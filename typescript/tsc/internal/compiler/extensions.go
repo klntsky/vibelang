@@ -1,6 +1,8 @@
 package compiler
 
 import (
+	"slices"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/transformers"
 )
@@ -28,4 +30,18 @@ func getHookTransformers(opts *transformers.TransformOptions, sourceFile *ast.So
 		}
 	}
 	return tx
+}
+
+var directiveExemptSources []string
+
+// RegisterDirectiveExemptSource exempts diagnostics whose Source is source
+// from @ts-ignore and @ts-expect-error comments, which then neither hide them
+// nor count as used. Call it only from the init function of an in-tree
+// package that tsc/cmd/tsc imports; registration is not synchronized.
+func RegisterDirectiveExemptSource(source string) {
+	directiveExemptSources = append(directiveExemptSources, source)
+}
+
+func isDirectiveExempt(diagnostic *ast.Diagnostic) bool {
+	return diagnostic.Source() != "" && slices.Contains(directiveExemptSources, diagnostic.Source())
 }

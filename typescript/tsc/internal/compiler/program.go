@@ -1624,7 +1624,7 @@ func (p *Program) getDiagnosticsWithPrecedingDirectives(sourceFile *ast.SourceFi
 	filtered := make([]*ast.Diagnostic, 0, len(diags))
 	for _, diagnostic := range diags {
 		ignoreDiagnostic := false
-		if diagnostic.File() != sourceFile {
+		if diagnostic.File() != sourceFile || isDirectiveExempt(diagnostic) {
 			filtered = append(filtered, diagnostic)
 			continue
 		}
