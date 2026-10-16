@@ -1,0 +1,2 @@
+main.es(22,10): error ES2001
+main.es(25,16): error ES3201

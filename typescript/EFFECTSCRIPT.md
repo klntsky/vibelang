@@ -66,6 +66,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-wire` | `wire` takes its arguments in any order and emits them consumers first, so one `Database` serves `Users` and `Orders` |
 | `es-wire.fail` | ES3202, ES3203, ES3204: a duplicate provider, a cycle, and an argument typed `Layer.Any` |
 | `es-wire-missing.fail` | ES3201 at a runner: `MailerLive needs Smtp` |
+| `es-wire-discard.fail` | A layer that provides nothing, `Layer.effectDiscard`'s, keeps its E and In through `wire`: ES2001 at a contract and ES3201 at the runner |
 | `es-provider-escapes.fail` | ES2001 names the provider member that a failure escapes, in an object literal and in an `implements` class |
 | `es-provider-audited.fail` | ES3101 at a per-call lookup, in an object literal and in an `implements` class |
 | `es-effect-value-calls` | Calling an `Exit` replays it and calling a tagged error instance fails with it (D24): `Effect<A, E, never>` and `Effect<never, EmptyDocument, never>` |

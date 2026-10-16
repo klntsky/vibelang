@@ -3,9 +3,12 @@ import * as K from "./kernel/kernel.js"
 
 export const $Context = Context
 
-type LOut<L> = L extends Layer.Layer<infer O, any, any> ? O : never
-type LErr<L> = L extends Layer.Layer<any, infer E, any> ? E : never
-type LIn<L> = L extends Layer.Layer<any, any, infer I> ? I : never
+// Infer every parameter: Layer's output is contravariant, so a layer that
+// provides nothing, Layer<never, E, In>, does not extend Layer<any, any, any>,
+// and a pattern with any would drop its E and In.
+type LOut<L> = L extends Layer.Layer<infer O, infer _E, infer _I> ? O : never
+type LErr<L> = L extends Layer.Layer<infer _O, infer E, infer _I> ? E : never
+type LIn<L> = L extends Layer.Layer<infer _O, infer _E, infer I> ? I : never
 
 export const wire = <const L extends readonly [Layer.Any, ...Array<Layer.Any>]>(
   ...layers: L
