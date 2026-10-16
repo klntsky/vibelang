@@ -149,12 +149,21 @@ func declaresUsing(fn *ast.Node) bool {
 		if isFunctionBoundary(n) {
 			return false
 		}
-		if n.Kind == ast.KindVariableDeclarationList && n.Flags&ast.NodeFlagsBlockScoped&(ast.NodeFlagsUsing|ast.NodeFlagsAwaitUsing) != 0 {
+		if n.Kind == ast.KindVariableDeclarationList && isUsingList(n) {
 			return true
 		}
 		return n.ForEachChild(visit)
 	}
 	return visit(fn.Body())
+}
+
+// isUsingList reports whether list, a variable declaration list, declares
+// using or await using variables. The block-scoped flags of await using are
+// those of const and using together, so a test for either flag alone would
+// match const.
+func isUsingList(list *ast.Node) bool {
+	kind := list.Flags & ast.NodeFlagsBlockScoped
+	return kind == ast.NodeFlagsUsing || kind == ast.NodeFlagsAwaitUsing
 }
 
 // directReference describes how code in the callee expression's file reaches

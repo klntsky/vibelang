@@ -1,0 +1,13 @@
+// A function that declares const or let, and runs no Effect, compiles to
+// plain JavaScript (D10), so Array.prototype.map can call it. Only a using
+// declaration makes a function compile to frames (D54).
+function double(n: number) {
+  const twice = n * 2
+  let result = twice
+  return result
+}
+
+// expect-result: [2,4,6]
+export function main() {
+  return [1, 2, 3].map(double)
+}
