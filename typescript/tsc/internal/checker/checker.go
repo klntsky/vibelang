@@ -17372,6 +17372,10 @@ func (c *Checker) getBaseConstructorTypeOfClass(t *Type) *Type {
 	if data.resolvedBaseConstructorType != nil {
 		return data.resolvedBaseConstructorType
 	}
+	if hooked, _ := c.classBasesFromHooks(t); hooked != nil {
+		data.resolvedBaseConstructorType = hooked
+		return hooked
+	}
 	baseTypeNode := getBaseTypeNodeOfClass(t)
 	if baseTypeNode == nil {
 		data.resolvedBaseConstructorType = c.undefinedType
@@ -19658,6 +19662,10 @@ func (c *Checker) getTupleBaseType(t *Type) *Type {
 }
 
 func (c *Checker) resolveBaseTypesOfClass(t *Type) {
+	if hooked, instanceType := c.classBasesFromHooks(t); hooked != nil {
+		t.AsInterfaceType().resolvedBaseTypes = core.IfElse(instanceType != nil, []*Type{instanceType}, nil)
+		return
+	}
 	baseConstructorType := c.getApparentType(c.getBaseConstructorTypeOfClass(t))
 	if baseConstructorType.flags&(TypeFlagsObject|TypeFlagsIntersection|TypeFlagsAny) == 0 {
 		return
