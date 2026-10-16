@@ -93,6 +93,20 @@ test("fork: exiting a block interrupts its child and waits for cleanup", async (
   await Effect.runPromise(Effect.scoped(Effect.asVoid(fork(Effect.void))))
 })
 
+test("regions: using keeps each acquisition's own interruptibility (D25)", async () => {
+  const events: string[] = []
+  const slow = (interruptible: boolean) => Effect.acquireRelease(
+    Effect.andThen(Effect.sleep("20 millis"), Effect.sync(() => { events.push(`acquired:${interruptible}`) })),
+    () => Effect.sync(() => { events.push(`released:${interruptible}`) }),
+    { interruptible }
+  )
+  const timedOut = async (interruptible: boolean) =>
+    Exit.isFailure(await Effect.runPromiseExit(Effect.timeout($region(scope => $using(scope, slow(interruptible))), "5 millis")))
+  expect(await timedOut(false)).toBe(true)
+  expect(await timedOut(true)).toBe(true)
+  expect(events).toEqual(["acquired:false", "released:false"])
+})
+
 interface Settings { readonly value: number }
 class Settings extends $service<Settings>("runtime-test/Settings") {}
 interface Doubled { readonly value: number }

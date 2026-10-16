@@ -22,12 +22,16 @@ export const $region = <A, E, R>(body: (scope: Scope.Scope) => Effect.Effect<A, 
 /**
  * `using x = acquire()`: only this acquisition sees the block's Scope (D14,
  * Codex R8). A TypeScript `Disposable` is released with `Symbol.dispose`.
+ * The acquisition keeps the interruptibility its own `acquireRelease` gives
+ * it (D25); the `Symbol.dispose` release is registered with interruption
+ * masked, so a value that arrives is always released.
  */
 export const $using = <A, E, R>(scope: Scope.Scope, acquire: Effect.Effect<A, E, R>): Effect.Effect<A, E, Exclude<R, Scope.Scope>> =>
-  Effect.tap(Scope.provide(acquire, scope), (value: any) =>
-    value !== null && typeof value === "object" && typeof value[Symbol.dispose] === "function"
-      ? Scope.addFinalizer(scope, Effect.sync(() => value[Symbol.dispose]()))
-      : Effect.void)
+  Effect.uninterruptibleMask((restore) =>
+    Effect.tap(restore(Scope.provide(acquire, scope)), (value: any) =>
+      value !== null && typeof value === "object" && typeof value[Symbol.dispose] === "function"
+        ? Scope.addFinalizer(scope, Effect.sync(() => value[Symbol.dispose]()))
+        : Effect.void))
 
 /**
  * D54: an expected failure thrown in a function that compiles to plain
