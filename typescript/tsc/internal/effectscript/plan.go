@@ -1,8 +1,6 @@
 package effectscript
 
 import (
-	"sync"
-
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
@@ -101,24 +99,23 @@ type analyzer struct {
 	effectInterface *checker.Type                       // the generic Effect interface, once seen
 }
 
-var analyzers sync.Map // *checker.Checker -> *analyzer
+type analyzerKey struct{}
 
-// analyzerFor returns the analyzer that remembers c's answers. A checker is
-// used by one goroutine at a time, so its analyzer needs no lock of its own.
+// analyzerFor returns the analyzer that remembers c's answers. It lives on c,
+// so it is freed with c. A checker is used by one goroutine at a time, so its
+// analyzer needs no lock of its own.
 func analyzerFor(c *checker.Checker) *analyzer {
-	if a, ok := analyzers.Load(c); ok {
-		return a.(*analyzer)
-	}
-	a, _ := analyzers.LoadOrStore(c, &analyzer{
-		checker:   c,
-		states:    map[*ast.Node]fnState{},
-		effects:   map[*ast.Node]*effectInfo{},
-		lambdas:   map[*ast.Node]*lambdaState{},
-		current:   map[*ast.Node][]*checker.Signature{},
-		rejected:  map[*ast.Node]map[candidateKey]bool{},
-		resolving: map[*ast.Node]bool{},
-	})
-	return a.(*analyzer)
+	return c.ExtensionState(analyzerKey{}, func() any {
+		return &analyzer{
+			checker:   c,
+			states:    map[*ast.Node]fnState{},
+			effects:   map[*ast.Node]*effectInfo{},
+			lambdas:   map[*ast.Node]*lambdaState{},
+			current:   map[*ast.Node][]*checker.Signature{},
+			rejected:  map[*ast.Node]map[candidateKey]bool{},
+			resolving: map[*ast.Node]bool{},
+		}
+	}).(*analyzer)
 }
 
 func (a *analyzer) isEffect(fn *ast.Node) bool {
