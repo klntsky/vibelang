@@ -2,6 +2,42 @@
 
 These guides teach EffectScript one topic at a time and also serve as a reference while you build. Start with [Welcome](001-onboarding.md), or jump to the subject you need.
 
+## Create and run your first project
+
+Run setup once from the EffectScript repository, then scaffold wherever you
+keep projects:
+
+```sh
+sh scripts/setup.sh
+bun create effectscript my-app --no-git
+cd my-app
+bun run build
+bun run start
+bun run test
+```
+
+The starter prints:
+
+```out
+Hello, EffectScript!
+Recovered from EmptyName
+```
+
+`src/greeting.es` defines a greeting function and an `EmptyName` tagged error.
+`src/main.es` declares the abstract `Greeter` service, supplies its live layer,
+recovers a typed failure with `try`/`catch`, and starts the program with
+`NodeRuntime.runMain`. `src/greeting.test.es` uses `it.effect` to test success
+and recovery. Tests run from compiled JavaScript in `dist/`.
+
+Run `bun run dev` to compile on changes and restart Node when output changes.
+Press Ctrl+C to stop both watchers. Open this project in VS Code or Cursor after
+installing the `.vsix` printed by setup. The extension uses the local compiler
+for diagnostics and hovers.
+
+Keep the EffectScript checkout available: the project's local package paths
+point to it. See [Installation](getting-started/004-installation.md) for
+prerequisites, setup details, and the end-to-end verification command.
+
 ## Guides and reference material
 
 ```ts

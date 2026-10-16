@@ -2,6 +2,45 @@
 
 A language for writing Effect programs: TypeScript syntax in which every function is an Effect, built on one-shot delimited continuations over Effect 4's fiber runtime.
 
+## Quickstart
+
+From this checkout, install the local compiler, runtime, and Bun project template:
+
+```sh
+sh scripts/setup.sh
+bun create effectscript my-app --no-git
+cd my-app
+bun run build
+bun run start
+bun run test
+```
+
+Setup requires Go, Bun, and Node on `PATH`. The tested toolchain is Go 1.26
+(with automatic Go 1.27 download), Bun 1.4.1, and Node 26.10. Nothing needs to
+be published to npm. Keep this checkout available: scaffolded projects use
+absolute `file:` dependencies on its compiler and runtime packages. Rerun setup
+after updating the checkout, then run `bun install --force` in existing projects
+to refresh their local package copies.
+
+`bun run dev` builds once, watches `.es` sources with `esc --watch`, and runs
+Node with `--watch` on the output. `bun run test` compiles `.es` tests before
+running Vitest with `@effect/vitest`. The starter demonstrates an abstract-class
+service, a layer, a tagged failure, and `try`/`catch` recovery.
+
+Setup builds the editor extension when `editors/vscode` is available and prints
+its exact `.vsix` path. Install it with `code --install-extension <path>` or
+`cursor --install-extension <path>`, then open your project directory.
+
+During the parallel build, setup reports missing runtime or editor packages.
+The end-to-end check fails at the first incomplete step with its diagnostics:
+
+```sh
+sh scripts/e2e.sh
+```
+
+See [Installation](docs/user/src/getting-started/004-installation.md) and
+[Getting Started](docs/user/src/013-getting-started.md) for the full workflow.
+
 | Path | What it is |
 | --- | --- |
 | `docs/design/` | The spec (`effectscript-design.html`, built from `src/` by `docs/tools/render.ts`) and the decision log (`DECISIONS.md`) |

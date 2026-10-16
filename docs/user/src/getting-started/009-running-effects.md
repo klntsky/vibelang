@@ -4,6 +4,27 @@ Runners start a program at an application boundary. Inside a running EffectScrip
 
 Call a runner at module top level or in a plain callback registered there with a TypeScript function, such as a `describe` body or framework route handler. Calling a runner inside code a fiber runs is ES1005; call the program or use `fork` instead. Tests in `.es` use `it.effect` from `@effect/vitest`; Promise-style tests stay in `.ts`.
 
+## Build and run a local project
+
+After [installing and scaffolding](004-installation.md), use the starter scripts:
+
+```sh
+bun run build
+bun run start
+bun run dev
+bun run test
+```
+
+`build` invokes `esc` with the project's `tsconfig.json`. `start` builds, then
+runs `node --enable-source-maps dist/main.js`. `dev` builds once, then runs
+`esc --watch` alongside `node --watch --enable-source-maps dist/main.js`.
+`test` builds, then runs Vitest against `dist/**/*.test.js`. Node and Vitest
+receive JavaScript; neither interprets `.es` sources directly.
+
+The starter's `NodeRuntime.runMain(() => main())` supplies the application
+boundary. Its greeting and recovery messages provide a quick check that the
+service layer and typed failure both run.
+
 ## Execute synchronous computations
 
 ```ts

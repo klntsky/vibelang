@@ -1,114 +1,102 @@
 # Installation
 
-EffectScript targets Effect 4.0.5 and compiles to TypeScript for JavaScript runtimes. Install the library dependencies separately from the language compiler; a TypeScript runtime alone does not interpret `.es` files.
+EffectScript compiles `.es` sources to JavaScript with the native `esc` compiler.
+This private preview installs from your local repository. The `@effectscript`
+packages are not published to npm.
 
-## Runtime prerequisites
+## Prerequisites
 
-```ts
-// hello.es
-export function hello() {
-  Effect.log("EffectScript is ready")
-  return "ready"
-}
-// Effect<string, never, never>
-```
+Install Go, Bun, and Node and make them available on `PATH`. The tested versions
+are Go 1.26, Bun 1.4.1, and Node 26.10. Go downloads the compiler repository's
+Go 1.27 toolchain automatically on its first build. Setup requires network access
+for that download and package installation.
 
-Use a runtime supported by `effect@4.0.5` and its platform packages. The language's runtime evidence was gathered on Node.js 26.10 and Bun 1.4.1. The compiler uses TypeScript 7.1's checker and checks `.ts` and `.es` files in one program.
+The starter pins `effect` and `@effect/platform-node` to **4.0.5**. Its tests pin
+`@effect/vitest` to **4.0.5** and `vitest` to **5.0.5**. Keep those versions together.
 
-`@effectscript/compiler` installs the native `esc` binary; `@effectscript/runtime` supplies the runtime helpers used by generated code. v0 requires Effect 4.0.5 exactly, and the runtime rejects another version when it loads.
+## Install from the repository
 
-## Add dependencies manually
-
-```sh
-mkdir hello-effectscript
-cd hello-effectscript
-npm init -y
-npm install effect@4.0.5 @effectscript/runtime
-npm install --save-dev @effectscript/compiler
-npx esc --init
-```
-
-Set `"type": "module"` in `package.json` and `"strict": true` in `tsconfig.json`. Enable `declaration` and `sourceMap` to emit declarations and source maps. Keep the package lockfile so every developer uses the same versions. Other package managers install the same packages with their corresponding commands.
+Run this command from the EffectScript checkout:
 
 ```sh
-npx esc --noEmit
-npx esc
-npx esc --watch
+sh scripts/setup.sh
 ```
 
-These commands check, check and emit, and rebuild on changes, respectively. `esc` accepts every `tsc` flag, including `-b` for project builds; `esc --lsp --stdio` serves editors and `esc --api` serves build tools.
+Setup builds `packages/compiler/native/esc`, installs and builds the runtime,
+and copies the starter into `~/.bun-create/effectscript`. It writes absolute
+`file:` dependencies pointing to this checkout's compiler and runtime packages.
+Keep the checkout at that path. Rerun setup after moving or updating it.
+Run `bun install --force` in existing projects after rebuilding to refresh their
+local package copies. If you move the checkout, update those projects' `file:`
+paths in `package.json` before reinstalling.
 
-## Set up a JavaScript runtime
+Setup creates an `esc` launcher in `~/.local/bin` when that directory is already
+on `PATH`. Otherwise, use the project scripts below, which find the project's
+compiler automatically. Setup never edits your shell configuration or replaces
+an unrelated executable or template. `ESC_BINARY` overrides the native binary
+when you need to test another build.
 
-```ts
-// main.es
-import { NodeRuntime } from "@effect/platform-node"
-import { hello } from "./hello.es"
+If `packages/runtime` or `editors/vscode` has not landed yet, setup prints the
+missing path. Rerun setup after those packages land. The compiler still builds;
+installing and running the starter requires the runtime.
 
-NodeRuntime.runMain(() => hello())
-```
-
-For Node applications, add an Effect 4 compatible `@effect/platform-node` release. Bun and browser applications use the matching `@effect/platform-bun` and `@effect/platform-browser` integrations when they need platform services. Keep platform packages compatible with the pinned core library.
-
-After the compiler emits the application, run the generated JavaScript entry with Node or Bun. Commands such as `node main.es` do not supply the language's compilation step. `.es` imports name source files, such as `./hello.es`; emission rewrites that specifier to `./hello.js`.
-
-## Integrate Vite and React
+## Create a project
 
 ```sh
-npm create vite@latest effectscript-ui -- --template react-ts
-cd effectscript-ui
-npm install
-npm install effect@4.0.5 @effectscript/runtime
-npm install --save-dev @effectscript/compiler @effectscript/vite
+bun create effectscript my-app --no-git
+cd my-app
+bun run build
+bun run start
+bun run test
 ```
 
-Add the plugin to Vite's configuration:
+Bun installs dependencies while scaffolding. If installation is interrupted, run
+`bun install` in the project before building. `--no-git` leaves repository setup
+under your control. See [Getting Started](../013-getting-started.md) for the
+starter files and [Running Effects](009-running-effects.md) for execution.
 
-```ts
-// TypeScript (.ts)
-// vite.config.ts
-import { defineConfig } from "vite"
-import react from "@vitejs/plugin-react"
-import effectscript from "@effectscript/vite"
+These commands use the real native compiler. They never fall back to the
+TypeScript-API prototype. Run `sh scripts/e2e.sh` in the EffectScript repository
+to check setup, scaffold, install, build, execution, and tests in a temporary
+project. It reports the first failing step and returns a nonzero status.
 
-export default defineConfig({
-  plugins: [react(), effectscript()]
-})
+## Configure your editor
+
+When `editors/vscode` exists, setup builds its `.vsix` and prints the exact install
+commands for VS Code and Cursor:
+
+```sh
+code --install-extension /path/printed/by/setup/effectscript-0.0.1.vsix
+# Or use cursor --install-extension with the same path.
 ```
 
-Keep React components in `.tsx`, and place application operations in `.es` modules. For example, export this operation:
+Open the scaffolded project directory. The extension uses the project's
+`@effectscript/compiler` to start `esc --lsp --stdio`. Other editors can run that
+same command through their LSP client for `.es` and `.ts` files.
 
-```ts
-// increment.es
-export function increment(current: number) {
-  return current + 1
-}
+Setup builds the extension but does not install it for you.
+
+## Compiler commands
+
+From a scaffolded project, run:
+
+```sh
+bun run build
+bun run dev
+bun run test
+bun x --no-install esc --noEmit
 ```
 
-Then call its emitted module from a React component:
-
-```ts
-// TypeScript (.ts)
-// Counter.tsx
-import { useState } from "react"
-import { Effect } from "effect"
-import { increment } from "./increment.js"
-
-export function Counter() {
-  const [count, setCount] = useState(0)
-  return <button onClick={() => {
-    const next = Effect.runSync(increment(count))
-    setCount(next)
-  }}>Count: {count}</button>
-}
-```
-
-The compiler resolves TypeScript's `./increment.js` import to `increment.es`. `@effectscript/vite` compiles requested `.es` modules through one `esc --api` process, serves JavaScript with source maps, and reports compiler errors in Vite's overlay. Hot reload also invalidates importers when exported contracts, control classes, or plain JavaScript variants change.
-
-Use `runSync` only for work known to remain synchronous. For operations that pause or need shared services, use a [managed runtime](../036-runtime.md) at the framework boundary and dispose it when its owner shuts down.
+The template's `tsconfig.json` selects `.es` files under `src/`, emits Node ESM
+to `dist/`, enables strict checking and source maps, and prevents emit on errors.
+Local source imports use `.es`; generated JavaScript imports use `.js`.
+`esc` accepts TypeScript compiler flags such as `--noEmit`, `--watch`, and `-b`.
 
 ## Coming from Effect
 
-Install `@effectscript/compiler` for `.es` compilation and `@effectscript/runtime` alongside `effect@4.0.5`. Use `esc` in place of `tsc` for a program that includes `.es` files, and add `@effectscript/vite` for Vite applications.
+Use the local `@effectscript/compiler` for `.es` compilation and
+`@effectscript/runtime` alongside `effect@4.0.5`. Write application logic in `.es`
+and keep ordinary TypeScript integrations in `.ts`. The compiler checks both
+file types as one program.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/installation)
