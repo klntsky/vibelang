@@ -2620,9 +2620,11 @@ D60). D30&#39;s per-platform package distribution remains a release target.</p>
 (with Go 1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
 <code>packages/compiler/native/esc</code>, installs and builds the runtime, and copies
 <code>templates/app</code> into <code>~/.bun-create/effectscript</code>. The installed template uses
-absolute <code>file:</code> dependencies on this checkout&#39;s compiler, runtime, and Vite
-packages. Keep the checkout available; after updating it, rerun setup and
-<code>bun install --force</code> in existing projects to refresh package copies.</p>
+absolute <code>file:</code> dependencies on this checkout&#39;s compiler and Vite packages
+and the runtime tarball that setup packs (D120). Keep the checkout available;
+after updating it, rerun setup and run
+<code>bun update @effectscript/runtime @effectscript/compiler @effectscript/vite</code>
+in existing projects to refresh the packages.</p>
 <p>Setup links <code>~/.local/bin/esc</code> when that directory is already on PATH and no
 unrelated executable occupies the path. Project scripts find their own compiler
 without that global link. <code>ESC_BINARY</code> overrides the launcher&#39;s native binary.

@@ -20,9 +20,11 @@ Setup requires Go, Bun, and Node on PATH. The tested versions are Go 1.26
 (with Go 1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
 `packages/compiler/native/esc`, installs and builds the runtime, and copies
 `templates/app` into `~/.bun-create/effectscript`. The installed template uses
-absolute `file:` dependencies on this checkout's compiler, runtime, and Vite
-packages. Keep the checkout available; after updating it, rerun setup and
-`bun install --force` in existing projects to refresh package copies.
+absolute `file:` dependencies on this checkout's compiler and Vite packages
+and the runtime tarball that setup packs (D120). Keep the checkout available;
+after updating it, rerun setup and run
+`bun update @effectscript/runtime @effectscript/compiler @effectscript/vite`
+in existing projects to refresh the packages.
 
 Setup links `~/.local/bin/esc` when that directory is already on PATH and no
 unrelated executable occupies the path. Project scripts find their own compiler
