@@ -1,0 +1,9 @@
+{
+  "name": "@effectscript/compiler",
+  "version": "0.0.1",
+  "description": "The native EffectScript compiler and language server",
+  "type": "module",
+  "bin": { "esc": "bin/esc" },
+  "files": ["bin", "native", "README.md"],
+  "engines": { "node": ">=22" }
+}

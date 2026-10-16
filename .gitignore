@@ -6,4 +6,7 @@ node_modules
 .cache/
 docs/user/site/
 *.tgz
+packages/compiler/native/
+templates/app/dist/
+templates/app/.prototype/
 experiments/scratch-agent-a/v3pkg/
