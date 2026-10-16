@@ -36,7 +36,9 @@ paths in `package.json` before reinstalling.
 Setup creates an `esc` launcher in `~/.local/bin` when that directory is already
 on `PATH`. Otherwise, use the project scripts below, which find the project's
 compiler automatically. Setup never edits your shell configuration or replaces
-an unrelated executable or template. `ESC_BINARY` overrides the native binary
+an unrelated executable or template. It does replace a link to another
+checkout's launcher or to a missing file, which an earlier setup left when its
+checkout moved. `ESC_BINARY` overrides the native binary
 when you need to test another build.
 
 If `packages/runtime` or `editors/vscode` has not landed yet, setup prints the

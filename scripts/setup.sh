@@ -33,13 +33,29 @@ bin_dir=${EFFECTSCRIPT_BIN_DIR:-$HOME/.local/bin}
 case ":$PATH:" in
   *":$bin_dir:"*)
     mkdir -p "$bin_dir"
-    if [ -e "$bin_dir/esc" ] || [ -L "$bin_dir/esc" ]; then
-      if [ ! -L "$bin_dir/esc" ] || [ "$(readlink "$bin_dir/esc")" != "$root/packages/compiler/bin/esc" ]; then
-        echo "setup: preserving existing $bin_dir/esc; use the project's bun run build"
-      fi
+    link="$bin_dir/esc"
+    launcher="$root/packages/compiler/bin/esc"
+    if [ -L "$link" ]; then
+      # A link to a moved or deleted checkout, or to another checkout's
+      # launcher, is one an earlier setup made: point it here.
+      previous=$(readlink "$link")
+      case "$previous" in
+        "$launcher") ;;
+        */packages/compiler/bin/esc) ln -sfn "$launcher" "$link"; echo "setup: linked $link (it pointed to $previous)" ;;
+        *)
+          if [ -e "$link" ]; then
+            echo "setup: preserving existing $link; use the project's bun run build"
+          else
+            ln -sfn "$launcher" "$link"
+            echo "setup: linked $link (it pointed to the missing $previous)"
+          fi
+          ;;
+      esac
+    elif [ -e "$link" ]; then
+      echo "setup: preserving existing $link; use the project's bun run build"
     else
-      ln -s "$root/packages/compiler/bin/esc" "$bin_dir/esc"
-      echo "setup: linked $bin_dir/esc"
+      ln -s "$launcher" "$link"
+      echo "setup: linked $link"
     fi
     ;;
   *)
