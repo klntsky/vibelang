@@ -16,6 +16,7 @@ type plan struct {
 	effects  map[*ast.Node]bool // functions lowered to Effect.fnUntraced generators
 	programs map[*ast.Node]bool // lambdas lowered to Effect.gen programs (design D7)
 	runs     map[*ast.Node]bool // calls in those functions emitted as yield*
+	servicePlan
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool   { return p.effects[fn] }
@@ -25,7 +26,7 @@ func (p *plan) runsCall(call *ast.Node) bool { return p.runs[call] }
 // planFile asks the checker which functions in file are Effects and which of
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
-	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}}
+	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, servicePlan: newServicePlan()}
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -47,6 +48,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					return false
 				})
 			}
+			p.planServiceClass(c, node)
 			node.ForEachChild(visit)
 			return false
 		}

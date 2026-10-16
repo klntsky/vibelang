@@ -25,6 +25,7 @@ func init() {
 	checker.RegisterContextualReturnTypeHook(contextualReturnType)
 	checker.RegisterSourceFileCheckHook(checkSourceFile)
 	checker.RegisterDiagnosticsFilterHook(filterCoveredDiagnostics)
+	checker.RegisterClassBaseHook(classBases)
 }
 
 // isEffectScriptFile reports whether file is an EffectScript source file.

@@ -28,6 +28,7 @@ type lowering struct {
 	transformers.Transformer
 	plan     *plan
 	effect   *ast.IdentifierNode // local name for effect's Effect module, imported on first use
+	runtime  *ast.IdentifierNode // local name for @effectscript/runtime, imported on first use
 	inEffect bool                // visiting code that runs inside a lowered generator
 }
 
@@ -45,6 +46,8 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 		return tx.visitSourceFile(node.AsSourceFile())
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):
 		return tx.visitRunningCall(node)
+	case node.Kind == ast.KindClassDeclaration && tx.plan.keys[node] != "":
+		return tx.visitServiceClass(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
 	case tx.plan.isEffect(node):
@@ -61,20 +64,31 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 
 func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 	visited := tx.Visitor().VisitEachChild(file.AsNode())
-	if tx.effect == nil {
+	var imports []*ast.Node
+	if tx.effect != nil {
+		imports = append(imports, tx.namespaceImport(tx.effect, "effect/Effect"))
+	}
+	if tx.runtime != nil {
+		imports = append(imports, tx.namespaceImport(tx.runtime, "@effectscript/runtime"))
+	}
+	if len(imports) == 0 {
 		return visited
 	}
+	statements := append(imports, visited.Statements()...)
+	return tx.Factory().UpdateSourceFile(visited.AsSourceFile(), tx.Factory().NewNodeList(statements), visited.AsSourceFile().EndOfFileToken)
+}
+
+// namespaceImport returns `import * as name from "module"`.
+func (tx *lowering) namespaceImport(name *ast.IdentifierNode, module string) *ast.Node {
 	f := tx.Factory()
-	// import * as Effect from "effect/Effect"
-	importEffect := f.NewImportDeclaration(
+	declaration := f.NewImportDeclaration(
 		nil, /*modifiers*/
-		f.NewImportClause(ast.KindUnknown, nil /*name*/, f.NewNamespaceImport(tx.effect)),
-		f.NewStringLiteral("effect/Effect", ast.TokenFlagsNone),
+		f.NewImportClause(ast.KindUnknown, nil /*name*/, f.NewNamespaceImport(name)),
+		f.NewStringLiteral(module, ast.TokenFlagsNone),
 		nil, /*attributes*/
 	)
-	ast.SetParentInChildren(importEffect)
-	statements := append([]*ast.Node{importEffect}, visited.Statements()...)
-	return f.UpdateSourceFile(visited.AsSourceFile(), f.NewNodeList(statements), visited.AsSourceFile().EndOfFileToken)
+	ast.SetParentInChildren(declaration)
+	return declaration
 }
 
 // effectName returns the local name bound to effect's Effect module.
@@ -84,6 +98,15 @@ func (tx *lowering) effectName() *ast.IdentifierNode {
 		tx.effect = tx.Factory().NewUniqueNameEx("Effect", printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
 	}
 	return tx.effect
+}
+
+// runtimeMember returns `runtime.name`, where runtime is the local name
+// bound to @effectscript/runtime.
+func (tx *lowering) runtimeMember(name string) *ast.Node {
+	if tx.runtime == nil {
+		tx.runtime = tx.Factory().NewUniqueNameEx("runtime", printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
+	}
+	return tx.Factory().NewPropertyAccessExpression(tx.runtime, nil /*questionDotToken*/, tx.Factory().NewIdentifier(name), ast.NodeFlagsNone)
 }
 
 // visitRunningCall turns `f(x)` into `yield* f(x)`.

@@ -1,0 +1,48 @@
+// Services are abstract classes (D1). Each compiles to a class that extends
+// a Context key (D45): as a value the class is the key, and as a type it is
+// the service's shape, branded with the key. run.mjs uses the classes from
+// JavaScript as Effect 4 keys.
+import { Data, Effect, Layer } from "effect"
+
+export class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: string }> {}
+
+export interface User {
+  readonly id: string
+  readonly name: string
+}
+
+export abstract class Users {
+  abstract find(id: string): Effect.Effect<User, UserNotFound, never>
+}
+
+export abstract class Settings {
+  abstract readonly greeting: string
+
+  static readonly layer = Layer.succeed(Settings, { greeting: "Welcome" })
+}
+
+export const UsersLive = Layer.succeed(Users, {
+  find: (id: string) => Effect.succeed({ id, name: "Ada" })
+})
+
+// An implementation can be a class that implements the service.
+export class UsersInMemory implements Users {
+  find(id: string) {
+    return id === "7" ? Effect.succeed({ id, name: "Grace" }) : Effect.fail(new UserNotFound({ id }))
+  }
+}
+
+export const UsersTest = Layer.succeed(Users, new UsersInMemory())
+
+// Two services with the same members are different types, so providing one
+// never satisfies the other.
+abstract class Primary {
+  abstract query(sql: string): Effect.Effect<string, never, never>
+}
+
+abstract class Replica {
+  abstract query(sql: string): Effect.Effect<string, never, never>
+}
+
+type Collapsed = [Primary] extends [Replica] ? true : [Replica] extends [Primary] ? true : false
+export const collapsed: Collapsed = false
