@@ -18,8 +18,11 @@
 //     what it prints with expected/stdout.txt.
 //
 // Every case except a failing one must compile without errors. Every file in
-// expected/ other than stdout.txt must equal the file at the same path under
-// out/. A runnable case with expected/stdout.txt compares with that file.
+// expected/ other than stdout.txt and diagnostics.txt must equal the file at
+// the same path under out/. A runnable case with expected/stdout.txt compares
+// with that file. A case of any kind with expected/diagnostics.txt passes only
+// when tsc reports exactly the diagnostics it lists, one per line, in tsc's
+// order and without message text: `main.es(5,23): error ES1001`.
 //
 // A case is pending when it has a file named `pending` whose first word names
 // the lane that owns the missing feature and whose rest says what is missing.
@@ -176,6 +179,15 @@ async function check(name) {
     return { ok: false, detail: `tsc exited with ${compiled.code}`, log: output }
   }
 
+  const diagnosticsFile = path.join(dir, "expected", "diagnostics.txt")
+  if (fs.existsSync(diagnosticsFile)) {
+    const want = fs.readFileSync(diagnosticsFile, "utf8").trim().split("\n").map((line) => line.trim()).filter(Boolean)
+    const got = diagnostics.map((d) => d.text.split("\n")[0].replace(/^(.*?: (?:error|warning|message|suggestion) [A-Za-z]+\d+):.*$/, "$1"))
+    if (want.join("\n") !== got.join("\n")) {
+      return { ok: false, detail: "diagnostics differ from expected/diagnostics.txt", log: [`want:\n  ${want.join("\n  ")}`, `got:\n  ${got.join("\n  ")}`, output].join("\n") }
+    }
+  }
+
   if (headers.codes) {
     const want = new Set(headers.codes)
     const got = new Set(errors.map((d) => d.code))
@@ -194,7 +206,7 @@ async function check(name) {
   const expectedFiles = fs.existsSync(expectedDir) ? fs.readdirSync(expectedDir, { recursive: true }) : []
   for (const file of expectedFiles.map(String).sort()) {
     const want = path.join(expectedDir, file)
-    if (file === "stdout.txt" || fs.statSync(want).isDirectory()) continue
+    if (file === "stdout.txt" || file === "diagnostics.txt" || fs.statSync(want).isDirectory()) continue
     const got = path.join(dir, "out", file)
     if (!fs.existsSync(got)) return { ok: false, detail: `out/${file} is missing`, log: output }
     if (fs.readFileSync(want, "utf8") !== fs.readFileSync(got, "utf8")) {
