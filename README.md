@@ -9,15 +9,16 @@ A language for writing Effect programs: TypeScript syntax in which every functio
 | `docs/research/` | Research behind the design: Effect 4's runtime, continuation prior art, the TypeScript compiler, TC39 proposals, usage censuses, feature coverage |
 | `docs/reviews/` | Independent reviews of the design |
 | `experiments/` | The continuation kernel prototype on `effect@4.0.5` and its law suite (`bun test`); the design build refuses to run if any test fails |
-| `prototype/esc/` | A prototype compiler on the TypeScript API that lowers `.es` files to Effect TypeScript |
+| `prototype/esc/` | A prototype compiler on the TypeScript API that lowers `.es` files to Effect TypeScript; the executable reference for lowering |
+| `prototype/single-pass/` | The experiment that settled single-pass lowering (D56) on a patched TypeScript 5.9 checker |
+| `typescript/` | The compiler, `esc`: microsoft/TypeScript 7 (Go) with the EffectScript commits on top; `typescript/EFFECTSCRIPT.md` describes them |
 | `artifacts/` | The earlier design-space proposal, kept for history; superseded by `docs/design/` |
-
-The fork of the TypeScript compiler lives in its own repository, `../effectscript-ts`.
 
 ```sh
 cd experiments && bun install && bun test          # kernel laws
 cd docs/tools && bun install && bun render.ts      # build the spec
 bun prototype/esc/examples/run-all.ts              # prototype compiler examples
+cd typescript && sh effectscript/smoke.sh          # build esc and run its cases
 ```
 
 `experiments/scripts/v3-wakeup-chain.mjs` needs Effect 3.22.3 unpacked in `experiments/scratch-agent-a/v3pkg/` (`npm pack effect@3.22.3`), which is not checked in.
