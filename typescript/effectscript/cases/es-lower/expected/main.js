@@ -26,8 +26,7 @@ export const main = Effect_1.fnUntraced(function* () {
     // Config extends Effect, but only Effect itself runs: a Config is data (design D24).
     const port = Config.Port("PORT");
     yield* Console.log(`config is data: ${Config.isConfig(port)}`);
-    // findName returns Effect<string>, so the call runs it. The checker still
-    // types the result as the Effect, so this case uses it only in a template.
+    // findName returns Effect<string>, so the call runs it and name is a string.
     const name = yield* findName(2);
-    yield* Console.log(`found ${name}`);
+    yield* Console.log(`found ${name.toUpperCase()}`);
 });

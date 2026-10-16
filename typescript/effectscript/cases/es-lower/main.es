@@ -29,8 +29,7 @@ export function main(): void {
   // Config extends Effect, but only Effect itself runs: a Config is data (design D24).
   const port = Config.Port("PORT")
   Console.log(`config is data: ${Config.isConfig(port)}`)
-  // findName returns Effect<string>, so the call runs it. The checker still
-  // types the result as the Effect, so this case uses it only in a template.
+  // findName returns Effect<string>, so the call runs it and name is a string.
   const name = findName(2)
-  Console.log(`found ${name}`)
+  Console.log(`found ${name.toUpperCase()}`)
 }

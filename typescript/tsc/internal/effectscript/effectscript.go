@@ -9,12 +9,14 @@ package effectscript
 
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/compiler"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
 func init() {
 	compiler.RegisterScriptTransformerHook(newLowering)
+	checker.RegisterCallExpressionTypeHook(callExpressionType)
 }
 
 // isEffectScriptFile reports whether file is an EffectScript source file.

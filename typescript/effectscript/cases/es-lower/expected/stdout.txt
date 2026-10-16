@@ -8,4 +8,4 @@ hello, bc
 total 3
 doubled: 2, 4, 6
 config is data: true
-found barbara
+found BARBARA
