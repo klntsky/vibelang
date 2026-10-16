@@ -75,15 +75,19 @@ func (info *effectInfo) addFrom(other *effectInfo, source *ast.Node) {
 	}
 }
 
-// effectOf collects fn's effectInfo: what can escape its body (flowOf).
+// effectOf returns fn's effectInfo, what can escape its body (flowOf). The
+// functions fn calls are solved first, and the functions of a call cycle
+// together (recursion.go); while fn's cycle is being solved, it returns what
+// was found so far.
 func (a *analyzer) effectOf(fn *ast.Node) *effectInfo {
 	if info, ok := a.effects[fn]; ok {
-		return info // nil while fn is being collected
+		return info
 	}
-	a.effects[fn] = nil
-	info := a.flowOf(fn.Body())
-	a.effects[fn] = info
-	return info
+	if info, solving := a.approx[fn]; solving {
+		return info
+	}
+	a.solve(fn)
+	return a.effects[fn]
 }
 
 // effectInterface returns the generic Effect interface, given an Effect t.

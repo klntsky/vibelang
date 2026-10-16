@@ -109,6 +109,8 @@ type analyzer struct {
 	checker   *checker.Checker
 	states    map[*ast.Node]fnState
 	effects   map[*ast.Node]*effectInfo // see effectOf
+	approx    map[*ast.Node]*effectInfo // the E and R found so far of a call cycle being solved (recursion.go)
+	recursive map[*ast.Node]bool        // functions on a call cycle
 	tryBlocks map[*ast.Node]*effectInfo // see tryBlockFlow
 	contracts map[*ast.Node]*contract   // see contractOf
 
@@ -140,6 +142,8 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			checker:   c,
 			states:    map[*ast.Node]fnState{},
 			effects:   map[*ast.Node]*effectInfo{},
+			approx:    map[*ast.Node]*effectInfo{},
+			recursive: map[*ast.Node]bool{},
 			tryBlocks: map[*ast.Node]*effectInfo{},
 			contracts: map[*ast.Node]*contract{},
 			lambdas:   map[*ast.Node]*lambdaState{},

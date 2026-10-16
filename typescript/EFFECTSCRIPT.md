@@ -78,6 +78,9 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es2002-escaping-requirement.fail` | A service the body needs escapes the contract's R |
 | `es2003-bare-return.fail` | A plain return annotation is ES2003 on a function that runs an Effect or throws, and allowed on one that compiles to plain JavaScript (D67) |
 | `es2003-missing-channels.fail` | `Effect<string>` and `Effect<string, UserNotFound>` leave channels out |
+| `recursion` | `isOdd` and `isEven` learn each other's failures through their cycle (D52), a caller outside reads the solved contract, and a self-recursive `totalSize` needs no contract |
+| `es2102-recursive-success.fail` | Effect functions whose A depends on their own result need a contract; a pure recursive function keeps TypeScript's rules |
+| `es2102-cycle-catch.fail` | A `catch` whose `try` block calls into a cycle with inferred contracts needs a written contract on the cycle |
 | `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 | `lambda-forms` | A lambda takes the form the overload candidate under check declares, and the first candidate that accepts it in that form wins: the overload probes behind `../prototype/single-pass/RESULTS.md`, including a returned lambda, which is plain |
 | `programs` | A lambda with no parameters is a program where Effect expects an Effect: `retry`, `race`, `timeout`, `all` over an array and a record, `provide`, a stored lambda that reruns, and an object property typed through `Layer.succeed`'s `NoInfer<S>` |
@@ -214,6 +217,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 76 | `rtqqsqrv` | declarations: add a hook to declare a type from the checker instead of its annotation | A contract's inferred channels reach the `.d.ts` |
 | 77 | `kxzmxurw` | checker: add hooks for checked return types and infer outside conditional types | Seams for checking returns against A and for `infer Name` channels |
 | 78 | `stuypkuq` | effectscript: check written contracts (ES2001, ES2002, ES2003, D57) | A written contract is checked, and `infer` channels come from the body |
+| 79 | `ovsoxmyu` | effectscript: solve E and R of call cycles as a fixpoint (D52, ES2102) | `isEven` and `isOdd` both fail with what either throws |
 
 Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), and lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork).
 
@@ -429,6 +433,7 @@ The checks so far:
 | ES2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
 | ES2003 | A return annotation that leaves a contract channel out, or a plain return annotation on a function whose body runs an Effect | `contracts.go` |
 | ES2004 | The `catch` keyword, when the `try` block can raise no expected failure (D37); covers TypeScript's errors about the `never` caught value | `failures.go` |
+| ES2102 | The name of an Effect function on a call cycle whose A TypeScript cannot infer because it depends on the function's own result, covering TS7022, TS7023, and TS7024 there; a `catch` variable, or a function, on a cycle that the checker typed before the cycle's E and R were known | `recursion.go` |
 | ES4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; an `.es` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
 | ES4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
 | ES4402 | Where code runs a platform API (D108): the callee of a call, `new`, or tagged template, or the property read, whose root is a binding imported from a platform module or a platform global; inside boundaries and at the top level too. It covers TypeScript's "cannot find name" for an unresolved platform global it reports | `platform.go` |
@@ -629,6 +634,14 @@ main.es(6,35): error ES2003: Effect<string> leaves contract channels unspecified
   Write Effect<string, never, never> to check the missing channels as never.
   Or write Effect<string, infer E, infer R> to infer them from the body.
 ```
+
+### Recursion (D52)
+
+E and R of a function on a call cycle are a fixpoint over the cycle's strongly connected component, computed inside the component only (`recursion.go`). `effectOf` solves a function's component with Tarjan's algorithm over the call graph whose edges are the `.es` callees a body reads (`bodyCallees`: a callee whose contract states E and R, or a generic callee the call instantiates, is no edge). A component is solved after every component it calls. Its members start with empty E and R and are read again, with the E and R found so far, until none grows; the rows are finite and only grow, so the iteration ends. While a component is being solved, `effectOf` returns a member's approximation, and `tryBlockFlow` reads a member's `try` blocks again in each round. In `recursion`, `isOdd` and `isEven` each learn the other's failure only through the cycle, and both get `Effect<boolean, Even | Odd, never>`.
+
+A stays TypeScript's to infer. When it depends on the function's own result, TypeScript reports TS7023 and types the function `any`; on an Effect function that is ES2102 instead, at the function's name, whose fix writes the contract with its success type and `infer` for E and R. A pure recursive function compiles to plain JavaScript, so TS7023 and a plain annotation stay TypeScript's (D67).
+
+The checker caches types, so one it computes while a component is being solved cannot change afterwards. Two such types are checked once the component is solved, and a mismatch is ES2102, because a written contract on the cycle breaks the dependency: a `catch` variable whose `try` block calls into the cycle, and a member's own return type. `es2102-cycle-catch.fail` shows the first; writing the contract of the function the `try` block calls makes it compile.
 
 A provider's members are checked against the service they implement by `providers_check.go`, which reports ES2001 and ES3101 at the member; a member with its own contract is also checked against that contract here. The two checks compare different contracts, so one mismatch is reported once.
 
@@ -861,7 +874,7 @@ A span is named after its function; a class method's span names its class too. A
 - TypeScript types a context-sensitive lambda's parameters from the first candidate that types them, so an overload whose parameter types differ cannot retype them.
 - Accessors, constructors, async functions, and generators are never lowered. `this` and `arguments` inside a lowered arrow function rebind to the generator, and `arguments` and `super` inside a lowered method do not reach the method.
 - A lowered function declaration is a `const`, so a call above it at the module top level hits the temporal dead zone.
-- E and R miss contributions that arrive through a call cycle (no fixed point). A union of Effects is not treated as an Effect.
+- A call cycle through a lambda, such as `Effect.forEach(children, (child) => walk(child))` where `walk` calls back, is solved through the checker's type of the call, which the checker computes once; a cycle whose E grows through it is ES2102. A union of Effects is not treated as an Effect.
 - The synthesized wrappers, such as `yield*` and `Effect.fnUntraced(…)`, have no source positions of their own; the statements and expressions inside them do, so stack traces and breakpoints map to `.es` lines.
 
 ## Differential check against the TypeScript-API prototype

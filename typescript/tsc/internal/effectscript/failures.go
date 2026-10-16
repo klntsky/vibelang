@@ -92,13 +92,19 @@ func (a *analyzer) tryFlow(node *ast.Node) *effectInfo {
 }
 
 // tryBlockFlow is flowOf for the try block of a try statement, remembered:
-// its errors are also the type of the catch clause's variable.
+// its errors are also the type of the catch clause's variable. Inside a call
+// cycle that is being solved, it is read again in each round.
 func (a *analyzer) tryBlockFlow(block *ast.Node) *effectInfo {
 	if info, ok := a.tryBlocks[block]; ok {
 		if info == nil {
 			return &effectInfo{} // being collected; see catchVariableType
 		}
 		return info
+	}
+	if fn := ownerFunction(block); fn != nil {
+		if _, solving := a.approx[fn]; solving {
+			return a.flowOf(block)
+		}
 	}
 	a.tryBlocks[block] = nil
 	info := a.flowOf(block)
