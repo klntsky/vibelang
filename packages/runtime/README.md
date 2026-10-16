@@ -88,8 +88,8 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$control` | Register one kernel operation per generated control method | D2 |
 | `Control` | Mark an abstract control declaration in the prelude | D2, D4 |
 | `wire` | Compose layers in the dependent-first order computed by the compiler | D27 |
-| `Continuation` (type) | Type the clause-local, one-shot continuation token | D16, D17 |
-| `handle` | Install a deep handler and optional return clause | D16 |
+| `Continuation` (type) | Type the clause-local, one-shot continuation token: `Continuation<V, E, H>` | D16, D50 |
+| `handle` | Install a deep handler and optional return clause; a clause for every operation | D16, D50 |
 | `resume` | Resume a captured continuation with a value | D16 |
 | `resumeWith` | Resume with an injected Effect that requires no services | D17 |
 | `abandon` | Consume a continuation and run its cleanup without resuming its body | D16 |
@@ -131,7 +131,14 @@ The extraction preserves the prototype's helper names and execution behavior.
 The compiler orders `wire` arguments with dependents before providers; the
 runtime itself does not inspect or sort Layer dependencies. `$trusted` tests
 `instanceof` against the classes the compiler passes (D51), where the prototype
-matched exception tags and constructor names. The existing `Continuation<X, A, E>` type parameters are retained.
+matched exception tags and constructor names.
+
+`Continuation<V, E, H>` follows D50: `V` is what the perform site receives, `E`
+the operation's declared errors, which `resumeWith`'s program may raise, and `H`
+what `resume` returns. `handle` takes `H` to be the program's own result, which
+is exact when every clause that returns a value of another type does not
+resume; with `onReturn`, `H` is `never`, so a clause's tail `resume` adds
+nothing to the `handle`'s result (D97).
 
 The producer-to-Stream adapter retains the prototype's one-element buffer. The
 stricter zero-capacity handoff described by D26 remains follow-up work. Direct
