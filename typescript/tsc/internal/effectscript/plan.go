@@ -22,6 +22,7 @@ type plan struct {
 	plainPlan
 	trustedPlan
 	tracingPlan
+	scopePlan
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -32,7 +33,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 // planFile asks the checker which functions in file are Effects and which of
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
-	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan()}
+	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -55,6 +56,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					p.planServiceCall(c, call)
 					return false
 				})
+				p.planScopes(a, node)
 			}
 			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertPrograms {
 				p.converts[node] = conversion
@@ -166,7 +168,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn) || hasEscapingThrow(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn)
+	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn) || hasEscapingThrow(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn) || declaresUsing(fn)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
 }

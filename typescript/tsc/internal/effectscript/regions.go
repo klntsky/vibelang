@@ -184,20 +184,27 @@ func (tx *lowering) visitTryStatement(node *ast.Node) *ast.Node {
 }
 
 // regionStatements visits the statements of block as the body of a closure
-// of region r.
+// of region r. A block that declares using or calls fork is a Scope region
+// inside r (scopes_lower.go).
 func (tx *lowering) regionStatements(r *region, block *ast.Node) []*ast.Node {
 	saved := tx.frame
 	tx.frame = &frame{name: saved.name, region: r}
-	statements := tx.Visitor().VisitNodes(block.AsBlock().Statements)
+	var statements []*ast.Node
+	if tx.plan.scopeBlocks[block] {
+		statements = tx.visitScopeBlock(block).AsBlock().Statements.Nodes
+	} else {
+		statements = tx.Visitor().VisitNodes(block.AsBlock().Statements).Nodes
+	}
 	tx.frame = saved
-	return statements.Nodes
+	return statements
 }
 
 // regionFunction makes `Effect.fnUntraced(function* <name>$<role>(binding) {
 // statements })`, a closure of region r whose body is statements, the visited
-// statements of block. binding is a catch clause's variable declaration, or
-// nil. When a jump leaves r, a closure that can reach its end returns $normal
-// there.
+// statements of block. binding is the variable declaration whose name the
+// closure takes as its parameter, a catch clause's or a Scope region's scope,
+// or nil. When a jump leaves r, a closure that can reach its end returns
+// $normal there.
 func (tx *lowering) regionFunction(r *region, role string, binding *ast.Node, block *ast.Node, statements []*ast.Node) *ast.Node {
 	f := tx.Factory()
 	var parameters []*ast.Node

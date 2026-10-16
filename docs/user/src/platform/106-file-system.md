@@ -49,7 +49,6 @@ Calls run sequentially: the write completes before the read starts. Expected I/O
 | `stream`, `sink`, `watch` | Stream bytes, write through a sink, or observe changes |
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { FileSystem } from "effect"
 
 function fileSize(path: string) {

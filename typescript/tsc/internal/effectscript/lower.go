@@ -34,6 +34,9 @@ type lowering struct {
 	frame    *frame              // the generator being emitted while inEffect
 	plain    bool                // visiting the body of an .es function that compiles to plain JavaScript
 	imports  []namedImport       // named imports the lowering adds, such as a @throws class
+
+	// scopes maps each Scope region's block to the name of its Scope (scopes_lower.go).
+	scopes map[*ast.Node]*ast.Node
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
@@ -62,6 +65,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitImportWithDirectVariants(node)
 	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
 		return tx.visitImportOrExport(node)
+	case tx.inEffect && tx.plan.scoped(node):
+		return tx.visitScoped(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
 		return tx.visitEffectValueCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):

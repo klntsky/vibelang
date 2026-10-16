@@ -30,6 +30,9 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 		case n.Kind == ast.KindThrowStatement:
 			n.ForEachChild(visit)
 			info.addError(a.thrownType(n), n.Expression())
+		case n.Kind == ast.KindCallExpression && a.getsScope(n):
+			n.ForEachChild(visit)
+			a.addScoped(info, n) // a fork or acquisition in a Scope region (scopes.go)
 		case n.Kind == ast.KindCallExpression:
 			n.ForEachChild(visit)
 			a.addServiceLookup(info, n)

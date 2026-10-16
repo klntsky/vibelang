@@ -142,19 +142,28 @@ func (a *analyzer) candidateCallee(call *ast.Node) *ast.Node {
 }
 
 // declaresUsing reports whether fn's own body declares a using variable,
-// which acquires an Effect resource, so fn compiles to frames.
+// which acquires an Effect resource, so fn compiles to frames (D54).
 func declaresUsing(fn *ast.Node) bool {
+	return firstUsing(fn) != nil
+}
+
+// firstUsing returns the first using declaration list in fn's own body, or
+// nil.
+func firstUsing(fn *ast.Node) *ast.Node {
+	var found *ast.Node
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		if isFunctionBoundary(n) {
 			return false
 		}
 		if n.Kind == ast.KindVariableDeclarationList && isUsingList(n) {
+			found = n
 			return true
 		}
 		return n.ForEachChild(visit)
 	}
-	return visit(fn.Body())
+	visit(fn.Body())
+	return found
 }
 
 // isUsingList reports whether list, a variable declaration list, declares

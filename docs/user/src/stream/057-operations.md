@@ -40,7 +40,6 @@ function exportRows(source: Stream.Stream<string>) {
 `toAsyncIterableEffect` captures the current services and returns an async iterable for a TypeScript consumer. `toAsyncIterable` is the direct variant for a source with no service requirements. Iteration failures cross as JavaScript errors, so a foreign consumer must map them back into its declared failure channel; conversion itself does not consume the stream.
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { Pull, Stream } from "effect"
 
 function printBatches() {
@@ -139,7 +138,6 @@ const names = Stream.crossWith(
 ## Partitioning and grouping
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { Filter, Stream } from "effect"
 
 function partitionReadings() {
@@ -220,7 +218,6 @@ function formatFields() {
 ## Broadcasting and buffering
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { Stream } from "effect"
 
 function shareReadings() {

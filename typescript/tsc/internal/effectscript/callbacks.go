@@ -34,16 +34,16 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 		switch {
 		case isLambda(node):
 			if a.finalForm(node) == formPlain {
-				if pause := a.firstPause(node); pause != nil {
+				if pause := a.pauseText(file, node); pause != "" {
 					call, _ := ownerCall(node)
-					d := report(c, node, pausingCallback, nodeText(file, pause.Expression()), calleeName(c, file, call))
+					d := report(c, node, pausingCallback, pause, calleeName(c, file, call))
 					note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
 				}
 			}
 		case node.Kind == ast.KindMethodDeclaration && isLowerable(node):
 			if owner := a.plainMemberOwner(node); owner != "" {
-				if pause := a.firstPause(node); pause != nil {
-					report(c, node.Name(), pausingMethod, nodeText(file, node.Name()), nodeText(file, pause.Expression()), owner)
+				if pause := a.pauseText(file, node); pause != "" {
+					report(c, node.Name(), pausingMethod, nodeText(file, node.Name()), pause, owner)
 				}
 			}
 		case node.Kind == ast.KindIdentifier:
@@ -93,6 +93,22 @@ func (a *analyzer) plainMemberOwner(method *ast.Node) string {
 		return nodeText(ast.GetSourceFileOfNode(method), owners[0])
 	}
 	return "its contextual type"
+}
+
+// pauseText names what makes fn compile to frames, for ES4301: the callee of
+// its first call that performs an Effect operation, else its first using
+// declaration, which needs a Scope region (D54), such as "using conn"; ""
+// when neither does.
+func (a *analyzer) pauseText(file *ast.SourceFile, fn *ast.Node) string {
+	if pause := a.firstPause(fn); pause != nil {
+		return nodeText(file, pause.Expression())
+	}
+	if list := firstUsing(fn); list != nil {
+		if declarations := list.AsVariableDeclarationList().Declarations.Nodes; len(declarations) > 0 {
+			return "using " + nodeText(file, declarations[0].Name())
+		}
+	}
+	return ""
 }
 
 // calleeName names what call calls, for a diagnostic: Array.prototype.map

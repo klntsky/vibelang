@@ -5,7 +5,6 @@ A `PubSub` broadcasts values to independent subscribers. Each active subscriber 
 ## Broadcasting to independent subscribers
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { PubSub } from "effect"
 
 function broadcast() {
@@ -44,7 +43,6 @@ A bounded hub backpressures publishers when its buffer is full, so a slow subscr
 ## Managing scoped subscriptions
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { PubSub } from "effect"
 
 function listen(hub: PubSub.PubSub<string>) {
@@ -61,7 +59,6 @@ In Effect 4, consume the returned `PubSub.Subscription` with `PubSub.take` and t
 ## Publishing batches
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { PubSub } from "effect"
 
 function batch() {
@@ -82,7 +79,6 @@ function batch() {
 ## Inspecting size and capacity
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { PubSub } from "effect"
 
 function inspect() {
@@ -107,7 +103,6 @@ Capacity is a plain value, while size and fullness queries run Effects. Size mea
 ## Ending subscriptions and shutting down
 
 ```ts
-// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { PubSub } from "effect"
 
 function ownHub() {
