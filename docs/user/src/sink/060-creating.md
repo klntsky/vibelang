@@ -72,7 +72,7 @@ function immediateResult() {
 }
 
 function rejectInput() {
-  return Stream.run(Stream.make(40, 50), Sink.fail(new Rejected({})))
+  return Stream.run(Stream.make(40, 50), Sink.fail(new Rejected()))
 }
 // Effect<never, Rejected, never>
 ```

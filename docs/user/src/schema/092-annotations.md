@@ -72,6 +72,8 @@ Log the issue tag or stage when diagnostics help. Avoid recording the rejected p
 ## Defining custom schema annotations
 
 ```ts
+import * as Schema from "effect/Schema"
+
 const InternalOnly = Symbol.for("warehouse/schema/internal-only")
 
 declare module "effect/Schema" {

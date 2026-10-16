@@ -62,7 +62,7 @@ function waitForArchive() {
     schedule: delay,
     until: (status) => status._tag === "Ready"
   })
-  if (result._tag === "Pending") throw new PollLimit({})
+  if (result._tag === "Pending") throw new PollLimit()
   return result.path
 }
 // Effect<string, PollLimit, never>
@@ -79,7 +79,7 @@ class Offline extends TaggedError("Offline")<{}> {}
 
 function readWithDeadline() {
   return pipe(
-    () => { throw new Offline({}) },
+    () => { throw new Offline() },
     Effect.retry(Schedule.upTo(Schedule.exponential("80 millis"), { times: 5 })),
     Effect.timeout("350 millis")
   )
@@ -103,7 +103,7 @@ function reconnect() {
   )
   return Effect.retry(() => {
     attempts++
-    if (attempts < 4) throw new Disconnected({})
+    if (attempts < 4) throw new Disconnected()
     return "connected"
   }, phases)
 }

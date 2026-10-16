@@ -23,7 +23,7 @@ import { Equal, Hash } from "effect"
 class GridCell implements Equal.Equal {
   constructor(readonly row: number, readonly column: number) {}
 
-  [Equal.symbol](other: Equal.Equal) {
+  [Equal.symbol](other: Equal.Equal): boolean {
     return other instanceof GridCell &&
       this.row === other.row && this.column === other.column
   }

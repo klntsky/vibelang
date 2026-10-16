@@ -65,7 +65,7 @@ function reserveSlot() {
   let attempts = 0
   return Effect.retry(() => {
     attempts++
-    if (attempts < 3) throw new Busy({})
+    if (attempts < 3) throw new Busy()
     return "reserved"
   }, Schedule.recurs(3))
 }

@@ -9,7 +9,7 @@ import { Result, Stream } from "effect"
 
 class Disconnected extends TaggedError("Disconnected")<{}> {}
 
-const primary = Stream.concat(Stream.make("live-a", "live-b"), Stream.fail(new Disconnected({})))
+const primary = Stream.concat(Stream.make("live-a", "live-b"), Stream.fail(new Disconnected()))
 const recovered = Stream.catch(primary, () => Stream.succeed("cached"))
 
 function readRecovered() {
@@ -127,7 +127,7 @@ class Idle extends TaggedError("Idle")<{}> {}
 const endWhenIdle = Stream.timeout(Stream.never, "3 seconds")
 const failWhenIdle = Stream.timeoutOrElse(Stream.never, {
   duration: "3 seconds",
-  orElse: () => Stream.fail(new Idle({}))
+  orElse: () => Stream.fail(new Idle())
 })
 const defectWhenIdle = Stream.timeoutOrElse(Stream.never, {
   duration: "3 seconds",

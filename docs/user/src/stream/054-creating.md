@@ -28,7 +28,7 @@ import { Stream } from "effect"
 class SourceClosed extends TaggedError("SourceClosed")<{}> {}
 
 const ready = Stream.succeed("ready")
-const closed = Stream.fail(new SourceClosed({}))
+const closed = Stream.fail(new SourceClosed())
 
 function readClosed() {
   try {

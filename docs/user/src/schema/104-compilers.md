@@ -92,6 +92,7 @@ The build Effect finds directly exported schema values in the listed modules and
 Decoding is the default operation. Add encoding, guards, and construction only when needed. Nested dependencies do not need direct exports unless a separate target is required for an otherwise undiscovered graph.
 
 ```ts
+// fragment
 // application.es
 import "./generated/parcel-validators.js"
 import { Parcel } from "./schemas/Parcel.es"

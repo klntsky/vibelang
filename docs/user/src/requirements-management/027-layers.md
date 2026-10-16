@@ -156,7 +156,7 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 abstract class Banner {
   abstract text(title: string): Effect<string, never, never>
 
-  static make() {
+  static make(): Effect<Banner, never, Settings> {
     const settings = Settings()
     return { text: (title) => `${settings.prefix}: ${title}` }
   }

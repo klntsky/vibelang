@@ -62,7 +62,7 @@ class Rejected extends TaggedError("Rejected")<{}> {}
 function releaseOnFailure() {
   const mutex = Semaphore.make(1)
   try {
-    pipe(() => { throw new Rejected({}) }, Semaphore.withPermits(mutex, 1))
+    pipe(() => { throw new Rejected() }, Semaphore.withPermits(mutex, 1))
   } catch (error) {
     Effect.logWarning("first job rejected", error._tag)
   }

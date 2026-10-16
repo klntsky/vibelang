@@ -29,7 +29,7 @@ class DocumentRevision implements Equal.Equal {
     readonly observedBy: string
   ) {}
 
-  [Equal.symbol](other: Equal.Equal) {
+  [Equal.symbol](other: Equal.Equal): boolean {
     return other instanceof DocumentRevision &&
       this.documentId === other.documentId &&
       this.revision === other.revision
