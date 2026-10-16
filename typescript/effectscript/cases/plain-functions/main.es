@@ -1,5 +1,6 @@
 // Functions that perform no Effect operation compile to plain JavaScript
-// (design D10), and a call to one is a plain call.
+// (design D10). EffectScript callers call them inline through their $direct
+// variant; TypeScript callers see an Effect, the one calling convention.
 import { Effect } from "effect"
 
 const order: string[] = []
@@ -41,15 +42,16 @@ function area(w: number, h: number) {
   return scaled
 }
 
-// A pure function and a lambda that calls one are plain where JavaScript
-// expects a plain function.
+// D9: a pure function passed where JavaScript expects a plain function is its
+// $direct variant; where Effect expects an Effect function, its Effect form.
 function maps(xs: ReadonlyArray<number>) {
   const doubled = xs.map(double)
   const viaLambda = xs.map((x) => double(x) + 1)
-  return { doubled, viaLambda }
+  const viaEffect = Effect.forEach(xs, double)
+  return { doubled, viaLambda, viaEffect }
 }
 
-// expect-result: {"sum":500500,"parity":["even","odd"],"area":24,"order":["w","h"],"maps":{"doubled":[2,4],"viaLambda":[3,5]}}
+// expect-result: {"sum":500500,"parity":["even","odd"],"area":24,"order":["w","h"],"maps":{"doubled":[2,4],"viaLambda":[3,5],"viaEffect":[2,4]}}
 export function main() {
   return {
     sum: sumTo(1000),

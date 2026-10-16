@@ -11,5 +11,5 @@ const program: Effect.Effect<number> = Effect.succeed(handle(4))
 
 // expect-result: 40
 export function main() {
-  return program
+  return program()
 }

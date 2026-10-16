@@ -19,6 +19,7 @@ type plan struct {
 	converts map[*ast.Node]conversion // function values converted where they are passed
 	prelude  []string                 // prelude names the file uses as values (prelude.go)
 	servicePlan
+	plainPlan
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -29,7 +30,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 // planFile asks the checker which functions in file are Effects and which of
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
-	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan()}
+	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan()}
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -56,6 +57,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertPrograms {
 				p.converts[node] = conversion
 			}
+			p.planPlain(a, node)
 			p.planServiceClass(c, node)
 			node.ForEachChild(visit)
 			return false
@@ -112,7 +114,10 @@ type analyzer struct {
 
 	conversions map[*ast.Node]*valueState // argument expressions that convert (conversions.go)
 
-	plain map[*ast.Node]plainState // function declarations that compile to plain JavaScript (plain.go)
+	// Plain JavaScript functions (plain.go).
+	plain                 map[*ast.Node]plainState // function declarations that compile to plain JavaScript
+	programEffect         *checker.Type            // effect's Effect interface, found in the program's files
+	programEffectSearched bool
 }
 
 type analyzerKey struct{}
@@ -170,6 +175,12 @@ func (a *analyzer) runs(call *ast.Node) bool {
 		return false
 	}
 	if fn := implementationOf(sig.Declaration()); fn != nil && isLowerable(fn) {
+		if a.isPlainFunction(fn) {
+			// A plain function's call runs inline, through its $direct
+			// variant when it has one, and runs its Effect form only where
+			// that variant is out of reach.
+			return a.isSplittable(fn) && a.directReferenceOf(call.Expression(), fn) == nil
+		}
 		return a.isEffect(fn)
 	}
 	return isEffectType(a.checker, a.checker.GetReturnTypeOfSignature(sig))

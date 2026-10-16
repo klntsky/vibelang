@@ -1,0 +1,22 @@
+// An .es module calls another module's plain functions inline through their
+// $direct variants, by named import, renamed import, or namespace import, and
+// passes them where JavaScript expects a plain function (D9, D10).
+import { Effect } from "effect"
+import { double, square as sq } from "./math.es"
+import * as M from "./math.es"
+
+function quadruple(n: number) {
+  return double(double(n))
+}
+
+// expect-result: {"quadruple":12,"squares":[1,4,9],"renamed":16,"namespace":[14,25],"viaEffect":[2,4]}
+export function main() {
+  Effect.sleep("1 millis")
+  return {
+    quadruple: quadruple(3),
+    squares: [1, 2, 3].map(sq),
+    renamed: sq(4),
+    namespace: [M.double(7), M.square(5)],
+    viaEffect: Effect.forEach([1, 2], double)
+  }
+}

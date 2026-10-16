@@ -26,6 +26,7 @@ const (
 	convertNone     conversion = iota
 	convertProgram             // Effect.suspend(value)
 	convertPrograms            // $programs(value), an array or record of programs
+	convertDirect              // f$direct, the plain variant of a function that compiles to plain JavaScript
 	convertRejected            // a function that can pause where a plain function is expected
 )
 
@@ -60,7 +61,7 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 		a.conversions[node] = s
 	}
 	if conv, ok := s.byCandidate[key]; ok {
-		if conv == convertProgram || conv == convertPrograms {
+		if conv == convertProgram || conv == convertPrograms || conv == convertDirect {
 			return s.types[key]
 		}
 		return t
@@ -131,7 +132,14 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 			return convertProgram, effect
 		}
 	case position.plainFn && !position.effectFn:
-		if fn := esFunctionOf(a.checker, node); fn != nil && a.isEffect(fn) {
+		fn := esFunctionOf(a.checker, node)
+		switch {
+		case fn == nil:
+		case a.isPlainFunction(fn) && !a.isSplittable(fn):
+			// Annotated with a plain return type: the function itself is plain.
+		case a.isPlainFunction(fn) && a.directReferenceOf(node, fn) != nil:
+			return convertDirect, a.plainTypeOf(t)
+		case a.isEffect(fn) || a.isPlainFunction(fn):
 			return convertRejected, t
 		}
 	case position.elements.program:
@@ -206,13 +214,14 @@ func (a *analyzer) finalConversion(node *ast.Node) conversion {
 	return s.first
 }
 
-// esFunctionOf returns the .es function that node, an identifier, names: a
-// function declaration, or a variable initialized with a lambda.
+// esFunctionOf returns the .es function that node, an identifier or a
+// namespace member such as M.double, names: a function declaration, or a
+// variable initialized with a lambda.
 func esFunctionOf(c *checker.Checker, node *ast.Node) *ast.Node {
-	if !ast.IsIdentifier(node) {
+	if !ast.IsIdentifier(node) && !(ast.IsPropertyAccessExpression(node) && ast.IsIdentifier(node.Name())) {
 		return nil
 	}
-	symbol := c.GetResolvedSymbol(node)
+	symbol := c.GetSymbolAtLocation(node)
 	if symbol == nil {
 		return nil
 	}

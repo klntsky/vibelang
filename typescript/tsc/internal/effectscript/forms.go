@@ -283,6 +283,9 @@ func (a *analyzer) effectTypeOf(fn *ast.Node, success *checker.Type) *checker.Ty
 	}
 	effect := a.effectInterfaceFor(fn, info)
 	if effect == nil {
+		effect = a.programEffectInterface()
+	}
+	if effect == nil {
 		effect = a.effectInterface
 	}
 	if effect == nil {

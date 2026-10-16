@@ -8,9 +8,11 @@ import (
 // callExpressionType gives a call that runs an Effect the type of the
 // Effect's success value. Inside a function that the lowering can turn into
 // an Effect, `const name = findName(id)` has type string, not
-// Effect<string>, because the call runs. Every other call keeps its type.
+// Effect<string>, because the call runs. A call that runs a plain function
+// inline through its $direct variant has its success type anywhere in an .es
+// file (plain.go). Every other call keeps its type.
 func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *checker.Type {
-	if !ast.IsCallExpression(call) || !inLowerableBody(call) {
+	if !ast.IsCallExpression(call) || !inLowerableBody(call) && analyzerFor(c).directCallee(call) == nil {
 		return t
 	}
 	if success := successType(c, t); success != nil {

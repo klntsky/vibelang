@@ -43,6 +43,9 @@ func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *tra
 }
 
 func (tx *lowering) visit(node *ast.Node) *ast.Node {
+	if ref := tx.plan.directRefs[node]; ref != nil {
+		return tx.visitDirectReference(node, ref)
+	}
 	if conversion := tx.plan.conversionOf(node); conversion != convertNone {
 		return tx.convert(node, conversion)
 	}
@@ -53,6 +56,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	switch {
 	case node.Kind == ast.KindSourceFile:
 		return tx.visitSourceFile(node.AsSourceFile())
+	case node.Kind == ast.KindImportDeclaration && len(tx.plan.directImports[node]) != 0:
+		return tx.visitImportWithDirectVariants(node)
 	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
 		return tx.visitImportOrExport(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
@@ -77,6 +82,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitPlainThrowStatement(node)
 	case tx.plain && node.Kind == ast.KindCatchClause:
 		return tx.visitPlainCatchClause(node)
+	case node.Kind == ast.KindFunctionDeclaration && tx.plan.directs[node]:
+		return tx.visitPlainFunctionDeclaration(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
 	case node.Kind == ast.KindMethodDeclaration && tx.plan.isEffect(node):
