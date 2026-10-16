@@ -18,6 +18,8 @@ type PluginImport struct {
 // CompilerOptions contains the compiler options exposed by the API.
 type CompilerOptions struct {
 	_                                         noCopy
+	// EffectScript is compilerOptions.effectscript. It is added by hand, not generated.
+	EffectScript *EffectScriptOptions `json:"effectscript,omitzero"`
 	AllowJs                                   Tristate                                  `json:"allowJs,omitzero"`
 	AllowArbitraryExtensions                  Tristate                                  `json:"allowArbitraryExtensions,omitzero"`
 	AllowImportingTsExtensions                Tristate                                  `json:"allowImportingTsExtensions,omitzero"`
@@ -165,6 +167,7 @@ type CompilerOptions struct {
 // Clone creates a shallow copy of the CompilerOptions.
 func (options *CompilerOptions) Clone() *CompilerOptions {
 	return &CompilerOptions{
+		EffectScript:                              options.EffectScript,
 		AllowJs:                                   options.AllowJs,
 		AllowArbitraryExtensions:                  options.AllowArbitraryExtensions,
 		AllowImportingTsExtensions:                options.AllowImportingTsExtensions,
@@ -307,6 +310,9 @@ func (options *CompilerOptions) Equals(other *CompilerOptions) bool {
 		return true
 	}
 	if options == nil || other == nil {
+		return false
+	}
+	if !options.EffectScript.Equals(other.EffectScript) {
 		return false
 	}
 	if options.AllowJs != other.AllowJs {

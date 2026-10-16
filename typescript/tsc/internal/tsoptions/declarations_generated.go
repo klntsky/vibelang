@@ -245,6 +245,14 @@ var commonOptionsWithBuild = []*CommandLineOption{
 }
 
 var optionsForCompiler = []*CommandLineOption{
+	// effectscript is added by hand, not generated; see effectscript.go.
+	{
+		Name:            "effectscript",
+		Kind:            CommandLineOptionTypeObject,
+		IsTSConfigOnly:  true,
+		Category:        diagnostics.Language_and_Environment,
+		extraValidation: extraValidationEffectScript,
+	},
 	{
 		Name:                     "all",
 		Kind:                     CommandLineOptionTypeBoolean,
