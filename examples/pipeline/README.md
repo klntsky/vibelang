@@ -12,7 +12,7 @@ bun run build
 bun run start
 ```
 
-Features: `function*`, `yield`, producer-to-Stream conversion, and stream iteration.
+Features: `function*`, `yield`, a producer as a Stream, and `for...of` over a Stream.
 The consuming loop in Effect TypeScript is:
 ```ts
 const consume = Stream.runForEach(alerts, (alert) =>
@@ -20,6 +20,8 @@ const consume = Stream.runForEach(alerts, (alert) =>
 )
 ```
 
-EffectScript converts the producer when `Stream.filter` expects a Stream.
-`Stream.take` closes upstream before delivering its final buffered element,
-so the closure message precedes the final alert in the output fixture.
+A producer is a Stream, so `Stream.filter` takes it directly. The producer
+hands over each reading only when the stream pulls it, so it never reads
+ahead. After the second alert, the loop's next pull ends `Stream.take`, which
+closes the stream and runs the producer's finalizer, so the closure message
+follows the final alert in the output fixture.
