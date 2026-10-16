@@ -1,0 +1,9 @@
+node_modules
+.DS_Store
+*.db
+*.db-shm
+*.db-wal
+.cache/
+docs/user/site/
+*.tgz
+experiments/scratch-agent-a/v3pkg/
