@@ -14,9 +14,12 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 | [pipeline](pipeline/) | A producer flowing through Stream operators and a `for...of` consumer. |
 
 Set up the repository's local compiler and runtime first using the repository
-setup instructions. The manifests resolve `@effectscript/runtime` and
-`@effectscript/compiler` from `../../packages`, so run repository setup before
-installing the examples.
+setup instructions. The manifests install `@effectscript/compiler` from
+`../../packages/compiler` and `@effectscript/runtime` from the tarball that setup
+packs, `../../packages/runtime/effectscript-runtime.tgz`, so the runtime and the
+example load one copy of `effect`. Run repository setup before installing the
+examples, and after rerunning it, run `bun update @effectscript/runtime` in an
+example you installed before.
 Then, in an example directory, run `bun install`,
 `bun run build`, and `bun run start`. The users, http-api, and resilience
 projects also have `bun run test`; Vitest compiles their `.es` sources

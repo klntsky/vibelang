@@ -9,7 +9,7 @@
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "@effectscript/runtime": "file:../../packages/runtime"
+    "@effectscript/runtime": "file:../../packages/runtime/effectscript-runtime.tgz"
   },
   "devDependencies": {
     "@effectscript/compiler": "file:../../packages/compiler"
