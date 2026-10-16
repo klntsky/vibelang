@@ -1,0 +1,32 @@
+// expect: ES4401
+// D5: a bare call to a plain TypeScript function inside a function is ES4401;
+// a boundary, a trusted contract, or the module's top level (D51) allows it.
+import { Effect } from "effect"
+import { fetchName, formatName, parseHidden, shout, type User } from "./helpers.ts"
+
+export function card(user: User) {
+  return formatName(user)
+}
+
+export function later(id: string) {
+  return fetchName(id)
+}
+
+export function cards(users: ReadonlyArray<User>) {
+  return users.map((user) => formatName(user))
+}
+
+export function hidden(text: string) {
+  return parseHidden(text)
+}
+
+// Allowed: a trusted contract, a boundary, and the module's top level.
+export function loud(text: string) {
+  return shout(text)
+}
+
+export function bounded(user: User) {
+  return Effect.try(() => formatName(user))
+}
+
+export const ada = formatName({ name: "Ada" })

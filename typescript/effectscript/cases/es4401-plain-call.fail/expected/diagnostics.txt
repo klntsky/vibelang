@@ -1,0 +1,4 @@
+main.es(8,10): error ES4401
+main.es(12,10): error ES4401
+main.es(16,30): error ES4401
+main.es(20,10): error ES4401
