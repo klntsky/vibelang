@@ -15,7 +15,16 @@ function sample() {
 
 Install `@effectscript/compiler` as a dev dependency. Its `esc --lsp --stdio` command starts the language server from the project's compiler, with one server for `.es` and `.ts` files.
 
-In VS Code, install `effectscript.effectscript`. It registers `*.es` as the `effectscript` language, starts the project's server, and sets `typescript.validate.enable` to `false` in workspaces containing `.es` files so the built-in server does not duplicate diagnostics. Other editors configure their LSP client to run `esc --lsp --stdio` for `*.es` and `*.ts`, use `tsconfig.json` as the root marker, and turn off their other TypeScript server for the project. JetBrains IDEs can use LSP4IJ.
+For VS Code and Cursor, run `sh scripts/setup.sh` in the repository. When
+`editors/vscode` is available, setup builds a `.vsix` and prints its install
+command. Install that local file, then open the application directory. The
+extension is not published to the marketplace. If setup reports that the editor
+package is absent, rerun setup after updating the checkout.
+
+Other editors configure their LSP client to run `esc --lsp --stdio` for `*.es`
+and `*.ts`, with `tsconfig.json` as the root marker. Turn off the other TypeScript
+server for this project to avoid duplicate diagnostics. JetBrains IDEs can use
+LSP4IJ.
 
 For GitHub highlighting, add `*.es linguist-language=TypeScript` to `.gitattributes`; otherwise GitHub highlights `.es` as JavaScript. Effect's own `@effect/tsgo` tooling remains for `.ts` files and does not check EffectScript semantics.
 
@@ -33,12 +42,13 @@ function accepted(value: number) {
 
 Inspect `A`, `E`, and `R` when changing a function. A local call returns the success value, while the function's complete contract also records escaping failures and unmet services. Generated declarations expose that complete Effect contract to TypeScript consumers.
 
-Hover over a function to see its inferred `Effect<A, E, R>` and control class; hover over a call to see its success value's type. The control class records whether the function computes directly, performs synchronous work, can pause, or can capture a continuation.
+Hover over a function to see its inferred `Effect<A, E, R>`; hover over a call to see its success value's type. Separate control-class hover text is a D33 design target, not a shipped feature.
 
 ## Diagnostics, completions, and refactors
 
 ```ts
-// Deliberately invalid: Rejected escapes a contract promising no failures.
+// expect-error: ES2001
+// Rejected escapes a contract promising no failures.
 function promised(value: number): Effect<number, never, never> {
   return accepted(value)
 }
@@ -46,11 +56,14 @@ function promised(value: number): Effect<number, never, never> {
 
 The language design diagnoses this as `ES2001`. Handle `Rejected` inside the function or widen its contract. Related checks include unmet services (`ES2002`), running a program at module top level (`ES1001`), and passing a suspending callback to synchronous JavaScript (`ES4301`).
 
-Inside functions, plain foreign calls need an explicit boundary such as `Effect.try` or `Effect.tryPromise`, or a trusted declaration (`ES4401`). Effect's own packages are trusted. Platform calls are rejected with an Effect module suggestion (`ES4402`), and uncontrolled time or randomness reads have their own diagnostic (`ES4403`). A runner inside code a fiber runs is `ES1005`, and a `catch` that can never receive an expected failure is `ES2004`, a warning by default.
+Inside functions, plain foreign calls need an explicit boundary such as `Effect.try` or `Effect.tryPromise`, or a trusted declaration (`ES4401`). Effect's own packages are trusted. Running a platform API is rejected with an Effect module suggestion (`ES4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`ES4403`). A runner inside code a fiber runs is `ES1005`, and a `catch` that can never receive an expected failure is `ES2004`, a warning by default.
 
-Completions include service members, prelude names, and the error classes a `catch` can receive. Quick fixes cover diagnostics with mechanical fixes, including converting generator code, adding a missing contract, wrapping an untrusted call, and replacing a platform call with its Effect module.
-
-Refactors convert `Effect.gen` or `Effect.fn` functions into EffectScript functions, convert `Context.Service` classes to abstract service classes, scaffold service implementations as object literals or `implements` classes, and write inferred contracts as annotations. Whole-function conversion is offered only when every construct has an EffectScript form. Do not apply a TypeScript refactor that introduces `Effect.gen` and `yield*` inside `.es`.
+The server exposes TypeScript completions through the EffectScript checker,
+including service member types. D33 also calls for catch-specific completions,
+mechanical ES quick fixes, and migration refactors. Those features are not
+implemented by the current compiler. Diagnostic messages include suggested
+repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen`
+or `yield*` inside `.es`.
 
 ## Configure compiler checks
 
@@ -60,7 +73,7 @@ function checked(value: number): Effect<number, Rejected, never> {
 }
 ```
 
-A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks the success and failure channels and infers requirements. All three slots are required in a return annotation with a body. ES2003 offers explicit `never` or `infer` fixes for omitted slots. Configure the compiler in `tsconfig.json`:
+A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks the success and failure channels and infers requirements. All three slots are required in a return annotation with a body. For omitted slots, ES2003 suggests explicit `never` or `infer` contracts in its diagnostic text. Configure the compiler in `tsconfig.json`:
 
 ```json
 {
@@ -79,17 +92,33 @@ Only ES2004 and ES4403 can be set to `"error"`, `"warning"`, or `"off"`; the val
 
 ## Lint and build integration
 
-The compiler owns type and language diagnostics in the terminal, editor, and Vite overlay. Oxlint parses `.es` as TypeScript and runs syntactic lint rules there. Its type-aware mode, tsgolint, skips `.es` because its embedded TypeScript checker models different call semantics.
+Run `esc --noEmit` for type checking. The compiler owns type and language
+diagnostics in the terminal, editor, and Vite overlay. The local
+`@effectscript/vite` package supports Vite 7 and 8 and Vitest 5. It runs one
+whole-project compiler subprocess on the first request and after edits, serves
+JavaScript and source maps, and invalidates loaded `.es` modules and their
+importers. It does not use `esc --api`.
 
-Install `@effectscript/oxlint-config` as a dev dependency and extend it in `.oxlintrc.json`:
+```ts
+// TypeScript (.ts)
+// vitest.config.ts
+import { defineConfig } from "vitest/config"
+import effectscript from "@effectscript/vite"
 
-```json
-{
-  "extends": ["@effectscript/oxlint-config"]
-}
+export default defineConfig({
+  plugins: [effectscript()],
+  test: { include: ["src/**/*.test.es"] }
+})
 ```
 
-This config disables type-aware rules on `.es` and syntactic rules whose premise changes, such as `require-yield`. Vite Plus uses `@effectscript/vite` for development, builds, and tests, and this Oxlint config for lint. Run `esc --noEmit` for type checking. Each diagnostic has one owner, so reports need no deduplication.
+The starter already includes this configuration. `bun run test` checks and
+compiles source tests without a prior build. See
+[TestClock](../testing/063-testclock.md) for tests with virtual time.
+
+D35 assigns syntactic linting to Oxlint and reserves type-aware rules for `.ts`
+files. `@effectscript/oxlint-config` and a tested Vite Plus integration are not
+shipped. Keep type-aware linting off `.es`: a stock TypeScript checker models
+different call semantics.
 
 ## Debugging in editors
 
@@ -101,7 +130,7 @@ function tracedSample() {
 
 Add spans where you need an execution boundary to appear in telemetry. EffectScript functions are untraced by default; `tracing` can add spans to exported functions or all functions that compile to frames. Effect's `DevTools` layer from `effect/devtools`, with its VS Code extension, shows fibers and logical span stacks across suspensions.
 
-`esc` with `sourceMap` enabled and the Vite plugin produce maps composed from `.es` through generated TypeScript to JavaScript. Debuggers that read standard source maps map breakpoints and paused frames to `.es`: VS Code's JavaScript debugger, Chrome and Edge DevTools, and JetBrains IDEs.
+`esc` with `sourceMap` enabled and the Vite plugin produce maps from emitted JavaScript directly to `.es` positions. Debuggers that read standard source maps map breakpoints and paused frames to `.es`: VS Code's JavaScript debugger, Chrome and Edge DevTools, and JetBrains IDEs.
 
 Compiled functions and producers retain their source names; clauses use the operation member's name, and region closures use names such as `sample$try`, `$catch`, `$finally`, and `$using`. The JavaScript stack shows the active frame above Effect's run loop. A paused continuation is a heap value, so its frames are absent while a clause runs and become active again when it resumes. Stepping over a pausing call can enter the run loop; set a breakpoint on the next source line. Use spans for the logical call chain, and include the Effect version, inferred contract, and diagnostic when reporting a problem.
 

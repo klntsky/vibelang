@@ -2,6 +2,32 @@
 
 `TestClock` replaces live time with time controlled by your test. Use it to check sleeps, timeouts, recurring work, and clock reads without waiting for wall-clock time. Import it from `effect/testing`, and use `Clock` rather than JavaScript time reads in application code.
 
+## Configure the test runner
+
+The [starter](../getting-started/004-installation.md) includes Vitest 5.0.5,
+`@effect/vitest` 4.0.5, and the local `@effectscript/vite` plugin. Run
+`bun run test` to compile and execute `src/**/*.test.es` directly. Tests need no
+prior `dist/` build. Keep configuration in TypeScript:
+
+```ts
+// TypeScript (.ts)
+// vitest.config.ts
+import { defineConfig } from "vitest/config"
+import effectscript from "@effectscript/vite"
+
+export default defineConfig({
+  plugins: [effectscript()],
+  test: { include: ["src/**/*.test.es"] }
+})
+```
+
+Register `it.effect` at the top level or inside `describe`. The callback is a
+program, so EffectScript calls inside it run. For assertions from a foreign
+library, use an explicit boundary, for example
+`Effect.sync(() => assert.strictEqual(actual, expected))`. Assertion failures
+are defects and point to the original `.es` line through the plugin's maps.
+The examples below use a local `check` helper instead.
+
 ## Controlling virtual time
 
 ```ts

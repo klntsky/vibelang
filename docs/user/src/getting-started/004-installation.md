@@ -24,7 +24,7 @@ sh scripts/setup.sh
 
 Setup builds `packages/compiler/native/esc`, installs and builds the runtime,
 and copies the starter into `~/.bun-create/effectscript`. It writes absolute
-`file:` dependencies pointing to this checkout's compiler and runtime packages.
+`file:` dependencies pointing to this checkout's compiler, runtime, and Vite packages.
 Keep the checkout at that path. Rerun setup after moving or updating it.
 Run `bun install --force` in existing projects after rebuilding to refresh their
 local package copies. If you move the checkout, update those projects' `file:`

@@ -27,7 +27,7 @@ Recovered from EmptyName
 `src/main.es` declares the abstract `Greeter` service, supplies its live layer,
 recovers a typed failure with `try`/`catch`, and starts the program with
 `NodeRuntime.runMain`. `src/greeting.test.es` uses `it.effect` to test success
-and recovery. Tests run from compiled JavaScript in `dist/`.
+and recovery. Vitest compiles `src/**/*.test.es` through `@effectscript/vite`; tests need no prior build.
 
 Run `bun run dev` to compile on changes and restart Node when output changes.
 Press Ctrl+C to stop both watchers. Open this project in VS Code or Cursor after

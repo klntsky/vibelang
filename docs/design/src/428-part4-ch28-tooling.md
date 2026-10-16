@@ -1,93 +1,138 @@
 ### 28. Tooling
 
 ```sh
-npm install effect@4.0.5 @effectscript/runtime
-npm install --save-dev @effectscript/compiler
-npx esc --noEmit        # check every .ts and .es file in the program
-npx esc                 # check, then emit .js, .d.ts, and source maps
-npx esc --watch         # rebuild on change
+# From the local EffectScript checkout:
+sh scripts/setup.sh
+bun create effectscript my-app --no-git
+cd my-app
+bun run build
+bun run start
+bun run test
+bun run dev
+bun x --no-install esc --noEmit
 ```
 
-```json
-// tsconfig.json
-{
-  "compilerOptions": {
-    "strict": true,
-    "module": "nodenext",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "effectscript": {
-      "diagnostics": { "ES4403": "warning" },
-      "tracing": "exported"
-    }
-  },
-  "include": ["src"]
-}
-```
+This private preview installs from the repository. The `@effectscript` packages
+are not published to npm, and the extension is not on the marketplace (D58,
+D60). D30's per-platform package distribution remains a release target.
 
-The compiler is one native binary, `esc`, the fork of TypeScript's `tsc` (Chapter 27). It reads the same `tsconfig.json`, accepts every `tsc` flag, and checks `.ts` and `.es` files as one program. The name is EffectScript, the extension is `.es`, and package names use the `@effectscript` scope (D58). The compiler source is `typescript/` in the same private repository as the spec, runtime, and tools (D60).
+Setup requires Go, Bun, and Node on PATH. The tested versions are Go 1.26
+(with Go 1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
+`packages/compiler/native/esc`, installs and builds the runtime, and copies
+`templates/app` into `~/.bun-create/effectscript`. The installed template uses
+absolute `file:` dependencies on this checkout's compiler, runtime, and Vite
+packages. Keep the checkout available; after updating it, rerun setup and
+`bun install --force` in existing projects to refresh package copies.
+
+Setup links `~/.local/bin/esc` when that directory is already on PATH and no
+unrelated executable occupies the path. Project scripts find their own compiler
+without that global link. `ESC_BINARY` overrides the launcher's native binary.
+Setup preserves unrelated templates and never edits shell configuration.
 
 #### Packages and versions
 
-| Package | What it holds | Install as |
-| --- | --- | --- |
-| `@effectscript/compiler` | The `esc` binary, through per-platform optional dependencies (`@effectscript/compiler-darwin-arm64`, `-linux-x64`, and so on), as `typescript@7` ships `tsc` | A dev dependency |
-| `@effectscript/runtime` | The kernel and the helpers generated code imports: `handle`, `tailResume`, `catchExpected`, `suspend`, `handoff`, `Control`, the key helpers `serviceKey`, `controlKey`, and `referenceKey`, `Yield`, and the producer adapter | A dependency |
-| `@effectscript/vite` | The Vite plugin | A dev dependency, for Vite projects |
-| `@effectscript/oxlint-config` | The Oxlint settings for `.es` files | A dev dependency, for Oxlint users |
-| `effectscript.effectscript` | The VS Code extension | From the VS Code marketplace |
-
-| Component | v0 supports |
+| Package | Current implementation |
 | --- | --- |
-| `effect` | 4.0.5 exactly. The runtime checks the version when it loads and refuses any other, because the kernel reads Effect internals (Chapter 25) |
-| TypeScript | The compiler is TypeScript 7.1's checker (Chapter 27), so `.ts` files in the program check as TypeScript 7.1 checks them. Emitted declarations are ordinary `.d.ts` files that TypeScript 7 reads |
-| JavaScript runtimes | Wherever `effect@4.0.5` and its platform packages run. The evidence in Part III was gathered on Node.js 26.10 and Bun 1.4.1 |
-| Building the compiler | Go 1.27 |
+| `@effectscript/compiler` | Node launcher forwarding arguments, streams, signals, and exit status to its package-relative `native/esc` |
+| `@effectscript/runtime` | Continuation kernel, prelude, and generated-code helpers; see its README for the ABI |
+| `@effectscript/vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
+| VS Code extension | Local `.vsix` built by setup when `editors/vscode` is available |
 
-`esc` adds no commands of its own. `esc` checks and emits, `esc --noEmit` checks, `esc --watch` and `esc -b` rebuild, `esc --lsp --stdio` serves editors, and `esc --api` serves build tools.
+The starter pins `effect`, `@effect/platform-node`, and `@effect/vitest` to
+4.0.5, and Vitest to 5.0.5. The runtime checks Effect's version on load. The
+compiler is the TypeScript 7.1 checker, with ordinary TypeScript semantics for
+`.ts` files (D30). Its emitted declarations are ordinary `.d.ts` files.
 
-#### Building
+`esc` accepts TypeScript compiler flags: bare `esc` checks and emits,
+`--noEmit` checks, `--watch` watches, and `-b` builds references. The same native
+binary exposes `--lsp --stdio` and the upstream `--api` transport. The current
+Vite plugin uses subprocess compilation instead of the API transport (D31).
 
-Libraries and servers build with `esc` or `esc --watch` and run the emitted JavaScript. Applications built with Vite add the plugin:
+#### Building and testing
+
+The starter's configuration emits Node ESM into `dist/`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmitOnError": true,
+    "rewriteRelativeImportExtensions": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["src/**/*.es"]
+}
+```
+
+`build` runs `esc`. `start` builds and runs Node with `--enable-source-maps`.
+`dev` builds once, then runs the compiler watcher and Node output watcher;
+Ctrl+C stops both. Libraries can add `declaration` and `declarationMap` to
+emit declarations. The starter does not enable them.
+
+Import local sources as `./welcome.es` or `./format.ts`. The compiler emits
+`.js` specifiers and declarations that name `.js` outputs (D31). In `.ts`,
+`./welcome.js` resolves to `welcome.es`. Only `.es` sources are selected by the
+starter's include glob; imported `.ts` integrations also join the program.
+
+The starter tests source files through the Vite plugin:
 
 ```ts ts
-// vite.config.ts
-import { defineConfig } from "vite"
+// TypeScript (.ts)
+// vitest.config.ts
+import { defineConfig } from "vitest/config"
 import effectscript from "@effectscript/vite"
 
 export default defineConfig({
-  plugins: [effectscript()]
+  plugins: [effectscript()],
+  test: { include: ["src/**/*.test.es"] }
 })
 ```
 
-- **Compilation.** The plugin starts one `esc --api` process for the whole program and asks it for each `.es` module Vite requests, so types and contracts come from the same checker as `esc`.
-- **Source maps.** Each module is served with a map composed from `.es` through the generated TypeScript to JavaScript.
-- **Diagnostics.** Compiler errors print in the terminal and appear in Vite's error overlay, at `.es` spans.
-- **Hot reload.** An edit re-emits the module. If its exported contracts, control classes, or `$direct` variants changed, its importers are invalidated too, because their generated code depends on those facts (Chapter 15).
+Register `it.effect` from `@effect/vitest` at the top level or in `describe`
+(D38). Keep foreign assertions inside a boundary such as
+`Effect.sync(() => assert.strictEqual(actual, expected))`. `bun run test`
+needs no prior build and maps assertion failures to `.es` lines.
 
-Module specifiers name source files. In `.es`, `import { welcome } from "./welcome.es"` and `import { formatName } from "./format.ts"`; the emitted JavaScript imports `./welcome.js` and `./format.js`. TypeScript files import an EffectScript module as `./welcome.js`, which the compiler resolves to `welcome.es` as it resolves `.js` to `.ts`. A published library ships `.js` and `.d.ts` files with the metadata tags of Chapter 27, so a consumer needs no compiler unless it writes `.es` itself.
+For a Vite application, add the same plugin to `vite.config.ts`. The plugin
+runs one compiler subprocess for the project on the first request and after
+source changes. Requests share compilation. It emits JavaScript and source
+maps into its own directory under `node_modules/.effectscript/`, reports errors
+in the terminal and overlay, and invalidates all loaded `.es` modules and their
+importers after an edit. It does not compare exported contracts or use the
+API transport yet. Its README documents `project` and `compiler` overrides.
 
 #### The editor
 
-The language server is the fork's own, from the same binary: `esc --lsp --stdio`, taken from the project's `@effectscript/compiler`. It serves the `.es` and `.ts` files of the program, so one server owns both.
+The server is the fork's own, `esc --lsp --stdio`, from the project's compiler
+(D32). Setup builds a local `.vsix` when the editor package is present and
+prints install commands:
 
-| Editor | Setup |
-| --- | --- |
-| VS Code | Install `effectscript.effectscript`. It registers the `effectscript` language for `*.es`, starts `esc --lsp --stdio`, and sets `"typescript.validate.enable": false` in workspaces that contain `.es` files, so VS Code's built-in TypeScript server does not report the same `.ts` errors a second time |
-| Neovim, Helix, Zed, Emacs, JetBrains IDEs (through LSP4IJ) | Configure the editor's LSP client to run `esc --lsp --stdio` for `*.es` and `*.ts`, with `tsconfig.json` as the root marker, and turn off the editor's other TypeScript server for the project |
-| GitHub | Add `*.es linguist-language=TypeScript` to `.gitattributes`; GitHub otherwise highlights `.es` as JavaScript |
+```sh
+code --install-extension /path/printed/by/setup/effectscript-0.0.1.vsix
+# Or use cursor --install-extension with the same path.
+```
 
-v0 ships these editor features:
+Setup does not install the extension automatically. If it reports the editor
+package is absent, update the checkout and rerun setup. Open the scaffolded
+project directory so the extension finds its local compiler.
 
-| Feature | What it does |
-| --- | --- |
-| Hover | A function's inferred contract and control class; at a call, the success value's type |
-| Completions | TypeScript's, plus service members after `Users.`, the prelude names, and, in a `catch`, the error classes its `try` block can raise |
-| Quick fixes | Every diagnostic with a mechanical fix has one; the code table below lists them |
-| Refactors | Convert an `Effect.gen` or `Effect.fn` function to an EffectScript function; convert a `Context.Service` class to an abstract service class; implement a service, scaffolding an object literal or an `implements` class with every member; write a function's inferred contract as its annotation |
+Other editors can configure their LSP client for `.es` and `.ts`, with
+`tsconfig.json` as the root marker, and disable their other TypeScript server
+for this project. Add `*.es linguist-language=TypeScript` to `.gitattributes`
+for GitHub highlighting.
 
-The `Effect.gen` conversion removes `Effect.gen` or `Effect.fn`, `function*`, and `yield*`; turns `yield* Service` followed by a method call into `Service.method()`; turns `return yield* new E()` into `throw new E()`; turns a trailing `Effect.catchTag` or `Effect.ensuring` stage into `try`/`catch` or `finally`; and leaves every other combinator as a call with `() =>` programs. It is offered only when the whole function converts, so a function that keeps a construct with no EffectScript form stays in its `.ts` file.
+The checker supplies inferred Effect contracts, call success types, and
+service member types to the upstream LSP. D33's separate control-class hover
+text, catch-specific completions, mechanical ES code actions, and migration
+refactors remain design targets. Diagnostic messages include repair suggestions
+as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
@@ -100,9 +145,12 @@ Every ES diagnostic is an error, except two. Each error marks code that has no m
 
 `esc` exits non-zero when any error is reported. Diagnostics print at `.es` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
 
-Every code, with its quick fix:
+The diagnostic registry reserves these codes. This table describes each rule
+and the intended repair (D33, D53). A registry entry does not prove that its
+check or editor code action is implemented; the acceptance suite and compiler
+README track coverage. Repairs below are suggestions, not shipped code actions:
 
-| Code | What it reports | Quick fix | Chapter |
+| Code | What it reports | Suggested repair | Chapter |
 | --- | --- | --- | --- |
 | ES1001 | A module's top level runs a program | Export a function instead | 13 |
 | ES1002 | A generator-based API (`Effect.gen`) in a `.es` file, where `function*` declares a producer | Convert the function | 10 |
@@ -131,33 +179,21 @@ Every code, with its quick fix:
 | ES4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | ES4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of` | 10, 16 |
 | ES4401 | A plain TypeScript call with no boundary or trusted contract | Wrap it in `Effect.try`, or tag the declaration `@effectscript trusted` | 10 |
-| ES4402 | A Node.js or browser API | Replace the import with the Effect module the error names | 11 |
+| ES4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | ES4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 
-#### Linting, Oxlint, and Vite Plus
+#### Linting
 
-Each diagnostic has exactly one owner, so nothing is reported twice:
-
-| Diagnostics | Owner | Files |
-| --- | --- | --- |
-| Type errors (TypeScript's codes) and language errors (ES codes) | `esc`, through the CLI, the language server, and the Vite plugin | `.ts` and `.es` |
-| Syntactic lint rules | Oxlint | `.ts` and `.es`: EffectScript adds no syntax, so Oxlint's TypeScript parser reads `.es` files |
-| Type-aware lint rules, including Effect's `@effect/tsgo` rules through tsgolint | Oxlint | `.ts` only |
-
-Oxlint's type-aware mode embeds TypeScript's checker, not EffectScript's, so on `.es` files it would analyze the wrong semantics: a rule that flags an unused `Effect` value, for example, would flag every `.es` call statement whose callee returns one. `@effectscript/oxlint-config` turns type-aware rules off for `**/*.es` and turns off the syntactic rules whose premise EffectScript changes, such as `require-yield` (a producer need not yield):
-
-```json
-// .oxlintrc.json
-{
-  "extends": ["@effectscript/oxlint-config"]
-}
-```
-
-Vite Plus runs Vite, Vitest, and Oxlint from one configuration, and it picks EffectScript up through the same two pieces: `@effectscript/vite` in its Vite plugins, for development, builds, and tests, and `@effectscript/oxlint-config` in its lint settings. A type-check step runs `esc --noEmit` in place of `tsc --noEmit`. Effect's own TypeScript tooling (`@effect/tsgo`) keeps working on `.ts` files; it does not run on `.es` files, whose semantics it does not model.
+D35 assigns type and language diagnostics to `esc` and reserves type-aware
+linting for `.ts` files. A stock TypeScript checker models different call
+semantics and cannot type-check EffectScript correctly. Run `esc --noEmit`
+for `.es` checking. `@effectscript/oxlint-config` is not shipped, and Vite Plus
+integration has no acceptance coverage yet. Do not install an unpublished
+lint-config package from the registry.
 
 #### Debugging
 
-`esc` writes source maps when `sourceMap` is on, and the Vite plugin always serves them. Each map is composed from `.es` through the generated TypeScript to JavaScript, so any debugger that reads standard source maps maps breakpoints and paused frames to `.es` lines: VS Code's JavaScript debugger for Node.js, Bun, and Chrome targets; Chrome and Edge DevTools; and JetBrains IDEs.
+`esc` writes source maps when `sourceMap` is on, and the Vite plugin always serves them. Each map records original `.es` positions on the lowered AST through TypeScript emit, so any debugger that reads standard source maps maps breakpoints and paused frames to `.es` lines: VS Code's JavaScript debugger for Node.js, Bun, and Chrome targets; Chrome and Edge DevTools; and JetBrains IDEs.
 
 ```text
 Paused on breakpoint, requestApproval  checkout.es:22

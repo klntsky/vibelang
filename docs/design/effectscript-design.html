@@ -2481,189 +2481,229 @@ stack bottom              FiberExitFrame at _stack[0]          internal/effect.t
 }</code></pre></figure>
 <h2 id="part-iv-the-compiler"><a class="anchor" href="#part-iv-the-compiler">Part IV. The compiler</a></h2>
 <h3 id="27-compiler-architecture"><a class="anchor" href="#27-compiler-architecture">27. Compiler architecture</a></h3>
-<figure class="code side-dts"><figcaption>Generated declaration</figcaption><pre class="code" data-lang="ts"><code><span class="c">/** @effectscript control=pure direct=double$direct */</span>
-<span class="k">export</span> <span class="k">declare</span> <span class="k">const</span> double: (n: <span class="l">number</span>) =&gt; <span class="t">Effect</span>.<span class="t">Effect</span>&lt;<span class="l">number</span>&gt;</code></pre></figure>
-<p>That declaration is the compiler&#39;s whole contract with the outside world: an ordinary Effect type that any TypeScript code can use, plus a JSDoc tag that only EffectScript reads. This chapter covers how the compiler produces it.</p>
-<h4 id="fork-with-a-content-mapper-skeleton-first"><a class="anchor" href="#fork-with-a-content-mapper-skeleton-first">Fork, with a content-mapper skeleton first</a></h4>
-<p>Lowering is type-directed: <code>f(x)</code> compiles differently when <code>f</code> is an EffectScript function, an Effect-returning TypeScript function, an <code>Effect</code> value, a service method, a control operation, a trusted function, or a value whose type extends <code>Effect</code> (<a href="#13-what-a-call-means">Chapter 13</a>). Plain JavaScript calls need control classes; contract checks need the checker. A TypeScript content mapper receives only a file name and text, and tsc emits no JavaScript for content-mapped files (<code>typescript-native-compiler.md</code> §1.7). The language therefore needs a compiler fork.</p>
-<p>A content mapper can host a walking skeleton without any Go work:</p>
-<ul>
-<li>syntax-directed lowering;</li>
-<li>a runtime <code>bind</code> that runs a call&#39;s result when it is an <code>Effect</code>;</li>
-<li>every call on a heap frame;</li>
-<li>TypeScript inferring A, E, and R from the generated generators.</li>
-</ul>
-<p>The skeleton validates the ABI, the declarations, and diagnostic mapping. Its runtime dispatch is wrong for the real language, because a call whose static type is <code>unknown</code> must not run an Effect it happens to return. It is a test rig, not a design. The prototype compiler below took the same path with TypeScript&#39;s compiler API in place of a content mapper, and with type-directed dispatch instead of a runtime <code>bind</code>.</p>
-<h4 id="baseline"><a class="anchor" href="#baseline">Baseline</a></h4>
-<div class="table"><table><thead><tr><th>Fact</th><th>Evidence</th></tr></thead><tbody><tr><td><code>microsoft/typescript-go</code> is archived (pushed 2026-08-31); its README at <code>89d5d5b</code> says &quot;This Repo Is Closed&quot; and points to <code>microsoft/TypeScript</code></td><td><code>typescript-native-compiler.md</code> §1.1</td></tr>
-<tr><td>The Go compiler lives in <code>microsoft/TypeScript</code> under <code>tsc/</code>, module <code>github.com/microsoft/TypeScript/tsc</code>, requiring Go 1.27; <code>main</code> was at <code>0e081d6</code> on 2026-10-15</td><td>§1.2, §1.4</td></tr>
-<tr><td>typescript-go commit IDs do not exist in <code>microsoft/TypeScript</code>: history was rewritten on import</td><td>§1.2</td></tr>
-<tr><td>npm <code>typescript@latest</code> is 7.0.2; <code>typescript@next</code> is 7.1.0-dev.20261015.1, built from <code>main</code> at <code>257e874</code>; 7.1 stable is planned for 2026-11-24</td><td>§1.3</td></tr>
-<tr><td>One binary serves the CLI (<code>tsc</code>), the language server (<code>--lsp --stdio</code>), and the API (<code>--api</code>)</td><td>§1.5</td></tr>
-<tr><td>No in-process plugins; the TypeScript team calls emit-side transforms &quot;out of scope going forward&quot; (#63771)</td><td>§1.7</td></tr>
-<tr><td>Go&#39;s <code>internal</code> rule compares import paths: only modules under <code>github.com/microsoft/TypeScript/tsc</code> may import <code>tsc/internal/*</code></td><td>§1.6 (reproduced)</td></tr></tbody></table></div>
-<p>Rules [Rule]:</p>
-<ul>
-<li>Fork <code>microsoft/TypeScript</code> at the <code>gitHead</code> of a published <code>typescript@next</code> nightly, and re-pin to the 7.1 stable tag when it ships. Pinning to a published build allows differential tests against the official binary.</li>
-<li>Put EffectScript in-tree under <code>tsc/internal/effectscript/</code>. Limit upstream edits to <code>.es</code> recognition and <code>Register*</code> hooks, wired by a blank import in <code>tsc/cmd/tsc/main.go</code>, carried as an ordered, digest-gated patch series (VibeLang&#39;s mechanics, <code>vibelang.md</code> §9).</li>
-<li>Do not build on shim modules. effect-tsgo carries 1,135 <code>//go:linkname</code> bindings and 24 unsafe struct mirrors, and an upstream <code>Symbol</code> layout change broke it (Effect-TS/tsgo#832).</li>
-<li>The fork needs Go 1.27.</li>
-</ul>
+<figure class="code side-dts"><figcaption>Generated declaration</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> <span class="k">type</span> { <span class="t">Effect</span> } <span class="k">from</span> <span class="s">"@effectscript/runtime"</span>
+<span class="k">export</span> <span class="k">declare</span> <span class="k">function</span> <span class="f">double</span>(n: <span class="l">number</span>): <span class="t">Effect</span>&lt;<span class="l">number</span>, <span class="l">never</span>, <span class="l">never</span>&gt;</code></pre></figure>
+<p>The compiler writes ordinary TypeScript declarations with Effect contracts.
+TypeScript consumers call an Effect-returning function; EffectScript consumers
+run that Effect through an ordinary call. The current implementation is in
+<code>typescript/tsc/internal/effectscript/</code>. <code>typescript/EFFECTSCRIPT.md</code> lists the
+hooks, acceptance cases, and remaining limitations.</p>
+<h4 id="the-go-fork"><a class="anchor" href="#the-go-fork">The Go fork</a></h4>
+<p>The repository contains <code>microsoft/TypeScript</code> at <code>257e874</code>, the source of
+<code>typescript@next</code> 7.1.0-dev.20261015.1, imported without upstream test baselines
+(D60). The Go module requires Go 1.27. Build from the repository root:</p>
+<figure class="code side-none"><pre class="code" data-lang="sh"><code>cd typescript/tsc
+CGO_ENABLED=0 GOFLAGS=-trimpath go build -o ../built/local/tsc ./cmd/tsc</code></pre></figure>
+<p>Use <code>sh scripts/build-esc.sh</code> instead to place the native executable in
+<code>packages/compiler/native/esc</code> for the package launcher. <code>-trimpath</code> lets jj
+workspaces share Go build-cache entries. The compiler embeds its library
+<code>.d.ts</code> files, so the executable needs no adjacent library directory.</p>
+<p>EffectScript lives in-tree and registers hooks through a blank import in
+<code>cmd/tsc/main.go</code>. Upstream seams handle <code>.es</code> recognition, module resolution,
+checker queries and extension state, diagnostics, compiler options, and
+transform registration. The implementation uses no unsafe struct mirrors or
+<code>go:linkname</code> bindings. The seams are small commits in the repository&#39;s jj
+history, rather than a separately applied patch series.</p>
 <h4 id="pipeline"><a class="anchor" href="#pipeline">Pipeline</a></h4>
-<figure class="code side-none"><pre class="code" data-lang="text"><code> .es source ──► parser: TypeScript's grammar, unchanged; function* in .es = producer
-                  │
-                  ▼
- binder + TypeScript checker: data types, generics, overloads, narrowing
-   lambda forms per overload candidate, in the same pass (D56)
-   classifies abstract classes: service (no extends) or control operation (extends Control)
-   prelude names bound in every .es file
-                  │                     ▲ .ts and .d.ts imports; Effect types via typeparser
-                  ▼
- effect checker:  per function: contract (A, E, R), control class
-                  fixed points inside call-graph cycles (D52); callback polymorphism
-                  foreign calls: trusted contracts, boundaries, platform APIs (ES44xx)
-                  fiber crossing (Chapter 16); second-class continuations (Chapter 9)
-                  provider graphs (wire); service contract checks (ES3101)
-                  │
-                  ▼
- computation IR (checked, typed):
-     call(kind, callee, args)   perform(op, args)   handle(region, clauses)
-     catch(region, h)           final(region, fin)  scope(region)
-     restore(region, Γ′)        mask(region, ι)     fork(program, owner)
-     return(v)                  throw(e)            tailResume(k, v)
-     direct(region)
-                  │
-        ┌─────────┴───────────────────────────┐
-        ▼                                     ▼
- lowering to TypeScript:                declarations:
-   generator frames, Effect regions,      .d.ts with the Effect ABI
-   runtime calls, $direct variants        + metadata (control class, direct
-        │                                    variant, producer form, keys)
-        ▼                                  + declaration maps
- TypeScript emit: type erasure,
- module transforms → .js + composed source maps</code></pre></figure>
-<p>EffectScript adds no syntax, so the parser is TypeScript&#39;s. What changes is meaning: the binder classifies fully abstract classes as services or control operations (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>, <a href="#9-handlers-defining-your-own-effects">Chapter 9</a>), and binds the prelude names in every <code>.es</code> file. The checked IR is where the machine meets the compiler. Every IR node is one transition of <a href="#20-the-machine">Chapter 20</a> or one region frame. Lowering is a mechanical map from IR to Effect and runtime calls, so the conformance tests can target the IR directly.</p>
+<figure class="code side-none"><pre class="code" data-lang="text"><code>.es and .ts sources
+  -&gt; TypeScript parser and binder
+  -&gt; TypeScript checker with EffectScript hooks
+       prelude and service keys
+       lambda forms inside overload resolution (D56)
+       contracts, failures, requirements, provider graphs
+       trust levels and diagnostics
+  -&gt; EffectScript AST transform under the checker lock
+       Effect.fnUntraced generators and Effect regions
+       runtime helpers and plain $direct variants
+  -&gt; TypeScript emit
+       JavaScript, source maps, and ordinary .d.ts files</code></pre></figure>
+<p>The parser keeps TypeScript&#39;s grammar. The checker resolves prelude names as
+implicit imports from <code>@effectscript/runtime</code>, unless a local declaration or
+import shadows them (D4, D48). Class hooks give fully abstract service classes
+the static side of an Effect Context key and the instance shape of their
+abstract members (D1, D45).</p>
+<p>Lowering runs before TypeScript&#39;s type erasure. It queries the checker while
+holding the checker lock and rewrites the TypeScript AST directly. The
+computation IR described by the machine chapters is a semantic model; the
+current compiler does not materialize a separate IR.</p>
+<p>A call that returns Effect itself runs; structured Effect subtypes such as
+Config remain data until called (D24). A pure function gets a <code>$direct</code> variant
+for inline calls and an Effect form for the public ABI (D9, D10). Calls and
+operands retain source order. <code>throw</code> adds an expected failure; <code>try</code>, <code>catch</code>,
+and <code>finally</code> become regions with completion records for jumps (D13, D15, D46).</p>
+<h4 id="one-checker-pass"><a class="anchor" href="#one-checker-pass">One checker pass</a></h4>
+<p>Lambda hooks participate in TypeScript&#39;s own overload resolution. Each
+candidate asks for a plain function, an Effect function, or a program; the
+first accepting candidate selects the form (D44, D56). A return in a program
+is checked against the Effect&#39;s success type. <code>pipe</code> looks ahead to its first
+stage (D8), and function values and collections convert where the parameter
+expects programs (D7, D49). D10 eligibility uses a greatest fixpoint over the
+callee group. D12 callback parameters carry inferred E and R type parameters.</p>
+<p>D52 requires recursive E and R inference inside a call-graph component. The
+compiler&#39;s acceptance cases and <code>typescript/EFFECTSCRIPT.md</code> record its current
+coverage; no whole-program iterative lowering pass runs.</p>
+<p>The earlier <code>prototype/esc</code> uses TypeScript 5.9.3 and repeated checks as an
+executable reference. Its 46 examples are now native-compiler acceptance cases
+under <code>typescript/effectscript/cases/</code>. <code>prototype/single-pass/RESULTS.md</code>
+records the experiments that established D56. The native implementation does
+not duplicate source text per lambda form.</p>
 <h4 id="runtime-boundary"><a class="anchor" href="#runtime-boundary">Runtime boundary</a></h4>
-<p>Generated code imports exactly two runtime packages: <code>effect</code>, pinned to the version the kernel supports, and <code>@effectscript/runtime</code>. The runtime package contains the kernel (<a href="#24-what-effect-provides-and-what-the-kernel-adds">Chapter 24</a>), <code>suspend</code> and <code>handoff</code>, <code>catchExpected</code>, <code>tailResume</code>, <code>Control</code>, the key helpers <code>serviceKey</code>, <code>controlKey</code>, and <code>referenceKey</code>, the <code>Yield</code> operation, and the producer adapter. Everything else is ordinary Effect: services are <code>Context.Key</code>s, providers are Layers, and programs are <code>Effect</code> values. There is no EffectScript scheduler, no second Context, and no second fiber type. The kernel checks the Effect version at load time (<code>kernel/internals.ts</code>), so a version mismatch fails at startup instead of corrupting a fiber.</p>
-<p>A service class compiles to an interface for its shape and a key class from the runtime, its static members kept (D45, <a href="#4-dependency-injection-the-r-channel">Chapter 4</a>):</p>
-<figure class="code side-es"><figcaption>EffectScript</figcaption><pre class="code" data-lang="ts"><code><span class="k">abstract</span> <span class="k">class</span> <span class="t">Users</span> {
-  <span class="k">abstract</span> <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">Effect</span>&lt;<span class="t">User</span>, <span class="t">UserNotFound</span>, <span class="l">never</span>&gt;
-  <span class="k">static</span> <span class="k">readonly</span> layer = <span class="t">UsersLive</span>
-}</code></pre></figure>
-<figure class="code side-gen"><figcaption>Generated TypeScript</figcaption><pre class="code" data-lang="ts"><code><span class="k">export</span> <span class="k">interface</span> <span class="t">Users</span> {
-  <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">Effect</span>.<span class="t">Effect</span>&lt;<span class="t">User</span>, <span class="t">UserNotFound</span>&gt;
+<p>Generated JavaScript imports only <code>effect</code> and <code>@effectscript/runtime</code> (D30).
+The runtime contains the continuation kernel and the helpers the compiler
+emits. It runs on Effect&#39;s fiber, Context, and Scope; it adds no scheduler.
+The package checks <code>effect@4.0.5</code> at load time and rejects other versions.</p>
+<div class="table"><table><thead><tr><th>Runtime helper</th><th>Purpose</th></tr></thead><tbody><tr><td><code>$programs</code></td><td>Convert collections of program functions</td></tr>
+<tr><td><code>$catch</code>, <code>$finally</code></td><td>Expected-failure handling and cleanup</td></tr>
+<tr><td><code>$expected</code>, <code>$caught</code></td><td>Expected failures in plain JavaScript regions</td></tr>
+<tr><td><code>$region</code>, <code>$using</code>, <code>$fork</code></td><td>Block-owned scopes, resources, and children</td></tr>
+<tr><td><code>$service</code>, <code>$reference</code>, <code>$control</code></td><td>Service keys, defaults, and control operations</td></tr>
+<tr><td><code>$trusted</code>, <code>$trustedPlain</code></td><td>Classify listed foreign exceptions</td></tr>
+<tr><td><code>handle</code>, <code>resume</code>, <code>$tailResume</code></td><td>Continuation handling</td></tr>
+<tr><td><code>$produce</code>, <code>$yield</code>, <code>$forOf</code>, <code>$forStream</code>, <code>$toStream</code></td><td>Producers and Stream adaptation</td></tr></tbody></table></div>
+<p>The runtime&#39;s README lists the full ABI. Compiler and helper changes belong
+in the same commit. The smoke harness builds the runtime and links every case
+to that workspace&#39;s package, so incompatible versions cannot pass unnoticed.</p>
+<h4 id="declarations-and-metadata"><a class="anchor" href="#declarations-and-metadata">Declarations and metadata</a></h4>
+<p>Services emit as runtime key classes. Declaration emit writes the instance
+shape as an interface and a class whose base has the <code>ServiceKey&lt;Users&gt;</code> type
+(D45), so ordinary TypeScript can implement and provide the service:</p>
+<figure class="code side-dts"><figcaption>Generated declaration</figcaption><pre class="code" data-lang="ts"><code><span class="k">export</span> <span class="k">interface</span> <span class="t">Users</span> {
+  <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">Effect</span>.<span class="t">Effect</span>&lt;<span class="t">User</span>, <span class="t">UserNotFound</span>, <span class="l">never</span>&gt;
   <span class="k">readonly</span> <span class="s">"~esc/service"</span>?: <span class="s">"@acme/app/src/users#Users"</span>
 }
-<span class="k">export</span> <span class="k">class</span> <span class="t">Users</span> <span class="k">extends</span> serviceKey&lt;<span class="t">Users</span>&gt;(<span class="s">"@acme/app/src/users#Users"</span>) {
-  <span class="k">static</span> <span class="k">readonly</span> layer = <span class="t">UsersLive</span>
-}</code></pre></figure>
-<p>A control operation compiles the same way from <code>controlKey</code>, whose Context entry is handler evidence, and a service with <code>static readonly default</code> from <code>referenceKey</code>, which makes a <code>Context.Reference</code>:</p>
-<figure class="code side-gen"><figcaption>Generated TypeScript</figcaption><pre class="code" data-lang="ts"><code><span class="k">export</span> <span class="k">interface</span> <span class="t">Approval</span> {
-  <span class="f">approve</span>(request: <span class="l">string</span>): <span class="t">Effect</span>.<span class="t">Effect</span>&lt;<span class="l">boolean</span>, <span class="t">ReviewBusy</span>&gt;
-  <span class="k">readonly</span> <span class="s">"~esc/service"</span>?: <span class="s">"@acme/app/src/approval#Approval"</span>
-}
-<span class="k">export</span> <span class="k">class</span> <span class="t">Approval</span> <span class="k">extends</span> controlKey&lt;<span class="t">Approval</span>&gt;(<span class="s">"@acme/app/src/approval#Approval"</span>) {}</code></pre></figure>
-<p>The compiler checks a provider&#39;s implementation against the service&#39;s shape, taken from the <code>Effect&lt;Users, …&gt;</code> that <code>Layer.effect</code> expects of its program, not from the object literal the provider returns; that is what lets ES2001 and ES3101 name the method at fault (<code>prototype/esc/FINDINGS.md</code>, finding 9). Lowering also writes an explicit terminator after every generated statement, because a statement that begins with <code>(yield* …)</code> would otherwise join the previous line through automatic semicolon insertion (finding 28).</p>
-<h4 id="the-prototype"><a class="anchor" href="#the-prototype">The prototype</a></h4>
-<p><code>prototype/esc</code> is a prototype of this pipeline in TypeScript, about 3,560 lines on <code>typescript@5.9.3</code> and <code>effect@4.0.5</code>, with the experiments kernel as its runtime. It lowers by asking TypeScript&#39;s checker about the generated code and repeating until the answers stop changing. A second agent wrote its 46 example files from this document before the compiler existed: the 26 runnable ones produce their expected results, and the 20 that must fail report their codes. 25 of the document&#39;s 28 claimed contracts matched as first written; the other three led to D23&#39;s trusted contract for <code>profileCard</code>, D48&#39;s <code>Scope</code>, and D52&#39;s recursion fixpoint. Its findings settled D44-D53 (<code>prototype/esc/FINDINGS.md</code>).</p>
-<h4 id="one-checker-pass"><a class="anchor" href="#one-checker-pass">One checker pass</a></h4>
-<p>The prototype re-checks the whole program until its decisions repeat, because three decisions form a loop: whether a call runs depends on the callee&#39;s type, a lambda&#39;s form depends on the overload that resolution picks, and resolution depends on the lambda&#39;s form. It needs 1 pass for 1 file, 2 for 16, 3 for 26, 4 for 2, and 5 for 1.</p>
-<p>The compiler decides in one checker pass. The single-pass experiment (<code>prototype/single-pass/RESULTS.md</code>) tested that on the prototype&#39;s corpus: it patches TypeScript 5.9.3 so that <code>chooseOverload</code> classifies each lambda against each candidate&#39;s declared parameter type, emits every type-dependent choice as an intrinsic the checker resolves, and compares one check per file with the prototype&#39;s iteration.</p>
-<figure class="code side-none"><pre class="code" data-lang="text"><code>corpus   46 files: 817 call sites, 257 lambdas and methods
-result   0 disagreements; the prototype's generated TypeScript, byte for byte, in 46 of 46 files
-cost     46 checks in 2.1 s, against the prototype's 124 checks in 4.0 s (warm)
-probes   2 synthetic files, 17 disagreements
-           16  follow from 6 lambdas with two self-consistent lowerings: the prototype keeps
-               the one its first guess reaches; one pass keeps the first accepting candidate's (D56)
-            1  mutual recursion: E crosses the cycle only by iterating the component (D52)</code></pre></figure>
-<p>Inside the checker, each link of the loop resolves when something first asks for it, so no link needs a pass of its own. The experiment turned into these rules for the checker:</p>
-<div class="table"><table><thead><tr><th>Rule</th><th>Why</th></tr></thead><tbody><tr><td>Classify a lambda inside <code>chooseOverload</code>, per candidate, from the candidate&#39;s declared parameter type, and keep that first classification (D44, D56)</td><td>The lambda&#39;s own inferred type, or a deferred re-check that sees it, makes the answer depend on the first guess</td></tr>
-<tr><td>Skip a lambda in TypeScript&#39;s first round only when the form the candidate selects is context sensitive</td><td><code>Layer.effect(Users, () =&gt; {…})</code> selects a program, which is a call; skipping it by its plain form failed the only candidate (<code>ch04-services.es:75</code>)</td></tr>
-<tr><td>Check a lambda at most once per form, with TypeScript&#39;s one-shot caches (contextual parameter types, resolved return types, inner calls&#39; signatures) keyed by form</td><td>The harness duplicated each lambda&#39;s text per form instead: 2.03 times the final text</td></tr>
-<tr><td>Apply the call rule to the call node</td><td>Narrowing must see the original call: <code>Exit.isFailure(x)</code> lost its narrowing through a wrapper (<code>ch15-failures.es:181</code>)</td></tr>
-<tr><td>Type a call to a D10 function from plain code as the plain variant&#39;s value</td><td>Typed as an Effect, it rejected a plain-callback overload</td></tr>
-<tr><td>Compute D10 on demand, as a greatest fixpoint over the callee&#39;s component</td><td>A D9 conversion, a lambda with no expected type, and a plain-code call need it before the caller is typed</td></tr>
-<tr><td>Keep D8&#39;s look-ahead for <code>pipe</code></td><td><code>pipe</code>&#39;s first argument takes its form from the next argument&#39;s parameter type</td></tr>
-<tr><td>Iterate E and R inside a recursive component only (D52)</td><td>Mutual recursion is the one construct that needs a second check</td></tr></tbody></table></div>
-<p>What remains is the last row, and holding the three forms inside the Go checker rather than in duplicated text. G19 tracks both (<a href="#30-risks-and-experiments">Chapter 30</a>).</p>
-<h4 id="the-go-fork"><a class="anchor" href="#the-go-fork">The Go fork</a></h4>
-<p><code>typescript/</code> is the compiler tree in this private repository (D60), imported without the 349 MB of upstream test baselines. The initial EffectScript stack has 11 commits on <code>257e874</code>, the <code>gitHead</code> of <code>typescript@next</code> 7.1.0-dev.20261015.1. EffectScript lives in <code>tsc/internal/effectscript/</code>, 5 files and 523 lines, and registers three hooks: a script transformer that runs before type erasure, a call-expression type hook, and an inferred-return-type hook. The upstream diff is 20 added and 12 removed lines in 5 existing files, plus 93 lines in 2 new files that define the hooks, so a rebase onto a newer nightly can conflict only in those 5 files.</p>
-<p>It already lowers calls by type and infers <code>Effect&lt;A, E, R&gt;</code> for <code>.es</code> functions, in one checker pass. A call runs when its resolved signature returns effect&#39;s own <code>Effect</code> or calls an <code>.es</code> Effect function, so a <code>Config</code> stays data (D24). A function whose body runs nothing stays plain JavaScript (D10). An unannotated function&#39;s E and R are the unions of what it runs, and the <code>.d.ts</code> declares them. On its three lowering cases it matches the prototype: the same <code>yield*</code> sites (2, 12, and 6), the same plain calls, including <code>Config.Port(…)</code> and <code>[1, 2, 3].map(double)</code>, and the same contracts, <code>lookup: Effect&lt;string, NotFound, never&gt;</code> and <code>main: Effect&lt;void, NotFound, never&gt;</code> (<code>typescript/EFFECTSCRIPT.md</code>).</p>
-<p>It needs only one pass because it ignores position: it has no programs as values (D7) and no per-candidate forms (D56), and its E and R miss what arrives through a cycle (D52). Failure semantics (<code>throw</code>, <code>try</code>, <code>using</code>), services, control operations, the prelude, <code>pipe</code>, <code>wire</code>, <code>fork</code>, handlers, ES diagnostics, <code>$direct</code> metadata, methods, and imports between <code>.es</code> files are not built yet. The single-pass harness&#39;s decisions are the reference for porting D56 and D52 into it.</p>
-<h4 id="declarations-and-metadata"><a class="anchor" href="#declarations-and-metadata">Declarations and metadata</a></h4>
-<p>The <code>.d.ts</code> file carries only the Effect ABI: functions as <code>(...) =&gt; Effect.Effect&lt;A, E, R&gt;</code>, producers as <code>(...) =&gt; Stream.Stream&lt;A, E, R&gt;</code>, service classes, Layers, and control operations. EffectScript-only facts travel as a JSDoc tag on the declaration, which TypeScript ignores and EffectScript reads, as in the example at the top of this chapter: the control class, the <code>$direct</code> variant, and a producer&#39;s internal form. A missing or unreadable tag means &quot;control class <code>suspends</code>, no direct variant&quot;. That is always correct and only slower, so per-file bundling never fails closed (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>). VibeLang made &quot;empty row means plain call&quot; a second calling convention, and 21.5% of call sites in its multi-module programs then failed closed under per-file bundling (<code>vibelang.md</code> §6).</p>
-<p>The same channel carries trusted contracts in the other direction. <code>/** @effectscript trusted */</code> and its <code>@throws</code> lines on a TypeScript declaration (<a href="#10-working-with-typescript">Chapter 10</a>) are read by the same code that reads the compiler&#39;s own tags.</p>
-<h4 id="what-to-borrow-and-what-not-to"><a class="anchor" href="#what-to-borrow-and-what-not-to">What to borrow, and what not to</a></h4>
-<div class="table"><table><thead><tr><th>From</th><th>Borrow</th><th>Do not inherit</th></tr></thead><tbody><tr><td>VibeLang checkpoint (<code>ebe89a2b</code>)</td><td>Fork mechanics: SHA pin, <code>go build -overlay</code>, digest-gated patches. The content mapper as the first seam. Effect-row state beside the checker (<code>Signature</code> fields or a <code>LinkStore</code>), never a <code>TypeFlags</code> bit. Lowering before <code>TypeEraserTransformer</code> through an extended <code>EmitResolver</code>. Intrinsics recognized by resolved symbol identity. Its one-shot and abandonment rules as conformance tests. Its foreign implicit-invocation predicate.</td><td>Eager functions with <code>Result</code> values. Two calling conventions chosen per call site. A private handler loop and scheduler beside the host. An <code>AsyncLocalStorage</code> bridge. Layers without acquisition or lifetime.</td></tr>
-<tr><td>effect-tsgo (upstream 0.53.1)</td><td><code>internal/typeparser</code>: recognizes Effect, Layer, and services, and extracts A/E/R from the <code>_A</code>/<code>_E</code>/<code>_R</code> members of <code>~effect/Effect</code>. Its diagnostics infrastructure, severities, and per-file overrides; its baseline harness with real Effect packages; its per-platform binary packaging.</td><td>Its after-check hook as a lowering seam: the hook can only append diagnostics and cannot change emit.</td></tr>
-<tr><td>VibeLang, a measured gotcha</td><td>TypeScript&#39;s subtype reduction merged structurally identical classes and caused a runtime panic. Service classes are nominal for the same reason (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>; <code>experiments/scratch-abstract-services/probe.ts</code>).</td><td></td></tr></tbody></table></div>
+<span class="k">declare</span> <span class="k">const</span> <span class="t">Users_base</span>: <span class="k">import</span>(<span class="s">"@effectscript/runtime"</span>).<span class="t">ServiceKey</span>&lt;<span class="t">Users</span>&gt;
+<span class="k">export</span> <span class="k">declare</span> <span class="k">abstract</span> <span class="k">class</span> <span class="t">Users</span> <span class="k">extends</span> <span class="t">Users_base</span> {}</code></pre></figure>
+<p>A default service uses <code>ReferenceKey</code>. Declaration transforms add type imports
+for prelude names, preserve D12&#39;s callback parameters, and rewrite source
+specifiers to <code>.js</code> (D31). TypeScript consumers need only the <code>.js</code>, <code>.d.ts</code>,
+<code>effect</code>, and runtime packages.</p>
+<p><a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>&#39;s control-class and <code>$direct</code> JSDoc metadata is a design target.
+The current compiler does not emit or read that metadata. A consumer compiled
+against a declaration uses the Effect form, which preserves correctness at
+the cost of the direct-call optimization. Trusted TypeScript declarations do
+support <code>/** @effectscript trusted */</code> and <code>@throws {T}</code> (D23): each listed
+exception class joins E and generated code tests it with <code>instanceof</code> (D51).</p>
+<h4 id="acceptance-checks"><a class="anchor" href="#acceptance-checks">Acceptance checks</a></h4>
+<figure class="code side-none"><pre class="code" data-lang="sh"><code>cd typescript
+sh effectscript/smoke.sh --status</code></pre></figure>
+<p>The harness compiles cases in parallel, runs successful programs on Node, and
+checks expected failure codes and optional diagnostic positions. Cases marked
+<code>pending</code> report their owning compiler lane and do not fail the suite.
+Source-map and tracing cases check original <code>.es</code> frames and generated spans
+(D34, D36). The docs checker independently checks user-guide snippets with
+<code>bun docs/tools/check-snippets.ts</code> from the repository root.</p>
 <h3 id="28-tooling"><a class="anchor" href="#28-tooling">28. Tooling</a></h3>
-<figure class="code side-none"><pre class="code" data-lang="sh"><code>npm install effect@4.0.5 @effectscript/runtime
-npm install --save-dev @effectscript/compiler
-npx esc --noEmit        # check every .ts and .es file in the program
-npx esc                 # check, then emit .js, .d.ts, and source maps
-npx esc --watch         # rebuild on change</code></pre></figure>
-<figure class="code side-none"><pre class="code" data-lang="json"><code>// tsconfig.json
-{
-  "compilerOptions": {
-    "strict": true,
-    "module": "nodenext",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "effectscript": {
-      "diagnostics": { "ES4403": "warning" },
-      "tracing": "exported"
-    }
-  },
-  "include": ["src"]
-}</code></pre></figure>
-<p>The compiler is one native binary, <code>esc</code>, the fork of TypeScript&#39;s <code>tsc</code> (<a href="#27-compiler-architecture">Chapter 27</a>). It reads the same <code>tsconfig.json</code>, accepts every <code>tsc</code> flag, and checks <code>.ts</code> and <code>.es</code> files as one program. The name is EffectScript, the extension is <code>.es</code>, and package names use the <code>@effectscript</code> scope (D58). The compiler source is <code>typescript/</code> in the same private repository as the spec, runtime, and tools (D60).</p>
+<figure class="code side-none"><pre class="code" data-lang="sh"><code># From the local EffectScript checkout:
+sh scripts/setup.sh
+bun create effectscript my-app --no-git
+cd my-app
+bun run build
+bun run start
+bun run test
+bun run dev
+bun x --no-install esc --noEmit</code></pre></figure>
+<p>This private preview installs from the repository. The <code>@effectscript</code> packages
+are not published to npm, and the extension is not on the marketplace (D58,
+D60). D30&#39;s per-platform package distribution remains a release target.</p>
+<p>Setup requires Go, Bun, and Node on PATH. The tested versions are Go 1.26
+(with Go 1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
+<code>packages/compiler/native/esc</code>, installs and builds the runtime, and copies
+<code>templates/app</code> into <code>~/.bun-create/effectscript</code>. The installed template uses
+absolute <code>file:</code> dependencies on this checkout&#39;s compiler, runtime, and Vite
+packages. Keep the checkout available; after updating it, rerun setup and
+<code>bun install --force</code> in existing projects to refresh package copies.</p>
+<p>Setup links <code>~/.local/bin/esc</code> when that directory is already on PATH and no
+unrelated executable occupies the path. Project scripts find their own compiler
+without that global link. <code>ESC_BINARY</code> overrides the launcher&#39;s native binary.
+Setup preserves unrelated templates and never edits shell configuration.</p>
 <h4 id="packages-and-versions"><a class="anchor" href="#packages-and-versions">Packages and versions</a></h4>
-<div class="table"><table><thead><tr><th>Package</th><th>What it holds</th><th>Install as</th></tr></thead><tbody><tr><td><code>@effectscript/compiler</code></td><td>The <code>esc</code> binary, through per-platform optional dependencies (<code>@effectscript/compiler-darwin-arm64</code>, <code>-linux-x64</code>, and so on), as <code>typescript@7</code> ships <code>tsc</code></td><td>A dev dependency</td></tr>
-<tr><td><code>@effectscript/runtime</code></td><td>The kernel and the helpers generated code imports: <code>handle</code>, <code>tailResume</code>, <code>catchExpected</code>, <code>suspend</code>, <code>handoff</code>, <code>Control</code>, the key helpers <code>serviceKey</code>, <code>controlKey</code>, and <code>referenceKey</code>, <code>Yield</code>, and the producer adapter</td><td>A dependency</td></tr>
-<tr><td><code>@effectscript/vite</code></td><td>The Vite plugin</td><td>A dev dependency, for Vite projects</td></tr>
-<tr><td><code>@effectscript/oxlint-config</code></td><td>The Oxlint settings for <code>.es</code> files</td><td>A dev dependency, for Oxlint users</td></tr>
-<tr><td><code>effectscript.effectscript</code></td><td>The VS Code extension</td><td>From the VS Code marketplace</td></tr></tbody></table></div>
-<div class="table"><table><thead><tr><th>Component</th><th>v0 supports</th></tr></thead><tbody><tr><td><code>effect</code></td><td>4.0.5 exactly. The runtime checks the version when it loads and refuses any other, because the kernel reads Effect internals (<a href="#25-implementation-strategies-and-costs">Chapter 25</a>)</td></tr>
-<tr><td>TypeScript</td><td>The compiler is TypeScript 7.1&#39;s checker (<a href="#27-compiler-architecture">Chapter 27</a>), so <code>.ts</code> files in the program check as TypeScript 7.1 checks them. Emitted declarations are ordinary <code>.d.ts</code> files that TypeScript 7 reads</td></tr>
-<tr><td>JavaScript runtimes</td><td>Wherever <code>effect@4.0.5</code> and its platform packages run. The evidence in Part III was gathered on Node.js 26.10 and Bun 1.4.1</td></tr>
-<tr><td>Building the compiler</td><td>Go 1.27</td></tr></tbody></table></div>
-<p><code>esc</code> adds no commands of its own. <code>esc</code> checks and emits, <code>esc --noEmit</code> checks, <code>esc --watch</code> and <code>esc -b</code> rebuild, <code>esc --lsp --stdio</code> serves editors, and <code>esc --api</code> serves build tools.</p>
-<h4 id="building"><a class="anchor" href="#building">Building</a></h4>
-<p>Libraries and servers build with <code>esc</code> or <code>esc --watch</code> and run the emitted JavaScript. Applications built with Vite add the plugin:</p>
-<figure class="code side-ts"><figcaption>TypeScript</figcaption><pre class="code" data-lang="ts"><code><span class="c">// vite.config.ts</span>
-<span class="k">import</span> { defineConfig } <span class="k">from</span> <span class="s">"vite"</span>
+<div class="table"><table><thead><tr><th>Package</th><th>Current implementation</th></tr></thead><tbody><tr><td><code>@effectscript/compiler</code></td><td>Node launcher forwarding arguments, streams, signals, and exit status to its package-relative <code>native/esc</code></td></tr>
+<tr><td><code>@effectscript/runtime</code></td><td>Continuation kernel, prelude, and generated-code helpers; see its README for the ABI</td></tr>
+<tr><td><code>@effectscript/vite</code></td><td>Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5</td></tr>
+<tr><td>VS Code extension</td><td>Local <code>.vsix</code> built by setup when <code>editors/vscode</code> is available</td></tr></tbody></table></div>
+<p>The starter pins <code>effect</code>, <code>@effect/platform-node</code>, and <code>@effect/vitest</code> to
+4.0.5, and Vitest to 5.0.5. The runtime checks Effect&#39;s version on load. The
+compiler is the TypeScript 7.1 checker, with ordinary TypeScript semantics for
+<code>.ts</code> files (D30). Its emitted declarations are ordinary <code>.d.ts</code> files.</p>
+<p><code>esc</code> accepts TypeScript compiler flags: bare <code>esc</code> checks and emits,
+<code>--noEmit</code> checks, <code>--watch</code> watches, and <code>-b</code> builds references. The same native
+binary exposes <code>--lsp --stdio</code> and the upstream <code>--api</code> transport. The current
+Vite plugin uses subprocess compilation instead of the API transport (D31).</p>
+<h4 id="building-and-testing"><a class="anchor" href="#building-and-testing">Building and testing</a></h4>
+<p>The starter&#39;s configuration emits Node ESM into <code>dist/</code>:</p>
+<figure class="code side-none"><pre class="code" data-lang="json"><code>{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmitOnError": true,
+    "rewriteRelativeImportExtensions": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["src/**/*.es"]
+}</code></pre></figure>
+<p><code>build</code> runs <code>esc</code>. <code>start</code> builds and runs Node with <code>--enable-source-maps</code>.
+<code>dev</code> builds once, then runs the compiler watcher and Node output watcher;
+Ctrl+C stops both. Libraries can add <code>declaration</code> and <code>declarationMap</code> to
+emit declarations. The starter does not enable them.</p>
+<p>Import local sources as <code>./welcome.es</code> or <code>./format.ts</code>. The compiler emits
+<code>.js</code> specifiers and declarations that name <code>.js</code> outputs (D31). In <code>.ts</code>,
+<code>./welcome.js</code> resolves to <code>welcome.es</code>. Only <code>.es</code> sources are selected by the
+starter&#39;s include glob; imported <code>.ts</code> integrations also join the program.</p>
+<p>The starter tests source files through the Vite plugin:</p>
+<figure class="code side-ts"><figcaption>TypeScript</figcaption><pre class="code" data-lang="ts"><code><span class="c">// TypeScript (.ts)</span>
+<span class="c">// vitest.config.ts</span>
+<span class="k">import</span> { defineConfig } <span class="k">from</span> <span class="s">"vitest/config"</span>
 <span class="k">import</span> effectscript <span class="k">from</span> <span class="s">"@effectscript/vite"</span>
 
 <span class="k">export</span> <span class="k">default</span> <span class="f">defineConfig</span>({
-  plugins: [<span class="f">effectscript</span>()]
+  plugins: [<span class="f">effectscript</span>()],
+  test: { include: [<span class="s">"src/**/*.test.es"</span>] }
 })</code></pre></figure>
-<ul>
-<li><strong>Compilation.</strong> The plugin starts one <code>esc --api</code> process for the whole program and asks it for each <code>.es</code> module Vite requests, so types and contracts come from the same checker as <code>esc</code>.</li>
-<li><strong>Source maps.</strong> Each module is served with a map composed from <code>.es</code> through the generated TypeScript to JavaScript.</li>
-<li><strong>Diagnostics.</strong> Compiler errors print in the terminal and appear in Vite&#39;s error overlay, at <code>.es</code> spans.</li>
-<li><strong>Hot reload.</strong> An edit re-emits the module. If its exported contracts, control classes, or <code>$direct</code> variants changed, its importers are invalidated too, because their generated code depends on those facts (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>).</li>
-</ul>
-<p>Module specifiers name source files. In <code>.es</code>, <code>import { welcome } from &quot;./welcome.es&quot;</code> and <code>import { formatName } from &quot;./format.ts&quot;</code>; the emitted JavaScript imports <code>./welcome.js</code> and <code>./format.js</code>. TypeScript files import an EffectScript module as <code>./welcome.js</code>, which the compiler resolves to <code>welcome.es</code> as it resolves <code>.js</code> to <code>.ts</code>. A published library ships <code>.js</code> and <code>.d.ts</code> files with the metadata tags of <a href="#27-compiler-architecture">Chapter 27</a>, so a consumer needs no compiler unless it writes <code>.es</code> itself.</p>
+<p>Register <code>it.effect</code> from <code>@effect/vitest</code> at the top level or in <code>describe</code>
+(D38). Keep foreign assertions inside a boundary such as
+<code>Effect.sync(() =&gt; assert.strictEqual(actual, expected))</code>. <code>bun run test</code>
+needs no prior build and maps assertion failures to <code>.es</code> lines.</p>
+<p>For a Vite application, add the same plugin to <code>vite.config.ts</code>. The plugin
+runs one compiler subprocess for the project on the first request and after
+source changes. Requests share compilation. It emits JavaScript and source
+maps into its own directory under <code>node_modules/.effectscript/</code>, reports errors
+in the terminal and overlay, and invalidates all loaded <code>.es</code> modules and their
+importers after an edit. It does not compare exported contracts or use the
+API transport yet. Its README documents <code>project</code> and <code>compiler</code> overrides.</p>
 <h4 id="the-editor"><a class="anchor" href="#the-editor">The editor</a></h4>
-<p>The language server is the fork&#39;s own, from the same binary: <code>esc --lsp --stdio</code>, taken from the project&#39;s <code>@effectscript/compiler</code>. It serves the <code>.es</code> and <code>.ts</code> files of the program, so one server owns both.</p>
-<div class="table"><table><thead><tr><th>Editor</th><th>Setup</th></tr></thead><tbody><tr><td>VS Code</td><td>Install <code>effectscript.effectscript</code>. It registers the <code>effectscript</code> language for <code>*.es</code>, starts <code>esc --lsp --stdio</code>, and sets <code>&quot;typescript.validate.enable&quot;: false</code> in workspaces that contain <code>.es</code> files, so VS Code&#39;s built-in TypeScript server does not report the same <code>.ts</code> errors a second time</td></tr>
-<tr><td>Neovim, Helix, Zed, Emacs, JetBrains IDEs (through LSP4IJ)</td><td>Configure the editor&#39;s LSP client to run <code>esc --lsp --stdio</code> for <code>*.es</code> and <code>*.ts</code>, with <code>tsconfig.json</code> as the root marker, and turn off the editor&#39;s other TypeScript server for the project</td></tr>
-<tr><td>GitHub</td><td>Add <code>*.es linguist-language=TypeScript</code> to <code>.gitattributes</code>; GitHub otherwise highlights <code>.es</code> as JavaScript</td></tr></tbody></table></div>
-<p>v0 ships these editor features:</p>
-<div class="table"><table><thead><tr><th>Feature</th><th>What it does</th></tr></thead><tbody><tr><td>Hover</td><td>A function&#39;s inferred contract and control class; at a call, the success value&#39;s type</td></tr>
-<tr><td>Completions</td><td>TypeScript&#39;s, plus service members after <code>Users.</code>, the prelude names, and, in a <code>catch</code>, the error classes its <code>try</code> block can raise</td></tr>
-<tr><td>Quick fixes</td><td>Every diagnostic with a mechanical fix has one; the code table below lists them</td></tr>
-<tr><td>Refactors</td><td>Convert an <code>Effect.gen</code> or <code>Effect.fn</code> function to an EffectScript function; convert a <code>Context.Service</code> class to an abstract service class; implement a service, scaffolding an object literal or an <code>implements</code> class with every member; write a function&#39;s inferred contract as its annotation</td></tr></tbody></table></div>
-<p>The <code>Effect.gen</code> conversion removes <code>Effect.gen</code> or <code>Effect.fn</code>, <code>function*</code>, and <code>yield*</code>; turns <code>yield* Service</code> followed by a method call into <code>Service.method()</code>; turns <code>return yield* new E()</code> into <code>throw new E()</code>; turns a trailing <code>Effect.catchTag</code> or <code>Effect.ensuring</code> stage into <code>try</code>/<code>catch</code> or <code>finally</code>; and leaves every other combinator as a call with <code>() =&gt;</code> programs. It is offered only when the whole function converts, so a function that keeps a construct with no EffectScript form stays in its <code>.ts</code> file.</p>
+<p>The server is the fork&#39;s own, <code>esc --lsp --stdio</code>, from the project&#39;s compiler
+(D32). Setup builds a local <code>.vsix</code> when the editor package is present and
+prints install commands:</p>
+<figure class="code side-none"><pre class="code" data-lang="sh"><code>code --install-extension /path/printed/by/setup/effectscript-0.0.1.vsix
+# Or use cursor --install-extension with the same path.</code></pre></figure>
+<p>Setup does not install the extension automatically. If it reports the editor
+package is absent, update the checkout and rerun setup. Open the scaffolded
+project directory so the extension finds its local compiler.</p>
+<p>Other editors can configure their LSP client for <code>.es</code> and <code>.ts</code>, with
+<code>tsconfig.json</code> as the root marker, and disable their other TypeScript server
+for this project. Add <code>*.es linguist-language=TypeScript</code> to <code>.gitattributes</code>
+for GitHub highlighting.</p>
+<p>The checker supplies inferred Effect contracts, call success types, and
+service member types to the upstream LSP. D33&#39;s separate control-class hover
+text, catch-specific completions, mechanical ES code actions, and migration
+refactors remain design targets. Diagnostic messages include repair suggestions
+as text; the current compiler does not implement those editor refactors.</p>
 <h4 id="diagnostics"><a class="anchor" href="#diagnostics">Diagnostics</a></h4>
 <p>Every ES diagnostic is an error, except two. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and <code>// @ts-expect-error</code> does not apply to them; it keeps its TypeScript meaning for TypeScript&#39;s own codes. The two exceptions are policy, not soundness: ES2004, a <code>catch</code> that can never run, is a warning by default, and ES4403, a clock or randomness read, is an error by default. A project may set either to <code>&quot;error&quot;</code>, <code>&quot;warning&quot;</code>, or <code>&quot;off&quot;</code> in <code>compilerOptions.effectscript.diagnostics</code>; an ES4403 read then compiles as a trusted <code>sync</code> call that tests cannot control.</p>
 <div class="table"><table><thead><tr><th>Option in <code>compilerOptions.effectscript</code></th><th>Values</th><th>Default</th></tr></thead><tbody><tr><td><code>diagnostics</code></td><td><code>&quot;ES2004&quot;</code> and <code>&quot;ES4403&quot;</code>, each <code>&quot;error&quot;</code>, <code>&quot;warning&quot;</code>, or <code>&quot;off&quot;</code></td><td>ES2004 <code>&quot;warning&quot;</code>, ES4403 <code>&quot;error&quot;</code></td></tr>
 <tr><td><code>tracing</code></td><td><code>&quot;none&quot;</code>: no spans. <code>&quot;exported&quot;</code>: exported functions compile with <code>Effect.fn</code> spans. <code>&quot;all&quot;</code>: every function that compiles to frames does</td><td><code>&quot;none&quot;</code></td></tr></tbody></table></div>
 <p><code>esc</code> exits non-zero when any error is reported. Diagnostics print at <code>.es</code> spans, in the same form as the examples in this document, in the terminal, the editor, and Vite&#39;s overlay.</p>
-<p>Every code, with its quick fix:</p>
-<div class="table"><table><thead><tr><th>Code</th><th>What it reports</th><th>Quick fix</th><th>Chapter</th></tr></thead><tbody><tr><td>ES1001</td><td>A module&#39;s top level runs a program</td><td>Export a function instead</td><td>13</td></tr>
+<p>The diagnostic registry reserves these codes. This table describes each rule
+and the intended repair (D33, D53). A registry entry does not prove that its
+check or editor code action is implemented; the acceptance suite and compiler
+README track coverage. Repairs below are suggestions, not shipped code actions:</p>
+<div class="table"><table><thead><tr><th>Code</th><th>What it reports</th><th>Suggested repair</th><th>Chapter</th></tr></thead><tbody><tr><td>ES1001</td><td>A module&#39;s top level runs a program</td><td>Export a function instead</td><td>13</td></tr>
 <tr><td>ES1002</td><td>A generator-based API (<code>Effect.gen</code>) in a <code>.es</code> file, where <code>function*</code> declares a producer</td><td>Convert the function</td><td>10</td></tr>
 <tr><td>ES1003</td><td><code>async</code>, <code>await</code>, <code>for await</code>, or <code>await using</code>: a call already waits</td><td>Remove them</td><td>10</td></tr>
 <tr><td>ES1004</td><td><code>using</code> at a module&#39;s top level</td><td>Move it into a function</td><td>6</td></tr>
@@ -2690,21 +2730,17 @@ npx esc --watch         # rebuild on change</code></pre></figure>
 <tr><td>ES4202</td><td>A TypeScript function whose R holds a control operation</td><td>None in v0</td><td>9</td></tr>
 <tr><td>ES4301</td><td>A callback that can pause or fail where a plain function is expected</td><td>Rewrite as <code>Effect.forEach</code> or <code>for...of</code></td><td>10, 16</td></tr>
 <tr><td>ES4401</td><td>A plain TypeScript call with no boundary or trusted contract</td><td>Wrap it in <code>Effect.try</code>, or tag the declaration <code>@effectscript trusted</code></td><td>10</td></tr>
-<tr><td>ES4402</td><td>A Node.js or browser API</td><td>Replace the import with the Effect module the error names</td><td>11</td></tr>
+<tr><td>ES4402</td><td>Running a Node.js or browser API; importing and passing values is allowed (D108)</td><td>Use the Effect module the error names</td><td>11</td></tr>
 <tr><td>ES4403</td><td>A clock or randomness read (an error by default)</td><td>Use <code>Clock</code>, <code>DateTime</code>, or <code>Random</code></td><td>10</td></tr></tbody></table></div>
-<h4 id="linting-oxlint-and-vite-plus"><a class="anchor" href="#linting-oxlint-and-vite-plus">Linting, Oxlint, and Vite Plus</a></h4>
-<p>Each diagnostic has exactly one owner, so nothing is reported twice:</p>
-<div class="table"><table><thead><tr><th>Diagnostics</th><th>Owner</th><th>Files</th></tr></thead><tbody><tr><td>Type errors (TypeScript&#39;s codes) and language errors (ES codes)</td><td><code>esc</code>, through the CLI, the language server, and the Vite plugin</td><td><code>.ts</code> and <code>.es</code></td></tr>
-<tr><td>Syntactic lint rules</td><td>Oxlint</td><td><code>.ts</code> and <code>.es</code>: EffectScript adds no syntax, so Oxlint&#39;s TypeScript parser reads <code>.es</code> files</td></tr>
-<tr><td>Type-aware lint rules, including Effect&#39;s <code>@effect/tsgo</code> rules through tsgolint</td><td>Oxlint</td><td><code>.ts</code> only</td></tr></tbody></table></div>
-<p>Oxlint&#39;s type-aware mode embeds TypeScript&#39;s checker, not EffectScript&#39;s, so on <code>.es</code> files it would analyze the wrong semantics: a rule that flags an unused <code>Effect</code> value, for example, would flag every <code>.es</code> call statement whose callee returns one. <code>@effectscript/oxlint-config</code> turns type-aware rules off for <code>**/*.es</code> and turns off the syntactic rules whose premise EffectScript changes, such as <code>require-yield</code> (a producer need not yield):</p>
-<figure class="code side-none"><pre class="code" data-lang="json"><code>// .oxlintrc.json
-{
-  "extends": ["@effectscript/oxlint-config"]
-}</code></pre></figure>
-<p>Vite Plus runs Vite, Vitest, and Oxlint from one configuration, and it picks EffectScript up through the same two pieces: <code>@effectscript/vite</code> in its Vite plugins, for development, builds, and tests, and <code>@effectscript/oxlint-config</code> in its lint settings. A type-check step runs <code>esc --noEmit</code> in place of <code>tsc --noEmit</code>. Effect&#39;s own TypeScript tooling (<code>@effect/tsgo</code>) keeps working on <code>.ts</code> files; it does not run on <code>.es</code> files, whose semantics it does not model.</p>
+<h4 id="linting"><a class="anchor" href="#linting">Linting</a></h4>
+<p>D35 assigns type and language diagnostics to <code>esc</code> and reserves type-aware
+linting for <code>.ts</code> files. A stock TypeScript checker models different call
+semantics and cannot type-check EffectScript correctly. Run <code>esc --noEmit</code>
+for <code>.es</code> checking. <code>@effectscript/oxlint-config</code> is not shipped, and Vite Plus
+integration has no acceptance coverage yet. Do not install an unpublished
+lint-config package from the registry.</p>
 <h4 id="debugging"><a class="anchor" href="#debugging">Debugging</a></h4>
-<p><code>esc</code> writes source maps when <code>sourceMap</code> is on, and the Vite plugin always serves them. Each map is composed from <code>.es</code> through the generated TypeScript to JavaScript, so any debugger that reads standard source maps maps breakpoints and paused frames to <code>.es</code> lines: VS Code&#39;s JavaScript debugger for Node.js, Bun, and Chrome targets; Chrome and Edge DevTools; and JetBrains IDEs.</p>
+<p><code>esc</code> writes source maps when <code>sourceMap</code> is on, and the Vite plugin always serves them. Each map records original <code>.es</code> positions on the lowered AST through TypeScript emit, so any debugger that reads standard source maps maps breakpoints and paused frames to <code>.es</code> lines: VS Code&#39;s JavaScript debugger for Node.js, Bun, and Chrome targets; Chrome and Edge DevTools; and JetBrains IDEs.</p>
 <figure class="code side-none"><pre class="code" data-lang="text"><code>Paused on breakpoint, requestApproval  checkout.es:22
 Call stack (JavaScript)
   requestApproval            checkout.es:22         the running EffectScript function
