@@ -82,6 +82,8 @@ Everything in that test except `operation`, `handle`, and the capture is ordinar
 | A Layer cycle through `Layer.suspend` hangs on its own in-progress build. | Research §6. | `wire` detects provider cycles statically (ES3203, Chapter 4). |
 | Effect 3 values die in the Effect 4 runtime and vice versa. | Research §10. | Target Effect 4 only. Effect 3 code is foreign code behind a boundary (Chapter 10). |
 
+The [upstream draft index](../upstream/README.md) collects reproductions and proposed fixes for wake-up depth, generator cleanup and tooling, mixed-cause recovery, fairness, Layer memoization documentation, and interruption diagnostics, plus supported-prompt and segmented-stack proposals. Every entry is drafted, not filed (D59). Kernel review defects are tracked separately in `experiments/KERNEL-CHANGES.md`.
+
 #### Scheduling, stack safety, and cancellation
 
 **Scheduling** [Effect] [Rule]. A fiber runs until it parks, completes, or reaches 2048 run-loop steps, then yields through its dispatcher. Woken fibers run on the waker's JS stack (`Deferred`, `PubSub`, fiber exit, `Effect.callback`) or through a dispatcher task (`Queue.offer`, `Latch.open`, `Semaphore.release`). EffectScript makes no promise about whether a woken fiber runs before or after the waker's next step; programs that need an order must synchronize explicitly. Fairness is promised only at run-loop steps. A plain JavaScript region is atomic, exactly as an `Effect.sync` body is.
