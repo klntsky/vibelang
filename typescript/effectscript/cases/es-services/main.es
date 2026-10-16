@@ -47,7 +47,7 @@ function makeUsers() {
   return impl
 }
 
-const UsersLive = Layer.effect(Users, makeUsers())
+const UsersLive = Layer.effect(Users, () => makeUsers())
 
 // An implementation can be a class that implements the service.
 class UsersInMemory implements Users {
@@ -84,14 +84,16 @@ export function lookupBoth(id: string) {
   return first.name
 }
 
-const live = Effect.provide(greet("1"), Layer.mergeAll(Layer.provide(UsersLive, DirectoryLive), Settings.layer))
-const memory = Effect.provide(greet("7"), Layer.mergeAll(Layer.succeed(Users, new UsersInMemory()), Settings.layer))
-const direct = Effect.provide(lookupBoth("7"), Layer.succeed(Users, new UsersInMemory()))
-const missing = Effect.flip(Effect.provide(greet("9"), Layer.mergeAll(Layer.succeed(Users, new UsersInMemory()), Settings.layer)))
-const fake = Effect.provide(lookupBoth("3"), Layer.succeed(Users, new UsersFake()))
-const grace = Effect.provide(lookupBoth("4"), UsersGrace)
+const Memory = Layer.mergeAll(Layer.succeed(Users, new UsersInMemory()), Settings.layer)
 
 // expect-result: {"live":"Welcome, Ada!","memory":"Welcome, Grace!","direct":"Grace","missing":"UserNotFound","fake":"fake 3","grace":"Grace"}
 export function main() {
-  return { live: live(), memory: memory(), direct: direct(), missing: missing()._tag, fake: fake(), grace: grace() }
+  return {
+    live: Effect.provide(() => greet("1"), Layer.mergeAll(Layer.provide(UsersLive, DirectoryLive), Settings.layer)),
+    memory: Effect.provide(() => greet("7"), Memory),
+    direct: Effect.provide(() => lookupBoth("7"), Layer.succeed(Users, new UsersInMemory())),
+    missing: Effect.flip(() => Effect.provide(() => greet("9"), Memory))._tag,
+    fake: Effect.provide(() => lookupBoth("3"), Layer.succeed(Users, new UsersFake())),
+    grace: Effect.provide(() => lookupBoth("4"), UsersGrace)
+  }
 }

@@ -39,11 +39,11 @@ export function login(user: string) {
   return session?.user ?? "nobody"
 }
 
-const classic = checkoutPage("c1")
-const fresh = Effect.provideService(checkoutPage("c2"), FeatureFlags, { newCheckout: true })
-const session = Effect.provide(login("ada"), Sessions.layer)
-
 // expect-result: {"classic":"classic c1","fresh":"new c2","session":"ada"}
 export function main() {
-  return { classic: classic(), fresh: fresh(), session: session() }
+  return {
+    classic: checkoutPage("c1"),
+    fresh: Effect.provideService(() => checkoutPage("c2"), FeatureFlags, { newCheckout: true }),
+    session: Effect.provide(() => login("ada"), Sessions.layer)
+  }
 }

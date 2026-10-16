@@ -3,7 +3,7 @@
 import { lookup } from "./users.es"
 export { NotFound } from "./users.es"
 
-export const one: Effect<number> = Effect.succeed(1)
+export const one: Effect<number> = Effect.never
 export const scoped: Effect<void, never, Scope> = Effect.void
 
 // expect-result: "ada"

@@ -17,5 +17,6 @@ export function main() {
   Console.log(`not printed: ${missing}`)
 }
 
-// The module top level is not inside a program, so main() is an Effect here.
-Effect.runPromise(Effect.catch(main(), (e) => Console.log(`caught ${e._tag} ${e.id}`)))
+// The module top level is not inside a program, so a runner starts one: it
+// receives a program, a function with no parameters (D7, D38).
+Effect.runPromise(() => Effect.catch(() => main(), (e) => Console.log(`caught ${e._tag} ${e.id}`)))

@@ -7,9 +7,7 @@ function handle(n: number) {
   return n * 10
 }
 
-const program: Effect.Effect<number> = Effect.succeed(handle(4))
-
 // expect-result: 40
 export function main() {
-  return program()
+  return Effect.succeed(handle(4))
 }

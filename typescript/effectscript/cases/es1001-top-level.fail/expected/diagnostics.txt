@@ -1,0 +1,7 @@
+main.es(11,23): error ES1001
+main.es(12,23): error ES1001
+main.es(13,19): error ES1001
+main.es(14,24): error ES1001
+main.es(21,20): error ES1001
+main.es(22,22): error ES1001
+main.es(23,22): error ES1001

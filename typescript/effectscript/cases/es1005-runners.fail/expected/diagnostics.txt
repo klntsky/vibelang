@@ -1,0 +1,6 @@
+main.es(16,25): error ES1005
+main.es(22,10): error ES1005
+main.es(26,10): error ES1005
+main.es(30,3): error ES1005
+main.es(40,3): error ES1005
+main.es(44,3): error ES1005

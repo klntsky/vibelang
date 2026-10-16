@@ -15,5 +15,6 @@ export const main = Effect_1.fnUntraced(function* () {
     const missing = yield* lookup(7); // fails, so main stops here
     yield* Console.log(`not printed: ${missing}`);
 });
-// The module top level is not inside a program, so main() is an Effect here.
-Effect.runPromise(Effect.catch(main(), Effect_1.fnUntraced(function* (e) { return yield* Console.log(`caught ${e._tag} ${e.id}`); })));
+// The module top level is not inside a program, so a runner starts one: it
+// receives a program, a function with no parameters (D7, D38).
+Effect.runPromise(Effect_1.gen(function* () { return yield* Effect.catch(Effect_1.gen(function* () { return yield* main(); }), Effect_1.fnUntraced(function* (e) { return yield* Console.log(`caught ${e._tag} ${e.id}`); })); }));

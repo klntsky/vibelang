@@ -309,35 +309,18 @@ func (tx *lowering) visitWireCall(node *ast.Node) *ast.Node {
 	return f.UpdateCallExpression(node.AsCallExpression(), tx.Visitor().VisitNode(node.Expression()), nil /*questionDotToken*/, node.TypeArgumentList(), f.NewNodeList(arguments), ast.NodeFlagsNone)
 }
 
-// runners start a root fiber, so the program they run must need no services.
-var runners = map[string][]string{
-	"Effect":      {"runFork", "runCallback", "runPromise", "runPromiseExit", "runSync", "runSyncExit"},
-	"NodeRuntime": {"runMain"},
-	"BunRuntime":  {"runMain"},
-}
-
 // checkRunners reports ES3201 at a runner whose program still needs a
 // service that a wire call in the program leaves unprovided: the dependency
 // path names the provider that needs it.
 func checkRunners(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if ast.IsCallExpression(node) && isRunnerCall(node) && len(node.Arguments()) > 0 {
+		if ast.IsCallExpression(node) && isRootRunner(c, node) && len(node.Arguments()) > 0 {
 			checkRunner(c, node.Arguments()[0])
 		}
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
-}
-
-// isRunnerCall reports whether call is written as a runner, such as
-// Effect.runPromise(…) or NodeRuntime.runMain(…).
-func isRunnerCall(call *ast.Node) bool {
-	callee := call.Expression()
-	if !ast.IsPropertyAccessExpression(callee) || !ast.IsIdentifier(callee.Expression()) {
-		return false
-	}
-	return slices.Contains(runners[callee.Expression().Text()], callee.Name().Text())
 }
 
 func checkRunner(c *checker.Checker, program *ast.Node) {

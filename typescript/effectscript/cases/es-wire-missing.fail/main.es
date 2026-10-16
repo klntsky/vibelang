@@ -28,4 +28,4 @@ export function main() {
   Effect.provide(() => welcome(), AppLive)
 }
 
-Effect.runFork(main())
+Effect.runFork(() => main())

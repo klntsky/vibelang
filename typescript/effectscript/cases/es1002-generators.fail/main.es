@@ -24,5 +24,5 @@ function* body() {
   return 2
 }
 
-export const named = Effect.gen(body)
+export const named = () => Effect.gen(body)
 export const fromTs = fromTypeScript

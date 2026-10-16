@@ -23,9 +23,11 @@ export function joined(a: string, b: string) {
 // A lambda whose body only looks a service up is an Effect function too.
 const underRoot = (part: string) => Path.join("root", part)
 
-const program = Effect.provide(Effect.all([describe("2"), piped(), joined("a", "b"), underRoot("c")]), Layer.mergeAll(UserRepoLive, PathLayer))
+function everything() {
+  return [describe("2"), piped(), joined("a", "b"), underRoot("c")]
+}
 
 // expect-result: ["Grace of 2","piped label","a/b","root/c"]
 export function main() {
-  return program()
+  return Effect.provide(() => everything(), Layer.mergeAll(UserRepoLive, PathLayer))
 }

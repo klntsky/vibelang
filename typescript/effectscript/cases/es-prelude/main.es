@@ -11,18 +11,22 @@ function lookup(id: number) {
   return names[id]
 }
 
-const one: Effect<number> = Effect.succeed(1)
 const done: Effect<void, never, Scope> = Effect.void
-const both: Effect.Effect<number, never, Scope.Scope> = Effect.as(done, 2)
+const both: Effect.Effect<void, never, Scope.Scope> = done
 const double = (n: number) => n * 2
+
+// The top level may not run a program (ES1001), so the Effect<number> value
+// arrives as a program, a function with no parameters (D7).
+function first(one: Effect<number>) {
+  return Effect.map(one, (x) => x)
+}
 
 // expect-result: {"found":"ada","tag":"NotFound","piped":8,"one":1}
 export function main() {
   const found = lookup(0)
   const tag = new NotFound({ id: 9 })._tag
   const piped = pipe(2, double, double)
-  const n = Effect.map(one, (x) => x)
-  return { found, tag, piped, one: n }
+  return { found, tag, piped, one: first(() => Effect.succeed(1)) }
 }
 
 export const unused = both

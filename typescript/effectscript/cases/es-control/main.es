@@ -14,13 +14,19 @@ export function checkout(cartId: string) {
 }
 
 const requests: string[] = []
-const approved = handle(checkout("c42"), Approval, {
-  approve: (request: string, k) => {
-    requests.push(request)
-    return resume(k, true)
-  }
-})
-const declined = handle(checkout("c7"), Approval, { approve: (_request: string, k) => resume(k, false) })
+
+function approved() {
+  return handle(() => checkout("c42"), Approval, {
+    approve: (request: string, k) => {
+      requests.push(request)
+      return resume(k, true)
+    }
+  })
+}
+
+function declined() {
+  return handle(() => checkout("c7"), Approval, { approve: (_request: string, k) => resume(k, false) })
+}
 
 // expect-result: {"approved":"charged c42","declined":"declined c7","requests":["charge cart c42"]}
 export function main() {
