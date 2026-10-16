@@ -87,6 +87,12 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 13 | `wnytpnpp` | runtime: export the kernel as @effectscript/runtime/kernel | The `stack-depth` case reads the kernel's hooks |
 | 14 | `mzuwnztz` | effectscript: run cases with a parallel harness | Failing, runnable, and pending cases, and `--status` |
 | 15 | `ylzmpsoz` | effectscript: port the prototype's 46 examples as cases | The acceptance suite, each case pending on its owner |
+| 16 | `wskpkmqv` | checker: add hooks for file checks and diagnostic filters | Report ES diagnostics while checking, and hide the TypeScript errors they explain |
+| 17 | `wvstzskn` | compiler: exempt registered diagnostic sources from comment directives | `@ts-ignore` cannot hide an ES diagnostic |
+| 18 | `yuprxynn` | tsoptions: add the effectscript compiler option | `compilerOptions.effectscript` (D34) |
+| 19 | `wuupxsnv` | effectscript: add the ES diagnostics registry and reporting path | Every Chapter 28 code, with `report`, `note`, and `cover` |
+| 20 | `qqszuvwv` | effectscript: report ES1003 and ES1004 | `async` and `await`; `using` at a module's top level |
+| 21 | `msunyvzt` | effectscript: report ES1002 for generator-based APIs | `Effect.gen` and friends in a `.es` file |
 
 ## Seams in upstream files
 
@@ -162,6 +168,7 @@ The checks so far:
 
 | Code | Reported at | File |
 | --- | --- | --- |
+| ES1002 | The API, such as `Effect.gen`, when a `function*` is passed where a function that returns a lib `Generator` or `Iterator` is expected; covers the generator | `generators.go` |
 | ES1003 | `async`, `await`, `for await`, and `await using` in a `.es` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
 | ES1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
 
