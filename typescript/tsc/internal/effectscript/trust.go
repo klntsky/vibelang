@@ -465,10 +465,18 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 	case t.kind == trustForeign:
 		d := report(c, callee, ES4401, name)
 		// Another package's declaration cannot carry the tag; a re-export can (D23).
+		trusted := ""
 		if declared := ast.GetSourceFileOfNode(signatureDeclaration(c, call)); packageOf(c, declared) != packageOf(c, file) {
-			note(d, "Call it through Effect.try(() => {0}), or re-export it from a .ts file you own with /** @effectscript trusted */.", nodeText(file, call))
+			trusted = "re-export it from a .ts file you own with /** @effectscript trusted */"
 		} else {
-			note(d, "Call it through Effect.try(() => {0}), or tag its declaration in {1} with /** @effectscript trusted */.", nodeText(file, call), path.Base(string(declared.FileName())))
+			trusted = "tag its declaration in " + path.Base(string(declared.FileName())) + " with /** @effectscript trusted */"
+		}
+		// A callback of Effect.try is plain code, so the operands that run an
+		// Effect must run before it.
+		if operand := performingOperand(c, a, call); operand != nil {
+			note(d, "Bind {0} to a const first, then call it through Effect.try, whose callback cannot run an Effect; or {1}.", nodeText(file, operand), trusted)
+		} else {
+			note(d, "Call it through Effect.try(() => {0}), or {1}.", nodeText(file, call), trusted)
 		}
 	case t.kind == trustTagged && t.unreachable != "":
 		d := report(c, callee, unreachableThrows, name, t.unreachable)
@@ -482,6 +490,34 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 			}
 		}
 	}
+}
+
+// performingOperand returns the first call in call's receiver or arguments
+// that runs an Effect, outside the functions they define, or nil.
+func performingOperand(c *checker.Checker, a *analyzer, call *ast.Node) *ast.Node {
+	var operands []*ast.Node
+	if callee := ast.SkipParentheses(call.Expression()); ast.IsPropertyAccessExpression(callee) || ast.IsElementAccessExpression(callee) {
+		operands = append(operands, callee.Expression())
+	}
+	operands = append(operands, call.Arguments()...)
+	var found *ast.Node
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if ast.IsFunctionLike(node) {
+			return false
+		}
+		if ast.IsCallExpression(node) && (a.performs(node) || isEffectValueCall(c, node)) {
+			found = node
+			return true
+		}
+		return node.ForEachChild(visit)
+	}
+	for _, operand := range operands {
+		if visit(operand) {
+			return found
+		}
+	}
+	return nil
 }
 
 // reachClass finds how the generated code of file refers to f's class at run
