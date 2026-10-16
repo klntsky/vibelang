@@ -109,7 +109,7 @@ test("Vite serves JS and maps, invalidates importers, reports diagnostics and re
   await until(() => !importer.transformResult)
   response = await fetch(`${base}/main.es`)
   assert.equal(response.status, 200)
-  assert.match(await response.text(), /double\(22\)/)
+  assert.match(await response.text(), /double(\$direct)?\(22\)/)
 
   await writeFile(sourcePath, source + '\nconst broken: number = "wrong"\n')
   await until(() => messages.some((message) => message?.type === "error"))
@@ -123,7 +123,7 @@ test("Vite serves JS and maps, invalidates importers, reports diagnostics and re
   await writeFile(sourcePath, source.replace("double(21)", "double(23)"))
   await until(async () => {
     const recovered = await fetch(`${base}/main.es`)
-    return recovered.status === 200 && /double\(23\)/.test(await recovered.text())
+    return recovered.status === 200 && /double(\$direct)?\(23\)/.test(await recovered.text())
   })
   console.log("PASS HTTP: JS, .es source map, importer invalidation, TS2322 terminal/overlay, recovery")
 })
