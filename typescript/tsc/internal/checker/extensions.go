@@ -214,3 +214,80 @@ func (c *Checker) applyEntityNameVisibilityHooks(entityName *ast.Node, symbol *a
 	}
 	return false
 }
+
+// unwrapReturnTypeOf returns the type that what fn returns is checked
+// against, given returnType, fn's return type: the type an async function or
+// a generator wraps, as unwrapReturnType says, unless a hook says otherwise.
+func (c *Checker) unwrapReturnTypeOf(fn *ast.Node, returnType *Type) *Type {
+	t := c.unwrapReturnType(returnType, ast.GetFunctionFlags(fn))
+	for _, hook := range unwrappedReturnTypeHooks {
+		t = hook(c, fn, t)
+	}
+	return t
+}
+
+// UnwrappedReturnTypeHook can replace t, the type that the return statements
+// and expression body of fn, a function with a return type annotation, are
+// checked against. TypeScript checks what an async function returns against
+// the type its Promise wraps; an extension can unwrap its own types the same
+// way.
+type UnwrappedReturnTypeHook func(c *Checker, fn *ast.Node, t *Type) *Type
+
+var unwrappedReturnTypeHooks []UnwrappedReturnTypeHook
+
+// RegisterUnwrappedReturnTypeHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterUnwrappedReturnTypeHook(hook UnwrappedReturnTypeHook) {
+	unwrappedReturnTypeHooks = append(unwrappedReturnTypeHooks, hook)
+}
+
+// AnnotatedReturnTypeHook can replace t, the return type that the return type
+// annotation of fn declares, as the return type of fn's signature.
+type AnnotatedReturnTypeHook func(c *Checker, fn *ast.Node, t *Type) *Type
+
+var annotatedReturnTypeHooks []AnnotatedReturnTypeHook
+
+// RegisterAnnotatedReturnTypeHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterAnnotatedReturnTypeHook(hook AnnotatedReturnTypeHook) {
+	annotatedReturnTypeHooks = append(annotatedReturnTypeHooks, hook)
+}
+
+func (c *Checker) applyAnnotatedReturnTypeHooks(fn *ast.Node, t *Type) *Type {
+	for _, hook := range annotatedReturnTypeHooks {
+		t = hook(c, fn, t)
+	}
+	return t
+}
+
+// InferTypeHook reports whether an extension gives node, an infer type
+// outside the extends clause of a conditional type, a meaning in its
+// position. The checker then reports neither that position nor the unused
+// name.
+type InferTypeHook func(c *Checker, node *ast.Node) bool
+
+var inferTypeHooks []InferTypeHook
+
+// RegisterInferTypeHook adds hook to every checker. Call it only from the init
+// function of an in-tree package that tsc/cmd/tsc imports; registration is not
+// synchronized.
+func RegisterInferTypeHook(hook InferTypeHook) {
+	inferTypeHooks = append(inferTypeHooks, hook)
+}
+
+func (c *Checker) inferTypeHasExtensionMeaning(node *ast.Node) bool {
+	for _, hook := range inferTypeHooks {
+		if hook(c, node) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetReturnTypeFromBody returns the return type that TypeScript infers from
+// the body of fn, before any inferred return type hook replaces it.
+func (c *Checker) GetReturnTypeFromBody(fn *ast.Node) *Type {
+	return c.getReturnTypeFromBodyWorker(fn, CheckModeNormal)
+}

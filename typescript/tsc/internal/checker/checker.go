@@ -3363,6 +3363,9 @@ func (c *Checker) checkConditionalType(node *ast.Node) {
 }
 
 func (c *Checker) checkInferType(node *ast.Node) {
+	if c.inferTypeHasExtensionMeaning(node) {
+		return
+	}
 	if ast.FindAncestor(node, func(n *ast.Node) bool {
 		return n.Parent != nil && n.Parent.Kind == ast.KindConditionalType && n.Parent.AsConditionalTypeNode().ExtendsType == n
 	}) == nil {
@@ -3782,10 +3785,9 @@ func (c *Checker) isImplementationCompatibleWithOverload(implementation *Signatu
 }
 
 func (c *Checker) checkAllCodePathsInNonVoidFunctionReturnOrThrow(fn *ast.Node, returnType *Type) {
-	functionFlags := ast.GetFunctionFlags(fn)
 	var t *Type
 	if returnType != nil {
-		t = c.unwrapReturnType(returnType, functionFlags)
+		t = c.unwrapReturnTypeOf(fn, returnType)
 	}
 	// Functions with an explicitly specified return type that includes `void` or is exactly `any` or `undefined` don't
 	// need any return statements.
@@ -3834,7 +3836,7 @@ func (c *Checker) checkAllCodePathsInNonVoidFunctionReturnOrThrow(fn *ast.Node, 
 }
 
 func (c *Checker) isUnwrappedReturnTypeUndefinedVoidOrAny(fn *ast.Node, returnType *Type) bool {
-	t := c.unwrapReturnType(returnType, ast.GetFunctionFlags(fn))
+	t := c.unwrapReturnTypeOf(fn, returnType)
 	return t != nil && (c.maybeTypeOfKind(t, TypeFlagsVoid) || t.flags&(TypeFlagsAny|TypeFlagsUndefined) != 0)
 }
 
@@ -4162,7 +4164,6 @@ func (c *Checker) checkReturnStatement(node *ast.Node) {
 	}
 	signature := c.getSignatureFromDeclaration(container)
 	returnType := c.getReturnTypeOfSignature(signature)
-	functionFlags := ast.GetFunctionFlags(container)
 	if c.strictNullChecks || exprNode != nil || returnType.flags&TypeFlagsNever != 0 {
 		if ast.IsSetAccessorDeclaration(container) {
 			if exprNode != nil {
@@ -4173,7 +4174,7 @@ func (c *Checker) checkReturnStatement(node *ast.Node) {
 				c.error(node, diagnostics.Return_type_of_constructor_signature_must_be_assignable_to_the_instance_type_of_the_class)
 			}
 		} else if c.getReturnTypeFromAnnotation(container) != nil {
-			unwrappedReturnType := core.OrElse(c.unwrapReturnType(returnType, functionFlags), returnType)
+			unwrappedReturnType := core.OrElse(c.unwrapReturnTypeOf(container, returnType), returnType)
 			c.checkReturnExpression(container, unwrappedReturnType, node, node.Expression(), exprType, false)
 		}
 	} else if !ast.IsConstructorDeclaration(container) && c.compilerOptions.NoImplicitReturns.IsTrue() && !c.isUnwrappedReturnTypeUndefinedVoidOrAny(container, returnType) {
@@ -10441,7 +10442,6 @@ func (c *Checker) contextuallyCheckFunctionExpressionOrObjectLiteralMethod(node 
 }
 
 func (c *Checker) checkFunctionExpressionOrObjectLiteralMethodDeferred(node *ast.Node) {
-	functionFlags := ast.GetFunctionFlags(node)
 	returnType := c.getReturnTypeFromAnnotation(node)
 	c.checkAllCodePathsInNonVoidFunctionReturnOrThrow(node, returnType)
 	body := node.Body()
@@ -10464,7 +10464,7 @@ func (c *Checker) checkFunctionExpressionOrObjectLiteralMethodDeferred(node *ast
 			// its return type annotation.
 			exprType := c.checkExpression(body)
 			if returnType != nil {
-				returnOrPromisedType := c.unwrapReturnType(returnType, functionFlags)
+				returnOrPromisedType := c.unwrapReturnTypeOf(node, returnType)
 				if returnOrPromisedType != nil {
 					c.checkReturnExpression(node, returnOrPromisedType, body, body, exprType, false)
 				}
@@ -20480,6 +20480,8 @@ func (c *Checker) getReturnTypeOfSignature(sig *Signature) *Type {
 			} else {
 				t = c.anyType
 			}
+		} else {
+			t = c.applyAnnotatedReturnTypeHooks(sig.declaration, t)
 		}
 	}
 	if sig.flags&SignatureFlagsIsInnerCallChain != 0 {
