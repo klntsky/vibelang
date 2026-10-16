@@ -13,10 +13,10 @@ checking does not prove runtime behavior; the native smoke suite covers that.
 
 ## Evidence and scope
 
-The ordinary TypeScript versions of the Match example and Config fallback
-compile with the same native TypeScript checker (exit 0); their EffectScript
-versions fail. This isolates those failures to EffectScript checking rather
-than an unavailable Effect API. Effect 4.0.5's `Arbitrary.checkEffect` declaration
+The ordinary TypeScript version of the Match example compiles with the
+same native TypeScript checker (exit 0); its EffectScript version fails. This
+isolates that failure to EffectScript checking rather than an unavailable
+Effect API. Effect 4.0.5's `Arbitrary.checkEffect` declaration
 explicitly accepts `boolean | Effect<boolean, E, R>`. D39 requires the effectful
 predicate to select its Effect form. Other rows identify the missing contract,
 resource, producer, or value-call behavior and the exact diagnostic observed.
@@ -32,7 +32,6 @@ adapter's one-element buffer, which differs from D26's zero-capacity handoff.
 
 | Page and block | First code line | Diagnostic | Rule and disagreement |
 | --- | --- | --- | --- |
-| [035-configuration.md, block 8](../src/035-configuration.md) | `import { Config } from "effect"` | TS2739: Type 'Effect<Config<string>, never, never>' is missing the following properties from type 'Config<Config<string>>': [TypeId], parse | D24/D56: Config fallback callbacks must return Config data, not an Effect-wrapped Config. |
 | [067-pattern-matching.md, block 1](../src/code-style/067-pattern-matching.md) | `import { Match } from "effect"` | TS2345, TS2349, TS2339: Argument of type '<I, F, A, Pr>(self: Matcher<I, F, unknown, A, Pr, unknown, any[]>) => Matcher<I, AddWithout<F, number>, ApplyFilters<I, AddWithout<F, number>>, string &#124; A, Pr, unknown, ...>'... | D22/D56: Generic Match pipe stages lose their input and accumulated matcher types. |
 | [067-pattern-matching.md, block 2](../src/code-style/067-pattern-matching.md) | `import { Match } from "effect"` | TS2345: Argument of type '<I, F, A, Pr>(self: Matcher<I, F, unknown, A, Pr, unknown, any[]>) => Matcher<I, AddWithout<F, { readonly status: "failed"; readonly attempts: never; }>, ApplyFilters<I, AddWithou... | D22/D56: Generic Match pipe stages lose their input and accumulated matcher types. |
 | [067-pattern-matching.md, block 3](../src/code-style/067-pattern-matching.md) | `import { Match } from "effect"` | TS2345: Argument of type '<I, F, A, Pr>(self: Matcher<I, F, unknown, A, Pr, unknown, any[]>) => Matcher<I, AddOnly<F, "closed">, ApplyFilters<I, AddOnly<F, "closed">>, string &#124; A, Pr, unknown, ...>' i... | D22/D56: Generic Match pipe stages lose their input and accumulated matcher types. |

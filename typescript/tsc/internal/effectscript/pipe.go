@@ -26,7 +26,7 @@ func (a *analyzer) isPipeProgram(call *ast.Node, path []pathStep) bool {
 	}
 	stage := a.checker.GetTypeAtLocation(call.Arguments()[1])
 	for _, signature := range a.checker.GetSignaturesOfType(stage, checker.SignatureKindCall) {
-		if parameters := signature.Parameters(); len(parameters) > 0 && a.isEffectLike(a.checker.GetTypeOfSymbol(parameters[0])) {
+		if parameters := signature.Parameters(); len(parameters) > 0 && a.isExpectedEffect(a.checker.GetTypeOfSymbol(parameters[0])) {
 			return true
 		}
 	}

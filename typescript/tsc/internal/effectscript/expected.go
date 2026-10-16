@@ -124,13 +124,13 @@ func (a *analyzer) classify(types []*checker.Type) expectation {
 		}
 		signatures := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall)
 		if len(signatures) == 0 {
-			if a.isEffectLike(t) {
+			if a.isExpectedEffect(t) {
 				e.program = true
 			}
 			return
 		}
 		for _, s := range signatures {
-			if a.isEffectLike(unwrapSubstitution(a.checker.GetReturnTypeOfSignature(s))) {
+			if a.isExpectedEffect(unwrapSubstitution(a.checker.GetReturnTypeOfSignature(s))) {
 				e.effectFn = true
 			} else {
 				e.plainFn = true
@@ -143,25 +143,25 @@ func (a *analyzer) classify(types []*checker.Type) expectation {
 	return e
 }
 
-// isEffectLike reports whether t is an Effect or a type that extends one, or
-// a type parameter constrained to one.
-func (a *analyzer) isEffectLike(t *checker.Type) bool {
+// isExpectedEffect reports whether t, an expected type, is effect's own
+// Effect interface, or a type parameter constrained to one. A type that
+// extends Effect with structure of its own, such as Config or Exit, is data
+// (D24): a callback expected to return a Config returns the Config and stays
+// plain, as Config.orElse's fallback does.
+func (a *analyzer) isExpectedEffect(t *checker.Type) bool {
 	if t.Flags()&(checker.TypeFlagsTypeParameter|checker.TypeFlagsIndexedAccess|checker.TypeFlagsConditional) != 0 {
 		constraint := a.checker.GetBaseConstraintOfType(t)
-		return constraint != nil && constraint != t && a.isEffectLike(constraint)
+		return constraint != nil && constraint != t && a.isExpectedEffect(constraint)
 	}
 	if t.Flags()&checker.TypeFlagsUnion != 0 {
 		for _, member := range t.Types() {
-			if !a.isEffectLike(member) {
+			if !a.isExpectedEffect(member) {
 				return false
 			}
 		}
 		return len(t.Types()) > 0
 	}
-	if t.Flags()&checker.TypeFlagsObject == 0 && t.Flags()&checker.TypeFlagsIntersection == 0 {
-		return false
-	}
-	if a.checker.GetPropertyOfType(t, effectTypeID) == nil {
+	if !isEffectType(a.checker, t) {
 		return false
 	}
 	if a.effectInterface == nil {

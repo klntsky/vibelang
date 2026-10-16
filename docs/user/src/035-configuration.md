@@ -115,7 +115,6 @@ function testDatabaseSettings() {
 ## Defaults and fallbacks
 
 ```ts
-// compiler-gap: D24/D56 Config fallback callbacks must return Config data, not an Effect-wrapped Config.
 // optional-config.es
 import { Config } from "effect"
 
