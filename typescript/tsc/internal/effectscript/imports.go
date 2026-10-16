@@ -36,12 +36,22 @@ func (tx *lowering) outputSpecifier(specifier *ast.Node) *ast.Node {
 	if specifier == nil || !ast.IsStringLiteral(specifier) {
 		return specifier
 	}
-	text := specifier.Text()
-	if !tspath.ToModuleSpecifier(text).ShouldRewriteExtension(nil /*rewrites*/, tspath.CaseSensitive) {
+	text, changed := outputSpecifierText(specifier.Text())
+	if !changed {
 		return specifier
 	}
-	output := tx.Factory().NewStringLiteral(tspath.ChangeExtension(text, outputpaths.GetOutputExtension(text, core.JsxEmitNone)), specifier.AsStringLiteral().TokenFlags)
+	output := tx.Factory().NewStringLiteral(text, specifier.AsStringLiteral().TokenFlags)
 	tx.EmitContext().SetOriginal(output, specifier)
 	tx.EmitContext().AssignCommentAndSourceMapRanges(output, specifier)
 	return output
+}
+
+// outputSpecifierText returns the specifier that output uses for text, and
+// whether it differs from text: a relative specifier that names a TypeScript
+// or EffectScript source, ./users.es, names its output, ./users.js.
+func outputSpecifierText(text string) (string, bool) {
+	if !tspath.ToModuleSpecifier(text).ShouldRewriteExtension(nil /*rewrites*/, tspath.CaseSensitive) {
+		return text, false
+	}
+	return tspath.ChangeExtension(text, outputpaths.GetOutputExtension(text, core.JsxEmitNone)), true
 }

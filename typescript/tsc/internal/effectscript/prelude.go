@@ -124,15 +124,20 @@ func forEachBindingName(name *ast.Node, fn func(name string)) {
 
 // preludeState is what one checker remembers about the prelude.
 type preludeState struct {
-	modules map[*ast.SourceFile]*ast.Symbol     // the runtime module each .es file resolves
-	uses    map[*ast.SourceFile]map[string]bool // prelude names each .es file uses as values
+	modules  map[*ast.SourceFile]*ast.Symbol     // the runtime module each .es file resolves
+	uses     map[*ast.SourceFile]map[string]bool // prelude names each .es file uses as values
+	typeUses map[*ast.SourceFile]map[string]bool // prelude names each .es file's declaration file writes (declarations.go)
 }
 
 type preludeStateKey struct{}
 
 func preludeStateOf(c *checker.Checker) *preludeState {
 	return c.ExtensionState(preludeStateKey{}, func() any {
-		return &preludeState{modules: map[*ast.SourceFile]*ast.Symbol{}, uses: map[*ast.SourceFile]map[string]bool{}}
+		return &preludeState{
+			modules:  map[*ast.SourceFile]*ast.Symbol{},
+			uses:     map[*ast.SourceFile]map[string]bool{},
+			typeUses: map[*ast.SourceFile]map[string]bool{},
+		}
 	}).(*preludeState)
 }
 

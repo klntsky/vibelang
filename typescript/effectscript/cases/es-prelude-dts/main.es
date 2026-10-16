@@ -1,13 +1,10 @@
-// Declarations name prelude types, so the emitted .d.ts imports them.
-export class NotFound extends TaggedError("NotFound")<{ readonly id: number }> {}
+// The declaration file of a .es file imports the prelude types its
+// declarations name, and names its imports by output (./users.js).
+import { lookup } from "./users.es"
+export { NotFound } from "./users.es"
 
 export const one: Effect<number> = Effect.succeed(1)
 export const scoped: Effect<void, never, Scope> = Effect.void
-
-export function lookup(id: number) {
-  if (id > 1) Effect.fail(new NotFound({ id }))
-  return "ada"
-}
 
 // expect-result: "ada"
 export function main() {

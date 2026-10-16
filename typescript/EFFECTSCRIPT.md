@@ -143,6 +143,10 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 51 | `vwtxzvnt` | effectscript: report a service that wire leaves unprovided at a runner | ES3201 with the provider that needs the service |
 | 52 | `ktslyskx` | effectscript: check providers against their service's contracts | ES2001 and ES3101 name the member at fault |
 | 53 | `xorurrnt` | effectscript: document service checks and wire in EFFECTSCRIPT.md | This section |
+| 54 | `rwmokwmv` | checker: add an entity name visibility hook | A declaration file may write a prelude name |
+| 55 | `knrysqlq` | compiler: add a declaration transformer hook | Extensions can add imports to a declaration file |
+| 56 | `psvzumxw` | module: resolve an .es specifier to its declaration file | `./users.es` finds `users.d.ts` in a published package |
+| 57 | `nxmqvpsu` | effectscript: write portable declaration files for .es files | `declaration: true` works with the prelude and `.es` imports |
 
 ## Seams in upstream files
 
@@ -159,15 +163,17 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
 | `tsc/internal/compiler/fileloader.go` | Resolve each module an implicit import hook names for a file | +4 |
 | `tsc/internal/binder/nameresolver.go` | `NameResolver.ResolveBeforeGlobals`, consulted before the global scope | +6 |
-| `tsc/internal/module/resolver.go` | Try `.es` for `./welcome.es`, and after `.tsx` for `./welcome.js` | +13 |
+| `tsc/internal/module/resolver.go` | Try `.es`, then `.d.ts`, for `./welcome.es`, and `.es` after `.tsx` for `./welcome.js` | +19 |
 | `tsc/internal/module/util.go` | An `.es` resolution is always allowed | +2 / -1 |
 | `tsc/internal/core/compileroptions.go` | A `.es` file may import a TypeScript source by its extension | +5 / -1 |
+| `tsc/internal/checker/emitsupport.go` | Ask entity name visibility hooks in `isEntityNameVisible` | +4 |
+| `tsc/internal/compiler/emitter.go` | Run declaration transformer hooks after TypeScript's | +2 / -2 |
 | `tsc/internal/core/options_generated.go` (generated) | `CompilerOptions.EffectScript`, in `Clone` and `Equals` | +6 |
 | `tsc/internal/tsoptions/declarations_generated.go` (generated) | The `effectscript` declaration | +8 |
 | `tsc/internal/tsoptions/options_generated.go` (generated) | Parse, merge for `extends`, compare for semantic diagnostics and emit, and serialize for `--showConfig` | +15 / -1 |
 | `tsc/internal/tsoptions/commandlineoption.go`, `tsconfigparsing.go` | The option's extra validation | +4 |
-| `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource`, `RegisterImplicitImportHook` | +70 |
-| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening`, `RegisterNameResolutionHook` | +193 |
+| `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource`, `RegisterImplicitImportHook`, `RegisterDeclarationTransformerHook` | +106 |
+| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening`, `RegisterNameResolutionHook`, `RegisterEntityNameVisibilityHook` | +217 |
 | `tsc/internal/checker/extensions_classes.go` (new) | `RegisterClassBaseHook`, `Program`, `GetStringLiteralType`, `NewOptionalReadonlyPropertyType` | +48 |
 | `tsc/internal/checker/extensions_calls.go` (new) | `RegisterMemberReceiverHook`, `RegisterCallSignaturesHook`, `NewCallSignature` | +52 |
 | `tsc/internal/checker/extensions_functions.go` (new) | `RegisterSkippedFunctionTypeHook`, `GetNonInferrableAnyType` | +35 |
@@ -398,6 +404,8 @@ Every `.es` file sees these names without an import (D4, D48): `Effect`, `Schema
 
 A name used only in types, such as `Scope` in `Effect<void, never, Scope>`, is not imported. The emitted imports are ES module imports: `.es` files compile to ES modules. When `@effectscript/runtime` is not installed, a prelude name is TypeScript's TS2304 (cannot find name).
 
+A declaration file is ordinary TypeScript, so the `.d.ts` of a `.es` file imports the prelude names its declarations write: `import type { Effect, Scope } from "@effectscript/runtime"`. Declaration emit asks the entity name visibility hook whether each name it writes is visible; `preludeNameVisible` says yes for a prelude name and records it, and `transformDeclarations`, a declaration transformer hook, adds the import (`declarations.go`, case `es-prelude-dts`).
+
 ## Imports between files
 
 A `.es` file imports another module by its source name, and the emitted JavaScript imports the output (D31):
@@ -410,7 +418,7 @@ A `.es` file imports another module by its source name, and the emitted JavaScri
 
 - **Resolution.** The module resolver tries `welcome.es` for `./welcome.es`, and after `.ts` and `.tsx` for `./welcome.js` and an extensionless specifier, so `.ts` beats `.es` when both exist. An `.es` resolution is always allowed, like a `.ts` one (`module/resolver.go`, `module/util.go`).
 - **Extensions in specifiers.** A `.es` file may name a `.ts` or `.es` source without `allowImportingTsExtensions` (no TS5097), because its emitted JavaScript never keeps the source name (`core.AllowImportingTsExtensionsFrom`). A `.ts` file follows TypeScript's rules.
-- **Emit.** The lowering rewrites the specifier of every import and export declaration in a `.es` file that names a TypeScript or EffectScript source, with or without `rewriteRelativeImportExtensions` (`imports.go`). Dynamic `import()` is not rewritten: it returns a Promise, which `.es` code does not await.
+- **Emit.** The lowering rewrites the specifier of every import and export declaration in a `.es` file that names a TypeScript or EffectScript source, with or without `rewriteRelativeImportExtensions` (`imports.go`). The `.d.ts` of a `.es` file names outputs too, including in the `import("./users.js")` types the checker writes for inferred types, so stock TypeScript can read it (`declarations.go`); and `./users.es` resolves to `users.d.ts` when only the declaration file exists, as `./users.ts` does. Dynamic `import()` is not rewritten: it returns a Promise, which `.es` code does not await.
 
 Case `es-imports` covers an `.es` file calling an `.es` Effect function and a pure helper, and a `.ts` file calling an `.es` function that `.es` code then runs; `es-imports-norewrite` covers a project without `rewriteRelativeImportExtensions`.
 
@@ -424,7 +432,6 @@ Generated JavaScript imports only `effect` and `@effectscript/runtime` (D30): th
 - `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
 - `fork` and handlers have no meaning yet: the prelude names them, and their lanes give them meaning. A service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
 - ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
-- A `.d.ts` file does not import the prelude types it names, so `declaration: true` reports TS4025 for an exported declaration annotated with `Effect<…>` (case `es-prelude-dts`, pending on F1).
 - No programs as values (D7). `Effect.retry(() => sync(store), policy)` passes a plain function where an Effect is expected.
 - Most ES diagnostics do not exist yet. A top-level `main()` is an Effect value, not ES1001. An Effect lambda passed to `Array.prototype.forEach` silently does nothing, not ES4301. A plain TypeScript call is not ES4401.
 - An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract.
