@@ -94,6 +94,10 @@ cd experiments && bun install && bun test          # kernel laws
 cd docs/tools && bun install && bun render.ts      # build the spec
 bun prototype/esc/examples/run-all.ts              # prototype compiler examples
 cd typescript && sh effectscript/smoke.sh          # build esc and run its cases
+bun docs/tools/check-snippets.ts                   # compile every user-doc code block
+sh scripts/check-examples.sh                       # build and run the examples
 ```
+
+To run any of these on a Linux build host instead of this machine, set `ES_REMOTE_HOST` (and `ES_REMOTE_KEY`) and prefix the command with `scripts/remote.sh` from the directory it runs in, for example `cd typescript && ../scripts/remote.sh sh effectscript/smoke.sh --status`.
 
 `experiments/scripts/v3-wakeup-chain.mjs` needs Effect 3.22.3 unpacked in `experiments/scratch-agent-a/v3pkg/` (`npm pack effect@3.22.3`), which is not checked in.
