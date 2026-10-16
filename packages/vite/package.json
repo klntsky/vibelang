@@ -1,0 +1,37 @@
+{
+  "name": "@effectscript/vite",
+  "version": "0.0.1",
+  "description": "Compile EffectScript source modules with esc in Vite and Vitest",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/plugin.test.mjs"
+  },
+  "peerDependencies": {
+    "@effectscript/compiler": "0.0.1",
+    "vite": ">=7 <9"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.5",
+    "effect": "4.0.5",
+    "vite": "^8.0.0",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependenciesMeta": {
+    "@effectscript/compiler": {
+      "optional": true
+    }
+  }
+}
