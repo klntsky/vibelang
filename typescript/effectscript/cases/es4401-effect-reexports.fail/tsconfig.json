@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["esnext"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "types": [],
+    "skipLibCheck": true,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "out",
+    "paths": {
+      "vitest": ["./stubs/vitest/index.d.ts"],
+      "@effect/vitest": ["./stubs/effect-vitest/index.d.ts"]
+    }
+  },
+  "include": ["*.es", "*.ts"]
+}

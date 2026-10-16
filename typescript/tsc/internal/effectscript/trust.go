@@ -107,7 +107,61 @@ func computeTrust(c *checker.Checker, call *ast.Node) *trust {
 	if symbol := decl.Symbol(); symbol != nil {
 		candidates = append(candidates, symbol.Declarations()...) // the other overloads
 	}
-	return tagged(c, call, candidates, &trust{kind: trustForeign, promise: returnsPromise(c, call)})
+	t := tagged(c, call, candidates, &trust{kind: trustForeign, promise: returnsPromise(c, call)})
+	if t.kind == trustForeign && file.IsDeclarationFile && reachedThroughEffect(c, call) {
+		return &trust{kind: trustEffect}
+	}
+	return t
+}
+
+// reachedThroughEffect reports whether call's callee is an export of one of
+// Effect's packages, a member of one, or a function or method of a value
+// that a trusted call to one returned (D22). A package may re-export another
+// package's functions, as @effect/vitest re-exports vitest's assert and
+// expect, so their declarations alone do not show that they are Effect's:
+//
+//	import { assert, expect } from "@effect/vitest"
+//	assert.strictEqual(n, 1)   // assert is an export of @effect/vitest
+//	expect(n).toBe(1)          // toBe is a method of what expect returned
+func reachedThroughEffect(c *checker.Checker, call *ast.Node) bool {
+	callee := ast.SkipParentheses(call.Expression())
+	for {
+		switch {
+		case ast.IsPropertyAccessExpression(callee), ast.IsElementAccessExpression(callee):
+			callee = ast.SkipParentheses(callee.Expression())
+		case ast.IsCallExpression(callee):
+			return callTrust(c, callee).kind == trustEffect
+		case ast.IsIdentifier(callee):
+			return importedFromEffect(c, callee)
+		default:
+			return false
+		}
+	}
+}
+
+// importedFromEffect reports whether name is bound by an import from one of
+// Effect's packages, whichever module declares what the import names.
+func importedFromEffect(c *checker.Checker, name *ast.Node) bool {
+	symbol := c.GetSymbolAtLocation(name)
+	if symbol == nil || symbol.Flags()&ast.SymbolFlagsAlias == 0 {
+		return false
+	}
+	for _, decl := range symbol.Declarations() {
+		statement := ast.FindAncestorKind(decl, ast.KindImportDeclaration)
+		if statement == nil {
+			continue
+		}
+		module := c.ResolveExternalModuleName(statement.ModuleSpecifier(), nil /*importAttributesType*/)
+		if module == nil {
+			continue
+		}
+		for _, moduleDecl := range module.Declarations() {
+			if file := ast.GetSourceFileOfNode(moduleDecl); file != nil && isEffectPackage(packageOf(c, file)) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // tagged returns the trust of a declaration among candidates that is tagged

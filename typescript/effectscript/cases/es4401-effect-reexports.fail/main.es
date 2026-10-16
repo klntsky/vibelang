@@ -1,0 +1,26 @@
+// expect: ES4401
+// D22: an export of one of Effect's packages is trusted, and so are the
+// values it returns, also when the package re-exports another package's
+// function, as @effect/vitest re-exports vitest's assert and expect. The
+// same function imported from its own package keeps ES4401, and so does the
+// program's own TypeScript reached through a value Effect returned.
+import { Option } from "effect"
+import { assert, expect } from "@effect/vitest"
+import * as EffectVitest from "@effect/vitest"
+import { expect as vitestExpect } from "vitest"
+import type { Account } from "./account.ts"
+
+export function trusted(n: number) {
+  Effect.sleep("1 millis")
+  assert.strictEqual(n, 1)
+  expect(n).toBe(1)
+  EffectVitest.assert.isTrue(n > 0)
+  return n
+}
+
+export function untrusted(n: number, account: Option.Option<Account>) {
+  Effect.sleep("1 millis")
+  vitestExpect(n).toBe(1)
+  Option.getOrThrow(account).close()
+  return n
+}
