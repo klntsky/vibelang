@@ -43,6 +43,13 @@ function bareEffect() {
   return f("z")
 }
 
+// A lambda a function returns has no expected type: plain, because its body
+// runs nothing, even inside an Effect function.
+function returned(n: number) {
+  Effect.sleep("1 millis")
+  return (x: number) => Math.max(x, n)
+}
+
 // Array.prototype.map declares a plain callback; Effect.forEach an Effect one.
 function traversals(ids: ReadonlyArray<string>) {
   const trimmed = ids.map((id) => id.trim())
@@ -50,7 +57,7 @@ function traversals(ids: ReadonlyArray<string>) {
   return found.join("")
 }
 
-// expect-result: {"plainBody":"plain 2","plainCall":"plain 1","effectCall":"effect 1","effectFirst":"effect 2","programFirst":"program 2","bare":0,"bareEffect":"z","traversals":"ab"}
+// expect-result: {"plainBody":"plain 2","plainCall":"plain 1","effectCall":"effect 1","effectFirst":"effect 2","programFirst":"program 2","bare":0,"bareEffect":"z","traversals":"ab","returned":5}
 export function main() {
   return {
     plainBody: plainBody(),
@@ -60,6 +67,7 @@ export function main() {
     programFirst: programFirst(),
     bare: bare(),
     bareEffect: bareEffect(),
-    traversals: traversals([" a", "b "])
+    traversals: traversals([" a", "b "]),
+    returned: returned(5)(3)
   }
 }
