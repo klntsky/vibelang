@@ -11397,7 +11397,8 @@ func (c *Checker) checkIdentifier(node *ast.Node, checkMode CheckMode) *Type {
 		t != c.autoType && t != c.autoArrayType && (!c.strictNullChecks || t.flags&(TypeFlagsAnyOrUnknown|TypeFlagsVoid) != 0 || IsInTypeQuery(node) || c.isInAmbientOrTypeNode(node) || node.Parent.Kind == ast.KindExportSpecifier) ||
 		ast.IsNonNullExpression(node.Parent) ||
 		ast.IsVariableDeclaration(declaration) && declaration.AsVariableDeclaration().ExclamationToken != nil ||
-		declaration.Flags&ast.NodeFlagsAmbient != 0
+		declaration.Flags&ast.NodeFlagsAmbient != 0 ||
+		ast.IsCatchClauseVariableDeclarationOrBindingElement(declaration)
 	var initialType *Type
 	switch {
 	case isAutomaticTypeInNonNull:
@@ -17099,6 +17100,9 @@ func (c *Checker) getTypeForVariableLikeDeclaration(declaration *ast.Node, inclu
 				return declaredType
 			}
 			return c.errorType
+		}
+		if t := c.applyCatchVariableTypeHooks(declaration); t != nil {
+			return t
 		}
 		// If the catch clause is not explicitly annotated, treat it as though it were explicitly
 		// annotated with unknown or any, depending on useUnknownInCatchVariables.

@@ -75,6 +75,29 @@ func (c *Checker) ExtensionState(key any, create func() any) any {
 	return value
 }
 
+// CatchVariableTypeHook gives the variable of a catch clause that has no type
+// annotation its type, or returns nil to leave TypeScript's any or unknown.
+// declaration is the catch clause's variable declaration.
+type CatchVariableTypeHook func(c *Checker, declaration *ast.Node) *Type
+
+var catchVariableTypeHooks []CatchVariableTypeHook
+
+// RegisterCatchVariableTypeHook adds hook to every checker. Call it only from
+// the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterCatchVariableTypeHook(hook CatchVariableTypeHook) {
+	catchVariableTypeHooks = append(catchVariableTypeHooks, hook)
+}
+
+func (c *Checker) applyCatchVariableTypeHooks(declaration *ast.Node) *Type {
+	for _, hook := range catchVariableTypeHooks {
+		if t := hook(c, declaration); t != nil {
+			return t
+		}
+	}
+	return nil
+}
+
 // NewTypeReference instantiates target, a generic class or interface type,
 // with typeArguments.
 func (c *Checker) NewTypeReference(target *Type, typeArguments []*Type) *Type {
