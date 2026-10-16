@@ -6098,7 +6098,7 @@ func (c *Checker) checkVariableLikeDeclaration(node *ast.Node) {
 					c.checkTypeAssignableTo(c.widenTypeForVariableLikeDeclaration(initializerType, node, false), optionalDisposableType, initializer,
 						diagnostics.The_initializer_of_an_await_using_declaration_must_be_either_an_object_with_a_Symbol_asyncDispose_or_Symbol_dispose_method_or_be_null_or_undefined)
 				}
-			} else if blockScopeKind == ast.NodeFlagsUsing {
+			} else if blockScopeKind == ast.NodeFlagsUsing && !c.applyUsingInitializerHooks(node) {
 				globalDisposableType := c.getGlobalDisposableType()
 				if globalDisposableType != c.emptyObjectType {
 					optionalDisposableType := c.getUnionType([]*Type{globalDisposableType, c.nullType, c.undefinedType})
