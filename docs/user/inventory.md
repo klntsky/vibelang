@@ -153,6 +153,7 @@ Code example count: one example per fenced code block in the source body, includ
 
 ### EffectScript features
 
+- [Control operations and handlers](src/effectscript-features/111-control-operations-and-handlers.md)
 - [Producers](src/effectscript-features/112-producers.md)
 
 ## Page inventory
@@ -278,6 +279,7 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 
 | Local page | Topics |
 | --- | --- |
+| [Control operations and handlers](src/effectscript-features/111-control-operations-and-handlers.md) | Declaration, performing, policies, resuming, abandonment, cleanup, fiber diagnostics |
 | [Producers](src/effectscript-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
 
 ## Counts by sidebar section
@@ -308,8 +310,8 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | Guides | Behaviour | 2 |
 | Guides | Schema | 20 |
 | Guides | Platform | 6 |
-| EffectScript features | Original language guides | 1 |
-| **Total** | | **111** |
+| EffectScript features | Original language guides | 2 |
+| **Total** | | **112** |
 
 ## Counts by upstream directory
 
