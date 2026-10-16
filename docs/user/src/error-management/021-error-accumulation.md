@@ -1,0 +1,64 @@
+# Error Accumulation
+
+Independent checks often need to report every problem in one response. Use validation to collect domain errors, or partitioning when successful results are useful even if other inputs fail.
+
+[Upstream page](https://effect.website/docs/v4/error-management/error-accumulation)
+
+## Validating every computation
+
+```ts
+class InvalidHandle extends TaggedError("InvalidHandle")<{
+  readonly input: string
+}> {}
+
+function validateHandle(input: string) {
+  const handle = input.trim()
+  if (handle.length < 3) throw new InvalidHandle({ input })
+  return handle.toLowerCase()
+}
+
+function validateTeam() {
+  return Effect.validate(
+    ["Jo", "RIVER", ""],
+    (input) => validateHandle(input),
+    { concurrency: 2 }
+  )
+}
+// Effect<string[], [InvalidHandle, ...InvalidHandle[]], never>
+```
+
+`Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel contains a nonempty array of every domain error and the successful values are discarded. If all succeed, it returns an array of successes.
+
+```ts
+function checkTeamOnly() {
+  Effect.validate(["RIVER", "SKY"], (input) => validateHandle(input), {
+    discard: true,
+    concurrency: 2
+  })
+}
+```
+
+`discard: true` returns `void` on success when you only need validation. Concurrency controls how many independent checks run at once. A cause without an expected failure still terminates the computation. These APIs use Effect's error-to-result conversion, so a mixed cause containing an expected failure can be reduced to that error and lose its other reasons; use cause-level inspection when those reasons matter.
+
+## Partitioning successes and failures
+
+```ts
+function inspectTeam() {
+  const [handles, errors] = Effect.partition(
+    ["Jo", "RIVER", ""],
+    (input) => validateHandle(input),
+    { concurrency: 2 }
+  )
+  return {
+    handles,                       // ["river"]
+    rejected: errors.length        // 2
+  }
+}
+// Effect<{ handles: string[]; rejected: number }, never, never>
+```
+
+The tuple order is `[successes, failures]`. `partition` preserves both arrays and removes expected errors from `E`, letting you accept valid inputs while reporting rejected ones. Its mixed-cause policy is the same as validation's.
+
+## Coming from Effect
+
+Pass an ordinary EffectScript callback to `validate` or `partition`. A plain array `map` cannot run a callback that needs services, pauses, or has a typed failure.

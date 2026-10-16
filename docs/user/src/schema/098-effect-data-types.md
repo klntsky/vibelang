@@ -1,0 +1,116 @@
+# Effect Data Types
+
+Schemas for Effect data types work as in Effect. Runtime collection schemas expect their actual runtime containers on both sides and transform the contents. Derive a canonical JSON codec when the external representation is plain JSON instead. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+
+## Building configuration-compatible codecs
+
+```ts
+import { Config, ConfigProvider } from "effect"
+
+const DispatchConfig = Config.schema(Schema.Struct({
+  depot: Schema.String,
+  capacity: Schema.Finite
+}), "dispatch")
+
+function configurationExample() {
+  const provider = ConfigProvider.fromUnknown({
+    dispatch: { depot: "north", capacity: 24 }
+  })
+  return DispatchConfig.parse(provider)
+}
+```
+
+`Config.schema` builds a Config value without reading it. Calling `DispatchConfig()` reads the current provider; `DispatchConfig.parse(provider)` reads the explicit provider and decodes its representation to the schema's type. The example uses a structured provider with a numeric capacity. String-based providers need a representation that accepts strings, such as a string-tree codec or explicit `FiniteFromString` fields. Configuration errors use Config's error model rather than exposing the raw Schema parser unchanged.
+
+## Encoding options, results, and exits
+
+```ts
+import { Exit, Option, Result } from "effect"
+
+const OptionalCount = Schema.Option(Schema.FiniteFromString)
+const CountResult = Schema.Result(Schema.FiniteFromString, Schema.Trim)
+const CountExit = Schema.Exit(Schema.FiniteFromString, Schema.String, Schema.Defect())
+
+function decodeContainers() {
+  const option = Schema.decodeUnknownEffect(OptionalCount)(Option.some("9"))
+  const result = Schema.decodeUnknownEffect(CountResult)(Result.fail(" delayed "))
+  const exit = Schema.decodeUnknownEffect(CountExit)(Exit.succeed("9"))
+  return { option, result, exit }
+}
+```
+
+`Option` applies its value schema to `Some` and retains `None`. `Result(success, failure)` transforms each channel independently. `Exit(success, failure, defect)` also describes failures and defects inside the cause. `Exit.succeed` and `Exit.fail` construct data, and an Exit returned by the parser stays data. A failure stored inside it does not itself fail the surrounding parser. Calling the Exit runs it, succeeding or failing with its stored outcome.
+
+```ts
+function encodeResult() {
+  const codec = Effect.try(() => Schema.toCodecJson(CountResult))
+  return Schema.encodeEffect(codec)(Result.succeed(9))
+}
+// { _tag: "Success", success: "9" }
+```
+
+Canonical JSON uses `{ _tag: "Some", value }` and `{ _tag: "None" }` for options, and `Success/success` or `Failure/failure` for results. Exit JSON uses `Success/value` or `Failure/cause`; causes preserve their failure reasons. `Schema.Defect()` reconstructs supported error-shaped defect data, including name, message, and optional stack.
+
+| Option conversion | Inputs decoded as `None` | Default encoding of `None` |
+| --- | --- | --- |
+| `OptionFromUndefinedOr` | undefined | undefined |
+| `OptionFromNullOr` | null | null |
+| `OptionFromNullishOr` | null or undefined | undefined |
+| `OptionFromOptionalKey` | missing key | omitted key |
+| `OptionFromOptional` | missing key or undefined | omitted key |
+| `OptionFromOptionalNullOr` | missing key, null, or undefined | omitted key |
+
+`OptionFromNullishOr` accepts `onNoneEncoding: null` to choose null instead. `OptionFromOptionalNullOr` accepts `"omit"`, null, or undefined for the encoding policy.
+
+## Supporting native and Effect collections
+
+```ts
+const NativeSet = Schema.ReadonlySet(Schema.FiniteFromString)
+const NativeMap = Schema.ReadonlyMap(Schema.String, Schema.FiniteFromString)
+const PersistentSet = Schema.HashSet(Schema.FiniteFromString)
+const PersistentMap = Schema.HashMap(Schema.String, Schema.FiniteFromString)
+
+function collectionsFromJson() {
+  const setCodec = Effect.try(() => Schema.toCodecJson(PersistentSet))
+  const mapCodec = Effect.try(() => Schema.toCodecJson(PersistentMap))
+  const set = Schema.decodeUnknownEffect(setCodec)(["4", "7"])
+  const map = Schema.decodeUnknownEffect(mapCodec)([["cold", "4"]])
+  return { set, map }
+}
+```
+
+`ReadonlySet` and `ReadonlyMap` describe native Set and Map containers; `HashSet` and `HashMap` describe Effect's persistent collections. Runtime schemas transform each element or entry while retaining the container kind. Their canonical JSON codecs use arrays of values for sets and arrays of key-value pairs for maps. The inner codec's explicit string encoding remains in the JSON representation.
+
+## Converting durations and protected values
+
+```ts
+import { Duration } from "effect"
+
+function durations() {
+  const hold = Schema.decodeEffect(Schema.DurationFromString)("3 seconds")
+  const milliseconds = Schema.encodeEffect(Schema.DurationFromMillis)(hold)
+  const nanoseconds = Schema.decodeEffect(Schema.DurationFromNanos)(3_000_000_000n)
+  const jsonCodec = Effect.try(() => Schema.toCodecJson(Schema.Duration))
+  const json = Schema.encodeEffect(jsonCodec)(Duration.seconds(3))
+  return { milliseconds, nanoseconds, json }
+}
+// json: { _tag: "Millis", value: 3000 }
+```
+
+`Schema.Duration` validates an existing Duration. `DurationFromString`, `DurationFromMillis`, and `DurationFromNanos` select text, numeric milliseconds, or bigint nanoseconds. The canonical Duration representation is tagged and preserves the supported precision and infinity cases.
+
+```ts
+const AccessToken = Schema.RedactedFromValue(Schema.NonEmptyString)
+const NonSerializableToken = Schema.Redacted(Schema.String, {
+  label: "DispatchToken",
+  disallowJsonEncode: true
+})
+
+function readToken(input: unknown) {
+  return Schema.decodeUnknownEffect(AccessToken)(input)
+}
+```
+
+`RedactedFromValue` validates a raw value and wraps it; `Redacted` expects a Redacted container and validates its hidden contents. Redaction protects display, not every serialization path: encoding a raw-value codec or a default canonical JSON codec can expose the contents. Use `disallowJsonEncode: true` on the Redacted schema when its canonical JSON codec must refuse encoding, and avoid logging decoded secrets.
+
+[Upstream page](https://effect.website/docs/v4/schema/effect-data-types)

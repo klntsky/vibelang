@@ -1,0 +1,93 @@
+# Exit
+
+`Exit` works in EffectScript exactly as in Effect. Use `Exit<A, E>` to inspect success or an entire failure cause, including defects and interruption. A call that returns an Exit returns data; calling that data runs its recorded outcome.
+
+## Representing full outcomes
+
+```ts
+import { Exit } from "effect"
+
+class ExportRejected extends TaggedError("ExportRejected")<{
+  readonly reason: string
+}> {}
+
+function inspectExport() {
+  const outcome = Effect.exit(() => {
+    throw new ExportRejected({ reason: "empty selection" })
+  })
+  if (Exit.isFailure(outcome)) return outcome.cause.reasons.length
+  return 0
+}
+```
+
+An exit is `Success` with `.value`, or `Failure` with `.cause`. `Effect.exit` runs a program and returns that outcome as its success value. The caller can inspect it without re-raising the recorded failure.
+
+## Creating success and cause-based failure exits
+
+```ts
+import { Cause, Exit } from "effect"
+
+function sampleOutcomes() {
+  const successful = Exit.succeed(12)
+  const failed = Exit.failCause(
+    Cause.combine(
+      Cause.fail("write rejected"),
+      Cause.die(new Error("release failed"))
+    )
+  )
+  return { successful, failed }
+}
+
+function constantSuccess() {
+  return Exit.succeed(12)
+}
+// Effect<Exit.Exit<number>, never, never>
+```
+
+`Exit.succeed` and `Exit.failCause` construct exit data, including at a module's top level. `Exit.succeed(12)` gives a success exit containing `12`, and `Exit.failCause(cause)` gives a failure exit containing the cause. Neither raises a failure. Use `Effect.exit` to run a program and capture its actual outcome instead.
+
+## Matching exit variants
+
+```ts
+import { Cause, Exit } from "effect"
+
+function describe<A, E>(outcome: Exit.Exit<A, E>) {
+  return Exit.match(outcome, {
+    onSuccess: (value) => `Completed: ${String(value)}`,
+    onFailure: (cause) => Cause.pretty(cause)
+  })
+}
+```
+
+`Exit.match` receives the success value or the complete cause. Its callbacks here compute strings synchronously. Use `isSuccess` or `isFailure` and ordinary branches when the response needs effectful work.
+
+## Relating exits to results
+
+```ts
+import { Cause, Exit, Result } from "effect"
+
+function asResult<A, E>(outcome: Exit.Exit<A, E>) {
+  if (Exit.isSuccess(outcome)) return Result.succeed(outcome.value)
+  return Result.fail(outcome.cause)
+}
+// Effect<Result.Result<A, Cause.Cause<E>>, never, never>
+```
+
+An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result<A, E>` alone cannot express the additional defect and interruption reasons. Keep the full cause when moving an execution outcome into another data structure.
+
+## Relating exits to effects
+
+```ts
+import { Exit } from "effect"
+
+function replay<A, E>(outcome: Exit.Exit<A, E>) {
+  return outcome()
+}
+// Effect<A, E, never>
+```
+
+Calling a held exit runs its constant outcome. Success returns the stored value; failure propagates the stored cause, without repeating the original work. Taking an exit with `Effect.exit` and later calling it therefore separates inspection from propagation.
+
+## Coming from Effect
+
+`const outcome = Exit.succeed(value)` still builds an exit object. Call `outcome()` to propagate it, or use `Effect.exit(() => work())` to capture a program's outcome. Although Exit extends Effect, its constructors return data under the call rule.

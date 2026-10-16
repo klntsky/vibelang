@@ -1,0 +1,82 @@
+# Sink Operations
+
+Transform a Sink when its existing consumption rule fits but its input or result type does not. Pure mappings build a new sink; effectful mappings defer their work until consumption. Filter the feeding Stream when only selected elements should reach a sink.
+
+## Adapting consumer input
+
+```ts
+import { Sink, Stream } from "effect"
+
+const quantities = Sink.mapInput(Sink.sum, (entry: { readonly quantity: number }) => entry.quantity)
+
+function countItems() {
+  return Stream.run(Stream.make({ quantity: 7 }, { quantity: 11 }), quantities)
+}
+// Returns 18.
+```
+
+`mapInput` converts each incoming value before the original sink sees it. Its callback is synchronous and cannot perform Effect work. Use `mapInputEffect` for validation, service calls, or other work with failures and requirements.
+
+```ts
+import { Sink } from "effect"
+
+class InvalidQuantity extends TaggedError("InvalidQuantity")<{
+  readonly raw: string
+}> {}
+
+const parsedTotal = Sink.mapInputEffect(Sink.sum, (raw: string) => {
+  const value = Number(raw)
+  if (!Number.isFinite(value)) throw new InvalidQuantity({ raw })
+  return value
+})
+```
+
+The new sink accepts strings and can fail with `InvalidQuantity`. A failed input transformation fails consumption; it does not silently discard the input.
+
+## Mapping consumer output
+
+```ts
+import { Sink, Stream } from "effect"
+
+const report = Sink.map(Sink.sum, (total) => ({ total, unit: "items" }))
+
+function totalReport() {
+  return Stream.run(Stream.make(7, 11), report)
+}
+// Returns { total: 18, unit: "items" }.
+```
+
+`map` runs once on the sink's successful final result. It leaves the input and leftover types unchanged. `mapEffect` allows Effect work when transforming that result, such as saving a summary.
+
+## Composing input and output transformations
+
+```ts
+import { Sink, Stream } from "effect"
+
+const report = pipe(
+  Sink.sum,
+  Sink.mapInput((entry: { readonly bytes: number }) => entry.bytes),
+  Sink.map((bytes) => `${bytes} bytes`)
+)
+
+function byteReport() {
+  return Stream.run(Stream.make({ bytes: 128 }, { bytes: 256 }), report)
+}
+// Returns "384 bytes".
+```
+
+The input stage adapts each element, the original sink accumulates, and the output stage formats once. The pipeline builds a Sink value. `Stream.run` is the operation that executes it.
+
+## Filtering before consumption
+
+```ts
+import { Sink, Stream } from "effect"
+
+function positiveBatches() {
+  const positive = Stream.filter(Stream.make(-3, 4, 0, 8, -1, 12, 16), (n) => n > 0)
+  const batches = Stream.transduce(positive, Sink.take<number>(3))
+  return Stream.runCollect(batches) // [[4, 8, 12], [16]]
+}
+```
+
+Filtering upstream means rejected elements do not count toward the sink's limit. `Stream.transduce` repeatedly runs the sink and passes batch leftovers into the next run. If input ends exactly at a completed sink boundary, a final empty sink result can appear; remove empty arrays downstream when the application needs only non-empty groups.

@@ -1,0 +1,101 @@
+# Layer Memoization
+
+Effect shares repeated uses of the same layer value within one build graph. EffectScript keeps this behavior, so reuse a layer value when consumers should share its initialization and resources.
+
+[Upstream page](https://effect.website/docs/v4/requirements-management/layer-memoization)
+
+## Sharing acquisition across a graph
+
+```ts
+abstract class Prefix {
+  abstract readonly value: string
+}
+abstract class Heading {
+  abstract readonly value: string
+}
+abstract class Footer {
+  abstract readonly value: string
+}
+
+const PrefixLive = Layer.effect(Prefix, () => {
+  Effect.log("Prefix initialized")
+  return { value: "Monthly" }
+})
+const HeadingLive = Layer.effect(Heading, () => {
+  const prefix = Prefix()
+  return { value: `${prefix.value} report` }
+})
+const FooterLive = Layer.effect(Footer, () => {
+  const prefix = Prefix()
+  return { value: `${prefix.value} archive` }
+})
+
+const Shared = Layer.merge(
+  Layer.provide(HeadingLive, PrefixLive),
+  Layer.provide(FooterLive, PrefixLive)
+)
+
+function documentLabels() {
+  return Effect.provide(() => [Heading().value, Footer().value], Shared)
+}
+```
+
+Both graph branches reference `PrefixLive`, so its initialization logs once per `documentLabels` call. Memoization uses layer object identity, not the output service type or structural equivalence. If a factory builds a layer, call it once and reuse the resulting value when sharing matters.
+
+Sharing lasts for the graph's managed lifetime; it is not a process-wide singleton. Scoped acquisitions remain open while the graph uses them and release when the owning lifetime ends.
+
+## Requesting fresh acquisition
+
+```ts
+const Separate = Layer.merge(
+  Layer.provide(HeadingLive, Layer.fresh(PrefixLive)),
+  Layer.provide(FooterLive, Layer.fresh(PrefixLive))
+)
+
+function isolatedLabels() {
+  return Effect.provide(() => [Heading().value, Footer().value], Separate)
+}
+```
+
+Each fresh branch acquires its own prefix implementation, producing two initialization messages. `Layer.fresh` isolates acquisition from the surrounding graph's memoization. Use it when separate state or resource ownership is part of the intended behavior.
+
+## Local provision boundaries
+
+```ts
+function twoLocalReads() {
+  const first = Effect.provide(() => Prefix().value, PrefixLive)
+  const second = Effect.provide(() => Prefix().value, PrefixLive)
+  return [first, second]
+}
+
+function oneSharedReadBoundary() {
+  return Effect.provide(() => {
+    const first = Prefix().value
+    const second = Prefix().value
+    return [first, second]
+  }, PrefixLive)
+}
+```
+
+`twoLocalReads` builds twice because each `Effect.provide` starts a separate build boundary. `oneSharedReadBoundary` builds once and shares within it. Provide the application layer around the entry point; use `ManagedRuntime` for multiple entry points that need a common runtime lifetime.
+
+## Controlling memoization explicitly
+
+```ts
+function manualSharing() {
+  return Effect.scoped(() => {
+    const memoMap = Layer.makeMemoMap()
+    const scope = Effect.scope()
+    const first = Layer.buildWithMemoMap(PrefixLive, memoMap, scope)
+    const second = Layer.buildWithMemoMap(PrefixLive, memoMap, scope)
+    return [
+      Effect.provide(() => Prefix().value, first),
+      Effect.provide(() => Prefix().value, second)
+    ]
+  })
+}
+```
+
+`Layer.makeMemoMap` is an Effect value, so call it to obtain the map. Building the same layer with the same map reuses its acquisition; providing the resulting contexts does not rebuild it. The explicit scope owns resource release, and both contexts are consumed before that scope closes.
+
+A memo map controls sharing, while a scope controls lifetime. Keep both aligned with the intended application or test boundary, and avoid retaining resource-owning implementations after their scopes close.

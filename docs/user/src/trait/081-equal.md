@@ -1,0 +1,90 @@
+# Equal
+
+`Equal` works in EffectScript exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can represent the same member or key in an Effect hash collection.
+
+## Checking structural equality
+
+```ts
+import { Equal } from "effect"
+
+const left = { folder: "inbox", flags: ["unread", "starred"] }
+const right = { folder: "inbox", flags: ["unread", "starred"] }
+Object.is(left, right) // false
+Equal.equals(left, right) // true
+Equal.equals([1, { n: 2 }], [1, { n: 3 }]) // false
+Equal.equals(new Set([2, 5]), new Set([5, 2])) // true
+```
+
+Effect 4 compares plain objects, arrays, maps, sets, dates, and regular expressions by content. Nested values participate recursively, with custom implementations consulted where present. Treat structural values as immutable after comparison or hashing because results are cached.
+
+## Implementing the equality protocol
+
+```ts
+import { Equal, Hash } from "effect"
+
+class DocumentRevision implements Equal.Equal {
+  constructor(
+    readonly documentId: string,
+    readonly revision: number,
+    readonly observedBy: string
+  ) {}
+
+  [Equal.symbol](other: Equal.Equal) {
+    return other instanceof DocumentRevision &&
+      this.documentId === other.documentId &&
+      this.revision === other.revision
+  }
+
+  [Hash.symbol]() {
+    return Hash.hash([this.documentId, this.revision])
+  }
+}
+
+Equal.equals(
+  new DocumentRevision("doc-8", 2, "reader-a"),
+  new DocumentRevision("doc-8", 2, "reader-b")
+) // true
+```
+
+`Equal.Equal` extends `Hash.Hash`, so implement both computed methods. The equality method defines which fields matter, and equal values must produce the same hash. Here `observedBy` is excluded from both methods because it describes an observation rather than revision identity.
+
+These methods compile to plain JavaScript methods, because they implement members typed as plain functions. A protocol method must perform no Effect operation and cannot fail with an expected error; otherwise it is error ES4301, and the fix is to compute the value before building the object. Callers call it as an ordinary method.
+
+## Opting into reference identity
+
+```ts
+import { Equal } from "effect"
+
+const record = { state: "ready" }
+const reference = Equal.byReference(record)
+Equal.equals(reference, { state: "ready" }) // false
+Equal.equals(reference, reference) // true
+Equal.equals(record, { state: "ready" }) // true
+
+const owned = { state: "ready" }
+Equal.byReferenceUnsafe(owned)
+Equal.equals(owned, { state: "ready" }) // false
+```
+
+`byReference` returns a proxy that opts out of structural comparison without changing the original object. Compare and store that returned proxy consistently. `byReferenceUnsafe` marks the original object permanently and avoids the proxy allocation.
+
+## Using custom equality in hash-based collections
+
+```ts
+import { HashMap, HashSet, Option } from "effect"
+
+const seen = HashSet.make(
+  new DocumentRevision("doc-8", 2, "reader-a"),
+  new DocumentRevision("doc-8", 2, "reader-b")
+)
+HashSet.size(seen) // 1
+
+const byFolder = HashMap.set(
+  HashMap.set(HashMap.empty<{ folder: string }, number>(), { folder: "inbox" }, 4),
+  { folder: "inbox" }, 9
+)
+HashMap.size(byFolder) // 1
+Option.getOrElse(HashMap.get(byFolder, { folder: "inbox" }), () => 0) // 9
+```
+
+`HashSet` uses equality to deduplicate members and `HashMap` uses it to identify keys. Plain structural keys work without custom classes; implement the protocol when only selected fields determine identity. JavaScript's native `Set` and `Map` do not consult this protocol and keep their normal identity rules.

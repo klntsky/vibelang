@@ -1,0 +1,88 @@
+# Default Services
+
+Clock, random generation, console output, configuration sources, and tracing have live defaults in Effect. EffectScript uses those same defaults, so normal access does not add an application service requirement.
+
+[Upstream page](https://effect.website/docs/v4/requirements-management/default-services)
+
+## Using the clock, random, and console
+
+```ts
+import { Clock, Console, Random } from "effect"
+
+function startupMessage() {
+  const started = Clock.currentTimeMillis()
+  const sample = Random.next()
+  Console.log(`Started at ${started}; sample=${sample}`)
+}
+// Effect<void, never, never>
+```
+
+`Clock.currentTimeMillis` and `Random.next` are Effect values; calling them runs them. `Console.log` returns an Effect, so its call runs too. Use these modules instead of `Date.now()`, `Math.random()`, or the browser console so tests and local overrides can control the behavior.
+
+The five default references are `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, and `Tracer.Tracer`. Import their modules from `effect` when using them. Their defaults explain why the example's `R` is `never` even though it reads time and random state.
+
+```ts
+import { Config } from "effect"
+
+const Port = Config.withDefault(Config.Port("PORT"), 3000)
+
+function configuredPort() {
+  return Port()
+}
+// Effect<number, Config.ConfigError, never>
+```
+
+`Config.Port` and `Config.withDefault` build configuration data; they do not read the environment. Calling `Port()` reads it through the default configuration provider. Calls returning a `Config`, an `Exit`, or a Context key leave it as data; calling the held value runs it.
+
+## Replacing default implementations
+
+```ts
+import { Random } from "effect"
+
+function fixedRandomSample() {
+  return Effect.provideService(() => Random.next(), Random.Random, {
+    nextDoubleUnsafe: () => 0.25,
+    nextIntUnsafe: () => 12
+  })
+}
+```
+
+`Effect.provideService` overrides a default reference for the supplied program. This implementation has Effect 4's synchronous `Random` interface; both callbacks only return constants and qualify as plain JavaScript functions. Use the same provision mechanism with a complete implementation of any other default reference.
+
+An override remains in effect across pauses and is inherited by new child fibers. It does not change unrelated programs. Prefer module helpers when they supply the behavior you need without implementing a whole service.
+
+```ts
+abstract class DisplaySettings {
+  abstract readonly prefix: string
+  static readonly default: DisplaySettings = { prefix: "Ticket" }
+}
+
+function defaultLabel(id: number) {
+  return `${DisplaySettings().prefix} ${id}`
+}
+// Effect<string, never, never>
+```
+
+A service with `static readonly default` compiles to a `Context.Reference`, so using it adds nothing to `R`. Override it with `Effect.provideService` as above. Effect's own `Context.Reference(key, { defaultValue })` also works unchanged and returns a key as data.
+
+## Reproducible random computations
+
+```ts
+import { Random } from "effect"
+
+function pair() {
+  return [Random.next(), Random.next()]
+}
+
+function reproduciblePairs() {
+  const first = Random.withSeed(() => pair(), "documentation-seed")
+  const second = Random.withSeed(() => pair(), "documentation-seed")
+  return { first, second }
+}
+```
+
+Each `withSeed` call installs a new deterministic generator, so both pairs contain the same sequence. Reads within one seeded region advance that generator rather than returning one fixed value. Keep random consumption order stable when a test depends on the sequence; concurrent consumers can change which task receives which number.
+
+## Coming from Effect
+
+Default service behavior is unchanged. Effect values such as `Random.next` run with parentheses, while provision and seed helpers receive a program such as `() => pair()`.

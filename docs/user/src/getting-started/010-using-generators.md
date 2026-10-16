@@ -1,0 +1,127 @@
+# Using Generators
+
+EffectScript sequences computations with ordinary functions and calls. This page covers the control-flow tasks handled by `Effect.gen` in TypeScript and explains the separate role of `function*` in EffectScript.
+
+## Sequence computations
+
+```ts
+import { Config } from "effect"
+
+function invoice(quantity: number) {
+  const unitPrice = Config.Finite("UNIT_PRICE")()
+  const subtotal = quantity * unitPrice
+  Effect.log(`subtotal=${subtotal}`)
+  return subtotal
+}
+```
+
+Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")` builds a descriptor; the following `()` loads the setting and returns a number. A loading failure stops the function. You do not write `Effect.gen` or `yield*` in `.es` files.
+
+## Relate calls to async functions
+
+```ts
+function delayedLabel(name: string) {
+  Effect.sleep("30 millis")
+  return name.toUpperCase()
+}
+
+function greeting() {
+  const label = delayedLabel("sora")
+  return `Hello ${label}`
+}
+```
+
+`greeting` waits for the callee without `async` or `await`. The computation can pause while retaining typed errors, service requirements, and interruption support. At a promise-based framework boundary, run the exported function through a runner from `.ts`.
+
+## Branches and loops
+
+```ts
+function reportEven(values: ReadonlyArray<number>) {
+  let count = 0
+  for (const value of values) {
+    if (value < 0) break
+    if (value % 2 !== 0) continue
+    Effect.log(`even=${value}`)
+    count += 1
+  }
+  return count
+}
+```
+
+Conditions, local variables, `break`, `continue`, and early returns keep JavaScript's evaluation order. This loop runs sequentially. Use `Effect.forEach` with an explicit concurrency limit when the iterations should overlap.
+
+## Raise failures and stop early
+
+```ts
+class MissingTitle extends TaggedError("MissingTitle")<{}> {}
+
+function titleLength(title: string | undefined) {
+  if (title === undefined) throw new MissingTitle()
+  return title.length
+}
+// Effect<number, MissingTitle, never>
+
+function optionalTitle(title: string | undefined) {
+  try {
+    return titleLength(title)
+  } catch (error) {
+    return 0
+  }
+}
+```
+
+A throw stops the current sequence and adds its type to `E`. Control-flow analysis knows that the missing-title branch cannot continue, so `title` is narrowed afterward. `try`/`catch` handles expected failures; defects and interruption propagate, while `finally` still runs. A cause containing a defect or interruption bypasses `catch` as a whole, even if it also contains an expected failure.
+
+When a cause contains several expected failures and no defect or interruption, `catch` receives the first and handles the cause as a whole. Use `Effect.catchCause` to inspect every failure.
+
+To keep processing after a failure without catching it immediately, use `Effect.result(() => titleLength(title))` and inspect the resulting `Result`.
+
+## Retain the receiver
+
+```ts
+class Prefixer {
+  constructor(readonly prefix: string) {}
+
+  format(value: string) {
+    Effect.log("formatting label")
+    return `${this.prefix}: ${value}`
+  }
+}
+
+function label() {
+  const prefixer = new Prefixer("item")
+  return prefixer.format("marker")
+}
+```
+
+Ordinary method calls preserve `this` and evaluate the receiver once. There is no nested generator whose receiver needs a special binding. If passing the method as a program, capture the receiver with `() => prefixer.format("marker")`.
+
+## Producers use `function*`
+
+```ts
+function* ticks() {
+  for (let n = 0; n < 3; n += 1) {
+    Effect.sleep("10 millis")
+    yield n
+  }
+}
+
+function firstTwo() {
+  const values: number[] = []
+  for (const n of ticks()) {
+    values.push(n)
+    if (values.length === 2) break
+  }
+  return values
+}
+```
+
+An EffectScript generator produces values for `for...of`; `yield` delivers a value rather than running an Effect. Early loop exit runs the producer's cleanup. Existing `Effect.gen` code stays in `.ts` files, where JavaScript generators keep their usual Effect meaning.
+
+A producer also converts to a `Stream` wherever one is expected, so `Stream.take(ticks(), 2)` uses Effect's operators directly. The adapter hands over each value only when pulled, without running ahead; closing it interrupts the producer's fiber and runs its cleanup. `for...of` can also consume an Effect `Stream` directly and closes it when the loop exits.
+
+## Coming from Effect
+
+Remove `Effect.gen`, `function*`, and `yield*` when converting a sequence to an ordinary EffectScript function. Keep `function*` only when the function's purpose is to produce a sequence of values.
+
+[Upstream Effect page](https://effect.website/docs/v4/getting-started/using-generators)
