@@ -111,6 +111,8 @@ type analyzer struct {
 	effectInterface *checker.Type                       // the generic Effect interface, once seen
 
 	conversions map[*ast.Node]*valueState // argument expressions that convert (conversions.go)
+
+	plain map[*ast.Node]plainState // function declarations that compile to plain JavaScript (plain.go)
 }
 
 type analyzerKey struct{}
@@ -131,6 +133,7 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			resolving: map[*ast.Node]bool{},
 
 			conversions: map[*ast.Node]*valueState{},
+			plain:       map[*ast.Node]plainState{},
 		}
 	}).(*analyzer)
 }
@@ -138,6 +141,9 @@ func analyzerFor(c *checker.Checker) *analyzer {
 func (a *analyzer) isEffect(fn *ast.Node) bool {
 	if isLambda(fn) {
 		return a.finalForm(fn) != formPlain
+	}
+	if isPlainCandidate(fn) {
+		return !a.isPlainFunction(fn)
 	}
 	switch a.states[fn] {
 	case stateVisiting, stateEffect:
