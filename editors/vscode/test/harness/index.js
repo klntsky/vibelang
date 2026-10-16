@@ -118,6 +118,23 @@ async function run() {
     assert(uris.some((uri) => uri.endsWith(path.join("src", "users.ts"))), `went to ${JSON.stringify(uris)}`)
   })
 
+  await check("completion: prelude names and a service's members in services.es", async () => {
+    const services = await open("src/services.es")
+    const labels = async (needle, offset) => {
+      const list = await vscode.commands.executeCommand("vscode.executeCompletionItemProvider", services.uri, positionOf(services, needle, offset))
+      return list.items.map((item) => (typeof item.label === "string" ? item.label : item.label.label))
+    }
+    const scope = await labels("Users.find", 0)
+    for (const label of ["TaggedError", "wire", "Users", "double"]) assert(scope.includes(label), `no ${label} in completions`)
+    assert((await labels("Users.find", 6)).includes("find"), "no find after Users.")
+  })
+
+  await check("hover: a plain function shows the signature EffectScript calls", async () => {
+    const services = await open("src/services.es")
+    const shown = await hoverText(services, "double(n")
+    assert(shown.includes("function double(n: number): number"), `hover ${JSON.stringify(shown)}`)
+  })
+
   await check("diagnostics: main.es has none", () => {
     const items = vscode.languages.getDiagnostics(main.uri)
     assert(items.length === 0, JSON.stringify(items.map((d) => d.message)))

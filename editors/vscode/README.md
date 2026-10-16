@@ -73,7 +73,7 @@ bun run test             # install effectscript.vsix into a fresh VS Code and ch
 bun run derive-grammar   # regenerate syntaxes/ from the installed VS Code's TypeScript grammar
 ```
 
-`bun run test` needs `esc` at `../../typescript/built/local/esc` (or `ESC`) and `effect` in `../../experiments/node_modules` (or `EFFECT_NODE_MODULES`). It downloads VS Code 1.98.2 to `.vscode-test/` (`VSCODE_VERSION`, `VSCODE_TEST_CACHE`), or uses the VS Code at `VSCODE_EXECUTABLE`. It copies `typescript/effectscript/lsp-fixture` to a scratch project, installs the `.vsix` into a fresh profile, and checks the language, the grammar's scopes, TypeScript and ES diagnostics, hovers, and a definition; a second run disables the built-in TypeScript extension and checks that EffectScript reports `.ts` diagnostics. On Linux, run it under `xvfb-run -a`. On macOS it opens a VS Code window for about a minute.
+`bun run test` needs `esc` at `../../typescript/built/local/esc` (or `ESC`), `effect` in `../../experiments/node_modules` (or `EFFECT_NODE_MODULES`), and the built runtime in `../../packages/runtime` (or `EFFECTSCRIPT_RUNTIME`). It downloads VS Code 1.98.2 to `.vscode-test/` (`VSCODE_VERSION`, `VSCODE_TEST_CACHE`), or uses the VS Code at `VSCODE_EXECUTABLE`. It copies `typescript/effectscript/lsp-fixture` to a scratch project, installs the `.vsix` into a fresh profile, and checks the language, the grammar's scopes, TypeScript and ES diagnostics, hovers, a definition, and completions of prelude names and service members; a second run disables the built-in TypeScript extension and checks that EffectScript reports `.ts` diagnostics. On Linux, run it under `xvfb-run -a`. On macOS it opens a VS Code window for about a minute.
 
 ## License
 

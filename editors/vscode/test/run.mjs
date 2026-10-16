@@ -10,6 +10,8 @@
 //   EFFECT_NODE_MODULES  a node_modules directory that holds effect 4.0.5
 //                        (default: ../../experiments/node_modules, else
 //                        ~/effectscript/experiments/node_modules)
+//   EFFECTSCRIPT_RUNTIME the built @effectscript/runtime package directory
+//                        (default: ../../packages/runtime)
 //   VSCODE_EXECUTABLE    an installed VS Code to test with, such as
 //                        "/Applications/Visual Studio Code.app/Contents/MacOS/Electron";
 //                        otherwise VS Code VSCODE_VERSION (default 1.98.2) is
@@ -37,11 +39,13 @@ const effectModules = path.resolve(
     path.join(repo, "experiments", "node_modules")
 )
 const fixture = path.join(repo, "typescript", "effectscript", "lsp-fixture")
+const runtime = path.resolve(process.env.EFFECTSCRIPT_RUNTIME ?? path.join(repo, "packages", "runtime"))
 
 for (const [what, file] of [
   ["the packaged extension; run bun run package", vsix],
   ["esc; set ESC", esc],
-  ["effect; set EFFECT_NODE_MODULES", path.join(effectModules, "effect")]
+  ["effect; set EFFECT_NODE_MODULES", path.join(effectModules, "effect")],
+  ["the built runtime; set EFFECTSCRIPT_RUNTIME", path.join(runtime, "dist", "index.d.ts")]
 ]) {
   if (!existsSync(file)) {
     console.error(`test: missing ${what}: ${file}`)
@@ -58,8 +62,10 @@ const userDataDir = path.join(scratch, "user-data")
 cpSync(fixture, project, { recursive: true, filter: (file) => path.basename(file) !== "node_modules" })
 mkdirSync(path.join(project, "node_modules", ".bin"), { recursive: true })
 for (const name of readdirSync(effectModules)) {
-  if (name !== ".bin") symlinkSync(path.join(effectModules, name), path.join(project, "node_modules", name))
+  if (name !== ".bin" && name !== "@effectscript") symlinkSync(path.join(effectModules, name), path.join(project, "node_modules", name))
 }
+mkdirSync(path.join(project, "node_modules", "@effectscript"), { recursive: true })
+symlinkSync(runtime, path.join(project, "node_modules", "@effectscript", "runtime"))
 symlinkSync(esc, path.join(project, "node_modules", ".bin", "esc"))
 
 try {
