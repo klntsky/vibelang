@@ -8728,6 +8728,9 @@ func (c *Checker) resolveCallExpression(node *ast.Node, candidatesOutArray *[]*S
 	// Function interface, since they have none by default. This is a bit of a leap of faith
 	// that the user will not add any.
 	callSignatures := c.getSignaturesOfType(apparentType, SignatureKindCall)
+	if len(callSignatures) == 0 {
+		callSignatures = c.callSignaturesFromHooks(node, funcType)
+	}
 	numConstructSignatures := len(c.getSignaturesOfType(apparentType, SignatureKindConstruct))
 	// TS 1.0 Spec: 4.12
 	// In an untyped function call no TypeArgs are permitted, Args can be any argument list, no contextual
@@ -11557,6 +11560,7 @@ func (c *Checker) checkPropertyAccessExpressionOrQualifiedName(node *ast.Node, l
 			}
 			return apparentType
 		}
+		apparentType = c.memberReceiverFromHooks(node, apparentType)
 		prop = c.getPropertyOfTypeEx(apparentType, right.Text(), isConstEnumObjectType(apparentType) /*skipObjectFunctionPropertyAugment*/, node.Kind == ast.KindQualifiedName /*includeTypeOnlyMembers*/)
 	}
 	c.markLinkedReferences(node, ReferenceHintProperty, prop, leftType)
