@@ -22,8 +22,11 @@ if [ -z "$effect_modules" ]; then
 	[ -d "$effect_modules" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
 fi
 
-echo "build: go build -o built/local/tsc ./cmd/tsc"
-(cd "$root/tsc" && CGO_ENABLED=0 go build -o "$tsc" ./cmd/tsc)
+# -trimpath keys the Go build cache by module path instead of directory, so
+# every jj workspace shares one set of cache entries. Without DWARF the cache
+# entries are smaller; panics still print stack traces.
+echo "build: go build -trimpath -gcflags=all=-dwarf=false -o built/local/tsc ./cmd/tsc"
+(cd "$root/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$tsc" ./cmd/tsc)
 
 if [ $# -eq 0 ]; then
 	set -- $(cd "$cases" && ls -d */tsconfig.json | sed 's,/tsconfig.json$,,')

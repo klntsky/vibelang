@@ -18,13 +18,13 @@ It is a first prototype. It lowers `.es` files with checker types, runs the outp
 Run these from `typescript/`:
 
 ```sh
-cd tsc && CGO_ENABLED=0 go build -o ../built/local/tsc ./cmd/tsc   # about 75 s cold
+cd tsc && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o ../built/local/tsc ./cmd/tsc
 effectscript/smoke.sh                                             # builds, then runs every case
 effectscript/smoke.sh es-infer                                    # one case
 ./built/local/tsc -p effectscript/cases/ts-hello                  # the stock-compiler smoke test
 ```
 
-The build embeds the `lib.*.d.ts` files; Herebyfile's `-tags=noembed` build copies them next to the binary instead. A cold build fills about 2.1 GB of Go build cache, or 1.7 GB with `GOFLAGS=-gcflags=all=-dwarf=false`.
+The build embeds the `lib.*.d.ts` files; Herebyfile's `-tags=noembed` build copies them next to the binary instead. A cold build takes about 75 s and fills about 1.7 GB of Go build cache. Always pass `-trimpath`: without it, Go keys each package's cache entry by its absolute directory, so every jj workspace cold-builds and adds its own copy. `-gcflags=all=-dwarf=false` shrinks the entries; panics still print stack traces.
 
 Each directory in `effectscript/cases` is one case. `smoke.sh` compiles it with `tsc -p`, which must print nothing. It then compares every file in `expected/` with the same path under `out/`, and compares `expected/stdout.txt` with the output of `node run.mjs` or `node out/main.js`. A case whose `package.json` depends on `effect` gets a `node_modules` symlink to `$EFFECT_NODE_MODULES`, by default `../experiments/node_modules`.
 
