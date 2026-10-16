@@ -1,0 +1,8 @@
+{
+  "name": "effectscript-docs-tools",
+  "private": true,
+  "type": "module",
+  "description": "Builds docs/design/effectscript-design.md and a self-contained HTML rendering from docs/design/src/*.md.",
+  "scripts": { "build": "bun render.ts" },
+  "devDependencies": { "marked": "18.0.12" }
+}

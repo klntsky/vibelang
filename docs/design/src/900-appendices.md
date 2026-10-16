@@ -1,0 +1,198 @@
+## Appendices
+
+### A. Evidence index
+
+Run everything with:
+
+```sh
+cd experiments
+bun install        # effect@4.0.5 exactly
+bun test           # {{testCount}} tests in {{testFiles}} files, about a second
+bun test ./scratch-review-codex/                     # the Codex review's probes R1-R10
+bun test ./scratch-review-fable/suspend-in-acquire.test.ts ./scratch-review-fable/tail-resume-generator.test.ts
+bun bench/perform.ts
+bun bench/deep-capture.ts
+node scripts/wakeup-chain-depth.ts       # F10 depths on this host (also runs under bun)
+node scripts/v3-wakeup-chain.mjs 100000  # F10b: the same chain on effect 3.22.3
+cd reference-machine && bun install && bun test   # strategy B, 20 tests, about 18 s
+```
+
+The design document's build (`docs/tools/render.ts`) runs `bun test` and refuses to build if any test fails.
+
+#### How this revision was checked
+
+The first draft had two independent reviews. Codex (GPT-6.1 Sol) wrote 54 conformance tests against the kernel and found five bugs, all fixed. Fable reviewed the draft against the original request; its findings shaped Chapters 9, 13, and 26.
+
+The second draft had two more, on 2026-10-16: Codex (GPT-6 Astra, `docs/reviews/2026-10-16-codex-astra.md`) and Fable (`docs/reviews/2026-10-16-fable.md`). Both passed the central test and verified counterexamples with probes. Five were kernel or lowering defects, now fixed with regression tests K11-K15; 12 of those tests fail on a copy of the kernel with the fixes reverted, and K15 pins Effect's own acquisition behavior (`experiments/KERNEL-CHANGES.md`). The rest were rule gaps, now decided (D9-D21). A feature-coverage audit then mapped every section of Effect's documentation to the language (`docs/research/effect-feature-coverage.md`, 309 features); its gaps are decided in D22-D28 and D37-D43, and its map is Appendix C. Then a prototype compiler compiled 46 example files written from this document and ran them on the kernel; its findings are decided in D44-D53. Last, a single-pass experiment reached the same lowering with one patched TypeScript check per file, byte for byte; its probes are decided in D56 and D52.
+
+#### Effect facts
+
+| ID | File | What it shows |
+| --- | --- | --- |
+| F1-F3 | `tests/effect-facts.test.ts` | JavaScript `finally` and `catch` in `Effect.gen` do not run when a yielded effect fails or the fiber is interrupted |
+| F4 | same | A JavaScript exception in a generator body is a defect |
+| F5, F6 | same | `Effect.callback` ignores every resume after the first; an asynchronous resume runs the fiber on the resumer's stack |
+| F7, F8 | same | A child snapshots Context at fork, with nothing flowing back; `forkChild` children are interrupted when the parent completes |
+| F9 | same | Direct recursion limit: about 39,900 frames on Bun 1.4.1 and about 10,150 on Node 26.10 |
+| F10a, F10b | `tests/wakeup-chain.test.ts`, `scripts/` | A chain of `Deferred` wake-ups overflows in one fiber and strands the rest; effect 3.22.3 completes the same chain at 100,000 hops |
+| T5a, T6b | `tests/kernel.test.ts` | `Effect.callback` drops a late resume silently; plain JavaScript recursion overflows |
+| D01-D05 | `tests/conformance/source-claims.test.ts` | Corrections the conformance review made to the first draft's Effect claims: synchronous callback resume, fork-time async context, `zip`'s `concurrent` flag, `catchCause` on a self-raised interrupt, sibling provides sharing a supplied `MemoMap` |
+| A3 | `tests/fiber-behavior.test.ts` | Two providers for one key in `Layer.merge`: the later one wins silently |
+| K15a | `tests/review-fixes.test.ts` | Default `acquireRelease` masks a wait: interruption waits for the value, which is then released |
+
+#### Kernel laws
+
+| ID | File | What it shows |
+| --- | --- | --- |
+| T1 | `tests/trace.test.ts` | Nested suspension and resumption keep Context and Scope; the clause sees the outer Context; the fiber waits at its root while the continuation is held |
+| T2-T4 | `tests/kernel.test.ts` | Double resume is a defect; a clause that returns without resuming abandons first; interruption order is clause, continuation, outer |
+| T5b, T5c, K10a, K10b | `tests/kernel.test.ts`, `tests/wakeup-chain.test.ts` | `suspend` reports lost races, delivers once, survives a 100,000-fiber chain, and releases a deferred value that loses to cancellation |
+| T6a | `tests/kernel.test.ts` | 100,001 nested compiled frames captured in one operation and resumed |
+| T7a, T7b, T8 | same | Capture through TypeScript-authored `Effect.forEach`; forking combinators and child fibers cannot reach the parent's prompt |
+| T9-T11 | same | Deep handlers; external iteration with `transfer`; retry runs fresh continuations |
+| T12-T15 | `tests/kernel-edges.test.ts` | Pending interruption at resume; resume-site Context; fiber-affine abandonment (T14b caught a real bug); `HandlerPromptExited` instead of rebinding |
+| T16, T17 | `tests/producers.test.ts` | `for...of` lowering: `break` runs the producer's finalizer first; 100,000 elements in constant stack with a `flatMap`-shaped clause |
+| K11a-K11d | `tests/review-fixes.test.ts` | A generator clause that returns `tailResume` iterates 100,000 elements at 3 frames, 5 with a per-element `using` and `finally`; yielding a tail-resume request is a defect; a resume inside a `finally` region is not a tail resume |
+| K12a-K12e | same | Abandonment reports every cleanup failure beside real pending interruptions: explicit `abandon`, `abandonNow`, owner exit, and Scope exit |
+| K13a-K13e | same | A transferred continuation never outlives its capturing fiber; transfer into a parallel Scope is rejected |
+| K14a-K14c | same | `catchExpected` recovers only causes made of expected failures, the first one first; mixed causes pass through intact |
+| K15b, K15c | same | Interruptible acquisition: cancellation wins, and late or deferred values are released |
+| H1-H4 | `tests/handoff.test.ts` | Handoff: one delivery; late delivery during asynchronous shutdown released before cancellation completes; deferred delivery released; delivery after quiescence rejected |
+| G6a, G6b | `tests/context-bridges.test.ts` | Spans are correct across capture; `AsyncLocalStorage` is not delimited |
+| Probes | `tests/fiber-behavior.test.ts` | 17 combinators keep control on the performing fiber; 7 move it to other fibers |
+| A01-A04 | `tests/conformance/abandonment.test.ts` | Finalizer failures and swallowed aborts surface at every abandoning boundary |
+| F01-F09 | `tests/conformance/frames.test.ts` | Effect's own frames (restore closures, masks, nested prompts, iterator frames, finalizers) behave correctly when spliced |
+| I01-I11 | `tests/conformance/interruption.test.ts` | Interruption at capture, at resume, and during abandonment; real interrupts are never lost or mixed with the internal abort |
+| O01-O08 | `tests/conformance/ownership.test.ts` | Nested owners, transfer, revocation, fiber affinity, and the ownership-cycle check |
+| S01, S02 | `tests/conformance/scopes.test.ts` | `Effect.scoped`, `acquireRelease`, and Layer resources across resume and abandonment |
+| T01, T02 | `tests/conformance/tracing-cache.test.ts` | `Effect.fn` and `withSpan` frames across capture; `Context.Reference` and fiber caches at every boundary |
+| W01-W05 | `tests/conformance/wake.test.ts` | Wake budget ordering and release on every losing path |
+| X01, X02 | `tests/conformance/async-frames.test.ts` | Effect's async finalizer frame inside a captured segment |
+| B | `reference-machine/` | The independent strategy-B machine (Codex, GPT-6.1 Sol): 20 tests on the same laws |
+
+The conformance suite (A, D, F, I, O, S, T, W, X) was written by Codex (GPT-6.1 Sol) as an independent review of the first kernel. Its failing tests found the first five bugs. Tests that encoded the old behavior as counterexamples were rewritten to assert the corrected behavior.
+
+#### Review probes
+
+Counterexamples from the 2026-10-16 reviews, kept as observational tests. Where a defect was fixed, the probe now asserts the fixed behavior.
+
+| ID | File | What it showed |
+| --- | --- | --- |
+| R1 | `scratch-review-codex/probes.test.ts` | `Effect.catch` recovers a cause holding both a failure and a defect, and drops the defect (D13, K14) |
+| R2, R2b | same | Owner-driven abandonment keeps a cleanup defect; explicit `abandon` dropped it while an interruption was pending (D15, K12) |
+| R3 | same | Default `acquireRelease` shields `suspend` from cancellation (D25, K15) |
+| R4 | same | Inlining an `Effect.sync` operation removes an interruption point (D10) |
+| R5 | same | A child that transfers into its inherited Scope and exits stranded the segment (D16, K13) |
+| R6 | same | A TypeScript function forks its operation without taking a program argument (D20) |
+| R7 | same | A provider around `resumeWith` cannot satisfy the injected program's R (D17) |
+| R8 | same | A block-wide Scope closes acquisitions not marked `using` (D14) |
+| R9 | same | Strategies A and B disagree on the next clause's Context after a resume (G16) |
+| R10 | same | A generator clause written `return yield* resume(k, v)` defeats constant-stack iteration (D18, K11) |
+| Fable probes | `scratch-review-fable/` | The masked adapter's race branches never run; generator clauses grow 200,003 frames over 100,000 elements before K11 |
+| Services | `scratch-abstract-services/probe.ts` | Structurally equal abstract classes alias in R, and the program dies with `Service not found` (D1) |
+
+#### Prototype compiler
+
+```sh
+cd /Users/williamcory/effectscript
+bun prototype/esc/examples/run-all.ts       # 46 of 46 example files pass, about 16 s
+bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.es
+bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.es
+```
+
+| What | Where | What it shows |
+| --- | --- | --- |
+| The compiler | `prototype/esc/src/` | Type-directed lowering of `.es` to TypeScript on `typescript@5.9.3`, with the experiments kernel as its runtime; about 3,560 lines |
+| 26 runnable examples | `prototype/esc/examples/*.es` | Each compiles with no errors and produces its stated result, including the six reference programs (`ref1` to `ref6`) |
+| 20 expected failures | `prototype/esc/examples/*.fail.es` | Each reports its diagnostic code at the right span |
+| `regions.es` | same | Completion records through nested `try`, `catch`, and `finally` match plain JavaScript's results and order |
+| `stack-depth.es` | same | Producer loops and handler clauses stay under 50 frames over 100,000 elements |
+| `scratch/probe2.ts` | `prototype/esc/scratch/` | The service emission of D45: nominal R, working `implements`, and a parameter typed with the service meaning its methods |
+| Findings | `prototype/esc/FINDINGS.md` | Thirty findings, settled by D44-D53 |
+
+#### Single-pass experiment
+
+```sh
+cd /Users/williamcory/effectscript/prototype/single-pass
+bun patch/apply.ts            # copy TypeScript 5.9.3 to typescript/ and patch it
+bun harness/compare.ts        # the corpus: 46 of 46 files, about 10 s
+bun harness/compare.ts --dir /Users/williamcory/effectscript/prototype/single-pass/probes --verbose
+bun harness/passes.ts         # the prototype's decision changes per pass
+```
+
+| What | Where | What it shows |
+| --- | --- | --- |
+| The patched checker | `prototype/single-pass/patch/es-checker.js` | Each lambda classified per overload candidate inside `chooseOverload`, D10 on demand, and narrowing through the call rule: one 668-line block and 15 hooks in TypeScript 5.9.3 |
+| The comparison | `prototype/single-pass/harness/compare.ts` | One check per file reaches the prototype's lowering in 46 of 46 files: 817 call sites, 257 lambdas and methods, 0 disagreements, byte-identical output, 46 checks instead of 124 |
+| The probes | `prototype/single-pass/probes/` | 17 disagreements: 16 from 6 lambdas with two self-consistent lowerings (D56), 1 from mutual recursion (D52) |
+| Results | `prototype/single-pass/RESULTS.md` | The method, the per-file table, and the rules for the Go checker (Chapter 27) |
+
+#### The Go fork
+
+```sh
+cd /Users/williamcory/effectscript-ts
+effectscript/smoke.sh            # builds tsc (about 75 s cold), then compiles and runs every case
+effectscript/smoke.sh es-infer   # one case
+```
+
+| Case | What it shows |
+| --- | --- |
+| `es-wrap` | Functions lower to `Effect.fnUntraced` generators, and JavaScript runs them |
+| `es-lower` | Calls run by type: pure helpers stay plain, Effect-returning calls run, operands run left to right, and a `Config` stays data |
+| `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, and the `.d.ts` declares it |
+
+`~/effectscript-ts/EFFECTSCRIPT.md` records the base, the 11 commits, the upstream lines it changes, and the differential check against the prototype.
+
+#### Research and drafts
+
+- `docs/design/DECISIONS.md`: the decision log, D1-D56.
+- `docs/research/effect4-runtime.md`: Effect 4.0.5 runtime facts, with 23 scripts in `experiments/scratch-agent-a/scripts/`. Scripts written for this design live in `experiments/scripts/`.
+- `docs/research/continuation-prior-art.md`: OCaml 5, Kotlin, Swift, Loom, WasmFX, Koka, Effekt, Effection, js_of_ocaml, and the papers.
+- `docs/research/vibelang.md`: VibeLang `main` (`c60eca97`) and the unmerged checkpoint (`ebe89a2b`).
+- `docs/research/typescript-native-compiler.md`: the native compiler upstream and effect-tsgo.
+- `docs/research/independent-design-codex.md`: the independent semantics Codex wrote from the same brief.
+- `docs/research/pipe-census.md`: how real Effect code uses `pipe` (D8).
+- `docs/research/tc39-syntax.md`: the status of every TC39 proposal that could give syntax to an Effect feature, fetched 2026-10-16.
+- `docs/research/effect-feature-coverage.md`: every Effect docs section mapped to the language (Appendix C).
+- `experiments/KERNEL-CHANGES.md`: the 2026-10-16 kernel fixes.
+- `prototype/esc/FINDINGS.md`: what the prototype compiler found.
+- `prototype/single-pass/RESULTS.md`: the single-pass experiment (D56, D52).
+- `~/effectscript-ts/EFFECTSCRIPT.md`: the Go fork's base, commits, seams, and gaps.
+- `docs/upstream/`: draft Effect issues for F10 and F1-F3, not filed.
+
+### B. Prior art
+
+Full notes, with quoted sources, are in `docs/research/continuation-prior-art.md`. Rule numbers below refer to its final section.
+
+| Question | Prior art | EffectScript |
+| --- | --- | --- |
+| Second resume | A runtime error everywhere it is checked: OCaml `Continuation_already_resumed`, Kotlin "Already resumed", Swift's checked continuation traps (6.4 rejects it at compile time), Loom "Continuation terminated", WasmFX traps. `Effect.callback` and Effection drop it silently | Defect at the caller (T2). Root waits keep first-wins and report the loss (rule 1) |
+| Abandoned continuations | No system cleans them up from the GC. Deterministic cleanup exists only where a handler or scope owns the continuation: Koka's final yield, Effection's `return()`, OCaml's `discontinue`, WasmFX's `resume_throw` | Owner frames, Scope ownership, and the capturing fiber's exit; development-only leak reports (rules 3, 4) |
+| Cancellation versus resumption | One take-once cell. Only Kotlin hands the losing value to a release hook (`onCancellation`) | Kernel `suspend` reports the loss and releases deferred values (T5b, K10b); `handoff` releases late values after producer quiescence (H2-H4) (rule 2) |
+| `finally` in generated code | Effection loses a halt when a delegated `finally` performs an effect; Effect 4 never calls `return()` | Finalizers compile to Effect frames, never JavaScript `finally` (rule 5) |
+| Dynamic state across resume | DDB in the delimited-control literature, Racket, and Koka; snapshot in TC39 AsyncContext (at each `await`, and a generator's creation-time context), Effect 4, Kotlin, Swift, and tokio | Snapshot (Chapter 22). It differs from the research recommendation (rule 6); the reasons and the cost are in Chapter 22 |
+| Tail-resumptive operations | Run in place: 10× on Koka's counter benchmark, under the handler's evidence | Run in place under the caller's Context, as Effect services do; call-time lookups must be in the contract (Chapter 4). Differs from rule 7 on whose Context |
+| Handler identity | Generative tags (WasmFX), labels (Koka), capabilities (Effekt) | Handler instances, found through Context evidence (rule 8) |
+| Multi-shot | Excluded by every fiber or thread runtime; Kyo stays single-shot so it never re-enters a released bracket | Excluded (rule 9) |
+| Foreign frames | Every system refuses to capture through them (OCaml `Unhandled`, js_of_ocaml, JSPI `SuspendError`, Racket barriers) | Rejected at compile time (ES4301, ES4202); unhandled at run time (rule 10) |
+| Which code gets transformed | Selective: Koka cut CPS-translated functions by over 80%; Stopify measured generators at about 2× slower than exception-based capture | Frames only where capture or parking is reachable (Chapter 15; rule 11) |
+| Cross-fiber resume | Kotlin and Swift always schedule | Bounded synchronous wake-ups (Chapter 24; rule 12) |
+| Resumable handlers on Effect-TS or ZIO | None found by searches of npm, GitHub code (`fiber._stack`, `"~effect/Effect/successCont"`), and Effect issues and discussions on 2026-10-15. Effect's maintainer: generators "are only valid to express `one-shot` effect types" | No other implementation is known; this kernel is one-shot by design. The claim fails if a search turns one up |
+
+#### TC39 proposals and EffectScript
+
+Stages as fetched on 2026-10-16 (`docs/research/tc39-syntax.md`).
+
+| Proposal | Stage | In EffectScript |
+| --- | --- | --- |
+| Explicit Resource Management (`using`) | 4 since 2026-05-19, for ES2027 | Adopted: `using` with Effect's guarantees (Chapter 6) |
+| Pipeline operator (Hack `\|>`) | 2 since 2021-08; topic token undecided; "somewhat stuck" (January 2026) | Not in v0: a call runs before the pipe sees it; the `pipe(program, …)` built-in instead (Chapter 5, D8). Revisited at Stage 3 |
+| AsyncContext | 2 | Prior art for the snapshot rule (Chapter 22). EffectScript code keeps request-scoped values in Effect's Context |
+| Partial application (`f~(x, ?)`) | 1 | Not adopted. A function with no arguments is the program spelling (D7) |
+| Pattern matching (`match`) | 1 | Not adopted. `switch` and `catch` narrowing, and Effect's `Match` module |
+| Throw expressions | 2, unchanged since 2017 | Not adopted. `throw` is a statement and a typed failure |
+| Extractors | 2 | Not in v0. A possible future syntax for Schema decoding |
+| Import defer | 3 | Not used. Deferring a module's evaluation does not change ES1001: its top level still cannot run a program |
+| Await dictionary (`Promise.allKeyed`) | 3 | Not needed: `Effect.all` takes a record |
+| Abort Controller, Concurrency control | 1 | Not adopted. Effect's interruption and `concurrency` options |
+| F#-style pipes; `Function.pipe` and `flow` | Failed Stage 2; withdrawn | Not applicable |
