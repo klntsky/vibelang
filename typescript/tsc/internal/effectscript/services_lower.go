@@ -9,7 +9,7 @@ import (
 type servicePlan struct {
 	lookups map[*ast.Node]bool   // calls S.member(…) whose callee looks the service up
 	values  map[*ast.Node]bool   // calls p() that run p, an Effect value
-	keys    map[*ast.Node]string // service classes, by declaration, and their keys
+	keys    map[*ast.Node]string // service and control classes, by declaration, and their keys
 }
 
 func newServicePlan() servicePlan {
@@ -27,7 +27,8 @@ func (p *servicePlan) planServiceCall(c *checker.Checker, call *ast.Node) {
 	}
 }
 
-// planServiceClass records the key of node when it declares a service.
+// planServiceClass records the key of node when it declares a service or a
+// control operation.
 func (p *servicePlan) planServiceClass(c *checker.Checker, node *ast.Node) {
 	if classKindOf(node) != ordinaryClass {
 		p.keys[node] = servicesFor(c).key(node)
@@ -61,7 +62,8 @@ func (tx *lowering) visitServiceLookup(node *ast.Node) *ast.Node {
 	receiver := tx.Visitor().VisitNode(node.Expression())
 	lookup := f.NewParenthesizedExpression(f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), receiver))
 	tx.EmitContext().SetOriginal(lookup, node.Expression())
-	return f.UpdatePropertyAccessExpression(node.AsPropertyAccessExpression(), lookup, nil /*questionDotToken*/, node.Name(), ast.NodeFlagsNone)
+	access := f.UpdatePropertyAccessExpression(node.AsPropertyAccessExpression(), lookup, nil /*questionDotToken*/, node.Name(), ast.NodeFlagsNone)
+	return access
 }
 
 // visitEffectValueCall turns `p()`, where p is an Effect value, into
@@ -86,9 +88,12 @@ func (tx *lowering) visitEffectValueCall(node *ast.Node) *ast.Node {
 // The type-only abstract members are erased later by the TypeScript
 // transform. A service with `static readonly default` extends
 // runtime.$reference(key, () => Flags.default) instead, a Context.Reference
-// that needs no provider (D40).
+// that needs no provider (D40). A control operation also registers one
+// kernel operation per abstract method, after the class:
+// runtime.$control(Approval, ["approve"]).
 func (tx *lowering) visitServiceClass(node *ast.Node) *ast.Node {
 	f := tx.Factory()
+	ec := tx.EmitContext()
 	key := tx.plan.keys[node]
 
 	saved := tx.inEffect
@@ -106,6 +111,22 @@ func (tx *lowering) visitServiceClass(node *ast.Node) *ast.Node {
 	base := f.NewCallExpression(tx.runtimeMember(helper), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
 	extends := f.NewHeritageClause(ast.KindExtendsKeyword, f.NewNodeList([]*ast.Node{f.NewExpressionWithTypeArguments(base, nil /*typeArguments*/)}))
 	class := f.UpdateClassDeclaration(node.AsClassDeclaration(), node.Modifiers(), node.Name(), nil /*typeParameters*/, f.NewNodeList([]*ast.Node{extends}), members)
-	tx.EmitContext().SetOriginal(class, node)
-	return class
+	ec.SetOriginal(class, node)
+	if classKindOf(node) != controlClass {
+		return class
+	}
+
+	var operations []*ast.Node
+	for _, member := range node.Members() {
+		if ast.IsMethodDeclaration(member) && !ast.IsStatic(member) && ast.IsIdentifier(member.Name()) {
+			operations = append(operations, f.NewStringLiteral(member.Name().Text(), ast.TokenFlagsNone))
+		}
+	}
+	register := f.NewCallExpression(tx.runtimeMember("$control"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{
+		f.NewIdentifier(node.Name().Text()),
+		f.NewArrayLiteralExpression(f.NewNodeList(operations), false /*multiLine*/),
+	}), ast.NodeFlagsNone)
+	statement := f.NewExpressionStatement(register)
+	ec.SetOriginal(statement, node)
+	return f.NewSyntaxList([]*ast.Node{class, statement})
 }

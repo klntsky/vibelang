@@ -8,11 +8,12 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
-// Services (design D1, D41, D45).
+// Services and control operations (design D1, D2, D41, D45).
 //
 // An abstract class in an .es file whose instance members are all abstract
-// declares a service. The checker sees such a class as this TypeScript would
-// declare it:
+// declares a service, and one that extends Control declares a control
+// operation. The checker sees such a class as this TypeScript would declare
+// it:
 //
 //	interface Users {
 //	  find(id: string): Effect<User, UserNotFound, never>
@@ -40,13 +41,15 @@ type classKind uint8
 const (
 	ordinaryClass classKind = iota
 	serviceClass            // an abstract class that declares a service (D1)
+	controlClass            // an abstract class that extends Control (D2)
 )
 
 // classKindOf reports what class declares. A class declaration in an .es
 // file is a service when it is abstract, has no type parameters, no
 // implements clause, and no extends clause, and has at least one instance
-// member, every one of them an abstract method or property. Static members
-// are allowed. Every other class is ordinary.
+// member, every one of them an abstract method or property. With
+// `extends Control` instead of no extends clause, it is a control operation.
+// Static members are allowed. Every other class is ordinary.
 func classKindOf(class *ast.Node) classKind {
 	if class == nil || !ast.IsClassDeclaration(class) || class.Name() == nil ||
 		!ast.HasSyntacticModifier(class, ast.ModifierFlagsAbstract) || class.TypeParameters() != nil ||
@@ -54,8 +57,12 @@ func classKindOf(class *ast.Node) classKind {
 		!isEffectScriptFile(ast.GetSourceFileOfNode(class)) {
 		return ordinaryClass
 	}
-	if ast.GetClassExtendsHeritageElement(class) != nil {
-		return ordinaryClass
+	kind := serviceClass
+	if extends := ast.GetClassExtendsHeritageElement(class); extends != nil {
+		if !isControlReference(extends) {
+			return ordinaryClass
+		}
+		kind = controlClass
 	}
 	instanceMembers := 0
 	for _, member := range class.Members() {
@@ -70,7 +77,14 @@ func classKindOf(class *ast.Node) classKind {
 	if instanceMembers == 0 {
 		return ordinaryClass
 	}
-	return serviceClass
+	return kind
+}
+
+// isControlReference reports whether heritage, an extends clause element,
+// names the prelude's Control.
+func isControlReference(heritage *ast.Node) bool {
+	expression := heritage.Expression()
+	return ast.IsIdentifier(expression) && expression.Text() == "Control" && heritage.TypeArguments() == nil
 }
 
 // hasStaticDefault reports whether class declares `static readonly default`,
@@ -168,10 +182,12 @@ func (s *services) key(class *ast.Node) string {
 	return key
 }
 
-// classBases is the checker's class base hook. A service class inherits the
-// static side of Context.Service<Self, Self>, or of Context.Service<never,
-// Self> when a static default makes its key a reference, and its instances
-// inherit the brand { readonly "~esc/service"?: key }.
+// classBases is the checker's class base hook. A service or control class
+// inherits the static side of Context.Service<Self, Self>, or of
+// Context.Service<never, Self> when a static default makes its key a
+// reference, and its instances inherit the brand
+// { readonly "~esc/service"?: key }. A control class's own extends clause
+// is ignored.
 func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checker.Type) {
 	symbol := class.Symbol()
 	if symbol == nil {
