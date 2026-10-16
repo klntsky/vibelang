@@ -1728,9 +1728,15 @@ func (r *resolutionState) tryAddingExtensions(extensionless tspath.FileNameStem,
 		}
 		return continueSearching()
 	case tspath.ExtensionEs:
-		// An EffectScript import names its source file: ./welcome.es.
+		// An EffectScript import names its source file, ./welcome.es; where only
+		// the declaration file exists, as in a published package, it names that.
 		if extensions&extensionsTypeScript != 0 {
 			if resolved := r.tryExtension(tspath.ExtensionEs, extensionless, true); !resolved.shouldContinueSearching() {
+				return resolved
+			}
+		}
+		if extensions&extensionsDeclaration != 0 {
+			if resolved := r.tryExtension(tspath.ExtensionDts, extensionless, true); !resolved.shouldContinueSearching() {
 				return resolved
 			}
 		}
