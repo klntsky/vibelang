@@ -32,6 +32,7 @@ type lowering struct {
 	inEffect bool                // visiting code that runs inside a lowered generator
 	frame    *frame              // the generator being emitted while inEffect
 	plain    bool                // visiting the body of an .es function that compiles to plain JavaScript
+	imports  []namedImport       // named imports the lowering adds, such as a @throws class
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
@@ -64,6 +65,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitEffectValueCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):
 		return tx.visitRunningCall(node)
+	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.trusted[node] != nil:
+		return tx.visitTrustedCall(node)
+	case node.Kind == ast.KindCallExpression && tx.plain && tx.plan.trusted[node] != nil:
+		return tx.visitTrustedPlainCall(node)
 	case node.Kind == ast.KindPropertyAccessExpression && tx.inEffect && tx.plan.looksUp(node):
 		return tx.visitServiceLookup(node)
 	case node.Kind == ast.KindClassDeclaration && tx.plan.keys[node] != "":
@@ -112,6 +117,7 @@ func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 	if tx.runtime != nil {
 		imports = append(imports, tx.namespaceImport(tx.runtime, "@effectscript/runtime"))
 	}
+	imports = append(imports, tx.namedImportDeclarations()...)
 	if len(imports) == 0 {
 		return visited
 	}

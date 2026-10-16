@@ -216,7 +216,7 @@ func (a *analyzer) decide(fn *ast.Node, e expectation) form {
 	if e.program {
 		return formEffect
 	}
-	if a.canBePlain(fn) {
+	if a.canBePlain(fn) && !a.hasEscapingFailure(fn) {
 		return formPlain
 	}
 	return formEffect

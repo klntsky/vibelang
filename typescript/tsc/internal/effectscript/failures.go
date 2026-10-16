@@ -33,6 +33,7 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			n.ForEachChild(visit)
 			a.addServiceLookup(info, n)
 			a.addCall(info, n)
+			a.addFailures(info, n)
 		default:
 			n.ForEachChild(visit)
 		}
