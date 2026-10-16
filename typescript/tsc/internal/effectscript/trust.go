@@ -464,7 +464,12 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 		note(d, "Wait for it with Effect.tryPromise({ try: (signal) => {0}, catch: (cause) => … }).", nodeText(file, call))
 	case t.kind == trustForeign:
 		d := report(c, callee, ES4401, name)
-		note(d, "Call it through Effect.try(() => {0}), or tag its declaration in {1} with /** @effectscript trusted */.", nodeText(file, call), path.Base(string(ast.GetSourceFileOfNode(signatureDeclaration(c, call)).FileName())))
+		// Another package's declaration cannot carry the tag; a re-export can (D23).
+		if declared := ast.GetSourceFileOfNode(signatureDeclaration(c, call)); packageOf(c, declared) != packageOf(c, file) {
+			note(d, "Call it through Effect.try(() => {0}), or re-export it from a .ts file you own with /** @effectscript trusted */.", nodeText(file, call))
+		} else {
+			note(d, "Call it through Effect.try(() => {0}), or tag its declaration in {1} with /** @effectscript trusted */.", nodeText(file, call), path.Base(string(declared.FileName())))
+		}
 	case t.kind == trustTagged && t.unreachable != "":
 		d := report(c, callee, unreachableThrows, name, t.unreachable)
 		note(d, "Name an exported class in @throws.")
