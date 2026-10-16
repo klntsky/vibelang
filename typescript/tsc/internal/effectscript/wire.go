@@ -315,31 +315,53 @@ func (tx *lowering) visitWireCall(node *ast.Node) *ast.Node {
 func checkRunners(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if ast.IsCallExpression(node) && isRootRunner(c, node) && len(node.Arguments()) > 0 {
-			checkRunner(c, node.Arguments()[0])
+		if ast.IsCallExpression(node) {
+			switch {
+			case isRootRunner(c, node) && len(node.Arguments()) > 0:
+				checkProgram(c, node.Arguments()[0], nil /*accepted*/, false /*test*/)
+			case isTestRegistration(c, node):
+				checkTest(c, node)
+			}
 		}
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
 }
 
-func checkRunner(c *checker.Checker, program *ast.Node) {
-	t := c.GetTypeAtLocation(program)
-	r := varianceChannel(c, t, "_R")
-	if r == nil {
+// checkTest checks the program of a test that it.effect registers against
+// what the test provides: Scope, and the services of an enclosing layer(…),
+// which the type of its parameter says.
+func checkTest(c *checker.Checker, call *ast.Node) {
+	signature := c.GetResolvedSignature(call)
+	if signature == nil {
 		return
 	}
-	missing := unionMembers(r)
-	if len(missing) == 0 {
+	for i, program := range call.Arguments() {
+		if accepted := requirementsOf(c, c.GetTypeAtPosition(signature, i)); accepted != nil {
+			checkProgram(c, program, accepted, true /*test*/)
+			return
+		}
+	}
+}
+
+// checkProgram reports ES3201 for the services that program, the program a
+// runner receives, needs and accepted does not include: a root runner such
+// as Effect.runPromise or NodeRuntime.runMain starts with an empty Context,
+// so accepted is nil. TypeScript would report that the program's type does
+// not fit the parameter; ES3201 names the services instead, and the wire
+// arguments that need them.
+func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type, test bool) {
+	needed := requirementsOf(c, c.GetTypeAtLocation(program))
+	if needed == nil {
 		return
 	}
-	var names []string
-	var paths []string
-	for _, service := range missing {
+	var names, paths []string
+	for _, service := range unionMembers(needed) {
+		if accepted != nil && c.IsTypeAssignableTo(service, accepted) {
+			continue
+		}
+		names = append(names, c.TypeToString(service))
 		for _, needer := range servicesFor(c).wireNeeders(service) {
-			if !slices.Contains(names, c.TypeToString(service)) {
-				names = append(names, c.TypeToString(service))
-			}
 			paths = append(paths, scanner.GetTextOfNode(needer)+" needs "+c.TypeToString(service))
 		}
 	}
@@ -350,8 +372,27 @@ func checkRunner(c *checker.Checker, program *ast.Node) {
 	for _, path := range paths {
 		note(d, "{0}, and no argument of its wire provides it.", path)
 	}
-	note(d, "Add a provider of {0} to wire.", strings.Join(names, ", "))
-	cover(c, program) // TS2345: the runner requires an Effect whose R is never
+	switch {
+	case len(paths) > 0:
+		note(d, "Add a provider of {0} to wire.", strings.Join(names, ", "))
+	case test:
+		note(d, "Provide it to the test with Effect.provide(() => …, layer), or register the test inside layer(…).")
+	default:
+		note(d, "Provide it to the program with Effect.provide(() => …, layer).")
+	}
+	coverArgument(c, program)
+}
+
+// requirementsOf returns R of t, an Effect or a function that returns one,
+// or nil for any other type.
+func requirementsOf(c *checker.Checker, t *checker.Type) *checker.Type {
+	if r := varianceChannel(c, t, "_R"); r != nil {
+		return r
+	}
+	if signatures := c.GetSignaturesOfType(t, checker.SignatureKindCall); len(signatures) == 1 {
+		return varianceChannel(c, c.GetReturnTypeOfSignature(signatures[0]), "_R")
+	}
+	return nil
 }
 
 // wireNeeders returns the wire arguments, anywhere in the program, that need

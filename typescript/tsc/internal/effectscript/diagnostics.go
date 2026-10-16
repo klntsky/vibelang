@@ -230,14 +230,15 @@ func checkSourceFile(c *checker.Checker, file *ast.SourceFile) {
 
 // diagnosticsState is what one checker remembers about diagnostics.
 type diagnosticsState struct {
-	covered map[*ast.SourceFile][]core.TextRange
+	covered   map[*ast.SourceFile][]core.TextRange
+	arguments map[*ast.SourceFile][]int // the starts of arguments whose type error an ES diagnostic explains
 }
 
 type diagnosticsStateKey struct{}
 
 func diagnosticsStateOf(c *checker.Checker) *diagnosticsState {
 	return c.ExtensionState(diagnosticsStateKey{}, func() any {
-		return &diagnosticsState{covered: map[*ast.SourceFile][]core.TextRange{}}
+		return &diagnosticsState{covered: map[*ast.SourceFile][]core.TextRange{}, arguments: map[*ast.SourceFile][]int{}}
 	}).(*diagnosticsState)
 }
 
@@ -250,17 +251,35 @@ func cover(c *checker.Checker, node *ast.Node) {
 	state.covered[file] = append(state.covered[file], core.NewTextRange(scanner.SkipTrivia(file.Text(), node.Pos()), node.End()))
 }
 
-// filterCoveredDiagnostics drops TypeScript diagnostics inside covered nodes.
+// coverArgument hides TypeScript's error that argument's type does not fit
+// its parameter (TS2345, or TS2769 for an overloaded callee), because an ES
+// diagnostic reported for argument explains it. Unlike cover, it keeps the
+// errors inside argument, such as those in a test's body.
+func coverArgument(c *checker.Checker, argument *ast.Node) {
+	file := ast.GetSourceFileOfNode(argument)
+	state := diagnosticsStateOf(c)
+	state.arguments[file] = append(state.arguments[file], scanner.SkipTrivia(file.Text(), argument.Pos()))
+}
+
+// filterCoveredDiagnostics drops TypeScript diagnostics inside covered nodes,
+// and the type errors of covered arguments.
 func filterCoveredDiagnostics(c *checker.Checker, file *ast.SourceFile, diagnostics []*ast.Diagnostic) []*ast.Diagnostic {
 	if !isEffectScriptFile(file) {
 		return diagnostics
 	}
-	covered := diagnosticsStateOf(c).covered[file]
-	if len(covered) == 0 {
+	state := diagnosticsStateOf(c)
+	covered, arguments := state.covered[file], state.arguments[file]
+	if len(covered) == 0 && len(arguments) == 0 {
 		return diagnostics
 	}
 	isCovered := func(d *ast.Diagnostic) bool {
-		return d.Source() == "" && slices.ContainsFunc(covered, func(r core.TextRange) bool {
+		if d.Source() != "" {
+			return false
+		}
+		if (d.Code() == 2345 || d.Code() == 2769) && slices.Contains(arguments, d.Pos()) {
+			return true
+		}
+		return slices.ContainsFunc(covered, func(r core.TextRange) bool {
 			return r.Pos() <= d.Pos() && d.End() <= r.End()
 		})
 	}

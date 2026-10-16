@@ -66,6 +66,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-wire` | `wire` takes its arguments in any order and emits them consumers first, so one `Database` serves `Users` and `Orders` |
 | `es-wire.fail` | ES3202, ES3203, ES3204: a duplicate provider, a cycle, and an argument typed `Layer.Any` |
 | `es-wire-missing.fail` | ES3201 at a runner: `MailerLive needs Smtp` |
+| `es3201-runner-services.fail` | ES3201 for a service nothing provides, at `NodeRuntime.runMain`, at `Effect.runPromise`, and at `it.effect`, in place of TypeScript's argument error; none for a test inside `layer(…)` or one that provides the service itself; a type error inside the test's body stays |
 | `es-wire-discard.fail` | A layer that provides nothing, `Layer.effectDiscard`'s, keeps its E and In through `wire`: ES2001 at a contract and ES3201 at the runner |
 | `es-provider-escapes.fail` | ES2001 names the provider member that a failure escapes, in an object literal and in an `implements` class |
 | `es-provider-audited.fail` | ES3101 at a per-call lookup, in an object literal and in an `implements` class |
@@ -563,7 +564,7 @@ A provider is usually a program that returns an object literal whose members hav
 | ES3202 | The later of two arguments | Two arguments provide the same service |
 | ES3203 | The `wire` call | The arguments form a cycle, printed as `CacheLive → Database → DatabaseLive → Cache → CacheLive` |
 | ES3204 | The argument | Its type does not name its outputs: `Out` is `any` or `unknown`, as in `Layer.Any` |
-| ES3201 | The runner's program | A runner whose program starts with an empty Context (`isRootRunner` in `runners.go`: Effect's `run*` functions, but not their `*With` forms, and `NodeRuntime.runMain` and `BunRuntime.runMain`) runs a program whose R holds a service that a `wire` argument anywhere in the program needs and no argument of that `wire` provides; notes name the arguments that need it, and it covers TS2345 |
+| ES3201 | The runner's program | A runner's program needs a service that the runner does not provide. A root runner (`isRootRunner` in `runners.go`: Effect's `run*` functions, but not their `*With` forms, and `NodeRuntime.runMain` and `BunRuntime.runMain`) starts with an empty Context; `it.effect` provides `Scope` and the services of an enclosing `layer(…)`, which its parameter's type says. Notes name the `wire` arguments that need the service when one does, and otherwise say how to provide it. It hides TypeScript's TS2345 or TS2769 about the argument's type (`coverArgument`), and keeps the errors inside the program |
 
 An input that no argument provides stays in the result's `In`, as with `Layer.provide`, so wiring part of a graph is not an error by itself.
 

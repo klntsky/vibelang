@@ -89,6 +89,14 @@ func isRootRunnerIdentity(d identity) bool {
 	return false
 }
 
+// isTestRegistration reports whether call registers a test with
+// @effect/vitest's it.effect or it.live, or a modifier of them, whose
+// program a test fiber runs.
+func isTestRegistration(c *checker.Checker, call *ast.Node) bool {
+	d, ok := calleeIdentity(c, call)
+	return ok && d.pkg == "@effect/vitest" && d.owner.Kind == ast.KindInterfaceDeclaration && d.name == "Test"
+}
+
 // identity names the declaration that a call resolves to.
 type identity struct {
 	pkg       string    // the package that declares it, such as "effect"
