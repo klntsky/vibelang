@@ -21,6 +21,7 @@ type plan struct {
 	servicePlan
 	plainPlan
 	trustedPlan
+	tracingPlan
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -31,7 +32,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 // planFile asks the checker which functions in file are Effects and which of
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
-	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan()}
+	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan()}
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -65,6 +66,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 		}
 		file.AsNode().ForEachChild(visit)
 		p.planTrustedCalls(c, a, file)
+		p.planSpans(c, file)
 	})
 	return p
 }

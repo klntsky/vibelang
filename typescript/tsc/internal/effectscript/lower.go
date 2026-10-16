@@ -211,7 +211,7 @@ func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
 // lowerFunction turns a function expression or arrow function into
 // `Effect.fnUntraced(function* (params) { body })`.
 func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
-	return tx.wrapGenerator("fnUntraced", node, tx.generatorOf(node))
+	return tx.wrapFunction(node, tx.generatorOf(node))
 }
 
 // lowerProgram turns a lambda with no parameters that is a program into

@@ -1,0 +1,27 @@
+// "tracing": "all" compiles every named function that compiles to frames
+// with a span named after it (D34): declarations, lambdas a variable names,
+// and methods, whose span names their class. A lambda without a name, such as
+// a callback, runs in its caller's span.
+import { Cause } from "effect"
+
+abstract class Greeter {
+  abstract greet(): Effect<string, Cause.NoSuchElementError, never>
+}
+
+class Hello implements Greeter {
+  greet() {
+    return Effect.currentSpan().name
+  }
+}
+
+function inner() {
+  return Effect.currentSpan().name
+}
+
+const viaArrow = () => Effect.currentSpan().name
+
+// expect-result: ["inner","viaArrow","Hello.greet",["main"]]
+export function main() {
+  const callback = Effect.forEach([1], () => Effect.currentSpan().name)
+  return [inner(), viaArrow(), new Hello().greet(), callback]
+}

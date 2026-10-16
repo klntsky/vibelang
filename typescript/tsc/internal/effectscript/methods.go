@@ -64,7 +64,7 @@ func (tx *lowering) lowerMethod(node *ast.Node) *ast.Node {
 		arguments = []*ast.Node{f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{self}), false /*multiLine*/), generator}
 	}
 	gen := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("gen"), ast.NodeFlagsNone), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
-	block := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(gen)}), true /*multiLine*/)
+	block := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(tx.traceMethod(node, gen))}), true /*multiLine*/)
 	lowered := f.UpdateMethodDeclaration(method, node.Modifiers(), method.AsteriskToken, node.Name(), method.PostfixToken, method.TypeParameters, parameters, method.Type, method.FullSignature, block)
 	ec.SetOriginal(lowered, node)
 	return lowered
