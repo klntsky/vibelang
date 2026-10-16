@@ -113,7 +113,11 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 
 The kernel's implementation modules are private package files. Their source
 remains in `src/kernel/` so the original law and trace suites can test the
-continuation machine directly. Generated code uses the package root.
+continuation machine directly. Generated code uses the package root. Tests and
+instrumentation import the kernel module itself from
+`@effectscript/runtime/kernel`, for example its `hooks`, which report each
+capture and resumption; the compiler's acceptance case `stack-depth` uses them
+to check that loops run in constant stack.
 
 ## Prototype compatibility
 

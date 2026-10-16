@@ -8,6 +8,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./kernel": {
+      "types": "./dist/kernel/kernel.d.ts",
+      "import": "./dist/kernel/kernel.js",
+      "default": "./dist/kernel/kernel.js"
     }
   },
   "files": [
