@@ -29,18 +29,18 @@ declare function $esIter<I>(iterable: I, id: number): import("effect").Effect.Ef
 
 type $EsSucceed<T> = import("effect").Effect.Effect<T, never, never>
 type $EsTrusted<A, E> = import("effect").Effect.Effect<A, E, never>
-type $EsBind<T> = import("../../esc/runtime/index.ts").Bind<T>
-type $EsStreamOf<P> = P extends import("../../esc/runtime/index.ts").Producer<infer T, infer E, infer R>
+type $EsBind<T> = import("../../../packages/runtime/src/index.ts").Bind<T>
+type $EsStreamOf<P> = P extends import("../../../packages/runtime/src/index.ts").Producer<infer T, infer E, infer R>
   ? import("effect").Stream.Stream<T, E, R>
   : never
 type $EsDirectOf<F> = F extends (...args: infer P) => import("effect").Effect.Effect<infer A, any, any> ? (...args: P) => A : F
-type $EsElem<I> = I extends import("../../esc/runtime/index.ts").Producer<infer T, any, any> ? T
+type $EsElem<I> = I extends import("../../../packages/runtime/src/index.ts").Producer<infer T, any, any> ? T
   : I extends import("effect").Stream.Stream<infer T, any, any> ? T
   : I extends Iterable<infer T> ? T
   : never
-type $EsErr<I> = I extends import("../../esc/runtime/index.ts").Producer<any, infer E, any> ? E
+type $EsErr<I> = I extends import("../../../packages/runtime/src/index.ts").Producer<any, infer E, any> ? E
   : I extends import("effect").Stream.Stream<any, infer E, any> ? E
   : never
-type $EsReq<I> = I extends import("../../esc/runtime/index.ts").Producer<any, any, infer R> ? R
+type $EsReq<I> = I extends import("../../../packages/runtime/src/index.ts").Producer<any, any, infer R> ? R
   : I extends import("effect").Stream.Stream<any, any, infer R> ? R
   : never

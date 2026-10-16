@@ -220,7 +220,7 @@ export const calleeOrigin = (call: ts.CallExpression, checker: ts.TypeChecker, g
     return PLATFORM_GLOBALS.has(root) ? "platform" : "lib"
   }
   if (/\/node_modules\/(effect|@effect\/[^/]+)\//.test(file)) return "effect"
-  if (/\/prototype\/esc\/runtime\//.test(file) || /\/experiments\/kernel\//.test(file)) return "effect"
+  if (/\/packages\/runtime\/src\//.test(file)) return "effect"
   return "ts"
 }
 

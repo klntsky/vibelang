@@ -12,7 +12,7 @@ import { collectFacts, fingerprint, type Unit } from "../../esc/src/facts.ts"
 import { emptyFacts, type EsFile, type Facts, type ServiceDecl } from "../../esc/src/model.ts"
 
 export const ESC = path.resolve(import.meta.dir, "../../esc")
-export const RUNTIME = path.join(ESC, "runtime/index.ts")
+export const RUNTIME = path.resolve(ESC, "../../packages/runtime/src/index.ts")
 // Service keys embed a cwd-relative path (compiler.ts `serviceKey`); run from the repo root as run-all does.
 process.chdir(path.resolve(ESC, "../.."))
 

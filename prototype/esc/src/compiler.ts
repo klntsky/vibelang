@@ -43,7 +43,7 @@ export interface CompileResult {
   ms: number
 }
 
-const RUNTIME = path.resolve(import.meta.dir, "../runtime/index.ts")
+const RUNTIME = path.resolve(import.meta.dir, "../../../packages/runtime/src/index.ts")
 
 export const compilerOptions: ts.CompilerOptions = {
   strict: true,

@@ -1,5 +1,5 @@
 import { Context, Effect, Layer, Scope } from "effect"
-import { $bind, $catch, $finally, TaggedError } from "../runtime/index.ts"
+import { $bind, $catch, $finally, TaggedError } from "../../../packages/runtime/src/index.ts"
 
 interface User { readonly id: string; readonly name: string; readonly email: string }
 class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}
