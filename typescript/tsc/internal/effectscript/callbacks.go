@@ -37,7 +37,7 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 				if pause := a.firstPause(node); pause != nil {
 					call, _ := ownerCall(node)
 					d := report(c, node, pausingCallback, nodeText(file, pause.Expression()), calleeName(c, file, call))
-					note(d, "Use {0} or a for...of loop.", forEachFix(file, call, node))
+					note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
 				}
 			}
 		case node.Kind == ast.KindMethodDeclaration && isLowerable(node):
@@ -50,7 +50,7 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 			if a.finalConversion(node) == convertRejected {
 				call, _ := ownerCall(node)
 				d := report(c, node, ES4301, node.Text(), calleeName(c, file, call))
-				note(d, "Use {0} or a for...of loop.", forEachFix(file, call, node))
+				note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
 			}
 		}
 		return node.ForEachChild(visit)
@@ -96,12 +96,13 @@ func (a *analyzer) plainMemberOwner(method *ast.Node) string {
 }
 
 // calleeName names what call calls, for a diagnostic: Array.prototype.map
-// for a method an interface or class declares, else the callee as written.
+// for a method an interface or class declares, called on an instance, else
+// the callee as written, such as Array.from or Order.mapInput.
 func calleeName(c *checker.Checker, file *ast.SourceFile, call *ast.Node) string {
 	if call == nil {
 		return "its caller"
 	}
-	if signature := c.GetResolvedSignature(call); signature != nil {
+	if signature := c.GetResolvedSignature(call); signature != nil && !isStaticReceiver(c, receiverOf(call)) {
 		if d := signature.Declaration(); d != nil && (ast.IsMethodSignatureDeclaration(d) || ast.IsMethodDeclaration(d)) && d.Parent != nil {
 			if owner := d.Parent.Name(); owner != nil && ast.IsIdentifier(owner) && ast.IsIdentifier(d.Name()) {
 				return owner.Text() + ".prototype." + d.Name().Text()
@@ -112,12 +113,43 @@ func calleeName(c *checker.Checker, file *ast.SourceFile, call *ast.Node) string
 }
 
 // forEachFix writes the Effect.forEach call that replaces call, a call such
-// as ids.map(f) whose callback f can pause.
-func forEachFix(file *ast.SourceFile, call *ast.Node, callback *ast.Node) string {
-	if call != nil && ast.IsPropertyAccessExpression(call.Expression()) {
-		return "Effect.forEach(" + nodeText(file, call.Expression().Expression()) + ", " + nodeText(file, callback) + ")"
+// as ids.map(f) whose callback f can pause, when the object call's callee
+// belongs to is iterable, and else names Effect.forEach.
+func forEachFix(c *checker.Checker, file *ast.SourceFile, call *ast.Node, callback *ast.Node) string {
+	if receiver := receiverOf(call); receiver != nil && c.IteratedType(c.GetTypeAtLocation(receiver)) != nil {
+		return "Effect.forEach(" + nodeText(file, receiver) + ", " + nodeText(file, callback) + ")"
 	}
 	return "Effect.forEach"
+}
+
+// receiverOf returns the object that call's callee belongs to, ids in
+// ids.map(f), or nil.
+func receiverOf(call *ast.Node) *ast.Node {
+	if call != nil && ast.IsPropertyAccessExpression(call.Expression()) {
+		return call.Expression().Expression()
+	}
+	return nil
+}
+
+// isStaticReceiver reports whether receiver names a namespace, a class, an
+// enum, or a value that a declaration file declares, such as Array in
+// Array.from, rather than an instance whose methods its prototype holds.
+func isStaticReceiver(c *checker.Checker, receiver *ast.Node) bool {
+	if receiver == nil || !ast.IsEntityNameExpression(receiver) {
+		return false
+	}
+	symbol := c.GetSymbolAtLocation(receiver)
+	if symbol != nil && symbol.Flags()&ast.SymbolFlagsAlias != 0 {
+		symbol = c.GetAliasedSymbol(symbol)
+	}
+	if symbol == nil {
+		return false
+	}
+	if symbol.Flags()&(ast.SymbolFlagsModule|ast.SymbolFlagsClass|ast.SymbolFlagsEnum) != 0 {
+		return true
+	}
+	declaration := symbol.ValueDeclaration()
+	return declaration != nil && ast.IsVariableDeclaration(declaration) && ast.GetSourceFileOfNode(declaration).IsDeclarationFile
 }
 
 // nodeText returns the source text of node, without leading trivia.
