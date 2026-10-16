@@ -16,6 +16,9 @@ func inferredReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *chec
 	if !isLowerable(fn) || isLambda(fn) {
 		return t // a lambda's type depends on its form (forms.go)
 	}
+	if isProducer(fn) {
+		return producerType(c, fn, t)
+	}
 	a := analyzerFor(c)
 	// A function that compiles to plain JavaScript through a $direct variant
 	// is still an Effect to TypeScript (Chapter 15); other plain functions,

@@ -38,6 +38,9 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			a.addServiceLookup(info, n)
 			a.addCall(info, n)
 			a.addFailures(info, n)
+		case n.Kind == ast.KindForOfStatement:
+			n.ForEachChild(visit)
+			a.addStreamLoop(info, n)
 		default:
 			n.ForEachChild(visit)
 		}

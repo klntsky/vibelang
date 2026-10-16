@@ -138,6 +138,8 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 		fn := esFunctionOf(a.checker, node)
 		switch {
 		case fn == nil:
+		case isProducer(fn):
+			// Calling a producer runs none of it: it is a plain function.
 		case a.isPlainFunction(fn) && !a.isSplittable(fn):
 			// Annotated with a plain return type: the function itself is plain.
 		case a.isPlainFunction(fn) && a.directReferenceOf(node, fn) != nil:

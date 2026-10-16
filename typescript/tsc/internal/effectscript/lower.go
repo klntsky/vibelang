@@ -87,6 +87,12 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitTailResumeReturn(node)
 	case tx.inEffect && tx.frame.clause && node.Kind == ast.KindCallExpression && tx.plan.resumes[node] != "" && tx.plan.isTailResumeBody(node):
 		return tx.tailResumeCall(node)
+	case tx.inEffect && node.Kind == ast.KindYieldExpression:
+		return tx.visitYield(node)
+	case tx.inEffect && node.Kind == ast.KindForOfStatement && tx.plan.streamLoops[node]:
+		return tx.visitStreamLoop(node)
+	case tx.inEffect && node.Kind == ast.KindLabeledStatement && tx.plan.streamLoops[node.AsLabeledStatement().Statement]:
+		return tx.visitStreamLoop(node.AsLabeledStatement().Statement) // $forOf takes the label
 	case tx.inEffect && (node.Kind == ast.KindReturnStatement || ast.IsBreakOrContinueStatement(node)):
 		return tx.visitJump(node)
 	case tx.inEffect && isJumpTarget(node):
@@ -101,6 +107,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitPlainFunctionDeclaration(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.wireOrders[node] != nil:
 		return tx.visitWireCall(node)
+	case tx.plan.producers[node]:
+		return tx.visitProducer(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
 	case node.Kind == ast.KindMethodDeclaration && tx.plan.isEffect(node):

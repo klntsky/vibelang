@@ -24,6 +24,7 @@ type plan struct {
 	tracingPlan
 	scopePlan
 	handlerPlan
+	producerPlan
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -36,6 +37,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
 	p.handlerPlan = newHandlerPlan()
+	p.producerPlan = newProducerPlan()
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -52,6 +54,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					p.effects[node] = true
 				}
 				p.planClause(c, node)
+				p.planProducer(c, node)
 				forEachCallInBody(node, func(call *ast.Node) bool {
 					if a.runs(call) {
 						p.runs[call] = true
@@ -163,6 +166,9 @@ func analyzerFor(c *checker.Checker) *analyzer {
 }
 
 func (a *analyzer) isEffect(fn *ast.Node) bool {
+	if isProducer(fn) {
+		return true // its body is an Effect body; calling it returns a Stream
+	}
 	if isLambda(fn) {
 		return a.finalForm(fn) != formPlain
 	}
@@ -176,7 +182,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn) || hasEscapingThrow(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn) || declaresUsing(fn)
+	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn) || hasEscapingThrow(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn) || declaresUsing(fn) || a.hasStreamLoop(fn)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
 }
@@ -194,6 +200,9 @@ func (a *analyzer) runs(call *ast.Node) bool {
 		return false
 	}
 	if fn := implementationOf(sig.Declaration()); fn != nil && isLowerable(fn) {
+		if isProducer(fn) {
+			return false // a call constructs the producer's Stream and runs none of it
+		}
 		if a.isPlainFunction(fn) {
 			// A plain function's call runs inline, through its $direct
 			// variant when it has one, and runs its Effect form only where

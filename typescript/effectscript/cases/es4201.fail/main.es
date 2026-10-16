@@ -2,7 +2,7 @@
 // A control operation inside a combinator that runs it on another fiber
 // cannot reach the handler on this fiber (chapter 9). The calls in allowed()
 // stay on this fiber or handle the operation inside the branch.
-import { Data, Effect } from "effect"
+import { Data, Effect, Stream } from "effect"
 import { Control, handle, resume } from "@effectscript/runtime"
 
 class Busy extends Data.TaggedError("Busy")<{}> {}
@@ -21,6 +21,21 @@ export function raced() {
 
 export function timed() {
   return Effect.timeout(() => Approval.approve("slow"), "1 second")
+}
+
+// A producer used as a Stream runs on a fiber of its own (D26).
+function* approvals(ids: ReadonlyArray<string>) {
+  for (const id of ids) yield Approval.approve(id)
+}
+
+export function collected(ids: ReadonlyArray<string>) {
+  return Stream.runCollect(approvals(ids))
+}
+
+export function looped(ids: ReadonlyArray<string>) {
+  let approved = 0
+  for (const ok of approvals(ids)) if (ok) approved++
+  return approved
 }
 
 export function allowed(ids: ReadonlyArray<string>) {

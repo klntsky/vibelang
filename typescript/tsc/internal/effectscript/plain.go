@@ -36,7 +36,7 @@ const (
 // isPlainCandidate reports whether D10 decides how fn compiles: a named .es
 // function declaration with a body and no overloads.
 func isPlainCandidate(fn *ast.Node) bool {
-	if fn == nil || fn.Kind != ast.KindFunctionDeclaration || fn.Name() == nil || !isLowerable(fn) {
+	if fn == nil || fn.Kind != ast.KindFunctionDeclaration || fn.Name() == nil || !isLowerable(fn) || isProducer(fn) {
 		return false
 	}
 	symbol := fn.Symbol()
@@ -85,7 +85,7 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			continue
 		}
 		a.plain[d] = plainExploring
-		m := &member{ok: !hasEscapingThrow(d) && !declaresUsing(d) && !a.hasEscapingFailure(d)}
+		m := &member{ok: !hasEscapingThrow(d) && !declaresUsing(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d)}
 		group[d] = m
 		forEachCallInBody(d, func(call *ast.Node) bool {
 			if callee := a.candidateCallee(call); callee != nil {

@@ -43,6 +43,7 @@ func init() {
 	checker.RegisterEntityNameVisibilityHook(preludeNameVisible)
 	checker.RegisterTypeParametersHook(extraTypeParameters)
 	checker.RegisterParameterTypeHook(callbackParameterType)
+	checker.RegisterIteratedElementTypeHook(iteratedElementType)
 }
 
 // isEffectScriptFile reports whether file is an EffectScript source file.
@@ -52,15 +53,17 @@ func isEffectScriptFile(file *ast.SourceFile) bool {
 
 // isLowerable reports whether node is a function that the lowering can turn
 // into an Effect: a function declaration, function expression, arrow
-// function, or method with a body, declared in an .es file, that is neither
-// async nor a generator. Accessors and constructors stay as they are.
+// function, or method with a body, declared in an .es file, that is not
+// async, and is not a generator unless it is a producer (producers.go), whose
+// body is an Effect body too. Accessors and constructors stay as they are.
 func isLowerable(node *ast.Node) bool {
 	switch node.Kind {
 	case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
 	default:
 		return false
 	}
-	if node.Body() == nil || ast.GetFunctionFlags(node)&(ast.FunctionFlagsAsync|ast.FunctionFlagsGenerator) != 0 {
+	flags := ast.GetFunctionFlags(node)
+	if node.Body() == nil || flags&ast.FunctionFlagsAsync != 0 || flags&ast.FunctionFlagsGenerator != 0 && !isProducer(node) {
 		return false
 	}
 	return isEffectScriptFile(ast.GetSourceFileOfNode(node))

@@ -66,7 +66,7 @@ func (a *analyzer) lambda(fn *ast.Node) *lambdaState {
 // isLambda reports whether fn is a function expression or arrow function in
 // an .es file whose form the analyzer decides.
 func isLambda(fn *ast.Node) bool {
-	return (fn.Kind == ast.KindArrowFunction || fn.Kind == ast.KindFunctionExpression) && isLowerable(fn)
+	return (fn.Kind == ast.KindArrowFunction || fn.Kind == ast.KindFunctionExpression) && isLowerable(fn) && !isProducer(fn)
 }
 
 // callCandidate records that call's arguments are being checked against
@@ -290,7 +290,7 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 // runs no Effect and looks up no service, no throw can end it, and it
 // declares no using (D54).
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
-	return !forEachCallInBody(fn, a.performs) && !hasEscapingThrow(fn) && !declaresUsing(fn)
+	return !forEachCallInBody(fn, a.performs) && !hasEscapingThrow(fn) && !declaresUsing(fn) && !a.hasStreamLoop(fn)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript

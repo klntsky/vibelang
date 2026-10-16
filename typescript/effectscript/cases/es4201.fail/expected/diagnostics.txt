@@ -2,3 +2,4 @@ main.es(15,38): error ES4201
 main.es(19,28): error ES4201
 main.es(19,57): error ES4201
 main.es(23,31): error ES4201
+main.es(32,28): error ES4201

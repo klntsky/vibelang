@@ -31,8 +31,9 @@ func checkGeneratorArguments(c *checker.Checker, file *ast.SourceFile) {
 					api := apiName(node)
 					d := report(c, api, ES1002, scanner.GetSourceTextOfNodeFromSourceFile(file, api, false))
 					note(d, "Write the body as an ordinary function: remove {0}, function*, and yield*.", scanner.GetSourceTextOfNodeFromSourceFile(file, api, false))
-					if ast.IsFunctionExpression(arg) {
-						cover(c, arg) // its body has no EffectScript meaning
+					cover(c, arg) // a function expression's body has no EffectScript meaning
+					if decl := generatorDeclaration(c, arg); decl != nil && ast.GetSourceFileOfNode(decl) == file {
+						cover(c, decl) // nor has the body of a producer written for it
 					}
 				}
 			}
@@ -48,14 +49,21 @@ func isGeneratorFunction(c *checker.Checker, arg *ast.Node) bool {
 	if ast.IsFunctionExpression(arg) {
 		return arg.AsFunctionExpression().AsteriskToken != nil
 	}
-	if ast.IsIdentifier(arg) {
-		if symbol := c.GetSymbolAtLocation(arg); symbol != nil {
-			if decl := symbol.ValueDeclaration(); decl != nil && ast.IsFunctionDeclaration(decl) && decl.AsFunctionDeclaration().AsteriskToken != nil {
-				return isEffectScriptFile(ast.GetSourceFileOfNode(decl))
-			}
+	return generatorDeclaration(c, arg) != nil
+}
+
+// generatorDeclaration returns the function* declaration in a .es file that
+// arg, an identifier, names, or nil.
+func generatorDeclaration(c *checker.Checker, arg *ast.Node) *ast.Node {
+	if !ast.IsIdentifier(arg) {
+		return nil
+	}
+	if symbol := c.GetSymbolAtLocation(arg); symbol != nil {
+		if decl := symbol.ValueDeclaration(); decl != nil && ast.IsFunctionDeclaration(decl) && decl.AsFunctionDeclaration().AsteriskToken != nil && isEffectScriptFile(ast.GetSourceFileOfNode(decl)) {
+			return decl
 		}
 	}
-	return false
+	return nil
 }
 
 // expectsGenerator reports whether the parameter that receives arg is a

@@ -40,6 +40,7 @@ func checkReach(c *checker.Checker, file *ast.SourceFile) {
 			if what, fix := forkingCall(c, file, node); what != "" {
 				checkForkedArguments(c, file, node, what, fix)
 			}
+			checkProducerArguments(c, file, node)
 			checkTypeScriptCallee(c, file, node)
 		}
 		return node.ForEachChild(visit)
@@ -238,6 +239,45 @@ func performSite(c *checker.Checker, file *ast.SourceFile, argument *ast.Node, c
 		return found, nodeText(file, found.Expression())
 	}
 	return argument, control.Symbol().Name()
+}
+
+// checkProducerArguments reports ES4201 for a producer passed to call, a
+// Stream operator or any other function, whose requirements hold a control
+// operation: run as a Stream, a producer runs on a fiber of its own (D26).
+// for...of and yield* run it on this fiber instead.
+func checkProducerArguments(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
+	for _, argument := range call.Arguments() {
+		producer := producerOfCall(c, ast.SkipParentheses(argument))
+		if producer == nil {
+			continue
+		}
+		requirements := streamChannel(c, c.GetTypeAtLocation(argument), "_R")
+		if requirements == nil {
+			continue
+		}
+		for _, control := range controlsIn(c, []*checker.Type{requirements}) {
+			operation := control.Symbol().Name()
+			if site, _ := performSite(c, ast.GetSourceFileOfNode(producer), producer.Body(), control); site != producer.Body() {
+				operation = nodeText(ast.GetSourceFileOfNode(producer), site.Expression())
+			}
+			d := report(c, argument, ES4201, operation, "the producer "+nodeText(file, argument)+" passed to "+nodeText(file, call.Expression()), control.Symbol().Name())
+			note(d, "A producer used as a Stream runs on a fiber of its own. Loop over it with for...of, or handle {0} inside the producer.", control.Symbol().Name())
+		}
+	}
+}
+
+// producerOfCall returns the producer that call, a call expression, calls,
+// or nil.
+func producerOfCall(c *checker.Checker, call *ast.Node) *ast.Node {
+	if !ast.IsCallExpression(call) {
+		return nil
+	}
+	if signature := c.GetResolvedSignature(call); signature != nil {
+		if fn := implementationOf(signature.Declaration()); fn != nil && isProducer(fn) {
+			return fn
+		}
+	}
+	return nil
 }
 
 // checkTypeScriptCallee reports ES4202 when call calls a function declared
