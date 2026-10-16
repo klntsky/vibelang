@@ -2,6 +2,7 @@ package effectscript
 
 import (
 	"slices"
+	"strconv"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
@@ -24,7 +25,8 @@ import (
 // preludeNameVisible lets the declaration file of a .es file write a prelude
 // name that the source wrote, such as Effect in Effect<number>.
 func preludeNameVisible(c *checker.Checker, entityName *ast.Node, symbol *ast.Symbol) bool {
-	name := ast.GetFirstIdentifier(entityName).Text()
+	first := ast.GetFirstIdentifier(entityName)
+	name := first.Text()
 	if _, ok := preludeModules[name]; !ok {
 		return false
 	}
@@ -41,6 +43,7 @@ func preludeNameVisible(c *checker.Checker, entityName *ast.Node, symbol *ast.Sy
 		state.typeUses[file] = map[string]bool{}
 	}
 	state.typeUses[file][name] = true
+	state.typeRefs[first] = true
 	return true
 }
 
@@ -57,25 +60,90 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 		declarations = rewriter.TransformSourceFile(declarations)
 
 		var names []string
+		var refs map[*ast.Node]bool
 		r.WithChecker(func(c *checker.Checker) {
-			for name := range preludeStateOf(c).typeUses[sourceFile] {
+			state := preludeStateOf(c)
+			for name := range state.typeUses[sourceFile] {
 				names = append(names, name)
 			}
+			refs = state.typeRefs
 		})
 		if len(names) == 0 {
 			return declarations
 		}
 		slices.Sort(names)
+		// A file that imports Effect from effect and writes Effect<…> keeps
+		// its import, so the prelude's Effect needs another local name.
+		aliases := preludeAliases(declarations, names)
+		if len(aliases) > 0 {
+			renamer := &preludeRenamer{aliases: aliases, refs: refs}
+			renamer.NewTransformer(renamer.visit, resolver.EmitContext())
+			declarations = renamer.TransformSourceFile(declarations)
+		}
 		// import type { Effect, Scope } from "@effectscript/runtime"
 		f := resolver.EmitContext().Factory
 		specifiers := make([]*ast.Node, 0, len(names))
 		for _, name := range names {
+			if alias, ok := aliases[name]; ok {
+				specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, f.NewIdentifier(name), f.NewIdentifier(alias)))
+				continue
+			}
 			specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, nil /*propertyName*/, f.NewIdentifier(name)))
 		}
 		clause := f.NewImportClause(ast.KindTypeKeyword, nil /*name*/, f.NewNamedImports(f.NewNodeList(specifiers)))
 		statements := append([]*ast.Node{f.NewImportDeclaration(nil /*modifiers*/, clause, f.NewStringLiteral(runtimeModule, ast.TokenFlagsNone), nil /*attributes*/)}, declarations.Statements.Nodes...)
 		return f.UpdateSourceFile(declarations, f.NewNodeList(statements), declarations.EndOfFileToken).AsSourceFile()
 	}
+}
+
+// preludeAliases returns a free local name for each prelude name in names
+// that a top-level declaration or import of declarations already binds.
+func preludeAliases(declarations *ast.SourceFile, names []string) map[string]string {
+	bound := map[string]bool{}
+	for _, statement := range declarations.Statements.Nodes {
+		forEachTopLevelName(statement, func(name string) { bound[name] = true })
+	}
+	used := map[string]bool{}
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if ast.IsIdentifier(node) {
+			used[node.Text()] = true
+		}
+		return node.ForEachChild(visit)
+	}
+	declarations.AsNode().ForEachChild(visit)
+	aliases := map[string]string{}
+	for _, name := range names {
+		if !bound[name] {
+			continue
+		}
+		for i := 1; ; i++ {
+			if alias := name + "_" + strconv.Itoa(i); !bound[alias] && !used[alias] {
+				aliases[name] = alias
+				used[alias] = true
+				break
+			}
+		}
+	}
+	return aliases
+}
+
+// preludeRenamer gives the identifiers that write a prelude name the alias
+// the declaration file imports it under.
+type preludeRenamer struct {
+	transformers.Transformer
+	aliases map[string]string
+	refs    map[*ast.Node]bool // the identifiers that preludeNameVisible allowed
+}
+
+func (tx *preludeRenamer) visit(node *ast.Node) *ast.Node {
+	if ast.IsIdentifier(node) {
+		if alias, ok := tx.aliases[node.Text()]; ok && tx.refs[tx.EmitContext().MostOriginal(node)] {
+			return tx.Factory().NewIdentifier(alias)
+		}
+		return node
+	}
+	return tx.Visitor().VisitEachChild(node)
 }
 
 // specifierRewriter makes a declaration file name modules by output: the

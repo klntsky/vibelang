@@ -127,6 +127,7 @@ type preludeState struct {
 	modules  map[*ast.SourceFile]*ast.Symbol     // the runtime module each .es file resolves
 	uses     map[*ast.SourceFile]map[string]bool // prelude names each .es file uses as values
 	typeUses map[*ast.SourceFile]map[string]bool // prelude names each .es file's declaration file writes (declarations.go)
+	typeRefs map[*ast.Node]bool                  // the identifiers that write those names
 }
 
 type preludeStateKey struct{}
@@ -137,6 +138,7 @@ func preludeStateOf(c *checker.Checker) *preludeState {
 			modules:  map[*ast.SourceFile]*ast.Symbol{},
 			uses:     map[*ast.SourceFile]map[string]bool{},
 			typeUses: map[*ast.SourceFile]map[string]bool{},
+			typeRefs: map[*ast.Node]bool{},
 		}
 	}).(*preludeState)
 }

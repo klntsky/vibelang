@@ -757,7 +757,7 @@ Every `.es` file sees these names without an import (D4, D48): `Effect`, `Schema
 
 A name used only in types, such as `Scope` in `Effect<void, never, Scope>`, is not imported. The emitted imports are ES module imports: `.es` files compile to ES modules. When `@effectscript/runtime` is not installed, a prelude name is TypeScript's TS2304 (cannot find name).
 
-A declaration file is ordinary TypeScript, so the `.d.ts` of a `.es` file imports the prelude names its declarations write: `import type { Effect, Scope } from "@effectscript/runtime"`. Declaration emit asks the entity name visibility hook whether each name it writes is visible; `preludeNameVisible` says yes for a prelude name and records it, and `transformDeclarations`, a declaration transformer hook, adds the import (`declarations.go`, case `es-prelude-dts`).
+A declaration file is ordinary TypeScript, so the `.d.ts` of a `.es` file imports the prelude names its declarations write: `import type { Effect, Scope } from "@effectscript/runtime"`. Declaration emit asks the entity name visibility hook whether each name it writes is visible; `preludeNameVisible` says yes for a prelude name and records it, and `transformDeclarations`, a declaration transformer hook, adds the import (`declarations.go`, case `es-prelude-dts`). A file that also binds the name itself, as an Effect user's `import { Effect } from "effect"` does, keeps that import in its declaration file, so the prelude's type is imported under a free name, `import type { Effect as Effect_1 } from "@effectscript/runtime"`, and only the references the hook allowed are renamed (case `es-prelude-dts-shadow`, whose TypeScript consumer compiles with `skipLibCheck` off).
 
 ## Imports between files
 
