@@ -7766,6 +7766,7 @@ func (c *Checker) checkExpressionEx(node *ast.Node, checkMode CheckMode) *Type {
 	if isConstEnumObjectType(t) {
 		c.checkConstEnumAccess(node, t)
 	}
+	t = c.applyExpressionTypeHooks(node, t)
 	c.currentNode = saveCurrentNode
 	return t
 }
