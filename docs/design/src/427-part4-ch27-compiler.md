@@ -65,8 +65,9 @@ computation IR described by the machine chapters is a semantic model; the
 current compiler does not materialize a separate IR.
 
 A call that returns Effect itself runs; structured Effect subtypes such as
-Config remain data until called (D24). A pure function gets a `$direct` variant
-for inline calls and an Effect form for the public ABI (D9, D10). Calls and
+Config remain data until called (D24). An unannotated or Effect-contract pure function gets a `$direct` variant
+for inline calls and an Effect form for the public ABI (D9, D10). A plain
+return annotation instead preserves one plain function (D67). Calls and
 operands retain source order. `throw` adds an expected failure; `try`, `catch`,
 and `finally` become regions with completion records for jumps (D13, D15, D46).
 
