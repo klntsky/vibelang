@@ -6,13 +6,14 @@ import (
 )
 
 // A lambda, an arrow function or function expression in an .es file,
-// compiles as a plain function or an Effect function (design D56). Overload
-// resolution decides which: while TypeScript checks a call's arguments against
-// a candidate signature, each lambda argument takes the form that candidate's
-// declared, uninstantiated parameter type asks for (D44), and the candidate
-// that TypeScript's first-applicable rule selects decides the form the lambda
+// compiles in one of three forms (design D56). Overload resolution decides
+// which: while TypeScript checks a call's arguments against a candidate
+// signature, each lambda argument takes the form that candidate's declared,
+// uninstantiated parameter type asks for (D44), and the candidate that
+// TypeScript's first-applicable rule selects decides the form the lambda
 // compiles to.
 //
+//	Effect.retry(() => sync(store), policy)   // Effect<A, E, R> expected: a program
 //	Effect.forEach(ids, (id) => find(id))      // (a) => Effect expected: an Effect function
 //	ids.map((id) => id.trim())                 // (value) => U expected: a plain function
 //
@@ -23,9 +24,10 @@ import (
 type form uint8
 
 const (
-	formNone   form = iota
-	formPlain       // a plain JavaScript function: (x) => A
-	formEffect      // an Effect function: (x) => Effect<A, E, R>
+	formNone    form = iota
+	formPlain        // a plain JavaScript function: (x) => A
+	formEffect       // an Effect function: (x) => Effect<A, E, R>
+	formProgram      // a program, a function with no parameters: Effect<A, E, R>
 )
 
 // candidateKey identifies an overload candidate across its instantiations:
@@ -48,7 +50,7 @@ type lambdaState struct {
 	byCandidate map[candidateKey]form // the first form each candidate asked for
 	free        form                  // the form outside every call's candidates
 	deciding    bool                  // free is being decided; a recursive call sees plain
-	types       [3]*checker.Type      // the lambda's type in each form
+	types       [4]*checker.Type      // the lambda's type in each form
 }
 
 func (a *analyzer) lambda(fn *ast.Node) *lambdaState {
@@ -96,7 +98,8 @@ func filterCandidate(c *checker.Checker, call *ast.Node, candidate *checker.Sign
 }
 
 // functionExpressionType gives a lambda the type of its form at its position:
-// the plain function TypeScript inferred, or an Effect function.
+// the plain function TypeScript inferred, an Effect function, or the program's
+// Effect.
 func functionExpressionType(c *checker.Checker, fn *ast.Node, t *checker.Type) *checker.Type {
 	if !isLambda(fn) {
 		return t
@@ -162,14 +165,26 @@ func (a *analyzer) freeForm(fn *ast.Node) form {
 }
 
 // decide turns an expectation into a form for fn. Without one, fn is plain
-// when D10 allows it and an Effect function otherwise.
+// when D10 allows it and an Effect function otherwise. Where only an Effect is
+// expected, fn is a program; with required parameters it cannot be one, so it
+// stays an Effect function and TypeScript reports the mismatch. Where a
+// function or an Effect is expected (D39), a function with parameters is a
+// function, and one without is a program when it can pause.
 func (a *analyzer) decide(fn *ast.Node, e expectation) form {
+	function := formNone
 	switch {
 	case e.effectFn:
-		return formEffect
+		function = formEffect
 	case e.plainFn:
-		return formPlain
-	case e.program:
+		function = formPlain
+	}
+	if e.program && requiredParameterCount(fn) == 0 && (function == formNone || !a.canBePlain(fn)) {
+		return formProgram
+	}
+	if function != formNone {
+		return function
+	}
+	if e.program {
 		return formEffect
 	}
 	if a.canBePlain(fn) {
@@ -226,7 +241,10 @@ func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Ty
 	if effect == nil {
 		return t
 	}
-	result := a.checker.NewFunctionTypeWithReturnType(t.Symbol(), signatures[0], effect)
+	result := effect
+	if f == formEffect {
+		result = a.checker.NewFunctionTypeWithReturnType(t.Symbol(), signatures[0], effect)
+	}
 	s.types[f] = result
 	return result
 }
@@ -296,13 +314,35 @@ func reverse(path []pathStep) {
 	}
 }
 
+func requiredParameterCount(fn *ast.Node) int {
+	n := 0
+	for _, p := range fn.Parameters() {
+		if p.Initializer() != nil || p.QuestionToken() != nil || p.AsParameterDeclaration().DotDotDotToken != nil {
+			break
+		}
+		n++
+	}
+	return n
+}
+
 // contextualReturnType makes what an .es function returns contextually typed
 // by the success type of the Effect expected of it. Its body returns the
 // success value, because the calls in it run: an Effect function expected as
-// (a) => Effect<B, E, R> returns a B.
+// (a) => Effect<B, E, R> returns a B. A program expected as Effect<A, E, R>
+// has no contextual signature, so its body is typed by A, as the object a
+// Layer.effect program returns is typed by the service's shape.
 func contextualReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *checker.Type {
-	if t == nil || !isLowerable(fn) {
+	if !isLowerable(fn) {
 		return t
+	}
+	if t == nil {
+		if !isLambda(fn) || requiredParameterCount(fn) != 0 {
+			return nil
+		}
+		if contextual := c.GetContextualType(fn, checker.ContextFlagsSignature); contextual != nil && len(c.GetSignaturesOfType(contextual, checker.SignatureKindCall)) == 0 {
+			return successType(c, contextual)
+		}
+		return nil
 	}
 	if success := successType(c, t); success != nil {
 		return success

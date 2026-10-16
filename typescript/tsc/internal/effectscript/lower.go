@@ -49,6 +49,8 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 		return tx.visitEffectFunctionDeclaration(node)
 	case tx.plan.isEffect(node):
 		return tx.lowerFunction(node)
+	case tx.plan.isProgram(node):
+		return tx.lowerProgram(node)
 	case isFunctionBoundary(node):
 		saved := tx.inEffect
 		tx.inEffect = false
@@ -95,6 +97,19 @@ func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
 // lowerFunction turns a function expression or arrow function into
 // `Effect.fnUntraced(function* (params) { body })`.
 func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
+	return tx.wrapGenerator("fnUntraced", node, tx.generatorOf(node))
+}
+
+// lowerProgram turns a lambda with no parameters that is a program into
+// `Effect.gen(function* () { body })`, an Effect that runs the body each time
+// it runs.
+func (tx *lowering) lowerProgram(node *ast.Node) *ast.Node {
+	return tx.wrapGenerator("gen", node, tx.generatorOf(node))
+}
+
+// generatorOf returns `function* (params) { body }` for node, with node's
+// calls that run lowered to yield*.
+func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
 
@@ -114,10 +129,15 @@ func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
 	}
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), name, nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
 	ec.SetOriginal(generator, node)
+	return generator
+}
 
-	fnUntraced := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("fnUntraced"), ast.NodeFlagsNone)
-	lowered := f.NewCallExpression(fnUntraced, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{generator}), ast.NodeFlagsNone)
-	ec.SetOriginal(lowered, node)
+// wrapGenerator returns `Effect.<method>(generator)` in place of node.
+func (tx *lowering) wrapGenerator(method string, node *ast.Node, generator *ast.Node) *ast.Node {
+	f := tx.Factory()
+	callee := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier(method), ast.NodeFlagsNone)
+	lowered := f.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{generator}), ast.NodeFlagsNone)
+	tx.EmitContext().SetOriginal(lowered, node)
 	lowered.Loc = node.Loc
 	return lowered
 }

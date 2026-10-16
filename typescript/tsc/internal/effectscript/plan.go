@@ -15,17 +15,19 @@ const effectTypeID = "~effect/Effect"
 
 // plan records what the lowering does to one .es file.
 type plan struct {
-	effects map[*ast.Node]bool // functions lowered to Effect.fnUntraced generators
-	runs    map[*ast.Node]bool // calls in those functions emitted as yield*
+	effects  map[*ast.Node]bool // functions lowered to Effect.fnUntraced generators
+	programs map[*ast.Node]bool // lambdas lowered to Effect.gen programs (design D7)
+	runs     map[*ast.Node]bool // calls in those functions emitted as yield*
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool   { return p.effects[fn] }
+func (p *plan) isProgram(fn *ast.Node) bool  { return p.programs[fn] }
 func (p *plan) runsCall(call *ast.Node) bool { return p.runs[call] }
 
 // planFile asks the checker which functions in file are Effects and which of
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
-	p := &plan{effects: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}}
+	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}}
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -35,7 +37,11 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 		var visit func(node *ast.Node) bool
 		visit = func(node *ast.Node) bool {
 			if isLowerable(node) && a.isEffect(node) {
-				p.effects[node] = true
+				if isLambda(node) && a.finalForm(node) == formProgram {
+					p.programs[node] = true
+				} else {
+					p.effects[node] = true
+				}
 				forEachCallInBody(node, func(call *ast.Node) bool {
 					if a.runs(call) {
 						p.runs[call] = true

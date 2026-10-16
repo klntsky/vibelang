@@ -1,9 +1,9 @@
 // A lambda takes the form the overload candidate under check declares
-// (design D56): a plain function or an Effect function. The first candidate
-// that accepts it in that form wins, as TypeScript's first-applicable rule
-// says.
+// (design D56): a plain function, an Effect function, or a program. The first
+// candidate that accepts it in that form wins, as TypeScript's first-applicable
+// rule says.
 import { Effect } from "effect"
-import { apply, attach, find, register } from "./helpers.ts"
+import { apply, attach, find, register, start } from "./helpers.ts"
 
 // No call in the body: overload 1 accepts the plain form.
 function plainBody() {
@@ -26,6 +26,11 @@ function effectFirst() {
   return attach((x) => x + 1)
 }
 
+// A program comes first: a lambda with no parameters is a program there.
+function programFirst() {
+  return start(() => Math.max(1, 2))
+}
+
 // No expected type: the lambda is plain because its body runs nothing (D10).
 function bare() {
   const f = apply((x: number) => Math.max(x, 0))
@@ -45,13 +50,14 @@ function traversals(ids: ReadonlyArray<string>) {
   return found.join("")
 }
 
-// expect-result: {"plainBody":"plain 2","plainCall":"plain 1","effectCall":"effect 1","effectFirst":"effect 2","bare":0,"bareEffect":"z","traversals":"ab"}
+// expect-result: {"plainBody":"plain 2","plainCall":"plain 1","effectCall":"effect 1","effectFirst":"effect 2","programFirst":"program 2","bare":0,"bareEffect":"z","traversals":"ab"}
 export function main() {
   return {
     plainBody: plainBody(),
     plainCall: plainCall(),
     effectCall: effectCall(),
     effectFirst: effectFirst(),
+    programFirst: programFirst(),
     bare: bare(),
     bareEffect: bareEffect(),
     traversals: traversals([" a", "b "])

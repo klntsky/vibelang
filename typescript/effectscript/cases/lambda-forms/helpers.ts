@@ -22,6 +22,13 @@ export function attach(f: (x: number) => unknown): unknown {
   return describe(f(1))
 }
 
+/** A program first, a thunk second. */
+export function start<A, E, R>(program: Effect.Effect<A, E, R>): Effect.Effect<string, E, R>
+export function start<A>(thunk: () => A): string
+export function start(x: unknown): unknown {
+  return typeof x === "function" ? `thunk ${(x as () => unknown)()}` : Effect.map(x as Effect.Effect<unknown>, (a) => `program ${a}`)
+}
+
 /** A bare type parameter: nothing about the parameter's type says what form to take. */
 export function apply<F>(f: F): F {
   return f
