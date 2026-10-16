@@ -124,6 +124,8 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 41 | `oywqrtxx` | module: resolve .es source files | `./welcome.es` and, from `.ts`, `./welcome.js` find `welcome.es` |
 | 42 | `urkxzymx` | core: let .es files import TypeScript sources by extension | No TS5097 for `./welcome.es` or `./format.ts` in `.es` |
 | 43 | `ntslxkmz` | effectscript: emit .js specifiers for imports of sources | Imports between files (D31) |
+| 44 | `rplwrxxw` | effectscript: record a prelude use only at a source reference | No duplicate `Effect` import when the file never names it |
+| 45 | `nvukvnsq` | effectscript: test the runtime import's free name | Helpers import as `runtime_1` when the file declares `runtime` |
 
 ## Seams in upstream files
 
@@ -360,6 +362,10 @@ A `.es` file imports another module by its source name, and the emitted JavaScri
 - **Emit.** The lowering rewrites the specifier of every import and export declaration in a `.es` file that names a TypeScript or EffectScript source, with or without `rewriteRelativeImportExtensions` (`imports.go`). Dynamic `import()` is not rewritten: it returns a Promise, which `.es` code does not await.
 
 Case `es-imports` covers an `.es` file calling an `.es` Effect function and a pure helper, and a `.ts` file calling an `.es` function that `.es` code then runs; `es-imports-norewrite` covers a project without `rewriteRelativeImportExtensions`.
+
+## The runtime
+
+Generated JavaScript imports only `effect` and `@effectscript/runtime` (D30): the prelude names it uses, `effect/Effect` for `Effect.fnUntraced` under a free name (`Effect`, else `Effect_1`, …), and the helpers as one namespace under a free name (`runtime`, else `runtime_1`, …), called as `runtime.$catch(…)`. The runtime's exports are the ABI between compiler and runtime, so a compiler change that needs a new helper adds it to `packages/runtime` in the same commit; `smoke.sh` builds the runtime from source and every case links it, so the commit is tested as one. Case `es-runtime-name` declares `runtime` and `Effect_1` itself and still runs.
 
 ## What it cannot do yet
 
