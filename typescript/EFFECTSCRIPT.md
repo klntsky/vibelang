@@ -80,6 +80,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `plain-methods-pausing.fail` | ES4301 for an `[Equal.symbol]` that pauses (D55) |
 | `callback-contracts` | A callback parameter without a contract accepts any contract (D12): `mapAll` and `withRetry` infer E and R from each call, and the `.d.ts` writes `<A, B, E, R>` |
 | `generic-callees` | A call to a generic `.es` function adds the callee's E and R as the call instantiates them |
+| `d39-unions` | Where a parameter takes a function or an Effect (D39), a lambda with a parameter is a function, and one without is a program when it can pause and a function when it is plain |
 
 ### Acceptance cases
 
