@@ -19,18 +19,47 @@ import (
 // program. Applied to plain data, pipe is effect's ordinary pipe.
 
 // isPipeProgram reports whether the argument at path is pipe's first
-// argument, and pipe's first stage takes an Effect.
+// argument, and pipe's first stage takes an Effect. Callers ask only about an
+// argument that can be a program, a function with no required parameters.
+//
+// The stage itself is not checked here: pipe has not inferred the type the
+// stage receives yet, and a generic stage such as Match.when(…) or
+// Effect.catchTag(…) checked without it would keep a resolution that lost
+// its inferences. The look-ahead reads the stage's callee instead.
 func (a *analyzer) isPipeProgram(call *ast.Node, path []pathStep) bool {
 	if len(path) != 1 || path[0].argument != 0 || len(call.Arguments()) < 2 || !a.isEffectPipe(call) {
 		return false
 	}
-	stage := a.checker.GetTypeAtLocation(call.Arguments()[1])
-	for _, signature := range a.checker.GetSignaturesOfType(stage, checker.SignatureKindCall) {
-		if parameters := signature.Parameters(); len(parameters) > 0 && a.isExpectedEffect(a.checker.GetTypeOfSymbol(parameters[0])) {
+	for _, stage := range a.stageSignatures(call.Arguments()[1]) {
+		if parameters := stage.Parameters(); len(parameters) > 0 && a.isExpectedEffect(a.checker.GetTypeOfSymbol(parameters[0])) {
 			return true
 		}
 	}
 	return false
+}
+
+// stageSignatures returns the signatures of the function that stage, a pipe
+// argument, evaluates to: for a call such as Effect.retry(policy), the
+// functions its callee's signatures of that arity return; for a function
+// value such as Effect.orDie, its own signatures.
+func (a *analyzer) stageSignatures(stage *ast.Node) []*checker.Signature {
+	c := a.checker
+	stage = ast.SkipParentheses(stage)
+	switch {
+	case ast.IsCallExpression(stage):
+		count := len(stage.Arguments())
+		var out []*checker.Signature
+		for _, s := range c.GetSignaturesOfType(c.GetTypeAtLocation(stage.Expression()), checker.SignatureKindCall) {
+			if count < s.MinArgumentCount() || count > len(s.Parameters()) && !s.HasRestParameter() {
+				continue
+			}
+			out = append(out, c.GetSignaturesOfType(c.GetReturnTypeOfSignature(s), checker.SignatureKindCall)...)
+		}
+		return out
+	case ast.IsIdentifier(stage) || ast.IsPropertyAccessExpression(stage):
+		return c.GetSignaturesOfType(c.GetTypeAtLocation(stage), checker.SignatureKindCall)
+	}
+	return nil
 }
 
 // isEffectPipe reports whether call calls effect's pipe function, which the

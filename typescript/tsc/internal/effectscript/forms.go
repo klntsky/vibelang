@@ -123,7 +123,7 @@ func (a *analyzer) formHere(fn *ast.Node) form {
 				return f
 			}
 			e := a.classify(a.expectedAt(call, signature, path, fn))
-			if a.isPipeProgram(call, path) {
+			if requiredParameterCount(fn) == 0 && a.isPipeProgram(call, path) {
 				e.program = true
 			}
 			f := a.decide(fn, e)

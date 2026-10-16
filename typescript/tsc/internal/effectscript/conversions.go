@@ -110,7 +110,7 @@ type valuePosition struct {
 func (a *analyzer) classifyValuePosition(call *ast.Node, signature *checker.Signature, path []pathStep, node *ast.Node, t *checker.Type) valuePosition {
 	expected := a.expectedAt(call, signature, path, node)
 	position := valuePosition{expectation: a.classify(expected)}
-	if a.isPipeProgram(call, path) {
+	if a.programOf(t) != nil && a.isPipeProgram(call, path) {
 		position.program = true
 	}
 	if !position.any() {
