@@ -22,7 +22,7 @@ import {
   type FiberInternals,
   restoreInterruptible,
   setFailCause
-} from "./internals.ts"
+} from "./internals.js"
 
 setFailCause((cause) => Effect.failCause(cause))
 
@@ -712,7 +712,7 @@ export const suspend = <A>(
   register: (resumer: Resumer<A>) => (() => void) | void,
   options?: { readonly release?: (value: A) => void }
 ): Effect.Effect<A> =>
-  Effect.callback<A>(function(this: SchedulerThis, resumeEffect) {
+  Effect.callback<A>(function(this: SchedulerThis, resumeEffect: (effect: Effect.Effect<A>) => void) {
     let state: "waiting" | "resumed" | "cancelled" = "waiting"
     const delivery = makeDelivery<A>(this, resumeEffect)
     const releaseAll = () => {
@@ -763,7 +763,7 @@ export const handoff = <A>(
   register: (deliver: (value: A) => void) => Effect.Effect<void>,
   releaseLate: (value: A) => Effect.Effect<void>
 ): Effect.Effect<A> =>
-  Effect.callback<A>(function(this: SchedulerThis, resumeEffect) {
+  Effect.callback<A>(function(this: SchedulerThis, resumeEffect: (effect: Effect.Effect<A>) => void) {
     let state: "waiting" | "delivered" | "cancelled" | "closed" = "waiting"
     let late: { readonly value: A } | undefined
     const delivery = makeDelivery<A>(this, resumeEffect)

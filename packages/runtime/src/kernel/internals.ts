@@ -7,17 +7,8 @@
 // through `Effect.withFiber` and the string-keyed primitive protocol
 // (internal/core.ts:31-61). Every access is pinned to the exact version.
 import type { Cause, Context } from "effect"
-import { createRequire } from "node:module"
-
-export const PINNED_EFFECT_VERSION = "4.0.5"
-
-const require = createRequire(import.meta.url)
-const effectVersion: string = require("effect/package.json").version
-if (effectVersion !== PINNED_EFFECT_VERSION) {
-  throw new Error(
-    `EffectScript kernel prototype is pinned to effect@${PINNED_EFFECT_VERSION}, found ${effectVersion}`
-  )
-}
+import "../version.js"
+export { PINNED_EFFECT_VERSION } from "../version.js"
 
 // Frame protocol keys (internal/core.ts:46-58).
 export const contA = "~effect/Effect/successCont"

@@ -1,5 +1,5 @@
 import { Context, Effect, Layer } from "effect"
-import * as K from "./kernel/kernel.ts"
+import * as K from "./kernel/kernel.js"
 
 export const $Context = Context
 

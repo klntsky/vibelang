@@ -1,6 +1,6 @@
 import { Context, Effect } from "effect"
-import * as K from "./kernel/kernel.ts"
-import { controls } from "./services.ts"
+import * as K from "./kernel/kernel.js"
+import { controls } from "./services.js"
 
 declare const ContinuationBrand: unique symbol
 /** The rest of a handled program, paused at an operation that returns X. Usable only inside its clause. */

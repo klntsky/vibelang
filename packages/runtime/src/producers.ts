@@ -1,6 +1,6 @@
 import { Effect, Queue, Stream } from "effect"
-import * as K from "./kernel/kernel.ts"
-import { $normal } from "./regions.ts"
+import * as K from "./kernel/kernel.js"
+import { $normal } from "./regions.js"
 
 /** The phantom requirement a producer body has until a loop handles its Yield. */
 export interface YieldOf<T> {

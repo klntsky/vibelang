@@ -1,6 +1,6 @@
 // Tracing helpers: name compiled-function frames and print machine state.
 import { Context, Effect } from "effect"
-import { asInternals, contA, contAll, contE, type FiberInternals, identifier } from "./internals.ts"
+import { asInternals, contA, contAll, contE, type FiberInternals, identifier } from "./internals.js"
 
 const generatorNames = new WeakMap<object, string>()
 

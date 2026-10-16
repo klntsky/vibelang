@@ -1,9 +1,13 @@
+import "./version.js"
 // Runtime ABI used by generated EffectScript modules.
-export * from "./calls.ts"
-export * from "./regions.ts"
-export * from "./fork.ts"
-export { $Context, $control, $service, Control, wire } from "./services.ts"
-export * from "./handlers.ts"
-export * from "./producers.ts"
-export * from "./boundaries.ts"
-export * from "./prelude.ts"
+export * from "./calls.js"
+export * from "./regions.js"
+export * from "./fork.js"
+export { $Context, $control, $service, Control, wire } from "./services.js"
+export * from "./handlers.js"
+export * from "./producers.js"
+export * from "./boundaries.js"
+export * from "./prelude.js"
+
+// TypeScript adapters for asynchronous sources (D43).
+export { suspend, handoff, HandoffProtocolViolation, type Resumer } from "./kernel/kernel.js"
