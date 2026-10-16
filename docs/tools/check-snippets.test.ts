@@ -1,0 +1,61 @@
+import { expect, test } from "bun:test"
+import { classify, extract, parseDiagnostics } from "./check-snippets"
+
+const block = extract('```ts\nconst answer = 42\n```')[0]
+const diagnostic = (code: string, message = "example") => ({ code, message })
+test("extracts ts fences, skips TypeScript examples, and preserves lines and directives", () => {
+  const blocks = extract('heading\n```ts\n// TypeScript (.ts)\nconst ignored = 1\n```\n~~~ts es\n// expect-error: ES2001 TS2322\nfunction f() {}\n~~~\n```json\n{}\n```\n```ts\n// compiler-gap: return contract\nfunction g() {}\n```')
+  expect(blocks.map(b => [b.number, b.line, b.firstLine])).toEqual([[2, 7, "function f() {}"], [3, 14, "function g() {}"]])
+  expect(blocks[0].expected).toEqual(["ES2001", "TS2322"])
+  expect(blocks[1].gap).toBe("return contract")
+})
+test("only unresolved names and local imports are automatic fragments", () => {
+  expect(classify(block, []).status).toBe("ok")
+  expect(classify(block, [diagnostic("TS2304")]).status).toBe("fragment")
+  expect(classify(block, [diagnostic("TS2552")]).status).toBe("fragment")
+  expect(classify(block, [diagnostic("TS2307", "Cannot find module './fixture.es' or its corresponding type declarations.")]).status).toBe("fragment")
+  expect(classify(block, [diagnostic("TS2307", "Cannot find module 'missing-package'")]).status).toBe("fail")
+  expect(classify(block, [diagnostic("TS2304"), diagnostic("TS2322")]).status).toBe("fail")
+})
+test("expected diagnostics must occur and do not hide other errors", () => {
+  const expected = { ...block, expected: ["ES2001"] }
+  expect(classify(expected, []).status).toBe("fail")
+  expect(classify(expected, [diagnostic("ES2001")]).status).toBe("ok")
+  expect(classify(expected, [diagnostic("ES2001"), diagnostic("TS2322")]).status).toBe("fail")
+})
+test("explicit gaps remain checked, and stale markers fail", () => {
+  const gap = { ...block, gap: "D56 program conversion" }
+  expect(classify(gap, [diagnostic("TS2345")]).status).toBe("compiler-gap")
+  expect(classify(gap, []).status).toBe("fail")
+  expect(classify({ ...gap, expected: ["ES2001"] }, []).status).toBe("compiler-gap")
+  expect(classify({ ...gap, expected: ["ES2001"] }, [diagnostic("ES2001")]).status).toBe("fail")
+  expect(classify(gap, [diagnostic("TS2304")]).status).toBe("fail")
+  expect(classify({ ...block, fragment: true }, [diagnostic("TS1005")]).status).toBe("fragment")
+})
+test("parses native ES and TS errors and ignores notes and warnings", () => {
+  expect(parseDiagnostics("block-2.es(4,8): error ES2001: failure escapes\n  Widen the contract.\nblock-3.es(1,1): warning ES2004: unreachable\nerror TS18003: No inputs were found")).toEqual([
+    { file: "block-2.es", diagnostic: { code: "ES2001", message: "failure escapes", line: 4, column: 8 } },
+    { diagnostic: { code: "TS18003", message: "No inputs were found" } }
+  ])
+})
+
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { join, relative, resolve } from "node:path"
+import { tmpdir } from "node:os"
+const compiler = resolve(import.meta.dir, "../../typescript/built/local/tsc")
+test.skipIf(!existsSync(compiler))("checks shared declarations, schema type/value names, captions, and expected errors together", async () => {
+  const root = mkdtempSync(join(tmpdir(), "snippet-check-test-"))
+  try {
+    writeFileSync(join(root, "page.md"), [
+      "```ts", "// descriptor.es", "export const Item = Schema.Struct({ name: Schema.String })", "```",
+      "```ts", "type Item = typeof Item.Type", "function read(input: unknown) { return Schema.decodeUnknownEffect(Item)(input) }", "```",
+      "```ts", "import { Item } from './descriptor.es'", "const sample = { name: 'Ada' } satisfies typeof Item.Type", "```",
+      "```ts", "// expect-error: TS2322", "const invalid: number = 'text'", "```"
+    ].join("\n"))
+    const output = join(root, "report.json")
+    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", relative(process.cwd(), compiler), "--json", output], { stdout: "pipe", stderr: "pipe" })
+    const [stdout, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
+    expect({ status, stderr, failures: stdout.split("\n").filter(l => l.includes("fail")) }).toEqual({ status: 0, stderr: "", failures: [expect.stringContaining('"fail":0')] })
+    expect(JSON.parse(readFileSync(output, "utf8")).totals).toMatchObject({ blocks: 4, ok: 4, fail: 0, fragment: 0 })
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})

@@ -1,0 +1,58 @@
+# Documentation checks
+
+From the repository root, install `experiments` and `docs/tools` dependencies
+with `bun install` in each directory, build `packages/runtime` with `bun run
+build`, and build the native compiler:
+
+```sh
+cd typescript/tsc
+CGO_ENABLED=0 GOFLAGS=-trimpath go build -o ../built/local/tsc ./cmd/tsc
+```
+
+Then run one command from the repository root:
+
+```sh
+bun docs/tools/check-snippets.ts
+```
+
+The checker extracts `ts` fences under `docs/user`, except blocks whose first
+line is `// TypeScript (.ts)`. It creates one temporary project per page and
+runs `esc --noEmit` once per page. Each block gets its own `.es` module. Imports
+and declarations from earlier examples are available in later blocks; a new
+name shadows the earlier example's name. Blocks that deliberately fail or opt
+out do not supply declarations to later blocks. Local imports with no fixture
+remain fragments. No snippet executes.
+
+| Status | Meaning |
+| --- | --- |
+| `ok` | No unexpected errors; all declared expected codes occur |
+| `fragment` | Only TS2304, TS2552, or TS2307 for a relative import; or an explicit opt-out |
+| `compiler-gap` | A checked example has a documented compiler disagreement |
+| `fail` | Another error, a missing expected diagnostic, or a stale gap marker |
+
+Use a header comment before the code:
+
+- `// expect-error: ES2001` declares an intentionally invalid example. List
+  several codes separated by spaces. Unexpected diagnostics still fail.
+- `// fragment` opts out of classification for incomplete syntax or a prose
+  sketch. The compiler still checks the block.
+- `// compiler-gap: <reason>` retains the intended language example while the
+  compiler disagrees. Record the page, first code line, diagnostics, and rule
+  in `docs/user/notes/compiler-gaps.md`. A marker becomes stale when the block
+  has no unexpected substantive error and every expected code occurs. Stale
+  markers fail, so resolved gaps cannot silently accumulate.
+
+`--compiler path` (or `ESC_BINARY`) selects a compiler. The default is
+`typescript/built/local/tsc`, then `esc` on PATH. `--filter text` selects pages,
+`--json path` writes diagnostics with Markdown line numbers, and `--keep`
+preserves temporary projects for debugging. Compiler crashes, missing runtime
+builds, and project configuration errors exit 2. Snippet failures exit 1.
+Temporary files are removed on success and failure unless `--keep` is set.
+
+```sh
+bun test docs/tools/check-snippets.test.ts
+(cd docs/tools && bun render.ts)
+bun docs/tools/render-user.ts
+```
+
+The user renderer checks local page links while building the 110-page site.
