@@ -19,7 +19,8 @@ setup instructions. The manifests resolve `@effectscript/runtime` and
 installing the examples.
 Then, in an example directory, run `bun install`,
 `bun run build`, and `bun run start`. The users, http-api, and resilience
-projects also have `bun run test`; Vitest reads their compiled tests in `dist`.
+projects also have `bun run test`; Vitest compiles their `.es` sources
+through `@effectscript/vite`, with source maps for assertion stacks.
 Run file-tree from its own directory to find the bundled fixtures.
 
 From the repository root, `scripts/check-examples.sh` compiles every project

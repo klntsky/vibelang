@@ -16,8 +16,11 @@ bun run test
 
 `start` prints `Hello, EffectScript!` and `Recovered from EmptyName`. `dev`
 builds once, then runs `esc --watch` and Node's output watcher together. Press
-Ctrl+C to stop both. Tests compile from `.es` to `dist/` before Vitest runs them
-with `@effect/vitest`; Vitest never interprets `.es` files.
+Ctrl+C to stop both. Vitest runs `src/**/*.test.es` through `@effectscript/vite` and
+`@effect/vitest`. The plugin checks the project with `esc`, serves compiled
+JavaScript from `node_modules/.effectscript/`, and maps assertion stacks to
+the original `.es` lines. `test` needs no prior build. The Node server keeps
+its compiler and output watchers for `dev`.
 
 Edit `src/main.es` for the service and layer, and `src/greeting.es` for a typed
 failure. Import local `.es` source files; the compiler emits `.js` imports.

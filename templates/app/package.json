@@ -7,7 +7,7 @@
     "build": "esc",
     "start": "bun run build && node --enable-source-maps dist/main.js",
     "dev": "node scripts/dev.mjs",
-    "test": "bun run build && vitest run"
+    "test": "vitest run"
   },
   "dependencies": {
     "effect": "4.0.5",
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@effectscript/compiler": "file:../../packages/compiler",
     "vitest": "5.0.5",
-    "@effect/vitest": "4.0.5"
+    "@effect/vitest": "4.0.5",
+    "@effectscript/vite": "file:../../packages/vite"
   }
 }

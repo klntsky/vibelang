@@ -5,7 +5,7 @@
   "scripts": {
     "build": "esc -p .",
     "start": "node dist/run.js",
-    "test": "esc -p . && vitest run"
+    "test": "vitest run"
   },
   "dependencies": {
     "effect": "4.0.5",
@@ -15,6 +15,7 @@
   "devDependencies": {
     "@effect/vitest": "4.0.5",
     "vitest": "5.0.5",
-    "@effectscript/compiler": "file:../../packages/compiler"
+    "@effectscript/compiler": "file:../../packages/compiler",
+    "@effectscript/vite": "file:../../packages/vite"
   }
 }

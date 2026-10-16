@@ -13,7 +13,8 @@ bun run start
 bun run test
 ```
 
-`src/main.test.es` uses `it.effect`; Vitest runs the compiled JavaScript.
+`src/main.test.es` uses `it.effect`; Vitest runs the source
+through `@effectscript/vite`, with assertion stacks mapped to `.es` lines.
 Assertions sit inside `Effect.sync`, an explicit boundary for foreign code.
 The lookup in Effect TypeScript is:
 ```ts

@@ -12,7 +12,9 @@ bun run start
 bun run test
 ```
 
-The tests use `it.effect` and `TestClock.adjust`; they never wait for live time.
+Vitest runs `src/main.test.es` through `@effectscript/vite` without a prior
+build. Assertion stacks point to `.es` lines. The tests use `it.effect` and
+`TestClock.adjust`; they never wait for live time.
 A Deferred checks that retries remain pending before their scheduled deadline.
 The deadline function in Effect TypeScript is:
 ```ts

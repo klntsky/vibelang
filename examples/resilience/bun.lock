@@ -12,6 +12,7 @@
       "devDependencies": {
         "@effect/vitest": "4.0.5",
         "@effectscript/compiler": "file:../../packages/compiler",
+        "@effectscript/vite": "file:../../packages/vite",
         "vitest": "5.0.5",
       },
     },
@@ -26,6 +27,8 @@
     "@effectscript/compiler": ["@effectscript/compiler@file:../../packages/compiler", { "bin": { "esc": "bin/esc" } }],
 
     "@effectscript/runtime": ["@effectscript/runtime@file:../../packages/runtime", { "devDependencies": { "effect": "4.0.5", "typescript": "5.9.3" }, "peerDependencies": { "effect": "4.0.5" } }],
+
+    "@effectscript/vite": ["@effectscript/vite@file:../../packages/vite", { "devDependencies": { "@effect/vitest": "4.0.5", "effect": "4.0.5", "vite": "^8.0.0", "vitest": "5.0.5" }, "peerDependencies": { "@effectscript/compiler": "0.0.1", "vite": ">=7 <9" }, "optionalPeers": ["@effectscript/compiler"] }],
 
     "@jridgewell/resolve-uri": ["@jridgewell/resolve-uri@3.1.2", "", {}, "sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw=="],
 

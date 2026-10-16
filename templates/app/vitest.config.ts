@@ -1,5 +1,7 @@
 import { defineConfig } from "vitest/config"
+import effectscript from "@effectscript/vite"
 
 export default defineConfig({
-  test: { include: ["dist/**/*.test.js"] }
+  plugins: [effectscript()],
+  test: { include: ["src/**/*.test.es"] }
 })
