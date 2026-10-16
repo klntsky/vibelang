@@ -2280,6 +2280,7 @@ func (c *Checker) checkSourceFile(ctx context.Context, sourceFile *ast.SourceFil
 		if !sourceFile.IsDeclarationFile && !c.isCanceled() {
 			c.checkUnusedRenamedBindingElements()
 		}
+		c.applySourceFileCheckHooks(sourceFile)
 		c.produceDeferredDiagnostics()
 		c.reportedUnreachableNodes.Clear()
 		links.typeChecked = true
@@ -14234,7 +14235,7 @@ func (c *Checker) getDiagnostics(ctx context.Context, sourceFile *ast.SourceFile
 	if c.wasCanceled {
 		return nil
 	}
-	return collection.GetDiagnosticsForFile(sourceFile)
+	return c.applyDiagnosticsFilterHooks(sourceFile, collection.GetDiagnosticsForFile(sourceFile))
 }
 
 func (c *Checker) GetGlobalDiagnostics() []*ast.Diagnostic {

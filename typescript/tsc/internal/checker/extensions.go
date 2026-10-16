@@ -1,6 +1,9 @@
 package checker
 
-import "github.com/microsoft/TypeScript/tsc/internal/ast"
+import (
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+)
 
 // WithChecker calls fn with the checker behind r while holding the checker's
 // lock, the way the resolver's own methods do. In-tree language extensions use
@@ -76,4 +79,58 @@ func (c *Checker) ExtensionState(key any, create func() any) any {
 // with typeArguments.
 func (c *Checker) NewTypeReference(target *Type, typeArguments []*Type) *Type {
 	return c.createTypeReference(target, typeArguments)
+}
+
+// CompilerOptions returns the options of the program that c checks.
+func (c *Checker) CompilerOptions() *core.CompilerOptions {
+	return c.compilerOptions
+}
+
+// AddDiagnostic records d with c's diagnostics. d must belong to a node of
+// the file that c is checking: the program reads each file's diagnostics from
+// the checker that checks that file.
+func (c *Checker) AddDiagnostic(d *ast.Diagnostic) *ast.Diagnostic {
+	return c.addDiagnostic(d)
+}
+
+// SourceFileCheckHook runs after c has checked file, once for each checker
+// and file, so it can report diagnostics for file with AddDiagnostic.
+type SourceFileCheckHook func(c *Checker, file *ast.SourceFile)
+
+var sourceFileCheckHooks []SourceFileCheckHook
+
+// RegisterSourceFileCheckHook adds hook to every checker. Call it only from
+// the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterSourceFileCheckHook(hook SourceFileCheckHook) {
+	sourceFileCheckHooks = append(sourceFileCheckHooks, hook)
+}
+
+func (c *Checker) applySourceFileCheckHooks(file *ast.SourceFile) {
+	for _, hook := range sourceFileCheckHooks {
+		if c.isCanceled() {
+			return
+		}
+		hook(c, file)
+	}
+}
+
+// DiagnosticsFilterHook can drop diagnostics from what c reports for file. It
+// returns diagnostics itself when it drops nothing, and a new slice otherwise.
+type DiagnosticsFilterHook func(c *Checker, file *ast.SourceFile, diagnostics []*ast.Diagnostic) []*ast.Diagnostic
+
+var diagnosticsFilterHooks []DiagnosticsFilterHook
+
+// RegisterDiagnosticsFilterHook adds hook to every checker. Call it only from
+// the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterDiagnosticsFilterHook(hook DiagnosticsFilterHook) {
+	diagnosticsFilterHooks = append(diagnosticsFilterHooks, hook)
+}
+
+func (c *Checker) applyDiagnosticsFilterHooks(file *ast.SourceFile, diagnostics []*ast.Diagnostic) []*ast.Diagnostic {
+	for _, hook := range diagnosticsFilterHooks {
+		diagnostics = hook(c, file, diagnostics)
+	}
+	return diagnostics
 }
