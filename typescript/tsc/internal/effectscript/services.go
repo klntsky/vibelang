@@ -112,12 +112,11 @@ func hasStaticDefault(class *ast.Node) bool {
 // services remembers one checker's answers about service classes. A checker
 // is used by one goroutine at a time, so it needs no lock of its own.
 type services struct {
-	checker         *checker.Checker
-	contextModule   *ast.Symbol // effect's Context module, nil if the program lacks it
-	contextSearched bool
-	keys            map[*ast.Node]string
-	byKey           map[string][]*ast.Node        // every service and control class in the program, by key
-	unprovided      map[*checker.Type][]*ast.Node // wire arguments, by a service they need and their wire does not provide
+	checker    *checker.Checker
+	modules    map[string]*ast.Symbol // effect's modules by name, nil if the program lacks one
+	keys       map[*ast.Node]string
+	byKey      map[string][]*ast.Node        // every service and control class in the program, by key
+	unprovided map[*checker.Type][]*ast.Node // wire arguments, by a service they need and their wire does not provide
 }
 
 type servicesKey struct{}
@@ -126,26 +125,27 @@ type servicesKey struct{}
 // so they are freed with c.
 func servicesFor(c *checker.Checker) *services {
 	return c.ExtensionState(servicesKey{}, func() any {
-		return &services{checker: c, keys: map[*ast.Node]string{}}
+		return &services{checker: c, modules: map[string]*ast.Symbol{}, keys: map[*ast.Node]string{}}
 	}).(*services)
 }
 
-// contextExport returns the symbol that effect's Context module exports as
-// name, or nil when the program does not include effect's declarations.
-func (s *services) contextExport(name string) *ast.Symbol {
-	if !s.contextSearched {
-		s.contextSearched = true
+// effectExport returns the symbol that effect's module (such as "Context")
+// exports as name, or nil when the program does not include that module.
+func (s *services) effectExport(module, name string) *ast.Symbol {
+	symbol, searched := s.modules[module]
+	if !searched {
 		for _, file := range s.checker.Program().SourceFiles() {
-			if isEffectModuleFile(file, "Context") {
-				s.contextModule = file.Symbol
+			if isEffectModuleFile(file, module) {
+				symbol = file.Symbol
 				break
 			}
 		}
+		s.modules[module] = symbol
 	}
-	if s.contextModule == nil {
+	if symbol == nil {
 		return nil
 	}
-	for _, export := range s.checker.GetExportsOfModule(s.contextModule) {
+	for _, export := range s.checker.GetExportsOfModule(symbol) {
 		if export.Name() == name {
 			return export
 		}
@@ -209,7 +209,7 @@ func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checke
 		return nil, nil
 	}
 	s := servicesFor(c)
-	service := s.contextExport("Service")
+	service := s.effectExport("Context", "Service")
 	if service == nil {
 		return nil, nil
 	}
@@ -316,12 +316,20 @@ func isEffectValueCall(c *checker.Checker, call *ast.Node) bool {
 }
 
 // effectOfValue returns Effect<A, E, R> for t, a type whose values are
-// Effects, such as a Context key or a Config, or nil when t is not one.
+// Effects, or nil when some value of t is not one. Such a type is a Context
+// key or a Config, whose variance the Effect interface declares; an Exit, a
+// union of two Effects; or a tagged error instance, whose class declares the
+// variance itself.
 func effectOfValue(c *checker.Checker, t *checker.Type) *checker.Type {
-	if t == nil || t.Flags()&checker.TypeFlagsObject == 0 {
+	if t == nil || !isEffectValueType(c, t) {
 		return nil
 	}
 	effect := effectInterface(c, t)
+	if effect == nil {
+		if symbol := servicesFor(c).effectExport("Effect", "Effect"); symbol != nil {
+			effect = c.GetDeclaredTypeOfSymbol(symbol)
+		}
+	}
 	if effect == nil {
 		return nil
 	}
@@ -330,6 +338,20 @@ func effectOfValue(c *checker.Checker, t *checker.Type) *checker.Type {
 		return nil
 	}
 	return c.NewTypeReference(effect, []*checker.Type{a, e, r})
+}
+
+// isEffectValueType reports whether every value of t is an Effect: t is an
+// object type with the ~effect/Effect variance, or a union of such types.
+func isEffectValueType(c *checker.Checker, t *checker.Type) bool {
+	if t.Flags()&checker.TypeFlagsUnion != 0 {
+		for _, member := range t.Types() {
+			if !isEffectValueType(c, member) {
+				return false
+			}
+		}
+		return len(t.Types()) > 0
+	}
+	return t.Flags()&checker.TypeFlagsObject != 0 && c.GetPropertyOfType(t, effectTypeID) != nil
 }
 
 // varianceChannel reads one channel of t's `~effect/Effect` variance

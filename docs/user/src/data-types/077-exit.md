@@ -78,7 +78,6 @@ An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result
 ## Relating exits to effects
 
 ```ts
-// compiler-gap: D24 Calling an Effect subtype value must run it, including Exit and tagged errors.
 import { Exit } from "effect"
 
 function replay<A, E>(outcome: Exit.Exit<A, E>) {
