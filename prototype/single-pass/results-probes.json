@@ -1,0 +1,213 @@
+[
+  {
+    "file": "p1-overloads.es",
+    "prototypePasses": 3,
+    "calls": 19,
+    "lambdas": 9,
+    "convs": 0,
+    "loops": 0,
+    "disagreements": [
+      {
+        "what": "call",
+        "line": 22,
+        "node": "register((x) => Math.max(x, 0))",
+        "prototype": "run",
+        "singlePass": "call"
+      },
+      {
+        "what": "call",
+        "line": 27,
+        "node": "register((x) => double(x))",
+        "prototype": "run",
+        "singlePass": "call"
+      },
+      {
+        "what": "call",
+        "line": 37,
+        "node": "attach((x) => x + 1)",
+        "prototype": "call",
+        "singlePass": "run"
+      },
+      {
+        "what": "call",
+        "line": 42,
+        "node": "start(() => Math.max(1, 2))",
+        "prototype": "call",
+        "singlePass": "run"
+      },
+      {
+        "what": "call",
+        "line": 48,
+        "node": "f(1)",
+        "prototype": "run",
+        "singlePass": "call"
+      },
+      {
+        "what": "lambda",
+        "line": 22,
+        "node": "(x) => Math.max(x, 0)",
+        "prototype": "effect (ctx effectFn)",
+        "singlePass": "plain (ctx plainFn)"
+      },
+      {
+        "what": "lambda",
+        "line": 27,
+        "node": "(x) => double(x)",
+        "prototype": "effect (ctx effectFn)",
+        "singlePass": "plain (ctx plainFn)"
+      },
+      {
+        "what": "lambda",
+        "line": 37,
+        "node": "(x) => x + 1",
+        "prototype": "plain (ctx plainFn)",
+        "singlePass": "effect (ctx effectFn)"
+      },
+      {
+        "what": "lambda",
+        "line": 42,
+        "node": "() => Math.max(1, 2)",
+        "prototype": "plain (ctx plainFn)",
+        "singlePass": "program (ctx program)"
+      },
+      {
+        "what": "lambda",
+        "line": 47,
+        "node": "(x: number) => Math.max(x, 0)",
+        "prototype": "effect (ctx effectFn)",
+        "singlePass": "plain (ctx none)"
+      },
+      {
+        "what": "lambda",
+        "line": 59,
+        "node": "(x: number) => Math.max(x, n)",
+        "prototype": "effect (ctx effectFn)",
+        "singlePass": "plain (ctx none)"
+      },
+      {
+        "what": "direct",
+        "node": "effectFirst",
+        "prototype": "true",
+        "singlePass": "false"
+      },
+      {
+        "what": "direct",
+        "node": "programOrThunk",
+        "prototype": "true",
+        "singlePass": "false"
+      },
+      {
+        "what": "direct",
+        "node": "plainCall",
+        "prototype": "false",
+        "singlePass": "true"
+      },
+      {
+        "what": "direct",
+        "node": "esCall",
+        "prototype": "false",
+        "singlePass": "true"
+      },
+      {
+        "what": "direct",
+        "node": "bare",
+        "prototype": "false",
+        "singlePass": "true"
+      }
+    ],
+    "textSame": false,
+    "fixpoint": false,
+    "emissionFixpoint": true,
+    "fixpointChanges": [],
+    "rawOnlySinglePass": [
+      "c p1-overloads.es:L37=effect/false/false/",
+      "c p1-overloads.es:L42=effect/false/false/",
+      "c p1-overloads.es:L48=plain/false/false/",
+      "c p1-overloads.es:L22=plain/false/false/",
+      "c p1-overloads.es:L27=plain/false/false/",
+      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#bare",
+      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#esCall",
+      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#plainCall",
+      "l p1-overloads.es:L37=effectFn/false",
+      "l p1-overloads.es:L42=program/false",
+      "l p1-overloads.es:L47=none/false",
+      "l p1-overloads.es:L52=none/true",
+      "l p1-overloads.es:L59=none/false",
+      "l p1-overloads.es:L22=plainFn/false",
+      "l p1-overloads.es:L27=plainFn/false"
+    ],
+    "rawOnlyPrototype": [
+      "c p1-overloads.es:L37=plain/false/false/",
+      "c p1-overloads.es:L42=plain/false/false/",
+      "c p1-overloads.es:L48=effect/false/false/",
+      "c p1-overloads.es:L22=effect/false/false/",
+      "c p1-overloads.es:L27=effect/false/false/",
+      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#effectFirst",
+      "d/Users/williamcory/effectscript/prototype/single-pass/probes/p1-overloads.es#programOrThunk",
+      "l p1-overloads.es:L37=plainFn/false",
+      "l p1-overloads.es:L42=plainFn/false",
+      "l p1-overloads.es:L47=effectFn/false",
+      "l p1-overloads.es:L52=effectFn/true",
+      "l p1-overloads.es:L59=effectFn/false",
+      "l p1-overloads.es:L22=effectFn/false",
+      "l p1-overloads.es:L27=effectFn/false"
+    ],
+    "anomalies": [],
+    "selections": {
+      "candidatesTried": 9,
+      "viaNeeds": 3,
+      "viaPipe": 0,
+      "overloaded": 1,
+      "split": 1,
+      "splits": [
+        "L32 (x) => Users.find(String(x)).id.length: plain, effect -> effect"
+      ]
+    },
+    "checkMs": 62.21183300000007,
+    "tsErrors": 1
+  },
+  {
+    "file": "p2-recursion.es",
+    "prototypePasses": 3,
+    "calls": 4,
+    "lambdas": 0,
+    "convs": 0,
+    "loops": 0,
+    "disagreements": [
+      {
+        "what": "rec",
+        "node": "p2-recursion.es#isEven",
+        "prototype": "any / Odd / never",
+        "singlePass": "any / never / never"
+      }
+    ],
+    "textSame": false,
+    "fixpoint": false,
+    "emissionFixpoint": false,
+    "fixpointChanges": [
+      {
+        "what": "rec",
+        "node": "p2-recursion.es#isEven",
+        "prototype": "any / never / never",
+        "singlePass": "any / Odd / never"
+      }
+    ],
+    "rawOnlySinglePass": [
+      "r/Users/williamcory/effectscript/prototype/single-pass/probes/p2-recursion.es#isEven=any/never/never"
+    ],
+    "rawOnlyPrototype": [
+      "r/Users/williamcory/effectscript/prototype/single-pass/probes/p2-recursion.es#isEven=any/Odd/never"
+    ],
+    "anomalies": [],
+    "selections": {
+      "candidatesTried": 0,
+      "viaNeeds": 0,
+      "viaPipe": 0,
+      "overloaded": 0,
+      "split": 0,
+      "splits": []
+    },
+    "checkMs": 21.85849999999982,
+    "tsErrors": 0
+  }
+]

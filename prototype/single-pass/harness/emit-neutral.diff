@@ -1,0 +1,940 @@
+--- a/prototype/esc/src/emit.ts
++++ b/prototype/single-pass/harness/emit-neutral.ts
+@@ -1,10 +1,22 @@
+-// The lowering emitter: one `.es` file to Effect TypeScript.
++// The neutral emitter: one `.es` file to TypeScript that a checker can lower in one pass.
+ //
+-// Every decision that depends on types (does this call return an Effect? is
+-// this lambda a program, an Effect function, or a plain callback?) is read
+-// from `facts`, which the compiler computes by type-checking the previous
+-// pass's output. With no facts (pass 1) the emitter is optimistic: calls go
+-// through `$bind`, whose conditional type types the program either way.
++// A copy of prototype/esc/src/emit.ts. The prototype reads every type-dependent
++// decision from `facts` computed by checking the previous pass's output. This
++// copy reads none: each such decision is emitted as an intrinsic call (declared
++// in es-shim.d.ts) that the patched checker resolves while it checks this text:
++//
++//   lambdas                 $esDual(plain, effect, program, meta, id)
++//   methods, nested bodies  $esBody(plainThunk, effectThunk, meta, id)
++//   calls in Effect code    (yield* $esBind(call, id)), (yield* $esBind0(callee, call, id))
++//   zero-argument calls     $esVal0(callee, call, id) in plain code
++//   receivers               (yield* $esSvc(receiver, "member", id)).member
++//   argument values         $esConv(value, meta, id)
++//   for...of in Effect code for (x of (yield* $esIter(iterable, id)))
++//   top-level functions     $esFn(Effect.fnUntraced(...), meta, id)
++//
++// Every intrinsic, dual variant, and probe is recorded with its variant path
++// (the dual variants that enclose it), so that after the check the harness can
++// keep the copies that sit in the variants the checker selected.
+ import ts from "typescript"
+ import {
+   type Diagnostic,
+@@ -14,7 +26,61 @@
+   PRELUDE_NAMES,
+   type ServiceDecl,
+   type Span
+-} from "./model.ts"
++} from "../../esc/src/model.ts"
++
++/** The dual variants enclosing a generated node: [dual id, variant index] from the outside in. */
++export type VariantPath = Array<[number, number]>
++
++export interface CallCopy {
++  id: number
++  path: VariantPath
++  es: ts.CallExpression
++  mode: Mode
++  /** How the copy is emitted: an intrinsic, a plain call, a special form, or a tail resume. */
++  kind: "bind" | "bind0" | "val0" | "plain" | "special" | "tail"
++  call?: Span
++  callee?: Span
++  receiver?: Span
++  /** The $esSvc intrinsic wrapping the receiver, in Effect code. */
++  svc?: number
++}
++
++export interface DualCopy {
++  id: number
++  path: VariantPath
++  es: ts.Node
++  kind: "dual" | "body"
++  /** Object-literal methods have no separate program variant. */
++  method: boolean
++}
++
++export interface ConvCopy {
++  id: number
++  path: VariantPath
++  es: ts.Expression
++  expr: Span
++  site: Span
++}
++
++export interface LoopCopy {
++  id: number
++  path: VariantPath
++  es: ts.ForOfStatement
++  iterable: Span
++}
++
++export interface NeutralEmitted {
++  text: string
++  bodyEnd: number
++  calls: CallCopy[]
++  duals: DualCopy[]
++  convs: ConvCopy[]
++  loops: LoopCopy[]
++  /** Generated top-level const names that hold `.es` functions, for the D10 reading. */
++  fnDecls: Map<string, { node: ts.FunctionDeclaration; direct: boolean; contract: boolean }>
++  wireCalls: Array<{ es: ts.CallExpression; path: VariantPath; call: Span }>
++  diagnostics: Diagnostic[]
++}
+ 
+ export interface Claim {
+   node: ts.Node
+@@ -144,7 +210,19 @@
+ const EFFECT_TYPE_REF = /(?<![.\w$])Effect</g
+ export const rewriteEffectTypeText = (text: string) => text.replace(EFFECT_TYPE_REF, "Effect.Effect<")
+ 
+-export class FileEmitter {
++export class NeutralEmitter {
++  // ---- single-pass bookkeeping ----
++  private nextId = 0
++  /** The dual variants around the text being emitted. */
++  private vpath: VariantPath = []
++  /** Intrinsic ids emitted shallowly in the body being collected (innermost function-like first). */
++  private shallow: number[][] = []
++  calls: CallCopy[] = []
++  duals: DualCopy[] = []
++  convs: ConvCopy[] = []
++  loops: LoopCopy[] = []
++  wireCalls: NeutralEmitted["wireCalls"] = []
++  // ---- as in the prototype ----
+   out = ""
+   maps: Emitted["maps"] = []
+   callProbes = new Map<ts.CallExpression, Span>()
+@@ -187,6 +265,61 @@
+     return `${base}${++this.counter}`
+   }
+ 
++  /** A fresh id for a dual or a body (not an Effect operation). */
++  private choiceId() {
++    return ++this.nextId
++  }
++
++  /** A fresh id for an intrinsic that decides an Effect operation; the enclosing body collects it. */
++  private opId() {
++    const id = ++this.nextId
++    this.shallow[this.shallow.length - 1]?.push(id)
++    return id
++  }
++
++  private path(): VariantPath {
++    return this.vpath.map(([d, v]) => [d, v])
++  }
++
++  /** Emit one variant of a dual; returns the intrinsic ids emitted shallowly inside it. */
++  private variant(dual: number, index: number, f: () => void): number[] {
++    this.vpath.push([dual, index])
++    this.shallow.push([])
++    f()
++    const ids = this.shallow.pop()!
++    this.vpath.pop()
++    return ids
++  }
++
++  /** A body that is not a dual variant (a top-level function): collect its shallow intrinsic ids. */
++  private collect(f: () => void): number[] {
++    this.shallow.push([])
++    f()
++    return this.shallow.pop()!
++  }
++
++  /** The prototype's needs(): statements that make a body an Effect function in a non-plain context. */
++  private syntacticOps(body: ts.Node | undefined) {
++    if (!body) return false
++    return containsShallow(body, (n) => ts.isThrowStatement(n) || ts.isTryStatement(n) || (ts.isVariableStatement(n) && (n.declarationList.flags & 7) === 4))
++  }
++
++  /** computeDirect's statements that keep a top-level function from compiling to plain JavaScript. */
++  private directBad(fn: ts.FunctionDeclaration) {
++    if (!fn.body || fn.asteriskToken || hasModifier(fn, ts.SyntaxKind.AsyncKeyword)) return true
++    return containsShallow(fn.body, (n) => {
++      if (ts.isThrowStatement(n) || ts.isTryStatement(n) || ts.isYieldExpression(n) || ts.isAwaitExpression(n)) return true
++      if (ts.isVariableStatement(n) && (n.declarationList.flags & 7) >= 4) return true
++      if (ts.isCallExpression(n) && ts.isIdentifier(n.expression) && ["fork", "handle", "resume", "resumeWith", "abandon"].includes(n.expression.text)) return true
++      return false
++    })
++  }
++
++  /** Arguments of an intrinsic: a JSON string the checker parses, then the id. */
++  private static meta(m: object) {
++    return JSON.stringify(JSON.stringify(m))
++  }
++
+   private diag(code: string, node: ts.Node, message: string, severity: "error" | "warning" = "error") {
+     this.diagnostics.push({ code, severity, file: this.o.file.path, start: node.getStart(this.sf), end: node.end, message })
+   }
+@@ -286,7 +419,7 @@
+   // File
+   // ---------------------------------------------------------------------------
+ 
+-  emitFile(): Emitted {
++  emitFile(): NeutralEmitted {
+     const f = this.o.file
+     const prelude = PRELUDE_NAMES.filter((n) => !f.topNames.has(n))
+     this.push(`// Generated by esc from ${f.path.split("/").pop()}. Do not edit.\n`)
+@@ -313,27 +446,15 @@
+     this.push(this.text.slice(pos))
+     this.push("\n")
+     const bodyEnd = this.out.length
+-    this.collectClaims()
+-    if (this.o.check) this.emitClaimProbes()
+     return {
+       text: this.out,
+       bodyEnd,
+-      maps: this.maps,
+-      callProbes: this.callProbes,
+-      calleeProbes: this.calleeProbes,
+-      receiverProbes: this.receiverProbes,
+-      lambdaProbes: this.lambdaProbes,
+-      objectProbes: this.objectProbes,
+-      classProbes: this.classProbes,
+-      convProbes: this.convProbes,
+-      throwProbes: this.throwProbes,
+-      forOfProbes: this.forOfProbes,
+-      callInfo: this.callInfo,
+-      throwInfo: this.throwInfo,
+-      lambdaModes: this.lambdaModes,
+-      wireOrders: this.wireOrders,
++      calls: this.calls,
++      duals: this.duals,
++      convs: this.convs,
++      loops: this.loops,
+       fnDecls: this.fnDecls,
+-      claims: this.claims,
++      wireCalls: this.wireCalls,
+       diagnostics: this.diagnostics
+     }
+   }
+@@ -464,7 +585,7 @@
+     const extra: string[] = []
+     const params = fn.parameters.map((p) => {
+       const t = p.type
+-      if (t && ts.isFunctionTypeNode(t) && !FileEmitter.effectTypeArgs(t.type)) {
++      if (t && ts.isFunctionTypeNode(t) && !NeutralEmitter.effectTypeArgs(t.type)) {
+         const n = extra.length / 2 + 1
+         extra.push(`E$${n}`, `R$${n}`)
+         const head = this.capture(() => {
+@@ -490,7 +611,7 @@
+       this.diag("ES1003", fn, "`async` functions are not part of EffectScript: a call already waits.")
+     }
+     const key = `${this.o.file.path}#${name}`
+-    const contractArgs = FileEmitter.effectTypeArgs(fn.type)
++    const contractArgs = NeutralEmitter.effectTypeArgs(fn.type)
+     if (fn.type && !contractArgs) {
+       this.diag("ES2003", fn.type, `${name}'s return annotation must be a full contract Effect<A, E, R> (prototype rule).`)
+     }
+@@ -506,41 +627,33 @@
+       return
+     }
+     if (fn.asteriskToken) return this.producerFunction(fn, name, exp)
+-    const direct = this.facts.direct.has(key)
+-    this.fnDecls.set(name, { node: fn, direct, contract: contractArgs !== undefined })
++    // D10 is decided after the check (from the body's call decisions), or inside it where a D9
++    // conversion needs it; the text is always the Effect function, whose type is the same.
++    void key
++    this.fnDecls.set(name, { node: fn, direct: false, contract: contractArgs !== undefined })
+     const { params, typeParams } = this.d12(fn)
+     const contract = contractArgs && contractArgs.length === 3
+       ? `Effect.Effect<${contractArgs.map((a) => this.typeText(a)).join(", ")}>`
+       : undefined
+     const annotation = contract ? `: ${typeParams}(${params}) => ${contract}` : ""
+-    const ctx: Ctx = { ...this.topCtx(), mode: direct ? "plain" : "effect", fn: name }
++    const ctx: Ctx = { ...this.topCtx(), mode: "effect", fn: name }
++    const id = this.choiceId()
+     this.mapped(fn, () => {
+-      if (direct) {
+-        const ret = contractArgs && contractArgs.length === 3 ? `: ${this.typeText(contractArgs[0])}` : ""
+-        this.push(`${exp}function ${name}$direct${typeParams}(${params})${ret} {`)
+-        this.fnBody(fn.body!, ctx)
+-        this.push("}\n")
+-        const simple = fn.parameters.every((p) => ts.isIdentifier(p.name) && !p.dotDotDotToken)
+-        const args = simple ? fn.parameters.map((p) => (p.name as ts.Identifier).text).join(", ") : "...args"
+-        const wparams = simple ? params : `...args: Parameters<typeof ${name}$direct>`
+-        this.push(`${exp}const ${name}${annotation} = ${typeParams}(${wparams}) => Effect.sync(() => ${name}$direct(${args}))`)
+-      } else {
+-        // A recursive function without a written contract: recursive calls go
+-        // through a forward binding typed with the previous pass's inference,
+-        // so E and R are a fixpoint over the cycle (Chapter 12).
+-        const rec = this.recBinding(fn, name)
+-        if (rec) this.push(`let ${name}$rec: ${typeParams}(${params}) => Effect.Effect<${rec.A}, ${rec.E}, ${rec.R}>;\n`)
+-        this.push(`${exp}const ${name}${annotation} = Effect.fnUntraced(function* ${typeParams}(${params}) {`)
+-        this.fnBody(fn.body!, ctx)
+-        this.push("})")
+-        if (rec) this.push(`;\n${name}$rec = ${name} as any`)
+-      }
++      // A recursive function without a written contract: recursive calls go through a forward
++      // binding. The prototype types it with the previous pass's inference; one pass has none, so
++      // it keeps the prototype's first-pass default (the separate per-SCC fixpoint, finding 7).
++      const rec = this.recBinding(fn, name)
++      if (rec) this.push(`let ${name}$rec: ${typeParams}(${params}) => Effect.Effect<${rec.A}, ${rec.E}, ${rec.R}>;\n`)
++      this.push(`${exp}const ${name}${annotation} = $esFn(Effect.fnUntraced(function* ${typeParams}(${params}) {`)
++      const ids = this.collect(() => this.fnBody(fn.body!, ctx))
++      this.push(`}), ${NeutralEmitter.meta({ name, bad: this.directBad(fn) ? 1 : 0, ids })}, ${id})`)
++      if (rec) this.push(`;\n${name}$rec = ${name} as any`)
+     })
+   }
+ 
+   /** The forward binding's contract for a recursive function, or undefined when it needs none. */
+   private recBinding(fn: ts.FunctionDeclaration, name: string) {
+-    if (!this.o.file.recursive.has(name) || FileEmitter.effectTypeArgs(fn.type) || fn.typeParameters) return undefined
++    if (!this.o.file.recursive.has(name) || NeutralEmitter.effectTypeArgs(fn.type) || fn.typeParameters) return undefined
+     return this.facts.recTypes.get(`${this.o.file.path}#${name}`) ?? { A: "any", E: "never", R: "never" }
+   }
+ 
+@@ -551,26 +664,34 @@
+     return this.recBinding(fn, callee.text) ? `${callee.text}$rec` : undefined
+   }
+ 
+-  /** A function declaration inside a body: keeps hoisting; Effect functions return a generator Effect. */
++  /** A function declaration inside a body: keeps hoisting; the checker picks the plain or Effect body. */
+   private nestedFunction(fn: ts.FunctionDeclaration, ctx: Ctx) {
+     if (!fn.body || !fn.name) return this.generic(fn, ctx)
+-    const mode = this.lambdaKind(fn, ctx)
+-    this.lambdaModes.set(fn, mode === "program" ? "effect" : mode)
+     const tps = fn.typeParameters ? `<${fn.typeParameters.map((t) => this.typeText(t)).join(", ")}>` : ""
+     const ps = fn.parameters.map((p) => this.typeText(p)).join(", ")
+     this.mapped(fn, () => {
+-      if (mode === "plain") {
+-        this.push(`function ${fn.name!.text}${tps}(${ps}) {`)
+-        this.fnBody(fn.body!, { ...this.innerCtx(ctx), mode: "plain" })
+-        this.push("}")
+-      } else {
+-        this.push(`function ${fn.name!.text}${tps}(${ps}) { return Effect.gen(function* () {`)
+-        this.fnBody(fn.body!, { ...this.innerCtx(ctx), mode: "effect" })
+-        this.push("}) }")
+-      }
++      this.push(`function ${fn.name!.text}${tps}(${ps}) { return `)
++      this.body(fn, () => this.fnBody(fn.body!, { ...this.innerCtx(ctx), mode: "plain" }),
++        () => {
++          this.push("Effect.gen(function* () {")
++          this.fnBody(fn.body!, { ...this.innerCtx(ctx), mode: "effect" })
++          this.push("})")
++        })
++      this.push(" }")
+     })
+   }
+ 
++  /** `$esBody(() => { plain }, () => effect, meta, id)`: a method or nested function whose class the checker decides. */
++  private body(fn: ts.FunctionLikeDeclaration, plain: () => void, effect: () => void) {
++    const id = this.choiceId()
++    this.duals.push({ id, path: this.path(), es: fn, kind: "body", method: false })
++    this.push("$esBody(() => {")
++    this.variant(id, 0, plain)
++    this.push("}, () => ")
++    const ids = this.variant(id, 1, effect)
++    this.push(`, ${NeutralEmitter.meta({ n: fn.parameters.length === 0 ? 1 : 0, s: this.syntacticOps(fn.body) ? 1 : 0, ids })}, ${id})`)
++  }
++
+   private innerCtx(ctx: Ctx): Ctx {
+     return { ...ctx, region: undefined, breakDepth: 0, contDepth: 0, labels: [], scopeVar: undefined, producer: false, clause: false }
+   }
+@@ -658,11 +779,8 @@
+         this.push(`const ${this.src(d.name)} = yield* $using(${ctx.scopeVar}, `)
+         const init = d.initializer
+         if (init && ts.isCallExpression(init)) {
+-          const f = this.facts.calls.get(init)
+-          const raw = f && f.type === "plain" && !f.serviceReceiver
+-          if (raw) this.push("$bind(")
++          // A raw call emits its intrinsic without yield*: $esBind(call) is already the Effect to acquire.
+           this.call(init, ctx, true)
+-          if (raw) this.push(")")
+         } else if (init) {
+           this.push("$bind(")
+           this.any(init, ctx)
+@@ -815,105 +933,108 @@
+     return undefined
+   }
+ 
+-  private directName(call: ts.CallExpression): string | undefined {
+-    const f = this.facts.calls.get(call)
+-    if (!f?.esCallee || !ts.isIdentifier(call.expression)) return undefined
+-    if (!this.facts.direct.has(`${f.esCallee.file}#${f.esCallee.name}`)) return undefined
+-    return `${call.expression.text}$direct`
++  /** The callee, with an Effect-code receiver behind $esSvc. Returns the receiver's span. */
++  private calleeText(call: ts.CallExpression, ctx: Ctx, copy: CallCopy): Span | undefined {
++    const callee = call.expression
++    const rec = this.recTarget(callee)
++    if (rec) {
++      this.push(rec)
++      return undefined
++    }
++    if (ts.isPropertyAccessExpression(callee)) {
++      let recv: Span
++      if (ctx.mode === "effect") {
++        // A service key's member is the service's member: `(yield* S).m`, decided by the checker.
++        const sid = this.opId()
++        copy.svc ??= sid
++        this.push("(yield* $esSvc(")
++        const s = this.out.length
++        this.any(callee.expression, ctx)
++        recv = { start: s, end: this.out.length }
++        this.push(`, ${JSON.stringify(callee.name.text)}, ${sid}))`)
++      } else {
++        const s = this.out.length
++        this.any(callee.expression, ctx)
++        recv = { start: s, end: this.out.length }
++      }
++      this.push(this.text.slice(callee.expression.end, callee.name.getStart(this.sf)).trim() || ".")
++      this.push(callee.name.text)
++      return recv
++    }
++    this.any(callee, ctx)
++    return undefined
+   }
+ 
+   /**
+-   * A call. In an Effect function, a call whose type is an Effect runs it
+-   * (`yield*`), a plain call stays a call, and an undecided call goes through
+-   * `$bind`. `raw` emits the call expression without running it (for `using`).
++   * A call. Its lowering is a choice point the checker resolves: in an Effect
++   * function `(yield* $esBind(call))` runs the call when its type is Effect
++   * (D24) and binds its value otherwise; a zero-argument call goes through
++   * `$esBind0(callee, call)`, which runs the callee itself when it is a
++   * non-callable Effect value. In plain code a zero-argument call is
++   * `$esVal0(callee, call)`. `raw` (for `using`) leaves out the `yield*`.
+    */
+   private call(call: ts.CallExpression, ctx: Ctx, raw: boolean): void {
+     if (this.specialCall(call, ctx)) return
+-    const f = this.facts.calls.get(call)
+     const callee = call.expression
+     this.callInfo.set(call, { mode: ctx.mode, boundary: ctx.boundary, fn: ctx.fn, inCatchTry: ctx.inCatchTry })
+-    const svcSelf = f ? f.calleeEffectValue : this.syntacticService(callee) !== undefined
++    const effect = ctx.mode === "effect"
++    const id = this.opId()
++    const copy: CallCopy = { id, path: this.path(), es: call, mode: ctx.mode, kind: "plain" }
++    this.calls.push(copy)
+     const gs = this.out.length
+-    if (svcSelf && call.arguments.length === 0) {
+-      // `p()` where `p` is an Effect value (a service key included): run it.
+-      if (ctx.mode === "effect" && !raw) {
+-        this.push("(yield* ")
+-        const s = this.out.length
+-        const recvSvc = f?.serviceReceiver ?? (ts.isPropertyAccessExpression(callee) && this.syntacticService(callee.expression) !== undefined)
+-        if (ts.isPropertyAccessExpression(callee)) {
+-          // `S.member()` where the member is an Effect value: `yield* (yield* S).member`.
+-          if (recvSvc) this.push("(yield* ")
+-          const r = this.out.length
+-          this.any(callee.expression, ctx)
+-          this.receiverProbes.set(call, { start: r, end: this.out.length })
+-          if (recvSvc) this.push(")")
+-          this.push(`.${callee.name.text}`)
+-        } else this.any(callee, ctx)
+-        this.calleeProbes.set(call, { start: s, end: this.out.length })
+-        this.push(")")
+-      } else {
+-        const s = this.out.length
+-        this.any(callee, ctx)
+-        this.calleeProbes.set(call, { start: s, end: this.out.length })
+-      }
++    const typeArgs = () => {
++      if (call.typeArguments) this.push(`<${call.typeArguments.map((t) => this.typeText(t)).join(", ")}>`)
++    }
++    if (call.arguments.length === 0) {
++      copy.kind = effect ? "bind0" : "val0"
++      if (effect && !raw) this.push("(yield* ")
++      this.push(effect ? "$esBind0(" : "$esVal0(")
++      const cs = this.out.length
++      copy.receiver = this.calleeText(call, ctx, copy)
++      copy.callee = { start: cs, end: this.out.length }
++      this.push(", ")
++      const ks = this.out.length
++      this.calleeText(call, ctx, { ...copy })
++      typeArgs()
++      this.push(call.questionDotToken ? "?.()" : "()")
++      copy.call = { start: ks, end: this.out.length }
++      this.push(`, ${id})`)
++      if (effect && !raw) this.push(")")
+       this.maps.push({ gs, ge: this.out.length, node: call })
+       return
+     }
+-    const direct = this.directName(call)
+-    const type = f?.type ?? "unknown"
+-    const trusted = ctx.mode === "effect" && !raw && f?.throws ? f.throws : undefined
+-    const wrap = trusted ? "trusted" : ctx.mode === "effect" && !raw && !direct ? (type === "effect" ? "yield" : type === "unknown" ? "bind" : "none") : "none"
+-    if (wrap === "yield") this.push("(yield* ")
+-    else if (wrap === "bind") this.push("(yield* $bind(")
+-    else if (trusted) {
+-      // D23: the declared exceptions become typed failures; any other exception stays a defect.
+-      const types = trusted.map((t) => `import(${JSON.stringify(this.relTo(t.file))}).${t.name}`).join(" | ")
+-      this.push(`(yield* $trusted<${types}>()(() => `)
++    // In plain code a call to an .es function that compiles to plain JavaScript calls its plain
++    // variant (`f$direct(...)`, D10), whose type is the value: `$esPlain(call)` lets the checker decide.
++    const plainEs = !effect && ts.isIdentifier(callee) && this.o.file.functions.has(callee.text) && !this.recTarget(callee)
++    if (effect) {
++      copy.kind = "bind"
++      if (!raw) this.push("(yield* ")
++      this.push("$esBind(")
++    } else if (plainEs) {
++      copy.kind = "val0"
++      this.push("$esPlain(")
+     }
+     const rs = this.out.length
+-    const serviceRecv = f ? f.serviceReceiver : ts.isPropertyAccessExpression(callee) && this.syntacticService(callee.expression) !== undefined
+-    const cs = this.out.length
+-    const rec = direct ? undefined : this.recTarget(callee)
+-    if (direct) {
+-      this.push(direct)
+-    } else if (rec) {
+-      this.push(rec)
+-    } else if (ts.isPropertyAccessExpression(callee) && ctx.mode === "effect") {
+-      if (serviceRecv) this.push("(yield* ")
+-      const s = this.out.length
+-      this.any(callee.expression, ctx)
+-      this.receiverProbes.set(call, { start: s, end: this.out.length })
+-      if (serviceRecv) this.push(")")
+-      this.push(this.text.slice(callee.expression.end, callee.name.getStart(this.sf)).trim() || ".")
+-      this.push(callee.name.text)
+-    } else if (ts.isPropertyAccessExpression(callee)) {
+-      const s = this.out.length
+-      this.any(callee.expression, ctx)
+-      this.receiverProbes.set(call, { start: s, end: this.out.length })
+-      this.push(this.text.slice(callee.expression.end, callee.name.getStart(this.sf)).trim() || ".")
+-      this.push(callee.name.text)
+-    } else {
+-      this.any(callee, ctx)
+-    }
+-    this.calleeProbes.set(call, { start: cs, end: this.out.length })
+-    if (call.typeArguments) this.push(`<${call.typeArguments.map((t) => this.typeText(t)).join(", ")}>`)
++    copy.receiver = this.calleeText(call, ctx, copy)
++    copy.callee = { start: rs, end: this.out.length }
++    typeArgs()
+     this.push(call.questionDotToken ? "?.(" : "(")
+     const boundary = ctx.boundary || this.isBoundaryCallee(callee)
+     const argCtx = boundary === ctx.boundary ? ctx : { ...ctx, boundary }
+-    // D27: `wire` arguments in dependency order (consumers first), from the previous pass's Layer types.
+-    const isWire = ts.isIdentifier(callee) && callee.text === "wire" && !this.o.file.topNames.has("wire")
+-    const order = isWire ? this.facts.wireOrders.get(call) : undefined
+-    if (isWire) this.wireOrders.set(call, order ?? call.arguments.map((_, i) => i))
+-    const args = order ? order.map((i) => call.arguments[i]) : [...call.arguments]
+-    args.forEach((a, i) => {
++    // D27: `wire` keeps source order here; the order is read from the arguments' Layer types after the check.
++    call.arguments.forEach((a, i) => {
+       if (i > 0) this.push(", ")
+       this.argLike(a, argCtx)
+     })
+     this.push(")")
+-    this.callProbes.set(call, { start: rs, end: this.out.length })
+-    if (wrap === "yield") this.push(")")
+-    else if (wrap === "bind") this.push("))")
+-    else if (trusted) this.push(`, ${JSON.stringify(trusted.map((t) => t.name))}))`)
++    copy.call = { start: rs, end: this.out.length }
++    if (ts.isIdentifier(callee) && callee.text === "wire" && !this.o.file.topNames.has("wire")) {
++      this.wireCalls.push({ es: call, path: copy.path, call: copy.call })
++    }
++    if (effect) {
++      this.push(`, ${id})`)
++      if (!raw) this.push(")")
++    } else if (plainEs) this.push(`, ${id})`)
+     this.maps.push({ gs, ge: this.out.length, node: call })
+   }
+ 
+@@ -923,53 +1044,30 @@
+       callee.expression.text === "Effect" && ["try", "tryPromise", "sync", "promise"].includes(callee.name.text)
+   }
+ 
+-  /** Arguments, array elements, and property values: where program conversion (D7) and D9 apply. */
++  /** `pipe(first, stage, ...)` from the prelude: D8 decides whether `first` is a program. */
++  private isPipeFirst(a: ts.Node) {
++    const p = a.parent
++    return ts.isCallExpression(p) && p.arguments[0] === a && ts.isIdentifier(p.expression) && p.expression.text === "pipe" &&
++      p.arguments.length >= 2 && !this.o.file.topNames.has("pipe")
++  }
++
++  /**
++   * Arguments, array elements, and property values: where program conversion
++   * (D7), container conversion, Stream conversion (D26), and the plain variant
++   * (D9) apply. `$esConv(value)` lets the checker decide from the position's
++   * expected type and the value's own type.
++   */
+   private argLike(a: ts.Expression, ctx: Ctx) {
+-    const conv = this.facts.convs.get(a)
+     const candidate = ts.isIdentifier(a) || ts.isPropertyAccessExpression(a) || ts.isElementAccessExpression(a) || ts.isCallExpression(a)
+     if (!candidate) return this.any(a, ctx)
+-    if (conv?.stream || (conv?.programs === undefined && false)) {
+-      const site = this.out.length
+-      this.push("$toStream(")
+-      const s = this.out.length
+-      this.any(a, ctx)
+-      const e = this.out.length
+-      this.push(")")
+-      this.convProbes.set(a, { expr: { start: s, end: e }, site: { start: site, end: this.out.length } })
+-      return
+-    }
+-    if (conv?.programs) {
+-      const site = this.out.length
+-      this.push("$programs(")
+-      const s = this.out.length
+-      this.any(a, ctx)
+-      const e = this.out.length
+-      this.push(")")
+-      this.convProbes.set(a, { expr: { start: s, end: e }, site: { start: site, end: this.out.length } })
+-      return
+-    }
+-    if (conv?.program) {
+-      const site = this.out.length
+-      this.push("$program(")
+-      const s = this.out.length
+-      this.any(a, ctx)
+-      const e = this.out.length
+-      this.push(")")
+-      this.convProbes.set(a, { expr: { start: s, end: e }, site: { start: site, end: this.out.length } })
+-      return
+-    }
+-    if (conv?.direct && ts.isIdentifier(a)) {
+-      const s = this.out.length
+-      this.mapped(a, () => this.push(`${a.text}$direct`))
+-      this.convProbes.set(a, { expr: { start: s, end: this.out.length }, site: { start: s, end: this.out.length } })
+-      return
+-    }
+-    if (conv?.rejectPlain) {
+-      this.diag("ES4301", a, `${this.src(a)} can pause, but it is passed where a plain JavaScript function is expected, which calls it synchronously.`)
+-    }
++    const id = this.choiceId()
++    const site = this.out.length
++    this.push("$esConv(")
+     const s = this.out.length
+     this.any(a, ctx)
+-    this.convProbes.set(a, { expr: { start: s, end: this.out.length }, site: { start: s, end: this.out.length } })
++    const e = this.out.length
++    this.push(`, ${NeutralEmitter.meta({ p: this.isPipeFirst(a) ? 1 : 0 })}, ${id})`)
++    this.convs.push({ id, path: this.path(), es: a, expr: { start: s, end: e }, site: { start: site, end: this.out.length } })
+   }
+ 
+   private arrayLiteral(arr: ts.ArrayLiteralExpression, ctx: Ctx) {
+@@ -1014,34 +1112,6 @@
+   // Lambdas
+   // ---------------------------------------------------------------------------
+ 
+-  private syntacticNeedsEffect(fn: ts.SignatureDeclaration & { body?: ts.ConciseBody }) {
+-    if (!fn.body) return false
+-    return containsShallow(fn.body, (n) => ts.isCallExpression(n) || ts.isThrowStatement(n) || ts.isTryStatement(n) || isUsingStatementNode(n))
+-  }
+-
+-  /** Decide how a lambda compiles: a program (D7), an Effect function, or a plain callback. */
+-  private lambdaKind(fn: ts.SignatureDeclaration & { body?: ts.ConciseBody }, ctx: Ctx): "program" | "effect" | "plain" {
+-    const lf = this.facts.lambdas.get(fn)
+-    const noParams = fn.parameters.length === 0
+-    if (this.facts.pipePrograms.has(fn as unknown as ts.Expression) && noParams) return "program"
+-    if (!lf) return this.syntacticNeedsEffect(fn) ? "effect" : "plain"
+-    if (lf.ctx === "program" && noParams) return "program"
+-    if (lf.ctx === "program") return "effect"
+-    if (lf.ctx === "effectFn") return "effect"
+-    if (lf.ctx === "plainFn") {
+-      if (lf.needsEffect) {
+-        this.diag(
+-          "ES4301",
+-          fn,
+-          `this callback can pause (${lf.pauses ?? "an Effect call"}), but ${lf.ctxText ?? "its caller"} calls it synchronously. Use Effect.forEach or a for...of loop.`
+-        )
+-        this.diagnostics[this.diagnostics.length - 1].covers = fn
+-      }
+-      return "plain"
+-    }
+-    return lf.needsEffect ? "effect" : "plain"
+-  }
+-
+   private lambdaParams(fn: ts.ArrowFunction | ts.FunctionExpression | ts.MethodDeclaration, keepReturn: boolean) {
+     const tps = fn.typeParameters ? `<${fn.typeParameters.map((t) => this.typeText(t)).join(", ")}>` : ""
+     const ps = fn.parameters.map((p) => this.typeText(p)).join(", ")
+@@ -1054,84 +1124,106 @@
+     return usesThis ? "Effect.gen({ self: this }, function* () {" : "Effect.gen(function* () {"
+   }
+ 
++  /**
++   * A lambda: `$esDual(plain, effect, program, meta, id)`. The checker
++   * classifies it where it sits (inside overload resolution, against each
++   * candidate's declared parameter type) and checks only the selected variant.
++   */
+   private lambda(fn: ts.ArrowFunction | ts.FunctionExpression, ctx: Ctx) {
+-    const kind = this.lambdaKind(fn, ctx)
+-    this.lambdaModes.set(fn, kind)
+     if (hasModifier(fn, ts.SyntaxKind.AsyncKeyword)) {
+       this.diag("ES1003", fn, "`async` functions are not part of EffectScript: a call already waits.")
+     }
+-    const s = this.out.length
++    const id = this.choiceId()
++    const noParams = fn.parameters.length === 0
++    this.duals.push({ id, path: this.path(), es: fn, kind: "dual", method: false })
++    this.mapped(fn, () => {
++      this.push("$esDual(")
++      this.variant(id, 0, () => this.lambdaForm(fn, ctx, "plain"))
++      this.push(", ")
++      const ids = this.variant(id, 1, () => this.lambdaForm(fn, ctx, "effect"))
++      this.push(", ")
++      if (noParams) this.variant(id, 2, () => this.lambdaForm(fn, ctx, "program"))
++      else this.push("0")
++      const meta = { n: noParams ? 1 : 0, s: this.syntacticOps(fn.body) ? 1 : 0, ids, p: this.isPipeFirst(fn) ? 1 : 0 }
++      this.push(`, ${NeutralEmitter.meta(meta)}, ${id})`)
++    })
++  }
++
++  /** One lowering of a lambda, as the prototype's `lambda` emits it for that kind. */
++  private lambdaForm(fn: ts.ArrowFunction | ts.FunctionExpression, ctx: Ctx, kind: "program" | "effect" | "plain") {
+     const clause = isClause(fn)
+     const inner: Ctx = { ...this.innerCtx(ctx), mode: kind === "plain" ? "plain" : "effect", clause }
+-    this.mapped(fn, () => {
+-      if (kind === "program") {
+-        this.push(this.genOpen(fn))
+-        this.fnBody(fn.body, inner)
+-        this.push("})")
+-      } else if (kind === "effect") {
+-        const contract = FileEmitter.effectTypeArgs(fn.type) !== undefined
+-        if (ts.isArrowFunction(fn)) this.push(`${this.lambdaParams(fn, contract)} => `)
+-        else this.push(`function${fn.name ? " " + fn.name.text : ""}${this.lambdaParams(fn, contract)} { return `)
+-        this.push(this.genOpen(fn))
+-        this.fnBody(fn.body, inner)
+-        this.push("})")
+-        if (!ts.isArrowFunction(fn)) this.push(" }")
+-      } else {
+-        // Plain: copy, with calls left as calls.
+-        if (ts.isArrowFunction(fn)) {
+-          this.push(`${this.lambdaParams(fn, true)} =>`)
+-          if (ts.isBlock(fn.body)) this.block(fn.body, inner)
+-          else {
+-            this.push(" ")
+-            const needsParens = ts.isObjectLiteralExpression(skipParens(fn.body))
+-            if (needsParens) this.push("(")
+-            this.any(fn.body, inner)
+-            if (needsParens) this.push(")")
+-          }
+-        } else {
+-          this.push(`function${fn.name ? " " + fn.name.text : ""}${this.lambdaParams(fn, true)} `)
+-          this.block(fn.body, inner)
+-        }
++    if (kind === "program") {
++      this.push(this.genOpen(fn))
++      this.fnBody(fn.body, inner)
++      this.push("})")
++    } else if (kind === "effect") {
++      const contract = NeutralEmitter.effectTypeArgs(fn.type) !== undefined
++      if (ts.isArrowFunction(fn)) this.push(`${this.lambdaParams(fn, contract)} => `)
++      else this.push(`function${fn.name ? " " + fn.name.text : ""}${this.lambdaParams(fn, contract)} { return `)
++      this.push(this.genOpen(fn))
++      this.fnBody(fn.body, inner)
++      this.push("})")
++      if (!ts.isArrowFunction(fn)) this.push(" }")
++    } else if (ts.isArrowFunction(fn)) {
++      // Plain: copy, with calls left as calls.
++      this.push(`${this.lambdaParams(fn, true)} =>`)
++      if (ts.isBlock(fn.body)) this.block(fn.body, inner)
++      else {
++        this.push(" ")
++        const needsParens = ts.isObjectLiteralExpression(skipParens(fn.body))
++        if (needsParens) this.push("(")
++        this.any(fn.body, inner)
++        if (needsParens) this.push(")")
+       }
+-    })
+-    this.lambdaProbes.set(fn, { start: s, end: this.out.length })
++    } else {
++      this.push(`function${fn.name ? " " + fn.name.text : ""}${this.lambdaParams(fn, true)} `)
++      this.block(fn.body, inner)
++    }
+   }
+ 
+-  /** A method in an object literal: an Effect function when its expected type returns an Effect. */
++  /** A method in an object literal: a property whose value is a dual of function expressions. */
+   private objectMethod(m: ts.MethodDeclaration, obj: ts.ObjectLiteralExpression, ctx: Ctx) {
+     if (!m.body) return this.any(m, ctx)
+-    const kind = this.lambdaKind(m, ctx)
+-    this.lambdaModes.set(m, kind)
++    void obj
++    const id = this.choiceId()
++    this.duals.push({ id, path: this.path(), es: m, kind: "dual", method: true })
+     const clause = isClause(m)
+-    const inner: Ctx = { ...this.innerCtx(ctx), mode: kind === "plain" ? "plain" : "effect", clause }
+     this.mapped(m, () => {
+-      this.push(`${this.src(m.name)}${this.lambdaParams(m, kind === "plain" || FileEmitter.effectTypeArgs(m.type) !== undefined)} {`)
+-      if (kind === "plain") {
+-        this.statements(m.body!.statements, inner, m.body!.statements.pos)
+-      } else {
+-        this.push(" return ")
++      this.push(`${this.src(m.name)}: $esDual(`)
++      this.variant(id, 0, () => {
++        this.push(`function${this.lambdaParams(m, true)} {`)
++        this.statements(m.body!.statements, { ...this.innerCtx(ctx), mode: "plain", clause }, m.body!.statements.pos)
++        this.push(" }")
++      })
++      this.push(", ")
++      const ids = this.variant(id, 1, () => {
++        this.push(`function${this.lambdaParams(m, NeutralEmitter.effectTypeArgs(m.type) !== undefined)} { return `)
+         this.push(this.genOpen(m))
+-        this.fnBody(m.body!, inner)
+-        this.push("})")
+-        this.push(";")
+-      }
+-      this.push(" }")
++        this.fnBody(m.body!, { ...this.innerCtx(ctx), mode: "effect", clause })
++        this.push("}); }")
++      })
++      const meta = { n: m.parameters.length === 0 ? 1 : 0, m: 1, s: this.syntacticOps(m.body) ? 1 : 0, ids }
++      this.push(`, 0, ${NeutralEmitter.meta(meta)}, ${id})`)
+     })
+   }
+ 
+-  /** A method of an ordinary class: an Effect function when its body needs one. */
++  /** A method of an ordinary class: the checker picks the plain or Effect body ($esBody). */
+   private classMethod(m: ts.MethodDeclaration, ctx: Ctx) {
+     if (!m.body || !ts.isClassLike(m.parent)) return this.generic(m, ctx)
+-    const cls = m.parent
+-    if (ts.isClassDeclaration(cls) && !this.classProbes.has(cls)) this.classProbes.set(cls, { start: 0, end: 0 })
+-    const kind = this.lambdaKind(m, ctx)
+-    this.lambdaModes.set(m, kind)
+-    if (kind === "plain") return this.generic(m, { ...this.innerCtx(ctx), mode: "plain" })
+     const mods = (ts.getModifiers(m) ?? []).map((x) => x.getText(this.sf)).join(" ")
+     this.mapped(m, () => {
+-      this.push(`${mods ? mods + " " : ""}${this.src(m.name)}${this.lambdaParams(m, FileEmitter.effectTypeArgs(m.type) !== undefined)} { return ${this.genOpen(m)}`)
+-      this.fnBody(m.body!, { ...this.innerCtx(ctx), mode: "effect" })
+-      this.push("}) }")
++      this.push(`${mods ? mods + " " : ""}${this.src(m.name)}${this.lambdaParams(m, NeutralEmitter.effectTypeArgs(m.type) !== undefined)} { return `)
++      this.body(
++        m,
++        () => this.statements(m.body!.statements, { ...this.innerCtx(ctx), mode: "plain" }, m.body!.statements.pos),
++        () => {
++          this.push(this.genOpen(m))
++          this.fnBody(m.body!, { ...this.innerCtx(ctx), mode: "effect" })
++          this.push("})")
++        }
++      )
++      this.push(" }")
+     })
+   }
+ 
+@@ -1170,7 +1262,7 @@
+       for (const m of cls.members) {
+         if (hasModifier(m, ts.SyntaxKind.StaticKeyword)) continue
+         if (ts.isMethodDeclaration(m)) {
+-          const args = FileEmitter.effectTypeArgs(m.type)
++          const args = NeutralEmitter.effectTypeArgs(m.type)
+           if (!args || args.length !== 3) {
+             this.diag(
+               "ES2101",
+@@ -1214,8 +1306,11 @@
+     if (callee.text === "fork" && ctx.mode === "effect") {
+       // D19: block-owned fiber. Attach to the innermost `using` Scope region, else the caller's Scope.
+       this.callInfo.set(call, { mode: ctx.mode, boundary: ctx.boundary, fn: ctx.fn, inCatchTry: ctx.inCatchTry })
++      const id = this.opId()
++      const copy: CallCopy = { id, path: this.path(), es: call, mode: ctx.mode, kind: "special" }
++      this.calls.push(copy)
+       this.mapped(call, () => {
+-        this.push(`(yield* `)
++        this.push(`(yield* $esBind(`)
+         const s = this.out.length
+         this.push(`$fork(`)
+         call.arguments.forEach((a, i) => {
+@@ -1223,8 +1318,8 @@
+           this.argLike(a, ctx)
+         })
+         this.push(ctx.scopeVar ? `, ${ctx.scopeVar})` : ")")
+-        this.callProbes.set(call, { start: s, end: this.out.length })
+-        this.push(")")
++        copy.call = { start: s, end: this.out.length }
++        this.push(`, ${id}))`)
+       })
+       return true
+     }
+@@ -1239,6 +1334,8 @@
+   private tailResume(call: ts.CallExpression, ctx: Ctx) {
+     const kind = this.resumeKind(call)!
+     this.callInfo.set(call, { mode: ctx.mode, boundary: ctx.boundary, fn: ctx.fn, inCatchTry: ctx.inCatchTry })
++    // The prototype records no probe for a tail resume, so its fact keeps the defaults.
++    this.calls.push({ id: this.choiceId(), path: this.path(), es: call, mode: ctx.mode, kind: "tail" })
+     this.mapped(call, () => {
+       this.push(kind === "resume" ? "$tailResume(" : "$tailResumeWith(")
+       call.arguments.forEach((a, i) => {
+@@ -1270,59 +1367,38 @@
+     this.fnDecls.set(name, { node: fn, direct: false, contract: false })
+     const { params, typeParams } = this.d12(fn)
+     const ctx: Ctx = { ...this.topCtx(), mode: "effect", fn: name, producer: true }
++    const id = this.choiceId()
+     this.mapped(fn, () => {
+-      this.push(`${exp}const ${name} = ${typeParams}(${params}) => $produce(Effect.fnUntraced(function* () {`)
+-      this.fnBody(fn.body!, ctx)
+-      this.push("}))")
++      this.push(`${exp}const ${name} = $esFn(${typeParams}(${params}) => $produce(Effect.fnUntraced(function* () {`)
++      const ids = this.collect(() => this.fnBody(fn.body!, ctx))
++      this.push(`})), ${NeutralEmitter.meta({ name, producer: 1, bad: 1, ids })}, ${id})`)
+     })
+   }
+ 
+-  /** `for (x of producer)`: internal iteration under a Yield handler; plain iterables keep JavaScript's meaning. */
++  /**
++   * `for (x of xs)`: in an Effect function the iterable goes through
++   * `$esIter`, whose type adds a producer's or Stream's E and R and types the
++   * element; the loop and its body stay as written. The checker's type of the
++   * iterable says whether the loop is a producer loop, a Stream loop, or
++   * JavaScript's loop. (The prototype's final text moves a producer loop's
++   * body into a region closure; the decisions are read from types here.)
++   */
+   private forOf(st: ts.ForOfStatement, ctx: Ctx) {
+-    const isProducer = this.facts.producerLoops.has(st) || this.facts.streamLoops.has(st)
+-    if (ctx.mode !== "effect" || !isProducer) {
+-      // JavaScript's loop. Record the iterable's span so the next pass can tell a producer from an iterable.
+-      const loop: Ctx = { ...ctx, breakDepth: ctx.breakDepth + 1, contDepth: ctx.contDepth + 1 }
+-      this.mapped(st, () => {
+-        this.push(`for ${st.awaitModifier ? "await " : ""}(`)
+-        this.any(st.initializer, ctx)
+-        this.push(" of ")
+-        const s = this.out.length
+-        this.any(st.expression, ctx)
+-        this.forOfProbes.set(st, { start: s, end: this.out.length })
+-        this.push(") ")
+-        this.any(st.statement, loop)
+-      })
+-      return
+-    }
+-    if (st.awaitModifier) this.diag("ES1003", st, "`for await` is not part of EffectScript.")
+-    const c = this.fresh("$c")
+-    const region: Region = { ret: false, brk: new Set(), cont: new Set() }
+-    const decl = st.initializer
+-    const binding = ts.isVariableDeclarationList(decl) ? this.src(decl.declarations[0].name) : this.src(decl)
+-    const label = ts.isLabeledStatement(st.parent) ? st.parent.label.text : undefined
++    const loop: Ctx = { ...ctx, breakDepth: ctx.breakDepth + 1, contDepth: ctx.contDepth + 1 }
++    const effect = ctx.mode === "effect"
++    if (effect && st.awaitModifier) this.diag("ES1003", st, "`for await` is not part of EffectScript.")
++    const id = effect ? this.opId() : this.choiceId()
+     this.mapped(st, () => {
+-      this.push(`const ${c} = yield* ${this.facts.streamLoops.has(st) ? "$forStream" : "$forOf"}(`)
++      this.push(`for ${st.awaitModifier ? "await " : ""}(`)
++      this.any(st.initializer, ctx)
++      this.push(" of ")
++      if (effect) this.push("(yield* $esIter(")
+       const s = this.out.length
+       this.any(st.expression, ctx)
+-      this.forOfProbes.set(st, { start: s, end: this.out.length })
+-      this.push(`, (${binding}) => Effect.gen(function* () {`)
+-      // The loop body is a region: its own break/continue complete the clause.
+-      const body: Ctx = { ...ctx, region, breakDepth: 0, contDepth: 0, labels: [], scopeVar: undefined }
+-      if (ts.isBlock(st.statement)) this.regionBody(st.statement, body)
+-      else {
+-        this.any(st.statement, body)
+-        this.push(";")
+-      }
+-      this.push(` return $normal; })${label ? `, ${JSON.stringify(label)}` : ""});`)
+-      // break/continue that target this loop are handled by $forOf.
+-      const own = (l: string) => l === "" || l === label
+-      const outer: Region = {
+-        ret: region.ret,
+-        brk: new Set([...region.brk].filter((l) => !own(l))),
+-        cont: new Set([...region.cont].filter((l) => !own(l)))
+-      }
+-      this.dispatch(c, outer, ctx, true)
++      this.loops.push({ id, path: this.path(), es: st, iterable: { start: s, end: this.out.length } })
++      if (effect) this.push(`, ${id}))`)
++      this.push(") ")
++      this.any(st.statement, loop)
+     })
+   }
+ 
