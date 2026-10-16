@@ -55,6 +55,23 @@ func (c *Checker) applyInferredReturnTypeHooks(fn *ast.Node, t *Type) *Type {
 	return t
 }
 
+// ExtensionState returns the value an in-tree language extension keeps for c
+// under key, calling create to make it on first use. The value lives exactly
+// as long as c, so a language server that replaces its checkers on every edit
+// does not accumulate it. A checker is used by one goroutine at a time, so
+// neither the state map nor the value needs a lock.
+func (c *Checker) ExtensionState(key any, create func() any) any {
+	if value, ok := c.extensionState[key]; ok {
+		return value
+	}
+	if c.extensionState == nil {
+		c.extensionState = map[any]any{}
+	}
+	value := create()
+	c.extensionState[key] = value
+	return value
+}
+
 // NewTypeReference instantiates target, a generic class or interface type,
 // with typeArguments.
 func (c *Checker) NewTypeReference(target *Type, typeArguments []*Type) *Type {
