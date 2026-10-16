@@ -14,8 +14,8 @@ import (
 //
 // Where the overload candidate under check declares an Effect, a function
 // with no parameters that returns an Effect converts to a program (D7). Where
-// it declares an iterable or a record of Effects, an array or record of such
-// functions converts element by element (D49). Where it declares a plain
+// it declares an iterable or a record of Effects, an iterable or a record of
+// such functions converts element by element (D49). Where it declares a plain
 // function, an EffectScript function that can pause has no plain form, so the
 // candidate rejects it, as it rejects such a lambda (D9, D56). As with
 // lambdas, each candidate decides once, and the candidate overload resolution
@@ -166,13 +166,18 @@ func (a *analyzer) programOf(t *checker.Type) *checker.Type {
 	return nil
 }
 
-// programsOf returns the array or record of Effects that t, an array or
-// record of programs, converts to, or nil.
+// programsOf returns the array or record of Effects that t, an iterable or a
+// record of programs, converts to, or nil. An iterable, such as an array, a
+// Set, or a Map's values, converts to an array, as $programs makes it one.
+// Like Effect.all, it treats an iterable as an iterable, never as a record.
 func (a *analyzer) programsOf(t *checker.Type) *checker.Type {
 	if a.checker.GetSignaturesOfType(t, checker.SignatureKindCall) != nil {
 		return nil
 	}
-	if elements := a.elementTypes(t, 0); len(elements) > 0 && a.checker.IsArrayLikeType(t) {
+	if elements, iterable := a.iteratedTypes(t); iterable {
+		if len(elements) == 0 {
+			return nil
+		}
 		var effects []*checker.Type
 		for _, element := range elements {
 			effect := a.programOf(element)
@@ -195,6 +200,18 @@ func (a *analyzer) programsOf(t *checker.Type) *checker.Type {
 		return nil
 	}
 	return converted
+}
+
+// iteratedTypes returns the element types of t and true when t is iterable:
+// an array, a tuple, or an object with a [Symbol.iterator] method.
+func (a *analyzer) iteratedTypes(t *checker.Type) ([]*checker.Type, bool) {
+	if a.checker.IsArrayLikeType(t) {
+		return a.elementTypes(t, 0), true
+	}
+	if element := a.checker.IteratedType(t); element != nil {
+		return []*checker.Type{element}, true
+	}
+	return nil, false
 }
 
 // finalConversion is what node compiles to: the conversion the candidate its

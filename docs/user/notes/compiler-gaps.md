@@ -29,7 +29,6 @@ adapter's one-element buffer, which differs from D26's zero-capacity handoff.
 
 | Page and block | First code line | Diagnostic | Rule and disagreement |
 | --- | --- | --- | --- |
-| [069-control-flow.md, block 6](../src/code-style/069-control-flow.md) | `function collected() {` | TS2345: Argument of type 'Set<() => Effect<string, never, never>>' is not assignable to parameter of type 'Iterable<Effect<any, any, any>> &#124; Record<string, Effect<any, any, any>>'. | D49: An iterable of zero-argument programs must convert where Effect.all expects Effects. |
 | [050-pubsub.md, block 1](../src/concurrency/050-pubsub.md) | `import { PubSub } from "effect"` | TS2741: Property '[Symbol.dispose]' is missing in type 'Subscription<string>' but required in type 'Disposable'. | D14/D47: A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value. |
 | [050-pubsub.md, block 3](../src/concurrency/050-pubsub.md) | `import { PubSub } from "effect"` | TS2741: Property '[Symbol.dispose]' is missing in type 'Subscription<string>' but required in type 'Disposable'. | D14/D47: A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value. |
 | [050-pubsub.md, block 4](../src/concurrency/050-pubsub.md) | `import { PubSub } from "effect"` | TS2741: Property '[Symbol.dispose]' is missing in type 'Subscription<string>' but required in type 'Disposable'. | D14/D47: A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value. |

@@ -127,7 +127,6 @@ function logAll() {
 ## Collecting programs
 
 ```ts
-// compiler-gap: D49 An iterable of zero-argument programs must convert where Effect.all expects Effects.
 function collected() {
   const tuple = Effect.all([() => 12, () => "ready"] as const)
   const object = Effect.all({ count: () => 12, status: () => "ready" })
