@@ -158,6 +158,13 @@ func checkContracts(c *checker.Checker, file *ast.SourceFile) {
 
 Report only from a file check, and only at nodes of the file being checked: the program reads each file's diagnostics from the checker that checks that file. A check that finds a problem while the checker types another file records it and reports it from the file check of the file that holds the node.
 
+The checks so far:
+
+| Code | Reported at | File |
+| --- | --- | --- |
+| ES1003 | `async`, `await`, `for await`, and `await using` in a `.es` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
+| ES1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
+
 `compilerOptions.effectscript` (D34) sets the category of the two codes that are policy, not soundness, and the tracing mode:
 
 ```json

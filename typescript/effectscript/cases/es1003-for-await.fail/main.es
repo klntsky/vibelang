@@ -1,0 +1,10 @@
+// expect: ES1003
+// for await is not part of EffectScript: for...of over a producer or a Stream
+// already waits.
+declare const lines: AsyncIterable<string>
+
+export function count() {
+  let n = 0
+  for await (const line of lines) n += line.length
+  return n
+}
