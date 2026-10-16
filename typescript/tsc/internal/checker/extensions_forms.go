@@ -95,3 +95,24 @@ func (c *Checker) NewFunctionTypeWithReturnType(symbol *ast.Symbol, signature *S
 	result.resolvedReturnType = returnType
 	return c.newAnonymousType(symbol, nil, []*Signature{result}, nil, nil)
 }
+
+// ContextualReturnTypeHook can replace t, the contextual type of what fn
+// returns, which return statements, an arrow function's expression body, and
+// the inference of fn's return type see. t may be nil.
+type ContextualReturnTypeHook func(c *Checker, fn *ast.Node, t *Type) *Type
+
+var contextualReturnTypeHooks []ContextualReturnTypeHook
+
+// RegisterContextualReturnTypeHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterContextualReturnTypeHook(hook ContextualReturnTypeHook) {
+	contextualReturnTypeHooks = append(contextualReturnTypeHooks, hook)
+}
+
+func (c *Checker) applyContextualReturnTypeHooks(fn *ast.Node, t *Type) *Type {
+	for _, hook := range contextualReturnTypeHooks {
+		t = hook(c, fn, t)
+	}
+	return t
+}

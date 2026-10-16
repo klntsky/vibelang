@@ -30313,6 +30313,10 @@ func (c *Checker) getContextualIterationType(kind IterationTypeKind, functionDec
 }
 
 func (c *Checker) getContextualReturnType(functionDecl *ast.Node, contextFlags ContextFlags) *Type {
+	return c.applyContextualReturnTypeHooks(functionDecl, c.getContextualReturnTypeWorker(functionDecl, contextFlags))
+}
+
+func (c *Checker) getContextualReturnTypeWorker(functionDecl *ast.Node, contextFlags ContextFlags) *Type {
 	// If the containing function has a return type annotation, is a constructor, or is a get accessor whose
 	// corresponding set accessor has a type annotation, return statements in the function are contextually typed
 	returnType := c.getReturnTypeFromAnnotation(functionDecl)
