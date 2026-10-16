@@ -63,6 +63,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-wire-missing.fail` | ES3201 at a runner: `MailerLive needs Smtp` |
 | `es-provider-escapes.fail` | ES2001 names the provider member that a failure escapes, in an object literal and in an `implements` class |
 | `es-provider-audited.fail` | ES3101 at a per-call lookup, in an object literal and in an `implements` class |
+| `es-service-dts` | A service's `.d.ts` is an interface plus a key class: TypeScript code compiled against it with `skipLibCheck` off implements `Users`, provides it with `Layer.succeed`, and yields `Users` and a default service in `Effect.gen` |
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives expected failures and rethrows a `TypeError` defect (D54) |
@@ -147,6 +148,8 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 55 | `knrysqlq` | compiler: add a declaration transformer hook | Extensions can add imports to a declaration file |
 | 56 | `psvzumxw` | module: resolve an .es specifier to its declaration file | `./users.es` finds `users.d.ts` in a published package |
 | 57 | `nxmqvpsu` | effectscript: write portable declaration files for .es files | `declaration: true` works with the prelude and `.es` imports |
+| 58 | `llryttxs` | effectscript: declare a service as an interface and a key class | D45 in `.d.ts`: TypeScript code uses an `.es` service as a Context key |
+| 59 | `zummuosy` | effectscript: document service declaration files in EFFECTSCRIPT.md | This section |
 
 ## Seams in upstream files
 
@@ -274,6 +277,21 @@ abstract class Users {                           class Users extends runtime.$se
 ```
 
 A service with `static readonly default` extends `runtime.$reference(key, () => Flags.default)`, a `Context.Reference` (D40); its static side is `Context.Service<never, Flags>`, so using it adds nothing to R. A control operation extends `runtime.$service(key)` and then registers one kernel operation per abstract method, `runtime.$control(Approval, ["approve"])`; the runtime's `handle` provides an implementation whose methods perform those operations. Generated code imports `@effectscript/runtime` as a namespace under a free name, as it imports `effect/Effect`.
+
+**Declaration files.** The declaration transform writes a service class as the abstract class it is in source, which TypeScript code could only extend. A declaration transformer hook (`services_declarations.go`) rewrites it to what the checker sees: the instance members move into an interface with the brand, a `Users_base` constant gets the runtime's key type, and the class extends it with only its static members:
+
+```ts
+export interface Users {
+    find(id: string): Effect.Effect<User, UserNotFound, never>;
+    readonly "~esc/service"?: "app/users#Users";
+}
+declare const Users_base: import("@effectscript/runtime").ServiceKey<Users>;
+export declare abstract class Users extends Users_base {
+    static readonly layer: Layer.Layer<Users, never, never>;
+}
+```
+
+`ServiceKey<I>` is `(abstract new () => {}) & Context.Service<I, I>`, the type of `$service`; a service with a static default extends `ReferenceKey<I>`, the type of `$reference`, a `Context.Reference`. A default-exported service declares the interface and the class locally, because merged declarations must share their export status, and ends with `export default Users`.
 
 **Member calls (D41).** In an `.es` function body, a call `S.member(…)` where `S` is a Context key whose service declares `member` looks the service up, then applies the call rule to the member. The member receiver hook (`memberReceiver`) makes the checker read `member` from the service's shape, so a member the service declares wins over the key's own `pipe`, `of`, and `use`. The rule is structural: it covers `.es` services, `Context.Service` classes written in TypeScript, and Effect's own services such as `FileSystem` and `Path`.
 
@@ -430,7 +448,7 @@ Generated JavaScript imports only `effect` and `@effectscript/runtime` (D30): th
 
 - `using` is plain JavaScript.
 - `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
-- `fork` and handlers have no meaning yet: the prelude names them, and their lanes give them meaning. A service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
+- `fork` and handlers have no meaning yet: the prelude names them, and their lanes give them meaning.
 - ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
 - No programs as values (D7). `Effect.retry(() => sync(store), policy)` passes a plain function where an Effect is expected.
 - Most ES diagnostics do not exist yet. A top-level `main()` is an Effect value, not ES1001. An Effect lambda passed to `Array.prototype.forEach` silently does nothing, not ES4301. A plain TypeScript call is not ES4401.
