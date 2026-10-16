@@ -4,7 +4,8 @@ import "github.com/microsoft/TypeScript/tsc/internal/ast"
 
 // This file holds the hooks that let an in-tree language extension decide
 // what a function expression is while overload resolution checks it against
-// each candidate signature.
+// each candidate signature, and the few checker operations such an extension
+// needs to build the resulting types.
 
 // CallCandidateHook is told that the arguments of call, a call or new
 // expression, are about to be checked against candidate, during type argument
@@ -61,4 +62,36 @@ func (c *Checker) acceptCandidateByHooks(call *ast.Node, candidate *Signature) b
 		}
 	}
 	return true
+}
+
+// FunctionExpressionTypeHook can replace t, the type the checker gives fn, a
+// function expression, arrow function, or object literal method, each time it
+// checks fn with its parameters typed. Inside overload resolution that is once
+// per candidate signature the enclosing call is checked against.
+type FunctionExpressionTypeHook func(c *Checker, fn *ast.Node, t *Type) *Type
+
+var functionExpressionTypeHooks []FunctionExpressionTypeHook
+
+// RegisterFunctionExpressionTypeHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterFunctionExpressionTypeHook(hook FunctionExpressionTypeHook) {
+	functionExpressionTypeHooks = append(functionExpressionTypeHooks, hook)
+}
+
+func (c *Checker) applyFunctionExpressionTypeHooks(fn *ast.Node, t *Type) *Type {
+	for _, hook := range functionExpressionTypeHooks {
+		t = hook(c, fn, t)
+	}
+	return t
+}
+
+// NewFunctionTypeWithReturnType returns a function type with the parameters
+// and type parameters of signature and the given return type.
+func (c *Checker) NewFunctionTypeWithReturnType(symbol *ast.Symbol, signature *Signature, returnType *Type) *Type {
+	result := c.cloneSignature(signature)
+	result.target = nil
+	result.mapper = nil
+	result.resolvedReturnType = returnType
+	return c.newAnonymousType(symbol, nil, []*Signature{result}, nil, nil)
 }

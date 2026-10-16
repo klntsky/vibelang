@@ -10374,7 +10374,7 @@ func (c *Checker) checkFunctionExpressionOrObjectLiteralMethod(node *ast.Node, c
 		}
 	}
 	c.contextuallyCheckFunctionExpressionOrObjectLiteralMethod(node, checkMode)
-	return c.getTypeOfSymbol(c.getSymbolOfDeclaration(node))
+	return c.applyFunctionExpressionTypeHooks(node, c.getTypeOfSymbol(c.getSymbolOfDeclaration(node)))
 }
 
 func (c *Checker) contextuallyCheckFunctionExpressionOrObjectLiteralMethod(node *ast.Node, checkMode CheckMode) {
