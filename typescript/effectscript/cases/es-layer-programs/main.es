@@ -1,0 +1,50 @@
+// A Layer.effect program whose result is context sensitive, an object
+// literal whose methods and arrows have untyped parameters, still infers the
+// layer's E and R (D7): find's id is typed by the service, and Database is a
+// requirement of building the layer, not of calling Users.find.
+import { Data, Effect, Layer } from "effect"
+
+class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: string }> {}
+
+interface User {
+  readonly id: string
+  readonly name: string
+}
+
+abstract class Database {
+  abstract lookup(id: string): Effect.Effect<User | undefined, never, never>
+}
+
+abstract class Users {
+  abstract find(id: string): Effect.Effect<User, UserNotFound, never>
+  abstract count(): Effect.Effect<number, never, never>
+}
+
+const DatabaseLive = Layer.succeed(Database, {
+  lookup: (id: string) => Effect.succeed(id === "1" ? { id, name: "Ada" } : undefined)
+})
+
+const UsersLive = Layer.effect(Users, () => {
+  const db = Database()
+  return {
+    find(id) {
+      const user = db.lookup(id)
+      if (user === undefined) return Effect.fail(new UserNotFound({ id }))
+      return Effect.succeed(user)
+    },
+    count: () => 1
+  }
+})
+
+type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+export const inferred: Equals<typeof UsersLive, Layer.Layer<Users, never, Database>> = true
+
+// expect-result: {"name":"Ada","count":1,"missing":"UserNotFound"}
+export function main() {
+  return Effect.provide(() => {
+    const name = Users.find("1").name
+    const count = Users.count()
+    const missing = Effect.flip(() => Users.find("9"))._tag
+    return { name, count, missing }
+  }, Layer.provide(UsersLive, DatabaseLive))
+}
