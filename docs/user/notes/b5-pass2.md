@@ -20,7 +20,7 @@ The other 13 pages needed no edits. Existing `Effect.service(key)` calls remain 
 - `src/trait/081-equal.md`, "Implementing the equality protocol": kept the Proposed marker because chapters 15-16 define plain function variants and passing function values into synchronous callbacks, but do not specify how an EffectScript method implementing a TypeScript interface is exposed for synchronous protocol dispatch. Appendix C19 says Equal/Hash are unchanged without settling that method emission rule.
 - `src/trait/082-hash.md`, "Implementing the hashing protocol": kept the Proposed marker for the same unresolved protocol-method emission rule; Hash calls `[Hash.symbol]()` synchronously, so an Effect-returning method would not satisfy it.
 
-The Option.gen and Result.gen markers were removed: D26 and the TypeScript-interop chapter explicitly settle both. Neither owner-open question about partial-annotation spelling or the language's name occurs in this batch, so no Not designed yet marker was needed.
+The Option.gen and Result.gen markers were removed: D26 and the TypeScript-interop chapter explicitly settle both. D57 and D58 close the former partial-annotation and language-name questions; no marker is needed for either.
 
 ## Specification issues and unclear points
 

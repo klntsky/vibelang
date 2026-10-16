@@ -60,7 +60,7 @@ function checked(value: number): Effect<number, Rejected, never> {
 }
 ```
 
-Complete contracts give the compiler a concrete promise to check. Use all three channels or omit the annotation until partial-annotation spelling is chosen. Configure the compiler in `tsconfig.json`:
+A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks the success and failure channels and infers requirements. All three slots are required in a return annotation with a body. ES2003 offers explicit `never` or `infer` fixes for omitted slots. Configure the compiler in `tsconfig.json`:
 
 ```json
 {

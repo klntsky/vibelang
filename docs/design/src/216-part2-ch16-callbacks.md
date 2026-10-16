@@ -14,7 +14,7 @@ const names = mapAll(ids, (id) => Users.find(id).name)   // Effect<string[], Use
 const sizes = mapAll(words, (w) => w.length)             // Effect<number[], never, never>
 ```
 
-`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. Whether this reading of a bare callback type is the final spelling belongs with the partial-annotation question the owner decides (O7, Chapter 29); the rule stands until then.
+`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
 
 The declaration file writes the polymorphism out, as the comment shows. A TypeScript caller therefore passes a callback that returns an `Effect`, and wraps a plain one: `mapAll(words, (w) => Effect.succeed(w.length))`.
 

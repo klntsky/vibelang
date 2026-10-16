@@ -26,7 +26,7 @@ npx esc --watch         # rebuild on change
 }
 ```
 
-The compiler is one native binary, `esc`, the fork of TypeScript's `tsc` (Chapter 27). It reads the same `tsconfig.json`, accepts every `tsc` flag, and checks `.ts` and `.es` files as one program. Package names use the `@effectscript` scope and change with the language's name (O9).
+The compiler is one native binary, `esc`, the fork of TypeScript's `tsc` (Chapter 27). It reads the same `tsconfig.json`, accepts every `tsc` flag, and checks `.ts` and `.es` files as one program. The name is EffectScript, the extension is `.es`, and package names use the `@effectscript` scope (D58). The compiler source is `typescript/` in the same private repository as the spec, runtime, and tools (D60).
 
 #### Packages and versions
 
@@ -111,7 +111,7 @@ Every code, with its quick fix:
 | ES1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
 | ES2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | ES2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
-| ES2003 | A return annotation that is not a full `Effect<A, E, R>` | Write the full contract | 14 |
+| ES2003 | A return annotation on a function with a body that is not `Effect<A, E, R>` with all three slots, each checked or written `infer Name` | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
 | ES2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
 | ES2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | ES2101 | A declaration without a body that has no full contract | Write `Effect<T, never, never>` | 14 |

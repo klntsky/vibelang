@@ -130,7 +130,7 @@ bun harness/passes.ts         # the prototype's decision changes per pass
 #### The Go fork
 
 ```sh
-cd /Users/williamcory/effectscript-ts
+cd typescript                    # from the repository root
 effectscript/smoke.sh            # builds tsc (about 75 s cold), then compiles and runs every case
 effectscript/smoke.sh es-infer   # one case
 ```
@@ -141,11 +141,11 @@ effectscript/smoke.sh es-infer   # one case
 | `es-lower` | Calls run by type: pure helpers stay plain, Effect-returning calls run, operands run left to right, and a `Config` stays data |
 | `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, and the `.d.ts` declares it |
 
-`~/effectscript-ts/EFFECTSCRIPT.md` records the base, the 11 commits, the upstream lines it changes, and the differential check against the prototype.
+`typescript/EFFECTSCRIPT.md` records the base, the 11 commits, the upstream lines it changes, and the differential check against the prototype.
 
 #### Research and drafts
 
-- `docs/design/DECISIONS.md`: the decision log, D1-D56.
+- `docs/design/DECISIONS.md`: the decision log, D1-D60.
 - `docs/research/effect4-runtime.md`: Effect 4.0.5 runtime facts, with 23 scripts in `experiments/scratch-agent-a/scripts/`. Scripts written for this design live in `experiments/scripts/`.
 - `docs/research/continuation-prior-art.md`: OCaml 5, Kotlin, Swift, Loom, WasmFX, Koka, Effekt, Effection, js_of_ocaml, and the papers.
 - `docs/research/vibelang.md`: VibeLang `main` (`c60eca97`) and the unmerged checkpoint (`ebe89a2b`).
@@ -157,7 +157,7 @@ effectscript/smoke.sh es-infer   # one case
 - `experiments/KERNEL-CHANGES.md`: the 2026-10-16 kernel fixes.
 - `prototype/esc/FINDINGS.md`: what the prototype compiler found.
 - `prototype/single-pass/RESULTS.md`: the single-pass experiment (D56, D52).
-- `~/effectscript-ts/EFFECTSCRIPT.md`: the Go fork's base, commits, seams, and gaps.
+- `typescript/EFFECTSCRIPT.md`: the Go fork's base, commits, seams, and gaps.
 - `docs/upstream/`: draft Effect issues for F10 and F1-F3, not filed.
 
 ### B. Prior art

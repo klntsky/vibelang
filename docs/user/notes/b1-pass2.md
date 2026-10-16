@@ -8,7 +8,7 @@ Read STYLE.md in full, DECISIONS.md D1-D54, design chapters 1-17 and 28, all of 
 - `src/013-getting-started.md`: replaced the reference to tooling still being designed with the settled tooling topics.
 - `src/035-configuration.md`: applied D24 to every configuration read, moved descriptor composition examples into `.es`, removed the old integration-gap marker, and corrected whole-group defaults against Effect 4.0.5.
 - `src/036-runtime.md`: stated the D38 runner boundary and allowed plain framework callbacks registered from `.es` top level; retained the valid static service layer and managed-runtime examples.
-- `src/getting-started/003-the-effect-type.md`: clarified the all-three-or-none annotation rule and ES2003, retained the owner's partial-annotation question, and explained structured Effect subtypes as data.
+- `src/getting-started/003-the-effect-type.md`: recorded the then-current annotation rule and ES2003 and explained structured Effect subtypes as data. D57 now replaces the partial-annotation marker with `infer Name` slots.
 - `src/getting-started/004-installation.md`: replaced all three obsolete markers with the compiler/runtime packages, supported versions, `esc` commands, Vite plugin, source imports, maps, and hot reload.
 - `src/getting-started/005-creating-effects.md`: added Effect-package trust and JSDoc contracts, expected-only catch and ES2004, the top-level foreign-call exception, and D43 callback boundaries with Exit data and resource-race handling.
 - `src/getting-started/008-importing-effect.md`: corrected compiler distribution guidance, added Scope's module/type prelude meanings, and explained trusted Effect data calls.
@@ -19,11 +19,11 @@ Read STYLE.md in full, DECISIONS.md D1-D54, design chapters 1-17 and 28, all of 
 
 `src/044-batching.md` and `src/getting-started/002-why-effect.md` needed no changes. Their service layers, program callbacks, requests, resolver completion, concurrency, and cache ownership remain consistent with the decisions and installed APIs. No page in this batch incorrectly used service statics, default references, or value-member access.
 
-## Markers kept
+## Marker resolution
 
-- `src/getting-started/003-the-effect-type.md`: kept **Not designed yet.** for partial-annotation spelling because O7 is still the owner's call. The surrounding prose states the settled interim rule: all three channels or no annotation.
+- `src/getting-started/003-the-effect-type.md`: the earlier pass kept a partial-annotation marker. D57 closes former O7; the page now teaches `infer Name` and both ES2003 fixes.
 
-No Proposed markers remain. No language-name marker existed in this batch; O9 remains open and tooling package names follow the current spec.
+No Proposed markers remain. D58 closes former O9 by keeping EffectScript, `esc`, `.es`, and `@effectscript`.
 
 ## Spec issues and ambiguities
 
@@ -39,4 +39,4 @@ No Proposed markers remain. No language-name marker existed in this batch; O9 re
 - Parsed all 80 TypeScript/EffectScript code fences with the installed TypeScript parser, selecting TSX for Counter.tsx; no syntax errors. All page fences are balanced, local Markdown links resolve, and no forbidden dash punctuation remains.
 - These are syntax and upstream API/behavior checks, not full EffectScript compiler or editor/build integration tests. Tooling names and promised behavior follow D30-D36 and chapter 28; no packages were installed and no external documentation prose or code was copied.
 
-Final totals: **12 pages changed; 1 marker remaining (0 Proposed, 1 Not designed yet).**
+Pass 2 totals before D57: **12 pages changed; 1 marker remaining.** After applying D57: **0 Proposed; 0 Not designed yet.**

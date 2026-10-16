@@ -18,7 +18,7 @@ The other 8 pages needed no change. In particular, the testing page already uses
 
 ## Markers remaining
 
-**0 Proposed; 0 Not designed yet.** Removed all five earlier markers: Stream, Sink, Brand, and Match trust are settled by D22 and the standard-library/feature-map guidance; producer and Stream interoperability is settled by D26 and the producers chapter. No owner-open partial-annotation spelling or language-name question occurs in these pages, so there is no marker to retain for either.
+**0 Proposed; 0 Not designed yet.** Removed all five earlier markers: Stream, Sink, Brand, and Match trust are settled by D22 and the standard-library/feature-map guidance; producer and Stream interoperability is settled by D26 and the producers chapter. D57 and D58 close the former partial-annotation and language-name questions; no marker is needed for either.
 
 ## Spec issues and clarifications
 

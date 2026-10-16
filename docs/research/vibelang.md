@@ -53,7 +53,7 @@ Do not inherit VibeLang's execution model:
 | vibelang.sh | matches `144d10347ba9` (on the checkpoint lineage) | 2026-08-22 13:32 -07:00 | WebFetch of `/`, `/specification/failures`, `/specification/type-system`; `/specification/effects` returns 404 |
 | Upstream pin on `main` | `microsoft/TypeScript@c087644e82dc3d48cf87e4c5519eeaaea9daf35c` ("Downgrade too-new npm deps (#63925)") | 2026-08-20 | `gh api`; `tsc/go.mod` exists at that commit |
 | Upstream pin on checkpoint | `microsoft/TypeScript@bf7f49d6f5ad3254d03ed83dd07ab510ae4e582a` ("Add independent VS Code extension releases (#64139)") | 2026-09-08 | `gh api`; `tsc/go.mod` exists at that commit |
-| Fork repository | `smithersai/TypeScript` (fork of `microsoft/TypeScript`, last push 2026-08-20T20:41Z) | | `gh api repos/smithersai/TypeScript` |
+| VibeLang upstream fork | `smithersai/TypeScript` (fork of `microsoft/TypeScript`, last push 2026-08-20T20:41Z) | | `gh api repos/smithersai/TypeScript` |
 
 Evidence for the site attribution: the site's type-system "Foreign
 Boundaries" paragraph is identical to `144d10347ba9:docs/src/pages/specification/type-system.mdx:60`.
@@ -139,8 +139,8 @@ repository.
 - [main] The pin is `typescript-fork.json:7` (`revision`), set to
   `c087644e82dc…`. The fork is `smithersai/TypeScript`, vendored at
   `vendor/typescript` "with a squashed Git subtree" (`docs/TYPESCRIPT_FORK.md:3-6`).
-- [main] `docs/TYPESCRIPT_FORK.md:8-11` says "The fork repository has not been
-  created yet". GitHub shows the fork existed (last push
+- [main] VibeLang's `docs/TYPESCRIPT_FORK.md:8-11` claims its fork did not yet
+  exist. GitHub shows that VibeLang fork existed (last push
   2026-08-20T20:41Z). `main` has no `vendor/` directory.
 - [ckpt] The pin moved to `bf7f49d6…` (`typescript-fork.json:7`). The Go module
   is `github.com/microsoft/TypeScript/tsc` on Go 1.26
@@ -462,7 +462,7 @@ regressions across 132,873 upstream subtests
 - [ckpt] The project API "propagates direct-call Error/Context rows through
   cycles to a fixed point" (`poc/src/language/README.md:66-68`). For the Go
   checker, the seam document points at `pushTypeResolution`/`popTypeResolution`
-  as "the checker's built-in fixed-point machinery — precisely what the POC
+  as "the checker's built-in fixed-point machinery: precisely what the POC
   re-implemented by hand" (`compiler/FORK-SEAM-DESIGN.md:769-773`).
 - Durable Flows only: [main] "Inline recursive Flow expansion is rejected"
   (`docs/DURABLE_EXECUTION.md:109`). [ckpt] withdrew recursion in Flow bodies
@@ -526,7 +526,7 @@ Cleanup:
   Selection uses "compiler-stable nominal identity, not a forgeable user `_tag`
   or minifier-sensitive constructor name" ([main] `failures.mdx:96-105`).
 - [ckpt] lowers `error.match` to `instanceof` dispatch. Coverage is "held in a
-  side table keyed by resolved class symbol — never in a `TypeFlags` bit"
+  side table keyed by resolved class symbol: never in a `TypeFlags` bit"
   (`compiler/README.md:307-323`).
 - [ckpt] Must-consume extends to started Promises and to containers. "A
   `return` is a **transfer**, not a discharge" (`poc/src/language/README.md:757-783`).
@@ -633,7 +633,7 @@ Cleanup:
 - [ckpt] Both are withdrawn. "VibeLang has no `TypeScript` requirement.
   TypeScript is the only target, so every program depends on the JavaScript
   runtime and a requirement recording that fact would carry no information"
-  (`compatibility.mdx:28`). "There is no `Module<…>` requirement — measured
+  (`compatibility.mdx:28`). "There is no `Module<…>` requirement: measured
   2026-08-28 … the host constraint is carried by the panic channel"
   (`guide/typescript-interop.mdx:24-43`).
 
@@ -782,15 +782,15 @@ Measured costs of keeping this convention private behind eager calls:
 
 ### 7.1 Every decision on [main] (139: 101 Locked, 25 Direction, 13 Open)
 
-"—" means neither the ledger nor the [main] specification pages state a reason.
+`Not stated` means neither the ledger nor the [main] specification pages state a reason.
 "L" is the line in [main] `docs/DECISIONS.md`.
 
 **Identity and compatibility**
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 19 | Locked | Name is VibeLang | — |
-| 20 | Locked | Source extension `.vibe` | — |
+| 19 | Locked | Name is VibeLang | Not stated |
+| 20 | Locked | Source extension `.vibe` | Not stated |
 | 21 | Open | JSX extension unconfirmed; `.vibex` must not imply a sounder mode | Avoid a stricter dialect chosen by extension (stated) |
 | 23 | Locked | Not a syntactic superset; TS-derived grammar with deliberate differences | "deliberate, important differences such as failure handling and expression control flow" |
 | 26 | Locked | Import TS/JS directly; they keep their own syntax and semantics | They are "interoperability inputs, not source that must parse as `.vibe`" |
@@ -804,9 +804,9 @@ Measured costs of keeping this convention private behind eager calls:
 | 38 | Locked | Eager functions; no `Effect<A, E, R>` value, interpreter, or `.run()` | Avoid "a second execution vocabulary" (`introduction/why-vibelang.mdx:30`); "eager call with an ordinary stack" (`philosophy.mdx:23`) |
 | 40 | Locked | Fallible returns `Result<A, E>`; async returns `Promise<Result<A, E>>` | Failure is "the ordinary return value, not an erased side channel" |
 | 44 | Locked | `return` gives success, `throw` gives error; no `Result.ok/err` | Ordinary `return`/`throw` already construct the variants |
-| 47 | Locked | Infer `E` and `R` transitively; `Result` is the explicit public failure contract | — |
+| 47 | Locked | Infer `E` and `R` transitively; `Result` is the explicit public failure contract | Not stated |
 | 51 | Locked | No Effect-style fiber runtime | Prefer TC39 concurrency work over a fiber abstraction (L255) |
-| 52 | Direction | Native target: Go-like GC runtime; TS target lowers to TS/JS | — |
+| 52 | Direction | Native target: Go-like GC runtime; TS target lowers to TS/JS | Not stated |
 
 **Typed failures**
 
@@ -815,24 +815,24 @@ Measured costs of keeping this convention private behind eager calls:
 | 57 | Locked | Any `Error` subclass is a nominal recoverable error; no `TaggedError` | Keep normal `Error` behavior; compiler supplies identity |
 | 61 | Locked | Built-in `Result` with Better Result-inspired methods, minus `ok`/`err` | `return`/`throw` construct the variants |
 | 65 | Locked | `Result.unwrap()` is the propagation spelling | An ordinary call rather than new grammar (stated as "ordinary-call spelling") |
-| 68 | Locked | Results are must-use; discarding is a compile error | — |
+| 68 | Locked | Results are must-use; discarding is a compile error | Not stated |
 | 71 | Locked | `Error.prototype` gets `is/matches/match/matchPartial/rootCause`; exhaustive `match` | Nominal keys, not a forgeable `_tag` (`failures.mdx:105`) |
-| 75 | Locked | No `throws`, prefix `try`, postfix `catch`, `!T`, or panic-catch grammar | — |
+| 75 | Locked | No `throws`, prefix `try`, postfix `catch`, `!T`, or panic-catch grammar | Not stated |
 | 79 | Locked | Unannotated functions infer `Result<A, E>`; public contracts spell it | "a public signature is a contract" (`philosophy.mdx:39`) |
 | 83 | Locked | Foreign throws and rejections become `UnhandledException` unless an adapter maps them | Avoid "an untyped rejection escaping the declared return contract" (`failures.mdx:123`) |
 | 86 | Locked | `Reflect.panic` is the non-recoverable defect | Reserved for compiler and runtime invariants (`failures.mdx:113`) |
-| 88 | Locked | `defer` and `errdefer` supported | — |
+| 88 | Locked | `defer` and `errdefer` supported | Not stated |
 
 **Optionals and nullability**
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 92 | Locked | Built-in `Optional<T>` with Result-like methods | — |
-| 95 | Locked | `return value` → present; `return null/undefined` → absent | — |
-| 98 | Locked | Generic and method syntax; `?T`, payload capture, `orelse`, `.?` removed | — |
-| 102 | Locked | Absence and failure are separate | — |
+| 92 | Locked | Built-in `Optional<T>` with Result-like methods | Not stated |
+| 95 | Locked | `return value` → present; `return null/undefined` → absent | Not stated |
+| 98 | Locked | Generic and method syntax; `?T`, payload capture, `orelse`, `.?` removed | Not stated |
+| 102 | Locked | Absence and failure are separate | Not stated |
 | 103 | Locked | TS `undefined`, optional params, and optional properties keep working | TypeScript compatibility (stated) |
-| 105 | Open | `Optional<T>` ↔ `T \| null \| undefined` conversions | — |
+| 105 | Open | `Optional<T>` ↔ `T \| null \| undefined` conversions | Not stated |
 
 **Requirements and dependency injection**
 
@@ -840,12 +840,12 @@ Measured costs of keeping this convention private behind eager calls:
 | --- | --- | --- | --- |
 | 110 | Locked | Capability = abstract class extending `Context`; class is contract and key | "Effect-inspired model with less generic ceremony" |
 | 113 | Locked | `Capability.context()` is compiler-recognized and adds to the row | "no `uses` source-language grammar is needed" |
-| 116 | Locked | Context is part of the static type, not a hand-passed argument | — |
-| 118 | Locked | Requirements propagate by inference | — |
-| 119 | Locked | Provider composition from `vibelang/provider`, no `provide {}` | — |
-| 121 | Locked | Effect-like layers create and provide implementations | — |
+| 116 | Locked | Context is part of the static type, not a hand-passed argument | Not stated |
+| 118 | Locked | Requirements propagate by inference | Not stated |
+| 119 | Locked | Provider composition from `vibelang/provider`, no `provide {}` | Not stated |
+| 121 | Locked | Effect-like layers create and provide implementations | Not stated |
 | 123 | Direction | `Layer<Provides, Error, Requires>` | A layer carries what it provides, how construction fails, and what construction needs (stated) |
-| 125 | Open | Layer acquisition, memoization, scoping, override, disposal | — |
+| 125 | Open | Layer acquisition, memoization, scoping, override, disposal | Not stated |
 | 127 | Open | Does a provided Layer own an implicit structured lifetime (join/cancel children)? | Recorded as the current recommendation |
 | 132 | Open | Declaration encoding and JS lowering of the row (phantom, hidden params, ambient) | Must not change source calls (stated) |
 
@@ -857,14 +857,14 @@ Measured costs of keeping this convention private behind eager calls:
 | 141 | Locked | Non-code imports use import attributes to pick the loader | No second import grammar |
 | 146 | Locked | Built-in Markdown and MDX loaders | Libraries supply vocabularies, for example agent prompts |
 | 149 | Locked | User-defined comptime loaders | Users do not duplicate result types |
-| 152 | Direction | File imports are incremental build nodes with content keys | — |
-| 155 | Open | Loader registration API; Markdown/MDX module shapes | — |
+| 152 | Direction | File imports are incremental build nodes with content keys | Not stated |
+| 155 | Open | Loader registration API; Markdown/MDX module shapes | Not stated |
 | 157 | Locked | Platform functionality is always a typed requirement | "Portability and testability become the same feature" (`philosophy.mdx:48-58`) |
 | 159 | Locked | No ambient `process`/`window`/`document`/fs/network | Same |
 | 162 | Locked | Only universal facilities are ambient; clock and random still need capabilities | Host-sensitive (stated) |
 | 165 | Locked | Using a TS/JS value is a dependency; type-only imports are not | Represents "that compatibility boundary" (`compatibility.mdx:22`) |
 | 167 | Direction | Exact `Module<"node:fs">` requirement | "a provider or target may satisfy one host contract without satisfying another" (`compatibility.mdx:54`) |
-| 169 | Locked | Capability implementations vary by target (Node, Bun, Deno, native, WASI, test) | — |
+| 169 | Locked | Capability implementations vary by target (Node, Bun, Deno, native, WASI, test) | Not stated |
 | 172 | Locked | Zig/Rust via generated typed Wasm/native bindings | Bun as inspiration |
 | 175 | Direction | Reuse C/Zig/Rust/Bun/Deno/libuv behind providers | "where technically and legally suitable" |
 
@@ -872,43 +872,43 @@ Measured costs of keeping this convention private behind eager calls:
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 180 | Locked | TS target accepts complete TS in imported modules | — |
-| 183 | Locked | Near-native target through LLVM; should support Wasm | — |
-| 185 | Locked | Features are portable, `TypeScript`-required, or forbidden | — |
-| 189 | Locked | `TypeScript` requirement propagates transitively | — |
-| 191 | Locked | Native pin is a checked assertion with dependency-path diagnostics | — |
+| 180 | Locked | TS target accepts complete TS in imported modules | Not stated |
+| 183 | Locked | Near-native target through LLVM; should support Wasm | Not stated |
+| 185 | Locked | Features are portable, `TypeScript`-required, or forbidden | Not stated |
+| 189 | Locked | `TypeScript` requirement propagates transitively | Not stated |
+| 191 | Locked | Native pin is a checked assertion with dependency-path diagnostics | Not stated |
 | 194 | Locked | `any` adds `TypeScript` instead of being forbidden | TypeScript compatibility; lint may still discourage |
-| 196 | Locked | `eval` usable but adds `TypeScript` | — |
-| 197 | Direction | Ordinary classes portable; prototype mutation is `TypeScript` or forbidden | — |
-| 200 | Locked | No arbitrary dynamic import in native code at first | — |
-| 203 | Direction | VibeLang owns a native GC runtime | — |
-| 206 | Open | Per-feature classification table (Proxy, descriptors, weak refs, thenables) | — |
-| 209 | Open | Type assertion semantics | — |
-| 213 | Open | Native pin spelling | — |
+| 196 | Locked | `eval` usable but adds `TypeScript` | Not stated |
+| 197 | Direction | Ordinary classes portable; prototype mutation is `TypeScript` or forbidden | Not stated |
+| 200 | Locked | No arbitrary dynamic import in native code at first | Not stated |
+| 203 | Direction | VibeLang owns a native GC runtime | Not stated |
+| 206 | Open | Per-feature classification table (Proxy, descriptors, weak refs, thenables) | Not stated |
+| 209 | Open | Type assertion semantics | Not stated |
+| 213 | Open | Native pin spelling | Not stated |
 
 **Comptime and runtime validation**
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 217 | Locked | Comptime follows Zig: automatic when possible, intrinsic to force | — |
+| 217 | Locked | Comptime follows Zig: automatic when possible, intrinsic to force | Not stated |
 | 220 | Locked | `comptime` imported from `vibelang:comptime`; recognized by resolved binding | "aliases work and unrelated functions named `comptime` remain ordinary" |
-| 224 | Locked | `comptime(value)` evaluates; `comptime(fn)` marks without invoking | — |
+| 224 | Locked | `comptime(value)` evaluates; `comptime(fn)` marks without invoking | Not stated |
 | 227 | Locked | Compiler-owned virtual module; uncompiled load fails | Instead of "evaluating arguments at runtime" |
-| 230 | Locked | Comptime may generate types | — |
+| 230 | Locked | Comptime may generate types | Not stated |
 | 231 | Locked | Comptime I/O only through compiler-known imports | Hermetic, reproducible builds (`philosophy.mdx:60-64`) |
-| 234 | Locked | No `runtime type` modifier | — |
-| 235 | Locked | Validators, codecs, and schemas derived at comptime from ordinary types | — |
-| 237 | Locked | External data `unknown` until validated (best practice) | — |
+| 234 | Locked | No `runtime type` modifier | Not stated |
+| 235 | Locked | Validators, codecs, and schemas derived at comptime from ordinary types | Not stated |
+| 237 | Locked | External data `unknown` until validated (best practice) | Not stated |
 
 **Expression-oriented language**
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 242 | Locked | Blocks, `if`, `switch`, `while`, and `for` can be expressions | — |
-| 243 | Locked | Switch keeps `case`; the final expression is its value | — |
+| 242 | Locked | Blocks, `if`, `switch`, `while`, and `for` can be expressions | Not stated |
+| 243 | Locked | Switch keeps `case`; the final expression is its value | Not stated |
 | 245 | Locked | Stay close to TS; borrow from Zig only where TS has no form | Stated |
-| 247 | Direction | Labeled `break` values and loop `else` | — |
-| 248 | Locked | Declarations in conditionals adopted early from TC39 | — |
+| 247 | Direction | Labeled `break` values and loop `else` | Not stated |
+| 248 | Locked | Declarations in conditionals adopted early from TC39 | Not stated |
 | 249 | Locked | No throw-expression grammar at first | Wait for the TC39 proposal upstream |
 
 **Concurrency**
@@ -917,59 +917,59 @@ Measured costs of keeping this convention private behind eager calls:
 | --- | --- | --- | --- |
 | 255 | Locked | Prefer TC39 concurrency work over a fiber abstraction | Stated |
 | 257 | Locked | Follow TC39 module expressions, shared structs, governors, cancellation | A governor limits fan-out and does not own lifetimes |
-| 260 | Direction | Structured typed joins (`await.all`) own, cancel, and wait for children | — |
-| 264 | Locked | Cancellation in typed failures, provided by the dependency model | — |
-| 266 | Locked | Promises consumed only with `await`; `.then/.catch/.finally` are errors | — |
-| 270 | Locked | `await` yields the Result and never unwraps it | — |
-| 272 | Direction | Promise behavior that blocks native compilation may need `TypeScript` | — |
+| 260 | Direction | Structured typed joins (`await.all`) own, cancel, and wait for children | Not stated |
+| 264 | Locked | Cancellation in typed failures, provided by the dependency model | Not stated |
+| 266 | Locked | Promises consumed only with `await`; `.then/.catch/.finally` are errors | Not stated |
+| 270 | Locked | `await` yields the Result and never unwraps it | Not stated |
+| 272 | Direction | Promise behavior that blocks native compilation may need `TypeScript` | Not stated |
 
 **Durable execution**
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 278 | Locked | Durable execution is a language feature | — |
+| 278 | Locked | Durable execution is a language feature | Not stated |
 | 280 | Locked | Supersedes the separate `~/flows` library | That library is prior art |
-| 283 | Locked | Action = abstract op with a replaceable provider and a closed signature | — |
-| 285 | Locked | Action implementation is an ordinary function; no Effect wrapper | — |
+| 283 | Locked | Action = abstract op with a replaceable provider and a closed signature | Not stated |
+| 285 | Locked | Action implementation is an ordinary function; no Effect wrapper | Not stated |
 | 288 | Locked | Action I/O, failures, and requirements come from its signature; codecs derived | Source never repeats types as schema arguments |
-| 291 | Locked | `durable` imported from `vibelang:flows`; resolved binding | — |
+| 291 | Locked | `durable` imported from `vibelang:flows`; resolved binding | Not stated |
 | 294 | Locked | `durable(...)` becomes a Flow descriptor over Plan IR | Not a runtime callback wrapper |
-| 298 | Locked | A Flow is a statically analyzable plan template | — |
-| 301 | Locked | No proxy evaluation; `Action.run` lowers to plan node | — |
+| 298 | Locked | A Flow is a statically analyzable plan template | Not stated |
+| 301 | Locked | No proxy evaluation; `Action.run` lowers to plan node | Not stated |
 | 305 | Locked | Source function disappears after emission | Plan/preview runs no implementation |
-| 309 | Locked | Four phases: template, deployment build, plan/preview, execution | — |
-| 312 | Locked | Runtime-dependent control flow only when explicit in Plan IR | — |
-| 315 | Locked | Actions/Flows run across processes and machines | — |
-| 318 | Direction | Placement belongs to provider/deployment layers | — |
-| 321 | Direction | Lifecycle, retries, timers, journal, idempotency, fencing, compensation | — |
-| 324 | Direction | Cross-machine values need compiler-checked codecs | — |
+| 309 | Locked | Four phases: template, deployment build, plan/preview, execution | Not stated |
+| 312 | Locked | Runtime-dependent control flow only when explicit in Plan IR | Not stated |
+| 315 | Locked | Actions/Flows run across processes and machines | Not stated |
+| 318 | Direction | Placement belongs to provider/deployment layers | Not stated |
+| 321 | Direction | Lifecycle, retries, timers, journal, idempotency, fencing, compensation | Not stated |
+| 324 | Direction | Cross-machine values need compiler-checked codecs | Not stated |
 | 326 | Direction | Journal atomic with runtime state only; external safety needs destination help | Stated |
 | 330 | Locked | Sealing and compensation are not exactly-once | Stated |
-| 333 | Direction | Recovery safety and cache eligibility are separate | — |
+| 333 | Direction | Recovery safety and cache eligibility are separate | Not stated |
 | 336 | Locked | Every resolved node adopted into run-local state first | Restart independent of cache entries (stated) |
 | 340 | Locked | Memoization differs from deterministic content caching | Stated |
-| 345 | Direction | Four distinct identity keys | — |
-| 349 | Direction | Eviction affects performance only; memo expiry opens a new generation | — |
-| 352 | Open | Loops, fan-out, IDs, wire format, migration, sequencing | — |
+| 345 | Direction | Four distinct identity keys | Not stated |
+| 349 | Direction | Eviction affects performance only; memo expiry opens a new generation | Not stated |
+| 352 | Open | Loops, fan-out, IDs, wire format, migration, sequencing | Not stated |
 
 **Asset-backed prompts and agents**
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 358 | Locked | MDX prompts are library APIs, not syntax | — |
-| 361 | Locked | Standard agent writes TypeScript each turn | — |
-| 364 | Locked | Generated code calls only explicitly passed functions | — |
-| 367 | Locked | Agent and sandbox are library-level | — |
-| 371 | Direction | Small composable agent primitives | — |
-| 375 | Direction | Wrap model calls in Actions/Flows | — |
-| 379 | Open | Agent APIs and sandbox backends | — |
+| 358 | Locked | MDX prompts are library APIs, not syntax | Not stated |
+| 361 | Locked | Standard agent writes TypeScript each turn | Not stated |
+| 364 | Locked | Generated code calls only explicitly passed functions | Not stated |
+| 367 | Locked | Agent and sandbox are library-level | Not stated |
+| 371 | Direction | Small composable agent primitives | Not stated |
+| 375 | Direction | Wrap model calls in Actions/Flows | Not stated |
+| 379 | Open | Agent APIs and sandbox backends | Not stated |
 
 **Standard library**
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 384 | Locked | Match or exceed Effect's stdlib breadth with ordinary APIs | — |
-| 386 | Locked | Platform is a universal dependency | — |
+| 384 | Locked | Match or exceed Effect's stdlib breadth with ordinary APIs | Not stated |
+| 386 | Locked | Platform is a universal dependency | Not stated |
 | 388 | Direction | Wasm/Zig for compute-heavy parts | Chosen by measurement, not ideology |
 | 391 | Direction | Schema, streams, schedules, and more "without copying Effect's wrapper/combinator ceremony" | Stated |
 
@@ -977,11 +977,11 @@ Measured costs of keeping this convention private behind eager calls:
 
 | L | Status | Decision | Rationale |
 | --- | --- | --- | --- |
-| 398 | Locked | Adopt listed TC39 proposals early | — |
-| 405 | Locked | Capabilities subsume AsyncContext | — |
-| 407 | Locked | VibeLang owns expression control-flow grammar | — |
-| 409 | Locked | Forked platform declarations audited for failures, defects, requirements | — |
-| 411 | Locked | Standing rejections (Block Params, Record & Tuple, eventual send, others) | — |
+| 398 | Locked | Adopt listed TC39 proposals early | Not stated |
+| 405 | Locked | Capabilities subsume AsyncContext | Not stated |
+| 407 | Locked | VibeLang owns expression control-flow grammar | Not stated |
+| 409 | Locked | Forked platform declarations audited for failures, defects, requirements | Not stated |
+| 411 | Locked | Standing rejections (Block Params, Record & Tuple, eventual send, others) | Not stated |
 | 415 | Direction | Shared structs later | Lower-risk features first |
 
 **Compiler and delivery**
@@ -990,14 +990,14 @@ Measured costs of keeping this convention private behind eager calls:
 | --- | --- | --- | --- |
 | 420 | Locked | Build on the Go compiler under `tsc/`; minimal diff | Internal packages need in-module code (`TYPESCRIPT_FORK.md:15-19`); the TS 7 preview "has no JavaScript compiler API" (`poc/FINDINGS.md:14-17`) |
 | 422 | Locked | Canonical fork `smithersai/TypeScript`; squashed subtree; pinned manifest | Source in every checkout without a network dependency (`TYPESCRIPT_FORK.md:3-6`) |
-| 425 | Locked | Narrow plugin interface, not features spread through upstream | — |
-| 428 | Locked | Lower to TS before the stock pipeline checks and emits | — |
-| 431 | Direction | Content mappers for early prototype and editor; shared IR for LLVM/Wasm | — |
-| 433 | Open | Exact seams and plugin ABI need an upstream audit | — |
-| 435 | Locked | Go-style batteries-included toolchain | — |
-| 438 | Direction | Loaders and assets in a content-addressed incremental graph | — |
-| 442 | Direction | Compiler grows into a Bazel-like build machine | — |
-| 447 | Open | Build graph, rule contract, remote cache, TS incremental seams | — |
+| 425 | Locked | Narrow plugin interface, not features spread through upstream | Not stated |
+| 428 | Locked | Lower to TS before the stock pipeline checks and emits | Not stated |
+| 431 | Direction | Content mappers for early prototype and editor; shared IR for LLVM/Wasm | Not stated |
+| 433 | Open | Exact seams and plugin ABI need an upstream audit | Not stated |
+| 435 | Locked | Go-style batteries-included toolchain | Not stated |
+| 438 | Direction | Loaders and assets in a content-addressed incremental graph | Not stated |
+| 442 | Direction | Compiler grows into a Bazel-like build machine | Not stated |
+| 447 | Open | Build graph, rule contract, remote cache, TS incremental seams | Not stated |
 
 `docs/DECISIONS.md:451-469` lists nine "Immediate unresolved design work"
 items:

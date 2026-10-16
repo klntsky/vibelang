@@ -35,10 +35,10 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | [II. The rules](#part-ii-the-rules) | The precise rules behind Part I: what a call means, how contracts are inferred and checked, which functions compile to plain JavaScript | You are reviewing the language design |
 | [III. The runtime](#part-iii-the-runtime) | How EffectScript runs on Effect's fiber runtime: one-shot delimited continuations, ownership, cancellation, and the tests that check them | You care how it executes, or you are reviewing the runtime |
 | [IV. The compiler](#part-iv-the-compiler) | The fork of the TypeScript compiler, the pipeline, declarations, and editor support | You will build it |
-| [V. Decisions](#part-v-decisions) | Every decision with its reason and evidence, the four questions only the owner can settle, and the experiments that confirm the implementation | You want to check or change a decision |
+| [V. Decisions](#part-v-decisions) | Every decision with its reason and evidence, the closed end-to-end build calls, and the experiments that confirm the implementation | You want to check or change a decision |
 | [Appendices](#appendices) | The evidence index, prior art, and every Effect feature mapped to EffectScript | You want to check a claim |
 
-**Status.** This is the specification. Every rule in it is decided: the owner's decisions and the defaults made to complete the design are logged in `docs/design/DECISIONS.md` (D1-D56) and collected in [Part V](#29-decisions), which also lists the four calls still open to the owner. The runtime in Part III is a working prototype: 148 tests pass in `experiments/`. The compiler exists as two prototypes: `prototype/esc`, on TypeScript's API, compiles 46 example files written from this document, and a Go fork of TypeScript lowers calls by type and infers contracts (Chapter 27).
+**Status.** This is the specification. Every rule in it is decided: the owner's decisions and the defaults made to complete the design are logged in `docs/design/DECISIONS.md` (D1-D60) and collected in [Part V](#29-decisions), which records the closed end-to-end build calls. D57 and D58 are controversial defaults. The runtime in Part III is a working prototype: 148 tests pass in `experiments/`. The compiler exists as two prototypes: `prototype/esc`, on TypeScript's API, compiles 46 example files written from this document, and the Go fork of TypeScript in `typescript/` lowers calls by type and infers contracts (Chapter 27). The compiler, spec, runtime, and tooling share one private repository (D60).
 
 ## Effect to EffectScript at a glance
 
@@ -305,7 +305,16 @@ error ES2001: UserNotFound can escape greeting, but its contract says E = never.
   Catch it inside greeting, or change the contract to Effect<string, UserNotFound, Users>.
 ```
 
-You will often want to state one channel and leave the others to inference, for example "this function never fails" without listing its services. Every channel can be inferred or declared independently, and a channel you leave out is inferred, never assumed to be `never`. The spelling of a partial annotation is one of the owner's open calls ([Part V](#29-decisions), O7); until it is chosen, you write all three channels or none.
+To check selected channels, write `infer` followed by a name in each channel the compiler should infer (D57):
+
+```ts es
+function greeting(id: string): Effect<string, infer E, infer R> {
+  return `Hello, ${Users.find(id).name}`
+}
+// Effect<string, UserNotFound, Users>
+```
+
+Here A is checked, and E and R come from the body. `Effect<string, never, infer R>` instead promises no expected failures while inferring services. All three slots must be present: `Effect<string>` in a return annotation on a function with a body is ES2003, with fixes for explicit `never` or explicit inference ([Chapter 14](#14-contracts-and-inference)). The name after `infer` is documentation only; it introduces no type variable.
 
 #### Calling TypeScript
 
@@ -2309,7 +2318,7 @@ The contract has exactly three channels. Whether a function can pause is a separ
 
 #### Declarations without bodies
 
-Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its full contract. A bare return type is an error, never a silent `Effect<A, never, never>`:
+Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `Effect<A, never, never>`. Effect type arguments keep their TypeScript defaults in these declarations, so `Effect<A>` means `Effect<A, never, never>` (D57):
 
 ```ts es
 abstract class Rates {
@@ -2327,7 +2336,54 @@ A service's value members are not calls, so they take any type: `abstract readon
 
 #### Partial annotations
 
-You will often want to fix one channel and leave the others to inference, for example to promise that a function never fails without listing its services. The requirement is settled: each channel can be inferred or declared independently, and a channel you leave out is inferred, never assumed to be `never`. The spelling is the owner's call (O7, Chapter 29). Until it is chosen, a contract is written with all three channels or not at all, so a return annotation on a function with a body that is not a full `Effect<A, E, R>`, such as `: number`, is ES2003.
+In the return annotation of a function with a body, write all three channel slots. A slot written `infer` followed by a name comes from the body; every other slot is checked (D57).
+
+```ts es
+function find(id: string): Effect<User, infer E, never> {
+  return Effect.fail(new UserNotFound({ id }))
+}
+// Checks A = User and R = never; infers E = UserNotFound.
+
+function load(id: string): Effect<User, never, infer R> {
+  return Effect.orDie(() => Users.find(id))
+}
+// Checks A = User and E = never; infers R = Users.
+
+function plan(id: string): Effect<infer A, UserNotFound, Users> {
+  return Users.find(id).name
+}
+// Infers A = string; checks E = UserNotFound and R = Users.
+
+function greeting(id: string): Effect<string, infer E, infer R> {
+  return `Hello, ${Users.find(id).name}`
+}
+// Checks A = string; infers E = UserNotFound and R = Users.
+
+function inferred(id: string): Effect<infer _, infer _, infer _> {
+  return Users.find(id)
+}
+// Effect<User, UserNotFound, Users>, as with no annotation.
+```
+
+The name after `infer` is documentation only and is not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
+
+Omission is an error in this position. Neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel should be checked as `never` or inferred. A bare return annotation such as `: User` is also ES2003.
+
+```ts es
+function find(id: string): Effect<User> {
+  return Users.find(id)
+}
+```
+
+```text
+error ES2003: Effect<User> leaves contract channels unspecified. Did you mean never or inferred?
+  Write Effect<User, never, never> to check E and R as never.
+  Or write Effect<User, infer E, infer R> to infer E and R from the body.
+```
+
+These are two distinct quick fixes. The first can then report ES2001 or ES2002 when the body fails or needs services. The second keeps those channels inferred.
+
+This rule applies only to the return annotation of an EffectScript function with a body. Parameter types, type aliases, abstract members, and `.ts` files keep TypeScript's meaning of `Effect<User>`, including its `never` defaults. They do not gain channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
 
 #### Recursion
 
@@ -2498,7 +2554,7 @@ const names = mapAll(ids, (id) => Users.find(id).name)   // Effect<string[], Use
 const sizes = mapAll(words, (w) => w.length)             // Effect<number[], never, never>
 ```
 
-`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. Whether this reading of a bare callback type is the final spelling belongs with the partial-annotation question the owner decides (O7, Chapter 29); the rule stands until then.
+`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
 
 The declaration file writes the polymorphism out, as the comment shows. A TypeScript caller therefore passes a callback that returns an `Effect`, and wraps a plain one: `mapAll(words, (w) => Effect.succeed(w.length))`.
 
@@ -3279,7 +3335,7 @@ restore closures          bound to the pushing fiber           internal/effect.t
 stack bottom              FiberExitFrame at _stack[0]          internal/effect.ts:516
 ```
 
-Mitigation: pin `effect` exactly, check the version at load (`kernel/internals.ts`), and run the law suite on every Effect release. The durable fix is upstream: a supported prompt primitive, or at least a public stack-splice and interruptibility API on `Fiber`. The kernel is the concrete proposal to bring to the Effect maintainers (G1), once the owner approves outward-facing work (O8).
+Mitigation: pin `effect` exactly, check the version at load (`kernel/internals.ts`), and run the law suite on every Effect release. The durable fix is upstream: a supported prompt primitive, or at least a public stack-splice and interruptibility API on `Fiber`. The kernel is the concrete reference for the supported-prompt proposal (G1). Its draft lives in `docs/upstream/`; D59 sets the status to drafted, not filed.
 
 #### Representations of a compiled frame
 
@@ -3617,9 +3673,9 @@ What remains is the last row, and holding the three forms inside the Go checker 
 
 #### The Go fork
 
-`~/effectscript-ts` is the fork the rules above call for, as a jj repository: 11 commits on `257e874`, the `gitHead` of `typescript@next` 7.1.0-dev.20261015.1. EffectScript lives in `tsc/internal/effectscript/`, 5 files and 523 lines, and registers three hooks: a script transformer that runs before type erasure, a call-expression type hook, and an inferred-return-type hook. The upstream diff is 20 added and 12 removed lines in 5 existing files, plus 93 lines in 2 new files that define the hooks, so a rebase onto a newer nightly can conflict only in those 5 files.
+`typescript/` is the compiler tree in this private repository (D60), imported without the 349 MB of upstream test baselines. The initial EffectScript stack has 11 commits on `257e874`, the `gitHead` of `typescript@next` 7.1.0-dev.20261015.1. EffectScript lives in `tsc/internal/effectscript/`, 5 files and 523 lines, and registers three hooks: a script transformer that runs before type erasure, a call-expression type hook, and an inferred-return-type hook. The upstream diff is 20 added and 12 removed lines in 5 existing files, plus 93 lines in 2 new files that define the hooks, so a rebase onto a newer nightly can conflict only in those 5 files.
 
-It already lowers calls by type and infers `Effect<A, E, R>` for `.es` functions, in one checker pass. A call runs when its resolved signature returns effect's own `Effect` or calls an `.es` Effect function, so a `Config` stays data (D24). A function whose body runs nothing stays plain JavaScript (D10). An unannotated function's E and R are the unions of what it runs, and the `.d.ts` declares them. On its three lowering cases it matches the prototype: the same `yield*` sites (2, 12, and 6), the same plain calls, including `Config.Port(…)` and `[1, 2, 3].map(double)`, and the same contracts, `lookup: Effect<string, NotFound, never>` and `main: Effect<void, NotFound, never>` (`~/effectscript-ts/EFFECTSCRIPT.md`).
+It already lowers calls by type and infers `Effect<A, E, R>` for `.es` functions, in one checker pass. A call runs when its resolved signature returns effect's own `Effect` or calls an `.es` Effect function, so a `Config` stays data (D24). A function whose body runs nothing stays plain JavaScript (D10). An unannotated function's E and R are the unions of what it runs, and the `.d.ts` declares them. On its three lowering cases it matches the prototype: the same `yield*` sites (2, 12, and 6), the same plain calls, including `Config.Port(…)` and `[1, 2, 3].map(double)`, and the same contracts, `lookup: Effect<string, NotFound, never>` and `main: Effect<void, NotFound, never>` (`typescript/EFFECTSCRIPT.md`).
 
 It needs only one pass because it ignores position: it has no programs as values (D7) and no per-candidate forms (D56), and its E and R miss what arrives through a cycle (D52). Failure semantics (`throw`, `try`, `using`), services, control operations, the prelude, `pipe`, `wire`, `fork`, handlers, ES diagnostics, `$direct` metadata, methods, and imports between `.es` files are not built yet. The single-pass harness's decisions are the reference for porting D56 and D52 into it.
 
@@ -3665,7 +3721,7 @@ npx esc --watch         # rebuild on change
 }
 ```
 
-The compiler is one native binary, `esc`, the fork of TypeScript's `tsc` (Chapter 27). It reads the same `tsconfig.json`, accepts every `tsc` flag, and checks `.ts` and `.es` files as one program. Package names use the `@effectscript` scope and change with the language's name (O9).
+The compiler is one native binary, `esc`, the fork of TypeScript's `tsc` (Chapter 27). It reads the same `tsconfig.json`, accepts every `tsc` flag, and checks `.ts` and `.es` files as one program. The name is EffectScript, the extension is `.es`, and package names use the `@effectscript` scope (D58). The compiler source is `typescript/` in the same private repository as the spec, runtime, and tools (D60).
 
 #### Packages and versions
 
@@ -3750,7 +3806,7 @@ Every code, with its quick fix:
 | ES1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
 | ES2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | ES2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
-| ES2003 | A return annotation that is not a full `Effect<A, E, R>` | Write the full contract | 14 |
+| ES2003 | A return annotation on a function with a body that is not `Effect<A, E, R>` with all three slots, each checked or written `infer Name` | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
 | ES2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
 | ES2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | ES2101 | A declaration without a body that has no full contract | Write `Effect<T, never, never>` | 14 |
@@ -3820,9 +3876,9 @@ What a debugger shows follows from the frame invariant (Chapter 26):
 
 ```text
 settled before this document      1-7     the owner's original decisions
-decisions since                   D1-D56  the owner's calls and the defaults that complete the design
+decisions since                   D1-D60  the owner's calls and the defaults that complete the design
 rules of the runtime and compiler P1-P22  adopted (D29), revised where the 2026-10-16 reviews broke them
-still the owner's call            O7, O8, O9, and pushing to a remote
+end-to-end build calls           D57-D60 closed; D57 and D58 are controversial
 ```
 
 Every rule in this document traces to one of these. The log with full reasons is `docs/design/DECISIONS.md`; a default is a decision made to complete the design, and the owner can overturn any default.
@@ -3839,9 +3895,11 @@ These come from the earlier conversation and are not reopened.
 6. New syntax must earn its place. Ordinary function syntax and the `Effect<A, E, R>` annotation reuse TypeScript syntax.
 7. Broad npm interoperability is not an MVP constraint. Interop with TypeScript code that already uses Effect is.
 
+D57 supplies the partial-annotation spelling required by decision 2: explicit `infer Name` slots.
+
 #### Decisions since
 
-"Will" marks the owner's decisions; every other row is a default.
+"Will" marks the owner's decisions; every other row is a default. **Controversial** marks a decision the owner is likely to revisit after using the language.
 
 | # | Decision | Reason and evidence | Chapters |
 | --- | --- | --- | --- |
@@ -3856,7 +3914,7 @@ These come from the earlier conversation and are not reopened.
 | D9 | A function value where a plain function is expected passes its plain-JavaScript form, or ES4301 | Fable review, finding 3 | 13, 16 |
 | D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; pure recursion on the JavaScript stack | Codex review R4; settled decision 4; the owner's `add` feedback | 15 |
 | D11 | Higher-order functions compile to frames in v0 | Fable review, finding 5 | 15, 16 |
-| D12 | A callback type without a contract accepts any contract; listed with O7 | Settled decision 2 forbids reading it as `never` | 16 |
+| D12 | A callback type without a contract accepts any contract; unchanged by D57 | Settled decision 2 forbids reading it as `never` | 16 |
 | D13 | `catch` handles a cause only when it holds no defect and no interruption | Codex review R1; K14a-K14c | 3, 17, 26 |
 | D14 | Only `using` acquisitions belong to the block | Codex review R8 | 6, 23, 26 |
 | D15 | A failure during cleanup is never dropped | Codex review R2b; K12a-K12e | 17, 21 |
@@ -3901,6 +3959,10 @@ These come from the earlier conversation and are not reopened.
 | D54 | Inside a plain-JavaScript function, `try`, `catch`, and `finally` are JavaScript's own; `catch` rethrows anything unexpected | D10 with D5: nothing in the function can pause | 15 |
 | D55 | A method implementing a plain-function member (`[Equal.symbol]`, `[Hash.symbol]`) compiles to a plain JavaScript method, or ES4301 | The member's declared type is not an Effect | 15 |
 | D56 | A lambda's form (plain, Effect function, program) is decided against each overload candidate's declared parameter type, and the first candidate that accepts it wins; never by the lambda's own inferred type. D10 eligibility is computed on demand | Single-pass experiment: 0 disagreements in 46 files; 6 probe lambdas with two self-consistent lowerings | 13, 15, 27 |
+| D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; omitted slots are ES2003. D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
+| D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; the repository stays private | Another compile-to-JavaScript language uses the name; rename before public release remains possible | 28 |
+| D59 | Draft upstream issues and proposals in `docs/upstream/`; status: drafted, not filed | Filing speaks for the owner in a third-party project and needs his go-ahead | 24, 25, 30 |
+| D60 | **Will.** One private repository, `github.com/roninjin10/effectscript`; the compiler lives in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
 
 #### Rules of the runtime and compiler
 
@@ -3921,7 +3983,7 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | P11 | The frame invariant; source regions compile to Effect frames, never JavaScript `try`, in functions that compile to frames | F1-F3 | 26 |
 | P12 | **Revised** as D10: plain JavaScript only with no Effect operation and E = never; pure recursion on the JavaScript stack; `pure` permits inlining only | F9, T6a; review probe R4 | 15 |
 | P13 | The kernel bounds synchronous wake-up depth | F10a, K10a, K10b | 24 |
-| P14 | A callback type without a contract is effect-polymorphic (D12); its spelling is with O7 | Settled decision 2 | 16 |
+| P14 | A callback type without a contract is effect-polymorphic (D12); D57 leaves this rule intact | Settled decision 2 | 16 |
 | P15 | Effect 4 only | Research §10 | 10 |
 | P16 | Fork `microsoft/TypeScript` `tsc/` at a published nightly; in-tree package; no shims | Compiler research | 27 |
 | P17 | A declaration without a body states its full contract; a bare return type there is an error, never `never` | Settled decision 2 | 14 |
@@ -3944,14 +4006,16 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | O10 | Does deep pure recursion overflow like JavaScript? | D10 |
 | O11 | What does a call to plain TypeScript mean? | D5, D22, D23 |
 
-#### Still the owner's call
+#### Closed calls for the end-to-end build
 
-| # | Question | Why it waits |
+| Former item | Decision | Result |
 | --- | --- | --- |
-| O7 | How are channels partially annotated, and is D12 acceptable until then? | The requirement is settled (decision 2); the spelling is the owner's. Until then, a contract has all three channels or none |
-| O8 | File the two Effect issues (G5), and propose a supported prompt primitive to the Effect maintainers (G1)? | Outward-facing |
-| O9 | Keep the name? `EffectScript` is taken by an unrelated compile-to-JavaScript language (`github.com/EffectScript/effectscript`, created 2026-02-23) | Must be decided before anything is published; package names (Chapter 28) follow it |
-| | Push any repository to a remote? | Outward-facing |
+| O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
+| O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
+| O9 | D58 (**controversial**) | Keep EffectScript, `esc`, `.es`, and `@effectscript` |
+| Remote and repository layout | D60 | The one repository is private at `github.com/roninjin10/effectscript`, with the compiler in `typescript/` |
+
+No language or repository decision waits on the owner. D59's filing boundary remains: these drafts are ready to file, and none is filed without his go-ahead. The build lanes land locally; the orchestrator handles any push.
 
 ### 30. Risks and experiments
 
@@ -3962,15 +4026,15 @@ the semantic gate              G16  one law suite for both runtime strategies (R
 the checker's foundation       G8   second-class continuations and the finalizer rule
 ```
 
-No design question in this list is open: every row states the rule that stands, what could go wrong in building it, and the experiment that checks it. The owner's open calls are in Chapter 29.
+No design question in this list is open: every row states the rule that stands, what could go wrong in building it, and the experiment that checks it. D57-D60 close the former open calls (Chapter 29); D57 and D58 are marked controversial. Upstream filing follows D59.
 
 #### Risks, in the order to work on them
 
 | # | Rule that stands | Risk | Experiment | What would change the rule |
 | --- | --- | --- | --- | --- |
-| G19 | The call rule is decided by types (Chapter 13) in one checker pass: a lambda's form per overload candidate (D44, D56), E and R of a recursive component by a fixpoint inside it (D52) | The hypothesis survives on the corpus and the probes (`prototype/single-pass/RESULTS.md`): one patched check reaches the prototype's lowering in 46 of 46 files with 0 disagreements, and each probe disagreement is a lambda with two self-consistent lowerings, which D56 decides, or mutual recursion. What remains is the iteration inside a recursive component, which the harness lacks, and holding the three forms in the Go checker, where the harness duplicated each lambda's text | Build both in the Go fork (`~/effectscript-ts`), compile the corpus and `prototype/single-pass/probes/`, and compare every lowering decision with the single-pass harness's and every contract with the prototype's | A construct that needs a check outside its own component; its rule changes so that one pass decides it |
+| G19 | The call rule is decided by types (Chapter 13) in one checker pass: a lambda's form per overload candidate (D44, D56), E and R of a recursive component by a fixpoint inside it (D52) | The hypothesis survives on the corpus and the probes (`prototype/single-pass/RESULTS.md`): one patched check reaches the prototype's lowering in 46 of 46 files with 0 disagreements, and each probe disagreement is a lambda with two self-consistent lowerings, which D56 decides, or mutual recursion. What remains is the iteration inside a recursive component, which the harness lacks, and holding the three forms in the Go checker, where the harness duplicated each lambda's text | Build both in the Go fork (`typescript/` in this repository, D60), compile the corpus and `prototype/single-pass/probes/`, and compare every lowering decision with the single-pass harness's and every contract with the prototype's | A construct that needs a check outside its own component; its rule changes so that one pass decides it |
 | G20 | The prototype covers the language's core (Chapter 27) | It does not yet emit `.d.ts` files, `$direct` metadata, source maps, or hovers; implement ES4202 or external iteration of producers; or test `this` inside Effect methods | Extend the prototype in that order, then port its decisions to the Go fork | A part whose rule cannot be implemented as written |
-| G1 | Strategy A is the runtime (Chapter 25) | An Effect release can break capture or abandonment without notice | Run the law suite against every Effect 4 patch release in CI. Propose a supported primitive (a `Fiber` stack splice plus interruptibility access, or `Effect.prompt`) to the Effect maintainers, with the kernel as the reference, once the owner approves (O8) | A release breaks a law with no workaround, or the maintainers reject any splice API; capture-heavy code then falls back to strategy B and loses transparency through TypeScript combinators |
+| G1 | Strategy A is the runtime (Chapter 25) | An Effect release can break capture or abandonment without notice | Run the law suite against every Effect 4 patch release in CI. Propose a supported primitive (a `Fiber` stack splice plus interruptibility access, or `Effect.prompt`) to the Effect maintainers, with the kernel as the reference, from the draft in `docs/upstream/`, with filing governed by D59 | A release breaks a law with no workaround, or the maintainers reject any splice API; capture-heavy code then falls back to strategy B and loses transparency through TypeScript combinators |
 | G16 | Strategy B is the reference semantics | The two strategies disagree today (R9) and pass separate suites | Write the Chapter 20 laws once against a small interface with an adapter per strategy; run both. First law: the reinstalled prompt records the resume site's Context | A law the two cannot both express, which would mean Chapter 20 is ambiguous |
 | G8 | Continuations are second-class; a finalizer handles its own control operations (Chapter 9) | The static checks are specified, not built | Implement both checks in a checker prototype; run them over the reference programs; count false positives | Correct handlers, such as schedulers, that need escapes `transfer` cannot express |
 | G9 | Callback types without contracts are effect-polymorphic (D12); inferred contracts are shown on hover | Unreadable inferred types defeat inference | Infer the reference programs' contracts with the rules of Chapters 14 and 16; check multiple callbacks, returned callbacks, aliases, and declaration round trips | A callback that needs more than one row variable to read correctly |
@@ -3981,7 +4045,7 @@ No design question in this list is open: every row states the rule that stands, 
 | G13 | `wire` reports missing, duplicate, and cyclic providers from Layer types (D27) | Layer types might not carry enough to order a graph | Implement `wire` over Layer types; test missing, ambiguous, cyclic, failing-acquisition, residual-requirement, and run-time-selected graphs | Layer types that do not carry enough to order the graph |
 | G11 | The ABI and diagnostics map through `.es` spans (Chapters 27, 28) | The Go fork emits declarations, but its generated nodes carry no source positions and its language service is untested | In the fork, lower `displayName`; check the declaration, a type error at the `.es` span, and hover | Spans that lowering cannot map back to the `.es` source |
 | G18 | Workflow bodies are ordinary programs under replay (D42) | A producer or handler inside a replayed body might keep state across executions | Run a workflow whose body iterates a producer and installs a handler, suspend it durably mid-iteration, replay it, and check that finalizers ran once per execution and nothing carried over | State that survives into a replay |
-| G5 | Effect's own wake-ups are unbounded (F10), and its generator frames skip `finally` (F1-F3) | EffectScript code waiting on `Deferred` chains inherits the overflow, and TypeScript users leak resources | Draft issues with minimal repros are in `docs/upstream/`; filing them waits for the owner (O8) | Upstream treats unbounded synchronous wake-ups as intended; EffectScript then wraps `Deferred` and `PubSub` waits in `suspend` |
+| G5 | Effect's own wake-ups are unbounded (F10), and its generator frames skip `finally` (F1-F3) | EffectScript code waiting on `Deferred` chains inherits the overflow, and TypeScript users leak resources | Draft issues with minimal repros are in `docs/upstream/`; their status is drafted, not filed (D59) | Upstream treats unbounded synchronous wake-ups as intended; EffectScript then wraps `Deferred` and `PubSub` waits in `suspend` |
 | G14 | Abandonment unwinds as an interruption (P8) | Finalizers see a sentinel interrupt id; diagnostics cannot yet say "abandoned" | Annotate the abort cause, or add a reason, and check what `Cause.pretty` and finalizers show | |
 | G15 | Typed failures do not cross JavaScript frames in v0 (D10, D9) | A pure helper that throws a typed error compiles to frames, not plain JavaScript | Bridge typed failures as branded exceptions caught at the nearest frame; measure cost and correctness | |
 | G17 | Capture copies the segment (Chapter 25) | Capture at every level of a deep recursion copies quadratically (79 ms at depth 8,000) | Prototype a segmented `_stack` in a patched Effect build and rerun `bench/deep-capture.ts` | Real producers nest deep enough for the quadratic term to dominate their own work |
@@ -3999,7 +4063,7 @@ No design question in this list is open: every row states the rule that stands, 
 | Review, first draft | Five kernel bugs from the conformance review (abandonment Exit, pending interruptions, abort leaking through a finalizer's capture, transfer revocation, registration leak) | Fixed; the review's 54 tests run with the suite |
 | Reviews, 2026-10-16 | Five defects in implementation and lowering: tail resume from a compiled clause (R10, Fable 1), a cleanup defect dropped by explicit `abandon` (R2b), a transfer outliving its fiber (R5), `Effect.catch` recovering a defect (R1), and masked acquisition blocking cancellation (R3, Fable 2) | Fixed. Regression tests K11-K14 cover the kernel changes, and 12 of them fail on a copy of the kernel with the fixes reverted; K15 pins Effect's own acquisition behavior (`experiments/KERNEL-CHANGES.md`) |
 | Reviews, 2026-10-16 | Rule gaps: catch with mixed causes, `using` ownership, `resumeWith` requirements, fork outside a region, provider sharing, control operations through TypeScript, function values in plain positions, trust for foreign code | Decided: D13, D14, D17, D19, D21, D20, D9, D5 with D22 and D23 |
-| Coverage audit | Seventeen gaps found by mapping every Effect docs page (`docs/research/effect-feature-coverage.md`) | Decided: D22-D28 and D37-D43; tooling D30-D36; O7 stays with the owner |
+| Coverage audit | Seventeen gaps found by mapping every Effect docs page (`docs/research/effect-feature-coverage.md`) | Decided: D22-D28 and D37-D43; tooling D30-D36; partial annotations are settled by D57 |
 
 #### Reference programs
 
@@ -4144,7 +4208,7 @@ bun harness/passes.ts         # the prototype's decision changes per pass
 #### The Go fork
 
 ```sh
-cd /Users/williamcory/effectscript-ts
+cd typescript                    # from the repository root
 effectscript/smoke.sh            # builds tsc (about 75 s cold), then compiles and runs every case
 effectscript/smoke.sh es-infer   # one case
 ```
@@ -4155,11 +4219,11 @@ effectscript/smoke.sh es-infer   # one case
 | `es-lower` | Calls run by type: pure helpers stay plain, Effect-returning calls run, operands run left to right, and a `Config` stays data |
 | `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, and the `.d.ts` declares it |
 
-`~/effectscript-ts/EFFECTSCRIPT.md` records the base, the 11 commits, the upstream lines it changes, and the differential check against the prototype.
+`typescript/EFFECTSCRIPT.md` records the base, the 11 commits, the upstream lines it changes, and the differential check against the prototype.
 
 #### Research and drafts
 
-- `docs/design/DECISIONS.md`: the decision log, D1-D56.
+- `docs/design/DECISIONS.md`: the decision log, D1-D60.
 - `docs/research/effect4-runtime.md`: Effect 4.0.5 runtime facts, with 23 scripts in `experiments/scratch-agent-a/scripts/`. Scripts written for this design live in `experiments/scripts/`.
 - `docs/research/continuation-prior-art.md`: OCaml 5, Kotlin, Swift, Loom, WasmFX, Koka, Effekt, Effection, js_of_ocaml, and the papers.
 - `docs/research/vibelang.md`: VibeLang `main` (`c60eca97`) and the unmerged checkpoint (`ebe89a2b`).
@@ -4171,7 +4235,7 @@ effectscript/smoke.sh es-infer   # one case
 - `experiments/KERNEL-CHANGES.md`: the 2026-10-16 kernel fixes.
 - `prototype/esc/FINDINGS.md`: what the prototype compiler found.
 - `prototype/single-pass/RESULTS.md`: the single-pass experiment (D56, D52).
-- `~/effectscript-ts/EFFECTSCRIPT.md`: the Go fork's base, commits, seams, and gaps.
+- `typescript/EFFECTSCRIPT.md`: the Go fork's base, commits, seams, and gaps.
 - `docs/upstream/`: draft Effect issues for F10 and F1-F3, not filed.
 
 ### B. Prior art
@@ -4221,7 +4285,7 @@ function loadUser(id: string) {
 }
 ```
 
-Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to EffectScript. **Changed** means EffectScript has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. The one open item is partial annotation (O7).
+Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to EffectScript. **Changed** means EffectScript has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
 
 #### C1. Getting started: the Effect type, creating, running, generators, pipelines
 
@@ -4229,7 +4293,7 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | --- | --- | --- |
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an EffectScript function |
-| Annotate one channel, infer the rest | Owner's call (O7) | Until decided, a contract has all three channels or none |
+| Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
 | Installation | Changed | `effect@4.0.5`, `@effectscript/runtime`, and `@effectscript/compiler` (Chapter 28) |
 | Importing Effect | Changed | The prelude needs no import (`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, and the built-ins); other modules come from `effect` |
 | `Effect.succeed` | Changed | `return 42` |

@@ -4,9 +4,9 @@
 
 ```text
 settled before this document      1-7     the owner's original decisions
-decisions since                   D1-D56  the owner's calls and the defaults that complete the design
+decisions since                   D1-D60  the owner's calls and the defaults that complete the design
 rules of the runtime and compiler P1-P22  adopted (D29), revised where the 2026-10-16 reviews broke them
-still the owner's call            O7, O8, O9, and pushing to a remote
+end-to-end build calls           D57-D60 closed; D57 and D58 are controversial
 ```
 
 Every rule in this document traces to one of these. The log with full reasons is `docs/design/DECISIONS.md`; a default is a decision made to complete the design, and the owner can overturn any default.
@@ -23,9 +23,11 @@ These come from the earlier conversation and are not reopened.
 6. New syntax must earn its place. Ordinary function syntax and the `Effect<A, E, R>` annotation reuse TypeScript syntax.
 7. Broad npm interoperability is not an MVP constraint. Interop with TypeScript code that already uses Effect is.
 
+D57 supplies the partial-annotation spelling required by decision 2: explicit `infer Name` slots.
+
 #### Decisions since
 
-"Will" marks the owner's decisions; every other row is a default.
+"Will" marks the owner's decisions; every other row is a default. **Controversial** marks a decision the owner is likely to revisit after using the language.
 
 | # | Decision | Reason and evidence | Chapters |
 | --- | --- | --- | --- |
@@ -40,7 +42,7 @@ These come from the earlier conversation and are not reopened.
 | D9 | A function value where a plain function is expected passes its plain-JavaScript form, or ES4301 | Fable review, finding 3 | 13, 16 |
 | D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; pure recursion on the JavaScript stack | Codex review R4; settled decision 4; the owner's `add` feedback | 15 |
 | D11 | Higher-order functions compile to frames in v0 | Fable review, finding 5 | 15, 16 |
-| D12 | A callback type without a contract accepts any contract; listed with O7 | Settled decision 2 forbids reading it as `never` | 16 |
+| D12 | A callback type without a contract accepts any contract; unchanged by D57 | Settled decision 2 forbids reading it as `never` | 16 |
 | D13 | `catch` handles a cause only when it holds no defect and no interruption | Codex review R1; K14a-K14c | 3, 17, 26 |
 | D14 | Only `using` acquisitions belong to the block | Codex review R8 | 6, 23, 26 |
 | D15 | A failure during cleanup is never dropped | Codex review R2b; K12a-K12e | 17, 21 |
@@ -85,6 +87,10 @@ These come from the earlier conversation and are not reopened.
 | D54 | Inside a plain-JavaScript function, `try`, `catch`, and `finally` are JavaScript's own; `catch` rethrows anything unexpected | D10 with D5: nothing in the function can pause | 15 |
 | D55 | A method implementing a plain-function member (`[Equal.symbol]`, `[Hash.symbol]`) compiles to a plain JavaScript method, or ES4301 | The member's declared type is not an Effect | 15 |
 | D56 | A lambda's form (plain, Effect function, program) is decided against each overload candidate's declared parameter type, and the first candidate that accepts it wins; never by the lambda's own inferred type. D10 eligibility is computed on demand | Single-pass experiment: 0 disagreements in 46 files; 6 probe lambdas with two self-consistent lowerings | 13, 15, 27 |
+| D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; omitted slots are ES2003. D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
+| D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; the repository stays private | Another compile-to-JavaScript language uses the name; rename before public release remains possible | 28 |
+| D59 | Draft upstream issues and proposals in `docs/upstream/`; status: drafted, not filed | Filing speaks for the owner in a third-party project and needs his go-ahead | 24, 25, 30 |
+| D60 | **Will.** One private repository, `github.com/roninjin10/effectscript`; the compiler lives in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
 
 #### Rules of the runtime and compiler
 
@@ -105,7 +111,7 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | P11 | The frame invariant; source regions compile to Effect frames, never JavaScript `try`, in functions that compile to frames | F1-F3 | 26 |
 | P12 | **Revised** as D10: plain JavaScript only with no Effect operation and E = never; pure recursion on the JavaScript stack; `pure` permits inlining only | F9, T6a; review probe R4 | 15 |
 | P13 | The kernel bounds synchronous wake-up depth | F10a, K10a, K10b | 24 |
-| P14 | A callback type without a contract is effect-polymorphic (D12); its spelling is with O7 | Settled decision 2 | 16 |
+| P14 | A callback type without a contract is effect-polymorphic (D12); D57 leaves this rule intact | Settled decision 2 | 16 |
 | P15 | Effect 4 only | Research §10 | 10 |
 | P16 | Fork `microsoft/TypeScript` `tsc/` at a published nightly; in-tree package; no shims | Compiler research | 27 |
 | P17 | A declaration without a body states its full contract; a bare return type there is an error, never `never` | Settled decision 2 | 14 |
@@ -128,11 +134,13 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | O10 | Does deep pure recursion overflow like JavaScript? | D10 |
 | O11 | What does a call to plain TypeScript mean? | D5, D22, D23 |
 
-#### Still the owner's call
+#### Closed calls for the end-to-end build
 
-| # | Question | Why it waits |
+| Former item | Decision | Result |
 | --- | --- | --- |
-| O7 | How are channels partially annotated, and is D12 acceptable until then? | The requirement is settled (decision 2); the spelling is the owner's. Until then, a contract has all three channels or none |
-| O8 | File the two Effect issues (G5), and propose a supported prompt primitive to the Effect maintainers (G1)? | Outward-facing |
-| O9 | Keep the name? `EffectScript` is taken by an unrelated compile-to-JavaScript language (`github.com/EffectScript/effectscript`, created 2026-02-23) | Must be decided before anything is published; package names (Chapter 28) follow it |
-| | Push any repository to a remote? | Outward-facing |
+| O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
+| O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
+| O9 | D58 (**controversial**) | Keep EffectScript, `esc`, `.es`, and `@effectscript` |
+| Remote and repository layout | D60 | The one repository is private at `github.com/roninjin10/effectscript`, with the compiler in `typescript/` |
+
+No language or repository decision waits on the owner. D59's filing boundary remains: these drafts are ready to file, and none is filed without his go-ahead. The build lanes land locally; the orchestrator handles any push.

@@ -29,9 +29,35 @@ function convert(amount: number, currency: string) {
 
 Errors and services from several calls accumulate as unions. Catching a failure removes that handled failure from `E`; providing a service removes that requirement from `R`. Write a full annotation when you want the compiler to check a promise, such as `Effect<number, never, Rates>`.
 
-Partial annotations must infer omitted channels rather than set them to `never`. Until the partial-annotation spelling is chosen, write all three channels or leave the annotation off. A bare return annotation such as `: number` is ES2003.
+## Check selected channels
 
-> **Not designed yet.** How do you write an annotation that fixes only selected channels and leaves the others inferred?
+```ts
+function rate(currency: string): Effect<number, infer E, Rates> {
+  return Rates.lookup(currency)
+}
+// Checks number and Rates; infers MissingRate.
+
+function rateOrDie(currency: string): Effect<number, never, infer R> {
+  return Effect.orDie(() => Rates.lookup(currency))
+}
+// Checks number and never; infers Rates.
+
+function label(currency: string): Effect<infer A, MissingRate, Rates> {
+  return Rates.lookup(currency).toFixed(2)
+}
+// Infers string; checks MissingRate and Rates.
+
+function checkedConversion(amount: number, currency: string): Effect<number, infer E, infer R> {
+  return convert(amount, currency)
+}
+// Checks number; infers MissingRate and Rates.
+```
+
+In a return annotation on a function with a body, `infer` followed by any name infers that channel from the body. Other slots are promises the compiler checks. The name is documentation only and is not in scope in the body or other slots. `infer _` is allowed, including `Effect<infer _, infer _, infer _>` to infer all three channels.
+
+Write all three slots. `Effect<number>` in this position reports ES2003: "Did you mean never or inferred?" The quick fixes offer `Effect<number, never, never>` to check for no failures or requirements, and `Effect<number, infer E, infer R>` to infer them. A bare return annotation such as `: number` is also ES2003.
+
+This applies only to function return annotations with bodies in `.es`. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults: `Effect<number, never, never>`. Those positions do not support this channel inference. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 
 ## Description and execution
 

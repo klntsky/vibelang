@@ -4,9 +4,11 @@ Audit of `docs/design/effectscript-design.md` (proposal dated 2026-10-15, 2,732 
 
 EffectScript answers an Effect feature in one of three ways: a language form replaces it (statements, `throw`, `try`, `using`, `service`, producers), a rule lets Effect's own API be used as is (a call runs; a function with no arguments is a program), or the proposal has no answer. This file sorts every documented Effect feature into **Changed**, **Unchanged**, or **Gap**, shows the Effect 4 form beside the EffectScript form, and answers the questions an Effect user will ask first.
 
+> Historical audit. The counts and quoted forms describe the 2026-10-15 proposal. D57 closes partial annotations with explicit `infer Name` slots; D58-D60 settle naming, upstream drafts, and the single-repository layout. Current user guidance is in `docs/user/` and the spec.
+
 ## Summary
 
-The proposal answers 266 of the 309 Effect features audited here: 130 with a form of its own and 136 by using Effect's API unchanged, which its call rule makes intentional. The other 43 rows point to 17 gaps, 15 found by this audit and two the proposal already lists (G12, O7). Two of the new ones are rules that give wrong-looking answers for code Effect users write every day: `Config`, `Exit`, SQL statements, CLI commands, and service references are Effects in 4.0.5, so Chapter 11 runs them where they are built (X1); and a `.es` `try`/`catch` no longer catches an exception from a plain call such as `JSON.parse`, which `Effect.gen` catches today (X2).
+The proposal answers 266 of the 309 Effect features audited here: 130 with a form of its own and 136 by using Effect's API unchanged, which its call rule makes intentional. The other 43 rows point to 17 gaps, 15 found by this audit and two the audited proposal already listed (G12, former O7, now D57). Two of the new ones are rules that give wrong-looking answers for code Effect users write every day: `Config`, `Exit`, SQL statements, CLI commands, and service references are Effects in 4.0.5, so Chapter 11 runs them where they are built (X1); and a `.es` `try`/`catch` no longer catches an exception from a plain call such as `JSON.parse`, which `Effect.gen` catches today (X2).
 
 EffectScript changes how a program is written and leaves Effect's semantics alone. Functions replace generators; `throw`, `try`, `finally`, and `using` replace the error and resource combinators; `service` and `wire` replace hand-built tags and layer plumbing; and `() => f()` stands wherever Effect expects a program. Concurrency, interruption, scheduling, state, caching, batching, Schema, platform services, HTTP, AI, and RPC keep their Effect APIs. Async needs no new construct, because a call already waits and Promises go through `Effect.tryPromise`; concurrency is always an explicit Effect combinator. The gaps sit at boundaries the rules do not define yet: callbacks passed to pure TypeScript helpers, runners inside `.es` code, Stream interop, and values that are both data and Effects.
 
@@ -51,7 +53,7 @@ Gaps, most frequently hit first ([details](#gaps-ranked-by-how-often-an-effect-u
 4. **G12** Producers and `Stream`: the adapters, and `for...of` over a `Stream` (the proposal's own gap).
 5. **X1** Values that are both data and Effects: `Config`, `Exit`, SQL statements, CLI commands, toolkits, `Context.Reference`.
 6. **X5** Layer sharing across sibling `provide` calls.
-7. **O7** Annotating one channel and inferring the rest (the proposal's own open item).
+7. **Partial annotations (former O7, closed by D57).** Use `infer Name` for inferred slots in a return annotation with a body; every slot must be present.
 8. **X8** `fork` in a function with no Scope region.
 9. **X12** `service` lacks Effect 4's `make` option and `Context.Reference` defaults.
 10. **X13** Service members that return plain values or are Effect values (`Path.Path.join`).
@@ -63,7 +65,7 @@ Gaps, most frequently hit first ([details](#gaps-ranked-by-how-often-an-effect-u
 
 Seven answers in the proposal look wrong as written; [the list](#answers-that-look-wrong) gives each with its chapter.
 
-A decision log written while this audit ran (`docs/design/DECISIONS.md`, D1 to D36, dated 2026-10-16) settles 9 of the 17 gaps with default decisions (X1, X3, X5, X6, X8, X10, X15, X16, and the design half of G12), narrows 4 (X2, X4, X11, X12), and leaves 4 open (O7, X9, X13, X17); the gap table's last column gives each status. D24 is X1's option (a) and D9 is X3's proposed rule. The log also changes surface syntax this file quotes from the proposal: services become abstract classes (D1), `TaggedError`, `Schema`, and `Layer` join the prelude (D3, D4), and platform APIs such as `fetch` are not callable from `.es` (D5, ES4402).
+A decision log written while this audit ran (`docs/design/DECISIONS.md`, D1 to D36, dated 2026-10-16) settles 9 of the 17 gaps with default decisions (X1, X3, X5, X6, X8, X10, X15, X16, and the design half of G12), narrows 4 (X2, X4, X11, X12), and at that time left 4 open (O7, X9, X13, X17); D57, D39, D41, and D42 now settle those four; the gap table's last column gives each status. D24 is X1's option (a) and D9 is X3's proposed rule. The log also changes surface syntax this file quotes from the proposal: services become abstract classes (D1), `TaggedError`, `Schema`, and `Layer` join the prelude (D3, D4), and platform APIs such as `fetch` are not callable from `.es` (D5, ES4402).
 
 ## Sources
 
@@ -120,7 +122,7 @@ Docs pages: Welcome, Why Effect?, The Effect Type, Installation, Creating Effect
 | --- | --- | --- | --- | --- |
 | The `Effect<A, E, R>` type | Changed | `const f = (id: string): Effect.Effect<User, UserNotFound, Users> => …` | inferred for every function; written as a return annotation `Effect<A, E, R>` (ambient, no import), which may be wider than the body, never narrower | Ch. 1, 2, 12 |
 | Type helpers (`Effect.Success`, `Effect.Error`, `Effect.Services`) | Unchanged | `type R = Effect.Services<typeof program>` | same, applied to the TypeScript-visible type of an EffectScript function | Ch. 10 (derived) |
-| Annotate one channel, infer the rest | Gap O7 | not needed; TypeScript infers | required by settled decision 2; spelling open | Ch. 12, O7 |
+| Annotate one channel, infer the rest | Changed (D57) | not needed; TypeScript infers | `Effect<A, infer E, infer R>` in return annotations with bodies; all slots required | Ch. 14, D57 |
 | Installation and project setup | Gap X16 | `npm install effect`; TypeScript 5.9+, `strict` | Ch. 25 describes a TypeScript compiler fork and an `@effectscript/runtime` package, with no install, build-tool, or test-runner setup | Ch. 25 |
 | Importing Effect | Unchanged | `import { Effect } from "effect"` | same. `Effect<A, E, R>` and the built-ins `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`, `transfer` are ambient; whether they shadow an imported `pipe` is unstated (Fable review, finding 12) | Ch. 1 |
 | Succeed (`Effect.succeed`) | Changed | `Effect.succeed(42)` | `return 42` | Ch. 2 |
@@ -622,7 +624,7 @@ Rank comes from the usage census in [appendix A](#appendix-a-usage-census) (file
 | 4 | [G12](#g12-producers-and-streams) Producers and Streams | `for (const e of events)` over a `Stream`; a producer feeding `Stream.mapEffect` with concurrency | `Stream.*` 497 / 82; `Stream.run*` 284 / 39 | G12 | Design settled by D26: a producer is a `Stream` wherever one is expected, and `for...of` over a `Stream` pulls with `Stream.toPull`; the experiment remains |
 | 5 | [X1](#x1-values-that-are-both-data-and-effects) Values that are both data and Effects | `` sql`SELECT …`.stream ``; `Exit.succeed(1)` in an assertion; a top-level `Command.make(...)` | Effect SQL templates 271 / 4; `Exit` constructors 114 / 4 (90 in tests); `Context.Reference` 41 / 5 | none | Settled by D24: a call runs only when its type is `Effect<A, E, R>` itself; a richer subtype is data until called; `new` never runs |
 | 6 | [X5](#x5-layer-sharing-across-provide-calls) Layer sharing across `provide` calls | two `Effect.provide(() => …, AppLive)` calls in one program | `Effect.provide` 1,577 / 150 (8,124 call sites in Smithers) | Fable review, finding 6 | Settled by D21: each `provide` builds its layers once; provide at `main` |
-| 7 | O7 Partial contracts | "this export never fails; infer the rest" | not measurable by search | O7 | Open (Will) |
+| 7 | Partial contracts (former O7) | "this export never fails; infer the rest" | not measurable by search | D57 | Closed: `Effect<infer A, never, infer R>` |
 | 8 | [X8](#x8-fork-outside-a-scope-region) `fork` outside a Scope region | `fork(() => poll())` in a function with no `using` | fork variants 429 / 97 | O5; Fable review, finding 9 | Settled by D19: `fork` is block-owned |
 | 9 | [X12](#x12-service-declarations-and-effect-4-service-features) Service declarations and Effect 4 service features | `make`, `static layer`, `Context.Reference` defaults | `extends Context.Service` 140 / 145; `Context.Reference` 41 / 5 | O2 | Narrowed by D1: services are abstract classes that may carry `static layer`; `Context.Reference` defaults unaddressed |
 | 10 | [X13](#x13-service-members-that-are-not-effect-returning-methods) Service members that are not Effect-returning methods | `Path.Path.join(a, b)`, `Terminal.Terminal.readLine` | `FileSystem`/`Path` 424 / 81 | none | Open: D1 allows `abstract readonly` value members; TypeScript services with plain methods are unaddressed |

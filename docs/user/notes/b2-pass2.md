@@ -25,7 +25,7 @@ The retrying, timing-out, sandboxing, and layer-memoization pages needed no chan
 
 Remaining in the 18 pages: **0 Proposed**, **0 Not designed yet**.
 
-Removed the sole Proposed block from `025-services.md`: D45 now specifies an implementation interface plus a key class, and local `Context.Service.Shape<T>` extracts the shape from `Context.Key`. No marker was retained. Neither owner-only open question, partial-annotation spelling or the language's name, appears as a marker in this batch.
+Removed the sole Proposed block from `025-services.md`: D45 now specifies an implementation interface plus a key class, and local `Context.Service.Shape<T>` extracts the shape from `Context.Key`. No marker was retained. D57 and D58 close the former partial-annotation and language-name questions; neither appears as a marker in this batch.
 
 ## Spec issues and ambiguities
 

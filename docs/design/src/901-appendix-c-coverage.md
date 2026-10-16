@@ -8,7 +8,7 @@ function loadUser(id: string) {
 }
 ```
 
-Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to EffectScript. **Changed** means EffectScript has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. The one open item is partial annotation (O7).
+Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to EffectScript. **Changed** means EffectScript has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
 
 #### C1. Getting started: the Effect type, creating, running, generators, pipelines
 
@@ -16,7 +16,7 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | --- | --- | --- |
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an EffectScript function |
-| Annotate one channel, infer the rest | Owner's call (O7) | Until decided, a contract has all three channels or none |
+| Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
 | Installation | Changed | `effect@4.0.5`, `@effectscript/runtime`, and `@effectscript/compiler` (Chapter 28) |
 | Importing Effect | Changed | The prelude needs no import (`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, and the built-ins); other modules come from `effect` |
 | `Effect.succeed` | Changed | `return 42` |

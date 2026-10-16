@@ -33,7 +33,7 @@ No markers were kept. The three earlier markers are resolved:
 - `086-getting-started.md`, Not designed yet: D22/D37 permit direct guards and assertions with normal TypeScript narrowing. A required boundary no longer separates the check from the narrowed variable. Assertion exceptions remain defects.
 - `099-standard-schema.md`, Proposed: D23 permits plain calls inside `Effect.tryPromise`; `Promise.resolve` supplies the Promise shape that boundary expects for either Standard Schema result form.
 
-The owner's open partial-annotation spelling and language-name questions do not occur as markers in this batch. Examples use full contracts where annotated and retain the current EffectScript name.
+D57 and D58 close the former partial-annotation and language-name questions; neither appears as a marker in this batch. Examples use full contracts where annotated and retain the current EffectScript name.
 
 ## Spec issue
 

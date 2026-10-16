@@ -54,7 +54,7 @@ The contract has exactly three channels. Whether a function can pause is a separ
 
 #### Declarations without bodies
 
-Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its full contract. A bare return type is an error, never a silent `Effect<A, never, never>`:
+Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `Effect<A, never, never>`. Effect type arguments keep their TypeScript defaults in these declarations, so `Effect<A>` means `Effect<A, never, never>` (D57):
 
 ```ts es
 abstract class Rates {
@@ -72,7 +72,54 @@ A service's value members are not calls, so they take any type: `abstract readon
 
 #### Partial annotations
 
-You will often want to fix one channel and leave the others to inference, for example to promise that a function never fails without listing its services. The requirement is settled: each channel can be inferred or declared independently, and a channel you leave out is inferred, never assumed to be `never`. The spelling is the owner's call (O7, Chapter 29). Until it is chosen, a contract is written with all three channels or not at all, so a return annotation on a function with a body that is not a full `Effect<A, E, R>`, such as `: number`, is ES2003.
+In the return annotation of a function with a body, write all three channel slots. A slot written `infer` followed by a name comes from the body; every other slot is checked (D57).
+
+```ts es
+function find(id: string): Effect<User, infer E, never> {
+  return Effect.fail(new UserNotFound({ id }))
+}
+// Checks A = User and R = never; infers E = UserNotFound.
+
+function load(id: string): Effect<User, never, infer R> {
+  return Effect.orDie(() => Users.find(id))
+}
+// Checks A = User and E = never; infers R = Users.
+
+function plan(id: string): Effect<infer A, UserNotFound, Users> {
+  return Users.find(id).name
+}
+// Infers A = string; checks E = UserNotFound and R = Users.
+
+function greeting(id: string): Effect<string, infer E, infer R> {
+  return `Hello, ${Users.find(id).name}`
+}
+// Checks A = string; infers E = UserNotFound and R = Users.
+
+function inferred(id: string): Effect<infer _, infer _, infer _> {
+  return Users.find(id)
+}
+// Effect<User, UserNotFound, Users>, as with no annotation.
+```
+
+The name after `infer` is documentation only and is not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
+
+Omission is an error in this position. Neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel should be checked as `never` or inferred. A bare return annotation such as `: User` is also ES2003.
+
+```ts es
+function find(id: string): Effect<User> {
+  return Users.find(id)
+}
+```
+
+```text
+error ES2003: Effect<User> leaves contract channels unspecified. Did you mean never or inferred?
+  Write Effect<User, never, never> to check E and R as never.
+  Or write Effect<User, infer E, infer R> to infer E and R from the body.
+```
+
+These are two distinct quick fixes. The first can then report ES2001 or ES2002 when the body fails or needs services. The second keeps those channels inferred.
+
+This rule applies only to the return annotation of an EffectScript function with a body. Parameter types, type aliases, abstract members, and `.ts` files keep TypeScript's meaning of `Effect<User>`, including its `never` defaults. They do not gain channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
 
 #### Recursion
 

@@ -113,7 +113,16 @@ error ES2001: UserNotFound can escape greeting, but its contract says E = never.
   Catch it inside greeting, or change the contract to Effect<string, UserNotFound, Users>.
 ```
 
-You will often want to state one channel and leave the others to inference, for example "this function never fails" without listing its services. Every channel can be inferred or declared independently, and a channel you leave out is inferred, never assumed to be `never`. The spelling of a partial annotation is one of the owner's open calls ([Part V](#29-decisions), O7); until it is chosen, you write all three channels or none.
+To check selected channels, write `infer` followed by a name in each channel the compiler should infer (D57):
+
+```ts es
+function greeting(id: string): Effect<string, infer E, infer R> {
+  return `Hello, ${Users.find(id).name}`
+}
+// Effect<string, UserNotFound, Users>
+```
+
+Here A is checked, and E and R come from the body. `Effect<string, never, infer R>` instead promises no expected failures while inferring services. All three slots must be present: `Effect<string>` in a return annotation on a function with a body is ES2003, with fixes for explicit `never` or explicit inference ([Chapter 14](#14-contracts-and-inference)). The name after `infer` is documentation only; it introduces no type variable.
 
 #### Calling TypeScript
 

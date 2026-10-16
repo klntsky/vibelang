@@ -10,7 +10,7 @@ Reviewed all 20 pages in observability, scheduling, state-management, caching, a
 
 ## Markers kept
 
-None. Remaining markers: 0 Proposed, 0 Not designed yet. The SDK marker's language-policy questions are answered by the current spec: a bridge supplies a Layer, foreign calls need a declared boundary or trust, and synchronous callbacks cannot perform Effect operations. The page keeps its locally verified OTLP example rather than adding an unverified bridge API. No page in this batch raises the owner's partial-annotation or language-name questions.
+None. Remaining markers: 0 Proposed, 0 Not designed yet. The SDK marker's language-policy questions are answered by the current spec: a bridge supplies a Layer, foreign calls need a declared boundary or trust, and synchronous callbacks cannot perform Effect operations. The page keeps its locally verified OTLP example rather than adding an unverified bridge API. D57 and D58 close the former partial-annotation and language-name questions; neither needs a marker.
 
 ## Spec issues and ambiguities
 
