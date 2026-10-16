@@ -2631,6 +2631,7 @@ Rules:
 - **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds a defect or an interruption passes through `catch` untouched, including its expected failures. Effect's own `Effect.catch` recovers such a cause and drops the defect (Codex review R1, `internal/effect.ts:158-165, 2665-2685`); source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26).
 - **Cleanup runs in reverse order of acquisition**, once per exit, with interruption held off until it finishes.
 - **A failure during cleanup is never dropped.** It is added to the cause being reported, on every path: a block's exit, a clause that abandons, an explicit `abandon` while an interruption is pending, a scope that closes, and a fiber that exits (K12a-K12e, K13d).
+- **Control cannot leave a `finally` block.** A `return`, `break`, or `continue` there would replace the block's exit, and in JavaScript it discards a failure in flight, so it is ES2006.
 - **Abandonment unwinds like interruption.** Cleanup sees an interrupted exit, `catch` does not run, and the handler that abandoned the program continues only after cleanup finishes. A cleanup failure during abandonment fails the `handle` or the `abandon` call that abandoned.
 - **Cleanup that uses a control operation handles it inside the cleanup** (Chapter 9). A handler outside could stop the cleanup partway.
 
@@ -3840,6 +3841,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | ES2003 | A return annotation on a function with a body that is not `Effect<A, E, R>` with all three slots, each checked or written `infer Name` | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
 | ES2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
 | ES2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
+| ES2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | ES2101 | A declaration without a body that has no full contract | Write `Effect<T, never, never>` | 14 |
 | ES2102 | A recursive function whose A depends on its own result | Write the contract | 14 |
 | ES3001 | Two services share a key | Rename one | 4 |

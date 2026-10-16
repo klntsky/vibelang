@@ -84,6 +84,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `recursion` | `isOdd` and `isEven` learn each other's failures through their cycle (D52), a caller outside reads the solved contract, and a self-recursive `totalSize` needs no contract |
 | `es2102-recursive-success.fail` | Effect functions whose A depends on their own result need a contract; a pure recursive function keeps TypeScript's rules |
 | `es2102-cycle-catch.fail` | A `catch` whose `try` block calls into a cycle with inferred contracts needs a written contract on the cycle |
+| `es2006-finally-jump.fail` | A `return` and a `continue` that leave `finally` blocks are ES2006; a `break` that stays inside one is not |
 | `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 | `lambda-forms` | A lambda takes the form the overload candidate under check declares, and the first candidate that accepts it in that form wins: the overload probes behind `../prototype/single-pass/RESULTS.md`, including a returned lambda, which is plain |
 | `programs` | A lambda with no parameters is a program where Effect expects an Effect: `retry`, `race`, `timeout`, `all` over an array and a record, `provide`, a stored lambda that reruns, and an object property typed through `Layer.succeed`'s `NoInfer<S>` |
@@ -222,6 +223,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 77 | `kxzmxurw` | checker: add hooks for checked return types and infer outside conditional types | Seams for checking returns against A and for `infer Name` channels |
 | 78 | `stuypkuq` | effectscript: check written contracts (ES2001, ES2002, ES2003, D57) | A written contract is checked, and `infer` channels come from the body |
 | 79 | `ovsoxmyu` | effectscript: solve E and R of call cycles as a fixpoint (D52, ES2102) | `isEven` and `isOdd` both fail with what either throws |
+| 80 | `uvuursyx` | effectscript: report ES2006 for a jump out of a finally block | A `finally` that returns would discard the failure in flight |
 
 Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork), and lane F4's in [The editor and the esc command](#the-editor-and-the-esc-command).
 
@@ -448,6 +450,7 @@ The checks so far:
 | ES2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
 | ES2003 | A return annotation that leaves a contract channel out, or a plain return annotation on a function whose body runs an Effect | `contracts.go` |
 | ES2004 | The `catch` keyword, when the `try` block can raise no expected failure (D37); covers TypeScript's errors about the `never` caught value | `failures.go` |
+| ES2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript would discard the failure in flight | `regions.go` |
 | ES2102 | The name of an Effect function on a call cycle whose A TypeScript cannot infer because it depends on the function's own result, covering TS7022, TS7023, and TS7024 there; a `catch` variable, or a function, on a cycle that the checker typed before the cycle's E and R were known | `recursion.go` |
 | ES4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; an `.es` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
 | ES4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
@@ -593,7 +596,7 @@ function lookup(id: number) {                const lookup = Effect.fnUntraced(fu
                                              });
 ```
 
-`$catch` is the kernel's `catchExpected` and `$finally` is `Effect.onExit`, from `@effectscript/runtime`, which the file imports as `* as runtime` under a free name. A `return`, `break`, or `continue` that leaves a region cannot jump out of its closure, so the closure returns a completion record: `{ kind: "return", value }`, `{ kind: "break", label }`, or `{ kind: "continue", label }`, with `""` as the label of an unlabeled jump, and the runtime's `$normal` when it reaches its end. The generator that runs the region dispatches each record that can arrive: it returns, breaks, or continues itself, or, when it is a region's closure too and the jump leaves it as well, returns the record to its own runner. A region that no jump leaves runs as `yield* …;` with no record. A closure whose block refers to `this` runs with the function's `this`. A `var` in a region belongs to the whole function, so the lowering declares it in the Effect function and assigns it where the source declared it.
+`$catch` is the kernel's `catchExpected` and `$finally` is `Effect.onExit`, from `@effectscript/runtime`, which the file imports as `* as runtime` under a free name. A `return`, `break`, or `continue` that leaves a region cannot jump out of its closure, so the closure returns a completion record: `{ kind: "return", value }`, `{ kind: "break", label }`, or `{ kind: "continue", label }`, with `""` as the label of an unlabeled jump, and the runtime's `$normal` when it reaches its end. The generator that runs the region dispatches each record that can arrive: it returns, breaks, or continues itself, or, when it is a region's closure too and the jump leaves it as well, returns the record to its own runner. A region that no jump leaves runs as `yield* …;` with no record. A closure whose block refers to `this` runs with the function's `this`. Control cannot leave a `finally` block (ES2006): in JavaScript a jump there replaces the block's exit and discards a failure in flight, and EffectScript never drops a failure silently (D15). A `var` in a region belongs to the whole function, so the lowering declares it in the Effect function and assigns it where the source declared it.
 
 ### Regions in plain functions
 
@@ -929,7 +932,7 @@ Upstream code needed four fixes for `.es` files in the server: auto-import panic
 
 ## What it cannot do yet
 
-- `arguments` inside a region's closure is the closure's, not the function's, and a function whose body declares `using` or calls `fork` runs its whole body in such a closure. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
+- `arguments` inside a region's closure is the closure's, not the function's, and a function whose body declares `using` or calls `fork` runs its whole body in such a closure.
 - A `using` in the head of a C-style `for` loop, `for (using x = init; …; …)`, stays TypeScript's own `using`, which Effect does not run on failure or interruption, and an acquisition there is TS2850.
 - Handlers have no meaning yet: the prelude names them, and their lane gives them meaning. A control operation in a forked fiber is not ES4201 yet.
 - ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.

@@ -162,6 +162,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | ES2003 | A return annotation on a function with a body that is not `Effect<A, E, R>` with all three slots, each checked or written `infer Name` | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
 | ES2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
 | ES2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
+| ES2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | ES2101 | A declaration without a body that has no full contract | Write `Effect<T, never, never>` | 14 |
 | ES2102 | A recursive function whose A depends on its own result | Write the contract | 14 |
 | ES3001 | Two services share a key | Rename one | 4 |

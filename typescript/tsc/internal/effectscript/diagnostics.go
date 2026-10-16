@@ -82,6 +82,8 @@ var (
 	ES2004 = message(2004, warningCategory, "this catch can never run: nothing in its try block fails with an expected error.")
 	// ES2005: a resumeWith program that needs a service or fails outside the operation's contract. {0} is what it needs.
 	ES2005 = message(2005, errorCategory, "resumeWith runs this code at the perform site, inside the handled program, where the clause's providers are not in scope. It needs {0}.")
+	// ES2006: a return, break, or continue that leaves a finally block. {0} is the statement's keyword.
+	ES2006 = message(2006, errorCategory, "{0} leaves a finally block, which would discard a failure in flight.")
 	// ES2101: a declaration without a body that has no full contract. {0} is the declaration.
 	ES2101 = message(2101, errorCategory, "{0} has no body to infer from, so its contract must be written in full.")
 	// ES2102: a recursive function whose A depends on its own result. {0} is the function.
@@ -130,7 +132,7 @@ var registry = map[int32]*Message{}
 func init() {
 	for _, m := range []*Message{
 		ES1001, ES1002, ES1003, ES1004, ES1005,
-		ES2001, ES2002, ES2003, ES2004, ES2005, ES2101, ES2102,
+		ES2001, ES2002, ES2003, ES2004, ES2005, ES2006, ES2101, ES2102,
 		ES3001, ES3002, ES3003, ES3004, ES3005, ES3006, ES3101, ES3201, ES3202, ES3203, ES3204,
 		ES4201, ES4202, ES4301, ES4401, ES4402, ES4403,
 	} {

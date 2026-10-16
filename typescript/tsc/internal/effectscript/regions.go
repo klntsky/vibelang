@@ -4,6 +4,8 @@ import (
 	"slices"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 	"github.com/microsoft/TypeScript/tsc/internal/transformers"
 )
 
@@ -464,4 +466,60 @@ func (tx *lowering) visitPlainCatchClause(node *ast.Node) *ast.Node {
 	statements := append([]*ast.Node{unwrap}, block.AsBlock().Statements.Nodes...)
 	block = f.UpdateBlock(block.AsBlock(), f.NewNodeList(statements), true /*multiLine*/)
 	return f.UpdateCatchClause(clause, declaration, block)
+}
+
+func init() {
+	fileChecks = append(fileChecks, checkFinallyJumps)
+}
+
+// checkFinallyJumps reports ES2006 at each return, break, or continue that
+// leaves a finally block of an .es function. In JavaScript such a jump
+// replaces the block's completion and discards a failure in flight, and
+// EffectScript never drops a failure silently (D15).
+func checkFinallyJumps(c *checker.Checker, file *ast.SourceFile) {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if node.Kind == ast.KindTryStatement && node.AsTryStatement().FinallyBlock != nil && inLowerableBody(node) {
+			forEachJumpLeaving(node.AsTryStatement().FinallyBlock, func(jump *ast.Node) {
+				keyword := jumpKind(jump.Kind)
+				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, jump.Pos()), ES2006, keyword)
+				note(d, "Move the {0} after the try statement.", keyword)
+			})
+		}
+		return node.ForEachChild(visit)
+	}
+	file.AsNode().ForEachChild(visit)
+}
+
+// forEachJumpLeaving calls fn with each return, break, or continue in block,
+// outside the functions nested in it, whose target is outside block.
+func forEachJumpLeaving(block *ast.Node, fn func(jump *ast.Node)) {
+	f := &frame{region: &region{}}
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		switch {
+		case isFunctionBoundary(node):
+			return false
+		case node.Kind == ast.KindReturnStatement || ast.IsBreakOrContinueStatement(node):
+			j := jump{kind: node.Kind}
+			if node.Kind != ast.KindReturnStatement && node.Label() != nil {
+				j.label = node.Label().Text()
+			}
+			if !f.lands(j) {
+				fn(node)
+			}
+		case isJumpTarget(node):
+			t := target{loop: ast.IsIterationStatement(node, false /*lookInLabeledStatements*/)}
+			if node.Kind == ast.KindLabeledStatement {
+				statement := node.AsLabeledStatement()
+				t = target{label: statement.Label.Text(), loop: ast.IsIterationStatement(statement.Statement, true /*lookInLabeledStatements*/)}
+			}
+			f.targets = append(f.targets, t)
+			node.ForEachChild(visit)
+			f.targets = f.targets[:len(f.targets)-1]
+			return false
+		}
+		return node.ForEachChild(visit)
+	}
+	block.ForEachChild(visit)
 }
