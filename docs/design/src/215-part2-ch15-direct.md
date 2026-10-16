@@ -1,6 +1,6 @@
 ### 15. Which functions compile to plain JavaScript
 
-Every function has an Effect contract, but a function like `add` should cost what a JavaScript call costs. The compiler emits a plain JavaScript function whenever the difference is unobservable.
+Unannotated functions and functions with Effect annotations expose Effect contracts, but a function like `add` should cost what a JavaScript call costs. A helper with a plain return annotation keeps a plain function type (D67). The compiler emits a plain JavaScript function whenever the difference is unobservable.
 
 ```ts es
 function double(n: number) {
@@ -46,10 +46,10 @@ The test is "can it reach an Effect operation", not "are E and R empty". `Effect
 
 #### Why this is safe
 
-- **Nothing runs early.** The TypeScript-facing form is `Effect.sync(() => …)`, never `Effect.succeed(double$direct(n))`. Building a program does no work, even work that looks free. A pure function can still throw a defect (`(undefined as any).x`), and that must happen when the program runs, not when it is built.
+- **Nothing runs early when building an Effect.** For an unannotated or Effect-contract helper, the TypeScript-facing form is `Effect.sync(() => …)`, never `Effect.succeed(double$direct(n))`. Building a program does no work, even work that looks free. A pure function can still throw a defect (`(undefined as any).x`), and that must happen when the program runs, not when it is built.
 - **No point where another fiber could run disappears.** A plain call runs inside its caller's current step. Every Effect operation is such a point, including an `Effect.sync` body, so a function containing one is not eligible. Inlining a callee that performs no operation removes none.
 - **Order is kept.** Generated code evaluates in source order. In `area`, both `double` calls run before `Settings.scale()`, as the source says, even though only the service call can pause.
-- **One calling convention.** TypeScript always sees `(...) => Effect<A, E, R>`. The `$direct` variant is an internal shortcut, advertised to other EffectScript packages in declaration metadata (Chapter 27). A caller that lacks the metadata calls the Effect form, which is always correct, only slower.
+- **Public types follow annotations.** An unannotated or Effect-contract helper exposes `(...) => Effect<A, E, R>` and gets a `$direct` shortcut. An eligible helper annotated `: A` exposes `(...) => A` and emits one plain function (D67). Plain calls run inline even at module top level (D65). The compiler does not yet emit `$direct` declaration metadata, so callers compiled against declarations use the correct, slower Effect form (Chapter 27).
 
 #### Regions inside a plain function
 
@@ -76,7 +76,7 @@ export function readPort$direct(text: string): number {
 }
 ```
 
-A `using` declaration acquires an Effect resource, so a function that declares one compiles to frames.
+Any `using` declaration makes a function compile to frames, whether its initializer acquires an Effect resource or supplies an ordinary Disposable (D54, D94).
 
 #### Methods that implement a plain-function member
 
@@ -86,11 +86,11 @@ import { Equal, Hash } from "effect"
 class Money implements Equal.Equal {
   constructor(readonly cents: number, readonly currency: string) {}
 
-  [Equal.symbol](that: Equal.Equal) {
+  [Equal.symbol](that: Equal.Equal): boolean {
     return that instanceof Money && that.cents === this.cents && that.currency === this.currency
   }
 
-  [Hash.symbol]() {
+  [Hash.symbol](): number {
     return Hash.combine(Hash.number(this.cents), Hash.string(this.currency))
   }
 }
