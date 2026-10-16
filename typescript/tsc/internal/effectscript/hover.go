@@ -7,10 +7,12 @@ import (
 )
 
 // The language server's hooks register here rather than in effectscript.go,
-// so editor features stay in this file.
+// so editor features stay in this file and completions.go.
 func init() {
 	ls.RegisterQuickInfoHook(plainFunctionQuickInfo)
 	ls.RegisterQuickInfoHook(runningCallQuickInfo)
+	ls.RegisterCompletionScopeHook(preludeCompletions)
+	ls.RegisterMemberCompletionHook(serviceMemberCompletions)
 }
 
 const hoverTypeFlags = checker.TypeFormatFlagsUseAliasDefinedOutsideCurrentScope

@@ -369,15 +369,18 @@ try {
     assert(JSON.stringify(lines) === JSON.stringify(expected), `edit lines ${JSON.stringify(lines)}, want ${JSON.stringify(expected)}`)
   })
 
+  const completionLabels = async (relative, needle, options) => {
+    const result = await connection.request("textDocument/completion", position(relative, needle, options))
+    return (Array.isArray(result) ? result : result.items).map((item) => item.label)
+  }
+
   await check("completion: members of an imported Effect module in .es", async () => {
-    const result = await connection.request("textDocument/completion", position("src/main.es", "Console.log", { offset: 8 }))
-    const labels = (Array.isArray(result) ? result : result.items).map((item) => item.label)
+    const labels = await completionLabels("src/main.es", "Console.log", { offset: 8 })
     assert(labels.includes("log") && labels.includes("error"), `labels ${JSON.stringify(labels.slice(0, 20))}`)
   })
 
   await check("completion: .es declarations in scope", async () => {
-    const result = await connection.request("textDocument/completion", position("src/main.es", "name.toUpperCase", { offset: 0 }))
-    const labels = (Array.isArray(result) ? result : result.items).map((item) => item.label)
+    const labels = await completionLabels("src/main.es", "name.toUpperCase", { offset: 0 })
     for (const label of ["lookup", "name", "NotFound", "findName"]) assert(labels.includes(label), `no ${label} in completions`)
   })
 
@@ -392,6 +395,45 @@ try {
   await check("diagnostics: report.ts, which imports an .es function, checks clean", async () => {
     const items = await diagnostics("src/report.ts")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  // An entry is in scope when it is not an auto-import, which names its module.
+  const inScope = async (relative, needle, options) => {
+    const result = await connection.request("textDocument/completion", position(relative, needle, options))
+    const items = Array.isArray(result) ? result : result.items
+    return (label) => items.some((item) => item.label === label && item.labelDetails?.description === undefined)
+  }
+
+  await check("completion: prelude names are in scope in an .es file", async () => {
+    const has = await inScope("src/services.es", "Users.find", { offset: 0 })
+    for (const label of ["Effect", "Layer", "Schema", "Scope", "TaggedError", "pipe", "wire", "fork", "Users", "double"]) {
+      assert(has(label), `no ${label} in scope`)
+    }
+  })
+
+  await check("completion: resolving a prelude entry gives its declaration", async () => {
+    const result = await connection.request("textDocument/completion", position("src/services.es", "Users.find", { offset: 0 }))
+    const item = (Array.isArray(result) ? result : result.items).find((i) => i.label === "wire" && i.labelDetails?.description === undefined)
+    assert(item, "no wire entry")
+    const resolved = await connection.request("completionItem/resolve", item)
+    assert(/wire/.test(resolved.detail ?? ""), `detail ${JSON.stringify(resolved.detail)}`)
+  })
+
+  await check("completion: prelude names are in scope in an .es file that uses none yet", async () => {
+    const has = await inScope("src/main.es", "name.toUpperCase", { offset: 0 })
+    for (const label of ["Effect", "Layer", "TaggedError", "pipe", "wire"]) assert(has(label), `no ${label} in scope`)
+  })
+
+  await check("completion: prelude names are not in scope in a .ts file", async () => {
+    const has = await inScope("src/users.ts", "names[id]", { offset: 0 })
+    assert(has("names"), "no names in scope")
+    for (const label of ["TaggedError", "wire", "fork", "Layer"]) assert(!has(label), `${label} in scope`)
+  })
+
+  await check("completion: a service's members after Users. in an .es function", async () => {
+    const labels = await completionLabels("src/services.es", "Users.find", { offset: 6 })
+    assert(labels.includes("find"), `labels ${JSON.stringify(labels.slice(0, 20))}`)
+    for (const label of ["pipe", "of", "key"]) assert(!labels.includes(label), `the key's own member ${label} in completions`)
   })
 
   await check("hover: a plain .es function shows the signature EffectScript calls", async () => {
