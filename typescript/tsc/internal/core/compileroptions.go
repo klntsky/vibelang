@@ -87,8 +87,12 @@ func (options *CompilerOptions) GetAllowImportingTsExtensions() bool {
 	return options.AllowImportingTsExtensions.IsTrue() || options.RewriteRelativeImportExtensions.IsTrue()
 }
 
+// AllowImportingTsExtensionsFrom reports whether fileName may import a
+// TypeScript source by its own extension. An EffectScript (.es) file always
+// may: it imports ./welcome.es and ./format.ts, and its emitted JavaScript
+// imports ./welcome.js and ./format.js.
 func (options *CompilerOptions) AllowImportingTsExtensionsFrom(fileName tspath.RootedFilePath) bool {
-	return options.GetAllowImportingTsExtensions() || fileName.IsDeclarationFile()
+	return options.GetAllowImportingTsExtensions() || fileName.IsDeclarationFile() || fileName.ExtensionIs(tspath.ExtensionEs)
 }
 
 func (options *CompilerOptions) GetResolveJsonModule() bool {
