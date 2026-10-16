@@ -1,0 +1,39 @@
+// expect: ES2005
+// resumeWith runs its program at the perform site: it may need no service and
+// may fail only with the operation's declared errors (D17). Two programs break
+// those rules; the clause in allowed() keeps them.
+import { Data, Effect } from "effect"
+import { Control, handle, resumeWith } from "@effectscript/runtime"
+
+class Busy extends Data.TaggedError("Busy")<{}> {}
+class Other extends Data.TaggedError("Other")<{}> {}
+
+abstract class Approval extends Control {
+  abstract approve(request: string): Effect.Effect<boolean, Busy, never>
+}
+
+abstract class Secret {
+  abstract read(): Effect.Effect<boolean, never, never>
+}
+
+export function needsService() {
+  return handle(() => Approval.approve("x"), Approval, {
+    approve(_request, k) { return resumeWith(k, () => Secret.read()) }
+  })
+}
+
+export function undeclaredError() {
+  return handle(() => Approval.approve("x"), Approval, {
+    approve(_request, k) { return resumeWith(k, () => { throw new Other() }) }
+  })
+}
+
+export function allowed() {
+  return handle(() => Approval.approve("x"), Approval, {
+    approve(_request, k) {
+      const secret = Secret.read()
+      if (secret) return resumeWith(k, () => { throw new Busy() })
+      return resumeWith(k, () => secret)
+    }
+  })
+}
