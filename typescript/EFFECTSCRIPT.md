@@ -2,7 +2,7 @@
 
 This directory is microsoft/TypeScript with a short stack of commits that teach the Go compiler (`tsc/`) EffectScript: TypeScript syntax in which every function is an Effect (effect@4.0.5). A call to a function that returns an Effect runs it, and the compiler infers each function's `Effect<A, E, R>`.
 
-It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services and control operations work (see "Services and control operations"); errors (`throw`, `try`), the prelude, and programs as values are not built yet. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
+It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services, control operations, failures and regions, and the prelude work (see their sections); the acceptance table below says which lane builds each remaining feature. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
 
 ## Base
 
@@ -115,6 +115,11 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 32 | `mssmulnm` | effectscript: lower try, catch, and finally to Effect regions | Regions, completion records, and E through a `try` |
 | 33 | `qsxrpnuo` | effectscript: lower throw to Effect.fail and add its type to E | `throw` is an expected failure (D46) |
 | 34 | `vlzoymlw` | effectscript: keep JavaScript's try in plain functions (D54) | A plain function's `catch` sees expected failures only; `$expected` and `$caught` in the runtime |
+| 35 | `ywvpypzw` | checker: add a name resolution hook before the global scope | Prelude names behave like imports |
+| 36 | `zlxmxpnz` | compiler: add an implicit import hook | The program loads `@effectscript/runtime` for `.es` files |
+| 37 | `owtkpmql` | runtime: type the prelude's Effect and Scope | `Effect<A, E, R>` and `Scope` are types too |
+| 38 | `swxmkoyv` | effectscript: point the runtime at the cases' effect in smoke.sh | One copy of `effect` per program |
+| 39 | `urznvokp` | effectscript: resolve and import the prelude in .es files | Every `.es` file sees the prelude (D4, D48) |
 
 ## Seams in upstream files
 
@@ -126,15 +131,17 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/core/core.go` | `.es` is `ScriptKindTS` | +1 / -1 |
 | `tsc/internal/compiler/emitter.go` | Run hook transformers first in `getScriptTransformers` | +2 / -0 |
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
-| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none | +21 / -4 |
+| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals` | +22 / -4 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
+| `tsc/internal/compiler/fileloader.go` | Resolve each module an implicit import hook names for a file | +4 |
+| `tsc/internal/binder/nameresolver.go` | `NameResolver.ResolveBeforeGlobals`, consulted before the global scope | +6 |
 | `tsc/internal/core/options_generated.go` (generated) | `CompilerOptions.EffectScript`, in `Clone` and `Equals` | +6 |
 | `tsc/internal/tsoptions/declarations_generated.go` (generated) | The `effectscript` declaration | +8 |
 | `tsc/internal/tsoptions/options_generated.go` (generated) | Parse, merge for `extends`, compare for semantic diagnostics and emit, and serialize for `--showConfig` | +15 / -1 |
 | `tsc/internal/tsoptions/commandlineoption.go`, `tsconfigparsing.go` | The option's extra validation | +4 |
-| `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource` | +47 |
-| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening` | +168 |
+| `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource`, `RegisterImplicitImportHook` | +70 |
+| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening`, `RegisterNameResolutionHook` | +193 |
 | `tsc/internal/checker/extensions_classes.go` (new) | `RegisterClassBaseHook`, `Program`, `GetStringLiteralType`, `NewOptionalReadonlyPropertyType` | +48 |
 | `tsc/internal/checker/extensions_calls.go` (new) | `RegisterMemberReceiverHook`, `RegisterCallSignaturesHook`, `NewCallSignature` | +52 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
@@ -319,12 +326,25 @@ function clamp(n: number) {                  function clamp(n) {
 | `runtimeMember`, `runtimeCall` | Reference `@effectscript/runtime` helpers, importing the package on first use |
 
 To add a region kind: create a `region`, emit each block with `regionStatements` and `regionFunction`, compose the closures with runtime helpers, and pass the result to `runRegion`. A consumer that handles some jumps itself, as a producer loop handles its own `break` and `continue`, filters `r.jumps` before dispatching.
+## The prelude
+
+Every `.es` file sees these names without an import (D4, D48): `Effect`, `Schema`, `Layer`, `TaggedError`, `Control`, `Scope`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. They are the exports of `@effectscript/runtime`, whose `prelude.ts` gives `Effect` and `Scope` two meanings each: the effect module, for `Effect.gen` and `Scope.make`, and a type, so `Effect<A, E, R>` means `Effect.Effect<A, E, R>` and `Scope` means `Scope.Scope`.
+
+| Step | How | Where |
+| --- | --- | --- |
+| Load the runtime | A `.es` file with an identifier that has a prelude name, and no top-level declaration or import of that name, resolves `@effectscript/runtime` as an implicit import, as a file with `importHelpers` resolves `tslib`. A file that uses no prelude name compiles exactly as TypeScript would | `implicitRuntimeImport`, through `compiler.RegisterImplicitImportHook` |
+| Resolve a name | When no scope declares a prelude name, the checker resolves it to the runtime's export before it searches the global scope. A local declaration or import therefore shadows it, and `.ts` files never see it | `resolvePreludeName`, through `checker.RegisterNameResolutionHook` |
+| Import it | The checker records each prelude name a file uses as a value outside a type. The lowering adds `import * as Effect from "effect/Effect"` for the effect modules (`Effect`, `Layer`, `Schema`, `Scope`) and one `import { TaggedError, pipe, … } from "@effectscript/runtime"` for the rest | `preludeUses`, `preludeImports`, `lowering.visitSourceFile` |
+
+A name used only in types, such as `Scope` in `Effect<void, never, Scope>`, is not imported. The emitted imports are ES module imports: `.es` files compile to ES modules. When `@effectscript/runtime` is not installed, a prelude name is TypeScript's TS2304 (cannot find name).
+
 ## What it cannot do yet
 
 - `using` is plain JavaScript.
 - `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
-- No prelude globals (D4), `pipe`, `wire`, `fork`, or handlers. Services and control operations exist, but none of their diagnostics (ES2101, ES3001-ES3006, ES3101, ES3201-ES3204) do, and a service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
+- `wire`, `fork`, and handlers have no meaning yet: the prelude names them, and their lanes give them meaning. Services and control operations exist, but none of their diagnostics (ES2101, ES3001-ES3006, ES3101, ES3201-ES3204) do, and a service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
 - A provider's object literal is checked against the service's shape only as TypeScript checks any assignment, so an escaping error is TS2322, not ES2001 or ES3101 naming the member.
+- A `.d.ts` file does not import the prelude types it names, so `declaration: true` reports TS4025 for an exported declaration annotated with `Effect<…>` (case `es-prelude-dts`, pending on F1).
 - No programs as values (D7). `Effect.retry(() => sync(store), policy)` passes a plain function where an Effect is expected.
 - Most ES diagnostics do not exist yet. A top-level `main()` is an Effect value, not ES1001. An Effect lambda passed to `Array.prototype.forEach` silently does nothing, not ES4301. A plain TypeScript call is not ES4401.
 - An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract.

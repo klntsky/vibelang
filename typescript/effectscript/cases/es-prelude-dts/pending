@@ -1,0 +1,1 @@
+F1 the .d.ts of a .es file imports the prelude types it names (TS4025 today)

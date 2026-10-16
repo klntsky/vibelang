@@ -94,7 +94,7 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 
 func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 	visited := tx.Visitor().VisitEachChild(file.AsNode())
-	var imports []*ast.Node
+	imports := preludeImports(&tx.Factory().NodeFactory, tx.plan.prelude)
 	if tx.effect != nil {
 		imports = append(imports, tx.namespaceImport(tx.effect, "effect/Effect"))
 	}

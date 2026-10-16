@@ -17,6 +17,7 @@ import (
 func init() {
 	compiler.RegisterScriptTransformerHook(newLowering)
 	compiler.RegisterDirectiveExemptSource(diagnosticSource)
+	compiler.RegisterImplicitImportHook(implicitRuntimeImport)
 	checker.RegisterCallExpressionTypeHook(callExpressionType)
 	checker.RegisterInferredReturnTypeHook(inferredReturnType)
 	checker.RegisterCallCandidateHook(callCandidate)
@@ -30,6 +31,7 @@ func init() {
 	checker.RegisterCallSignaturesHook(effectValueCall)
 	checker.RegisterExpressionTypeHook(expressionType)
 	checker.RegisterCatchVariableTypeHook(catchVariableType)
+	checker.RegisterNameResolutionHook(resolvePreludeName)
 }
 
 // isEffectScriptFile reports whether file is an EffectScript source file.

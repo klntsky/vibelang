@@ -17,6 +17,7 @@ type plan struct {
 	programs map[*ast.Node]bool       // lambdas lowered to Effect.gen programs (design D7)
 	runs     map[*ast.Node]bool       // calls in those functions emitted as yield*
 	converts map[*ast.Node]conversion // function values converted where they are passed
+	prelude  []string                 // prelude names the file uses as values (prelude.go)
 	servicePlan
 }
 
@@ -34,6 +35,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 		return p
 	}
 	r.WithChecker(func(c *checker.Checker) {
+		p.prelude = preludeUses(c, file)
 		a := analyzerFor(c)
 		var visit func(node *ast.Node) bool
 		visit = func(node *ast.Node) bool {
