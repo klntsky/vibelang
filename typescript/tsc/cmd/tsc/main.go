@@ -9,6 +9,9 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/execute"
 	"github.com/microsoft/TypeScript/tsc/internal/osutil"
+
+	// EffectScript registers its compiler hooks from init.
+	_ "github.com/microsoft/TypeScript/tsc/internal/effectscript"
 )
 
 func main() {

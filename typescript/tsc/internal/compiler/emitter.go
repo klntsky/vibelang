@@ -140,6 +140,9 @@ func getScriptTransformers(emitResolver printer.EmitResolver, host printer.EmitH
 		CaseSensitivity:                host.CaseSensitivity(),
 	}
 
+	// transforms registered by in-tree language extensions
+	tx = append(tx, getHookTransformers(&opts, sourceFile)...)
+
 	// transform TypeScript syntax
 	{
 		// use type nodes to add metadata decorators
