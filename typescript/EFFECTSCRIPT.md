@@ -19,14 +19,28 @@ Run these from `typescript/`:
 
 ```sh
 cd tsc && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o ../built/local/tsc ./cmd/tsc
-effectscript/smoke.sh                                             # builds, then runs every case
-effectscript/smoke.sh es-infer                                    # one case
-./built/local/tsc -p effectscript/cases/ts-hello                  # the stock-compiler smoke test
+effectscript/smoke.sh                 # builds tsc and the runtime, then runs every case
+effectscript/smoke.sh --status        # one line per case: name, owner, and status
+effectscript/smoke.sh ch04 ref2       # the cases whose names contain ch04 or ref2
+effectscript/smoke.sh -v es-infer     # one case, with what tsc printed
+./built/local/tsc -p effectscript/cases/ts-hello
 ```
 
 The build embeds the `lib.*.d.ts` files; Herebyfile's `-tags=noembed` build copies them next to the binary instead. A cold build takes about 75 s and fills about 1.7 GB of Go build cache. Always pass `-trimpath`: without it, Go keys each package's cache entry by its absolute directory, so every jj workspace cold-builds and adds its own copy. `-gcflags=all=-dwarf=false` shrinks the entries; panics still print stack traces.
 
-Each directory in `effectscript/cases` is one case. `smoke.sh` compiles it with `tsc -p`, which must print nothing. It then compares every file in `expected/` with the same path under `out/`, and compares `expected/stdout.txt` with the output of `node run.mjs` or `node out/main.js`. A case whose `package.json` depends on `effect` gets a `node_modules` symlink to `$EFFECT_NODE_MODULES`, by default `../experiments/node_modules`.
+### Cases
+
+`effectscript/smoke.sh` builds `tsc`, builds `../packages/runtime` with that `tsc`, and runs `effectscript/harness.mjs`, which compiles the cases in parallel and runs them. Each directory in `effectscript/cases` that has a `tsconfig.json` is a case, and its sources decide its kind:
+
+| Kind | Marked by | Passes when |
+| --- | --- | --- |
+| Failing | A source whose first line is `// expect: ES2001 ES2002` | The error codes `tsc -p` reports are exactly those codes. Warnings and message text do not count |
+| Runnable | A source with a line `// expect-result: <json>` that exports `main()` | `tsc -p` reports no errors, and `out/run.mjs`, which the harness writes, prints `<json>`: the JSON of the success value of the Effect that `main()` returns |
+| Plain | Neither | `tsc -p` reports no errors, every file in `expected/` other than `stdout.txt` equals the file at the same path under `out/`, and `run.mjs`, or else `out/main.js`, prints `expected/stdout.txt` |
+
+A case with a file named `pending` is pending. The file's first word names the lane that owns the missing feature and the rest says what is missing, for example `F5 wire (D27)`. A pending case runs but never fails the suite. When it passes, the harness reports `XPASS`, and its owner deletes `pending` in the commit that makes it pass. The suite fails when a case that is not pending fails.
+
+Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_MODULES` (default `../experiments/node_modules`, else the main checkout's `~/effectscript/experiments/node_modules`), and `@effectscript/runtime`, from `$EFFECTSCRIPT_RUNTIME` (default `../packages/runtime`). `smoke.sh` builds the runtime's `dist/` from source with the fork's `tsc`, so a commit that changes the compiler and the runtime is tested as one. It links `effect` into the runtime's own `node_modules` when that directory has none, so a case loads one copy of `effect`.
 
 | Case | Proves |
 | --- | --- |

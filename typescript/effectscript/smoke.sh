@@ -1,26 +1,31 @@
 #!/bin/sh
-# Builds tsc, then compiles and runs every case under effectscript/cases.
+# Builds tsc and @effectscript/runtime, then compiles and runs every case under
+# effectscript/cases with effectscript/harness.mjs, which describes the cases.
 #
-# A case is a directory with a tsconfig.json. The compile must succeed with no
-# diagnostics. Every file in <case>/expected/ except stdout.txt must equal the
-# file at the same path under <case>/out/. stdout.txt must equal what
-# `node <case>/run.mjs` (or `node <case>/out/main.js`) prints.
+# Usage: effectscript/smoke.sh [--status] [--verbose] [--jobs N] [case...]
 #
-# Cases whose package.json depends on "effect" get a node_modules symlink to
-# $EFFECT_NODE_MODULES (default: ../experiments/node_modules, falling back to
-# the main checkout's ~/effectscript/experiments/node_modules).
+#   --status    one line per case: name, owner, and ok, FAIL, pending, or XPASS
+#   case        a case name, or a substring that selects every case containing it
 #
-# Usage: effectscript/smoke.sh [case-name...]
+# Environment:
+#   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.5
+#                          (default: ../experiments/node_modules, else the main
+#                          checkout's ~/effectscript/experiments/node_modules)
+#   EFFECTSCRIPT_RUNTIME   the @effectscript/runtime package directory
+#                          (default: ../packages/runtime, built here with tsc)
+#
+# The suite fails when a case that is not pending fails.
 set -eu
 
 root=$(cd "$(dirname "$0")/.." && pwd)
-cases="$root/effectscript/cases"
 tsc="$root/built/local/tsc"
 effect_modules=${EFFECT_NODE_MODULES:-}
 if [ -z "$effect_modules" ]; then
 	effect_modules="$root/../experiments/node_modules"
-	[ -d "$effect_modules" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
+	[ -d "$effect_modules/effect" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
 fi
+runtime=${EFFECTSCRIPT_RUNTIME:-$root/../packages/runtime}
+runtime=$(cd "$runtime" && pwd)
 
 # -trimpath keys the Go build cache by module path instead of directory, so
 # every jj workspace shares one set of cache entries. Without DWARF the cache
@@ -28,41 +33,17 @@ fi
 echo "build: go build -trimpath -gcflags=all=-dwarf=false -o built/local/tsc ./cmd/tsc"
 (cd "$root/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$tsc" ./cmd/tsc)
 
-if [ $# -eq 0 ]; then
-	set -- $(cd "$cases" && ls -d */tsconfig.json | sed 's,/tsconfig.json$,,')
+# The runtime's dist/ is not checked in. Build it from source with this tsc, so
+# a commit that changes the compiler and the runtime is tested as one. The
+# runtime resolves effect from its own node_modules; link the copy the cases
+# use when that directory has none, so a program loads one copy of effect.
+if [ -f "$runtime/tsconfig.json" ]; then
+	if [ ! -e "$runtime/node_modules/effect" ]; then
+		mkdir -p "$runtime/node_modules"
+		ln -s "$effect_modules/effect" "$runtime/node_modules/effect"
+	fi
+	echo "build: tsc -p $runtime/tsconfig.json"
+	"$tsc" -p "$runtime/tsconfig.json"
 fi
 
-failed=0
-for name in "$@"; do
-	dir="$cases/$name"
-	log=$(mktemp)
-	rm -rf "$dir/out"
-	if grep -q '"effect"' "$dir/package.json" 2>/dev/null; then
-		ln -sfn "$effect_modules" "$dir/node_modules"
-	fi
-	if ! "$tsc" -p "$dir" >"$log" 2>&1 || [ -s "$log" ]; then
-		echo "FAIL $name: tsc reported diagnostics"
-		cat "$log"
-		failed=1
-		continue
-	fi
-	for want in $(cd "$dir/expected" && find . -type f ! -name stdout.txt); do
-		if ! diff -u "$dir/expected/$want" "$dir/out/$want" >"$log" 2>&1; then
-			echo "FAIL $name: out/$want differs from expected/$want"
-			cat "$log"
-			failed=1
-			continue 2
-		fi
-	done
-	entry="$dir/out/main.js"
-	[ -f "$dir/run.mjs" ] && entry="$dir/run.mjs"
-	if ! node "$entry" >"$log" 2>&1 || ! diff -u "$dir/expected/stdout.txt" "$log"; then
-		echo "FAIL $name: node $(basename "$entry") output differs from expected/stdout.txt"
-		cat "$log"
-		failed=1
-		continue
-	fi
-	rm -f "$log"
-	echo "ok   $name"
-done
-exit $failed
+EFFECT_NODE_MODULES=$effect_modules EFFECTSCRIPT_RUNTIME=$runtime exec node "$root/effectscript/harness.mjs" "$@"
