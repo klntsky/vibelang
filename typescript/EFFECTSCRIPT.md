@@ -35,7 +35,7 @@ The build embeds the `lib.*.d.ts` files; Herebyfile's `-tags=noembed` build copi
 | Kind | Marked by | Passes when |
 | --- | --- | --- |
 | Failing | A source whose first line is `// expect: ES2001 ES2002` | The error codes `tsc -p` reports are exactly those codes. Warnings and message text do not count |
-| Runnable | A source with a line `// expect-result: <json>` that exports `main()` | `tsc -p` reports no errors, and `out/run.mjs`, which the harness writes, prints `<json>`: the JSON of the success value of the Effect that `main()` returns |
+| Runnable | A source with a line `// expect-result: <json>` that exports `main()` | `tsc -p` reports no errors, and `out/run.mjs`, which the harness writes, prints `@@result <json>`: the JSON of the success value of the Effect that `main()` returns. What the program logs does not count |
 | Plain | Neither | `tsc -p` reports no errors, every file in `expected/` other than `stdout.txt` equals the file at the same path under `out/`, and `run.mjs`, or else `out/main.js`, prints `expected/stdout.txt` |
 
 A case with a file named `pending` is pending. The file's first word names the lane that owns the missing feature and the rest says what is missing, for example `F5 wire (D27)`. A pending case runs but never fails the suite. When it passes, the harness reports `XPASS`, and its owner deletes `pending` in the commit that makes it pass. The suite fails when a case that is not pending fails.
