@@ -1,0 +1,31 @@
+// expect: ES3201
+// An input that no wire argument provides stays in the layer's In, as with
+// Layer.provide, and is reported where the program's requirements must be
+// empty: here, at the runner (D27).
+import { Effect, Layer } from "effect"
+import { wire } from "@effectscript/runtime"
+
+abstract class Smtp {
+  abstract deliver(to: string): Effect.Effect<void, never, never>
+}
+
+abstract class Mailer {
+  abstract send(to: string): Effect.Effect<void, never, never>
+}
+
+const MailerLive = Layer.effect(Mailer, () => {
+  const smtp = Smtp()
+  return { send: (to: string) => smtp.deliver(to) }
+})
+
+const AppLive = wire(MailerLive)
+
+function welcome() {
+  Mailer.send("ada@example.com")
+}
+
+export function main() {
+  Effect.provide(() => welcome(), AppLive)
+}
+
+Effect.runFork(main())

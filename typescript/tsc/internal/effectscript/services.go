@@ -116,7 +116,8 @@ type services struct {
 	contextModule   *ast.Symbol // effect's Context module, nil if the program lacks it
 	contextSearched bool
 	keys            map[*ast.Node]string
-	byKey           map[string][]*ast.Node // every service and control class in the program, by key
+	byKey           map[string][]*ast.Node        // every service and control class in the program, by key
+	unprovided      map[*checker.Type][]*ast.Node // wire arguments, by a service they need and their wire does not provide
 }
 
 type servicesKey struct{}

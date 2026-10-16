@@ -18,13 +18,14 @@ import (
 // independent arguments. It reports a duplicate provider (ES3202), a cycle
 // (ES3203), and an argument whose type does not name its outputs (ES3204).
 // An input that no argument provides stays in the result's In, as with
-// Layer.provide.
+// Layer.provide, and is reported with the provider that needs it where the
+// program's requirements must be empty, at a runner (ES3201).
 
 // layerTypeID names the variance property of every Effect 4 Layer:
 // `readonly [TypeId]: { _ROut: Contravariant<ROut>; _E; _RIn }`.
 const layerTypeID = "~effect/Layer"
 
-func init() { fileChecks = append(fileChecks, checkWires) }
+func init() { fileChecks = append(fileChecks, checkWires, checkRunners) }
 
 // wireArgument is what one argument of a wire call provides and needs.
 type wireArgument struct {
@@ -306,4 +307,105 @@ func (tx *lowering) visitWireCall(node *ast.Node) *ast.Node {
 	}
 	f := tx.Factory()
 	return f.UpdateCallExpression(node.AsCallExpression(), tx.Visitor().VisitNode(node.Expression()), nil /*questionDotToken*/, node.TypeArgumentList(), f.NewNodeList(arguments), ast.NodeFlagsNone)
+}
+
+// runners start a root fiber, so the program they run must need no services.
+var runners = map[string][]string{
+	"Effect":      {"runFork", "runCallback", "runPromise", "runPromiseExit", "runSync", "runSyncExit"},
+	"NodeRuntime": {"runMain"},
+	"BunRuntime":  {"runMain"},
+}
+
+// checkRunners reports ES3201 at a runner whose program still needs a
+// service that a wire call in the program leaves unprovided: the dependency
+// path names the provider that needs it.
+func checkRunners(c *checker.Checker, file *ast.SourceFile) {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if ast.IsCallExpression(node) && isRunnerCall(node) && len(node.Arguments()) > 0 {
+			checkRunner(c, node.Arguments()[0])
+		}
+		return node.ForEachChild(visit)
+	}
+	file.AsNode().ForEachChild(visit)
+}
+
+// isRunnerCall reports whether call is written as a runner, such as
+// Effect.runPromise(…) or NodeRuntime.runMain(…).
+func isRunnerCall(call *ast.Node) bool {
+	callee := call.Expression()
+	if !ast.IsPropertyAccessExpression(callee) || !ast.IsIdentifier(callee.Expression()) {
+		return false
+	}
+	return slices.Contains(runners[callee.Expression().Text()], callee.Name().Text())
+}
+
+func checkRunner(c *checker.Checker, program *ast.Node) {
+	t := c.GetTypeAtLocation(program)
+	r := varianceChannel(c, t, "_R")
+	if r == nil {
+		return
+	}
+	missing := unionMembers(r)
+	if len(missing) == 0 {
+		return
+	}
+	var names []string
+	var paths []string
+	for _, service := range missing {
+		for _, needer := range servicesFor(c).wireNeeders(service) {
+			if !slices.Contains(names, c.TypeToString(service)) {
+				names = append(names, c.TypeToString(service))
+			}
+			paths = append(paths, scanner.GetTextOfNode(needer)+" needs "+c.TypeToString(service))
+		}
+	}
+	if len(names) == 0 {
+		return
+	}
+	d := report(c, program, ES3201, strings.Join(names, ", "))
+	for _, path := range paths {
+		note(d, "{0}, and no argument of its wire provides it.", path)
+	}
+	note(d, "Add a provider of {0} to wire.", strings.Join(names, ", "))
+	cover(c, program) // TS2345: the runner requires an Effect whose R is never
+}
+
+// wireNeeders returns the wire arguments, anywhere in the program, that need
+// service while no argument of their wire call provides it.
+func (s *services) wireNeeders(service *checker.Type) []*ast.Node {
+	if s.unprovided == nil {
+		s.unprovided = map[*checker.Type][]*ast.Node{}
+		for _, file := range s.checker.Program().SourceFiles() {
+			if !isEffectScriptFile(file) {
+				continue
+			}
+			var visit func(node *ast.Node) bool
+			visit = func(node *ast.Node) bool {
+				if isWireCall(s.checker, node) {
+					g := graphOfWire(s.checker, node)
+					for i, a := range g.arguments {
+						for _, input := range a.inputs {
+							if !providedBy(g, input, i) {
+								s.unprovided[input] = append(s.unprovided[input], a.node)
+							}
+						}
+					}
+				}
+				return node.ForEachChild(visit)
+			}
+			file.AsNode().ForEachChild(visit)
+		}
+	}
+	return s.unprovided[service]
+}
+
+// providedBy reports whether an argument of g other than i provides service.
+func providedBy(g *wireGraph, service *checker.Type, i int) bool {
+	for j, a := range g.arguments {
+		if j != i && slices.Contains(a.outputs, service) {
+			return true
+		}
+	}
+	return false
 }
