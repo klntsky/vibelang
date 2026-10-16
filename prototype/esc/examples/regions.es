@@ -1,0 +1,70 @@
+// Chapter 24: return, break, and continue leave try/catch/finally and `using`
+// regions through completion records. Checked against JavaScript's semantics.
+class Boom extends TaggedError("Boom")<{ readonly n: number }> {}
+
+const events: string[] = []
+
+function risky(n: number) {
+  if (n % 3 === 0) throw new Boom({ n })
+  return n
+}
+// Effect<number, Boom, never>
+
+function loop(stopAt: number) {
+  let total = 0
+  outer: for (let i = 1; i <= 10; i++) {
+    for (let j = 0; j < 2; j++) {
+      try {
+        if (i === stopAt) break outer
+        if (j === 1) continue outer
+        if (i % 2 === 0) continue
+        total += risky(i)
+      } catch (e) {
+        events.push(`caught ${e.n}`)
+        if (e.n === 9) return -total
+      } finally {
+        events.push(`finally ${i}.${j}`)
+      }
+    }
+  }
+  return total
+}
+// Effect<number, never, never>
+
+abstract class Pool extends Control {
+  abstract unused(): Effect<void, never, never>
+}
+
+function lease(name: string) {
+  return Effect.acquireRelease(
+    () => {
+      events.push(`open ${name}`)
+      return name
+    },
+    () => {
+      events.push(`close ${name}`)
+    }
+  )
+}
+
+// `using` in a loop body: released every iteration, including on break and return.
+function leases() {
+  for (const name of ["a", "b", "c", "d"]) {
+    using held = lease(name)
+    if (held === "b") continue
+    if (held === "c") break
+    events.push(`use ${held}`)
+  }
+  {
+    using last = lease("e")
+    return last
+  }
+}
+
+// expect-result: {"stop8":13,"stop11":-13,"held":"e","events":["finally 1.0","finally 1.1","finally 2.0","finally 2.1","caught 3","finally 3.0","finally 3.1","finally 4.0","finally 4.1","finally 5.0","finally 5.1","finally 6.0","finally 6.1","finally 7.0","finally 7.1","finally 8.0","finally 1.0","finally 1.1","finally 2.0","finally 2.1","caught 3","finally 3.0","finally 3.1","finally 4.0","finally 4.1","finally 5.0","finally 5.1","finally 6.0","finally 6.1","finally 7.0","finally 7.1","finally 8.0","finally 8.1","caught 9","finally 9.0","open a","use a","close a","open b","close b","open c","close c","open e","close e"]}
+export function main() {
+  const stop8 = loop(8)
+  const stop11 = loop(11)
+  const held = leases()
+  return { stop8, stop11, held, events }
+}

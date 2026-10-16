@@ -1,0 +1,117 @@
+// Chapter 2. Functions and calls.
+
+class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}
+class MailError extends TaggedError("MailError")<{ readonly reason: string }> {}
+
+interface User {
+  readonly id: string
+  readonly name: string
+  readonly email: string
+  readonly subscribed: boolean
+}
+
+abstract class Users {
+  abstract find(id: string): Effect<User, UserNotFound, never>
+}
+
+abstract class Mailer {
+  abstract send(to: string, body: string): Effect<void, MailError, never>
+}
+
+// welcome from Chapter 1, used by notifyAll and welcomeTraced.
+function welcome(id: string) {
+  const user = Users.find(id)
+  Mailer.send(user.email, `Welcome, ${user.name}!`)
+  return user.name
+}
+// Effect<string, UserNotFound | MailError, Users | Mailer>
+
+// Every function is an Effect
+
+function add(a: number, b: number) {
+  return a + b
+}
+// Effect<number, never, never>
+
+function greeting(id: string) {
+  const user = Users.find(id)
+  return `Hello, ${user.name}`
+}
+// Effect<string, UserNotFound, Users>
+
+// Calling runs the function
+
+function userName(id: string) {
+  const name = Users.find(id).name.trim()
+  Effect.log(`found ${name}`)
+  return name
+}
+
+// Control flow is ordinary JavaScript
+
+function notifyAll(ids: ReadonlyArray<string>) {
+  let sent = 0
+  for (const id of ids) {
+    const user = Users.find(id)
+    if (!user.subscribed) continue
+    welcome(id)
+    sent++
+  }
+  return sent
+}
+// Effect<number, UserNotFound | MailError, Users | Mailer>
+
+// Tracing
+
+function welcomeTraced(id: string) {
+  return Effect.withSpan(() => welcome(id), "welcome")
+}
+
+// Writing the contract yourself
+// NOTE: renamed from `greeting`; the proposal reuses that name for the annotated variant.
+// The narrower contract from the same section is ch02-contract-narrower.fail.es.
+
+export function greetingChecked(id: string): Effect<string, UserNotFound, Users> {
+  const user = Users.find(id)
+  return `Hello, ${user.name}`
+}
+
+// "Calling TypeScript" (profileCard) needs a plain TypeScript function, which D5 makes ES4401
+// without a boundary: see ch02-plain-ts-call.fail.es and the adapted version in ch10-typescript.es.
+
+const people: ReadonlyArray<User> = [
+  { id: "1", name: "Ada", email: "ada@example.com", subscribed: true },
+  { id: "2", name: "  Grace  ", email: "grace@example.com", subscribed: false },
+  { id: "3", name: "Edsger", email: "edsger@example.com", subscribed: true }
+]
+
+const UsersTest = Layer.succeed(Users, {
+  find: (id) => {
+    const user = people.find((person) => person.id === id)
+    if (user === undefined) throw new UserNotFound({ id })
+    return user
+  }
+})
+
+const outbox: string[] = []
+
+const MailerTest = Layer.succeed(Mailer, {
+  send: (to, body) => {
+    outbox.push(`${to}: ${body}`)
+  }
+})
+
+function scenario() {
+  const sum = add(1, 2)
+  const hello = greeting("1")
+  const trimmed = userName("2")
+  const sent = notifyAll(["1", "2", "3"])
+  const traced = welcomeTraced("1")
+  const checked = greetingChecked("3")
+  return { sum, greeting: hello, userName: trimmed, sent, traced, checked, outbox }
+}
+
+// expect-result: {"sum":3,"greeting":"Hello, Ada","userName":"Grace","sent":2,"traced":"Ada","checked":"Hello, Edsger","outbox":["ada@example.com: Welcome, Ada!","edsger@example.com: Welcome, Edsger!","ada@example.com: Welcome, Ada!"]}
+export function main() {
+  return Effect.provide(() => scenario(), Layer.mergeAll(UsersTest, MailerTest))
+}

@@ -1,0 +1,31 @@
+// expect: ES3201
+// Reference program 2 / D27: no provider for Smtp. wire(MailerLive) leaves Smtp in the layer's
+// inputs, as Layer.provide would, and the compiler reports it with its dependency path where the
+// program's R must be empty: here, at the runner.
+
+abstract class Smtp {
+  abstract deliver(to: string): Effect<void, never, never>
+}
+
+abstract class Mailer {
+  abstract send(to: string): Effect<void, never, never>
+}
+
+const MailerLive = Layer.effect(Mailer, () => {
+  const smtp = Smtp()
+  return {
+    send: (to) => smtp.deliver(to)
+  }
+})
+
+const AppLive = wire(MailerLive)
+
+function welcome() {
+  Mailer.send("ada@example.com")
+}
+
+function main() {
+  Effect.provide(() => welcome(), AppLive)
+}
+
+Effect.runFork(() => main())
