@@ -20560,6 +20560,10 @@ func getEffectiveSetAccessorTypeAnnotationNode(node *ast.Node) *ast.Node {
 }
 
 func (c *Checker) getReturnTypeFromBody(fn *ast.Node, checkMode CheckMode) *Type {
+	return c.applyInferredReturnTypeHooks(fn, c.getReturnTypeFromBodyWorker(fn, checkMode))
+}
+
+func (c *Checker) getReturnTypeFromBodyWorker(fn *ast.Node, checkMode CheckMode) *Type {
 	body := fn.Body()
 	if body == nil {
 		return c.errorType

@@ -34,3 +34,29 @@ func (c *Checker) applyCallExpressionTypeHooks(call *ast.Node, t *Type) *Type {
 	}
 	return t
 }
+
+// InferredReturnTypeHook can replace t, the return type the checker inferred
+// from the body of fn, a function without a return type annotation.
+type InferredReturnTypeHook func(c *Checker, fn *ast.Node, t *Type) *Type
+
+var inferredReturnTypeHooks []InferredReturnTypeHook
+
+// RegisterInferredReturnTypeHook adds hook to every checker. Call it only from
+// the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterInferredReturnTypeHook(hook InferredReturnTypeHook) {
+	inferredReturnTypeHooks = append(inferredReturnTypeHooks, hook)
+}
+
+func (c *Checker) applyInferredReturnTypeHooks(fn *ast.Node, t *Type) *Type {
+	for _, hook := range inferredReturnTypeHooks {
+		t = hook(c, fn, t)
+	}
+	return t
+}
+
+// NewTypeReference instantiates target, a generic class or interface type,
+// with typeArguments.
+func (c *Checker) NewTypeReference(target *Type, typeArguments []*Type) *Type {
+	return c.createTypeReference(target, typeArguments)
+}
