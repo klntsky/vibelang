@@ -1,0 +1,45 @@
+import { Console, Fiber, Schedule } from "effect"
+
+export class Unavailable extends TaggedError("Unavailable")<{ readonly attempt: number }> {}
+
+export function fetchReport() {
+  let attempts = 0
+  return Effect.retry(() => {
+    attempts++
+    if (attempts < 3) throw new Unavailable({ attempt: attempts })
+    return `report after ${attempts} attempts`
+  }, { schedule: Schedule.spaced("10 millis"), times: 2 })
+}
+
+export function cachedReport() {
+  Effect.sleep("5 millis")
+  return "cached report"
+}
+
+export function slowReport() {
+  Effect.sleep("1 second")
+  return "remote report"
+}
+
+export function deadline() {
+  try {
+    return Effect.timeout(() => slowReport(), "20 millis")
+  } catch (error) {
+    return error._tag
+  }
+}
+
+export function scenario() {
+  const pending = fork(() => fetchReport())
+  const fastest = Effect.race(() => cachedReport(), () => slowReport())
+  const timed = deadline()
+  const report = Fiber.join(pending)
+  return { fastest, timed, report }
+}
+
+export function main() {
+  const result = scenario()
+  Console.log(result.fastest)
+  Console.log(result.timed)
+  Console.log(result.report)
+}
