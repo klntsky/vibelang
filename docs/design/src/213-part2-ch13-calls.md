@@ -22,7 +22,7 @@ const n = double$direct(4)                     // a plain JavaScript call (Chapt
 const user = yield* (yield* Users).find(id)    // the implementation in the current Context, then the method
 const row = yield* findUser(id)                // runs the returned program
 const label = formatName(user)                 // an ordinary call
-const ok = yield* Approval.approve(request)    // asks the nearest handler (Chapter 9)
+const ok = yield* (yield* Approval).approve(request)    // asks the nearest handler (Chapter 9)
 const port = yield* Port                       // runs the Config
 ```
 
@@ -31,14 +31,14 @@ The full rule:
 | The callee is | The call | Generated |
 | --- | --- | --- |
 | An EffectScript function that can pause | Runs it on the current fiber | `yield* f(a)` |
-| An EffectScript function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)` |
+| An EffectScript function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)`, or `f(a)` with a plain return annotation (D67) |
 | A TypeScript function whose call has the type `Effect<A, E, R>` | Runs the returned program | `yield* f(a)` |
 | A TypeScript function whose R contains a control operation | Rejected in v0: ES4202 (Chapter 9) | |
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
 | A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
 | A service, `Users()` | Returns the implementation | `yield* Users` |
-| A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* Approval.approve(x)` |
+| A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |
 | A JavaScript built-in, or an export of `effect` or `@effect/*` that does not return an `Effect` | A trusted call: listed exceptions join E, others are defects | `f(a)`, with listed exceptions converted |
 | A TypeScript function tagged `@effectscript trusted` | The same | `f(a)`, with listed exceptions converted |
 | Any other plain TypeScript or JavaScript function | Rejected: ES4401 (Chapter 10) | |
@@ -73,10 +73,12 @@ A function used as a value is passed in the form its destination expects:
 | --- | --- |
 | A function type that returns an `Effect`, as Effect's combinators expect | The function's Effect form |
 | A plain function type, as `Array.prototype.map` expects | The function's plain-JavaScript form, if it has one (Chapter 15); otherwise ES4301 |
-| `Effect<A, E, R>`, an array or record of them | A function with no parameters, converted to a program (Chapter 5) |
+| `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5) |
 | Either a function or an `Effect`, as `HttpRouter.add` and `Effect.withErrorReporting` accept | A function with parameters: the function. A function without parameters: the function if it compiles to plain JavaScript, a program if it can pause |
 
 The last row matters because several Effect APIs choose at run time with `Effect.isEffect`. In `HttpRouter.add("GET", "/users/:id", (request) => showUser(request))`, the handler has a parameter and is passed as a function. In `HttpRouter.add("GET", "/health", () => checkHealth())` and `Effect.withErrorReporting(() => serve())`, the argument can pause and is passed as a program.
+
+An Effect callback or program destination means Effect's own interface, or a type parameter constrained to it; structured subtypes such as `Config` remain data (D109). A destination that allows both plain and Effect returns selects plain when D10 permits and Effect otherwise (D112). A contract-annotated lambda selected as plain has type `(…) => A`, and plain-callback inference starts from A (D113). These rules apply to named function values as well as lambdas (D66).
 
 #### Programs and continuations
 
@@ -93,7 +95,7 @@ Two kinds of "rest of the work" appear in this document, and they behave differe
 
 #### How program values are spelled
 
-A call always runs, so a program value needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). It never converts a value because it merely looks like a function:
+A call always runs, so a program value needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
 
 ```ts gen
 // Effect.retry(() => syncInventory(store), Schedule.recurs(3))
