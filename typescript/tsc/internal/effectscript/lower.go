@@ -122,8 +122,11 @@ func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 	if len(imports) == 0 {
 		return visited
 	}
-	statements := append(imports, visited.Statements()...)
-	return tx.Factory().UpdateSourceFile(visited.AsSourceFile(), tx.Factory().NewNodeList(statements), visited.AsSourceFile().EndOfFileToken)
+	// The list keeps the source range, from whose end the printer emits the
+	// comments after the last statement.
+	statements := tx.Factory().NewNodeList(append(imports, visited.Statements()...))
+	statements.Loc = visited.AsSourceFile().Statements.Loc
+	return tx.Factory().UpdateSourceFile(visited.AsSourceFile(), statements, visited.AsSourceFile().EndOfFileToken)
 }
 
 // namespaceImport returns `import * as name from "module"`.

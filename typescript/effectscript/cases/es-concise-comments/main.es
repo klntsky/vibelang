@@ -1,5 +1,5 @@
 // A concise arrow body that the lowering turns into a block keeps the
-// comment after it outside the block.
+// comment after it outside the block, and the file keeps its last comment.
 import { Effect } from "effect"
 
 abstract class Settings {

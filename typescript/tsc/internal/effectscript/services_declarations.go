@@ -64,7 +64,9 @@ func serviceDeclarations(resolver printer.EmitResolver, file *ast.SourceFile) fu
 		if !changed {
 			return declarations
 		}
-		return ec.Factory.UpdateSourceFile(declarations, ec.Factory.NewNodeList(statements), declarations.EndOfFileToken).AsSourceFile()
+		list := ec.Factory.NewNodeList(statements)
+		list.Loc = declarations.Statements.Loc
+		return ec.Factory.UpdateSourceFile(declarations, list, declarations.EndOfFileToken).AsSourceFile()
 	}
 }
 
