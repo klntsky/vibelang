@@ -1,0 +1,53 @@
+import { Console } from "effect"
+
+export interface User {
+  readonly id: string
+  readonly name: string
+}
+
+export class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}
+
+export abstract class Directory {
+  abstract lookup(id: string): Effect<User | undefined, never, never>
+}
+
+export abstract class Users {
+  abstract find(id: string): Effect<User, UserNotFound, never>
+}
+
+export const DirectoryLive = Layer.succeed(Directory, {
+  lookup: (id) => id === "42" ? { id, name: "Ada" } : undefined
+})
+
+export const UsersLive = Layer.effect(Users, () => {
+  const directory = Directory()
+  return {
+    find(id) {
+      const user = directory.lookup(id)
+      if (user === undefined) throw new UserNotFound({ id })
+      return user
+    }
+  }
+})
+
+export const UsersTest = Layer.succeed(Users, {
+  find: (id) => ({ id, name: "Grace" })
+})
+
+export const AppLive = wire(UsersLive, DirectoryLive)
+
+export function greet(id: string) {
+  try {
+    const user = Users.find(id)
+    return `Welcome, ${user.name}!`
+  } catch (error) {
+    return `No user ${error.id}`
+  }
+}
+
+export function main() {
+  Effect.provide(() => {
+    Console.log(greet("42"))
+    Console.log(greet("missing"))
+  }, AppLive)
+}
