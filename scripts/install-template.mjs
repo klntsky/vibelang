@@ -5,8 +5,19 @@ import { fileURLToPath } from "node:url"
 const root = fileURLToPath(new URL("../", import.meta.url))
 const base = process.env.BUN_CREATE_DIR || join(process.env.HOME, ".bun-create")
 const destination = resolve(base, "effectscript")
-const marker = ".effectscript-template"
-if (existsSync(destination) && !existsSync(join(destination, marker))) {
+// A template is setup's own when its package.json depends on the compiler.
+// Templates from earlier setups carry a marker file instead, which bun create
+// copied into every project.
+function isOwnTemplate(directory) {
+  if (existsSync(join(directory, ".effectscript-template"))) return true
+  try {
+    const pkg = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"))
+    return Boolean(pkg.devDependencies?.["@effectscript/compiler"])
+  } catch {
+    return false
+  }
+}
+if (existsSync(destination) && !isOwnTemplate(destination)) {
   console.error(`setup: refusing to replace an unrelated template at ${destination}`)
   process.exit(1)
 }
@@ -22,5 +33,4 @@ pkg.dependencies["@effectscript/runtime"] = `file:${join(root, "packages/runtime
 pkg.devDependencies["@effectscript/compiler"] = `file:${join(root, "packages/compiler")}`
 pkg.devDependencies["@effectscript/vite"] = `file:${join(root, "packages/vite")}`
 writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n")
-writeFileSync(join(destination, marker), `${root}\n`)
 console.log(`setup: installed template at ${destination}`)
