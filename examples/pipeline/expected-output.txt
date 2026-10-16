@@ -1,0 +1,3 @@
+temperature alert: 25 C
+sensor closed
+temperature alert: 28 C

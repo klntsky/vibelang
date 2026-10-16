@@ -1,0 +1,22 @@
+import { Console, Stream } from "effect"
+
+// A lazy source: operators decide how many readings to request.
+function* readings() {
+  try {
+    for (const celsius of [18, 21, 25, 19, 28, 30]) {
+      yield celsius
+    }
+  } finally {
+    Console.log("sensor closed")
+  }
+}
+
+export function main() {
+  const alerts = Stream.take(
+    Stream.map(Stream.filter(readings(), (value) => value >= 25), (value) => `${value} C`),
+    2
+  )
+  for (const alert of alerts) {
+    Console.log(`temperature alert: ${alert}`)
+  }
+}
