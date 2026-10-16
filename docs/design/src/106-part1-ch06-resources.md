@@ -26,6 +26,10 @@ function readReport(path: string) {
 
 `Files.open` returns a scoped resource: `Effect<FileHandle, IOError, Scope>`. The block that declares `using` supplies the `Scope`, which is why `Scope` does not appear in `readReport`'s requirements. Several `using` declarations release in reverse order.
 
+A call that runs an Effect is an acquisition even when its result has no `Symbol.dispose`; it receives the block Scope. Other initializers must be Disposable, `null`, or `undefined`. A Disposable result also runs `[Symbol.dispose]()` at block exit. If its Effect release already disposes it, this disposes it twice (D94).
+
+In `for (using item of values)`, each iteration owns a Scope region, including `using` and `fork` inside its body (D95). C-style `for` heads still use TypeScript disposal and do not yet release on Effect failure or interruption; an Effect acquisition there reports TS2850.
+
 #### Who owns a resource
 
 Only `using` acquisitions belong to the block. A resource acquired without `using` belongs to the caller, even when the same block also has a `using`:
