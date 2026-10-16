@@ -64,6 +64,19 @@ function loop() {
   return "end"
 }
 
+// for (using x of values): each value is released when its iteration ends,
+// after what the iteration acquired, and on break.
+function eachDisposable() {
+  const seen: string[] = []
+  outer: for (using d of [disposable("x"), disposable("y"), disposable("z")]) {
+    using r = resource(`for ${d.name}`)
+    if (d.name === "y") continue outer
+    if (d.name === "z") break
+    seen.push(d.name)
+  }
+  return seen.join()
+}
+
 function labeled() {
   outer: for (const i of [1, 2]) {
     for (const j of [1, 2]) {
@@ -179,7 +192,7 @@ function phase<A>(name: string, result: A) {
   return result
 }
 
-// expect-result: {"ordered":"ab","failed":"Busy","timedOut":"TimeoutError","loop":"returned at l3","labeled":"labeled done","kept":"kept","mixed":"drnull","tried":"recovered","nested":"nested done","bumped":"bump 1","arrow":5,"masked":"TimeoutError","interruptible":"TimeoutError","events":["acquire a","acquire b","use a+b","release b","release a","-- ordered","acquire f","release f","-- failed","acquire slow","release slow","-- timedOut","acquire l1","body l1","release l1","acquire l2","release l2","acquire l3","release l3","-- loop","acquire 1.1","release 1.1","acquire 1.2","release 1.2","acquire 2.1","release 2.1","-- labeled","acquire kept","acquire log","opened kept with log","release log","still open: kept","release kept","-- kept","create d","acquire r","release r","dispose d","-- mixed","acquire t","release t","caught t","-- tried","before","acquire inner","in inner","release inner","after","-- nested","acquire bump","release bump","-- bumped","acquire arrow","release arrow","-- arrow","masked acquired","masked released","-- masked","-- interruptible"]}
+// expect-result: {"ordered":"ab","failed":"Busy","timedOut":"TimeoutError","loop":"returned at l3","labeled":"labeled done","each":"x","kept":"kept","mixed":"drnull","tried":"recovered","nested":"nested done","bumped":"bump 1","arrow":5,"masked":"TimeoutError","interruptible":"TimeoutError","events":["acquire a","acquire b","use a+b","release b","release a","-- ordered","acquire f","release f","-- failed","acquire slow","release slow","-- timedOut","acquire l1","body l1","release l1","acquire l2","release l2","acquire l3","release l3","-- loop","acquire 1.1","release 1.1","acquire 1.2","release 1.2","acquire 2.1","release 2.1","-- labeled","create x","create y","create z","acquire for x","release for x","dispose x","acquire for y","release for y","dispose y","acquire for z","release for z","dispose z","-- each","acquire kept","acquire log","opened kept with log","release log","still open: kept","release kept","-- kept","create d","acquire r","release r","dispose d","-- mixed","acquire t","release t","caught t","-- tried","before","acquire inner","in inner","release inner","after","-- nested","acquire bump","release bump","-- bumped","acquire arrow","release arrow","-- arrow","masked acquired","masked released","-- masked","-- interruptible"]}
 export function main() {
   const o = phase("ordered", ordered())
   let failed = "none"
@@ -198,6 +211,7 @@ export function main() {
   phase("timedOut", timedOut)
   const l = phase("loop", loop())
   const lb = phase("labeled", labeled())
+  const each = phase("each", eachDisposable())
   const k = phase("kept", keeper())
   const m = phase("mixed", mixed())
   const t = phase("tried", tryUsing())
@@ -207,5 +221,5 @@ export function main() {
   const a = phase("arrow", arrow("arrow"))
   const masked = phase("masked", deadline(() => maskedAcquire()))
   const interruptible = phase("interruptible", deadline(() => interruptibleAcquire()))
-  return { ordered: o, failed, timedOut, loop: l, labeled: lb, kept: k, mixed: m, tried: t, nested: n, bumped: b, arrow: a, masked, interruptible, events }
+  return { ordered: o, failed, timedOut, loop: l, labeled: lb, each, kept: k, mixed: m, tried: t, nested: n, bumped: b, arrow: a, masked, interruptible, events }
 }

@@ -9,10 +9,11 @@ type scopePlan struct {
 	scopeBlocks map[*ast.Node]bool      // blocks that are Scope regions
 	usings      map[*ast.Node]bool      // using statements in those blocks
 	forks       map[*ast.Node]*ast.Node // fork calls, mapped to the block whose region owns the fiber
+	usingLoops  map[*ast.Node]bool      // for (using x of values) statements
 }
 
 func newScopePlan() scopePlan {
-	return scopePlan{scopeBlocks: map[*ast.Node]bool{}, usings: map[*ast.Node]bool{}, forks: map[*ast.Node]*ast.Node{}}
+	return scopePlan{scopeBlocks: map[*ast.Node]bool{}, usings: map[*ast.Node]bool{}, forks: map[*ast.Node]*ast.Node{}, usingLoops: map[*ast.Node]bool{}}
 }
 
 // planScopes records the Scope regions of fn, a function the lowering turns
@@ -26,6 +27,8 @@ func (p *scopePlan) planScopes(a *analyzer, fn *ast.Node) {
 		case isBlockUsing(node):
 			p.scopeBlocks[node.Parent] = true
 			p.usings[node] = true
+		case isUsingForOf(node):
+			p.usingLoops[node] = true
 		case node.Kind == ast.KindCallExpression:
 			if owner := a.forkOwner(node); owner != nil {
 				p.scopeBlocks[owner] = true
@@ -40,9 +43,10 @@ func (p *scopePlan) planScopes(a *analyzer, fn *ast.Node) {
 }
 
 // scoped reports whether the lowering of node belongs to a Scope region: node
-// is a Scope region's block, a using statement in one, or a fork it owns.
+// is a Scope region's block, a using statement in one, a fork it owns, or a
+// for...of loop that takes its values with using.
 func (p *scopePlan) scoped(node *ast.Node) bool {
-	return p.scopeBlocks[node] || p.usings[node] || p.forks[node] != nil
+	return p.scopeBlocks[node] || p.usings[node] || p.forks[node] != nil || p.usingLoops[node]
 }
 
 // visitScoped lowers a node that scoped reports.
@@ -52,6 +56,8 @@ func (tx *lowering) visitScoped(node *ast.Node) *ast.Node {
 		return tx.visitScopeBlock(node)
 	case ast.KindVariableStatement:
 		return tx.visitUsing(node)
+	case ast.KindForOfStatement:
+		return tx.visitUsingForOf(node)
 	default:
 		return tx.visitFork(node)
 	}
@@ -211,4 +217,58 @@ func (tx *lowering) visitFork(node *ast.Node) *ast.Node {
 	run := tx.Factory().NewYieldExpression(tx.Factory().NewToken(ast.KindAsteriskToken), tx.runtimeCall("$fork", arguments...))
 	tx.EmitContext().SetOriginal(run, node)
 	return run
+}
+
+// visitUsingForOf lowers `for (using x of values) body` in an Effect
+// function. Each iteration's body is a Scope region that takes the value
+// with using first, so the value is released when the iteration ends, by any
+// path, after what the body acquired:
+//
+//	for (using conn of connections) { if (conn.closed) break; send(conn) }
+//
+// becomes
+//
+//	for (const value of connections) {
+//	  const completion = yield* runtime.$region(Effect.fnUntraced(function* f$using(scope) {
+//	    const conn = yield* runtime.$using(scope, Effect.succeed(value));
+//	    if (conn.closed) return { kind: "break", label: "" };
+//	    yield* send(conn);
+//	    return runtime.$normal;
+//	  }));
+//	  if (completion.kind === "break" && completion.label === "") break;
+//	}
+//
+// The using declarations and forks of a block body join the same region.
+func (tx *lowering) visitUsingForOf(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	loop := node.AsForInOrOfStatement()
+	declaration := loop.Initializer.AsVariableDeclarationList().Declarations.Nodes[0]
+	expression := tx.Visitor().VisitNode(loop.Expression)
+	value := f.NewUniqueName("value")
+	body := loop.Statement
+	scope := tx.scopeName(body)
+
+	// The loop is the target of the jumps its region dispatches, as
+	// visitJumpTarget makes it for any other loop.
+	tx.frame.targets = append(tx.frame.targets, target{loop: true})
+	r := &region{}
+	saved := tx.frame
+	tx.frame = &frame{name: saved.name, region: r}
+	using := f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), tx.runtimeCall("$using", scope, tx.succeed(value)))
+	statements := []*ast.Node{f.NewVariableStatement(nil /*modifiers*/, f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
+		f.NewVariableDeclaration(tx.Visitor().VisitNode(declaration.Name()), nil /*exclamationToken*/, nil /*typeNode*/, using),
+	}), ast.NodeFlagsConst))}
+	if body.Kind == ast.KindBlock {
+		statements = append(statements, tx.Visitor().VisitNodes(body.AsBlock().Statements).Nodes...)
+	} else {
+		statements = append(statements, statementsOf(tx.Visitor().VisitNode(body))...)
+	}
+	tx.frame = saved
+	dispatched := statementsOf(tx.runRegion(body, tx.scopeRegion(r, scope, body, statements), r))
+	tx.frame.targets = tx.frame.targets[:len(tx.frame.targets)-1]
+
+	initializer := f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
+		f.NewVariableDeclaration(value, nil /*exclamationToken*/, nil /*typeNode*/, nil /*initializer*/),
+	}), ast.NodeFlagsConst)
+	return f.UpdateForInOrOfStatement(loop, nil /*awaitModifier*/, initializer, expression, f.NewBlock(f.NewNodeList(dispatched), true /*multiLine*/))
 }

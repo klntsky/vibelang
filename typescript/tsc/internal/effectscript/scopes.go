@@ -35,7 +35,9 @@ import (
 // is a Disposable, null, or undefined. A value that is a Disposable, from
 // either kind, is also released with [Symbol.dispose]() when the block exits.
 // using adds no masking of its own: an acquisition is masked or interruptible
-// as its Effect.acquireRelease says (D25).
+// as its Effect.acquireRelease says (D25). for (using x of values) takes each
+// value with using in a Scope region around that iteration's body, so the
+// value is released when the iteration ends, by any path.
 
 func init() {
 	checker.RegisterUsingInitializerHook(usingInitializer)
@@ -47,6 +49,16 @@ func init() {
 func isBlockUsing(node *ast.Node) bool {
 	return node.Kind == ast.KindVariableStatement && isUsingList(node.AsVariableStatement().DeclarationList) &&
 		node.Parent != nil && node.Parent.Kind == ast.KindBlock
+}
+
+// isUsingForOf reports whether node is `for (using x of values) body`, whose
+// body the lowering makes a Scope region for each iteration.
+func isUsingForOf(node *ast.Node) bool {
+	if node.Kind != ast.KindForOfStatement {
+		return false
+	}
+	initializer := node.AsForInOrOfStatement().Initializer
+	return initializer != nil && initializer.Kind == ast.KindVariableDeclarationList && isUsingList(initializer)
 }
 
 // ownerBlock returns the innermost block around node within its function, or
