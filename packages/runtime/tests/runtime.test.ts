@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test"
 import { Cause, Context, Deferred, Fiber, Stream } from "effect"
 import {
-  $bind, $catch, $caught, $control, $expected, $finally, $fork, $forOf, $forStream, $normal,
+  $bind, $catch, $caught, $control, $expected, $finally, $fork, $forOf, $normal,
   $produce, $program, $programs, $reference, $region, $service, $tailResume,
-  $tailResumeWith, $toStream, $trusted, $trustedPlain, $using, $yield, abandon, Control,
-  Effect, Exit, fork, handle, handoff, Layer, pipe, Producer, resume,
+  $tailResumeWith, $trusted, $trustedPlain, $using, $yield, $yieldAll, abandon, Control,
+  Effect, Exit, fork, handle, handoff, Layer, pipe, resume,
   resumeWith, runMain, Schema, Scope, suspend, TaggedError, wire
 } from "@effectscript/runtime"
 
@@ -178,28 +178,78 @@ const numbers = () => $produce(() => Effect.gen(function* () {
   yield* $yield(3)
 }))
 
-test("producers: forOf consumes a cold Producer and break closes it", async () => {
+test("producers: a producer is a cold Stream; forOf iterates it and break closes it", async () => {
   const events: number[] = []
   let closed = false
-  const producer = $produce(() => $finally(numbers().body(), Effect.sync(() => { closed = true })))
-  expect(producer).toBeInstanceOf(Producer)
+  const producer = $produce(() => $finally(Effect.gen(function* () {
+    yield* $yieldAll(numbers())
+  }), Effect.sync(() => { closed = true })))
+  expect(Stream.isStream(producer)).toBe(true)
   expect(closed).toBe(false)
-  await Effect.runPromise($forOf(producer, value => Effect.sync(() => {
+  const completion = await Effect.runPromise($forOf(producer, value => Effect.sync(() => {
     events.push(value)
     return value === 2 ? { kind: "break", label: "" } : $normal
   })))
+  expect(completion).toEqual($normal)
   expect(events).toEqual([1, 2])
   expect(closed).toBe(true)
 })
 
-test("producers: a producer is consumed through Stream and forStream stops at break", async () => {
-  expect(await Effect.runPromise(Stream.runCollect($toStream(numbers())))).toEqual([1, 2, 3])
+test("producers: a loop body's other jumps leave the loop as completion records", async () => {
+  const outer = { kind: "break", label: "outer" }
+  expect(await Effect.runPromise($forOf(numbers(), () => Effect.succeed(outer), "inner"))).toBe(outer)
   const seen: number[] = []
-  await Effect.runPromise($forStream(Stream.make(1, 2, 3), value => Effect.sync(() => {
+  expect(await Effect.runPromise($forOf(numbers(), value => Effect.sync(() => {
+    seen.push(value)
+    return { kind: "continue", label: "inner" }
+  }), "inner"))).toEqual($normal)
+  expect(seen).toEqual([1, 2, 3])
+})
+
+test("producers: forOf pulls a Stream and stops at break", async () => {
+  expect(await Effect.runPromise(Stream.runCollect(numbers()))).toEqual([1, 2, 3])
+  const seen: number[] = []
+  await Effect.runPromise($forOf(Stream.make(1, 2, 3), value => Effect.sync(() => {
     seen.push(value)
     return { kind: "break", label: "" }
   })))
   expect(seen).toEqual([1])
+})
+
+test("producers: yieldAll yields another producer, a Stream, and an iterable", async () => {
+  const all = $produce(() => Effect.gen(function* () {
+    yield* $yieldAll(numbers())
+    yield* $yieldAll(Stream.make(4, 5))
+    yield* $yieldAll([6])
+  }))
+  expect(await Effect.runPromise(Stream.runCollect(all))).toEqual([1, 2, 3, 4, 5, 6])
+})
+
+test("producers: a producer used as a Stream never runs ahead of its pulls", async () => {
+  const events: string[] = []
+  const counting = $produce(() => Effect.gen(function* () {
+    for (let n = 1; n <= 3; n++) {
+      events.push(`produce ${n}`)
+      yield* $yield(n)
+    }
+  }))
+  await Effect.runPromise(Effect.scoped(Effect.gen(function* () {
+    const pull = yield* Stream.toPull(counting)
+    events.push(`pulled ${(yield* pull)[0]}`)
+    yield* Effect.sleep("20 millis")
+    events.push("waited")
+    events.push(`pulled ${(yield* pull)[0]}`)
+  })))
+  expect(events).toEqual(["produce 1", "pulled 1", "waited", "produce 2", "pulled 2"])
+})
+
+test("producers: a producer's failure fails the Stream that runs it", async () => {
+  const failing = $produce(() => Effect.gen(function* () {
+    yield* $yield(1)
+    return yield* Effect.fail("broken")
+  }))
+  const exit = await Effect.runPromiseExit(Stream.runCollect(failing))
+  expect(exit).toEqual(Exit.fail("broken"))
 })
 
 test("boundaries: trusted throws become failures only for instances of the listed classes", () => {
@@ -252,7 +302,7 @@ test("producers: closing a Stream waits for the producer's finalizer", async () 
     let n = 0
     while (true) yield* $yield(++n)
   }), Effect.sync(() => { closed = true })))
-  expect(await Effect.runPromise(Stream.runCollect(Stream.take($toStream(producer), 1)))).toEqual([1])
+  expect(await Effect.runPromise(Stream.runCollect(Stream.take(producer, 1)))).toEqual([1])
   expect(closed).toBe(true)
 })
 

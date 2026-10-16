@@ -95,13 +95,13 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `abandon` | Consume a continuation and run its cleanup without resuming its body | D16 |
 | `$tailResume` | Return a tail-resume request without adding a clause frame | D18 |
 | `$tailResumeWith` | Return a tail-resume request with an injected Effect | D17, D18 |
-| `YieldOf` (type) | Track a producer's unhandled yield requirement | D26 |
-| `Producer` | Hold a cold producer body and its element, failure, and requirement types | D26 |
-| `$produce` | Turn a generated producer body into a cold `Producer` | D26 |
+| `YieldOf` (type) | Type a producer body's yields until a loop or a Stream handles them | D26 |
+| `Producer` (type) | A producer: a `Stream` that also carries its body | D26 |
+| `$produce` | Turn a generated producer body into a cold `Stream` that hands over one element per pull | D26 |
 | `$yield` | Perform the built-in yield operation | D26 |
-| `$forOf` | Handle producer yields and lower loop completion records | D26 |
-| `$forStream` | Consume an Effect Stream and stop pulling when the loop exits | D26 |
-| `$toStream` | Adapt a producer to a Stream with fiber-owned cleanup | D26 |
+| `$yieldAll` | Yield every element of another producer, a Stream, or an iterable (`yield*`) | D26 |
+| `$forOf` | Iterate a producer under a `Yield` handler, or pull a Stream, and lower loop completion records | D18, D26 |
+| `$forStream`, `$toStream` | Kept for the prototype compiler's output: `$forOf`, and the identity | D26 |
 | `$trusted` | Run a trusted call: an instance of a listed class is an expected failure, any other exception a defect | D5, D23 |
 | `$trustedPlain` | The same in a function that compiles to plain JavaScript: throw a listed exception as `$expected` for its `catch` | D54 |
 | `Effect` | Supply the prelude Effect namespace | D4 |
@@ -140,8 +140,12 @@ is exact when every clause that returns a value of another type does not
 resume; with `onReturn`, `H` is `never`, so a clause's tail `resume` adds
 nothing to the `handle`'s result (D97).
 
-The producer-to-Stream adapter retains the prototype's one-element buffer. The
-stricter zero-capacity handoff described by D26 remains follow-up work. Direct
-`$forOf` consumption uses a tail-resumptive handler and closes the producer when
-a completion record exits the loop. Stream closure interrupts its producer
-fiber and runs cleanup.
+A producer is a `Stream`. `for...of` over it runs its body under a `Yield`
+handler on the loop's fiber and resumes it in tail position, so a long producer
+runs in constant stack; a loop that ends early abandons it, which runs its
+cleanup. Anything else that runs it as a `Stream` starts its body on a fiber of
+its own on the first pull, and the `Yield` clause completes the pending pull and
+waits for the next one before it resumes the body: a handoff with no buffer, so
+the producer never runs ahead of its consumer (D26; the prototype's adapter used
+a one-element buffer). Closing the stream interrupts that fiber, which runs the
+producer's cleanup.
