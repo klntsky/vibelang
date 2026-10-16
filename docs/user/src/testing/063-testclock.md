@@ -22,11 +22,14 @@ export default defineConfig({
 ```
 
 Register `it.effect` at the top level or inside `describe`. The callback is a
-program, so EffectScript calls inside it run. For assertions from a foreign
-library, use an explicit boundary, for example
-`Effect.sync(() => assert.strictEqual(actual, expected))`. Assertion failures
-are defects and point to the original `.es` line through the plugin's maps.
-The examples below use a local `check` helper instead.
+program, so EffectScript calls inside it run. `assert` and `expect` from
+`@effect/vitest` are exports of an Effect package, so call them directly, as in
+`assert.strictEqual(actual, expected)` or `expect(actual).toBe(expected)`. A
+failed assertion is a defect: it fails the test, and its stack points to the
+original `.es` line through the plugin's maps. Import them from
+`@effect/vitest`; the same functions imported from `vitest` are plain
+TypeScript, which is ES4401 inside a test. The examples below use a local
+`check` helper, which works the same way.
 
 ## Controlling virtual time
 

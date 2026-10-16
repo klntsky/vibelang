@@ -61,14 +61,14 @@ function answer() {
 }
 
 it.effect("answers", () => {
-  const actual = answer()
-  Effect.sync(() => assert.strictEqual(actual, 42))
+  assert.strictEqual(answer(), 42)
 })
 ```
 
 Run `bunx vitest run` or `bunx vitest` for watch mode. No prior emission to
-`dist/` is needed. `Effect.sync` keeps assertions at an explicit foreign-code
-boundary. A failed assertion's stack points to its `.es` source line.
+`dist/` is needed. `assert` and `expect` from `@effect/vitest` are trusted
+exports of an Effect package, so a test calls them directly. A failed
+assertion's stack points to its `.es` source line.
 
 ## Options
 
