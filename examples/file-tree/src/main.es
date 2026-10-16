@@ -1,0 +1,38 @@
+import { Console } from "effect"
+import { FileSystem } from "effect/FileSystem"
+import { Path } from "effect/Path"
+import { NodeServices } from "@effect/platform-node"
+
+// A does not depend on the recursive result, so the whole contract is inferred.
+function collectFiles(directory: string, found: string[], visited: Set<string>) {
+  const canonical = FileSystem.realPath(directory)
+  if (visited.has(canonical)) return
+  visited.add(canonical)
+  const names = FileSystem.readDirectory(directory).sort()
+  for (const name of names) {
+    const path = Path.join(directory, name)
+    const info = FileSystem.stat(path)
+    if (info.type === "Directory") collectFiles(path, found, visited)
+    else if (info.type === "File") found.push(path)
+  }
+}
+
+function* walk(directory: string) {
+  const files: string[] = []
+  collectFiles(directory, files, new Set<string>())
+  for (const path of files) yield path
+}
+
+function summarize(root: string) {
+  const files: string[] = []
+  for (const path of walk(root)) files.push(path)
+  const lengths = Effect.forEach(files, (path) => {
+    const text = FileSystem.readFileString(path)
+    return { path: Path.relative(root, path), lines: text.trimEnd().split("\n").length }
+  }, { concurrency: 4 })
+  for (const file of lengths) Console.log(`${file.path}: ${file.lines} lines`)
+}
+
+export function main() {
+  Effect.provide(() => summarize("fixtures"), NodeServices.layer)
+}
