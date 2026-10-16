@@ -190,3 +190,27 @@ func (c *Checker) resolveBeforeGlobals(location *ast.Node, name string, meaning 
 	}
 	return nil
 }
+
+// EntityNameVisibilityHook reports whether a declaration file may write
+// entityName, which resolves to symbol, although no declaration of the file
+// declares or imports it. A hook that says yes must make the declaration file
+// import the name, for example with a declaration transformer hook.
+type EntityNameVisibilityHook func(c *Checker, entityName *ast.Node, symbol *ast.Symbol) bool
+
+var entityNameVisibilityHooks []EntityNameVisibilityHook
+
+// RegisterEntityNameVisibilityHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterEntityNameVisibilityHook(hook EntityNameVisibilityHook) {
+	entityNameVisibilityHooks = append(entityNameVisibilityHooks, hook)
+}
+
+func (c *Checker) applyEntityNameVisibilityHooks(entityName *ast.Node, symbol *ast.Symbol) bool {
+	for _, hook := range entityNameVisibilityHooks {
+		if hook(c, entityName, symbol) {
+			return true
+		}
+	}
+	return false
+}

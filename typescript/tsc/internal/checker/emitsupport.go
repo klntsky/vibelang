@@ -185,6 +185,10 @@ func (c *Checker) isEntityNameVisible(entityName *ast.Node, enclosingDeclaration
 		}
 	}
 
+	if c.applyEntityNameVisibilityHooks(entityName, symbol) {
+		return printer.SymbolAccessibilityResult{Accessibility: printer.SymbolAccessibilityAccessible}
+	}
+
 	visible := c.hasVisibleDeclarations(symbol, shouldComputeAliasToMakeVisible)
 	if visible != nil {
 		return *visible
