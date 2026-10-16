@@ -16,6 +16,8 @@ const sizes = mapAll(words, (w) => w.length)             // Effect<number[], nev
 
 `f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
 
+This rule also covers declarations, methods, and function expressions that are not call arguments. Added channel parameters are named E and R, then E2 and R2 for another callback (D68). A contract-less callback cannot be called inside a synchronous JavaScript callback such as a `sort` comparator: it can pause, so that call is ES4301.
+
 The declaration file writes the polymorphism out, as the comment shows. A TypeScript caller therefore passes a callback that returns an `Effect`, and wraps a plain one: `mapAll(words, (w) => Effect.succeed(w.length))`.
 
 `mapAll` compiles to frames in v0 whatever its callback does (Chapter 15). The same rule makes wrappers short:
