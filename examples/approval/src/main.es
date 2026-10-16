@@ -1,0 +1,37 @@
+import { Console } from "effect"
+
+export abstract class Approval extends Control {
+  abstract approve(request: string): Effect<boolean, never, never>
+}
+
+// The business program knows neither the reviewer nor the approval policy.
+export function release(version: string) {
+  if (!Approval.approve(`deploy ${version} to staging`)) return "staging declined"
+  if (!Approval.approve(`deploy ${version} to production`)) return "production declined"
+  return `released ${version}`
+}
+
+export function autoApprove(version: string) {
+  return handle(() => release(version), Approval, {
+    approve(_request, continuation) {
+      return resume(continuation, true)
+    }
+  })
+}
+
+export function scriptedReview(version: string, decisions: ReadonlyArray<boolean>) {
+  let next = 0
+  return handle(() => release(version), Approval, {
+    approve(request, continuation) {
+      const approved = decisions[next] ?? false
+      next++
+      Console.log(`review: ${request}: ${approved ? "yes" : "no"}`)
+      return resume(continuation, approved)
+    }
+  })
+}
+
+export function main() {
+  Console.log(`automatic: ${autoApprove("v1")}`)
+  Console.log(`scripted: ${scriptedReview("v1", [true, false])}`)
+}
