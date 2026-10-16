@@ -84,6 +84,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitPlainCatchClause(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.directs[node]:
 		return tx.visitPlainFunctionDeclaration(node)
+	case node.Kind == ast.KindCallExpression && tx.plan.wireOrders[node] != nil:
+		return tx.visitWireCall(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
 	case node.Kind == ast.KindMethodDeclaration && tx.plan.isEffect(node):

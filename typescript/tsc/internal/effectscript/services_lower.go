@@ -7,13 +7,14 @@ import (
 
 // servicePlan records what the lowering does with services in one file.
 type servicePlan struct {
-	lookups map[*ast.Node]bool   // calls S.member(…) whose callee looks the service up
-	values  map[*ast.Node]bool   // calls p() that run p, an Effect value
-	keys    map[*ast.Node]string // service and control classes, by declaration, and their keys
+	lookups    map[*ast.Node]bool   // calls S.member(…) whose callee looks the service up
+	values     map[*ast.Node]bool   // calls p() that run p, an Effect value
+	keys       map[*ast.Node]string // service and control classes, by declaration, and their keys
+	wireOrders map[*ast.Node][]int  // wire calls whose arguments the lowering reorders
 }
 
 func newServicePlan() servicePlan {
-	return servicePlan{lookups: map[*ast.Node]bool{}, values: map[*ast.Node]bool{}, keys: map[*ast.Node]string{}}
+	return servicePlan{lookups: map[*ast.Node]bool{}, values: map[*ast.Node]bool{}, keys: map[*ast.Node]string{}, wireOrders: map[*ast.Node][]int{}}
 }
 
 // planServiceCall records how call, in the body of a function the lowering
@@ -27,11 +28,14 @@ func (p *servicePlan) planServiceCall(c *checker.Checker, call *ast.Node) {
 	}
 }
 
-// planServiceClass records the key of node when it declares a service or a
-// control operation.
-func (p *servicePlan) planServiceClass(c *checker.Checker, node *ast.Node) {
+// planServiceNode records the key of node when it declares a service or a
+// control operation, and the order of its arguments when it calls wire.
+func (p *servicePlan) planServiceNode(c *checker.Checker, node *ast.Node) {
 	if classKindOf(node) != ordinaryClass {
 		p.keys[node] = servicesFor(c).key(node)
+	}
+	if ast.IsCallExpression(node) {
+		p.planWire(c, node)
 	}
 }
 

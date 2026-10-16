@@ -58,7 +58,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 				p.converts[node] = conversion
 			}
 			p.planPlain(a, node)
-			p.planServiceClass(c, node)
+			p.planServiceNode(c, node)
 			node.ForEachChild(visit)
 			return false
 		}
