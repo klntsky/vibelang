@@ -1,7 +1,6 @@
 import { Console } from "effect"
 
-// A function that makes a call becomes an Effect. Calls do not run yet, so
-// the Console.log below builds an Effect and drops it.
+// Each function that runs an Effect becomes one. Calling Console.log runs it.
 export function answer(): number {
   Console.log("computing the answer")
   return 42

@@ -1,0 +1,11 @@
+hello, user 0
+greeted with 6 letters
+hello, user 1
+greeted with 6 letters
+CALLS RUN IN ORDER
+hello, a
+hello, bc
+total 3
+doubled: 2, 4, 6
+config is data: true
+found barbara

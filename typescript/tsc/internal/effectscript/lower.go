@@ -9,29 +9,33 @@ import (
 // lowering rewrites one .es file so it runs on Effect 4. It runs before the
 // TypeScript transforms, which then erase types and convert modules as usual.
 // A function that the plan marks as an Effect becomes an Effect.fnUntraced
-// generator:
+// generator, and each call in it that the plan marks as running becomes a
+// yield*:
 //
-//	export function answer(): number {
-//	  return 42
+//	export function greet(name: string) {
+//	  Console.log(`hello, ${name}`)
+//	  return name.length
 //	}
 //
 // becomes
 //
 //	import * as Effect from "effect/Effect"
-//	export const answer = Effect.fnUntraced(function* () {
-//	  return 42
+//	export const greet = Effect.fnUntraced(function* (name: string) {
+//	  yield* Console.log(`hello, ${name}`)
+//	  return name.length
 //	})
 type lowering struct {
 	transformers.Transformer
-	plan   *plan
-	effect *ast.IdentifierNode // local name for effect's Effect module, imported on first use
+	plan     *plan
+	effect   *ast.IdentifierNode // local name for effect's Effect module, imported on first use
+	inEffect bool                // visiting code that runs inside a lowered generator
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
 	if !isEffectScriptFile(file) {
 		return nil
 	}
-	tx := &lowering{plan: planFile(file)}
+	tx := &lowering{plan: planFile(opts.EmitResolver, file)}
 	return tx.NewTransformer(tx.visit, opts.Context)
 }
 
@@ -39,10 +43,16 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 	switch {
 	case node.Kind == ast.KindSourceFile:
 		return tx.visitSourceFile(node.AsSourceFile())
+	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):
+		return tx.visitRunningCall(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
 	case tx.plan.isEffect(node):
 		return tx.lowerFunction(node)
+	case isFunctionBoundary(node):
+		saved := tx.inEffect
+		tx.inEffect = false
+		defer func() { tx.inEffect = saved }()
 	}
 	return tx.Visitor().VisitEachChild(node)
 }
@@ -74,14 +84,26 @@ func (tx *lowering) effectName() *ast.IdentifierNode {
 	return tx.effect
 }
 
+// visitRunningCall turns `f(x)` into `yield* f(x)`.
+func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
+	call := tx.Visitor().VisitEachChild(node)
+	run := tx.Factory().NewYieldExpression(tx.Factory().NewToken(ast.KindAsteriskToken), call)
+	tx.EmitContext().SetOriginal(run, node)
+	return run
+}
+
 // lowerFunction turns a function expression or arrow function into
 // `Effect.fnUntraced(function* (params) { body })`.
 func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
 
+	saved := tx.inEffect
+	tx.inEffect = false // a generator's parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
+	tx.inEffect = true
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
+	tx.inEffect = saved
 	if !ast.IsBlock(body) {
 		body = ec.ConvertToFunctionBlock(body, false /*multiLine*/)
 	}
