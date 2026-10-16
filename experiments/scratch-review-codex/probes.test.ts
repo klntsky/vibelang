@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Cause, Context, Effect, Exit, Fiber } from "effect"
-import { abandon, catchExpected, handle, hooks, operation, resume, resumeWith, suspend, tailResume, transfer, type Suspended } from "../kernel/kernel.ts"
+import { abandon, catchExpected, handle, hooks, operation, resume, resumeWith, suspend, tailResume, transfer, type Suspended } from "../../packages/runtime/src/kernel/kernel.ts"
 import * as Reference from "../reference-machine/kernel.ts"
 
 // Counterexamples are asserted as observations, not as desired semantics.

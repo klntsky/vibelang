@@ -1,7 +1,7 @@
 // G4: handoff for producers that cannot act on a lost race.
 import { expect, test } from "bun:test"
 import { Effect, Exit, Fiber } from "effect"
-import { handoff, HandoffProtocolViolation, wakeConfig } from "../kernel/kernel.ts"
+import { handoff, HandoffProtocolViolation, wakeConfig } from "../../packages/runtime/src/kernel/kernel.ts"
 
 const recorder = () => {
   const events: Array<string> = []

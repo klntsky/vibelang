@@ -3,7 +3,7 @@
 import { expect, test } from "bun:test"
 import { AsyncLocalStorage } from "node:async_hooks"
 import { Cause, Context, Effect, Layer } from "effect"
-import { handle, operation, resume } from "../../kernel/kernel.ts"
+import { handle, operation, resume } from "../../../packages/runtime/src/kernel/kernel.ts"
 import { defect, run, sync, value } from "./helpers.ts"
 
 test("D01 §2.5.3 false: Effect.callback can resume synchronously inside its own fiber", () => {

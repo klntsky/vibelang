@@ -1,7 +1,7 @@
 // D18 / Codex R10 / Fable 1: producers and handler clauses whose last step is
 // `resume` must run in constant stack. The kernel's `hooks.onResume` reports
 // the fiber's stack depth at every resumption.
-import { hooks } from "../../../experiments/kernel/kernel.ts"
+import { hooks } from "../../../packages/runtime/src/kernel/kernel.ts"
 
 function* count(n: number) {
   let i = 0

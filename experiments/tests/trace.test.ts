@@ -29,8 +29,8 @@
 //   }
 import { expect, test } from "bun:test"
 import { Context, Effect, Exit, Scope } from "effect"
-import { handle, hooks, operation, resume } from "../kernel/kernel.ts"
-import { compiled, contextLabels, stackLabels } from "../kernel/trace.ts"
+import { handle, hooks, operation, resume } from "../../packages/runtime/src/kernel/kernel.ts"
+import { compiled, contextLabels, stackLabels } from "../../packages/runtime/src/kernel/trace.ts"
 
 class Logger extends Context.Service<Logger, {
   readonly name: string

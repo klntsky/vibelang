@@ -12,7 +12,7 @@
 // checked by the last two probes here and by K11a/K11b in tests/review-fixes.test.ts.
 import { expect, test } from "bun:test"
 import { Effect, Exit } from "effect"
-import { type Continuation, handle, hooks, operation, resume, tailResume } from "../kernel/kernel.ts"
+import { type Continuation, handle, hooks, operation, resume, tailResume } from "../../packages/runtime/src/kernel/kernel.ts"
 
 const Yield = operation<number, void>("Yield")
 const N = 100_000

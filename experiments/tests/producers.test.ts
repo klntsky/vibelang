@@ -14,7 +14,7 @@
 //   }
 import { expect, test } from "bun:test"
 import { Effect, Exit } from "effect"
-import { type Continuation, handle, hooks, operation, resume } from "../kernel/kernel.ts"
+import { type Continuation, handle, hooks, operation, resume } from "../../packages/runtime/src/kernel/kernel.ts"
 
 const Yield = operation<number, void>("Yield")
 

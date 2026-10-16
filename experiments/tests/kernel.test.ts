@@ -13,8 +13,8 @@ import {
   suspend,
   Suspended,
   transfer
-} from "../kernel/kernel.ts"
-import { compiled } from "../kernel/trace.ts"
+} from "../../packages/runtime/src/kernel/kernel.ts"
+import { compiled } from "../../packages/runtime/src/kernel/trace.ts"
 
 const run = <A, E>(effect: Effect.Effect<A, E, never>) => Effect.runPromiseExit(effect)
 

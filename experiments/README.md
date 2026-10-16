@@ -14,9 +14,9 @@ cd reference-machine && bun install && bun test   # independent strategy-B machi
 
 | Path | Contents |
 | --- | --- |
-| `kernel/kernel.ts` | The continuation kernel: operations, evidence, `handle`, `perform`, `resume`, `resumeWith`, `abandon`, `transfer`, root `suspend` with bounded wake-ups, `handoff` |
-| `kernel/internals.ts` | Structural access to `FiberImpl` fields; refuses to load on any Effect version but 4.0.5 |
-| `kernel/trace.ts` | Names compiled-function frames and prints machine state |
+| `../packages/runtime/src/kernel/kernel.ts` | The continuation kernel: operations, evidence, `handle`, `perform`, `resume`, `resumeWith`, `abandon`, `transfer`, root `suspend` with bounded wake-ups, `handoff` |
+| `../packages/runtime/src/kernel/internals.ts` | Structural access to `FiberImpl` fields; refuses to load on any Effect version but 4.0.5 |
+| `../packages/runtime/src/kernel/trace.ts` | Names compiled-function frames and prints machine state |
 | `tests/trace.test.ts` | T1: nested suspension and resumption through Context and Scope |
 | `tests/kernel.test.ts` | One-shot ownership, handler semantics, interop, stack safety, producers, retry |
 | `tests/kernel-edges.test.ts` | Resume-site state, masking, fiber affinity, foreign frames, finalizer failure |

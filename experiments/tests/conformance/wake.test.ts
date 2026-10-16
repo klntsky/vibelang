@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test"
 import { Effect, Exit, Scheduler } from "effect"
-import { suspend, wakeConfig, type Resumer } from "../../kernel/kernel.ts"
+import { suspend, wakeConfig, type Resumer } from "../../../packages/runtime/src/kernel/kernel.ts"
 import { note } from "./helpers.ts"
 
 const originalBudget = wakeConfig.budget

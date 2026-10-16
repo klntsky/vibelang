@@ -4,7 +4,7 @@
 // (imported, never edited).
 import { Context, Data, Effect, Exit, Fiber, Layer, Queue, Schema, Scope, Stream } from "effect"
 import { pipe } from "effect/Function"
-import * as K from "../../../experiments/kernel/kernel.ts"
+import * as K from "../../../packages/runtime/src/kernel/kernel.ts"
 
 export { Effect, Layer, Schema, pipe }
 export const $Context = Context

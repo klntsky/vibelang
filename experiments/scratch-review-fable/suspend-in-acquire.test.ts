@@ -10,7 +10,7 @@
 // become live.
 import { expect, test } from "bun:test"
 import { Effect, Exit, Fiber } from "effect"
-import { suspend } from "../kernel/kernel.ts"
+import { suspend } from "../../packages/runtime/src/kernel/kernel.ts"
 
 type Sock = { id: number; destroyed: boolean }
 

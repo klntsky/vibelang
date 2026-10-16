@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { Context, Effect, Exit, References, Scheduler, Tracer } from "effect"
-import { handle, operation, resume } from "../../kernel/kernel.ts"
-import { frameName } from "../../kernel/internals.ts"
+import { handle, operation, resume } from "../../../packages/runtime/src/kernel/kernel.ts"
+import { frameName } from "../../../packages/runtime/src/kernel/internals.ts"
 import { note, sync, value } from "./helpers.ts"
 
 for (const consume of ["resume", "abandon"] as const) {

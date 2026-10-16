@@ -4,7 +4,7 @@ import { $bind, $catch, $finally, $region, $using, $normal, $program, $trusted, 
 // D18 / Codex R10 / Fable 1: producers and handler clauses whose last step is
 // `resume` must run in constant stack. The kernel's `hooks.onResume` reports
 // the fiber's stack depth at every resumption.
-import { hooks } from "../../../../experiments/kernel/kernel.ts"
+import { hooks } from "../../../../packages/runtime/src/kernel/kernel.ts"
 
 const count = (n: number) => $produce(Effect.fnUntraced(function* () {
   let i = 0;

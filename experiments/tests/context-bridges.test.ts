@@ -2,7 +2,7 @@
 import { expect, test } from "bun:test"
 import { AsyncLocalStorage } from "node:async_hooks"
 import { Effect, Exit, Tracer } from "effect"
-import { type Continuation, handle, operation, resume } from "../kernel/kernel.ts"
+import { type Continuation, handle, operation, resume } from "../../packages/runtime/src/kernel/kernel.ts"
 
 test("G6a spans: the clause sees the outer span, the body sees its own after resume, each span ends once", async () => {
   const Ask = operation<void, string>("Ask")

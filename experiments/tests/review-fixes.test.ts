@@ -20,7 +20,7 @@ import {
   tailResumeWith,
   transfer,
   wakeConfig
-} from "../kernel/kernel.ts"
+} from "../../packages/runtime/src/kernel/kernel.ts"
 
 afterEach(() => {
   hooks.onCapture = undefined

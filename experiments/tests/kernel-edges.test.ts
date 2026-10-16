@@ -2,7 +2,7 @@
 // interruption, masking, cross-fiber abandonment, and opaque foreign frames.
 import { describe, expect, test } from "bun:test"
 import { Cause, Context, Effect, Exit, Fiber, Scope } from "effect"
-import { abandon, type Continuation, handle, operation, resume, Suspended, transfer } from "../kernel/kernel.ts"
+import { abandon, type Continuation, handle, operation, resume, Suspended, transfer } from "../../packages/runtime/src/kernel/kernel.ts"
 
 const run = <A, E>(effect: Effect.Effect<A, E, never>) => Effect.runPromiseExit(effect)
 

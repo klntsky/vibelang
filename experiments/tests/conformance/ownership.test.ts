@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Effect, Exit, Fiber, Scope } from "effect"
-import { handle, operation, resume, transfer, type Continuation } from "../../kernel/kernel.ts"
+import { handle, operation, resume, transfer, type Continuation } from "../../../packages/runtime/src/kernel/kernel.ts"
 import { defect, note, run, sync, value } from "./helpers.ts"
 
 test("O01 §1.4/1.7 Owner inside an abandoned segment abandons its own held continuation", () => {

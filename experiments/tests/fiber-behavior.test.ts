@@ -4,7 +4,7 @@
 // (capture passed through the combinator); "other" means HandlerNotOnThisFiber.
 import { describe, expect, test } from "bun:test"
 import { Cause, Context, Effect, Exit, Fiber, Layer, Schedule } from "effect"
-import { type Continuation, handle, operation, resume } from "../kernel/kernel.ts"
+import { type Continuation, handle, operation, resume } from "../../packages/runtime/src/kernel/kernel.ts"
 
 const Ask = operation<void, number>("FiberProbe")
 

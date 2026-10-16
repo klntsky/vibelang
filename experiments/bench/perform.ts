@@ -1,7 +1,7 @@
 // Cost of operations on effect@4.0.5. Run: bun bench/perform.ts
 // Prints nanoseconds per operation; numbers are indicative, not a benchmark suite.
 import { Context, Effect } from "effect"
-import { type Continuation, handle, operation, provideInPlace, resume } from "../kernel/kernel.ts"
+import { type Continuation, handle, operation, provideInPlace, resume } from "../../packages/runtime/src/kernel/kernel.ts"
 
 class Counter extends Context.Service<Counter, { readonly next: (n: number) => Effect.Effect<number> }>()("bench/Counter") {}
 

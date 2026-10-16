@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Context, Effect, Exit, Layer } from "effect"
-import { handle, operation, resume } from "../../kernel/kernel.ts"
+import { handle, operation, resume } from "../../../packages/runtime/src/kernel/kernel.ts"
 import { note, sync, value } from "./helpers.ts"
 
 class Resource extends Context.Service<Resource, string>()("conformance/Resource") {}

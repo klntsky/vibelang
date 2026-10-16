@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Effect, Exit, Scope } from "effect"
-import { abandon, abandonNow, handle, operation, transfer } from "../../kernel/kernel.ts"
+import { abandon, abandonNow, handle, operation, transfer } from "../../../packages/runtime/src/kernel/kernel.ts"
 import { summary, sync, value } from "./helpers.ts"
 
 test("A01 §1.7 transferred continuation release defect must fail the owning Scope boundary", () => {

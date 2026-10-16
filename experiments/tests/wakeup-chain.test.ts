@@ -4,7 +4,7 @@
 // long chain nests run loops.
 import { expect, test } from "bun:test"
 import { Cause, Deferred, Effect, Exit, Fiber } from "effect"
-import { suspend, wakeConfig } from "../kernel/kernel.ts"
+import { suspend, wakeConfig } from "../../packages/runtime/src/kernel/kernel.ts"
 
 const settle = Effect.sleep("50 millis")
 

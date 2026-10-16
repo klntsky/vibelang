@@ -1,7 +1,7 @@
 // G7: cost of capturing at every level of a deep recursion. Run: bun bench/deep-capture.ts
 // Each level performs once before descending, so capture n copies about n frames.
 import { Effect } from "effect"
-import { type Continuation, handle, operation, resume } from "../kernel/kernel.ts"
+import { type Continuation, handle, operation, resume } from "../../packages/runtime/src/kernel/kernel.ts"
 
 const Tick = operation<number, void>("Tick")
 

@@ -24,7 +24,7 @@ const lines = (path: string) => readFileSync(join(experimentsDir, path), "utf8")
 const facts: Record<string, string> = {
   testCount: ran[1]!,
   testFiles: ran[2]!,
-  kernelLines: String(lines("kernel/kernel.ts") + lines("kernel/internals.ts"))
+  kernelLines: String(lines("../packages/runtime/src/kernel/kernel.ts") + lines("../packages/runtime/src/kernel/internals.ts"))
 }
 
 const markdown = parts

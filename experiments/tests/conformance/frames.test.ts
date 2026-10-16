@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { Context, Effect, Exit } from "effect"
-import { handle, operation, resume, resumeWith } from "../../kernel/kernel.ts"
+import { handle, operation, resume, resumeWith } from "../../../packages/runtime/src/kernel/kernel.ts"
 import { defect, note, sync, value } from "./helpers.ts"
 
 class Local extends Context.Service<Local, string>()("conformance/Local") {}

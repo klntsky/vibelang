@@ -1,7 +1,7 @@
 // Reference program 4, TypeScript side: a callback API adapted with the kernel's `suspend`
 // (Chapter 6 "Adapting a callback API"). Boundary code, so it lives in TypeScript and may use timers.
 import { Effect } from "effect"
-import { suspend } from "../../../experiments/kernel/kernel.ts"
+import { suspend } from "../../../packages/runtime/src/kernel/kernel.ts"
 
 export const log: string[] = []
 

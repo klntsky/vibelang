@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test"
 import { Effect, Exit, Fiber } from "effect"
-import { abandonNow, handle, hooks, operation, resume } from "../../kernel/kernel.ts"
+import { abandonNow, handle, hooks, operation, resume } from "../../../packages/runtime/src/kernel/kernel.ts"
 import { defect, note, run, summary, sync, value } from "./helpers.ts"
 
 afterEach(() => { delete hooks.onCapture; delete hooks.onResume })
