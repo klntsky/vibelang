@@ -90,10 +90,11 @@ const (
 )
 
 // analyzer decides which .es functions are Effects. A function is an Effect
-// when its body runs a call: a call whose signature returns an Effect, or a
-// call to an .es function that is itself an Effect. A function on a call
-// cycle is an Effect, which is always correct and only slower than solving
-// the cycle. Every other function compiles to plain JavaScript (design D10).
+// when its body runs a call, a call whose signature returns an Effect or a
+// call to an .es function that is itself an Effect, or when a throw can end
+// it. A function on a call cycle is an Effect, which is always correct and
+// only slower than solving the cycle. Every other function compiles to plain
+// JavaScript (design D10).
 type analyzer struct {
 	checker   *checker.Checker
 	states    map[*ast.Node]fnState
@@ -143,7 +144,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn)
+	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn) || hasEscapingThrow(fn)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
 }

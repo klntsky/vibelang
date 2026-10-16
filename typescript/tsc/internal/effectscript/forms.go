@@ -243,9 +243,9 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 }
 
 // canBePlain reports whether fn compiles to plain JavaScript (D10): its body
-// runs no Effect and looks up no service.
+// runs no Effect and looks up no service, and no throw can end it.
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
-	return !forEachCallInBody(fn, a.performs)
+	return !forEachCallInBody(fn, a.performs) && !hasEscapingThrow(fn)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript
@@ -278,17 +278,17 @@ func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Ty
 // A, or nil when no Effect interface is in reach.
 func (a *analyzer) effectTypeOf(fn *ast.Node, success *checker.Type) *checker.Type {
 	info := a.effectOf(fn)
-	effect := a.effectInterface
-	if info != nil && info.effect != nil {
-		effect = info.effect
+	if info == nil {
+		info = &effectInfo{} // fn's body is being collected
+	}
+	effect := a.effectInterfaceFor(fn, info)
+	if effect == nil {
+		effect = a.effectInterface
 	}
 	if effect == nil {
 		return nil
 	}
-	var errors, requirements []*checker.Type
-	if info != nil {
-		errors, requirements = info.errors, info.requirements
-	}
+	errors, requirements := info.errors, info.requirements
 	return a.checker.NewTypeReference(effect, []*checker.Type{success, a.checker.GetUnionType(errors), a.checker.GetUnionType(requirements)})
 }
 

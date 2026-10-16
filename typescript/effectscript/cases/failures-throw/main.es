@@ -1,0 +1,102 @@
+// throw is Effect.fail (D46): the thrown value is an expected failure, and its
+// type joins the function's E. A catch handles the try block's expected
+// failures and receives their union, which instanceof and _tag narrow.
+import { Data, Effect } from "effect"
+
+export class InvalidId extends Data.TaggedError("InvalidId")<{ readonly raw: string }> {}
+export class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: string }> {}
+
+export interface User {
+  readonly id: string
+  readonly name: string
+}
+
+const guest: User = { id: "0", name: "Guest" }
+const users = new Map<string, User>([["42", { id: "42", name: "Ada" }]])
+
+// A throw is enough to make a function an Effect: Effect<number, InvalidId, never>.
+export function parseId(raw: string) {
+  if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })
+  return Number(raw)
+}
+
+export function find(id: string) {
+  const user = users.get(id)
+  if (user === undefined) throw new UserNotFound({ id })
+  return user
+}
+
+// The catch handles UserNotFound; InvalidId escapes from before the try.
+export function lookup(raw: string) {
+  const id = parseId(raw)
+  try {
+    return find(String(id))
+  } catch (e) {
+    return guest
+  }
+}
+
+// e is InvalidId | UserNotFound; after the instanceof test it is InvalidId,
+// which the rethrow adds to E.
+export function lookupOrGuest(raw: string) {
+  try {
+    return find(String(parseId(raw)))
+  } catch (e) {
+    if (e instanceof UserNotFound) return guest
+    throw e
+  }
+}
+
+// Any value can be thrown; a fresh literal widens as in a return type.
+export function oops(n: number) {
+  if (n > 1) throw "bad"
+  if (n > 0) throw new Error("worse")
+  return n
+}
+
+// _tag narrows the caught union too.
+export function describe(raw: string) {
+  try {
+    return find(String(parseId(raw))).name
+  } catch (e) {
+    switch (e._tag) {
+      case "InvalidId":
+        return `invalid ${e.raw}`
+      case "UserNotFound":
+        return `missing ${e.id}`
+    }
+  }
+}
+
+// A lambda that can throw is an Effect function too.
+const doubled = (n: number) => {
+  if (n < 0) throw new InvalidId({ raw: String(n) })
+  return n * 2
+}
+
+// expect-result: {"found":"Ada","missing":"Guest","orGuest":"Guest","invalid":"InvalidId","oops":["bad","worse",0],"describe":["Ada","invalid x","missing 7"],"lambda":[42,"InvalidId"]}
+export function main() {
+  let invalid = "none"
+  try {
+    lookupOrGuest("x")
+  } catch (e) {
+    invalid = e._tag
+  }
+  const failures: Array<string | number> = []
+  for (const n of [2, 1, 0]) {
+    try {
+      failures.push(oops(n))
+    } catch (e) {
+      failures.push(typeof e === "string" ? e : e.message)
+    }
+  }
+  return {
+    found: lookup("42").name,
+    missing: lookup("7").name,
+    orGuest: lookupOrGuest("7").name,
+    invalid,
+    oops: failures,
+    describe: [describe("42"), describe("x"), describe("7")],
+    lambda: [doubled(21), Effect.catch(() => doubled(-1), (e) => e._tag)]
+  }
+}

@@ -7,12 +7,13 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
 
-// This file computes what code can fail with and what it needs, through try
-// statements. A catch handles every expected failure of its try block (D13,
-// D28), so a try statement with a catch passes on only what its catch block
-// itself raises; requirements are never handled by a catch. A finally block
-// adds its own failures and requirements (D15). E of a function is what can
-// escape its body.
+// This file computes what code can fail with and what it needs. A throw adds
+// the static type of the thrown value to E, widened as TypeScript widens a
+// return type, so `throw "bad"` adds string. A catch handles every expected
+// failure of its try block (D13, D28), so a try statement with a catch passes
+// on only what its catch block itself raises; requirements are never handled
+// by a catch. A finally block adds its own failures and requirements (D15). E
+// of a function is what can escape its body.
 
 // flowOf collects what running node adds to E and R. node is a statement,
 // block, or expression in the body of one function; the functions and classes
@@ -25,6 +26,9 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 		case isFunctionBoundary(n):
 		case n.Kind == ast.KindTryStatement:
 			info.add(a.tryFlow(n))
+		case n.Kind == ast.KindThrowStatement:
+			n.ForEachChild(visit)
+			info.errors = append(info.errors, a.thrownType(n))
 		case n.Kind == ast.KindCallExpression:
 			n.ForEachChild(visit)
 			a.addServiceLookup(info, n)
@@ -36,6 +40,33 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 	}
 	visit(node)
 	return info
+}
+
+// thrownType returns the expected failure that throw adds to E.
+func (a *analyzer) thrownType(throw *ast.Node) *checker.Type {
+	c := a.checker
+	return c.GetWidenedType(c.GetWidenedLiteralType(c.GetTypeOfExpressionBeforeWidening(throw.Expression())))
+}
+
+// hasEscapingThrow reports whether a throw statement in fn's own body can end
+// fn: a throw that no try block of fn with a catch clause encloses.
+func hasEscapingThrow(fn *ast.Node) bool {
+	var visit func(n *ast.Node, caught bool) bool
+	visit = func(n *ast.Node, caught bool) bool {
+		switch {
+		case isFunctionBoundary(n):
+			return false
+		case n.Kind == ast.KindThrowStatement && !caught:
+			return true
+		case n.Kind == ast.KindTryStatement:
+			try := n.AsTryStatement()
+			return visit(try.TryBlock, caught || try.CatchClause != nil) ||
+				try.CatchClause != nil && visit(try.CatchClause, caught) ||
+				try.FinallyBlock != nil && visit(try.FinallyBlock, caught)
+		}
+		return n.ForEachChild(func(child *ast.Node) bool { return visit(child, caught) })
+	}
+	return visit(fn.Body(), false /*caught*/)
 }
 
 // tryFlow collects what can escape a try statement.

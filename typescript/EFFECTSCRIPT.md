@@ -54,6 +54,8 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-services-ts` | A TypeScript `Context.Service` class and Effect's `Path` are used as services: an Effect-valued member runs when called, and the service's own `pipe` wins over the key's |
 | `es-services-default` | `static readonly default` makes a service a `Context.Reference` that never joins R; `static make` and `static readonly layer` stay on the class |
 | `es-control` | `extends Control` declares a control operation; `Approval.approve(…)` joins R until the runtime's `handle` answers it |
+| `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
+| `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 
 ### Acceptance cases
@@ -110,6 +112,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 30 | `ykwlmytt` | checker: add a catch clause variable type hook | Seam for typing a `catch` variable as the `try` block's expected failures |
 | 31 | `yullvuom` | checker: expose an expression's type before literal widening | `throw "bad"` adds `string`, as `return "bad"` does |
 | 32 | `mssmulnm` | effectscript: lower try, catch, and finally to Effect regions | Regions, completion records, and E through a `try` |
+| 33 | `qsxrpnuo` | effectscript: lower throw to Effect.fail and add its type to E | `throw` is an expected failure (D46) |
 
 ## Seams in upstream files
 
@@ -257,6 +260,7 @@ A method's expectation is read once, from the contextual type the checker has wh
 
 ### Types
 
+- **`throw`.** `throw e` in an Effect function lowers to `return yield* Effect.fail(e)` (D46); the `return` keeps TypeScript's narrowing after the throw in the generated code. The static type of `e` joins E, widened as TypeScript widens a return type, so `throw "bad"` adds `string` while a value declared with a literal type keeps it. A function is an Effect when a throw can end it: one that no `try` block of the function with a `catch` encloses (`hasEscapingThrow`).
 - **E through a `try`.** A `catch` handles every expected failure of its `try` block (D13, D28), so what escapes `try { A } catch { B }` is what `B` raises. Requirements are never handled: R is the union of every block's. A `finally` block adds its own failures and requirements (D15). `failures.go` computes this from the syntax tree and the checker's types (`flowOf`, `tryFlow`).
 - **The caught value.** In a function the lowering can turn into an Effect, the variable of a `catch` without a type annotation has the union of the `try` block's expected failures, `never` when there are none, so `instanceof` and `_tag` narrow it. The checker asks `catchVariableType` through the catch clause variable type hook. A `catch` at a module's top level keeps TypeScript's `unknown`.
 
@@ -298,7 +302,7 @@ function lookup(id: number) {                const lookup = Effect.fnUntraced(fu
 To add a region kind: create a `region`, emit each block with `regionStatements` and `regionFunction`, compose the closures with runtime helpers, and pass the result to `runRegion`. A consumer that handles some jumps itself, as a producer loop handles its own `break` and `continue`, filters `r.jumps` before dispatching.
 ## What it cannot do yet
 
-- `throw` and `using` are plain JavaScript. A `throw` is a defect.
+- `using` is plain JavaScript.
 - `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
 - No prelude globals (D4), `pipe`, `wire`, `fork`, or handlers. Services and control operations exist, but none of their diagnostics (ES2101, ES3001-ES3006, ES3101, ES3201-ES3204) do, and a service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
 - A provider's object literal is checked against the service's shape only as TypeScript checks any assignment, so an escaping error is TS2322, not ES2001 or ES3101 naming the member.

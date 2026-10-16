@@ -62,6 +62,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitServiceClass(node)
 	case tx.inEffect && node.Kind == ast.KindTryStatement:
 		return tx.visitTryStatement(node)
+	case tx.inEffect && node.Kind == ast.KindThrowStatement:
+		return tx.visitThrowStatement(node)
 	case tx.inEffect && (node.Kind == ast.KindReturnStatement || ast.IsBreakOrContinueStatement(node)):
 		return tx.visitJump(node)
 	case tx.inEffect && isJumpTarget(node):
@@ -120,6 +122,24 @@ func (tx *lowering) effectName() *ast.IdentifierNode {
 		tx.effect = tx.Factory().NewUniqueNameEx("Effect", printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
 	}
 	return tx.effect
+}
+
+// visitThrowStatement turns `throw e` into `return yield* Effect.fail(e)`
+// (D46): the thrown value is an expected failure, and the return keeps
+// TypeScript's narrowing after the throw in the generated code.
+func (tx *lowering) visitThrowStatement(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	fail := f.NewCallExpression(
+		f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("fail"), ast.NodeFlagsNone),
+		nil, /*questionDotToken*/
+		nil, /*typeArguments*/
+		f.NewNodeList([]*ast.Node{tx.Visitor().VisitNode(node.Expression())}),
+		ast.NodeFlagsNone,
+	)
+	statement := f.NewReturnStatement(f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), fail))
+	tx.EmitContext().SetOriginal(statement, node)
+	statement.Loc = node.Loc
+	return statement
 }
 
 // runtimeMember returns `runtime.name`, where runtime is the local name

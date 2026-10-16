@@ -60,3 +60,65 @@ func effectInterface(c *checker.Checker, t *checker.Type) *checker.Type {
 	}
 	return nil
 }
+
+// effectInterfaceFor returns the generic Effect interface for the type of fn,
+// whose body adds info: from an Effect the body runs, from the module that
+// declares a thrown error's `~effect/Effect` property (a TaggedError's comes
+// from YieldableError), from the Effect namespace in scope at fn, or from the
+// file's imports of effect's modules.
+func (a *analyzer) effectInterfaceFor(fn *ast.Node, info *effectInfo) *checker.Type {
+	c := a.checker
+	if info.effect != nil {
+		return info.effect
+	}
+	for _, e := range info.errors {
+		if property := c.GetPropertyOfType(e, effectTypeID); property != nil {
+			if variance := c.GetTypeOfSymbol(property).Symbol(); variance != nil && variance.Parent() != nil {
+				if t := effectInterfaceOfModule(c, variance.Parent()); t != nil {
+					return t
+				}
+			}
+		}
+	}
+	if namespace := c.ResolveName("Effect", fn, ast.SymbolFlagsNamespace, false /*excludeGlobals*/); namespace != nil {
+		if t := effectInterfaceOfModule(c, namespace); t != nil {
+			return t
+		}
+	}
+	for _, statement := range ast.GetSourceFileOfNode(fn).Statements.Nodes {
+		if statement.Kind != ast.KindImportDeclaration {
+			continue
+		}
+		if module := c.ResolveExternalModuleName(statement.ModuleSpecifier(), nil /*importAttributesType*/); module != nil {
+			if t := effectInterfaceOfModule(c, module); t != nil {
+				return t
+			}
+		}
+	}
+	return nil
+}
+
+// effectInterfaceOfModule returns effect's Effect interface when module is
+// effect's Effect module, or a module that exports it as the namespace
+// Effect, as the package's index does.
+func effectInterfaceOfModule(c *checker.Checker, module *ast.Symbol) *checker.Type {
+	if module.Flags()&ast.SymbolFlagsAlias != 0 {
+		module = c.GetAliasedSymbol(module)
+	}
+	for _, export := range c.GetExportsOfModule(module) {
+		if export.Name() != "Effect" {
+			continue
+		}
+		if export.Flags()&ast.SymbolFlagsInterface != 0 {
+			if t := c.GetDeclaredTypeOfSymbol(export); effectInterfaceSymbol(c, t) == c.GetMergedSymbol(export) {
+				return t
+			}
+		}
+		if export.Flags()&ast.SymbolFlagsAlias != 0 {
+			if namespace := c.GetAliasedSymbol(export); namespace != module && namespace.Flags()&ast.SymbolFlagsValueModule != 0 {
+				return effectInterfaceOfModule(c, namespace)
+			}
+		}
+	}
+	return nil
+}
