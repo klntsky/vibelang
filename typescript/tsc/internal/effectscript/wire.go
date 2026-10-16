@@ -337,7 +337,7 @@ func checkTest(c *checker.Checker, call *ast.Node) {
 		return
 	}
 	for i, program := range call.Arguments() {
-		if accepted := requirementsOf(c, c.GetTypeAtPosition(signature, i)); accepted != nil {
+		if accepted := runnerRequirements(c, c.GetTypeAtPosition(signature, i)); accepted != nil {
 			checkProgram(c, program, accepted, true /*test*/)
 			return
 		}
@@ -351,7 +351,7 @@ func checkTest(c *checker.Checker, call *ast.Node) {
 // not fit the parameter; ES3201 names the services instead, and the wire
 // arguments that need them.
 func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type, test bool) {
-	needed := requirementsOf(c, c.GetTypeAtLocation(program))
+	needed := runnerRequirements(c, c.GetTypeAtLocation(program))
 	if needed == nil {
 		return
 	}
@@ -383,9 +383,9 @@ func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type,
 	coverArgument(c, program)
 }
 
-// requirementsOf returns R of t, an Effect or a function that returns one,
+// runnerRequirements returns R of t, an Effect or a function that returns one,
 // or nil for any other type.
-func requirementsOf(c *checker.Checker, t *checker.Type) *checker.Type {
+func runnerRequirements(c *checker.Checker, t *checker.Type) *checker.Type {
 	if r := varianceChannel(c, t, "_R"); r != nil {
 		return r
 	}
