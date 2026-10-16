@@ -11238,6 +11238,9 @@ func (c *Checker) checkYieldExpression(node *ast.Node) *Type {
 		c.checkTypeAssignableToAndOptionallyElaborate(yieldedType, signatureYieldType, core.OrElse(node.Expression(), node), node.Expression(), nil, nil)
 	}
 	if node.AsYieldExpression().AsteriskToken != nil {
+		if c.iteratedElementTypeFromHooks(node, yieldExpressionType) != nil {
+			return c.undefinedType
+		}
 		use := core.IfElse(isAsync, IterationUseAsyncYieldStar, IterationUseYieldStar)
 		return core.OrElse(c.getIterationTypeOfIterable(use, IterationTypeKindReturn, yieldExpressionType, node.Expression()), c.anyType)
 	}
@@ -11263,6 +11266,9 @@ func (c *Checker) getYieldedTypeOfYieldExpression(node *ast.Node, expressionType
 	// A `yield*` expression effectively yields everything that its operand yields
 	yieldedType := expressionType
 	if isYieldStar {
+		if t := c.iteratedElementTypeFromHooks(node, expressionType); t != nil {
+			return t
+		}
 		yieldedType = c.checkIteratedTypeOrElementType(core.IfElse(isAsync, IterationUseAsyncYieldStar, IterationUseYieldStar), expressionType, sentType, errorNode)
 	}
 	if !isAsync {
@@ -18130,7 +18136,11 @@ func (c *Checker) isNullOrUndefined(node *ast.Node) bool {
 
 func (c *Checker) checkRightHandSideOfForOf(statement *ast.Node) *Type {
 	use := core.IfElse(statement.AsForInOrOfStatement().AwaitModifier != nil, IterationUseForAwaitOf, IterationUseForOf)
-	return c.checkIteratedTypeOrElementType(use, c.checkNonNullExpression(statement.Expression()), c.undefinedType, statement.Expression())
+	iterated := c.checkNonNullExpression(statement.Expression())
+	if t := c.iteratedElementTypeFromHooks(statement, iterated); t != nil {
+		return t
+	}
+	return c.checkIteratedTypeOrElementType(use, iterated, c.undefinedType, statement.Expression())
 }
 
 // Return the inferred type for a binding element
@@ -20799,8 +20809,10 @@ func (c *Checker) checkAndAggregateYieldOperandTypes(fn *ast.Node, checkMode Che
 		yieldTypes = core.AppendIfUnique(yieldTypes, c.getYieldedTypeOfYieldExpression(yieldExpr, yieldExprType, c.anyType, isAsync))
 		var nextType *Type
 		if yieldExpr.AsYieldExpression().AsteriskToken != nil {
-			iterationTypes := c.getIterationTypesOfIterable(yieldExprType, core.IfElse(isAsync, IterationUseAsyncYieldStar, IterationUseYieldStar), yieldExpr.Expression())
-			nextType = iterationTypes.nextType
+			if c.iteratedElementTypeFromHooks(yieldExpr, yieldExprType) == nil {
+				iterationTypes := c.getIterationTypesOfIterable(yieldExprType, core.IfElse(isAsync, IterationUseAsyncYieldStar, IterationUseYieldStar), yieldExpr.Expression())
+				nextType = iterationTypes.nextType
+			}
 		} else {
 			nextType = c.getContextualType(yieldExpr, ContextFlagsNone)
 		}
