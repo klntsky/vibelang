@@ -47,3 +47,13 @@ export const $control = (cls: Context.Key<any, any>, methods: ReadonlyArray<stri
  */
 export const $service = <I>(key: string): (abstract new () => {}) & Context.Key<I, I> =>
   Context.Service<I, I>()(key) as any
+
+/**
+ * D40: the base of a generated service class that declares
+ * `static readonly default`. Its static side is an Effect 4
+ * `Context.Reference`, so a program that uses the service needs no provider:
+ * the first lookup without one reads `defaultValue`, which returns the
+ * class's `default`.
+ */
+export const $reference = <I>(key: string, defaultValue: () => I): (abstract new () => {}) & Context.Reference<I> =>
+  Context.Reference<I>(key, { defaultValue }) as any

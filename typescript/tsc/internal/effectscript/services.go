@@ -73,6 +73,19 @@ func classKindOf(class *ast.Node) classKind {
 	return serviceClass
 }
 
+// hasStaticDefault reports whether class declares `static readonly default`,
+// which makes its key a Context.Reference that needs no provider (D40).
+func hasStaticDefault(class *ast.Node) bool {
+	for _, member := range class.Members() {
+		if ast.IsPropertyDeclaration(member) && ast.IsStatic(member) && ast.HasSyntacticModifier(member, ast.ModifierFlagsReadonly) {
+			if name := member.Name(); name != nil && ast.IsIdentifier(name) && name.Text() == "default" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // services remembers one checker's answers about service classes. A checker
 // is used by one goroutine at a time, so it needs no lock of its own.
 type services struct {
@@ -156,8 +169,9 @@ func (s *services) key(class *ast.Node) string {
 }
 
 // classBases is the checker's class base hook. A service class inherits the
-// static side of Context.Service<Self, Self>, and its instances inherit the
-// brand { readonly "~esc/service"?: key }.
+// static side of Context.Service<Self, Self>, or of Context.Service<never,
+// Self> when a static default makes its key a reference, and its instances
+// inherit the brand { readonly "~esc/service"?: key }.
 func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checker.Type) {
 	symbol := class.Symbol()
 	if symbol == nil {
@@ -172,7 +186,11 @@ func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checke
 	if service == nil {
 		return nil, nil
 	}
-	key := c.NewTypeReference(c.GetDeclaredTypeOfSymbol(service), []*checker.Type{class, class})
+	identifier := class
+	if hasStaticDefault(declaration) {
+		identifier = c.GetNeverType()
+	}
+	key := c.NewTypeReference(c.GetDeclaredTypeOfSymbol(service), []*checker.Type{identifier, class})
 	brand := c.NewOptionalReadonlyPropertyType(serviceBrandProperty, c.GetStringLiteralType(s.key(declaration)))
 	return key, brand
 }

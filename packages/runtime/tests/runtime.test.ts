@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { Cause, Context, Deferred, Fiber, Stream } from "effect"
 import {
   $bind, $catch, $control, $finally, $fork, $forOf, $forStream, $normal,
-  $produce, $program, $programs, $region, $service, $tailResume,
+  $produce, $program, $programs, $reference, $region, $service, $tailResume,
   $tailResumeWith, $toStream, $trusted, $using, $yield, abandon, Control,
   Effect, Exit, fork, handle, handoff, Layer, pipe, Producer, resume,
   resumeWith, runMain, Schema, Scope, suspend, TaggedError, wire
@@ -87,6 +87,17 @@ test("services: service keys and dependent-first wire provide implementations", 
   const doubled = Layer.effect(Doubled, Effect.map(Settings, s => ({ value: s.value * 2 })))
   const program = Effect.map(Doubled, d => d.value)
   expect(await Effect.runPromise(Effect.provide(program, wire(doubled, settings)))).toBe(42)
+})
+
+interface Flags { readonly beta: boolean }
+class Flags extends $reference<Flags>("runtime-test/Flags", () => Flags.default) {
+  static readonly default: Flags = { beta: false }
+}
+
+test("services: a reference key reads its class's default until a provider overrides it", async () => {
+  const beta = Effect.map(Flags, f => f.beta)
+  expect(await Effect.runPromise(beta)).toBe(false)
+  expect(await Effect.runPromise(Effect.provideService(beta, Flags, { beta: true }))).toBe(true)
 })
 
 interface Ask { answer(question: string): Effect.Effect<number> }

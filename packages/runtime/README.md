@@ -80,6 +80,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `fork` | Expose `Effect.forkScoped` to TypeScript and prelude type positions | D4, D19 |
 | `$Context` | Expose Effect's Context namespace for generated service references | D1, D40 |
 | `$service` | Create the Context key base merged with a generated service interface | D1, D45 |
+| `$reference` | Create the `Context.Reference` base of a service class that declares `static readonly default` | D40, D45 |
 | `$control` | Register one kernel operation per generated control method | D2 |
 | `Control` | Mark an abstract control declaration in the prelude | D2, D4 |
 | `wire` | Compose layers in the dependent-first order computed by the compiler | D27 |

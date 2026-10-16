@@ -84,7 +84,9 @@ func (tx *lowering) visitEffectValueCall(node *ast.Node) *ast.Node {
 //	class Users extends runtime.$service("app/users#Users") {}
 //
 // The type-only abstract members are erased later by the TypeScript
-// transform.
+// transform. A service with `static readonly default` extends
+// runtime.$reference(key, () => Flags.default) instead, a Context.Reference
+// that needs no provider (D40).
 func (tx *lowering) visitServiceClass(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	key := tx.plan.keys[node]
@@ -94,7 +96,14 @@ func (tx *lowering) visitServiceClass(node *ast.Node) *ast.Node {
 	members := tx.Visitor().VisitNodes(node.MemberList())
 	tx.inEffect = saved
 
-	base := f.NewCallExpression(tx.runtimeMember("$service"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{f.NewStringLiteral(key, ast.TokenFlagsNone)}), ast.NodeFlagsNone)
+	helper, arguments := "$service", []*ast.Node{f.NewStringLiteral(key, ast.TokenFlagsNone)}
+	if hasStaticDefault(node) {
+		// runtime.$reference(key, () => Flags.default)
+		helper = "$reference"
+		read := f.NewPropertyAccessExpression(f.NewIdentifier(node.Name().Text()), nil /*questionDotToken*/, f.NewIdentifier("default"), ast.NodeFlagsNone)
+		arguments = append(arguments, f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), read))
+	}
+	base := f.NewCallExpression(tx.runtimeMember(helper), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
 	extends := f.NewHeritageClause(ast.KindExtendsKeyword, f.NewNodeList([]*ast.Node{f.NewExpressionWithTypeArguments(base, nil /*typeArguments*/)}))
 	class := f.UpdateClassDeclaration(node.AsClassDeclaration(), node.Modifiers(), node.Name(), nil /*typeParameters*/, f.NewNodeList([]*ast.Node{extends}), members)
 	tx.EmitContext().SetOriginal(class, node)
