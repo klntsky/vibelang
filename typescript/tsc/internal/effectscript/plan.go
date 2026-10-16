@@ -1,6 +1,8 @@
 package effectscript
 
 import (
+	"sync"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
@@ -29,7 +31,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 		return p
 	}
 	r.WithChecker(func(c *checker.Checker) {
-		a := &analyzer{checker: c, states: map[*ast.Node]fnState{}}
+		a := analyzerFor(c)
 		var visit func(node *ast.Node) bool
 		visit = func(node *ast.Node) bool {
 			if isLowerable(node) && a.isEffect(node) {
@@ -83,6 +85,19 @@ const (
 type analyzer struct {
 	checker *checker.Checker
 	states  map[*ast.Node]fnState
+	effects map[*ast.Node]*effectInfo // see effectOf
+}
+
+var analyzers sync.Map // *checker.Checker -> *analyzer
+
+// analyzerFor returns the analyzer that remembers c's answers. A checker is
+// used by one goroutine at a time, so its analyzer needs no lock of its own.
+func analyzerFor(c *checker.Checker) *analyzer {
+	if a, ok := analyzers.Load(c); ok {
+		return a.(*analyzer)
+	}
+	a, _ := analyzers.LoadOrStore(c, &analyzer{checker: c, states: map[*ast.Node]fnState{}, effects: map[*ast.Node]*effectInfo{}})
+	return a.(*analyzer)
 }
 
 func (a *analyzer) isEffect(fn *ast.Node) bool {

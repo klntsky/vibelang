@@ -31,9 +31,15 @@ func inLowerableBody(node *ast.Node) bool {
 	return false
 }
 
-// successType returns A for an Effect<A, E, R>, read from the covariant _A
-// member of the Effect's variance property, or nil if t is not an Effect.
+// successType returns A for an Effect<A, E, R>, or nil if t is not an Effect.
 func successType(c *checker.Checker, t *checker.Type) *checker.Type {
+	return channelType(c, t, "_A")
+}
+
+// channelType returns one channel of an Effect<A, E, R>, or nil if t is not
+// an Effect. name is "_A", "_E", or "_R": a member of the Effect's
+// `~effect/Effect` variance property whose type is `(_: never) => Channel`.
+func channelType(c *checker.Checker, t *checker.Type, name string) *checker.Type {
 	if !isEffectType(c, t) {
 		return nil
 	}
@@ -41,7 +47,7 @@ func successType(c *checker.Checker, t *checker.Type) *checker.Type {
 	if variance == nil {
 		return nil
 	}
-	covariant := c.GetTypeOfPropertyOfType(variance, "_A") // (_: never) => A
+	covariant := c.GetTypeOfPropertyOfType(variance, name) // (_: never) => Channel
 	if covariant == nil {
 		return nil
 	}
