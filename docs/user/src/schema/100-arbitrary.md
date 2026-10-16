@@ -58,7 +58,6 @@ Schema generation targets the decoded type, so a string-to-number codec generate
 ## Checking properties
 
 ```ts
-// compiler-gap: D39/D56 Arbitrary.checkEffect accepts an effectful predicate as well as a plain predicate.
 function checkCountRoundTrip() {
   const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
   const generator = Effect.try(() => Arbitrary.schema(Count))

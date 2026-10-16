@@ -13,10 +13,8 @@ checking does not prove runtime behavior; the native smoke suite covers that.
 
 ## Evidence and scope
 
-Effect 4.0.5's `Arbitrary.checkEffect` declaration explicitly accepts
-`boolean | Effect<boolean, E, R>`. D39 requires the effectful predicate to
-select its Effect form. Other rows identify the missing contract, resource,
-producer, or value-call behavior and the exact diagnostic observed.
+Each row identifies the missing contract, resource, producer, or value-call
+behavior and the exact diagnostic observed.
 
 The tooling gaps are separate: distribution uses local file dependencies and a
 local VSIX, Vite uses compiler subprocesses, declaration emit has no `$direct`
@@ -51,7 +49,6 @@ adapter's one-element buffer, which differs from D26's zero-capacity handoff.
 | [089-advanced-usage.md, block 10](../src/schema/089-advanced-usage.md) | `interface Crate {` | TS2739, TS2740: Type 'Struct<{ readonly count: FiniteFromString; readonly children: $Array<suspend<Constraint>>; }>' is missing the following properties from type 'Effect<Codec<Crate, CrateWire, never, never>, nev... | D9/D57: A plain callback with an Effect contract must check the success type and pass its plain form when eligible. |
 | [091-transformations.md, block 6](../src/schema/091-transformations.md) | `const SemicolonNumbers = Schema.String.pipe(` | TS2345, TS2739, TS2339: Argument of type 'Transformation<Effect<readonly string[], never, never>, string, never, never>' is not assignable to parameter of type '{ readonly decode: Getter<NoInfer<readonly string[]>, string... | D9/D57: A plain callback with an Effect contract must check the success type and pass its plain form when eligible. |
 | [096-classes.md, block 8](../src/schema/096-classes.md) | `interface CrateWire {` | TS2739, TS2740: Type 'typeof Crate' is missing the following properties from type 'Effect<Codec<Crate, CrateWire, never, never>, never, never>': toJSON, [NodeInspectSymbol], [TypeId], [Symbol.iterator] | D9/D57: A plain callback with an Effect contract must check the success type and pass its plain form when eligible. |
-| [100-arbitrary.md, block 4](../src/schema/100-arbitrary.md) | `function checkCountRoundTrip() {` | ES4301: this callback can pause (Schema.encodeEffect(Schema.FiniteFromString)), but Arbitrary.checkEffect calls it synchronously. | D39/D56: Arbitrary.checkEffect accepts an effectful predicate as well as a plain predicate. |
 | [101-json-schema.md, block 5](../src/schema/101-json-schema.md) | `interface DepotTree {` | TS2739, TS2740: Type 'Struct<{ readonly name: String; readonly branches: $Array<suspend<Constraint>>; }>' is missing the following properties from type 'Effect<Codec<DepotTree, DepotTree, never, never>, never, nev... | D9/D57: A plain callback with an Effect contract must check the success type and pass its plain form when eligible. |
 | [053-introduction.md, block 5](../src/stream/053-introduction.md) | `import { Stream } from "effect"` | TS2739, TS18046, TS2488: Type 'Generator<number, void, unknown>' is missing the following properties from type 'Stream<unknown, unknown, unknown>': channel, pipe, [TypeId] | D26: A producer must adapt to Stream and for-of must consume a Stream. |
 | [057-operations.md, block 3](../src/stream/057-operations.md) | `import { Pull, Stream } from "effect"` | TS2741: Property '[Symbol.dispose]' is missing in type 'Pull<readonly [number, ...number[]], never, void, never>' but required in type 'Disposable'. | D14/D47: A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value. |

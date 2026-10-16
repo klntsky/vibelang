@@ -194,14 +194,23 @@ func (a *analyzer) freeForm(fn *ast.Node) form {
 }
 
 // decide turns an expectation into a form for fn. Without one, fn is plain
-// when D10 allows it and an Effect function otherwise. Where only an Effect is
-// expected, fn is a program; with required parameters it cannot be one, so it
-// stays an Effect function and TypeScript reports the mismatch. Where a
-// function or an Effect is expected (D39), a function with parameters is a
-// function, and one without is a program when it can pause.
+// when D10 allows it and an Effect function otherwise, and so is fn where a
+// function that returns a plain value or an Effect is expected. Where only an
+// Effect is expected, fn is a program; with required parameters it cannot be
+// one, so it stays an Effect function and TypeScript reports the mismatch.
+// Where a function or an Effect is expected (D39), a function with parameters
+// is a function, and one without is a program when it can pause.
 func (a *analyzer) decide(fn *ast.Node, e expectation) form {
+	plainOrEffect := func() form {
+		if a.canBePlain(fn) && !a.hasEscapingFailure(fn) {
+			return formPlain
+		}
+		return formEffect
+	}
 	function := formNone
 	switch {
+	case e.effectFn && e.plainFn:
+		function = plainOrEffect()
 	case e.effectFn:
 		function = formEffect
 	case e.plainFn:
@@ -216,10 +225,7 @@ func (a *analyzer) decide(fn *ast.Node, e expectation) form {
 	if e.program {
 		return formEffect
 	}
-	if a.canBePlain(fn) && !a.hasEscapingFailure(fn) {
-		return formPlain
-	}
-	return formEffect
+	return plainOrEffect()
 }
 
 func (a *analyzer) reject(call *ast.Node, key candidateKey) {

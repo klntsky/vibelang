@@ -1,0 +1,29 @@
+// A callback declared to return a plain value or an Effect takes the plain
+// form when it compiles to plain JavaScript and the Effect form when it can
+// pause (design D39), as Arbitrary.checkEffect's property does.
+import { Arbitrary, Schema } from "effect"
+import { probe } from "./helpers.ts"
+
+function isSmall(n: number) {
+  Effect.sleep("1 millis")
+  return n < 10
+}
+
+const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
+
+function roundTrip() {
+  const result = Arbitrary.checkEffect(Arbitrary.schema(Count), (count) => {
+    const wire = Schema.encodeEffect(Schema.FiniteFromString)(count)
+    return Schema.decodeEffect(Schema.FiniteFromString)(wire) === count
+  }, { runs: 20, seed: "count-round-trip" })
+  return result._tag
+}
+
+// expect-result: {"plain":"plain: true","pausing":"effect: true","roundTrip":"Passed"}
+export function main() {
+  return {
+    plain: probe((n) => n > 0),
+    pausing: probe((n) => isSmall(n)),
+    roundTrip: roundTrip()
+  }
+}

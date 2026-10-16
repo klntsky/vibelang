@@ -130,9 +130,14 @@ func (a *analyzer) classify(types []*checker.Type) expectation {
 			return
 		}
 		for _, s := range signatures {
-			if a.isExpectedEffect(unwrapSubstitution(a.checker.GetReturnTypeOfSignature(s))) {
+			switch returned := unwrapSubstitution(a.checker.GetReturnTypeOfSignature(s)); {
+			case a.isExpectedEffect(returned):
 				e.effectFn = true
-			} else {
+			case a.mayBeExpectedEffect(returned):
+				// A plain value or an Effect, as Arbitrary.checkEffect's
+				// property returns: either function fits (D39).
+				e.effectFn, e.plainFn = true, true
+			default:
 				e.plainFn = true
 			}
 		}
@@ -168,6 +173,20 @@ func (a *analyzer) isExpectedEffect(t *checker.Type) bool {
 		a.effectInterface = effectInterface(a.checker, t)
 	}
 	return true
+}
+
+// mayBeExpectedEffect reports whether t, an expected type, is a union with a
+// member that isExpectedEffect accepts, such as boolean | Effect<boolean>.
+func (a *analyzer) mayBeExpectedEffect(t *checker.Type) bool {
+	if t.Flags()&checker.TypeFlagsUnion == 0 {
+		return false
+	}
+	for _, member := range t.Types() {
+		if a.isExpectedEffect(member) {
+			return true
+		}
+	}
+	return false
 }
 
 // elementTypes returns what iterating t yields, for an array literal element's
