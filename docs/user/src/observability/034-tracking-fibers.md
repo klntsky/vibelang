@@ -5,6 +5,7 @@
 ## Managing groups of running fibers
 
 ```ts
+// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { Fiber, FiberSet } from "effect"
 
 function runGroup() {
@@ -27,6 +28,7 @@ function runGroup() {
 ## Tracking fibers by key
 
 ```ts
+// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { Fiber, FiberMap } from "effect"
 
 function replacePreview() {
@@ -48,6 +50,7 @@ Starting another fiber under an existing key interrupts the previous fiber for t
 ## Removing completed work
 
 ```ts
+// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { FiberSet } from "effect"
 
 function waitForAllTracked() {
@@ -64,6 +67,7 @@ Completed fibers are removed automatically, so a long-lived owner does not accum
 ## Interrupting tracked work on scope closure
 
 ```ts
+// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 import { FiberSet } from "effect"
 
 function serveBriefly() {

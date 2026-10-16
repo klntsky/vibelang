@@ -99,6 +99,7 @@ The release callback receives both the resource and the use phase's `Exit`. The 
 ## Giving the caller resource ownership
 
 ```ts
+// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 function acquireLease() {
   const store = LeaseStore()
   return Effect.acquireRelease(

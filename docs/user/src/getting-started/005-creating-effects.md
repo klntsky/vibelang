@@ -143,6 +143,7 @@ function counters() {
 The returned function delays its body until each call. Wrap an entire computation, including mutable setup, if retry should create new state each time. `Effect.suspend` remains useful in TypeScript adapters to delay construction of an Effect; in EffectScript, passing a program already delays its body.
 
 ```ts
+// compiler-gap: D57 A function body must check against the success type of its written Effect contract.
 function countdown(n: number): Effect<number, never, never> {
   if (n <= 0) return 0
   Effect.sleep("1 millis")

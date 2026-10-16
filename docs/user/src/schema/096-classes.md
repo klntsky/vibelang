@@ -119,6 +119,7 @@ Pass annotations after the fields or struct. The class identifier also becomes i
 ## Modeling recursive classes
 
 ```ts
+// compiler-gap: D9/D57 A plain callback with an Effect contract must check the success type and pass its plain form when eligible.
 interface CrateWire {
   readonly count: string
   readonly children: ReadonlyArray<CrateWire>

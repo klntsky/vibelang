@@ -127,6 +127,7 @@ Each `Effect.provide` builds its layers once for its program and releases their 
 ## Observing initialization and recovering failures
 
 ```ts
+// compiler-gap: D22/D56 Generic Layer pipe stages must preserve their input layer and failure types.
 class InitializationFailed extends TaggedError("InitializationFailed")<{}> {}
 
 const ReportsUnavailable = Layer.effect(Reports, () => {
@@ -153,6 +154,7 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 ## Declaring service factories and dependencies
 
 ```ts
+// compiler-gap: D57 A function body must check against the success type of its written Effect contract.
 abstract class Banner {
   abstract text(title: string): Effect<string, never, never>
 

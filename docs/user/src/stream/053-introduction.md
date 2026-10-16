@@ -85,6 +85,7 @@ function printReadings() {
 The consumer controls demand, so production slows when consumption slows. Streams exchange internal batches, so a source can prepare more than one element per pull. Buffering and concurrency introduce explicit read-ahead; backpressure does not mean exactly one element is ever in memory.
 
 ```ts
+// compiler-gap: D26 A producer must adapt to Stream and for-of must consume a Stream.
 import { Stream } from "effect"
 
 function* readings() {

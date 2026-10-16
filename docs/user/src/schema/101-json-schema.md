@@ -76,6 +76,7 @@ String lengths have a representational difference: JavaScript counts UTF-16 code
 ## Emitting references for recursive definitions
 
 ```ts
+// compiler-gap: D9/D57 A plain callback with an Effect contract must check the success type and pass its plain form when eligible.
 interface DepotTree {
   readonly name: string
   readonly branches: ReadonlyArray<DepotTree>

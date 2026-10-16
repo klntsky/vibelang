@@ -23,6 +23,7 @@ function requireText(documentId: string, text: string) {
 `Data.Error` creates an error class with typed fields and Effect's yieldable behavior. EffectScript does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
 
 ```ts
+// compiler-gap: D24 Calling an Effect subtype value must run it, including Exit and tagged errors.
 function emptyDocumentError(documentId: string) {
   return new EmptyDocument({ documentId })
 }

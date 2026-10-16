@@ -7,6 +7,7 @@ Match constructors, case builders, finalizers, and returned matchers are trusted
 ## Matchers from types or values
 
 ```ts
+// compiler-gap: D22/D56 Generic Match pipe stages lose their input and accumulated matcher types.
 import { Match } from "effect"
 
 const describe = pipe(
@@ -35,6 +36,7 @@ function describeJob(input: { readonly state: string; readonly attempts: number 
 ## Shapes, predicates, and tags
 
 ```ts
+// compiler-gap: D22/D56 Generic Match pipe stages lose their input and accumulated matcher types.
 import { Match } from "effect"
 
 function classifyRetry(input: { readonly status: string; readonly attempts: number }) {
@@ -69,6 +71,7 @@ Other patterns include `Match.nonEmptyString`, `Match.bigint`, `Match.date`, `Ma
 ## Negating patterns
 
 ```ts
+// compiler-gap: D22/D56 Generic Match pipe stages lose their input and accumulated matcher types.
 import { Match } from "effect"
 
 function availability(status: "active" | "paused" | "closed") {
@@ -103,6 +106,7 @@ Place `withReturnType<T>()` before all cases. Each handler must return `T`, whic
 ## Exhaustive handling
 
 ```ts
+// compiler-gap: D22/D56 Generic Match pipe stages lose their input and accumulated matcher types.
 import { Match } from "effect"
 
 type Phase = "draft" | "published"
@@ -122,6 +126,7 @@ function phaseLabel(phase: Phase) {
 ## Defaults, optional outputs, and result outputs
 
 ```ts
+// compiler-gap: D22/D56 Generic Match pipe stages lose their input and accumulated matcher types.
 import { Match } from "effect"
 
 type Command = "start" | "stop" | "help"

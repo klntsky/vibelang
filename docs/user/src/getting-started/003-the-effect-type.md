@@ -32,6 +32,7 @@ Errors and services from several calls accumulate as unions. Catching a failure 
 ## Check selected channels
 
 ```ts
+// compiler-gap: D57 Return contracts must check written channels and infer channels written infer Name.
 function rate(currency: string): Effect<number, infer E, Rates> {
   return Rates.lookup(currency)
 }

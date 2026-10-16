@@ -47,6 +47,7 @@ Hover over a function to see its inferred `Effect<A, E, R>`; hover over a call t
 ## Diagnostics, completions, and refactors
 
 ```ts
+// compiler-gap: D57/ES2001 An escaping expected failure must report ES2001 against the written contract.
 // expect-error: ES2001
 // Rejected escapes a contract promising no failures.
 function promised(value: number): Effect<number, never, never> {
@@ -68,6 +69,7 @@ or `yield*` inside `.es`.
 ## Configure compiler checks
 
 ```ts
+// compiler-gap: D57 A function body must check against the success type of its written Effect contract.
 function checked(value: number): Effect<number, Rejected, never> {
   return accepted(value)
 }

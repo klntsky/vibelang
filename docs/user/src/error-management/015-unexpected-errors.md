@@ -33,6 +33,7 @@ function firstLabel(labels: ReadonlyArray<string>) {
 ## Promoting typed failures to defects
 
 ```ts
+// compiler-gap: D8/D56 A pipe program must retain its failure type through generic error operators.
 class MissingSetting extends TaggedError("MissingSetting")<{
   readonly name: string
 }> {}

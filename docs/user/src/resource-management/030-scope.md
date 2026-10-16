@@ -48,6 +48,7 @@ function manuallyManagedWork() {
 ## Acquiring resources with automatic release
 
 ```ts
+// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 function openBuffer(label: string) {
   return Effect.acquireRelease(
     () => {
@@ -74,6 +75,7 @@ function copyLabels() {
 ## Arranging nested resource lifetimes
 
 ```ts
+// compiler-gap: D14/D47 A using acquisition must bind its Scope to the block without requiring Symbol.dispose on the resource value.
 function nestedLifetimes() {
   using outer = openBuffer("session")
   {

@@ -66,6 +66,7 @@ A normal `if` followed by `throw` is the statement form. Neither form changes ex
 ## Observing errors, tags, causes, and defects
 
 ```ts
+// compiler-gap: D8/D56 A pipe program must retain its failure type through generic error operators.
 function observeQuantity(value: number) {
   return pipe(
     () => quantity(value),
