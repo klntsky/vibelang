@@ -2,6 +2,7 @@ package effectscript
 
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/printer"
 	"github.com/microsoft/TypeScript/tsc/internal/transformers"
 )
@@ -235,6 +236,10 @@ func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 	if !ast.IsBlock(body) {
 		body = ec.ConvertToFunctionBlock(body, false /*multiLine*/)
+		// The printer emits the comments before the closing brace from the end
+		// of the statement list, which would be the expression's source end:
+		// the comment after the arrow would also appear inside the block.
+		body.AsBlock().Statements.Loc = core.UndefinedTextRange()
 	}
 
 	generator := tx.generatorExpression(node, sourceName(node), parameters, body)
