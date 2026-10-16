@@ -299,9 +299,30 @@ try {
     assert(contract("function main(): Effect<void, NotFound, never>").test(shown), `got ${JSON.stringify(shown)}`)
   })
 
+  await check("hover: a call that runs shows the callee's contract and the success value", async () => {
+    const shown = await hover("src/main.es", "lookup(1)")
+    assert(contract("function lookup(id: number): Effect<string, NotFound, never>").test(shown), `got ${JSON.stringify(shown)}`)
+    assert(/Runs here and returns `string`/.test(shown), `no success value in ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a TypeScript call that runs shows its success value", async () => {
+    const shown = await hover("src/main.es", "findName(id)")
+    assert(/Runs here and returns `string`/.test(shown), `no success value in ${JSON.stringify(shown)}`)
+  })
+
   await check("hover: a variable holding a call's result has the success type", async () => {
     const shown = await hover("src/main.es", "name = ")
     assert(shown.includes("const name: string"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a call to Effect.fail in an .es body runs and fails", async () => {
+    const shown = await hover("src/main.es", "Effect.fail", { offset: 7 })
+    assert(/Runs here and returns `never`/.test(shown), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a call in a .ts file does not run", async () => {
+    const shown = await hover("src/users.ts", "Effect.succeed", { offset: 7 })
+    assert(shown.includes("succeed") && !shown.includes("Runs here"), `got ${JSON.stringify(shown)}`)
   })
 
   const definition = async (relative, needle, options) => {
