@@ -122,7 +122,11 @@ func (a *analyzer) formHere(fn *ast.Node) form {
 			if f, ok := s.byCandidate[key]; ok {
 				return f
 			}
-			f := a.decide(fn, a.classify(a.expectedAt(call, signature, path, fn)))
+			e := a.classify(a.expectedAt(call, signature, path, fn))
+			if a.isPipeProgram(call, path) {
+				e.program = true
+			}
+			f := a.decide(fn, e)
 			s.byCandidate[key] = f
 			if s.first == formNone {
 				s.first = f
