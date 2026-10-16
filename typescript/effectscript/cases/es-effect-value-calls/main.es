@@ -1,0 +1,36 @@
+// Calling a value whose type is an Effect runs it (D24, Chapter 13). An
+// Exit, a union of two Effects, replays its outcome, and a tagged error
+// instance, whose class declares the Effect variance itself, fails with
+// itself. A call that returns such a value returns data; calling it runs it.
+import { Data, Effect, Exit } from "effect"
+
+class EmptyDocument extends Data.TaggedError("EmptyDocument")<{ readonly documentId: string }> {}
+
+export function replay<A, E>(outcome: Exit.Exit<A, E>) {
+  return outcome()
+}
+
+function emptyDocumentError(documentId: string) {
+  return new EmptyDocument({ documentId })
+}
+
+export function rejectDocument(documentId: string) {
+  const error = emptyDocumentError(documentId) // data, not a failure
+  return error() // calling the error fails with it
+}
+
+type Equals<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+export const replayType: Equals<ReturnType<typeof replay<number, string>>, Effect.Effect<number, string, never>> = true
+export const rejectType: Equals<ReturnType<typeof rejectDocument>, Effect.Effect<never, EmptyDocument, never>> = true
+
+// expect-result: {"value":42,"replayedFailure":"EmptyDocument d1","rejection":"EmptyDocument d2"}
+export function main() {
+  const value = replay(Exit.succeed(42))
+  const replayedFailure = Effect.flip(() => replay(Exit.fail(new EmptyDocument({ documentId: "d1" }))))
+  const rejection = Effect.flip(() => rejectDocument("d2"))
+  return {
+    value,
+    replayedFailure: `${replayedFailure._tag} ${replayedFailure.documentId}`,
+    rejection: `${rejection._tag} ${rejection.documentId}`
+  }
+}
