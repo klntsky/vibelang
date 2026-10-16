@@ -71,6 +71,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives expected failures and rethrows a `TypeError` defect (D54) |
+| `es2004-dead-catch.fail` | A `catch` over a `try` that raises no expected failure is ES2004, which `compilerOptions.effectscript` makes an error here; a live `catch` is not reported |
 | `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 | `lambda-forms` | A lambda takes the form the overload candidate under check declares, and the first candidate that accepts it in that form wins: the overload probes behind `../prototype/single-pass/RESULTS.md`, including a returned lambda, which is plain |
 | `programs` | A lambda with no parameters is a program where Effect expects an Effect: `retry`, `race`, `timeout`, `all` over an array and a record, `provide`, a stored lambda that reruns, and an object property typed through `Layer.succeed`'s `NoInfer<S>` |
@@ -198,6 +199,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 72 | `ysknkpmu` | effectscript: keep the comment after a concise arrow out of its block | A block made from a concise body has no source range for the printer's closing-brace comments |
 | 73 | `vsvzswzz` | effectscript: keep the last comment of a lowered file | The statement list keeps its source range when the lowering adds imports |
 | 74 | `twymwmrr` | effectscript: document calls to Exit and error values in EFFECTSCRIPT.md | This section |
+| 75 | `oqrpqyrk` | effectscript: report ES2004 for a catch that can never run | D37: a `catch` over a `try` that cannot fail is dead code |
 
 Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks).
 
@@ -404,6 +406,7 @@ The checks so far:
 | ES1003 | `async`, `await`, `for await`, and `await using` in a `.es` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
 | ES1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
 | ES1005 | The callee of a runner in code a fiber runs | `runners.go` |
+| ES2004 | The `catch` keyword, when the `try` block can raise no expected failure (D37); covers TypeScript's errors about the `never` caught value | `failures.go` |
 | ES4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; an `.es` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
 | ES4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
 | ES4402 | Where code runs a platform API (D108): the callee of a call, `new`, or tagged template, or the property read, whose root is a binding imported from a platform module or a platform global; inside boundaries and at the top level too. It covers TypeScript's "cannot find name" for an unresolved platform global it reports | `platform.go` |

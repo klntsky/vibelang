@@ -1,0 +1,36 @@
+// expect: ES2004 ES2004
+// A catch whose try block can raise no expected failure can never run (D37):
+// Option.getOrThrow's exception is a defect. ES2004 is a warning by default;
+// this project makes it an error. TypeScript's complaint about e._tag on
+// never is covered.
+import { Console, Data, Option } from "effect"
+
+class Missing extends Data.TaggedError("Missing")<{}> {}
+
+function firstAdmin(names: ReadonlyArray<string>) {
+  try {
+    return Option.getOrThrow(Option.fromNullishOr(names.find((name) => name.startsWith("admin"))))
+  } catch (e) {
+    return e._tag
+  }
+}
+
+// A plain function's catch over a try that throws nothing is dead too.
+function parse(text: string) {
+  try {
+    return text.length
+  } catch {
+    return -1
+  }
+}
+
+// These catches can run: the try blocks fail with Missing.
+function live(names: ReadonlyArray<string>) {
+  try {
+    if (names.length === 0) throw new Missing()
+    Console.log(names[0])
+  } catch (e) {
+    return e._tag
+  }
+  return "found"
+}

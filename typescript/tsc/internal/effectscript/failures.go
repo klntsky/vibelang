@@ -5,6 +5,7 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
 // This file computes what code can fail with and what it needs. A throw adds
@@ -145,4 +146,31 @@ func catchVariableType(c *checker.Checker, declaration *ast.Node) *checker.Type 
 	}
 	info := analyzerFor(c).tryBlockFlow(clause.Parent.AsTryStatement().TryBlock)
 	return c.GetUnionType(info.errors)
+}
+
+func init() {
+	fileChecks = append(fileChecks, checkDeadCatches)
+}
+
+// checkDeadCatches reports ES2004 at each catch whose try block can raise no
+// expected failure (D37). Such a catch can never run: an exception that no
+// contract lists, such as Option.getOrThrow's, is a defect, which catch does
+// not see. A warning by default (D34). Its variable has type never, so the
+// warning covers TypeScript's errors about that inside the catch.
+func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if node.Kind == ast.KindTryStatement && node.AsTryStatement().CatchClause != nil && inLowerableBody(node) {
+			try := node.AsTryStatement()
+			if c.GetUnionType(analyzerFor(c).tryBlockFlow(try.TryBlock).errors).Flags()&checker.TypeFlagsNever != 0 {
+				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, try.CatchClause.Pos()), ES2004)
+				if d != nil {
+					note(d, "Use a form that can fail, such as Option.getOrElse or Schema.decodeUnknownEffect, or bound the call with Effect.try.")
+					cover(c, try.CatchClause)
+				}
+			}
+		}
+		return node.ForEachChild(visit)
+	}
+	file.AsNode().ForEachChild(visit)
 }
