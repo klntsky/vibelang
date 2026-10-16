@@ -38,12 +38,15 @@ echo "test: go test ./internal/effectscript/"
 
 # The runtime's dist/ is not checked in. Build it from source with this tsc, so
 # a commit that changes the compiler and the runtime is tested as one. The
-# runtime resolves effect from its own node_modules; link the copy the cases
-# use when that directory has none, so a program loads one copy of effect.
+# runtime resolves effect from its own node_modules; point that at the copy
+# the cases use, replacing any other install, so a program and its type
+# checking see one copy of effect.
 if [ -f "$runtime/tsconfig.json" ]; then
-	if [ ! -e "$runtime/node_modules/effect" ]; then
+	effect_real=$(cd "$effect_modules/effect" && pwd -P)
+	if [ "$(cd "$runtime/node_modules/effect" 2>/dev/null && pwd -P)" != "$effect_real" ]; then
 		mkdir -p "$runtime/node_modules"
-		ln -s "$effect_modules/effect" "$runtime/node_modules/effect"
+		rm -rf "$runtime/node_modules/effect"
+		ln -s "$effect_real" "$runtime/node_modules/effect"
 	fi
 	echo "build: tsc -p $runtime/tsconfig.json"
 	"$tsc" -p "$runtime/tsconfig.json"
