@@ -1,2 +1,4 @@
 [test]
 root = "./tests"
+# Stress laws execute 100,000 operations while compiler lanes build in parallel.
+timeout = 30000

@@ -224,6 +224,6 @@ Experiment: patch TypeScript 5.9's `chooseOverload` to classify lambdas against 
 | `src/emit.ts` | The lowering emitter, its probe spans, and the span map for diagnostics |
 | `src/facts.ts` | Checker queries |
 | `src/model.ts` | Shared types and names |
-| `runtime/index.ts` | The prelude (D4), helpers, services, control operations, producers, Streams, and `$trusted` |
+| `../../packages/runtime/src/index.ts` | The prelude (D4), helpers, services, control operations, producers, Streams, and `$trusted` |
 | `examples/` | 26 runnable examples, 20 expected-failure files, and `run-all.ts`; `out/` holds the generated TypeScript |
 | `scratch/` | `probe1.ts` (hand lowering), `probe2.ts` (D1 emission), `keymembers.ts`, and `es/` edge cases |
