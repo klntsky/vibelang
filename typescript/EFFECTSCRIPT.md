@@ -23,8 +23,11 @@ effectscript/smoke.sh                 # builds tsc and the runtime, then runs ev
 effectscript/smoke.sh --status        # one line per case: name, owner, and status
 effectscript/smoke.sh ch04 ref2       # the cases whose names contain ch04 or ref2
 effectscript/smoke.sh -v es-infer     # one case, with what tsc printed
+effectscript/lsp-smoke.sh             # builds esc and the runtime, then runs the language server test
 ./built/local/tsc -p effectscript/cases/ts-hello
 ```
+
+The binary is EffectScript's compiler, `esc`, under any file name; `effectscript/lsp-smoke.sh` builds it as `built/local/esc`, and `../scripts/build-esc.sh` as `../packages/compiler/native/esc`.
 
 The build embeds the `lib.*.d.ts` files; Herebyfile's `-tags=noembed` build copies them next to the binary instead. A cold build takes about 75 s and fills about 1.7 GB of Go build cache. Always pass `-trimpath`: without it, Go keys each package's cache entry by its absolute directory, so every jj workspace cold-builds and adds its own copy. `-gcflags=all=-dwarf=false` shrinks the entries; panics still print stack traces.
 
@@ -220,7 +223,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 78 | `stuypkuq` | effectscript: check written contracts (ES2001, ES2002, ES2003, D57) | A written contract is checked, and `infer` channels come from the body |
 | 79 | `ovsoxmyu` | effectscript: solve E and R of call cycles as a fixpoint (D52, ES2102) | `isEven` and `isOdd` both fail with what either throws |
 
-Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), and lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork).
+Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork), and lane F4's in [The editor and the esc command](#the-editor-and-the-esc-command).
 
 ## Seams in upstream files
 
@@ -243,6 +246,12 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/binder/nameresolver.go` | `NameResolver.ResolveBeforeGlobals`, consulted before the global scope | +6 |
 | `tsc/internal/module/resolver.go` | Try `.es`, then `.d.ts`, for `./welcome.es`, and `.es` after `.tsx` for `./welcome.js` | +19 |
 | `tsc/internal/module/util.go` | An `.es` resolution is always allowed | +2 / -1 |
+| `tsc/internal/module/util.go` | An `.es` file's output extension is `.js`, so auto-import can name it | +1 / -1 |
+| `tsc/internal/tsoptions/parsedcommandline.go` | `.es` in a project's wildcard include globs, so a new `.es` file joins the project | +4 / -4 |
+| `tsc/internal/lsp/server.go` | `.es` in the `willRenameFiles` filter; exit with status 0 after `shutdown` and `exit` | +3 / -3 |
+| `tsc/internal/ls/hover.go` | Apply quick info hooks to each hover | +1 |
+| `tsc/internal/ls/completions.go` | Add completion scope hooks' symbols to global completions; let member completion hooks replace the type left of the dot | +2 |
+| `tsc/internal/execute/tsc/help.go` | The `--version` line, the `--help` title, its examples' command, and its icon come from the identity | +6 / -6 |
 | `tsc/internal/core/compileroptions.go` | A `.es` file may import a TypeScript source by its extension | +5 / -1 |
 | `tsc/internal/checker/emitsupport.go` | Ask entity name visibility hooks in `isEntityNameVisible` | +4 |
 | `tsc/internal/compiler/emitter.go` | Run declaration transformer hooks after TypeScript's | +2 / -2 |
@@ -260,6 +269,9 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/checker/extensions_values.go` (new) | `RegisterExpressionTypeHook`, `CreateArrayType`, `MapObjectType`, `IteratedType` | +55 |
 | `tsc/internal/checker/extensions_callbacks.go` (new) | `RegisterTypeParametersHook`, `RegisterParameterTypeHook`, `NewTypeParameter` | +61 |
 | `tsc/internal/checker/extensions_using.go` (new) | `RegisterUsingInitializerHook` | +29 |
+| `tsc/internal/ls/extensions.go` (new) | `RegisterQuickInfoHook`, `RegisterCompletionScopeHook`, `RegisterMemberCompletionHook` | +92 |
+| `tsc/internal/execute/tsc/extensions.go` (new) | `SetIdentity` | +56 |
+| `tsc/internal/checker/extensions_signatures.go` (new) | `SignatureWithReturnType` | +8 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
 | `tsc/internal/tsoptions/effectscript.go` (new) | Parse, validate, and serialize `compilerOptions.effectscript` | +149 |
 
@@ -864,6 +876,57 @@ Generated functions carry their source's names (D36, `names.go`). A compiled fun
 
 A span is named after its function; a class method's span names its class too. A lambda without a name, such as a callback, runs in its caller's span. Spans give the logical call stack that a JavaScript debugger cannot show (D36), through Effect's `DevTools` layer or any tracer Effect supports.
 
+## The editor and the esc command
+
+The binary that `tsc/cmd/tsc` builds is `esc`, EffectScript's compiler, under any file name (`identity.go`, through `tsc.SetIdentity`):
+
+```text
+$ esc --version
+EffectScript 0.0.1 (TypeScript 7.1.0-dev)
+$ esc --help
+esc: The EffectScript Compiler - Version 0.0.1 (TypeScript 7.1.0-dev)
+```
+
+`esc --lsp --stdio` is TypeScript 7's language server running the EffectScript checker, so TypeScript's features work on `.es` files with EffectScript's types: a call that runs has its success type, and an `.es` function has its inferred contract. Hooks in `hover.go` and `completions.go` add what TypeScript cannot know:
+
+| Request | In an `.es` file |
+| --- | --- |
+| Hover on a function | Its inferred contract: `function lookup(id: number): Effect.Effect<string, NotFound, never>` |
+| Hover on the callee of a call that runs | The callee's contract, then "Runs here and returns `string`.", the success value the call evaluates to. It asks the analyzer the same questions as the lowering, so a call in a `.ts` file or one the lowering leaves plain shows nothing |
+| Hover on a plain function or a call to it | `function double(n: number): number`, then "Plain JavaScript: EffectScript code calls it directly. TypeScript callers see `Effect<number, never, never>`." A `.ts` file keeps TypeScript's view |
+| Completions | The prelude names, as names in scope that the file's own declarations and imports shadow; a file that uses none yet takes them from the runtime another `.es` file imports. After `Users.` in a function body, the service's members (D41), not the Context key's |
+| Diagnostics | Pulled with `textDocument/diagnostic` for a document opened as `effectscript` or `typescript`. ES diagnostics have source `ES` and their number as the code, which VS Code shows as `ES(1003)` |
+
+Upstream code needed four fixes for `.es` files in the server: auto-import panicked with "Extension .es is unsupported" (`module.TryGetJSExtensionForFile`), a new `.es` file on disk did not join its project (the wildcard globs in `tsoptions`), renaming an `.es` file did not update its importers (the `willRenameFiles` filter), and the server exited with status 1 after `shutdown` and `exit`, which Neovim reports on every restart. Per-checker state lives on the checker (`ExtensionState`), because the server replaces its checkers on every edit: with a package-level map, 300 edits of one `.es` file grew the server from 448 MiB to 914 MiB; now it stays at 305 MiB, as the same file as `.ts` does.
+
+`effectscript/lsp-smoke.sh` builds `esc` and the runtime, checks `esc --version` and `esc --help`, and runs `lsp-smoke.mjs`, an LSP client without dependencies, on `effectscript/lsp-fixture`: 37 checks of diagnostics, hovers, definitions, references, renames, completions, file watching, and shutdown across `.es` and `.ts` files. The editor setups and their tests are in `../editors/` (start with `../editors/README.md`).
+
+### Commits
+
+| Change | Subject |
+| --- | --- |
+| `lutmtlns` | checker: let in-tree extensions keep state per checker |
+| `ssqltlzy` | effectscript: keep the analyzer on its checker |
+| `xosuknwx` | module: map .es files to .js output |
+| `kowtxrmz` | tsoptions: match .es files in wildcard include globs |
+| `mwpkwpsm` | lsp: send willRenameFiles for .es files |
+| `knrotrus` | effectscript: add a headless language server test |
+| `uwpykqxu` | ls: add a quick info hook |
+| `otxrukzp` | effectscript: show a running call's success value on hover |
+| `qlpsqxln` | execute: let a compiler built on tsc name itself |
+| `txvnzpqn` | effectscript: identify the compiler as esc |
+| `trpvstxy` | editors: derive an EffectScript grammar from VS Code's TypeScript grammar |
+| `svkttyrl` | editors: add the VS Code extension |
+| `ryxzxutw` | ls: let a quick info hook replace the quick info line |
+| `unqyxosy` | checker: add a signature with another return type |
+| `xumoqrzt` | effectscript: show a plain function the way EffectScript calls it |
+| `xpqmlqkm` | ls: add completion hooks for scope names and members |
+| `lqzlumyp` | effectscript: complete prelude names and service members |
+| `vrzttyov` | lsp: exit with status 0 after shutdown and exit |
+| `nzvnqlxu` | editors: check completions and plain hovers in the VS Code test |
+| `wuyspvlk` | editors: set up Neovim and Zed |
+| `pzsnyzmw` | effectscript: document the editor and esc in EFFECTSCRIPT.md |
+
 ## What it cannot do yet
 
 - `arguments` inside a region's closure is the closure's, not the function's, and a function whose body declares `using` or calls `fork` runs its whole body in such a closure. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
@@ -879,6 +942,7 @@ A span is named after its function; a class method's span names its class too. A
 - Accessors, constructors, async functions, and generators are never lowered. `arguments` inside a lowered arrow function is the generator's, and `arguments` and `super` inside a lowered method do not reach the method.
 - A lowered function declaration is a `const`, so a call above it at the module top level hits the temporal dead zone.
 - A call cycle through a lambda, such as `Effect.forEach(children, (child) => walk(child))` where `walk` calls back, is solved through the checker's type of the call, which the checker computes once; a cycle whose E grows through it is ES2102. A union of Effects is not treated as an Effect.
+- Hover shows no control class (D33): the compiler does not yet tell `pure` from `sync` or find `captures`. The language server has no EffectScript quick fixes or refactors (D33), completions in a `catch` do not narrow to the error classes its `try` can raise, and the server's `serverInfo` still says `typescript`.
 - The synthesized wrappers, such as `yield*` and `Effect.fnUntraced(…)`, have no source positions of their own; the statements and expressions inside them do, so stack traces and breakpoints map to `.es` lines.
 
 ## Differential check against the TypeScript-API prototype
