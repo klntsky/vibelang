@@ -156,6 +156,7 @@ Code example count: one example per fenced code block in the source body, includ
 - [Control operations and handlers](src/effectscript-features/111-control-operations-and-handlers.md)
 - [Producers](src/effectscript-features/112-producers.md)
 - [Building an HTTP API](src/effectscript-features/113-building-an-http-api.md)
+- [EffectScript for Effect users](src/effectscript-features/114-effectscript-for-effect-users.md)
 
 ## Page inventory
 
@@ -283,6 +284,7 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | [Control operations and handlers](src/effectscript-features/111-control-operations-and-handlers.md) | Declaration, performing, policies, resuming, abandonment, cleanup, fiber diagnostics |
 | [Producers](src/effectscript-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
 | [Building an HTTP API](src/effectscript-features/113-building-an-http-api.md) | Server layers, routing, Schema bodies, typed errors, socket-free testing |
+| [EffectScript for Effect users](src/effectscript-features/114-effectscript-for-effect-users.md) | Idiom translation, programs, top-level declarations, platform work, expected failures |
 
 ## Counts by sidebar section
 
@@ -312,8 +314,8 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | Guides | Behaviour | 2 |
 | Guides | Schema | 20 |
 | Guides | Platform | 6 |
-| EffectScript features | Original language guides | 3 |
-| **Total** | | **113** |
+| EffectScript features | Original language guides | 4 |
+| **Total** | | **114** |
 
 ## Counts by upstream directory
 

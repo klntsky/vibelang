@@ -62,4 +62,4 @@ bun test docs/tools/check-snippets.test.ts
 bun docs/tools/render-user.ts
 ```
 
-The user renderer checks local page links while building the 110-page site.
+The user renderer checks local page links while building the 114-page site (110 mirrored pages and four EffectScript guides).

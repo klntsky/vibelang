@@ -67,12 +67,11 @@ See [Installation](docs/user/src/getting-started/004-installation.md) and
 - A `Disposable`'s `[Symbol.dispose]` runs synchronously and cannot run an
   Effect (ES4301). Acquire a resource whose release logs or waits with
   `Effect.acquireRelease`, and hold it with `using`.
-- The user docs follow Effect's documentation page for page, so features
-  that Effect's docs lack have no page there. For control operations
-  (`extends Control`, `handle`, `resume`), read "Handlers: defining your own
-  effects" in Part I of [the design](docs/design/effectscript-design.md) and
-  [`examples/approval`](examples/approval); for an HTTP API, start from
-  [`examples/http-api`](examples/http-api).
+- The user docs mirror Effect's pages and add an EffectScript features section:
+  [control operations and handlers](docs/user/src/effectscript-features/111-control-operations-and-handlers.md),
+  [producers](docs/user/src/effectscript-features/112-producers.md),
+  [building an HTTP API](docs/user/src/effectscript-features/113-building-an-http-api.md),
+  and [EffectScript for Effect users](docs/user/src/effectscript-features/114-effectscript-for-effect-users.md).
 - A route handler's services are request requirements. `HttpRouter.serve`
   turns them into the server layer's inputs, which `wire` provides; a test
   that calls `HttpRouter.toHttpEffect` provides them with
