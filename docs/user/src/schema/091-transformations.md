@@ -118,7 +118,7 @@ A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue
 ## Composing transformations and effectful checks
 
 ```ts
-// compiler-gap: D9/D57 A plain callback with an Effect contract must check the success type and pass its plain form when eligible.
+// compiler-gap: D57 A plain callback with an Effect contract must check its returns against the success type.
 const SemicolonNumbers = Schema.String.pipe(
   Schema.decodeTo(Schema.Array(Schema.String), SchemaTransformation.transform({
     decode: (text): Effect<ReadonlyArray<string>, never, never> => text.split(";"),

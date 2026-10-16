@@ -1,0 +1,34 @@
+// A lambda with a contract, Effect<A, E, R>, where only a plain function fits
+// takes the plain form when D10 allows it (D9, D67). It returns A, so
+// Schema.suspend receives a schema, and SchemaTransformation.transform infers
+// its types from A instead of the Effect.
+import { Schema, SchemaTransformation } from "effect"
+
+interface Crate {
+  readonly count: number
+  readonly children: ReadonlyArray<Crate>
+}
+interface CrateWire {
+  readonly count: string
+  readonly children: ReadonlyArray<CrateWire>
+}
+
+const Crate = Schema.Struct({
+  count: Schema.FiniteFromString,
+  children: Schema.Array(Schema.suspend((): Effect<Schema.Codec<Crate, CrateWire>, never, never> => Crate))
+})
+
+const SemicolonNumbers = Schema.String.pipe(
+  Schema.decodeTo(Schema.Array(Schema.String), SchemaTransformation.transform({
+    decode: (text): Effect<ReadonlyArray<string>, never, never> => text.split(";"),
+    encode: (items) => items.join(";")
+  })),
+  Schema.decodeTo(Schema.Array(Schema.FiniteFromString))
+)
+
+// expect-result: {"crate":{"count":2,"children":[{"count":1,"children":[]}]},"numbers":[2,5,8]}
+export function main() {
+  const crate = Schema.decodeUnknownEffect(Crate)({ count: "2", children: [{ count: "1", children: [] }] })
+  const numbers = Schema.decodeEffect(SemicolonNumbers)("2;5;8")
+  return { crate, numbers }
+}

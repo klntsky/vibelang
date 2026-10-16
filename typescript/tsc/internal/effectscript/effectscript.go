@@ -26,6 +26,7 @@ func init() {
 	checker.RegisterCandidateFilterHook(filterCandidate)
 	checker.RegisterFunctionExpressionTypeHook(functionExpressionType)
 	checker.RegisterContextualReturnTypeHook(contextualReturnType)
+	checker.RegisterAnnotatedReturnInferenceHook(annotatedReturnInference)
 	checker.RegisterSourceFileCheckHook(checkSourceFile)
 	checker.RegisterDiagnosticsFilterHook(filterCoveredDiagnostics)
 	checker.RegisterClassBaseHook(classBases)

@@ -122,11 +122,7 @@ func (a *analyzer) formHere(fn *ast.Node) form {
 			if f, ok := s.byCandidate[key]; ok {
 				return f
 			}
-			e := a.classify(a.expectedAt(call, signature, path, fn))
-			if requiredParameterCount(fn) == 0 && a.isPipeProgram(call, path) {
-				e.program = true
-			}
-			f := a.decide(fn, e)
+			f := a.decide(fn, a.expectationAt(call, signature, path, fn))
 			s.byCandidate[key] = f
 			if s.first == formNone {
 				s.first = f
@@ -138,6 +134,44 @@ func (a *analyzer) formHere(fn *ast.Node) form {
 		}
 	}
 	return a.freeForm(fn)
+}
+
+// expectationAt reads what signature, the candidate call is checked against,
+// expects of fn at path among call's arguments.
+func (a *analyzer) expectationAt(call *ast.Node, signature *checker.Signature, path []pathStep, fn *ast.Node) expectation {
+	e := a.classify(a.expectedAt(call, signature, path, fn))
+	if requiredParameterCount(fn) == 0 && a.isPipeProgram(call, path) {
+		e.program = true
+	}
+	return e
+}
+
+// annotatedReturnInference makes inference from the contract of a lambda that
+// only a plain function fits, such as decode in SchemaTransformation.transform,
+// infer from the contract's A, the lambda's return type in the plain form
+// (D9). TypeScript would infer from Effect<A, E, R>, before the lambda takes
+// a form. Only the position decides here: fn's parameters are being typed,
+// so its body cannot be checked yet.
+func annotatedReturnInference(c *checker.Checker, fn *ast.Node, t *checker.Type) *checker.Type {
+	if !isLambda(fn) {
+		return t
+	}
+	a := analyzerFor(c)
+	call, path := ownerCall(fn)
+	if call == nil {
+		return t
+	}
+	signature := a.candidateOf(call)
+	if signature == nil {
+		return t
+	}
+	if e := a.expectationAt(call, signature, path, fn); !e.plainFn || e.effectFn || e.program {
+		return t
+	}
+	if success := successType(c, t); success != nil {
+		return success
+	}
+	return t
 }
 
 // finalForm is the form fn compiles to: the form the candidate its call
@@ -259,8 +293,13 @@ func (a *analyzer) canBePlain(fn *ast.Node) bool {
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript
-// inferred for it: a function that returns its body's success value A.
+// inferred for it: a function that returns its body's success value A. A
+// lambda with a contract, Effect<A, E, R>, that takes the plain form returns
+// A, as Schema.suspend's thunk returns a schema (D9, D67).
 func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Type {
+	if f == formPlain && fn.Type() != nil {
+		return a.plainTypeOf(t)
+	}
 	if f == formPlain || f == formNone || fn.Type() != nil {
 		return t
 	}
