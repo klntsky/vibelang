@@ -41,11 +41,25 @@ export const $control = (cls: Context.Key<any, any>, methods: ReadonlyArray<stri
 }
 
 /**
+ * D45: the static side of a compiled service or control class, as its
+ * declaration file names it: an Effect 4 `Context.Service` whose identifier
+ * and shape are both the service's interface, and an abstract constructor
+ * with an empty instance side, so the merged interface is the class's type.
+ */
+export type ServiceKey<I> = (abstract new () => {}) & Context.Service<I, I>
+
+/**
+ * D40: the static side of a compiled service class that declares
+ * `static readonly default`: a `Context.Reference`, which needs no provider.
+ */
+export type ReferenceKey<I> = (abstract new () => {}) & Context.Reference<I>
+
+/**
  * D1: the base of a generated service class. Its static side is an Effect 4
  * Context key whose identifier and shape are both the service's interface;
  * its instance side is empty, so the merged interface is the class's type.
  */
-export const $service = <I>(key: string): (abstract new () => {}) & Context.Key<I, I> =>
+export const $service = <I>(key: string): ServiceKey<I> =>
   Context.Service<I, I>()(key) as any
 
 /**
@@ -55,5 +69,5 @@ export const $service = <I>(key: string): (abstract new () => {}) & Context.Key<
  * the first lookup without one reads `defaultValue`, which returns the
  * class's `default`.
  */
-export const $reference = <I>(key: string, defaultValue: () => I): (abstract new () => {}) & Context.Reference<I> =>
+export const $reference = <I>(key: string, defaultValue: () => I): ReferenceKey<I> =>
   Context.Reference<I>(key, { defaultValue }) as any
