@@ -4,9 +4,9 @@
 
 ```text
 settled before this document      1-7     the owner's original decisions
-decisions since                  D1-D113 the owner's calls and reported build defaults; gaps reserved
+decisions since                  D1-D124 the owner's calls and reported build defaults; gaps reserved
 rules of the runtime and compiler P1-P22  adopted (D29), revised where the 2026-10-16 reviews broke them
-end-to-end build calls          D61-D113 recorded below where reported; F7 pending
+end-to-end build calls          D61-D124 recorded below where reported; unreported numbers stay unassigned
 ```
 
 Every rule in this document traces to one of these. The log with full reasons is `docs/design/DECISIONS.md`; a default is a decision made to complete the design, and the owner can overturn any default.
@@ -94,7 +94,7 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 
 #### Decisions from the end-to-end build (2026-10-16)
 
-The following rows record reported defaults, not new language decisions. D97-D99 remain reserved for the compiler lane still landing. The decision log groups known gaps by area and distinguishes a lane's landing snapshot from later fixes.
+The following rows record build defaults, not new language decisions. Lane U recorded D97-D99 from F7's compiler notes because its inbox report was absent. The decision log groups known gaps by area and distinguishes landing snapshots from later fixes. D114-D119 have no reported decisions.
 
 | # | Decision | Reason and evidence | Chapters |
 | --- | --- | --- | --- |
@@ -129,7 +129,9 @@ The following rows record reported defaults, not new language decisions. D97-D99
 | D94 | Effect acquisitions receive the block Scope; other initializers need Disposable, null, or undefined; Disposable results also run Symbol.dispose | Effect acquisitions and ordinary Disposables have different ownership | 6 |
 | D95 | In an Effect function, `for (using x of values)` makes each iteration's body a Scope region; the value is taken first, and `using` or `fork` inside the body join that region | Cleanup belongs to the iteration that owns it | 6, 7 |
 | D96 | **Controversial.** A `fork` belongs to the innermost block around it; an arrow function with an expression body has no block, so `() => fork(p)` is `Effect.forkScoped` and keeps `Scope` in R | An expression body has no owning block | 7 |
-| D97-D99 | Reserved for handlers, producers, and streams; not reported | F7 is still landing | 8, 9, 26 |
+| D97 | **Controversial.** Continuation H is the program's A, or never with onReturn; handle unions program and clause results. Recorded from the compiler notes | TypeScript fixes H before checking onReturn; mixed early returns can narrow resume too far | 9 |
+| D98 | Producers return lazy Streams; direct loops use the consumer fiber, Stream operators use a separate fiber and a handoff with no buffer. Recorded from the compiler notes | Lazy interoperability, cleanup, and bounded stack without running ahead | 8, 26 |
+| D99 | ES4201 checks known fiber boundaries and control-requiring producer arguments; ES4202 checks foreign callees' declared control requirements. Recorded from the compiler notes | Diagnose unreachable handlers; runtime enforces fiber ownership | 9, 16 |
 | D100 | Code no fiber runs is plain JavaScript for ES4401 too: a module's top level and the plain callbacks it passes to TypeScript functions (`describe` bodies, route handlers), the same places D38 allows runners | Framework callbacks run outside a fiber | 10, 13 |
 | D101 | **Controversial.** Only built-ins that parse outside text declare expected failures (`JSON.parse` with `SyntaxError`, `decodeURI` and `decodeURIComponent` with `URIError`); every other built-in's exceptions are defects | Unlisted built-in exceptions remain defects | 10, 26 |
 | D102 | **Controversial.** Original platform-import restriction; import half superseded by D108; globals and allowed web standards retained | Platform work needs typed, replaceable Effect services | 10, 11 |
@@ -144,6 +146,11 @@ The following rows record reported defaults, not new language decisions. D97-D99
 | D111 | The D49 conversion covers any iterable (`Set`, a `Map`'s values) through its iterated type; an iterable never converts as a record, matching `Effect.all` at run time | Matches Effect.all at run time | 5, 13 |
 | D112 | A callback whose expected return mixes plain and Effect (`boolean \| Effect<…>`) is plain when D10 allows and an Effect function otherwise; the same holds wherever both forms fit | D10 selects the eligible form without Effect work | 13, 16 |
 | D113 | A lambda with a contract that takes the plain form has type `(…) => A`; where only a plain function fits, inference from its annotation starts from A | Plain inference needs A rather than its Effect wrapper | 14, 16 |
+| D120 | Local runtime dependencies use setup's tarball; refresh all three packages with bun update; examples omit bun.lock | Avoid a second Effect copy that prevents child interruption; amends D83 | 27, 28 |
+| D121 | **Controversial.** Effect trust follows re-exports and returned values, including assertions from @effect/vitest | Tests need usable assertions; direct Vitest imports and local TypeScript retain boundary checks | 10, 16 |
+| D122 | Every runner checks all services it does not supply; it.effect supplies Scope and its layer services | Diagnose missing services before execution | 4, 28 |
+| D123 | Declaration prelude imports use free aliases when names are already bound | Avoid duplicate identifiers in declaration consumers | 27 |
+| D124 | Setup relinks esc launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
 
 #### Rules of the runtime and compiler
 
