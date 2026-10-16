@@ -1008,7 +1008,7 @@ func (s *Server) dispatchLoop(ctx context.Context) error {
 	for {
 		req, err := s.requestQueue.Get(ctx)
 		if err != nil {
-			return err
+			return context.Cause(ctx)
 		}
 
 		s.lastRequestTimeMs.Store(time.Now().UnixMilli())
@@ -1030,7 +1030,7 @@ func (s *Server) dispatchLoop(ctx context.Context) error {
 					lspExit(err)
 				}
 			} else if errors.Is(err, io.EOF) {
-				lspExit(nil)
+				lspExit(io.EOF) // the exit notification: Run returns nil
 			} else {
 				if err := s.sendError(req.ID, err); err != nil {
 					lspExit(err)

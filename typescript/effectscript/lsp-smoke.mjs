@@ -95,6 +95,7 @@ class Connection {
     this.send({ jsonrpc: "2.0", method, params })
   }
 
+  // close asks the server to shut down and exit, and returns how it exited.
   async close() {
     try {
       await this.request("shutdown")
@@ -102,8 +103,9 @@ class Connection {
     } finally {
       this.process.stdin.end()
       const timer = setTimeout(() => this.process.kill("SIGKILL"), 5_000)
-      await this.exited
+      const exit = await this.exited
       clearTimeout(timer)
+      return exit
     }
   }
 }
@@ -480,9 +482,9 @@ try {
   console.log(`FAIL ${error.message}`)
 } finally {
   rmSync(extraFile, { force: true })
-  await connection.close().catch((error) => {
-    failures++
-    console.log(`FAIL shutdown: ${error.message}`)
+  await check("shutdown: the server exits with status 0 after shutdown and exit", async () => {
+    const { code, signal } = await connection.close()
+    assert(code === 0, `exit status ${code}, signal ${signal}`)
   })
 }
 
