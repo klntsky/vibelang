@@ -71,7 +71,7 @@ When `editors/vscode` exists, setup builds its `.vsix` and prints the exact inst
 commands for VS Code and Cursor:
 
 ```sh
-code --install-extension /path/printed/by/setup/effectscript-0.0.1.vsix
+code --install-extension /path/to/effectscript/editors/vscode/effectscript.vsix
 # Or use cursor --install-extension with the same path.
 ```
 
