@@ -2,7 +2,7 @@
 
 This directory is microsoft/TypeScript with a short stack of commits that teach the Go compiler (`tsc/`) EffectScript: TypeScript syntax in which every function is an Effect (effect@4.0.5). A call to a function that returns an Effect runs it, and the compiler infers each function's `Effect<A, E, R>`.
 
-It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services, control operations, failures and regions, and the prelude work (see their sections); the acceptance table below says which lane builds each remaining feature. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
+It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services, control operations, failures and regions, the prelude, trust levels at TypeScript boundaries, platform APIs, runners, and debugging and tracing work (see their sections); the acceptance table below says which lane builds each remaining feature. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
 
 ## Base
 
@@ -47,10 +47,10 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | Case | Proves |
 | --- | --- |
 | `ts-hello` | The stock compiler still compiles and runs plain TypeScript |
-| `es-parse` | An `.es` file parses and checks as TypeScript and emits `main.js` and `main.d.ts` |
+| `es-parse` | An `.es` file parses and checks as TypeScript and emits `main.js` and `main.d.ts`; JavaScript prints its value, because `console` is a platform API |
 | `es-wrap` | Exported functions and arrow functions lower to `Effect.fnUntraced`, and JavaScript runs them with `Effect.runSync` |
 | `es-lower` | Type-directed `yield*`: pure helpers stay plain, Effect-returning TypeScript calls and `.es` calls run, operands run left to right, a `Config` stays data |
-| `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, the `.d.ts` declares it, and the module runs its own program |
+| `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, the `.d.ts` declares it, and the module's top level passes a program to a runner |
 | `es-service-keys` | Service classes compile to Context key classes that JavaScript uses as Effect keys; an `implements` class is an implementation; two services with the same members are different types |
 | `es-services` | `Users.find(id)` and `Users()` look the service up, value members read from `Settings()`, a provider captures another service, and object literal and class methods run Effects |
 | `es-services-ts` | A TypeScript `Context.Service` class and Effect's `Path` are used as services: an Effect-valued member runs when called, and the service's own `pipe` wins over the key's |
@@ -83,6 +83,16 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `callback-contracts` | A callback parameter without a contract accepts any contract (D12): `mapAll` and `withRetry` infer E and R from each call, and the `.d.ts` writes `<A, B, E, R>` |
 | `generic-callees` | A call to a generic `.es` function adds the callee's E and R as the call instantiates them |
 | `d39-unions` | Where a parameter takes a function or an Effect (D39), a lambda with a parameter is a function, and one without is a program when it can pause and a function when it is plain |
+| `trust-levels` | `JSON.parse`'s `SyntaxError` and a trusted function's `@throws` class join E and reach a `catch`, in Effect functions and in plain ones (D54); an unlisted exception is a defect; operands that run Effects run before the trusted call; Effect's exports, a boundary, a trusted re-export, a trusted method, and a parameter's callee need nothing |
+| `es4401-plain-call.fail` | ES4401 for a plain TypeScript call, one that returns a Promise, one in a plain callback, and a trusted contract whose `@throws` class the file cannot import; none for a trusted call, a boundary, or the top level |
+| `es4402-platform.fail` | ES4402 for `node:` and Node built-in imports, `fetch` inside a boundary, `setTimeout`, `console`, `process.env`, and `localStorage`; a type-only import, `URL`, and `TextEncoder` are allowed |
+| `es4403-clock.fail` | ES4403 for `Date.now()`, `new Date()`, `Math.random()`, `crypto.randomUUID()`, `performance.now()`, and `Date()`, at the top level too; `new Date(text)`, `Date.parse`, and `Date.UTC` are allowed |
+| `es4403-warning` | With `"ES4403": "warning"`, the reads are warnings and run as plain calls |
+| `es1001-top-level.fail` | ES1001 for an `.es` program, an Effect, a program passed straight to a runner, a service member call, a service, and an Effect value at the top level; none for values, lambdas, or a runner given a program |
+| `es1005-runners.fail` | ES1005 for runners in code a fiber runs, `ManagedRuntime` and `*With` forms included, and for `it.effect` in a test body; none at the top level or in a plain callback the top level passes to TypeScript (`describe`, a route handler, `layer(…)`); `stubs/` holds the real declarations of `NodeRuntime.runMain` and `@effect/vitest` |
+| `debug-stack` | With `sourceMap`, Node's stack traces point at `.es` lines and name the function, a region closure (`audited$try`), and a recursive function whose generator is a method (D36) |
+| `tracing-exported` | `"tracing": "exported"` gives exported functions `Effect.fn` spans named after them |
+| `tracing-all` | `"tracing": "all"` gives every named Effect function a span, a method an `Effect.withSpan` span named `Class.method`, and a callback none |
 
 ### Acceptance cases
 
@@ -96,7 +106,7 @@ The prototype's 46 examples (`../prototype/esc/examples/`) are cases named after
 | F5 | Services, layers, `wire` | `ch01-first-look`, `ch04-provider-escapes.fail`, `ch04-services`, `ch04-users-audited.fail`, `ch04-wire`, `ch12-rates-bare-return.fail`, `ref1-existing-service`, `ref2-ambiguous-provider.fail`, `ref2-cycle.fail`, `ref2-missing-provider.fail`, `ref2-opaque-layer.fail`, `ref2-provider-graph` |
 | F6 | `using`, `fork`, Scope regions | `ch06-disposable`, `ch06-resources`, `ch07-concurrency`, `ref3-resourceful-retry`, `ref6-fork.fail` |
 | F7 | Handlers, producers, streams | `ch08-producers`, `ch08-streams`, `ch09-approve-all-forked.fail`, `ch09-handlers`, `ref6-handlers`, `stack-depth` |
-| F8 | Boundaries, runners | `ch02-plain-ts-call.fail`, `ch10-fetch.fail`, `ch10-typescript`, `ch11-top-level-run.fail`, `ch24-profile`, `d5-clock-read.fail` |
+| F8 | Boundaries, runners | None pending: `ch02-plain-ts-call.fail`, `ch10-fetch.fail`, `ch10-typescript`, `ch11-top-level-run.fail`, `ch24-profile`, and `d5-clock-read.fail` pass |
 
 The `pending` files are the source of truth: `effectscript/smoke.sh --status` prints each case's current owner.
 
@@ -165,6 +175,15 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 57 | `nxmqvpsu` | effectscript: write portable declaration files for .es files | `declaration: true` works with the prelude and `.es` imports |
 | 58 | `llryttxs` | effectscript: declare a service as an interface and a key class | D45 in `.d.ts`: TypeScript code uses an `.es` service as a Context key |
 | 59 | `zummuosy` | effectscript: document service declaration files in EFFECTSCRIPT.md | This section |
+| 60 | `ksxlppnq` | runtime: test trusted exceptions with instanceof | D51: `$trusted` tests the classes the compiler passes; `$trustedPlain` for plain functions (D54) |
+| 61 | `ywyktuko` | effectscript: compare a case's diagnostics with expected/diagnostics.txt | A case can pin each diagnostic's position and count |
+| 62 | `rvpuznxt` | effectscript: report ES4401 for calls without a trust level | D5, D22, D23: trust levels by declaration; boundaries; code outside fibers is JavaScript (D51) |
+| 63 | `uspovlno` | effectscript: lower the expected failures of trusted calls | `@throws` classes and built-in contracts join E and compile to `$trusted` |
+| 64 | `nuwqloyu` | effectscript: report platform APIs (ES4402) and clock reads (ES4403) | D6: each error names the Effect module that replaces the API |
+| 65 | `olsmqqqy` | effectscript: report programs started outside a runner (ES1001, ES1005) | D38: the runner registry, which ES3201 shares |
+| 66 | `zunmxlrk` | effectscript: name generators after their source (D36) | Stack traces and debuggers name the `.es` function |
+| 67 | `xnmknson` | effectscript: trace functions with Effect.fn spans (D34) | `tracing`: `"exported"` and `"all"` |
+| 68 | `stmorqmo` | effectscript: document boundaries, runners, debugging, and tracing | The sections from "Code that is not Effect" to "Tracing" |
 
 Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks).
 
@@ -357,10 +376,15 @@ The checks so far:
 
 | Code | Reported at | File |
 | --- | --- | --- |
+| ES1001 | The outermost call at a module's top level that runs a program; covers TypeScript's TS2339 and TS2348 for a service member call and an Effect value call there | `runners.go` |
 | ES1002 | The API, such as `Effect.gen`, when a `function*` is passed where a function that returns a lib `Generator` or `Iterator` is expected; covers the generator | `generators.go` |
 | ES1003 | `async`, `await`, `for await`, and `await using` in a `.es` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
 | ES1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
+| ES1005 | The callee of a runner in code a fiber runs | `runners.go` |
 | ES4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; an `.es` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
+| ES4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
+| ES4402 | The module specifier of an import of a platform module; each reference to a platform global, inside boundaries and at the top level too; covers TypeScript's "cannot find" errors for them | `platform.go` |
+| ES4403 | A clock or randomness read, everywhere in a `.es` file | `platform.go` |
 
 `compilerOptions.effectscript` (D34) sets the category of the two codes that are policy, not soundness, and the tracing mode:
 
@@ -368,7 +392,7 @@ The checks so far:
 "effectscript": { "diagnostics": { "ES2004": "off", "ES4403": "warning" }, "tracing": "exported" }
 ```
 
-ES2004 defaults to `"warning"` and ES4403 to `"error"`; every other ES code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.EffectScript.Tracing` holds the tracing mode for lane F8. `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
+ES2004 defaults to `"warning"` and ES4403 to `"error"`; every other ES code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.EffectScript.Tracing` selects the functions that compile with spans (see "Tracing"). `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
 
 ## Services and control operations
 
@@ -465,7 +489,7 @@ A provider is usually a program that returns an object literal whose members hav
 | ES3202 | The later of two arguments | Two arguments provide the same service |
 | ES3203 | The `wire` call | The arguments form a cycle, printed as `CacheLive → Database → DatabaseLive → Cache → CacheLive` |
 | ES3204 | The argument | Its type does not name its outputs: `Out` is `any` or `unknown`, as in `Layer.Any` |
-| ES3201 | The runner's program | A runner (`Effect.runFork`, `runPromise`, `runSync`, their `Exit` forms, `runCallback`, `NodeRuntime.runMain`, `BunRuntime.runMain`) runs a program whose R holds a service that a `wire` argument anywhere in the program needs and no argument of that `wire` provides; notes name the arguments that need it, and it covers TS2345 |
+| ES3201 | The runner's program | A runner whose program starts with an empty Context (`isRootRunner` in `runners.go`: Effect's `run*` functions, but not their `*With` forms, and `NodeRuntime.runMain` and `BunRuntime.runMain`) runs a program whose R holds a service that a `wire` argument anywhere in the program needs and no argument of that `wire` provides; notes name the arguments that need it, and it covers TS2345 |
 
 An input that no argument provides stays in the result's `In`, as with `Layer.provide`, so wiring part of a graph is not an error by itself.
 
@@ -566,13 +590,108 @@ Case `es-imports` covers an `.es` file calling an `.es` Effect function and a pu
 
 Generated JavaScript imports only `effect` and `@effectscript/runtime` (D30): the prelude names it uses, `effect/Effect` for `Effect.fnUntraced` under a free name (`Effect`, else `Effect_1`, …), and the helpers as one namespace under a free name (`runtime`, else `runtime_1`, …), called as `runtime.$catch(…)`. The runtime's exports are the ABI between compiler and runtime, so a compiler change that needs a new helper adds it to `packages/runtime` in the same commit; `smoke.sh` builds the runtime from source and every case links it, so the commit is tested as one. Case `es-runtime-name` declares `runtime` and `Effect_1` itself and still runs.
 
+## Code that is not Effect
+
+A call to a function that returns no `Effect` needs a trust level (D5, D22, D23). `trust.go` classifies the callee by the declaration its signature resolves to:
+
+| Callee | Trust | A bare call |
+| --- | --- | --- |
+| An `.es` function, or a parameter of an `.es` function | EffectScript's own | Allowed |
+| A declaration in TypeScript's lib files: `String`, `Array`, `Math`, `JSON`, `Map`, `RegExp`, `URL`, … | A built-in with a shipped contract (D5) | Allowed; the contract's exceptions join E |
+| An export of `effect`, `@effect/*`, or `@effectscript/runtime`, and the functions and values those return | Trusted `sync` (D22); exceptions are defects | Allowed |
+| A declaration tagged `/** @effectscript trusted */` | Trusted `sync` (D23); each `@throws {T}` joins E | Allowed |
+| A declaration in a platform package (`@types/node`, `bun-types`) | Platform | ES4402 reports the import or global instead |
+| Anything else | None | ES4401 |
+
+A package's name comes from the nearest `package.json` (`packageOf` in `origins.go`), so `@effectscript/runtime` installed through a `file:` link, outside `node_modules`, is still recognized.
+
+**The tag.** `/** @effectscript trusted */` may sit on a function or method declaration, on any of its overloads, or on the statement of a `const` that a function initializes, which is how a library function is trusted:
+
+```ts
+/**
+ * @effectscript trusted
+ * @throws {SyntaxError} when the text is not JSON
+ */
+export const parseJson: (text: string) => unknown = JSON.parse
+```
+
+Each `@throws {T}` names a class in the declaring file's scope.
+
+**Where ES4401 applies.** In code a fiber runs, outside a boundary. A boundary is a callback of `Effect.try`, `Effect.tryPromise`, `Effect.sync`, `Effect.promise`, or `Effect.callback` (D23, D43), known by effect's declarations, including the `try` and `catch` of an options object. Code that no fiber runs is JavaScript (D51): the module's top level, and a plain callback that the top level passes to a TypeScript function, such as a `describe` body or a framework's route handler (`outsideFibers`, the places where D38 lets a runner start). A call that returns a Promise gets ES4401's Promise text and an `Effect.tryPromise` fix.
+
+**Expected failures.** A call whose contract lists exceptions compiles to a runtime helper that tests `instanceof` (D51):
+
+```ts
+// main.es                              // main.js
+function port(text: string) {           const port = Effect.fnUntraced(function* port(text) {
+  return parsePort(text)                  return yield* runtime.$trusted(() => parsePort(text), [PortError]);
+}                                       });
+```
+
+The listed classes join E (`addFailures`, from `flowOf`), and a call whose failures can end a function makes it an Effect (`hasEscapingFailure`, which D10's fixpoint asks too). Inside a `try` with a `catch` in a function that compiles to plain JavaScript (D54), the helper is `runtime.$trustedPlain`, which throws a listed exception as `$expected`, so the `catch` receives it. In a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, a trusted call stays an ordinary call and its exceptions are defects. When an operand runs an Effect, the operands are evaluated first, in order, and passed to the thunk: `((receiver, args) => () => receiver.m(...args))(yield* r(), [yield* x()])`.
+
+The generated code imports each class from a module the `.es` file imports that exports it, usually the one it imports the trusted function from: `import { PortError } from "./parsers.ts"`. A global class such as `SyntaxError` needs no import. A class that no imported module exports is ES4401 (`reachClass`). The code is `trust_lower.go`.
+
+The shipped contracts (`builtinContracts`) list only built-ins that parse text from outside the program: `JSON.parse` fails with `SyntaxError`, and `decodeURI` and `decodeURIComponent` with `URIError`. Every other built-in is trusted, and its exceptions are defects.
+
+## Platform APIs and clock reads
+
+`platform.go` reports Node.js and browser APIs (ES4402), each with the Effect module that replaces it (Chapter 11's table, D6), and clock and randomness reads (ES4403):
+
+- **Imports.** A value import or re-export of a Node.js built-in module, with or without `node:`, or of a `bun:` module, is ES4402 at its module specifier, which covers TypeScript's "cannot find module". An import of types only is allowed.
+- **Globals.** Each reference to a global in `platformGlobals` is ES4402: `fetch`, `XMLHttpRequest`, `WebSocket`, the timers, `process` (with `process.env`, `argv`, and the standard streams named apart), `console`, `crypto`, `performance`, `localStorage`, `sessionStorage`, `indexedDB`, `Worker`, the DOM's entry points, `require`, `module`, `__dirname`, `__filename`, `Buffer`, `Bun`, and `Deno`. The name must resolve to the global that a lib file or a platform package declares, or not resolve at all, as `process` does without `@types/node`. Web standards that touch nothing outside the program, such as `URL`, `TextEncoder`, `AbortController`, `structuredClone`, `Headers`, and `Response`, are allowed.
+- **Clock reads.** A call that resolves to `Date.now`, `Date()`, `new Date()` without arguments, `Math.random`, `crypto.randomUUID`, `crypto.getRandomValues`, `performance.now`, or one of `Temporal.Now`'s functions is ES4403, with the `Clock`, `DateTime`, `Random`, or `Crypto` call that replaces it. A project that sets ES4403 to `"warning"` or `"off"` (D34) gets that, and the read compiles as a plain call.
+
+Both apply everywhere in a `.es` file, inside boundaries (D23) and at the top level.
+
+## Where programs start
+
+`runners.go` holds D38's runner registry and two checks. `runnerOf` knows a runner by the declaration its call resolves to: Effect's `runPromise`, `runPromiseExit`, `runSync`, `runSyncExit`, `runFork`, and `runCallback`, and their `*With` forms; `ManagedRuntime`'s `run*` methods; `NodeRuntime.runMain` and `BunRuntime.runMain`; and `@effect/vitest`'s `it.effect` and `it.live`, their modifiers, `.each`, and `.prop`, and `layer(…)`.
+
+| Code | Rule |
+| --- | --- |
+| ES1001 | At a module's top level, a call that would run a program inside a function body: a call that runs an Effect or an `.es` Effect function, a service member call, or a call of an Effect value such as `Users()` or `Port()`. Only the outermost such call is reported. A program passed straight to a runner, as in `Effect.runPromise(main())`, gets the fix `() => main()` |
+| ES1005 | A runner anywhere but the module's top level and the plain callbacks that the top level passes to TypeScript functions (`outsideFibers`). The fix forks the program, `fork(() => refresh(id))`; a test runner's fix registers the test at the top level or in a `describe` callback |
+
+```ts
+NodeRuntime.runMain(() => main())          // allowed: a runner at the top level, given a program
+describe("users", () => {
+  it.effect("finds Ada", () => find("1"))  // allowed: a plain callback from the top level
+})
+export const config = loadConfig()         // ES1001
+```
+
+## Debugging
+
+`esc --sourceMap` maps generated JavaScript to `.es` lines and columns. The lowering keeps the position of each statement and expression it moves, inside generators and region closures too, so `node --enable-source-maps` prints `.es` frames (case `debug-stack`):
+
+```text
+TypeError: Cannot read properties of undefined (reading 'name')
+    at ownerName (main.es:12:25)
+```
+
+Generated functions carry their source's names (D36, `names.go`). A compiled function's generator is named after the function, or the variable or property that names it in the source, and region closures are `<function>$try`, `$catch`, and `$finally`. A named function expression binds its name inside its body, so when the body refers to that name, the generator is a method of an object literal instead, which has the name and binds nothing: `Effect.fnUntraced({ *fact(n) { … } }.fact)`. A lambda without a name stays anonymous. Clauses and producers, still to come in lane F7, can name their generators with `generatorExpression`.
+
+## Tracing
+
+`compilerOptions.effectscript.tracing` (D34) selects the functions that compile with spans (`tracing.go`):
+
+| Mode | Spans |
+| --- | --- |
+| `"none"`, the default | None: functions compile to `Effect.fnUntraced` |
+| `"exported"` | Each exported function declaration, and each exported `const` that a function initializes: `Effect.fn("greet")(function* greet(…) { … })` |
+| `"all"` | Every named function that compiles to frames, and every lowered method, whose Effect runs as `Effect.withSpan(Effect.gen(…), "Users.find")` |
+
+A span is named after its function; a class method's span names its class too. A lambda without a name, such as a callback, runs in its caller's span. Spans give the logical call stack that a JavaScript debugger cannot show (D36), through Effect's `DevTools` layer or any tracer Effect supports.
+
 ## What it cannot do yet
 
 - `using` is plain JavaScript.
 - `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
 - `fork` and handlers have no meaning yet: the prelude names them, and their lanes give them meaning.
 - ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
-- Most ES diagnostics do not exist yet. A top-level `main()` is an Effect value, not ES1001. A plain TypeScript call is not ES4401.
+- A trusted call's expected failures are defects inside a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback ES4301.
+- Runners are known by their declarations in `effect`, `@effect/platform-node`, `@effect/platform-bun`, and `@effect/vitest`; a function that wraps one is not a runner. ES4402's globals are a fixed list (`platformGlobals`), so a platform global outside it, such as `postMessage` or `BroadcastChannel`, is not reported.
 - An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract.
 - Declaration files carry no JSDoc metadata for `$direct` variants (Chapter 27), so code compiled against a `.d.ts` runs a plain function's Effect form, which is correct and slower.
 - A callback parameter without a contract returns an Effect (D12), so a function cannot call it inside a callback that JavaScript calls synchronously, such as a `sort` comparator: that is ES4301.
@@ -580,13 +699,13 @@ Generated JavaScript imports only `effect` and `@effectscript/runtime` (D30): th
 - Accessors, constructors, async functions, and generators are never lowered. `this` and `arguments` inside a lowered arrow function rebind to the generator, and `arguments` and `super` inside a lowered method do not reach the method.
 - A lowered function declaration is a `const`, so a call above it at the module top level hits the temporal dead zone.
 - E and R miss contributions that arrive through a call cycle (no fixed point). A union of Effects is not treated as an Effect.
-- Synthesized nodes have no source positions, and the language service is untested.
+- The synthesized wrappers, such as `yield*` and `Effect.fnUntraced(…)`, have no source positions of their own; the statements and expressions inside them do, so stack traces and breakpoints map to `.es` lines.
 
 ## Differential check against the TypeScript-API prototype
 
 `../prototype/esc` compiled copies of `es-wrap`, `es-lower`, and `es-infer`, with plain return annotations removed because the prototype rejects them (ES2003). Both compilers put `yield*` on the same call sites (2, 12, and 6) and leave the same calls plain, including `Config.Port(...)` and `[1, 2, 3].map(double)`. Both infer `lookup: Effect<string, NotFound, never>` and `main: Effect<void, NotFound, never>`.
 
-The prototype reports ES1001 on the top-level `Effect.runPromise(Effect.catch(main(), …))`, because the design (Chapter 11, "Where programs start") forbids running a program at the module top level. This fork has no ES1001 yet and treats `main()` there as an Effect value.
+The prototype reports ES1001 on the top-level `Effect.runPromise(Effect.catch(main(), …))`, because the design (Chapter 11, "Where programs start") forbids running a program at the module top level. This fork reports it too, so `es-infer` passes the runner a program: `Effect.runPromise(() => Effect.catch(() => main(), …))`.
 
 ## Next hardest risk
 
