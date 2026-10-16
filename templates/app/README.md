@@ -3,8 +3,9 @@
 Install local tooling first with `sh scripts/setup.sh` in the EffectScript
 repository. Keep that checkout available: this project depends on its packages
 through absolute `file:` paths written when setup installs the template.
-After updating the checkout, rerun setup there and `bun install --force` here
-to refresh the local package copies.
+After updating the checkout, rerun setup there, then run
+`bun update @effectscript/runtime @effectscript/compiler @effectscript/vite` here to install
+the new packages.
 
 ```sh
 bun install

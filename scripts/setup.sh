@@ -18,6 +18,11 @@ if [ -f "$root/packages/runtime/package.json" ]; then
   else
     echo "setup: runtime has no build script; using its declared exports"
   fi
+  # Projects install this tarball, not the directory: bun links a directory's
+  # files into the checkout, where Node resolves the runtime's own effect, and
+  # two copies of effect let a Scope miss the fibers it must stop.
+  echo "setup: pack runtime"
+  (cd "$root/packages/runtime" && bun pm pack --quiet --filename "$root/packages/runtime/effectscript-runtime.tgz" >/dev/null)
 else
   echo "setup: WARNING: packages/runtime is absent. The compiler is ready; projects need the runtime lane before they can install." >&2
 fi
@@ -58,4 +63,5 @@ else
 fi
 
 echo "setup: local file dependencies point to $root; keep this checkout available."
+echo "setup: in projects created before this run, run bun update @effectscript/runtime to install the new runtime."
 printf '\nNext commands:\n  bun create effectscript my-app --no-git\n  cd my-app\n  bun run start\n'

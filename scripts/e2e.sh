@@ -21,6 +21,20 @@ step=install
 echo "e2e: install"
 bun install
 echo "e2e: PASS install"
+step=one-effect
+echo "e2e: one copy of effect"
+# Node resolves imports from a module's real path, so compare where the
+# runtime's real files and the project find effect.
+node --input-type=module -e '
+import { realpathSync } from "node:fs"
+import { createRequire } from "node:module"
+const runtime = createRequire(realpathSync("node_modules/@effectscript/runtime/dist/index.js")).resolve("effect")
+const project = createRequire(realpathSync("package.json")).resolve("effect")
+if (runtime !== project) {
+  console.error(`e2e: the runtime loads ${runtime}, the project loads ${project}`)
+  process.exit(1)
+}'
+echo "e2e: PASS one copy of effect"
 step=build
 echo "e2e: build"
 bun run build

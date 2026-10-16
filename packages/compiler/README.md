@@ -11,5 +11,5 @@ The Node launcher forwards arguments, standard streams, signals, and the native
 process's exit status. It loads `native/esc` relative to its own package, so it
 works from another directory. Set `ESC_BINARY` to use another native binary.
 The local setup uses absolute `file:` dependencies; no registry publication or
-global package registration is required. Rebuild after changing compiler source,
-then run `bun install --force` in existing projects to refresh their package copy.
+global package registration is required. A project links `native/esc` from
+this package, so it uses a rebuilt compiler without reinstalling.

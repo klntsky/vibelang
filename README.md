@@ -18,9 +18,10 @@ bun run test
 Setup requires Go, Bun, and Node on `PATH`. The tested toolchain is Go 1.26
 (with automatic Go 1.27 download), Bun 1.4.1, and Node 26.10. Nothing needs to
 be published to npm. Keep this checkout available: scaffolded projects use
-absolute `file:` dependencies on its compiler and runtime packages. Rerun setup
-after updating the checkout, then run `bun install --force` in existing projects
-to refresh their local package copies.
+absolute `file:` dependencies on its compiler and Vite packages and on the
+runtime tarball that setup packs. Rerun setup after updating the checkout, then
+run `bun update @effectscript/runtime @effectscript/compiler @effectscript/vite` in
+existing projects to install the new packages.
 
 `bun run dev` builds once, watches `.es` sources with `esc --watch`, and runs
 Node with `--watch` on the output. `bun run test` compiles `.es` tests before

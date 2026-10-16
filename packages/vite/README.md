@@ -19,8 +19,8 @@ bun add -d /absolute/path/to/effectscript/packages/compiler \
 bun add -d vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
-Keep the checkout available. Rerun setup and `bun install --force` after updating
-it. No package is published to npm. The plugin supports Vite 7 and 8 on Node 22+;
+Keep the checkout available. After updating it, rerun setup, then run
+`bun update @effectscript/vite` in each project. No package is published to npm. The plugin supports Vite 7 and 8 on Node 22+;
 the acceptance tests use Vite 8 and Vitest 5.
 
 ## Configure Vite
