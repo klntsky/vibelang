@@ -1002,6 +1002,10 @@ function readReport(path: string) {
 
 `Files.open` returns a scoped resource: `Effect<FileHandle, IOError, Scope>`. The block that declares `using` supplies the `Scope`, which is why `Scope` does not appear in `readReport`'s requirements. Several `using` declarations release in reverse order.
 
+A call that runs an Effect is an acquisition even when its result has no `Symbol.dispose`; it receives the block Scope. Other initializers must be Disposable, `null`, or `undefined`. A Disposable result also runs `[Symbol.dispose]()` at block exit. If its Effect release already disposes it, this disposes it twice (D94).
+
+In `for (using item of values)`, each iteration owns a Scope region, including `using` and `fork` inside its body (D95). C-style `for` heads still use TypeScript disposal and do not yet release on Effect failure or interruption; an Effect acquisition there reports TS2850.
+
 #### Who owns a resource
 
 Only `using` acquisitions belong to the block. A resource acquired without `using` belongs to the caller, even when the same block also has a `using`:
@@ -1193,6 +1197,8 @@ function withProgress(id: string) {
 ```
 
 `fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `Fiber.join`. For a longer lifetime, say so with Effect's combinators: `Effect.forkScoped` ties the fiber to the caller's scope and adds `Scope` to R, `Effect.forkChild` ties it to the current fiber, and `Effect.forkDetach` ties it to nothing.
+
+An expression-bodied arrow has no block to own its child: `() => fork(p)` uses `Effect.forkScoped` and keeps `Scope` in R, unlike `() => { return fork(p) }` (D96). Returning a block-owned child currently returns a fiber already interrupted when that block exited; the compiler does not warn.
 
 #### What a new fiber sees
 
@@ -1456,7 +1462,7 @@ There is no equivalent. A service method can wait and return, but it cannot end 
 
 ### 10. Working with TypeScript
 
-EffectScript compiles to TypeScript and shares its types, modules, and Effect. A project can mix `.ts` and `.es` files freely: existing Effect code stays in TypeScript, and new code can be written in either.
+EffectScript uses the TypeScript compiler and shares its types, modules, and Effect. A project can mix `.ts` and `.es` files freely: existing Effect code stays in TypeScript, and new code can be written in either.
 
 #### Using TypeScript Effect code from EffectScript
 
@@ -1503,11 +1509,11 @@ error ES1002: Effect.gen expects a JavaScript generator, but in EffectScript fun
     function findName(id: string) { return Users.find(id).name }
 ```
 
-The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions and `await` are not part of EffectScript either: a call already waits. Converting a function is mostly deletion, as every chapter of Part I shows, and the editor does it for whole functions (Chapter 28).
+The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions and `await` are not part of EffectScript either: a call already waits. Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (Chapter 28).
 
 #### Using EffectScript code from TypeScript
 
-To TypeScript, every exported EffectScript function is a function that returns an `Effect`, and every exported producer is a function that returns a `Stream`. The compiler writes that into the declaration file:
+To TypeScript, an exported unannotated or Effect-contract function returns an `Effect`, and every exported producer is a function that returns a `Stream`. The compiler writes that into the declaration file:
 
 ```ts dts
 // page.d.ts
@@ -1522,7 +1528,7 @@ import { title } from "./page.js"
 const program = title("42").pipe(Effect.provide(DatabaseLive))   // nothing has run yet
 ```
 
-Calling an EffectScript function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees `add` as `(a: number, b: number) => Effect<number>`, and only EffectScript callers use the fast path. TypeScript imports `./page.js`, which the compiler resolves to `page.es` the way it resolves `.js` to `.ts`.
+Calling an EffectScript function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and EffectScript callers in the same compilation use the fast path. An eligible helper with a plain annotation, such as `: number`, instead keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.es` the way it resolves `.js` to `.ts`.
 
 #### Code that is not Effect
 
@@ -1561,9 +1567,11 @@ A trusted contract is declared once, on the TypeScript declaration:
 export function slugify(title: string): string { … }
 ```
 
-The compiler trusts the tag; it cannot check a TypeScript body. `@throws {InvalidSlug}` makes `InvalidSlug` an expected failure that joins the caller's E; any other exception from `slugify` is a defect. Each `@throws` names an exported class, and the generated code tests `instanceof InvalidSlug`. The tag cannot be put on a function that returns a Promise or an `Effect`. To trust a function from a package you cannot edit, re-export it from a `.ts` file you own, with the tag.
+The compiler trusts the tag; it cannot check a TypeScript body. `@throws {InvalidSlug}` makes `InvalidSlug` an expected failure that joins the caller's E; any other exception from `slugify` is a defect. Each `@throws` names a class exported by a module the `.es` caller imports; otherwise the call is ES4401 (D101). The generated code tests `instanceof InvalidSlug`. The tag cannot be put on a function that returns a Promise or an `Effect`. To trust a function from a package you cannot edit, re-export it from a `.ts` file you own, with the tag.
 
-ES4401 applies inside functions. A module's top level runs outside every program, so a plain call there is an ordinary JavaScript call, as in TypeScript, and an exception from it fails the module's import.
+ES4401 applies where a fiber runs the code. Module initialization and its plain callbacks passed to TypeScript, such as `describe` bodies and route handlers, run ordinary JavaScript calls (D100). An exception at module top level fails the import. Trusted failures stay defects inside plain callbacks, while they make free lambdas and named EffectScript functions use the Effect form (D101).
+
+Only built-ins that parse outside text declare expected failures: `JSON.parse` declares `SyntaxError`, and `decodeURI` and `decodeURIComponent` declare `URIError`. Other built-in exceptions are defects (D101).
 
 An explicit boundary says what an exception means at the call. These are Effect's own constructors, unchanged:
 
@@ -1635,12 +1643,14 @@ function loadSettings(path: string) {
 
 ```text
 error ES4402: node:fs/promises is a platform API, which EffectScript code does not call directly.
-  settings.es:1:26   import { readFile } from "node:fs/promises"
+  settings.es:4:21   return JSON.parse(readFile(path, "utf8"))
   Use FileSystem from "effect/FileSystem":   FileSystem.readFileString(path)
   Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.
 ```
 
 EffectScript's standard library is Effect's. Node.js and browser APIs are not callable from `.es` files, and each error names the Effect module that replaces the API. EffectScript adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
+
+Imports, re-exports, and passing platform values to adapters are allowed (D108). For example, `NodeHttpServer.layer(createServer, { port })` passes a host function without calling it. ES4402 reports execution: calls, construction, tagged templates, and reads of platform properties, including destructuring and spreading. Namespace members used as values, such as `os.EOL`, are allowed. The current check does not follow platform functions through local aliases, parameters, or objects returned by platform calls.
 
 There are three reasons. Platform APIs throw and reject in ways their types do not state, which is exactly what Chapter 10's boundary rules exist to contain. An Effect module states its errors in its types and is a service, so a test replaces it with a Layer. And Effect already ships these modules, with implementations for Node.js, Bun, and browsers, so cloning Node's API surface would duplicate them.
 
@@ -2107,7 +2117,7 @@ const n = double$direct(4)                     // a plain JavaScript call (Chapt
 const user = yield* (yield* Users).find(id)    // the implementation in the current Context, then the method
 const row = yield* findUser(id)                // runs the returned program
 const label = formatName(user)                 // an ordinary call
-const ok = yield* Approval.approve(request)    // asks the nearest handler (Chapter 9)
+const ok = yield* (yield* Approval).approve(request)    // asks the nearest handler (Chapter 9)
 const port = yield* Port                       // runs the Config
 ```
 
@@ -2116,14 +2126,14 @@ The full rule:
 | The callee is | The call | Generated |
 | --- | --- | --- |
 | An EffectScript function that can pause | Runs it on the current fiber | `yield* f(a)` |
-| An EffectScript function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)` |
+| An EffectScript function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)`, or `f(a)` with a plain return annotation (D67) |
 | A TypeScript function whose call has the type `Effect<A, E, R>` | Runs the returned program | `yield* f(a)` |
 | A TypeScript function whose R contains a control operation | Rejected in v0: ES4202 (Chapter 9) | |
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
 | A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
 | A service, `Users()` | Returns the implementation | `yield* Users` |
-| A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* Approval.approve(x)` |
+| A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |
 | A JavaScript built-in, or an export of `effect` or `@effect/*` that does not return an `Effect` | A trusted call: listed exceptions join E, others are defects | `f(a)`, with listed exceptions converted |
 | A TypeScript function tagged `@effectscript trusted` | The same | `f(a)`, with listed exceptions converted |
 | Any other plain TypeScript or JavaScript function | Rejected: ES4401 (Chapter 10) | |
@@ -2158,10 +2168,12 @@ A function used as a value is passed in the form its destination expects:
 | --- | --- |
 | A function type that returns an `Effect`, as Effect's combinators expect | The function's Effect form |
 | A plain function type, as `Array.prototype.map` expects | The function's plain-JavaScript form, if it has one (Chapter 15); otherwise ES4301 |
-| `Effect<A, E, R>`, an array or record of them | A function with no parameters, converted to a program (Chapter 5) |
+| `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5) |
 | Either a function or an `Effect`, as `HttpRouter.add` and `Effect.withErrorReporting` accept | A function with parameters: the function. A function without parameters: the function if it compiles to plain JavaScript, a program if it can pause |
 
 The last row matters because several Effect APIs choose at run time with `Effect.isEffect`. In `HttpRouter.add("GET", "/users/:id", (request) => showUser(request))`, the handler has a parameter and is passed as a function. In `HttpRouter.add("GET", "/health", () => checkHealth())` and `Effect.withErrorReporting(() => serve())`, the argument can pause and is passed as a program.
+
+An Effect callback or program destination means Effect's own interface, or a type parameter constrained to it; structured subtypes such as `Config` remain data (D109). A destination that allows both plain and Effect returns selects plain when D10 permits and Effect otherwise (D112). A contract-annotated lambda selected as plain has type `(…) => A`, and plain-callback inference starts from A (D113). These rules apply to named function values as well as lambdas (D66).
 
 #### Programs and continuations
 
@@ -2178,7 +2190,7 @@ Two kinds of "rest of the work" appear in this document, and they behave differe
 
 #### How program values are spelled
 
-A call always runs, so a program value needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). It never converts a value because it merely looks like a function:
+A call always runs, so a program value needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
 
 ```ts gen
 // Effect.retry(() => syncInventory(store), Schedule.recurs(3))
@@ -2266,7 +2278,7 @@ Evaluation order is JavaScript's, and generated code keeps it. Arguments are eva
 
 #### What the compiler infers
 
-Each function gets a contract `Effect<A, E, R>`:
+An unannotated function or a function with an Effect return annotation gets a contract `Effect<A, E, R>`. An eligible function with a plain return annotation keeps its plain type (D67, Chapter 15):
 
 - **A** is the type of what it returns, inferred and widened as TypeScript infers a function's return type: `return "ok"` gives `string`.
 - **E** is every error it `throw`s, plus every error its callees can fail with, plus the expected failures named by the trusted contracts it calls, minus what its `catch` blocks handle.
@@ -2314,11 +2326,13 @@ error ES2002: welcome needs Mailer, but its contract says R = Users.
 | Requirements | Every requirement that remains must be in R | ES2002 |
 | Width | A contract may be wider than the body needs, never narrower | ES2001, ES2002 |
 
+A call to a function with a complete written contract contributes that contract's E and R, even when the body needs less (D73).
+
 The contract has exactly three channels. Whether a function can pause is a separate fact the compiler tracks, its control class (Chapter 15), not part of the contract.
 
 #### Declarations without bodies
 
-Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `Effect<A, never, never>`. Effect type arguments keep their TypeScript defaults in these declarations, so `Effect<A>` means `Effect<A, never, never>` (D57):
+Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `Effect<A, never, never>`. Service and control methods require all three Effect type arguments; `Effect<A>` is ES2101 there (D93, amending D57):
 
 ```ts es
 abstract class Rates {
@@ -2367,7 +2381,7 @@ function inferred(id: string): Effect<infer _, infer _, infer _> {
 
 The name after `infer` is documentation only and is not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
 
-Omission is an error in this position. Neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel should be checked as `never` or inferred. A bare return annotation such as `: User` is also ES2003.
+Omission is an error in this position. Neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel should be checked as `never` or inferred. A plain return annotation such as `: User` is ES2003 only when a non-method function's body runs an Effect. An eligible plain helper keeps that annotation and compiles to one plain function (D67). Methods are exempt from ES2003 for plain annotations, including methods implementing JavaScript protocols (D74); their expected type and body determine whether they lower to Effects (D92).
 
 ```ts es
 function find(id: string): Effect<User> {
@@ -2383,11 +2397,11 @@ error ES2003: Effect<User> leaves contract channels unspecified. Did you mean ne
 
 These are two distinct quick fixes. The first can then report ES2001 or ES2002 when the body fails or needs services. The second keeps those channels inferred.
 
-This rule applies only to the return annotation of an EffectScript function with a body. Parameter types, type aliases, abstract members, and `.ts` files keep TypeScript's meaning of `Effect<User>`, including its `never` defaults. They do not gain channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
+This rule applies only to the return annotation of an EffectScript function with a body. Parameter types, type aliases, and `.ts` files keep TypeScript's meaning of `Effect<User>`, including its `never` defaults. Service and control methods instead require a complete contract (D93). They do not gain channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
 
 #### Recursion
 
-A recursive function's E and R come from a fixpoint over its strongly connected component of the call graph, so they never need an annotation:
+A recursive Effect function's E and R come from a fixpoint over its strongly connected component of the call graph. Cached catch-variable or return types can require a written contract before those channels are known (ES2102, D71):
 
 ```ts es
 function totalSize(path: string) {
@@ -2418,9 +2432,11 @@ function visitEntry(path: string) {
 
 Checked once in source order, `visitDir` meets `visitEntry` before `visitEntry` has a contract and misses `Locked`; the recheck adds it. The prototype compiler reaches the same contracts by re-checking the whole program (`prototype/esc/FINDINGS.md`, finding 7). The single-pass experiment found this case, in its `isEven` and `isOdd` probe, to be the only one that needs a second check (`prototype/single-pass/RESULTS.md`). A follows TypeScript's rule: when A depends on the function's own result, the contract must be written (ES2102).
 
+ES2102 applies to functions that run Effects. Pure recursion keeps TypeScript's TS7023 when its return type depends on itself; a plain annotation fixes it (D72). The current checker also needs contracts in some cached-type cycles that the fixpoint model alone would solve. A cycle through a callback uses the checker's single type for that call, and generic-call inference does not fill `infer` channels in a lambda (F3's known gaps).
+
 ### 15. Which functions compile to plain JavaScript
 
-Every function has an Effect contract, but a function like `add` should cost what a JavaScript call costs. The compiler emits a plain JavaScript function whenever the difference is unobservable.
+Unannotated functions and functions with Effect annotations expose Effect contracts, but a function like `add` should cost what a JavaScript call costs. A helper with a plain return annotation keeps a plain function type (D67). The compiler emits a plain JavaScript function whenever the difference is unobservable.
 
 ```ts es
 function double(n: number) {
@@ -2466,10 +2482,10 @@ The test is "can it reach an Effect operation", not "are E and R empty". `Effect
 
 #### Why this is safe
 
-- **Nothing runs early.** The TypeScript-facing form is `Effect.sync(() => …)`, never `Effect.succeed(double$direct(n))`. Building a program does no work, even work that looks free. A pure function can still throw a defect (`(undefined as any).x`), and that must happen when the program runs, not when it is built.
+- **Nothing runs early when building an Effect.** For an unannotated or Effect-contract helper, the TypeScript-facing form is `Effect.sync(() => …)`, never `Effect.succeed(double$direct(n))`. Building a program does no work, even work that looks free. A pure function can still throw a defect (`(undefined as any).x`), and that must happen when the program runs, not when it is built.
 - **No point where another fiber could run disappears.** A plain call runs inside its caller's current step. Every Effect operation is such a point, including an `Effect.sync` body, so a function containing one is not eligible. Inlining a callee that performs no operation removes none.
 - **Order is kept.** Generated code evaluates in source order. In `area`, both `double` calls run before `Settings.scale()`, as the source says, even though only the service call can pause.
-- **One calling convention.** TypeScript always sees `(...) => Effect<A, E, R>`. The `$direct` variant is an internal shortcut, advertised to other EffectScript packages in declaration metadata (Chapter 27). A caller that lacks the metadata calls the Effect form, which is always correct, only slower.
+- **Public types follow annotations.** An unannotated or Effect-contract helper exposes `(...) => Effect<A, E, R>` and gets a `$direct` shortcut. An eligible helper annotated `: A` exposes `(...) => A` and emits one plain function (D67). Plain calls run inline even at module top level (D65). The compiler does not yet emit `$direct` declaration metadata, so callers compiled against declarations use the correct, slower Effect form (Chapter 27).
 
 #### Regions inside a plain function
 
@@ -2496,7 +2512,7 @@ export function readPort$direct(text: string): number {
 }
 ```
 
-A `using` declaration acquires an Effect resource, so a function that declares one compiles to frames.
+Any `using` declaration makes a function compile to frames, whether its initializer acquires an Effect resource or supplies an ordinary Disposable (D54, D94).
 
 #### Methods that implement a plain-function member
 
@@ -2506,11 +2522,11 @@ import { Equal, Hash } from "effect"
 class Money implements Equal.Equal {
   constructor(readonly cents: number, readonly currency: string) {}
 
-  [Equal.symbol](that: Equal.Equal) {
+  [Equal.symbol](that: Equal.Equal): boolean {
     return that instanceof Money && that.cents === this.cents && that.currency === this.currency
   }
 
-  [Hash.symbol]() {
+  [Hash.symbol](): number {
     return Hash.combine(Hash.number(this.cents), Hash.string(this.currency))
   }
 }
@@ -2555,6 +2571,8 @@ const sizes = mapAll(words, (w) => w.length)             // Effect<number[], nev
 ```
 
 `f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
+
+This rule also covers declarations, methods, and function expressions that are not call arguments. Added channel parameters are named E and R, then E2 and R2 for another callback (D68). A contract-less callback cannot be called inside a synchronous JavaScript callback such as a `sort` comparator: it can pause, so that call is ES4301.
 
 The declaration file writes the polymorphism out, as the comment shows. A TypeScript caller therefore passes a callback that returns an `Effect`, and wraps a plain one: `mapAll(words, (w) => Effect.succeed(w.length))`.
 
@@ -3589,8 +3607,9 @@ computation IR described by the machine chapters is a semantic model; the
 current compiler does not materialize a separate IR.
 
 A call that returns Effect itself runs; structured Effect subtypes such as
-Config remain data until called (D24). A pure function gets a `$direct` variant
-for inline calls and an Effect form for the public ABI (D9, D10). Calls and
+Config remain data until called (D24). An unannotated or Effect-contract pure function gets a `$direct` variant
+for inline calls and an Effect form for the public ABI (D9, D10). A plain
+return annotation instead preserves one plain function (D67). Calls and
 operands retain source order. `throw` adds an expected failure; `try`, `catch`,
 and `finally` become regions with completion records for jumps (D13, D15, D46).
 
@@ -3725,7 +3744,8 @@ compiler is the TypeScript 7.1 checker, with ordinary TypeScript semantics for
 `esc` accepts TypeScript compiler flags: bare `esc` checks and emits,
 `--noEmit` checks, `--watch` watches, and `-b` builds references. The same native
 binary exposes `--lsp --stdio` and the upstream `--api` transport. The current
-Vite plugin uses subprocess compilation instead of the API transport (D31).
+Vite plugin uses subprocess compilation instead of the API transport (D105,
+amending D31).
 
 #### Building and testing
 
@@ -3785,12 +3805,13 @@ source changes. Requests share compilation. It emits JavaScript and source
 maps into its own directory under `node_modules/.effectscript/`, reports errors
 in the terminal and overlay, and invalidates all loaded `.es` modules and their
 importers after an edit. It does not compare exported contracts or use the
-API transport yet. Its README documents `project` and `compiler` overrides.
+API transport yet. Sources must stay under Vite's root so emit paths and source maps agree (D107). Its README documents `project` and `compiler` overrides.
 
 #### The editor
 
 The server is the fork's own, `esc --lsp --stdio`, from the project's compiler
-(D32). Setup builds a local `.vsix` when the editor package is present and
+(D32). The same binary identifies as `EffectScript 0.0.1 (TypeScript 7.1.0-dev)`
+with `--version`; there is no separate compiler entry point (D75). Setup builds a local `.vsix` when the editor package is present and
 prints install commands:
 
 ```sh
@@ -3802,14 +3823,27 @@ Setup does not install the extension automatically. If it reports the editor
 package is absent, update the checkout and rerun setup. Open the scaffolded
 project directory so the extension finds its local compiler.
 
+The extension finds `esc` from `effectscript.server.path`, then the nearest
+`node_modules/.bin/esc`, then PATH. It requires a trusted workspace (D79).
+Its grammar reuses VS Code's TypeScript grammar under `source.effectscript`,
+with inner `.ts` scopes so existing themes apply.
+
+For `.ts` ownership, disable VS Code's built-in TypeScript extension, or use
+Cursor's `useTsgo` setting (D76). The extension serves `.es` while the built-in
+TypeScript extension remains active, but leaves `.ts` to that extension.
+Do not set `typescript.validate.enable` to false: this server reads that
+setting too and would hide its EffectScript diagnostics.
+
 Other editors can configure their LSP client for `.es` and `.ts`, with
 `tsconfig.json` as the root marker, and disable their other TypeScript server
 for this project. Add `*.es linguist-language=TypeScript` to `.gitattributes`
 for GitHub highlighting.
 
-The checker supplies inferred Effect contracts, call success types, and
-service member types to the upstream LSP. D33's separate control-class hover
-text, catch-specific completions, mechanical ES code actions, and migration
+Hover shows a running call's success value as "Runs here and returns `T`",
+and a plain helper's direct signature alongside its TypeScript-facing type
+(D77). Prelude names and service members complete in scope (D78). TypeScript
+files retain TypeScript hover behavior. D33's control-class hover text,
+catch-specific completions, mechanical ES code actions, and migration
 refactors remain design targets. Diagnostic messages include repair suggestions
 as text; the current compiler does not implement those editor refactors.
 
@@ -3820,9 +3854,9 @@ Every ES diagnostic is an error, except two. Each error marks code that has no m
 | Option in `compilerOptions.effectscript` | Values | Default |
 | --- | --- | --- |
 | `diagnostics` | `"ES2004"` and `"ES4403"`, each `"error"`, `"warning"`, or `"off"` | ES2004 `"warning"`, ES4403 `"error"` |
-| `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every function that compiles to frames does | `"none"` |
+| `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas do not (D104) | `"none"` |
 
-`esc` exits non-zero when any error is reported. Diagnostics print at `.es` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
+`esc` exits non-zero when any error is reported. The CLI prints `error ES1003:`; LSP sends source `ES` and numeric code `1003`, which VS Code displays as `ES(1003)` (D61). Diagnostics print at `.es` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
 
 The diagnostic registry reserves these codes. This table describes each rule
 and the intended repair (D33, D53). A registry entry does not prove that its
@@ -3832,18 +3866,18 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | Code | What it reports | Suggested repair | Chapter |
 | --- | --- | --- | --- |
 | ES1001 | A module's top level runs a program | Export a function instead | 13 |
-| ES1002 | A generator-based API (`Effect.gen`) in a `.es` file, where `function*` declares a producer | Convert the function | 10 |
+| ES1002 | A `function*` passed to an API whose parameter returns a library Generator or Iterator, such as `Effect.gen` (D64) | Convert the function | 10 |
 | ES1003 | `async`, `await`, `for await`, or `await using`: a call already waits | Remove them | 10 |
-| ES1004 | `using` at a module's top level | Move it into a function | 6 |
+| ES1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
 | ES1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
 | ES2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | ES2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
-| ES2003 | A return annotation on a function with a body that is not `Effect<A, E, R>` with all three slots, each checked or written `infer Name` | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
+| ES2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
 | ES2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
 | ES2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | ES2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | ES2101 | A declaration without a body that has no full contract | Write `Effect<T, never, never>` | 14 |
-| ES2102 | A recursive function whose A depends on its own result | Write the contract | 14 |
+| ES2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
 | ES3001 | Two services share a key | Rename one | 4 |
 | ES3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | ES3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -3858,7 +3892,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | ES4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | ES4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | ES4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of` | 10, 16 |
-| ES4401 | A plain TypeScript call with no boundary or trusted contract | Wrap it in `Effect.try`, or tag the declaration `@effectscript trusted` | 10 |
+| ES4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `Effect.try`, or tag the declaration `@effectscript trusted` | 10 |
 | ES4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | ES4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 
@@ -3897,9 +3931,9 @@ What a debugger shows follows from the frame invariant (Chapter 26):
 
 ```text
 settled before this document      1-7     the owner's original decisions
-decisions since                   D1-D60  the owner's calls and the defaults that complete the design
+decisions since                  D1-D113 the owner's calls and reported build defaults; gaps reserved
 rules of the runtime and compiler P1-P22  adopted (D29), revised where the 2026-10-16 reviews broke them
-end-to-end build calls           D57-D60 closed; D57 and D58 are controversial
+end-to-end build calls          D61-D113 recorded below where reported; F7 pending
 ```
 
 Every rule in this document traces to one of these. The log with full reasons is `docs/design/DECISIONS.md`; a default is a decision made to complete the design, and the owner can overturn any default.
@@ -3984,6 +4018,59 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; the repository stays private | Another compile-to-JavaScript language uses the name; rename before public release remains possible | 28 |
 | D59 | Draft upstream issues and proposals in `docs/upstream/`; status: drafted, not filed | Filing speaks for the owner in a third-party project and needs his go-ahead | 24, 25, 30 |
 | D60 | **Will.** One private repository, `github.com/roninjin10/effectscript`; the compiler lives in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
+
+#### Decisions from the end-to-end build (2026-10-16)
+
+The following rows record reported defaults, not new language decisions. D97-D99 remain reserved for the compiler lane still landing. The decision log groups known gaps by area and distinguishes a lane's landing snapshot from later fixes.
+
+| # | Decision | Reason and evidence | Chapters |
+| --- | --- | --- | --- |
+| D61 | **Controversial.** An ES diagnostic is a TypeScript diagnostic with source `ES`, on upstream's content-mapper path | One diagnostic path for CLI and LSP | 28 |
+| D62 | The prelude is the runtime's exports | Lazy imports preserve files that use no prelude names | 1, 27 |
+| D63 | A `.es` file imports `./x.es` or `./x.ts` by source name with no flag (no TS5097); specifiers become `.js` in JavaScript and `.d.ts` output | Source names for checking, output names for JavaScript | 10, 27, 28 |
+| D64 | A failing compiler case passes when its exact set of error codes matches (TypeScript codes count, warnings do not); a runnable case compares only its `@@result` line, so programs may log | Exact codes detect regressions while result markers allow logging | 10, 27, 28 |
+| D65 | A call from a `.es` file to a plain function runs inline as `f$direct(a)` everywhere, including a module's top level, because it computes a value and runs no program | Plain computation runs no program | 13, 15 |
+| D66 | An overload candidate that asks for a plain function rejects an `.es` function value that can pause, as it rejects such a lambda (D56 extended to function values); a TypeScript function that returns an Effect passes as data; when every candidate rejects, ES4301 reports against the first candidate's form | Named values and lambdas need the same callback safety | 13, 16 |
+| D67 | **Controversial.** A function with a plain return annotation keeps that type and compiles to one plain function; only unannotated or Effect-contract functions get the `$direct` plus `Effect.sync` pair, whose TypeScript type is `(…) => Effect<A, never, never>` (chapter 15's one calling convention) | Plain annotations support JavaScript protocols | 10, 14, 15 |
+| D68 | **Controversial.** D12 (a callback parameter without a contract accepts any contract) applies to declarations, methods, and function expressions that are not call arguments; the added type parameters are named E and R (then E2, R2) and appear in `.d.ts` output | Missing callback channels must not mean never | 16, 27 |
+| D69 | A program lambda lowers to `Effect.gen(function* …)`, a converted function value to `Effect.suspend(v)`, and an array or record of programs built at run time to `$programs` | Conversions must preserve cold execution | 5, 13, 27 |
+| D70 | **Controversial.** A `return`, `break`, or `continue` that leaves a `finally` block is a new error, ES2006; in JavaScript such a jump discards the failure in flight, and compiling `finally` to Effect cleanup cannot honor it | Effect cleanup cannot honor jumps that discard failures | 17, 28 |
+| D71 | ES2102 also covers a `catch` variable or return type typed before its cycle's E and R are known; the fix is a written contract | The checker cannot revise cached recursive types | 14, 28 |
+| D72 | ES2102 applies only to functions that run Effects; a pure recursive function keeps TypeScript's TS7023, which a plain annotation fixes (consistent with D67) | Pure recursion needs no Effect channel analysis | 14, 15 |
+| D73 | A call to a function with a complete written contract adds the contract's E and R, not what its body does | Callers rely on the public contract | 14 |
+| D74 | Methods are exempt from ES2003 for a plain annotation, because a method implementing a plain-function member is declared that way (D55) | Plain protocol members need plain annotations | 14, 15 |
+| D75 | The `tsc/cmd/tsc` binary identifies as EffectScript; there is no separate cmd/esc | One upstream entry-point seam | 27, 28 |
+| D76 | **Controversial.** The editor serves `.ts` only when the built-in TypeScript extension is disabled, or with Cursor's useTsgo | Disabling validation also hides EffectScript diagnostics; amends D32 | 28 |
+| D77 | **Controversial.** Hover shows a running call's success value and a plain helper's direct and TypeScript-facing signatures; `.ts` hover stays unchanged | Explain both call semantics and helper ABI | 15, 28 |
+| D78 | Prelude names and service members complete in scope; local declarations shadow prelude names | Discoverability without explicit imports | 1, 4, 28 |
+| D79 | Reuse TypeScript TextMate grammar; resolve esc from setting, project, then PATH; require workspace trust | Keep theme support and project compiler ownership | 28 |
+| D80 | The runtime checks Effect's version by importing effect's package metadata with a static JSON import attribute; works in Node, Bun, and bundlers | JSON attributes work in Node, Bun, and bundlers | 27, 28 |
+| D81 | The runtime exports `suspend`, `handoff`, `Resumer`, and `HandoffProtocolViolation` for TypeScript callback adapters (D43) | Resource adapters need cancellation and lost-race reporting | 6, 21 |
+| D82 | The extraction kept the prototype helpers' behavior and continuation parameter order; discrepancies with the spec are documented in packages/runtime/README.md, not fixed silently | Extraction must preserve compiler compatibility | 26, 27 |
+| D83 | Setup writes absolute `file:` dependencies on the repository's packages into new projects instead of `bun link`; nothing registers globally and nothing is published, so a project keeps working only while the checkout stays where it is | Local setup needs no registration or publication | 28 |
+| D84-D89 | No decisions reported in the build inbox | Leave these numbers unassigned | |
+| D90 | The member-call rule (D41) is structural: it applies to any Context key whose service type declares the member, which covers `.es` services, TypeScript `Context.Service` classes, and Effect's `FileSystem` and `Path` | Context keys and EffectScript services share call behavior | 4, 13 |
+| D91 | **Controversial.** A control-operation call lowers like a service call, `yield* (yield* Approval).approve(x)`, as the prototype did (amending the original Chapter 13 lowering); `handle` provides an implementation that performs the kernel operations | Preserves the prototype implementation pending F7 | 9, 13 |
+| D92 | A method in a `.es` file becomes an Effect when its body runs or looks up an Effect, or when its expected type returns one; it stays a method whose body is `return Effect.gen({ self: this }, function* () { … })` | Generators must retain the method receiver | 15, 27 |
+| D93 | **Controversial.** Service keys use package, module, and name; defaults require `static readonly`; ES2101 requires all three Effect channels; wire emits consumers first | Stable service identity and bounded provider analysis | 4, 14 |
+| D94 | Effect acquisitions receive the block Scope; other initializers need Disposable, null, or undefined; Disposable results also run Symbol.dispose | Effect acquisitions and ordinary Disposables have different ownership | 6 |
+| D95 | In an Effect function, `for (using x of values)` makes each iteration's body a Scope region; the value is taken first, and `using` or `fork` inside the body join that region | Cleanup belongs to the iteration that owns it | 6, 7 |
+| D96 | **Controversial.** A `fork` belongs to the innermost block around it; an arrow function with an expression body has no block, so `() => fork(p)` is `Effect.forkScoped` and keeps `Scope` in R | An expression body has no owning block | 7 |
+| D97-D99 | Reserved for handlers, producers, and streams; not reported | F7 is still landing | 8, 9, 26 |
+| D100 | Code no fiber runs is plain JavaScript for ES4401 too: a module's top level and the plain callbacks it passes to TypeScript functions (`describe` bodies, route handlers), the same places D38 allows runners | Framework callbacks run outside a fiber | 10, 13 |
+| D101 | **Controversial.** Only built-ins that parse outside text declare expected failures (`JSON.parse` with `SyntaxError`, `decodeURI` and `decodeURIComponent` with `URIError`); every other built-in's exceptions are defects | Unlisted built-in exceptions remain defects | 10, 26 |
+| D102 | **Controversial.** Original platform-import restriction; import half superseded by D108; globals and allowed web standards retained | Platform work needs typed, replaceable Effect services | 10, 11 |
+| D103 | ES1001 covers any top-level call that would run a program, including service member calls and Effect-value calls, reported once at the outermost call | One outer call identifies attempted program execution | 13, 28 |
+| D104 | Compiled generators are named after their function, variable, or property (an object method `{ *name() {} }.name` when the body refers to that name); `tracing: "exported"` spans exported functions, `"all"` every named lowered function plus methods through `Effect.withSpan("Class.method")`; anonymous lambdas get no span | Names and spans identify source failures | 19, 26, 28 |
+| D105 | Vite compiles a project through one shared esc subprocess per source revision, with cached output; amends D31 | Whole-project checking keeps caller contracts consistent | 28 |
+| D106 | After an edit the plugin invalidates every loaded `.es` module and its transitive importers, because callers compile differently when a contract changes | Contract changes can change caller lowering | 28 |
+| D107 | **Controversial.** Sources must sit under Vite's root; the plugin overrides emit paths and source roots there so output lookup and source maps are predictable | One source root makes output lookup predictable | 28 |
+| D108 | ES4402 reports platform execution, including calls and property reads; imports and passing values are allowed. Supersedes the import half of D102 | Effect adapters must accept host function values | 10, 11, 28 |
+| D109 | An expected callback or program asks for the Effect form only when its type is effect's own `Effect` interface, or a type parameter constrained to it; subtypes such as `Config` are data (D24), so `Config.orElse`'s fallback stays plain | D24 keeps structured subtypes as data | 13, 16 |
+| D110 | The `pipe` look-ahead (D8) reads the first stage's callee signatures, or a function value's own signatures; it runs only when the first argument can be a program, and never checks the stage early | Reading signatures avoids circular inference | 5, 13 |
+| D111 | The D49 conversion covers any iterable (`Set`, a `Map`'s values) through its iterated type; an iterable never converts as a record, matching `Effect.all` at run time | Matches Effect.all at run time | 5, 13 |
+| D112 | A callback whose expected return mixes plain and Effect (`boolean \| Effect<…>`) is plain when D10 allows and an Effect function otherwise; the same holds wherever both forms fit | D10 selects the eligible form without Effect work | 13, 16 |
+| D113 | A lambda with a contract that takes the plain form has type `(…) => A`; where only a plain function fits, inference from its annotation starts from A | Plain inference needs A rather than its Effect wrapper | 14, 16 |
 
 #### Rules of the runtime and compiler
 
