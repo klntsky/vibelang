@@ -2,7 +2,7 @@
 
 This directory is microsoft/TypeScript with a short stack of commits that teach the Go compiler (`tsc/`) EffectScript: TypeScript syntax in which every function is an Effect (effect@4.0.5). A call to a function that returns an Effect runs it, and the compiler infers each function's `Effect<A, E, R>`.
 
-It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Errors (`throw`, `try`), services, the prelude, and programs as values are not built yet. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
+It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services and control operations work (see "Services and control operations"); errors (`throw`, `try`), the prelude, and programs as values are not built yet. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
 
 ## Base
 
@@ -49,6 +49,11 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-wrap` | Exported functions and arrow functions lower to `Effect.fnUntraced`, and JavaScript runs them with `Effect.runSync` |
 | `es-lower` | Type-directed `yield*`: pure helpers stay plain, Effect-returning TypeScript calls and `.es` calls run, operands run left to right, a `Config` stays data |
 | `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, the `.d.ts` declares it, and the module runs its own program |
+| `es-service-keys` | Service classes compile to Context key classes that JavaScript uses as Effect keys; an `implements` class is an implementation; two services with the same members are different types |
+| `es-services` | `Users.find(id)` and `Users()` look the service up, value members read from `Settings()`, a provider captures another service, and object literal and class methods run Effects |
+| `es-services-ts` | A TypeScript `Context.Service` class and Effect's `Path` are used as services: an Effect-valued member runs when called, and the service's own `pipe` wins over the key's |
+| `es-services-default` | `static readonly default` makes a service a `Context.Reference` that never joins R; `static make` and `static readonly layer` stay on the class |
+| `es-control` | `extends Control` declares a control operation; `Approval.approve(…)` joins R until the runtime's `handle` answers it |
 
 ### Acceptance cases
 
@@ -93,6 +98,14 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 19 | `wuupxsnv` | effectscript: add the ES diagnostics registry and reporting path | Every Chapter 28 code, with `report`, `note`, and `cover` |
 | 20 | `qqszuvwv` | effectscript: report ES1003 and ES1004 | `async` and `await`; `using` at a module's top level |
 | 21 | `msunyvzt` | effectscript: report ES1002 for generator-based APIs | `Effect.gen` and friends in a `.es` file |
+| 22 | `rkproqwz` | checker: add a class base hook | Seam for a class whose bases an extension chooses: a service's static side is a Context key |
+| 23 | `mxvtplyt` | effectscript: compile abstract classes to service keys | D1, D45: the key class, the branded shape, and the runtime import |
+| 24 | `zympzwnv` | checker: add member receiver and call signatures hooks | Seams for `Users.find(id)` and for calling an Effect value |
+| 25 | `ssslmlqz` | effectscript: call service members through the current Context | D41: `yield* (yield* Users).find(id)`, `Users()`, and R |
+| 26 | `ptlsrptn` | effectscript: lower methods to Effect functions | Providers and `implements` classes have methods that run Effects |
+| 27 | `sxoqtkxo` | effectscript: give a service with a static default a reference key | D40: `static readonly default` needs no provider |
+| 28 | `qlnyylqp` | effectscript: declare control operations | D2: `extends Control` registers kernel operations; the entry point for handlers |
+| 29 | `ozrknmym` | effectscript: document services in EFFECTSCRIPT.md | This section |
 
 ## Seams in upstream files
 
@@ -104,7 +117,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/core/core.go` | `.es` is `ScriptKindTS` | +1 / -1 |
 | `tsc/internal/compiler/emitter.go` | Run hook transformers first in `getScriptTransformers` | +2 / -0 |
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
-| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns | +9 / -4 |
+| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none | +21 / -4 |
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
 | `tsc/internal/core/options_generated.go` (generated) | `CompilerOptions.EffectScript`, in `Clone` and `Equals` | +6 |
 | `tsc/internal/tsoptions/declarations_generated.go` (generated) | The `effectscript` declaration | +8 |
@@ -112,6 +125,8 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/tsoptions/commandlineoption.go`, `tsconfigparsing.go` | The option's extra validation | +4 |
 | `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource` | +47 |
 | `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook` | +136 |
+| `tsc/internal/checker/extensions_classes.go` (new) | `RegisterClassBaseHook`, `Program`, `GetStringLiteralType`, `NewOptionalReadonlyPropertyType` | +48 |
+| `tsc/internal/checker/extensions_calls.go` (new) | `RegisterMemberReceiverHook`, `RegisterCallSignaturesHook`, `NewCallSignature` | +52 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
 | `tsc/internal/tsoptions/effectscript.go` (new) | Parse, validate, and serialize `compilerOptions.effectscript` | +149 |
 
@@ -180,15 +195,67 @@ The checks so far:
 
 ES2004 defaults to `"warning"` and ES4403 to `"error"`; every other ES code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.EffectScript.Tracing` holds the tracing mode for lane F8. `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
 
+## Services and control operations
+
+An abstract class in an `.es` file whose instance members are all abstract (methods and `abstract readonly` values), with no type parameters, no `implements` clause, and no `extends` clause, declares a service (D1). With `extends Control` instead, it declares a control operation (D2). Static members are allowed. Any other class is ordinary. The code is `services.go` (what the checker sees) and `services_lower.go` (what the lowering emits).
+
+**What the checker sees.** The class means what this TypeScript declares (D45):
+
+```ts
+interface Users {
+  find(id: string): Effect<User, UserNotFound, never>
+  readonly "~esc/service"?: "app/users#Users"
+}
+class Users extends Context.Service<Users, Users> {}
+```
+
+The class base hook (`classBases`) gives the class no instance base other than the optional brand, and the static side of `Context.Service<Users, Users>` as its base constructor type. As a value, `Users` is a Context key: `Layer.succeed(Users, …)`, `Effect.provideService`, and `yield* Users` in TypeScript work. As a type, `Users` is the shape: `implements Users` and a parameter typed `Users` mean the members. The brand holds the key, so two services with the same members are different types: providing `Primary` leaves `Replica` in R, and a `Replica` implementation is not a `Primary`. The checker finds `Context.Service` in effect's own declarations (`effect/dist/Context.d.ts`), so a program that does not include effect keeps the class ordinary.
+
+**Keys.** The key joins the nearest `package.json`'s `name` (its directory's name when it has none), the module path within that package without `.es`, and the class name: `@acme/app/src/users#Users`. A case directory without a name gives `es-services/main#Users`.
+
+**What the lowering emits.** The class extends the runtime's key class, and TypeScript's own transform erases the abstract members:
+
+```ts
+// main.es                                       // main.js
+abstract class Users {                           class Users extends runtime.$service("app/users#Users") {
+  abstract find(id: string): Effect<User, …>       static layer = Layer.succeed(Users, …);
+  static readonly layer = Layer.succeed(Users, …) }
+}
+```
+
+A service with `static readonly default` extends `runtime.$reference(key, () => Flags.default)`, a `Context.Reference` (D40); its static side is `Context.Service<never, Flags>`, so using it adds nothing to R. A control operation extends `runtime.$service(key)` and then registers one kernel operation per abstract method, `runtime.$control(Approval, ["approve"])`; the runtime's `handle` provides an implementation whose methods perform those operations. Generated code imports `@effectscript/runtime` as a namespace under a free name, as it imports `effect/Effect`.
+
+**Member calls (D41).** In an `.es` function body, a call `S.member(…)` where `S` is a Context key whose service declares `member` looks the service up, then applies the call rule to the member. The member receiver hook (`memberReceiver`) makes the checker read `member` from the service's shape, so a member the service declares wins over the key's own `pipe`, `of`, and `use`. The rule is structural: it covers `.es` services, `Context.Service` classes written in TypeScript, and Effect's own services such as `FileSystem` and `Path`.
+
+| Source | Generated | R gains |
+| --- | --- | --- |
+| `Users.find(id)`, a member that returns an Effect | `yield* (yield* Users).find(id)` | `Users`, and the member's R |
+| `Path.join(a, b)`, a member that returns a plain value | `(yield* Path).join(a, b)` | `Path` |
+| `UserRepo.all()`, a member that is an Effect value | `yield* (yield* UserRepo).all` | `UserRepo`, and the member's R |
+| `Users()`, the service itself | `yield* Users` | `Users` |
+| `FeatureFlags()`, a service with a default | `yield* FeatureFlags` | nothing |
+
+The last three rows are one rule from Chapter 13: in an `.es` function body, a value whose type is an Effect, called with no arguments, runs. The call signatures hook (`effectValueCall`) gives such a callee the signature `() => Effect<A, E, R>`, and the call expression type hook then types the call as `A`, so `Settings().baseUrl` checks. A lookup makes the enclosing function an Effect even when the member returns a plain value, and `effectOf` adds the service to R.
+
+A lookup also keeps a lambda from compiling to plain JavaScript: `canBePlain` asks `performs`, which is `runs` or a lookup, so `(part) => Path.join(root, part)` is an Effect function.
+
+**Methods.** An object literal method or a class method in an `.es` file becomes an Effect when its body runs a call, by the rule that decides functions, or when it is expected to return one (`expectsEffect`): its object literal's contextual type, or the member it implements through its class's `implements` clause, is a function that returns an Effect. So `class UsersFake implements Users { find(id) { return { … } } }` is an implementation even though its body runs nothing. Its inferred return type is `Effect<A, E, R>`. It keeps its name and parameters, and its body runs as a generator bound to the method's `this` (`methods.go`):
+
+```ts
+find(id) { return Effect.gen({ self: this }, function* () { … }) }
+```
+
+A method's expectation is read once, from the contextual type the checker has when it first asks, whereas a lambda's form is decided per overload candidate (D56).
 ## What it cannot do yet
 
 - `throw`, `try`/`catch`/`finally`, and `using` are plain JavaScript. A `throw` is a defect, and `catch` does not see a failed Effect.
-- No services (D1), control operations (D2), prelude globals (D4), `pipe`, `wire`, `fork`, or handlers.
+- No prelude globals (D4), `pipe`, `wire`, `fork`, or handlers. Services and control operations exist, but none of their diagnostics (ES2101, ES3001-ES3006, ES3101, ES3201-ES3204) do, and a service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
+- A provider's object literal is checked against the service's shape only as TypeScript checks any assignment, so an escaping error is TS2322, not ES2001 or ES3101 naming the member.
 - No programs as values (D7). `Effect.retry(() => sync(store), policy)` passes a plain function where an Effect is expected.
 - Most ES diagnostics do not exist yet. A top-level `main()` is an Effect value, not ES1001. An Effect lambda passed to `Array.prototype.forEach` silently does nothing, not ES4301. A plain TypeScript call is not ES4401.
 - An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract.
 - No `$direct` variants or JSDoc metadata. A pure `.es` function exports a plain function type.
-- Methods, accessors, constructors, async functions, and generators are never lowered. `this` and `arguments` inside a lowered arrow function rebind to the generator.
+- Accessors, constructors, async functions, and generators are never lowered. `this` and `arguments` inside a lowered arrow function rebind to the generator, and `arguments` and `super` inside a lowered method do not reach the method.
 - A lowered function declaration is a `const`, so a call above it at the module top level hits the temporal dead zone.
 - Module resolution does not probe for `.es`, so one `.es` file cannot import another.
 - E and R miss contributions that arrive through a call cycle (no fixed point). A union of Effects is not treated as an Effect.
