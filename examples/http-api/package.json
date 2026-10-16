@@ -16,6 +16,7 @@
     "@effect/vitest": "4.0.5",
     "vitest": "5.0.5",
     "@effectscript/compiler": "file:../../packages/compiler",
-    "@effectscript/vite": "file:../../packages/vite"
+    "@effectscript/vite": "file:../../packages/vite",
+    "@types/node": "26.6.5"
   }
 }

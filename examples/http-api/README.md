@@ -19,6 +19,8 @@ Vitest runs `src/main.test.es` through `@effectscript/vite` without a prior
 build. Assertion stacks point to `.es` lines. The test routes requests through
 `HttpRouter.toHttpEffect`, without a socket.
 Importing `main.js` constructs layers; only `run.js` starts the server.
+`src/server.ts` builds the server layer in TypeScript: `NodeHttpServer`
+takes Node's `createServer`, a platform API that `.es` files do not import.
 The successful request path in Effect TypeScript is:
 ```ts
 const createUser = Effect.fnUntraced(function* () {
