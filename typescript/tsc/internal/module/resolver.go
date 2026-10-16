@@ -1727,12 +1727,24 @@ func (r *resolutionState) tryAddingExtensions(extensionless tspath.FileNameStem,
 			}
 		}
 		return continueSearching()
+	case tspath.ExtensionEs:
+		// An EffectScript import names its source file: ./welcome.es.
+		if extensions&extensionsTypeScript != 0 {
+			if resolved := r.tryExtension(tspath.ExtensionEs, extensionless, true); !resolved.shouldContinueSearching() {
+				return resolved
+			}
+		}
+		return continueSearching()
 	case tspath.ExtensionTs, tspath.ExtensionDts, tspath.ExtensionJs, "":
 		if extensions&extensionsTypeScript != 0 {
 			if resolved := r.tryExtension(tspath.ExtensionTs, extensionless, originalExtension == tspath.ExtensionTs || originalExtension == tspath.ExtensionDts); !resolved.shouldContinueSearching() {
 				return resolved
 			}
 			if resolved := r.tryExtension(tspath.ExtensionTsx, extensionless, originalExtension == tspath.ExtensionTs || originalExtension == tspath.ExtensionDts); !resolved.shouldContinueSearching() {
+				return resolved
+			}
+			// ./welcome.js resolves to welcome.es as it resolves to welcome.ts.
+			if resolved := r.tryExtension(tspath.ExtensionEs, extensionless, false); !resolved.shouldContinueSearching() {
 				return resolved
 			}
 		}

@@ -165,7 +165,8 @@ func GetResolutionDiagnostic(options *core.CompilerOptions, resolvedModule *Reso
 	switch resolvedModule.Extension {
 	case tspath.ExtensionTs, tspath.ExtensionDts,
 		tspath.ExtensionMts, tspath.ExtensionDmts,
-		tspath.ExtensionCts, tspath.ExtensionDcts:
+		tspath.ExtensionCts, tspath.ExtensionDcts,
+		tspath.ExtensionEs:
 		// These are always allowed.
 		return nil
 	case tspath.ExtensionTsx:
