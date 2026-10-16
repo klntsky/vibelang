@@ -2,7 +2,7 @@
 
 This directory is microsoft/TypeScript with a short stack of commits that teach the Go compiler (`tsc/`) EffectScript: TypeScript syntax in which every function is an Effect (effect@4.0.5). A call to a function that returns an Effect runs it, and the compiler infers each function's `Effect<A, E, R>`.
 
-It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services, control operations, failures and regions, the prelude, trust levels at TypeScript boundaries, platform APIs, runners, and debugging and tracing work (see their sections); the acceptance table below says which lane builds each remaining feature. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
+It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services, control operations, failures and regions, Scope regions (`using` and `fork`), the prelude, trust levels at TypeScript boundaries, platform APIs, runners, and debugging and tracing work (see their sections); the acceptance table below says which lane builds each remaining feature. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
 
 ## Base
 
@@ -108,6 +108,11 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `debug-stack` | With `sourceMap`, Node's stack traces point at `.es` lines and name the function, a region closure (`audited$try`), and a recursive function whose generator is a method (D36) |
 | `tracing-exported` | `"tracing": "exported"` gives exported functions `Effect.fn` spans named after them |
 | `tracing-all` | `"tracing": "all"` gives every named Effect function a span, a method an `Effect.withSpan` span named `Class.method`, and a callback none |
+| `plain-const` | A function that declares `const` and `let` and runs no Effect compiles to plain JavaScript, so `Array.prototype.map` calls it; only `using` needs frames (D54) |
+| `scopes-using` | `using` releases in reverse order on success, failure, and interruption; once per loop iteration through `continue`, a labeled `break`, and `return`; before a `catch` runs; in a method and an arrow function; a TypeScript Disposable and `null`; an acquisition without `using` stays the caller's (D14); a masked acquisition finishes before a timeout takes effect and an interruptible one does not start (D25); `for (using x of values)` |
+| `scopes-fork` | A block interrupts the fiber it forked and waits for its cleanup before releasing what it acquired earlier: in a function body, an inner block, a loop body, and a block that fails; `Fiber.join` returns the child's result or its failure; a `fork` that no block encloses uses the caller's Scope; `Effect.forkScoped` and `Effect.forkDetach` keep Effect's meaning |
+| `scopes-types` | `Scope` leaves R only for `using` acquisitions and forks a block owns; `contracts.ts` checks each contract exactly |
+| `scopes-callback.fail` | ES4301 for a callback that declares `using`, of a Disposable or an acquisition, passed to `Array.prototype.map` or `Effect.sync` (D54) |
 
 ### Acceptance cases
 
@@ -119,8 +124,8 @@ The prototype's 46 examples (`../prototype/esc/examples/`) are cases named after
 | F2 | Programs as values, plain functions, callbacks | `ch05-programs`, `ch10-map-pausing-callback.fail`, `ch13-plain`, `ch14-callbacks`, `ref4-callbacks`, `ref4-pausing-function-value.fail`, `ref5-programs-as-data` |
 | F3 | `throw`, regions, contracts | `ch02-contract-narrower.fail`, `ch02-functions`, `ch03-errors`, `ch03-safelookup-no-try.fail`, `ch12-contracts`, `ch12-welcome-missing-mailer.fail`, `ch15-failures`, `nominal-services.fail`, `regions` |
 | F5 | Services, layers, `wire` | `ch01-first-look`, `ch04-provider-escapes.fail`, `ch04-services`, `ch04-users-audited.fail`, `ch04-wire`, `ch12-rates-bare-return.fail`, `ref1-existing-service`, `ref2-ambiguous-provider.fail`, `ref2-cycle.fail`, `ref2-missing-provider.fail`, `ref2-opaque-layer.fail`, `ref2-provider-graph` |
-| F6 | `using`, `fork`, Scope regions | `ch06-disposable`, `ch06-resources`, `ch07-concurrency`, `ref3-resourceful-retry`, `ref6-fork.fail` |
-| F7 | Handlers, producers, streams | `ch08-producers`, `ch08-streams`, `ch09-approve-all-forked.fail`, `ch09-handlers`, `ref6-handlers`, `stack-depth` |
+| F6 | `using`, `fork`, Scope regions | `ch06-disposable`, `ch06-resources`, `ch07-concurrency`, `ref3-resourceful-retry` |
+| F7 | Handlers, producers, streams | `ch08-producers`, `ch08-streams`, `ch09-approve-all-forked.fail`, `ch09-handlers`, `ref6-fork.fail`, `ref6-handlers`, `stack-depth` |
 | F8 | Boundaries, runners | None pending: `ch02-plain-ts-call.fail`, `ch10-fetch.fail`, `ch10-typescript`, `ch11-top-level-run.fail`, `ch24-profile`, and `d5-clock-read.fail` pass |
 
 The `pending` files are the source of truth: `effectscript/smoke.sh --status` prints each case's current owner.
@@ -210,7 +215,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 77 | `kxzmxurw` | checker: add hooks for checked return types and infer outside conditional types | Seams for checking returns against A and for `infer Name` channels |
 | 78 | `stuypkuq` | effectscript: check written contracts (ES2001, ES2002, ES2003, D57) | A written contract is checked, and `infer` channels come from the body |
 
-Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks).
+Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), and lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork).
 
 ## Seams in upstream files
 
@@ -224,6 +229,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
 | `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals`; ask skipped function type hooks where `checkFunctionExpressionOrObjectLiteralMethod` skips a context-sensitive function | +23 / -5 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
+| `tsc/internal/checker/checker.go` | Ask using initializer hooks before `checkVariableLikeDeclaration` requires a `using` initializer to be a Disposable | +1 / -1 |
 | `tsc/internal/checker/checker.go` | Check what a function returns against `unwrapReturnTypeOf` at the four places that check it against `unwrapReturnType`; complete an annotated return type through annotated return type hooks in `getReturnTypeOfSignature`; ask infer type hooks in `checkInferType` | +9 / -7 |
 | `tsc/internal/transformers/declarations/transform.go` | `ensureType` serializes a type from the checker when a type annotation hook asks | +1 / -1 |
 | `tsc/internal/checker/checker.go` | Tell call candidate hooks which candidate `inferTypeArguments` and `isSignatureApplicable` check, and let candidate filter hooks reject it; pass the type of a function expression, a contextual return type (`getContextualReturnType` wraps the old body as `getContextualReturnTypeWorker`), and every checked expression through hooks; append hook type parameters in `getSignatureFromDeclaration` and `getOuterTypeParameters`; let parameter type hooks replace an annotation's type in `getTypeForVariableLikeDeclaration`; let annotated return inference hooks replace the return annotation's type in `inferFromAnnotatedParametersAndReturn` | +15 / -5 |
@@ -248,6 +254,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/checker/extensions_forms.go` (new) | `RegisterCallCandidateHook`, `RegisterCandidateFilterHook`, `RegisterFunctionExpressionTypeHook`, `RegisterContextualReturnTypeHook`, `RegisterAnnotatedReturnInferenceHook`, `NewFunctionTypeWithReturnType` | +142 |
 | `tsc/internal/checker/extensions_values.go` (new) | `RegisterExpressionTypeHook`, `CreateArrayType`, `MapObjectType`, `IteratedType` | +55 |
 | `tsc/internal/checker/extensions_callbacks.go` (new) | `RegisterTypeParametersHook`, `RegisterParameterTypeHook`, `NewTypeParameter` | +61 |
+| `tsc/internal/checker/extensions_using.go` (new) | `RegisterUsingInitializerHook` | +29 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
 | `tsc/internal/tsoptions/effectscript.go` (new) | Parse, validate, and serialize `compilerOptions.effectscript` | +149 |
 
@@ -585,7 +592,7 @@ function clamp(n: number) {                  function clamp(n) {
                                              }
 ```
 
-`regions.go` holds the machinery as an API for the region kinds still to come, `using` and `fork` blocks (lane F6) and loops over producers (F7):
+`regions.go` holds the machinery as an API for every region kind: Scope regions ([Scope regions: using and fork](#scope-regions-using-and-fork)) use it, and so will loops over producers (F7):
 
 | Piece | Role |
 | --- | --- |
@@ -624,6 +631,85 @@ main.es(6,35): error ES2003: Effect<string> leaves contract channels unspecified
 ```
 
 A provider's members are checked against the service they implement by `providers_check.go`, which reports ES2001 and ES3101 at the member; a member with its own contract is also checked against that contract here. The two checks compare different contracts, so one mismatch is reported once.
+
+## Scope regions: using and fork
+
+A block of an Effect function that declares `using` or calls `fork` is a Scope region (D14, D19, D47). It runs under a Scope of its own, which only its `using` acquisitions and the fibers it forks receive, and which closes when the block exits by any path: success, failure, or interruption. Closing runs the releases and interrupts the forked fibers in reverse order, and waits for each. `scopes.go` decides what the checker sees, and `scopes_lower.go` emits the regions:
+
+```ts
+// serve.es
+function serve(port: number) {
+  using server = Http.listen(port)    // Effect<Server, never, Scope>
+  fork(() => heartbeat())             // stopped before the server closes
+  return server.awaitShutdown()
+}
+// Effect<string, never, Http>
+
+// serve.js
+const serve = Effect.fnUntraced(function* (port) {
+  return yield* runtime.$region(Effect.fnUntraced(function* serve$using(scope) {
+    const server = yield* runtime.$using(scope, (yield* Http).listen(port));
+    yield* runtime.$fork(Effect.gen(function* () { return yield* heartbeat(); }), scope);
+    return yield* server.awaitShutdown();
+  }));
+});
+```
+
+`$region` is `Effect.scopedWith`: it makes the Scope, does not add it to the Context, and closes it with the closure's exit. Everything else in the block runs under the Scope its caller supplies, so a resource acquired without `using` belongs to the caller, and `Scope` stays in R (D14).
+
+### Regions
+
+| Block | Lowers to |
+| --- | --- |
+| A function's body | `return yield* runtime.$region(…)`: a return from the closure is a return from the function, so it needs no completion record |
+| Any other block | `const completion = yield* runtime.$region(…)` and its dispatch, as [Regions](#regions) describes, inside a block so that it stays one statement |
+| A `try`, `catch`, or `finally` block | A Scope region inside that region's closure (`regionStatements`), so a release runs before the `catch` |
+| `for (using x of values)` | A Scope region around each iteration's body that first takes the value with `using`; the body's own `using` and `fork` join it |
+
+A closure is named `<function>$using` (D36), for a block that only forks too, and runs with the function's `this` when its block refers to `this`.
+
+### using
+
+`using x = init` decides by its initializer (`isAcquisition`):
+
+- **An acquisition**, a call that runs an Effect, lowers to `const x = yield* runtime.$using(scope, f(a))`: the call's Effect, not run, runs with the region's Scope, so `Effect.acquireRelease` registers its release there. The using initializer hook (`usingInitializer`) tells the checker not to require a Disposable (TS2850), and `x` has the Effect's success type.
+- **A value**, any other initializer, lowers to `runtime.$using(scope, Effect.succeed(v))`. TypeScript checks that it is a Disposable, `null`, or `undefined`.
+
+`$using` releases a Disposable value of either kind with `[Symbol.dispose]()` when the region closes, and registers that release with interruption masked. It adds no masking to the acquisition itself (D25): `acquireRelease` masks acquisition by default, so a timeout waits for it and then the release runs, and `{ interruptible: true }` lets cancellation reach it.
+
+A function that declares `using` compiles to frames (D54), even when it runs nothing else, so it never compiles to plain JavaScript. A lambda with `using` passed where a plain function is expected, such as to `Array.prototype.map` or `Effect.sync`, is ES4301: `this callback can pause (using t)`.
+
+### fork
+
+`fork(program, options)` in a Scope region lowers to `yield* runtime.$fork(program, scope, options)`, which is `Effect.forkIn`: the region interrupts the fiber when it closes and waits for its cleanup, so a fiber forked after a resource was acquired stops before the resource is released. `forkOwner` finds the block that owns a call: the call names the runtime's `fork` (`isRuntimeExport`), runs, as `fork(program)` does, and sits in a block of an Effect function's body. A `fork` that no block encloses, in an arrow function whose body is an expression, stays the prelude's `fork`, which is `Effect.forkScoped`: the caller's Scope owns the fiber, and `Scope` joins R. `Effect.forkScoped`, `Effect.forkChild`, and `Effect.forkDetach` keep Effect's meaning, and `Fiber.join` waits for a fiber and fails with its failure.
+
+A block-owned fiber cannot outlive its block: `function start() { return fork(() => work()) }` returns a fiber that is interrupted as `start` returns. Code that hands a fiber to its caller uses `Effect.forkScoped` or `Effect.forkDetach`.
+
+### Types
+
+`flowOf` asks `getsScope` about each call, and `addScoped` adds what a call that receives a region's Scope contributes:
+
+| Call | Adds to E | Adds to R |
+| --- | --- | --- |
+| A `using` acquisition | The acquisition's E | The acquisition's R without `Scope`, and the service its callee looks up |
+| A `fork` its block owns | Nothing: the fiber's failures reach the parent through `Fiber.join` | The program's R, including a `Scope` that the program needs itself |
+| Any other call | Its E | Its R, so an acquisition without `using` keeps `Scope` |
+
+### One copy of effect
+
+The runtime and the program must load the same copy of `effect`. Each copy numbers its fibers from 1, and `Effect.forkIn` registers a finalizer that skips the interruption when the fiber closing the Scope has the forked fiber's id, so with two copies a Scope can fail to stop a fiber. `smoke.sh` links the runtime's `effect` to the cases' copy; a project gets one copy because the runtime declares `effect` as a peer dependency.
+
+### Commits
+
+| Change | Subject |
+| --- | --- |
+| `utpqokps` | effectscript: count only using declarations as using |
+| `ssqqsmwt` | checker: add a using initializer hook |
+| `rmkrouvo` | runtime: register a Disposable's release with interruption masked |
+| `xvsrqxyz` | effectscript: lower using to Scope regions |
+| `twvqsuom` | effectscript: give each fork to the block that calls it |
+| `nzuukwkz` | effectscript: take each for...of value with using |
+| `qsytkrtw` | effectscript: document Scope regions, using, and fork in EFFECTSCRIPT.md |
 
 ## The prelude
 
@@ -763,9 +849,9 @@ A span is named after its function; a class method's span names its class too. A
 
 ## What it cannot do yet
 
-- `using` is plain JavaScript.
-- `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
-- `fork` and handlers have no meaning yet: the prelude names them, and their lanes give them meaning.
+- `arguments` inside a region's closure is the closure's, not the function's, and a function whose body declares `using` or calls `fork` runs its whole body in such a closure. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
+- A `using` in the head of a C-style `for` loop, `for (using x = init; …; …)`, stays TypeScript's own `using`, which Effect does not run on failure or interruption, and an acquisition there is TS2850.
+- Handlers have no meaning yet: the prelude names them, and their lane gives them meaning. A control operation in a forked fiber is not ES4201 yet.
 - ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
 - A trusted call's expected failures are defects inside a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback ES4301.
 - Runners are known by their declarations in `effect`, `@effect/platform-node`, `@effect/platform-bun`, and `@effect/vitest`; a function that wraps one is not a runner. ES4402's globals are a fixed list (`platformGlobals`), so a platform global outside it, such as `postMessage` or `BroadcastChannel`, is not reported.
