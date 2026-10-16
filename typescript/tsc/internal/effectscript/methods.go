@@ -52,7 +52,7 @@ func (tx *lowering) lowerMethod(node *ast.Node) *ast.Node {
 	tx.inEffect, tx.plain = false, false // a parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
-	tx.frame = &frame{name: functionName(node)}
+	tx.frame = &frame{name: functionName(node), clause: tx.plan.resumesInTail(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 

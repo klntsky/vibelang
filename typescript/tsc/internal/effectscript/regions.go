@@ -65,6 +65,7 @@ type frame struct {
 	name    string   // the Effect function's name, for naming region closures
 	region  *region  // the region whose closure this is; nil for the function's own body
 	targets []target // the statements a break or continue can jump to, innermost last
+	clause  bool     // the generator is a handler clause's own body, where a return can resume in tail position
 }
 
 // A target is a statement that break or continue can jump to: a loop, a

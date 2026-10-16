@@ -83,6 +83,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitTryStatement(node)
 	case tx.inEffect && node.Kind == ast.KindThrowStatement:
 		return tx.visitThrowStatement(node)
+	case tx.inEffect && tx.frame.clause && node.Kind == ast.KindReturnStatement && tx.plan.tailResumeOf(node.Expression()) != nil:
+		return tx.visitTailResumeReturn(node)
+	case tx.inEffect && tx.frame.clause && node.Kind == ast.KindCallExpression && tx.plan.resumes[node] != "" && tx.plan.isTailResumeBody(node):
+		return tx.tailResumeCall(node)
 	case tx.inEffect && (node.Kind == ast.KindReturnStatement || ast.IsBreakOrContinueStatement(node)):
 		return tx.visitJump(node)
 	case tx.inEffect && isJumpTarget(node):
@@ -264,7 +268,7 @@ func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
 	tx.inEffect, tx.plain = false, false // a generator's parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
-	tx.frame = &frame{name: sourceName(node)}
+	tx.frame = &frame{name: sourceName(node), clause: tx.plan.resumesInTail(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 	if !ast.IsBlock(body) {

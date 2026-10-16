@@ -23,6 +23,7 @@ type plan struct {
 	trustedPlan
 	tracingPlan
 	scopePlan
+	handlerPlan
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -34,6 +35,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
+	p.handlerPlan = newHandlerPlan()
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -49,11 +51,13 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 				} else {
 					p.effects[node] = true
 				}
+				p.planClause(c, node)
 				forEachCallInBody(node, func(call *ast.Node) bool {
 					if a.runs(call) {
 						p.runs[call] = true
 					}
 					p.planServiceCall(c, call)
+					p.planResume(c, call)
 					return false
 				})
 				p.planScopes(a, node)
