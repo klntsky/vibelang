@@ -149,92 +149,161 @@ The `pending` files are the source of truth: `effectscript/smoke.sh --status` pr
 
 ## The stack
 
-Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive rewrites.
+The following history includes every commit from the TypeScript import through
+this table's update that touches `typescript/`, in ancestor order. Change IDs
+are jj's and survive rewrites. Area is the commit subject's prefix; commits that
+only change the runtime or examples remain in the relevant lane's prose below.
+Regenerate with `jj log -r 'unpwqpnz::main' --reversed -- typescript/`.
 
-| # | Change | Subject | Why |
-| --- | --- | --- | --- |
-| 1 | `pzxkrxsm` | effectscript: add a build-and-run smoke test | A one-command check that every later commit must pass |
-| 2 | `ltlztyux` | tspath: accept .es files as TypeScript sources | `.es` root files, globs, `ScriptKindTS`, and `foo.js`/`foo.d.ts` output |
-| 3 | `xvqlzzvl` | compiler: add a script transformer registration hook | The only emit seam: hook transformers run before type erasure; `main.go` blank-imports the package |
-| 4 | `wzsmttko` | effectscript: lower .es functions to Effect.fnUntraced generators | The rewriting mechanics, syntax only: no call runs yet |
-| 5 | `uvwpnsyr` | checker: let emit-time extensions query the checker | `EmitResolver.WithChecker` holds the checker lock that parallel emit needs |
-| 6 | `wzmxpyyu` | effectscript: run Effect-typed calls with yield* | The type-directed decision: which calls run and which functions are Effects |
-| 7 | `wnyqnmso` | checker: add a call expression type hook | Seam for typing a call by what it does |
-| 8 | `vlkoxlmy` | effectscript: type a call that runs as the Effect's success value | `const name = findName(id)` is a `string` inside an `.es` function |
-| 9 | `xnptkzuz` | checker: add an inferred return type hook | Seam for an inferred return type, plus `NewTypeReference` |
-| 10 | `ukynlwvn` | effectscript: infer Effect<A, E, R> for .es functions | The ABI: callers outside `.es` bodies and `.d.ts` files see an Effect |
-| 11 | `wzntprnu` | effectscript: describe the fork in EFFECTSCRIPT.md | This file |
-| 12 | `zwwnumoq` | effectscript: build with -trimpath in smoke.sh | Workspaces share Go build-cache entries |
-| 13 | `wnytpnpp` | runtime: export the kernel as @effectscript/runtime/kernel | The `stack-depth` case reads the kernel's hooks |
-| 14 | `mzuwnztz` | effectscript: run cases with a parallel harness | Failing, runnable, and pending cases, and `--status` |
-| 15 | `ylzmpsoz` | effectscript: port the prototype's 46 examples as cases | The acceptance suite, each case pending on its owner |
-| 16 | `wskpkmqv` | checker: add hooks for file checks and diagnostic filters | Report ES diagnostics while checking, and hide the TypeScript errors they explain |
-| 17 | `wvstzskn` | compiler: exempt registered diagnostic sources from comment directives | `@ts-ignore` cannot hide an ES diagnostic |
-| 18 | `yuprxynn` | tsoptions: add the effectscript compiler option | `compilerOptions.effectscript` (D34) |
-| 19 | `wuupxsnv` | effectscript: add the ES diagnostics registry and reporting path | Every Chapter 28 code, with `report`, `note`, and `cover` |
-| 20 | `qqszuvwv` | effectscript: report ES1003 and ES1004 | `async` and `await`; `using` at a module's top level |
-| 21 | `msunyvzt` | effectscript: report ES1002 for generator-based APIs | `Effect.gen` and friends in a `.es` file |
-| 22 | `rkproqwz` | checker: add a class base hook | Seam for a class whose bases an extension chooses: a service's static side is a Context key |
-| 23 | `mxvtplyt` | effectscript: compile abstract classes to service keys | D1, D45: the key class, the branded shape, and the runtime import |
-| 24 | `zympzwnv` | checker: add member receiver and call signatures hooks | Seams for `Users.find(id)` and for calling an Effect value |
-| 25 | `ssslmlqz` | effectscript: call service members through the current Context | D41: `yield* (yield* Users).find(id)`, `Users()`, and R |
-| 26 | `ptlsrptn` | effectscript: lower methods to Effect functions | Providers and `implements` classes have methods that run Effects |
-| 27 | `sxoqtkxo` | effectscript: give a service with a static default a reference key | D40: `static readonly default` needs no provider |
-| 28 | `qlnyylqp` | effectscript: declare control operations | D2: `extends Control` registers kernel operations; the entry point for handlers |
-| 29 | `ozrknmym` | effectscript: document services in EFFECTSCRIPT.md | This section |
-| 30 | `ykwlmytt` | checker: add a catch clause variable type hook | Seam for typing a `catch` variable as the `try` block's expected failures |
-| 31 | `yullvuom` | checker: expose an expression's type before literal widening | `throw "bad"` adds `string`, as `return "bad"` does |
-| 32 | `mssmulnm` | effectscript: lower try, catch, and finally to Effect regions | Regions, completion records, and E through a `try` |
-| 33 | `qsxrpnuo` | effectscript: lower throw to Effect.fail and add its type to E | `throw` is an expected failure (D46) |
-| 34 | `vlzoymlw` | effectscript: keep JavaScript's try in plain functions (D54) | A plain function's `catch` sees expected failures only; `$expected` and `$caught` in the runtime |
-| 35 | `ywvpypzw` | checker: add a name resolution hook before the global scope | Prelude names behave like imports |
-| 36 | `zlxmxpnz` | compiler: add an implicit import hook | The program loads `@effectscript/runtime` for `.es` files |
-| 37 | `owtkpmql` | runtime: type the prelude's Effect and Scope | `Effect<A, E, R>` and `Scope` are types too |
-| 38 | `swxmkoyv` | effectscript: point the runtime at the cases' effect in smoke.sh | One copy of `effect` per program |
-| 39 | `urznvokp` | effectscript: resolve and import the prelude in .es files | Every `.es` file sees the prelude (D4, D48) |
-| 40 | `uwozskvx` | effectscript: compare a runnable case's result, not its logs | Cases that log, such as `ch01-first-look`, compare their result |
-| 41 | `oywqrtxx` | module: resolve .es source files | `./welcome.es` and, from `.ts`, `./welcome.js` find `welcome.es` |
-| 42 | `urkxzymx` | core: let .es files import TypeScript sources by extension | No TS5097 for `./welcome.es` or `./format.ts` in `.es` |
-| 43 | `ntslxkmz` | effectscript: emit .js specifiers for imports of sources | Imports between files (D31) |
-| 44 | `rplwrxxw` | effectscript: record a prelude use only at a source reference | No duplicate `Effect` import when the file never names it |
-| 45 | `nvukvnsq` | effectscript: test the runtime import's free name | Helpers import as `runtime_1` when the file declares `runtime` |
-| 46 | `srwuqnot` | effectscript: report misused service classes | ES2101 and ES3001-ES3006 |
-| 47 | `yvlmtqkl` | effectscript: lower a method's body as an Effect body only | A method lowered inside a plain function takes Effect lowering only |
-| 48 | `truwtzrw` | checker: add a skipped function type hook | Seam for the placeholder a context-sensitive function has in overload resolution's first pass |
-| 49 | `qzmttpum` | effectscript: infer a program whose result is context sensitive | `Layer.effect(Users, () => ({ find(id) { … } }))` infers E and R |
-| 50 | `zvvqmzyy` | effectscript: order wire's arguments and check its provider graph | D27: consumers first; ES3202, ES3203, ES3204 |
-| 51 | `vwtxzvnt` | effectscript: report a service that wire leaves unprovided at a runner | ES3201 with the provider that needs the service |
-| 52 | `ktslyskx` | effectscript: check providers against their service's contracts | ES2001 and ES3101 name the member at fault |
-| 53 | `xorurrnt` | effectscript: document service checks and wire in EFFECTSCRIPT.md | This section |
-| 54 | `rwmokwmv` | checker: add an entity name visibility hook | A declaration file may write a prelude name |
-| 55 | `knrysqlq` | compiler: add a declaration transformer hook | Extensions can add imports to a declaration file |
-| 56 | `psvzumxw` | module: resolve an .es specifier to its declaration file | `./users.es` finds `users.d.ts` in a published package |
-| 57 | `nxmqvpsu` | effectscript: write portable declaration files for .es files | `declaration: true` works with the prelude and `.es` imports |
-| 58 | `llryttxs` | effectscript: declare a service as an interface and a key class | D45 in `.d.ts`: TypeScript code uses an `.es` service as a Context key |
-| 59 | `zummuosy` | effectscript: document service declaration files in EFFECTSCRIPT.md | This section |
-| 60 | `ksxlppnq` | runtime: test trusted exceptions with instanceof | D51: `$trusted` tests the classes the compiler passes; `$trustedPlain` for plain functions (D54) |
-| 61 | `ywyktuko` | effectscript: compare a case's diagnostics with expected/diagnostics.txt | A case can pin each diagnostic's position and count |
-| 62 | `rvpuznxt` | effectscript: report ES4401 for calls without a trust level | D5, D22, D23: trust levels by declaration; boundaries; code outside fibers is JavaScript (D51) |
-| 63 | `uspovlno` | effectscript: lower the expected failures of trusted calls | `@throws` classes and built-in contracts join E and compile to `$trusted` |
-| 64 | `nuwqloyu` | effectscript: report platform APIs (ES4402) and clock reads (ES4403) | D6: each error names the Effect module that replaces the API |
-| 65 | `olsmqqqy` | effectscript: report programs started outside a runner (ES1001, ES1005) | D38: the runner registry, which ES3201 shares |
-| 66 | `zunmxlrk` | effectscript: name generators after their source (D36) | Stack traces and debuggers name the `.es` function |
-| 67 | `xnmknson` | effectscript: trace functions with Effect.fn spans (D34) | `tracing`: `"exported"` and `"all"` |
-| 68 | `stmorqmo` | effectscript: document boundaries, runners, debugging, and tracing | The sections from "Code that is not Effect" to "Tracing" |
-| 69 | `ooknlorp` | effectscript: report ES4402 where code runs a platform API (D108) | Importing a platform API and passing it as a value, as `NodeHttpServer.layer(createServer, …)` does, is allowed |
-| 70 | `okrmuzvz` | effectscript: add a pending case for calling Exit and error values | The D24 gap the user docs found, as a failing case |
-| 71 | `rvysxzyx` | effectscript: run a call to an Exit or an error value | D24: `outcome()` and `error()` run; the docs lose two compiler-gap markers |
-| 72 | `ysknkpmu` | effectscript: keep the comment after a concise arrow out of its block | A block made from a concise body has no source range for the printer's closing-brace comments |
-| 73 | `vsvzswzz` | effectscript: keep the last comment of a lowered file | The statement list keeps its source range when the lowering adds imports |
-| 74 | `twymwmrr` | effectscript: document calls to Exit and error values in EFFECTSCRIPT.md | This section |
-| 75 | `oqrpqyrk` | effectscript: report ES2004 for a catch that can never run | D37: a `catch` over a `try` that cannot fail is dead code |
-| 76 | `rtqqsqrv` | declarations: add a hook to declare a type from the checker instead of its annotation | A contract's inferred channels reach the `.d.ts` |
-| 77 | `kxzmxurw` | checker: add hooks for checked return types and infer outside conditional types | Seams for checking returns against A and for `infer Name` channels |
-| 78 | `stuypkuq` | effectscript: check written contracts (ES2001, ES2002, ES2003, D57) | A written contract is checked, and `infer` channels come from the body |
-| 79 | `ovsoxmyu` | effectscript: solve E and R of call cycles as a fixpoint (D52, ES2102) | `isEven` and `isOdd` both fail with what either throws |
-| 80 | `uvuursyx` | effectscript: report ES2006 for a jump out of a finally block | A `finally` that returns would discard the failure in flight |
-
-Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork), lane F4's in [The editor and the esc command](#the-editor-and-the-esc-command), and lane F7's in [Handlers and producers](#handlers-and-producers).
+| Change | Subject | Area |
+| --- | --- | --- |
+| `unpwqpnz` | typescript: import microsoft/TypeScript at 257e874 | typescript |
+| `pzxkrxsm` | effectscript: add a build-and-run smoke test | effectscript |
+| `ltlztyux` | tspath: accept .es files as TypeScript sources | tspath |
+| `xvqlzzvl` | compiler: add a script transformer registration hook | compiler |
+| `wzsmttko` | effectscript: lower .es functions to Effect.fnUntraced generators | effectscript |
+| `uvwpnsyr` | checker: let emit-time extensions query the checker | checker |
+| `wzmxpyyu` | effectscript: run Effect-typed calls with yield* | effectscript |
+| `wnyqnmso` | checker: add a call expression type hook | checker |
+| `vlkoxlmy` | effectscript: type a call that runs as the Effect's success value | effectscript |
+| `xnptkzuz` | checker: add an inferred return type hook | checker |
+| `ukynlwvn` | effectscript: infer Effect<A, E, R> for .es functions | effectscript |
+| `wzntprnu` | effectscript: describe the fork in EFFECTSCRIPT.md | effectscript |
+| `zwwnumoq` | effectscript: build with -trimpath in smoke.sh | effectscript |
+| `mzuwnztz` | effectscript: run cases with a parallel harness | effectscript |
+| `ylzmpsoz` | effectscript: port the prototype's 46 examples as cases | effectscript |
+| `oozozxtw` | checker: add overload candidate hooks | checker |
+| `vvpuorns` | checker: add a function expression type hook | checker |
+| `kptnxtrk` | checker: add a contextual return type hook | checker |
+| `smmzorwv` | effectscript: decide a lambda's form per overload candidate | effectscript |
+| `rokrkspy` | effectscript: compile a lambda where an Effect is expected as a program | effectscript |
+| `lutmtlns` | checker: let in-tree extensions keep state per checker | checker |
+| `ssqltlzy` | effectscript: keep the analyzer on its checker | effectscript |
+| `wskpkmqv` | checker: add hooks for file checks and diagnostic filters | checker |
+| `wvstzskn` | compiler: exempt registered diagnostic sources from comment directives | compiler |
+| `yuprxynn` | tsoptions: add the effectscript compiler option | tsoptions |
+| `wuupxsnv` | effectscript: add the ES diagnostics registry and reporting path | effectscript |
+| `qqszuvwv` | effectscript: report ES1003 and ES1004 | effectscript |
+| `msunyvzt` | effectscript: report ES1002 for generator-based APIs | effectscript |
+| `rkproqwz` | checker: add a class base hook | checker |
+| `mxvtplyt` | effectscript: compile abstract classes to service keys | effectscript |
+| `zympzwnv` | checker: add member receiver and call signatures hooks | checker |
+| `ssslmlqz` | effectscript: call service members through the current Context | effectscript |
+| `ptlsrptn` | effectscript: lower methods to Effect functions | effectscript |
+| `sxoqtkxo` | effectscript: give a service with a static default a reference key | effectscript |
+| `qlnyylqp` | effectscript: declare control operations | effectscript |
+| `ozrknmym` | effectscript: document services in EFFECTSCRIPT.md | effectscript |
+| `xosuknwx` | module: map .es files to .js output | module |
+| `kowtxrmz` | tsoptions: match .es files in wildcard include globs | tsoptions |
+| `mwpkwpsm` | lsp: send willRenameFiles for .es files | lsp |
+| `knrotrus` | effectscript: add a headless language server test | effectscript |
+| `uwpykqxu` | ls: add a quick info hook | ls |
+| `otxrukzp` | effectscript: show a running call's success value on hover | effectscript |
+| `qlpsqxln` | execute: let a compiler built on tsc name itself | execute |
+| `txvnzpqn` | effectscript: identify the compiler as esc | effectscript |
+| `rnpxuunq` | checker: add an expression type hook | checker |
+| `vkznolxv` | effectscript: convert function values where Effects are expected | effectscript |
+| `xkssspqy` | effectscript: add a case for calling Effect values | effectscript |
+| `xuttxlwl` | effectscript: report ES4301 for callbacks that can pause | effectscript |
+| `ykwlmytt` | checker: add a catch clause variable type hook | checker |
+| `yullvuom` | checker: expose an expression's type before literal widening | checker |
+| `mssmulnm` | effectscript: lower try, catch, and finally to Effect regions | effectscript |
+| `qsxrpnuo` | effectscript: lower throw to Effect.fail and add its type to E | effectscript |
+| `vlzoymlw` | effectscript: keep JavaScript's try in plain functions (D54) | effectscript |
+| `ywvpypzw` | checker: add a name resolution hook before the global scope | checker |
+| `zlxmxpnz` | compiler: add an implicit import hook | compiler |
+| `swxmkoyv` | effectscript: point the runtime at the cases' effect in smoke.sh | effectscript |
+| `urznvokp` | effectscript: resolve and import the prelude in .es files | effectscript |
+| `uwozskvx` | effectscript: compare a runnable case's result, not its logs | effectscript |
+| `oywqrtxx` | module: resolve .es source files | module |
+| `urkxzymx` | core: let .es files import TypeScript sources by extension | core |
+| `ntslxkmz` | effectscript: emit .js specifiers for imports of sources | effectscript |
+| `rplwrxxw` | effectscript: record a prelude use only at a source reference | effectscript |
+| `nvukvnsq` | effectscript: test the runtime import's free name | effectscript |
+| `kmonzlpz` | effectscript: decide plain functions as a greatest fixpoint | effectscript |
+| `nmlrmkpo` | effectscript: give plain functions a $direct variant and an Effect form | effectscript |
+| `tlvxnnyq` | effectscript: let pipe take the program first | effectscript |
+| `srwuqnot` | effectscript: report misused service classes | effectscript |
+| `yvlmtqkl` | effectscript: lower a method's body as an Effect body only | effectscript |
+| `truwtzrw` | checker: add a skipped function type hook | checker |
+| `qzmttpum` | effectscript: infer a program whose result is context sensitive | effectscript |
+| `zvvqmzyy` | effectscript: order wire's arguments and check its provider graph | effectscript |
+| `vwtxzvnt` | effectscript: report a service that wire leaves unprovided at a runner | effectscript |
+| `ktslyskx` | effectscript: check providers against their service's contracts | effectscript |
+| `xorurrnt` | effectscript: document service checks and wire in EFFECTSCRIPT.md | effectscript |
+| `rwmokwmv` | checker: add an entity name visibility hook | checker |
+| `knrysqlq` | compiler: add a declaration transformer hook | compiler |
+| `psvzumxw` | module: resolve an .es specifier to its declaration file | module |
+| `nxmqvpsu` | effectscript: write portable declaration files for .es files | effectscript |
+| `okvzuusr` | effectscript: hand ch13-plain and ref4-callbacks to the lanes they wait on | effectscript |
+| `pylwouuv` | effectscript: report ES4301 for a method that implements a plain member | effectscript |
+| `llryttxs` | effectscript: declare a service as an interface and a key class | effectscript |
+| `zummuosy` | effectscript: document service declaration files in EFFECTSCRIPT.md | effectscript |
+| `nwnutlmz` | effectscript: read a generic .es callee's E and R from the call | effectscript |
+| `uuwrwppk` | checker: add type parameter and parameter type hooks | checker |
+| `tmmqumtk` | effectscript: let a callback parameter without a contract accept any contract | effectscript |
+| `wnqqlkmm` | effectscript: document programs, plain functions, and callbacks | effectscript |
+| `vumssupn` | effectscript: add the returned-lambda probe to lambda-forms | effectscript |
+| `uqswlnul` | effectscript: add a case for a parameter that takes a function or an Effect | effectscript |
+| `ywyktuko` | effectscript: compare a case's diagnostics with expected/diagnostics.txt | effectscript |
+| `rvpuznxt` | effectscript: report ES4401 for calls without a trust level | effectscript |
+| `uspovlno` | effectscript: lower the expected failures of trusted calls | effectscript |
+| `nuwqloyu` | effectscript: report platform APIs (ES4402) and clock reads (ES4403) | effectscript |
+| `olsmqqqy` | effectscript: report programs started outside a runner (ES1001, ES1005) | effectscript |
+| `zunmxlrk` | effectscript: name generators after their source (D36) | effectscript |
+| `xnmknson` | effectscript: trace functions with Effect.fn spans (D34) | effectscript |
+| `stmorqmo` | effectscript: document boundaries, runners, debugging, and tracing | effectscript |
+| `ooknlorp` | effectscript: report ES4402 where code runs a platform API (D108) | effectscript |
+| `okrmuzvz` | effectscript: add a pending case for calling Exit and error values | effectscript |
+| `rvysxzyx` | effectscript: run a call to an Exit or an error value | effectscript |
+| `ysknkpmu` | effectscript: keep the comment after a concise arrow out of its block | effectscript |
+| `vsvzswzz` | effectscript: keep the last comment of a lowered file | effectscript |
+| `twymwmrr` | effectscript: document calls to Exit and error values in EFFECTSCRIPT.md | effectscript |
+| `ztwuloyu` | effectscript: keep a lambda that must return a Config plain | effectscript |
+| `wpukknuy` | effectscript: look ahead in pipe without checking the first stage | effectscript |
+| `lmsyqkzu` | checker: export the iterated type of an iterable | checker |
+| `lzqulkkl` | effectscript: convert any iterable of programs for Effect.all | effectscript |
+| `tsvpvvxs` | effectscript: let a callback that may return an Effect take either form | effectscript |
+| `pqtovvuk` | effectscript: name the collection and callee in ES4301 notes correctly | effectscript |
+| `nzkrouwn` | checker: add an annotated return inference hook | checker |
+| `nzplpwps` | effectscript: type a plain lambda with a contract as returning A | effectscript |
+| `uqxznpul` | effectscript: document the F2 follow-up fixes in EFFECTSCRIPT.md | effectscript |
+| `oqrpqyrk` | effectscript: report ES2004 for a catch that can never run | effectscript |
+| `rtqqsqrv` | declarations: add a hook to declare a type from the checker instead of its annotation | declarations |
+| `kxzmxurw` | checker: add hooks for checked return types and infer outside conditional types | checker |
+| `stuypkuq` | effectscript: check written contracts (ES2001, ES2002, ES2003, D57) | effectscript |
+| `utpqokps` | effectscript: count only using declarations as using | effectscript |
+| `ssqqsmwt` | checker: add a using initializer hook | checker |
+| `xvsrqxyz` | effectscript: lower using to Scope regions | effectscript |
+| `twvqsuom` | effectscript: give each fork to the block that calls it | effectscript |
+| `nzuukwkz` | effectscript: take each for...of value with using | effectscript |
+| `qsytkrtw` | effectscript: document Scope regions, using, and fork in EFFECTSCRIPT.md | effectscript |
+| `ovsoxmyu` | effectscript: solve E and R of call cycles as a fixpoint (D52, ES2102) | effectscript |
+| `rkxpuynr` | effectscript: keep this in a lowered arrow function | effectscript |
+| `ryxzxutw` | ls: let a quick info hook replace the quick info line | ls |
+| `unqyxosy` | checker: add a signature with another return type | checker |
+| `xumoqrzt` | effectscript: show a plain function the way EffectScript calls it | effectscript |
+| `xpqmlqkm` | ls: add completion hooks for scope names and members | ls |
+| `lqzlumyp` | effectscript: complete prelude names and service members | effectscript |
+| `vrzttyov` | lsp: exit with status 0 after shutdown and exit | lsp |
+| `pzsnyzmw` | effectscript: document the editor and esc in EFFECTSCRIPT.md | effectscript |
+| `uvuursyx` | effectscript: report ES2006 for a jump out of a finally block | effectscript |
+| `yppyvsqw` | editors: run esc through the compiler package's launcher in editor tests | editors |
+| `lqwnpvkm` | effectscript: trust what Effect's packages re-export (D22) | effectscript |
+| `npwvluvx` | effectscript: suggest a trusted re-export for a package's function | effectscript |
+| `nmnxqxrr` | runtime: keep the errors and inputs of a layer that provides nothing | runtime |
+| `xvumwqrx` | effectscript: alias a prelude type the declaration file already binds | effectscript |
+| `lnsqowzl` | effectscript: let a case check the text of its diagnostics | effectscript |
+| `zlrnlrmv` | effectscript: tell ES4401 to bind operands that run Effects first | effectscript |
+| `suvtvsls` | effectscript: report ES3201 for any service a runner's program lacks | effectscript |
+| `zootqspn` | effectscript: name the runner check's reader runnerRequirements | effectscript |
+| `xqrnzlyn` | effectscript: compile a clause's tail resume to the kernel's request | effectscript |
+| `pnvzvzmo` | effectscript: report ES2005 for resumeWith programs outside the operation's contract | effectscript |
+| `susnvvyx` | effectscript: report control operations that cannot reach their handler | effectscript |
+| `lxxwsyuu` | checker: add an iterated element type hook | checker |
+| `tnnzwswk` | effectscript: compile function* to producers and loop over Streams | effectscript |
+| `moutqkun` | effectscript: document handlers and producers in EFFECTSCRIPT.md | effectscript |
+| `oxmyvyxm` | docs: refresh the compiler commit table | docs |
 
 ## Seams in upstream files
 
