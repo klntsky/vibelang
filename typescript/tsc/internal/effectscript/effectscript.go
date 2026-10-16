@@ -26,6 +26,8 @@ func init() {
 	checker.RegisterSourceFileCheckHook(checkSourceFile)
 	checker.RegisterDiagnosticsFilterHook(filterCoveredDiagnostics)
 	checker.RegisterClassBaseHook(classBases)
+	checker.RegisterMemberReceiverHook(memberReceiver)
+	checker.RegisterCallSignaturesHook(effectValueCall)
 }
 
 // isEffectScriptFile reports whether file is an EffectScript source file.

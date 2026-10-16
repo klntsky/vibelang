@@ -45,6 +45,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					if a.runs(call) {
 						p.runs[call] = true
 					}
+					p.planServiceCall(c, call)
 					return false
 				})
 			}
@@ -131,9 +132,15 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := forEachCallInBody(fn, a.runs)
+	effect := forEachCallInBody(fn, a.performs)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
+}
+
+// performs reports whether call performs an Effect operation: it runs an
+// Effect, or it looks up a service.
+func (a *analyzer) performs(call *ast.Node) bool {
+	return a.runs(call) || isServiceLookup(a.checker, call)
 }
 
 // runs reports whether call runs an Effect, which the lowering spells yield*.

@@ -55,6 +55,7 @@ func (a *analyzer) effectOf(fn *ast.Node) *effectInfo {
 	a.effects[fn] = nil
 	info := &effectInfo{}
 	forEachCallInBody(fn, func(call *ast.Node) bool {
+		a.addServiceLookup(info, call)
 		if !a.runs(call) {
 			return false
 		}

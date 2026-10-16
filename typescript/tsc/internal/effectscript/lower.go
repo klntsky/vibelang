@@ -44,8 +44,12 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 	switch {
 	case node.Kind == ast.KindSourceFile:
 		return tx.visitSourceFile(node.AsSourceFile())
+	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
+		return tx.visitEffectValueCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):
 		return tx.visitRunningCall(node)
+	case node.Kind == ast.KindPropertyAccessExpression && tx.inEffect && tx.plan.looksUp(node):
+		return tx.visitServiceLookup(node)
 	case node.Kind == ast.KindClassDeclaration && tx.plan.keys[node] != "":
 		return tx.visitServiceClass(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):

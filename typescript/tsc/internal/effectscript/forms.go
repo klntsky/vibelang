@@ -218,9 +218,9 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 }
 
 // canBePlain reports whether fn compiles to plain JavaScript (D10): its body
-// runs no Effect.
+// runs no Effect and looks up no service.
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
-	return !forEachCallInBody(fn, a.runs)
+	return !forEachCallInBody(fn, a.performs)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript

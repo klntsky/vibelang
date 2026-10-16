@@ -7,11 +7,24 @@ import (
 
 // servicePlan records what the lowering does with services in one file.
 type servicePlan struct {
-	keys map[*ast.Node]string // service classes, by declaration, and their keys
+	lookups map[*ast.Node]bool   // calls S.member(…) whose callee looks the service up
+	values  map[*ast.Node]bool   // calls p() that run p, an Effect value
+	keys    map[*ast.Node]string // service classes, by declaration, and their keys
 }
 
 func newServicePlan() servicePlan {
-	return servicePlan{keys: map[*ast.Node]string{}}
+	return servicePlan{lookups: map[*ast.Node]bool{}, values: map[*ast.Node]bool{}, keys: map[*ast.Node]string{}}
+}
+
+// planServiceCall records how call, in the body of a function the lowering
+// turns into an Effect, uses services.
+func (p *servicePlan) planServiceCall(c *checker.Checker, call *ast.Node) {
+	if isServiceLookup(c, call) {
+		p.lookups[call] = true
+	}
+	if isEffectValueCall(c, call) {
+		p.values[call] = true
+	}
 }
 
 // planServiceClass records the key of node when it declares a service.
@@ -19,6 +32,46 @@ func (p *servicePlan) planServiceClass(c *checker.Checker, node *ast.Node) {
 	if classKindOf(node) != ordinaryClass {
 		p.keys[node] = servicesFor(c).key(node)
 	}
+}
+
+// looksUp reports whether node, a property access, is the callee of a call
+// that looks a service up.
+func (p *servicePlan) looksUp(node *ast.Node) bool {
+	return node.Parent != nil && p.lookups[node.Parent] && node.Parent.Expression() == node
+}
+
+// addServiceLookup adds the service that call looks up to info's
+// requirements.
+func (a *analyzer) addServiceLookup(info *effectInfo, call *ast.Node) {
+	identifier := serviceLookup(a.checker, call)
+	if identifier == nil {
+		return
+	}
+	info.requirements = append(info.requirements, identifier)
+	if info.effect == nil {
+		info.effect = effectInterface(a.checker, a.checker.GetApparentType(a.checker.GetTypeAtLocation(call.Expression().Expression())))
+	}
+}
+
+// visitServiceLookup turns the callee `Users.find` of a service call into
+// `(yield* Users).find`, which reads the member from the implementation in
+// the current Context.
+func (tx *lowering) visitServiceLookup(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	receiver := tx.Visitor().VisitNode(node.Expression())
+	lookup := f.NewParenthesizedExpression(f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), receiver))
+	tx.EmitContext().SetOriginal(lookup, node.Expression())
+	return f.UpdatePropertyAccessExpression(node.AsPropertyAccessExpression(), lookup, nil /*questionDotToken*/, node.Name(), ast.NodeFlagsNone)
+}
+
+// visitEffectValueCall turns `p()`, where p is an Effect value, into
+// `yield* p`.
+func (tx *lowering) visitEffectValueCall(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	callee := tx.Visitor().VisitNode(node.Expression())
+	run := f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), callee)
+	tx.EmitContext().SetOriginal(run, node)
+	return run
 }
 
 // visitServiceClass turns a service class into a class that extends the

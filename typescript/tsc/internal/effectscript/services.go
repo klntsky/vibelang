@@ -8,7 +8,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
-// Services (design D1, D45).
+// Services (design D1, D41, D45).
 //
 // An abstract class in an .es file whose instance members are all abstract
 // declares a service. The checker sees such a class as this TypeScript would
@@ -23,11 +23,17 @@ import (
 // As a type, Users is the service's shape, branded with its key so that two
 // services with the same members stay distinct requirements. As a value,
 // Users is a Context key, so Layer.succeed(Users, …), Effect.provideService,
-// and yield* Users work as they do with a Context.Service class.
+// and yield* Users work as they do with a Context.Service class. In an .es
+// function body, Users.find(id) calls a member through the key and Users()
+// returns the implementation.
 
 // serviceBrandProperty is the optional property that brands a service's
 // shape with its key.
 const serviceBrandProperty = "~esc/service"
+
+// contextServiceTypeID names the property that every Effect 4 Context key
+// has: `readonly [ServiceTypeId]: ServiceTypeId`.
+const contextServiceTypeID = "~effect/Context/Service"
 
 type classKind uint8
 
@@ -169,4 +175,132 @@ func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checke
 	key := c.NewTypeReference(c.GetDeclaredTypeOfSymbol(service), []*checker.Type{class, class})
 	brand := c.NewOptionalReadonlyPropertyType(serviceBrandProperty, c.GetStringLiteralType(s.key(declaration)))
 	return key, brand
+}
+
+// serviceOfKey returns the identifier and the shape of the service that t,
+// a Context key, looks up, or nil and nil when t is not a Context key.
+func serviceOfKey(c *checker.Checker, t *checker.Type) (identifier *checker.Type, shape *checker.Type) {
+	if t == nil || t.Flags()&checker.TypeFlagsObject == 0 || c.GetPropertyOfType(t, contextServiceTypeID) == nil {
+		return nil, nil
+	}
+	return c.GetTypeOfPropertyOfType(t, "Identifier"), c.GetTypeOfPropertyOfType(t, "Service")
+}
+
+// isMemberCallSite reports whether node is the callee of a call
+// `S.member(…)` in the body of an .es function.
+func isMemberCallSite(node *ast.Node) bool {
+	if !ast.IsPropertyAccessExpression(node) || ast.IsPrivateIdentifier(node.Name()) {
+		return false
+	}
+	call := node.Parent
+	return call != nil && ast.IsCallExpression(call) && call.Expression() == node && call.QuestionDotToken() == nil && inLowerableBody(call)
+}
+
+// serviceMember returns the identifier and the shape of the service whose
+// member node, at a member call site, calls: receiver is the apparent type
+// of S in `S.member(…)`, and it must be a Context key whose service declares
+// member. It returns nil and nil otherwise.
+func serviceMember(c *checker.Checker, node *ast.Node, receiver *checker.Type) (identifier *checker.Type, shape *checker.Type) {
+	identifier, shape = serviceOfKey(c, receiver)
+	if shape == nil || c.GetPropertyOfType(shape, node.Name().Text()) == nil {
+		return nil, nil
+	}
+	return identifier, shape
+}
+
+// memberReceiver is the checker's member receiver hook. In a call
+// `S.member(…)` in an .es function body, where S is a Context key whose
+// service declares member, member is read from the service's shape (design
+// D41). A member the service declares therefore wins over the key's own
+// members, such as pipe, of, and use.
+func memberReceiver(c *checker.Checker, node *ast.Node, receiver *checker.Type) *checker.Type {
+	if !isMemberCallSite(node) {
+		return receiver
+	}
+	if _, shape := serviceMember(c, node, receiver); shape != nil {
+		return shape
+	}
+	return receiver
+}
+
+// serviceLookup returns the identifier of the service that call looks up,
+// or nil when call is not a service member call. A service member call looks
+// the service up in the current Context, so the service joins R whatever the
+// member returns, and then calls the member.
+func serviceLookup(c *checker.Checker, call *ast.Node) *checker.Type {
+	callee := call.Expression()
+	if !isMemberCallSite(callee) {
+		return nil
+	}
+	identifier, _ := serviceMember(c, callee, c.GetApparentType(c.GetTypeAtLocation(callee.Expression())))
+	return identifier
+}
+
+// isServiceLookup reports whether call is a service member call.
+func isServiceLookup(c *checker.Checker, call *ast.Node) bool {
+	return serviceLookup(c, call) != nil
+}
+
+// isEffectValueCallSite reports whether call has the form `p()` in the body
+// of an .es function.
+func isEffectValueCallSite(call *ast.Node) bool {
+	return len(call.Arguments()) == 0 && call.TypeArguments() == nil && call.QuestionDotToken() == nil && inLowerableBody(call)
+}
+
+// effectValueCall is the checker's call signatures hook. In an .es function
+// body, a value whose type is an Effect, called with no arguments, runs:
+// Users() gives the service's implementation, and Port() reads a Config
+// (design D24). The call gets the signature () => Effect<A, E, R>.
+func effectValueCall(c *checker.Checker, call *ast.Node, callee *checker.Type) []*checker.Signature {
+	if !isEffectValueCallSite(call) {
+		return nil
+	}
+	if effect := effectOfValue(c, callee); effect != nil {
+		return []*checker.Signature{c.NewCallSignature(effect)}
+	}
+	return nil
+}
+
+// isEffectValueCall reports whether call runs its callee, an Effect value.
+func isEffectValueCall(c *checker.Checker, call *ast.Node) bool {
+	if !isEffectValueCallSite(call) {
+		return false
+	}
+	callee := c.GetApparentType(c.GetTypeAtLocation(call.Expression()))
+	return len(c.GetSignaturesOfType(callee, checker.SignatureKindCall)) == 0 && effectOfValue(c, callee) != nil
+}
+
+// effectOfValue returns Effect<A, E, R> for t, a type whose values are
+// Effects, such as a Context key or a Config, or nil when t is not one.
+func effectOfValue(c *checker.Checker, t *checker.Type) *checker.Type {
+	if t == nil || t.Flags()&checker.TypeFlagsObject == 0 {
+		return nil
+	}
+	effect := effectInterface(c, t)
+	if effect == nil {
+		return nil
+	}
+	a, e, r := varianceChannel(c, t, "_A"), varianceChannel(c, t, "_E"), varianceChannel(c, t, "_R")
+	if a == nil || e == nil || r == nil {
+		return nil
+	}
+	return c.NewTypeReference(effect, []*checker.Type{a, e, r})
+}
+
+// varianceChannel reads one channel of t's `~effect/Effect` variance
+// property, whether or not t is the Effect interface itself.
+func varianceChannel(c *checker.Checker, t *checker.Type, name string) *checker.Type {
+	variance := c.GetTypeOfPropertyOfType(t, effectTypeID)
+	if variance == nil {
+		return nil
+	}
+	covariant := c.GetTypeOfPropertyOfType(variance, name)
+	if covariant == nil {
+		return nil
+	}
+	signatures := c.GetSignaturesOfType(covariant, checker.SignatureKindCall)
+	if len(signatures) != 1 {
+		return nil
+	}
+	return c.GetReturnTypeOfSignature(signatures[0])
 }
