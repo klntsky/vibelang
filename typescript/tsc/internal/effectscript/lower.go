@@ -224,25 +224,20 @@ func (tx *lowering) lowerProgram(node *ast.Node) *ast.Node {
 // generatorOf returns `function* (params) { body }` for node, with node's
 // calls that run lowered to yield*.
 func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
-	f := tx.Factory()
 	ec := tx.EmitContext()
 
 	saved, savedFrame, savedPlain := tx.inEffect, tx.frame, tx.plain
 	tx.inEffect, tx.plain = false, false // a generator's parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
-	tx.frame = &frame{name: functionName(node)}
+	tx.frame = &frame{name: sourceName(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 	if !ast.IsBlock(body) {
 		body = ec.ConvertToFunctionBlock(body, false /*multiLine*/)
 	}
 
-	var name *ast.Node
-	if node.Kind == ast.KindFunctionExpression {
-		name = node.Name()
-	}
-	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), name, nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
+	generator := tx.generatorExpression(node, sourceName(node), parameters, body)
 	ec.SetOriginal(generator, node)
 	return generator
 }

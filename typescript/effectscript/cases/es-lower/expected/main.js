@@ -8,13 +8,13 @@ function double(n) {
 }
 // Console.log returns an Effect, so calling it runs it, and greet becomes
 // an Effect itself.
-const greet = Effect_1.fnUntraced(function* (name) {
+const greet = Effect_1.fnUntraced(function* greet(name) {
     yield* Console.log(`hello, ${name}`);
     return name.length;
 });
 // An arrow function that runs an Effect is lowered the same way.
-const shout = Effect_1.fnUntraced(function* (text) { return yield* Console.log(text.toUpperCase()); });
-export const main = Effect_1.fnUntraced(function* () {
+const shout = Effect_1.fnUntraced(function* shout(text) { return yield* Console.log(text.toUpperCase()); });
+export const main = Effect_1.fnUntraced(function* main() {
     for (const id of [0, 1]) {
         const length = yield* greet(`user ${id}`); // an .es Effect: runs
         yield* Console.log(`greeted with ${length} letters`);

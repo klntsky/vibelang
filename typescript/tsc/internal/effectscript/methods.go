@@ -56,7 +56,7 @@ func (tx *lowering) lowerMethod(node *ast.Node) *ast.Node {
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 
-	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
+	generator := tx.generatorExpression(node, sourceName(node), f.NewNodeList(nil), body)
 	ec.SetOriginal(generator, node)
 	arguments := []*ast.Node{generator}
 	if usesThis(node.Body()) {
