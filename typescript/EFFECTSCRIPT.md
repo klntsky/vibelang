@@ -2,7 +2,7 @@
 
 This directory is microsoft/TypeScript with a short stack of commits that teach the Go compiler (`tsc/`) EffectScript: TypeScript syntax in which every function is an Effect (effect@4.0.5). A call to a function that returns an Effect runs it, and the compiler infers each function's `Effect<A, E, R>`.
 
-It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services, control operations, failures and regions, Scope regions (`using` and `fork`), the prelude, trust levels at TypeScript boundaries, platform APIs, runners, and debugging and tracing work (see their sections); the acceptance table below says which lane builds each remaining feature. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
+It is a first prototype. It lowers `.es` files with checker types, runs the output on Effect 4, and emits `.d.ts` files with the inferred Effect types. Services, control operations, handlers, producers, failures and regions, Scope regions (`using` and `fork`), the prelude, trust levels at TypeScript boundaries, platform APIs, runners, and debugging and tracing work (see their sections); the acceptance table below says which lane builds each remaining feature. The design is `../docs/design/effectscript-design.md`; the syntax decisions are `../docs/design/DECISIONS.md`.
 
 ## Base
 
@@ -125,6 +125,11 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `scopes-types` | `Scope` leaves R only for `using` acquisitions and forks a block owns; `contracts.ts` checks each contract exactly |
 | `scopes-callback.fail` | ES4301 for a callback that declares `using`, of a Disposable or an acquisition, passed to `Array.prototype.map` or `Effect.sync` (D54) |
 | `lambda-this` | A lowered arrow function keeps its enclosing function's `this`: a program passed to `Effect.retry`, an Effect function passed to `Effect.forEach`, and a forked program in a method |
+| `handlers` | Two handlers for one program, a clause that returns without resuming and runs the program's `finally`, `abandon` in a clause, `resumeWith` raising a declared error the program catches, `onReturn`, a second `resume` that is a defect, a clause that holds a `using` resource until the resumed program finishes, and 100,000 tail resumes under 50 frames (D18) |
+| `es2005.fail` | ES2005 for a `resumeWith` program that needs a service and for one that fails with an undeclared error; a program that fails with the declared error, or returns a value read in the clause, is allowed |
+| `es4201.fail` | ES4201 for a control operation under `Effect.forEach` with `concurrency: 4`, `Effect.race`, and `Effect.timeout`, and for a producer that performs one passed to `Stream.runCollect`; none without concurrency, with `concurrency: 1`, with a handler inside each branch, or for a `for...of` over the producer |
+| `es4202.fail` | ES4202 for a TypeScript function whose declared requirements hold a control operation; none for a generic TypeScript function that passes its argument's requirements through |
+| `producers` | Producers (D26): laziness; cleanup before `break`, `return`, and `continue` to an outer label complete; one pass per run; service calls between yields; `yield*`; `Stream.take` without running ahead; a failure reaching the loop's `catch`; pattern, existing-variable, and `var` loop targets; a labeled JavaScript loop around a producer loop; `for...of` over a Stream; 100,000 elements under 50 frames; and `Stream<number, Broken, never>` in the `.d.ts` |
 
 ### Acceptance cases
 
@@ -137,7 +142,7 @@ The prototype's 46 examples (`../prototype/esc/examples/`) are cases named after
 | F3 | `throw`, regions, contracts | `ch02-contract-narrower.fail`, `ch02-functions`, `ch03-errors`, `ch03-safelookup-no-try.fail`, `ch12-contracts`, `ch12-welcome-missing-mailer.fail`, `ch15-failures`, `nominal-services.fail`, `regions` |
 | F5 | Services, layers, `wire` | `ch01-first-look`, `ch04-provider-escapes.fail`, `ch04-services`, `ch04-users-audited.fail`, `ch04-wire`, `ch12-rates-bare-return.fail`, `ref1-existing-service`, `ref2-ambiguous-provider.fail`, `ref2-cycle.fail`, `ref2-missing-provider.fail`, `ref2-opaque-layer.fail`, `ref2-provider-graph` |
 | F6 | `using`, `fork`, Scope regions | `ch06-disposable`, `ch06-resources`, `ch07-concurrency`, `ref3-resourceful-retry` |
-| F7 | Handlers, producers, streams | `ch08-producers`, `ch08-streams`, `ch09-approve-all-forked.fail`, `ch09-handlers`, `ref6-fork.fail`, `ref6-handlers`, `stack-depth` |
+| F7 | Handlers, producers, streams | None pending: `ch08-producers`, `ch08-streams`, `ch09-approve-all-forked.fail`, `ch09-handlers`, `ref6-fork.fail`, `ref6-handlers`, and `stack-depth` pass |
 | F8 | Boundaries, runners | None pending: `ch02-plain-ts-call.fail`, `ch10-fetch.fail`, `ch10-typescript`, `ch11-top-level-run.fail`, `ch24-profile`, and `d5-clock-read.fail` pass |
 
 The `pending` files are the source of truth: `effectscript/smoke.sh --status` prints each case's current owner.
@@ -229,7 +234,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 79 | `ovsoxmyu` | effectscript: solve E and R of call cycles as a fixpoint (D52, ES2102) | `isEven` and `isOdd` both fail with what either throws |
 | 80 | `uvuursyx` | effectscript: report ES2006 for a jump out of a finally block | A `finally` that returns would discard the failure in flight |
 
-Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork), and lane F4's in [The editor and the esc command](#the-editor-and-the-esc-command).
+Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks), lane F6's in [Scope regions: using and fork](#scope-regions-using-and-fork), lane F4's in [The editor and the esc command](#the-editor-and-the-esc-command), and lane F7's in [Handlers and producers](#handlers-and-producers).
 
 ## Seams in upstream files
 
@@ -244,6 +249,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals`; ask skipped function type hooks where `checkFunctionExpressionOrObjectLiteralMethod` skips a context-sensitive function | +23 / -5 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
 | `tsc/internal/checker/checker.go` | Ask using initializer hooks before `checkVariableLikeDeclaration` requires a `using` initializer to be a Disposable | +1 / -1 |
+| `tsc/internal/checker/checker.go` | Ask iterated element type hooks in `checkRightHandSideOfForOf` and, for `yield*`, in `getYieldedTypeOfYieldExpression`, `checkYieldExpression`, and `checkAndAggregateYieldOperandTypes` | +14 / -3 |
 | `tsc/internal/checker/checker.go` | Check what a function returns against `unwrapReturnTypeOf` at the four places that check it against `unwrapReturnType`; complete an annotated return type through annotated return type hooks in `getReturnTypeOfSignature`; ask infer type hooks in `checkInferType` | +9 / -7 |
 | `tsc/internal/transformers/declarations/transform.go` | `ensureType` serializes a type from the checker when a type annotation hook asks | +1 / -1 |
 | `tsc/internal/checker/checker.go` | Tell call candidate hooks which candidate `inferTypeArguments` and `isSignatureApplicable` check, and let candidate filter hooks reject it; pass the type of a function expression, a contextual return type (`getContextualReturnType` wraps the old body as `getContextualReturnTypeWorker`), and every checked expression through hooks; append hook type parameters in `getSignatureFromDeclaration` and `getOuterTypeParameters`; let parameter type hooks replace an annotation's type in `getTypeForVariableLikeDeclaration`; let annotated return inference hooks replace the return annotation's type in `inferFromAnnotatedParametersAndReturn` | +15 / -5 |
@@ -278,6 +284,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/ls/extensions.go` (new) | `RegisterQuickInfoHook`, `RegisterCompletionScopeHook`, `RegisterMemberCompletionHook` | +92 |
 | `tsc/internal/execute/tsc/extensions.go` (new) | `SetIdentity` | +56 |
 | `tsc/internal/checker/extensions_signatures.go` (new) | `SignatureWithReturnType` | +8 |
+| `tsc/internal/checker/extensions_loops.go` (new) | `RegisterIteratedElementTypeHook` | +29 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
 | `tsc/internal/tsoptions/effectscript.go` (new) | Parse, validate, and serialize `compilerOptions.effectscript` | +149 |
 
@@ -446,7 +453,7 @@ The checks so far:
 | Code | Reported at | File |
 | --- | --- | --- |
 | ES1001 | The outermost call at a module's top level that runs a program; covers TypeScript's TS2339 and TS2348 for a service member call and an Effect value call there | `runners.go` |
-| ES1002 | The API, such as `Effect.gen`, when a `function*` is passed where a function that returns a lib `Generator` or `Iterator` is expected; covers the generator | `generators.go` |
+| ES1002 | The API, such as `Effect.gen`, when a `function*` is passed where a function that returns a lib `Generator` or `Iterator` is expected; covers the generator, and a producer passed by name with its body | `generators.go` |
 | ES1003 | `async`, `await`, `for await`, and `await using` in a `.es` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
 | ES1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
 | ES1005 | The callee of a runner in code a fiber runs | `runners.go` |
@@ -454,8 +461,11 @@ The checks so far:
 | ES2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
 | ES2003 | A return annotation that leaves a contract channel out, or a plain return annotation on a function whose body runs an Effect | `contracts.go` |
 | ES2004 | The `catch` keyword, when the `try` block can raise no expected failure (D37); covers TypeScript's errors about the `never` caught value | `failures.go` |
+| ES2005 | The program passed to `resumeWith` when it needs a service or fails with an error the operation does not declare (D17); covers TypeScript's TS2345 there | `handlers.go` |
 | ES2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript would discard the failure in flight | `regions.go` |
 | ES2102 | The name of an Effect function on a call cycle whose A TypeScript cannot infer because it depends on the function's own result, covering TS7022, TS7023, and TS7024 there; a `catch` variable, or a function, on a cycle that the checker typed before the cycle's E and R were known | `recursion.go` |
+| ES4201 | A control operation that a combinator runs on another fiber: at its perform site in the argument, else at the argument; and a producer that performs one, passed to a function that runs it as a Stream | `reach.go` |
+| ES4202 | The callee, when a function declared outside EffectScript declares a control operation in its requirements (D20) | `reach.go` |
 | ES4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; an `.es` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
 | ES4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
 | ES4402 | Where code runs a platform API (D108): the callee of a call, `new`, or tagged template, or the property read, whose root is a binding imported from a platform module or a platform global; inside boundaries and at the top level too. It covers TypeScript's "cannot find name" for an unresolved platform global it reports | `platform.go` |
@@ -747,6 +757,93 @@ The runtime and the program must load the same copy of `effect`. Each copy numbe
 | `qsytkrtw` | effectscript: document Scope regions, using, and fork in EFFECTSCRIPT.md |
 | `rkxpuynr` | effectscript: keep this in a lowered arrow function |
 
+## Handlers and producers
+
+Control operations handled with one-shot delimited continuations, and producers built on them, are the part of EffectScript that Effect does not have (design chapters 8, 9, and 26). `handlers.go` and `reach.go` hold the handler rules, `producers.go` holds producers and loops over Streams, and `packages/runtime/src/handlers.ts` and `producers.ts` are their runtime.
+
+### Handlers (D16-D18, D50)
+
+`handle`, `resume`, `resumeWith`, and `abandon` are the runtime's functions, and their TypeScript signatures type a handler. The compiler adds one lowering rule, the tail resume, and three checks:
+
+```ts
+// approval.es                                  // approval.js
+function approved() {                           const approved = Effect.fnUntraced(function* approved() {
+  return handle(() => checkout("c-42"), Approval, {   return yield* handle(Effect.gen(function* () { return yield* checkout("c-42"); }), Approval, {
+    approve(request, k) {                               approve(request, k) {
+      const decision = Reviewers.decide(request)          return Effect.gen(function* () {
+      return resume(k, decision)                            const decision = yield* (yield* Reviewers).decide(request);
+    }                                                       return runtime.$tailResume(k, decision);
+  })                                                      });
+}                                                       }
+                                                      });
+                                                    });
+```
+
+- **Types.** `handle(program, Control, clauses, onReturn?)` takes the program as an `Effect<A, E, R>`, so a lambda there is a program (D7). It needs a clause for every operation of the control, because it removes the whole control from R. A clause's `k` is a `Continuation<V, E, H>` (D50): V is what the perform site receives, E the operation's declared errors, and H what `resume` returns. The `handle` call is `Effect<A | each clause's A, E | each clause's E, Exclude<R, Control> | each clause's R>`, with `onReturn`'s result in place of A when it is given. H is the program's own A, or `never` with `onReturn`, because TypeScript fixes H before it checks `onReturn` (D97).
+- **Clauses** compile as any method or lambda expected to return an Effect: an object literal method becomes an Effect method (`expectsEffect`), and a lambda an Effect function (D56). The runtime calls a clause with the operation's arguments and `k`.
+- **Tail resume (D18).** In a clause's own frame, `return resume(k, v)` and `return resumeWith(k, p)` return the kernel's request, `runtime.$tailResume(k, v)` and `runtime.$tailResumeWith(k, p)`, and so does a lambda clause whose expression body is the call. The clause's generator finishes, and then its Clause frame resumes the program, so a clause that resumes 100,000 times stays under 50 frames (cases `handlers` and `stack-depth`). The plan records each clause (`planClause`) and each call of `resume` or `resumeWith` (`planResume`); the lowering emits the request only where `frame.clause` holds (`resumesInTail`). A region's closure is a frame of its own, so inside a `try`, `catch`, `finally`, or Scope region of the clause, `resume` runs as any call does (`yield*`), and the region's cleanup runs after the resumed program. A clause whose body is itself a Scope region, because it declares `using` or forks, has no tail resume either: its body's closure keeps the clause's frame, but what it holds must be released after the resumed program.
+
+The checks:
+
+| Code | Reported at | Rule |
+| --- | --- | --- |
+| ES2005 | The program passed to `resumeWith` | It runs at the perform site, inside the handled program, so it may need no service and may fail only with the operation's declared errors (D17). The runtime's signature rejects the same program as TS2345, which ES2005 covers (`checkResumeWith`) |
+| ES4201 | The perform site in an argument, such as `Approval.approve(id)`, or the argument | A combinator that runs the argument on another fiber, where this fiber's handler cannot be reached: effect's `forkChild`, `forkDetach`, `forkIn`, `forkScoped`, `race`, `raceAll`, `raceAllFirst`, `raceFirst`, `timeout`, `timeoutOption`, and `timeoutOrElse`; any call of the `Effect` or `Stream` module with a `concurrency` option other than `1`; `zip` and `zipWith` with `concurrent: true`; and the prelude's `fork`. It reads the requirements of each argument, an Effect, a function that returns one, or an array or record of them, so a branch that handles the operation inside itself passes (`checkForkedArguments`). A producer whose requirements hold a control operation, passed to any function, is ES4201 too, because run as a Stream it runs on a fiber of its own (`checkProducerArguments`) |
+| ES4202 | The callee | A function declared outside EffectScript whose declared return type requires a control operation, because its body can fork where no table sees it (D20). Only the declared type counts, so a generic combinator such as `Effect.forEach`, whose R is a type parameter, is left to ES4201 (`checkTypeScriptCallee`) |
+
+A control type is the type of a class that `classKindOf` calls a control class; `runtimeExport` knows `handle`, `resume`, `resumeWith`, and `fork` by their declarations in the runtime package, through an import, a namespace, or the prelude.
+
+### Producers (D26)
+
+A `function*` declaration or function expression in an `.es` file is a producer (`isProducer`). Its body is an Effect body, as any `.es` function's is, so its calls run; `yield v` performs the built-in Yield operation, and `yield* p` yields every element of another producer, a Stream, or an iterable. Calling a producer runs none of its body: it returns a Stream that carries the body. Generator methods, `*items() { … }`, stay JavaScript's generators.
+
+```ts
+// lines.es                                 // lines.js
+function* lines(path: string) {             function lines(path) {
+  const file = Files.open(path)                 return runtime.$produce(Effect.fnUntraced(function* lines() {
+  while (true) {                                    const file = yield* (yield* Files).open(path);
+    const line = file.readLine()                    while (true) {
+    if (line === undefined) return                      const line = yield* file.readLine();
+    yield line                                          if (line === undefined) return;
+  }                                                     yield* runtime.$yield(line);
+}                                                   }
+                                                }));
+                                            }
+```
+
+- **Types.** A producer returns `Stream<T, E, R>` (`producerType`, through the inferred return type hook): T is the type of its yields, widened as a return type is, so `yield 1` yields `number`, and E and R are what its body can fail with and needs. To TypeScript callers and `.d.ts` readers it is a function that returns a Stream, and Stream's own functions take it directly. A call to a producer does not run: it constructs the Stream.
+- **Lowering.** The producer stays a plain function with its parameters, and its body becomes a generator named after it (`visitProducer`, `generatorExpression`). `yield v` becomes `yield* runtime.$yield(v)`, and `yield* p` becomes `yield* runtime.$yieldAll(p)` (`visitYield`). The body's `try`, `finally`, and Scope regions lower as in any Effect function.
+- **Loops.** `for...of` over a value whose type is a Stream, a producer or any other, in an `.es` function's body is a loop over its elements (`isStreamLoop`); over any other iterable it is JavaScript's loop. The function can pause, so it compiles to an Effect (`hasStreamLoop`, which `isEffect`, D10's fixpoint, and `canBePlain` ask), and the Stream's E and R join the function's (`addStreamLoop`, from `flowOf`). The loop body is a region (`visitStreamLoop`) whose closure, `<function>$for`, takes the element:
+
+```ts
+for (const line of lines(path)) {      const completion = yield* runtime.$forOf(lines(path), Effect.fnUntraced(function* first$for(line) {
+  if (line.startsWith("ERROR"))            if (line.startsWith("ERROR"))
+    return line                                return { kind: "return", value: line };
+}                                      }));
+                                       if (completion.kind === "return") return completion.value;
+```
+
+`runtime.$forOf(iterable, body, label?)` handles the body's `break` and `continue` of its own loop, unlabeled or with the loop's label, and returns every other jump for the enclosing generator to dispatch; a body that no jump leaves returns nothing, which counts as normal completion. A binding pattern, an existing variable, and a `var` are each a loop target. A labeled loop passes its label to `$forOf` and loses the label statement.
+
+- **How the runtime iterates.** Over a producer, `$forOf` runs the producer's body under a Yield handler on the loop's fiber, and the loop body is the clause, which resumes the producer in tail position, so 100,000 elements stay under 50 frames. `break`, `return`, a jump to an outer label, and a failure in the body return from the clause without resuming, so the producer's cleanup runs before the loop exits. Over any other Stream, `$forOf` pulls it with `Stream.toPull` and closes it when the loop exits.
+- **The Stream a producer is.** Anything else that runs a producer as a Stream, such as `Stream.take`, starts its body on a fiber of its own on the first pull. Its Yield clause completes the pending pull and waits for the next before it resumes the body: a handoff with no buffer, so the producer never runs ahead of its consumer, and a pull from any fiber works. Closing the stream interrupts that fiber, which abandons the producer and runs its cleanup. Case `producers` shows `Stream.take(numbers(100), 2)` logging two yields and the close, nothing more.
+- **Checker seam.** A Stream has no `[Symbol.iterator]`, so the iterated element type hook (`iteratedElementType`) gives a `for...of` over a Stream, and a producer's `yield*` of one, the Stream's element type before TypeScript asks for an iterator. ES1002 also covers TypeScript's errors in a producer passed by name to `Effect.gen` or another generator-based API, whose body was written for that API.
+
+### Commits
+
+| Change | Subject |
+| --- | --- |
+| `lzvlmlou` | runtime: type continuations as Continuation<V, E, H> |
+| `xqrnzlyn` | effectscript: compile a clause's tail resume to the kernel's request |
+| `pnvzvzmo` | effectscript: report ES2005 for resumeWith programs outside the operation's contract |
+| `susnvvyx` | effectscript: report control operations that cannot reach their handler |
+| `lxxwsyuu` | checker: add an iterated element type hook |
+| `znpynsvy` | runtime: make a producer a Stream with a zero-capacity handoff |
+| `tnnzwswk` | effectscript: compile function* to producers and loop over Streams |
+| `yxpkoupr` | examples: close the pipeline's producer after its last alert |
+| `lynmrvwz` | docs: remove the stream page's producer compiler gap |
+| `moutqkun` | effectscript: document handlers and producers in EFFECTSCRIPT.md |
+
 ## The prelude
 
 Every `.es` file sees these names without an import (D4, D48): `Effect`, `Schema`, `Layer`, `TaggedError`, `Control`, `Scope`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. They are the exports of `@effectscript/runtime`, whose `prelude.ts` gives `Effect` and `Scope` two meanings each: the effect module, for `Effect.gen` and `Scope.make`, and a type, so `Effect<A, E, R>` means `Effect.Effect<A, E, R>` and `Scope` means `Scope.Scope`.
@@ -871,7 +968,7 @@ TypeError: Cannot read properties of undefined (reading 'name')
     at ownerName (main.es:12:25)
 ```
 
-Generated functions carry their source's names (D36, `names.go`). A compiled function's generator is named after the function, or the variable or property that names it in the source, and region closures are `<function>$try`, `$catch`, and `$finally`. A named function expression binds its name inside its body, so when the body refers to that name, the generator is a method of an object literal instead, which has the name and binds nothing: `Effect.fnUntraced({ *fact(n) { … } }.fact)`. A lambda without a name stays anonymous. Clauses and producers, still to come in lane F7, can name their generators with `generatorExpression`.
+Generated functions carry their source's names (D36, `names.go`). A compiled function's generator is named after the function, or the variable or property that names it in the source, and region closures are `<function>$try`, `$catch`, and `$finally`. A named function expression binds its name inside its body, so when the body refers to that name, the generator is a method of an object literal instead, which has the name and binds nothing: `Effect.fnUntraced({ *fact(n) { … } }.fact)`. A lambda without a name stays anonymous. A clause is named after its operation member, a producer's body generator after the producer, and the closure of a loop over a Stream is `<function>$for`.
 
 ## Tracing
 
@@ -941,7 +1038,9 @@ Upstream code needed four fixes for `.es` files in the server: auto-import panic
 
 - `arguments` inside a region's closure is the closure's, not the function's, and a function whose body declares `using` or calls `fork` runs its whole body in such a closure.
 - A `using` in the head of a C-style `for` loop, `for (using x = init; …; …)`, stays TypeScript's own `using`, which Effect does not run on failure or interruption, and an acquisition there is TS2850.
-- Handlers have no meaning yet: the prelude names them, and their lane gives them meaning. A control operation in a forked fiber is not ES4201 yet.
+- Inside a clause, `resume(k, v)` has the program's own result type, or `never` with `onReturn` (D97), so a clause that uses the resumed result while another clause returns early with another type sees a narrower type than the value. The rule that `k` stays inside its clause is not checked.
+- ES4201 knows effect's forking combinators by name and any call by its `concurrency` option; a TypeScript wrapper around a fork is ES4202 only when its declared requirements name the control operation. A producer stored in a variable and then passed to a Stream function is not ES4201.
+- `this` in a producer is the function's, but `arguments` is the body generator's. A `for (using x of producer)` loop takes JavaScript's `for...of`, so it cannot iterate a producer.
 - ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
 - A trusted call's expected failures are defects inside a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback ES4301.
 - Runners are known by their declarations in `effect`, `@effect/platform-node`, `@effect/platform-bun`, and `@effect/vitest`; a function that wraps one is not a runner. ES4402's globals are a fixed list (`platformGlobals`), so a platform global outside it, such as `postMessage` or `BroadcastChannel`, is not reported.
@@ -949,7 +1048,7 @@ Upstream code needed four fixes for `.es` files in the server: auto-import panic
 - Declaration files carry no JSDoc metadata for `$direct` variants (Chapter 27), so code compiled against a `.d.ts` runs a plain function's Effect form, which is correct and slower.
 - A callback parameter without a contract returns an Effect (D12), so a function cannot call it inside a callback that JavaScript calls synchronously, such as a `sort` comparator: that is ES4301.
 - TypeScript types a context-sensitive lambda's parameters from the first candidate that types them, so an overload whose parameter types differ cannot retype them.
-- Accessors, constructors, async functions, and generators are never lowered. `arguments` inside a lowered arrow function is the generator's, and `arguments` and `super` inside a lowered method do not reach the method.
+- Accessors, constructors, async functions, and generator methods are never lowered. `arguments` inside a lowered arrow function is the generator's, and `arguments` and `super` inside a lowered method do not reach the method.
 - A lowered function declaration is a `const`, so a call above it at the module top level hits the temporal dead zone.
 - A call cycle through a lambda, such as `Effect.forEach(children, (child) => walk(child))` where `walk` calls back, is solved through the checker's type of the call, which the checker computes once; a cycle whose E grows through it is ES2102. A union of Effects is not treated as an Effect.
 - Hover shows no control class (D33): the compiler does not yet tell `pure` from `sync` or find `captures`. The language server has no EffectScript quick fixes or refactors (D33), completions in a `catch` do not narrow to the error classes its `try` can raise, and the server's `serverInfo` still says `typescript`.
