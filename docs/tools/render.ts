@@ -12,7 +12,8 @@ const parts = readdirSync(srcDir).filter((f) => f.endsWith(".md")).sort()
 
 // Facts the document states are derived here, not typed by hand. The build
 // refuses to run if the law suite fails: no [Kernel] claim outlives a broken law.
-const suite = Bun.spawnSync(["bun", "test"], { cwd: experimentsDir, stdout: "pipe", stderr: "pipe" })
+// The 100,000-element stress cases also run while build lanes share the host.
+const suite = Bun.spawnSync(["bun", "test", "--timeout=30000"], { cwd: experimentsDir, stdout: "pipe", stderr: "pipe" })
 const suiteOutput = suite.stdout.toString() + suite.stderr.toString()
 const ran = /Ran (\d+) tests? across (\d+) files?/.exec(suiteOutput)
 const failed = /(\d+) fail/.exec(suiteOutput)
