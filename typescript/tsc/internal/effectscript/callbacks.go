@@ -23,6 +23,10 @@ func init() {
 // pausingCallback is ES4301's text for a lambda, which names what pauses.
 var pausingCallback = ES4301.With("this callback can pause ({0}), but {1} calls it synchronously.")
 
+// pausingMethod is ES4301's text for a method that implements a plain
+// function member, such as Equal.Equal's [Equal.symbol] (D55).
+var pausingMethod = ES4301.With("{0} can pause ({1}), but {2} declares it as a plain function, which its callers call synchronously.")
+
 func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 	a := analyzerFor(c)
 	var visit func(node *ast.Node) bool
@@ -36,6 +40,12 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 					note(d, "Use {0} or a for...of loop.", forEachFix(file, call, node))
 				}
 			}
+		case node.Kind == ast.KindMethodDeclaration && isLowerable(node):
+			if owner := a.plainMemberOwner(node); owner != "" {
+				if pause := a.firstPause(node); pause != nil {
+					report(c, node.Name(), pausingMethod, nodeText(file, node.Name()), nodeText(file, pause.Expression()), owner)
+				}
+			}
 		case node.Kind == ast.KindIdentifier:
 			if a.finalConversion(node) == convertRejected {
 				call, _ := ownerCall(node)
@@ -46,6 +56,43 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
+}
+
+// plainMemberOwner returns the name of the type whose member method
+// implements when that member is a plain function, such as Equal.Equal for
+// [Equal.symbol] (D55), and "" otherwise: the method then compiles to a plain
+// method, so it must not pause. The member comes from the interfaces that
+// method's class implements, or from the contextual type of method's object
+// literal.
+func (a *analyzer) plainMemberOwner(method *ast.Node) string {
+	c := a.checker
+	symbol := c.GetSymbolOfDeclaration(method)
+	if symbol == nil || ast.IsStatic(method) {
+		return ""
+	}
+	var owners []*ast.Node
+	var expected []*checker.Type
+	switch parent := method.Parent; {
+	case ast.IsObjectLiteralExpression(parent):
+		if t := c.GetContextualTypeForObjectLiteralElement(method, checker.ContextFlagsSignature); t != nil {
+			expected = append(expected, t)
+		}
+	case ast.IsClassLike(parent):
+		for _, heritage := range ast.GetImplementsHeritageClauseElements(parent) {
+			if member := c.GetPropertyOfType(c.GetTypeFromTypeNode(heritage), symbol.Name()); member != nil {
+				expected = append(expected, c.GetTypeOfSymbol(member))
+				owners = append(owners, heritage)
+			}
+		}
+	}
+	e := a.classify(expected)
+	if !e.plainFn || e.effectFn || e.program {
+		return ""
+	}
+	if len(owners) > 0 {
+		return nodeText(ast.GetSourceFileOfNode(method), owners[0])
+	}
+	return "its contextual type"
 }
 
 // calleeName names what call calls, for a diagnostic: Array.prototype.map

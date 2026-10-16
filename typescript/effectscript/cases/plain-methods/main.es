@@ -1,0 +1,27 @@
+// A method that implements a plain function member, such as Equal.Equal's
+// [Equal.symbol] or Hash.Hash's [Hash.symbol], compiles to a plain method
+// (design D55): Equal.equals and HashSet call it synchronously.
+import { Equal, Hash, HashSet } from "effect"
+
+class Money implements Equal.Equal {
+  constructor(readonly cents: number, readonly currency: string) {}
+
+  // TypeScript needs this annotation: the instanceof test refers back to the method.
+  [Equal.symbol](that: Equal.Equal): boolean {
+    return that instanceof Money && that.cents === this.cents && that.currency === this.currency
+  }
+
+  [Hash.symbol]() {
+    return Hash.combine(Hash.number(this.cents))(Hash.string(this.currency))
+  }
+}
+
+// expect-result: {"equal":true,"different":false,"size":2}
+export function main() {
+  const a = new Money(500, "EUR")
+  const b = new Money(500, "EUR")
+  const c = new Money(700, "EUR")
+  const set = HashSet.make(a, b, c)
+  Effect.sleep("1 millis")
+  return { equal: Equal.equals(a, b), different: Equal.equals(a, c), size: HashSet.size(set) }
+}
