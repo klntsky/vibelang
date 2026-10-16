@@ -53,6 +53,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	switch {
 	case node.Kind == ast.KindSourceFile:
 		return tx.visitSourceFile(node.AsSourceFile())
+	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
+		return tx.visitImportOrExport(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
 		return tx.visitEffectValueCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):

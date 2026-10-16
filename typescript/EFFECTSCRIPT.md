@@ -120,6 +120,10 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 37 | `owtkpmql` | runtime: type the prelude's Effect and Scope | `Effect<A, E, R>` and `Scope` are types too |
 | 38 | `swxmkoyv` | effectscript: point the runtime at the cases' effect in smoke.sh | One copy of `effect` per program |
 | 39 | `urznvokp` | effectscript: resolve and import the prelude in .es files | Every `.es` file sees the prelude (D4, D48) |
+| 40 | `uwozskvx` | effectscript: compare a runnable case's result, not its logs | Cases that log, such as `ch01-first-look`, compare their result |
+| 41 | `oywqrtxx` | module: resolve .es source files | `./welcome.es` and, from `.ts`, `./welcome.js` find `welcome.es` |
+| 42 | `urkxzymx` | core: let .es files import TypeScript sources by extension | No TS5097 for `./welcome.es` or `./format.ts` in `.es` |
+| 43 | `ntslxkmz` | effectscript: emit .js specifiers for imports of sources | Imports between files (D31) |
 
 ## Seams in upstream files
 
@@ -136,6 +140,9 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
 | `tsc/internal/compiler/fileloader.go` | Resolve each module an implicit import hook names for a file | +4 |
 | `tsc/internal/binder/nameresolver.go` | `NameResolver.ResolveBeforeGlobals`, consulted before the global scope | +6 |
+| `tsc/internal/module/resolver.go` | Try `.es` for `./welcome.es`, and after `.tsx` for `./welcome.js` | +13 |
+| `tsc/internal/module/util.go` | An `.es` resolution is always allowed | +2 / -1 |
+| `tsc/internal/core/compileroptions.go` | A `.es` file may import a TypeScript source by its extension | +5 / -1 |
 | `tsc/internal/core/options_generated.go` (generated) | `CompilerOptions.EffectScript`, in `Clone` and `Equals` | +6 |
 | `tsc/internal/tsoptions/declarations_generated.go` (generated) | The `effectscript` declaration | +8 |
 | `tsc/internal/tsoptions/options_generated.go` (generated) | Parse, merge for `extends`, compare for semantic diagnostics and emit, and serialize for `--showConfig` | +15 / -1 |
@@ -338,6 +345,22 @@ Every `.es` file sees these names without an import (D4, D48): `Effect`, `Schema
 
 A name used only in types, such as `Scope` in `Effect<void, never, Scope>`, is not imported. The emitted imports are ES module imports: `.es` files compile to ES modules. When `@effectscript/runtime` is not installed, a prelude name is TypeScript's TS2304 (cannot find name).
 
+## Imports between files
+
+A `.es` file imports another module by its source name, and the emitted JavaScript imports the output (D31):
+
+| Source | Emitted JavaScript | Resolves to |
+| --- | --- | --- |
+| `import { welcome } from "./welcome.es"` in `.es` | `from "./welcome.js"` | `welcome.es` |
+| `import { formatName } from "./format.ts"` in `.es` | `from "./format.js"` | `format.ts` |
+| `import { welcome } from "./welcome.js"` in `.ts` | unchanged | `welcome.es`, as `./format.js` resolves to `format.ts` |
+
+- **Resolution.** The module resolver tries `welcome.es` for `./welcome.es`, and after `.ts` and `.tsx` for `./welcome.js` and an extensionless specifier, so `.ts` beats `.es` when both exist. An `.es` resolution is always allowed, like a `.ts` one (`module/resolver.go`, `module/util.go`).
+- **Extensions in specifiers.** A `.es` file may name a `.ts` or `.es` source without `allowImportingTsExtensions` (no TS5097), because its emitted JavaScript never keeps the source name (`core.AllowImportingTsExtensionsFrom`). A `.ts` file follows TypeScript's rules.
+- **Emit.** The lowering rewrites the specifier of every import and export declaration in a `.es` file that names a TypeScript or EffectScript source, with or without `rewriteRelativeImportExtensions` (`imports.go`). Dynamic `import()` is not rewritten: it returns a Promise, which `.es` code does not await.
+
+Case `es-imports` covers an `.es` file calling an `.es` Effect function and a pure helper, and a `.ts` file calling an `.es` function that `.es` code then runs; `es-imports-norewrite` covers a project without `rewriteRelativeImportExtensions`.
+
 ## What it cannot do yet
 
 - `using` is plain JavaScript.
@@ -351,7 +374,6 @@ A name used only in types, such as `Scope` in `Effect<void, never, Scope>`, is n
 - No `$direct` variants or JSDoc metadata. A pure `.es` function exports a plain function type.
 - Accessors, constructors, async functions, and generators are never lowered. `this` and `arguments` inside a lowered arrow function rebind to the generator, and `arguments` and `super` inside a lowered method do not reach the method.
 - A lowered function declaration is a `const`, so a call above it at the module top level hits the temporal dead zone.
-- Module resolution does not probe for `.es`, so one `.es` file cannot import another.
 - E and R miss contributions that arrive through a call cycle (no fixed point). A union of Effects is not treated as an Effect.
 - Synthesized nodes have no source positions, and the language service is untested.
 
