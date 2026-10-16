@@ -929,6 +929,7 @@ Upstream code needed four fixes for `.es` files in the server: auto-import panic
 | `nzvnqlxu` | editors: check completions and plain hovers in the VS Code test |
 | `wuyspvlk` | editors: set up Neovim and Zed |
 | `pzsnyzmw` | effectscript: document the editor and esc in EFFECTSCRIPT.md |
+| `yppyvsqw` | editors: run esc through the compiler package's launcher in editor tests |
 
 ## What it cannot do yet
 

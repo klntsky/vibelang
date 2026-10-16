@@ -1,7 +1,8 @@
 // Tests the packaged extension in a real VS Code. It copies the language
-// server fixture to a scratch project whose node_modules/.bin/esc is the
-// compiler under test, installs effectscript.vsix into a fresh VS Code
-// profile, opens the project, and runs test/harness/index.js inside VS Code.
+// server fixture to a scratch project that has @effectscript/compiler
+// installed with the compiler under test as its native binary, installs
+// effectscript.vsix into a fresh VS Code profile, opens the project, and runs
+// test/harness/index.js inside VS Code.
 //
 // Usage: bun run package && node test/run.mjs
 //
@@ -20,7 +21,7 @@
 // On Linux, run it under xvfb-run. On macOS it opens a VS Code window for
 // about a minute.
 import { spawnSync } from "node:child_process"
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync } from "node:fs"
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -66,7 +67,16 @@ for (const name of readdirSync(effectModules)) {
 }
 mkdirSync(path.join(project, "node_modules", "@effectscript"), { recursive: true })
 symlinkSync(runtime, path.join(project, "node_modules", "@effectscript", "runtime"))
-symlinkSync(esc, path.join(project, "node_modules", ".bin", "esc"))
+// node_modules/.bin/esc is @effectscript/compiler's Node launcher, as bun
+// install leaves it, and the launcher runs native/esc next to it.
+const compiler = path.join(project, "node_modules", "@effectscript", "compiler")
+mkdirSync(path.join(compiler, "bin"), { recursive: true })
+mkdirSync(path.join(compiler, "native"))
+cpSync(path.join(repo, "packages", "compiler", "package.json"), path.join(compiler, "package.json"))
+cpSync(path.join(repo, "packages", "compiler", "bin", "esc"), path.join(compiler, "bin", "esc"))
+chmodSync(path.join(compiler, "bin", "esc"), 0o755)
+symlinkSync(esc, path.join(compiler, "native", "esc"))
+symlinkSync("../@effectscript/compiler/bin/esc", path.join(project, "node_modules", ".bin", "esc"))
 
 try {
   const vscodeExecutablePath =

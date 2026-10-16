@@ -1,7 +1,8 @@
 #!/bin/sh
 # Checks editors/nvim/effectscript.lua in a headless Neovim 0.10 or later.
-# It copies typescript/effectscript/lsp-fixture to a scratch project whose
-# node_modules/.bin/esc is the compiler under test, then runs test.lua.
+# It copies typescript/effectscript/lsp-fixture to a scratch project that has
+# @effectscript/compiler installed with the compiler under test as its native
+# binary, then runs test.lua.
 #
 # Usage: editors/nvim/test.sh
 #
@@ -31,7 +32,15 @@ rm -rf "$project/node_modules"
 mkdir -p "$project/node_modules/.bin" "$project/node_modules/@effectscript"
 ln -s "$(cd "$effect_modules/effect" && pwd -P)" "$project/node_modules/effect"
 ln -s "$(cd "$runtime" && pwd -P)" "$project/node_modules/@effectscript/runtime"
-ln -s "$esc" "$project/node_modules/.bin/esc"
+# node_modules/.bin/esc is @effectscript/compiler's Node launcher, as bun
+# install leaves it, and the launcher runs native/esc next to it.
+compiler="$project/node_modules/@effectscript/compiler"
+mkdir -p "$compiler/bin" "$compiler/native"
+cp "$repo/packages/compiler/package.json" "$compiler/package.json"
+cp "$repo/packages/compiler/bin/esc" "$compiler/bin/esc"
+chmod +x "$compiler/bin/esc"
+ln -s "$esc" "$compiler/native/esc"
+ln -s ../@effectscript/compiler/bin/esc "$project/node_modules/.bin/esc"
 
 echo "nvim: $("$nvim" --version | head -1)"
 "$nvim" --headless --clean -l "$here/test.lua" "$project" "$here/effectscript.lua"

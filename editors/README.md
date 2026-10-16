@@ -22,7 +22,7 @@ require("effectscript").setup()
 
 `setup({ typescript = true })` also attaches the server to `.ts` and `.js` files, so a `.ts` file that imports an `.es` module resolves it. Turn off your other TypeScript server (`ts_ls`, `vtsls`) for those projects first, or both report every `.ts` file.
 
-`editors/nvim/test.sh` checks the configuration in a headless Neovim: it copies `typescript/effectscript/lsp-fixture` to a scratch project whose `node_modules/.bin/esc` is the compiler under test, then checks the filetype and highlighting, that the project's `esc` attaches, TS2322 and ES1003 diagnostics, and a hover with the inferred contract and a call's success value. It reads `NVIM`, `ESC`, `EFFECT_NODE_MODULES`, and `EFFECTSCRIPT_RUNTIME`.
+`editors/nvim/test.sh` checks the configuration in a headless Neovim: it copies `typescript/effectscript/lsp-fixture` to a scratch project that has `@effectscript/compiler` installed, with its Node launcher at `node_modules/.bin/esc` and the compiler under test as its native binary, then checks the filetype and highlighting, that the project's `esc` attaches, TS2322 and ES1003 diagnostics, and a hover with the inferred contract and a call's success value. It reads `NVIM`, `ESC`, `EFFECT_NODE_MODULES`, and `EFFECTSCRIPT_RUNTIME`.
 
 ## Zed
 
