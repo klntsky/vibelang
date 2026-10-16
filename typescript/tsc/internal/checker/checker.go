@@ -7569,9 +7569,9 @@ func (c *Checker) getQuickTypeOfExpression(node *ast.Node) *Type {
 	// signature where we can just fetch the return type without checking the arguments.
 	case ast.IsCallExpression(expr) && expr.Expression().Kind != ast.KindSuperKeyword && !ast.IsRequireCall(expr, true /*requireStringLiteralLikeArgument*/) && !c.isSymbolOrSymbolForCall(expr) && !ast.IsImportCall(expr):
 		if isCallChain(expr) {
-			return c.getReturnTypeOfSingleNonGenericSignatureOfCallChain(expr)
+			return c.applyCallExpressionTypeHooks(expr, c.getReturnTypeOfSingleNonGenericSignatureOfCallChain(expr))
 		}
-		return c.getReturnTypeOfSingleNonGenericSignature(c.checkNonNullExpression(expr.Expression()), SignatureKindCall)
+		return c.applyCallExpressionTypeHooks(expr, c.getReturnTypeOfSingleNonGenericSignature(c.checkNonNullExpression(expr.Expression()), SignatureKindCall))
 	case ast.IsNewExpression(expr):
 		return c.getReturnTypeOfSingleNonGenericSignature(c.checkNonNullExpression(expr.Expression()), SignatureKindConstruct)
 	case ast.IsAssertionExpression(expr) && !ast.IsConstTypeReference(expr.Type()):
@@ -8562,7 +8562,7 @@ func (c *Checker) checkCallExpression(node *ast.Node, checkMode CheckMode) *Type
 			c.getTypeOfDottedName(node.Expression(), diagnostic)
 		}
 	}
-	return returnType
+	return c.applyCallExpressionTypeHooks(node, returnType)
 }
 
 func (c *Checker) checkDeprecatedSignature(sig *Signature, node *ast.Node) {
