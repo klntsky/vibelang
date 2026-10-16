@@ -18,138 +18,142 @@ Code example count: one example per fenced code block in the source body, includ
 ### Onboarding
 
 - **Start Here**
-  - [Welcome](src/001-onboarding.md) — `v4/onboarding.mdx`
-  - [Why Effect?](src/getting-started/002-why-effect.md) — `v4/getting-started/why-effect.mdx`
+  - [Welcome](src/001-onboarding.md): `v4/onboarding.mdx`
+  - [Why Effect?](src/getting-started/002-why-effect.md): `v4/getting-started/why-effect.mdx`
 - **Learning Path**
-  - [The Effect Type](src/getting-started/003-the-effect-type.md) — `v4/getting-started/the-effect-type.mdx`
-  - [Installation](src/getting-started/004-installation.md) — `v4/getting-started/installation.mdx`
-  - [Creating Effects](src/getting-started/005-creating-effects.md) — `v4/getting-started/creating-effects.mdx`
-  - [Two Types of Errors](src/error-management/006-two-error-types.md) — `v4/error-management/two-error-types.mdx`
-  - [Basic Concurrency](src/concurrency/007-basic-concurrency.md) — `v4/concurrency/basic-concurrency.mdx`
+  - [The Effect Type](src/getting-started/003-the-effect-type.md): `v4/getting-started/the-effect-type.mdx`
+  - [Installation](src/getting-started/004-installation.md): `v4/getting-started/installation.mdx`
+  - [Creating Effects](src/getting-started/005-creating-effects.md): `v4/getting-started/creating-effects.mdx`
+  - [Two Types of Errors](src/error-management/006-two-error-types.md): `v4/error-management/two-error-types.mdx`
+  - [Basic Concurrency](src/concurrency/007-basic-concurrency.md): `v4/concurrency/basic-concurrency.mdx`
 - **Core Concepts**
-  - [Importing Effect](src/getting-started/008-importing-effect.md) — `v4/getting-started/importing-effect.mdx`
-  - [Running Effects](src/getting-started/009-running-effects.md) — `v4/getting-started/running-effects.mdx`
-  - [Using Generators](src/getting-started/010-using-generators.md) — `v4/getting-started/using-generators.mdx`
-  - [Building Pipelines](src/getting-started/011-building-pipelines.md) — `v4/getting-started/building-pipelines.mdx`
-  - [Devtools](src/getting-started/012-devtools.md) — `v4/getting-started/devtools.mdx`
+  - [Importing Effect](src/getting-started/008-importing-effect.md): `v4/getting-started/importing-effect.mdx`
+  - [Running Effects](src/getting-started/009-running-effects.md): `v4/getting-started/running-effects.mdx`
+  - [Using Generators](src/getting-started/010-using-generators.md): `v4/getting-started/using-generators.mdx`
+  - [Building Pipelines](src/getting-started/011-building-pipelines.md): `v4/getting-started/building-pipelines.mdx`
+  - [Devtools](src/getting-started/012-devtools.md): `v4/getting-started/devtools.mdx`
 
 ### Guides
 
-- [Getting Started](src/013-getting-started.md) — `v4/getting-started.mdx`
+- [Getting Started](src/013-getting-started.md): `v4/getting-started.mdx`
 - **Error Management**
-  - [Expected Errors](src/error-management/014-expected-errors.md) — `v4/error-management/expected-errors.mdx`
-  - [Unexpected Errors](src/error-management/015-unexpected-errors.md) — `v4/error-management/unexpected-errors.mdx`
-  - [Fallback](src/error-management/016-fallback.md) — `v4/error-management/fallback.mdx`
-  - [Matching](src/error-management/017-matching.md) — `v4/error-management/matching.mdx`
-  - [Retrying](src/error-management/018-retrying.md) — `v4/error-management/retrying.mdx`
-  - [Timing Out](src/error-management/019-timing-out.md) — `v4/error-management/timing-out.mdx`
-  - [Sandboxing](src/error-management/020-sandboxing.md) — `v4/error-management/sandboxing.mdx`
-  - [Error Accumulation](src/error-management/021-error-accumulation.md) — `v4/error-management/error-accumulation.mdx`
-  - [Error Channel Operations](src/error-management/022-error-channel-operations.md) — `v4/error-management/error-channel-operations.mdx`
-  - [Parallel and Sequential Errors](src/error-management/023-parallel-and-sequential-errors.md) — `v4/error-management/parallel-and-sequential-errors.mdx`
-  - [Yieldable Errors](src/error-management/024-yieldable-errors.md) — `v4/error-management/yieldable-errors.mdx`
+  - [Expected Errors](src/error-management/014-expected-errors.md): `v4/error-management/expected-errors.mdx`
+  - [Unexpected Errors](src/error-management/015-unexpected-errors.md): `v4/error-management/unexpected-errors.mdx`
+  - [Fallback](src/error-management/016-fallback.md): `v4/error-management/fallback.mdx`
+  - [Matching](src/error-management/017-matching.md): `v4/error-management/matching.mdx`
+  - [Retrying](src/error-management/018-retrying.md): `v4/error-management/retrying.mdx`
+  - [Timing Out](src/error-management/019-timing-out.md): `v4/error-management/timing-out.mdx`
+  - [Sandboxing](src/error-management/020-sandboxing.md): `v4/error-management/sandboxing.mdx`
+  - [Error Accumulation](src/error-management/021-error-accumulation.md): `v4/error-management/error-accumulation.mdx`
+  - [Error Channel Operations](src/error-management/022-error-channel-operations.md): `v4/error-management/error-channel-operations.mdx`
+  - [Parallel and Sequential Errors](src/error-management/023-parallel-and-sequential-errors.md): `v4/error-management/parallel-and-sequential-errors.mdx`
+  - [Yieldable Errors](src/error-management/024-yieldable-errors.md): `v4/error-management/yieldable-errors.mdx`
 - **Requirements Management**
-  - [Managing Services](src/requirements-management/025-services.md) — `v4/requirements-management/services.mdx`
-  - [Default Services](src/requirements-management/026-default-services.md) — `v4/requirements-management/default-services.mdx`
-  - [Managing Layers](src/requirements-management/027-layers.md) — `v4/requirements-management/layers.mdx`
-  - [Layer Memoization](src/requirements-management/028-layer-memoization.md) — `v4/requirements-management/layer-memoization.mdx`
+  - [Managing Services](src/requirements-management/025-services.md): `v4/requirements-management/services.mdx`
+  - [Default Services](src/requirements-management/026-default-services.md): `v4/requirements-management/default-services.mdx`
+  - [Managing Layers](src/requirements-management/027-layers.md): `v4/requirements-management/layers.mdx`
+  - [Layer Memoization](src/requirements-management/028-layer-memoization.md): `v4/requirements-management/layer-memoization.mdx`
 - **Resource Management**
-  - [Introduction](src/resource-management/029-introduction.md) — `v4/resource-management/introduction.mdx`
-  - [Scope](src/resource-management/030-scope.md) — `v4/resource-management/scope.mdx`
+  - [Introduction](src/resource-management/029-introduction.md): `v4/resource-management/introduction.mdx`
+  - [Scope](src/resource-management/030-scope.md): `v4/resource-management/scope.mdx`
 - **Observability**
-  - [Logging](src/observability/031-logging.md) — `v4/observability/logging.mdx`
-  - [Metrics](src/observability/032-metrics.md) — `v4/observability/metrics.mdx`
-  - [Tracing](src/observability/033-tracing.md) — `v4/observability/tracing.mdx`
-  - [Tracking Fibers](src/observability/034-tracking-fibers.md) — `v4/observability/tracking-fibers.mdx`
-- [Configuration](src/035-configuration.md) — `v4/configuration.mdx`
-- [Runtime](src/036-runtime.md) — `v4/runtime.mdx`
+  - [Logging](src/observability/031-logging.md): `v4/observability/logging.mdx`
+  - [Metrics](src/observability/032-metrics.md): `v4/observability/metrics.mdx`
+  - [Tracing](src/observability/033-tracing.md): `v4/observability/tracing.mdx`
+  - [Tracking Fibers](src/observability/034-tracking-fibers.md): `v4/observability/tracking-fibers.mdx`
+- [Configuration](src/035-configuration.md): `v4/configuration.mdx`
+- [Runtime](src/036-runtime.md): `v4/runtime.mdx`
 - **Scheduling**
-  - [Using schedules](src/scheduling/037-using-schedules.md) — `v4/scheduling/using-schedules.mdx`
-  - [Choosing and combining schedules](src/scheduling/038-choosing-and-combining-schedules.md) — `v4/scheduling/choosing-and-combining-schedules.mdx`
-  - [Scheduling work with cron](src/scheduling/039-cron.md) — `v4/scheduling/cron.mdx`
-  - [Schedule cookbook](src/scheduling/040-cookbook.md) — `v4/scheduling/cookbook.mdx`
+  - [Using schedules](src/scheduling/037-using-schedules.md): `v4/scheduling/using-schedules.mdx`
+  - [Choosing and combining schedules](src/scheduling/038-choosing-and-combining-schedules.md): `v4/scheduling/choosing-and-combining-schedules.mdx`
+  - [Scheduling work with cron](src/scheduling/039-cron.md): `v4/scheduling/cron.mdx`
+  - [Schedule cookbook](src/scheduling/040-cookbook.md): `v4/scheduling/cookbook.mdx`
 - **State Management**
-  - [Ref](src/state-management/041-ref.md) — `v4/state-management/ref.mdx`
-  - [SynchronizedRef](src/state-management/042-synchronizedref.md) — `v4/state-management/synchronizedref.mdx`
-  - [SubscriptionRef](src/state-management/043-subscriptionref.md) — `v4/state-management/subscriptionref.mdx`
-- [Batching](src/044-batching.md) — `v4/batching.mdx`
+  - [Ref](src/state-management/041-ref.md): `v4/state-management/ref.mdx`
+  - [SynchronizedRef](src/state-management/042-synchronizedref.md): `v4/state-management/synchronizedref.mdx`
+  - [SubscriptionRef](src/state-management/043-subscriptionref.md): `v4/state-management/subscriptionref.mdx`
+- [Batching](src/044-batching.md): `v4/batching.mdx`
 - **Caching**
-  - [Caching Effects](src/caching/045-caching-effects.md) — `v4/caching/caching-effects.mdx`
-  - [Cache](src/caching/046-cache.md) — `v4/caching/cache.mdx`
+  - [Caching Effects](src/caching/045-caching-effects.md): `v4/caching/caching-effects.mdx`
+  - [Cache](src/caching/046-cache.md): `v4/caching/cache.mdx`
 - **Concurrency**
-  - [Fibers](src/concurrency/047-fibers.md) — `v4/concurrency/fibers.mdx`
-  - [Deferred](src/concurrency/048-deferred.md) — `v4/concurrency/deferred.mdx`
-  - [Queue](src/concurrency/049-queue.md) — `v4/concurrency/queue.mdx`
-  - [PubSub](src/concurrency/050-pubsub.md) — `v4/concurrency/pubsub.mdx`
-  - [Semaphore](src/concurrency/051-semaphore.md) — `v4/concurrency/semaphore.mdx`
-  - [Latch](src/concurrency/052-latch.md) — `v4/concurrency/latch.mdx`
+  - [Fibers](src/concurrency/047-fibers.md): `v4/concurrency/fibers.mdx`
+  - [Deferred](src/concurrency/048-deferred.md): `v4/concurrency/deferred.mdx`
+  - [Queue](src/concurrency/049-queue.md): `v4/concurrency/queue.mdx`
+  - [PubSub](src/concurrency/050-pubsub.md): `v4/concurrency/pubsub.mdx`
+  - [Semaphore](src/concurrency/051-semaphore.md): `v4/concurrency/semaphore.mdx`
+  - [Latch](src/concurrency/052-latch.md): `v4/concurrency/latch.mdx`
 - **Stream**
-  - [Introduction](src/stream/053-introduction.md) — `v4/stream/introduction.mdx`
-  - [Creating Streams](src/stream/054-creating.md) — `v4/stream/creating.mdx`
-  - [Consuming Streams](src/stream/055-consuming-streams.md) — `v4/stream/consuming-streams.mdx`
-  - [Error Handling](src/stream/056-error-handling.md) — `v4/stream/error-handling.mdx`
-  - [Operations](src/stream/057-operations.md) — `v4/stream/operations.mdx`
-  - [Resourceful Streams](src/stream/058-resourceful-streams.md) — `v4/stream/resourceful-streams.mdx`
+  - [Introduction](src/stream/053-introduction.md): `v4/stream/introduction.mdx`
+  - [Creating Streams](src/stream/054-creating.md): `v4/stream/creating.mdx`
+  - [Consuming Streams](src/stream/055-consuming-streams.md): `v4/stream/consuming-streams.mdx`
+  - [Error Handling](src/stream/056-error-handling.md): `v4/stream/error-handling.mdx`
+  - [Operations](src/stream/057-operations.md): `v4/stream/operations.mdx`
+  - [Resourceful Streams](src/stream/058-resourceful-streams.md): `v4/stream/resourceful-streams.mdx`
 - **Sink**
-  - [Introduction](src/sink/059-introduction.md) — `v4/sink/introduction.mdx`
-  - [Creating Sinks](src/sink/060-creating.md) — `v4/sink/creating.mdx`
-  - [Operations](src/sink/061-operations.md) — `v4/sink/operations.mdx`
-  - [Leftovers](src/sink/062-leftovers.md) — `v4/sink/leftovers.mdx`
+  - [Introduction](src/sink/059-introduction.md): `v4/sink/introduction.mdx`
+  - [Creating Sinks](src/sink/060-creating.md): `v4/sink/creating.mdx`
+  - [Operations](src/sink/061-operations.md): `v4/sink/operations.mdx`
+  - [Leftovers](src/sink/062-leftovers.md): `v4/sink/leftovers.mdx`
 - **Testing**
-  - [TestClock](src/testing/063-testclock.md) — `v4/testing/testclock.mdx`
+  - [TestClock](src/testing/063-testclock.md): `v4/testing/testclock.mdx`
 - **Code Style**
-  - [Guidelines](src/code-style/064-guidelines.md) — `v4/code-style/guidelines.mdx`
-  - [Dual APIs](src/code-style/065-dual.md) — `v4/code-style/dual.mdx`
-  - [Branded Types](src/code-style/066-branded-types.md) — `v4/code-style/branded-types.mdx`
-  - [Pattern Matching](src/code-style/067-pattern-matching.md) — `v4/code-style/pattern-matching.mdx`
-  - [Excessive Nesting](src/code-style/068-do.md) — `v4/code-style/do.mdx`
-  - [Control Flow Operators](src/code-style/069-control-flow.md) — `v4/code-style/control-flow.mdx`
+  - [Guidelines](src/code-style/064-guidelines.md): `v4/code-style/guidelines.mdx`
+  - [Dual APIs](src/code-style/065-dual.md): `v4/code-style/dual.mdx`
+  - [Branded Types](src/code-style/066-branded-types.md): `v4/code-style/branded-types.mdx`
+  - [Pattern Matching](src/code-style/067-pattern-matching.md): `v4/code-style/pattern-matching.mdx`
+  - [Excessive Nesting](src/code-style/068-do.md): `v4/code-style/do.mdx`
+  - [Control Flow Operators](src/code-style/069-control-flow.md): `v4/code-style/control-flow.mdx`
 - **Data Types**
-  - [BigDecimal](src/data-types/070-bigdecimal.md) — `v4/data-types/bigdecimal.mdx`
-  - [Cause](src/data-types/071-cause.md) — `v4/data-types/cause.mdx`
-  - [Chunk](src/data-types/072-chunk.md) — `v4/data-types/chunk.mdx`
-  - [Data](src/data-types/073-data.md) — `v4/data-types/data.mdx`
-  - [DateTime](src/data-types/074-datetime.md) — `v4/data-types/datetime.mdx`
-  - [Duration](src/data-types/075-duration.md) — `v4/data-types/duration.mdx`
-  - [Result](src/data-types/076-result.md) — `v4/data-types/result.mdx`
-  - [Exit](src/data-types/077-exit.md) — `v4/data-types/exit.mdx`
-  - [HashSet](src/data-types/078-hash-set.md) — `v4/data-types/hash-set.mdx`
-  - [Option](src/data-types/079-option.md) — `v4/data-types/option.mdx`
-  - [Redacted](src/data-types/080-redacted.md) — `v4/data-types/redacted.mdx`
+  - [BigDecimal](src/data-types/070-bigdecimal.md): `v4/data-types/bigdecimal.mdx`
+  - [Cause](src/data-types/071-cause.md): `v4/data-types/cause.mdx`
+  - [Chunk](src/data-types/072-chunk.md): `v4/data-types/chunk.mdx`
+  - [Data](src/data-types/073-data.md): `v4/data-types/data.mdx`
+  - [DateTime](src/data-types/074-datetime.md): `v4/data-types/datetime.mdx`
+  - [Duration](src/data-types/075-duration.md): `v4/data-types/duration.mdx`
+  - [Result](src/data-types/076-result.md): `v4/data-types/result.mdx`
+  - [Exit](src/data-types/077-exit.md): `v4/data-types/exit.mdx`
+  - [HashSet](src/data-types/078-hash-set.md): `v4/data-types/hash-set.mdx`
+  - [Option](src/data-types/079-option.md): `v4/data-types/option.mdx`
+  - [Redacted](src/data-types/080-redacted.md): `v4/data-types/redacted.mdx`
 - **Trait**
-  - [Equal](src/trait/081-equal.md) — `v4/trait/equal.mdx`
-  - [Hash](src/trait/082-hash.md) — `v4/trait/hash.mdx`
+  - [Equal](src/trait/081-equal.md): `v4/trait/equal.mdx`
+  - [Hash](src/trait/082-hash.md): `v4/trait/hash.mdx`
 - **Behaviour**
-  - [Equivalence](src/behaviour/083-equivalence.md) — `v4/behaviour/equivalence.mdx`
-  - [Order](src/behaviour/084-order.md) — `v4/behaviour/order.mdx`
+  - [Equivalence](src/behaviour/083-equivalence.md): `v4/behaviour/equivalence.mdx`
+  - [Order](src/behaviour/084-order.md): `v4/behaviour/order.mdx`
 - **Schema**
-  - [Introduction](src/schema/085-introduction.md) — `v4/schema/introduction.mdx`
-  - [Getting Started](src/schema/086-getting-started.md) — `v4/schema/getting-started.mdx`
-  - [Basic Usage](src/schema/087-basic-usage.md) — `v4/schema/basic-usage.mdx`
-  - [Filters](src/schema/088-filters.md) — `v4/schema/filters.mdx`
-  - [Advanced Usage](src/schema/089-advanced-usage.md) — `v4/schema/advanced-usage.mdx`
-  - [Projections](src/schema/090-projections.md) — `v4/schema/projections.mdx`
-  - [Transformations](src/schema/091-transformations.md) — `v4/schema/transformations.mdx`
-  - [Annotations](src/schema/092-annotations.md) — `v4/schema/annotations.mdx`
-  - [Canonical Codecs](src/schema/093-canonical-codecs.md) — `v4/schema/canonical-codecs.mdx`
-  - [Error Messages](src/schema/094-error-messages.md) — `v4/schema/error-messages.mdx`
-  - [Error Formatters](src/schema/095-error-formatters.md) — `v4/schema/error-formatters.mdx`
-  - [Class APIs](src/schema/096-classes.md) — `v4/schema/classes.mdx`
-  - [Default Constructors](src/schema/097-default-constructors.md) — `v4/schema/default-constructors.mdx`
-  - [Effect Data Types](src/schema/098-effect-data-types.md) — `v4/schema/effect-data-types.mdx`
-  - [Standard Schema](src/schema/099-standard-schema.md) — `v4/schema/standard-schema.mdx`
-  - [Arbitrary](src/schema/100-arbitrary.md) — `v4/schema/arbitrary.mdx`
-  - [JSON Schema](src/schema/101-json-schema.md) — `v4/schema/json-schema.mdx`
-  - [Equivalence](src/schema/102-equivalence.md) — `v4/schema/equivalence.mdx`
-  - [Formatter](src/schema/103-formatter.md) — `v4/schema/formatter.mdx`
-  - [Schema Compilers](src/schema/104-compilers.md) — `v4/schema/compilers.mdx`
+  - [Introduction](src/schema/085-introduction.md): `v4/schema/introduction.mdx`
+  - [Getting Started](src/schema/086-getting-started.md): `v4/schema/getting-started.mdx`
+  - [Basic Usage](src/schema/087-basic-usage.md): `v4/schema/basic-usage.mdx`
+  - [Filters](src/schema/088-filters.md): `v4/schema/filters.mdx`
+  - [Advanced Usage](src/schema/089-advanced-usage.md): `v4/schema/advanced-usage.mdx`
+  - [Projections](src/schema/090-projections.md): `v4/schema/projections.mdx`
+  - [Transformations](src/schema/091-transformations.md): `v4/schema/transformations.mdx`
+  - [Annotations](src/schema/092-annotations.md): `v4/schema/annotations.mdx`
+  - [Canonical Codecs](src/schema/093-canonical-codecs.md): `v4/schema/canonical-codecs.mdx`
+  - [Error Messages](src/schema/094-error-messages.md): `v4/schema/error-messages.mdx`
+  - [Error Formatters](src/schema/095-error-formatters.md): `v4/schema/error-formatters.mdx`
+  - [Class APIs](src/schema/096-classes.md): `v4/schema/classes.mdx`
+  - [Default Constructors](src/schema/097-default-constructors.md): `v4/schema/default-constructors.mdx`
+  - [Effect Data Types](src/schema/098-effect-data-types.md): `v4/schema/effect-data-types.mdx`
+  - [Standard Schema](src/schema/099-standard-schema.md): `v4/schema/standard-schema.mdx`
+  - [Arbitrary](src/schema/100-arbitrary.md): `v4/schema/arbitrary.mdx`
+  - [JSON Schema](src/schema/101-json-schema.md): `v4/schema/json-schema.mdx`
+  - [Equivalence](src/schema/102-equivalence.md): `v4/schema/equivalence.mdx`
+  - [Formatter](src/schema/103-formatter.md): `v4/schema/formatter.mdx`
+  - [Schema Compilers](src/schema/104-compilers.md): `v4/schema/compilers.mdx`
 - **Platform**
-  - [Introduction](src/platform/105-introduction.md) — `v4/platform/introduction.mdx`
-  - [FileSystem](src/platform/106-file-system.md) — `v4/platform/file-system.mdx`
-  - [Path](src/platform/107-path.md) — `v4/platform/path.mdx`
-  - [PlatformLogger](src/platform/108-platformlogger.md) — `v4/platform/platformlogger.mdx`
-  - [Runtime](src/platform/109-runtime.md) — `v4/platform/runtime.mdx`
-  - [Terminal](src/platform/110-terminal.md) — `v4/platform/terminal.mdx`
+  - [Introduction](src/platform/105-introduction.md): `v4/platform/introduction.mdx`
+  - [FileSystem](src/platform/106-file-system.md): `v4/platform/file-system.mdx`
+  - [Path](src/platform/107-path.md): `v4/platform/path.mdx`
+  - [PlatformLogger](src/platform/108-platformlogger.md): `v4/platform/platformlogger.mdx`
+  - [Runtime](src/platform/109-runtime.md): `v4/platform/runtime.mdx`
+  - [Terminal](src/platform/110-terminal.md): `v4/platform/terminal.mdx`
+
+### EffectScript features
+
+- [Producers](src/effectscript-features/112-producers.md)
 
 ## Page inventory
 
@@ -162,14 +166,14 @@ Upstream paths are relative to the repository root. Section names identify the a
 | `apps/web/src/content/docs/v4/getting-started/the-effect-type.mdx` | The Effect Type | Onboarding / Learning Path | success, failure, and service type parameters; distinguishing descriptions from execution; extracting inferred success, error, and dependency types | `Effect.Effect`, `Effect.Success`, `Effect.Error`, `Effect.Services`, `Context.Service` | 2 |
 | `apps/web/src/content/docs/v4/getting-started/installation.mdx` | Installation | Onboarding / Learning Path | runtime prerequisites; adding dependencies manually; setting up JavaScript runtimes; integrating a Vite and React application | `Effect.sync`, `Effect.runSync`, `Console.log` | 45 |
 | `apps/web/src/content/docs/v4/getting-started/creating-effects.mdx` | Creating Effects | Onboarding / Learning Path | constructing successful and failed computations; tracking error types without throwing; wrapping synchronous operations; creating effects from promises; adapting callbacks and cancellation; suspending work for laziness, recursion, and type unification | `Effect.succeed`, `Effect.fail`, `Effect.sync`, `Effect.try`, `Effect.promise`, `Effect.tryPromise`, `Effect.callback`, `Effect.suspend`, `Effect.isEffect` | 22 |
-| `apps/web/src/content/docs/v4/error-management/two-error-types.mdx` | Two Types of Errors | Onboarding / Learning Path | separating recoverable domain failures from defects; choosing which failures belong in the error type | — | 0 |
+| `apps/web/src/content/docs/v4/error-management/two-error-types.mdx` | Two Types of Errors | Onboarding / Learning Path | separating recoverable domain failures from defects; choosing which failures belong in the error type | None | 0 |
 | `apps/web/src/content/docs/v4/concurrency/basic-concurrency.mdx` | Basic Concurrency | Onboarding / Learning Path | running work sequentially or with bounded or unbounded parallelism; interrupting computations; attaching interruption cleanup; propagating cancellation across concurrent work; racing computations under different winner rules; inspecting the winning result | `Effect.all`, `Effect.interrupt`, `Effect.onInterrupt`, `Effect.race`, `Effect.raceAll`, `Effect.raceFirst` | 19 |
 | `apps/web/src/content/docs/v4/getting-started/importing-effect.mdx` | Importing Effect | Onboarding / Core Concepts | installing the core package; choosing module and namespace imports; composing standalone functions; eliminating unused imports during bundling; extending programs with reusable operators | `Effect.succeed`, `pipe` | 8 |
 | `apps/web/src/content/docs/v4/getting-started/running-effects.mdx` | Running Effects | Onboarding / Core Concepts | executing synchronous computations; running promise-based computations; collecting complete execution results; starting and interrupting a fiber; selecting application execution boundaries | `Effect.runSync`, `Effect.runSyncExit`, `Effect.runPromise`, `Effect.runPromiseExit`, `Effect.runFork`, `Fiber.interrupt` | 8 |
 | `apps/web/src/content/docs/v4/getting-started/using-generators.mdx` | Using Generators | Onboarding / Core Concepts | sequencing effects with generator syntax; relating generators to async functions; expressing branches and loops; yielding failures and stopping early; retaining the receiver in generator methods | `Effect.gen`, `Effect.fail`, `Effect.promise`, `Effect.succeed` | 9 |
 | `apps/web/src/content/docs/v4/getting-started/building-pipelines.mdx` | Building Pipelines | Onboarding / Core Concepts | composing reusable function pipelines; mapping and replacing successes; sequencing dependent computations; integrating optional and result values; observing intermediate results; collecting multiple computations; avoiding discarded effects | `pipe`, `Effect.map`, `Effect.as`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap`, `Effect.all`, `Effect.fromOption` | 19 |
 | `apps/web/src/content/docs/v4/getting-started/devtools.mdx` | Devtools | Onboarding / Core Concepts | installing language tooling; inspecting inferred program information; using diagnostics, completions, and refactors; configuring compiler checks; integrating lint and build tools; debugging in supported editors | `Effect.log` | 36 |
-| `apps/web/src/content/docs/v4/getting-started.mdx` | Getting Started | Guides / root pages | navigating guides and reference material; selecting a documentation version; finding subjects and in-page navigation; using documentation with language models; community entry points | — | 0 |
+| `apps/web/src/content/docs/v4/getting-started.mdx` | Getting Started | Guides / root pages | navigating guides and reference material; selecting a documentation version; finding subjects and in-page navigation; using documentation with language models; community entry points | None | 0 |
 | `apps/web/src/content/docs/v4/error-management/expected-errors.mdx` | Expected Errors | Guides / Error Management | constructing typed failures; tracking several domain error cases; converting failures into result or optional values; recovering all or selected failures; filtering tagged and nested error reasons | `Effect.fail`, `Effect.result`, `Effect.option`, `Effect.catch`, `Effect.catchTag`, `Effect.catchTags`, `Effect.catchIf`, `Effect.catchFilter`, `Data.TaggedError` | 10 |
 | `apps/web/src/content/docs/v4/error-management/unexpected-errors.mdx` | Unexpected Errors | Guides / Error Management | creating defects; promoting typed failures to defects; examining full execution results; recovering defects or complete failure causes | `Effect.die`, `Effect.orDie`, `Effect.exit`, `Effect.catchDefect`, `Effect.catchCause`, `Cause.isDieReason` | 6 |
 | `apps/web/src/content/docs/v4/error-management/fallback.mdx` | Fallback | Guides / Error Management | recovering with another computation; supplying a default success; trying alternatives until one succeeds | `Effect.catch`, `Effect.orElseSucceed`, `Effect.firstSuccessOf` | 3 |
@@ -268,6 +272,14 @@ Upstream paths are relative to the repository root. Section names identify the a
 | `apps/web/src/content/docs/v4/platform/runtime.mdx` | Runtime | Guides / Platform | running a platform application entry point; configuring runtime launch behavior; handling completion and failures | `NodeRuntime.runMain` | 4 |
 | `apps/web/src/content/docs/v4/platform/terminal.mdx` | Terminal | Guides / Platform | requesting terminal services; writing standard output; reading standard input; handling terminal quit errors; building an interactive guessing program | `Terminal.Terminal`, `NodeTerminal.layer`, `Terminal.QuitError` | 4 |
 
+## EffectScript feature inventory
+
+These original pages supplement the 110 mirrored Effect pages. They have no upstream counterparts.
+
+| Local page | Topics |
+| --- | --- |
+| [Producers](src/effectscript-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
+
 ## Counts by sidebar section
 
 | View | Section or root page | Pages |
@@ -296,7 +308,8 @@ Upstream paths are relative to the repository root. Section names identify the a
 | Guides | Behaviour | 2 |
 | Guides | Schema | 20 |
 | Guides | Platform | 6 |
-| **Total** | | **110** |
+| EffectScript features | Original language guides | 1 |
+| **Total** | | **111** |
 
 ## Counts by upstream directory
 
