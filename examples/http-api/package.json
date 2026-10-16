@@ -1,0 +1,20 @@
+{
+  "name": "effectscript-example-http-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esc -p .",
+    "start": "node dist/run.js",
+    "test": "esc -p . && vitest run"
+  },
+  "dependencies": {
+    "effect": "4.0.5",
+    "@effect/platform-node": "4.0.5",
+    "@effectscript/runtime": "file:../../packages/runtime"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.5",
+    "vitest": "5.0.5",
+    "@effectscript/compiler": "file:../../packages/compiler"
+  }
+}
