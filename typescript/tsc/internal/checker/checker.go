@@ -10368,7 +10368,7 @@ func (c *Checker) checkFunctionExpressionOrObjectLiteralMethod(node *ast.Node, c
 				return returnOnlyType
 			}
 		}
-		return c.anyFunctionType
+		return c.skippedFunctionType(node)
 	}
 	// Grammar checking
 	hasGrammarError := c.checkGrammarFunctionLikeDeclaration(node)
