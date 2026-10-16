@@ -118,6 +118,8 @@ type analyzer struct {
 	plain                 map[*ast.Node]plainState // function declarations that compile to plain JavaScript
 	programEffect         *checker.Type            // effect's Effect interface, found in the program's files
 	programEffectSearched bool
+
+	callbacks map[*ast.Node]*callbackContracts // functions with uncontracted callback parameters (callbackcontracts.go)
 }
 
 type analyzerKey struct{}
@@ -139,6 +141,7 @@ func analyzerFor(c *checker.Checker) *analyzer {
 
 			conversions: map[*ast.Node]*valueState{},
 			plain:       map[*ast.Node]plainState{},
+			callbacks:   map[*ast.Node]*callbackContracts{},
 		}
 	}).(*analyzer)
 }
