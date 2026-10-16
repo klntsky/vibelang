@@ -157,3 +157,12 @@ func (c *Checker) applyDiagnosticsFilterHooks(file *ast.SourceFile, diagnostics 
 	}
 	return diagnostics
 }
+
+// GetTypeOfExpressionBeforeWidening returns the type the checker gives the
+// expression node, keeping literal freshness: TypeScript widens the type of
+// "bad" in `return "bad"` to string in an inferred return type, but not the
+// type of a variable declared as the literal type "bad". Language extensions
+// that infer a type from expressions widen it the same way.
+func (c *Checker) GetTypeOfExpressionBeforeWidening(node *ast.Node) *Type {
+	return c.checkExpressionCached(node)
+}
