@@ -20,11 +20,10 @@ func inferredReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *chec
 	if !a.isEffect(fn) {
 		return t
 	}
-	info := a.effectOf(fn)
-	if info == nil || info.effect == nil {
-		return t
+	if effect := a.effectTypeOf(fn, t); effect != nil {
+		return effect
 	}
-	return c.NewTypeReference(info.effect, []*checker.Type{t, c.GetUnionType(info.errors), c.GetUnionType(info.requirements)})
+	return t
 }
 
 // effectInfo lists what running a function's body adds to the error and

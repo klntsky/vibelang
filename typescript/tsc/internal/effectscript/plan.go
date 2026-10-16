@@ -132,7 +132,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := forEachCallInBody(fn, a.performs)
+	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
 }

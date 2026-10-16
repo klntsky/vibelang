@@ -36,12 +36,12 @@ func isEffectScriptFile(file *ast.SourceFile) bool {
 }
 
 // isLowerable reports whether node is a function that the lowering can turn
-// into an Effect: a function declaration, function expression, or arrow
-// function with a body, declared in an .es file, that is neither async nor a
-// generator. Methods, accessors, and constructors stay as they are for now.
+// into an Effect: a function declaration, function expression, arrow
+// function, or method with a body, declared in an .es file, that is neither
+// async nor a generator. Accessors and constructors stay as they are.
 func isLowerable(node *ast.Node) bool {
 	switch node.Kind {
-	case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction:
+	case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
 	default:
 		return false
 	}

@@ -54,6 +54,8 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 		return tx.visitServiceClass(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
+	case node.Kind == ast.KindMethodDeclaration && tx.plan.isEffect(node):
+		return tx.lowerMethod(node)
 	case tx.plan.isEffect(node):
 		return tx.lowerFunction(node)
 	case tx.plan.isProgram(node):

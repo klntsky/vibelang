@@ -38,7 +38,7 @@ const DirectoryLive = Layer.succeed(Directory, {
 function makeUsers() {
   const directory = Directory()
   const impl: Users = {
-    find: (id: string) => {
+    find(id) {
       const user = directory.lookup(id)
       if (user === undefined) return Effect.fail(new UserNotFound({ id }))
       return Effect.succeed(user)
@@ -60,6 +60,20 @@ class UsersInMemory implements Users {
   }
 }
 
+// A method that implements a service member compiles to an Effect even when
+// its body runs nothing, in a class and in an object literal.
+class UsersFake implements Users {
+  find(id: string) {
+    return { id, name: `fake ${id}` }
+  }
+}
+
+const UsersGrace = Layer.succeed(Users, {
+  find(id) {
+    return { id, name: "Grace" }
+  }
+})
+
 export function greet(id: string) {
   const user = Users.find(id)
   return Settings.shout(`${Settings().greeting}, ${user.name}`)
@@ -74,8 +88,10 @@ const live = Effect.provide(greet("1"), Layer.mergeAll(Layer.provide(UsersLive, 
 const memory = Effect.provide(greet("7"), Layer.mergeAll(Layer.succeed(Users, new UsersInMemory()), Settings.layer))
 const direct = Effect.provide(lookupBoth("7"), Layer.succeed(Users, new UsersInMemory()))
 const missing = Effect.flip(Effect.provide(greet("9"), Layer.mergeAll(Layer.succeed(Users, new UsersInMemory()), Settings.layer)))
+const fake = Effect.provide(lookupBoth("3"), Layer.succeed(Users, new UsersFake()))
+const grace = Effect.provide(lookupBoth("4"), UsersGrace)
 
-// expect-result: {"live":"Welcome, Ada!","memory":"Welcome, Grace!","direct":"Grace","missing":"UserNotFound"}
+// expect-result: {"live":"Welcome, Ada!","memory":"Welcome, Grace!","direct":"Grace","missing":"UserNotFound","fake":"fake 3","grace":"Grace"}
 export function main() {
-  return { live: live(), memory: memory(), direct: direct(), missing: missing()._tag }
+  return { live: live(), memory: memory(), direct: direct(), missing: missing()._tag, fake: fake(), grace: grace() }
 }
