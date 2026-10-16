@@ -46,7 +46,8 @@ compiler is the TypeScript 7.1 checker, with ordinary TypeScript semantics for
 `esc` accepts TypeScript compiler flags: bare `esc` checks and emits,
 `--noEmit` checks, `--watch` watches, and `-b` builds references. The same native
 binary exposes `--lsp --stdio` and the upstream `--api` transport. The current
-Vite plugin uses subprocess compilation instead of the API transport (D31).
+Vite plugin uses subprocess compilation instead of the API transport (D105,
+amending D31).
 
 #### Building and testing
 
@@ -106,12 +107,13 @@ source changes. Requests share compilation. It emits JavaScript and source
 maps into its own directory under `node_modules/.effectscript/`, reports errors
 in the terminal and overlay, and invalidates all loaded `.es` modules and their
 importers after an edit. It does not compare exported contracts or use the
-API transport yet. Its README documents `project` and `compiler` overrides.
+API transport yet. Sources must stay under Vite's root so emit paths and source maps agree (D107). Its README documents `project` and `compiler` overrides.
 
 #### The editor
 
 The server is the fork's own, `esc --lsp --stdio`, from the project's compiler
-(D32). Setup builds a local `.vsix` when the editor package is present and
+(D32). The same binary identifies as `EffectScript 0.0.1 (TypeScript 7.1.0-dev)`
+with `--version`; there is no separate compiler entry point (D75). Setup builds a local `.vsix` when the editor package is present and
 prints install commands:
 
 ```sh
@@ -123,14 +125,27 @@ Setup does not install the extension automatically. If it reports the editor
 package is absent, update the checkout and rerun setup. Open the scaffolded
 project directory so the extension finds its local compiler.
 
+The extension finds `esc` from `effectscript.server.path`, then the nearest
+`node_modules/.bin/esc`, then PATH. It requires a trusted workspace (D79).
+Its grammar reuses VS Code's TypeScript grammar under `source.effectscript`,
+with inner `.ts` scopes so existing themes apply.
+
+For `.ts` ownership, disable VS Code's built-in TypeScript extension, or use
+Cursor's `useTsgo` setting (D76). The extension serves `.es` while the built-in
+TypeScript extension remains active, but leaves `.ts` to that extension.
+Do not set `typescript.validate.enable` to false: this server reads that
+setting too and would hide its EffectScript diagnostics.
+
 Other editors can configure their LSP client for `.es` and `.ts`, with
 `tsconfig.json` as the root marker, and disable their other TypeScript server
 for this project. Add `*.es linguist-language=TypeScript` to `.gitattributes`
 for GitHub highlighting.
 
-The checker supplies inferred Effect contracts, call success types, and
-service member types to the upstream LSP. D33's separate control-class hover
-text, catch-specific completions, mechanical ES code actions, and migration
+Hover shows a running call's success value as "Runs here and returns `T`",
+and a plain helper's direct signature alongside its TypeScript-facing type
+(D77). Prelude names and service members complete in scope (D78). TypeScript
+files retain TypeScript hover behavior. D33's control-class hover text,
+catch-specific completions, mechanical ES code actions, and migration
 refactors remain design targets. Diagnostic messages include repair suggestions
 as text; the current compiler does not implement those editor refactors.
 
@@ -141,9 +156,9 @@ Every ES diagnostic is an error, except two. Each error marks code that has no m
 | Option in `compilerOptions.effectscript` | Values | Default |
 | --- | --- | --- |
 | `diagnostics` | `"ES2004"` and `"ES4403"`, each `"error"`, `"warning"`, or `"off"` | ES2004 `"warning"`, ES4403 `"error"` |
-| `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every function that compiles to frames does | `"none"` |
+| `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas do not (D104) | `"none"` |
 
-`esc` exits non-zero when any error is reported. Diagnostics print at `.es` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
+`esc` exits non-zero when any error is reported. The CLI prints `error ES1003:`; LSP sends source `ES` and numeric code `1003`, which VS Code displays as `ES(1003)` (D61). Diagnostics print at `.es` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
 
 The diagnostic registry reserves these codes. This table describes each rule
 and the intended repair (D33, D53). A registry entry does not prove that its
@@ -153,18 +168,18 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | Code | What it reports | Suggested repair | Chapter |
 | --- | --- | --- | --- |
 | ES1001 | A module's top level runs a program | Export a function instead | 13 |
-| ES1002 | A generator-based API (`Effect.gen`) in a `.es` file, where `function*` declares a producer | Convert the function | 10 |
+| ES1002 | A `function*` passed to an API whose parameter returns a library Generator or Iterator, such as `Effect.gen` (D64) | Convert the function | 10 |
 | ES1003 | `async`, `await`, `for await`, or `await using`: a call already waits | Remove them | 10 |
-| ES1004 | `using` at a module's top level | Move it into a function | 6 |
+| ES1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
 | ES1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
 | ES2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | ES2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
-| ES2003 | A return annotation on a function with a body that is not `Effect<A, E, R>` with all three slots, each checked or written `infer Name` | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
+| ES2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
 | ES2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
 | ES2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | ES2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | ES2101 | A declaration without a body that has no full contract | Write `Effect<T, never, never>` | 14 |
-| ES2102 | A recursive function whose A depends on its own result | Write the contract | 14 |
+| ES2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
 | ES3001 | Two services share a key | Rename one | 4 |
 | ES3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | ES3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -179,7 +194,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | ES4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | ES4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | ES4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of` | 10, 16 |
-| ES4401 | A plain TypeScript call with no boundary or trusted contract | Wrap it in `Effect.try`, or tag the declaration `@effectscript trusted` | 10 |
+| ES4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `Effect.try`, or tag the declaration `@effectscript trusted` | 10 |
 | ES4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | ES4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 
