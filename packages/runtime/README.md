@@ -102,7 +102,8 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$forOf` | Handle producer yields and lower loop completion records | D26 |
 | `$forStream` | Consume an Effect Stream and stop pulling when the loop exits | D26 |
 | `$toStream` | Adapt a producer to a Stream with fiber-owned cleanup | D26 |
-| `$trusted` | Turn listed exception tags or class names into expected failures | D23 |
+| `$trusted` | Run a trusted call: an instance of a listed class is an expected failure, any other exception a defect | D5, D23 |
+| `$trustedPlain` | The same in a function that compiles to plain JavaScript: throw a listed exception as `$expected` for its `catch` | D54 |
 | `Effect` | Supply the prelude Effect namespace | D4 |
 | `Layer` | Supply the prelude Layer namespace | D4 |
 | `Schema` | Supply the prelude Schema namespace | D4 |
@@ -128,9 +129,9 @@ to check that loops run in constant stack.
 
 The extraction preserves the prototype's helper names and execution behavior.
 The compiler orders `wire` arguments with dependents before providers; the
-runtime itself does not inspect or sort Layer dependencies. `$trusted` currently
-accepts exception tag or constructor-name strings; it does not resolve exception
-constructors. The existing `Continuation<X, A, E>` type parameters are retained.
+runtime itself does not inspect or sort Layer dependencies. `$trusted` tests
+`instanceof` against the classes the compiler passes (D51), where the prototype
+matched exception tags and constructor names. The existing `Continuation<X, A, E>` type parameters are retained.
 
 The producer-to-Stream adapter retains the prototype's one-element buffer. The
 stricter zero-capacity handoff described by D26 remains follow-up work. Direct

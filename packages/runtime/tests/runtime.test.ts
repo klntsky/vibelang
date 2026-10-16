@@ -3,7 +3,7 @@ import { Cause, Context, Deferred, Fiber, Stream } from "effect"
 import {
   $bind, $catch, $caught, $control, $expected, $finally, $fork, $forOf, $forStream, $normal,
   $produce, $program, $programs, $reference, $region, $service, $tailResume,
-  $tailResumeWith, $toStream, $trusted, $using, $yield, abandon, Control,
+  $tailResumeWith, $toStream, $trusted, $trustedPlain, $using, $yield, abandon, Control,
   Effect, Exit, fork, handle, handoff, Layer, pipe, Producer, resume,
   resumeWith, runMain, Schema, Scope, suspend, TaggedError, wire
 } from "@effectscript/runtime"
@@ -179,13 +179,30 @@ test("producers: a producer is consumed through Stream and forStream stops at br
   expect(seen).toEqual([1])
 })
 
-test("boundaries: trusted throws become failures only for declared exceptions", () => {
-  const trusted = $trusted<SyntaxError>()
-  const failure = Effect.runSyncExit(trusted(() => { throw new SyntaxError("bad") }, ["SyntaxError"]))
+test("boundaries: trusted throws become failures only for instances of the listed classes", () => {
+  class Named extends Error {
+    override readonly name = "SyntaxError"
+  }
+  const failure = Effect.runSyncExit($trusted(() => { throw new SyntaxError("bad") }, [SyntaxError]))
   expect(Exit.isFailure(failure) && Cause.hasFails(failure.cause)).toBe(true)
-  const defect = Effect.runSyncExit(trusted(() => { throw new TypeError("bad") }, ["SyntaxError"]))
+  const defect = Effect.runSyncExit($trusted(() => { throw new TypeError("bad") }, [SyntaxError]))
   expect(Exit.isFailure(defect) && Cause.hasDies(defect.cause)).toBe(true)
-  expect(Effect.runSync(trusted(() => 42, []))).toBe(42)
+  const sameName = Effect.runSyncExit($trusted(() => { throw new Named("bad") }, [SyntaxError]))
+  expect(Exit.isFailure(sameName) && Cause.hasDies(sameName.cause)).toBe(true)
+  expect(Effect.runSync($trusted(() => 42, []))).toBe(42)
+})
+
+test("boundaries: in plain code, listed exceptions reach the catch as expected failures", () => {
+  const caught = (thunk: () => unknown) => {
+    try {
+      return $trustedPlain(thunk, [SyntaxError])
+    } catch (e) {
+      return $caught(e)
+    }
+  }
+  expect(caught(() => 42)).toBe(42)
+  expect(caught(() => JSON.parse("{"))).toBeInstanceOf(SyntaxError)
+  expect(() => caught(() => { throw new TypeError("bad") })).toThrow(TypeError)
 })
 
 test("prelude: exports Effect's modules, pipe, and TaggedError without wrappers", () => {

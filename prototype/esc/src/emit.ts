@@ -146,6 +146,7 @@ export const rewriteEffectTypeText = (text: string) => text.replace(EFFECT_TYPE_
 
 export class FileEmitter {
   out = ""
+  private readonly throwsImports = new Map<string, string>()
   maps: Emitted["maps"] = []
   callProbes = new Map<ts.CallExpression, Span>()
   calleeProbes = new Map<ts.CallExpression, Span>()
@@ -312,6 +313,11 @@ export class FileEmitter {
     }
     this.push(this.text.slice(pos))
     this.push("\n")
+    // Imports are hoisted, so the classes `$trusted` tests can follow the body without moving its spans.
+    for (const [key, local] of this.throwsImports) {
+      const at = key.lastIndexOf("#")
+      this.push(`import { ${key.slice(at + 1)} as ${local} } from ${JSON.stringify(key.slice(0, at))}\n`)
+    }
     const bodyEnd = this.out.length
     this.collectClaims()
     if (this.o.check) this.emitClaimProbes()
@@ -867,8 +873,7 @@ export class FileEmitter {
     else if (wrap === "bind") this.push("(yield* $bind(")
     else if (trusted) {
       // D23: the declared exceptions become typed failures; any other exception stays a defect.
-      const types = trusted.map((t) => `import(${JSON.stringify(this.relTo(t.file))}).${t.name}`).join(" | ")
-      this.push(`(yield* $trusted<${types}>()(() => `)
+      this.push(`(yield* $trusted(() => `)
     }
     const rs = this.out.length
     const serviceRecv = f ? f.serviceReceiver : ts.isPropertyAccessExpression(callee) && this.syntacticService(callee.expression) !== undefined
@@ -913,8 +918,20 @@ export class FileEmitter {
     this.callProbes.set(call, { start: rs, end: this.out.length })
     if (wrap === "yield") this.push(")")
     else if (wrap === "bind") this.push("))")
-    else if (trusted) this.push(`, ${JSON.stringify(trusted.map((t) => t.name))}))`)
+    else if (trusted) this.push(`, [${trusted.map((t) => this.throwsClass(t)).join(", ")}]))`)
     this.maps.push({ gs, ge: this.out.length, node: call })
+  }
+
+  /** D51: a `@throws` class, imported from the trusted function's module so `$trusted` can test `instanceof`. */
+  private throwsClass(t: { name: string; file: string }) {
+    const key = `${this.relTo(t.file)}#${t.name}`
+    let local = this.throwsImports.get(key)
+    if (!local) {
+      const taken = this.o.file.topNames.has(t.name) || [...this.throwsImports.values()].includes(t.name)
+      local = taken ? `$throws${this.throwsImports.size}_${t.name}` : t.name
+      this.throwsImports.set(key, local)
+    }
+    return local
   }
 
   /** D5, D23: `Effect.try`, `Effect.tryPromise`, `Effect.sync`, and `Effect.promise` are the explicit boundary to plain code. */
