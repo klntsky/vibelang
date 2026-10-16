@@ -1,0 +1,17 @@
+{
+  "name": "effectscript-example-hello",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esc -p .",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "effect": "4.0.5",
+    "@effect/platform-node": "4.0.5",
+    "@effectscript/runtime": "file:../../packages/runtime"
+  },
+  "devDependencies": {
+    "@effectscript/compiler": "file:../../packages/compiler"
+  }
+}
