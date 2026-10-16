@@ -7,10 +7,12 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
 
-// QuickInfoHook returns a Markdown paragraph that a hover on node shows below
-// the node's quick info, or "" to add nothing. c is the checker for node's
-// file, held for the duration of the call.
-type QuickInfoHook func(c *checker.Checker, node *ast.Node) string
+// QuickInfoHook can change a hover on node. A text that is not "" replaces
+// the quick info line, such as `function add(a: number, b: number): number`.
+// A paragraph that is not "" is Markdown that the hover shows below it,
+// before the documentation. c is the checker for node's file, held for the
+// duration of the call.
+type QuickInfoHook func(c *checker.Checker, node *ast.Node) (text string, paragraph string)
 
 var quickInfoHooks []QuickInfoHook
 
@@ -21,20 +23,24 @@ func RegisterQuickInfoHook(hook QuickInfoHook) {
 	quickInfoHooks = append(quickInfoHooks, hook)
 }
 
-// withQuickInfoHooks puts the paragraphs the hooks return for node in front of
-// documentation.
-func withQuickInfoHooks(c *checker.Checker, node *ast.Node, documentation string) string {
+// withQuickInfoHooks applies the hooks to a hover on node, whose quick info
+// line and documentation TypeScript computed.
+func withQuickInfoHooks(c *checker.Checker, node *ast.Node, quickInfo string, documentation string) (string, string) {
 	var paragraphs []string
 	for _, hook := range quickInfoHooks {
-		if text := hook(c, node); text != "" {
-			paragraphs = append(paragraphs, text)
+		text, paragraph := hook(c, node)
+		if text != "" {
+			quickInfo = text
+		}
+		if paragraph != "" {
+			paragraphs = append(paragraphs, paragraph)
 		}
 	}
 	if len(paragraphs) == 0 {
-		return documentation
+		return quickInfo, documentation
 	}
 	if documentation != "" {
 		paragraphs = append(paragraphs, documentation)
 	}
-	return strings.Join(paragraphs, "\n\n")
+	return quickInfo, strings.Join(paragraphs, "\n\n")
 }

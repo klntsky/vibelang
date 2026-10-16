@@ -69,7 +69,7 @@ func (l *LanguageService) ProvideHover(ctx context.Context, params *lsproto.Hove
 			done()
 			continue
 		}
-		documentation = withQuickInfoHooks(c, rangeNode, documentation)
+		quickInfo, documentation = withQuickInfoHooks(c, rangeNode, quickInfo, documentation)
 		rangeFile := ast.GetSourceFileOfNode(rangeNode)
 		textRange := getRangeOfNode(rangeNode, rangeFile, nil /*endNode*/)
 		hoverRange, hoverFidelity := l.converters.ToLSPRangeForFeature(rangeFile, textRange, spanmap.FeatureHover)
