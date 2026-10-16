@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/printer"
 	"github.com/microsoft/TypeScript/tsc/internal/transformers"
 )
 
@@ -67,3 +68,36 @@ func implicitImports(file *ast.SourceFile) []string {
 	}
 	return names
 }
+
+// DeclarationTransformerHook returns a transform for the declaration file
+// emitted for sourceFile, which runs after TypeScript's own declaration
+// transforms, or nil to leave the declaration file alone.
+type DeclarationTransformerHook func(resolver printer.EmitResolver, sourceFile *ast.SourceFile) func(declarations *ast.SourceFile) *ast.SourceFile
+
+var declarationTransformerHooks []DeclarationTransformerHook
+
+// RegisterDeclarationTransformerHook adds hook to every declaration emit.
+// Call it only from the init function of an in-tree package that tsc/cmd/tsc
+// imports; registration is not synchronized.
+func RegisterDeclarationTransformerHook(hook DeclarationTransformerHook) {
+	declarationTransformerHooks = append(declarationTransformerHooks, hook)
+}
+
+func getHookDeclarationTransformers(resolver printer.EmitResolver, sourceFile *ast.SourceFile) []declarationTransformer {
+	var tx []declarationTransformer
+	for _, hook := range declarationTransformerHooks {
+		if transform := hook(resolver, sourceFile); transform != nil {
+			tx = append(tx, hookDeclarationTransformer(transform))
+		}
+	}
+	return tx
+}
+
+// hookDeclarationTransformer adapts a hook's transform to the emitter.
+type hookDeclarationTransformer func(declarations *ast.SourceFile) *ast.SourceFile
+
+func (t hookDeclarationTransformer) TransformSourceFile(declarations *ast.SourceFile) *ast.SourceFile {
+	return t(declarations)
+}
+
+func (t hookDeclarationTransformer) GetDiagnostics() []*ast.Diagnostic { return nil }

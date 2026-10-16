@@ -61,10 +61,10 @@ type declarationTransformer interface {
 
 func (e *emitter) getDeclarationTransformers(emitResolver printer.EmitResolver, sourceFile *ast.SourceFile, declarationFilePath tspath.RootedFilePath) []declarationTransformer {
 	forceDtsEmit := e.emitOnly == EmitOnlyBuilderSignature || e.forceEmit && e.emitOnly == EmitOnlyDts
-	return []declarationTransformer{
+	return append([]declarationTransformer{
 		declarations.NewDeclarationTransformer(e.host, emitResolver, e.host.Options(), declarationFilePath),
 		declarations.NewSupplementalReferencesTransformer(e.host, sourceFile, declarationFilePath, forceDtsEmit),
-	}
+	}, getHookDeclarationTransformers(emitResolver, sourceFile)...)
 }
 
 func (e *emitter) runScriptTransformers(emitResolver printer.EmitResolver, sourceFile *ast.SourceFile) *ast.SourceFile {
