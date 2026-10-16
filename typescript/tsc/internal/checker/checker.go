@@ -1546,6 +1546,7 @@ func (c *Checker) createNameResolver() *binder.NameResolver {
 		OnPropertyWithInvalidInitializer: c.checkAndReportErrorForInvalidInitializer,
 		OnFailedToResolveSymbol:          c.onFailedToResolveSymbol,
 		OnSuccessfullyResolvedSymbol:     c.onSuccessfullyResolvedSymbol,
+		ResolveBeforeGlobals:             c.resolveBeforeGlobals,
 	}
 }
 

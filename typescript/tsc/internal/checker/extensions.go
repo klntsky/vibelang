@@ -166,3 +166,27 @@ func (c *Checker) applyDiagnosticsFilterHooks(file *ast.SourceFile, diagnostics 
 func (c *Checker) GetTypeOfExpressionBeforeWidening(node *ast.Node) *Type {
 	return c.checkExpressionCached(node)
 }
+
+// NameResolutionHook can supply a symbol for name, which no scope enclosing
+// location declares, before the checker searches the global scope. It returns
+// nil when it has nothing to supply. It runs for every name that reaches the
+// global scope, so it must be cheap.
+type NameResolutionHook func(c *Checker, location *ast.Node, name string, meaning ast.SymbolFlags) *ast.Symbol
+
+var nameResolutionHooks []NameResolutionHook
+
+// RegisterNameResolutionHook adds hook to every checker. Call it only from the
+// init function of an in-tree package that tsc/cmd/tsc imports; registration
+// is not synchronized.
+func RegisterNameResolutionHook(hook NameResolutionHook) {
+	nameResolutionHooks = append(nameResolutionHooks, hook)
+}
+
+func (c *Checker) resolveBeforeGlobals(location *ast.Node, name string, meaning ast.SymbolFlags) *ast.Symbol {
+	for _, hook := range nameResolutionHooks {
+		if symbol := hook(c, location, name, meaning); symbol != nil {
+			return symbol
+		}
+	}
+	return nil
+}

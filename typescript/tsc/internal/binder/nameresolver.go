@@ -20,6 +20,9 @@ type NameResolver struct {
 	OnPropertyWithInvalidInitializer func(location *ast.Node, name string, declaration *ast.Node, result *ast.Symbol) bool
 	OnFailedToResolveSymbol          func(location *ast.Node, name string, meaning ast.SymbolFlags, nameNotFoundMessage *diagnostics.Message)
 	OnSuccessfullyResolvedSymbol     func(location *ast.Node, result *ast.Symbol, meaning ast.SymbolFlags, lastLocation *ast.Node, associatedDeclarationForContainingInitializerOrBindingName *ast.Node, withinDeferredContext bool)
+	// ResolveBeforeGlobals, when set, can supply a symbol for a name that no
+	// scope enclosing location declares, before the global scope is searched.
+	ResolveBeforeGlobals func(location *ast.Node, name string, meaning ast.SymbolFlags) *ast.Symbol
 }
 
 func (r *NameResolver) Resolve(location *ast.Node, name string, meaning ast.SymbolFlags, nameNotFoundMessage *diagnostics.Message, isUse bool, excludeGlobals bool) *ast.Symbol {
@@ -323,6 +326,9 @@ loop:
 		if r.SymbolReferenced != nil {
 			r.SymbolReferenced(result, meaning)
 		}
+	}
+	if result == nil && r.ResolveBeforeGlobals != nil && originalLocation != nil {
+		result = r.ResolveBeforeGlobals(originalLocation, name, meaning)
 	}
 	if result == nil && !excludeGlobals {
 		result = r.lookup(r.Globals, name, meaning|ast.SymbolFlagsGlobalLookup)
