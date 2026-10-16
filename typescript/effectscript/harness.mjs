@@ -22,7 +22,9 @@
 // the same path under out/. A runnable case with expected/stdout.txt compares
 // with that file. A case of any kind with expected/diagnostics.txt passes only
 // when tsc reports exactly the diagnostics it lists, one per line, in tsc's
-// order and without message text: `main.es(5,23): error ES1001`.
+// order and without message text: `main.es(5,23): error ES1001`. A case with
+// expected/messages.txt passes only when each of its lines appears in what
+// tsc printed, which checks a diagnostic's text.
 //
 // A case is pending when it has a file named `pending` whose first word names
 // the lane that owns the missing feature and whose rest says what is missing.
@@ -188,6 +190,15 @@ async function check(name) {
     }
   }
 
+  const messagesFile = path.join(dir, "expected", "messages.txt")
+  if (fs.existsSync(messagesFile)) {
+    const lines = fs.readFileSync(messagesFile, "utf8").split("\n").map((line) => line.trim()).filter(Boolean)
+    const missing = lines.filter((line) => !output.includes(line))
+    if (missing.length > 0) {
+      return { ok: false, detail: "tsc did not print every line of expected/messages.txt", log: [`missing:\n  ${missing.join("\n  ")}`, output].join("\n") }
+    }
+  }
+
   if (headers.codes) {
     const want = new Set(headers.codes)
     const got = new Set(errors.map((d) => d.code))
@@ -206,7 +217,7 @@ async function check(name) {
   const expectedFiles = fs.existsSync(expectedDir) ? fs.readdirSync(expectedDir, { recursive: true }) : []
   for (const file of expectedFiles.map(String).sort()) {
     const want = path.join(expectedDir, file)
-    if (file === "stdout.txt" || file === "diagnostics.txt" || fs.statSync(want).isDirectory()) continue
+    if (file === "stdout.txt" || file === "diagnostics.txt" || file === "messages.txt" || fs.statSync(want).isDirectory()) continue
     const got = path.join(dir, "out", file)
     if (!fs.existsSync(got)) return { ok: false, detail: `out/${file} is missing`, log: output }
     if (fs.readFileSync(want, "utf8") !== fs.readFileSync(got, "utf8")) {
