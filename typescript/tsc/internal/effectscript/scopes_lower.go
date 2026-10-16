@@ -6,16 +6,17 @@ import (
 
 // scopePlan records the Scope regions of one file (scopes.go).
 type scopePlan struct {
-	scopeBlocks map[*ast.Node]bool // blocks that are Scope regions
-	usings      map[*ast.Node]bool // using statements in those blocks
+	scopeBlocks map[*ast.Node]bool      // blocks that are Scope regions
+	usings      map[*ast.Node]bool      // using statements in those blocks
+	forks       map[*ast.Node]*ast.Node // fork calls, mapped to the block whose region owns the fiber
 }
 
 func newScopePlan() scopePlan {
-	return scopePlan{scopeBlocks: map[*ast.Node]bool{}, usings: map[*ast.Node]bool{}}
+	return scopePlan{scopeBlocks: map[*ast.Node]bool{}, usings: map[*ast.Node]bool{}, forks: map[*ast.Node]*ast.Node{}}
 }
 
 // planScopes records the Scope regions of fn, a function the lowering turns
-// into an Effect, and the using statements they own.
+// into an Effect, and the using statements and fork calls they own.
 func (p *scopePlan) planScopes(a *analyzer, fn *ast.Node) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
@@ -25,6 +26,11 @@ func (p *scopePlan) planScopes(a *analyzer, fn *ast.Node) {
 		case isBlockUsing(node):
 			p.scopeBlocks[node.Parent] = true
 			p.usings[node] = true
+		case node.Kind == ast.KindCallExpression:
+			if owner := a.forkOwner(node); owner != nil {
+				p.scopeBlocks[owner] = true
+				p.forks[node] = owner
+			}
 		}
 		return node.ForEachChild(visit)
 	}
@@ -34,21 +40,25 @@ func (p *scopePlan) planScopes(a *analyzer, fn *ast.Node) {
 }
 
 // scoped reports whether the lowering of node belongs to a Scope region: node
-// is a Scope region's block or a using statement in one.
+// is a Scope region's block, a using statement in one, or a fork it owns.
 func (p *scopePlan) scoped(node *ast.Node) bool {
-	return p.scopeBlocks[node] || p.usings[node]
+	return p.scopeBlocks[node] || p.usings[node] || p.forks[node] != nil
 }
 
 // visitScoped lowers a node that scoped reports.
 func (tx *lowering) visitScoped(node *ast.Node) *ast.Node {
-	if node.Kind == ast.KindBlock {
+	switch node.Kind {
+	case ast.KindBlock:
 		return tx.visitScopeBlock(node)
+	case ast.KindVariableStatement:
+		return tx.visitUsing(node)
+	default:
+		return tx.visitFork(node)
 	}
-	return tx.visitUsing(node)
 }
 
 // scopeName returns a new name for the Scope of the region that block runs
-// in, and records it for the using statements the block owns.
+// in, and records it for the using statements and forks the block owns.
 func (tx *lowering) scopeName(block *ast.Node) *ast.Node {
 	scope := tx.Factory().NewUniqueName("scope")
 	if tx.scopes == nil {
@@ -185,4 +195,20 @@ func (tx *lowering) succeed(value *ast.Node) *ast.Node {
 	f := tx.Factory()
 	succeed := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("succeed"), ast.NodeFlagsNone)
 	return f.NewCallExpression(succeed, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{value}), ast.NodeFlagsNone)
+}
+
+// visitFork lowers fork(program, options) in a Scope region to
+// `yield* runtime.$fork(program, scope, options)`, Effect.forkIn with the
+// region's Scope: the region interrupts the fiber when it closes, and waits
+// for the fiber's cleanup.
+func (tx *lowering) visitFork(node *ast.Node) *ast.Node {
+	scope := tx.scopes[tx.plan.forks[node]]
+	if scope == nil || len(node.Arguments()) == 0 {
+		return tx.visitRunningCall(node)
+	}
+	visited := tx.Visitor().VisitNodes(node.ArgumentList()).Nodes
+	arguments := append([]*ast.Node{visited[0], scope}, visited[1:]...)
+	run := tx.Factory().NewYieldExpression(tx.Factory().NewToken(ast.KindAsteriskToken), tx.runtimeCall("$fork", arguments...))
+	tx.EmitContext().SetOriginal(run, node)
+	return run
 }

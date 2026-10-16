@@ -78,7 +78,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$caught` | Unwrap an expected failure in a plain-JavaScript `catch`, and rethrow a defect | D13, D54 |
 | `$region` | Create a block-owned scope without adding it to the body's Context | D14, D47 |
 | `$using` | Run an acquisition with a block's scope, keeping the acquisition's own interruptibility, and register `Symbol.dispose` cleanup with interruption masked | D14, D25 |
-| `$fork` | Fork into an explicit block scope, or require a scope from the caller | D19, D47 |
+| `$fork` | Fork into a block's scope, with `forkIn`'s options, or require a scope from the caller | D19, D47 |
 | `fork` | Expose `Effect.forkScoped` to TypeScript and prelude type positions | D4, D19 |
 | `$Context` | Expose Effect's Context namespace for generated service references | D1, D40 |
 | `$service` | Create the Context key base merged with a generated service interface | D1, D45 |

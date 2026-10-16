@@ -107,6 +107,15 @@ test("regions: using keeps each acquisition's own interruptibility (D25)", async
   expect(events).toEqual(["acquired:false", "released:false"])
 })
 
+test("fork: a block's fork passes its options to forkIn", async () => {
+  const events: string[] = []
+  await Effect.runPromise($region(scope => Effect.gen(function* () {
+    yield* $fork(Effect.sync(() => { events.push("child") }), scope, { startImmediately: true })
+    events.push("parent")
+  })))
+  expect(events).toEqual(["child", "parent"])
+})
+
 interface Settings { readonly value: number }
 class Settings extends $service<Settings>("runtime-test/Settings") {}
 interface Doubled { readonly value: number }

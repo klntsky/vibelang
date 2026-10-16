@@ -5,25 +5,29 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
 
-// Scope regions (design D14, D25, D47; spec Chapters 6 and 26).
+// Scope regions (design D14, D19, D25, D47; spec Chapters 6, 7, and 26).
 //
-// A block of an Effect function that declares using is a Scope region. It
-// runs under a Scope of its own, which only its using acquisitions receive,
-// and which closes when the block exits by any path: success, failure, or
-// interruption. Closing runs the releases, newest first:
+// A block of an Effect function that declares using or calls fork is a Scope
+// region. It runs under a Scope of its own, which only its using
+// acquisitions and the fibers it forks receive, and which closes when the
+// block exits by any path: success, failure, or interruption. Closing runs
+// the releases and interrupts the forked fibers, newest first, and waits for
+// each before going on:
 //
-//	function compareLogs(a: string, b: string) {
-//	  using left = openLog(a)    // Effect<FileHandle, IOError, Files | Scope>: gets the block's Scope
-//	  using right = openLog(b)
-//	  return diffLines(left.readAll(), right.readAll())
+//	function serve(port: number) {
+//	  using server = Http.listen(port)   // Effect<Server, never, Scope>: gets the block's Scope
+//	  fork(() => heartbeat())            // interrupted when serve exits, before the server closes
+//	  return server.awaitShutdown()
 //	}
-//	// Effect<Diff, IOError, Files>: right closes, then left
+//	// Effect<string, never, Http>
 //
 // Everything else in the block runs under the Scope its caller supplies, so a
 // resource acquired without using belongs to the caller, and Scope stays in
-// R (D14). A function that declares using is an Effect function (D54), even
-// when it runs nothing else, so its using is always a Scope region; await
-// using is ES1003, and the lowering treats it as using.
+// R (D14). A fork that no block encloses, in an arrow function whose body is
+// an expression, is Effect.forkScoped and adds Scope to R. A function that
+// declares using is an Effect function (D54), even when it runs nothing else,
+// so its using is always a Scope region; await using is ES1003, and the
+// lowering treats it as using.
 //
 // using decides by its initializer: a call that runs an Effect is an
 // acquisition, whose Effect runs with the block's Scope and whose own release
@@ -43,6 +47,18 @@ func init() {
 func isBlockUsing(node *ast.Node) bool {
 	return node.Kind == ast.KindVariableStatement && isUsingList(node.AsVariableStatement().DeclarationList) &&
 		node.Parent != nil && node.Parent.Kind == ast.KindBlock
+}
+
+// ownerBlock returns the innermost block around node within its function, or
+// nil when no block encloses node there, as in an arrow function whose body is
+// an expression.
+func ownerBlock(node *ast.Node) *ast.Node {
+	for n := node.Parent; n != nil && !isFunctionBoundary(n); n = n.Parent {
+		if n.Kind == ast.KindBlock {
+			return n
+		}
+	}
+	return nil
 }
 
 // usingDeclarationOf returns the declaration whose initializer is node,
@@ -83,16 +99,54 @@ func usingInitializer(c *checker.Checker, declaration *ast.Node) bool {
 	return analyzerFor(c).isAcquisition(initializer)
 }
 
-// getsScope reports whether call runs with the Scope of a Scope region: it
-// is a using acquisition.
-func (a *analyzer) getsScope(call *ast.Node) bool {
-	return a.isAcquisition(call)
+// forkOwner returns the block whose Scope region owns the fiber that call
+// starts, or nil. call must be a call to the prelude's fork that runs, which
+// is fork(program), in the body of a function the lowering can turn into an
+// Effect, inside a block of that body.
+func (a *analyzer) forkOwner(call *ast.Node) *ast.Node {
+	if !a.isPreludeFork(call) || !inLowerableBody(call) || !a.runs(call) {
+		return nil
+	}
+	return ownerBlock(call)
 }
 
-// addScoped adds to info what call, which getsScope, adds to E and R. An
-// acquisition adds its failures and its requirements other than Scope, plus
-// the service its callee looks up.
+// isPreludeFork reports whether call calls the runtime's fork: the prelude's,
+// or one imported from @effectscript/runtime.
+func (a *analyzer) isPreludeFork(call *ast.Node) bool {
+	return isRuntimeExport(a.checker, ast.SkipParentheses(call.Expression()), "fork")
+}
+
+// getsScope reports whether call runs with the Scope of a Scope region: it
+// forks a fiber the region owns, or it is a using acquisition.
+func (a *analyzer) getsScope(call *ast.Node) bool {
+	return a.forkOwner(call) != nil || a.isAcquisition(call)
+}
+
+// addScoped adds to info what call, which getsScope, adds to E and R. A fork
+// adds the requirements of the program it starts, whose fiber sees this
+// fiber's services, and none of its failures, which reach the parent only
+// through Fiber.join. An acquisition adds its failures and its requirements
+// other than Scope, plus the service its callee looks up.
 func (a *analyzer) addScoped(info *effectInfo, call *ast.Node) {
+	c := a.checker
+	if a.forkOwner(call) != nil {
+		if arguments := call.Arguments(); len(arguments) > 0 {
+			program := c.GetTypeAtLocation(arguments[0])
+			if r := channelType(c, program, "_R"); r != nil {
+				info.addRequirement(r, call)
+				if info.effect == nil {
+					info.effect = effectInterface(c, program)
+				}
+				return
+			}
+		}
+		forked := &effectInfo{}
+		a.addCall(forked, call)
+		forked = withoutScope(forked)
+		forked.errors, forked.errorSources = nil, nil
+		info.add(forked)
+		return
+	}
 	a.addServiceLookup(info, call)
 	acquisition := &effectInfo{}
 	a.addCall(acquisition, call)
@@ -101,7 +155,7 @@ func (a *analyzer) addScoped(info *effectInfo, call *ast.Node) {
 
 // withoutScope returns info without effect's Scope among its requirements,
 // splitting unions and keeping each requirement's source: a Scope region
-// supplies the Scope that its acquisitions ask for.
+// supplies the Scope that its acquisitions and forks ask for.
 func withoutScope(info *effectInfo) *effectInfo {
 	out := &effectInfo{errors: info.errors, errorSources: info.errorSources, effect: info.effect}
 	for i, r := range info.requirements {
