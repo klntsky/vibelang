@@ -1,0 +1,64 @@
+// Chapter 24: the function whose region lowering both reviews examined.
+// try/catch/finally compile to Effect frames; catch handles expected failures only (D13).
+class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}
+class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}
+
+interface User {
+  readonly id: string
+  readonly name: string
+}
+
+abstract class Users {
+  abstract find(id: string): Effect<User, UserNotFound, never>
+}
+
+abstract class Metrics {
+  abstract increment(name: string): Effect<void, never, never>
+}
+
+const guest: User = { id: "0", name: "guest" }
+
+function parseId(raw: string) {
+  if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })
+  return Number(raw)
+}
+
+function profile(raw: string) {
+  const id = parseId(raw)                 // may throw InvalidId
+  try {
+    return Users.find(String(id))
+  } catch (e) {                           // e: UserNotFound
+    return guest
+  } finally {
+    Metrics.increment("profile")
+  }
+}
+// Effect<User, InvalidId, Users | Metrics>
+
+const counts: string[] = []
+
+const UsersTest = Layer.succeed(Users, {
+  find: (id) => {
+    if (id !== "42") throw new UserNotFound({ id })
+    return { id, name: "Ada" }
+  }
+})
+
+const MetricsTest = Layer.succeed(Metrics, {
+  increment: (name) => {
+    counts.push(name)
+  }
+})
+
+// expect-result: {"found":"Ada","missing":"guest","invalid":"InvalidId","counts":["profile","profile"]}
+export function main() {
+  const found = Effect.provide(() => profile("42"), Layer.mergeAll(UsersTest, MetricsTest))
+  const missing = Effect.provide(() => profile("7"), Layer.mergeAll(UsersTest, MetricsTest))
+  let invalid = "none"
+  try {
+    Effect.provide(() => profile("x"), Layer.mergeAll(UsersTest, MetricsTest))
+  } catch (e) {
+    invalid = e._tag
+  }
+  return { found: found.name, missing: missing.name, invalid, counts }
+}

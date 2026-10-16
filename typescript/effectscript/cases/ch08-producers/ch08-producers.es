@@ -1,0 +1,98 @@
+// Chapter 8. Producers: streams of values.
+import { Scope } from "effect"
+
+class IOError extends TaggedError("IOError")<{ readonly path: string }> {}
+
+interface LineFile {
+  readLine(): Effect<string | undefined, IOError, never>
+}
+
+abstract class Files {
+  abstract open(path: string): Effect<LineFile, IOError, Scope.Scope>
+}
+
+const events: string[] = []
+let linesRead = 0
+
+const contents = new Map<string, ReadonlyArray<string>>([
+  ["/var/log/app.log", ["INFO start", "ERROR one", "INFO tick", "ERROR two", "ERROR three", "ERROR four", "INFO end"]]
+])
+
+function* lines(path: string) {
+  using file = Files.open(path)
+  while (true) {
+    const line = file.readLine()        // a service call: may wait on I/O
+    if (line === undefined) return
+    yield line
+  }
+}
+
+function firstErrors(path: string) {
+  const found: string[] = []
+  for (const line of lines(path)) {
+    if (line.startsWith("ERROR")) found.push(line)
+    if (found.length === 3) break       // the file closes here
+  }
+  return found
+}
+// Effect<string[], IOError, Files>
+
+// The same loop, recording when it exits: the file must close before "loop exited".
+function firstErrorsTraced(path: string) {
+  const found: string[] = []
+  for (const line of lines(path)) {
+    if (line.startsWith("ERROR")) found.push(line)
+    if (found.length === 3) break
+  }
+  events.push("loop exited")
+  return found
+}
+
+// One pass per run: iterating the same producer again starts it from the beginning.
+function twoPasses(path: string) {
+  const producer = lines(path)
+  let first = 0
+  for (const line of producer) first++
+  let second = 0
+  for (const line of producer) second++
+  return [first, second]
+}
+
+const FilesTest = Layer.succeed(Files, {
+  open: (path) => Effect.acquireRelease(
+    () => {
+      events.push(`open ${path}`)
+      const all = contents.get(path) ?? []
+      let next = 0
+      const file: LineFile = {
+        readLine: () => {
+          if (next >= all.length) return undefined
+          const line = all[next]
+          next++
+          linesRead++
+          return line
+        }
+      }
+      return file
+    },
+    () => {
+      events.push(`close ${path}`)
+    }
+  )
+})
+
+function scenario() {
+  const before = events.length
+  const producer = lines("/var/log/app.log")     // lazy: runs none of its body
+  const openedByCall = events.length - before
+  const found = firstErrors("/var/log/app.log")
+  const readForFirst = linesRead
+  const traced = firstErrorsTraced("/var/log/app.log")
+  const passes = twoPasses("/var/log/app.log")
+  return { openedByCall, found, readForFirst, traced: traced.length, passes, events }
+}
+
+// expect-result: {"openedByCall":0,"found":["ERROR one","ERROR two","ERROR three"],"readForFirst":5,"traced":3,"passes":[7,7],"events":["open /var/log/app.log","close /var/log/app.log","open /var/log/app.log","close /var/log/app.log","loop exited","open /var/log/app.log","close /var/log/app.log","open /var/log/app.log","close /var/log/app.log"]}
+export function main() {
+  return Effect.provide(() => scenario(), FilesTest)
+}

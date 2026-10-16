@@ -1,0 +1,154 @@
+// Chapter 7. Concurrency.
+// NOTE: durations are shortened from the proposal's so the run is fast.
+import { Fiber, Scope } from "effect"
+
+interface Profile {
+  readonly id: string
+  readonly name: string
+}
+
+interface Order {
+  readonly id: string
+  readonly total: number
+}
+
+interface Server {
+  readonly port: number
+  awaitShutdown(): Effect<string, never, never>
+}
+
+abstract class Http {
+  abstract listen(port: number): Effect<Server, never, Scope.Scope>
+}
+
+const events: string[] = []
+let beats = 0
+
+function loadProfile(id: string) {
+  Effect.sleep("5 millis")
+  const profile: Profile = { id, name: "Ada" }
+  return profile
+}
+
+function recentOrders(id: string) {
+  Effect.sleep("1 millis")
+  const orders: ReadonlyArray<Order> = [{ id: "o1", total: 10 }, { id: "o2", total: 32 }]
+  return orders
+}
+
+// Running several things at once
+
+function dashboard(id: string) {
+  const [profile, orders] = Effect.all([() => loadProfile(id), () => recentOrders(id)], {
+    concurrency: 2
+  })
+  return { profile, orders }
+}
+
+function resize(image: string) {
+  Effect.sleep("1 millis")
+  return `${image}@thumb`
+}
+
+function fromCache(id: string) {
+  Effect.sleep("1 millis")
+  return `cache:${id}`
+}
+
+function fromNetwork(id: string) {
+  Effect.sleep("50 millis")
+  return `network:${id}`
+}
+
+function slowQuery(id: string) {
+  Effect.sleep("1 millis")
+  return `rows for ${id}`
+}
+
+// NOTE: the proposal shows these three lines as fragments; they are wrapped in one function.
+function combinators(id: string, images: ReadonlyArray<string>) {
+  const thumbnails = Effect.forEach(images, (image) => resize(image), { concurrency: 8 })
+  const first = Effect.race(() => fromCache(id), () => fromNetwork(id))
+  const quick = Effect.timeout(() => slowQuery(id), "500 millis")
+  return { thumbnails, first, quick }
+}
+
+// Background work with a lifetime
+
+function heartbeat() {
+  try {
+    while (true) {
+      Effect.sleep("1 millis")
+      beats++
+    }
+  } finally {
+    events.push("heartbeat stopped")
+  }
+}
+
+function serve(port: number) {
+  using server = Http.listen(port)
+  fork(() => heartbeat())          // stopped before the server closes
+  return server.awaitShutdown()
+}
+
+function buildReport(id: string) {
+  Effect.sleep("2 millis")
+  events.push(`report ${id} built`)
+  return `report ${id}`
+}
+
+function sendProgressEmail(id: string) {
+  events.push(`progress email ${id}`)
+}
+
+// NOTE: the proposal shows this as a fragment; it is wrapped in reportWithProgress.
+function reportWithProgress(id: string) {
+  const pending = fork(() => buildReport(id))
+  sendProgressEmail(id)
+  const report = Fiber.join(pending)      // waits for it; fails if it failed
+  return report
+}
+
+const HttpTest = Layer.succeed(Http, {
+  listen: (port) => Effect.acquireRelease(
+    () => {
+      events.push(`listen ${port}`)
+      const server: Server = {
+        port,
+        awaitShutdown: () => {
+          Effect.sleep("10 millis")
+          events.push("shutdown requested")
+          return "stopped"
+        }
+      }
+      return server
+    },
+    () => {
+      events.push("server closed")
+    }
+  )
+})
+
+function scenario() {
+  const board = dashboard("42")
+  const combined = combinators("42", ["a.png", "b.png"])
+  const served = serve(8080)
+  const report = reportWithProgress("r1")
+  return {
+    profile: board.profile.name,
+    orders: board.orders.length,
+    thumbnails: combined.thumbnails,
+    first: combined.first,
+    quick: combined.quick,
+    served,
+    beating: beats > 0,
+    report,
+    events
+  }
+}
+
+// expect-result: {"profile":"Ada","orders":2,"thumbnails":["a.png@thumb","b.png@thumb"],"first":"cache:42","quick":"rows for 42","served":"stopped","beating":true,"report":"report r1","events":["listen 8080","shutdown requested","heartbeat stopped","server closed","progress email r1","report r1 built"]}
+export function main() {
+  return Effect.provide(() => scenario(), HttpTest)
+}

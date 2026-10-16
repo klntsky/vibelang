@@ -1,0 +1,71 @@
+// Reference program 3. Resourceful retry: acquire, fail, release, retry with fresh locals, then
+// cancel during a later attempt. Each acquisition is released exactly once.
+import { Schedule, Scope } from "effect"
+
+class Flaky extends TaggedError("Flaky")<{ readonly attempt: number }> {}
+
+interface Conn {
+  readonly id: number
+}
+
+abstract class Pool {
+  abstract acquire(): Effect<Conn, never, Scope.Scope>
+}
+
+const events: string[] = []
+const localsSeen: number[] = []
+let acquired = 0
+let released = 0
+let attempts = 0
+let slowAttempts = 0
+
+// Fails on the first two attempts. Each attempt holds a connection and starts with fresh locals.
+function attempt() {
+  using conn = Pool.acquire()
+  let local = 0
+  local++
+  attempts++
+  localsSeen.push(local)
+  if (attempts < 3) throw new Flaky({ attempt: attempts })
+  return `ok on ${conn.id}`
+}
+
+// Fails on the first attempt; the second hangs until it is cancelled.
+function slowAttempt() {
+  using conn = Pool.acquire()
+  slowAttempts++
+  if (slowAttempts === 1) throw new Flaky({ attempt: slowAttempts })
+  Effect.sleep("1000 millis")
+  return `late on ${conn.id}`
+}
+
+const PoolTest = Layer.succeed(Pool, {
+  acquire: () => Effect.acquireRelease(
+    () => {
+      acquired++
+      const conn: Conn = { id: acquired }
+      events.push(`acquire ${conn.id}`)
+      return conn
+    },
+    (conn) => {
+      released++
+      events.push(`release ${conn.id}`)
+    }
+  )
+})
+
+function scenario() {
+  const result = Effect.retry(() => attempt(), Schedule.recurs(5))
+  let cancelled = "none"
+  try {
+    Effect.timeout(() => Effect.retry(() => slowAttempt(), Schedule.recurs(5)), "20 millis")
+  } catch (e) {
+    cancelled = e._tag
+  }
+  return { result, attempts, localsSeen, cancelled, slowAttempts, acquired, released, events }
+}
+
+// expect-result: {"result":"ok on 3","attempts":3,"localsSeen":[1,1,1],"cancelled":"TimeoutError","slowAttempts":2,"acquired":5,"released":5,"events":["acquire 1","release 1","acquire 2","release 2","acquire 3","release 3","acquire 4","release 4","acquire 5","release 5"]}
+export function main() {
+  return Effect.provide(() => scenario(), PoolTest)
+}

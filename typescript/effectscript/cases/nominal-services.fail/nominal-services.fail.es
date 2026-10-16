@@ -1,0 +1,25 @@
+// expect: ES2002
+// D1: service classes are nominal. Primary and Replica have identical members; providing only
+// Primary must leave Replica in R, so onlyPrimary's contract (R = never) is violated. If the
+// identities collapsed structurally, this file would compile and then die at run time with
+// "Service not found" (experiments/scratch-abstract-services/probe.ts).
+
+abstract class Primary {
+  abstract query(sql: string): Effect<string, never, never>
+}
+
+abstract class Replica {
+  abstract query(sql: string): Effect<string, never, never>
+}
+
+function both() {
+  return `${Primary.query("select 1")} / ${Replica.query("select 1")}`
+}
+
+const PrimaryLive = Layer.succeed(Primary, {
+  query: (sql) => `primary ${sql}`
+})
+
+export function onlyPrimary(): Effect<string, never, never> {
+  return Effect.provide(() => both(), PrimaryLive)
+}

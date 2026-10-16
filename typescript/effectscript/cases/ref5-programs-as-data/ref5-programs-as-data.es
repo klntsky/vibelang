@@ -1,0 +1,59 @@
+// Reference program 5. Programs as data: store, return, retry, and concurrently compose a program
+// without running it early.
+// NOTE: the proposal states this program in prose only; the contract comment below is this file's
+// expectation, following Chapter 5's makeSync.
+import { Schedule } from "effect"
+
+class Flaky extends TaggedError("Flaky")<{ readonly name: string }> {}
+
+const runs = new Map<string, number>()
+const failuresLeft = new Map<string, number>([["flaky", 2]])
+
+function work(name: string) {
+  runs.set(name, (runs.get(name) ?? 0) + 1)
+  const left = failuresLeft.get(name) ?? 0
+  if (left > 0) {
+    failuresLeft.set(name, left - 1)
+    throw new Flaky({ name })
+  }
+  Effect.sleep("1 millis")
+  return name.toUpperCase()
+}
+
+// Return a program from a function: nothing runs.
+function makeJob(name: string) {
+  return () => work(name)
+}
+// Effect<() => Effect<string, Flaky, never>, never, never>
+
+function countRuns() {
+  let total = 0
+  for (const count of runs.values()) total += count
+  return total
+}
+
+function scenario() {
+  const stored = () => work("stored")                               // store a program
+  const returned = makeJob("returned")                              // return a program
+  const flaky = makeJob("flaky")
+  const builtButNotRun = countRuns()                                // nothing ran yet
+
+  const once = stored()                                             // calling runs it
+  const retried = Effect.retry(flaky, Schedule.recurs(3))           // retry a stored program
+  const both = Effect.all([stored, returned], { concurrency: 2 })   // compose stored programs
+  const twice = [returned(), returned()]                            // each call runs it again
+
+  return {
+    builtButNotRun,
+    once,
+    retried,
+    both,
+    twice,
+    runs: { stored: runs.get("stored"), returned: runs.get("returned"), flaky: runs.get("flaky") }
+  }
+}
+
+// expect-result: {"builtButNotRun":0,"once":"STORED","retried":"FLAKY","both":["STORED","RETURNED"],"twice":["RETURNED","RETURNED"],"runs":{"stored":2,"returned":3,"flaky":3}}
+export function main() {
+  return scenario()
+}

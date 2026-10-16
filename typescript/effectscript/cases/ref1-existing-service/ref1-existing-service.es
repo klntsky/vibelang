@@ -1,0 +1,61 @@
+// Reference program 1. Existing Effect service: import a generic, overloaded, aliased TypeScript
+// Effect function; compose it without changing E or R; provide a Layer from TypeScript.
+// NOTE: the proposal states this program in prose only. The contract comments below are this
+// file's expectations ("without changing E or R"), not contracts printed in the proposal.
+import { fetchUser, findBy, getUser, loadUser, lookup, UserRepo, UserRepoLive } from "./ref1-users-repo.ts"
+
+function teamOf(id: string) {
+  return lookup(id).team                     // overloaded: the single-id signature
+}
+// Effect<string, UserNotFound | DbError, UserRepo>
+
+function teamNames(ids: ReadonlyArray<string>) {
+  const members = lookup(ids)                // overloaded: the many-ids signature
+  return members.map((member) => member.name)
+}
+// Effect<string[], UserNotFound | DbError, UserRepo>
+
+function coreLead() {
+  return findBy("team", "core").name         // generic: K = "team"
+}
+// Effect<string, UserNotFound | DbError, UserRepo>
+
+function aliases(id: string) {
+  const a = fetchUser(id).name
+  const b = getUser(id).name
+  const c = loadUser(id).name
+  return [a, b, c]
+}
+// Effect<string[], UserNotFound | DbError, UserRepo>
+
+// The TypeScript-authored Context.Service class is used like an .es service.
+// NOTE: UserRepo.all is an Effect-valued member, not a method; calling it runs it (Chapter 11's
+// "a value of type Effect, called as p()"). Whether `UserRepo.all()` is the right spelling is open.
+function directly(id: string) {
+  const user = UserRepo.byId(id)
+  const everyone = UserRepo.all()
+  return `${user.name} of ${everyone.length}`
+}
+// Effect<string, UserNotFound | DbError, UserRepo>
+
+function scenario() {
+  let missing = "none"
+  try {
+    teamOf("9")
+  } catch (e) {
+    missing = e._tag
+  }
+  return {
+    team: teamOf("2"),
+    names: teamNames(["1", "3"]),
+    lead: coreLead(),
+    aliases: aliases("2"),
+    direct: directly("3"),
+    missing
+  }
+}
+
+// expect-result: {"team":"compilers","names":["Ada","Edsger"],"lead":"Ada","aliases":["Grace","Grace","Grace"],"direct":"Edsger of 3","missing":"UserNotFound"}
+export function main() {
+  return Effect.provide(() => scenario(), UserRepoLive)
+}

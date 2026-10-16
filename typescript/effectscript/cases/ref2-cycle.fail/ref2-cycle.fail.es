@@ -1,0 +1,26 @@
+// expect: ES3203
+// Reference program 2: providers form a cycle, CacheLive -> Database -> DatabaseLive -> Cache -> CacheLive.
+
+abstract class Cache {
+  abstract get(key: string): Effect<string, never, never>
+}
+
+abstract class Database {
+  abstract query(sql: string): Effect<string, never, never>
+}
+
+const CacheLive = Layer.effect(Cache, () => {
+  const db = Database()
+  return {
+    get: (key) => db.query(key)
+  }
+})
+
+const DatabaseLive = Layer.effect(Database, () => {
+  const cache = Cache()
+  return {
+    query: (sql) => cache.get(sql)
+  }
+})
+
+const AppLive = wire(CacheLive, DatabaseLive)

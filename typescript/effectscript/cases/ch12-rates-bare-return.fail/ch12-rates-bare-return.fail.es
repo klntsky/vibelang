@@ -1,0 +1,7 @@
+// expect: ES2101
+// Chapter 12 "Declarations without bodies": Rates.lookup has no body to infer from, so its contract
+// must be written in full. NOTE: written as an abstract class (D1) instead of `service Rates`.
+
+abstract class Rates {
+  abstract lookup(currency: string): number
+}

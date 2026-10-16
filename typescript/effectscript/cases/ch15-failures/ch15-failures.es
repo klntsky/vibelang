@@ -1,0 +1,194 @@
+// Chapter 15. Failures, defects, interruption, and cleanup.
+import { Exit, Scope } from "effect"
+
+class UploadError extends TaggedError("UploadError")<{ readonly file: string }> {}
+class Expected extends TaggedError("Expected")<{}> {}
+
+interface TempFile {
+  readonly name: string
+  write(row: string): Effect<void, never, never>
+}
+
+interface Account {
+  readonly id: string
+}
+
+abstract class TempFiles {
+  abstract create(): Effect<TempFile, never, Scope.Scope>
+}
+
+abstract class Reports {
+  abstract rows(id: string): Effect<ReadonlyArray<string>, never, never>
+}
+
+abstract class Storage {
+  abstract upload(file: TempFile): Effect<string, UploadError, never>
+  abstract queueRetry(id: string): Effect<string, never, never>
+}
+
+abstract class Metrics {
+  abstract increment(name: string): Effect<void, never, never>
+}
+
+abstract class Ledger {
+  abstract debit(account: Account, amount: number): Effect<void, never, never>
+  abstract credit(account: Account, amount: number): Effect<void, never, never>
+}
+
+const events: string[] = []
+let tempFiles = 0
+let uploadDelay = 0
+let uploadFails = false
+
+// NOTE: writeRows is unspecified in the proposal; it writes each row to the temporary file.
+function writeRows(file: TempFile, rows: ReadonlyArray<string>) {
+  for (const row of rows) file.write(row)
+}
+
+function exportReport(id: string) {
+  using tmp = TempFiles.create()
+  try {
+    writeRows(tmp, Reports.rows(id))
+    return Storage.upload(tmp)
+  } catch (e) {                    // e: UploadError
+    return Storage.queueRetry(id)
+  } finally {
+    Metrics.increment("exports")
+  }
+}
+
+function exportWithDeadline(id: string) {
+  return Effect.timeout(() => exportReport(id), "30 seconds")
+}
+
+// NOTE: the same deadline at 10 millis, so the run interrupts a slow upload quickly.
+function exportWithShortDeadline(id: string) {
+  return Effect.timeout(() => exportReport(id), "10 millis")
+}
+
+// A defect is not caught by catch (D13): a JavaScript TypeError is a defect.
+function defectThroughCatch() {
+  try {
+    const broken: any = undefined
+    return broken.name
+  } catch (e) {
+    events.push("catch saw a defect")      // must not run
+    return "caught"
+  }
+}
+
+// Codex review R1 / D13: a cause holding both an expected failure and a defect is not caught.
+function mixedCause() {
+  try {
+    try {
+      throw new Expected()
+    } finally {
+      Effect.die("release-defect")
+    }
+  } catch (e) {
+    events.push("catch saw a mixed cause")  // must not run
+    return "recovered"
+  }
+}
+
+function moveFunds(from: Account, to: Account, amount: number) {
+  Effect.uninterruptible(() => {
+    Ledger.debit(from, amount)
+    Ledger.credit(to, amount)     // an interruption waits until both have run
+  })
+}
+
+const TempFilesTest = Layer.succeed(TempFiles, {
+  create: () => Effect.acquireRelease(
+    () => {
+      tempFiles++
+      const name = `tmp${tempFiles}`
+      events.push(`create ${name}`)
+      const file: TempFile = {
+        name,
+        write: (row) => {
+          events.push(`write ${name} ${row}`)
+        }
+      }
+      return file
+    },
+    (file) => {
+      events.push(`remove ${file.name}`)
+    }
+  )
+})
+
+const ReportsTest = Layer.succeed(Reports, {
+  rows: (id) => ["a"]
+})
+
+const StorageTest = Layer.succeed(Storage, {
+  upload: (file) => {
+    Effect.sleep(uploadDelay)
+    if (uploadFails) throw new UploadError({ file: file.name })
+    events.push(`upload ${file.name}`)
+    return `uploaded ${file.name}`
+  },
+  queueRetry: (id) => {
+    events.push(`queue ${id}`)
+    return `queued ${id}`
+  }
+})
+
+const MetricsTest = Layer.succeed(Metrics, {
+  increment: (name) => {
+    events.push(`metric ${name}`)
+  }
+})
+
+const LedgerTest = Layer.succeed(Ledger, {
+  debit: (account, amount) => {
+    Effect.sleep("20 millis")
+    events.push(`debit ${account.id} ${amount}`)
+  },
+  credit: (account, amount) => {
+    events.push(`credit ${account.id} ${amount}`)
+  }
+})
+
+function scenario() {
+  const first = exportReport("r1")
+  uploadFails = true
+  const second = exportReport("r2")
+  uploadFails = false
+  uploadDelay = 50
+  let third = "none"
+  try {
+    exportWithShortDeadline("r3")
+  } catch (e) {
+    third = e._tag
+  }
+  uploadDelay = 0
+  const deadline = exportWithDeadline("r4")
+  const defect = Effect.exit(() => defectThroughCatch())
+  const mixed = Effect.exit(() => mixedCause())
+  let moved = "none"
+  try {
+    Effect.timeout(() => moveFunds({ id: "a" }, { id: "b" }, 10), "5 millis")
+  } catch (e) {
+    moved = e._tag
+  }
+  return {
+    first,
+    second,
+    third,
+    deadline,
+    defect: Exit.isFailure(defect) ? defect.cause.reasons.map((reason) => reason._tag) : ["Success"],
+    mixed: Exit.isFailure(mixed) ? mixed.cause.reasons.map((reason) => reason._tag) : ["Success"],
+    moved,
+    events
+  }
+}
+
+// expect-result: {"first":"uploaded tmp1","second":"queued r2","third":"TimeoutError","deadline":"uploaded tmp4","defect":["Die"],"mixed":["Fail","Die"],"moved":"TimeoutError","events":["create tmp1","write tmp1 a","upload tmp1","metric exports","remove tmp1","create tmp2","write tmp2 a","queue r2","metric exports","remove tmp2","create tmp3","write tmp3 a","metric exports","remove tmp3","create tmp4","write tmp4 a","upload tmp4","metric exports","remove tmp4","debit a 10","credit b 10"]}
+export function main() {
+  return Effect.provide(
+    () => scenario(),
+    Layer.mergeAll(TempFilesTest, ReportsTest, StorageTest, MetricsTest, LedgerTest)
+  )
+}

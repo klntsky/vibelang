@@ -50,6 +50,22 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-lower` | Type-directed `yield*`: pure helpers stay plain, Effect-returning TypeScript calls and `.es` calls run, operands run left to right, a `Config` stays data |
 | `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, the `.d.ts` declares it, and the module runs its own program |
 
+### Acceptance cases
+
+The prototype's 46 examples (`../prototype/esc/examples/`) are cases named after their files, such as `ch04-wire` and `ref2-cycle.fail`. Each keeps its `.es` source and `.ts` helpers as the prototype has them, except that kernel imports name `@effectscript/runtime` and `@effectscript/runtime/kernel`. They compile with `module: nodenext` and `rewriteRelativeImportExtensions`, as the app template does. Every compiler lane turns its cases green and never turns a green case red. Each case is pending on the lane that owns its feature; a case that mixes features belongs to the lane that owns its first missing feature, and its `pending` file names the other lanes it needs:
+
+| Owner | Feature | Cases |
+| --- | --- | --- |
+| F1 | Diagnostics, prelude, imports between files | `ch10-effect-gen.fail` |
+| F2 | Programs as values, plain functions, callbacks | `ch05-programs`, `ch10-map-pausing-callback.fail`, `ch13-plain`, `ch14-callbacks`, `ref4-callbacks`, `ref4-pausing-function-value.fail`, `ref5-programs-as-data` |
+| F3 | `throw`, regions, contracts | `ch02-contract-narrower.fail`, `ch02-functions`, `ch03-errors`, `ch03-safelookup-no-try.fail`, `ch12-contracts`, `ch15-failures`, `regions` |
+| F5 | Services, layers, `wire` | `ch01-first-look`, `ch04-provider-escapes.fail`, `ch04-services`, `ch04-users-audited.fail`, `ch04-wire`, `ch12-rates-bare-return.fail`, `ch12-welcome-missing-mailer.fail`, `nominal-services.fail`, `ref1-existing-service`, `ref2-ambiguous-provider.fail`, `ref2-cycle.fail`, `ref2-missing-provider.fail`, `ref2-opaque-layer.fail`, `ref2-provider-graph` |
+| F6 | `using`, `fork`, Scope regions | `ch06-disposable`, `ch06-resources`, `ch07-concurrency`, `ref3-resourceful-retry`, `ref6-fork.fail` |
+| F7 | Handlers, producers, streams | `ch08-producers`, `ch08-streams`, `ch09-approve-all-forked.fail`, `ch09-handlers`, `ref6-handlers`, `stack-depth` |
+| F8 | Boundaries, runners | `ch02-plain-ts-call.fail`, `ch10-fetch.fail`, `ch10-typescript`, `ch11-top-level-run.fail`, `ch24-profile`, `d5-clock-read.fail` |
+
+The `pending` files are the source of truth: `effectscript/smoke.sh --status` prints each case's current owner.
+
 ## The stack
 
 Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive rewrites.
@@ -67,6 +83,10 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 9 | `xnptkzuz` | checker: add an inferred return type hook | Seam for an inferred return type, plus `NewTypeReference` |
 | 10 | `ukynlwvn` | effectscript: infer Effect<A, E, R> for .es functions | The ABI: callers outside `.es` bodies and `.d.ts` files see an Effect |
 | 11 | `wzntprnu` | effectscript: describe the fork in EFFECTSCRIPT.md | This file |
+| 12 | `zwwnumoq` | effectscript: build with -trimpath in smoke.sh | Workspaces share Go build-cache entries |
+| 13 | `wnytpnpp` | runtime: export the kernel as @effectscript/runtime/kernel | The `stack-depth` case reads the kernel's hooks |
+| 14 | `mzuwnztz` | effectscript: run cases with a parallel harness | Failing, runnable, and pending cases, and `--status` |
+| 15 | `ylzmpsoz` | effectscript: port the prototype's 46 examples as cases | The acceptance suite, each case pending on its owner |
 
 ## Seams in upstream files
 
