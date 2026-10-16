@@ -1,1 +1,1 @@
-F2 plain callbacks for Array.prototype.map (D9, D10) and Effect.forEach callbacks
+F6 using on an Effect acquisition (D14): connect returns an Effect, not a Disposable (TS2741); the callbacks (D9, D10) already compile

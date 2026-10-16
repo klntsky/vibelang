@@ -1,1 +1,1 @@
-F2 plain JavaScript compilation (D10) and plain variants of function values (D9)
+F3 return statements checked against a written contract's A (D57): sumTo and gcd are TS2322; the plain functions (D9, D10) already run
