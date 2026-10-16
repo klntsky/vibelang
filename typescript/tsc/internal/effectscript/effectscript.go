@@ -18,6 +18,10 @@ func init() {
 	compiler.RegisterScriptTransformerHook(newLowering)
 	checker.RegisterCallExpressionTypeHook(callExpressionType)
 	checker.RegisterInferredReturnTypeHook(inferredReturnType)
+	checker.RegisterCallCandidateHook(callCandidate)
+	checker.RegisterCandidateFilterHook(filterCandidate)
+	checker.RegisterFunctionExpressionTypeHook(functionExpressionType)
+	checker.RegisterContextualReturnTypeHook(contextualReturnType)
 }
 
 // isEffectScriptFile reports whether file is an EffectScript source file.

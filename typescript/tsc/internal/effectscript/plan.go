@@ -86,6 +86,13 @@ type analyzer struct {
 	checker *checker.Checker
 	states  map[*ast.Node]fnState
 	effects map[*ast.Node]*effectInfo // see effectOf
+
+	// Lambda forms (forms.go).
+	lambdas         map[*ast.Node]*lambdaState
+	current         map[*ast.Node][]*checker.Signature  // call -> candidates its arguments are being checked against
+	rejected        map[*ast.Node]map[candidateKey]bool // call -> candidates a lambda argument rejected
+	resolving       map[*ast.Node]bool                  // calls whose signature candidateOf is resolving
+	effectInterface *checker.Type                       // the generic Effect interface, once seen
 }
 
 var analyzers sync.Map // *checker.Checker -> *analyzer
@@ -96,11 +103,22 @@ func analyzerFor(c *checker.Checker) *analyzer {
 	if a, ok := analyzers.Load(c); ok {
 		return a.(*analyzer)
 	}
-	a, _ := analyzers.LoadOrStore(c, &analyzer{checker: c, states: map[*ast.Node]fnState{}, effects: map[*ast.Node]*effectInfo{}})
+	a, _ := analyzers.LoadOrStore(c, &analyzer{
+		checker:   c,
+		states:    map[*ast.Node]fnState{},
+		effects:   map[*ast.Node]*effectInfo{},
+		lambdas:   map[*ast.Node]*lambdaState{},
+		current:   map[*ast.Node][]*checker.Signature{},
+		rejected:  map[*ast.Node]map[candidateKey]bool{},
+		resolving: map[*ast.Node]bool{},
+	})
 	return a.(*analyzer)
 }
 
 func (a *analyzer) isEffect(fn *ast.Node) bool {
+	if isLambda(fn) {
+		return a.finalForm(fn) != formPlain
+	}
 	switch a.states[fn] {
 	case stateVisiting, stateEffect:
 		return true

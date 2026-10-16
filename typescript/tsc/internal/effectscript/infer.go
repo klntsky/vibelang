@@ -13,8 +13,8 @@ import (
 // module top level or in TypeScript and .d.ts files, a call to the function
 // is therefore an Effect value.
 func inferredReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *checker.Type {
-	if !isLowerable(fn) {
-		return t
+	if !isLowerable(fn) || isLambda(fn) {
+		return t // a lambda's type depends on its form (forms.go)
 	}
 	a := analyzerFor(c)
 	if !a.isEffect(fn) {
