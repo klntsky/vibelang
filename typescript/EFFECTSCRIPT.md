@@ -65,6 +65,8 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-wire-missing.fail` | ES3201 at a runner: `MailerLive needs Smtp` |
 | `es-provider-escapes.fail` | ES2001 names the provider member that a failure escapes, in an object literal and in an `implements` class |
 | `es-provider-audited.fail` | ES3101 at a per-call lookup, in an object literal and in an `implements` class |
+| `es-effect-value-calls` | Calling an `Exit` replays it and calling a tagged error instance fails with it (D24): `Effect<A, E, never>` and `Effect<never, EmptyDocument, never>` |
+| `es-concise-comments` | A lowered concise arrow keeps the comment after it outside its block, and a lowered file keeps its last comment |
 | `es-service-dts` | A service's `.d.ts` is an interface plus a key class: TypeScript code compiled against it with `skipLibCheck` off implements `Users`, provides it with `Layer.succeed`, and yields `Users` and a default service in `Effect.gen` |
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
@@ -186,6 +188,11 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 67 | `xnmknson` | effectscript: trace functions with Effect.fn spans (D34) | `tracing`: `"exported"` and `"all"` |
 | 68 | `stmorqmo` | effectscript: document boundaries, runners, debugging, and tracing | The sections from "Code that is not Effect" to "Tracing" |
 | 69 | `ooknlorp` | effectscript: report ES4402 where code runs a platform API (D108) | Importing a platform API and passing it as a value, as `NodeHttpServer.layer(createServer, …)` does, is allowed |
+| 70 | `okrmuzvz` | effectscript: add a pending case for calling Exit and error values | The D24 gap the user docs found, as a failing case |
+| 71 | `rvysxzyx` | effectscript: run a call to an Exit or an error value | D24: `outcome()` and `error()` run; the docs lose two compiler-gap markers |
+| 72 | `ysknkpmu` | effectscript: keep the comment after a concise arrow out of its block | A block made from a concise body has no source range for the printer's closing-brace comments |
+| 73 | `vsvzswzz` | effectscript: keep the last comment of a lowered file | The statement list keeps its source range when the lowering adds imports |
+| 74 | `twymwmrr` | effectscript: document calls to Exit and error values in EFFECTSCRIPT.md | This section |
 
 Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks).
 
@@ -451,7 +458,7 @@ export declare abstract class Users extends Users_base {
 | `Users()`, the service itself | `yield* Users` | `Users` |
 | `FeatureFlags()`, a service with a default | `yield* FeatureFlags` | nothing |
 
-The last three rows are one rule from Chapter 13: in an `.es` function body, a value whose type is an Effect, called with no arguments, runs. The call signatures hook (`effectValueCall`) gives such a callee the signature `() => Effect<A, E, R>`, and the call expression type hook then types the call as `A`, so `Settings().baseUrl` checks. A lookup makes the enclosing function an Effect even when the member returns a plain value, and `effectOf` adds the service to R.
+The last three rows are one rule from Chapter 13: in an `.es` function body, a value whose type is an Effect, called with no arguments, runs (D24). That covers a Context key or a `Config`, whose variance the `Effect` interface declares; an `Exit`, a union of two Effects, which `outcome()` replays; and a tagged error instance, whose class declares the variance itself, which `error()` fails with. The call signatures hook (`effectValueCall`) gives such a callee the signature `() => Effect<A, E, R>`, built from effect's own `Effect` interface when the callee's type does not name it, and the call expression type hook then types the call as `A`, so `Settings().baseUrl` checks. A lookup makes the enclosing function an Effect even when the member returns a plain value, and `effectOf` adds the service to R.
 
 A lookup also keeps a lambda from compiling to plain JavaScript: `canBePlain` asks `performs`, which is `runs` or a lookup, so `(part) => Path.join(root, part)` is an Effect function.
 
