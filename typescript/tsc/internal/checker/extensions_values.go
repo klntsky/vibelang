@@ -43,3 +43,13 @@ func (c *Checker) MapObjectType(t *Type, f func(*Type) *Type) *Type {
 	}
 	return c.newAnonymousType(nil /*symbol*/, members, nil /*callSignatures*/, nil /*constructSignatures*/, indexInfos)
 }
+
+// IteratedType returns the type that iterating t yields, as a for-of loop
+// over t does, or nil when t has no [Symbol.iterator] method.
+func (c *Checker) IteratedType(t *Type) *Type {
+	types := c.getIterationTypesOfIterable(t, IterationUseElement, nil /*errorNode*/)
+	if !types.hasTypes() {
+		return nil
+	}
+	return types.yieldType
+}
