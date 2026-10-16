@@ -9,6 +9,7 @@ import (
 // The language server's hooks register here rather than in effectscript.go,
 // so editor features stay in this file.
 func init() {
+	ls.RegisterQuickInfoHook(plainFunctionQuickInfo)
 	ls.RegisterQuickInfoHook(runningCallQuickInfo)
 }
 
@@ -62,4 +63,37 @@ func runsInLoweredBody(c *checker.Checker, call *ast.Node) bool {
 		}
 	}
 	return false
+}
+
+// plainFunctionQuickInfo shows a function that compiles to plain JavaScript
+// the way EffectScript calls it. TypeScript sees `function add(a: number,
+// b: number)` as returning Effect<number, never, never>, its one calling
+// convention (Chapter 15), but EffectScript code calls add$direct and gets
+// the number. So a hover on add, or on a call to it, in an .es file shows
+// `function add(a: number, b: number): number` and says what TypeScript
+// callers see. A hover in a .ts file keeps TypeScript's view.
+func plainFunctionQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
+	if !ast.IsIdentifier(node) || !isEffectScriptFile(ast.GetSourceFileOfNode(node)) {
+		return "", ""
+	}
+	symbol := c.GetSymbolAtLocation(node)
+	if symbol != nil && symbol.Flags()&ast.SymbolFlagsAlias != 0 {
+		symbol = c.GetAliasedSymbol(symbol)
+	}
+	if symbol == nil || symbol.Flags()&ast.SymbolFlagsFunction == 0 || len(symbol.Declarations()) != 1 {
+		return "", ""
+	}
+	fn := symbol.Declarations()[0]
+	a := analyzerFor(c)
+	if !a.isSplittable(fn) || !a.isPlainFunction(fn) {
+		return "", ""
+	}
+	signature := c.GetSignatureFromDeclaration(fn)
+	effect := c.GetReturnTypeOfSignature(signature)
+	success := successType(c, effect)
+	if success == nil {
+		return "", ""
+	}
+	text := "function " + symbol.Name() + c.SignatureToStringEx(c.SignatureWithReturnType(signature, success), node, hoverTypeFlags, nil)
+	return text, "Plain JavaScript: EffectScript code calls it directly. TypeScript callers see `" + c.TypeToStringEx(effect, node, hoverTypeFlags, nil) + "`."
 }

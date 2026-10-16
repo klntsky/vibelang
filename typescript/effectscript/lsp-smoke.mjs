@@ -381,6 +381,40 @@ try {
     for (const label of ["lookup", "name", "NotFound", "findName"]) assert(labels.includes(label), `no ${label} in completions`)
   })
 
+  open("src/services.es", "effectscript")
+  open("src/report.ts", "typescript")
+
+  await check("diagnostics: services.es, with the prelude and a service, checks clean", async () => {
+    const items = await diagnostics("src/services.es")
+    assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  await check("diagnostics: report.ts, which imports an .es function, checks clean", async () => {
+    const items = await diagnostics("src/report.ts")
+    assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  await check("hover: a plain .es function shows the signature EffectScript calls", async () => {
+    const shown = await hover("src/services.es", "double(n")
+    assert(shown.includes("function double(n: number): number"), `got ${JSON.stringify(shown)}`)
+    assert(/TypeScript callers see `(Effect\.)?Effect<number, never, never>`/.test(shown), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a call to a plain .es function shows its plain signature and does not run", async () => {
+    const shown = await hover("src/services.es", "double(id)")
+    assert(shown.includes("function double(n: number): number") && !shown.includes("Runs here"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a .ts file sees a plain .es function as an Effect", async () => {
+    const shown = await hover("src/report.ts", "double(2)")
+    assert(/Effect<number, never, never>/.test(shown) && !shown.includes("Plain JavaScript"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a service member call runs and shows its success value", async () => {
+    const shown = await hover("src/services.es", "find(id)")
+    assert(/Runs here and returns `string`/.test(shown), `got ${JSON.stringify(shown)}`)
+  })
+
   await check("watching: the server registers a watcher that covers new .es files", () => {
     const watchers = connection.registrations
       .filter((r) => r.method === "workspace/didChangeWatchedFiles")
