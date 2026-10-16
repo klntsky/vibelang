@@ -2,16 +2,14 @@ import { assert, it } from "@effect/vitest"
 import { EmptyName, greeting } from "./greeting.es"
 
 it.effect("greets a name", () => {
-  const actual = greeting("Ada")
-  Effect.sync(() => assert.strictEqual(actual, "Hello, Ada!"))
+  assert.strictEqual(greeting("Ada"), "Hello, Ada!")
 })
 
 it.effect("recovers from an empty name", () => {
-  let recovered = false
   try {
     greeting("")
+    assert.fail("expected EmptyName")
   } catch (error) {
-    recovered = error instanceof EmptyName
+    assert.instanceOf(error, EmptyName)
   }
-  Effect.sync(() => assert.strictEqual(recovered, true))
 })
