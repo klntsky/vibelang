@@ -116,6 +116,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `scopes-fork` | A block interrupts the fiber it forked and waits for its cleanup before releasing what it acquired earlier: in a function body, an inner block, a loop body, and a block that fails; `Fiber.join` returns the child's result or its failure; a `fork` that no block encloses uses the caller's Scope; `Effect.forkScoped` and `Effect.forkDetach` keep Effect's meaning |
 | `scopes-types` | `Scope` leaves R only for `using` acquisitions and forks a block owns; `contracts.ts` checks each contract exactly |
 | `scopes-callback.fail` | ES4301 for a callback that declares `using`, of a Disposable or an acquisition, passed to `Array.prototype.map` or `Effect.sync` (D54) |
+| `lambda-this` | A lowered arrow function keeps its enclosing function's `this`: a program passed to `Effect.retry`, an Effect function passed to `Effect.forEach`, and a forked program in a method |
 
 ### Acceptance cases
 
@@ -306,6 +307,8 @@ A lambda, an arrow function or function expression, takes one of three forms. Th
 | Plain | `(x) => A`, what TypeScript infers | the lambda as written |
 | Effect function | `(x) => Effect<A, E, R>` | `Effect.fnUntraced(function* (x) { … })` |
 | Program | `Effect<A, E, R>` | `Effect.gen(function* () { … })`, which runs the body each time it runs |
+
+An arrow function that refers to `this` keeps its enclosing function's `this`, as JavaScript's arrow functions do: its Effect function is bound with `.bind(this)`, and its program is `Effect.gen({ self: this }, function* () { … })`, so `fork(() => this.poll())` in a method reaches the instance (case `lambda-this`).
 
 The position decides, inside TypeScript's own overload resolution (`forms.go`, `expected.go`):
 
@@ -723,6 +726,7 @@ The runtime and the program must load the same copy of `effect`. Each copy numbe
 | `twvqsuom` | effectscript: give each fork to the block that calls it |
 | `nzuukwkz` | effectscript: take each for...of value with using |
 | `qsytkrtw` | effectscript: document Scope regions, using, and fork in EFFECTSCRIPT.md |
+| `rkxpuynr` | effectscript: keep this in a lowered arrow function |
 
 ## The prelude
 
@@ -872,7 +876,7 @@ A span is named after its function; a class method's span names its class too. A
 - Declaration files carry no JSDoc metadata for `$direct` variants (Chapter 27), so code compiled against a `.d.ts` runs a plain function's Effect form, which is correct and slower.
 - A callback parameter without a contract returns an Effect (D12), so a function cannot call it inside a callback that JavaScript calls synchronously, such as a `sort` comparator: that is ES4301.
 - TypeScript types a context-sensitive lambda's parameters from the first candidate that types them, so an overload whose parameter types differ cannot retype them.
-- Accessors, constructors, async functions, and generators are never lowered. `this` and `arguments` inside a lowered arrow function rebind to the generator, and `arguments` and `super` inside a lowered method do not reach the method.
+- Accessors, constructors, async functions, and generators are never lowered. `arguments` inside a lowered arrow function is the generator's, and `arguments` and `super` inside a lowered method do not reach the method.
 - A lowered function declaration is a `const`, so a call above it at the module top level hits the temporal dead zone.
 - A call cycle through a lambda, such as `Effect.forEach(children, (child) => walk(child))` where `walk` calls back, is solved through the checker's type of the call, which the checker computes once; a cycle whose E grows through it is ES2102. A union of Effects is not treated as an Effect.
 - The synthesized wrappers, such as `yield*` and `Effect.fnUntraced(…)`, have no source positions of their own; the statements and expressions inside them do, so stack traces and breakpoints map to `.es` lines.

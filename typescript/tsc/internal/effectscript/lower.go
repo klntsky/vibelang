@@ -220,14 +220,39 @@ func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
 // lowerFunction turns a function expression or arrow function into
 // `Effect.fnUntraced(function* (params) { body })`.
 func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
-	return tx.wrapFunction(node, tx.generatorOf(node))
+	lowered := tx.wrapFunction(node, tx.generatorOf(node))
+	if keepsThis(node) {
+		lowered = tx.Factory().NewFunctionBindCall(lowered, tx.Factory().NewThisExpression(), nil /*argumentsList*/)
+	}
+	return lowered
 }
 
 // lowerProgram turns a lambda with no parameters that is a program into
 // `Effect.gen(function* () { body })`, an Effect that runs the body each time
-// it runs.
+// it runs, or `Effect.gen({ self: this }, function* () { body })` when the
+// lambda keeps its enclosing function's this.
 func (tx *lowering) lowerProgram(node *ast.Node) *ast.Node {
-	return tx.wrapGenerator("gen", node, tx.generatorOf(node))
+	generator := tx.generatorOf(node)
+	if !keepsThis(node) {
+		return tx.wrapGenerator("gen", node, generator)
+	}
+	f := tx.Factory()
+	self := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{
+		f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("self"), nil /*postfixToken*/, nil /*typeNode*/, f.NewThisExpression()),
+	}), false /*multiLine*/)
+	callee := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("gen"), ast.NodeFlagsNone)
+	lowered := f.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{self, generator}), ast.NodeFlagsNone)
+	tx.EmitContext().SetOriginal(lowered, node)
+	lowered.Loc = node.Loc
+	return lowered
+}
+
+// keepsThis reports whether node is an arrow function that refers to this.
+// An arrow function sees its enclosing function's this, but the generator
+// function that replaces it has its own, so the lowering passes the arrow's
+// this on.
+func keepsThis(node *ast.Node) bool {
+	return node.Kind == ast.KindArrowFunction && usesThis(node.Body())
 }
 
 // generatorOf returns `function* (params) { body }` for node, with node's
