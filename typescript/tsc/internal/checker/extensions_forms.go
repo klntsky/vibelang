@@ -116,3 +116,27 @@ func (c *Checker) applyContextualReturnTypeHooks(fn *ast.Node, t *Type) *Type {
 	}
 	return t
 }
+
+// AnnotatedReturnInferenceHook can replace t, the type of the return type
+// annotation of fn, a context-sensitive function expression, arrow function,
+// or object literal method, as the source that inference from fn's
+// annotations infers the enclosing call's type arguments from. TypeScript
+// infers from the annotation as written; an extension that gives fn another
+// return type in some positions can infer from that type instead.
+type AnnotatedReturnInferenceHook func(c *Checker, fn *ast.Node, t *Type) *Type
+
+var annotatedReturnInferenceHooks []AnnotatedReturnInferenceHook
+
+// RegisterAnnotatedReturnInferenceHook adds hook to every checker. Call it
+// only from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterAnnotatedReturnInferenceHook(hook AnnotatedReturnInferenceHook) {
+	annotatedReturnInferenceHooks = append(annotatedReturnInferenceHooks, hook)
+}
+
+func (c *Checker) applyAnnotatedReturnInferenceHooks(fn *ast.Node, t *Type) *Type {
+	for _, hook := range annotatedReturnInferenceHooks {
+		t = hook(c, fn, t)
+	}
+	return t
+}

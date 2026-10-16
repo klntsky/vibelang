@@ -10486,7 +10486,7 @@ func (c *Checker) inferFromAnnotatedParametersAndReturn(sig *Signature, context 
 	}
 	if declaration := sig.Declaration(); declaration != nil {
 		if returnTypeNode := declaration.Type(); returnTypeNode != nil {
-			source := c.getTypeFromTypeNode(returnTypeNode)
+			source := c.applyAnnotatedReturnInferenceHooks(declaration, c.getTypeFromTypeNode(returnTypeNode))
 			target := c.getReturnTypeOfSignature(context)
 			c.inferTypes(inferenceContext.inferences, source, target, InferencePriorityNone, false)
 		}
