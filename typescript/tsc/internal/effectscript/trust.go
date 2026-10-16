@@ -398,7 +398,7 @@ func checkTrust(c *checker.Checker, file *ast.SourceFile) {
 }
 
 func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.Node) {
-	if ast.IsSuperCall(call) || ast.IsImportCall(call) || a.performs(call) || isEffectValueCall(c, call) {
+	if ast.IsSuperCall(call) || ast.IsImportCall(call) || a.performs(call) || isEffectValueCall(c, call) || isPlatformCallee(c, call) {
 		return
 	}
 	t := callTrust(c, call)

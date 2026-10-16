@@ -85,7 +85,8 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `d39-unions` | Where a parameter takes a function or an Effect (D39), a lambda with a parameter is a function, and one without is a program when it can pause and a function when it is plain |
 | `trust-levels` | `JSON.parse`'s `SyntaxError` and a trusted function's `@throws` class join E and reach a `catch`, in Effect functions and in plain ones (D54); an unlisted exception is a defect; operands that run Effects run before the trusted call; Effect's exports, a boundary, a trusted re-export, a trusted method, and a parameter's callee need nothing |
 | `es4401-plain-call.fail` | ES4401 for a plain TypeScript call, one that returns a Promise, one in a plain callback, and a trusted contract whose `@throws` class the file cannot import; none for a trusted call, a boundary, or the top level |
-| `es4402-platform.fail` | ES4402 for `node:` and Node built-in imports, `fetch` inside a boundary, `setTimeout`, `console`, `process.env`, and `localStorage`; a type-only import, `URL`, and `TextEncoder` are allowed |
+| `es4402-platform.fail` | ES4402 where code runs a platform API (D108): imported functions called inside boundaries, a namespace member called, a property read on a default import and on a namespace member, `fetch`, `setTimeout`, `console.log`, destructuring `process`, and `new WebSocket`; importing, passing `createServer` and `os.EOL` as values, a type-only import, `URL`, and `TextEncoder` are allowed |
+| `platform-values` | Importing `createServer` from `node:http` and `os` from `node:os`, and passing them as values, compiles and runs |
 | `es4403-clock.fail` | ES4403 for `Date.now()`, `new Date()`, `Math.random()`, `crypto.randomUUID()`, `performance.now()`, and `Date()`, at the top level too; `new Date(text)`, `Date.parse`, and `Date.UTC` are allowed |
 | `es4403-warning` | With `"ES4403": "warning"`, the reads are warnings and run as plain calls |
 | `es1001-top-level.fail` | ES1001 for an `.es` program, an Effect, a program passed straight to a runner, a service member call, a service, and an Effect value at the top level; none for values, lambdas, or a runner given a program |
@@ -184,6 +185,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 66 | `zunmxlrk` | effectscript: name generators after their source (D36) | Stack traces and debuggers name the `.es` function |
 | 67 | `xnmknson` | effectscript: trace functions with Effect.fn spans (D34) | `tracing`: `"exported"` and `"all"` |
 | 68 | `stmorqmo` | effectscript: document boundaries, runners, debugging, and tracing | The sections from "Code that is not Effect" to "Tracing" |
+| 69 | `ooknlorp` | effectscript: report ES4402 where code runs a platform API (D108) | Importing a platform API and passing it as a value, as `NodeHttpServer.layer(createServer, …)` does, is allowed |
 
 Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks).
 
@@ -383,7 +385,7 @@ The checks so far:
 | ES1005 | The callee of a runner in code a fiber runs | `runners.go` |
 | ES4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; an `.es` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
 | ES4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
-| ES4402 | The module specifier of an import of a platform module; each reference to a platform global, inside boundaries and at the top level too; covers TypeScript's "cannot find" errors for them | `platform.go` |
+| ES4402 | Where code runs a platform API (D108): the callee of a call, `new`, or tagged template, or the property read, whose root is a binding imported from a platform module or a platform global; inside boundaries and at the top level too. It covers TypeScript's "cannot find name" for an unresolved platform global it reports | `platform.go` |
 | ES4403 | A clock or randomness read, everywhere in a `.es` file | `platform.go` |
 
 `compilerOptions.effectscript` (D34) sets the category of the two codes that are policy, not soundness, and the tracing mode:
@@ -636,11 +638,19 @@ The shipped contracts (`builtinContracts`) list only built-ins that parse text f
 
 ## Platform APIs and clock reads
 
-`platform.go` reports Node.js and browser APIs (ES4402), each with the Effect module that replaces it (Chapter 11's table, D6), and clock and randomness reads (ES4403):
+`platform.go` reports where `.es` code runs a Node.js or browser API (ES4402), each with the Effect module that replaces it (Chapter 11's table, D6), and clock and randomness reads (ES4403).
 
-- **Imports.** A value import or re-export of a Node.js built-in module, with or without `node:`, or of a `bun:` module, is ES4402 at its module specifier, which covers TypeScript's "cannot find module". An import of types only is allowed.
-- **Globals.** Each reference to a global in `platformGlobals` is ES4402: `fetch`, `XMLHttpRequest`, `WebSocket`, the timers, `process` (with `process.env`, `argv`, and the standard streams named apart), `console`, `crypto`, `performance`, `localStorage`, `sessionStorage`, `indexedDB`, `Worker`, the DOM's entry points, `require`, `module`, `__dirname`, `__filename`, `Buffer`, `Bun`, and `Deno`. The name must resolve to the global that a lib file or a platform package declares, or not resolve at all, as `process` does without `@types/node`. Web standards that touch nothing outside the program, such as `URL`, `TextEncoder`, `AbortController`, `structuredClone`, `Headers`, and `Response`, are allowed.
-- **Clock reads.** A call that resolves to `Date.now`, `Date()`, `new Date()` without arguments, `Math.random`, `crypto.randomUUID`, `crypto.getRandomValues`, `performance.now`, or one of `Temporal.Now`'s functions is ES4403, with the `Clock`, `DateTime`, `Random`, or `Crypto` call that replaces it. A project that sets ES4403 to `"warning"` or `"off"` (D34) gets that, and the read compiles as a plain call.
+**ES4402 fires where the code runs the API (D108), not where it names it.** A platform API is a binding imported from a Node.js built-in module, with or without `node:`, or from a `bun:` module, or a global in `platformGlobals`: `fetch`, `XMLHttpRequest`, `WebSocket`, the timers, `process` (with `process.env`, `argv`, and the standard streams named apart), `console`, `crypto`, `performance`, `localStorage`, `sessionStorage`, `indexedDB`, `Worker`, the DOM's entry points, `require`, `module`, `__dirname`, `__filename`, `Buffer`, `Bun`, and `Deno`. A global's name must resolve to the global that a lib file or a platform package declares, or not resolve at all, as `process` does without `@types/node`. The code runs the API when it calls it, constructs it with `new`, tags a template with it, or reads one of its properties, which can run a getter, directly, by destructuring, or by spreading. Importing it, re-exporting it, or passing it as a value runs nothing, so Effect's own setup compiles in `.es`:
+
+```ts
+import { createServer } from "node:http"
+const Server = NodeHttpServer.layer(createServer, { port: 3000 })   // allowed: a value
+export function log(message: string) { console.log(message) }       // ES4402: a call
+```
+
+A namespace import's members are values too, until the code runs one: `os.EOL` is allowed, and `os.cpus()` is ES4402. Web standards that touch nothing outside the program, such as `URL`, `TextEncoder`, `AbortController`, `structuredClone`, `Headers`, and `Response`, are not platform APIs. ES4401 leaves a call that runs a platform API to ES4402 (`isPlatformCallee`).
+
+**ES4403.** A call that resolves to `Date.now`, `Date()`, `new Date()` without arguments, `Math.random`, `crypto.randomUUID`, `crypto.getRandomValues`, `performance.now`, or one of `Temporal.Now`'s functions is a clock or randomness read, reported with the `Clock`, `DateTime`, `Random`, or `Crypto` call that replaces it. A project that sets ES4403 to `"warning"` or `"off"` (D34) gets that, and the read compiles as a plain call.
 
 Both apply everywhere in a `.es` file, inside boundaries (D23) and at the top level.
 
@@ -692,6 +702,7 @@ A span is named after its function; a class method's span names its class too. A
 - ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
 - A trusted call's expected failures are defects inside a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback ES4301.
 - Runners are known by their declarations in `effect`, `@effect/platform-node`, `@effect/platform-bun`, and `@effect/vitest`; a function that wraps one is not a runner. ES4402's globals are a fixed list (`platformGlobals`), so a platform global outside it, such as `postMessage` or `BroadcastChannel`, is not reported.
+- ES4402 follows a platform API by its import or global name. A platform function reached through a local alias, a destructured namespace member, a parameter, or an object that a platform call returned is not reported, and as a call to a platform package it is not ES4401 either.
 - An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract.
 - Declaration files carry no JSDoc metadata for `$direct` variants (Chapter 27), so code compiled against a `.d.ts` runs a plain function's Effect form, which is correct and slower.
 - A callback parameter without a contract returns an Effect (D12), so a function cannot call it inside a callback that JavaScript calls synchronously, such as a `sort` comparator: that is ES4301.

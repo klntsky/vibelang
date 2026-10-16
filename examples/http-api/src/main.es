@@ -1,5 +1,6 @@
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
-import { ServerLive } from "./server.ts"
+import { NodeHttpServer } from "@effect/platform-node"
+import { createServer } from "node:http"
 
 export const CreateUser = Schema.Struct({ name: Schema.String })
 export class NameTaken extends TaggedError("NameTaken")<{ readonly name: string }> {}
@@ -41,7 +42,10 @@ export function createUser() {
 export const Routes = HttpRouter.add("POST", "/users", () => createUser())
 export const App = HttpRouter.provideRequest(UsersLive)(Routes)
 
-const Live = Layer.provide(HttpRouter.serve(App), ServerLive)
+// NodeHttpServer runs Node's createServer itself; .es code passes it as a
+// value, which runs nothing (D108).
+const Server = NodeHttpServer.layer(createServer, { port: 3000 })
+const Live = Layer.provide(HttpRouter.serve(App), Server)
 
 export function main() {
   Layer.launch(Live)

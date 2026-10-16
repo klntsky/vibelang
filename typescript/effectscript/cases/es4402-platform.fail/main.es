@@ -1,10 +1,14 @@
 // expect: ES4402
-// D5, D6: a Node.js or browser API is not usable from an .es file, even
-// inside a boundary; the error names the Effect module that replaces it.
+// D108: .es code may import a platform API and pass it as a value, but it
+// may not run one: a call, a new, or a tagged template of it, or a read of a
+// property of it, is ES4402, which names the Effect module that replaces it.
+// Boundaries and the module's top level are no exception.
 import { readFile } from "node:fs/promises"
 import fs from "fs"
-import type { Server } from "node:http"
+import * as os from "node:os"
+import { createServer, type Server } from "node:http"
 import { Effect } from "effect"
+import { setup } from "./setup.ts"
 
 export function load(path: string) {
   return Effect.tryPromise(() => readFile(path, "utf8"))
@@ -12,6 +16,14 @@ export function load(path: string) {
 
 export function exists(path: string) {
   return Effect.sync(() => fs.existsSync(path))
+}
+
+export function cores() {
+  return Effect.sync(() => os.cpus().length)
+}
+
+export function signals() {
+  return Object.keys(os.constants.signals)
 }
 
 export function get(url: string) {
@@ -27,15 +39,18 @@ export function log(message: string) {
 }
 
 export function port() {
-  return process.env.PORT
+  const { env } = process
+  return env.PORT
 }
 
-export function save(key: string, value: string) {
-  localStorage.setItem(key, value)
+export function socket(url: string) {
+  return new WebSocket(url)
 }
 
-// Allowed: a type from a platform module, and web standards that touch
-// nothing outside the program.
+// Allowed: platform APIs imported and passed as values, a type from a
+// platform module, a namespace member read as a value, and web standards.
+export const configured = setup(createServer, os.EOL)
+
 export function serve(server: Server) {
   return server
 }

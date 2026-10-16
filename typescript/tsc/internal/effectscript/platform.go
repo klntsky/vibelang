@@ -7,20 +7,28 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
 
-// EffectScript's standard library is Effect's (design D6, Chapter 11). A
-// Node.js or browser API is not usable from an .es file, and the error names
-// the Effect module that replaces it (ES4402):
+// EffectScript's standard library is Effect's (design D6, Chapter 11). An .es
+// file may not run a Node.js or browser API, and the error names the Effect
+// module that replaces it (ES4402):
 //
-//	error ES4402: node:fs/promises is a platform API, which EffectScript code does not call directly.
+//	error ES4402: readFile from node:fs/promises is a platform API, which EffectScript code does not call directly.
 //	  Use FileSystem from "effect/FileSystem":   FileSystem.readFileString(path)
 //	  Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.
 //
-// An import of a Node.js built-in module is reported at its module specifier,
-// and a reference to a platform global such as fetch, setTimeout, process, or
-// console where it appears. A clock or randomness read, such as Date.now(),
-// is ES4403 instead, an error by default that a project may lower (D34); a
-// read it allows compiles as a trusted sync call. Both apply everywhere in an
-// .es file, a boundary's callback and the module's top level included.
+// D108 puts the error where the code runs the API: a call, a new, or a
+// tagged template of it, or a read of one of its properties, which can run a
+// getter, as process.env does. The API is a binding imported from a Node.js
+// or Bun built-in module, or a platform global such as fetch, setTimeout,
+// process, or console. Importing one, or passing one as a value, runs
+// nothing, so Effect's own setup works:
+//
+//	import { createServer } from "node:http"
+//	const Server = NodeHttpServer.layer(createServer, { port: 3000 })   // allowed
+//
+// A clock or randomness read, such as Date.now(), is ES4403 instead, an error
+// by default that a project may lower (D34); a read it allows compiles as a
+// trusted sync call. Both apply everywhere in an .es file, a boundary's
+// callback and the module's top level included.
 
 // replacement is the Effect API that replaces a platform API.
 type replacement struct {
@@ -128,18 +136,17 @@ func init() {
 	fileChecks = append(fileChecks, checkPlatform)
 }
 
-// platformModule is ES4402's text for an import, which names the module.
+// platformModule is ES4402's text for a dynamic import of a platform module.
 var platformModule = ES4402.With("{0} is a platform API, which EffectScript code does not call directly.")
 
-// checkPlatform reports ES4402 for platform modules and globals, and ES4403
-// for clock and randomness reads, in file.
+// checkPlatform reports ES4402 where file's code runs a platform API (D108),
+// and ES4403 for clock and randomness reads.
 func checkPlatform(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		switch {
 		case ast.IsImportDeclaration(node) || ast.IsExportDeclaration(node):
-			checkPlatformImport(c, file, node)
-			return false
+			return false // importing or re-exporting a platform API runs nothing
 		case ast.IsImportCall(node):
 			if arguments := node.Arguments(); len(arguments) > 0 && ast.IsStringLiteral(arguments[0]) {
 				if r, ok := platformModuleOf(arguments[0].Text()); ok {
@@ -149,57 +156,11 @@ func checkPlatform(c *checker.Checker, file *ast.SourceFile) {
 		case ast.IsCallExpression(node) || ast.IsNewExpression(node):
 			checkClockRead(c, file, node)
 		case ast.IsIdentifier(node):
-			checkPlatformGlobal(c, file, node)
+			checkPlatformUse(c, file, node)
 		}
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
-}
-
-// checkPlatformImport reports an import or re-export of a platform module.
-// An import of types only uses nothing at run time and stays allowed.
-func checkPlatformImport(c *checker.Checker, file *ast.SourceFile, node *ast.Node) {
-	specifier := node.ModuleSpecifier()
-	if specifier == nil || !ast.IsStringLiteral(specifier) || importsOnlyTypes(node) {
-		return
-	}
-	r, ok := platformModuleOf(specifier.Text())
-	if !ok {
-		return
-	}
-	d := report(c, specifier, platformModule, specifier.Text())
-	noteReplacement(d, replacements[r])
-	cover(c, specifier) // TypeScript cannot find the module without @types/node
-}
-
-// importsOnlyTypes reports whether an import or export declaration brings in
-// types only: `import type`, `export type`, or named imports that are all
-// marked type, as in import { type Server } from "node:http".
-func importsOnlyTypes(node *ast.Node) bool {
-	if ast.IsExportDeclaration(node) {
-		return node.IsTypeOnly()
-	}
-	clause := node.AsImportDeclaration().ImportClause
-	if clause == nil {
-		return false // import "node:fs" runs the module
-	}
-	if clause.IsTypeOnly() {
-		return true
-	}
-	if clause.Name() != nil {
-		return false
-	}
-	bindings := clause.AsImportClause().NamedBindings
-	if bindings == nil || bindings.Kind != ast.KindNamedImports {
-		return false
-	}
-	elements := bindings.AsNamedImports().Elements.Nodes
-	for _, element := range elements {
-		if !element.AsImportSpecifier().IsTypeOnly {
-			return false
-		}
-	}
-	return len(elements) > 0
 }
 
 // platformModuleOf returns the name of module's replacement, and whether
@@ -219,39 +180,148 @@ func platformModuleOf(module string) (string, bool) {
 	return "", prefixed
 }
 
-// checkPlatformGlobal reports a reference to a platform global.
-func checkPlatformGlobal(c *checker.Checker, file *ast.SourceFile, id *ast.Node) {
-	r, listed := platformGlobals[id.Text()]
-	if !listed || !isValueUse(id) {
-		return
+// platformRef is what a reference to a platform API refers to.
+type platformRef struct {
+	replacement string // the name of what replaces it in replacements, or ""
+	module      string // the platform module it is imported from, or "" for a global
+	namespace   bool   // a namespace import, whose members are values until code runs them
+	unresolved  bool   // a platform global's name that does not resolve
+}
+
+// platformReference reports whether id refers to a platform API: a binding
+// imported from a platform module, or a global in platformGlobals that a lib
+// file or a platform package declares, or that does not resolve at all, as
+// process does without @types/node.
+func platformReference(c *checker.Checker, id *ast.Node) (platformRef, bool) {
+	if !ast.IsIdentifier(id) || !isValueUse(id) {
+		return platformRef{}, false
 	}
-	// A name that resolves must be the platform's global, not a local, an
-	// import, or a global the program declares. A platform name that does not
-	// resolve, such as process without @types/node, is the platform's too, and
-	// ES4402 explains TypeScript's "cannot find name".
 	symbol := c.GetSymbolAtLocation(id)
-	if symbol != nil && !isGlobalOf(symbol, func(file *ast.SourceFile) bool { return isLibFile(c, file) || isPlatformPackage(packageOf(c, file)) }) {
-		return
-	}
-	name := id.Text()
-	parent := id.Parent
-	if ast.IsPropertyAccessExpression(parent) && parent.Expression() == id {
-		member := parent.Name().Text()
-		if call := parent.Parent; call != nil && (ast.IsCallExpression(call) || ast.IsNewExpression(call)) && call.Expression() == parent && isClockRead(c, call) {
-			return // ES4403 reports it
-		}
-		name += "." + member
-		if id.Text() == "process" {
-			if m, ok := processMembers[member]; ok {
-				r = m
+	if symbol != nil && symbol.Flags()&ast.SymbolFlagsAlias != 0 {
+		for _, decl := range symbol.Declarations() {
+			if module, namespace := importedFrom(decl); module != "" {
+				if r, ok := platformModuleOf(module); ok {
+					return platformRef{replacement: r, module: module, namespace: namespace}, true
+				}
 			}
 		}
+		return platformRef{}, false
 	}
-	d := report(c, id, ES4402, name)
-	noteReplacement(d, replacements[r])
-	if symbol == nil {
-		cover(c, id)
+	r, listed := platformGlobals[id.Text()]
+	if !listed {
+		return platformRef{}, false
 	}
+	if symbol != nil && !isGlobalOf(symbol, func(file *ast.SourceFile) bool { return isLibFile(c, file) || isPlatformPackage(packageOf(c, file)) }) {
+		return platformRef{}, false // a local, or a global the program declares
+	}
+	return platformRef{replacement: r, unresolved: symbol == nil}, true
+}
+
+// importedFrom returns the module that decl, an import binding's
+// declaration, imports from, and whether it imports the module's namespace.
+func importedFrom(decl *ast.Node) (module string, namespace bool) {
+	namespace = decl.Kind == ast.KindNamespaceImport || decl.Kind == ast.KindImportEqualsDeclaration
+	for n := decl; n != nil; n = n.Parent {
+		switch {
+		case ast.IsImportDeclaration(n):
+			if specifier := n.ModuleSpecifier(); specifier != nil && ast.IsStringLiteral(specifier) {
+				return specifier.Text(), namespace
+			}
+			return "", false
+		case ast.IsImportEqualsDeclaration(n):
+			if reference := n.AsImportEqualsDeclaration().ModuleReference; reference != nil && ast.IsExternalModuleReference(reference) {
+				if expression := reference.AsExternalModuleReference().Expression; expression != nil && ast.IsStringLiteral(expression) {
+					return expression.Text(), namespace
+				}
+			}
+			return "", false
+		}
+	}
+	return "", false
+}
+
+// isPlatformCallee reports whether the callee of call is rooted in a
+// reference to a platform API, whose run ES4402 reports.
+func isPlatformCallee(c *checker.Checker, call *ast.Node) bool {
+	root := ast.SkipParentheses(call.Expression())
+	for ast.IsPropertyAccessExpression(root) || ast.IsElementAccessExpression(root) {
+		root = ast.SkipParentheses(root.Expression())
+	}
+	_, ok := platformReference(c, root)
+	return ok
+}
+
+// checkPlatformUse reports id, a reference to a platform API, where the code
+// runs it (D108): calls it, constructs it, tags a template with it, or reads
+// a property of it, which can run a getter, as process.env does, directly or
+// by destructuring. Importing it, or passing it as a value, as to
+// NodeHttpServer.layer(createServer, …), runs nothing. A namespace import's
+// member is a value too, until the code runs it: os.EOL is allowed, and
+// os.cpus() is not.
+func checkPlatformUse(c *checker.Checker, file *ast.SourceFile, id *ast.Node) {
+	ref, ok := platformReference(c, id)
+	if !ok {
+		return
+	}
+	value := id // the expression that denotes the platform API
+	if ref.namespace {
+		parent := id.Parent
+		if !(ast.IsPropertyAccessExpression(parent) || ast.IsElementAccessExpression(parent)) || parent.Expression() != id {
+			return // the namespace object itself, as a value
+		}
+		value = parent
+	}
+	use, runs := platformRun(c, value)
+	if !runs {
+		return
+	}
+	replacement := ref.replacement
+	if id.Text() == "process" && ref.module == "" && ast.IsPropertyAccessExpression(use) {
+		if r, ok := processMembers[use.Name().Text()]; ok {
+			replacement = r
+		}
+	}
+	name := nodeText(file, use)
+	if ref.module != "" {
+		name += " from " + ref.module
+	}
+	d := report(c, use, ES4402, name)
+	noteReplacement(d, replacements[replacement])
+	if ref.unresolved {
+		cover(c, id) // ES4402 explains TypeScript's "cannot find name"
+	}
+}
+
+// platformRun reports whether the code runs value, an expression that
+// denotes a platform API, where it appears, and returns the expression that
+// names what runs: value itself for a call, a new, or a tagged template, and
+// the property access for a read of one of its properties.
+func platformRun(c *checker.Checker, value *ast.Node) (use *ast.Node, runs bool) {
+	parent := value.Parent
+	for parent != nil && ast.IsParenthesizedExpression(parent) {
+		value, parent = parent, parent.Parent
+	}
+	switch {
+	case parent == nil:
+		return nil, false
+	case (ast.IsCallExpression(parent) || ast.IsNewExpression(parent)) && parent.Expression() == value:
+		return value, true
+	case ast.IsTaggedTemplateExpression(parent) && parent.AsTaggedTemplateExpression().Tag == value:
+		return value, true
+	case (ast.IsPropertyAccessExpression(parent) || ast.IsElementAccessExpression(parent)) && parent.Expression() == value:
+		if call := parent.Parent; call != nil && (ast.IsCallExpression(call) || ast.IsNewExpression(call)) && call.Expression() == parent && isClockRead(c, call) {
+			return nil, false // ES4403 reports it
+		}
+		return parent, true
+	case ast.IsVariableDeclaration(parent) && parent.Initializer() == value && ast.IsBindingPattern(parent.Name()):
+		return value, true // destructuring reads its properties
+	case ast.IsBinaryExpression(parent) && parent.AsBinaryExpression().OperatorToken.Kind == ast.KindEqualsToken &&
+		parent.AsBinaryExpression().Right == value && (ast.IsObjectLiteralExpression(parent.AsBinaryExpression().Left) || ast.IsArrayLiteralExpression(parent.AsBinaryExpression().Left)):
+		return value, true
+	case ast.IsSpreadElement(parent) || ast.IsSpreadAssignment(parent):
+		return value, true // spreading reads its elements or properties
+	}
+	return nil, false
 }
 
 // isValueUse reports whether id, an identifier, refers to a value where it
