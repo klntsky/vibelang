@@ -2,8 +2,8 @@
 // docs/design/effectscript-design.md, then render a self-contained HTML page
 // (inline CSS, no external requests) next to it. Run: bun render.ts
 import { Marked, type Tokens } from "marked"
-import { readdirSync, readFileSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { join, resolve } from "node:path"
 
 const designDir = join(import.meta.dir, "..", "design")
 const srcDir = join(designDir, "src")
@@ -35,7 +35,6 @@ const markdown = parts
     if (!(name in facts)) throw new Error(`unknown placeholder ${match}`)
     return facts[name]!
   }) + "\n"
-writeFileSync(join(designDir, "effectscript-design.md"), markdown)
 
 // GitHub-compatible heading slugs, so the in-document links work in both outputs.
 const slug = (text: string) =>
@@ -252,5 +251,28 @@ ${linked}
 </body>
 </html>
 `
+// Check the rendered targets, including generated navigation and chapter links.
+// Relative file links resolve beside the combined design, not its source parts.
+const ids = new Set<string>()
+const hrefs = new Set<string>()
+await new HTMLRewriter()
+  .on("[id]", { element: (element) => { ids.add(element.getAttribute("id")!) } })
+  .on("a[href]", { element: (element) => { hrefs.add(element.getAttribute("href")!) } })
+  .transform(new Response(html)).text()
+const broken: string[] = []
+for (const href of hrefs) {
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(href)) continue
+  try {
+    const [target, fragment] = href.split("#", 2)
+    const path = decodeURIComponent(target!.split("?", 1)[0]!)
+    if (path ? !existsSync(resolve(designDir, path)) : fragment && !ids.has(decodeURIComponent(fragment))) {
+      broken.push(href)
+    }
+  } catch {
+    broken.push(href)
+  }
+}
+if (broken.length) throw new Error(`Design build has broken internal links:\n${broken.map(href => `  - ${href}`).join("\n")}`)
+writeFileSync(join(designDir, "effectscript-design.md"), markdown)
 writeFileSync(join(designDir, "effectscript-design.html"), html)
 console.log(`wrote effectscript-design.md (${markdown.length} chars) and effectscript-design.html from ${parts.length} parts; ${facts.testCount} tests passed; kernel ${facts.kernelLines} lines`)
