@@ -1,0 +1,22 @@
+{
+  "name": "effectscript-app",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esc",
+    "start": "bun run build && node --enable-source-maps dist/main.js",
+    "dev": "node scripts/dev.mjs",
+    "test": "bun run build && vitest run"
+  },
+  "dependencies": {
+    "effect": "4.0.5",
+    "@effect/platform-node": "4.0.5",
+    "@effectscript/runtime": "file:../../packages/runtime"
+  },
+  "devDependencies": {
+    "@effectscript/compiler": "file:../../packages/compiler",
+    "vitest": "5.0.5",
+    "@effect/vitest": "4.0.5"
+  }
+}

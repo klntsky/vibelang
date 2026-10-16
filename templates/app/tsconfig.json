@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmitOnError": true,
+    "rewriteRelativeImportExtensions": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["src/**/*.es"]
+}
