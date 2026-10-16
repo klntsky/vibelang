@@ -51,8 +51,17 @@ const (
 // `extends Control` instead of no extends clause, it is a control operation.
 // Static members are allowed. Every other class is ordinary.
 func classKindOf(class *ast.Node) classKind {
+	if class == nil || !ast.IsClassDeclaration(class) || class.TypeParameters() != nil {
+		return ordinaryClass
+	}
+	return shapeKindOf(class)
+}
+
+// shapeKindOf is classKindOf without the rule against type parameters: it
+// says what class would declare if it had none (ES3005).
+func shapeKindOf(class *ast.Node) classKind {
 	if class == nil || !ast.IsClassDeclaration(class) || class.Name() == nil ||
-		!ast.HasSyntacticModifier(class, ast.ModifierFlagsAbstract) || class.TypeParameters() != nil ||
+		!ast.HasSyntacticModifier(class, ast.ModifierFlagsAbstract) ||
 		len(ast.GetImplementsHeritageClauseElements(class)) != 0 ||
 		!isEffectScriptFile(ast.GetSourceFileOfNode(class)) {
 		return ordinaryClass
@@ -107,6 +116,7 @@ type services struct {
 	contextModule   *ast.Symbol // effect's Context module, nil if the program lacks it
 	contextSearched bool
 	keys            map[*ast.Node]string
+	byKey           map[string][]*ast.Node // every service and control class in the program, by key
 }
 
 type servicesKey struct{}
