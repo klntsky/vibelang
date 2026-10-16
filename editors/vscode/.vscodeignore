@@ -1,0 +1,8 @@
+**
+!dist/extension.js
+!syntaxes/**
+!icons/**
+!language-configuration.json
+!package.json
+!README.md
+!ThirdPartyNotices.txt

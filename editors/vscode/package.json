@@ -1,0 +1,183 @@
+{
+  "name": "effectscript",
+  "displayName": "EffectScript",
+  "description": "EffectScript language support: the esc language server, diagnostics with ES codes, hovers with inferred contracts, and syntax highlighting for .es files.",
+  "version": "0.0.1",
+  "publisher": "effectscript",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "vscode": "^1.91.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "effect",
+    "effectscript",
+    "typescript"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "The extension runs the workspace's esc binary, which a workspace you do not trust could replace."
+    },
+    "virtualWorkspaces": false
+  },
+  "activationEvents": [
+    "onLanguage:effectscript",
+    "workspaceContains:**/*.es"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "effectscript",
+        "aliases": [
+          "EffectScript",
+          "effectscript"
+        ],
+        "extensions": [
+          ".es"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/effectscript.svg",
+          "dark": "./icons/effectscript.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "effectscript",
+        "scopeName": "source.effectscript",
+        "path": "./syntaxes/EffectScript.tmLanguage.json",
+        "unbalancedBracketScopes": [
+          "keyword.operator.relational",
+          "storage.type.function.arrow",
+          "keyword.operator.bitwise.shift",
+          "meta.brace.angle",
+          "punctuation.definition.tag",
+          "keyword.operator.assignment.compound.bitwise.ts"
+        ],
+        "tokenTypes": {
+          "meta.template.expression": "other",
+          "meta.template.expression string": "string",
+          "meta.template.expression comment": "comment",
+          "entity.name.type.instance.jsdoc": "other",
+          "entity.name.function.tagged-template": "other",
+          "meta.import string.quoted": "other",
+          "variable.other.jsdoc": "other"
+        }
+      },
+      {
+        "scopeName": "documentation.injection.effectscript",
+        "path": "./syntaxes/jsdoc.effectscript.injection.tmLanguage.json",
+        "injectTo": [
+          "source.effectscript"
+        ]
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "effectscript",
+        "scopes": {
+          "property": [
+            "variable.other.property.ts"
+          ],
+          "property.readonly": [
+            "variable.other.constant.property.ts"
+          ],
+          "variable": [
+            "variable.other.readwrite.ts"
+          ],
+          "variable.readonly": [
+            "variable.other.constant.object.ts"
+          ],
+          "function": [
+            "entity.name.function.ts"
+          ],
+          "namespace": [
+            "entity.name.type.module.ts"
+          ],
+          "variable.defaultLibrary": [
+            "support.variable.ts"
+          ],
+          "function.defaultLibrary": [
+            "support.function.ts"
+          ]
+        }
+      }
+    ],
+    "configuration": {
+      "title": "EffectScript",
+      "properties": {
+        "effectscript.server.path": {
+          "type": "string",
+          "default": "",
+          "scope": "machine-overridable",
+          "markdownDescription": "Path to the `esc` binary that serves as the language server. A relative path is relative to the first workspace folder. When empty, the extension uses the nearest `node_modules/.bin/esc`, then `esc` on `PATH`."
+        },
+        "effectscript.server.typeScriptFiles": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "on",
+            "off"
+          ],
+          "enumDescriptions": [
+            "Serve .ts and .js files too when the built-in TypeScript features are off: the built-in extension \"TypeScript and JavaScript Language Features\" is disabled, or, in Cursor, `typescript.experimental.useTsgo` is true.",
+            "Always serve .ts and .js files too. VS Code's built-in TypeScript features then report the same files a second time unless they are off.",
+            "Serve only .es files."
+          ],
+          "default": "auto",
+          "markdownDescription": "Whether the EffectScript language server also serves `.ts` and `.js` files. It always checks them as part of the program; this decides whether it reports their diagnostics, hovers, and completions in the editor."
+        },
+        "effectscript.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Log the messages between VS Code and the EffectScript language server to the EffectScript output."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "effectscript.restartServer",
+        "title": "Restart Language Server",
+        "category": "EffectScript"
+      },
+      {
+        "command": "effectscript.showOutput",
+        "title": "Show Language Server Output",
+        "category": "EffectScript"
+      },
+      {
+        "command": "effectscript.serveTypeScriptFiles",
+        "title": "Serve TypeScript Files in This Workspace",
+        "category": "EffectScript"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc --noEmit -p . && esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --sourcemap --outfile=dist/extension.js",
+    "package": "bun run build && vsce package --no-dependencies --skip-license --allow-missing-repository --out effectscript.vsix",
+    "test": "node test/run.mjs",
+    "derive-grammar": "node scripts/derive-grammar.mjs"
+  },
+  "dependencies": {
+    "vscode-languageclient": "10.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.91.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3"
+  }
+}

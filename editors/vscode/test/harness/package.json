@@ -1,0 +1,10 @@
+{
+  "name": "effectscript-extension-test",
+  "description": "Hosts test/harness/index.js, which checks the EffectScript extension installed from effectscript.vsix.",
+  "publisher": "effectscript",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "vscode": "^1.91.0"
+  }
+}
