@@ -75,8 +75,11 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `lambda-forms` | A lambda takes the form the overload candidate under check declares, and the first candidate that accepts it in that form wins: the overload probes behind `../prototype/single-pass/RESULTS.md`, including a returned lambda, which is plain |
 | `programs` | A lambda with no parameters is a program where Effect expects an Effect: `retry`, `race`, `timeout`, `all` over an array and a record, `provide`, a stored lambda that reruns, and an object property typed through `Layer.succeed`'s `NoInfer<S>` |
 | `program-values` | A function value converts where it is passed: `Effect.retry(flaky, …)`, array and record literals of programs, and arrays and records built at run time through `$programs` |
+| `programs-iterables` | `Effect.all` over a tuple, a record, a `Set`, and a `Map`'s values of programs (D49) |
 | `effect-values` | Calling an Effect value runs it: a clock read, a cached program, a `Config`, and a Context key |
+| `config-fallbacks` | `Config.orElse`'s fallback lambda returns a `Config` and stays plain: a `Config` extends Effect but is data (D24) |
 | `pipe-programs` | `pipe` takes a program first when its first stage takes an Effect (D8), and stays effect's `pipe` on plain data |
+| `pipe-generic-stages` | Generic stages infer from the value before them: `Match.when` after `Match.type` and `Match.value`, `Layer.tapError` after a layer, and `Effect.mapError` after a program |
 | `plain-functions` | A pure function compiles to a `$direct` variant and an Effect form; calls run inline in source order; a pure recursive pair is plain (a greatest fixpoint); `xs.map(double)` passes `double$direct` |
 | `plain-imports` | Another `.es` module's plain functions run inline through named, renamed, and namespace imports |
 | `plain-methods` | `[Equal.symbol]` and `[Hash.symbol]` compile to plain methods that `Equal.equals` and `HashSet` call (D55) |
@@ -85,6 +88,8 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `callback-contracts` | A callback parameter without a contract accepts any contract (D12): `mapAll` and `withRetry` infer E and R from each call, and the `.d.ts` writes `<A, B, E, R>` |
 | `generic-callees` | A call to a generic `.es` function adds the callee's E and R as the call instantiates them |
 | `d39-unions` | Where a parameter takes a function or an Effect (D39), a lambda with a parameter is a function, and one without is a program when it can pause and a function when it is plain |
+| `callbacks-result-unions` | A callback declared to return a plain value or an Effect, as `Arbitrary.checkEffect`'s property is, is plain when D10 allows it and an Effect function when it can pause |
+| `contract-lambdas-plain` | A lambda with a contract where only a plain function fits is plain and returns A: `Schema.suspend` and `SchemaTransformation.transform`. Pending on F3's D57 return check |
 | `trust-levels` | `JSON.parse`'s `SyntaxError` and a trusted function's `@throws` class join E and reach a `catch`, in Effect functions and in plain ones (D54); an unlisted exception is a defect; operands that run Effects run before the trusted call; Effect's exports, a boundary, a trusted re-export, a trusted method, and a parameter's callee need nothing |
 | `es4401-plain-call.fail` | ES4401 for a plain TypeScript call, one that returns a Promise, one in a plain callback, and a trusted contract whose `@throws` class the file cannot import; none for a trusted call, a boundary, or the top level |
 | `es4402-platform.fail` | ES4402 where code runs a platform API (D108): imported functions called inside boundaries, a namespace member called, a property read on a default import and on a namespace member, `fetch`, `setTimeout`, `console.log`, destructuring `process`, and `new WebSocket`; importing, passing `createServer` and `os.EOL` as values, a type-only import, `URL`, and `TextEncoder` are allowed |
@@ -208,7 +213,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
 | `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals`; ask skipped function type hooks where `checkFunctionExpressionOrObjectLiteralMethod` skips a context-sensitive function | +23 / -5 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
-| `tsc/internal/checker/checker.go` | Tell call candidate hooks which candidate `inferTypeArguments` and `isSignatureApplicable` check, and let candidate filter hooks reject it; pass the type of a function expression, a contextual return type (`getContextualReturnType` wraps the old body as `getContextualReturnTypeWorker`), and every checked expression through hooks; append hook type parameters in `getSignatureFromDeclaration` and `getOuterTypeParameters`; let parameter type hooks replace an annotation's type in `getTypeForVariableLikeDeclaration` | +14 / -4 |
+| `tsc/internal/checker/checker.go` | Tell call candidate hooks which candidate `inferTypeArguments` and `isSignatureApplicable` check, and let candidate filter hooks reject it; pass the type of a function expression, a contextual return type (`getContextualReturnType` wraps the old body as `getContextualReturnTypeWorker`), and every checked expression through hooks; append hook type parameters in `getSignatureFromDeclaration` and `getOuterTypeParameters`; let parameter type hooks replace an annotation's type in `getTypeForVariableLikeDeclaration`; let annotated return inference hooks replace the return annotation's type in `inferFromAnnotatedParametersAndReturn` | +15 / -5 |
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
 | `tsc/internal/compiler/fileloader.go` | Resolve each module an implicit import hook names for a file | +4 |
 | `tsc/internal/binder/nameresolver.go` | `NameResolver.ResolveBeforeGlobals`, consulted before the global scope | +6 |
@@ -226,8 +231,8 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/checker/extensions_classes.go` (new) | `RegisterClassBaseHook`, `Program`, `GetStringLiteralType`, `NewOptionalReadonlyPropertyType` | +48 |
 | `tsc/internal/checker/extensions_calls.go` (new) | `RegisterMemberReceiverHook`, `RegisterCallSignaturesHook`, `NewCallSignature` | +52 |
 | `tsc/internal/checker/extensions_functions.go` (new) | `RegisterSkippedFunctionTypeHook`, `GetNonInferrableAnyType` | +35 |
-| `tsc/internal/checker/extensions_forms.go` (new) | `RegisterCallCandidateHook`, `RegisterCandidateFilterHook`, `RegisterFunctionExpressionTypeHook`, `RegisterContextualReturnTypeHook`, `NewFunctionTypeWithReturnType` | +118 |
-| `tsc/internal/checker/extensions_values.go` (new) | `RegisterExpressionTypeHook`, `CreateArrayType`, `MapObjectType` | +45 |
+| `tsc/internal/checker/extensions_forms.go` (new) | `RegisterCallCandidateHook`, `RegisterCandidateFilterHook`, `RegisterFunctionExpressionTypeHook`, `RegisterContextualReturnTypeHook`, `RegisterAnnotatedReturnInferenceHook`, `NewFunctionTypeWithReturnType` | +142 |
+| `tsc/internal/checker/extensions_values.go` (new) | `RegisterExpressionTypeHook`, `CreateArrayType`, `MapObjectType`, `IteratedType` | +55 |
 | `tsc/internal/checker/extensions_callbacks.go` (new) | `RegisterTypeParametersHook`, `RegisterParameterTypeHook`, `NewTypeParameter` | +61 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
 | `tsc/internal/tsoptions/effectscript.go` (new) | Parse, validate, and serialize `compilerOptions.effectscript` | +149 |
@@ -281,11 +286,11 @@ The position decides, inside TypeScript's own overload resolution (`forms.go`, `
 
 1. `inferTypeArguments` and `isSignatureApplicable` tell the call candidate hook (`callCandidate`) which candidate they check a call's arguments against.
 2. When the checker types a lambda among the arguments, also inside an array literal or as an object literal property, the function expression type hook (`functionExpressionType`) reads that candidate's declared, uninstantiated parameter type (D44) and follows the path to the lambda through element and property types. A bare type parameter says nothing, so the lambda falls back to its contextual type, instantiated with the inferences made so far, as `Layer.succeed`'s `NoInfer<S>` needs.
-3. The expected type decides the form: a function type that returns an Effect asks for an Effect function, another function type for a plain function, and an Effect for a program. Where a parameter accepts a function or an Effect (D39), a lambda with parameters is a function and one without is a program when it can pause. Without an expected type, as for a returned lambda, a lambda is plain when D10 allows it and an Effect function otherwise.
+3. The expected type decides the form: a function type that returns an Effect asks for an Effect function, another function type for a plain function, and an Effect for a program. Only effect's own Effect interface counts, so a callback expected to return a `Config`, which extends Effect but is data (D24), stays plain. Where a parameter accepts a function or an Effect (D39), a lambda with parameters is a function and one without is a program when it can pause. Without an expected type, as for a returned lambda, a lambda is plain when D10 allows it and an Effect function otherwise, and so is a lambda whose expected type returns a plain value or an Effect, such as `boolean | Effect<boolean, E, R>`. A lambda with a contract, `Effect<A, E, R>`, that takes the plain form returns A, and inference from its annotation infers from A (the annotated return inference hook, `annotatedReturnInference`).
 4. A plain function cannot run an Effect, so when a candidate asks a lambda that pauses for the plain form, the candidate filter hook (`filterCandidate`) rejects the candidate and resolution tries the next one. The first candidate that accepts the lambda in the form it asks for wins, as TypeScript's first-applicable rule says.
 5. Each candidate's first answer stands. The lambda compiles to the form the candidate resolution selected asked for, read back from the call's resolved signature.
 
-A return statement in an Effect function or program is contextually typed by the success type of the Effect expected of it (the contextual return type hook, `contextualReturnType`), so the object a `Layer.effect` program returns gets the service's shape. `pipe` looks ahead (D8): when its first argument is a function with no parameters and its first stage takes an Effect, that argument is a program (`pipe.go`).
+A return statement in an Effect function or program is contextually typed by the success type of the Effect expected of it (the contextual return type hook, `contextualReturnType`), so the object a `Layer.effect` program returns gets the service's shape. `pipe` looks ahead (D8): when its first argument is a function with no parameters and its first stage takes an Effect, that argument is a program (`pipe.go`). The look-ahead reads the signatures of the stage's callee instead of checking the stage, so a generic stage such as `Match.when(…)` is inferred once, from what `pipe` passes it.
 
 ### Programs as values (D7, D49)
 
@@ -294,7 +299,7 @@ A function value converts where it is passed, as a lambda takes its form there. 
 | Expected | Value | Lowers to |
 | --- | --- | --- |
 | An Effect | A function with no required parameters that returns an Effect | `Effect.suspend(value)` |
-| An iterable or record of Effects | An array or record of such functions, built at run time | `runtime.$programs(value)`, which keeps a record's keys |
+| An iterable or record of Effects | An iterable, such as an array, a `Set`, or a `Map`'s values, or a record of such functions, built at run time | `runtime.$programs(value)`, which makes an iterable an array and keeps a record's keys |
 | A plain function | An `.es` function that compiles to plain JavaScript | `f$direct` (D9) |
 | A plain function | An `.es` function that can pause | rejected, then ES4301 |
 
@@ -353,6 +358,15 @@ A parameter whose annotation is a function type returning something other than a
 | `nwnutlmz` | effectscript: read a generic .es callee's E and R from the call |
 | `uuwrwppk` | checker: add type parameter and parameter type hooks |
 | `tmmqumtk` | effectscript: let a callback parameter without a contract accept any contract |
+| `ztwuloyu` | effectscript: keep a lambda that must return a Config plain |
+| `wpukknuy` | effectscript: look ahead in pipe without checking the first stage |
+| `lmsyqkzu` | checker: export the iterated type of an iterable |
+| `lzqulkkl` | effectscript: convert any iterable of programs for Effect.all |
+| `tsvpvvxs` | effectscript: let a callback that may return an Effect take either form |
+| `pqtovvuk` | effectscript: name the collection and callee in ES4301 notes correctly |
+| `nzkrouwn` | checker: add an annotated return inference hook |
+| `nzplpwps` | effectscript: type a plain lambda with a contract as returning A |
+| `uqxznpul` | effectscript: document the F2 follow-up fixes in EFFECTSCRIPT.md |
 
 ## Diagnostics
 
@@ -710,7 +724,7 @@ A span is named after its function; a class method's span names its class too. A
 - A trusted call's expected failures are defects inside a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback ES4301.
 - Runners are known by their declarations in `effect`, `@effect/platform-node`, `@effect/platform-bun`, and `@effect/vitest`; a function that wraps one is not a runner. ES4402's globals are a fixed list (`platformGlobals`), so a platform global outside it, such as `postMessage` or `BroadcastChannel`, is not reported.
 - ES4402 follows a platform API by its import or global name. A platform function reached through a local alias, a destructured namespace member, a parameter, or an object that a platform call returned is not reported, and as a call to a platform package it is not ES4401 either.
-- An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract.
+- An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract, also in a lambda that takes the plain form and returns A.
 - Declaration files carry no JSDoc metadata for `$direct` variants (Chapter 27), so code compiled against a `.d.ts` runs a plain function's Effect form, which is correct and slower.
 - A callback parameter without a contract returns an Effect (D12), so a function cannot call it inside a callback that JavaScript calls synchronously, such as a `sort` comparator: that is ES4301.
 - TypeScript types a context-sensitive lambda's parameters from the first candidate that types them, so an overload whose parameter types differ cannot retype them.
