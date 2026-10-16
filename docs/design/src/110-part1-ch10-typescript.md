@@ -1,6 +1,6 @@
 ### 10. Working with TypeScript
 
-EffectScript compiles to TypeScript and shares its types, modules, and Effect. A project can mix `.ts` and `.es` files freely: existing Effect code stays in TypeScript, and new code can be written in either.
+EffectScript uses the TypeScript compiler and shares its types, modules, and Effect. A project can mix `.ts` and `.es` files freely: existing Effect code stays in TypeScript, and new code can be written in either.
 
 #### Using TypeScript Effect code from EffectScript
 
@@ -47,11 +47,11 @@ error ES1002: Effect.gen expects a JavaScript generator, but in EffectScript fun
     function findName(id: string) { return Users.find(id).name }
 ```
 
-The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions and `await` are not part of EffectScript either: a call already waits. Converting a function is mostly deletion, as every chapter of Part I shows, and the editor does it for whole functions (Chapter 28).
+The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions and `await` are not part of EffectScript either: a call already waits. Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (Chapter 28).
 
 #### Using EffectScript code from TypeScript
 
-To TypeScript, every exported EffectScript function is a function that returns an `Effect`, and every exported producer is a function that returns a `Stream`. The compiler writes that into the declaration file:
+To TypeScript, an exported unannotated or Effect-contract function returns an `Effect`, and every exported producer is a function that returns a `Stream`. The compiler writes that into the declaration file:
 
 ```ts dts
 // page.d.ts
@@ -66,7 +66,7 @@ import { title } from "./page.js"
 const program = title("42").pipe(Effect.provide(DatabaseLive))   // nothing has run yet
 ```
 
-Calling an EffectScript function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees `add` as `(a: number, b: number) => Effect<number>`, and only EffectScript callers use the fast path. TypeScript imports `./page.js`, which the compiler resolves to `page.es` the way it resolves `.js` to `.ts`.
+Calling an EffectScript function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and EffectScript callers in the same compilation use the fast path. An eligible helper with a plain annotation, such as `: number`, instead keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.es` the way it resolves `.js` to `.ts`.
 
 #### Code that is not Effect
 
@@ -105,9 +105,11 @@ A trusted contract is declared once, on the TypeScript declaration:
 export function slugify(title: string): string { … }
 ```
 
-The compiler trusts the tag; it cannot check a TypeScript body. `@throws {InvalidSlug}` makes `InvalidSlug` an expected failure that joins the caller's E; any other exception from `slugify` is a defect. Each `@throws` names an exported class, and the generated code tests `instanceof InvalidSlug`. The tag cannot be put on a function that returns a Promise or an `Effect`. To trust a function from a package you cannot edit, re-export it from a `.ts` file you own, with the tag.
+The compiler trusts the tag; it cannot check a TypeScript body. `@throws {InvalidSlug}` makes `InvalidSlug` an expected failure that joins the caller's E; any other exception from `slugify` is a defect. Each `@throws` names a class exported by a module the `.es` caller imports; otherwise the call is ES4401 (D101). The generated code tests `instanceof InvalidSlug`. The tag cannot be put on a function that returns a Promise or an `Effect`. To trust a function from a package you cannot edit, re-export it from a `.ts` file you own, with the tag.
 
-ES4401 applies inside functions. A module's top level runs outside every program, so a plain call there is an ordinary JavaScript call, as in TypeScript, and an exception from it fails the module's import.
+ES4401 applies where a fiber runs the code. Module initialization and its plain callbacks passed to TypeScript, such as `describe` bodies and route handlers, run ordinary JavaScript calls (D100). An exception at module top level fails the import. Trusted failures stay defects inside plain callbacks, while they make free lambdas and named EffectScript functions use the Effect form (D101).
+
+Only built-ins that parse outside text declare expected failures: `JSON.parse` declares `SyntaxError`, and `decodeURI` and `decodeURIComponent` declare `URIError`. Other built-in exceptions are defects (D101).
 
 An explicit boundary says what an exception means at the call. These are Effect's own constructors, unchanged:
 
