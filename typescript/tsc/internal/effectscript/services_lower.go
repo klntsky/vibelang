@@ -52,7 +52,7 @@ func (a *analyzer) addServiceLookup(info *effectInfo, call *ast.Node) {
 	if identifier == nil {
 		return
 	}
-	info.requirements = append(info.requirements, identifier)
+	info.addRequirement(identifier, call)
 	if info.effect == nil {
 		info.effect = effectInterface(a.checker, a.checker.GetApparentType(a.checker.GetTypeAtLocation(call.Expression().Expression())))
 	}

@@ -1,0 +1,19 @@
+// expect: ES2003
+// A plain return annotation keeps its type on a function that compiles to
+// plain JavaScript (D67). A function whose body runs an Effect returns
+// Effect<A, E, R>, so a plain annotation there is ES2003.
+import { Console } from "effect"
+
+export function add(a: number, b: number): number {
+  return a + b
+}
+
+export function greet(name: string): number {
+  Console.log(`hello, ${name}`)
+  return name.length
+}
+
+export const half = (n: number): number => {
+  if (n < 0) throw "negative"
+  return n / 2
+}

@@ -108,6 +108,7 @@ type analyzer struct {
 	states    map[*ast.Node]fnState
 	effects   map[*ast.Node]*effectInfo // see effectOf
 	tryBlocks map[*ast.Node]*effectInfo // see tryBlockFlow
+	contracts map[*ast.Node]*contract   // see contractOf
 
 	// Lambda forms (forms.go).
 	lambdas         map[*ast.Node]*lambdaState
@@ -138,6 +139,7 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			states:    map[*ast.Node]fnState{},
 			effects:   map[*ast.Node]*effectInfo{},
 			tryBlocks: map[*ast.Node]*effectInfo{},
+			contracts: map[*ast.Node]*contract{},
 			lambdas:   map[*ast.Node]*lambdaState{},
 			current:   map[*ast.Node][]*checker.Signature{},
 			rejected:  map[*ast.Node]map[candidateKey]bool{},
@@ -164,7 +166,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn) || hasEscapingThrow(fn) || a.hasEscapingFailure(fn)
+	effect := forEachCallInBody(fn, a.performs) || a.expectsEffect(fn) || hasEscapingThrow(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
 }

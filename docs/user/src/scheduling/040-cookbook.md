@@ -36,7 +36,6 @@ Parse the response's retry hint into a duration at the HTTP boundary. The policy
 ## Polling with response-dependent delays
 
 ```ts
-// compiler-gap: D57 A function body must check against the success type of its written Effect contract.
 import { Duration, Schedule } from "effect"
 
 type Status =

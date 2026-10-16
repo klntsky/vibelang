@@ -72,6 +72,12 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives expected failures and rethrows a `TypeError` defect (D54) |
 | `es2004-dead-catch.fail` | A `catch` over a `try` that raises no expected failure is ES2004, which `compilerOptions.effectscript` makes an error here; a live `catch` is not reported |
+| `contracts` | Written contracts: returns checked against A, a contract wider than the body, a contract on a body that runs nothing, `infer` in each channel (D57), and the `.d.ts` with the inferred channels filled in |
+| `contracts-success.fail` | A returned value that A does not accept is TypeScript's TS2322 |
+| `es2001-escaping-failure.fail` | A failure from a call and one from a `throw` escape their contracts; a `catch` keeps a third function within its contract |
+| `es2002-escaping-requirement.fail` | A service the body needs escapes the contract's R |
+| `es2003-bare-return.fail` | A plain return annotation is ES2003 on a function that runs an Effect or throws, and allowed on one that compiles to plain JavaScript (D67) |
+| `es2003-missing-channels.fail` | `Effect<string>` and `Effect<string, UserNotFound>` leave channels out |
 | `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 | `lambda-forms` | A lambda takes the form the overload candidate under check declares, and the first candidate that accepts it in that form wins: the overload probes behind `../prototype/single-pass/RESULTS.md`, including a returned lambda, which is plain |
 | `programs` | A lambda with no parameters is a program where Effect expects an Effect: `retry`, `race`, `timeout`, `all` over an array and a record, `provide`, a stored lambda that reruns, and an object property typed through `Layer.succeed`'s `NoInfer<S>` |
@@ -200,6 +206,9 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 73 | `vsvzswzz` | effectscript: keep the last comment of a lowered file | The statement list keeps its source range when the lowering adds imports |
 | 74 | `twymwmrr` | effectscript: document calls to Exit and error values in EFFECTSCRIPT.md | This section |
 | 75 | `oqrpqyrk` | effectscript: report ES2004 for a catch that can never run | D37: a `catch` over a `try` that cannot fail is dead code |
+| 76 | `rtqqsqrv` | declarations: add a hook to declare a type from the checker instead of its annotation | A contract's inferred channels reach the `.d.ts` |
+| 77 | `kxzmxurw` | checker: add hooks for checked return types and infer outside conditional types | Seams for checking returns against A and for `infer Name` channels |
+| 78 | `stuypkuq` | effectscript: check written contracts (ES2001, ES2002, ES2003, D57) | A written contract is checked, and `infer` channels come from the body |
 
 Lane F2's commits, which landed among these, are listed in [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks).
 
@@ -215,6 +224,8 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
 | `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals`; ask skipped function type hooks where `checkFunctionExpressionOrObjectLiteralMethod` skips a context-sensitive function | +23 / -5 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
+| `tsc/internal/checker/checker.go` | Check what a function returns against `unwrapReturnTypeOf` at the four places that check it against `unwrapReturnType`; complete an annotated return type through annotated return type hooks in `getReturnTypeOfSignature`; ask infer type hooks in `checkInferType` | +9 / -7 |
+| `tsc/internal/transformers/declarations/transform.go` | `ensureType` serializes a type from the checker when a type annotation hook asks | +1 / -1 |
 | `tsc/internal/checker/checker.go` | Tell call candidate hooks which candidate `inferTypeArguments` and `isSignatureApplicable` check, and let candidate filter hooks reject it; pass the type of a function expression, a contextual return type (`getContextualReturnType` wraps the old body as `getContextualReturnTypeWorker`), and every checked expression through hooks; append hook type parameters in `getSignatureFromDeclaration` and `getOuterTypeParameters`; let parameter type hooks replace an annotation's type in `getTypeForVariableLikeDeclaration`; let annotated return inference hooks replace the return annotation's type in `inferFromAnnotatedParametersAndReturn` | +15 / -5 |
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
 | `tsc/internal/compiler/fileloader.go` | Resolve each module an implicit import hook names for a file | +4 |
@@ -229,7 +240,8 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/tsoptions/options_generated.go` (generated) | Parse, merge for `extends`, compare for semantic diagnostics and emit, and serialize for `--showConfig` | +15 / -1 |
 | `tsc/internal/tsoptions/commandlineoption.go`, `tsconfigparsing.go` | The option's extra validation | +4 |
 | `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource`, `RegisterImplicitImportHook`, `RegisterDeclarationTransformerHook` | +106 |
-| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening`, `RegisterNameResolutionHook`, `RegisterEntityNameVisibilityHook` | +217 |
+| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening`, `RegisterNameResolutionHook`, `RegisterEntityNameVisibilityHook`, `RegisterUnwrappedReturnTypeHook`, `RegisterAnnotatedReturnTypeHook`, `RegisterInferTypeHook`, `GetReturnTypeFromBody` | +288 |
+| `tsc/internal/transformers/declarations/extensions.go` (new) | `RegisterTypeAnnotationHook` | +27 |
 | `tsc/internal/checker/extensions_classes.go` (new) | `RegisterClassBaseHook`, `Program`, `GetStringLiteralType`, `NewOptionalReadonlyPropertyType` | +48 |
 | `tsc/internal/checker/extensions_calls.go` (new) | `RegisterMemberReceiverHook`, `RegisterCallSignaturesHook`, `NewCallSignature` | +52 |
 | `tsc/internal/checker/extensions_functions.go` (new) | `RegisterSkippedFunctionTypeHook`, `GetNonInferrableAnyType` | +35 |
@@ -406,6 +418,9 @@ The checks so far:
 | ES1003 | `async`, `await`, `for await`, and `await using` in a `.es` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
 | ES1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
 | ES1005 | The callee of a runner in code a fiber runs | `runners.go` |
+| ES2001 | The call or `throw` that adds an expected failure the function's contract does not allow | `contracts.go` |
+| ES2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
+| ES2003 | A return annotation that leaves a contract channel out, or a plain return annotation on a function whose body runs an Effect | `contracts.go` |
 | ES2004 | The `catch` keyword, when the `try` block can raise no expected failure (D37); covers TypeScript's errors about the `never` caught value | `failures.go` |
 | ES4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; an `.es` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
 | ES4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
@@ -582,6 +597,34 @@ function clamp(n: number) {                  function clamp(n) {
 | `runtimeMember`, `runtimeCall` | Reference `@effectscript/runtime` helpers, importing the package on first use |
 
 To add a region kind: create a `region`, emit each block with `regionStatements` and `regionFunction`, compose the closures with runtime helpers, and pass the result to `runRegion`. A consumer that handles some jumps itself, as a producer loop handles its own `break` and `continue`, filters `r.jumps` before dispatching.
+## Contracts
+
+The return type annotation of an `.es` function with a body is the function's contract, `Effect<A, E, R>`: the whole computation, as `Promise<string>` is the whole computation of an async function. `contracts.go` implements the checks of design chapter 14:
+
+| Rule | How |
+| --- | --- |
+| A function with a contract is an Effect, whatever its body runs | `hasContract` in `analyzer.isEffect`; a lambda's form stays the lambda's position's to decide (D56), so a lambda with a contract in a plain position is plain and returns A (D113) |
+| What it returns is checked against A | The unwrapped return type hook gives `checkReturnStatement` and an arrow function's expression body the A of the signature's return type, where TypeScript would check against the whole Effect; a mismatch is TypeScript's own error, such as TS2322. F2's contextual return type hook types the returned expressions by A |
+| An expected failure that escapes the body must be in E | ES2001 at the call or `throw` that adds it, naming the failure and the contract, with a fix that widens E. `effectInfo` keeps, for each failure and requirement, the call or `throw` in the function's own body that adds it |
+| A requirement must be in R | ES2002 at the call that needs it |
+| A channel written `infer Name` comes from the body (D57) | The annotated return type hook completes the signature's return type: A as TypeScript infers a return type (`GetReturnTypeFromBody`), E and R from `effectOf`. The infer type hook keeps `checkInferType` from reporting TS1338 and the unused name; the binder already declares such a name in no scope |
+| The declaration file carries the full contract | An annotation with an `infer` channel is not copied: the declaration type annotation hook makes the emitter serialize the signature's return type. A full contract is copied, and the prelude's declaration-file imports make its `Effect` portable |
+| A contract that leaves a channel out is ES2003 | `Effect<User>` and `Effect<User, UserNotFound>`, with both fixes: the missing channels as `never`, or as `infer` |
+| A plain return annotation keeps its type on a function that compiles to plain JavaScript (D67) | On a function whose body runs an Effect, throws past its own `catch`, or makes a trusted call whose failures escape, it is ES2003. Methods are exempt: a method that implements a plain-function member is declared with a plain type (D55) |
+| A caller sees the contract, not the body | `addCall` reads a callee's E and R from its contract when the contract infers neither; a callee whose contract infers a channel is read through its body, which never asks for a return type that a call cycle may be computing |
+
+```text
+main.es(14,20): error ES2001: UserNotFound can escape greeting, but its contract says E = never.
+  Catch it inside greeting, or change the contract to Effect<string, UserNotFound, never>.
+main.es(15,3): error ES2002: welcome needs Mailer, but its contract says R = Users.
+  Provide Mailer inside welcome, or add it: Effect<string, MailError, Mailer | Users>.
+main.es(6,35): error ES2003: Effect<string> leaves contract channels unspecified. Did you mean never or inferred?
+  Write Effect<string, never, never> to check the missing channels as never.
+  Or write Effect<string, infer E, infer R> to infer them from the body.
+```
+
+A provider's members are checked against the service they implement by `providers_check.go`, which reports ES2001 and ES3101 at the member; a member with its own contract is also checked against that contract here. The two checks compare different contracts, so one mismatch is reported once.
+
 ## The prelude
 
 Every `.es` file sees these names without an import (D4, D48): `Effect`, `Schema`, `Layer`, `TaggedError`, `Control`, `Scope`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. They are the exports of `@effectscript/runtime`, whose `prelude.ts` gives `Effect` and `Scope` two meanings each: the effect module, for `Effect.gen` and `Scope.make`, and a type, so `Effect<A, E, R>` means `Effect.Effect<A, E, R>` and `Scope` means `Scope.Scope`.
@@ -727,7 +770,6 @@ A span is named after its function; a class method's span names its class too. A
 - A trusted call's expected failures are defects inside a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback ES4301.
 - Runners are known by their declarations in `effect`, `@effect/platform-node`, `@effect/platform-bun`, and `@effect/vitest`; a function that wraps one is not a runner. ES4402's globals are a fixed list (`platformGlobals`), so a platform global outside it, such as `postMessage` or `BroadcastChannel`, is not reported.
 - ES4402 follows a platform API by its import or global name. A platform function reached through a local alias, a destructured namespace member, a parameter, or an object that a platform call returned is not reported, and as a call to a platform package it is not ES4401 either.
-- An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract, also in a lambda that takes the plain form and returns A.
 - Declaration files carry no JSDoc metadata for `$direct` variants (Chapter 27), so code compiled against a `.d.ts` runs a plain function's Effect form, which is correct and slower.
 - A callback parameter without a contract returns an Effect (D12), so a function cannot call it inside a callback that JavaScript calls synchronously, such as a `sort` comparator: that is ES4301.
 - TypeScript types a context-sensitive lambda's parameters from the first candidate that types them, so an overload whose parameter types differ cannot retype them.

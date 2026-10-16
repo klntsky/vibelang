@@ -30,16 +30,46 @@ func inferredReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *chec
 }
 
 // effectInfo lists what running a function's body adds to the error and
-// requirement channels of its Effect.
+// requirement channels of its Effect, each with its source: the call or throw
+// in the body that adds it.
 type effectInfo struct {
-	errors       []*checker.Type
-	requirements []*checker.Type
-	effect       *checker.Type // the generic Effect interface, from any Effect the body runs
+	errors             []*checker.Type
+	requirements       []*checker.Type
+	errorSources       []*ast.Node   // errorSources[i] adds errors[i]
+	requirementSources []*ast.Node   // requirementSources[i] adds requirements[i]
+	effect             *checker.Type // the generic Effect interface, from any Effect the body runs
 }
 
+func (info *effectInfo) addError(t *checker.Type, source *ast.Node) {
+	info.errors = append(info.errors, t)
+	info.errorSources = append(info.errorSources, source)
+}
+
+func (info *effectInfo) addRequirement(t *checker.Type, source *ast.Node) {
+	info.requirements = append(info.requirements, t)
+	info.requirementSources = append(info.requirementSources, source)
+}
+
+// add adds what other lists, keeping its sources.
 func (info *effectInfo) add(other *effectInfo) {
 	info.errors = append(info.errors, other.errors...)
 	info.requirements = append(info.requirements, other.requirements...)
+	info.errorSources = append(info.errorSources, other.errorSources...)
+	info.requirementSources = append(info.requirementSources, other.requirementSources...)
+	if info.effect == nil {
+		info.effect = other.effect
+	}
+}
+
+// addFrom adds what other lists, as added by source, such as a call to the
+// function whose body other describes.
+func (info *effectInfo) addFrom(other *effectInfo, source *ast.Node) {
+	for _, t := range other.errors {
+		info.addError(t, source)
+	}
+	for _, t := range other.requirements {
+		info.addRequirement(t, source)
+	}
 	if info.effect == nil {
 		info.effect = other.effect
 	}

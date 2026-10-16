@@ -32,7 +32,6 @@ Errors and services from several calls accumulate as unions. Catching a failure 
 ## Check selected channels
 
 ```ts
-// compiler-gap: D57 Return contracts must check written channels and infer channels written infer Name.
 function rate(currency: string): Effect<number, infer E, Rates> {
   return Rates.lookup(currency)
 }
@@ -56,7 +55,7 @@ function checkedConversion(amount: number, currency: string): Effect<number, inf
 
 In a return annotation on a function with a body, `infer` followed by any name infers that channel from the body. Other slots are promises the compiler checks. The name is documentation only and is not in scope in the body or other slots. `infer _` is allowed, including `Effect<infer _, infer _, infer _>` to infer all three channels.
 
-Write all three slots. `Effect<number>` in this position reports ES2003: "Did you mean never or inferred?" The quick fixes offer `Effect<number, never, never>` to check for no failures or requirements, and `Effect<number, infer E, infer R>` to infer them. A bare return annotation such as `: number` is also ES2003.
+Write all three slots. `Effect<number>` in this position reports ES2003: "Did you mean never or inferred?" The quick fixes offer `Effect<number, never, never>` to check for no failures or requirements, and `Effect<number, infer E, infer R>` to infer them. A plain return annotation such as `: number` is ES2003 on a function whose body runs an Effect; a function that compiles to plain JavaScript keeps it.
 
 This applies only to function return annotations with bodies in `.es`. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults: `Effect<number, never, never>`. Those positions do not support this channel inference. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 

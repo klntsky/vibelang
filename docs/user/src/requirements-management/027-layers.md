@@ -153,7 +153,6 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 ## Declaring service factories and dependencies
 
 ```ts
-// compiler-gap: D57 A function body must check against the success type of its written Effect contract.
 abstract class Banner {
   abstract text(title: string): Effect<string, never, never>
 

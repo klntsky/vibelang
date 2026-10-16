@@ -9,7 +9,7 @@ function double(n: number): number {
 
 // Console.log returns an Effect, so calling it runs it, and greet becomes
 // an Effect itself.
-function greet(name: string): number {
+function greet(name: string) {
   Console.log(`hello, ${name}`)
   return name.length
 }
@@ -17,7 +17,7 @@ function greet(name: string): number {
 // An arrow function that runs an Effect is lowered the same way.
 const shout = (text: string) => Console.log(text.toUpperCase())
 
-export function main(): void {
+export function main() {
   for (const id of [0, 1]) {
     const length = greet(`user ${id}`) // an .es Effect: runs
     Console.log(`greeted with ${length} letters`)

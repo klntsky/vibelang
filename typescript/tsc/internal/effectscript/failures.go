@@ -29,7 +29,7 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			info.add(a.tryFlow(n))
 		case n.Kind == ast.KindThrowStatement:
 			n.ForEachChild(visit)
-			info.errors = append(info.errors, a.thrownType(n))
+			info.addError(a.thrownType(n), n.Expression())
 		case n.Kind == ast.KindCallExpression:
 			n.ForEachChild(visit)
 			a.addServiceLookup(info, n)
@@ -75,11 +75,12 @@ func hasEscapingThrow(fn *ast.Node) bool {
 func (a *analyzer) tryFlow(node *ast.Node) *effectInfo {
 	try := node.AsTryStatement()
 	body := a.tryBlockFlow(try.TryBlock)
-	escapes := &effectInfo{requirements: slices.Clone(body.requirements), effect: body.effect}
+	escapes := &effectInfo{requirements: slices.Clone(body.requirements), requirementSources: slices.Clone(body.requirementSources), effect: body.effect}
 	if try.CatchClause != nil {
 		escapes.add(a.flowOf(try.CatchClause.AsCatchClause().Block))
 	} else {
 		escapes.errors = append(escapes.errors, body.errors...)
+		escapes.errorSources = append(escapes.errorSources, body.errorSources...)
 	}
 	if try.FinallyBlock != nil {
 		escapes.add(a.flowOf(try.FinallyBlock))
@@ -116,19 +117,23 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 	// A call to a generic .es function, such as one whose callback accepts any
 	// contract (D12), adds the callee's E and R as this call instantiates
 	// them, so it reads its instantiated return type; the callee's own body
-	// knows only its type parameters.
+	// knows only its type parameters. A callee with a contract adds what the
+	// contract says.
 	if callee := implementationOf(sig.Declaration()); callee != nil && isLowerable(callee) && sig.Target() == nil {
-		if calleeInfo := a.effectOf(callee); calleeInfo != nil {
-			info.add(calleeInfo)
+		if e, r, ok := a.calleeContract(callee, sig); ok {
+			info.addError(e, call)
+			info.addRequirement(r, call)
+		} else if calleeInfo := a.effectOf(callee); calleeInfo != nil {
+			info.addFrom(calleeInfo, call)
 		}
 		return
 	}
 	t := a.checker.GetReturnTypeOfSignature(sig)
 	if e := channelType(a.checker, t, "_E"); e != nil {
-		info.errors = append(info.errors, e)
+		info.addError(e, call)
 	}
 	if r := channelType(a.checker, t, "_R"); r != nil {
-		info.requirements = append(info.requirements, r)
+		info.addRequirement(r, call)
 	}
 	if info.effect == nil {
 		info.effect = effectInterface(a.checker, t)

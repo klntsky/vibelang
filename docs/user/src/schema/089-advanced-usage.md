@@ -204,7 +204,6 @@ Spread `.fields` or use `fieldsAssign` to add fields. `encodeKeys` maps decoded 
 ## Modeling recursive and mutually recursive codecs
 
 ```ts
-// compiler-gap: D57 A plain callback with an Effect contract must check its returns against the success type.
 interface Crate {
   readonly count: number
   readonly children: ReadonlyArray<Crate>

@@ -11,6 +11,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/compiler"
+	"github.com/microsoft/TypeScript/tsc/internal/transformers/declarations"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
@@ -34,6 +35,10 @@ func init() {
 	checker.RegisterCallSignaturesHook(effectValueCall)
 	checker.RegisterExpressionTypeHook(expressionType)
 	checker.RegisterCatchVariableTypeHook(catchVariableType)
+	checker.RegisterUnwrappedReturnTypeHook(unwrappedReturnType)
+	checker.RegisterAnnotatedReturnTypeHook(annotatedReturnType)
+	checker.RegisterInferTypeHook(inferChannel)
+	declarations.RegisterTypeAnnotationHook(hasInferredChannel)
 	checker.RegisterNameResolutionHook(resolvePreludeName)
 	checker.RegisterEntityNameVisibilityHook(preludeNameVisible)
 	checker.RegisterTypeParametersHook(extraTypeParameters)

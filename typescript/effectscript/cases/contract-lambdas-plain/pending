@@ -1,1 +1,0 @@
-F3 returns of a lambda with a contract checked against A, not Effect<A, E, R> (D57)

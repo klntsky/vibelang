@@ -93,7 +93,7 @@ func (a *analyzer) expectedFailures(call *ast.Node) []failure {
 // addFailures adds the expected failures of call to info.
 func (a *analyzer) addFailures(info *effectInfo, call *ast.Node) {
 	for _, f := range a.expectedFailures(call) {
-		info.errors = append(info.errors, f.t)
+		info.addError(f.t, call)
 	}
 }
 

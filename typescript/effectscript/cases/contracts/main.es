@@ -1,0 +1,75 @@
+// A written contract is the function's whole computation: returns are checked
+// against A, and E and R may be wider than the body needs, never narrower.
+// A channel written `infer Name` comes from the body (D57), and the
+// declaration file carries the full contract.
+import { Data } from "effect"
+
+export class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: string }> {}
+export class Invalid extends Data.TaggedError("Invalid")<{ readonly raw: string }> {}
+
+export interface User {
+  readonly id: string
+  readonly name: string
+}
+
+const users = new Map<string, User>([["42", { id: "42", name: "Ada" }]])
+
+export function find(id: string): Effect<User, UserNotFound, never> {
+  const user = users.get(id)
+  if (user === undefined) throw new UserNotFound({ id })
+  return user
+}
+
+// Wider than the body: Invalid can never happen here.
+export function wide(id: string): Effect<string, UserNotFound | Invalid, never> {
+  return find(id).name
+}
+
+// A contract makes a function an Effect even when its body runs nothing.
+export function answer(): Effect<number, never, never> {
+  return 42
+}
+
+// The returned object literal is checked against A.
+export function point(): Effect<{ readonly x: number; readonly kind: "point" }, never, never> {
+  return { x: 1, kind: "point" }
+}
+
+// Partial annotations: infer E, infer R, and infer A.
+export function greeting(id: string): Effect<string, infer E, infer R> {
+  return `Hello, ${find(id).name}`
+}
+
+export function safe(id: string): Effect<string, never, infer R> {
+  try {
+    return find(id).name
+  } catch (e) {
+    return `missing ${e.id}`
+  }
+}
+
+export function named(id: string): Effect<infer A, UserNotFound, never> {
+  return { id, name: find(id).name }
+}
+
+export function everything(id: string): Effect<infer _, infer _, infer _> {
+  return find(id)
+}
+
+// A lambda with a contract.
+export const twice = (n: number): Effect<number, never, never> => n * 2
+
+// expect-result: {"find":"Ada","wide":"Ada","answer":42,"point":"point","greeting":"Hello, Ada","safe":"missing 7","named":"Ada","everything":"42","twice":8}
+export function main() {
+  return {
+    find: find("42").name,
+    wide: wide("42"),
+    answer: answer(),
+    point: point().kind,
+    greeting: greeting("42"),
+    safe: safe("7"),
+    named: named("42").name,
+    everything: everything("42").id,
+    twice: twice(4)
+  }
+}
