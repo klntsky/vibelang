@@ -16,8 +16,15 @@ bun docs/tools/check-snippets.ts
 ```
 
 The checker extracts `ts` fences under `docs/user`, except blocks whose first
-line is `// TypeScript (.ts)`. It creates one temporary project per page and
-runs `esc --noEmit` once per page. Each block gets its own `.es` module. Imports
+line is `// TypeScript (.ts)` and has no filename caption. It creates one
+temporary project per page and runs `esc --noEmit` once per page. Each block
+gets its own module. A filename comment in either of the first two lines,
+such as `// launch-options.ts` after `// TypeScript (.ts)` or `// main.es`,
+names that file and makes it available to relative imports. Named `.ts`
+companions keep TypeScript semantics and must import their own dependencies.
+The temporary project links the local runtime and Vite plugin packages.
+Repeated captions name independent examples, so those blocks keep numbered
+filenames. Unnamed EffectScript blocks also use numbered `.es` files. Imports
 and declarations from earlier examples are available in later blocks; a new
 name shadows the earlier example's name. Blocks that deliberately fail or opt
 out do not supply declarations to later blocks. Local imports with no fixture

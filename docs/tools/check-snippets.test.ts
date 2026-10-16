@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { classify, extract, parseDiagnostics } from "./check-snippets"
+import { blockFilenames, classify, extract, parseDiagnostics } from "./check-snippets"
 
 const block = extract('```ts\nconst answer = 42\n```')[0]
 const diagnostic = (code: string, message = "example") => ({ code, message })
@@ -57,5 +57,43 @@ test.skipIf(!existsSync(compiler))("checks shared declarations, schema type/valu
     const [stdout, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
     expect({ status, stderr, failures: stdout.split("\n").filter(l => l.includes("fail")) }).toEqual({ status: 0, stderr: "", failures: [expect.stringContaining('"fail":0')] })
     expect(JSON.parse(readFileSync(output, "utf8")).totals).toMatchObject({ blocks: 4, ok: 4, fail: 0, fragment: 0 })
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+
+test("filename captions include TypeScript companions and only use the first two lines", () => {
+  const blocks = extract([
+    "```ts", "// TypeScript (.ts)", "// launch-options.ts", "export const code = 2", "```",
+    "```ts", "// main.es", "import { code } from './launch-options.ts'", "```",
+    "```ts", "// prose", "// nested/helper.es", "export const answer = 42", "```",
+    "```ts", "// prose", "// more prose", "// ignored.es", "const value = 1", "```"
+  ].join("\n"))
+  expect(blocks.map(b => b.filename)).toEqual(["launch-options.ts", "main.es", "nested/helper.es", undefined])
+  expect([...blockFilenames(blocks).values()]).toEqual(["launch-options.ts", "main.es", "nested/helper.es", "block-4.es"])
+  expect(() => extract("```ts\n// ../escape.ts\n``` ")).toThrow("Invalid snippet filename")
+})
+
+test("repeated captions stay independent and cannot overwrite a named file", () => {
+  const blocks = extract("```ts\n// main.es\nconst a = 1\n```\n```ts\n// main.es\nconst a = 2\n```\n```ts\n// block-1.es\nconst b = 3\n```")
+  expect([...blockFilenames(blocks).values()]).toEqual(["block-1-2.es", "block-2.es", "block-1.es"])
+})
+
+test.skipIf(!existsSync(compiler))("checks named TypeScript companions and maps named-file errors to Markdown", async () => {
+  const root = mkdtempSync(join(tmpdir(), "snippet-named-test-"))
+  try {
+    writeFileSync(join(root, "page.md"), [
+      "```ts", "// TypeScript (.ts)", "// launch-options.ts", "export const launchOptions: { code: number } = { code: 2 }", "```",
+      "```ts", "// main.es", "import { launchOptions } from './launch-options.ts'", "const code: number = launchOptions.code", "```",
+      "```ts", "// TypeScript (.ts)", "// invalid.ts", "// expect-error: TS2322", "export const invalid: number = 'text'", "```",
+      "```ts", "// nested/check.es", "// expect-error: TS2322", "const wrong: number = 'text'", "```"
+    ].join("\n"))
+    const output = join(root, "report.json")
+    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--json", output], { stdout: "pipe", stderr: "pipe" })
+    const [stdout, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
+    expect({ status, stderr }).toEqual({ status: 0, stderr: "" })
+    const report = JSON.parse(readFileSync(output, "utf8"))
+    expect(report.totals).toMatchObject({ blocks: 4, ok: 4, fragment: 0, fail: 0 })
+    expect(report.pages[0].blocks[2].diagnostics[0].line).toBe(15)
+    expect(report.pages[0].blocks[3].diagnostics[0].line).toBe(20)
   } finally { rmSync(root, { recursive: true, force: true }) }
 })

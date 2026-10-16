@@ -1,12 +1,12 @@
 // Run from the repository root: bun docs/tools/check-snippets.ts
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join, relative, resolve } from "node:path"
+import { dirname, join, relative, resolve } from "node:path"
 import { createRequire } from "node:module"
 
 const repo = resolve(import.meta.dir, "../..")
 export type Diagnostic = { code: string; message: string; line?: number; column?: number }
-export type Block = { number: number; line: number; source: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string }
+export type Block = { number: number; line: number; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string }
 export type Result = Block & { status: "ok" | "fragment" | "compiler-gap" | "fail"; diagnostics: Diagnostic[]; reason?: string }
 
 export function extract(markdown: string): Block[] {
@@ -22,20 +22,43 @@ export function extract(markdown: string): Block[] {
     while (++i < lines.length && !close.test(lines[i])) body.push(lines[i])
     if (fence[2].trim().split(/\s+/)[0] !== "ts") continue
     number++
-    if (/^\s*\/\/ TypeScript \(\.ts\)/.test(body[0] ?? "")) continue
+    const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:es|ts))\s*$/.exec(line)?.[1]).find(Boolean)
+    if (filename?.split("/").some(part => part === "." || part === "..")) throw new Error(`Invalid snippet filename: ${filename}`)
+    if (/^\s*\/\/ TypeScript \(\.ts\)/.test(body[0] ?? "") && !filename) continue
     const headers: string[] = []
     for (const line of body) {
       if (!/^\s*\/\//.test(line)) break
       headers.push(line)
     }
     const header = headers.join("\n")
-    blocks.push({ number, line: start + 1, source: body.join("\n"),
+    blocks.push({ number, line: start + 1, source: body.join("\n"), filename,
       firstLine: body.find(l => l.trim() && !/^\s*\/\//.test(l)) ?? body[0] ?? "",
       expected: [...(header.match(/\/\/ expect-error:\s*([^\n]+)/)?.[1] ?? "").matchAll(/(?:ES|TS)\d+/g)].map(m => m[0]),
       fragment: /\/\/ fragment\s*(?:$|\n)/.test(header),
       gap: header.match(/\/\/ compiler-gap:\s*([^\n]+)/)?.[1] })
   }
   return blocks
+}
+
+// Repeated captions describe independent examples, so keep their numbered files.
+// Unique captions are real source files, including TypeScript companion modules.
+export function blockFilenames(blocks: Block[]): Map<number, string> {
+  const counts = new Map<string, number>()
+  for (const block of blocks) if (block.filename) counts.set(block.filename, (counts.get(block.filename) ?? 0) + 1)
+  const used = new Set([...counts].filter(([, count]) => count === 1).map(([name]) => name))
+  return new Map(blocks.map(block => {
+    if (block.filename && counts.get(block.filename) === 1) return [block.number, block.filename]
+    const extension = block.filename?.endsWith(".ts") ? "ts" : "es"
+    let filename = `block-${block.number}.${extension}`
+    for (let suffix = 2; used.has(filename); suffix++) filename = `block-${block.number}-${suffix}.${extension}`
+    used.add(filename)
+    return [block.number, filename]
+  }))
+}
+
+function localImport(from: string, to: string): string {
+  const path = relative(dirname(from), to).replaceAll("\\", "/")
+  return path.startsWith(".") ? path : "./" + path
 }
 
 function missing(d: Diagnostic) {
@@ -112,7 +135,7 @@ async function main() {
         if (!existsSync(target)) symlinkSync(join(source, name), target)
       }
     }
-    symlinkSync(join(repo, "packages/runtime"), join(modules, "@effectscript/runtime"))
+    for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, "@effectscript", name))
     if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(repo, "packages/runtime/dist/index.d.ts"))) {
       throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
     }
@@ -123,10 +146,17 @@ async function main() {
       const dir = join(temp, String(++index))
       mkdirSync(dir)
       writeFileSync(join(dir, "package.json"), '{"type":"module","name":"docs-snippets"}')
+      const filenames = blockFilenames(blocks)
       const scope = new Map<string, { from: string; value: boolean }>()
       const offsets = new Map<string, number>()
       for (const block of blocks) {
-        const filename = `block-${block.number}.es`
+        const filename = filenames.get(block.number)!
+        mkdirSync(dirname(join(dir, filename)), { recursive: true })
+        if (filename.endsWith(".ts")) {
+          offsets.set(filename, 0)
+          writeFileSync(join(dir, filename), block.source + "\n")
+          continue
+        }
         const ast = ts.createSourceFile(filename, block.source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
         const names = new Set<string>()
         const exported = new Set<string>()
@@ -170,37 +200,27 @@ async function main() {
           } else list.push(name)
           imports.set(previous.from, list)
         }
-        const prefix = [...[...imports].map(([from, ids]) => `import { ${ids.join(", ")} } from "./${from}"`), ...values].join("\n") + "\n"
+        const prefix = [...[...imports].map(([from, ids]) => `import { ${ids.join(", ")} } from "${localImport(filename, from)}"`), ...values].join("\n") + "\n"
         offsets.set(filename, prefix.split("\n").length - 1)
         writeFileSync(join(dir, filename), `${prefix}${block.source}\nexport { ${[...names].filter(n => !exported.has(n)).join(", ")} }\n`)
         // An example that deliberately fails or opts out cannot supply reliable
         // definitions to later examples. Other blocks share their latest names.
         if (!block.fragment && !block.expected.length) for (const name of names) scope.set(name, { from: filename, value: !typeOnly.has(name) || values.some(v => v.startsWith(`const ${name} =`)) })
       }
-      // File captions provide real local import targets without merging examples.
-      const captions = new Map<string, Block[]>()
-      for (const block of blocks) {
-        const caption = block.source.match(/^\/\/ (?:[^\n]*\/)?([\w.-]+\.es)\s*$/m)?.[1]
-        if (!caption || /^block-\d+\.es$/.test(caption)) continue
-        captions.set(caption, [...(captions.get(caption) ?? []), block])
-      }
-      for (const [caption, matches] of captions) if (matches.length === 1) {
-        writeFileSync(join(dir, caption), `export * from "./block-${matches[0].number}.es"\n`)
-      }
       writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: {
         strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext",
         skipLibCheck: true, noEmit: true, types: [], rewriteRelativeImportExtensions: true
-      }, files: blocks.map(b => `block-${b.number}.es`) }))
+      }, files: [...filenames.values()] }))
       const child = Bun.spawn([compiler, "--noEmit", "--pretty", "false", "-p", join(dir, "tsconfig.json")], { cwd: dir, stdout: "pipe", stderr: "pipe" })
       const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
       const output = `${stdout}\n${stderr}`
       if (keep) writeFileSync(join(dir, "compiler.log"), output)
       const parsed = parseDiagnostics(output)
-      const infrastructure = parsed.filter(d => !d.file || !/^block-\d+\.es$/.test(d.file.replaceAll("\\", "/").split("/").at(-1)!))
+      const infrastructure = parsed.filter(d => !d.file || !offsets.has(relative(dir, resolve(dir, d.file)).replaceAll("\\", "/")))
       if (infrastructure.length || (code !== 0 && !parsed.length)) throw new Error(`Compiler failed for ${relative(repo, page)} (exit ${code}):\n${output}`)
       const results = blocks.map(block => {
-        const filename = `block-${block.number}.es`
-        const diagnostics = parsed.filter(d => d.file?.replaceAll("\\", "/").split("/").at(-1) === filename).map(({ diagnostic }) => ({
+        const filename = filenames.get(block.number)!
+        const diagnostics = parsed.filter(d => d.file && relative(dir, resolve(dir, d.file)).replaceAll("\\", "/") === filename).map(({ diagnostic }) => ({
           ...diagnostic, line: block.line + diagnostic.line! - offsets.get(filename)! - 1
         }))
         return classify(block, diagnostics)
