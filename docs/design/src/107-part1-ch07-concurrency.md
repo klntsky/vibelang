@@ -77,6 +77,8 @@ function withProgress(id: string) {
 
 `fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `Fiber.join`. For a longer lifetime, say so with Effect's combinators: `Effect.forkScoped` ties the fiber to the caller's scope and adds `Scope` to R, `Effect.forkChild` ties it to the current fiber, and `Effect.forkDetach` ties it to nothing.
 
+An expression-bodied arrow has no block to own its child: `() => fork(p)` uses `Effect.forkScoped` and keeps `Scope` in R, unlike `() => { return fork(p) }` (D96). Returning a block-owned child currently returns a fiber already interrupted when that block exited; the compiler does not warn.
+
 #### What a new fiber sees
 
 A forked fiber starts with the services of the code that forked it, as in Effect. Later changes in either fiber do not flow to the other. Handlers, introduced in Chapter 9, are the one thing that does not cross to a new fiber; Chapter 9 shows the compiler's check.
