@@ -852,6 +852,10 @@ func (p *fileLoader) resolveImportsAndModuleAugmentations(t *parseTask) {
 		}
 	}
 
+	for _, name := range implicitImports(file) {
+		moduleNames = append(moduleNames, p.createSyntheticImport(name, file))
+	}
+
 	importsStart := len(moduleNames)
 
 	moduleNames = append(moduleNames, file.Imports()...)

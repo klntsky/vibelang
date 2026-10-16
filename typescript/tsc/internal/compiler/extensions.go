@@ -45,3 +45,25 @@ func RegisterDirectiveExemptSource(source string) {
 func isDirectiveExempt(diagnostic *ast.Diagnostic) bool {
 	return diagnostic.Source() != "" && slices.Contains(directiveExemptSources, diagnostic.Source())
 }
+
+// ImplicitImportHook returns modules that file uses without importing them.
+// The program resolves each one from file, as it resolves tslib for
+// importHelpers, and includes the module's file.
+type ImplicitImportHook func(file *ast.SourceFile) []string
+
+var implicitImportHooks []ImplicitImportHook
+
+// RegisterImplicitImportHook adds hook to every program. Call it only from the
+// init function of an in-tree package that tsc/cmd/tsc imports; registration
+// is not synchronized.
+func RegisterImplicitImportHook(hook ImplicitImportHook) {
+	implicitImportHooks = append(implicitImportHooks, hook)
+}
+
+func implicitImports(file *ast.SourceFile) []string {
+	var names []string
+	for _, hook := range implicitImportHooks {
+		names = append(names, hook(file)...)
+	}
+	return names
+}
