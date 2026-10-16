@@ -18,8 +18,10 @@ bun run test
 `build` invokes `esc` with the project's `tsconfig.json`. `start` builds, then
 runs `node --enable-source-maps dist/main.js`. `dev` builds once, then runs
 `esc --watch` alongside `node --watch --enable-source-maps dist/main.js`.
-`test` builds, then runs Vitest against `dist/**/*.test.js`. Node and Vitest
-receive JavaScript; neither interprets `.es` sources directly.
+`test` runs Vitest on `src/**/*.test.es` through `@effectscript/vite`, which
+compiles the project with `esc` and serves the JavaScript, so tests need no
+prior build. Node and Vitest receive JavaScript; neither interprets `.es`
+sources directly.
 
 The starter's `NodeRuntime.runMain(() => main())` supplies the application
 boundary. Its greeting and recovery messages provide a quick check that the
