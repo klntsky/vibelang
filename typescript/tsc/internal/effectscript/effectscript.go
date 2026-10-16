@@ -4,7 +4,7 @@
 // call to a function that returns an Effect runs it, and the compiler infers
 // each function's Effect<A, E, R>. The package plugs into upstream tsc only
 // through Register* hooks, which it calls from init; tsc/cmd/tsc imports it
-// for that side effect.
+// for that side effect. See EFFECTSCRIPT.md at the repository root.
 package effectscript
 
 import (
