@@ -48,6 +48,7 @@ func keyOf(signature *checker.Signature) candidateKey {
 // lambdaState is what the analyzer knows about one lambda.
 type lambdaState struct {
 	byCandidate map[candidateKey]form // the first form each candidate asked for
+	first       form                  // the form the first candidate to check the lambda asked for
 	free        form                  // the form outside every call's candidates
 	deciding    bool                  // free is being decided; a recursive call sees plain
 	types       [4]*checker.Type      // the lambda's type in each form
@@ -123,6 +124,9 @@ func (a *analyzer) formHere(fn *ast.Node) form {
 			}
 			f := a.decide(fn, a.classify(a.expectedAt(call, signature, path, fn)))
 			s.byCandidate[key] = f
+			if s.first == formNone {
+				s.first = f
+			}
 			if f == formPlain && !a.canBePlain(fn) {
 				a.reject(call, key)
 			}
@@ -133,16 +137,37 @@ func (a *analyzer) formHere(fn *ast.Node) form {
 }
 
 // finalForm is the form fn compiles to: the form the candidate its call
-// selected asked for, or the form it has outside any call.
+// selected asked for, or the form it has outside any call. When no candidate
+// accepted the call, TypeScript may report it against a signature no
+// candidate was checked as, and fn keeps the form the first candidate asked
+// for.
 func (a *analyzer) finalForm(fn *ast.Node) form {
 	if call, _ := ownerCall(fn); call != nil {
 		if signature := a.candidateOf(call); signature != nil {
-			if f, ok := a.lambda(fn).byCandidate[keyOf(signature)]; ok {
+			s := a.lambda(fn)
+			if f, ok := s.byCandidate[keyOf(signature)]; ok {
 				return f
+			}
+			if s.first != formNone {
+				return s.first
 			}
 		}
 	}
 	return a.freeForm(fn)
+}
+
+// firstPause returns the first call in fn's own body that performs an Effect
+// operation, or nil when fn compiles to plain JavaScript.
+func (a *analyzer) firstPause(fn *ast.Node) *ast.Node {
+	var pause *ast.Node
+	forEachCallInBody(fn, func(call *ast.Node) bool {
+		if a.performs(call) {
+			pause = call
+			return true
+		}
+		return false
+	})
+	return pause
 }
 
 // freeForm is fn's form where no candidate decides it: from its contextual

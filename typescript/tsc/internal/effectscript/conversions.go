@@ -33,6 +33,8 @@ const (
 // candidate asked for.
 type valueState struct {
 	byCandidate map[candidateKey]conversion
+	first       conversion // what the first candidate to check the value asked for
+	checked     bool       // a candidate has checked the value
 	types       map[candidateKey]*checker.Type
 }
 
@@ -66,6 +68,9 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 	conv, converted := a.convert(node, t, a.classifyValuePosition(call, signature, path, node, t))
 	s.byCandidate[key] = conv
 	s.types[key] = converted
+	if !s.checked {
+		s.first, s.checked = conv, true
+	}
 	if conv == convertRejected {
 		a.reject(call, key)
 	}
@@ -182,7 +187,8 @@ func (a *analyzer) programsOf(t *checker.Type) *checker.Type {
 }
 
 // finalConversion is what node compiles to: the conversion the candidate its
-// call selected asked for.
+// call selected asked for, or, when no candidate accepted the call, the one
+// the first candidate asked for.
 func (a *analyzer) finalConversion(node *ast.Node) conversion {
 	s := a.conversions[node]
 	if s == nil {
@@ -193,9 +199,11 @@ func (a *analyzer) finalConversion(node *ast.Node) conversion {
 		return convertNone
 	}
 	if signature := a.candidateOf(call); signature != nil {
-		return s.byCandidate[keyOf(signature)]
+		if conv, ok := s.byCandidate[keyOf(signature)]; ok {
+			return conv
+		}
 	}
-	return convertNone
+	return s.first
 }
 
 // esFunctionOf returns the .es function that node, an identifier, names: a
