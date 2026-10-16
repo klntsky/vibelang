@@ -31,6 +31,7 @@ type lowering struct {
 	runtime  *ast.IdentifierNode // local name for @effectscript/runtime, imported on first use
 	inEffect bool                // visiting code that runs inside a lowered generator
 	frame    *frame              // the generator being emitted while inEffect
+	plain    bool                // visiting the body of an .es function that compiles to plain JavaScript
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
@@ -70,6 +71,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitJumpTarget(node)
 	case tx.inEffect && tx.frame.region != nil && varList(node) != nil:
 		return tx.visitVar(node)
+	case tx.plain && node.Kind == ast.KindThrowStatement:
+		return tx.visitPlainThrowStatement(node)
+	case tx.plain && node.Kind == ast.KindCatchClause:
+		return tx.visitPlainCatchClause(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
 	case node.Kind == ast.KindMethodDeclaration && tx.plan.isEffect(node):
@@ -79,9 +84,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	case tx.plan.isProgram(node):
 		return tx.lowerProgram(node)
 	case isFunctionBoundary(node):
-		saved := tx.inEffect
+		saved, savedPlain := tx.inEffect, tx.plain
 		tx.inEffect = false
-		defer func() { tx.inEffect = saved }()
+		tx.plain = isLowerable(node) // an .es function that is not an Effect
+		defer func() { tx.inEffect, tx.plain = saved, savedPlain }()
 	}
 	return tx.Visitor().VisitEachChild(node)
 }
@@ -204,13 +210,13 @@ func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
 
-	saved, savedFrame := tx.inEffect, tx.frame
-	tx.inEffect = false // a generator's parameter list cannot yield
+	saved, savedFrame, savedPlain := tx.inEffect, tx.frame, tx.plain
+	tx.inEffect, tx.plain = false, false // a generator's parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
 	tx.frame = &frame{name: functionName(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
-	tx.inEffect, tx.frame = saved, savedFrame
+	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 	if !ast.IsBlock(body) {
 		body = ec.ConvertToFunctionBlock(body, false /*multiLine*/)
 	}

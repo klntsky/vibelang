@@ -1,0 +1,56 @@
+// A function that runs no Effect and whose throws are all caught inside it
+// compiles to plain JavaScript, and its try, catch, and finally stay
+// JavaScript's (D54). Its catch still sees expected failures only: anything
+// else, a defect, is rethrown (D13).
+import { Data, Effect, Exit } from "effect"
+
+class Invalid extends Data.TaggedError("Invalid")<{ readonly n: number }> {}
+
+export function clamp(n: number) {
+  try {
+    if (n > 10) throw new Invalid({ n })
+    return n
+  } catch (e) {
+    return e.n > 100 ? -100 : -10
+  }
+}
+
+// A destructured catch, and a TypeError that passes through it.
+export function length(value: any) {
+  try {
+    if (value === 0) throw new Invalid({ n: 0 })
+    return value.length
+  } catch ({ n }) {
+    return n
+  }
+}
+
+// A catch without a binding that rethrows, caught by an outer catch.
+export function rethrown(n: number) {
+  try {
+    try {
+      if (n < 0) throw new Invalid({ n })
+      return n
+    } catch {
+      throw "negative"
+    } finally {
+      steps.push(`finally ${n}`)
+    }
+  } catch (e) {
+    return e
+  }
+}
+
+const steps: string[] = []
+
+// expect-result: {"clamp":[5,-10,-100],"length":[0,3],"defect":["Die"],"rethrown":["negative",2],"steps":["finally -1","finally 2"]}
+export function main() {
+  const defect = Effect.exit(() => Effect.sync(() => length(undefined)))
+  return {
+    clamp: [clamp(5), clamp(50), clamp(500)],
+    length: [length(0), length("abc")],
+    defect: Exit.isFailure(defect) ? defect.cause.reasons.map((reason) => reason._tag) : ["Success"],
+    rethrown: [rethrown(-1), rethrown(2)],
+    steps
+  }
+}

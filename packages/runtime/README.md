@@ -74,6 +74,8 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$normal` | Represent normal completion of a lowered region or loop body | D14, D26 |
 | `$catch` | Recover a cause containing expected failures only | D13, D28, D46 |
 | `$finally` | Run cleanup on every exit and retain cleanup failures | D15, D46 |
+| `$expected` | Mark a value thrown in a plain-JavaScript function as an expected failure | D54 |
+| `$caught` | Unwrap an expected failure in a plain-JavaScript `catch`, and rethrow a defect | D13, D54 |
 | `$region` | Create a block-owned scope without adding it to the body's Context | D14, D47 |
 | `$using` | Provide a scope to an acquisition and register `Symbol.dispose` cleanup | D14, D25 |
 | `$fork` | Fork into an explicit block scope, or require a scope from the caller | D19, D47 |

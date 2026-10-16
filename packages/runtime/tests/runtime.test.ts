@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { Cause, Context, Deferred, Fiber, Stream } from "effect"
 import {
-  $bind, $catch, $control, $finally, $fork, $forOf, $forStream, $normal,
+  $bind, $catch, $caught, $control, $expected, $finally, $fork, $forOf, $forStream, $normal,
   $produce, $program, $programs, $reference, $region, $service, $tailResume,
   $tailResumeWith, $toStream, $trusted, $using, $yield, abandon, Control,
   Effect, Exit, fork, handle, handoff, Layer, pipe, Producer, resume,
@@ -32,6 +32,20 @@ test("regions: catch handles expected failures and leaves defects and mixed caus
     if (Exit.isFailure(exit)) expect(exit.cause).toEqual(cause)
   }
   expect(caught).toBe(1)
+})
+
+test("regions: a plain-JavaScript catch receives expected failures and rethrows defects", () => {
+  const plain = (fail: unknown) => {
+    try {
+      if (fail instanceof Error) throw fail
+      throw $expected(fail)
+    } catch (e) {
+      return $caught(e)
+    }
+  }
+  expect(plain("expected")).toBe("expected")
+  const defect = new TypeError("defect")
+  expect(() => plain(defect)).toThrow(defect)
 })
 
 test("regions: finally runs and completes when its body is interrupted", async () => {

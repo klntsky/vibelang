@@ -406,3 +406,55 @@ func (tx *lowering) hoist(name *ast.Node) {
 		}
 	}
 }
+
+// Plain-JavaScript regions (D54). A function that compiles to plain
+// JavaScript cannot pause, so its try, catch, and finally stay JavaScript's.
+// Every throw in it is caught by one of its own catch clauses, or it would be
+// an Effect, so its throws mark the thrown value as an expected failure, and
+// its catch clauses rethrow anything else, a defect, as D13 requires:
+//
+//	try { if (n > 0) throw new Invalid() } catch (e) { return -1 }
+//
+// becomes
+//
+//	try { if (n > 0) throw runtime.$expected(new Invalid()) } catch (e) { e = runtime.$caught(e); return -1 }
+
+// visitPlainThrowStatement turns `throw e` into `throw runtime.$expected(e)`.
+func (tx *lowering) visitPlainThrowStatement(node *ast.Node) *ast.Node {
+	statement := tx.Factory().NewThrowStatement(tx.runtimeCall("$expected", tx.Visitor().VisitNode(node.Expression())))
+	tx.EmitContext().SetOriginal(statement, node)
+	statement.Loc = node.Loc
+	return statement
+}
+
+// visitPlainCatchClause makes a catch clause start with `runtime.$caught`, which
+// returns the expected failure it caught or rethrows a defect.
+func (tx *lowering) visitPlainCatchClause(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	clause := node.AsCatchClause()
+	declaration := clause.VariableDeclaration
+	var unwrap *ast.Node
+	switch {
+	case declaration != nil && ast.IsIdentifier(declaration.Name()):
+		// catch (e) { e = runtime.$caught(e); ... }
+		name := declaration.Name().Text()
+		unwrap = f.NewExpressionStatement(f.NewAssignmentExpression(f.NewIdentifier(name), tx.runtimeCall("$caught", f.NewIdentifier(name))))
+		declaration = tx.Visitor().VisitNode(declaration)
+	default:
+		// catch ({ id }) { const { id } = runtime.$caught(error); ... }, and
+		// catch { ... } as catch (error) { runtime.$caught(error); ... }
+		error := f.NewUniqueName("error")
+		if declaration != nil {
+			unwrap = f.NewVariableStatement(nil /*modifiers*/, f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
+				f.NewVariableDeclaration(tx.Visitor().VisitNode(declaration.Name()), nil /*exclamationToken*/, nil /*typeNode*/, tx.runtimeCall("$caught", error)),
+			}), ast.NodeFlagsConst))
+		} else {
+			unwrap = f.NewExpressionStatement(tx.runtimeCall("$caught", error))
+		}
+		declaration = f.NewVariableDeclaration(error, nil /*exclamationToken*/, nil /*typeNode*/, nil /*initializer*/)
+	}
+	block := tx.Visitor().VisitNode(clause.Block)
+	statements := append([]*ast.Node{unwrap}, block.AsBlock().Statements.Nodes...)
+	block = f.UpdateBlock(block.AsBlock(), f.NewNodeList(statements), true /*multiLine*/)
+	return f.UpdateCatchClause(clause, declaration, block)
+}

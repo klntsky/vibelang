@@ -56,6 +56,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-control` | `extends Control` declares a control operation; `Approval.approve(…)` joins R until the runtime's `handle` answers it |
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
+| `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives expected failures and rethrows a `TypeError` defect (D54) |
 | `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 
 ### Acceptance cases
@@ -113,6 +114,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 31 | `yullvuom` | checker: expose an expression's type before literal widening | `throw "bad"` adds `string`, as `return "bad"` does |
 | 32 | `mssmulnm` | effectscript: lower try, catch, and finally to Effect regions | Regions, completion records, and E through a `try` |
 | 33 | `qsxrpnuo` | effectscript: lower throw to Effect.fail and add its type to E | `throw` is an expected failure (D46) |
+| 34 | `vlzoymlw` | effectscript: keep JavaScript's try in plain functions (D54) | A plain function's `catch` sees expected failures only; `$expected` and `$caught` in the runtime |
 
 ## Seams in upstream files
 
@@ -287,6 +289,23 @@ function lookup(id: number) {                const lookup = Effect.fnUntraced(fu
 ```
 
 `$catch` is the kernel's `catchExpected` and `$finally` is `Effect.onExit`, from `@effectscript/runtime`, which the file imports as `* as runtime` under a free name. A `return`, `break`, or `continue` that leaves a region cannot jump out of its closure, so the closure returns a completion record: `{ kind: "return", value }`, `{ kind: "break", label }`, or `{ kind: "continue", label }`, with `""` as the label of an unlabeled jump, and the runtime's `$normal` when it reaches its end. The generator that runs the region dispatches each record that can arrive: it returns, breaks, or continues itself, or, when it is a region's closure too and the jump leaves it as well, returns the record to its own runner. A region that no jump leaves runs as `yield* …;` with no record. A closure whose block refers to `this` runs with the function's `this`. A `var` in a region belongs to the whole function, so the lowering declares it in the Effect function and assigns it where the source declared it.
+
+### Regions in plain functions
+
+A function that compiles to plain JavaScript cannot pause, so its `try`, `catch`, and `finally` stay JavaScript's (D54). Each of its throws is caught by one of its own `catch` clauses, or a throw could end it and it would be an Effect. A throw there marks the thrown value as an expected failure, and each `catch` unwraps it or rethrows anything else, a defect, so D13 holds:
+
+```ts
+// clamp.es                                  // clamp.js
+function clamp(n: number) {                  function clamp(n) {
+  try {                                          try {
+    if (n > 10) throw new Invalid({ n })             if (n > 10) throw runtime.$expected(new Invalid({ n }));
+    return n                                         return n;
+  } catch (e) {                                  } catch (e) {
+    return -10                                       e = runtime.$caught(e);
+  }                                                  return -10;
+}                                                }
+                                             }
+```
 
 `regions.go` holds the machinery as an API for the region kinds still to come, `using` and `fork` blocks (lane F6) and loops over producers (F7):
 
