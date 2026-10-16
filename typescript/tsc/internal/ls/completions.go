@@ -1001,6 +1001,7 @@ func (l *LanguageService) getCompletionData(
 			// we will check (and cache) the type of `this` *before* checking the type of the node.
 			typeChecker.TryGetThisTypeAtEx(node, false /*includeGlobalThis*/, nil)
 			t := typeChecker.GetNonOptionalType(typeChecker.GetTypeAtLocation(node))
+			t = applyMemberCompletionHooks(typeChecker, node, t)
 
 			if !isTypeLocation {
 				insertQuestionDot := false
@@ -1644,6 +1645,7 @@ func (l *LanguageService) getCompletionData(
 				}
 			}
 		}
+		symbols = append(symbols, completionScopeSymbolsFromHooks(typeChecker, scopeNode, symbolMeanings)...)
 
 		// Need to insert 'this.' before properties of `this` type.
 		if scopeNode.Kind != ast.KindSourceFile {
