@@ -156,13 +156,22 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 	if symbol == nil || !hasMeaning(c, symbol, meaning) {
 		return nil
 	}
-	if meaning&ast.SymbolFlagsValue != 0 && !inTypeNode(location) {
+	if isValueReference(location, name, meaning) {
 		if state.uses[file] == nil {
 			state.uses[file] = map[string]bool{}
 		}
 		state.uses[file][name] = true
 	}
 	return symbol
+}
+
+// isValueReference reports whether resolving name at location, with
+// meaning, is a reference in the source that the emitted JavaScript keeps:
+// an identifier with that name, outside every type. Checks that resolve a
+// name for their own purposes, such as the namespace Effect at a function,
+// pass another location and are not uses.
+func isValueReference(location *ast.Node, name string, meaning ast.SymbolFlags) bool {
+	return meaning&ast.SymbolFlagsValue != 0 && ast.IsIdentifier(location) && location.Text() == name && !inTypeNode(location)
 }
 
 // inTypeNode reports whether node is inside a type, such as the Scope of
