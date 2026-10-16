@@ -54,6 +54,15 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-services-ts` | A TypeScript `Context.Service` class and Effect's `Path` are used as services: an Effect-valued member runs when called, and the service's own `pipe` wins over the key's |
 | `es-services-default` | `static readonly default` makes a service a `Context.Reference` that never joins R; `static make` and `static readonly layer` stay on the class |
 | `es-control` | `extends Control` declares a control operation; `Approval.approve(…)` joins R until the runtime's `handle` answers it |
+| `es-service-misuse.fail` | ES3002-ES3006: a service that is extended, constructed, tested with `instanceof`, declared generic, or given a static member with a service member's name |
+| `es-service-contract.fail` | ES2101: a service method with a bare return type, a partial `Effect<A>`, or no annotation; a value member takes any type |
+| `es-service-keys-shared.fail` | ES3001: two services in one module share a key |
+| `es-layer-programs` | A `Layer.effect` program whose object has untyped methods still infers `Layer<Users, never, Database>` |
+| `es-wire` | `wire` takes its arguments in any order and emits them consumers first, so one `Database` serves `Users` and `Orders` |
+| `es-wire.fail` | ES3202, ES3203, ES3204: a duplicate provider, a cycle, and an argument typed `Layer.Any` |
+| `es-wire-missing.fail` | ES3201 at a runner: `MailerLive needs Smtp` |
+| `es-provider-escapes.fail` | ES2001 names the provider member that a failure escapes, in an object literal and in an `implements` class |
+| `es-provider-audited.fail` | ES3101 at a per-call lookup, in an object literal and in an `implements` class |
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives expected failures and rethrows a `TypeError` defect (D54) |
@@ -67,8 +76,8 @@ The prototype's 46 examples (`../prototype/esc/examples/`) are cases named after
 | --- | --- | --- |
 | F1 | Diagnostics, prelude, imports between files | `ch10-effect-gen.fail` |
 | F2 | Programs as values, plain functions, callbacks | `ch05-programs`, `ch10-map-pausing-callback.fail`, `ch13-plain`, `ch14-callbacks`, `ref4-callbacks`, `ref4-pausing-function-value.fail`, `ref5-programs-as-data` |
-| F3 | `throw`, regions, contracts | `ch02-contract-narrower.fail`, `ch02-functions`, `ch03-errors`, `ch03-safelookup-no-try.fail`, `ch12-contracts`, `ch15-failures`, `regions` |
-| F5 | Services, layers, `wire` | `ch01-first-look`, `ch04-provider-escapes.fail`, `ch04-services`, `ch04-users-audited.fail`, `ch04-wire`, `ch12-rates-bare-return.fail`, `ch12-welcome-missing-mailer.fail`, `nominal-services.fail`, `ref1-existing-service`, `ref2-ambiguous-provider.fail`, `ref2-cycle.fail`, `ref2-missing-provider.fail`, `ref2-opaque-layer.fail`, `ref2-provider-graph` |
+| F3 | `throw`, regions, contracts | `ch02-contract-narrower.fail`, `ch02-functions`, `ch03-errors`, `ch03-safelookup-no-try.fail`, `ch12-contracts`, `ch12-welcome-missing-mailer.fail`, `ch15-failures`, `nominal-services.fail`, `regions` |
+| F5 | Services, layers, `wire` | `ch01-first-look`, `ch04-provider-escapes.fail`, `ch04-services`, `ch04-users-audited.fail`, `ch04-wire`, `ch12-rates-bare-return.fail`, `ref1-existing-service`, `ref2-ambiguous-provider.fail`, `ref2-cycle.fail`, `ref2-missing-provider.fail`, `ref2-opaque-layer.fail`, `ref2-provider-graph` |
 | F6 | `using`, `fork`, Scope regions | `ch06-disposable`, `ch06-resources`, `ch07-concurrency`, `ref3-resourceful-retry`, `ref6-fork.fail` |
 | F7 | Handlers, producers, streams | `ch08-producers`, `ch08-streams`, `ch09-approve-all-forked.fail`, `ch09-handlers`, `ref6-handlers`, `stack-depth` |
 | F8 | Boundaries, runners | `ch02-plain-ts-call.fail`, `ch10-fetch.fail`, `ch10-typescript`, `ch11-top-level-run.fail`, `ch24-profile`, `d5-clock-read.fail` |
@@ -126,6 +135,14 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 43 | `ntslxkmz` | effectscript: emit .js specifiers for imports of sources | Imports between files (D31) |
 | 44 | `rplwrxxw` | effectscript: record a prelude use only at a source reference | No duplicate `Effect` import when the file never names it |
 | 45 | `nvukvnsq` | effectscript: test the runtime import's free name | Helpers import as `runtime_1` when the file declares `runtime` |
+| 46 | `srwuqnot` | effectscript: report misused service classes | ES2101 and ES3001-ES3006 |
+| 47 | `yvlmtqkl` | effectscript: lower a method's body as an Effect body only | A method lowered inside a plain function takes Effect lowering only |
+| 48 | `truwtzrw` | checker: add a skipped function type hook | Seam for the placeholder a context-sensitive function has in overload resolution's first pass |
+| 49 | `qzmttpum` | effectscript: infer a program whose result is context sensitive | `Layer.effect(Users, () => ({ find(id) { … } }))` infers E and R |
+| 50 | `zvvqmzyy` | effectscript: order wire's arguments and check its provider graph | D27: consumers first; ES3202, ES3203, ES3204 |
+| 51 | `vwtxzvnt` | effectscript: report a service that wire leaves unprovided at a runner | ES3201 with the provider that needs the service |
+| 52 | `ktslyskx` | effectscript: check providers against their service's contracts | ES2001 and ES3101 name the member at fault |
+| 53 | `xorurrnt` | effectscript: document service checks and wire in EFFECTSCRIPT.md | This section |
 
 ## Seams in upstream files
 
@@ -137,7 +154,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/core/core.go` | `.es` is `ScriptKindTS` | +1 / -1 |
 | `tsc/internal/compiler/emitter.go` | Run hook transformers first in `getScriptTransformers` | +2 / -0 |
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
-| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals` | +22 / -4 |
+| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals`; ask skipped function type hooks where `checkFunctionExpressionOrObjectLiteralMethod` skips a context-sensitive function | +23 / -5 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
 | `tsc/internal/compiler/fileloader.go` | Resolve each module an implicit import hook names for a file | +4 |
@@ -153,6 +170,7 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening`, `RegisterNameResolutionHook` | +193 |
 | `tsc/internal/checker/extensions_classes.go` (new) | `RegisterClassBaseHook`, `Program`, `GetStringLiteralType`, `NewOptionalReadonlyPropertyType` | +48 |
 | `tsc/internal/checker/extensions_calls.go` (new) | `RegisterMemberReceiverHook`, `RegisterCallSignaturesHook`, `NewCallSignature` | +52 |
+| `tsc/internal/checker/extensions_functions.go` (new) | `RegisterSkippedFunctionTypeHook`, `GetNonInferrableAnyType` | +35 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
 | `tsc/internal/tsoptions/effectscript.go` (new) | Parse, validate, and serialize `compilerOptions.effectscript` | +149 |
 
@@ -272,6 +290,39 @@ find(id) { return Effect.gen({ self: this }, function* () { … }) }
 ```
 
 A method's expectation is read once, from the contextual type the checker has when it first asks, whereas a lambda's form is decided per overload candidate (D56).
+### Checks of service classes
+
+`services_check.go` reports misuse of service and control classes:
+
+| Code | Reported at | What it reports |
+| --- | --- | --- |
+| ES2101 | The return type of a service or control method, or its name | A method without a full contract: the annotation must be an `Effect` with all three channels written, such as `Effect<number, never, never>`, or an alias of one. `Effect<A>` leaves channels to defaults, so it is not one. An annotation TypeScript cannot resolve is left to TypeScript's error |
+| ES3001 | The class name | Two service or control classes anywhere in the program share a key; a note names the other |
+| ES3002 | The `extends` expression | A class extends a service; covers TypeScript's errors about the inherited abstract members |
+| ES3003 | The `new` expression | `new Users()`; covers TS2511 |
+| ES3004 | The `instanceof` expression | `x instanceof Users` |
+| ES3005 | The class name | A fully abstract generic class, which no one key can represent |
+| ES3006 | The static member's name | A static member with a service member's name, which `S.member(…)` could not reach |
+
+### Providers
+
+`providers_check.go` compares each implementation member with the service member it implements: every method and function-valued property of an object literal with the type its contextual type gives that member, and every method of a class with the member of the same name in its `implements` clause. When both are functions that return Effects, it reports a failure the contract does not allow (ES2001, at the member) and a requirement the contract does not declare (ES3101, at the call that looks the service up per call), and covers TypeScript's TS2322, TS2345, or TS2416 for the same mismatch at its error spans: the member's name, an arrow member's expression body, and the header of each function that encloses the object and is a call argument. A contract whose E or R holds a type parameter is not checked.
+
+A provider is usually a program that returns an object literal whose members have untyped parameters, typed by the service, as in `Layer.effect(Users, () => { const db = Database(); return { find(id) { … } } })`. Such a lambda is context sensitive, so the first pass of overload resolution skips it and TypeScript types it as `anyFunctionType`, which an Effect parameter does not accept: the candidate failed before the second pass inferred its type arguments, and E and R came out `unknown` without an error. The skipped function type hook (`skipped.go`) gives a lambda with no required parameters, where only an Effect is expected, the non-inferrable `any` type instead; the parameter accepts it and inference ignores it, so the second pass infers E and R from the program.
+
+### wire
+
+`wire(…)` is the runtime's `wire`, imported or from the prelude (D27). `wire.go` reads each argument's `Layer<Out, E, In>` from its `~effect/Layer` variance property and builds the provider graph: an argument needs another when one of its inputs is one of the other's outputs. The runtime folds the arguments with `Layer.provideMerge` from the last to the first, so the lowering emits them consumers first, a topological order that keeps source order among independent arguments; the arguments can be written in any order.
+
+| Code | Reported at | What it reports |
+| --- | --- | --- |
+| ES3202 | The later of two arguments | Two arguments provide the same service |
+| ES3203 | The `wire` call | The arguments form a cycle, printed as `CacheLive → Database → DatabaseLive → Cache → CacheLive` |
+| ES3204 | The argument | Its type does not name its outputs: `Out` is `any` or `unknown`, as in `Layer.Any` |
+| ES3201 | The runner's program | A runner (`Effect.runFork`, `runPromise`, `runSync`, their `Exit` forms, `runCallback`, `NodeRuntime.runMain`, `BunRuntime.runMain`) runs a program whose R holds a service that a `wire` argument anywhere in the program needs and no argument of that `wire` provides; notes name the arguments that need it, and it covers TS2345 |
+
+An input that no argument provides stays in the result's `In`, as with `Layer.provide`, so wiring part of a graph is not an error by itself.
+
 ## Failures and regions
 
 `try`, `catch`, and `finally` in an Effect function compile to Effect's failure and cleanup frames, never to a JavaScript `try`, because Effect does not run a generator's JavaScript `finally` when a fiber fails or is interrupted (design chapter 26).
@@ -371,8 +422,8 @@ Generated JavaScript imports only `effect` and `@effectscript/runtime` (D30): th
 
 - `using` is plain JavaScript.
 - `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
-- `wire`, `fork`, and handlers have no meaning yet: the prelude names them, and their lanes give them meaning. Services and control operations exist, but none of their diagnostics (ES2101, ES3001-ES3006, ES3101, ES3201-ES3204) do, and a service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
-- A provider's object literal is checked against the service's shape only as TypeScript checks any assignment, so an escaping error is TS2322, not ES2001 or ES3101 naming the member.
+- `fork` and handlers have no meaning yet: the prelude names them, and their lanes give them meaning. A service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
+- ES3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
 - A `.d.ts` file does not import the prelude types it names, so `declaration: true` reports TS4025 for an exported declaration annotated with `Effect<…>` (case `es-prelude-dts`, pending on F1).
 - No programs as values (D7). `Effect.retry(() => sync(store), policy)` passes a plain function where an Effect is expected.
 - Most ES diagnostics do not exist yet. A top-level `main()` is an Effect value, not ES1001. An Effect lambda passed to `Array.prototype.forEach` silently does nothing, not ES4301. A plain TypeScript call is not ES4401.
