@@ -189,7 +189,7 @@ func GetResolutionDiagnostic(options *core.CompilerOptions, resolvedModule *Reso
 func TryGetJSExtensionForFile(fileName string, options *core.CompilerOptions) string {
 	ext := tspath.TryGetExtensionFromPath(fileName)
 	switch ext {
-	case tspath.ExtensionTs, tspath.ExtensionDts:
+	case tspath.ExtensionTs, tspath.ExtensionDts, tspath.ExtensionEs:
 		return tspath.ExtensionJs
 	case tspath.ExtensionTsx:
 		if options.Jsx == core.JsxEmitPreserve {
