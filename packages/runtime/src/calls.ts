@@ -7,8 +7,19 @@ export const $bind = <T>(value: T): Bind<T> => (Effect.isEffect(value) ? value :
 /** A program value: a function with no arguments where an Effect is expected (D7). */
 export const $program = <A, E, R>(thunk: () => Effect.Effect<A, E, R>): Effect.Effect<A, E, R> => Effect.suspend(thunk)
 
-/** Prototype extension: an array of programs where an iterable of Effects is expected. */
-export const $programs = <P extends () => Effect.Effect<any, any, any>>(programs: Iterable<P>): Array<ReturnType<P>> =>
-  Array.from(programs, (p) => Effect.suspend(p)) as Array<ReturnType<P>>
+/**
+ * D49: an iterable or a record of programs where an iterable or a record of
+ * Effects is expected. An iterable becomes an array; a record keeps its keys.
+ */
+export function $programs<P extends () => Effect.Effect<any, any, any>>(programs: Iterable<P>): Array<ReturnType<P>>
+export function $programs<R extends Record<string, () => Effect.Effect<any, any, any>>>(
+  programs: R
+): { [K in keyof R]: ReturnType<R[K]> }
+export function $programs(programs: Iterable<() => Effect.Effect<any, any, any>> | Record<string, () => Effect.Effect<any, any, any>>): unknown {
+  if (Symbol.iterator in Object(programs)) {
+    return Array.from(programs as Iterable<() => Effect.Effect<any, any, any>>, (p) => Effect.suspend(p))
+  }
+  return Object.fromEntries(Object.entries(programs).map(([key, p]) => [key, Effect.suspend(p)]))
+}
 
 export const runMain = <A, E>(program: Effect.Effect<A, E, never>) => Effect.runPromiseExit(program)

@@ -70,7 +70,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$bind` | Run an Effect result or lift an ordinary value during prototype call lowering | D24 |
 | `Bind` (type) | Preserve the success, failure, and requirement types of `$bind` | D24 |
 | `$program` | Convert a zero-argument function to a lazy, rerunnable Effect | D7 |
-| `$programs` | Convert an iterable of zero-argument functions to an array of Effects | D49 |
+| `$programs` | Convert an iterable of zero-argument functions to an array of Effects, or a record of them to a record of Effects | D49 |
 | `$normal` | Represent normal completion of a lowered region or loop body | D14, D26 |
 | `$catch` | Recover a cause containing expected failures only | D13, D28, D46 |
 | `$finally` | Run cleanup on every exit and retain cleanup failures | D15, D46 |
@@ -124,8 +124,7 @@ to check that loops run in constant stack.
 
 The extraction preserves the prototype's helper names and execution behavior.
 The compiler orders `wire` arguments with dependents before providers; the
-runtime itself does not inspect or sort Layer dependencies. `$programs` converts
-iterables, so record conversion remains compiler work. `$trusted` currently
+runtime itself does not inspect or sort Layer dependencies. `$trusted` currently
 accepts exception tag or constructor-name strings; it does not resolve exception
 constructors. The existing `Continuation<X, A, E>` type parameters are retained.
 

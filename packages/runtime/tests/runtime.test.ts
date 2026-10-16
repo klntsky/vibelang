@@ -12,9 +12,11 @@ test("calls: programs are lazy and rerunnable; bind accepts data and Effects", a
   let runs = 0
   const program = $program(() => Effect.sync(() => ++runs))
   const programs = $programs([() => program, () => $bind(9)])
+  const record = $programs({ a: () => program, b: () => $bind("b") })
   expect(runs).toBe(0)
   expect(await Effect.runPromise(Effect.all(programs))).toEqual([1, 9])
-  expect(await Effect.runPromise($bind(program))).toBe(2)
+  expect(await Effect.runPromise(Effect.all(record))).toEqual({ a: 2, b: "b" })
+  expect(await Effect.runPromise($bind(program))).toBe(3)
   expect(await runMain(Effect.fail("expected"))).toEqual(Exit.fail("expected"))
 })
 

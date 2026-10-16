@@ -1,0 +1,53 @@
+// Programs as values (design D7, D49): a function with no parameters is a
+// program, nothing runs until something calls it, and a function value
+// converts to an Effect where Effect expects one.
+import { Effect, Schedule } from "effect"
+
+let runs = 0
+
+function work(name: string) {
+  runs++
+  Effect.sleep("1 millis")
+  return name.toUpperCase()
+}
+
+// Returns a program; calling makeJob runs nothing.
+function makeJob(name: string) {
+  return () => work(name)
+}
+
+let failuresLeft = 2
+
+function flakyWork() {
+  if (failuresLeft > 0) {
+    failuresLeft--
+    Effect.fail("not yet")
+  }
+  return "FLAKY"
+}
+
+function stored() {
+  const job = () => work("stored")
+  const returned = makeJob("returned")
+  const flaky = () => flakyWork()
+  const before = runs
+  const once = job()
+  const retried = Effect.retry(flaky, Schedule.recurs(3))
+  const pair = Effect.all([job, returned], { concurrency: 2 })
+  const record = Effect.all({ a: job, b: returned })
+  return { before, once, retried, pair, record }
+}
+
+// Arrays and records of programs built at run time convert element by element.
+function built() {
+  const jobs = ["x", "y"].map(makeJob)
+  const table: Record<string, () => Effect.Effect<string>> = { p: makeJob("p"), q: makeJob("q") }
+  return { jobs: Effect.all(jobs), table: Effect.all(table) }
+}
+
+// expect-result: {"stored":{"before":0,"once":"STORED","retried":"FLAKY","pair":["STORED","RETURNED"],"record":{"a":"STORED","b":"RETURNED"}},"built":{"jobs":["X","Y"],"table":{"p":"P","q":"Q"}},"runs":9}
+export function main() {
+  const s = stored()
+  const b = built()
+  return { stored: s, built: b, runs }
+}

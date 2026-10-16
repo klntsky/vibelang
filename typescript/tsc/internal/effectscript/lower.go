@@ -41,6 +41,13 @@ func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *tra
 }
 
 func (tx *lowering) visit(node *ast.Node) *ast.Node {
+	if conversion := tx.plan.conversionOf(node); conversion != convertNone {
+		return tx.convert(node, conversion)
+	}
+	return tx.visitNode(node)
+}
+
+func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	switch {
 	case node.Kind == ast.KindSourceFile:
 		return tx.visitSourceFile(node.AsSourceFile())
@@ -113,6 +120,27 @@ func (tx *lowering) runtimeMember(name string) *ast.Node {
 		tx.runtime = tx.Factory().NewUniqueNameEx("runtime", printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
 	}
 	return tx.Factory().NewPropertyAccessExpression(tx.runtime, nil /*questionDotToken*/, tx.Factory().NewIdentifier(name), ast.NodeFlagsNone)
+}
+
+// convert lowers a function value that its position converts: a program
+// becomes Effect.suspend(value), and an array or record of programs becomes
+// $programs(value).
+func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
+	f := tx.Factory()
+	value := tx.visitNode(node)
+	var callee *ast.Node
+	switch conversion {
+	case convertProgram:
+		callee = f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("suspend"), ast.NodeFlagsNone)
+	case convertPrograms:
+		callee = tx.runtimeMember("$programs")
+	default:
+		return value
+	}
+	converted := f.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{value}), ast.NodeFlagsNone)
+	tx.EmitContext().SetOriginal(converted, node)
+	converted.Loc = node.Loc
+	return converted
 }
 
 // visitRunningCall turns `f(x)` into `yield* f(x)`.

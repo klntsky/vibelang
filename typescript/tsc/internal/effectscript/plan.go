@@ -13,20 +13,22 @@ const effectTypeID = "~effect/Effect"
 
 // plan records what the lowering does to one .es file.
 type plan struct {
-	effects  map[*ast.Node]bool // functions lowered to Effect.fnUntraced generators
-	programs map[*ast.Node]bool // lambdas lowered to Effect.gen programs (design D7)
-	runs     map[*ast.Node]bool // calls in those functions emitted as yield*
+	effects  map[*ast.Node]bool       // functions lowered to Effect.fnUntraced generators
+	programs map[*ast.Node]bool       // lambdas lowered to Effect.gen programs (design D7)
+	runs     map[*ast.Node]bool       // calls in those functions emitted as yield*
+	converts map[*ast.Node]conversion // function values converted where they are passed
 	servicePlan
 }
 
-func (p *plan) isEffect(fn *ast.Node) bool   { return p.effects[fn] }
-func (p *plan) isProgram(fn *ast.Node) bool  { return p.programs[fn] }
-func (p *plan) runsCall(call *ast.Node) bool { return p.runs[call] }
+func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
+func (p *plan) isProgram(fn *ast.Node) bool            { return p.programs[fn] }
+func (p *plan) runsCall(call *ast.Node) bool           { return p.runs[call] }
+func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node] }
 
 // planFile asks the checker which functions in file are Effects and which of
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
-	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, servicePlan: newServicePlan()}
+	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan()}
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
 		return p
@@ -48,6 +50,9 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					p.planServiceCall(c, call)
 					return false
 				})
+			}
+			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertPrograms {
+				p.converts[node] = conversion
 			}
 			p.planServiceClass(c, node)
 			node.ForEachChild(visit)
@@ -100,6 +105,8 @@ type analyzer struct {
 	rejected        map[*ast.Node]map[candidateKey]bool // call -> candidates a lambda argument rejected
 	resolving       map[*ast.Node]bool                  // calls whose signature candidateOf is resolving
 	effectInterface *checker.Type                       // the generic Effect interface, once seen
+
+	conversions map[*ast.Node]*valueState // argument expressions that convert (conversions.go)
 }
 
 type analyzerKey struct{}
@@ -117,6 +124,8 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			current:   map[*ast.Node][]*checker.Signature{},
 			rejected:  map[*ast.Node]map[candidateKey]bool{},
 			resolving: map[*ast.Node]bool{},
+
+			conversions: map[*ast.Node]*valueState{},
 		}
 	}).(*analyzer)
 }
