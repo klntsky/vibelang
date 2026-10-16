@@ -42,6 +42,42 @@ sh scripts/e2e.sh
 See [Installation](docs/user/src/getting-started/004-installation.md) and
 [Getting Started](docs/user/src/013-getting-started.md) for the full workflow.
 
+## Before you write your first file
+
+- Every function in a `.es` file is an Effect, and a call runs it:
+  `const todo = Todos.get(id)` is a `Todo`. Pass work to an Effect operator as
+  a function with no parameters:
+  `Effect.retry(() => send(message), Schedule.exponential("100 millis"))`.
+- `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
+  `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no
+  import. Import other source files by their source name,
+  `import { Todos } from "./todos.es"`; the compiler emits `.js` imports.
+- A module's top level only declares. A call there that would run a program
+  is ES1001, including `Effect.succeed(1)`. Start the program once with a
+  runner: `NodeRuntime.runMain(() => main())`.
+- Plain functions from other packages need a boundary, such as
+  `Effect.try(() => parse(text))`, or a `/** @effectscript trusted */`
+  re-export from a `.ts` file (ES4401). Effect's packages are trusted,
+  including `assert` and `expect` from `@effect/vitest`: import them from
+  `@effect/vitest`, not from `vitest`.
+- `console.log`, `fetch`, timers, and `Date.now()` are errors in `.es` code
+  (ES4402, ES4403). Use `Effect.log` or `Console`, `Effect.sleep`, `Clock`,
+  and Effect's HTTP modules: `effect/http` with `NodeHttpServer` from
+  `@effect/platform-node`.
+- A `Disposable`'s `[Symbol.dispose]` runs synchronously and cannot run an
+  Effect (ES4301). Acquire a resource whose release logs or waits with
+  `Effect.acquireRelease`, and hold it with `using`.
+- The user docs follow Effect's documentation page for page, so features
+  that Effect's docs lack have no page there. For control operations
+  (`extends Control`, `handle`, `resume`), read "Handlers: defining your own
+  effects" in Part I of [the design](docs/design/effectscript-design.md) and
+  [`examples/approval`](examples/approval); for an HTTP API, start from
+  [`examples/http-api`](examples/http-api).
+- A route handler's services are request requirements. `HttpRouter.serve`
+  turns them into the server layer's inputs, which `wire` provides; a test
+  that calls `HttpRouter.toHttpEffect` provides them with
+  `HttpRouter.provideRequest(layer)(routes)`.
+
 | Path | What it is |
 | --- | --- |
 | `docs/design/` | The spec (`effectscript-design.html`, built from `src/` by `docs/tools/render.ts`) and the decision log (`DECISIONS.md`) |
