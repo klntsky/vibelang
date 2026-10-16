@@ -32,6 +32,9 @@ runtime=$(cd "$runtime" && pwd)
 # entries are smaller; panics still print stack traces.
 echo "build: go build -trimpath -gcflags=all=-dwarf=false -o built/local/tsc ./cmd/tsc"
 (cd "$root/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$tsc" ./cmd/tsc)
+echo "test: go test ./internal/effectscript/"
+(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/effectscript/ >/dev/null) ||
+	(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/effectscript/; exit 1)
 
 # The runtime's dist/ is not checked in. Build it from source with this tsc, so
 # a commit that changes the compiler and the runtime is tested as one. The

@@ -90,7 +90,7 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 
 ## Seams in upstream files
 
-EffectScript code lives in `tsc/internal/effectscript/` (5 files, 523 lines), which may import any internal package because it sits under `tsc/internal/`. It registers three hooks from `init`. Upstream code changes in two ways: one-line call sites in existing files, and new files that hold the hooks.
+EffectScript code lives in `tsc/internal/effectscript/`, which may import any internal package because it sits under `tsc/internal/`. It registers its hooks from `init`. Upstream code changes in three ways: one-line call sites in existing files, new files that hold the hooks, and the `effectscript` compiler option, which is added by hand to the generated option tables because the generator's type model has no nested objects.
 
 | Upstream file | Change | Lines (+/-) |
 | --- | --- | --- |
@@ -98,11 +98,18 @@ EffectScript code lives in `tsc/internal/effectscript/` (5 files, 523 lines), wh
 | `tsc/internal/core/core.go` | `.es` is `ScriptKindTS` | +1 / -1 |
 | `tsc/internal/compiler/emitter.go` | Run hook transformers first in `getScriptTransformers` | +2 / -0 |
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
-| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody` | +6 / -3 |
-| `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook` | +31 |
-| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference` | +62 |
+| `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns | +9 / -4 |
+| `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
+| `tsc/internal/core/options_generated.go` (generated) | `CompilerOptions.EffectScript`, in `Clone` and `Equals` | +6 |
+| `tsc/internal/tsoptions/declarations_generated.go` (generated) | The `effectscript` declaration | +8 |
+| `tsc/internal/tsoptions/options_generated.go` (generated) | Parse, merge for `extends`, compare for semantic diagnostics and emit, and serialize for `--showConfig` | +15 / -1 |
+| `tsc/internal/tsoptions/commandlineoption.go`, `tsconfigparsing.go` | The option's extra validation | +4 |
+| `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource` | +47 |
+| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook` | +136 |
+| `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
+| `tsc/internal/tsoptions/effectscript.go` (new) | Parse, validate, and serialize `compilerOptions.effectscript` | +149 |
 
-That is 20 added and 12 removed lines in 5 existing upstream files, plus 93 lines in 2 new upstream-package files. A rebase onto a newer nightly can conflict only in those 5 files.
+A rebase onto a newer nightly can conflict only in the existing files above. If upstream regenerates the option tables, add the `effectscript` lines again; `tsoptions/effectscript.go` lists where they go.
 
 ## What the lowering does
 
@@ -124,12 +131,47 @@ function lookup(id: number) {                const lookup = Effect_1.fnUntraced(
 
 Checking takes one pass. The analyzer decides from function bodies and callee types, and the hooks type each call and lambda inside TypeScript's own overload resolution.
 
+## Diagnostics
+
+ES diagnostics are TypeScript diagnostics whose source is `ES`. `tsc` prints them as `main.es(7,13): error ES1003: …`, with each fix line indented under the headline, and the language server publishes them with `source: "ES"` and the numeric code, which VS Code shows as `ES(1003)`. The checker reports them while it checks a file, so `tsc`, `tsc --noEmit`, the language server, and `tsc --api` see the same diagnostics. `@ts-ignore` and `@ts-expect-error` do not apply to them, so an `@ts-expect-error` above one is itself reported as unused (TS2578).
+
+`tsc/internal/effectscript/diagnostics.go` is the registry: one `Message` for each code in Chapter 28, `ES1001` through `ES4403`, with its default category and the headline the spec prints. A Go test keeps the registry equal to Chapter 28's table. A check is a function in its own file:
+
+```go
+func init() { fileChecks = append(fileChecks, checkContracts) }
+
+func checkContracts(c *checker.Checker, file *ast.SourceFile) {
+	d := report(c, ret, ES2001, "UserNotFound", "greeting", "its contract says E = never")
+	note(d, "Catch it inside greeting, or change the contract to {0}.", contract)
+	cover(c, ret) // ES2001 explains TypeScript's TS2322 at this return
+}
+```
+
+| Name | What it does |
+| --- | --- |
+| `fileChecks` | Functions that run once for each `.es` file a checker checks, after TypeScript's own checks of that file |
+| `report(c, node, m, args...)` | Adds a diagnostic with message `m` at `node`'s error span, in the category the project gives `m`'s code, and returns it; returns nil when the project turns the code off |
+| `reportAt(c, file, loc, m, args...)` | `report` at a span that is not a node's error span, such as one keyword |
+| `note(d, text, args...)` | Adds an indented line, such as a fix, under `d` |
+| `cover(c, node)` | Hides TypeScript's own diagnostics inside `node`, because an ES diagnostic there explains them |
+| `m.With(text)` | A second headline for `m`'s code, for a situation the registry's text does not fit |
+
+Report only from a file check, and only at nodes of the file being checked: the program reads each file's diagnostics from the checker that checks that file. A check that finds a problem while the checker types another file records it and reports it from the file check of the file that holds the node.
+
+`compilerOptions.effectscript` (D34) sets the category of the two codes that are policy, not soundness, and the tracing mode:
+
+```json
+"effectscript": { "diagnostics": { "ES2004": "off", "ES4403": "warning" }, "tracing": "exported" }
+```
+
+ES2004 defaults to `"warning"` and ES4403 to `"error"`; every other ES code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.EffectScript.Tracing` holds the tracing mode for lane F8. `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
+
 ## What it cannot do yet
 
 - `throw`, `try`/`catch`/`finally`, and `using` are plain JavaScript. A `throw` is a defect, and `catch` does not see a failed Effect.
 - No services (D1), control operations (D2), prelude globals (D4), `pipe`, `wire`, `fork`, or handlers.
 - No programs as values (D7). `Effect.retry(() => sync(store), policy)` passes a plain function where an Effect is expected.
-- None of the ES diagnostics exist. A top-level `main()` is an Effect value, not ES1001. An Effect lambda passed to `Array.prototype.forEach` silently does nothing, not ES4301. A plain TypeScript call is not ES4401.
+- Most ES diagnostics do not exist yet. A top-level `main()` is an Effect value, not ES1001. An Effect lambda passed to `Array.prototype.forEach` silently does nothing, not ES4301. A plain TypeScript call is not ES4401.
 - An annotated function keeps its annotated type. `function f(): number` with Effect calls is `() => number` to TypeScript but returns an Effect at run time. An Effect contract annotation is checked against the body as a TypeScript type, not as a contract.
 - No `$direct` variants or JSDoc metadata. A pure `.es` function exports a plain function type.
 - Methods, accessors, constructors, async functions, and generators are never lowered. `this` and `arguments` inside a lowered arrow function rebind to the generator.
