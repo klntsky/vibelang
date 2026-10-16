@@ -48,12 +48,13 @@ func (tx *lowering) lowerMethod(node *ast.Node) *ast.Node {
 	ec := tx.EmitContext()
 	method := node.AsMethodDeclaration()
 
-	saved := tx.inEffect
+	saved, savedFrame := tx.inEffect, tx.frame
 	tx.inEffect = false // a parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
+	tx.frame = &frame{name: functionName(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
-	tx.inEffect = saved
+	tx.inEffect, tx.frame = saved, savedFrame
 
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
 	ec.SetOriginal(generator, node)

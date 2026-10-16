@@ -1,0 +1,408 @@
+package effectscript
+
+import (
+	"slices"
+
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/transformers"
+)
+
+// Regions.
+//
+// A region is a block of an Effect function that runs as an Effect of its
+// own, so that a runtime helper can wrap it: the try, catch, and finally
+// blocks of a try statement. A region compiles to a generator closure over
+// the function's variables, wrapped with Effect.fnUntraced, so assignments
+// inside it are visible after it:
+//
+//	try { return Users.find(id) } catch (e) { return guest } finally { log() }
+//
+// becomes
+//
+//	const completion = yield* runtime.$finally(runtime.$catch(
+//	  Effect.fnUntraced(function* lookup$try() { return { kind: "return", value: yield* Users.find(id) } })(),
+//	  Effect.fnUntraced(function* lookup$catch(e) { return { kind: "return", value: guest } })),
+//	  Effect.fnUntraced(function* lookup$finally() { yield* log() })())
+//	if (completion.kind === "return") return completion.value
+//
+// A return, break, or continue that leaves a region cannot jump out of its
+// closure, so the closure returns a completion record instead: { kind:
+// "return", value }, { kind: "break", label }, or { kind: "continue", label },
+// with "" as the label of an unlabeled jump, and the runtime's $normal when
+// the closure reaches its end. The generator that runs the region dispatches
+// on the record: it returns, breaks, or continues itself, or, when it is a
+// region's closure too and the jump leaves it as well, it returns the record
+// to its own runner. A region that no jump leaves has no record to dispatch.
+//
+// The API for other region kinds (using, fork, and loops over producers):
+// create a *region, emit each block with regionStatements, which collects the
+// jumps that leave it, and regionFunction, compose the closures with runtime
+// helpers, and run the result with runRegion.
+
+// A jump is where a return, break, or continue statement goes.
+type jump struct {
+	kind  ast.Kind // ast.KindReturnStatement, ast.KindBreakStatement, or ast.KindContinueStatement
+	label string   // the target label; "" for return and for an unlabeled break or continue
+}
+
+// A region collects the jumps that leave it while the lowering emits its
+// closures.
+type region struct {
+	jumps []jump // each jump once, in the order the lowering met them
+}
+
+func (r *region) add(j jump) {
+	if !slices.Contains(r.jumps, j) {
+		r.jumps = append(r.jumps, j)
+	}
+}
+
+// A frame is one generator function the lowering is emitting: an Effect
+// function's own body, or the closure of a region.
+type frame struct {
+	name    string   // the Effect function's name, for naming region closures
+	region  *region  // the region whose closure this is; nil for the function's own body
+	targets []target // the statements a break or continue can jump to, innermost last
+}
+
+// A target is a statement that break or continue can jump to: a loop, a
+// switch, or a labeled statement.
+type target struct {
+	label string // the label of a labeled statement; "" for a loop or a switch
+	loop  bool   // continue can jump to it
+}
+
+// lands reports whether j lands in this generator, so that the generator can
+// jump itself instead of returning a completion record.
+func (f *frame) lands(j jump) bool {
+	if j.kind == ast.KindReturnStatement {
+		return f.region == nil
+	}
+	for i := len(f.targets) - 1; i >= 0; i-- {
+		t := f.targets[i]
+		switch {
+		case j.label != "":
+			if t.label == j.label {
+				return true
+			}
+		case t.label == "" && (t.loop || j.kind == ast.KindBreakStatement):
+			return true
+		}
+	}
+	return false
+}
+
+// isJumpTarget reports whether node is a statement that break or continue can
+// jump to.
+func isJumpTarget(node *ast.Node) bool {
+	return node.Kind == ast.KindLabeledStatement || node.Kind == ast.KindSwitchStatement || ast.IsIterationStatement(node, false /*lookInLabeledStatements*/)
+}
+
+// visitJumpTarget visits a loop, switch, or labeled statement in an Effect
+// function, with the statement open as a jump target.
+func (tx *lowering) visitJumpTarget(node *ast.Node) *ast.Node {
+	t := target{loop: ast.IsIterationStatement(node, false /*lookInLabeledStatements*/)}
+	if node.Kind == ast.KindLabeledStatement {
+		statement := node.AsLabeledStatement()
+		t = target{label: statement.Label.Text(), loop: ast.IsIterationStatement(statement.Statement, true /*lookInLabeledStatements*/)}
+	}
+	f := tx.frame
+	f.targets = append(f.targets, t)
+	visited := tx.Visitor().VisitEachChild(node)
+	f.targets = f.targets[:len(f.targets)-1]
+	return visited
+}
+
+// visitJump visits a return, break, or continue statement in a region's
+// closure. A jump that leaves the region returns its completion record.
+func (tx *lowering) visitJump(node *ast.Node) *ast.Node {
+	j := jump{kind: node.Kind}
+	if node.Kind != ast.KindReturnStatement {
+		if label := node.Label(); label != nil {
+			j.label = label.Text()
+		}
+	}
+	if tx.frame.lands(j) {
+		return tx.Visitor().VisitEachChild(node)
+	}
+	tx.frame.region.add(j)
+	f := tx.Factory()
+	properties := []*ast.Node{f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("kind"), nil /*postfixToken*/, nil /*typeNode*/, f.NewStringLiteral(jumpKind(j.kind), ast.TokenFlagsNone))}
+	if j.kind == ast.KindReturnStatement {
+		if expression := node.Expression(); expression != nil {
+			properties = append(properties, f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("value"), nil /*postfixToken*/, nil /*typeNode*/, tx.Visitor().VisitNode(expression)))
+		}
+	} else {
+		properties = append(properties, f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("label"), nil /*postfixToken*/, nil /*typeNode*/, f.NewStringLiteral(j.label, ast.TokenFlagsNone)))
+	}
+	record := f.NewReturnStatement(f.NewObjectLiteralExpression(f.NewNodeList(properties), false /*multiLine*/))
+	tx.EmitContext().SetOriginal(record, node)
+	record.Loc = node.Loc
+	return record
+}
+
+func jumpKind(kind ast.Kind) string {
+	switch kind {
+	case ast.KindReturnStatement:
+		return "return"
+	case ast.KindBreakStatement:
+		return "break"
+	default:
+		return "continue"
+	}
+}
+
+// visitTryStatement lowers a try statement in an Effect function to regions:
+// the try block runs under $catch when there is a catch clause, and under
+// $finally when there is a finally block.
+func (tx *lowering) visitTryStatement(node *ast.Node) *ast.Node {
+	try := node.AsTryStatement()
+	r := &region{}
+	tryBlock := tx.regionStatements(r, try.TryBlock)
+	var catchClause *ast.CatchClause
+	var catchBlock []*ast.Node
+	if try.CatchClause != nil {
+		catchClause = try.CatchClause.AsCatchClause()
+		catchBlock = tx.regionStatements(r, catchClause.Block)
+	}
+	// Every jump out of the try and catch blocks is known now, so each closure
+	// that can reach its end knows whether it must return $normal.
+	run := tx.runNow(tx.regionFunction(r, "try", nil, try.TryBlock, tryBlock), try.TryBlock)
+	if catchClause != nil {
+		handler := tx.regionFunction(r, "catch", catchClause.VariableDeclaration, catchClause.Block, catchBlock)
+		if usesThis(catchClause.Block) {
+			handler = tx.Factory().NewFunctionBindCall(handler, tx.Factory().NewThisExpression(), nil /*argumentsList*/)
+		}
+		run = tx.runtimeCall("$catch", run, handler)
+	}
+	if try.FinallyBlock != nil {
+		cleanup := &region{}
+		finallyBlock := tx.regionStatements(cleanup, try.FinallyBlock)
+		run = tx.runtimeCall("$finally", run, tx.runNow(tx.regionFunction(cleanup, "finally", nil, try.FinallyBlock, finallyBlock), try.FinallyBlock))
+	}
+	return tx.runRegion(node, run, r)
+}
+
+// regionStatements visits the statements of block as the body of a closure
+// of region r.
+func (tx *lowering) regionStatements(r *region, block *ast.Node) []*ast.Node {
+	saved := tx.frame
+	tx.frame = &frame{name: saved.name, region: r}
+	statements := tx.Visitor().VisitNodes(block.AsBlock().Statements)
+	tx.frame = saved
+	return statements.Nodes
+}
+
+// regionFunction makes `Effect.fnUntraced(function* <name>$<role>(binding) {
+// statements })`, a closure of region r whose body is statements, the visited
+// statements of block. binding is a catch clause's variable declaration, or
+// nil. When a jump leaves r, a closure that can reach its end returns $normal
+// there.
+func (tx *lowering) regionFunction(r *region, role string, binding *ast.Node, block *ast.Node, statements []*ast.Node) *ast.Node {
+	f := tx.Factory()
+	var parameters []*ast.Node
+	if binding != nil {
+		name := binding.Name()
+		if ast.IsBindingPattern(name) {
+			// catch ({ a = f() }): a pattern's defaults may run calls, which a
+			// generator's parameter list cannot yield, so the body destructures.
+			error := f.NewUniqueName("error")
+			destructure := f.NewVariableStatement(nil /*modifiers*/, f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
+				f.NewVariableDeclaration(tx.visitInFrame(r, name), nil /*exclamationToken*/, nil /*typeNode*/, error),
+			}), ast.NodeFlagsConst))
+			statements = append([]*ast.Node{destructure}, statements...)
+			name = error
+		}
+		parameters = append(parameters, f.NewParameterDeclaration(nil /*modifiers*/, nil /*dotDotDotToken*/, name, nil /*questionToken*/, nil /*typeNode*/, nil /*initializer*/))
+	}
+	if len(r.jumps) > 0 && canCompleteNormally(block) {
+		statements = append(statements, f.NewReturnStatement(tx.runtimeMember("$normal")))
+	}
+	body := f.NewBlock(f.NewNodeList(statements), true /*multiLine*/)
+	body.Loc = block.Loc
+	var name *ast.Node
+	if tx.frame.name != "" {
+		name = f.NewIdentifier(tx.frame.name + "$" + role)
+	}
+	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), name, nil /*typeParameters*/, f.NewNodeList(parameters), nil /*type*/, nil /*fullSignature*/, body)
+	tx.EmitContext().SetOriginal(generator, block)
+	return tx.wrapGenerator("fnUntraced", block, generator)
+}
+
+// visitInFrame visits node as code of region r's closure.
+func (tx *lowering) visitInFrame(r *region, node *ast.Node) *ast.Node {
+	saved := tx.frame
+	tx.frame = &frame{name: saved.name, region: r}
+	visited := tx.Visitor().VisitNode(node)
+	tx.frame = saved
+	return visited
+}
+
+// runRegion makes the statements that run run, a region's Effect, in the
+// enclosing generator, and dispatch every jump that leaves region r:
+//
+//	const completion = yield* run
+//	if (completion.kind === "return") return completion.value
+//	if (completion.kind === "break" && completion.label === "outer") break outer
+//
+// A jump that leaves the enclosing generator too, when it is a region's
+// closure, returns the record again.
+func (tx *lowering) runRegion(original *ast.Node, run *ast.Node, r *region) *ast.Node {
+	f := tx.Factory()
+	ec := tx.EmitContext()
+	yield := f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), run)
+	if len(r.jumps) == 0 {
+		statement := f.NewExpressionStatement(yield)
+		ec.SetOriginal(statement, original)
+		statement.Loc = original.Loc
+		return statement
+	}
+	completion := f.NewUniqueName("completion")
+	declaration := f.NewVariableStatement(nil /*modifiers*/, f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
+		f.NewVariableDeclaration(completion, nil /*exclamationToken*/, nil /*typeNode*/, yield),
+	}), ast.NodeFlagsConst))
+	ec.SetOriginal(declaration, original)
+	declaration.Loc = original.Loc
+	statements := []*ast.Node{declaration}
+	for _, j := range r.jumps {
+		statements = append(statements, tx.dispatch(completion, j))
+	}
+	return f.NewSyntaxList(statements)
+}
+
+// dispatch makes `if (<completion is j>) <jump>` for one jump that leaves a
+// region.
+func (tx *lowering) dispatch(completion *ast.Node, j jump) *ast.Node {
+	f := tx.Factory()
+	member := func(name string) *ast.Node {
+		return f.NewPropertyAccessExpression(completion, nil /*questionDotToken*/, f.NewIdentifier(name), ast.NodeFlagsNone)
+	}
+	test := f.NewStrictEqualityExpression(member("kind"), f.NewStringLiteral(jumpKind(j.kind), ast.TokenFlagsNone))
+	if j.kind != ast.KindReturnStatement {
+		test = f.NewLogicalANDExpression(test, f.NewStrictEqualityExpression(member("label"), f.NewStringLiteral(j.label, ast.TokenFlagsNone)))
+	}
+	var then *ast.Node
+	switch {
+	case !tx.frame.lands(j):
+		tx.frame.region.add(j)
+		then = f.NewReturnStatement(completion)
+	case j.kind == ast.KindReturnStatement:
+		then = f.NewReturnStatement(member("value"))
+	default:
+		var label *ast.Node
+		if j.label != "" {
+			label = f.NewIdentifier(j.label)
+		}
+		if j.kind == ast.KindBreakStatement {
+			then = f.NewBreakStatement(label)
+		} else {
+			then = f.NewContinueStatement(label)
+		}
+	}
+	return f.NewIfStatement(test, then, nil /*elseStatement*/)
+}
+
+// runNow makes `fn()`, which makes the Effect that fn, the closure of block,
+// runs, or `fn.call(this)` when block refers to this, so the closure sees the
+// function's this.
+func (tx *lowering) runNow(fn *ast.Node, block *ast.Node) *ast.Node {
+	f := tx.Factory()
+	if usesThis(block) {
+		return f.NewFunctionCallCall(fn, f.NewThisExpression(), nil /*argumentsList*/)
+	}
+	return f.NewCallExpression(fn, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(nil), ast.NodeFlagsNone)
+}
+
+// canCompleteNormally reports whether statement can reach its end, so control
+// continues after it. It looks only at syntax and answers true when unsure.
+func canCompleteNormally(statement *ast.Node) bool {
+	if statement == nil {
+		return true
+	}
+	switch statement.Kind {
+	case ast.KindReturnStatement, ast.KindThrowStatement, ast.KindBreakStatement, ast.KindContinueStatement:
+		return false
+	case ast.KindBlock:
+		for _, s := range statement.AsBlock().Statements.Nodes {
+			if !canCompleteNormally(s) {
+				return false
+			}
+		}
+		return true
+	case ast.KindIfStatement:
+		s := statement.AsIfStatement()
+		return s.ElseStatement == nil || canCompleteNormally(s.ThenStatement) || canCompleteNormally(s.ElseStatement)
+	case ast.KindTryStatement:
+		s := statement.AsTryStatement()
+		body := canCompleteNormally(s.TryBlock) || s.CatchClause != nil && canCompleteNormally(s.CatchClause.AsCatchClause().Block)
+		return body && canCompleteNormally(s.FinallyBlock)
+	}
+	return true
+}
+
+// varList returns the var declaration list that node declares in a region's
+// closure, or nil: node is a var statement, or the var list that initializes
+// a for, for...in, or for...of loop.
+func varList(node *ast.Node) *ast.Node {
+	var list *ast.Node
+	switch node.Kind {
+	case ast.KindVariableStatement:
+		list = node.AsVariableStatement().DeclarationList
+	case ast.KindVariableDeclarationList:
+		if parent := node.Parent; parent != nil && (parent.Kind == ast.KindForStatement || parent.Kind == ast.KindForInStatement || parent.Kind == ast.KindForOfStatement) {
+			list = node
+		}
+	}
+	if list == nil || list.Flags&ast.NodeFlagsBlockScoped != 0 {
+		return nil
+	}
+	return list
+}
+
+// visitVar lowers a var declaration in a region's closure. A var belongs to
+// the whole function, and the closure would make it its own, so the lowering
+// declares the names in the Effect function and assigns them where the source
+// declared them: `var x = f()` becomes `x = yield* f()`. A var list that
+// initializes a for...in or for...of loop becomes the loop's target.
+func (tx *lowering) visitVar(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	list := varList(node)
+	var assignments []*ast.Node
+	for _, declaration := range list.AsVariableDeclarationList().Declarations.Nodes {
+		tx.hoist(declaration.Name())
+		target := tx.Visitor().VisitNode(declaration.Name())
+		if ast.IsBindingPattern(target) {
+			target = transformers.ConvertBindingPatternToAssignmentPattern(tx.EmitContext(), target.AsBindingPattern())
+		}
+		if node.Kind == ast.KindVariableDeclarationList && node.Parent.Kind != ast.KindForStatement {
+			return target // for (var x of xs): exactly one declaration, without initializer
+		}
+		if initializer := declaration.Initializer(); initializer != nil {
+			assignments = append(assignments, f.NewAssignmentExpression(target, tx.Visitor().VisitNode(initializer)))
+		}
+	}
+	if len(assignments) == 0 {
+		return nil
+	}
+	expression := f.InlineExpressions(assignments)
+	if node.Kind == ast.KindVariableDeclarationList {
+		return expression
+	}
+	statement := f.NewExpressionStatement(expression)
+	tx.EmitContext().SetOriginal(statement, node)
+	statement.Loc = node.Loc
+	return statement
+}
+
+// hoist declares each name that name binds as a var of the Effect function.
+func (tx *lowering) hoist(name *ast.Node) {
+	if ast.IsIdentifier(name) {
+		tx.EmitContext().AddVariableDeclaration(tx.Factory().NewIdentifier(name.Text()))
+		return
+	}
+	for _, element := range name.AsBindingPattern().Elements.Nodes {
+		if element.Name() != nil {
+			tx.hoist(element.Name())
+		}
+	}
+}

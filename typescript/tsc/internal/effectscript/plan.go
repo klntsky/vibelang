@@ -95,9 +95,10 @@ const (
 // cycle is an Effect, which is always correct and only slower than solving
 // the cycle. Every other function compiles to plain JavaScript (design D10).
 type analyzer struct {
-	checker *checker.Checker
-	states  map[*ast.Node]fnState
-	effects map[*ast.Node]*effectInfo // see effectOf
+	checker   *checker.Checker
+	states    map[*ast.Node]fnState
+	effects   map[*ast.Node]*effectInfo // see effectOf
+	tryBlocks map[*ast.Node]*effectInfo // see tryBlockFlow
 
 	// Lambda forms (forms.go).
 	lambdas         map[*ast.Node]*lambdaState
@@ -120,6 +121,7 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			checker:   c,
 			states:    map[*ast.Node]fnState{},
 			effects:   map[*ast.Node]*effectInfo{},
+			tryBlocks: map[*ast.Node]*effectInfo{},
 			lambdas:   map[*ast.Node]*lambdaState{},
 			current:   map[*ast.Node][]*checker.Signature{},
 			rejected:  map[*ast.Node]map[candidateKey]bool{},

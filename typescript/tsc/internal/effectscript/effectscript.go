@@ -29,6 +29,7 @@ func init() {
 	checker.RegisterMemberReceiverHook(memberReceiver)
 	checker.RegisterCallSignaturesHook(effectValueCall)
 	checker.RegisterExpressionTypeHook(expressionType)
+	checker.RegisterCatchVariableTypeHook(catchVariableType)
 }
 
 // isEffectScriptFile reports whether file is an EffectScript source file.

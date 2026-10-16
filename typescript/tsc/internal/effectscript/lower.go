@@ -30,6 +30,7 @@ type lowering struct {
 	effect   *ast.IdentifierNode // local name for effect's Effect module, imported on first use
 	runtime  *ast.IdentifierNode // local name for @effectscript/runtime, imported on first use
 	inEffect bool                // visiting code that runs inside a lowered generator
+	frame    *frame              // the generator being emitted while inEffect
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
@@ -59,6 +60,14 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitServiceLookup(node)
 	case node.Kind == ast.KindClassDeclaration && tx.plan.keys[node] != "":
 		return tx.visitServiceClass(node)
+	case tx.inEffect && node.Kind == ast.KindTryStatement:
+		return tx.visitTryStatement(node)
+	case tx.inEffect && (node.Kind == ast.KindReturnStatement || ast.IsBreakOrContinueStatement(node)):
+		return tx.visitJump(node)
+	case tx.inEffect && isJumpTarget(node):
+		return tx.visitJumpTarget(node)
+	case tx.inEffect && tx.frame.region != nil && varList(node) != nil:
+		return tx.visitVar(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.isEffect(node):
 		return tx.visitEffectFunctionDeclaration(node)
 	case node.Kind == ast.KindMethodDeclaration && tx.plan.isEffect(node):
@@ -143,6 +152,11 @@ func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
 	return converted
 }
 
+// runtimeCall makes `runtime.name(arguments...)`.
+func (tx *lowering) runtimeCall(name string, arguments ...*ast.Node) *ast.Node {
+	return tx.Factory().NewCallExpression(tx.runtimeMember(name), nil /*questionDotToken*/, nil /*typeArguments*/, tx.Factory().NewNodeList(arguments), ast.NodeFlagsNone)
+}
+
 // visitRunningCall turns `f(x)` into `yield* f(x)`.
 func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
 	call := tx.Visitor().VisitEachChild(node)
@@ -170,12 +184,13 @@ func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
 
-	saved := tx.inEffect
+	saved, savedFrame := tx.inEffect, tx.frame
 	tx.inEffect = false // a generator's parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
+	tx.frame = &frame{name: functionName(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
-	tx.inEffect = saved
+	tx.inEffect, tx.frame = saved, savedFrame
 	if !ast.IsBlock(body) {
 		body = ec.ConvertToFunctionBlock(body, false /*multiLine*/)
 	}
@@ -197,6 +212,18 @@ func (tx *lowering) wrapGenerator(method string, node *ast.Node, generator *ast.
 	tx.EmitContext().SetOriginal(lowered, node)
 	lowered.Loc = node.Loc
 	return lowered
+}
+
+// functionName returns the name of fn, a function the lowering turns into an
+// Effect: its own name, or the name of the variable it initializes, or "".
+func functionName(fn *ast.Node) string {
+	if name := fn.Name(); name != nil && ast.IsIdentifier(name) {
+		return name.Text()
+	}
+	if parent := fn.Parent; parent != nil && parent.Kind == ast.KindVariableDeclaration && ast.IsIdentifier(parent.Name()) {
+		return parent.Name().Text()
+	}
+	return ""
 }
 
 // visitEffectFunctionDeclaration turns `function f() {}` into

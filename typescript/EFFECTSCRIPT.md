@@ -54,6 +54,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `es-services-ts` | A TypeScript `Context.Service` class and Effect's `Path` are used as services: an Effect-valued member runs when called, and the service's own `pipe` wins over the key's |
 | `es-services-default` | `static readonly default` makes a service a `Context.Reference` that never joins R; `static make` and `static readonly layer` stay on the class |
 | `es-control` | `extends Control` declares a control operation; `Approval.approve(…)` joins R until the runtime's `handle` answers it |
+| `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 
 ### Acceptance cases
 
@@ -106,6 +107,9 @@ Each commit builds and passes `smoke.sh`. The change IDs are jj's and survive re
 | 27 | `sxoqtkxo` | effectscript: give a service with a static default a reference key | D40: `static readonly default` needs no provider |
 | 28 | `qlnyylqp` | effectscript: declare control operations | D2: `extends Control` registers kernel operations; the entry point for handlers |
 | 29 | `ozrknmym` | effectscript: document services in EFFECTSCRIPT.md | This section |
+| 30 | `ykwlmytt` | checker: add a catch clause variable type hook | Seam for typing a `catch` variable as the `try` block's expected failures |
+| 31 | `yullvuom` | checker: expose an expression's type before literal widening | `throw "bad"` adds `string`, as `return "bad"` does |
+| 32 | `mssmulnm` | effectscript: lower try, catch, and finally to Effect regions | Regions, completion records, and E through a `try` |
 
 ## Seams in upstream files
 
@@ -118,13 +122,14 @@ EffectScript code lives in `tsc/internal/effectscript/`, which may import any in
 | `tsc/internal/compiler/emitter.go` | Run hook transformers first in `getScriptTransformers` | +2 / -0 |
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effectscript` | +2 / -0 |
 | `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none | +21 / -4 |
+| `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
 | `tsc/internal/compiler/program.go` | Comment directives skip diagnostics from exempt sources | +1 / -1 |
 | `tsc/internal/core/options_generated.go` (generated) | `CompilerOptions.EffectScript`, in `Clone` and `Equals` | +6 |
 | `tsc/internal/tsoptions/declarations_generated.go` (generated) | The `effectscript` declaration | +8 |
 | `tsc/internal/tsoptions/options_generated.go` (generated) | Parse, merge for `extends`, compare for semantic diagnostics and emit, and serialize for `--showConfig` | +15 / -1 |
 | `tsc/internal/tsoptions/commandlineoption.go`, `tsconfigparsing.go` | The option's extra validation | +4 |
 | `tsc/internal/compiler/extensions.go` (new) | `RegisterScriptTransformerHook`, `RegisterDirectiveExemptSource` | +47 |
-| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook` | +136 |
+| `tsc/internal/checker/extensions.go` (new) | `WithChecker`, `RegisterCallExpressionTypeHook`, `RegisterInferredReturnTypeHook`, `NewTypeReference`, `ExtensionState`, `CompilerOptions`, `AddDiagnostic`, `RegisterSourceFileCheckHook`, `RegisterDiagnosticsFilterHook`, `RegisterCatchVariableTypeHook`, `GetTypeOfExpressionBeforeWidening` | +168 |
 | `tsc/internal/checker/extensions_classes.go` (new) | `RegisterClassBaseHook`, `Program`, `GetStringLiteralType`, `NewOptionalReadonlyPropertyType` | +48 |
 | `tsc/internal/checker/extensions_calls.go` (new) | `RegisterMemberReceiverHook`, `RegisterCallSignaturesHook`, `NewCallSignature` | +52 |
 | `tsc/internal/core/effectscript.go` (new) | `EffectScriptOptions` | +22 |
@@ -246,9 +251,55 @@ find(id) { return Effect.gen({ self: this }, function* () { … }) }
 ```
 
 A method's expectation is read once, from the contextual type the checker has when it first asks, whereas a lambda's form is decided per overload candidate (D56).
+## Failures and regions
+
+`try`, `catch`, and `finally` in an Effect function compile to Effect's failure and cleanup frames, never to a JavaScript `try`, because Effect does not run a generator's JavaScript `finally` when a fiber fails or is interrupted (design chapter 26).
+
+### Types
+
+- **E through a `try`.** A `catch` handles every expected failure of its `try` block (D13, D28), so what escapes `try { A } catch { B }` is what `B` raises. Requirements are never handled: R is the union of every block's. A `finally` block adds its own failures and requirements (D15). `failures.go` computes this from the syntax tree and the checker's types (`flowOf`, `tryFlow`).
+- **The caught value.** In a function the lowering can turn into an Effect, the variable of a `catch` without a type annotation has the union of the `try` block's expected failures, `never` when there are none, so `instanceof` and `_tag` narrow it. The checker asks `catchVariableType` through the catch clause variable type hook. A `catch` at a module's top level keeps TypeScript's `unknown`.
+
+### Regions
+
+A region is a block that runs as an Effect of its own, so a runtime helper can wrap it: today the `try`, `catch`, and `finally` blocks of a `try` statement. Each compiles to a generator closure over the function's variables, wrapped in `Effect.fnUntraced` and named `<function>$try`, `$catch`, or `$finally` (D36):
+
+```ts
+// lookup.es                                 // lookup.js
+function lookup(id: number) {                const lookup = Effect.fnUntraced(function* (id) {
+  try {                                          const completion = yield* runtime.$finally(runtime.$catch(
+    return find(id)                                Effect.fnUntraced(function* lookup$try() {
+  } catch (e) {                                      return { kind: "return", value: yield* find(id) };
+    return `guest (${e._tag})`                     })(),
+  } finally {                                      Effect.fnUntraced(function* lookup$catch(e) {
+    events.push("done")                              return { kind: "return", value: `guest (${e._tag})` };
+  }                                                })),
+}                                                  Effect.fnUntraced(function* lookup$finally() {
+                                                     events.push("done");
+                                                   })());
+                                                 if (completion.kind === "return")
+                                                   return completion.value;
+                                             });
+```
+
+`$catch` is the kernel's `catchExpected` and `$finally` is `Effect.onExit`, from `@effectscript/runtime`, which the file imports as `* as runtime` under a free name. A `return`, `break`, or `continue` that leaves a region cannot jump out of its closure, so the closure returns a completion record: `{ kind: "return", value }`, `{ kind: "break", label }`, or `{ kind: "continue", label }`, with `""` as the label of an unlabeled jump, and the runtime's `$normal` when it reaches its end. The generator that runs the region dispatches each record that can arrive: it returns, breaks, or continues itself, or, when it is a region's closure too and the jump leaves it as well, returns the record to its own runner. A region that no jump leaves runs as `yield* …;` with no record. A closure whose block refers to `this` runs with the function's `this`. A `var` in a region belongs to the whole function, so the lowering declares it in the Effect function and assigns it where the source declared it.
+
+`regions.go` holds the machinery as an API for the region kinds still to come, `using` and `fork` blocks (lane F6) and loops over producers (F7):
+
+| Piece | Role |
+| --- | --- |
+| `region` | Collects the jumps (`jump{kind, label}`) that leave a region while its closures are emitted |
+| `frame` | One generator being emitted, the function's body or a region's closure, with the loops, switches, and labels open in it; `frame.lands(j)` says whether a jump stays inside |
+| `regionStatements(r, block)` | Visits a block as the body of a closure of region `r` |
+| `regionFunction(r, role, binding, block, statements)` | Makes `Effect.fnUntraced(function* f$role(binding) { … })`, appending `return $normal` when a jump leaves `r` and the block can reach its end |
+| `runRegion(original, run, r)` | Emits `const completion = yield* run` and one dispatch per jump, or `yield* run;` when nothing leaves |
+| `runtimeMember`, `runtimeCall` | Reference `@effectscript/runtime` helpers, importing the package on first use |
+
+To add a region kind: create a `region`, emit each block with `regionStatements` and `regionFunction`, compose the closures with runtime helpers, and pass the result to `runRegion`. A consumer that handles some jumps itself, as a producer loop handles its own `break` and `continue`, filters `r.jumps` before dispatching.
 ## What it cannot do yet
 
-- `throw`, `try`/`catch`/`finally`, and `using` are plain JavaScript. A `throw` is a defect, and `catch` does not see a failed Effect.
+- `throw` and `using` are plain JavaScript. A `throw` is a defect.
+- `arguments` inside a region's closure is the closure's, not the function's. A `return`, `break`, or `continue` that leaves a `finally` block is not dispatched.
 - No prelude globals (D4), `pipe`, `wire`, `fork`, or handlers. Services and control operations exist, but none of their diagnostics (ES2101, ES3001-ES3006, ES3101, ES3201-ES3204) do, and a service's `.d.ts` declares an abstract class, not the key class TypeScript callers need.
 - A provider's object literal is checked against the service's shape only as TypeScript checks any assignment, so an escaping error is TS2322, not ES2001 or ES3101 naming the member.
 - No programs as values (D7). `Effect.retry(() => sync(store), policy)` passes a plain function where an Effect is expected.

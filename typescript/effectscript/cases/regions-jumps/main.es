@@ -1,0 +1,114 @@
+// try, catch, and finally in an Effect function compile to regions: closures
+// whose return, break, and continue leave them as completion records that the
+// enclosing generator dispatches. The results and the finally order are
+// JavaScript's.
+import { Data, Effect } from "effect"
+
+class Boom extends Data.TaggedError("Boom")<{ readonly n: number }> {}
+
+const events: string[] = []
+
+function risky(n: number) {
+  if (n % 3 === 0) Effect.fail(new Boom({ n }))
+  return n
+}
+
+// Labeled break and continue, an unlabeled continue, and a return from catch.
+function loop(stopAt: number) {
+  let total = 0
+  outer: for (let i = 1; i <= 10; i++) {
+    for (let j = 0; j < 2; j++) {
+      try {
+        if (i === stopAt) break outer
+        if (j === 1) continue outer
+        if (i % 2 === 0) continue
+        total += risky(i)
+      } catch (e) {
+        events.push(`caught ${e.n}`)
+        if (e.n === 9) return -total
+      } finally {
+        events.push(`finally ${i}.${j}`)
+      }
+    }
+  }
+  return total
+}
+
+// A return inside a region inside a catch leaves both regions.
+function nested(n: number) {
+  try {
+    return risky(n)
+  } catch (e) {
+    try {
+      return risky(e.n * 3)
+    } catch {
+      events.push("inner catch")
+      return -1
+    } finally {
+      events.push("inner finally")
+    }
+  } finally {
+    events.push("outer finally")
+  }
+}
+
+// break out of a labeled try, a destructured catch binding, a try as the body
+// of an if, and a switch inside a region.
+function shapes(flag: boolean) {
+  let out = ""
+  block: try {
+    risky(9)
+  } catch ({ n }) {
+    out += `caught ${n};`
+    if (flag) break block
+    out += "not broken;"
+  }
+  if (flag) try { risky(3) } catch { out += "embedded;" }
+  try {
+    switch (risky(4)) {
+      case 4:
+        out += "four;"
+        break
+      default:
+        out += "other;"
+    }
+  } finally {
+    out += "switched"
+  }
+  return out
+}
+
+// A var declared in a region belongs to the whole function.
+function hoisted() {
+  try {
+    var first = risky(1)
+    for (var i = 0; i < 2; i++) first += i
+  } finally {
+    events.push("hoisted")
+  }
+  return `${first} ${i}`
+}
+
+// A region's closure sees the method's this.
+const counter = {
+  count: 0,
+  bump(n: number) {
+    try {
+      this.count += risky(n)
+    } catch (e) {
+      this.count -= 100
+    } finally {
+      this.count += 1000
+    }
+    return this.count
+  }
+}
+
+// expect-result: {"this":[1001,1901],"stop8":13,"stop11":-13,"nested":[1,-1],"shapes":["caught 9;embedded;four;switched","caught 9;not broken;four;switched"],"hoisted":"2 2","events":["finally 1.0","finally 1.1","finally 2.0","finally 2.1","caught 3","finally 3.0","finally 3.1","finally 4.0","finally 4.1","finally 5.0","finally 5.1","finally 6.0","finally 6.1","finally 7.0","finally 7.1","finally 8.0","finally 1.0","finally 1.1","finally 2.0","finally 2.1","caught 3","finally 3.0","finally 3.1","finally 4.0","finally 4.1","finally 5.0","finally 5.1","finally 6.0","finally 6.1","finally 7.0","finally 7.1","finally 8.0","finally 8.1","caught 9","finally 9.0","outer finally","inner catch","inner finally","outer finally","hoisted"]}
+export function main() {
+  const stop8 = loop(8)
+  const stop11 = loop(11)
+  const nestedResults = [nested(1), nested(3)]
+  const bumps = [counter.bump(1), counter.bump(3)]
+  return { this: bumps, stop8, stop11, nested: nestedResults, shapes: [shapes(true), shapes(false)], hoisted: hoisted(), events }
+}
