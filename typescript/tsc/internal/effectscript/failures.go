@@ -111,7 +111,11 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 		return
 	}
 	sig := a.checker.GetResolvedSignature(call)
-	if callee := implementationOf(sig.Declaration()); callee != nil && isLowerable(callee) {
+	// A call to a generic .es function, such as one whose callback accepts any
+	// contract (D12), adds the callee's E and R as this call instantiates
+	// them, so it reads its instantiated return type; the callee's own body
+	// knows only its type parameters.
+	if callee := implementationOf(sig.Declaration()); callee != nil && isLowerable(callee) && sig.Target() == nil {
 		if calleeInfo := a.effectOf(callee); calleeInfo != nil {
 			info.add(calleeInfo)
 		}

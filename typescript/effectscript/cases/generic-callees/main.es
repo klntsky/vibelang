@@ -1,0 +1,25 @@
+// A call to a generic .es function adds the callee's E and R as the call
+// instantiates them: run's E is whatever its argument fails with.
+class Missing extends TaggedError("Missing")<{ readonly key: string }> {}
+
+function run<A, E, R>(program: () => Effect<A, E, R>) {
+  Effect.sleep("1 millis")
+  return program()
+}
+
+function lookup(key: string) {
+  if (key !== "a") throw new Missing({ key })
+  return 1
+}
+
+// expect-result: {"found":1,"caught":"Missing b"}
+export function main() {
+  const found = run(() => lookup("a"))
+  let caught = "none"
+  try {
+    run(() => lookup("b"))
+  } catch (e) {
+    caught = `${e._tag} ${e.key}`
+  }
+  return { found, caught }
+}
