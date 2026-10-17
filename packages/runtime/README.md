@@ -2,15 +2,25 @@
 
 > **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-The Effeck runtime contains the one-shot continuation kernel and the
-helpers that `effeck` emits. It runs on Effect 4's fibers, scopes, and services.
-Generated JavaScript imports `effect` and `effeck-runtime`; applications
-install both packages. The runtime requires **effect@4.0.5 exactly** because the
-kernel accesses that version's fiber continuation stack.
+The Effeck runtime: the one-shot continuation kernel and the helpers that the
+[`effeck`](https://www.npmjs.com/package/effeck) compiler emits. It runs on
+Effect 4's fibers, scopes, and services.
+
+## Install
+
+```sh
+npm install effeck-runtime effect@4.0.5
+```
+
+JavaScript compiled by `effeck` imports `effect` and `effeck-runtime`, so an
+application lists both as dependencies; apps made with `create-effeck` already
+do. The runtime requires **effect@4.0.5 exactly**, because the kernel accesses
+that version's fiber continuation stack. Install one copy of `effect`: with two
+copies, a Scope can miss the fibers it must stop.
 
 ## Build and test
 
-From this directory:
+For contributors, from this directory of the Effeck repository:
 
 ```sh
 bun install
@@ -21,8 +31,8 @@ bun run test
 The build uses TypeScript to write ES2022 JavaScript modules, declarations,
 JavaScript source maps, and declaration maps to `dist/`. Node 26 and Bun 1.4
 load the package's JavaScript export. TypeScript resolves the same export to
-`dist/index.d.ts`. The package includes `dist/` and this README; build it before
-packing or installing a local copy. Generated files under `dist/` are ignored.
+`dist/index.d.ts`. The package includes `dist/`, this README, and the license; build it
+before packing or installing a local copy. Generated files under `dist/` are ignored.
 
 `bun run test` builds first and then runs behavior tests through the package
 export. `bun test` uses the current build. The tests cover each helper module,

@@ -9,21 +9,16 @@ source modules and their importers after edits.
 
 ## Install
 
-For this unpublished local build, first run `sh scripts/setup.sh` from the
-Effeck checkout. In your application, install the local packages, using
-absolute paths for projects outside the checkout:
-
 ```sh
-bun add effect@4.0.5 /absolute/path/to/effeck/packages/runtime
-bun add -d /absolute/path/to/effeck/packages/compiler \
-  /absolute/path/to/effeck/packages/vite vite
+npm install --save-dev effeck effeck-vite vite
 # For tests:
-bun add -d vitest@5.0.5 @effect/vitest@4.0.5
+npm install --save-dev vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
-Keep the checkout available. After updating it, rerun setup, then run
-`bun update effeck-vite` in each project. No package is published to npm. The plugin supports Vite 7 and 8 on Node 22+;
-the acceptance tests use Vite 8 and Vitest 5.
+The plugin runs the `effeck` compiler package, an optional peer dependency:
+install it, or pass a `compiler` path. It supports Vite 7 and 8 on Node 22 or
+later; the acceptance tests use Vite 8 and Vitest 5. Apps made with
+`create-effeck` already include the plugin and a Vitest configuration.
 
 ## Configure Vite
 
@@ -83,9 +78,7 @@ effeck({
 
 By default, the plugin resolves `effeck` from the application's
 root and runs its Node launcher. `EFFECK_BINARY` selects a native binary when no
-`compiler` option is set. The compiler package is an optional peer because local
-Bun installs otherwise try to fetch the unpublished package from the registry;
-install it explicitly or provide a compiler path.
+`compiler` option is set.
 
 ## How it works
 
@@ -111,7 +104,7 @@ text and source location in the overlay, and clears on the next successful edit.
 
 ## Acceptance checks
 
-From the repository root:
+For contributors, from the Effeck repository root:
 
 ```sh
 sh scripts/build-effeck.sh
