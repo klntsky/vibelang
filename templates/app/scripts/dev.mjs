@@ -24,6 +24,6 @@ build.on("exit", (code, signal) => {
 })
 
 function fail(error) {
-  console.error(`dev: ${error.message}. Run bun install and the repository setup first.`)
+  console.error(`dev: ${error.message}. Install the project's dependencies first, with bun install or npm install.`)
   process.exitCode = 1
 }

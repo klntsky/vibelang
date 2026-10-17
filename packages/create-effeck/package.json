@@ -1,0 +1,13 @@
+{
+  "name": "create-effeck",
+  "version": "0.0.1",
+  "description": "Create an Effeck application: bun create effeck my-app",
+  "keywords": ["effeck", "effect", "typescript", "create", "template"],
+  "homepage": "https://effeck.pages.dev",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "create-effeck": "bin/create-effeck.mjs" },
+  "files": ["bin", "template", "README.md", "LICENSE"],
+  "scripts": { "test": "node --test test/" },
+  "engines": { "node": ">=22" }
+}

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "effeck",
-    "start": "bun run build && node --enable-source-maps dist/main.js",
+    "start": "effeck && node --enable-source-maps dist/main.js",
     "dev": "node scripts/dev.mjs",
     "test": "vitest run"
   },

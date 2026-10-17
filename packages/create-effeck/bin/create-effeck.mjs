@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+// create-effeck copies the Effeck starter app into a new directory, pins the
+// Effeck packages to its own version, and installs dependencies with the
+// package manager that ran it: `bun create effeck my-app` or
+// `npm create effeck@latest my-app`.
+import { spawnSync } from "node:child_process"
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import { basename, join, resolve } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const usage = "Usage: create-effeck [directory] [--no-install]"
+const own = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"))
+
+let target
+let install = true
+for (const arg of process.argv.slice(2)) {
+  if (arg === "--no-install") install = false
+  else if (arg === "--no-git") continue // accepted; create-effeck never runs git init
+  else if (arg === "-h" || arg === "--help") {
+    console.log(usage)
+    process.exit(0)
+  } else if (arg === "-v" || arg === "--version") {
+    console.log(own.version)
+    process.exit(0)
+  } else if (arg.startsWith("-")) fail(`unknown option ${arg}\n${usage}`)
+  else if (target === undefined) target = arg
+  else fail(`unexpected argument ${arg}\n${usage}`)
+}
+target ??= "effeck-app"
+const directory = resolve(target)
+if (existsSync(directory) && readdirSync(directory).length > 0) {
+  fail(`${target} is not empty. Choose a new directory name.`)
+}
+
+// The published package carries the template in template/; a checkout uses
+// templates/app directly.
+const packaged = fileURLToPath(new URL("../template", import.meta.url))
+const template = existsSync(packaged) ? packaged : fileURLToPath(new URL("../../../templates/app", import.meta.url))
+mkdirSync(directory, { recursive: true })
+cpSync(template, directory, {
+  recursive: true,
+  filter: (path) => !["node_modules", "dist", "bun.lock", ".prototype"].includes(basename(path))
+})
+// npm drops .gitignore from published packages, so the template stores dotfiles without the dot.
+for (const name of ["gitignore", "gitattributes"]) {
+  if (existsSync(join(directory, name))) renameSync(join(directory, name), join(directory, `.${name}`))
+}
+
+const manifestPath = join(directory, "package.json")
+const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
+manifest.name = packageName(basename(directory))
+manifest.dependencies["@effeck/runtime"] = own.version
+manifest.devDependencies["effeck"] = own.version
+manifest.devDependencies["@effeck/vite"] = own.version
+writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n")
+
+const manager = packageManager()
+console.log(`Created ${target} with Effeck ${own.version}.`)
+if (install) {
+  console.log(`Installing dependencies with ${manager}...`)
+  const result = spawnSync(manager, ["install"], { cwd: directory, stdio: "inherit", shell: process.platform === "win32" })
+  if (result.status !== 0) {
+    console.error(`create-effeck: ${manager} install failed. Run it again in ${target}.`)
+    process.exit(result.status || 1)
+  }
+}
+
+console.log(`
+Next steps:
+  cd ${target}${install ? "" : `\n  ${manager} install`}
+  ${manager} run start    build and run src/main.effeck
+  ${manager} run dev      rebuild and restart on every save
+  ${manager} run test     run the .effeck tests with Vitest
+
+Editor support for VS Code or Cursor, after the install:
+  code --install-extension node_modules/effeck/editor/effeck.vsix
+  cursor --install-extension node_modules/effeck/editor/effeck.vsix
+
+Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.`)
+
+// packageName turns a directory name into a valid npm package name.
+function packageName(name) {
+  const cleaned = name.toLowerCase().replace(/[^a-z0-9._~-]+/g, "-").replace(/^[._-]+/, "").replace(/-+$/, "")
+  return cleaned || "effeck-app"
+}
+
+// packageManager reports the tool that ran this script, from the user agent
+// npm, bun, pnpm, and yarn set for package binaries.
+function packageManager() {
+  const name = (process.env.npm_config_user_agent || "").split("/")[0]
+  if (["bun", "npm", "pnpm", "yarn"].includes(name)) return name
+  return process.versions.bun ? "bun" : "npm"
+}
+
+function fail(message) {
+  console.error(`create-effeck: ${message}`)
+  process.exit(1)
+}
