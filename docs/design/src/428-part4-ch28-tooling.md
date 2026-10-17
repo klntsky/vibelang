@@ -1,9 +1,7 @@
 ### 28. Tooling
 
 ```sh
-# From the local Effeck checkout:
-sh scripts/setup.sh
-bun create effeck my-app --no-git
+bun create effeck my-app        # or: npm create effeck@latest my-app
 cd my-app
 bun run build
 bun run start
@@ -12,19 +10,34 @@ bun run dev
 bun x --no-install effeck --noEmit
 ```
 
-This private preview installs from the repository. The `@effeck` packages
-are not published to npm, and the extension is not on the marketplace (D58,
-D60). D30's per-platform package distribution remains a release target.
+Effeck 0.0.1 installs from npm under the names D125 chose. `create-effeck`
+copies the starter, pins the Effeck packages to its own version, and installs
+dependencies; `--no-install` skips installation. Projects need Node 26 or later
+and Bun 1.4 or later. The compiler is a native binary: `effeck` lists one
+package per platform as an optional dependency, and the package manager
+installs the one that matches the machine, the per-platform distribution D30
+planned:
 
-Setup requires Go, Bun, and Node on PATH. The tested versions are Go 1.26
-(with Go 1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
+| Platform | Package | Tested for 0.0.1 |
+| --- | --- | --- |
+| macOS on Apple silicon | `@effeck/darwin-arm64` | Yes |
+| macOS on Intel | `@effeck/darwin-x64` | No |
+| Linux on x64 | `@effeck/linux-x64` | Yes |
+| Linux on arm64 | `@effeck/linux-arm64` | No |
+| Windows on x64 | `@effeck/win32-x64` | No |
+| Windows on arm64 | `@effeck/win32-arm64` | No |
+
+To work on Effeck itself, install from a checkout instead. `sh scripts/setup.sh`
+requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
+1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
 `packages/compiler/native/effeck`, installs and builds the runtime, and copies
-`templates/app` into `~/.bun-create/effeck`. The installed template uses
-absolute `file:` dependencies on this checkout's compiler and Vite packages
-and the runtime tarball that setup packs (D120). Keep the checkout available;
-after updating it, rerun setup and run
+`templates/app` into `~/.bun-create/effeck`, a local template that
+`bun create effeck` prefers over the npm package. That template uses absolute
+`file:` dependencies on the checkout's compiler and Vite packages and on the
+runtime tarball that setup packs (D120). Keep the checkout available; after
+updating it, rerun setup and run
 `bun update @effeck/runtime effeck @effeck/vite`
-in existing projects to refresh the packages.
+in projects created from it.
 
 Setup links `~/.local/bin/effeck` when that directory is already on PATH and no
 unrelated executable occupies the path. Project scripts find their own compiler
@@ -35,10 +48,12 @@ Setup preserves unrelated templates and never edits shell configuration.
 
 | Package | Current implementation |
 | --- | --- |
-| `effeck` | Node launcher forwarding arguments, streams, signals, and exit status to its package-relative `native/effeck` |
+| `effeck` | The compiler and language server: a Node launcher that forwards arguments, streams, signals, and exit status to the native binary of the matching platform package (`EFFECK_BINARY` overrides it), plus the VS Code extension at `editor/effeck.vsix` |
+| `@effeck/<os>-<cpu>` | The native `effeck` binary for one platform |
 | `@effeck/runtime` | Continuation kernel, prelude, and generated-code helpers; see its README for the ABI |
 | `@effeck/vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
-| VS Code extension | Local `.vsix` built by setup when `editors/vscode` is available |
+| `create-effeck` | Scaffolds the starter for `bun create effeck` and `npm create effeck` |
+| VS Code extension | Ships inside `effeck` as `editor/effeck.vsix`; not on the VS Code Marketplace or Open VSX |
 
 The starter pins `effect`, `@effect/platform-node`, and `@effect/vitest` to
 4.0.5, and Vitest to 5.0.5. The runtime checks Effect's version on load. The
@@ -115,17 +130,17 @@ API transport yet. Sources must stay under Vite's root so emit paths and source 
 
 The server is the fork's own, `effeck --lsp --stdio`, from the project's compiler
 (D32). The same binary identifies as `Effeck 0.0.1 (TypeScript 7.1.0-dev)`
-with `--version`; there is no separate compiler entry point (D75). Setup builds a local `.vsix` when the editor package is present and
-prints install commands:
+with `--version`; there is no separate compiler entry point (D75). `effeck`
+ships the extension as `editor/effeck.vsix`. Install it from a project:
 
 ```sh
-code --install-extension /path/printed/by/setup/effeck-0.0.1.vsix
+code --install-extension node_modules/effeck/editor/effeck.vsix
 # Or use cursor --install-extension with the same path.
 ```
 
-Setup does not install the extension automatically. If it reports the editor
-package is absent, update the checkout and rerun setup. Open the scaffolded
-project directory so the extension finds its local compiler.
+Open the project directory so the extension finds its local compiler. Install
+the extension again after updating `effeck`. In a checkout, setup also builds
+the extension and prints its path.
 
 The extension finds `effeck` from `effeck.server.path`, then the nearest
 `node_modules/.bin/effeck`, then PATH. It requires a trusted workspace (D79).

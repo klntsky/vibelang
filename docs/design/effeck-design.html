@@ -1471,7 +1471,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
   })
 }</code></pre></figure>
 <p><code>Effect.callback</code> works in <code>.effeck</code>: its register function is a boundary, so it may call plain TypeScript, and its <code>resume</code> takes an Effect, to which <code>.effeck</code> code passes an <code>Exit</code>, data until run (<a href="#13-what-a-call-means">Chapter 13</a>). A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime&#39;s <code>suspend</code> and <code>Effect.acquireRelease(…, { interruptible: true })</code>, so a value that arrives after cancellation is released (<a href="#6-resources">Chapter 6</a>). Node.js and browser callback APIs already have Effect modules (<a href="#11-the-standard-library">Chapter 11</a>).</p>
-<h4 id="can-i-mix-ts-and-es-files"><a class="anchor" href="#can-i-mix-ts-and-es-files">Can I mix <code>.ts</code> and <code>.effeck</code> files?</a></h4>
+<h4 id="can-i-mix-ts-and-effeck-files"><a class="anchor" href="#can-i-mix-ts-and-effeck-files">Can I mix <code>.ts</code> and <code>.effeck</code> files?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> { findUser } <span class="k">from</span> <span class="s">"./users-repo.ts"</span>     <span class="c">// Effect.fn("findUser")(function* …)</span>
 
 <span class="k">export</span> <span class="k">function</span> <span class="f">title</span>(id: <span class="l">string</span>) {
@@ -2607,36 +2607,48 @@ Source-map and tracing cases check original <code>.effeck</code> frames and gene
 (D34, D36). The docs checker independently checks user-guide snippets with
 <code>bun docs/tools/check-snippets.ts</code> from the repository root.</p>
 <h3 id="28-tooling"><a class="anchor" href="#28-tooling">28. Tooling</a></h3>
-<figure class="code side-none"><pre class="code" data-lang="sh"><code># From the local Effeck checkout:
-sh scripts/setup.sh
-bun create effeck my-app --no-git
+<figure class="code side-none"><pre class="code" data-lang="sh"><code>bun create effeck my-app        # or: npm create effeck@latest my-app
 cd my-app
 bun run build
 bun run start
 bun run test
 bun run dev
 bun x --no-install effeck --noEmit</code></pre></figure>
-<p>This private preview installs from the repository. The <code>@effeck</code> packages
-are not published to npm, and the extension is not on the marketplace (D58,
-D60). D30&#39;s per-platform package distribution remains a release target.</p>
-<p>Setup requires Go, Bun, and Node on PATH. The tested versions are Go 1.26
-(with Go 1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
+<p>Effeck 0.0.1 installs from npm under the names D125 chose. <code>create-effeck</code>
+copies the starter, pins the Effeck packages to its own version, and installs
+dependencies; <code>--no-install</code> skips installation. Projects need Node 26 or later
+and Bun 1.4 or later. The compiler is a native binary: <code>effeck</code> lists one
+package per platform as an optional dependency, and the package manager
+installs the one that matches the machine, the per-platform distribution D30
+planned:</p>
+<div class="table"><table><thead><tr><th>Platform</th><th>Package</th><th>Tested for 0.0.1</th></tr></thead><tbody><tr><td>macOS on Apple silicon</td><td><code>@effeck/darwin-arm64</code></td><td>Yes</td></tr>
+<tr><td>macOS on Intel</td><td><code>@effeck/darwin-x64</code></td><td>No</td></tr>
+<tr><td>Linux on x64</td><td><code>@effeck/linux-x64</code></td><td>Yes</td></tr>
+<tr><td>Linux on arm64</td><td><code>@effeck/linux-arm64</code></td><td>No</td></tr>
+<tr><td>Windows on x64</td><td><code>@effeck/win32-x64</code></td><td>No</td></tr>
+<tr><td>Windows on arm64</td><td><code>@effeck/win32-arm64</code></td><td>No</td></tr></tbody></table></div>
+<p>To work on Effeck itself, install from a checkout instead. <code>sh scripts/setup.sh</code>
+requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
+1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
 <code>packages/compiler/native/effeck</code>, installs and builds the runtime, and copies
-<code>templates/app</code> into <code>~/.bun-create/effeck</code>. The installed template uses
-absolute <code>file:</code> dependencies on this checkout&#39;s compiler and Vite packages
-and the runtime tarball that setup packs (D120). Keep the checkout available;
-after updating it, rerun setup and run
+<code>templates/app</code> into <code>~/.bun-create/effeck</code>, a local template that
+<code>bun create effeck</code> prefers over the npm package. That template uses absolute
+<code>file:</code> dependencies on the checkout&#39;s compiler and Vite packages and on the
+runtime tarball that setup packs (D120). Keep the checkout available; after
+updating it, rerun setup and run
 <code>bun update @effeck/runtime effeck @effeck/vite</code>
-in existing projects to refresh the packages.</p>
+in projects created from it.</p>
 <p>Setup links <code>~/.local/bin/effeck</code> when that directory is already on PATH and no
 unrelated executable occupies the path. Project scripts find their own compiler
 without that global link. <code>EFFECK_BINARY</code> overrides the launcher&#39;s native binary.
 Setup preserves unrelated templates and never edits shell configuration.</p>
 <h4 id="packages-and-versions"><a class="anchor" href="#packages-and-versions">Packages and versions</a></h4>
-<div class="table"><table><thead><tr><th>Package</th><th>Current implementation</th></tr></thead><tbody><tr><td><code>effeck</code></td><td>Node launcher forwarding arguments, streams, signals, and exit status to its package-relative <code>native/effeck</code></td></tr>
+<div class="table"><table><thead><tr><th>Package</th><th>Current implementation</th></tr></thead><tbody><tr><td><code>effeck</code></td><td>The compiler and language server: a Node launcher that forwards arguments, streams, signals, and exit status to the native binary of the matching platform package (<code>EFFECK_BINARY</code> overrides it), plus the VS Code extension at <code>editor/effeck.vsix</code></td></tr>
+<tr><td><code>@effeck/&lt;os&gt;-&lt;cpu&gt;</code></td><td>The native <code>effeck</code> binary for one platform</td></tr>
 <tr><td><code>@effeck/runtime</code></td><td>Continuation kernel, prelude, and generated-code helpers; see its README for the ABI</td></tr>
 <tr><td><code>@effeck/vite</code></td><td>Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5</td></tr>
-<tr><td>VS Code extension</td><td>Local <code>.vsix</code> built by setup when <code>editors/vscode</code> is available</td></tr></tbody></table></div>
+<tr><td><code>create-effeck</code></td><td>Scaffolds the starter for <code>bun create effeck</code> and <code>npm create effeck</code></td></tr>
+<tr><td>VS Code extension</td><td>Ships inside <code>effeck</code> as <code>editor/effeck.vsix</code>; not on the VS Code Marketplace or Open VSX</td></tr></tbody></table></div>
 <p>The starter pins <code>effect</code>, <code>@effect/platform-node</code>, and <code>@effect/vitest</code> to
 4.0.5, and Vitest to 5.0.5. The runtime checks Effect&#39;s version on load. The
 compiler is the TypeScript 7.1 checker, with ordinary TypeScript semantics for
@@ -2696,13 +2708,13 @@ API transport yet. Sources must stay under Vite&#39;s root so emit paths and sou
 <h4 id="the-editor"><a class="anchor" href="#the-editor">The editor</a></h4>
 <p>The server is the fork&#39;s own, <code>effeck --lsp --stdio</code>, from the project&#39;s compiler
 (D32). The same binary identifies as <code>Effeck 0.0.1 (TypeScript 7.1.0-dev)</code>
-with <code>--version</code>; there is no separate compiler entry point (D75). Setup builds a local <code>.vsix</code> when the editor package is present and
-prints install commands:</p>
-<figure class="code side-none"><pre class="code" data-lang="sh"><code>code --install-extension /path/printed/by/setup/effeck-0.0.1.vsix
+with <code>--version</code>; there is no separate compiler entry point (D75). <code>effeck</code>
+ships the extension as <code>editor/effeck.vsix</code>. Install it from a project:</p>
+<figure class="code side-none"><pre class="code" data-lang="sh"><code>code --install-extension node_modules/effeck/editor/effeck.vsix
 # Or use cursor --install-extension with the same path.</code></pre></figure>
-<p>Setup does not install the extension automatically. If it reports the editor
-package is absent, update the checkout and rerun setup. Open the scaffolded
-project directory so the extension finds its local compiler.</p>
+<p>Open the project directory so the extension finds its local compiler. Install
+the extension again after updating <code>effeck</code>. In a checkout, setup also builds
+the extension and prints its path.</p>
 <p>The extension finds <code>effeck</code> from <code>effeck.server.path</code>, then the nearest
 <code>node_modules/.bin/effeck</code>, then PATH. It requires a trusted workspace (D79).
 Its grammar reuses VS Code&#39;s TypeScript grammar under <code>source.effeck</code>,
@@ -2727,7 +2739,7 @@ as text; the current compiler does not implement those editor refactors.</p>
 <p>Every EK diagnostic is an error, except two. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and <code>// @ts-expect-error</code> does not apply to them; it keeps its TypeScript meaning for TypeScript&#39;s own codes. The two exceptions are policy, not soundness: EK2004, a <code>catch</code> that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to <code>&quot;error&quot;</code>, <code>&quot;warning&quot;</code>, or <code>&quot;off&quot;</code> in <code>compilerOptions.effeck.diagnostics</code>; an EK4403 read then compiles as a trusted <code>sync</code> call that tests cannot control.</p>
 <div class="table"><table><thead><tr><th>Option in <code>compilerOptions.effeck</code></th><th>Values</th><th>Default</th></tr></thead><tbody><tr><td><code>diagnostics</code></td><td><code>&quot;EK2004&quot;</code> and <code>&quot;EK4403&quot;</code>, each <code>&quot;error&quot;</code>, <code>&quot;warning&quot;</code>, or <code>&quot;off&quot;</code></td><td>EK2004 <code>&quot;warning&quot;</code>, EK4403 <code>&quot;error&quot;</code></td></tr>
 <tr><td><code>tracing</code></td><td><code>&quot;none&quot;</code>: no spans. <code>&quot;exported&quot;</code>: exported functions compile with <code>Effect.fn</code> spans. <code>&quot;all&quot;</code>: every named lowered function and method gets a span; anonymous lambdas do not (D104)</td><td><code>&quot;none&quot;</code></td></tr></tbody></table></div>
-<p><code>effeck</code> exits non-zero when any error is reported. The CLI prints <code>error EK1003:</code>; LSP sends source <code>ES</code> and numeric code <code>1003</code>, which VS Code displays as <code>EK(1003)</code> (D61). Diagnostics print at <code>.effeck</code> spans, in the same form as the examples in this document, in the terminal, the editor, and Vite&#39;s overlay.</p>
+<p><code>effeck</code> exits non-zero when any error is reported. The CLI prints <code>error EK1003:</code>; LSP sends source <code>EK</code> and numeric code <code>1003</code>, which VS Code displays as <code>EK(1003)</code> (D61). Diagnostics print at <code>.effeck</code> spans, in the same form as the examples in this document, in the terminal, the editor, and Vite&#39;s overlay.</p>
 <p>The diagnostic registry reserves these codes. This table describes each rule
 and the intended repair (D33, D53). A registry entry does not prove that its
 check or editor code action is implemented; the acceptance suite and compiler
@@ -2862,12 +2874,12 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D55</td><td>A method implementing a plain-function member (<code>[Equal.symbol]</code>, <code>[Hash.symbol]</code>) compiles to a plain JavaScript method, or EK4301</td><td>The member&#39;s declared type is not an Effect</td><td>15</td></tr>
 <tr><td>D56</td><td>A lambda&#39;s form (plain, Effect function, program) is decided against each overload candidate&#39;s declared parameter type, and the first candidate that accepts it wins; never by the lambda&#39;s own inferred type. D10 eligibility is computed on demand</td><td>Single-pass experiment: 0 disagreements in 46 files; 6 probe lambdas with two self-consistent lowerings</td><td>13, 15, 27</td></tr>
 <tr><td>D57</td><td><strong>Controversial.</strong> Partial annotations use <code>infer Name</code> per channel in a function return annotation with a body; omitted slots are EK2003. D12 stands</td><td>TypeScript 7 parses <code>infer</code>; explicit slots distinguish inference from <code>never</code></td><td>2, 14, 16, 28</td></tr>
-<tr><td>D58</td><td><strong>Controversial.</strong> Keep Effeck, <code>effeck</code>, <code>.effeck</code>, and <code>@effeck</code>; the repository stays private</td><td>Another compile-to-JavaScript language uses the name; rename before public release remains possible</td><td>28</td></tr>
+<tr><td>D58</td><td><strong>Controversial.</strong> Keep EffectScript, <code>esc</code>, <code>.es</code>, and <code>@effectscript</code>; superseded by D125</td><td>Another compile-to-JavaScript language uses the name</td><td>28</td></tr>
 <tr><td>D59</td><td>Draft upstream issues and proposals in <code>docs/upstream/</code>; status: drafted, not filed</td><td>Filing speaks for the owner in a third-party project and needs his go-ahead</td><td>24, 25, 30</td></tr>
 <tr><td>D60</td><td><strong>Will.</strong> One private repository, <code>github.com/roninjin10/effectscript</code>; the compiler lives in <code>typescript/</code></td><td>Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines</td><td>27, 28</td></tr></tbody></table></div>
 <h4 id="decisions-from-the-end-to-end-build-2026-10-16"><a class="anchor" href="#decisions-from-the-end-to-end-build-2026-10-16">Decisions from the end-to-end build (2026-10-16)</a></h4>
 <p>The following rows record build defaults, not new language decisions. Lane U recorded D97-D99 from F7&#39;s compiler notes because its inbox report was absent. The decision log groups known gaps by area and distinguishes landing snapshots from later fixes. D114-D119 have no reported decisions.</p>
-<div class="table"><table><thead><tr><th>#</th><th>Decision</th><th>Reason and evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>D61</td><td><strong>Controversial.</strong> An EK diagnostic is a TypeScript diagnostic with source <code>ES</code>, on upstream&#39;s content-mapper path</td><td>One diagnostic path for CLI and LSP</td><td>28</td></tr>
+<div class="table"><table><thead><tr><th>#</th><th>Decision</th><th>Reason and evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>D61</td><td><strong>Controversial.</strong> An EK diagnostic is a TypeScript diagnostic with source <code>EK</code>, on upstream&#39;s content-mapper path</td><td>One diagnostic path for CLI and LSP</td><td>28</td></tr>
 <tr><td>D62</td><td>The prelude is the runtime&#39;s exports</td><td>Lazy imports preserve files that use no prelude names</td><td>1, 27</td></tr>
 <tr><td>D63</td><td>A <code>.effeck</code> file imports <code>./x.effeck</code> or <code>./x.ts</code> by source name with no flag (no TS5097); specifiers become <code>.js</code> in JavaScript and <code>.d.ts</code> output</td><td>Source names for checking, output names for JavaScript</td><td>10, 27, 28</td></tr>
 <tr><td>D64</td><td>A failing compiler case passes when its exact set of error codes matches (TypeScript codes count, warnings do not); a runnable case compares only its <code>@@result</code> line, so programs may log</td><td>Exact codes detect regressions while result markers allow logging</td><td>10, 27, 28</td></tr>
@@ -2919,7 +2931,8 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D121</td><td><strong>Controversial.</strong> Effect trust follows re-exports and returned values, including assertions from @effect/vitest</td><td>Tests need usable assertions; direct Vitest imports and local TypeScript retain boundary checks</td><td>10, 16</td></tr>
 <tr><td>D122</td><td>Every runner checks all services it does not supply; it.effect supplies Scope and its layer services</td><td>Diagnose missing services before execution</td><td>4, 28</td></tr>
 <tr><td>D123</td><td>Declaration prelude imports use free aliases when names are already bound</td><td>Avoid duplicate identifiers in declaration consumers</td><td>27</td></tr>
-<tr><td>D124</td><td>Setup relinks effeck launchers pointing into another checkout or at missing files</td><td>Keep the launcher usable after workspace changes</td><td>28</td></tr></tbody></table></div>
+<tr><td>D124</td><td>Setup relinks effeck launchers pointing into another checkout or at missing files</td><td>Keep the launcher usable after workspace changes</td><td>28</td></tr>
+<tr><td>D125</td><td><strong>Controversial.</strong> The language is Effeck: binary <code>effeck</code>, files <code>.effeck</code>, codes <code>EK</code>, npm <code>effeck</code> and <code>@effeck</code></td><td>The <code>@effectscript</code> npm scope belongs to another language</td><td>28</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>
@@ -2956,7 +2969,7 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <h4 id="closed-calls-for-the-end-to-end-build"><a class="anchor" href="#closed-calls-for-the-end-to-end-build">Closed calls for the end-to-end build</a></h4>
 <div class="table"><table><thead><tr><th>Former item</th><th>Decision</th><th>Result</th></tr></thead><tbody><tr><td>O7</td><td>D57 (<strong>controversial</strong>)</td><td><code>infer Name</code> marks an inferred channel; all three return-annotation slots are required; D12 stands</td></tr>
 <tr><td>O8</td><td>D59</td><td>Upstream issues and proposals are drafted in <code>docs/upstream/</code>, not filed</td></tr>
-<tr><td>O9</td><td>D58 (<strong>controversial</strong>)</td><td>Keep Effeck, <code>effeck</code>, <code>.effeck</code>, and <code>@effeck</code></td></tr>
+<tr><td>O9</td><td>D58, superseded by D125 (<strong>controversial</strong>)</td><td>Effeck: <code>effeck</code>, <code>.effeck</code>, <code>EK</code> codes, and <code>@effeck</code></td></tr>
 <tr><td>Remote and repository layout</td><td>D60</td><td>The one repository is private at <code>github.com/roninjin10/effectscript</code>, with the compiler in <code>typescript/</code></td></tr></tbody></table></div>
 <p>No language or repository decision waits on the owner. D59&#39;s filing boundary remains: these drafts are ready to file, and none is filed without his go-ahead. The build lanes land locally; the orchestrator handles any push.</p>
 <h3 id="30-risks-and-experiments"><a class="anchor" href="#30-risks-and-experiments">30. Risks and experiments</a></h3>
