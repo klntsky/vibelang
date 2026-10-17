@@ -1,5 +1,5 @@
 // Run from the repository root: bun docs/tools/check-snippets.ts
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, relative, resolve } from "node:path"
 import { createRequire } from "node:module"
@@ -129,6 +129,14 @@ async function main() {
   try {
     const modules = join(temp, "node_modules")
     mkdirSync(modules, { recursive: true })
+    // effeck-runtime is a symlink to packages/runtime, which resolves effect
+    // from its own node_modules. Give the project that same copy: TypeScript
+    // merges two copies of a package only for files an import loads, so with
+    // two copies a module augmentation such as `declare module "effect/Schema"`
+    // can name the copy outside the program and fail with TS2664, depending on
+    // which copy the parallel file loader reaches first.
+    const runtimeEffect = join(repo, "packages/runtime/node_modules/effect")
+    if (existsSync(join(runtimeEffect, "package.json"))) symlinkSync(realpathSync(runtimeEffect), join(modules, "effect"))
     const dependencies = [join(repo, "experiments/node_modules"), join(repo, "docs/tools/node_modules")]
     for (const source of dependencies) {
       if (!existsSync(source)) continue
