@@ -53,12 +53,6 @@
 					"include": "#effeck-fork"
 				},
 				{
-					"include": "#effeck-interruption-block"
-				},
-				{
-					"include": "#effeck-finally-exit"
-				},
-				{
 					"include": "#declaration"
 				},
 				{
@@ -235,10 +229,7 @@
 					"include": "#effeck-fork"
 				},
 				{
-					"include": "#effeck-interruption-block"
-				},
-				{
-					"include": "#effeck-finally-exit"
+					"include": "#effeck-match"
 				},
 				{
 					"include": "#expressionWithoutIdentifiers"
@@ -5890,31 +5881,6 @@
 				}
 			}
 		},
-		"effeck-interruption-block": {
-			"match": "(?<![_$[:alnum:].])(uninterruptible|restore|interruptible)\\s*(?=\\{)",
-			"captures": {
-				"1": {
-					"name": "keyword.control.flow.ts"
-				}
-			}
-		},
-		"effeck-finally-exit": {
-			"match": "\\b(finally)\\s*(\\()\\s*([_$[:alpha:]][_$[:alnum:]]*)\\s*(\\))",
-			"captures": {
-				"1": {
-					"name": "keyword.control.trycatch.ts"
-				},
-				"2": {
-					"name": "meta.brace.round.ts"
-				},
-				"3": {
-					"name": "variable.parameter.ts"
-				},
-				"4": {
-					"name": "meta.brace.round.ts"
-				}
-			}
-		},
 		"effeck-fork": {
 			"match": "(?<![_$[:alnum:]])(fork)\\s+(?=[_$[:alpha:]{]|this\\b|new\\b|await\\b)",
 			"captures": {
@@ -5955,6 +5921,42 @@
 					"name": "keyword.control.loop.ts"
 				}
 			}
+		},
+		"effeck-match": {
+			"patterns": [
+				{
+					"match": "(?<![_$[:alnum:].])(match)\\s*(?=\\(.*\\)\\s*\\{)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.switch.ts"
+						}
+					}
+				},
+				{
+					"match": "^\\s*(when)(?=\\s)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.switch.ts"
+						}
+					}
+				},
+				{
+					"match": "(?<=[_$[:alnum:])\\]])\\s+(is)(?=\\s+[^\\s=])",
+					"captures": {
+						"1": {
+							"name": "keyword.operator.expression.instanceof.ts"
+						}
+					}
+				},
+				{
+					"match": "(?<=[\\s(])(and|or|not)(?=\\s+(?:let|const|var|not|if|[\\[{(\"'`0-9]|[A-Z]))",
+					"captures": {
+						"1": {
+							"name": "keyword.operator.expression.instanceof.ts"
+						}
+					}
+				}
+			]
 		}
 	}
 }

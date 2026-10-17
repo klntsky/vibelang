@@ -99,10 +99,13 @@ type Parser struct {
 	setParentFromContext ast.Visitor
 	reparsedClones       []*ast.Node
 
-	effeckMutableMember       bool               // the type member being parsed was written with mutable (effeck.go)
-	effeckAbstractMembers     bool               // bodiless class members become abstract: a service or control body (effeck.go)
-	effeckSelects             int                // select statements parsed so far, which number their labels (effeck_fibers.go)
-	effeckOmittedDependencies map[*ast.Node]bool // Effect types whose dependencies were left out (effeck.go)
+	effeckMutableMember       bool                     // the type member being parsed was written with mutable (effeck.go)
+	effeckAbstractMembers     bool                     // bodiless class members become abstract: a service or control body (effeck.go)
+	effeckSelects             int                      // select statements parsed so far, which number their labels (effeck_fibers.go)
+	effeckMatchTemps          int                      // names written for match and is, numbered per file (effeck_match.go)
+	effeckMatches             map[*ast.Node]*matchInfo // match expressions as written, by the call that stands for each (effeck_match.go)
+	effeckIsBindings          map[*ast.Node]*isInfo    // is expressions whose patterns bind names, by their markers (effeck_match.go)
+	effeckOmittedDependencies map[*ast.Node]bool       // Effect types whose dependencies were left out (effeck.go)
 }
 
 func newParser() *Parser {
@@ -1277,6 +1280,9 @@ func (p *Parser) parseIfStatement() *ast.Node {
 	if p.parseOptional(ast.KindElseKeyword) {
 		elseStatement = p.parseStatement()
 	}
+	if rewritten := p.restructureEffeckIf(expression, thenStatement, elseStatement, pos); rewritten != nil {
+		return rewritten // an is in the condition binds names (effeck_match.go)
+	}
 	result := p.finishNode(p.factory.NewIfStatement(expression, thenStatement, elseStatement), pos)
 	p.withJSDoc(result, jsdoc)
 	return result
@@ -1311,6 +1317,9 @@ func (p *Parser) parseWhileStatement() *ast.Node {
 	expression := p.parseExpressionAllowIn()
 	p.parseExpectedMatchingBrackets(ast.KindOpenParenToken, ast.KindCloseParenToken, openParenParsed, openParenPosition)
 	statement := p.parseStatement()
+	if rewritten := p.restructureEffeckWhile(expression, statement, pos); rewritten != nil {
+		return rewritten // an is in the condition binds names (effeck_match.go)
+	}
 	result := p.finishNode(p.factory.NewWhileStatement(expression, statement), pos)
 	p.withJSDoc(result, jsdoc)
 	return result
@@ -1405,6 +1414,9 @@ func (p *Parser) parseReturnStatement() *ast.Node {
 		expression = p.parseExpressionAllowIn()
 	}
 	p.parseSemicolon()
+	if info := p.effeckMatches[expression]; info != nil {
+		return p.matchReturnStatement(info, pos) // return match (...) { ... } (effeck_match.go)
+	}
 	result := p.finishNode(p.factory.NewReturnStatement(expression), pos)
 	p.withJSDoc(result, jsdoc)
 	return result
@@ -1575,6 +1587,9 @@ func (p *Parser) parseExpressionOrLabeledStatement() *ast.Statement {
 
 	if !p.tryParseSemicolon() {
 		p.parseErrorForMissingSemicolonAfter(expression)
+	}
+	if info := p.effeckMatches[expression]; info != nil {
+		return p.matchStatement(info, pos) // a match statement (effeck_match.go)
 	}
 	result := p.finishNode(p.factory.NewExpressionStatement(expression), pos)
 	if hasParen {
@@ -4735,6 +4750,15 @@ func (p *Parser) parseBinaryExpressionRest(precedence ast.OperatorPrecedence, le
 		// We either have a binary operator here, or we're finished.  We call
 		// reScanGreaterToken so that we merge token sequences like > and = into >=
 		operator := p.reScanGreaterThanToken()
+		if p.isEffeckIs() {
+			// subject is pattern binds as instanceof does (effeck_match.go)
+			if !shouldConsumeBinaryOperator(ast.KindInstanceOfKeyword, ast.GetBinaryOperatorPrecedence(ast.KindInstanceOfKeyword), precedence) {
+				break
+			}
+			leftOperand = p.parseEffeckIs(leftOperand, pos)
+			lastOperand = leftOperand
+			continue
+		}
 		newPrecedence := ast.GetBinaryOperatorPrecedence(operator)
 		// Check the precedence to see if we should "take" this operator
 		// - For left associative operator (all operator but **), consume the operator,
@@ -5718,6 +5742,9 @@ func (p *Parser) parseTemplateSpan(isTaggedTemplate bool) *ast.Node {
 }
 
 func (p *Parser) parsePrimaryExpression() *ast.Expression {
+	if p.isStartOfEffeckMatch() {
+		return p.parseEffeckMatch() // match (subject) { when ...: ...; } (effeck_match.go)
+	}
 	switch p.token {
 	case ast.KindNoSubstitutionTemplateLiteral:
 		if p.scanner.TokenFlags()&ast.TokenFlagsIsInvalid != 0 {

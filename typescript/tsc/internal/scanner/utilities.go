@@ -84,10 +84,14 @@ func GetTextOfNodeFromSourceText(sourceText string, node *ast.Node, includeTrivi
 	if node.Flags&ast.NodeFlagsReparserTransformedLiteral != 0 {
 		// This is similar to `getLiteralTextOfNode` in the printer, but without the context of an `emitContext` to provide overrides
 		if ast.IsStringLiteral(node) {
+			// A string literal's own text: the source text for one the JSDoc
+			// reparser made from an identifier, and the written text for one
+			// Effeck's match writes at another token (typeof x === "object").
+			own := node.Text()
 			if node.AsStringLiteral().TokenFlags&ast.TokenFlagsSingleQuote != 0 {
-				return "'" + text + "'"
+				return "'" + escapeQuoted(own, '\'') + "'"
 			}
-			return "\"" + text + "\""
+			return "\"" + escapeQuoted(own, '"') + "\""
 		} else if ast.IsIdentifier(node) || node.Kind == ast.KindNumericLiteral {
 			// A numeric literal synthesized at another token, as Effeck's select
 			// writes its case indices, prints its own text.
@@ -145,4 +149,26 @@ func IsIdentifierText(name string, languageVariant core.LanguageVariant) bool {
 
 func IsIntrinsicJsxName(name string) bool {
 	return len(name) != 0 && (name[0] >= 'a' && name[0] <= 'z' || strings.ContainsRune(name, '-'))
+}
+
+// escapeQuoted escapes backslashes, quote, and line breaks in text, for a
+// string literal delimited by quote.
+func escapeQuoted(text string, quote rune) string {
+	var b strings.Builder
+	for _, r := range text {
+		switch r {
+		case '\\':
+			b.WriteString(`\\`)
+		case quote:
+			b.WriteRune('\\')
+			b.WriteRune(r)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }

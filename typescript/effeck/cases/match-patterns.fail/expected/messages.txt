@@ -1,0 +1,5 @@
+This match does not handle every case of NotFound | Timeout: Timeout is left.
+A binding cannot appear inside an or or not pattern yet.
+Bindings in an is pattern work only in the condition of an if or while statement, joined by &&.
+Regular expression patterns are not supported yet.
+Patterns joined by and, or, or not cannot share a level; add parentheses.

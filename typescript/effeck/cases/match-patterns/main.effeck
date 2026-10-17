@@ -1,0 +1,198 @@
+// expect-result: {"errors":["no user 7","retry","denied root"],"literals":["one","two","many","neg","null"],"option":["some 5","none"],"exit":["value 1","failed NotFound"],"result":["ok 3","err bad"],"arrays":["empty","single 1","head 1 rest 2,3"],"objects":["admin ada","guest","rest b,c"],"combinators":["vowel","small","other"],"types":["string 2","number 4","other"],"custom":["even 4","odd"],"extract":"extracted 9","is":[true,false,true],"ifBind":["cause NotFound","fine"],"whileBind":[3,2,1],"position":["stmt","ret","expr 6"],"effectful":"Ada","nested":"inner b","subjectCall":"from call"}
+error NotFound { id: string }
+error Timeout
+error Denied { user: string; reason: string }
+
+type Failure = NotFound | Timeout | Denied
+
+function getUser(id: string): string!NotFound {
+  if (id === "7") throw new NotFound({ id })
+  return "Ada"
+}
+
+// Every case of a finite union, without a default arm.
+function describe(e: Failure) {
+  return match (e) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+    when Denied and { user: let who, reason: "root" or "admin" }: `denied ${who}`;
+    when Denied: "denied";
+  }
+}
+
+function literal(n: number | null) {
+  return match (n) {
+    when 1: "one";
+    when 2: "two";
+    when -1: "neg";
+    when null: "null";
+    default: "many";
+  }
+}
+
+function option(o: Option.Option<number>) {
+  return match (o) {
+    when Option.Some(let v): `some ${v}`;
+    when Option.None: "none";
+  }
+}
+
+function exitOf(id: string) {
+  const outcome = Effect.exit(getUser(id))
+  return match (outcome) {
+    when Exit.Success(let v): `value ${v.length - 2}`;
+    when Exit.Failure(let cause): `failed ${cause.reasons[0]._tag === "Fail" ? (cause.reasons[0] as any).error._tag : "?"}`;
+  }
+}
+
+function result(r: Result.Result<number, string>) {
+  return match (r) {
+    when Result.Success(let n): `ok ${n}`;
+    when Result.Failure(let message): `err ${message}`;
+  }
+}
+
+function arrays(xs: ReadonlyArray<number>) {
+  return match (xs) {
+    when []: "empty";
+    when [let only]: `single ${only}`;
+    when [let head, ...let tail]: `head ${head} rest ${tail.join(",")}`;
+  }
+}
+
+function objects(u: { role: string; name?: string; [k: string]: unknown }) {
+  return match (u) {
+    when { role: "admin", let name }: `admin ${name}`;
+    when { role: "guest" }: "guest";
+    when { role: "x", ...let others }: `rest ${Object.keys(others).join(",")}`;
+    default: "unknown";
+  }
+}
+
+function combinators(s: string) {
+  return match (s) {
+    when "a" or "e" or "i": "vowel";
+    when (not ("zz" or "zzz")) and if (s.length < 2): "small";
+    default: "other";
+  }
+}
+
+function types(v: unknown) {
+  return match (v) {
+    when String and let text: `string ${(text as string).length}`;
+    when Number(let n): `number ${n}`;
+    default: "other";
+  }
+}
+
+const Even = {
+  [customMatcher](subject: unknown) {
+    return typeof subject === "number" && subject % 2 === 0
+  }
+}
+
+function custom(n: number) {
+  return match (n) {
+    when Even: `even ${n}`;
+    default: "odd";
+  }
+}
+
+function extract(e: Failure) {
+  return match (e) {
+    when NotFound(let found): `extracted ${found.id}`;
+    default: "no";
+  }
+}
+
+function isChecks(e: Failure) {
+  return [e is NotFound, e is Timeout or Denied, [1, 2] is [1, Number]]
+}
+
+function ifBind(id: string) {
+  const outcome = Effect.exit(getUser(id))
+  if (outcome is Exit.Failure(let cause) && cause.reasons.length > 0) {
+    return `cause ${(cause.reasons[0] as any).error._tag}`
+  } else {
+    return "fine"
+  }
+}
+
+function whileBind() {
+  const stack = [1, 2, 3]
+  const seen: number[] = []
+  while (stack is [...let rest] && rest.length > 0) {
+    seen.push(rest[rest.length - 1])
+    stack.pop()
+  }
+  return seen
+}
+
+function positions() {
+  const out: string[] = []
+  match ("s") {
+    when "s": out.push("stmt");
+    default: out.push("other");
+  }
+  out.push(returned())
+  out.push(`expr ${match (3) { when 3: 6; default: 0; }}`)
+  return out
+}
+
+function returned() {
+  return match ("r") {
+    when "r": "ret";
+    default: "no";
+  }
+}
+
+function effectful() {
+  return match ("1") {
+    when "1": getUser("1");
+    default: "no";
+  }
+}
+
+function nested(a: string, b: string) {
+  return match (a) {
+    when "a": match (b) {
+      when "b": "inner b";
+      default: "inner other";
+    };
+    default: "outer";
+  }
+}
+
+function source() {
+  return { kind: "call" }
+}
+
+function subjectCall() {
+  return match (source()) {
+    when { kind: "call" }: "from call";
+    default: "other";
+  }
+}
+
+export function main() {
+  return {
+    errors: [describe(new NotFound({ id: "7" })), describe(new Timeout()), describe(new Denied({ user: "root", reason: "root" }))],
+    literals: [literal(1), literal(2), literal(9), literal(-1), literal(null)],
+    option: [option(Option.some(5)), option(Option.none())],
+    exit: [exitOf("1"), exitOf("7")],
+    result: [result(Result.succeed(3)), result(Result.fail("bad"))],
+    arrays: [arrays([]), arrays([1]), arrays([1, 2, 3])],
+    objects: [objects({ role: "admin", name: "ada" }), objects({ role: "guest" }), objects({ role: "x", b: 1, c: 2 })],
+    combinators: [combinators("e"), combinators("q"), combinators("long")],
+    types: [types("hi"), types(4), types(true)],
+    custom: [custom(4), custom(3)],
+    extract: extract(new NotFound({ id: "9" })),
+    is: isChecks(new NotFound({ id: "1" })).slice(0, 2).concat([isChecks(new Timeout())[1]]),
+    ifBind: [ifBind("7"), ifBind("1")],
+    whileBind: whileBind(),
+    position: positions(),
+    effectful: effectful(),
+    nested: nested("a", "b"),
+    subjectCall: subjectCall()
+  }
+}

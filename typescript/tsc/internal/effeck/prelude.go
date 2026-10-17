@@ -60,16 +60,16 @@ var preludeModules = map[string]string{
 	"$clause": runtimeModule,
 	// The fiber forms (D166-D170, fibers.go): the parser writes await, select,
 	// and for concurrent as calls of these; detach and forkIn are fork's variants.
-	"$await":         runtimeModule,
-	"$select":        runtimeModule,
+	"$await":  runtimeModule,
+	"$select": runtimeModule,
 	// The await operations (D196): await.all, await.allSettled, await.race, await.any.
 	"$awaitAll":        runtimeModule,
 	"$awaitAllSettled": runtimeModule,
 	"$awaitRace":       runtimeModule,
 	"$awaitAny":        runtimeModule,
-	"$forConcurrent": runtimeModule,
-	"detach":         runtimeModule,
-	"forkIn":         runtimeModule,
+	"$forConcurrent":   runtimeModule,
+	"detach":           runtimeModule,
+	"forkIn":           runtimeModule,
 	// A provide block's Key = value provider, which the parser writes (D173, provide.go).
 	"$provideService": runtimeModule,
 	// The primitives with their own syntax (D176-D180, primitives.go): the bare
@@ -87,6 +87,14 @@ var preludeModules = map[string]string{
 	"$uninterruptibleBlock": runtimeModule,
 	"$restoreBlock":         runtimeModule,
 	"$interruptibleBlock":   runtimeModule,
+	// Pattern matching (D206-D225, match.go): the parser writes match and is
+	// with these helpers; customMatcher is the proposal's Symbol.customMatcher.
+	"$is":           runtimeModule,
+	"$extract":      runtimeModule,
+	"$rest":         runtimeModule,
+	"$noMatch":      runtimeModule,
+	"$patternError": runtimeModule,
+	"customMatcher": runtimeModule,
 }
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the

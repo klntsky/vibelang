@@ -1,0 +1,35 @@
+// expect: EK4701 EK4702 EK4703 EK4704 EK4705
+error NotFound { id: string }
+error Timeout
+
+export function missing(e: NotFound | Timeout) {
+  return match (e) {
+    when NotFound: "no user";
+  }
+}
+
+export function bindInOr(x: unknown) {
+  return match (x) {
+    when [let a] or { length: let a }: 1;
+    default: 0;
+  }
+}
+
+export function bindOutsideIf(xs: number[]) {
+  const ok = xs is [let first]
+  return ok
+}
+
+export function regex(s: string) {
+  return match (s) {
+    when /^a/: "a";
+    default: "other";
+  }
+}
+
+export function mixed(n: number) {
+  return match (n) {
+    when 1 and Number or 3: "mixed";
+    default: "other";
+  }
+}
