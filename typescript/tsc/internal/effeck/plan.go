@@ -31,6 +31,8 @@ type plan struct {
 
 	pipes         map[*ast.Node]pipeMode    // how each pipe compiles (pipes_lower.go)
 	topicClosures map[*ast.Node][]*ast.Node // functions that read the topic of these pipes
+
+	entry *entryPlan // how an entry module runs its main (entry.go), or nil
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -100,6 +102,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 		}
 		file.AsNode().ForEachChild(visit)
 		p.planTrustedCalls(c, a, file)
+		p.entry = planEntry(c, file)
 		p.planSpans(c, file)
 	})
 	return p

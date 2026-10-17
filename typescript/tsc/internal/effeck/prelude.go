@@ -69,12 +69,17 @@ func implicitRuntimeImport(file *ast.SourceFile) []string {
 		return nil
 	}
 	prelude, root := mayUsePrelude(file)
+	entry := entryMain(file) != nil
 	var modules []string
-	if prelude {
+	if prelude || entry {
 		modules = append(modules, runtimeModule)
 	}
 	if root {
 		modules = append(modules, effectRootModule)
+	}
+	if entry {
+		// An entry module runs main with NodeRuntime when the package resolves (entry.go).
+		modules = append(modules, platformNodeModule)
 	}
 	return modules
 }

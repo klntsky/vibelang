@@ -1,4 +1,5 @@
 import * as Effect_1 from "effect/Effect";
+import * as runtime from "effeck-runtime";
 import { Config, Console } from "effect";
 import { findName } from "./users.js";
 // Pure: no call runs an Effect, so it stays a plain JavaScript function
@@ -30,3 +31,5 @@ export const main = Effect_1.fnUntraced(function* main() {
     const name = yield* findName(2);
     yield* Console.log(`found ${name.toUpperCase()}`);
 });
+if (import.meta.main)
+    runtime.$runMain(main());
