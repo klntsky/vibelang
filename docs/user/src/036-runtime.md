@@ -48,7 +48,7 @@ const Quiet = Logger.layer([])
 
 function startup() {
   log("visible before")
-  with Quiet {
+  provide Quiet {
     log("suppressed in this region")
   }
   log("visible after")

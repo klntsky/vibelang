@@ -182,7 +182,7 @@ const program = Effect.gen(function* () {
 
 ```ts es
 function program() {
-  with UsersLive {
+  provide UsersLive {
     return Users.find("1")
   }
 }

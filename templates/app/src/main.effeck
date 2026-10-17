@@ -9,7 +9,7 @@ layer GreeterLive: Greeter {
 }
 
 export function main() {
-  with GreeterLive {
+  provide GreeterLive {
     Console.log(Greeter.greet("Effeck"))
     try {
       Greeter.greet("")

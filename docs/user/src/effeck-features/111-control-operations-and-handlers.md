@@ -162,7 +162,7 @@ Handle the operation inside each concurrent branch. A handler on the parent fibe
 | Diagnostic | Meaning | Fix |
 | --- | --- | --- |
 | EK2005 | A `resumeWith` program needs a service or raises an undeclared error | Read the service in the clause; raise only the operation's declared errors |
-| EK2107 | A handle clause names an operation of something that is not a control, such as a service | Provide a service with a layer or a `with` block |
+| EK2107 | A handle clause names an operation of something that is not a control, such as a service | Provide a service with a layer or a `provide` block |
 | EK2108 | A handle statement leaves an operation of its control without a clause, or gives one two clauses | Add the missing clause, or remove the second |
 | EK4201 | Work sent to another fiber still requires a control operation | Handle it inside the branch, or use sequential execution where the combinator supports it |
 | EK4202 | A TypeScript function's declared requirements include a control operation | Write it in Effeck or handle the operation inside the TypeScript implementation |

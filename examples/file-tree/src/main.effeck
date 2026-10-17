@@ -33,5 +33,5 @@ function summarize(root: string) {
 }
 
 export function main() {
-  with NodeServices.layer { summarize("fixtures") }
+  provide NodeServices.layer { summarize("fixtures") }
 }

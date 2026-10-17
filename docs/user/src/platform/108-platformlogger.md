@@ -34,7 +34,7 @@ const LoggerLive = Layer.provide(
 )
 
 function main() {
-  with LoggerLive {
+  provide LoggerLive {
     log("Report generated")
   }
   // LoggerLive's scope has closed and its final batch has flushed.

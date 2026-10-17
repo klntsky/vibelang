@@ -156,7 +156,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
 | D128 | `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D129 | `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
-| D130 | `with AppLive { ... }` provides a layer to a block whose statements stay code of the enclosing function | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
+| D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
 | D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias, and the two cannot drift apart | 11 |
@@ -179,6 +179,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D169 | `for concurrent(n)` runs the body per item in its own fiber; `continue` ends an item; `break` and `return` are EK4605 and EK4606 | `forEach` with a concurrency option, as a loop |
 | D170 | `detach(program)` and `forkIn(scope, program)` are fork's variants | Longer lifetimes without Effect's names |
 | D171 | `await`'s types accept one level of arrays and objects | Deeper recursive types exceed TypeScript's limits |
+| D172 | `provide AppLive { ... }` replaces `with AppLive { ... }`; `with` still compiles with the warning EK1009 and a quick fix | Effeck keywords reuse Effect's own names, so `provide` reads as `Effect.provide` | 4 |
 
 #### Rules of the runtime and compiler
 

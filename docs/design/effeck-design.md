@@ -815,11 +815,11 @@ function main() {
 
 `main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.
 
-`with AppLive { ... }` provides a layer to a block (D130). It is short for `Effect.provide(() => { ... }, AppLive)`, except that its statements are code of the enclosing function: a `return` returns from the function, and `break` and `continue` leave its loops. Its errors are the block's and the layer's, and its requirements are the block's that the layer does not provide plus the layer's own. Like `Effect.provide`, it accepts a layer, an array of layers, or a `Context`. A `with` block at a module's top level would run a program there, so it is EK1001.
+`provide AppLive { ... }` provides a layer to a block (D130, D172); its keyword matches `Effect.provide`. It is short for `Effect.provide(() => { ... }, AppLive)`, except that its statements are code of the enclosing function: a `return` returns from the function, and `break` and `continue` leave its loops. Its errors are the block's and the layer's, and its requirements are the block's that the layer does not provide plus the layer's own. Like `Effect.provide`, it accepts a layer, an array of layers, or a `Context`. A `with` block at a module's top level would run a program there, so it is EK1001.
 
 ```ts es
 function main() {
-  with AppLive {
+  provide AppLive {
     log(`welcomed ${welcome("42")}`)
   }
 }
@@ -2139,7 +2139,7 @@ A `Config` is data until you call it (Chapter 13), so `Config.all`, `Config.nest
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
-  with AppLive { serve(8080) }
+  provide AppLive { serve(8080) }
 }
 
 NodeRuntime.runMain(() => main())
@@ -4060,7 +4060,7 @@ as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic is an error, except two. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. The two exceptions are policy, not soundness: EK2004, a `catch` that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
+Every EK diagnostic is an error, except three. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. EK1009, the old `with` spelling of a `provide` block, is a warning: the block compiles the same either way. The other two exceptions are policy, not soundness: EK2004, a `catch` that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
 
 | Option in `compilerOptions.effeck` | Values | Default |
 | --- | --- | --- |
@@ -4084,6 +4084,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK1006 | A pipe whose body does not use its topic, as in `name \|> "anonymous"` (D156) | Write `%` where the value goes: `name \|> greet(%)` | 5 |
 | EK1007 | `%` outside every pipe's body (D156) | Use `%` only after `\|>`; `%` between two operands is still the remainder | 5 |
 | EK1008 | A pipe that passes its left side by name to one program and also uses it as a value (D155) | Bind the value first with `const`, or pass it by name everywhere | 5, 13 |
+| EK1009 | A `provide` block written with its old keyword, `with` (a warning; D172) | Write `provide`; the quick fix replaces the keyword | 4 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, suggest `T!!` or removing the annotation; for a bare `T`, suggest `T!!` or `T!Errors` | 14 |
@@ -4312,7 +4313,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
 | D128 | `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D129 | `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
-| D130 | `with AppLive { ... }` provides a layer to a block whose statements stay code of the enclosing function | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
+| D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
 | D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias, and the two cannot drift apart | 11 |
@@ -4335,6 +4336,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D169 | `for concurrent(n)` runs the body per item in its own fiber; `continue` ends an item; `break` and `return` are EK4605 and EK4606 | `forEach` with a concurrency option, as a loop |
 | D170 | `detach(program)` and `forkIn(scope, program)` are fork's variants | Longer lifetimes without Effect's names |
 | D171 | `await`'s types accept one level of arrays and objects | Deeper recursive types exceed TypeScript's limits |
+| D172 | `provide AppLive { ... }` replaces `with AppLive { ... }`; `with` still compiles with the warning EK1009 and a quick fix | Effeck keywords reuse Effect's own names, so `provide` reads as `Effect.provide` | 4 |
 
 #### Rules of the runtime and compiler
 

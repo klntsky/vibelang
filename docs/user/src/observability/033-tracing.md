@@ -45,7 +45,7 @@ const Tracing = OtlpTracer.layer({
   |> Layer.provide(%, FetchHttpClient.layer)
 
 function exportedReport() {
-  with Tracing { return renderReport("csv") }
+  provide Tracing { return renderReport("csv") }
 }
 ```
 
@@ -114,7 +114,7 @@ The inner spans inherit the outer span as parent. Their trace IDs match, while e
 
 ```ts
 function demonstration() {
-  with Tracing { generate() }
+  provide Tracing { generate() }
 }
 ```
 
@@ -139,7 +139,7 @@ const VendorTracing = Layer.unwrap(() => {
 })
 
 function productionReport() {
-  with VendorTracing { return generate() }
+  provide VendorTracing { return generate() }
 }
 ```
 

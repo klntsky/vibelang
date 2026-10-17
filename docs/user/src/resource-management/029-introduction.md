@@ -116,7 +116,7 @@ layer LeaseStoreTest: LeaseStore {
 }
 
 function example() {
-  with LeaseStoreTest { return leaseId() }
+  provide LeaseStoreTest { return leaseId() }
 }
 ```
 

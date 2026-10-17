@@ -88,7 +88,7 @@ function readRoute(input: unknown) {
 layer TestRoutes: Routes { check(_code) {} }
 
 function previewRoute() {
-  with TestRoutes { return readRoute("coastal") }
+  provide TestRoutes { return readRoute("coastal") }
 }
 ```
 

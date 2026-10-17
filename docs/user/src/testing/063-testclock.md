@@ -62,7 +62,7 @@ it.effect("a deadline returns the fallback", () => {
 import { TestClock } from "effect/testing"
 
 function standaloneClockExample() {
-  with TestClock.layer() {
+  provide TestClock.layer() {
     TestClock.setTime(5_000)
     TestClock.adjust("2 seconds")
     return Clock.currentTimeMillis() // 7000

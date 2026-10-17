@@ -174,7 +174,7 @@ A `Config` is data until you call it (Chapter 13), so `Config.all`, `Config.nest
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
-  with AppLive { serve(8080) }
+  provide AppLive { serve(8080) }
 }
 
 NodeRuntime.runMain(() => main())

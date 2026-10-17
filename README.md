@@ -68,7 +68,7 @@ clients, see [editors/](editors/README.md).
   and call `Users.find(id)`; `control` declares a control operation the same way.
 - Implement a service with `layer UsersLive: Users { find(id) { ... } }`;
   statements before the members run once, when the layer builds.
-- Provide a layer to a block with `with AppLive { ... }`; a `return` inside
+- Provide a layer to a block with `provide AppLive { ... }`; a `return` inside
   returns from the enclosing function.
 - Start work concurrently with `fork work()` and wait for it with `await`:
   `const [a, b] = await [fork left(), fork right()]`. `select { case ... }`

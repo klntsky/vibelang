@@ -42,7 +42,7 @@ export function greet(id: string) {
 }
 
 export function main() {
-  with AppLive {
+  provide AppLive {
     Console.log(greet("42"))
     Console.log(greet("missing"))
   }

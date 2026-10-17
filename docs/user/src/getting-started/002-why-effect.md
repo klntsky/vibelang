@@ -36,7 +36,7 @@ function receipt(sku: string) {
 layer PricesTest: Prices { total(_sku) { return 18 } }
 
 function preview() {
-  with PricesTest { return receipt("pencil-box") }
+  provide PricesTest { return receipt("pencil-box") }
 }
 ```
 

@@ -171,7 +171,7 @@ const EnvProvider = ConfigProvider.fromEnv({ env: { PORT: "9092" } })
 const DotEnvProvider = ConfigProvider.fromDotEnvContents("PORT=9093")
 
 function testPort() {
-  with ConfigProvider.layer(TestProvider) { return Config.Port("PORT")() }
+  provide ConfigProvider.layer(TestProvider) { return Config.Port("PORT")() }
 }
 
 function fileProvider() {
@@ -191,7 +191,7 @@ const DeploymentProvider = ConfigProvider.constantCase(
 )
 
 function deploymentPort() {
-  with ConfigProvider.layer(DeploymentProvider) { return Config.Port("servicePort")() }
+  provide ConfigProvider.layer(DeploymentProvider) { return Config.Port("servicePort")() }
 }
 ```
 
@@ -206,7 +206,7 @@ const Combined = ConfigProvider.orElse(
 )
 
 function configuredServer() {
-  with ConfigProvider.layer(Combined) {
+  provide ConfigProvider.layer(Combined) {
     return { host: Config.String("HOST")(), port: Config.Port("PORT")() }
   }
 }

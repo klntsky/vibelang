@@ -100,7 +100,7 @@ Reuse the same layer value when several paths need a shared instance. Reconstruc
 
 ```ts
 function main() {
-  with AppLive {
+  provide AppLive {
     const first = report("Inventory")
     const second = report("Forecast")
     return [first, second]
@@ -111,12 +111,12 @@ function main() {
 function withBuiltContext() {
   return Effect.scoped(() => {
     const context = Layer.build(AppLive)
-    with context { return report("Inventory") }
+    provide context { return report("Inventory") }
   })
 }
 ```
 
-`with AppLive { ... }` provides the layer to its statements: it builds the layer once, every call inside shares the implementations, and the layer's resources are released when the block exits. The statements are code of the enclosing function, so the `return` inside returns from `main`. The block is short for `Effect.provide(() => { ... }, AppLive)`, and like it accepts a layer, an array of layers, or a `Context`. Separate provision boundaries acquire separately; use `ManagedRuntime` when several entry points need one application lifetime.
+`provide AppLive { ... }` provides the layer to its statements: it builds the layer once, every call inside shares the implementations, and the layer's resources are released when the block exits. The statements are code of the enclosing function, so the `return` inside returns from `main`. The block is short for `Effect.provide(() => { ... }, AppLive)`, and like it accepts a layer, an array of layers, or a `Context`. Separate provision boundaries acquire separately; use `ManagedRuntime` when several entry points need one application lifetime.
 
 `Layer.build` produces a `Context` and requires a `Scope`, supplied here by `Effect.scoped`. Consume resource-owning services inside that scope. For an application represented entirely by a layer, `Layer.launch(AppLive)` builds it and waits until interruption, keeping its resources alive.
 
@@ -173,11 +173,11 @@ const BannerWithTestSettings = Layer.provide(Banner.layerWithoutDependencies, Se
 layer BannerTest: Banner { text(title) { return `fixture/${title}` } }
 
 function testBannerDependency() {
-  with BannerWithTestSettings { return Banner.text("Orders") }
+  provide BannerWithTestSettings { return Banner.text("Orders") }
 }
 
 function testBannerDirectly() {
-  with BannerTest { return Banner.text("Orders") }
+  provide BannerTest { return Banner.text("Orders") }
 }
 ```
 
