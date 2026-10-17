@@ -34,7 +34,7 @@ func (p *ParsedCommandLine) fileGlobPatterns() (fileGlob string, recursiveFileGl
 		return fileGlobPattern, recursiveFileGlobPattern
 	}
 	extensions := make([]string, 0, 10+len(mapperExtensions))
-	extensions = append(extensions, "js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts", "json", "es")
+	extensions = append(extensions, "js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts", "json", "effeck")
 	for _, extension := range mapperExtensions {
 		extensions = append(extensions, strings.TrimPrefix(extension, "."))
 	}

@@ -1,7 +1,7 @@
 {
   "name": "effeck",
   "displayName": "Effeck",
-  "description": "Effeck language support: the effeck language server, diagnostics with ES codes, hovers with inferred contracts, and syntax highlighting for .effeck files.",
+  "description": "Effeck language support: the effeck language server, diagnostics with EK codes, hovers with inferred contracts, and syntax highlighting for .effeck files.",
   "version": "0.0.1",
   "publisher": "effeck",
   "private": true,

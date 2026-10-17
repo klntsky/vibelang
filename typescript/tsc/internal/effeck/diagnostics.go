@@ -24,7 +24,7 @@ import (
 // lines under it with note, and hide TypeScript's own diagnostics that it
 // explains with cover.
 
-// diagnosticSource is the prefix of every ES code.
+// diagnosticSource is the prefix of every EK code.
 const diagnosticSource = "EK"
 
 // A Message is the text of one Effeck diagnostic. In Text, {0}, {1}, …
@@ -55,7 +55,7 @@ const (
 	warningCategory = diagnostics.CategoryWarning
 )
 
-// The registry: every ES code in Chapter 28 of the spec
+// The registry: every EK code in Chapter 28 of the spec
 // (docs/design/src/428-part4-ch28-tooling.md) with its default category and
 // the headline the spec prints for it. Every code is an error except EK2004,
 // which is a warning by default; a project may change the category of EK2004
@@ -242,7 +242,7 @@ func diagnosticsStateOf(c *checker.Checker) *diagnosticsState {
 	}).(*diagnosticsState)
 }
 
-// cover hides TypeScript's own diagnostics inside node, because an ES
+// cover hides TypeScript's own diagnostics inside node, because an EK
 // diagnostic reported for node explains them. For example, EK1003 at an
 // await covers TypeScript's complaint that the function is not async.
 func cover(c *checker.Checker, node *ast.Node) {
@@ -252,7 +252,7 @@ func cover(c *checker.Checker, node *ast.Node) {
 }
 
 // coverArgument hides TypeScript's error that argument's type does not fit
-// its parameter (TS2345, or TS2769 for an overloaded callee), because an ES
+// its parameter (TS2345, or TS2769 for an overloaded callee), because an EK
 // diagnostic reported for argument explains it. Unlike cover, it keeps the
 // errors inside argument, such as those in a test's body.
 func coverArgument(c *checker.Checker, argument *ast.Node) {

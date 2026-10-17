@@ -28,7 +28,7 @@ end
 
 function M.setup(opts)
   opts = opts or {}
-  vim.filetype.add({ extension = { es = "effeck" } })
+  vim.filetype.add({ extension = { effeck = "effeck" } })
   vim.treesitter.language.register("typescript", "effeck")
 
   local filetypes = { "effeck" }

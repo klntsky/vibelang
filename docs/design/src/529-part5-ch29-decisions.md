@@ -60,8 +60,8 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D27 | `wire` is an intrinsic with a bounded contract (EK3201-EK3204) | Layer types carry outputs and inputs | 4 |
 | D28 | A `catch` over several expected failures receives the first | K14a | 3, 17 |
 | D29 | P1-P22 are the spec's rules, as revised below | The reviews' verified findings | 29 |
-| D30 | Installation: `effeck` (`effeck`) and `@effeck/runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
-| D31 | Builds: `effeck --watch`; `@effeck/vite` for Vite | One checker for CLI, editor, and bundler | 28 |
+| D30 | Installation: `effeck` (`effeck`) and `effeck-runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
+| D31 | Builds: `effeck --watch`; `effeck-vite` for Vite | One checker for CLI, editor, and bundler | 28 |
 | D32 | The editor: `effeck --lsp --stdio`; the `effeck.effeck` extension | The fork's binary already serves LSP | 28 |
 | D33 | v0 editor features: hover, completions, quick fixes, four refactors | The diagnostics with mechanical fixes | 28 |
 | D34 | Diagnostics: errors, except the policies EK2004 (a warning) and EK4403; `compilerOptions.effeck` | Soundness errors cannot be lowered | 28 |
@@ -151,7 +151,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D122 | Every runner checks all services it does not supply; it.effect supplies Scope and its layer services | Diagnose missing services before execution | 4, 28 |
 | D123 | Declaration prelude imports use free aliases when names are already bound | Avoid duplicate identifiers in declaration consumers | 27 |
 | D124 | Setup relinks effeck launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
-| D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, npm `effeck` and `@effeck` | The `@effectscript` npm scope belongs to another language | 28 |
+| D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
 
 #### Rules of the runtime and compiler
 
@@ -201,7 +201,7 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | --- | --- | --- |
 | O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
 | O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
-| O9 | D58, superseded by D125 (**controversial**) | Effeck: `effeck`, `.effeck`, `EK` codes, and `@effeck` |
+| O9 | D58, superseded by D125 (**controversial**) | Effeck: `effeck`, `.effeck`, `EK` codes, and unscoped npm packages |
 | Remote and repository layout | D60 | The one repository is private at `github.com/roninjin10/effectscript`, with the compiler in `typescript/` |
 
 No language or repository decision waits on the owner. D59's filing boundary remains: these drafts are ready to file, and none is filed without his go-ahead. The build lanes land locally; the orchestrator handles any push.
