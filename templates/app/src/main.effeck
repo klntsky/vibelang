@@ -5,9 +5,9 @@ service Greeter {
   greet(name: string): string!EmptyName
 }
 
-const GreeterLive = Layer.succeed(Greeter, {
-  greet: (name: string) => greeting(name)
-})
+layer GreeterLive: Greeter {
+  greet(name: string) { return greeting(name) }
+}
 
 export function main() {
   Effect.provide(() => {

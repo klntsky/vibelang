@@ -28,37 +28,33 @@ The implementation graph on this page has `Printer` depend on `Settings`, and `R
 ## Preventing dependency leakage
 
 ```ts
-const PrinterLive = Layer.effect(Printer, () => {
+layer PrinterLive: Printer {
   const settings = Settings()
-  return {
-    print(text) {
-      log(`${settings.prefix}: ${text}`)
-    }
+  print(text) {
+    log(`${settings.prefix}: ${text}`)
   }
-})
+}
 // Layer<Printer, never, Settings>
 ```
 
-`Settings()` runs once when the layer builds. The returned method captures that implementation, so callers need `Printer` without also needing `Settings`. Looking up a service inside a method instead makes it a call-time requirement, which must appear in the abstract method's full contract.
+`layer PrinterLive: Printer { ... }` builds a `Printer`. The statements before the members run once, when the layer builds, and the members form the implementation; a value member is written `readonly name = value`. The declaration is short for `Layer.effect(Printer, () => { ...; return { print(text) { ... } } })`, and a layer without statements is `Layer.succeed`. `Settings()` runs once when the layer builds, and the method captures that implementation, so callers need `Printer` without also needing `Settings`. Looking up a service inside a method instead makes it a call-time requirement, which must appear in the member's full contract.
 
 Keep method requirements at `never` when dependencies are implementation details. This lets a test provide a simple fake without also recreating the production graph.
 
 ## Constructing service layers
 
 ```ts
-const SettingsLive = Layer.succeed(Settings, { prefix: "reports" })
+layer SettingsLive: Settings { readonly prefix = "reports" }
 // Layer<Settings, never, never>
 
-const ReportsLive = Layer.effect(Reports, () => {
+layer ReportsLive: Reports {
   const settings = Settings()
   const printer = Printer()
-  return {
-    render(title) {
-      printer.print("Rendering report")
-      return `${settings.prefix}/${title}`
-    }
+  render(title) {
+    printer.print("Rendering report")
+    return `${settings.prefix}/${title}`
   }
-})
+}
 // Layer<Reports, never, Settings | Printer>
 ```
 
@@ -133,9 +129,9 @@ const ReportsUnavailable = Layer.effect(Reports, () => {
   throw new InitializationFailed()
 })
 
-const ReportsFallback = Layer.succeed(Reports, {
-  render: (title) => `Offline report: ${title}`
-})
+layer ReportsFallback: Reports {
+  render(title) { return `Offline report: ${title}` }
+}
 
 const ObservedReports = pipe(
   ReportsUnavailable,
@@ -174,9 +170,9 @@ A constant factory can use `Layer.succeed`; synchronous factories can use `Layer
 ## Replacing services in tests
 
 ```ts
-const SettingsTest = Layer.succeed(Settings, { prefix: "test" })
+layer SettingsTest: Settings { readonly prefix = "test" }
 const BannerWithTestSettings = Layer.provide(Banner.layerWithoutDependencies, SettingsTest)
-const BannerTest = Layer.succeed(Banner, { text: (title) => `fixture/${title}` })
+layer BannerTest: Banner { text(title) { return `fixture/${title}` } }
 
 function testBannerDependency() {
   return Effect.provide(() => Banner.text("Orders"), BannerWithTestSettings)

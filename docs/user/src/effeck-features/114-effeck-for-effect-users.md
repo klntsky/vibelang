@@ -26,6 +26,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `const x = yield* work()` | `const x = work()` |
 | `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, then call the next function |
 | `Context.Service` | `service Users { find(id: string): User!NotFound }`; call `Users.find(id)` |
+| `Layer.effect(Users, Effect.gen(function* () { ... }))` | `layer UsersLive: Users { setup; find(id) { ... } }` |
 | `Effect.catchTag(program, "Missing", recover)` | `try` / `catch`, narrowed by `instanceof` or `_tag` |
 | `Effect.ensuring(program, cleanup)` | `try` / `finally` |
 | `Effect.scoped` with `Effect.acquireRelease` | Acquire with `using` in the block that owns the resource |

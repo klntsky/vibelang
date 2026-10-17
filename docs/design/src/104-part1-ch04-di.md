@@ -80,7 +80,7 @@ Calling any member through the service looks the service up, so the service join
 
 #### Writing a provider
 
-A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation.
+A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation. `layer UsersLive: Users { ... }` writes the same provider with less: the statements before the members run once, when the layer is built, the members form the implementation, and a value member is `readonly name = value` (D129). It is short for `Layer.effect(Users, () => { ...; return { ... } })`, or `Layer.succeed(Users, { ... })` when there are no statements. A statement after the members is EK2104.
 
 ```ts effect
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
@@ -100,19 +100,17 @@ const UsersLive = Layer.effect(Users, Effect.gen(function* () {
 ```
 
 ```ts es
-const UsersLive = Layer.effect(Users, () => {
+layer UsersLive: Users {
   const db = Database()              // runs once, when the layer is built
-  return {
-    find(id) {
-      const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
-      if (rows.length === 0) throw new UserNotFound({ id })
-      return toUser(rows[0])
-    },
-    rename(id, name) {
-      Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
-    }
+  find(id) {
+    const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
+    if (rows.length === 0) throw new UserNotFound({ id })
+    return toUser(rows[0])
   }
-})
+  rename(id, name) {
+    Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
+  }
+}
 // Layer<Users, never, Database>
 ```
 
@@ -215,13 +213,11 @@ const DatabaseLive = Layer.effect(Database, Effect.gen(function* () {
 ```
 
 ```ts es
-const DatabaseLive = Layer.effect(Database, () => {
+layer DatabaseLive: Database {
   const pool = Postgres.connect(DatabaseConfig().url)    // no `using`: the pool lives as long as the layer
-  return {
-    query: (sql, params) => pool.query(sql, params),
-    execute: (sql, params) => pool.execute(sql, params)
-  }
-})
+  query(sql, params) { return pool.query(sql, params) }
+  execute(sql, params) { return pool.execute(sql, params) }
+}
 // Layer<Database, ConnectError, DatabaseConfig>
 ```
 
@@ -232,16 +228,14 @@ const DatabaseLive = Layer.effect(Database, () => {
 Sometimes a method looks up another service each time it is called, instead of capturing it when the layer is built. That lookup happens in the *caller's* context, so its requirement belongs to the caller, and the service contract has to say so. The compiler catches the mismatch:
 
 ```ts es
-const UsersAudited = Layer.effect(Users, () => {
+layer UsersAudited: Users {
   const db = Database()
-  return {
-    find(id) {
-      Audit.record(`users.find ${id}`)    // looked up on every call
-      return findIn(db, id)
-    },
-    rename(id, name) { renameIn(db, id, name) }
+  find(id) {
+    Audit.record(`users.find ${id}`)    // looked up on every call
+    return findIn(db, id)
   }
-})
+  rename(id, name) { renameIn(db, id, name) }
+}
 ```
 
 ```text
@@ -324,10 +318,10 @@ it.effect("welcome returns the user's name", () =>
 ```
 
 ```ts es
-const UsersTest = Layer.succeed(Users, {
-  find: (id) => ({ id, name: "Ada", email: "ada@example.com" }),
-  rename: () => {}
-})
+layer UsersTest: Users {
+  find(id) { return ({ id, name: "Ada", email: "ada@example.com" }) }
+  rename() {}
+}
 
 it.effect("welcome returns the user's name", () => {
   const name = Effect.provide(() => welcome("42"), wire(UsersTest, MailerTest))

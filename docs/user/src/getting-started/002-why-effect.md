@@ -33,7 +33,7 @@ function receipt(sku: string) {
 }
 // string!InvalidQuantity!Prices
 
-const PricesTest = Layer.succeed(Prices, { total: (_sku) => 18 })
+layer PricesTest: Prices { total(_sku) { return 18 } }
 
 function preview() {
   return Effect.provide(() => receipt("pencil-box"), PricesTest)

@@ -10,18 +10,16 @@ export service Users {
 }
 
 // The layer owns its state; each test builds an isolated directory.
-export const UsersLive = Layer.effect(Users, () => {
+export layer UsersLive: Users {
   const names = new Set<string>()
   let nextId = 0
-  return {
-    create(name) {
-      if (names.has(name)) throw new NameTaken({ name })
-      names.add(name)
-      nextId++
-      return { id: String(nextId), name }
-    }
+  create(name) {
+    if (names.has(name)) throw new NameTaken({ name })
+    names.add(name)
+    nextId++
+    return { id: String(nextId), name }
   }
-})
+}
 
 export function createUser() {
   try {

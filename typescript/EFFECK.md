@@ -316,6 +316,7 @@ A declaration form starts with a word that an identifier follows on the same lin
 | `error NotFound { id: string }` | `class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}` | D126 |
 | `User!NotFound!Db`, `User!!`, `User!NotFound` | `Effect.Effect<User, NotFound, Db>`; an empty slot is `never`; left-out dependencies are `infer R` on a function with a body (`parseReturnType`), else `never` | D127 |
 | `service Users { find(id: string): User!NotFound }`, `control Approval { ... }` | `abstract class Users { abstract find(...) }`, with `extends Control` for `control`; bodiless instance members become abstract, value members also readonly (`effeckAbstractMembers`, cleared inside nested classes); an implemented member is EK2103 | D128 |
+| `layer UsersLive: Users { setup; find(id) { ... }; readonly region = "eu" }` | `const UsersLive = Layer.effect(Users, () => { setup; return { find(id) { ... }, region: "eu" } })`, or `Layer.succeed` without setup; setup after a member is EK2104 (`layers_check.go`) | D129 |
 
 In `.effeck` files, `parsePostfixTypeOrHigher` leaves `!` to `parseType`, which reads the slots of an Effect type; JSDoc's postfix non-null `T!` does not parse there. Hovers rewrite Effect types into the `!` form through `ls.RegisterQuickInfoTextHook` (`effeck/bang.go`), and contract messages write them the same way.
 

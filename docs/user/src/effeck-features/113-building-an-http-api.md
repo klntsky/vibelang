@@ -13,18 +13,16 @@ export service Users {
   create(name: string): { readonly id: string; readonly name: string }!NameTaken
 }
 
-export const UsersLive = Layer.effect(Users, () => {
+export layer UsersLive: Users {
   const names = new Set<string>()
   let nextId = 0
-  return {
-    create(name) {
-      if (names.has(name)) throw new NameTaken({ name })
-      names.add(name)
-      nextId++
-      return { id: String(nextId), name }
-    }
+  create(name) {
+    if (names.has(name)) throw new NameTaken({ name })
+    names.add(name)
+    nextId++
+    return { id: String(nextId), name }
   }
-})
+}
 ```
 
 `CreateUser` accepts a JSON object with a string `name`. `Users.create` declares `NameTaken` as an expected failure. The layer owns the set of names and the ID counter, so each layer build starts with isolated state.

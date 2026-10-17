@@ -81,8 +81,8 @@ function announceTicket() {
 }
 // string!!Sequence | Reporter
 
-const SequenceTest = Layer.succeed(Sequence, { next: () => 17 })
-const ReporterTest = Layer.succeed(Reporter, { write: (_message) => {} })
+layer SequenceTest: Sequence { next() { return 17 } }
+layer ReporterTest: Reporter { write(_message) {} }
 
 function testAnnouncement() {
   return Effect.provide(() => announceTicket(), wire(SequenceTest, ReporterTest))
@@ -126,14 +126,12 @@ service ReportSettings {
   prefix: string
 }
 
-const ReporterLive = Layer.effect(Reporter, () => {
+layer ReporterLive: Reporter {
   const settings = ReportSettings()
-  return {
-    write(message) {
-      log(`${settings.prefix}: ${message}`)
-    }
+  write(message) {
+    log(`${settings.prefix}: ${message}`)
   }
-})
+}
 // Layer<Reporter, never, ReportSettings>
 ```
 

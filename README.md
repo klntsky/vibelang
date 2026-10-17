@@ -62,6 +62,8 @@ clients, see [editors/](editors/README.md).
   dependencies left out of a function's return type are inferred from its body.
 - Declare a service with `service Users { find(id: string): User!NotFound }`
   and call `Users.find(id)`; `control` declares a control operation the same way.
+- Implement a service with `layer UsersLive: Users { find(id) { ... } }`;
+  statements before the members run once, when the layer builds.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`, the boundary
   hatches `sync`, `try`, and `callback`, the runners, and the Effect

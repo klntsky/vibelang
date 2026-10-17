@@ -17,18 +17,18 @@ service Footer {
   value: string
 }
 
-const PrefixLive = Layer.effect(Prefix, () => {
+layer PrefixLive: Prefix {
   log("Prefix initialized")
-  return { value: "Monthly" }
-})
-const HeadingLive = Layer.effect(Heading, () => {
+  readonly value = "Monthly"
+}
+layer HeadingLive: Heading {
   const prefix = Prefix()
-  return { value: `${prefix.value} report` }
-})
-const FooterLive = Layer.effect(Footer, () => {
+  readonly value = `${prefix.value} report`
+}
+layer FooterLive: Footer {
   const prefix = Prefix()
-  return { value: `${prefix.value} archive` }
-})
+  readonly value = `${prefix.value} archive`
+}
 
 const Shared = Layer.merge(
   Layer.provide(HeadingLive, PrefixLive),

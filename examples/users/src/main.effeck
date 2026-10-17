@@ -13,24 +13,22 @@ export service Users {
   find(id: string): User!UserNotFound
 }
 
-export const DirectoryLive = Layer.succeed(Directory, {
-  lookup: (id) => id === "42" ? { id, name: "Ada" } : undefined
-})
+export layer DirectoryLive: Directory {
+  lookup(id) { return id === "42" ? { id, name: "Ada" } : undefined }
+}
 
-export const UsersLive = Layer.effect(Users, () => {
+export layer UsersLive: Users {
   const directory = Directory()
-  return {
-    find(id) {
-      const user = directory.lookup(id)
-      if (user === undefined) throw new UserNotFound({ id })
-      return user
-    }
+  find(id) {
+    const user = directory.lookup(id)
+    if (user === undefined) throw new UserNotFound({ id })
+    return user
   }
-})
+}
 
-export const UsersTest = Layer.succeed(Users, {
-  find: (id) => ({ id, name: "Grace" })
-})
+export layer UsersTest: Users {
+  find(id) { return ({ id, name: "Grace" }) }
+}
 
 export const AppLive = wire(UsersLive, DirectoryLive)
 

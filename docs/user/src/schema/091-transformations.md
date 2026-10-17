@@ -85,7 +85,7 @@ function readRoute(input: unknown) {
 }
 // string!Schema.SchemaError!Routes
 
-const TestRoutes = Layer.succeed(Routes, { check: (_code) => {} })
+layer TestRoutes: Routes { check(_code) {} }
 
 function previewRoute() {
   return Effect.provide(() => readRoute("coastal"), TestRoutes)

@@ -110,10 +110,10 @@ function leaseId() {
 }
 // string!!LeaseStore
 
-const LeaseStoreTest = Layer.succeed(LeaseStore, {
-  acquire: () => ({ id: "test-lease" }),
-  release: (_lease) => {}
-})
+layer LeaseStoreTest: LeaseStore {
+  acquire() { return ({ id: "test-lease" }) }
+  release(_lease) {}
+}
 
 function example() {
   return Effect.provide(() => leaseId(), LeaseStoreTest)
