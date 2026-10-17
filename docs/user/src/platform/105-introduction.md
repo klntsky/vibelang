@@ -28,7 +28,7 @@ export function readGreeting() {
 
 ```sh
 npm install effect@4.0.5 @effect/platform-node
-npm install @effeck/runtime
+npm install effeck-runtime
 npm install --save-dev effeck
 ```
 
@@ -42,7 +42,7 @@ deno add npm:effect@4.0.5 npm:@effect/platform-node
 bun add effect@4.0.5 @effect/platform-bun
 ```
 
-`effeck` ships the `effeck` binary. Run `npx effeck` to check and compile the project's `.effeck` and `.ts` sources before launching the generated JavaScript; `npx effeck --noEmit` checks without emitting. The Bun and Deno projects also need `@effeck/runtime` and the compiler. Do not pass `.effeck` files directly to a TypeScript runner.
+`effeck` ships the `effeck` binary. Run `npx effeck` to check and compile the project's `.effeck` and `.ts` sources before launching the generated JavaScript; `npx effeck --noEmit` checks without emitting. The Bun and Deno projects also need `effeck-runtime` and the compiler. Do not pass `.effeck` files directly to a TypeScript runner.
 
 ## Writing platform-independent programs
 

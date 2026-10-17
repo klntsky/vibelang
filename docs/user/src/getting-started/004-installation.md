@@ -17,12 +17,12 @@ package manager installs only the one that matches your machine:
 
 | Platform | Package | Tested for 0.0.1 |
 | --- | --- | --- |
-| macOS on Apple silicon | `@effeck/darwin-arm64` | Yes |
-| macOS on Intel | `@effeck/darwin-x64` | No |
-| Linux on x64 | `@effeck/linux-x64` | Yes |
-| Linux on arm64 | `@effeck/linux-arm64` | No |
-| Windows on x64 | `@effeck/win32-x64` | No |
-| Windows on arm64 | `@effeck/win32-arm64` | No |
+| macOS on Apple silicon | `effeck-darwin-arm64` | Yes |
+| macOS on Intel | `effeck-darwin-x64` | No |
+| Linux on x64 | `effeck-linux-x64` | Yes |
+| Linux on arm64 | `effeck-linux-arm64` | No |
+| Windows on x64 | `effeck-win32-x64` | No |
+| Windows on arm64 | `effeck-win32-arm64` | No |
 
 Keep optional dependencies enabled. If an install skips them, for example with
 `npm install --omit=optional`, `effeck` cannot find its binary and exits with an
@@ -55,8 +55,8 @@ See [Getting Started](../013-getting-started.md) for the starter's files and
 ## Add Effeck to an existing project
 
 ```sh
-bun add @effeck/runtime@0.0.1 effect@4.0.5 @effect/platform-node@4.0.5
-bun add -d effeck@0.0.1 @effeck/vite@0.0.1 vitest@5.0.5 @effect/vitest@4.0.5
+bun add effeck-runtime@0.0.1 effect@4.0.5 @effect/platform-node@4.0.5
+bun add -d effeck@0.0.1 effeck-vite@0.0.1 vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 With npm, run `npm install --save-exact` for the first line and
@@ -64,16 +64,16 @@ With npm, run `npm install --save-exact` for the first line and
 
 | Package | Install as | Purpose |
 | --- | --- | --- |
-| `@effeck/runtime` | Dependency | The continuation kernel and helpers that compiled code imports |
+| `effeck-runtime` | Dependency | The continuation kernel and helpers that compiled code imports |
 | `effect`, `@effect/platform-node` | Dependency | Effect 4.0.5 and its Node platform |
 | `effeck` | Dev dependency | The compiler and language server, its native binary, and the VS Code extension |
-| `@effeck/vite` | Dev dependency | Compiles `.effeck` modules for Vite and Vitest |
+| `effeck-vite` | Dev dependency | Compiles `.effeck` modules for Vite and Vitest |
 | `vitest`, `@effect/vitest` | Dev dependency | Vitest 5.0.5 and `@effect/vitest` 4.0.5 for tests |
 
-`@effeck/runtime` requires `effect` 4.0.5 exactly and checks Effect's version
+`effeck-runtime` requires `effect` 4.0.5 exactly and checks Effect's version
 when it loads. Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at
 4.0.5, so the runtime and your program share one copy of `effect`. Keep
-`effeck`, `@effeck/runtime`, and `@effeck/vite` at the same version: they are
+`effeck`, `effeck-runtime`, and `effeck-vite` at the same version: they are
 released together.
 
 Add a `tsconfig.json` that selects `.effeck` sources and emits Node ESM to
@@ -117,7 +117,7 @@ Test `.effeck` files through the Vite plugin:
 // TypeScript (.ts)
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
-import effeck from "@effeck/vite"
+import effeck from "effeck-vite"
 
 export default defineConfig({
   plugins: [effeck()],
@@ -128,8 +128,8 @@ export default defineConfig({
 To update, install the new version of all three Effeck packages together:
 
 ```sh
-bun add @effeck/runtime@latest
-bun add -d effeck@latest @effeck/vite@latest
+bun add effeck-runtime@latest
+bun add -d effeck@latest effeck-vite@latest
 ```
 
 Effeck is v0, so a new version can change the language in breaking ways. Read
@@ -172,7 +172,7 @@ and `-b`.
 
 ## Coming from Effect
 
-Install `effeck` for `.effeck` compilation and `@effeck/runtime` alongside
+Install `effeck` for `.effeck` compilation and `effeck-runtime` alongside
 `effect@4.0.5`. Write application logic in `.effeck` and keep ordinary
 TypeScript integrations in `.ts`. The compiler checks both file types as one
 program.

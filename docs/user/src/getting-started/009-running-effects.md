@@ -18,7 +18,7 @@ bun run test
 `build` invokes `effeck` with the project's `tsconfig.json`. `start` builds, then
 runs `node --enable-source-maps dist/main.js`. `dev` builds once, then runs
 `effeck --watch` alongside `node --watch --enable-source-maps dist/main.js`.
-`test` runs Vitest on `src/**/*.test.effeck` through `@effeck/vite`, which
+`test` runs Vitest on `src/**/*.test.effeck` through `effeck-vite`, which
 compiles the project with `effeck` and serves the JavaScript, so tests need no
 prior build. Node and Vitest receive JavaScript; neither interprets `.effeck`
 sources directly.

@@ -8,7 +8,7 @@ Effeck uses Effect's modules and standard module import syntax. A small prelude 
 npm install effect@4.0.5
 ```
 
-The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](004-installation.md) for platform packages, `effeck`, and `@effeck/runtime`.
+The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](004-installation.md) for platform packages, `effeck`, and `effeck-runtime`.
 
 ## Module and namespace imports
 

@@ -22,7 +22,7 @@ Recovered from EmptyName
 `src/main.effeck` declares the abstract `Greeter` service, supplies its live layer,
 recovers a typed failure with `try`/`catch`, and starts the program with
 `NodeRuntime.runMain`. `src/greeting.test.effeck` uses `it.effect` to test success
-and recovery. Vitest compiles `src/**/*.test.effeck` through `@effeck/vite`; tests need no prior build.
+and recovery. Vitest compiles `src/**/*.test.effeck` through `effeck-vite`; tests need no prior build.
 
 Run `bun run dev` to compile on changes and restart Node when output changes.
 Press Ctrl+C to stop both watchers. For diagnostics and hovers in VS Code or

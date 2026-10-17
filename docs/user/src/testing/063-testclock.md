@@ -5,7 +5,7 @@
 ## Configure the test runner
 
 The [starter](../getting-started/004-installation.md) includes Vitest 5.0.5,
-`@effect/vitest` 4.0.5, and the local `@effeck/vite` plugin. Run
+`@effect/vitest` 4.0.5, and the local `effeck-vite` plugin. Run
 `bun run test` to compile and execute `src/**/*.test.effeck` directly. Tests need no
 prior `dist/` build. Keep configuration in TypeScript:
 
@@ -13,7 +13,7 @@ prior `dist/` build. Keep configuration in TypeScript:
 // TypeScript (.ts)
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
-import effeck from "@effeck/vite"
+import effeck from "effeck-vite"
 
 export default defineConfig({
   plugins: [effeck()],

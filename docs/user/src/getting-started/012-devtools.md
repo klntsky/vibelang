@@ -100,7 +100,7 @@ Only EK2004 and EK4403 can be set to `"error"`, `"warning"`, or `"off"`; the val
 
 Run `effeck --noEmit` for type checking. The compiler owns type and language
 diagnostics in the terminal, editor, and Vite overlay. The local
-`@effeck/vite` package supports Vite 7 and 8 and Vitest 5. It runs one
+`effeck-vite` package supports Vite 7 and 8 and Vitest 5. It runs one
 whole-project compiler subprocess on the first request and after edits, serves
 JavaScript and source maps, and invalidates loaded `.effeck` modules and their
 importers. It does not use `effeck --api`.
@@ -109,7 +109,7 @@ importers. It does not use `effeck --api`.
 // TypeScript (.ts)
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
-import effeck from "@effeck/vite"
+import effeck from "effeck-vite"
 
 export default defineConfig({
   plugins: [effeck()],
@@ -122,7 +122,7 @@ compiles source tests without a prior build. See
 [TestClock](../testing/063-testclock.md) for tests with virtual time.
 
 D35 assigns syntactic linting to Oxlint and reserves type-aware rules for `.ts`
-files. `@effeck/oxlint-config` and a tested Vite Plus integration are not
+files. `effeck-oxlint-config` and a tested Vite Plus integration are not
 shipped. Keep type-aware linting off `.effeck`: a stock TypeScript checker models
 different call semantics.
 

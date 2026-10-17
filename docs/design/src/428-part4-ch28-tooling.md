@@ -10,7 +10,9 @@ bun run dev
 bun x --no-install effeck --noEmit
 ```
 
-Effeck 0.0.1 installs from npm under the names D125 chose. `create-effeck`
+Effeck 0.0.1 installs from npm as unscoped packages: `effeck`,
+`effeck-runtime`, `effeck-vite`, `create-effeck`, and one `effeck-<os>-<cpu>`
+package per platform. `create-effeck`
 copies the starter, pins the Effeck packages to its own version, and installs
 dependencies; `--no-install` skips installation. Projects need Node 26 or later
 and Bun 1.4 or later. The compiler is a native binary: `effeck` lists one
@@ -20,12 +22,12 @@ planned:
 
 | Platform | Package | Tested for 0.0.1 |
 | --- | --- | --- |
-| macOS on Apple silicon | `@effeck/darwin-arm64` | Yes |
-| macOS on Intel | `@effeck/darwin-x64` | No |
-| Linux on x64 | `@effeck/linux-x64` | Yes |
-| Linux on arm64 | `@effeck/linux-arm64` | No |
-| Windows on x64 | `@effeck/win32-x64` | No |
-| Windows on arm64 | `@effeck/win32-arm64` | No |
+| macOS on Apple silicon | `effeck-darwin-arm64` | Yes |
+| macOS on Intel | `effeck-darwin-x64` | No |
+| Linux on x64 | `effeck-linux-x64` | Yes |
+| Linux on arm64 | `effeck-linux-arm64` | No |
+| Windows on x64 | `effeck-win32-x64` | No |
+| Windows on arm64 | `effeck-win32-arm64` | No |
 
 To work on Effeck itself, install from a checkout instead. `sh scripts/setup.sh`
 requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
@@ -36,7 +38,7 @@ requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
 `file:` dependencies on the checkout's compiler and Vite packages and on the
 runtime tarball that setup packs (D120). Keep the checkout available; after
 updating it, rerun setup and run
-`bun update @effeck/runtime effeck @effeck/vite`
+`bun update effeck-runtime effeck effeck-vite`
 in projects created from it.
 
 Setup links `~/.local/bin/effeck` when that directory is already on PATH and no
@@ -49,9 +51,9 @@ Setup preserves unrelated templates and never edits shell configuration.
 | Package | Current implementation |
 | --- | --- |
 | `effeck` | The compiler and language server: a Node launcher that forwards arguments, streams, signals, and exit status to the native binary of the matching platform package (`EFFECK_BINARY` overrides it), plus the VS Code extension at `editor/effeck.vsix` |
-| `@effeck/<os>-<cpu>` | The native `effeck` binary for one platform |
-| `@effeck/runtime` | Continuation kernel, prelude, and generated-code helpers; see its README for the ABI |
-| `@effeck/vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
+| `effeck-<os>-<cpu>` | The native `effeck` binary for one platform |
+| `effeck-runtime` | Continuation kernel, prelude, and generated-code helpers; see its README for the ABI |
+| `effeck-vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
 | `create-effeck` | Scaffolds the starter for `bun create effeck` and `npm create effeck` |
 | VS Code extension | Ships inside `effeck` as `editor/effeck.vsix`; not on the VS Code Marketplace or Open VSX |
 
@@ -105,7 +107,7 @@ The starter tests source files through the Vite plugin:
 // TypeScript (.ts)
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
-import effeck from "@effeck/vite"
+import effeck from "effeck-vite"
 
 export default defineConfig({
   plugins: [effeck()],
@@ -220,7 +222,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 D35 assigns type and language diagnostics to `effeck` and reserves type-aware
 linting for `.ts` files. A stock TypeScript checker models different call
 semantics and cannot type-check Effeck correctly. Run `effeck --noEmit`
-for `.effeck` checking. `@effeck/oxlint-config` is not shipped, and Vite Plus
+for `.effeck` checking. `effeck-oxlint-config` is not shipped, and Vite Plus
 integration has no acceptance coverage yet. Do not install an unpublished
 lint-config package from the registry.
 

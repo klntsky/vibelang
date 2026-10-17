@@ -18,7 +18,7 @@ bun run test
 
 With npm, run `npm create effeck@latest my-app`. You need Node 26 or later and
 Bun 1.4 or later. The command copies a starter, pins `effeck`,
-`@effeck/runtime`, and `@effeck/vite` to one version, and installs dependencies;
+`effeck-runtime`, and `effeck-vite` to one version, and installs dependencies;
 `--no-install` skips installation. The compiler is a native binary from a
 per-platform package for macOS, Linux, and Windows on arm64 and x64. Version
 0.0.1 is tested on macOS on Apple silicon and on Linux on x64.
@@ -99,7 +99,7 @@ prefers that local template over the npm package, so projects created after
 setup use absolute `file:` dependencies on this checkout's compiler and Vite
 packages and on the runtime tarball that setup packs. Keep the checkout
 available. Rerun setup after updating it, then run
-`bun update @effeck/runtime effeck @effeck/vite` in those projects. To scaffold
+`bun update effeck-runtime effeck effeck-vite` in those projects. To scaffold
 from npm instead, run `npm create effeck@latest`, or remove
 `~/.bun-create/effeck`.
 
