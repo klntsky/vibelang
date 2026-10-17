@@ -5,12 +5,12 @@
 import { Schema, SchemaTransformation } from "effect"
 
 interface Crate {
-  readonly count: number
-  readonly children: ReadonlyArray<Crate>
+  count: number
+  children: ReadonlyArray<Crate>
 }
 interface CrateWire {
-  readonly count: string
-  readonly children: ReadonlyArray<CrateWire>
+  count: string
+  children: ReadonlyArray<CrateWire>
 }
 
 const Crate = Schema.Struct({

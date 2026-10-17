@@ -4,10 +4,10 @@ class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> 
 class MailError extends TaggedError("MailError")<{ readonly reason: string }> {}
 
 interface User {
-  readonly id: string
-  readonly name: string
-  readonly email: string
-  readonly subscribed: boolean
+  id: string
+  name: string
+  email: string
+  subscribed: boolean
 }
 
 abstract class Users {

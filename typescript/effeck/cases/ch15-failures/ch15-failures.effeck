@@ -5,12 +5,12 @@ class UploadError extends TaggedError("UploadError")<{ readonly file: string }> 
 class Expected extends TaggedError("Expected")<{}> {}
 
 interface TempFile {
-  readonly name: string
+  name: string
   write(row: string): Effect<void, never, never>
 }
 
 interface Account {
-  readonly id: string
+  id: string
 }
 
 abstract class TempFiles {

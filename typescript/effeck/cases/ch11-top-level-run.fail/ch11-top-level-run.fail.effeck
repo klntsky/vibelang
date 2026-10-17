@@ -3,7 +3,7 @@
 // inside one.
 
 interface AppConfig {
-  readonly port: number
+  port: number
 }
 
 function loadConfig() {

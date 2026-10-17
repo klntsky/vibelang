@@ -9,9 +9,9 @@ class ConnectError extends TaggedError("ConnectError")<{ readonly url: string }>
 class ConfigError extends TaggedError("ConfigError")<{ readonly key: string }> {}
 
 interface User {
-  readonly id: string
-  readonly name: string
-  readonly email: string
+  id: string
+  name: string
+  email: string
 }
 
 abstract class Users {

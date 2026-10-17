@@ -8,29 +8,29 @@ class MailError extends TaggedError("MailError")<{ readonly reason: string }> {}
 class IOError extends TaggedError("IOError")<{ readonly path: string }> {}
 
 interface Item {
-  readonly sku: string
-  readonly price: number
+  sku: string
+  price: number
 }
 
 interface Cart {
-  readonly id: string
-  readonly items: ReadonlyArray<Item>
+  id: string
+  items: ReadonlyArray<Item>
 }
 
 interface Quote {
-  readonly total: number
-  readonly estimated: boolean
+  total: number
+  estimated: boolean
 }
 
 interface User {
-  readonly id: string
-  readonly name: string
-  readonly email: string
+  id: string
+  name: string
+  email: string
 }
 
 interface Entry {
-  readonly isDirectory: boolean
-  readonly size: number
+  isDirectory: boolean
+  size: number
 }
 
 abstract class Carts {

@@ -4,7 +4,7 @@
 class NotFound extends TaggedError("NotFound")<{ readonly id: number }> {}
 
 interface Account {
-  readonly owner: { readonly name: string } | undefined
+  owner: { name: string } | undefined
 }
 
 function ownerName(account: Account) {

@@ -6,15 +6,15 @@ class DbError extends TaggedError("DbError")<{ readonly reason: string }> {}
 class ConnectError extends TaggedError("ConnectError")<{ readonly url: string }> {}
 
 interface User {
-  readonly id: string
-  readonly name: string
-  readonly email: string
+  id: string
+  name: string
+  email: string
 }
 
 interface Row {
-  readonly id: string
-  readonly name: string
-  readonly email: string
+  id: string
+  name: string
+  email: string
 }
 
 // Declaring a service

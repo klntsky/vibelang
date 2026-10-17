@@ -5,25 +5,25 @@ class IOError extends TaggedError("IOError")<{ readonly path: string }> {}
 class ParseError extends TaggedError("ParseError")<{ readonly text: string }> {}
 
 interface FileHandle {
-  readonly path: string
+  path: string
   readAll(): Effect<string, IOError, never>
   close(): Effect<void, never, never>
 }
 
 interface Report {
-  readonly title: string
-  readonly lines: number
+  title: string
+  lines: number
 }
 
 interface Diff {
-  readonly same: boolean
-  readonly left: number
-  readonly right: number
+  same: boolean
+  left: number
+  right: number
 }
 
 interface Connection {
-  readonly id: number
-  open: boolean
+  id: number
+  mutable open: boolean
 }
 
 // Files.open returns a scoped resource: Effect<FileHandle, IOError, Scope>.

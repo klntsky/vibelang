@@ -6,17 +6,17 @@ class FetchError extends TaggedError("FetchError")<{ readonly attempt: number }>
 class SyncError extends TaggedError("SyncError")<{ readonly store: string }> {}
 
 interface User {
-  readonly id: string
-  readonly name: string
+  id: string
+  name: string
 }
 
 interface Store {
-  readonly name: string
+  name: string
 }
 
 interface SyncReport {
-  readonly store: string
-  readonly items: number
+  store: string
+  items: number
 }
 
 abstract class Inventory {

@@ -123,9 +123,36 @@ func (p *Parser) effeckAbstractMember(modifiers *ast.ModifierList, name *ast.Nod
 	return p.effeckModifiers(modifiers, name, ast.KindAbstractKeyword)
 }
 
-// effeckReadonly adds a synthesized readonly modifier, anchored on the
-// property's name, to the modifiers of a property signature, unless it has one.
-func (p *Parser) effeckReadonly(modifiers *ast.ModifierList, name *ast.Node) *ast.ModifierList {
+// Readonly members (D134). In an .effeck file a property signature or an
+// index signature of an interface or an object type is readonly unless it is
+// written with mutable:
+//
+//	interface Counter { label: string; mutable count: number }
+//
+// reads as `interface Counter { readonly label: string; count: number }`.
+// mutable is a modifier only when a member name follows it on the same line,
+// so a member named mutable still parses as before.
+
+// parseEffeckMutable consumes mutable at the start of a type member and
+// reports whether it did.
+func (p *Parser) parseEffeckMutable() bool {
+	if p.token != ast.KindIdentifier || p.scanner.TokenValue() != "mutable" || !p.lookAhead((*Parser).nextTokenStartsMemberNameOnSameLine) {
+		return false
+	}
+	p.nextToken()
+	return true
+}
+
+// nextTokenStartsMemberNameOnSameLine reports whether the next token, on the
+// same line, starts a member's name or an index signature.
+func (p *Parser) nextTokenStartsMemberNameOnSameLine() bool {
+	p.nextToken()
+	return !p.hasPrecedingLineBreak() && (p.isLiteralPropertyName() || p.token == ast.KindOpenBracketToken)
+}
+
+// effeckReadonly adds a synthesized readonly modifier, anchored on anchor, a
+// member's name or its first token, to modifiers, unless they have one.
+func (p *Parser) effeckReadonly(modifiers *ast.ModifierList, anchor core.TextRange) *ast.ModifierList {
 	if modifiers != nil {
 		for _, modifier := range modifiers.Nodes {
 			if modifier.Kind == ast.KindReadonlyKeyword {
@@ -133,9 +160,9 @@ func (p *Parser) effeckReadonly(modifiers *ast.ModifierList, name *ast.Node) *as
 			}
 		}
 	}
-	readonly := p.effeckSynthesized(p.factory.NewModifier(ast.KindReadonlyKeyword), name.Loc)
+	readonly := p.effeckSynthesized(p.factory.NewModifier(ast.KindReadonlyKeyword), anchor)
 	if modifiers == nil {
-		return p.newModifierList(name.Loc, []*ast.Node{readonly})
+		return p.newModifierList(anchor, []*ast.Node{readonly})
 	}
 	return p.newModifierList(modifiers.Loc, append([]*ast.Node{readonly}, modifiers.Nodes...))
 }
@@ -156,10 +183,7 @@ func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifier
 	typeParameters := p.parseTypeParameters()
 	var fields *ast.Node
 	if p.token == ast.KindOpenBraceToken {
-		saveReadonly := p.effeckReadonlyMembers
-		p.effeckReadonlyMembers = true
-		fields = p.parseTypeLiteral()
-		p.effeckReadonlyMembers = saveReadonly
+		fields = p.parseTypeLiteral() // readonly unless written mutable (D134)
 	} else {
 		fields = p.effeckSynthesized(p.factory.NewTypeLiteralNode(p.newNodeList(name.Loc, nil)), name.Loc)
 	}
@@ -853,6 +877,8 @@ func (p *Parser) effeckClauseResumes(block *ast.Node, anchor core.TextRange) boo
 //	})
 //	interface User extends Schema.Schema.Type<typeof User> {}
 //
+// A field written mutable gets Schema.mutableKey (D134).
+//
 // A field's type becomes the schema of its values: a primitive, a literal, a
 // union, an array, a tuple, a record, an object type, or the name of another
 // schema, which the struct refers to as a value. Any other type becomes
@@ -937,6 +963,10 @@ func (p *Parser) effeckSchemaFields(members []*ast.Node, body core.TextRange) *a
 		value := p.effeckSchemaOf(member.Type())
 		if member.PostfixToken() != nil && member.PostfixToken().Kind == ast.KindQuestionToken {
 			value = p.effeckSchemaCall("optional", member.PostfixToken().Loc, value)
+		}
+		if !ast.HasSyntacticModifier(member, ast.ModifierFlagsReadonly) {
+			// Written mutable (D134): the field's key is mutable.
+			value = p.effeckSchemaCall("mutableKey", name.Loc, value)
 		}
 		properties = append(properties, p.effeckSpanning(p.factory.NewPropertyAssignment(nil /*modifiers*/, name, nil /*postfixToken*/, nil /*typeNode*/, value), core.NewTextRange(name.Pos(), value.End())))
 	}

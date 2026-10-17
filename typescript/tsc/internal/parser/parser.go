@@ -99,7 +99,7 @@ type Parser struct {
 	setParentFromContext ast.Visitor
 	reparsedClones       []*ast.Node
 
-	effeckReadonlyMembers     bool               // property signatures get a readonly modifier (effeck.go)
+	effeckMutableMember       bool               // the type member being parsed was written with mutable (effeck.go)
 	effeckAbstractMembers     bool               // bodiless class members become abstract: a service or control body (effeck.go)
 	effeckOmittedDependencies map[*ast.Node]bool // Effect types whose dependencies were left out (effeck.go)
 }
@@ -3289,6 +3289,7 @@ func (p *Parser) parseTypeMember() *ast.Node {
 	}
 	pos := p.nodePos()
 	jsdoc := p.jsdocScannerInfo()
+	mutable := p.isEffeckFile() && p.parseEffeckMutable() // members are readonly unless written mutable (effeck.go)
 	modifiers := p.parseModifiers()
 	if p.parseContextualModifier(ast.KindGetKeyword) {
 		return p.parseAccessorDeclaration(pos, jsdoc, modifiers, ast.KindGetAccessor, ParseFlagsType)
@@ -3297,8 +3298,12 @@ func (p *Parser) parseTypeMember() *ast.Node {
 		return p.parseAccessorDeclaration(pos, jsdoc, modifiers, ast.KindSetAccessor, ParseFlagsType)
 	}
 	if p.isIndexSignature() {
+		if p.isEffeckFile() && !mutable {
+			modifiers = p.effeckReadonly(modifiers, p.scanner.TokenRange())
+		}
 		return p.parseIndexSignatureDeclaration(pos, jsdoc, modifiers)
 	}
+	p.effeckMutableMember = mutable
 	return p.parsePropertyOrMethodSignature(pos, jsdoc, modifiers)
 }
 
@@ -3683,6 +3688,8 @@ func (p *Parser) parseIndexSignatureDeclaration(pos int, jsdoc jsdocScannerInfo,
 }
 
 func (p *Parser) parsePropertyOrMethodSignature(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList) *ast.Node {
+	mutable := p.effeckMutableMember
+	p.effeckMutableMember = false
 	name := p.parsePropertyName()
 	questionToken := p.parseOptionalToken(ast.KindQuestionToken)
 	var result *ast.Node
@@ -3702,8 +3709,8 @@ func (p *Parser) parsePropertyOrMethodSignature(pos int, jsdoc jsdocScannerInfo,
 		if p.token == ast.KindEqualsToken {
 			initializer = p.parseInitializer()
 		}
-		if p.effeckReadonlyMembers {
-			modifiers = p.effeckReadonly(modifiers, name)
+		if p.isEffeckFile() && !mutable {
+			modifiers = p.effeckReadonly(modifiers, name.Loc)
 		}
 		result = p.factory.NewPropertySignatureDeclaration(modifiers, name, questionToken, typeNode, initializer)
 	}
@@ -6069,6 +6076,9 @@ func (p *Parser) scanTypeMemberStart() bool {
 		return true
 	}
 	idToken := false
+	if p.isEffeckFile() {
+		p.parseEffeckMutable() // mutable before a member name (effeck.go)
+	}
 	// Eat up all modifiers, but hold on to the last one in case it is actually an identifier
 	for ast.IsModifierKind(p.token) {
 		idToken = true

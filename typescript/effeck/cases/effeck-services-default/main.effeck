@@ -5,7 +5,7 @@
 import { Effect, Layer } from "effect"
 
 interface Session {
-  readonly user: string
+  user: string
 }
 
 abstract class Sessions {

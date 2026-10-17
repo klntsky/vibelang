@@ -1,0 +1,17 @@
+// expect: TS2540
+interface Point {
+  x: number
+  y: number
+}
+
+// TS2540: x is readonly, since it is not written mutable.
+export function move(point: Point) {
+  point.x = point.x + 1
+  return point
+}
+
+// TS2540: so is a member of an object type.
+export function rename(user: { name: string }) {
+  user.name = "Ada"
+  return user
+}

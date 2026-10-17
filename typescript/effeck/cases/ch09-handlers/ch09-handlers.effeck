@@ -7,25 +7,25 @@ class Declined extends TaggedError("Declined")<{ readonly cartId: string }> {}
 class PaymentError extends TaggedError("PaymentError")<{ readonly cartId: string }> {}
 
 interface Receipt {
-  readonly cartId: string
-  readonly paid: boolean
+  cartId: string
+  paid: boolean
 }
 
 interface Hold {
-  readonly cartId: string
+  cartId: string
 }
 
 interface Cell {
-  readonly row: number
-  readonly value: number
+  row: number
+  value: number
 }
 
 interface Cursor {
-  readonly cells: ReadonlyArray<Cell>
+  cells: ReadonlyArray<Cell>
 }
 
 interface Grid {
-  readonly rows: ReadonlyArray<number>
+  rows: ReadonlyArray<number>
   open(row: number): Effect<Cursor, never, Scope.Scope>
 }
 

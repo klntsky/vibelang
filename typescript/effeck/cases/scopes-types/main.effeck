@@ -2,7 +2,7 @@
 // it forks, so Scope leaves R only there (D14, D19, D47). contracts.ts checks
 // each function's contract.
 export interface Conn {
-  readonly id: number
+  id: number
 }
 
 export class Down extends TaggedError("Down")<{}> {}

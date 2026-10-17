@@ -141,7 +141,7 @@ function scenario() {
     sum,
     shadow,
     doubleResume: Exit.isFailure(doubled)
-      ? doubled.cause.reasons.map((reason) => (reason._tag === "Die" ? (reason.defect as { readonly _tag?: string })._tag : reason._tag))
+      ? doubled.cause.reasons.map((reason) => (reason._tag === "Die" ? (reason.defect as { _tag?: string })._tag : reason._tag))
       : ["Success"],
     abandoned,
     dropped,

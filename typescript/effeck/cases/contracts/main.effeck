@@ -8,8 +8,8 @@ export class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id
 export class Invalid extends Data.TaggedError("Invalid")<{ readonly raw: string }> {}
 
 export interface User {
-  readonly id: string
-  readonly name: string
+  id: string
+  name: string
 }
 
 const users = new Map<string, User>([["42", { id: "42", name: "Ada" }]])
@@ -31,7 +31,7 @@ export function answer(): Effect<number, never, never> {
 }
 
 // The returned object literal is checked against A.
-export function point(): Effect<{ readonly x: number; readonly kind: "point" }, never, never> {
+export function point(): Effect<{ x: number; kind: "point" }, never, never> {
   return { x: 1, kind: "point" }
 }
 

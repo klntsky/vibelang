@@ -28,8 +28,8 @@ export function parity(n: number) {
 // Self-recursion whose success type does not depend on itself needs no
 // contract: total is declared as a number.
 interface Entry {
-  readonly size: number
-  readonly children: ReadonlyArray<string>
+  size: number
+  children: ReadonlyArray<string>
 }
 
 export class Missing extends TaggedError("Missing")<{ readonly path: string }> {}

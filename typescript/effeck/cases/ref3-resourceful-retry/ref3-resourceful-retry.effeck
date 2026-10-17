@@ -5,7 +5,7 @@ import { Schedule, Scope } from "effect"
 class Flaky extends TaggedError("Flaky")<{ readonly attempt: number }> {}
 
 interface Conn {
-  readonly id: number
+  id: number
 }
 
 abstract class Pool {

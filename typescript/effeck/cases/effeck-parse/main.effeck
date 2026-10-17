@@ -1,7 +1,7 @@
 // An .effeck file is parsed and checked as TypeScript. Nothing is lowered yet.
 export interface Point {
-  readonly x: number
-  readonly y: number
+  x: number
+  y: number
 }
 
 export function add(a: Point, b: Point): Point {

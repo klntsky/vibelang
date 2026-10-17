@@ -3,17 +3,17 @@
 import { Fiber, Scope } from "effect"
 
 interface Profile {
-  readonly id: string
-  readonly name: string
+  id: string
+  name: string
 }
 
 interface Order {
-  readonly id: string
-  readonly total: number
+  id: string
+  total: number
 }
 
 interface Server {
-  readonly port: number
+  port: number
   awaitShutdown(): Effect<string, never, never>
 }
 

@@ -3,7 +3,7 @@
 class MailError extends TaggedError("MailError")<{ readonly reason: string }> {}
 
 abstract class Users {
-  abstract find(id: string): Effect<{ readonly email: string; readonly name: string }, never, never>
+  abstract find(id: string): Effect<{ email: string; name: string }, never, never>
 }
 
 abstract class Mailer {

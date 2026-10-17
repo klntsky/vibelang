@@ -8,8 +8,8 @@ class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: strin
 class DbError extends Data.TaggedError("DbError")<{ readonly reason: string }> {}
 
 interface User {
-  readonly id: string
-  readonly name: string
+  id: string
+  name: string
 }
 
 abstract class Users {
