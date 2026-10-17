@@ -213,6 +213,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2106 | A catch clause after an untyped catch clause (D131) | Move the untyped clause last | 3 |
 | EK2107 | A handle clause whose control is not a control declaration, such as a service (D132) | Provide a service with a layer; handle only a control's operations | 9 |
 | EK2108 | A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132) | Add the missing clause, or remove the second | 9 |
+| EK2109 | A field of a `schema` declaration whose type has no schema form, or names a value that is not a schema (D133) | Declare the schema with `Schema.Struct`, or name a schema constant | 11 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |

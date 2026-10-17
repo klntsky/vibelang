@@ -104,6 +104,8 @@ var (
 	EK2107 = message(2107, errorCategory, "{0} is not a control: a handle clause answers an operation that a control declares.")
 	// EK2108: a control's operation without a clause in a handle statement. {0} lists the operations, {1} is the control.
 	EK2108 = message(2108, errorCategory, "{0} has no clause: a handle statement answers every operation of {1}.")
+	// EK2109: a schema declaration's field whose type has no schema form. {0} is the type.
+	EK2109 = message(2109, errorCategory, "{0} has no schema form: a schema declaration's field is a primitive, a literal, a union, an array, a tuple, a record, an object type, or another schema.")
 	// EK2102: a recursive function whose A depends on its own result. {0} is the function.
 	EK2102 = message(2102, errorCategory, "{0} calls itself, and its success type depends on that call, so its contract must be written.")
 
@@ -154,7 +156,7 @@ var registry = map[int32]*Message{}
 func init() {
 	for _, m := range []*Message{
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008,
-		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108,
+		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4501,
 	} {

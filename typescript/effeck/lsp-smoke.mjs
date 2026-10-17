@@ -509,6 +509,22 @@ try {
     assert(location.range.start.line === lineOf("src/declarations.effeck", "approve(request: string)"), `line ${location.range.start.line}`)
   })
 
+  await check("hover: a schema declaration's interface types a field by its schema", async () => {
+    const shown = await hover("src/declarations.effeck", "tier\n")
+    assert(shown.includes('tier: "free" | "pro"'), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a schema declaration's name is its decoded type", async () => {
+    const shown = await hover("src/declarations.effeck", "Profile) {")
+    assert(shown.includes("interface Profile"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("definition: a schema field that names another schema goes to its declaration", async () => {
+    const [location] = await definition("src/declarations.effeck", "Place\n")
+    assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)
+    assert(location.range.start.line === lineOf("src/declarations.effeck", "export schema Place"), `line ${location.range.start.line}`)
+  })
+
   await check("diagnostics: report.ts, which imports an .effeck function, checks clean", async () => {
     const items = await diagnostics("src/report.ts")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)

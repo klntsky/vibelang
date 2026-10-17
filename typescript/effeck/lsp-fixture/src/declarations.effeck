@@ -45,3 +45,17 @@ export function approved(version: string) {
     resume(request.startsWith("v"))
   }
 }
+
+export schema Place {
+  city: string
+}
+
+export schema Profile {
+  name: string
+  tier: "free" | "pro"
+  home: Place
+}
+
+export function tierOf(profile: Profile) {
+  return profile.tier
+}

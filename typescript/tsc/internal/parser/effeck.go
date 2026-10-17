@@ -3,6 +3,7 @@ package parser
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
@@ -27,7 +28,7 @@ func (p *Parser) isEffeckFile() bool {
 // that parses today.
 func isEffeckDeclarationWord(text string) bool {
 	switch text {
-	case "error", "service", "control", "layer":
+	case "error", "service", "control", "layer", "schema":
 		return true
 	}
 	return false
@@ -58,6 +59,8 @@ func (p *Parser) parseEffeckDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 		return p.parseServiceDeclaration(pos, jsdoc, modifiers, true /*control*/)
 	case "layer":
 		return p.parseLayerDeclaration(pos, jsdoc, modifiers)
+	case "schema":
+		return p.parseSchemaDeclaration(pos, jsdoc, modifiers)
 	}
 	return nil
 }
@@ -833,4 +836,222 @@ func (p *Parser) effeckClauseResumes(block *ast.Node, anchor core.TextRange) boo
 	}
 	tail(block)
 	return used
+}
+
+// parseSchemaDeclaration parses
+//
+//	schema User { id: string; nickname?: string; role: "admin" | "member"; tags: ReadonlyArray<string>; home: Address }
+//
+// as the two declarations it abbreviates (D133):
+//
+//	const User = Schema.Struct({
+//	  id: Schema.String,
+//	  nickname: Schema.optional(Schema.String),
+//	  role: Schema.Literals(["admin", "member"]),
+//	  tags: Schema.Array(Schema.String),
+//	  home: Address
+//	})
+//	interface User extends Schema.Schema.Type<typeof User> {}
+//
+// A field's type becomes the schema of its values: a primitive, a literal, a
+// union, an array, a tuple, a record, an object type, or the name of another
+// schema, which the struct refers to as a value. Any other type becomes
+// Schema.Unknown flagged NodeFlagsEffeck, which the checker reports as EK2109
+// (schemas.go). The struct call is flagged NodeFlagsEffeck too. The interface
+// goes to p.reparseList, so the statement list holds it before the constant.
+func (p *Parser) parseSchemaDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList) *ast.Node {
+	keyword := p.scanner.TokenRange()
+	p.nextToken() // schema
+	name := p.parseBindingIdentifier()
+	var members []*ast.Node
+	body := name.Loc
+	if p.token == ast.KindOpenBraceToken {
+		literal := p.parseTypeLiteral()
+		members = literal.AsTypeLiteralNode().Members.Nodes
+		body = literal.Loc
+	}
+	fields := p.effeckSchemaFields(members, body)
+	statement := p.factory.NewVariableStatement(modifiers, p.effeckSpanning(p.factory.NewVariableDeclarationList(
+		p.newNodeList(core.NewTextRange(name.Pos(), fields.End()), []*ast.Node{
+			p.effeckSpanning(p.factory.NewVariableDeclaration(name, nil /*exclamationToken*/, nil /*typeNode*/, fields), core.NewTextRange(name.Pos(), fields.End())),
+		}), ast.NodeFlagsConst), core.NewTextRange(name.Pos(), fields.End())))
+	p.finishNode(statement, pos)
+	p.withJSDoc(statement, jsdoc)
+
+	// interface User extends Schema.Schema.Type<typeof User> {}
+	var interfaceModifiers *ast.ModifierList
+	if modifiers != nil {
+		var copies []*ast.Node
+		for _, modifier := range modifiers.Nodes {
+			copies = append(copies, p.effeckSynthesized(p.factory.NewModifier(modifier.Kind), keyword))
+		}
+		interfaceModifiers = p.newModifierList(keyword, copies)
+	}
+	typeName := p.effeckSynthesized(p.factory.NewIdentifier(name.Text()), name.Loc)
+	query := p.effeckSynthesized(p.factory.NewTypeQueryNode(p.effeckSynthesized(p.factory.NewIdentifier(name.Text()), name.Loc), nil /*typeArguments*/), name.Loc)
+	helper := p.effeckSchemaMember(p.effeckSchemaMember(nil, "Schema", keyword), "Type", keyword)
+	base := p.effeckSynthesized(p.factory.NewExpressionWithTypeArguments(helper, p.newNodeList(name.Loc, []*ast.Node{query})), keyword)
+	clause := p.effeckSynthesized(p.factory.NewHeritageClause(ast.KindExtendsKeyword, p.newNodeList(keyword, []*ast.Node{base})), keyword)
+	declaration := p.factory.NewInterfaceDeclaration(interfaceModifiers, typeName, nil /*typeParameters*/, p.newNodeList(keyword, []*ast.Node{clause}), p.newNodeList(keyword, nil))
+	p.effeckSynthesized(declaration, core.NewTextRange(pos, keyword.End()))
+	p.reparseList = append(p.reparseList, declaration)
+	return statement
+}
+
+// effeckSchemaMember makes Schema.<name>, or <object>.<name> when object is
+// not nil, synthesized at anchor.
+func (p *Parser) effeckSchemaMember(object *ast.Node, name string, anchor core.TextRange) *ast.Node {
+	if object == nil {
+		object = p.effeckSynthesized(p.factory.NewIdentifier("Schema"), anchor)
+	}
+	member := p.effeckSynthesized(p.factory.NewIdentifier(name), anchor)
+	return p.effeckSynthesized(p.factory.NewPropertyAccessExpression(object, nil /*questionDotToken*/, member, ast.NodeFlagsNone), anchor)
+}
+
+// effeckSchemaCall makes Schema.<name>(arguments...), whose callee stands on
+// anchor and which spans anchor and its arguments.
+func (p *Parser) effeckSchemaCall(name string, anchor core.TextRange, arguments ...*ast.Node) *ast.Node {
+	span := anchor
+	if len(arguments) != 0 {
+		span = core.NewTextRange(min(anchor.Pos(), arguments[0].Pos()), max(anchor.End(), arguments[len(arguments)-1].End()))
+	}
+	list := p.newNodeList(span, arguments)
+	return p.effeckSpanning(p.factory.NewCallExpression(p.effeckSchemaMember(nil, name, anchor), nil /*questionDotToken*/, nil /*typeArguments*/, list, ast.NodeFlagsNone), span)
+}
+
+// effeckSchemaFields makes Schema.Struct({ ... }) of members, the members of
+// a schema declaration's body or of an object type in a field, flagged
+// NodeFlagsEffeck. body is the range of the braces.
+func (p *Parser) effeckSchemaFields(members []*ast.Node, body core.TextRange) *ast.Node {
+	var properties []*ast.Node
+	for _, member := range members {
+		name := member.Name()
+		if name == nil || !ast.IsPropertySignatureDeclaration(member) || member.Type() == nil {
+			// A method, an index signature, or a property without a type.
+			if name == nil {
+				name = p.effeckSynthesized(p.factory.NewStringLiteral("", ast.TokenFlagsNone), member.Loc)
+			}
+			properties = append(properties, p.effeckSpanning(p.factory.NewPropertyAssignment(nil /*modifiers*/, name, nil /*postfixToken*/, nil /*typeNode*/, p.effeckUnsupportedSchema(member.Loc)), member.Loc))
+			continue
+		}
+		value := p.effeckSchemaOf(member.Type())
+		if member.PostfixToken() != nil && member.PostfixToken().Kind == ast.KindQuestionToken {
+			value = p.effeckSchemaCall("optional", member.PostfixToken().Loc, value)
+		}
+		properties = append(properties, p.effeckSpanning(p.factory.NewPropertyAssignment(nil /*modifiers*/, name, nil /*postfixToken*/, nil /*typeNode*/, value), core.NewTextRange(name.Pos(), value.End())))
+	}
+	object := p.effeckSpanning(p.factory.NewObjectLiteralExpression(p.newNodeList(body, properties), true /*multiLine*/), body)
+	brace := scanner.SkipTrivia(p.sourceText, body.Pos())
+	call := p.effeckSchemaCall("Struct", core.NewTextRange(brace, min(brace+1, body.End())), object)
+	call.Flags |= ast.NodeFlagsEffeck
+	return call
+}
+
+// effeckUnsupportedSchema makes the Schema.Unknown that stands for a field
+// type with no schema form, flagged NodeFlagsEffeck so the checker reports it.
+func (p *Parser) effeckUnsupportedSchema(anchor core.TextRange) *ast.Node {
+	unknown := p.effeckSchemaMember(nil, "Unknown", anchor)
+	unknown.Flags |= ast.NodeFlagsEffeck
+	return unknown
+}
+
+// effeckSchemaOf returns the schema expression of typeNode, a field's type.
+func (p *Parser) effeckSchemaOf(typeNode *ast.Node) *ast.Node {
+	switch typeNode.Kind {
+	case ast.KindParenthesizedType:
+		return p.effeckSchemaOf(typeNode.AsParenthesizedTypeNode().Type)
+	case ast.KindStringKeyword, ast.KindNumberKeyword, ast.KindBooleanKeyword, ast.KindBigIntKeyword, ast.KindSymbolKeyword,
+		ast.KindUndefinedKeyword, ast.KindUnknownKeyword, ast.KindAnyKeyword, ast.KindNeverKeyword, ast.KindObjectKeyword, ast.KindVoidKeyword:
+		return p.effeckSchemaMember(nil, effeckSchemaKeywords[typeNode.Kind], typeNode.Loc)
+	case ast.KindLiteralType:
+		literal := typeNode.AsLiteralTypeNode().Literal
+		if literal.Kind == ast.KindNullKeyword {
+			return p.effeckSchemaMember(nil, "Null", typeNode.Loc)
+		}
+		return p.effeckSchemaCall("Literal", typeNode.Loc, literal)
+	case ast.KindUnionType:
+		members := typeNode.AsUnionTypeNode().Types.Nodes
+		if core.Every(members, isEffeckSchemaLiteral) {
+			literals := make([]*ast.Node, len(members))
+			for i, member := range members {
+				literals[i] = member.AsLiteralTypeNode().Literal
+			}
+			array := p.effeckSpanning(p.factory.NewArrayLiteralExpression(p.newNodeList(typeNode.Loc, literals), false /*multiLine*/), typeNode.Loc)
+			return p.effeckSchemaCall("Literals", typeNode.Loc, array)
+		}
+		schemas := make([]*ast.Node, len(members))
+		for i, member := range members {
+			schemas[i] = p.effeckSchemaOf(member)
+		}
+		array := p.effeckSpanning(p.factory.NewArrayLiteralExpression(p.newNodeList(typeNode.Loc, schemas), false /*multiLine*/), typeNode.Loc)
+		return p.effeckSchemaCall("Union", typeNode.Loc, array)
+	case ast.KindArrayType:
+		return p.effeckSchemaCall("Array", typeNode.Loc, p.effeckSchemaOf(typeNode.AsArrayTypeNode().ElementType))
+	case ast.KindTypeOperator:
+		if operator := typeNode.AsTypeOperatorNode(); operator.Operator == ast.KindReadonlyKeyword &&
+			(operator.Type.Kind == ast.KindArrayType || operator.Type.Kind == ast.KindTupleType) {
+			return p.effeckSchemaOf(operator.Type)
+		}
+	case ast.KindTupleType:
+		elements := typeNode.AsTupleTypeNode().Elements.Nodes
+		schemas := make([]*ast.Node, len(elements))
+		for i, element := range elements {
+			if element.Kind == ast.KindNamedTupleMember || element.Kind == ast.KindOptionalType || element.Kind == ast.KindRestType {
+				return p.effeckUnsupportedSchema(typeNode.Loc)
+			}
+			schemas[i] = p.effeckSchemaOf(element)
+		}
+		array := p.effeckSpanning(p.factory.NewArrayLiteralExpression(p.newNodeList(typeNode.Loc, schemas), false /*multiLine*/), typeNode.Loc)
+		return p.effeckSchemaCall("Tuple", typeNode.Loc, array)
+	case ast.KindTypeLiteral:
+		return p.effeckSchemaFields(typeNode.AsTypeLiteralNode().Members.Nodes, typeNode.Loc)
+	case ast.KindTypeReference:
+		reference := typeNode.AsTypeReferenceNode()
+		var arguments []*ast.Node
+		if reference.TypeArguments != nil {
+			arguments = reference.TypeArguments.Nodes
+		}
+		name := reference.TypeName
+		switch {
+		case len(arguments) == 0:
+			return p.effeckEntityExpression(name)
+		case ast.IsIdentifier(name) && (name.Text() == "Array" || name.Text() == "ReadonlyArray") && len(arguments) == 1:
+			return p.effeckSchemaCall("Array", name.Loc, p.effeckSchemaOf(arguments[0]))
+		case ast.IsIdentifier(name) && name.Text() == "Record" && len(arguments) == 2:
+			return p.effeckSchemaCall("Record", name.Loc, p.effeckSchemaOf(arguments[0]), p.effeckSchemaOf(arguments[1]))
+		}
+	}
+	return p.effeckUnsupportedSchema(typeNode.Loc)
+}
+
+// effeckSchemaKeywords names the schema of each keyword type.
+var effeckSchemaKeywords = map[ast.Kind]string{
+	ast.KindStringKeyword:    "String",
+	ast.KindNumberKeyword:    "Number",
+	ast.KindBooleanKeyword:   "Boolean",
+	ast.KindBigIntKeyword:    "BigInt",
+	ast.KindSymbolKeyword:    "Symbol",
+	ast.KindUndefinedKeyword: "Undefined",
+	ast.KindUnknownKeyword:   "Unknown",
+	ast.KindAnyKeyword:       "Any",
+	ast.KindNeverKeyword:     "Never",
+	ast.KindObjectKeyword:    "ObjectKeyword",
+	ast.KindVoidKeyword:      "Void",
+}
+
+// isEffeckSchemaLiteral reports whether typeNode is a literal type other than
+// null: a string, number, bigint, or boolean literal.
+func isEffeckSchemaLiteral(typeNode *ast.Node) bool {
+	return typeNode.Kind == ast.KindLiteralType && typeNode.AsLiteralTypeNode().Literal.Kind != ast.KindNullKeyword
+}
+
+// effeckEntityExpression turns name, an entity name such as Address or
+// models.Address, into the expression that names the same value, reusing its
+// identifiers.
+func (p *Parser) effeckEntityExpression(name *ast.Node) *ast.Node {
+	if name.Kind != ast.KindQualifiedName {
+		return name
+	}
+	qualified := name.AsQualifiedName()
+	return p.effeckSpanning(p.factory.NewPropertyAccessExpression(p.effeckEntityExpression(qualified.Left), nil /*questionDotToken*/, qualified.Right, ast.NodeFlagsNone), name.Loc)
 }

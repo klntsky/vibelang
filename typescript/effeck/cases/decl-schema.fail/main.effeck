@@ -1,0 +1,9 @@
+// expect: EK2109
+schema Event {
+  // EK2109: Date is a class, not a schema.
+  when: Date
+  // EK2109: a method has no schema form.
+  run(): void
+  // EK2109: a generic type other than an array or a record.
+  parts: Partial<{ a: string }>
+}
