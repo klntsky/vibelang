@@ -2984,7 +2984,12 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK4605</td><td><code>break</code> that would leave a <code>for concurrent</code> loop (D169)</td><td>Use <code>continue</code> to end one item, or <code>throw</code> to stop every item</td><td>7</td></tr>
 <tr><td>EK4606</td><td><code>return</code> in a <code>for concurrent</code> body (D169)</td><td>Use <code>continue</code> to end one item</td><td>7</td></tr>
 <tr><td>EK4607</td><td><code>select</code>, which <code>await.race</code> replaced (D197)</td><td>Write <code>await.race [a(), b()]</code>; for a <code>default:</code> clause, poll with <code>Queue.poll</code> and an <code>if</code></td><td>7</td></tr>
-<tr><td>EK4608</td><td><code>await.race</code> or <code>await.any</code> on an object (D196)</td><td>Write the elements in an array: <code>await.race [a(), b()]</code></td><td>7</td></tr></tbody></table></div>
+<tr><td>EK4608</td><td><code>await.race</code> or <code>await.any</code> on an object (D196)</td><td>Write the elements in an array: <code>await.race [a(), b()]</code></td><td>7</td></tr>
+<tr><td>EK4701</td><td>A <code>match</code> without a <code>default</code> arm over a finite union (tagged errors, Option, Exit, Result, literals) that misses a case (D209)</td><td>Add an arm for each case left, or a <code>default</code> arm</td><td>7</td></tr>
+<tr><td>EK4702</td><td>A binding inside an <code>or</code> or <code>not</code> pattern (D210)</td><td>Bind outside the combinator, or match each alternative in its own arm</td><td>7</td></tr>
+<tr><td>EK4703</td><td>An <code>is</code> whose pattern binds names outside the condition of an <code>if</code> or <code>while</code> (D211)</td><td>Move the test into an <code>if</code> or <code>while</code> condition, or use <code>match</code></td><td>7</td></tr>
+<tr><td>EK4704</td><td>A pattern form Effeck does not support yet: regular expression, relational, or a computed key other than a name or literal (D212)</td><td>Use a guard: <code>if (/re/.test(x))</code> or <code>if (x &lt; 5)</code></td><td>7</td></tr>
+<tr><td>EK4705</td><td><code>and</code>, <code>or</code>, and <code>not</code> combined at one level without parentheses (D206)</td><td>Add parentheses: <code>(a and b) or c</code></td><td>7</td></tr></tbody></table></div>
 <h4 id="linting"><a class="anchor" href="#linting">Linting</a></h4>
 <p>D35 assigns type and language diagnostics to <code>effeck</code> and reserves type-aware
 linting for <code>.ts</code> files. A stock TypeScript checker models different call
