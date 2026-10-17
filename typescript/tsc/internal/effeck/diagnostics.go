@@ -71,6 +71,12 @@ var (
 	EK1004 = message(1004, errorCategory, "using needs a block that a program runs, but a module's top level is not inside one.")
 	// EK1005: a runner inside code that a fiber runs. {0} is the runner, {1} the function.
 	EK1005 = message(1005, errorCategory, "{0} starts a new root fiber, but {1} already runs on one.")
+	// EK1006: a pipe whose body never uses its topic.
+	EK1006 = message(1006, errorCategory, "This pipe's body does not use its topic, %, so the value before |> would go nowhere.")
+	// EK1007: % outside every pipe's body.
+	EK1007 = message(1007, errorCategory, "% is the topic of a pipe and stands only in a pipe's body, after |>.")
+	// EK1008: a pipe that passes its left side by name and also uses it as a value. {0} is the left side.
+	EK1008 = message(1008, errorCategory, "% stands for {0}, which this pipe passes by name to a program elsewhere, so it cannot also be a value here.")
 
 	// EK2001: an expected failure escapes the written contract. {0} is the failure, {1} the function, {2} what the contract allows.
 	EK2001 = message(2001, errorCategory, "{0} can escape {1}, but {2}.")
@@ -143,7 +149,7 @@ var registry = map[int32]*Message{}
 
 func init() {
 	for _, m := range []*Message{
-		EK1001, EK1002, EK1003, EK1004, EK1005,
+		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008,
 		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4501,

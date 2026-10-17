@@ -390,6 +390,28 @@ try {
     assert(/Method syntax: calls `Option\.getOrElse\(/.test(shown), `got ${JSON.stringify(shown)}`)
   })
 
+  await check("hover: a topic passed by name names the program's receiver", async () => {
+    const shown = await hover("src/main.effeck", "%, \"1 second\") |>")
+    assert(shown.includes("Passed by name to `Effect.timeout` as a program: `greeting()` runs when that program runs"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a topic used as a value shows its type and left side", async () => {
+    const shown = await hover("src/main.effeck", "${%}!", { offset: 2 })
+    assert(shown.includes("(topic) %: string") && shown.includes("runs once, before the pipe's body"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("formatting: a pipe keeps |> together", async () => {
+    const edits = await connection.request("textDocument/formatting", { textDocument: { uri: fileUri("src/main.effeck") }, options: { tabSize: 2, insertSpaces: true } })
+    const lines = text("src/main.effeck").split("\n")
+    for (const edit of [...(edits ?? [])].sort((a, b) => b.range.start.line - a.range.start.line || b.range.start.character - a.range.start.character)) {
+      const { start, end } = edit.range
+      const head = lines[start.line].slice(0, start.character), tail = lines[end.line].slice(end.character)
+      lines.splice(start.line, end.line - start.line + 1, ...(head + edit.newText + tail).split("\n"))
+    }
+    const formatted = lines.join("\n")
+    assert(formatted.includes('greeting() |> Effect.timeout(%, "1 second") |> `${%}!`'), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("greeting()")))}`)
+  })
+
   await check("completion: an Effect data type lists its module's functions as methods", async () => {
     const labels = await completionLabels("src/main.effeck", "map((n) =>", { offset: 0 })
     for (const label of ["map", "getOrElse", "flatMap", "pipe"]) assert(labels.includes(label), `no ${label} in ${JSON.stringify(labels.slice(0, 30))}`)

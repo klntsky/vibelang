@@ -26,10 +26,11 @@ func (c *Checker) missingPropertyFromHooks(node *ast.Node, receiver *Type, name 
 	return nil
 }
 
-// NewMethodProperty returns a property named name of type t whose
-// declarations are declarations, for a missing property hook to supply, so
-// go to definition and hover reach the function the property stands for.
-func (c *Checker) NewMethodProperty(name string, t *Type, declarations []*ast.Node) *ast.Symbol {
+// NewPropertySymbol returns a property named name of type t whose
+// declarations are declarations: for a missing property hook to supply, so go
+// to definition and hover reach the function the property stands for, or for
+// a name resolution hook to resolve a name to a value of type t.
+func (c *Checker) NewPropertySymbol(name string, t *Type, declarations []*ast.Node) *ast.Symbol {
 	property := c.newSymbol(ast.SymbolFlagsProperty, name)
 	property.SetDeclarations(declarations)
 	c.valueSymbolLinks.Get(property).resolvedType = t

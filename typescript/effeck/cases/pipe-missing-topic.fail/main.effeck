@@ -1,0 +1,5 @@
+// expect: EK1006
+// A pipe's body must use its topic (D154): the value before |> would go nowhere.
+export function label(name: string) {
+  return name |> "anonymous"
+}

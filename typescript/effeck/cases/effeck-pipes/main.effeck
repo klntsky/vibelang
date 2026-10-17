@@ -1,0 +1,68 @@
+// The pipe operator (D154, D155): x |> body evaluates body with the topic %
+// standing for x. Where % stands for a program, the left side is passed by
+// name; elsewhere it runs once, before the body.
+let attempts = 0
+
+error Flaky
+
+function flaky() {
+  attempts += 1
+  if (attempts < 3) throw new Flaky()
+  return attempts
+}
+
+function addMargin(n: number) { return n + 3 }
+function double(n: number) { return n * 2 }
+
+function* readings() {
+  for (const celsius of [18, 26, 31, 22]) {
+    yield celsius
+  }
+}
+
+let evaluations = 0
+
+function counted(n: number) {
+  evaluations += 1
+  return n
+}
+
+// Each handler keeps the topic of the pipe evaluation that created it.
+function handlers() {
+  const made: Array<() => number> = []
+  for (const id of [1, 2, 3]) {
+    made.push(id * 10 |> (() => % + 1))
+  }
+  return made.map((handler) => handler())
+}
+
+export const doubled = 21 |> % * 2
+
+function hello() {
+  sleep("1 millis")
+  return "hi"
+}
+
+// At the top level a pipe whose topic is passed by name runs nothing, so
+// EK1001 does not apply; the runner starts the whole pipe as one program.
+export const started = runFork(hello() |> withSpan(%, "hello"))
+
+// A pipe passed by name as a whole: fork runs it on a child fiber.
+function forked() {
+  const fiber = fork(hello() |> timeout(%, "1 second") |> `${%}!`)
+  return fiber.join()
+}
+
+// expect-result: {"price":"Price: 24","retried":3,"label":"Ada Lovelace","hot":["26 C","31 C"],"handlers":[11,21,31],"odd":1,"signed":0,"evaluations":1,"doubled":42,"nested":"<7>","forked":"hi!","hatched":"id-1"}
+export function main() {
+  const price = 9 |> addMargin(%) |> double(%) |> `Price: ${%}`
+  const retried = flaky() |> retry(%, Schedule.recurs(5))
+  const label = { first: "Ada", last: "Lovelace" } |> `${%.first} ${%.last}`
+  const hot: string[] = []
+  for (const reading of readings() |> %.filter((c) => c > 25).map((c) => `${c} C`)) hot.push(reading)
+  const odd = 7 |> % % 2
+  const signed = counted(-4) |> % > 0 ? % : 0
+  const nested = 7 |> (`${%}` |> `<${%}>`)
+  const hatched = sync(() => "id" |> `${%}-1`)
+  return { price, retried, label, hot, handlers: handlers(), odd, signed, evaluations, doubled, nested, forked: forked(), hatched }
+}

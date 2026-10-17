@@ -4258,7 +4258,7 @@ func (p *Parser) parseAssignmentExpressionOrHigherWorker(allowReturnTypeInArrowF
 		return p.makeBinaryExpression(expr, p.parseTokenNode(), p.parseAssignmentExpressionOrHigherWorker(allowReturnTypeInArrowFunction), pos)
 	}
 	// It wasn't an assignment or a lambda.  This is a conditional expression:
-	return p.parseConditionalExpressionRest(expr, pos, allowReturnTypeInArrowFunction)
+	return p.parsePipeRest(p.parseConditionalExpressionRest(expr, pos, allowReturnTypeInArrowFunction), pos) // x |> body (effeck_pipes.go)
 }
 
 func (p *Parser) isYieldExpression() bool {
@@ -4728,8 +4728,8 @@ func (p *Parser) parseBinaryExpressionRest(precedence ast.OperatorPrecedence, le
 		//            ^^token; leftOperand = b. Return b ** c to the caller as a rightOperand
 		//      a ** b - c
 		//             ^token; leftOperand = b. Return b to the caller as a rightOperand
-		if !shouldConsumeBinaryOperator(operator, newPrecedence, precedence) {
-			break
+		if !shouldConsumeBinaryOperator(operator, newPrecedence, precedence) || p.isPipeOperator() {
+			break // |>, the pipe operator, binds after every binary operator (effeck_pipes.go)
 		}
 		if operator == ast.KindInKeyword && p.inDisallowInContext() {
 			break
@@ -5721,6 +5721,10 @@ func (p *Parser) parsePrimaryExpression() *ast.Expression {
 		if p.isStartOfTryCall() {
 			return p.parseIdentifierName() // the callee of try(…) (effeck_hatches.go)
 		}
+	case ast.KindPercentToken:
+		if p.isEffeckFile() {
+			return p.parseTopicReference() // the topic of a pipe (effeck_pipes.go)
+		}
 	}
 	return p.parseIdentifierWithDiagnostic(diagnostics.Expression_expected, nil)
 }
@@ -6311,6 +6315,8 @@ func (p *Parser) isStartOfLeftHandSideExpression() bool {
 		return p.isNextTokenOpenParenOrLessThanOrDot()
 	case ast.KindTryKeyword:
 		return p.isStartOfTryCall()
+	case ast.KindPercentToken:
+		return p.isEffeckFile()
 	}
 	return p.isIdentifier()
 }

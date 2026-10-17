@@ -1,0 +1,12 @@
+// expect: EK1008
+// A pipe passes its left side by name or evaluates it, not both (D155): race
+// expects programs, so the first % is a program that runs work(), while
+// Effect.succeed takes a value.
+function work() {
+  sleep("1 millis")
+  return 1
+}
+
+export function main() {
+  return work() |> race(%, Effect.succeed(%))
+}

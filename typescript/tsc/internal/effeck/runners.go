@@ -179,9 +179,14 @@ func runsAtTopLevel(c *checker.Checker, a *analyzer, call *ast.Node) (runs bool,
 
 // passedAsProgram reports whether call, at a module's top level, is an
 // argument where a program is expected, as main() is in
-// NodeRuntime.runMain(main()): a call there runs nothing and builds the
-// program the callee receives (D147), so EK1001 does not apply.
+// NodeRuntime.runMain(main()), or is evaluated by an expression passed by
+// name, such as a pipe's left side whose topic is passed by name: a call
+// there runs nothing and builds the program the callee receives (D147,
+// D155), so EK1001 does not apply.
 func (a *analyzer) passedAsProgram(call *ast.Node) bool {
+	if a.byNameOf(call) != nil {
+		return true
+	}
 	owner, path := ownerCall(call)
 	if owner == nil || !isEffectType(a.checker, a.checker.GetTypeAtLocation(call)) {
 		return false

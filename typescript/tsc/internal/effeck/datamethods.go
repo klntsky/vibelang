@@ -145,7 +145,7 @@ func methodProperty(c *checker.Checker, file *ast.SourceFile, module string, nam
 				}
 			}
 			if len(methods) > 0 {
-				property = c.NewMethodProperty(name, c.NewFunctionType(nil, methods), function.Declarations())
+				property = c.NewPropertySymbol(name, c.NewFunctionType(nil, methods), function.Declarations())
 			}
 		}
 	}

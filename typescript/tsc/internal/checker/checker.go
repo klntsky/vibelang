@@ -12596,6 +12596,9 @@ func (c *Checker) checkBinaryLikeExpression(left *ast.Node, operatorToken *ast.N
 	}
 	leftType := c.checkExpressionEx(left, checkMode)
 	rightType := c.checkExpressionEx(right, checkMode)
+	if isEffeckPipe(errorNode) {
+		return rightType // left |> body has its body's type (extensions_pipes.go)
+	}
 	if ast.IsLogicalOrCoalescingBinaryOperator(operator) {
 		parent := left.Parent.Parent
 		for ast.IsParenthesizedExpression(parent) || ast.IsLogicalOrCoalescingBinaryExpression(parent) {
@@ -30529,6 +30532,10 @@ func (c *Checker) getContextualTypeForBinaryOperand(node *ast.Node, contextFlags
 	case ast.KindAmpersandAmpersandToken, ast.KindCommaToken:
 		if node == binary.Right {
 			return c.getContextualType(binary.AsNode(), contextFlags)
+		}
+	case ast.KindBarToken:
+		if node == binary.Right && isEffeckPipe(binary.AsNode()) {
+			return c.getContextualType(binary.AsNode(), contextFlags) // a pipe's body (extensions_pipes.go)
 		}
 	}
 	return nil

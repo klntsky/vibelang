@@ -28,3 +28,9 @@ export function eventually() {
 export function labelled(id: number) {
   return Option.some(id).map((n) => `#${n}`).getOrElse(() => "none")
 }
+
+// The pipe operator (D154, D155): Effect.timeout receives greeting() by name
+// through the first topic; the second topic is the timed greeting's value.
+export function piped() {
+  return greeting() |> Effect.timeout(%, "1 second") |> `${%}!`
+}

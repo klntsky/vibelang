@@ -197,6 +197,7 @@ func isPlaceholderNever(t *checker.Type) bool {
 // type parameter with a default, as in Effect.forkScoped's
 // <Arg extends Effect | Options = Options>, would take the default.
 func (a *analyzer) valueTypeOf(node *ast.Node, t *checker.Type) *checker.Type {
+	node = byNameSubject(node)
 	if !isPlaceholderNever(t) || a.valueTyping[node] {
 		return t
 	}
@@ -208,8 +209,10 @@ func (a *analyzer) valueTypeOf(node *ast.Node, t *checker.Type) *checker.Type {
 // mayRunByName is the cheap test for an expression of any type that it may be
 // passed by name: it evaluates a call, and it sits in the body of a function
 // the lowering can turn into an Effect, where calls run, or at a module's top
-// level, where a call to a plain function runs inline.
+// level, where a call to a plain function runs inline. A pipe's topic passes
+// the pipe's left side (pipes.go).
 func mayRunByName(node *ast.Node) bool {
+	node = byNameSubject(node)
 	return containsCall(node) && (inLowerableBody(node) || atTopLevel(node))
 }
 
@@ -245,6 +248,7 @@ func containsCall(node *ast.Node) bool {
 // a service, or calls an .effeck function, including one that compiles to
 // plain JavaScript, whose TypeScript type is an Effect too (D10, D67).
 func (a *analyzer) pauses(node *ast.Node) bool {
+	node = byNameSubject(node)
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		if isFunctionBoundary(n) {
@@ -273,7 +277,7 @@ func (a *analyzer) callsEffeckFunction(call *ast.Node) bool {
 // type of its value where it runs: E and R are what running node adds, as
 // for the body of the lambda () => node.
 func (a *analyzer) byNameType(node *ast.Node, success *checker.Type) *checker.Type {
-	info := a.flowOf(node)
+	info := a.flowOf(byNameSubject(node))
 	effect := info.effect
 	if effect == nil {
 		effect = a.programEffectInterface()
@@ -288,8 +292,12 @@ func (a *analyzer) byNameType(node *ast.Node, success *checker.Type) *checker.Ty
 }
 
 // isByName reports whether node is an expression passed by name (D147). It
-// resolves the call node is an argument of first, which decides it.
+// resolves the call node is an argument of first, which decides it. The left
+// side of a pipe is passed by name when a topic of its body is (D155).
 func (a *analyzer) isByName(node *ast.Node) bool {
+	if pipe := pipeOfLeft(node); pipe != nil {
+		return a.pipeIsByName(pipe)
+	}
 	if a.conversions[node] == nil {
 		if !mayRunByName(node) {
 			return false
@@ -310,8 +318,28 @@ func (a *analyzer) byNameOf(node *ast.Node) *ast.Node {
 		if a.conversions[n] != nil && a.finalConversion(n) == convertByName {
 			return n
 		}
+		if pipe := pipeOfLeft(n); pipe != nil && a.pipeIsByName(pipe) {
+			return n
+		}
 	}
 	return nil
+}
+
+// byNameOwner returns the call that receives byName, an expression passed by
+// name, as a program: the call it is an argument of, or, for a pipe's left
+// side, the call whose argument is the first topic passed by name.
+func (a *analyzer) byNameOwner(byName *ast.Node) *ast.Node {
+	if pipe := pipeOfLeft(byName); pipe != nil {
+		for _, topic := range topicsOf(pipe) {
+			if a.isByName(topic) {
+				owner, _ := ownerCall(topic)
+				return owner
+			}
+		}
+		return nil
+	}
+	owner, _ := ownerCall(byName)
+	return owner
 }
 
 // programOf returns the Effect that t, a function with no required parameters

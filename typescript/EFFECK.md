@@ -340,6 +340,8 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals`; ask skipped function type hooks where `checkFunctionExpressionOrObjectLiteralMethod` skips a context-sensitive function | +23 / -5 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
 | `tsc/internal/checker/checker.go` | Ask missing property hooks in `checkPropertyAccessExpressionOrQualifiedName` when a property access finds no member (`datamethods.go`) | +3 |
+| `tsc/internal/checker/checker.go` | A pipe has its body's type in `checkBinaryLikeExpression`, and its body has the pipe's contextual type in `getContextualTypeForBinaryOperand` (`extensions_pipes.go`) | +7 |
+| `tsc/internal/format/rulecontext.go` | The two characters of `\|>` are no binary operator context in `isBinaryOpContext`, so the formatter keeps them together | +3 |
 | `tsc/internal/checker/checker.go` | Ask using initializer hooks before `checkVariableLikeDeclaration` requires a `using` initializer to be a Disposable | +1 / -1 |
 | `tsc/internal/checker/checker.go` | Ask iterated element type hooks in `checkRightHandSideOfForOf` and, for `yield*`, in `getYieldedTypeOfYieldExpression`, `checkYieldExpression`, and `checkAndAggregateYieldOperandTypes` | +14 / -3 |
 | `tsc/internal/checker/checker.go` | Check what a function returns against `unwrapReturnTypeOf` at the four places that check it against `unwrapReturnType`; complete an annotated return type through annotated return type hooks in `getReturnTypeOfSignature`; ask infer type hooks in `checkInferType` | +9 / -7 |
@@ -352,6 +354,7 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/module/util.go` | An `.effeck` resolution is always allowed | +2 / -1 |
 | `tsc/internal/module/util.go` | An `.effeck` file's output extension is `.js`, so auto-import can name it | +1 / -1 |
 | `tsc/internal/parser/parser.go` | `try(` starts an expression in an `.effeck` file: the statement switch, `isStartOfLeftHandSideExpression`, `parsePrimaryExpression` (`effeck_hatches.go`) | +9 / -1 |
+| `tsc/internal/parser/parser.go` | `\|>` ends `parseBinaryExpressionRest` and follows `parseConditionalExpressionRest` in `parseAssignmentExpressionOrHigherWorker`; `%` starts an expression in `parsePrimaryExpression` and `isStartOfLeftHandSideExpression` (`effeck_pipes.go`) | +9 / -3 |
 | `tsc/internal/tsoptions/parsedcommandline.go` | `.effeck` in a project's wildcard include globs, so a new `.effeck` file joins the project | +4 / -4 |
 | `tsc/internal/lsp/server.go` | `.effeck` in the `willRenameFiles` filter; exit with status 0 after `shutdown` and `exit` | +3 / -3 |
 | `tsc/internal/ls/hover.go` | Apply quick info hooks to each hover | +1 |
@@ -378,7 +381,8 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/execute/tsc/extensions.go` (new) | `SetIdentity` | +56 |
 | `tsc/internal/checker/extensions_signatures.go` (new) | `SignatureWithReturnType` | +8 |
 | `tsc/internal/checker/extensions_loops.go` (new) | `RegisterIteratedElementTypeHook` | +29 |
-| `tsc/internal/checker/extensions_methods.go` (new) | `RegisterMissingPropertyHook`, `NewMethodProperty`, `SignatureWithThisFromFirstParameter`, `NewFunctionType`, `GetIntersectionType` | +77 |
+| `tsc/internal/checker/extensions_methods.go` (new) | `RegisterMissingPropertyHook`, `NewPropertySymbol`, `SignatureWithThisFromFirstParameter`, `NewFunctionType`, `GetIntersectionType` | +78 |
+| `tsc/internal/checker/extensions_pipes.go` (new) | `isEffeckPipe` | +13 |
 | `tsc/internal/core/effeck.go` (new) | `EffeckOptions` | +22 |
 | `tsc/internal/tsoptions/effeck.go` (new) | Parse, validate, and serialize `compilerOptions.effeck` | +149 |
 
@@ -1032,6 +1036,25 @@ const done = fiber.join()                          const done = yield* Fiber.joi
 - **EK4501.** A method access that is not a call's callee is an error (`checkModuleMethods`): no function value exists to bind.
 
 Cases: `effeck-methods` (Stream, Option, Duration, Chunk, Fiber, and Ref chains; `pipe` and arrays keep their members; `isSome` narrowing; a shadowed module name), `ek4501-method-value.fail`, `methods-optional-chain.fail`. The LSP smoke checks a hover and a completion.
+
+## The pipe operator (D154-D156)
+
+`x |> body` evaluates `body` with the topic `%` standing for `x` (`pipes.go`, `pipes_lower.go`):
+
+```ts
+// main.effeck                                      // main.js
+const n = 9 |> addMargin(%) |> double(%)             const n = double$direct(addMargin$direct(9))
+const r = flaky() |> retry(%, Schedule.recurs(5))    const r = yield* retry(Effect.gen(function* () { return yield* flaky() }), Schedule.recurs(5))
+const l = user |> `${%.first} ${%.last}`             const l = (topic_1 = user, `${topic_1.first} ${topic_1.last}`)
+```
+
+- **Parsing.** `parser/effeck_pipes.go`: in an `.effeck` file, `|` directly followed by `>` ends a binary expression, and after a conditional expression starts a pipe, a `BinaryExpression` flagged `NodeFlagsEffeck` whose operator token is the `|`; the `>` belongs to the pipe as a token of no child, so every token node stays one scanner token for the formatter. The body is a conditional expression, and the loop makes pipes left-associative. `%` where an expression starts is an identifier named `%` flagged `NodeFlagsEffeck`; after an operand it is still the remainder operator.
+- **Typing.** The checker gives a pipe its body's type and its body the pipe's contextual type (`extensions_pipes.go`). `resolveTopic`, a name resolution hook, resolves `%` to a property symbol whose type is the type of the left side of the innermost pipe whose body holds it, or to the error type outside every body (EK1007).
+- **By name.** A topic is an argument like any other, so the conversion hook classifies its position; `byNameSubject` makes `mayRunByName`, `pauses`, `byNameType`, and `valueTypeOf` read the pipe's left side for it. A pipe whose topic is passed by name passes its left side: `isByName` and `byNameOf` say so for the left side, so `flowOf` skips it, EK1001 does not apply to it at a module's top level, and a hover on a call in it names the program's receiver (`byNameOwner`). Mixed uses are EK1008; a body without `%` is EK1006.
+- **Lowering.** `planPipe` picks one of three forms. By name, the pipe compiles to its body, and `byNameProgram` turns each topic into a program that evaluates the left side. A topic used once, which `topicFirst` shows is evaluated unconditionally and after nothing with an effect, becomes the left side itself. Otherwise `visitPipe` assigns the left side to a hoisted `topic` variable in a comma expression, and `visitTopicClosure` lowers each function in the body that reads the topic inside `((topic_2) => function)(topic_1)`, so the function keeps its evaluation's value.
+- **Language service.** Hover on `%` shows `(topic) %: T` and either "The value of `x`, which runs once" or "Passed by name to `retry` as a program" (`topicQuickInfo`). The formatter treats the two characters of `|>` as one operator (`format/rulecontext.go`).
+
+Cases: `effeck-pipes` (values, by name, chains, closures, `% % 2`, nested pipes, a hatch, a top-level runner, a forked pipe), `pipe-missing-topic.fail`, `pipe-topic-outside.fail`, `pipe-mixed.fail`. The LSP smoke checks both hovers and that formatting keeps `|>`.
 
 ## Code that is not Effect
 

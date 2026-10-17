@@ -37,8 +37,8 @@ func runningCallQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
 		return "", ""
 	}
 	returns := "`" + c.TypeToStringEx(success, call, hoverTypeFlags, nil) + "`"
-	if byName := analyzerFor(c).byNameOf(call); byName != nil {
-		if owner, _ := ownerCall(byName); owner != nil {
+	if a := analyzerFor(c); a.byNameOf(call) != nil {
+		if owner := a.byNameOwner(a.byNameOf(call)); owner != nil {
 			return "", "Passed by name to `" + calleeText(owner) + "` as a program: it runs when that program runs, not here, and returns " + returns + "."
 		}
 	}

@@ -42,6 +42,13 @@ type lowering struct {
 	// of its namespace import, for method calls (datamethods.go).
 	modules     map[string]*ast.IdentifierNode
 	moduleOrder []string
+
+	// topicNames maps a pipe that keeps its left side's value in a variable
+	// to that variable's name where the lowering is; rebinding marks the
+	// function being lowered inside an arrow function that rebinds them
+	// (pipes_lower.go).
+	topicNames map[*ast.Node]*ast.IdentifierNode
+	rebinding  map[*ast.Node]bool
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
@@ -53,6 +60,9 @@ func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *tra
 }
 
 func (tx *lowering) visit(node *ast.Node) *ast.Node {
+	if pipes := tx.plan.topicClosures[node]; len(pipes) != 0 && !tx.rebinding[node] {
+		return tx.visitTopicClosure(node, pipes)
+	}
 	if tx.plan.conversionOf(node) == convertByName {
 		return tx.byNameProgram(node)
 	}
@@ -73,6 +83,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitImportWithDirectVariants(node)
 	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
 		return tx.visitImportOrExport(node)
+	case isPipe(node):
+		return tx.visitPipe(node)
+	case isTopic(node):
+		return tx.visitTopic(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.hatches[node] != (hatchForm{}):
 		return tx.visitHatchCall(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.methods[node].module != "":
@@ -250,18 +264,19 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	saved, savedFrame, savedPlain := tx.inEffect, tx.frame, tx.plain
 	tx.inEffect, tx.plain = true, false
 	tx.frame = &frame{}
+	subject := byNameSubject(node) // a topic passes its pipe's left side (pipes.go)
 	var value *ast.Node
-	if ref := tx.plan.directRefs[node]; ref != nil {
-		value = tx.visitDirectReference(node, ref)
+	if ref := tx.plan.directRefs[subject]; ref != nil {
+		value = tx.visitDirectReference(subject, ref)
 	} else {
-		value = tx.visitNode(node)
+		value = tx.visitNode(subject)
 	}
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 	body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(value)}), false /*multiLine*/)
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
 	ec.SetOriginal(generator, node)
 	arguments := []*ast.Node{generator}
-	if usesThis(node) {
+	if usesThis(subject) {
 		self := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{
 			f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("self"), nil /*postfixToken*/, nil /*typeNode*/, f.NewThisExpression()),
 		}), false /*multiLine*/)
