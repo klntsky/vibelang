@@ -102,6 +102,7 @@ type Parser struct {
 	effeckMutableMember       bool                     // the type member being parsed was written with mutable (effeck.go)
 	effeckAbstractMembers     bool                     // bodiless class members become abstract: a service or control body (effeck.go)
 	effeckSelects             int                      // select statements parsed so far, which number their labels (effeck_fibers.go)
+	effeckNoBlockParams       bool                     // a { after an expression is not a block param here: heritage clauses and provide's providers (effeck_blocks.go)
 	effeckMatchTemps          int                      // names written for match and is, numbered per file (effeck_match.go)
 	effeckMatches             map[*ast.Node]*matchInfo // match expressions as written, by the call that stands for each (effeck_match.go)
 	effeckIsBindings          map[*ast.Node]*isInfo    // is expressions whose patterns bind names, by their markers (effeck_match.go)
@@ -1943,7 +1944,10 @@ func (p *Parser) convertEntityNameExpressionToEntityName(node *ast.Node) *ast.No
 
 func (p *Parser) parseExpressionWithTypeArguments() *ast.Node {
 	pos := p.nodePos()
+	saveNoBlockParams := p.effeckNoBlockParams
+	p.effeckNoBlockParams = true // the { after a heritage clause opens the class body (effeck_blocks.go)
 	expression := p.parseLeftHandSideExpressionOrHigher()
+	p.effeckNoBlockParams = saveNoBlockParams
 	if ast.IsExpressionWithTypeArguments(expression) {
 		return expression
 	}
@@ -5670,6 +5674,9 @@ func (p *Parser) parseCallExpressionRest(pos int, expression *ast.Expression) *a
 			p.parseErrorAtCurrentToken(diagnostics.Identifier_expected)
 			name := p.createMissingIdentifier()
 			expression = p.finishNode(p.factory.NewPropertyAccessExpression(expression, questionDotToken, name, ast.NodeFlagsOptionalChain), pos)
+		}
+		if p.isStartOfEffeckBlockParam(expression) {
+			expression = p.parseEffeckBlockParam(pos, expression) // f(args) { block } (effeck_blocks.go)
 		}
 		break
 	}

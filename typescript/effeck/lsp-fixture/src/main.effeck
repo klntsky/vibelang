@@ -46,3 +46,10 @@ export function shout() {
     word.toUpperCase()
   }
 }
+
+// A block param (D188).
+export function spanned() {
+  return withSpan("load") {
+    return greeting()
+  }
+}

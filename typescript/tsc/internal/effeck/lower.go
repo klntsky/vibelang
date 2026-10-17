@@ -87,6 +87,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitPipe(node)
 	case isTopic(node):
 		return tx.visitTopic(node)
+	case node.Kind == ast.KindCallExpression && tx.plan.blockForms[node] != blockAppended:
+		return tx.visitBlockParamCall(node, tx.plan.blockForms[node]) // f(args) { block } for an Effect dual (blockparams.go)
 	case node.Kind == ast.KindCallExpression && tx.plan.hatches[node] != (hatchForm{}):
 		return tx.visitHatchCall(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.methods[node].module != "":

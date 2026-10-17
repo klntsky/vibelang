@@ -523,7 +523,10 @@ func (p *Parser) scanStartOfEffeckProvide() bool {
 	if !p.isStartOfExpression() {
 		return false
 	}
+	saveNoBlockParams := p.effeckNoBlockParams
+	p.effeckNoBlockParams = true // the { after the providers opens the block (effeck_blocks.go)
 	p.parseExpression()
+	p.effeckNoBlockParams = saveNoBlockParams
 	return p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak()
 }
 
@@ -572,7 +575,10 @@ func (p *Parser) parseEffeckProvideStatement() *ast.Node {
 		providers = p.parseExpression()
 		p.parseExpected(ast.KindCloseParenToken)
 	} else {
+		saveNoBlockParams := p.effeckNoBlockParams
+		p.effeckNoBlockParams = true // the { after the providers opens the block (effeck_blocks.go)
 		providers = p.parseExpression()
+		p.effeckNoBlockParams = saveNoBlockParams
 	}
 	layer := p.effeckProviders(providers)
 	statement := p.effeckSpanning(p.factory.NewExpressionStatement(layer), layer.Loc)

@@ -29,6 +29,7 @@ type plan struct {
 	failureTags map[*ast.Node][]string   // the tags of each typed catch clause's test (catches.go)
 	causeThrows map[*ast.Node]bool       // throw statements whose value is a Cause (primitives.go)
 	methods     map[*ast.Node]methodCall // method calls on Effect data types (datamethods.go)
+	blockForms  map[*ast.Node]blockParamForm // block param calls that move their block (blockparams.go)
 
 	pipes         map[*ast.Node]pipeMode    // how each pipe compiles (pipes_lower.go)
 	topicClosures map[*ast.Node][]*ast.Node // functions that read the topic of these pipes
@@ -50,6 +51,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p.failureTags = map[*ast.Node][]string{}
 	p.causeThrows = map[*ast.Node]bool{}
 	p.methods = map[*ast.Node]methodCall{}
+	p.blockForms = map[*ast.Node]blockParamForm{}
 	p.pipes = map[*ast.Node]pipeMode{}
 	p.topicClosures = map[*ast.Node][]*ast.Node{}
 	p.producerPlan = newProducerPlan()
@@ -101,6 +103,9 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			}
 			if isPipe(node) {
 				p.planPipe(a, node)
+			}
+			if form := blockParamFormOf(c, node); form != blockAppended {
+				p.blockForms[node] = form
 			}
 			p.planPlain(a, node)
 			p.planServiceNode(c, node)

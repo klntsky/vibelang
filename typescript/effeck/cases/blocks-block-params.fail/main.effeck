@@ -1,0 +1,15 @@
+// expect: TS2554
+function getName(): string!! {
+  return "Ada"
+}
+
+// getName takes no program, so it cannot take a block.
+function wrong() {
+  return getName() {
+    return 1
+  }
+}
+
+export function main() {
+  return wrong()
+}

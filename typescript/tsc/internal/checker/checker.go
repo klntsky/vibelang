@@ -8734,6 +8734,7 @@ func (c *Checker) resolveCallExpression(node *ast.Node, candidatesOutArray *[]*S
 	if len(callSignatures) == 0 {
 		callSignatures = c.callSignaturesFromHooks(node, funcType)
 	}
+	callSignatures = c.filterCallSignaturesByHooks(node, callSignatures) // Effeck block params (extensions_blockparams.go)
 	numConstructSignatures := len(c.getSignaturesOfType(apparentType, SignatureKindConstruct))
 	// TS 1.0 Spec: 4.12
 	// In an untyped function call no TypeArgs are permitted, Args can be any argument list, no contextual

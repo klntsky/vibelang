@@ -428,7 +428,7 @@ try {
     assert(formatted.includes('greeting() |> Effect.timeout(%, "1 second") |> `${%}!`'), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("greeting()")))}`)
   })
 
-  await check("formatting: throw and do expressions keep their shape", async () => {
+  await check("formatting: throw, do, and block params keep their shape", async () => {
     const edits = await connection.request("textDocument/formatting", { textDocument: { uri: fileUri("src/main.effeck") }, options: { tabSize: 2, insertSpaces: true } })
     const lines = text("src/main.effeck").split("\n")
     for (const edit of [...(edits ?? [])].sort((a, b) => b.range.start.line - a.range.start.line || b.range.start.character - a.range.start.character)) {
@@ -439,6 +439,7 @@ try {
     const formatted = lines.join("\n")
     assert(formatted.includes("return names[id] ?? throw new NotFound({ id })"), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("throw")))}`)
     assert(formatted.includes("return do {") && formatted.includes("    word.toUpperCase()"), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("do {") || l.includes("toUpperCase")))}`)
+    assert(formatted.includes('return withSpan("load") {') && formatted.includes("    return greeting()"), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("withSpan") || l.includes("return greeting")))}`)
   })
 
   await check("completion: an Effect data type lists its module's functions as methods", async () => {

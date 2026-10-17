@@ -148,3 +148,38 @@ func (p *Parser) reportReturnsInDo(body *ast.Node) {
 	}
 	body.ForEachChild(visit)
 }
+
+// isStartOfEffeckBlockParam reports whether a block param follows expression:
+// in an .effeck file, a { on the same line after a name, a property access,
+// or a call, which TypeScript cannot parse
+// (https://github.com/samuelgoto/proposal-block-params). A heritage clause
+// and a provide block's providers are followed by their own blocks.
+func (p *Parser) isStartOfEffeckBlockParam(expression *ast.Node) bool {
+	if p.token != ast.KindOpenBraceToken || p.hasPrecedingLineBreak() || p.effeckNoBlockParams || !p.isEffeckFile() {
+		return false
+	}
+	switch expression.Kind {
+	case ast.KindIdentifier, ast.KindPropertyAccessExpression, ast.KindCallExpression:
+		return expression.Flags&ast.NodeFlagsOptionalChain == 0
+	}
+	return false
+}
+
+// parseEffeckBlockParam parses the block after expression as a program and
+// passes it as the last argument of one call (D188): `f { block }` is
+// f(() => { block }) and `f(args) { block }` is f(args, () => { block }). The
+// checker offers an Effect dual's call the forms that take the block as the
+// program, and the lowering moves it there (effeck/blockparams.go).
+func (p *Parser) parseEffeckBlockParam(pos int, expression *ast.Node) *ast.Node {
+	anchor := p.tokenRange()
+	body := p.parseFunctionBlock(ParseFlagsNone, nil /*diagnosticMessage*/)
+	program := p.effeckProgramArrow(nil, body, anchor)
+	if expression.Kind == ast.KindCallExpression {
+		call := expression.AsCallExpression()
+		nodes := append(append([]*ast.Node{}, call.Arguments.Nodes...), program)
+		arguments := p.newNodeList(core.NewTextRange(call.Arguments.Pos(), program.End()), nodes)
+		return p.finishNode(p.factory.NewCallExpression(call.Expression, nil /*questionDotToken*/, call.TypeArguments, arguments, ast.NodeFlagsNone), pos)
+	}
+	arguments := p.newNodeList(program.Loc, []*ast.Node{program})
+	return p.finishNode(p.factory.NewCallExpression(expression, nil /*questionDotToken*/, nil /*typeArguments*/, arguments, ast.NodeFlagsNone), pos)
+}
