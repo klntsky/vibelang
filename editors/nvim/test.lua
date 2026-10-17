@@ -77,7 +77,7 @@ end)
 check("diagnostics: EK1003 with source EK on wait.effeck", function()
   local buf = edit("src/wait.effeck")
   wait_for("EK1003", function()
-    return has_diagnostic(buf, 1003, "ES")
+    return has_diagnostic(buf, 1003, "EK")
   end)
 end)
 

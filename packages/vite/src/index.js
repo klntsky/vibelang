@@ -116,10 +116,10 @@ export default function effeck(options = {}) {
       }
     },
     watchChange(id) {
-      if (/\.(?:es|[cm]?tsx?|json)$/.test(id)) revision++
+      if (/\.(?:effeck|[cm]?tsx?|json)$/.test(id)) revision++
     },
     async handleHotUpdate(context) {
-      if (!/\.(?:es|[cm]?tsx?)$/.test(context.file) && !context.file.endsWith(".json")) return
+      if (!/\.(?:effeck|[cm]?tsx?)$/.test(context.file) && !context.file.endsWith(".json")) return
       revision++
       // Any source can change the contracts used to compile an .effeck importer.
       const affected = new Set()

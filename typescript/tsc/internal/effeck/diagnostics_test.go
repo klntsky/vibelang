@@ -50,7 +50,7 @@ func TestRegistryMatchesSpec(t *testing.T) {
 		t.Fatal(err)
 	}
 	var want []int32
-	for _, m := range regexp.MustCompile(`(?m)^\| ES(\d{4}) \|`).FindAllStringSubmatch(string(spec), -1) {
+	for _, m := range regexp.MustCompile(`(?m)^\| EK(\d{4}) \|`).FindAllStringSubmatch(string(spec), -1) {
 		code, _ := strconv.Atoi(m[1])
 		want = append(want, int32(code))
 	}

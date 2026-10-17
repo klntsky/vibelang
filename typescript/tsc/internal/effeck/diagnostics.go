@@ -13,7 +13,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
-// Effeck diagnostics are TypeScript diagnostics whose Source is "ES",
+// Effeck diagnostics are TypeScript diagnostics whose Source is "EK",
 // so tsc prints them as `error EK2001: …` and the language server publishes
 // them with source "EK" and the code as a number. They are reported while the
 // checker checks a file, so `effeck`, `effeck --noEmit`, the language server, and

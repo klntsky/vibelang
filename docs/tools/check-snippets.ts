@@ -22,7 +22,7 @@ export function extract(markdown: string): Block[] {
     while (++i < lines.length && !close.test(lines[i])) body.push(lines[i])
     if (fence[2].trim().split(/\s+/)[0] !== "ts") continue
     number++
-    const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:es|ts))\s*$/.exec(line)?.[1]).find(Boolean)
+    const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:effeck|ts))\s*$/.exec(line)?.[1]).find(Boolean)
     if (filename?.split("/").some(part => part === "." || part === "..")) throw new Error(`Invalid snippet filename: ${filename}`)
     if (/^\s*\/\/ TypeScript \(\.ts\)/.test(body[0] ?? "") && !filename) continue
     const headers: string[] = []
@@ -33,7 +33,7 @@ export function extract(markdown: string): Block[] {
     const header = headers.join("\n")
     blocks.push({ number, line: start + 1, source: body.join("\n"), filename,
       firstLine: body.find(l => l.trim() && !/^\s*\/\//.test(l)) ?? body[0] ?? "",
-      expected: [...(header.match(/\/\/ expect-error:\s*([^\n]+)/)?.[1] ?? "").matchAll(/(?:ES|TS)\d+/g)].map(m => m[0]),
+      expected: [...(header.match(/\/\/ expect-error:\s*([^\n]+)/)?.[1] ?? "").matchAll(/(?:EK|TS)\d+/g)].map(m => m[0]),
       fragment: /\/\/ fragment\s*(?:$|\n)/.test(header),
       gap: header.match(/\/\/ compiler-gap:\s*([^\n]+)/)?.[1] })
   }
@@ -48,7 +48,7 @@ export function blockFilenames(blocks: Block[]): Map<number, string> {
   const used = new Set([...counts].filter(([, count]) => count === 1).map(([name]) => name))
   return new Map(blocks.map(block => {
     if (block.filename && counts.get(block.filename) === 1) return [block.number, block.filename]
-    const extension = block.filename?.endsWith(".ts") ? "ts" : "es"
+    const extension = block.filename?.endsWith(".ts") ? "ts" : "effeck"
     let filename = `block-${block.number}.${extension}`
     for (let suffix = 2; used.has(filename); suffix++) filename = `block-${block.number}-${suffix}.${extension}`
     used.add(filename)
@@ -82,10 +82,10 @@ export function classify(block: Block, diagnostics: Diagnostic[]): Result {
 export function parseDiagnostics(output: string): { file?: string; diagnostic: Diagnostic }[] {
   const result: { file?: string; diagnostic: Diagnostic }[] = []
   for (const line of output.split(/\r?\n/)) {
-    const m = /^(.*)\((\d+),(\d+)\): error ((?:TS|ES)\d+): (.*)$/.exec(line)
+    const m = /^(.*)\((\d+),(\d+)\): error ((?:TS|EK)\d+): (.*)$/.exec(line)
     if (m) result.push({ file: m[1], diagnostic: { code: m[4], message: m[5], line: +m[2], column: +m[3] } })
     else {
-      const global = /^error ((?:TS|ES)\d+): (.*)$/.exec(line)
+      const global = /^error ((?:TS|EK)\d+): (.*)$/.exec(line)
       if (global) result.push({ diagnostic: { code: global[1], message: global[2] } })
     }
   }

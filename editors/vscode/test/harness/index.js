@@ -99,7 +99,7 @@ async function run() {
   await check("diagnostics: EK1003 appears on wait.effeck with source EK", async () => {
     const wait = await open("src/wait.effeck")
     const found = await waitFor("EK1003", () => vscode.languages.getDiagnostics(wait.uri).find((d) => codeOf(d) === 1003))
-    assert(found.source === "ES", `source ${found.source}`)
+    assert(found.source === "EK", `source ${found.source}`)
   })
 
   await check("hover: an .effeck function shows its inferred contract", async () => {

@@ -272,7 +272,7 @@ try {
     const items = await diagnostics("src/wait.effeck")
     assert(items.length === 1, `expected one diagnostic, got ${JSON.stringify(items.map((d) => d.message))}`)
     const [item] = items
-    assert(item.source === "ES" && item.code === 1003, `expected ES 1003, got ${item.source} ${JSON.stringify(item.code)}`)
+    assert(item.source === "EK" && item.code === 1003, `expected EK 1003, got ${item.source} ${JSON.stringify(item.code)}`)
     const start = at("src/wait.effeck", "async function")
     assert(item.range.start.line === start.line && item.range.start.character === start.character, `range ${JSON.stringify(item.range)}`)
   })

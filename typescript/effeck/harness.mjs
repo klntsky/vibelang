@@ -123,14 +123,14 @@ function linkNodeModules(dir) {
 function readHeaders(dir) {
   const headers = { codes: undefined, result: undefined, entry: undefined }
   for (const name of fs.readdirSync(dir).sort()) {
-    if (!/\.(es|ts|mts|cts)$/.test(name) || name.endsWith(".d.ts")) continue
+    if (!/\.(effeck|ts|mts|cts)$/.test(name) || name.endsWith(".d.ts")) continue
     const lines = fs.readFileSync(path.join(dir, name), "utf8").split("\n")
     const codes = /^\/\/ expect:\s*(.*)$/.exec(lines[0])
     if (codes) headers.codes = [...(headers.codes ?? []), ...codes[1].split(/\s+/).filter(Boolean)]
     const result = lines.find((line) => line.startsWith("// expect-result:"))
     if (result) {
       headers.result = JSON.stringify(JSON.parse(result.slice("// expect-result:".length)))
-      headers.entry = name.replace(/\.(es|ts|mts|cts)$/, ".js")
+      headers.entry = name.replace(/\.(effeck|ts|mts|cts)$/, ".js")
     }
   }
   return headers
