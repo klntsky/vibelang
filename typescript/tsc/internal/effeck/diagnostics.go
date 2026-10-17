@@ -100,8 +100,8 @@ var (
 	EK2104 = message(2104, errorCategory, "This statement follows the layer's members, but a layer's setup statements come first.")
 	// EK2105: a typed catch clause whose type has a member without a literal _tag. {0} is the clause's type, {1} the member.
 	EK2105 = message(2105, errorCategory, "catch (…: {0}) matches failures by _tag, but {1} has no literal _tag.")
-	// EK2106: a catch clause after an untyped catch clause, which catches every failure.
-	EK2106 = message(2106, errorCategory, "This catch clause can never run: the untyped catch clause before it catches every failure.")
+	// EK2106: a catch clause after one that catches every failure (an untyped clause or a Cause clause).
+	EK2106 = message(2106, errorCategory, "This catch clause can never run: an earlier catch clause catches every failure.")
 	// EK2107: a handle clause whose control is not a control declaration. {0} is the control.
 	EK2107 = message(2107, errorCategory, "{0} is not a control: a handle clause answers an operation that a control declares.")
 	// EK2108: a control's operation without a clause in a handle statement. {0} lists the operations, {1} is the control.
