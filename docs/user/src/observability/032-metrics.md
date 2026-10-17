@@ -1,4 +1,4 @@
-# Metrics in Effect
+# Metrics in Effeck
 
 Effeck uses Effect's `Metric` module to count events, record current values, and measure distributions over time. Metric constructors build values exactly as in Effect; updates, state reads, and instrumented programs run when called.
 

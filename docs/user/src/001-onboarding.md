@@ -1,4 +1,4 @@
-# Welcome to Effect
+# Welcome to Effeck
 
 Effeck gives every function a contract for its result, expected errors, and required services. Use it to write application logic with TypeScript syntax and Effect's execution, resource, and concurrency tools.
 

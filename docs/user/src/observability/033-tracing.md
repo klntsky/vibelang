@@ -1,4 +1,4 @@
-# Tracing in Effect
+# Tracing in Effeck
 
 Tracing records an operation's duration and its relationship to other operations. Effeck uses Effect's spans, attributes, and exporters, so traces can connect work across services. Functions are untraced by default; add spans around operations that you want to observe.
 

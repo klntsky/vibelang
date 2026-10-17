@@ -1,4 +1,4 @@
-# Why Effect?
+# Why Effeck?
 
 Effeck uses Effect to make a program's expected failures and dependencies visible to the compiler. Choose it when application logic needs coordinated retries, cancellation, resource cleanup, and service substitution.
 
