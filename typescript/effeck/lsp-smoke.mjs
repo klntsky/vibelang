@@ -322,6 +322,11 @@ try {
     assert(/Runs here and returns `never`/.test(shown), `got ${JSON.stringify(shown)}`)
   })
 
+  await check("hover: a call passed by name says it runs as a program", async () => {
+    const shown = await hover("src/main.effeck", "greeting(), ")
+    assert(/Passed by name to `Effect\.timeout` as a program: it runs when that program runs, not here, and returns `string`/.test(shown), `got ${JSON.stringify(shown)}`)
+  })
+
   await check("hover: a call in a .ts file does not run", async () => {
     const shown = await hover("src/users.ts", "Effect.succeed", { offset: 7 })
     assert(shown.includes("succeed") && !shown.includes("Runs here"), `got ${JSON.stringify(shown)}`)

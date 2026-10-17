@@ -48,6 +48,9 @@ func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *tra
 }
 
 func (tx *lowering) visit(node *ast.Node) *ast.Node {
+	if tx.plan.conversionOf(node) == convertByName {
+		return tx.byNameProgram(node)
+	}
 	if ref := tx.plan.directRefs[node]; ref != nil {
 		return tx.visitDirectReference(node, ref)
 	}
@@ -197,7 +200,8 @@ func (tx *lowering) runtimeMember(name string) *ast.Node {
 
 // convert lowers a function value that its position converts: a program
 // becomes Effect.suspend(value), and an array or record of programs becomes
-// $programs(value).
+// $programs(value). An expression passed by name becomes a program that runs
+// it (byNameProgram, which visit calls first).
 func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
 	f := tx.Factory()
 	value := tx.visitNode(node)
@@ -214,6 +218,42 @@ func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
 	tx.EmitContext().SetOriginal(converted, node)
 	converted.Loc = node.Loc
 	return converted
+}
+
+// byNameProgram lowers node, an expression passed by name (D147), to
+// `Effect.gen(function* () { return node })`, with node's calls that run
+// lowered to yield* in that generator, or to
+// `Effect.gen({ self: this }, function* () { … })` when node refers to this.
+// fork(fetchReport()) becomes fork(Effect.gen(function* () { return yield*
+// fetchReport(); })): the program runs fetchReport each time it runs.
+func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	ec := tx.EmitContext()
+	saved, savedFrame, savedPlain := tx.inEffect, tx.frame, tx.plain
+	tx.inEffect, tx.plain = true, false
+	tx.frame = &frame{}
+	var value *ast.Node
+	if ref := tx.plan.directRefs[node]; ref != nil {
+		value = tx.visitDirectReference(node, ref)
+	} else {
+		value = tx.visitNode(node)
+	}
+	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
+	body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(value)}), false /*multiLine*/)
+	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
+	ec.SetOriginal(generator, node)
+	arguments := []*ast.Node{generator}
+	if usesThis(node) {
+		self := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{
+			f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("self"), nil /*postfixToken*/, nil /*typeNode*/, f.NewThisExpression()),
+		}), false /*multiLine*/)
+		arguments = []*ast.Node{self, generator}
+	}
+	callee := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("gen"), ast.NodeFlagsNone)
+	lowered := f.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
+	ec.SetOriginal(lowered, node)
+	lowered.Loc = node.Loc
+	return lowered
 }
 
 // runtimeCall makes `runtime.name(arguments...)`.

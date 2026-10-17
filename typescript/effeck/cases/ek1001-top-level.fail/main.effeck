@@ -10,7 +10,7 @@ function loadConfig() {
 
 export const config = loadConfig()
 export const answer = Effect.succeed(42)
-Effect.runPromise(loadConfig())
+Effect.runPromise(loadConfig()) // by name (D147): runPromise receives the program
 export const nested = [Effect.map(Effect.succeed(1), (n) => n + 1)]
 
 // A service lookup and a call of an Effect value run programs too.

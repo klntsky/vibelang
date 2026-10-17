@@ -13,3 +13,13 @@ export function main() {
   const name = lookup(1)
   Console.log(`found ${name.toUpperCase()}`)
 }
+
+function greeting() {
+  Effect.sleep("1 millis")
+  return "hello"
+}
+
+// Effect.timeout receives the greeting call by name, as a program (D147).
+export function eventually() {
+  return Effect.timeout(greeting(), "1 second")
+}

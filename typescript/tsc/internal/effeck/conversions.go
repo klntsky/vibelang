@@ -28,6 +28,7 @@ const (
 	convertPrograms            // $programs(value), an array or record of programs
 	convertDirect              // f$direct, the plain variant of a function that compiles to plain JavaScript
 	convertRejected            // a function that can pause where a plain function is expected
+	convertByName              // an expression that runs an Effect, passed as a program that runs it (D147)
 )
 
 // valueState records, for one argument expression, the conversion each
@@ -42,7 +43,7 @@ type valueState struct {
 // expressionType gives an argument expression the type of the conversion the
 // candidate under check asks for.
 func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checker.Type {
-	if !mayConvert(c, node, t) {
+	if !mayConvert(c, node, t) || analyzerFor(c).valueTyping[node] {
 		return t
 	}
 	call, path := ownerCall(node)
@@ -61,7 +62,16 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 		a.conversions[node] = s
 	}
 	if conv, ok := s.byCandidate[key]; ok {
-		if conv == convertProgram || conv == convertPrograms || conv == convertDirect {
+		switch conv {
+		case convertByName:
+			// The program's type follows t, the type of the expression's value
+			// in this check: a check that skips a generic call, as an inference
+			// pass does, sees a placeholder never that a later check replaces,
+			// and that must reach inference unwrapped so it infers nothing.
+			if program := a.byNameType(node, a.valueTypeOf(node, t)); program != nil {
+				return program
+			}
+		case convertProgram, convertPrograms, convertDirect:
 			return s.types[key]
 		}
 		return t
@@ -79,26 +89,36 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 }
 
 // mayConvert is the cheap test that runs on every expression: node is an
-// argument, an array element, or a property value, its type is a function or
-// an object, and it is not a lambda, whose form forms.go decides.
+// argument, an array element, or a property value, it is not a lambda, whose
+// form forms.go decides, and either its type is a function or an object or it
+// evaluates a call in a function the lowering turns into an Effect, so it may
+// be passed by name (D147).
 func mayConvert(c *checker.Checker, node *ast.Node, t *checker.Type) bool {
 	switch node.Kind {
 	case ast.KindArrowFunction, ast.KindFunctionExpression, ast.KindParenthesizedExpression:
 		return false
 	}
 	parent := node.Parent
-	if parent == nil || t == nil || t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsUnion|checker.TypeFlagsIntersection) == 0 {
+	if parent == nil || t == nil {
 		return false
 	}
 	switch parent.Kind {
 	case ast.KindCallExpression, ast.KindNewExpression:
-		return parent.Expression() != node
+		if parent.Expression() == node {
+			return false
+		}
 	case ast.KindArrayLiteralExpression, ast.KindParenthesizedExpression:
-		return true
 	case ast.KindPropertyAssignment:
-		return parent.Initializer() == node
+		if parent.Initializer() != node {
+			return false
+		}
+	default:
+		return false
 	}
-	return false
+	if t.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsUnion|checker.TypeFlagsIntersection) != 0 {
+		return true
+	}
+	return mayRunByName(node)
 }
 
 // valuePosition is what an argument position expects of a value.
@@ -152,7 +172,146 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 			return convertPrograms, converted
 		}
 	}
+	// An expression that runs an Effect where a program is expected is passed
+	// by name (D147): fork(fetchReport()) passes fetchReport() as a program,
+	// as if written () => fetchReport(), and runs nothing at the call site. An
+	// expression whose value is itself an Effect keeps its meaning.
+	if position.program && !isEffectType(a.checker, t) && a.pauses(node) {
+		if program := a.byNameType(node, a.valueTypeOf(node, t)); program != nil {
+			return convertByName, program
+		}
+	}
 	return convertNone, t
+}
+
+// isPlaceholderNever reports whether t is the never that the checker gives a
+// generic call it skips during an inference pass, which infers nothing.
+func isPlaceholderNever(t *checker.Type) bool {
+	return t.Flags()&checker.TypeFlagsNever != 0 && t.ObjectFlags()&checker.ObjectFlagsNonInferrableType != 0
+}
+
+// valueTypeOf returns t, the type of node's value in the check in progress,
+// or node's own type when t is the placeholder never of an inference pass
+// that skipped a generic call in node. A by-name argument must infer the
+// callee's type parameters in that pass: a placeholder infers nothing, so a
+// type parameter with a default, as in Effect.forkScoped's
+// <Arg extends Effect | Options = Options>, would take the default.
+func (a *analyzer) valueTypeOf(node *ast.Node, t *checker.Type) *checker.Type {
+	if !isPlaceholderNever(t) || a.valueTyping[node] {
+		return t
+	}
+	a.valueTyping[node] = true
+	defer delete(a.valueTyping, node)
+	return a.checker.GetTypeAtLocation(node)
+}
+
+// mayRunByName is the cheap test for an expression of any type that it may be
+// passed by name: it evaluates a call, and it sits in the body of a function
+// the lowering can turn into an Effect, where calls run, or at a module's top
+// level, where a call to a plain function runs inline.
+func mayRunByName(node *ast.Node) bool {
+	return containsCall(node) && (inLowerableBody(node) || atTopLevel(node))
+}
+
+// atTopLevel reports whether a module's top level evaluates node, not a
+// function or class inside it.
+func atTopLevel(node *ast.Node) bool {
+	for n := node.Parent; n != nil; n = n.Parent {
+		if isFunctionBoundary(n) {
+			return false
+		}
+		if n.Kind == ast.KindSourceFile {
+			return isEffeckFile(n.AsSourceFile())
+		}
+	}
+	return false
+}
+
+// containsCall reports whether node is or contains a call that node itself
+// evaluates, not one in a nested function.
+func containsCall(node *ast.Node) bool {
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if isFunctionBoundary(n) {
+			return false
+		}
+		return n.Kind == ast.KindCallExpression || n.ForEachChild(visit)
+	}
+	return visit(node)
+}
+
+// pauses reports whether evaluating node, an expression, calls something
+// TypeScript sees as an Effect: it runs a call that runs an Effect, looks up
+// a service, or calls an .effeck function, including one that compiles to
+// plain JavaScript, whose TypeScript type is an Effect too (D10, D67).
+func (a *analyzer) pauses(node *ast.Node) bool {
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if isFunctionBoundary(n) {
+			return false
+		}
+		if n.Kind == ast.KindCallExpression && (a.performs(n) || a.callsEffeckFunction(n)) {
+			return true
+		}
+		return n.ForEachChild(visit)
+	}
+	return visit(node)
+}
+
+// callsEffeckFunction reports whether call calls an .effeck function other
+// than a producer, whose call builds a Stream.
+func (a *analyzer) callsEffeckFunction(call *ast.Node) bool {
+	signature := a.checker.GetResolvedSignature(call)
+	if signature == nil {
+		return false
+	}
+	fn := implementationOf(signature.Declaration())
+	return fn != nil && isLowerable(fn) && !isProducer(fn)
+}
+
+// byNameType returns Effect<A, E, R> for node passed by name, given A, the
+// type of its value where it runs: E and R are what running node adds, as
+// for the body of the lambda () => node.
+func (a *analyzer) byNameType(node *ast.Node, success *checker.Type) *checker.Type {
+	info := a.flowOf(node)
+	effect := info.effect
+	if effect == nil {
+		effect = a.programEffectInterface()
+	}
+	if effect == nil {
+		effect = a.effectInterface
+	}
+	if effect == nil {
+		return nil
+	}
+	return a.checker.NewTypeReference(effect, []*checker.Type{success, a.checker.GetUnionType(info.errors), a.checker.GetUnionType(info.requirements)})
+}
+
+// isByName reports whether node is an expression passed by name (D147). It
+// resolves the call node is an argument of first, which decides it.
+func (a *analyzer) isByName(node *ast.Node) bool {
+	if a.conversions[node] == nil {
+		if !mayRunByName(node) {
+			return false
+		}
+		call, _ := ownerCall(node)
+		if call == nil || a.resolving[call] {
+			return false
+		}
+		a.checker.GetResolvedSignature(call)
+	}
+	return a.finalConversion(node) == convertByName
+}
+
+// byNameOf returns the expression passed by name that evaluates node, or nil:
+// node itself or an ancestor in the same function.
+func (a *analyzer) byNameOf(node *ast.Node) *ast.Node {
+	for n := node; n != nil && !isFunctionBoundary(n); n = n.Parent {
+		if a.conversions[n] != nil && a.finalConversion(n) == convertByName {
+			return n
+		}
+	}
+	return nil
 }
 
 // programOf returns the Effect that t, a function with no required parameters

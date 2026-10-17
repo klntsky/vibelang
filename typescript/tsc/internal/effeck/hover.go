@@ -4,6 +4,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
 // The language server's hooks register here rather than in effeck.go,
@@ -35,7 +36,24 @@ func runningCallQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
 	if success == nil {
 		return "", ""
 	}
-	return "", "Runs here and returns `" + c.TypeToStringEx(success, call, hoverTypeFlags, nil) + "`."
+	returns := "`" + c.TypeToStringEx(success, call, hoverTypeFlags, nil) + "`"
+	if byName := analyzerFor(c).byNameOf(call); byName != nil {
+		if owner, _ := ownerCall(byName); owner != nil {
+			return "", "Passed by name to `" + calleeText(owner) + "` as a program: it runs when that program runs, not here, and returns " + returns + "."
+		}
+	}
+	return "", "Runs here and returns " + returns + "."
+}
+
+// calleeText returns the source text of call's callee, such as fork or
+// Effect.timeout, for a hover to name it.
+func calleeText(call *ast.Node) string {
+	callee := call.Expression()
+	file := ast.GetSourceFileOfNode(callee)
+	if file == nil {
+		return "the callee"
+	}
+	return scanner.GetSourceTextOfNodeFromSourceFile(file, callee, false /*includeJsDoc*/)
 }
 
 // callOfCallee returns the call that node names the callee of: the call

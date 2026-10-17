@@ -1,0 +1,53 @@
+// Where a parameter expects a program, an expression that runs an Effect is
+// passed by name (D147): fork(fetchReport()) passes the call as a program,
+// as if written () => fetchReport(), and runs nothing at the call site.
+// Elsewhere, such as Console.log's parameters, the call still runs here.
+class Unavailable extends TaggedError("Unavailable")<{ readonly attempt: number }> {}
+
+let attempts = 0
+let fastRuns = 0
+
+function fetchReport() {
+  attempts++
+  if (attempts < 3) throw new Unavailable({ attempt: attempts })
+  return `report after ${attempts} attempts`
+}
+
+function slow() {
+  Effect.sleep("1 second")
+  return "slow"
+}
+
+function fast() {
+  fastRuns++
+  Effect.sleep("5 millis")
+  return "fast"
+}
+
+function deadline() {
+  try {
+    return Effect.timeout(slow(), "20 millis")
+  } catch (error) {
+    return error._tag
+  }
+}
+
+function subtotal() {
+  return 7 * 8
+}
+
+// At the top level too, a runner receives a call by name: subtotal() runs
+// inside the program that runSync starts, through its plain variant.
+const total = Effect.runSync(subtotal())
+
+// expect-result: {"report":"report after 3 attempts","winner":"fast","timed":"TimeoutError","joined":"fast","both":["fast","fast"],"logged":true,"attempts":3,"fastRuns":5,"total":56}
+export function main() {
+  const report = Effect.retry(fetchReport(), { times: 5 })
+  const winner = Effect.race(fast(), slow())
+  const timed = deadline()
+  const fiber = fork(fast())
+  const joined = Fiber.join(fiber)
+  const both = Effect.all([fast(), fast()])
+  Console.log(fast())
+  return { report, winner, timed, joined, both, logged: true, attempts, fastRuns, total }
+}

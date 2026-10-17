@@ -440,6 +440,26 @@ A function value converts where it is passed, as a lambda takes its form there. 
 
 A syntactic array or object literal of programs converts element by element, so `Effect.all([job, () => fetch(id)])` needs no helper. Calling an Effect value runs it (`Clock.currentTimeMillis()`, a cached program, a `Config`): the call signatures hook (`effectValueCall`, `services.go`) gives such a callee the signature `() => Effect<A, E, R>`.
 
+### By-name arguments (D147)
+
+Where a parameter expects an Effect, an argument expression that calls something TypeScript sees as an Effect, an `.effeck` function (plain ones too), a function that returns an Effect, or a service member, is passed by name: as a program that evaluates it each time it runs.
+
+```ts
+// main.effeck                                        // main.js
+const fiber = fork(fetchReport())                     const fiber = yield* runtime.$fork(Effect.gen(function* () { return yield* fetchReport(); }), scope_1)
+const total = Effect.runSync(subtotal())              const total = Effect.runSync(Effect.gen(function* () { return subtotal$direct(); }))
+Console.log(fast())                                   yield* Console.log(yield* fast())
+```
+
+- **Where.** The expression type hook (`expressionType`, `conversions.go`) decides per overload candidate, like the conversions above: `convertByName` when the candidate's declared parameter expects a program (`classify`), the expression calls an Effect (`pauses`), and its value is not itself an Effect. Arguments, array elements, and record fields qualify, in lowered function bodies and at a module's top level (`mayRunByName`). A position that accepts any value, such as `Console.log`'s, runs the call where it stands.
+- **Type.** `byNameType` builds `Effect<A, E, R>` from the expression's value type and what `flowOf` collects from it. The value type follows each check: an inference pass that skips a generic call gives the placeholder `never`, so `valueTypeOf` reads the expression's own type there; otherwise a type parameter with a default, as in `Effect.forkScoped`'s `<Arg extends Effect | Options = Options>`, would take the default.
+- **Channels.** `flowOf` skips an expression passed by name (`isByName`), so its errors and requirements join the callee's Effect, not the enclosing function's.
+- **Lowering.** `visit` checks `convertByName` first and emits `Effect.gen(function* () { return … })` with a fresh frame (`byNameProgram`), or `Effect.gen({ self: this }, …)` when the expression uses `this`; a plain function's call inside it runs through its `$direct` variant.
+- **The top level.** EK1001 does not apply to a call passed by name (`passedAsProgram`), so `NodeRuntime.runMain(main())` and `Effect.runPromise(loadConfig())` are allowed. A service member call or an Effect value call there still needs `() =>`: the checker types those only inside function bodies.
+- **Hover.** A hover on the callee says "Passed by name to `Effect.timeout` as a program: it runs when that program runs, not here".
+
+Case `effeck-by-name` covers retry, race, timeout inside `try`, `fork`, array elements, `Console.log`, and a top-level runner; `lsp-smoke.sh` checks the hover.
+
 ### Plain JavaScript (D9, D10, D55)
 
 ```ts

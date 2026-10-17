@@ -65,7 +65,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 				})
 				p.planScopes(a, node)
 			}
-			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertPrograms {
+			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertPrograms || conversion == convertByName {
 				p.converts[node] = conversion
 			}
 			p.planPlain(a, node)
@@ -129,6 +129,7 @@ type analyzer struct {
 	effectInterface *checker.Type                       // the generic Effect interface, once seen
 
 	conversions map[*ast.Node]*valueState // argument expressions that convert (conversions.go)
+	valueTyping map[*ast.Node]bool        // by-name arguments whose own type is being read (valueTypeOf)
 
 	// Plain JavaScript functions (plain.go).
 	plain                 map[*ast.Node]plainState // function declarations that compile to plain JavaScript
@@ -159,6 +160,7 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			resolving: map[*ast.Node]bool{},
 
 			conversions: map[*ast.Node]*valueState{},
+			valueTyping: map[*ast.Node]bool{},
 			plain:       map[*ast.Node]plainState{},
 			callbacks:   map[*ast.Node]*callbackContracts{},
 		}

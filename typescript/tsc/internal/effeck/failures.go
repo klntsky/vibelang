@@ -18,13 +18,16 @@ import (
 
 // flowOf collects what running node adds to E and R. node is a statement,
 // block, or expression in the body of one function; the functions and classes
-// nested in it do not run as part of it.
+// nested in it, and the expressions it passes by name (D147), do not run as
+// part of it.
 func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 	info := &effectInfo{}
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		switch {
 		case isFunctionBoundary(n):
+		case n != node && a.isByName(n):
+			// Passed as a program (D147): it runs where the callee runs it.
 		case n.Kind == ast.KindTryStatement:
 			info.add(a.tryFlow(n))
 		case n.Kind == ast.KindThrowStatement:

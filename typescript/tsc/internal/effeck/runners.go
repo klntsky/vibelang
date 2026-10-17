@@ -131,7 +131,7 @@ func checkProgramStarts(c *checker.Checker, file *ast.SourceFile) {
 			topLevel = false
 		}
 		if ast.IsCallExpression(node) {
-			if topLevel {
+			if topLevel && !a.passedAsProgram(node) {
 				if runs, explains := runsAtTopLevel(c, a, node); runs {
 					reportTopLevelRun(c, file, node)
 					if explains {
@@ -177,6 +177,22 @@ func runsAtTopLevel(c *checker.Checker, a *analyzer, call *ast.Node) (runs bool,
 	return false, false
 }
 
+// passedAsProgram reports whether call, at a module's top level, is an
+// argument where a program is expected, as main() is in
+// NodeRuntime.runMain(main()): a call there runs nothing and builds the
+// program the callee receives (D147), so EK1001 does not apply.
+func (a *analyzer) passedAsProgram(call *ast.Node) bool {
+	owner, path := ownerCall(call)
+	if owner == nil || !isEffectType(a.checker, a.checker.GetTypeAtLocation(call)) {
+		return false
+	}
+	signature := a.checker.GetResolvedSignature(owner)
+	if signature == nil {
+		return false
+	}
+	return a.classify(a.expectedAt(owner, signature, path, call)).program
+}
+
 // reportTopLevelRun reports EK1001 for call, which runs a program at the
 // module's top level.
 func reportTopLevelRun(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
@@ -207,10 +223,8 @@ func reportNestedRunner(c *checker.Checker, file *ast.SourceFile, call *ast.Node
 	}
 	program := "() => …"
 	if arguments := call.Arguments(); len(arguments) > 0 {
+		// fork receives a call by name (D147), as the runner did.
 		program = nodeText(file, arguments[0])
-		if !ast.IsArrowFunction(arguments[0]) && !ast.IsFunctionExpression(arguments[0]) {
-			program = "() => " + program
-		}
 	}
 	note(d, "Call the program, or fork it so the block owns it:   fork({0})", program)
 }
