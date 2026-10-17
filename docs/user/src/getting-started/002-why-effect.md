@@ -23,7 +23,7 @@ const quote = () => unitPrice(72, 6)
 ## Share an application foundation
 
 ```ts
-service Prices {
+service class Prices {
   total(sku: string): number!InvalidQuantity
 }
 
@@ -33,7 +33,9 @@ function receipt(sku: string) {
 }
 // string!InvalidQuantity!Prices
 
-layer PricesTest: Prices { total(_sku) { return 18 } }
+const PricesTest = Layer.succeed(Prices, {
+  total(_sku) { return 18 }
+})
 
 function preview() {
   provide PricesTest { return receipt("pencil-box") }

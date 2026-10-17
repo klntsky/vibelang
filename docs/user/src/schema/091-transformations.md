@@ -62,7 +62,7 @@ error UnknownRoute {
   code: string
 }
 
-service Routes {
+service class Routes {
   check(code: string): void!UnknownRoute
 }
 
@@ -85,7 +85,9 @@ function readRoute(input: unknown) {
 }
 // string!Schema.SchemaError!Routes
 
-layer TestRoutes: Routes { check(_code) {} }
+const TestRoutes = Layer.succeed(Routes, {
+  check(_code) {}
+})
 
 function previewRoute() {
   provide TestRoutes { return readRoute("coastal") }

@@ -111,7 +111,7 @@ error SetupFailed {
   stage: string
 }
 
-service ProjectSteps {
+service class ProjectSteps {
   create(stage: string): string!SetupFailed
   remove(id: string): void!!
   finish(storage: string, index: string): string!SetupFailed
@@ -145,11 +145,11 @@ The finalizers see the whole setup operation's exit, so defects and interruption
 ```ts
 function exerciseRollback() {
   const removed: string[] = []
-  layer testLayer: ProjectSteps {
-    create(stage) { return stage }
-    remove(id) { removed.push(id) }
+  const testLayer = Layer.succeed(ProjectSteps, {
+    create(stage) { return stage },
+    remove(id) { removed.push(id) },
     finish(_storage, _index) { throw new SetupFailed({ stage: "finish" }) }
-  }
+  })
   const outcome = Effect.result(Effect.provide(() => setupProject(), testLayer))
   return { outcome, removed } // removed: ["index", "storage"]
 }

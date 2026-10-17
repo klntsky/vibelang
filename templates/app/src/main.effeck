@@ -1,12 +1,12 @@
 import { EmptyName, greeting } from "./greeting.effeck"
 
-service Greeter {
+service class Greeter {
   greet(name: string): string!EmptyName
 }
 
-layer GreeterLive: Greeter {
+const GreeterLive = Layer.succeed(Greeter, {
   greet(name: string) { return greeting(name) }
-}
+})
 
 export function main() {
   provide GreeterLive {

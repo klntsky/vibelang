@@ -8,7 +8,7 @@ A control operation lets a handler decide how the caller continues. Use one when
 // approval.effeck
 export error ReviewBusy { request: string }
 
-export control Approval {
+export control class Approval {
   approve(request: string): boolean!ReviewBusy
 }
 

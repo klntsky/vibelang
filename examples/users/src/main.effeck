@@ -5,30 +5,32 @@ export interface User {
 
 export error UserNotFound { id: string }
 
-export service Directory {
+export service class Directory {
   lookup(id: string): User | undefined!!
 }
 
-export service Users {
+export service class Users {
   find(id: string): User!UserNotFound
 }
 
-export layer DirectoryLive: Directory {
+export const DirectoryLive = Layer.succeed(Directory, {
   lookup(id) { return id === "42" ? { id, name: "Ada" } : undefined }
-}
+})
 
-export layer UsersLive: Users {
+export const UsersLive = Layer.effect(Users) {
   const directory = Directory()
-  find(id) {
-    const user = directory.lookup(id)
-    if (user === undefined) throw new UserNotFound({ id })
-    return user
+  return {
+    find(id) {
+      const user = directory.lookup(id)
+      if (user === undefined) throw new UserNotFound({ id })
+      return user
+    }
   }
 }
 
-export layer UsersTest: Users {
+export const UsersTest = Layer.succeed(Users, {
   find(id) { return ({ id, name: "Grace" }) }
-}
+})
 
 export const AppLive = wire(UsersLive, DirectoryLive)
 

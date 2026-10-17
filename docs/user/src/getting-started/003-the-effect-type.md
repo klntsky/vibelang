@@ -9,7 +9,7 @@ error MissingRate {
   currency: string
 }
 
-service Rates {
+service class Rates {
   lookup(currency: string): number!MissingRate
 }
 

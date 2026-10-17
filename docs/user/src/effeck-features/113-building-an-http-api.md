@@ -9,18 +9,20 @@ Build routes with Effect's HTTP modules and write each handler as an Effeck func
 export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
-export service Users {
+export service class Users {
   create(name: string): { id: string; name: string }!NameTaken
 }
 
-export layer UsersLive: Users {
+export const UsersLive = Layer.effect(Users) {
   const names = new Set<string>()
   let nextId = 0
-  create(name) {
-    if (names.has(name)) throw new NameTaken({ name })
-    names.add(name)
-    nextId++
-    return { id: String(nextId), name }
+  return {
+    create(name) {
+      if (names.has(name)) throw new NameTaken({ name })
+      names.add(name)
+      nextId++
+      return { id: String(nextId), name }
+    }
   }
 }
 ```

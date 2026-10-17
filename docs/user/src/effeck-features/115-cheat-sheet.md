@@ -17,7 +17,7 @@ function getOrders(id: string): number!! {
   return id.length
 }
 
-control Approval {
+control class Approval {
   approve(request: string): boolean!!
 }
 
@@ -61,7 +61,7 @@ error Missing { id: string }
 error Timeout
 ```
 
-**Services** (D128). Value members are readonly.
+**Services** (D128, D220). `service` modifies a class declaration, as `declare` does; members have no bodies, and value members are readonly.
 
 ```ts effect
 class Users extends Context.Service<Users, {
@@ -71,13 +71,13 @@ class Users extends Context.Service<Users, {
 ```
 
 ```ts es
-service Users {
+service class Users {
   find(id: string): User!NotFound
   region: string
 }
 ```
 
-**Control operations** (D128). Effect has none, so the left column is Effeck's long form.
+**Control operations** (D128, D220). Effect has none, so the left column is Effeck's long form.
 
 ```ts long
 abstract class Review extends Control {
@@ -86,12 +86,12 @@ abstract class Review extends Control {
 ```
 
 ```ts es
-control Review {
+control class Review {
   approve(request: string): boolean!!
 }
 ```
 
-**Layers** (D129). Statements run once when the layer builds; without them, the layer is `Layer.succeed`.
+**Layers** (D221). A layer is Effect's own call: the block after `Layer.effect(Users)` is its effect (block params, D188), its statements run once when the layer builds, and the service types the returned members. Without setup, write `Layer.succeed(Users, { ... })`.
 
 ```ts effect
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
@@ -101,10 +101,12 @@ const UsersLive = Layer.effect(Users, Effect.gen(function* () {
 ```
 
 ```ts es
-layer UsersLive: Users {
+const UsersLive = Layer.effect(Users) {
   const seen = new Set<string>()
-  find(id) { return getUser(id) }
-  readonly region = "eu"
+  return {
+    find(id) { return getUser(id) },
+    region: "eu"
+  }
 }
 ```
 

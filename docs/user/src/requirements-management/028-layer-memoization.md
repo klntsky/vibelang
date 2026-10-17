@@ -7,27 +7,33 @@ Effect shares repeated uses of the same layer value within one build graph. Effe
 ## Sharing acquisition across a graph
 
 ```ts
-service Prefix {
+service class Prefix {
   value: string
 }
-service Heading {
+service class Heading {
   value: string
 }
-service Footer {
+service class Footer {
   value: string
 }
 
-layer PrefixLive: Prefix {
+const PrefixLive = Layer.effect(Prefix) {
   log("Prefix initialized")
-  readonly value = "Monthly"
+  return {
+    value: "Monthly"
+  }
 }
-layer HeadingLive: Heading {
+const HeadingLive = Layer.effect(Heading) {
   const prefix = Prefix()
-  readonly value = `${prefix.value} report`
+  return {
+    value: `${prefix.value} report`
+  }
 }
-layer FooterLive: Footer {
+const FooterLive = Layer.effect(Footer) {
   const prefix = Prefix()
-  readonly value = `${prefix.value} archive`
+  return {
+    value: `${prefix.value} archive`
+  }
 }
 
 const Shared = Layer.merge(

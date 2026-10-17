@@ -16,7 +16,7 @@ A **control operation** is a request whose handler receives the rest of the call
 A control operation is declared like a service, with `control`, which is short for an abstract class that extends the global `Control` (D128):
 
 ```ts es
-control Approval {
+control class Approval {
   approve(request: string): boolean!ReviewBusy
 }
 
@@ -70,7 +70,7 @@ const receipt = handle(() => checkout("c-42"), Approval, {
 A handler that returns without calling `resume` ends the handled program with the handler's result. Everything the program had open is cleaned up first.
 
 ```ts es
-control Found {
+control class Found {
   found(cell: Cell): never!!
 }
 

@@ -20,7 +20,7 @@ A function value remains a description until it is called or handed to a runner.
 ## Run with an explicit service context
 
 ```ts
-service Labels {
+service class Labels {
   format(value: string): string!!
 }
 
@@ -77,7 +77,7 @@ function roll(): number!! {
 
 ```ts
 // notifications.effeck
-export service Notifications {
+export service class Notifications {
   send(message: string): void!!
 
   static readonly layer = Layer.succeed(Notifications, {

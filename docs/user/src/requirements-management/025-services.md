@@ -7,11 +7,11 @@ A service gives a program a named capability without passing an implementation t
 ## Declaring typed service keys
 
 ```ts
-service Sequence {
+service class Sequence {
   next(): number!!
 }
 
-service Reporter {
+service class Reporter {
   write(message: string): void!!
 }
 ```
@@ -45,7 +45,7 @@ function readImplementation() {
 `Sequence.next()` looks up the service and runs its method. `Sequence()` returns the implementation itself, which is useful for capturing it or reading value members. A runner needs a program whose remaining requirements have been supplied.
 
 ```ts
-service Settings {
+service class Settings {
   baseUrl: string
 }
 
@@ -69,7 +69,7 @@ type SequenceImplementation = Context.Service.Shape<typeof Sequence>
 
 `Context.Service.Shape` is Effect 4's utility for extracting the implementation associated with a key. A service compiles to an interface for its implementation and a class whose static side is a `Context.Key`. The utility therefore works on `typeof Sequence`; using `Sequence` as a type also names the implementation, so `implements Sequence` checks its methods. The generated key keeps the requirement nominal.
 
-Normal providers already infer and check their implementation from the key argument, so this utility is unnecessary for most layer declarations. When crossing a TypeScript boundary, it describes the emitted implementation's Effect-returning methods.
+Normal providers already infer and check their implementation from the key argument, so this utility is unnecessary for most layers. When crossing a TypeScript boundary, it describes the emitted implementation's Effect-returning methods.
 
 ## Combining multiple dependencies
 
@@ -81,8 +81,12 @@ function announceTicket() {
 }
 // string!!Sequence | Reporter
 
-layer SequenceTest: Sequence { next() { return 17 } }
-layer ReporterTest: Reporter { write(_message) {} }
+const SequenceTest = Layer.succeed(Sequence, {
+  next() { return 17 }
+})
+const ReporterTest = Layer.succeed(Reporter, {
+  write(_message) {}
+})
 
 function testAnnouncement() {
   provide wire(SequenceTest, ReporterTest) { return announceTicket() }
@@ -122,14 +126,16 @@ function optionalAnnouncement(message: string) {
 ## Handling dependencies between services
 
 ```ts
-service ReportSettings {
+service class ReportSettings {
   prefix: string
 }
 
-layer ReporterLive: Reporter {
+const ReporterLive = Layer.effect(Reporter) {
   const settings = ReportSettings()
-  write(message) {
-    log(`${settings.prefix}: ${message}`)
+  return {
+    write(message) {
+      log(`${settings.prefix}: ${message}`)
+    }
   }
 }
 // Layer<Reporter, never, ReportSettings>

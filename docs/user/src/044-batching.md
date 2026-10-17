@@ -97,11 +97,11 @@ For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `colle
 ## Supply resolver dependencies
 
 ```ts
-service CatalogApi {
+service class CatalogApi {
   fetchMany(codes: ReadonlyArray<string>): ReadonlyMap<string, Part>!CatalogUnavailable
 }
 
-service Parts {
+service class Parts {
   find(code: string): Part!PartMissing | CatalogUnavailable
 
   static readonly layer = Layer.effect(Parts) {

@@ -68,7 +68,7 @@ interface Lease {
   id: string
 }
 
-service LeaseStore {
+service class LeaseStore {
   acquire(): Lease!!
   release(lease: Lease): void!!
 }
@@ -112,10 +112,10 @@ function leaseId() {
 }
 // string!!LeaseStore
 
-layer LeaseStoreTest: LeaseStore {
-  acquire() { return ({ id: "test-lease" }) }
+const LeaseStoreTest = Layer.succeed(LeaseStore, {
+  acquire() { return ({ id: "test-lease" }) },
   release(_lease) {}
-}
+})
 
 function example() {
   provide LeaseStoreTest { return leaseId() }

@@ -23,7 +23,7 @@ function readFirst() {
 ## Async iteration and manual pulls
 
 ```ts
-service Exporter {
+service class Exporter {
   write(rows: AsyncIterable<string>): number!Error
 }
 

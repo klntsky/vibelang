@@ -210,8 +210,9 @@ async function main() {
         }
         // TypeScript's parser reads Effeck's declaration forms, such as
         // `error NotFound { id: string }`, as expression statements, so their
-        // names come from the source text. Each declares a value.
-        for (const m of block.source.matchAll(/^(export\s+)?(?:error|service|control|layer|schema)\s+([A-Za-z_$][\w$]*)/gm)) {
+        // names come from the source text. Each declares a value. `service`
+        // and `control` may be followed by `class` (D220).
+        for (const m of block.source.matchAll(/^(export\s+)?(?:error|(?:service|control)(?:\s+class)?|layer|schema)\s+([A-Za-z_$][\w$]*)/gm)) {
           names.add(m[2])
           localValues.add(m[2])
           if (m[1]) exported.add(m[2])

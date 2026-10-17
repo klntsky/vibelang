@@ -7,13 +7,13 @@ A layer describes how to construct services, including their dependencies, initi
 ## Describing a dependency graph
 
 ```ts
-service Settings {
+service class Settings {
   prefix: string
 }
-service Printer {
+service class Printer {
   print(text: string): void!!
 }
-service Reports {
+service class Reports {
   render(title: string): string!!
 }
 
@@ -28,31 +28,37 @@ The implementation graph on this page has `Printer` depend on `Settings`, and `R
 ## Preventing dependency leakage
 
 ```ts
-layer PrinterLive: Printer {
+const PrinterLive = Layer.effect(Printer) {
   const settings = Settings()
-  print(text) {
-    log(`${settings.prefix}: ${text}`)
+  return {
+    print(text) {
+      log(`${settings.prefix}: ${text}`)
+    }
   }
 }
 // Layer<Printer, never, Settings>
 ```
 
-`layer PrinterLive: Printer { ... }` builds a `Printer`. The statements before the members run once, when the layer builds, and the members form the implementation; a value member is written `readonly name = value`. The declaration is short for `Layer.effect(Printer, () => { ...; return { print(text) { ... } } })`, and a layer without statements is `Layer.succeed`. `Settings()` runs once when the layer builds, and the method captures that implementation, so callers need `Printer` without also needing `Settings`. Looking up a service inside a method instead makes it a call-time requirement, which must appear in the member's full contract.
+`Layer.effect(Printer) { ... }` builds a `Printer`: the block is the layer's effect, passed to Effect's `Layer.effect` through block params. Its statements run once, when the layer builds, and the object it returns is the implementation, whose members the service types, so `print(text)` needs no annotation. A layer without setup is `Layer.succeed(Printer, { ... })`. `Settings()` runs once when the layer builds, and the method captures that implementation, so callers need `Printer` without also needing `Settings`. Looking up a service inside a method instead makes it a call-time requirement, which must appear in the member's full contract.
 
 Keep method requirements at `never` when dependencies are implementation details. This lets a test provide a simple fake without also recreating the production graph.
 
 ## Constructing service layers
 
 ```ts
-layer SettingsLive: Settings { readonly prefix = "reports" }
+const SettingsLive = Layer.succeed(Settings, {
+  prefix: "reports"
+})
 // Layer<Settings, never, never>
 
-layer ReportsLive: Reports {
+const ReportsLive = Layer.effect(Reports) {
   const settings = Settings()
   const printer = Printer()
-  render(title) {
-    printer.print("Rendering report")
-    return `${settings.prefix}/${title}`
+  return {
+    render(title) {
+      printer.print("Rendering report")
+      return `${settings.prefix}/${title}`
+    }
   }
 }
 // Layer<Reports, never, Settings | Printer>
@@ -129,9 +135,9 @@ const ReportsUnavailable = Layer.effect(Reports) {
   throw new InitializationFailed()
 }
 
-layer ReportsFallback: Reports {
+const ReportsFallback = Layer.succeed(Reports, {
   render(title) { return `Offline report: ${title}` }
-}
+})
 
 const ObservedReports = ReportsUnavailable
   |> Layer.tap(%, () => log("Reports initialized"))
@@ -147,7 +153,7 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 ## Declaring service factories and dependencies
 
 ```ts
-service Banner {
+service class Banner {
   text(title: string): string!!
 
   static make(): Banner!!Settings {
@@ -168,9 +174,13 @@ A constant factory can use `Layer.succeed`; synchronous factories can use `Layer
 ## Replacing services in tests
 
 ```ts
-layer SettingsTest: Settings { readonly prefix = "test" }
+const SettingsTest = Layer.succeed(Settings, {
+  prefix: "test"
+})
 const BannerWithTestSettings = Layer.provide(Banner.layerWithoutDependencies, SettingsTest)
-layer BannerTest: Banner { text(title) { return `fixture/${title}` } }
+const BannerTest = Layer.succeed(Banner, {
+  text(title) { return `fixture/${title}` }
+})
 
 function testBannerDependency() {
   provide BannerWithTestSettings { return Banner.text("Orders") }

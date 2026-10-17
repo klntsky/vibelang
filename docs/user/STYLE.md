@@ -42,23 +42,24 @@ Code blocks use the `ts` fence and are Effeck unless the first line says otherwi
 - **Errors.** `error UserNotFound { id: string }` declares a tagged error class with readonly fields (short for `class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}`); `throw new UserNotFound({ id })` adds it to E; `try`/`catch` handles expected failures only; `catch (e: NotFound)` handles one type, `catch (e: A | B)` several, and a final untyped clause the rest; `finally` always runs. Serializable errors use `Schema.TaggedError`. `Effect.orDie(() => f())` turns failures into defects; `Effect.catchDefect` observes defects at a boundary.
 - **Readonly by default.** Members of interfaces and object types are readonly; write `mutable count: number` for a member the code assigns. Do not write `readonly` on members; arrays still need `ReadonlyArray`.
 - **Data.** `schema User { id: string; role: "admin" | "member"; tags: ReadonlyArray<string>; home: Address }` declares the struct schema `User` and its decoded type in one declaration (short for `const User = Schema.Struct({ ... })` with `interface User extends Schema.Schema.Type<typeof User> {}`). A field may name another schema or a schema constant, such as `const Created = Schema.DateTimeUtc`. Use `Schema.Struct` for checks, transformations, and exact optional keys.
-- **Services are `service` declarations**, abstract classes whose members state their contracts. Provide a layer to a block with `provide AppLive { ... }`, the keyword that matches `Effect.provide`, and one service with `provide Key = value { ... }`.
+- **Services are `service class` declarations** (D220): `service` is a modifier, like `declare`, and the members are bodiless contracts. A layer is a call: `Layer.effect(Users) { setup; return { ...members } }` through block params, or `Layer.succeed(Users, { ...members })` without setup (D221). Provide a layer to a block with `provide AppLive { ... }`, the keyword that matches `Effect.provide`, and one service with `provide Key = value { ... }`. Do not write `service Users { }` without `class` or `layer UsersLive: Users { }`; both are old spellings that warn (EK2120, EK2121).
 
   ```ts
-  service Users {
+  service class Users {
     find(id: string): User!UserNotFound
-    static readonly layer = Layer.effect(Users, () => {
-      const db = Database()                       // captured once, when the layer is built
-      return { find: (id) => db.findUser(id) }
-    })
+  }
+
+  const UsersLive = Layer.effect(Users) {
+    const db = Database()                         // runs once, when the layer is built
+    return { find: (id) => db.findUser(id) }
   }
   ```
 
-  Call `Users.find(id)`; `Users()` returns the implementation. Provide with `Effect.provide(() => main(), layer)`; compose with `wire(UsersLive, DatabaseLive)` or Effect's `Layer` functions. Test with `Layer.succeed(Users, { find: (id) => fakeUser })`.
+  Call `Users.find(id)`; `Users()` returns the implementation. Compose with `wire(UsersLive, DatabaseLive)` or Effect's `Layer` functions. Test with `Layer.succeed(Users, { find: (id) => fakeUser })`.
 - **Resources.** `using file = Files.open(path)` releases at block exit. `Effect.acquireRelease(() => acquire(), (x) => release(x))` defines one. Only `using` acquisitions belong to the block; anything acquired without `using` belongs to the caller (`Scope` stays in R).
 - **Concurrency.** Effect's combinators with programs, as above. `fork(() => work())` starts a fiber owned by the enclosing block, interrupted when the block exits; `Fiber.join(fiber)` waits. `Effect.forkScoped` and `Effect.forkDetach` give longer lifetimes.
 - **Producers.** `function*` with `yield` produces values one at a time and may call services between them; `for (const x of producer())` consumes it, and `break` runs its cleanup. Consume an Effect `Stream` with Stream's functions: `Stream.runForEach(stream, (x) => handle(x))`.
-- **Control operations** (advanced): `control Approval { approve(request: string): boolean!ReviewBusy }`, handled with `try { return checkout(id) } handle Approval.approve(request) { resume(true) }`. A `return` in the try block or a clause returns from the function. `handle(() => checkout(id), Approval, { approve(request, k) { return resume(k, true) } })` is the expression form.
+- **Control operations** (advanced): `control class Approval { approve(request: string): boolean!ReviewBusy }`, handled with `try { return checkout(id) } handle Approval.approve(request) { resume(true) }`. A `return` in the try block or a clause returns from the function. `handle(() => checkout(id), Approval, { approve(request, k) { return resume(k, true) } })` is the expression form.
 - **Globals** (no import): `Effect` (also the `Effect<A, E, R>` type), `Schema`, `Layer`, `TaggedError`, `Control`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`. Import everything else from `effect`: `import { Option, Stream, Schedule, Duration, Fiber, Queue, Ref } from "effect"`.
 - **Code that is not Effect.** JavaScript built-ins (`String`, `Array`, `Math`, `JSON`, `Map`, `Set`, `Number`, `Object`, `RegExp`) are called directly. Running Node.js and browser APIs is EK4402 (D108); imports and passing bindings as values are allowed. Use Effect's modules: `FileSystem`, `Path`, `HttpClient`, `effect/process`, `Config`, `Console`, `Clock`, `DateTime`, `Random`, `KeyValueStore`. Any other plain function is called through `Effect.try` or `Effect.tryPromise`, which say what an exception or rejection means.
 - **Running.** Export `function main()` from the entry module: `node dist/main.js` runs it with `NodeRuntime.runMain`, and importing the module runs nothing. Call `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))` at the top level yourself to provide layers or options. Tests: `it.effect("name", () => { … })` from `@effect/vitest`.
