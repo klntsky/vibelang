@@ -1,0 +1,35 @@
+// The Effect module's most used functions are in scope without the Effect.
+// prefix (D151), and calls pass by name to them as to Effect.retry (D147). A
+// declaration in a nested scope shadows one there.
+error Flaky {}
+
+let attempts = 0
+
+function flaky() {
+  attempts++
+  if (attempts < 3) throw new Flaky()
+  return attempts
+}
+
+function after(ms: number, value: string) {
+  sleep(`${ms} millis`)
+  return value
+}
+
+function shadowed() {
+  const log = (text: string) => text.toUpperCase()
+  return log("local")
+}
+
+// expect-result: {"retried":3,"both":["one","two"],"each":[2,4],"timed":"ok","raced":"fast","traced":"ok","local":"LOCAL"}
+export function main() {
+  log("bare log")
+  logInfo("bare logInfo")
+  const retried = retry(flaky(), { times: 5 })
+  const both = all([after(2, "one"), after(1, "two")])
+  const each = forEach([1, 2], (n) => n * 2)
+  const timed = timeout(after(1, "ok"), "1 second")
+  const raced = race(after(1, "fast"), after(200, "slow"))
+  const traced = withSpan(after(1, "ok"), "traced")
+  return { retried, both, each, timed, raced, traced, local: shadowed() }
+}

@@ -89,7 +89,7 @@ func mayUsePrelude(file *ast.SourceFile) (prelude bool, root bool) {
 		if ast.IsIdentifier(node) && !declared[node.Text()] {
 			if _, ok := preludeModules[node.Text()]; ok {
 				prelude = true
-			} else if _, ok := effectRootNames[node.Text()]; ok {
+			} else if _, ok := effectRootNames[node.Text()]; ok || effectFunctionNames[node.Text()] {
 				root = true
 			}
 			return prelude && root
@@ -178,7 +178,7 @@ func preludeStateOf(c *checker.Checker) *preludeState {
 func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, meaning ast.SymbolFlags) *ast.Symbol {
 	_, isPrelude := preludeModules[name]
 	_, isRoot := effectRootNames[name]
-	if !isPrelude && !isRoot {
+	if !isPrelude && !isRoot && !effectFunctionNames[name] {
 		return nil
 	}
 	file := ast.GetSourceFileOfNode(location)
@@ -213,10 +213,22 @@ func preludeSymbol(c *checker.Checker, state *preludeState, file *ast.SourceFile
 	if isBuiltinGlobal(c, name) {
 		return nil
 	}
-	if module := effectRootModuleSymbol(c, state, file); module != nil {
-		return c.TryGetMemberInModuleExports(name, module)
+	module := effectRootModuleSymbol(c, state, file)
+	if module == nil {
+		return nil
 	}
-	return nil
+	if effectFunctionNames[name] {
+		// A function of the Effect module, reached through the root's Effect.
+		effect := c.TryGetMemberInModuleExports("Effect", module)
+		if effect == nil {
+			return nil
+		}
+		if effect.Flags()&ast.SymbolFlagsAlias != 0 {
+			effect = c.GetAliasedSymbol(effect)
+		}
+		return c.TryGetMemberInModuleExports(name, effect)
+	}
+	return c.TryGetMemberInModuleExports(name, module)
 }
 
 // isLoweredHatchCallee reports whether location names the callee of a sync or
@@ -344,7 +356,9 @@ func preludeImports(f *ast.NodeFactory, names []string) []*ast.Node {
 	var namedModules []string
 	for _, name := range names {
 		module, namespace := preludeModules[name], true
-		if module == "" {
+		if module == "" && effectFunctionNames[name] {
+			module, namespace = "effect/Effect", false
+		} else if module == "" {
 			root := effectRootNames[name]
 			module, namespace = root.module, root.namespace
 		}
