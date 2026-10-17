@@ -772,7 +772,9 @@ fork <span class="f">syncInventory</span>(store)              <span class="c">//
 <tr><td><code>Effect.catchTag</code>, <code>Effect.catch</code>, <code>Effect.mapError</code></td><td><code>try</code>/<code>catch</code></td></tr>
 <tr><td><code>Effect.ensuring</code></td><td><code>finally</code></td></tr>
 <tr><td><code>Effect.provide</code>, <code>Effect.provideService</code></td><td>the same functions, with a program argument</td></tr>
-<tr><td><code>Effect.retry</code>, <code>Effect.timeout</code>, <code>Effect.withSpan</code>, <code>Effect.cached</code>, <code>Effect.uninterruptible</code></td><td>the same functions, called or piped with <code>|&gt;</code> as above</td></tr></tbody></table></div>
+<tr><td><code>Effect.retry</code>, <code>Effect.timeout</code>, <code>Effect.withSpan</code>, <code>Effect.cached</code></td><td>the same functions, called or piped with <code>|&gt;</code> as above</td></tr>
+<tr><td><code>Effect.catchCause</code>, <code>Effect.failCause</code>, <code>Effect.onExit</code></td><td><code>catch (cause: Cause)</code>, <code>throw cause</code>, <code>finally (exit)</code> (D176-D178)</td></tr>
+<tr><td><code>Effect.uninterruptibleMask</code>, <code>Effect.interruptible</code></td><td><code>uninterruptible { … restore { … } }</code>, <code>interruptible { … }</code> (D180)</td></tr></tbody></table></div>
 <p>On a cause that also holds a defect, Effect&#39;s recovery operators and <code>try</code>/<code>catch</code> differ; <a href="#17-failures-defects-interruption-and-cleanup">Chapter 17</a> lists how.</p>
 <p>Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (<code>docs/research/pipe-census.md</code>). Pipelines over plain data stay plain: <code>items |&gt; Arr.filter(%, isActive) |&gt; Arr.map(%, toRow)</code> is <code>Arr.map(Arr.filter(items, isActive), toRow)</code>.</p>
 <h4 id="methods-on-effects-data-types"><a class="anchor" href="#methods-on-effects-data-types">Methods on Effect&#39;s data types</a></h4>
@@ -2009,6 +2011,37 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
   })
 }</code></pre></figure>
 <p><code>try</code>, <code>catch</code>, <code>finally</code>, and <code>using</code> compile to Effect&#39;s own failure and cleanup frames, never to JavaScript <code>try</code>, in any function that compiles to frames. Effect does not run JavaScript <code>finally</code> blocks inside generators when a fiber fails or is interrupted (F1-F3), so a JavaScript <code>try</code> would skip cleanup. <a href="#26-what-compiled-code-must-guarantee">Chapter 26</a> shows the generated code. Functions that compile to plain JavaScript are the exception, because nothing in them can pause (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>).</p>
+<h4 id="causes-exits-and-interruption-blocks"><a class="anchor" href="#causes-exits-and-interruption-blocks">Causes, exits, and interruption blocks</a></h4>
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>error <span class="t">Unavailable</span>
+
+<span class="k">function</span> <span class="f">fetchSnapshot</span>(): <span class="l">string</span>!<span class="t">Unavailable</span> {
+  <span class="f">sleep</span>(<span class="s">"1 millis"</span>)
+  <span class="k">return</span> <span class="s">"snapshot"</span>
+}
+
+<span class="k">function</span> <span class="f">snapshotOrFallback</span>() {
+  <span class="k">try</span> {
+    <span class="k">return</span> <span class="f">fetchSnapshot</span>()
+  } <span class="k">catch</span> (e: <span class="t">Unavailable</span>) {
+    <span class="k">return</span> <span class="s">"cached"</span>
+  } <span class="k">catch</span> (cause: <span class="t">Cause</span>) {
+    <span class="k">if</span> (cause.<span class="f">hasInterrupts</span>()) <span class="k">throw</span> cause
+    <span class="k">return</span> <span class="s">"degraded"</span>
+  } <span class="k">finally</span> (exit) {
+    <span class="f">logDebug</span>(<span class="s">`snapshot ${exit._tag}`</span>)
+  }
+}
+
+<span class="k">function</span> <span class="f">commit</span>(rows: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
+  uninterruptible {
+    <span class="f">logInfo</span>(<span class="s">`writing ${rows.length} rows`</span>)
+    restore {
+      <span class="f">sleep</span>(<span class="s">"10 millis"</span>)
+    }
+    <span class="f">logInfo</span>(<span class="s">"written"</span>)
+  }
+}</code></pre></figure>
+<p>A catch clause typed <code>Cause</code> catches every reason the failure holds, defects and interrupts included, as <code>Effect.catchCause</code> does (D176); clauses before it still see expected failures only, and it must come last (EK2106). A control operation&#39;s abandonment unwinds through it untouched. <code>throw</code> with a <code>Cause</code> fails with every reason it holds, as <code>Effect.failCause</code> does, and adds the Cause&#39;s E to the function&#39;s E (D177). <code>finally (exit)</code> binds the statement&#39;s <code>Exit&lt;void, E&gt;</code>, where E is what the try statement can fail with; the block runs uninterruptibly, as <code>Effect.onExit</code>&#39;s finalizer does, and a success carries no value (D178). <code>exit(program)</code>, <code>interrupt()</code>, and <code>yieldNow()</code> are bare functions (D179). An <code>uninterruptible</code> block runs as <code>Effect.uninterruptibleMask</code>, a <code>restore</code> block inside it as the mask&#39;s <code>restore</code>, and an <code>interruptible</code> block as <code>Effect.interruptible</code>; their statements stay code of the enclosing function, and each block calls the prelude function of its name, which also takes a program directly (D180). A <code>restore</code> block outside an <code>uninterruptible</code> block is EK2111.</p>
 <h2 id="part-iii-the-runtime"><a class="anchor" href="#part-iii-the-runtime">Part III. The runtime</a></h2>
 <p>This part is for reviewing how Effeck runs. It explains how the features in Parts I and II execute on Effect 4&#39;s fiber runtime, what Effect already provides, what a small runtime extension (the <strong>kernel</strong>) adds, and the tests that check each claim. Claims carry tags:</p>
 <div class="table"><table><thead><tr><th>Tag</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>[Effect]</strong></td><td>Verified in <code>effect@4.0.5</code> source (<code>experiments/node_modules/effect/src</code>, cited as <code>file:line</code>) or by an Effect-only test (F1-F10, conformance tests D01-D05, K15a)</td></tr>
@@ -2027,7 +2060,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <p>Both examples need one thing Effect does not expose today: a way for code on a fiber to take &quot;the rest of the computation, up to here&quot;, hand it to a handler, and let the handler continue it once, later, or never. That object is a <strong>one-shot delimited continuation</strong>. Fubhy&#39;s advice was to build the language on it: &quot;Start with a one-shot delimited continuation though. That is kind of the core thing that anything else should be based on.&quot; This part shows that Effect 4 already provides most of it, and what the rest takes.</p>
 <h4 id="effect-already-runs-on-continuations"><a class="anchor" href="#effect-already-runs-on-continuations">Effect already runs on continuations</a></h4>
 <p>Effect 4 runs every program as a one-shot continuation. A fiber&#39;s <code>_stack</code> is the rest of the computation, reified as an array of frames. <code>Effect.callback</code> parks it and accepts one resume. Interruption unwinds it through finalizer frames. What Effect lacks is a delimiter inside a fiber: the only one is the fiber&#39;s root, so the only continuation anyone can take is the whole fiber.</p>
-<p>Effeck adds the missing delimiter. A 871-line kernel prototype on <code>effect@4.0.5</code> pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect&#39;s own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 148 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored <code>Effect.forEach</code>, retry, producers in constant stack, cause-aware <code>catch</code>, and a 54-test conformance suite written by an independent reviewer. A prototype compiler then compiled 46 example files written from this document to that kernel and ran them (<a href="#27-compiler-architecture">Chapter 27</a>).</p>
+<p>Effeck adds the missing delimiter. A 877-line kernel prototype on <code>effect@4.0.5</code> pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect&#39;s own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 148 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored <code>Effect.forEach</code>, retry, producers in constant stack, cause-aware <code>catch</code>, and a 54-test conformance suite written by an independent reviewer. A prototype compiler then compiled 46 example files written from this document to that kernel and ran them (<a href="#27-compiler-architecture">Chapter 27</a>).</p>
 <p>Every feature in Parts I and II is a rule over that one machine:</p>
 <ul>
 <li>A function call is a frame; <code>throw</code> unwinds frames.</li>
@@ -2910,6 +2943,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK2107</td><td>A handle clause whose control is not a control declaration, such as a service (D132)</td><td>Provide a service with a layer; handle only a control&#39;s operations</td><td>9</td></tr>
 <tr><td>EK2108</td><td>A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132)</td><td>Add the missing clause, or remove the second</td><td>9</td></tr>
 <tr><td>EK2109</td><td>A field of a <code>schema</code> declaration whose type has no schema form, or names a value that is not a schema (D133)</td><td>Declare the schema with <code>Schema.Struct</code>, or name a schema constant</td><td>11</td></tr>
+<tr><td>EK2111</td><td>A <code>restore</code> block that no <code>uninterruptible</code> block of the same function encloses (D180)</td><td>Put it inside <code>uninterruptible { … }</code>, or use <code>interruptible { … }</code></td><td>6</td></tr>
 <tr><td>EK3001</td><td>Two services share a key</td><td>Rename one</td><td>4</td></tr>
 <tr><td>EK3002</td><td>A class extends a service</td><td>Replace <code>extends</code> with <code>implements</code></td><td>4</td></tr>
 <tr><td>EK3003</td><td><code>new</code> on a service</td><td>Use <code>Users()</code> for the implementation</td><td>4</td></tr>
@@ -3125,6 +3159,11 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D173</td><td><code>provide Key = value</code> provides one service; providers separated by commas mix layers and services; <code>provide(...) { }</code> means the same</td><td><code>Effect.provideService</code> without a layer, in the same block form</td><td>4</td></tr>
 <tr><td>D174</td><td>In a provider, an effect module stands for its key of the same name: <code>Clock</code> for <code>Clock.Clock</code></td><td><code>provide Clock = testClock</code> and <code>provide Scheduler = fifo</code> swap runtime services</td><td>4, 28</td></tr>
 <tr><td>D175</td><td>The analyzer reads an array of providers element by element</td><td>A layer that provides nothing would otherwise hide the others&#39; services</td><td>4</td></tr>
+<tr><td>D176</td><td><code>catch (cause: Cause)</code> catches every reason, as Effect.catchCause</td><td>Effect&#39;s catchCause in a typed clause&#39;s shape</td><td>17</td></tr>
+<tr><td>D177</td><td><code>throw cause</code> with a Cause rethrows every reason</td><td>Effect.failCause without a new keyword</td><td>17</td></tr>
+<tr><td>D178</td><td><code>finally (exit)</code> binds the try statement&#39;s Exit</td><td>Effect.onExit in finally&#39;s shape</td><td>17</td></tr>
+<tr><td>D179</td><td><code>exit</code>, <code>interrupt</code>, and <code>yieldNow</code> are bare functions</td><td>Effect&#39;s names; no bare <code>yield</code></td><td>7, 17</td></tr>
+<tr><td>D180</td><td><strong>Controversial.</strong> <code>uninterruptible</code>, <code>restore</code>, and <code>interruptible</code> blocks</td><td>Effect&#39;s names in a block that keeps jumps</td><td>17</td></tr>
 <tr><td>D186</td><td><code>throw</code> is also an expression: <code>x ?? throw new NotFound({ id })</code></td><td>TC39 throw expressions (stage 2); fails as the throw statement does</td><td>3</td></tr>
 <tr><td>D187</td><td><code>do { }</code> is an expression whose value is its last statement&#39;s</td><td>TC39 do expressions (stage 1); a racer or an arm gets several statements</td><td>13</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
@@ -3374,7 +3413,7 @@ effeck/smoke.sh effeck-infer   # one case</code></pre></figure>
 <tr><td><code>Effect.try</code>, <code>tryPromise</code>, <code>promise</code></td><td>Changed</td><td>The hatches <code>try(…)</code> and <code>sync(async () =&gt; …)</code>, whose arguments are plain TypeScript (D148)</td></tr>
 <tr><td><code>Effect.suspend</code></td><td>Changed</td><td>A call passed by name where a program is expected, or <code>() =&gt; …</code> (D147)</td></tr>
 <tr><td><code>Effect.callback</code></td><td>Changed</td><td>The hatch <code>callback((resume, signal) =&gt; …)</code>: <code>resume(value)</code>, <code>resume.fail(error)</code> (D43, D148)</td></tr>
-<tr><td><code>Effect.void</code>, <code>never</code>, <code>yieldNow</code>, <code>interrupt</code></td><td>Unchanged by design</td><td>Call the value: <code>Effect.yieldNow()</code></td></tr>
+<tr><td><code>Effect.void</code>, <code>never</code>, <code>yieldNow</code>, <code>interrupt</code></td><td>Changed</td><td>Bare functions: <code>yieldNow()</code>, <code>interrupt()</code> (D179)</td></tr>
 <tr><td>Runners (<code>runPromise</code>, <code>runSync</code>, <code>runFork</code>, <code>runCallback</code>)</td><td>Changed</td><td>In the prelude; <code>runPromise(main())</code> from TypeScript, a top-level call, or a hatch&#39;s body, where no fiber runs the code (EK1005, D38, D148)</td></tr>
 <tr><td><code>Effect.gen</code> and <code>yield*</code></td><td>Changed</td><td>An ordinary function body, and calls (<a href="#2-functions-and-calls">Chapter 2</a>); <code>Effect.gen</code> in <code>.effeck</code> is EK1002</td></tr>
 <tr><td><code>Effect.gen({ self: this }, …)</code></td><td>Changed</td><td>An ordinary method; <code>this</code> keeps its JavaScript meaning</td></tr>
@@ -3511,7 +3550,7 @@ effeck/smoke.sh effeck-infer   # one case</code></pre></figure>
 <tr><td>Background work owned by a block</td><td>Changed</td><td><code>fork(() =&gt; heartbeat())</code> (D19)</td></tr>
 <tr><td><code>Fiber.join</code>, <code>await</code>, <code>interrupt</code>, <code>joinAll</code>, <code>interruptAll</code></td><td>Unchanged by design</td><td>The same calls</td></tr>
 <tr><td>Interruption is not an error</td><td>Changed</td><td><code>catch</code> never sees it; <code>finally</code> and <code>using</code> always run</td></tr>
-<tr><td><code>uninterruptible</code>, <code>uninterruptibleMask</code>, <code>interruptibleMask</code></td><td>Changed</td><td>Programs as functions</td></tr>
+<tr><td><code>uninterruptible</code>, <code>uninterruptibleMask</code>, <code>interruptibleMask</code></td><td>Changed</td><td><code>uninterruptible { … restore { … } }</code> and <code>interruptible { … }</code> blocks, or the prelude functions with a program (D180)</td></tr>
 <tr><td><code>onInterrupt</code></td><td>Changed</td><td><code>Effect.onInterrupt(() =&gt; task(), () =&gt; Console.log(&quot;stopped&quot;))</code></td></tr>
 <tr><td><code>Effect.forever</code></td><td>Changed</td><td><code>while (true) tick()</code></td></tr>
 <tr><td><code>Deferred</code></td><td>Unchanged by design</td><td><code>Deferred.make&lt;number&gt;()</code>, <code>Deferred.await(d)</code></td></tr>

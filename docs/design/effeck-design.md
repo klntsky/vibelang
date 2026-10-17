@@ -972,7 +972,9 @@ Most pipes you write today disappear:
 | `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch` |
 | `Effect.ensuring` | `finally` |
 | `Effect.provide`, `Effect.provideService` | the same functions, with a program argument |
-| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached`, `Effect.uninterruptible` | the same functions, called or piped with `\|>` as above |
+| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached` | the same functions, called or piped with `\|>` as above |
+| `Effect.catchCause`, `Effect.failCause`, `Effect.onExit` | `catch (cause: Cause)`, `throw cause`, `finally (exit)` (D176-D178) |
+| `Effect.uninterruptibleMask`, `Effect.interruptible` | `uninterruptible { … restore { … } }`, `interruptible { … }` (D180) |
 
 On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how.
 
@@ -2912,6 +2914,42 @@ function moveFunds(from: Account, to: Account, amount: number) {
 
 `try`, `catch`, `finally`, and `using` compile to Effect's own failure and cleanup frames, never to JavaScript `try`, in any function that compiles to frames. Effect does not run JavaScript `finally` blocks inside generators when a fiber fails or is interrupted (F1-F3), so a JavaScript `try` would skip cleanup. Chapter 26 shows the generated code. Functions that compile to plain JavaScript are the exception, because nothing in them can pause (Chapter 15).
 
+#### Causes, exits, and interruption blocks
+
+```ts es
+error Unavailable
+
+function fetchSnapshot(): string!Unavailable {
+  sleep("1 millis")
+  return "snapshot"
+}
+
+function snapshotOrFallback() {
+  try {
+    return fetchSnapshot()
+  } catch (e: Unavailable) {
+    return "cached"
+  } catch (cause: Cause) {
+    if (cause.hasInterrupts()) throw cause
+    return "degraded"
+  } finally (exit) {
+    logDebug(`snapshot ${exit._tag}`)
+  }
+}
+
+function commit(rows: ReadonlyArray<string>) {
+  uninterruptible {
+    logInfo(`writing ${rows.length} rows`)
+    restore {
+      sleep("10 millis")
+    }
+    logInfo("written")
+  }
+}
+```
+
+A catch clause typed `Cause` catches every reason the failure holds, defects and interrupts included, as `Effect.catchCause` does (D176); clauses before it still see expected failures only, and it must come last (EK2106). A control operation's abandonment unwinds through it untouched. `throw` with a `Cause` fails with every reason it holds, as `Effect.failCause` does, and adds the Cause's E to the function's E (D177). `finally (exit)` binds the statement's `Exit<void, E>`, where E is what the try statement can fail with; the block runs uninterruptibly, as `Effect.onExit`'s finalizer does, and a success carries no value (D178). `exit(program)`, `interrupt()`, and `yieldNow()` are bare functions (D179). An `uninterruptible` block runs as `Effect.uninterruptibleMask`, a `restore` block inside it as the mask's `restore`, and an `interruptible` block as `Effect.interruptible`; their statements stay code of the enclosing function, and each block calls the prelude function of its name, which also takes a program directly (D180). A `restore` block outside an `uninterruptible` block is EK2111.
+
 ## Part III. The runtime
 
 This part is for reviewing how Effeck runs. It explains how the features in Parts I and II execute on Effect 4's fiber runtime, what Effect already provides, what a small runtime extension (the **kernel**) adds, and the tests that check each claim. Claims carry tags:
@@ -2942,7 +2980,7 @@ Both examples need one thing Effect does not expose today: a way for code on a f
 
 Effect 4 runs every program as a one-shot continuation. A fiber's `_stack` is the rest of the computation, reified as an array of frames. `Effect.callback` parks it and accepts one resume. Interruption unwinds it through finalizer frames. What Effect lacks is a delimiter inside a fiber: the only one is the fiber's root, so the only continuation anyone can take is the whole fiber.
 
-Effeck adds the missing delimiter. A 871-line kernel prototype on `effect@4.0.5` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 148 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer. A prototype compiler then compiled 46 example files written from this document to that kernel and ran them (Chapter 27).
+Effeck adds the missing delimiter. A 877-line kernel prototype on `effect@4.0.5` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. 148 tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer. A prototype compiler then compiled 46 example files written from this document to that kernel and ran them (Chapter 27).
 
 Every feature in Parts I and II is a rule over that one machine:
 
@@ -4145,6 +4183,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2107 | A handle clause whose control is not a control declaration, such as a service (D132) | Provide a service with a layer; handle only a control's operations | 9 |
 | EK2108 | A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132) | Add the missing clause, or remove the second | 9 |
 | EK2109 | A field of a `schema` declaration whose type has no schema form, or names a value that is not a schema (D133) | Declare the schema with `Schema.Struct`, or name a schema constant | 11 |
+| EK2111 | A `restore` block that no `uninterruptible` block of the same function encloses (D180) | Put it inside `uninterruptible { … }`, or use `interruptible { … }` | 6 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -4385,6 +4424,11 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
 | D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
+| D176 | `catch (cause: Cause)` catches every reason, as Effect.catchCause | Effect's catchCause in a typed clause's shape | 17 |
+| D177 | `throw cause` with a Cause rethrows every reason | Effect.failCause without a new keyword | 17 |
+| D178 | `finally (exit)` binds the try statement's Exit | Effect.onExit in finally's shape | 17 |
+| D179 | `exit`, `interrupt`, and `yieldNow` are bare functions | Effect's names; no bare `yield` | 7, 17 |
+| D180 | **Controversial.** `uninterruptible`, `restore`, and `interruptible` blocks | Effect's names in a block that keeps jumps | 17 |
 | D186 | `throw` is also an expression: `x ?? throw new NotFound({ id })` | TC39 throw expressions (stage 2); fails as the throw statement does | 3 |
 | D187 | `do { }` is an expression whose value is its last statement's | TC39 do expressions (stage 1); a racer or an arm gets several statements | 13 |
 
@@ -4728,7 +4772,7 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.try`, `tryPromise`, `promise` | Changed | The hatches `try(…)` and `sync(async () => …)`, whose arguments are plain TypeScript (D148) |
 | `Effect.suspend` | Changed | A call passed by name where a program is expected, or `() => …` (D147) |
 | `Effect.callback` | Changed | The hatch `callback((resume, signal) => …)`: `resume(value)`, `resume.fail(error)` (D43, D148) |
-| `Effect.void`, `never`, `yieldNow`, `interrupt` | Unchanged by design | Call the value: `Effect.yieldNow()` |
+| `Effect.void`, `never`, `yieldNow`, `interrupt` | Changed | Bare functions: `yieldNow()`, `interrupt()` (D179) |
 | Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | In the prelude; `runPromise(main())` from TypeScript, a top-level call, or a hatch's body, where no fiber runs the code (EK1005, D38, D148) |
 | `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.effeck` is EK1002 |
 | `Effect.gen({ self: this }, …)` | Changed | An ordinary method; `this` keeps its JavaScript meaning |
@@ -4910,7 +4954,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Background work owned by a block | Changed | `fork(() => heartbeat())` (D19) |
 | `Fiber.join`, `await`, `interrupt`, `joinAll`, `interruptAll` | Unchanged by design | The same calls |
 | Interruption is not an error | Changed | `catch` never sees it; `finally` and `using` always run |
-| `uninterruptible`, `uninterruptibleMask`, `interruptibleMask` | Changed | Programs as functions |
+| `uninterruptible`, `uninterruptibleMask`, `interruptibleMask` | Changed | `uninterruptible { … restore { … } }` and `interruptible { … }` blocks, or the prelude functions with a program (D180) |
 | `onInterrupt` | Changed | `Effect.onInterrupt(() => task(), () => Console.log("stopped"))` |
 | `Effect.forever` | Changed | `while (true) tick()` |
 | `Deferred` | Unchanged by design | `Deferred.make<number>()`, `Deferred.await(d)` |
