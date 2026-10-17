@@ -115,7 +115,7 @@ func (a *analyzer) forEachFailingCall(fn *ast.Node, cb func(call *ast.Node, caug
 			return false
 		case n.Kind == ast.KindTryStatement:
 			try := n.AsTryStatement()
-			return visit(try.TryBlock, caught || try.CatchClause != nil) ||
+			return visit(try.TryBlock, caught || catches(n)) ||
 				try.CatchClause != nil && visit(try.CatchClause, caught) ||
 				try.FinallyBlock != nil && visit(try.FinallyBlock, caught)
 		case n.Kind == ast.KindCallExpression && len(a.expectedFailures(n)) > 0 && cb(n, caught):

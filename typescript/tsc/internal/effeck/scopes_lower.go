@@ -132,7 +132,7 @@ func (tx *lowering) visitScopeBlock(block *ast.Node) *ast.Node {
 	r := &region{}
 	saved := tx.frame
 	if !isBody {
-		tx.frame = &frame{name: saved.name, region: r}
+		tx.frame = &frame{name: saved.name, region: r, handleClause: saved.handleClause}
 	}
 	statements := tx.Visitor().VisitNodes(block.AsBlock().Statements).Nodes
 	tx.frame = saved
@@ -253,7 +253,7 @@ func (tx *lowering) visitUsingForOf(node *ast.Node) *ast.Node {
 	tx.frame.targets = append(tx.frame.targets, target{loop: true})
 	r := &region{}
 	saved := tx.frame
-	tx.frame = &frame{name: saved.name, region: r}
+	tx.frame = &frame{name: saved.name, region: r, handleClause: saved.handleClause}
 	using := f.NewYieldExpression(f.NewToken(ast.KindAsteriskToken), tx.runtimeCall("$using", scope, tx.succeed(value)))
 	statements := []*ast.Node{f.NewVariableStatement(nil /*modifiers*/, f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{
 		f.NewVariableDeclaration(tx.Visitor().VisitNode(declaration.Name()), nil /*exclamationToken*/, nil /*typeNode*/, using),

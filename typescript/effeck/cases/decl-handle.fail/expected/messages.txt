@@ -1,0 +1,5 @@
+Approval.note has no clause: a handle statement answers every operation of Approval.
+Approval.approve already has a clause in this statement.
+Users is not a control: a handle clause answers an operation that a control declares.
+This handle statement runs a program, but a module's top level is not inside one.
+Read it in the clause first, and resume with the value: resumeWith(() => value).

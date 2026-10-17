@@ -55,6 +55,9 @@ var preludeModules = map[string]string{
 	"runCallback": runtimeModule,
 	// The test of a typed catch clause, which the parser writes (D131, catches.go).
 	"$isFailure": runtimeModule,
+	// What a handle statement's clause binds, which the parser writes for the
+	// checker and the lowering removes (D132, handles.go).
+	"$clause": runtimeModule,
 }
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the
@@ -192,7 +195,7 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 	if symbol == nil || !hasMeaning(c, symbol, meaning) {
 		return nil
 	}
-	if isValueReference(location, name, meaning) && !isLoweredHatchCallee(location) {
+	if isValueReference(location, name, meaning) && !isLoweredHatchCallee(location) && !isClauseCallee(location) {
 		recordPreludeUse(state, file, name)
 	}
 	return symbol

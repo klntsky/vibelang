@@ -88,3 +88,18 @@ export const abandon: <V, E, H>(k: Continuation<V, E, H>) => Effect.Effect<void>
 export const $tailResume: <V, E, H>(k: Continuation<V, E, H>, value: NoInfer<V>) => K.TailResume = K.tailResume as any
 export const $tailResumeWith: <V, E, H>(k: Continuation<V, E, H>, program: Effect.Effect<NoInfer<V>, NoInfer<E>, never>) => K.TailResume =
   K.tailResumeWith as any
+
+type ClauseBinding<F> = F extends (...args: infer P) => Effect.Effect<infer V, infer E, any> ? [k: Continuation<V, E, never>, ...args: P]
+  : never
+
+/**
+ * D132: what a clause of a handle statement binds, the continuation and then
+ * the operation's arguments. For
+ * `try { … } handle Approval.approve(request) { … }` the parser writes
+ * `const [$k, request] = $clause(Approval.approve)` for the checker, and the
+ * lowering removes it. The continuation's `resume` returns `never`: the
+ * clause's result is what the rest of the try block does.
+ */
+export function $clause<F extends (...args: any) => Effect.Effect<any, any, any>>(_operation: F): ClauseBinding<F> {
+  throw new Error("$clause types a handle clause's bindings; compiled code never calls it")
+}

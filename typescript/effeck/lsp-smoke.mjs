@@ -488,6 +488,27 @@ try {
     assert(location.range.start.line === lineOf("src/declarations.effeck", "export error MissingUser"), `line ${location.range.start.line}`)
   })
 
+  await check("hover: a handle statement removes the control it handles", async () => {
+    const shown = await hover("src/declarations.effeck", "approved(version: string)")
+    assert(/function approved\(version: string\): [^!\n]+!!/.test(shown), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a handle clause's parameter has the operation's parameter type", async () => {
+    const shown = await hover("src/declarations.effeck", "request.startsWith")
+    assert(shown.includes("request: string"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a handle clause's operation shows its contract in the ! form", async () => {
+    const shown = await hover("src/declarations.effeck", "approve(request) {")
+    assert(shown.includes("approve(request: string): boolean!!"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("definition: a handle clause's operation goes to the member in the control declaration", async () => {
+    const [location] = await definition("src/declarations.effeck", "approve(request) {")
+    assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)
+    assert(location.range.start.line === lineOf("src/declarations.effeck", "approve(request: string)"), `line ${location.range.start.line}`)
+  })
+
   await check("diagnostics: report.ts, which imports an .effeck function, checks clean", async () => {
     const items = await diagnostics("src/report.ts")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)

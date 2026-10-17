@@ -30,6 +30,8 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			// Passed as a program (D147): it runs where the callee runs it.
 		case isHatchArgument(n):
 			// TypeScript inside a boundary hatch (D148): nothing there runs.
+		case isHandleStatement(n):
+			info.add(a.handleFlow(n)) // try { ... } handle Control.op(...) { ... } (handles.go)
 		case n.Kind == ast.KindTryStatement:
 			info.add(a.tryFlow(n))
 		case isWithBlock(n):
@@ -75,7 +77,7 @@ func hasEscapingThrow(fn *ast.Node) bool {
 			return true
 		case n.Kind == ast.KindTryStatement:
 			try := n.AsTryStatement()
-			return visit(try.TryBlock, caught || try.CatchClause != nil) ||
+			return visit(try.TryBlock, caught || catches(n)) ||
 				try.CatchClause != nil && visit(try.CatchClause, caught) ||
 				try.FinallyBlock != nil && visit(try.FinallyBlock, caught)
 		}
@@ -165,7 +167,7 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 // such as at a module's top level, keeps TypeScript's meaning.
 func catchVariableType(c *checker.Checker, declaration *ast.Node) *checker.Type {
 	clause := declaration.Parent
-	if clause == nil || clause.Kind != ast.KindCatchClause || !inLowerableBody(clause.Parent) {
+	if clause == nil || clause.Kind != ast.KindCatchClause || !inLowerableBody(clause.Parent) || isHandleStatement(clause.Parent) {
 		return nil
 	}
 	info := analyzerFor(c).tryBlockFlow(clause.Parent.AsTryStatement().TryBlock)
@@ -184,7 +186,7 @@ func init() {
 func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if node.Kind == ast.KindTryStatement && node.AsTryStatement().CatchClause != nil && inLowerableBody(node) {
+		if node.Kind == ast.KindTryStatement && catches(node) && inLowerableBody(node) {
 			try := node.AsTryStatement()
 			if c.GetUnionType(analyzerFor(c).tryBlockFlow(try.TryBlock).errors).Flags()&checker.TypeFlagsNever != 0 {
 				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, try.CatchClause.Pos()), EK2004)

@@ -1,0 +1,67 @@
+// expect: EK1001 EK2005 EK2107 EK2108
+control Approval {
+  approve(request: string): boolean!!
+  note(text: string): void!!
+}
+
+service Users {
+  find(id: string): string!!
+}
+
+// EK2108: Approval.note has no clause.
+function partial() {
+  try {
+    return Approval.approve("x")
+  } handle Approval.approve(request) {
+    resume(true)
+  }
+}
+
+// EK2108: Approval.approve already has a clause.
+function twice() {
+  try {
+    return Approval.approve("x")
+  } handle Approval.approve(request) {
+    resume(true)
+  } handle Approval.approve(request) {
+    resume(false)
+  } handle Approval.note(text) {
+    resume()
+  }
+}
+
+// EK2107: Users is a service.
+function service() {
+  try {
+    return Users.find("1")
+  } handle Users.find(id) {
+    resume("Ada")
+  }
+}
+
+service Secret {
+  read(): string!!
+}
+
+control Ask {
+  ask(question: string): string!!
+}
+
+// EK2005: the program passed to resumeWith needs Secret, which the try block
+// does not provide.
+function secret() {
+  try {
+    return Ask.ask("password")
+  } handle Ask.ask(question) {
+    resumeWith(() => Secret.read())
+  }
+}
+
+// EK1001: a module's top level runs no program.
+try {
+  Approval.approve("top")
+} handle Approval.approve(request) {
+  resume(true)
+} handle Approval.note(text) {
+  resume()
+}

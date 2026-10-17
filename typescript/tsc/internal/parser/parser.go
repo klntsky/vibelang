@@ -99,8 +99,8 @@ type Parser struct {
 	setParentFromContext ast.Visitor
 	reparsedClones       []*ast.Node
 
-	effeckReadonlyMembers     bool              // property signatures get a readonly modifier (effeck.go)
-	effeckAbstractMembers     bool              // bodiless class members become abstract: a service or control body (effeck.go)
+	effeckReadonlyMembers     bool               // property signatures get a readonly modifier (effeck.go)
+	effeckAbstractMembers     bool               // bodiless class members become abstract: a service or control body (effeck.go)
 	effeckOmittedDependencies map[*ast.Node]bool // Effect types whose dependencies were left out (effeck.go)
 }
 
@@ -1494,6 +1494,9 @@ func (p *Parser) parseTryStatement() *ast.Node {
 	jsdoc := p.jsdocScannerInfo()
 	p.parseExpected(ast.KindTryKeyword)
 	tryBlock := p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
+	if p.isEffeckFile() && p.isStartOfHandleClause() {
+		return p.parseEffeckHandleStatement(pos, jsdoc, tryBlock) // try { ... } handle Control.op(...) { ... } (effeck.go)
+	}
 	var catchClause *ast.Node
 	if p.token == ast.KindCatchKeyword {
 		catchClause = p.parseCatchClause()

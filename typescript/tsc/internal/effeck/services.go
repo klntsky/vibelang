@@ -259,7 +259,7 @@ func serviceMember(c *checker.Checker, node *ast.Node, receiver *checker.Type) (
 // D41). A member the service declares therefore wins over the key's own
 // members, such as pipe, of, and use.
 func memberReceiver(c *checker.Checker, node *ast.Node, receiver *checker.Type) *checker.Type {
-	if !isMemberCallSite(node) {
+	if !isMemberCallSite(node) && !isClauseOperation(node) {
 		return receiver
 	}
 	if _, shape := serviceMember(c, node, receiver); shape != nil {

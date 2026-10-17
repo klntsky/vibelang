@@ -33,3 +33,15 @@ export function recover(id: string) {
     return e.id
   }
 }
+
+export control Approval {
+  approve(request: string): boolean!!
+}
+
+export function approved(version: string) {
+  try {
+    return Approval.approve(version) ? "approved" : "declined"
+  } handle Approval.approve(request) {
+    resume(request.startsWith("v"))
+  }
+}

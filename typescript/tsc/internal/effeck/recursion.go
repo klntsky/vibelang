@@ -172,7 +172,7 @@ func checkRecursion(c *checker.Checker, file *ast.SourceFile) {
 				a.checkRecursiveFunction(node)
 			}
 		}
-		if node.Kind == ast.KindCatchClause && node.AsCatchClause().VariableDeclaration != nil && node.AsCatchClause().VariableDeclaration.Type() == nil {
+		if node.Kind == ast.KindCatchClause && catches(node.Parent) && node.AsCatchClause().VariableDeclaration != nil && node.AsCatchClause().VariableDeclaration.Type() == nil {
 			if fn := ownerFunction(node); fn != nil && a.recursive[fn] {
 				a.checkRecursiveCatch(node)
 			}

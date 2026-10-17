@@ -66,6 +66,9 @@ type frame struct {
 	region  *region  // the region whose closure this is; nil for the function's own body
 	targets []target // the statements a break or continue can jump to, innermost last
 	clause  bool     // the generator is a handler clause's own body, where a return can resume in tail position
+	// handleClause is the clause of a handle statement whose code this frame
+	// emits: the clause's own frame and the frames of regions inside it.
+	handleClause *clauseState
 }
 
 // A target is a statement that break or continue can jump to: a loop, a
@@ -128,19 +131,48 @@ func (tx *lowering) visitJump(node *ast.Node) *ast.Node {
 	if tx.frame.lands(j) {
 		return tx.Visitor().VisitEachChild(node)
 	}
+	var value *ast.Node
+	if j.kind == ast.KindReturnStatement && node.Expression() != nil {
+		value = tx.Visitor().VisitNode(node.Expression())
+	}
+	return tx.leave(j, value, node)
+}
+
+// jumpTo makes the statement that jumps to j, a break or continue, from the
+// frame being emitted: the jump itself when it lands in the frame, and
+// otherwise the return of its completion record. original is the node the
+// jump stands for.
+func (tx *lowering) jumpTo(j jump, original *ast.Node) *ast.Node {
+	f := tx.Factory()
+	if tx.frame.lands(j) {
+		var label *ast.Node
+		if j.label != "" {
+			label = f.NewIdentifier(j.label)
+		}
+		if j.kind == ast.KindBreakStatement {
+			return f.NewBreakStatement(label)
+		}
+		return f.NewContinueStatement(label)
+	}
+	return tx.leave(j, nil, original)
+}
+
+// leave makes the return of the completion record of j, which leaves the
+// region whose closure the frame emits, with value as a return's value.
+func (tx *lowering) leave(j jump, value *ast.Node, original *ast.Node) *ast.Node {
 	tx.frame.region.add(j)
 	f := tx.Factory()
 	properties := []*ast.Node{f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("kind"), nil /*postfixToken*/, nil /*typeNode*/, f.NewStringLiteral(jumpKind(j.kind), ast.TokenFlagsNone))}
 	if j.kind == ast.KindReturnStatement {
-		if expression := node.Expression(); expression != nil {
-			properties = append(properties, f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("value"), nil /*postfixToken*/, nil /*typeNode*/, tx.Visitor().VisitNode(expression)))
+		if value != nil {
+			properties = append(properties, f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("value"), nil /*postfixToken*/, nil /*typeNode*/, value))
 		}
 	} else {
 		properties = append(properties, f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("label"), nil /*postfixToken*/, nil /*typeNode*/, f.NewStringLiteral(j.label, ast.TokenFlagsNone)))
 	}
 	record := f.NewReturnStatement(f.NewObjectLiteralExpression(f.NewNodeList(properties), false /*multiLine*/))
-	tx.EmitContext().SetOriginal(record, node)
-	record.Loc = node.Loc
+	tx.EmitContext().SetOriginal(record, original)
+	record.Loc = original.Loc
 	return record
 }
 
@@ -191,7 +223,7 @@ func (tx *lowering) visitTryStatement(node *ast.Node) *ast.Node {
 // inside r (scopes_lower.go).
 func (tx *lowering) regionStatements(r *region, block *ast.Node) []*ast.Node {
 	saved := tx.frame
-	tx.frame = &frame{name: saved.name, region: r}
+	tx.frame = &frame{name: saved.name, region: r, handleClause: saved.handleClause}
 	var statements []*ast.Node
 	if tx.plan.scopeBlocks[block] {
 		statements = tx.visitScopeBlock(block).AsBlock().Statements.Nodes
@@ -242,7 +274,7 @@ func (tx *lowering) regionFunction(r *region, role string, binding *ast.Node, bl
 // visitInFrame visits node as code of region r's closure.
 func (tx *lowering) visitInFrame(r *region, node *ast.Node) *ast.Node {
 	saved := tx.frame
-	tx.frame = &frame{name: saved.name, region: r}
+	tx.frame = &frame{name: saved.name, region: r, handleClause: saved.handleClause}
 	visited := tx.Visitor().VisitNode(node)
 	tx.frame = saved
 	return visited

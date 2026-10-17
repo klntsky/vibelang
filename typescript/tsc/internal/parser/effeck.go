@@ -612,3 +612,225 @@ func (p *Parser) effeckClauseBody(clause *ast.Node) *ast.Node {
 	span := core.NewTextRange(start, catch.Block.End())
 	return p.effeckSpanning(p.factory.NewBlock(p.newNodeList(span, statements), true /*multiLine*/), span)
 }
+
+// isStartOfHandleClause reports whether the current token, after a try block
+// or a handle clause, starts a handle clause: `handle` and then a name on the
+// same line. In TypeScript only catch or finally may follow a try block, so
+// the form takes nothing away.
+func (p *Parser) isStartOfHandleClause() bool {
+	return p.token == ast.KindIdentifier && p.scanner.TokenValue() == "handle" && p.lookAhead((*Parser).nextTokenIsIdentifierOnSameLine)
+}
+
+// The names the parser gives a handle statement's synthesized variables: the
+// catch variable that stands for "an operation was performed", the
+// continuation of a clause, and the function whose result types a clause's
+// bindings.
+const (
+	effeckPerformedName    = "$performed"
+	effeckContinuationName = "$k"
+	effeckClauseName       = "$clause"
+)
+
+// parseEffeckHandleStatement parses the handle clauses that follow tryBlock,
+// and the catch clauses and finally block that may follow them:
+//
+//	try { BODY } handle Approval.approve(request) { CLAUSE } catch (e) { C } finally { F }
+//
+// as the TypeScript the checker reads in its place:
+//
+//	try {
+//	  try { BODY } catch ($performed) {
+//	    if ($performed) { const [$k, request] = $clause(Approval.approve); CLAUSE }
+//	  }
+//	} catch (e) { C } finally { F }
+//
+// The inner try statement, flagged NodeFlagsEffeck, is the handle statement
+// (D132). Its catch block stands for the clauses: TypeScript lets a catch
+// block start at any point of its try block, as a clause starts at any
+// operation the body performs, and the if chain makes each clause reachable
+// on its own. $clause types a clause's parameters as the operation's, and
+// $k, the continuation, so that its resume returns never. In a clause,
+// resume(value), resumeWith(program), and abandon() pass $k, and a resume in
+// tail position becomes `return resume($k, value)`: the clause ends there, as
+// the rest of the try block decides. A return in the body or a clause
+// returns from the enclosing function. The analyzer and the lowering read
+// the statement as a call of handle (handles.go); catch and finally wrap the
+// whole statement, so they also see failures raised in a clause.
+func (p *Parser) parseEffeckHandleStatement(pos int, jsdoc jsdocScannerInfo, tryBlock *ast.Node) *ast.Node {
+	var clauses []effeckHandleClause
+	for p.isStartOfHandleClause() {
+		clauses = append(clauses, p.parseHandleClause())
+	}
+	var chain *ast.Node
+	end := clauses[len(clauses)-1].block.End()
+	for i := len(clauses) - 1; i >= 0; i-- {
+		clause := clauses[i]
+		test := p.effeckSynthesized(p.factory.NewIdentifier(effeckPerformedName), clause.anchor)
+		chain = p.effeckSpanning(p.factory.NewIfStatement(test, clause.block, chain), core.NewTextRange(clause.block.Pos(), end))
+	}
+	anchor := clauses[0].anchor
+	name := p.effeckSynthesized(p.factory.NewIdentifier(effeckPerformedName), anchor)
+	variable := p.effeckSynthesized(p.factory.NewVariableDeclaration(name, nil /*exclamationToken*/, nil /*typeNode*/, nil /*initializer*/), anchor)
+	block := p.effeckSpanning(p.factory.NewBlock(p.newNodeList(chain.Loc, []*ast.Node{chain}), true /*multiLine*/), chain.Loc)
+	catch := p.effeckSpanning(p.factory.NewCatchClause(variable, block), chain.Loc)
+	handle := p.finishNode(p.factory.NewTryStatement(tryBlock, catch, nil /*finallyBlock*/), pos)
+	handle.Flags |= ast.NodeFlagsEffeck
+	if p.token != ast.KindCatchKeyword && p.token != ast.KindFinallyKeyword {
+		p.withJSDoc(handle, jsdoc)
+		return handle
+	}
+	var catchClause *ast.Node
+	if p.token == ast.KindCatchKeyword {
+		catchClause = p.parseEffeckCatchClauses(p.parseCatchClause())
+	}
+	var finallyBlock *ast.Node
+	if p.parseOptional(ast.KindFinallyKeyword) {
+		finallyBlock = p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
+	}
+	body := p.effeckSpanning(p.factory.NewBlock(p.newNodeList(handle.Loc, []*ast.Node{handle}), true /*multiLine*/), handle.Loc)
+	result := p.finishNode(p.factory.NewTryStatement(body, catchClause, finallyBlock), pos)
+	p.withJSDoc(result, jsdoc)
+	return result
+}
+
+// An effeckHandleClause is one parsed handle clause: the range of its handle
+// word, which its synthesized nodes stand on, and the block the checker
+// reads, whose first statement binds the clause's parameters.
+type effeckHandleClause struct {
+	anchor core.TextRange
+	block  *ast.Node
+}
+
+// parseHandleClause parses `handle Approval.approve(request) { ... }`. Its
+// parameters are binding elements without types, which come from the
+// operation.
+func (p *Parser) parseHandleClause() effeckHandleClause {
+	anchor := p.scanner.TokenRange()
+	p.nextToken() // handle
+	operation := p.parseHandleOperation()
+	open := p.scanner.TokenRange()
+	p.parseExpected(ast.KindOpenParenToken)
+	parameters := p.parseDelimitedList(PCParameters, (*Parser).parseArrayBindingElement)
+	p.parseExpected(ast.KindCloseParenToken)
+	header := core.NewTextRange(open.Pos(), p.nodePos())
+	body := p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
+	// The continuation comes first, so a rest parameter stays last.
+	var k *ast.Node
+	if p.effeckClauseResumes(body, open) {
+		k = p.effeckSynthesized(p.factory.NewIdentifier(effeckContinuationName), open)
+	}
+	continuation := p.effeckSynthesized(p.factory.NewBindingElement(nil /*dotDotDotToken*/, nil /*propertyName*/, k, nil /*initializer*/), open)
+	elements := p.newNodeList(core.NewTextRange(open.Pos(), max(parameters.End(), open.End())), append([]*ast.Node{continuation}, parameters.Nodes...))
+	pattern := p.effeckSpanning(p.factory.NewBindingPattern(ast.KindArrayBindingPattern, elements), header)
+	callee := p.effeckSynthesized(p.factory.NewIdentifier(effeckClauseName), anchor)
+	call := p.effeckSpanning(p.factory.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, p.newNodeList(operation.Loc, []*ast.Node{operation}), ast.NodeFlagsNone), core.NewTextRange(anchor.Pos(), operation.End()))
+	span := core.NewTextRange(anchor.Pos(), header.End())
+	declaration := p.effeckSpanning(p.factory.NewVariableDeclaration(pattern, nil /*exclamationToken*/, nil /*typeNode*/, call), span)
+	list := p.effeckSpanning(p.factory.NewVariableDeclarationList(p.newNodeList(span, []*ast.Node{declaration}), ast.NodeFlagsConst), span)
+	binding := p.effeckSpanning(p.factory.NewVariableStatement(nil /*modifiers*/, list), span)
+	binding.Flags |= ast.NodeFlagsEffeck
+	statements := append([]*ast.Node{binding}, body.AsBlock().Statements.Nodes...)
+	blockSpan := core.NewTextRange(anchor.Pos(), body.End())
+	block := p.effeckSpanning(p.factory.NewBlock(p.newNodeList(blockSpan, statements), true /*multiLine*/), blockSpan)
+	return effeckHandleClause{anchor: anchor, block: block}
+}
+
+// parseHandleOperation parses the operation a handle clause answers, a
+// control's name and the operation's, Approval.approve, as a property access.
+func (p *Parser) parseHandleOperation() *ast.Node {
+	pos := p.nodePos()
+	expression := p.parseIdentifier()
+	for p.token == ast.KindDotToken || expression.Kind == ast.KindIdentifier {
+		p.parseExpected(ast.KindDotToken)
+		name := p.parseRightSideOfDot(true /*allowIdentifierNames*/, false /*allowPrivateIdentifiers*/, true /*allowUnicodeEscapeSequenceInIdentifierName*/)
+		expression = p.finishNode(p.factory.NewPropertyAccessExpression(expression, nil /*questionDotToken*/, name, ast.NodeFlagsNone), pos)
+	}
+	return expression
+}
+
+// effeckClauseResumes passes the clause's continuation, $k standing on
+// anchor, to each resume(value), resume(), resumeWith(program), and abandon()
+// in the clause's block, outside nested functions, and turns a resume or resumeWith
+// statement in tail position into `return resume($k, value)`. Calls with the
+// continuation already passed, such as those of a nested handle statement's
+// clauses, keep their arguments. It reports whether the clause uses the
+// continuation.
+func (p *Parser) effeckClauseResumes(block *ast.Node, anchor core.TextRange) bool {
+	used := false
+	resumes := map[*ast.Node]bool{}
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if ast.IsFunctionLike(node) || ast.IsClassLike(node) || node.Kind == ast.KindClassStaticBlockDeclaration {
+			return false
+		}
+		node.ForEachChild(visit)
+		if node.Kind != ast.KindCallExpression || !ast.IsIdentifier(node.Expression()) || node.QuestionDotToken() != nil {
+			return false
+		}
+		call := node.AsCallExpression()
+		arguments := call.Arguments
+		switch node.Expression().Text() {
+		case "resume":
+			// resume() continues an operation whose result is void.
+			if len(arguments.Nodes) > 1 {
+				return false
+			}
+			resumes[node] = true
+		case "resumeWith":
+			if len(arguments.Nodes) != 1 {
+				return false
+			}
+			resumes[node] = true
+		case "abandon":
+			if len(arguments.Nodes) != 0 {
+				return false
+			}
+		default:
+			return false
+		}
+		callee := node.Expression()
+		k := p.effeckSynthesized(p.factory.NewIdentifier(effeckContinuationName), callee.Loc)
+		passed := append([]*ast.Node{k}, arguments.Nodes...)
+		loc := k.Loc
+		if len(arguments.Nodes) != 0 {
+			loc = core.NewTextRange(k.Pos(), arguments.End())
+		} else if callee.Text() == "resume" {
+			passed = append(passed, p.effeckSynthesized(p.factory.NewIdentifier("undefined"), callee.Loc))
+		}
+		for _, argument := range passed {
+			argument.Parent = node
+		}
+		call.Arguments = p.newNodeList(loc, passed)
+		used = true
+		return false
+	}
+	block.ForEachChild(visit)
+	// A tail resume ends the clause: it returns what the resumed body does.
+	var tail func(statement *ast.Node) *ast.Node
+	tail = func(statement *ast.Node) *ast.Node {
+		switch statement.Kind {
+		case ast.KindExpressionStatement:
+			if resumes[ast.SkipParentheses(statement.Expression())] {
+				result := p.effeckSpanning(p.factory.NewReturnStatement(statement.Expression()), statement.Loc)
+				result.Flags |= ast.NodeFlagsEffeck
+				return result
+			}
+		case ast.KindIfStatement:
+			s := statement.AsIfStatement()
+			s.ThenStatement = tail(s.ThenStatement)
+			s.ThenStatement.Parent = statement
+			if s.ElseStatement != nil {
+				s.ElseStatement = tail(s.ElseStatement)
+				s.ElseStatement.Parent = statement
+			}
+		case ast.KindBlock:
+			if statements := statement.AsBlock().Statements.Nodes; len(statements) != 0 {
+				statements[len(statements)-1] = tail(statements[len(statements)-1])
+				statements[len(statements)-1].Parent = statement
+			}
+		}
+		return statement
+	}
+	tail(block)
+	return used
+}

@@ -204,7 +204,11 @@ func checkResumeWithProgram(c *checker.Checker, file *ast.SourceFile, call *ast.
 	reported := false
 	if r := channelType(c, effect, "_R"); r != nil && r.Flags()&checker.TypeFlagsNever == 0 {
 		d := report(c, program, EK2005, c.TypeToString(r))
-		note(d, "Read it in the clause first, and resume with the value: resumeWith(k, () => value).")
+		if isClauseContinuation(call.Arguments()[0]) {
+			note(d, "Read it in the clause first, and resume with the value: resumeWith(() => value).")
+		} else {
+			note(d, "Read it in the clause first, and resume with the value: resumeWith(k, () => value).")
+		}
 		reported = true
 	}
 	if signature := c.GetResolvedSignature(call); signature != nil {
@@ -232,6 +236,9 @@ func checkResumeWithProgram(c *checker.Checker, file *ast.SourceFile, call *ast.
 // Approval.approve, or "the operation" when no clause encloses it.
 func operationOfClause(c *checker.Checker, file *ast.SourceFile, node *ast.Node) string {
 	for fn := node.Parent; fn != nil; fn = fn.Parent {
+		if clause := handleClauseOfBlock(fn); clause != nil {
+			return entityText(clause) // a handle statement's clause (handles.go)
+		}
 		if !ast.IsFunctionLike(fn) {
 			continue
 		}
