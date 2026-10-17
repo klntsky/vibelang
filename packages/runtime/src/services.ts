@@ -28,19 +28,28 @@ export abstract class Control {}
 interface ControlInfo {
   readonly ops: Record<string, K.Operation<any, any, any>>
   readonly impl: Record<string, (...args: Array<any>) => Effect.Effect<any, any, any>>
+  /** Each operation's declared parameter count, or -1 when it has a rest parameter or is unknown. */
+  readonly arity: Record<string, number>
 }
 export const controls = new WeakMap<object, ControlInfo>()
 
-/** Registers a generated control class: one kernel operation per abstract method. */
-export const $control = (cls: Context.Key<any, any>, methods: ReadonlyArray<string>) => {
+/**
+ * Registers a generated control class: one kernel operation per abstract
+ * method. `arities` holds each operation's declared parameter count (-1 for a
+ * rest parameter), so `handle` passes a clause its continuation after every
+ * declared parameter even when a call leaves an optional argument out.
+ */
+export const $control = (cls: Context.Key<any, any>, methods: ReadonlyArray<string>, arities: ReadonlyArray<number> = []) => {
   const ops: Record<string, K.Operation<any, any, any>> = {}
   const impl: Record<string, (...args: Array<any>) => Effect.Effect<any, any, any>> = {}
-  for (const m of methods) {
+  const arity: Record<string, number> = {}
+  methods.forEach((m, i) => {
     const op = K.operation<Array<any>, any, any>(`${cls.key}.${m}`)
     ops[m] = op
     impl[m] = (...args) => op(args)
-  }
-  controls.set(cls, { ops, impl })
+    arity[m] = arities[i] ?? -1
+  })
+  controls.set(cls, { ops, impl, arity })
 }
 
 /**

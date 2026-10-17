@@ -156,6 +156,23 @@ test("handlers: resume reinstalls the continuation and onReturn transforms its r
   }, value => Effect.succeed(value * 2)))).toBe(42)
 })
 
+interface Logger { write(message: string, level?: string): Effect.Effect<string> }
+class Logger extends $service<Logger>("runtime-test/Logger") {}
+$control(Logger, ["write"], [2])
+
+test("handlers: a clause gets its continuation last when a call leaves an optional argument out", async () => {
+  const write = (level?: string) =>
+    Effect.gen(function* () {
+      const logger = yield* Logger
+      return yield* (level === undefined ? logger.write("hi") : logger.write("hi", level))
+    })
+  const clauses = {
+    write: (message: string, level: string | undefined, k: any) => resume(k, `${message}/${level ?? "default"}`)
+  }
+  expect(await Effect.runPromise(handle(write(), Logger, clauses))).toBe("hi/default")
+  expect(await Effect.runPromise(handle(write("warn"), Logger, clauses))).toBe("hi/warn")
+})
+
 test("handlers: tail resumption and abandonment preserve their generated shapes", async () => {
   expect(await Effect.runPromise(handle(asking, Ask, {
     answer: (_, k) => Effect.succeed($tailResume(k, 41))

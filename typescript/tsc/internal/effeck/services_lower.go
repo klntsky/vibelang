@@ -1,6 +1,8 @@
 package effeck
 
 import (
+	"strconv"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
@@ -93,8 +95,9 @@ func (tx *lowering) visitEffectValueCall(node *ast.Node) *ast.Node {
 // transform. A service with `static readonly default` extends
 // runtime.$reference(key, () => Flags.default) instead, a Context.Reference
 // that needs no provider (D40). A control operation also registers one
-// kernel operation per abstract method, after the class:
-// runtime.$control(Approval, ["approve"]).
+// kernel operation per abstract method, after the class, with each
+// operation's declared parameter count:
+// runtime.$control(Approval, ["approve"], [1]).
 func (tx *lowering) visitServiceClass(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
@@ -120,17 +123,57 @@ func (tx *lowering) visitServiceClass(node *ast.Node) *ast.Node {
 		return class
 	}
 
-	var operations []*ast.Node
+	// One entry per operation; overloads share an entry and the widest arity.
+	var names []string
+	arity := map[string]int{}
 	for _, member := range node.Members() {
 		if ast.IsMethodDeclaration(member) && !ast.IsStatic(member) && ast.IsIdentifier(member.Name()) {
-			operations = append(operations, f.NewStringLiteral(member.Name().Text(), ast.TokenFlagsNone))
+			name, n := member.Name().Text(), operationArity(member)
+			previous, seen := arity[name]
+			switch {
+			case !seen:
+				names = append(names, name)
+				arity[name] = n
+			case previous >= 0 && (n < 0 || n > previous):
+				arity[name] = n
+			}
+		}
+	}
+	operations := make([]*ast.Node, 0, len(names))
+	arities := make([]*ast.Node, 0, len(names))
+	for _, name := range names {
+		operations = append(operations, f.NewStringLiteral(name, ast.TokenFlagsNone))
+		if n := arity[name]; n < 0 {
+			arities = append(arities, f.NewPrefixUnaryExpression(ast.KindMinusToken, f.NewNumericLiteral("1", ast.TokenFlagsNone)))
+		} else {
+			arities = append(arities, f.NewNumericLiteral(strconv.Itoa(n), ast.TokenFlagsNone))
 		}
 	}
 	register := f.NewCallExpression(tx.runtimeMember("$control"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{
 		f.NewIdentifier(node.Name().Text()),
 		f.NewArrayLiteralExpression(f.NewNodeList(operations), false /*multiLine*/),
+		f.NewArrayLiteralExpression(f.NewNodeList(arities), false /*multiLine*/),
 	}), ast.NodeFlagsNone)
 	statement := f.NewExpressionStatement(register)
 	ec.SetOriginal(statement, node)
 	return f.NewSyntaxList([]*ast.Node{class, statement})
+}
+
+// operationArity is the number of parameters a control operation declares,
+// not counting a this parameter, or -1 when it has a rest parameter. The
+// runtime pads a call's arguments to it, so a clause always receives its
+// continuation after the declared parameters, also when the call left an
+// optional argument out.
+func operationArity(method *ast.Node) int {
+	n := 0
+	for _, parameter := range method.Parameters() {
+		if ast.IsThisParameter(parameter) {
+			continue
+		}
+		if parameter.AsParameterDeclaration().DotDotDotToken != nil {
+			return -1
+		}
+		n++
+	}
+	return n
 }

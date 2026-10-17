@@ -65,10 +65,24 @@ export function handle(
   for (const [m, op] of Object.entries(info.ops)) {
     if (typeof clauses[m] !== "function") continue
     ops.push(op)
-    kclauses[op.name] = (payload: Array<any>, k) => clauses[m](...payload, k)
+    const arity = info.arity[m] ?? -1
+    kclauses[op.name] = (payload: Array<any>, k) => clauses[m](...fitArguments(payload, arity), k)
   }
   return K.handle(String((control as any).key), ops, Effect.provideService(program, control, info.impl as any), kclauses, onReturn)
 }
+
+/**
+ * Pads a call's arguments to the operation's declared parameter count, so a
+ * clause receives its continuation after every declared parameter even when
+ * the call left an optional argument out. A count of -1 (a rest parameter, or
+ * a control registered without counts) keeps the arguments as given.
+ */
+const fitArguments = (payload: Array<any>, arity: number): Array<any> =>
+  arity < 0 || payload.length === arity
+    ? payload
+    : payload.length < arity
+    ? [...payload, ...new Array<undefined>(arity - payload.length)]
+    : payload.slice(0, arity)
 
 /** Continues the program with `value` at the perform site; returns what the `handle` then produces. */
 export const resume: <V, E, H>(k: Continuation<V, E, H>, value: NoInfer<V>) => Effect.Effect<H> = K.resume as any
