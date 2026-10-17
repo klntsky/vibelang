@@ -670,13 +670,13 @@ service Users {
   find(id: string): User!UserNotFound
   rename(id: string, name: string): void!UserNotFound
 
-  static readonly layer = Layer.effect(Users, () => {
+  static readonly layer = Layer.effect(Users) {
     const db = Database()
     return {
       find(id) { … },
       rename(id, name) { … }
     }
-  })
+  }
 }
 ```
 
@@ -884,10 +884,10 @@ layer UsersTest: Users {
   rename() {}
 }
 
-it.effect("welcome returns the user's name", () => {
+it.effect("welcome returns the user's name") {
   const name = Effect.provide(() => welcome("42"), wire(UsersTest, MailerTest))
   assert.strictEqual(name, "Ada")
-})
+}
 ```
 
 To replace one service for part of a program, provide it around that part. The override applies only inside:
@@ -1127,9 +1127,9 @@ export const connect = (host: string, port: number) =>
   Effect.acquireRelease(
     suspend<net.Socket>((waiter) => {
       const socket = net.connect(port, host)
-      socket.once("connect", () => {
+      socket.once("connect") {
         if (!waiter.resume(socket)) socket.destroy()   // the waiter was cancelled first: still ours
-      })
+      }
       return () => socket.destroy()                    // cancelled while connecting
     }, { release: (socket) => socket.destroy() }),     // accepted, but cancelled before delivery
     (socket) => Effect.sync(() => socket.destroy()),
@@ -1547,13 +1547,13 @@ error EK2005: resumeWith runs this code at the perform site, inside the handled 
 #### Testing with a handler
 
 ```ts es
-it.effect("checkout charges when approved", () => {
+it.effect("checkout charges when approved") {
   try {
     assert.isTrue(checkout("c-42").paid)
   } handle Approval.approve(_request) {
     resume(true)
   }
-})
+}
 ```
 
 #### The full API
@@ -2137,11 +2137,11 @@ Effect's `Stream`, `Sink`, and `Channel` modules work unchanged: their operators
 import { assert, it } from "@effect/vitest"
 import { TestClock } from "effect/testing"
 
-it.effect("a reminder fires after one day", () => {
+it.effect("a reminder fires after one day") {
   const reminder = fork remindLater("ada", "1 day")
   TestClock.adjust("1 day")                          // virtual time: nothing waits
   assert.strictEqual(await reminder, "sent")
-})
+}
 ```
 
 `@effect/vitest` works unchanged: `it.effect` runs an Effeck function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.effeck` has no `await`, and a runner inside a test body is EK1005 (Chapter 13).
@@ -2506,6 +2506,29 @@ function first() {
   return race(do { const value = cached(); value.toUpperCase() }, fetched())
 }
 ```
+
+#### Blocks after calls
+
+A block on the same line after a call or a name is the call's program (D188, the TC39 [block params](https://github.com/samuelgoto/proposal-block-params) proposal). The block is the call's last argument, except where the callee is an Effect dual: there it takes the place of the program, as `withSpan(block, "guarded")` or `semaphore.withPermits(1)(block)`, and the call infers its type parameters from the arguments and the block together:
+
+```ts
+function work(): string!! {
+  sleep("1 millis")
+  return "done"
+}
+
+function guarded() {
+  const semaphore = Semaphore.make(1)
+  const result = semaphore.withPermits(1) {
+    return work()
+  }
+  return withSpan("guarded") {
+    return result.toUpperCase()
+  }
+}
+```
+
+The block is a function body, so a value needs `return`.
 
 ### 14. Contracts and inference
 
@@ -2920,10 +2943,10 @@ Interruption can be held off for a block of work with Effect's own combinators:
 
 ```ts es
 function moveFunds(from: Account, to: Account, amount: number) {
-  Effect.uninterruptible(() => {
+  Effect.uninterruptible {
     Ledger.debit(from, amount)
     Ledger.credit(to, amount)     // an interruption waits until both have run
-  })
+  }
 }
 ```
 
@@ -3290,9 +3313,9 @@ approve(request, k) {
 ```
 
 ```ts ts
-socket.once("connect", () => {
+socket.once("connect") {
   if (!waiter.resume(socket)) socket.destroy()   // lost the race to cancellation: still ours to release
-})
+}
 ```
 
 Both snippets consume a continuation a second time, or too late, and the machine answers differently in each case. One representation has three holders, and the law for a second consumption depends on the holder:
@@ -4453,6 +4476,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D180 | **Controversial.** `uninterruptible`, `restore`, and `interruptible` blocks | Effect's names in a block that keeps jumps | 17 |
 | D186 | `throw` is also an expression: `x ?? throw new NotFound({ id })` | TC39 throw expressions (stage 2); fails as the throw statement does | 3 |
 | D187 | `do { }` is an expression whose value is its last statement's | TC39 do expressions (stage 1); a racer or an arm gets several statements | 13 |
+| D188 | **Controversial.** A block after a call is its program: `withSpan("load") { ... }`, `it.effect("name") { ... }`; an Effect dual takes it in its program's place | TC39 block params (stage 1); removes `() => { }` around multi-statement programs | 13 |
 | D196 | **Controversial.** `await.all`, `await.allSettled`, `await.race`, `await.any` start programs by name and behave as the `Promise` methods; EK4608 | TC39 await operations and Await Dictionary; `await.x` reads as `Promise.x` |
 | D197 | `await.race [...]` replaces `select`, which is EK4607 | `case` read as value comparison and "select" is not Effect's word |
 
