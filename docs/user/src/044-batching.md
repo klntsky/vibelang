@@ -5,7 +5,7 @@ Use requests and resolvers when independent lookups can share a backend call. A 
 ## Model requests and domain errors
 
 ```ts
-type Part = { readonly code: string; readonly label: string }
+type Part = { code: string; label: string }
 
 error PartMissing {
   code: string
@@ -14,8 +14,8 @@ error PartMissing {
 error CatalogUnavailable
 
 interface FindPart extends Request.Request<Part, PartMissing | CatalogUnavailable> {
-  readonly _tag: "FindPart"
-  readonly code: string
+  _tag: "FindPart"
+  code: string
 }
 
 const FindPart = Request.tagged<FindPart>("FindPart")

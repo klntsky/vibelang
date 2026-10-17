@@ -116,8 +116,8 @@ Pass annotations after the fields or struct. The class identifier also becomes i
 
 ```ts
 interface CrateWire {
-  readonly count: string
-  readonly children: ReadonlyArray<CrateWire>
+  count: string
+  children: ReadonlyArray<CrateWire>
 }
 
 class Crate extends Schema.Class<Crate>("Crate")({

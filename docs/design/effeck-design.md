@@ -1588,6 +1588,20 @@ const program = title("42").pipe(Effect.provide(DatabaseLive))   // nothing has 
 
 Calling an Effeck function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and Effeck callers in the same compilation use the fast path. An eligible helper with a plain annotation, such as `: number`, instead keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.effeck` the way it resolves `.js` to `.ts`.
 
+#### Readonly members
+
+An interface or an object type in an `.effeck` file has readonly members unless a member says `mutable` (D134):
+
+```ts es
+interface Cart {
+  id: string
+  mutable items: Array<string>
+}
+// interface Cart { readonly id: string; items: Array<string> }
+```
+
+The declaration file writes `readonly`, so TypeScript code sees the same types. Readonly limits writes through the type, not the object: TypeScript assigns a mutable object to a readonly type, so TypeScript code passes its objects in unchanged. Index signatures follow the same rule. Class members keep TypeScript's rule, and arrays keep theirs: write `ReadonlyArray` or `readonly T[]` for an array the code must not change.
+
 #### Code that is not Effect
 
 A function that does not return an `Effect` is foreign code. Nothing in its type says whether it throws, what it reads, or whether it touches the outside world, so each kind of callee has a rule:
@@ -4231,6 +4245,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias, and the two cannot drift apart | 11 |
+| D134 | **Controversial.** Members of interfaces and object types are readonly unless written `mutable` | Immutable data is the common case and no longer repeats `readonly` | 10 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
 | D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |

@@ -146,8 +146,8 @@ const halving = Stream.unfold(32, (n) => {
 
 service Directory {
   page(cursor: number): Effect<{
-    readonly names: ReadonlyArray<string>
-    readonly next: number | undefined
+    names: ReadonlyArray<string>
+    next: number | undefined
   }, never, never>
 }
 

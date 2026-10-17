@@ -32,8 +32,8 @@ Effect's array `sort` returns a sorted copy. JavaScript's array method sorts its
 
 ```ts
 interface Task {
-  readonly priority: number
-  readonly title: string
+  priority: number
+  title: string
 }
 
 const byPriority = Order.mapInput(Order.Number, (task: Task) => task.priority)
@@ -52,8 +52,8 @@ byPriority(
 ```ts
 import { Array as Arr } from "effect"
 interface Task {
-  readonly priority: number
-  readonly title: string
+  priority: number
+  title: string
 }
 
 const byPriority = Order.mapInput(Order.Number, (task: Task) => task.priority)

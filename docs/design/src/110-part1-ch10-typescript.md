@@ -68,6 +68,20 @@ const program = title("42").pipe(Effect.provide(DatabaseLive))   // nothing has 
 
 Calling an Effeck function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and Effeck callers in the same compilation use the fast path. An eligible helper with a plain annotation, such as `: number`, instead keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.effeck` the way it resolves `.js` to `.ts`.
 
+#### Readonly members
+
+An interface or an object type in an `.effeck` file has readonly members unless a member says `mutable` (D134):
+
+```ts es
+interface Cart {
+  id: string
+  mutable items: Array<string>
+}
+// interface Cart { readonly id: string; items: Array<string> }
+```
+
+The declaration file writes `readonly`, so TypeScript code sees the same types. Readonly limits writes through the type, not the object: TypeScript assigns a mutable object to a readonly type, so TypeScript code passes its objects in unchanged. Index signatures follow the same rule. Class members keep TypeScript's rule, and arrays keep theirs: write `ReadonlyArray` or `readonly T[]` for an array the code must not change.
+
 #### Code that is not Effect
 
 A function that does not return an `Effect` is foreign code. Nothing in its type says whether it throws, what it reads, or whether it touches the outside world, so each kind of callee has a rule:

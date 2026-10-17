@@ -160,6 +160,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias, and the two cannot drift apart | 11 |
+| D134 | **Controversial.** Members of interfaces and object types are readonly unless written `mutable` | Immutable data is the common case and no longer repeats `readonly` | 10 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
 | D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |

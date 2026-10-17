@@ -10,8 +10,8 @@ function makeProgress() {
 }
 
 function advance(progress: SubscriptionRef.SubscriptionRef<{
-  readonly completed: number
-  readonly total: number
+  completed: number
+  total: number
 }>) {
   SubscriptionRef.update(progress, (state) => ({
     ...state,

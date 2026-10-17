@@ -75,8 +75,8 @@ String lengths have a representational difference: JavaScript counts UTF-16 code
 
 ```ts
 interface DepotTree {
-  readonly name: string
-  readonly branches: ReadonlyArray<DepotTree>
+  name: string
+  branches: ReadonlyArray<DepotTree>
 }
 const DepotTree = Schema.Struct({
   name: Schema.String,

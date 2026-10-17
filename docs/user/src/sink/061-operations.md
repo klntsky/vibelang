@@ -5,7 +5,7 @@ Transform a Sink when its existing consumption rule fits but its input or result
 ## Adapting consumer input
 
 ```ts
-const quantities = Sink.sum.mapInput((entry: { readonly quantity: number }) => entry.quantity)
+const quantities = Sink.sum.mapInput((entry: { quantity: number }) => entry.quantity)
 
 function countItems() {
   return Stream.make({ quantity: 7 }, { quantity: 11 }).run(quantities)
@@ -46,7 +46,7 @@ function totalReport() {
 
 ```ts
 const report = Sink.sum
-  .mapInput((entry: { readonly bytes: number }) => entry.bytes)
+  .mapInput((entry: { bytes: number }) => entry.bytes)
   .map((bytes) => `${bytes} bytes`)
 
 function byteReport() {

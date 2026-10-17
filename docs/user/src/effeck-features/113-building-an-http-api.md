@@ -10,7 +10,7 @@ export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
 export service Users {
-  create(name: string): { readonly id: string; readonly name: string }!NameTaken
+  create(name: string): { id: string; name: string }!NameTaken
 }
 
 export layer UsersLive: Users {

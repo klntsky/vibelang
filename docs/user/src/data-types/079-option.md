@@ -6,8 +6,8 @@
 
 ```ts
 interface Contact {
-  readonly name: string
-  readonly nickname: Option.Option<string>
+  name: string
+  nickname: Option.Option<string>
 }
 
 const named: Contact = { name: "Mina", nickname: Option.some("Mi") }
@@ -49,7 +49,7 @@ function describe(value: Option.Option<string>) {
 
 ```ts
 interface Address {
-  readonly street: Option.Option<string>
+  street: Option.Option<string>
 }
 
 function streetLabel(address: Option.Option<Address>) {

@@ -197,12 +197,12 @@ Spread `.fields` or use `fieldsAssign` to add fields. `encodeKeys` maps decoded 
 
 ```ts
 interface Crate {
-  readonly count: number
-  readonly children: ReadonlyArray<Crate>
+  count: number
+  children: ReadonlyArray<Crate>
 }
 interface CrateWire {
-  readonly count: string
-  readonly children: ReadonlyArray<CrateWire>
+  count: string
+  children: ReadonlyArray<CrateWire>
 }
 
 const Crate = Schema.Struct({
@@ -212,8 +212,8 @@ const Crate = Schema.Struct({
   )
 })
 
-interface Branch { readonly leaves: ReadonlyArray<Leaf> }
-interface Leaf { readonly owner: Branch | null }
+interface Branch { leaves: ReadonlyArray<Leaf> }
+interface Leaf { owner: Branch | null }
 
 const Branch = Schema.Struct({
   leaves: Schema.Array(Schema.suspend((): Schema.Codec<Leaf>!! => Leaf))

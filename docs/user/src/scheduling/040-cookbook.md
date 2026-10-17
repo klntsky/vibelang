@@ -35,8 +35,8 @@ Parse the response's retry hint into a duration at the HTTP boundary. The policy
 
 ```ts
 type Status =
-  | { readonly _tag: "Pending"; readonly pollAfter: Duration.Duration }
-  | { readonly _tag: "Ready"; readonly path: string }
+  | { _tag: "Pending"; pollAfter: Duration.Duration }
+  | { _tag: "Ready"; path: string }
 
 error PollLimit
 

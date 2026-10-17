@@ -106,7 +106,7 @@ function collectUnique() {
 Use a native Set when JavaScript value equality is appropriate. A size limit counts unique values, so duplicates do not consume another slot. The initializer creates a fresh Set on every run, avoiding shared mutable sink state.
 
 ```ts
-type Reading = { readonly station: string; readonly count: number }
+type Reading = { station: string; count: number }
 
 function addReading(totals: Map<string, number>, reading: Reading) {
   totals.set(reading.station, (totals.get(reading.station) ?? 0) + reading.count)
@@ -162,8 +162,8 @@ function foldSamples() {
 ## Folding by weight
 
 ```ts
-type Packet = { readonly bytes: number }
-type Batch = { readonly packets: ReadonlyArray<Packet>; readonly bytes: number }
+type Packet = { bytes: number }
+type Batch = { packets: ReadonlyArray<Packet>; bytes: number }
 
 const weighted = Sink.fold<Batch, Packet>(
   () => ({ packets: [], bytes: 0 }),

@@ -35,8 +35,8 @@ The string, boolean, bigint, and `strictEqual` relations use strict equality. `E
 
 ```ts
 interface Product {
-  readonly sku: string
-  readonly displayName: string
+  sku: string
+  displayName: string
 }
 
 const bySku = Equivalence.mapInput(

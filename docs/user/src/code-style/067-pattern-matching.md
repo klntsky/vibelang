@@ -19,7 +19,7 @@ function describeInput(input: number | string) {
 }
 // string!!
 
-function describeJob(input: { readonly state: string; readonly attempts: number }) {
+function describeJob(input: { state: string; attempts: number }) {
   return pipe(
     Match.value(input),
     Match.when({ state: "queued" }, (job) => `waiting: ${job.attempts}`),
@@ -33,7 +33,7 @@ function describeJob(input: { readonly state: string; readonly attempts: number 
 ## Shapes, predicates, and tags
 
 ```ts
-function classifyRetry(input: { readonly status: string; readonly attempts: number }) {
+function classifyRetry(input: { status: string; attempts: number }) {
   return pipe(
     Match.value(input),
     Match.when({ status: "failed", attempts: (n: number) => n >= 3 }, () => "escalate"),
@@ -43,9 +43,9 @@ function classifyRetry(input: { readonly status: string; readonly attempts: numb
 }
 
 type Job =
-  | { readonly _tag: "Queued" }
-  | { readonly _tag: "Running"; readonly worker: string }
-  | { readonly _tag: "Done"; readonly output: string }
+  | { _tag: "Queued" }
+  | { _tag: "Running"; worker: string }
+  | { _tag: "Done"; output: string }
 
 function jobLabel(job: Job) {
   return pipe(

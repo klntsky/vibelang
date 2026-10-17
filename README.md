@@ -59,6 +59,8 @@ clients, see [editors/](editors/README.md).
   the function's errors, and `catch (e: NotFound) { ... }` handles only it.
 - Declare a struct schema and its type with `schema User { id: string; role: "admin" | "member" }`;
   a field may name another schema.
+- Members of interfaces and object types are readonly unless written
+  `mutable`: `interface Cart { id: string; mutable items: Array<string> }`.
 - Write a contract as `Result!Error!Dependencies`: `User!NotFound!Db` is
   `Effect<User, NotFound, Db>`, an empty slot is `never` (`User!!`), and
   dependencies left out of a function's return type are inferred from its body.

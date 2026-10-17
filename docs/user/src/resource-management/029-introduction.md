@@ -63,7 +63,7 @@ function reportFailedExport(accepted: boolean) {
 
 ```ts
 interface Lease {
-  readonly id: string
+  id: string
 }
 
 service LeaseStore {

@@ -43,8 +43,8 @@ new Archived({ documentId: "doc-3" })._tag // "Archived"
 ```ts
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
-  Sent: { readonly tracking: string }
-  Rejected: { readonly reason: string }
+  Sent: { tracking: string }
+  Rejected: { reason: string }
 }>
 
 const Delivery = Data.taggedEnum<Delivery>()
@@ -69,12 +69,12 @@ describe(sent) // "Tracking: parcel-8"
 ```ts
 type LoadState<A, E> = Data.TaggedEnum<{
   Idle: {}
-  Ready: { readonly value: A }
-  Failed: { readonly error: E }
+  Ready: { value: A }
+  Failed: { error: E }
 }>
 
 interface LoadStateDefinition extends Data.TaggedEnum.WithGenerics<2> {
-  readonly taggedEnum: LoadState<this["A"], this["B"]>
+  taggedEnum: LoadState<this["A"], this["B"]>
 }
 
 const LoadState = Data.taggedEnum<LoadStateDefinition>()
