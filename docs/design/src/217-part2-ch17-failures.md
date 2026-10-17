@@ -66,3 +66,40 @@ function moveFunds(from: Account, to: Account, amount: number) {
 ```
 
 `try`, `catch`, `finally`, and `using` compile to Effect's own failure and cleanup frames, never to JavaScript `try`, in any function that compiles to frames. Effect does not run JavaScript `finally` blocks inside generators when a fiber fails or is interrupted (F1-F3), so a JavaScript `try` would skip cleanup. Chapter 26 shows the generated code. Functions that compile to plain JavaScript are the exception, because nothing in them can pause (Chapter 15).
+
+#### Causes, exits, and interruption blocks
+
+```ts es
+error Unavailable
+
+function fetchSnapshot(): string!Unavailable {
+  sleep("1 millis")
+  return "snapshot"
+}
+
+function snapshotOrFallback() {
+  try {
+    return fetchSnapshot()
+  } catch (e: Unavailable) {
+    return "cached"
+  } catch (cause: Cause) {
+    if (cause.hasInterrupts()) throw cause
+    return "degraded"
+  } finally (exit) {
+    logDebug(`snapshot ${exit._tag}`)
+  }
+}
+
+function commit(rows: ReadonlyArray<string>) {
+  uninterruptible {
+    logInfo(`writing ${rows.length} rows`)
+    restore {
+      sleep("10 millis")
+    }
+    logInfo("written")
+  }
+}
+```
+
+A catch clause typed `Cause` catches every reason the failure holds, defects and interrupts included, as `Effect.catchCause` does (D176); clauses before it still see expected failures only, and it must come last (EK2106). A control operation's abandonment unwinds through it untouched. `throw` with a `Cause` fails with every reason it holds, as `Effect.failCause` does, and adds the Cause's E to the function's E (D177). `finally (exit)` binds the statement's `Exit<void, E>`, where E is what the try statement can fail with; the block runs uninterruptibly, as `Effect.onExit`'s finalizer does, and a success carries no value (D178). `exit(program)`, `interrupt()`, and `yieldNow()` are bare functions (D179). An `uninterruptible` block runs as `Effect.uninterruptibleMask`, a `restore` block inside it as the mask's `restore`, and an `interruptible` block as `Effect.interruptible`; their statements stay code of the enclosing function, and each block calls the prelude function of its name, which also takes a program directly (D180). A `restore` block outside an `uninterruptible` block is EK2111.
+

@@ -73,7 +73,7 @@ function replay<A, E>(outcome: Exit.Exit<A, E>) {
 // A!E!
 ```
 
-Calling a held exit runs its constant outcome. Success returns the stored value; failure propagates the stored cause, without repeating the original work. Taking an exit with `Effect.exit` and later calling it therefore separates inspection from propagation.
+Calling a held exit runs its constant outcome. Success returns the stored value; failure propagates the stored cause, without repeating the original work. Taking an exit with `exit(program)` and later calling it therefore separates inspection from propagation. Inside a try statement, `finally (exit)` binds the statement's own exit.
 
 ## Coming from Effect
 

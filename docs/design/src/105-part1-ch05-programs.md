@@ -65,7 +65,9 @@ Most pipes you write today disappear:
 | `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch` |
 | `Effect.ensuring` | `finally` |
 | `Effect.provide`, `Effect.provideService` | the same functions, with a program argument |
-| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached`, `Effect.uninterruptible` | the same functions, called or piped with `\|>` as above |
+| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached` | the same functions, called or piped with `\|>` as above |
+| `Effect.catchCause`, `Effect.failCause`, `Effect.onExit` | `catch (cause: Cause)`, `throw cause`, `finally (exit)` (D176-D178) |
+| `Effect.uninterruptibleMask`, `Effect.interruptible` | `uninterruptible { … restore { … } }`, `interruptible { … }` (D180) |
 
 On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how.
 

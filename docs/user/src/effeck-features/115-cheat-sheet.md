@@ -264,6 +264,114 @@ export function main() {
 }
 ```
 
+## Causes, exits, and interruption
+
+**Catch every cause** (D176). A clause typed `Cause` also sees defects and interrupts; clauses before it still see expected failures only.
+
+```ts effect
+const safe = (id: string) =>
+  Effect.map(getUser(id), (user) => user.name).pipe(
+    Effect.catchTag("NotFound", (e) => Effect.succeed(`no user ${e.id}`)),
+    Effect.catchCause((cause) => Effect.succeed(`failed: ${Cause.pretty(cause)}`))
+  )
+```
+
+```ts es
+function safe(id: string) {
+  try {
+    return getUser(id).name
+  } catch (e: NotFound) {
+    return `no user ${e.id}`
+  } catch (cause: Cause) {
+    return `failed: ${Cause.pretty(cause)}`
+  }
+}
+```
+
+**Rethrow a cause** (D177). `throw` with a `Cause` fails with every reason it holds.
+
+```ts effect
+const logged = getUser("1").pipe(
+  Effect.catchCause((cause) => Effect.andThen(Effect.logError(cause), Effect.failCause(cause)))
+)
+```
+
+```ts es
+function logged() {
+  try {
+    return getUser("1")
+  } catch (cause: Cause) {
+    logError(cause)
+    throw cause
+  }
+}
+```
+
+**Run on every exit** (D178). The block runs without interruption; a success carries no value.
+
+```ts effect
+const tracked = getUser("1").pipe(
+  Effect.onExit((exit) => Effect.log(`lookup ${exit._tag}`))
+)
+```
+
+```ts es
+function tracked() {
+  try {
+    return getUser("1")
+  } finally (exit) {
+    log(`lookup ${exit._tag}`)
+  }
+}
+```
+
+**Exit, yield, and interrupt** (D179). `exit` takes its program by name.
+
+```ts effect
+const result = yield* Effect.exit(getUser("1"))
+yield* Effect.yieldNow
+if (result._tag === "Failure") yield* Effect.interrupt
+```
+
+```ts es
+function outcome() {
+  const result = exit(getUser("1"))
+  yieldNow()
+  if (result._tag === "Failure") interrupt()
+  return result
+}
+```
+
+**Interruption** (D180). The blocks keep `return` and `break` meaning what they mean in the function; `uninterruptible(program)` also works.
+
+```ts effect
+const guarded = Effect.uninterruptibleMask((restore) =>
+  Effect.gen(function* () {
+    const user = yield* getUser("1")
+    const orders = yield* restore(getOrders(user.id))
+    return { user, orders }
+  })
+)
+const cancellable = Effect.interruptible(getOrders("1"))
+```
+
+```ts es
+function guarded() {
+  uninterruptible {
+    const user = getUser("1")
+    restore {
+      return { user, orders: getOrders(user.id) }
+    }
+  }
+}
+
+function cancellable() {
+  interruptible {
+    return getOrders("1")
+  }
+}
+```
+
 ## Calls
 
 **No imports from `effect`** (D146).

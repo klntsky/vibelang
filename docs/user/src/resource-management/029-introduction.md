@@ -31,17 +31,19 @@ function exportRows(accepted: boolean) {
 
 ```ts
 function observedExport(accepted: boolean) {
-  return Effect.onExit(() => exportRows(accepted), (exit) => {
+  try {
+    return exportRows(accepted)
+  } finally (exit) {
     if (exit.isSuccess()) {
       log("Export succeeded")
     } else {
       log("Export stopped", exit.cause.reasons.map((reason) => reason._tag))
     }
-  })
+  }
 }
 ```
 
-`onExit` receives an `Exit` containing the success value or complete failure cause. Unlike a boolean success flag, this preserves defects and cancellation as well as domain errors. Its cleanup runs uninterruptibly, and successful cleanup preserves the original result.
+`finally (exit)` binds the try statement's `Exit`, as `Effect.onExit` does. A success carries no value, because the try block's statements have none; a failure carries the complete cause. Unlike a boolean success flag, this preserves defects and cancellation as well as domain errors. Its cleanup runs uninterruptibly, and successful cleanup preserves the original result.
 
 ## Cleaning up failed work
 

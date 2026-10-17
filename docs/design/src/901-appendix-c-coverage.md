@@ -25,7 +25,7 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.try`, `tryPromise`, `promise` | Changed | The hatches `try(…)` and `sync(async () => …)`, whose arguments are plain TypeScript (D148) |
 | `Effect.suspend` | Changed | A call passed by name where a program is expected, or `() => …` (D147) |
 | `Effect.callback` | Changed | The hatch `callback((resume, signal) => …)`: `resume(value)`, `resume.fail(error)` (D43, D148) |
-| `Effect.void`, `never`, `yieldNow`, `interrupt` | Unchanged by design | Call the value: `Effect.yieldNow()` |
+| `Effect.void`, `never`, `yieldNow`, `interrupt` | Changed | Bare functions: `yieldNow()`, `interrupt()` (D179) |
 | Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | In the prelude; `runPromise(main())` from TypeScript, a top-level call, or a hatch's body, where no fiber runs the code (EK1005, D38, D148) |
 | `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.effeck` is EK1002 |
 | `Effect.gen({ self: this }, …)` | Changed | An ordinary method; `this` keeps its JavaScript meaning |
@@ -207,7 +207,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Background work owned by a block | Changed | `fork(() => heartbeat())` (D19) |
 | `Fiber.join`, `await`, `interrupt`, `joinAll`, `interruptAll` | Unchanged by design | The same calls |
 | Interruption is not an error | Changed | `catch` never sees it; `finally` and `using` always run |
-| `uninterruptible`, `uninterruptibleMask`, `interruptibleMask` | Changed | Programs as functions |
+| `uninterruptible`, `uninterruptibleMask`, `interruptibleMask` | Changed | `uninterruptible { … restore { … } }` and `interruptible { … }` blocks, or the prelude functions with a program (D180) |
 | `onInterrupt` | Changed | `Effect.onInterrupt(() => task(), () => Console.log("stopped"))` |
 | `Effect.forever` | Changed | `while (true) tick()` |
 | `Deferred` | Unchanged by design | `Deferred.make<number>()`, `Deferred.await(d)` |

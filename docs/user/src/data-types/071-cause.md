@@ -31,7 +31,7 @@ error MissingRecord {
 }
 
 function diagnose() {
-  const outcome = Effect.exit(() => {
+  const outcome = exit(() => {
     throw new MissingRecord({ id: "r-9" })
   })
   if (outcome.isFailure()) {
@@ -41,7 +41,7 @@ function diagnose() {
 }
 ```
 
-`Effect.exit` runs the program and returns its full outcome as data. A failure exit exposes `.cause`, including defects and interruption that ordinary `catch` does not handle. Use `Effect.failCause(cause)` when you deliberately want to propagate the entire cause again.
+`exit` runs the program and returns its full outcome as data, as `Effect.exit` does. A failure exit exposes `.cause`, including defects and interruption that ordinary `catch` does not handle. Use `throw cause` when you deliberately want to propagate the entire cause again, or catch it whole with `catch (cause: Cause)`.
 
 ## Identifying reason variants
 

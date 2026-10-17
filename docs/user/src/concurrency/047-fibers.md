@@ -56,6 +56,29 @@ Cancellation does not require a hand-written polling loop. Effect delivers it at
 
 When the caller needs to continue during cleanup, fork the interruption, `fork worker.interrupt()`, and await that fiber before its owner exits. Avoid immediate unsafe runtime methods when cleanup ordering matters.
 
+## Protecting work from interruption
+
+```ts
+function saveReport() {
+  uninterruptible {
+    logInfo("saving; an interruption waits until the block ends")
+    restore {
+      sleep("1 second")
+    }
+    logInfo("saved")
+  }
+}
+
+function pollStatus(cancelled: boolean) {
+  interruptible {
+    sleep("1 second")
+  }
+  if (cancelled) interrupt()
+}
+```
+
+An `uninterruptible` block runs without interruption, as `Effect.uninterruptibleMask` does: an interruption that arrives waits until the block ends. A `restore` block inside it brings back the interruptibility the fiber had before, so long waits stay cancellable. An `interruptible` block makes its code interruptible even inside an uninterruptible region, as `Effect.interruptible` does. Statements inside these blocks stay code of the enclosing function, so `return` returns from it. The blocks call prelude functions of the same names, so `uninterruptible(saveRows())` passes a program instead. `interrupt()` interrupts the running fiber, as `Effect.interrupt` does.
+
 ## Combining results
 
 ```ts
@@ -165,4 +188,4 @@ function waitForReady() {
 }
 ```
 
-Forking schedules a child; it does not prove the child has reached a particular statement. `Effect.yieldNow()` gives other work a chance to run, but it is not a readiness guarantee. Use a `Deferred`, as above, when ordering matters; `await ready` waits until the child completes it. Sleeping for an estimated startup time leaves a race.
+Forking schedules a child; it does not prove the child has reached a particular statement. `yieldNow()` gives other work a chance to run, but it is not a readiness guarantee. Use a `Deferred`, as above, when ordering matters; `await ready` waits until the child completes it. Sleeping for an estimated startup time leaves a race.

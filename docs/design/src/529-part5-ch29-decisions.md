@@ -183,6 +183,11 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
 | D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
+| D176 | `catch (cause: Cause)` catches every reason, as Effect.catchCause | Effect's catchCause in a typed clause's shape | 17 |
+| D177 | `throw cause` with a Cause rethrows every reason | Effect.failCause without a new keyword | 17 |
+| D178 | `finally (exit)` binds the try statement's Exit | Effect.onExit in finally's shape | 17 |
+| D179 | `exit`, `interrupt`, and `yieldNow` are bare functions | Effect's names; no bare `yield` | 7, 17 |
+| D180 | **Controversial.** `uninterruptible`, `restore`, and `interruptible` blocks | Effect's names in a block that keeps jumps | 17 |
 | D186 | `throw` is also an expression: `x ?? throw new NotFound({ id })` | TC39 throw expressions (stage 2); fails as the throw statement does | 3 |
 | D187 | `do { }` is an expression whose value is its last statement's | TC39 do expressions (stage 1); a racer or an arm gets several statements | 13 |
 
