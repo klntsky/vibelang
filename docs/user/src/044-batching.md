@@ -34,7 +34,7 @@ const DemoCatalog = new Map<string, Part>([
 ])
 
 const PartResolver = RequestResolver.make<FindPart>((entries) => {
-  Effect.log(`catalog batch size=${entries.length}`)
+  log(`catalog batch size=${entries.length}`)
   for (const entry of entries) {
     Request.completeEffect(entry, () => {
       const part = DemoCatalog.get(entry.request.code)
@@ -68,7 +68,7 @@ function partLabel(code: string) {
 
 ```ts
 function labels(codes: ReadonlyArray<string>) {
-  return Effect.forEach(codes, (code) => partLabel(code), {
+  return forEach(codes, (code) => partLabel(code), {
     concurrency: "unbounded"
   })
 }

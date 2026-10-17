@@ -6,8 +6,8 @@ Effeck uses Effect's structured logging to record progress, failures, and diagno
 
 ```ts
 function reportProgress() {
-  Effect.log("export started", { format: "csv", stage: "prepare" })
-  Effect.logInfo("export completed", { rows: 240 })
+  log("export started", { format: "csv", stage: "prepare" })
+  logInfo("export completed", { rows: 240 })
 }
 ```
 
@@ -19,10 +19,10 @@ function reportProgress() {
 function diagnostics() {
   Effect.provideService(() => {
     Effect.logTrace("entered parser")
-    Effect.logDebug("parsed header")
-    Effect.logInfo("input accepted")
-    Effect.logWarning("using fallback settings")
-    Effect.logError("destination unavailable")
+    logDebug("parsed header")
+    logInfo("input accepted")
+    logWarning("using fallback settings")
+    logError("destination unavailable")
     Effect.logFatal("application cannot start")
   }, References.MinimumLogLevel, "Debug")
 }
@@ -35,19 +35,19 @@ The default threshold is Info, which filters Debug and Trace messages. Providing
 ```ts
 function annotatedExport() {
   Effect.annotateLogs(() => {
-    Effect.logInfo("preparing")
-    Effect.annotateLogs(() => Effect.logInfo("writing"), "stage", "write")
+    logInfo("preparing")
+    Effect.annotateLogs(() => logInfo("writing"), "stage", "write")
   }, { operation: "weekly-export", format: "csv" })
-  Effect.logInfo("outside annotated operation")
+  logInfo("outside annotated operation")
 }
 
 function scopedAnnotations() {
   Effect.scoped(() => {
     Effect.annotateLogsScoped({ component: "importer" })
-    Effect.logInfo("reading input")
-    Effect.logInfo("validating rows")
+    logInfo("reading input")
+    logInfo("validating rows")
   })
-  Effect.logInfo("outside importer scope")
+  logInfo("outside importer scope")
 }
 ```
 
@@ -58,9 +58,9 @@ function scopedAnnotations() {
 ```ts
 function timedExport() {
   Effect.withLogSpan(() => {
-    Effect.logInfo("opening output")
-    Effect.sleep("30 millis")
-    Effect.logInfo("output written")
+    logInfo("opening output")
+    sleep("30 millis")
+    logInfo("output written")
   }, "write-output")
 }
 ```
@@ -79,11 +79,11 @@ const ConfiguredLevel = Layer.unwrap(() => {
 })
 
 function quiet() {
-  Effect.provide(() => Effect.logInfo("suppressed"), Silent)
+  Effect.provide(() => logInfo("suppressed"), Silent)
 }
 
 function configured() {
-  Effect.provide(() => Effect.logDebug("configuration loaded"), ConfiguredLevel)
+  Effect.provide(() => logDebug("configuration loaded"), ConfiguredLevel)
 }
 ```
 
@@ -98,8 +98,8 @@ function captureLogs() {
     records.push({ level: logLevel, message })
   })
   Effect.provide(() => {
-    Effect.logInfo("batch accepted", { count: 3 })
-    Effect.logWarning("one retry required")
+    logInfo("batch accepted", { count: 3 })
+    logWarning("one retry required")
   }, Logger.layer([capture, Logger.tracerLogger]))
   return records
 }
@@ -116,7 +116,7 @@ const ObjectLogs = Logger.layer([Logger.consoleStructured, Logger.tracerLogger])
 const JsonLogs = Logger.layer([Logger.consoleJson, Logger.tracerLogger])
 
 function jsonExample() {
-  Effect.provide(() => Effect.logInfo("started", { workers: 4 }), JsonLogs)
+  Effect.provide(() => logInfo("started", { workers: 4 }), JsonLogs)
 }
 ```
 
@@ -133,7 +133,7 @@ function consoleAndCapture() {
     audit,
     Logger.tracerLogger
   ])
-  Effect.provide(() => Effect.logInfo("job finished"), destinations)
+  Effect.provide(() => logInfo("job finished"), destinations)
   return auditMessages
 }
 ```

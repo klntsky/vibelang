@@ -65,7 +65,7 @@ function readWithInspection() {
   try {
     return sandboxedRow()
   } catch (cause) {
-    Effect.log("Row computation stopped", cause.reasons.map((reason) => reason._tag))
+    log("Row computation stopped", cause.reasons.map((reason) => reason._tag))
     return Effect.failCause(cause)
   }
 }

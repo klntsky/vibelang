@@ -57,10 +57,10 @@ function classify<E>(cause: Cause.Cause<E>) {
     interruptionOnly: Cause.hasInterruptsOnly(cause)
   }
   for (const reason of cause.reasons) {
-    if (Cause.isFailReason(reason)) Effect.log("expected failure")
-    else if (Cause.isDieReason(reason)) Effect.log("defect")
+    if (Cause.isFailReason(reason)) log("expected failure")
+    else if (Cause.isDieReason(reason)) log("defect")
     else if (Cause.isInterruptReason(reason)) {
-      Effect.log(`interruption: ${reason.fiberId}`)
+      log(`interruption: ${reason.fiberId}`)
     }
   }
   return summary

@@ -14,7 +14,7 @@ function exportReport(id: string) {
 }
 
 function exportWithDeadline(id: string) {
-  return Effect.timeout(exportReport(id), "30 seconds")
+  return timeout(exportReport(id), "30 seconds")
 }
 ```
 

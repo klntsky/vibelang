@@ -15,14 +15,14 @@ The core package supplies Effect's data types, schedules, concurrency tools, and
 ```ts
 function pauseBeforeRetry() {
   const started = Clock.currentTimeMillis()
-  Effect.sleep(Duration.millis(25))
+  sleep(Duration.millis(25))
   return started
 }
 
 const backoff = Schedule.exponential("50 millis")
 ```
 
-`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `File!IOError!Scope`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`; the boundary hatches `sync`, `try`, and `callback`; and the runners `runPromise`, `runFork`, `runSync`, and `runCallback`. `Clock`, `Duration`, `Schedule`, and every other module of `effect`'s root need no import either, and neither do `flow` and `identity`.
+`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `File!IOError!Scope`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`; the boundary hatches `sync`, `try`, and `callback`; the runners `runPromise`, `runFork`, `runSync`, and `runCallback`; and the Effect module's most used functions without the `Effect.` prefix: `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, and `die`. The other Effect functions keep the prefix, as in `Effect.result(work())`. `Clock`, `Duration`, `Schedule`, and every other module of `effect`'s root need no import either, and neither do `flow` and `identity`.
 
 JavaScript's own globals keep their names. `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules with those names under another name:
 
@@ -58,12 +58,12 @@ Effeck's global names are source conveniences. They refer to Effect and language
 
 ```ts
 function withinSecond<A, E, R>(program: () => A!E!R) {
-  return Effect.timeout(program, "1 second")
+  return timeout(program, "1 second")
 }
 
 function example() {
   return withinSecond(() => {
-    Effect.sleep("10 millis")
+    sleep("10 millis")
     return "ready"
   })
 }

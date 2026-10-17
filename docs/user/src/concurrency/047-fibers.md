@@ -7,10 +7,10 @@ A fiber is a running computation with a result and a lifetime. Effeck uses Effec
 ```ts
 function buildDashboard() {
   const chart = fork(() => {
-    Effect.sleep("30 millis")
+    sleep("30 millis")
     return "chart"
   })
-  Effect.logInfo("preparing dashboard frame")
+  logInfo("preparing dashboard frame")
   return Fiber.join(chart)
 }
 // string!!
@@ -25,7 +25,7 @@ function inspectChild() {
   const child = fork(() => { throw "render failed" })
   const exit = Fiber.await(child)
   if (Exit.isFailure(exit)) {
-    Effect.logError("renderer stopped", exit.cause)
+    logError("renderer stopped", exit.cause)
   }
   return exit
 }
@@ -39,14 +39,14 @@ function inspectChild() {
 function stopWorker() {
   const worker = fork(() => {
     try {
-      Effect.sleep("1 minute")
+      sleep("1 minute")
     } finally {
-      Effect.logInfo("worker finalizer")
+      logInfo("worker finalizer")
     }
   })
-  Effect.sleep("10 millis")
+  sleep("10 millis")
   Fiber.interrupt(worker)
-  Effect.logInfo("worker has terminated")
+  logInfo("worker has terminated")
 }
 ```
 
@@ -60,10 +60,10 @@ When the caller needs to continue during cleanup, start `Fiber.interrupt(worker)
 function combine() {
   const title = fork(() => "Inventory")
   const rows = fork(() => {
-    Effect.sleep("20 millis")
+    sleep("20 millis")
     return 18
   })
-  const both = Effect.all([
+  const both = all([
     Fiber.join(title),
     Fiber.join(rows)
   ], { concurrency: 2 })
@@ -80,15 +80,15 @@ function request() {
   {
     const progress = fork(() => {
       try {
-        Effect.sleep("1 minute")
+        sleep("1 minute")
       } finally {
-        Effect.logInfo("progress reporter stopped")
+        logInfo("progress reporter stopped")
       }
     })
-    Effect.sleep("20 millis")
+    sleep("20 millis")
     // The nested block owns progress, even without an explicit join.
   }
-  Effect.logInfo("request finishing")
+  logInfo("request finishing")
 }
 ```
 
@@ -100,20 +100,20 @@ Forked fibers inherit the current services and tracing context. Control-operatio
 
 ```ts
 function startInCallerScope() {
-  return Effect.forkScoped(Effect.sleep("1 minute"))
+  return Effect.forkScoped(sleep("1 minute"))
 }
 // Scope remains in this function's requirements.
 
 function scopedExample() {
   Effect.scoped(() => {
     const background = startInCallerScope()
-    Effect.sleep("20 millis")
+    sleep("20 millis")
     // Closing this scope interrupts background.
   })
 }
 
 function detachedExample() {
-  const independent = Effect.forkDetach(() => Effect.sleep("50 millis"))
+  const independent = Effect.forkDetach(() => sleep("50 millis"))
   Fiber.join(independent)
 }
 ```
@@ -126,12 +126,12 @@ function detachedExample() {
 function waitForReady() {
   const ready = Deferred.make<void>()
   const worker = fork(() => {
-    Effect.logInfo("worker initialized")
+    logInfo("worker initialized")
     Deferred.succeed(ready, undefined)
-    Effect.sleep("20 millis")
+    sleep("20 millis")
   })
   Deferred.await(ready)
-  Effect.logInfo("initialization is complete")
+  logInfo("initialization is complete")
   Fiber.join(worker)
 }
 ```

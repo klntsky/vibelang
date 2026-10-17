@@ -10,13 +10,13 @@ import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
   try {
-    Effect.log("worker started")
+    log("worker started")
     while (true) {
-      Effect.sleep("2 seconds")
-      Effect.log("checking work")
+      sleep("2 seconds")
+      log("checking work")
     }
   } finally {
-    Effect.log("worker stopped")
+    log("worker stopped")
   }
 }
 
@@ -36,7 +36,7 @@ Call runners only where no fiber runs the code: at the module's top level or in 
 import { BunRuntime } from "@effect/platform-bun"
 
 function main() {
-  Effect.log("running on Bun")
+  log("running on Bun")
 }
 
 BunRuntime.runMain(() => main())
@@ -59,7 +59,7 @@ function parseDecimalTokens(tokens: ReadonlyArray<string>) {
 // parseDecimalTokens(["10", "10", "10"]) returns [10, 10, 10].
 
 function printValues(values: ReadonlyArray<number>) {
-  Effect.forEach(values, (value) => Effect.log(value), { discard: true })
+  forEach(values, (value) => log(value), { discard: true })
 }
 ```
 

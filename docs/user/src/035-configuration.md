@@ -144,7 +144,7 @@ import { origin } from "./origin-config.effeck"
 
 function reportOrigin() {
   const value = origin()
-  Effect.log(value)
+  log(value)
   return value
 }
 ```
@@ -156,7 +156,7 @@ Use `Config.map` for a transformation that cannot fail. Express validation in a 
 ```ts
 function secretSetting() {
   const token = Config.Redacted("ACCESS_TOKEN")()
-  Effect.log(token)
+  log(token)
   return token
 }
 ```

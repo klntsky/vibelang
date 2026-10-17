@@ -18,7 +18,7 @@ function download() {
       Duration.max(duration, input.retryAfter)),
     Schedule.upTo({ times: 3 })
   )
-  return Effect.retry(() => {
+  return retry(() => {
     calls++
     if (calls < 3) {
       throw new Throttled({ retryAfter: Duration.seconds(2) })
@@ -54,7 +54,7 @@ function waitForArchive() {
     Schedule.modifyDelay(({ input }) =>
       input._tag === "Pending" ? input.pollAfter : Duration.zero)
   )
-  const result = Effect.repeat(check(), {
+  const result = repeat(check(), {
     schedule: delay,
     until: (status) => status._tag === "Ready"
   })
@@ -74,8 +74,8 @@ error Offline
 function readWithDeadline() {
   return pipe(
     () => { throw new Offline() },
-    Effect.retry(Schedule.upTo(Schedule.exponential("80 millis"), { times: 5 })),
-    Effect.timeout("350 millis")
+    retry(Schedule.upTo(Schedule.exponential("80 millis"), { times: 5 })),
+    timeout("350 millis")
   )
 }
 ```
@@ -93,7 +93,7 @@ function reconnect() {
     Schedule.upTo(Schedule.spaced("200 millis"), { times: 2 }),
     Schedule.upTo(Schedule.spaced("4 seconds"), { times: 3 })
   )
-  return Effect.retry(() => {
+  return retry(() => {
     attempts++
     if (attempts < 4) throw new Disconnected()
     return "connected"
@@ -117,14 +117,14 @@ function observedRequest() {
     Schedule.setInputType<Unavailable>(),
     Schedule.upTo({ times: 3 }),
     Schedule.tap(({ attempt, duration, input }) => {
-      Effect.logWarning("retry planned", {
+      logWarning("retry planned", {
         retry: attempt,
         status: input.status,
         delayMs: Duration.toMillis(duration)
       })
     })
   )
-  return Effect.retry(() => {
+  return retry(() => {
     attempts++
     if (attempts < 3) throw new Unavailable({ status: 503 })
     return "accepted"

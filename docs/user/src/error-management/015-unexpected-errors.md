@@ -8,7 +8,7 @@ Defects report bugs and broken invariants outside the typed error contract. Keep
 
 ```ts
 function decodeOpcode(opcode: number) {
-  if (opcode !== 1) Effect.die(new Error("unknown internal opcode"))
+  if (opcode !== 1) die(new Error("unknown internal opcode"))
   return "start"
 }
 // string!!
@@ -77,10 +77,10 @@ An `Exit` stays data when returned by a call. Constructing one with `Exit.succee
 function isolateDecoder(opcode: number) {
   return Effect.catchDefect(() => decodeOpcode(opcode), (defect) => {
     if (defect instanceof Error && defect.message === "unknown internal opcode") {
-      Effect.log("Decoder disabled after an invariant failure")
+      log("Decoder disabled after an invariant failure")
       return "disabled"
     }
-    return Effect.die(defect)
+    return die(defect)
   })
 }
 ```
@@ -94,7 +94,7 @@ function decoderBoundary(opcode: number) {
   return Effect.catchCause(decodeOpcode(opcode), (cause) => {
     if (Cause.hasInterrupts(cause)) return Effect.failCause(cause)
     if (Cause.hasDies(cause)) {
-      Effect.log("Decoder failed", cause.reasons.map((reason) => reason._tag))
+      log("Decoder failed", cause.reasons.map((reason) => reason._tag))
       return "disabled"
     }
     return Effect.failCause(cause)

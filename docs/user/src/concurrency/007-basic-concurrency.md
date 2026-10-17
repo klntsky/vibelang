@@ -6,17 +6,17 @@ Ordinary Effeck calls run in sequence. Use Effect's concurrency combinators to o
 
 ```ts
 function task(id: number) {
-  Effect.logInfo("starting", id)
-  Effect.sleep("40 millis")
+  logInfo("starting", id)
+  sleep("40 millis")
   return id * 2
 }
 
 function runTasks() {
-  const sequential = Effect.all([task(1), task(2)])
-  const bounded = Effect.forEach([1, 2, 3, 4], (id) => task(id), {
+  const sequential = all([task(1), task(2)])
+  const bounded = forEach([1, 2, 3, 4], (id) => task(id), {
     concurrency: 2
   })
-  const unbounded = Effect.all([
+  const unbounded = all([
     task(5),
     task(6),
     task(7)
@@ -32,7 +32,7 @@ The default is sequential execution. A positive numeric limit bounds active oper
 ```ts
 function cancelWork() {
   const worker = fork(() => {
-    Effect.sleep("1 minute")
+    sleep("1 minute")
     return "finished"
   })
   Fiber.interrupt(worker)
@@ -48,12 +48,12 @@ function cancelWork() {
 function cancelWithCleanup() {
   const worker = fork(Effect.onInterrupt(() => {
     try {
-      Effect.sleep("1 minute")
+      sleep("1 minute")
     } finally {
-      Effect.logInfo("released worker resources")
+      logInfo("released worker resources")
     }
-  }, () => Effect.logInfo("worker cancelled")))
-  Effect.sleep("10 millis")
+  }, () => logInfo("worker cancelled")))
+  sleep("10 millis")
   Fiber.interrupt(worker)
 }
 ```
@@ -64,16 +64,16 @@ function cancelWithCleanup() {
 
 ```ts
 function cancelBatch() {
-  Effect.forEach([1, 2, 3], (id) => {
+  forEach([1, 2, 3], (id) => {
     try {
       if (id === 2) {
-        Effect.sleep("10 millis")
+        sleep("10 millis")
         Effect.interrupt()
       }
-      Effect.sleep("1 second")
+      sleep("1 second")
       return id
     } finally {
-      Effect.logInfo("branch finished", id)
+      logInfo("branch finished", id)
     }
   }, { concurrency: 3 })
 }
@@ -85,12 +85,12 @@ An interrupted branch stops the concurrent operation and interrupts its active s
 
 ```ts
 function answer(label: string, delay: Duration.Input) {
-  Effect.sleep(delay)
+  sleep(delay)
   return label
 }
 
 function raceExamples() {
-  const firstSuccess = Effect.race(
+  const firstSuccess = race(
     () => { throw "unavailable" },
     answer("replica", "20 millis")
   )
@@ -117,13 +117,13 @@ function inspectRace() {
   const outcome = Effect.result(Effect.raceFirst(
     () => { throw "primary offline" },
     () => {
-      Effect.sleep("1 second")
+      sleep("1 second")
       return "backup response"
     },
     { onWinner: ({ index }) => { winners.push(index) } }
   ))
   if (Result.isFailure(outcome)) {
-    Effect.logWarning("first completion failed", outcome.failure)
+    logWarning("first completion failed", outcome.failure)
   }
   return { outcome, winners }
 }

@@ -18,7 +18,7 @@ service Footer {
 }
 
 const PrefixLive = Layer.effect(Prefix, () => {
-  Effect.log("Prefix initialized")
+  log("Prefix initialized")
   return { value: "Monthly" }
 })
 const HeadingLive = Layer.effect(Heading, () => {

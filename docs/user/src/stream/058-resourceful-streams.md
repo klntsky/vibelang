@@ -6,7 +6,7 @@ A stream can keep a connection, file, or subscription open while its elements ar
 
 ```ts
 function openReader() {
-  Effect.log("reader opened")
+  log("reader opened")
   return { lines: ["header", "entry-a", "entry-b"] }
 }
 
@@ -14,7 +14,7 @@ const lines = Stream.scoped(
   Stream.flatMap(
     Stream.fromEffect(Effect.acquireRelease(
       () => openReader(),
-      () => Effect.log("reader closed")
+      () => log("reader closed")
     )),
     (reader) => Stream.fromArray(reader.lines)
   )
@@ -36,10 +36,10 @@ function readHeader() {
 // Returns ["header"] and closes the reader.
 
 function readWithDeadline() {
-  return Effect.timeout(() => {
+  return timeout(() => {
     Stream.runForEach(lines, (line) => {
-      Effect.sleep("1 second")
-      Effect.log(line)
+      sleep("1 second")
+      log(line)
     })
   }, "100 millis")
 }
@@ -51,8 +51,8 @@ The early consumer closes the reader even though it does not use every line. The
 
 ```ts
 const audited = Stream.ensuring(lines, () => {
-  Effect.log("reader resources released")
-  Effect.log("consumption finished")
+  log("reader resources released")
+  log("consumption finished")
 })
 
 function readAudited() {

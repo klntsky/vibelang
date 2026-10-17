@@ -114,7 +114,7 @@ function requiredName(name: Option.Option<string>) {
 // string!Cause.NoSuchElementError!
 
 function requiredPair() {
-  return Effect.all([
+  return all([
     Effect.fromOption(Option.some("east")),
     Effect.fromOption(Option.some(3))
   ])

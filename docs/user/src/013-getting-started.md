@@ -40,7 +40,7 @@ supported platforms, editor setup, and adding Effeck to an existing project.
 ```ts
 function main() {
   const label = "first program"
-  Effect.log(label)
+  log(label)
   return label.length
 }
 // number!!

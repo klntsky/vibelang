@@ -36,7 +36,7 @@ const userName = Effect.fn("userName")(function* (id: string) {
 ```ts es
 function userName(id: string) {
   const name = Users.find(id).name.trim()
-  Effect.log(`found ${name}`)
+  log(`found ${name}`)
   return name
 }
 ```
@@ -83,7 +83,7 @@ The loop runs one `welcome` at a time, in order. Running several at once is alwa
 
 ```ts es
 function welcomeTraced(id: string) {
-  return Effect.withSpan(welcome(id), "welcome")
+  return withSpan(welcome(id), "welcome")
 }
 ```
 

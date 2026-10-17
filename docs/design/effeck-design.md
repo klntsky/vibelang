@@ -152,6 +152,7 @@ Every `.effeck` file starts with a small prelude in scope, so the program above 
 | `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | Effeck's built-ins, each introduced where it is first used |
 | `sync`, `try`, `callback` | Boundary hatches: their arguments are plain TypeScript (D148) |
 | `runPromise`, `runFork`, `runSync`, `runCallback` | Effect's runners, the way back in from TypeScript (D150) |
+| `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, `die` | The Effect module's functions without the `Effect.` prefix (D151) |
 | Every other export of `effect`'s root | `Console`, `Option`, `Stream`, `Schedule`, `Duration`, and the rest, plus `flow` and `identity` (D146) |
 
 Modules from `effect`'s subpath packages, such as `effect/http`, are imported as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: `Effect` appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), `Schema` in 39-44%, `Layer` in 34-44%, and no other module in more than 22%. `Scope` is there because contracts name it whenever a resource outlives a function (Chapter 6). JavaScript's own globals keep their names: `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so Effect's modules with those names need an import under another name, as in `import { Array as Arr } from "effect"`. A host global does not shadow Effect: in a project whose `lib` includes the DOM, `Option` is still Effect's.
@@ -166,7 +167,7 @@ import { welcome } from "./welcome.effeck"
 
 function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
-  Effect.log(`sent a welcome email to ${name}`)
+  log(`sent a welcome email to ${name}`)
 }
 
 NodeRuntime.runMain(() => main())
@@ -233,7 +234,7 @@ const userName = Effect.fn("userName")(function* (id: string) {
 ```ts es
 function userName(id: string) {
   const name = Users.find(id).name.trim()
-  Effect.log(`found ${name}`)
+  log(`found ${name}`)
   return name
 }
 ```
@@ -280,7 +281,7 @@ The loop runs one `welcome` at a time, in order. Running several at once is alwa
 
 ```ts es
 function welcomeTraced(id: string) {
-  return Effect.withSpan(welcome(id), "welcome")
+  return withSpan(welcome(id), "welcome")
 }
 ```
 
@@ -815,7 +816,7 @@ The contract is bounded by what Layer types say:
 ```ts es
 function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
-  Effect.log(`welcomed ${name}`)
+  log(`welcomed ${name}`)
 }
 // void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
@@ -904,9 +905,9 @@ const fastest = yield* Effect.race(fromCache(id), fromNetwork(id))
 ```
 
 ```ts es
-const user = Effect.retry(fetchUser(id), Schedule.exponential("100 millis"))
-const fresh = Effect.timeout(fetchUser(id), "1 second")
-const fastest = Effect.race(fromCache(id), fromNetwork(id))   // the first to succeed
+const user = retry(fetchUser(id), Schedule.exponential("100 millis"))
+const fresh = timeout(fetchUser(id), "1 second")
+const fastest = race(fromCache(id), fromNetwork(id))   // the first to succeed
 ```
 
 Each line is a call, so it runs: `user` is a `User`, not an `Effect`. The inner calls are passed by name: `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
@@ -926,9 +927,9 @@ const user = yield* fetchUser(id).pipe(
 ```ts es
 const user = pipe(
   () => fetchUser(id),
-  Effect.retry({ times: 3 }),
-  Effect.timeout("2 seconds"),
-  Effect.withSpan("load-user")
+  retry({ times: 3 }),
+  timeout("2 seconds"),
+  withSpan("load-user")
 )
 // user: User;  E gains Cause.TimeoutError from Effect.timeout
 ```
@@ -965,7 +966,7 @@ function makeSync(store: Store) {
 
 function syncEverything(stores: ReadonlyArray<Store>) {
   const syncAll = stores.map(makeSync)                    // an array of programs; nothing ran
-  return Effect.all(syncAll, { concurrency: 4 })          // now they run
+  return all(syncAll, { concurrency: 4 })          // now they run
 }
 ```
 
@@ -1097,7 +1098,7 @@ function session(host: string) {
 }
 
 function sessionWithin(host: string) {
-  return Effect.timeout(session(host), "2 seconds")    // cancels a connect that hangs
+  return timeout(session(host), "2 seconds")    // cancels a connect that hangs
 }
 ```
 
@@ -1142,7 +1143,7 @@ const dashboard = Effect.fn("dashboard")(function* (id: string) {
 
 ```ts es
 function dashboard(id: string) {
-  const [profile, orders] = Effect.all([loadProfile(id), recentOrders(id)], {
+  const [profile, orders] = all([loadProfile(id), recentOrders(id)], {
     concurrency: 2
   })
   return { profile, orders }
@@ -1150,10 +1151,10 @@ function dashboard(id: string) {
 ```
 
 ```ts es
-const thumbnails = Effect.forEach(images, (image) => resize(image), { concurrency: 8 })
-const fastest = Effect.race(fromCache(id), fromNetwork(id))
+const thumbnails = forEach(images, (image) => resize(image), { concurrency: 8 })
+const fastest = race(fromCache(id), fromNetwork(id))
 const first = Effect.raceFirst(fromCache(id), fromNetwork(id))
-const quick = Effect.timeout(slowQuery(id), "500 millis")
+const quick = timeout(slowQuery(id), "500 millis")
 ```
 
 Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect's semantics here:
@@ -1429,7 +1430,7 @@ A handler belongs to the fiber it was installed on, so a program that runs on ot
 
 ```ts es
 function approveAll(ids: ReadonlyArray<string>) {
-  return Effect.forEach(ids, (id) => Approval.approve(id), { concurrency: 4 })
+  return forEach(ids, (id) => Approval.approve(id), { concurrency: 4 })
 }
 ```
 
@@ -1443,7 +1444,7 @@ The fix puts a handler inside each concurrent branch:
 
 ```ts es
 function approveAll(ids: ReadonlyArray<string>) {
-  return Effect.forEach(ids, (id) =>
+  return forEach(ids, (id) =>
     handle(() => Approval.approve(id), Approval, {
       approve: (request, k) => resume(k, Reviewers.decide(request))
     }),
@@ -1737,12 +1738,12 @@ const heartbeat = Effect.log("alive").pipe(Effect.repeat(Schedule.spaced("30 sec
 
 ```ts es
 function greetLater(name: string) {
-  Effect.sleep("1 second")
+  sleep("1 second")
   return `Hello, ${name}`
 }
 
 function heartbeat() {
-  Effect.repeat(Effect.log("alive"), Schedule.spaced("30 seconds"))
+  repeat(log("alive"), Schedule.spaced("30 seconds"))
 }
 ```
 
@@ -1801,7 +1802,7 @@ import { FetchHttpClient } from "effect/http"
 
 function main() {
   const branch = Effect.provide(() => currentBranch(), wire(NodeServices.layer, FetchHttpClient.layer))
-  Effect.log(`on ${branch}`)
+  log(`on ${branch}`)
 }
 
 NodeRuntime.runMain(() => main())
@@ -1833,11 +1834,11 @@ A call waits for its callee, whether the callee finishes at once or after a netw
 
 ```ts es
 function homePage(userId: string) {
-  const [feed, unread] = Effect.all(
+  const [feed, unread] = all(
     [Feed.load(userId), Notifications.unread(userId)],
     { concurrency: "unbounded" }
   )
-  const previews = Effect.forEach(feed.items, (item) => preview(item), { concurrency: 8 })
+  const previews = forEach(feed.items, (item) => preview(item), { concurrency: 8 })
   return { previews, unread }
 }
 ```
@@ -1859,7 +1860,7 @@ Every function body plays the part of the generator, and every call that returns
 ```ts es
 function parseId(raw: string) {
   if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })     // a typed failure: InvalidId joins E
-  if (raw.length > 64) Effect.die(new Error("caller bug"))  // a defect, on purpose
+  if (raw.length > 64) die(new Error("caller bug"))  // a defect, on purpose
   return Number(raw)
 }
 // number!InvalidId!
@@ -1956,8 +1957,8 @@ it.effect("a reminder fires after one day", () => {
 const checkouts = Metric.counter("checkouts")
 
 function checkout(cartId: string) {
-  Effect.log(`checkout ${cartId}`)
-  const receipt = Effect.withSpan(Payments.charge(cartId), "charge")
+  log(`checkout ${cartId}`)
+  const receipt = withSpan(Payments.charge(cartId), "charge")
   Metric.update(checkouts, 1)
   return receipt
 }
@@ -1972,7 +1973,7 @@ const Port = Config.withDefault(Config.Port("PORT"), 3000)
 
 function main() {
   const port = Port()                         // reads PORT; ConfigError if it is invalid
-  Effect.log(`listening on ${port}`)
+  log(`listening on ${port}`)
 }
 ```
 
@@ -1996,7 +1997,7 @@ A program starts only at a runner: `NodeRuntime.runMain` or `BunRuntime.runMain`
 #### Do I still use `pipe`?
 
 ```ts es
-const user = pipe(() => fetchUser(id), Effect.retry({ times: 3 }), Effect.timeout("2 seconds"))
+const user = pipe(() => fetchUser(id), retry({ times: 3 }), timeout("2 seconds"))
 ```
 
 Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The built-in `pipe` stacks policies over a program and still works on data. There is no `|>` (Chapter 5).
@@ -2073,7 +2074,7 @@ Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Optio
 ```ts es
 function countVisits(paths: ReadonlyArray<string>) {
   const visits = Ref.make(0)
-  Effect.forEach(paths, (path) => {
+  forEach(paths, (path) => {
     Visits.record(path)
     Ref.update(visits, (n) => n + 1)
   }, { concurrency: 4 })
@@ -2220,7 +2221,7 @@ A call never starts a fiber. A program starts only when a **runner** receives it
 // main.effeck
 export function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
-  Effect.log(`welcomed ${name}`)
+  log(`welcomed ${name}`)
 }
 
 NodeRuntime.runMain(() => main())
@@ -2588,7 +2589,7 @@ The declaration file writes the polymorphism out, as the comment shows. A TypeSc
 
 ```ts es
 function withRetry<A>(times: number, program: () => A) {
-  return Effect.retry(program, Schedule.recurs(times))
+  return retry(program, Schedule.recurs(times))
 }
 // <A, E, R>(times: number, program: () => A!E!R) => A!E!R
 ```
@@ -2603,8 +2604,8 @@ A control operation must be handled on the fiber that performs it (Chapter 9). T
 
 ```ts es
 handle(() => {
-  Effect.retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
-  Effect.timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
+  retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
+  timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
 }, Approval, { approve: (_request, k) => resume(k, true) })
 ```
 
@@ -2636,7 +2637,7 @@ function exportReport(id: string) {
 }
 
 function exportWithDeadline(id: string) {
-  return Effect.timeout(exportReport(id), "30 seconds")
+  return timeout(exportReport(id), "30 seconds")
 }
 ```
 
@@ -3141,10 +3142,10 @@ The reference machine (strategy B, Chapter 25) does not implement this rule yet.
 ```ts es
 const approved = handle(() => {
   const viaMap = ids.map((id) => Approval.approve(id))                    // EK4301: a JavaScript frame
-  const viaFork = Effect.forEach(ids, (id) => Approval.approve(id), {
+  const viaFork = forEach(ids, (id) => Approval.approve(id), {
     concurrency: 4                                                        // EK4201: other fibers
   })
-  return Effect.forEach(ids, (id) => Approval.approve(id))                // fine: same fiber, Effect frames
+  return forEach(ids, (id) => Approval.approve(id))                // fine: same fiber, Effect frames
 }, Approval, { approve: (_request, k) => resume(k, true) })
 ```
 
@@ -4117,6 +4118,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
 | D149 | `try(…)` parses as a call in `.effeck`; Effect's `{ try, catch }` object is EK4404 | A try statement needs a block, so `try (` is unambiguous | 10, 28 |
 | D150 | `runPromise`, `runFork`, `runSync`, `runCallback` are in the prelude, for TypeScript and hatch bodies | The way back in; EK1005 still applies where a fiber runs | 10, 13 |
+| D151 | `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and seven more Effect functions need no prefix | They were 329 of the 538 `Effect.` member uses in the docs | 1, 27 |
 
 #### Rules of the runtime and compiler
 
@@ -4437,7 +4439,7 @@ Stages as fetched on 2026-10-16 (`docs/research/tc39-syntax.md`).
 const Port = Config.withDefault(Config.Port("PORT"), 3000)      // unchanged by design: Effect's API, as is
 
 function loadUser(id: string) {
-  return Effect.retry(Users.find(id), { times: 3 })        // changed: the program is a function
+  return retry(Users.find(id), { times: 3 })        // changed: the program is a function
 }
 ```
 

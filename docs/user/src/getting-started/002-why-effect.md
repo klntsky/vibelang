@@ -48,9 +48,9 @@ Services carry dependencies through the same contract as errors and successes. L
 function resilientReceipt(sku: string) {
   return pipe(
     () => receipt(sku),
-    Effect.retry({ times: 2 }),
-    Effect.timeout("800 millis"),
-    Effect.withSpan("receipt")
+    retry({ times: 2 }),
+    timeout("800 millis"),
+    withSpan("receipt")
   )
 }
 ```

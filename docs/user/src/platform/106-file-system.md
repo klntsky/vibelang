@@ -61,7 +61,7 @@ function fileSize(path: string) {
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 function main() {
   const fs = Effect.service(FileSystem.FileSystem)
-  Effect.log(fs.readFileString("./README.md"))
+  log(fs.readFileString("./README.md"))
 }
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))

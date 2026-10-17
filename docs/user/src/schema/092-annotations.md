@@ -32,7 +32,7 @@ Representation hooks include `toCodec`, `toCodecJson`, `toCodecStringTree`, `toC
 ```ts
 const ReviewedLabel = Schema.String.pipe(Schema.decode({
   decode: SchemaGetter.checkEffect((label) => {
-    Effect.sleep("10 millis")
+    sleep("10 millis")
     return label.length > 0 || "Empty label"
   }),
   encode: SchemaGetter.passthrough()
@@ -51,7 +51,7 @@ Product schemas such as arrays, structs, and tuples can run effectful child pars
 ```ts
 const OptionalLabel = Schema.String.pipe(
   Schema.catchDecoding((issue) => {
-    Effect.log(`label fallback: ${issue._tag}`)
+    log(`label fallback: ${issue._tag}`)
     return Option.some("unlabeled")
   })
 )

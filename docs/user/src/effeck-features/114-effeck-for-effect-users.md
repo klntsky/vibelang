@@ -4,14 +4,14 @@ Keep Effect's runtime, libraries, layers, and error channels. In `.effeck` files
 
 ```ts
 function greet(name: string) {
-  Effect.sleep("10 millis")
+  sleep("10 millis")
   const message = `Hello, ${name}`
   Console.log(message)
   return message
 }
 
 function main() {
-  return Effect.retry(greet("Ada"), Schedule.recurs(2))
+  return retry(greet("Ada"), Schedule.recurs(2))
 }
 ```
 
@@ -50,7 +50,7 @@ function sequential() {
 }
 
 function concurrent() {
-  return Effect.all([greet("Ada"), greet("Grace")], { concurrency: 2 })
+  return all([greet("Ada"), greet("Grace")], { concurrency: 2 })
 }
 ```
 

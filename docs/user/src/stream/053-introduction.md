@@ -64,12 +64,12 @@ A successful function call returns one result, even if that result is an array. 
 ```ts
 function printReadings() {
   const source = Stream.mapEffect(Stream.range(20, 25), (n) => {
-    Effect.log(`prepare ${n}`)
+    log(`prepare ${n}`)
     return n
   })
   Stream.runForEach(source, (n) => {
-    Effect.sleep("50 millis")
-    Effect.log(`received ${n}`)
+    sleep("50 millis")
+    log(`received ${n}`)
   })
 }
 ```
@@ -79,7 +79,7 @@ The consumer controls demand, so production slows when consumption slows. Stream
 ```ts
 function* readings() {
   for (let n = 1; n <= 3; n++) {
-    Effect.sleep("50 millis")
+    sleep("50 millis")
     yield n
   }
 }
@@ -87,7 +87,7 @@ function* readings() {
 function printFirstReading() {
   const source = Stream.map(readings(), (n) => n * 10)
   for (const n of source) {
-    Effect.log(n) // 10
+    log(n) // 10
     break
   }
 }

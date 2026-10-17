@@ -2,7 +2,7 @@ export error Unavailable { attempt: number }
 
 export function fetchReport() {
   let attempts = 0
-  return Effect.retry(() => {
+  return retry(() => {
     attempts++
     if (attempts < 3) throw new Unavailable({ attempt: attempts })
     return `report after ${attempts} attempts`
@@ -10,18 +10,18 @@ export function fetchReport() {
 }
 
 export function cachedReport() {
-  Effect.sleep("5 millis")
+  sleep("5 millis")
   return "cached report"
 }
 
 export function slowReport() {
-  Effect.sleep("1 second")
+  sleep("1 second")
   return "remote report"
 }
 
 export function deadline() {
   try {
-    return Effect.timeout(slowReport(), "20 millis")
+    return timeout(slowReport(), "20 millis")
   } catch (error) {
     return error._tag
   }
@@ -29,7 +29,7 @@ export function deadline() {
 
 export function scenario() {
   const pending = fork(fetchReport())
-  const fastest = Effect.race(cachedReport(), slowReport())
+  const fastest = race(cachedReport(), slowReport())
   const timed = deadline()
   const report = Fiber.join(pending)
   return { fastest, timed, report }

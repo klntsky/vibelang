@@ -9,7 +9,7 @@ A scope owns registered finalizers and runs them when its lifetime ends. Use `us
 ```ts
 function registeredWork() {
   Effect.addFinalizer((exit) => {
-    Effect.log(`Work scope closed with ${exit._tag}`)
+    log(`Work scope closed with ${exit._tag}`)
   })
   return "Prepared"
 }
@@ -32,8 +32,8 @@ function manuallyManagedWork() {
   return Effect.acquireUseRelease(
     () => Scope.make(),
     (scope) => {
-      Scope.addFinalizer(scope, () => Effect.log("First finalizer"))
-      Scope.addFinalizer(scope, () => Effect.log("Second finalizer"))
+      Scope.addFinalizer(scope, () => log("First finalizer"))
+      Scope.addFinalizer(scope, () => log("Second finalizer"))
       return Scope.provide(() => registeredWork(), scope)
     },
     (scope, exit) => Scope.close(scope, exit)
@@ -51,10 +51,10 @@ function manuallyManagedWork() {
 function openBuffer(label: string) {
   return Effect.acquireRelease(
     () => {
-      Effect.log(`Opened ${label}`)
+      log(`Opened ${label}`)
       return { label }
     },
-    (buffer) => Effect.log(`Closed ${buffer.label}`)
+    (buffer) => log(`Closed ${buffer.label}`)
   )
 }
 // { label: string }!!Scope
@@ -78,22 +78,22 @@ function nestedLifetimes() {
   using outer = openBuffer("session")
   {
     using inner = openBuffer("request")
-    Effect.log(`${outer.label}/${inner.label}`)
+    log(`${outer.label}/${inner.label}`)
   }
-  Effect.log("Request buffer closed; session still open")
+  log("Request buffer closed; session still open")
 }
 
 function mixedOwnership() {
   const callerOwned = openBuffer("caller")
   using local = openBuffer("local")
-  Effect.log(`${callerOwned.label}/${local.label}`)
+  log(`${callerOwned.label}/${local.label}`)
 }
 // void!!Scope
 
 function observeOwnership() {
   Effect.scoped(() => {
     mixedOwnership()
-    Effect.log("Local closed; caller buffer still open")
+    log("Local closed; caller buffer still open")
   })
 }
 ```

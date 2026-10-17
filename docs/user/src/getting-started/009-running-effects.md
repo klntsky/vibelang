@@ -44,7 +44,7 @@ const total = Effect.runSync(subtotal())
 
 ```ts
 function preparedMessage() {
-  Effect.sleep("15 millis")
+  sleep("15 millis")
   return "prepared"
 }
 
@@ -76,13 +76,13 @@ An `Exit` is either a success with a value or a failure with a `Cause`. That cau
 
 ```ts
 function heartbeat() {
-  Effect.repeat(Effect.log("alive"), Schedule.spaced("200 millis"))
+  repeat(log("alive"), Schedule.spaced("200 millis"))
 }
 
 const running = Effect.runFork(heartbeat())
 
 Effect.runPromise(() => {
-  Effect.sleep("650 millis")
+  sleep("650 millis")
   Fiber.interrupt(running)
 })
 ```
@@ -96,7 +96,7 @@ Effect.runPromise(() => {
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
-  Effect.log("application started")
+  log("application started")
 }
 
 NodeRuntime.runMain(() => main())

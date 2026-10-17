@@ -7,9 +7,9 @@ A `SynchronizedRef` serializes updates that need to run Effects. Use it when the
 ```ts
 function recordRevisions() {
   const revisions = SynchronizedRef.make<ReadonlyArray<number>>([])
-  Effect.forEach([1, 2, 3], (id) => {
+  forEach([1, 2, 3], (id) => {
     SynchronizedRef.updateEffect(revisions, (current) => {
-      Effect.sleep("10 millis")
+      sleep("10 millis")
       return [...current, id]
     })
   }, { concurrency: 3 })
@@ -48,7 +48,7 @@ function refreshTwice() {
     return SynchronizedRef.updateAndGetEffect(version, (current) =>
       Versions.loadAfter(current))
   }
-  return Effect.all([refresh(), refresh()], { concurrency: 2 })
+  return all([refresh(), refresh()], { concurrency: 2 })
 }
 // [number, number]!RefreshFailed!Versions
 ```

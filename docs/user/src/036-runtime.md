@@ -6,7 +6,7 @@ Effect's runtime executes computations, carries service implementations, schedul
 
 ```ts
 function operation() {
-  Effect.sleep("10 millis")
+  sleep("10 millis")
   return "complete"
 }
 
@@ -47,11 +47,11 @@ Most applications build their context through layers instead. Use an explicit co
 const Quiet = Logger.layer([])
 
 function startup() {
-  Effect.log("visible before")
+  log("visible before")
   Effect.provide(() => {
-    Effect.log("suppressed in this region")
+    log("suppressed in this region")
   }, Quiet)
-  Effect.log("visible after")
+  log("visible after")
 }
 ```
 

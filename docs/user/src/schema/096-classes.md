@@ -75,7 +75,7 @@ class LabeledPackage extends Schema.Class<LabeledPackage>("LabeledPackage")({
   }
 
   announce() {
-    Effect.log(this.describe())
+    log(this.describe())
   }
 }
 

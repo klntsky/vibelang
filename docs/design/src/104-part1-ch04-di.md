@@ -289,7 +289,7 @@ The contract is bounded by what Layer types say:
 ```ts es
 function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
-  Effect.log(`welcomed ${name}`)
+  log(`welcomed ${name}`)
 }
 // void!UserNotFound | MailError | ConfigError | ConnectError!
 ```

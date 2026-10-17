@@ -20,7 +20,7 @@ The contract tells a caller that `greet` returns a string, can fail with `EmptyN
 
 ```ts
 function announce(name: string) {
-  Effect.log(greet(name))
+  log(greet(name))
 }
 
 const announcement = () => announce("Mira")
@@ -37,20 +37,20 @@ A function value describes work. Calling it runs that work in the current progra
 
 ```ts
 function prepare() {
-  return Effect.all([
+  return all([
     () => {
-      Effect.sleep("20 millis")
+      sleep("20 millis")
       return "catalog"
     },
     () => {
-      Effect.log("checking inventory")
+      log("checking inventory")
       return "inventory"
     }
   ], { concurrency: 2 })
 }
 
 function main() {
-  return Effect.withSpan(prepare(), "startup")
+  return withSpan(prepare(), "startup")
 }
 ```
 

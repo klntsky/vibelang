@@ -11,7 +11,7 @@ error Busy { attempt: number }
 
 function loadWithRetries() {
   let attempts = 0
-  return Effect.retry(() => {
+  return retry(() => {
     attempts += 1
     if (attempts < 3) throw new Busy({ attempt: attempts })
     return "Snapshot ready"
@@ -35,7 +35,7 @@ function sendRequest(): string!RequestRejected! {
 }
 
 function sendTransient() {
-  return Effect.retry(sendRequest(), {
+  return retry(sendRequest(), {
     times: 4,
     while: (error) => error.transient
   })
@@ -48,7 +48,7 @@ function sendTransient() {
 
 ```ts
 function sendWithBackoff() {
-  return Effect.retry(sendRequest(), {
+  return retry(sendRequest(), {
     times: 4,
     while: (error) => error.transient,
     schedule: Schedule.exponential("150 millis")
@@ -56,7 +56,7 @@ function sendWithBackoff() {
 }
 
 function sendThreeMoreTimes() {
-  return Effect.retry(sendRequest(), Schedule.recurs(3))
+  return retry(sendRequest(), Schedule.recurs(3))
 }
 ```
 
@@ -70,7 +70,7 @@ function sendOrQueue() {
     () => sendRequest(),
     Schedule.recurs(2),
     (error, retries) => {
-      Effect.log(`Queued after ${retries} retries; transient=${error.transient}`)
+      log(`Queued after ${retries} retries; transient=${error.transient}`)
       return "Queued for later"
     }
   )

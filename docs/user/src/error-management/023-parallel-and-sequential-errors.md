@@ -26,7 +26,7 @@ function operationWithBrokenCleanup() {
   try {
     throw "delivery rejected"
   } finally {
-    Effect.die(new Error("release invariant failed"))
+    die(new Error("release invariant failed"))
   }
 }
 

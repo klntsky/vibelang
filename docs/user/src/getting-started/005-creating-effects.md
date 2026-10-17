@@ -91,7 +91,7 @@ function nextReading(source: Source) {
 
 function readAndReport(source: Source) {
   const reading = nextReading(source)
-  Effect.log(`reading=${reading}`)
+  log(`reading=${reading}`)
   return reading
 }
 ```
@@ -123,7 +123,7 @@ The returned function delays its body until each call. Wrap an entire computatio
 ```ts
 function countdown(n: number): number!! {
   if (n <= 0) return 0
-  Effect.sleep("1 millis")
+  sleep("1 millis")
   return 1 + countdown(n - 1)
 }
 

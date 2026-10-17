@@ -102,12 +102,12 @@ const heartbeat = Effect.log("alive").pipe(Effect.repeat(Schedule.spaced("30 sec
 
 ```ts es
 function greetLater(name: string) {
-  Effect.sleep("1 second")
+  sleep("1 second")
   return `Hello, ${name}`
 }
 
 function heartbeat() {
-  Effect.repeat(Effect.log("alive"), Schedule.spaced("30 seconds"))
+  repeat(log("alive"), Schedule.spaced("30 seconds"))
 }
 ```
 
@@ -166,7 +166,7 @@ import { FetchHttpClient } from "effect/http"
 
 function main() {
   const branch = Effect.provide(() => currentBranch(), wire(NodeServices.layer, FetchHttpClient.layer))
-  Effect.log(`on ${branch}`)
+  log(`on ${branch}`)
 }
 
 NodeRuntime.runMain(() => main())

@@ -69,18 +69,18 @@ A normal `if` followed by `throw` is the statement form. Neither form changes ex
 function observeQuantity(value: number) {
   return pipe(
     () => quantity(value),
-    Effect.tapError((error) => Effect.log(`Rejected quantity ${error.value}`)),
-    Effect.tapErrorTag("InvalidQuantity", () => Effect.log("Quantity validation failed")),
+    Effect.tapError((error) => log(`Rejected quantity ${error.value}`)),
+    Effect.tapErrorTag("InvalidQuantity", () => log("Quantity validation failed")),
     Effect.tapCause((cause) => {
-      Effect.log("Failure kinds", cause.reasons.map((reason) => reason._tag))
+      log("Failure kinds", cause.reasons.map((reason) => reason._tag))
     })
   )
 }
 
 function observeDefect() {
   return Effect.tapDefect(
-    () => Effect.die(new Error("inventory invariant")),
-    () => Effect.log("Inventory defect recorded")
+    () => die(new Error("inventory invariant")),
+    () => log("Inventory defect recorded")
   )
 }
 ```

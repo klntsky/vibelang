@@ -131,7 +131,7 @@ A handler belongs to the fiber it was installed on, so a program that runs on ot
 
 ```ts es
 function approveAll(ids: ReadonlyArray<string>) {
-  return Effect.forEach(ids, (id) => Approval.approve(id), { concurrency: 4 })
+  return forEach(ids, (id) => Approval.approve(id), { concurrency: 4 })
 }
 ```
 
@@ -145,7 +145,7 @@ The fix puts a handler inside each concurrent branch:
 
 ```ts es
 function approveAll(ids: ReadonlyArray<string>) {
-  return Effect.forEach(ids, (id) =>
+  return forEach(ids, (id) =>
     handle(() => Approval.approve(id), Approval, {
       approve: (request, k) => resume(k, Reviewers.decide(request))
     }),

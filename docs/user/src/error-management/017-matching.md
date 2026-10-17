@@ -31,11 +31,11 @@ function countLabel(raw: number) {
 function reportCount(raw: number) {
   return Effect.matchEffect(() => itemCount(raw), {
     onFailure: () => {
-      Effect.log("Invalid count received")
+      log("Invalid count received")
       return "Count unavailable"
     },
     onSuccess: (count) => {
-      Effect.log("Count accepted")
+      log("Count accepted")
       return `${count} items`
     }
   })
@@ -48,16 +48,16 @@ function reportCount(raw: number) {
 
 ```ts
 function outcomeLabel() {
-  return Effect.matchCause(Effect.die(new Error("index invariant")), {
+  return Effect.matchCause(die(new Error("index invariant")), {
     onFailure: (cause) => Cause.hasDies(cause) ? "Index defect" : "Index stopped",
     onSuccess: () => "Index ready"
   })
 }
 
 function reportOutcome() {
-  return Effect.matchCauseEffect(() => Effect.die(new Error("index invariant")), {
+  return Effect.matchCauseEffect(() => die(new Error("index invariant")), {
     onFailure: (cause) => {
-      Effect.log("Index stopped", cause.reasons.map((reason) => reason._tag))
+      log("Index stopped", cause.reasons.map((reason) => reason._tag))
       return "Unavailable"
     },
     onSuccess: () => "Ready"
@@ -76,7 +76,7 @@ function ignoreRejectedCount() {
 // void!!
 
 function discardBoundaryOutcome() {
-  Effect.ignoreCause(() => Effect.die(new Error("isolated task failed")))
+  Effect.ignoreCause(() => die(new Error("isolated task failed")))
 }
 ```
 

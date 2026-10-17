@@ -43,7 +43,7 @@ function check(condition: boolean, message: string) {
 
 it.effect("a deadline returns the fallback", () => {
   const pending = fork(Effect.timeoutOrElse(() => {
-    Effect.sleep("10 minutes")
+    sleep("10 minutes")
     return Option.some("finished")
   }, {
     duration: "30 seconds",
@@ -82,7 +82,7 @@ it.effect("emits once per interval", () => {
   const queue = Queue.unbounded<string>()
   fork(() => {
     while (true) {
-      Effect.sleep("15 minutes")
+      sleep("15 minutes")
       Queue.offer(queue, "refresh")
     }
   })
@@ -132,7 +132,7 @@ import { it } from "@effect/vitest"
 it.effect("completes a deferred after a delay", () => {
   const ready = Deferred.make<number>()
   const worker = fork(() => {
-    Effect.sleep("6 seconds")
+    sleep("6 seconds")
     Deferred.succeed(ready, 42)
   })
 

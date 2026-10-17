@@ -130,7 +130,7 @@ const ReporterLive = Layer.effect(Reporter, () => {
   const settings = ReportSettings()
   return {
     write(message) {
-      Effect.log(`${settings.prefix}: ${message}`)
+      log(`${settings.prefix}: ${message}`)
     }
   }
 })

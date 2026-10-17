@@ -62,12 +62,12 @@ const defectOnly = Stream.catchCauseFilter(
 function consumeChecked() {
   const source = pipe(
     Stream.concat(Stream.succeed("accepted"), Stream.fail("read failed")),
-    Stream.onError(() => Effect.log("input failed; closing reader"))
+    Stream.onError(() => log("input failed; closing reader"))
   )
   try {
     return Stream.runCollect(source)
   } finally {
-    Effect.log("consumer finished")
+    log("consumer finished")
   }
 }
 ```

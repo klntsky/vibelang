@@ -4,7 +4,7 @@
 const Port = Config.withDefault(Config.Port("PORT"), 3000)      // unchanged by design: Effect's API, as is
 
 function loadUser(id: string) {
-  return Effect.retry(Users.find(id), { times: 3 })        // changed: the program is a function
+  return retry(Users.find(id), { times: 3 })        // changed: the program is a function
 }
 ```
 

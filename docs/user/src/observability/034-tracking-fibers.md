@@ -8,14 +8,14 @@
 function runGroup() {
   using workers = FiberSet.make<number>()
   const first = FiberSet.run(workers, () => {
-    Effect.sleep("30 millis")
+    sleep("30 millis")
     return 1
   })
   const second = FiberSet.run(workers, () => {
-    Effect.sleep("50 millis")
+    sleep("50 millis")
     return 2
   })
-  Effect.logInfo("tracked workers", FiberSet.size(workers))
+  logInfo("tracked workers", FiberSet.size(workers))
   return [Fiber.join(first), Fiber.join(second)]
 }
 ```
@@ -28,11 +28,11 @@ function runGroup() {
 function replacePreview() {
   using previews = FiberMap.make<string, string>()
   FiberMap.run(previews, "editor-1", () => {
-    Effect.sleep("1 second")
+    sleep("1 second")
     return "old preview"
   })
   const current = FiberMap.run(previews, "editor-1", () => {
-    Effect.sleep("20 millis")
+    sleep("20 millis")
     return "new preview"
   })
   return Fiber.join(current)
@@ -46,8 +46,8 @@ Starting another fiber under an existing key interrupts the previous fiber for t
 ```ts
 function waitForAllTracked() {
   using workers = FiberSet.make<void>()
-  FiberSet.run(workers, Effect.sleep("10 millis"))
-  FiberSet.run(workers, Effect.sleep("20 millis"))
+  FiberSet.run(workers, sleep("10 millis"))
+  FiberSet.run(workers, sleep("20 millis"))
   FiberSet.awaitEmpty(workers)
   return FiberSet.size(workers) // 0
 }
@@ -63,14 +63,14 @@ function serveBriefly() {
     using workers = FiberSet.make<void>()
     FiberSet.run(workers, () => {
       try {
-        Effect.sleep("1 minute")
+        sleep("1 minute")
       } finally {
-        Effect.logInfo("tracked worker cleaned up")
+        logInfo("tracked worker cleaned up")
       }
     })
-    Effect.sleep("20 millis")
+    sleep("20 millis")
   }
-  Effect.logInfo("worker scope has closed")
+  logInfo("worker scope has closed")
 }
 ```
 

@@ -125,7 +125,7 @@ const SemicolonNumbers = Schema.String.pipe(
 const DeferredLabel = Schema.String.pipe(
   Schema.decode({
     decode: SchemaGetter.checkEffect((label) => {
-      Effect.sleep("5 millis")
+      sleep("5 millis")
       return label.length > 2 || "Label is too short"
     }),
     encode: SchemaGetter.passthrough()

@@ -25,7 +25,7 @@ function standardMetadata() {
 ```ts
 const ReviewedDispatch = Dispatch.pipe(Schema.decode({
   decode: SchemaGetter.checkEffect((_dispatch) => {
-    Effect.sleep("5 millis")
+    sleep("5 millis")
     return true
   }),
   encode: SchemaGetter.passthrough()
@@ -49,7 +49,7 @@ Inside the `try` hatch, plain TypeScript calls are allowed. `Promise.resolve` pr
 
 ```ts
 const BrokenLabel = Schema.String.pipe(Schema.decode({
-  decode: SchemaGetter.transformEffect((_label) => Effect.die("label invariant failed")),
+  decode: SchemaGetter.transformEffect((_label) => die("label invariant failed")),
   encode: SchemaGetter.passthrough()
 }))
 const BrokenStandard = Schema.toStandardSchemaV1(BrokenLabel)

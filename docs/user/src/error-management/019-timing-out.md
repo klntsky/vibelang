@@ -8,12 +8,12 @@ A timeout limits how long a caller waits for work to finish. Effect interrupts t
 
 ```ts
 function buildPreview() {
-  Effect.sleep("3 seconds")
+  sleep("3 seconds")
   return "Rendered preview"
 }
 
 function previewWithDeadline() {
-  return Effect.timeout(buildPreview(), "500 millis")
+  return timeout(buildPreview(), "500 millis")
 }
 // string!Cause.TimeoutError!
 ```
@@ -73,7 +73,7 @@ The alternative runs lazily after the timer wins. It can use services, fail, or 
 
 ```ts
 function protectedPreview() {
-  return Effect.timeout(
+  return timeout(
     () => Effect.uninterruptible(buildPreview()),
     "500 millis"
   )

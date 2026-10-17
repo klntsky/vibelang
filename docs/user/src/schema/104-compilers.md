@@ -82,7 +82,7 @@ import { buildSchemas } from "./build-schema-aot.ts"
 
 function build() {
   const result = buildSchemas()
-  Effect.log(`Prepared ${result.schemas} schema exports in ${result.outFile}`)
+  log(`Prepared ${result.schemas} schema exports in ${result.outFile}`)
 }
 ```
 

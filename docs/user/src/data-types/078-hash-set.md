@@ -104,7 +104,7 @@ const copy = [...regions]
 const native = new Set(regions)
 
 function report() {
-  for (const region of regions) Effect.log(region)
+  for (const region of regions) log(region)
 }
 ```
 

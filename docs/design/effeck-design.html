@@ -252,6 +252,7 @@ error <span class="t">MailError</span> {
 <tr><td><code>pipe</code>, <code>wire</code>, <code>fork</code>, <code>handle</code>, <code>resume</code>, <code>resumeWith</code>, <code>abandon</code></td><td>Effeck&#39;s built-ins, each introduced where it is first used</td></tr>
 <tr><td><code>sync</code>, <code>try</code>, <code>callback</code></td><td>Boundary hatches: their arguments are plain TypeScript (D148)</td></tr>
 <tr><td><code>runPromise</code>, <code>runFork</code>, <code>runSync</code>, <code>runCallback</code></td><td>Effect&#39;s runners, the way back in from TypeScript (D150)</td></tr>
+<tr><td><code>sleep</code>, <code>log</code>, <code>logDebug</code>, <code>logInfo</code>, <code>logWarning</code>, <code>logError</code>, <code>retry</code>, <code>repeat</code>, <code>timeout</code>, <code>all</code>, <code>forEach</code>, <code>race</code>, <code>withSpan</code>, <code>die</code></td><td>The Effect module&#39;s functions without the <code>Effect.</code> prefix (D151)</td></tr>
 <tr><td>Every other export of <code>effect</code>&#39;s root</td><td><code>Console</code>, <code>Option</code>, <code>Stream</code>, <code>Schedule</code>, <code>Duration</code>, and the rest, plus <code>flow</code> and <code>identity</code> (D146)</td></tr></tbody></table></div>
 <p>Modules from <code>effect</code>&#39;s subpath packages, such as <code>effect/http</code>, are imported as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: <code>Effect</code> appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), <code>Schema</code> in 39-44%, <code>Layer</code> in 34-44%, and no other module in more than 22%. <code>Scope</code> is there because contracts name it whenever a resource outlives a function (<a href="#6-resources">Chapter 6</a>). JavaScript&#39;s own globals keep their names: <code>Array</code>, <code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>Symbol</code>, <code>BigInt</code>, <code>Function</code>, and <code>RegExp</code> mean JavaScript&#39;s, so Effect&#39;s modules with those names need an import under another name, as in <code>import { Array as Arr } from &quot;effect&quot;</code>. A host global does not shadow Effect: in a project whose <code>lib</code> includes the DOM, <code>Option</code> is still Effect&#39;s.</p>
 <h4 id="running-it"><a class="anchor" href="#running-it">Running it</a></h4>
@@ -262,7 +263,7 @@ error <span class="t">MailError</span> {
 
 <span class="k">function</span> <span class="f">main</span>() {
   <span class="k">const</span> name = <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">welcome</span>(<span class="s">"42"</span>), <span class="t">AppLive</span>)
-  <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`sent a welcome email to ${name}`</span>)
+  <span class="f">log</span>(<span class="s">`sent a welcome email to ${name}`</span>)
 }
 
 <span class="t">NodeRuntime</span>.<span class="f">runMain</span>(() =&gt; <span class="f">main</span>())</code></pre></figure>
@@ -303,7 +304,7 @@ error <span class="t">MailError</span> {
   <span class="k">return</span> name
 })</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">userName</span>(id: <span class="l">string</span>) {
   <span class="k">const</span> name = <span class="t">Users</span>.<span class="f">find</span>(id).name.<span class="f">trim</span>()
-  <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`found ${name}`</span>)
+  <span class="f">log</span>(<span class="s">`found ${name}`</span>)
   <span class="k">return</span> name
 }</code></pre></figure></div>
 <p>Where Effect code sequences with <code>Effect.map</code>, <code>flatMap</code>, <code>andThen</code>, or <code>tap</code>, Effeck uses the value and then the next statement.</p>
@@ -334,7 +335,7 @@ error <span class="t">MailError</span> {
 <h4 id="tracing"><a class="anchor" href="#tracing">Tracing</a></h4>
 <p><code>Effect.fn(&quot;welcome&quot;)</code> gives every call a span. Effeck functions compile to untraced frames by default, because a traced frame costs 10 to 20 times more (<a href="#24-what-effect-provides-and-what-the-kernel-adds">Chapter 24</a>). Add a span where you want one, with Effect&#39;s own <code>withSpan</code>:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">welcomeTraced</span>(id: <span class="l">string</span>) {
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">withSpan</span>(<span class="f">welcome</span>(id), <span class="s">"welcome"</span>)
+  <span class="k">return</span> <span class="f">withSpan</span>(<span class="f">welcome</span>(id), <span class="s">"welcome"</span>)
 }</code></pre></figure>
 <h4 id="writing-the-contract-yourself"><a class="anchor" href="#writing-the-contract-yourself">Writing the contract yourself</a></h4>
 <p>Most functions leave the contract to inference. Write it when you want the compiler to check a promise, typically on exported functions. The annotation is the whole computation, the way <code>Promise&lt;string&gt;</code> is on an <code>async</code> function: the <code>return</code> is checked against <code>string</code>.</p>
@@ -680,7 +681,7 @@ error EK3203: providers form a cycle: SessionsLive → Database → DatabaseLive
 <h4 id="running-with-providers"><a class="anchor" href="#running-with-providers">Running with providers</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">main</span>() {
   <span class="k">const</span> name = <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">welcome</span>(<span class="s">"42"</span>), <span class="t">AppLive</span>)
-  <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`welcomed ${name}`</span>)
+  <span class="f">log</span>(<span class="s">`welcomed ${name}`</span>)
 }
 <span class="c">// void!UserNotFound | MailError | ConfigError | ConnectError!</span></code></pre></figure>
 <p><code>main</code>&#39;s contract shows what providing costs: <code>ConfigError</code> and <code>ConnectError</code> come from building the layers. The layers are built when <code>Effect.provide</code> runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.</p>
@@ -735,9 +736,9 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <p>Effect&#39;s combinators take programs, so you pass the call itself wherever Effect expects an Effect, as in Effect&#39;s own code. The compiler passes it by name.</p>
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="k">yield</span>* <span class="f">fetchUser</span>(id).<span class="f">pipe</span>(<span class="t">Effect</span>.<span class="f">retry</span>(<span class="t">Schedule</span>.<span class="f">exponential</span>(<span class="s">"100 millis"</span>)))
 <span class="k">const</span> fresh = <span class="k">yield</span>* <span class="f">fetchUser</span>(id).<span class="f">pipe</span>(<span class="t">Effect</span>.<span class="f">timeout</span>(<span class="s">"1 second"</span>))
-<span class="k">const</span> fastest = <span class="k">yield</span>* <span class="t">Effect</span>.<span class="f">race</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="t">Effect</span>.<span class="f">retry</span>(<span class="f">fetchUser</span>(id), <span class="t">Schedule</span>.<span class="f">exponential</span>(<span class="s">"100 millis"</span>))
-<span class="k">const</span> fresh = <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="f">fetchUser</span>(id), <span class="s">"1 second"</span>)
-<span class="k">const</span> fastest = <span class="t">Effect</span>.<span class="f">race</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))   <span class="c">// the first to succeed</span></code></pre></figure></div>
+<span class="k">const</span> fastest = <span class="k">yield</span>* <span class="t">Effect</span>.<span class="f">race</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="f">retry</span>(<span class="f">fetchUser</span>(id), <span class="t">Schedule</span>.<span class="f">exponential</span>(<span class="s">"100 millis"</span>))
+<span class="k">const</span> fresh = <span class="f">timeout</span>(<span class="f">fetchUser</span>(id), <span class="s">"1 second"</span>)
+<span class="k">const</span> fastest = <span class="f">race</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))   <span class="c">// the first to succeed</span></code></pre></figure></div>
 <p>Each line is a call, so it runs: <code>user</code> is a <code>User</code>, not an <code>Effect</code>. The inner calls are passed by name: <code>Effect.retry</code> runs <code>fetchUser(id)</code> again on each attempt, with fresh local variables each time.</p>
 <h4 id="pipe"><a class="anchor" href="#pipe">Pipe</a></h4>
 <p>Stacking several combinators reads best as a pipeline. Effeck&#39;s built-in <code>pipe</code> takes the program first:</p>
@@ -747,9 +748,9 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   <span class="t">Effect</span>.<span class="f">withSpan</span>(<span class="s">"load-user"</span>)
 )</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="f">pipe</span>(
   () =&gt; <span class="f">fetchUser</span>(id),
-  <span class="t">Effect</span>.<span class="f">retry</span>({ times: <span class="n">3</span> }),
-  <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="s">"2 seconds"</span>),
-  <span class="t">Effect</span>.<span class="f">withSpan</span>(<span class="s">"load-user"</span>)
+  <span class="f">retry</span>({ times: <span class="n">3</span> }),
+  <span class="f">timeout</span>(<span class="s">"2 seconds"</span>),
+  <span class="f">withSpan</span>(<span class="s">"load-user"</span>)
 )
 <span class="c">// user: User;  E gains Cause.TimeoutError from Effect.timeout</span></code></pre></figure></div>
 <p>When <code>pipe</code>&#39;s first argument is a function with no parameters and the first stage expects an <code>Effect</code>, that function is the program. Applied to plain data, <code>pipe</code> is Effect&#39;s ordinary <code>pipe</code>. The types flow exactly as in Effect: <code>Effect.timeout</code> adds <code>Cause.TimeoutError</code> to E, and <code>Effect.retry</code> keeps E and R. To keep the pipeline as a program instead of running it, wrap it: <code>const loadUser = () =&gt; pipe(() =&gt; fetchUser(id), …)</code>.</p>
@@ -772,7 +773,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 
 <span class="k">function</span> <span class="f">syncEverything</span>(stores: <span class="t">ReadonlyArray</span>&lt;<span class="t">Store</span>&gt;) {
   <span class="k">const</span> syncAll = stores.<span class="f">map</span>(makeSync)                    <span class="c">// an array of programs; nothing ran</span>
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">all</span>(syncAll, { concurrency: <span class="n">4</span> })          <span class="c">// now they run</span>
+  <span class="k">return</span> <span class="f">all</span>(syncAll, { concurrency: <span class="n">4</span> })          <span class="c">// now they run</span>
 }</code></pre></figure>
 <p><code>stores.map(makeSync)</code> passes <code>makeSync</code> to JavaScript&#39;s <code>Array.prototype.map</code>, which expects a plain function. <code>makeSync</code> performs no Effect operation, so it compiles to plain JavaScript (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>), and <code>map</code> receives that form: <code>syncAll</code> holds programs. A function that can pause cannot be passed to <code>map</code> (EK4301, <a href="#10-working-with-typescript">Chapter 10</a>). Where <code>Effect.all</code> expects Effects, an array or record of programs converts element by element.</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">startServer</span>() {
@@ -861,7 +862,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 }
 
 <span class="k">function</span> <span class="f">sessionWithin</span>(host: <span class="l">string</span>) {
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="f">session</span>(host), <span class="s">"2 seconds"</span>)    <span class="c">// cancels a connect that hangs</span>
+  <span class="k">return</span> <span class="f">timeout</span>(<span class="f">session</span>(host), <span class="s">"2 seconds"</span>)    <span class="c">// cancels a connect that hangs</span>
 }</code></pre></figure>
 <p>The two acquisition policies behave differently when cancellation arrives during the wait:</p>
 <div class="table"><table><thead><tr><th>Acquisition</th><th>Cancellation during the wait</th><th>Who releases a value that arrives late</th></tr></thead><tbody><tr><td>Masked (the default)</td><td>Waits for the value, registers its release, then releases it</td><td>Effect, through the registered release</td></tr>
@@ -886,15 +887,15 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   })
   <span class="k">return</span> { profile, orders }
 })</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">dashboard</span>(id: <span class="l">string</span>) {
-  <span class="k">const</span> [profile, orders] = <span class="t">Effect</span>.<span class="f">all</span>([<span class="f">loadProfile</span>(id), <span class="f">recentOrders</span>(id)], {
+  <span class="k">const</span> [profile, orders] = <span class="f">all</span>([<span class="f">loadProfile</span>(id), <span class="f">recentOrders</span>(id)], {
     concurrency: <span class="n">2</span>
   })
   <span class="k">return</span> { profile, orders }
 }</code></pre></figure></div>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> thumbnails = <span class="t">Effect</span>.<span class="f">forEach</span>(images, (image) =&gt; <span class="f">resize</span>(image), { concurrency: <span class="n">8</span> })
-<span class="k">const</span> fastest = <span class="t">Effect</span>.<span class="f">race</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> thumbnails = <span class="f">forEach</span>(images, (image) =&gt; <span class="f">resize</span>(image), { concurrency: <span class="n">8</span> })
+<span class="k">const</span> fastest = <span class="f">race</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))
 <span class="k">const</span> first = <span class="t">Effect</span>.<span class="f">raceFirst</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))
-<span class="k">const</span> quick = <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="f">slowQuery</span>(id), <span class="s">"500 millis"</span>)</code></pre></figure>
+<span class="k">const</span> quick = <span class="f">timeout</span>(<span class="f">slowQuery</span>(id), <span class="s">"500 millis"</span>)</code></pre></figure>
 <p>Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect&#39;s semantics here:</p>
 <div class="table"><table><thead><tr><th>Combinator</th><th>Succeeds with</th><th>When a branch fails</th></tr></thead><tbody><tr><td><code>Effect.all</code>, <code>Effect.forEach</code></td><td>Every result, in order</td><td>Interrupts the other branches, waits for their cleanup, and fails with that failure</td></tr>
 <tr><td><code>Effect.race</code></td><td>The first success</td><td>Keeps waiting for the other branch; fails only if both fail, with both failures</td></tr>
@@ -1078,14 +1079,14 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <h4 id="handlers-and-concurrency"><a class="anchor" href="#handlers-and-concurrency">Handlers and concurrency</a></h4>
 <p>A handler belongs to the fiber it was installed on, so a program that runs on other fibers must handle its own control operations. The compiler checks every Effect combinator that runs its argument elsewhere (<a href="#16-callbacks-and-higher-order-functions">Chapter 16</a>):</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">approveAll</span>(ids: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">forEach</span>(ids, (id) =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id), { concurrency: <span class="n">4</span> })
+  <span class="k">return</span> <span class="f">forEach</span>(ids, (id) =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id), { concurrency: <span class="n">4</span> })
 }</code></pre></figure>
 <figure class="code side-none"><pre class="code" data-lang="text"><code>error EK4201: Approval.approve is a control operation, and forEach with concurrency 4 runs
   its callback on other fibers, where the Approval handler on this fiber cannot be reached.
   Handle Approval inside the callback, or run the loop with concurrency 1.</code></pre></figure>
 <p>The fix puts a handler inside each concurrent branch:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">approveAll</span>(ids: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">forEach</span>(ids, (id) =&gt;
+  <span class="k">return</span> <span class="f">forEach</span>(ids, (id) =&gt;
     <span class="f">handle</span>(() =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id), <span class="t">Approval</span>, {
       approve: (request, k) =&gt; <span class="f">resume</span>(k, <span class="t">Reviewers</span>.<span class="f">decide</span>(request))
     }),
@@ -1261,12 +1262,12 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 })
 
 <span class="k">const</span> heartbeat = <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">"alive"</span>).<span class="f">pipe</span>(<span class="t">Effect</span>.<span class="f">repeat</span>(<span class="t">Schedule</span>.<span class="f">spaced</span>(<span class="s">"30 seconds"</span>)))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">greetLater</span>(name: <span class="l">string</span>) {
-  <span class="t">Effect</span>.<span class="f">sleep</span>(<span class="s">"1 second"</span>)
+  <span class="f">sleep</span>(<span class="s">"1 second"</span>)
   <span class="k">return</span> <span class="s">`Hello, ${name}`</span>
 }
 
 <span class="k">function</span> <span class="f">heartbeat</span>() {
-  <span class="t">Effect</span>.<span class="f">repeat</span>(<span class="t">Effect</span>.<span class="f">log</span>(<span class="s">"alive"</span>), <span class="t">Schedule</span>.<span class="f">spaced</span>(<span class="s">"30 seconds"</span>))
+  <span class="f">repeat</span>(<span class="f">log</span>(<span class="s">"alive"</span>), <span class="t">Schedule</span>.<span class="f">spaced</span>(<span class="s">"30 seconds"</span>))
 }</code></pre></figure></div>
 <p>Time comes from the <code>Clock</code> service, so a test moves it forward with <code>TestClock.adjust</code> instead of waiting (<a href="#12-questions-effect-users-ask">Chapter 12</a>).</p>
 <h4 id="environment"><a class="anchor" href="#environment">Environment</a></h4>
@@ -1302,7 +1303,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 
 <span class="k">function</span> <span class="f">main</span>() {
   <span class="k">const</span> branch = <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">currentBranch</span>(), <span class="f">wire</span>(<span class="t">NodeServices</span>.layer, <span class="t">FetchHttpClient</span>.layer))
-  <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`on ${branch}`</span>)
+  <span class="f">log</span>(<span class="s">`on ${branch}`</span>)
 }
 
 <span class="t">NodeRuntime</span>.<span class="f">runMain</span>(() =&gt; <span class="f">main</span>())</code></pre></figure>
@@ -1322,11 +1323,11 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <p>A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no <code>async</code> function and no <code>await</code> outside a boundary hatch, so there are no &quot;colored&quot; functions: every function can wait. A Promise from a TypeScript library crosses with the <code>try</code> hatch, or with <code>sync</code> when a rejection is a bug (D148); inside the hatch&#39;s function, <code>async</code> and <code>await</code> keep their JavaScript meaning. Platform APIs that return Promises, such as <code>fetch</code>, are replaced by Effect modules (<a href="#11-the-standard-library">Chapter 11</a>).</p>
 <h4 id="how-do-i-run-things-concurrently"><a class="anchor" href="#how-do-i-run-things-concurrently">How do I run things concurrently?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">homePage</span>(userId: <span class="l">string</span>) {
-  <span class="k">const</span> [feed, unread] = <span class="t">Effect</span>.<span class="f">all</span>(
+  <span class="k">const</span> [feed, unread] = <span class="f">all</span>(
     [<span class="t">Feed</span>.<span class="f">load</span>(userId), <span class="t">Notifications</span>.<span class="f">unread</span>(userId)],
     { concurrency: <span class="s">"unbounded"</span> }
   )
-  <span class="k">const</span> previews = <span class="t">Effect</span>.<span class="f">forEach</span>(feed.items, (item) =&gt; <span class="f">preview</span>(item), { concurrency: <span class="n">8</span> })
+  <span class="k">const</span> previews = <span class="f">forEach</span>(feed.items, (item) =&gt; <span class="f">preview</span>(item), { concurrency: <span class="n">8</span> })
   <span class="k">return</span> { previews, unread }
 }</code></pre></figure>
 <p>Calls run in order. Concurrency is always a combinator over programs: <code>Effect.all</code>, <code>Effect.forEach</code>, <code>Effect.race</code>, <code>Effect.raceFirst</code>, or <code>fork</code> (<a href="#7-concurrency">Chapter 7</a>). <code>Semaphore</code>, <code>Latch</code>, <code>Queue</code>, <code>Deferred</code>, and <code>PubSub</code> work unchanged.</p>
@@ -1338,7 +1339,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <h4 id="what-does-throw-mean-now"><a class="anchor" href="#what-does-throw-mean-now">What does <code>throw</code> mean now?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">parseId</span>(raw: <span class="l">string</span>) {
   <span class="k">if</span> (!/^\d+$/.<span class="f">test</span>(raw)) <span class="k">throw</span> <span class="k">new</span> <span class="t">InvalidId</span>({ raw })     <span class="c">// a typed failure: InvalidId joins E</span>
-  <span class="k">if</span> (raw.length &gt; <span class="n">64</span>) <span class="t">Effect</span>.<span class="f">die</span>(<span class="k">new</span> <span class="t">Error</span>(<span class="s">"caller bug"</span>))  <span class="c">// a defect, on purpose</span>
+  <span class="k">if</span> (raw.length &gt; <span class="n">64</span>) <span class="f">die</span>(<span class="k">new</span> <span class="t">Error</span>(<span class="s">"caller bug"</span>))  <span class="c">// a defect, on purpose</span>
   <span class="k">return</span> <span class="t">Number</span>(raw)
 }
 <span class="c">// number!InvalidId!</span></code></pre></figure>
@@ -1405,8 +1406,8 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> checkouts = <span class="t">Metric</span>.<span class="f">counter</span>(<span class="s">"checkouts"</span>)
 
 <span class="k">function</span> <span class="f">checkout</span>(cartId: <span class="l">string</span>) {
-  <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`checkout ${cartId}`</span>)
-  <span class="k">const</span> receipt = <span class="t">Effect</span>.<span class="f">withSpan</span>(<span class="t">Payments</span>.<span class="f">charge</span>(cartId), <span class="s">"charge"</span>)
+  <span class="f">log</span>(<span class="s">`checkout ${cartId}`</span>)
+  <span class="k">const</span> receipt = <span class="f">withSpan</span>(<span class="t">Payments</span>.<span class="f">charge</span>(cartId), <span class="s">"charge"</span>)
   <span class="t">Metric</span>.<span class="f">update</span>(checkouts, <span class="n">1</span>)
   <span class="k">return</span> receipt
 }</code></pre></figure>
@@ -1416,7 +1417,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 
 <span class="k">function</span> <span class="f">main</span>() {
   <span class="k">const</span> port = <span class="t">Port</span>()                         <span class="c">// reads PORT; ConfigError if it is invalid</span>
-  <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`listening on ${port}`</span>)
+  <span class="f">log</span>(<span class="s">`listening on ${port}`</span>)
 }</code></pre></figure>
 <p>A <code>Config</code> is data until you call it (<a href="#13-what-a-call-means">Chapter 13</a>), so <code>Config.all</code>, <code>Config.nested</code>, and <code>Config.withDefault</code> compose it first and a call reads it. A <code>ConfigProvider</code> replaces the environment in tests (<a href="#11-the-standard-library">Chapter 11</a>).</p>
 <h4 id="how-do-i-run-a-program"><a class="anchor" href="#how-do-i-run-a-program">How do I run a program?</a></h4>
@@ -1430,7 +1431,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <span class="t">NodeRuntime</span>.<span class="f">runMain</span>(() =&gt; <span class="f">main</span>())</code></pre></figure>
 <p>A program starts only at a runner: <code>NodeRuntime.runMain</code> or <code>BunRuntime.runMain</code> for a process, <code>it.effect</code> for a test, and <code>Effect.runPromise</code> or a <code>ManagedRuntime</code> where TypeScript code needs a result. A web framework that calls your handlers builds one <code>ManagedRuntime</code> from the application layer and runs each handler through it, so the layer is built once (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>). A module&#39;s top level cannot run a program (EK1001).</p>
 <h4 id="do-i-still-use-pipe"><a class="anchor" href="#do-i-still-use-pipe">Do I still use <code>pipe</code>?</a></h4>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="f">pipe</span>(() =&gt; <span class="f">fetchUser</span>(id), <span class="t">Effect</span>.<span class="f">retry</span>({ times: <span class="n">3</span> }), <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="s">"2 seconds"</span>))</code></pre></figure>
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="f">pipe</span>(() =&gt; <span class="f">fetchUser</span>(id), <span class="f">retry</span>({ times: <span class="n">3</span> }), <span class="f">timeout</span>(<span class="s">"2 seconds"</span>))</code></pre></figure>
 <p>Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The built-in <code>pipe</code> stacks policies over a program and still works on data. There is no <code>|&gt;</code> (<a href="#5-programs-as-values-retry-timeout-and-pipe">Chapter 5</a>).</p>
 <h4 id="how-do-i-pattern-match"><a class="anchor" href="#how-do-i-pattern-match">How do I pattern match?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">area</span>(shape: <span class="t">Circle</span> | <span class="t">Square</span>) {
@@ -1477,7 +1478,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <h4 id="how-do-i-keep-state-that-several-fibers-share"><a class="anchor" href="#how-do-i-keep-state-that-several-fibers-share">How do I keep state that several fibers share?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">countVisits</span>(paths: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
   <span class="k">const</span> visits = <span class="t">Ref</span>.<span class="f">make</span>(<span class="n">0</span>)
-  <span class="t">Effect</span>.<span class="f">forEach</span>(paths, (path) =&gt; {
+  <span class="f">forEach</span>(paths, (path) =&gt; {
     <span class="t">Visits</span>.<span class="f">record</span>(path)
     <span class="t">Ref</span>.<span class="f">update</span>(visits, (n) =&gt; n + <span class="n">1</span>)
   }, { concurrency: <span class="n">4</span> })
@@ -1569,7 +1570,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="c">// main.effeck</span>
 <span class="k">export</span> <span class="k">function</span> <span class="f">main</span>() {
   <span class="k">const</span> name = <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">welcome</span>(<span class="s">"42"</span>), <span class="t">AppLive</span>)
-  <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`welcomed ${name}`</span>)
+  <span class="f">log</span>(<span class="s">`welcomed ${name}`</span>)
 }
 
 <span class="t">NodeRuntime</span>.<span class="f">runMain</span>(() =&gt; <span class="f">main</span>())</code></pre></figure>
@@ -1808,7 +1809,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <p>The declaration file writes the polymorphism out, as the comment shows. A TypeScript caller therefore passes a callback that returns an <code>Effect</code>, and wraps a plain one: <code>mapAll(words, (w) =&gt; Effect.succeed(w.length))</code>.</p>
 <p><code>mapAll</code> compiles to frames in v0 whatever its callback does (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>). The same rule makes wrappers short:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> withRetry&lt;<span class="t">A</span>&gt;(times: <span class="l">number</span>, program: () =&gt; <span class="t">A</span>) {
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">retry</span>(program, <span class="t">Schedule</span>.<span class="f">recurs</span>(times))
+  <span class="k">return</span> <span class="f">retry</span>(program, <span class="t">Schedule</span>.<span class="f">recurs</span>(times))
 }
 <span class="c">// &lt;A, E, R&gt;(times: number, program: () =&gt; A!E!R) =&gt; A!E!R</span></code></pre></figure>
 <h4 id="callbacks-into-javascript"><a class="anchor" href="#callbacks-into-javascript">Callbacks into JavaScript</a></h4>
@@ -1816,8 +1817,8 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <h4 id="which-effect-combinators-run-their-argument-on-another-fiber"><a class="anchor" href="#which-effect-combinators-run-their-argument-on-another-fiber">Which Effect combinators run their argument on another fiber</a></h4>
 <p>A control operation must be handled on the fiber that performs it (<a href="#9-handlers-defining-your-own-effects">Chapter 9</a>). The compiler therefore needs to know, for each Effect function that takes a program, whether it runs that program on the same fiber. These were measured by performing a control operation inside each combinator, with the handler outside it (<code>tests/fiber-behavior.test.ts</code>):</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="f">handle</span>(() =&gt; {
-  <span class="t">Effect</span>.<span class="f">retry</span>(<span class="t">Approval</span>.<span class="f">approve</span>(<span class="s">"a"</span>), <span class="t">Schedule</span>.<span class="f">recurs</span>(<span class="n">2</span>))     <span class="c">// same fiber: reaches the handler</span>
-  <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="t">Approval</span>.<span class="f">approve</span>(<span class="s">"b"</span>), <span class="s">"1 second"</span>)           <span class="c">// other fiber: EK4201</span>
+  <span class="f">retry</span>(<span class="t">Approval</span>.<span class="f">approve</span>(<span class="s">"a"</span>), <span class="t">Schedule</span>.<span class="f">recurs</span>(<span class="n">2</span>))     <span class="c">// same fiber: reaches the handler</span>
+  <span class="f">timeout</span>(<span class="t">Approval</span>.<span class="f">approve</span>(<span class="s">"b"</span>), <span class="s">"1 second"</span>)           <span class="c">// other fiber: EK4201</span>
 }, <span class="t">Approval</span>, { approve: (_request, k) =&gt; <span class="f">resume</span>(k, <span class="l">true</span>) })</code></pre></figure>
 <div class="table"><table><thead><tr><th>Same fiber: a handler outside still works</th><th>Other fibers: handle control operations inside</th></tr></thead><tbody><tr><td><code>flatMap</code>, <code>map</code>, <code>catch</code>, <code>catchCause</code>, <code>ensuring</code>, <code>onExit</code>, <code>provideService</code>, <code>scoped</code>, <code>acquireRelease</code> (acquire), <code>acquireUseRelease</code> (use), <code>retry</code>, <code>repeat</code>, <code>uninterruptible</code>, sequential <code>forEach</code> and <code>all</code>, <code>zip</code> by default</td><td>Measured: <code>timeout</code>, <code>race</code>, <code>raceFirst</code>, <code>forEach</code> with concurrency 2, unbounded <code>all</code>, <code>zip</code> with <code>concurrent: true</code>, <code>forkChild</code>. From source: <code>forkIn</code>, <code>forkScoped</code>, <code>forkDetach</code>, <code>Layer.merge</code> builds, parallel Scope finalizers</td></tr></tbody></table></div>
 <p><code>timeout</code> is on the right because it runs its program on a child fiber to race it against the clock. For an Effect function outside this table, the compiler assumes the argument may run on another fiber.</p>
@@ -1838,7 +1839,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 }
 
 <span class="k">function</span> <span class="f">exportWithDeadline</span>(id: <span class="l">string</span>) {
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="f">exportReport</span>(id), <span class="s">"30 seconds"</span>)
+  <span class="k">return</span> <span class="f">timeout</span>(<span class="f">exportReport</span>(id), <span class="s">"30 seconds"</span>)
 }</code></pre></figure>
 <p>If the 30 seconds run out during the upload, the upload is interrupted, the <code>catch</code> block does not run, the <code>finally</code> block runs, the temporary file is removed, and the <code>Effect.timeout</code> call fails with <code>Cause.TimeoutError</code>. Each kind of exit has one rule:</p>
 <div class="table"><table><thead><tr><th>Exit</th><th>Source</th><th>In E</th><th>Runs <code>catch</code></th><th>Runs <code>finally</code> and <code>using</code></th></tr></thead><tbody><tr><td>Expected failure</td><td><code>throw</code> in Effeck; a callee&#39;s E; an exception a trusted contract lists</td><td>Yes</td><td>Yes, narrowed by type</td><td>Yes</td></tr>
@@ -2209,10 +2210,10 @@ Frame                                                        Effect 4 frame
 <h3 id="23-boundaries-and-finalization"><a class="anchor" href="#23-boundaries-and-finalization">23. Boundaries and finalization</a></h3>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> approved = <span class="f">handle</span>(() =&gt; {
   <span class="k">const</span> viaMap = ids.<span class="f">map</span>((id) =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id))                    <span class="c">// EK4301: a JavaScript frame</span>
-  <span class="k">const</span> viaFork = <span class="t">Effect</span>.<span class="f">forEach</span>(ids, (id) =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id), {
+  <span class="k">const</span> viaFork = <span class="f">forEach</span>(ids, (id) =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id), {
     concurrency: <span class="n">4</span>                                                        <span class="c">// EK4201: other fibers</span>
   })
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">forEach</span>(ids, (id) =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id))                <span class="c">// fine: same fiber, Effect frames</span>
+  <span class="k">return</span> <span class="f">forEach</span>(ids, (id) =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id))                <span class="c">// fine: same fiber, Effect frames</span>
 }, <span class="t">Approval</span>, { approve: (_request, k) =&gt; <span class="f">resume</span>(k, <span class="l">true</span>) })</code></pre></figure>
 <p>Three calls look alike and meet three different boundaries. A capture moves frames between a perform site and its prompt, so whatever sits between them decides whether the capture can happen. The compiler rejects the first two; the runtime would otherwise fail them with <code>UnhandledOperation</code> and <code>HandlerNotOnThisFiber</code>.</p>
 <h4 id="execution-boundaries"><a class="anchor" href="#execution-boundaries">Execution boundaries</a></h4>
@@ -2943,7 +2944,8 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D147</td><td><strong>Controversial.</strong> A call is passed by name where a parameter expects a program: <code>fork(fetchReport())</code></td><td>Thunks around single calls were 2.6% of the docs&#39; tokens</td><td>5, 13</td></tr>
 <tr><td>D148</td><td><strong>Controversial.</strong> <code>sync</code>, <code>try</code>, and <code>callback</code> are boundary hatches whose arguments are plain TypeScript</td><td>One visible escape hatch replaces five Effect constructors and their lambda rules</td><td>10, 28</td></tr>
 <tr><td>D149</td><td><code>try(…)</code> parses as a call in <code>.effeck</code>; Effect&#39;s <code>{ try, catch }</code> object is EK4404</td><td>A try statement needs a block, so <code>try (</code> is unambiguous</td><td>10, 28</td></tr>
-<tr><td>D150</td><td><code>runPromise</code>, <code>runFork</code>, <code>runSync</code>, <code>runCallback</code> are in the prelude, for TypeScript and hatch bodies</td><td>The way back in; EK1005 still applies where a fiber runs</td><td>10, 13</td></tr></tbody></table></div>
+<tr><td>D150</td><td><code>runPromise</code>, <code>runFork</code>, <code>runSync</code>, <code>runCallback</code> are in the prelude, for TypeScript and hatch bodies</td><td>The way back in; EK1005 still applies where a fiber runs</td><td>10, 13</td></tr>
+<tr><td>D151</td><td><code>sleep</code>, <code>log</code>, <code>retry</code>, <code>timeout</code>, <code>all</code>, <code>forEach</code>, <code>race</code>, and seven more Effect functions need no prefix</td><td>They were 329 of the 538 <code>Effect.</code> member uses in the docs</td><td>1, 27</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>
@@ -3176,7 +3178,7 @@ effeck/smoke.sh effeck-infer   # one case</code></pre></figure>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">Port</span> = <span class="t">Config</span>.<span class="f">withDefault</span>(<span class="t">Config</span>.<span class="t">Port</span>(<span class="s">"PORT"</span>), <span class="n">3000</span>)      <span class="c">// unchanged by design: Effect's API, as is</span>
 
 <span class="k">function</span> <span class="f">loadUser</span>(id: <span class="l">string</span>) {
-  <span class="k">return</span> <span class="t">Effect</span>.<span class="f">retry</span>(<span class="t">Users</span>.<span class="f">find</span>(id), { times: <span class="n">3</span> })        <span class="c">// changed: the program is a function</span>
+  <span class="k">return</span> <span class="f">retry</span>(<span class="t">Users</span>.<span class="f">find</span>(id), { times: <span class="n">3</span> })        <span class="c">// changed: the program is a function</span>
 }</code></pre></figure>
 <p>Every section of Effect 4&#39;s documentation, the Effect 3 pages that version 4 dropped, and the <code>effect@4.0.5</code> modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to Effeck. <strong>Changed</strong> means Effeck has its own form. <strong>Unchanged by design</strong> means you use Effect&#39;s API as you do today, on purpose: the call rule (<a href="#13-what-a-call-means">Chapter 13</a>) makes Effect&#39;s API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (<code>docs/research/effect-feature-coverage.md</code>, 309 features), updated to the decisions in <a href="#29-decisions">Chapter 29</a>. D57 completes partial annotations with explicit <code>infer</code> slots.</p>
 <h4 id="c1-getting-started-the-effect-type-creating-running-generators-pipelines"><a class="anchor" href="#c1-getting-started-the-effect-type-creating-running-generators-pipelines">C1. Getting started: the Effect type, creating, running, generators, pipelines</a></h4>

@@ -12,8 +12,8 @@ const FileLogger = Logger.layer([
 ])
 
 function application() {
-  Effect.log("Index build started")
-  Effect.log("Index build completed")
+  log("Index build started")
+  log("Index build completed")
 }
 ```
 
@@ -35,7 +35,7 @@ const LoggerLive = Layer.provide(
 
 function main() {
   Effect.provide(() => {
-    Effect.log("Report generated")
+    log("Report generated")
   }, LoggerLive)
   // LoggerLive's scope has closed and its final batch has flushed.
   const fs = Effect.service(FileSystem.FileSystem)
@@ -63,7 +63,7 @@ const LoggerLive = Layer.provide(
 )
 
 function main() {
-  Effect.log("Worker ready")
+  log("Worker ready")
 }
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), LoggerLive))

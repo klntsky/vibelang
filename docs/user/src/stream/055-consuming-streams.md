@@ -18,8 +18,8 @@ function collectLabels() {
 ```ts
 function announce() {
   Stream.runForEach(Stream.make("build", "test", "package"), (stage) => {
-    Effect.log(`starting ${stage}`)
-    Effect.sleep("20 millis")
+    log(`starting ${stage}`)
+    sleep("20 millis")
   })
 }
 // void!!
@@ -53,7 +53,7 @@ function totalBytes() {
 function totalWithProgress() {
   return Stream.runFoldEffect(Stream.make(256, 512, 128), () => 0, (total, n) => {
     const next = total + n
-    Effect.log(`processed ${next} bytes`)
+    log(`processed ${next} bytes`)
     return next
   })
 }

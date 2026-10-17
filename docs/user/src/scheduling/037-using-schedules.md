@@ -6,8 +6,8 @@ A schedule decides when work runs again and when it stops. `Schedule` values wor
 
 ```ts
 function heartbeat() {
-  Effect.repeat(
-    Effect.logInfo("worker available"),
+  repeat(
+    logInfo("worker available"),
     Schedule.spaced("15 seconds")
   )
 }
@@ -20,7 +20,7 @@ function heartbeat() {
 ```ts
 function waitForBuild() {
   let checks = 0
-  const status = Effect.repeat(() => {
+  const status = repeat(() => {
     checks++
     return checks >= 4 ? "ready" : "building"
   }, {
@@ -40,7 +40,7 @@ The initial check is separate from the seven permitted repetitions, so this loop
 ```ts
 function delayedCleanup() {
   Effect.schedule(
-    Effect.logInfo("sweeping expired sessions"),
+    logInfo("sweeping expired sessions"),
     Schedule.spaced("30 minutes")
   )
 }
@@ -55,7 +55,7 @@ error Busy
 
 function reserveSlot() {
   let attempts = 0
-  return Effect.retry(() => {
+  return retry(() => {
     attempts++
     if (attempts < 3) throw new Busy()
     return "reserved"
@@ -76,11 +76,11 @@ service Sensor {
 }
 
 function sampleContinuously() {
-  Effect.repeat(() => {
+  repeat(() => {
     try {
-      Effect.logInfo("sample", Sensor.read())
+      logInfo("sample", Sensor.read())
     } catch (error) {
-      Effect.logWarning("sample unavailable", error._tag)
+      logWarning("sample unavailable", error._tag)
     }
   }, Schedule.spaced("5 seconds"))
 }

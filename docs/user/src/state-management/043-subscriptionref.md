@@ -61,7 +61,7 @@ function observeTwoClients() {
     return Stream.runForEach(
       Stream.take(SubscriptionRef.changes(count), 2),
       (value) => {
-        Effect.logInfo("observed", value)
+        logInfo("observed", value)
         Deferred.succeed(ready, undefined)
       }
     )

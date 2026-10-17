@@ -9,9 +9,9 @@ A platform `runMain` starts an Effeck application and connects its lifetime to t
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
-  Effect.log("Preparing export")
-  Effect.sleep("100 millis")
-  Effect.log("Export complete")
+  log("Preparing export")
+  sleep("100 millis")
+  log("Export complete")
 }
 
 NodeRuntime.runMain(() => main())
@@ -60,7 +60,7 @@ import { NodeRuntime } from "@effect/platform-node"
 import { launchOptions } from "./launch-options.ts"
 
 function main() {
-  Effect.log("Starting with custom exit handling")
+  log("Starting with custom exit handling")
 }
 
 NodeRuntime.runMain(() => main(), launchOptions)
@@ -81,9 +81,9 @@ error InvalidBatch {
 function exportBatch(count: number) {
   try {
     if (count <= 0) throw new InvalidBatch({ count })
-    Effect.log(`Exporting ${count} records`)
+    log(`Exporting ${count} records`)
   } finally {
-    Effect.log("Export cleanup finished")
+    log("Export cleanup finished")
   }
 }
 

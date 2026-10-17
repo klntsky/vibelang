@@ -91,10 +91,10 @@ For a foreign event API, put the raw callback registration in a TypeScript adapt
 
 ```ts
 function openSession() {
-  Effect.log("open session")
+  log("open session")
   return Effect.acquireRelease(
     () => ({ name: "metrics" }),
-    () => Effect.log("close session")
+    () => log("close session")
   )
 }
 

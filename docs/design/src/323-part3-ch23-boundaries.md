@@ -3,10 +3,10 @@
 ```ts es
 const approved = handle(() => {
   const viaMap = ids.map((id) => Approval.approve(id))                    // EK4301: a JavaScript frame
-  const viaFork = Effect.forEach(ids, (id) => Approval.approve(id), {
+  const viaFork = forEach(ids, (id) => Approval.approve(id), {
     concurrency: 4                                                        // EK4201: other fibers
   })
-  return Effect.forEach(ids, (id) => Approval.approve(id))                // fine: same fiber, Effect frames
+  return forEach(ids, (id) => Approval.approve(id))                // fine: same fiber, Effect frames
 }, Approval, { approve: (_request, k) => resume(k, true) })
 ```
 

@@ -22,11 +22,11 @@ A call waits for its callee, whether the callee finishes at once or after a netw
 
 ```ts es
 function homePage(userId: string) {
-  const [feed, unread] = Effect.all(
+  const [feed, unread] = all(
     [Feed.load(userId), Notifications.unread(userId)],
     { concurrency: "unbounded" }
   )
-  const previews = Effect.forEach(feed.items, (item) => preview(item), { concurrency: 8 })
+  const previews = forEach(feed.items, (item) => preview(item), { concurrency: 8 })
   return { previews, unread }
 }
 ```
@@ -48,7 +48,7 @@ Every function body plays the part of the generator, and every call that returns
 ```ts es
 function parseId(raw: string) {
   if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })     // a typed failure: InvalidId joins E
-  if (raw.length > 64) Effect.die(new Error("caller bug"))  // a defect, on purpose
+  if (raw.length > 64) die(new Error("caller bug"))  // a defect, on purpose
   return Number(raw)
 }
 // number!InvalidId!
@@ -145,8 +145,8 @@ it.effect("a reminder fires after one day", () => {
 const checkouts = Metric.counter("checkouts")
 
 function checkout(cartId: string) {
-  Effect.log(`checkout ${cartId}`)
-  const receipt = Effect.withSpan(Payments.charge(cartId), "charge")
+  log(`checkout ${cartId}`)
+  const receipt = withSpan(Payments.charge(cartId), "charge")
   Metric.update(checkouts, 1)
   return receipt
 }
@@ -161,7 +161,7 @@ const Port = Config.withDefault(Config.Port("PORT"), 3000)
 
 function main() {
   const port = Port()                         // reads PORT; ConfigError if it is invalid
-  Effect.log(`listening on ${port}`)
+  log(`listening on ${port}`)
 }
 ```
 
@@ -185,7 +185,7 @@ A program starts only at a runner: `NodeRuntime.runMain` or `BunRuntime.runMain`
 #### Do I still use `pipe`?
 
 ```ts es
-const user = pipe(() => fetchUser(id), Effect.retry({ times: 3 }), Effect.timeout("2 seconds"))
+const user = pipe(() => fetchUser(id), retry({ times: 3 }), timeout("2 seconds"))
 ```
 
 Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The built-in `pipe` stacks policies over a program and still works on data. There is no `|>` (Chapter 5).
@@ -262,7 +262,7 @@ Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Optio
 ```ts es
 function countVisits(paths: ReadonlyArray<string>) {
   const visits = Ref.make(0)
-  Effect.forEach(paths, (path) => {
+  forEach(paths, (path) => {
     Visits.record(path)
     Ref.update(visits, (n) => n + 1)
   }, { concurrency: 4 })

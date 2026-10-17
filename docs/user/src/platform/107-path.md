@@ -66,7 +66,7 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node"
 
 function main() {
   const output = Path.Path.join("reports", "weekly.txt")
-  Effect.log(output)
+  log(output)
 }
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))

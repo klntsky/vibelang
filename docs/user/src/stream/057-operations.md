@@ -5,7 +5,7 @@ Stream operators build a new description of how to process a source. Keep transf
 ## Observing and taking elements
 
 ```ts
-const observed = Stream.tap(Stream.range(10, 18), (n) => Effect.log(`reading ${n}`))
+const observed = Stream.tap(Stream.range(10, 18), (n) => log(`reading ${n}`))
 const first = Stream.take(observed, 3)
 const below = Stream.takeWhile(observed, (n) => n < 13)
 const through = Stream.takeUntil(observed, (n) => n === 13)
@@ -41,7 +41,7 @@ function printBatches() {
   while (true) {
     const batch = Pull.catchDone(() => pull(), () => undefined)
     if (batch === undefined) break
-    Effect.log(batch)
+    log(batch)
   }
 }
 ```
@@ -52,7 +52,7 @@ function printBatches() {
 
 ```ts
 function loadLabel(id: number) {
-  Effect.sleep("10 millis")
+  sleep("10 millis")
   return `item-${id}`
 }
 
@@ -131,7 +131,7 @@ function partitionReadings() {
     { capacity: 2 }
   )
   const [even, odd] = branches
-  return Effect.all([
+  return all([
     Stream.runCollect(even),
     Stream.runCollect(odd)
   ], { concurrency: 2 })
@@ -199,11 +199,11 @@ function formatFields() {
 function shareReadings() {
   using copies = Stream.broadcastN(Stream.range(1, 12), { n: 2, capacity: 3 })
   const [totals, audit] = copies
-  return Effect.all([
+  return all([
     Stream.runSum(totals),
     Stream.runForEach(audit, (n) => {
-      Effect.sleep("10 millis")
-      Effect.log(`audit ${n}`)
+      sleep("10 millis")
+      log(`audit ${n}`)
     })
   ], { concurrency: 2 })
 }
@@ -221,7 +221,7 @@ const buffered = Stream.buffer(Stream.range(1, 12), { capacity: 3 })
 const bursts = Stream.concat(
   Stream.make("c", "ca", "cat"),
   Stream.fromEffect(() => {
-    Effect.sleep("300 millis")
+    sleep("300 millis")
     return "cats"
   })
 )
@@ -246,7 +246,7 @@ const announcements = Stream.schedule(
 )
 
 function announce() {
-  Stream.runForEach(announcements, (message) => Effect.log(message))
+  Stream.runForEach(announcements, (message) => log(message))
 }
 ```
 

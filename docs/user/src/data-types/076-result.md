@@ -69,7 +69,7 @@ function requireCount(input: string) {
 // number!InvalidCount!
 
 function validatePair() {
-  return Effect.all([
+  return all([
     requireCount("6"),
     Effect.fromResult(Result.succeed("ready"))
   ])

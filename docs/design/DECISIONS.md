@@ -341,6 +341,8 @@ Will approved the token-reduction proposals measured on the docs and examples (5
 
 **D150. Runners lead back in** (extends D38). `runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude, re-exported from `effect/Effect`. They are called from plain TypeScript: a `.ts` file, a hatch's body, or a module's top level. EK1005 still reports one in code a fiber runs, and does not apply inside a hatch.
 
+**D151. The Effect module's most used functions need no prefix** (Will; extends D146). `all`, `die`, `forEach`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `race`, `repeat`, `retry`, `sleep`, `timeout`, and `withSpan` are in scope as the Effect module's functions: `sleep("1 second")`, `retry(fetchUser(id), policy)`. They were 329 of the 538 `Effect.` member uses in the docs and examples. Operations that Effeck spells another way stay qualified: `Effect.fail` is `throw`, `Effect.provide` is `with`, `Effect.scoped` and `acquireRelease` are `using`, and `Effect.sync`, `promise`, `try`, and `tryPromise` are the hatches (D148). Names that read poorly alone, such as `result`, `exit`, and `service`, stay qualified too. A local declaration shadows one; the emitted JavaScript imports each one used from `effect/Effect`.
+
 ### Known gaps
 
 - **Runtime (R):** At extraction, Stream adaptation retained a one-element buffer instead of D26's zero-capacity handoff; `$programs` handled iterables but not records; `$trusted` matched exception names or tags. F2, F7, and F8 own the follow-up behavior; later decisions and the runtime README take precedence over this extraction snapshot.

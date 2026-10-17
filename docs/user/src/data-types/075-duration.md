@@ -68,7 +68,7 @@ const doubled = Duration.times(total, 2)
 Duration.toMillis(doubled) // 9000
 
 function waitBeforeRetry() {
-  Effect.sleep(doubled)
+  sleep(doubled)
 }
 ```
 

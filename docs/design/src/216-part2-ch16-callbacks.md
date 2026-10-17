@@ -24,7 +24,7 @@ The declaration file writes the polymorphism out, as the comment shows. A TypeSc
 
 ```ts es
 function withRetry<A>(times: number, program: () => A) {
-  return Effect.retry(program, Schedule.recurs(times))
+  return retry(program, Schedule.recurs(times))
 }
 // <A, E, R>(times: number, program: () => A!E!R) => A!E!R
 ```
@@ -39,8 +39,8 @@ A control operation must be handled on the fiber that performs it (Chapter 9). T
 
 ```ts es
 handle(() => {
-  Effect.retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
-  Effect.timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
+  retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
+  timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
 }, Approval, { approve: (_request, k) => resume(k, true) })
 ```
 

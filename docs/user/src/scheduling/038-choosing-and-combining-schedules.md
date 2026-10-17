@@ -28,9 +28,9 @@ These declarations build reusable values without running work. Choose a rule acc
 
 ```ts
 function runChecks() {
-  Effect.repeat(() => {
-    Effect.logInfo("checking")
-    Effect.sleep("2 seconds")
+  repeat(() => {
+    logInfo("checking")
+    sleep("2 seconds")
   }, Schedule.upTo(Schedule.spaced("6 seconds"), { times: 2 }))
 }
 ```

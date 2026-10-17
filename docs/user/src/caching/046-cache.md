@@ -34,11 +34,11 @@ function concurrentLookup() {
     capacity: 10,
     lookup: (key: string) => {
       calls++
-      Effect.sleep("30 millis")
+      sleep("30 millis")
       return key.toUpperCase()
     }
   })
-  const values = Effect.all([
+  const values = all([
     Cache.get(cache, "north"),
     Cache.get(cache, "north"),
     Cache.get(cache, "north")

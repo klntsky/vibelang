@@ -7,7 +7,7 @@ Use compiler diagnostics to inspect Effeck contracts and catch failures or requi
 ```ts
 // example.effeck
 function sample() {
-  Effect.sleep("5 millis")
+  sleep("5 millis")
   return "sample"
 }
 // string!!
@@ -130,7 +130,7 @@ different call semantics.
 
 ```ts
 function tracedSample() {
-  return Effect.withSpan(sample(), "sample")
+  return withSpan(sample(), "sample")
 }
 ```
 

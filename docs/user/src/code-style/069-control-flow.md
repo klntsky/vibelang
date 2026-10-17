@@ -22,7 +22,7 @@ function requiredSize(size: number) {
 
 function announceIfEnabled(enabled: boolean) {
   return Effect.when(() => {
-    Effect.log("notifications enabled")
+    log("notifications enabled")
     return "announced"
   }, () => enabled)
 }
@@ -34,12 +34,12 @@ function announceIfEnabled(enabled: boolean) {
 
 ```ts
 function amount() {
-  Effect.sleep("30 millis")
+  sleep("30 millis")
   return 18
 }
 
 function currency() {
-  Effect.sleep("10 millis")
+  sleep("10 millis")
   return "USD"
 }
 
@@ -71,7 +71,7 @@ function inspectPages() {
   const inspected: number[] = []
   let page = 1
   while (page <= 3) {
-    Effect.sleep("10 millis")
+    sleep("10 millis")
     inspected.push(page)
     page++
   }
@@ -80,7 +80,7 @@ function inspectPages() {
 
 function logAttempts() {
   for (let attempt = 1; attempt <= 3; attempt++) {
-    Effect.log(`attempt ${attempt}`)
+    log(`attempt ${attempt}`)
   }
 }
 ```
@@ -92,7 +92,7 @@ function operatorLoop() {
   let index = 0
   Effect.whileLoop({
     while: () => index < 3,
-    body: () => Effect.log(`iteration ${index}`),
+    body: () => log(`iteration ${index}`),
     step: () => { index++ }
   })
 }
@@ -104,19 +104,19 @@ In Effect 4.0.5, `whileLoop` accepts one options object and returns `void`. Its 
 
 ```ts
 function prepare(id: number) {
-  Effect.sleep("10 millis")
+  sleep("10 millis")
   return `prepared-${id}`
 }
 
 function prepareAll() {
-  return Effect.forEach([3, 5, 8], (id, index) => {
-    Effect.log(`preparing position ${index}`)
+  return forEach([3, 5, 8], (id, index) => {
+    log(`preparing position ${index}`)
     return prepare(id)
   }, { concurrency: 2 })
 }
 
 function logAll() {
-  Effect.forEach([3, 5, 8], (id) => Effect.log(`id ${id}`), { discard: true })
+  forEach([3, 5, 8], (id) => log(`id ${id}`), { discard: true })
 }
 ```
 
@@ -126,10 +126,10 @@ function logAll() {
 
 ```ts
 function collected() {
-  const tuple = Effect.all([() => 12, () => "ready"] as const)
-  const object = Effect.all({ count: () => 12, status: () => "ready" })
+  const tuple = all([() => 12, () => "ready"] as const)
+  const object = all({ count: () => 12, status: () => "ready" })
   const iterable = new Set([() => prepare(3), () => prepare(5)])
-  const array = Effect.all(iterable, { concurrency: 2 })
+  const array = all(iterable, { concurrency: 2 })
   return { tuple, object, array }
 }
 // tuple: [12, "ready"]
@@ -148,17 +148,17 @@ error Unavailable {
 
 function load(id: number) {
   if (id === 5) throw new Unavailable({ id })
-  Effect.log(`loaded ${id}`)
+  log(`loaded ${id}`)
   return `item-${id}`
 }
 
 function stopAtFailure() {
-  return Effect.all([load(3), load(5), load(8)])
+  return all([load(3), load(5), load(8)])
 }
 // Sequentially loads 3, then fails with Unavailable; 8 is not started.
 
 function collectOutcomes() {
-  return Effect.all([load(3), load(5), load(8)], { mode: "result" })
+  return all([load(3), load(5), load(8)], { mode: "result" })
 }
 // [Result.succeed("item-3"), Result.fail(Unavailable), Result.succeed("item-8")]
 ```

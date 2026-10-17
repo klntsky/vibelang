@@ -9,7 +9,7 @@ const exampleKey = Redacted.make("example-key-not-a-real-secret")
 String(exampleKey) // "<redacted>"
 
 function reportConfiguration() {
-  Effect.log({ apiKey: exampleKey })
+  log({ apiKey: exampleKey })
 }
 ```
 

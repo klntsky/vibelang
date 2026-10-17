@@ -37,7 +37,7 @@ Interruption is a third kind of termination. It also bypasses `catch`; both inte
 ```ts
 function percentage(part: number, total: number) {
   if (total <= 0) {
-    Effect.die(new Error("validated total must be positive"))
+    die(new Error("validated total must be positive"))
   }
   return part / total * 100
 }

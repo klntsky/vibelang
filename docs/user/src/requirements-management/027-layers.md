@@ -32,7 +32,7 @@ const PrinterLive = Layer.effect(Printer, () => {
   const settings = Settings()
   return {
     print(text) {
-      Effect.log(`${settings.prefix}: ${text}`)
+      log(`${settings.prefix}: ${text}`)
     }
   }
 })
@@ -139,8 +139,8 @@ const ReportsFallback = Layer.succeed(Reports, {
 
 const ObservedReports = pipe(
   ReportsUnavailable,
-  Layer.tap(() => Effect.log("Reports initialized")),
-  Layer.tapError((error) => Effect.log(`Reports initialization failed: ${error._tag}`))
+  Layer.tap(() => log("Reports initialized")),
+  Layer.tapError((error) => log(`Reports initialization failed: ${error._tag}`))
 )
 
 const ResilientReports = Layer.catch(ObservedReports, () => ReportsFallback)

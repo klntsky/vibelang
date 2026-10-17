@@ -11,7 +11,7 @@ function memoizeLengths() {
     capacity: 64,
     lookup: (word: string) => {
       lookups++
-      Effect.sleep("10 millis")
+      sleep("10 millis")
       return word.length
     }
   })
@@ -33,7 +33,7 @@ function cachedSettings() {
   let loads = 0
   const settings = Effect.cached(() => {
     loads++
-    Effect.sleep("20 millis")
+    sleep("20 millis")
     return { theme: "dark", revision: loads }
   })
   // The settings loader has not run yet.
@@ -53,7 +53,7 @@ function expiringSnapshot() {
   const snapshot = Effect.cachedWithTTL(() => ++revision, "100 millis")
   const first = snapshot()
   const same = snapshot()
-  Effect.sleep("150 millis")
+  sleep("150 millis")
   const fresh = snapshot()
   return { first, same, fresh } // { first: 1, same: 1, fresh: 2 }
 }

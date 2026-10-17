@@ -18,10 +18,10 @@ Create the pool once for the callers that must share a limit. Allocating a separ
 ```ts
 function uploadAll() {
   const uploads = Semaphore.make(2)
-  return Effect.forEach(["a.csv", "b.csv", "c.csv", "d.csv"], (file) => {
+  return forEach(["a.csv", "b.csv", "c.csv", "d.csv"], (file) => {
     return pipe(() => {
-      Effect.logInfo("upload started", file)
-      Effect.sleep("30 millis")
+      logInfo("upload started", file)
+      sleep("30 millis")
       return file
     }, Semaphore.withPermits(uploads, 1))
   }, { concurrency: "unbounded" })
@@ -35,9 +35,9 @@ The traversal can start all four callers, but only two can enter the permit-prot
 ```ts
 function weightedJobs() {
   const memoryBudget = Semaphore.make(4)
-  return Effect.forEach([1, 2, 3], (weight) => {
+  return forEach([1, 2, 3], (weight) => {
     return pipe(() => {
-      Effect.sleep("20 millis")
+      sleep("20 millis")
       return `job using ${weight} units`
     }, Semaphore.withPermits(memoryBudget, weight))
   }, { concurrency: 3 })
@@ -56,7 +56,7 @@ function releaseOnFailure() {
   try {
     pipe(() => { throw new Rejected() }, Semaphore.withPermits(mutex, 1))
   } catch (error) {
-    Effect.logWarning("first job rejected", error._tag)
+    logWarning("first job rejected", error._tag)
   }
   return pipe(() => "next job can enter", Semaphore.withPermits(mutex, 1))
 }

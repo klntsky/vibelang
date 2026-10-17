@@ -64,7 +64,9 @@ clients, see [editors/](editors/README.md).
   and call `Users.find(id)`; `control` declares a control operation the same way.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`, the boundary
-  hatches `sync`, `try`, and `callback`, and the runners need no import, and neither does any other module of `effect`'s root, such as
+  hatches `sync`, `try`, and `callback`, the runners, and the Effect
+  functions `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and
+  a few more need no import, and neither does any other module of `effect`'s root, such as
   `Console`, `Option`, and `Stream`. Import other source files by their source name,
   `import { Todos } from "./todos.effeck"`; the compiler emits `.js` imports.
 - A module's top level only declares. A call there that would run a program

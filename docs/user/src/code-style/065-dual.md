@@ -22,19 +22,19 @@ The direct form supplies `source` in the first call. The data-last form first bu
 
 ```ts
 function lookup() {
-  Effect.sleep("10 millis")
+  sleep("10 millis")
   return "found"
 }
 
 function directLookup() {
-  return Effect.timeout(lookup(), "1 second")
+  return timeout(lookup(), "1 second")
 }
 
 function pipedLookup() {
   return pipe(
     () => lookup(),
-    Effect.retry({ times: 2 }),
-    Effect.timeout("1 second")
+    retry({ times: 2 }),
+    timeout("1 second")
   )
 }
 ```
@@ -45,13 +45,13 @@ The first argument to the program pipeline is a function, so retry and timeout c
 
 ```ts
 function boundedLookup() {
-  return Effect.retry(lookup(), { times: 2 })
+  return retry(lookup(), { times: 2 })
 }
 
 const reusableLookup = () => pipe(
   () => lookup(),
-  Effect.retry({ times: 2 }),
-  Effect.timeout("1 second")
+  retry({ times: 2 }),
+  timeout("1 second")
 )
 ```
 

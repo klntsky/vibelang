@@ -121,7 +121,7 @@ function tryImpossibleGenerator() {
   try {
     return try(Arbitrary.schema(Schema.Never))
   } catch (error) {
-    Effect.log("Arbitrary derivation failed for the empty domain")
+    log("Arbitrary derivation failed for the empty domain")
     throw error
   }
 }

@@ -11,11 +11,11 @@ error ExportRejected
 
 function exportRows(accepted: boolean) {
   try {
-    Effect.log("Export started")
+    log("Export started")
     if (!accepted) throw new ExportRejected()
     return "Export complete"
   } finally {
-    Effect.log("Export finished")
+    log("Export finished")
   }
 }
 // string!ExportRejected!
@@ -33,9 +33,9 @@ function exportRows(accepted: boolean) {
 function observedExport(accepted: boolean) {
   return Effect.onExit(() => exportRows(accepted), (exit) => {
     if (Exit.isSuccess(exit)) {
-      Effect.log("Export succeeded")
+      log("Export succeeded")
     } else {
-      Effect.log("Export stopped", exit.cause.reasons.map((reason) => reason._tag))
+      log("Export stopped", exit.cause.reasons.map((reason) => reason._tag))
     }
   })
 }
@@ -49,9 +49,9 @@ function observedExport(accepted: boolean) {
 function reportFailedExport(accepted: boolean) {
   return Effect.onError(() => exportRows(accepted), (cause) => {
     if (Cause.hasInterrupts(cause)) {
-      Effect.log("Export cancelled; cleanup complete")
+      log("Export cancelled; cleanup complete")
     } else {
-      Effect.log("Export failed; cleanup complete")
+      log("Export failed; cleanup complete")
     }
   })
 }
@@ -76,11 +76,11 @@ function withLease() {
   return Effect.acquireUseRelease(
     () => store.acquire(),
     (lease) => {
-      Effect.log(`Working with lease ${lease.id}`)
+      log(`Working with lease ${lease.id}`)
       return lease.id
     },
     (lease, exit) => {
-      Effect.log(`Releasing after ${exit._tag}`)
+      log(`Releasing after ${exit._tag}`)
       store.release(lease)
     }
   )

@@ -72,7 +72,7 @@ const renderTime = Metric.timer("guide_render_duration", {
 
 function render() {
   return pipe(() => {
-    Effect.sleep("30 millis")
+    sleep("30 millis")
     return "rendered"
   }, Effect.trackDuration(renderTime))
 }

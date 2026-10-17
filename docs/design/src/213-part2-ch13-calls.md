@@ -134,7 +134,7 @@ A call never starts a fiber. A program starts only when a **runner** receives it
 // main.effeck
 export function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
-  Effect.log(`welcomed ${name}`)
+  log(`welcomed ${name}`)
 }
 
 NodeRuntime.runMain(() => main())

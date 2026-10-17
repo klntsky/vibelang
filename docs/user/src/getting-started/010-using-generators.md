@@ -8,7 +8,7 @@ Effeck sequences computations with ordinary functions and calls. This page cover
 function invoice(quantity: number) {
   const unitPrice = Config.Finite("UNIT_PRICE")()
   const subtotal = quantity * unitPrice
-  Effect.log(`subtotal=${subtotal}`)
+  log(`subtotal=${subtotal}`)
   return subtotal
 }
 ```
@@ -19,7 +19,7 @@ Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")
 
 ```ts
 function delayedLabel(name: string) {
-  Effect.sleep("30 millis")
+  sleep("30 millis")
   return name.toUpperCase()
 }
 
@@ -39,7 +39,7 @@ function reportEven(values: ReadonlyArray<number>) {
   for (const value of values) {
     if (value < 0) break
     if (value % 2 !== 0) continue
-    Effect.log(`even=${value}`)
+    log(`even=${value}`)
     count += 1
   }
   return count
@@ -81,7 +81,7 @@ class Prefixer {
   constructor(readonly prefix: string) {}
 
   format(value: string) {
-    Effect.log("formatting label")
+    log("formatting label")
     return `${this.prefix}: ${value}`
   }
 }
@@ -99,7 +99,7 @@ Ordinary method calls preserve `this` and evaluate the receiver once. There is n
 ```ts
 function* ticks() {
   for (let n = 0; n < 3; n += 1) {
-    Effect.sleep("10 millis")
+    sleep("10 millis")
     yield n
   }
 }

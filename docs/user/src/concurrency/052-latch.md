@@ -11,7 +11,7 @@ function initializeThenWork() {
     Latch.await(ready)
     return "processing enabled"
   })
-  Effect.sleep("20 millis")
+  sleep("20 millis")
   Latch.open(ready)
   return Fiber.join(worker)
 }
@@ -55,7 +55,7 @@ function gatedExclusiveWork() {
   const exclusive = Semaphore.make(1)
   Latch.await(initialized)
   return pipe(
-    () => Effect.logInfo("updating shared device"),
+    () => logInfo("updating shared device"),
     Semaphore.withPermits(exclusive, 1)
   )
 }

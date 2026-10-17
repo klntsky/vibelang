@@ -6,8 +6,8 @@ Tracing records an operation's duration and its relationship to other operations
 
 ```ts
 function requestTrace() {
-  return Effect.withSpan(() => {
-    Effect.sleep("10 millis")
+  return withSpan(() => {
+    sleep("10 millis")
     return "response"
   }, "report-request")
 }
@@ -19,8 +19,8 @@ A span describes one operation with a name, identifiers, timestamps, status, and
 
 ```ts
 function renderReport(format: string) {
-  return Effect.withSpan(() => {
-    Effect.sleep("20 millis")
+  return withSpan(() => {
+    sleep("20 millis")
     return `report.${format}`
   }, "render-report", { attributes: { "report.format": format } })
 }
@@ -63,11 +63,11 @@ error RenderFailed {
 }
 
 function failingRender() {
-  const exit = Effect.exit(Effect.withSpan(() => {
+  const exit = Effect.exit(withSpan(() => {
     Effect.annotateCurrentSpan("report.format", "unknown")
     throw new RenderFailed({ format: "unknown" })
   }, "render-report"))
-  if (Exit.isFailure(exit)) Effect.logError("render failed", exit.cause)
+  if (Exit.isFailure(exit)) logError("render failed", exit.cause)
   return exit
 }
 ```
@@ -78,10 +78,10 @@ An exported failure includes error status and failure details, while attributes 
 
 ```ts
 function tracedLogs() {
-  Effect.provide(() => Effect.withSpan(() => {
-    Effect.logInfo("input validated")
-    Effect.sleep("10 millis")
-    Effect.logInfo("artifact written")
+  Effect.provide(() => withSpan(() => {
+    logInfo("input validated")
+    sleep("10 millis")
+    logInfo("artifact written")
   }, "generate-artifact"), Logger.layer([
     Logger.defaultLogger,
     Logger.tracerLogger
@@ -95,14 +95,14 @@ The tracer logger records logs within an active span as timestamped events. Thos
 
 ```ts
 function loadTemplate() {
-  return Effect.withSpan(() => {
-    Effect.sleep("10 millis")
+  return withSpan(() => {
+    sleep("10 millis")
     return "weekly-template"
   }, "load-template")
 }
 
 function generate() {
-  return Effect.withSpan(() => {
+  return withSpan(() => {
     const template = loadTemplate()
     const output = renderReport("csv")
     return { template, output }

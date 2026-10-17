@@ -89,7 +89,7 @@ function stopImmediately() {
     try {
       Queue.await(queue)
     } finally {
-      Effect.logInfo("queue closed")
+      logInfo("queue closed")
     }
   })
   Queue.shutdown(queue)

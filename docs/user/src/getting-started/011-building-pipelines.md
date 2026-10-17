@@ -22,8 +22,8 @@ For program operators, start with the work to run:
 function preparedPrice() {
   return pipe(
     () => priceLabel(),
-    Effect.timeout("1 second"),
-    Effect.withSpan("price-label")
+    timeout("1 second"),
+    withSpan("price-label")
   )
 }
 ```
@@ -39,7 +39,7 @@ function adjustedPrice() {
 }
 
 function recordPrice() {
-  Effect.log(`price=${adjustedPrice()}`)
+  log(`price=${adjustedPrice()}`)
   return "recorded"
 }
 ```
@@ -91,7 +91,7 @@ function validated(value: number) {
 ```ts
 function quotedTotal() {
   const amount = total()
-  Effect.log(`quoted amount=${amount}`)
+  log(`quoted amount=${amount}`)
   return amount
 }
 ```
@@ -102,7 +102,7 @@ The local variable remains available after logging, giving the behavior of `Effe
 
 ```ts
 function summary() {
-  const details = Effect.all({
+  const details = all({
     price: total(),
     label: priceLabel()
   }, { concurrency: 2 })
@@ -118,9 +118,9 @@ For a dynamic collection, use `Effect.forEach(values, (value) => work(value), { 
 
 ```ts
 function saveNotice() {
-  const notice = () => Effect.log("saved")
+  const notice = () => log("saved")
   notice()
-  Effect.log("finished")
+  log("finished")
 }
 ```
 

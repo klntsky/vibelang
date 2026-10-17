@@ -15,7 +15,7 @@ const dashboard = Effect.fn("dashboard")(function* (id: string) {
 
 ```ts es
 function dashboard(id: string) {
-  const [profile, orders] = Effect.all([loadProfile(id), recentOrders(id)], {
+  const [profile, orders] = all([loadProfile(id), recentOrders(id)], {
     concurrency: 2
   })
   return { profile, orders }
@@ -23,10 +23,10 @@ function dashboard(id: string) {
 ```
 
 ```ts es
-const thumbnails = Effect.forEach(images, (image) => resize(image), { concurrency: 8 })
-const fastest = Effect.race(fromCache(id), fromNetwork(id))
+const thumbnails = forEach(images, (image) => resize(image), { concurrency: 8 })
+const fastest = race(fromCache(id), fromNetwork(id))
 const first = Effect.raceFirst(fromCache(id), fromNetwork(id))
-const quick = Effect.timeout(slowQuery(id), "500 millis")
+const quick = timeout(slowQuery(id), "500 millis")
 ```
 
 Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect's semantics here:

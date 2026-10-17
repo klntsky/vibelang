@@ -125,7 +125,7 @@ export function busyReviewer() {
 import { Approval } from "./approval.effeck"
 
 export function approveAll(requests: ReadonlyArray<string>) {
-  return Effect.forEach(requests, (request) =>
+  return forEach(requests, (request) =>
     handle(() => Approval.approve(request), Approval, {
       approve(_request, k) { return resume(k, true) }
     }),

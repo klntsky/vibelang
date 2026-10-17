@@ -42,7 +42,7 @@ A bounded hub backpressures publishers when its buffer is full, so a slow subscr
 function listen(hub: PubSub.PubSub<string>) {
   using subscription = PubSub.subscribe(hub)
   const message = PubSub.take(subscription)
-  Effect.logInfo("notification", message)
+  logInfo("notification", message)
 }
 ```
 
@@ -99,7 +99,7 @@ function ownHub() {
     {
       using subscriber = PubSub.subscribe(hub)
       PubSub.publish(hub, "last update")
-      Effect.logInfo(PubSub.take(subscriber))
+      logInfo(PubSub.take(subscriber))
     } // This subscription is released here.
   } finally {
     PubSub.shutdown(hub)

@@ -14,7 +14,7 @@ function latestTitle() {
 }
 
 function cachedTitle() {
-  Effect.log("Reading saved title")
+  log("Reading saved title")
   return "Saved issue"
 }
 

@@ -49,7 +49,7 @@ bun add effect@4.0.5 @effect/platform-bun
 export function main() {
   const fs = Effect.service(FileSystem.FileSystem)
   const greeting = fs.readFileString("./greeting.txt")
-  Effect.log(greeting.trim())
+  log(greeting.trim())
 }
 ```
 

@@ -32,7 +32,7 @@ function summarize() {
 }
 
 function drainObserved() {
-  const source = Stream.tap(Stream.make("ready", "done"), (s) => Effect.log(s))
+  const source = Stream.tap(Stream.make("ready", "done"), (s) => log(s))
   Stream.run(source, Sink.drain)
 }
 ```
@@ -43,8 +43,8 @@ These sinks consume the whole source. `drain` discards elements but still execut
 
 ```ts
 const print = Sink.forEach((line: string) => {
-  Effect.log(`record: ${line}`)
-  Effect.sleep("10 millis")
+  log(`record: ${line}`)
+  sleep("10 millis")
 })
 
 function writeRecords() {
@@ -141,7 +141,7 @@ const budget = Sink.fold(
   () => 0,
   (sum) => sum < 20,
   (sum, n: number) => {
-    Effect.log(`adding ${n}`)
+    log(`adding ${n}`)
     return sum + n
   }
 )

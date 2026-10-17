@@ -47,7 +47,7 @@ function shareFailure() {
   try {
     return Deferred.await(result)
   } catch (error) {
-    Effect.logError(error)
+    logError(error)
     return 0
   }
 }
@@ -79,7 +79,7 @@ function inspectWithoutWaiting() {
 function coordinate() {
   const prepared = Deferred.make<ReadonlyArray<string>>()
   const producer = fork(() => {
-    Effect.sleep("20 millis")
+    sleep("20 millis")
     Deferred.succeed(prepared, ["part-a", "part-b"])
   })
   const consumer = fork(() => {

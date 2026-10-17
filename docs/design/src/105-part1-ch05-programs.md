@@ -26,9 +26,9 @@ const fastest = yield* Effect.race(fromCache(id), fromNetwork(id))
 ```
 
 ```ts es
-const user = Effect.retry(fetchUser(id), Schedule.exponential("100 millis"))
-const fresh = Effect.timeout(fetchUser(id), "1 second")
-const fastest = Effect.race(fromCache(id), fromNetwork(id))   // the first to succeed
+const user = retry(fetchUser(id), Schedule.exponential("100 millis"))
+const fresh = timeout(fetchUser(id), "1 second")
+const fastest = race(fromCache(id), fromNetwork(id))   // the first to succeed
 ```
 
 Each line is a call, so it runs: `user` is a `User`, not an `Effect`. The inner calls are passed by name: `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
@@ -48,9 +48,9 @@ const user = yield* fetchUser(id).pipe(
 ```ts es
 const user = pipe(
   () => fetchUser(id),
-  Effect.retry({ times: 3 }),
-  Effect.timeout("2 seconds"),
-  Effect.withSpan("load-user")
+  retry({ times: 3 }),
+  timeout("2 seconds"),
+  withSpan("load-user")
 )
 // user: User;  E gains Cause.TimeoutError from Effect.timeout
 ```
@@ -87,7 +87,7 @@ function makeSync(store: Store) {
 
 function syncEverything(stores: ReadonlyArray<Store>) {
   const syncAll = stores.map(makeSync)                    // an array of programs; nothing ran
-  return Effect.all(syncAll, { concurrency: 4 })          // now they run
+  return all(syncAll, { concurrency: 4 })          // now they run
 }
 ```
 
