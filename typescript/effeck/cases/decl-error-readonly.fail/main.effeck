@@ -1,0 +1,7 @@
+// expect: TS2540
+error NotFound { id: string }
+
+export function rename(error: NotFound) {
+  error.id = "other"
+  return error
+}

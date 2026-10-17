@@ -98,6 +98,8 @@ type Parser struct {
 	currentParent        *ast.Node
 	setParentFromContext ast.Visitor
 	reparsedClones       []*ast.Node
+
+	effeckReadonlyMembers bool // property signatures get a readonly modifier (effeck.go)
 }
 
 func newParser() *Parser {
@@ -1116,6 +1118,10 @@ func (p *Parser) parseStatement() *ast.Statement {
 		if p.isStartOfDeclaration() {
 			return p.parseDeclaration()
 		}
+	case ast.KindIdentifier:
+		if p.isStartOfEffeckDeclaration() {
+			return p.parseDeclaration()
+		}
 	}
 	return p.parseExpressionOrLabeledStatement()
 }
@@ -1169,6 +1175,10 @@ func (p *Parser) parseDeclarationWorker(pos int, jsdoc jsdocScannerInfo, modifie
 		return p.parseModuleDeclaration(pos, jsdoc, modifiers)
 	case ast.KindImportKeyword:
 		return p.parseImportDeclarationOrImportEqualsDeclaration(pos, jsdoc, modifiers)
+	case ast.KindIdentifier:
+		if node := p.parseEffeckDeclaration(pos, jsdoc, modifiers); node != nil {
+			return node
+		}
 	case ast.KindExportKeyword:
 		p.nextToken()
 		switch p.token {
@@ -3661,6 +3671,9 @@ func (p *Parser) parsePropertyOrMethodSignature(pos int, jsdoc jsdocScannerInfo,
 		var initializer *ast.Expression
 		if p.token == ast.KindEqualsToken {
 			initializer = p.parseInitializer()
+		}
+		if p.effeckReadonlyMembers {
+			modifiers = p.effeckReadonly(modifiers, pos)
 		}
 		result = p.factory.NewPropertySignatureDeclaration(modifiers, name, questionToken, typeNode, initializer)
 	}
@@ -6226,6 +6239,8 @@ func (p *Parser) scanStartOfDeclaration() bool {
 		case ast.KindStaticKeyword:
 			p.nextToken()
 			continue
+		case ast.KindIdentifier:
+			return p.isEffeckFile() && p.scanStartOfEffeckDeclaration()
 		}
 		return false
 	}
