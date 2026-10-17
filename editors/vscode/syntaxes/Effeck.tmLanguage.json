@@ -1,6 +1,6 @@
 {
 	"information_for_contributors": [
-		"Derived for Effeck by editors/vscode/scripts/derive-grammar.mjs from the TypeScript grammar that VS Code ships; only name and scopeName differ.",
+		"Derived for Effeck by editors/vscode/scripts/derive-grammar.mjs from the TypeScript grammar that VS Code ships; it adds the Effeck forms in effeck-grammar.mjs.",
 		"This file has been converted from https://github.com/microsoft/TypeScript-TmLanguage/blob/master/TypeScript.tmLanguage",
 		"If you want to provide a fix or improvement, please create a pull request against the original repository.",
 		"Once accepted there, we are happy to receive an update request."
@@ -31,6 +31,18 @@
 		},
 		"statements": {
 			"patterns": [
+				{
+					"include": "#effeck-type-declaration"
+				},
+				{
+					"include": "#effeck-member-declaration"
+				},
+				{
+					"include": "#effeck-layer-declaration"
+				},
+				{
+					"include": "#effeck-handle-clause"
+				},
 				{
 					"include": "#declaration"
 				},
@@ -4150,6 +4162,10 @@
 		"type": {
 			"patterns": [
 				{
+					"name": "keyword.operator.type.effect.ts",
+					"match": "!"
+				},
+				{
 					"include": "#comment"
 				},
 				{
@@ -5748,6 +5764,104 @@
 					]
 				}
 			]
+		},
+		"effeck-type-declaration": {
+			"name": "meta.class.ts",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(error|schema)\\s+([_$[:alpha:]][_$[:alnum:]]*)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.export.ts"
+				},
+				"2": {
+					"name": "storage.type.class.ts"
+				},
+				"3": {
+					"name": "entity.name.type.class.ts"
+				},
+				"4": {
+					"name": "entity.name.type.ts"
+				}
+			},
+			"end": "(?<=\\})|(?<=[_$[:alnum:]>])(?=\\s*(?:$|;|//))",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#type-parameters"
+				},
+				{
+					"include": "#type-object"
+				}
+			]
+		},
+		"effeck-member-declaration": {
+			"name": "meta.class.ts",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(service|control)\\s+([_$[:alpha:]][_$[:alnum:]]*)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.export.ts"
+				},
+				"2": {
+					"name": "storage.type.class.ts"
+				},
+				"3": {
+					"name": "entity.name.type.class.ts"
+				},
+				"4": {
+					"name": "entity.name.type.ts"
+				}
+			},
+			"end": "(?<=\\})|(?<=[_$[:alnum:]>])(?=\\s*(?:$|;|//))",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#type-parameters"
+				},
+				{
+					"include": "#class-or-interface-body"
+				}
+			]
+		},
+		"effeck-layer-declaration": {
+			"name": "meta.class.ts",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(layer)\\s+([_$[:alpha:]][_$[:alnum:]]*)\\s*:\\s*([_$[:alpha:]][_$[:alnum:]]*(?:\\.[_$[:alpha:]][_$[:alnum:]]*)*)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.export.ts"
+				},
+				"2": {
+					"name": "storage.type.class.ts"
+				},
+				"3": {
+					"name": "entity.name.type.class.ts"
+				},
+				"4": {
+					"name": "entity.name.type.ts"
+				}
+			},
+			"end": "(?<=\\})|(?<=[_$[:alnum:]>])(?=\\s*(?:$|;|//))",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#type-parameters"
+				},
+				{
+					"include": "#class-or-interface-body"
+				}
+			]
+		},
+		"effeck-handle-clause": {
+			"match": "\\b(handle)\\s+(?=[_$[:alpha:]][_$[:alnum:]]*\\s*\\.\\s*[_$[:alpha:]][_$[:alnum:]]*\\s*\\()",
+			"captures": {
+				"1": {
+					"name": "keyword.control.trycatch.ts"
+				}
+			}
 		}
 	}
 }
