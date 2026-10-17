@@ -130,7 +130,7 @@ function withFilter(input: string) {
 function withPredicate(input: string) {
   return Effect.catchIf(
     () => findItem(input),
-    (error) => error._tag === "ItemMissing",
+    (error) => error is ItemMissing,
     () => ({ code: "", label: "Out of catalog" })
   )
 }

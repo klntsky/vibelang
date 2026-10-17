@@ -414,13 +414,14 @@ func (p *Parser) parseMatchObjectPattern(anchor core.TextRange) *pattern {
 				result.items = append(result.items, &pattern{kind: patternInvalid, anchor: keyAnchor, code: 4704, detail: "A computed key other than a name or a literal"})
 				continue
 			}
-			result.clauses = append(result.clauses, objectClause{key: key, computed: true, pattern: sub})
+			// A literal key reads the same as a written one, ["a"] as "a".
+			result.clauses = append(result.clauses, objectClause{key: key, computed: !isLiteralKey(key), pattern: sub})
 		default:
 			key := p.parsePropertyName()
 			clause := objectClause{key: key}
 			if key.Kind == ast.KindComputedPropertyName {
 				clause.key = key.Expression()
-				clause.computed = true
+				clause.computed = !isLiteralKey(clause.key)
 			}
 			if p.parseOptional(ast.KindColonToken) {
 				clause.pattern = p.parseMatchPattern()
@@ -619,11 +620,12 @@ func (p *Parser) propertyPath(base matchPath, clause objectClause) matchPath {
 		case !clause.computed && key.Kind == ast.KindNumericLiteral:
 			return p.mElement(base(), p.effeckSynthesized(p.factory.NewNumericLiteral(key.Text(), ast.TokenFlagsNone), key.Loc), key.Loc)
 		}
-		if copied := p.cloneIdentExpression(key); copied != nil {
-			return p.mElement(base(), copied, key.Loc)
-		}
-		return p.mElement(base(), key, key.Loc)
+		return p.mElement(base(), p.cloneIdentExpression(key), key.Loc)
 	}
+}
+
+func isLiteralKey(key *ast.Node) bool {
+	return key.Kind == ast.KindStringLiteral || key.Kind == ast.KindNumericLiteral
 }
 
 // propertyKeyTest writes "key" in path(), or key in path() for a computed key.
@@ -637,9 +639,6 @@ func (p *Parser) propertyKeyTest(path matchPath, clause objectClause, at core.Te
 		left = p.effeckSynthesized(p.factory.NewNumericLiteral(key.Text(), ast.TokenFlagsNone), key.Loc)
 	default:
 		left = p.cloneIdentExpression(key)
-		if left == nil {
-			left = key
-		}
 	}
 	return p.mBinary(left, ast.KindInKeyword, path(), at)
 }
@@ -733,11 +732,14 @@ func (p *Parser) compilePattern(pat *pattern, path matchPath, steps *[]matchStep
 		typeOf := p.effeckSpanning(p.factory.NewTypeOfExpression(path()), at)
 		test(p.mBinary(typeOf, ast.KindEqualsEqualsEqualsToken, p.mString("object", at), at))
 		test(p.mBinary(path(), ast.KindExclamationEqualsEqualsToken, p.mKeyword(ast.KindNullKeyword, at), at))
-		var names []*ast.Node
+		var names []func() *ast.Node
 		for _, clause := range pat.clauses {
 			test(p.propertyKeyTest(path, clause, at))
-			if !clause.computed {
-				names = append(names, p.mString(clause.key.Text(), clause.key.Loc))
+			key := clause.key
+			if clause.computed {
+				names = append(names, func() *ast.Node { return p.cloneIdentExpression(key) })
+			} else {
+				names = append(names, func() *ast.Node { return p.mString(key.Text(), key.Loc) })
 			}
 			if clause.pattern != nil {
 				p.compilePattern(clause.pattern, p.propertyPath(path, clause), steps, ctx)
@@ -750,7 +752,7 @@ func (p *Parser) compilePattern(pat *pattern, path matchPath, steps *[]matchStep
 			restPath := func() *ast.Node {
 				var copies []*ast.Node
 				for _, name := range names {
-					copies = append(copies, p.mString(name.Text(), name.Loc))
+					copies = append(copies, name())
 				}
 				keys := p.effeckSpanning(p.factory.NewArrayLiteralExpression(p.newNodeList(at, copies), false), at)
 				return p.mCall(p.mIdent("$rest", at), []*ast.Node{path(), keys}, at)

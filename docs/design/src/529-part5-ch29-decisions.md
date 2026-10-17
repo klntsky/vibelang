@@ -193,6 +193,16 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D188 | **Controversial.** A block after a call is its program: `withSpan("load") { ... }`, `it.effect("name") { ... }`; an Effect dual takes it in its program's place | TC39 block params (stage 1); removes `() => { }` around multi-statement programs | 13 |
 | D196 | **Controversial.** `await.all`, `await.allSettled`, `await.race`, `await.any` start programs by name and behave as the `Promise` methods; EK4608 | TC39 await operations and Await Dictionary; `await.x` reads as `Promise.x` |
 | D197 | `await.race [...]` replaces `select`, which is EK4607 | `case` read as value comparison and "select" is not Effect's word |
+| D206 | `match (x) { when P: v; default: d; }` is an expression; mixed `and`/`or`/`not` need parentheses (EK4705) | TC39 pattern matching (stage 1); one expression per arm, `do { }` for more | 3 |
+| D207 | The supported pattern subset: literals, bindings, arrays, objects, matchers, extractors, `and`/`or`/`not`, guards, `is` | The proposal's core; regular expression, relational, and async forms deferred | 3 |
+| D208 | **Controversial.** `Option`, `Exit`, `Result`, and primitive classes compile to their own guards | Exact binding types without a runtime protocol; a shadowing local is not consulted | 3 |
+| D209 | **Controversial.** A match without `default` over a finite union that misses a case is EK4701 | `Match.exhaustive` at compile time; other types throw the proposal's `TypeError` | 3 |
+| D210 | A binding inside `or` or `not` is EK4702 | Inline boolean lowering has nowhere to declare it | 3 |
+| D211 | **Controversial.** `is` binds only in an `if` or `while` `&&` condition, for the then branch or body (EK4703) | Nesting keeps narrowing; the proposal also scopes else and the rest of the block | 3 |
+| D212 | Regular expression and relational patterns and non-literal computed keys are EK4704 | Reported with a guard as the fix instead of misparsed | 3 |
+| D213 | **Deviation.** A matcher is a custom matcher, a primitive class (`typeof`), a class (`instanceof`), a predicate, or a value (SameValue) | Built-in brand checks cannot be written in a runtime helper | 3 |
+| D214 | A match lowers to a returning block, a labeled block, or an immediately invoked arrow function | TypeScript narrows each arm and arms run Effects in every position | 3 |
+| D215 | `customMatcher` is exported, and every `error` class matches by `instanceof` and extracts itself | Same-tag classes stay distinct | 3 |
 
 #### Rules of the runtime and compiler
 

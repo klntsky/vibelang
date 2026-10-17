@@ -185,3 +185,23 @@ function admin(users: ReadonlyArray<{ admin: boolean; name: string }>) {
 // string!NoAdmin!
 ```
 
+#### Matching errors and outcomes
+
+`match` and `is` come from the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (D206, D211). An `error` class is a pattern that matches its own instances (D215), and `Option`, `Exit`, and `Result` have matchers that bind their contents (D208):
+
+```ts es
+function describe(failure: NotFound | Timeout) {
+  return match (failure) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+  }
+}
+
+function firstFailure(id: string) {
+  const outcome = exit(getUser(id))
+  if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) return Cause.pretty(cause)
+  return "ok"
+}
+```
+
+The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case; leaving out `Timeout` above is EK4701 (D209). A typed `catch (e: NotFound)` remains the way to handle a failure as it propagates; `match` is for a failure or an Exit held as a value.

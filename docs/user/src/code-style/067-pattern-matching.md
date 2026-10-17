@@ -1,10 +1,132 @@
 # Pattern Matching
 
-`Match` provides Effect's pattern matching for Effeck values. Build cases for shapes, literals, predicates, or tags, then choose how the matcher handles unmatched input. Match callbacks are synchronous value computations; use ordinary `if` or `switch` when a branch performs Effect work.
+Effeck matches values with `match` and tests them with `is`, from the TC39 pattern matching proposal. Both compile to plain conditionals: TypeScript narrows the value in each arm, and an arm can call Effect functions. [Pattern matching with match and is](../effeck-features/116-match-and-is.md) lists every pattern. Effect's `Match` module still builds reusable matcher functions.
 
-Match constructors, case builders, finalizers, and returned matchers are trusted Effect library functions. Call them directly; exceptions from those calls are defects. An ordinary `catch` does not recover those exceptions.
+## Matching values
 
-## Matchers from types or values
+```ts
+function describeInput(input: number | string) {
+  return match (input) {
+    when Number: `count ${input}`;
+    when String: `label ${input}`;
+  }
+}
+
+function describeJob(input: { state: string; attempts: number }) {
+  return match (input) {
+    when { state: "queued" }: `waiting: ${input.attempts}`;
+    default: `state: ${input.state}`;
+  }
+}
+```
+
+Arms are tried in order, and the first arm whose pattern matches gives the value. `Number` and `String` test `typeof`. An object pattern checks only the properties it names.
+
+## Shapes, guards, and tags
+
+```ts
+function classifyRetry(input: { status: string; attempts: number }) {
+  return match (input) {
+    when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
+    when { status: "failed" }: "retry";
+    default: "leave unchanged";
+  }
+}
+
+type Job =
+  | { _tag: "Queued" }
+  | { _tag: "Running"; worker: string }
+  | { _tag: "Done"; output: string }
+
+function jobLabel(job: Job) {
+  return match (job) {
+    when { _tag: "Queued" }: "waiting";
+    when { _tag: "Running", let worker }: `worker ${worker}`;
+    when { _tag: "Done", let output }: output;
+  }
+}
+```
+
+`let n` binds a property, and a guard, `if (condition)`, tests the bindings before it. Matching `_tag` narrows a tagged union. An `error` class is itself a pattern: `when NotFound:` matches its instances.
+
+## Negating and combining patterns
+
+```ts
+function availability(status: "active" | "paused" | "closed") {
+  return match (status) {
+    when not "closed": "can reopen";
+    default: "archived";
+  }
+}
+
+function weekend(day: string) {
+  return match (day) {
+    when "Saturday" or "Sunday": true;
+    default: false;
+  }
+}
+```
+
+`not` matches what its pattern does not; `or` matches either pattern. Order still matters: a broad arm can consume inputs that a later arm was meant to handle.
+
+## Fixing the return type
+
+```ts
+function display(input: number | boolean): string {
+  return match (input) {
+    when Number: input.toFixed(1);
+    when Boolean: input ? "enabled" : "disabled";
+  }
+}
+```
+
+A match's type is the union of its arms' types. Annotate the function's return type to require one type from every arm, which catches an arm that returns a number from a text formatter.
+
+## Exhaustive handling
+
+```ts
+type Phase = "draft" | "published"
+
+function phaseLabel(phase: Phase) {
+  return match (phase) {
+    when "draft": "Draft";
+    when "published": "Published";
+  }
+}
+```
+
+A match without a `default` arm over a finite union, such as literals, `error` classes, `Option`, `Exit`, or `Result`, must handle every case. Adding a member to `Phase` makes this match EK4701 until it gets an arm. A guard does not prove that every value of a type is covered. Over other types, a match that no arm fits throws a `TypeError` when it runs.
+
+## Defaults, optional outputs, and result outputs
+
+```ts
+type Command = "start" | "stop" | "help"
+
+function withDefault(command: Command) {
+  return match (command) {
+    when "start": "starting";
+    default: `unhandled: ${command}`;
+  }
+}
+
+function optionalCommand(command: Command) {
+  return match (command) {
+    when "start": Option.some("starting");
+    default: Option.none();
+  }
+}
+
+function commandResult(command: Command) {
+  return match (command) {
+    when "start": Result.succeed("starting");
+    default: Result.fail(command);
+  }
+}
+```
+
+A `default` arm comes last and receives every unmatched input, narrowed to the cases no arm took. Return an `Option` or a `Result` from the arms when the caller needs to know whether a case matched. That failed Result is a returned value, not a typed Effect failure.
+
+## Reusable matchers with the Match module
 
 ```ts
 const describe = pipe(
@@ -14,129 +136,9 @@ const describe = pipe(
   Match.exhaustive
 )
 
-function describeInput(input: number | string) {
-  return describe(input)
-}
-// string!!
-
-function describeJob(input: { state: string; attempts: number }) {
-  return pipe(
-    Match.value(input),
-    Match.when({ state: "queued" }, (job) => `waiting: ${job.attempts}`),
-    Match.orElse((job) => `state: ${job.state}`)
-  )
+function describeAll(inputs: ReadonlyArray<number | string>) {
+  return inputs.map(describe)
 }
 ```
 
-`Match.type<T>()` builds a matcher without choosing an input yet; its finalizer produces a plain function. `Match.value(input)` chooses the input first, so the finalizer directly computes the matched value. Cases are tried in order and the first matching case wins.
-
-## Shapes, predicates, and tags
-
-```ts
-function classifyRetry(input: { status: string; attempts: number }) {
-  return pipe(
-    Match.value(input),
-    Match.when({ status: "failed", attempts: (n: number) => n >= 3 }, () => "escalate"),
-    Match.when({ status: "failed" }, () => "retry"),
-    Match.orElse(() => "leave unchanged")
-  )
-}
-
-type Job =
-  | { _tag: "Queued" }
-  | { _tag: "Running"; worker: string }
-  | { _tag: "Done"; output: string }
-
-function jobLabel(job: Job) {
-  return pipe(
-    Match.value(job),
-    Match.tag("Queued", () => "waiting"),
-    Match.tag("Running", (job) => `worker ${job.worker}`),
-    Match.tag("Done", (job) => job.output),
-    Match.exhaustive
-  )
-}
-```
-
-An object pattern checks its named properties without requiring the whole object to be written out. Predicate patterns check values; built-in predicates include `Match.string`, `Match.number`, `Match.boolean`, and `Match.symbol`. `Match.tag` narrows a union by `_tag`, and accepts several tags before the handler when cases share a result.
-
-Other patterns include `Match.nonEmptyString`, `Match.bigint`, `Match.date`, `Match.record`, `Match.null`, `Match.undefined`, `Match.defined`, and `Match.any`. `Match.is(...values)` selects listed literals and `Match.instanceOf(Class)` selects class instances. Keep custom predicates free of Effect operations and expected failures so they can run as JavaScript callbacks.
-
-## Negating patterns
-
-```ts
-function availability(status: "active" | "paused" | "closed") {
-  return pipe(
-    Match.value(status),
-    Match.not("closed", () => "can reopen"),
-    Match.orElse(() => "archived")
-  )
-}
-```
-
-`Match.not` selects inputs that do not match its pattern. The fallback receives values excluded by that negation and any earlier cases. Order still matters: a broad negated case can consume inputs that a later case was meant to handle.
-
-## Fixing the return type
-
-```ts
-function display(input: number | boolean) {
-  return pipe(
-    Match.value(input),
-    Match.withReturnType<string>(),
-    Match.when(Match.number, (n) => n.toFixed(1)),
-    Match.when(Match.boolean, (b) => b ? "enabled" : "disabled"),
-    Match.exhaustive
-  )
-}
-```
-
-Place `withReturnType<T>()` before all cases. Each handler must return `T`, which catches accidental mismatches such as returning a number from one branch of a text formatter. Without it, the result normally becomes the union of handler return types.
-
-## Exhaustive handling
-
-```ts
-type Phase = "draft" | "published"
-
-function phaseLabel(phase: Phase) {
-  return pipe(
-    Match.value(phase),
-    Match.when("draft", () => "Draft"),
-    Match.when("published", () => "Published"),
-    Match.exhaustive
-  )
-}
-```
-
-`exhaustive` requires the remaining input type to be `never`. Adding a member to `Phase` exposes a missing branch at the finalizer. A predicate that tests an arbitrary condition does not necessarily prove that all values of a type have been covered.
-
-## Defaults, optional outputs, and result outputs
-
-```ts
-type Command = "start" | "stop" | "help"
-
-function withDefault(command: Command) {
-  return pipe(
-    Match.value(command),
-    Match.when("start", () => "starting"),
-    Match.orElse((unmatched) => `unhandled: ${unmatched}`)
-  )
-}
-
-function optionalCommand(command: Command) {
-  return pipe(
-    Match.value(command),
-    Match.when("start", () => "starting"),
-    Match.option
-  )
-}
-
-function commandResult(command: Command) {
-  return pipe(
-    Match.value(command),
-    Match.when("start", () => "starting"),
-    Match.result
-  )
-}
-```
-
-`orElse` computes a fallback from the unmatched input. `option` returns `Some` on a match and `None` otherwise. `result` returns a successful Result on a match, or a failed Result containing the unmatched input. That failed Result is a returned value, not a typed Effect failure.
+`Match.type<T>()` builds a matcher without choosing an input, and its finalizer produces a plain function to pass as a callback. Match callbacks are synchronous value computations, and Match functions are trusted Effect library functions: their exceptions are defects that an ordinary `catch` does not recover. Use `match` when an arm performs Effect work.

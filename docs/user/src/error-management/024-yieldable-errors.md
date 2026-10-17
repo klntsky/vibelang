@@ -52,7 +52,7 @@ function title(text: string) {
 
 An `error` declaration is a class that extends the global `TaggedError`, Effect's `Data.TaggedError`, which needs no import. Every instance has a readonly `_tag` equal to the class name, and the class names the instance type as well as constructing values. Use `Schema.TaggedError` when an error also needs schema-based serialization.
 
-Choose distinct tags for distinct error cases. Tag-based matching compares strings, so two classes with the same tag cannot be distinguished by `catchTag` or `_tag` narrowing; do not assume a duplicate tag is diagnosed.
+Choose distinct tags for distinct error cases. Tag-based matching compares strings, so two classes with the same tag cannot be distinguished by `catchTag` or `_tag` narrowing; do not assume a duplicate tag is diagnosed. `is` and `match` test the class with `instanceof`, so they do tell such classes apart.
 
 ## Recovering failures by tag
 
@@ -66,7 +66,7 @@ function editableTitle(text: string) {
   try {
     return title(text)
   } catch (error) {
-    if (error._tag === "EmptyTitle") return "Untitled"
+    if (error is EmptyTitle) return "Untitled"
     throw error
   }
 }

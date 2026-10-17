@@ -337,7 +337,7 @@ if (result._tag === "Failure") yield* Effect.interrupt
 function outcome() {
   const result = exit(getUser("1"))
   yieldNow()
-  if (result._tag === "Failure") interrupt()
+  if (result is Exit.Failure) interrupt()
   return result
 }
 ```
@@ -498,6 +498,85 @@ function loaded() {
 it.effect("finds a user") {
   const user = getUser("1")
   assert.strictEqual(user.name, "Ada")
+}
+```
+
+## Pattern matching
+
+From the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1). See [Pattern matching with match and is](116-match-and-is.md).
+
+**Match a value** (D206, D209). Without `default`, a missing case of a finite union is EK4701, as with `Match.exhaustive`.
+
+```ts effect
+const phaseLabel = (phase: "draft" | "published") =>
+  Match.value(phase).pipe(
+    Match.when("draft", () => "Draft"),
+    Match.when("published", () => "Published"),
+    Match.exhaustive
+  )
+```
+
+```ts es
+function phaseLabel(phase: "draft" | "published") {
+  return match (phase) {
+    when "draft": "Draft";
+    when "published": "Published";
+  }
+}
+```
+
+**Match errors by class** (D215). An `error` class is a pattern; `and { let id }` binds a property.
+
+```ts effect
+const describeFailure = (failure: NotFound | Timeout) =>
+  Match.value(failure).pipe(
+    Match.tag("NotFound", (e) => `no user ${e.id}`),
+    Match.tag("Timeout", () => "retry"),
+    Match.exhaustive
+  )
+```
+
+```ts es
+function describeFailure(failure: NotFound | Timeout) {
+  return match (failure) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+  }
+}
+```
+
+**Option, Exit, and Result** (D208). The arms can run Effect functions.
+
+```ts effect
+const greet = (name: Option.Option<string>) =>
+  Option.match(name, { onNone: () => "Hello", onSome: (n) => `Hello, ${n}` })
+const failed = (outcome: Exit.Exit<User, NotFound>) => Exit.isFailure(outcome)
+```
+
+```ts es
+function greet(name: Option.Option<string>) {
+  return match (name) {
+    when Option.Some(let n): `Hello, ${n}`;
+    when Option.None: "Hello";
+  }
+}
+
+function failed(outcome: Exit.Exit<User, NotFound>) {
+  return outcome is Exit.Failure
+}
+```
+
+**Test and bind** (D211). Bindings in an `is` work in an `if` or `while` condition.
+
+```ts effect
+const firstFailure = (outcome: Exit.Exit<User, NotFound>) =>
+  Exit.isFailure(outcome) && Cause.hasFails(outcome.cause) ? Cause.pretty(outcome.cause) : "ok"
+```
+
+```ts es
+function firstFailure(outcome: Exit.Exit<User, NotFound>) {
+  if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) return Cause.pretty(cause)
+  return "ok"
 }
 ```
 

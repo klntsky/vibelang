@@ -43,14 +43,14 @@ function constantSuccess() {
 
 ```ts
 function describe<A, E>(outcome: Exit.Exit<A, E>) {
-  return outcome.match({
-    onSuccess: (value) => `Completed: ${String(value)}`,
-    onFailure: (cause) => Cause.pretty(cause)
-  })
+  return match (outcome) {
+    when Exit.Success(let value): `Completed: ${String(value)}`;
+    when Exit.Failure(let cause): Cause.pretty(cause);
+  }
 }
 ```
 
-`Exit.match` receives the success value or the complete cause. Its callbacks here compute strings synchronously. Use `isSuccess` or `isFailure` and ordinary branches when the response needs effectful work.
+`Exit.Success(let value)` binds the success value, and `Exit.Failure(let cause)` binds the complete cause. Leaving out either arm is EK4701. Arms are ordinary expressions, so they can run Effect functions; `outcome.match({ onSuccess, onFailure })` also works when the callbacks compute values synchronously. To test one variant, write `outcome is Exit.Failure`.
 
 ## Relating exits to results
 
