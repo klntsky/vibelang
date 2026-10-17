@@ -188,6 +188,14 @@ async function main() {
             for (const name of names) if (!before.has(name)) exported.add(name)
           }
         }
+        // TypeScript's parser reads Effeck's declaration forms, such as
+        // `error NotFound { id: string }`, as expression statements, so their
+        // names come from the source text. Each declares a value.
+        for (const m of block.source.matchAll(/^(export\s+)?(?:error|service|control|layer|schema)\s+([A-Za-z_$][\w$]*)/gm)) {
+          names.add(m[2])
+          localValues.add(m[2])
+          if (m[1]) exported.add(m[2])
+        }
         for (const name of localValues) typeOnly.delete(name)
         const imports = new Map<string, string[]>()
         const values: string[] = []
