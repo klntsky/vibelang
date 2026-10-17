@@ -1,0 +1,188 @@
+#!/usr/bin/env node
+// make-packages assembles Effeck's ten npm packages under dist-npm/pkg/ and
+// packs them into dist-npm/tarballs/, with manifest.json listing the tarballs
+// in publish order. Run scripts/release/build-binaries.sh first.
+//
+//   node scripts/release/make-packages.mjs [--skip-build]
+//
+// --skip-build reuses packages/runtime/dist and editors/vscode/effeck.vsix.
+// The script fails unless every package version equals the compiler's own
+// version (typescript/tsc/internal/effeck/identity.go) and every pin agrees.
+import { execFileSync } from "node:child_process"
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
+import { basename, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const root = fileURLToPath(new URL("../../", import.meta.url))
+const out = join(root, "dist-npm")
+const staging = join(out, "pkg")
+const tarballs = join(out, "tarballs")
+const skipBuild = process.argv.includes("--skip-build")
+const platforms = {
+  "darwin-arm64": ["darwin", "arm64"],
+  "darwin-x64": ["darwin", "x64"],
+  "linux-arm64": ["linux", "arm64"],
+  "linux-x64": ["linux", "x64"],
+  "win32-arm64": ["win32", "arm64"],
+  "win32-x64": ["win32", "x64"]
+}
+
+const readJson = (path) => JSON.parse(readFileSync(join(root, path), "utf8"))
+const compiler = readJson("packages/compiler/package.json")
+const runtime = readJson("packages/runtime/package.json")
+const vite = readJson("packages/vite/package.json")
+const create = readJson("packages/create-effeck/package.json")
+const template = readJson("templates/app/package.json")
+const identity = readFileSync(join(root, "typescript/tsc/internal/effeck/identity.go"), "utf8")
+const version = /const Version = "([^"]+)"/.exec(identity)?.[1]
+
+const problems = []
+const expect = (ok, message) => { if (!ok) problems.push(message) }
+expect(version, "identity.go: no Version constant")
+for (const [name, pkg] of [["effeck", compiler], ["@effeck/runtime", runtime], ["@effeck/vite", vite], ["create-effeck", create]]) {
+  expect(pkg.name === name, `${name}: package.json names ${pkg.name}`)
+  expect(pkg.version === version, `${name}: version ${pkg.version}, but the compiler is ${version}`)
+}
+const optional = compiler.optionalDependencies ?? {}
+expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.keys(platforms).map((p) => `@effeck/${p}`).sort()),
+  `effeck: optionalDependencies must list exactly ${Object.keys(platforms).join(", ")}`)
+for (const [name, pin] of Object.entries(optional)) expect(pin === version, `effeck: ${name} pinned to ${pin}, expected ${version}`)
+expect(vite.peerDependencies?.effeck === version, `@effeck/vite: peer effeck ${vite.peerDependencies?.effeck}, expected ${version}`)
+const effect = runtime.peerDependencies?.effect
+expect(template.dependencies?.effect === effect, `template: effect ${template.dependencies?.effect}, but the runtime requires ${effect}`)
+expect(template.dependencies?.["@effect/platform-node"] === effect, `template: @effect/platform-node must match effect ${effect}`)
+expect(template.devDependencies?.["@effect/vitest"] === effect, `template: @effect/vitest must match effect ${effect}`)
+for (const [platform, [os]] of Object.entries(platforms)) {
+  const binary = join(out, "bin", platform, os === "win32" ? "effeck.exe" : "effeck")
+  expect(existsSync(binary), `missing ${binary.slice(root.length)}; run scripts/release/build-binaries.sh`)
+}
+if (problems.length) {
+  console.error(`make-packages: ${problems.length} problem(s):\n${problems.map((p) => `  - ${p}`).join("\n")}`)
+  process.exit(1)
+}
+
+const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: ["ignore", "inherit", "inherit"] })
+if (!skipBuild) {
+  console.log("make-packages: build the runtime")
+  run("bun", ["install", "--frozen-lockfile"], join(root, "packages/runtime"))
+  run("bun", ["run", "build"], join(root, "packages/runtime"))
+  console.log("make-packages: build the VS Code extension")
+  run("bun", ["install", "--frozen-lockfile"], join(root, "editors/vscode"))
+  run("bun", ["run", "package"], join(root, "editors/vscode"))
+}
+const vsix = join(root, "editors/vscode/effeck.vsix")
+for (const file of [vsix, join(root, "packages/runtime/dist/index.js")]) {
+  if (!existsSync(file)) {
+    console.error(`make-packages: missing ${file.slice(root.length)}; run without --skip-build`)
+    process.exit(1)
+  }
+}
+
+rmSync(staging, { recursive: true, force: true })
+rmSync(tarballs, { recursive: true, force: true })
+mkdirSync(tarballs, { recursive: true })
+
+const rootLicense = readFileSync(join(root, "LICENSE"), "utf8")
+const mit = rootLicense.slice(rootLicense.indexOf("MIT License"))
+const apache = readFileSync(join(root, "typescript/LICENSE.txt"), "utf8")
+const notice = `Effeck
+Copyright (c) 2026 the Effeck authors
+
+The Effeck compiler is a modified version of the TypeScript compiler
+(typescript-go), Copyright (c) Microsoft Corporation, licensed under the
+Apache License 2.0. Effeck's changes are licensed under the same license.
+The TypeScript notices follow.
+
+${readFileSync(join(root, "typescript/NOTICE.txt"), "utf8")}`
+const warning = "> **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use."
+
+function stage(name, sources, files) {
+  const dir = join(staging, name.replace("@effeck/", "effeck-"))
+  mkdirSync(dir, { recursive: true })
+  for (const [from, to] of sources) cpSync(join(root, from), join(dir, to ?? basename(from)), { recursive: true })
+  for (const [to, text] of Object.entries(files)) writeFileSync(join(dir, to), text)
+  return dir
+}
+
+const order = []
+for (const [platform, [os, cpu]] of Object.entries(platforms)) {
+  const exe = os === "win32" ? "effeck.exe" : "effeck"
+  const name = `@effeck/${platform}`
+  const dir = stage(name, [], {
+    "package.json": JSON.stringify({
+      name,
+      version,
+      description: `The native Effeck compiler for ${os} on ${cpu}. Install effeck instead; it selects this package.`,
+      homepage: compiler.homepage,
+      license: "Apache-2.0",
+      os: [os],
+      cpu: [cpu],
+      files: ["bin", "README.md", "LICENSE", "NOTICE"],
+      preferUnplugged: true,
+      publishConfig: { access: "public" }
+    }, null, 2) + "\n",
+    "README.md": `# ${name}\n\n${warning}\n\nThe native Effeck compiler for ${os} on ${cpu}. Install [\`effeck\`](https://www.npmjs.com/package/effeck) instead: it lists this package as an optional dependency, and npm installs the one that matches your platform.\n`,
+    "LICENSE": apache,
+    "NOTICE": notice
+  })
+  mkdirSync(join(dir, "bin"))
+  copyFileSync(join(out, "bin", platform, exe), join(dir, "bin", exe))
+  chmodSync(join(dir, "bin", exe), 0o755)
+  order.push({ name, dir, required: [`bin/${exe}`, "LICENSE", "NOTICE"], executable: `bin/${exe}` })
+}
+
+const effeckDir = stage("effeck", [["packages/compiler/bin", "bin"], ["packages/compiler/README.md"], ["packages/compiler/package.json"]], { LICENSE: apache, NOTICE: notice })
+mkdirSync(join(effeckDir, "editor"))
+copyFileSync(vsix, join(effeckDir, "editor", "effeck.vsix"))
+order.push({ name: "effeck", dir: effeckDir, required: ["bin/effeck", "editor/effeck.vsix", "LICENSE", "NOTICE"], forbidden: /^native\// })
+
+order.push({
+  name: "@effeck/runtime",
+  dir: stage("@effeck/runtime", [["packages/runtime/dist", "dist"], ["packages/runtime/README.md"], ["packages/runtime/package.json"]], { LICENSE: mit }),
+  required: ["dist/index.js", "dist/index.d.ts", "dist/kernel/kernel.js", "LICENSE"]
+})
+order.push({
+  name: "@effeck/vite",
+  dir: stage("@effeck/vite", [["packages/vite/src", "src"], ["packages/vite/README.md"], ["packages/vite/package.json"]], { LICENSE: mit }),
+  required: ["src/index.js", "src/index.d.ts", "LICENSE"]
+})
+
+const createDir = stage("create-effeck", [["packages/create-effeck/bin", "bin"], ["packages/create-effeck/README.md"], ["packages/create-effeck/package.json"]], { LICENSE: mit })
+cpSync(join(root, "templates/app"), join(createDir, "template"), {
+  recursive: true,
+  filter: (path) => !["node_modules", "dist", "bun.lock", ".prototype", ".effeck"].includes(basename(path))
+})
+// npm drops .gitignore from packages; create-effeck restores the dot.
+for (const name of [".gitignore", ".gitattributes"]) renameSync(join(createDir, "template", name), join(createDir, "template", name.slice(1)))
+const appManifest = JSON.parse(readFileSync(join(createDir, "template/package.json"), "utf8"))
+appManifest.dependencies["@effeck/runtime"] = version
+appManifest.devDependencies.effeck = version
+appManifest.devDependencies["@effeck/vite"] = version
+writeFileSync(join(createDir, "template/package.json"), JSON.stringify(appManifest, null, 2) + "\n")
+order.push({
+  name: "create-effeck",
+  dir: createDir,
+  required: ["bin/create-effeck.mjs", "template/package.json", "template/gitignore", "template/gitattributes", "template/src/main.effeck", "LICENSE"]
+})
+
+const manifest = []
+for (const entry of order) {
+  const [packed] = JSON.parse(execFileSync("npm", ["pack", entry.dir, "--pack-destination", tarballs, "--json", "--silent"], { encoding: "utf8" }))
+  const paths = new Map(packed.files.map((file) => [file.path, file]))
+  for (const required of entry.required) {
+    if (!paths.has(required)) problems.push(`${entry.name}: tarball lacks ${required}`)
+  }
+  if (entry.forbidden) for (const path of paths.keys()) if (entry.forbidden.test(path)) problems.push(`${entry.name}: tarball includes ${path}`)
+  if (entry.executable && (paths.get(entry.executable)?.mode & 0o111) === 0) problems.push(`${entry.name}: ${entry.executable} is not executable`)
+  if (packed.name !== entry.name || packed.version !== version) problems.push(`${entry.name}: packed as ${packed.name}@${packed.version}`)
+  manifest.push({ name: packed.name, version: packed.version, file: packed.filename, size: packed.size, unpackedSize: packed.unpackedSize, files: packed.files.length })
+}
+if (problems.length) {
+  console.error(`make-packages: ${problems.length} problem(s):\n${problems.map((p) => `  - ${p}`).join("\n")}`)
+  process.exit(1)
+}
+writeFileSync(join(tarballs, "manifest.json"), JSON.stringify({ version, packages: manifest }, null, 2) + "\n")
+
+const mb = (bytes) => `${(bytes / 1024 / 1024).toFixed(1)} MB`
+console.log(`\nmake-packages: ${manifest.length} tarballs for ${version} in dist-npm/tarballs/, in publish order:`)
+for (const p of manifest) console.log(`  ${p.name.padEnd(22)} ${mb(p.size).padStart(9)} packed  ${mb(p.unpackedSize).padStart(9)} unpacked  ${String(p.files).padStart(3)} files`)
