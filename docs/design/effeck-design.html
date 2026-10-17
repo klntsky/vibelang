@@ -490,6 +490,21 @@ error <span class="t">MailError</span> {
   <span class="k">return</span> users.<span class="f">find</span>((user) =&gt; user.admin)?.name ?? <span class="k">throw</span> <span class="k">new</span> <span class="t">NoAdmin</span>()
 }
 <span class="c">// string!NoAdmin!</span></code></pre></figure>
+<h4 id="matching-errors-and-outcomes"><a class="anchor" href="#matching-errors-and-outcomes">Matching errors and outcomes</a></h4>
+<p><code>match</code> and <code>is</code> come from the TC39 <a href="https://github.com/tc39/proposal-pattern-matching">pattern matching</a> proposal (D206, D211). An <code>error</code> class is a pattern that matches its own instances (D215), and <code>Option</code>, <code>Exit</code>, and <code>Result</code> have matchers that bind their contents (D208):</p>
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">describe</span>(failure: <span class="t">NotFound</span> | <span class="t">Timeout</span>) {
+  <span class="k">return</span> <span class="f">match</span> (failure) {
+    when <span class="t">NotFound</span> and { <span class="k">let</span> id }: <span class="s">`no user ${id}`</span>;
+    when <span class="t">Timeout</span>: <span class="s">"retry"</span>;
+  }
+}
+
+<span class="k">function</span> <span class="f">firstFailure</span>(id: <span class="l">string</span>) {
+  <span class="k">const</span> outcome = <span class="f">exit</span>(<span class="f">getUser</span>(id))
+  <span class="k">if</span> (outcome is <span class="t">Exit</span>.<span class="t">Failure</span>(<span class="k">let</span> cause) &amp;&amp; <span class="t">Cause</span>.<span class="f">hasFails</span>(cause)) <span class="k">return</span> <span class="t">Cause</span>.<span class="f">pretty</span>(cause)
+  <span class="k">return</span> <span class="s">"ok"</span>
+}</code></pre></figure>
+<p>The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without <code>default</code> over a finite union must cover every case; leaving out <code>Timeout</code> above is EK4701 (D209). A typed <code>catch (e: NotFound)</code> remains the way to handle a failure as it propagates; <code>match</code> is for a failure or an Exit held as a value.</p>
 <h3 id="4-dependency-injection-the-r-channel"><a class="anchor" href="#4-dependency-injection-the-r-channel">4. Dependency injection: the R channel</a></h3>
 <p>Dependency injection is Effect&#39;s: services are <code>Context</code> keys, implementations are <code>Layer</code>s, and <code>Effect.provide</code> supplies them. Effeck removes the ceremony and adds compile-time checks of the dependency graph.</p>
 <h4 id="declaring-a-service"><a class="anchor" href="#declaring-a-service">Declaring a service</a></h4>
@@ -3002,11 +3017,11 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK4606</td><td><code>return</code> in a <code>for concurrent</code> body (D169)</td><td>Use <code>continue</code> to end one item</td><td>7</td></tr>
 <tr><td>EK4607</td><td><code>select</code>, which <code>await.race</code> replaced (D197)</td><td>Write <code>await.race [a(), b()]</code>; for a <code>default:</code> clause, poll with <code>Queue.poll</code> and an <code>if</code></td><td>7</td></tr>
 <tr><td>EK4608</td><td><code>await.race</code> or <code>await.any</code> on an object (D196)</td><td>Write the elements in an array: <code>await.race [a(), b()]</code></td><td>7</td></tr>
-<tr><td>EK4701</td><td>A <code>match</code> without a <code>default</code> arm over a finite union (tagged errors, Option, Exit, Result, literals) that misses a case (D209)</td><td>Add an arm for each case left, or a <code>default</code> arm</td><td>7</td></tr>
-<tr><td>EK4702</td><td>A binding inside an <code>or</code> or <code>not</code> pattern (D210)</td><td>Bind outside the combinator, or match each alternative in its own arm</td><td>7</td></tr>
-<tr><td>EK4703</td><td>An <code>is</code> whose pattern binds names outside the condition of an <code>if</code> or <code>while</code> (D211)</td><td>Move the test into an <code>if</code> or <code>while</code> condition, or use <code>match</code></td><td>7</td></tr>
-<tr><td>EK4704</td><td>A pattern form Effeck does not support yet: regular expression, relational, or a computed key other than a name or literal (D212)</td><td>Use a guard: <code>if (/re/.test(x))</code> or <code>if (x &lt; 5)</code></td><td>7</td></tr>
-<tr><td>EK4705</td><td><code>and</code>, <code>or</code>, and <code>not</code> combined at one level without parentheses (D206)</td><td>Add parentheses: <code>(a and b) or c</code></td><td>7</td></tr></tbody></table></div>
+<tr><td>EK4701</td><td>A <code>match</code> without a <code>default</code> arm over a finite union (tagged errors, Option, Exit, Result, literals) that misses a case (D209)</td><td>Add an arm for each case left, or a <code>default</code> arm</td><td>3</td></tr>
+<tr><td>EK4702</td><td>A binding inside an <code>or</code> or <code>not</code> pattern (D210)</td><td>Bind outside the combinator, or match each alternative in its own arm</td><td>3</td></tr>
+<tr><td>EK4703</td><td>An <code>is</code> whose pattern binds names outside the condition of an <code>if</code> or <code>while</code> (D211)</td><td>Move the test into an <code>if</code> or <code>while</code> condition, or use <code>match</code></td><td>3</td></tr>
+<tr><td>EK4704</td><td>A pattern form Effeck does not support yet: regular expression, relational, or a computed key other than a name or literal (D212)</td><td>Use a guard: <code>if (/re/.test(x))</code> or <code>if (x &lt; 5)</code></td><td>3</td></tr>
+<tr><td>EK4705</td><td><code>and</code>, <code>or</code>, and <code>not</code> combined at one level without parentheses (D206)</td><td>Add parentheses: <code>(a and b) or c</code></td><td>3</td></tr></tbody></table></div>
 <h4 id="linting"><a class="anchor" href="#linting">Linting</a></h4>
 <p>D35 assigns type and language diagnostics to <code>effeck</code> and reserves type-aware
 linting for <code>.ts</code> files. A stock TypeScript checker models different call
@@ -3206,7 +3221,17 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D187</td><td><code>do { }</code> is an expression whose value is its last statement&#39;s</td><td>TC39 do expressions (stage 1); a racer or an arm gets several statements</td><td>13</td></tr>
 <tr><td>D188</td><td><strong>Controversial.</strong> A block after a call is its program: <code>withSpan(&quot;load&quot;) { ... }</code>, <code>it.effect(&quot;name&quot;) { ... }</code>; an Effect dual takes it in its program&#39;s place</td><td>TC39 block params (stage 1); removes <code>() =&gt; { }</code> around multi-statement programs</td><td>13</td></tr>
 <tr><td>D196</td><td><strong>Controversial.</strong> <code>await.all</code>, <code>await.allSettled</code>, <code>await.race</code>, <code>await.any</code> start programs by name and behave as the <code>Promise</code> methods; EK4608</td><td>TC39 await operations and Await Dictionary; <code>await.x</code> reads as <code>Promise.x</code></td><td></td></tr>
-<tr><td>D197</td><td><code>await.race [...]</code> replaces <code>select</code>, which is EK4607</td><td><code>case</code> read as value comparison and &quot;select&quot; is not Effect&#39;s word</td><td></td></tr></tbody></table></div>
+<tr><td>D197</td><td><code>await.race [...]</code> replaces <code>select</code>, which is EK4607</td><td><code>case</code> read as value comparison and &quot;select&quot; is not Effect&#39;s word</td><td></td></tr>
+<tr><td>D206</td><td><code>match (x) { when P: v; default: d; }</code> is an expression; mixed <code>and</code>/<code>or</code>/<code>not</code> need parentheses (EK4705)</td><td>TC39 pattern matching (stage 1); one expression per arm, <code>do { }</code> for more</td><td>3</td></tr>
+<tr><td>D207</td><td>The supported pattern subset: literals, bindings, arrays, objects, matchers, extractors, <code>and</code>/<code>or</code>/<code>not</code>, guards, <code>is</code></td><td>The proposal&#39;s core; regular expression, relational, and async forms deferred</td><td>3</td></tr>
+<tr><td>D208</td><td><strong>Controversial.</strong> <code>Option</code>, <code>Exit</code>, <code>Result</code>, and primitive classes compile to their own guards</td><td>Exact binding types without a runtime protocol; a shadowing local is not consulted</td><td>3</td></tr>
+<tr><td>D209</td><td><strong>Controversial.</strong> A match without <code>default</code> over a finite union that misses a case is EK4701</td><td><code>Match.exhaustive</code> at compile time; other types throw the proposal&#39;s <code>TypeError</code></td><td>3</td></tr>
+<tr><td>D210</td><td>A binding inside <code>or</code> or <code>not</code> is EK4702</td><td>Inline boolean lowering has nowhere to declare it</td><td>3</td></tr>
+<tr><td>D211</td><td><strong>Controversial.</strong> <code>is</code> binds only in an <code>if</code> or <code>while</code> <code>&amp;&amp;</code> condition, for the then branch or body (EK4703)</td><td>Nesting keeps narrowing; the proposal also scopes else and the rest of the block</td><td>3</td></tr>
+<tr><td>D212</td><td>Regular expression and relational patterns and non-literal computed keys are EK4704</td><td>Reported with a guard as the fix instead of misparsed</td><td>3</td></tr>
+<tr><td>D213</td><td><strong>Deviation.</strong> A matcher is a custom matcher, a primitive class (<code>typeof</code>), a class (<code>instanceof</code>), a predicate, or a value (SameValue)</td><td>Built-in brand checks cannot be written in a runtime helper</td><td>3</td></tr>
+<tr><td>D214</td><td>A match lowers to a returning block, a labeled block, or an immediately invoked arrow function</td><td>TypeScript narrows each arm and arms run Effects in every position</td><td>3</td></tr>
+<tr><td>D215</td><td><code>customMatcher</code> is exported, and every <code>error</code> class matches by <code>instanceof</code> and extracts itself</td><td>Same-tag classes stay distinct</td><td>3</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>

@@ -536,6 +536,27 @@ function admin(users: ReadonlyArray<{ admin: boolean; name: string }>) {
 // string!NoAdmin!
 ```
 
+#### Matching errors and outcomes
+
+`match` and `is` come from the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (D206, D211). An `error` class is a pattern that matches its own instances (D215), and `Option`, `Exit`, and `Result` have matchers that bind their contents (D208):
+
+```ts es
+function describe(failure: NotFound | Timeout) {
+  return match (failure) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+  }
+}
+
+function firstFailure(id: string) {
+  const outcome = exit(getUser(id))
+  if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) return Cause.pretty(cause)
+  return "ok"
+}
+```
+
+The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case; leaving out `Timeout` above is EK4701 (D209). A typed `catch (e: NotFound)` remains the way to handle a failure as it propagates; `match` is for a failure or an Exit held as a value.
+
 ### 4. Dependency injection: the R channel
 
 Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. Effeck removes the ceremony and adds compile-time checks of the dependency graph.
@@ -4249,11 +4270,11 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4606 | `return` in a `for concurrent` body (D169) | Use `continue` to end one item | 7 |
 | EK4607 | `select`, which `await.race` replaced (D197) | Write `await.race [a(), b()]`; for a `default:` clause, poll with `Queue.poll` and an `if` | 7 |
 | EK4608 | `await.race` or `await.any` on an object (D196) | Write the elements in an array: `await.race [a(), b()]` | 7 |
-| EK4701 | A `match` without a `default` arm over a finite union (tagged errors, Option, Exit, Result, literals) that misses a case (D209) | Add an arm for each case left, or a `default` arm | 7 |
-| EK4702 | A binding inside an `or` or `not` pattern (D210) | Bind outside the combinator, or match each alternative in its own arm | 7 |
-| EK4703 | An `is` whose pattern binds names outside the condition of an `if` or `while` (D211) | Move the test into an `if` or `while` condition, or use `match` | 7 |
-| EK4704 | A pattern form Effeck does not support yet: regular expression, relational, or a computed key other than a name or literal (D212) | Use a guard: `if (/re/.test(x))` or `if (x < 5)` | 7 |
-| EK4705 | `and`, `or`, and `not` combined at one level without parentheses (D206) | Add parentheses: `(a and b) or c` | 7 |
+| EK4701 | A `match` without a `default` arm over a finite union (tagged errors, Option, Exit, Result, literals) that misses a case (D209) | Add an arm for each case left, or a `default` arm | 3 |
+| EK4702 | A binding inside an `or` or `not` pattern (D210) | Bind outside the combinator, or match each alternative in its own arm | 3 |
+| EK4703 | An `is` whose pattern binds names outside the condition of an `if` or `while` (D211) | Move the test into an `if` or `while` condition, or use `match` | 3 |
+| EK4704 | A pattern form Effeck does not support yet: regular expression, relational, or a computed key other than a name or literal (D212) | Use a guard: `if (/re/.test(x))` or `if (x < 5)` | 3 |
+| EK4705 | `and`, `or`, and `not` combined at one level without parentheses (D206) | Add parentheses: `(a and b) or c` | 3 |
 
 #### Linting
 
@@ -4479,6 +4500,16 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D188 | **Controversial.** A block after a call is its program: `withSpan("load") { ... }`, `it.effect("name") { ... }`; an Effect dual takes it in its program's place | TC39 block params (stage 1); removes `() => { }` around multi-statement programs | 13 |
 | D196 | **Controversial.** `await.all`, `await.allSettled`, `await.race`, `await.any` start programs by name and behave as the `Promise` methods; EK4608 | TC39 await operations and Await Dictionary; `await.x` reads as `Promise.x` |
 | D197 | `await.race [...]` replaces `select`, which is EK4607 | `case` read as value comparison and "select" is not Effect's word |
+| D206 | `match (x) { when P: v; default: d; }` is an expression; mixed `and`/`or`/`not` need parentheses (EK4705) | TC39 pattern matching (stage 1); one expression per arm, `do { }` for more | 3 |
+| D207 | The supported pattern subset: literals, bindings, arrays, objects, matchers, extractors, `and`/`or`/`not`, guards, `is` | The proposal's core; regular expression, relational, and async forms deferred | 3 |
+| D208 | **Controversial.** `Option`, `Exit`, `Result`, and primitive classes compile to their own guards | Exact binding types without a runtime protocol; a shadowing local is not consulted | 3 |
+| D209 | **Controversial.** A match without `default` over a finite union that misses a case is EK4701 | `Match.exhaustive` at compile time; other types throw the proposal's `TypeError` | 3 |
+| D210 | A binding inside `or` or `not` is EK4702 | Inline boolean lowering has nowhere to declare it | 3 |
+| D211 | **Controversial.** `is` binds only in an `if` or `while` `&&` condition, for the then branch or body (EK4703) | Nesting keeps narrowing; the proposal also scopes else and the rest of the block | 3 |
+| D212 | Regular expression and relational patterns and non-literal computed keys are EK4704 | Reported with a guard as the fix instead of misparsed | 3 |
+| D213 | **Deviation.** A matcher is a custom matcher, a primitive class (`typeof`), a class (`instanceof`), a predicate, or a value (SameValue) | Built-in brand checks cannot be written in a runtime helper | 3 |
+| D214 | A match lowers to a returning block, a labeled block, or an immediately invoked arrow function | TypeScript narrows each arm and arms run Effects in every position | 3 |
+| D215 | `customMatcher` is exported, and every `error` class matches by `instanceof` and extracts itself | Same-tag classes stay distinct | 3 |
 
 #### Rules of the runtime and compiler
 
