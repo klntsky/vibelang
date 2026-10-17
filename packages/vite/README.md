@@ -1,5 +1,7 @@
 # @effectscript/vite
 
+> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+
 Compile `.es` modules with the native EffectScript compiler in Vite and Vitest.
 The compiler owns type and language diagnostics. The plugin serves its JavaScript
 and source maps, reports errors in the terminal and Vite overlay, and invalidates

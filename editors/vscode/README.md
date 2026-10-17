@@ -1,5 +1,7 @@
 # EffectScript for VS Code
 
+> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+
 The extension `effectscript.effectscript` registers the EffectScript language for `.es` files and runs the EffectScript compiler, `esc --lsp --stdio`, as their language server. It works in VS Code 1.91 or later and in Cursor.
 
 | Feature | What you see |

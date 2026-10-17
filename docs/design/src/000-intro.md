@@ -2,6 +2,8 @@
 
 A language for writing Effect programs. Specification, 2026-10-16. Runtime: `effect@4.0.5`.
 
+> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+
 EffectScript is TypeScript syntax in which every function is an Effect. You call functions normally, `throw` and `catch` typed errors, and ask for services by name. The compiler infers each function's `Effect<A, E, R>` and emits the Effect code you would have written by hand, so TypeScript code uses it like any other Effect library.
 
 ```ts effect

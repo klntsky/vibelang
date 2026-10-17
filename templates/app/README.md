@@ -1,5 +1,7 @@
 # EffectScript app
 
+> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+
 Install local tooling first with `sh scripts/setup.sh` in the EffectScript
 repository. Keep that checkout available: this project depends on its packages
 through absolute `file:` paths written when setup installs the template.

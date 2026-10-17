@@ -164,6 +164,7 @@ body { overflow-wrap: anywhere; }
 .callout { border: 1px solid var(--rule); border-left: 4px solid var(--accent); background: var(--mark); }
 .callout.not-designed { border-left-style: double; border-left-width: 6px; }
 .callout strong:first-child { color: var(--accent); }
+.v0-warning { margin: 0 0 24px; padding: 10px 18px; border-radius: 0 8px 8px 0; }
 img, svg, video { max-width: 100%; height: auto; }
 pre { max-width: 100%; overflow-x: auto; overflow-wrap: normal; }
 .table { max-width: 100%; }
@@ -323,7 +324,7 @@ async function render(source: string, markdown: string, destination: string, cou
 <div class="layout">
 <nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), "index.html"))}">EffectScript Docs</a>${sidebar}</nav>
 <nav class="page-toc" aria-label="On this page"><h2>On this page</h2>${toc.map(t => `<a href="#${escape(t.id)}">${escape(t.text)}</a>`).join("\n")}</nav>
-<main id="content"><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav></main>
+<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav></main>
 </div>
 </body>
 </html>\n`

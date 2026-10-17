@@ -2,6 +2,9 @@
 
 A language for writing Effect programs: TypeScript syntax in which every function is an Effect, built on one-shot delimited continuations over Effect 4's fiber runtime.
 
+> [!WARNING]
+> EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+
 ## Quickstart
 
 From this checkout, install the local compiler, runtime, and Bun project template:

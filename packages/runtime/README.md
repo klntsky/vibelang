@@ -1,5 +1,7 @@
 # @effectscript/runtime
 
+> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+
 The EffectScript runtime contains the one-shot continuation kernel and the
 helpers that `esc` emits. It runs on Effect 4's fibers, scopes, and services.
 Generated JavaScript imports `effect` and `@effectscript/runtime`; applications

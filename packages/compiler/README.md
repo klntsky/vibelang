@@ -1,5 +1,7 @@
 # @effectscript/compiler
 
+> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+
 Build the native compiler from the repository root:
 
 ```sh

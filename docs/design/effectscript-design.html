@@ -138,6 +138,9 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
 <main>
 <h1 id="effectscript"><a class="anchor" href="#effectscript">EffectScript</a></h1>
 <p>A language for writing Effect programs. Specification, 2026-10-16. Runtime: <code>effect@4.0.5</code>.</p>
+<blockquote>
+<p><strong>Warning:</strong> EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.</p>
+</blockquote>
 <p>EffectScript is TypeScript syntax in which every function is an Effect. You call functions normally, <code>throw</code> and <code>catch</code> typed errors, and ask for services by name. The compiler infers each function&#39;s <code>Effect&lt;A, E, R&gt;</code> and emits the Effect code you would have written by hand, so TypeScript code uses it like any other Effect library.</p>
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> welcome = <span class="t">Effect</span>.<span class="f">fn</span>(<span class="s">"welcome"</span>)(<span class="k">function</span>* (id: <span class="l">string</span>) {
   <span class="k">const</span> users = <span class="k">yield</span>* <span class="t">Users</span>
