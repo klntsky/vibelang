@@ -26,14 +26,10 @@ export function createUser() {
     const input = HttpServerRequest.schemaBodyJson(CreateUser)
     const user = Users.create(input.name)
     return HttpServerResponse.json(user, { status: 201 })
-  } catch (error) {
-    if (error instanceof NameTaken) {
-      return HttpServerResponse.text(`Name already registered: ${error.name}`, { status: 409 })
-    }
-    if (error._tag === "SchemaError") {
-      return HttpServerResponse.text("Expected a JSON object with a string name", { status: 400 })
-    }
-    throw error
+  } catch (error: NameTaken) {
+    return HttpServerResponse.text(`Name already registered: ${error.name}`, { status: 409 })
+  } catch (error: Schema.SchemaError) {
+    return HttpServerResponse.text("Expected a JSON object with a string name", { status: 400 })
   }
 }
 

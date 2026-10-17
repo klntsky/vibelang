@@ -81,9 +81,8 @@ The catch receives `InvalidCode | ItemMissing` and handles both here. It handles
 function labelOrMissing(input: string) {
   try {
     return findItem(input).label
-  } catch (error) {
-    if (error instanceof ItemMissing) return "Out of catalog"
-    throw error
+  } catch (error: ItemMissing) {
+    return "Out of catalog"
   }
 }
 // string!InvalidCode!
@@ -97,7 +96,7 @@ function labelByTag(input: string) {
 }
 ```
 
-Narrowing and rethrowing preserves the unhandled error type. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
+A typed catch clause, `catch (error: ItemMissing)`, handles only failures with that type's `_tag`; the others propagate with their types, as `string!InvalidCode!` shows. Several clauses can follow one `try`, `catch (error: A | B)` names several types, and a final untyped clause catches the rest. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
 
 ```ts
 function withTagTable(input: string) {

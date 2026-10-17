@@ -53,19 +53,20 @@ function lookup(raw: string) {
 // User!InvalidId!Users
 ```
 
-To handle some errors and pass the rest on, narrow and rethrow. TypeScript's narrowing works on the caught value:
+To handle some errors and pass the rest on, name them in the clause (D131). `catch (e: UserNotFound)` handles only failures with that type's `_tag`, and the others propagate with their types:
 
 ```ts es
 function lookupOrGuest(raw: string) {
   try {
     return Users.find(String(parseId(raw)))
-  } catch (e) {                          // e: InvalidId | UserNotFound
-    if (e instanceof UserNotFound) return guest
-    throw e                              // e: InvalidId here, so E is InvalidId
+  } catch (e: UserNotFound) {
+    return guest
   }
 }
 // User!InvalidId!Users
 ```
+
+Several clauses can follow one `try`, each naming a type or a union of types, and a final untyped clause catches the rest. A failure raised inside a clause is not tested by the clauses after it. The test compares `_tag`, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A clause type without a literal `_tag` is EK2105, and a clause after an untyped one is EK2106. Narrowing and rethrowing inside an untyped clause still works, since TypeScript's narrowing applies to the caught value.
 
 Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
 

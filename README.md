@@ -56,7 +56,7 @@ clients, see [editors/](editors/README.md).
   of several statements is a function with no parameters, `() => { … }`.
 - Declare an expected failure with `error NotFound { id: string }`, a tagged
   error class with readonly fields; `throw new NotFound({ id })` adds it to
-  the function's errors.
+  the function's errors, and `catch (e: NotFound) { ... }` handles only it.
 - Write a contract as `Result!Error!Dependencies`: `User!NotFound!Db` is
   `Effect<User, NotFound, Db>`, an empty slot is `never` (`User!!`), and
   dependencies left out of a function's return type are inferred from its body.
