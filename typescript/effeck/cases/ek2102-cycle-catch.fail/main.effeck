@@ -1,0 +1,38 @@
+// expect: EK2102
+// A catch whose try block calls into a call cycle with inferred contracts
+// handles failures the cycle's fixpoint finds (D52). The checker typed its
+// variable before the fixpoint knew them, so the cycle needs a written
+// contract: writing g's breaks the cycle.
+export class X extends TaggedError("X")<{}> {}
+export class Y extends TaggedError("Y")<{}> {}
+
+export function f(n: number): Effect<number, infer E, infer R> {
+  try {
+    return g(n)
+  } catch (e) {
+    if (e instanceof X) return -1
+    throw e
+  }
+}
+
+export function g(n: number): Effect<number, infer E, infer R> {
+  if (n > 5) throw new Y()
+  if (n > 3) throw new X()
+  return f(n + 1)
+}
+
+// With g's contract written, f's catch types its variable as X | Y.
+export function h(n: number): Effect<number, infer E, infer R> {
+  try {
+    return k(n)
+  } catch (e) {
+    if (e instanceof X) return -1
+    throw e
+  }
+}
+
+export function k(n: number): Effect<number, X | Y, never> {
+  if (n > 5) throw new Y()
+  if (n > 3) throw new X()
+  return h(n + 1)
+}

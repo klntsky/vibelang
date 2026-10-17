@@ -42,7 +42,7 @@ function reportCount(raw: number) {
 }
 ```
 
-`matchEffect` accepts EffectScript functions that can pause, fail, or use services. Only the selected branch runs, and its errors and requirements join the result's contract. A `try`/`catch` is also useful when the two branches are easier to read as statements.
+`matchEffect` accepts Effeck functions that can pause, fail, or use services. Only the selected branch runs, and its errors and requirements join the result's contract. A `try`/`catch` is also useful when the two branches are easier to read as statements.
 
 ## Matching complete failure causes
 

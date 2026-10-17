@@ -1,6 +1,6 @@
 # Consuming Streams
 
-A consumer runs a Stream and returns one result. Inside an EffectScript function, calls such as `Stream.runCollect` wait for consumption and give you the result directly. An unbounded source needs a stopping condition before a consumer that waits for its end.
+A consumer runs a Stream and returns one result. Inside an Effeck function, calls such as `Stream.runCollect` wait for consumption and give you the result directly. An unbounded source needs a stopping condition before a consumer that waits for its end.
 
 ## Collecting elements
 
@@ -67,7 +67,7 @@ function totalWithProgress() {
 }
 ```
 
-The initial-state callback runs for each consumption, which also supports fresh mutable accumulators. `runFold` requires a synchronous, non-failing reducer; `runFoldEffect` accepts EffectScript work. Both wait for the source to finish; use `runForEachWhile` when the accumulator should trigger early termination.
+The initial-state callback runs for each consumption, which also supports fresh mutable accumulators. `runFold` requires a synchronous, non-failing reducer; `runFoldEffect` accepts Effeck work. Both wait for the source to finish; use `runForEachWhile` when the accumulator should trigger early termination.
 
 ## Running a sink
 

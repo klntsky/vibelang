@@ -34,7 +34,7 @@ or the API documentation explicitly states that JavaScript cleanup is unsupporte
 and tooling reports it. Driving effects yielded from `finally` requires a defined
 masking and cause-combination policy; calling `return()` once is insufficient.
 
-**EffectScript impact.** Every pausing function lowers source `catch`, `finally`,
+**Effeck impact.** Every pausing function lowers source `catch`, `finally`,
 and `using` into Effect recovery and finalizer frames. A generator frame must not
 own source cleanup. This is the frame invariant in the spec, not a request to
 make JavaScript `catch` recover Effect failures automatically.

@@ -7,11 +7,11 @@ import { once } from "node:events"
 import { fileURLToPath } from "node:url"
 import { test } from "node:test"
 
-const launcher = fileURLToPath(new URL("../bin/esc", import.meta.url))
+const launcher = fileURLToPath(new URL("../bin/effeck", import.meta.url))
 test("forwards arguments, input, streams, working directory, and exit status", () => {
-  const scratch = mkdtempSync(join(tmpdir(), "esc-launcher-"))
+  const scratch = mkdtempSync(join(tmpdir(), "effeck-launcher-"))
   try {
-    const binary = join(scratch, "native esc")
+    const binary = join(scratch, "native effeck")
     writeFileSync(binary, `#!/usr/bin/env node
 import fs from "node:fs"
 console.log(JSON.stringify({ args: process.argv.slice(2), cwd: process.cwd(), input: fs.readFileSync(0, "utf8") }))
@@ -20,7 +20,7 @@ process.exit(23)
 `)
     chmodSync(binary, 0o755)
     const result = spawnSync(process.execPath, [launcher, "--pretty", "a b", "$literal"], {
-      cwd: scratch, env: { ...process.env, ESC_BINARY: binary }, input: "native stdin", encoding: "utf8"
+      cwd: scratch, env: { ...process.env, EFFECK_BINARY: binary }, input: "native stdin", encoding: "utf8"
     })
     assert.equal(result.status, 23)
     assert.deepEqual(JSON.parse(result.stdout), {
@@ -34,20 +34,20 @@ process.exit(23)
 
 test("explains how to supply a missing native compiler", () => {
   const result = spawnSync(process.execPath, [launcher], {
-    env: { ...process.env, ESC_BINARY: "/nonexistent/effectscript/esc" }, encoding: "utf8"
+    env: { ...process.env, EFFECK_BINARY: "/nonexistent/effeck/effeck" }, encoding: "utf8"
   })
   assert.equal(result.status, 1)
-  assert.match(result.stderr, /scripts\/build-esc.sh/)
-  assert.match(result.stderr, /ESC_BINARY/)
+  assert.match(result.stderr, /scripts\/build-effeck.sh/)
+  assert.match(result.stderr, /EFFECK_BINARY/)
 })
 
 test("preserves native termination signals", () => {
-  const scratch = mkdtempSync(join(tmpdir(), "esc-signal-"))
+  const scratch = mkdtempSync(join(tmpdir(), "effeck-signal-"))
   try {
-    const binary = join(scratch, "native esc")
+    const binary = join(scratch, "native effeck")
     writeFileSync(binary, '#!/usr/bin/env node\nprocess.kill(process.pid, "SIGTERM")\n')
     chmodSync(binary, 0o755)
-    const result = spawnSync(process.execPath, [launcher], { env: { ...process.env, ESC_BINARY: binary } })
+    const result = spawnSync(process.execPath, [launcher], { env: { ...process.env, EFFECK_BINARY: binary } })
     assert.equal(result.signal, "SIGTERM")
   } finally {
     rmSync(scratch, { recursive: true, force: true })
@@ -55,15 +55,15 @@ test("preserves native termination signals", () => {
 })
 
 test("forwards termination to a running native watcher", { timeout: 5000 }, async () => {
-  const scratch = mkdtempSync(join(tmpdir(), "esc-watcher-"))
+  const scratch = mkdtempSync(join(tmpdir(), "effeck-watcher-"))
   let wrapper
   let nativePid
   try {
-    const binary = join(scratch, "native esc")
+    const binary = join(scratch, "native effeck")
     writeFileSync(binary, '#!/usr/bin/env node\nconsole.log(process.pid)\nsetInterval(() => {}, 1000)\n')
     chmodSync(binary, 0o755)
     wrapper = spawn(process.execPath, [launcher, "--watch"], {
-      env: { ...process.env, ESC_BINARY: binary }, stdio: ["ignore", "pipe", "inherit"]
+      env: { ...process.env, EFFECK_BINARY: binary }, stdio: ["ignore", "pipe", "inherit"]
     })
     const [data] = await once(wrapper.stdout, "data")
     nativePid = Number(data.toString().trim())

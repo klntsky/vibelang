@@ -88,9 +88,9 @@ const outcome = handle(() => checkout("c-42"), Approval, {
 The code passed to `resumeWith` runs inside the handled program, at the call, so two rules keep its contract honest. It may throw only the operation's declared errors (`ReviewBusy` here), which every caller of `Approval.approve` already sees in E. And it may need no service: the providers around the clause are not in scope at the call, so its R must be `never`.
 
 ```text
-error ES2005: resumeWith runs this code at the perform site, inside the handled program,
+error EK2005: resumeWith runs this code at the perform site, inside the handled program,
   where the clause's providers are not in scope. It needs Secret.
-  approvals.es:4:34   return resumeWith(k, () => Secret.read())
+  approvals.effeck:4:34   return resumeWith(k, () => Secret.read())
   Read it in the clause first:   const secret = Secret.read()   …   resumeWith(k, () => secret)
 ```
 
@@ -136,7 +136,7 @@ function approveAll(ids: ReadonlyArray<string>) {
 ```
 
 ```text
-error ES4201: Approval.approve is a control operation, and forEach with concurrency 4 runs
+error EK4201: Approval.approve is a control operation, and forEach with concurrency 4 runs
   its callback on other fibers, where the Approval handler on this fiber cannot be reached.
   Handle Approval inside the callback, or run the loop with concurrency 1.
 ```
@@ -153,17 +153,17 @@ function approveAll(ids: ReadonlyArray<string>) {
 }
 ```
 
-TypeScript code is checked the same way, from its signature. A TypeScript function can fork internally without taking a program argument, where no table can see it, so a TypeScript function whose R contains a control operation cannot be called from EffectScript in v0:
+TypeScript code is checked the same way, from its signature. A TypeScript function can fork internally without taking a program argument, where no table can see it, so a TypeScript function whose R contains a control operation cannot be called from Effeck in v0:
 
 ```text
-error ES4202: retryApproval is a TypeScript function whose requirements include the control
+error EK4202: retryApproval is a TypeScript function whose requirements include the control
   operation Approval. TypeScript code can perform Approval.approve on another fiber, where
   this handler cannot reach it.
-  Write retryApproval in EffectScript, where the compiler sees every fork, or handle Approval inside it.
+  Write retryApproval in Effeck, where the compiler sees every fork, or handle Approval inside it.
 ```
 
-EffectScript functions in other packages are not affected: their declarations carry the compiler's metadata, and the compiler checked their bodies when it built them.
+Effeck functions in other packages are not affected: their declarations carry the compiler's metadata, and the compiler checked their bodies when it built them.
 
 #### In Effect today
 
-There is no equivalent. A service method can wait and return, but it cannot end its caller with a value, and it cannot hand the caller's remaining work to someone else to continue later. Code that needs those things today restructures itself around queues, `Deferred`s, and extra fibers. Part III explains how EffectScript provides this on Effect's runtime, and why it is the foundation everything else in this part is built on.
+There is no equivalent. A service method can wait and return, but it cannot end its caller with a value, and it cannot hand the caller's remaining work to someone else to continue later. Code that needs those things today restructures itself around queues, `Deferred`s, and extra fibers. Part III explains how Effeck provides this on Effect's runtime, and why it is the foundation everything else in this part is built on.

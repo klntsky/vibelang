@@ -1,22 +1,22 @@
 {
-  "name": "effectscript-example-http-api",
+  "name": "effeck-example-http-api",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esc -p .",
+    "build": "effeck -p .",
     "start": "node dist/run.js",
     "test": "vitest run"
   },
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "@effectscript/runtime": "file:../../packages/runtime/effectscript-runtime.tgz"
+    "@effeck/runtime": "file:../../packages/runtime/effeck-runtime.tgz"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.5",
     "vitest": "5.0.5",
-    "@effectscript/compiler": "file:../../packages/compiler",
-    "@effectscript/vite": "file:../../packages/vite",
+    "effeck": "file:../../packages/compiler",
+    "@effeck/vite": "file:../../packages/vite",
     "@types/node": "26.6.5"
   }
 }

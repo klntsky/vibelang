@@ -1,6 +1,6 @@
 # Option
 
-`Option` works in EffectScript exactly as in Effect. It represents a value that is present (`Some<A>`) or absent (`None`), useful for lookups, optional fields, and validation that needs no error description.
+`Option` works in Effeck exactly as in Effect. It represents a value that is present (`Some<A>`) or absent (`None`), useful for lookups, optional fields, and validation that needs no error description.
 
 ## Representing optional values and properties
 
@@ -85,7 +85,7 @@ function extract(value: Option.Option<string>) {
 const certain = Option.getOrThrow(Option.some("known"))
 ```
 
-`getOrElse` computes its fallback only for `None`. `getOrNull` and `getOrUndefined` adapt to APIs expecting nullish values. `getOrThrow` throws a defect on `None`, which an EffectScript `catch` does not handle; prefer a guard, default, or `Effect.fromOption` when absence is expected rather than a programming error. A `catch` around only `getOrThrow` cannot run and receives warning ES2004 by default.
+`getOrElse` computes its fallback only for `None`. `getOrNull` and `getOrUndefined` adapt to APIs expecting nullish values. `getOrThrow` throws a defect on `None`, which an Effeck `catch` does not handle; prefer a guard, default, or `Effect.fromOption` when absence is expected rather than a programming error. A `catch` around only `getOrThrow` cannot run and receives warning EK2004 by default.
 
 ## Choosing fallback options
 
@@ -187,7 +187,7 @@ function combinedData() {
 }
 ```
 
-`Option.gen` sequences JavaScript generator yields and stops at the first `None`. In `.es`, `function*` creates an EffectScript producer instead, so generator-based APIs stay in `.ts` files; using `Option.gen` in `.es` is ES1002. Use `flatMap`, `zipWith`, and `all` in EffectScript, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit boundary; a helper declared with `/** @effectscript trusted */` can be called directly.
+`Option.gen` sequences JavaScript generator yields and stops at the first `None`. In `.effeck`, `function*` creates an Effeck producer instead, so generator-based APIs stay in `.ts` files; using `Option.gen` in `.effeck` is EK1002. Use `flatMap`, `zipWith`, and `all` in Effeck, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit boundary; a helper declared with `/** @effeck trusted */` can be called directly.
 
 ## Deriving equality and ordering
 

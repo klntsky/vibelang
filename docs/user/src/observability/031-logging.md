@@ -1,6 +1,6 @@
 # Logging
 
-EffectScript uses Effect's structured logging to record progress, failures, and diagnostic context. Log calls run where they appear, and the current logging configuration determines which records are emitted and where they go.
+Effeck uses Effect's structured logging to record progress, failures, and diagnostic context. Log calls run where they appear, and the current logging configuration determines which records are emitted and where they go.
 
 ## Emitting structured records
 

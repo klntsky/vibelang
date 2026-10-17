@@ -1,10 +1,10 @@
 import type { Plugin } from "vite"
 
-export interface EffectScriptOptions {
+export interface EffeckOptions {
   /** tsconfig path relative to Vite's root. Defaults to tsconfig.json. */
   project?: string
-  /** Native esc binary or Node launcher path. Defaults to @effectscript/compiler. */
+  /** Native effeck binary or Node launcher path. Defaults to effeck. */
   compiler?: string
 }
 
-export default function effectscript(options?: EffectScriptOptions): Plugin
+export default function effeck(options?: EffeckOptions): Plugin

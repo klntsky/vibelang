@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "effectscript-docs-tools",
+      "name": "effeck-docs-tools",
       "devDependencies": {
         "@effect/platform-bun": "4.0.5",
         "@effect/platform-node": "4.0.5",

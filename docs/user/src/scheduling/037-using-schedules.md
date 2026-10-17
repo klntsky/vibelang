@@ -1,6 +1,6 @@
 # Using schedules
 
-A schedule decides when work runs again and when it stops. `Schedule` values work in EffectScript exactly as in Effect; pass a program to `Effect.repeat`, `Effect.schedule`, or `Effect.retry` to run one. These schedules live in the running process and do not recover jobs missed during downtime.
+A schedule decides when work runs again and when it stops. `Schedule` values work in Effeck exactly as in Effect; pass a program to `Effect.repeat`, `Effect.schedule`, or `Effect.retry` to run one. These schedules live in the running process and do not recover jobs missed during downtime.
 
 ## Repeating successful computations
 

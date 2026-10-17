@@ -1,0 +1,28 @@
+// expect: EK2102
+// When an Effect function's A depends on its own result, TypeScript cannot
+// infer A, and the contract must be written (D52). The functions throw, so
+// they are Effects; a plain annotation such as : boolean would be EK2003.
+class Negative extends TaggedError("Negative")<{ readonly n: number }> {}
+
+export function isEven(n: number) {
+  if (n < 0) throw new Negative({ n })
+  if (n === 0) return true
+  return isOdd(n - 1)
+}
+
+export function isOdd(n: number) {
+  if (n === 0) return false
+  return isEven(n - 1)
+}
+
+export function countDown(n: number) {
+  if (n < 0) throw new Negative({ n })
+  if (n === 0) return 0
+  return countDown(n - 1) + 1
+}
+
+// A pure function keeps TypeScript's rules: it compiles to plain JavaScript,
+// and a plain annotation is allowed (D67).
+export function depth(n: number): number {
+  return n === 0 ? 0 : depth(n - 1) + 1
+}

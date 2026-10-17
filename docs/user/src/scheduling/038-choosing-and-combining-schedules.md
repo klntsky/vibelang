@@ -1,6 +1,6 @@
 # Choosing and combining schedules
 
-`Schedule` works in EffectScript exactly as in Effect. Start with the timing rule you need, add limits to it, and combine separate rules only when the job needs them. The consumer determines whether schedule input is a successful result (`repeat`) or an expected error (`retry`).
+`Schedule` works in Effeck exactly as in Effect. Start with the timing rule you need, add limits to it, and combine separate rules only when the job needs them. The consumer determines whether schedule input is a successful result (`repeat`) or an expected error (`retry`).
 
 ## Choosing a starting rule
 

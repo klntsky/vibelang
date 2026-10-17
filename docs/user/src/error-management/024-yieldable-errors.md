@@ -1,6 +1,6 @@
 # Yieldable Errors
 
-Effect's custom error values can be yielded inside TypeScript generators. In EffectScript, signal those same domain failures with `throw`; `function*` produces values rather than sequencing an Effect program.
+Effect's custom error values can be yielded inside TypeScript generators. In Effeck, signal those same domain failures with `throw`; `function*` produces values rather than sequencing an Effect program.
 
 [Upstream page](https://effect.website/docs/v4/error-management/yieldable-errors)
 
@@ -20,7 +20,7 @@ function requireText(documentId: string, text: string) {
 // Effect<string, EmptyDocument, never>
 ```
 
-`Data.Error` creates an error class with typed fields and Effect's yieldable behavior. EffectScript does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
+`Data.Error` creates an error class with typed fields and Effect's yieldable behavior. Effeck does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
 
 ```ts
 function emptyDocumentError(documentId: string) {
@@ -79,6 +79,6 @@ Both versions remove `EmptyTitle` from `E` while preserving `TitleTooLong`. `Eff
 
 ## Coming from Effect
 
-Existing `.ts` functions that yield `Data.Error` or `Data.TaggedError` stay in TypeScript and are called normally from `.es` files. Replace `return yield* new ErrorCase(...)` with `throw new ErrorCase(...)` when writing the EffectScript implementation.
+Existing `.ts` functions that yield `Data.Error` or `Data.TaggedError` stay in TypeScript and are called normally from `.effeck` files. Replace `return yield* new ErrorCase(...)` with `throw new ErrorCase(...)` when writing the Effeck implementation.
 
-An EffectScript `function*` is a producer that yields elements. It converts to an Effect `Stream` wherever one is expected; it is not a place to paste `Effect.gen` or `yield*` error sequencing.
+An Effeck `function*` is a producer that yields elements. It converts to an Effect `Stream` wherever one is expected; it is not a place to paste `Effect.gen` or `yield*` error sequencing.

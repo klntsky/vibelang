@@ -1,6 +1,6 @@
 # Equivalence
 
-`Equivalence` works in EffectScript exactly as in Effect. It packages a reusable rule for deciding whether two values count as equivalent in a particular operation, without changing their global equality behavior.
+`Equivalence` works in Effeck exactly as in Effect. It packages a reusable rule for deciding whether two values count as equivalent in a particular operation, without changing their global equality behavior.
 
 ## Representing a reusable equality relation
 

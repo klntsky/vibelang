@@ -1,8 +1,8 @@
 {
-  "name": "effectscript-docs-tools",
+  "name": "effeck-docs-tools",
   "private": true,
   "type": "module",
-  "description": "Builds docs/design/effectscript-design.md and a self-contained HTML rendering from docs/design/src/*.md.",
+  "description": "Builds docs/design/effeck-design.md and a self-contained HTML rendering from docs/design/src/*.md.",
   "scripts": {
     "build": "bun render.ts",
     "check:snippets": "bun check-snippets.ts"

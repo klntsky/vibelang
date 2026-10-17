@@ -79,7 +79,7 @@ export const profile = Effect.fnUntraced(function* (raw: string) {
 
 Region bodies are closures over the function's variables, so assignments inside a region are visible after it. `return`, `break`, and `continue` that leave a region produce a completion record (`{ kind: "return", value }`, `{ kind: "break", label }`, `{ kind: "normal" }`) that the enclosing frame dispatches on. This is the same transform TypeScript's own downlevel generator emit performs, applied to Effect frames. Because closures hide assignments from TypeScript's definite-assignment analysis, the compiler checks definite assignment on the source, before lowering (D52).
 
-The prototype compiler (`prototype/esc`) emits these shapes and runs them on the kernel. Its `regions.es` example reproduces plain JavaScript's results and `finally` order through labeled `break`, `continue`, and `return` across nested `try`, `catch`, and `finally`, and a `using` in a loop body releases once per iteration on every exit (`prototype/esc/FINDINGS.md`, findings 15 and 17).
+The prototype compiler (`prototype/esc`) emits these shapes and runs them on the kernel. Its `regions.effeck` example reproduces plain JavaScript's results and `finally` order through labeled `break`, `continue`, and `return` across nested `try`, `catch`, and `finally`, and a `using` in a loop body releases once per iteration on every exit (`prototype/esc/FINDINGS.md`, findings 15 and 17).
 
 #### Scope regions
 
@@ -116,11 +116,11 @@ A Scope finalizer registered later runs earlier, so the child is interrupted and
 
 #### Clauses
 
-A clause compiles like any function, with one rule for its last step (D18). When a clause's last action is `return resume(k, v)` and no `try`, `catch`, `finally`, or `using` region of the clause encloses it, the compiler emits `return tailResume(k, v)`: the request is returned, never yielded, so the clause's generator finishes and the `Clause(k)` frame performs the resume with the clause gone (K11a, K11c). Inside such a region the compiler emits `yield* resume(k, v)`, because the region's cleanup must run after the resumed computation, and the stack grows by design (K11d). In the prototype compiler, producer loops, handler clauses, and loop bodies with `try` and `finally` stay under 50 frames over 100,000 elements (`stack-depth.es`, finding 23).
+A clause compiles like any function, with one rule for its last step (D18). When a clause's last action is `return resume(k, v)` and no `try`, `catch`, `finally`, or `using` region of the clause encloses it, the compiler emits `return tailResume(k, v)`: the request is returned, never yielded, so the clause's generator finishes and the `Clause(k)` frame performs the resume with the clause gone (K11a, K11c). Inside such a region the compiler emits `yield* resume(k, v)`, because the region's cleanup must run after the resumed computation, and the stack grows by design (K11d). In the prototype compiler, producer loops, handler clauses, and loop bodies with `try` and `finally` stay under 50 frames over 100,000 elements (`stack-depth.effeck`, finding 23).
 
 #### Producers
 
-A `function*` body may pause, so it cannot keep JavaScript's generator meaning, whose body runs synchronously inside `next()`. EffectScript defines `function*` by the machine instead [Rule]:
+A `function*` body may pause, so it cannot keep JavaScript's generator meaning, whose body runs synchronously inside `next()`. Effeck defines `function*` by the machine instead [Rule]:
 
 - Calling a `function*` runs none of its body. The result is a **producer**: a cold program that performs the built-in control operation `Yield<T>` once per element.
 - `yield v` performs `Yield<T>`.

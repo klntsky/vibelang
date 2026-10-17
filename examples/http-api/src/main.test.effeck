@@ -1,0 +1,18 @@
+import { assert, it } from "@effect/vitest"
+import { HttpClientRequest, HttpRouter, HttpServerRequest } from "effect/http"
+import { App } from "./main.effeck"
+
+function request(body: unknown) {
+  const client = HttpClientRequest.bodyJson(HttpClientRequest.post("http://local/users"), body)
+  return HttpServerRequest.fromClientRequest(client)
+}
+
+it.effect("routes a validated request without opening a socket", () => {
+  Effect.scoped(() => {
+    const app = HttpRouter.toHttpEffect(App)
+    const created = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: "Ada" }))
+    const conflict = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: "Ada" }))
+    const bad = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: 123 }))
+    Effect.sync(() => assert.deepStrictEqual([created.status, conflict.status, bad.status], [201, 409, 400]))
+  })
+})

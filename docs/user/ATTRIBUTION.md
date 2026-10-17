@@ -21,7 +21,7 @@ The live website footer displays “MIT Licensed” and credits Effectful Techno
 
 The earlier licensing check stopped copying and left the per-page inventory pending. The structure-only inventory and original-writing stubs have now been completed as described below. No upstream documentation body prose or code examples have been copied. Obtain an upstream license file or explicit documentation reuse permission before copying or adapting upstream text or examples. No archive was downloaded, and no Git or jj commands were run.
 
-Proposed attribution for any subsequently authorized copy: “Documentation derived from Effect-TS/website, by the Effect documentation contributors; upstream snapshot 9b2ad8c7569b7ca65562185052c1122167eae906, checked 2026-10-15. Effect website footer credits Effectful Technologies Inc. EffectScript modifications and translations must be identified separately.” Preserve the actual upstream copyright and license notice once supplied; this proposed attribution is not a substitute for it.
+Proposed attribution for any subsequently authorized copy: “Documentation derived from Effect-TS/website, by the Effect documentation contributors; upstream snapshot 9b2ad8c7569b7ca65562185052c1122167eae906, checked 2026-10-15. Effect website footer credits Effectful Technologies Inc. Effeck modifications and translations must be identified separately.” Preserve the actual upstream copyright and license notice once supplied; this proposed attribution is not a substitute for it.
 
 ## Effect versions
 
@@ -61,7 +61,7 @@ These counts use Markdown/MDX paths in the pinned tree. Root pages include onboa
 
 ## Plan: original docs mirroring structure
 
-EffectScript end-user documentation will mirror the pinned Effect 4 sections, pages, order, and topics one to one. No upstream prose is copied; pages are written fresh for EffectScript. Upstream code examples are not copied either. The unresolved upstream licensing status remains recorded above.
+Effeck end-user documentation will mirror the pinned Effect 4 sections, pages, order, and topics one to one. No upstream prose is copied; pages are written fresh for Effeck. Upstream code examples are not copied either. The unresolved upstream licensing status remains recorded above.
 
 The [structure and topic inventory](inventory.md) records all 110 upstream page paths, titles, sidebar sections, original short topic phrases, central Effect API names, and fenced code example counts. It follows both sidebar views: onboarding has 12 pages across Start Here, Learning Path, and Core Concepts; guides has the remaining 98 pages. Ordering was checked against `sidebar-config.json`, `onboarding-groups.json`, the sidebar construction code, and page frontmatter at the pinned commit.
 

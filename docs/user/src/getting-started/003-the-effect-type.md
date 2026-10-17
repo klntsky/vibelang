@@ -1,6 +1,6 @@
 # The Effect Type
 
-`Effect<A, E, R>` is the contract of a computation: its success value, expected errors, and required services. EffectScript infers this contract for every function, including small functions that only calculate a value.
+`Effect<A, E, R>` is the contract of a computation: its success value, expected errors, and required services. Effeck infers this contract for every function, including small functions that only calculate a value.
 
 ## Success, failure, and services
 
@@ -55,9 +55,9 @@ function checkedConversion(amount: number, currency: string): Effect<number, inf
 
 In a return annotation on a function with a body, `infer` followed by any name infers that channel from the body. Other slots are promises the compiler checks. The name is documentation only and is not in scope in the body or other slots. `infer _` is allowed, including `Effect<infer _, infer _, infer _>` to infer all three channels.
 
-Write all three slots. `Effect<number>` in this position reports ES2003: "Did you mean never or inferred?" The quick fixes offer `Effect<number, never, never>` to check for no failures or requirements, and `Effect<number, infer E, infer R>` to infer them. A plain return annotation such as `: number` is ES2003 on a function whose body runs an Effect; a function that compiles to plain JavaScript keeps it.
+Write all three slots. `Effect<number>` in this position reports EK2003: "Did you mean never or inferred?" The quick fixes offer `Effect<number, never, never>` to check for no failures or requirements, and `Effect<number, infer E, infer R>` to infer them. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect; a function that compiles to plain JavaScript keeps it.
 
-This applies only to function return annotations with bodies in `.es`. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults: `Effect<number, never, never>`. Those positions do not support this channel inference. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
+This applies only to function return annotations with bodies in `.effeck`. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults: `Effect<number, never, never>`. Those positions do not support this channel inference. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 
 ## Description and execution
 
@@ -79,7 +79,7 @@ The result type must be `Effect` itself for a call to run it automatically. `Con
 ## Extract inferred channel types
 
 ```ts
-// convert.es
+// convert.effeck
 export function double(amount: number) {
   return amount * 2
 }
@@ -88,7 +88,7 @@ export function double(amount: number) {
 
 ```ts
 // TypeScript (.ts)
-// inspect.ts: imports the emitted EffectScript module
+// inspect.ts: imports the emitted Effeck module
 import { Effect } from "effect"
 import { double } from "./convert.js"
 
@@ -98,10 +98,10 @@ type Failure = Effect.Error<Contract>    // never
 type Services = Effect.Services<Contract> // never
 ```
 
-TypeScript consumers see exported EffectScript functions as functions returning ordinary Effects. `Effect.Success`, `Effect.Error`, and `Effect.Services` extract the channels from those inferred return types. These utilities inspect types without executing the program.
+TypeScript consumers see exported Effeck functions as functions returning ordinary Effects. `Effect.Success`, `Effect.Error`, and `Effect.Services` extract the channels from those inferred return types. These utilities inspect types without executing the program.
 
 ## Coming from Effect
 
-`Effect<A, E, R>` is available globally in `.es` files. A local call gives `A`; preserve a program with a function value when you need to compose or store it.
+`Effect<A, E, R>` is available globally in `.effeck` files. A local call gives `A`; preserve a program with a function value when you need to compose or store it.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/the-effect-type)

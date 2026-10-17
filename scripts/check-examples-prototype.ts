@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Check the examples with the executable language reference while esc is built.
+// Check the examples with the executable language reference while effeck is built.
 import fs from "node:fs"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
@@ -19,16 +19,16 @@ for (const name of names) {
   // Keep disposable emitted modules and their source maps inside the project
   // so package imports resolve through its installed dependencies.
   for (const file of fs.readdirSync(path.join(dir, "src"))) {
-    if (!file.endsWith(".es")) continue
+    if (!file.endsWith(".effeck")) continue
     const source = fs.readFileSync(path.join(dir, "src", file), "utf8")
     fs.writeFileSync(path.join(staging, file), source)
   }
-  const entry = "main.es"
-  const test = fs.existsSync(path.join(staging, "main.test.es"))
+  const entry = "main.effeck"
+  const test = fs.existsSync(path.join(staging, "main.test.effeck"))
   const entries = [path.join(staging, entry)]
-  if (test) entries.push(path.join(staging, "main.test.es"))
-  if (name !== "file-tree" && fs.existsSync(path.join(staging, "run.es"))) {
-    entries.push(path.join(staging, "run.es"))
+  if (test) entries.push(path.join(staging, "main.test.effeck"))
+  if (name !== "file-tree" && fs.existsSync(path.join(staging, "run.effeck"))) {
+    entries.push(path.join(staging, "run.effeck"))
   }
   fs.writeFileSync(log, "")
   try {

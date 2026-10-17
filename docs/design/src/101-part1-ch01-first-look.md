@@ -1,8 +1,8 @@
 ## Part I. The language by example
 
-Each chapter shows something you do in Effect today and the same thing in EffectScript. EffectScript code uses Effect's own modules unchanged; what changes is that you stop writing generators, `yield*`, and most combinators.
+Each chapter shows something you do in Effect today and the same thing in Effeck. Effeck code uses Effect's own modules unchanged; what changes is that you stop writing generators, `yield*`, and most combinators.
 
-Three conventions for the snippets. A snippet shown without an enclosing function sits inside one, because a module's top level cannot run a program (Chapter 13). Names such as `User`, `guest`, and `MailerTest` are declared nearby, and helpers such as `toUser` are EffectScript functions. Imports of Effect modules outside the prelude (`Schedule`, `Stream`, `Fiber`, and so on) are left out.
+Three conventions for the snippets. A snippet shown without an enclosing function sits inside one, because a module's top level cannot run a program (Chapter 13). Names such as `User`, `guest`, and `MailerTest` are declared nearby, and helpers such as `toUser` are Effeck functions. Imports of Effect modules outside the prelude (`Schedule`, `Stream`, `Fiber`, and so on) are left out.
 
 ### 1. A first look
 
@@ -71,7 +71,7 @@ Four things changed:
 
 #### What is in scope
 
-Every `.es` file starts with a small prelude in scope, so the program above has no imports:
+Every `.effeck` file starts with a small prelude in scope, so the program above has no imports:
 
 | Name | What it is |
 | --- | --- |
@@ -80,17 +80,17 @@ Every `.es` file starts with a small prelude in scope, so the program above has 
 | `Scope` | Effect's `Scope` module, and the type `Scope`, which is Effect's `Scope.Scope` |
 | `TaggedError` | Effect's `Data.TaggedError` |
 | `Control` | The base class of control operations (Chapter 9) |
-| `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | EffectScript's built-ins, each introduced where it is first used |
+| `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | Effeck's built-ins, each introduced where it is first used |
 
 Everything else is imported from `effect` as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: `Effect` appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), `Schema` in 39-44%, `Layer` in 34-44%, and no other module in more than 22%. `Scope` is there because contracts name it whenever a resource outlives a function (Chapter 6). `Option` and `Array` stay imports because they would shadow the browser's `Option` and JavaScript's `Array`.
 
 #### Running it
 
 ```ts es
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
-import { AppLive } from "./app.es"
-import { welcome } from "./welcome.es"
+import { AppLive } from "./app.effeck"
+import { welcome } from "./welcome.effeck"
 
 function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
@@ -104,7 +104,7 @@ NodeRuntime.runMain(() => main())
 
 #### What the compiler produces
 
-EffectScript compiles to TypeScript. This is the output for `welcome`:
+Effeck compiles to TypeScript. This is the output for `welcome`:
 
 ```ts gen
 export const welcome = Effect.fnUntraced(function* (id: string) {
@@ -121,4 +121,4 @@ export declare const welcome: (id: string) =>
   Effect.Effect<string, UserNotFound | MailError, Users | Mailer>
 ```
 
-TypeScript code that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so a TypeScript program can provide `Users` with an ordinary Layer, and EffectScript can use services written in TypeScript.
+TypeScript code that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so a TypeScript program can provide `Users` with an ordinary Layer, and Effeck can use services written in TypeScript.

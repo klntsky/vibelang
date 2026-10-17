@@ -1,7 +1,0 @@
-main.es(5,10): error ES4403
-main.es(9,10): error ES4403
-main.es(13,21): error ES4403
-main.es(17,10): error ES4403
-main.es(21,10): error ES4403
-main.es(25,10): error ES4403
-main.es(28,26): error ES4403

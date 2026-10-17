@@ -1,9 +1,9 @@
 {
-  "name": "@effectscript/compiler",
+  "name": "effeck",
   "version": "0.0.1",
-  "description": "The native EffectScript compiler and language server",
+  "description": "The native Effeck compiler and language server",
   "type": "module",
-  "bin": { "esc": "bin/esc" },
+  "bin": { "effeck": "bin/effeck" },
   "files": ["bin", "native", "README.md"],
   "engines": { "node": ">=22" }
 }

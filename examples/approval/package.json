@@ -1,17 +1,17 @@
 {
-  "name": "effectscript-example-approval",
+  "name": "effeck-example-approval",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esc -p .",
+    "build": "effeck -p .",
     "start": "node dist/run.js"
   },
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "@effectscript/runtime": "file:../../packages/runtime/effectscript-runtime.tgz"
+    "@effeck/runtime": "file:../../packages/runtime/effeck-runtime.tgz"
   },
   "devDependencies": {
-    "@effectscript/compiler": "file:../../packages/compiler"
+    "effeck": "file:../../packages/compiler"
   }
 }

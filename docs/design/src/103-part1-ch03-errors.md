@@ -2,7 +2,7 @@
 
 #### Throwing a typed error
 
-Errors are the same tagged error classes you use today. `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.es` file; errors that must be serialized use `Schema.TaggedError`. `throw` adds the error to the function's E.
+Errors are the same tagged error classes you use today. `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.effeck` file; errors that must be serialized use `Schema.TaggedError`. `throw` adds the error to the function's E.
 
 ```ts effect
 class InvalidId extends Data.TaggedError("InvalidId")<{ readonly raw: string }> {}
@@ -87,7 +87,7 @@ export function safeLookup(raw: string): Effect<User, never, Users> {
 }
 ```
 
-Remove the `try` and you get `ES2001: InvalidId can escape safeLookup` (the same error as in Chapter 2).
+Remove the `try` and you get `EK2001: InvalidId can escape safeLookup` (the same error as in Chapter 2).
 
 #### Cleanup with `finally`
 
@@ -117,7 +117,7 @@ A cleanup that acquires and releases a resource is better written with `using` (
 
 #### Failures, defects, and interruption
 
-Effect distinguishes three ways a computation can stop, and EffectScript keeps them apart:
+Effect distinguishes three ways a computation can stop, and Effeck keeps them apart:
 
 ```ts es
 function lookupAudited(id: string) {
@@ -149,9 +149,9 @@ A `catch` that caught bugs or cancellation would hide them, so it does not. To d
 
 Two things that look the same mean different things, on purpose.
 
-**`throw` is `Effect.fail`.** Inside `Effect.gen`, `throw new Error("unreachable")` is a defect. In EffectScript, every `throw` is a typed failure: `Error` joins E, and a `catch` can handle it. To signal a bug, die explicitly: `Effect.die(new Error("unreachable"))`.
+**`throw` is `Effect.fail`.** Inside `Effect.gen`, `throw new Error("unreachable")` is a defect. In Effeck, every `throw` is a typed failure: `Error` joins E, and a `catch` can handle it. To signal a bug, die explicitly: `Effect.die(new Error("unreachable"))`.
 
-**`catch` sees expected failures only.** Inside `Effect.gen`, a JavaScript `catch` sees any synchronous exception from the code in its `try`. In EffectScript, an exception that no contract lists is a defect, and `catch` does not see it. That covers Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, whose exceptions are defects (Chapter 10). Each has a form for code that can fail: `Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`. A `catch` that therefore can never run is reported, as a warning by default:
+**`catch` sees expected failures only.** Inside `Effect.gen`, a JavaScript `catch` sees any synchronous exception from the code in its `try`. In Effeck, an exception that no contract lists is a defect, and `catch` does not see it. That covers Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, whose exceptions are defects (Chapter 10). Each has a form for code that can fail: `Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`. A `catch` that therefore can never run is reported, as a warning by default:
 
 ```ts es
 function firstAdmin(users: ReadonlyArray<User>) {
@@ -164,8 +164,8 @@ function firstAdmin(users: ReadonlyArray<User>) {
 ```
 
 ```text
-warning ES2004: this catch can never run: nothing in its try block fails with an expected error.
-  admins.es:3:12   return Option.getOrThrow(Option.fromNullishOr(users.find(isAdmin)))
+warning EK2004: this catch can never run: nothing in its try block fails with an expected error.
+  admins.effeck:3:12   return Option.getOrThrow(Option.fromNullishOr(users.find(isAdmin)))
                           ^^^^^^^^^^^^^^^^^ its exceptions are defects
   Use a form that can fail:   return users.find(isAdmin) ?? guest
   or bound the call:          Effect.try({ try: () => …, catch: (cause) => new NoAdmin({ cause }) })

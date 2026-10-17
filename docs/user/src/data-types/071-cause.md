@@ -1,6 +1,6 @@
 # Cause
 
-`Cause` works in EffectScript exactly as in Effect. It records every reason a computation failed, including typed errors, defects, and interruption, so use it when the error channel alone cannot explain an outcome.
+`Cause` works in Effeck exactly as in Effect. It records every reason a computation failed, including typed errors, defects, and interruption, so use it when the error channel alone cannot explain an outcome.
 
 ## Representing failure reasons
 
@@ -97,4 +97,4 @@ function inspect<E>(cause: Cause.Cause<E>) {
 
 ## Coming from Effect
 
-An EffectScript `catch` handles a cause only when it contains no defect and no interruption. For full outcome inspection, use `Effect.exit(() => work())` and keep the complete cause available.
+An Effeck `catch` handles a cause only when it contains no defect and no interruption. For full outcome inspection, use `Effect.exit(() => work())` and keep the complete cause available.

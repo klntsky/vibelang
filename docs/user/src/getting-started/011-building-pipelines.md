@@ -1,6 +1,6 @@
 # Building Pipelines
 
-Use statements for dependent steps and `pipe` for a series of operators that control a program. EffectScript's global `pipe` supports ordinary data transformations and Effect operators whose first input is a program.
+Use statements for dependent steps and `pipe` for a series of operators that control a program. Effeck's global `pipe` supports ordinary data transformations and Effect operators whose first input is a program.
 
 ## Compose reusable functions
 
@@ -126,7 +126,7 @@ function saveNotice() {
 }
 ```
 
-A call in an EffectScript statement runs even when its success value is ignored. A function value such as `notice` describes work and needs a call to execute. Merely writing `() => Effect.log("saved")` creates a value that no runner or caller uses.
+A call in an Effeck statement runs even when its success value is ignored. A function value such as `notice` describes work and needs a call to execute. Merely writing `() => Effect.log("saved")` creates a value that no runner or caller uses.
 
 ## Coming from Effect
 

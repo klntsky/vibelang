@@ -1,9 +1,0 @@
-main.es(14,34): error ES4402
-main.es(18,28): error ES4402
-main.es(22,28): error ES4402
-main.es(26,22): error ES4402
-main.es(30,34): error ES4402
-main.es(34,56): error ES4402
-main.es(38,3): error ES4402
-main.es(42,19): error ES4402
-main.es(47,14): error ES4402

@@ -1,6 +1,6 @@
 # Class APIs
 
-Schema classes work in EffectScript as in Effect. A class can validate its fields, act as a codec, and expose domain behavior on its instances. Use one when methods or class identity help the model; use `Struct` for plain records. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema classes work in Effeck as in Effect. A class can validate its fields, act as a codec, and expose domain behavior on its instances. Use one when methods or class identity help the model; use `Struct` for plain records. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Declaring validated classes
 
@@ -16,7 +16,7 @@ function readPackage(input: unknown) {
 // Effect<Package, Schema.SchemaError, never>
 ```
 
-Supply the class itself as the `Self` type, a stable identifier, and its fields. The class extends a generated base and is an ordinary data class, not an EffectScript service. The identifier is available as `Package.identifier` and helps Effect recognize class instances across module reloads.
+Supply the class itself as the `Self` type, a stable identifier, and its fields. The class extends a generated base and is an ordinary data class, not an Effeck service. The identifier is available as `Package.identifier` and helps Effect recognize class instances across module reloads.
 
 ## Constructing and checking instances
 
@@ -90,7 +90,7 @@ function announcePackage() {
 }
 ```
 
-Getters derive synchronous values from fields. Methods follow ordinary EffectScript call rules and can run effects; calling `announce` logs before returning. Keep getters pure so formatting, checks, and compiled validators can read properties safely.
+Getters derive synchronous values from fields. Methods follow ordinary Effeck call rules and can run effects; calling `announce` logs before returning. Keep getters pure so formatting, checks, and compiled validators can read properties safely.
 
 ## Using classes as codecs
 

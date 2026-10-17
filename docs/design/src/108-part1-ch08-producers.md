@@ -1,6 +1,6 @@
 ### 8. Producers: streams of values
 
-A `function*` in EffectScript is a **producer**: a function that yields values one at a time and can do anything an EffectScript function does between yields, including calling services and waiting. `for...of` consumes it. The comparison below builds the same reusable, lazy line source over the same `Files` service on both sides.
+A `function*` in Effeck is a **producer**: a function that yields values one at a time and can do anything an Effeck function does between yields, including calling services and waiting. `for...of` consumes it. The comparison below builds the same reusable, lazy line source over the same `Files` service on both sides.
 
 ```ts effect
 const lines = (path: string) =>
@@ -50,7 +50,7 @@ How a producer behaves:
 - **One pass per run.** Iterating the same producer again starts it again from the beginning.
 - **Constant stack.** A loop over a million elements uses the same stack depth as a loop over three (Chapter 26).
 
-A JavaScript generator could not do this: its body runs synchronously inside `next()`, so it cannot wait for a service between values. An EffectScript producer can, because each `yield` is a control operation that the loop handles (Chapter 9 shows the machinery, and Part III how it runs). For the same reason, `Effect.gen`, `Option.gen`, and other generator-based APIs cannot be written in `.es` files: there, `function*` declares a producer (Chapter 10).
+A JavaScript generator could not do this: its body runs synchronously inside `next()`, so it cannot wait for a service between values. An Effeck producer can, because each `yield` is a control operation that the loop handles (Chapter 9 shows the machinery, and Part III how it runs). For the same reason, `Effect.gen`, `Option.gen`, and other generator-based APIs cannot be written in `.effeck` files: there, `function*` declares a producer (Chapter 10).
 
 #### What `for...of` does depends on what it iterates
 
@@ -64,7 +64,7 @@ The choice is made from the static type, like every other call rule (Chapter 13)
 
 #### Producers and Effect streams
 
-To TypeScript, a producer is a `Stream`: the declaration file types `lines` as `(path: string) => Stream.Stream<string, IOError, Files>`. Inside EffectScript, a producer converts to a `Stream` wherever a `Stream` is expected, so Stream's operators apply directly:
+To TypeScript, a producer is a `Stream`: the declaration file types `lines` as `(path: string) => Stream.Stream<string, IOError, Files>`. Inside Effeck, a producer converts to a `Stream` wherever a `Stream` is expected, so Stream's operators apply directly:
 
 ```ts es
 function errorCount(path: string) {
@@ -75,7 +75,7 @@ function errorCount(path: string) {
 
 The conversion runs the producer on a fiber of its own and hands over each element only when the stream pulls it, through a handoff with no buffer, so a pull from any fiber works and the producer never runs ahead of its consumer. Closing the stream interrupts that fiber, which runs the producer's cleanup.
 
-The other direction needs no adapter. Stream's own functions take callbacks that return Effects, so EffectScript callbacks work there, and `for...of` iterates a `Stream` directly:
+The other direction needs no adapter. Stream's own functions take callbacks that return Effects, so Effeck callbacks work there, and `for...of` iterates a `Stream` directly:
 
 ```ts es
 function auditAll(events: Stream.Stream<Event, EventError>) {

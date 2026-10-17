@@ -1,9 +1,0 @@
-// expect: ES1003
-// await is not part of EffectScript: a call already waits. TypeScript's own
-// error for an await outside an async function restates it and is hidden.
-declare const pending: Promise<number>
-
-export function total() {
-  const n = await pending
-  return n + 1
-}

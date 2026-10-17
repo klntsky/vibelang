@@ -1,0 +1,19 @@
+#!/usr/bin/env node
+import { spawn } from "node:child_process"
+import { fileURLToPath } from "node:url"
+
+const binary = process.env.EFFECK_BINARY || fileURLToPath(new URL("../native/effeck", import.meta.url))
+const child = spawn(binary, process.argv.slice(2), { stdio: "inherit" })
+const signals = ["SIGINT", "SIGTERM", "SIGHUP"]
+for (const signal of signals) process.on(signal, () => child.kill(signal))
+child.on("error", (error) => {
+  console.error(`effeck: cannot run ${binary}: ${error.message}`)
+  console.error("Run sh scripts/build-effeck.sh from the Effeck repository, or set EFFECK_BINARY.")
+  process.exitCode = 1
+})
+child.on("exit", (code, signal) => {
+  if (signal) {
+    process.removeAllListeners(signal)
+    process.kill(process.pid, signal)
+  } else process.exitCode = code ?? 1
+})

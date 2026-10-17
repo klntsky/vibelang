@@ -1,3 +1,0 @@
-error ES3201: no provider for Todos.
-error ES3201: no provider for Clock2, Todos.
-Provide it to the test with Effect.provide(() => …, layer), or register the test inside layer(…).

@@ -8,8 +8,8 @@ const packageDir = fileURLToPath(new URL("..", import.meta.url))
 const effectDir = dirname(fileURLToPath(import.meta.resolve("effect/package.json")))
 const effectMetadata = JSON.parse(readFileSync(join(effectDir, "package.json"), "utf8"))
 const fixture = (version: string) => {
-  const dir = mkdtempSync(join(tmpdir(), "effectscript-runtime-"))
-  const runtime = join(dir, "node_modules/@effectscript/runtime")
+  const dir = mkdtempSync(join(tmpdir(), "effeck-runtime-"))
+  const runtime = join(dir, "node_modules/@effeck/runtime")
   const effect = join(dir, "node_modules/effect")
   mkdirSync(runtime, { recursive: true })
   mkdirSync(effect, { recursive: true })
@@ -18,7 +18,7 @@ const fixture = (version: string) => {
   writeFileSync(join(effect, "package.json"), JSON.stringify({ ...effectMetadata, version }))
   symlinkSync(join(effectDir, "dist"), join(effect, "dist"))
   writeFileSync(join(dir, "package.json"), '{"type":"module"}')
-  writeFileSync(join(dir, "main.js"), `import { Effect, $bind } from "@effectscript/runtime"; console.log(Effect.runSync($bind(42)))`)
+  writeFileSync(join(dir, "main.js"), `import { Effect, $bind } from "@effeck/runtime"; console.log(Effect.runSync($bind(42)))`)
   return dir
 }
 
@@ -42,7 +42,7 @@ for (const version of ["4.0.5", "4.0.6", "3.99.0"]) {
           expect(output.trim()).toBe("42")
         } else {
           expect(result.exitCode).not.toBe(0)
-          expect(output).toContain("@effectscript/runtime@0.0.1 requires effect@4.0.5")
+          expect(output).toContain("@effeck/runtime@0.0.1 requires effect@4.0.5")
           expect(output).toContain(`found effect@${version}`)
           expect(output).toContain("npm install effect@4.0.5")
         }

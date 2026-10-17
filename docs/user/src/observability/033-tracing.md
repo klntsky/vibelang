@@ -1,6 +1,6 @@
 # Tracing in Effect
 
-Tracing records an operation's duration and its relationship to other operations. EffectScript uses Effect's spans, attributes, and exporters, so traces can connect work across services. Functions are untraced by default; add spans around operations that you want to observe.
+Tracing records an operation's duration and its relationship to other operations. Effeck uses Effect's spans, attributes, and exporters, so traces can connect work across services. Functions are untraced by default; add spans around operations that you want to observe.
 
 ## Relating spans to traces
 
@@ -53,7 +53,7 @@ function exportedReport() {
 
 This source version provides direct OTLP/HTTP export under `effect/observability`. The layer batches ended spans, uses the supplied HTTP client and serialization, and flushes during scope shutdown. Provide it around the application's lifetime so each request does not create and close its own exporter.
 
-An application that already owns an OpenTelemetry SDK tracer provider can initialize its compatible bridge in a TypeScript bootstrap or adapter and provide the resulting Effect layer to EffectScript. Effect's own packages are trusted; a plain third-party SDK call inside an EffectScript function needs an explicit boundary such as `Effect.try`, or a TypeScript declaration tagged `/** @effectscript trusted */`. A synchronous SDK context callback must compile to plain JavaScript, so it cannot call services or perform other Effect operations.
+An application that already owns an OpenTelemetry SDK tracer provider can initialize its compatible bridge in a TypeScript bootstrap or adapter and provide the resulting Effect layer to Effeck. Effect's own packages are trusted; a plain third-party SDK call inside an Effeck function needs an explicit boundary such as `Effect.try`, or a TypeScript declaration tagged `/** @effeck trusted */`. A synchronous SDK context callback must compile to plain JavaScript, so it cannot call services or perform other Effect operations.
 
 ## Inspecting failures and attributes
 
@@ -124,7 +124,7 @@ function demonstration() {
 }
 ```
 
-Run an OTLP/HTTP collector and a trace viewer on the endpoints configured above. For a local Grafana LGTM container, run `docker run --rm --name effectscript-telemetry --publish 3000:3000 --publish 4318:4318 grafana/otel-lgtm`. It supplies a collector and Tempo for trace storage, with Grafana for inspection. Run `demonstration` through the application runner, let the exporter close cleanly, then open `http://localhost:3000/explore` and search Tempo for service `report-worker`.
+Run an OTLP/HTTP collector and a trace viewer on the endpoints configured above. For a local Grafana LGTM container, run `docker run --rm --name effeck-telemetry --publish 3000:3000 --publish 4318:4318 grafana/otel-lgtm`. It supplies a collector and Tempo for trace storage, with Grafana for inspection. Run `demonstration` through the application runner, let the exporter close cleanly, then open `http://localhost:3000/explore` and search Tempo for service `report-worker`.
 
 Open a `generate-report` trace to compare parent duration, child durations, attributes, events, and failure status. If nothing arrives, check the trace URL, HTTP transport, serialization, and exporter diagnostics before adding more instrumentation.
 

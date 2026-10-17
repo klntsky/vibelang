@@ -1,6 +1,6 @@
 # Schema to JSON Schema
 
-JSON Schema export works in EffectScript as in Effect. It describes the encoded side of a schema's canonical JSON codec, so the exported shape matches the selected JSON representation. Export is best-effort and does not replace runtime decoding. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+JSON Schema export works in Effeck as in Effect. It describes the encoded side of a schema's canonical JSON codec, so the exported shape matches the selected JSON representation. Export is best-effort and does not replace runtime decoding. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Exporting JSON Schema documents
 

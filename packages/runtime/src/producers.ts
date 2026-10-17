@@ -6,7 +6,7 @@ import { $normal } from "./regions.js"
 // ---------------------------------------------------------------------------
 // Producers (D26, design chapters 8 and 26)
 //
-// `function*` in an .es file declares a producer, and `yield v` performs the
+// `function*` in an .effeck file declares a producer, and `yield v` performs the
 // built-in Yield operation. Calling the producer runs none of its body: it
 // returns a Stream that carries the body. `for...of` over that Stream runs the
 // body under a Yield handler on the loop's own fiber (internal iteration);
@@ -15,11 +15,11 @@ import { $normal } from "./regions.js"
 // ---------------------------------------------------------------------------
 
 /** The built-in Yield operation that `yield` performs. */
-const YieldOp = K.operation<unknown, void>("esc/Yield")
+const YieldOp = K.operation<unknown, void>("effeck/Yield")
 
 /** The requirement a producer body has until a loop or a Stream handles its yields. */
 export interface YieldOf<T> {
-  readonly "~esc/Yield": T
+  readonly "~effeck/Yield": T
 }
 
 type ElementOf<R> = R extends YieldOf<infer T> ? T : never
@@ -27,7 +27,7 @@ type ElementOf<R> = R extends YieldOf<infer T> ? T : never
 /** `yield value` in a producer. */
 export const $yield = <T>(value: T): Effect.Effect<void, never, YieldOf<T>> => YieldOp(value) as any
 
-const producerBody: unique symbol = Symbol.for("@effectscript/runtime/producer") as any
+const producerBody: unique symbol = Symbol.for("@effeck/runtime/producer") as any
 
 /** A producer: a Stream that also carries its body for internal iteration. */
 export type Producer<T, E = never, R = never> = Stream.Stream<T, E, R>

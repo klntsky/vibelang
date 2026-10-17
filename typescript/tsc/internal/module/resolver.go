@@ -1727,11 +1727,11 @@ func (r *resolutionState) tryAddingExtensions(extensionless tspath.FileNameStem,
 			}
 		}
 		return continueSearching()
-	case tspath.ExtensionEs:
-		// An EffectScript import names its source file, ./welcome.es; where only
+	case tspath.ExtensionEffeck:
+		// An Effeck import names its source file, ./welcome.effeck; where only
 		// the declaration file exists, as in a published package, it names that.
 		if extensions&extensionsTypeScript != 0 {
-			if resolved := r.tryExtension(tspath.ExtensionEs, extensionless, true); !resolved.shouldContinueSearching() {
+			if resolved := r.tryExtension(tspath.ExtensionEffeck, extensionless, true); !resolved.shouldContinueSearching() {
 				return resolved
 			}
 		}
@@ -1749,8 +1749,8 @@ func (r *resolutionState) tryAddingExtensions(extensionless tspath.FileNameStem,
 			if resolved := r.tryExtension(tspath.ExtensionTsx, extensionless, originalExtension == tspath.ExtensionTs || originalExtension == tspath.ExtensionDts); !resolved.shouldContinueSearching() {
 				return resolved
 			}
-			// ./welcome.js resolves to welcome.es as it resolves to welcome.ts.
-			if resolved := r.tryExtension(tspath.ExtensionEs, extensionless, false); !resolved.shouldContinueSearching() {
+			// ./welcome.js resolves to welcome.effeck as it resolves to welcome.ts.
+			if resolved := r.tryExtension(tspath.ExtensionEffeck, extensionless, false); !resolved.shouldContinueSearching() {
 				return resolved
 			}
 		}

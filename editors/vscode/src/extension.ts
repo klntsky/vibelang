@@ -1,5 +1,5 @@
-// The EffectScript extension: starts `esc --lsp --stdio` as the language
-// server for .es files, and for .ts and .js files when VS Code's built-in
+// The Effeck extension: starts `effeck --lsp --stdio` as the language
+// server for .effeck files, and for .ts and .js files when VS Code's built-in
 // TypeScript features are off.
 import * as fs from "node:fs"
 import * as os from "node:os"
@@ -21,18 +21,18 @@ let status: vscode.LanguageStatusItem
 let restarting: Promise<void> = Promise.resolve()
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  output = vscode.window.createOutputChannel("EffectScript", { log: true })
-  status = vscode.languages.createLanguageStatusItem("effectscript.server", { language: "effectscript" })
-  status.name = "EffectScript language server"
-  status.command = { title: "Show Output", command: "effectscript.showOutput" }
+  output = vscode.window.createOutputChannel("Effeck", { log: true })
+  status = vscode.languages.createLanguageStatusItem("effeck.server", { language: "effeck" })
+  status.name = "Effeck language server"
+  status.command = { title: "Show Output", command: "effeck.showOutput" }
   context.subscriptions.push(
     output,
     status,
-    vscode.commands.registerCommand("effectscript.restartServer", () => restart()),
-    vscode.commands.registerCommand("effectscript.showOutput", () => output.show()),
-    vscode.commands.registerCommand("effectscript.serveTypeScriptFiles", serveTypeScriptFiles),
+    vscode.commands.registerCommand("effeck.restartServer", () => restart()),
+    vscode.commands.registerCommand("effeck.showOutput", () => output.show()),
+    vscode.commands.registerCommand("effeck.serveTypeScriptFiles", serveTypeScriptFiles),
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("effectscript.server") || event.affectsConfiguration("typescript.experimental.useTsgo")) {
+      if (event.affectsConfiguration("effeck.server") || event.affectsConfiguration("typescript.experimental.useTsgo")) {
         void restart()
       }
     }),
@@ -70,20 +70,20 @@ async function start(): Promise<void> {
   const server = findServer()
   if (server === undefined) {
     status.severity = vscode.LanguageStatusSeverity.Error
-    status.text = "esc not found"
-    status.detail = "Run bun install in the project, set effectscript.server.path, or put esc on PATH"
-    output.error("Cannot find esc: effectscript.server.path is empty, no node_modules/.bin/esc was found, and esc is not on PATH.")
+    status.text = "effeck not found"
+    status.detail = "Run bun install in the project, set effeck.server.path, or put effeck on PATH"
+    output.error("Cannot find effeck: effeck.server.path is empty, no node_modules/.bin/effeck was found, and effeck is not on PATH.")
     const choice = await vscode.window.showErrorMessage(
-      "EffectScript cannot find esc. Run bun install in the project (it installs @effectscript/compiler), set effectscript.server.path, or put esc on PATH.",
+      "Effeck cannot find effeck. Run bun install in the project (it installs effeck), set effeck.server.path, or put effeck on PATH.",
       "Open Settings",
       "Show Output"
     )
-    if (choice === "Open Settings") await vscode.commands.executeCommand("workbench.action.openSettings", "effectscript.server.path")
+    if (choice === "Open Settings") await vscode.commands.executeCommand("workbench.action.openSettings", "effeck.server.path")
     if (choice === "Show Output") output.show()
     return
   }
 
-  const languages = servesTypeScriptFiles() ? ["effectscript", ...typeScriptLanguages] : ["effectscript"]
+  const languages = servesTypeScriptFiles() ? ["effeck", ...typeScriptLanguages] : ["effeck"]
   output.info(`Starting ${server.command} --lsp --stdio (from ${server.from}) for ${languages.join(", ")} documents`)
   const serverOptions: ServerOptions = {
     command: server.command,
@@ -97,13 +97,13 @@ async function start(): Promise<void> {
       { scheme: "untitled", language }
     ]),
     outputChannel: output,
-    diagnosticCollectionName: "effectscript",
+    diagnosticCollectionName: "effeck",
     diagnosticPullOptions: { onChange: true, onSave: true },
     middleware: {
       workspace: {
         // The server reads the typescript, javascript, and js/ts sections.
         // Their validate.enable switches VS Code's built-in TypeScript
-        // diagnostics, and turning those off must not silence EffectScript's.
+        // diagnostics, and turning those off must not silence Effeck's.
         configuration: async (params, token, next) => {
           const values = await next(params, token)
           if (!Array.isArray(values)) return values
@@ -112,29 +112,29 @@ async function start(): Promise<void> {
       }
     }
   }
-  const started = new LanguageClient("effectscript", "EffectScript", serverOptions, clientOptions)
+  const started = new LanguageClient("effeck", "Effeck", serverOptions, clientOptions)
   started.onDidChangeState(({ newState }) => {
     if (client !== started) return
     if (newState === State.Running) {
       const info = started.initializeResult?.serverInfo
       status.severity = vscode.LanguageStatusSeverity.Information
-      status.text = "esc"
+      status.text = "effeck"
       status.detail = `${server.command}${info?.version ? ` (TypeScript ${info.version})` : ""}`
     } else if (newState === State.Stopped) {
       status.severity = vscode.LanguageStatusSeverity.Warning
-      status.text = "esc stopped"
-      status.detail = "Run EffectScript: Restart Language Server"
+      status.text = "effeck stopped"
+      status.detail = "Run Effeck: Restart Language Server"
     }
   })
   client = started
   status.severity = vscode.LanguageStatusSeverity.Information
-  status.text = "esc starting"
+  status.text = "effeck starting"
   status.detail = server.command
   try {
     await started.start()
   } catch (error) {
     status.severity = vscode.LanguageStatusSeverity.Error
-    status.text = "esc failed"
+    status.text = "effeck failed"
     status.detail = String(error)
     output.error(`The language server did not start: ${String(error)}`)
   }
@@ -153,25 +153,25 @@ interface Server {
   from: string
 }
 
-// findServer returns the esc to run: the effectscript.server.path setting,
-// else the node_modules/.bin/esc nearest to the active .es file or to a
-// workspace folder, else esc on PATH.
+// findServer returns the effeck to run: the effeck.server.path setting,
+// else the node_modules/.bin/effeck nearest to the active .effeck file or to a
+// workspace folder, else effeck on PATH.
 function findServer(): Server | undefined {
   const folders = vscode.workspace.workspaceFolders ?? []
-  const configured = vscode.workspace.getConfiguration("effectscript").get<string>("server.path", "").trim()
+  const configured = vscode.workspace.getConfiguration("effeck").get<string>("server.path", "").trim()
   if (configured !== "") {
     const expanded = configured.startsWith("~/") ? path.join(os.homedir(), configured.slice(2)) : configured
     const base = folders[0]?.uri.fsPath
     const command = path.isAbsolute(expanded) || base === undefined ? expanded : path.resolve(base, expanded)
-    return { command, from: "the effectscript.server.path setting" }
+    return { command, from: "the effeck.server.path setting" }
   }
 
-  const executable = process.platform === "win32" ? "esc.cmd" : "esc"
+  const executable = process.platform === "win32" ? "effeck.cmd" : "effeck"
   const starts: string[] = []
   const active = vscode.window.activeTextEditor?.document
-  if (active?.languageId === "effectscript" && active.uri.scheme === "file") starts.push(path.dirname(active.uri.fsPath))
+  if (active?.languageId === "effeck" && active.uri.scheme === "file") starts.push(path.dirname(active.uri.fsPath))
   for (const document of vscode.workspace.textDocuments) {
-    if (document.languageId === "effectscript" && document.uri.scheme === "file") starts.push(path.dirname(document.uri.fsPath))
+    if (document.languageId === "effeck" && document.uri.scheme === "file") starts.push(path.dirname(document.uri.fsPath))
   }
   for (const folder of folders) starts.push(folder.uri.fsPath)
   for (const start of starts) {
@@ -203,7 +203,7 @@ function isExecutableFile(file: string): boolean {
 // features are off, so no file gets two sets of diagnostics, hovers, and
 // completions.
 function servesTypeScriptFiles(): boolean {
-  const mode = vscode.workspace.getConfiguration("effectscript").get<string>("server.typeScriptFiles", "auto")
+  const mode = vscode.workspace.getConfiguration("effeck").get<string>("server.typeScriptFiles", "auto")
   if (mode === "on") return true
   if (mode === "off") return false
   return builtInTypeScriptIsOff()
@@ -223,11 +223,11 @@ function isCursor(): boolean {
 }
 
 // serveTypeScriptFiles turns the built-in TypeScript features off for this
-// workspace, so EffectScript's server serves .ts and .js files too: a .ts
-// file that imports an .es module then resolves it.
+// workspace, so Effeck's server serves .ts and .js files too: a .ts
+// file that imports an .effeck module then resolves it.
 async function serveTypeScriptFiles(): Promise<void> {
   if (builtInTypeScriptIsOff()) {
-    await vscode.window.showInformationMessage("EffectScript already serves .ts and .js files in this workspace.")
+    await vscode.window.showInformationMessage("Effeck already serves .ts and .js files in this workspace.")
     return
   }
   if (isCursor()) {
@@ -236,7 +236,7 @@ async function serveTypeScriptFiles(): Promise<void> {
     return
   }
   const choice = await vscode.window.showInformationMessage(
-    "To let EffectScript serve .ts and .js files, disable the built-in extension \"TypeScript and JavaScript Language Features\" for this workspace (Disable (Workspace)), then reload the window.",
+    "To let Effeck serve .ts and .js files, disable the built-in extension \"TypeScript and JavaScript Language Features\" for this workspace (Disable (Workspace)), then reload the window.",
     "Show Extension"
   )
   if (choice !== undefined) {

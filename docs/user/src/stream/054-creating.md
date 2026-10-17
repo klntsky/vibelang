@@ -73,7 +73,7 @@ function adaptRows(rows: AsyncIterable<string>) {
 }
 ```
 
-Pass an async iterable obtained from a TypeScript adapter or a service. The error mapper turns iteration exceptions and rejections into the stream's failure type. EffectScript has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
+Pass an async iterable obtained from a TypeScript adapter or a service. The error mapper turns iteration exceptions and rejections into the stream's failure type. Effeck has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
 
 ## Effects and callbacks
 
@@ -95,7 +95,7 @@ function readNotices() {
 
 `fromEffect` emits one success value. `callback` gives its registration program a queue: `Queue.offer` emits an element, `Queue.end` completes normally, and `Queue.fail` terminates with a typed error. Its optional second argument accepts `bufferSize` and a `strategy` of `"suspend"`, `"dropping"`, or `"sliding"`.
 
-For a foreign event API, put the raw callback registration in a TypeScript adapter and register unsubscription with `Effect.acquireRelease`. The registration callback's Scope remains open for the stream lifetime. Platform callbacks cannot call EffectScript programs directly as synchronous JavaScript callbacks.
+For a foreign event API, put the raw callback registration in a TypeScript adapter and register unsubscription with `Effect.acquireRelease`. The registration callback's Scope remains open for the stream lifetime. Platform callbacks cannot call Effeck programs directly as synchronous JavaScript callbacks.
 
 ## Scoped sources
 
@@ -177,7 +177,7 @@ const names = Stream.paginate(0, (cursor) => {
 })
 ```
 
-`unfold` returns either `[element, nextState]` or `undefined` to stop without emitting. Its callback expects an Effect, so ordinary EffectScript statements can perform work between steps. `paginate` instead returns `[batch, nextStateOption]`; it emits the whole batch, including the final page whose next state is `None`.
+`unfold` returns either `[element, nextState]` or `undefined` to stop without emitting. Its callback expects an Effect, so ordinary Effeck statements can perform work between steps. `paginate` instead returns `[batch, nextStateOption]`; it emits the whole batch, including the final page whose next state is `None`.
 
 ## Queues and broadcasts
 

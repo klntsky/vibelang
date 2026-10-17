@@ -1,0 +1,58 @@
+// Chapter 14. Callbacks and higher-order functions.
+// D12: a function type without a contract accepts any contract, inferred from each call's argument.
+import { Schedule } from "effect"
+
+class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}
+class Flaky extends TaggedError("Flaky")<{ readonly attempt: number }> {}
+
+interface User {
+  readonly id: string
+  readonly name: string
+}
+
+abstract class Users {
+  abstract find(id: string): Effect<User, UserNotFound, never>
+}
+
+function mapAll<A, B>(items: ReadonlyArray<A>, f: (a: A) => B) {
+  const out: B[] = []
+  for (const item of items) out.push(f(item))
+  return out
+}
+// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>) => Effect<B[], E, R>
+
+// NOTE: the proposal shows these two calls at a module's top level, where a call may not run a
+// program (EK1001); they are moved into a function.
+function namesAndSizes(ids: ReadonlyArray<string>, words: ReadonlyArray<string>) {
+  const names = mapAll(ids, (id) => Users.find(id).name)   // Effect<string[], UserNotFound, Users>
+  const sizes = mapAll(words, (w) => w.length)             // Effect<number[], never, never>
+  return { names, sizes }
+}
+
+function withRetry<A>(times: number, program: () => A) {
+  return Effect.retry(program, Schedule.recurs(times))
+}
+// <A, E, R>(times: number, program: () => Effect<A, E, R>) => Effect<A, E, R>
+
+let attempts = 0
+
+function flaky() {
+  attempts++
+  if (attempts < 3) throw new Flaky({ attempt: attempts })
+  return attempts
+}
+
+const UsersTest = Layer.succeed(Users, {
+  find: (id) => ({ id, name: `user-${id}` })
+})
+
+function scenario() {
+  const both = namesAndSizes(["1", "2"], ["a", "bcd"])
+  const retried = withRetry(5, () => flaky())
+  return { names: both.names, sizes: both.sizes, retried, attempts }
+}
+
+// expect-result: {"names":["user-1","user-2"],"sizes":[1,3],"retried":3,"attempts":3}
+export function main() {
+  return Effect.provide(() => scenario(), UsersTest)
+}

@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config"
-import effectscript from "@effectscript/vite"
+import effeck from "@effeck/vite"
 
 export default defineConfig({
-  plugins: [effectscript()],
-  test: { include: ["src/**/*.test.es"] }
+  plugins: [effeck()],
+  test: { include: ["src/**/*.test.effeck"] }
 })

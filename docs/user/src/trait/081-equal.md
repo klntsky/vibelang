@@ -1,6 +1,6 @@
 # Equal
 
-`Equal` works in EffectScript exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can represent the same member or key in an Effect hash collection.
+`Equal` works in Effeck exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can represent the same member or key in an Effect hash collection.
 
 ## Checking structural equality
 
@@ -48,7 +48,7 @@ Equal.equals(
 
 `Equal.Equal` extends `Hash.Hash`, so implement both computed methods. The equality method defines which fields matter, and equal values must produce the same hash. Here `observedBy` is excluded from both methods because it describes an observation rather than revision identity.
 
-These methods compile to plain JavaScript methods, because they implement members typed as plain functions. A protocol method must perform no Effect operation and cannot fail with an expected error; otherwise it is error ES4301, and the fix is to compute the value before building the object. Callers call it as an ordinary method.
+These methods compile to plain JavaScript methods, because they implement members typed as plain functions. A protocol method must perform no Effect operation and cannot fail with an expected error; otherwise it is error EK4301, and the fix is to compute the value before building the object. Callers call it as an ordinary method.
 
 ## Opting into reference identity
 

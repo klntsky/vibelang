@@ -1,0 +1,6 @@
+// expect: TS5023 TS6046
+// compilerOptions.effeck in tsconfig.json has an unknown key (tracng),
+// a code that cannot be configured (EK2001), and two invalid values.
+export function main() {
+  return 1
+}

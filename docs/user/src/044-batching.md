@@ -64,7 +64,7 @@ function partLabel(code: string) {
 }
 ```
 
-`Effect.request` submits the request to its resolver and waits for that entry's answer. The returned success value is available directly in EffectScript. The resolver's pending work, rather than the query function's syntax, determines which calls share a backend operation.
+`Effect.request` submits the request to its resolver and waits for that entry's answer. The returned success value is available directly in Effeck. The resolver's pending work, rather than the query function's syntax, determines which calls share a backend operation.
 
 ## Combine compatible requests into batches
 
@@ -183,6 +183,6 @@ Use `asCache` when you need a first-class cache with expiry, refresh, and invali
 
 ## Coming from Effect
 
-Requests and resolvers keep Effect 4's APIs. Resolver callbacks are ordinary EffectScript functions, completion programs use `() => ...`, and cache allocation runs when `withCache` or `asCache` is called inside a function.
+Requests and resolvers keep Effect 4's APIs. Resolver callbacks are ordinary Effeck functions, completion programs use `() => ...`, and cache allocation runs when `withCache` or `asCache` is called inside a function.
 
 [Upstream Effect page](https://effect.website/docs/v4/batching)

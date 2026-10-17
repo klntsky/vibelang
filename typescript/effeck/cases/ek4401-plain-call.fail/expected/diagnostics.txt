@@ -1,0 +1,4 @@
+main.effeck(8,10): error EK4401
+main.effeck(12,10): error EK4401
+main.effeck(16,30): error EK4401
+main.effeck(20,10): error EK4401

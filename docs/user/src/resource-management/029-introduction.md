@@ -1,6 +1,6 @@
 # Introduction
 
-Resources need cleanup on success, failure, and cancellation. EffectScript uses `finally` for unconditional cleanup, `using` for lexical resource ownership, and Effect's outcome-aware combinators when release depends on how work ended.
+Resources need cleanup on success, failure, and cancellation. Effeck uses `finally` for unconditional cleanup, `using` for lexical resource ownership, and Effect's outcome-aware combinators when release depends on how work ended.
 
 [Upstream page](https://effect.website/docs/v4/resource-management/introduction)
 
@@ -21,7 +21,7 @@ function exportRows(accepted: boolean) {
 // Effect<string, ExportRejected, never>
 ```
 
-`finally` runs after success, a typed failure, a defect, or interruption. It also runs after early return and when a handler abandons the protected computation. EffectScript gives it Effect cleanup semantics, including deferred interruption while cleanup runs.
+`finally` runs after success, a typed failure, a defect, or interruption. It also runs after early return and when a handler abandons the protected computation. Effeck gives it Effect cleanup semantics, including deferred interruption while cleanup runs.
 
 `Effect.ensuring(() => work(), () => cleanup())` remains available for a reusable combinator. A `finally` block is usually clearer for local cleanup. If cleanup itself fails, its failure is retained with the original outcome rather than silently replacing and dropping an earlier failure.
 
@@ -132,4 +132,4 @@ Only `using` acquisitions belong to the lexical block. An acquisition without `u
 
 ## Coming from Effect
 
-`try`/`finally` replaces local `ensuring` chains, and `using resource = acquire()` replaces a scoped acquisition for a lexical block. Effect's `onExit`, `onError`, and bracket combinators still take programs and EffectScript callbacks.
+`try`/`finally` replaces local `ensuring` chains, and `using resource = acquire()` replaces a scoped acquisition for a lexical block. Effect's `onExit`, `onError`, and bracket combinators still take programs and Effeck callbacks.

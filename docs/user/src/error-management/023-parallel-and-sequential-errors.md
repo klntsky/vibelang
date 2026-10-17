@@ -71,4 +71,4 @@ Validation produces one typed failure containing a collection of domain errors. 
 
 ## Coming from Effect
 
-Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup, with EffectScript's guarantee that cleanup failure never replaces and drops an earlier failure.
+Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup, with Effeck's guarantee that cleanup failure never replaces and drops an earlier failure.

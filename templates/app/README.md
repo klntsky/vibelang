@@ -1,12 +1,12 @@
-# EffectScript app
+# Effeck app
 
-> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+> **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-Install local tooling first with `sh scripts/setup.sh` in the EffectScript
+Install local tooling first with `sh scripts/setup.sh` in the Effeck
 repository. Keep that checkout available: this project depends on its packages
 through absolute `file:` paths written when setup installs the template.
 After updating the checkout, rerun setup there, then run
-`bun update @effectscript/runtime @effectscript/compiler @effectscript/vite` here to install
+`bun update @effeck/runtime effeck @effeck/vite` here to install
 the new packages.
 
 ```sh
@@ -17,16 +17,16 @@ bun run dev
 bun run test
 ```
 
-`start` prints `Hello, EffectScript!` and `Recovered from EmptyName`. `dev`
-builds once, then runs `esc --watch` and Node's output watcher together. Press
-Ctrl+C to stop both. Vitest runs `src/**/*.test.es` through `@effectscript/vite` and
-`@effect/vitest`. The plugin checks the project with `esc`, serves compiled
-JavaScript from `node_modules/.effectscript/`, and maps assertion stacks to
-the original `.es` lines. `test` needs no prior build. The Node server keeps
+`start` prints `Hello, Effeck!` and `Recovered from EmptyName`. `dev`
+builds once, then runs `effeck --watch` and Node's output watcher together. Press
+Ctrl+C to stop both. Vitest runs `src/**/*.test.effeck` through `@effeck/vite` and
+`@effect/vitest`. The plugin checks the project with `effeck`, serves compiled
+JavaScript from `node_modules/.effeck/`, and maps assertion stacks to
+the original `.effeck` lines. `test` needs no prior build. The Node server keeps
 its compiler and output watchers for `dev`.
 
-Edit `src/main.es` for the service and layer, and `src/greeting.es` for a typed
-failure. Import local `.es` source files; the compiler emits `.js` imports.
+Edit `src/main.effeck` for the service and layer, and `src/greeting.effeck` for a typed
+failure. Import local `.effeck` source files; the compiler emits `.js` imports.
 Source maps connect Node debugging to those sources.
 
 Install the `.vsix` printed by setup with `code --install-extension <path>`

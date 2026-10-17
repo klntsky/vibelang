@@ -14,7 +14,7 @@ function decodeOpcode(opcode: number) {
 // Effect<string, never, never>
 ```
 
-`Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit EffectScript `throw`, including `throw new Error(...)`, is a typed failure instead.
+`Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit Effeck `throw`, including `throw new Error(...)`, is a typed failure instead.
 
 ```ts
 import { Option } from "effect"
@@ -28,7 +28,7 @@ function firstLabel(labels: ReadonlyArray<string>) {
 }
 ```
 
-`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, so ordinary catch does not see them. A catch whose try block has no expected failures gets warning ES2004 by default. Use a typed form such as `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect` when callers need recovery. A JavaScript catch inside `Effect.gen` can see synchronous exceptions; a catch in `.es` follows the expected-failure contract instead.
+`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, so ordinary catch does not see them. A catch whose try block has no expected failures gets warning EK2004 by default. Use a typed form such as `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect` when callers need recovery. A JavaScript catch inside `Effect.gen` can see synchronous exceptions; a catch in `.effeck` follows the expected-failure contract instead.
 
 ## Promoting typed failures to defects
 

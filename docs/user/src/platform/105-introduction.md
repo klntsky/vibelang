@@ -1,6 +1,6 @@
 # Introduction to Effect Platform
 
-EffectScript uses Effect's platform services for files, paths, terminals, and application launch. Write the application against those interfaces, then supply implementations for Node.js, Deno, Bun, or the browser at the entry point.
+Effeck uses Effect's platform services for files, paths, terminals, and application launch. Write the application against those interfaces, then supply implementations for Node.js, Deno, Bun, or the browser at the entry point.
 
 ## Choosing portable platform services
 
@@ -14,7 +14,7 @@ export function readGreeting() {
 // Effect<string, PlatformError.PlatformError, FileSystem.FileSystem>
 ```
 
-`FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use these interfaces instead of calling `node:*` APIs or browser globals from `.es` files. Portability depends on the target actually implementing the services your program needs; a browser does not automatically gain arbitrary disk access.
+`FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use these interfaces instead of calling `node:*` APIs or browser globals from `.effeck` files. Portability depends on the target actually implementing the services your program needs; a browser does not automatically gain arbitrary disk access.
 
 | Capability | API |
 | --- | --- |
@@ -28,8 +28,8 @@ export function readGreeting() {
 
 ```sh
 npm install effect@4.0.5 @effect/platform-node
-npm install @effectscript/runtime
-npm install --save-dev @effectscript/compiler
+npm install @effeck/runtime
+npm install --save-dev effeck
 ```
 
 The `effect` package contains the interfaces. Install `@effect/platform-node` for Node.js or Deno, `@effect/platform-bun` for Bun, or `@effect/platform-browser` for browser integrations. Choose adapter releases compatible with the project's Effect version.
@@ -42,12 +42,12 @@ deno add npm:effect@4.0.5 npm:@effect/platform-node
 bun add effect@4.0.5 @effect/platform-bun
 ```
 
-`@effectscript/compiler` ships the `esc` binary. Run `npx esc` to check and compile the project's `.es` and `.ts` sources before launching the generated JavaScript; `npx esc --noEmit` checks without emitting. The Bun and Deno projects also need `@effectscript/runtime` and the compiler. Do not pass `.es` files directly to a TypeScript runner.
+`effeck` ships the `effeck` binary. Run `npx effeck` to check and compile the project's `.effeck` and `.ts` sources before launching the generated JavaScript; `npx effeck --noEmit` checks without emitting. The Bun and Deno projects also need `@effeck/runtime` and the compiler. Do not pass `.effeck` files directly to a TypeScript runner.
 
 ## Writing platform-independent programs
 
 ```ts
-// greeting.es
+// greeting.effeck
 import { FileSystem } from "effect"
 
 export function main() {
@@ -62,9 +62,9 @@ export function main() {
 ## Supplying Node or Deno implementations
 
 ```ts
-// main-node.es
+// main-node.effeck
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { main } from "./greeting.es"
+import { main } from "./greeting.effeck"
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
 ```
@@ -74,9 +74,9 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
 ## Supplying Bun implementations
 
 ```ts
-// main-bun.es
+// main-bun.effeck
 import { BunRuntime, BunServices } from "@effect/platform-bun"
-import { main } from "./greeting.es"
+import { main } from "./greeting.effeck"
 
 BunRuntime.runMain(() => Effect.provide(() => main(), BunServices.layer))
 ```
@@ -85,4 +85,4 @@ Only the entry point changes: the same `main` uses Bun's implementations. A targ
 
 ## Coming from Effect
 
-Pass `() => main()` wherever an Effect program is expected. EffectScript functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.
+Pass `() => main()` wherever an Effect program is expected. Effeck functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.

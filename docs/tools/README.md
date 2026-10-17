@@ -17,14 +17,14 @@ bun docs/tools/check-snippets.ts
 
 The checker extracts `ts` fences under `docs/user`, except blocks whose first
 line is `// TypeScript (.ts)` and has no filename caption. It creates one
-temporary project per page and runs `esc --noEmit` once per page. Each block
+temporary project per page and runs `effeck --noEmit` once per page. Each block
 gets its own module. A filename comment in either of the first two lines,
-such as `// launch-options.ts` after `// TypeScript (.ts)` or `// main.es`,
+such as `// launch-options.ts` after `// TypeScript (.ts)` or `// main.effeck`,
 names that file and makes it available to relative imports. Named `.ts`
 companions keep TypeScript semantics and must import their own dependencies.
 The temporary project links the local runtime and Vite plugin packages.
 Repeated captions name independent examples, so those blocks keep numbered
-filenames. Unnamed EffectScript blocks also use numbered `.es` files. Imports
+filenames. Unnamed Effeck blocks also use numbered `.effeck` files. Imports
 and declarations from earlier examples are available in later blocks; a new
 name shadows the earlier example's name. Blocks that deliberately fail or opt
 out do not supply declarations to later blocks. Local imports with no fixture
@@ -39,7 +39,7 @@ remain fragments. No snippet executes.
 
 Use a header comment before the code:
 
-- `// expect-error: ES2001` declares an intentionally invalid example. List
+- `// expect-error: EK2001` declares an intentionally invalid example. List
   several codes separated by spaces. Unexpected diagnostics still fail.
 - `// fragment` opts out of classification for incomplete syntax or a prose
   sketch. The compiler still checks the block.
@@ -49,8 +49,8 @@ Use a header comment before the code:
   has no unexpected substantive error and every expected code occurs. Stale
   markers fail, so resolved gaps cannot silently accumulate.
 
-`--compiler path` (or `ESC_BINARY`) selects a compiler. The default is
-`typescript/built/local/tsc`, then `esc` on PATH. `--filter text` selects pages,
+`--compiler path` (or `EFFECK_BINARY`) selects a compiler. The default is
+`typescript/built/local/tsc`, then `effeck` on PATH. `--filter text` selects pages,
 `--json path` writes diagnostics with Markdown line numbers, and `--keep`
 preserves temporary projects for debugging. Compiler crashes, missing runtime
 builds, and project configuration errors exit 2. Snippet failures exit 1.
@@ -62,4 +62,4 @@ bun test docs/tools/check-snippets.test.ts
 bun docs/tools/render-user.ts
 ```
 
-The user renderer checks local page links while building the 114-page site (110 mirrored pages and four EffectScript guides).
+The user renderer checks local page links while building the 114-page site (110 mirrored pages and four Effeck guides).

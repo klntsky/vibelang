@@ -1,6 +1,6 @@
 # Managing Services
 
-A service gives a program a named capability without passing an implementation through every function. EffectScript declares service keys as abstract classes and infers their use in the `R` channel.
+A service gives a program a named capability without passing an implementation through every function. Effeck declares service keys as abstract classes and infers their use in the `R` channel.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/services)
 
@@ -55,9 +55,9 @@ function endpoint(path: string) {
 // Effect<string, never, Settings>
 ```
 
-Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members are trusted; a plain TypeScript member from another package needs `@effectscript trusted`, or the call is ES4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
+Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members are trusted; a plain TypeScript member from another package needs `@effeck trusted`, or the call is EK4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
 
-A declared service member wins over the key's own members, including `pipe`, `use`, `key`, and `call`. A static member with the same name as a service member is error ES3006.
+A declared service member wins over the key's own members, including `pipe`, `use`, `key`, and `call`. A static member with the same name as a service member is error EK3006.
 
 `provideService` removes this dependency only within its supplied program. Nested overrides are local, and a captured implementation remains the same object across later overrides or pauses. Forked fibers inherit the context present when they start.
 
@@ -147,4 +147,4 @@ Capture construction dependencies in the layer factory. Calling `Reporter.write`
 
 ## Coming from Effect
 
-Abstract classes replace hand-written `Context.Service` declarations in `.es` files. Call service methods directly, and use `ServiceName()` where a TypeScript generator would yield the key to obtain its implementation.
+Abstract classes replace hand-written `Context.Service` declarations in `.effeck` files. Call service methods directly, and use `ServiceName()` where a TypeScript generator would yield the key to obtain its implementation.

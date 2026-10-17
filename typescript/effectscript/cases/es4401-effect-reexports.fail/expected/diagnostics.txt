@@ -1,3 +1,0 @@
-main.es(23,3): error ES4401
-main.es(23,3): error ES4401
-main.es(24,3): error ES4401

@@ -1,6 +1,6 @@
 # Schema to Formatter
 
-Value formatters work in EffectScript exactly as in Effect. A schema-derived formatter renders decoded values as readable strings for diagnostics or display. It does not validate input or serialize a value for transport; use a codec for serialization and an issue formatter for failures. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Value formatters work in Effeck exactly as in Effect. A schema-derived formatter renders decoded values as readable strings for diagnostics or display. It does not validate input or serialize a value for transport; use a codec for serialization and an issue formatter for failures. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Deriving value formatters from schemas
 

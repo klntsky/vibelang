@@ -1,5 +1,5 @@
 import "./version.js"
-// Runtime ABI used by generated EffectScript modules.
+// Runtime ABI used by generated Effeck modules.
 export * from "./calls.js"
 export * from "./regions.js"
 export * from "./fork.js"

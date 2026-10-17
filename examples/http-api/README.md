@@ -5,7 +5,7 @@ calls an abstract `Users` service. It returns 201, maps `NameTaken` to 409,
 and maps schema failures to 400. Other failures retain their typed channel.
 `HttpRouter.provideRequest` supplies request services from a shared layer.
 
-From this directory, with `esc` on `PATH`:
+From this directory, with `effeck` on `PATH`:
 ```sh
 bun install
 bun run build
@@ -15,12 +15,12 @@ curl -i localhost:3000/users -H 'content-type: application/json' -d '{"name":"Ad
 bun run test
 ```
 
-Vitest runs `src/main.test.es` through `@effectscript/vite` without a prior
-build. Assertion stacks point to `.es` lines. The test routes requests through
+Vitest runs `src/main.test.effeck` through `@effeck/vite` without a prior
+build. Assertion stacks point to `.effeck` lines. The test routes requests through
 `HttpRouter.toHttpEffect`, without a socket.
 Importing `main.js` constructs layers; only `run.js` starts the server.
-`main.es` passes Node's `createServer` to `NodeHttpServer.layer` as a value,
-which runs nothing; a call to a platform API from `.es` code is ES4402.
+`main.effeck` passes Node's `createServer` to `NodeHttpServer.layer` as a value,
+which runs nothing; a call to a platform API from `.effeck` code is EK4402.
 The successful request path in Effect TypeScript is:
 ```ts
 const createUser = Effect.fnUntraced(function* () {

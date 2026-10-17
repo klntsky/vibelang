@@ -1,6 +1,6 @@
 # Basic Usage
 
-Schema constructors work in EffectScript as they do in Effect. Combine small descriptions into arrays, objects, and alternatives, then run a parser inside a function. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema constructors work in Effeck as they do in Effect. Combine small descriptions into arrays, objects, and alternatives, then run a parser inside a function. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Modeling primitives, symbols, literals, enums, and template strings
 

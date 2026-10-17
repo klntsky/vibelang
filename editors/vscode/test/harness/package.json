@@ -1,7 +1,7 @@
 {
-  "name": "effectscript-extension-test",
-  "description": "Hosts test/harness/index.js, which checks the EffectScript extension installed from effectscript.vsix.",
-  "publisher": "effectscript",
+  "name": "effeck-extension-test",
+  "description": "Hosts test/harness/index.js, which checks the Effeck extension installed from effeck.vsix.",
+  "publisher": "effeck",
   "version": "0.0.0",
   "private": true,
   "engines": {

@@ -1,6 +1,6 @@
 # Introduction to Runtime
 
-Effect's runtime executes computations, carries service implementations, schedules fibers, and runs cleanup. EffectScript uses that infrastructure while ordinary functions express the work to execute.
+Effect's runtime executes computations, carries service implementations, schedules fibers, and runs cleanup. Effeck uses that infrastructure while ordinary functions express the work to execute.
 
 ## Execution infrastructure
 
@@ -15,7 +15,7 @@ const outcome = Effect.runPromiseExit(() => operation())
 
 A runner starts a root fiber with its context, fiber-local settings, and initial program. The runtime steps through the work, waits for asynchronous results, coordinates interruption, and executes finalizers. `outcome` is a promise for an `Exit` that records either the success or the complete failure cause.
 
-A function value remains a description until it is called or handed to a runner. Calling another EffectScript function inside `operation` continues on the same fiber; concurrency requires an explicit operator.
+A function value remains a description until it is called or handed to a runner. Calling another Effeck function inside `operation` continues on the same fiber; concurrency requires an explicit operator.
 
 ## Run with an explicit service context
 
@@ -39,7 +39,7 @@ const result = Effect.runSyncWith(context)(() => label())
 
 `Context.make` associates a service key with its implementation. The `run*With` variants accept that context and execute a program whose requirements it satisfies. `runPromiseWith` and `runForkWith` serve asynchronous and fiber-based entry points; plain runners require no remaining application services.
 
-Call runners only where no fiber runs the code: at a module's top level or in a plain callback registered there with a TypeScript host. Calling one inside a running program is ES1005; call the program directly or use `fork` there.
+Call runners only where no fiber runs the code: at a module's top level or in a plain callback registered there with a TypeScript host. Calling one inside a running program is EK1005; call the program directly or use `fork` there.
 
 Most applications build their context through layers instead. Use an explicit context when the host already has one, or a managed runtime when several entry points must share layer resources.
 
@@ -66,7 +66,7 @@ To emit a different format, supply a logger such as `Logger.consoleJson` through
 ## Build and dispose managed runtimes
 
 ```ts
-// notifications.es
+// notifications.effeck
 import { Console } from "effect"
 
 export abstract class Notifications {
@@ -102,7 +102,7 @@ export async function example() {
 
 `ManagedRuntime.make` builds its layer lazily on first use and shares the resulting context across executions. The layer's resources live until disposal rather than until each call completes. Dispose the runtime when its owner shuts down, and create a fresh runtime for a new owner.
 
-Each `Effect.provide` builds its layers once for that invocation. Repeating `provide` at several entry points rebuilds them, which is why a managed runtime is useful for shared pools or clients. For Effect-based cleanup, `runtime.disposeEffect` is an Effect value that runs when called from `.es`.
+Each `Effect.provide` builds its layers once for that invocation. Repeating `provide` at several entry points rebuilds them, which is why a managed runtime is useful for shared pools or clients. For Effect-based cleanup, `runtime.disposeEffect` is an Effect value that runs when called from `.effeck`.
 
 ## Connect runtime execution to frameworks
 
@@ -123,10 +123,10 @@ export function makeNotificationHost() {
 
 The framework owns this adapter: call `onMessage` at an entry point and `close` when the application, test fixture, or component owner ends. Its promise reports failures back to the host. Keep the runtime stable across repeated requests or renders so layer resources are shared as intended.
 
-Framework callbacks can stay in TypeScript and import the emitted EffectScript functions, as above. A plain framework callback registered from an `.es` module's top level can also call `runtime.runPromise(() => notify(message))`. The callback runs outside a fiber; the runner supplies the boundary to the application program.
+Framework callbacks can stay in TypeScript and import the emitted Effeck functions, as above. A plain framework callback registered from an `.effeck` module's top level can also call `runtime.runPromise(() => notify(message))`. The callback runs outside a fiber; the runner supplies the boundary to the application program.
 
 ## Coming from Effect
 
-Abstract service classes replace hand-written `Context.Service` declarations in `.es`. The runtime, context, layers, and managed runtime remain Effect's APIs; TypeScript boundary code continues to pass cold Effects to their runners.
+Abstract service classes replace hand-written `Context.Service` declarations in `.effeck`. The runtime, context, layers, and managed runtime remain Effect's APIs; TypeScript boundary code continues to pass cold Effects to their runners.
 
 [Upstream Effect page](https://effect.website/docs/v4/runtime)

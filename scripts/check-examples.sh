@@ -1,15 +1,15 @@
 #!/bin/sh
 # Compile all examples, then compare finite programs with their output fixtures.
-# ESC=/absolute/path/to/esc scripts/check-examples.sh
+# EFFECK=/absolute/path/to/effeck scripts/check-examples.sh
 # Detailed diagnostics and output remain in .cache/check-examples/.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 logs="$root/.cache/check-examples"
 mkdir -p "$logs"
-compiler=${ESC:-}
+compiler=${EFFECK:-}
 if [ -z "$compiler" ]; then
-  if command -v esc >/dev/null 2>&1; then
-    compiler=$(command -v esc)
+  if command -v effeck >/dev/null 2>&1; then
+    compiler=$(command -v effeck)
   else
     compiler="$root/typescript/built/local/tsc"
   fi
@@ -33,7 +33,7 @@ for name in hello users http-api file-tree resilience approval pipeline; do
     continue
   fi
   entry=dist/run.js
-  [ -f "$dir/src/run.es" ] || entry=dist/main.js
+  [ -f "$dir/src/run.effeck" ] || entry=dist/main.js
   # Bound execution so an incorrect producer or fiber lifetime cannot hang CI.
   if ! (cd "$dir" && node --input-type=module - "$entry" <<'JS'
 import { spawnSync } from "node:child_process"

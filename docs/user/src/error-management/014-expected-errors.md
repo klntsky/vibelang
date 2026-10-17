@@ -1,6 +1,6 @@
 # Expected Errors
 
-Expected errors describe situations callers can handle: invalid input, a denied operation, or an unavailable dependency. EffectScript infers them in the `E` channel and narrows them inside `catch`.
+Expected errors describe situations callers can handle: invalid input, a denied operation, or an unavailable dependency. Effeck infers them in the `E` channel and narrows them inside `catch`.
 
 [Upstream page](https://effect.website/docs/v4/error-management/expected-errors)
 
@@ -24,7 +24,7 @@ function normalizeCode(input: string) {
 
 The global `TaggedError` is Effect's `Data.TaggedError`. Its constructor stores the fields and adds a readonly `_tag`; `throw` adds the class to `E`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
 
-Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs `Effect.try` or a trusted declaration, `/** @effectscript trusted */`; each `@throws {T}` names an exported exception class that joins `E`, and unlisted exceptions are defects. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
+Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs `Effect.try` or a trusted declaration, `/** @effeck trusted */`; each `@throws {T}` names an exported exception class that joins `E`, and unlisted exceptions are defects. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
 
 ## Tracking several error cases
 

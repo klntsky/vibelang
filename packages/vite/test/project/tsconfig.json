@@ -5,5 +5,5 @@
     "rootDir": ".", "outDir": "dist", "noEmitOnError": true,
     "rewriteRelativeImportExtensions": true
   },
-  "include": ["*.es"]
+  "include": ["*.effeck"]
 }

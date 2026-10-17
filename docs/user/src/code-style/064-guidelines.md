@@ -1,11 +1,11 @@
 # Guidelines
 
-Run an EffectScript application through its platform runtime, keep its lifetime in `main`, and make callback arguments explicit. These habits keep shutdown predictable and prevent accidental argument forwarding when composing functions.
+Run an Effeck application through its platform runtime, keep its lifetime in `main`, and make callback arguments explicit. These habits keep shutdown predictable and prevent accidental argument forwarding when composing functions.
 
 ## Running application entry points
 
 ```ts
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
@@ -27,12 +27,12 @@ Pass the program to `runMain`; the runner starts it and coordinates interruption
 
 `Effect.runPromise` is useful when another host owns execution and needs a Promise. For a standalone process, prefer the platform runner's signal handling and shutdown behavior. Module-level calls may build values or register an entry point, but ordinary application work belongs inside functions.
 
-Call runners only where no fiber runs the code: at the module's top level or in a plain framework callback registered from there. A runner inside code a fiber runs is ES1005; call the program or use `fork` there. Tests in `.es` use `it.effect`; Promise-style tests stay in `.ts`.
+Call runners only where no fiber runs the code: at the module's top level or in a plain framework callback registered from there. A runner inside code a fiber runs is EK1005; call the program or use `fork` there. Tests in `.effeck` use `it.effect`; Promise-style tests stay in `.ts`.
 
 ## Selecting a platform runtime
 
 ```ts
-// main.es
+// main.effeck
 import { BunRuntime } from "@effect/platform-bun"
 
 function main() {

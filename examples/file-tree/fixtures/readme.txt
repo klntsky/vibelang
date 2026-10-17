@@ -1,1 +1,1 @@
-EffectScript
+Effeck

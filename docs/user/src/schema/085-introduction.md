@@ -1,11 +1,11 @@
 # Introduction to Effect Schema
 
-`Schema` works in EffectScript exactly as in Effect: it describes values, checks data, and converts between representations. Use a schema at a boundary where incoming data has an unknown shape, or where a domain value needs a storage or transport format. `Schema` is already in scope in `.es` files.
+`Schema` works in Effeck exactly as in Effect: it describes values, checks data, and converts between representations. Use a schema at a boundary where incoming data has an unknown shape, or where a domain value needs a storage or transport format. `Schema` is already in scope in `.effeck` files.
 
 ## Configuring compiler prerequisites
 
 ```ts
-// settings.es
+// settings.effeck
 const Settings = Schema.Struct({
   label: Schema.String,
   hint: Schema.optionalKey(Schema.String)
@@ -17,9 +17,9 @@ function readSettings(input: unknown) {
 // Effect<typeof Settings.Type, Schema.SchemaError, never>
 ```
 
-Enable `strict` in the project's compiler options. Enable `exactOptionalPropertyTypes` as well to distinguish an absent `hint` from a present `hint: undefined`. `optionalKey` accepts the absent key but rejects explicit `undefined`; turning the compiler option off does not change that runtime rule. EffectScript v0 uses the TypeScript 7.1 checker and supports `effect@4.0.5` exactly. Install `@effectscript/runtime` and `effect@4.0.5` as dependencies and `@effectscript/compiler` as a dev dependency. Run `esc --noEmit` to check `.es` and `.ts` files together; `esc` also emits JavaScript and declarations.
+Enable `strict` in the project's compiler options. Enable `exactOptionalPropertyTypes` as well to distinguish an absent `hint` from a present `hint: undefined`. `optionalKey` accepts the absent key but rejects explicit `undefined`; turning the compiler option off does not change that runtime rule. Effeck v0 uses the TypeScript 7.1 checker and supports `effect@4.0.5` exactly. Install `@effeck/runtime` and `effect@4.0.5` as dependencies and `effeck` as a dev dependency. Run `effeck --noEmit` to check `.effeck` and `.ts` files together; `effeck` also emits JavaScript and declarations.
 
-Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls; their exceptions are defects. `catch` does not handle those defects. Use an Effect-returning parser for typed validation failures, or an explicit `Effect.try` boundary to give a synchronous exception an expected error type. External plain TypeScript functions need a boundary or a `/** @effectscript trusted */` contract inside a program.
+Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls; their exceptions are defects. `catch` does not handle those defects. Use an Effect-returning parser for typed validation failures, or an explicit `Effect.try` boundary to give a synchronous exception an expected error type. External plain TypeScript functions need a boundary or a `/** @effeck trusted */` contract inside a program.
 
 ## Understanding schemas and codecs
 

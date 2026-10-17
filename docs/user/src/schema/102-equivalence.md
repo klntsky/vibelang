@@ -1,6 +1,6 @@
 # Schema to Equivalence
 
-Schema-derived equivalence works in EffectScript exactly as in Effect. It compares decoded values using the structure described by a schema, making it useful for domain comparisons and round-trip checks. It does not decode or validate the compared values. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema-derived equivalence works in Effeck exactly as in Effect. It compares decoded values using the structure described by a schema, making it useful for domain comparisons and round-trip checks. It does not decode or validate the compared values. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Deriving equality from schemas
 

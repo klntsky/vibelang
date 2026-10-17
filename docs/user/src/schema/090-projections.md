@@ -1,6 +1,6 @@
 # Schema Projections
 
-Projections work in EffectScript exactly as in Effect. They turn one side of a codec into a schema that validates that representation without running the codec's conversion. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Projections work in Effeck exactly as in Effect. They turn one side of a codec into a schema that validates that representation without running the codec's conversion. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Projecting a codec to its decoded schema
 

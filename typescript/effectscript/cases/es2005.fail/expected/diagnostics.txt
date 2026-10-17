@@ -1,2 +1,0 @@
-main.es(21,49): error ES2005
-main.es(27,49): error ES2005

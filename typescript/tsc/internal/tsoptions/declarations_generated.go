@@ -245,13 +245,13 @@ var commonOptionsWithBuild = []*CommandLineOption{
 }
 
 var optionsForCompiler = []*CommandLineOption{
-	// effectscript is added by hand, not generated; see effectscript.go.
+	// effeck is added by hand, not generated; see effeck.go.
 	{
-		Name:            "effectscript",
+		Name:            "effeck",
 		Kind:            CommandLineOptionTypeObject,
 		IsTSConfigOnly:  true,
 		Category:        diagnostics.Language_and_Environment,
-		extraValidation: extraValidationEffectScript,
+		extraValidation: extraValidationEffeck,
 	},
 	{
 		Name:                     "all",

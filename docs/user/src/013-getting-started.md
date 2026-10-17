@@ -1,15 +1,15 @@
 # Getting Started
 
-These guides teach EffectScript one topic at a time and also serve as a reference while you build. Start with [Welcome](001-onboarding.md), or jump to the subject you need.
+These guides teach Effeck one topic at a time and also serve as a reference while you build. Start with [Welcome](001-onboarding.md), or jump to the subject you need.
 
 ## Create and run your first project
 
-Run setup once from the EffectScript repository, then scaffold wherever you
+Run setup once from the Effeck repository, then scaffold wherever you
 keep projects:
 
 ```sh
 sh scripts/setup.sh
-bun create effectscript my-app --no-git
+bun create effeck my-app --no-git
 cd my-app
 bun run build
 bun run start
@@ -19,22 +19,22 @@ bun run test
 The starter prints:
 
 ```out
-Hello, EffectScript!
+Hello, Effeck!
 Recovered from EmptyName
 ```
 
-`src/greeting.es` defines a greeting function and an `EmptyName` tagged error.
-`src/main.es` declares the abstract `Greeter` service, supplies its live layer,
+`src/greeting.effeck` defines a greeting function and an `EmptyName` tagged error.
+`src/main.effeck` declares the abstract `Greeter` service, supplies its live layer,
 recovers a typed failure with `try`/`catch`, and starts the program with
-`NodeRuntime.runMain`. `src/greeting.test.es` uses `it.effect` to test success
-and recovery. Vitest compiles `src/**/*.test.es` through `@effectscript/vite`; tests need no prior build.
+`NodeRuntime.runMain`. `src/greeting.test.effeck` uses `it.effect` to test success
+and recovery. Vitest compiles `src/**/*.test.effeck` through `@effeck/vite`; tests need no prior build.
 
 Run `bun run dev` to compile on changes and restart Node when output changes.
 Press Ctrl+C to stop both watchers. Open this project in VS Code or Cursor after
 installing the `.vsix` printed by setup. The extension uses the local compiler
 for diagnostics and hovers.
 
-Keep the EffectScript checkout available: the project's local package paths
+Keep the Effeck checkout available: the project's local package paths
 point to it. See [Installation](getting-started/004-installation.md) for
 prerequisites, setup details, and the end-to-end verification command.
 
@@ -49,7 +49,7 @@ function main() {
 // Effect<number, never, never>
 ```
 
-Read [The Effect Type](getting-started/003-the-effect-type.md) to understand this function's contract, [Creating Effects](getting-started/005-creating-effects.md) to add failures, and [Running Effects](getting-started/009-running-effects.md) to execute it at an application boundary. Each guide explains a use case. The [Effect 4 API reference](https://effect.website/docs/v4/api) lists library signatures, whose program arguments become zero-argument functions in EffectScript.
+Read [The Effect Type](getting-started/003-the-effect-type.md) to understand this function's contract, [Creating Effects](getting-started/005-creating-effects.md) to add failures, and [Running Effects](getting-started/009-running-effects.md) to execute it at an application boundary. Each guide explains a use case. The [Effect 4 API reference](https://effect.website/docs/v4/api) lists library signatures, whose program arguments become zero-argument functions in Effeck.
 
 ## Documentation versions
 
@@ -73,12 +73,12 @@ Use each page's headings to find a specific operation. In a Markdown reader, fol
 
 ## Using documentation with language models
 
-Provide the relevant EffectScript guide alongside the Effect API signature. State that every function is an Effect, calls run, and programs passed to operators are functions such as `() => main()`. Include your error and service declarations so generated code has enough information to preserve the contract.
+Provide the relevant Effeck guide alongside the Effect API signature. State that every function is an Effect, calls run, and programs passed to operators are functions such as `() => main()`. Include your error and service declarations so generated code has enough information to preserve the contract.
 
-Use compiler feedback and focused tests to check the result. Effect's TypeScript tooling applies to `.ts` integration code; the [Devtools](getting-started/012-devtools.md) page explains EffectScript's compiler, language server, linting, and debugging setup.
+Use compiler feedback and focused tests to check the result. Effect's TypeScript tooling applies to `.ts` integration code; the [Devtools](getting-started/012-devtools.md) page explains Effeck's compiler, language server, linting, and debugging setup.
 
 ## Community entry points
 
-Use [Effect Discord](https://discord.gg/effect-ts) for ecosystem help and [Effect on GitHub](https://github.com/Effect-TS) for library sources and issues. Say whether a reproduction is `.es` or `.ts`, and include the installed version. For language-specific behavior, include the smallest EffectScript function that exhibits it.
+Use [Effect Discord](https://discord.gg/effect-ts) for ecosystem help and [Effect on GitHub](https://github.com/Effect-TS) for library sources and issues. Say whether a reproduction is `.effeck` or `.ts`, and include the installed version. For language-specific behavior, include the smallest Effeck function that exhibits it.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started)

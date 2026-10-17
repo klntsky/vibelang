@@ -1,2 +1,0 @@
-main.es(7,10): warning ES4403
-main.es(11,10): warning ES4403

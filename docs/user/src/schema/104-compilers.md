@@ -1,11 +1,11 @@
 # Schema Compilers
 
-Effect's experimental Schema compilers work behind the ordinary Schema APIs in EffectScript. They generate JavaScript for supported parsing operations while leaving unsupported work to the interpreter. Measure the change on your schemas before relying on a performance improvement. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Effect's experimental Schema compilers work behind the ordinary Schema APIs in Effeck. They generate JavaScript for supported parsing operations while leaving unsupported work to the interpreter. Measure the change on your schemas before relying on a performance improvement. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Understanding optimized validation paths
 
 ```ts
-// schemas/Parcel.es
+// schemas/Parcel.effeck
 export const Parcel = Schema.Struct({
   reference: Schema.String,
   count: Schema.Int
@@ -23,7 +23,7 @@ Compilation must be active for the relevant AST and operation before a consumer 
 ## Enabling just-in-time compilation and fallback
 
 ```ts
-// main.es
+// main.effeck
 import "effect/schema/SchemaJITCompiler/enable"
 
 const CompiledParcel = Schema.Struct({
@@ -78,7 +78,7 @@ export const buildSchemas = () => Effect.provide(
 ```
 
 ```ts
-// build.es
+// build.effeck
 import { buildSchemas } from "./build-schema-aot.ts"
 
 function build() {
@@ -93,9 +93,9 @@ Decoding is the default operation. Add encoding, guards, and construction only w
 
 ```ts
 // fragment
-// application.es
+// application.effeck
 import "./generated/parcel-validators.js"
-import { Parcel } from "./schemas/Parcel.es"
+import { Parcel } from "./schemas/Parcel.effeck"
 
 function receive(input: unknown) {
   return Schema.decodeUnknownEffect(Parcel)(input)

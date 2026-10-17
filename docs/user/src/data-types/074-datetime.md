@@ -1,6 +1,6 @@
 # DateTime
 
-`DateTime` works in EffectScript exactly as in Effect. It represents immutable instants, optionally carrying a time zone, and provides parsing, calendar operations, and formatting without mutating a JavaScript `Date`.
+`DateTime` works in Effeck exactly as in Effect. It represents immutable instants, optionally carrying a time zone, and provides parsing, calendar operations, and formatting without mutating a JavaScript `Date`.
 
 ## Modeling UTC and zoned instants
 

@@ -1,6 +1,6 @@
 ### 12. Questions Effect users ask
 
-Short answers, each with the code. Appendix C maps every section of Effect's documentation to EffectScript, including the many features that carry over unchanged.
+Short answers, each with the code. Appendix C maps every section of Effect's documentation to Effeck, including the many features that carry over unchanged.
 
 #### Where did `async` and `await` go?
 
@@ -41,7 +41,7 @@ function displayName(id: string) {
 }
 ```
 
-Every function body plays the part of the generator, and every call that returns an Effect plays the part of `yield*`. `function*` now declares a producer (Chapter 8), so APIs that take a generator, such as `Effect.gen` and `Option.gen`, stay in `.ts` files (ES1002). The editor converts an `Effect.gen` function for you (Chapter 28).
+Every function body plays the part of the generator, and every call that returns an Effect plays the part of `yield*`. `function*` now declares a producer (Chapter 8), so APIs that take a generator, such as `Effect.gen` and `Option.gen`, stay in `.ts` files (EK1002). The editor converts an `Effect.gen` function for you (Chapter 28).
 
 #### What does `throw` mean now?
 
@@ -69,7 +69,7 @@ function readPort(text: string) {
 // Effect<number, never, never>
 ```
 
-JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (ES4401), and platform APIs are replaced by Effect modules (ES4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, an EffectScript `catch` does not see it, and a `catch` that could only have caught such exceptions is reported, ES2004 (Chapter 3).
+JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, an Effeck `catch` does not see it, and a `catch` that could only have caught such exceptions is reported, EK2004 (Chapter 3).
 
 #### How do I use `Option` and `Result`?
 
@@ -107,7 +107,7 @@ function register(body: unknown) {
 // Effect<Account, SchemaError | AccountError, Accounts>
 ```
 
-`Schema` is in the prelude and unchanged. A decoder that returns an `Effect` runs when called and fails with a typed `SchemaError`. The other forms (`decodeUnknownSync`, `is`) are trusted functions whose exceptions are defects, so `.es` code prefers the `Effect` forms. Errors that must cross a process boundary are `Schema.TaggedError` classes.
+`Schema` is in the prelude and unchanged. A decoder that returns an `Effect` runs when called and fails with a typed `SchemaError`. The other forms (`decodeUnknownSync`, `is`) are trusted functions whose exceptions are defects, so `.effeck` code prefers the `Effect` forms. Errors that must cross a process boundary are `Schema.TaggedError` classes.
 
 #### How do I work with streams?
 
@@ -139,7 +139,7 @@ it.effect("a reminder fires after one day", () => {
 })
 ```
 
-`@effect/vitest` works unchanged: `it.effect` runs an EffectScript function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.es` has no `await`, and a runner inside a test body is ES1005 (Chapter 13).
+`@effect/vitest` works unchanged: `it.effect` runs an Effeck function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.effeck` has no `await`, and a runner inside a test body is EK1005 (Chapter 13).
 
 #### How do I log, trace, and record metrics?
 
@@ -174,7 +174,7 @@ A `Config` is data until you call it (Chapter 13), so `Config.all`, `Config.nest
 #### How do I run a program?
 
 ```ts es
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
@@ -184,7 +184,7 @@ function main() {
 NodeRuntime.runMain(() => main())
 ```
 
-A program starts only at a runner: `NodeRuntime.runMain` or `BunRuntime.runMain` for a process, `it.effect` for a test, and `Effect.runPromise` or a `ManagedRuntime` where TypeScript code needs a result. A web framework that calls your handlers builds one `ManagedRuntime` from the application layer and runs each handler through it, so the layer is built once (Chapter 4). A module's top level cannot run a program (ES1001).
+A program starts only at a runner: `NodeRuntime.runMain` or `BunRuntime.runMain` for a process, `it.effect` for a test, and `Effect.runPromise` or a `ManagedRuntime` where TypeScript code needs a result. A web framework that calls your handlers builds one `ManagedRuntime` from the application layer and runs each handler through it, so the layer is built once (Chapter 4). A module's top level cannot run a program (EK1001).
 
 #### Do I still use `pipe`?
 
@@ -213,7 +213,7 @@ const describe = Match.type<Circle | Square>().pipe(
 )
 ```
 
-TypeScript's narrowing does most of the work: `switch` on `_tag`, `instanceof`, and `catch` narrowing on errors (Chapter 3). Effect's `Match` module works unchanged; its handlers are plain functions, so they cannot pause (ES4301). TC39's pattern matching proposal is at Stage 1 and is not used.
+TypeScript's narrowing does most of the work: `switch` on `_tag`, `instanceof`, and `catch` narrowing on errors (Chapter 3). Effect's `Match` module works unchanged; its handlers are plain functions, so they cannot pause (EK4301). TC39's pattern matching proposal is at Stage 1 and is not used.
 
 #### How do fibers, interruption, and cancellation work?
 
@@ -241,9 +241,9 @@ function ready() {
 }
 ```
 
-`Effect.callback` works in `.es`: its register function is a boundary, so it may call plain TypeScript, and its `resume` takes an Effect, to which `.es` code passes an `Exit`, data until run (Chapter 13). A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime's `suspend` and `Effect.acquireRelease(…, { interruptible: true })`, so a value that arrives after cancellation is released (Chapter 6). Node.js and browser callback APIs already have Effect modules (Chapter 11).
+`Effect.callback` works in `.effeck`: its register function is a boundary, so it may call plain TypeScript, and its `resume` takes an Effect, to which `.effeck` code passes an `Exit`, data until run (Chapter 13). A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime's `suspend` and `Effect.acquireRelease(…, { interruptible: true })`, so a value that arrives after cancellation is released (Chapter 6). Node.js and browser callback APIs already have Effect modules (Chapter 11).
 
-#### Can I mix `.ts` and `.es` files?
+#### Can I mix `.ts` and `.effeck` files?
 
 ```ts es
 import { findUser } from "./users-repo.ts"     // Effect.fn("findUser")(function* …)
@@ -253,7 +253,7 @@ export function title(id: string) {
 }
 ```
 
-Yes, in one program: `esc` checks both, and the editor serves both (Chapter 28). A TypeScript function that returns an `Effect` is called like an EffectScript function, and TypeScript sees every EffectScript function as one that returns an `Effect` (Chapter 10).
+Yes, in one program: `effeck` checks both, and the editor serves both (Chapter 28). A TypeScript function that returns an `Effect` is called like an Effeck function, and TypeScript sees every Effeck function as one that returns an `Effect` (Chapter 10).
 
 #### Is there anything from Effect I cannot use?
 
@@ -264,7 +264,7 @@ const legacy = Effect.tryPromise({
 })
 ```
 
-Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.es` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (ES4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (ES1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (ES4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.
+Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.effeck` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.
 
 #### How do I keep state that several fibers share?
 

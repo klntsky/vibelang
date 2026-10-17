@@ -1,10 +1,10 @@
-# @effectscript/runtime
+# @effeck/runtime
 
-> **Warning:** EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.
+> **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-The EffectScript runtime contains the one-shot continuation kernel and the
-helpers that `esc` emits. It runs on Effect 4's fibers, scopes, and services.
-Generated JavaScript imports `effect` and `@effectscript/runtime`; applications
+The Effeck runtime contains the one-shot continuation kernel and the
+helpers that `effeck` emits. It runs on Effect 4's fibers, scopes, and services.
+Generated JavaScript imports `effect` and `@effeck/runtime`; applications
 install both packages. The runtime requires **effect@4.0.5 exactly** because the
 kernel accesses that version's fiber continuation stack.
 
@@ -39,13 +39,13 @@ bun prototype/esc/examples/run-all.ts          # 46 compiler examples
 For example, generated JavaScript can compose helpers directly:
 
 ```js
-import { Effect, $bind, $program } from "@effectscript/runtime"
+import { Effect, $bind, $program } from "@effeck/runtime"
 
 const answer = $program(() => $bind(42))
 console.log(await Effect.runPromise(answer))
 ```
 
-Applications normally write `.es` programs and let the compiler select these
+Applications normally write `.effeck` programs and let the compiler select these
 helpers. Programs stay lazy: a helper that receives a program does not start a
 root fiber. An explicit Effect runner starts execution at the application
 boundary.
@@ -123,7 +123,7 @@ The kernel's implementation modules are private package files. Their source
 remains in `src/kernel/` so the original law and trace suites can test the
 continuation machine directly. Generated code uses the package root. Tests and
 instrumentation import the kernel module itself from
-`@effectscript/runtime/kernel`, for example its `hooks`, which report each
+`@effeck/runtime/kernel`, for example its `hooks`, which report each
 capture and resumption; the compiler's acceptance case `stack-depth` uses them
 to check that loops run in constant stack.
 

@@ -38,10 +38,10 @@ generator do not release resources when a yielded Effect fails or is
 interrupted. The diagnostic should identify the unsupported cleanup and point
 to Effect finalizers, rather than describe that syntax as valid cleanup.
 
-## Why it matters to EffectScript
+## Why it matters to Effeck
 
 Developers migrating from Effect generators need accurate cleanup guidance.
-EffectScript lowers `finally` to `Effect.onExit` and resource ownership to
+Effeck lowers `finally` to `Effect.onExit` and resource ownership to
 Scopes. The language cannot carry an unsafe generator cleanup pattern into
 generated code.
 

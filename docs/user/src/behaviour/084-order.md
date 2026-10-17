@@ -1,6 +1,6 @@
 # Order
 
-`Order` works in EffectScript exactly as in Effect. It defines reusable comparison rules returning `-1`, `0`, or `1`, so sorting and range checks can share the same definition of before, tied, and after.
+`Order` works in Effeck exactly as in Effect. It defines reusable comparison rules returning `-1`, `0`, or `1`, so sorting and range checks can share the same definition of before, tied, and after.
 
 ## Using built-in orderings
 

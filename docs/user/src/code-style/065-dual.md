@@ -1,6 +1,6 @@
 # Dual APIs
 
-Many Effect APIs accept either the data followed by options or options followed by the data. These are the data-first and data-last forms of a dual API. EffectScript preserves both forms; when the data is a program, pass a zero-argument function to keep its execution under the operator's control.
+Many Effect APIs accept either the data followed by options or options followed by the data. These are the data-first and data-last forms of a dual API. Effeck preserves both forms; when the data is a program, pass a zero-argument function to keep its execution under the operator's control.
 
 ## Data first or data last
 

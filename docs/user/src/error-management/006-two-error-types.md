@@ -1,6 +1,6 @@
 # Two Types of Errors
 
-A missing record and a broken invariant need different responses. EffectScript tracks recoverable domain failures in `Effect<A, E, R>` and keeps defects in the runtime's failure cause.
+A missing record and a broken invariant need different responses. Effeck tracks recoverable domain failures in `Effect<A, E, R>` and keeps defects in the runtime's failure cause.
 
 [Upstream page](https://effect.website/docs/v4/error-management/two-error-types)
 

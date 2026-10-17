@@ -4,7 +4,7 @@ Pinned upstream: [`Effect-TS/website@9b2ad8c7569b7ca65562185052c1122167eae906`](
 
 Structure sources: [sidebar section ranks](https://github.com/Effect-TS/website/blob/9b2ad8c7569b7ca65562185052c1122167eae906/apps/web/src/content/docs/sidebar-config.json), [onboarding groups](https://github.com/Effect-TS/website/blob/9b2ad8c7569b7ca65562185052c1122167eae906/apps/web/src/content/docs/onboarding-groups.json), and [sidebar construction rules](https://github.com/Effect-TS/website/blob/9b2ad8c7569b7ca65562185052c1122167eae906/apps/web/src/lib/docs-sections.ts). The complete pinned repository tree supplies the page list.
 
-Only page titles, navigation labels, paths, API identifiers, counts, and original topic summaries are retained. No upstream body prose or code examples are copied. The stubs are a plan for fresh EffectScript writing; the API column identifies upstream Effect APIs, not a promise that EffectScript exposes those names.
+Only page titles, navigation labels, paths, API identifiers, counts, and original topic summaries are retained. No upstream body prose or code examples are copied. The stubs are a plan for fresh Effeck writing; the API column identifies upstream Effect APIs, not a promise that Effeck exposes those names.
 
 Order follows the two upstream sidebar views: onboarding first, then guides. Onboarding pages are excluded from guides, just as in the upstream navigation. Guide sections and root pages interleave by configured rank; pages within a section sort by frontmatter `sidebar.order`, then sidebar label. Labels may differ from page titles.
 
@@ -151,18 +151,18 @@ Code example count: one example per fenced code block in the source body, includ
   - [Runtime](src/platform/109-runtime.md): `v4/platform/runtime.mdx`
   - [Terminal](src/platform/110-terminal.md): `v4/platform/terminal.mdx`
 
-### EffectScript features
+### Effeck features
 
-- [Control operations and handlers](src/effectscript-features/111-control-operations-and-handlers.md)
-- [Producers](src/effectscript-features/112-producers.md)
-- [Building an HTTP API](src/effectscript-features/113-building-an-http-api.md)
-- [EffectScript for Effect users](src/effectscript-features/114-effectscript-for-effect-users.md)
+- [Control operations and handlers](src/effeck-features/111-control-operations-and-handlers.md)
+- [Producers](src/effeck-features/112-producers.md)
+- [Building an HTTP API](src/effeck-features/113-building-an-http-api.md)
+- [Effeck for Effect users](src/effeck-features/114-effeck-for-effect-users.md)
 
 ## Page inventory
 
 Upstream paths are relative to the repository root. Section names identify the actual sidebar group; ungrouped guide links are marked as root pages.
 
-| Upstream path | Page title | Section | Topics to cover in original EffectScript writing | Main upstream Effect APIs (names only) | Code examples |
+| Upstream path | Page title | Section | Topics to cover in original Effeck writing | Main upstream Effect APIs (names only) | Code examples |
 | --- | --- | --- | --- | --- | ---: |
 | `apps/web/src/content/docs/v4/onboarding.mdx` | Welcome to Effect | Onboarding / Start Here | why typed programs help; representing programs as composable values; errors, concurrency, resources, and telemetry; working with coding assistants; choosing a learning sequence; finding community support | `Effect.gen`, `Effect.succeed`, `Effect.log`, `Effect.runPromise` | 1 |
 | `apps/web/src/content/docs/v4/getting-started/why-effect.mdx` | Why Effect? | Onboarding / Start Here | describing computations before executing them; reusing a shared application foundation; applying composable tools to production problems; learning through practical programs | `Effect.Effect`, `Effect.succeed`, `Effect.fail`, `Effect.runSync` | 2 |
@@ -275,16 +275,16 @@ Upstream paths are relative to the repository root. Section names identify the a
 | `apps/web/src/content/docs/v4/platform/runtime.mdx` | Runtime | Guides / Platform | running a platform application entry point; configuring runtime launch behavior; handling completion and failures | `NodeRuntime.runMain` | 4 |
 | `apps/web/src/content/docs/v4/platform/terminal.mdx` | Terminal | Guides / Platform | requesting terminal services; writing standard output; reading standard input; handling terminal quit errors; building an interactive guessing program | `Terminal.Terminal`, `NodeTerminal.layer`, `Terminal.QuitError` | 4 |
 
-## EffectScript feature inventory
+## Effeck feature inventory
 
 These original pages supplement the 110 mirrored Effect pages. They have no upstream counterparts.
 
 | Local page | Topics |
 | --- | --- |
-| [Control operations and handlers](src/effectscript-features/111-control-operations-and-handlers.md) | Declaration, performing, policies, resuming, abandonment, cleanup, fiber diagnostics |
-| [Producers](src/effectscript-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
-| [Building an HTTP API](src/effectscript-features/113-building-an-http-api.md) | Server layers, routing, Schema bodies, typed errors, socket-free testing |
-| [EffectScript for Effect users](src/effectscript-features/114-effectscript-for-effect-users.md) | Idiom translation, programs, top-level declarations, platform work, expected failures |
+| [Control operations and handlers](src/effeck-features/111-control-operations-and-handlers.md) | Declaration, performing, policies, resuming, abandonment, cleanup, fiber diagnostics |
+| [Producers](src/effeck-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
+| [Building an HTTP API](src/effeck-features/113-building-an-http-api.md) | Server layers, routing, Schema bodies, typed errors, socket-free testing |
+| [Effeck for Effect users](src/effeck-features/114-effeck-for-effect-users.md) | Idiom translation, programs, top-level declarations, platform work, expected failures |
 
 ## Counts by sidebar section
 
@@ -314,7 +314,7 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | Guides | Behaviour | 2 |
 | Guides | Schema | 20 |
 | Guides | Platform | 6 |
-| EffectScript features | Original language guides | 4 |
+| Effeck features | Original language guides | 4 |
 | **Total** | | **114** |
 
 ## Counts by upstream directory

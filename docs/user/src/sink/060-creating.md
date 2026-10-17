@@ -1,6 +1,6 @@
 # Creating Sinks
 
-Choose a Sink for the result you need, then run it with `Stream.run`. Constructors stay reusable: state supplied by an initializer is fresh on each run. This page uses [trusted Sink builders](059-introduction.md) and keeps effectful callbacks as ordinary EffectScript functions.
+Choose a Sink for the result you need, then run it with `Stream.run`. Constructors stay reusable: state supplied by an initializer is fresh on each run. This page uses [trusted Sink builders](059-introduction.md) and keeps effectful callbacks as ordinary Effeck functions.
 
 ## Basic consumers and endpoint values
 
@@ -77,7 +77,7 @@ function rejectInput() {
 // Effect<never, Rejected, never>
 ```
 
-`succeed` and `fail` finish without requesting source elements. Construction itself does not succeed or fail a running program; that happens when the sink runs. `Sink.fromEffect(() => work())` creates the same kind of immediate sink from an EffectScript program.
+`succeed` and `fail` finish without requesting source elements. Construction itself does not succeed or fail a running program; that happens when the sink runs. `Sink.fromEffect(() => work())` creates the same kind of immediate sink from an Effeck program.
 
 ## Collecting by size or condition
 

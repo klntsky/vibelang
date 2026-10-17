@@ -6,10 +6,10 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import test from "node:test"
 import { build, createServer } from "vite"
-import effectscript from "../src/index.js"
+import effeck from "../src/index.js"
 
 const packageRoot = fileURLToPath(new URL("../", import.meta.url))
-const compiler = join(packageRoot, "../compiler/bin/esc")
+const compiler = join(packageRoot, "../compiler/bin/effeck")
 const require = createRequire(import.meta.url)
 const vitest = join(dirname(require.resolve("vitest/package.json")), "vitest.mjs")
 
@@ -21,10 +21,10 @@ async function fixture(t) {
   await cp(join(packageRoot, "test/project"), root, { recursive: true })
   await writeFile(join(root, "vitest.config.ts"), `
 import { defineConfig } from "vitest/config"
-import effectscript from ${JSON.stringify(join(packageRoot, "src/index.js"))}
+import effeck from ${JSON.stringify(join(packageRoot, "src/index.js"))}
 export default defineConfig({
-  plugins: [effectscript({ compiler: ${JSON.stringify(compiler)} })],
-  test: { include: [process.env.FAILING_TEST ? "failure.test.es" : "passing.test.es"] }
+  plugins: [effeck({ compiler: ${JSON.stringify(compiler)} })],
+  test: { include: [process.env.FAILING_TEST ? "failure.test.effeck" : "passing.test.effeck"] }
 })
 `)
   return root
@@ -52,19 +52,19 @@ async function until(check) {
   assert.fail("Timed out waiting for Vite's file watcher")
 }
 
-test("Vitest runs .es Effect functions and plain callbacks", async (t) => {
+test("Vitest runs .effeck Effect functions and plain callbacks", async (t) => {
   const result = await runVitest(await fixture(t))
   assert.equal(result.code, 0, result.output)
   assert.match(result.output, /2 passed/)
-  console.log("PASS .es Vitest: 2 assertions")
+  console.log("PASS .effeck Vitest: 2 assertions")
 })
 
-test("a deliberate failing assertion reports failure.test.es:6", async (t) => {
+test("a deliberate failing assertion reports failure.test.effeck:6", async (t) => {
   const result = await runVitest(await fixture(t), true)
   assert.equal(result.code, 1, result.output)
   assert.match(result.output, /expected 41 to equal 42/)
-  assert.match(result.output, /failure\.test\.es:6:28/)
-  console.log("PASS expected failure: assertion stack at failure.test.es:6:28")
+  assert.match(result.output, /failure\.test\.effeck:6:28/)
+  console.log("PASS expected failure: assertion stack at failure.test.effeck:6:28")
 })
 
 test("Vite serves JS and maps, invalidates importers, reports diagnostics and recovers", async (t) => {
@@ -76,7 +76,7 @@ test("Vite serves JS and maps, invalidates importers, reports diagnostics and re
   await writeFile(join(root, "entry.ts"), 'export { answer } from "./main.js"\n')
   const errors = []
   const server = await createServer({
-    root, configFile: false, plugins: [effectscript({ compiler })],
+    root, configFile: false, plugins: [effeck({ compiler })],
     customLogger: { info() {}, warn() {}, warnOnce() {}, error: (message) => errors.push(message),
       clearScreen() {}, hasErrorLogged() { return false }, hasWarned: false },
     server: { host: "127.0.0.1", port: 0 }
@@ -90,24 +90,24 @@ test("Vite serves JS and maps, invalidates importers, reports diagnostics and re
   const base = `http://127.0.0.1:${address.port}`
   let response = await fetch(`${base}/entry.ts`)
   assert.equal(response.status, 200)
-  assert.match(await response.text(), /main\.es/)
-  response = await fetch(`${base}/main.es`)
+  assert.match(await response.text(), /main\.effeck/)
+  response = await fetch(`${base}/main.effeck`)
   assert.equal(response.status, 200)
   const javascript = await response.text()
   assert.match(javascript, /yield\* Effect\.succeed/)
   assert.doesNotMatch(javascript, /value: number/)
   const map = JSON.parse(Buffer.from(javascript.match(/sourceMappingURL=data:application\/json;base64,(\S+)/)[1], "base64"))
-  assert.ok(map.sources.some((source) => source.endsWith("main.es")))
+  assert.ok(map.sources.some((source) => source.endsWith("main.effeck")))
   assert.ok(map.sources.every((source) => !source.includes("example.invalid")))
   assert.ok(map.sourcesContent.some((source) => source.includes("value: number")))
 
   const importer = server.moduleGraph.getModuleById(join(root, "entry.ts"))
   assert.ok(importer.transformResult)
-  const sourcePath = join(root, "main.es")
+  const sourcePath = join(root, "main.effeck")
   const source = await readFile(sourcePath, "utf8")
   await writeFile(sourcePath, source.replace("double(21)", "double(22)"))
   await until(() => !importer.transformResult)
-  response = await fetch(`${base}/main.es`)
+  response = await fetch(`${base}/main.effeck`)
   assert.equal(response.status, 200)
   assert.match(await response.text(), /double(\$direct)?\(22\)/)
 
@@ -115,24 +115,24 @@ test("Vite serves JS and maps, invalidates importers, reports diagnostics and re
   await until(() => messages.some((message) => message?.type === "error"))
   assert.ok(errors.some((message) => /TS2322/.test(message)), errors.join("\n"))
   const diagnostic = messages.find((message) => message?.type === "error").err
-  assert.equal(diagnostic.plugin, "effectscript")
+  assert.equal(diagnostic.plugin, "effeck")
   assert.equal(diagnostic.loc.file, sourcePath)
   assert.match(diagnostic.message, /TS2322/)
-  response = await fetch(`${base}/main.es`)
+  response = await fetch(`${base}/main.effeck`)
   assert.equal(response.status, 500)
   await writeFile(sourcePath, source.replace("double(21)", "double(23)"))
   await until(async () => {
-    const recovered = await fetch(`${base}/main.es`)
+    const recovered = await fetch(`${base}/main.effeck`)
     return recovered.status === 200 && /double(\$direct)?\(23\)/.test(await recovered.text())
   })
-  console.log("PASS HTTP: JS, .es source map, importer invalidation, TS2322 terminal/overlay, recovery")
+  console.log("PASS HTTP: JS, .effeck source map, importer invalidation, TS2322 terminal/overlay, recovery")
 })
 
-test("Vite production builds accept .es entry modules", async (t) => {
+test("Vite production builds accept .effeck entry modules", async (t) => {
   const root = await fixture(t)
   const result = await build({
-    root, configFile: false, plugins: [effectscript({ compiler })], logLevel: "silent",
-    build: { write: false, sourcemap: true, lib: { entry: join(root, "main.es"), formats: ["es"] },
+    root, configFile: false, plugins: [effeck({ compiler })], logLevel: "silent",
+    build: { write: false, sourcemap: true, lib: { entry: join(root, "main.effeck"), formats: ["es"] },
       rollupOptions: { external: ["effect", "effect/Effect"] } }
   })
   const output = result.output || result[0].output

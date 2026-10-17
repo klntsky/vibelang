@@ -1,14 +1,14 @@
-// Runs inside the VS Code that test/run.mjs starts. It checks the EffectScript
-// extension installed from effectscript.vsix on a copy of the language server
-// fixture (typescript/effectscript/lsp-fixture), whose node_modules/.bin/esc
+// Runs inside the VS Code that test/run.mjs starts. It checks the Effeck
+// extension installed from effeck.vsix on a copy of the language server
+// fixture (typescript/effeck/lsp-fixture), whose node_modules/.bin/effeck
 // is the compiler under test. run() throws when any check fails.
 const fs = require("node:fs")
 const path = require("node:path")
 const vscode = require("vscode")
 
-const workspace = process.env.EFFECTSCRIPT_TEST_WORKSPACE
-const extensionsDir = process.env.EFFECTSCRIPT_TEST_EXTENSIONS
-const timeoutMs = Number(process.env.EFFECTSCRIPT_TEST_TIMEOUT ?? 90_000)
+const workspace = process.env.EFFECK_TEST_WORKSPACE
+const extensionsDir = process.env.EFFECK_TEST_EXTENSIONS
+const timeoutMs = Number(process.env.EFFECK_TEST_TIMEOUT ?? 90_000)
 
 function assert(condition, message) {
   if (!condition) throw new Error(message)
@@ -57,17 +57,17 @@ async function run() {
     }
   }
 
-  await check("extension: effectscript.effectscript comes from the .vsix and activates", async () => {
-    const extension = vscode.extensions.getExtension("effectscript.effectscript")
+  await check("extension: effeck.effeck comes from the .vsix and activates", async () => {
+    const extension = vscode.extensions.getExtension("effeck.effeck")
     assert(extension, "the extension is not installed")
     assert(extension.extensionPath.startsWith(extensionsDir), `loaded from ${extension.extensionPath}, not ${extensionsDir}`)
     await extension.activate()
   })
 
-  if (process.env.EFFECTSCRIPT_TEST_PASS === "typescript-off") {
+  if (process.env.EFFECK_TEST_PASS === "typescript-off") {
     // test/run.mjs disabled the built-in TypeScript extension, so only
-    // EffectScript's server can report this .ts file's diagnostics.
-    await check("typescript: with VS Code's TypeScript off, EffectScript reports .ts diagnostics", async () => {
+    // Effeck's server can report this .ts file's diagnostics.
+    await check("typescript: with VS Code's TypeScript off, Effeck reports .ts diagnostics", async () => {
       assert(vscode.extensions.getExtension("vscode.typescript-language-features") === undefined, "the built-in TypeScript extension is enabled")
       fs.writeFileSync(path.join(workspace, "src", "typed.ts"), 'export const count: number = "three"\n')
       const typed = await open("src/typed.ts")
@@ -77,32 +77,32 @@ async function run() {
     return
   }
 
-  const main = await open("src/main.es")
+  const main = await open("src/main.effeck")
 
-  await check("language: an .es file opens as effectscript", () => {
-    assert(main.languageId === "effectscript", `language ${main.languageId}`)
+  await check("language: an .effeck file opens as effeck", () => {
+    assert(main.languageId === "effeck", `language ${main.languageId}`)
   })
 
-  await check("grammar: the EffectScript grammar colors .es files", async () => {
+  await check("grammar: the Effeck grammar colors .effeck files", async () => {
     const tokens = await vscode.commands.executeCommand("_workbench.captureSyntaxTokens", main.uri)
     const keyword = tokens.find((token) => token.c.trim() === "function")
     assert(keyword, `no function token in ${tokens.length} tokens`)
-    assert(keyword.t.startsWith("source.effectscript") && keyword.t.includes("storage.type.function"), `scopes ${keyword.t}`)
+    assert(keyword.t.startsWith("source.effeck") && keyword.t.includes("storage.type.function"), `scopes ${keyword.t}`)
   })
 
-  await check("diagnostics: TypeScript's TS2322 appears on broken.es", async () => {
-    const broken = await open("src/broken.es")
+  await check("diagnostics: TypeScript's TS2322 appears on broken.effeck", async () => {
+    const broken = await open("src/broken.effeck")
     const found = await waitFor("TS2322", () => vscode.languages.getDiagnostics(broken.uri).find((d) => codeOf(d) === 2322))
     assert(found.range.start.line === 1, `line ${found.range.start.line}`)
   })
 
-  await check("diagnostics: ES1003 appears on wait.es with source ES", async () => {
-    const wait = await open("src/wait.es")
-    const found = await waitFor("ES1003", () => vscode.languages.getDiagnostics(wait.uri).find((d) => codeOf(d) === 1003))
+  await check("diagnostics: EK1003 appears on wait.effeck with source EK", async () => {
+    const wait = await open("src/wait.effeck")
+    const found = await waitFor("EK1003", () => vscode.languages.getDiagnostics(wait.uri).find((d) => codeOf(d) === 1003))
     assert(found.source === "ES", `source ${found.source}`)
   })
 
-  await check("hover: an .es function shows its inferred contract", async () => {
+  await check("hover: an .effeck function shows its inferred contract", async () => {
     const shown = await hoverText(main, "lookup(id")
     assert(/function lookup\(id: number\): (Effect\.)?Effect<string, NotFound, never>/.test(shown), `hover ${JSON.stringify(shown)}`)
   })
@@ -112,14 +112,14 @@ async function run() {
     assert(shown.includes("Runs here and returns `string`"), `hover ${JSON.stringify(shown)}`)
   })
 
-  await check("definition: a .ts function called from .es goes to users.ts", async () => {
+  await check("definition: a .ts function called from .effeck goes to users.ts", async () => {
     const locations = await vscode.commands.executeCommand("vscode.executeDefinitionProvider", main.uri, positionOf(main, "findName(id)"))
     const uris = locations.map((l) => (l.targetUri ?? l.uri).fsPath)
     assert(uris.some((uri) => uri.endsWith(path.join("src", "users.ts"))), `went to ${JSON.stringify(uris)}`)
   })
 
-  await check("completion: prelude names and a service's members in services.es", async () => {
-    const services = await open("src/services.es")
+  await check("completion: prelude names and a service's members in services.effeck", async () => {
+    const services = await open("src/services.effeck")
     const labels = async (needle, offset) => {
       const list = await vscode.commands.executeCommand("vscode.executeCompletionItemProvider", services.uri, positionOf(services, needle, offset))
       return list.items.map((item) => (typeof item.label === "string" ? item.label : item.label.label))
@@ -129,13 +129,13 @@ async function run() {
     assert((await labels("Users.find", 6)).includes("find"), "no find after Users.")
   })
 
-  await check("hover: a plain function shows the signature EffectScript calls", async () => {
-    const services = await open("src/services.es")
+  await check("hover: a plain function shows the signature Effeck calls", async () => {
+    const services = await open("src/services.effeck")
     const shown = await hoverText(services, "double(n")
     assert(shown.includes("function double(n: number): number"), `hover ${JSON.stringify(shown)}`)
   })
 
-  await check("diagnostics: main.es has none", () => {
+  await check("diagnostics: main.effeck has none", () => {
     const items = vscode.languages.getDiagnostics(main.uri)
     assert(items.length === 0, JSON.stringify(items.map((d) => d.message)))
   })

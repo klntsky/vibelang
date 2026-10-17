@@ -1,6 +1,6 @@
-# EffectScript examples
+# Effeck examples
 
-Each project has exact Effect 4.0.5 dependencies, `.es` sources in `src`,
+Each project has exact Effect 4.0.5 dependencies, `.effeck` sources in `src`,
 Node ESM output in `dist`, and a short README with an Effect TypeScript equivalent.
 
 | Example | Shows |
@@ -14,22 +14,22 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 | [pipeline](pipeline/) | A producer flowing through Stream operators and a `for...of` consumer. |
 
 Set up the repository's local compiler and runtime first using the repository
-setup instructions. The manifests install `@effectscript/compiler` from
-`../../packages/compiler` and `@effectscript/runtime` from the tarball that setup
-packs, `../../packages/runtime/effectscript-runtime.tgz`, so the runtime and the
+setup instructions. The manifests install `effeck` from
+`../../packages/compiler` and `@effeck/runtime` from the tarball that setup
+packs, `../../packages/runtime/effeck-runtime.tgz`, so the runtime and the
 example load one copy of `effect`. Run repository setup before installing the
-examples, and after rerunning it, run `bun update @effectscript/runtime` in an
+examples, and after rerunning it, run `bun update @effeck/runtime` in an
 example you installed before.
 Then, in an example directory, run `bun install`,
 `bun run build`, and `bun run start`. The users, http-api, and resilience
-projects also have `bun run test`; Vitest compiles their `.es` sources
-through `@effectscript/vite`, with source maps for assertion stacks.
+projects also have `bun run test`; Vitest compiles their `.effeck` sources
+through `@effeck/vite`, with source maps for assertion stacks.
 Run file-tree from its own directory to find the bundled fixtures.
 
 From the repository root, `scripts/check-examples.sh` compiles every project
 and compares the six finite programs with their output fixtures. It compiles
-http-api without starting its persistent server. Set `ESC=/path/to/esc` to
-select a compiler; otherwise it uses `esc` on PATH, then `typescript/built/local/tsc`.
+http-api without starting its persistent server. Set `EFFECK=/path/to/effeck` to
+select a compiler; otherwise it uses `effeck` on PATH, then `typescript/built/local/tsc`.
 Each project gets one status line. A failure returns exit code 1 and leaves
 diagnostics in `.cache/check-examples/`. Execution has a 15-second bound.
 
@@ -47,11 +47,11 @@ The prototype check compiles all seven main modules and their supported runners,
 compares finite output,
 and runs the six `it.effect` tests. It creates disposable `.prototype` directories
 inside each example and writes each project's diagnostics to `.prototype/check.log`.
-Project sources use `.es` imports per D31; the compiler rewrites them to `.js`.
+Project sources use `.effeck` imports per D31; the compiler rewrites them to `.js`.
 It runs a main module through a TypeScript harness, except hello, whose module
 already contains its runner. The CLI's `run` command would run hello twice.
 File-tree's main runs, but the prototype widens recursive E and R to `unknown`;
-checking its EffectScript runner then reports ES3201. Its contract stays inferred
+checking its Effeck runner then reports EK3201. Its contract stays inferred
 as specified by D52 instead of adding annotations to work around the prototype.
 
 The setup lane provides `sh scripts/setup.sh` to build the local compiler and

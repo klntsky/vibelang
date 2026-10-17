@@ -1,5 +1,5 @@
 // Compile a consumer against the installed package export and emitted .d.ts files.
-import { $bind, $program, $produce, $region, $using, $yield, Effect, Layer, Scope, suspend, type Producer } from "@effectscript/runtime"
+import { $bind, $program, $produce, $region, $using, $yield, Effect, Layer, Scope, suspend, type Producer } from "@effeck/runtime"
 
 const bound: Effect.Effect<number> = $bind(42)
 const program: Effect.Effect<number> = $program(() => bound)

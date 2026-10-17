@@ -36,7 +36,7 @@ await Effect.runPromise(Effect.gen(function*() {
 
 **Suggestion.** Bound inline resumption: track nesting depth in `evaluate` and, past a small budget, schedule the resumption on the woken fiber's dispatcher instead of running it inline. A budget of 64 nested wake-ups completes a 100,000-fiber chain in our tests while keeping the inline fast path for shallow wake-ups.
 
-**EffectScript impact.** The kernel bounds its own `suspend` wake-ups, but
+**Effeck impact.** The kernel bounds its own `suspend` wake-ups, but
 `Deferred`, `PubSub`, and TypeScript-authored Effects still use Effect's native
 wake-ups. One stranded dependency can leave an application waiting forever.
 Observe failed fibers in the reproduction instead of relying only on a timeout.

@@ -1,6 +1,6 @@
 # Redacted
 
-`Redacted` works in EffectScript exactly as in Effect. It hides a sensitive value from ordinary string, JSON, and inspection output, helping prevent accidental disclosure while allowing deliberate access.
+`Redacted` works in Effeck exactly as in Effect. It hides a sensitive value from ordinary string, JSON, and inspection output, helping prevent accidental disclosure while allowing deliberate access.
 
 ## Wrapping sensitive values
 

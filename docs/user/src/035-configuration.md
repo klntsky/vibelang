@@ -18,7 +18,7 @@ function serverSettings() {
 // Effect<{ host: string; port: number }, ConfigError, never>
 ```
 
-`Host()` and `Port()` load values from the active provider, which defaults to the environment. Constructing the descriptors reads nothing. Missing or invalid input fails with `ConfigError`. No direct environment access is needed in `.es` files.
+`Host()` and `Port()` load values from the active provider, which defaults to the environment. Constructing the descriptors reads nothing. Missing or invalid input fails with `ConfigError`. No direct environment access is needed in `.effeck` files.
 
 | Constructor | Decoded value |
 | --- | --- |
@@ -32,7 +32,7 @@ function serverSettings() {
 
 Prefer `Finite` to `Number` for ordinary numeric settings: `Number` also accepts non-finite values. Boolean text is case sensitive and supports `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`, and `y`/`n`.
 
-`Config.all`, `Config.nested`, and `Config.withDefault` compose descriptors as data in `.es`. A type that extends `Effect` with its own structure stays data when returned by a call; only a call whose result type is `Effect` itself runs that result automatically.
+`Config.all`, `Config.nested`, and `Config.withDefault` compose descriptors as data in `.effeck`. A type that extends `Effect` with its own structure stays data when returned by a call; only a call whose result type is `Effect` itself runs that result automatically.
 
 ## Parse with schemas
 
@@ -51,7 +51,7 @@ function teamName() {
 `Config.schema` builds a descriptor that decodes the provider's representation using the schema. Calling it returns the decoded value. Put constraints in the schema so invalid input reports a configuration failure. A structured schema can describe an entire object, with field paths mapping to environment keys or object properties.
 
 ```ts
-// descriptors.es
+// descriptors.effeck
 import { Config } from "effect"
 
 export const server = Config.schema(Schema.Struct({
@@ -62,7 +62,7 @@ export const server = Config.schema(Schema.Struct({
 
 ```ts
 import { ConfigProvider } from "effect"
-import { server } from "./descriptors.es"
+import { server } from "./descriptors.effeck"
 
 function localServer() {
   return server.parse(ConfigProvider.fromUnknown({
@@ -90,7 +90,7 @@ Arrays accept structural values or a separated string such as `north,south`. Rec
 ## Nest and combine configuration
 
 ```ts
-// database-config.es
+// database-config.effeck
 import { Config } from "effect"
 
 export const database = Config.nested(Config.all({
@@ -101,7 +101,7 @@ export const database = Config.nested(Config.all({
 
 ```ts
 import { ConfigProvider } from "effect"
-import { database } from "./database-config.es"
+import { database } from "./database-config.effeck"
 
 function testDatabaseSettings() {
   return database.parse(ConfigProvider.fromEnv({
@@ -115,7 +115,7 @@ function testDatabaseSettings() {
 ## Defaults and fallbacks
 
 ```ts
-// optional-config.es
+// optional-config.effeck
 import { Config } from "effect"
 
 export const port = Config.withDefault(Config.Port("PORT"), 9091)
@@ -128,7 +128,7 @@ export const host = Config.orElse(
 
 ```ts
 import { ConfigProvider } from "effect"
-import { port, apiKey, host } from "./optional-config.es"
+import { port, apiKey, host } from "./optional-config.effeck"
 
 function defaultsExample() {
   const provider = ConfigProvider.fromUnknown({ BACKUP_HOST: "standby.internal" })
@@ -147,7 +147,7 @@ A default on a `Config.all` group replaces the whole group when any child is abs
 ## Transform parsed values
 
 ```ts
-// origin-config.es
+// origin-config.effeck
 import { Config } from "effect"
 
 export const origin = Config.map(Config.all({
@@ -157,7 +157,7 @@ export const origin = Config.map(Config.all({
 ```
 
 ```ts
-import { origin } from "./origin-config.es"
+import { origin } from "./origin-config.effeck"
 
 function reportOrigin() {
   const value = origin()
@@ -166,7 +166,7 @@ function reportOrigin() {
 }
 ```
 
-Use `Config.map` for a transformation that cannot fail. Express validation in a schema; use `Config.mapEffect` when transformation needs an Effect with `ConfigError`. Loading first and transforming with ordinary EffectScript statements also works when you do not need a reusable descriptor.
+Use `Config.map` for a transformation that cannot fail. Express validation in a schema; use `Config.mapEffect` when transformation needs an Effect with `ConfigError`. Loading first and transforming with ordinary Effeck statements also works when you do not need a reusable descriptor.
 
 ## Protect secrets
 
@@ -244,6 +244,6 @@ Provider fallback fills absent paths; it does not recover from source or validat
 
 ## Coming from Effect
 
-Compose Config descriptors directly in `.es`, then call a descriptor to load it, or call its `parse` method with an explicit provider. Returning a descriptor does not read it, just as returning an `Exit`, a Context key, or an error instance does not run that value. `new` constructs an instance and never runs it.
+Compose Config descriptors directly in `.effeck`, then call a descriptor to load it, or call its `parse` method with an explicit provider. Returning a descriptor does not read it, just as returning an `Exit`, a Context key, or an error instance does not run that value. `new` constructs an instance and never runs it.
 
 [Upstream Effect page](https://effect.website/docs/v4/configuration)

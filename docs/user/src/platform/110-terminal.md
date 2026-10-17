@@ -1,6 +1,6 @@
 # Terminal
 
-`Terminal` exposes Effect's interactive input and output service in EffectScript. Use it for prompts and line input, provide a runtime terminal layer, and handle a user's quit request as a typed error where appropriate.
+`Terminal` exposes Effect's interactive input and output service in Effeck. Use it for prompts and line input, provide a runtime terminal layer, and handle a user's quit request as a typed error where appropriate.
 
 ## Requesting terminal services
 
@@ -19,7 +19,7 @@ function dimensions() {
 ## Writing standard output
 
 ```ts
-// main.es
+// main.effeck
 import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
 import { Terminal } from "effect"
 
@@ -69,7 +69,7 @@ function askNameOrQuit() {
 ## Building an interactive guessing program
 
 ```ts
-// guessing.es
+// guessing.effeck
 import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
 import { Option, Random, Terminal } from "effect"
 

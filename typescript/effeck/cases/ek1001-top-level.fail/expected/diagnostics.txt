@@ -1,0 +1,7 @@
+main.effeck(11,23): error EK1001
+main.effeck(12,23): error EK1001
+main.effeck(13,19): error EK1001
+main.effeck(14,24): error EK1001
+main.effeck(21,20): error EK1001
+main.effeck(22,22): error EK1001
+main.effeck(23,22): error EK1001

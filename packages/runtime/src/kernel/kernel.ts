@@ -1,4 +1,4 @@
-// EffectScript continuation kernel prototype on effect@4.0.5.
+// Effeck continuation kernel prototype on effect@4.0.5.
 //
 // The kernel adds multi-prompt, one-shot delimited control to Effect's own
 // fiber stack. A handler installs a Prompt frame on `fiber._stack` and an
@@ -175,7 +175,7 @@ export interface Operation<P, A, E = never> {
 }
 
 export const operation = <P, A, E = never>(name: string): Operation<P, A, E> => {
-  const key = Context.Service<Evidence>(`effectscript/operation/${name}`) as unknown as Context.Key<any, Evidence>
+  const key = Context.Service<Evidence>(`effeck/operation/${name}`) as unknown as Context.Key<any, Evidence>
   const op = ((payload: P) => perform(op, payload)) as Operation<P, A, E>
   Object.defineProperty(op, "name", { value: name })
   ;(op as any).key = key
@@ -619,7 +619,7 @@ export const handle = <A, E, R>(
 // Effect.catch recovers from the first Fail reason and replaces the whole
 // cause (findError + catchCauseFilter, internal/effect.ts:158-165, 2646-2685),
 // so a cause holding both an expected failure and a cleanup defect is
-// recovered and the defect vanishes (Codex review R1). EffectScript's `catch`
+// recovered and the defect vanishes (Codex review R1). Effeck's `catch`
 // handles expected failures only: it recovers when every reason in the cause
 // is a Fail, and otherwise re-fails with the whole cause untouched. The
 // handler receives the first failure, as Effect.catch's does (K14).

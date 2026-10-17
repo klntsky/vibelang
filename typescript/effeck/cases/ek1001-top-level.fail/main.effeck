@@ -1,0 +1,35 @@
+// expect: EK1001
+// D38, D51: a module's top level is not inside a program. A call there may
+// build values, but a call that runs a program is EK1001.
+import { Config, Effect, Schedule } from "effect"
+
+function loadConfig() {
+  Effect.sleep("1 millis")
+  return { port: 8080 }
+}
+
+export const config = loadConfig()
+export const answer = Effect.succeed(42)
+Effect.runPromise(loadConfig())
+export const nested = [Effect.map(Effect.succeed(1), (n) => n + 1)]
+
+// A service lookup and a call of an Effect value run programs too.
+abstract class Users {
+  abstract find(id: string): Effect.Effect<string, never, never>
+}
+
+export const ada = Users.find("1")
+export const users = Users()
+export const ready = Effect.void()
+
+// Values: none of these runs a program.
+export const port = Config.withDefault(Config.Port("PORT"), 3000)
+export const portNow = () => port()
+export const policy = Schedule.recurs(3)
+export const later = () => loadConfig()
+export const names = ["a", "b"].map((name) => name.toUpperCase())
+Effect.runPromise(() => loadConfig())
+
+class Cache {
+  static readonly hits = [1, 2].length
+}

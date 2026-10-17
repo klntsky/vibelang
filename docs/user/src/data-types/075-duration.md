@@ -1,6 +1,6 @@
 # Duration
 
-`Duration` works in EffectScript exactly as in Effect. Use it to express elapsed time, delays, and timeout budgets with explicit units; Effect 4.0.5 also supports negative durations and infinities.
+`Duration` works in Effeck exactly as in Effect. Use it to express elapsed time, delays, and timeout budgets with explicit units; Effect 4.0.5 also supports negative durations and infinities.
 
 ## Constructing finite and infinite durations
 

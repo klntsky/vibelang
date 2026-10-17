@@ -1,6 +1,6 @@
 # Path
 
-`Path` provides Effect's platform-specific path service to EffectScript. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module.
+`Path` provides Effect's platform-specific path service to Effeck. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module.
 
 ## Requesting the path service
 
@@ -67,7 +67,7 @@ URL conversions return Effects and run directly when called, reporting `BadArgum
 ## Supplying a platform path implementation
 
 ```ts
-// main.es
+// main.effeck
 import { Path } from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 

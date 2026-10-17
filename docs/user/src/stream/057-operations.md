@@ -52,7 +52,7 @@ function printBatches() {
 }
 ```
 
-`toPull` returns an Effect value that yields a non-empty array on each call. Normal completion uses `Cause.Done`, handled here with `Pull.catchDone`; other failures propagate. Keep the pull within its Scope. For ordinary element processing, use Stream's consumers or `for (const element of source) { … }`, which pulls a Stream and closes it when the loop exits. `for...of` also consumes EffectScript producers; async iterables use Stream adaptation or a TypeScript consumer.
+`toPull` returns an Effect value that yields a non-empty array on each call. Normal completion uses `Cause.Done`, handled here with `Pull.catchDone`; other failures propagate. Keep the pull within its Scope. For ordinary element processing, use Stream's consumers or `for (const element of source) { … }`, which pulls a Stream and closes it when the loop exits. `for...of` also consumes Effeck producers; async iterables use Stream adaptation or a TypeScript consumer.
 
 ## Mapping, flattening, and state
 
@@ -74,7 +74,7 @@ const totals = Stream.mapAccum(Stream.make(4, 7, 9), () => 0, (total, n) => {
 })
 ```
 
-`map` is a synchronous value transformation; `mapEffect` accepts EffectScript calls. With concurrency greater than one, `mapEffect` runs multiple callbacks but preserves input order by default; `{ unordered: true }` allows completion order. `flattenIterable` emits each member of each iterable.
+`map` is a synchronous value transformation; `mapEffect` accepts Effeck calls. With concurrency greater than one, `mapEffect` runs multiple callbacks but preserves input order by default; `{ unordered: true }` allows completion order. `flattenIterable` emits each member of each iterable.
 
 `mapAccum` initializes fresh state for each run and returns `[nextState, emittedValues]` per input. The output array can contain zero or more values. Use `mapAccumEffect` when the transition performs Effect work, and `Stream.drain(source)` when work should run but its emitted values should be suppressed.
 

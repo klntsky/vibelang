@@ -13,8 +13,8 @@ func parseCompilerOptions(key string, value any, allOptions *core.CompilerOption
 		key = option.Name
 	}
 	switch key {
-	case "effectscript":
-		allOptions.EffectScript = parseEffectScriptOptions(value)
+	case "effeck":
+		allOptions.Effeck = parseEffeckOptions(value)
 	case "allowJs":
 		allOptions.AllowJs = ParseTristate(value)
 	case "allowArbitraryExtensions":
@@ -374,7 +374,7 @@ func CompilerOptionsAffectSemanticDiagnostics(oldOptions *core.CompilerOptions, 
 	if oldOptions == nil || newOptions == nil {
 		return true
 	}
-	return !oldOptions.EffectScript.Equals(newOptions.EffectScript) ||
+	return !oldOptions.Effeck.Equals(newOptions.Effeck) ||
 		oldOptions.AllowImportingTsExtensions != newOptions.AllowImportingTsExtensions ||
 		oldOptions.AllowUmdGlobalAccess != newOptions.AllowUmdGlobalAccess ||
 		oldOptions.AllowUnreachableCode != newOptions.AllowUnreachableCode ||
@@ -433,7 +433,7 @@ func CompilerOptionsAffectEmit(oldOptions *core.CompilerOptions, newOptions *cor
 	if oldOptions == nil || newOptions == nil {
 		return true
 	}
-	return !oldOptions.EffectScript.Equals(newOptions.EffectScript) ||
+	return !oldOptions.Effeck.Equals(newOptions.Effeck) ||
 		oldOptions.AssumeChangesOnlyAffectDirectDependencies != newOptions.AssumeChangesOnlyAffectDirectDependencies ||
 		oldOptions.EmitBOM != newOptions.EmitBOM ||
 		oldOptions.EmitDecoratorMetadata != newOptions.EmitDecoratorMetadata ||
@@ -671,10 +671,10 @@ func ForEachCompilerOptionAffectingBuildInfo(options *core.CompilerOptions, fn f
 }
 
 func mergeCompilerOptionFields(targetOptions, sourceOptions *core.CompilerOptions, explicitNullFields collections.Set[string]) {
-	if explicitNullFields.Has("effectscript") {
-		targetOptions.EffectScript = nil
-	} else if sourceOptions.EffectScript != nil {
-		targetOptions.EffectScript = sourceOptions.EffectScript
+	if explicitNullFields.Has("effeck") {
+		targetOptions.Effeck = nil
+	} else if sourceOptions.Effeck != nil {
+		targetOptions.Effeck = sourceOptions.Effeck
 	}
 	if explicitNullFields.Has("allowJs") {
 		targetOptions.AllowJs = core.TSUnknown
@@ -1370,8 +1370,8 @@ func handleOptionConfigDirTemplateSubstitution(compilerOptions *parsedCompilerOp
 
 func serializeCompilerOptions(options *core.CompilerOptions, configFilePath tspath.RootedFilePath, caseSensitivity tspath.CaseSensitivity) *collections.OrderedMap[string, any] {
 	result := collections.NewOrderedMapWithSizeHint[string, any](32)
-	if options.EffectScript != nil {
-		result.Set("effectscript", serializeEffectScriptOptions(options.EffectScript))
+	if options.Effeck != nil {
+		result.Set("effeck", serializeEffeckOptions(options.Effeck))
 	}
 	if options.AllowJs == core.TSTrue || options.AllowJs == core.TSFalse {
 		result.Set("allowJs", options.AllowJs == core.TSTrue)

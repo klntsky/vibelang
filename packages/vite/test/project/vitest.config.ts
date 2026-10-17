@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config"
-import effectscript from "../../src/index.js"
+import effeck from "../../src/index.js"
 
 export default defineConfig({
-  plugins: [effectscript({ compiler: "../../../compiler/bin/esc" })],
-  test: { include: [process.env.FAILING_TEST ? "failure.test.es" : "passing.test.es"] }
+  plugins: [effeck({ compiler: "../../../compiler/bin/effeck" })],
+  test: { include: [process.env.FAILING_TEST ? "failure.test.effeck" : "passing.test.effeck"] }
 })

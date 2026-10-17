@@ -17,7 +17,7 @@ Both snippets consume a continuation a second time, or too late, and the machine
 
 | Holder | What it holds | Law on a second consumption | Why it differs |
 | --- | --- | --- | --- |
-| A handler clause | A prompt continuation `k` | Defect at the caller | A clause that resumes twice is a programming error inside EffectScript |
+| A handler clause | A prompt continuation `k` | Defect at the caller | A clause that resumes twice is a programming error inside Effeck |
 | A foreign callback resuming a root wait (`suspend`) | The whole parked fiber | `resume` returns `false`; the caller keeps the value | Foreign producers race legitimately with cancellation and must learn they lost |
 | A foreign producer under `handoff` | The whole parked fiber | `HandoffProtocolViolation` thrown into the producer | The producer promised one delivery and quiescence; breaking that promise is the producer's bug |
 

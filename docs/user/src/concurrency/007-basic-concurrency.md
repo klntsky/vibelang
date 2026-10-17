@@ -1,6 +1,6 @@
 # Basic Concurrency
 
-Ordinary EffectScript calls run in sequence. Use Effect's concurrency combinators to overlap work, choose a concurrency limit, and control cancellation. Pass functions describing the work so the combinator starts each operation at the right time.
+Ordinary Effeck calls run in sequence. Use Effect's concurrency combinators to overlap work, choose a concurrency limit, and control cancellation. Pass functions describing the work so the combinator starts each operation at the right time.
 
 ## Sequential, bounded, and unbounded work
 
@@ -137,8 +137,8 @@ function inspectRace() {
 }
 ```
 
-The synchronous `onWinner` callback observes the winning fiber and index, zero for the first branch and one for the second. It does not replace the winning result and cannot run an EffectScript operation that pauses. `Effect.result` captures expected failures as data; use `Effect.exit` when defects and interruption must also be represented.
+The synchronous `onWinner` callback observes the winning fiber and index, zero for the first branch and one for the second. It does not replace the winning result and cannot run an Effeck operation that pauses. `Effect.result` captures expected failures as data; use `Effect.exit` when defects and interruption must also be represented.
 
 ## Coming from Effect
 
-`Effect.all([task(1), task(2)])` in TypeScript becomes `Effect.all([() => task(1), () => task(2)])` in EffectScript. Calling `task(1)` before passing it to the combinator would already run the work.
+`Effect.all([task(1), task(2)])` in TypeScript becomes `Effect.all([() => task(1), () => task(2)])` in Effeck. Calling `task(1)` before passing it to the combinator would already run the work.

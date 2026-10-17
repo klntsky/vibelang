@@ -1,4 +1,4 @@
-### C. Every Effect feature in EffectScript
+### C. Every Effect feature in Effeck
 
 ```ts es
 const Port = Config.withDefault(Config.Port("PORT"), 3000)      // unchanged by design: Effect's API, as is
@@ -8,16 +8,16 @@ function loadUser(id: string) {
 }
 ```
 
-Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to EffectScript. **Changed** means EffectScript has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
+Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to Effeck. **Changed** means Effeck has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
 
 #### C1. Getting started: the Effect type, creating, running, generators, pipelines
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
-| Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an EffectScript function |
+| Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an Effeck function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
-| Installation | Changed | `effect@4.0.5`, `@effectscript/runtime`, and `@effectscript/compiler` (Chapter 28) |
+| Installation | Changed | `effect@4.0.5`, `@effeck/runtime`, and `effeck` (Chapter 28) |
 | Importing Effect | Changed | The prelude needs no import (`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, and the built-ins); other modules come from `effect` |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |
@@ -26,8 +26,8 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.suspend` | Changed | `() => …` wherever a program is expected |
 | `Effect.callback` | Unchanged by design | The same call; `resume(Exit.succeed(x))` (D43) |
 | `Effect.void`, `never`, `yieldNow`, `interrupt` | Unchanged by design | Call the value: `Effect.yieldNow()` |
-| Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | Take a program, `Effect.runPromise(() => main())`, only where no fiber runs the code (ES1005, D38) |
-| `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.es` is ES1002 |
+| Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | Take a program, `Effect.runPromise(() => main())`, only where no fiber runs the code (EK1005, D38) |
+| `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.effeck` is EK1002 |
 | `Effect.gen({ self: this }, …)` | Changed | An ordinary method; `this` keeps its JavaScript meaning |
 | `Effect.fn`, `fnUntraced` | Changed | `function f() { … }`, untraced unless `tracing` asks for spans (Chapter 28) |
 | `map`, `flatMap`, `andThen`, `tap`, `as` | Changed | Statements |
@@ -36,17 +36,17 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.all`, `zip`, `zipWith` | Changed | Programs as functions: `Effect.all([() => a(), () => b()])` |
 | `Effect.fromOption`, `fromResult`, `fromNullishOr` | Unchanged by design | `const n = Effect.fromOption(parse(x))` |
 | Control flow inside `Effect.gen` | Changed | `if`, `for`, `while`, and early `return` in an ordinary function |
-| Devtools | Changed | The fork's language server for `.es`; `@effect/tsgo` stays on `.ts`; Effect's `DevTools` for fibers and spans (Chapter 28) |
+| Devtools | Changed | The fork's language server for `.effeck`; `@effect/tsgo` stays on `.ts`; Effect's `DevTools` for fibers and spans (Chapter 28) |
 
 #### C2. Error management
 
-On a cause that mixes an expected failure and a defect, Effect's operators below keep their Effect behavior, which differs from EffectScript's `catch`; Chapter 17 lists how.
+On a cause that mixes an expected failure and a defect, Effect's operators below keep their Effect behavior, which differs from Effeck's `catch`; Chapter 17 lists how.
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | Expected errors and defects | Changed | `throw` is expected; an exception no contract lists, `Effect.die`, and `Effect.orDie` are defects (Chapter 3) |
 | A JavaScript `throw` | Changed | Always a typed failure; `Effect.die(new Error(…))` for a bug |
-| A JavaScript `catch` around a throwing call | Changed | `catch` sees expected failures only; a dead `catch` is ES2004 (D37) |
+| A JavaScript `catch` around a throwing call | Changed | `catch` sees expected failures only; a dead `catch` is EK2004 (D37) |
 | `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `TaggedError` is in the prelude; `Schema.TaggedError` is unchanged |
 | Error tracking in E | Changed | Inferred: what a function throws, plus its callees' E, minus what it catches |
 | `Effect.catch`, `catchTag`, `catchTags`, `catchIf` | Changed | `try`/`catch` with narrowing; the combinators still work with a program |
@@ -59,19 +59,19 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Effect.retry`, `retryOrElse` | Changed | `Effect.retry(() => request(), { times: 5 })`, with fresh locals per attempt |
 | `Effect.timeout`, `timeoutOption`, `timeoutOrElse` | Changed | `Effect.timeout(() => task(), "1 second")`; E gains `Cause.TimeoutError` |
 | `Effect.sandbox` | Changed | `Effect.sandbox(() => task())` inside `try`; `catch (cause)` gets the cause |
-| `Effect.validate`, `partition` | Unchanged by design | The same calls, with EffectScript callbacks |
+| `Effect.validate`, `partition` | Unchanged by design | The same calls, with Effeck callbacks |
 | `Effect.all` with `mode: "result"` | Changed | Programs as functions, the same options |
 | `mapError`, `mapBoth`, `tapError`, `flip`, `filterOrFail` | Changed | `catch (e) { throw new Other({ e }) }`; `if (…) throw new E()` |
 | Parallel and sequential errors (`Cause.reasons`) | Unchanged by design | `catch` gets the first expected failure (D28); `Effect.catchCause` sees all |
 | Yieldable errors | Changed | `throw new E()`; `new` never runs anything (D24) |
-| A contract with E = `never` | Changed | Checked by the compiler (ES2001) |
+| A contract with E = `never` | Changed | Checked by the compiler (EK2001) |
 
 #### C3. Requirements management: services, layers, memoization
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Context.Service` class | Changed | `abstract class Users { abstract find(id: string): Effect<User, UserNotFound, never> }` (D1) |
-| Service keys | Changed | Derived from package, path, and class name; duplicates are ES3001 |
+| Service keys | Changed | Derived from package, path, and class name; duplicates are EK3001 |
 | `yield* Users`, then a method | Changed | `Users.find(id)`; `Users()` gives the implementation |
 | `Users.use`, `useSync` | Changed | Call the member: `Users.find(id)` |
 | A member that returns a plain value (`Path.join`) | Changed | `Path.join(a, b)`; the service joins R (D41) |
@@ -84,9 +84,9 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Context.make`, `Context.add` | Unchanged by design | Values, provided with `Effect.provide(() => program(), context)` |
 | `Layer.succeed`, `effect`, `sync` | Changed | `Layer.effect(Users, () => { const db = Database(); return { … } })` |
 | Layers that hold resources | Changed | Acquire without `using`; the layer's Scope owns the resource |
-| Requirements that leak into methods | Changed | ES3101 |
+| Requirements that leak into methods | Changed | EK3101 |
 | `Layer.merge`, `mergeAll`, `provide`, `provideMerge` | Unchanged by design | The same functions; `wire(…)` orders them and reports graph errors (D27) |
-| Missing, duplicate, and cyclic providers | Changed | ES3201, ES3202, ES3203 |
+| Missing, duplicate, and cyclic providers | Changed | EK3201, EK3202, EK3203 |
 | `Effect.provide` | Changed | `Effect.provide(() => program(), AppLive)`; each `provide` builds its layers once (D21) |
 | Layer memoization, `Layer.fresh`, MemoMaps | Unchanged by design | As in Effect; provide at `main`, or run entry points through one `ManagedRuntime` (D21) |
 | `Layer.launch`, `build`, `unwrap`, `mock`, `tap`, `catch` | Unchanged by design | Values and calls as in Effect |
@@ -94,7 +94,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C4. Resource management
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Effect.scoped` | Changed | A block that declares `using` |
 | `acquireRelease`, `acquireUseRelease` | Changed | `using lock = Effect.acquireRelease(() => acquire(), (l) => release(l))` |
@@ -108,14 +108,14 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C5. Observability
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Effect.log` and its levels | Unchanged by design | `Effect.logWarning("disk low")` |
 | A minimum log level for a region | Changed | `Effect.provideService(() => program(), References.MinimumLogLevel, "Debug")` |
 | `annotateLogs`, `withLogSpan` | Changed | With a program: `Effect.withLogSpan(() => handle(req), "handler")` |
 | `annotateLogsScoped` | Unchanged by design | The same call; a `using` block or the caller supplies the Scope |
 | `Logger.make`, `Logger.layer`, formats, `Logger.toFile` | Unchanged by design | Values, provided as layers |
-| `Console` | Unchanged by design | `Console.log("hi")`; `console.log` is ES4402 |
+| `Console` | Unchanged by design | `Console.log("hi")`; `console.log` is EK4402 |
 | Metrics (`counter`, `gauge`, `histogram`, `summary`, `frequency`, `timer`) | Unchanged by design | Defined at the top level; `Metric.update(requests, 1)` |
 | `trackSuccesses`, `trackDuration` | Changed | `Effect.trackDuration(() => task(), latency)` |
 | `Metric.CurrentMetricAttributes` | Changed | Provided around a program with `Effect.provideService` |
@@ -129,7 +129,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C6. Configuration
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Config.String`, `Port`, `Int`, `Boolean`, `Duration`, `URL`, `Redacted` | Unchanged by design | Data until called: `const Port = Config.Port("PORT")`, then `Port()` (D24) |
 | `Config.all`, `withDefault`, `nested`, `option`, `orElse`, `schema` | Unchanged by design | Composed as data, read once by calling |
@@ -141,23 +141,23 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C7. Runtime
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `NodeRuntime.runMain`, `BunRuntime.runMain` | Changed | `NodeRuntime.runMain(() => main())` at a module's top level |
 | `runMain` options | Changed | The same options, with a program |
 | One-shot runners and `run*With(context)` | Changed | Programs as functions, only where no fiber runs the code (D38) |
 | `ManagedRuntime` | Unchanged by design | `ManagedRuntime.make(AppLive)`; `runtime.runPromise(() => handle(req))` in a framework callback, or from TypeScript |
-| Top-level `await` | Changed | No `await`; the top level builds values and calls runners (ES1001) |
+| Top-level `await` | Changed | No `await`; the top level builds values and calls runners (EK1001) |
 | Scheduling and fairness | Unchanged by design | 2048 operations per slice; a plain JavaScript region is atomic |
 | `ErrorReporter`, `Effect.withErrorReporting` | Changed | `Effect.withErrorReporting(() => program())`: the thunk is a program (D39) |
 
 #### C8. Scheduling
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | Schedule constructors (`spaced`, `fixed`, `exponential`, `recurs`, `cron`) | Unchanged by design | `Schedule.exponential("250 millis")` |
 | Schedule combinators | Unchanged by design | `.pipe` over a schedule value |
-| Effectful schedule callbacks (`tap`, `modifyDelay`) | Unchanged by design | EffectScript callbacks |
+| Effectful schedule callbacks (`tap`, `modifyDelay`) | Unchanged by design | Effeck callbacks |
 | `Effect.repeat` | Changed | `Effect.repeat(() => poll(), { schedule, until: (s) => s === "done" })` |
 | `Effect.retry` with a schedule | Changed | `Effect.retry(() => f(), Schedule.exponential("100 millis"))` |
 | `Effect.schedule`, `repeatOrElse` | Changed | Programs as functions |
@@ -166,7 +166,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C9. State management
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Ref` | Unchanged by design | `const ref = Ref.make(0); Ref.update(ref, (n) => n + 1)` |
 | Programs stored as object fields | Changed | `inc = () => Ref.update(this.value, (n) => n + 1)` |
@@ -176,7 +176,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C10. Caching
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Effect.cached` | Changed | `const get = Effect.cached(() => load())`, then `get()` |
 | `cachedWithTTL`, `cachedInvalidateWithTTL` | Changed | Programs as functions; `get()` and `invalidate()` |
@@ -184,10 +184,10 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C11. Batching
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Request.Class`, `TaggedClass` | Unchanged by design | The same classes |
-| `RequestResolver.make`, `fromEffect`, `makeGrouped`, `batchN` | Unchanged by design | Callbacks are EffectScript functions |
+| `RequestResolver.make`, `fromEffect`, `makeGrouped`, `batchN` | Unchanged by design | Callbacks are Effeck functions |
 | `Effect.request` | Unchanged by design | `Effect.request(new GetUser({ id }), resolver)` |
 | Batches form under concurrency | Unchanged by design | Sequential calls never batch, as in Effect |
 | `RequestResolver.withCache` | Unchanged by design | Inside a function or a Layer |
@@ -195,7 +195,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C12. Concurrency
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | The `concurrency` option | Changed | Programs as functions, the same options |
 | Struct and record forms of `Effect.all` | Changed | Record fields convert to programs |
@@ -218,29 +218,29 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Semaphore` | Unchanged by design | `Semaphore.make(1)`; `mutex.withPermits(1)(() => task())` |
 | `Latch` | Unchanged by design | `latch.open()`: an `Effect` member runs when called |
 | What a forked fiber sees | Unchanged by design | A snapshot of the parent's Context |
-| Control operations across fibers | Changed | ES4201 (Chapter 9) |
+| Control operations across fibers | Changed | EK4201 (Chapter 9) |
 
 #### C13. Async interop
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
-| `async` and `await` | Changed | None in `.es`: a call waits |
+| `async` and `await` | Changed | None in `.effeck`: a call waits |
 | `Effect.promise`, `Effect.tryPromise` | Unchanged by design | The same calls; the `AbortSignal` cancels on interruption |
 | `Effect.callback` | Unchanged by design | A boundary; `resume(Exit.succeed(x))`; `suspend` for resources (D43) |
 | `Effect.runPromise` from Promise code | Unchanged by design | From TypeScript, or a top-level callback (D38) |
 | Async iterables and event emitters | Unchanged by design | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
-| Synchronous code that throws | Changed | `Effect.try`; a dead `catch` is ES2004 (D37) |
+| Synchronous code that throws | Changed | `Effect.try`; a dead `catch` is EK2004 (D37) |
 | Effect 3 libraries | Changed | Foreign code: `Effect.tryPromise({ try: () => Effect3.runPromise(p), catch })` |
 
 #### C14. Streams
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | A sequence produced by code that waits between values | Changed | A `function*` producer and `for...of` (Chapter 8) |
 | Streams from data (`make`, `range`, `fromIterable`, `tick`) | Unchanged by design | `Stream.range(1, 10)` |
 | `fromEffect`, `fromEffectRepeat` | Changed | Programs as functions |
-| `unfold`, `paginate` | Unchanged by design | EffectScript callbacks |
-| `Stream.callback`, `fromQueue`, `fromPubSub`, `fromEventListener` | Unchanged by design | The same calls; inner JavaScript callbacks cannot pause (ES4301) |
+| `unfold`, `paginate` | Unchanged by design | Effeck callbacks |
+| `Stream.callback`, `fromQueue`, `fromPubSub`, `fromEventListener` | Unchanged by design | The same calls; inner JavaScript callbacks cannot pause (EK4301) |
 | Operators (`map`, `filter`, `mapEffect`, `merge`, `buffer`, `debounce`, `groupedWithin`) | Unchanged by design | The same calls; a producer converts to a `Stream` (D26) |
 | `runCollect`, `runForEach`, `runFold`, `runDrain`, `run` | Unchanged by design | Calls that run the stream |
 | `Stream.toPull` | Changed | `for...of` over a `Stream` (D26) |
@@ -253,15 +253,15 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C15. Sinks
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | Sinks (`sum`, `count`, `collect`, `head`, `drain`) | Unchanged by design | `Stream.run(stream, Sink.sum)` |
-| `Sink.fold`, `foldUntil`, `forEach` | Unchanged by design | EffectScript callbacks; pure ones pass as plain functions (D9) |
+| `Sink.fold`, `foldUntil`, `forEach` | Unchanged by design | Effeck callbacks; pure ones pass as plain functions (D9) |
 | A producer into a sink | Changed | The producer converts to a `Stream` (D26) |
 
 #### C16. Testing
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `it.effect` | Changed | `it.effect("name", () => { … })` |
 | `it.live`, `.each`, `.prop`, `it.flakyTest` | Unchanged by design | The same calls |
@@ -277,20 +277,20 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C17. Code style
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | Run once, at the edge | Changed | `NodeRuntime.runMain(() => main())` |
 | Avoid tacit calls | Unchanged by design | The same advice |
 | Dual APIs | Changed | Data-first with a program; data-last inside `pipe` |
 | Branded types | Unchanged by design | A failed check throws a defect; `Int.result(n)` for a typed error |
 | Pattern matching with pure handlers (`Match`) | Unchanged by design | The same module |
-| Pattern matching with effectful branches | Changed | `switch` or `if`; effectful `Match` handlers are ES4301 (D9) |
+| Pattern matching with effectful branches | Changed | `switch` or `if`; effectful `Match` handlers are EK4301 (D9) |
 | Do notation (`Effect.Do`, `bind`, `let`) | Changed | Statements |
 | Control flow operators (`Effect.when`, `whileLoop`) | Changed | `if` and `while` |
 
 #### C18. Data types
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Option` | Unchanged by design | Plain data; `Option.gen` stays in `.ts` |
 | An `Option` to a typed failure | Changed | `Effect.fromOption(found)`, or `throw` |
@@ -303,26 +303,26 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Error classes | Changed | `TaggedError` in the prelude; `throw` |
 | `new` of a class whose instances are Effects | Changed | `new` constructs and never runs (D24) |
 | `Chunk`, `HashSet`, `HashMap`, `Duration`, `BigDecimal`, `Redacted` | Unchanged by design | The same modules |
-| `DateTime` | Unchanged by design | `DateTime.now()`; `new Date()` is ES4403 |
+| `DateTime` | Unchanged by design | `DateTime.now()`; `new Date()` is EK4403 |
 | A time zone for a region | Changed | Programs as functions |
 
 #### C19. Traits and behaviours
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Equal`, `Hash` | Unchanged by design | The same functions; `===` keeps its JavaScript meaning. A class implements `[Equal.symbol]` and `[Hash.symbol]` with plain methods (D55, Chapter 15) |
 | `Equivalence`, `Order` | Unchanged by design | The same modules |
 
 #### C20. Schema
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | Defining schemas | Unchanged by design | Values, built at the top level |
 | `decodeUnknownEffect`, `decodeEffect`, `encodeEffect` | Unchanged by design | Calls that run; `SchemaError` joins E |
 | `decodeUnknownSync`, `is`, `asserts` | Unchanged by design | Trusted; their exceptions are defects (D37) |
 | `decodeUnknownExit` | Unchanged by design | An `Exit` value (D24) |
 | Filters and transformations | Unchanged by design | The same functions |
-| `transformEffect`, `checkEffect` | Unchanged by design | EffectScript callbacks |
+| `transformEffect`, `checkEffect` | Unchanged by design | Effeck callbacks |
 | Defaults given as Effects (`withConstructorDefault`) | Changed | A program: `Schema.withConstructorDefault(() => Clock.currentTimeMillis())` |
 | `Schema.Class`, `TaggedClass` | Unchanged by design | The same classes |
 | `Schema.TaggedError` | Changed | `throw new HttpError({ status: 500 })` |
@@ -332,9 +332,9 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C21. Platform
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
-| Node.js and browser APIs | Changed | Not callable from `.es` (ES4402); Chapter 11 names each replacement |
+| Node.js and browser APIs | Changed | Not callable from `.effeck` (EK4402); Chapter 11 names each replacement |
 | Platform layers (`NodeServices.layer`) | Changed | `Effect.provide(() => main(), NodeServices.layer)` |
 | `FileSystem` | Unchanged by design | `FileSystem.readFileString(path)`, from `effect/FileSystem` |
 | `FileSystem.open` (a scoped `File`) | Changed | `using file = FileSystem.open(path)` |
@@ -344,11 +344,11 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Child processes | Unchanged by design | `ChildProcessSpawner.string(ChildProcess.make("git", ["status"]))`; the command is data (D24) |
 | `KeyValueStore` | Unchanged by design | From `effect/persistence` |
 | Sockets | Changed | `using` for a scoped reader |
-| Workers | Unchanged by design | EffectScript handlers |
+| Workers | Unchanged by design | Effeck handlers |
 
 #### C22. HTTP
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `HttpClient` | Unchanged by design | `HttpClient.get(url)` runs |
 | Response bodies | Unchanged by design | `response.json()` |
@@ -356,12 +356,12 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `HttpRouter.add` handlers | Unchanged by design | A handler function, or a program (D39) |
 | Serving | Changed | `NodeRuntime.runMain(() => Layer.launch(HttpRouter.serve(routes)))` |
 | `HttpApi` definitions, middleware, security | Unchanged by design | Values |
-| `HttpApi` handlers | Unchanged by design | EffectScript functions |
+| `HttpApi` handlers | Unchanged by design | Effeck functions |
 | `HttpApiClient` | Unchanged by design | Calls that run |
 
 #### C23. SQL
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `SqlClient` | Unchanged by design | `const sql = SqlClient.SqlClient()` |
 | `` sql`…` `` statements | Unchanged by design | Data until called (D24): `` sql`SELECT * FROM users`() `` runs it, and `.stream` stays reachable |
@@ -372,7 +372,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C24. CLI
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Command.make`, `withSubcommands`, `withHandler` | Unchanged by design | Data (D24), declared at the top level |
 | Flags and arguments | Unchanged by design | Values |
@@ -381,7 +381,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C25. AI
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `LanguageModel.generateText`, `generateObject` | Unchanged by design | Calls that run |
 | `LanguageModel.streamText` | Unchanged by design | A `Stream` |
@@ -394,20 +394,20 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C26. Cluster, workflow, and RPC
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Rpc.make`, `RpcGroup.make` | Unchanged by design | Values |
-| `group.toLayer(handlers)` | Unchanged by design | An object of EffectScript handlers (D39) |
+| `group.toLayer(handlers)` | Unchanged by design | An object of Effeck handlers (D39) |
 | RPC clients and servers | Changed | `using client = RpcClient.make(UserRpcs)` |
 | Entities | Unchanged by design | `Counter.client()` |
-| Workflows | Unchanged by design | Bodies are EffectScript functions (D42) |
+| Workflows | Unchanged by design | Bodies are Effeck functions (D42) |
 | Activities | Unchanged by design | Data until called (D24) |
 | `DurableClock.sleep`, `DurableDeferred.await` | Unchanged by design | Calls that run |
 | Replay | Unchanged by design | Each execution is a fresh program run; held continuations end with it (D42) |
 
 #### C27. Effect 3 features that Effect 4 removed
 
-| Feature | In EffectScript | Form |
+| Feature | In Effeck | Form |
 | --- | --- | --- |
 | `Micro` | Unchanged by design | Effect 4 has none; Effect 3 code is foreign code (Chapter 10) |
 | `Supervisor` | Unchanged by design | `FiberSet` and `fork` |

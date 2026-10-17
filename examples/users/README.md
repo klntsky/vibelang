@@ -5,7 +5,7 @@ A directory-backed greeting uses abstract services, inferred contracts,
 The directory is captured when `UsersLive` builds, so lookups need only `Users`.
 Tests replace the live graph with `UsersTest` and check missing-user recovery.
 
-From this directory, with `esc` on `PATH`:
+From this directory, with `effeck` on `PATH`:
 ```sh
 bun install
 bun run build
@@ -13,8 +13,8 @@ bun run start
 bun run test
 ```
 
-`src/main.test.es` uses `it.effect`; Vitest runs the source
-through `@effectscript/vite`, with assertion stacks mapped to `.es` lines.
+`src/main.test.effeck` uses `it.effect`; Vitest runs the source
+through `@effeck/vite`, with assertion stacks mapped to `.effeck` lines.
 Assertions sit inside `Effect.sync`, an explicit boundary for foreign code.
 The lookup in Effect TypeScript is:
 ```ts

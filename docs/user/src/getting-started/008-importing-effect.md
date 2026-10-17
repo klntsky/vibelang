@@ -1,6 +1,6 @@
 # Importing Effect
 
-EffectScript uses Effect's modules and standard module import syntax. A small prelude is already in scope in `.es` files; import the other modules as you need them.
+Effeck uses Effect's modules and standard module import syntax. A small prelude is already in scope in `.effeck` files; import the other modules as you need them.
 
 ## Install the core package
 
@@ -8,7 +8,7 @@ EffectScript uses Effect's modules and standard module import syntax. A small pr
 npm install effect@4.0.5
 ```
 
-The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](004-installation.md) for platform packages, `@effectscript/compiler`, and `@effectscript/runtime`.
+The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](004-installation.md) for platform packages, `effeck`, and `@effeck/runtime`.
 
 ## Module and namespace imports
 
@@ -46,7 +46,7 @@ Effect exposes operations as module functions. Call them with their data argumen
 
 Named module imports and direct namespace imports both expose the library without adding methods to your objects. Bundlers can eliminate unused exports when their module analysis supports it. Check the generated bundle when size matters; the import spelling alone does not guarantee a particular size.
 
-EffectScript's global names are source conveniences. They refer to Effect and language support code, which still participates in the emitted module graph.
+Effeck's global names are source conveniences. They refer to Effect and language support code, which still participates in the emitted module graph.
 
 ## Reusable operators
 
@@ -67,6 +67,6 @@ A helper can accept a program and apply library operators to it. Its contract pr
 
 ## Coming from Effect
 
-Skip imports for the prelude in `.es`. In `.ts` integration files, import `Effect`, `Layer`, and the other names you use as usual.
+Skip imports for the prelude in `.effeck`. In `.ts` integration files, import `Effect`, `Layer`, and the other names you use as usual.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/importing-effect)

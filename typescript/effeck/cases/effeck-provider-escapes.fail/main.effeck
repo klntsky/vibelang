@@ -1,0 +1,38 @@
+// expect: EK2001
+// A provider's member must fit the service member's contract (Chapter 4).
+// Without Effect.orDie, DbError escapes find, whose contract allows only
+// UserNotFound, in an object literal provider and in an implementing class.
+import { Data, Effect, Layer } from "effect"
+
+class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: string }> {}
+class DbError extends Data.TaggedError("DbError")<{ readonly reason: string }> {}
+
+interface User {
+  readonly id: string
+  readonly name: string
+}
+
+abstract class Users {
+  abstract find(id: string): Effect.Effect<User, UserNotFound, never>
+}
+
+abstract class Database {
+  abstract query(sql: string): Effect.Effect<ReadonlyArray<User>, DbError, never>
+}
+
+export const UsersLive = Layer.effect(Users, () => {
+  const db = Database()
+  return {
+    find(id) {
+      const rows = db.query(`select ${id}`)
+      if (rows.length === 0) return Effect.fail(new UserNotFound({ id }))
+      return Effect.succeed(rows[0])
+    }
+  }
+})
+
+export class UsersFlaky implements Users {
+  find(id: string) {
+    return Effect.fail(new DbError({ reason: `no connection for ${id}` }))
+  }
+}

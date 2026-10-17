@@ -1,9 +1,9 @@
-// Derives the EffectScript TextMate grammar from VS Code's TypeScript grammar.
+// Derives the Effeck TextMate grammar from VS Code's TypeScript grammar.
 //
-// EffectScript adds no syntax to TypeScript, so the grammar is TypeScript's
-// with a new name and root scope, source.effectscript. Inner scopes keep
+// Effeck adds no syntax to TypeScript, so the grammar is TypeScript's
+// with a new name and root scope, source.effeck. Inner scopes keep
 // their .ts suffix, so every theme rule written for TypeScript colors
-// EffectScript the same way. The JSDoc injection is retargeted to the new
+// Effeck the same way. The JSDoc injection is retargeted to the new
 // root scope. Both source files are MIT-licensed; see ThirdPartyNotices.txt.
 //
 // Usage: node scripts/derive-grammar.mjs [typescript-basics directory]
@@ -22,17 +22,17 @@ const read = (file) => JSON.parse(readFileSync(path.join(source, "syntaxes", fil
 const write = (file, json) => writeFileSync(path.join(syntaxes, file), JSON.stringify(json, null, "\t") + "\n")
 
 const note =
-  "Derived for EffectScript by editors/vscode/scripts/derive-grammar.mjs from the TypeScript grammar that VS Code ships; only name and scopeName differ."
+  "Derived for Effeck by editors/vscode/scripts/derive-grammar.mjs from the TypeScript grammar that VS Code ships; only name and scopeName differ."
 
 const grammar = read("TypeScript.tmLanguage.json")
 const { information_for_contributors: info = [], version, name, scopeName, patterns, repository, ...other } = grammar
 if (name !== "TypeScript" || scopeName !== "source.ts") throw new Error(`unexpected grammar ${name} (${scopeName})`)
 if (Object.keys(other).length > 0) throw new Error(`unexpected grammar keys: ${Object.keys(other).join(", ")}`)
-write("EffectScript.tmLanguage.json", {
+write("Effeck.tmLanguage.json", {
   information_for_contributors: [note, ...info],
   version,
-  name: "EffectScript",
-  scopeName: "source.effectscript",
+  name: "Effeck",
+  scopeName: "source.effeck",
   patterns,
   repository
 })
@@ -41,12 +41,12 @@ const injection = read("jsdoc.ts.injection.tmLanguage.json")
 const text = JSON.stringify(injection)
 if (!text.includes("source.ts#docblock")) throw new Error("the JSDoc injection no longer includes source.ts#docblock")
 write(
-  "jsdoc.effectscript.injection.tmLanguage.json",
+  "jsdoc.effeck.injection.tmLanguage.json",
   JSON.parse(
-    text.replaceAll("source.ts#docblock", "source.effectscript#docblock").replace(
+    text.replaceAll("source.ts#docblock", "source.effeck#docblock").replace(
       '"scopeName":"documentation.injection.ts"',
-      '"scopeName":"documentation.injection.effectscript"'
+      '"scopeName":"documentation.injection.effeck"'
     )
   )
 )
-console.log(`wrote ${path.relative(process.cwd(), syntaxes)}/EffectScript.tmLanguage.json (TypeScript-TmLanguage ${version})`)
+console.log(`wrote ${path.relative(process.cwd(), syntaxes)}/Effeck.tmLanguage.json (TypeScript-TmLanguage ${version})`)

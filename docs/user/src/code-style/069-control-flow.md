@@ -1,6 +1,6 @@
 # Control Flow Operators
 
-EffectScript uses ordinary branches and loops for sequential work. Effect's operators remain useful when you need concurrent execution, a collected set of results, or a policy that applies to whole programs. Pass functions to operators so they decide when each computation starts.
+Effeck uses ordinary branches and loops for sequential work. Effect's operators remain useful when you need concurrent execution, a collected set of results, or a policy that applies to whole programs. Pass functions to operators so they decide when each computation starts.
 
 ## Branching and conditional computations
 
@@ -30,7 +30,7 @@ function announceIfEnabled(enabled: boolean) {
 }
 ```
 
-`if`, early `return`, and `throw` work inside an EffectScript function, including after a service call. `Effect.when` evaluates its condition program first, runs its source only for `true`, and returns an `Option` indicating whether it ran. `false` produces `None`; a condition failure propagates instead of skipping work.
+`if`, early `return`, and `throw` work inside an Effeck function, including after a service call. `Effect.when` evaluates its condition program first, runs its source only for `true`, and returns an `Option` indicating whether it ran. `false` produces `None`; a condition failure propagates instead of skipping work.
 
 ## Combining two results
 

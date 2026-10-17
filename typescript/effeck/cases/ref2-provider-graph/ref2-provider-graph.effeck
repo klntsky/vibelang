@@ -1,0 +1,149 @@
+// Reference program 2. Provider graph: a shared database, two dependent services, test overrides,
+// a failing acquisition, a missing provider, an ambiguous provider, and a cycle. Acquisition
+// dependencies must not leak to callers.
+// The missing, ambiguous, and cyclic graphs are compile-time errors under `wire`:
+// ref2-missing-provider.fail.effeck, ref2-ambiguous-provider.fail.effeck, ref2-cycle.fail.effeck.
+// NOTE: the proposal states this program in prose only; the contract comments below are this file's
+// expectations, not contracts printed in the proposal.
+
+class ConnectError extends TaggedError("ConnectError")<{ readonly url: string }> {}
+class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}
+class DbError extends TaggedError("DbError")<{ readonly reason: string }> {}
+
+interface User {
+  readonly id: string
+  readonly name: string
+}
+
+interface Order {
+  readonly id: string
+  readonly userId: string
+  readonly total: number
+}
+
+abstract class Database {
+  abstract query(table: string, key: string): Effect<ReadonlyArray<string>, DbError, never>
+}
+
+abstract class Users {
+  abstract find(id: string): Effect<User, UserNotFound, never>
+}
+
+abstract class Orders {
+  abstract forUser(userId: string): Effect<ReadonlyArray<Order>, never, never>
+}
+
+abstract class Config {
+  abstract readonly url: string
+}
+
+const events: string[] = []
+let connections = 0
+
+const data = new Map<string, ReadonlyArray<string>>([
+  ["users/1", ["Ada"]],
+  ["orders/1", ["o1:30", "o2:12"]]
+])
+
+// The shared database: one connection per provide, released when the provided program ends.
+const DatabaseLive = Layer.effect(Database, () => {
+  const url = Config().url
+  if (url.startsWith("broken:")) throw new ConnectError({ url })   // a failing acquisition
+  Effect.acquireRelease(
+    () => {
+      connections++
+      events.push(`connect ${url}`)
+    },
+    () => {
+      events.push(`disconnect ${url}`)
+    }
+  )
+  return {
+    query: (table, key) => data.get(`${table}/${key}`) ?? []
+  }
+})
+// Layer<Database, ConnectError, Config>
+
+// Two services that depend on the database. Each captures Database when its layer is built, so
+// callers of Users.find and Orders.forUser need only Users and Orders.
+const UsersLive = Layer.effect(Users, () => {
+  const db = Database()
+  return {
+    find(id) {
+      const rows = Effect.orDie(() => db.query("users", id))
+      if (rows.length === 0) throw new UserNotFound({ id })
+      return { id, name: rows[0] }
+    }
+  }
+})
+// Layer<Users, never, Database>
+
+const OrdersLive = Layer.effect(Orders, () => {
+  const db = Database()
+  return {
+    forUser(userId) {
+      const rows = Effect.orDie(() => db.query("orders", userId))
+      return rows.map((row) => {
+        const [id, total] = row.split(":")
+        return { id, userId, total: Number(total) }
+      })
+    }
+  }
+})
+// Layer<Orders, never, Database>
+
+// A caller: R is Users | Orders, never Database.
+function summary(userId: string) {
+  const user = Users.find(userId)
+  const orders = Orders.forUser(userId)
+  let total = 0
+  for (const order of orders) total += order.total
+  return `${user.name}: ${orders.length} orders, ${total}`
+}
+// Effect<string, UserNotFound, Users | Orders>
+
+// A test override implemented by a class (D1: a class that `implements Users`).
+// NOTE: the method's parameter is annotated because `implements` gives no contextual types.
+class UsersFake implements Users {
+  find(id: string) {
+    return { id, name: `fake-${id}` }
+  }
+}
+
+const UsersTest = Layer.succeed(Users, new UsersFake())
+
+const ConfigLive = Layer.succeed(Config, { url: "postgres://shared" })
+const ConfigBroken = Layer.succeed(Config, { url: "broken://nowhere" })
+
+// NOTE: Layer.provide (not provideMerge) keeps Database out of the application's outputs.
+const AppLive = pipe(
+  Layer.mergeAll(UsersLive, OrdersLive),
+  Layer.provide(DatabaseLive),
+  Layer.provide(ConfigLive)
+)
+
+const AppWithFakeUsers = pipe(
+  Layer.mergeAll(UsersTest, OrdersLive),
+  Layer.provide(DatabaseLive),
+  Layer.provide(ConfigLive)
+)
+
+const AppBroken = pipe(
+  Layer.mergeAll(UsersLive, OrdersLive),
+  Layer.provide(DatabaseLive),
+  Layer.provide(ConfigBroken)
+)
+
+// The database is shared by Users and Orders within one provide: two provides, two connections.
+// expect-result: {"live":"Ada: 2 orders, 42","fake":"fake-1: 2 orders, 42","broken":"ConnectError","connections":2,"events":["connect postgres://shared","disconnect postgres://shared","connect postgres://shared","disconnect postgres://shared"]}
+export function main() {
+  const live = Effect.provide(() => summary("1"), AppLive)
+  const fake = Effect.provide(() => summary("1"), AppWithFakeUsers)
+  let broken = "none"
+  try {
+    Effect.provide(() => summary("1"), AppBroken)
+  } catch (e) {
+    broken = e._tag
+  }
+  return { live, fake, broken, connections, events }
+}

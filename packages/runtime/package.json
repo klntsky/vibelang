@@ -1,7 +1,7 @@
 {
-  "name": "@effectscript/runtime",
+  "name": "@effeck/runtime",
   "version": "0.0.1",
-  "description": "The EffectScript continuation kernel and generated-code runtime helpers.",
+  "description": "The Effeck continuation kernel and generated-code runtime helpers.",
   "type": "module",
   "exports": {
     ".": {

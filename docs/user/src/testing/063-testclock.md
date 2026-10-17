@@ -5,30 +5,30 @@
 ## Configure the test runner
 
 The [starter](../getting-started/004-installation.md) includes Vitest 5.0.5,
-`@effect/vitest` 4.0.5, and the local `@effectscript/vite` plugin. Run
-`bun run test` to compile and execute `src/**/*.test.es` directly. Tests need no
+`@effect/vitest` 4.0.5, and the local `@effeck/vite` plugin. Run
+`bun run test` to compile and execute `src/**/*.test.effeck` directly. Tests need no
 prior `dist/` build. Keep configuration in TypeScript:
 
 ```ts
 // TypeScript (.ts)
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
-import effectscript from "@effectscript/vite"
+import effeck from "@effeck/vite"
 
 export default defineConfig({
-  plugins: [effectscript()],
-  test: { include: ["src/**/*.test.es"] }
+  plugins: [effeck()],
+  test: { include: ["src/**/*.test.effeck"] }
 })
 ```
 
 Register `it.effect` at the top level or inside `describe`. The callback is a
-program, so EffectScript calls inside it run. `assert` and `expect` from
+program, so Effeck calls inside it run. `assert` and `expect` from
 `@effect/vitest` are exports of an Effect package, so call them directly, as in
 `assert.strictEqual(actual, expected)` or `expect(actual).toBe(expected)`. A
 failed assertion is a defect: it fails the test, and its stack points to the
-original `.es` line through the plugin's maps. Import them from
+original `.effeck` line through the plugin's maps. Import them from
 `@effect/vitest`; the same functions imported from `vitest` are plain
-TypeScript, which is ES4401 inside a test. The examples below use a local
+TypeScript, which is EK4401 inside a test. The examples below use a local
 `check` helper, which works the same way.
 
 ## Controlling virtual time
@@ -125,7 +125,7 @@ it.effect("expires at the boundary", () => {
 })
 ```
 
-Calls to `Clock.currentTimeMillis()` read the supplied clock and remain deterministic under the test layer. `Date.now()`, zero-argument `new Date()`, and platform timers are not application time sources in EffectScript. Testing just before and at a boundary catches comparison mistakes that checking only a later timestamp misses.
+Calls to `Clock.currentTimeMillis()` read the supplied clock and remain deterministic under the test layer. `Date.now()`, zero-argument `new Date()`, and platform timers are not application time sources in Effeck. Testing just before and at a boundary catches comparison mistakes that checking only a later timestamp misses.
 
 ## Timed waits and deferred results
 

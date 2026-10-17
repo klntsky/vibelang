@@ -1,17 +1,17 @@
 // Tests the packaged extension in a real VS Code. It copies the language
-// server fixture to a scratch project that has @effectscript/compiler
+// server fixture to a scratch project that has effeck
 // installed with the compiler under test as its native binary, installs
-// effectscript.vsix into a fresh VS Code profile, opens the project, and runs
+// effeck.vsix into a fresh VS Code profile, opens the project, and runs
 // test/harness/index.js inside VS Code.
 //
 // Usage: bun run package && node test/run.mjs
 //
 // Environment:
-//   ESC                  the esc binary (default: ../../typescript/built/local/esc)
+//   EFFECK                  the effeck binary (default: ../../typescript/built/local/effeck)
 //   EFFECT_NODE_MODULES  a node_modules directory that holds effect 4.0.5
 //                        (default: ../../experiments/node_modules, else
 //                        ~/effectscript/experiments/node_modules)
-//   EFFECTSCRIPT_RUNTIME the built @effectscript/runtime package directory
+//   EFFECK_RUNTIME the built @effeck/runtime package directory
 //                        (default: ../../packages/runtime)
 //   VSCODE_EXECUTABLE    an installed VS Code to test with, such as
 //                        "/Applications/Visual Studio Code.app/Contents/MacOS/Electron";
@@ -30,23 +30,23 @@ import { downloadAndUnzipVSCode, resolveCliPathFromVSCodeExecutablePath, runTest
 const here = path.dirname(fileURLToPath(import.meta.url))
 const extensionRoot = path.resolve(here, "..")
 const repo = path.resolve(extensionRoot, "..", "..")
-const vsix = path.join(extensionRoot, "effectscript.vsix")
-const esc = path.resolve(process.env.ESC ?? path.join(repo, "typescript", "built", "local", "esc"))
+const vsix = path.join(extensionRoot, "effeck.vsix")
+const effeck = path.resolve(process.env.EFFECK ?? path.join(repo, "typescript", "built", "local", "effeck"))
 const effectModules = path.resolve(
   process.env.EFFECT_NODE_MODULES ??
-    [path.join(repo, "experiments", "node_modules"), path.join(os.homedir(), "effectscript", "experiments", "node_modules")].find(
+    [path.join(repo, "experiments", "node_modules"), path.join(os.homedir(), "effeck", "experiments", "node_modules")].find(
       (dir) => existsSync(path.join(dir, "effect"))
     ) ??
     path.join(repo, "experiments", "node_modules")
 )
-const fixture = path.join(repo, "typescript", "effectscript", "lsp-fixture")
-const runtime = path.resolve(process.env.EFFECTSCRIPT_RUNTIME ?? path.join(repo, "packages", "runtime"))
+const fixture = path.join(repo, "typescript", "effeck", "lsp-fixture")
+const runtime = path.resolve(process.env.EFFECK_RUNTIME ?? path.join(repo, "packages", "runtime"))
 
 for (const [what, file] of [
   ["the packaged extension; run bun run package", vsix],
-  ["esc; set ESC", esc],
+  ["effeck; set EFFECK", effeck],
   ["effect; set EFFECT_NODE_MODULES", path.join(effectModules, "effect")],
-  ["the built runtime; set EFFECTSCRIPT_RUNTIME", path.join(runtime, "dist", "index.d.ts")]
+  ["the built runtime; set EFFECK_RUNTIME", path.join(runtime, "dist", "index.d.ts")]
 ]) {
   if (!existsSync(file)) {
     console.error(`test: missing ${what}: ${file}`)
@@ -63,20 +63,20 @@ const userDataDir = path.join(scratch, "user-data")
 cpSync(fixture, project, { recursive: true, filter: (file) => path.basename(file) !== "node_modules" })
 mkdirSync(path.join(project, "node_modules", ".bin"), { recursive: true })
 for (const name of readdirSync(effectModules)) {
-  if (name !== ".bin" && name !== "@effectscript") symlinkSync(path.join(effectModules, name), path.join(project, "node_modules", name))
+  if (name !== ".bin" && name !== "@effeck") symlinkSync(path.join(effectModules, name), path.join(project, "node_modules", name))
 }
-mkdirSync(path.join(project, "node_modules", "@effectscript"), { recursive: true })
-symlinkSync(runtime, path.join(project, "node_modules", "@effectscript", "runtime"))
-// node_modules/.bin/esc is @effectscript/compiler's Node launcher, as bun
-// install leaves it, and the launcher runs native/esc next to it.
-const compiler = path.join(project, "node_modules", "@effectscript", "compiler")
+mkdirSync(path.join(project, "node_modules", "@effeck"), { recursive: true })
+symlinkSync(runtime, path.join(project, "node_modules", "@effeck", "runtime"))
+// node_modules/.bin/effeck is effeck's Node launcher, as bun
+// install leaves it, and the launcher runs native/effeck next to it.
+const compiler = path.join(project, "node_modules", "effeck")
 mkdirSync(path.join(compiler, "bin"), { recursive: true })
 mkdirSync(path.join(compiler, "native"))
 cpSync(path.join(repo, "packages", "compiler", "package.json"), path.join(compiler, "package.json"))
-cpSync(path.join(repo, "packages", "compiler", "bin", "esc"), path.join(compiler, "bin", "esc"))
-chmodSync(path.join(compiler, "bin", "esc"), 0o755)
-symlinkSync(esc, path.join(compiler, "native", "esc"))
-symlinkSync("../@effectscript/compiler/bin/esc", path.join(project, "node_modules", ".bin", "esc"))
+cpSync(path.join(repo, "packages", "compiler", "bin", "effeck"), path.join(compiler, "bin", "effeck"))
+chmodSync(path.join(compiler, "bin", "effeck"), 0o755)
+symlinkSync(effeck, path.join(compiler, "native", "effeck"))
+symlinkSync("../effeck/bin/effeck", path.join(project, "node_modules", ".bin", "effeck"))
 
 try {
   const vscodeExecutablePath =
@@ -96,11 +96,11 @@ try {
       extensionDevelopmentPath: path.join(here, "harness"),
       extensionTestsPath: path.join(here, "harness", "index.js"),
       launchArgs: [project, `--extensions-dir=${extensionsDir}`, `--user-data-dir=${userDataDir}`, "--disable-telemetry", ...args],
-      extensionTestsEnv: { EFFECTSCRIPT_TEST_WORKSPACE: project, EFFECTSCRIPT_TEST_EXTENSIONS: extensionsDir, EFFECTSCRIPT_TEST_PASS: name }
+      extensionTestsEnv: { EFFECK_TEST_WORKSPACE: project, EFFECK_TEST_EXTENSIONS: extensionsDir, EFFECK_TEST_PASS: name }
     })
   // First with VS Code's TypeScript features on, as a new install has them.
   await pass("default")
-  // Then with the built-in TypeScript extension disabled, so EffectScript
+  // Then with the built-in TypeScript extension disabled, so Effeck
   // serves .ts files too.
   await pass("typescript-off", "--disable-extension=vscode.typescript-language-features")
   console.log("test: the packaged extension passed")

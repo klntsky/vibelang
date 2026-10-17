@@ -33,7 +33,7 @@ const boundary = Stream.catchDefect(
 )
 ```
 
-`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, including failure, defect, and interruption reasons; use it only when that full information is needed. Ordinary EffectScript `catch` handles typed failures only, and propagates a mixed cause containing defects or interruption.
+`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, including failure, defect, and interruption reasons; use it only when that full information is needed. Ordinary Effeck `catch` handles typed failures only, and propagates a mixed cause containing defects or interruption.
 
 ## Selective recovery
 

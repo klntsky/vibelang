@@ -1,0 +1,31 @@
+// A service's declaration file is an interface for the shape, branded with
+// the key, merged with a class whose static side is a Context key (D45), so
+// TypeScript code uses an .effeck service as it uses a Context.Service class.
+// consumer/main.ts implements Users, provides it with Layer.succeed, and
+// yields Users and Flags in Effect.gen; run.mjs compiles and runs it.
+import { Effect, Layer } from "effect"
+
+export interface User {
+  readonly id: string
+  readonly name: string
+}
+
+export abstract class Users {
+  abstract find(id: string): Effect.Effect<User, never, never>
+  abstract readonly source: string
+
+  static readonly layer = Layer.succeed(Users, {
+    find: (id: string) => Effect.succeed({ id, name: "Ada" }),
+    source: "memory"
+  })
+}
+
+export abstract class Flags {
+  abstract readonly beta: boolean
+  static readonly default: Flags = { beta: true }
+}
+
+export function greet(id: string) {
+  const user = Users.find(id)
+  return `${user.name} via ${Users().source}, beta ${Flags().beta}`
+}

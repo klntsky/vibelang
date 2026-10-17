@@ -1,6 +1,6 @@
 # BigDecimal
 
-`BigDecimal` works in EffectScript exactly as in Effect. Use it for decimal arithmetic when binary floating point would lose information, such as prices imported as decimal strings.
+`BigDecimal` works in Effeck exactly as in Effect. Use it for decimal arithmetic when binary floating point would lose information, such as prices imported as decimal strings.
 
 ## Representing decimal values
 

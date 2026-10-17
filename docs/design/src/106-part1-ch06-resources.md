@@ -89,7 +89,7 @@ Wrapping a callback-based API is boundary code. It belongs in TypeScript, using 
 ```ts ts
 // net-adapter.ts
 import { Effect } from "effect"
-import { suspend } from "@effectscript/runtime"
+import { suspend } from "@effeck/runtime"
 import * as net from "node:net"
 
 export const connect = (host: string, port: number) =>
@@ -128,7 +128,7 @@ The two acquisition policies behave differently when cancellation arrives during
 
 Without `{ interruptible: true }`, `sessionWithin` would wait for a connection that never completes, and the race branches in the adapter would never run (Chapter 21).
 
-A callback API that hands over a plain value, not a resource, can be adapted in `.es` with Effect's own `Effect.callback`. Its register function is boundary code, so it may call plain TypeScript. Its `resume` takes an Effect, and `.es` code passes an `Exit`: a call returns an `Exit` as data (Chapter 13), while `Effect.succeed(value)` would run where it is written:
+A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with Effect's own `Effect.callback`. Its register function is boundary code, so it may call plain TypeScript. Its `resume` takes an Effect, and `.effeck` code passes an `Exit`: a call returns an `Exit` as data (Chapter 13), while `Effect.succeed(value)` would run where it is written:
 
 ```ts es
 import { onceReady } from "./sdk.ts"     // (callback: (sdk: Sdk) => void) => void

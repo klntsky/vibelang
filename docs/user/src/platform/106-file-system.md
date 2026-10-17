@@ -1,6 +1,6 @@
 # FileSystem
 
-`FileSystem` exposes Effect's portable file operations in EffectScript. Request the service inside a function, call its operations, and provide a runtime implementation or test layer around the application.
+`FileSystem` exposes Effect's portable file operations in Effeck. Request the service inside a function, call its operations, and provide a runtime implementation or test layer around the application.
 
 ## Requesting the file-system service
 
@@ -63,7 +63,7 @@ function fileSize(path: string) {
 ## Supplying platform implementations
 
 ```ts
-// main.es
+// main.effeck
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 import { FileSystem } from "effect"
 
@@ -104,4 +104,4 @@ it.effect("reads the configured title", () => {
 
 ## Coming from Effect
 
-Test overrides use ordinary EffectScript functions. Contextual typing converts them to the Effect-returning methods the service interface expects, so `readFileString: () => "Release notes"` replaces a TypeScript `Effect.succeed` body.
+Test overrides use ordinary Effeck functions. Contextual typing converts them to the Effect-returning methods the service interface expects, so `readFileString: () => "Release notes"` replaces a TypeScript `Effect.succeed` body.

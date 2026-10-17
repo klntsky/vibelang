@@ -4,7 +4,7 @@ A transient report failure retries on a spaced `Schedule`, with two retries.
 A cache races the network, a timeout recovers to its tag, and a block-owned
 `fork` runs the report while the caller works before `Fiber.join`.
 
-From this directory, with `esc` on `PATH`:
+From this directory, with `effeck` on `PATH`:
 ```sh
 bun install
 bun run build
@@ -12,8 +12,8 @@ bun run start
 bun run test
 ```
 
-Vitest runs `src/main.test.es` through `@effectscript/vite` without a prior
-build. Assertion stacks point to `.es` lines. The tests use `it.effect` and
+Vitest runs `src/main.test.effeck` through `@effeck/vite` without a prior
+build. Assertion stacks point to `.effeck` lines. The tests use `it.effect` and
 `TestClock.adjust`; they never wait for live time.
 A Deferred checks that retries remain pending before their scheduled deadline.
 The deadline function in Effect TypeScript is:

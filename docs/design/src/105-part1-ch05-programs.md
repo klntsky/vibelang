@@ -34,7 +34,7 @@ Each line is a call, so it runs: `user` is a `User`, not an `Effect`. `Effect.re
 
 #### Pipe
 
-Stacking several combinators reads best as a pipeline. EffectScript's built-in `pipe` takes the program first:
+Stacking several combinators reads best as a pipeline. Effeck's built-in `pipe` takes the program first:
 
 ```ts effect
 const user = yield* fetchUser(id).pipe(
@@ -58,7 +58,7 @@ When `pipe`'s first argument is a function with no parameters and the first stag
 
 Most pipes you write today disappear:
 
-| You pipe today | In EffectScript |
+| You pipe today | In Effeck |
 | --- | --- |
 | `Effect.map`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap` | statements |
 | `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch` |
@@ -72,7 +72,7 @@ Measured on two large Effect codebases, once statements replace sequencing, erro
 
 #### Why there is no `|>`
 
-JavaScript's proposed pipeline operator is not part of EffectScript. It conflicts with the rule that calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, the call `fetchUser(id)` runs before the pipe sees it, and so would every stage that calls a combinator. The proposal is also not settled: it has been at Stage 2 since 2021-08, its topic token is undecided (the `%` in its README is disqualified on the proposal's own wiki), the committee's January 2026 review listed it as "somewhat stuck", and TypeScript waits for Stage 3 before implementing it (`docs/research/tc39-syntax.md` §1). EffectScript revisits the operator if it reaches Stage 3.
+JavaScript's proposed pipeline operator is not part of Effeck. It conflicts with the rule that calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, the call `fetchUser(id)` runs before the pipe sees it, and so would every stage that calls a combinator. The proposal is also not settled: it has been at Stage 2 since 2021-08, its topic token is undecided (the `%` in its README is disqualified on the proposal's own wiki), the committee's January 2026 review listed it as "somewhat stuck", and TypeScript waits for Stage 3 before implementing it (`docs/research/tc39-syntax.md` §1). Effeck revisits the operator if it reaches Stage 3.
 
 #### Storing, returning, and composing programs
 
@@ -90,7 +90,7 @@ function syncEverything(stores: ReadonlyArray<Store>) {
 }
 ```
 
-`stores.map(makeSync)` passes `makeSync` to JavaScript's `Array.prototype.map`, which expects a plain function. `makeSync` performs no Effect operation, so it compiles to plain JavaScript (Chapter 15), and `map` receives that form: `syncAll` holds programs. A function that can pause cannot be passed to `map` (ES4301, Chapter 10). Where `Effect.all` expects Effects, an array or record of programs converts element by element.
+`stores.map(makeSync)` passes `makeSync` to JavaScript's `Array.prototype.map`, which expects a plain function. `makeSync` performs no Effect operation, so it compiles to plain JavaScript (Chapter 15), and `map` receives that form: `syncAll` holds programs. A function that can pause cannot be passed to `map` (EK4301, Chapter 10). Where `Effect.all` expects Effects, an array or record of programs converts element by element.
 
 ```ts es
 function startServer() {

@@ -1,0 +1,18 @@
+// expect: EK2001
+// Chapter 2 "Writing the contract yourself": a contract may be wider than the body, never narrower.
+// Users.find can fail with UserNotFound, but the contract says E = never.
+
+class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}
+
+interface User {
+  readonly id: string
+  readonly name: string
+}
+
+abstract class Users {
+  abstract find(id: string): Effect<User, UserNotFound, never>
+}
+
+export function greeting(id: string): Effect<string, never, Users> {
+  return `Hello, ${Users.find(id).name}`
+}

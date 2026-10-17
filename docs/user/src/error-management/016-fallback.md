@@ -59,4 +59,4 @@ function bestTitle() {
 
 ## Coming from Effect
 
-Write alternatives as `() => fetchTitle()` rather than calling `fetchTitle()` while assembling the collection. A call runs immediately in EffectScript.
+Write alternatives as `() => fetchTitle()` rather than calling `fetchTitle()` while assembling the collection. A call runs immediately in Effeck.

@@ -1,6 +1,6 @@
 ### 4. Dependency injection: the R channel
 
-Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. EffectScript removes the ceremony and adds compile-time checks of the dependency graph.
+Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. Effeck removes the ceremony and adds compile-time checks of the dependency graph.
 
 #### Declaring a service
 
@@ -20,15 +20,15 @@ abstract class Users {
 
 An abstract class whose instance members are all abstract is a service, and it does the job of the class on the left. The rules, each checked by the compiler:
 
-- **What makes a class a service.** In an `.es` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
-- **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (ES3001).
+- **What makes a class a service.** In an `.effeck` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
+- **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (EK3001).
 - **Each service is its own type.** TypeScript compares classes by shape, so two abstract classes with the same members would be one type: providing one would type-check as providing the other, and the program would die at run time with `Service not found`. The compiler gives every service class its own identity, as Effect's `Context.Service` classes have.
-- **Contracts are written out.** A service has no body to infer from, so each method states its full `Effect<A, E, R>` (ES2101, Chapter 14).
-- **A service is a key, not a base class.** `extends Users` (ES3002), `new Users()` (ES3003), `instanceof Users` (ES3004), and a generic service class (ES3005) are errors. Implement a service with an object literal or with a class that `implements Users`.
+- **Contracts are written out.** A service has no body to infer from, so each method states its full `Effect<A, E, R>` (EK2101, Chapter 14).
+- **A service is a key, not a base class.** `extends Users` (EK3002), `new Users()` (EK3003), `instanceof Users` (EK3004), and a generic service class (EK3005) are errors. Implement a service with an object literal or with a class that `implements Users`.
 
 ```text
-error ES3002: a class cannot extend a service.
-  users-memory.es:1:28   class UsersInMemory extends Users {
+error EK3002: a class cannot extend a service.
+  users-memory.effeck:1:28   class UsersInMemory extends Users {
   Implement it instead:  class UsersInMemory implements Users { … }
 ```
 
@@ -38,16 +38,16 @@ What the class compiles to:
 export interface Users {
   find(id: string): Effect.Effect<User, UserNotFound>
   rename(id: string, name: string): Effect.Effect<void, UserNotFound>
-  readonly "~esc/service"?: "@acme/app/src/users#Users"
+  readonly "~effeck/service"?: "@acme/app/src/users#Users"
 }
 export class Users extends serviceKey<Users>("@acme/app/src/users#Users") {}
 ```
 
 TypeScript sees `Users` two ways. As a type, it is the interface, so `implements Users` and a parameter typed `db: Users` mean the methods. As a value, it is a `Context.Key`, so `Layer.succeed(Users, …)`, `Effect.provideService`, and `yield* Users` work as they do with a `Context.Service` class. The optional brand keeps two services with the same methods distinct in R. Effect's own class form cannot be the output: it makes the class's instance type the service identifier, so `implements Users` would fail with TS2720 (`prototype/esc/scratch/probe2.ts`).
 
-The syntax takes nothing away from TypeScript. Calling an abstract member through its class (`Users.find(id)`) is error TS2339 today, and calling a class without `new` (`Users()`) is TS2348, so EffectScript gives both a meaning. Fully abstract classes are also rare in ordinary code: Smithers has none in 4,461 files, and opencode has five in 3,235, whose only fully abstract one extends another class.
+The syntax takes nothing away from TypeScript. Calling an abstract member through its class (`Users.find(id)`) is error TS2339 today, and calling a class without `new` (`Users()`) is TS2348, so Effeck gives both a meaning. Fully abstract classes are also rare in ordinary code: Smithers has none in 4,461 files, and opencode has five in 3,235, whose only fully abstract one extends another class.
 
-A `Context.Service` written in TypeScript, as a class or as a value like Effect's own `FileSystem`, is a service too, and EffectScript uses it the same way.
+A `Context.Service` written in TypeScript, as a class or as a value like Effect's own `FileSystem`, is a service too, and Effeck uses it the same way.
 
 #### Using a service
 
@@ -76,7 +76,7 @@ function apiUrl(path: string) {
 // Effect<string, never, Settings>
 ```
 
-Calling any member through the service looks the service up, so the service joins R whatever the member returns. `Path.join(a, b)`, from Effect's `Path` service, returns a string and still adds `Path`. A member that is itself an `Effect` value runs when called: `Terminal.readLine()`. A member the service declares wins over the key's own members, such as `pipe`, `use`, and `key`, so `Rpc.call(…)` reaches the service even though the key, a class, has a `call` of its own. A static member with the same name as a service member is ES3006.
+Calling any member through the service looks the service up, so the service joins R whatever the member returns. `Path.join(a, b)`, from Effect's `Path` service, returns a string and still adds `Path`. A member that is itself an `Effect` value runs when called: `Terminal.readLine()`. A member the service declares wins over the key's own members, such as `pipe`, `use`, and `key`, so `Rpc.call(…)` reaches the service even though the key, a class, has a `call` of its own. A static member with the same name as a service member is EK3006.
 
 #### Writing a provider
 
@@ -121,8 +121,8 @@ const UsersLive = Layer.effect(Users, () => {
 The compiler checks each method against the service's contract. Without the `Effect.orDie`, the database's `DbError` would escape:
 
 ```text
-error ES2001: DbError can escape UsersLive.find, but Users.find's contract allows only UserNotFound.
-  users-live.es:5:20   const rows = db.query("select * from users where id = $1", [id])
+error EK2001: DbError can escape UsersLive.find, but Users.find's contract allows only UserNotFound.
+  users-live.effeck:5:20   const rows = db.query("select * from users where id = $1", [id])
                                     ^^^^^^^^ can fail with DbError
   Handle it, add DbError to Users.find's contract, or make it a defect with Effect.orDie.
 ```
@@ -144,7 +144,7 @@ abstract class Users {
 }
 ```
 
-An implementation can also be a class that `implements` the service. Its methods are EffectScript methods, checked against the service's contracts:
+An implementation can also be a class that `implements` the service. Its methods are Effeck methods, checked against the service's contracts:
 
 ```ts es
 class UsersInMemory implements Users {
@@ -245,10 +245,10 @@ const UsersAudited = Layer.effect(Users, () => {
 ```
 
 ```text
-error ES3101: UsersAudited.find looks up Audit each time it is called, but
+error EK3101: UsersAudited.find looks up Audit each time it is called, but
   Users.find(id: string): Effect<User, UserNotFound, never>
   allows no call-time requirements.
-  users-audited.es:5:7   Audit.record(`users.find ${id}`)
+  users-audited.effeck:5:7   Audit.record(`users.find ${id}`)
   Capture it once:      const audit = Audit()   …   audit.record(…)
   or declare it:        abstract find(id: string): Effect<User, UserNotFound, Audit>
 ```
@@ -272,16 +272,16 @@ const AppLive = wire(UsersLive, MailerLive, DatabaseLive, DatabaseConfigLive)
 `wire` reads each provider's inputs and outputs from its `Layer<Out, E, In>` type, orders them, and generates the composition on the left. Its value is the errors. Today Effect reports a missing provider only as a leftover requirement where you run the program, silently picks one of two providers for the same service, and hangs on some cycles. `wire` reports all three at compile time:
 
 ```text
-error ES3201: no provider for Smtp.
+error EK3201: no provider for Smtp.
   welcome → Mailer.send → MailerLive needs Smtp
-error ES3202: two providers for Users: UsersLive (src/users.es:12) and UsersTest (test/fakes.es:3). Pass one.
-error ES3203: providers form a cycle: SessionsLive → Database → DatabaseLive → Sessions → SessionsLive
+error EK3202: two providers for Users: UsersLive (src/users.effeck:12) and UsersTest (test/fakes.effeck:3). Pass one.
+error EK3203: providers form a cycle: SessionsLive → Database → DatabaseLive → Sessions → SessionsLive
 ```
 
 The contract is bounded by what Layer types say:
 
-- Inputs that no argument provides stay in the result's `In`, as with `Layer.provide`, so you can wire part of a graph. ES3201 is reported where the program's requirements must be empty: at a runner, or at a contract whose R excludes them.
-- An argument whose type does not name its outputs, such as a value typed `Layer<any>`, is ES3204: compose it with `Layer.provide`. A Layer chosen at run time with `Layer.unwrap` has a proper type and wires normally.
+- Inputs that no argument provides stay in the result's `In`, as with `Layer.provide`, so you can wire part of a graph. EK3201 is reported where the program's requirements must be empty: at a runner, or at a contract whose R excludes them.
+- An argument whose type does not name its outputs, such as a value typed `Layer<any>`, is EK3204: compose it with `Layer.provide`. A Layer chosen at run time with `Layer.unwrap` has a proper type and wires normally.
 - `Layer.provide`, `Layer.merge`, and the rest keep working; `wire` is optional.
 
 #### Running with providers

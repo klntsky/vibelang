@@ -1,6 +1,6 @@
 # Chunk
 
-`Chunk` works in EffectScript exactly as in Effect. It is an immutable sequence optimized for repeated concatenation; use an ordinary array when concatenation is not the main workload.
+`Chunk` works in Effeck exactly as in Effect. It is an immutable sequence optimized for repeated concatenation; use an ordinary array when concatenation is not the main workload.
 
 ## Choosing sequence storage
 

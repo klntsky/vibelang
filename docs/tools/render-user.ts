@@ -12,7 +12,7 @@ const output = (s: string) => s.replace(/\.md$/i, ".html")
 // Code block roles, written after the language in the fence: ```ts effect
 const CAPTIONS: Record<string, string> = {
   effect: "Effect today (TypeScript)",
-  es: "EffectScript",
+  es: "Effeck",
   gen: "Generated TypeScript",
   dts: "Generated declaration",
   ts: "TypeScript",
@@ -316,15 +316,15 @@ async function render(source: string, markdown: string, destination: string, cou
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
-<title>${escape(title)} · EffectScript Docs</title>
+<title>${escape(title)} · Effeck Docs</title>
 <style>${css}${userCss}</style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <div class="layout">
-<nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), "index.html"))}">EffectScript Docs</a>${sidebar}</nav>
+<nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), "index.html"))}">Effeck Docs</a>${sidebar}</nav>
 <nav class="page-toc" aria-label="On this page"><h2>On this page</h2>${toc.map(t => `<a href="#${escape(t.id)}">${escape(t.text)}</a>`).join("\n")}</nav>
-<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> EffectScript is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav></main>
+<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav></main>
 </div>
 </body>
 </html>\n`

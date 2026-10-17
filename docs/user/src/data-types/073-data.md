@@ -1,6 +1,6 @@
 # Data
 
-`Data` works in EffectScript exactly as in Effect. Use it for classes, tagged unions, and errors with Effect's equality and hashing support; ordinary objects and arrays already compare structurally in Effect 4.
+`Data` works in Effeck exactly as in Effect. Use it for classes, tagged unions, and errors with Effect's equality and hashing support; ordinary objects and arrays already compare structurally in Effect 4.
 
 ## Creating values with structural equality
 
@@ -145,4 +145,4 @@ A `cause` field preserves the original exception using native error-cause suppor
 
 ## Coming from Effect
 
-Raise a data error with `throw new DocumentMissing({ id })`. Generator yielding and `Effect.fail` are unnecessary for ordinary EffectScript error propagation.
+Raise a data error with `throw new DocumentMissing({ id })`. Generator yielding and `Effect.fail` are unnecessary for ordinary Effeck error propagation.

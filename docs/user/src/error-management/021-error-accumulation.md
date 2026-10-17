@@ -61,4 +61,4 @@ The tuple order is `[successes, failures]`. `partition` preserves both arrays an
 
 ## Coming from Effect
 
-Pass an ordinary EffectScript callback to `validate` or `partition`. A plain array `map` cannot run a callback that needs services, pauses, or has a typed failure.
+Pass an ordinary Effeck callback to `validate` or `partition`. A plain array `map` cannot run a callback that needs services, pauses, or has a typed failure.

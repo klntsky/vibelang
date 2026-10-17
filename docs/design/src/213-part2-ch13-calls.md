@@ -9,7 +9,7 @@ Part I showed the language by example. This part states the rules behind those e
 A call is always written `f(x)`. What it compiles to depends on what `f` is, and the compiler decides from the types:
 
 ```ts es
-const n = double(4)                    // EffectScript function that compiles to plain JavaScript
+const n = double(4)                    // Effeck function that compiles to plain JavaScript
 const user = Users.find(id)            // service method
 const row = findUser(id)               // TypeScript function returning an Effect
 const label = formatName(user)         // trusted TypeScript function
@@ -30,22 +30,22 @@ The full rule:
 
 | The callee is | The call | Generated |
 | --- | --- | --- |
-| An EffectScript function that can pause | Runs it on the current fiber | `yield* f(a)` |
-| An EffectScript function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)`, or `f(a)` with a plain return annotation (D67) |
+| An Effeck function that can pause | Runs it on the current fiber | `yield* f(a)` |
+| An Effeck function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)`, or `f(a)` with a plain return annotation (D67) |
 | A TypeScript function whose call has the type `Effect<A, E, R>` | Runs the returned program | `yield* f(a)` |
-| A TypeScript function whose R contains a control operation | Rejected in v0: ES4202 (Chapter 9) | |
+| A TypeScript function whose R contains a control operation | Rejected in v0: EK4202 (Chapter 9) | |
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
 | A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
 | A service, `Users()` | Returns the implementation | `yield* Users` |
 | A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |
 | A JavaScript built-in, or an export of `effect` or `@effect/*` that does not return an `Effect` | A trusted call: listed exceptions join E, others are defects | `f(a)`, with listed exceptions converted |
-| A TypeScript function tagged `@effectscript trusted` | The same | `f(a)`, with listed exceptions converted |
-| Any other plain TypeScript or JavaScript function | Rejected: ES4401 (Chapter 10) | |
-| A platform API, or a clock or randomness read | Rejected: ES4402, ES4403 (Chapters 10, 11) | |
+| A TypeScript function tagged `@effeck trusted` | The same | `f(a)`, with listed exceptions converted |
+| Any other plain TypeScript or JavaScript function | Rejected: EK4401 (Chapter 10) | |
+| A platform API, or a clock or randomness read | Rejected: EK4402, EK4403 (Chapters 10, 11) | |
 | `new C(…)` | Constructs; never runs a program | `new C(…)` |
 
-Because the meaning depends on types, the compiler needs TypeScript's type checker, not a source transform. That is why EffectScript is a fork of the TypeScript compiler (Chapter 27).
+Because the meaning depends on types, the compiler needs TypeScript's type checker, not a source transform. That is why Effeck is a fork of the TypeScript compiler (Chapter 27).
 
 #### Calls run `Effect` itself, not everything that extends it
 
@@ -72,7 +72,7 @@ A function used as a value is passed in the form its destination expects:
 | Expected type | What is passed |
 | --- | --- |
 | A function type that returns an `Effect`, as Effect's combinators expect | The function's Effect form |
-| A plain function type, as `Array.prototype.map` expects | The function's plain-JavaScript form, if it has one (Chapter 15); otherwise ES4301 |
+| A plain function type, as `Array.prototype.map` expects | The function's plain-JavaScript form, if it has one (Chapter 15); otherwise EK4301 |
 | `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5) |
 | Either a function or an `Effect`, as `HttpRouter.add` and `Effect.withErrorReporting` accept | A function with parameters: the function. A function without parameters: the function if it compiles to plain JavaScript, a program if it can pause |
 
@@ -102,7 +102,7 @@ A call always runs, so a program value needs a form that does not run: a functio
 yield* Effect.retry(Effect.suspend(() => syncInventory(store)), Schedule.recurs(3))
 ```
 
-"The expected type" has one precise meaning: the declared parameter type of the overload candidate TypeScript is trying, before instantiation (D44). TypeScript's own contextual type is the wrong one, because it is inferred from the argument itself. In `ids.map((id) => Users.find(id))`, `map`'s declared parameter is `(value: T, index: number) => U`, a plain function type, so the lambda is a callback that cannot pause (ES4301); instantiating `U` from the lambda would have made it look like an Effect position. When resolution fails, the candidates whose arity fits decide. The instantiated type is used only when the declared type is a bare type parameter fixed by another argument, such as `Layer.succeed`'s `NoInfer<S>`.
+"The expected type" has one precise meaning: the declared parameter type of the overload candidate TypeScript is trying, before instantiation (D44). TypeScript's own contextual type is the wrong one, because it is inferred from the argument itself. In `ids.map((id) => Users.find(id))`, `map`'s declared parameter is `(value: T, index: number) => U`, a plain function type, so the lambda is a callback that cannot pause (EK4301); instantiating `U` from the lambda would have made it look like an Effect position. When resolution fails, the candidates whose arity fits decide. The instantiated type is used only when the declared type is a bare type parameter fixed by another argument, such as `Layer.succeed`'s `NoInfer<S>`.
 
 With overloads, the first candidate that accepts the lambda in the form that candidate expects wins (D56). TypeScript tries candidates in declaration order, and against each one the lambda takes the form the candidate's parameter declares: a plain function, an Effect function, or a program.
 
@@ -110,7 +110,7 @@ With overloads, the first candidate that accepts the lambda in the form that can
 // helpers.d.ts: a plain callback first, an Effect callback second
 import { Effect } from "effect"
 
-/** @effectscript trusted */
+/** @effeck trusted */
 export declare function register(f: (x: number) => number): string
 export declare function register<E, R>(f: (x: number) => Effect.Effect<number, E, R>): Effect.Effect<string, E, R>
 ```
@@ -127,7 +127,7 @@ Against overload 1, `b`'s lambda is a plain function, and a plain function canno
 A call never starts a fiber. A program starts only when a **runner** receives it. The compiler recognizes runners by their resolved symbols: `Effect.runPromise`, `runPromiseExit`, `runSync`, `runSyncExit`, `runFork`, `runCallback`, and their `*With` forms; `ManagedRuntime`'s `run*` methods; `NodeRuntime.runMain` and `BunRuntime.runMain`; and `@effect/vitest`'s `it.effect`, `it.live`, their `.each` and `.prop` forms, and `layer(…)`.
 
 ```ts es
-// main.es
+// main.effeck
 export function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
   Effect.log(`welcomed ${name}`)
@@ -149,13 +149,13 @@ NodeRuntime.runMain(main())
 A module's top level is not inside any program. A call there may build values, such as `Layer.effect(…)`, `wire(…)`, `Config.Port(…)`, or `Schedule.exponential(…)`, but it may not run a program:
 
 ```ts es
-// config.es
+// config.effeck
 export const config = loadConfig()
 ```
 
 ```text
-error ES1001: loadConfig() runs a program, but a module's top level is not inside one.
-  config.es:2:23   export const config = loadConfig()
+error EK1001: loadConfig() runs a program, but a module's top level is not inside one.
+  config.effeck:2:23   export const config = loadConfig()
   Export a function instead, or provide the value as a service with a Layer.
 ```
 
@@ -168,12 +168,12 @@ function refreshAll(ids: ReadonlyArray<string>) {
 ```
 
 ```text
-error ES1005: Effect.runFork starts a new root fiber, but refreshAll already runs on one.
-  refresh.es:2:25   for (const id of ids) Effect.runFork(() => refresh(id))
+error EK1005: Effect.runFork starts a new root fiber, but refreshAll already runs on one.
+  refresh.effeck:2:25   for (const id of ids) Effect.runFork(() => refresh(id))
   Call the program, or fork it so the block owns it:   fork(() => refresh(id))
 ```
 
-Tests in `.es` use `it.effect`. A test that must `await` a Promise stays in a `.ts` file.
+Tests in `.effeck` use `it.effect`. A test that must `await` a Promise stays in a `.ts` file.
 
 #### Evaluation order
 

@@ -1,6 +1,6 @@
 # Scheduling work with cron
 
-`Cron` and `Schedule.cron` work in EffectScript exactly as in Effect. Use them for work tied to calendar dates, such as a weekday report, and use interval schedules when only elapsed time matters.
+`Cron` and `Schedule.cron` work in Effeck exactly as in Effect. Use them for work tied to calendar dates, such as a weekday report, and use interval schedules when only elapsed time matters.
 
 ## Defining calendar execution
 

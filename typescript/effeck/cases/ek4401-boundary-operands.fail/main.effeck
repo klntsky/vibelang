@@ -1,0 +1,23 @@
+// expect: EK4401
+// EK4401's note suggests Effect.try around a plain call. A callback of
+// Effect.try cannot run an Effect, so when the call's arguments or receiver
+// run one, the note says to bind it to a const first.
+import { type Shelf, sortTitles } from "./legacy.ts"
+
+abstract class Todos {
+  abstract list(): Effect<ReadonlyArray<{ title: string }>, never, never>
+  abstract shelf(): Effect<Shelf, never, never>
+}
+
+export function sorted() {
+  return sortTitles(Todos.list())
+}
+
+export function shelved() {
+  return Todos.shelf().titles()
+}
+
+export function plain(titles: ReadonlyArray<{ title: string }>) {
+  Effect.sleep("1 millis")
+  return sortTitles(titles)
+}

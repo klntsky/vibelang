@@ -37,7 +37,7 @@ observations. Adding tracing should not make a
 single interruption appear to be several unrelated cancellation events.
 Retain useful stack annotations even when grouping reasons by interruptor.
 
-## Why it matters to EffectScript
+## Why it matters to Effeck
 
 Tracing is opt-in, and enabling it changes the number of reasons developers
 see. Abandonment must retain every real pending interruption and cleanup

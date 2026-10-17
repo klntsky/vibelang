@@ -1,8 +1,8 @@
 # Running Effects
 
-Runners start a program at an application boundary. Inside a running EffectScript function, ordinary calls already run computations on the current fiber, so reserve runners for entry points and framework adapters.
+Runners start a program at an application boundary. Inside a running Effeck function, ordinary calls already run computations on the current fiber, so reserve runners for entry points and framework adapters.
 
-Call a runner at module top level or in a plain callback registered there with a TypeScript function, such as a `describe` body or framework route handler. Calling a runner inside code a fiber runs is ES1005; call the program or use `fork` instead. Tests in `.es` use `it.effect` from `@effect/vitest`; Promise-style tests stay in `.ts`.
+Call a runner at module top level or in a plain callback registered there with a TypeScript function, such as a `describe` body or framework route handler. Calling a runner inside code a fiber runs is EK1005; call the program or use `fork` instead. Tests in `.effeck` use `it.effect` from `@effect/vitest`; Promise-style tests stay in `.ts`.
 
 ## Build and run a local project
 
@@ -15,12 +15,12 @@ bun run dev
 bun run test
 ```
 
-`build` invokes `esc` with the project's `tsconfig.json`. `start` builds, then
+`build` invokes `effeck` with the project's `tsconfig.json`. `start` builds, then
 runs `node --enable-source-maps dist/main.js`. `dev` builds once, then runs
-`esc --watch` alongside `node --watch --enable-source-maps dist/main.js`.
-`test` runs Vitest on `src/**/*.test.es` through `@effectscript/vite`, which
-compiles the project with `esc` and serves the JavaScript, so tests need no
-prior build. Node and Vitest receive JavaScript; neither interprets `.es`
+`effeck --watch` alongside `node --watch --enable-source-maps dist/main.js`.
+`test` runs Vitest on `src/**/*.test.effeck` through `@effeck/vite`, which
+compiles the project with `effeck` and serves the JavaScript, so tests need no
+prior build. Node and Vitest receive JavaScript; neither interprets `.effeck`
 sources directly.
 
 The starter's `NodeRuntime.runMain(() => main())` supplies the application
@@ -52,7 +52,7 @@ const pending = Effect.runPromise(() => preparedMessage())
 // pending: Promise<string>
 ```
 
-`Effect.runPromise` starts execution and returns a promise for the success value. The promise rejects when the program fails. A foreign TypeScript caller can await that promise; an EffectScript caller should call `preparedMessage()` directly inside its own program.
+`Effect.runPromise` starts execution and returns a promise for the success value. The promise rejects when the program fails. A foreign TypeScript caller can await that promise; an Effeck caller should call `preparedMessage()` directly inside its own program.
 
 ## Collect complete execution results
 
@@ -94,7 +94,7 @@ Effect.runPromise(() => {
 ## Select an application boundary
 
 ```ts
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
@@ -118,6 +118,6 @@ The three contract channels do not say whether work runs synchronously. Prefer a
 
 ## Coming from Effect
 
-Pass `() => main()` in `.es` files. A TypeScript caller receives a cold Effect from an exported EffectScript function and passes `main()` to the runner instead.
+Pass `() => main()` in `.effeck` files. A TypeScript caller receives a cold Effect from an exported Effeck function and passes `main()` to the runner instead.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/running-effects)

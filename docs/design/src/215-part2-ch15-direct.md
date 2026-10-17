@@ -13,7 +13,7 @@ function area(w: number, h: number) {
 ```
 
 ```ts gen
-export function double$direct(n: number): number {              // EffectScript callers use this
+export function double$direct(n: number): number {              // Effeck callers use this
   return n * 2
 }
 export const double = (n: number): Effect.Effect<number> =>     // TypeScript callers use this
@@ -30,7 +30,7 @@ export const area = Effect.fnUntraced(function* (w: number, h: number) {
 
 A function compiles to plain JavaScript when both hold:
 
-1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript EffectScript functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary such as `Effect.sync`. Its control class is `pure` or `sync`.
+1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript Effeck functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary such as `Effect.sync`. Its control class is `pure` or `sync`.
 2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. Exceptions become typed failures only where they are raised: at the call of a trusted function, whose listed exceptions are converted there (Chapter 26), and inside the plain function's own `try`, whose `catch` handles them (below). Bridging across calls is experiment G15.
 
 The test is "can it reach an Effect operation", not "are E and R empty". `Effect.sleep("1 second")` has E = `never` and R = `never`, and it pauses the fiber. So the compiler tracks a separate fact for each function, its **control class**:
@@ -42,7 +42,7 @@ The test is "can it reach an Effect operation", not "are E and R empty". `Effect
 | `suspends` | May pause the fiber, or crosses an Effect boundary | `Effect.sleep`, `Effect.sync(…)`, any service method, any imported Effect | No |
 | `captures` | May reach a handler (Chapter 9) | `Approval.approve`, `yield` in a producer | No |
 
-`pure` is assigned only to EffectScript functions the compiler analyzed and to built-ins on the compiler's list; a trusted TypeScript function is `sync` at most. `pure` permits one thing beyond `sync`: inlining the body at a call. It never permits removing a call whose result is unused, reordering calls, or merging two calls into one.
+`pure` is assigned only to Effeck functions the compiler analyzed and to built-ins on the compiler's list; a trusted TypeScript function is `sync` at most. `pure` permits one thing beyond `sync`: inlining the body at a call. It never permits removing a call whose result is unused, reordering calls, or merging two calls into one.
 
 #### Why this is safe
 
@@ -96,7 +96,7 @@ class Money implements Equal.Equal {
 }
 ```
 
-`Equal.Equal` declares `[Equal.symbol](that): boolean` and `Hash.Hash` declares `[Hash.symbol](): number`: plain functions, which `Equal.equals` and `HashSet` call synchronously. A method that implements such a member compiles to a plain JavaScript method when it is eligible under the rule above, and is ES4301 otherwise. EffectScript callers call it as a plain method, because its declared type is not an Effect. A method that implements a service member keeps compiling to an Effect function, because the service declares an `Effect` (D55).
+`Equal.Equal` declares `[Equal.symbol](that): boolean` and `Hash.Hash` declares `[Hash.symbol](): number`: plain functions, which `Equal.equals` and `HashSet` call synchronously. A method that implements such a member compiles to a plain JavaScript method when it is eligible under the rule above, and is EK4301 otherwise. Effeck callers call it as a plain method, because its declared type is not an Effect. A method that implements a service member keeps compiling to an Effect function, because the service declares an `Effect` (D55).
 
 #### Recursion
 

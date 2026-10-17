@@ -1,6 +1,6 @@
 # Schema Annotations
 
-Annotations work in EffectScript exactly as in Effect. They attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation choices, and custom tooling. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Annotations work in Effeck exactly as in Effect. They attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation choices, and custom tooling. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Attaching built-in metadata
 

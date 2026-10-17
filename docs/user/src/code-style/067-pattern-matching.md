@@ -1,6 +1,6 @@
 # Pattern Matching
 
-`Match` provides Effect's pattern matching for EffectScript values. Build cases for shapes, literals, predicates, or tags, then choose how the matcher handles unmatched input. Match callbacks are synchronous value computations; use ordinary `if` or `switch` when a branch performs Effect work.
+`Match` provides Effect's pattern matching for Effeck values. Build cases for shapes, literals, predicates, or tags, then choose how the matcher handles unmatched input. Match callbacks are synchronous value computations; use ordinary `if` or `switch` when a branch performs Effect work.
 
 Match constructors, case builders, finalizers, and returned matchers are trusted Effect library functions. Call them directly; exceptions from those calls are defects. An ordinary `catch` does not recover those exceptions.
 

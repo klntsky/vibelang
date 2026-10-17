@@ -1,0 +1,2 @@
+Call it through Effect.try(() => vitestExpect(n)), or re-export it from a .ts file you own with /** @effeck trusted */.
+Call it through Effect.try(() => Option.getOrThrow(account).close()), or tag its declaration in account.ts with /** @effeck trusted */.

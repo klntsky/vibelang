@@ -1,6 +1,6 @@
 # Default Services
 
-Clock, random generation, console output, configuration sources, and tracing have live defaults in Effect. EffectScript uses those same defaults, so normal access does not add an application service requirement.
+Clock, random generation, console output, configuration sources, and tracing have live defaults in Effect. Effeck uses those same defaults, so normal access does not add an application service requirement.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/default-services)
 

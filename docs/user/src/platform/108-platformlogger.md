@@ -1,6 +1,6 @@
 # PlatformLogger
 
-File logging uses Effect's `Logger` module in EffectScript. Combine a string formatter with `Logger.toFile`, then install the resulting logger with a layer whose scope owns the file and pending batches.
+File logging uses Effect's `Logger` module in Effeck. Combine a string formatter with `Logger.toFile`, then install the resulting logger with a layer whose scope owns the file and pending batches.
 
 ## Writing formatted logs to a file
 
@@ -26,7 +26,7 @@ In Effect 4.0.5, `toFile` batches by default with a one-second window; `batchWin
 ## Supplying file-system dependencies
 
 ```ts
-// main.es
+// main.effeck
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 import { FileSystem, Logger } from "effect"
 
@@ -54,7 +54,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 ## Combining file and console output
 
 ```ts
-// main.es
+// main.effeck
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 import { Logger } from "effect"
 

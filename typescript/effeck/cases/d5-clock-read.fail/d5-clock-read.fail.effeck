@@ -1,0 +1,7 @@
+// expect: EK4403
+// D5: clock and randomness reads (Date.now(), new Date(), Math.random(), crypto.randomUUID()) must go
+// through Clock, DateTime, and Random so tests control them.
+
+function stamp(label: string) {
+  return `${label} at ${Date.now()}`
+}

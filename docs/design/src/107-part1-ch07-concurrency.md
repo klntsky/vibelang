@@ -29,7 +29,7 @@ const first = Effect.raceFirst(() => fromCache(id), () => fromNetwork(id))
 const quick = Effect.timeout(() => slowQuery(id), "500 millis")
 ```
 
-Each combinator has its own rule for a failing branch, and EffectScript adds nothing to Effect's semantics here:
+Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect's semantics here:
 
 | Combinator | Succeeds with | When a branch fails |
 | --- | --- | --- |

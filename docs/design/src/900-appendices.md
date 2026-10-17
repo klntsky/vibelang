@@ -96,17 +96,17 @@ Counterexamples from the 2026-10-16 reviews, kept as observational tests. Where 
 ```sh
 cd /Users/williamcory/effectscript
 bun prototype/esc/examples/run-all.ts       # 46 of 46 example files pass, about 16 s
-bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.es
-bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.es
+bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.effeck
+bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.effeck
 ```
 
 | What | Where | What it shows |
 | --- | --- | --- |
-| The compiler | `prototype/esc/src/` | Type-directed lowering of `.es` to TypeScript on `typescript@5.9.3`, with the experiments kernel as its runtime; about 3,560 lines |
-| 26 runnable examples | `prototype/esc/examples/*.es` | Each compiles with no errors and produces its stated result, including the six reference programs (`ref1` to `ref6`) |
-| 20 expected failures | `prototype/esc/examples/*.fail.es` | Each reports its diagnostic code at the right span |
-| `regions.es` | same | Completion records through nested `try`, `catch`, and `finally` match plain JavaScript's results and order |
-| `stack-depth.es` | same | Producer loops and handler clauses stay under 50 frames over 100,000 elements |
+| The compiler | `prototype/esc/src/` | Type-directed lowering of `.effeck` to TypeScript on `typescript@5.9.3`, with the experiments kernel as its runtime; about 3,560 lines |
+| 26 runnable examples | `prototype/esc/examples/*.effeck` | Each compiles with no errors and produces its stated result, including the six reference programs (`ref1` to `ref6`) |
+| 20 expected failures | `prototype/esc/examples/*.fail.effeck` | Each reports its diagnostic code at the right span |
+| `regions.effeck` | same | Completion records through nested `try`, `catch`, and `finally` match plain JavaScript's results and order |
+| `stack-depth.effeck` | same | Producer loops and handler clauses stay under 50 frames over 100,000 elements |
 | `scratch/probe2.ts` | `prototype/esc/scratch/` | The service emission of D45: nominal R, working `implements`, and a parameter typed with the service meaning its methods |
 | Findings | `prototype/esc/FINDINGS.md` | Thirty findings, settled by D44-D53 |
 
@@ -131,17 +131,17 @@ bun harness/passes.ts         # the prototype's decision changes per pass
 
 ```sh
 cd typescript                    # from the repository root
-effectscript/smoke.sh            # builds tsc (about 75 s cold), then compiles and runs every case
-effectscript/smoke.sh es-infer   # one case
+effeck/smoke.sh            # builds tsc (about 75 s cold), then compiles and runs every case
+effeck/smoke.sh effeck-infer   # one case
 ```
 
 | Case | What it shows |
 | --- | --- |
-| `es-wrap` | Functions lower to `Effect.fnUntraced` generators, and JavaScript runs them |
-| `es-lower` | Calls run by type: pure helpers stay plain, Effect-returning calls run, operands run left to right, and a `Config` stays data |
-| `es-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, and the `.d.ts` declares it |
+| `effeck-wrap` | Functions lower to `Effect.fnUntraced` generators, and JavaScript runs them |
+| `effeck-lower` | Calls run by type: pure helpers stay plain, Effect-returning calls run, operands run left to right, and a `Config` stays data |
+| `effeck-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, and the `.d.ts` declares it |
 
-`typescript/EFFECTSCRIPT.md` records the base, the 11 commits, the upstream lines it changes, and the differential check against the prototype.
+`typescript/EFFECK.md` records the base, the 11 commits, the upstream lines it changes, and the differential check against the prototype.
 
 #### Research and drafts
 
@@ -157,14 +157,14 @@ effectscript/smoke.sh es-infer   # one case
 - `experiments/KERNEL-CHANGES.md`: the 2026-10-16 kernel fixes.
 - `prototype/esc/FINDINGS.md`: what the prototype compiler found.
 - `prototype/single-pass/RESULTS.md`: the single-pass experiment (D56, D52).
-- `typescript/EFFECTSCRIPT.md`: the Go fork's base, commits, seams, and gaps.
+- `typescript/EFFECK.md`: the Go fork's base, commits, seams, and gaps.
 - [Upstream draft index](../upstream/README.md): nine Effect runtime, tooling, documentation, and API drafts with reproductions; all drafted, not filed (D59).
 
 ### B. Prior art
 
 Full notes, with quoted sources, are in `docs/research/continuation-prior-art.md`. Rule numbers below refer to its final section.
 
-| Question | Prior art | EffectScript |
+| Question | Prior art | Effeck |
 | --- | --- | --- |
 | Second resume | A runtime error everywhere it is checked: OCaml `Continuation_already_resumed`, Kotlin "Already resumed", Swift's checked continuation traps (6.4 rejects it at compile time), Loom "Continuation terminated", WasmFX traps. `Effect.callback` and Effection drop it silently | Defect at the caller (T2). Root waits keep first-wins and report the loss (rule 1) |
 | Abandoned continuations | No system cleans them up from the GC. Deterministic cleanup exists only where a handler or scope owns the continuation: Koka's final yield, Effection's `return()`, OCaml's `discontinue`, WasmFX's `resume_throw` | Owner frames, Scope ownership, and the capturing fiber's exit; development-only leak reports (rules 3, 4) |
@@ -174,25 +174,25 @@ Full notes, with quoted sources, are in `docs/research/continuation-prior-art.md
 | Tail-resumptive operations | Run in place: 10× on Koka's counter benchmark, under the handler's evidence | Run in place under the caller's Context, as Effect services do; call-time lookups must be in the contract (Chapter 4). Differs from rule 7 on whose Context |
 | Handler identity | Generative tags (WasmFX), labels (Koka), capabilities (Effekt) | Handler instances, found through Context evidence (rule 8) |
 | Multi-shot | Excluded by every fiber or thread runtime; Kyo stays single-shot so it never re-enters a released bracket | Excluded (rule 9) |
-| Foreign frames | Every system refuses to capture through them (OCaml `Unhandled`, js_of_ocaml, JSPI `SuspendError`, Racket barriers) | Rejected at compile time (ES4301, ES4202); unhandled at run time (rule 10) |
+| Foreign frames | Every system refuses to capture through them (OCaml `Unhandled`, js_of_ocaml, JSPI `SuspendError`, Racket barriers) | Rejected at compile time (EK4301, EK4202); unhandled at run time (rule 10) |
 | Which code gets transformed | Selective: Koka cut CPS-translated functions by over 80%; Stopify measured generators at about 2× slower than exception-based capture | Frames only where capture or parking is reachable (Chapter 15; rule 11) |
 | Cross-fiber resume | Kotlin and Swift always schedule | Bounded synchronous wake-ups (Chapter 24; rule 12) |
 | Resumable handlers on Effect-TS or ZIO | None found by searches of npm, GitHub code (`fiber._stack`, `"~effect/Effect/successCont"`), and Effect issues and discussions on 2026-10-15. Effect's maintainer: generators "are only valid to express `one-shot` effect types" | No other implementation is known; this kernel is one-shot by design. The claim fails if a search turns one up |
 
-#### TC39 proposals and EffectScript
+#### TC39 proposals and Effeck
 
 Stages as fetched on 2026-10-16 (`docs/research/tc39-syntax.md`).
 
-| Proposal | Stage | In EffectScript |
+| Proposal | Stage | In Effeck |
 | --- | --- | --- |
 | Explicit Resource Management (`using`) | 4 since 2026-05-19, for ES2027 | Adopted: `using` with Effect's guarantees (Chapter 6) |
 | Pipeline operator (Hack `\|>`) | 2 since 2021-08; topic token undecided; "somewhat stuck" (January 2026) | Not in v0: a call runs before the pipe sees it; the `pipe(program, …)` built-in instead (Chapter 5, D8). Revisited at Stage 3 |
-| AsyncContext | 2 | Prior art for the snapshot rule (Chapter 22). EffectScript code keeps request-scoped values in Effect's Context |
+| AsyncContext | 2 | Prior art for the snapshot rule (Chapter 22). Effeck code keeps request-scoped values in Effect's Context |
 | Partial application (`f~(x, ?)`) | 1 | Not adopted. A function with no arguments is the program spelling (D7) |
 | Pattern matching (`match`) | 1 | Not adopted. `switch` and `catch` narrowing, and Effect's `Match` module |
 | Throw expressions | 2, unchanged since 2017 | Not adopted. `throw` is a statement and a typed failure |
 | Extractors | 2 | Not in v0. A possible future syntax for Schema decoding |
-| Import defer | 3 | Not used. Deferring a module's evaluation does not change ES1001: its top level still cannot run a program |
+| Import defer | 3 | Not used. Deferring a module's evaluation does not change EK1001: its top level still cannot run a program |
 | Await dictionary (`Promise.allKeyed`) | 3 | Not needed: `Effect.all` takes a record |
 | Abort Controller, Concurrency control | 1 | Not adopted. Effect's interruption and `concurrency` options |
 | F#-style pipes; `Function.pipe` and `flow` | Failed Stage 2; withdrawn | Not applicable |

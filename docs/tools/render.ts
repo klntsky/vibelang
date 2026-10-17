@@ -1,5 +1,5 @@
 // Build the design document: concatenate docs/design/src/*.md into
-// docs/design/effectscript-design.md, then render a self-contained HTML page
+// docs/design/effeck-design.md, then render a self-contained HTML page
 // (inline CSS, no external requests) next to it. Run: bun render.ts
 import { Marked, type Tokens } from "marked"
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
@@ -52,7 +52,7 @@ const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").rep
 // Code block roles, written after the language in the fence: ```ts effect
 const CAPTIONS: Record<string, string> = {
   effect: "Effect today (TypeScript)",
-  es: "EffectScript",
+  es: "Effeck",
   gen: "Generated TypeScript",
   dts: "Generated declaration",
   ts: "TypeScript",
@@ -124,7 +124,7 @@ const marked = new Marked({
   }
 })
 
-// An "Effect today" block immediately followed by an "EffectScript" block
+// An "Effect today" block immediately followed by an "Effeck" block
 // renders side by side.
 const body = (marked.parse(markdown) as string).replace(
   /(<figure class="code side-effect">(?:(?!<\/figure>)[\s\S])*<\/figure>)\s*(<figure class="code side-es">(?:(?!<\/figure>)[\s\S])*<\/figure>)/g,
@@ -152,7 +152,7 @@ const html = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EffectScript Design</title>
+<title>Effeck Design</title>
 <style>
 :root {
   --bg: #fbfbf9; --fg: #1d1d1f; --muted: #5d6066; --rule: #dedcd6; --panel: #f2f1ed;
@@ -273,6 +273,6 @@ for (const href of hrefs) {
   }
 }
 if (broken.length) throw new Error(`Design build has broken internal links:\n${broken.map(href => `  - ${href}`).join("\n")}`)
-writeFileSync(join(designDir, "effectscript-design.md"), markdown)
-writeFileSync(join(designDir, "effectscript-design.html"), html)
-console.log(`wrote effectscript-design.md (${markdown.length} chars) and effectscript-design.html from ${parts.length} parts; ${facts.testCount} tests passed; kernel ${facts.kernelLines} lines`)
+writeFileSync(join(designDir, "effeck-design.md"), markdown)
+writeFileSync(join(designDir, "effeck-design.html"), html)
+console.log(`wrote effeck-design.md (${markdown.length} chars) and effeck-design.html from ${parts.length} parts; ${facts.testCount} tests passed; kernel ${facts.kernelLines} lines`)

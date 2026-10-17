@@ -1,6 +1,6 @@
 # Hash
 
-`Hash` works in EffectScript exactly as in Effect. It gives equality-aware collections a numeric fingerprint for a value, allowing them to locate likely matches before performing a full comparison.
+`Hash` works in Effeck exactly as in Effect. It gives equality-aware collections a numeric fingerprint for a value, allowing them to locate likely matches before performing a full comparison.
 
 ## Connecting hashing to equality
 
@@ -39,7 +39,7 @@ Equal.equals(new GridCell(3, 7), new GridCell(3, 8)) // false
 
 A `[Hash.symbol]` method returns a number and must be synchronous. `Hash.hash` handles primitive and structural inputs, so hashing a tuple of identity fields is a convenient implementation. `Equal.Equal` requires hashing as part of its interface.
 
-The method compiles to a plain JavaScript method, because `[Hash.symbol]` is typed as a plain function. Its body must perform no Effect operation and cannot fail with an expected error; otherwise it is error ES4301.
+The method compiles to a plain JavaScript method, because `[Hash.symbol]` is typed as a plain function. Its body must perform no Effect operation and cannot fail with an expected error; otherwise it is error EK4301.
 
 ## Keeping equal values hash-consistent
 

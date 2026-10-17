@@ -76,7 +76,7 @@ export const resume: <V, E, H>(k: Continuation<V, E, H>, value: NoInfer<V>) => E
 /**
  * Continues the program by running `program` at the perform site (D17): it
  * may fail only with the operation's declared errors, and needs nothing
- * (ES2005).
+ * (EK2005).
  */
 export const resumeWith: <V, E, H>(k: Continuation<V, E, H>, program: Effect.Effect<NoInfer<V>, NoInfer<E>, never>) => Effect.Effect<H> =
   K.resumeWith as any

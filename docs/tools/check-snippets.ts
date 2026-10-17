@@ -110,7 +110,7 @@ async function main() {
     console.log("bun docs/tools/check-snippets.ts [--compiler path] [--root docs/user] [--filter text] [--json path] [--keep]")
     return
   }
-  const selectedCompiler = option("--compiler", process.env.ESC_BINARY || (existsSync(join(repo, "typescript/built/local/tsc")) ? join(repo, "typescript/built/local/tsc") : "esc"))!
+  const selectedCompiler = option("--compiler", process.env.EFFECK_BINARY || (existsSync(join(repo, "typescript/built/local/tsc")) ? join(repo, "typescript/built/local/tsc") : "effeck"))!
   const compiler = selectedCompiler.includes("/") ? resolve(selectedCompiler) : selectedCompiler
   const root = resolve(option("--root", join(repo, "docs/user"))!)
   const filter = option("--filter", "")!
@@ -118,24 +118,24 @@ async function main() {
   const keep = args.includes("--keep")
   if (args.some(a => a !== "--keep")) throw new Error(`Unknown argument: ${args.join(" ")}`)
   // The experiments package pins this parser. It only discovers declarations;
-  // all language checking belongs to the native EffectScript compiler.
+  // all language checking belongs to the native Effeck compiler.
   const require = createRequire(join(repo, "experiments/package.json"))
   const ts = require("typescript") as typeof import("../../experiments/node_modules/typescript")
-  const temp = mkdtempSync(join(tmpdir(), "effectscript-docs-"))
+  const temp = mkdtempSync(join(tmpdir(), "effeck-docs-"))
   const pages: { page: string; blocks: Result[] }[] = []
   try {
     const modules = join(temp, "node_modules")
-    mkdirSync(join(modules, "@effectscript"), { recursive: true })
+    mkdirSync(join(modules, "@effeck"), { recursive: true })
     const dependencies = [join(repo, "experiments/node_modules"), join(repo, "docs/tools/node_modules")]
     for (const source of dependencies) {
       if (!existsSync(source)) continue
       for (const name of readdirSync(source).filter(n => !n.startsWith("."))) {
-        if (name === "@effectscript") continue
+        if (name === "@effeck") continue
         const target = join(modules, name)
         if (!existsSync(target)) symlinkSync(join(source, name), target)
       }
     }
-    for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, "@effectscript", name))
+    for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, "@effeck", name))
     if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(repo, "packages/runtime/dist/index.d.ts"))) {
       throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
     }

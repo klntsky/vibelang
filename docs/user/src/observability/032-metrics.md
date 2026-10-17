@@ -1,6 +1,6 @@
 # Metrics in Effect
 
-EffectScript uses Effect's `Metric` module to count events, record current values, and measure distributions over time. Metric constructors build values exactly as in Effect; updates, state reads, and instrumented programs run when called.
+Effeck uses Effect's `Metric` module to count events, record current values, and measure distributions over time. Metric constructors build values exactly as in Effect; updates, state reads, and instrumented programs run when called.
 
 ## Recording counters and gauges
 

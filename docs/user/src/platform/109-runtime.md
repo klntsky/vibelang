@@ -1,11 +1,11 @@
 # Runtime
 
-A platform `runMain` starts an EffectScript application and connects its lifetime to the host process. It reports unhandled failures, handles termination signals, waits for cleanup, and chooses an exit code.
+A platform `runMain` starts an Effeck application and connects its lifetime to the host process. It reports unhandled failures, handles termination signals, waits for cleanup, and chooses an exit code.
 
 ## Running an application entry point
 
 ```ts
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
@@ -19,14 +19,14 @@ NodeRuntime.runMain(() => main())
 
 Pass a program to the runner, not an already executed call. A module's top level can call the recognized runner, while the application work runs inside `main`. Supply application layers with `Effect.provide(() => main(), AppLive)` inside that runner's program.
 
-Runners may also be called in plain callbacks passed from the top level to TypeScript, such as a framework's route handler or a `describe` body. A runner inside code that a fiber runs is ES1005: call the program or use `fork` there. Tests in `.es` use `it.effect`; Promise-style tests stay in `.ts`.
+Runners may also be called in plain callbacks passed from the top level to TypeScript, such as a framework's route handler or a `describe` body. A runner inside code that a fiber runs is EK1005: call the program or use `fork` there. Tests in `.effeck` use `it.effect`; Promise-style tests stay in `.ts`.
 
-Bun applications use `BunRuntime.runMain` from `@effect/platform-bun`; Node.js and Deno use the Node adapter. Run the generated JavaScript entry module after the EffectScript build.
+Bun applications use `BunRuntime.runMain` from `@effect/platform-bun`; Node.js and Deno use the Node adapter. Run the generated JavaScript entry module after the Effeck build.
 
 ## Configuring runtime launch behavior
 
 ```ts
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
 class StartupRejected extends TaggedError("StartupRejected")<{
@@ -55,7 +55,7 @@ export const launchOptions = {
 ```
 
 ```ts
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 import { launchOptions } from "./launch-options.ts"
 
@@ -71,7 +71,7 @@ Teardown is a plain host callback, not an Effect-returning program. Keep a custo
 ## Handling completion and failures
 
 ```ts
-// main.es
+// main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
 class InvalidBatch extends TaggedError("InvalidBatch")<{
@@ -92,4 +92,4 @@ NodeRuntime.runMain(() => exportBatch(0))
 
 Normal return is success; a value returned from `main` is not automatically printed. An unhandled expected failure or defect is reported by default and receives a failing exit code. Effect 4.0.5's default teardown uses 0 for success, 130 for interruption-only causes, and 1 for other failures unless a supported error-specific exit code overrides it.
 
-On a termination signal, the platform interrupts the application and waits for registered cleanup. EffectScript `finally` and `using` run during interruption, while ordinary `catch` does not catch it. Handle recoverable failures inside the program, and let the runner report failures that remain unhandled.
+On a termination signal, the platform interrupts the application and waits for registered cleanup. Effeck `finally` and `using` run during interruption, while ordinary `catch` does not catch it. Handle recoverable failures inside the program, and let the runner report failures that remain unhandled.

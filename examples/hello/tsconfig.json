@@ -13,6 +13,6 @@
     "rewriteRelativeImportExtensions": true
   },
   "include": [
-    "src/**/*.es"
+    "src/**/*.effeck"
   ]
 }

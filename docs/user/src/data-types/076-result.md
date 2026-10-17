@@ -1,6 +1,6 @@
 # Result
 
-`Result` works in EffectScript exactly as in Effect. A `Result<A, E>` stores either a synchronous success or an expected failure as data, useful when validation should return an outcome without raising it in the caller.
+`Result` works in Effeck exactly as in Effect. A `Result<A, E>` stores either a synchronous success or an expected failure as data, useful when validation should return an outcome without raising it in the caller.
 
 ## Results and execution exits
 
@@ -134,4 +134,4 @@ function combinedData() {
 }
 ```
 
-`Result.gen` is the JavaScript generator sequencing API: the first yielded failure skips the rest. EffectScript's `function*` declares a producer, so generator-based APIs stay in `.ts` files; using `Result.gen` in `.es` is ES1002. Use `flatMap` and `all` locally, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit `Effect.try` boundary; a helper declared with `/** @effectscript trusted */` can be called directly.
+`Result.gen` is the JavaScript generator sequencing API: the first yielded failure skips the rest. Effeck's `function*` declares a producer, so generator-based APIs stay in `.ts` files; using `Result.gen` in `.effeck` is EK1002. Use `flatMap` and `all` locally, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit `Effect.try` boundary; a helper declared with `/** @effeck trusted */` can be called directly.

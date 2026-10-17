@@ -1,0 +1,3 @@
+Bind Todos.list() to a const first, then call it through Effect.try, whose callback cannot run an Effect; or tag its declaration in legacy.ts with /** @effeck trusted */.
+Bind Todos.shelf() to a const first, then call it through Effect.try, whose callback cannot run an Effect; or tag its declaration in legacy.ts with /** @effeck trusted */.
+Call it through Effect.try(() => sortTitles(titles)), or tag its declaration in legacy.ts with /** @effeck trusted */.

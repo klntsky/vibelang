@@ -1,0 +1,30 @@
+// expect: EK2006
+// Control cannot leave a finally block: in JavaScript a return, break, or
+// continue there discards the failure in flight.
+class Boom extends TaggedError("Boom")<{}> {}
+
+export function swallow(n: number) {
+  try {
+    if (n > 0) throw new Boom()
+    return n
+  } finally {
+    return -1
+  }
+}
+
+export function loop(items: ReadonlyArray<number>) {
+  let total = 0
+  for (const item of items) {
+    try {
+      if (item < 0) throw new Boom()
+      total += item
+    } finally {
+      if (item === 0) continue
+      // A jump that stays inside the finally block is fine.
+      for (let i = 0; i < 2; i++) {
+        if (i === 1) break
+      }
+    }
+  }
+  return total
+}

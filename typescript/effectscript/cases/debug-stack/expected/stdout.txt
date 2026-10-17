@@ -1,4 +1,0 @@
-[3,2,1,0]
-at ownerName (main.es:12:25)
-at lookup (main.es:17:9)
-at audited$try (main.es:23:27)

@@ -19,16 +19,16 @@ const (
 	ExtensionCjs         = ".cjs"
 	ExtensionCts         = ".cts"
 	ExtensionDcts        = ".d.cts"
-	ExtensionEs          = ".es" // EffectScript source; parses as TypeScript
+	ExtensionEffeck      = ".effeck" // Effeck source; parses as TypeScript
 )
 
 var (
 	SupportedDeclarationExtensions                 = []string{ExtensionDts, ExtensionDcts, ExtensionDmts}
-	SupportedTSImplementationExtensions            = []string{ExtensionTs, ExtensionTsx, ExtensionMts, ExtensionCts, ExtensionEs}
-	supportedTSExtensionsForExtractExtension       = []string{ExtensionDts, ExtensionDcts, ExtensionDmts, ExtensionTs, ExtensionTsx, ExtensionMts, ExtensionCts, ExtensionEs}
-	AllSupportedExtensions                         = [][]string{{ExtensionTs, ExtensionTsx, ExtensionDts, ExtensionJs, ExtensionJsx, ExtensionEs}, {ExtensionCts, ExtensionDcts, ExtensionCjs}, {ExtensionMts, ExtensionDmts, ExtensionMjs}}
-	SupportedTSExtensions                          = [][]string{{ExtensionTs, ExtensionTsx, ExtensionDts, ExtensionEs}, {ExtensionCts, ExtensionDcts}, {ExtensionMts, ExtensionDmts}}
-	SupportedTSExtensionsFlat                      = []string{ExtensionTs, ExtensionTsx, ExtensionDts, ExtensionCts, ExtensionDcts, ExtensionMts, ExtensionDmts, ExtensionEs}
+	SupportedTSImplementationExtensions            = []string{ExtensionTs, ExtensionTsx, ExtensionMts, ExtensionCts, ExtensionEffeck}
+	supportedTSExtensionsForExtractExtension       = []string{ExtensionDts, ExtensionDcts, ExtensionDmts, ExtensionTs, ExtensionTsx, ExtensionMts, ExtensionCts, ExtensionEffeck}
+	AllSupportedExtensions                         = [][]string{{ExtensionTs, ExtensionTsx, ExtensionDts, ExtensionJs, ExtensionJsx, ExtensionEffeck}, {ExtensionCts, ExtensionDcts, ExtensionCjs}, {ExtensionMts, ExtensionDmts, ExtensionMjs}}
+	SupportedTSExtensions                          = [][]string{{ExtensionTs, ExtensionTsx, ExtensionDts, ExtensionEffeck}, {ExtensionCts, ExtensionDcts}, {ExtensionMts, ExtensionDmts}}
+	SupportedTSExtensionsFlat                      = []string{ExtensionTs, ExtensionTsx, ExtensionDts, ExtensionCts, ExtensionDcts, ExtensionMts, ExtensionDmts, ExtensionEffeck}
 	SupportedJSExtensions                          = [][]string{{ExtensionJs, ExtensionJsx}, {ExtensionMjs}, {ExtensionCjs}}
 	SupportedJSExtensionsFlat                      = []string{ExtensionJs, ExtensionJsx, ExtensionMjs, ExtensionCjs}
 	AllSupportedExtensionsWithJson                 = slices.Concat(AllSupportedExtensions, [][]string{{ExtensionJson}})
@@ -38,10 +38,10 @@ var (
 )
 
 func ExtensionIsTs(ext string) bool {
-	return ext == ExtensionTs || ext == ExtensionTsx || ext == ExtensionDts || ext == ExtensionEs || ext == ExtensionMts || ext == ExtensionDmts || ext == ExtensionCts || ext == ExtensionDcts || len(ext) >= 7 && ext[:3] == ".d." && ext[len(ext)-3:] == ".ts"
+	return ext == ExtensionTs || ext == ExtensionTsx || ext == ExtensionDts || ext == ExtensionEffeck || ext == ExtensionMts || ext == ExtensionDmts || ext == ExtensionCts || ext == ExtensionDcts || len(ext) >= 7 && ext[:3] == ".d." && ext[len(ext)-3:] == ".ts"
 }
 
-var extensionsToRemove = []string{ExtensionDts, ExtensionDmts, ExtensionDcts, ExtensionMjs, ExtensionMts, ExtensionCjs, ExtensionCts, ExtensionTs, ExtensionJs, ExtensionTsx, ExtensionJsx, ExtensionJson, ExtensionEs}
+var extensionsToRemove = []string{ExtensionDts, ExtensionDmts, ExtensionDcts, ExtensionMjs, ExtensionMts, ExtensionCjs, ExtensionCts, ExtensionTs, ExtensionJs, ExtensionTsx, ExtensionJsx, ExtensionJson, ExtensionEffeck}
 
 func RemoveFileExtension(path string) string {
 	// Remove any known extension even if it has more than one dot
@@ -145,7 +145,7 @@ func GetDeclarationEmitExtensionForPath(path string) string {
 		return ExtensionDmts
 	case FileExtensionIsOneOf(path, []string{ExtensionCjs, ExtensionCts}):
 		return ExtensionDcts
-	case FileExtensionIsOneOf(path, []string{ExtensionTs, ExtensionTsx, ExtensionJs, ExtensionJsx, ExtensionEs}):
+	case FileExtensionIsOneOf(path, []string{ExtensionTs, ExtensionTsx, ExtensionJs, ExtensionJsx, ExtensionEffeck}):
 		return ExtensionDts
 	default:
 		ext := GetAnyExtensionFromPath(path, nil, CaseSensitive)

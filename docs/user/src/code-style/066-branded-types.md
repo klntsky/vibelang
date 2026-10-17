@@ -1,6 +1,6 @@
 # Branded Types
 
-`Brand` uses Effect's branded types in EffectScript: a brand distinguishes domain values without changing their runtime representation. Use brands when two strings or numbers mean different things, and construct them at a boundary where their origin or validation is clear.
+`Brand` uses Effect's branded types in Effeck: a brand distinguishes domain values without changing their runtime representation. Use brands when two strings or numbers mean different things, and construct them at a boundary where their origin or validation is clear.
 
 ## Distinguishing identical representations
 

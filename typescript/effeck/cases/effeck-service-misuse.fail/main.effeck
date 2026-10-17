@@ -1,0 +1,25 @@
+// expect: EK3002 EK3003 EK3004 EK3005 EK3006
+// A service is a key, not a base class (D1): extends (EK3002), new (EK3003),
+// and instanceof (EK3004) are errors, a generic fully abstract class cannot
+// be a service (EK3005), and a static member cannot share a service member's
+// name (EK3006).
+import { Effect } from "effect"
+
+abstract class Users {
+  abstract find(id: string): Effect.Effect<string, never, never>
+
+  static find(id: string) {
+    return id
+  }
+}
+
+class UsersInMemory extends Users {}
+
+abstract class Repository<T> {
+  abstract get(id: string): Effect.Effect<T, never, never>
+}
+
+export function misuse(value: unknown) {
+  const users = new Users()
+  return value instanceof Users ? users : undefined
+}

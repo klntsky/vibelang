@@ -9,21 +9,21 @@ function loadSettings(path: string) {
 ```
 
 ```text
-error ES4402: node:fs/promises is a platform API, which EffectScript code does not call directly.
-  settings.es:4:21   return JSON.parse(readFile(path, "utf8"))
+error EK4402: node:fs/promises is a platform API, which Effeck code does not call directly.
+  settings.effeck:4:21   return JSON.parse(readFile(path, "utf8"))
   Use FileSystem from "effect/FileSystem":   FileSystem.readFileString(path)
   Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.
 ```
 
-EffectScript's standard library is Effect's. Node.js and browser APIs are not callable from `.es` files, and each error names the Effect module that replaces the API. EffectScript adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
+Effeck's standard library is Effect's. Node.js and browser APIs are not callable from `.effeck` files, and each error names the Effect module that replaces the API. Effeck adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
 
-Imports, re-exports, and passing platform values to adapters are allowed (D108). For example, `NodeHttpServer.layer(createServer, { port })` passes a host function without calling it. ES4402 reports execution: calls, construction, tagged templates, and reads of platform properties, including destructuring and spreading. Namespace members used as values, such as `os.EOL`, are allowed. The current check does not follow platform functions through local aliases, parameters, or objects returned by platform calls.
+Imports, re-exports, and passing platform values to adapters are allowed (D108). For example, `NodeHttpServer.layer(createServer, { port })` passes a host function without calling it. EK4402 reports execution: calls, construction, tagged templates, and reads of platform properties, including destructuring and spreading. Namespace members used as values, such as `os.EOL`, are allowed. The current check does not follow platform functions through local aliases, parameters, or objects returned by platform calls.
 
 There are three reasons. Platform APIs throw and reject in ways their types do not state, which is exactly what Chapter 10's boundary rules exist to contain. An Effect module states its errors in its types and is a service, so a test replaces it with a Layer. And Effect already ships these modules, with implementations for Node.js, Bun, and browsers, so cloning Node's API surface would duplicate them.
 
 #### What replaces what
 
-| You would use | In EffectScript | Import from |
+| You would use | In Effeck | Import from |
 | --- | --- | --- |
 | `fs`, `fs/promises` | `FileSystem` | `effect/FileSystem` |
 | `path` | `Path` | `effect/Path` |
@@ -160,7 +160,7 @@ function currentBranch() {
 #### Providing the platform
 
 ```ts es
-// main.es
+// main.effeck
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { FetchHttpClient } from "effect/http"
 

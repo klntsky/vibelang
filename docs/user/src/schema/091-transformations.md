@@ -1,6 +1,6 @@
 # Schema Transformations
 
-Transformations work in EffectScript as in Effect: a codec validates one representation, converts it, and validates the result. Use `decodeTo` to connect schemas, then supply pure conversions or effectful getters as needed. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Transformations work in Effeck as in Effect: a codec validates one representation, converts it, and validates the result. Use `decodeTo` to connect schemas, then supply pure conversions or effectful getters as needed. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Defining reversible infallible conversions
 
@@ -57,7 +57,7 @@ const DeliveryMode = Schema.String.pipe(
 )
 ```
 
-`transformEffect` receives the converted input and active parse options. Its callback returns a value directly in EffectScript and throws a `SchemaIssue.Issue` for an expected conversion failure. The outer Schema parser wraps issues in `SchemaError`. A domain error from a service must be translated to an issue before it escapes the getter.
+`transformEffect` receives the converted input and active parse options. Its callback returns a value directly in Effeck and throws a `SchemaIssue.Issue` for an expected conversion failure. The outer Schema parser wraps issues in `SchemaError`. A domain error from a service must be translated to an issue before it escapes the getter.
 
 ## Running asynchronous conversions with dependencies
 
@@ -189,6 +189,6 @@ function readManifest(input: unknown) {
 
 ## Coming from Effect
 
-Inside `SchemaGetter.transformEffect`, write ordinary statements and `throw` schema issues. EffectScript turns the callback into the Effect expected by the getter, including its directional service requirements.
+Inside `SchemaGetter.transformEffect`, write ordinary statements and `throw` schema issues. Effeck turns the callback into the Effect expected by the getter, including its directional service requirements.
 
 [Upstream page](https://effect.website/docs/v4/schema/transformations)

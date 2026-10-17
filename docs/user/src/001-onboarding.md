@@ -1,6 +1,6 @@
 # Welcome to Effect
 
-EffectScript gives every function a contract for its result, expected errors, and required services. Use it to write application logic with TypeScript syntax and Effect's execution, resource, and concurrency tools.
+Effeck gives every function a contract for its result, expected errors, and required services. Use it to write application logic with TypeScript syntax and Effect's execution, resource, and concurrency tools.
 
 ## Why typed programs help
 
@@ -58,7 +58,7 @@ function main() {
 
 ## Working with coding assistants
 
-Give an assistant the EffectScript rules and the version of Effect your project uses. Ask it to write ordinary functions, pass programs as zero-argument functions, and check inferred errors and services. Examples copied from TypeScript Effect need adaptation: `.es` files use calls instead of `yield*`, and platform access goes through Effect modules.
+Give an assistant the Effeck rules and the version of Effect your project uses. Ask it to write ordinary functions, pass programs as zero-argument functions, and check inferred errors and services. Examples copied from TypeScript Effect need adaptation: `.effeck` files use calls instead of `yield*`, and platform access goes through Effect modules.
 
 Keep feedback concrete: check the contract, test a failure, and test cleanup when a request is interrupted. An assistant needs the same boundaries as a human author, especially around plain JavaScript libraries.
 
@@ -70,14 +70,14 @@ Keep feedback concrete: check the contract, test a failure, and test cleanup whe
 4. Learn [expected failures and defects](error-management/006-two-error-types.md).
 5. Add [concurrency](concurrency/007-basic-concurrency.md) and [resource management](resource-management/029-introduction.md) as your application needs them.
 
-Use the [guide index](013-getting-started.md) to return to a topic. The Effect API reference explains library operators; these pages explain how to call them from EffectScript.
+Use the [guide index](013-getting-started.md) to return to a topic. The Effect API reference explains library operators; these pages explain how to call them from Effeck.
 
 ## Community support
 
-Ask library questions in the [Effect community on Discord](https://discord.gg/effect-ts) or browse [Effect's GitHub organization](https://github.com/Effect-TS). Include the Effect version and a small reproduction. For language questions, identify the source as EffectScript and include its inferred contract so readers can distinguish language behavior from TypeScript Effect behavior.
+Ask library questions in the [Effect community on Discord](https://discord.gg/effect-ts) or browse [Effect's GitHub organization](https://github.com/Effect-TS). Include the Effect version and a small reproduction. For language questions, identify the source as Effeck and include its inferred contract so readers can distinguish language behavior from TypeScript Effect behavior.
 
 ## Coming from Effect
 
-An ordinary function replaces `Effect.gen` sequencing. Functions, typed errors, services, and resources still run on Effect 4; use EffectScript's call rules when reading the examples.
+An ordinary function replaces `Effect.gen` sequencing. Functions, typed errors, services, and resources still run on Effect 4; use Effeck's call rules when reading the examples.
 
 [Upstream Effect page](https://effect.website/docs/v4/onboarding)

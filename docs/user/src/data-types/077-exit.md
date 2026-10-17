@@ -1,6 +1,6 @@
 # Exit
 
-`Exit` works in EffectScript exactly as in Effect. Use `Exit<A, E>` to inspect success or an entire failure cause, including defects and interruption. A call that returns an Exit returns data; calling that data runs its recorded outcome.
+`Exit` works in Effeck exactly as in Effect. Use `Exit<A, E>` to inspect success or an entire failure cause, including defects and interruption. A call that returns an Exit returns data; calling that data runs its recorded outcome.
 
 ## Representing full outcomes
 

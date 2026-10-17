@@ -1,6 +1,6 @@
 # Layer Memoization
 
-Effect shares repeated uses of the same layer value within one build graph. EffectScript keeps this behavior, so reuse a layer value when consumers should share its initialization and resources.
+Effect shares repeated uses of the same layer value within one build graph. Effeck keeps this behavior, so reuse a layer value when consumers should share its initialization and resources.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/layer-memoization)
 

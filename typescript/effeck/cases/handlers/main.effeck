@@ -1,0 +1,168 @@
+// Handlers (chapter 9): two handlers for one program, a clause that returns
+// without resuming, abandon, resumeWith, onReturn, a rejected second resume,
+// and a tail-resumptive clause that runs 100,000 times in constant stack.
+import { Data, Effect, Exit } from "effect"
+import { abandon, Control, handle, resume, resumeWith } from "@effeck/runtime"
+import { hooks } from "@effeck/runtime/kernel"
+
+class Busy extends Data.TaggedError("Busy")<{ readonly request: string }> {}
+
+abstract class Ask extends Control {
+  abstract ask(question: string): Effect.Effect<number, Busy, never>
+}
+
+abstract class Log extends Control {
+  abstract log(message: string): Effect.Effect<void, never, never>
+}
+
+const events: string[] = []
+
+function conversation() {
+  const a = Ask.ask("first")
+  Log.log(`got ${a}`)
+  const b = Ask.ask("second")
+  Log.log(`got ${b}`)
+  return a + b
+}
+
+// Two handlers for one program: Ask inside, Log outside.
+function twoHandlers() {
+  return handle(() => handle(() => conversation(), Ask, {
+    ask(question, k) { return resume(k, question.length) }
+  }), Log, {
+    log: (message, k) => {
+      events.push(message)
+      return resume(k, undefined)
+    }
+  })
+}
+
+// A clause that returns without resuming: the program's cleanup runs before
+// handle returns, and the code after the operation never runs.
+function stopEarly() {
+  const result = handle(() => {
+    try {
+      Ask.ask("stop")
+      events.push("not reached")
+      return "finished"
+    } finally {
+      events.push("cleanup ran")
+    }
+  }, Ask, {
+    ask(question, _k) { return `stopped at ${question}` }
+  })
+  events.push("handle returned")
+  return result
+}
+
+// abandon(k) runs the program's cleanup inside the clause.
+function abandonInClause() {
+  return handle(() => {
+    try {
+      return Ask.ask("drop")
+    } finally {
+      events.push("abandoned cleanup")
+    }
+  }, Ask, {
+    ask(_question, k) {
+      abandon(k)
+      events.push("after abandon")
+      return -1
+    }
+  })
+}
+
+// resumeWith raises the operation's declared error at the perform site, where
+// the program catches it.
+function busyAnswer() {
+  return handle(() => {
+    try {
+      return Ask.ask("now")
+    } catch (e) {
+      return e._tag === "Busy" ? -2 : -3
+    }
+  }, Ask, {
+    ask(request, k) { return resumeWith(k, () => { throw new Busy({ request }) }) }
+  })
+}
+
+// onReturn transforms what the program returns.
+function doubled() {
+  return handle(() => Ask.ask("four"), Ask, {
+    ask(question, k) { return resume(k, question.length) }
+  }, (n) => n * 2)
+}
+
+// A second resume of the same continuation is a defect.
+function resumeTwice() {
+  return handle(() => Ask.ask("twice"), Ask, {
+    ask(_question, k) {
+      const first = resume(k, 1)
+      const second = resume(k, 2)
+      return first + second
+    }
+  })
+}
+
+// A clause that holds a resource with using releases it after the resumed
+// program finishes, so its resume is not a tail resume.
+function leaseWhileResuming() {
+  const log: string[] = []
+  const answer = handle(() => {
+    const n = Ask.ask("lease")
+    log.push(`program got ${n}`)
+    return n
+  }, Ask, {
+    ask(_question, k) {
+      using lease = Effect.acquireRelease(() => {
+        log.push("acquire")
+      }, () => {
+        log.push("release")
+      })
+      return resume(k, 7)
+    }
+  })
+  return { answer, log }
+}
+
+function count(n: number) {
+  let i = 0
+  while (i < n) {
+    Log.log("tick")
+    i++
+  }
+  return i
+}
+
+// A clause whose last step is resume runs in constant stack (D18).
+function manyTicks() {
+  let maxDepth = 0
+  let seen = 0
+  hooks.onResume = (fiber) => {
+    maxDepth = Math.max(maxDepth, fiber._stack.length)
+  }
+  const total = handle(() => count(100000), Log, {
+    log(_message, k) {
+      seen++
+      return resume(k, undefined)
+    }
+  })
+  hooks.onResume = undefined
+  return { total, seen, bounded: maxDepth < 50 }
+}
+
+// expect-result: {"sum":11,"stopped":"stopped at stop","dropped":-1,"busy":-2,"twice":8,"again":["ContinuationAlreadyConsumed"],"leased":{"answer":7,"log":["acquire","program got 7","release"]},"many":{"total":100000,"seen":100000,"bounded":true},"events":["got 5","got 6","cleanup ran","handle returned","abandoned cleanup","after abandon"]}
+export function main() {
+  const sum = twoHandlers()
+  const stopped = stopEarly()
+  const dropped = abandonInClause()
+  const busy = busyAnswer()
+  const twice = doubled()
+  const exit = Effect.exit(() => resumeTwice())
+  const again = Exit.isFailure(exit)
+    ? exit.cause.reasons.map((reason) => (reason._tag === "Die" ? (reason.defect as { readonly _tag?: string })._tag : reason._tag))
+    : ["Success"]
+  const leased = leaseWhileResuming()
+  const many = manyTicks()
+  return { sum, stopped, dropped, busy, twice, again, leased, many, events }
+}

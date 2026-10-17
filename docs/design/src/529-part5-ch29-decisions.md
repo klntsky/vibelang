@@ -39,7 +39,7 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D6 | The standard library is Effect's (Will) | Effect ships the modules and the platform implementations | 11 |
 | D7 | Program values are functions with no arguments | No new syntax; `() =>` already means "not yet" | 5, 13 |
 | D8 | No `\|>` in v0; the `pipe(program, …stages)` built-in stays | Calls run before a pipe sees them; Stage 2 since 2021; 1.1% and 2.6% of pipes keep two stages | 5 |
-| D9 | A function value where a plain function is expected passes its plain-JavaScript form, or ES4301 | Fable review, finding 3 | 13, 16 |
+| D9 | A function value where a plain function is expected passes its plain-JavaScript form, or EK4301 | Fable review, finding 3 | 13, 16 |
 | D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; pure recursion on the JavaScript stack | Codex review R4; settled decision 4; the owner's `add` feedback | 15 |
 | D11 | Higher-order functions compile to frames in v0 | Fable review, finding 5 | 15, 16 |
 | D12 | A callback type without a contract accepts any contract; unchanged by D57 | Settled decision 2 forbids reading it as `never` | 16 |
@@ -50,30 +50,30 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D17 | `resumeWith` runs code whose R is `never` | Codex review R7 | 9, 20 |
 | D18 | A clause whose last step is `resume` compiles to the tail-resume shape | Both reviews (R10, Fable 1); K11a-K11d | 20, 26 |
 | D19 | `fork` is block-owned | Fable review, finding 9 | 7, 26 |
-| D20 | A TypeScript function whose R holds a control operation is ES4202 in v0 | Codex review R6 | 9, 16 |
+| D20 | A TypeScript function whose R holds a control operation is EK4202 in v0 | Codex review R6 | 9, 16 |
 | D21 | Each `Effect.provide` builds its layers once; provide at `main`; `ManagedRuntime` for several entry points | Fable review, finding 6; conformance test D05 | 4 |
 | D22 | Effect's own packages are trusted, with the functions and values they return | D6; `Option` and `Result` are data in Effect 4 | 10 |
-| D23 | A trusted contract is the `@effectscript trusted` JSDoc tag, with `@throws` | TypeScript syntax only; the compiler's metadata channel | 10, 27 |
+| D23 | A trusted contract is the `@effeck trusted` JSDoc tag, with `@throws` | TypeScript syntax only; the compiler's metadata channel | 10, 27 |
 | D24 | A call runs only `Effect` itself; subtypes are data until called; `new` never runs | `Config`, `Exit`, keys, and errors extend `Effect` | 13 |
 | D25 | `using` adds no masking policy | K15a-K15c | 6, 21 |
 | D26 | Producers: `for...of` by type; a producer is a `Stream` to TypeScript; the adapter runs it on its own fiber behind a zero-capacity handoff | Stream operators pull on other fibers; continuations are fiber-affine; a one-element buffer runs ahead (prototype finding 26) | 8, 26 |
-| D27 | `wire` is an intrinsic with a bounded contract (ES3201-ES3204) | Layer types carry outputs and inputs | 4 |
+| D27 | `wire` is an intrinsic with a bounded contract (EK3201-EK3204) | Layer types carry outputs and inputs | 4 |
 | D28 | A `catch` over several expected failures receives the first | K14a | 3, 17 |
 | D29 | P1-P22 are the spec's rules, as revised below | The reviews' verified findings | 29 |
-| D30 | Installation: `@effectscript/compiler` (`esc`) and `@effectscript/runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
-| D31 | Builds: `esc --watch`; `@effectscript/vite` for Vite | One checker for CLI, editor, and bundler | 28 |
-| D32 | The editor: `esc --lsp --stdio`; the `effectscript.effectscript` extension | The fork's binary already serves LSP | 28 |
+| D30 | Installation: `effeck` (`effeck`) and `@effeck/runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
+| D31 | Builds: `effeck --watch`; `@effeck/vite` for Vite | One checker for CLI, editor, and bundler | 28 |
+| D32 | The editor: `effeck --lsp --stdio`; the `effeck.effeck` extension | The fork's binary already serves LSP | 28 |
 | D33 | v0 editor features: hover, completions, quick fixes, four refactors | The diagnostics with mechanical fixes | 28 |
-| D34 | Diagnostics: errors, except the policies ES2004 (a warning) and ES4403; `compilerOptions.effectscript` | Soundness errors cannot be lowered | 28 |
-| D35 | One owner per diagnostic: `esc` for types and language, Oxlint for lint | tsgolint embeds TypeScript's checker | 28 |
+| D34 | Diagnostics: errors, except the policies EK2004 (a warning) and EK4403; `compilerOptions.effeck` | Soundness errors cannot be lowered | 28 |
+| D35 | One owner per diagnostic: `effeck` for types and language, Oxlint for lint | tsgolint embeds TypeScript's checker | 28 |
 | D36 | Debugging through composed source maps; spans for logical stacks | The frame invariant keeps callers off the JavaScript stack | 28 |
-| D37 | `catch` never sees an unlisted exception; a dead `catch` is the warning ES2004 | Coverage audit X2; prototype finding 16 | 3, 10 |
-| D38 | Runners only where no fiber runs the code; ES1005 elsewhere | Coverage audit X4 | 13 |
+| D37 | `catch` never sees an unlisted exception; a dead `catch` is the warning EK2004 | Coverage audit X2; prototype finding 16 | 3, 10 |
+| D38 | Runners only where no fiber runs the code; EK1005 elsewhere | Coverage audit X4 | 13 |
 | D39 | A function-or-Effect parameter: a function if plain, a program if it can pause | Coverage audit X9 | 13 |
 | D40 | Service statics: `layer`, `make`; `static readonly default` makes a `Context.Reference` | Coverage audit X12 | 4 |
-| D41 | `S.member(…)` always adds `S` to R; service members win over the key's members; ES3006 for a static that shares a member's name | Coverage audit X13; prototype findings 3, 4 | 4, 13 |
+| D41 | `S.member(…)` always adds `S` to R; service members win over the key's members; EK3006 for a static that shares a member's name | Coverage audit X13; prototype findings 3, 4 | 4, 13 |
 | D42 | Workflow bodies are ordinary programs: interrupted on durable suspension, rerun on replay | Coverage audit X17; `workflow/Workflow.ts:695-780, 1031-1036` | 23 |
-| D43 | `Effect.callback` is an explicit boundary; its `resume` takes an Effect, and `.es` passes an `Exit` | Coverage audit X11; `Effect.ts` | 6, 10 |
+| D43 | `Effect.callback` is an explicit boundary; its `resume` takes an Effect, and `.effeck` passes an `Exit` | Coverage audit X11; `Effect.ts` | 6, 10 |
 | D44 | "The expected type" is the declared, uninstantiated parameter type of the resolved overload | Prototype finding 1: the contextual type is inferred from the lambda itself | 13 |
 | D45 | A service compiles to an interface plus a `Context.Key` class, with an optional brand | Prototype finding 19: Effect's class form breaks `implements` (TS2720) | 4, 27 |
 | D46 | `finally` lowers to `Effect.onExit`; `throw` to `return yield* Effect.fail(e)`; E is the type of causes made only of expected failures | Prototype findings 11, 12, 14 | 14, 17, 26 |
@@ -82,13 +82,13 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D49 | Arrays and records of programs convert where Effects are expected | Prototype finding 5 | 5, 13 |
 | D50 | `Continuation<V, E, H>`: `resume` returns the `handle`'s result type | Prototype finding 24 | 9 |
 | D51 | Plain calls at a module's top level are ordinary calls; `@throws {T}` names a class | Prototype finding 21 | 10 |
-| D52 | E and R of recursion by a fixpoint inside the component, never a whole-program pass (ES2102 for A); A widens; definite assignment on the source | Prototype findings 7, 10, 13; the single-pass probe `isEven`/`isOdd` | 14, 26, 27 |
+| D52 | E and R of recursion by a fixpoint inside the component, never a whole-program pass (EK2102 for A); A widens; definite assignment on the source | Prototype findings 7, 10, 13; the single-pass probe `isEven`/`isOdd` | 14, 26, 27 |
 | D53 | Diagnostic codes follow the prototype | Prototype diagnostics | 28 |
 | D54 | Inside a plain-JavaScript function, `try`, `catch`, and `finally` are JavaScript's own; `catch` rethrows anything unexpected | D10 with D5: nothing in the function can pause | 15 |
-| D55 | A method implementing a plain-function member (`[Equal.symbol]`, `[Hash.symbol]`) compiles to a plain JavaScript method, or ES4301 | The member's declared type is not an Effect | 15 |
+| D55 | A method implementing a plain-function member (`[Equal.symbol]`, `[Hash.symbol]`) compiles to a plain JavaScript method, or EK4301 | The member's declared type is not an Effect | 15 |
 | D56 | A lambda's form (plain, Effect function, program) is decided against each overload candidate's declared parameter type, and the first candidate that accepts it wins; never by the lambda's own inferred type. D10 eligibility is computed on demand | Single-pass experiment: 0 disagreements in 46 files; 6 probe lambdas with two self-consistent lowerings | 13, 15, 27 |
-| D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; omitted slots are ES2003. D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
-| D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; the repository stays private | Another compile-to-JavaScript language uses the name; rename before public release remains possible | 28 |
+| D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; omitted slots are EK2003. D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
+| D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; superseded by D125 | Another compile-to-JavaScript language uses the name | 28 |
 | D59 | Draft upstream issues and proposals in `docs/upstream/`; status: drafted, not filed | Filing speaks for the owner in a third-party project and needs his go-ahead | 24, 25, 30 |
 | D60 | **Will.** One private repository, `github.com/roninjin10/effectscript`; the compiler lives in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
 
@@ -98,49 +98,49 @@ The following rows record build defaults, not new language decisions. Lane U rec
 
 | # | Decision | Reason and evidence | Chapters |
 | --- | --- | --- | --- |
-| D61 | **Controversial.** An ES diagnostic is a TypeScript diagnostic with source `ES`, on upstream's content-mapper path | One diagnostic path for CLI and LSP | 28 |
+| D61 | **Controversial.** An EK diagnostic is a TypeScript diagnostic with source `EK`, on upstream's content-mapper path | One diagnostic path for CLI and LSP | 28 |
 | D62 | The prelude is the runtime's exports | Lazy imports preserve files that use no prelude names | 1, 27 |
-| D63 | A `.es` file imports `./x.es` or `./x.ts` by source name with no flag (no TS5097); specifiers become `.js` in JavaScript and `.d.ts` output | Source names for checking, output names for JavaScript | 10, 27, 28 |
+| D63 | A `.effeck` file imports `./x.effeck` or `./x.ts` by source name with no flag (no TS5097); specifiers become `.js` in JavaScript and `.d.ts` output | Source names for checking, output names for JavaScript | 10, 27, 28 |
 | D64 | A failing compiler case passes when its exact set of error codes matches (TypeScript codes count, warnings do not); a runnable case compares only its `@@result` line, so programs may log | Exact codes detect regressions while result markers allow logging | 10, 27, 28 |
-| D65 | A call from a `.es` file to a plain function runs inline as `f$direct(a)` everywhere, including a module's top level, because it computes a value and runs no program | Plain computation runs no program | 13, 15 |
-| D66 | An overload candidate that asks for a plain function rejects an `.es` function value that can pause, as it rejects such a lambda (D56 extended to function values); a TypeScript function that returns an Effect passes as data; when every candidate rejects, ES4301 reports against the first candidate's form | Named values and lambdas need the same callback safety | 13, 16 |
+| D65 | A call from a `.effeck` file to a plain function runs inline as `f$direct(a)` everywhere, including a module's top level, because it computes a value and runs no program | Plain computation runs no program | 13, 15 |
+| D66 | An overload candidate that asks for a plain function rejects an `.effeck` function value that can pause, as it rejects such a lambda (D56 extended to function values); a TypeScript function that returns an Effect passes as data; when every candidate rejects, EK4301 reports against the first candidate's form | Named values and lambdas need the same callback safety | 13, 16 |
 | D67 | **Controversial.** A function with a plain return annotation keeps that type and compiles to one plain function; only unannotated or Effect-contract functions get the `$direct` plus `Effect.sync` pair, whose TypeScript type is `(…) => Effect<A, never, never>` (chapter 15's one calling convention) | Plain annotations support JavaScript protocols | 10, 14, 15 |
 | D68 | **Controversial.** D12 (a callback parameter without a contract accepts any contract) applies to declarations, methods, and function expressions that are not call arguments; the added type parameters are named E and R (then E2, R2) and appear in `.d.ts` output | Missing callback channels must not mean never | 16, 27 |
 | D69 | A program lambda lowers to `Effect.gen(function* …)`, a converted function value to `Effect.suspend(v)`, and an array or record of programs built at run time to `$programs` | Conversions must preserve cold execution | 5, 13, 27 |
-| D70 | **Controversial.** A `return`, `break`, or `continue` that leaves a `finally` block is a new error, ES2006; in JavaScript such a jump discards the failure in flight, and compiling `finally` to Effect cleanup cannot honor it | Effect cleanup cannot honor jumps that discard failures | 17, 28 |
-| D71 | ES2102 also covers a `catch` variable or return type typed before its cycle's E and R are known; the fix is a written contract | The checker cannot revise cached recursive types | 14, 28 |
-| D72 | ES2102 applies only to functions that run Effects; a pure recursive function keeps TypeScript's TS7023, which a plain annotation fixes (consistent with D67) | Pure recursion needs no Effect channel analysis | 14, 15 |
+| D70 | **Controversial.** A `return`, `break`, or `continue` that leaves a `finally` block is a new error, EK2006; in JavaScript such a jump discards the failure in flight, and compiling `finally` to Effect cleanup cannot honor it | Effect cleanup cannot honor jumps that discard failures | 17, 28 |
+| D71 | EK2102 also covers a `catch` variable or return type typed before its cycle's E and R are known; the fix is a written contract | The checker cannot revise cached recursive types | 14, 28 |
+| D72 | EK2102 applies only to functions that run Effects; a pure recursive function keeps TypeScript's TS7023, which a plain annotation fixes (consistent with D67) | Pure recursion needs no Effect channel analysis | 14, 15 |
 | D73 | A call to a function with a complete written contract adds the contract's E and R, not what its body does | Callers rely on the public contract | 14 |
-| D74 | Methods are exempt from ES2003 for a plain annotation, because a method implementing a plain-function member is declared that way (D55) | Plain protocol members need plain annotations | 14, 15 |
-| D75 | The `tsc/cmd/tsc` binary identifies as EffectScript; there is no separate cmd/esc | One upstream entry-point seam | 27, 28 |
-| D76 | **Controversial.** The editor serves `.ts` only when the built-in TypeScript extension is disabled, or with Cursor's useTsgo | Disabling validation also hides EffectScript diagnostics; amends D32 | 28 |
+| D74 | Methods are exempt from EK2003 for a plain annotation, because a method implementing a plain-function member is declared that way (D55) | Plain protocol members need plain annotations | 14, 15 |
+| D75 | The `tsc/cmd/tsc` binary identifies as Effeck; there is no separate cmd/effeck | One upstream entry-point seam | 27, 28 |
+| D76 | **Controversial.** The editor serves `.ts` only when the built-in TypeScript extension is disabled, or with Cursor's useTsgo | Disabling validation also hides Effeck diagnostics; amends D32 | 28 |
 | D77 | **Controversial.** Hover shows a running call's success value and a plain helper's direct and TypeScript-facing signatures; `.ts` hover stays unchanged | Explain both call semantics and helper ABI | 15, 28 |
 | D78 | Prelude names and service members complete in scope; local declarations shadow prelude names | Discoverability without explicit imports | 1, 4, 28 |
-| D79 | Reuse TypeScript TextMate grammar; resolve esc from setting, project, then PATH; require workspace trust | Keep theme support and project compiler ownership | 28 |
+| D79 | Reuse TypeScript TextMate grammar; resolve effeck from setting, project, then PATH; require workspace trust | Keep theme support and project compiler ownership | 28 |
 | D80 | The runtime checks Effect's version by importing effect's package metadata with a static JSON import attribute; works in Node, Bun, and bundlers | JSON attributes work in Node, Bun, and bundlers | 27, 28 |
 | D81 | The runtime exports `suspend`, `handoff`, `Resumer`, and `HandoffProtocolViolation` for TypeScript callback adapters (D43) | Resource adapters need cancellation and lost-race reporting | 6, 21 |
 | D82 | The extraction kept the prototype helpers' behavior and continuation parameter order; discrepancies with the spec are documented in packages/runtime/README.md, not fixed silently | Extraction must preserve compiler compatibility | 26, 27 |
 | D83 | Setup writes absolute `file:` dependencies on the repository's packages into new projects instead of `bun link`; nothing registers globally and nothing is published, so a project keeps working only while the checkout stays where it is | Local setup needs no registration or publication | 28 |
 | D84-D89 | No decisions reported in the build inbox | Leave these numbers unassigned | |
-| D90 | The member-call rule (D41) is structural: it applies to any Context key whose service type declares the member, which covers `.es` services, TypeScript `Context.Service` classes, and Effect's `FileSystem` and `Path` | Context keys and EffectScript services share call behavior | 4, 13 |
+| D90 | The member-call rule (D41) is structural: it applies to any Context key whose service type declares the member, which covers `.effeck` services, TypeScript `Context.Service` classes, and Effect's `FileSystem` and `Path` | Context keys and Effeck services share call behavior | 4, 13 |
 | D91 | **Controversial.** A control-operation call lowers like a service call, `yield* (yield* Approval).approve(x)`, as the prototype did (amending the original Chapter 13 lowering); `handle` provides an implementation that performs the kernel operations | Preserves the prototype implementation pending F7 | 9, 13 |
-| D92 | A method in a `.es` file becomes an Effect when its body runs or looks up an Effect, or when its expected type returns one; it stays a method whose body is `return Effect.gen({ self: this }, function* () { … })` | Generators must retain the method receiver | 15, 27 |
-| D93 | **Controversial.** Service keys use package, module, and name; defaults require `static readonly`; ES2101 requires all three Effect channels; wire emits consumers first | Stable service identity and bounded provider analysis | 4, 14 |
+| D92 | A method in a `.effeck` file becomes an Effect when its body runs or looks up an Effect, or when its expected type returns one; it stays a method whose body is `return Effect.gen({ self: this }, function* () { … })` | Generators must retain the method receiver | 15, 27 |
+| D93 | **Controversial.** Service keys use package, module, and name; defaults require `static readonly`; EK2101 requires all three Effect channels; wire emits consumers first | Stable service identity and bounded provider analysis | 4, 14 |
 | D94 | Effect acquisitions receive the block Scope; other initializers need Disposable, null, or undefined; Disposable results also run Symbol.dispose | Effect acquisitions and ordinary Disposables have different ownership | 6 |
 | D95 | In an Effect function, `for (using x of values)` makes each iteration's body a Scope region; the value is taken first, and `using` or `fork` inside the body join that region | Cleanup belongs to the iteration that owns it | 6, 7 |
 | D96 | **Controversial.** A `fork` belongs to the innermost block around it; an arrow function with an expression body has no block, so `() => fork(p)` is `Effect.forkScoped` and keeps `Scope` in R | An expression body has no owning block | 7 |
 | D97 | **Controversial.** Continuation H is the program's A, or never with onReturn; handle unions program and clause results. Recorded from the compiler notes | TypeScript fixes H before checking onReturn; mixed early returns can narrow resume too far | 9 |
 | D98 | Producers return lazy Streams; direct loops use the consumer fiber, Stream operators use a separate fiber and a handoff with no buffer. Recorded from the compiler notes | Lazy interoperability, cleanup, and bounded stack without running ahead | 8, 26 |
-| D99 | ES4201 checks known fiber boundaries and control-requiring producer arguments; ES4202 checks foreign callees' declared control requirements. Recorded from the compiler notes | Diagnose unreachable handlers; runtime enforces fiber ownership | 9, 16 |
-| D100 | Code no fiber runs is plain JavaScript for ES4401 too: a module's top level and the plain callbacks it passes to TypeScript functions (`describe` bodies, route handlers), the same places D38 allows runners | Framework callbacks run outside a fiber | 10, 13 |
+| D99 | EK4201 checks known fiber boundaries and control-requiring producer arguments; EK4202 checks foreign callees' declared control requirements. Recorded from the compiler notes | Diagnose unreachable handlers; runtime enforces fiber ownership | 9, 16 |
+| D100 | Code no fiber runs is plain JavaScript for EK4401 too: a module's top level and the plain callbacks it passes to TypeScript functions (`describe` bodies, route handlers), the same places D38 allows runners | Framework callbacks run outside a fiber | 10, 13 |
 | D101 | **Controversial.** Only built-ins that parse outside text declare expected failures (`JSON.parse` with `SyntaxError`, `decodeURI` and `decodeURIComponent` with `URIError`); every other built-in's exceptions are defects | Unlisted built-in exceptions remain defects | 10, 26 |
 | D102 | **Controversial.** Original platform-import restriction; import half superseded by D108; globals and allowed web standards retained | Platform work needs typed, replaceable Effect services | 10, 11 |
-| D103 | ES1001 covers any top-level call that would run a program, including service member calls and Effect-value calls, reported once at the outermost call | One outer call identifies attempted program execution | 13, 28 |
+| D103 | EK1001 covers any top-level call that would run a program, including service member calls and Effect-value calls, reported once at the outermost call | One outer call identifies attempted program execution | 13, 28 |
 | D104 | Compiled generators are named after their function, variable, or property (an object method `{ *name() {} }.name` when the body refers to that name); `tracing: "exported"` spans exported functions, `"all"` every named lowered function plus methods through `Effect.withSpan("Class.method")`; anonymous lambdas get no span | Names and spans identify source failures | 19, 26, 28 |
-| D105 | Vite compiles a project through one shared esc subprocess per source revision, with cached output; amends D31 | Whole-project checking keeps caller contracts consistent | 28 |
-| D106 | After an edit the plugin invalidates every loaded `.es` module and its transitive importers, because callers compile differently when a contract changes | Contract changes can change caller lowering | 28 |
+| D105 | Vite compiles a project through one shared effeck subprocess per source revision, with cached output; amends D31 | Whole-project checking keeps caller contracts consistent | 28 |
+| D106 | After an edit the plugin invalidates every loaded `.effeck` module and its transitive importers, because callers compile differently when a contract changes | Contract changes can change caller lowering | 28 |
 | D107 | **Controversial.** Sources must sit under Vite's root; the plugin overrides emit paths and source roots there so output lookup and source maps are predictable | One source root makes output lookup predictable | 28 |
-| D108 | ES4402 reports platform execution, including calls and property reads; imports and passing values are allowed. Supersedes the import half of D102 | Effect adapters must accept host function values | 10, 11, 28 |
+| D108 | EK4402 reports platform execution, including calls and property reads; imports and passing values are allowed. Supersedes the import half of D102 | Effect adapters must accept host function values | 10, 11, 28 |
 | D109 | An expected callback or program asks for the Effect form only when its type is effect's own `Effect` interface, or a type parameter constrained to it; subtypes such as `Config` are data (D24), so `Config.orElse`'s fallback stays plain | D24 keeps structured subtypes as data | 13, 16 |
 | D110 | The `pipe` look-ahead (D8) reads the first stage's callee signatures, or a function value's own signatures; it runs only when the first argument can be a program, and never checks the stage early | Reading signatures avoids circular inference | 5, 13 |
 | D111 | The D49 conversion covers any iterable (`Set`, a `Map`'s values) through its iterated type; an iterable never converts as a record, matching `Effect.all` at run time | Matches Effect.all at run time | 5, 13 |
@@ -150,7 +150,8 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D121 | **Controversial.** Effect trust follows re-exports and returned values, including assertions from @effect/vitest | Tests need usable assertions; direct Vitest imports and local TypeScript retain boundary checks | 10, 16 |
 | D122 | Every runner checks all services it does not supply; it.effect supplies Scope and its layer services | Diagnose missing services before execution | 4, 28 |
 | D123 | Declaration prelude imports use free aliases when names are already bound | Avoid duplicate identifiers in declaration consumers | 27 |
-| D124 | Setup relinks esc launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
+| D124 | Setup relinks effeck launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
+| D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, npm `effeck` and `@effeck` | The `@effectscript` npm scope belongs to another language | 28 |
 
 #### Rules of the runtime and compiler
 
@@ -167,7 +168,7 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | P7 | An owner frame abandons an unresumed continuation. `transfer` (standard library only) moves ownership to the Scope region around the handler, revokes an earlier transfer, and rejects ownership cycles and parallel Scopes. **Revised**: the capturing fiber's exit is a second owner, so a transfer never outlives its fiber (R5) | T3, T4, T10, O01-O08, K13a-K13e | 21 |
 | P8 | Abandonment unwinds like interruption and never disturbs real pending interruptions; a masked handler that swallows it is re-raised. **Revised**: every cleanup failure is reported beside pending interruptions, on every abandoning path (R2b) | kernel-edges, A01-A04, I03, I10, I11, K12a-K12e | 20, 23 |
 | P9 | Services always use in-place evidence. Control operations use prompt evidence, or in-place evidence when TypeScript supplies an implementation that always resumes; the checker treats them as fiber-bound either way | In-place and override tests; T8 | 4, 9, 16 |
-| P10 | Control operations cannot cross fibers. **Revised**: the runtime is the guarantee (`HandlerNotOnThisFiber`); the fiber-behavior table is the diagnostic (ES4201), and TypeScript functions with a control operation in R are rejected (ES4202) | T7b, T8, probes; review probe R6 | 9, 16 |
+| P10 | Control operations cannot cross fibers. **Revised**: the runtime is the guarantee (`HandlerNotOnThisFiber`); the fiber-behavior table is the diagnostic (EK4201), and TypeScript functions with a control operation in R are rejected (EK4202) | T7b, T8, probes; review probe R6 | 9, 16 |
 | P11 | The frame invariant; source regions compile to Effect frames, never JavaScript `try`, in functions that compile to frames | F1-F3 | 26 |
 | P12 | **Revised** as D10: plain JavaScript only with no Effect operation and E = never; pure recursion on the JavaScript stack; `pure` permits inlining only | F9, T6a; review probe R4 | 15 |
 | P13 | The kernel bounds synchronous wake-up depth | F10a, K10a, K10b | 24 |
@@ -177,7 +178,7 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | P17 | A declaration without a body states its full contract; a bare return type there is an error, never `never` | Settled decision 2 | 14 |
 | P18 | **Revised** as D17: `resumeWith` may raise only the operation's declared E, and its R is `never` | Settled decision 3; review probe R7 | 9 |
 | P19 | A finalizer's control operations must be handled inside the finalizer | I06, I11 | 17, 23 |
-| P20 | Programs start only at runners; calls never create fibers; a module's top level cannot run a program (ES1001). **Revised**: runners are called only where no fiber runs the code (ES1005, D38) | Fable review | 13, 23 |
+| P20 | Programs start only at runners; calls never create fibers; a module's top level cannot run a program (EK1001). **Revised**: runners are called only where no fiber runs the code (EK1005, D38) | Fable review | 13, 23 |
 | P21 | `for...of` over a producer is internal iteration; pulling from outside uses `transfer` | T10, T16 | 8, 26 |
 | P22 | **Revised** as D18: a clause whose last action is `resume`, outside any region of the clause, compiles to `return tailResume(k, v)` and iterates in constant stack. The first draft's evidence, T17, covered only a `flatMap`-shaped clause | K11a-K11d; review probe R10 | 20, 26 |
 
@@ -200,7 +201,7 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | --- | --- | --- |
 | O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
 | O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
-| O9 | D58 (**controversial**) | Keep EffectScript, `esc`, `.es`, and `@effectscript` |
+| O9 | D58, superseded by D125 (**controversial**) | Effeck: `effeck`, `.effeck`, `EK` codes, and `@effeck` |
 | Remote and repository layout | D60 | The one repository is private at `github.com/roninjin10/effectscript`, with the compiler in `typescript/` |
 
 No language or repository decision waits on the owner. D59's filing boundary remains: these drafts are ready to file, and none is filed without his go-ahead. The build lanes land locally; the orchestrator handles any push.

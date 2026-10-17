@@ -1,12 +1,12 @@
 ## Part III. The runtime
 
-This part is for reviewing how EffectScript runs. It explains how the features in Parts I and II execute on Effect 4's fiber runtime, what Effect already provides, what a small runtime extension (the **kernel**) adds, and the tests that check each claim. Claims carry tags:
+This part is for reviewing how Effeck runs. It explains how the features in Parts I and II execute on Effect 4's fiber runtime, what Effect already provides, what a small runtime extension (the **kernel**) adds, and the tests that check each claim. Claims carry tags:
 
 | Tag | Meaning |
 | --- | --- |
 | **[Effect]** | Verified in `effect@4.0.5` source (`experiments/node_modules/effect/src`, cited as `file:line`) or by an Effect-only test (F1-F10, conformance tests D01-D05, K15a) |
 | **[Kernel]** | Verified by a kernel test: T1-T17, K10-K15, H1-H4, G6, and the conformance suite's A, F, I, O, S, T, W, and X tests. These test the language model, not ordinary Effect programs |
-| **[Prototype]** | Compiled from `.es` by the prototype compiler and run on the kernel: an example in `prototype/esc/examples` (Chapter 27) |
+| **[Prototype]** | Compiled from `.effeck` by the prototype compiler and run on the kernel: an example in `prototype/esc/examples` (Chapter 27) |
 | **[Rule]** | A language rule, decided in Part V; the compiler enforces it, and no test can prove a rule a checker has not been built to enforce |
 | **[Experiment]** | A rule whose implementation an experiment in Chapter 30 still has to confirm |
 
@@ -28,7 +28,7 @@ Both examples need one thing Effect does not expose today: a way for code on a f
 
 Effect 4 runs every program as a one-shot continuation. A fiber's `_stack` is the rest of the computation, reified as an array of frames. `Effect.callback` parks it and accepts one resume. Interruption unwinds it through finalizer frames. What Effect lacks is a delimiter inside a fiber: the only one is the fiber's root, so the only continuation anyone can take is the whole fiber.
 
-EffectScript adds the missing delimiter. A {{kernelLines}}-line kernel prototype on `effect@4.0.5` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. {{testCount}} tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer. A prototype compiler then compiled 46 example files written from this document to that kernel and ran them (Chapter 27).
+Effeck adds the missing delimiter. A {{kernelLines}}-line kernel prototype on `effect@4.0.5` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. {{testCount}} tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer. A prototype compiler then compiled 46 example files written from this document to that kernel and ran them (Chapter 27).
 
 Every feature in Parts I and II is a rule over that one machine:
 
@@ -41,7 +41,7 @@ Every feature in Parts I and II is a rule over that one machine:
 
 #### Why not lower to `Effect.gen` first
 
-An earlier proposal compiled EffectScript through `Effect.gen` and deferred delimited control to a later experiment. That cannot be the foundation, for four reasons that are facts about the running system:
+An earlier proposal compiled Effeck through `Effect.gen` and deferred delimited control to a later experiment. That cannot be the foundation, for four reasons that are facts about the running system:
 
 1. `Effect.gen` and `flatMap` push frames onto one fiber stack whose only delimiter is the root. They sequence work. They cannot hand "the rest of the computation up to here" to a handler, because nothing marks "here". When the handler is on another fiber, the operation is simply unhandled (T7b, T8).
 2. `Effect.gen` drops its generator on failure and interruption without running JavaScript `finally` (F1-F3). A language that compiled `finally` to generator `finally` would leak on every failure.
@@ -59,18 +59,18 @@ General delimited control therefore needs new frame kinds (`Prompt` and `Owner` 
 | Feature | Mechanism in the machine | Captures | Evidence |
 | --- | --- | --- | --- |
 | Program entry | A runner creates a fiber root for a program value | No | Chapters 13, 23 |
-| Calls and returns | `Ret` frames; plain calls only where no pause or capture is reachable | No | T6a, T17; F9; `ch02-functions.es`, `ch13-plain.es` |
-| `throw` and `catch` | Abortive unwinding to a `Catch` frame that recovers only causes made of expected failures | No: aborts | K14a-K14c; `resumeWith` test; `ch15-failures.es` |
-| `finally` and `using` | `Final` frames on every exit, abandonment included | No | T1, T3, T4, T10, K11b; `regions.es` |
-| Services | In-place evidence in the Context | No: runs in place | In-place evidence test; `ch04-services.es` |
+| Calls and returns | `Ret` frames; plain calls only where no pause or capture is reachable | No | T6a, T17; F9; `ch02-functions.effeck`, `ch13-plain.effeck` |
+| `throw` and `catch` | Abortive unwinding to a `Catch` frame that recovers only causes made of expected failures | No: aborts | K14a-K14c; `resumeWith` test; `ch15-failures.effeck` |
+| `finally` and `using` | `Final` frames on every exit, abandonment included | No | T1, T3, T4, T10, K11b; `regions.effeck` |
+| Services | In-place evidence in the Context | No: runs in place | In-place evidence test; `ch04-services.effeck` |
 | Providers and Layers | Installing evidence: `Restore` frames plus a Scope | No | Effect (Chapter 24) |
 | Test overrides | Services: a `Restore` frame. Control operations: a handler for one region | Services: no. Control operations: yes | Override test; Chapter 9 |
 | Async I/O, sleep, waits | Root capture with one-shot resume | Yes, at the root | T1 step ③; F5, F6 |
 | Callback adapters | Root capture with a reported race and bounded wake-ups; masked or interruptible acquisition | Yes, at the root | T5b, T5c, K10a, K10b, K15a-K15c |
 | Interruption | Asynchronous unwinding of the fiber's continuation, deferred by `Mask` frames | No | T4, T12 |
 | Structured concurrency | New roots with a Context snapshot and no prompts; block-owned forks | No | F7, F8, T8 |
-| Control handlers | Prompt capture, resume, abandon, ownership | Yes | T1-T4, T9, T13, T15; O01-O08; A01-A04; I03-I11; K12; `ref6-handlers.es` |
-| Producers (`function*`) | One prompt capture per element; abandonment on `break`; constant stack under a tail resume | Yes | T10, T16, T17, K11a-K11d; `stack-depth.es` |
+| Control handlers | Prompt capture, resume, abandon, ownership | Yes | T1-T4, T9, T13, T15; O01-O08; A01-A04; I03-I11; K12; `ref6-handlers.effeck` |
+| Producers (`function*`) | One prompt capture per element; abandonment on `break`; constant stack under a tail resume | Yes | T10, T16, T17, K11a-K11d; `stack-depth.effeck` |
 | Retry, race, all | Fresh runs of a program; nothing reused | No | T11 |
 
 Features checked against the claim and kept out:

@@ -1,6 +1,6 @@
 # HashSet
 
-`HashSet` and `MutableHashSet` work in EffectScript exactly as in Effect. They store unique, unordered values using Effect's equality and hashing rules; choose them for frequent membership checks and set operations.
+`HashSet` and `MutableHashSet` work in Effeck exactly as in Effect. They store unique, unordered values using Effect's equality and hashing rules; choose them for frequent membership checks and set operations.
 
 ## Choosing immutable or mutable sets
 
