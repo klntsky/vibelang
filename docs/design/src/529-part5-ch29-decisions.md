@@ -183,6 +183,8 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
 | D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
+| D186 | `throw` is also an expression: `x ?? throw new NotFound({ id })` | TC39 throw expressions (stage 2); fails as the throw statement does | 3 |
+| D187 | `do { }` is an expression whose value is its last statement's | TC39 do expressions (stage 1); a racer or an arm gets several statements | 13 |
 
 #### Rules of the runtime and compiler
 

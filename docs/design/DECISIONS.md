@@ -391,6 +391,12 @@ Will approved the token-reduction proposals measured on the docs and examples (5
 
 **D175. A provider list is read element by element** (lane provide). The analyzer computes what an array-literal provider provides from each element's type. The array's own type merges the elements into one union, and because a layer is contravariant in what it provides, `Layer<Names> | Layer<never>` reduces to `Layer<never>`, which would hide `Names`. This also fixes `provide [NamesLive, RandomLive] { ... }` written as an array. Not controversial.
 
+## TC39 forms: blocks (2026-10-17)
+
+**D186. `throw` is also an expression** (lane blocks; [throw expressions](https://github.com/tc39/proposal-throw-expressions), stage 2). In an `.effeck` file, `throw` in expression position takes a unary expression, as the proposal's grammar has it: `users.get(id) ?? throw new NotFound({ id })`, `ok ? value : throw new Invalid()`, `(id) => find(id) ?? throw new NotFound({ id })`. It parses as `(() => { throw operand })()`, so it fails exactly as the throw statement does (an `error` value joins E, a Cause rethrows) and has type `never`; the right side of `??`, `||`, `&&`, and `?:` still runs only when chosen. A statement that starts with `throw` is the throw statement.
+
+**D187. `do { }` is an expression** (lane blocks; [do expressions](https://github.com/tc39/proposal-do-expressions), stage 1). `do { statements }` in expression position has the completion value of its last statement: an expression statement, an `if` with an `else` whose branches end in one, a `try`/`catch` whose blocks end in one, or a `throw`. A declaration, a loop, or an `if` without `else` at the end is TS1109, and a `return` inside is TS1108, as the proposal forbids it. It parses as `(() => { ...; return last })()`, so it runs where it stands, and a parameter that expects a program takes it by name (D147): `race(do { sleep("1 millis"); "cached" }, fetch())`. A statement that starts with `do` is the do-while statement.
+
 ### Known gaps
 
 - **Runtime (R):** At extraction, Stream adaptation retained a one-element buffer instead of D26's zero-capacity handoff; `$programs` handled iterables but not records; `$trusted` matched exception names or tags. F2, F7, and F8 own the follow-up behavior; later decisions and the runtime README take precedence over this extraction snapshot.

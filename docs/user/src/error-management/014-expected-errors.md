@@ -26,6 +26,19 @@ function normalizeCode(input: string) {
 
 Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a trusted declaration, `/** @effeck trusted */`; each `@throws {T}` names an exported exception class that joins `E`, and unlisted exceptions are defects. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
 
+## Failing in an expression
+
+```ts
+error MissingPort
+
+function port(env: Map<string, string>) {
+  return env.get("PORT") ?? throw new MissingPort()
+}
+// string!MissingPort!
+```
+
+`throw` also works in expression position, as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it, and fails the same way the statement does. The right side of `??`, `||`, `&&`, and `?:` runs only when it is chosen.
+
 ## Tracking several error cases
 
 ```ts

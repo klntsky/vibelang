@@ -204,3 +204,24 @@ Tests in `.effeck` use `it.effect`. A test that must `await` a Promise stays in 
 #### Evaluation order
 
 Evaluation order is JavaScript's, and generated code keeps it. Arguments are evaluated left to right, each once. A receiver is evaluated once and keeps its `this`. `a() && b()` runs `b` only if `a()` is truthy. A getter runs once per access. In `double(w) * double(h) * Settings.scale()`, both `double` calls run before the service call, even though only the service call can pause (Chapter 15).
+
+#### Blocks as values
+
+A `do { }` expression (D187, the TC39 [do expressions](https://github.com/tc39/proposal-do-expressions) proposal) has the value of its last statement. It runs where it stands, and a parameter that expects a program takes it by name, like a call (D147):
+
+```ts
+function cached(): string!! {
+  sleep("1 millis")
+  return "cached"
+}
+
+function fetched(): string!! {
+  sleep("1 second")
+  return "fetched"
+}
+
+function first() {
+  return race(do { const value = cached(); value.toUpperCase() }, fetched())
+}
+```
+

@@ -326,6 +326,39 @@ function piped() {
 }
 ```
 
+## TC39 expression forms
+
+**Throw in an expression** (D186, [throw expressions](https://github.com/tc39/proposal-throw-expressions)).
+
+```ts effect
+const findUser = (users: Map<string, User>, id: string) =>
+  Effect.fromNullishOr(users.get(id)).pipe(Effect.mapError(() => new NotFound({ id })))
+```
+
+```ts es
+function findUser(users: Map<string, User>, id: string) {
+  return users.get(id) ?? throw new NotFound({ id })
+}
+```
+
+**Blocks as values** (D187, [do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
+
+```ts effect
+const label = (id: string) =>
+  Effect.map(getUser(id), (user) => (user.name.length > 3 ? user.name : "short"))
+```
+
+```ts es
+function label(id: string) {
+  const name = do {
+    const user = getUser(id)
+    if (user.name.length > 3) user.name
+    else "short"
+  }
+  return name
+}
+```
+
 ## Escape hatches
 
 **Plain TypeScript inside `sync`, `try`, and `callback`** (D148). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. `runPromise` leads back in from a hatch's body or a `.ts` file.

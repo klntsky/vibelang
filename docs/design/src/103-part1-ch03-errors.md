@@ -171,3 +171,17 @@ warning EK2004: this catch can never run: nothing in its try block fails with an
   Use a form that can fail:   return users.find(isAdmin) ?? guest
   or bound the call:          try(…, (cause) => new NoAdmin({ cause }))
 ```
+
+#### Failing in an expression
+
+`throw` also works in expression position (D186), as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it. It fails exactly as the statement does and has type `never`:
+
+```ts
+error NoAdmin
+
+function admin(users: ReadonlyArray<{ admin: boolean; name: string }>) {
+  return users.find((user) => user.admin)?.name ?? throw new NoAdmin()
+}
+// string!NoAdmin!
+```
+
