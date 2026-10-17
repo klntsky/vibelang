@@ -12,7 +12,7 @@ bun run build
 bun run start
 ```
 
-Features: an abstract class extending `Control`, `handle`, and tail `resume`.
+Features: a `control` declaration, handle statements, and tail `resume`.
 Effect alone does not provide delimited handlers. Its key control call, expressed
 as Effect TypeScript against Effeck's emitted Approval key and runtime, is:
 ```ts

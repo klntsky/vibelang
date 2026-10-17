@@ -66,6 +66,9 @@ clients, see [editors/](editors/README.md).
   statements before the members run once, when the layer builds.
 - Provide a layer to a block with `with AppLive { ... }`; a `return` inside
   returns from the enclosing function.
+- Answer a control operation with a handle clause:
+  `try { return release(v) } handle Approval.approve(request) { resume(true) }`.
+  A `return` in the try block or a clause returns from the enclosing function.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`, the boundary
   hatches `sync`, `try`, and `callback`, the runners, and the Effect

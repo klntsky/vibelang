@@ -10,23 +10,23 @@ export function release(version: string) {
 }
 
 export function autoApprove(version: string) {
-  return handle(() => release(version), Approval, {
-    approve(_request, continuation) {
-      return resume(continuation, true)
-    }
-  })
+  try {
+    return release(version)
+  } handle Approval.approve(_request) {
+    resume(true)
+  }
 }
 
 export function scriptedReview(version: string, decisions: ReadonlyArray<boolean>) {
   let next = 0
-  return handle(() => release(version), Approval, {
-    approve(request, continuation) {
-      const approved = decisions[next] ?? false
-      next++
-      Console.log(`review: ${request}: ${approved ? "yes" : "no"}`)
-      return resume(continuation, approved)
-    }
-  })
+  try {
+    return release(version)
+  } handle Approval.approve(request) {
+    const approved = decisions[next] ?? false
+    next++
+    Console.log(`review: ${request}: ${approved ? "yes" : "no"}`)
+    resume(approved)
+  }
 }
 
 export function main() {

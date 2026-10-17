@@ -1356,19 +1356,37 @@ To the code that performs it, `Approval.approve` looks like any call: it returns
 
 #### Handling it
 
-`handle` runs a program and answers its operations. Each answer receives `k`, the rest of the program from the point of the call. `resume(k, value)` continues it with that value.
+A `handle` clause after a try block answers an operation that the block performs. It names the operation and its parameters, which take the operation's parameter types. `resume(value)` continues the block from the call with that value.
+
+```ts es
+function reviewedCheckout(cartId: string) {
+  try {
+    return checkout(cartId)
+  } handle Approval.approve(request) {
+    const decision = Reviewers.decide(request)    // may take minutes: the fiber just waits
+    resume(decision)                              // checkout continues from its call
+  }
+}
+// Receipt!ReviewBusy | Declined | PaymentError!Inventory | Payments | Reviewers
+```
+
+While the reviewer decides, the cart's hold is still reserved and `checkout` is paused at its call, exactly as it would be during any slow service call. A clause that ends by resuming, like this one, costs no stack: the compiler ends the clause before it continues the program (Chapter 26), so a handler that resumes a million times runs in constant space.
+
+The try block and the clauses are code of the enclosing function (D132). A `return` in either returns from the function, and `break` and `continue` leave its loops. A clause can work after `resume`: `resume` returns when the try block finishes, and when the clause then ends, the statement ends as the block did, so the block's `return` takes effect after the clause, as a pending `return` waits for a `finally` block. A statement answers every operation of each control it names (EK2108), and catch clauses and a `finally` block may follow its handle clauses, covering the block and the clauses.
+
+The statement is short for `handle`, a function that runs a program and returns its result. Each clause receives `k`, the rest of the program from the point of the call, and `resume(k, value)` continues it:
 
 ```ts es
 const receipt = handle(() => checkout("c-42"), Approval, {
   approve(request, k) {
-    const decision = Reviewers.decide(request)    // may take minutes: the fiber just waits
-    return resume(k, decision)                    // checkout continues from its call
+    const decision = Reviewers.decide(request)
+    return resume(k, decision)
   }
 })
 // receipt: Receipt
 ```
 
-While the reviewer decides, the cart's hold is still reserved and `checkout` is paused at its call, exactly as it would be during any slow service call. `resume` returns what the rest of `checkout` returned, here the `Receipt`. A clause that ends by resuming, like this one, costs no stack: the compiler ends the clause before it continues the program (Chapter 26), so a handler that resumes a million times runs in constant space.
+`resume` returns what the rest of `checkout` returned, here the `Receipt`.
 
 #### Not continuing
 
@@ -1380,15 +1398,15 @@ control Found {
 }
 
 function locate(grid: Grid, target: number) {
-  return handle(() => {
+  try {
     for (const row of grid.rows) {
       using cursor = grid.open(row)
       for (const cell of cursor.cells) if (cell.value === target) Found.found(cell)
     }
     return undefined
-  }, Found, {
-    found(cell, _k) { return cell }      // stop: the open cursor is released before handle returns
-  })
+  } handle Found.found(cell) {
+    return cell      // stop: the open cursor is released before locate returns
+  }
 }
 // Cell | undefined!!
 ```
@@ -1400,12 +1418,14 @@ function locate(grid: Grid, target: number) {
 `resumeWith` continues the program by running code at the call, where the program may catch what it throws:
 
 ```ts es
-const outcome = handle(() => checkout("c-42"), Approval, {
-  approve(request, k) {
-    if (Reviewers.busy()) return resumeWith(k, () => { throw new ReviewBusy({ request }) })
-    return resume(k, Reviewers.decide(request))
+function patientCheckout(cartId: string) {
+  try {
+    return checkout(cartId)
+  } handle Approval.approve(request) {
+    if (Reviewers.busy()) resumeWith(() => { throw new ReviewBusy({ request }) })
+    else resume(Reviewers.decide(request))
   }
-})
+}
 ```
 
 The code passed to `resumeWith` runs inside the handled program, at the call, so two rules keep its contract honest. It may throw only the operation's declared errors (`ReviewBusy` here), which every caller of `Approval.approve` already sees in E. And it may need no service: the providers around the clause are not in scope at the call, so its R must be `never`.
@@ -1413,22 +1433,25 @@ The code passed to `resumeWith` runs inside the handled program, at the call, so
 ```text
 error EK2005: resumeWith runs this code at the perform site, inside the handled program,
   where the clause's providers are not in scope. It needs Secret.
-  approvals.effeck:4:34   return resumeWith(k, () => Secret.read())
-  Read it in the clause first:   const secret = Secret.read()   …   resumeWith(k, () => secret)
+  approvals.effeck:4:16   resumeWith(() => Secret.read())
+  Read it in the clause first:   const secret = Secret.read()   …   resumeWith(() => secret)
 ```
 
 #### Testing with a handler
 
 ```ts es
 it.effect("checkout charges when approved", () => {
-  const receipt = handle(() => checkout("c-42"), Approval, {
-    approve: (_request, k) => resume(k, true)
-  })
-  assert.isTrue(receipt.paid)
+  try {
+    assert.isTrue(checkout("c-42").paid)
+  } handle Approval.approve(_request) {
+    resume(true)
+  }
 })
 ```
 
 #### The full API
+
+`try { … } handle Control.operation(parameters) { … }` handles the operations of the controls its clauses name, the first control's handler innermost. In a clause, `resume(value)`, `resumeWith(() => …)`, and `abandon()` act on the clause's continuation; `resume()` continues an operation whose result is `void`. The compiler writes the statement as a call of `handle` whose program and clauses return the statement's completion: a `return`, `break`, or `continue`, or normal completion (Chapter 26).
 
 `handle(program, Operations, clauses, onReturn?)` runs `program` with a handler for `Operations`. The optional `onReturn` transforms the program's own result before `handle` returns it. Inside a clause, `k` has the type `Continuation<V, E, H>`. `V` is what the call receives, `E` is the operation's declared errors, which only `resumeWith` may raise, and `H` is the result type of the whole `handle`. `resume(k, v)` returns an `H`: the handler is deep, so the resumed program runs until it reaches the handler again, where `onReturn`, or a later clause that does not resume, produces the value. The compiler computes `H` from `onReturn`'s result (the program's own result without one) and every clause's return type. Three operations take `k`:
 
@@ -1438,13 +1461,15 @@ it.effect("checkout charges when approved", () => {
 | `resumeWith(k, () => …)` | Continue the program by running the given code at the call. It may throw only the operation's declared errors, and its R is `never` |
 | `abandon(k)` | Stop the program now: its cleanup runs, its `catch` blocks do not. Fails if cleanup fails |
 
+In a handle statement's clause, the same three calls leave out `k`: `resume(value)`, `resumeWith(() => …)`, and `abandon()`.
+
 The standard library uses a fourth operation, `transfer`, which hands a continuation to a scope so it can be resumed after the clause returns. Producers' external iteration needs it. v0 keeps it inside the standard library (Chapter 21).
 
 #### The rules
 
 - **Continue at most once.** Calling `resume(k, …)` a second time is an error at the second call; nothing in the program runs twice.
 - **Not continuing cleans up.** If the handler returns, fails, or is interrupted without resuming, the program's `using` and `finally` blocks run before `handle` returns.
-- **`k` stays inside the clause.** You cannot store `k`, return it, or capture it in a closure that outlives the clause.
+- **`k` stays inside the clause.** You cannot store `k`, return it, or capture it in a closure that outlives the clause. A handle statement's clause never names its continuation: it calls `resume`, `resumeWith`, and `abandon` in its own code, not in a function nested in it.
 - **Handlers belong to a fiber.** A program forked onto another fiber cannot reach a handler on this one; the next section shows the check.
 - **Cleanup code handles its own operations.** A `finally` block or `using` release that performs a control operation must handle it inside itself, so a handler elsewhere cannot cut cleanup short.
 
@@ -1468,11 +1493,13 @@ The fix puts a handler inside each concurrent branch:
 
 ```ts es
 function approveAll(ids: ReadonlyArray<string>) {
-  return forEach(ids, (id) =>
-    handle(() => Approval.approve(id), Approval, {
-      approve: (request, k) => resume(k, Reviewers.decide(request))
-    }),
-    { concurrency: 4 })
+  return forEach(ids, (id) => {
+    try {
+      return Approval.approve(id)
+    } handle Approval.approve(request) {
+      resume(Reviewers.decide(request))
+    }
+  }, { concurrency: 4 })
 }
 ```
 
@@ -2649,10 +2676,12 @@ A JavaScript function such as `Array.prototype.map` calls its callback synchrono
 A control operation must be handled on the fiber that performs it (Chapter 9). The compiler therefore needs to know, for each Effect function that takes a program, whether it runs that program on the same fiber. These were measured by performing a control operation inside each combinator, with the handler outside it (`tests/fiber-behavior.test.ts`):
 
 ```ts es
-handle(() => {
+try {
   retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
   timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
-}, Approval, { approve: (_request, k) => resume(k, true) })
+} handle Approval.approve(_request) {
+  resume(true)
+}
 ```
 
 | Same fiber: a handler outside still works | Other fibers: handle control operations inside |
@@ -3965,6 +3994,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2104 | A setup statement of a `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
 | EK2105 | A typed catch clause whose type has a member without a literal `_tag` (D131) | Catch a tagged error, or test the value in an untyped clause | 3 |
 | EK2106 | A catch clause after an untyped catch clause (D131) | Move the untyped clause last | 3 |
+| EK2107 | A handle clause whose control is not a control declaration, such as a service (D132) | Provide a service with a layer; handle only a control's operations | 9 |
+| EK2108 | A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132) | Add the missing clause, or remove the second | 9 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -4174,6 +4205,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D129 | `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
 | D130 | `with AppLive { ... }` provides a layer to a block whose statements stay code of the enclosing function | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
 | D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
+| D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
 | D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |

@@ -38,10 +38,12 @@ A JavaScript function such as `Array.prototype.map` calls its callback synchrono
 A control operation must be handled on the fiber that performs it (Chapter 9). The compiler therefore needs to know, for each Effect function that takes a program, whether it runs that program on the same fiber. These were measured by performing a control operation inside each combinator, with the handler outside it (`tests/fiber-behavior.test.ts`):
 
 ```ts es
-handle(() => {
+try {
   retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
   timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
-}, Approval, { approve: (_request, k) => resume(k, true) })
+} handle Approval.approve(_request) {
+  resume(true)
+}
 ```
 
 | Same fiber: a handler outside still works | Other fibers: handle control operations inside |

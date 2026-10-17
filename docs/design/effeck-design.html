@@ -1021,15 +1021,27 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <span class="c">// Receipt!ReviewBusy | Declined | PaymentError!Approval | Inventory | Payments</span></code></pre></figure>
 <p>To the code that performs it, <code>Approval.approve</code> looks like any call: it returns a <code>boolean</code> or fails with <code>ReviewBusy</code>. Like a service, <code>Approval</code> appears in R until something handles it. The service rules apply: its members are abstract with full contracts, its key is derived from its module, and it cannot be extended or instantiated.</p>
 <h4 id="handling-it"><a class="anchor" href="#handling-it">Handling it</a></h4>
-<p><code>handle</code> runs a program and answers its operations. Each answer receives <code>k</code>, the rest of the program from the point of the call. <code>resume(k, value)</code> continues it with that value.</p>
+<p>A <code>handle</code> clause after a try block answers an operation that the block performs. It names the operation and its parameters, which take the operation&#39;s parameter types. <code>resume(value)</code> continues the block from the call with that value.</p>
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">reviewedCheckout</span>(cartId: <span class="l">string</span>) {
+  <span class="k">try</span> {
+    <span class="k">return</span> <span class="f">checkout</span>(cartId)
+  } handle <span class="t">Approval</span>.<span class="f">approve</span>(request) {
+    <span class="k">const</span> decision = <span class="t">Reviewers</span>.<span class="f">decide</span>(request)    <span class="c">// may take minutes: the fiber just waits</span>
+    <span class="f">resume</span>(decision)                              <span class="c">// checkout continues from its call</span>
+  }
+}
+<span class="c">// Receipt!ReviewBusy | Declined | PaymentError!Inventory | Payments | Reviewers</span></code></pre></figure>
+<p>While the reviewer decides, the cart&#39;s hold is still reserved and <code>checkout</code> is paused at its call, exactly as it would be during any slow service call. A clause that ends by resuming, like this one, costs no stack: the compiler ends the clause before it continues the program (<a href="#26-what-compiled-code-must-guarantee">Chapter 26</a>), so a handler that resumes a million times runs in constant space.</p>
+<p>The try block and the clauses are code of the enclosing function (D132). A <code>return</code> in either returns from the function, and <code>break</code> and <code>continue</code> leave its loops. A clause can work after <code>resume</code>: <code>resume</code> returns when the try block finishes, and when the clause then ends, the statement ends as the block did, so the block&#39;s <code>return</code> takes effect after the clause, as a pending <code>return</code> waits for a <code>finally</code> block. A statement answers every operation of each control it names (EK2108), and catch clauses and a <code>finally</code> block may follow its handle clauses, covering the block and the clauses.</p>
+<p>The statement is short for <code>handle</code>, a function that runs a program and returns its result. Each clause receives <code>k</code>, the rest of the program from the point of the call, and <code>resume(k, value)</code> continues it:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> receipt = <span class="f">handle</span>(() =&gt; <span class="f">checkout</span>(<span class="s">"c-42"</span>), <span class="t">Approval</span>, {
   <span class="f">approve</span>(request, k) {
-    <span class="k">const</span> decision = <span class="t">Reviewers</span>.<span class="f">decide</span>(request)    <span class="c">// may take minutes: the fiber just waits</span>
-    <span class="k">return</span> <span class="f">resume</span>(k, decision)                    <span class="c">// checkout continues from its call</span>
+    <span class="k">const</span> decision = <span class="t">Reviewers</span>.<span class="f">decide</span>(request)
+    <span class="k">return</span> <span class="f">resume</span>(k, decision)
   }
 })
 <span class="c">// receipt: Receipt</span></code></pre></figure>
-<p>While the reviewer decides, the cart&#39;s hold is still reserved and <code>checkout</code> is paused at its call, exactly as it would be during any slow service call. <code>resume</code> returns what the rest of <code>checkout</code> returned, here the <code>Receipt</code>. A clause that ends by resuming, like this one, costs no stack: the compiler ends the clause before it continues the program (<a href="#26-what-compiled-code-must-guarantee">Chapter 26</a>), so a handler that resumes a million times runs in constant space.</p>
+<p><code>resume</code> returns what the rest of <code>checkout</code> returned, here the <code>Receipt</code>.</p>
 <h4 id="not-continuing"><a class="anchor" href="#not-continuing">Not continuing</a></h4>
 <p>A handler that returns without calling <code>resume</code> ends the handled program with the handler&#39;s result. Everything the program had open is cleaned up first.</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">control</span> <span class="t">Found</span> {
@@ -1037,49 +1049,54 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 }
 
 <span class="k">function</span> <span class="f">locate</span>(grid: <span class="t">Grid</span>, target: <span class="l">number</span>) {
-  <span class="k">return</span> <span class="f">handle</span>(() =&gt; {
+  <span class="k">try</span> {
     <span class="k">for</span> (<span class="k">const</span> row <span class="k">of</span> grid.rows) {
       <span class="k">using</span> cursor = grid.<span class="f">open</span>(row)
       <span class="k">for</span> (<span class="k">const</span> cell <span class="k">of</span> cursor.cells) <span class="k">if</span> (cell.value === target) <span class="t">Found</span>.<span class="f">found</span>(cell)
     }
     <span class="k">return</span> <span class="l">undefined</span>
-  }, <span class="t">Found</span>, {
-    <span class="f">found</span>(cell, _k) { <span class="k">return</span> cell }      <span class="c">// stop: the open cursor is released before handle returns</span>
-  })
+  } handle <span class="t">Found</span>.<span class="f">found</span>(cell) {
+    <span class="k">return</span> cell      <span class="c">// stop: the open cursor is released before locate returns</span>
+  }
 }
 <span class="c">// Cell | undefined!!</span></code></pre></figure>
 <p><code>found</code>&#39;s result type is <code>never</code>, so its handler cannot continue the search, and the type says so.</p>
 <h4 id="continuing-with-an-error"><a class="anchor" href="#continuing-with-an-error">Continuing with an error</a></h4>
 <p><code>resumeWith</code> continues the program by running code at the call, where the program may catch what it throws:</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> outcome = <span class="f">handle</span>(() =&gt; <span class="f">checkout</span>(<span class="s">"c-42"</span>), <span class="t">Approval</span>, {
-  <span class="f">approve</span>(request, k) {
-    <span class="k">if</span> (<span class="t">Reviewers</span>.<span class="f">busy</span>()) <span class="k">return</span> <span class="f">resumeWith</span>(k, () =&gt; { <span class="k">throw</span> <span class="k">new</span> <span class="t">ReviewBusy</span>({ request }) })
-    <span class="k">return</span> <span class="f">resume</span>(k, <span class="t">Reviewers</span>.<span class="f">decide</span>(request))
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">patientCheckout</span>(cartId: <span class="l">string</span>) {
+  <span class="k">try</span> {
+    <span class="k">return</span> <span class="f">checkout</span>(cartId)
+  } handle <span class="t">Approval</span>.<span class="f">approve</span>(request) {
+    <span class="k">if</span> (<span class="t">Reviewers</span>.<span class="f">busy</span>()) <span class="f">resumeWith</span>(() =&gt; { <span class="k">throw</span> <span class="k">new</span> <span class="t">ReviewBusy</span>({ request }) })
+    <span class="k">else</span> <span class="f">resume</span>(<span class="t">Reviewers</span>.<span class="f">decide</span>(request))
   }
-})</code></pre></figure>
+}</code></pre></figure>
 <p>The code passed to <code>resumeWith</code> runs inside the handled program, at the call, so two rules keep its contract honest. It may throw only the operation&#39;s declared errors (<code>ReviewBusy</code> here), which every caller of <code>Approval.approve</code> already sees in E. And it may need no service: the providers around the clause are not in scope at the call, so its R must be <code>never</code>.</p>
 <figure class="code side-none"><pre class="code" data-lang="text"><code>error EK2005: resumeWith runs this code at the perform site, inside the handled program,
   where the clause's providers are not in scope. It needs Secret.
-  approvals.effeck:4:34   return resumeWith(k, () =&gt; Secret.read())
-  Read it in the clause first:   const secret = Secret.read()   …   resumeWith(k, () =&gt; secret)</code></pre></figure>
+  approvals.effeck:4:16   resumeWith(() =&gt; Secret.read())
+  Read it in the clause first:   const secret = Secret.read()   …   resumeWith(() =&gt; secret)</code></pre></figure>
 <h4 id="testing-with-a-handler"><a class="anchor" href="#testing-with-a-handler">Testing with a handler</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>it.<span class="f">effect</span>(<span class="s">"checkout charges when approved"</span>, () =&gt; {
-  <span class="k">const</span> receipt = <span class="f">handle</span>(() =&gt; <span class="f">checkout</span>(<span class="s">"c-42"</span>), <span class="t">Approval</span>, {
-    approve: (_request, k) =&gt; <span class="f">resume</span>(k, <span class="l">true</span>)
-  })
-  assert.<span class="f">isTrue</span>(receipt.paid)
+  <span class="k">try</span> {
+    assert.<span class="f">isTrue</span>(<span class="f">checkout</span>(<span class="s">"c-42"</span>).paid)
+  } handle <span class="t">Approval</span>.<span class="f">approve</span>(_request) {
+    <span class="f">resume</span>(<span class="l">true</span>)
+  }
 })</code></pre></figure>
 <h4 id="the-full-api"><a class="anchor" href="#the-full-api">The full API</a></h4>
+<p><code>try { … } handle Control.operation(parameters) { … }</code> handles the operations of the controls its clauses name, the first control&#39;s handler innermost. In a clause, <code>resume(value)</code>, <code>resumeWith(() =&gt; …)</code>, and <code>abandon()</code> act on the clause&#39;s continuation; <code>resume()</code> continues an operation whose result is <code>void</code>. The compiler writes the statement as a call of <code>handle</code> whose program and clauses return the statement&#39;s completion: a <code>return</code>, <code>break</code>, or <code>continue</code>, or normal completion (<a href="#26-what-compiled-code-must-guarantee">Chapter 26</a>).</p>
 <p><code>handle(program, Operations, clauses, onReturn?)</code> runs <code>program</code> with a handler for <code>Operations</code>. The optional <code>onReturn</code> transforms the program&#39;s own result before <code>handle</code> returns it. Inside a clause, <code>k</code> has the type <code>Continuation&lt;V, E, H&gt;</code>. <code>V</code> is what the call receives, <code>E</code> is the operation&#39;s declared errors, which only <code>resumeWith</code> may raise, and <code>H</code> is the result type of the whole <code>handle</code>. <code>resume(k, v)</code> returns an <code>H</code>: the handler is deep, so the resumed program runs until it reaches the handler again, where <code>onReturn</code>, or a later clause that does not resume, produces the value. The compiler computes <code>H</code> from <code>onReturn</code>&#39;s result (the program&#39;s own result without one) and every clause&#39;s return type. Three operations take <code>k</code>:</p>
 <div class="table"><table><thead><tr><th>Call</th><th>Meaning</th></tr></thead><tbody><tr><td><code>resume(k, value)</code></td><td>Continue the program with <code>value</code> as the operation&#39;s result. Returns an <code>H</code>: what the <code>handle</code> produces when the program next reaches it</td></tr>
 <tr><td><code>resumeWith(k, () =&gt; …)</code></td><td>Continue the program by running the given code at the call. It may throw only the operation&#39;s declared errors, and its R is <code>never</code></td></tr>
 <tr><td><code>abandon(k)</code></td><td>Stop the program now: its cleanup runs, its <code>catch</code> blocks do not. Fails if cleanup fails</td></tr></tbody></table></div>
+<p>In a handle statement&#39;s clause, the same three calls leave out <code>k</code>: <code>resume(value)</code>, <code>resumeWith(() =&gt; …)</code>, and <code>abandon()</code>.</p>
 <p>The standard library uses a fourth operation, <code>transfer</code>, which hands a continuation to a scope so it can be resumed after the clause returns. Producers&#39; external iteration needs it. v0 keeps it inside the standard library (<a href="#21-one-shot-ownership-and-races">Chapter 21</a>).</p>
 <h4 id="the-rules"><a class="anchor" href="#the-rules">The rules</a></h4>
 <ul>
 <li><strong>Continue at most once.</strong> Calling <code>resume(k, …)</code> a second time is an error at the second call; nothing in the program runs twice.</li>
 <li><strong>Not continuing cleans up.</strong> If the handler returns, fails, or is interrupted without resuming, the program&#39;s <code>using</code> and <code>finally</code> blocks run before <code>handle</code> returns.</li>
-<li><strong><code>k</code> stays inside the clause.</strong> You cannot store <code>k</code>, return it, or capture it in a closure that outlives the clause.</li>
+<li><strong><code>k</code> stays inside the clause.</strong> You cannot store <code>k</code>, return it, or capture it in a closure that outlives the clause. A handle statement&#39;s clause never names its continuation: it calls <code>resume</code>, <code>resumeWith</code>, and <code>abandon</code> in its own code, not in a function nested in it.</li>
 <li><strong>Handlers belong to a fiber.</strong> A program forked onto another fiber cannot reach a handler on this one; the next section shows the check.</li>
 <li><strong>Cleanup code handles its own operations.</strong> A <code>finally</code> block or <code>using</code> release that performs a control operation must handle it inside itself, so a handler elsewhere cannot cut cleanup short.</li>
 </ul>
@@ -1093,11 +1110,13 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   Handle Approval inside the callback, or run the loop with concurrency 1.</code></pre></figure>
 <p>The fix puts a handler inside each concurrent branch:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">approveAll</span>(ids: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
-  <span class="k">return</span> <span class="f">forEach</span>(ids, (id) =&gt;
-    <span class="f">handle</span>(() =&gt; <span class="t">Approval</span>.<span class="f">approve</span>(id), <span class="t">Approval</span>, {
-      approve: (request, k) =&gt; <span class="f">resume</span>(k, <span class="t">Reviewers</span>.<span class="f">decide</span>(request))
-    }),
-    { concurrency: <span class="n">4</span> })
+  <span class="k">return</span> <span class="f">forEach</span>(ids, (id) =&gt; {
+    <span class="k">try</span> {
+      <span class="k">return</span> <span class="t">Approval</span>.<span class="f">approve</span>(id)
+    } handle <span class="t">Approval</span>.<span class="f">approve</span>(request) {
+      <span class="f">resume</span>(<span class="t">Reviewers</span>.<span class="f">decide</span>(request))
+    }
+  }, { concurrency: <span class="n">4</span> })
 }</code></pre></figure>
 <p>TypeScript code is checked the same way, from its signature. A TypeScript function can fork internally without taking a program argument, where no table can see it, so a TypeScript function whose R contains a control operation cannot be called from Effeck in v0:</p>
 <figure class="code side-none"><pre class="code" data-lang="text"><code>error EK4202: retryApproval is a TypeScript function whose requirements include the control
@@ -1839,10 +1858,12 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <p>A JavaScript function such as <code>Array.prototype.map</code> calls its callback synchronously, on a stack frame the runtime cannot pause or capture. A callback passed where a plain function type is expected must therefore compile to plain JavaScript (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>): no Effect operation, and E = <code>never</code>. Anything else is EK4301 (<a href="#10-working-with-typescript">Chapter 10</a>). The same holds for a named Effeck function passed as a value: <code>stores.map(makeSync)</code> passes <code>makeSync</code>&#39;s plain form, and a function without one is rejected.</p>
 <h4 id="which-effect-combinators-run-their-argument-on-another-fiber"><a class="anchor" href="#which-effect-combinators-run-their-argument-on-another-fiber">Which Effect combinators run their argument on another fiber</a></h4>
 <p>A control operation must be handled on the fiber that performs it (<a href="#9-handlers-defining-your-own-effects">Chapter 9</a>). The compiler therefore needs to know, for each Effect function that takes a program, whether it runs that program on the same fiber. These were measured by performing a control operation inside each combinator, with the handler outside it (<code>tests/fiber-behavior.test.ts</code>):</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="f">handle</span>(() =&gt; {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">try</span> {
   <span class="f">retry</span>(<span class="t">Approval</span>.<span class="f">approve</span>(<span class="s">"a"</span>), <span class="t">Schedule</span>.<span class="f">recurs</span>(<span class="n">2</span>))     <span class="c">// same fiber: reaches the handler</span>
   <span class="f">timeout</span>(<span class="t">Approval</span>.<span class="f">approve</span>(<span class="s">"b"</span>), <span class="s">"1 second"</span>)           <span class="c">// other fiber: EK4201</span>
-}, <span class="t">Approval</span>, { approve: (_request, k) =&gt; <span class="f">resume</span>(k, <span class="l">true</span>) })</code></pre></figure>
+} handle <span class="t">Approval</span>.<span class="f">approve</span>(_request) {
+  <span class="f">resume</span>(<span class="l">true</span>)
+}</code></pre></figure>
 <div class="table"><table><thead><tr><th>Same fiber: a handler outside still works</th><th>Other fibers: handle control operations inside</th></tr></thead><tbody><tr><td><code>flatMap</code>, <code>map</code>, <code>catch</code>, <code>catchCause</code>, <code>ensuring</code>, <code>onExit</code>, <code>provideService</code>, <code>scoped</code>, <code>acquireRelease</code> (acquire), <code>acquireUseRelease</code> (use), <code>retry</code>, <code>repeat</code>, <code>uninterruptible</code>, sequential <code>forEach</code> and <code>all</code>, <code>zip</code> by default</td><td>Measured: <code>timeout</code>, <code>race</code>, <code>raceFirst</code>, <code>forEach</code> with concurrency 2, unbounded <code>all</code>, <code>zip</code> with <code>concurrent: true</code>, <code>forkChild</code>. From source: <code>forkIn</code>, <code>forkScoped</code>, <code>forkDetach</code>, <code>Layer.merge</code> builds, parallel Scope finalizers</td></tr></tbody></table></div>
 <p><code>timeout</code> is on the right because it runs its program on a child fiber to race it against the clock. For an Effect function outside this table, the compiler assumes the argument may run on another fiber.</p>
 <p>The runtime is the guarantee and the table is the diagnostic. A control operation that reaches another fiber fails loudly at run time with <code>HandlerNotOnThisFiber</code> (T7b, T8), never silently. The table turns that defect into a compile-time error where it can, and a combinator missing from it costs a conservative error, not a wrong program.</p>
@@ -2794,6 +2815,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK2104</td><td>A setup statement of a <code>layer</code> declaration that follows one of its members (D129)</td><td>Move the statement above the members</td><td>4</td></tr>
 <tr><td>EK2105</td><td>A typed catch clause whose type has a member without a literal <code>_tag</code> (D131)</td><td>Catch a tagged error, or test the value in an untyped clause</td><td>3</td></tr>
 <tr><td>EK2106</td><td>A catch clause after an untyped catch clause (D131)</td><td>Move the untyped clause last</td><td>3</td></tr>
+<tr><td>EK2107</td><td>A handle clause whose control is not a control declaration, such as a service (D132)</td><td>Provide a service with a layer; handle only a control&#39;s operations</td><td>9</td></tr>
+<tr><td>EK2108</td><td>A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132)</td><td>Add the missing clause, or remove the second</td><td>9</td></tr>
 <tr><td>EK3001</td><td>Two services share a key</td><td>Rename one</td><td>4</td></tr>
 <tr><td>EK3002</td><td>A class extends a service</td><td>Replace <code>extends</code> with <code>implements</code></td><td>4</td></tr>
 <tr><td>EK3003</td><td><code>new</code> on a service</td><td>Use <code>Users()</code> for the implementation</td><td>4</td></tr>
@@ -2978,6 +3001,7 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D129</td><td><code>layer UsersLive: Users { setup; find(id) { ... } }</code> is <code>Layer.effect</code> (or <code>Layer.succeed</code> without setup); setup after members is EK2104</td><td>Fewer tokens than <code>Layer.effect(S, () =&gt; { return { ... } })</code></td><td>4</td></tr>
 <tr><td>D130</td><td><code>with AppLive { ... }</code> provides a layer to a block whose statements stay code of the enclosing function</td><td>Fewer tokens than <code>Effect.provide(() =&gt; { ... }, AppLive)</code>, and <code>return</code> keeps its meaning</td><td>4</td></tr>
 <tr><td>D131</td><td><code>catch (e: NotFound)</code> handles only failures with that type&#39;s <code>_tag</code>; several clauses may follow a <code>try</code>, and failures no clause names propagate</td><td>Fewer tokens than narrowing and rethrowing</td><td>3</td></tr>
+<tr><td>D132</td><td><code>try { ... } handle Approval.approve(request) { resume(true) }</code> handles a control&#39;s operations; the block and the clauses stay code of the enclosing function</td><td>Fewer tokens than <code>handle(() =&gt; ..., Approval, { approve(request, k) { return resume(k, true) } })</code>, and <code>return</code> keeps its meaning</td><td>9</td></tr>
 <tr><td>D146</td><td>Every export of <code>effect</code>&#39;s root is in scope; JavaScript&#39;s own globals win, host globals do not</td><td>Imports from <code>effect</code> were 5.9% of the docs&#39; tokens</td><td>1, 27</td></tr>
 <tr><td>D147</td><td><strong>Controversial.</strong> A call is passed by name where a parameter expects a program: <code>fork(fetchReport())</code></td><td>Thunks around single calls were 2.6% of the docs&#39; tokens</td><td>5, 13</td></tr>
 <tr><td>D148</td><td><strong>Controversial.</strong> <code>sync</code>, <code>try</code>, and <code>callback</code> are boundary hatches whose arguments are plain TypeScript</td><td>One visible escape hatch replaces five Effect constructors and their lambda rules</td><td>10, 28</td></tr>
