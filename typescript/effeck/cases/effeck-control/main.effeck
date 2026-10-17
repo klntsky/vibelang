@@ -2,7 +2,7 @@
 // compiles like a service whose key also registers one kernel operation per
 // abstract method, and performing it joins R until a handler answers it.
 import { Effect } from "effect"
-import { Control, handle, resume } from "@effeck/runtime"
+import { Control, handle, resume } from "effeck-runtime"
 
 abstract class Approval extends Control {
   abstract approve(request: string): Effect.Effect<boolean, never, never>

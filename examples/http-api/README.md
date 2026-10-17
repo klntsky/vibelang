@@ -15,7 +15,7 @@ curl -i localhost:3000/users -H 'content-type: application/json' -d '{"name":"Ad
 bun run test
 ```
 
-Vitest runs `src/main.test.effeck` through `@effeck/vite` without a prior
+Vitest runs `src/main.test.effeck` through `effeck-vite` without a prior
 build. Assertion stacks point to `.effeck` lines. The test routes requests through
 `HttpRouter.toHttpEffect`, without a socket.
 Importing `main.js` constructs layers; only `run.js` starts the server.

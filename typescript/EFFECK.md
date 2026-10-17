@@ -45,7 +45,7 @@ A case of any kind may also have `expected/diagnostics.txt`, which lists the dia
 
 A case with a file named `pending` is pending. The file's first word names the lane that owns the missing feature and the rest says what is missing, for example `F5 wire (D27)`. A pending case runs but never fails the suite. When it passes, the harness reports `XPASS`, and its owner deletes `pending` in the commit that makes it pass. The suite fails when a case that is not pending fails.
 
-Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_MODULES` (default `../experiments/node_modules`, else the main checkout's `~/effectscript/experiments/node_modules`), and `@effeck/runtime`, from `$EFFECK_RUNTIME` (default `../packages/runtime`). `smoke.sh` builds the runtime's `dist/` from source with the fork's `tsc`, so a commit that changes the compiler and the runtime is tested as one. It links `effect` into the runtime's own `node_modules` when that directory has none, so a case loads one copy of `effect`.
+Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_MODULES` (default `../experiments/node_modules`, else the main checkout's `~/effectscript/experiments/node_modules`), and `effeck-runtime`, from `$EFFECK_RUNTIME` (default `../packages/runtime`). `smoke.sh` builds the runtime's `dist/` from source with the fork's `tsc`, so a commit that changes the compiler and the runtime is tested as one. It links `effect` into the runtime's own `node_modules` when that directory has none, so a case loads one copy of `effect`.
 
 | Case | Proves |
 | --- | --- |
@@ -133,7 +133,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 
 ### Acceptance cases
 
-The prototype's 46 examples (`../prototype/esc/examples/`) are cases named after their files, such as `ch04-wire` and `ref2-cycle.fail`. Each keeps its `.effeck` source and `.ts` helpers as the prototype has them, except that kernel imports name `@effeck/runtime` and `@effeck/runtime/kernel`. They compile with `module: nodenext` and `rewriteRelativeImportExtensions`, as the app template does. Every compiler lane turns its cases green and never turns a green case red. Each case is pending on the lane that owns its feature; a case that mixes features belongs to the lane that owns its first missing feature, and its `pending` file names the other lanes it needs:
+The prototype's 46 examples (`../prototype/esc/examples/`) are cases named after their files, such as `ch04-wire` and `ref2-cycle.fail`. Each keeps its `.effeck` source and `.ts` helpers as the prototype has them, except that kernel imports name `effeck-runtime` and `effeck-runtime/kernel`. They compile with `module: nodenext` and `rewriteRelativeImportExtensions`, as the app template does. Every compiler lane turns its cases green and never turns a green case red. Each case is pending on the lane that owns its feature; a case that mixes features belongs to the lane that owns its first missing feature, and its `pending` file names the other lanes it needs:
 
 | Owner | Feature | Cases |
 | --- | --- | --- |
@@ -576,7 +576,7 @@ abstract class Users {                           class Users extends runtime.$se
 }
 ```
 
-A service with `static readonly default` extends `runtime.$reference(key, () => Flags.default)`, a `Context.Reference` (D40); its static side is `Context.Service<never, Flags>`, so using it adds nothing to R. A control operation extends `runtime.$service(key)` and then registers one kernel operation per abstract method, `runtime.$control(Approval, ["approve"])`; the runtime's `handle` provides an implementation whose methods perform those operations. Generated code imports `@effeck/runtime` as a namespace under a free name, as it imports `effect/Effect`.
+A service with `static readonly default` extends `runtime.$reference(key, () => Flags.default)`, a `Context.Reference` (D40); its static side is `Context.Service<never, Flags>`, so using it adds nothing to R. A control operation extends `runtime.$service(key)` and then registers one kernel operation per abstract method, `runtime.$control(Approval, ["approve"])`; the runtime's `handle` provides an implementation whose methods perform those operations. Generated code imports `effeck-runtime` as a namespace under a free name, as it imports `effect/Effect`.
 
 **Declaration files.** The declaration transform writes a service class as the abstract class it is in source, which TypeScript code could only extend. A declaration transformer hook (`services_declarations.go`) rewrites it to what the checker sees: the instance members move into an interface with the brand, a `Users_base` constant gets the runtime's key type, and the class extends it with only its static members:
 
@@ -585,7 +585,7 @@ export interface Users {
     find(id: string): Effect.Effect<User, UserNotFound, never>;
     readonly "~effeck/service"?: "app/users#Users";
 }
-declare const Users_base: import("@effeck/runtime").ServiceKey<Users>;
+declare const Users_base: import("effeck-runtime").ServiceKey<Users>;
 export declare abstract class Users extends Users_base {
     static readonly layer: Layer.Layer<Users, never, never>;
 }
@@ -679,7 +679,7 @@ function lookup(id: number) {                const lookup = Effect.fnUntraced(fu
                                              });
 ```
 
-`$catch` is the kernel's `catchExpected` and `$finally` is `Effect.onExit`, from `@effeck/runtime`, which the file imports as `* as runtime` under a free name. A `return`, `break`, or `continue` that leaves a region cannot jump out of its closure, so the closure returns a completion record: `{ kind: "return", value }`, `{ kind: "break", label }`, or `{ kind: "continue", label }`, with `""` as the label of an unlabeled jump, and the runtime's `$normal` when it reaches its end. The generator that runs the region dispatches each record that can arrive: it returns, breaks, or continues itself, or, when it is a region's closure too and the jump leaves it as well, returns the record to its own runner. A region that no jump leaves runs as `yield* …;` with no record. A closure whose block refers to `this` runs with the function's `this`. Control cannot leave a `finally` block (EK2006): in JavaScript a jump there replaces the block's exit and discards a failure in flight, and Effeck never drops a failure silently (D15). A `var` in a region belongs to the whole function, so the lowering declares it in the Effect function and assigns it where the source declared it.
+`$catch` is the kernel's `catchExpected` and `$finally` is `Effect.onExit`, from `effeck-runtime`, which the file imports as `* as runtime` under a free name. A `return`, `break`, or `continue` that leaves a region cannot jump out of its closure, so the closure returns a completion record: `{ kind: "return", value }`, `{ kind: "break", label }`, or `{ kind: "continue", label }`, with `""` as the label of an unlabeled jump, and the runtime's `$normal` when it reaches its end. The generator that runs the region dispatches each record that can arrive: it returns, breaks, or continues itself, or, when it is a region's closure too and the jump leaves it as well, returns the record to its own runner. A region that no jump leaves runs as `yield* …;` with no record. A closure whose block refers to `this` runs with the function's `this`. Control cannot leave a `finally` block (EK2006): in JavaScript a jump there replaces the block's exit and discards a failure in flight, and Effeck never drops a failure silently (D15). A `var` in a region belongs to the whole function, so the lowering declares it in the Effect function and assigns it where the source declared it.
 
 ### Regions in plain functions
 
@@ -707,7 +707,7 @@ function clamp(n: number) {                  function clamp(n) {
 | `regionStatements(r, block)` | Visits a block as the body of a closure of region `r` |
 | `regionFunction(r, role, binding, block, statements)` | Makes `Effect.fnUntraced(function* f$role(binding) { … })`, appending `return $normal` when a jump leaves `r` and the block can reach its end |
 | `runRegion(original, run, r)` | Emits `const completion = yield* run` and one dispatch per jump, or `yield* run;` when nothing leaves |
-| `runtimeMember`, `runtimeCall` | Reference `@effeck/runtime` helpers, importing the package on first use |
+| `runtimeMember`, `runtimeCall` | Reference `effeck-runtime` helpers, importing the package on first use |
 
 To add a region kind: create a `region`, emit each block with `regionStatements` and `regionFunction`, compose the closures with runtime helpers, and pass the result to `runRegion`. A consumer that handles some jumps itself, as a producer loop handles its own `break` and `continue`, filters `r.jumps` before dispatching.
 ## Contracts
@@ -915,17 +915,17 @@ for (const line of lines(path)) {      const completion = yield* runtime.$forOf(
 
 ## The prelude
 
-Every `.effeck` file sees these names without an import (D4, D48): `Effect`, `Schema`, `Layer`, `TaggedError`, `Control`, `Scope`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. They are the exports of `@effeck/runtime`, whose `prelude.ts` gives `Effect` and `Scope` two meanings each: the effect module, for `Effect.gen` and `Scope.make`, and a type, so `Effect<A, E, R>` means `Effect.Effect<A, E, R>` and `Scope` means `Scope.Scope`.
+Every `.effeck` file sees these names without an import (D4, D48): `Effect`, `Schema`, `Layer`, `TaggedError`, `Control`, `Scope`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. They are the exports of `effeck-runtime`, whose `prelude.ts` gives `Effect` and `Scope` two meanings each: the effect module, for `Effect.gen` and `Scope.make`, and a type, so `Effect<A, E, R>` means `Effect.Effect<A, E, R>` and `Scope` means `Scope.Scope`.
 
 | Step | How | Where |
 | --- | --- | --- |
-| Load the runtime | A `.effeck` file with an identifier that has a prelude name, and no top-level declaration or import of that name, resolves `@effeck/runtime` as an implicit import, as a file with `importHelpers` resolves `tslib`. A file that uses no prelude name compiles exactly as TypeScript would | `implicitRuntimeImport`, through `compiler.RegisterImplicitImportHook` |
+| Load the runtime | A `.effeck` file with an identifier that has a prelude name, and no top-level declaration or import of that name, resolves `effeck-runtime` as an implicit import, as a file with `importHelpers` resolves `tslib`. A file that uses no prelude name compiles exactly as TypeScript would | `implicitRuntimeImport`, through `compiler.RegisterImplicitImportHook` |
 | Resolve a name | When no scope declares a prelude name, the checker resolves it to the runtime's export before it searches the global scope. A local declaration or import therefore shadows it, and `.ts` files never see it | `resolvePreludeName`, through `checker.RegisterNameResolutionHook` |
-| Import it | The checker records each prelude name a file uses as a value outside a type. The lowering adds `import * as Effect from "effect/Effect"` for the effect modules (`Effect`, `Layer`, `Schema`, `Scope`) and one `import { TaggedError, pipe, … } from "@effeck/runtime"` for the rest | `preludeUses`, `preludeImports`, `lowering.visitSourceFile` |
+| Import it | The checker records each prelude name a file uses as a value outside a type. The lowering adds `import * as Effect from "effect/Effect"` for the effect modules (`Effect`, `Layer`, `Schema`, `Scope`) and one `import { TaggedError, pipe, … } from "effeck-runtime"` for the rest | `preludeUses`, `preludeImports`, `lowering.visitSourceFile` |
 
-A name used only in types, such as `Scope` in `Effect<void, never, Scope>`, is not imported. The emitted imports are ES module imports: `.effeck` files compile to ES modules. When `@effeck/runtime` is not installed, a prelude name is TypeScript's TS2304 (cannot find name).
+A name used only in types, such as `Scope` in `Effect<void, never, Scope>`, is not imported. The emitted imports are ES module imports: `.effeck` files compile to ES modules. When `effeck-runtime` is not installed, a prelude name is TypeScript's TS2304 (cannot find name).
 
-A declaration file is ordinary TypeScript, so the `.d.ts` of a `.effeck` file imports the prelude names its declarations write: `import type { Effect, Scope } from "@effeck/runtime"`. Declaration emit asks the entity name visibility hook whether each name it writes is visible; `preludeNameVisible` says yes for a prelude name and records it, and `transformDeclarations`, a declaration transformer hook, adds the import (`declarations.go`, case `effeck-prelude-dts`). A file that also binds the name itself, as an Effect user's `import { Effect } from "effect"` does, keeps that import in its declaration file, so the prelude's type is imported under a free name, `import type { Effect as Effect_1 } from "@effeck/runtime"`, and only the references the hook allowed are renamed (case `effeck-prelude-dts-shadow`, whose TypeScript consumer compiles with `skipLibCheck` off).
+A declaration file is ordinary TypeScript, so the `.d.ts` of a `.effeck` file imports the prelude names its declarations write: `import type { Effect, Scope } from "effeck-runtime"`. Declaration emit asks the entity name visibility hook whether each name it writes is visible; `preludeNameVisible` says yes for a prelude name and records it, and `transformDeclarations`, a declaration transformer hook, adds the import (`declarations.go`, case `effeck-prelude-dts`). A file that also binds the name itself, as an Effect user's `import { Effect } from "effect"` does, keeps that import in its declaration file, so the prelude's type is imported under a free name, `import type { Effect as Effect_1 } from "effeck-runtime"`, and only the references the hook allowed are renamed (case `effeck-prelude-dts-shadow`, whose TypeScript consumer compiles with `skipLibCheck` off).
 
 ## Imports between files
 
@@ -945,7 +945,7 @@ Case `effeck-imports` covers an `.effeck` file calling an `.effeck` Effect funct
 
 ## The runtime
 
-Generated JavaScript imports only `effect` and `@effeck/runtime` (D30): the prelude names it uses, `effect/Effect` for `Effect.fnUntraced` under a free name (`Effect`, else `Effect_1`, …), and the helpers as one namespace under a free name (`runtime`, else `runtime_1`, …), called as `runtime.$catch(…)`. The runtime's exports are the ABI between compiler and runtime, so a compiler change that needs a new helper adds it to `packages/runtime` in the same commit; `smoke.sh` builds the runtime from source and every case links it, so the commit is tested as one. Case `effeck-runtime-name` declares `runtime` and `Effect_1` itself and still runs.
+Generated JavaScript imports only `effect` and `effeck-runtime` (D30): the prelude names it uses, `effect/Effect` for `Effect.fnUntraced` under a free name (`Effect`, else `Effect_1`, …), and the helpers as one namespace under a free name (`runtime`, else `runtime_1`, …), called as `runtime.$catch(…)`. The runtime's exports are the ABI between compiler and runtime, so a compiler change that needs a new helper adds it to `packages/runtime` in the same commit; `smoke.sh` builds the runtime from source and every case links it, so the commit is tested as one. Case `effeck-runtime-name` declares `runtime` and `Effect_1` itself and still runs.
 
 ## Code that is not Effect
 
@@ -955,12 +955,12 @@ A call to a function that returns no `Effect` needs a trust level (D5, D22, D23)
 | --- | --- | --- |
 | An `.effeck` function, or a parameter of an `.effeck` function | Effeck's own | Allowed |
 | A declaration in TypeScript's lib files: `String`, `Array`, `Math`, `JSON`, `Map`, `RegExp`, `URL`, … | A built-in with a shipped contract (D5) | Allowed; the contract's exceptions join E |
-| An export of `effect`, `@effect/*`, or `@effeck/runtime`, and the functions and values those return | Trusted `sync` (D22); exceptions are defects | Allowed |
+| An export of `effect`, `@effect/*`, or `effeck-runtime`, and the functions and values those return | Trusted `sync` (D22); exceptions are defects | Allowed |
 | A declaration tagged `/** @effeck trusted */` | Trusted `sync` (D23); each `@throws {T}` joins E | Allowed |
 | A declaration in a platform package (`@types/node`, `bun-types`) | Platform | EK4402 reports the import or global instead |
 | Anything else | None | EK4401 |
 
-A package's name comes from the nearest `package.json` (`packageOf` in `origins.go`), so `@effeck/runtime` installed through a `file:` link, outside `node_modules`, is still recognized.
+A package's name comes from the nearest `package.json` (`packageOf` in `origins.go`), so `effeck-runtime` installed through a `file:` link, outside `node_modules`, is still recognized.
 
 An Effect package may re-export another package's functions: `@effect/vitest` re-exports vitest, so `assert` and `expect` are declared in vitest's files. A call whose callee a declaration file declares is still Effect's when the callee is reached through an import from an Effect package, or through a value that a trusted call to one returned (`reachedThroughEffect`): `assert.strictEqual(n, 1)` and `expect(n).toBe(1)` are trusted calls whose exceptions are defects, so a failed assertion fails the test. The program's own TypeScript keeps its rule even when an Effect function returned the value. For another package's function, EK4401's note suggests a tagged re-export from a `.ts` file (D23), because the package's own declaration cannot carry the tag.
 

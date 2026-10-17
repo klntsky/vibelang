@@ -89,7 +89,7 @@ Wrapping a callback-based API is boundary code. It belongs in TypeScript, using 
 ```ts ts
 // net-adapter.ts
 import { Effect } from "effect"
-import { suspend } from "@effeck/runtime"
+import { suspend } from "effeck-runtime"
 import * as net from "node:net"
 
 export const connect = (host: string, port: number) =>

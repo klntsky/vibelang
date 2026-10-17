@@ -2,8 +2,8 @@
 // without resuming, abandon, resumeWith, onReturn, a rejected second resume,
 // and a tail-resumptive clause that runs 100,000 times in constant stack.
 import { Data, Effect, Exit } from "effect"
-import { abandon, Control, handle, resume, resumeWith } from "@effeck/runtime"
-import { hooks } from "@effeck/runtime/kernel"
+import { abandon, Control, handle, resume, resumeWith } from "effeck-runtime"
+import { hooks } from "effeck-runtime/kernel"
 
 class Busy extends Data.TaggedError("Busy")<{ readonly request: string }> {}
 

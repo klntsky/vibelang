@@ -3,7 +3,7 @@
 // cannot reach the handler on this fiber (chapter 9). The calls in allowed()
 // stay on this fiber or handle the operation inside the branch.
 import { Data, Effect, Stream } from "effect"
-import { Control, handle, resume } from "@effeck/runtime"
+import { Control, handle, resume } from "effeck-runtime"
 
 class Busy extends Data.TaggedError("Busy")<{}> {}
 

@@ -12,7 +12,7 @@ bun run start
 bun run test
 ```
 
-Vitest runs `src/main.test.effeck` through `@effeck/vite` without a prior
+Vitest runs `src/main.test.effeck` through `effeck-vite` without a prior
 build. Assertion stacks point to `.effeck` lines. The tests use `it.effect` and
 `TestClock.adjust`; they never wait for live time.
 A Deferred checks that retries remain pending before their scheduled deadline.

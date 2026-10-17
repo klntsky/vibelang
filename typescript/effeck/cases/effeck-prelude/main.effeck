@@ -1,7 +1,7 @@
 // Every .effeck file sees the prelude without an import (D4, D48): Effect is the
 // effect module and the type Effect<A, E, R>, Scope the module and the type
 // Scope.Scope. The emitted JavaScript imports exactly the names the file uses
-// as values: effect modules from effect, the rest from @effeck/runtime.
+// as values: effect modules from effect, the rest from effeck-runtime.
 class NotFound extends TaggedError("NotFound")<{ readonly id: number }> {}
 
 const names = ["ada", "grace"]

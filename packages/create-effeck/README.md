@@ -12,7 +12,7 @@ npm create effeck@latest my-app
 ```
 
 The command copies a starter app into `my-app`, pins `effeck`,
-`@effeck/runtime`, and `@effeck/vite` to its own version, and installs
+`effeck-runtime`, and `effeck-vite` to its own version, and installs
 dependencies with the package manager that ran it. It refuses a directory that
 is not empty, and it never runs `git init`.
 

@@ -14,7 +14,7 @@ import (
 //	  }
 //	})
 //
-// handle, resume, resumeWith, and abandon are @effeck/runtime's
+// handle, resume, resumeWith, and abandon are effeck-runtime's
 // functions, and their TypeScript signatures type a handler: handle removes
 // the control from the program's R, and each clause, an object literal method
 // or lambda, compiles to an Effect function because the clauses parameter
@@ -27,7 +27,7 @@ import (
 // region, the region's cleanup must run after the resumed program, so resume
 // runs there as any call does (yield*).
 
-// runtimeExport returns the name of the @effeck/runtime export that
+// runtimeExport returns the name of the effeck-runtime export that
 // callee refers to, such as "handle" or "resume", or "" when callee refers to
 // anything else. An import, a renamed import, a namespace member such as
 // runtime.resume, and the prelude all resolve to the runtime's own

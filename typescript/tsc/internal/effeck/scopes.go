@@ -123,7 +123,7 @@ func (a *analyzer) forkOwner(call *ast.Node) *ast.Node {
 }
 
 // isPreludeFork reports whether call calls the runtime's fork: the prelude's,
-// or one imported from @effeck/runtime.
+// or one imported from effeck-runtime.
 func (a *analyzer) isPreludeFork(call *ast.Node) bool {
 	return isRuntimeExport(a.checker, ast.SkipParentheses(call.Expression()), "fork")
 }

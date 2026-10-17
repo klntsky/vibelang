@@ -3,7 +3,7 @@
 // Layer.provide, and is reported where the program's requirements must be
 // empty: here, at the runner (D27).
 import { Effect, Layer } from "effect"
-import { wire } from "@effeck/runtime"
+import { wire } from "effeck-runtime"
 
 abstract class Smtp {
   abstract deliver(to: string): Effect.Effect<void, never, never>

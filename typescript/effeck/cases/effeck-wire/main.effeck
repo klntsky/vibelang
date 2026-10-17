@@ -3,7 +3,7 @@
 // consumers first, which is the order the runtime's fold needs, so one
 // Database serves both Users and Orders, and Config reaches Database.
 import { Data, Effect, Layer } from "effect"
-import { wire } from "@effeck/runtime"
+import { wire } from "effeck-runtime"
 
 class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: string }> {}
 

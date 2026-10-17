@@ -29,7 +29,7 @@ type lowering struct {
 	transformers.Transformer
 	plan     *plan
 	effect   *ast.IdentifierNode // local name for effect's Effect module, imported on first use
-	runtime  *ast.IdentifierNode // local name for @effeck/runtime, imported on first use
+	runtime  *ast.IdentifierNode // local name for effeck-runtime, imported on first use
 	inEffect bool                // visiting code that runs inside a lowered generator
 	frame    *frame              // the generator being emitted while inEffect
 	plain    bool                // visiting the body of an .effeck function that compiles to plain JavaScript
@@ -133,7 +133,7 @@ func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 		imports = append(imports, tx.namespaceImport(tx.effect, "effect/Effect"))
 	}
 	if tx.runtime != nil {
-		imports = append(imports, tx.namespaceImport(tx.runtime, "@effeck/runtime"))
+		imports = append(imports, tx.namespaceImport(tx.runtime, "effeck-runtime"))
 	}
 	imports = append(imports, tx.namedImportDeclarations()...)
 	if len(imports) == 0 {
@@ -187,7 +187,7 @@ func (tx *lowering) visitThrowStatement(node *ast.Node) *ast.Node {
 }
 
 // runtimeMember returns `runtime.name`, where runtime is the local name
-// bound to @effeck/runtime.
+// bound to effeck-runtime.
 func (tx *lowering) runtimeMember(name string) *ast.Node {
 	if tx.runtime == nil {
 		tx.runtime = tx.Factory().NewUniqueNameEx("runtime", printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})

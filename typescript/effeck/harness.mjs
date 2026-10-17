@@ -32,7 +32,7 @@
 // reports XPASS, and its owner deletes the file in the commit that fixed it.
 //
 // Each case gets node_modules/effect from $EFFECT_NODE_MODULES and
-// node_modules/@effeck/runtime from $EFFECK_RUNTIME.
+// node_modules/effeck-runtime from $EFFECK_RUNTIME.
 import { spawn } from "node:child_process"
 import fs from "node:fs"
 import os from "node:os"
@@ -114,9 +114,9 @@ function linkNodeModules(dir) {
   const modules = path.join(dir, "node_modules")
   const stat = fs.lstatSync(modules, { throwIfNoEntry: false })
   if (stat && !stat.isDirectory()) fs.unlinkSync(modules) // an older smoke.sh linked the whole directory
-  fs.mkdirSync(path.join(modules, "@effeck"), { recursive: true })
+  fs.mkdirSync(modules, { recursive: true })
   link(path.join(effectModules, "effect"), path.join(modules, "effect"))
-  link(runtimeDir, path.join(modules, "@effeck", "runtime"))
+  link(runtimeDir, path.join(modules, "effeck-runtime"))
 }
 
 // readHeaders finds the expected codes and the expected result in a case's sources.

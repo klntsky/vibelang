@@ -11,11 +11,11 @@ import (
 // The prelude (design decisions D4 and D48) is the names every .effeck file sees
 // without an import: Effect, Schema, Layer, TaggedError, Control, Scope, pipe,
 // wire, fork, handle, resume, resumeWith, and abandon. They are the exports of
-// @effeck/runtime, which declares each with the right meanings: Effect
+// effeck-runtime, which declares each with the right meanings: Effect
 // is the namespace and the type Effect<A, E, R>, Scope the namespace and the
 // type Scope.Scope.
 //
-// The program resolves @effeck/runtime from every .effeck file as an
+// The program resolves effeck-runtime from every .effeck file as an
 // implicit import, and the checker resolves a prelude name that no scope
 // declares to the runtime's export, before it searches the global scope. So a
 // local declaration or import shadows a prelude name, and .ts files never see
@@ -24,7 +24,7 @@ import (
 
 // runtimeModule is the package that holds the prelude and the helpers that
 // generated code calls.
-const runtimeModule = "@effeck/runtime"
+const runtimeModule = "effeck-runtime"
 
 // preludeModules maps each prelude name to the module the emitted JavaScript
 // imports it from. A name from an effect module is imported as that module's
@@ -243,7 +243,7 @@ func preludeUses(c *checker.Checker, file *ast.SourceFile) []string {
 // file uses as values:
 //
 //	import * as Effect from "effect/Effect"
-//	import { TaggedError, pipe } from "@effeck/runtime"
+//	import { TaggedError, pipe } from "effeck-runtime"
 //
 // The checker resolved each use to the runtime's export, so the declarations
 // bind the names the emitted code already refers to. They are ES module

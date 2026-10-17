@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@effeck/vite",
+      "name": "effeck-vite",
       "devDependencies": {
         "@effect/vitest": "4.0.5",
         "effect": "4.0.5",

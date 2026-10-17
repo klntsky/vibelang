@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds effeck and @effeck/runtime, then runs the headless language
+# Builds effeck and effeck-runtime, then runs the headless language
 # server test, effeck/lsp-smoke.mjs, on effeck/lsp-fixture.
 #
 # Usage: effeck/lsp-smoke.sh
@@ -8,7 +8,7 @@
 #   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.5
 #                          (default: ../experiments/node_modules, else the main
 #                          checkout's ~/effectscript/experiments/node_modules)
-#   EFFECK_RUNTIME   the @effeck/runtime package directory
+#   EFFECK_RUNTIME   the effeck-runtime package directory
 #                          (default: ../packages/runtime, built here with effeck)
 set -eu
 
@@ -51,7 +51,7 @@ echo "build: effeck -p $runtime/tsconfig.json"
 "$effeck" -p "$runtime/tsconfig.json"
 
 [ -L "$fixture/node_modules" ] && rm "$fixture/node_modules" # an older lsp-smoke.sh linked the whole directory
-mkdir -p "$fixture/node_modules/@effeck"
+mkdir -p "$fixture/node_modules"
 ln -sfn "$effect_real" "$fixture/node_modules/effect"
-ln -sfn "$runtime" "$fixture/node_modules/@effeck/runtime"
+ln -sfn "$runtime" "$fixture/node_modules/effeck-runtime"
 exec node "$root/effeck/lsp-smoke.mjs" "$effeck"

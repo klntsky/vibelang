@@ -1,4 +1,4 @@
-import type { Effect, Scope } from "@effeck/runtime";
+import type { Effect, Scope } from "effeck-runtime";
 export { NotFound } from "./users.js";
 export declare const one: Effect<number>;
 export declare const scoped: Effect<void, never, Scope>;

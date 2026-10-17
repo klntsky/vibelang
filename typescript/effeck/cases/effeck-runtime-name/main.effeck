@@ -1,4 +1,4 @@
-// Generated code imports @effeck/runtime as a namespace under a free
+// Generated code imports effeck-runtime as a namespace under a free
 // name. This file declares runtime and Effect_1 itself, so the lowering
 // picks other names for its imports.
 class Missing extends TaggedError("Missing")<{ readonly key: string }> {}

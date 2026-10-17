@@ -29,8 +29,8 @@ cpSync(join(root, "templates/app"), destination, {
 })
 const packagePath = join(destination, "package.json")
 const pkg = JSON.parse(readFileSync(packagePath, "utf8"))
-pkg.dependencies["@effeck/runtime"] = `file:${join(root, "packages/runtime/effeck-runtime.tgz")}`
+pkg.dependencies["effeck-runtime"] = `file:${join(root, "packages/runtime/effeck-runtime.tgz")}`
 pkg.devDependencies["effeck"] = `file:${join(root, "packages/compiler")}`
-pkg.devDependencies["@effeck/vite"] = `file:${join(root, "packages/vite")}`
+pkg.devDependencies["effeck-vite"] = `file:${join(root, "packages/vite")}`
 writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n")
 console.log(`setup: installed template at ${destination}`)

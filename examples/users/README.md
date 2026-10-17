@@ -14,7 +14,7 @@ bun run test
 ```
 
 `src/main.test.effeck` uses `it.effect`; Vitest runs the source
-through `@effeck/vite`, with assertion stacks mapped to `.effeck` lines.
+through `effeck-vite`, with assertion stacks mapped to `.effeck` lines.
 Assertions sit inside `Effect.sync`, an explicit boundary for foreign code.
 The lookup in Effect TypeScript is:
 ```ts

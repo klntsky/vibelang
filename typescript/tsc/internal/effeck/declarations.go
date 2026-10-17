@@ -14,7 +14,7 @@ import (
 // what the source took from the prelude and name its imports by output:
 //
 //	// main.effeck                               // main.d.ts
-//	import { find } from "./users.effeck"        import type { Effect } from "@effeck/runtime";
+//	import { find } from "./users.effeck"        import type { Effect } from "effeck-runtime";
 //	export const one: Effect<number> = …     import { find } from "./users.js";
 //	                                         export declare const one: Effect<number>;
 //
@@ -80,7 +80,7 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 			renamer.NewTransformer(renamer.visit, resolver.EmitContext())
 			declarations = renamer.TransformSourceFile(declarations)
 		}
-		// import type { Effect, Scope } from "@effeck/runtime"
+		// import type { Effect, Scope } from "effeck-runtime"
 		f := resolver.EmitContext().Factory
 		specifiers := make([]*ast.Node, 0, len(names))
 		for _, name := range names {

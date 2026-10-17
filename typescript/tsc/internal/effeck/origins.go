@@ -49,10 +49,10 @@ func packageOf(c *checker.Checker, file *ast.SourceFile) string {
 }
 
 // isEffectPackage reports whether name is effect, an @effect/* package, or
-// @effeck/runtime, the packages whose exports Effeck trusts
+// effeck-runtime, the packages whose exports Effeck trusts
 // (D22).
 func isEffectPackage(name string) bool {
-	return name == "effect" || strings.HasPrefix(name, "@effect/") || name == "@effeck/runtime"
+	return name == "effect" || strings.HasPrefix(name, "@effect/") || name == "effeck-runtime"
 }
 
 // isLibFile reports whether file is one of TypeScript's lib files, which

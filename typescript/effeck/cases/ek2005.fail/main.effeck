@@ -3,7 +3,7 @@
 // may fail only with the operation's declared errors (D17). Two programs break
 // those rules; the clause in allowed() keeps them.
 import { Data, Effect } from "effect"
-import { Control, handle, resumeWith } from "@effeck/runtime"
+import { Control, handle, resumeWith } from "effeck-runtime"
 
 class Busy extends Data.TaggedError("Busy")<{}> {}
 class Other extends Data.TaggedError("Other")<{}> {}

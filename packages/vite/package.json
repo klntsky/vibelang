@@ -1,5 +1,5 @@
 {
-  "name": "@effeck/vite",
+  "name": "effeck-vite",
   "version": "0.0.1",
   "description": "Compile Effeck source modules with effeck in Vite and Vitest",
   "keywords": [

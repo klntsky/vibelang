@@ -12,12 +12,12 @@
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "@effeck/runtime": "file:../../packages/runtime/effeck-runtime.tgz"
+    "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz"
   },
   "devDependencies": {
     "effeck": "file:../../packages/compiler",
     "vitest": "5.0.5",
     "@effect/vitest": "4.0.5",
-    "@effeck/vite": "file:../../packages/vite"
+    "effeck-vite": "file:../../packages/vite"
   }
 }

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds tsc and @effeck/runtime, then compiles and runs every case under
+# Builds tsc and effeck-runtime, then compiles and runs every case under
 # effeck/cases with effeck/harness.mjs, which describes the cases.
 #
 # Usage: effeck/smoke.sh [--status] [--verbose] [--jobs N] [case...]
@@ -11,7 +11,7 @@
 #   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.5
 #                          (default: ../experiments/node_modules, else the main
 #                          checkout's ~/effectscript/experiments/node_modules)
-#   EFFECK_RUNTIME   the @effeck/runtime package directory
+#   EFFECK_RUNTIME   the effeck-runtime package directory
 #                          (default: ../packages/runtime, built here with tsc)
 #
 # The suite fails when a case that is not pending fails.

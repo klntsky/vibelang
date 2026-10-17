@@ -26,9 +26,9 @@ test("copies the starter app and pins the Effeck packages to its own version", (
     assert.ok(!existsSync(join(app, ".git")))
     const manifest = JSON.parse(readFileSync(join(app, "package.json"), "utf8"))
     assert.equal(manifest.name, "my-app")
-    assert.equal(manifest.dependencies["@effeck/runtime"], version)
+    assert.equal(manifest.dependencies["effeck-runtime"], version)
     assert.equal(manifest.devDependencies.effeck, version)
-    assert.equal(manifest.devDependencies["@effeck/vite"], version)
+    assert.equal(manifest.devDependencies["effeck-vite"], version)
     assert.match(result.stdout, /npm install/)
     assert.match(result.stdout, /node_modules\/effeck\/editor\/effeck\.vsix/)
   } finally {

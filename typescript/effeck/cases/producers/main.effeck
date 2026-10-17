@@ -4,7 +4,7 @@
 // to Stream.take, for...of over a Stream, and 100,000 elements in constant
 // stack.
 import { Data, Stream } from "effect"
-import { hooks } from "@effeck/runtime/kernel"
+import { hooks } from "effeck-runtime/kernel"
 
 class Missing extends Data.TaggedError("Missing")<{ readonly key: string }> {}
 

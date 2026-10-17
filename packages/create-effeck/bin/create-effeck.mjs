@@ -49,9 +49,9 @@ for (const name of ["gitignore", "gitattributes"]) {
 const manifestPath = join(directory, "package.json")
 const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
 manifest.name = packageName(basename(directory))
-manifest.dependencies["@effeck/runtime"] = own.version
+manifest.dependencies["effeck-runtime"] = own.version
 manifest.devDependencies["effeck"] = own.version
-manifest.devDependencies["@effeck/vite"] = own.version
+manifest.devDependencies["effeck-vite"] = own.version
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n")
 
 const manager = packageManager()

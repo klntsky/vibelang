@@ -5,7 +5,7 @@
 // encloses is Effect.forkScoped, and Effect's own fork combinators keep
 // their meaning.
 import { Data, Effect, Fiber } from "effect"
-import { fork } from "@effeck/runtime"
+import { fork } from "effeck-runtime"
 
 class Boom extends Data.TaggedError("Boom")<{}> {}
 

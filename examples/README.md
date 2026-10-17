@@ -15,15 +15,15 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 
 Set up the repository's local compiler and runtime first using the repository
 setup instructions. The manifests install `effeck` from
-`../../packages/compiler` and `@effeck/runtime` from the tarball that setup
+`../../packages/compiler` and `effeck-runtime` from the tarball that setup
 packs, `../../packages/runtime/effeck-runtime.tgz`, so the runtime and the
 example load one copy of `effect`. Run repository setup before installing the
-examples, and after rerunning it, run `bun update @effeck/runtime` in an
+examples, and after rerunning it, run `bun update effeck-runtime` in an
 example you installed before.
 Then, in an example directory, run `bun install`,
 `bun run build`, and `bun run start`. The users, http-api, and resilience
 projects also have `bun run test`; Vitest compiles their `.effeck` sources
-through `@effeck/vite`, with source maps for assertion stacks.
+through `effeck-vite`, with source maps for assertion stacks.
 Run file-tree from its own directory to find the bundled fixtures.
 
 From the repository root, `scripts/check-examples.sh` compiles every project

@@ -23,7 +23,7 @@ import (
 //	    find(id: string): Effect.Effect<User, UserNotFound, never>;
 //	    readonly "~effeck/service"?: "app/users#Users";
 //	}
-//	declare const Users_base: import("@effeck/runtime").ServiceKey<Users>;
+//	declare const Users_base: import("effeck-runtime").ServiceKey<Users>;
 //	export declare abstract class Users extends Users_base {
 //	    static readonly layer: Layer.Layer<Users, never, never>;
 //	}
@@ -113,7 +113,7 @@ func serviceDeclaration(ec *printer.EmitContext, declared, class *ast.Node, key 
 		keyType = "ReferenceKey"
 	}
 	base := name + "_base"
-	baseType := f.NewImportTypeNode(false /*isTypeOf*/, f.NewLiteralTypeNode(f.NewStringLiteral("@effeck/runtime", ast.TokenFlagsNone)), nil /*attributes*/, f.NewIdentifier(keyType), f.NewNodeList([]*ast.Node{f.NewTypeReferenceNode(f.NewIdentifier(name), nil /*typeArguments*/)}))
+	baseType := f.NewImportTypeNode(false /*isTypeOf*/, f.NewLiteralTypeNode(f.NewStringLiteral("effeck-runtime", ast.TokenFlagsNone)), nil /*attributes*/, f.NewIdentifier(keyType), f.NewNodeList([]*ast.Node{f.NewTypeReferenceNode(f.NewIdentifier(name), nil /*typeArguments*/)}))
 	baseDeclaration := f.NewVariableStatement(
 		f.NewModifierList([]*ast.Node{f.NewModifier(ast.KindDeclareKeyword)}),
 		f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{f.NewVariableDeclaration(f.NewIdentifier(base), nil /*exclamationToken*/, baseType, nil /*initializer*/)}), ast.NodeFlagsConst),

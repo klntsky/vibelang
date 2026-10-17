@@ -12,7 +12,7 @@
 #   EFFECT_NODE_MODULES    a node_modules directory that holds effect 4.0.5
 #                          (default: ../../experiments/node_modules, else
 #                          ~/effectscript/experiments/node_modules)
-#   EFFECK_RUNTIME   the built @effeck/runtime package directory
+#   EFFECK_RUNTIME   the built effeck-runtime package directory
 #                          (default: ../../packages/runtime)
 set -eu
 
@@ -29,9 +29,9 @@ trap 'rm -rf "$scratch"' EXIT
 project="$scratch/project"
 cp -R "$repo/typescript/effeck/lsp-fixture" "$project"
 rm -rf "$project/node_modules"
-mkdir -p "$project/node_modules/.bin" "$project/node_modules/@effeck"
+mkdir -p "$project/node_modules/.bin"
 ln -s "$(cd "$effect_modules/effect" && pwd -P)" "$project/node_modules/effect"
-ln -s "$(cd "$runtime" && pwd -P)" "$project/node_modules/@effeck/runtime"
+ln -s "$(cd "$runtime" && pwd -P)" "$project/node_modules/effeck-runtime"
 # node_modules/.bin/effeck is effeck's Node launcher, as bun
 # install leaves it, and the launcher runs native/effeck next to it.
 compiler="$project/node_modules/effeck"

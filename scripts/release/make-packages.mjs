@@ -39,7 +39,7 @@ const version = /const Version = "([^"]+)"/.exec(identity)?.[1]
 const problems = []
 const expect = (ok, message) => { if (!ok) problems.push(message) }
 expect(version, "identity.go: no Version constant")
-for (const [name, pkg] of [["effeck", compiler], ["@effeck/runtime", runtime], ["@effeck/vite", vite], ["create-effeck", create]]) {
+for (const [name, pkg] of [["effeck", compiler], ["effeck-runtime", runtime], ["effeck-vite", vite], ["create-effeck", create]]) {
   expect(pkg.name === name, `${name}: package.json names ${pkg.name}`)
   expect(pkg.version === version, `${name}: version ${pkg.version}, but the compiler is ${version}`)
 }
@@ -47,7 +47,7 @@ const optional = compiler.optionalDependencies ?? {}
 expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.keys(platforms).map((p) => `@effeck/${p}`).sort()),
   `effeck: optionalDependencies must list exactly ${Object.keys(platforms).join(", ")}`)
 for (const [name, pin] of Object.entries(optional)) expect(pin === version, `effeck: ${name} pinned to ${pin}, expected ${version}`)
-expect(vite.peerDependencies?.effeck === version, `@effeck/vite: peer effeck ${vite.peerDependencies?.effeck}, expected ${version}`)
+expect(vite.peerDependencies?.effeck === version, `effeck-vite: peer effeck ${vite.peerDependencies?.effeck}, expected ${version}`)
 const effect = runtime.peerDependencies?.effect
 expect(template.dependencies?.effect === effect, `template: effect ${template.dependencies?.effect}, but the runtime requires ${effect}`)
 expect(template.dependencies?.["@effect/platform-node"] === effect, `template: @effect/platform-node must match effect ${effect}`)
@@ -137,13 +137,13 @@ copyFileSync(vsix, join(effeckDir, "editor", "effeck.vsix"))
 order.push({ name: "effeck", dir: effeckDir, required: ["bin/effeck", "editor/effeck.vsix", "LICENSE", "NOTICE"], forbidden: /^native\// })
 
 order.push({
-  name: "@effeck/runtime",
-  dir: stage("@effeck/runtime", [["packages/runtime/dist", "dist"], ["packages/runtime/README.md"], ["packages/runtime/package.json"]], { LICENSE: mit }),
+  name: "effeck-runtime",
+  dir: stage("effeck-runtime", [["packages/runtime/dist", "dist"], ["packages/runtime/README.md"], ["packages/runtime/package.json"]], { LICENSE: mit }),
   required: ["dist/index.js", "dist/index.d.ts", "dist/kernel/kernel.js", "LICENSE"]
 })
 order.push({
-  name: "@effeck/vite",
-  dir: stage("@effeck/vite", [["packages/vite/src", "src"], ["packages/vite/README.md"], ["packages/vite/package.json"]], { LICENSE: mit }),
+  name: "effeck-vite",
+  dir: stage("effeck-vite", [["packages/vite/src", "src"], ["packages/vite/README.md"], ["packages/vite/package.json"]], { LICENSE: mit }),
   required: ["src/index.js", "src/index.d.ts", "LICENSE"]
 })
 
@@ -155,9 +155,9 @@ cpSync(join(root, "templates/app"), join(createDir, "template"), {
 // npm drops .gitignore from packages; create-effeck restores the dot.
 for (const name of [".gitignore", ".gitattributes"]) renameSync(join(createDir, "template", name), join(createDir, "template", name.slice(1)))
 const appManifest = JSON.parse(readFileSync(join(createDir, "template/package.json"), "utf8"))
-appManifest.dependencies["@effeck/runtime"] = version
+appManifest.dependencies["effeck-runtime"] = version
 appManifest.devDependencies.effeck = version
-appManifest.devDependencies["@effeck/vite"] = version
+appManifest.devDependencies["effeck-vite"] = version
 writeFileSync(join(createDir, "template/package.json"), JSON.stringify(appManifest, null, 2) + "\n")
 order.push({
   name: "create-effeck",

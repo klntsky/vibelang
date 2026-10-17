@@ -3,7 +3,7 @@
 // program, keeps its errors and requirements through wire (D27): the
 // contract of launch must name Offline, and the runner reports Mailer.
 import { Effect, Layer } from "effect"
-import { wire } from "@effeck/runtime"
+import { wire } from "effeck-runtime"
 
 abstract class Mailer {
   abstract send(to: string): Effect.Effect<void, never, never>

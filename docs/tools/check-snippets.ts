@@ -125,17 +125,17 @@ async function main() {
   const pages: { page: string; blocks: Result[] }[] = []
   try {
     const modules = join(temp, "node_modules")
-    mkdirSync(join(modules, "@effeck"), { recursive: true })
+    mkdirSync(modules, { recursive: true })
     const dependencies = [join(repo, "experiments/node_modules"), join(repo, "docs/tools/node_modules")]
     for (const source of dependencies) {
       if (!existsSync(source)) continue
       for (const name of readdirSync(source).filter(n => !n.startsWith("."))) {
-        if (name === "@effeck") continue
+        if (name === "effeck-runtime" || name === "effeck-vite") continue
         const target = join(modules, name)
         if (!existsSync(target)) symlinkSync(join(source, name), target)
       }
     }
-    for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, "@effeck", name))
+    for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, `effeck-${name}`))
     if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(repo, "packages/runtime/dist/index.d.ts"))) {
       throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
     }

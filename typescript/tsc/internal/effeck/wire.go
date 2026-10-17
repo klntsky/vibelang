@@ -50,7 +50,7 @@ func isWireCall(c *checker.Checker, call *ast.Node) bool {
 }
 
 // isRuntimeExport reports whether expr, an identifier, names the export name
-// of @effeck/runtime, through an import or the prelude.
+// of effeck-runtime, through an import or the prelude.
 func isRuntimeExport(c *checker.Checker, expr *ast.Node, name string) bool {
 	if !ast.IsIdentifier(expr) || expr.Text() != name {
 		return false
@@ -62,7 +62,7 @@ func isRuntimeExport(c *checker.Checker, expr *ast.Node, name string) bool {
 	if symbol == nil || symbol.ValueDeclaration() == nil {
 		return false
 	}
-	return packageNameOf(c, ast.GetSourceFileOfNode(symbol.ValueDeclaration())) == "@effeck/runtime"
+	return packageNameOf(c, ast.GetSourceFileOfNode(symbol.ValueDeclaration())) == "effeck-runtime"
 }
 
 // packageNameOf returns the name in the package.json nearest to file.

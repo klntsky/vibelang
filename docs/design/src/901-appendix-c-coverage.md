@@ -17,7 +17,7 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an Effeck function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
-| Installation | Changed | `effect@4.0.5`, `@effeck/runtime`, and `effeck` (Chapter 28) |
+| Installation | Changed | `effect@4.0.5`, `effeck-runtime`, and `effeck` (Chapter 28) |
 | Importing Effect | Changed | The prelude needs no import (`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, and the built-ins); other modules come from `effect` |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |

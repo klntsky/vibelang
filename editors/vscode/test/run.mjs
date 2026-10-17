@@ -11,7 +11,7 @@
 //   EFFECT_NODE_MODULES  a node_modules directory that holds effect 4.0.5
 //                        (default: ../../experiments/node_modules, else
 //                        ~/effectscript/experiments/node_modules)
-//   EFFECK_RUNTIME the built @effeck/runtime package directory
+//   EFFECK_RUNTIME the built effeck-runtime package directory
 //                        (default: ../../packages/runtime)
 //   VSCODE_EXECUTABLE    an installed VS Code to test with, such as
 //                        "/Applications/Visual Studio Code.app/Contents/MacOS/Electron";
@@ -63,10 +63,9 @@ const userDataDir = path.join(scratch, "user-data")
 cpSync(fixture, project, { recursive: true, filter: (file) => path.basename(file) !== "node_modules" })
 mkdirSync(path.join(project, "node_modules", ".bin"), { recursive: true })
 for (const name of readdirSync(effectModules)) {
-  if (name !== ".bin" && name !== "@effeck") symlinkSync(path.join(effectModules, name), path.join(project, "node_modules", name))
+  if (name !== ".bin" && name !== "effeck-runtime") symlinkSync(path.join(effectModules, name), path.join(project, "node_modules", name))
 }
-mkdirSync(path.join(project, "node_modules", "@effeck"), { recursive: true })
-symlinkSync(runtime, path.join(project, "node_modules", "@effeck", "runtime"))
+symlinkSync(runtime, path.join(project, "node_modules", "effeck-runtime"))
 // node_modules/.bin/effeck is effeck's Node launcher, as bun
 // install leaves it, and the launcher runs native/effeck next to it.
 const compiler = path.join(project, "node_modules", "effeck")

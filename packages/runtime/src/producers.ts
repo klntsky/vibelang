@@ -27,7 +27,7 @@ type ElementOf<R> = R extends YieldOf<infer T> ? T : never
 /** `yield value` in a producer. */
 export const $yield = <T>(value: T): Effect.Effect<void, never, YieldOf<T>> => YieldOp(value) as any
 
-const producerBody: unique symbol = Symbol.for("@effeck/runtime/producer") as any
+const producerBody: unique symbol = Symbol.for("effeck-runtime/producer") as any
 
 /** A producer: a Stream that also carries its body for internal iteration. */
 export type Producer<T, E = never, R = never> = Stream.Stream<T, E, R>

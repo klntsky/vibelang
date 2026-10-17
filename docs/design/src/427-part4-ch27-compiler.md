@@ -3,7 +3,7 @@
 ### 27. Compiler architecture
 
 ```ts dts
-import type { Effect } from "@effeck/runtime"
+import type { Effect } from "effeck-runtime"
 export declare function double(n: number): Effect<number, never, never>
 ```
 
@@ -54,7 +54,7 @@ history, rather than a separately applied patch series.
 ```
 
 The parser keeps TypeScript's grammar. The checker resolves prelude names as
-implicit imports from `@effeck/runtime`, unless a local declaration or
+implicit imports from `effeck-runtime`, unless a local declaration or
 import shadows them (D4, D48). Class hooks give fully abstract service classes
 the static side of an Effect Context key and the instance shape of their
 abstract members (D1, D45).
@@ -93,7 +93,7 @@ not duplicate source text per lambda form.
 
 #### Runtime boundary
 
-Generated JavaScript imports only `effect` and `@effeck/runtime` (D30).
+Generated JavaScript imports only `effect` and `effeck-runtime` (D30).
 The runtime contains the continuation kernel and the helpers the compiler
 emits. It runs on Effect's fiber, Context, and Scope; it adds no scheduler.
 The package checks `effect@4.0.5` at load time and rejects other versions.
@@ -124,7 +124,7 @@ export interface Users {
   find(id: string): Effect.Effect<User, UserNotFound, never>
   readonly "~effeck/service"?: "@acme/app/src/users#Users"
 }
-declare const Users_base: import("@effeck/runtime").ServiceKey<Users>
+declare const Users_base: import("effeck-runtime").ServiceKey<Users>
 export declare abstract class Users extends Users_base {}
 ```
 

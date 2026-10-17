@@ -29,7 +29,7 @@ type trustKind uint8
 const (
 	trustUnknown  trustKind = iota // no declaration to judge, as for a callee of type any
 	trustES                        // Effeck code, or a parameter of an .effeck function
-	trustEffect                    // an export of effect, @effect/*, or @effeck/runtime (D22)
+	trustEffect                    // an export of effect, @effect/*, or effeck-runtime (D22)
 	trustBuiltin                   // a JavaScript built-in that TypeScript's lib files declare (D5)
 	trustTagged                    // a declaration tagged @effeck trusted (D23)
 	trustPlatform                  // a platform package such as @types/node, which EK4402 reports

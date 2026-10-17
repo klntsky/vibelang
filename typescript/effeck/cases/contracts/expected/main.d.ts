@@ -1,4 +1,4 @@
-import type { Effect } from "@effeck/runtime";
+import type { Effect } from "effeck-runtime";
 declare const UserNotFound_base: new <A extends Record<string, any> = {}>(args: import("effect/Types", { with: { "resolution-mode": "import" } }).VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }>) => import("effect/Cause", { with: { "resolution-mode": "import" } }).YieldableError & {
     readonly _tag: "UserNotFound";
 } & Readonly<A>;

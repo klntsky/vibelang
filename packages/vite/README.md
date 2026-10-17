@@ -1,4 +1,4 @@
-# @effeck/vite
+# effeck-vite
 
 > **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
@@ -22,7 +22,7 @@ bun add -d vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 Keep the checkout available. After updating it, rerun setup, then run
-`bun update @effeck/vite` in each project. No package is published to npm. The plugin supports Vite 7 and 8 on Node 22+;
+`bun update effeck-vite` in each project. No package is published to npm. The plugin supports Vite 7 and 8 on Node 22+;
 the acceptance tests use Vite 8 and Vitest 5.
 
 ## Configure Vite
@@ -30,7 +30,7 @@ the acceptance tests use Vite 8 and Vitest 5.
 ```ts
 // vite.config.ts
 import { defineConfig } from "vite"
-import effeck from "@effeck/vite"
+import effeck from "effeck-vite"
 
 export default defineConfig({ plugins: [effeck()] })
 ```
@@ -45,7 +45,7 @@ Import local sources with `./welcome.effeck`. Imports rewritten by `effeck` to
 ```ts
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
-import effeck from "@effeck/vite"
+import effeck from "effeck-vite"
 
 export default defineConfig({
   plugins: [effeck()],
