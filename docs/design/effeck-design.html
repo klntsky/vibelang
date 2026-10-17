@@ -482,6 +482,14 @@ error <span class="t">MailError</span> {
                           ^^^^^^^^^^^^^^^^^ its exceptions are defects
   Use a form that can fail:   return users.find(isAdmin) ?? guest
   or bound the call:          try(…, (cause) =&gt; new NoAdmin({ cause }))</code></pre></figure>
+<h4 id="failing-in-an-expression"><a class="anchor" href="#failing-in-an-expression">Failing in an expression</a></h4>
+<p><code>throw</code> also works in expression position (D186), as the TC39 <a href="https://github.com/tc39/proposal-throw-expressions">throw expressions</a> proposal writes it. It fails exactly as the statement does and has type <code>never</code>:</p>
+<figure class="code side-none"><pre class="code" data-lang="ts"><code>error <span class="t">NoAdmin</span>
+
+<span class="k">function</span> <span class="f">admin</span>(users: <span class="t">ReadonlyArray</span>&lt;{ admin: <span class="l">boolean</span>; name: <span class="l">string</span> }&gt;) {
+  <span class="k">return</span> users.<span class="f">find</span>((user) =&gt; user.admin)?.name ?? <span class="k">throw</span> <span class="k">new</span> <span class="t">NoAdmin</span>()
+}
+<span class="c">// string!NoAdmin!</span></code></pre></figure>
 <h3 id="4-dependency-injection-the-r-channel"><a class="anchor" href="#4-dependency-injection-the-r-channel">4. Dependency injection: the R channel</a></h3>
 <p>Dependency injection is Effect&#39;s: services are <code>Context</code> keys, implementations are <code>Layer</code>s, and <code>Effect.provide</code> supplies them. Effeck removes the ceremony and adds compile-time checks of the dependency graph.</p>
 <h4 id="declaring-a-service"><a class="anchor" href="#declaring-a-service">Declaring a service</a></h4>
@@ -1706,6 +1714,21 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <p>Tests in <code>.effeck</code> use <code>it.effect</code>. A test that must <code>await</code> a Promise stays in a <code>.ts</code> file.</p>
 <h4 id="evaluation-order"><a class="anchor" href="#evaluation-order">Evaluation order</a></h4>
 <p>Evaluation order is JavaScript&#39;s, and generated code keeps it. Arguments are evaluated left to right, each once. A receiver is evaluated once and keeps its <code>this</code>. <code>a() &amp;&amp; b()</code> runs <code>b</code> only if <code>a()</code> is truthy. A getter runs once per access. In <code>double(w) * double(h) * Settings.scale()</code>, both <code>double</code> calls run before the service call, even though only the service call can pause (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>).</p>
+<h4 id="blocks-as-values"><a class="anchor" href="#blocks-as-values">Blocks as values</a></h4>
+<p>A <code>do { }</code> expression (D187, the TC39 <a href="https://github.com/tc39/proposal-do-expressions">do expressions</a> proposal) has the value of its last statement. It runs where it stands, and a parameter that expects a program takes it by name, like a call (D147):</p>
+<figure class="code side-none"><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">cached</span>(): <span class="l">string</span>!! {
+  <span class="f">sleep</span>(<span class="s">"1 millis"</span>)
+  <span class="k">return</span> <span class="s">"cached"</span>
+}
+
+<span class="k">function</span> <span class="f">fetched</span>(): <span class="l">string</span>!! {
+  <span class="f">sleep</span>(<span class="s">"1 second"</span>)
+  <span class="k">return</span> <span class="s">"fetched"</span>
+}
+
+<span class="k">function</span> <span class="f">first</span>() {
+  <span class="k">return</span> <span class="f">race</span>(<span class="k">do</span> { <span class="k">const</span> value = <span class="f">cached</span>(); value.<span class="f">toUpperCase</span>() }, <span class="f">fetched</span>())
+}</code></pre></figure>
 <h3 id="14-contracts-and-inference"><a class="anchor" href="#14-contracts-and-inference">14. Contracts and inference</a></h3>
 <h4 id="what-the-compiler-infers"><a class="anchor" href="#what-the-compiler-infers">What the compiler infers</a></h4>
 <p>An unannotated function or a function with an Effect return annotation gets a contract <code>Effect&lt;A, E, R&gt;</code>. An eligible function with a plain return annotation keeps its plain type (D67, <a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>):</p>
@@ -3101,7 +3124,9 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D172</td><td><code>provide AppLive { ... }</code> replaces <code>with AppLive { ... }</code>; <code>with</code> still compiles with the warning EK1009 and a quick fix</td><td>Effeck keywords reuse Effect&#39;s own names, so <code>provide</code> reads as <code>Effect.provide</code></td><td>4</td></tr>
 <tr><td>D173</td><td><code>provide Key = value</code> provides one service; providers separated by commas mix layers and services; <code>provide(...) { }</code> means the same</td><td><code>Effect.provideService</code> without a layer, in the same block form</td><td>4</td></tr>
 <tr><td>D174</td><td>In a provider, an effect module stands for its key of the same name: <code>Clock</code> for <code>Clock.Clock</code></td><td><code>provide Clock = testClock</code> and <code>provide Scheduler = fifo</code> swap runtime services</td><td>4, 28</td></tr>
-<tr><td>D175</td><td>The analyzer reads an array of providers element by element</td><td>A layer that provides nothing would otherwise hide the others&#39; services</td><td>4</td></tr></tbody></table></div>
+<tr><td>D175</td><td>The analyzer reads an array of providers element by element</td><td>A layer that provides nothing would otherwise hide the others&#39; services</td><td>4</td></tr>
+<tr><td>D186</td><td><code>throw</code> is also an expression: <code>x ?? throw new NotFound({ id })</code></td><td>TC39 throw expressions (stage 2); fails as the throw statement does</td><td>3</td></tr>
+<tr><td>D187</td><td><code>do { }</code> is an expression whose value is its last statement&#39;s</td><td>TC39 do expressions (stage 1); a racer or an arm gets several statements</td><td>13</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>

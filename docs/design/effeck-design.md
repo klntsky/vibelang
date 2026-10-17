@@ -523,6 +523,19 @@ warning EK2004: this catch can never run: nothing in its try block fails with an
   or bound the call:          try(…, (cause) => new NoAdmin({ cause }))
 ```
 
+#### Failing in an expression
+
+`throw` also works in expression position (D186), as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it. It fails exactly as the statement does and has type `never`:
+
+```ts
+error NoAdmin
+
+function admin(users: ReadonlyArray<{ admin: boolean; name: string }>) {
+  return users.find((user) => user.admin)?.name ?? throw new NoAdmin()
+}
+// string!NoAdmin!
+```
+
 ### 4. Dependency injection: the R channel
 
 Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. Effeck removes the ceremony and adds compile-time checks of the dependency graph.
@@ -2457,6 +2470,26 @@ Tests in `.effeck` use `it.effect`. A test that must `await` a Promise stays in 
 
 Evaluation order is JavaScript's, and generated code keeps it. Arguments are evaluated left to right, each once. A receiver is evaluated once and keeps its `this`. `a() && b()` runs `b` only if `a()` is truthy. A getter runs once per access. In `double(w) * double(h) * Settings.scale()`, both `double` calls run before the service call, even though only the service call can pause (Chapter 15).
 
+#### Blocks as values
+
+A `do { }` expression (D187, the TC39 [do expressions](https://github.com/tc39/proposal-do-expressions) proposal) has the value of its last statement. It runs where it stands, and a parameter that expects a program takes it by name, like a call (D147):
+
+```ts
+function cached(): string!! {
+  sleep("1 millis")
+  return "cached"
+}
+
+function fetched(): string!! {
+  sleep("1 second")
+  return "fetched"
+}
+
+function first() {
+  return race(do { const value = cached(); value.toUpperCase() }, fetched())
+}
+```
+
 ### 14. Contracts and inference
 
 #### What the compiler infers
@@ -4352,6 +4385,8 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
 | D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
+| D186 | `throw` is also an expression: `x ?? throw new NotFound({ id })` | TC39 throw expressions (stage 2); fails as the throw statement does | 3 |
+| D187 | `do { }` is an expression whose value is its last statement's | TC39 do expressions (stage 1); a racer or an arm gets several statements | 13 |
 
 #### Rules of the runtime and compiler
 
