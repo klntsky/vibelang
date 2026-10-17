@@ -50,7 +50,7 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | `yield* effect` | just call it: `f(x)` | [2](#2-functions-and-calls) |
 | `Effect.map`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap` | plain statements: `const x = f(); g(x)` | [2](#2-functions-and-calls) |
 | `Effect.fail(e)` or `return yield* new E()` | `throw new E()` | [3](#3-errors-the-e-channel) |
-| `Data.TaggedError("E")` | `TaggedError("E")`, in scope without an import | [3](#3-errors-the-e-channel) |
+| `class E extends Data.TaggedError("E")<{ ... }> {}` | `error E { ... }` | [3](#3-errors-the-e-channel) |
 | `Effect.catchTag("E", h)` | `try { … } catch (e) { … }` | [3](#3-errors-the-e-channel) |
 | `Effect.ensuring(cleanup)` | `finally { … }` | [3](#3-errors-the-e-channel) |
 | `class S extends Context.Service<…>()("key") {}` | `abstract class S { abstract method(): Effect<…> }` | [4](#4-dependency-injection-the-r-channel) |

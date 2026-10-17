@@ -7,7 +7,7 @@ Matching turns an outcome into one value or selects the next computation. Use ty
 ## Folding success and failure into values
 
 ```ts
-class InvalidCount extends TaggedError("InvalidCount")<{}> {}
+error InvalidCount
 
 function itemCount(raw: number) {
   if (raw < 0) throw new InvalidCount()

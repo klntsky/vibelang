@@ -317,6 +317,12 @@ These entries record the build lanes' defaults. Lane U recorded F7's D97-D99 fro
 
 **D125. The language is Effeck** (Will, **controversial**; supersedes D58). The npm scope `@effectscript` belongs to the unrelated EffectScript language (`.efs`), so 0.0.1 cannot publish under it. Will chose Effeck; the npm names `effeck` and `create-effeck` and the domain `effeck.sh` were free. Will asked for no npm organization, so every package is unscoped: `effeck` (the compiler and its `effeck` binary), `effeck-runtime`, `effeck-vite`, `create-effeck`, and one `effeck-<os>-<cpu>` package per platform binary. The binary is `effeck`, source files end in `.effeck`, diagnostic codes use the prefix `EK` (`EK1003`), the configuration key is `compilerOptions.effeck`, the trust tag is `@effeck trusted`, and the editor extension is `effeck.effeck`. Effeck sounds like Effekt, an effect-handler language also published on npm (`@effekt-lang/effekt`), so spoken references can be confused. The GitHub repository and the local checkout keep the name `effectscript` until they are renamed.
 
+## Fewer tokens: declarations (2026-10-16)
+
+Will asked for fewer tokens per program: "we can go crazy here." A measurement over the docs and examples found the ceremony; these forms remove it. Each form is parser sugar for the long form, which still compiles, so checking, emit, declaration files, and the language service treat both the same.
+
+**D126. `error` declares a tagged error class** (Will). `error NotFound { id: string }` is short for `class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}`: the tag is the class name, every field is readonly, and `error Timeout` declares an error without fields. Type parameters follow the name. `error` stays an ordinary identifier unless another identifier follows it on the same line. Not controversial.
+
 ## Fewer tokens: calls (2026-10-16)
 
 Will approved the token-reduction proposals measured on the docs and examples (59,572 word and punctuation pieces in 632 code units). These decisions cover calls; the declaration keywords have their own section.

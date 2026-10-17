@@ -7,7 +7,7 @@ Build routes with Effect's HTTP modules and write each handler as an Effeck func
 ```ts
 // users.effeck
 export const CreateUser = Schema.Struct({ name: Schema.String })
-export class NameTaken extends TaggedError("NameTaken")<{ readonly name: string }> {}
+export error NameTaken { name: string }
 
 export abstract class Users {
   abstract create(name: string): Effect<{ readonly id: string; readonly name: string }, NameTaken, never>

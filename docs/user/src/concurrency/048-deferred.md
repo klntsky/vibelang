@@ -5,9 +5,9 @@ A `Deferred<A, E>` is a result that another fiber can complete once. Use it to s
 ## Creating a one-time result
 
 ```ts
-class StartupFailed extends TaggedError("StartupFailed")<{
-  readonly stage: string
-}> {}
+error StartupFailed {
+  stage: string
+}
 
 function makeStartupSignal() {
   return Deferred.make<string, StartupFailed>()

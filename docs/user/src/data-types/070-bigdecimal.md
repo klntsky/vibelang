@@ -31,9 +31,9 @@ BigDecimal.format(whole) // "42"
 ## Safe and unsafe constructors
 
 ```ts
-class InvalidPrice extends TaggedError("InvalidPrice")<{
-  readonly input: string
-}> {}
+error InvalidPrice {
+  input: string
+}
 
 function parsePrice(input: string) {
   return Effect.try({

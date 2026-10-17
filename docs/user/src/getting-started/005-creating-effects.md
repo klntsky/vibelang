@@ -5,9 +5,9 @@ Write an ordinary function to describe an Effeck computation. Return a value for
 ## Success and failure
 
 ```ts
-class Unavailable extends TaggedError("Unavailable")<{
-  readonly item: string
-}> {}
+error Unavailable {
+  item: string
+}
 
 function reserve(item: string, available: boolean) {
   if (!available) throw new Unavailable({ item })
@@ -37,9 +37,9 @@ function attemptReservation(item: string, available: boolean) {
 // Assume ./legacy-codec.ts exports encode(value: string): string.
 import { encode } from "./legacy-codec.ts"
 
-class EncodingFailed extends TaggedError("EncodingFailed")<{
-  readonly cause: unknown
-}> {}
+error EncodingFailed {
+  cause: unknown
+}
 
 function encodeLabel(value: string) {
   return Effect.try({
@@ -64,9 +64,9 @@ A synchronous TypeScript function can declare trust once with `/** @effeck trust
 // Assume this SDK function returns Promise<string> and accepts AbortSignal.
 import { lookupLabel } from "./legacy-sdk.ts"
 
-class LookupFailed extends TaggedError("LookupFailed")<{
-  readonly cause: unknown
-}> {}
+error LookupFailed {
+  cause: unknown
+}
 
 function label(id: string) {
   return Effect.tryPromise({

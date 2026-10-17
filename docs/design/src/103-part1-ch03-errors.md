@@ -2,7 +2,7 @@
 
 #### Throwing a typed error
 
-Errors are the same tagged error classes you use today. `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.effeck` file; errors that must be serialized use `Schema.TaggedError`. `throw` adds the error to the function's E.
+Errors are the same tagged error classes you use today. `error InvalidId { raw: string }` declares one. It is short for `class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}`, where `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.effeck` file. The tag is the class name, every field is readonly, and `error Timeout` declares an error without fields (D126). Errors that must be serialized use `Schema.TaggedError`. `throw` adds the error to the function's E.
 
 ```ts effect
 class InvalidId extends Data.TaggedError("InvalidId")<{ readonly raw: string }> {}
@@ -14,7 +14,7 @@ const parseId = Effect.fn("parseId")(function* (raw: string) {
 ```
 
 ```ts es
-class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}
+error InvalidId { raw: string }
 
 function parseId(raw: string) {
   if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })

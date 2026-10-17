@@ -58,9 +58,9 @@ An application that already owns an OpenTelemetry SDK tracer provider can initia
 ## Inspecting failures and attributes
 
 ```ts
-class RenderFailed extends TaggedError("RenderFailed")<{
-  readonly format: string
-}> {}
+error RenderFailed {
+  format: string
+}
 
 function failingRender() {
   const exit = Effect.exit(() => Effect.withSpan(() => {

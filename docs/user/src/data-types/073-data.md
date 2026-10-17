@@ -93,9 +93,9 @@ class InvalidDocument extends Data.Error<{
   readonly line: number
 }> {}
 
-class DocumentMissing extends TaggedError("DocumentMissing")<{
-  readonly id: string
-}> {}
+error DocumentMissing {
+  id: string
+}
 
 function requireDocument(id: string) {
   if (id === "") throw new DocumentMissing({ id })
@@ -118,9 +118,9 @@ function documentOrDraft(id: string) {
 ## Preserving native error causes
 
 ```ts
-class DocumentDecodeError extends TaggedError("DocumentDecodeError")<{
-  readonly cause: unknown
-}> {}
+error DocumentDecodeError {
+  cause: unknown
+}
 
 function decodeDocument(text: string) {
   return Effect.try({

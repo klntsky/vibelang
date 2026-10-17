@@ -7,7 +7,7 @@ Resources need cleanup on success, failure, and cancellation. Effeck uses `final
 ## Guaranteeing cleanup
 
 ```ts
-class ExportRejected extends TaggedError("ExportRejected")<{}> {}
+error ExportRejected
 
 function exportRows(accepted: boolean) {
   try {

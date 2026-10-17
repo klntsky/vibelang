@@ -5,9 +5,9 @@
 ## Success, failure, and services
 
 ```ts
-class MissingRate extends TaggedError("MissingRate")<{
-  readonly currency: string
-}> {}
+error MissingRate {
+  currency: string
+}
 
 abstract class Rates {
   abstract lookup(currency: string): Effect<number, MissingRate, never>

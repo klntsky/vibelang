@@ -52,6 +52,9 @@ clients, see [editors/](editors/README.md).
   `const todo = Todos.get(id)` is a `Todo`. Pass work to an Effect operator as
   a function with no parameters:
   `Effect.retry(() => send(message), Schedule.exponential("100 millis"))`.
+- Declare an expected failure with `error NotFound { id: string }`, a tagged
+  error class with readonly fields; `throw new NotFound({ id })` adds it to
+  the function's errors.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no
   import. Import other source files by their source name,

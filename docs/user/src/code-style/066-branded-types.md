@@ -41,9 +41,9 @@ const WholeCents = Brand.make<WholeCents>((n) =>
   Number.isSafeInteger(n) || "amount must be a safe integer"
 )
 
-class InvalidAmount extends TaggedError("InvalidAmount")<{
-  readonly cause: unknown
-}> {}
+error InvalidAmount {
+  cause: unknown
+}
 
 function parseAmount(raw: number) {
   return Effect.try({
@@ -81,9 +81,9 @@ const Positive = Brand.make<Positive>((n) => n > 0 || "amount must be positive")
 const Charge = Brand.all(WholeCents, Positive)
 type Charge = Brand.Brand.FromConstructor<typeof Charge>
 
-class InvalidCharge extends TaggedError("InvalidCharge")<{
-  readonly cause: unknown
-}> {}
+error InvalidCharge {
+  cause: unknown
+}
 
 function chargeAmount(raw: number) {
   return Effect.try({

@@ -6,7 +6,7 @@ A control operation lets a handler decide how the caller continues. Use one when
 
 ```ts
 // approval.effeck
-export class ReviewBusy extends TaggedError("ReviewBusy")<{ readonly request: string }> {}
+export error ReviewBusy { request: string }
 
 export abstract class Approval extends Control {
   abstract approve(request: string): Effect<boolean, ReviewBusy, never>

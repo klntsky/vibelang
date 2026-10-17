@@ -141,7 +141,7 @@ function totalSize(path: string) {
 TypeScript cannot compute this on its own: to TypeScript, the generated recursive function is an implicit `any` (TS7022). The compiler computes the fixpoint itself, inside the component only (D52). It checks the component's bodies, then rechecks those bodies alone, with the E and R found so far, until E and R stop growing. Rows only grow and are finite, so the iteration ends, and no function outside the component is checked twice. Mutual recursion is where the recheck matters:
 
 ```ts es
-class Locked extends TaggedError("Locked")<{ readonly path: string }> {}
+error Locked { path: string }
 
 function visitDir(path: string) {
   for (const child of Files.list(path)) visitEntry(`${path}/${child}`)

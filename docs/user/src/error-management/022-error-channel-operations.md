@@ -7,9 +7,9 @@ Error-channel operations transform, observe, or expose failures without immediat
 ## Mapping failures or both outcomes
 
 ```ts
-class InvalidQuantity extends TaggedError("InvalidQuantity")<{
-  readonly value: number
-}> {}
+error InvalidQuantity {
+  value: number
+}
 
 function quantity(value: number) {
   if (value < 1) throw new InvalidQuantity({ value })

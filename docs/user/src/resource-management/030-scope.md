@@ -107,9 +107,9 @@ A block that calls `fork` also owns a scope region, even without `using`. Its ch
 ## Sequencing scoped operations with rollback
 
 ```ts
-class SetupFailed extends TaggedError("SetupFailed")<{
-  readonly stage: string
-}> {}
+error SetupFailed {
+  stage: string
+}
 
 abstract class ProjectSteps {
   abstract create(stage: string): Effect<string, SetupFailed, never>

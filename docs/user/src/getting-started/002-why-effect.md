@@ -5,9 +5,9 @@ Effeck uses Effect to make a program's expected failures and dependencies visibl
 ## Describe work before running it
 
 ```ts
-class InvalidQuantity extends TaggedError("InvalidQuantity")<{
-  readonly quantity: number
-}> {}
+error InvalidQuantity {
+  quantity: number
+}
 
 function unitPrice(total: number, quantity: number) {
   if (quantity <= 0) throw new InvalidQuantity({ quantity })

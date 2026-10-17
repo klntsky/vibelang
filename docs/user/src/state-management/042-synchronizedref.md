@@ -36,7 +36,7 @@ function inspect() {
 ## Keeping dependent asynchronous updates atomic
 
 ```ts
-class RefreshFailed extends TaggedError("RefreshFailed")<{}> {}
+error RefreshFailed
 
 abstract class Versions {
   abstract loadAfter(version: number): Effect<number, RefreshFailed, never>

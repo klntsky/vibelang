@@ -7,9 +7,9 @@ Sandboxing places the complete runtime failure cause in the typed error channel.
 ## Moving causes into the error channel
 
 ```ts
-class InvalidRow extends TaggedError("InvalidRow")<{
-  readonly line: number
-}> {}
+error InvalidRow {
+  line: number
+}
 
 function readRow() {
   throw new InvalidRow({ line: 8 })

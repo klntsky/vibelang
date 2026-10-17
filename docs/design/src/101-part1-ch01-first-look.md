@@ -39,13 +39,13 @@ export const welcome = Effect.fn("welcome")(function* (id: string) {
 ```
 
 ```ts es
-class UserNotFound extends TaggedError("UserNotFound")<{
-  readonly id: string
-}> {}
+error UserNotFound {
+  id: string
+}
 
-class MailError extends TaggedError("MailError")<{
-  readonly reason: string
-}> {}
+error MailError {
+  reason: string
+}
 
 abstract class Users {
   abstract find(id: string): Effect<User, UserNotFound, never>
@@ -67,7 +67,7 @@ Four things changed:
 - **`welcome` is a plain function.** No `Effect.fn`, no generator, no `yield*`. Calling `Users.find(id)` runs it and gives you the `User`; if it fails, `welcome` fails with the same error.
 - **A service is an abstract class.** `abstract class Users` replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
 - **The contract is inferred.** `welcome` is `Effect<string, UserNotFound | MailError, Users | Mailer>`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
-- **Errors are the same classes.** `TaggedError` is Effect's `Data.TaggedError`, in scope without an import.
+- **Errors are the same classes.** `error UserNotFound { id: string }` declares a class that extends `TaggedError`, Effect's `Data.TaggedError`, in scope without an import.
 
 #### What is in scope
 

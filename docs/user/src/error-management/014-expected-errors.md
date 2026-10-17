@@ -7,12 +7,12 @@ Expected errors describe situations callers can handle: invalid input, a denied 
 ## Constructing typed failures
 
 ```ts
-class InvalidCode extends TaggedError("InvalidCode")<{
-  readonly input: string
-}> {}
-class ItemMissing extends TaggedError("ItemMissing")<{
-  readonly code: string
-}> {}
+error InvalidCode {
+  input: string
+}
+error ItemMissing {
+  code: string
+}
 
 function normalizeCode(input: string) {
   const code = input.trim()
@@ -22,7 +22,7 @@ function normalizeCode(input: string) {
 // Effect<string, InvalidCode, never>
 ```
 
-The global `TaggedError` is Effect's `Data.TaggedError`. Its constructor stores the fields and adds a readonly `_tag`; `throw` adds the class to `E`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
+`error InvalidCode { input: string }` declares an expected failure. The declaration is a class: its constructor takes the fields, every field is readonly, and each instance has a readonly `_tag` equal to the class name. `throw` adds the class to `E`. `error Timeout` declares an error without fields. The declaration is short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
 
 Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs `Effect.try` or a trusted declaration, `/** @effeck trusted */`; each `@throws {T}` names an exported exception class that joins `E`, and unlisted exceptions are defects. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
 
@@ -129,11 +129,11 @@ function withPredicate(input: string) {
 ## Filtering nested reasons
 
 ```ts
-class Busy extends TaggedError("Busy")<{ readonly seconds: number }> {}
-class Rejected extends TaggedError("Rejected")<{}> {}
-class CatalogError extends TaggedError("CatalogError")<{
-  readonly reason: Busy | Rejected
-}> {}
+error Busy { seconds: number }
+error Rejected
+error CatalogError {
+  reason: Busy | Rejected
+}
 
 function remoteLabel(): Effect<string, CatalogError, never> {
   throw new CatalogError({ reason: new Busy({ seconds: 4 }) })

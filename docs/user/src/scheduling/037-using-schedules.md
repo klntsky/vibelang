@@ -51,7 +51,7 @@ function delayedCleanup() {
 ## Retrying failed computations
 
 ```ts
-class Busy extends TaggedError("Busy")<{}> {}
+error Busy
 
 function reserveSlot() {
   let attempts = 0
@@ -69,7 +69,7 @@ function reserveSlot() {
 ## Handling failures while repeating
 
 ```ts
-class SensorOffline extends TaggedError("SensorOffline")<{}> {}
+error SensorOffline
 
 abstract class Sensor {
   abstract read(): Effect<number, SensorOffline, never>

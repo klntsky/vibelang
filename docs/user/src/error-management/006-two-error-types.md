@@ -7,9 +7,9 @@ A missing record and a broken invariant need different responses. Effeck tracks 
 ## Separating failures from defects
 
 ```ts
-class UnknownProduct extends TaggedError("UnknownProduct")<{
-  readonly sku: string
-}> {}
+error UnknownProduct {
+  sku: string
+}
 
 function price(sku: string) {
   if (sku !== "notebook") throw new UnknownProduct({ sku })

@@ -39,9 +39,9 @@ function validateDispatch(input: unknown) {
   })
 }
 
-class ValidationBoundaryError extends TaggedError("ValidationBoundaryError")<{
-  readonly cause: unknown
-}> {}
+error ValidationBoundaryError {
+  cause: unknown
+}
 ```
 
 The standard interface attempts synchronous validation first. If it encounters asynchronous work, it returns a Promise instead of a direct result. `Promise.resolve` inside an explicit foreign-code boundary normalizes both cases without `await` in Effeck. Prefer `Schema.decodeUnknownEffect` for ordinary Effeck application code; the standard interface is most useful for interoperability.

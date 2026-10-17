@@ -37,10 +37,10 @@ function rejectDocument(documentId: string) {
 ## Creating tagged error classes
 
 ```ts
-class EmptyTitle extends TaggedError("EmptyTitle")<{}> {}
-class TitleTooLong extends TaggedError("TitleTooLong")<{
-  readonly length: number
-}> {}
+error EmptyTitle
+error TitleTooLong {
+  length: number
+}
 
 function title(text: string) {
   if (text.length === 0) throw new EmptyTitle()
@@ -50,7 +50,7 @@ function title(text: string) {
 // Effect<string, EmptyTitle | TitleTooLong, never>
 ```
 
-The global `TaggedError` is `Data.TaggedError`; no import is needed for it. Every instance has the supplied readonly `_tag`, and the class names the instance type as well as constructing values. Use `Schema.TaggedError` when an error also needs schema-based serialization.
+An `error` declaration is a class that extends the global `TaggedError`, Effect's `Data.TaggedError`, which needs no import. Every instance has a readonly `_tag` equal to the class name, and the class names the instance type as well as constructing values. Use `Schema.TaggedError` when an error also needs schema-based serialization.
 
 Choose distinct tags for distinct error cases. Tag-based matching compares strings, so two classes with the same tag cannot be distinguished by `catchTag` or `_tag` narrowing; do not assume a duplicate tag is diagnosed.
 

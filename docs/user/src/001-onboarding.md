@@ -5,7 +5,7 @@ Effeck gives every function a contract for its result, expected errors, and requ
 ## Why typed programs help
 
 ```ts
-class EmptyName extends TaggedError("EmptyName")<{}> {}
+error EmptyName
 
 function greet(name: string) {
   if (name.trim() === "") throw new EmptyName()

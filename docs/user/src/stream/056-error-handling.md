@@ -5,7 +5,7 @@ Stream recovery replaces a failed source with another source. Use stream operato
 ## Recovering typed failures and defects
 
 ```ts
-class Disconnected extends TaggedError("Disconnected")<{}> {}
+error Disconnected
 
 const primary = Stream.concat(Stream.make("live-a", "live-b"), Stream.fail(new Disconnected()))
 const recovered = Stream.catch(primary, () => Stream.succeed("cached"))
@@ -34,8 +34,8 @@ const boundary = Stream.catchDefect(
 ## Selective recovery
 
 ```ts
-class NotReady extends TaggedError("NotReady")<{}> {}
-class AccessDenied extends TaggedError("AccessDenied")<{}> {}
+error NotReady
+error AccessDenied
 
 function recoverKnown(source: Stream.Stream<string, NotReady | AccessDenied>) {
   return Stream.catchTag(source, "NotReady", () => Stream.succeed("pending"))
@@ -77,7 +77,7 @@ function consumeChecked() {
 ## Retrying a source
 
 ```ts
-class Offline extends TaggedError("Offline")<{}> {}
+error Offline
 
 abstract class Sensor {
   abstract read(): Effect<number, Offline, never>
@@ -108,7 +108,7 @@ Refail the errors callers are expected to handle and turn impossible failures in
 ## Timeout failures and replacement sources
 
 ```ts
-class Idle extends TaggedError("Idle")<{}> {}
+error Idle
 
 const endWhenIdle = Stream.timeout(Stream.never, "3 seconds")
 const failWhenIdle = Stream.timeoutOrElse(Stream.never, {

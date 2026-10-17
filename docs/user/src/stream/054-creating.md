@@ -21,7 +21,7 @@ function readPowers() {
 ## Successes and failures
 
 ```ts
-class SourceClosed extends TaggedError("SourceClosed")<{}> {}
+error SourceClosed
 
 const ready = Stream.succeed("ready")
 const closed = Stream.fail(new SourceClosed())
@@ -56,9 +56,9 @@ const codes = Stream.fromIterableEffect(() => Catalog.codes())
 ## Async iterables
 
 ```ts
-class IteratorFailed extends TaggedError("IteratorFailed")<{
-  readonly cause: unknown
-}> {}
+error IteratorFailed {
+  cause: unknown
+}
 
 function adaptRows(rows: AsyncIterable<string>) {
   return Stream.fromAsyncIterable(rows, (cause) => new IteratorFailed({ cause }))

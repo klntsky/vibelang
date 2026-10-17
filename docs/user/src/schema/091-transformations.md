@@ -58,9 +58,9 @@ const DeliveryMode = Schema.String.pipe(
 ## Running asynchronous conversions with dependencies
 
 ```ts
-class UnknownRoute extends TaggedError("UnknownRoute")<{
-  readonly code: string
-}> {}
+error UnknownRoute {
+  code: string
+}
 
 abstract class Routes {
   abstract check(code: string): Effect<void, UnknownRoute, never>

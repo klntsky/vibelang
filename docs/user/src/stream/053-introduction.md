@@ -5,7 +5,7 @@
 ## Element, error, and service types
 
 ```ts
-class FeedUnavailable extends TaggedError("FeedUnavailable")<{}> {}
+error FeedUnavailable
 
 abstract class Feed {
   abstract next(): Effect<string, FeedUnavailable, never>

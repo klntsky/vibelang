@@ -57,7 +57,7 @@ const pending = Effect.runPromise(() => preparedMessage())
 ## Collect complete execution results
 
 ```ts
-class BadInput extends TaggedError("BadInput")<{}> {}
+error BadInput
 
 function validate(input: string) {
   if (input === "") throw new BadInput()

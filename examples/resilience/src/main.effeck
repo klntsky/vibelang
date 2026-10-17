@@ -1,4 +1,4 @@
-export class Unavailable extends TaggedError("Unavailable")<{ readonly attempt: number }> {}
+export error Unavailable { attempt: number }
 
 export function fetchReport() {
   let attempts = 0

@@ -5,9 +5,9 @@ These recipes use ordinary functions as repeatable programs. Each recipe bounds 
 ## Honoring server retry hints
 
 ```ts
-class Throttled extends TaggedError("Throttled")<{
-  readonly retryAfter: Duration.Duration
-}> {}
+error Throttled {
+  retryAfter: Duration.Duration
+}
 
 function download() {
   let calls = 0
@@ -38,7 +38,7 @@ type Status =
   | { readonly _tag: "Pending"; readonly pollAfter: Duration.Duration }
   | { readonly _tag: "Ready"; readonly path: string }
 
-class PollLimit extends TaggedError("PollLimit")<{}> {}
+error PollLimit
 
 function waitForArchive() {
   let checks = 0
@@ -69,7 +69,7 @@ A pending response is a success, so it feeds `repeat` rather than `retry`. This 
 ## Bounding the whole retry operation
 
 ```ts
-class Offline extends TaggedError("Offline")<{}> {}
+error Offline
 
 function readWithDeadline() {
   return pipe(
@@ -85,7 +85,7 @@ The outer timeout covers the first attempt, every wait, and every retry. Placing
 ## Switching from rapid to slower retries
 
 ```ts
-class Disconnected extends TaggedError("Disconnected")<{}> {}
+error Disconnected
 
 function reconnect() {
   let attempts = 0
@@ -106,9 +106,9 @@ The first two retries use short waits; later retries use four second waits. This
 ## Recording retry decisions
 
 ```ts
-class Unavailable extends TaggedError("Unavailable")<{
-  readonly status: number
-}> {}
+error Unavailable {
+  status: number
+}
 
 function observedRequest() {
   let attempts = 0

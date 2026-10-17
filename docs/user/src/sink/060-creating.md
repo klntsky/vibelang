@@ -57,7 +57,7 @@ function writeRecords() {
 ## Successful and failed sinks
 
 ```ts
-class Rejected extends TaggedError("Rejected")<{}> {}
+error Rejected
 
 function immediateResult() {
   return Stream.run(Stream.make(40, 50), Sink.succeed("already complete"))

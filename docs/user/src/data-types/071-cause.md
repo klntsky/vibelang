@@ -29,9 +29,9 @@ Effect 4 stores reasons in a flat array. `combine` retains both sets of reasons;
 ## Extracting a computation's cause
 
 ```ts
-class MissingRecord extends TaggedError("MissingRecord")<{
-  readonly id: string
-}> {}
+error MissingRecord {
+  id: string
+}
 
 function diagnose() {
   const outcome = Effect.exit(() => {

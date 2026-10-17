@@ -66,9 +66,9 @@ function decodeSynchronously(input: unknown) {
   })
 }
 
-class InvalidShipment extends TaggedError("InvalidShipment")<{
-  readonly cause: unknown
-}> {}
+error InvalidShipment {
+  cause: unknown
+}
 ```
 
 Prefer `decodeUnknownEffect` inside Effeck: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and requires a synchronous, service-free decoding path. Unexpected exceptions from synchronous callbacks are defects; ordinary `catch` does not handle them.

@@ -5,9 +5,9 @@
 ## Representing full outcomes
 
 ```ts
-class ExportRejected extends TaggedError("ExportRejected")<{
-  readonly reason: string
-}> {}
+error ExportRejected {
+  reason: string
+}
 
 function inspectExport() {
   const outcome = Effect.exit(() => {

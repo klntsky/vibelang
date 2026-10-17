@@ -31,9 +31,9 @@ function firstLabel(labels: ReadonlyArray<string>) {
 ## Promoting typed failures to defects
 
 ```ts
-class MissingSetting extends TaggedError("MissingSetting")<{
-  readonly name: string
-}> {}
+error MissingSetting {
+  name: string
+}
 
 function requireSetting(name: string) {
   throw new MissingSetting({ name })

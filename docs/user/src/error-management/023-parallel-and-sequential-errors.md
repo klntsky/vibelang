@@ -52,7 +52,7 @@ When every reason is an expected failure, ordinary catch receives the first fail
 ## Runtime causes and domain error collections
 
 ```ts
-class InvalidPort extends TaggedError("InvalidPort")<{ readonly port: number }> {}
+error InvalidPort { port: number }
 
 function validatePorts() {
   return Effect.validate([8080, -1, 70000], (port) => {

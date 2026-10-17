@@ -54,9 +54,9 @@ function previewOrPlaceholder() {
   })
 }
 
-class PreviewDeadline extends TaggedError("PreviewDeadline")<{
-  readonly documentId: string
-}> {}
+error PreviewDeadline {
+  documentId: string
+}
 
 function requiredPreview(documentId: string) {
   return Effect.timeoutOrElse(() => buildPreview(), {

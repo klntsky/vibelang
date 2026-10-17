@@ -305,12 +305,25 @@ Regenerate with `jj log -r 'unpwqpnz::main' --reversed -- typescript/`.
 | `moutqkun` | effeck: document handlers and producers in EFFECK.md | effeck |
 | `oxmyvyxm` | docs: refresh the compiler commit table | docs |
 
+## Short forms
+
+`.effeck` files add short forms that the parser expands into the TypeScript they abbreviate (`tsc/internal/parser/effeck.go`), so the binder, checker, emitter, declaration emit, and language service see ordinary TypeScript nodes, and the long forms still compile. A node with no source text of its own is synthesized: it takes the location of the source token it stands for, `NodeFlagsReparsed` keeps the language service from treating it as source, and `NodeFlagsReparserTransformedLiteral` makes the printer use an identifier's own text, or a string literal's source text in quotes. That is the mechanism the JSDoc reparser uses for `@typedef` names. A node that only wraps source nodes spans them, so navigation still reaches the source inside.
+
+A declaration form starts with a word that an identifier follows on the same line. Two identifiers in a row are a TypeScript syntax error, so the words stay ordinary identifiers everywhere else: `catch (error)` and `error.id` parse as before.
+
+| Form | Expands to | Decision |
+| --- | --- | --- |
+| `error NotFound { id: string }` | `class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}` | D126 |
+
+The VS Code grammar adds these forms in `editors/vscode/scripts/effeck-grammar.mjs`, which `derive-grammar.mjs` applies whenever it rederives the grammar from TypeScript's.
+
 ## Seams in upstream files
 
 Effeck code lives in `tsc/internal/effeck/`, which may import any internal package because it sits under `tsc/internal/`. It registers its hooks from `init`. Upstream code changes in three ways: one-line call sites in existing files, new files that hold the hooks, and the `effeck` compiler option, which is added by hand to the generated option tables because the generator's type model has no nested objects.
 
 | Upstream file | Change | Lines (+/-) |
 | --- | --- | --- |
+| `tsc/internal/parser/parser.go` | Hand an identifier that starts a short form to `effeck.go` in `parseStatement`, `parseDeclarationWorker`, and `scanStartOfDeclaration`; add a readonly modifier in `parsePropertyOrMethodSignature` while `effeckReadonlyMembers` is set | +17 / -0 |
 | `tsc/internal/tspath/extension.go` | `ExtensionEffeck` in the TypeScript extension lists; `.effeck` declares to `.d.ts` | +9 / -8 |
 | `tsc/internal/core/core.go` | `.effeck` is `ScriptKindTS` | +1 / -1 |
 | `tsc/internal/compiler/emitter.go` | Run hook transformers first in `getScriptTransformers` | +2 / -0 |

@@ -5,9 +5,9 @@ A `Cache` stores lookup outcomes by key and shares in-progress lookups across ca
 ## Building a lookup cache
 
 ```ts
-class MissingProduct extends TaggedError("MissingProduct")<{
-  readonly sku: string
-}> {}
+error MissingProduct {
+  sku: string
+}
 
 abstract class Products {
   abstract price(sku: string): Effect<number, MissingProduct, never>

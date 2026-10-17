@@ -7,7 +7,7 @@ A fallback runs another computation after an expected failure. Pass computations
 ## Recovering with another computation
 
 ```ts
-class SourceOffline extends TaggedError("SourceOffline")<{}> {}
+error SourceOffline
 
 function latestTitle() {
   throw new SourceOffline()

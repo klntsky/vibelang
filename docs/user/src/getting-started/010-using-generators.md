@@ -51,7 +51,7 @@ Conditions, local variables, `break`, `continue`, and early returns keep JavaScr
 ## Raise failures and stop early
 
 ```ts
-class MissingTitle extends TaggedError("MissingTitle")<{}> {}
+error MissingTitle
 
 function titleLength(title: string | undefined) {
   if (title === undefined) throw new MissingTitle()

@@ -5,9 +5,9 @@ Effeck uses ordinary branches and loops for sequential work. Effect's operators 
 ## Branching and conditional computations
 
 ```ts
-class InvalidSize extends TaggedError("InvalidSize")<{
-  readonly size: number
-}> {}
+error InvalidSize {
+  size: number
+}
 
 function optionalSize(size: number) {
   if (size < 0) return Option.none<number>()
@@ -142,9 +142,9 @@ function collected() {
 ## Early termination and alternate collection modes
 
 ```ts
-class Unavailable extends TaggedError("Unavailable")<{
-  readonly id: number
-}> {}
+error Unavailable {
+  id: number
+}
 
 function load(id: number) {
   if (id === 5) throw new Unavailable({ id })

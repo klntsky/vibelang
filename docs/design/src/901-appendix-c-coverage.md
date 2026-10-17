@@ -47,7 +47,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Expected errors and defects | Changed | `throw` is expected; an exception no contract lists, `Effect.die`, and `Effect.orDie` are defects (Chapter 3) |
 | A JavaScript `throw` | Changed | Always a typed failure; `Effect.die(new Error(…))` for a bug |
 | A JavaScript `catch` around a throwing call | Changed | `catch` sees expected failures only; a dead `catch` is EK2004 (D37) |
-| `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `TaggedError` is in the prelude; `Schema.TaggedError` is unchanged |
+| `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `error E { ... }` declares a `TaggedError` class; `Schema.TaggedError` is unchanged |
 | Error tracking in E | Changed | Inferred: what a function throws, plus its callees' E, minus what it catches |
 | `Effect.catch`, `catchTag`, `catchTags`, `catchIf` | Changed | `try`/`catch` with narrowing; the combinators still work with a program |
 | `catchReason`, `catchReasons`, `unwrapReason` | Changed | Narrow `e._tag` and `e.reason._tag` inside `catch` |
@@ -300,7 +300,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Exit` constructors and readers | Unchanged by design | Data (D24); `Exit.match` |
 | `Cause` | Unchanged by design | `Effect.catchCause(() => f(), (cause) => …)` |
 | `Data.Class`, `TaggedClass`, `taggedEnum` | Unchanged by design | The same functions |
-| Error classes | Changed | `TaggedError` in the prelude; `throw` |
+| Error classes | Changed | `error E { ... }` declarations; `throw` |
 | `new` of a class whose instances are Effects | Changed | `new` constructs and never runs (D24) |
 | `Chunk`, `HashSet`, `HashMap`, `Duration`, `BigDecimal`, `Redacted` | Unchanged by design | The same modules |
 | `DateTime` | Unchanged by design | `DateTime.now()`; `new Date()` is EK4403 |

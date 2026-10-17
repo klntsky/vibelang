@@ -127,7 +127,7 @@ Each `Effect.provide` builds its layers once for its program and releases their 
 ## Observing initialization and recovering failures
 
 ```ts
-class InitializationFailed extends TaggedError("InitializationFailed")<{}> {}
+error InitializationFailed
 
 const ReportsUnavailable = Layer.effect(Reports, () => {
   throw new InitializationFailed()

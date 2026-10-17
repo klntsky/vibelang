@@ -16,9 +16,9 @@ function countItems() {
 `mapInput` converts each incoming value before the original sink sees it. Its callback is synchronous and cannot perform Effect work. Use `mapInputEffect` for validation, service calls, or other work with failures and requirements.
 
 ```ts
-class InvalidQuantity extends TaggedError("InvalidQuantity")<{
-  readonly raw: string
-}> {}
+error InvalidQuantity {
+  raw: string
+}
 
 const parsedTotal = Sink.mapInputEffect(Sink.sum, (raw: string) => {
   const value = Number(raw)

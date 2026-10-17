@@ -29,9 +29,9 @@ Bun applications use `BunRuntime.runMain` from `@effect/platform-bun`; Node.js a
 // main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
-class StartupRejected extends TaggedError("StartupRejected")<{
-  readonly reason: string
-}> {}
+error StartupRejected {
+  reason: string
+}
 
 function main() {
   throw new StartupRejected({ reason: "configuration missing" })
@@ -74,9 +74,9 @@ Teardown is a plain host callback, not an Effect-returning program. Keep a custo
 // main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
-class InvalidBatch extends TaggedError("InvalidBatch")<{
-  readonly count: number
-}> {}
+error InvalidBatch {
+  count: number
+}
 
 function exportBatch(count: number) {
   try {

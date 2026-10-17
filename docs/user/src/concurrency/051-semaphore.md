@@ -49,7 +49,7 @@ An operation waits until its requested permits can be acquired together. This mo
 ## Releasing permits safely
 
 ```ts
-class Rejected extends TaggedError("Rejected")<{}> {}
+error Rejected
 
 function releaseOnFailure() {
   const mutex = Semaphore.make(1)

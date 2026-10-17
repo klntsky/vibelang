@@ -7,7 +7,7 @@ Retry transient domain failures when a new attempt has a useful chance of succee
 ## Retrying failed computations
 
 ```ts
-class Busy extends TaggedError("Busy")<{ readonly attempt: number }> {}
+error Busy { attempt: number }
 
 function loadWithRetries() {
   let attempts = 0
@@ -26,9 +26,9 @@ Failures stop the current attempt before retry begins. Defects and interruption 
 ## Selecting retryable domain errors
 
 ```ts
-class RequestRejected extends TaggedError("RequestRejected")<{
-  readonly transient: boolean
-}> {}
+error RequestRejected {
+  transient: boolean
+}
 
 function sendRequest(): Effect<string, RequestRejected, never> {
   throw new RequestRejected({ transient: false })

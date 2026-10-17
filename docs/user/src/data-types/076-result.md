@@ -55,9 +55,9 @@ function summarize(result: Result.Result<number, string>) {
 ## Converting results into effects
 
 ```ts
-class InvalidCount extends TaggedError("InvalidCount")<{
-  readonly input: string
-}> {}
+error InvalidCount {
+  input: string
+}
 
 function requireCount(input: string) {
   const count = Number(input)

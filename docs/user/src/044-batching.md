@@ -7,11 +7,11 @@ Use requests and resolvers when independent lookups can share a backend call. A 
 ```ts
 type Part = { readonly code: string; readonly label: string }
 
-class PartMissing extends TaggedError("PartMissing")<{
-  readonly code: string
-}> {}
+error PartMissing {
+  code: string
+}
 
-class CatalogUnavailable extends TaggedError("CatalogUnavailable")<{}> {}
+error CatalogUnavailable
 
 interface FindPart extends Request.Request<Part, PartMissing | CatalogUnavailable> {
   readonly _tag: "FindPart"

@@ -22,6 +22,7 @@ function main() {
 | In Effect TypeScript | In Effeck |
 | --- | --- |
 | `Effect.gen(function* () { ... })` | An ordinary function with statements |
+| `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
 | `const x = yield* work()` | `const x = work()` |
 | `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, then call the next function |
 | `Context.Service` | An abstract class with fully contracted members; call `Users.find(id)` |
@@ -84,7 +85,7 @@ A plain function from your `.ts` code or a foreign package needs `Effect.try`, `
 ## Catch expected failures only
 
 ```ts
-class Missing extends TaggedError("Missing")<{ readonly id: string }> {}
+error Missing { id: string }
 
 function lookup(id: string) {
   if (id !== "ada") throw new Missing({ id })

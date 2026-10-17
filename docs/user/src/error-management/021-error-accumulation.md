@@ -7,9 +7,9 @@ Independent checks often need to report every problem in one response. Use valid
 ## Validating every computation
 
 ```ts
-class InvalidHandle extends TaggedError("InvalidHandle")<{
-  readonly input: string
-}> {}
+error InvalidHandle {
+  input: string
+}
 
 function validateHandle(input: string) {
   const handle = input.trim()

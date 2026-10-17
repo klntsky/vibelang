@@ -49,7 +49,7 @@ Using the returned value replaces `Effect.map` for local transformations. A subs
 ## Sequence dependent computations
 
 ```ts
-class InvalidRate extends TaggedError("InvalidRate")<{}> {}
+error InvalidRate
 
 function discounted(price: number, percent: number) {
   if (percent < 0 || percent > 100) throw new InvalidRate()

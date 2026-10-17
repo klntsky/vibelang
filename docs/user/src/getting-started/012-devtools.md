@@ -37,7 +37,7 @@ For GitHub highlighting, add `*.effeck linguist-language=TypeScript` to `.gitatt
 ## Inspect inferred information
 
 ```ts
-class Rejected extends TaggedError("Rejected")<{}> {}
+error Rejected
 
 function accepted(value: number) {
   if (value < 0) throw new Rejected()
