@@ -67,14 +67,12 @@ A normal `if` followed by `throw` is the statement form. Neither form changes ex
 
 ```ts
 function observeQuantity(value: number) {
-  return pipe(
-    () => quantity(value),
-    Effect.tapError((error) => log(`Rejected quantity ${error.value}`)),
-    Effect.tapErrorTag("InvalidQuantity", () => log("Quantity validation failed")),
-    Effect.tapCause((cause) => {
+  return quantity(value)
+    |> Effect.tapError(%, (error) => log(`Rejected quantity ${error.value}`))
+    |> Effect.tapErrorTag(%, "InvalidQuantity", () => log("Quantity validation failed"))
+    |> Effect.tapCause(%, (cause) => {
       log("Failure kinds", cause.reasons.map((reason) => reason._tag))
     })
-  )
 }
 
 function observeDefect() {

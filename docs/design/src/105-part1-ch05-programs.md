@@ -33,9 +33,9 @@ const fastest = race(fromCache(id), fromNetwork(id))   // the first to succeed
 
 Each line is a call, so it runs: `user` is a `User`, not an `Effect`. The inner calls are passed by name: `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
 
-#### Pipe
+#### The pipe operator
 
-Stacking several combinators reads best as a pipeline. Effeck's built-in `pipe` takes the program first:
+Stacking several combinators reads best as a pipeline. Effeck has TC39's proposed pipe operator, Hack style (D154): in `x |> f(%, a)`, the topic `%` stands for `x`.
 
 ```ts effect
 const user = yield* fetchUser(id).pipe(
@@ -46,16 +46,16 @@ const user = yield* fetchUser(id).pipe(
 ```
 
 ```ts es
-const user = pipe(
-  () => fetchUser(id),
-  retry({ times: 3 }),
-  timeout("2 seconds"),
-  withSpan("load-user")
-)
+const user = fetchUser(id)
+  |> retry(%, { times: 3 })
+  |> timeout(%, "2 seconds")
+  |> withSpan(%, "load-user")
 // user: User;  E gains Cause.TimeoutError from Effect.timeout
 ```
 
-When `pipe`'s first argument is a function with no parameters and the first stage expects an `Effect`, that function is the program. Applied to plain data, `pipe` is Effect's ordinary `pipe`. The types flow exactly as in Effect: `Effect.timeout` adds `Cause.TimeoutError` to E, and `Effect.retry` keeps E and R. To keep the pipeline as a program instead of running it, wrap it: `const loadUser = () => pipe(() => fetchUser(id), …)`.
+The topic follows the one rule (D155). Each `%` above stands where a parameter expects a program, so the expression before its `|>` is passed by name: `retry` receives `fetchUser(id)` as a program and runs it again on each attempt, `timeout` receives the retried program, and `withSpan` the timed one. Where `%` stands for a value, the expression before `|>` runs once, before the body, and `%` is its result: `9 |> addMargin(%) |> double(%)` is `double(addMargin(9))`. A pipe does one or the other (EK1008), and its body must use `%` (EK1006). The types flow exactly as in Effect: `Effect.timeout` adds `Cause.TimeoutError` to E, and `Effect.retry` keeps E and R. The pipe is a call, so it runs; to keep it as a program, wrap it: `const loadUser = () => fetchUser(id) |> retry(%, { times: 3 })`.
+
+The built-in `pipe` function still works: applied to plain data it is Effect's `pipe`, and with a function with no parameters first, that function is the program. It suits data-last functions that have no data-first form, such as `Match.when`.
 
 Most pipes you write today disappear:
 
@@ -65,11 +65,11 @@ Most pipes you write today disappear:
 | `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch` |
 | `Effect.ensuring` | `finally` |
 | `Effect.provide`, `Effect.provideService` | the same functions, with a program argument |
-| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached`, `Effect.uninterruptible` | the same functions, called or piped as above |
+| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached`, `Effect.uninterruptible` | the same functions, called or piped with `\|>` as above |
 
 On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how.
 
-Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (`docs/research/pipe-census.md`). Pipelines over plain data stay plain: `pipe(items, Array.filter(isActive), Array.map(toRow))` is an ordinary function call.
+Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (`docs/research/pipe-census.md`). Pipelines over plain data stay plain: `items |> Arr.filter(%, isActive) |> Arr.map(%, toRow)` is `Arr.map(Arr.filter(items, isActive), toRow)`.
 
 #### Methods on Effect's data types
 
@@ -89,9 +89,9 @@ The module is the one that declares the value's type: a `Stream` takes `Stream`'
 
 The compiled JavaScript calls the module's function, `Stream.take(Stream.map(Stream.filter(readings, …), …), 3)`, so a bundler drops the functions a program never calls, as it does for Effect code.
 
-#### Why there is no `|>`
+#### Why `|>` passes by name
 
-JavaScript's proposed pipeline operator is not part of Effeck. It conflicts with the rule that calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, the call `fetchUser(id)` runs before the pipe sees it, and so would every stage that calls a combinator. The proposal is also not settled: it has been at Stage 2 since 2021-08, its topic token is undecided (the `%` in its README is disqualified on the proposal's own wiki), the committee's January 2026 review listed it as "somewhat stuck", and TypeScript waits for Stage 3 before implementing it (`docs/research/tc39-syntax.md` §1). Effeck revisits the operator if it reaches Stage 3.
+D8 kept the operator out of v0 because calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, a topic that always held a value would run `fetchUser(id)` once, before `Effect.retry` saw it, and retry would have nothing to repeat. The by-name rule (D147) removes the conflict: where `%` stands for a program, the expression before `|>` is passed as one, exactly as `retry(fetchUser(id), policy)` passes it. The proposal itself is still at Stage 2 and its topic token is undecided (`docs/research/tc39-syntax.md` §1); Effeck uses `%`, the token in the proposal's README, and will follow the token TC39 chooses.
 
 #### Storing, returning, and composing programs
 

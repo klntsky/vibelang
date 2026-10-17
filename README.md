@@ -77,6 +77,10 @@ clients, see [editors/](editors/README.md).
   methods: `maybe.map(f).getOrElse(() => 0)` calls `Option.map` and
   `Option.getOrElse`, and `stream.filter(p).take(3)` calls `Stream.filter` and
   `Stream.take`. Arrays, strings, and objects keep JavaScript's methods.
+- Chain operators with the pipe operator: `x |> f(%, a)`, where `%` stands
+  for `x`. Where `%` is an argument that expects a program, `x` is passed by
+  name: `fetchUser(id) |> retry(%, policy) |> timeout(%, "1 second")` retries
+  and times the call. Elsewhere `x` runs once and `%` is its value.
 - A module's top level only declares. A call there that would run a program
   is EK1001, including `Effect.succeed(1)`. Start the program once with a
   runner, which receives `main()` by name: `NodeRuntime.runMain(main())`.

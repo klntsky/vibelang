@@ -37,6 +37,7 @@ The full rule:
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
 | A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
+| A pipe's topic, `%` in `fetchUser(id) \|> retry(%, policy)` | Where `%` stands for a program, the pipe's left side, passed by name (D155); elsewhere the left side's value, computed once before the body | `retry(Effect.gen(function* () { return yield* fetchUser(id) }), policy)` |
 | A method of an Effect data type, `stream.take(3)` or `fiber.join()` | Calls the module's function with the value first (D152), then applies these rules to that call: an `Effect` runs, other data is returned | `Stream.take(stream, 3)`; `yield* Fiber.join(fiber)` |
 | A service, `Users()` | Returns the implementation | `yield* Users` |
 | A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |

@@ -42,13 +42,10 @@ A schedule step receives input and produces output plus timing metadata. In `ret
 ## Limiting duration and adjusting delays
 
 ```ts
-const bounded = pipe(
-  Schedule.exponential("300 millis"),
-  Schedule.modifyDelay(({ duration }) =>
-    duration.min(Duration.seconds(8))),
-  Schedule.jittered,
-  Schedule.upTo({ times: 6, duration: "40 seconds" })
-)
+const bounded = Schedule.exponential("300 millis")
+  .modifyDelay(({ duration }) => duration.min(Duration.seconds(8)))
+  .jittered()
+  .upTo({ times: 6, duration: "40 seconds" })
 
 const firstThree = Schedule.while(
   Schedule.spaced("1 second"),

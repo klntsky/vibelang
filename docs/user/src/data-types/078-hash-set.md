@@ -37,7 +37,7 @@ Plain objects compare structurally in Effect 4.0.5, so separately allocated reco
 ```ts
 const empty = HashSet.empty<number>()
 const initial = HashSet.fromIterable([2, 4, 4, 6])
-const changed = pipe(initial, HashSet.add(8), HashSet.remove(2))
+const changed = initial.add(8).remove(2)
 const other = HashSet.make(6, 10)
 const together = changed.union(other)
 const common = changed.intersection(other)
@@ -47,7 +47,7 @@ const labels = large.map((n) => `item-${n}`)
 const sum = initial.reduce(0, (total, n) => total + n)
 ```
 
-`empty`, `make`, and `fromIterable` all construct sets. `add` and `remove` return updated sets; union, intersection, and difference return the corresponding set operation. A data pipeline chains immutable updates without changing the original.
+`empty`, `make`, and `fromIterable` all construct sets. `add` and `remove` return updated sets; union, intersection, and difference return the corresponding set operation. Method calls chain immutable updates without changing the original.
 
 ## Querying membership and size
 

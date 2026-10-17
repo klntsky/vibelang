@@ -1,6 +1,6 @@
 # Building Pipelines
 
-Use statements for dependent steps and `pipe` for a series of operators that control a program. Effeck's global `pipe` supports ordinary data transformations and Effect operators whose first input is a program.
+Use statements for dependent steps and the pipe operator, `|>`, for a series of operators. In `x |> f(%)`, the topic `%` stands for `x`: the body after `|>` says where the value goes, so a stage can take it in any argument position.
 
 ## Compose reusable functions
 
@@ -9,26 +9,24 @@ function addMargin(n: number) { return n + 3 }
 function double(n: number) { return n * 2 }
 
 function priceLabel() {
-  return pipe(9, addMargin, double, (n) => `Price: ${n}`)
+  return 9 |> addMargin(%) |> double(%) |> `Price: ${%}`
 }
 // string!!; "Price: 24"
 ```
 
-Each stage takes the previous stage's result as its argument. Standalone functions remain reusable without adding methods to a value's prototype. Effect exports also support bundlers removing unused code when the bundler can analyze the module graph.
+Each body uses the previous stage's result through `%`. Here `%` stands for a value, so the expression before `|>` runs once and the body receives its result. Standalone functions remain reusable without adding methods to a value's prototype, and bundlers can remove the Effect functions a program never calls.
 
 For program operators, start with the work to run:
 
 ```ts
 function preparedPrice() {
-  return pipe(
-    () => priceLabel(),
-    timeout("1 second"),
-    withSpan("price-label")
-  )
+  return priceLabel() |> timeout(%, "1 second") |> withSpan(%, "price-label")
 }
 ```
 
-The program function delays `priceLabel` until the pipeline runs it. The `pipe` call returns the final success value. Wrap the whole pipeline in another function to keep it as reusable work.
+Here each `%` stands where `timeout` and `withSpan` expect a program, so the expression before `|>` is passed by name: `priceLabel()` runs when `timeout` runs it, and the span covers the timed work. The pipe returns the final success value. Wrap the whole pipeline in a function to keep it as reusable work: `const prepared = () => priceLabel() |> timeout(%, "1 second")`.
+
+A pipe passes its left side by name or uses it as a value, not both, and its body must use `%`. Hover over a `%` to see which it does.
 
 ## Map or replace a success
 
@@ -156,6 +154,6 @@ A call in an Effeck statement runs even when its success value is ignored. A fun
 
 ## Coming from Effect
 
-Statements replace `map`, `flatMap`, `andThen`, and `tap` in most functions. Use the global `pipe` with a program first for retry, timeout, provisioning, and tracing; an ordinary program function has no Effect `.pipe` method. Call a data type's functions as methods, `maybe.map(f).getOrElse(() => 0)`, instead of `pipe(maybe, Option.map(f), Option.getOrElse(() => 0))`.
+Statements replace `map`, `flatMap`, `andThen`, and `tap` in most functions. Use `|>` for retry, timeout, provisioning, and tracing: `work() |> retry(%, policy) |> timeout(%, "1 second")` replaces `work().pipe(Effect.retry(policy), Effect.timeout("1 second"))`. Call a data type's functions as methods, `maybe.map(f).getOrElse(() => 0)`, instead of `pipe(maybe, Option.map(f), Option.getOrElse(() => 0))`. The global `pipe` still works, and suits data-last functions that have no data-first form, such as `Match.when`.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/building-pipelines)

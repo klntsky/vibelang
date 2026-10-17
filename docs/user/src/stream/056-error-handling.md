@@ -49,10 +49,9 @@ const defectOnly = Stream.die("corrupt frame").catchCauseFilter(Cause.findDie, (
 
 ```ts
 function consumeChecked() {
-  const source = pipe(
-    Stream.succeed("accepted").concat(Stream.fail("read failed")),
-    Stream.onError(() => log("input failed; closing reader"))
-  )
+  const source = Stream.succeed("accepted")
+    .concat(Stream.fail("read failed"))
+    .onError(() => log("input failed; closing reader"))
   try {
     return source.runCollect()
   } finally {

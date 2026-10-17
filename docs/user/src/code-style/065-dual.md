@@ -1,6 +1,6 @@
 # Dual APIs
 
-Many Effect APIs accept either the data followed by options or options followed by the data. These are the data-first and data-last forms of a dual API. Effeck preserves both forms; when the data is a program, pass a zero-argument function to keep its execution under the operator's control.
+Many Effect APIs accept either the data followed by options or options followed by the data. These are the data-first and data-last forms of a dual API. Effeck preserves both forms. With the pipe operator, `|>`, and method syntax on Effect's data types, the data-first form usually reads best.
 
 ## Data first or data last
 
@@ -31,15 +31,11 @@ function directLookup() {
 }
 
 function pipedLookup() {
-  return pipe(
-    () => lookup(),
-    retry({ times: 2 }),
-    timeout("1 second")
-  )
+  return lookup() |> retry(%, { times: 2 }) |> timeout(%, "1 second")
 }
 ```
 
-The first argument to the program pipeline is a function, so retry and timeout control the whole computation. `Effect.retry({ times: 2 })` builds a stage; applying that stage in `pipe` runs the resulting program. Writing `lookup()` as the initial argument would run it before the operators receive it.
+Each `%` stands for the expression before its `|>`. Where `%` is an argument that expects a program, as the first argument of `retry` and `timeout` does, that expression is passed by name: retry runs `lookup()` again on each attempt, and timeout limits the whole retried computation. Where `%` is an argument that expects a value, the expression runs once and `%` is its result.
 
 ## Choosing a form
 
@@ -48,11 +44,7 @@ function boundedLookup() {
   return retry(lookup(), { times: 2 })
 }
 
-const reusableLookup = () => pipe(
-  () => lookup(),
-  retry({ times: 2 }),
-  timeout("1 second")
-)
+const reusableLookup = () => lookup() |> retry(%, { times: 2 }) |> timeout(%, "1 second")
 ```
 
-A direct call suits one operator; a pipeline keeps several operators readable. Wrap the complete pipeline in a function when you want a reusable program rather than its result. For transformations that only use a completed value, ordinary statements are usually clearer than `Effect.map` or `Effect.flatMap`.
+A direct call suits one operator; a pipe keeps several operators readable. Wrap the complete pipe in a function when you want a reusable program rather than its result. For transformations that only use a completed value, ordinary statements are usually clearer than `Effect.map` or `Effect.flatMap`.

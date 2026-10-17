@@ -185,10 +185,10 @@ A program starts only at a runner: `NodeRuntime.runMain` or `BunRuntime.runMain`
 #### Do I still use `pipe`?
 
 ```ts es
-const user = pipe(() => fetchUser(id), retry({ times: 3 }), timeout("2 seconds"))
+const user = fetchUser(id) |> retry(%, { times: 3 }) |> timeout(%, "2 seconds")
 ```
 
-Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The built-in `pipe` stacks policies over a program and still works on data. There is no `|>` (Chapter 5).
+Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The pipe operator, `x |> f(%)`, stacks policies over a program, passing it by name where a policy expects a program, and works on data too (Chapter 5).
 
 #### How do I pattern match?
 

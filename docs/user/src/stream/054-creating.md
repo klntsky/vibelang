@@ -180,7 +180,7 @@ function fromBroadcast(bus: PubSub.PubSub<string>) {
 ## Schedules as sources
 
 ```ts
-const policy = pipe(Schedule.spaced("400 millis"), Schedule.upTo({ times: 3 }))
+const policy = Schedule.spaced("400 millis").upTo({ times: 3 })
 const pulses = Stream.fromSchedule(policy)
 
 function readPulses() {

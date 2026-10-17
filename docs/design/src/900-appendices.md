@@ -188,7 +188,7 @@ Stages as fetched on 2026-10-16 (`docs/research/tc39-syntax.md`).
 | Proposal | Stage | In Effeck |
 | --- | --- | --- |
 | Explicit Resource Management (`using`) | 4 since 2026-05-19, for ES2027 | Adopted: `using` with Effect's guarantees (Chapter 6) |
-| Pipeline operator (Hack `\|>`) | 2 since 2021-08; topic token undecided; "somewhat stuck" (January 2026) | Not in v0: a call runs before the pipe sees it; the `pipe(program, …)` built-in instead (Chapter 5, D8). Revisited at Stage 3 |
+| Pipeline operator (Hack `\|>`) | 2 since 2021-08; topic token undecided; "somewhat stuck" (January 2026) | In `.effeck` files with the topic `%`; a topic that stands for a program passes the left side by name (Chapter 5, D154, D155; supersedes D8) |
 | AsyncContext | 2 | Prior art for the snapshot rule (Chapter 22). Effeck code keeps request-scoped values in Effect's Context |
 | Partial application (`f~(x, ?)`) | 1 | Not adopted. A function with no arguments is the program spelling (D7) |
 | Pattern matching (`match`) | 1 | Not adopted. `switch` and `catch` narrowing, and Effect's `Match` module |

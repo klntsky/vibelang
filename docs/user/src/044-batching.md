@@ -81,11 +81,9 @@ Requests using the same resolver and batch key can join the same pending batch. 
 ## Control batch execution
 
 ```ts
-const TunedResolver = pipe(
-  PartResolver,
-  RequestResolver.setDelay("8 millis"),
-  RequestResolver.batchN(64)
-)
+const TunedResolver = PartResolver
+  |> RequestResolver.setDelay(%, "8 millis")
+  |> RequestResolver.batchN(%, 64)
 
 function tunedLookup(code: string) {
   return Effect.request(FindPart({ code }), TunedResolver)

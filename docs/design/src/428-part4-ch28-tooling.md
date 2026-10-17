@@ -165,7 +165,9 @@ and a plain helper's direct signature alongside its TypeScript-facing type
 (D77). Prelude names and service members complete in scope (D78). A method of
 an Effect data type hovers as the function it calls, "Method syntax: calls
 `Option.getOrElse(maybe, …)`", and completes after a dot (D152). A call passed
-by name hovers as "Passed by name to `fork` as a program" (D147). TypeScript
+by name hovers as "Passed by name to `fork` as a program" (D147), and so does a
+pipe's topic that passes its left side by name; any other topic hovers as its
+value, "(topic) %: T" (D155). TypeScript
 files retain TypeScript hover behavior. D33's control-class hover text,
 catch-specific completions, mechanical EK code actions, and migration
 refactors remain design targets. Diagnostic messages include repair suggestions
@@ -194,6 +196,9 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK1003 | `async`, `await`, `for await`, or `await using`: a call already waits | Remove them | 10 |
 | EK1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
 | EK1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
+| EK1006 | A pipe whose body does not use its topic, as in `name \|> "anonymous"` (D156) | Write `%` where the value goes: `name \|> greet(%)` | 5 |
+| EK1007 | `%` outside every pipe's body (D156) | Use `%` only after `\|>`; `%` between two operands is still the remainder | 5 |
+| EK1008 | A pipe that passes its left side by name to one program and also uses it as a value (D155) | Bind the value first with `const`, or pass it by name everywhere | 5, 13 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, suggest `T!!` or removing the annotation; for a bare `T`, suggest `T!!` or `T!Errors` | 14 |

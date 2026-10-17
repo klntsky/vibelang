@@ -38,7 +38,7 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D5 | Calls to non-Effect code need a declared trust level (Will) | Foreign code may throw; platform APIs are replaced; clock reads go through services | 10 |
 | D6 | The standard library is Effect's (Will) | Effect ships the modules and the platform implementations | 11 |
 | D7 | Program values are functions with no arguments | No new syntax; `() =>` already means "not yet" | 5, 13 |
-| D8 | No `\|>` in v0; the `pipe(program, …stages)` built-in stays | Calls run before a pipe sees them; Stage 2 since 2021; 1.1% and 2.6% of pipes keep two stages | 5 |
+| D8 | No `\|>` in v0; the `pipe(program, …stages)` built-in stays. **Superseded by D154** | Calls run before a pipe sees them; Stage 2 since 2021; 1.1% and 2.6% of pipes keep two stages | 5 |
 | D9 | A function value where a plain function is expected passes its plain-JavaScript form, or EK4301 | Fable review, finding 3 | 13, 16 |
 | D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; pure recursion on the JavaScript stack | Codex review R4; settled decision 4; the owner's `add` feedback | 15 |
 | D11 | Higher-order functions compile to frames in v0 | Fable review, finding 5 | 15, 16 |
@@ -166,6 +166,9 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D151 | `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and seven more Effect functions need no prefix | They were 329 of the 538 `Effect.` member uses in the docs | 1, 27 |
 | D152 | **Controversial.** A value of an Effect data type takes its module's data-first functions as methods: `stream.filter(p).take(3)` is `Stream.take(Stream.filter(stream, p), 3)`; own members win | Removes the module prefix and nesting from data-type code; the emitted calls tree-shake as Effect's do | 5, 13 |
 | D153 | A data type's method exists only in a call; any other access is EK4501 | No function value exists to bind | 13, 28 |
+| D154 | **Controversial.** The Hack pipe operator in `.effeck` files: `x \|> f(%, a)`, topic `%`, left-associative, looser than every binary operator; supersedes D8 | Fewer tokens and no nesting for operator chains; any argument position | 5, 27 |
+| D155 | **Controversial.** A topic follows the by-name rule: where `%` stands for a program, the left side is passed by name; elsewhere it runs once, before the body; both in one pipe is EK1008 | `fetchUser(id) \|> retry(%, policy)` must retry the call, as `retry(fetchUser(id), policy)` does | 5, 13 |
+| D156 | A pipe's body must use `%` (EK1006); `%` outside a pipe's body is EK1007; after an operand `%` is still the remainder | The proposal's early errors; `%` keeps its JavaScript meaning where it already has one | 5, 28 |
 
 #### Rules of the runtime and compiler
 

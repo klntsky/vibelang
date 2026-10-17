@@ -45,11 +45,9 @@ function totalReport() {
 ## Composing input and output transformations
 
 ```ts
-const report = pipe(
-  Sink.sum,
-  Sink.mapInput((entry: { readonly bytes: number }) => entry.bytes),
-  Sink.map((bytes) => `${bytes} bytes`)
-)
+const report = Sink.sum
+  .mapInput((entry: { readonly bytes: number }) => entry.bytes)
+  .map((bytes) => `${bytes} bytes`)
 
 function byteReport() {
   return Stream.make({ bytes: 128 }, { bytes: 256 }).run(report)
@@ -57,7 +55,7 @@ function byteReport() {
 // Returns "384 bytes".
 ```
 
-The input stage adapts each element, the original sink accumulates, and the output stage formats once. The pipeline builds a Sink value. `Stream.run` is the operation that executes it.
+The input stage adapts each element, the original sink accumulates, and the output stage formats once. The method chain builds a Sink value. `Stream.run` is the operation that executes it.
 
 ## Filtering before consumption
 

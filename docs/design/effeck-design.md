@@ -918,9 +918,9 @@ const fastest = race(fromCache(id), fromNetwork(id))   // the first to succeed
 
 Each line is a call, so it runs: `user` is a `User`, not an `Effect`. The inner calls are passed by name: `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
 
-#### Pipe
+#### The pipe operator
 
-Stacking several combinators reads best as a pipeline. Effeck's built-in `pipe` takes the program first:
+Stacking several combinators reads best as a pipeline. Effeck has TC39's proposed pipe operator, Hack style (D154): in `x |> f(%, a)`, the topic `%` stands for `x`.
 
 ```ts effect
 const user = yield* fetchUser(id).pipe(
@@ -931,16 +931,16 @@ const user = yield* fetchUser(id).pipe(
 ```
 
 ```ts es
-const user = pipe(
-  () => fetchUser(id),
-  retry({ times: 3 }),
-  timeout("2 seconds"),
-  withSpan("load-user")
-)
+const user = fetchUser(id)
+  |> retry(%, { times: 3 })
+  |> timeout(%, "2 seconds")
+  |> withSpan(%, "load-user")
 // user: User;  E gains Cause.TimeoutError from Effect.timeout
 ```
 
-When `pipe`'s first argument is a function with no parameters and the first stage expects an `Effect`, that function is the program. Applied to plain data, `pipe` is Effect's ordinary `pipe`. The types flow exactly as in Effect: `Effect.timeout` adds `Cause.TimeoutError` to E, and `Effect.retry` keeps E and R. To keep the pipeline as a program instead of running it, wrap it: `const loadUser = () => pipe(() => fetchUser(id), …)`.
+The topic follows the one rule (D155). Each `%` above stands where a parameter expects a program, so the expression before its `|>` is passed by name: `retry` receives `fetchUser(id)` as a program and runs it again on each attempt, `timeout` receives the retried program, and `withSpan` the timed one. Where `%` stands for a value, the expression before `|>` runs once, before the body, and `%` is its result: `9 |> addMargin(%) |> double(%)` is `double(addMargin(9))`. A pipe does one or the other (EK1008), and its body must use `%` (EK1006). The types flow exactly as in Effect: `Effect.timeout` adds `Cause.TimeoutError` to E, and `Effect.retry` keeps E and R. The pipe is a call, so it runs; to keep it as a program, wrap it: `const loadUser = () => fetchUser(id) |> retry(%, { times: 3 })`.
+
+The built-in `pipe` function still works: applied to plain data it is Effect's `pipe`, and with a function with no parameters first, that function is the program. It suits data-last functions that have no data-first form, such as `Match.when`.
 
 Most pipes you write today disappear:
 
@@ -950,11 +950,11 @@ Most pipes you write today disappear:
 | `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch` |
 | `Effect.ensuring` | `finally` |
 | `Effect.provide`, `Effect.provideService` | the same functions, with a program argument |
-| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached`, `Effect.uninterruptible` | the same functions, called or piped as above |
+| `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached`, `Effect.uninterruptible` | the same functions, called or piped with `\|>` as above |
 
 On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how.
 
-Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (`docs/research/pipe-census.md`). Pipelines over plain data stay plain: `pipe(items, Array.filter(isActive), Array.map(toRow))` is an ordinary function call.
+Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (`docs/research/pipe-census.md`). Pipelines over plain data stay plain: `items |> Arr.filter(%, isActive) |> Arr.map(%, toRow)` is `Arr.map(Arr.filter(items, isActive), toRow)`.
 
 #### Methods on Effect's data types
 
@@ -974,9 +974,9 @@ The module is the one that declares the value's type: a `Stream` takes `Stream`'
 
 The compiled JavaScript calls the module's function, `Stream.take(Stream.map(Stream.filter(readings, …), …), 3)`, so a bundler drops the functions a program never calls, as it does for Effect code.
 
-#### Why there is no `|>`
+#### Why `|>` passes by name
 
-JavaScript's proposed pipeline operator is not part of Effeck. It conflicts with the rule that calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, the call `fetchUser(id)` runs before the pipe sees it, and so would every stage that calls a combinator. The proposal is also not settled: it has been at Stage 2 since 2021-08, its topic token is undecided (the `%` in its README is disqualified on the proposal's own wiki), the committee's January 2026 review listed it as "somewhat stuck", and TypeScript waits for Stage 3 before implementing it (`docs/research/tc39-syntax.md` §1). Effeck revisits the operator if it reaches Stage 3.
+D8 kept the operator out of v0 because calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, a topic that always held a value would run `fetchUser(id)` once, before `Effect.retry` saw it, and retry would have nothing to repeat. The by-name rule (D147) removes the conflict: where `%` stands for a program, the expression before `|>` is passed as one, exactly as `retry(fetchUser(id), policy)` passes it. The proposal itself is still at Stage 2 and its topic token is undecided (`docs/research/tc39-syntax.md` §1); Effeck uses `%`, the token in the proposal's README, and will follow the token TC39 chooses.
 
 #### Storing, returning, and composing programs
 
@@ -2021,10 +2021,10 @@ A program starts only at a runner: `NodeRuntime.runMain` or `BunRuntime.runMain`
 #### Do I still use `pipe`?
 
 ```ts es
-const user = pipe(() => fetchUser(id), retry({ times: 3 }), timeout("2 seconds"))
+const user = fetchUser(id) |> retry(%, { times: 3 }) |> timeout(%, "2 seconds")
 ```
 
-Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The built-in `pipe` stacks policies over a program and still works on data. There is no `|>` (Chapter 5).
+Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The pipe operator, `x |> f(%)`, stacks policies over a program, passing it by name where a policy expects a program, and works on data too (Chapter 5).
 
 #### How do I pattern match?
 
@@ -2148,6 +2148,7 @@ The full rule:
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
 | A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
+| A pipe's topic, `%` in `fetchUser(id) \|> retry(%, policy)` | Where `%` stands for a program, the pipe's left side, passed by name (D155); elsewhere the left side's value, computed once before the body | `retry(Effect.gen(function* () { return yield* fetchUser(id) }), policy)` |
 | A method of an Effect data type, `stream.take(3)` or `fiber.join()` | Calls the module's function with the value first (D152), then applies these rules to that call: an `Effect` runs, other data is returned | `Stream.take(stream, 3)`; `yield* Fiber.join(fiber)` |
 | A service, `Users()` | Returns the implementation | `yield* Users` |
 | A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |
@@ -3918,7 +3919,9 @@ and a plain helper's direct signature alongside its TypeScript-facing type
 (D77). Prelude names and service members complete in scope (D78). A method of
 an Effect data type hovers as the function it calls, "Method syntax: calls
 `Option.getOrElse(maybe, …)`", and completes after a dot (D152). A call passed
-by name hovers as "Passed by name to `fork` as a program" (D147). TypeScript
+by name hovers as "Passed by name to `fork` as a program" (D147), and so does a
+pipe's topic that passes its left side by name; any other topic hovers as its
+value, "(topic) %: T" (D155). TypeScript
 files retain TypeScript hover behavior. D33's control-class hover text,
 catch-specific completions, mechanical EK code actions, and migration
 refactors remain design targets. Diagnostic messages include repair suggestions
@@ -3947,6 +3950,9 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK1003 | `async`, `await`, `for await`, or `await using`: a call already waits | Remove them | 10 |
 | EK1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
 | EK1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
+| EK1006 | A pipe whose body does not use its topic, as in `name \|> "anonymous"` (D156) | Write `%` where the value goes: `name \|> greet(%)` | 5 |
+| EK1007 | `%` outside every pipe's body (D156) | Use `%` only after `\|>`; `%` between two operands is still the remainder | 5 |
+| EK1008 | A pipe that passes its left side by name to one program and also uses it as a value (D155) | Bind the value first with `const`, or pass it by name everywhere | 5, 13 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, suggest `T!!` or removing the annotation; for a bare `T`, suggest `T!!` or `T!Errors` | 14 |
@@ -4048,7 +4054,7 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D5 | Calls to non-Effect code need a declared trust level (Will) | Foreign code may throw; platform APIs are replaced; clock reads go through services | 10 |
 | D6 | The standard library is Effect's (Will) | Effect ships the modules and the platform implementations | 11 |
 | D7 | Program values are functions with no arguments | No new syntax; `() =>` already means "not yet" | 5, 13 |
-| D8 | No `\|>` in v0; the `pipe(program, …stages)` built-in stays | Calls run before a pipe sees them; Stage 2 since 2021; 1.1% and 2.6% of pipes keep two stages | 5 |
+| D8 | No `\|>` in v0; the `pipe(program, …stages)` built-in stays. **Superseded by D154** | Calls run before a pipe sees them; Stage 2 since 2021; 1.1% and 2.6% of pipes keep two stages | 5 |
 | D9 | A function value where a plain function is expected passes its plain-JavaScript form, or EK4301 | Fable review, finding 3 | 13, 16 |
 | D10 | Plain JavaScript when a function performs no Effect operation and E is never; source order kept; pure recursion on the JavaScript stack | Codex review R4; settled decision 4; the owner's `add` feedback | 15 |
 | D11 | Higher-order functions compile to frames in v0 | Fable review, finding 5 | 15, 16 |
@@ -4176,6 +4182,9 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D151 | `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and seven more Effect functions need no prefix | They were 329 of the 538 `Effect.` member uses in the docs | 1, 27 |
 | D152 | **Controversial.** A value of an Effect data type takes its module's data-first functions as methods: `stream.filter(p).take(3)` is `Stream.take(Stream.filter(stream, p), 3)`; own members win | Removes the module prefix and nesting from data-type code; the emitted calls tree-shake as Effect's do | 5, 13 |
 | D153 | A data type's method exists only in a call; any other access is EK4501 | No function value exists to bind | 13, 28 |
+| D154 | **Controversial.** The Hack pipe operator in `.effeck` files: `x \|> f(%, a)`, topic `%`, left-associative, looser than every binary operator; supersedes D8 | Fewer tokens and no nesting for operator chains; any argument position | 5, 27 |
+| D155 | **Controversial.** A topic follows the by-name rule: where `%` stands for a program, the left side is passed by name; elsewhere it runs once, before the body; both in one pipe is EK1008 | `fetchUser(id) \|> retry(%, policy)` must retry the call, as `retry(fetchUser(id), policy)` does | 5, 13 |
+| D156 | A pipe's body must use `%` (EK1006); `%` outside a pipe's body is EK1007; after an operand `%` is still the remainder | The proposal's early errors; `%` keeps its JavaScript meaning where it already has one | 5, 28 |
 
 #### Rules of the runtime and compiler
 
@@ -4479,7 +4488,7 @@ Stages as fetched on 2026-10-16 (`docs/research/tc39-syntax.md`).
 | Proposal | Stage | In Effeck |
 | --- | --- | --- |
 | Explicit Resource Management (`using`) | 4 since 2026-05-19, for ES2027 | Adopted: `using` with Effect's guarantees (Chapter 6) |
-| Pipeline operator (Hack `\|>`) | 2 since 2021-08; topic token undecided; "somewhat stuck" (January 2026) | Not in v0: a call runs before the pipe sees it; the `pipe(program, …)` built-in instead (Chapter 5, D8). Revisited at Stage 3 |
+| Pipeline operator (Hack `\|>`) | 2 since 2021-08; topic token undecided; "somewhat stuck" (January 2026) | In `.effeck` files with the topic `%`; a topic that stands for a program passes the left side by name (Chapter 5, D154, D155; supersedes D8) |
 | AsyncContext | 2 | Prior art for the snapshot rule (Chapter 22). Effeck code keeps request-scoped values in Effect's Context |
 | Partial application (`f~(x, ?)`) | 1 | Not adopted. A function with no arguments is the program spelling (D7) |
 | Pattern matching (`match`) | 1 | Not adopted. `switch` and `catch` narrowing, and Effect's `Match` module |

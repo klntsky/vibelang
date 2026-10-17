@@ -34,13 +34,11 @@ Here `55` and `89` are in a batch the sink never requests. Changing internal bat
 
 ```ts
 function discardRemainder() {
-  const sink = pipe(
-    Sink.take<number>(2),
-    Sink.ignoreLeftover,
-    Sink.mapEnd(([selected, leftover]) => [
+  const sink = Sink.take<number>(2)
+    .ignoreLeftover()
+    .mapEnd(([selected, leftover]) => [
       { selected, leftover: leftover ?? [] }
     ] as const)
-  )
   return Stream.fromArray([21, 34, 55, 89]).run(sink)
 }
 // { selected: [21, 34], leftover: [] }

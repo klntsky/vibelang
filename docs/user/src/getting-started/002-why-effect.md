@@ -46,12 +46,10 @@ Services carry dependencies through the same contract as errors and successes. L
 
 ```ts
 function resilientReceipt(sku: string) {
-  return pipe(
-    () => receipt(sku),
-    retry({ times: 2 }),
-    timeout("800 millis"),
-    withSpan("receipt")
-  )
+  return receipt(sku)
+    |> retry(%, { times: 2 })
+    |> timeout(%, "800 millis")
+    |> withSpan(%, "receipt")
 }
 ```
 

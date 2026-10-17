@@ -36,15 +36,13 @@ import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"
 
-const Tracing = pipe(
-  OtlpTracer.layer({
-    url: "http://localhost:4318/v1/traces",
-    resource: { serviceName: "report-worker" },
-    exportInterval: "1 second"
-  }),
-  Layer.provide(OtlpSerialization.layerJson),
-  Layer.provide(FetchHttpClient.layer)
-)
+const Tracing = OtlpTracer.layer({
+  url: "http://localhost:4318/v1/traces",
+  resource: { serviceName: "report-worker" },
+  exportInterval: "1 second"
+})
+  |> Layer.provide(%, OtlpSerialization.layerJson)
+  |> Layer.provide(%, FetchHttpClient.layer)
 
 function exportedReport() {
   with Tracing { return renderReport("csv") }
@@ -135,11 +133,9 @@ const TraceEndpoint = Config.String("TRACE_ENDPOINT")
 
 const VendorTracing = Layer.unwrap(() => {
   const url = TraceEndpoint()
-  return pipe(
-    OtlpTracer.layer({ url, resource: { serviceName: "report-worker" } }),
-    Layer.provide(OtlpSerialization.layerJson),
-    Layer.provide(FetchHttpClient.layer)
-  )
+  return OtlpTracer.layer({ url, resource: { serviceName: "report-worker" } })
+    |> Layer.provide(%, OtlpSerialization.layerJson)
+    |> Layer.provide(%, FetchHttpClient.layer)
 })
 
 function productionReport() {

@@ -133,11 +133,9 @@ layer ReportsFallback: Reports {
   render(title) { return `Offline report: ${title}` }
 }
 
-const ObservedReports = pipe(
-  ReportsUnavailable,
-  Layer.tap(() => log("Reports initialized")),
-  Layer.tapError((error) => log(`Reports initialization failed: ${error._tag}`))
-)
+const ObservedReports = ReportsUnavailable
+  |> Layer.tap(%, () => log("Reports initialized"))
+  |> Layer.tapError(%, (error) => log(`Reports initialization failed: ${error._tag}`))
 
 const ResilientReports = Layer.catch(ObservedReports, () => ReportsFallback)
 ```

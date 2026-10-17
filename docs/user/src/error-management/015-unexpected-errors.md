@@ -45,11 +45,9 @@ function startup() {
 // never!!
 
 function startupWithMessage() {
-  return pipe(
-    () => requireSetting("region"),
-    Effect.mapError((error) => new Error(`Startup needs ${error.name}`)),
-    Effect.orDie
-  )
+  return requireSetting("region")
+    |> Effect.mapError(%, (error) => new Error(`Startup needs ${error.name}`))
+    |> Effect.orDie(%)
 }
 ```
 
