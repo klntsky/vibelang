@@ -1,4 +1,3 @@
-import { NodeRuntime } from "@effect/platform-node"
 import { EmptyName, greeting } from "./greeting.effeck"
 
 service Greeter {
@@ -19,5 +18,3 @@ export function main() {
     }
   }
 }
-
-NodeRuntime.runMain(() => main())

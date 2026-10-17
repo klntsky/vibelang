@@ -68,16 +68,14 @@ A held Effect value runs when called with no arguments. Data that Effect can als
 ## Declare at the module top level
 
 ```ts
-// run.effeck
-import { NodeRuntime } from "@effect/platform-node"
-function start() {
+// start.effeck
+export function main() {
   Console.log("started")
 }
-
-NodeRuntime.runMain(() => start())
+// node start.js runs main
 ```
 
-Declare functions, services, schemas, and layers at module scope. Do not run a program there: even `Effect.succeed(1)` is EK1001 at the top level. A runner is the execution boundary; call it where no fiber is already running.
+Declare functions, services, schemas, and layers at module scope. Do not run a program there: even `Effect.succeed(1)` is EK1001 at the top level. Export a `main` without parameters instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing the module runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
 
 `Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no imports. Import other APIs from their Effect packages.
 

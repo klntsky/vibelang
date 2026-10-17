@@ -1,7 +1,3 @@
-import { NodeRuntime } from "@effect/platform-node"
-
 export function main() {
   Console.log("Hello, Effeck!")
 }
-
-NodeRuntime.runMain(() => main())

@@ -6,9 +6,7 @@ Run an Effeck application through its platform runtime, keep its lifetime in `ma
 
 ```ts
 // main.effeck
-import { NodeRuntime } from "@effect/platform-node"
-
-function main() {
+export function main() {
   try {
     log("worker started")
     while (true) {
@@ -19,11 +17,10 @@ function main() {
     log("worker stopped")
   }
 }
-
-NodeRuntime.runMain(() => main())
+// node main.js runs main with NodeRuntime.runMain
 ```
 
-Pass the program to `runMain`; the runner starts it and coordinates interruption and shutdown. The `finally` block runs when the worker stops, including on interruption. Acquire application resources with `using` inside `main`, and provide the application layer once around the main program so its services share one lifetime.
+Export `main` from the entry module. When node starts the module, the compiled JavaScript passes `main()` to `NodeRuntime.runMain`, which starts it and coordinates interruption and shutdown; importing the module starts nothing. The `finally` block runs when the worker stops, including on interruption. Acquire application resources with `using` inside `main`, and provide the application layer once around the main program so its services share one lifetime.
 
 `Effect.runPromise` is useful when another host owns execution and needs a Promise. For a standalone process, prefer the platform runner's signal handling and shutdown behavior. Module-level calls may build values or register an entry point, but ordinary application work belongs inside functions.
 

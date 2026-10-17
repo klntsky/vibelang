@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "effeck -p .",
-    "start": "node dist/run.js"
+    "start": "node dist/main.js"
   },
   "dependencies": {
     "effect": "4.0.5",

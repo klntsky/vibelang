@@ -20,8 +20,8 @@ Recovered from EmptyName
 
 `src/greeting.effeck` defines a greeting function and an `EmptyName` tagged error.
 `src/main.effeck` declares the abstract `Greeter` service, supplies its live layer,
-recovers a typed failure with `try`/`catch`, and starts the program with
-`NodeRuntime.runMain`. `src/greeting.test.effeck` uses `it.effect` to test success
+recovers a typed failure with `try`/`catch`, and exports `main`, which
+`node dist/main.js` runs with `NodeRuntime.runMain`. `src/greeting.test.effeck` uses `it.effect` to test success
 and recovery. Vitest compiles `src/**/*.test.effeck` through `effeck-vite`; tests need no prior build.
 
 Run `bun run dev` to compile on changes and restart Node when output changes.

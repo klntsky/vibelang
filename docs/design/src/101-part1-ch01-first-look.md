@@ -92,19 +92,16 @@ Modules from `effect`'s subpath packages, such as `effect/http`, are imported as
 
 ```ts es
 // main.effeck
-import { NodeRuntime } from "@effect/platform-node"
 import { AppLive } from "./app.effeck"
 import { welcome } from "./welcome.effeck"
 
-function main() {
+export function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
   log(`sent a welcome email to ${name}`)
 }
-
-NodeRuntime.runMain(() => main())
 ```
 
-`Effect.provide` supplies the services `welcome` needs from an application Layer (Chapter 4 builds `AppLive`). The `() =>` in `() => welcome("42")` is how you hand a program to Effect without running it yet (Chapter 5). The last line hands `main` to Node's runner, which is the only place a program starts.
+`Effect.provide` supplies the services `welcome` needs from an application Layer (Chapter 4 builds `AppLive`). The `() =>` in `() => welcome("42")` is how you hand a program to Effect without running it yet (Chapter 5). The module exports `main` without parameters, so its JavaScript ends with `if (import.meta.main) NodeRuntime.runMain(main())`: `node main.js` hands `main` to Node's runner, the only place a program starts, and importing the module starts nothing (D135).
 
 #### What the compiler produces
 

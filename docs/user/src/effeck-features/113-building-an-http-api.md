@@ -73,17 +73,9 @@ export function main() {
 }
 ```
 
-```ts
-// run.effeck
-import { NodeRuntime } from "@effect/platform-node"
-import { main } from "./server.effeck"
-
-NodeRuntime.runMain(() => main())
-```
-
 Pass `createServer` as a value. `NodeHttpServer.layer` runs the Node API and owns its lifetime; calling `createServer()` directly in `.effeck` is a platform API error. `HttpRouter.serve` builds the serving layer, and `Layer.launch` keeps it alive until shutdown.
 
-The module top level constructs schemas, routes, and layers. Only the runner starts the application.
+The module top level constructs schemas, routes, and layers. `node server.js` starts the application: a module that exports a `main` without parameters ends with `if (import.meta.main) NodeRuntime.runMain(main())`, so importing it, from a test or another module, starts nothing.
 
 ## Test a route without a socket
 

@@ -23,8 +23,8 @@ compiles the project with `effeck` and serves the JavaScript, so tests need no
 prior build. Node and Vitest receive JavaScript; neither interprets `.effeck`
 sources directly.
 
-The starter's `NodeRuntime.runMain(() => main())` supplies the application
-boundary. Its greeting and recovery messages provide a quick check that the
+The starter's `main.effeck` exports `main`, so `node dist/main.js` runs it with
+`NodeRuntime.runMain`, the application boundary. Its greeting and recovery messages provide a quick check that the
 service layer and typed failure both run.
 
 ## Execute synchronous computations
@@ -93,16 +93,13 @@ Effect.runPromise(() => {
 
 ```ts
 // main.effeck
-import { NodeRuntime } from "@effect/platform-node"
-
-function main() {
+export function main() {
   log("application started")
 }
-
-NodeRuntime.runMain(() => main())
+// node main.js runs main with NodeRuntime.runMain
 ```
 
-Use the platform runner for a command-line application so shutdown follows platform conventions. Supply the application layer once around `main`; a runner needs all application requirements satisfied. For multiple framework entry points sharing services, use [ManagedRuntime](../036-runtime.md).
+A module that exports a `main` without parameters runs it with the platform runner when node starts the module, so shutdown follows platform conventions; without `@effect/platform-node` installed, the compiler uses the runtime's copy of that runner. Call a runner at the top level yourself to pass options or layers; the module then runs only that. Supply the application layer once around `main`; a runner needs all application requirements satisfied. For multiple framework entry points sharing services, use [ManagedRuntime](../036-runtime.md).
 
 | Runner | Result |
 | --- | --- |

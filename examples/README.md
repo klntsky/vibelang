@@ -5,7 +5,7 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 
 | Example | Shows |
 | --- | --- |
-| [hello](hello/) | One function, one log, and `NodeRuntime.runMain`. |
+| [hello](hello/) | One function and one log; an exported `main` runs when node starts the module. |
 | [users](users/) | Abstract services, layers, `wire`, typed failures, and test layers. |
 | [http-api](http-api/) | A schema-validated HTTP route, conflict errors, and socket-free route tests. |
 | [file-tree](file-tree/) | Inferred recursion, platform services, a producer, and concurrent reads. |
@@ -43,7 +43,7 @@ ln -s ../../experiments/node_modules prototype/esc/node_modules # once
 bun scripts/check-examples-prototype.ts
 ```
 
-The prototype check compiles all seven main modules and their supported runners,
+The prototype check compiles all seven main modules, runs each exported `main`,
 compares finite output,
 and runs the six `it.effect` tests. It creates disposable `.prototype` directories
 inside each example and writes each project's diagnostics to `.prototype/check.log`.

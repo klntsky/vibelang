@@ -89,8 +89,10 @@ clients, see [editors/](editors/README.md).
   name: `fetchUser(id) |> retry(%, policy) |> timeout(%, "1 second")` retries
   and times the call. Elsewhere `x` runs once and `%` is its value.
 - A module's top level only declares. A call there that would run a program
-  is EK1001, including `Effect.succeed(1)`. Start the program once with a
-  runner, which receives `main()` by name: `NodeRuntime.runMain(main())`.
+  is EK1001, including `Effect.succeed(1)`. Export `function main()` from the
+  entry module: `node dist/main.js` runs it with `NodeRuntime.runMain`, and
+  importing the module runs nothing. A runner you call at the top level,
+  `NodeRuntime.runMain(main())`, replaces that.
 - Plain functions from other packages need a boundary, such as
   `try(parse(text))`, or a `/** @effeck trusted */`
   re-export from a `.ts` file (EK4401). Effect's packages are trusted,

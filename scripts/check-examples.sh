@@ -32,8 +32,8 @@ for name in hello users http-api file-tree resilience approval pipeline; do
     printf 'OK   %-10s compile (long-running server; use bun run test)\n' "$name"
     continue
   fi
-  entry=dist/run.js
-  [ -f "$dir/src/run.effeck" ] || entry=dist/main.js
+  # main.js runs its exported main when node starts it (D135).
+  entry=dist/main.js
   # Bound execution so an incorrect producer or fiber lifetime cannot hang CI.
   if ! (cd "$dir" && node --input-type=module - "$entry" <<'JS'
 import { spawnSync } from "node:child_process"

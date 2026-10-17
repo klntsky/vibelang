@@ -85,6 +85,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$programs` | Convert an iterable of zero-argument functions to an array of Effects, or a record of them to a record of Effects | D49 |
 | `$normal` | Represent normal completion of a lowered region or loop body | D14, D26 |
 | `$catch` | Recover a cause containing expected failures only | D13, D28, D46 |
+| `$isFailure` | Test a caught failure's `_tag` against a typed catch clause's tags | D131 |
 | `$finally` | Run cleanup on every exit and retain cleanup failures | D15, D46 |
 | `$expected` | Mark a value thrown in a plain-JavaScript function as an expected failure | D54 |
 | `$caught` | Unwrap an expected failure in a plain-JavaScript `catch`, and rethrow a defect | D13, D54 |
@@ -107,6 +108,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `abandon` | Consume a continuation and run its cleanup without resuming its body | D16 |
 | `$tailResume` | Return a tail-resume request without adding a clause frame | D18 |
 | `$tailResumeWith` | Return a tail-resume request with an injected Effect | D17, D18 |
+| `$clause` | Type a handle statement's clause bindings for the checker; compiled code never calls it | D132 |
 | `YieldOf` (type) | Type a producer body's yields until a loop or a Stream handles them | D26 |
 | `Producer` (type) | A producer: a `Stream` that also carries its body | D26 |
 | `$produce` | Turn a generated producer body into a cold `Stream` that hands over one element per pull | D26 |
@@ -124,6 +126,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `pipe` | Supply the prelude pipeline function | D8 |
 | `Exit` | Expose Effect completion values to TypeScript adapters | D43 |
 | `runMain` | Run a prototype entry program and return its Exit | D38 |
+| `$runMain` | Run an entry module's `main` as `NodeRuntime.runMain` would, when `@effect/platform-node` is not installed | D135 |
 | `suspend` | Bridge callback registration with a resumer that reports a lost race | D43 |
 | `Resumer` (type) | Type `resume` and the callback registration state | D43 |
 | `handoff` | Bridge sources that acknowledge cancellation before releasing late values | D43 |

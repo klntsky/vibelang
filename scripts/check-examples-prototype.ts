@@ -27,9 +27,6 @@ for (const name of names) {
   const test = fs.existsSync(path.join(staging, "main.test.effeck"))
   const entries = [path.join(staging, entry)]
   if (test) entries.push(path.join(staging, "main.test.effeck"))
-  if (name !== "file-tree" && fs.existsSync(path.join(staging, "run.effeck"))) {
-    entries.push(path.join(staging, "run.effeck"))
-  }
   fs.writeFileSync(log, "")
   try {
     const result = compile(entries, { outDir: output })
@@ -37,13 +34,9 @@ for (const name of names) {
     if (result.diagnostics.some((d) => d.severity === "error")) throw new Error("compile")
     const expected = path.join(dir, "expected-output.txt")
     if (fs.existsSync(expected)) {
-      // Execute the emitted entry once. The prototype CLI's run subcommand
-      // would additionally invoke exported main, duplicating hello's runner.
-      const module = path.join(output, "main.ts")
-      const launcher = name === "hello" ? module : path.join(output, "launch.ts")
-      if (name !== "hello") {
-        fs.writeFileSync(launcher, 'import { Effect } from "effect"\nimport { main } from "./main.ts"\nawait Effect.runPromise(main())\n')
-      }
+      // Execute exported main once; the prototype emits no entry statement (D135).
+      const launcher = path.join(output, "launch.ts")
+      fs.writeFileSync(launcher, 'import { Effect } from "effect"\nimport { main } from "./main.ts"\nawait Effect.runPromise(main())\n')
       const run = spawnSync(process.execPath, [launcher], {
         cwd: dir, encoding: "utf8", timeout: 15000, killSignal: "SIGKILL"
       })

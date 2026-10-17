@@ -18,7 +18,8 @@ bun run test
 Vitest runs `src/main.test.effeck` through `effeck-vite` without a prior
 build. Assertion stacks point to `.effeck` lines. The test routes requests through
 `HttpRouter.toHttpEffect`, without a socket.
-Importing `main.js` constructs layers; only `run.js` starts the server.
+Importing `main.js` constructs layers and starts nothing; running it with
+`node dist/main.js` starts the server, because the module exports `main` (D135).
 `main.effeck` passes Node's `createServer` to `NodeHttpServer.layer` as a value,
 which runs nothing; a call to a platform API from `.effeck` code is EK4402.
 The successful request path in Effect TypeScript is:
