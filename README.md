@@ -71,11 +71,12 @@ clients, see [editors/](editors/README.md).
 - Provide a layer to a block with `provide AppLive { ... }`; a `return` inside
   returns from the enclosing function. `provide Clock = testClock { ... }`
   provides one service, and layers and services mix in one list.
-- Start work concurrently with `fork work()` and wait for it with `await`:
-  `const [a, b] = await [fork left(), fork right()]`. `select { case ... }`
-  takes the first of several events, and `for concurrent(8) (const x of xs)`
-  runs a loop body in parallel. `await` never waits for a call: a call
-  already waits.
+- Run programs concurrently with the TC39 await operations, which behave as
+  the `Promise` methods: `const [a, b] = await.all [left(), right()]`,
+  `await.race [...]`, `await.any [...]`, `await.allSettled [...]`. Start
+  background work with `fork work()` and wait for the fiber with `await`;
+  `for concurrent(8) (const x of xs)` runs a loop body in parallel. `await`
+  never waits for a call: a call already waits.
 - Answer a control operation with a handle clause:
   `try { return release(v) } handle Approval.approve(request) { resume(true) }`.
   A `return` in the try block or a clause returns from the enclosing function.

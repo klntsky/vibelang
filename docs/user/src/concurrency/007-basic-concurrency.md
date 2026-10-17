@@ -16,16 +16,12 @@ function runTasks() {
   const bounded = forEach([1, 2, 3, 4], (id) => task(id), {
     concurrency: 2
   })
-  const unbounded = all([
-    task(5),
-    task(6),
-    task(7)
-  ], { concurrency: "unbounded" })
+  const unbounded = await.all [task(5), task(6), task(7)]
   return { sequential, bounded, unbounded }
 }
 ```
 
-The default is sequential execution. A positive numeric limit bounds active operations, while `"unbounded"` permits all supplied operations to run concurrently. Results retain input order even when work finishes out of order; choose a finite limit when work uses a constrained service or resource.
+The default is sequential execution. A positive numeric limit bounds active operations. `await.all [...]` starts every element in its own fiber at once, like `Promise.all`, and is `Effect.all` with unbounded concurrency. Results keep the order written even when work finishes out of order; choose a finite limit with `forEach` or `for concurrent(n)` when work uses a constrained service or resource.
 
 ## Interrupting computations
 
@@ -93,20 +89,20 @@ function raceExamples() {
     () => { throw "unavailable" },
     answer("replica", "20 millis")
   )
-  const anySuccess = Effect.raceAll([
-    () => answer("west", "40 millis"),
-    () => answer("east", "10 millis"),
-    () => answer("central", "30 millis")
-  ])
-  const firstCompletion = Effect.raceFirst(
+  const anySuccess = await.any [
+    answer("west", "40 millis"),
+    answer("east", "10 millis"),
+    answer("central", "30 millis")
+  ]
+  const firstCompletion = await.race [
     answer("primary", "10 millis"),
     answer("backup", "50 millis")
-  )
+  ]
   return { firstSuccess, anySuccess, firstCompletion }
 }
 ```
 
-`race` and `raceAll` wait for a success, so one early failure does not defeat another branch that can still succeed. If no branch succeeds, they fail with the collected failure reasons. `raceFirst` accepts the earliest completion, including failure, and the losing work is interrupted and cleaned up before the race returns.
+The await operations come from the TC39 await operations proposal, and each behaves as the `Promise` method of the same name. `await.any` waits for a success (`Effect.raceAll`), so one early failure does not defeat another branch that can still succeed; if no branch succeeds, it fails with the collected failure reasons. `await.race` accepts the earliest completion, including failure (`Effect.raceFirst`). In both, the losing work is interrupted and cleaned up before the race returns. A named Effect function keeps Effect's meaning: `race` waits for a success, as `Effect.race` does.
 
 ## Inspecting the winner
 
@@ -132,4 +128,4 @@ The synchronous `onWinner` callback observes the winning fiber and index, zero f
 
 ## Coming from Effect
 
-`Effect.all([task(1), task(2)])` in TypeScript becomes `Effect.all([() => task(1), () => task(2)])` in Effeck. Calling `task(1)` before passing it to the combinator would already run the work.
+`Effect.all([task(1), task(2)], { concurrency: "unbounded" })` in TypeScript becomes `await.all [task(1), task(2)]` in Effeck, and `Effect.raceFirst(a, b)` becomes `await.race [a(), b()]`. Each element is passed by name, so `task(1)` starts in its own fiber instead of running before the operation.

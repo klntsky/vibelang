@@ -25,7 +25,7 @@ function dashboard(id: string) {
 ```ts es
 const thumbnails = forEach(images, (image) => resize(image), { concurrency: 8 })
 const fastest = race(fromCache(id), fromNetwork(id))
-const first = Effect.raceFirst(fromCache(id), fromNetwork(id))
+const first = await.race [fromCache(id), fromNetwork(id)]
 const quick = timeout(slowQuery(id), "500 millis")
 ```
 
@@ -38,7 +38,10 @@ Each combinator has its own rule for a failing branch, and Effeck adds nothing t
 | `Effect.raceFirst` | Whichever branch finishes first, success or failure | Fails if the first branch to finish failed; the other is interrupted |
 | `Effect.timeout` | The program's result | At the deadline, interrupts the program and fails with `Cause.TimeoutError` |
 | `await [a, b]` | Every fiber's value, in the same shape | Interrupts the other fibers and fails with that failure |
-| `select` | The first case to finish; its statements run | Fails if the first case to finish failed; the other cases are interrupted |
+| `await.all [a(), b()]` | Every result, in the same shape | Interrupts the other elements and fails with that failure |
+| `await.allSettled [a(), b()]` | Every outcome as a `Result`, in the same shape | Never fails |
+| `await.race [a(), b()]` | Whichever element finishes first, success or failure | Fails if the first to finish failed; the others are interrupted |
+| `await.any [a(), b()]` | The first success | Keeps waiting; fails only if every element fails, with every failure |
 | `for concurrent` | Nothing: the loop runs its body for each item | Interrupts the other items and fails with that failure |
 
 A `catch` around any of these sees the failure as usual. When `Effect.race` fails because both branches failed, `catch` receives the first failure (Chapter 3).
@@ -93,40 +96,52 @@ const summary = Effect.fn("summary")(function* (id: string) {
 
 ```ts es
 function summary(id: string) {
-  const [profile, orders] = await [fork loadProfile(id), fork recentOrders(id)]
-  return { profile, orders }
+  const profile = fork loadProfile(id)
+  const orders = fork recentOrders(id)
+  return { profile: await profile, orders: await orders }
 }
 ```
 
+To start several programs and wait for them in one step, use an await operation instead of forking each: `await.all [loadProfile(id), recentOrders(id)]` (below).
+
 `await` never waits for a call: a call already runs and waits where it stands, so `await loadProfile(id)` is EK4601. A promise is EK4602; wait for one in a hatch, `try(async () => …)`, where `await` keeps its JavaScript meaning. Anything else is EK4603, and an `await` in a hatch's function that is not `async` is EK4604.
 
-#### Selecting the first event
+#### Await operations
 
-`select` starts each case in its own fiber and runs the statements of the first to finish; the other cases are interrupted (D168):
+`await.all`, `await.allSettled`, `await.race`, and `await.any` (D196) come from the TC39 [await operations](https://github.com/tc39/proposal-await.ops) proposal (stage 1) and, for an object operand, the [Await Dictionary](https://github.com/tc39/proposal-await-dictionary) proposal (stage 3). Each behaves as the `Promise` method of the same name. Each element is a program passed by name (D147), started in its own fiber; an element that is a fiber or a `Deferred` already running is waited for, not restarted.
 
 ```ts effect
 const next = (jobs: Queue.Queue<Job>, shutdown: Deferred.Deferred<void>) =>
   Effect.raceAllFirst([
-    Effect.map(Queue.take(jobs), (job) => ({ kind: "job" as const, job })),
-    Effect.as(Deferred.await(shutdown), { kind: "shutdown" as const }),
-    Effect.as(Effect.sleep("30 seconds"), { kind: "idle" as const })
-  ]).pipe(Effect.flatMap((event) => /* switch on event.kind */ handle(event)))
+    Effect.map(Queue.take(jobs), (job) => run(job)),
+    Effect.as(Deferred.await(shutdown), "stopped"),
+    Effect.flatMap(Effect.sleep("30 seconds"), () => heartbeat())
+  ])
 ```
 
 ```ts es
 function next(jobs: Queue.Queue<Job>, shutdown: Deferred.Deferred<void>) {
-  select {
-    case const job = jobs.take(): return run(job)
-    case shutdown.await(): return "stopped"
-    case sleep("30 seconds"): return heartbeat()
-  }
+  return await.race [
+    run(jobs.take()),
+    do {
+      shutdown.await()
+      "stopped"
+    },
+    do {
+      sleep("30 seconds")
+      heartbeat()
+    }
+  ]
 }
 ```
 
-- A case's expression is a program: it is passed, not run, like a by-name argument. `case const x = program:` binds the winner's value.
-- A failing case that finishes first fails the select. Of cases ready at once, the first written wins: a case that finishes while the cases are starting stops the rest from starting.
-- A `default:` clause runs when no case finishes while the cases start, which makes `select` a poll.
-- `break` leaves the select, as it leaves a `switch`; `continue` and `return` keep their meaning in the enclosing loop and function. A select whose clauses all return ends the function.
+- `await.all [a(), b()]` and `await.all { x: a(), y: b() }` are `Effect.all` with unbounded concurrency: every result, the shape kept, an object's keys in the order written, and a failure interrupts the rest.
+- `await.allSettled` is `Effect.all` with `mode: "result"`: each outcome is a `Result`, and it never fails.
+- `await.race` is `Effect.raceFirst` over any number of elements: the first to finish wins, success or failure, and the others are interrupted. Of elements ready at once, the first written wins. An empty race never finishes, as `Promise.race([])` does not.
+- `await.any` is `Effect.raceAll`: the first success wins; it fails only when every element fails, with every failure.
+- A `do { ... }` expression (D187) gives an element statements of its own. A race over an object is EK4608.
+- **Controversial** (D196): `await.x` behaves like `Promise.x`, while a named Effect function keeps Effect's meaning, so `await.race [a(), b()]` takes the first to finish and `race(a(), b())` the first success.
+- `select` (D168) was replaced by `await.race` (D197) and is EK4607. To poll without waiting, call `Queue.poll` and test the result with an `if`.
 
 #### Concurrent loops
 

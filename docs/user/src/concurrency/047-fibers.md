@@ -82,36 +82,46 @@ An `uninterruptible` block runs without interruption, as `Effect.uninterruptible
 ## Combining results
 
 ```ts
+function title() {
+  return "Inventory"
+}
+
+function rowCount() {
+  sleep("20 millis")
+  return 18
+}
+
 function combine() {
-  const title = fork { return "Inventory" }
-  const rows = fork {
-    sleep("20 millis")
-    return 18
-  }
-  const [name, count] = await [title, rows]
+  const [name, count] = await.all [title(), rowCount()]
   return `${name}: ${count}`
 }
 // string!!
 ```
 
-`await` on an array or an object waits for every fiber in it and keeps the shape. Both children above already run concurrently before the `await` begins. When one fiber fails, `await` interrupts the others still running and propagates the failure, as `all` fails fast. For an expected-failure fallback, put `try` around the `await` and recover in `catch`; defects and interruption still propagate.
+`await.all [...]` starts every element in its own fiber and waits for all of them, keeping the shape of an array or an object, like `Promise.all`. Each element is passed by name, so `rowCount()` starts in its fiber instead of running before the operation. When one fails, `await.all` interrupts the others still running and propagates the failure, as `all` fails fast. For an expected-failure fallback, put `try` around it and recover in `catch`; defects and interruption still propagate. `await.allSettled [...]` never fails and returns each outcome as a `Result`.
 
-## Selecting the first event
+To wait for fibers you already hold, use `await` alone: `const [name, count] = await [titleFiber, rowsFiber]`. An await operation also accepts a fiber or a `Deferred` as an element and waits for it without restarting it.
+
+## Racing events
 
 ```ts
 function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>) {
-  select {
-    case const job = Queue.take(jobs): return `job: ${job}`
-    case Deferred.await(shutdown): return "shutdown"
-    case sleep("30 seconds"): return "idle"
-  }
+  return await.race [
+    `job: ${Queue.take(jobs)}`,
+    do {
+      Deferred.await(shutdown)
+      "shutdown"
+    },
+    do {
+      sleep("30 seconds")
+      "idle"
+    }
+  ]
 }
 // string!!
 ```
 
-`select` starts each case in its own fiber and runs the statements of the first to finish; the other cases are interrupted. A case's expression is a program, passed rather than run, and `case const job = ...:` binds the winner's value. If the first case to finish failed, the select fails with that failure.
-
-Of cases that are ready at once, the first written wins. A `default:` clause runs when no case finishes while the cases start, which turns `select` into a poll. `break` leaves the select, as it leaves a `switch`; `continue` and `return` keep their meaning in the enclosing loop and function.
+`await.race [...]` starts each element in its own fiber and returns the first to finish, success or failure, like `Promise.race` (`Effect.raceFirst`); the others are interrupted. A `do { ... }` expression gives an element statements of its own; its last expression is the element's value. Of elements ready at once, the first written wins. `await.any [...]` returns the first success instead and fails only when every element fails (`Effect.raceAll`). To poll without waiting, call `Queue.poll(jobs)` and test the result with an `if`.
 
 ## Running a loop body concurrently
 

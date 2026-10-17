@@ -241,6 +241,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4604 | `await` in a hatch body that is not `async` (D167) | Make the hatch's function `async` | 7 |
 | EK4605 | `break` that would leave a `for concurrent` loop (D169) | Use `continue` to end one item, or `throw` to stop every item | 7 |
 | EK4606 | `return` in a `for concurrent` body (D169) | Use `continue` to end one item | 7 |
+| EK4607 | `select`, which `await.race` replaced (D197) | Write `await.race [a(), b()]`; for a `default:` clause, poll with `Queue.poll` and an `if` | 7 |
+| EK4608 | `await.race` or `await.any` on an object (D196) | Write the elements in an array: `await.race [a(), b()]` | 7 |
 
 #### Linting
 

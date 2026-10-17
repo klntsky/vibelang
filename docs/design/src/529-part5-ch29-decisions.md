@@ -175,7 +175,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D156 | A pipe's body must use `%` (EK1006); `%` outside a pipe's body is EK1007; after an operand `%` is still the remainder | The proposal's early errors; `%` keeps its JavaScript meaning where it already has one | 5, 28 |
 | D166 | `fork` is a keyword: `fork x` is `fork(x)` and `fork { ... }` forks a block | Concurrency reads as one word, with no lambda |
 | D167 | **Controversial.** `await` waits for a Fiber, a Deferred, or an array or object of them, failing fast; EK4601-EK4604 | Fibers need a join, and `await` was free outside hatches |
-| D168 | **Controversial.** `select` runs the first case to finish and interrupts the rest; ties go to the first written; `default` polls; `break` leaves it | First-of-several events without `raceAll` plumbing |
+| D168 | **Superseded by D197.** **Controversial.** `select` runs the first case to finish and interrupts the rest; ties go to the first written; `default` polls; `break` leaves it | First-of-several events without `raceAll` plumbing |
 | D169 | `for concurrent(n)` runs the body per item in its own fiber; `continue` ends an item; `break` and `return` are EK4605 and EK4606 | `forEach` with a concurrency option, as a loop |
 | D170 | `detach(program)` and `forkIn(scope, program)` are fork's variants | Longer lifetimes without Effect's names |
 | D171 | `await`'s types accept one level of arrays and objects | Deeper recursive types exceed TypeScript's limits |
@@ -190,6 +190,8 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D180 | **Controversial.** `uninterruptible`, `restore`, and `interruptible` blocks | Effect's names in a block that keeps jumps | 17 |
 | D186 | `throw` is also an expression: `x ?? throw new NotFound({ id })` | TC39 throw expressions (stage 2); fails as the throw statement does | 3 |
 | D187 | `do { }` is an expression whose value is its last statement's | TC39 do expressions (stage 1); a racer or an arm gets several statements | 13 |
+| D196 | **Controversial.** `await.all`, `await.allSettled`, `await.race`, `await.any` start programs by name and behave as the `Promise` methods; EK4608 | TC39 await operations and Await Dictionary; `await.x` reads as `Promise.x` |
+| D197 | `await.race [...]` replaces `select`, which is EK4607 | `case` read as value comparison and "select" is not Effect's word |
 
 #### Rules of the runtime and compiler
 

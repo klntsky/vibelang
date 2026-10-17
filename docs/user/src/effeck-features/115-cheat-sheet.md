@@ -518,7 +518,7 @@ function both() {
 }
 ```
 
-**Wait for several** (D167). The shape is kept, and a failure interrupts the rest.
+**Wait for several** (D196). `await.all` behaves like `Promise.all`: it starts each element in its own fiber, keeps the shape, and a failure interrupts the rest.
 
 ```ts effect
 const [user, orders] = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded" })
@@ -527,9 +527,24 @@ const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, {
 
 ```ts es
 function many() {
-  const [user, orders] = await [fork getUser("1"), fork getOrders("1")]
-  const pair = await { user: fork getUser("1"), orders: fork getOrders("1") }
+  const [user, orders] = await.all [getUser("1"), getOrders("1")]
+  const pair = await.all { user: getUser("1"), orders: getOrders("1") }
   return { user, orders, pair }
+}
+```
+
+**First success, every outcome** (D196). `await.any` behaves like `Promise.any` and `await.allSettled` like `Promise.allSettled`.
+
+```ts effect
+const fastest = yield* Effect.raceAll([getUser("1"), getUser("2")])
+const outcomes = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded", mode: "result" })
+```
+
+```ts es
+function outcomes() {
+  const fastest = await.any [getUser("1"), getUser("2")]
+  const results = await.allSettled [getUser("1"), getOrders("1")]
+  return { fastest, results }
 }
 ```
 
@@ -588,7 +603,7 @@ function signal() {
 }
 ```
 
-**Race cases with `select`** (D168). The first case to finish wins and the rest are interrupted; `default` runs when no case finishes while they start.
+**Race** (D196, D197). `await.race` behaves like `Promise.race`: the first to finish wins, success or failure, and the rest are interrupted. It replaced `select` (EK4607); poll with `Queue.poll` and an `if`.
 
 ```ts effect
 const next = yield* Effect.raceFirst(
@@ -601,11 +616,13 @@ const next = yield* Effect.raceFirst(
 function next() {
   const jobs = Queue.unbounded<string>()
   Queue.offer(jobs, "build")
-  select {
-    case const job = Queue.take(jobs): return `ran ${job}`
-    case sleep("1 second"): return "timeout"
-    default: return "idle"
-  }
+  return await.race [
+    `ran ${Queue.take(jobs)}`,
+    do {
+      sleep("1 second")
+      "timeout"
+    }
+  ]
 }
 ```
 
