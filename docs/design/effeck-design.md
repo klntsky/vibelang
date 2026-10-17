@@ -1067,7 +1067,7 @@ Wrapping a callback-based API is boundary code. It belongs in TypeScript, using 
 ```ts ts
 // net-adapter.ts
 import { Effect } from "effect"
-import { suspend } from "@effeck/runtime"
+import { suspend } from "effeck-runtime"
 import * as net from "node:net"
 
 export const connect = (host: string, port: number) =>
@@ -3547,7 +3547,7 @@ try {
 ### 27. Compiler architecture
 
 ```ts dts
-import type { Effect } from "@effeck/runtime"
+import type { Effect } from "effeck-runtime"
 export declare function double(n: number): Effect<number, never, never>
 ```
 
@@ -3598,7 +3598,7 @@ history, rather than a separately applied patch series.
 ```
 
 The parser keeps TypeScript's grammar. The checker resolves prelude names as
-implicit imports from `@effeck/runtime`, unless a local declaration or
+implicit imports from `effeck-runtime`, unless a local declaration or
 import shadows them (D4, D48). Class hooks give fully abstract service classes
 the static side of an Effect Context key and the instance shape of their
 abstract members (D1, D45).
@@ -3637,7 +3637,7 @@ not duplicate source text per lambda form.
 
 #### Runtime boundary
 
-Generated JavaScript imports only `effect` and `@effeck/runtime` (D30).
+Generated JavaScript imports only `effect` and `effeck-runtime` (D30).
 The runtime contains the continuation kernel and the helpers the compiler
 emits. It runs on Effect's fiber, Context, and Scope; it adds no scheduler.
 The package checks `effect@4.0.5` at load time and rejects other versions.
@@ -3668,7 +3668,7 @@ export interface Users {
   find(id: string): Effect.Effect<User, UserNotFound, never>
   readonly "~effeck/service"?: "@acme/app/src/users#Users"
 }
-declare const Users_base: import("@effeck/runtime").ServiceKey<Users>
+declare const Users_base: import("effeck-runtime").ServiceKey<Users>
 export declare abstract class Users extends Users_base {}
 ```
 
@@ -3710,7 +3710,9 @@ bun run dev
 bun x --no-install effeck --noEmit
 ```
 
-Effeck 0.0.1 installs from npm under the names D125 chose. `create-effeck`
+Effeck 0.0.1 installs from npm as unscoped packages: `effeck`,
+`effeck-runtime`, `effeck-vite`, `create-effeck`, and one `effeck-<os>-<cpu>`
+package per platform. `create-effeck`
 copies the starter, pins the Effeck packages to its own version, and installs
 dependencies; `--no-install` skips installation. Projects need Node 26 or later
 and Bun 1.4 or later. The compiler is a native binary: `effeck` lists one
@@ -3720,12 +3722,12 @@ planned:
 
 | Platform | Package | Tested for 0.0.1 |
 | --- | --- | --- |
-| macOS on Apple silicon | `@effeck/darwin-arm64` | Yes |
-| macOS on Intel | `@effeck/darwin-x64` | No |
-| Linux on x64 | `@effeck/linux-x64` | Yes |
-| Linux on arm64 | `@effeck/linux-arm64` | No |
-| Windows on x64 | `@effeck/win32-x64` | No |
-| Windows on arm64 | `@effeck/win32-arm64` | No |
+| macOS on Apple silicon | `effeck-darwin-arm64` | Yes |
+| macOS on Intel | `effeck-darwin-x64` | No |
+| Linux on x64 | `effeck-linux-x64` | Yes |
+| Linux on arm64 | `effeck-linux-arm64` | No |
+| Windows on x64 | `effeck-win32-x64` | No |
+| Windows on arm64 | `effeck-win32-arm64` | No |
 
 To work on Effeck itself, install from a checkout instead. `sh scripts/setup.sh`
 requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
@@ -3736,7 +3738,7 @@ requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
 `file:` dependencies on the checkout's compiler and Vite packages and on the
 runtime tarball that setup packs (D120). Keep the checkout available; after
 updating it, rerun setup and run
-`bun update @effeck/runtime effeck @effeck/vite`
+`bun update effeck-runtime effeck effeck-vite`
 in projects created from it.
 
 Setup links `~/.local/bin/effeck` when that directory is already on PATH and no
@@ -3749,9 +3751,9 @@ Setup preserves unrelated templates and never edits shell configuration.
 | Package | Current implementation |
 | --- | --- |
 | `effeck` | The compiler and language server: a Node launcher that forwards arguments, streams, signals, and exit status to the native binary of the matching platform package (`EFFECK_BINARY` overrides it), plus the VS Code extension at `editor/effeck.vsix` |
-| `@effeck/<os>-<cpu>` | The native `effeck` binary for one platform |
-| `@effeck/runtime` | Continuation kernel, prelude, and generated-code helpers; see its README for the ABI |
-| `@effeck/vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
+| `effeck-<os>-<cpu>` | The native `effeck` binary for one platform |
+| `effeck-runtime` | Continuation kernel, prelude, and generated-code helpers; see its README for the ABI |
+| `effeck-vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
 | `create-effeck` | Scaffolds the starter for `bun create effeck` and `npm create effeck` |
 | VS Code extension | Ships inside `effeck` as `editor/effeck.vsix`; not on the VS Code Marketplace or Open VSX |
 
@@ -3805,7 +3807,7 @@ The starter tests source files through the Vite plugin:
 // TypeScript (.ts)
 // vitest.config.ts
 import { defineConfig } from "vitest/config"
-import effeck from "@effeck/vite"
+import effeck from "effeck-vite"
 
 export default defineConfig({
   plugins: [effeck()],
@@ -3920,7 +3922,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 D35 assigns type and language diagnostics to `effeck` and reserves type-aware
 linting for `.ts` files. A stock TypeScript checker models different call
 semantics and cannot type-check Effeck correctly. Run `effeck --noEmit`
-for `.effeck` checking. `@effeck/oxlint-config` is not shipped, and Vite Plus
+for `.effeck` checking. `effeck-oxlint-config` is not shipped, and Vite Plus
 integration has no acceptance coverage yet. Do not install an unpublished
 lint-config package from the registry.
 
@@ -4306,30 +4308,32 @@ Counterexamples from the 2026-10-16 reviews, kept as observational tests. Where 
 
 #### Prototype compiler
 
+The prototypes predate the rename to Effeck, so their sources keep the old `.es` extension.
+
 ```sh
-cd /Users/williamcory/effectscript
+# From the repository root:
 bun prototype/esc/examples/run-all.ts       # 46 of 46 example files pass, about 16 s
-bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.effeck
-bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.effeck
+bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.es
+bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.es
 ```
 
 | What | Where | What it shows |
 | --- | --- | --- |
-| The compiler | `prototype/esc/src/` | Type-directed lowering of `.effeck` to TypeScript on `typescript@5.9.3`, with the experiments kernel as its runtime; about 3,560 lines |
-| 26 runnable examples | `prototype/esc/examples/*.effeck` | Each compiles with no errors and produces its stated result, including the six reference programs (`ref1` to `ref6`) |
-| 20 expected failures | `prototype/esc/examples/*.fail.effeck` | Each reports its diagnostic code at the right span |
-| `regions.effeck` | same | Completion records through nested `try`, `catch`, and `finally` match plain JavaScript's results and order |
-| `stack-depth.effeck` | same | Producer loops and handler clauses stay under 50 frames over 100,000 elements |
+| The compiler | `prototype/esc/src/` | Type-directed lowering of `.es` to TypeScript on `typescript@5.9.3`, with the experiments kernel as its runtime; about 3,560 lines |
+| 26 runnable examples | `prototype/esc/examples/*.es` | Each compiles with no errors and produces its stated result, including the six reference programs (`ref1` to `ref6`) |
+| 20 expected failures | `prototype/esc/examples/*.fail.es` | Each reports its diagnostic code at the right span |
+| `regions.es` | same | Completion records through nested `try`, `catch`, and `finally` match plain JavaScript's results and order |
+| `stack-depth.es` | same | Producer loops and handler clauses stay under 50 frames over 100,000 elements |
 | `scratch/probe2.ts` | `prototype/esc/scratch/` | The service emission of D45: nominal R, working `implements`, and a parameter typed with the service meaning its methods |
 | Findings | `prototype/esc/FINDINGS.md` | Thirty findings, settled by D44-D53 |
 
 #### Single-pass experiment
 
 ```sh
-cd /Users/williamcory/effectscript/prototype/single-pass
+cd prototype/single-pass      # from the repository root
 bun patch/apply.ts            # copy TypeScript 5.9.3 to typescript/ and patch it
 bun harness/compare.ts        # the corpus: 46 of 46 files, about 10 s
-bun harness/compare.ts --dir /Users/williamcory/effectscript/prototype/single-pass/probes --verbose
+bun harness/compare.ts --dir "$PWD/probes" --verbose
 bun harness/passes.ts         # the prototype's decision changes per pass
 ```
 
@@ -4429,7 +4433,7 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an Effeck function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
-| Installation | Changed | `effect@4.0.5`, `@effeck/runtime`, and `effeck` (Chapter 28) |
+| Installation | Changed | `effect@4.0.5`, `effeck-runtime`, and `effeck` (Chapter 28) |
 | Importing Effect | Changed | The prelude needs no import (`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, and the built-ins); other modules come from `effect` |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |

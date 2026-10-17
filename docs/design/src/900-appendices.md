@@ -93,30 +93,32 @@ Counterexamples from the 2026-10-16 reviews, kept as observational tests. Where 
 
 #### Prototype compiler
 
+The prototypes predate the rename to Effeck, so their sources keep the old `.es` extension.
+
 ```sh
-cd /Users/williamcory/effectscript
+# From the repository root:
 bun prototype/esc/examples/run-all.ts       # 46 of 46 example files pass, about 16 s
-bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.effeck
-bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.effeck
+bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.es
+bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.es
 ```
 
 | What | Where | What it shows |
 | --- | --- | --- |
-| The compiler | `prototype/esc/src/` | Type-directed lowering of `.effeck` to TypeScript on `typescript@5.9.3`, with the experiments kernel as its runtime; about 3,560 lines |
-| 26 runnable examples | `prototype/esc/examples/*.effeck` | Each compiles with no errors and produces its stated result, including the six reference programs (`ref1` to `ref6`) |
-| 20 expected failures | `prototype/esc/examples/*.fail.effeck` | Each reports its diagnostic code at the right span |
-| `regions.effeck` | same | Completion records through nested `try`, `catch`, and `finally` match plain JavaScript's results and order |
-| `stack-depth.effeck` | same | Producer loops and handler clauses stay under 50 frames over 100,000 elements |
+| The compiler | `prototype/esc/src/` | Type-directed lowering of `.es` to TypeScript on `typescript@5.9.3`, with the experiments kernel as its runtime; about 3,560 lines |
+| 26 runnable examples | `prototype/esc/examples/*.es` | Each compiles with no errors and produces its stated result, including the six reference programs (`ref1` to `ref6`) |
+| 20 expected failures | `prototype/esc/examples/*.fail.es` | Each reports its diagnostic code at the right span |
+| `regions.es` | same | Completion records through nested `try`, `catch`, and `finally` match plain JavaScript's results and order |
+| `stack-depth.es` | same | Producer loops and handler clauses stay under 50 frames over 100,000 elements |
 | `scratch/probe2.ts` | `prototype/esc/scratch/` | The service emission of D45: nominal R, working `implements`, and a parameter typed with the service meaning its methods |
 | Findings | `prototype/esc/FINDINGS.md` | Thirty findings, settled by D44-D53 |
 
 #### Single-pass experiment
 
 ```sh
-cd /Users/williamcory/effectscript/prototype/single-pass
+cd prototype/single-pass      # from the repository root
 bun patch/apply.ts            # copy TypeScript 5.9.3 to typescript/ and patch it
 bun harness/compare.ts        # the corpus: 46 of 46 files, about 10 s
-bun harness/compare.ts --dir /Users/williamcory/effectscript/prototype/single-pass/probes --verbose
+bun harness/compare.ts --dir "$PWD/probes" --verbose
 bun harness/passes.ts         # the prototype's decision changes per pass
 ```
 

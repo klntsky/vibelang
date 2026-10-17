@@ -834,7 +834,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <p>Wrapping a callback-based API is boundary code. It belongs in TypeScript, using the runtime&#39;s <code>suspend</code>, which, unlike <code>Effect.callback</code>, tells the producer when a value arrived too late so the producer can release it:</p>
 <figure class="code side-ts"><figcaption>TypeScript</figcaption><pre class="code" data-lang="ts"><code><span class="c">// net-adapter.ts</span>
 <span class="k">import</span> { <span class="t">Effect</span> } <span class="k">from</span> <span class="s">"effect"</span>
-<span class="k">import</span> { suspend } <span class="k">from</span> <span class="s">"@effeck/runtime"</span>
+<span class="k">import</span> { suspend } <span class="k">from</span> <span class="s">"effeck-runtime"</span>
 <span class="k">import</span> * <span class="k">as</span> net <span class="k">from</span> <span class="s">"node:net"</span>
 
 <span class="k">export</span> <span class="k">const</span> connect = (host: <span class="l">string</span>, port: <span class="l">number</span>) =&gt;
@@ -2494,7 +2494,7 @@ stack bottom              FiberExitFrame at _stack[0]          internal/effect.t
 }</code></pre></figure>
 <h2 id="part-iv-the-compiler"><a class="anchor" href="#part-iv-the-compiler">Part IV. The compiler</a></h2>
 <h3 id="27-compiler-architecture"><a class="anchor" href="#27-compiler-architecture">27. Compiler architecture</a></h3>
-<figure class="code side-dts"><figcaption>Generated declaration</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> <span class="k">type</span> { <span class="t">Effect</span> } <span class="k">from</span> <span class="s">"@effeck/runtime"</span>
+<figure class="code side-dts"><figcaption>Generated declaration</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> <span class="k">type</span> { <span class="t">Effect</span> } <span class="k">from</span> <span class="s">"effeck-runtime"</span>
 <span class="k">export</span> <span class="k">declare</span> <span class="k">function</span> <span class="f">double</span>(n: <span class="l">number</span>): <span class="t">Effect</span>&lt;<span class="l">number</span>, <span class="l">never</span>, <span class="l">never</span>&gt;</code></pre></figure>
 <p>The compiler writes ordinary TypeScript declarations with Effect contracts.
 TypeScript consumers call an Effect-returning function; Effeck consumers
@@ -2531,7 +2531,7 @@ history, rather than a separately applied patch series.</p>
   -&gt; TypeScript emit
        JavaScript, source maps, and ordinary .d.ts files</code></pre></figure>
 <p>The parser keeps TypeScript&#39;s grammar. The checker resolves prelude names as
-implicit imports from <code>@effeck/runtime</code>, unless a local declaration or
+implicit imports from <code>effeck-runtime</code>, unless a local declaration or
 import shadows them (D4, D48). Class hooks give fully abstract service classes
 the static side of an Effect Context key and the instance shape of their
 abstract members (D1, D45).</p>
@@ -2562,7 +2562,7 @@ under <code>typescript/effeck/cases/</code>. <code>prototype/single-pass/RESULTS
 records the experiments that established D56. The native implementation does
 not duplicate source text per lambda form.</p>
 <h4 id="runtime-boundary"><a class="anchor" href="#runtime-boundary">Runtime boundary</a></h4>
-<p>Generated JavaScript imports only <code>effect</code> and <code>@effeck/runtime</code> (D30).
+<p>Generated JavaScript imports only <code>effect</code> and <code>effeck-runtime</code> (D30).
 The runtime contains the continuation kernel and the helpers the compiler
 emits. It runs on Effect&#39;s fiber, Context, and Scope; it adds no scheduler.
 The package checks <code>effect@4.0.5</code> at load time and rejects other versions.</p>
@@ -2585,7 +2585,7 @@ shape as an interface and a class whose base has the <code>ServiceKey&lt;Users&g
   <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">Effect</span>.<span class="t">Effect</span>&lt;<span class="t">User</span>, <span class="t">UserNotFound</span>, <span class="l">never</span>&gt;
   <span class="k">readonly</span> <span class="s">"~effeck/service"</span>?: <span class="s">"@acme/app/src/users#Users"</span>
 }
-<span class="k">declare</span> <span class="k">const</span> <span class="t">Users_base</span>: <span class="k">import</span>(<span class="s">"@effeck/runtime"</span>).<span class="t">ServiceKey</span>&lt;<span class="t">Users</span>&gt;
+<span class="k">declare</span> <span class="k">const</span> <span class="t">Users_base</span>: <span class="k">import</span>(<span class="s">"effeck-runtime"</span>).<span class="t">ServiceKey</span>&lt;<span class="t">Users</span>&gt;
 <span class="k">export</span> <span class="k">declare</span> <span class="k">abstract</span> <span class="k">class</span> <span class="t">Users</span> <span class="k">extends</span> <span class="t">Users_base</span> {}</code></pre></figure>
 <p>A default service uses <code>ReferenceKey</code>. Declaration transforms add type imports
 for prelude names, preserve D12&#39;s callback parameters, and rewrite source
@@ -2614,19 +2614,21 @@ bun run start
 bun run test
 bun run dev
 bun x --no-install effeck --noEmit</code></pre></figure>
-<p>Effeck 0.0.1 installs from npm under the names D125 chose. <code>create-effeck</code>
+<p>Effeck 0.0.1 installs from npm as unscoped packages: <code>effeck</code>,
+<code>effeck-runtime</code>, <code>effeck-vite</code>, <code>create-effeck</code>, and one <code>effeck-&lt;os&gt;-&lt;cpu&gt;</code>
+package per platform. <code>create-effeck</code>
 copies the starter, pins the Effeck packages to its own version, and installs
 dependencies; <code>--no-install</code> skips installation. Projects need Node 26 or later
 and Bun 1.4 or later. The compiler is a native binary: <code>effeck</code> lists one
 package per platform as an optional dependency, and the package manager
 installs the one that matches the machine, the per-platform distribution D30
 planned:</p>
-<div class="table"><table><thead><tr><th>Platform</th><th>Package</th><th>Tested for 0.0.1</th></tr></thead><tbody><tr><td>macOS on Apple silicon</td><td><code>@effeck/darwin-arm64</code></td><td>Yes</td></tr>
-<tr><td>macOS on Intel</td><td><code>@effeck/darwin-x64</code></td><td>No</td></tr>
-<tr><td>Linux on x64</td><td><code>@effeck/linux-x64</code></td><td>Yes</td></tr>
-<tr><td>Linux on arm64</td><td><code>@effeck/linux-arm64</code></td><td>No</td></tr>
-<tr><td>Windows on x64</td><td><code>@effeck/win32-x64</code></td><td>No</td></tr>
-<tr><td>Windows on arm64</td><td><code>@effeck/win32-arm64</code></td><td>No</td></tr></tbody></table></div>
+<div class="table"><table><thead><tr><th>Platform</th><th>Package</th><th>Tested for 0.0.1</th></tr></thead><tbody><tr><td>macOS on Apple silicon</td><td><code>effeck-darwin-arm64</code></td><td>Yes</td></tr>
+<tr><td>macOS on Intel</td><td><code>effeck-darwin-x64</code></td><td>No</td></tr>
+<tr><td>Linux on x64</td><td><code>effeck-linux-x64</code></td><td>Yes</td></tr>
+<tr><td>Linux on arm64</td><td><code>effeck-linux-arm64</code></td><td>No</td></tr>
+<tr><td>Windows on x64</td><td><code>effeck-win32-x64</code></td><td>No</td></tr>
+<tr><td>Windows on arm64</td><td><code>effeck-win32-arm64</code></td><td>No</td></tr></tbody></table></div>
 <p>To work on Effeck itself, install from a checkout instead. <code>sh scripts/setup.sh</code>
 requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
 1.27 downloaded automatically), Bun 1.4.1, and Node 26.10. Setup builds
@@ -2636,7 +2638,7 @@ requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
 <code>file:</code> dependencies on the checkout&#39;s compiler and Vite packages and on the
 runtime tarball that setup packs (D120). Keep the checkout available; after
 updating it, rerun setup and run
-<code>bun update @effeck/runtime effeck @effeck/vite</code>
+<code>bun update effeck-runtime effeck effeck-vite</code>
 in projects created from it.</p>
 <p>Setup links <code>~/.local/bin/effeck</code> when that directory is already on PATH and no
 unrelated executable occupies the path. Project scripts find their own compiler
@@ -2644,9 +2646,9 @@ without that global link. <code>EFFECK_BINARY</code> overrides the launcher&#39;
 Setup preserves unrelated templates and never edits shell configuration.</p>
 <h4 id="packages-and-versions"><a class="anchor" href="#packages-and-versions">Packages and versions</a></h4>
 <div class="table"><table><thead><tr><th>Package</th><th>Current implementation</th></tr></thead><tbody><tr><td><code>effeck</code></td><td>The compiler and language server: a Node launcher that forwards arguments, streams, signals, and exit status to the native binary of the matching platform package (<code>EFFECK_BINARY</code> overrides it), plus the VS Code extension at <code>editor/effeck.vsix</code></td></tr>
-<tr><td><code>@effeck/&lt;os&gt;-&lt;cpu&gt;</code></td><td>The native <code>effeck</code> binary for one platform</td></tr>
-<tr><td><code>@effeck/runtime</code></td><td>Continuation kernel, prelude, and generated-code helpers; see its README for the ABI</td></tr>
-<tr><td><code>@effeck/vite</code></td><td>Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5</td></tr>
+<tr><td><code>effeck-&lt;os&gt;-&lt;cpu&gt;</code></td><td>The native <code>effeck</code> binary for one platform</td></tr>
+<tr><td><code>effeck-runtime</code></td><td>Continuation kernel, prelude, and generated-code helpers; see its README for the ABI</td></tr>
+<tr><td><code>effeck-vite</code></td><td>Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5</td></tr>
 <tr><td><code>create-effeck</code></td><td>Scaffolds the starter for <code>bun create effeck</code> and <code>npm create effeck</code></td></tr>
 <tr><td>VS Code extension</td><td>Ships inside <code>effeck</code> as <code>editor/effeck.vsix</code>; not on the VS Code Marketplace or Open VSX</td></tr></tbody></table></div>
 <p>The starter pins <code>effect</code>, <code>@effect/platform-node</code>, and <code>@effect/vitest</code> to
@@ -2688,7 +2690,7 @@ starter&#39;s include glob; imported <code>.ts</code> integrations also join the
 <figure class="code side-ts"><figcaption>TypeScript</figcaption><pre class="code" data-lang="ts"><code><span class="c">// TypeScript (.ts)</span>
 <span class="c">// vitest.config.ts</span>
 <span class="k">import</span> { defineConfig } <span class="k">from</span> <span class="s">"vitest/config"</span>
-<span class="k">import</span> effeck <span class="k">from</span> <span class="s">"@effeck/vite"</span>
+<span class="k">import</span> effeck <span class="k">from</span> <span class="s">"effeck-vite"</span>
 
 <span class="k">export</span> <span class="k">default</span> <span class="f">defineConfig</span>({
   plugins: [<span class="f">effeck</span>()],
@@ -2778,7 +2780,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <p>D35 assigns type and language diagnostics to <code>effeck</code> and reserves type-aware
 linting for <code>.ts</code> files. A stock TypeScript checker models different call
 semantics and cannot type-check Effeck correctly. Run <code>effeck --noEmit</code>
-for <code>.effeck</code> checking. <code>@effeck/oxlint-config</code> is not shipped, and Vite Plus
+for <code>.effeck</code> checking. <code>effeck-oxlint-config</code> is not shipped, and Vite Plus
 integration has no acceptance coverage yet. Do not install an unpublished
 lint-config package from the registry.</p>
 <h4 id="debugging"><a class="anchor" href="#debugging">Debugging</a></h4>
@@ -3087,22 +3089,23 @@ cd reference-machine &amp;&amp; bun install &amp;&amp; bun test   # strategy B, 
 <tr><td>Fable probes</td><td><code>scratch-review-fable/</code></td><td>The masked adapter&#39;s race branches never run; generator clauses grow 200,003 frames over 100,000 elements before K11</td></tr>
 <tr><td>Services</td><td><code>scratch-abstract-services/probe.ts</code></td><td>Structurally equal abstract classes alias in R, and the program dies with <code>Service not found</code> (D1)</td></tr></tbody></table></div>
 <h4 id="prototype-compiler"><a class="anchor" href="#prototype-compiler">Prototype compiler</a></h4>
-<figure class="code side-none"><pre class="code" data-lang="sh"><code>cd /Users/williamcory/effectscript
+<p>The prototypes predate the rename to Effeck, so their sources keep the old <code>.es</code> extension.</p>
+<figure class="code side-none"><pre class="code" data-lang="sh"><code># From the repository root:
 bun prototype/esc/examples/run-all.ts       # 46 of 46 example files pass, about 16 s
-bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.effeck
-bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.effeck</code></pre></figure>
-<div class="table"><table><thead><tr><th>What</th><th>Where</th><th>What it shows</th></tr></thead><tbody><tr><td>The compiler</td><td><code>prototype/esc/src/</code></td><td>Type-directed lowering of <code>.effeck</code> to TypeScript on <code>typescript@5.9.3</code>, with the experiments kernel as its runtime; about 3,560 lines</td></tr>
-<tr><td>26 runnable examples</td><td><code>prototype/esc/examples/*.effeck</code></td><td>Each compiles with no errors and produces its stated result, including the six reference programs (<code>ref1</code> to <code>ref6</code>)</td></tr>
-<tr><td>20 expected failures</td><td><code>prototype/esc/examples/*.fail.effeck</code></td><td>Each reports its diagnostic code at the right span</td></tr>
-<tr><td><code>regions.effeck</code></td><td>same</td><td>Completion records through nested <code>try</code>, <code>catch</code>, and <code>finally</code> match plain JavaScript&#39;s results and order</td></tr>
-<tr><td><code>stack-depth.effeck</code></td><td>same</td><td>Producer loops and handler clauses stay under 50 frames over 100,000 elements</td></tr>
+bun prototype/esc/src/cli.ts build prototype/esc/examples/ch01-first-look.es
+bun prototype/esc/src/cli.ts run prototype/esc/examples/ch09-handlers.es</code></pre></figure>
+<div class="table"><table><thead><tr><th>What</th><th>Where</th><th>What it shows</th></tr></thead><tbody><tr><td>The compiler</td><td><code>prototype/esc/src/</code></td><td>Type-directed lowering of <code>.es</code> to TypeScript on <code>typescript@5.9.3</code>, with the experiments kernel as its runtime; about 3,560 lines</td></tr>
+<tr><td>26 runnable examples</td><td><code>prototype/esc/examples/*.es</code></td><td>Each compiles with no errors and produces its stated result, including the six reference programs (<code>ref1</code> to <code>ref6</code>)</td></tr>
+<tr><td>20 expected failures</td><td><code>prototype/esc/examples/*.fail.es</code></td><td>Each reports its diagnostic code at the right span</td></tr>
+<tr><td><code>regions.es</code></td><td>same</td><td>Completion records through nested <code>try</code>, <code>catch</code>, and <code>finally</code> match plain JavaScript&#39;s results and order</td></tr>
+<tr><td><code>stack-depth.es</code></td><td>same</td><td>Producer loops and handler clauses stay under 50 frames over 100,000 elements</td></tr>
 <tr><td><code>scratch/probe2.ts</code></td><td><code>prototype/esc/scratch/</code></td><td>The service emission of D45: nominal R, working <code>implements</code>, and a parameter typed with the service meaning its methods</td></tr>
 <tr><td>Findings</td><td><code>prototype/esc/FINDINGS.md</code></td><td>Thirty findings, settled by D44-D53</td></tr></tbody></table></div>
 <h4 id="single-pass-experiment"><a class="anchor" href="#single-pass-experiment">Single-pass experiment</a></h4>
-<figure class="code side-none"><pre class="code" data-lang="sh"><code>cd /Users/williamcory/effectscript/prototype/single-pass
+<figure class="code side-none"><pre class="code" data-lang="sh"><code>cd prototype/single-pass      # from the repository root
 bun patch/apply.ts            # copy TypeScript 5.9.3 to typescript/ and patch it
 bun harness/compare.ts        # the corpus: 46 of 46 files, about 10 s
-bun harness/compare.ts --dir /Users/williamcory/effectscript/prototype/single-pass/probes --verbose
+bun harness/compare.ts --dir "$PWD/probes" --verbose
 bun harness/passes.ts         # the prototype's decision changes per pass</code></pre></figure>
 <div class="table"><table><thead><tr><th>What</th><th>Where</th><th>What it shows</th></tr></thead><tbody><tr><td>The patched checker</td><td><code>prototype/single-pass/patch/es-checker.js</code></td><td>Each lambda classified per overload candidate inside <code>chooseOverload</code>, D10 on demand, and narrowing through the call rule: one 668-line block and 15 hooks in TypeScript 5.9.3</td></tr>
 <tr><td>The comparison</td><td><code>prototype/single-pass/harness/compare.ts</code></td><td>One check per file reaches the prototype&#39;s lowering in 46 of 46 files: 817 call sites, 257 lambdas and methods, 0 disagreements, byte-identical output, 46 checks instead of 124</td></tr>
@@ -3171,7 +3174,7 @@ effeck/smoke.sh effeck-infer   # one case</code></pre></figure>
 <div class="table"><table><thead><tr><th>Feature</th><th>In Effeck</th><th>Form</th></tr></thead><tbody><tr><td>The <code>Effect&lt;A, E, R&gt;</code> type</td><td>Changed</td><td>Inferred for every function; written as a return annotation to have it checked (<a href="#2-functions-and-calls">Chapter 2</a>)</td></tr>
 <tr><td>Type helpers (<code>Effect.Success</code>, <code>Error</code>, <code>Services</code>)</td><td>Unchanged by design</td><td>Apply them to the TypeScript type of an Effeck function</td></tr>
 <tr><td>Annotate one channel, infer the rest</td><td>Changed (D57)</td><td>In a return annotation with a body, write <code>Effect&lt;A, infer E, infer R&gt;</code>; all three slots are required</td></tr>
-<tr><td>Installation</td><td>Changed</td><td><code>effect@4.0.5</code>, <code>@effeck/runtime</code>, and <code>effeck</code> (<a href="#28-tooling">Chapter 28</a>)</td></tr>
+<tr><td>Installation</td><td>Changed</td><td><code>effect@4.0.5</code>, <code>effeck-runtime</code>, and <code>effeck</code> (<a href="#28-tooling">Chapter 28</a>)</td></tr>
 <tr><td>Importing Effect</td><td>Changed</td><td>The prelude needs no import (<code>Effect</code>, <code>Schema</code>, <code>Layer</code>, <code>Scope</code>, <code>TaggedError</code>, <code>Control</code>, and the built-ins); other modules come from <code>effect</code></td></tr>
 <tr><td><code>Effect.succeed</code></td><td>Changed</td><td><code>return 42</code></td></tr>
 <tr><td><code>Effect.fail</code>, <code>failSync</code></td><td>Changed</td><td><code>throw new HttpError()</code></td></tr>
