@@ -440,6 +440,11 @@ try {
     assert(location.range.start.line === lineOf("src/declarations.effeck", "const rate = 2"), `line ${location.range.start.line}`)
   })
 
+  await check("hover: a with block removes the services its layer provides", async () => {
+    const shown = await hover("src/declarations.effeck", "balanceWith(id: string)")
+    assert(shown.includes("function balanceWith(id: string): number!MissingUser!"), `got ${JSON.stringify(shown)}`)
+  })
+
   await check("definition: a thrown error goes to its error declaration", async () => {
     const [location] = await definition("src/declarations.effeck", "MissingUser({ id })")
     assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)

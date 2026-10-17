@@ -475,3 +475,35 @@ func (p *Parser) scanLayerMethodStart() bool {
 	}
 	return p.token == ast.KindColonToken || p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak()
 }
+
+// parseEffeckWithStatement parses
+//
+//	with UsersLive {
+//	  greet("42")
+//	}
+//
+// which runs its statements with the services the layer provides, as
+// Effect.provide(() => { ... }, UsersLive) would, except that the statements
+// are code of the enclosing function: a return returns from it, and a break
+// or continue leaves its loops (D130). The block parses as a Block flagged
+// NodeFlagsEffeck whose first statement holds the layer expression, so the
+// checker reads both as ordinary code; the analyzer and the lowering
+// recognize the flag. In an .effeck file, a module, JavaScript's with
+// statement is a syntax error, so the form takes nothing away.
+func (p *Parser) parseEffeckWithStatement() *ast.Node {
+	pos := p.nodePos()
+	p.parseExpected(ast.KindWithKeyword)
+	layer := p.parseExpression()
+	statement := p.effeckSpanning(p.factory.NewExpressionStatement(layer), layer.Loc)
+	statement.Flags |= ast.NodeFlagsEffeck
+	statements := []*ast.Node{statement}
+	if p.parseExpected(ast.KindOpenBraceToken) {
+		body := p.parseList(PCBlockStatements, (*Parser).parseStatement)
+		statements = append(statements, body.Nodes...)
+		p.parseExpected(ast.KindCloseBraceToken)
+	}
+	block := p.factory.NewBlock(p.newNodeList(core.NewTextRange(layer.Pos(), p.nodePos()), statements), true /*multiLine*/)
+	p.finishNode(block, pos)
+	block.Flags |= ast.NodeFlagsEffeck
+	return block
+}

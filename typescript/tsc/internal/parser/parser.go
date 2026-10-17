@@ -1102,6 +1102,9 @@ func (p *Parser) parseStatement() *ast.Statement {
 	case ast.KindReturnKeyword:
 		return p.parseReturnStatement()
 	case ast.KindWithKeyword:
+		if p.isEffeckFile() {
+			return p.parseEffeckWithStatement() // with Layer { ... } (effeck.go)
+		}
 		return p.parseWithStatement()
 	case ast.KindSwitchKeyword:
 		return p.parseSwitchStatement()

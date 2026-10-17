@@ -19,3 +19,9 @@ export layer AccountsLive: Accounts {
     return id.length * rate
   }
 }
+
+export function balanceWith(id: string) {
+  with AccountsLive {
+    return Accounts.balance(id)
+  }
+}

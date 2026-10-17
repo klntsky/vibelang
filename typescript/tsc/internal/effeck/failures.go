@@ -32,6 +32,8 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			// TypeScript inside a boundary hatch (D148): nothing there runs.
 		case n.Kind == ast.KindTryStatement:
 			info.add(a.tryFlow(n))
+		case isWithBlock(n):
+			info.add(a.withFlow(n)) // with Layer { ... } (with.go)
 		case n.Kind == ast.KindThrowStatement:
 			n.ForEachChild(visit)
 			info.addError(a.thrownType(n), n.Expression())

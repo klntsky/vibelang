@@ -86,6 +86,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitServiceClass(node)
 	case tx.inEffect && node.Kind == ast.KindTryStatement:
 		return tx.visitTryStatement(node)
+	case tx.inEffect && isWithBlock(node):
+		return tx.visitWithBlock(node)
+	case isWithLayer(node):
+		return nil // visitWithBlock lowers the layer expression itself
 	case tx.inEffect && node.Kind == ast.KindThrowStatement:
 		return tx.visitThrowStatement(node)
 	case tx.inEffect && tx.frame.clause && node.Kind == ast.KindReturnStatement && tx.plan.tailResumeOf(node.Expression()) != nil:

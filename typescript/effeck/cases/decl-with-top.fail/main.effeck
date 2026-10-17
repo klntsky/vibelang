@@ -1,0 +1,13 @@
+// expect: EK1001
+service Names {
+  name(): string!!
+}
+
+layer NamesLive: Names {
+  name() {
+    return "Ada"
+  }
+}
+
+with NamesLive {
+}

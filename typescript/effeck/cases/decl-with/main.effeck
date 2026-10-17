@@ -1,0 +1,61 @@
+// expect-result: {"greeting":"Hello, Ada","early":"early","count":2,"both":"Ada 1"}
+error NotFound { id: string }
+
+service Names {
+  name(id: string): string!NotFound
+}
+
+service Counter {
+  next(): number!!
+}
+
+layer NamesLive: Names {
+  name(id) {
+    if (id === "42") return "Ada"
+    throw new NotFound({ id })
+  }
+}
+
+layer CounterLive: Counter {
+  const count = Ref.make(0)
+  next() {
+    Ref.update(count, (n) => n + 1)
+    return Ref.get(count)
+  }
+}
+
+// The block provides Names, so the function needs no services.
+function greeting(id: string): string!NotFound! {
+  with NamesLive {
+    return `Hello, ${Names.name(id)}`
+  }
+}
+
+// A return inside a with block returns from the enclosing function.
+function early() {
+  for (const step of [1, 2, 3]) {
+    with CounterLive {
+      if (step === 1) return "early"
+    }
+  }
+  return "late"
+}
+
+// One layer instance serves the whole block.
+function counted() {
+  with CounterLive {
+    Counter.next()
+    return Counter.next()
+  }
+}
+
+// An array of layers provides all of their services.
+function both(): string!NotFound! {
+  with [NamesLive, CounterLive] {
+    return `${Names.name("42")} ${Counter.next()}`
+  }
+}
+
+export function main() {
+  return { greeting: greeting("42"), early: early(), count: counted(), both: both() }
+}

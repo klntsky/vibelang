@@ -290,7 +290,7 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 // runs no Effect and looks up no service, no throw can end it, and it
 // declares no using (D54).
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
-	return !forEachCallInBody(fn, a.performs) && !hasEscapingThrow(fn) && !declaresUsing(fn) && !a.hasStreamLoop(fn)
+	return !forEachCallInBody(fn, a.performs) && !hasEscapingThrow(fn) && !declaresUsing(fn) && !hasWithBlock(fn) && !a.hasStreamLoop(fn)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript
