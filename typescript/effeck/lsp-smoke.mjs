@@ -445,6 +445,11 @@ try {
     assert(shown.includes("function balanceWith(id: string): number!MissingUser!"), `got ${JSON.stringify(shown)}`)
   })
 
+  await check("hover: a typed catch clause's variable has the clause's type", async () => {
+    const shown = await hover("src/declarations.effeck", "e.id")
+    assert(shown.includes("e: MissingUser"), `got ${JSON.stringify(shown)}`)
+  })
+
   await check("definition: a thrown error goes to its error declaration", async () => {
     const [location] = await definition("src/declarations.effeck", "MissingUser({ id })")
     assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)

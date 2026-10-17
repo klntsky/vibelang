@@ -9,6 +9,14 @@ export const $catch: <A, E, R, B, E2, R2>(
   handler: (error: E) => Effect.Effect<B, E2, R2>
 ) => Effect.Effect<A | B, E2, R | R2> = K.catchExpected
 
+/**
+ * A typed catch clause, `catch (e: NotFound)`, tests the caught failure with
+ * the _tag of each type it names (D131); the compiler passes the tags.
+ */
+export function $isFailure<T>(value: unknown, ...tags: ReadonlyArray<string>): value is T {
+  return typeof value === "object" && value !== null && tags.includes((value as { readonly _tag?: unknown })._tag as string)
+}
+
 /** `finally`: runs on every exit; a failure inside it is never dropped (D15; onExit merges causes). */
 export const $finally = <A, E, R, X, E2, R2>(
   self: Effect.Effect<A, E, R>,

@@ -1,0 +1,72 @@
+// expect-result: {"a":"missing 7","b":"busy","c":"offline","d":"other: Broken","e":"rethrown","f":"handled","g":"schema"}
+error NotFound { id: string }
+error Busy
+error Offline
+error Broken
+
+function fail(kind: string) {
+  if (kind === "missing") throw new NotFound({ id: "7" })
+  if (kind === "busy") throw new Busy()
+  if (kind === "offline") throw new Offline()
+  if (kind === "ok") return "fine"
+  throw new Broken()
+}
+
+function describe(kind: string) {
+  try {
+    return fail(kind)
+  } catch (e: NotFound) {
+    return `missing ${e.id}`
+  } catch (e: Busy | Offline) {
+    return e._tag === "Busy" ? "busy" : "offline"
+  } catch (e) {
+    return `other: ${e._tag}`
+  }
+}
+
+// Without an untyped clause, a failure no clause names propagates with its type.
+function partial(kind: string): string!Broken! {
+  try {
+    return fail(kind)
+  } catch (e: NotFound | Busy | Offline) {
+    return "handled"
+  }
+}
+
+// A failure raised inside a clause is not tested by the clauses after it.
+function rethrow() {
+  try {
+    try {
+      fail("missing")
+      return "none"
+    } catch (e: NotFound) {
+      throw new Busy()
+    } catch (e: Busy) {
+      return "wrongly caught"
+    }
+  } catch (e: Busy) {
+    return "rethrown"
+  }
+}
+
+const Port = Schema.Struct({ port: Schema.Number })
+
+function parsePort(input: unknown) {
+  try {
+    return `${Schema.decodeUnknownEffect(Port)(input).port}`
+  } catch (e: Schema.SchemaError) {
+    return "schema"
+  }
+}
+
+export function main() {
+  return {
+    a: describe("missing"),
+    b: describe("busy"),
+    c: describe("offline"),
+    d: describe("broken"),
+    e: rethrow(),
+    f: partial("busy"),
+    g: parsePort({ port: "x" })
+  }
+}

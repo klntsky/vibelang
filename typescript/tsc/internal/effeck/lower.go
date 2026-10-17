@@ -88,6 +88,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitTryStatement(node)
 	case tx.inEffect && isWithBlock(node):
 		return tx.visitWithBlock(node)
+	case isFailureTest(node):
+		return tx.visitFailureTest(node)
 	case isWithLayer(node):
 		return nil // visitWithBlock lowers the layer expression itself
 	case tx.inEffect && node.Kind == ast.KindThrowStatement:

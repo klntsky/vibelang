@@ -90,6 +90,10 @@ var (
 	EK2103 = message(2103, errorCategory, "{0} has an implementation, but a {1} declares only contracts.")
 	// EK2104: a setup statement of a layer declaration that follows one of its members.
 	EK2104 = message(2104, errorCategory, "This statement follows the layer's members, but a layer's setup statements come first.")
+	// EK2105: a typed catch clause whose type has a member without a literal _tag. {0} is the clause's type, {1} the member.
+	EK2105 = message(2105, errorCategory, "catch (…: {0}) matches failures by _tag, but {1} has no literal _tag.")
+	// EK2106: a catch clause after an untyped catch clause, which catches every failure.
+	EK2106 = message(2106, errorCategory, "This catch clause can never run: the untyped catch clause before it catches every failure.")
 	// EK2102: a recursive function whose A depends on its own result. {0} is the function.
 	EK2102 = message(2102, errorCategory, "{0} calls itself, and its success type depends on that call, so its contract must be written.")
 
@@ -138,7 +142,7 @@ var registry = map[int32]*Message{}
 func init() {
 	for _, m := range []*Message{
 		EK1001, EK1002, EK1003, EK1004, EK1005,
-		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104,
+		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404,
 	} {

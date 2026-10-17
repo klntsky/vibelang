@@ -53,6 +53,8 @@ var preludeModules = map[string]string{
 	"runFork":     runtimeModule,
 	"runSync":     runtimeModule,
 	"runCallback": runtimeModule,
+	// The test of a typed catch clause, which the parser writes (D131, catches.go).
+	"$isFailure": runtimeModule,
 }
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the

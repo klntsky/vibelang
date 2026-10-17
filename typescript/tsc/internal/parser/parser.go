@@ -1497,6 +1497,9 @@ func (p *Parser) parseTryStatement() *ast.Node {
 	var catchClause *ast.Node
 	if p.token == ast.KindCatchKeyword {
 		catchClause = p.parseCatchClause()
+		if p.isEffeckFile() {
+			catchClause = p.parseEffeckCatchClauses(catchClause) // typed and repeated catch clauses (effeck.go)
+		}
 	}
 	// If we don't have a catch clause, then we must have a finally clause.  Try to parse
 	// one out no matter what.

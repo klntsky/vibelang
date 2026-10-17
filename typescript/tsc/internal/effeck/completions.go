@@ -1,6 +1,8 @@
 package effeck
 
 import (
+	"strings"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
@@ -22,6 +24,9 @@ func preludeCompletions(c *checker.Checker, location *ast.Node, meaning ast.Symb
 	state := preludeStateOf(c)
 	if module := orProgramModule(c, runtimeModuleSymbol(c, state, file), runtimeModule); module != nil {
 		for name := range preludeModules {
+			if strings.HasPrefix(name, "$") {
+				continue // written by the compiler, not by people
+			}
 			if symbol := c.TryGetMemberInModuleExports(name, module); symbol != nil && hasMeaning(c, symbol, meaning) {
 				symbols = append(symbols, symbol)
 			}

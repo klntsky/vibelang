@@ -25,7 +25,8 @@ type plan struct {
 	scopePlan
 	handlerPlan
 	producerPlan
-	hatches map[*ast.Node]hatchForm // sync and try hatches, lowered to Effect's functions (hatches.go)
+	hatches     map[*ast.Node]hatchForm // sync and try hatches, lowered to Effect's functions (hatches.go)
+	failureTags map[*ast.Node][]string  // the tags of each typed catch clause's test (catches.go)
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -39,6 +40,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
 	p.handlerPlan = newHandlerPlan()
 	p.hatches = map[*ast.Node]hatchForm{}
+	p.failureTags = map[*ast.Node][]string{}
 	p.producerPlan = newProducerPlan()
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
@@ -72,6 +74,9 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			}
 			if form, ok := hatchFormOf(c, node); ok {
 				p.hatches[node] = form
+			}
+			if isFailureTest(node) {
+				p.failureTags[node], _ = failureTags(c, c.GetTypeFromTypeNode(node.TypeArguments()[0]))
 			}
 			p.planPlain(a, node)
 			p.planServiceNode(c, node)

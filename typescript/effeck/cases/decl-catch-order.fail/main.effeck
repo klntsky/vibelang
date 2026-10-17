@@ -1,0 +1,14 @@
+// expect: EK2106
+error Busy
+error Offline
+
+export function attempt(flag: boolean) {
+  try {
+    if (flag) throw new Busy()
+    throw new Offline()
+  } catch (e) {
+    return "any"
+  } catch (e: Busy) {
+    return "busy"
+  }
+}

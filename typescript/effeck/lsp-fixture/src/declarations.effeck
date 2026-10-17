@@ -25,3 +25,11 @@ export function balanceWith(id: string) {
     return Accounts.balance(id)
   }
 }
+
+export function recover(id: string) {
+  try {
+    return findUser(id)
+  } catch (e: MissingUser) {
+    return e.id
+  }
+}
