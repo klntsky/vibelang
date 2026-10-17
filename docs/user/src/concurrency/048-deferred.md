@@ -22,9 +22,9 @@ The new deferred starts empty and contains neither a success nor a failure. Crea
 ```ts
 function waitForAddress() {
   const address = Deferred.make<string>()
-  const listener = fork(Deferred.await(address))
+  const listener = fork await address
   address.succeed("127.0.0.1:8080")
-  return listener.join()
+  return await listener
 }
 ```
 
@@ -37,7 +37,7 @@ function completeOnce() {
   const result = Deferred.make<number, string>()
   const accepted = result.succeed(25)
   const ignored = result.fail("too late")
-  return { accepted, ignored, value: Deferred.await(result) }
+  return { accepted, ignored, value: await result }
 }
 // Returns { accepted: true, ignored: false, value: 25 }.
 
@@ -45,7 +45,7 @@ function shareFailure() {
   const result = Deferred.make<number, string>()
   result.fail("configuration missing")
   try {
-    return Deferred.await(result)
+    return await result
   } catch (error) {
     logError(error)
     return 0
@@ -78,16 +78,16 @@ function inspectWithoutWaiting() {
 ```ts
 function coordinate() {
   const prepared = Deferred.make<ReadonlyArray<string>>()
-  const producer = fork(() => {
+  const producer = fork {
     sleep("20 millis")
     prepared.succeed(["part-a", "part-b"])
-  })
-  const consumer = fork(() => {
-    const parts = Deferred.await(prepared)
+  }
+  const consumer = fork {
+    const parts = await prepared
     return parts.join("+")
-  })
-  const result = consumer.join()
-  producer.join()
+  }
+  const result = await consumer
+  await producer
   return result
 }
 ```

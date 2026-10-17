@@ -70,6 +70,11 @@ clients, see [editors/](editors/README.md).
   statements before the members run once, when the layer builds.
 - Provide a layer to a block with `with AppLive { ... }`; a `return` inside
   returns from the enclosing function.
+- Start work concurrently with `fork work()` and wait for it with `await`:
+  `const [a, b] = await [fork left(), fork right()]`. `select { case ... }`
+  takes the first of several events, and `for concurrent(8) (const x of xs)`
+  runs a loop body in parallel. `await` never waits for a call: a call
+  already waits.
 - Answer a control operation with a handle clause:
   `try { return release(v) } handle Approval.approve(request) { resume(true) }`.
   A `return` in the try block or a clause returns from the enclosing function.

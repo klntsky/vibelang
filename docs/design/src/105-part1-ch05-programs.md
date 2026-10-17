@@ -6,7 +6,7 @@ A call runs where it stands, except where a parameter expects a program: there i
 
 ```ts es
 syncInventory(store)                    // runs now
-fork(syncInventory(store))              // passed by name: the forked fiber runs it
+fork syncInventory(store)              // passed by name: the forked fiber runs it
 
 const job = () => syncInventory(store)  // a program: nothing has run
 job()                                   // runs it

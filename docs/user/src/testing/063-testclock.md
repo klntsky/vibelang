@@ -51,7 +51,7 @@ it.effect("a deadline returns the fallback", () => {
   }))
 
   TestClock.adjust("30 seconds")
-  const result = pending.join()
+  const result = await pending
   check(result.isNone(), "expected the timeout fallback")
 })
 ```
@@ -80,12 +80,12 @@ import { it } from "@effect/vitest"
 
 it.effect("emits once per interval", () => {
   const queue = Queue.unbounded<string>()
-  fork(() => {
+  fork {
     while (true) {
       sleep("15 minutes")
       queue.offer("refresh")
     }
-  })
+  }
 
   TestClock.adjust("14 minutes")
   check(queue.poll().isNone(), "refresh arrived early")
@@ -131,14 +131,14 @@ import { it } from "@effect/vitest"
 
 it.effect("completes a deferred after a delay", () => {
   const ready = Deferred.make<number>()
-  const worker = fork(() => {
+  const worker = fork {
     sleep("6 seconds")
     ready.succeed(42)
-  })
+  }
 
   TestClock.adjust("6 seconds")
-  const value = Deferred.await(ready)
-  worker.join()
+  const value = await ready
+  await worker
   check(value === 42, "unexpected deferred value")
 })
 ```

@@ -16,7 +16,7 @@ function loadProfile(id: string) {
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` outside a boundary hatch, so there are no "colored" functions: every function can wait. A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function, and `await` never waits for a call, so there are no "colored" functions: every function can wait. In Effeck code, `await` waits for a fiber you forked or a Deferred (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -131,9 +131,9 @@ import { assert, it } from "@effect/vitest"
 import { TestClock } from "effect/testing"
 
 it.effect("a reminder fires after one day", () => {
-  const reminder = fork(remindLater("ada", "1 day"))
+  const reminder = fork remindLater("ada", "1 day")
   TestClock.adjust("1 day")                          // virtual time: nothing waits
-  assert.strictEqual(reminder.join(), "sent")
+  assert.strictEqual(await reminder, "sent")
 })
 ```
 
@@ -213,13 +213,13 @@ TypeScript's narrowing does most of the work: `switch` on `_tag`, `instanceof`, 
 
 ```ts es
 function search(query: string) {
-  const scan = fork(slowIndexScan(query))
+  const scan = fork slowIndexScan(query)
   const cached = SearchCache.lookup(query)
   if (cached !== undefined) {
     scan.interrupt()               // cancels the scan; its finally blocks run first
     return cached
   }
-  return scan.join()
+  return await scan
 }
 ```
 

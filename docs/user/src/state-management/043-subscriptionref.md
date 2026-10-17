@@ -64,13 +64,13 @@ function observeTwoClients() {
       })
   }
 
-  const first = fork(client(firstReady))
-  const second = fork(client(secondReady))
-  Deferred.await(firstReady)
-  Deferred.await(secondReady)
+  const first = fork client(firstReady)
+  const second = fork client(secondReady)
+  await firstReady
+  await secondReady
   SubscriptionRef.set(count, 1)
-  first.join()
-  second.join()
+  await first
+  await second
 }
 ```
 

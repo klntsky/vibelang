@@ -22,9 +22,9 @@ A bounded queue suspends offers when full until consumers free space. A dropping
 function offerWithBackpressure() {
   const queue = Queue.bounded<number>(1)
   queue.offer(10)
-  const secondOffer = fork(queue.offer(20))
+  const secondOffer = fork queue.offer(20)
   const first = queue.take()
-  secondOffer.join()
+  await secondOffer
   const second = queue.take()
   return [first, second] // [10, 20]
 }
@@ -85,13 +85,13 @@ function finishNormally() {
 
 function stopImmediately() {
   const queue = Queue.bounded<number>(4)
-  const waiter = fork(() => {
+  const waiter = fork {
     try {
       Queue.await(queue)
     } finally {
       logInfo("queue closed")
     }
-  })
+  }
   queue.shutdown()
   return Fiber.await(waiter)
 }

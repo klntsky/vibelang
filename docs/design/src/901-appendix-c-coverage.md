@@ -224,7 +224,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In Effeck | Form |
 | --- | --- | --- |
-| `async` and `await` | Changed | Only inside a hatch's function; elsewhere a call waits (D148) |
+| `async` and `await` | Changed | `async` only inside a hatch's function, where `await` is JavaScript's; elsewhere a call waits, and `await` waits for a fiber or a Deferred (D148, D167) |
 | `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal` cancels on interruption (D148) |
 | `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
 | `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |

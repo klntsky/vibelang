@@ -36,7 +36,10 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.catchTag(program, "Missing", recover)` | `try { ... } catch (e: Missing) { ... }` |
 | `Effect.ensuring(program, cleanup)` | `try` / `finally` |
 | `Effect.scoped` with `Effect.acquireRelease` | Acquire with `using` in the block that owns the resource |
-| `Effect.forkScoped(program)` | `fork(work())` for a child owned by the enclosing block |
+| `Effect.forkScoped(program)` | `fork work()` for a child owned by the enclosing block; `fork { ... }` forks a block |
+| `Fiber.join(fiber)` | `await fiber`; `await [a, b]` waits for several and interrupts the rest on a failure |
+| `Effect.raceAllFirst` with a tag per branch | `select { case const x = a(): ... case b(): ... }` |
+| `Effect.forEach(items, f, { concurrency: 8, discard: true })` | `for concurrent(8) (const item of items) f(item)` |
 | `Effect.sync(() => crypto.randomUUID())` | `sync(crypto.randomUUID())` |
 | `Effect.try({ try: () => parse(text), catch: (e) => new BadInput({ e }) })` | `try(parse(text), (e) => new BadInput({ e }))` |
 | `Effect.tryPromise((signal) => fetchJson(url, signal))` | `try(async (signal) => fetchJson(url, signal))` |

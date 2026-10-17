@@ -31,10 +31,10 @@ The default is sequential execution. A positive numeric limit bounds active oper
 
 ```ts
 function cancelWork() {
-  const worker = fork(() => {
+  const worker = fork {
     sleep("1 minute")
     return "finished"
-  })
+  }
   worker.interrupt()
   return Fiber.await(worker)
 }
@@ -64,22 +64,21 @@ function cancelWithCleanup() {
 
 ```ts
 function cancelBatch() {
-  forEach([1, 2, 3], (id) => {
+  for concurrent (const id of [1, 2, 3]) {
     try {
       if (id === 2) {
         sleep("10 millis")
         Effect.interrupt()
       }
       sleep("1 second")
-      return id
     } finally {
       logInfo("branch finished", id)
     }
-  }, { concurrency: 3 })
+  }
 }
 ```
 
-An interrupted branch stops the concurrent operation and interrupts its active siblings. An expected failure also stops the default concurrent traversal and cancels work whose result is no longer needed. The parent waits for branch cleanup; a cause containing interruption or a defect passes through ordinary `catch` intact.
+`for concurrent` runs each item in its own fiber. An interrupted branch stops the loop and interrupts its active siblings. An expected failure also stops the default concurrent traversal and cancels work whose result is no longer needed. The parent waits for branch cleanup; a cause containing interruption or a defect passes through ordinary `catch` intact.
 
 ## Racing under different winner rules
 

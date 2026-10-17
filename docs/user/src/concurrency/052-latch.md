@@ -7,13 +7,13 @@ A latch is a reusable gate for fibers. A closed latch makes callers wait; an ope
 ```ts
 function initializeThenWork() {
   const ready = Latch.make()
-  const worker = fork(() => {
+  const worker = fork {
     Latch.await(ready)
     return "processing enabled"
-  })
+  }
   sleep("20 millis")
   Latch.open(ready)
-  return worker.join()
+  return await worker
 }
 ```
 
@@ -26,9 +26,9 @@ function reopenGate() {
   const gate = Latch.make(true)
   Latch.await(gate) // Passes immediately.
   Latch.close(gate)
-  const waiting = fork(Latch.whenOpen(gate, () => "allowed again"))
+  const waiting = fork Latch.whenOpen(gate, () => "allowed again")
   Latch.open(gate)
-  return waiting.join()
+  return await waiting
 }
 ```
 
