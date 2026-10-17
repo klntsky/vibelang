@@ -46,15 +46,12 @@ error InvalidAmount {
 }
 
 function parseAmount(raw: number) {
-  return Effect.try({
-    try: () => WholeCents(raw),
-    catch: (cause) => new InvalidAmount({ cause })
-  })
+  return try(WholeCents(raw), (cause) => new InvalidAmount({ cause }))
 }
 // WholeCents!InvalidAmount!
 ```
 
-`Brand.make` accepts a synchronous check that returns `true` for valid input or an explanation for invalid input. The returned constructor throws a `Brand.BrandError` when validation fails. A direct call treats that exception as a defect, which ordinary `catch` does not see. Here `Effect.try` maps it to `InvalidAmount` in the expected error channel.
+`Brand.make` accepts a synchronous check that returns `true` for valid input or an explanation for invalid input. The returned constructor throws a `Brand.BrandError` when validation fails. A direct call treats that exception as a defect, which ordinary `catch` does not see. Here the `try` hatch maps it to `InvalidAmount` in the expected error channel.
 
 ```ts
 function inspectAmount(raw: number) {
@@ -86,10 +83,7 @@ error InvalidCharge {
 }
 
 function chargeAmount(raw: number) {
-  return Effect.try({
-    try: () => Charge(raw),
-    catch: (cause) => new InvalidCharge({ cause })
-  })
+  return try(Charge(raw), (cause) => new InvalidCharge({ cause }))
 }
 // chargeAmount(125) succeeds; -5 and 1.5 fail with InvalidCharge.
 ```
@@ -98,4 +92,4 @@ function chargeAmount(raw: number) {
 
 ## Coming from Effect
 
-Brands keep their usual types and runtime behavior. Direct constructor exceptions are defects; use the constructor's `result` with `Effect.fromResult`, or an explicit `Effect.try` mapping, when invalid input should be an expected failure.
+Brands keep their usual types and runtime behavior. Direct constructor exceptions are defects; use the constructor's `result` with `Effect.fromResult`, or an explicit `try` mapping, when invalid input should be an expected failure.

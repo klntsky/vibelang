@@ -63,15 +63,15 @@ clients, see [editors/](editors/README.md).
 - Declare a service with `service Users { find(id: string): User!NotFound }`
   and call `Users.find(id)`; `control` declares a control operation the same way.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
-  `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no
-  import, and neither does any other module of `effect`'s root, such as
+  `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`, the boundary
+  hatches `sync`, `try`, and `callback`, and the runners need no import, and neither does any other module of `effect`'s root, such as
   `Console`, `Option`, and `Stream`. Import other source files by their source name,
   `import { Todos } from "./todos.effeck"`; the compiler emits `.js` imports.
 - A module's top level only declares. A call there that would run a program
   is EK1001, including `Effect.succeed(1)`. Start the program once with a
   runner, which receives `main()` by name: `NodeRuntime.runMain(main())`.
 - Plain functions from other packages need a boundary, such as
-  `Effect.try(() => parse(text))`, or a `/** @effeck trusted */`
+  `try(parse(text))`, or a `/** @effeck trusted */`
   re-export from a `.ts` file (EK4401). Effect's packages are trusted,
   including `assert` and `expect` from `@effect/vitest`: import them from
   `@effect/vitest`, not from `vitest`.

@@ -12,7 +12,7 @@ const Dispatch = Schema.Struct({
 
 function displayDispatch(input: unknown) {
   const dispatch = Schema.decodeUnknownEffect(Dispatch)(input)
-  return Effect.try(() => Schema.toFormatter(Dispatch)(dispatch))
+  return try(Schema.toFormatter(Dispatch)(dispatch))
 }
 // For { depot: "east", counts: [2, 4] }, produces a readable object representation.
 ```
@@ -29,7 +29,7 @@ const Manifest = Schema.Struct({ label: Schema.String, weight: Weight })
 
 function displayManifest(input: unknown) {
   const manifest = Schema.decodeUnknownEffect(Manifest)(input)
-  return Effect.try(() => Schema.toFormatter(Manifest, {
+  return try(() => Schema.toFormatter(Manifest, {
     onBefore: (ast) => ast._tag === "String"
       ? (value: string) => `[${value}]`
       : undefined

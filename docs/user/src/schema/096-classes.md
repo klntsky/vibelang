@@ -26,7 +26,7 @@ function constructPackage(reference: string, pieces: number) {
 }
 
 function constructWithNew(reference: string) {
-  return Effect.try(() => new Package({ reference, pieces: 1 }))
+  return try(new Package({ reference, pieces: 1 }))
 }
 ```
 
@@ -38,9 +38,7 @@ Pass a checked `Schema.Struct` instead of a fields object when the class needs a
 
 ```ts
 function fromVerifiedFields(reference: string, pieces: number) {
-  return Effect.try(() =>
-    new Package({ reference, pieces }, { disableChecks: true })
-  )
+  return try(new Package({ reference, pieces }, { disableChecks: true }))
 }
 ```
 

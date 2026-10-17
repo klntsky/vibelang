@@ -62,7 +62,7 @@ function promised(value: number): number!! {
 
 The language design diagnoses this as `EK2001`. Handle `Rejected` inside the function or widen its contract. Related checks include unmet services (`EK2002`), running a program at module top level (`EK1001`), and passing a suspending callback to synchronous JavaScript (`EK4301`).
 
-Inside functions, plain foreign calls need an explicit boundary such as `Effect.try` or `Effect.tryPromise`, or a trusted declaration (`EK4401`). Effect's own packages are trusted. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a `catch` that can never receive an expected failure is `EK2004`, a warning by default.
+Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages are trusted. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a `catch` that can never receive an expected failure is `EK2004`, a warning by default.
 
 The server exposes TypeScript completions through the Effeck checker,
 including service member types. D33 also calls for catch-specific completions,

@@ -117,7 +117,7 @@ export default defineConfig({
 
 Register `it.effect` from `@effect/vitest` at the top level or in `describe`
 (D38). Keep foreign assertions inside a boundary such as
-`Effect.sync(() => assert.strictEqual(actual, expected))`. `bun run test`
+`sync(assert.strictEqual(actual, expected))`. `bun run test`
 needs no prior build and maps assertion failures to `.effeck` lines.
 
 For a Vite application, add the same plugin to `vite.config.ts`. The plugin
@@ -194,7 +194,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, suggest `T!!` or removing the annotation; for a bare `T`, suggest `T!!` or `T!Errors` | 14 |
-| EK2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
+| EK2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `try` | 3 |
 | EK2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
@@ -214,9 +214,10 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | EK4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of` | 10, 16 |
-| EK4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `Effect.try`, or tag the declaration `@effeck trusted` | 10 |
+| EK4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@effeck trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
+| EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
 
 #### Linting
 

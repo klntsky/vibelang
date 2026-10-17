@@ -111,19 +111,18 @@ EK4401 applies where a fiber runs the code. Module initialization and its plain 
 
 Only built-ins that parse outside text declare expected failures: `JSON.parse` declares `SyntaxError`, and `decodeURI` and `decodeURIComponent` declare `URIError`. Other built-in exceptions are defects (D101).
 
-An explicit boundary says what an exception means at the call. These are Effect's own constructors, unchanged:
+An explicit boundary says what an exception means at the call. The boundary hatches are `sync`, `try`, and `callback` (D148):
 
 ```ts es
 function parseLegacy(text: string) {
-  return Effect.try({
-    try: () => legacyParse(text),                 // plain TypeScript, allowed inside the boundary
-    catch: (cause) => new LegacyFormatError({ cause })
-  })
+  return try(legacyParse(text), (cause) => new LegacyFormatError({ cause }))   // plain TypeScript inside
 }
 // LegacyDoc!LegacyFormatError!
 ```
 
-`Effect.try` and `Effect.tryPromise` turn exceptions and rejections into a typed error; `Effect.sync` and `Effect.promise` make them defects; `Effect.callback` adapts a callback API (Chapter 6). Inside their callbacks, plain TypeScript calls are allowed, because the boundary says what an exception means. Platform APIs (EK4402) and clock reads (EK4403) are rejected there too: they belong behind an Effect module.
+`try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `try(legacyParse(text))`. A hatch's argument is plain TypeScript, not Effeck: calls there do not run, so calling an `.effeck` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
+
+`runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude as the way back in. They are called from plain TypeScript: a `.ts` file, a hatch's body, or a module's top level, never from code a fiber runs (EK1005).
 
 An exception that no contract lists is a defect, and an Effeck `catch` does not see it, unlike a JavaScript `catch` inside `Effect.gen` (Chapter 3). That includes the exceptions of Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, which `effect`'s trusted contracts classify as defects.
 
@@ -133,16 +132,13 @@ This is a policy change from the original direction, which adapted every plain c
 
 #### Promises
 
-Effeck has no `await`: a call already waits for the callee. A Promise from a TypeScript library is waited on with `Effect.tryPromise`, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request. This code is identical to the Effect code you write today:
+Effeck code has no `await` outside a hatch: a call already waits for the callee. A Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
 
 ```ts es
 import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: AbortSignal) => Promise<Charge>
 
 function charge(cartId: string, amount: number) {
-  return Effect.tryPromise({
-    try: (signal) => createCharge(amount, signal),
-    catch: (cause) => new ChargeFailed({ cartId, cause })
-  })
+  return try((signal) => createCharge(amount, signal), (cause) => new ChargeFailed({ cartId, cause }))
 }
 // Charge!ChargeFailed!
 ```
@@ -167,4 +163,4 @@ Effect's own combinators, such as `Effect.forEach`, expect callbacks that return
 
 #### Effect 3
 
-Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with `Effect.tryPromise` around `Effect3.runPromise`.
+Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try(Effect3.runPromise(program), (error) => …)`.

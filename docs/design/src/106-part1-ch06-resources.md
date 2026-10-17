@@ -84,7 +84,7 @@ A resource held by code that a handler stops (Chapter 9) is released when it sto
 
 #### Adapting a callback API
 
-Wrapping a callback-based API is boundary code. It belongs in TypeScript, using the runtime's `suspend`, which, unlike `Effect.callback`, tells the producer when a value arrived too late so the producer can release it:
+Wrapping a callback-based API is boundary code. It belongs in TypeScript, using the runtime's `suspend`, which, unlike the `callback` hatch, tells the producer when a value arrived too late so the producer can release it:
 
 ```ts ts
 // net-adapter.ts
@@ -128,14 +128,14 @@ The two acquisition policies behave differently when cancellation arrives during
 
 Without `{ interruptible: true }`, `sessionWithin` would wait for a connection that never completes, and the race branches in the adapter would never run (Chapter 21).
 
-A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with Effect's own `Effect.callback`. Its register function is boundary code, so it may call plain TypeScript. Its `resume` takes an Effect, and `.effeck` code passes an `Exit`: a call returns an `Exit` as data (Chapter 13), while `Effect.succeed(value)` would run where it is written:
+A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with the `callback` hatch (D148). Its register function is plain TypeScript, so it may call the SDK directly; `resume(value)` succeeds, `resume.fail(error)` fails, `resume.exit(exit)` adopts an `Exit`, and a function it returns runs on interruption:
 
 ```ts es
 import { onceReady } from "./sdk.ts"     // (callback: (sdk: Sdk) => void) => void
 
 function ready() {
-  return Effect.callback<Sdk>((resume) => {
-    onceReady((sdk) => resume(Exit.succeed(sdk)))
+  return callback<Sdk>((resume) => {
+    onceReady((sdk) => resume(sdk))
   })
 }
 // Sdk!!

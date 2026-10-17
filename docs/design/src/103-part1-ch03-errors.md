@@ -168,5 +168,5 @@ warning EK2004: this catch can never run: nothing in its try block fails with an
   admins.effeck:3:12   return Option.getOrThrow(Option.fromNullishOr(users.find(isAdmin)))
                           ^^^^^^^^^^^^^^^^^ its exceptions are defects
   Use a form that can fail:   return users.find(isAdmin) ?? guest
-  or bound the call:          Effect.try({ try: () => …, catch: (cause) => new NoAdmin({ cause }) })
+  or bound the call:          try(…, (cause) => new NoAdmin({ cause }))
 ```

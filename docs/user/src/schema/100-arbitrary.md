@@ -11,7 +11,7 @@ const Parcel = Schema.Struct({
 })
 
 function sampleParcels() {
-  const generator = Effect.try(() => Arbitrary.schema(Parcel))
+  const generator = try(Arbitrary.schema(Parcel))
   return Arbitrary.sampleEffect(generator, { count: 12, seed: "parcel-samples" })
 }
 ```
@@ -41,8 +41,8 @@ Built-in bounds, lengths, patterns, property counts, and uniqueness checks provi
 
 ```ts
 function sampleRepresentations() {
-  const decoded = Effect.try(() => Arbitrary.schema(Schema.FiniteFromString))
-  const encoded = Effect.try(() => Arbitrary.schema(Schema.toEncoded(Schema.FiniteFromString)))
+  const decoded = try(Arbitrary.schema(Schema.FiniteFromString))
+  const encoded = try(Arbitrary.schema(Schema.toEncoded(Schema.FiniteFromString)))
   const numbers = Arbitrary.sampleEffect(decoded, { count: 4, seed: 17 })
   const strings = Arbitrary.sampleEffect(encoded, { count: 4, seed: 17 })
   return { numbers, strings }
@@ -56,7 +56,7 @@ Schema generation targets the decoded type, so a string-to-number codec generate
 ```ts
 function checkCountRoundTrip() {
   const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
-  const generator = Effect.try(() => Arbitrary.schema(Count))
+  const generator = try(Arbitrary.schema(Count))
   const result = Arbitrary.checkEffect(generator, (count) => {
     const wire = Schema.encodeEffect(Schema.FiniteFromString)(count)
     return Schema.decodeEffect(Schema.FiniteFromString)(wire) === count
@@ -73,7 +73,7 @@ A falsification includes `shrunkInput` and a `replay` token. Call `checkEffect` 
 
 ```ts
 function sampleDispatchPlans() {
-  const counts = Effect.try(() => Arbitrary.schema(Schema.Int.check(
+  const counts = try(() => Arbitrary.schema(Schema.Int.check(
     Schema.isBetween({ minimum: 0, maximum: 32 })
   ), {
     shrink: (value) => value === 0 ? [] : [Math.floor(value / 2)]
@@ -107,7 +107,7 @@ const ShelfRefSchema = Schema.instanceOf(ShelfRef, {
 })
 
 function sampleShelves() {
-  const generator = Effect.try(() => Arbitrary.schema(ShelfRefSchema))
+  const generator = try(Arbitrary.schema(ShelfRefSchema))
   return Arbitrary.sampleEffect(generator, { count: 5, seed: 23 })
 }
 ```
@@ -119,7 +119,7 @@ An opaque declaration needs a generatable representation through `toCodecArbitra
 ```ts
 function tryImpossibleGenerator() {
   try {
-    return Effect.try(() => Arbitrary.schema(Schema.Never))
+    return try(Arbitrary.schema(Schema.Never))
   } catch (error) {
     Effect.log("Arbitrary derivation failed for the empty domain")
     throw error

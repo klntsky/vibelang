@@ -53,7 +53,7 @@ function exportedReport() {
 
 This source version provides direct OTLP/HTTP export under `effect/observability`. The layer batches ended spans, uses the supplied HTTP client and serialization, and flushes during scope shutdown. Provide it around the application's lifetime so each request does not create and close its own exporter.
 
-An application that already owns an OpenTelemetry SDK tracer provider can initialize its compatible bridge in a TypeScript bootstrap or adapter and provide the resulting Effect layer to Effeck. Effect's own packages are trusted; a plain third-party SDK call inside an Effeck function needs an explicit boundary such as `Effect.try`, or a TypeScript declaration tagged `/** @effeck trusted */`. A synchronous SDK context callback must compile to plain JavaScript, so it cannot call services or perform other Effect operations.
+An application that already owns an OpenTelemetry SDK tracer provider can initialize its compatible bridge in a TypeScript bootstrap or adapter and provide the resulting Effect layer to Effeck. Effect's own packages are trusted; a plain third-party SDK call inside an Effeck function needs an explicit boundary such as `try`, or a TypeScript declaration tagged `/** @effeck trusted */`. A synchronous SDK context callback must compile to plain JavaScript, so it cannot call services or perform other Effect operations.
 
 ## Inspecting failures and attributes
 

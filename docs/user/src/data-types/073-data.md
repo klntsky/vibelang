@@ -123,10 +123,7 @@ error DocumentDecodeError {
 }
 
 function decodeDocument(text: string) {
-  return Effect.try({
-    try: () => JSON.parse(text),
-    catch: (cause) => new DocumentDecodeError({ cause })
-  })
+  return try(JSON.parse(text), (cause) => new DocumentDecodeError({ cause }))
 }
 // any!DocumentDecodeError!
 ```

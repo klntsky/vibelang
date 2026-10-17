@@ -11,7 +11,7 @@ const Depot = Schema.Struct({
 })
 
 function depotDocument() {
-  return Effect.try(() => Schema.toJsonSchemaDocument(Depot))
+  return try(Schema.toJsonSchemaDocument(Depot))
 }
 ```
 
@@ -21,11 +21,11 @@ The returned document contains `dialect`, the root `schema`, and a separate `def
 
 ```ts
 function alternateDrafts() {
-  const document = Effect.try(() => Schema.toJsonSchemaDocument(
+  const document = try(() => Schema.toJsonSchemaDocument(
     Schema.Tuple([Schema.String, Schema.FiniteFromString])
   ))
-  const draft07 = Effect.try(() => JsonSchema.toDocumentDraft07(document))
-  const draft04 = Effect.try(() => JsonSchema.toDocumentDraft04(document))
+  const draft07 = try(JsonSchema.toDocumentDraft07(document))
+  const draft04 = try(JsonSchema.toDocumentDraft04(document))
   return { draft07, draft04 }
 }
 ```
@@ -44,7 +44,7 @@ const DepotName = Schema.Trim.pipe(Schema.annotateEncoded({
 }))
 
 function nameDocument() {
-  return Effect.try(() => Schema.toJsonSchemaDocument(DepotName, {
+  return try(() => Schema.toJsonSchemaDocument(DepotName, {
     includeAnnotationKey: (key) => key.startsWith("x-")
   }))
 }
@@ -63,7 +63,7 @@ const DepotRequest = Schema.Struct({
 })
 
 function requestDocument() {
-  return Effect.try(() => Schema.toJsonSchemaDocument(DepotRequest))
+  return try(Schema.toJsonSchemaDocument(DepotRequest))
 }
 ```
 
@@ -84,7 +84,7 @@ const DepotTree = Schema.Struct({
 }).annotate({ identifier: "DepotTree" })
 
 function treeDocument() {
-  return Effect.try(() => Schema.toJsonSchemaDocument(DepotTree))
+  return try(Schema.toJsonSchemaDocument(DepotTree))
 }
 ```
 
@@ -94,7 +94,7 @@ An identifier creates a named definition referenced through `$ref`. Recursive ex
 
 ```ts
 function strictDocument() {
-  return Effect.try(() => Schema.toJsonSchemaDocument(DepotRequest, {
+  return try(() => Schema.toJsonSchemaDocument(DepotRequest, {
     onExcessProperty: "error",
     generateDescriptions: true,
     includeAnnotationKey: (key) => key.startsWith("x-")
@@ -110,7 +110,7 @@ function strictDocument() {
 const DepotText = Schema.fromJsonString(Depot)
 
 function jsonTextDocument() {
-  return Effect.try(() => Schema.toJsonSchemaDocument(DepotText))
+  return try(Schema.toJsonSchemaDocument(DepotText))
 }
 ```
 

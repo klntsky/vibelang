@@ -15,7 +15,7 @@ function readableFailure(input: unknown) {
     Schema.decodeUnknownEffect(Dispatch)(input)
     return "Accepted"
   } catch (error) {
-    return Effect.try(() => SchemaIssue.makeFormatterDefault()(error.issue))
+    return try(SchemaIssue.makeFormatterDefault()(error.issue))
   }
 }
 ```
@@ -46,9 +46,7 @@ function formFailures(input: unknown) {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
     return []
   } catch (error) {
-    return Effect.try(() =>
-      SchemaIssue.makeFormatterStandardSchemaV1()(error.issue).issues
-    )
+    return try(SchemaIssue.makeFormatterStandardSchemaV1()(error.issue).issues)
   }
 }
 // An issue has a message and a path such as ["destination"].
@@ -70,7 +68,7 @@ function localizedFailures(input: unknown) {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
     return []
   } catch (error) {
-    return Effect.try(() => formFormatter(error.issue).issues)
+    return try(formFormatter(error.issue).issues)
   }
 }
 ```

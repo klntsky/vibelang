@@ -7,16 +7,16 @@ Short answers, each with the code. Appendix C maps every section of Effect's doc
 ```ts es
 function loadProfile(id: string) {
   const user = Users.find(id)                       // waits for the database: no await
-  const avatar = Effect.tryPromise({                // a Promise from a TypeScript library
-    try: (signal) => avatarSdk.fetch(user.avatarId, { signal }),
-    catch: (cause) => new AvatarError({ cause })
-  })
+  const avatar = try(                               // a Promise from a TypeScript library
+    (signal) => avatarSdk.fetch(user.avatarId, { signal }),
+    (cause) => new AvatarError({ cause })
+  )
   return { user, avatar }
 }
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await`, so there are no "colored" functions: every function can wait. A Promise from a TypeScript library crosses with `Effect.tryPromise`, or with `Effect.promise` when a rejection is a bug. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` outside a boundary hatch, so there are no "colored" functions: every function can wait. A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -223,19 +223,19 @@ function search(query: string) {
 }
 ```
 
-They are Effect's. A fiber is Effect's fiber, `fork` starts one owned by the enclosing block (Chapter 7), and `Fiber.join` and `Fiber.interrupt` work unchanged. Interruption runs every `finally` block and `using` release on the way out, and `catch` never catches it (Chapter 3). `Effect.uninterruptible(() => …)` protects a region, `Effect.onInterrupt` reacts to cancellation, and `Effect.timeout` and `Effect.race` interrupt the branches they discard. A Promise is cancelled through the `AbortSignal` that `Effect.tryPromise` passes.
+They are Effect's. A fiber is Effect's fiber, `fork` starts one owned by the enclosing block (Chapter 7), and `Fiber.join` and `Fiber.interrupt` work unchanged. Interruption runs every `finally` block and `using` release on the way out, and `catch` never catches it (Chapter 3). `Effect.uninterruptible(() => …)` protects a region, `Effect.onInterrupt` reacts to cancellation, and `Effect.timeout` and `Effect.race` interrupt the branches they discard. A Promise is cancelled through the `AbortSignal` that the `try` and `sync` hatches pass.
 
 #### How do I wrap a callback API?
 
 ```ts es
 function ready() {
-  return Effect.callback<Sdk>((resume) => {
-    onceReady((sdk) => resume(Exit.succeed(sdk)))
+  return callback<Sdk>((resume) => {
+    onceReady((sdk) => resume(sdk))
   })
 }
 ```
 
-`Effect.callback` works in `.effeck`: its register function is a boundary, so it may call plain TypeScript, and its `resume` takes an Effect, to which `.effeck` code passes an `Exit`, data until run (Chapter 13). A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime's `suspend` and `Effect.acquireRelease(…, { interruptible: true })`, so a value that arrives after cancellation is released (Chapter 6). Node.js and browser callback APIs already have Effect modules (Chapter 11).
+The `callback` hatch adapts it (D148): its register function is plain TypeScript, `resume(value)` succeeds, `resume.fail(error)` fails, and a function the register function returns runs on interruption. A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime's `suspend` and `Effect.acquireRelease(…, { interruptible: true })`, so a value that arrives after cancellation is released (Chapter 6). Node.js and browser callback APIs already have Effect modules (Chapter 11).
 
 #### Can I mix `.ts` and `.effeck` files?
 
@@ -252,10 +252,7 @@ Yes, in one program: `effeck` checks both, and the editor serves both (Chapter 2
 #### Is there anything from Effect I cannot use?
 
 ```ts es
-const legacy = Effect.tryPromise({
-  try: () => Effect3.runPromise(oldProgram),
-  catch: (cause) => new LegacyError({ cause })
-})
+const legacy = try(Effect3.runPromise(oldProgram), (cause) => new LegacyError({ cause }))
 ```
 
 Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.effeck` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.

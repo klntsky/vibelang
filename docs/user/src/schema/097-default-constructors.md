@@ -38,16 +38,16 @@ function constructOrExplain(value: number) {
   try {
     return String(CaseCount.makeEffect(value))
   } catch (issue) {
-    return Effect.try(() => SchemaIssue.makeFormatterDefault()(issue))
+    return try(SchemaIssue.makeFormatterDefault()(issue))
   }
 }
 
 function constructAsOption(value: number) {
-  return Effect.try(() => CaseCount.makeOption(value))
+  return try(CaseCount.makeOption(value))
 }
 
 function constructWithThrowingApi(value: number) {
-  return Effect.try(() => CaseCount.make(value))
+  return try(CaseCount.make(value))
 }
 ```
 
@@ -105,6 +105,6 @@ function createPackingRequest(reference: string) {
 }
 ```
 
-Classes use the same default-bearing field descriptions as structs. The result is a validated instance with its class behavior. `new PackingRequest(...)` also applies defaults. Its exceptions are defects unless an explicit `Effect.try` boundary gives them an expected error type; `new` itself never runs a program.
+Classes use the same default-bearing field descriptions as structs. The result is a validated instance with its class behavior. `new PackingRequest(...)` also applies defaults. Its exceptions are defects unless an explicit `try` hatch gives them an expected error type; `new` itself never runs a program.
 
 [Upstream page](https://effect.website/docs/v4/schema/default-constructors)

@@ -36,10 +36,7 @@ error InvalidPrice {
 }
 
 function parsePrice(input: string) {
-  return Effect.try({
-    try: () => BigDecimal.fromStringUnsafe(input),
-    catch: () => new InvalidPrice({ input })
-  })
+  return try(BigDecimal.fromStringUnsafe(input), () => new InvalidPrice({ input }))
 }
 // BigDecimal.BigDecimal!InvalidPrice!
 

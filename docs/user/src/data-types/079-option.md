@@ -162,7 +162,7 @@ export function combineOptions(
 import { combineOptions } from "./combine-options.ts"
 
 function combinedData() {
-  return Effect.try(() => combineOptions(
+  return try(() => combineOptions(
     Option.some(" Daily "), Option.some(3)
   ))
 }

@@ -33,10 +33,7 @@ const ReviewedDispatch = Dispatch.pipe(Schema.decode({
 const ReviewedStandard = Schema.toStandardSchemaV1(ReviewedDispatch)
 
 function validateDispatch(input: unknown) {
-  return Effect.tryPromise({
-    try: () => Promise.resolve(ReviewedStandard["~standard"].validate(input)),
-    catch: (cause) => new ValidationBoundaryError({ cause })
-  })
+  return try(Promise.resolve(ReviewedStandard["~standard"].validate(input)), (cause) => new ValidationBoundaryError({ cause }))
 }
 
 error ValidationBoundaryError {
@@ -46,7 +43,7 @@ error ValidationBoundaryError {
 
 The standard interface attempts synchronous validation first. If it encounters asynchronous work, it returns a Promise instead of a direct result. `Promise.resolve` inside an explicit foreign-code boundary normalizes both cases without `await` in Effeck. Prefer `Schema.decodeUnknownEffect` for ordinary Effeck application code; the standard interface is most useful for interoperability.
 
-Inside the `Effect.tryPromise` callback, plain TypeScript calls are allowed. `Promise.resolve` produces a Promise for either validation result shape, so no special mixed-return call rule is needed. The boundary maps synchronous exceptions and Promise rejections to `ValidationBoundaryError`; reported validation issues remain data.
+Inside the `try` hatch, plain TypeScript calls are allowed. `Promise.resolve` produces a Promise for either validation result shape, so no special mixed-return call rule is needed. The boundary maps synchronous exceptions and Promise rejections to `ValidationBoundaryError`; reported validation issues remain data.
 
 ## Handling defects during validation
 
@@ -58,7 +55,7 @@ const BrokenLabel = Schema.String.pipe(Schema.decode({
 const BrokenStandard = Schema.toStandardSchemaV1(BrokenLabel)
 
 function inspectBrokenValidation() {
-  return Effect.try(() => BrokenStandard["~standard"].validate("crate"))
+  return try(BrokenStandard["~standard"].validate("crate"))
 }
 ```
 

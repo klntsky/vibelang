@@ -60,10 +60,7 @@ function decodeAsData(input: unknown) {
 }
 
 function decodeSynchronously(input: unknown) {
-  return Effect.try({
-    try: () => Schema.decodeUnknownSync(Shipment)(input),
-    catch: (cause) => new InvalidShipment({ cause })
-  })
+  return try(Schema.decodeUnknownSync(Shipment)(input), (cause) => new InvalidShipment({ cause }))
 }
 
 error InvalidShipment {
@@ -73,7 +70,7 @@ error InvalidShipment {
 
 Prefer `decodeUnknownEffect` inside Effeck: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and requires a synchronous, service-free decoding path. Unexpected exceptions from synchronous callbacks are defects; ordinary `catch` does not handle them.
 
-`decodeUnknownSync` throws on invalid input. A direct call makes that exception a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A `catch` around a direct call alone cannot run and produces warning EK2004. The `Exit` and `Option` variants provide other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant supports asynchronous decoding without services and is consumed through `Effect.tryPromise`. The synchronous variants cannot complete asynchronous conversions, even when no service is needed.
+`decodeUnknownSync` throws on invalid input. A direct call makes that exception a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A `catch` around a direct call alone cannot run and produces warning EK2004. The `Exit` and `Option` variants provide other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant supports asynchronous decoding without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even when no service is needed.
 
 ## Encoding values
 

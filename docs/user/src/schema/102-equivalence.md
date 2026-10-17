@@ -13,7 +13,7 @@ const Shipment = Schema.Struct({
 function sameShipment(left: unknown, right: unknown) {
   const a = Schema.decodeUnknownEffect(Shipment)(left)
   const b = Schema.decodeUnknownEffect(Shipment)(right)
-  return Effect.try(() => Schema.toEquivalence(Shipment)(a, b))
+  return try(Schema.toEquivalence(Shipment)(a, b))
 }
 ```
 
@@ -23,7 +23,7 @@ function sameShipment(left: unknown, right: unknown) {
 
 ```ts
 function sameUnknown(left: unknown, right: unknown) {
-  return Effect.try(() => Schema.toEquivalence(Schema.Unknown)(left, right))
+  return try(Schema.toEquivalence(Schema.Unknown)(left, right))
 }
 
 class ShipmentRef {
@@ -34,7 +34,7 @@ const ShipmentRefSchema = Schema.instanceOf(ShipmentRef, {
 })
 
 function sameRef() {
-  return Effect.try(() => Schema.toEquivalence(ShipmentRefSchema)(
+  return try(() => Schema.toEquivalence(ShipmentRefSchema)(
     new ShipmentRef("ref-61", "morning"),
     new ShipmentRef("ref-61", "afternoon")
   )) // true
@@ -51,7 +51,7 @@ const ShipmentIdentity = Shipment.pipe(Schema.overrideToEquivalence(
 ))
 
 function sameIdentity(left: typeof Shipment.Type, right: typeof Shipment.Type) {
-  return Effect.try(() => Schema.toEquivalence(ShipmentIdentity)(left, right))
+  return try(Schema.toEquivalence(ShipmentIdentity)(left, right))
 }
 ```
 

@@ -39,7 +39,7 @@ function decodeContainers() {
 
 ```ts
 function encodeResult() {
-  const codec = Effect.try(() => Schema.toCodecJson(CountResult))
+  const codec = try(Schema.toCodecJson(CountResult))
   return Schema.encodeEffect(codec)(Result.succeed(9))
 }
 // { _tag: "Success", success: "9" }
@@ -67,8 +67,8 @@ const PersistentSet = Schema.HashSet(Schema.FiniteFromString)
 const PersistentMap = Schema.HashMap(Schema.String, Schema.FiniteFromString)
 
 function collectionsFromJson() {
-  const setCodec = Effect.try(() => Schema.toCodecJson(PersistentSet))
-  const mapCodec = Effect.try(() => Schema.toCodecJson(PersistentMap))
+  const setCodec = try(Schema.toCodecJson(PersistentSet))
+  const mapCodec = try(Schema.toCodecJson(PersistentMap))
   const set = Schema.decodeUnknownEffect(setCodec)(["4", "7"])
   const map = Schema.decodeUnknownEffect(mapCodec)([["cold", "4"]])
   return { set, map }
@@ -84,7 +84,7 @@ function durations() {
   const hold = Schema.decodeEffect(Schema.DurationFromString)("3 seconds")
   const milliseconds = Schema.encodeEffect(Schema.DurationFromMillis)(hold)
   const nanoseconds = Schema.decodeEffect(Schema.DurationFromNanos)(3_000_000_000n)
-  const jsonCodec = Effect.try(() => Schema.toCodecJson(Schema.Duration))
+  const jsonCodec = try(Schema.toCodecJson(Schema.Duration))
   const json = Schema.encodeEffect(jsonCodec)(Duration.seconds(3))
   return { milliseconds, nanoseconds, json }
 }

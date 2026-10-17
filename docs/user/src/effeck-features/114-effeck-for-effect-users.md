@@ -15,7 +15,7 @@ function main() {
 }
 ```
 
-`greet("Ada")` runs and returns a string. `() => greet("Ada")` describes a program that retry can run again. Write neither `async` nor `await`.
+Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.retry`, whose parameter expects a program, the same call is passed by name: retry runs it again on each attempt. Write neither `async` nor `await` outside a boundary hatch.
 
 ## Translate the idioms
 
@@ -29,7 +29,13 @@ function main() {
 | `Effect.catchTag(program, "Missing", recover)` | `try` / `catch`, narrowed by `instanceof` or `_tag` |
 | `Effect.ensuring(program, cleanup)` | `try` / `finally` |
 | `Effect.scoped` with `Effect.acquireRelease` | Acquire with `using` in the block that owns the resource |
-| `Effect.forkScoped(program)` | `fork(() => work())` for a child owned by the enclosing block |
+| `Effect.forkScoped(program)` | `fork(work())` for a child owned by the enclosing block |
+| `Effect.sync(() => crypto.randomUUID())` | `sync(crypto.randomUUID())` |
+| `Effect.try({ try: () => parse(text), catch: (e) => new BadInput({ e }) })` | `try(parse(text), (e) => new BadInput({ e }))` |
+| `Effect.tryPromise((signal) => fetchJson(url, signal))` | `try(async (signal) => fetchJson(url, signal))` |
+| `Effect.promise(() => load())` | `sync(async () => load())` |
+| `Effect.callback((resume) => …resume(Effect.succeed(x))…)` | `callback((resume) => …resume(x)…)` |
+| `Effect.runPromise(program)` in TypeScript | `runPromise(main())` in a `.ts` file or a hatch's body |
 | `Stream.fromIterable` or a generator-based source | A producer: `function*` with `yield value` |
 
 Use Effect's operators for retries, timeouts, concurrency, and Stream transformations. Statements replace the operators that only sequence ordinary work.
@@ -80,7 +86,7 @@ function reportTime() {
 
 `console.log`, `fetch`, timers, and `Date.now()` are errors in `.effeck`. Use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. Importing a Node function or passing it as a value is allowed; directly running it is a platform API error. [Building an HTTP API](113-building-an-http-api.md) shows `createServer` passed to a server layer.
 
-A plain function from your `.ts` code or a foreign package needs `Effect.try`, `Effect.tryPromise`, or a trusted declaration. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
+A plain function from your `.ts` code or a foreign package needs a boundary hatch, `try(parse(text))` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's argument is plain TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
 ## Catch expected failures only
 

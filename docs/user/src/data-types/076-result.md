@@ -117,10 +117,10 @@ export function combineResults(
 import { combineResults } from "./combine-results.ts"
 
 function combinedData() {
-  return Effect.try(() => combineResults(
+  return try(() => combineResults(
     Result.succeed(" Weekly "), Result.succeed(6)
   ))
 }
 ```
 
-`Result.gen` is the JavaScript generator sequencing API: the first yielded failure skips the rest. Effeck's `function*` declares a producer, so generator-based APIs stay in `.ts` files; using `Result.gen` in `.effeck` is EK1002. Use `flatMap` and `all` locally, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit `Effect.try` boundary; a helper declared with `/** @effeck trusted */` can be called directly.
+`Result.gen` is the JavaScript generator sequencing API: the first yielded failure skips the rest. Effeck's `function*` declares a producer, so generator-based APIs stay in `.ts` files; using `Result.gen` in `.effeck` is EK1002. Use `flatMap` and `all` locally, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit `try` hatch; a helper declared with `/** @effeck trusted */` can be called directly.

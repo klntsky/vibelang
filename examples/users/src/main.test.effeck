@@ -3,10 +3,10 @@ import { AppLive, greet, UsersTest } from "./main.effeck"
 
 it.effect("uses the test layer", () => {
   const message = Effect.provide(() => greet("42"), UsersTest)
-  Effect.sync(() => assert.strictEqual(message, "Welcome, Grace!"))
+  sync(assert.strictEqual(message, "Welcome, Grace!"))
 })
 
 it.effect("recovers a typed missing-user failure", () => {
   const message = Effect.provide(() => greet("missing"), AppLive)
-  Effect.sync(() => assert.strictEqual(message, "No user missing"))
+  sync(assert.strictEqual(message, "No user missing"))
 })

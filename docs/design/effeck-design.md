@@ -22,7 +22,7 @@ function welcome(id: string) {
   Mailer.send(user.email, `Welcome, ${user.name}!`)
   return user.name
 }
-// Effect<string, UserNotFound | MailError, Users | Mailer>
+// string!UserNotFound | MailError!Users | Mailer
 ```
 
 The comment under the Effeck version is not something you write. It is the contract the compiler infers, and what your editor shows when you hover over `welcome`.
@@ -50,10 +50,10 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | `yield* effect` | just call it: `f(x)` | [2](#2-functions-and-calls) |
 | `Effect.map`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap` | plain statements: `const x = f(); g(x)` | [2](#2-functions-and-calls) |
 | `Effect.fail(e)` or `return yield* new E()` | `throw new E()` | [3](#3-errors-the-e-channel) |
-| `Data.TaggedError("E")` | `TaggedError("E")`, in scope without an import | [3](#3-errors-the-e-channel) |
+| `class E extends Data.TaggedError("E")<{ ... }> {}` | `error E { ... }` | [3](#3-errors-the-e-channel) |
 | `Effect.catchTag("E", h)` | `try { … } catch (e) { … }` | [3](#3-errors-the-e-channel) |
 | `Effect.ensuring(cleanup)` | `finally { … }` | [3](#3-errors-the-e-channel) |
-| `class S extends Context.Service<…>()("key") {}` | `abstract class S { abstract method(): Effect<…> }` | [4](#4-dependency-injection-the-r-channel) |
+| `class S extends Context.Service<…>()("key") {}` | `service S { method(): A!E }` | [4](#4-dependency-injection-the-r-channel) |
 | `const s = yield* S` then `yield* s.method()` | `S.method()` | [4](#4-dependency-injection-the-r-channel) |
 | `Layer.effect(S, Effect.gen(…))` | `Layer.effect(S, () => { … })` | [4](#4-dependency-injection-the-r-channel) |
 | `program.pipe(Effect.provide(layer))` | `Effect.provide(() => program(), layer)` | [4](#4-dependency-injection-the-r-channel) |
@@ -62,7 +62,7 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | `Effect.all([a, b], { concurrency: 2 })` | `Effect.all([() => a(), () => b()], { concurrency: 2 })` | [7](#7-concurrency) |
 | `Effect.forkScoped(effect)` | `fork(() => f())`, owned by the enclosing block | [7](#7-concurrency) |
 | a `Stream` you build by hand | a `function*` producer and `for...of` | [8](#8-producers-streams-of-values) |
-| nothing comparable | `abstract class Op extends Control` and `handle` | [9](#9-handlers-defining-your-own-effects) |
+| nothing comparable | `control Op { ... }` and `handle` | [9](#9-handlers-defining-your-own-effects) |
 | `node:fs`, `fetch`, `process.env`, `child_process` | `FileSystem`, `HttpClient`, `Config`, `ChildProcessSpawner` | [11](#11-the-standard-library) |
 
 Where `async`, `Option`, `Schema`, `Stream`, testing, and the rest of Effect fit is answered in [Chapter 12](#12-questions-effect-users-ask) and, feature by feature, in [Appendix C](#c-every-effect-feature-in-effeck).
@@ -108,20 +108,20 @@ export const welcome = Effect.fn("welcome")(function* (id: string) {
 ```
 
 ```ts es
-class UserNotFound extends TaggedError("UserNotFound")<{
-  readonly id: string
-}> {}
-
-class MailError extends TaggedError("MailError")<{
-  readonly reason: string
-}> {}
-
-abstract class Users {
-  abstract find(id: string): Effect<User, UserNotFound, never>
+error UserNotFound {
+  id: string
 }
 
-abstract class Mailer {
-  abstract send(to: string, body: string): Effect<void, MailError, never>
+error MailError {
+  reason: string
+}
+
+service Users {
+  find(id: string): User!UserNotFound
+}
+
+service Mailer {
+  send(to: string, body: string): void!MailError
 }
 
 export function welcome(id: string) {
@@ -134,9 +134,9 @@ export function welcome(id: string) {
 Four things changed:
 
 - **`welcome` is a plain function.** No `Effect.fn`, no generator, no `yield*`. Calling `Users.find(id)` runs it and gives you the `User`; if it fails, `welcome` fails with the same error.
-- **A service is an abstract class.** `abstract class Users` replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
-- **The contract is inferred.** `welcome` is `Effect<string, UserNotFound | MailError, Users | Mailer>`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
-- **Errors are the same classes.** `TaggedError` is Effect's `Data.TaggedError`, in scope without an import.
+- **A service is a `service` declaration.** `service Users`, an abstract class, replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
+- **The contract is inferred.** `welcome` is `string!UserNotFound | MailError!Users | Mailer`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
+- **Errors are the same classes.** `error UserNotFound { id: string }` declares a class that extends `TaggedError`, Effect's `Data.TaggedError`, in scope without an import.
 
 #### What is in scope
 
@@ -150,6 +150,8 @@ Every `.effeck` file starts with a small prelude in scope, so the program above 
 | `TaggedError` | Effect's `Data.TaggedError` |
 | `Control` | The base class of control operations (Chapter 9) |
 | `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | Effeck's built-ins, each introduced where it is first used |
+| `sync`, `try`, `callback` | Boundary hatches: their arguments are plain TypeScript (D148) |
+| `runPromise`, `runFork`, `runSync`, `runCallback` | Effect's runners, the way back in from TypeScript (D150) |
 | Every other export of `effect`'s root | `Console`, `Option`, `Stream`, `Schedule`, `Duration`, and the rest, plus `flow` and `identity` (D146) |
 
 Modules from `effect`'s subpath packages, such as `effect/http`, are imported as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: `Effect` appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), `Schema` in 39-44%, `Layer` in 34-44%, and no other module in more than 22%. `Scope` is there because contracts name it whenever a resource outlives a function (Chapter 6). JavaScript's own globals keep their names: `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so Effect's modules with those names need an import under another name, as in `import { Array as Arr } from "effect"`. A host global does not shadow Effect: in a project whose `lib` includes the DOM, `Option` is still Effect's.
@@ -188,7 +190,7 @@ export const welcome = Effect.fnUntraced(function* (id: string) {
 
 ```ts dts
 export declare const welcome: (id: string) =>
-  Effect.Effect<string, UserNotFound | MailError, Users | Mailer>
+  string!UserNotFound | MailError!Users | Mailer
 ```
 
 TypeScript code that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so a TypeScript program can provide `Users` with an ordinary Layer, and Effeck can use services written in TypeScript.
@@ -203,13 +205,13 @@ There is one kind of function. Some can fail, some need services, some pause; th
 function add(a: number, b: number) {
   return a + b
 }
-// Effect<number, never, never>
+// number!!
 
 function greeting(id: string) {
   const user = Users.find(id)
   return `Hello, ${user.name}`
 }
-// Effect<string, UserNotFound, Users>
+// string!UserNotFound!Users
 ```
 
 `add` performs no Effect operation and cannot fail, so the compiler emits a plain JavaScript function for it: calling `add(1, 2)` costs what any JavaScript call costs (Chapter 15). `greeting` can fail and needs `Users`, so it compiles to an Effect.
@@ -267,7 +269,7 @@ function notifyAll(ids: ReadonlyArray<string>) {
   }
   return sent
 }
-// Effect<number, UserNotFound | MailError, Users | Mailer>
+// number!UserNotFound | MailError!Users | Mailer
 ```
 
 The loop runs one `welcome` at a time, in order. Running several at once is always explicit (Chapter 7).
@@ -278,7 +280,7 @@ The loop runs one `welcome` at a time, in order. Running several at once is alwa
 
 ```ts es
 function welcomeTraced(id: string) {
-  return Effect.withSpan(() => welcome(id), "welcome")
+  return Effect.withSpan(welcome(id), "welcome")
 }
 ```
 
@@ -287,7 +289,7 @@ function welcomeTraced(id: string) {
 Most functions leave the contract to inference. Write it when you want the compiler to check a promise, typically on exported functions. The annotation is the whole computation, the way `Promise<string>` is on an `async` function: the `return` is checked against `string`.
 
 ```ts es
-export function greeting(id: string): Effect<string, UserNotFound, Users> {
+export function greeting(id: string): string!UserNotFound!Users {
   const user = Users.find(id)
   return `Hello, ${user.name}`
 }
@@ -296,7 +298,7 @@ export function greeting(id: string): Effect<string, UserNotFound, Users> {
 A contract may be wider than what the body does, never narrower:
 
 ```ts es
-export function greeting(id: string): Effect<string, never, Users> {
+export function greeting(id: string): string!!Users {
   return `Hello, ${Users.find(id).name}`
 }
 ```
@@ -314,7 +316,7 @@ To check selected channels, write `infer` followed by a name in each channel the
 function greeting(id: string): Effect<string, infer E, infer R> {
   return `Hello, ${Users.find(id).name}`
 }
-// Effect<string, UserNotFound, Users>
+// string!UserNotFound!Users
 ```
 
 Here A is checked, and E and R come from the body. `Effect<string, never, infer R>` instead promises no expected failures while inferring services. All three slots must be present: `Effect<string>` in a return annotation on a function with a body is EK2003, with fixes for explicit `never` or explicit inference ([Chapter 14](#14-contracts-and-inference)). The name after `infer` is documentation only; it introduces no type variable.
@@ -324,7 +326,7 @@ Here A is checked, and E and R come from the body. `Effect<string, never, infer 
 Effeck calls TypeScript functions directly. What a call does depends on what the function returns:
 
 ```ts es
-import { loadAvatar } from "./avatars.ts"    // (id: string) => Effect<Avatar, AvatarError, Storage>
+import { loadAvatar } from "./avatars.ts"    // (id: string) => Avatar!AvatarError!Storage
 import { formatName } from "./format.ts"     // (user: User) => string, declared trusted
 
 function profileCard(id: string) {
@@ -334,7 +336,7 @@ function profileCard(id: string) {
     avatar: loadAvatar(user.id)              // returns an Effect, so the call runs it
   }
 }
-// Effect<{ title: string; avatar: Avatar }, UserNotFound | AvatarError, Users | Storage>
+// { title: string; avatar: Avatar }!UserNotFound | AvatarError!Users | Storage
 ```
 
 A TypeScript function that returns an `Effect` is treated exactly like an Effeck function: calling it runs it. A TypeScript function that returns anything else is foreign code, and nothing says what its exceptions mean, so the compiler asks you to say it once. `formatName` carries a trusted contract, a one-line tag on its declaration (Chapter 10). Without one, the call is an error that offers the fixes:
@@ -343,7 +345,7 @@ A TypeScript function that returns an `Effect` is treated exactly like an Effeck
 error EK4401: formatName is a plain TypeScript function, and nothing says what its exceptions mean.
   profile-card.effeck:7:12   title: formatName(user),
   Declare it trusted once:  add /** @effeck trusted */ to formatName in format.ts
-  Or bound this call:       Effect.try({ try: () => formatName(user), catch: (cause) => new FormatError({ cause }) })
+  Or bound this call:       try(formatName(user), (cause) => new FormatError({ cause }))
   Or move it into a .effeck file, where its contract is inferred.
 ```
 
@@ -353,7 +355,7 @@ Effect's own modules (`Option`, `Array`, `Schedule`, and the rest) and JavaScrip
 
 #### Throwing a typed error
 
-Errors are the same tagged error classes you use today. `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.effeck` file; errors that must be serialized use `Schema.TaggedError`. `throw` adds the error to the function's E.
+Errors are the same tagged error classes you use today. `error InvalidId { raw: string }` declares one. It is short for `class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}`, where `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.effeck` file. The tag is the class name, every field is readonly, and `error Timeout` declares an error without fields (D126). Errors that must be serialized use `Schema.TaggedError`. `throw` adds the error to the function's E.
 
 ```ts effect
 class InvalidId extends Data.TaggedError("InvalidId")<{ readonly raw: string }> {}
@@ -365,13 +367,13 @@ const parseId = Effect.fn("parseId")(function* (raw: string) {
 ```
 
 ```ts es
-class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}
+error InvalidId { raw: string }
 
 function parseId(raw: string) {
   if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })
   return Number(raw)
 }
-// Effect<number, InvalidId, never>
+// number!InvalidId!
 ```
 
 Errors from callees flow upward the same way. A function's E is everything it throws plus everything its callees can fail with, minus what it catches.
@@ -401,7 +403,7 @@ function lookup(raw: string) {
     return guest
   }
 }
-// Effect<User, InvalidId, Users>
+// User!InvalidId!Users
 ```
 
 To handle some errors and pass the rest on, narrow and rethrow. TypeScript's narrowing works on the caught value:
@@ -415,13 +417,13 @@ function lookupOrGuest(raw: string) {
     throw e                              // e: InvalidId here, so E is InvalidId
   }
 }
-// Effect<User, InvalidId, Users>
+// User!InvalidId!Users
 ```
 
 Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
 
 ```ts es
-const user = Effect.catchTag(() => Users.find(id), "UserNotFound", () => guest)
+const user = Effect.catchTag(Users.find(id), "UserNotFound", () => guest)
 ```
 
 #### Promising that nothing escapes
@@ -429,7 +431,7 @@ const user = Effect.catchTag(() => Users.find(id), "UserNotFound", () => guest)
 A contract with `never` in E says every error is handled inside. The compiler checks it.
 
 ```ts es
-export function safeLookup(raw: string): Effect<User, never, Users> {
+export function safeLookup(raw: string): User!!Users {
   try {
     return lookupOrGuest(raw)
   } catch (e) {                // e: InvalidId
@@ -519,7 +521,7 @@ warning EK2004: this catch can never run: nothing in its try block fails with an
   admins.effeck:3:12   return Option.getOrThrow(Option.fromNullishOr(users.find(isAdmin)))
                           ^^^^^^^^^^^^^^^^^ its exceptions are defects
   Use a form that can fail:   return users.find(isAdmin) ?? guest
-  or bound the call:          Effect.try({ try: () => …, catch: (cause) => new NoAdmin({ cause }) })
+  or bound the call:          try(…, (cause) => new NoAdmin({ cause }))
 ```
 
 ### 4. Dependency injection: the R channel
@@ -536,13 +538,13 @@ class Users extends Context.Service<Users, {
 ```
 
 ```ts es
-abstract class Users {
-  abstract find(id: string): Effect<User, UserNotFound, never>
-  abstract rename(id: string, name: string): Effect<void, UserNotFound, never>
+service Users {
+  find(id: string): User!UserNotFound
+  rename(id: string, name: string): void!UserNotFound
 }
 ```
 
-An abstract class whose instance members are all abstract is a service, and it does the job of the class on the left. The rules, each checked by the compiler:
+`service Users { ... }` declares a service, and it does the job of the class on the left. It is short for `abstract class Users { ... }` in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:
 
 - **What makes a class a service.** In an `.effeck` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
 - **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (EK3001).
@@ -589,15 +591,15 @@ const user = Users.find(id)
 Calling the service itself with no arguments, `Users()`, gives you its implementation object, the equivalent of `yield* Users`. You need it inside providers, and to read a service's value members:
 
 ```ts es
-abstract class Settings {
-  abstract readonly baseUrl: string
-  abstract scale(): Effect<number, never, never>
+service Settings {
+  baseUrl: string
+  scale(): number!!
 }
 
 function apiUrl(path: string) {
   return `${Settings().baseUrl}/${path}`
 }
-// Effect<string, never, Settings>
+// string!!Settings
 ```
 
 Calling any member through the service looks the service up, so the service joins R whatever the member returns. `Path.join(a, b)`, from Effect's `Path` service, returns a string and still adds `Path`. A member that is itself an `Effect` value runs when called: `Terminal.readLine()`. A member the service declares wins over the key's own members, such as `pipe`, `use`, and `key`, so `Rpc.call(…)` reaches the service even though the key, a class, has a `call` of its own. A static member with the same name as a service member is EK3006.
@@ -628,12 +630,12 @@ const UsersLive = Layer.effect(Users, () => {
   const db = Database()              // runs once, when the layer is built
   return {
     find(id) {
-      const rows = Effect.orDie(() => db.query("select * from users where id = $1", [id]))
+      const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
       if (rows.length === 0) throw new UserNotFound({ id })
       return toUser(rows[0])
     },
     rename(id, name) {
-      Effect.orDie(() => db.execute("update users set name = $1 where id = $2", [name, id]))
+      Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
     }
   }
 })
@@ -654,9 +656,9 @@ error EK2001: DbError can escape UsersLive.find, but Users.find's contract allow
 Effect 4 code often keeps the default Layer on the service class as `static readonly layer`. A service class can do the same, because static members stay on the class:
 
 ```ts es
-abstract class Users {
-  abstract find(id: string): Effect<User, UserNotFound, never>
-  abstract rename(id: string, name: string): Effect<void, UserNotFound, never>
+service Users {
+  find(id: string): User!UserNotFound
+  rename(id: string, name: string): void!UserNotFound
 
   static readonly layer = Layer.effect(Users, () => {
     const db = Database()
@@ -694,9 +696,9 @@ const UsersInMemoryLive = Layer.sync(Users, () => new UsersInMemory())
 Effect 4's `make` option becomes a static method, and a service that should work without any provider declares a default:
 
 ```ts es
-abstract class Sessions {
-  abstract get(token: string): Effect<Session | undefined, never, never>
-  abstract set(token: string, session: Session): Effect<void, never, never>
+service Sessions {
+  get(token: string): Session | undefined!!
+  set(token: string, session: Session): void!!
 
   static make() {
     const entries = new Map<string, Session>()
@@ -706,11 +708,11 @@ abstract class Sessions {
     }
   }
 
-  static readonly layer = Layer.effect(Sessions, () => Sessions.make())
+  static readonly layer = Layer.effect(Sessions, Sessions.make())
 }
 
-abstract class FeatureFlags {
-  abstract readonly newCheckout: boolean
+service FeatureFlags {
+  newCheckout: boolean
   static readonly default: FeatureFlags = { newCheckout: false }
 }
 
@@ -749,7 +751,7 @@ const DatabaseLive = Layer.effect(Database, () => {
 // Layer<Database, ConnectError, DatabaseConfig>
 ```
 
-`Postgres.connect` returns `Effect<Pool, ConnectError, Scope>`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6), and `Layer.effect` supplies the layer's own Scope, as it does in Effect today. The pool therefore closes when the program that provided `DatabaseLive` finishes. Writing `using pool = …` would close it as soon as the provider function returned, before any query ran.
+`Postgres.connect` returns `Pool!ConnectError!Scope`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6), and `Layer.effect` supplies the layer's own Scope, as it does in Effect today. The pool therefore closes when the program that provided `DatabaseLive` finishes. Writing `using pool = …` would close it as soon as the provider function returned, before any query ran.
 
 #### Requirements that would leak
 
@@ -815,7 +817,7 @@ function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
   Effect.log(`welcomed ${name}`)
 }
-// Effect<void, UserNotFound | MailError | ConfigError | ConnectError, never>
+// void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
 
 `main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.
@@ -863,7 +865,7 @@ To replace one service for part of a program, provide it around that part. The o
 
 ```ts es
 function welcomeQuietly(id: string) {
-  return Effect.provideService(() => welcome(id), Mailer, { send: () => {} })
+  return Effect.provideService(welcome(id), Mailer, { send: () => {} })
 }
 ```
 
@@ -878,10 +880,11 @@ function welcomeQuietly(id: string) {
 
 #### The one rule
 
-A call runs. A function value does not.
+A call runs where it stands, except where a parameter expects a program: there it is passed by name, and runs when the program runs. A function value does not run.
 
 ```ts es
 syncInventory(store)                    // runs now
+fork(syncInventory(store))              // passed by name: the forked fiber runs it
 
 const job = () => syncInventory(store)  // a program: nothing has run
 job()                                   // runs it
@@ -890,9 +893,9 @@ job()                                   // runs it again, from scratch
 
 That is the whole story of programs as values. An `Effect` value you get from TypeScript works the same way: it is a program, and calling it runs it (`Clock.currentTimeMillis()`). A value whose type extends `Effect` with structure of its own, such as a `Config` or an `Exit`, is data until you call it (Chapter 13).
 
-A program is written as a function with no arguments because that needs no new syntax: `() =>` already says "not yet". A quotation operator would be new syntax with the same meaning, and Effect's constructors (`Effect.suspend(() => …)`) are the boilerplate the language exists to remove.
+Where a parameter's type says it expects an `Effect`, the call itself is the program (D147): the parameter already says "not yet", so the source needs no marker. Elsewhere a program is written as a function with no arguments, because that needs no new syntax: `() =>` says "not yet". A program of several statements is always `() => { … }`. A quotation operator would be new syntax with the same meaning, and Effect's constructors (`Effect.suspend(() => …)`) are the boilerplate the language exists to remove.
 
-Effect's combinators take programs, so you pass a function wherever Effect expects an Effect. The compiler converts it.
+Effect's combinators take programs, so you pass the call itself wherever Effect expects an Effect, as in Effect's own code. The compiler passes it by name.
 
 ```ts effect
 const user = yield* fetchUser(id).pipe(Effect.retry(Schedule.exponential("100 millis")))
@@ -901,12 +904,12 @@ const fastest = yield* Effect.race(fromCache(id), fromNetwork(id))
 ```
 
 ```ts es
-const user = Effect.retry(() => fetchUser(id), Schedule.exponential("100 millis"))
-const fresh = Effect.timeout(() => fetchUser(id), "1 second")
-const fastest = Effect.race(() => fromCache(id), () => fromNetwork(id))   // the first to succeed
+const user = Effect.retry(fetchUser(id), Schedule.exponential("100 millis"))
+const fresh = Effect.timeout(fetchUser(id), "1 second")
+const fastest = Effect.race(fromCache(id), fromNetwork(id))   // the first to succeed
 ```
 
-Each line is a call, so it runs: `user` is a `User`, not an `Effect`. `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
+Each line is a call, so it runs: `user` is a `User`, not an `Effect`. The inner calls are passed by name: `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
 
 #### Pipe
 
@@ -958,7 +961,7 @@ Programs are values, so you can put them in variables, return them, and pass the
 function makeSync(store: Store) {
   return () => syncInventory(store)            // returns a program
 }
-// Effect<() => Effect<SyncReport, SyncError, Inventory>, never, never>
+// (() => SyncReport!SyncError!Inventory)!!
 
 function syncEverything(stores: ReadonlyArray<Store>) {
   const syncAll = stores.map(makeSync)                    // an array of programs; nothing ran
@@ -1000,10 +1003,10 @@ function readReport(path: string) {
   using file = Files.open(path)
   return parseReport(file.readAll())
 }
-// Effect<Report, IOError | ParseError, Files>
+// Report!IOError | ParseError!Files
 ```
 
-`Files.open` returns a scoped resource: `Effect<FileHandle, IOError, Scope>`. The block that declares `using` supplies the `Scope`, which is why `Scope` does not appear in `readReport`'s requirements. Several `using` declarations release in reverse order.
+`Files.open` returns a scoped resource: `FileHandle!IOError!Scope`. The block that declares `using` supplies the `Scope`, which is why `Scope` does not appear in `readReport`'s requirements. Several `using` declarations release in reverse order.
 
 A call that runs an Effect is an acquisition even when its result has no `Symbol.dispose`; it receives the block Scope. Other initializers must be Disposable, `null`, or `undefined`. A Disposable result also runs `[Symbol.dispose]()` at block exit. If its Effect release already disposes it, this disposes it twice (D94).
 
@@ -1020,7 +1023,7 @@ function openAndLog(url: string) {
   log.write(`connected to ${url}`)
   return connection                             // still open when it reaches the caller
 }
-// Effect<Connection, ConnectError | IOError, Database | Logs | Scope>
+// Connection!ConnectError | IOError!Database | Logs | Scope
 ```
 
 `log` closes when `openAndLog` returns. `connection` stays open, and `Scope` in the contract says the caller supplies the scope that will close it:
@@ -1029,14 +1032,14 @@ function openAndLog(url: string) {
 function openLog(day: string) {
   return Files.open(`/var/log/app-${day}.log`)    // no `using`: the caller owns the file
 }
-// Effect<FileHandle, IOError, Files | Scope>
+// FileHandle!IOError!Files | Scope
 
 function compareLogs(a: string, b: string) {
   using left = openLog(a)
   using right = openLog(b)
   return diffLines(left.readAll(), right.readAll())
 }
-// Effect<Diff, IOError, Files>; both files close when compareLogs returns
+// Diff!IOError!Files; both files close when compareLogs returns
 ```
 
 #### Defining a resource
@@ -1050,7 +1053,7 @@ function lease(name: string) {
     (lock) => Locks.release(lock)     // release: always runs, exactly once
   )
 }
-// Effect<Lock, LockError, Locks | Scope>
+// Lock!LockError!Locks | Scope
 ```
 
 The release is registered before anything else can happen, so a cancelled request never leaks a lock. By default the acquire step is also masked: an interruption that arrives while it runs waits for it to finish, and then the release runs. That suits a quick step such as taking a lock or opening a file. An acquisition that waits on the outside world, such as a connection that may never complete, passes `{ interruptible: true }` so that cancellation reaches the wait, as the adapter below does.
@@ -1063,7 +1066,7 @@ A resource held by code that a handler stops (Chapter 9) is released when it sto
 
 #### Adapting a callback API
 
-Wrapping a callback-based API is boundary code. It belongs in TypeScript, using the runtime's `suspend`, which, unlike `Effect.callback`, tells the producer when a value arrived too late so the producer can release it:
+Wrapping a callback-based API is boundary code. It belongs in TypeScript, using the runtime's `suspend`, which, unlike the `callback` hatch, tells the producer when a value arrived too late so the producer can release it:
 
 ```ts ts
 // net-adapter.ts
@@ -1094,7 +1097,7 @@ function session(host: string) {
 }
 
 function sessionWithin(host: string) {
-  return Effect.timeout(() => session(host), "2 seconds")    // cancels a connect that hangs
+  return Effect.timeout(session(host), "2 seconds")    // cancels a connect that hangs
 }
 ```
 
@@ -1107,17 +1110,17 @@ The two acquisition policies behave differently when cancellation arrives during
 
 Without `{ interruptible: true }`, `sessionWithin` would wait for a connection that never completes, and the race branches in the adapter would never run (Chapter 21).
 
-A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with Effect's own `Effect.callback`. Its register function is boundary code, so it may call plain TypeScript. Its `resume` takes an Effect, and `.effeck` code passes an `Exit`: a call returns an `Exit` as data (Chapter 13), while `Effect.succeed(value)` would run where it is written:
+A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with the `callback` hatch (D148). Its register function is plain TypeScript, so it may call the SDK directly; `resume(value)` succeeds, `resume.fail(error)` fails, `resume.exit(exit)` adopts an `Exit`, and a function it returns runs on interruption:
 
 ```ts es
 import { onceReady } from "./sdk.ts"     // (callback: (sdk: Sdk) => void) => void
 
 function ready() {
-  return Effect.callback<Sdk>((resume) => {
-    onceReady((sdk) => resume(Exit.succeed(sdk)))
+  return callback<Sdk>((resume) => {
+    onceReady((sdk) => resume(sdk))
   })
 }
-// Effect<Sdk, never, never>
+// Sdk!!
 ```
 
 Only `suspend` reports a lost race, so an adapter for a value that needs releasing stays in TypeScript, as above.
@@ -1139,7 +1142,7 @@ const dashboard = Effect.fn("dashboard")(function* (id: string) {
 
 ```ts es
 function dashboard(id: string) {
-  const [profile, orders] = Effect.all([() => loadProfile(id), () => recentOrders(id)], {
+  const [profile, orders] = Effect.all([loadProfile(id), recentOrders(id)], {
     concurrency: 2
   })
   return { profile, orders }
@@ -1148,9 +1151,9 @@ function dashboard(id: string) {
 
 ```ts es
 const thumbnails = Effect.forEach(images, (image) => resize(image), { concurrency: 8 })
-const fastest = Effect.race(() => fromCache(id), () => fromNetwork(id))
-const first = Effect.raceFirst(() => fromCache(id), () => fromNetwork(id))
-const quick = Effect.timeout(() => slowQuery(id), "500 millis")
+const fastest = Effect.race(fromCache(id), fromNetwork(id))
+const first = Effect.raceFirst(fromCache(id), fromNetwork(id))
+const quick = Effect.timeout(slowQuery(id), "500 millis")
 ```
 
 Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect's semantics here:
@@ -1183,7 +1186,7 @@ const serve = Effect.fn("serve")(
 ```ts es
 function serve(port: number) {
   using server = Http.listen(port)
-  fork(() => heartbeat())          // interrupted when serve exits, before the server closes
+  fork(heartbeat())          // interrupted when serve exits, before the server closes
   return server.awaitShutdown()
 }
 ```
@@ -1192,11 +1195,11 @@ function serve(port: number) {
 
 ```ts es
 function withProgress(id: string) {
-  const pending = fork(() => buildReport(id))
+  const pending = fork(buildReport(id))
   sendProgressEmail(id)
   return Fiber.join(pending)          // waits for it; fails if it failed
 }
-// Effect<Report, ReportError | MailError, Reports | Mailer>
+// Report!ReportError | MailError!Reports | Mailer
 ```
 
 `fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `Fiber.join`. For a longer lifetime, say so with Effect's combinators: `Effect.forkScoped` ties the fiber to the caller's scope and adds `Scope` to R, `Effect.forkChild` ties it to the current fiber, and `Effect.forkDetach` ties it to nothing.
@@ -1248,7 +1251,7 @@ function firstErrors(path: string) {
   }
   return found
 }
-// Effect<string[], IOError, Files>
+// string[]!IOError!Files
 ```
 
 How a producer behaves:
@@ -1279,7 +1282,7 @@ To TypeScript, a producer is a `Stream`: the declaration file types `lines` as `
 function errorCount(path: string) {
   return Stream.runCount(Stream.filter(lines(path), (line) => line.startsWith("ERROR")))
 }
-// Effect<number, IOError, Files>
+// number!IOError!Files
 ```
 
 The conversion runs the producer on a fiber of its own and hands over each element only when the stream pulls it, through a handoff with no buffer, so a pull from any fiber works and the producer never runs ahead of its consumer. Closing the stream interrupts that fiber, which runs the producer's cleanup.
@@ -1290,7 +1293,7 @@ The other direction needs no adapter. Stream's own functions take callbacks that
 function auditAll(events: Stream.Stream<Event, EventError>) {
   for (const event of events) Audit.record(event)
 }
-// Effect<void, EventError, Audit>
+// void!EventError!Audit
 ```
 
 ### 9. Handlers: defining your own effects
@@ -1308,11 +1311,11 @@ A **control operation** is a request whose handler receives the rest of the call
 
 #### Declaring and performing an operation
 
-A control operation is declared like a service, as an abstract class, but it extends the global `Control`:
+A control operation is declared like a service, with `control`, which is short for an abstract class that extends the global `Control` (D128):
 
 ```ts es
-abstract class Approval extends Control {
-  abstract approve(request: string): Effect<boolean, ReviewBusy, never>
+control Approval {
+  approve(request: string): boolean!ReviewBusy
 }
 
 function checkout(cartId: string) {
@@ -1321,7 +1324,7 @@ function checkout(cartId: string) {
   if (!ok) throw new Declined({ cartId })
   return Payments.charge(cartId)
 }
-// Effect<Receipt, ReviewBusy | Declined | PaymentError, Approval | Inventory | Payments>
+// Receipt!ReviewBusy | Declined | PaymentError!Approval | Inventory | Payments
 ```
 
 To the code that performs it, `Approval.approve` looks like any call: it returns a `boolean` or fails with `ReviewBusy`. Like a service, `Approval` appears in R until something handles it. The service rules apply: its members are abstract with full contracts, its key is derived from its module, and it cannot be extended or instantiated.
@@ -1347,8 +1350,8 @@ While the reviewer decides, the cart's hold is still reserved and `checkout` is 
 A handler that returns without calling `resume` ends the handled program with the handler's result. Everything the program had open is cleaned up first.
 
 ```ts es
-abstract class Found extends Control {
-  abstract found(cell: Cell): Effect<never, never, never>
+control Found {
+  found(cell: Cell): never!!
 }
 
 function locate(grid: Grid, target: number) {
@@ -1362,7 +1365,7 @@ function locate(grid: Grid, target: number) {
     found(cell, _k) { return cell }      // stop: the open cursor is released before handle returns
   })
 }
-// Effect<Cell | undefined, never, never>
+// Cell | undefined!!
 ```
 
 `found`'s result type is `never`, so its handler cannot continue the search, and the type says so.
@@ -1489,7 +1492,7 @@ import { findUser } from "./users-repo.ts"
 export function title(id: string) {
   return findUser(id).name.toUpperCase()
 }
-// Effect<string, UserNotFound | DbError, Database>
+// string!UserNotFound | DbError!Database
 ```
 
 Generic, overloaded, and aliased TypeScript functions keep their signatures. Services written in TypeScript as `Context.Service` classes or values are used exactly like abstract service classes: `Database.query(…)` works on either. A TypeScript function whose R contains a control operation is the one exception (EK4202, Chapter 9).
@@ -1546,7 +1549,7 @@ function publish(draft: Draft) {
   const words = draft.body.split(/\s+/).length
   return Articles.save({ slug, words, ...meta })
 }
-// Effect<Article, SyntaxError | InvalidSlug | SaveError, Articles>
+// Article!SyntaxError | InvalidSlug | SaveError!Articles
 ```
 
 | Callee | Rule | Diagnostic |
@@ -1576,19 +1579,18 @@ EK4401 applies where a fiber runs the code. Module initialization and its plain 
 
 Only built-ins that parse outside text declare expected failures: `JSON.parse` declares `SyntaxError`, and `decodeURI` and `decodeURIComponent` declare `URIError`. Other built-in exceptions are defects (D101).
 
-An explicit boundary says what an exception means at the call. These are Effect's own constructors, unchanged:
+An explicit boundary says what an exception means at the call. The boundary hatches are `sync`, `try`, and `callback` (D148):
 
 ```ts es
 function parseLegacy(text: string) {
-  return Effect.try({
-    try: () => legacyParse(text),                 // plain TypeScript, allowed inside the boundary
-    catch: (cause) => new LegacyFormatError({ cause })
-  })
+  return try(legacyParse(text), (cause) => new LegacyFormatError({ cause }))   // plain TypeScript inside
 }
-// Effect<LegacyDoc, LegacyFormatError, never>
+// LegacyDoc!LegacyFormatError!
 ```
 
-`Effect.try` and `Effect.tryPromise` turn exceptions and rejections into a typed error; `Effect.sync` and `Effect.promise` make them defects; `Effect.callback` adapts a callback API (Chapter 6). Inside their callbacks, plain TypeScript calls are allowed, because the boundary says what an exception means. Platform APIs (EK4402) and clock reads (EK4403) are rejected there too: they belong behind an Effect module.
+`try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `try(legacyParse(text))`. A hatch's argument is plain TypeScript, not Effeck: calls there do not run, so calling an `.effeck` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
+
+`runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude as the way back in. They are called from plain TypeScript: a `.ts` file, a hatch's body, or a module's top level, never from code a fiber runs (EK1005).
 
 An exception that no contract lists is a defect, and an Effeck `catch` does not see it, unlike a JavaScript `catch` inside `Effect.gen` (Chapter 3). That includes the exceptions of Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, which `effect`'s trusted contracts classify as defects.
 
@@ -1598,18 +1600,15 @@ This is a policy change from the original direction, which adapted every plain c
 
 #### Promises
 
-Effeck has no `await`: a call already waits for the callee. A Promise from a TypeScript library is waited on with `Effect.tryPromise`, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request. This code is identical to the Effect code you write today:
+Effeck code has no `await` outside a hatch: a call already waits for the callee. A Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
 
 ```ts es
 import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: AbortSignal) => Promise<Charge>
 
 function charge(cartId: string, amount: number) {
-  return Effect.tryPromise({
-    try: (signal) => createCharge(amount, signal),
-    catch: (cause) => new ChargeFailed({ cartId, cause })
-  })
+  return try((signal) => createCharge(amount, signal), (cause) => new ChargeFailed({ cartId, cause }))
 }
-// Effect<Charge, ChargeFailed, never>
+// Charge!ChargeFailed!
 ```
 
 HTTP itself goes through Effect's `HttpClient`, not `fetch` (Chapter 11).
@@ -1632,7 +1631,7 @@ Effect's own combinators, such as `Effect.forEach`, expect callbacks that return
 
 #### Effect 3
 
-Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with `Effect.tryPromise` around `Effect3.runPromise`.
+Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try(Effect3.runPromise(program), (error) => …)`.
 
 ### 11. The standard library
 
@@ -1701,7 +1700,7 @@ import { FileSystem } from "effect/FileSystem"
 function countLines(path: string) {
   return FileSystem.readFileString(path).split("\n").length
 }
-// Effect<number, PlatformError, FileSystem>
+// number!PlatformError!FileSystem
 ```
 
 #### HTTP
@@ -1720,7 +1719,7 @@ function getTodo(id: number) {
   const response = HttpClient.get(`https://jsonplaceholder.typicode.com/todos/${id}`)
   return HttpClientResponse.schemaBodyJson(Todo)(response)
 }
-// Effect<Todo, HttpClientError | SchemaError, HttpClient>
+// Todo!HttpClientError | SchemaError!HttpClient
 ```
 
 `HttpClient.get` returns an `Effect`, so the call runs it. `HttpClientResponse.schemaBodyJson(Todo)` returns a plain function, which `effect` exports with a trusted contract, and calling that function with the response returns an `Effect`, which runs.
@@ -1743,7 +1742,7 @@ function greetLater(name: string) {
 }
 
 function heartbeat() {
-  Effect.repeat(() => Effect.log("alive"), Schedule.spaced("30 seconds"))
+  Effect.repeat(Effect.log("alive"), Schedule.spaced("30 seconds"))
 }
 ```
 
@@ -1766,7 +1765,7 @@ const DatabaseUrl = Config.Redacted("DATABASE_URL")
 function serverConfig() {
   return { port: Port(), databaseUrl: DatabaseUrl() }
 }
-// Effect<{ port: number; databaseUrl: Redacted<string> }, ConfigError, never>
+// { port: number; databaseUrl: Redacted<string> }!ConfigError!
 ```
 
 A `Config` is data until you call it (Chapter 13). The module's top level builds `Port` and `DatabaseUrl`; `Port()` reads the variable and fails with `ConfigError` if it is set but invalid. A test supplies values with a `ConfigProvider` instead of touching the process environment.
@@ -1788,7 +1787,7 @@ import { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 function currentBranch() {
   return ChildProcessSpawner.string(ChildProcess.make("git", ["branch", "--show-current"])).trim()
 }
-// Effect<string, PlatformError, ChildProcessSpawner>
+// string!PlatformError!ChildProcessSpawner
 ```
 
 `ChildProcessSpawner.spawn` gives a handle whose output is a `Stream` and whose process belongs to a scope (its type requires `Scope`), so `using child = ChildProcessSpawner.spawn(command)` ties a long-running process to a block.
@@ -1819,23 +1818,23 @@ Short answers, each with the code. Appendix C maps every section of Effect's doc
 ```ts es
 function loadProfile(id: string) {
   const user = Users.find(id)                       // waits for the database: no await
-  const avatar = Effect.tryPromise({                // a Promise from a TypeScript library
-    try: (signal) => avatarSdk.fetch(user.avatarId, { signal }),
-    catch: (cause) => new AvatarError({ cause })
-  })
+  const avatar = try(                               // a Promise from a TypeScript library
+    (signal) => avatarSdk.fetch(user.avatarId, { signal }),
+    (cause) => new AvatarError({ cause })
+  )
   return { user, avatar }
 }
-// Effect<{ user: User; avatar: Avatar }, UserNotFound | AvatarError, Users>
+// { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await`, so there are no "colored" functions: every function can wait. A Promise from a TypeScript library crosses with `Effect.tryPromise`, or with `Effect.promise` when a rejection is a bug. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` outside a boundary hatch, so there are no "colored" functions: every function can wait. A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
 ```ts es
 function homePage(userId: string) {
   const [feed, unread] = Effect.all(
-    [() => Feed.load(userId), () => Notifications.unread(userId)],
+    [Feed.load(userId), Notifications.unread(userId)],
     { concurrency: "unbounded" }
   )
   const previews = Effect.forEach(feed.items, (item) => preview(item), { concurrency: 8 })
@@ -1863,7 +1862,7 @@ function parseId(raw: string) {
   if (raw.length > 64) Effect.die(new Error("caller bug"))  // a defect, on purpose
   return Number(raw)
 }
-// Effect<number, InvalidId, never>
+// number!InvalidId!
 ```
 
 `throw` is `Effect.fail`. Every thrown value joins E with its type and can be caught, including `throw new Error("unreachable")`, which inside `Effect.gen` would be a defect. To signal a bug, die explicitly with `Effect.die`. Defects also come from exceptions no contract lists, and from `Effect.orDie(() => …)` (Chapter 3).
@@ -1878,7 +1877,7 @@ function readPort(text: string) {
     return 8080
   }
 }
-// Effect<number, never, never>
+// number!!
 ```
 
 JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, an Effeck `catch` does not see it, and a `catch` that could only have caught such exceptions is reported, EK2004 (Chapter 3).
@@ -1894,10 +1893,10 @@ function displayName(user: User) {
 }
 
 function tryCharge(cartId: string) {
-  const outcome = Effect.result(() => Payments.charge(cartId))    // Result<Receipt, PaymentError>
+  const outcome = Effect.result(Payments.charge(cartId))    // Result<Receipt, PaymentError>
   return Result.isSuccess(outcome) ? outcome.success : undefined
 }
-// Effect<Receipt | undefined, never, Payments>
+// Receipt | undefined!!Payments
 ```
 
 `Option` and `Result` (Effect 4's name for `Either`) are plain data, imported from `effect` and used as in TypeScript. `Effect.result` and `Effect.option` turn a failure into a value; `throw` turns a value back into a failure. `Option.gen` and `Result.gen` take generators, so they stay in `.ts` files.
@@ -1914,7 +1913,7 @@ function register(body: unknown) {
   const signup = Schema.decodeUnknownEffect(Signup)(body)    // fails with SchemaError
   return Accounts.create(signup.email, signup.plan)
 }
-// Effect<Account, SchemaError | AccountError, Accounts>
+// Account!SchemaError | AccountError!Accounts
 ```
 
 `Schema` is in the prelude and unchanged. A decoder that returns an `Effect` runs when called and fails with a typed `SchemaError`. The other forms (`decodeUnknownSync`, `is`) are trusted functions whose exceptions are defects, so `.effeck` code prefers the `Effect` forms. Errors that must cross a process boundary are `Schema.TaggedError` classes.
@@ -1927,7 +1926,7 @@ function digestActive(users: Stream.Stream<User, DbError>) {
     if (user.active) Mailer.digest(user)
   }
 }
-// Effect<void, DbError | MailError, Mailer>
+// void!DbError | MailError!Mailer
 
 function firstErrorLines(path: string) {
   return Stream.runCollect(Stream.take(Stream.filter(lines(path), isError), 10))
@@ -1943,7 +1942,7 @@ import { assert, it } from "@effect/vitest"
 import { TestClock } from "effect/testing"
 
 it.effect("a reminder fires after one day", () => {
-  const reminder = fork(() => remindLater("ada", "1 day"))
+  const reminder = fork(remindLater("ada", "1 day"))
   TestClock.adjust("1 day")                          // virtual time: nothing waits
   assert.strictEqual(Fiber.join(reminder), "sent")
 })
@@ -1958,7 +1957,7 @@ const checkouts = Metric.counter("checkouts")
 
 function checkout(cartId: string) {
   Effect.log(`checkout ${cartId}`)
-  const receipt = Effect.withSpan(() => Payments.charge(cartId), "charge")
+  const receipt = Effect.withSpan(Payments.charge(cartId), "charge")
   Metric.update(checkouts, 1)
   return receipt
 }
@@ -2025,7 +2024,7 @@ TypeScript's narrowing does most of the work: `switch` on `_tag`, `instanceof`, 
 
 ```ts es
 function search(query: string) {
-  const scan = fork(() => slowIndexScan(query))
+  const scan = fork(slowIndexScan(query))
   const cached = SearchCache.lookup(query)
   if (cached !== undefined) {
     Fiber.interrupt(scan)               // cancels the scan; its finally blocks run first
@@ -2035,19 +2034,19 @@ function search(query: string) {
 }
 ```
 
-They are Effect's. A fiber is Effect's fiber, `fork` starts one owned by the enclosing block (Chapter 7), and `Fiber.join` and `Fiber.interrupt` work unchanged. Interruption runs every `finally` block and `using` release on the way out, and `catch` never catches it (Chapter 3). `Effect.uninterruptible(() => …)` protects a region, `Effect.onInterrupt` reacts to cancellation, and `Effect.timeout` and `Effect.race` interrupt the branches they discard. A Promise is cancelled through the `AbortSignal` that `Effect.tryPromise` passes.
+They are Effect's. A fiber is Effect's fiber, `fork` starts one owned by the enclosing block (Chapter 7), and `Fiber.join` and `Fiber.interrupt` work unchanged. Interruption runs every `finally` block and `using` release on the way out, and `catch` never catches it (Chapter 3). `Effect.uninterruptible(() => …)` protects a region, `Effect.onInterrupt` reacts to cancellation, and `Effect.timeout` and `Effect.race` interrupt the branches they discard. A Promise is cancelled through the `AbortSignal` that the `try` and `sync` hatches pass.
 
 #### How do I wrap a callback API?
 
 ```ts es
 function ready() {
-  return Effect.callback<Sdk>((resume) => {
-    onceReady((sdk) => resume(Exit.succeed(sdk)))
+  return callback<Sdk>((resume) => {
+    onceReady((sdk) => resume(sdk))
   })
 }
 ```
 
-`Effect.callback` works in `.effeck`: its register function is a boundary, so it may call plain TypeScript, and its `resume` takes an Effect, to which `.effeck` code passes an `Exit`, data until run (Chapter 13). A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime's `suspend` and `Effect.acquireRelease(…, { interruptible: true })`, so a value that arrives after cancellation is released (Chapter 6). Node.js and browser callback APIs already have Effect modules (Chapter 11).
+The `callback` hatch adapts it (D148): its register function is plain TypeScript, `resume(value)` succeeds, `resume.fail(error)` fails, and a function the register function returns runs on interruption. A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime's `suspend` and `Effect.acquireRelease(…, { interruptible: true })`, so a value that arrives after cancellation is released (Chapter 6). Node.js and browser callback APIs already have Effect modules (Chapter 11).
 
 #### Can I mix `.ts` and `.effeck` files?
 
@@ -2064,10 +2063,7 @@ Yes, in one program: `effeck` checks both, and the editor serves both (Chapter 2
 #### Is there anything from Effect I cannot use?
 
 ```ts es
-const legacy = Effect.tryPromise({
-  try: () => Effect3.runPromise(oldProgram),
-  catch: (cause) => new LegacyError({ cause })
-})
+const legacy = try(Effect3.runPromise(oldProgram), (cause) => new LegacyError({ cause }))
 ```
 
 Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.effeck` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.
@@ -2083,7 +2079,7 @@ function countVisits(paths: ReadonlyArray<string>) {
   }, { concurrency: 4 })
   return Ref.get(visits)
 }
-// Effect<number, VisitError, Visits>
+// number!VisitError!Visits
 ```
 
 Local variables work inside one function, as in any JavaScript. State shared between fibers uses Effect's `Ref`, `SynchronizedRef`, and `SubscriptionRef`, unchanged: `Ref.make(0)` returns an `Effect`, so the call runs it and gives you the `Ref`.
@@ -2163,7 +2159,7 @@ A function used as a value is passed in the form its destination expects:
 | --- | --- |
 | A function type that returns an `Effect`, as Effect's combinators expect | The function's Effect form |
 | A plain function type, as `Array.prototype.map` expects | The function's plain-JavaScript form, if it has one (Chapter 15); otherwise EK4301 |
-| `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5) |
+| `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5); or an expression that calls an Effect, passed by name (D147) |
 | Either a function or an `Effect`, as `HttpRouter.add` and `Effect.withErrorReporting` accept | A function with parameters: the function. A function without parameters: the function if it compiles to plain JavaScript, a program if it can pause |
 
 The last row matters because several Effect APIs choose at run time with `Effect.isEffect`. In `HttpRouter.add("GET", "/users/:id", (request) => showUser(request))`, the handler has a parameter and is passed as a function. In `HttpRouter.add("GET", "/health", () => checkHealth())` and `Effect.withErrorReporting(() => serve())`, the argument can pause and is passed as a program.
@@ -2185,11 +2181,15 @@ Two kinds of "rest of the work" appear in this document, and they behave differe
 
 #### How program values are spelled
 
-A call always runs, so a program value needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
+A call runs where it stands, except where the expected type is `Effect`: there an expression that calls an `.effeck` function or a function that returns an `Effect`, or looks up a service, is passed by name (D147). The compiler passes a program that evaluates the expression each time it runs, as if the source had written `() =>` before it, so `Effect.retry(syncInventory(store), Schedule.recurs(3))` retries the call and `fork(fetchReport())` runs nothing at the call site. This holds for arguments, array elements, and record fields, in function bodies and at a module's top level. A position that accepts any value, such as `Console.log`'s parameters or `Effect.succeed`'s, still runs the call where it stands, and an expression whose value is already an `Effect` keeps its meaning. Each overload candidate decides by its own declared parameter, as it does for a lambda (D56). A hover on the callee of a call passed by name says so.
+
+A program of several statements needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
 
 ```ts gen
-// Effect.retry(() => syncInventory(store), Schedule.recurs(3))
-yield* Effect.retry(Effect.suspend(() => syncInventory(store)), Schedule.recurs(3))
+// Effect.retry(syncInventory(store), Schedule.recurs(3))
+yield* Effect.retry(Effect.gen(function* () { return yield* syncInventory(store); }), Schedule.recurs(3))
+// Effect.retry(retrySync, Schedule.recurs(3)), with const retrySync = () => syncInventory(store)
+yield* Effect.retry(Effect.suspend(retrySync), Schedule.recurs(3))
 ```
 
 "The expected type" has one precise meaning: the declared parameter type of the overload candidate TypeScript is trying, before instantiation (D44). TypeScript's own contextual type is the wrong one, because it is inferred from the argument itself. In `ids.map((id) => Users.find(id))`, `map`'s declared parameter is `(value: T, index: number) => U`, a plain function type, so the lambda is a callback that cannot pause (EK4301); instantiating `U` from the lambda would have made it look like an Effect position. When resolution fails, the candidates whose arity fits decide. The instantiated type is used only when the declared type is a bare type parameter fixed by another argument, such as `Layer.succeed`'s `NoInfer<S>`.
@@ -2202,7 +2202,7 @@ import { Effect } from "effect"
 
 /** @effeck trusted */
 export declare function register(f: (x: number) => number): string
-export declare function register<E, R>(f: (x: number) => Effect.Effect<number, E, R>): Effect.Effect<string, E, R>
+export declare function register<E, R>(f: (x: number) => number!E!R): string!E!R
 ```
 
 ```ts es
@@ -2253,7 +2253,7 @@ A runner is called only where no fiber runs the code: at a module's top level, a
 
 ```ts es
 function refreshAll(ids: ReadonlyArray<string>) {
-  for (const id of ids) Effect.runFork(() => refresh(id))
+  for (const id of ids) Effect.runFork(refresh(id))
 }
 ```
 
@@ -2289,19 +2289,34 @@ function quoteCart(cartId: string) {
     return estimate(cart)                      // a pure Effeck helper
   }
 }
-// Effect<Quote, CartNotFound | EmptyCart, Carts | Pricing>
+// Quote!CartNotFound | EmptyCart!Carts | Pricing
 ```
 
 `PricingDown` is caught, so it is not in E. `Pricing` is still in R: catching an error does not remove the need for the service.
 
 Precisely, E is the type of the expected failures in a cause made only of expected failures. A cause that also holds a defect or an interruption can carry `Fail` reasons outside E, because `catch` passes such a cause through untouched (Chapter 17); no Effeck `catch` recovers it, and only cause-level tools see those reasons.
 
+#### Writing contracts
+
+`.effeck` code writes `Effect<A, E, R>` as `A!E!R` (D127), anywhere a type can appear: return annotations, service members, parameters, and aliases. The parser expands it to `Effect.Effect<A, E, R>`.
+
+| Written | Means |
+| --- | --- |
+| `User!NotFound!Db` | `Effect<User, NotFound, Db>` |
+| `User!NotFound!` | `Effect<User, NotFound, never>` |
+| `User!!Db` | `Effect<User, never, Db>` |
+| `User!!` | `Effect<User, never, never>` |
+| `User!NotFound` on a function with a body | `Effect<User, NotFound, infer R>`: R comes from the body |
+| `User!NotFound` without a body | `Effect<User, NotFound, never>` |
+
+A slot without a type is `never`. Dependencies left out entirely are inferred on a function with a body and `never` everywhere else. Unions bind inside a slot, so `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`. A function type, a conditional type, or an Effect type inside a slot needs parentheses, and so does an object type after a `!`: a `{` there starts the function's body, so `User!NotFound! { ... }` has no dependencies. Hovers and messages about `.effeck` code show contracts in this form; declaration files keep `Effect.Effect<A, E, R>`, so TypeScript callers are unaffected. `Effect<A, E, R>` is accepted everywhere, including `infer` slots (D57).
+
 #### Checking a written contract
 
 When you write the contract, the compiler checks the body against it:
 
 ```ts es
-export function welcome(id: string): Effect<string, UserNotFound | MailError, Users> {
+export function welcome(id: string): string!UserNotFound | MailError!Users {
   const user = Users.find(id)
   Mailer.send(user.email, "Welcome")
   return user.name
@@ -2317,7 +2332,7 @@ error EK2002: welcome needs Mailer, but its contract says R = Users.
 | Check | Rule | Diagnostic |
 | --- | --- | --- |
 | Success | The returned value must be assignable to A | TypeScript's |
-| Errors | Every error that can escape must be in E; `Effect<A, never, R>` allows `catch` inside and rejects any error that escapes | EK2001 |
+| Errors | Every error that can escape must be in E; `A!!R` allows `catch` inside and rejects any error that escapes | EK2001 |
 | Requirements | Every requirement that remains must be in R | EK2002 |
 | Width | A contract may be wider than the body needs, never narrower | EK2001, EK2002 |
 
@@ -2327,11 +2342,11 @@ The contract has exactly three channels. Whether a function can pause is a separ
 
 #### Declarations without bodies
 
-Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `Effect<A, never, never>`. Service and control methods require all three Effect type arguments; `Effect<A>` is EK2101 there (D93, amending D57):
+Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `A!!`. Service and control methods require all three Effect type arguments; `Effect<A>` is EK2101 there (D93, amending D57):
 
 ```ts es
-abstract class Rates {
-  abstract lookup(currency: string): number
+service Rates {
+  lookup(currency: string): number
 }
 ```
 
@@ -2354,7 +2369,7 @@ function find(id: string): Effect<User, infer E, never> {
 // Checks A = User and R = never; infers E = UserNotFound.
 
 function load(id: string): Effect<User, never, infer R> {
-  return Effect.orDie(() => Users.find(id))
+  return Effect.orDie(Users.find(id))
 }
 // Checks A = User and E = never; infers R = Users.
 
@@ -2371,7 +2386,7 @@ function greeting(id: string): Effect<string, infer E, infer R> {
 function inferred(id: string): Effect<infer _, infer _, infer _> {
   return Users.find(id)
 }
-// Effect<User, UserNotFound, Users>, as with no annotation.
+// User!UserNotFound!Users, as with no annotation.
 ```
 
 The name after `infer` is documentation only and is not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
@@ -2406,13 +2421,13 @@ function totalSize(path: string) {
   for (const child of Files.list(path)) total += totalSize(`${path}/${child}`)
   return total
 }
-// Effect<number, IOError, Files>
+// number!IOError!Files
 ```
 
 TypeScript cannot compute this on its own: to TypeScript, the generated recursive function is an implicit `any` (TS7022). The compiler computes the fixpoint itself, inside the component only (D52). It checks the component's bodies, then rechecks those bodies alone, with the E and R found so far, until E and R stop growing. Rows only grow and are finite, so the iteration ends, and no function outside the component is checked twice. Mutual recursion is where the recheck matters:
 
 ```ts es
-class Locked extends TaggedError("Locked")<{ readonly path: string }> {}
+error Locked { path: string }
 
 function visitDir(path: string) {
   for (const child of Files.list(path)) visitEntry(`${path}/${child}`)
@@ -2422,7 +2437,7 @@ function visitEntry(path: string) {
   if (path.endsWith(".lock")) throw new Locked({ path })
   if (Files.stat(path).isDirectory) visitDir(path)
 }
-// both: Effect<void, IOError | Locked, Files>
+// both: void!IOError | Locked!Files
 ```
 
 Checked once in source order, `visitDir` meets `visitEntry` before `visitEntry` has a contract and misses `Locked`; the recheck adds it. The prototype compiler reaches the same contracts by re-checking the whole program (`prototype/esc/FINDINGS.md`, finding 7). The single-pass experiment found this case, in its `isEven` and `isOdd` probe, to be the only one that needs a second check (`prototype/single-pass/RESULTS.md`). A follows TypeScript's rule: when A depends on the function's own result, the contract must be written (EK2102).
@@ -2461,7 +2476,7 @@ export const area = Effect.fnUntraced(function* (w: number, h: number) {
 
 A function compiles to plain JavaScript when both hold:
 
-1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript Effeck functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary such as `Effect.sync`. Its control class is `pure` or `sync`.
+1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript Effeck functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary hatch such as `sync`. Its control class is `pure` or `sync`.
 2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. Exceptions become typed failures only where they are raised: at the call of a trusted function, whose listed exceptions are converted there (Chapter 26), and inside the plain function's own `try`, whose `catch` handles them (below). Bridging across calls is experiment G15.
 
 The test is "can it reach an Effect operation", not "are E and R empty". `Effect.sleep("1 second")` has E = `never` and R = `never`, and it pauses the fiber. So the compiler tracks a separate fact for each function, its **control class**:
@@ -2470,7 +2485,7 @@ The test is "can it reach an Effect operation", not "are E and R empty". `Effect
 | --- | --- | --- | --- |
 | `pure` | No observable effect; cannot pause | `double`, string formatting, `Math.max` | Yes |
 | `sync` | Synchronous work you can observe; cannot pause | Mutating an object, `Map.prototype.set`, a trusted TypeScript function | Yes; the order and count of the work are kept |
-| `suspends` | May pause the fiber, or crosses an Effect boundary | `Effect.sleep`, `Effect.sync(…)`, any service method, any imported Effect | No |
+| `suspends` | May pause the fiber, or crosses an Effect boundary | `Effect.sleep`, `sync(…)`, any service method, any imported Effect | No |
 | `captures` | May reach a handler (Chapter 9) | `Approval.approve`, `yield` in a producer | No |
 
 `pure` is assigned only to Effeck functions the compiler analyzed and to built-ins on the compiler's list; a trusted TypeScript function is `sync` at most. `pure` permits one thing beyond `sync`: inlining the body at a call. It never permits removing a call whose result is unused, reordering calls, or merging two calls into one.
@@ -2530,11 +2545,11 @@ class Money implements Equal.Equal {
 #### Recursion
 
 ```ts es
-function sumTo(n: number): Effect<number, never, never> {
+function sumTo(n: number): number!! {
   return n === 0 ? 0 : n + sumTo(n - 1)
 }
 
-function walk(node: TreeNode): Effect<number, never, Nodes> {
+function walk(node: TreeNode): number!!Nodes {
   let total = node.size
   for (const child of Nodes.children(node)) total += walk(child)
   return total
@@ -2557,13 +2572,13 @@ function mapAll<A, B>(items: ReadonlyArray<A>, f: (a: A) => B) {
   for (const item of items) out.push(f(item))
   return out
 }
-// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>) => Effect<B[], E, R>
+// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => B!E!R) => B[]!E!R
 
-const names = mapAll(ids, (id) => Users.find(id).name)   // Effect<string[], UserNotFound, Users>
-const sizes = mapAll(words, (w) => w.length)             // Effect<number[], never, never>
+const names = mapAll(ids, (id) => Users.find(id).name)   // string[]!UserNotFound!Users
+const sizes = mapAll(words, (w) => w.length)             // number[]!!
 ```
 
-`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
+`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => B!!`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
 
 This rule also covers declarations, methods, and function expressions that are not call arguments. Added channel parameters are named E and R, then E2 and R2 for another callback (D68). A contract-less callback cannot be called inside a synchronous JavaScript callback such as a `sort` comparator: it can pause, so that call is EK4301.
 
@@ -2575,7 +2590,7 @@ The declaration file writes the polymorphism out, as the comment shows. A TypeSc
 function withRetry<A>(times: number, program: () => A) {
   return Effect.retry(program, Schedule.recurs(times))
 }
-// <A, E, R>(times: number, program: () => Effect<A, E, R>) => Effect<A, E, R>
+// <A, E, R>(times: number, program: () => A!E!R) => A!E!R
 ```
 
 #### Callbacks into JavaScript
@@ -2588,8 +2603,8 @@ A control operation must be handled on the fiber that performs it (Chapter 9). T
 
 ```ts es
 handle(() => {
-  Effect.retry(() => Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
-  Effect.timeout(() => Approval.approve("b"), "1 second")           // other fiber: EK4201
+  Effect.retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
+  Effect.timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
 }, Approval, { approve: (_request, k) => resume(k, true) })
 ```
 
@@ -2621,7 +2636,7 @@ function exportReport(id: string) {
 }
 
 function exportWithDeadline(id: string) {
-  return Effect.timeout(() => exportReport(id), "30 seconds")
+  return Effect.timeout(exportReport(id), "30 seconds")
 }
 ```
 
@@ -2761,12 +2776,12 @@ Features checked against the claim and kept out:
 This chapter follows one program through the machine before Chapter 20 defines the machine. The program is the checkout from Chapter 9, simplified, with a request-scoped audit log added so the trace shows which Context each piece of code sees. Kernel test T1 runs exactly this program, lowered by hand.
 
 ```ts es
-abstract class AuditLog  { abstract info(message: string): Effect<void, never, never> }
-abstract class Inventory { abstract reserve(cartId: string): Effect<Hold, never, Scope> }
-abstract class Reviewers { abstract decide(request: string): Effect<boolean, never, never> }
+service AuditLog { info(message: string): void!! }
+service Inventory { reserve(cartId: string): Hold!!Scope }
+service Reviewers { decide(request: string): boolean!! }
 
-abstract class Approval extends Control {
-  abstract approve(request: string): Effect<boolean, never, never>
+control Approval {
+  approve(request: string): boolean!!
 }
 
 function checkout(cartId: string) {
@@ -2784,7 +2799,7 @@ function requestApproval(cartId: string) {
 }
 
 const receipt = handle(
-  () => Effect.provideService(() => checkout("c-42"), AuditLog, RequestAuditLog),
+  () => Effect.provideService(checkout("c-42"), AuditLog, RequestAuditLog),
   Approval,
   {
     approve(request, k) {
@@ -3070,7 +3085,7 @@ JavaScript runs one fiber step at a time, so a race between a resume and an inte
 ### 22. What resume restores
 
 ```ts es
-handle(() => Effect.provideService(() => checkout("c-42"), AuditLog, RequestAuditLog), Approval, {
+handle(() => Effect.provideService(checkout("c-42"), AuditLog, RequestAuditLog), Approval, {
   approve(request, k) {
     AuditLog.info("in the handler")   // AppAuditLog: the clause runs outside the provide
     return resume(k, true)            // checkout continues with RequestAuditLog, its open Scope, its span
@@ -3380,7 +3395,7 @@ export const displayName = Effect.fnUntraced(function* (id: string) {
 
 ```ts dts
 export declare const displayName:
-  (id: string) => Effect.Effect<string, UserNotFound, Users>
+  (id: string) => string!UserNotFound!Users
 ```
 
 #### One obligation
@@ -3408,7 +3423,7 @@ function profile(raw: string) {
     Metrics.increment("profile")
   }
 }
-// Effect<User, InvalidId, Users | Metrics>
+// User!InvalidId!Users | Metrics
 ```
 
 ```ts gen
@@ -3539,7 +3554,7 @@ try {
 
 ```ts dts
 import type { Effect } from "effeck-runtime"
-export declare function double(n: number): Effect<number, never, never>
+export declare function double(n: number): number!!
 ```
 
 The compiler writes ordinary TypeScript declarations with Effect contracts.
@@ -3657,7 +3672,7 @@ shape as an interface and a class whose base has the `ServiceKey<Users>` type
 
 ```ts dts
 export interface Users {
-  find(id: string): Effect.Effect<User, UserNotFound, never>
+  find(id: string): User!UserNotFound!
   readonly "~effeck/service"?: "@acme/app/src/users#Users"
 }
 declare const Users_base: import("effeck-runtime").ServiceKey<Users>
@@ -3809,7 +3824,7 @@ export default defineConfig({
 
 Register `it.effect` from `@effect/vitest` at the top level or in `describe`
 (D38). Keep foreign assertions inside a boundary such as
-`Effect.sync(() => assert.strictEqual(actual, expected))`. `bun run test`
+`sync(assert.strictEqual(actual, expected))`. `bun run test`
 needs no prior build and maps assertion failures to `.effeck` lines.
 
 For a Vite application, add the same plugin to `vite.config.ts`. The plugin
@@ -3885,12 +3900,13 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
-| EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, offer both `Effect<T, never, never>` and `Effect<T, infer E, infer R>`; for a bare `T`, write a contract | 14 |
-| EK2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `Effect.try` | 3 |
+| EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, suggest `T!!` or removing the annotation; for a bare `T`, suggest `T!!` or `T!Errors` | 14 |
+| EK2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `try` | 3 |
 | EK2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
-| EK2101 | A declaration without a body that has no full contract | Write `Effect<T, never, never>` | 14 |
+| EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
 | EK2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
+| EK2103 | A member of a `service` or `control` declaration with a body or an initializer (D128) | Implement it in a layer, or make it static | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -3905,9 +3921,10 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | EK4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of` | 10, 16 |
-| EK4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `Effect.try`, or tag the declaration `@effeck trusted` | 10 |
+| EK4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@effeck trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
+| EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
 
 #### Linting
 
@@ -4092,7 +4109,14 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D123 | Declaration prelude imports use free aliases when names are already bound | Avoid duplicate identifiers in declaration consumers | 27 |
 | D124 | Setup relinks effeck launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
 | D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
+| D126 | `error NotFound { id: string }` declares a tagged error class with readonly fields | Fewer tokens for the most common declaration | 3 |
+| D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
+| D128 | `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
+| D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
+| D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
+| D149 | `try(…)` parses as a call in `.effeck`; Effect's `{ try, catch }` object is EK4404 | A try statement needs a block, so `try (` is unambiguous | 10, 28 |
+| D150 | `runPromise`, `runFork`, `runSync`, `runCallback` are in the prelude, for TypeScript and hatch bodies | The way back in; EK1005 still applies where a fiber runs | 10, 13 |
 
 #### Rules of the runtime and compiler
 
@@ -4413,7 +4437,7 @@ Stages as fetched on 2026-10-16 (`docs/research/tc39-syntax.md`).
 const Port = Config.withDefault(Config.Port("PORT"), 3000)      // unchanged by design: Effect's API, as is
 
 function loadUser(id: string) {
-  return Effect.retry(() => Users.find(id), { times: 3 })        // changed: the program is a function
+  return Effect.retry(Users.find(id), { times: 3 })        // changed: the program is a function
 }
 ```
 
@@ -4427,15 +4451,15 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an Effeck function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
 | Installation | Changed | `effect@4.0.5`, `effeck-runtime`, and `effeck` (Chapter 28) |
-| Importing Effect | Changed | The prelude needs no import (`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, and the built-ins); other modules come from `effect` |
+| Importing Effect | Changed | Every module of `effect`'s root needs no import (D146); subpath packages such as `effect/http` are imported |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |
-| `Effect.sync` around a side effect | Changed | Call the code; platform side effects go through Effect modules (Chapter 11) |
-| `Effect.try`, `tryPromise`, `promise` | Unchanged by design | The same calls, which run and give the value (Chapter 10) |
-| `Effect.suspend` | Changed | `() => …` wherever a program is expected |
-| `Effect.callback` | Unchanged by design | The same call; `resume(Exit.succeed(x))` (D43) |
+| `Effect.sync` around a side effect | Changed | Call the code; platform side effects go through Effect modules (Chapter 11), or the `sync` hatch (D148) |
+| `Effect.try`, `tryPromise`, `promise` | Changed | The hatches `try(…)` and `sync(async () => …)`, whose arguments are plain TypeScript (D148) |
+| `Effect.suspend` | Changed | A call passed by name where a program is expected, or `() => …` (D147) |
+| `Effect.callback` | Changed | The hatch `callback((resume, signal) => …)`: `resume(value)`, `resume.fail(error)` (D43, D148) |
 | `Effect.void`, `never`, `yieldNow`, `interrupt` | Unchanged by design | Call the value: `Effect.yieldNow()` |
-| Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | Take a program, `Effect.runPromise(() => main())`, only where no fiber runs the code (EK1005, D38) |
+| Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | In the prelude; `runPromise(main())` from TypeScript, a top-level call, or a hatch's body, where no fiber runs the code (EK1005, D38, D148) |
 | `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.effeck` is EK1002 |
 | `Effect.gen({ self: this }, …)` | Changed | An ordinary method; `this` keeps its JavaScript meaning |
 | `Effect.fn`, `fnUntraced` | Changed | `function f() { … }`, untraced unless `tracing` asks for spans (Chapter 28) |
@@ -4456,7 +4480,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Expected errors and defects | Changed | `throw` is expected; an exception no contract lists, `Effect.die`, and `Effect.orDie` are defects (Chapter 3) |
 | A JavaScript `throw` | Changed | Always a typed failure; `Effect.die(new Error(…))` for a bug |
 | A JavaScript `catch` around a throwing call | Changed | `catch` sees expected failures only; a dead `catch` is EK2004 (D37) |
-| `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `TaggedError` is in the prelude; `Schema.TaggedError` is unchanged |
+| `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `error E { ... }` declares a `TaggedError` class; `Schema.TaggedError` is unchanged |
 | Error tracking in E | Changed | Inferred: what a function throws, plus its callees' E, minus what it catches |
 | `Effect.catch`, `catchTag`, `catchTags`, `catchIf` | Changed | `try`/`catch` with narrowing; the combinators still work with a program |
 | `catchReason`, `catchReasons`, `unwrapReason` | Changed | Narrow `e._tag` and `e.reason._tag` inside `catch` |
@@ -4479,7 +4503,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In Effeck | Form |
 | --- | --- | --- |
-| `Context.Service` class | Changed | `abstract class Users { abstract find(id: string): Effect<User, UserNotFound, never> }` (D1) |
+| `Context.Service` class | Changed | `service Users { find(id: string): User!UserNotFound }` (D1, D128) |
 | Service keys | Changed | Derived from package, path, and class name; duplicates are EK3001 |
 | `yield* Users`, then a method | Changed | `Users.find(id)`; `Users()` gives the implementation |
 | `Users.use`, `useSync` | Changed | Call the member: `Users.find(id)` |
@@ -4633,13 +4657,13 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In Effeck | Form |
 | --- | --- | --- |
-| `async` and `await` | Changed | None in `.effeck`: a call waits |
-| `Effect.promise`, `Effect.tryPromise` | Unchanged by design | The same calls; the `AbortSignal` cancels on interruption |
-| `Effect.callback` | Unchanged by design | A boundary; `resume(Exit.succeed(x))`; `suspend` for resources (D43) |
-| `Effect.runPromise` from Promise code | Unchanged by design | From TypeScript, or a top-level callback (D38) |
+| `async` and `await` | Changed | Only inside a hatch's function; elsewhere a call waits (D148) |
+| `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal` cancels on interruption (D148) |
+| `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
+| `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |
 | Async iterables and event emitters | Unchanged by design | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
-| Synchronous code that throws | Changed | `Effect.try`; a dead `catch` is EK2004 (D37) |
-| Effect 3 libraries | Changed | Foreign code: `Effect.tryPromise({ try: () => Effect3.runPromise(p), catch })` |
+| Synchronous code that throws | Changed | `try(…)`; a dead `catch` is EK2004 (D37) |
+| Effect 3 libraries | Changed | Foreign code: `try(Effect3.runPromise(p), (error) => …)` |
 
 #### C14. Streams
 
@@ -4709,7 +4733,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Exit` constructors and readers | Unchanged by design | Data (D24); `Exit.match` |
 | `Cause` | Unchanged by design | `Effect.catchCause(() => f(), (cause) => …)` |
 | `Data.Class`, `TaggedClass`, `taggedEnum` | Unchanged by design | The same functions |
-| Error classes | Changed | `TaggedError` in the prelude; `throw` |
+| Error classes | Changed | `error E { ... }` declarations; `throw` |
 | `new` of a class whose instances are Effects | Changed | `new` constructs and never runs (D24) |
 | `Chunk`, `HashSet`, `HashMap`, `Duration`, `BigDecimal`, `Redacted` | Unchanged by design | The same modules |
 | `DateTime` | Unchanged by design | `DateTime.now()`; `new Date()` is EK4403 |

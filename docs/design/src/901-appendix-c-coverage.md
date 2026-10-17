@@ -18,15 +18,15 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an Effeck function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
 | Installation | Changed | `effect@4.0.5`, `effeck-runtime`, and `effeck` (Chapter 28) |
-| Importing Effect | Changed | The prelude needs no import (`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, and the built-ins); other modules come from `effect` |
+| Importing Effect | Changed | Every module of `effect`'s root needs no import (D146); subpath packages such as `effect/http` are imported |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |
-| `Effect.sync` around a side effect | Changed | Call the code; platform side effects go through Effect modules (Chapter 11) |
-| `Effect.try`, `tryPromise`, `promise` | Unchanged by design | The same calls, which run and give the value (Chapter 10) |
-| `Effect.suspend` | Changed | `() => …` wherever a program is expected |
-| `Effect.callback` | Unchanged by design | The same call; `resume(Exit.succeed(x))` (D43) |
+| `Effect.sync` around a side effect | Changed | Call the code; platform side effects go through Effect modules (Chapter 11), or the `sync` hatch (D148) |
+| `Effect.try`, `tryPromise`, `promise` | Changed | The hatches `try(…)` and `sync(async () => …)`, whose arguments are plain TypeScript (D148) |
+| `Effect.suspend` | Changed | A call passed by name where a program is expected, or `() => …` (D147) |
+| `Effect.callback` | Changed | The hatch `callback((resume, signal) => …)`: `resume(value)`, `resume.fail(error)` (D43, D148) |
 | `Effect.void`, `never`, `yieldNow`, `interrupt` | Unchanged by design | Call the value: `Effect.yieldNow()` |
-| Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | Take a program, `Effect.runPromise(() => main())`, only where no fiber runs the code (EK1005, D38) |
+| Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | In the prelude; `runPromise(main())` from TypeScript, a top-level call, or a hatch's body, where no fiber runs the code (EK1005, D38, D148) |
 | `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.effeck` is EK1002 |
 | `Effect.gen({ self: this }, …)` | Changed | An ordinary method; `this` keeps its JavaScript meaning |
 | `Effect.fn`, `fnUntraced` | Changed | `function f() { … }`, untraced unless `tracing` asks for spans (Chapter 28) |
@@ -224,13 +224,13 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In Effeck | Form |
 | --- | --- | --- |
-| `async` and `await` | Changed | None in `.effeck`: a call waits |
-| `Effect.promise`, `Effect.tryPromise` | Unchanged by design | The same calls; the `AbortSignal` cancels on interruption |
-| `Effect.callback` | Unchanged by design | A boundary; `resume(Exit.succeed(x))`; `suspend` for resources (D43) |
-| `Effect.runPromise` from Promise code | Unchanged by design | From TypeScript, or a top-level callback (D38) |
+| `async` and `await` | Changed | Only inside a hatch's function; elsewhere a call waits (D148) |
+| `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal` cancels on interruption (D148) |
+| `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
+| `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |
 | Async iterables and event emitters | Unchanged by design | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
-| Synchronous code that throws | Changed | `Effect.try`; a dead `catch` is EK2004 (D37) |
-| Effect 3 libraries | Changed | Foreign code: `Effect.tryPromise({ try: () => Effect3.runPromise(p), catch })` |
+| Synchronous code that throws | Changed | `try(…)`; a dead `catch` is EK2004 (D37) |
+| Effect 3 libraries | Changed | Foreign code: `try(Effect3.runPromise(p), (error) => …)` |
 
 #### C14. Streams
 
