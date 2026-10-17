@@ -1,0 +1,464 @@
+# Cheat sheet
+
+Every Effeck change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is Effeck. The examples share these declarations:
+
+```ts es
+error NotFound { id: string }
+
+interface User { id: string; name: string }
+
+function getUser(id: string): User!NotFound {
+  sleep("5 millis")
+  if (id === "missing") throw new NotFound({ id })
+  return { id, name: "Ada" }
+}
+
+function getOrders(id: string): number!! {
+  return id.length
+}
+
+control Approval {
+  approve(request: string): boolean!!
+}
+
+function release(version: string) {
+  return Approval.approve(`deploy ${version}`) ? `released ${version}` : "declined"
+}
+```
+
+## Types
+
+**Effect types** (D127). An empty slot is `never`. Dependencies left out are inferred from a function's body, and are `never` anywhere else.
+
+```ts effect
+type Find = (id: string) => Effect.Effect<User, NotFound>
+type Release = (version: string) => Effect.Effect<string, never, Approval>
+type Load = () => Effect.Effect<string>
+const hello = (id: string): Effect.Effect<string, NotFound> =>
+  Effect.map(getUser(id), (user) => `Hello, ${user.name}`)
+```
+
+```ts es
+type Find = (id: string) => User!NotFound
+type Release = (version: string) => string!!Approval
+type Load = () => string!!
+function hello(id: string): string!NotFound {
+  return `Hello, ${getUser(id).name}`
+}
+```
+
+## Declarations
+
+**Errors** (D126).
+
+```ts effect
+class Missing extends Data.TaggedError("Missing")<{ readonly id: string }> {}
+class Timeout extends Data.TaggedError("Timeout") {}
+```
+
+```ts es
+error Missing { id: string }
+error Timeout
+```
+
+**Services** (D128). Value members are readonly.
+
+```ts effect
+class Users extends Context.Service<Users, {
+  find(id: string): Effect.Effect<User, NotFound>
+  readonly region: string
+}>()("app/Users") {}
+```
+
+```ts es
+service Users {
+  find(id: string): User!NotFound
+  region: string
+}
+```
+
+**Control operations** (D128). Effect has none, so the left column is Effeck's long form.
+
+```ts long
+abstract class Review extends Control {
+  abstract approve(request: string): Effect<boolean, never, never>
+}
+```
+
+```ts es
+control Review {
+  approve(request: string): boolean!!
+}
+```
+
+**Layers** (D129). Statements run once when the layer builds; without them, the layer is `Layer.succeed`.
+
+```ts effect
+const UsersLive = Layer.effect(Users, Effect.gen(function* () {
+  const seen = new Set<string>()
+  return Users.of({ find: (id) => getUser(id), region: "eu" })
+}))
+```
+
+```ts es
+layer UsersLive: Users {
+  const seen = new Set<string>()
+  find(id) { return getUser(id) }
+  readonly region = "eu"
+}
+```
+
+**Schemas** (D133). One declaration gives the schema and its type.
+
+```ts effect
+const Account = Schema.Struct({
+  id: Schema.String,
+  nickname: Schema.optional(Schema.String),
+  role: Schema.Literals(["admin", "member"])
+})
+interface Account extends Schema.Schema.Type<typeof Account> {}
+```
+
+```ts es
+schema Account {
+  id: string
+  nickname?: string
+  role: "admin" | "member"
+}
+```
+
+**Readonly by default** (D134). Write `mutable` for a member you assign.
+
+```ts effect
+interface Cart { readonly id: string; items: Array<string> }
+```
+
+```ts es
+interface Cart { id: string; mutable items: Array<string> }
+```
+
+## Programs
+
+**Statements instead of generators.** Calls run; there is no `yield*`.
+
+```ts effect
+const greetUser = Effect.fn("greetUser")(function* (id: string) {
+  const user = yield* getUser(id)
+  yield* Effect.log(`Hello, ${user.name}`)
+  return user.name
+})
+```
+
+```ts es
+function greetUser(id: string) {
+  const user = getUser(id)
+  log(`Hello, ${user.name}`)
+  return user.name
+}
+```
+
+**Programs passed by name** (D147). A call runs where it stands, and is passed as a program where a parameter expects one.
+
+```ts effect
+const user = yield* getUser("1")
+const first = yield* Effect.race(getUser("1"), getUser("2"))
+```
+
+```ts es
+function fastest() {
+  const user = getUser("1")
+  return race(getUser("1"), getUser("2"))
+}
+```
+
+**Providing layers** (D130). `return` inside the block returns from the function.
+
+```ts effect
+const program = Effect.gen(function* () {
+  const users = yield* Users
+  return yield* users.find("1")
+}).pipe(Effect.provide(UsersLive))
+```
+
+```ts es
+function program() {
+  with UsersLive {
+    return Users.find("1")
+  }
+}
+```
+
+**Catching by tag** (D131). A failure no clause names keeps propagating.
+
+```ts effect
+const describe = (id: string) =>
+  Effect.map(getUser(id), (user) => user.name).pipe(
+    Effect.catchTag("NotFound", (e) => Effect.succeed(`no user ${e.id}`))
+  )
+```
+
+```ts es
+function describe(id: string) {
+  try {
+    return getUser(id).name
+  } catch (e: NotFound) {
+    return `no user ${e.id}`
+  }
+}
+```
+
+**Handling control operations** (D132). Effect has none, so the left column is Effeck's long form.
+
+```ts long
+function auto(version: string) {
+  return handle(() => release(version), Approval, {
+    approve(_request, continuation) {
+      return resume(continuation, true)
+    }
+  })
+}
+```
+
+```ts es
+function auto(version: string) {
+  try {
+    return release(version)
+  } handle Approval.approve(request) {
+    resume(true)
+  }
+}
+```
+
+**Entry point** (D135). An exported `main` runs when Node starts its module, and not when a test imports it.
+
+```ts effect
+// main.ts
+export const main = Effect.log("Hello")
+// run.ts
+NodeRuntime.runMain(main)
+```
+
+```ts es
+export function main() {
+  log("Hello")
+}
+```
+
+## Calls
+
+**No imports from `effect`** (D146).
+
+```ts effect
+import { Console } from "effect"
+
+const ready = Console.log("ready")
+```
+
+```ts es
+function ready() {
+  Console.log("ready")
+}
+```
+
+**Common functions without the `Effect.` prefix** (D151): `sleep`, `log`, `retry`, `repeat`, `timeout`, `race`, `all`, `forEach`, `die`, `withSpan`, and the `log` levels.
+
+```ts effect
+const patient = Effect.gen(function* () {
+  yield* Effect.sleep("10 millis")
+  return yield* Effect.timeout(Effect.retry(getUser("1"), Schedule.recurs(2)), "1 second")
+})
+```
+
+```ts es
+function patient() {
+  sleep("10 millis")
+  return timeout(retry(getUser("1"), Schedule.recurs(2)), "1 second")
+}
+```
+
+**Methods on Effect's data types** (D152).
+
+```ts effect
+const hot = Stream.take(
+  Stream.map(Stream.filter(Stream.make(18, 25, 30), (c) => c >= 25), (c) => `${c} C`),
+  2
+)
+```
+
+```ts es
+function hot() {
+  return Stream.make(18, 25, 30).filter((c) => c >= 25).map((c) => `${c} C`).take(2)
+}
+```
+
+**The pipe operator** (D154). `%` is the value on the left; where it lands in a program parameter, the left side is passed as a program.
+
+```ts effect
+const piped = getUser("1").pipe(
+  Effect.retry(Schedule.recurs(2)),
+  Effect.timeout("1 second")
+)
+```
+
+```ts es
+function piped() {
+  return getUser("1") |> retry(%, Schedule.recurs(2)) |> timeout(%, "1 second")
+}
+```
+
+## Escape hatches
+
+**Plain TypeScript inside `sync`, `try`, and `callback`** (D148). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. `runPromise` leads back in from a hatch's body or a `.ts` file.
+
+```ts effect
+const id = Effect.sync(() => crypto.randomUUID())
+const parsed = Effect.try({ try: () => JSON.parse(text), catch: (error) => new BadJson({ error }) })
+const loaded = Effect.promise(() => Promise.resolve(42))
+const fetched = Effect.tryPromise((signal) => fetch(url, { signal }))
+const tick = Effect.callback<number>((resume) => {
+  const timer = setTimeout(() => resume(Effect.succeed(7)), 10)
+  return Effect.sync(() => clearTimeout(timer))
+})
+const name = await Effect.runPromise(greetUser("1"))
+```
+
+```ts es
+error BadJson { error: unknown }
+
+function hatches(text: string, url: string) {
+  const id = sync(crypto.randomUUID())
+  const parsed = try(() => JSON.parse(text), (error) => new BadJson({ error }))
+  const loaded = sync(async () => Promise.resolve(42))
+  const fetched = try(async (signal) => fetch(url, { signal }))
+  const tick = callback<number>((resume) => {
+    const timer = setTimeout(() => resume(7), 10)
+    return () => clearTimeout(timer)
+  })
+  const name = sync(async () => runPromise(greetUser("1")))
+  return { id, parsed, loaded, status: fetched.status, tick, name }
+}
+```
+
+## Fibers
+
+**Fork and wait** (D166, D167). A fiber belongs to the block that forks it.
+
+```ts effect
+const user = yield* Effect.forkChild(getUser("1"))
+const orders = yield* Effect.forkChild(getOrders("1"))
+return [yield* Fiber.join(user), yield* Fiber.join(orders)]
+```
+
+```ts es
+function both() {
+  const user = fork getUser("1")
+  const orders = fork getOrders("1")
+  return [await user, await orders]
+}
+```
+
+**Wait for several** (D167). The shape is kept, and a failure interrupts the rest.
+
+```ts effect
+const [user, orders] = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded" })
+const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, { concurrency: "unbounded" })
+```
+
+```ts es
+function many() {
+  const [user, orders] = await [fork getUser("1"), fork getOrders("1")]
+  const pair = await { user: fork getUser("1"), orders: fork getOrders("1") }
+  return { user, orders, pair }
+}
+```
+
+**Fork a block** (D166). The loop stops when the enclosing block exits.
+
+```ts effect
+const withHeartbeat = Effect.scoped(Effect.gen(function* () {
+  yield* Effect.forkScoped(Effect.forever(Effect.andThen(Effect.log("tick"), Effect.sleep("1 second"))))
+  return yield* getUser("1")
+}))
+```
+
+```ts es
+function withHeartbeat() {
+  fork {
+    while (true) {
+      log("tick")
+      sleep("1 second")
+    }
+  }
+  return getUser("1")
+}
+```
+
+**Detached and scoped fibers** (D170).
+
+```ts effect
+yield* Effect.forkDetach(getUser("1"))
+const scope = yield* Scope.make()
+const fiber = yield* Effect.forkIn(getUser("2"), scope)
+```
+
+```ts es
+function background() {
+  detach(getUser("1"))
+  const scope = Scope.make()
+  const fiber = forkIn(scope, getUser("2"))
+  Scope.close(scope, Exit.void)
+  return fiber
+}
+```
+
+**Wait for a Deferred** (D167).
+
+```ts effect
+const ready = yield* Deferred.make<string>()
+yield* Deferred.succeed(ready, "go")
+const value = yield* Deferred.await(ready)
+```
+
+```ts es
+function signal() {
+  const ready = Deferred.make<string>()
+  Deferred.succeed(ready, "go")
+  return await ready
+}
+```
+
+**Race cases with `select`** (D168). The first case to finish wins and the rest are interrupted; `default` runs when no case finishes while they start.
+
+```ts effect
+const next = yield* Effect.raceFirst(
+  Effect.map(Queue.take(jobs), (job) => `ran ${job}`),
+  Effect.as(Effect.sleep("1 second"), "timeout")
+)
+```
+
+```ts es
+function next() {
+  const jobs = Queue.unbounded<string>()
+  Queue.offer(jobs, "build")
+  select {
+    case const job = Queue.take(jobs): return `ran ${job}`
+    case sleep("1 second"): return "timeout"
+    default: return "idle"
+  }
+}
+```
+
+**A concurrent loop** (D169). At most `n` items run at once, and all finish before the loop ends.
+
+```ts effect
+yield* Effect.forEach(ids, (id) => Effect.flatMap(getUser(id), (user) => Effect.log(user.name)), {
+  concurrency: 8,
+  discard: true
+})
+```
+
+```ts es
+function logAll(ids: string[]) {
+  for concurrent(8) (const id of ids) log(getUser(id).name)
+}
+```

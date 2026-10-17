@@ -157,6 +157,7 @@ Code example count: one example per fenced code block in the source body, includ
 - [Producers](src/effeck-features/112-producers.md)
 - [Building an HTTP API](src/effeck-features/113-building-an-http-api.md)
 - [Effeck for Effect users](src/effeck-features/114-effeck-for-effect-users.md)
+- [Cheat sheet](src/effeck-features/115-cheat-sheet.md)
 
 ## Page inventory
 
@@ -285,6 +286,7 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | [Producers](src/effeck-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
 | [Building an HTTP API](src/effeck-features/113-building-an-http-api.md) | Server layers, routing, Schema bodies, typed errors, socket-free testing |
 | [Effeck for Effect users](src/effeck-features/114-effeck-for-effect-users.md) | Idiom translation, programs, top-level declarations, platform work, expected failures |
+| [Cheat sheet](src/effeck-features/115-cheat-sheet.md) | Every Effeck change beside the Effect code it replaces |
 
 ## Counts by sidebar section
 
@@ -314,8 +316,8 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | Guides | Behaviour | 2 |
 | Guides | Schema | 20 |
 | Guides | Platform | 6 |
-| Effeck features | Original language guides | 4 |
-| **Total** | | **114** |
+| Effeck features | Original language guides | 5 |
+| **Total** | | **115** |
 
 ## Counts by upstream directory
 

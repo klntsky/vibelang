@@ -74,6 +74,6 @@ Use the [guide index](013-getting-started.md) to return to a topic. The Effect A
 
 ## Coming from Effect
 
-An ordinary function replaces `Effect.gen` sequencing. Functions, typed errors, services, and resources still run on Effect 4; use Effeck's call rules when reading the examples.
+An ordinary function replaces `Effect.gen` sequencing. Functions, typed errors, services, and resources still run on Effect 4; use Effeck's call rules when reading the examples. The [cheat sheet](effeck-features/115-cheat-sheet.md) shows every Effeck change beside the Effect code it replaces, and [Effeck for Effect users](effeck-features/114-effeck-for-effect-users.md) explains the rules.
 
 [Upstream Effect page](https://effect.website/docs/v4/onboarding)
