@@ -27,7 +27,7 @@ func (p *Parser) isEffeckFile() bool {
 // that parses today.
 func isEffeckDeclarationWord(text string) bool {
 	switch text {
-	case "error", "service", "control":
+	case "error", "service", "control", "layer":
 		return true
 	}
 	return false
@@ -56,6 +56,8 @@ func (p *Parser) parseEffeckDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 		return p.parseServiceDeclaration(pos, jsdoc, modifiers, false /*control*/)
 	case "control":
 		return p.parseServiceDeclaration(pos, jsdoc, modifiers, true /*control*/)
+	case "layer":
+		return p.parseLayerDeclaration(pos, jsdoc, modifiers)
 	}
 	return nil
 }
@@ -327,4 +329,149 @@ func (p *Parser) parseServiceDeclaration(pos int, jsdoc jsdocScannerInfo, modifi
 	p.finishNode(result, pos)
 	p.withJSDoc(result, jsdoc)
 	return result
+}
+
+// parseLayerDeclaration parses
+//
+//	layer UsersLive: Users {
+//	  const directory = Directory()
+//	  find(id) { ... }
+//	  readonly region = "eu"
+//	}
+//
+// as the layer it abbreviates:
+//
+//	const UsersLive = Layer.effect(Users, () => {
+//	  const directory = Directory()
+//	  return { find(id) { ... }, region: "eu" }
+//	})
+//
+// The statements run once, when the layer builds, and the members form the
+// implementation. Without statements it is Layer.succeed(Users, { ... }). A
+// member is a method, name(params) { ... } or *name(params) { ... }, or a
+// value, readonly name = expression. Statements come before the members;
+// the checker reports one that follows them (EK2104).
+func (p *Parser) parseLayerDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList) *ast.Node {
+	word := p.scanner.TokenRange()
+	p.nextToken() // layer
+	name := p.parseBindingIdentifier()
+	p.parseExpected(ast.KindColonToken)
+	service := p.parseEffeckEntityExpression()
+	bodyStart := p.nodePos()
+	var statements, members []*ast.Node
+	if p.parseExpected(ast.KindOpenBraceToken) {
+		for p.token != ast.KindCloseBraceToken && p.token != ast.KindEndOfFile {
+			switch {
+			case p.lookAhead((*Parser).scanLayerValueStart):
+				members = append(members, p.parseLayerValue())
+			case p.lookAhead((*Parser).scanLayerMethodStart):
+				memberPos := p.nodePos()
+				memberJSDoc := p.jsdocScannerInfo()
+				asterisk := p.parseOptionalToken(ast.KindAsteriskToken)
+				memberName := p.parsePropertyName()
+				members = append(members, p.parseMethodDeclaration(memberPos, memberJSDoc, nil /*modifiers*/, asterisk, memberName, nil /*questionToken*/, nil /*diagnosticMessage*/))
+			default:
+				statements = append(statements, p.parseStatement())
+			}
+		}
+		p.parseExpected(ast.KindCloseBraceToken)
+	}
+	bodyEnd := p.nodePos()
+	body := core.NewTextRange(bodyStart, bodyEnd)
+	membersLoc := body
+	if len(members) > 0 {
+		membersLoc = core.NewTextRange(members[0].Pos(), members[len(members)-1].End())
+	}
+	implementation := p.effeckSpanning(p.factory.NewObjectLiteralExpression(p.newNodeList(membersLoc, members), true /*multiLine*/), membersLoc)
+	method := "succeed"
+	argument := implementation
+	if len(statements) > 0 {
+		method = "effect"
+		returned := p.effeckSpanning(p.factory.NewReturnStatement(implementation), membersLoc)
+		block := p.effeckSpanning(p.factory.NewBlock(p.newNodeList(body, append(statements, returned)), true /*multiLine*/), body)
+		arrow := p.effeckSynthesized(p.factory.NewToken(ast.KindEqualsGreaterThanToken), word)
+		argument = p.effeckSpanning(p.factory.NewArrowFunction(nil, nil, p.newNodeList(core.NewTextRange(bodyStart, bodyStart), nil), nil, nil, arrow, block), body)
+	}
+	layer := p.effeckSynthesized(p.factory.NewIdentifier("Layer"), word)
+	constructor := p.effeckSynthesized(p.factory.NewIdentifier(method), word)
+	callee := p.effeckSynthesized(p.factory.NewPropertyAccessExpression(layer, nil, constructor, ast.NodeFlagsNone), word)
+	span := core.NewTextRange(service.Pos(), bodyEnd)
+	call := p.effeckSpanning(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(span, []*ast.Node{service, argument}), ast.NodeFlagsNone), span)
+	declarationSpan := core.NewTextRange(name.Pos(), bodyEnd)
+	declaration := p.effeckSpanning(p.factory.NewVariableDeclaration(name, nil, nil, call), declarationSpan)
+	list := p.effeckSpanning(p.factory.NewVariableDeclarationList(p.newNodeList(declarationSpan, []*ast.Node{declaration}), ast.NodeFlagsConst), declarationSpan)
+	result := p.factory.NewVariableStatement(modifiers, list)
+	p.finishNode(result, pos)
+	p.withJSDoc(result, jsdoc)
+	return result
+}
+
+// parseEffeckEntityExpression parses a name or a dotted name as an expression:
+// Users or Accounts.Users.
+func (p *Parser) parseEffeckEntityExpression() *ast.Node {
+	pos := p.nodePos()
+	expression := p.parseIdentifier()
+	for p.parseOptional(ast.KindDotToken) {
+		member := p.parseIdentifierName()
+		expression = p.finishNode(p.factory.NewPropertyAccessExpression(expression, nil, member, ast.NodeFlagsNone), pos)
+	}
+	return expression
+}
+
+// scanLayerValueStart reports whether a layer value member starts here:
+// readonly name =. It moves the scanner; call it through lookAhead.
+func (p *Parser) scanLayerValueStart() bool {
+	if p.token != ast.KindReadonlyKeyword {
+		return false
+	}
+	p.nextToken()
+	if !tokenIsIdentifierOrKeyword(p.token) {
+		return false
+	}
+	p.nextToken()
+	return p.token == ast.KindEqualsToken
+}
+
+// parseLayerValue parses readonly name = expression as the property name: expression.
+func (p *Parser) parseLayerValue() *ast.Node {
+	pos := p.nodePos()
+	p.nextToken() // readonly
+	name := p.parsePropertyName()
+	p.parseExpected(ast.KindEqualsToken)
+	initializer := p.parseAssignmentExpressionOrHigher()
+	p.parseSemicolon()
+	return p.finishNode(p.factory.NewPropertyAssignment(nil, name, nil, nil, initializer), pos)
+}
+
+// scanLayerMethodStart reports whether a layer method starts here: an
+// optional *, a name, a parameter list, and then a return type or a { on the
+// same line. A call statement cannot be followed by either, so the form
+// cannot change the meaning of code that parses today. It moves the scanner;
+// call it through lookAhead.
+func (p *Parser) scanLayerMethodStart() bool {
+	if p.token == ast.KindAsteriskToken {
+		p.nextToken()
+	}
+	if !tokenIsIdentifierOrKeyword(p.token) {
+		return false
+	}
+	p.nextToken()
+	if p.token != ast.KindOpenParenToken {
+		return false
+	}
+	for depth := 0; ; {
+		switch p.token {
+		case ast.KindOpenParenToken:
+			depth++
+		case ast.KindCloseParenToken:
+			depth--
+		case ast.KindEndOfFile:
+			return false
+		}
+		p.nextToken()
+		if depth == 0 {
+			break
+		}
+	}
+	return p.token == ast.KindColonToken || p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak()
 }

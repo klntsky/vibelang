@@ -429,6 +429,17 @@ try {
     assert(location.range.start.line === lineOf("src/declarations.effeck", "balance(id: string)"), `line ${location.range.start.line}`)
   })
 
+  await check("hover: a layer method's parameter has the service member's parameter type", async () => {
+    const shown = await hover("src/declarations.effeck", "id.length")
+    assert(shown.includes("id: string"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("definition: a layer's setup local, used in a member, goes to the setup statement", async () => {
+    const [location] = await definition("src/declarations.effeck", "rate\n")
+    assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)
+    assert(location.range.start.line === lineOf("src/declarations.effeck", "const rate = 2"), `line ${location.range.start.line}`)
+  })
+
   await check("definition: a thrown error goes to its error declaration", async () => {
     const [location] = await definition("src/declarations.effeck", "MissingUser({ id })")
     assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)

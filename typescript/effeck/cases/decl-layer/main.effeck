@@ -1,0 +1,62 @@
+// expect-result: {"found":"Ada","missing":"No user 7","region":"eu","stats":"2 lookups"}
+error UserNotFound { id: string }
+
+service Directory {
+  lookup(id: string): string | undefined!!
+}
+
+service Users {
+  find(id: string): string!UserNotFound
+  readonly region: string
+}
+
+service Stats {
+  count(): number!!
+  record(): void!!
+}
+
+// No setup statements: Layer.succeed.
+layer DirectoryLive: Directory {
+  lookup(id) {
+    return id === "42" ? "Ada" : undefined
+  }
+}
+
+// Setup runs once, when the layer builds: Layer.effect.
+export layer UsersLive: Users {
+  const directory = Directory()
+  const stats = Stats()
+  find(id) {
+    stats.record()
+    const name = directory.lookup(id)
+    if (name === undefined) throw new UserNotFound({ id })
+    return name
+  }
+  readonly region = "eu"
+}
+
+layer StatsLive: Stats {
+  const lookups = Ref.make(0)
+  count() {
+    return Ref.get(lookups)
+  }
+  record() {
+    Ref.update(lookups, (n) => n + 1)
+  }
+}
+
+function greet(id: string) {
+  try {
+    return Users.find(id)
+  } catch (error) {
+    return `No user ${error.id}`
+  }
+}
+
+export function main() {
+  return Effect.provide(() => {
+    const found = greet("42")
+    const missing = greet("7")
+    return { found, missing, region: Users().region, stats: `${Stats.count()} lookups` }
+  }, wire(UsersLive, DirectoryLive, StatsLive))
+}

@@ -200,6 +200,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
 | EK2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
 | EK2103 | A member of a `service` or `control` declaration with a body or an initializer (D128) | Implement it in a layer, or make it static | 4 |
+| EK2104 | A setup statement of a `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |

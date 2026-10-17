@@ -12,3 +12,10 @@ export service Accounts {
 export function total(id: string) {
   return Accounts.balance(id)
 }
+
+export layer AccountsLive: Accounts {
+  const rate = 2
+  balance(id) {
+    return id.length * rate
+  }
+}

@@ -15,7 +15,7 @@ import (
 //
 //	error EK2001: DbError can escape UsersLive.find, but Users.find's contract allows only UserNotFound.
 //	error EK3101: UsersAudited.find looks up Audit each time it is called, but
-//	  Users.find(id: string): Effect<User, UserNotFound, never> allows no call-time requirements.
+//	  Users.find(id: string): User!UserNotFound! allows no call-time requirements.
 //
 // A requirement that leaks this way is a service the member looks up when it
 // is called, in the caller's Context, which the contract does not declare.
@@ -143,9 +143,9 @@ func checkMember(c *checker.Checker, at, fn *ast.Node, holder, owner, name strin
 		}
 		var d *ast.Diagnostic
 		if allowedRequirements.Flags()&checker.TypeFlagsNever != 0 {
-			d = report(c, where, EK3101, holder+"."+name, c.TypeToString(service), signature)
+			d = report(c, where, EK3101, holder+"."+name, c.TypeToString(service), bangTypes(signature))
 		} else {
-			d = report(c, where, EK3101.With("{0} looks up {1} each time it is called, but {2} allows only {3}."), holder+"."+name, c.TypeToString(service), signature, c.TypeToString(allowedRequirements))
+			d = report(c, where, EK3101.With("{0} looks up {1} each time it is called, but {2} allows only {3}."), holder+"."+name, c.TypeToString(service), bangTypes(signature), c.TypeToString(allowedRequirements))
 		}
 		serviceName := c.TypeToString(service)
 		variable := serviceName
@@ -157,7 +157,7 @@ func checkMember(c *checker.Checker, at, fn *ast.Node, holder, owner, name strin
 		} else {
 			note(d, "Capture it once when the layer is built: const {0} = {1}()", variable, serviceName)
 		}
-		note(d, "or declare it: {0}(…): Effect<{1}, {2}, {3}>", name, c.TypeToString(channelType(c, contract, "_A")), c.TypeToString(allowedErrors), c.TypeToString(c.GetUnionType([]*checker.Type{allowedRequirements, service})))
+		note(d, "or declare it: {0}(…): {1}", name, bangText(c.TypeToString(channelType(c, contract, "_A")), c.TypeToString(allowedErrors), c.TypeToString(c.GetUnionType([]*checker.Type{allowedRequirements, service}))))
 	}
 	return reported
 }

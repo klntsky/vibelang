@@ -1,0 +1,11 @@
+// expect: EK2104
+service Counter {
+  next(): number!!
+}
+
+export layer CounterLive: Counter {
+  next() {
+    return 1
+  }
+  const start = 0
+}
