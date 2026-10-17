@@ -2985,7 +2985,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK2103</td><td>A member of a <code>service</code> or <code>control</code> declaration with a body or an initializer (D128)</td><td>Implement it in a layer, or make it static</td><td>4</td></tr>
 <tr><td>EK2104</td><td>A setup statement of a <code>layer</code> declaration that follows one of its members (D129)</td><td>Move the statement above the members</td><td>4</td></tr>
 <tr><td>EK2105</td><td>A typed catch clause whose type has a member without a literal <code>_tag</code> (D131)</td><td>Catch a tagged error, or test the value in an untyped clause</td><td>3</td></tr>
-<tr><td>EK2106</td><td>A catch clause after an untyped catch clause (D131)</td><td>Move the untyped clause last</td><td>3</td></tr>
+<tr><td>EK2106</td><td>A catch clause after one that catches every failure: an untyped clause or a <code>Cause</code> clause (D131, D176)</td><td>Move that clause last</td><td>3</td></tr>
 <tr><td>EK2107</td><td>A handle clause whose control is not a control declaration, such as a service (D132)</td><td>Provide a service with a layer; handle only a control&#39;s operations</td><td>9</td></tr>
 <tr><td>EK2108</td><td>A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132)</td><td>Add the missing clause, or remove the second</td><td>9</td></tr>
 <tr><td>EK2109</td><td>A field of a <code>schema</code> declaration whose type has no schema form, or names a value that is not a schema (D133)</td><td>Declare the schema with <code>Schema.Struct</code>, or name a schema constant</td><td>11</td></tr>

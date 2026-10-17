@@ -4238,7 +4238,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2103 | A member of a `service` or `control` declaration with a body or an initializer (D128) | Implement it in a layer, or make it static | 4 |
 | EK2104 | A setup statement of a `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
 | EK2105 | A typed catch clause whose type has a member without a literal `_tag` (D131) | Catch a tagged error, or test the value in an untyped clause | 3 |
-| EK2106 | A catch clause after an untyped catch clause (D131) | Move the untyped clause last | 3 |
+| EK2106 | A catch clause after one that catches every failure: an untyped clause or a `Cause` clause (D131, D176) | Move that clause last | 3 |
 | EK2107 | A handle clause whose control is not a control declaration, such as a service (D132) | Provide a service with a layer; handle only a control's operations | 9 |
 | EK2108 | A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132) | Add the missing clause, or remove the second | 9 |
 | EK2109 | A field of a `schema` declaration whose type has no schema form, or names a value that is not a schema (D133) | Declare the schema with `Schema.Struct`, or name a schema constant | 11 |
