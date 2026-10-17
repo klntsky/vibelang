@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	fileGlobPattern          = "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,es}"
-	recursiveFileGlobPattern = "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,es}"
+	fileGlobPattern          = "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,effeck}"
+	recursiveFileGlobPattern = "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,effeck}"
 )
 
 // fileGlobPatterns returns the include file glob patterns for this command line, augmenting the
