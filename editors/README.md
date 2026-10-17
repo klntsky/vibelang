@@ -1,12 +1,12 @@
 # Editor setup
 
-Every editor runs the same language server: `effeck --lsp --stdio`, the Effeck compiler that a project installs from `effeck` (`node_modules/.bin/effeck`). It serves `.effeck` and `.ts` files of the program that `tsconfig.json` describes: diagnostics with TypeScript codes and ES codes, hovers with inferred contracts, definitions, references, renames, and completions.
+Every editor runs the same language server: `effeck --lsp --stdio`, the Effeck compiler that a project installs from `effeck` (`node_modules/.bin/effeck`). It serves `.effeck` and `.ts` files of the program that `tsconfig.json` describes: diagnostics with TypeScript codes and EK codes, hovers with inferred contracts, definitions, references, renames, and completions.
 
 The server reports a file's diagnostics when the editor asks for them (LSP 3.17 pull diagnostics, `textDocument/diagnostic`), so the editor's LSP client must support pull diagnostics. VS Code, Cursor, Neovim 0.10 or later, and current Zed releases do.
 
 | Editor | Setup | Tested |
 | --- | --- | --- |
-| VS Code, Cursor | The extension in [vscode/](vscode/README.md) | `bun run test` in `editors/vscode`, on VS Code 1.98.2 and 1.105.1 |
+| VS Code, Cursor | The extension in [vscode/](vscode/README.md), shipped in `effeck` as `node_modules/effeck/editor/effeck.vsix` | `bun run test` in `editors/vscode`, on VS Code 1.98.2 and 1.105.1 |
 | Neovim 0.10 or later | [nvim/effeck.lua](nvim/effeck.lua), below | `editors/nvim/test.sh`, on Neovim 0.10.3 |
 | Zed | Settings, below | No: Zed has no headless mode |
 
@@ -31,7 +31,7 @@ Zed defines languages through extensions, so these settings treat `.effeck` file
 ```json
 {
   "file_types": {
-    "TypeScript": ["es"]
+    "TypeScript": ["effeck"]
   },
   "lsp": {
     "vtsls": {

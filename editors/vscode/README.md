@@ -14,17 +14,24 @@ The extension `effeck.effeck` registers the Effeck language for `.effeck` files 
 
 ## Install
 
-`sh scripts/setup.sh` at the repository root builds the extension and prints the install commands. To build it alone:
+From a project that has `effeck` installed, such as one made with `bun create effeck`:
+
+```sh
+code --install-extension node_modules/effeck/editor/effeck.vsix     # VS Code
+cursor --install-extension node_modules/effeck/editor/effeck.vsix   # Cursor
+```
+
+Then open the project directory. The extension is not on the VS Code Marketplace or Open VSX yet; install it again after updating `effeck`.
+
+To build it from this repository, run `sh scripts/setup.sh` at the repository root, which builds the extension and prints the install commands, or build it alone:
 
 ```sh
 cd editors/vscode
 bun install
-bun run package                                   # writes effeck.vsix
+bun run package                             # writes effeck.vsix
 code --install-extension effeck.vsix        # VS Code
 cursor --install-extension effeck.vsix      # Cursor
 ```
-
-Then open a project that has `effeck` installed, such as one made with `bun create effeck`.
 
 ## How it finds effeck
 
