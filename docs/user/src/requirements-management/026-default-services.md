@@ -12,7 +12,7 @@ function startupMessage() {
   const sample = Random.next()
   Console.log(`Started at ${started}; sample=${sample}`)
 }
-// Effect<void, never, never>
+// void!!
 ```
 
 `Clock.currentTimeMillis` and `Random.next` are Effect values; calling them runs them. `Console.log` returns an Effect, so its call runs too. Use these modules instead of `Date.now()`, `Math.random()`, or the browser console so tests and local overrides can control the behavior.
@@ -25,7 +25,7 @@ const Port = Config.withDefault(Config.Port("PORT"), 3000)
 function configuredPort() {
   return Port()
 }
-// Effect<number, Config.ConfigError, never>
+// number!Config.ConfigError!
 ```
 
 `Config.Port` and `Config.withDefault` build configuration data; they do not read the environment. Calling `Port()` reads it through the default configuration provider. Calls returning a `Config`, an `Exit`, or a Context key leave it as data; calling the held value runs it.
@@ -54,7 +54,7 @@ abstract class DisplaySettings {
 function defaultLabel(id: number) {
   return `${DisplaySettings().prefix} ${id}`
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 A service with `static readonly default` compiles to a `Context.Reference`, so using it adds nothing to `R`. Override it with `Effect.provideService` as above. Effect's own `Context.Reference(key, { defaultValue })` also works unchanged and returns a key as data.

@@ -31,7 +31,7 @@ A named zone follows its local calendar, including daylight saving changes. `UTC
 function validateRule(expression: string, timeZone: string) {
   return Effect.fromResult(Cron.parse(expression, timeZone))
 }
-// Effect<Cron.Cron, Cron.CronParseError, never>
+// Cron.Cron!Cron.CronParseError!
 ```
 
 `Cron.parse` returns a `Result`, so parsing alone does not throw a typed failure. `Effect.fromResult` places invalid expressions and invalid zones in the error channel. Validate configuration before starting any work, and report the configuration error at the application boundary.

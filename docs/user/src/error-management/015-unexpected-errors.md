@@ -11,7 +11,7 @@ function decodeOpcode(opcode: number) {
   if (opcode !== 1) Effect.die(new Error("unknown internal opcode"))
   return "start"
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit Effeck `throw`, including `throw new Error(...)`, is a typed failure instead.
@@ -42,7 +42,7 @@ function requireSetting(name: string) {
 function startup() {
   return Effect.orDie(requireSetting("region"))
 }
-// Effect<never, never, never>
+// never!!
 
 function startupWithMessage() {
   return pipe(

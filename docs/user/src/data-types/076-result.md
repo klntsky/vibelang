@@ -11,7 +11,7 @@ function parseCount(text: string) {
     ? Result.succeed(count)
     : Result.fail("Expected a nonnegative integer")
 }
-// Effect<Result.Result<number, string>, never, never>
+// Result.Result<number, string>!!
 ```
 
 Returning a failed `Result` does not fail `parseCount`: its success value is the result object. `Result` describes a choice between A and E; it does not record defects or interruption. Use `Exit` when you need the complete outcome of running a computation.
@@ -66,7 +66,7 @@ function requireCount(input: string) {
     : Result.fail(new InvalidCount({ input }))
   return Effect.fromResult(result)
 }
-// Effect<number, InvalidCount, never>
+// number!InvalidCount!
 
 function validatePair() {
   return Effect.all([

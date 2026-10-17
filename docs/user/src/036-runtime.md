@@ -21,7 +21,7 @@ A function value remains a description until it is called or handed to a runner.
 
 ```ts
 abstract class Labels {
-  abstract format(value: string): Effect<string, never, never>
+  abstract format(value: string): string!!
 }
 
 const context = Context.make(Labels, {
@@ -64,7 +64,7 @@ To emit a different format, supply a logger such as `Logger.consoleJson` through
 ```ts
 // notifications.effeck
 export abstract class Notifications {
-  abstract send(message: string): Effect<void, never, never>
+  abstract send(message: string): void!!
 
   static readonly layer = Layer.succeed(Notifications, {
     send: (message) => Console.log(message)

@@ -30,7 +30,7 @@ function waitForBuild() {
   })
   return { status, checks }
 }
-// Effect<{ status: string; checks: number }, never, never>
+// { status: string; checks: number }!!
 ```
 
 The initial check is separate from the seven permitted repetitions, so this loop makes at most eight checks. `until` stops on a matching result; `while` continues while its predicate holds. If the count limit wins, `repeat` returns the last result, so check it before assuming the work is ready.
@@ -61,7 +61,7 @@ function reserveSlot() {
     return "reserved"
   }, Schedule.recurs(3))
 }
-// Effect<string, Busy, never>
+// string!Busy!
 ```
 
 `retry` steps its schedule after an expected failure and stops immediately on success. `recurs(3)` permits three retries after the first attempt, for four attempts at most. Retry does not turn defects or interruption into expected failures.
@@ -72,7 +72,7 @@ function reserveSlot() {
 error SensorOffline
 
 abstract class Sensor {
-  abstract read(): Effect<number, SensorOffline, never>
+  abstract read(): number!SensorOffline!
 }
 
 function sampleContinuously() {

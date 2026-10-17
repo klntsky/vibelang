@@ -20,7 +20,7 @@ function countLabel(raw: number) {
     onSuccess: (count) => `${count} items`
   })
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `Effect.match` applies synchronous value callbacks. Neither callback can perform an Effect operation; a callback that only formats text is eligible for plain JavaScript compilation. A cause without an expected failure propagates. If a mixed cause includes an expected failure, Effect selects that failure and can discard its other reasons; ordinary catch preserves the whole mixed cause.
@@ -73,7 +73,7 @@ function reportOutcome() {
 function ignoreRejectedCount() {
   Effect.ignore(itemCount(-2))
 }
-// Effect<void, never, never>
+// void!!
 
 function discardBoundaryOutcome() {
   Effect.ignoreCause(() => Effect.die(new Error("isolated task failed")))

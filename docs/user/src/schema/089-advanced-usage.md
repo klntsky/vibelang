@@ -208,7 +208,7 @@ interface CrateWire {
 const Crate = Schema.Struct({
   count: Schema.FiniteFromString,
   children: Schema.Array(
-    Schema.suspend((): Effect<Schema.Codec<Crate, CrateWire>, never, never> => Crate)
+    Schema.suspend((): Schema.Codec<Crate, CrateWire>!! => Crate)
   )
 })
 
@@ -216,7 +216,7 @@ interface Branch { readonly leaves: ReadonlyArray<Leaf> }
 interface Leaf { readonly owner: Branch | null }
 
 const Branch = Schema.Struct({
-  leaves: Schema.Array(Schema.suspend((): Effect<Schema.Codec<Leaf>, never, never> => Leaf))
+  leaves: Schema.Array(Schema.suspend((): Schema.Codec<Leaf>!! => Leaf))
 })
 const Leaf = Schema.Struct({ owner: Schema.NullOr(Branch) })
 

@@ -39,7 +39,7 @@ function firstErrors(path: string) {
   }
   return found
 }
-// Effect<string[], IOError, Files>
+// string[]!IOError!Files
 ```
 
 How a producer behaves:
@@ -70,7 +70,7 @@ To TypeScript, a producer is a `Stream`: the declaration file types `lines` as `
 function errorCount(path: string) {
   return Stream.runCount(Stream.filter(lines(path), (line) => line.startsWith("ERROR")))
 }
-// Effect<number, IOError, Files>
+// number!IOError!Files
 ```
 
 The conversion runs the producer on a fiber of its own and hands over each element only when the stream pulls it, through a handoff with no buffer, so a pull from any fiber works and the producer never runs ahead of its consumer. Closing the stream interrupts that fiber, which runs the producer's cleanup.
@@ -81,5 +81,5 @@ The other direction needs no adapter. Stream's own functions take callbacks that
 function auditAll(events: Stream.Stream<Event, EventError>) {
   for (const event of events) Audit.record(event)
 }
-// Effect<void, EventError, Audit>
+// void!EventError!Audit
 ```

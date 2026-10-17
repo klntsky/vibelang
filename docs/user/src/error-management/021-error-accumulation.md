@@ -24,7 +24,7 @@ function validateTeam() {
     { concurrency: 2 }
   )
 }
-// Effect<string[], [InvalidHandle, ...InvalidHandle[]], never>
+// string[]![InvalidHandle, ...InvalidHandle[]]!
 ```
 
 `Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel contains a nonempty array of every domain error and the successful values are discarded. If all succeed, it returns an array of successes.
@@ -54,7 +54,7 @@ function inspectTeam() {
     rejected: errors.length        // 2
   }
 }
-// Effect<{ handles: string[]; rejected: number }, never, never>
+// { handles: string[]; rejected: number }!!
 ```
 
 The tuple order is `[successes, failures]`. `partition` preserves both arrays and removes expected errors from `E`, letting you accept valid inputs while reporting rejected ones. Its mixed-cause policy is the same as validation's.

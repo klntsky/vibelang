@@ -30,7 +30,7 @@ Example first, then two to five sentences.
 - `Effect.gen(function* () { … })` becomes an ordinary function.
 ```
 
-Code blocks use the `ts` fence and are Effeck unless the first line says otherwise (`// TypeScript (.ts)`). Show a file name in a first-line comment when it matters (`// main.effeck`). After a function, show the inferred contract as a comment when it teaches something: `// Effect<User, UserNotFound, Users>`.
+Code blocks use the `ts` fence and are Effeck unless the first line says otherwise (`// TypeScript (.ts)`). Show a file name in a first-line comment when it matters (`// main.effeck`). After a function, show the inferred contract as a comment when it teaches something: `// User!UserNotFound!Users`.
 
 ## The language in one page
 
@@ -44,7 +44,7 @@ Code blocks use the `ts` fence and are Effeck unless the first line says otherwi
 
   ```ts
   abstract class Users {
-    abstract find(id: string): Effect<User, UserNotFound, never>
+    abstract find(id: string): User!UserNotFound!
     static readonly layer = Layer.effect(Users, () => {
       const db = Database()                       // captured once, when the layer is built
       return { find: (id) => db.findUser(id) }
@@ -56,7 +56,7 @@ Code blocks use the `ts` fence and are Effeck unless the first line says otherwi
 - **Resources.** `using file = Files.open(path)` releases at block exit. `Effect.acquireRelease(() => acquire(), (x) => release(x))` defines one. Only `using` acquisitions belong to the block; anything acquired without `using` belongs to the caller (`Scope` stays in R).
 - **Concurrency.** Effect's combinators with programs, as above. `fork(() => work())` starts a fiber owned by the enclosing block, interrupted when the block exits; `Fiber.join(fiber)` waits. `Effect.forkScoped` and `Effect.forkDetach` give longer lifetimes.
 - **Producers.** `function*` with `yield` produces values one at a time and may call services between them; `for (const x of producer())` consumes it, and `break` runs its cleanup. Consume an Effect `Stream` with Stream's functions: `Stream.runForEach(stream, (x) => handle(x))`.
-- **Control operations** (advanced): `abstract class Approval extends Control { abstract approve(request: string): Effect<boolean, ReviewBusy, never> }`, handled with `handle(() => checkout(id), Approval, { approve(request, k) { return resume(k, true) } })`.
+- **Control operations** (advanced): `abstract class Approval extends Control { abstract approve(request: string): boolean!ReviewBusy! }`, handled with `handle(() => checkout(id), Approval, { approve(request, k) { return resume(k, true) } })`.
 - **Globals** (no import): `Effect` (also the `Effect<A, E, R>` type), `Schema`, `Layer`, `TaggedError`, `Control`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`. Import everything else from `effect`: `import { Option, Stream, Schedule, Duration, Fiber, Queue, Ref } from "effect"`.
 - **Code that is not Effect.** JavaScript built-ins (`String`, `Array`, `Math`, `JSON`, `Map`, `Set`, `Number`, `Object`, `RegExp`) are called directly. Running Node.js and browser APIs is EK4402 (D108); imports and passing bindings as values are allowed. Use Effect's modules: `FileSystem`, `Path`, `HttpClient`, `effect/process`, `Config`, `Console`, `Clock`, `DateTime`, `Random`, `KeyValueStore`. Any other plain function is called through `Effect.try` or `Effect.tryPromise`, which say what an exception or rejection means.
 - **Running.** `NodeRuntime.runMain(() => main())` from `@effect/platform-node`. Tests: `it.effect("name", () => { … })` from `@effect/vitest`.
@@ -73,7 +73,7 @@ Write the answer most consistent with the rules above, and mark it with a block 
 
 The spec is now `docs/design/effeck-design.md` with 30 chapters; chapter 11 is the standard library, chapter 12 the FAQ, chapter 28 tooling, and appendix C maps every Effect feature. Where a page disagrees with these, the page changes.
 
-- **Prelude** adds `Scope` (D48): the module, and the type `Scope` means `Scope.Scope`. Write `Effect<File, IOError, Scope>`.
+- **Prelude** adds `Scope` (D48): the module, and the type `Scope` means `Scope.Scope`. Write `File!IOError!Scope`.
 - **Data until called** (D24): a call runs its result only when its type is `Effect` itself. `Config`, `Exit`, Context keys, and error instances are data: `const Port = Config.withDefault(Config.Port("PORT"), 3000)` composes, and `const port = Port()` reads it.
 - **Effect's own packages are trusted** (D22): `Option.map`, `Schema.is`, `Duration.millis` are plain calls; their exceptions are defects. A plain TypeScript function is trusted with `/** @effeck trusted */` and `@throws {T}` (D23).
 - **`catch`** sees expected failures only (D13, D37). A defect from `Option.getOrThrow` or `Schema.decodeUnknownSync` is not caught; use the typed forms (`Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`). A `catch` that cannot run is warning EK2004. With several expected failures, `catch` receives the first (D28).

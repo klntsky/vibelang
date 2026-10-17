@@ -8,13 +8,13 @@ function mapAll<A, B>(items: ReadonlyArray<A>, f: (a: A) => B) {
   for (const item of items) out.push(f(item))
   return out
 }
-// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>) => Effect<B[], E, R>
+// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => B!E!R) => B[]!E!R
 
-const names = mapAll(ids, (id) => Users.find(id).name)   // Effect<string[], UserNotFound, Users>
-const sizes = mapAll(words, (w) => w.length)             // Effect<number[], never, never>
+const names = mapAll(ids, (id) => Users.find(id).name)   // string[]!UserNotFound!Users
+const sizes = mapAll(words, (w) => w.length)             // number[]!!
 ```
 
-`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => Effect<B, never, never>`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
+`f`'s type says nothing about errors or services, so `mapAll` passes through whatever its callback does: a missing contract on a callback parameter means "inferred from each call's argument", never "cannot fail, needs nothing". To restrict a callback, write its contract: `f: (a: A) => B!!`. D12 stands alongside D57: `infer` selects inferred channels in the return annotation of a function with a body. It does not introduce inference in parameter types or aliases. In a callback parameter, `(a: A) => Effect<B>` keeps TypeScript's defaults and means `(a: A) => Effect<B, never, never>`, while `(a: A) => B` accepts any contract.
 
 This rule also covers declarations, methods, and function expressions that are not call arguments. Added channel parameters are named E and R, then E2 and R2 for another callback (D68). A contract-less callback cannot be called inside a synchronous JavaScript callback such as a `sort` comparator: it can pause, so that call is EK4301.
 
@@ -26,7 +26,7 @@ The declaration file writes the polymorphism out, as the comment shows. A TypeSc
 function withRetry<A>(times: number, program: () => A) {
   return Effect.retry(program, Schedule.recurs(times))
 }
-// <A, E, R>(times: number, program: () => Effect<A, E, R>) => Effect<A, E, R>
+// <A, E, R>(times: number, program: () => A!E!R) => A!E!R
 ```
 
 #### Callbacks into JavaScript

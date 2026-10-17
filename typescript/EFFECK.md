@@ -314,6 +314,9 @@ A declaration form starts with a word that an identifier follows on the same lin
 | Form | Expands to | Decision |
 | --- | --- | --- |
 | `error NotFound { id: string }` | `class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}` | D126 |
+| `User!NotFound!Db`, `User!!`, `User!NotFound` | `Effect.Effect<User, NotFound, Db>`; an empty slot is `never`; left-out dependencies are `infer R` on a function with a body (`parseReturnType`), else `never` | D127 |
+
+In `.effeck` files, `parsePostfixTypeOrHigher` leaves `!` to `parseType`, which reads the slots of an Effect type; JSDoc's postfix non-null `T!` does not parse there. Hovers rewrite Effect types into the `!` form through `ls.RegisterQuickInfoTextHook` (`effeck/bang.go`), and contract messages write them the same way.
 
 The VS Code grammar adds these forms in `editors/vscode/scripts/effeck-grammar.mjs`, which `derive-grammar.mjs` applies whenever it rederives the grammar from TypeScript's.
 
@@ -323,7 +326,8 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 
 | Upstream file | Change | Lines (+/-) |
 | --- | --- | --- |
-| `tsc/internal/parser/parser.go` | Hand an identifier that starts a short form to `effeck.go` in `parseStatement`, `parseDeclarationWorker`, and `scanStartOfDeclaration`; add a readonly modifier in `parsePropertyOrMethodSignature` while `effeckReadonlyMembers` is set | +17 / -0 |
+| `tsc/internal/parser/parser.go` | Hand an identifier that starts a short form to `effeck.go` in `parseStatement`, `parseDeclarationWorker`, and `scanStartOfDeclaration`; add a readonly modifier in `parsePropertyOrMethodSignature` while `effeckReadonlyMembers` is set; read Effect types after `parseType`, stop `parsePostfixTypeOrHigher` at `!`, and infer left-out dependencies in `parseReturnType` | +30 / -1 |
+| `tsc/internal/ls/extensions.go` | `RegisterQuickInfoTextHook` rewrites a hover's quick info line after the quick info hooks | +14 / -0 |
 | `tsc/internal/tspath/extension.go` | `ExtensionEffeck` in the TypeScript extension lists; `.effeck` declares to `.d.ts` | +9 / -8 |
 | `tsc/internal/core/core.go` | `.effeck` is `ScriptKindTS` | +1 / -1 |
 | `tsc/internal/compiler/emitter.go` | Run hook transformers first in `getScriptTransformers` | +2 / -0 |

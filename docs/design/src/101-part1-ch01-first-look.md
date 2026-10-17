@@ -48,11 +48,11 @@ error MailError {
 }
 
 abstract class Users {
-  abstract find(id: string): Effect<User, UserNotFound, never>
+  abstract find(id: string): User!UserNotFound!
 }
 
 abstract class Mailer {
-  abstract send(to: string, body: string): Effect<void, MailError, never>
+  abstract send(to: string, body: string): void!MailError!
 }
 
 export function welcome(id: string) {
@@ -66,7 +66,7 @@ Four things changed:
 
 - **`welcome` is a plain function.** No `Effect.fn`, no generator, no `yield*`. Calling `Users.find(id)` runs it and gives you the `User`; if it fails, `welcome` fails with the same error.
 - **A service is an abstract class.** `abstract class Users` replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
-- **The contract is inferred.** `welcome` is `Effect<string, UserNotFound | MailError, Users | Mailer>`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
+- **The contract is inferred.** `welcome` is `string!UserNotFound | MailError!Users | Mailer`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
 - **Errors are the same classes.** `error UserNotFound { id: string }` declares a class that extends `TaggedError`, Effect's `Data.TaggedError`, in scope without an import.
 
 #### What is in scope
@@ -119,7 +119,7 @@ export const welcome = Effect.fnUntraced(function* (id: string) {
 
 ```ts dts
 export declare const welcome: (id: string) =>
-  Effect.Effect<string, UserNotFound | MailError, Users | Mailer>
+  string!UserNotFound | MailError!Users | Mailer
 ```
 
 TypeScript code that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so a TypeScript program can provide `Users` with an ordinary Layer, and Effeck can use services written in TypeScript.

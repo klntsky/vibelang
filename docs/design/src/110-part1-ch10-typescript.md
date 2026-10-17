@@ -24,7 +24,7 @@ import { findUser } from "./users-repo.ts"
 export function title(id: string) {
   return findUser(id).name.toUpperCase()
 }
-// Effect<string, UserNotFound | DbError, Database>
+// string!UserNotFound | DbError!Database
 ```
 
 Generic, overloaded, and aliased TypeScript functions keep their signatures. Services written in TypeScript as `Context.Service` classes or values are used exactly like abstract service classes: `Database.query(…)` works on either. A TypeScript function whose R contains a control operation is the one exception (EK4202, Chapter 9).
@@ -81,7 +81,7 @@ function publish(draft: Draft) {
   const words = draft.body.split(/\s+/).length
   return Articles.save({ slug, words, ...meta })
 }
-// Effect<Article, SyntaxError | InvalidSlug | SaveError, Articles>
+// Article!SyntaxError | InvalidSlug | SaveError!Articles
 ```
 
 | Callee | Rule | Diagnostic |
@@ -120,7 +120,7 @@ function parseLegacy(text: string) {
     catch: (cause) => new LegacyFormatError({ cause })
   })
 }
-// Effect<LegacyDoc, LegacyFormatError, never>
+// LegacyDoc!LegacyFormatError!
 ```
 
 `Effect.try` and `Effect.tryPromise` turn exceptions and rejections into a typed error; `Effect.sync` and `Effect.promise` make them defects; `Effect.callback` adapts a callback API (Chapter 6). Inside their callbacks, plain TypeScript calls are allowed, because the boundary says what an exception means. Platform APIs (EK4402) and clock reads (EK4403) are rejected there too: they belong behind an Effect module.
@@ -144,7 +144,7 @@ function charge(cartId: string, amount: number) {
     catch: (cause) => new ChargeFailed({ cartId, cause })
   })
 }
-// Effect<Charge, ChargeFailed, never>
+// Charge!ChargeFailed!
 ```
 
 HTTP itself goes through Effect's `HttpClient`, not `fetch` (Chapter 11).

@@ -20,7 +20,7 @@ function parseId(raw: string) {
   if (!/^\d+$/.test(raw)) throw new InvalidId({ raw })
   return Number(raw)
 }
-// Effect<number, InvalidId, never>
+// number!InvalidId!
 ```
 
 Errors from callees flow upward the same way. A function's E is everything it throws plus everything its callees can fail with, minus what it catches.
@@ -50,7 +50,7 @@ function lookup(raw: string) {
     return guest
   }
 }
-// Effect<User, InvalidId, Users>
+// User!InvalidId!Users
 ```
 
 To handle some errors and pass the rest on, narrow and rethrow. TypeScript's narrowing works on the caught value:
@@ -64,7 +64,7 @@ function lookupOrGuest(raw: string) {
     throw e                              // e: InvalidId here, so E is InvalidId
   }
 }
-// Effect<User, InvalidId, Users>
+// User!InvalidId!Users
 ```
 
 Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
@@ -78,7 +78,7 @@ const user = Effect.catchTag(Users.find(id), "UserNotFound", () => guest)
 A contract with `never` in E says every error is handled inside. The compiler checks it.
 
 ```ts es
-export function safeLookup(raw: string): Effect<User, never, Users> {
+export function safeLookup(raw: string): User!!Users {
   try {
     return lookupOrGuest(raw)
   } catch (e) {                // e: InvalidId

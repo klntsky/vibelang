@@ -17,7 +17,7 @@ A control operation is declared like a service, as an abstract class, but it ext
 
 ```ts es
 abstract class Approval extends Control {
-  abstract approve(request: string): Effect<boolean, ReviewBusy, never>
+  abstract approve(request: string): boolean!ReviewBusy!
 }
 
 function checkout(cartId: string) {
@@ -26,7 +26,7 @@ function checkout(cartId: string) {
   if (!ok) throw new Declined({ cartId })
   return Payments.charge(cartId)
 }
-// Effect<Receipt, ReviewBusy | Declined | PaymentError, Approval | Inventory | Payments>
+// Receipt!ReviewBusy | Declined | PaymentError!Approval | Inventory | Payments
 ```
 
 To the code that performs it, `Approval.approve` looks like any call: it returns a `boolean` or fails with `ReviewBusy`. Like a service, `Approval` appears in R until something handles it. The service rules apply: its members are abstract with full contracts, its key is derived from its module, and it cannot be extended or instantiated.
@@ -53,7 +53,7 @@ A handler that returns without calling `resume` ends the handled program with th
 
 ```ts es
 abstract class Found extends Control {
-  abstract found(cell: Cell): Effect<never, never, never>
+  abstract found(cell: Cell): never!!
 }
 
 function locate(grid: Grid, target: number) {
@@ -67,7 +67,7 @@ function locate(grid: Grid, target: number) {
     found(cell, _k) { return cell }      // stop: the open cursor is released before handle returns
   })
 }
-// Effect<Cell | undefined, never, never>
+// Cell | undefined!!
 ```
 
 `found`'s result type is `never`, so its handler cannot continue the search, and the type says so.

@@ -20,7 +20,7 @@ function parseHeader() {
   const header = Sink.take<string>(2)
   return Stream.run(source, header)
 }
-// Effect<Array<string>, never, never>
+// Array<string>!!
 // Returns ["format-v2", "length-64"].
 ```
 

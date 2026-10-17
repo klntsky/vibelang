@@ -15,7 +15,7 @@ function requireText(documentId: string, text: string) {
   if (text.trim() === "") throw new EmptyDocument({ documentId })
   return text
 }
-// Effect<string, EmptyDocument, never>
+// string!EmptyDocument!
 ```
 
 `Data.Error` creates an error class with typed fields and Effect's yieldable behavior. Effeck does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
@@ -29,7 +29,7 @@ function rejectDocument(documentId: string) {
   const error = emptyDocumentError(documentId) // data, not a failure
   return error()                             // calling the error fails with it
 }
-// Effect<never, EmptyDocument, never>
+// never!EmptyDocument!
 ```
 
 `new` only constructs, and a call returning an error instance returns data. Calling the held error runs its failure behavior, just as `throw error` does.
@@ -47,7 +47,7 @@ function title(text: string) {
   if (text.length > 80) throw new TitleTooLong({ length: text.length })
   return text
 }
-// Effect<string, EmptyTitle | TitleTooLong, never>
+// string!EmptyTitle | TitleTooLong!
 ```
 
 An `error` declaration is a class that extends the global `TaggedError`, Effect's `Data.TaggedError`, which needs no import. Every instance has a readonly `_tag` equal to the class name, and the class names the instance type as well as constructing values. Use `Schema.TaggedError` when an error also needs schema-based serialization.
@@ -60,7 +60,7 @@ Choose distinct tags for distinct error cases. Tag-based matching compares strin
 function displayTitle(text: string) {
   return Effect.catchTag(title(text), "EmptyTitle", () => "Untitled")
 }
-// Effect<string, TitleTooLong, never>
+// string!TitleTooLong!
 
 function editableTitle(text: string) {
   try {
@@ -70,7 +70,7 @@ function editableTitle(text: string) {
     throw error
   }
 }
-// Effect<string, TitleTooLong, never>
+// string!TitleTooLong!
 ```
 
 Both versions remove `EmptyTitle` from `E` while preserving `TitleTooLong`. `Effect.catchTags` supports one handler per tag when several cases need different responses. These remain typed failures even though the error classes also support generators in TypeScript.

@@ -18,10 +18,10 @@ function readRow() {
 function sandboxedRow() {
   return Effect.sandbox(() => readRow())
 }
-// Effect<never, Cause.Cause<InvalidRow>, never>
+// never!Cause.Cause<InvalidRow>!
 ```
 
-Import `Cause` from `effect` when naming the contract explicitly. `sandbox` changes `Effect<A, E, R>` into `Effect<A, Cause.Cause<E>, R>`. A defect in the original computation becomes a `Die` reason inside a typed cause value rather than a defect reason at this outer level.
+Import `Cause` from `effect` when naming the contract explicitly. `sandbox` changes `A!E!R` into `A!Cause.Cause<E>!R`. A defect in the original computation becomes a `Die` reason inside a typed cause value rather than a defect reason at this outer level.
 
 ## Inspecting individual reasons
 
@@ -69,7 +69,7 @@ function readWithInspection() {
     return Effect.failCause(cause)
   }
 }
-// Effect<never, InvalidRow, never>
+// never!InvalidRow!
 ```
 
 `Effect.failCause(cause)` restores the original failure model, including any defects and interruptions. `throw cause` would instead keep the cause object as a typed error. For a single inspection or recovery step, `Effect.catchCause(() => readRow(), handler)` avoids changing the error channel first.

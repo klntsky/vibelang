@@ -22,7 +22,7 @@ function pauseBeforeRetry() {
 const backoff = Schedule.exponential("50 millis")
 ```
 
-`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `Effect<File, IOError, Scope>`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. `Clock`, `Duration`, `Schedule`, and every other module of `effect`'s root need no import either, and neither do `flow` and `identity`.
+`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `File!IOError!Scope`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. `Clock`, `Duration`, `Schedule`, and every other module of `effect`'s root need no import either, and neither do `flow` and `identity`.
 
 JavaScript's own globals keep their names. `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules with those names under another name:
 
@@ -43,7 +43,7 @@ function expirationWindow() {
   const short = Duration.seconds(15)
   return Duration.toMillis(short)
 }
-// Effect<number, never, never>
+// number!!
 ```
 
 Effect exposes operations as module functions. Call them with their data argument or use their curried form in `pipe` where available. An Effect pipeline starts with a program, as in `pipe(() => work(), Effect.timeout("1 second"))`.
@@ -57,7 +57,7 @@ Effeck's global names are source conveniences. They refer to Effect and language
 ## Reusable operators
 
 ```ts
-function withinSecond<A, E, R>(program: () => Effect<A, E, R>) {
+function withinSecond<A, E, R>(program: () => A!E!R) {
   return Effect.timeout(program, "1 second")
 }
 

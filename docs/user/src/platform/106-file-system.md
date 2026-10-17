@@ -9,7 +9,7 @@ function readSettings() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./settings.json")
 }
-// Effect<string, PlatformError.PlatformError, FileSystem.FileSystem>
+// string!PlatformError.PlatformError!FileSystem.FileSystem
 ```
 
 `FileSystem` is the imported module; `FileSystem.FileSystem` is its service key. `Effect.service` retrieves the implementation and adds that service to R. `readFileString` returns text on success and reports a `PlatformError` as an expected failure.

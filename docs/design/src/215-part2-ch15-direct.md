@@ -99,11 +99,11 @@ class Money implements Equal.Equal {
 #### Recursion
 
 ```ts es
-function sumTo(n: number): Effect<number, never, never> {
+function sumTo(n: number): number!! {
   return n === 0 ? 0 : n + sumTo(n - 1)
 }
 
-function walk(node: TreeNode): Effect<number, never, Nodes> {
+function walk(node: TreeNode): number!!Nodes {
   let total = node.size
   for (const child of Nodes.children(node)) total += walk(child)
   return total

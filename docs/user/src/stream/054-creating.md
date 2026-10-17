@@ -45,7 +45,7 @@ const fromBatches = Stream.fromArrays([11, 22], [33])
 const fromSet = Stream.fromIterable(new Set(["east", "west"]))
 
 abstract class Catalog {
-  abstract codes(): Effect<ReadonlyArray<string>, never, never>
+  abstract codes(): ReadonlyArray<string>!!
 }
 
 const codes = Stream.fromIterableEffect(() => Catalog.codes())

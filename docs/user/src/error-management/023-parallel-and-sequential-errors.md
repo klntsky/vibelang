@@ -60,7 +60,7 @@ function validatePorts() {
     return port
   })
 }
-// Effect<number[], [InvalidPort, ...InvalidPort[]], never>
+// number[]![InvalidPort, ...InvalidPort[]]!
 ```
 
 Validation produces one typed failure containing a collection of domain errors. That is different from several runtime cause reasons. Use `Effect.partition` instead when you want successful values alongside the collected errors.

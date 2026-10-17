@@ -72,7 +72,7 @@ function withProgress(id: string) {
   sendProgressEmail(id)
   return Fiber.join(pending)          // waits for it; fails if it failed
 }
-// Effect<Report, ReportError | MailError, Reports | Mailer>
+// Report!ReportError | MailError!Reports | Mailer
 ```
 
 `fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `Fiber.join`. For a longer lifetime, say so with Effect's combinators: `Effect.forkScoped` ties the fiber to the caller's scope and adds `Scope` to R, `Effect.forkChild` ties it to the current fiber, and `Effect.forkDetach` ties it to nothing.

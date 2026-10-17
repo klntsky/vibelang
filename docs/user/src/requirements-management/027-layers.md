@@ -11,16 +11,16 @@ abstract class Settings {
   abstract readonly prefix: string
 }
 abstract class Printer {
-  abstract print(text: string): Effect<void, never, never>
+  abstract print(text: string): void!!
 }
 abstract class Reports {
-  abstract render(title: string): Effect<string, never, never>
+  abstract render(title: string): string!!
 }
 
 function report(title: string) {
   return Reports.render(title)
 }
-// Effect<string, never, Reports>
+// string!!Reports
 ```
 
 The implementation graph on this page has `Printer` depend on `Settings`, and `Reports` depend on both. `Layer.Layer<Out, E, In>` describes the services produced, construction failures, and construction requirements. The global `Layer` namespace provides the constructors and that type.
@@ -110,7 +110,7 @@ function main() {
     return [first, second]
   }, AppLive)
 }
-// Effect<string[], never, never>
+// string[]!!
 
 function withBuiltContext() {
   return Effect.scoped(() => {
@@ -154,9 +154,9 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 
 ```ts
 abstract class Banner {
-  abstract text(title: string): Effect<string, never, never>
+  abstract text(title: string): string!!
 
-  static make(): Effect<Banner, never, Settings> {
+  static make(): Banner!!Settings {
     const settings = Settings()
     return { text: (title) => `${settings.prefix}: ${title}` }
   }

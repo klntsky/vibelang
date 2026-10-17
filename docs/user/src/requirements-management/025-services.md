@@ -8,11 +8,11 @@ A service gives a program a named capability without passing an implementation t
 
 ```ts
 abstract class Sequence {
-  abstract next(): Effect<number, never, never>
+  abstract next(): number!!
 }
 
 abstract class Reporter {
-  abstract write(message: string): Effect<void, never, never>
+  abstract write(message: string): void!!
 }
 ```
 
@@ -26,20 +26,20 @@ The compiler gives each service nominal identity and derives its key from packag
 function nextLabel() {
   return `ticket-${Sequence.next()}`
 }
-// Effect<string, never, Sequence>
+// string!!Sequence
 
 function fixedLabel() {
   return Effect.provideService(nextLabel(), Sequence, {
     next: () => 17
   })
 }
-// Effect<string, never, never>
+// string!!
 
 function readImplementation() {
   const sequence = Sequence()
   return sequence.next()
 }
-// Effect<number, never, Sequence>
+// number!!Sequence
 ```
 
 `Sequence.next()` looks up the service and runs its method. `Sequence()` returns the implementation itself, which is useful for capturing it or reading value members. A runner needs a program whose remaining requirements have been supplied.
@@ -52,7 +52,7 @@ abstract class Settings {
 function endpoint(path: string) {
   return `${Settings().baseUrl}/${path}`
 }
-// Effect<string, never, Settings>
+// string!!Settings
 ```
 
 Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members are trusted; a plain TypeScript member from another package needs `@effeck trusted`, or the call is EK4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
@@ -79,7 +79,7 @@ function announceTicket() {
   Reporter.write(`Created ${label}`)
   return label
 }
-// Effect<string, never, Sequence | Reporter>
+// string!!Sequence | Reporter
 
 const SequenceTest = Layer.succeed(Sequence, { next: () => 17 })
 const ReporterTest = Layer.succeed(Reporter, { write: (_message) => {} })
@@ -114,7 +114,7 @@ function optionalAnnouncement(message: string) {
   reporter.value.write(message)
   return true
 }
-// Effect<boolean, never, never>
+// boolean!!
 ```
 
 `serviceOption` returns `None` when an application service is absent and `Some(implementation)` when it is present. The lookup does not add that service to `R`. Calling a found implementation still carries any method errors or call-time requirements declared by the service.

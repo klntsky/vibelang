@@ -83,7 +83,7 @@ Programs are values, so you can put them in variables, return them, and pass the
 function makeSync(store: Store) {
   return () => syncInventory(store)            // returns a program
 }
-// Effect<() => Effect<SyncReport, SyncError, Inventory>, never, never>
+// (() => SyncReport!SyncError!Inventory)!!
 
 function syncEverything(stores: ReadonlyArray<Store>) {
   const syncAll = stores.map(makeSync)                    // an array of programs; nothing ran

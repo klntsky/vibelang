@@ -10,7 +10,7 @@ error MissingProduct {
 }
 
 abstract class Products {
-  abstract price(sku: string): Effect<number, MissingProduct, never>
+  abstract price(sku: string): number!MissingProduct!
 }
 
 function makePrices() {
@@ -20,7 +20,7 @@ function makePrices() {
     lookup: (sku: string) => Products.price(sku)
   })
 }
-// Effect<Cache.Cache<string, number, MissingProduct>, never, Products>
+// Cache.Cache<string, number, MissingProduct>!!Products
 ```
 
 The default cache captures lookup services when it is created. `Cache.get(cache, sku)` then either reads an entry or calls the captured lookup. Creating a cache per request prevents sharing across requests; allocate it in a service layer when the cache belongs to the application.

@@ -16,7 +16,7 @@ export const displayName = Effect.fnUntraced(function* (id: string) {
 
 ```ts dts
 export declare const displayName:
-  (id: string) => Effect.Effect<string, UserNotFound, Users>
+  (id: string) => string!UserNotFound!Users
 ```
 
 #### One obligation
@@ -44,7 +44,7 @@ function profile(raw: string) {
     Metrics.increment("profile")
   }
 }
-// Effect<User, InvalidId, Users | Metrics>
+// User!InvalidId!Users | Metrics
 ```
 
 ```ts gen

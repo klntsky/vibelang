@@ -9,7 +9,7 @@ export function readGreeting() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./greeting.txt")
 }
-// Effect<string, PlatformError.PlatformError, FileSystem.FileSystem>
+// string!PlatformError.PlatformError!FileSystem.FileSystem
 ```
 
 `FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use these interfaces instead of calling `node:*` APIs or browser globals from `.effeck` files. Portability depends on the target actually implementing the services your program needs; a browser does not automatically gain arbitrary disk access.

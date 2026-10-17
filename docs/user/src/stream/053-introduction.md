@@ -8,7 +8,7 @@
 error FeedUnavailable
 
 abstract class Feed {
-  abstract next(): Effect<string, FeedUnavailable, never>
+  abstract next(): string!FeedUnavailable!
 }
 
 const messages = Stream.fromEffectRepeat(() => Feed.next())
@@ -17,7 +17,7 @@ const messages = Stream.fromEffectRepeat(() => Feed.next())
 function preview() {
   return Stream.runCollect(Stream.take(messages, 4))
 }
-// Effect<Array<string>, FeedUnavailable, Feed>
+// Array<string>!FeedUnavailable!Feed
 ```
 
 `Stream.Stream<A, E, R>` emits elements of type `A`, can fail with `E`, and needs services `R` during consumption. A failure ends that run of the source unless an operator recovers. Constructing `messages` does not look up `Feed` or request a message.
@@ -42,7 +42,7 @@ The source has no natural end, but the consumer requests only five elements. The
 function oneResult() {
   return [12, 24, 36]
 }
-// Effect<Array<number>, never, never>
+// Array<number>!!
 
 const noReadings = Stream.empty
 const oneReading = Stream.succeed(12)

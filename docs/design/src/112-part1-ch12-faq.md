@@ -13,7 +13,7 @@ function loadProfile(id: string) {
   })
   return { user, avatar }
 }
-// Effect<{ user: User; avatar: Avatar }, UserNotFound | AvatarError, Users>
+// { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
 A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await`, so there are no "colored" functions: every function can wait. A Promise from a TypeScript library crosses with `Effect.tryPromise`, or with `Effect.promise` when a rejection is a bug. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
@@ -51,7 +51,7 @@ function parseId(raw: string) {
   if (raw.length > 64) Effect.die(new Error("caller bug"))  // a defect, on purpose
   return Number(raw)
 }
-// Effect<number, InvalidId, never>
+// number!InvalidId!
 ```
 
 `throw` is `Effect.fail`. Every thrown value joins E with its type and can be caught, including `throw new Error("unreachable")`, which inside `Effect.gen` would be a defect. To signal a bug, die explicitly with `Effect.die`. Defects also come from exceptions no contract lists, and from `Effect.orDie(() => …)` (Chapter 3).
@@ -66,7 +66,7 @@ function readPort(text: string) {
     return 8080
   }
 }
-// Effect<number, never, never>
+// number!!
 ```
 
 JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, an Effeck `catch` does not see it, and a `catch` that could only have caught such exceptions is reported, EK2004 (Chapter 3).
@@ -85,7 +85,7 @@ function tryCharge(cartId: string) {
   const outcome = Effect.result(Payments.charge(cartId))    // Result<Receipt, PaymentError>
   return Result.isSuccess(outcome) ? outcome.success : undefined
 }
-// Effect<Receipt | undefined, never, Payments>
+// Receipt | undefined!!Payments
 ```
 
 `Option` and `Result` (Effect 4's name for `Either`) are plain data, imported from `effect` and used as in TypeScript. `Effect.result` and `Effect.option` turn a failure into a value; `throw` turns a value back into a failure. `Option.gen` and `Result.gen` take generators, so they stay in `.ts` files.
@@ -102,7 +102,7 @@ function register(body: unknown) {
   const signup = Schema.decodeUnknownEffect(Signup)(body)    // fails with SchemaError
   return Accounts.create(signup.email, signup.plan)
 }
-// Effect<Account, SchemaError | AccountError, Accounts>
+// Account!SchemaError | AccountError!Accounts
 ```
 
 `Schema` is in the prelude and unchanged. A decoder that returns an `Effect` runs when called and fails with a typed `SchemaError`. The other forms (`decodeUnknownSync`, `is`) are trusted functions whose exceptions are defects, so `.effeck` code prefers the `Effect` forms. Errors that must cross a process boundary are `Schema.TaggedError` classes.
@@ -115,7 +115,7 @@ function digestActive(users: Stream.Stream<User, DbError>) {
     if (user.active) Mailer.digest(user)
   }
 }
-// Effect<void, DbError | MailError, Mailer>
+// void!DbError | MailError!Mailer
 
 function firstErrorLines(path: string) {
   return Stream.runCollect(Stream.take(Stream.filter(lines(path), isError), 10))
@@ -271,7 +271,7 @@ function countVisits(paths: ReadonlyArray<string>) {
   }, { concurrency: 4 })
   return Ref.get(visits)
 }
-// Effect<number, VisitError, Visits>
+// number!VisitError!Visits
 ```
 
 Local variables work inside one function, as in any JavaScript. State shared between fibers uses Effect's `Ref`, `SynchronizedRef`, and `SubscriptionRef`, unchanged: `Ref.make(0)` returns an `Effect`, so the call runs it and gives you the `Ref`.

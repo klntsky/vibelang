@@ -8,7 +8,7 @@ A consumer runs a Stream and returns one result. Inside an Effeck function, call
 function collectLabels() {
   return Stream.runCollect(Stream.make("north", "south", "west"))
 }
-// Effect<Array<string>, never, never>
+// Array<string>!!
 ```
 
 `runCollect` returns an array in emission order. It retains every element, so use it for finite results that fit in memory. It fails if the source fails; it does not return a partial array as a successful result.
@@ -22,7 +22,7 @@ function announce() {
     Effect.sleep("20 millis")
   })
 }
-// Effect<void, never, never>
+// void!!
 ```
 
 `runForEach` runs the callback sequentially for each element and discards its result. Callback errors and service requirements join those of the source. For concurrent preparation, use `Stream.mapEffect` with a concurrency limit before consuming.

@@ -26,7 +26,7 @@ function download() {
     return "archive ready"
   }, policy)
 }
-// Effect<string, Throttled, never>
+// string!Throttled!
 ```
 
 Parse the response's retry hint into a duration at the HTTP boundary. The policy compares that duration with the backoff for the same failure, so the first two waits above are two seconds each. Three permitted retries mean at most four requests, and exhausting them propagates the last `Throttled` failure.
@@ -42,7 +42,7 @@ error PollLimit
 
 function waitForArchive() {
   let checks = 0
-  function check(): Effect<Status, never, never> {
+  function check(): Status!! {
     checks++
     return checks < 3
       ? { _tag: "Pending", pollAfter: Duration.millis(checks * 300) }
@@ -61,7 +61,7 @@ function waitForArchive() {
   if (result._tag === "Pending") throw new PollLimit()
   return result.path
 }
-// Effect<string, PollLimit, never>
+// string!PollLimit!
 ```
 
 A pending response is a success, so it feeds `repeat` rather than `retry`. This simulation waits 300 milliseconds, then 600 milliseconds, and returns the path on its third check. The count limit permits at most six checks; reaching it with another pending result becomes `PollLimit`.

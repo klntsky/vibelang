@@ -6,11 +6,11 @@ export interface User {
 export error UserNotFound { id: string }
 
 export abstract class Directory {
-  abstract lookup(id: string): Effect<User | undefined, never, never>
+  abstract lookup(id: string): User | undefined!!
 }
 
 export abstract class Users {
-  abstract find(id: string): Effect<User, UserNotFound, never>
+  abstract find(id: string): User!UserNotFound!
 }
 
 export const DirectoryLive = Layer.succeed(Directory, {

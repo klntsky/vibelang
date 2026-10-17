@@ -18,7 +18,7 @@ function exportRows(accepted: boolean) {
     Effect.log("Export finished")
   }
 }
-// Effect<string, ExportRejected, never>
+// string!ExportRejected!
 ```
 
 `finally` runs after success, a typed failure, a defect, or interruption. It also runs after early return and when a handler abandons the protected computation. Effeck gives it Effect cleanup semantics, including deferred interruption while cleanup runs.
@@ -67,8 +67,8 @@ interface Lease {
 }
 
 abstract class LeaseStore {
-  abstract acquire(): Effect<Lease, never, never>
-  abstract release(lease: Lease): Effect<void, never, never>
+  abstract acquire(): Lease!!
+  abstract release(lease: Lease): void!!
 }
 
 function withLease() {
@@ -85,7 +85,7 @@ function withLease() {
     }
   )
 }
-// Effect<string, never, LeaseStore>
+// string!!LeaseStore
 ```
 
 `acquireUseRelease` protects acquisition and release while allowing normal interruption during use. Release runs exactly once after successful acquisition, even when use fails or is cancelled; it is not called if acquisition fails. A failing acquisition must clean up any partial work it created before failing.
@@ -102,13 +102,13 @@ function acquireLease() {
     (lease) => store.release(lease)
   )
 }
-// Effect<Lease, never, LeaseStore | Scope>
+// Lease!!LeaseStore | Scope
 
 function leaseId() {
   using lease = acquireLease()
   return lease.id
 }
-// Effect<string, never, LeaseStore>
+// string!!LeaseStore
 
 const LeaseStoreTest = Layer.succeed(LeaseStore, {
   acquire: () => ({ id: "test-lease" }),

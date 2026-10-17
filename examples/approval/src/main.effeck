@@ -1,5 +1,5 @@
 export abstract class Approval extends Control {
-  abstract approve(request: string): Effect<boolean, never, never>
+  abstract approve(request: string): boolean!!
 }
 
 // The business program knows neither the reviewer nor the approval policy.

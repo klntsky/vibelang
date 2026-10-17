@@ -80,7 +80,7 @@ function consumeChecked() {
 error Offline
 
 abstract class Sensor {
-  abstract read(): Effect<number, Offline, never>
+  abstract read(): number!Offline!
 }
 
 const readings = Stream.retry(

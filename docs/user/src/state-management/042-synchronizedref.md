@@ -39,7 +39,7 @@ function inspect() {
 error RefreshFailed
 
 abstract class Versions {
-  abstract loadAfter(version: number): Effect<number, RefreshFailed, never>
+  abstract loadAfter(version: number): number!RefreshFailed!
 }
 
 function refreshTwice() {
@@ -50,7 +50,7 @@ function refreshTwice() {
   }
   return Effect.all([refresh(), refresh()], { concurrency: 2 })
 }
-// Effect<[number, number], RefreshFailed, Versions>
+// [number, number]!RefreshFailed!Versions
 ```
 
 The second update reads the first update's committed version before calling `loadAfter`. If a callback fails, it does not commit its replacement, and the lock is released. This protects the reference's update sequence; it does not roll back remote side effects, coordinate several references, or make recursive updates to the same reference safe.

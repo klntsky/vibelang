@@ -13,7 +13,7 @@ function buildDashboard() {
   Effect.logInfo("preparing dashboard frame")
   return Fiber.join(chart)
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `fork` starts a child and returns its handle without waiting for its result. `Fiber.join` waits and returns the success value or propagates the child's failure. Unlike an ordinary call, the fork lets the parent continue while its child is waiting.

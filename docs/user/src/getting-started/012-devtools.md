@@ -10,7 +10,7 @@ function sample() {
   Effect.sleep("5 millis")
   return "sample"
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 Install `effeck` as a dev dependency. Its `effeck --lsp --stdio` command starts the language server from the project's compiler, with one server for `.effeck` and `.ts` files.
@@ -43,7 +43,7 @@ function accepted(value: number) {
   if (value < 0) throw new Rejected()
   return value + 1
 }
-// Effect<number, Rejected, never>
+// number!Rejected!
 ```
 
 Inspect `A`, `E`, and `R` when changing a function. A local call returns the success value, while the function's complete contract also records escaping failures and unmet services. Generated declarations expose that complete Effect contract to TypeScript consumers.
@@ -55,7 +55,7 @@ Hover over a function to see its inferred `Effect<A, E, R>`; hover over a call t
 ```ts
 // expect-error: EK2001
 // Rejected escapes a contract promising no failures.
-function promised(value: number): Effect<number, never, never> {
+function promised(value: number): number!! {
   return accepted(value)
 }
 ```
@@ -74,7 +74,7 @@ or `yield*` inside `.effeck`.
 ## Configure compiler checks
 
 ```ts
-function checked(value: number): Effect<number, Rejected, never> {
+function checked(value: number): number!Rejected! {
   return accepted(value)
 }
 ```

@@ -153,6 +153,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D124 | Setup relinks effeck launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
 | D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
 | D126 | `error NotFound { id: string }` declares a tagged error class with readonly fields | Fewer tokens for the most common declaration | 3 |
+| D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
 

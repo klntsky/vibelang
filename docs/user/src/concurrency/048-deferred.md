@@ -12,7 +12,7 @@ error StartupFailed {
 function makeStartupSignal() {
   return Deferred.make<string, StartupFailed>()
 }
-// Effect<Deferred.Deferred<string, StartupFailed>, never, never>
+// Deferred.Deferred<string, StartupFailed>!!
 ```
 
 The new deferred starts empty and contains neither a success nor a failure. Creating it is an Effect operation and belongs inside a program. Pass the same handle to the producer and every waiter that should share its result.

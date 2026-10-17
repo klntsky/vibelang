@@ -15,7 +15,7 @@ function price(sku: string) {
   if (sku !== "notebook") throw new UnknownProduct({ sku })
   return 12
 }
-// Effect<number, UnknownProduct, never>
+// number!UnknownProduct!
 
 function displayPrice(sku: string) {
   try {
@@ -41,7 +41,7 @@ function percentage(part: number, total: number) {
   }
   return part / total * 100
 }
-// Effect<number, never, never>
+// number!!
 ```
 
 Use this contract only when validation has already established the invariant. If users can submit an invalid total, represent that case with a typed error instead. Put a failure in `E` when callers have a useful response, such as asking for corrected input or choosing another source.

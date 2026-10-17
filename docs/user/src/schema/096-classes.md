@@ -13,7 +13,7 @@ class Package extends Schema.Class<Package>("Package")({
 function readPackage(input: unknown) {
   return Schema.decodeUnknownEffect(Package)(input)
 }
-// Effect<Package, Schema.SchemaError, never>
+// Package!Schema.SchemaError!
 ```
 
 Supply the class itself as the `Self` type, a stable identifier, and its fields. The class extends a generated base and is an ordinary data class, not an Effeck service. The identifier is available as `Package.identifier` and helps Effect recognize class instances across module reloads.
@@ -125,7 +125,7 @@ interface CrateWire {
 class Crate extends Schema.Class<Crate>("Crate")({
   count: Schema.FiniteFromString,
   children: Schema.Array(
-    Schema.suspend((): Effect<Schema.Codec<Crate, CrateWire>, never, never> => Crate)
+    Schema.suspend((): Schema.Codec<Crate, CrateWire>!! => Crate)
   )
 }) {}
 
@@ -158,7 +158,7 @@ class InsuredPackage extends Package.extend<InsuredPackage>("InsuredPackage")({
 function reportMissing(reference: string) {
   throw MissingPackage.makeEffect({ reference })
 }
-// Effect<never, MissingPackage | SchemaIssue.Issue, never>
+// never!MissingPackage | SchemaIssue.Issue!
 ```
 
 `TaggedClass` adds `_tag` with a constructor default. `Schema.TaggedError` also supplies Error behavior and a serializable schema; the constructed instance is data until thrown or called. `new` constructs it without running it; throw it for an expected failure. The example also retains the constructor's issue channel. For errors that do not need serialization, use the global `TaggedError` instead.

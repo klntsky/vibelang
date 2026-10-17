@@ -24,7 +24,7 @@ function readFirst() {
 
 ```ts
 abstract class Exporter {
-  abstract write(rows: AsyncIterable<string>): Effect<number, Error, never>
+  abstract write(rows: AsyncIterable<string>): number!Error!
 }
 
 function exportRows(source: Stream.Stream<string>) {

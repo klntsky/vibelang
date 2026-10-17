@@ -25,7 +25,7 @@ function title() {
     return cachedTitle()
   }
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 The cache is read only if the primary computation fails. Errors from the fallback become errors of `title`; handling the primary does not handle the fallback too. Ordinary catch propagates defects, interruption, and mixed causes containing either.
@@ -38,7 +38,7 @@ The expression form is `Effect.catch(() => latestTitle(), () => cachedTitle())`.
 function titleOrPlaceholder() {
   return Effect.orElseSucceed(latestTitle(), () => "No title available")
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `orElseSucceed` computes its value lazily after a typed failure. It discards every typed error from the source; select one error first when other failures need to remain visible. Its value callback is synchronous, so use an effectful recovery function when producing the fallback needs services or waiting.

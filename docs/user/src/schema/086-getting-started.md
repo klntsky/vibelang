@@ -81,7 +81,7 @@ Prefer `decodeUnknownEffect` inside Effeck: it can pause, requires the codec's d
 function send(shipment: Shipment) {
   return Schema.encodeEffect(Shipment)(shipment)
 }
-// Effect<ShipmentWire, Schema.SchemaError, never>
+// ShipmentWire!Schema.SchemaError!
 
 function sendUntrusted(input: unknown) {
   return Schema.encodeUnknownEffect(Shipment)(input)
@@ -101,7 +101,7 @@ function receiveOrExplain(input: unknown) {
     return error.message
   }
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 The parser's expected failure is a `SchemaError` with `_tag: "SchemaError"`. Its `issue` preserves the structured failure and its `message` provides readable text. `catch` handles that expected failure; defects and interruption still propagate.

@@ -13,7 +13,7 @@ function unitPrice(total: number, quantity: number) {
   if (quantity <= 0) throw new InvalidQuantity({ quantity })
   return total / quantity
 }
-// Effect<number, InvalidQuantity, never>
+// number!InvalidQuantity!
 
 const quote = () => unitPrice(72, 6)
 ```
@@ -24,14 +24,14 @@ const quote = () => unitPrice(72, 6)
 
 ```ts
 abstract class Prices {
-  abstract total(sku: string): Effect<number, InvalidQuantity, never>
+  abstract total(sku: string): number!InvalidQuantity!
 }
 
 function receipt(sku: string) {
   const amount = Prices.total(sku)
   return `Total: ${amount}`
 }
-// Effect<string, InvalidQuantity, Prices>
+// string!InvalidQuantity!Prices
 
 const PricesTest = Layer.succeed(Prices, { total: (_sku) => 18 })
 

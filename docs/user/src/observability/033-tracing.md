@@ -24,7 +24,7 @@ function renderReport(format: string) {
     return `report.${format}`
   }, "render-report", { attributes: { "report.format": format } })
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `withSpan` starts the span before the program runs and ends it when that program exits. It preserves the success and failure behavior of the program. A stable operation name groups comparable work; put variable details into attributes instead of inventing a new span name per request.

@@ -80,7 +80,7 @@ interface DepotTree {
 }
 const DepotTree = Schema.Struct({
   name: Schema.String,
-  branches: Schema.Array(Schema.suspend((): Effect<Schema.Codec<DepotTree>, never, never> => DepotTree))
+  branches: Schema.Array(Schema.suspend((): Schema.Codec<DepotTree>!! => DepotTree))
 }).annotate({ identifier: "DepotTree" })
 
 function treeDocument() {

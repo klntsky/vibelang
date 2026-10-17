@@ -17,7 +17,7 @@ const describe = pipe(
 function describeInput(input: number | string) {
   return describe(input)
 }
-// Effect<string, never, never>
+// string!!
 
 function describeJob(input: { readonly state: string; readonly attempts: number }) {
   return pipe(

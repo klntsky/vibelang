@@ -13,12 +13,12 @@ function registeredWork() {
   })
   return "Prepared"
 }
-// Effect<string, never, Scope>
+// string!!Scope
 
 function runRegisteredWork() {
   return Effect.scoped(() => registeredWork())
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `Effect.addFinalizer` attaches cleanup to the current scope, not to the function's return. `Scope` is in the prelude: it names the module, and in a contract it means `Scope.Scope`, so no import is needed. `Effect.scoped` creates a scope, runs the program, and closes that scope with its outcome. On success the finalizer receives a success exit; typed failure, defects, and interruption produce failure exits.
@@ -57,14 +57,14 @@ function openBuffer(label: string) {
     (buffer) => Effect.log(`Closed ${buffer.label}`)
   )
 }
-// Effect<{ label: string }, never, Scope>
+// { label: string }!!Scope
 
 function copyLabels() {
   using source = openBuffer("source")
   using destination = openBuffer("destination")
   return `${source.label} -> ${destination.label}`
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `acquireRelease` makes acquisition uninterruptible by default and registers release before exposing the resource. Its third argument `{ interruptible: true }` permits cancellation during acquisition; `using` keeps that choice. Successful acquisition gets exactly one release when its scope closes; failed acquisition does not register one. Release order here is destination, then source.
@@ -88,7 +88,7 @@ function mixedOwnership() {
   using local = openBuffer("local")
   Effect.log(`${callerOwned.label}/${local.label}`)
 }
-// Effect<void, never, Scope>
+// void!!Scope
 
 function observeOwnership() {
   Effect.scoped(() => {
@@ -112,9 +112,9 @@ error SetupFailed {
 }
 
 abstract class ProjectSteps {
-  abstract create(stage: string): Effect<string, SetupFailed, never>
-  abstract remove(id: string): Effect<void, never, never>
-  abstract finish(storage: string, index: string): Effect<string, SetupFailed, never>
+  abstract create(stage: string): string!SetupFailed!
+  abstract remove(id: string): void!!
+  abstract finish(storage: string, index: string): string!SetupFailed!
 }
 
 function reserveStep(stage: string) {
@@ -126,7 +126,7 @@ function reserveStep(stage: string) {
     }
   )
 }
-// Effect<string, SetupFailed, ProjectSteps | Scope>
+// string!SetupFailed!ProjectSteps | Scope
 
 function setupProject() {
   return Effect.scoped(() => {
@@ -135,7 +135,7 @@ function setupProject() {
     return ProjectSteps.finish(storage, index)
   })
 }
-// Effect<string, SetupFailed, ProjectSteps>
+// string!SetupFailed!ProjectSteps
 ```
 
 Both reservations register in the same scope because neither uses lexical `using`. A successful scope exit keeps the created artifacts. If index creation fails, storage is removed; if `finish` fails, index is removed before storage.

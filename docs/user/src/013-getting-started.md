@@ -43,7 +43,7 @@ function main() {
   Effect.log(label)
   return label.length
 }
-// Effect<number, never, never>
+// number!!
 ```
 
 Read [The Effect Type](getting-started/003-the-effect-type.md) to understand this function's contract, [Creating Effects](getting-started/005-creating-effects.md) to add failures, and [Running Effects](getting-started/009-running-effects.md) to execute it at an application boundary. Each guide explains a use case. The [Effect 4 API reference](https://effect.website/docs/v4/api) lists library signatures, whose program arguments become zero-argument functions in Effeck.

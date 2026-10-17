@@ -14,7 +14,7 @@ const Settings = Schema.Struct({
 function readSettings(input: unknown) {
   return Schema.decodeUnknownEffect(Settings)(input)
 }
-// Effect<typeof Settings.Type, Schema.SchemaError, never>
+// typeof Settings.Type!Schema.SchemaError!
 ```
 
 Enable `strict` in the project's compiler options. Enable `exactOptionalPropertyTypes` as well to distinguish an absent `hint` from a present `hint: undefined`. `optionalKey` accepts the absent key but rejects explicit `undefined`; turning the compiler option off does not change that runtime rule. Effeck v0 uses the TypeScript 7.1 checker and supports `effect@4.0.5` exactly. Install `effeck-runtime` and `effect@4.0.5` as dependencies and `effeck` as a dev dependency. Run `effeck --noEmit` to check `.effeck` and `.ts` files together; `effeck` also emits JavaScript and declarations.
@@ -63,7 +63,7 @@ function inspectBoundary(incoming: unknown, outgoing: unknown) {
   const text = Schema.encodeUnknownEffect(Schema.FiniteFromString)(outgoing)
   return { quantity, text }
 }
-// Effect<{ quantity: number; text: string }, Schema.SchemaError, never>
+// { quantity: number; text: string }!Schema.SchemaError!
 ```
 
 The `Unknown` interpreters validate the input before converting it. Decoding expects a string here and produces a finite number; encoding expects a finite number and produces a string. The typed `decodeEffect` and `encodeEffect` variants constrain their arguments statically and still validate them at runtime.

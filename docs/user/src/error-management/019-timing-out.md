@@ -15,7 +15,7 @@ function buildPreview() {
 function previewWithDeadline() {
   return Effect.timeout(buildPreview(), "500 millis")
 }
-// Effect<string, Cause.TimeoutError, never>
+// string!Cause.TimeoutError!
 ```
 
 `Effect.timeout` adds `Cause.TimeoutError` to `E`; import `Cause` from `effect` if you write that type explicitly. A timely success returns its original value, and a domain failure before the deadline keeps its original error. The source is a program function so the timer surrounds the work itself.
@@ -64,7 +64,7 @@ function requiredPreview(documentId: string) {
     orElse: () => { throw new PreviewDeadline({ documentId }) }
   })
 }
-// Effect<string, PreviewDeadline, never>
+// string!PreviewDeadline!
 ```
 
 The alternative runs lazily after the timer wins. It can use services, fail, or return another success type, and those channels join the overall contract. Use a typed failure for an expected deadline; a defect is appropriate only when timing out breaks an invariant.

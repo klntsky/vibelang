@@ -11,7 +11,7 @@ function greet(name: string) {
   if (name.trim() === "") throw new EmptyName()
   return `Welcome, ${name.trim()}`
 }
-// Effect<string, EmptyName, never>
+// string!EmptyName!
 ```
 
 The contract tells a caller that `greet` returns a string, can fail with `EmptyName`, and needs no services. The compiler infers all three channels from the body. Expected errors remain visible as they pass through callers.

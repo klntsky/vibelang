@@ -111,7 +111,7 @@ Option.fromNullishOr("") // Some containing ""
 function requiredName(name: Option.Option<string>) {
   return Effect.fromOption(name)
 }
-// Effect<string, Cause.NoSuchElementError, never>
+// string!Cause.NoSuchElementError!
 
 function requiredPair() {
   return Effect.all([

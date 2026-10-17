@@ -22,7 +22,7 @@ function publicQuantity(value: number) {
     (error) => `Quantity must be positive: ${error.value}`
   )
 }
-// Effect<number, string, never>
+// number!string!
 
 function quantityMessage(value: number) {
   return Effect.mapBoth(() => quantity(value), {
@@ -30,7 +30,7 @@ function quantityMessage(value: number) {
     onSuccess: (count) => `${count} units`
   })
 }
-// Effect<string, string, never>
+// string!string!
 ```
 
 `mapError` changes `E` and preserves successes. `mapBoth` maps each outcome channel separately; it does not turn failures into successes. The callbacks must be eligible synchronous functions; use a catch block or an effectful operator when a transformation needs Effect operations.
@@ -105,7 +105,7 @@ function inspectQuantity(value: number) {
 function quantityOrErrorValue(value: number) {
   return Effect.catch(() => quantity(value), (error) => error)
 }
-// Effect<number | InvalidQuantity, never, never>
+// number | InvalidQuantity!!
 ```
 
 `result` exposes typed errors as `Result` data; `exit` captures the complete outcome with its cause. The last example instead puts either the original number or the original error directly into one success union. Removing `E` this way does not mean an error has been resolved at the application level.
@@ -116,7 +116,7 @@ function quantityOrErrorValue(value: number) {
 function rejectedQuantity() {
   return Effect.flip(() => quantity(0))
 }
-// Effect<InvalidQuantity, number, never>
+// InvalidQuantity!number!
 ```
 
 `flip` makes typed errors successful values and successful values typed failures. A cause without an expected failure still propagates; a mixed cause containing one can become a success and lose its other reasons. This is useful for inspecting an error in a focused test, while `mapError` and catch usually express production transformations more clearly.

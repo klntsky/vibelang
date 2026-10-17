@@ -101,7 +101,7 @@ function requireDocument(id: string) {
   if (id === "") throw new DocumentMissing({ id })
   return { id }
 }
-// Effect<{ id: string }, DocumentMissing, never>
+// { id: string }!DocumentMissing!
 
 function documentOrDraft(id: string) {
   try {
@@ -128,7 +128,7 @@ function decodeDocument(text: string) {
     catch: (cause) => new DocumentDecodeError({ cause })
   })
 }
-// Effect<any, DocumentDecodeError, never>
+// any!DocumentDecodeError!
 ```
 
 A `cause` field preserves the original exception using native error-cause support. It is separate from Effect's `Cause`, which describes an entire execution failure. Preserve the original error for diagnosis, and avoid adding document contents or credentials to diagnostic fields.

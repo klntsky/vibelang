@@ -37,7 +37,7 @@ function sampleOutcomes() {
 function constantSuccess() {
   return Exit.succeed(12)
 }
-// Effect<Exit.Exit<number>, never, never>
+// Exit.Exit<number>!!
 ```
 
 `Exit.succeed` and `Exit.failCause` construct exit data, including at a module's top level. `Exit.succeed(12)` gives a success exit containing `12`, and `Exit.failCause(cause)` gives a failure exit containing the cause. Neither raises a failure. Use `Effect.exit` to run a program and capture its actual outcome instead.
@@ -62,7 +62,7 @@ function asResult<A, E>(outcome: Exit.Exit<A, E>) {
   if (Exit.isSuccess(outcome)) return Result.succeed(outcome.value)
   return Result.fail(outcome.cause)
 }
-// Effect<Result.Result<A, Cause.Cause<E>>, never, never>
+// Result.Result<A, Cause.Cause<E>>!!
 ```
 
 An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result<A, E>` alone cannot express the additional defect and interruption reasons. Keep the full cause when moving an execution outcome into another data structure.
@@ -73,7 +73,7 @@ An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result
 function replay<A, E>(outcome: Exit.Exit<A, E>) {
   return outcome()
 }
-// Effect<A, E, never>
+// A!E!
 ```
 
 Calling a held exit runs its constant outcome. Success returns the stored value; failure propagates the stored cause, without repeating the original work. Taking an exit with `Effect.exit` and later calling it therefore separates inspection from propagation.

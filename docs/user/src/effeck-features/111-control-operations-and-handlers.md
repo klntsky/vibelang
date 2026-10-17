@@ -9,7 +9,7 @@ A control operation lets a handler decide how the caller continues. Use one when
 export error ReviewBusy { request: string }
 
 export abstract class Approval extends Control {
-  abstract approve(request: string): Effect<boolean, ReviewBusy, never>
+  abstract approve(request: string): boolean!ReviewBusy!
 }
 
 export function release(version: string) {
@@ -17,7 +17,7 @@ export function release(version: string) {
   if (!Approval.approve(`deploy ${version} to production`)) return "production declined"
   return `released ${version}`
 }
-// Effect<string, ReviewBusy, Approval>
+// string!ReviewBusy!Approval
 ```
 
 `Approval.approve` returns a boolean at the call. `Approval` stays in the program's requirements until a handler answers it. Each abstract operation states all three channels of its contract.

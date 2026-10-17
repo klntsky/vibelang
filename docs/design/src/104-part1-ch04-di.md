@@ -13,8 +13,8 @@ class Users extends Context.Service<Users, {
 
 ```ts es
 abstract class Users {
-  abstract find(id: string): Effect<User, UserNotFound, never>
-  abstract rename(id: string, name: string): Effect<void, UserNotFound, never>
+  abstract find(id: string): User!UserNotFound!
+  abstract rename(id: string, name: string): void!UserNotFound!
 }
 ```
 
@@ -67,13 +67,13 @@ Calling the service itself with no arguments, `Users()`, gives you its implement
 ```ts es
 abstract class Settings {
   abstract readonly baseUrl: string
-  abstract scale(): Effect<number, never, never>
+  abstract scale(): number!!
 }
 
 function apiUrl(path: string) {
   return `${Settings().baseUrl}/${path}`
 }
-// Effect<string, never, Settings>
+// string!!Settings
 ```
 
 Calling any member through the service looks the service up, so the service joins R whatever the member returns. `Path.join(a, b)`, from Effect's `Path` service, returns a string and still adds `Path`. A member that is itself an `Effect` value runs when called: `Terminal.readLine()`. A member the service declares wins over the key's own members, such as `pipe`, `use`, and `key`, so `Rpc.call(…)` reaches the service even though the key, a class, has a `call` of its own. A static member with the same name as a service member is EK3006.
@@ -131,8 +131,8 @@ Effect 4 code often keeps the default Layer on the service class as `static read
 
 ```ts es
 abstract class Users {
-  abstract find(id: string): Effect<User, UserNotFound, never>
-  abstract rename(id: string, name: string): Effect<void, UserNotFound, never>
+  abstract find(id: string): User!UserNotFound!
+  abstract rename(id: string, name: string): void!UserNotFound!
 
   static readonly layer = Layer.effect(Users, () => {
     const db = Database()
@@ -171,8 +171,8 @@ Effect 4's `make` option becomes a static method, and a service that should work
 
 ```ts es
 abstract class Sessions {
-  abstract get(token: string): Effect<Session | undefined, never, never>
-  abstract set(token: string, session: Session): Effect<void, never, never>
+  abstract get(token: string): Session | undefined!!
+  abstract set(token: string, session: Session): void!!
 
   static make() {
     const entries = new Map<string, Session>()
@@ -225,7 +225,7 @@ const DatabaseLive = Layer.effect(Database, () => {
 // Layer<Database, ConnectError, DatabaseConfig>
 ```
 
-`Postgres.connect` returns `Effect<Pool, ConnectError, Scope>`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6), and `Layer.effect` supplies the layer's own Scope, as it does in Effect today. The pool therefore closes when the program that provided `DatabaseLive` finishes. Writing `using pool = …` would close it as soon as the provider function returned, before any query ran.
+`Postgres.connect` returns `Pool!ConnectError!Scope`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6), and `Layer.effect` supplies the layer's own Scope, as it does in Effect today. The pool therefore closes when the program that provided `DatabaseLive` finishes. Writing `using pool = …` would close it as soon as the provider function returned, before any query ran.
 
 #### Requirements that would leak
 
@@ -291,7 +291,7 @@ function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
   Effect.log(`welcomed ${name}`)
 }
-// Effect<void, UserNotFound | MailError | ConfigError | ConnectError, never>
+// void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
 
 `main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.

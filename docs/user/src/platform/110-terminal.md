@@ -9,7 +9,7 @@ function dimensions() {
   const terminal = Effect.service(Terminal.Terminal)
   return { columns: terminal.columns(), rows: terminal.rows() }
 }
-// Effect<{ columns: number; rows: number }, never, Terminal.Terminal>
+// { columns: number; rows: number }!!Terminal.Terminal
 ```
 
 `Terminal.Terminal` is the service key; `Effect.service` retrieves its implementation. `columns`, `rows`, and `readLine` are Effect values, so call them to run them. `display` is an Effect-returning method and runs on a normal method call.
@@ -38,7 +38,7 @@ function askName() {
   const name = terminal.readLine()
   terminal.display(`Hello, ${name.trim() || "visitor"}.\n`)
 }
-// Effect<void, Terminal.QuitError | PlatformError.PlatformError, Terminal.Terminal>
+// void!Terminal.QuitError | PlatformError.PlatformError!Terminal.Terminal
 ```
 
 `readLine()` waits for a line and returns its text. Reading and display happen in order, so the prompt is issued before input is requested. Low-level `readInput` exposes scoped input events when line-oriented interaction is insufficient.
@@ -94,7 +94,7 @@ function game() {
   }
   terminal.display(`The answer was ${secret}.\n`)
 }
-// Effect<void, Terminal.QuitError | PlatformError.PlatformError, Terminal.Terminal>
+// void!Terminal.QuitError | PlatformError.PlatformError!Terminal.Terminal
 
 function main() {
   try {

@@ -51,7 +51,7 @@ function parseAmount(raw: number) {
     catch: (cause) => new InvalidAmount({ cause })
   })
 }
-// Effect<WholeCents, InvalidAmount, never>
+// WholeCents!InvalidAmount!
 ```
 
 `Brand.make` accepts a synchronous check that returns `true` for valid input or an explanation for invalid input. The returned constructor throws a `Brand.BrandError` when validation fails. A direct call treats that exception as a defect, which ordinary `catch` does not see. Here `Effect.try` maps it to `InvalidAmount` in the expected error channel.

@@ -10,13 +10,13 @@ error MissingRate {
 }
 
 abstract class Rates {
-  abstract lookup(currency: string): Effect<number, MissingRate, never>
+  abstract lookup(currency: string): number!MissingRate!
 }
 
 function convert(amount: number, currency: string) {
   return amount * Rates.lookup(currency)
 }
-// Effect<number, MissingRate, Rates>
+// number!MissingRate!Rates
 ```
 
 `A` is `number`, `E` is `MissingRate`, and `R` is `Rates`. A service method states its complete contract because it has no body to infer from. Using that method also adds the service itself to the caller's requirements.
@@ -27,7 +27,28 @@ function convert(amount: number, currency: string) {
 | `E` | `never` has no expected failure; defects and interruption remain possible. |
 | `R` | `never` needs no additional services or control operations. |
 
-Errors and services from several calls accumulate as unions. Catching a failure removes that handled failure from `E`; providing a service removes that requirement from `R`. Write a full annotation when you want the compiler to check a promise, such as `Effect<number, never, Rates>`.
+Errors and services from several calls accumulate as unions. Catching a failure removes that handled failure from `E`; providing a service removes that requirement from `R`. Write a full annotation when you want the compiler to check a promise, such as `number!!Rates`.
+
+## Write a contract
+
+```ts
+function rateOf(currency: string): number!MissingRate!Rates {
+  return Rates.lookup(currency)
+}
+
+function safeRate(currency: string): number!!Rates {
+  return Effect.orDie(() => Rates.lookup(currency))
+}
+
+function anyRate(currency: string): number!MissingRate {
+  return Rates.lookup(currency)
+}
+// Dependencies inferred: number!MissingRate!Rates
+```
+
+`.effeck` code writes `Effect<A, E, R>` as `Result!Error!Dependencies`. A slot without a type is `never`: `number!MissingRate!` cannot need a service, and `number!!` neither fails nor needs one. On a function with a body, dependencies left out entirely, as in `anyRate`, are inferred from the body; on a declaration without a body, such as a service member, they are `never`. A union belongs to its slot: `string!MissingRate | Offline!Rates` fails with either error. Put a function type, a conditional type, or, after a `!`, an object type in parentheses; the `{` of an object type would start the function's body.
+
+Hovers show contracts this way, and declaration files keep `Effect.Effect<A, E, R>` for TypeScript callers. `Effect<A, E, R>` is accepted anywhere a type is.
 
 ## Check selected channels
 
@@ -55,7 +76,7 @@ function checkedConversion(amount: number, currency: string): Effect<number, inf
 
 In a return annotation on a function with a body, `infer` followed by any name infers that channel from the body. Other slots are promises the compiler checks. The name is documentation only and is not in scope in the body or other slots. `infer _` is allowed, including `Effect<infer _, infer _, infer _>` to infer all three channels.
 
-Write all three slots. `Effect<number>` in this position reports EK2003: "Did you mean never or inferred?" The quick fixes offer `Effect<number, never, never>` to check for no failures or requirements, and `Effect<number, infer E, infer R>` to infer them. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect; a function that compiles to plain JavaScript keeps it.
+Write all three slots. `Effect<number>` in this position reports EK2003: "Did you mean never or inferred?" The fixes it suggests are `number!!`, to check for no failures or requirements, and removing the annotation to infer them. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect; a function that compiles to plain JavaScript keeps it.
 
 This applies only to function return annotations with bodies in `.effeck`. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults: `Effect<number, never, never>`. Those positions do not support this channel inference. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 
@@ -83,7 +104,7 @@ The result type must be `Effect` itself for a call to run it automatically. `Con
 export function double(amount: number) {
   return amount * 2
 }
-// Effect<number, never, never>
+// number!!
 ```
 
 ```ts

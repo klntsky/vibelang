@@ -66,7 +66,7 @@ function immediateResult() {
 function rejectInput() {
   return Stream.run(Stream.make(40, 50), Sink.fail(new Rejected()))
 }
-// Effect<never, Rejected, never>
+// never!Rejected!
 ```
 
 `succeed` and `fail` finish without requesting source elements. Construction itself does not succeed or fail a running program; that happens when the sink runs. `Sink.fromEffect(() => work())` creates the same kind of immediate sink from an Effeck program.

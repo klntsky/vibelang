@@ -57,6 +57,9 @@ clients, see [editors/](editors/README.md).
 - Declare an expected failure with `error NotFound { id: string }`, a tagged
   error class with readonly fields; `throw new NotFound({ id })` adds it to
   the function's errors.
+- Write a contract as `Result!Error!Dependencies`: `User!NotFound!Db` is
+  `Effect<User, NotFound, Db>`, an empty slot is `never` (`User!!`), and
+  dependencies left out of a function's return type are inferred from its body.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no
   import, and neither does any other module of `effect`'s root, such as

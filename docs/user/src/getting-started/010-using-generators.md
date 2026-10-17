@@ -57,7 +57,7 @@ function titleLength(title: string | undefined) {
   if (title === undefined) throw new MissingTitle()
   return title.length
 }
-// Effect<number, MissingTitle, never>
+// number!MissingTitle!
 
 function optionalTitle(title: string | undefined) {
   try {

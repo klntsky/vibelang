@@ -8,7 +8,7 @@ A semaphore limits access to a shared resource with a pool of permits. A one-per
 function makeUploadLimit() {
   return Semaphore.make(3)
 }
-// Effect<Semaphore.Semaphore, never, never>
+// Semaphore.Semaphore!!
 ```
 
 Create the pool once for the callers that must share a limit. Allocating a separate pool inside every upload would give each upload its own permits and impose no combined limit. A permit represents access, not a resource value such as a connection.

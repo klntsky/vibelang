@@ -116,7 +116,7 @@ import { Effect } from "effect"
 
 /** @effeck trusted */
 export declare function register(f: (x: number) => number): string
-export declare function register<E, R>(f: (x: number) => Effect.Effect<number, E, R>): Effect.Effect<string, E, R>
+export declare function register<E, R>(f: (x: number) => number!E!R): string!E!R
 ```
 
 ```ts es

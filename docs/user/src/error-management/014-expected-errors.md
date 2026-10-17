@@ -19,7 +19,7 @@ function normalizeCode(input: string) {
   if (code.length === 0) throw new InvalidCode({ input })
   return code.toUpperCase()
 }
-// Effect<string, InvalidCode, never>
+// string!InvalidCode!
 ```
 
 `error InvalidCode { input: string }` declares an expected failure. The declaration is a class: its constructor takes the fields, every field is readonly, and each instance has a readonly `_tag` equal to the class name. `throw` adds the class to `E`. `error Timeout` declares an error without fields. The declaration is short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
@@ -34,7 +34,7 @@ function findItem(input: string) {
   if (code !== "PEN") throw new ItemMissing({ code })
   return { code, label: "Fountain pen" }
 }
-// Effect<{ code: string; label: string }, InvalidCode | ItemMissing, never>
+// { code: string; label: string }!InvalidCode | ItemMissing!
 ```
 
 A function collects the failures it throws and those its calls can produce. Sequential statements stop at the first failure, so no lookup happens after normalization fails. An explicit full contract checks this inferred union rather than replacing it.
@@ -68,7 +68,7 @@ function itemLabel(input: string) {
     return `Unavailable (${error._tag})`
   }
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 The catch receives `InvalidCode | ItemMissing` and handles both here. It handles only causes with no defect and no interruption. If several expected failures occur together, it receives the first and handles their whole cause.
@@ -86,7 +86,7 @@ function labelOrMissing(input: string) {
     throw error
   }
 }
-// Effect<string, InvalidCode, never>
+// string!InvalidCode!
 
 function labelByTag(input: string) {
   return Effect.catchTag(
@@ -135,7 +135,7 @@ error CatalogError {
   reason: Busy | Rejected
 }
 
-function remoteLabel(): Effect<string, CatalogError, never> {
+function remoteLabel(): string!CatalogError! {
   throw new CatalogError({ reason: new Busy({ seconds: 4 }) })
 }
 
@@ -156,7 +156,7 @@ function explainReasons() {
 function exposeReasons() {
   return Effect.unwrapReason(() => remoteLabel(), "CatalogError")
 }
-// Effect<string, Busy | Rejected, never>
+// string!Busy | Rejected!
 ```
 
 These operators inspect the tagged error's readonly `reason` field. `catchReason` keeps the parent wrapper for unhandled reasons, while `catchReasons` selects several reasons at once. `unwrapReason` replaces the wrapper with its nested reason in `E` without recovering.

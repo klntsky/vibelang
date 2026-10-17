@@ -186,7 +186,7 @@ All defaults; Chapter 28 of the spec states them with examples. Package names ar
 
 Will, 2026-10-16: "I'm not going to make calls. It's your job to just use your best judgement. If you want to mark a decision as controversial go ahead and mark it." These close every item that was waiting on him. **Controversial** marks a call he is likely to revisit after using the language.
 
-**D57. Partial annotations use `infer`** (amended by D67, D74, D93) (default, **controversial**; resolves O7). In the return annotation of a function with a body, a channel written `infer` followed by any name is inferred; every other channel is checked.
+**D57. Partial annotations use `infer`** (amended by D67, D74, D93, D127) (default, **controversial**; resolves O7). In the return annotation of a function with a body, a channel written `infer` followed by any name is inferred; every other channel is checked.
 
 ```ts
 function find(id: string): Effect<User, infer E, never> { … }       // checks A and R, infers E
@@ -322,6 +322,8 @@ These entries record the build lanes' defaults. Lane U recorded F7's D97-D99 fro
 Will asked for fewer tokens per program: "we can go crazy here." A measurement over the docs and examples found the ceremony; these forms remove it. Each form is parser sugar for the long form, which still compiles, so checking, emit, declaration files, and the language service treat both the same.
 
 **D126. `error` declares a tagged error class** (Will). `error NotFound { id: string }` is short for `class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}`: the tag is the class name, every field is readonly, and `error Timeout` declares an error without fields. Type parameters follow the name. `error` stays an ordinary identifier unless another identifier follows it on the same line. Not controversial.
+
+**D127. Effect types are written `Result!Error!Dependencies`** (Will; amends D57, **controversial**). `User!NotFound!Db` is `Effect<User, NotFound, Db>` anywhere a type can appear. An empty slot is `never`: `User!NotFound!`, `User!!Db`, `User!!`. Dependencies left out entirely, as in `User!NotFound`, are `infer R` in the return annotation of a function with a body and `never` everywhere else; errors cannot be left out once a `!` is written, so inferring them takes no annotation or `Effect<A, infer E, ...>`. Unions bind inside a slot: `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`. A slot that starts with `{` is empty, because in a declaration the `{` starts the body; an object type after a `!` needs parentheses. The parser expands the form to `Effect.Effect<A, E, R>`, which resolves whether `Effect` is the prelude's or imported from `effect`, so declaration files read `Effect.Effect<A, E, R>`; hovers and contract messages about `.effeck` code use the `!` form. The postfix `!` of JSDoc types no longer parses in `.effeck` files. `Effect<A, E, R>` stays accepted. Controversial because `!` reads as negation or non-null to a TypeScript programmer.
 
 ## Fewer tokens: calls (2026-10-16)
 

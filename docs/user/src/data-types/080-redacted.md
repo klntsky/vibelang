@@ -19,13 +19,13 @@ function reportConfiguration() {
 
 ```ts
 abstract class CredentialsClient {
-  abstract authenticate(token: string): Effect<boolean, never, never>
+  abstract authenticate(token: string): boolean!!
 }
 
 function authenticate(token: Redacted.Redacted<string>) {
   return CredentialsClient.authenticate(Redacted.value(token))
 }
-// Effect<boolean, never, CredentialsClient>
+// boolean!!CredentialsClient
 ```
 
 `value` returns the stored payload. Reveal it only at the operation that requires the raw value and keep it out of messages, error fields, and log annotations. Redaction cannot protect a string that has already been extracted.

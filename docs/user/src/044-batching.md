@@ -55,7 +55,7 @@ Complete every entry, including requests for absent rows. Use `Request.succeed` 
 function findPart(code: string) {
   return Effect.request(FindPart({ code }), PartResolver)
 }
-// Effect<Part, PartMissing | CatalogUnavailable, never>
+// Part!PartMissing | CatalogUnavailable!
 
 function partLabel(code: string) {
   return findPart(code).label
@@ -100,13 +100,11 @@ For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `colle
 
 ```ts
 abstract class CatalogApi {
-  abstract fetchMany(codes: ReadonlyArray<string>): Effect<
-    ReadonlyMap<string, Part>, CatalogUnavailable, never
-  >
+  abstract fetchMany(codes: ReadonlyArray<string>): ReadonlyMap<string, Part>!CatalogUnavailable!
 }
 
 abstract class Parts {
-  abstract find(code: string): Effect<Part, PartMissing | CatalogUnavailable, never>
+  abstract find(code: string): Part!PartMissing | CatalogUnavailable!
 
   static readonly layer = Layer.effect(Parts, () => {
     const api = CatalogApi()

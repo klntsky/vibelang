@@ -44,7 +44,7 @@ function timestamp() {
   const now = DateTime.now()
   return DateTime.formatIso(now)
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `now` is an Effect value: call it to read UTC time through Effect's Clock. Tests can control that clock. Effect also exports `nowUnsafe`, but it bypasses Clock; use `now()` for application time rather than `Date.now()` or `new Date()`.
@@ -149,7 +149,7 @@ Calendar `add` and `subtract` operate on parts in the value's zone; duration ari
 function localDate() {
   return DateTime.formatIsoDate(DateTime.nowInCurrentZone())
 }
-// Effect<string, never, DateTime.CurrentTimeZone>
+// string!!DateTime.CurrentTimeZone
 
 function main() {
   return Effect.provide(

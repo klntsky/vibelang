@@ -13,7 +13,7 @@ function reserve(item: string, available: boolean) {
   if (!available) throw new Unavailable({ item })
   return { item, reserved: true }
 }
-// Effect<{ item: string; reserved: boolean }, Unavailable, never>
+// { item: string; reserved: boolean }!Unavailable!
 ```
 
 The compiler records the returned object in `A` and `Unavailable` in `E`. `Effect.succeed(value)` and `Effect.fail(error)` remain available inside a function, but those calls run immediately. To store the work, write `const reservation = () => reserve("notebook", true)`.
@@ -26,7 +26,7 @@ function attemptReservation(item: string, available: boolean) {
   if (Result.isFailure(outcome)) return outcome.failure.item
   return outcome.success.item
 }
-// Effect<string, never, never>
+// string!!
 ```
 
 `Effect.result` captures an expected failure as a `Result` value so the function can continue. Defects and interruption still propagate. Unlike an unchecked JavaScript exception, an Effeck `throw` contributes to the inferred contract; using `Effect.fail` gives the same expected failure channel.
@@ -47,7 +47,7 @@ function encodeLabel(value: string) {
     catch: (cause) => new EncodingFailed({ cause })
   })
 }
-// Effect<string, EncodingFailed, never>
+// string!EncodingFailed!
 ```
 
 A plain imported function needs a boundary or a trusted contract that declares what its exceptions mean. The short form `Effect.try(() => encode(value))` uses `UnknownError`; the object form gives the error a domain name. JavaScript language built-ins have compiler trust contracts, so operations such as string trimming can be called directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls, and their exceptions are defects.
@@ -74,7 +74,7 @@ function label(id: string) {
     catch: (cause) => new LookupFailed({ cause })
   })
 }
-// Effect<string, LookupFailed, never>
+// string!LookupFailed!
 ```
 
 `Effect.tryPromise` waits for the promise and maps rejections into `E`. Pass its signal to an API that supports cancellation; otherwise interruption stops waiting without necessarily stopping the foreign operation. The short overload uses `UnknownError`.
@@ -135,13 +135,13 @@ function counters() {
   const next = nextCounter()
   return [next(), next()]
 }
-// Effect<number[], never, never>; returns [1, 2]
+// number[]!!; returns [1, 2]
 ```
 
 The returned function delays its body until each call. Wrap an entire computation, including mutable setup, if retry should create new state each time. `Effect.suspend` remains useful in TypeScript adapters to delay construction of an Effect; in Effeck, passing a program already delays its body.
 
 ```ts
-function countdown(n: number): Effect<number, never, never> {
+function countdown(n: number): number!! {
   if (n <= 0) return 0
   Effect.sleep("1 millis")
   return 1 + countdown(n - 1)
@@ -151,7 +151,7 @@ function checkedQuantity(n: number) {
   if (n < 0) throw new Unavailable({ item: "quantity" })
   return n
 }
-// Effect<number, Unavailable, never>
+// number!Unavailable!
 ```
 
 Suspending recursion uses runtime frames, so it does not accumulate JavaScript stack frames. Pure recursion without Effect operations uses the JavaScript stack and can overflow. Ordinary returns and throws also unify success and failure channels across branches without an extra suspension wrapper.

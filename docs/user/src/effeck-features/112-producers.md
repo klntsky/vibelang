@@ -21,7 +21,7 @@ function firstAlert() {
   }
   return undefined
 }
-// Effect<number | undefined, never, never>
+// number | undefined!!
 ```
 
 Calling `readings()` constructs a lazy source. Its body starts when a consumer asks for a value. Each `yield` hands one value to the loop, and the producer waits until the consumer continues.

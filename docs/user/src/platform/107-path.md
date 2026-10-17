@@ -9,7 +9,7 @@ function pathSeparator() {
   const path = Effect.service(Path.Path)
   return path.sep
 }
-// Effect<string, never, Path.Path>
+// string!!Path.Path
 ```
 
 `Path` is the module and `Path.Path` is its service key. `Effect.service` obtains the implementation from the current environment. Reading `sep` returns that implementation's path separator.

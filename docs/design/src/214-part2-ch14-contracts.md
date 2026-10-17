@@ -18,19 +18,34 @@ function quoteCart(cartId: string) {
     return estimate(cart)                      // a pure Effeck helper
   }
 }
-// Effect<Quote, CartNotFound | EmptyCart, Carts | Pricing>
+// Quote!CartNotFound | EmptyCart!Carts | Pricing
 ```
 
 `PricingDown` is caught, so it is not in E. `Pricing` is still in R: catching an error does not remove the need for the service.
 
 Precisely, E is the type of the expected failures in a cause made only of expected failures. A cause that also holds a defect or an interruption can carry `Fail` reasons outside E, because `catch` passes such a cause through untouched (Chapter 17); no Effeck `catch` recovers it, and only cause-level tools see those reasons.
 
+#### Writing contracts
+
+`.effeck` code writes `Effect<A, E, R>` as `A!E!R` (D127), anywhere a type can appear: return annotations, service members, parameters, and aliases. The parser expands it to `Effect.Effect<A, E, R>`.
+
+| Written | Means |
+| --- | --- |
+| `User!NotFound!Db` | `Effect<User, NotFound, Db>` |
+| `User!NotFound!` | `Effect<User, NotFound, never>` |
+| `User!!Db` | `Effect<User, never, Db>` |
+| `User!!` | `Effect<User, never, never>` |
+| `User!NotFound` on a function with a body | `Effect<User, NotFound, infer R>`: R comes from the body |
+| `User!NotFound` without a body | `Effect<User, NotFound, never>` |
+
+A slot without a type is `never`. Dependencies left out entirely are inferred on a function with a body and `never` everywhere else. Unions bind inside a slot, so `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`. A function type, a conditional type, or an Effect type inside a slot needs parentheses, and so does an object type after a `!`: a `{` there starts the function's body, so `User!NotFound! { ... }` has no dependencies. Hovers and messages about `.effeck` code show contracts in this form; declaration files keep `Effect.Effect<A, E, R>`, so TypeScript callers are unaffected. `Effect<A, E, R>` is accepted everywhere, including `infer` slots (D57).
+
 #### Checking a written contract
 
 When you write the contract, the compiler checks the body against it:
 
 ```ts es
-export function welcome(id: string): Effect<string, UserNotFound | MailError, Users> {
+export function welcome(id: string): string!UserNotFound | MailError!Users {
   const user = Users.find(id)
   Mailer.send(user.email, "Welcome")
   return user.name
@@ -46,7 +61,7 @@ error EK2002: welcome needs Mailer, but its contract says R = Users.
 | Check | Rule | Diagnostic |
 | --- | --- | --- |
 | Success | The returned value must be assignable to A | TypeScript's |
-| Errors | Every error that can escape must be in E; `Effect<A, never, R>` allows `catch` inside and rejects any error that escapes | EK2001 |
+| Errors | Every error that can escape must be in E; `A!!R` allows `catch` inside and rejects any error that escapes | EK2001 |
 | Requirements | Every requirement that remains must be in R | EK2002 |
 | Width | A contract may be wider than the body needs, never narrower | EK2001, EK2002 |
 
@@ -56,7 +71,7 @@ The contract has exactly three channels. Whether a function can pause is a separ
 
 #### Declarations without bodies
 
-Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `Effect<A, never, never>`. Service and control methods require all three Effect type arguments; `Effect<A>` is EK2101 there (D93, amending D57):
+Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `A!!`. Service and control methods require all three Effect type arguments; `Effect<A>` is EK2101 there (D93, amending D57):
 
 ```ts es
 abstract class Rates {
@@ -100,7 +115,7 @@ function greeting(id: string): Effect<string, infer E, infer R> {
 function inferred(id: string): Effect<infer _, infer _, infer _> {
   return Users.find(id)
 }
-// Effect<User, UserNotFound, Users>, as with no annotation.
+// User!UserNotFound!Users, as with no annotation.
 ```
 
 The name after `infer` is documentation only and is not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
@@ -135,7 +150,7 @@ function totalSize(path: string) {
   for (const child of Files.list(path)) total += totalSize(`${path}/${child}`)
   return total
 }
-// Effect<number, IOError, Files>
+// number!IOError!Files
 ```
 
 TypeScript cannot compute this on its own: to TypeScript, the generated recursive function is an implicit `any` (TS7022). The compiler computes the fixpoint itself, inside the component only (D52). It checks the component's bodies, then rechecks those bodies alone, with the E and R found so far, until E and R stop growing. Rows only grow and are finite, so the iteration ends, and no function outside the component is checked twice. Mutual recursion is where the recheck matters:
@@ -151,7 +166,7 @@ function visitEntry(path: string) {
   if (path.endsWith(".lock")) throw new Locked({ path })
   if (Files.stat(path).isDirectory) visitDir(path)
 }
-// both: Effect<void, IOError | Locked, Files>
+// both: void!IOError | Locked!Files
 ```
 
 Checked once in source order, `visitDir` meets `visitEntry` before `visitEntry` has a contract and misses `Locked`; the recheck adds it. The prototype compiler reaches the same contracts by re-checking the whole program (`prototype/esc/FINDINGS.md`, finding 7). The single-pass experiment found this case, in its `isEven` and `isOdd` probe, to be the only one that needs a second check (`prototype/single-pass/RESULTS.md`). A follows TypeScript's rule: when A depends on the function's own result, the contract must be written (EK2102).

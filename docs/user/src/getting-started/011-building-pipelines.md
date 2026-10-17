@@ -11,7 +11,7 @@ function double(n: number) { return n * 2 }
 function priceLabel() {
   return pipe(9, addMargin, double, (n) => `Price: ${n}`)
 }
-// Effect<string, never, never>; "Price: 24"
+// string!!; "Price: 24"
 ```
 
 Each stage takes the previous stage's result as its argument. Standalone functions remain reusable without adding methods to a value's prototype. Effect exports also support bundlers removing unused code when the bundler can analyze the module graph.
@@ -61,7 +61,7 @@ function total() {
   const reduced = discounted(price, 12)
   return reduced + 2
 }
-// Effect<number, InvalidRate, never>
+// number!InvalidRate!
 ```
 
 A call followed by another call expresses the dependency that `flatMap` or `andThen` handles in TypeScript Effect. Each call runs once, in order. A failure prevents later statements from executing unless you handle it.
@@ -73,7 +73,7 @@ function positive(value: number) {
   const optional = value > 0 ? Option.some(value) : Option.none()
   return Effect.fromOption(optional)
 }
-// Effect<number, NoSuchElementError, never>
+// number!NoSuchElementError!
 
 function validated(value: number) {
   const checked = value >= 0
@@ -81,7 +81,7 @@ function validated(value: number) {
     : Result.fail("negative value")
   return Effect.fromResult(checked)
 }
-// Effect<number, string, never>
+// number!string!
 ```
 
 `Option` and `Result` are data values, so keep them intact when you want to inspect them. Explicit conversion runs them as computations: a missing option adds `NoSuchElementError`, and a failed result adds its error type. Calling a constructor such as `Option.some` builds the container.

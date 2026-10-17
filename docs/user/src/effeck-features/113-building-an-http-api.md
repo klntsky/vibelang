@@ -10,7 +10,7 @@ export const CreateUser = Schema.Struct({ name: Schema.String })
 export error NameTaken { name: string }
 
 export abstract class Users {
-  abstract create(name: string): Effect<{ readonly id: string; readonly name: string }, NameTaken, never>
+  abstract create(name: string): { readonly id: string; readonly name: string }!NameTaken!
 }
 
 export const UsersLive = Layer.effect(Users, () => {

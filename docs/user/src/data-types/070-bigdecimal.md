@@ -41,7 +41,7 @@ function parsePrice(input: string) {
     catch: () => new InvalidPrice({ input })
   })
 }
-// Effect<BigDecimal.BigDecimal, InvalidPrice, never>
+// BigDecimal.BigDecimal!InvalidPrice!
 
 const fixedRate = BigDecimal.fromNumberUnsafe(1.25)
 ```

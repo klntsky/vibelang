@@ -22,7 +22,7 @@ function welcome(id: string) {
   Mailer.send(user.email, `Welcome, ${user.name}!`)
   return user.name
 }
-// Effect<string, UserNotFound | MailError, Users | Mailer>
+// string!UserNotFound | MailError!Users | Mailer
 ```
 
 The comment under the Effeck version is not something you write. It is the contract the compiler infers, and what your editor shows when you hover over `welcome`.

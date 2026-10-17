@@ -13,7 +13,7 @@ function serverSettings() {
   const port = Port()
   return { host, port }
 }
-// Effect<{ host: string; port: number }, ConfigError, never>
+// { host: string; port: number }!ConfigError!
 ```
 
 `Host()` and `Port()` load values from the active provider, which defaults to the environment. Constructing the descriptors reads nothing. Missing or invalid input fails with `ConfigError`. No direct environment access is needed in `.effeck` files.
@@ -41,7 +41,7 @@ function teamName() {
     "TEAM_NAME"
   )()
 }
-// Effect<string, ConfigError, never>
+// string!ConfigError!
 ```
 
 `Config.schema` builds a descriptor that decodes the provider's representation using the schema. Calling it returns the decoded value. Put constraints in the schema so invalid input reports a configuration failure. A structured schema can describe an entire object, with field paths mapping to environment keys or object properties.

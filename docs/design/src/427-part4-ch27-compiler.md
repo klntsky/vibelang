@@ -4,7 +4,7 @@
 
 ```ts dts
 import type { Effect } from "effeck-runtime"
-export declare function double(n: number): Effect<number, never, never>
+export declare function double(n: number): number!!
 ```
 
 The compiler writes ordinary TypeScript declarations with Effect contracts.
@@ -122,7 +122,7 @@ shape as an interface and a class whose base has the `ServiceKey<Users>` type
 
 ```ts dts
 export interface Users {
-  find(id: string): Effect.Effect<User, UserNotFound, never>
+  find(id: string): User!UserNotFound!
   readonly "~effeck/service"?: "@acme/app/src/users#Users"
 }
 declare const Users_base: import("effeck-runtime").ServiceKey<Users>

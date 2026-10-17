@@ -65,7 +65,7 @@ import { FileSystem } from "effect/FileSystem"
 function countLines(path: string) {
   return FileSystem.readFileString(path).split("\n").length
 }
-// Effect<number, PlatformError, FileSystem>
+// number!PlatformError!FileSystem
 ```
 
 #### HTTP
@@ -84,7 +84,7 @@ function getTodo(id: number) {
   const response = HttpClient.get(`https://jsonplaceholder.typicode.com/todos/${id}`)
   return HttpClientResponse.schemaBodyJson(Todo)(response)
 }
-// Effect<Todo, HttpClientError | SchemaError, HttpClient>
+// Todo!HttpClientError | SchemaError!HttpClient
 ```
 
 `HttpClient.get` returns an `Effect`, so the call runs it. `HttpClientResponse.schemaBodyJson(Todo)` returns a plain function, which `effect` exports with a trusted contract, and calling that function with the response returns an `Effect`, which runs.
@@ -130,7 +130,7 @@ const DatabaseUrl = Config.Redacted("DATABASE_URL")
 function serverConfig() {
   return { port: Port(), databaseUrl: DatabaseUrl() }
 }
-// Effect<{ port: number; databaseUrl: Redacted<string> }, ConfigError, never>
+// { port: number; databaseUrl: Redacted<string> }!ConfigError!
 ```
 
 A `Config` is data until you call it (Chapter 13). The module's top level builds `Port` and `DatabaseUrl`; `Port()` reads the variable and fails with `ConfigError` if it is set but invalid. A test supplies values with a `ConfigProvider` instead of touching the process environment.
@@ -152,7 +152,7 @@ import { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 function currentBranch() {
   return ChildProcessSpawner.string(ChildProcess.make("git", ["branch", "--show-current"])).trim()
 }
-// Effect<string, PlatformError, ChildProcessSpawner>
+// string!PlatformError!ChildProcessSpawner
 ```
 
 `ChildProcessSpawner.spawn` gives a handle whose output is a `Stream` and whose process belongs to a scope (its type requires `Scope`), so `using child = ChildProcessSpawner.spawn(command)` ties a long-running process to a block.
