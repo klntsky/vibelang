@@ -2,7 +2,9 @@ package effeck
 
 import (
 	"context"
+	"path"
 	"slices"
+	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
@@ -46,33 +48,48 @@ var preludeModules = map[string]string{
 }
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the
-// runtime, so the runtime's declarations are in the program. A file that uses
-// no prelude name compiles exactly as TypeScript would.
+// runtime, and one that may use an export of effect's root (effectroot.go)
+// resolve effect, so their declarations are in the program. A file that uses
+// neither compiles exactly as TypeScript would.
 func implicitRuntimeImport(file *ast.SourceFile) []string {
-	if isEffeckFile(file) && mayUsePrelude(file) {
-		return []string{runtimeModule}
+	if !isEffeckFile(file) {
+		return nil
 	}
-	return nil
+	prelude, root := mayUsePrelude(file)
+	var modules []string
+	if prelude {
+		modules = append(modules, runtimeModule)
+	}
+	if root {
+		modules = append(modules, effectRootModule)
+	}
+	return modules
 }
 
-// mayUsePrelude reports whether file has an identifier with a prelude name
-// that no top-level declaration or import of file declares. It runs before
-// binding, so it reads names from the syntax, and a property named pipe or
-// an inner declaration counts as a use, which only loads the runtime.
-func mayUsePrelude(file *ast.SourceFile) bool {
+// mayUsePrelude reports whether file has an identifier with a prelude name,
+// and one with the name of an effect root export, that no top-level
+// declaration or import of file declares. It runs before binding, so it reads
+// names from the syntax, and a property named pipe or an inner declaration
+// counts as a use, which only loads a module.
+func mayUsePrelude(file *ast.SourceFile) (prelude bool, root bool) {
 	declared := map[string]bool{}
 	for _, statement := range file.Statements.Nodes {
 		forEachTopLevelName(statement, func(name string) { declared[name] = true })
 	}
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if ast.IsIdentifier(node) {
-			_, isPrelude := preludeModules[node.Text()]
-			return isPrelude && !declared[node.Text()]
+		if ast.IsIdentifier(node) && !declared[node.Text()] {
+			if _, ok := preludeModules[node.Text()]; ok {
+				prelude = true
+			} else if _, ok := effectRootNames[node.Text()]; ok {
+				root = true
+			}
+			return prelude && root
 		}
 		return node.ForEachChild(visit)
 	}
-	return file.AsNode().ForEachChild(visit)
+	file.AsNode().ForEachChild(visit)
+	return prelude, root
 }
 
 // forEachTopLevelName calls fn with each name that statement, a statement at
@@ -125,6 +142,7 @@ func forEachBindingName(name *ast.Node, fn func(name string)) {
 // preludeState is what one checker remembers about the prelude.
 type preludeState struct {
 	modules  map[*ast.SourceFile]*ast.Symbol     // the runtime module each .effeck file resolves
+	roots    map[*ast.SourceFile]*ast.Symbol     // the effect root module each .effeck file resolves
 	uses     map[*ast.SourceFile]map[string]bool // prelude names each .effeck file uses as values
 	typeUses map[*ast.SourceFile]map[string]bool // prelude names each .effeck file's declaration file writes (declarations.go)
 	typeRefs map[*ast.Node]bool                  // the identifiers that write those names
@@ -136,6 +154,7 @@ func preludeStateOf(c *checker.Checker) *preludeState {
 	return c.ExtensionState(preludeStateKey{}, func() any {
 		return &preludeState{
 			modules:  map[*ast.SourceFile]*ast.Symbol{},
+			roots:    map[*ast.SourceFile]*ast.Symbol{},
 			uses:     map[*ast.SourceFile]map[string]bool{},
 			typeUses: map[*ast.SourceFile]map[string]bool{},
 			typeRefs: map[*ast.Node]bool{},
@@ -144,10 +163,14 @@ func preludeStateOf(c *checker.Checker) *preludeState {
 }
 
 // resolvePreludeName resolves name, which no scope around location declares,
-// to the runtime's export when location is in a .effeck file and name is a
-// prelude name with the meaning the checker asks for.
+// when location is in a .effeck file: a prelude name to the runtime's export,
+// and the name of an effect root export to that export unless a global value
+// has the name, in each case when the export has the meaning the checker asks
+// for.
 func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, meaning ast.SymbolFlags) *ast.Symbol {
-	if _, ok := preludeModules[name]; !ok {
+	_, isPrelude := preludeModules[name]
+	_, isRoot := effectRootNames[name]
+	if !isPrelude && !isRoot {
 		return nil
 	}
 	file := ast.GetSourceFileOfNode(location)
@@ -155,11 +178,7 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 		return nil
 	}
 	state := preludeStateOf(c)
-	module := runtimeModuleSymbol(c, state, file)
-	if module == nil {
-		return nil
-	}
-	symbol := c.TryGetMemberInModuleExports(name, module)
+	symbol := preludeSymbol(c, state, file, name)
 	if symbol == nil || !hasMeaning(c, symbol, meaning) {
 		return nil
 	}
@@ -170,6 +189,45 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 		state.uses[file][name] = true
 	}
 	return symbol
+}
+
+// preludeSymbol returns the export that name, a prelude name or the name of an
+// effect root export, refers to in file, or nil when its module is not
+// installed or, for an effect root export, JavaScript defines a global value
+// with the name.
+func preludeSymbol(c *checker.Checker, state *preludeState, file *ast.SourceFile, name string) *ast.Symbol {
+	if _, ok := preludeModules[name]; ok {
+		if module := runtimeModuleSymbol(c, state, file); module != nil {
+			return c.TryGetMemberInModuleExports(name, module)
+		}
+		return nil
+	}
+	if isBuiltinGlobal(c, name) {
+		return nil
+	}
+	if module := effectRootModuleSymbol(c, state, file); module != nil {
+		return c.TryGetMemberInModuleExports(name, module)
+	}
+	return nil
+}
+
+// isBuiltinGlobal reports whether name is a global value that JavaScript
+// itself defines, declared by an ECMAScript lib file (lib.es5.d.ts,
+// lib.es2015.core.d.ts, …), such as Array, String, Number, or Symbol. Such a
+// global keeps its meaning in a .effeck file. A host's globals, such as the
+// DOM's Option and Request, do not: .effeck code reaches the host through
+// effect's modules (D102), so effect's Option wins.
+func isBuiltinGlobal(c *checker.Checker, name string) bool {
+	symbol := c.GlobalSymbol(name, ast.SymbolFlagsValue)
+	if symbol == nil {
+		return false
+	}
+	for _, declaration := range symbol.Declarations() {
+		if file := ast.GetSourceFileOfNode(declaration); file != nil && strings.HasPrefix(path.Base(string(file.FileName())), "lib.es") {
+			return true
+		}
+	}
+	return false
 }
 
 // isValueReference reports whether resolving name at location, with
@@ -210,20 +268,32 @@ func hasMeaning(c *checker.Checker, symbol *ast.Symbol, meaning ast.SymbolFlags)
 // runtimeModuleSymbol returns the symbol of the runtime module that file
 // resolves, or nil when the runtime is not installed.
 func runtimeModuleSymbol(c *checker.Checker, state *preludeState, file *ast.SourceFile) *ast.Symbol {
-	if module, ok := state.modules[file]; ok {
+	return resolvedModuleSymbol(c, state.modules, file, runtimeModule)
+}
+
+// effectRootModuleSymbol returns the symbol of the effect root module that
+// file resolves, or nil when effect is not installed.
+func effectRootModuleSymbol(c *checker.Checker, state *preludeState, file *ast.SourceFile) *ast.Symbol {
+	return resolvedModuleSymbol(c, state.roots, file, effectRootModule)
+}
+
+// resolvedModuleSymbol returns the symbol of the module named name that file
+// resolves, remembered in cache, or nil when it does not resolve.
+func resolvedModuleSymbol(c *checker.Checker, cache map[*ast.SourceFile]*ast.Symbol, file *ast.SourceFile, name string) *ast.Symbol {
+	if module, ok := cache[file]; ok {
 		return module
 	}
 	var module *ast.Symbol
 	program := c.Program()
 	for key, resolved := range program.GetResolvedModules()[file.PathKey()] {
-		if key.Name == runtimeModule && resolved.IsResolved() {
+		if key.Name == name && resolved.IsResolved() {
 			if moduleFile := program.GetSourceFileForResolvedModule(resolved); moduleFile != nil {
 				module = c.GetSymbolOfDeclaration(moduleFile.AsNode())
 				break
 			}
 		}
 	}
-	state.modules[file] = module
+	cache[file] = module
 	return module
 }
 
@@ -239,29 +309,52 @@ func preludeUses(c *checker.Checker, file *ast.SourceFile) []string {
 	return names
 }
 
-// preludeImports returns import declarations for names, the prelude names a
-// file uses as values:
+// preludeImports returns import declarations for names, the prelude names and
+// effect root exports a file uses as values, sorted:
 //
+//	import * as Console from "effect/Console"
 //	import * as Effect from "effect/Effect"
+//	import { flow } from "effect/Function"
 //	import { TaggedError, pipe } from "effeck-runtime"
 //
-// The checker resolved each use to the runtime's export, so the declarations
-// bind the names the emitted code already refers to. They are ES module
-// imports; .effeck files compile to ES modules.
+// The checker resolved each use to the runtime's or effect's export, so the
+// declarations bind the names the emitted code already refers to. A root
+// export is imported from its own module, never from effect's root, which
+// would load every module. They are ES module imports; .effeck files compile
+// to ES modules.
 func preludeImports(f *ast.NodeFactory, names []string) []*ast.Node {
-	var imports, fromRuntime []*ast.Node
+	var imports []*ast.Node
+	named := map[string][]*ast.Node{} // module -> named import specifiers
+	var namedModules []string
 	for _, name := range names {
-		module := preludeModules[name]
-		if module == runtimeModule {
-			fromRuntime = append(fromRuntime, f.NewImportSpecifier(false /*isTypeOnly*/, nil /*propertyName*/, f.NewIdentifier(name)))
+		module, namespace := preludeModules[name], true
+		if module == "" {
+			root := effectRootNames[name]
+			module, namespace = root.module, root.namespace
+		}
+		if module == runtimeModule || !namespace {
+			if named[module] == nil {
+				namedModules = append(namedModules, module)
+			}
+			named[module] = append(named[module], f.NewImportSpecifier(false /*isTypeOnly*/, nil /*propertyName*/, f.NewIdentifier(name)))
 			continue
 		}
 		clause := f.NewImportClause(ast.KindUnknown, nil /*name*/, f.NewNamespaceImport(f.NewIdentifier(name)))
 		imports = append(imports, f.NewImportDeclaration(nil /*modifiers*/, clause, f.NewStringLiteral(module, ast.TokenFlagsNone), nil /*attributes*/))
 	}
-	if len(fromRuntime) > 0 {
-		clause := f.NewImportClause(ast.KindUnknown, nil /*name*/, f.NewNamedImports(f.NewNodeList(fromRuntime)))
-		imports = append(imports, f.NewImportDeclaration(nil /*modifiers*/, clause, f.NewStringLiteral(runtimeModule, ast.TokenFlagsNone), nil /*attributes*/))
+	// The runtime's named imports come last, as before effect's root joined.
+	slices.SortStableFunc(namedModules, func(a, b string) int {
+		if (a == runtimeModule) != (b == runtimeModule) {
+			if a == runtimeModule {
+				return 1
+			}
+			return -1
+		}
+		return strings.Compare(a, b)
+	})
+	for _, module := range namedModules {
+		clause := f.NewImportClause(ast.KindUnknown, nil /*name*/, f.NewNamedImports(f.NewNodeList(named[module])))
+		imports = append(imports, f.NewImportDeclaration(nil /*modifiers*/, clause, f.NewStringLiteral(module, ast.TokenFlagsNone), nil /*attributes*/))
 	}
 	for _, declaration := range imports {
 		ast.SetParentInChildren(declaration)

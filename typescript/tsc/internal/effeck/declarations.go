@@ -23,11 +23,14 @@ import (
 // transformDeclarations imports the recorded names and rewrites specifiers.
 
 // preludeNameVisible lets the declaration file of a .effeck file write a prelude
-// name that the source wrote, such as Effect in Effect<number>.
+// name or effect root export that the source wrote, such as Effect in
+// Effect<number> or Option in Option.Option<string>.
 func preludeNameVisible(c *checker.Checker, entityName *ast.Node, symbol *ast.Symbol) bool {
 	first := ast.GetFirstIdentifier(entityName)
 	name := first.Text()
-	if _, ok := preludeModules[name]; !ok {
+	_, isPrelude := preludeModules[name]
+	_, isRoot := effectRootNames[name]
+	if !isPrelude && !isRoot {
 		return false
 	}
 	file := ast.GetSourceFileOfNode(entityName)
@@ -35,8 +38,7 @@ func preludeNameVisible(c *checker.Checker, entityName *ast.Node, symbol *ast.Sy
 		return false
 	}
 	state := preludeStateOf(c)
-	module := runtimeModuleSymbol(c, state, file)
-	if module == nil || c.TryGetMemberInModuleExports(name, module) != symbol {
+	if preludeSymbol(c, state, file, name) != symbol {
 		return false
 	}
 	if state.typeUses[file] == nil {
@@ -80,18 +82,28 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 			renamer.NewTransformer(renamer.visit, resolver.EmitContext())
 			declarations = renamer.TransformSourceFile(declarations)
 		}
+		// import type { Option } from "effect"
 		// import type { Effect, Scope } from "effeck-runtime"
 		f := resolver.EmitContext().Factory
-		specifiers := make([]*ast.Node, 0, len(names))
-		for _, name := range names {
-			if alias, ok := aliases[name]; ok {
-				specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, f.NewIdentifier(name), f.NewIdentifier(alias)))
-				continue
+		var imports []*ast.Node
+		for _, module := range []string{effectRootModule, runtimeModule} {
+			var specifiers []*ast.Node
+			for _, name := range names {
+				if _, isPrelude := preludeModules[name]; isPrelude != (module == runtimeModule) {
+					continue
+				}
+				if alias, ok := aliases[name]; ok {
+					specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, f.NewIdentifier(name), f.NewIdentifier(alias)))
+					continue
+				}
+				specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, nil /*propertyName*/, f.NewIdentifier(name)))
 			}
-			specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, nil /*propertyName*/, f.NewIdentifier(name)))
+			if len(specifiers) > 0 {
+				clause := f.NewImportClause(ast.KindTypeKeyword, nil /*name*/, f.NewNamedImports(f.NewNodeList(specifiers)))
+				imports = append(imports, f.NewImportDeclaration(nil /*modifiers*/, clause, f.NewStringLiteral(module, ast.TokenFlagsNone), nil /*attributes*/))
+			}
 		}
-		clause := f.NewImportClause(ast.KindTypeKeyword, nil /*name*/, f.NewNamedImports(f.NewNodeList(specifiers)))
-		statements := append([]*ast.Node{f.NewImportDeclaration(nil /*modifiers*/, clause, f.NewStringLiteral(runtimeModule, ast.TokenFlagsNone), nil /*attributes*/)}, declarations.Statements.Nodes...)
+		statements := append(imports, declarations.Statements.Nodes...)
 		return f.UpdateSourceFile(declarations, f.NewNodeList(statements), declarations.EndOfFileToken).AsSourceFile()
 	}
 }
