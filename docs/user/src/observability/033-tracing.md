@@ -58,8 +58,6 @@ An application that already owns an OpenTelemetry SDK tracer provider can initia
 ## Inspecting failures and attributes
 
 ```ts
-import { Exit } from "effect"
-
 class RenderFailed extends TaggedError("RenderFailed")<{
   readonly format: string
 }> {}
@@ -79,8 +77,6 @@ An exported failure includes error status and failure details, while attributes 
 ## Representing logs as span events
 
 ```ts
-import { Logger } from "effect"
-
 function tracedLogs() {
   Effect.provide(() => Effect.withSpan(() => {
     Effect.logInfo("input validated")
@@ -131,7 +127,6 @@ Open a `generate-report` trace to compare parent duration, child durations, attr
 ## Connecting external tracing services
 
 ```ts
-import { Config } from "effect"
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"

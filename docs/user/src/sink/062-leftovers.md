@@ -5,8 +5,6 @@ Leftovers are elements a sink has already received in a batch but has not consum
 ## Collecting leftover elements
 
 ```ts
-import { Sink, Stream } from "effect"
-
 function inspectRemainder() {
   const source = Stream.fromArray([21, 34, 55, 89])
   const sink = Sink.mapEnd(Sink.take<number>(2), ([selected, leftover]) => [
@@ -20,8 +18,6 @@ function inspectRemainder() {
 `Sink.mapEnd` receives `[result, optionalLeftoverBatch]` and returns another such tuple. Returning a one-element tuple moves the leftovers into the success result and leaves no separate leftover batch. `Stream.run` then returns that success result.
 
 ```ts
-import { Sink, Stream } from "effect"
-
 function inspectSmallBatches() {
   const source = Stream.rechunk(Stream.fromArray([21, 34, 55, 89]), 2)
   const sink = Sink.mapEnd(Sink.head<number>(), ([first, leftover]) => [
@@ -37,8 +33,6 @@ Here `55` and `89` are in a batch the sink never requests. Changing internal bat
 ## Explicitly discarding leftovers
 
 ```ts
-import { Sink, Stream } from "effect"
-
 function discardRemainder() {
   const sink = pipe(
     Sink.take<number>(2),

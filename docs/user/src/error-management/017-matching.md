@@ -47,8 +47,6 @@ function reportCount(raw: number) {
 ## Matching complete failure causes
 
 ```ts
-import { Cause } from "effect"
-
 function outcomeLabel() {
   return Effect.matchCause(() => Effect.die(new Error("index invariant")), {
     onFailure: (cause) => Cause.hasDies(cause) ? "Index defect" : "Index stopped",

@@ -5,8 +5,6 @@ A schedule decides when work runs again and when it stops. `Schedule` values wor
 ## Repeating successful computations
 
 ```ts
-import { Schedule } from "effect"
-
 function heartbeat() {
   Effect.repeat(
     () => Effect.logInfo("worker available"),
@@ -20,8 +18,6 @@ function heartbeat() {
 ## Stopping based on a result
 
 ```ts
-import { Schedule } from "effect"
-
 function waitForBuild() {
   let checks = 0
   const status = Effect.repeat(() => {
@@ -42,8 +38,6 @@ The initial check is separate from the seven permitted repetitions, so this loop
 ## Delaying the initial run
 
 ```ts
-import { Schedule } from "effect"
-
 function delayedCleanup() {
   Effect.schedule(
     () => Effect.logInfo("sweeping expired sessions"),
@@ -57,8 +51,6 @@ function delayedCleanup() {
 ## Retrying failed computations
 
 ```ts
-import { Schedule } from "effect"
-
 class Busy extends TaggedError("Busy")<{}> {}
 
 function reserveSlot() {
@@ -77,8 +69,6 @@ function reserveSlot() {
 ## Handling failures while repeating
 
 ```ts
-import { Schedule } from "effect"
-
 class SensorOffline extends TaggedError("SensorOffline")<{}> {}
 
 abstract class Sensor {

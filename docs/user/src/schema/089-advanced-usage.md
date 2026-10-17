@@ -22,8 +22,6 @@ function readShelf(input: unknown) {
 A declaration's guard establishes identity; its type predicate is inferred from `instanceof`. It does not validate every member automatically. Add checks when fields need validation. Unlike a struct, an opaque declaration gives interpreters no structural description to traverse.
 
 ```ts
-import { SchemaIssue, SchemaParser } from "effect"
-
 class Box<A> {
   constructor(readonly value: A) {}
 }
@@ -48,8 +46,6 @@ const BoxedCount = BoxSchema(Schema.FiniteFromString)
 ## Adding interpreter support
 
 ```ts
-import { SchemaTransformation } from "effect"
-
 const PortableShelf = Schema.declare(
   (input: unknown) => input instanceof Shelf,
   {
@@ -79,8 +75,6 @@ const PortableShelf = Schema.declare(
 ## Creating branded schemas
 
 ```ts
-import { Brand } from "effect"
-
 const ShelfId = Schema.NonEmptyString.pipe(Schema.brand("ShelfId"))
 type ShelfId = typeof ShelfId.Type
 
@@ -154,8 +148,6 @@ The decoded keys are required and hold `Option` values. The exact-key variant re
 ## Transforming field presence
 
 ```ts
-import { Option, SchemaGetter } from "effect"
-
 const Form = Schema.Struct({
   note: Schema.optionalKey(Schema.String).pipe(
     Schema.decodeTo(Schema.optionalKey(Schema.String), {

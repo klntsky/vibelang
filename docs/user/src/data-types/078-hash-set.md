@@ -5,8 +5,6 @@
 ## Choosing immutable or mutable sets
 
 ```ts
-import { HashSet, MutableHashSet } from "effect"
-
 const snapshot = HashSet.make("green", "blue")
 const revised = HashSet.add(snapshot, "red")
 HashSet.has(snapshot, "red") // false
@@ -25,8 +23,6 @@ Immutable updates preserve earlier versions, making snapshots suitable for shari
 ## Equality and uniqueness
 
 ```ts
-import { Equal, HashSet } from "effect"
-
 const a = { region: "west", active: true }
 const b = { region: "west", active: true }
 Equal.equals(a, b) // true
@@ -39,8 +35,6 @@ Plain objects compare structurally in Effect 4.0.5, so separately allocated reco
 ## Constructing and changing immutable sets
 
 ```ts
-import { HashSet } from "effect"
-
 const empty = HashSet.empty<number>()
 const initial = HashSet.fromIterable([2, 4, 4, 6])
 const changed = pipe(initial, HashSet.add(8), HashSet.remove(2))
@@ -58,8 +52,6 @@ const sum = HashSet.reduce(initial, 0, (total, n) => total + n)
 ## Querying membership and size
 
 ```ts
-import { HashSet } from "effect"
-
 const allowed = HashSet.make("read", "write", "audit")
 HashSet.has(allowed, "write") // true
 HashSet.size(allowed) // 3
@@ -73,8 +65,6 @@ HashSet.isSubset(HashSet.make("read"), allowed) // true
 ## Updating mutable sets
 
 ```ts
-import { MutableHashSet } from "effect"
-
 function uniqueRegions(regions: ReadonlyArray<string>) {
   const seen = MutableHashSet.fromIterable(regions)
   MutableHashSet.add(seen, "unknown")
@@ -92,8 +82,6 @@ function uniqueRegions(regions: ReadonlyArray<string>) {
 ## Balancing performance and persistence
 
 ```ts
-import { HashSet } from "effect"
-
 function snapshots(values: ReadonlyArray<number>) {
   let current = HashSet.empty<number>()
   const history = [current]
@@ -110,8 +98,6 @@ Persistent sets share storage between versions; mutable sets avoid persistent-up
 ## Converting to JavaScript collections
 
 ```ts
-import { HashSet } from "effect"
-
 const regions = HashSet.make("west", "east")
 const array = Array.from(regions)
 const copy = [...regions]

@@ -5,8 +5,6 @@
 ## Representing a reusable equality relation
 
 ```ts
-import { Equivalence } from "effect"
-
 const sameLabel: Equivalence.Equivalence<string> = (a, b) =>
   a.trim().toLowerCase() === b.trim().toLowerCase()
 
@@ -19,8 +17,6 @@ An `Equivalence<A>` is a synchronous function from two A values to a boolean. A 
 ## Choosing built-in relations
 
 ```ts
-import { Equivalence } from "effect"
-
 Equivalence.String("cyan", "cyan") // true
 Equivalence.Number(12, 13) // false
 Equivalence.Boolean(true, true) // true
@@ -38,8 +34,6 @@ The string, boolean, bigint, and `strictEqual` relations use strict equality. `E
 ## Deriving comparisons through input projections
 
 ```ts
-import { Equivalence } from "effect"
-
 interface Product {
   readonly sku: string
   readonly displayName: string

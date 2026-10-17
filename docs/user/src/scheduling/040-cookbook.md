@@ -5,8 +5,6 @@ These recipes use ordinary functions as repeatable programs. Each recipe bounds 
 ## Honoring server retry hints
 
 ```ts
-import { Duration, Schedule } from "effect"
-
 class Throttled extends TaggedError("Throttled")<{
   readonly retryAfter: Duration.Duration
 }> {}
@@ -36,8 +34,6 @@ Parse the response's retry hint into a duration at the HTTP boundary. The policy
 ## Polling with response-dependent delays
 
 ```ts
-import { Duration, Schedule } from "effect"
-
 type Status =
   | { readonly _tag: "Pending"; readonly pollAfter: Duration.Duration }
   | { readonly _tag: "Ready"; readonly path: string }
@@ -73,8 +69,6 @@ A pending response is a success, so it feeds `repeat` rather than `retry`. This 
 ## Bounding the whole retry operation
 
 ```ts
-import { Schedule } from "effect"
-
 class Offline extends TaggedError("Offline")<{}> {}
 
 function readWithDeadline() {
@@ -91,8 +85,6 @@ The outer timeout covers the first attempt, every wait, and every retry. Placing
 ## Switching from rapid to slower retries
 
 ```ts
-import { Schedule } from "effect"
-
 class Disconnected extends TaggedError("Disconnected")<{}> {}
 
 function reconnect() {
@@ -114,8 +106,6 @@ The first two retries use short waits; later retries use four second waits. This
 ## Recording retry decisions
 
 ```ts
-import { Duration, Schedule } from "effect"
-
 class Unavailable extends TaggedError("Unavailable")<{
   readonly status: number
 }> {}

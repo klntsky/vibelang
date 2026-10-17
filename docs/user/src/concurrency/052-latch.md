@@ -5,8 +5,6 @@ A latch is a reusable gate for fibers. A closed latch makes callers wait; an ope
 ## Waiting at a reusable gate
 
 ```ts
-import { Fiber, Latch } from "effect"
-
 function initializeThenWork() {
   const ready = Latch.make()
   const worker = fork(() => {
@@ -24,8 +22,6 @@ function initializeThenWork() {
 ## Opening and closing
 
 ```ts
-import { Fiber, Latch } from "effect"
-
 function reopenGate() {
   const gate = Latch.make(true)
   Latch.await(gate) // Passes immediately.
@@ -41,8 +37,6 @@ Opening releases current waiters and allows future callers through. Closing make
 ## Choosing the initial state
 
 ```ts
-import { Latch } from "effect"
-
 function createGates() {
   const starting = Latch.make()      // Closed by default.
   const paused = Latch.make(false)   // Explicitly closed.
@@ -56,8 +50,6 @@ Create the latch once and share it with all operations controlled by the same co
 ## Choosing a latch or a permit pool
 
 ```ts
-import { Latch, Semaphore } from "effect"
-
 function gatedExclusiveWork() {
   const initialized = Latch.make(true)
   const exclusive = Semaphore.make(1)

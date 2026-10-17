@@ -30,8 +30,6 @@ The default is sequential execution. A positive numeric limit bounds active oper
 ## Interrupting computations
 
 ```ts
-import { Fiber } from "effect"
-
 function cancelWork() {
   const worker = fork(() => {
     Effect.sleep("1 minute")
@@ -47,8 +45,6 @@ function cancelWork() {
 ## Attaching interruption cleanup
 
 ```ts
-import { Fiber } from "effect"
-
 function cancelWithCleanup() {
   const worker = fork(() => Effect.onInterrupt(() => {
     try {
@@ -88,8 +84,6 @@ An interrupted branch stops the concurrent operation and interrupts its active s
 ## Racing under different winner rules
 
 ```ts
-import { Duration } from "effect"
-
 function answer(label: string, delay: Duration.Input) {
   Effect.sleep(delay)
   return label
@@ -118,8 +112,6 @@ function raceExamples() {
 ## Inspecting the winner
 
 ```ts
-import { Result } from "effect"
-
 function inspectRace() {
   const winners: number[] = []
   const outcome = Effect.result(() => Effect.raceFirst(

@@ -5,8 +5,6 @@ A stream can keep a connection, file, or subscription open while its elements ar
 ## Acquiring for the stream lifetime
 
 ```ts
-import { Stream } from "effect"
-
 function openReader() {
   Effect.log("reader opened")
   return { lines: ["header", "entry-a", "entry-b"] }
@@ -32,8 +30,6 @@ function readLines() {
 ## Release after stopping or interruption
 
 ```ts
-import { Stream } from "effect"
-
 function readHeader() {
   return Stream.runCollect(Stream.take(lines, 1))
 }
@@ -54,8 +50,6 @@ The early consumer closes the reader even though it does not use every line. The
 ## Registering finalizers
 
 ```ts
-import { Stream } from "effect"
-
 const audited = Stream.ensuring(lines, () => {
   Effect.log("reader resources released")
   Effect.log("consumption finished")

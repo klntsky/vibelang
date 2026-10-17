@@ -21,8 +21,6 @@ The compiler records the returned object in `A` and `Unavailable` in `E`. `Effec
 ## Track errors as values
 
 ```ts
-import { Result } from "effect"
-
 function attemptReservation(item: string, available: boolean) {
   const outcome = Effect.result(() => reserve(item, available))
   if (Result.isFailure(outcome)) return outcome.failure.item

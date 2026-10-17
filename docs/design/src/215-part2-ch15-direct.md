@@ -81,8 +81,6 @@ Any `using` declaration makes a function compile to frames, whether its initiali
 #### Methods that implement a plain-function member
 
 ```ts es
-import { Equal, Hash } from "effect"
-
 class Money implements Equal.Equal {
   constructor(readonly cents: number, readonly currency: string) {}
 

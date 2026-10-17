@@ -5,8 +5,6 @@
 ## Defining calendar execution
 
 ```ts
-import { Schedule } from "effect"
-
 const weekdayReport = Schedule.cron("45 7 * * 1-5", "UTC")
 
 function reportJob() {
@@ -21,8 +19,6 @@ When both day of month and weekday restrict dates, either field can match. For a
 ## Selecting a time zone
 
 ```ts
-import { Schedule } from "effect"
-
 const localMorning = Schedule.cron("45 7 * * 1-5", "America/Los_Angeles")
 const fixedUtc = Schedule.cron("45 7 * * 1-5", "UTC")
 ```
@@ -32,8 +28,6 @@ A named zone follows its local calendar, including daylight saving changes. `UTC
 ## Validating expressions
 
 ```ts
-import { Cron } from "effect"
-
 function validateRule(expression: string, timeZone: string) {
   return Effect.fromResult(Cron.parse(expression, timeZone))
 }
@@ -45,8 +39,6 @@ function validateRule(expression: string, timeZone: string) {
 ## Previewing future runs
 
 ```ts
-import { Cron } from "effect"
-
 function preview() {
   const rule = Effect.fromResult(Cron.parse("45 7 * * 1-5", "UTC"))
   let after = new Date("2026-11-02T00:00:00Z")
@@ -64,8 +56,6 @@ function preview() {
 ## Starting and stopping a job
 
 ```ts
-import { Cron, Fiber, Schedule } from "effect"
-
 function runApplication() {
   const rule = Effect.fromResult(Cron.parse("*/10 * * * *", "UTC"))
   const reports = fork(() => Effect.schedule(

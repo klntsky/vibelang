@@ -5,8 +5,6 @@ Schemas for Effect data types work as in Effect. Runtime collection schemas expe
 ## Building configuration-compatible codecs
 
 ```ts
-import { Config, ConfigProvider } from "effect"
-
 const DispatchConfig = Config.schema(Schema.Struct({
   depot: Schema.String,
   capacity: Schema.Finite
@@ -25,8 +23,6 @@ function configurationExample() {
 ## Encoding options, results, and exits
 
 ```ts
-import { Exit, Option, Result } from "effect"
-
 const OptionalCount = Schema.Option(Schema.FiniteFromString)
 const CountResult = Schema.Result(Schema.FiniteFromString, Schema.Trim)
 const CountExit = Schema.Exit(Schema.FiniteFromString, Schema.String, Schema.Defect())
@@ -84,8 +80,6 @@ function collectionsFromJson() {
 ## Converting durations and protected values
 
 ```ts
-import { Duration } from "effect"
-
 function durations() {
   const hold = Schema.decodeEffect(Schema.DurationFromString)("3 seconds")
   const milliseconds = Schema.encodeEffect(Schema.DurationFromMillis)(hold)

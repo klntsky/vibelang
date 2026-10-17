@@ -69,8 +69,6 @@ A call followed by another call expresses the dependency that `flatMap` or `andT
 ## Integrate Option and Result
 
 ```ts
-import { Option, Result } from "effect"
-
 function positive(value: number) {
   const optional = value > 0 ? Option.some(value) : Option.none()
   return Effect.fromOption(optional)

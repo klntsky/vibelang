@@ -5,8 +5,6 @@ A fiber is a running computation with a result and a lifetime. Effeck uses Effec
 ## Forking and joining
 
 ```ts
-import { Fiber } from "effect"
-
 function buildDashboard() {
   const chart = fork(() => {
     Effect.sleep("30 millis")
@@ -23,8 +21,6 @@ function buildDashboard() {
 ## Awaiting completion as data
 
 ```ts
-import { Exit, Fiber } from "effect"
-
 function inspectChild() {
   const child = fork(() => { throw "render failed" })
   const exit = Fiber.await(child)
@@ -40,8 +36,6 @@ function inspectChild() {
 ## Handling asynchronous interruption
 
 ```ts
-import { Fiber } from "effect"
-
 function stopWorker() {
   const worker = fork(() => {
     try {
@@ -63,8 +57,6 @@ When the caller needs to continue during cleanup, start `Fiber.interrupt(worker)
 ## Combining results
 
 ```ts
-import { Fiber } from "effect"
-
 function combine() {
   const title = fork(() => "Inventory")
   const rows = fork(() => {
@@ -107,8 +99,6 @@ Forked fibers inherit the current services and tracing context. Control-operatio
 ## Selecting scoped or detached lifetimes
 
 ```ts
-import { Fiber } from "effect"
-
 function startInCallerScope() {
   return Effect.forkScoped(() => Effect.sleep("1 minute"))
 }
@@ -133,8 +123,6 @@ function detachedExample() {
 ## Understanding execution scheduling
 
 ```ts
-import { Deferred, Fiber } from "effect"
-
 function waitForReady() {
   const ready = Deferred.make<void>()
   const worker = fork(() => {

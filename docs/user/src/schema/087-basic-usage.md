@@ -163,8 +163,6 @@ function readPallet(input: unknown) {
 ## Selecting, removing, and changing optional fields
 
 ```ts
-import { Struct } from "effect"
-
 const PackageSummary = Package.mapFields(Struct.pick(["reference", "weight"]))
 const WithoutComment = Package.mapFields(Struct.omit(["comment"]))
 const Patch = Package.mapFields(Struct.map(Schema.optionalKey))

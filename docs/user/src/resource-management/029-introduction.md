@@ -30,8 +30,6 @@ function exportRows(accepted: boolean) {
 ## Finalizing based on the outcome
 
 ```ts
-import { Exit } from "effect"
-
 function observedExport(accepted: boolean) {
   return Effect.onExit(() => exportRows(accepted), (exit) => {
     if (Exit.isSuccess(exit)) {
@@ -48,8 +46,6 @@ function observedExport(accepted: boolean) {
 ## Cleaning up failed work
 
 ```ts
-import { Cause } from "effect"
-
 function reportFailedExport(accepted: boolean) {
   return Effect.onError(() => exportRows(accepted), (cause) => {
     if (Cause.hasInterrupts(cause)) {

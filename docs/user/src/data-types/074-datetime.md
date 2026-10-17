@@ -5,8 +5,6 @@
 ## Modeling UTC and zoned instants
 
 ```ts
-import { DateTime } from "effect"
-
 const instant = DateTime.makeUnsafe("2026-04-12T10:00:00Z")
 const paris = DateTime.setZone(
   instant, DateTime.zoneMakeNamedUnsafe("Europe/Paris")
@@ -20,8 +18,6 @@ A `Utc` holds epoch milliseconds. A `Zoned` holds the same kind of instant plus 
 ## Constructing timestamps from supported inputs
 
 ```ts
-import { DateTime } from "effect"
-
 const text = DateTime.make("2026-04-12T10:00:00Z")
 const epoch = DateTime.make(0)
 const parts = DateTime.make({ year: 2026, month: 4, day: 12 })
@@ -44,8 +40,6 @@ const serialized = DateTime.makeZonedFromString(
 ## Reading current time
 
 ```ts
-import { DateTime } from "effect"
-
 function timestamp() {
   const now = DateTime.now()
   return DateTime.formatIso(now)
@@ -58,8 +52,6 @@ function timestamp() {
 ## Identifying timestamp variants
 
 ```ts
-import { DateTime } from "effect"
-
 function describe(value: unknown) {
   if (!DateTime.isDateTime(value)) return "not a timestamp"
   if (DateTime.isUtc(value)) return "UTC"
@@ -76,8 +68,6 @@ function describe(value: unknown) {
 ## Parsing and changing time zones
 
 ```ts
-import { DateTime } from "effect"
-
 const named = DateTime.zoneMakeNamed("Asia/Tokyo")
 const parsed = DateTime.zoneFromString("+09:00")
 const fixed = DateTime.zoneMakeOffset(9 * 60 * 60 * 1000)
@@ -100,8 +90,6 @@ const shiftedView = DateTime.setZoneOffset(base, 9 * 60 * 60 * 1000)
 ## Comparing and converting instants
 
 ```ts
-import { DateTime, Duration } from "effect"
-
 const start = DateTime.makeUnsafe("2026-04-12T10:00:00Z")
 const end = DateTime.add(start, { hours: 3 })
 DateTime.isLessThan(start, end) // true
@@ -120,8 +108,6 @@ Ordering compares instants, independent of the attached zone. `distance(start, e
 ## Accessing calendar components
 
 ```ts
-import { DateTime } from "effect"
-
 const evening = DateTime.makeZonedUnsafe("2026-04-12T22:30:00Z", {
   timeZone: "Asia/Tokyo"
 })
@@ -138,8 +124,6 @@ const utcEdited = DateTime.setPartsUtc(evening, { hour: 9 })
 ## Calendar arithmetic and formatting
 
 ```ts
-import { DateTime, Duration } from "effect"
-
 const appointment = DateTime.makeZonedUnsafe("2026-04-12T10:00:00Z", {
   timeZone: "Europe/Paris"
 })
@@ -162,8 +146,6 @@ Calendar `add` and `subtract` operate on parts in the value's zone; duration ari
 ## Providing a default time zone
 
 ```ts
-import { DateTime } from "effect"
-
 function localDate() {
   return DateTime.formatIsoDate(DateTime.nowInCurrentZone())
 }

@@ -5,8 +5,6 @@ Schema issue formatters work as in Effect. Use readable strings for diagnostics 
 ## Rendering schema issues as readable strings
 
 ```ts
-import { SchemaIssue } from "effect"
-
 const Dispatch = Schema.Struct({
   destination: Schema.String,
   packages: Schema.Int

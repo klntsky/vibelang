@@ -34,7 +34,6 @@ TypeScript, which is EK4401 inside a test. The examples below use a local
 ## Controlling virtual time
 
 ```ts
-import { Fiber, Option } from "effect"
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 
@@ -60,7 +59,6 @@ it.effect("a deadline returns the fallback", () => {
 `it.effect` provides the test services, including virtual time. `adjust` advances by a duration and runs sleepers whose deadlines fall within that interval; `setTime` sets an absolute timestamp in milliseconds. Fork the timed work first so the test's own fiber remains free to adjust the clock. The block owns `pending` and interrupts it if the test exits early.
 
 ```ts
-import { Clock } from "effect"
 import { TestClock } from "effect/testing"
 
 function standaloneClockExample() {
@@ -77,7 +75,6 @@ Outside the test harness, explicitly provide `TestClock.layer()`. The virtual cl
 ## Advancing recurring computations
 
 ```ts
-import { Option, Queue } from "effect"
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 
@@ -108,7 +105,6 @@ Use the `check` helper from the first example. Advancing to each boundary lets t
 ## Checking clock-dependent behavior
 
 ```ts
-import { Clock } from "effect"
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 
@@ -130,7 +126,6 @@ Calls to `Clock.currentTimeMillis()` read the supplied clock and remain determin
 ## Timed waits and deferred results
 
 ```ts
-import { Deferred, Fiber } from "effect"
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 

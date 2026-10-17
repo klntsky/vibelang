@@ -38,8 +38,6 @@ An identifier replaces a generic expected-value description with a stable domain
 ## Customizing messages for checks and conversions
 
 ```ts
-import { SchemaGetter, SchemaIssue } from "effect"
-
 const WholeCount = Schema.String.annotate({
   message: "Enter the count as text"
 }).pipe(

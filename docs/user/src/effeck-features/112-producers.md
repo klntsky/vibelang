@@ -5,8 +5,6 @@ A producer yields values one at a time and can run Effects between yields. Use `
 ## Yield values on demand
 
 ```ts
-import { Console } from "effect"
-
 function* readings() {
   try {
     for (const celsius of [18, 21, 25, 19, 28, 30]) {
@@ -64,8 +62,6 @@ A producer can acquire resources with `using`. They stay open between yields and
 ## Use a producer as a Stream
 
 ```ts
-import { Stream } from "effect"
-
 function alerts() {
   const selected = Stream.take(
     Stream.map(

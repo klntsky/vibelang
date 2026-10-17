@@ -5,8 +5,6 @@ Effeck uses ordinary branches and loops for sequential work. Effect's operators 
 ## Branching and conditional computations
 
 ```ts
-import { Option } from "effect"
-
 class InvalidSize extends TaggedError("InvalidSize")<{
   readonly size: number
 }> {}

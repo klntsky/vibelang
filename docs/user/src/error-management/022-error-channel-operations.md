@@ -92,8 +92,6 @@ If observation fails, its failure can change the resulting cause, so use observa
 ## Exposing failures as successes
 
 ```ts
-import { Result, Exit } from "effect"
-
 function inspectQuantity(value: number) {
   const result = Effect.result(() => quantity(value))
   const summary = Result.match(result, {

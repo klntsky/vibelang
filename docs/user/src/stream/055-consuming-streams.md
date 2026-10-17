@@ -5,8 +5,6 @@ A consumer runs a Stream and returns one result. Inside an Effeck function, call
 ## Collecting elements
 
 ```ts
-import { Stream } from "effect"
-
 function collectLabels() {
   return Stream.runCollect(Stream.make("north", "south", "west"))
 }
@@ -18,8 +16,6 @@ function collectLabels() {
 ## Executing per-element effects
 
 ```ts
-import { Stream } from "effect"
-
 function announce() {
   Stream.runForEach(Stream.make("build", "test", "package"), (stage) => {
     Effect.log(`starting ${stage}`)
@@ -34,8 +30,6 @@ function announce() {
 ## Stopping conditionally
 
 ```ts
-import { Stream } from "effect"
-
 function reachBudget() {
   let total = 0
   Stream.runForEachWhile(Stream.make(3, 5, 8, 13), (amount) => {
@@ -51,8 +45,6 @@ The callback returns `true` to continue or `false` to stop. The element that ret
 ## Folding into an accumulator
 
 ```ts
-import { Stream } from "effect"
-
 function totalBytes() {
   return Stream.runFold(Stream.make(256, 512, 128), () => 0, (total, n) => total + n)
 }
@@ -72,8 +64,6 @@ The initial-state callback runs for each consumption, which also supports fresh 
 ## Running a sink
 
 ```ts
-import { Sink, Stream } from "effect"
-
 function readHeader() {
   const source = Stream.make("version", "length", "body")
   return Stream.run(source, Sink.take<string>(2))

@@ -5,8 +5,6 @@
 ## Requesting the path service
 
 ```ts
-import { Path } from "effect"
-
 function pathSeparator() {
   const path = Effect.service(Path.Path)
   return path.sep
@@ -19,8 +17,6 @@ function pathSeparator() {
 ## Manipulating paths portably
 
 ```ts
-import { Path } from "effect"
-
 function describeReport() {
   const path = Effect.service(Path.Path)
   const joined = path.join("reports", "weekly.txt")
@@ -52,8 +48,6 @@ Most `Path` methods are plain synchronous TypeScript functions. Effect's own pac
 | `toFileUrl`, `fromFileUrl` | Effectful file-URL conversion |
 
 ```ts
-import { Path } from "effect"
-
 function asFileUrl(file: string) {
   const path = Effect.service(Path.Path)
   const absolute = path.resolve(file)
@@ -68,7 +62,6 @@ URL conversions return Effects and run directly when called, reporting `BadArgum
 
 ```ts
 // main.effeck
-import { Path } from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 
 function main() {

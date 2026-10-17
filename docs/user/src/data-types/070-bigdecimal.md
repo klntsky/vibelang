@@ -5,8 +5,6 @@
 ## Representing decimal values
 
 ```ts
-import { BigDecimal } from "effect"
-
 const unitPrice = BigDecimal.make(875n, 2)
 const bulkPrice = BigDecimal.make(875n, -1)
 BigDecimal.format(unitPrice) // "8.75"
@@ -18,8 +16,6 @@ A value stores an integer coefficient and a scale: coefficient × 10 to the powe
 ## Constructing decimals
 
 ```ts
-import { BigDecimal, Option } from "effect"
-
 const whole = BigDecimal.fromBigInt(42n)
 const parsed = BigDecimal.fromString("18.625")
 const invalid = BigDecimal.fromString("eighteen")
@@ -35,8 +31,6 @@ BigDecimal.format(whole) // "42"
 ## Safe and unsafe constructors
 
 ```ts
-import { BigDecimal } from "effect"
-
 class InvalidPrice extends TaggedError("InvalidPrice")<{
   readonly input: string
 }> {}
@@ -57,8 +51,6 @@ const fixedRate = BigDecimal.fromNumberUnsafe(1.25)
 ## Performing arithmetic
 
 ```ts
-import { BigDecimal } from "effect"
-
 const price = BigDecimal.make(875n, 2)
 const quantity = BigDecimal.fromBigInt(4n)
 const subtotal = BigDecimal.multiply(price, quantity)
@@ -78,8 +70,6 @@ BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total))) // "32.5"
 ## Comparing values
 
 ```ts
-import { BigDecimal } from "effect"
-
 const amount = BigDecimal.make(325n, 1)
 const limit = BigDecimal.fromBigInt(40n)
 BigDecimal.isLessThan(amount, limit) // true
@@ -102,8 +92,6 @@ Use decimal comparisons rather than converting to numbers. Bounds passed to `bet
 ## Normalization and equality
 
 ```ts
-import { BigDecimal } from "effect"
-
 const padded = BigDecimal.make(87500n, 4)
 const compact = BigDecimal.normalize(padded)
 BigDecimal.equals(padded, BigDecimal.make(875n, 2)) // true

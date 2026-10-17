@@ -5,8 +5,6 @@ Transformations work in Effeck as in Effect: a codec validates one representatio
 ## Defining reversible infallible conversions
 
 ```ts
-import { SchemaTransformation } from "effect"
-
 const Availability = Schema.Literals(["ready", "held"]).pipe(
   Schema.decodeTo(Schema.Boolean, SchemaTransformation.transform({
     decode: (status) => status === "ready",
@@ -43,8 +41,6 @@ The middle functions above handle a number and a status string, even though the 
 ## Defining fallible conversions
 
 ```ts
-import { SchemaGetter, SchemaIssue } from "effect"
-
 const DeliveryMode = Schema.String.pipe(
   Schema.decodeTo(Schema.Literals(["road", "rail"]), {
     decode: SchemaGetter.transformEffect<"road" | "rail", string>((text) => {

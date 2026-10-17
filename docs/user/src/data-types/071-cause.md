@@ -5,8 +5,6 @@
 ## Representing failure reasons
 
 ```ts
-import { Cause } from "effect"
-
 const expected = Cause.fail("record missing")
 const defect = Cause.die(new Error("invariant broken"))
 const interrupted = Cause.interrupt(17)
@@ -19,8 +17,6 @@ empty.reasons.length // 0
 ## Combining reasons
 
 ```ts
-import { Cause } from "effect"
-
 const combined = Cause.combine(
   Cause.fail("export failed"),
   Cause.die(new Error("cleanup failed"))
@@ -33,8 +29,6 @@ Effect 4 stores reasons in a flat array. `combine` retains both sets of reasons;
 ## Extracting a computation's cause
 
 ```ts
-import { Cause, Exit } from "effect"
-
 class MissingRecord extends TaggedError("MissingRecord")<{
   readonly id: string
 }> {}
@@ -55,8 +49,6 @@ function diagnose() {
 ## Identifying reason variants
 
 ```ts
-import { Cause } from "effect"
-
 function classify<E>(cause: Cause.Cause<E>) {
   const summary = {
     failed: Cause.hasFails(cause),
@@ -80,8 +72,6 @@ Cause predicates answer whether a kind of reason is present. Reason guards narro
 ## Formatting and inspecting errors
 
 ```ts
-import { Cause } from "effect"
-
 function inspect<E>(cause: Cause.Cause<E>) {
   const failures = cause.reasons
     .filter(Cause.isFailReason)

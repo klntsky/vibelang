@@ -5,8 +5,6 @@ Effect's native `Arbitrary` module derives generators and shrinkers from schemas
 ## Generating schema-conforming random values
 
 ```ts
-import { Arbitrary } from "effect"
-
 const Parcel = Schema.Struct({
   label: Schema.NonEmptyString,
   count: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 24 }))
@@ -23,8 +21,6 @@ function sampleParcels() {
 ## Translating filters into generation constraints
 
 ```ts
-import { Order } from "effect"
-
 const EvenCapacity = Schema.Number.check(Schema.makeFilter(
   (value) => Number.isInteger(value) && value >= 2 && value <= 40 && value % 2 === 0,
   {
@@ -97,8 +93,6 @@ A custom `shrink` replaces the derived shrink strategy without replacing root ge
 ## Supporting custom declarations
 
 ```ts
-import { SchemaTransformation } from "effect"
-
 class ShelfRef {
   constructor(readonly code: `shelf_${string}`) {}
 }

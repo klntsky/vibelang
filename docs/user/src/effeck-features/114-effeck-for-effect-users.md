@@ -3,8 +3,6 @@
 Keep Effect's runtime, libraries, layers, and error channels. In `.effeck` files, write the sequential work as ordinary functions and statements.
 
 ```ts
-import { Console, Schedule } from "effect"
-
 function greet(name: string) {
   Effect.sleep("10 millis")
   const message = `Hello, ${name}`
@@ -58,8 +56,6 @@ A held Effect value runs when called with no arguments. Data that Effect can als
 ```ts
 // run.effeck
 import { NodeRuntime } from "@effect/platform-node"
-import { Console } from "effect"
-
 function start() {
   Console.log("started")
 }
@@ -74,8 +70,6 @@ Declare functions, services, schemas, and layers at module scope. Do not run a p
 ## Keep platform work in Effect
 
 ```ts
-import { Clock, Console } from "effect"
-
 function reportTime() {
   const now = Clock.currentTimeMillis()
   Console.log(now)

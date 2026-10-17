@@ -20,8 +20,6 @@ The returned document contains `dialect`, the root `schema`, and a separate `def
 ## Selecting canonical representations and specification drafts
 
 ```ts
-import { JsonSchema } from "effect"
-
 function alternateDrafts() {
   const document = Effect.try(() => Schema.toJsonSchemaDocument(
     Schema.Tuple([Schema.String, Schema.FiniteFromString])

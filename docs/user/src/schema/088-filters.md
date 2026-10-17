@@ -78,8 +78,6 @@ String checks include `isNonEmpty`, `isPattern`, `isStartingWith`, `isEndingWith
 Numbers support strict and inclusive lower and upper bounds, `isBetween`, `isInt`, and `isMultipleOf`. Bigints have the corresponding `BigInt` bounds, including `isBetweenBigInt`. Checks validate their input; they do not round numbers, change case, or trim strings.
 
 ```ts
-import { BigDecimal, Duration } from "effect"
-
 const ShipDate = Schema.Date.check(
   Schema.isBetweenDate({
     minimum: new Date("2026-01-01T00:00:00.000Z"),

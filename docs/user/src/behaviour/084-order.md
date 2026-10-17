@@ -5,8 +5,6 @@
 ## Using built-in orderings
 
 ```ts
-import { Order } from "effect"
-
 Order.String("amber", "violet") // -1
 Order.Number(7, 7) // 0
 Order.BigInt(11n, 3n) // 1
@@ -18,8 +16,7 @@ An `Order<A>` compares two values of A synchronously. Built-in orders cover stri
 ## Sorting values
 
 ```ts
-import { Array as Arr, Order } from "effect"
-
+import { Array as Arr } from "effect"
 const input = [9, 2, 6]
 const sorted = Arr.sort(input, Order.Number)
 // sorted: [2, 6, 9]; input: [9, 2, 6]
@@ -34,8 +31,6 @@ Effect's array `sort` returns a sorted copy. JavaScript's array method sorts its
 ## Deriving comparison rules
 
 ```ts
-import { Order } from "effect"
-
 interface Task {
   readonly priority: number
   readonly title: string
@@ -55,8 +50,7 @@ byPriority(
 ## Combining comparison rules
 
 ```ts
-import { Array as Arr, Order } from "effect"
-
+import { Array as Arr } from "effect"
 interface Task {
   readonly priority: number
   readonly title: string
@@ -78,8 +72,7 @@ const tasks = Arr.sort([
 ## Reversing an ordering
 
 ```ts
-import { Array as Arr, Order } from "effect"
-
+import { Array as Arr } from "effect"
 const descending = Order.flip(Order.Number)
 Arr.sort([5, 12, 3], descending) // [12, 5, 3]
 ```
@@ -89,8 +82,6 @@ Arr.sort([5, 12, 3], descending) // [12, 5, 3]
 ## Checking comparisons
 
 ```ts
-import { Order } from "effect"
-
 const less = Order.isLessThan(Order.Number)
 const greater = Order.isGreaterThan(Order.Number)
 const atMost = Order.isLessThanOrEqualTo(Order.Number)
@@ -106,8 +97,6 @@ These helpers turn an order into boolean comparisons. They work with derived obj
 ## Selecting extrema
 
 ```ts
-import { Order } from "effect"
-
 Order.min(Order.Number)(13, 8) // 8
 Order.max(Order.Number)(13, 8) // 13
 Order.min(Order.flip(Order.Number))(13, 8) // 13
@@ -118,8 +107,6 @@ Order.min(Order.flip(Order.Number))(13, 8) // 13
 ## Clamping values and testing ranges
 
 ```ts
-import { Order } from "effect"
-
 const bounds = { minimum: 10, maximum: 50 }
 const clamp = Order.clamp(Order.Number)(bounds)
 const inside = Order.isBetween(Order.Number)(bounds)

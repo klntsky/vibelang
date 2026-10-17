@@ -26,8 +26,6 @@ Import `Cause` from `effect` when naming the contract explicitly. `sandbox` chan
 ## Inspecting individual reasons
 
 ```ts
-import { Cause } from "effect"
-
 function rowFailureKinds() {
   try {
     return sandboxedRow()
@@ -46,8 +44,6 @@ Effect 4 stores reasons in a flat readonly array. `isFailReason` exposes `error`
 ## Recovering selected variants
 
 ```ts
-import { Cause } from "effect"
-
 function rowOrPlaceholder() {
   try {
     return sandboxedRow()

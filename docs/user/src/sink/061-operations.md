@@ -5,8 +5,6 @@ Transform a Sink when its existing consumption rule fits but its input or result
 ## Adapting consumer input
 
 ```ts
-import { Sink, Stream } from "effect"
-
 const quantities = Sink.mapInput(Sink.sum, (entry: { readonly quantity: number }) => entry.quantity)
 
 function countItems() {
@@ -18,8 +16,6 @@ function countItems() {
 `mapInput` converts each incoming value before the original sink sees it. Its callback is synchronous and cannot perform Effect work. Use `mapInputEffect` for validation, service calls, or other work with failures and requirements.
 
 ```ts
-import { Sink } from "effect"
-
 class InvalidQuantity extends TaggedError("InvalidQuantity")<{
   readonly raw: string
 }> {}
@@ -36,8 +32,6 @@ The new sink accepts strings and can fail with `InvalidQuantity`. A failed input
 ## Mapping consumer output
 
 ```ts
-import { Sink, Stream } from "effect"
-
 const report = Sink.map(Sink.sum, (total) => ({ total, unit: "items" }))
 
 function totalReport() {
@@ -51,8 +45,6 @@ function totalReport() {
 ## Composing input and output transformations
 
 ```ts
-import { Sink, Stream } from "effect"
-
 const report = pipe(
   Sink.sum,
   Sink.mapInput((entry: { readonly bytes: number }) => entry.bytes),
@@ -70,8 +62,6 @@ The input stage adapts each element, the original sink accumulates, and the outp
 ## Filtering before consumption
 
 ```ts
-import { Sink, Stream } from "effect"
-
 function positiveBatches() {
   const positive = Stream.filter(Stream.make(-3, 4, 0, 8, -1, 12, 16), (n) => n > 0)
   const batches = Stream.transduce(positive, Sink.take<number>(3))

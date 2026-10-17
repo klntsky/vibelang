@@ -5,8 +5,6 @@
 ## Distinguishing identical representations
 
 ```ts
-import { Brand } from "effect"
-
 type InvoiceId = string & Brand.Brand<"InvoiceId">
 type CustomerId = string & Brand.Brand<"CustomerId">
 
@@ -24,8 +22,6 @@ Two plain aliases for `string` remain interchangeable. These branded types requi
 ## Nominal brands
 
 ```ts
-import { Brand } from "effect"
-
 type InvoiceId = string & Brand.Brand<"InvoiceId">
 const InvoiceId = Brand.nominal<InvoiceId>()
 
@@ -40,8 +36,6 @@ function knownInvoice(raw: string) {
 ## Refined brands and validation
 
 ```ts
-import { Brand } from "effect"
-
 type WholeCents = number & Brand.Brand<"WholeCents">
 const WholeCents = Brand.make<WholeCents>((n) =>
   Number.isSafeInteger(n) || "amount must be a safe integer"
@@ -76,8 +70,6 @@ function inspectAmount(raw: number) {
 ## Composing constraints
 
 ```ts
-import { Brand } from "effect"
-
 type WholeCents = number & Brand.Brand<"WholeCents">
 const WholeCents = Brand.make<WholeCents>((n) =>
   Number.isSafeInteger(n) || "amount must be a safe integer"

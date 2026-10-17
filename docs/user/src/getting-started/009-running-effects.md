@@ -75,8 +75,6 @@ An `Exit` is either a success with a value or a failure with a `Cause`. That cau
 ## Start and interrupt a fiber
 
 ```ts
-import { Fiber, Schedule } from "effect"
-
 function heartbeat() {
   Effect.repeat(() => Effect.log("alive"), Schedule.spaced("200 millis"))
 }

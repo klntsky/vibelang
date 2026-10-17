@@ -42,8 +42,6 @@ A function collects the failures it throws and those its calls can produce. Sequ
 ## Turning failures into values
 
 ```ts
-import { Option, Result } from "effect"
-
 function inspectItem(input: string) {
   const result = Effect.result(() => findItem(input))
   return Result.match(result, {
@@ -102,8 +100,6 @@ function labelByTag(input: string) {
 Narrowing and rethrowing preserves the unhandled error type. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
 
 ```ts
-import { Filter } from "effect"
-
 function withTagTable(input: string) {
   return Effect.catchTags(() => findItem(input), {
     InvalidCode: () => ({ code: "", label: "Enter a code" }),

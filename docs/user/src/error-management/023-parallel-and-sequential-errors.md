@@ -7,8 +7,6 @@ An operation can stop for several reasons: concurrent work can fail together, or
 ## Representing multiple failures
 
 ```ts
-import { Cause } from "effect"
-
 function failureKinds() {
   const cause = Cause.combine(
     Cause.fail("delivery rejected"),
@@ -24,8 +22,6 @@ A `Cause.Cause<E>` contains a readonly array of `Cause.Reason<E>`. Each reason i
 ## Combining concurrent or sequential reasons
 
 ```ts
-import { Cause, Exit } from "effect"
-
 function operationWithBrokenCleanup() {
   try {
     throw "delivery rejected"

@@ -20,8 +20,6 @@ A function value remains a description until it is called or handed to a runner.
 ## Run with an explicit service context
 
 ```ts
-import { Context } from "effect"
-
 abstract class Labels {
   abstract format(value: string): Effect<string, never, never>
 }
@@ -46,8 +44,6 @@ Most applications build their context through layers instead. Use an explicit co
 ## Change runtime behavior within a region
 
 ```ts
-import { Logger } from "effect"
-
 const Quiet = Logger.layer([])
 
 function startup() {
@@ -67,8 +63,6 @@ To emit a different format, supply a logger such as `Logger.consoleJson` through
 
 ```ts
 // notifications.effeck
-import { Console } from "effect"
-
 export abstract class Notifications {
   abstract send(message: string): Effect<void, never, never>
 

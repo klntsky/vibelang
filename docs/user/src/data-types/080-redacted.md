@@ -5,8 +5,6 @@
 ## Wrapping sensitive values
 
 ```ts
-import { Redacted } from "effect"
-
 const exampleKey = Redacted.make("example-key-not-a-real-secret")
 String(exampleKey) // "<redacted>"
 
@@ -20,8 +18,6 @@ function reportConfiguration() {
 ## Revealing values deliberately
 
 ```ts
-import { Redacted } from "effect"
-
 abstract class CredentialsClient {
   abstract authenticate(token: string): Effect<boolean, never, never>
 }
@@ -37,8 +33,6 @@ function authenticate(token: Redacted.Redacted<string>) {
 ## Wiping stored secrets
 
 ```ts
-import { Redacted } from "effect"
-
 function useOnce(raw: string) {
   const token = Redacted.make(raw)
   try {
@@ -54,8 +48,6 @@ function useOnce(raw: string) {
 ## Comparing protected values
 
 ```ts
-import { Equivalence, Redacted } from "effect"
-
 const same = Redacted.makeEquivalence(Equivalence.String)
 const first = Redacted.make("example-a")
 const second = Redacted.make("example-a")

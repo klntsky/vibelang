@@ -17,8 +17,6 @@ function decodeOpcode(opcode: number) {
 `Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit Effeck `throw`, including `throw new Error(...)`, is a typed failure instead.
 
 ```ts
-import { Option } from "effect"
-
 function firstLabel(labels: ReadonlyArray<string>) {
   try {
     return Effect.fromOption(Option.fromNullishOr(labels[0]))
@@ -60,8 +58,6 @@ function startupWithMessage() {
 ## Examining complete execution results
 
 ```ts
-import { Cause, Exit } from "effect"
-
 function inspectStartup() {
   const outcome = Effect.exit(() => startup())
   if (Exit.isFailure(outcome)) {
@@ -94,8 +90,6 @@ function isolateDecoder(opcode: number) {
 ## Recovering a complete cause
 
 ```ts
-import { Cause } from "effect"
-
 function decoderBoundary(opcode: number) {
   return Effect.catchCause(() => decodeOpcode(opcode), (cause) => {
     if (Cause.hasInterrupts(cause)) return Effect.failCause(cause)

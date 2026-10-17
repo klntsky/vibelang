@@ -39,7 +39,6 @@ function receiveCompiled(input: unknown) {
 Put the enabling import before code that creates or runs parsers. Importing the compiler namespace alone does not enable it. Operations compile lazily on first use, without eagerly executing every check or default.
 
 ```ts
-import { SchemaAST } from "effect"
 import { SchemaJITCompiler } from "effect/schema"
 
 function enableSelectedDirections() {
@@ -107,7 +106,6 @@ Load the generated module before using the schemas and ensure the bundler preser
 ## Using lower-level compiler APIs
 
 ```ts
-import { SchemaAST } from "effect"
 import * as SchemaAOTCompiler from "effect/schema/SchemaAOTCompiler"
 
 function generateSource() {

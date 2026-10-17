@@ -7,8 +7,6 @@ Match constructors, case builders, finalizers, and returned matchers are trusted
 ## Matchers from types or values
 
 ```ts
-import { Match } from "effect"
-
 const describe = pipe(
   Match.type<number | string>(),
   Match.when(Match.number, (n) => `count ${n}`),
@@ -35,8 +33,6 @@ function describeJob(input: { readonly state: string; readonly attempts: number 
 ## Shapes, predicates, and tags
 
 ```ts
-import { Match } from "effect"
-
 function classifyRetry(input: { readonly status: string; readonly attempts: number }) {
   return pipe(
     Match.value(input),
@@ -69,8 +65,6 @@ Other patterns include `Match.nonEmptyString`, `Match.bigint`, `Match.date`, `Ma
 ## Negating patterns
 
 ```ts
-import { Match } from "effect"
-
 function availability(status: "active" | "paused" | "closed") {
   return pipe(
     Match.value(status),
@@ -85,8 +79,6 @@ function availability(status: "active" | "paused" | "closed") {
 ## Fixing the return type
 
 ```ts
-import { Match } from "effect"
-
 function display(input: number | boolean) {
   return pipe(
     Match.value(input),
@@ -103,8 +95,6 @@ Place `withReturnType<T>()` before all cases. Each handler must return `T`, whic
 ## Exhaustive handling
 
 ```ts
-import { Match } from "effect"
-
 type Phase = "draft" | "published"
 
 function phaseLabel(phase: Phase) {
@@ -122,8 +112,6 @@ function phaseLabel(phase: Phase) {
 ## Defaults, optional outputs, and result outputs
 
 ```ts
-import { Match } from "effect"
-
 type Command = "start" | "stop" | "help"
 
 function withDefault(command: Command) {

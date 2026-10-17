@@ -7,8 +7,6 @@ Clock, random generation, console output, configuration sources, and tracing hav
 ## Using the clock, random, and console
 
 ```ts
-import { Clock, Console, Random } from "effect"
-
 function startupMessage() {
   const started = Clock.currentTimeMillis()
   const sample = Random.next()
@@ -22,8 +20,6 @@ function startupMessage() {
 The five default references are `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, and `Tracer.Tracer`. Import their modules from `effect` when using them. Their defaults explain why the example's `R` is `never` even though it reads time and random state.
 
 ```ts
-import { Config } from "effect"
-
 const Port = Config.withDefault(Config.Port("PORT"), 3000)
 
 function configuredPort() {
@@ -37,8 +33,6 @@ function configuredPort() {
 ## Replacing default implementations
 
 ```ts
-import { Random } from "effect"
-
 function fixedRandomSample() {
   return Effect.provideService(() => Random.next(), Random.Random, {
     nextDoubleUnsafe: () => 0.25,
@@ -68,8 +62,6 @@ A service with `static readonly default` compiles to a `Context.Reference`, so u
 ## Reproducible random computations
 
 ```ts
-import { Random } from "effect"
-
 function pair() {
   return [Random.next(), Random.next()]
 }

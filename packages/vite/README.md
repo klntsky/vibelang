@@ -51,8 +51,6 @@ export default defineConfig({
 ```ts
 // src/answer.test.effeck
 import { assert, it } from "@effect/vitest"
-import { Effect } from "effect"
-
 function answer() {
   return Effect.succeed(42)
 }

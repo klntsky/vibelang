@@ -65,7 +65,6 @@ A continuation can be consumed once. Keep it inside its clause; never save it or
 
 ```ts
 // stopping.effeck
-import { Console } from "effect"
 import { Approval } from "./approval.effeck"
 
 function deployment() {

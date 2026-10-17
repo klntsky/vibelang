@@ -47,8 +47,6 @@ function sendTransient() {
 ## Controlling timing and limits
 
 ```ts
-import { Schedule } from "effect"
-
 function sendWithBackoff() {
   return Effect.retry(() => sendRequest(), {
     times: 4,
@@ -67,8 +65,6 @@ A schedule controls delay and can add its own stopping condition. Combining `tim
 ## Recovering after retries end
 
 ```ts
-import { Schedule } from "effect"
-
 function sendOrQueue() {
   return Effect.retryOrElse(
     () => sendRequest(),

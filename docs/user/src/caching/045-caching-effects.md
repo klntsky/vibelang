@@ -5,8 +5,6 @@ Caching shares a computation's outcome across callers instead of repeating the w
 ## Memoizing parameterized computations
 
 ```ts
-import { Cache } from "effect"
-
 function memoizeLengths() {
   let lookups = 0
   const cache = Cache.make({

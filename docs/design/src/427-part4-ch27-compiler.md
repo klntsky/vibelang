@@ -54,8 +54,9 @@ history, rather than a separately applied patch series.
 ```
 
 The parser keeps TypeScript's grammar. The checker resolves prelude names as
-implicit imports from `effeck-runtime`, unless a local declaration or
-import shadows them (D4, D48). Class hooks give fully abstract service classes
+implicit imports from `effeck-runtime`, and the other exports of `effect`'s
+root as implicit imports from `effect`, unless a local declaration or import
+shadows them (D4, D48, D146). Class hooks give fully abstract service classes
 the static side of an Effect Context key and the instance shape of their
 abstract members (D1, D45).
 

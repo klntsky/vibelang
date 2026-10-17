@@ -5,8 +5,6 @@
 ## Choosing a starting rule
 
 ```ts
-import { Schedule } from "effect"
-
 const immediate = Schedule.recurs(4)
 const afterCompletion = Schedule.spaced("20 seconds")
 const cadence = Schedule.fixed("20 seconds")
@@ -29,8 +27,6 @@ These declarations build reusable values without running work. Choose a rule acc
 ## Understanding schedule steps
 
 ```ts
-import { Schedule } from "effect"
-
 function runChecks() {
   Effect.repeat(() => {
     Effect.logInfo("checking")
@@ -46,8 +42,6 @@ A schedule step receives input and produces output plus timing metadata. In `ret
 ## Limiting duration and adjusting delays
 
 ```ts
-import { Duration, Schedule } from "effect"
-
 const bounded = pipe(
   Schedule.exponential("300 millis"),
   Schedule.modifyDelay(({ duration }) =>
@@ -67,8 +61,6 @@ const firstThree = Schedule.while(
 ## Requiring every timing rule
 
 ```ts
-import { Schedule } from "effect"
-
 const policy = Schedule.upTo(
   Schedule.max([
     Schedule.exponential("400 millis"),
@@ -83,8 +75,6 @@ const policy = Schedule.upTo(
 ## Accepting any timing rule
 
 ```ts
-import { Schedule } from "effect"
-
 const startupAndSteady = Schedule.min([
   Schedule.upTo(Schedule.spaced("500 millis"), { times: 2 }),
   Schedule.fixed("12 seconds")
@@ -96,8 +86,6 @@ const startupAndSteady = Schedule.min([
 ## Switching rules in phases
 
 ```ts
-import { Schedule } from "effect"
-
 const reconnect = Schedule.concat(
   Schedule.upTo(Schedule.spaced("150 millis"), { times: 2 }),
   Schedule.upTo(Schedule.spaced("3 seconds"), { times: 5 })

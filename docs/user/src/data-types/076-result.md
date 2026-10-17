@@ -5,8 +5,6 @@
 ## Results and execution exits
 
 ```ts
-import { Result } from "effect"
-
 function parseCount(text: string) {
   const count = Number(text)
   return text.trim() !== "" && Number.isInteger(count) && count >= 0
@@ -21,8 +19,6 @@ Returning a failed `Result` does not fail `parseCount`: its success value is the
 ## Constructing and identifying variants
 
 ```ts
-import { Result } from "effect"
-
 const accepted = Result.succeed(8)
 const rejected = Result.fail("limit exceeded")
 Result.isResult(accepted) // true
@@ -40,8 +36,6 @@ Success stores its payload in `.success`; failure uses `.failure`. Guards narrow
 ## Matching and mapping outcomes
 
 ```ts
-import { Result } from "effect"
-
 function summarize(result: Result.Result<number, string>) {
   const increased = Result.map(result, (count) => count + 2)
   const contextual = Result.mapError(increased, (error) => `count: ${error}`)
@@ -61,8 +55,6 @@ function summarize(result: Result.Result<number, string>) {
 ## Converting results into effects
 
 ```ts
-import { Result } from "effect"
-
 class InvalidCount extends TaggedError("InvalidCount")<{
   readonly input: string
 }> {}
@@ -89,8 +81,6 @@ function validatePair() {
 ## Sequencing and combining results
 
 ```ts
-import { Result } from "effect"
-
 function combine(
   name: Result.Result<string, string>,
   count: Result.Result<number, string>
@@ -124,7 +114,6 @@ export function combineResults(
 ```
 
 ```ts
-import { Result } from "effect"
 import { combineResults } from "./combine-results.ts"
 
 function combinedData() {

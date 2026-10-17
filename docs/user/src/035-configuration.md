@@ -5,8 +5,6 @@ Use `Config` to load typed settings and `ConfigProvider` to choose their source.
 ## Declare typed configuration
 
 ```ts
-import { Config } from "effect"
-
 const Host = Config.NonEmptyString("HOST")
 const Port = Config.Port("PORT")
 
@@ -37,8 +35,6 @@ Prefer `Finite` to `Number` for ordinary numeric settings: `Number` also accepts
 ## Parse with schemas
 
 ```ts
-import { Config } from "effect"
-
 function teamName() {
   return Config.schema(
     Schema.String.check(Schema.isMinLength(3)),
@@ -52,8 +48,6 @@ function teamName() {
 
 ```ts
 // descriptors.effeck
-import { Config } from "effect"
-
 export const server = Config.schema(Schema.Struct({
   host: Schema.String,
   port: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))
@@ -61,7 +55,6 @@ export const server = Config.schema(Schema.Struct({
 ```
 
 ```ts
-import { ConfigProvider } from "effect"
 import { server } from "./descriptors.effeck"
 
 function localServer() {
@@ -76,8 +69,6 @@ Use `descriptor.parse(provider)` when the source is explicit, especially in test
 ## Read arrays and records
 
 ```ts
-import { Config } from "effect"
-
 function routingSettings() {
   const regions = Config.Array(Schema.String, "REGIONS")()
   const labels = Config.Record(Schema.String, Schema.String, "LABELS")()
@@ -91,8 +82,6 @@ Arrays accept structural values or a separated string such as `north,south`. Rec
 
 ```ts
 // database-config.effeck
-import { Config } from "effect"
-
 export const database = Config.nested(Config.all({
   host: Config.NonEmptyString("HOST"),
   port: Config.Port("PORT")
@@ -100,7 +89,6 @@ export const database = Config.nested(Config.all({
 ```
 
 ```ts
-import { ConfigProvider } from "effect"
 import { database } from "./database-config.effeck"
 
 function testDatabaseSettings() {
@@ -116,8 +104,6 @@ function testDatabaseSettings() {
 
 ```ts
 // optional-config.effeck
-import { Config } from "effect"
-
 export const port = Config.withDefault(Config.Port("PORT"), 9091)
 export const apiKey = Config.option(Config.String("API_KEY"))
 export const host = Config.orElse(
@@ -127,7 +113,6 @@ export const host = Config.orElse(
 ```
 
 ```ts
-import { ConfigProvider } from "effect"
 import { port, apiKey, host } from "./optional-config.effeck"
 
 function defaultsExample() {
@@ -148,8 +133,6 @@ A default on a `Config.all` group replaces the whole group when any child is abs
 
 ```ts
 // origin-config.effeck
-import { Config } from "effect"
-
 export const origin = Config.map(Config.all({
   host: Config.NonEmptyString("HOST"),
   port: Config.Port("PORT")
@@ -171,8 +154,6 @@ Use `Config.map` for a transformation that cannot fail. Express validation in a 
 ## Protect secrets
 
 ```ts
-import { Config } from "effect"
-
 function secretSetting() {
   const token = Config.Redacted("ACCESS_TOKEN")()
   Effect.log(token)
@@ -185,8 +166,6 @@ function secretSetting() {
 ## Load providers
 
 ```ts
-import { Config, ConfigProvider } from "effect"
-
 const TestProvider = ConfigProvider.fromUnknown({ PORT: 9091 })
 const EnvProvider = ConfigProvider.fromEnv({ env: { PORT: "9092" } })
 const DotEnvProvider = ConfigProvider.fromDotEnvContents("PORT=9093")
@@ -207,8 +186,6 @@ function fileProvider() {
 ## Remap provider paths
 
 ```ts
-import { Config, ConfigProvider } from "effect"
-
 const DeploymentProvider = ConfigProvider.constantCase(
   ConfigProvider.fromEnv({ env: { SERVICE_PORT: "9094" } })
 )
@@ -226,8 +203,6 @@ function deploymentPort() {
 ## Compose and install providers
 
 ```ts
-import { Config, ConfigProvider } from "effect"
-
 const Combined = ConfigProvider.orElse(
   ConfigProvider.fromEnv({ env: { HOST: "edge.internal" } }),
   ConfigProvider.fromUnknown({ HOST: "localhost", PORT: 9091 })

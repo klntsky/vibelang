@@ -5,8 +5,6 @@ Use requests and resolvers when independent lookups can share a backend call. A 
 ## Model requests and domain errors
 
 ```ts
-import { Request, RequestResolver } from "effect"
-
 type Part = { readonly code: string; readonly label: string }
 
 class PartMissing extends TaggedError("PartMissing")<{
@@ -165,8 +163,6 @@ function cachedExample() {
 The cache is bounded by `capacity`, with `"lru"` eviction by default or `"fifo"` for insertion order. Completed expected failures are cached too; interrupted results are not. Entries have no time-based expiry, and cache hits depend on request equality.
 
 ```ts
-import { Cache } from "effect"
-
 function expiringLookup() {
   const cache = RequestResolver.asCache(PartResolver, {
     capacity: 128,

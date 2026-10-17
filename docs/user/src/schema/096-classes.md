@@ -49,8 +49,6 @@ function fromVerifiedFields(reference: string, pieces: number) {
 ## Defining structural equality
 
 ```ts
-import { Equal } from "effect"
-
 class Container extends Schema.Class<Container>("Container")({
   labels: Schema.Array(Schema.String)
 }) {}
@@ -141,8 +139,6 @@ Suspend the recursive edge and write the callback's full contract to break the i
 ## Creating tagged variants and extending classes
 
 ```ts
-import { SchemaIssue } from "effect"
-
 class Packed extends Schema.TaggedClass<Packed>()("Packed", {
   reference: Schema.String
 }) {}

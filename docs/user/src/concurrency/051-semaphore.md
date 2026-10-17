@@ -5,8 +5,6 @@ A semaphore limits access to a shared resource with a pool of permits. A one-per
 ## Creating a permit pool
 
 ```ts
-import { Semaphore } from "effect"
-
 function makeUploadLimit() {
   return Semaphore.make(3)
 }
@@ -18,8 +16,6 @@ Create the pool once for the callers that must share a limit. Allocating a separ
 ## Limiting concurrent access
 
 ```ts
-import { Semaphore } from "effect"
-
 function uploadAll() {
   const uploads = Semaphore.make(2)
   return Effect.forEach(["a.csv", "b.csv", "c.csv", "d.csv"], (file) => {
@@ -37,8 +33,6 @@ The traversal can start all four callers, but only two can enter the permit-prot
 ## Acquiring several permits around work
 
 ```ts
-import { Semaphore } from "effect"
-
 function weightedJobs() {
   const memoryBudget = Semaphore.make(4)
   return Effect.forEach([1, 2, 3], (weight) => {
@@ -55,8 +49,6 @@ An operation waits until its requested permits can be acquired together. This mo
 ## Releasing permits safely
 
 ```ts
-import { Semaphore } from "effect"
-
 class Rejected extends TaggedError("Rejected")<{}> {}
 
 function releaseOnFailure() {

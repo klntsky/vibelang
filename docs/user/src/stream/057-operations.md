@@ -5,8 +5,6 @@ Stream operators build a new description of how to process a source. Keep transf
 ## Observing and taking elements
 
 ```ts
-import { Stream } from "effect"
-
 const observed = Stream.tap(Stream.range(10, 18), (n) => Effect.log(`reading ${n}`))
 const first = Stream.take(observed, 3)
 const below = Stream.takeWhile(observed, (n) => n < 13)
@@ -25,8 +23,6 @@ function readFirst() {
 ## Async iteration and manual pulls
 
 ```ts
-import { Stream } from "effect"
-
 abstract class Exporter {
   abstract write(rows: AsyncIterable<string>): Effect<number, Error, never>
 }
@@ -40,8 +36,6 @@ function exportRows(source: Stream.Stream<string>) {
 `toAsyncIterableEffect` captures the current services and returns an async iterable for a TypeScript consumer. `toAsyncIterable` is the direct variant for a source with no service requirements. Iteration failures cross as JavaScript errors, so a foreign consumer must map them back into its declared failure channel; conversion itself does not consume the stream.
 
 ```ts
-import { Pull, Stream } from "effect"
-
 function printBatches() {
   using pull = Stream.toPull(Stream.rechunk(Stream.range(30, 34), 2))
   while (true) {
@@ -57,8 +51,6 @@ function printBatches() {
 ## Mapping, flattening, and state
 
 ```ts
-import { Stream } from "effect"
-
 function loadLabel(id: number) {
   Effect.sleep("10 millis")
   return `item-${id}`
@@ -81,8 +73,6 @@ const totals = Stream.mapAccum(Stream.make(4, 7, 9), () => 0, (total, n) => {
 ## Filtering, scanning, and changes
 
 ```ts
-import { Stream } from "effect"
-
 const readings = Stream.make(2, 2, 5, 5, 2)
 const large = Stream.filter(readings, (n) => n >= 5)
 const changes = Stream.changes(readings)
@@ -102,8 +92,6 @@ function inspect() {
 ## Zipping and indexing
 
 ```ts
-import { Stream } from "effect"
-
 const sizes = Stream.make(5, 8, 13)
 const names = Stream.make("small", "large")
 const pairs = Stream.zip(sizes, names)
@@ -123,8 +111,6 @@ For sources with different rates, `zipLatest` waits for both sides to produce, t
 ## Cartesian products
 
 ```ts
-import { Stream } from "effect"
-
 const variants = Stream.cross(Stream.make("linen", "wool"), Stream.make("blue", "gray"))
 const names = Stream.crossWith(
   Stream.make("linen", "wool"),
@@ -138,8 +124,6 @@ const names = Stream.crossWith(
 ## Partitioning and grouping
 
 ```ts
-import { Filter, Stream } from "effect"
-
 function partitionReadings() {
   using branches = Stream.partition(
     Stream.range(10, 19),
@@ -157,8 +141,6 @@ function partitionReadings() {
 `partition` runs one source and returns the passing and failing streams in that order. It is an Effect requiring Scope, so keep both consumers within the lifetime of `using`. Consume branches concurrently: a full, unconsumed branch can backpressure the other branch. `partitionEffect` accepts a `Filter.FilterEffect`, whose successes select the passing branch and failures of its Result select the other branch.
 
 ```ts
-import { Stream } from "effect"
-
 const requests = Stream.make(
   { region: "west", bytes: 10 },
   { region: "east", bytes: 20 },
@@ -181,8 +163,6 @@ const timedBatches = Stream.groupedWithin(requests, 20, "1 second")
 ## Concatenating, merging, and interleaving
 
 ```ts
-import { Stream } from "effect"
-
 const primary = Stream.make("a1", "a2")
 const secondary = Stream.make("b1", "b2", "b3")
 const sequential = Stream.concat(primary, secondary)
@@ -202,8 +182,6 @@ const selected = Stream.interleaveWith(primary, secondary, Stream.make(true, fal
 ## Separators and affixes
 
 ```ts
-import { Stream } from "effect"
-
 const fields = Stream.make("name", "email", "role")
 const separated = Stream.intersperse(fields, ",")
 const bracketed = Stream.intersperseAffixes(fields, { start: "[", middle: ",", end: "]" })
@@ -218,8 +196,6 @@ function formatFields() {
 ## Broadcasting and buffering
 
 ```ts
-import { Stream } from "effect"
-
 function shareReadings() {
   using copies = Stream.broadcastN(Stream.range(1, 12), { n: 2, capacity: 3 })
   const [totals, audit] = copies
@@ -242,8 +218,6 @@ const buffered = Stream.buffer(Stream.range(1, 12), { capacity: 3 })
 ## Debouncing and throttling
 
 ```ts
-import { Stream } from "effect"
-
 const bursts = Stream.concat(
   Stream.make("c", "ca", "cat"),
   Stream.fromEffect(() => {
@@ -266,8 +240,6 @@ const paced = Stream.throttle(Stream.rechunk(Stream.range(1, 10), 1), {
 ## Scheduling delivery
 
 ```ts
-import { Schedule, Stream } from "effect"
-
 const announcements = Stream.schedule(
   Stream.make("prepare", "deploy", "verify"),
   Schedule.spaced("500 millis")

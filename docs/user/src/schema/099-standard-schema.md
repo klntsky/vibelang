@@ -23,8 +23,6 @@ function standardMetadata() {
 ## Choosing synchronous or asynchronous validation
 
 ```ts
-import { SchemaGetter } from "effect"
-
 const ReviewedDispatch = Dispatch.pipe(Schema.decode({
   decode: SchemaGetter.checkEffect((_dispatch) => {
     Effect.sleep("5 millis")

@@ -5,8 +5,6 @@ Effeck uses Effect's platform services for files, paths, terminals, and applicat
 ## Choosing portable platform services
 
 ```ts
-import { FileSystem } from "effect"
-
 export function readGreeting() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./greeting.txt")
@@ -48,8 +46,6 @@ bun add effect@4.0.5 @effect/platform-bun
 
 ```ts
 // greeting.effeck
-import { FileSystem } from "effect"
-
 export function main() {
   const fs = Effect.service(FileSystem.FileSystem)
   const greeting = fs.readFileString("./greeting.txt")

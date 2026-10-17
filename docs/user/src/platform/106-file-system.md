@@ -5,8 +5,6 @@
 ## Requesting the file-system service
 
 ```ts
-import { FileSystem } from "effect"
-
 function readSettings() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./settings.json")
@@ -19,8 +17,6 @@ function readSettings() {
 ## Performing file operations
 
 ```ts
-import { FileSystem } from "effect"
-
 function saveSummary(text: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   fs.makeDirectory("./output", { recursive: true })
@@ -49,8 +45,6 @@ Calls run sequentially: the write completes before the read starts. Expected I/O
 | `stream`, `sink`, `watch` | Stream bytes, write through a sink, or observe changes |
 
 ```ts
-import { FileSystem } from "effect"
-
 function fileSize(path: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   using file = fs.open(path)
@@ -65,8 +59,6 @@ function fileSize(path: string) {
 ```ts
 // main.effeck
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
-import { FileSystem } from "effect"
-
 function main() {
   const fs = Effect.service(FileSystem.FileSystem)
   Effect.log(fs.readFileString("./README.md"))
@@ -81,8 +73,6 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 
 ```ts
 import { it } from "@effect/vitest"
-import { FileSystem } from "effect"
-
 function readFixture() {
   const fs = Effect.service(FileSystem.FileSystem)
   if (!fs.exists("/fixtures/title.txt")) return "Untitled"

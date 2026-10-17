@@ -5,8 +5,6 @@ Many Effect APIs accept either the data followed by options or options followed 
 ## Data first or data last
 
 ```ts
-import { Stream } from "effect"
-
 const source = Stream.make(5, 10, 15)
 const direct = Stream.map(source, (n) => n / 5)
 const stage = Stream.map((n: number) => n / 5)

@@ -5,8 +5,6 @@
 ## Representing full outcomes
 
 ```ts
-import { Exit } from "effect"
-
 class ExportRejected extends TaggedError("ExportRejected")<{
   readonly reason: string
 }> {}
@@ -25,8 +23,6 @@ An exit is `Success` with `.value`, or `Failure` with `.cause`. `Effect.exit` ru
 ## Creating success and cause-based failure exits
 
 ```ts
-import { Cause, Exit } from "effect"
-
 function sampleOutcomes() {
   const successful = Exit.succeed(12)
   const failed = Exit.failCause(
@@ -49,8 +45,6 @@ function constantSuccess() {
 ## Matching exit variants
 
 ```ts
-import { Cause, Exit } from "effect"
-
 function describe<A, E>(outcome: Exit.Exit<A, E>) {
   return Exit.match(outcome, {
     onSuccess: (value) => `Completed: ${String(value)}`,
@@ -64,8 +58,6 @@ function describe<A, E>(outcome: Exit.Exit<A, E>) {
 ## Relating exits to results
 
 ```ts
-import { Cause, Exit, Result } from "effect"
-
 function asResult<A, E>(outcome: Exit.Exit<A, E>) {
   if (Exit.isSuccess(outcome)) return Result.succeed(outcome.value)
   return Result.fail(outcome.cause)
@@ -78,8 +70,6 @@ An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result
 ## Relating exits to effects
 
 ```ts
-import { Exit } from "effect"
-
 function replay<A, E>(outcome: Exit.Exit<A, E>) {
   return outcome()
 }

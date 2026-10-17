@@ -49,8 +49,6 @@ Struct fields, arrays, records, and tuples are readonly by default. This describ
 ## Choosing synchronous, result, or effect decoding
 
 ```ts
-import { Result } from "effect"
-
 function decodeWithEffects(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input)
 }

@@ -5,8 +5,6 @@ Effeck sequences computations with ordinary functions and calls. This page cover
 ## Sequence computations
 
 ```ts
-import { Config } from "effect"
-
 function invoice(quantity: number) {
   const unitPrice = Config.Finite("UNIT_PRICE")()
   const subtotal = quantity * unitPrice

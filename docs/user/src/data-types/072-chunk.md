@@ -5,8 +5,6 @@
 ## Choosing sequence storage
 
 ```ts
-import { Chunk } from "effect"
-
 function collectBatches(batches: ReadonlyArray<ReadonlyArray<string>>) {
   let result = Chunk.empty<string>()
   for (const batch of batches) {
@@ -21,8 +19,6 @@ A chunk preserves sequence order and shares internal structure across updates. T
 ## Building chunks
 
 ```ts
-import { Chunk } from "effect"
-
 const empty = Chunk.empty<string>()
 const pair = Chunk.make("north", "south")
 const fromArray = Chunk.fromIterable(["east", "west"])
@@ -34,8 +30,6 @@ const fromSet = Chunk.fromIterable(new Set(["center"]))
 ## Reusing an array unsafely
 
 ```ts
-import { Chunk } from "effect"
-
 function ownedBatch() {
   const values = ["queued", "running"]
   return Chunk.fromArrayUnsafe(values)
@@ -48,8 +42,6 @@ function ownedBatch() {
 ## Concatenating and dropping elements
 
 ```ts
-import { Chunk } from "effect"
-
 const original = Chunk.make("draft", "review")
 const extended = Chunk.appendAll(original, Chunk.make("published"))
 const remaining = Chunk.drop(extended, 1)
@@ -62,8 +54,6 @@ Chunk.toReadonlyArray(remaining) // ["review", "published"]
 ## Checking structural equality
 
 ```ts
-import { Chunk, Equal } from "effect"
-
 const first = Chunk.make({ code: "A" }, { code: "B" })
 const same = Chunk.make({ code: "A" }, { code: "B" })
 const reversed = Chunk.make({ code: "B" }, { code: "A" })
@@ -76,8 +66,6 @@ Equality compares lengths and corresponding elements using Effect's equality rul
 ## Converting to arrays
 
 ```ts
-import { Chunk } from "effect"
-
 const nonempty = Chunk.toReadonlyArray(Chunk.make(7, 8))
 const none = Chunk.toReadonlyArray(Chunk.empty<number>())
 const mutableCopy = [...nonempty]

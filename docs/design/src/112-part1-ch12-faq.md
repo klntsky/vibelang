@@ -74,8 +74,6 @@ JavaScript's built-ins and Effect's own functions ship with contracts that say w
 #### How do I use `Option` and `Result`?
 
 ```ts es
-import { Option, Result } from "effect"
-
 function displayName(user: User) {
   return Option.match(Option.fromNullishOr(user.nickname), {
     onNone: () => user.name,
@@ -144,8 +142,6 @@ it.effect("a reminder fires after one day", () => {
 #### How do I log, trace, and record metrics?
 
 ```ts es
-import { Metric } from "effect"
-
 const checkouts = Metric.counter("checkouts")
 
 function checkout(cartId: string) {
@@ -197,8 +193,6 @@ Rarely. Statements replace sequencing, error handling, and cleanup, so most pipe
 #### How do I pattern match?
 
 ```ts es
-import { Match } from "effect"
-
 function area(shape: Circle | Square) {
   switch (shape._tag) {
     case "Circle": return Math.PI * shape.radius ** 2
@@ -269,8 +263,6 @@ Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Optio
 #### How do I keep state that several fibers share?
 
 ```ts es
-import { Ref } from "effect"
-
 function countVisits(paths: ReadonlyArray<string>) {
   const visits = Ref.make(0)
   Effect.forEach(paths, (path) => {

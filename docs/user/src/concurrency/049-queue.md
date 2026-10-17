@@ -5,8 +5,6 @@ A `Queue` passes values between fibers, delivering each offered value to one con
 ## Choosing an overflow strategy
 
 ```ts
-import { Queue } from "effect"
-
 function chooseQueues() {
   const jobs = Queue.bounded<string>(32)
   const optionalEvents = Queue.dropping<string>(32)
@@ -21,8 +19,6 @@ A bounded queue suspends offers when full until consumers free space. A dropping
 ## Offering values and batches
 
 ```ts
-import { Fiber, Queue } from "effect"
-
 function offerWithBackpressure() {
   const queue = Queue.bounded<number>(1)
   Queue.offer(queue, 10)
@@ -44,8 +40,6 @@ function rejectedBatch() {
 ## Taking, polling, and draining values
 
 ```ts
-import { Queue } from "effect"
-
 function consumeBatches() {
   const queue = Queue.bounded<number>(8)
   Queue.offerAll(queue, [1, 2, 3, 4, 5, 6])
@@ -63,8 +57,6 @@ function consumeBatches() {
 ## Querying queue state
 
 ```ts
-import { Queue } from "effect"
-
 function inspectQueue() {
   const queue = Queue.bounded<string>(2)
   Queue.offer(queue, "task")
@@ -82,8 +74,6 @@ Size counts buffered messages, and capacity is the configured limit. These value
 ## Shutting down and awaiting closure
 
 ```ts
-import { Cause, Fiber, Queue } from "effect"
-
 function finishNormally() {
   const queue = Queue.bounded<number, Cause.Done>(4)
   Queue.offerAll(queue, [7, 8])
@@ -114,8 +104,6 @@ Queues do not automatically close at ordinary block exit. Have their owner call 
 ## Restricting producer and consumer capabilities
 
 ```ts
-import { Queue } from "effect"
-
 function send(outbox: Queue.Enqueue<string>, message: string) {
   return Queue.offer(outbox, message)
 }

@@ -5,8 +5,6 @@ Stream recovery replaces a failed source with another source. Use stream operato
 ## Recovering typed failures and defects
 
 ```ts
-import { Result, Stream } from "effect"
-
 class Disconnected extends TaggedError("Disconnected")<{}> {}
 
 const primary = Stream.concat(Stream.make("live-a", "live-b"), Stream.fail(new Disconnected()))
@@ -25,8 +23,6 @@ const tagged = Stream.catch(
 `Stream.catch` receives a typed failure and returns the replacement Stream. Recovery abandons the rest of the failed source; it does not resume after its failing step. Tagging each source with `Result` is useful when downstream code needs to distinguish live data from fallback data.
 
 ```ts
-import { Stream } from "effect"
-
 const boundary = Stream.catchDefect(
   Stream.die(new Error("decoder invariant failed")),
   () => Stream.succeed("unreadable")
@@ -38,8 +34,6 @@ const boundary = Stream.catchDefect(
 ## Selective recovery
 
 ```ts
-import { Cause, Filter, Stream } from "effect"
-
 class NotReady extends TaggedError("NotReady")<{}> {}
 class AccessDenied extends TaggedError("AccessDenied")<{}> {}
 
@@ -65,8 +59,6 @@ const defectOnly = Stream.catchCauseFilter(
 ## Cleanup after failure
 
 ```ts
-import { Stream } from "effect"
-
 function consumeChecked() {
   const source = pipe(
     Stream.concat(Stream.succeed("accepted"), Stream.fail("read failed")),
@@ -85,8 +77,6 @@ function consumeChecked() {
 ## Retrying a source
 
 ```ts
-import { Schedule, Stream } from "effect"
-
 class Offline extends TaggedError("Offline")<{}> {}
 
 abstract class Sensor {
@@ -104,8 +94,6 @@ const readings = Stream.retry(
 ## Narrowing error types
 
 ```ts
-import { Stream } from "effect"
-
 function keepSyntaxErrors(source: Stream.Stream<string, Error>) {
   return Stream.catch(source, (error) => {
     if (error instanceof SyntaxError) return Stream.fail(error)
@@ -120,8 +108,6 @@ Refail the errors callers are expected to handle and turn impossible failures in
 ## Timeout failures and replacement sources
 
 ```ts
-import { Cause, Stream } from "effect"
-
 class Idle extends TaggedError("Idle")<{}> {}
 
 const endWhenIdle = Stream.timeout(Stream.never, "3 seconds")

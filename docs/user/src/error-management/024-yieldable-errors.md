@@ -7,8 +7,6 @@ Effect's custom error values can be yielded inside TypeScript generators. In Eff
 ## Defining an error without a tag
 
 ```ts
-import { Data } from "effect"
-
 class EmptyDocument extends Data.Error<{
   readonly documentId: string
 }> {}

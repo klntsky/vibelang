@@ -56,8 +56,6 @@ function slotRepresentation(input: unknown) {
 ## Supplying canonical conversions for custom declarations
 
 ```ts
-import { SchemaTransformation } from "effect"
-
 class DepotRef {
   constructor(readonly region: string, readonly number: number) {}
 }

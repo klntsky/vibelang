@@ -34,8 +34,6 @@ Filters run during construction as well as parsing. A filter leaves the static t
 ## Handling constructor failures
 
 ```ts
-import { SchemaIssue } from "effect"
-
 function constructOrExplain(value: number) {
   try {
     return String(CaseCount.makeEffect(value))

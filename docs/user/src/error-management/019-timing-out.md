@@ -36,8 +36,6 @@ The interruption used internally to stop the source is separate from the typed t
 ## Representing timeout as absence
 
 ```ts
-import { Option } from "effect"
-
 function optionalPreview() {
   const preview = Effect.timeoutOption(() => buildPreview(), "500 millis")
   return Option.isNone(preview) ? "No preview yet" : preview.value

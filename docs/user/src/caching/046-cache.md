@@ -5,8 +5,6 @@ A `Cache` stores lookup outcomes by key and shares in-progress lookups across ca
 ## Building a lookup cache
 
 ```ts
-import { Cache } from "effect"
-
 class MissingProduct extends TaggedError("MissingProduct")<{
   readonly sku: string
 }> {}
@@ -30,8 +28,6 @@ The default cache captures lookup services when it is created. `Cache.get(cache,
 ## Sharing concurrent requests
 
 ```ts
-import { Cache } from "effect"
-
 function concurrentLookup() {
   let calls = 0
   const cache = Cache.make({
@@ -57,8 +53,6 @@ Requests for the same missing key wait on one computation without blocking the J
 ## Setting capacity and expiration
 
 ```ts
-import { Cache, Duration } from "effect"
-
 function makePermanentNames() {
   return Cache.make({
     capacity: 50,
@@ -73,8 +67,6 @@ Capacity is a bound on entries, not bytes, and recently used entries take priori
 ## Inspecting cache state
 
 ```ts
-import { Cache } from "effect"
-
 function inspect() {
   const cache = Cache.make({ capacity: 5, lookup: (key: string) => key.length })
   Cache.get(cache, "paper")
@@ -92,8 +84,6 @@ function inspect() {
 ## Invalidating and refreshing entries
 
 ```ts
-import { Cache } from "effect"
-
 function refreshExample() {
   let version = 0
   const cache = Cache.make({

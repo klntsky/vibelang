@@ -16,8 +16,6 @@ function reportProgress() {
 ## Selecting severity thresholds
 
 ```ts
-import { References } from "effect"
-
 function diagnostics() {
   Effect.provideService(() => {
     Effect.logTrace("entered parser")
@@ -72,8 +70,6 @@ Each record inside the log span includes the elapsed time since that span began.
 ## Disabling and configuring logging
 
 ```ts
-import { Config, References } from "effect"
-
 const Silent = Layer.succeed(References.MinimumLogLevel, "None")
 const LogLevel = Config.LogLevel("LOG_LEVEL")
 
@@ -96,8 +92,6 @@ The None threshold suppresses logging in the provided region. `Config.LogLevel` 
 ## Defining a custom output handler
 
 ```ts
-import { Logger } from "effect"
-
 function captureLogs() {
   const records: Array<{ level: string; message: unknown }> = []
   const capture = Logger.make(({ logLevel, message }) => {
@@ -116,8 +110,6 @@ function captureLogs() {
 ## Choosing text, structured, and JSON formats
 
 ```ts
-import { Logger } from "effect"
-
 const TextLogs = Logger.layer([Logger.consoleLogFmt, Logger.tracerLogger])
 const PrettyLogs = Logger.layer([Logger.consolePretty(), Logger.tracerLogger])
 const ObjectLogs = Logger.layer([Logger.consoleStructured, Logger.tracerLogger])
@@ -133,8 +125,6 @@ The default logger emits readable text; LogFmt offers compact key/value output a
 ## Sending records to multiple destinations
 
 ```ts
-import { Logger } from "effect"
-
 function consoleAndCapture() {
   const auditMessages: unknown[] = []
   const audit = Logger.make(({ message }) => { auditMessages.push(message) })

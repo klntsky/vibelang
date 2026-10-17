@@ -1,6 +1,6 @@
 # Importing Effect
 
-Effeck uses Effect's modules and standard module import syntax. A small prelude is already in scope in `.effeck` files; import the other modules as you need them.
+Effect's modules are already in scope in `.effeck` files: the prelude, and every module that `effect` exports from its root, such as `Console`, `Option`, `Stream`, and `Schedule`. Import modules from `effect`'s subpath packages, such as `effect/http`, as you need them.
 
 ## Install the core package
 
@@ -13,8 +13,6 @@ The core package supplies Effect's data types, schedules, concurrency tools, and
 ## Module and namespace imports
 
 ```ts
-import { Clock, Duration, Schedule } from "effect"
-
 function pauseBeforeRetry() {
   const started = Clock.currentTimeMillis()
   Effect.sleep(Duration.millis(25))
@@ -24,15 +22,23 @@ function pauseBeforeRetry() {
 const backoff = Schedule.exponential("50 millis")
 ```
 
-`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `Effect<File, IOError, Scope>`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. `Clock`, `Duration`, and `Schedule` are ordinary imports.
+`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `Effect<File, IOError, Scope>`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`. `Clock`, `Duration`, `Schedule`, and every other module of `effect`'s root need no import either, and neither do `flow` and `identity`.
 
-A namespace import is also available: `import * as Duration from "effect/Duration"`. Choose one style consistently. Value constructors such as `Duration.millis` build data; `Clock.currentTimeMillis()` and `Effect.sleep(...)` run computations. Effect's own packages are trusted, so their data functions need no foreign-call boundary; exceptions from those functions are defects.
+JavaScript's own globals keep their names. `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules with those names under another name:
+
+```ts
+import { Array as Arr } from "effect"
+
+function firstTwo(values: ReadonlyArray<number>) {
+  return Arr.take(values, 2)
+}
+```
+
+A host's globals do not shadow Effect's modules: with the DOM in your `lib`, `Option` is still Effect's. An import or a local declaration with the same name as a module shadows it, as `import * as Duration from "effect/Duration"` would. Value constructors such as `Duration.millis` build data; `Clock.currentTimeMillis()` and `Effect.sleep(...)` run computations. Effect's own packages are trusted, so their data functions need no foreign-call boundary; exceptions from those functions are defects.
 
 ## Compose standalone functions
 
 ```ts
-import { Duration } from "effect"
-
 function expirationWindow() {
   const short = Duration.seconds(15)
   return Duration.toMillis(short)
@@ -67,6 +73,6 @@ A helper can accept a program and apply library operators to it. Its contract pr
 
 ## Coming from Effect
 
-Skip imports for the prelude in `.effeck`. In `.ts` integration files, import `Effect`, `Layer`, and the other names you use as usual.
+Skip imports from `effect`'s root in `.effeck`. In `.ts` integration files, import `Effect`, `Layer`, and the other names you use as usual.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/importing-effect)
