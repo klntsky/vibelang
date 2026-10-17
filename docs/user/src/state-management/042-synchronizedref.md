@@ -48,7 +48,7 @@ function refreshTwice() {
     return SynchronizedRef.updateAndGetEffect(version, (current) =>
       Versions.loadAfter(current))
   }
-  return Effect.all([() => refresh(), () => refresh()], { concurrency: 2 })
+  return Effect.all([refresh(), refresh()], { concurrency: 2 })
 }
 // Effect<[number, number], RefreshFailed, Versions>
 ```

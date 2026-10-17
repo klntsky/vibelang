@@ -13,7 +13,7 @@ function buildPreview() {
 }
 
 function previewWithDeadline() {
-  return Effect.timeout(() => buildPreview(), "500 millis")
+  return Effect.timeout(buildPreview(), "500 millis")
 }
 // Effect<string, Cause.TimeoutError, never>
 ```
@@ -48,7 +48,7 @@ function optionalPreview() {
 
 ```ts
 function previewOrPlaceholder() {
-  return Effect.timeoutOrElse(() => buildPreview(), {
+  return Effect.timeoutOrElse(buildPreview(), {
     duration: "500 millis",
     orElse: () => "Static placeholder"
   })
@@ -59,7 +59,7 @@ error PreviewDeadline {
 }
 
 function requiredPreview(documentId: string) {
-  return Effect.timeoutOrElse(() => buildPreview(), {
+  return Effect.timeoutOrElse(buildPreview(), {
     duration: "500 millis",
     orElse: () => { throw new PreviewDeadline({ documentId }) }
   })
@@ -74,7 +74,7 @@ The alternative runs lazily after the timer wins. It can use services, fail, or 
 ```ts
 function protectedPreview() {
   return Effect.timeout(
-    () => Effect.uninterruptible(() => buildPreview()),
+    () => Effect.uninterruptible(buildPreview()),
     "500 millis"
   )
 }

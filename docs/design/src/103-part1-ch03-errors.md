@@ -70,7 +70,7 @@ function lookupOrGuest(raw: string) {
 Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
 
 ```ts es
-const user = Effect.catchTag(() => Users.find(id), "UserNotFound", () => guest)
+const user = Effect.catchTag(Users.find(id), "UserNotFound", () => guest)
 ```
 
 #### Promising that nothing escapes

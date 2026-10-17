@@ -83,7 +83,7 @@ function find(id: string): Effect<User, infer E, never> {
 // Checks A = User and R = never; infers E = UserNotFound.
 
 function load(id: string): Effect<User, never, infer R> {
-  return Effect.orDie(() => Users.find(id))
+  return Effect.orDie(Users.find(id))
 }
 // Checks A = User and E = never; infers R = Users.
 

@@ -17,7 +17,7 @@ function main() {
 NodeRuntime.runMain(() => main())
 ```
 
-Pass a program to the runner, not an already executed call. A module's top level can call the recognized runner, while the application work runs inside `main`. Supply application layers with `Effect.provide(() => main(), AppLive)` inside that runner's program.
+Pass the runner a program: `main()` passed to a runner is passed by name, so it has not run yet. A module's top level can call the recognized runner, while the application work runs inside `main`. Supply application layers with `Effect.provide(() => main(), AppLive)` inside that runner's program.
 
 Runners may also be called in plain callbacks passed from the top level to TypeScript, such as a framework's route handler or a `describe` body. A runner inside code that a fiber runs is EK1005: call the program or use `fork` there. Tests in `.effeck` use `it.effect`; Promise-style tests stay in `.ts`.
 

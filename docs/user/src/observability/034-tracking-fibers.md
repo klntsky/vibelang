@@ -46,8 +46,8 @@ Starting another fiber under an existing key interrupts the previous fiber for t
 ```ts
 function waitForAllTracked() {
   using workers = FiberSet.make<void>()
-  FiberSet.run(workers, () => Effect.sleep("10 millis"))
-  FiberSet.run(workers, () => Effect.sleep("20 millis"))
+  FiberSet.run(workers, Effect.sleep("10 millis"))
+  FiberSet.run(workers, Effect.sleep("20 millis"))
   FiberSet.awaitEmpty(workers)
   return FiberSet.size(workers) // 0
 }

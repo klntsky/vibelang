@@ -70,8 +70,8 @@ function requireCount(input: string) {
 
 function validatePair() {
   return Effect.all([
-    () => requireCount("6"),
-    () => Effect.fromResult(Result.succeed("ready"))
+    requireCount("6"),
+    Effect.fromResult(Result.succeed("ready"))
   ])
 }
 ```

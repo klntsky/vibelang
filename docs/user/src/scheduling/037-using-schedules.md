@@ -7,7 +7,7 @@ A schedule decides when work runs again and when it stops. `Schedule` values wor
 ```ts
 function heartbeat() {
   Effect.repeat(
-    () => Effect.logInfo("worker available"),
+    Effect.logInfo("worker available"),
     Schedule.spaced("15 seconds")
   )
 }
@@ -40,7 +40,7 @@ The initial check is separate from the seven permitted repetitions, so this loop
 ```ts
 function delayedCleanup() {
   Effect.schedule(
-    () => Effect.logInfo("sweeping expired sessions"),
+    Effect.logInfo("sweeping expired sessions"),
     Schedule.spaced("30 minutes")
   )
 }

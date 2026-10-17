@@ -43,7 +43,7 @@ A function collects the failures it throws and those its calls can produce. Sequ
 
 ```ts
 function inspectItem(input: string) {
-  const result = Effect.result(() => findItem(input))
+  const result = Effect.result(findItem(input))
   return Result.match(result, {
     onFailure: (error) => `unavailable: ${error._tag}`,
     onSuccess: (item) => item.label
@@ -51,7 +51,7 @@ function inspectItem(input: string) {
 }
 
 function optionalItem(input: string) {
-  const item = Effect.option(() => findItem(input))
+  const item = Effect.option(findItem(input))
   return Option.isNone(item) ? "No item" : item.value.label
 }
 ```
@@ -90,7 +90,7 @@ function labelOrMissing(input: string) {
 
 function labelByTag(input: string) {
   return Effect.catchTag(
-    () => findItem(input),
+    findItem(input),
     "ItemMissing",
     (error) => ({ code: error.code, label: "Out of catalog" })
   )
@@ -101,7 +101,7 @@ Narrowing and rethrowing preserves the unhandled error type. `Effect.catchTag` r
 
 ```ts
 function withTagTable(input: string) {
-  return Effect.catchTags(() => findItem(input), {
+  return Effect.catchTags(findItem(input), {
     InvalidCode: () => ({ code: "", label: "Enter a code" }),
     ItemMissing: (error) => ({ code: error.code, label: "Out of catalog" })
   })

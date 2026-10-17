@@ -150,7 +150,7 @@ function exerciseRollback() {
     remove: (id) => { removed.push(id) },
     finish: (_storage, _index) => { throw new SetupFailed({ stage: "finish" }) }
   })
-  const outcome = Effect.result(() => Effect.provide(() => setupProject(), testLayer))
+  const outcome = Effect.result(Effect.provide(() => setupProject(), testLayer))
   return { outcome, removed } // removed: ["index", "storage"]
 }
 ```

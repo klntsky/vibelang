@@ -104,12 +104,12 @@ const UsersLive = Layer.effect(Users, () => {
   const db = Database()              // runs once, when the layer is built
   return {
     find(id) {
-      const rows = Effect.orDie(() => db.query("select * from users where id = $1", [id]))
+      const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
       if (rows.length === 0) throw new UserNotFound({ id })
       return toUser(rows[0])
     },
     rename(id, name) {
-      Effect.orDie(() => db.execute("update users set name = $1 where id = $2", [name, id]))
+      Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
     }
   }
 })
@@ -182,7 +182,7 @@ abstract class Sessions {
     }
   }
 
-  static readonly layer = Layer.effect(Sessions, () => Sessions.make())
+  static readonly layer = Layer.effect(Sessions, Sessions.make())
 }
 
 abstract class FeatureFlags {
@@ -339,7 +339,7 @@ To replace one service for part of a program, provide it around that part. The o
 
 ```ts es
 function welcomeQuietly(id: string) {
-  return Effect.provideService(() => welcome(id), Mailer, { send: () => {} })
+  return Effect.provideService(welcome(id), Mailer, { send: () => {} })
 }
 ```
 

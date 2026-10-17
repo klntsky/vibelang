@@ -27,7 +27,7 @@ function lookup() {
 }
 
 function directLookup() {
-  return Effect.timeout(() => lookup(), "1 second")
+  return Effect.timeout(lookup(), "1 second")
 }
 
 function pipedLookup() {
@@ -45,7 +45,7 @@ The first argument to the program pipeline is a function, so retry and timeout c
 
 ```ts
 function boundedLookup() {
-  return Effect.retry(() => lookup(), { times: 2 })
+  return Effect.retry(lookup(), { times: 2 })
 }
 
 const reusableLookup = () => pipe(

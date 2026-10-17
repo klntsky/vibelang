@@ -10,7 +10,7 @@ function operation() {
   return "complete"
 }
 
-const outcome = Effect.runPromiseExit(() => operation())
+const outcome = Effect.runPromiseExit(operation())
 ```
 
 A runner starts a root fiber with its context, fiber-local settings, and initial program. The runtime steps through the work, waits for asynchronous results, coordinates interruption, and executes finalizers. `outcome` is a promise for an `Exit` that records either the success or the complete failure cause.

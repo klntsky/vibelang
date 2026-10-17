@@ -52,7 +52,7 @@ export function createUser() {
   }
 }
 
-export const Routes = HttpRouter.add("POST", "/users", () => createUser())
+export const Routes = HttpRouter.add("POST", "/users", createUser())
 export const App = HttpRouter.provideRequest(UsersLive)(Routes)
 ```
 
@@ -60,7 +60,7 @@ The JSON decoder runs at the call and returns the validated body. `Users.create`
 
 `catch` sees expected failures only. It does not catch defects or interruption. Keep error-to-status mapping explicit so a programming defect cannot become a successful response.
 
-`HttpRouter.add` receives the handler as a program, `() => createUser()`. `HttpRouter.provideRequest` supplies `Users` to route execution. Calling `HttpRouter.toHttpEffect` in a test will therefore use the same service implementation as the server.
+`HttpRouter.add` receives `createUser()` by name, as a program that runs on each request. `HttpRouter.provideRequest` supplies `Users` to route execution. Calling `HttpRouter.toHttpEffect` in a test will therefore use the same service implementation as the server.
 
 ## Start the Node server
 

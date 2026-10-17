@@ -39,8 +39,8 @@ A control operation must be handled on the fiber that performs it (Chapter 9). T
 
 ```ts es
 handle(() => {
-  Effect.retry(() => Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
-  Effect.timeout(() => Approval.approve("b"), "1 second")           // other fiber: EK4201
+  Effect.retry(Approval.approve("a"), Schedule.recurs(2))     // same fiber: reaches the handler
+  Effect.timeout(Approval.approve("b"), "1 second")           // other fiber: EK4201
 }, Approval, { approve: (_request, k) => resume(k, true) })
 ```
 

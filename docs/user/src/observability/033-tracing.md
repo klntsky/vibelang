@@ -63,7 +63,7 @@ error RenderFailed {
 }
 
 function failingRender() {
-  const exit = Effect.exit(() => Effect.withSpan(() => {
+  const exit = Effect.exit(Effect.withSpan(() => {
     Effect.annotateCurrentSpan("report.format", "unknown")
     throw new RenderFailed({ format: "unknown" })
   }, "render-report"))

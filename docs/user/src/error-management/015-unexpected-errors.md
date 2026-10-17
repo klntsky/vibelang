@@ -40,7 +40,7 @@ function requireSetting(name: string) {
 }
 
 function startup() {
-  return Effect.orDie(() => requireSetting("region"))
+  return Effect.orDie(requireSetting("region"))
 }
 // Effect<never, never, never>
 
@@ -59,7 +59,7 @@ function startupWithMessage() {
 
 ```ts
 function inspectStartup() {
-  const outcome = Effect.exit(() => startup())
+  const outcome = Effect.exit(startup())
   if (Exit.isFailure(outcome)) {
     return Cause.hasDies(outcome.cause) ? "startup defect" : "startup stopped"
   }
@@ -91,7 +91,7 @@ function isolateDecoder(opcode: number) {
 
 ```ts
 function decoderBoundary(opcode: number) {
-  return Effect.catchCause(() => decodeOpcode(opcode), (cause) => {
+  return Effect.catchCause(decodeOpcode(opcode), (cause) => {
     if (Cause.hasInterrupts(cause)) return Effect.failCause(cause)
     if (Cause.hasDies(cause)) {
       Effect.log("Decoder failed", cause.reasons.map((reason) => reason._tag))

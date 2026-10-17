@@ -93,12 +93,12 @@ If observation fails, its failure can change the resulting cause, so use observa
 
 ```ts
 function inspectQuantity(value: number) {
-  const result = Effect.result(() => quantity(value))
+  const result = Effect.result(quantity(value))
   const summary = Result.match(result, {
     onFailure: () => "Rejected",
     onSuccess: (count) => `Accepted ${count}`
   })
-  const exit = Effect.exit(() => quantity(value))
+  const exit = Effect.exit(quantity(value))
   return { summary, completed: Exit.isSuccess(exit) }
 }
 

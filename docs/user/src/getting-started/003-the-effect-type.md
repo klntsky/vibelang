@@ -38,7 +38,7 @@ function rate(currency: string): Effect<number, infer E, Rates> {
 // Checks number and Rates; infers MissingRate.
 
 function rateOrDie(currency: string): Effect<number, never, infer R> {
-  return Effect.orDie(() => Rates.lookup(currency))
+  return Effect.orDie(Rates.lookup(currency))
 }
 // Checks number and never; infers Rates.
 

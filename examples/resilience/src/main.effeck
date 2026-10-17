@@ -21,15 +21,15 @@ export function slowReport() {
 
 export function deadline() {
   try {
-    return Effect.timeout(() => slowReport(), "20 millis")
+    return Effect.timeout(slowReport(), "20 millis")
   } catch (error) {
     return error._tag
   }
 }
 
 export function scenario() {
-  const pending = fork(() => fetchReport())
-  const fastest = Effect.race(() => cachedReport(), () => slowReport())
+  const pending = fork(fetchReport())
+  const fastest = Effect.race(cachedReport(), slowReport())
   const timed = deadline()
   const report = Fiber.join(pending)
   return { fastest, timed, report }

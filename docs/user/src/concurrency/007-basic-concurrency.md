@@ -12,14 +12,14 @@ function task(id: number) {
 }
 
 function runTasks() {
-  const sequential = Effect.all([() => task(1), () => task(2)])
+  const sequential = Effect.all([task(1), task(2)])
   const bounded = Effect.forEach([1, 2, 3, 4], (id) => task(id), {
     concurrency: 2
   })
   const unbounded = Effect.all([
-    () => task(5),
-    () => task(6),
-    () => task(7)
+    task(5),
+    task(6),
+    task(7)
   ], { concurrency: "unbounded" })
   return { sequential, bounded, unbounded }
 }
@@ -46,7 +46,7 @@ function cancelWork() {
 
 ```ts
 function cancelWithCleanup() {
-  const worker = fork(() => Effect.onInterrupt(() => {
+  const worker = fork(Effect.onInterrupt(() => {
     try {
       Effect.sleep("1 minute")
     } finally {
@@ -92,7 +92,7 @@ function answer(label: string, delay: Duration.Input) {
 function raceExamples() {
   const firstSuccess = Effect.race(
     () => { throw "unavailable" },
-    () => answer("replica", "20 millis")
+    answer("replica", "20 millis")
   )
   const anySuccess = Effect.raceAll([
     () => answer("west", "40 millis"),
@@ -100,8 +100,8 @@ function raceExamples() {
     () => answer("central", "30 millis")
   ])
   const firstCompletion = Effect.raceFirst(
-    () => answer("primary", "10 millis"),
-    () => answer("backup", "50 millis")
+    answer("primary", "10 millis"),
+    answer("backup", "50 millis")
   )
   return { firstSuccess, anySuccess, firstCompletion }
 }
@@ -114,7 +114,7 @@ function raceExamples() {
 ```ts
 function inspectRace() {
   const winners: number[] = []
-  const outcome = Effect.result(() => Effect.raceFirst(
+  const outcome = Effect.result(Effect.raceFirst(
     () => { throw "primary offline" },
     () => {
       Effect.sleep("1 second")

@@ -36,7 +36,7 @@ The expression form is `Effect.catch(() => latestTitle(), () => cachedTitle())`.
 
 ```ts
 function titleOrPlaceholder() {
-  return Effect.orElseSucceed(() => latestTitle(), () => "No title available")
+  return Effect.orElseSucceed(latestTitle(), () => "No title available")
 }
 // Effect<string, never, never>
 ```

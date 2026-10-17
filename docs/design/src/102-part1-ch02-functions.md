@@ -83,7 +83,7 @@ The loop runs one `welcome` at a time, in order. Running several at once is alwa
 
 ```ts es
 function welcomeTraced(id: string) {
-  return Effect.withSpan(() => welcome(id), "welcome")
+  return Effect.withSpan(welcome(id), "welcome")
 }
 ```
 

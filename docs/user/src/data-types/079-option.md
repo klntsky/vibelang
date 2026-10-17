@@ -115,8 +115,8 @@ function requiredName(name: Option.Option<string>) {
 
 function requiredPair() {
   return Effect.all([
-    () => Effect.fromOption(Option.some("east")),
-    () => Effect.fromOption(Option.some(3))
+    Effect.fromOption(Option.some("east")),
+    Effect.fromOption(Option.some(3))
   ])
 }
 ```

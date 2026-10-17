@@ -70,7 +70,7 @@ Use each page's headings to find a specific operation. In a Markdown reader, fol
 
 ## Using documentation with language models
 
-Provide the relevant Effeck guide alongside the Effect API signature. State that every function is an Effect, calls run, and programs passed to operators are functions such as `() => main()`. Include your error and service declarations so generated code has enough information to preserve the contract.
+Provide the relevant Effeck guide alongside the Effect API signature. State that every function is an Effect, calls run, and a call passed where an operator expects a program is passed by name, as in `fork(fetchReport())`. Include your error and service declarations so generated code has enough information to preserve the contract.
 
 Use compiler feedback and focused tests to check the result. Effect's TypeScript tooling applies to `.ts` integration code; the [Devtools](getting-started/012-devtools.md) page explains Effeck's compiler, language server, linting, and debugging setup.
 

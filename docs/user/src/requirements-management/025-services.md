@@ -29,7 +29,7 @@ function nextLabel() {
 // Effect<string, never, Sequence>
 
 function fixedLabel() {
-  return Effect.provideService(() => nextLabel(), Sequence, {
+  return Effect.provideService(nextLabel(), Sequence, {
     next: () => 17
   })
 }

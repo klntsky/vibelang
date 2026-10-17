@@ -70,7 +70,7 @@ Pass an async iterable obtained from a TypeScript adapter or a service. The erro
 ## Effects and callbacks
 
 ```ts
-const timestamp = Stream.fromEffect(() => Clock.currentTimeMillis())
+const timestamp = Stream.fromEffect(Clock.currentTimeMillis)
 
 const notices = Stream.callback<string>((queue) => {
   Queue.offer(queue, "connected")
@@ -99,7 +99,7 @@ function openSession() {
 }
 
 const sessionNames = Stream.scoped(
-  Stream.map(Stream.fromEffect(() => openSession()), (session) => session.name)
+  Stream.map(Stream.fromEffect(openSession()), (session) => session.name)
 )
 ```
 

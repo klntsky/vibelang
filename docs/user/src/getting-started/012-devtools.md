@@ -130,7 +130,7 @@ different call semantics.
 
 ```ts
 function tracedSample() {
-  return Effect.withSpan(() => sample(), "sample")
+  return Effect.withSpan(sample(), "sample")
 }
 ```
 

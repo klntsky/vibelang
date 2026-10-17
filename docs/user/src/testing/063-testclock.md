@@ -42,7 +42,7 @@ function check(condition: boolean, message: string) {
 }
 
 it.effect("a deadline returns the fallback", () => {
-  const pending = fork(() => Effect.timeoutOrElse(() => {
+  const pending = fork(Effect.timeoutOrElse(() => {
     Effect.sleep("10 minutes")
     return Option.some("finished")
   }, {

@@ -15,7 +15,7 @@ function itemCount(raw: number) {
 }
 
 function countLabel(raw: number) {
-  return Effect.match(() => itemCount(raw), {
+  return Effect.match(itemCount(raw), {
     onFailure: () => "Count unavailable",
     onSuccess: (count) => `${count} items`
   })
@@ -48,7 +48,7 @@ function reportCount(raw: number) {
 
 ```ts
 function outcomeLabel() {
-  return Effect.matchCause(() => Effect.die(new Error("index invariant")), {
+  return Effect.matchCause(Effect.die(new Error("index invariant")), {
     onFailure: (cause) => Cause.hasDies(cause) ? "Index defect" : "Index stopped",
     onSuccess: () => "Index ready"
   })
@@ -71,7 +71,7 @@ function reportOutcome() {
 
 ```ts
 function ignoreRejectedCount() {
-  Effect.ignore(() => itemCount(-2))
+  Effect.ignore(itemCount(-2))
 }
 // Effect<void, never, never>
 

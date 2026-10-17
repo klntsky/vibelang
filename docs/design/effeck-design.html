@@ -249,8 +249,9 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
 <tr><td><code>Scope</code></td><td>Effect&#39;s <code>Scope</code> module, and the type <code>Scope</code>, which is Effect&#39;s <code>Scope.Scope</code></td></tr>
 <tr><td><code>TaggedError</code></td><td>Effect&#39;s <code>Data.TaggedError</code></td></tr>
 <tr><td><code>Control</code></td><td>The base class of control operations (<a href="#9-handlers-defining-your-own-effects">Chapter 9</a>)</td></tr>
-<tr><td><code>pipe</code>, <code>wire</code>, <code>fork</code>, <code>handle</code>, <code>resume</code>, <code>resumeWith</code>, <code>abandon</code></td><td>Effeck&#39;s built-ins, each introduced where it is first used</td></tr></tbody></table></div>
-<p>Everything else is imported from <code>effect</code> as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: <code>Effect</code> appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), <code>Schema</code> in 39-44%, <code>Layer</code> in 34-44%, and no other module in more than 22%. <code>Scope</code> is there because contracts name it whenever a resource outlives a function (<a href="#6-resources">Chapter 6</a>). <code>Option</code> and <code>Array</code> stay imports because they would shadow the browser&#39;s <code>Option</code> and JavaScript&#39;s <code>Array</code>.</p>
+<tr><td><code>pipe</code>, <code>wire</code>, <code>fork</code>, <code>handle</code>, <code>resume</code>, <code>resumeWith</code>, <code>abandon</code></td><td>Effeck&#39;s built-ins, each introduced where it is first used</td></tr>
+<tr><td>Every other export of <code>effect</code>&#39;s root</td><td><code>Console</code>, <code>Option</code>, <code>Stream</code>, <code>Schedule</code>, <code>Duration</code>, and the rest, plus <code>flow</code> and <code>identity</code> (D146)</td></tr></tbody></table></div>
+<p>Modules from <code>effect</code>&#39;s subpath packages, such as <code>effect/http</code>, are imported as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: <code>Effect</code> appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), <code>Schema</code> in 39-44%, <code>Layer</code> in 34-44%, and no other module in more than 22%. <code>Scope</code> is there because contracts name it whenever a resource outlives a function (<a href="#6-resources">Chapter 6</a>). JavaScript&#39;s own globals keep their names: <code>Array</code>, <code>String</code>, <code>Number</code>, <code>Boolean</code>, <code>Symbol</code>, <code>BigInt</code>, <code>Function</code>, and <code>RegExp</code> mean JavaScript&#39;s, so Effect&#39;s modules with those names need an import under another name, as in <code>import { Array as Arr } from &quot;effect&quot;</code>. A host global does not shadow Effect: in a project whose <code>lib</code> includes the DOM, <code>Option</code> is still Effect&#39;s.</p>
 <h4 id="running-it"><a class="anchor" href="#running-it">Running it</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="c">// main.effeck</span>
 <span class="k">import</span> { <span class="t">NodeRuntime</span> } <span class="k">from</span> <span class="s">"@effect/platform-node"</span>
@@ -1355,9 +1356,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <span class="c">// Effect&lt;number, never, never&gt;</span></code></pre></figure>
 <p>JavaScript&#39;s built-ins and Effect&#39;s own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript <code>catch</code> inside <code>Effect.gen</code>, an Effeck <code>catch</code> does not see it, and a <code>catch</code> that could only have caught such exceptions is reported, EK2004 (<a href="#3-errors-the-e-channel">Chapter 3</a>).</p>
 <h4 id="how-do-i-use-option-and-result"><a class="anchor" href="#how-do-i-use-option-and-result">How do I use <code>Option</code> and <code>Result</code>?</a></h4>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> { <span class="t">Option</span>, <span class="t">Result</span> } <span class="k">from</span> <span class="s">"effect"</span>
-
-<span class="k">function</span> <span class="f">displayName</span>(user: <span class="t">User</span>) {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">displayName</span>(user: <span class="t">User</span>) {
   <span class="k">return</span> <span class="t">Option</span>.<span class="f">match</span>(<span class="t">Option</span>.<span class="f">fromNullishOr</span>(user.nickname), {
     onNone: () =&gt; user.name,
     onSome: (nickname) =&gt; nickname
@@ -1405,9 +1404,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 })</code></pre></figure>
 <p><code>@effect/vitest</code> works unchanged: <code>it.effect</code> runs an Effeck function as a test, <code>assert</code> comes from the same package, and <code>TestClock</code> controls time. Fake services are Layers (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>), and a control operation is scripted with a handler (<a href="#9-handlers-defining-your-own-effects">Chapter 9</a>). An <code>Exit</code> is data until called, so <code>assert.deepStrictEqual(Effect.exit(() =&gt; f()), Exit.succeed(1))</code> compares two <code>Exit</code> values. A test written as <code>async () =&gt; { await Effect.runPromise(p) }</code> stays in a <code>.ts</code> file: <code>.effeck</code> has no <code>await</code>, and a runner inside a test body is EK1005 (<a href="#13-what-a-call-means">Chapter 13</a>).</p>
 <h4 id="how-do-i-log-trace-and-record-metrics"><a class="anchor" href="#how-do-i-log-trace-and-record-metrics">How do I log, trace, and record metrics?</a></h4>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> { <span class="t">Metric</span> } <span class="k">from</span> <span class="s">"effect"</span>
-
-<span class="k">const</span> checkouts = <span class="t">Metric</span>.<span class="f">counter</span>(<span class="s">"checkouts"</span>)
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> checkouts = <span class="t">Metric</span>.<span class="f">counter</span>(<span class="s">"checkouts"</span>)
 
 <span class="k">function</span> <span class="f">checkout</span>(cartId: <span class="l">string</span>) {
   <span class="t">Effect</span>.<span class="f">log</span>(<span class="s">`checkout ${cartId}`</span>)
@@ -1438,9 +1435,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="f">pipe</span>(() =&gt; <span class="f">fetchUser</span>(id), <span class="t">Effect</span>.<span class="f">retry</span>({ times: <span class="n">3</span> }), <span class="t">Effect</span>.<span class="f">timeout</span>(<span class="s">"2 seconds"</span>))</code></pre></figure>
 <p>Rarely. Statements replace sequencing, error handling, and cleanup, so most pipelines disappear. The built-in <code>pipe</code> stacks policies over a program and still works on data. There is no <code>|&gt;</code> (<a href="#5-programs-as-values-retry-timeout-and-pipe">Chapter 5</a>).</p>
 <h4 id="how-do-i-pattern-match"><a class="anchor" href="#how-do-i-pattern-match">How do I pattern match?</a></h4>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> { <span class="t">Match</span> } <span class="k">from</span> <span class="s">"effect"</span>
-
-<span class="k">function</span> <span class="f">area</span>(shape: <span class="t">Circle</span> | <span class="t">Square</span>) {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">area</span>(shape: <span class="t">Circle</span> | <span class="t">Square</span>) {
   <span class="k">switch</span> (shape._tag) {
     <span class="k">case</span> <span class="s">"Circle"</span>: <span class="k">return</span> <span class="t">Math</span>.<span class="t">PI</span> * shape.radius ** <span class="n">2</span>
     <span class="k">case</span> <span class="s">"Square"</span>: <span class="k">return</span> shape.side ** <span class="n">2</span>
@@ -1485,9 +1480,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 })</code></pre></figure>
 <p>Five things, each with a replacement. Generator-based APIs (<code>Effect.gen</code>, <code>Option.gen</code>) cannot be written in <code>.effeck</code> files; call them from TypeScript. Effectful handlers in <code>Option.match</code> or <code>Match</code> are rejected (EK4301); use <code>if</code> or <code>switch</code>. Runners inside code a fiber runs are rejected (EK1005); call or <code>fork</code> the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including <code>Micro</code>, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.</p>
 <h4 id="how-do-i-keep-state-that-several-fibers-share"><a class="anchor" href="#how-do-i-keep-state-that-several-fibers-share">How do I keep state that several fibers share?</a></h4>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> { <span class="t">Ref</span> } <span class="k">from</span> <span class="s">"effect"</span>
-
-<span class="k">function</span> <span class="f">countVisits</span>(paths: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">countVisits</span>(paths: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
   <span class="k">const</span> visits = <span class="t">Ref</span>.<span class="f">make</span>(<span class="n">0</span>)
   <span class="t">Effect</span>.<span class="f">forEach</span>(paths, (path) =&gt; {
     <span class="t">Visits</span>.<span class="f">record</span>(path)
@@ -1767,9 +1760,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 }</code></pre></figure>
 <p>Any <code>using</code> declaration makes a function compile to frames, whether its initializer acquires an Effect resource or supplies an ordinary Disposable (D54, D94).</p>
 <h4 id="methods-that-implement-a-plain-function-member"><a class="anchor" href="#methods-that-implement-a-plain-function-member">Methods that implement a plain-function member</a></h4>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> { <span class="t">Equal</span>, <span class="t">Hash</span> } <span class="k">from</span> <span class="s">"effect"</span>
-
-<span class="k">class</span> <span class="t">Money</span> <span class="k">implements</span> <span class="t">Equal</span>.<span class="t">Equal</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">class</span> <span class="t">Money</span> <span class="k">implements</span> <span class="t">Equal</span>.<span class="t">Equal</span> {
   <span class="f">constructor</span>(<span class="k">readonly</span> cents: <span class="l">number</span>, <span class="k">readonly</span> currency: <span class="l">string</span>) {}
 
   [<span class="t">Equal</span>.<span class="l">symbol</span>](that: <span class="t">Equal</span>.<span class="t">Equal</span>): <span class="l">boolean</span> {
@@ -2531,8 +2522,9 @@ history, rather than a separately applied patch series.</p>
   -&gt; TypeScript emit
        JavaScript, source maps, and ordinary .d.ts files</code></pre></figure>
 <p>The parser keeps TypeScript&#39;s grammar. The checker resolves prelude names as
-implicit imports from <code>effeck-runtime</code>, unless a local declaration or
-import shadows them (D4, D48). Class hooks give fully abstract service classes
+implicit imports from <code>effeck-runtime</code>, and the other exports of <code>effect</code>&#39;s
+root as implicit imports from <code>effect</code>, unless a local declaration or import
+shadows them (D4, D48, D146). Class hooks give fully abstract service classes
 the static side of an Effect Context key and the instance shape of their
 abstract members (D1, D45).</p>
 <p>Lowering runs before TypeScript&#39;s type erasure. It queries the checker while
@@ -2934,7 +2926,8 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D122</td><td>Every runner checks all services it does not supply; it.effect supplies Scope and its layer services</td><td>Diagnose missing services before execution</td><td>4, 28</td></tr>
 <tr><td>D123</td><td>Declaration prelude imports use free aliases when names are already bound</td><td>Avoid duplicate identifiers in declaration consumers</td><td>27</td></tr>
 <tr><td>D124</td><td>Setup relinks effeck launchers pointing into another checkout or at missing files</td><td>Keep the launcher usable after workspace changes</td><td>28</td></tr>
-<tr><td>D125</td><td><strong>Controversial.</strong> The language is Effeck: binary <code>effeck</code>, files <code>.effeck</code>, codes <code>EK</code>, unscoped npm packages <code>effeck</code>, <code>effeck-runtime</code>, <code>effeck-vite</code></td><td>The <code>@effectscript</code> npm scope belongs to another language</td><td>28</td></tr></tbody></table></div>
+<tr><td>D125</td><td><strong>Controversial.</strong> The language is Effeck: binary <code>effeck</code>, files <code>.effeck</code>, codes <code>EK</code>, unscoped npm packages <code>effeck</code>, <code>effeck-runtime</code>, <code>effeck-vite</code></td><td>The <code>@effectscript</code> npm scope belongs to another language</td><td>28</td></tr>
+<tr><td>D146</td><td>Every export of <code>effect</code>&#39;s root is in scope; JavaScript&#39;s own globals win, host globals do not</td><td>Imports from <code>effect</code> were 5.9% of the docs&#39; tokens</td><td>1, 27</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>

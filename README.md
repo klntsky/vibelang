@@ -49,19 +49,22 @@ clients, see [editors/](editors/README.md).
 ## Before you write your first file
 
 - Every function in a `.effeck` file is an Effect, and a call runs it:
-  `const todo = Todos.get(id)` is a `Todo`. Pass work to an Effect operator as
-  a function with no parameters:
-  `Effect.retry(() => send(message), Schedule.exponential("100 millis"))`.
+  `const todo = Todos.get(id)` is a `Todo`. Where an Effect operator expects a
+  program, pass the call itself; it is passed by name and runs when the
+  operator runs it:
+  `Effect.retry(send(message), Schedule.exponential("100 millis"))`. A program
+  of several statements is a function with no parameters, `() => { … }`.
 - Declare an expected failure with `error NotFound { id: string }`, a tagged
   error class with readonly fields; `throw new NotFound({ id })` adds it to
   the function's errors.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no
-  import. Import other source files by their source name,
+  import, and neither does any other module of `effect`'s root, such as
+  `Console`, `Option`, and `Stream`. Import other source files by their source name,
   `import { Todos } from "./todos.effeck"`; the compiler emits `.js` imports.
 - A module's top level only declares. A call there that would run a program
   is EK1001, including `Effect.succeed(1)`. Start the program once with a
-  runner: `NodeRuntime.runMain(() => main())`.
+  runner, which receives `main()` by name: `NodeRuntime.runMain(main())`.
 - Plain functions from other packages need a boundary, such as
   `Effect.try(() => parse(text))`, or a `/** @effeck trusted */`
   re-export from a `.ts` file (EK4401). Effect's packages are trusted,

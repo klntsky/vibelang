@@ -150,8 +150,9 @@ Every `.effeck` file starts with a small prelude in scope, so the program above 
 | `TaggedError` | Effect's `Data.TaggedError` |
 | `Control` | The base class of control operations (Chapter 9) |
 | `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | Effeck's built-ins, each introduced where it is first used |
+| Every other export of `effect`'s root | `Console`, `Option`, `Stream`, `Schedule`, `Duration`, and the rest, plus `flow` and `identity` (D146) |
 
-Everything else is imported from `effect` as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: `Effect` appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), `Schema` in 39-44%, `Layer` in 34-44%, and no other module in more than 22%. `Scope` is there because contracts name it whenever a resource outlives a function (Chapter 6). `Option` and `Array` stay imports because they would shadow the browser's `Option` and JavaScript's `Array`.
+Modules from `effect`'s subpath packages, such as `effect/http`, are imported as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: `Effect` appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), `Schema` in 39-44%, `Layer` in 34-44%, and no other module in more than 22%. `Scope` is there because contracts name it whenever a resource outlives a function (Chapter 6). JavaScript's own globals keep their names: `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so Effect's modules with those names need an import under another name, as in `import { Array as Arr } from "effect"`. A host global does not shadow Effect: in a project whose `lib` includes the DOM, `Option` is still Effect's.
 
 #### Running it
 
@@ -1885,8 +1886,6 @@ JavaScript's built-ins and Effect's own functions ship with contracts that say w
 #### How do I use `Option` and `Result`?
 
 ```ts es
-import { Option, Result } from "effect"
-
 function displayName(user: User) {
   return Option.match(Option.fromNullishOr(user.nickname), {
     onNone: () => user.name,
@@ -1955,8 +1954,6 @@ it.effect("a reminder fires after one day", () => {
 #### How do I log, trace, and record metrics?
 
 ```ts es
-import { Metric } from "effect"
-
 const checkouts = Metric.counter("checkouts")
 
 function checkout(cartId: string) {
@@ -2008,8 +2005,6 @@ Rarely. Statements replace sequencing, error handling, and cleanup, so most pipe
 #### How do I pattern match?
 
 ```ts es
-import { Match } from "effect"
-
 function area(shape: Circle | Square) {
   switch (shape._tag) {
     case "Circle": return Math.PI * shape.radius ** 2
@@ -2080,8 +2075,6 @@ Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Optio
 #### How do I keep state that several fibers share?
 
 ```ts es
-import { Ref } from "effect"
-
 function countVisits(paths: ReadonlyArray<string>) {
   const visits = Ref.make(0)
   Effect.forEach(paths, (path) => {
@@ -2519,8 +2512,6 @@ Any `using` declaration makes a function compile to frames, whether its initiali
 #### Methods that implement a plain-function member
 
 ```ts es
-import { Equal, Hash } from "effect"
-
 class Money implements Equal.Equal {
   constructor(readonly cents: number, readonly currency: string) {}
 
@@ -3598,8 +3589,9 @@ history, rather than a separately applied patch series.
 ```
 
 The parser keeps TypeScript's grammar. The checker resolves prelude names as
-implicit imports from `effeck-runtime`, unless a local declaration or
-import shadows them (D4, D48). Class hooks give fully abstract service classes
+implicit imports from `effeck-runtime`, and the other exports of `effect`'s
+root as implicit imports from `effect`, unless a local declaration or import
+shadows them (D4, D48, D146). Class hooks give fully abstract service classes
 the static side of an Effect Context key and the instance shape of their
 abstract members (D1, D45).
 
@@ -4100,6 +4092,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D123 | Declaration prelude imports use free aliases when names are already bound | Avoid duplicate identifiers in declaration consumers | 27 |
 | D124 | Setup relinks effeck launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
 | D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
+| D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 
 #### Rules of the runtime and compiler
 

@@ -115,7 +115,7 @@ function session(host: string) {
 }
 
 function sessionWithin(host: string) {
-  return Effect.timeout(() => session(host), "2 seconds")    // cancels a connect that hangs
+  return Effect.timeout(session(host), "2 seconds")    // cancels a connect that hangs
 }
 ```
 

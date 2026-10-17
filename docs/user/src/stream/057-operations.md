@@ -132,8 +132,8 @@ function partitionReadings() {
   )
   const [even, odd] = branches
   return Effect.all([
-    () => Stream.runCollect(even),
-    () => Stream.runCollect(odd)
+    Stream.runCollect(even),
+    Stream.runCollect(odd)
   ], { concurrency: 2 })
 }
 ```
@@ -200,8 +200,8 @@ function shareReadings() {
   using copies = Stream.broadcastN(Stream.range(1, 12), { n: 2, capacity: 3 })
   const [totals, audit] = copies
   return Effect.all([
-    () => Stream.runSum(totals),
-    () => Stream.runForEach(audit, (n) => {
+    Stream.runSum(totals),
+    Stream.runForEach(audit, (n) => {
       Effect.sleep("10 millis")
       Effect.log(`audit ${n}`)
     })

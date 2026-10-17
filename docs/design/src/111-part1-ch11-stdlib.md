@@ -107,7 +107,7 @@ function greetLater(name: string) {
 }
 
 function heartbeat() {
-  Effect.repeat(() => Effect.log("alive"), Schedule.spaced("30 seconds"))
+  Effect.repeat(Effect.log("alive"), Schedule.spaced("30 seconds"))
 }
 ```
 

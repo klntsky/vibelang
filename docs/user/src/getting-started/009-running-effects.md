@@ -34,7 +34,7 @@ function subtotal() {
   return 7 * 8
 }
 
-const total = Effect.runSync(() => subtotal())
+const total = Effect.runSync(subtotal())
 // total: number, 56
 ```
 
@@ -48,7 +48,7 @@ function preparedMessage() {
   return "prepared"
 }
 
-const pending = Effect.runPromise(() => preparedMessage())
+const pending = Effect.runPromise(preparedMessage())
 // pending: Promise<string>
 ```
 
@@ -65,7 +65,7 @@ function validate(input: string) {
 }
 
 const immediate = Effect.runSyncExit(() => validate(""))
-const eventual = Effect.runPromiseExit(() => preparedMessage())
+const eventual = Effect.runPromiseExit(preparedMessage())
 // immediate: Exit<number, BadInput>
 // eventual: Promise<Exit<string, never>>
 ```
@@ -76,10 +76,10 @@ An `Exit` is either a success with a value or a failure with a `Cause`. That cau
 
 ```ts
 function heartbeat() {
-  Effect.repeat(() => Effect.log("alive"), Schedule.spaced("200 millis"))
+  Effect.repeat(Effect.log("alive"), Schedule.spaced("200 millis"))
 }
 
-const running = Effect.runFork(() => heartbeat())
+const running = Effect.runFork(heartbeat())
 
 Effect.runPromise(() => {
   Effect.sleep("650 millis")
@@ -116,6 +116,6 @@ The three contract channels do not say whether work runs synchronously. Prefer a
 
 ## Coming from Effect
 
-Pass `() => main()` in `.effeck` files. A TypeScript caller receives a cold Effect from an exported Effeck function and passes `main()` to the runner instead.
+In `.effeck` files, pass `main()` too: the runner receives the call by name, as a program, and `() => main()` means the same. A TypeScript caller receives a cold Effect from an exported Effeck function and passes `main()` to the runner the same way.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/running-effects)

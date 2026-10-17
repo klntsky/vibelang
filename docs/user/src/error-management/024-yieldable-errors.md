@@ -58,7 +58,7 @@ Choose distinct tags for distinct error cases. Tag-based matching compares strin
 
 ```ts
 function displayTitle(text: string) {
-  return Effect.catchTag(() => title(text), "EmptyTitle", () => "Untitled")
+  return Effect.catchTag(title(text), "EmptyTitle", () => "Untitled")
 }
 // Effect<string, TitleTooLong, never>
 

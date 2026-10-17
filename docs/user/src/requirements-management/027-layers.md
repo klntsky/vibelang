@@ -161,7 +161,7 @@ abstract class Banner {
     return { text: (title) => `${settings.prefix}: ${title}` }
   }
 
-  static readonly layerWithoutDependencies = Layer.effect(Banner, () => Banner.make())
+  static readonly layerWithoutDependencies = Layer.effect(Banner, Banner.make())
 
   static readonly layer = Layer.provide(Banner.layerWithoutDependencies, SettingsLive)
 }

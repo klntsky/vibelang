@@ -103,8 +103,8 @@ The local variable remains available after logging, giving the behavior of `Effe
 ```ts
 function summary() {
   const details = Effect.all({
-    price: () => total(),
-    label: () => priceLabel()
+    price: total(),
+    label: priceLabel()
   }, { concurrency: 2 })
   return `${details.label}, total=${details.price}`
 }

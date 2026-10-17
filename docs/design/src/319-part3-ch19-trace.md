@@ -26,7 +26,7 @@ function requestApproval(cartId: string) {
 }
 
 const receipt = handle(
-  () => Effect.provideService(() => checkout("c-42"), AuditLog, RequestAuditLog),
+  () => Effect.provideService(checkout("c-42"), AuditLog, RequestAuditLog),
   Approval,
   {
     approve(request, k) {

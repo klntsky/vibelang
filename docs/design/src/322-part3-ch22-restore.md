@@ -1,7 +1,7 @@
 ### 22. What resume restores
 
 ```ts es
-handle(() => Effect.provideService(() => checkout("c-42"), AuditLog, RequestAuditLog), Approval, {
+handle(() => Effect.provideService(checkout("c-42"), AuditLog, RequestAuditLog), Approval, {
   approve(request, k) {
     AuditLog.info("in the handler")   // AppAuditLog: the clause runs outside the provide
     return resume(k, true)            // checkout continues with RequestAuditLog, its open Scope, its span

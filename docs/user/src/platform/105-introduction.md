@@ -81,4 +81,4 @@ Only the entry point changes: the same `main` uses Bun's implementations. A targ
 
 ## Coming from Effect
 
-Pass `() => main()` wherever an Effect program is expected. Effeck functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.
+Pass `main()` wherever an Effect program is expected: it is passed by name, so nothing runs until the runner runs it. Effeck functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.

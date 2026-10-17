@@ -73,7 +73,7 @@ A function used as a value is passed in the form its destination expects:
 | --- | --- |
 | A function type that returns an `Effect`, as Effect's combinators expect | The function's Effect form |
 | A plain function type, as `Array.prototype.map` expects | The function's plain-JavaScript form, if it has one (Chapter 15); otherwise EK4301 |
-| `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5) |
+| `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5); or an expression that calls an Effect, passed by name (D147) |
 | Either a function or an `Effect`, as `HttpRouter.add` and `Effect.withErrorReporting` accept | A function with parameters: the function. A function without parameters: the function if it compiles to plain JavaScript, a program if it can pause |
 
 The last row matters because several Effect APIs choose at run time with `Effect.isEffect`. In `HttpRouter.add("GET", "/users/:id", (request) => showUser(request))`, the handler has a parameter and is passed as a function. In `HttpRouter.add("GET", "/health", () => checkHealth())` and `Effect.withErrorReporting(() => serve())`, the argument can pause and is passed as a program.
@@ -95,11 +95,15 @@ Two kinds of "rest of the work" appear in this document, and they behave differe
 
 #### How program values are spelled
 
-A call always runs, so a program value needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
+A call runs where it stands, except where the expected type is `Effect`: there an expression that calls an `.effeck` function or a function that returns an `Effect`, or looks up a service, is passed by name (D147). The compiler passes a program that evaluates the expression each time it runs, as if the source had written `() =>` before it, so `Effect.retry(syncInventory(store), Schedule.recurs(3))` retries the call and `fork(fetchReport())` runs nothing at the call site. This holds for arguments, array elements, and record fields, in function bodies and at a module's top level. A position that accepts any value, such as `Console.log`'s parameters or `Effect.succeed`'s, still runs the call where it stands, and an expression whose value is already an `Effect` keeps its meaning. Each overload candidate decides by its own declared parameter, as it does for a lambda (D56). A hover on the callee of a call passed by name says so.
+
+A program of several statements needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
 
 ```ts gen
-// Effect.retry(() => syncInventory(store), Schedule.recurs(3))
-yield* Effect.retry(Effect.suspend(() => syncInventory(store)), Schedule.recurs(3))
+// Effect.retry(syncInventory(store), Schedule.recurs(3))
+yield* Effect.retry(Effect.gen(function* () { return yield* syncInventory(store); }), Schedule.recurs(3))
+// Effect.retry(retrySync, Schedule.recurs(3)), with const retrySync = () => syncInventory(store)
+yield* Effect.retry(Effect.suspend(retrySync), Schedule.recurs(3))
 ```
 
 "The expected type" has one precise meaning: the declared parameter type of the overload candidate TypeScript is trying, before instantiation (D44). TypeScript's own contextual type is the wrong one, because it is inferred from the argument itself. In `ids.map((id) => Users.find(id))`, `map`'s declared parameter is `(value: T, index: number) => U`, a plain function type, so the lambda is a callback that cannot pause (EK4301); instantiating `U` from the lambda would have made it look like an Effect position. When resolution fails, the candidates whose arity fits decide. The instantiated type is used only when the declared type is a bare type parameter fixed by another argument, such as `Layer.succeed`'s `NoInfer<S>`.
@@ -163,7 +167,7 @@ A runner is called only where no fiber runs the code: at a module's top level, a
 
 ```ts es
 function refreshAll(ids: ReadonlyArray<string>) {
-  for (const id of ids) Effect.runFork(() => refresh(id))
+  for (const id of ids) Effect.runFork(refresh(id))
 }
 ```
 

@@ -23,7 +23,7 @@ A call waits for its callee, whether the callee finishes at once or after a netw
 ```ts es
 function homePage(userId: string) {
   const [feed, unread] = Effect.all(
-    [() => Feed.load(userId), () => Notifications.unread(userId)],
+    [Feed.load(userId), Notifications.unread(userId)],
     { concurrency: "unbounded" }
   )
   const previews = Effect.forEach(feed.items, (item) => preview(item), { concurrency: 8 })
@@ -82,7 +82,7 @@ function displayName(user: User) {
 }
 
 function tryCharge(cartId: string) {
-  const outcome = Effect.result(() => Payments.charge(cartId))    // Result<Receipt, PaymentError>
+  const outcome = Effect.result(Payments.charge(cartId))    // Result<Receipt, PaymentError>
   return Result.isSuccess(outcome) ? outcome.success : undefined
 }
 // Effect<Receipt | undefined, never, Payments>
@@ -131,7 +131,7 @@ import { assert, it } from "@effect/vitest"
 import { TestClock } from "effect/testing"
 
 it.effect("a reminder fires after one day", () => {
-  const reminder = fork(() => remindLater("ada", "1 day"))
+  const reminder = fork(remindLater("ada", "1 day"))
   TestClock.adjust("1 day")                          // virtual time: nothing waits
   assert.strictEqual(Fiber.join(reminder), "sent")
 })
@@ -146,7 +146,7 @@ const checkouts = Metric.counter("checkouts")
 
 function checkout(cartId: string) {
   Effect.log(`checkout ${cartId}`)
-  const receipt = Effect.withSpan(() => Payments.charge(cartId), "charge")
+  const receipt = Effect.withSpan(Payments.charge(cartId), "charge")
   Metric.update(checkouts, 1)
   return receipt
 }
@@ -213,7 +213,7 @@ TypeScript's narrowing does most of the work: `switch` on `_tag`, `instanceof`, 
 
 ```ts es
 function search(query: string) {
-  const scan = fork(() => slowIndexScan(query))
+  const scan = fork(slowIndexScan(query))
   const cached = SearchCache.lookup(query)
   if (cached !== undefined) {
     Fiber.interrupt(scan)               // cancels the scan; its finally blocks run first

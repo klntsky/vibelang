@@ -15,7 +15,7 @@ const dashboard = Effect.fn("dashboard")(function* (id: string) {
 
 ```ts es
 function dashboard(id: string) {
-  const [profile, orders] = Effect.all([() => loadProfile(id), () => recentOrders(id)], {
+  const [profile, orders] = Effect.all([loadProfile(id), recentOrders(id)], {
     concurrency: 2
   })
   return { profile, orders }
@@ -24,9 +24,9 @@ function dashboard(id: string) {
 
 ```ts es
 const thumbnails = Effect.forEach(images, (image) => resize(image), { concurrency: 8 })
-const fastest = Effect.race(() => fromCache(id), () => fromNetwork(id))
-const first = Effect.raceFirst(() => fromCache(id), () => fromNetwork(id))
-const quick = Effect.timeout(() => slowQuery(id), "500 millis")
+const fastest = Effect.race(fromCache(id), fromNetwork(id))
+const first = Effect.raceFirst(fromCache(id), fromNetwork(id))
+const quick = Effect.timeout(slowQuery(id), "500 millis")
 ```
 
 Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect's semantics here:
@@ -59,7 +59,7 @@ const serve = Effect.fn("serve")(
 ```ts es
 function serve(port: number) {
   using server = Http.listen(port)
-  fork(() => heartbeat())          // interrupted when serve exits, before the server closes
+  fork(heartbeat())          // interrupted when serve exits, before the server closes
   return server.awaitShutdown()
 }
 ```
@@ -68,7 +68,7 @@ function serve(port: number) {
 
 ```ts es
 function withProgress(id: string) {
-  const pending = fork(() => buildReport(id))
+  const pending = fork(buildReport(id))
   sendProgressEmail(id)
   return Fiber.join(pending)          // waits for it; fails if it failed
 }

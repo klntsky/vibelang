@@ -54,7 +54,7 @@ function waitForArchive() {
     Schedule.modifyDelay(({ input }) =>
       input._tag === "Pending" ? input.pollAfter : Duration.zero)
   )
-  const result = Effect.repeat(() => check(), {
+  const result = Effect.repeat(check(), {
     schedule: delay,
     until: (status) => status._tag === "Ready"
   })

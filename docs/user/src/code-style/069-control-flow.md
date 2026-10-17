@@ -50,7 +50,7 @@ function sequentialPair() {
 }
 
 function concurrentPair() {
-  return Effect.zip(() => amount(), () => currency(), { concurrent: true })
+  return Effect.zip(amount(), currency(), { concurrent: true })
 }
 
 function formattedPair() {
@@ -153,12 +153,12 @@ function load(id: number) {
 }
 
 function stopAtFailure() {
-  return Effect.all([() => load(3), () => load(5), () => load(8)])
+  return Effect.all([load(3), load(5), load(8)])
 }
 // Sequentially loads 3, then fails with Unavailable; 8 is not started.
 
 function collectOutcomes() {
-  return Effect.all([() => load(3), () => load(5), () => load(8)], { mode: "result" })
+  return Effect.all([load(3), load(5), load(8)], { mode: "result" })
 }
 // [Result.succeed("item-3"), Result.fail(Unavailable), Result.succeed("item-8")]
 ```

@@ -31,7 +31,7 @@ function operationWithBrokenCleanup() {
 }
 
 function inspectDelivery() {
-  const exit = Effect.exit(() => operationWithBrokenCleanup())
+  const exit = Effect.exit(operationWithBrokenCleanup())
   if (Exit.isFailure(exit)) {
     return {
       expected: Cause.hasFails(exit.cause),

@@ -64,8 +64,8 @@ function combine() {
     return 18
   })
   const both = Effect.all([
-    () => Fiber.join(title),
-    () => Fiber.join(rows)
+    Fiber.join(title),
+    Fiber.join(rows)
   ], { concurrency: 2 })
   return both
 }
@@ -100,7 +100,7 @@ Forked fibers inherit the current services and tracing context. Control-operatio
 
 ```ts
 function startInCallerScope() {
-  return Effect.forkScoped(() => Effect.sleep("1 minute"))
+  return Effect.forkScoped(Effect.sleep("1 minute"))
 }
 // Scope remains in this function's requirements.
 

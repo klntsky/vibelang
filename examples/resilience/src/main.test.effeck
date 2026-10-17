@@ -3,7 +3,7 @@ import { TestClock } from "effect/testing"
 import { deadline, fetchReport, scenario } from "./main.effeck"
 
 it.effect("retries, races and joins under virtual time", () => {
-  const pending = fork(() => scenario())
+  const pending = fork(scenario())
   TestClock.adjust("1 second")
   const result = Fiber.join(pending)
   Effect.sync(() => assert.deepStrictEqual(result, {
@@ -27,7 +27,7 @@ it.effect("does not finish retries before their scheduled time", () => {
 })
 
 it.effect("interrupts a slow request at its deadline", () => {
-  const pending = fork(() => deadline())
+  const pending = fork(deadline())
   TestClock.adjust("20 millis")
   const result = Fiber.join(pending)
   Effect.sync(() => assert.strictEqual(result, "TimeoutError"))

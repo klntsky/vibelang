@@ -11,7 +11,7 @@ function greet(name: string) {
 }
 
 function main() {
-  return Effect.retry(() => greet("Ada"), Schedule.recurs(2))
+  return Effect.retry(greet("Ada"), Schedule.recurs(2))
 }
 ```
 
@@ -44,7 +44,7 @@ function sequential() {
 }
 
 function concurrent() {
-  return Effect.all([() => greet("Ada"), () => greet("Grace")], { concurrency: 2 })
+  return Effect.all([greet("Ada"), greet("Grace")], { concurrency: 2 })
 }
 ```
 

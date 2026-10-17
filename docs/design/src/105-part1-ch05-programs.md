@@ -2,10 +2,11 @@
 
 #### The one rule
 
-A call runs. A function value does not.
+A call runs where it stands, except where a parameter expects a program: there it is passed by name, and runs when the program runs. A function value does not run.
 
 ```ts es
 syncInventory(store)                    // runs now
+fork(syncInventory(store))              // passed by name: the forked fiber runs it
 
 const job = () => syncInventory(store)  // a program: nothing has run
 job()                                   // runs it
@@ -14,9 +15,9 @@ job()                                   // runs it again, from scratch
 
 That is the whole story of programs as values. An `Effect` value you get from TypeScript works the same way: it is a program, and calling it runs it (`Clock.currentTimeMillis()`). A value whose type extends `Effect` with structure of its own, such as a `Config` or an `Exit`, is data until you call it (Chapter 13).
 
-A program is written as a function with no arguments because that needs no new syntax: `() =>` already says "not yet". A quotation operator would be new syntax with the same meaning, and Effect's constructors (`Effect.suspend(() => …)`) are the boilerplate the language exists to remove.
+Where a parameter's type says it expects an `Effect`, the call itself is the program (D147): the parameter already says "not yet", so the source needs no marker. Elsewhere a program is written as a function with no arguments, because that needs no new syntax: `() =>` says "not yet". A program of several statements is always `() => { … }`. A quotation operator would be new syntax with the same meaning, and Effect's constructors (`Effect.suspend(() => …)`) are the boilerplate the language exists to remove.
 
-Effect's combinators take programs, so you pass a function wherever Effect expects an Effect. The compiler converts it.
+Effect's combinators take programs, so you pass the call itself wherever Effect expects an Effect, as in Effect's own code. The compiler passes it by name.
 
 ```ts effect
 const user = yield* fetchUser(id).pipe(Effect.retry(Schedule.exponential("100 millis")))
@@ -25,12 +26,12 @@ const fastest = yield* Effect.race(fromCache(id), fromNetwork(id))
 ```
 
 ```ts es
-const user = Effect.retry(() => fetchUser(id), Schedule.exponential("100 millis"))
-const fresh = Effect.timeout(() => fetchUser(id), "1 second")
-const fastest = Effect.race(() => fromCache(id), () => fromNetwork(id))   // the first to succeed
+const user = Effect.retry(fetchUser(id), Schedule.exponential("100 millis"))
+const fresh = Effect.timeout(fetchUser(id), "1 second")
+const fastest = Effect.race(fromCache(id), fromNetwork(id))   // the first to succeed
 ```
 
-Each line is a call, so it runs: `user` is a `User`, not an `Effect`. `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
+Each line is a call, so it runs: `user` is a `User`, not an `Effect`. The inner calls are passed by name: `Effect.retry` runs `fetchUser(id)` again on each attempt, with fresh local variables each time.
 
 #### Pipe
 

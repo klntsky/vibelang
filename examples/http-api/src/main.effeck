@@ -39,7 +39,7 @@ export function createUser() {
   }
 }
 
-export const Routes = HttpRouter.add("POST", "/users", () => createUser())
+export const Routes = HttpRouter.add("POST", "/users", createUser())
 export const App = HttpRouter.provideRequest(UsersLive)(Routes)
 
 // NodeHttpServer runs Node's createServer itself; .effeck code passes it as a

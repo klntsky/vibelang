@@ -69,4 +69,4 @@ Use `Effect.forEach` or an ordinary loop when the callback performs Effect work.
 
 ## Coming from Effect
 
-Application code uses ordinary calls, `try`/`finally`, and `using`. Keep `runMain` at the outer boundary, and pass `() => main()` so the entry program has not already run.
+Application code uses ordinary calls, `try`/`finally`, and `using`. Keep `runMain` at the outer boundary, and pass it `main()`: the runner receives the call by name, so the entry program has not already run.

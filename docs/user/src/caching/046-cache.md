@@ -39,9 +39,9 @@ function concurrentLookup() {
     }
   })
   const values = Effect.all([
-    () => Cache.get(cache, "north"),
-    () => Cache.get(cache, "north"),
-    () => Cache.get(cache, "north")
+    Cache.get(cache, "north"),
+    Cache.get(cache, "north"),
+    Cache.get(cache, "north")
   ], { concurrency: 3 })
   return { values, calls }
 }

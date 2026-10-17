@@ -22,7 +22,7 @@ The new deferred starts empty and contains neither a success nor a failure. Crea
 ```ts
 function waitForAddress() {
   const address = Deferred.make<string>()
-  const listener = fork(() => Deferred.await(address))
+  const listener = fork(Deferred.await(address))
   Deferred.succeed(address, "127.0.0.1:8080")
   return Fiber.join(listener)
 }

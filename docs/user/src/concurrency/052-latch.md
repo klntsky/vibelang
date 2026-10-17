@@ -26,7 +26,7 @@ function reopenGate() {
   const gate = Latch.make(true)
   Latch.await(gate) // Passes immediately.
   Latch.close(gate)
-  const waiting = fork(() => Latch.whenOpen(gate, () => "allowed again"))
+  const waiting = fork(Latch.whenOpen(gate, () => "allowed again"))
   Latch.open(gate)
   return Fiber.join(waiting)
 }

@@ -12,7 +12,7 @@ function openReader() {
 
 const lines = Stream.scoped(
   Stream.flatMap(
-    Stream.fromEffect(() => Effect.acquireRelease(
+    Stream.fromEffect(Effect.acquireRelease(
       () => openReader(),
       () => Effect.log("reader closed")
     )),

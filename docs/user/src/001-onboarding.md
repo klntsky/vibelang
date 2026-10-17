@@ -50,7 +50,7 @@ function prepare() {
 }
 
 function main() {
-  return Effect.withSpan(() => prepare(), "startup")
+  return Effect.withSpan(prepare(), "startup")
 }
 ```
 
@@ -58,7 +58,7 @@ function main() {
 
 ## Working with coding assistants
 
-Give an assistant the Effeck rules and the version of Effect your project uses. Ask it to write ordinary functions, pass programs as zero-argument functions, and check inferred errors and services. Examples copied from TypeScript Effect need adaptation: `.effeck` files use calls instead of `yield*`, and platform access goes through Effect modules.
+Give an assistant the Effeck rules and the version of Effect your project uses. Ask it to write ordinary functions, pass the call itself where an operator expects a program, as in `fork(fetchReport())`, and check inferred errors and services. Examples copied from TypeScript Effect need adaptation: `.effeck` files use calls instead of `yield*`, and platform access goes through Effect modules.
 
 Keep feedback concrete: check the contract, test a failure, and test cleanup when a request is interrupted. An assistant needs the same boundaries as a human author, especially around plain JavaScript libraries.
 

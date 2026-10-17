@@ -35,7 +35,7 @@ function sendRequest(): Effect<string, RequestRejected, never> {
 }
 
 function sendTransient() {
-  return Effect.retry(() => sendRequest(), {
+  return Effect.retry(sendRequest(), {
     times: 4,
     while: (error) => error.transient
   })
@@ -48,7 +48,7 @@ function sendTransient() {
 
 ```ts
 function sendWithBackoff() {
-  return Effect.retry(() => sendRequest(), {
+  return Effect.retry(sendRequest(), {
     times: 4,
     while: (error) => error.transient,
     schedule: Schedule.exponential("150 millis")
@@ -56,7 +56,7 @@ function sendWithBackoff() {
 }
 
 function sendThreeMoreTimes() {
-  return Effect.retry(() => sendRequest(), Schedule.recurs(3))
+  return Effect.retry(sendRequest(), Schedule.recurs(3))
 }
 ```
 
