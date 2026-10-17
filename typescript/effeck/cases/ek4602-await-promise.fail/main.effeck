@@ -1,5 +1,5 @@
 // expect: EK4602
-// await in Effeck code waits for a Fiber or a Deferred. A promise needs a
+// await in Effeck code does not wait for promises. A promise needs a
 // hatch, where await keeps its JavaScript meaning.
 declare const pending: Promise<number>
 

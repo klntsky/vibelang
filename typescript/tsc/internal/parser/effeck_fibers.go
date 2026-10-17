@@ -68,6 +68,42 @@ func (p *Parser) parseEffeckFork() *ast.Node {
 	return call
 }
 
+// isStartOfEffeckJoin reports whether the current token, an identifier, is the
+// keyword join (D225): in an .effeck file, join followed on the same line by
+// an operand that starts with a name, this, or {, or by [ after a space.
+// join( stays a call, so a function named join keeps working, and join[i]
+// without a space stays an element access.
+func (p *Parser) isStartOfEffeckJoin() bool {
+	return p.token == ast.KindIdentifier && p.scanner.TokenValue() == "join" && p.isEffeckFile() && p.lookAhead((*Parser).nextTokenStartsJoinOperand)
+}
+
+func (p *Parser) nextTokenStartsJoinOperand() bool {
+	keywordEnd := p.scanner.TokenEnd()
+	p.nextToken()
+	if p.hasPrecedingLineBreak() {
+		return false
+	}
+	switch p.token {
+	case ast.KindIdentifier, ast.KindThisKeyword, ast.KindOpenBraceToken:
+		return true
+	case ast.KindOpenBracketToken:
+		return p.scanner.TokenStart() > keywordEnd
+	}
+	return false
+}
+
+// parseEffeckJoin parses `join operand` as $join(operand), which joins a
+// Fiber, or every fiber of an array or object of them, keeping the shape
+// (D225). The operand binds as fork's does.
+func (p *Parser) parseEffeckJoin() *ast.Node {
+	pos := p.nodePos()
+	anchor := p.tokenRange()
+	p.nextToken() // join
+	operand := p.parseSimpleUnaryExpression()
+	callee := p.effeckSynthesized(p.factory.NewIdentifier("$join"), anchor)
+	return p.finishNode(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(operand.Loc, []*ast.Node{operand}), ast.NodeFlagsNone), pos)
+}
+
 // effeckProgramArrow returns the arrow function (params) => body, with its
 // arrow synthesized at anchor, a token's range without trivia on the line
 // where params end (TypeScript rejects a line break before an arrow). params

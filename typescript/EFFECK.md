@@ -1073,7 +1073,8 @@ need no new node kinds:
 | --- | --- |
 | `fork getUser(id)` | `fork(getUser(id))`: the prelude's fork, owned by the block (D95) |
 | `fork { ... }` | `fork(() => { ... })` |
-| `await x` (outside `async`) | `$await(x)`, a call that runs: its value and its failures |
+| `join x` | `$join(x)`, a call that runs: the fiber's value and its failures (D225) |
+| `await x` (outside `async`) | `$await(x)`, kept only so that EK4609 and EK4610 name the replacement (D226) |
 | `await.all x`, `await.allSettled x`, `await.race x`, `await.any x` | `$awaitAll(x)`, `$awaitAllSettled(x)`, `$awaitRace(x)`, `$awaitAny(x)` (D196); the callee stands on `await` alone |
 | `select { case const v = a(): S ... default: D }` | `$selectN: { const $selected = $select(hasDefault, () => a(), ...); ... }`, kept only so that EK4607 names its replacement (D197) |
 | `for concurrent(n) (const x of xs) S` | `$forConcurrent(xs, n, (x) => { S })` |
@@ -1083,10 +1084,12 @@ The synthesized parts are anchored on the keyword they stand for, flagged
 by `NodeFlagsEffeck`, which marks provide blocks and schema structs. In a select, an
 unlabeled break that would leave it gets the block's label; in a `for
 concurrent` body, an unlabeled continue becomes a synthesized return and an
-escaping break is flagged for EK4605. `effeck/fibers.go` reports EK4601-EK4608
-(EK4607 on a select, EK4608 on a race over an object) and gives `await`, the
-await operations, and `for concurrent` hover text; the runtime's `fibers.ts`
-implements `$await`, the await operations (`$awaitRace` races through
+escaping break is flagged for EK4605. `effeck/fibers.go` reports EK4601-EK4612
+(EK4607 on a select, EK4608 on a race over an object, EK4609 and EK4610 on a
+plain `await`, whose quick fixes write `join x` and `x.await()`, EK4611 and
+EK4612 on a `join`) and gives `join`, the await operations, and `for
+concurrent` hover text; the runtime's `fibers.ts` implements `$join` (fibers
+only) and `$await`, the await operations (`$awaitRace` races through
 `$select`, forked with `startImmediately` so an element ready at start wins in
 written order; `$awaitAll` and `$awaitAllSettled` put an object's keys back in
 the order written), `$forConcurrent`, `detach`, and `forkIn`. An await
@@ -1094,6 +1097,8 @@ operation's elements are by-name programs because each helper's parameter
 expects Effects (the union `AwaitElement` includes `Fiber` and `Deferred`, so
 those pass as values). A numeric literal synthesized at another token prints its own text
 (`scanner.GetSourceTextOfNodeFromSourceFile`), which the select's indices need.
+
+Cases: `fibers-fork-join` (`join` on a fiber, an array, and an object; `fork { }`; the call form; `d.await()`; a failure at the join; fail fast; `detach`; `forkIn`), `fibers-join-identifiers` (a function named `join`, `words.join`, `join[0]`, and a member named `join` beside the keyword), `fibers-await.fail` (EK4601-EK4604 and EK4609-EK4612), `ek4602-await-promise.fail`, `fibers-for-concurrent`, `await-ops`.
 
 ## Primitives with their own syntax (D176-D180)
 

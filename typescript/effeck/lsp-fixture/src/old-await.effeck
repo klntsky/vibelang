@@ -1,0 +1,15 @@
+// await on a fiber and on a Deferred: EK4609 and EK4610, each with a quick fix (D226).
+function count(): number!! {
+  return 1
+}
+
+export function joinOld() {
+  const f = fork count()
+  return await f
+}
+
+export function waitOld() {
+  const d = Deferred.make<number>()
+  Deferred.succeed(d, 2)
+  return await d
+}

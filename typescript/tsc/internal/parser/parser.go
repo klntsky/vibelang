@@ -4850,6 +4850,9 @@ func (p *Parser) parseUnaryExpressionOrHigher() *ast.Expression {
 	if p.isStartOfEffeckFork() {
 		return p.parseEffeckFork() // fork operand (effeck_fibers.go)
 	}
+	if p.isStartOfEffeckJoin() {
+		return p.parseEffeckJoin() // join operand (effeck_fibers.go)
+	}
 	if p.isStartOfEffeckThrowExpression() {
 		return p.parseEffeckThrowExpression() // x ?? throw e (effeck_blocks.go)
 	}

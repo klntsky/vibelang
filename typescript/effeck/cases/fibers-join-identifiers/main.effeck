@@ -1,0 +1,28 @@
+// expect-result: {"call":"a-b","method":"x,y","indexed":"first","member":"m","fiber":3}
+// join( is a call and join[i] an element access, so names called join keep
+// working beside the join keyword (D225).
+function join(a: string, b: string): string {
+  return `${a}-${b}`
+}
+
+function indexed() {
+  const join = ["first"]
+  return join[0]
+}
+
+function count(): number!! {
+  return 3
+}
+
+export function main() {
+  const words = ["x", "y"]
+  const obj = { join: () => "m" }
+  const f = fork count()
+  return {
+    call: join("a", "b"),
+    method: words.join(","),
+    indexed: indexed(),
+    member: obj.join(),
+    fiber: join f
+  }
+}

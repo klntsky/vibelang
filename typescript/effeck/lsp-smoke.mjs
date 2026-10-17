@@ -293,6 +293,27 @@ try {
     assert(edits.length === 1 && edits[0].newText === "provide" && JSON.stringify(edits[0].range) === JSON.stringify(item.range), `edits ${JSON.stringify(edits)}`)
   })
 
+  await check("code action: await on a fiber is EK4609, and its quick fix writes join; on a Deferred, EK4610 writes d.await()", async () => {
+    open("src/old-await.effeck", "effeck")
+    const items = await diagnostics("src/old-await.effeck")
+    const codes = items.map((d) => `${d.source}${d.code}`).sort()
+    assert(JSON.stringify(codes) === JSON.stringify(["EK4609", "EK4610"]), `codes ${JSON.stringify(codes)}`)
+    const uri = fileUri("src/old-await.effeck")
+    const fixFor = async (item, title) => {
+      const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
+      const fix = actions.find((a) => a.title === title)
+      assert(fix, `no quick fix ${title} among ${JSON.stringify(actions.map((a) => a.title))}`)
+      return fix.edit?.changes?.[uri] ?? []
+    }
+    const fiber = items.find((d) => d.code === 4609)
+    const fiberEdits = await fixFor(fiber, "Join the fiber with join")
+    assert(fiberEdits.length === 1 && fiberEdits[0].newText === "join" && JSON.stringify(fiberEdits[0].range) === JSON.stringify(fiber.range), `edits ${JSON.stringify(fiberEdits)}`)
+    const deferred = items.find((d) => d.code === 4610)
+    const deferredEdits = await fixFor(deferred, "Wait for the Deferred with .await()")
+    const start = at("src/old-await.effeck", "await d")
+    assert(deferredEdits.length === 1 && deferredEdits[0].newText === "d.await()" && deferredEdits[0].range.start.line === start.line && deferredEdits[0].range.start.character === start.character && deferredEdits[0].range.end.character === start.character + "await d".length, `edits ${JSON.stringify(deferredEdits)}`)
+  })
+
   await check("diagnostics: an edit to main.effeck is checked with Effeck types", async () => {
     // name is the success value of lookup(1), a string, so toFixed does not exist.
     const broken = text("src/main.effeck").replace("name.toUpperCase()", "name.toFixed()")

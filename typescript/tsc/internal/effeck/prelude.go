@@ -61,6 +61,7 @@ var preludeModules = map[string]string{
 	// The fiber forms (D166-D170, fibers.go): the parser writes await, select,
 	// and for concurrent as calls of these; detach and forkIn are fork's variants.
 	"$await":  runtimeModule,
+	"$join":   runtimeModule,
 	"$select": runtimeModule,
 	// The await operations (D196): await.all, await.allSettled, await.race, await.any.
 	"$awaitAll":        runtimeModule,

@@ -5,6 +5,8 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/lsp/lsproto"
 )
 
 // QuickInfoHook can change a hover on node. A text that is not "" replaces
@@ -113,4 +115,11 @@ func applyMemberCompletionHooks(c *checker.Checker, left *ast.Node, t *checker.T
 		t = hook(c, left, t)
 	}
 	return t
+}
+
+// ToLSPRange converts textRange in file to an LSP range, for a quick fix
+// whose edit covers more than its diagnostic's range.
+func (l *LanguageService) ToLSPRange(file *ast.SourceFile, textRange core.TextRange) lsproto.Range {
+	rng, _ := l.converters.ToLSPRange(file, textRange)
+	return rng
 }

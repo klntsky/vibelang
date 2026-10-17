@@ -235,14 +235,18 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
 | EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
-| EK4601 | `await` before a call that already runs (D167) | Remove `await`; to run the call concurrently, fork it and await the fiber | 7 |
-| EK4602 | `await` on a promise in Effeck code (D167) | Wrap it in a hatch: `try(async () => …)` | 7 |
-| EK4603 | `await` on a value that is not a Fiber, a Deferred, or an array or object of them (D167) | Fork the program and await the fiber | 7 |
-| EK4604 | `await` in a hatch body that is not `async` (D167) | Make the hatch's function `async` | 7 |
+| EK4601 | `await` before a call that already runs (D226) | Remove `await`; to run the call concurrently, fork it and join the fiber | 7 |
+| EK4602 | `await` on a promise in Effeck code (D226) | Wrap it in a hatch: `try(async () => …)` | 7 |
+| EK4603 | `await` on any other value; Effeck code has only the await operations (D226) | Fork the program and join the fiber, or use `await.all`, `await.race`, `await.any`, or `await.allSettled` | 7 |
+| EK4604 | `await` in a hatch body that is not `async` (D226) | Make the hatch's function `async` | 7 |
 | EK4605 | `break` that would leave a `for concurrent` loop (D169) | Use `continue` to end one item, or `throw` to stop every item | 7 |
 | EK4606 | `return` in a `for concurrent` body (D169) | Use `continue` to end one item | 7 |
 | EK4607 | `select`, which `await.race` replaced (D197) | Write `await.race [a(), b()]`; for a `default:` clause, poll with `Queue.poll` and an `if` | 7 |
 | EK4608 | `await.race` or `await.any` on an object (D196) | Write the elements in an array: `await.race [a(), b()]` | 7 |
+| EK4609 | `await` on a fiber, or an array or object of fibers (D226) | Write `join` for `await` (quick fix) | 7 |
+| EK4610 | `await` on a Deferred (D226) | Write `d.await()` (quick fix) | 7 |
+| EK4611 | `join` on a value that is not a Fiber or an array or object of fibers (D225) | Join fibers; wait for a Deferred with `d.await()`; fork a program first | 7 |
+| EK4612 | `join` in a hatch body, which is plain TypeScript (D225) | Move the `join` out of the hatch | 7 |
 | EK4701 | A `match` without a `default` arm over a finite union (tagged errors, Option, Exit, Result, literals) that misses a case (D209) | Add an arm for each case left, or a `default` arm | 3 |
 | EK4702 | A binding inside an `or` or `not` pattern (D210) | Bind outside the combinator, or match each alternative in its own arm | 3 |
 | EK4703 | An `is` whose pattern binds names outside the condition of an `if` or `while` (D211) | Move the test into an `if` or `while` condition, or use `match` | 3 |

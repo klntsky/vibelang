@@ -48,6 +48,42 @@ export function $await(value: unknown): any {
   return awaitValue(value)
 }
 
+type IsFiber<T> = T extends Fiber.Fiber<infer _A, infer _E> ? true : false
+type JoinedLeaf<T> = T extends Fiber.Fiber<infer A, infer _E> ? A : never
+type JoinedLeafError<T> = T extends Fiber.Fiber<infer _A, infer E> ? E : never
+type NotJoinable = Effect.Effect<any, any, any> | Deferred.Deferred<any, any> | PromiseLike<any> | ((...args: never) => unknown)
+
+/**
+ * The value `join x` returns: a Fiber's value, or an array or object of them
+ * with the same shape. never for an operand join cannot join (EK4611).
+ * Elements must be Fibers themselves.
+ */
+export type JoinedValue<T> =
+  IsFiber<T> extends true ? JoinedLeaf<T>
+  : T extends NotJoinable ? never
+  : T extends readonly unknown[] ? { -readonly [K in keyof T]: JoinedLeaf<T[K]> }
+  : T extends object ? { -readonly [K in keyof T]: JoinedLeaf<T[K]> }
+  : never
+
+/** The failures `join x` can propagate. */
+export type JoinedError<T> =
+  IsFiber<T> extends true ? JoinedLeafError<T>
+  : T extends NotJoinable ? never
+  : T extends readonly unknown[] ? JoinedLeafError<T[number]>
+  : T extends object ? JoinedLeafError<T[keyof T]>
+  : never
+
+/**
+ * D225: `join x` joins a Fiber (Fiber.join), or every fiber of an array or
+ * object of them, keeping the shape. When one fails, the fibers still running
+ * are interrupted and the failure propagates, as Effect.all fails fast.
+ */
+export function $join<const T>(value: T): Effect.Effect<JoinedValue<T>, JoinedError<T>>
+// The implementation's return type is any for the same reason as $await's.
+export function $join(value: unknown): any {
+  return awaitValue(value)
+}
+
 function awaitValue(value: unknown): Effect.Effect<unknown, unknown> {
   if (Fiber.isFiber(value)) return Fiber.join(value)
   if (Deferred.isDeferred(value)) return Deferred.await(value)

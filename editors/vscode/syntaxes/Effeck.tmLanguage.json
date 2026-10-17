@@ -53,6 +53,9 @@
 					"include": "#effeck-fork"
 				},
 				{
+					"include": "#effeck-join"
+				},
+				{
 					"include": "#declaration"
 				},
 				{
@@ -227,6 +230,9 @@
 				},
 				{
 					"include": "#effeck-fork"
+				},
+				{
+					"include": "#effeck-join"
 				},
 				{
 					"include": "#effeck-match"
@@ -5883,6 +5889,14 @@
 		},
 		"effeck-fork": {
 			"match": "(?<![_$[:alnum:]])(fork)\\s+(?=[_$[:alpha:]{]|this\\b|new\\b|await\\b)",
+			"captures": {
+				"1": {
+					"name": "keyword.control.flow.ts"
+				}
+			}
+		},
+		"effeck-join": {
+			"match": "(?<![_$[:alnum:].])(join)\\s+(?=[_$[:alpha:]{\\[]|this\\b)",
 			"captures": {
 				"1": {
 					"name": "keyword.control.flow.ts"

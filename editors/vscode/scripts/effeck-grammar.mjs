@@ -38,9 +38,14 @@ export function addEffeckSyntax(grammar) {
     match: `\\b(handle)\\s+(?=${name}\\s*\\.\\s*${name}\\s*\\()`,
     captures: { 1: { name: "keyword.control.trycatch.ts" } }
   }
-  // The fiber forms (D166, D169, D196): fork operand, await.all [...] and the other await operations, for concurrent (...).
+  // The fiber forms (D166, D169, D196, D225): fork operand, join operand, await.all [...] and the other await operations, for concurrent (...).
   repository["effeck-fork"] = {
     match: "(?<![_$[:alnum:]])(fork)\\s+(?=[_$[:alpha:]{]|this\\b|new\\b|await\\b)",
+    captures: { 1: { name: "keyword.control.flow.ts" } }
+  }
+  // join operand (D225): join a fiber, or an array or object of fibers. join( stays a call.
+  repository["effeck-join"] = {
+    match: "(?<![_$[:alnum:].])(join)\\s+(?=[_$[:alpha:]{\\[]|this\\b)",
     captures: { 1: { name: "keyword.control.flow.ts" } }
   }
   repository["effeck-await-operation"] = {
@@ -70,10 +75,10 @@ export function addEffeckSyntax(grammar) {
       { match: "(?<=[\\s(])(and|or|not)(?=\\s+(?:let|const|var|not|if|[\\[{(\"'`0-9]|[A-Z]))", captures: { 1: { name: "keyword.operator.expression.instanceof.ts" } } }
     ]
   }
-  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-provide", "#effeck-for-concurrent", "#effeck-fork"]
+  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-provide", "#effeck-for-concurrent", "#effeck-fork", "#effeck-join"]
   const statements = repository.statements.patterns.filter((pattern) => !effeckIncludes.includes(pattern.include))
   repository.statements.patterns = [...effeckIncludes.map((include) => ({ include })), ...statements]
-  const effeckExpressions = ["#effeck-await-operation", "#effeck-fork", "#effeck-match"]
+  const effeckExpressions = ["#effeck-await-operation", "#effeck-fork", "#effeck-join", "#effeck-match"]
   const expressions = repository.expression.patterns.filter((pattern) => !effeckExpressions.includes(pattern.include))
   repository.expression.patterns = [...effeckExpressions.map((include) => ({ include })), ...expressions]
   // `!` separates the slots of an Effect type: Result!Error!Dependencies.
