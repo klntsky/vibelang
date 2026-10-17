@@ -100,6 +100,7 @@ type Parser struct {
 	reparsedClones       []*ast.Node
 
 	effeckReadonlyMembers     bool              // property signatures get a readonly modifier (effeck.go)
+	effeckAbstractMembers     bool              // bodiless class members become abstract: a service or control body (effeck.go)
 	effeckOmittedDependencies map[*ast.Node]bool // Effect types whose dependencies were left out (effeck.go)
 }
 
@@ -1772,7 +1773,10 @@ func (p *Parser) parseClassDeclarationOrExpression(pos int, jsdoc jsdocScannerIn
 	if p.parseExpected(ast.KindOpenBraceToken) {
 		// ClassTail[Yield,Await] : (Modified) See 14.5
 		//      ClassHeritage[?Yield,?Await]opt { ClassBody[?Yield,?Await]opt }
+		saveAbstract := p.effeckAbstractMembers // a class inside a service body is not one (effeck.go)
+		p.effeckAbstractMembers = false
 		members = p.parseList(PCClassMembers, (*Parser).parseClassElement)
+		p.effeckAbstractMembers = saveAbstract
 		p.parseExpected(ast.KindCloseBraceToken)
 	} else {
 		members = p.createMissingList()
@@ -2012,6 +2016,9 @@ func (p *Parser) parseMethodDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 	parameters := p.parseParameters(signatureFlags)
 	typeNode := p.parseReturnType(ast.KindColonToken, false /*isType*/)
 	body := p.parseFunctionBlockOrSemicolon(signatureFlags, diagnosticMessage)
+	if body == nil {
+		modifiers = p.effeckAbstractMember(modifiers, name, false /*property*/)
+	}
 	result := p.finishNode(p.factory.NewMethodDeclaration(modifiers, asteriskToken, name, questionToken, typeParameters, parameters, typeNode, nil /*fullSignature*/, body), pos)
 	p.withJSDoc(result, jsdoc)
 	p.checkJSSyntax(result)
@@ -2030,6 +2037,9 @@ func (p *Parser) parsePropertyDeclaration(pos int, jsdoc jsdocScannerInfo, modif
 	typeNode := p.parseTypeAnnotation()
 	initializer := p.doInContext(ast.NodeFlagsYieldContext|ast.NodeFlagsAwaitContext|ast.NodeFlagsDisallowInContext, false, (*Parser).parseInitializer)
 	p.parseSemicolonAfterPropertyName(name, typeNode, initializer)
+	if initializer == nil {
+		modifiers = p.effeckAbstractMember(modifiers, name, true /*property*/)
+	}
 	result := p.finishNode(p.factory.NewPropertyDeclaration(modifiers, name, postfixToken, typeNode, initializer), pos)
 	p.withJSDoc(result, jsdoc)
 	p.checkJSSyntax(result)

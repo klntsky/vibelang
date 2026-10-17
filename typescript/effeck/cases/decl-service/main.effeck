@@ -1,0 +1,41 @@
+// expect-result: {"name":"Ada","missing":"No user 7","region":"eu","approved":"released v1"}
+error UserNotFound { id: string }
+
+export service Users {
+  find(id: string): string!UserNotFound
+  readonly region: string
+
+  static readonly layer = Layer.succeed(Users, {
+    find: (id: string) => {
+      if (id === "42") return "Ada"
+      throw new UserNotFound({ id })
+    },
+    region: "eu"
+  })
+}
+
+export control Approval {
+  approve(request: string): boolean!!
+}
+
+function release(version: string) {
+  if (!Approval.approve(`deploy ${version}`)) return "declined"
+  return `released ${version}`
+}
+
+function greet(id: string) {
+  try {
+    return Users.find(id)
+  } catch (error) {
+    return `No user ${error.id}`
+  }
+}
+
+export function main() {
+  const approved = handle(() => release("v1"), Approval, {
+    approve(_request, continuation) {
+      return resume(continuation, true)
+    }
+  })
+  return Effect.provide(() => ({ name: greet("42"), missing: greet("7"), region: Users().region, approved }), Users.layer)
+}

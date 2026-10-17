@@ -4,3 +4,11 @@ export function findUser(id: string): string!MissingUser! {
   if (id === "") throw new MissingUser({ id })
   return id
 }
+
+export service Accounts {
+  balance(id: string): number!MissingUser
+}
+
+export function total(id: string) {
+  return Accounts.balance(id)
+}

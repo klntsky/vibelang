@@ -418,6 +418,17 @@ try {
     assert(shown.includes("id: string"), `got ${JSON.stringify(shown)}`)
   })
 
+  await check("hover: a service member call shows its contract in the ! form", async () => {
+    const shown = await hover("src/declarations.effeck", "balance(id)")
+    assert(shown.includes("balance(id: string): number!MissingUser!"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("definition: a service member call goes to the member in the service declaration", async () => {
+    const [location] = await definition("src/declarations.effeck", "balance(id)")
+    assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)
+    assert(location.range.start.line === lineOf("src/declarations.effeck", "balance(id: string)"), `line ${location.range.start.line}`)
+  })
+
   await check("definition: a thrown error goes to its error declaration", async () => {
     const [location] = await definition("src/declarations.effeck", "MissingUser({ id })")
     assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)

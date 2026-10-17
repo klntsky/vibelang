@@ -37,9 +37,44 @@ func checkServices(c *checker.Checker, file *ast.SourceFile) {
 	file.AsNode().ForEachChild(visit)
 }
 
+// declarationWord returns "service" or "control" when class was declared with
+// that word (D128): the parser gives such a class an abstract modifier that
+// is not in the source.
+func declarationWord(class *ast.Node) string {
+	for _, modifier := range class.ModifierNodes() {
+		if modifier.Kind == ast.KindAbstractKeyword && modifier.Flags&ast.NodeFlagsReparsed != 0 {
+			if class.ClassLikeData().HeritageClauses != nil {
+				return "control"
+			}
+			return "service"
+		}
+	}
+	return ""
+}
+
+// checkDeclarationMembers reports EK2103 for each instance member of a service
+// or control declaration that has a body or an initializer: the declaration
+// would otherwise be an ordinary abstract class.
+func checkDeclarationMembers(c *checker.Checker, class *ast.Node) {
+	word := declarationWord(class)
+	if word == "" {
+		return
+	}
+	for _, member := range class.Members() {
+		if ast.HasStaticModifier(member) || member.Name() == nil {
+			continue
+		}
+		if member.Body() != nil || ast.IsPropertyDeclaration(member) && member.Initializer() != nil {
+			d := report(c, member.Name(), EK2103, scanner.GetTextOfNode(member.Name()), word)
+			note(d, "Implement it in a layer, or make it static to keep it on the class.")
+		}
+	}
+}
+
 // checkServiceDeclaration reports EK2101, EK3001, EK3005, and EK3006 for
 // class, if it declares a service or a control operation.
 func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
+	checkDeclarationMembers(c, class)
 	kind := shapeKindOf(class)
 	if kind == ordinaryClass {
 		return

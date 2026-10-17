@@ -27,7 +27,7 @@ func (p *Parser) isEffeckFile() bool {
 // that parses today.
 func isEffeckDeclarationWord(text string) bool {
 	switch text {
-	case "error":
+	case "error", "service", "control":
 		return true
 	}
 	return false
@@ -52,6 +52,10 @@ func (p *Parser) parseEffeckDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 	switch p.scanner.TokenValue() {
 	case "error":
 		return p.parseErrorDeclaration(pos, jsdoc, modifiers)
+	case "service":
+		return p.parseServiceDeclaration(pos, jsdoc, modifiers, false /*control*/)
+	case "control":
+		return p.parseServiceDeclaration(pos, jsdoc, modifiers, true /*control*/)
 	}
 	return nil
 }
@@ -79,6 +83,39 @@ func (p *Parser) effeckSpanning(node *ast.Node, loc core.TextRange) *ast.Node {
 	node.Flags |= p.contextFlags
 	p.overrideParentInImmediateChildren(node)
 	return node
+}
+
+// effeckModifiers adds synthesized modifiers of the given kinds, anchored on
+// a member's name, to modifiers, before the modifiers it already has. A kind
+// it already has is not added again.
+func (p *Parser) effeckModifiers(modifiers *ast.ModifierList, name *ast.Node, kinds ...ast.Kind) *ast.ModifierList {
+	var added []*ast.Node
+	for _, kind := range kinds {
+		if modifiers != nil && core.Some(modifiers.Nodes, func(m *ast.Node) bool { return m.Kind == kind }) {
+			continue
+		}
+		added = append(added, p.effeckSynthesized(p.factory.NewModifier(kind), name.Loc))
+	}
+	if len(added) == 0 {
+		return modifiers
+	}
+	if modifiers == nil {
+		return p.newModifierList(name.Loc, added)
+	}
+	return p.newModifierList(modifiers.Loc, append(added, modifiers.Nodes...))
+}
+
+// effeckAbstractMember adds abstract, and readonly for a property, to a
+// member of a service or control body that has no body or initializer and is
+// not static.
+func (p *Parser) effeckAbstractMember(modifiers *ast.ModifierList, name *ast.Node, property bool) *ast.ModifierList {
+	if !p.effeckAbstractMembers || modifiers != nil && core.Some(modifiers.Nodes, func(m *ast.Node) bool { return m.Kind == ast.KindStaticKeyword }) {
+		return modifiers
+	}
+	if property {
+		return p.effeckModifiers(modifiers, name, ast.KindAbstractKeyword, ast.KindReadonlyKeyword)
+	}
+	return p.effeckModifiers(modifiers, name, ast.KindAbstractKeyword)
 }
 
 // effeckReadonly adds a synthesized readonly modifier, anchored on the
@@ -242,4 +279,52 @@ func (p *Parser) effeckInferOmitted(returnType *ast.TypeNode) {
 	infer := p.effeckSynthesized(p.factory.NewInferTypeNode(parameter), slot.Loc)
 	infer.Parent = returnType
 	arguments.Nodes[2] = infer
+}
+
+// parseServiceDeclaration parses
+//
+//	service Users { find(id: string): User!NotFound; readonly region: string }
+//	control Approval { approve(request: string): boolean!! }
+//
+// as the abstract classes they abbreviate:
+//
+//	abstract class Users { abstract find(id: string): User!NotFound; abstract readonly region: string }
+//	abstract class Approval extends Control { abstract approve(request: string): boolean!! }
+//
+// A member without a body or initializer that is not static becomes abstract,
+// and a value member also readonly. Static members, such as a layer, and
+// members with bodies stay as written. A member's contract is written in the
+// ! form; without a ! a return type is not an Effect (EK2101).
+func (p *Parser) parseServiceDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList, control bool) *ast.Node {
+	word := p.scanner.TokenRange()
+	p.nextToken() // service or control
+	name := p.parseBindingIdentifier()
+	typeParameters := p.parseTypeParameters()
+	var heritage *ast.NodeList
+	if control {
+		base := p.effeckSynthesized(p.factory.NewIdentifier("Control"), word)
+		expression := p.effeckSynthesized(p.factory.NewExpressionWithTypeArguments(base, nil), word)
+		clause := p.effeckSynthesized(p.factory.NewHeritageClause(ast.KindExtendsKeyword, p.newNodeList(word, []*ast.Node{expression})), word)
+		heritage = p.newNodeList(word, []*ast.Node{clause})
+	}
+	var members *ast.NodeList
+	if p.parseExpected(ast.KindOpenBraceToken) {
+		saveAbstract := p.effeckAbstractMembers
+		p.effeckAbstractMembers = true
+		members = p.parseList(PCClassMembers, (*Parser).parseClassElement)
+		p.effeckAbstractMembers = saveAbstract
+		p.parseExpected(ast.KindCloseBraceToken)
+	} else {
+		members = p.createMissingList()
+	}
+	abstract := p.effeckSynthesized(p.factory.NewModifier(ast.KindAbstractKeyword), word)
+	if modifiers == nil {
+		modifiers = p.newModifierList(word, []*ast.Node{abstract})
+	} else {
+		modifiers = p.newModifierList(core.NewTextRange(modifiers.Pos(), word.End()), append(append([]*ast.Node{}, modifiers.Nodes...), abstract))
+	}
+	result := p.factory.NewClassDeclaration(modifiers, name, typeParameters, heritage, members)
+	p.finishNode(result, pos)
+	p.withJSDoc(result, jsdoc)
+	return result
 }

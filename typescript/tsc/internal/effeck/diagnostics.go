@@ -86,6 +86,8 @@ var (
 	EK2006 = message(2006, errorCategory, "{0} leaves a finally block, which would discard a failure in flight.")
 	// EK2101: a declaration without a body that has no full contract. {0} is the declaration.
 	EK2101 = message(2101, errorCategory, "{0} has no body to infer from, so its contract must be written in full.")
+	// EK2103: a member of a service or control declaration with a body or an initializer. {0} is the member, {1} the word.
+	EK2103 = message(2103, errorCategory, "{0} has an implementation, but a {1} declares only contracts.")
 	// EK2102: a recursive function whose A depends on its own result. {0} is the function.
 	EK2102 = message(2102, errorCategory, "{0} calls itself, and its success type depends on that call, so its contract must be written.")
 
@@ -132,7 +134,7 @@ var registry = map[int32]*Message{}
 func init() {
 	for _, m := range []*Message{
 		EK1001, EK1002, EK1003, EK1004, EK1005,
-		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102,
+		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403,
 	} {
