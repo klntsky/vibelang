@@ -1,0 +1,74 @@
+// expect-result: {"typed":"NotFound","defect":"Die","rethrown":"Boom","onlyCause":"Fail","untyped":"Expected"}
+error NotFound { id: string }
+error Boom
+
+function find(id: string): string!NotFound! {
+  if (id === "missing") throw new NotFound({ id })
+  if (id === "bug") die(new Error("bug"))
+  return id
+}
+
+function boom() {
+  throw new Boom()
+}
+
+// A typed clause takes its expected failure; the Cause clause takes the rest.
+function typed() {
+  try {
+    return find("missing")
+  } catch (e: NotFound) {
+    return e._tag
+  } catch (cause: Cause) {
+    return "cause"
+  }
+}
+
+// A defect reaches only the Cause clause.
+function defect() {
+  try {
+    return find("bug")
+  } catch (e: NotFound) {
+    return e._tag
+  } catch (cause: Cause) {
+    return cause.reasons[0]._tag
+  }
+}
+
+// throw cause fails with every reason the Cause holds.
+function rethrown() {
+  try {
+    try {
+      boom()
+    } catch (cause: Cause) {
+      throw cause
+    }
+    return "no"
+  } catch (e: Boom) {
+    return e._tag
+  }
+}
+
+function onlyCause() {
+  try {
+    boom()
+    return "no"
+  } catch (cause: Cause) {
+    return cause.reasons[0]._tag
+  }
+}
+
+// Before a Cause clause, an untyped clause catches an expected failure.
+function untyped() {
+  try {
+    boom()
+    return "no"
+  } catch (e) {
+    return "Expected"
+  } catch (cause: Cause) {
+    return "cause"
+  }
+}
+
+export function main() {
+  return { typed: typed(), defect: defect(), rethrown: rethrown(), onlyCause: onlyCause(), untyped: untyped() }
+}

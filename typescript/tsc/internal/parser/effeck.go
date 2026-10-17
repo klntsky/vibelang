@@ -680,11 +680,36 @@ func (p *Parser) parseEffeckCatchClauses(first *ast.Node) *ast.Node {
 		return first
 	}
 	anchor := clauseAnchor(first)
-	chain := p.effeckCatchChain(clauses)
-	caught := p.effeckSynthesized(p.factory.NewIdentifier(effeckCaughtName), anchor)
-	variable := p.effeckSynthesized(p.factory.NewVariableDeclaration(caught, nil, nil, nil), anchor)
+	causeMode := false
+	for _, clause := range clauses {
+		causeMode = causeMode || isCauseCatchClause(clause)
+	}
+	chain := p.effeckCatchChain(clauses, causeMode)
 	span := core.NewTextRange(first.Pos(), clauses[len(clauses)-1].End())
-	block := p.effeckSpanning(p.factory.NewBlock(p.newNodeList(span, []*ast.Node{chain}), true /*multiLine*/), span)
+	if !causeMode {
+		caught := p.effeckSynthesized(p.factory.NewIdentifier(effeckCaughtName), anchor)
+		variable := p.effeckSynthesized(p.factory.NewVariableDeclaration(caught, nil, nil, nil), anchor)
+		block := p.effeckSpanning(p.factory.NewBlock(p.newNodeList(span, []*ast.Node{chain}), true /*multiLine*/), span)
+		return p.effeckSpanning(p.factory.NewCatchClause(variable, block), span)
+	}
+	// A clause typed Cause catches every reason (D176). The catch variable is
+	// the Cause, and the clauses before it test the expected failure it holds:
+	//
+	//	catch ($cause) {
+	//	  const $caught = $failureOf($cause)
+	//	  if ($isFailure<NotFound>($caught)) { const e = $caught; A }
+	//	  else { const cause = $cause; C }
+	//	}
+	causeName := p.effeckSynthesized(p.factory.NewIdentifier(effeckCauseName), anchor)
+	variable := p.effeckSynthesized(p.factory.NewVariableDeclaration(causeName, nil, nil, nil), anchor)
+	failureOf := p.effeckSynthesized(p.factory.NewIdentifier(effeckFailureOf), anchor)
+	argument := p.effeckSynthesized(p.factory.NewIdentifier(effeckCauseName), anchor)
+	call := p.effeckSynthesized(p.factory.NewCallExpression(failureOf, nil, nil, p.newNodeList(anchor, []*ast.Node{argument}), ast.NodeFlagsNone), anchor)
+	caught := p.effeckSynthesized(p.factory.NewIdentifier(effeckCaughtName), anchor)
+	declaration := p.effeckSynthesized(p.factory.NewVariableDeclaration(caught, nil, nil, call), anchor)
+	list := p.effeckSynthesized(p.factory.NewVariableDeclarationList(p.newNodeList(anchor, []*ast.Node{declaration}), ast.NodeFlagsConst), anchor)
+	statement := p.effeckSynthesized(p.factory.NewVariableStatement(nil, list), anchor)
+	block := p.effeckSpanning(p.factory.NewBlock(p.newNodeList(span, []*ast.Node{statement, chain}), true /*multiLine*/), span)
 	return p.effeckSpanning(p.factory.NewCatchClause(variable, block), span)
 }
 
@@ -707,12 +732,35 @@ func clauseAnchor(clause *ast.Node) core.TextRange {
 }
 
 // effeckCatchChain returns the statement that runs the first of clauses
-// whose type the caught failure has.
-func (p *Parser) effeckCatchChain(clauses []*ast.Node) *ast.Node {
+// whose type the caught failure has. In cause mode a clause typed Cause
+// catches every reason, and an untyped clause catches only an expected
+// failure (D176).
+func (p *Parser) effeckCatchChain(clauses []*ast.Node, causeMode bool) *ast.Node {
 	clause := clauses[0]
 	catch := clause.AsCatchClause()
 	span := core.NewTextRange(clause.Pos(), clauses[len(clauses)-1].End())
+	if causeMode && isCauseCatchClause(clause) {
+		body := p.effeckClauseBodyOf(clause, effeckCauseName)
+		if len(clauses) == 1 {
+			return body
+		}
+		// The clauses after a Cause clause cannot run (EK2106).
+		always := p.effeckSynthesized(p.factory.NewKeywordExpression(ast.KindTrueKeyword), clauseAnchor(clause))
+		return p.effeckSpanning(p.factory.NewIfStatement(always, body, p.effeckCatchChain(clauses[1:], causeMode)), span)
+	}
 	body := p.effeckClauseBody(clause)
+	if !isTypedCatchClause(clause) && causeMode {
+		// Before a Cause clause, an untyped clause catches an expected failure.
+		anchor := clauseAnchor(clause)
+		caught := p.effeckSynthesized(p.factory.NewIdentifier(effeckCaughtName), anchor)
+		none := p.effeckSynthesized(p.factory.NewIdentifier(effeckNoFailure), anchor)
+		test := p.effeckSynthesized(p.factory.NewBinaryExpression(nil /*modifiers*/, caught, nil /*typeNode*/, p.effeckSynthesized(p.factory.NewToken(ast.KindExclamationEqualsEqualsToken), anchor), none), anchor)
+		var rest *ast.Node
+		if len(clauses) > 1 {
+			rest = p.effeckCatchChain(clauses[1:], causeMode)
+		}
+		return p.effeckSpanning(p.factory.NewIfStatement(test, body, rest), span)
+	}
 	if !isTypedCatchClause(clause) {
 		if len(clauses) == 1 {
 			return body
@@ -721,7 +769,7 @@ func (p *Parser) effeckCatchChain(clauses []*ast.Node) *ast.Node {
 		// run (EK2106). They stay in the tree, after a test that always holds,
 		// so the checker still reads them.
 		always := p.effeckSynthesized(p.factory.NewKeywordExpression(ast.KindTrueKeyword), clauseAnchor(clause))
-		return p.effeckSpanning(p.factory.NewIfStatement(always, body, p.effeckCatchChain(clauses[1:])), span)
+		return p.effeckSpanning(p.factory.NewIfStatement(always, body, p.effeckCatchChain(clauses[1:], causeMode)), span)
 	}
 	anchor := clauseAnchor(clause)
 	typeNode := catch.VariableDeclaration.Type()
@@ -730,7 +778,7 @@ func (p *Parser) effeckCatchChain(clauses []*ast.Node) *ast.Node {
 	test := p.effeckSpanning(p.factory.NewCallExpression(guard, nil, p.newNodeList(typeNode.Loc, []*ast.Node{typeNode}), p.newNodeList(anchor, []*ast.Node{caught}), ast.NodeFlagsNone), typeNode.Loc)
 	var rest *ast.Node
 	if len(clauses) > 1 {
-		rest = p.effeckCatchChain(clauses[1:])
+		rest = p.effeckCatchChain(clauses[1:], causeMode)
 	} else {
 		last := p.effeckSynthesized(p.factory.NewIdentifier(effeckCaughtName), anchor)
 		rest = p.effeckSynthesized(p.factory.NewThrowStatement(last), anchor)
@@ -741,13 +789,19 @@ func (p *Parser) effeckCatchChain(clauses []*ast.Node) *ast.Node {
 // effeckClauseBody returns clause's block with `const <variable> = $caught`
 // in front when the clause names a variable.
 func (p *Parser) effeckClauseBody(clause *ast.Node) *ast.Node {
+	return p.effeckClauseBodyOf(clause, effeckCaughtName)
+}
+
+// effeckClauseBodyOf returns clause's block with `const <variable> = <source>`
+// in front when the clause names a variable.
+func (p *Parser) effeckClauseBodyOf(clause *ast.Node, source string) *ast.Node {
 	catch := clause.AsCatchClause()
 	statements := catch.Block.AsBlock().Statements.Nodes
 	start := catch.Block.Pos()
 	if variable := catch.VariableDeclaration; variable != nil {
 		name := variable.Name()
 		start = name.Pos()
-		caught := p.effeckSynthesized(p.factory.NewIdentifier(effeckCaughtName), name.Loc)
+		caught := p.effeckSynthesized(p.factory.NewIdentifier(source), name.Loc)
 		declaration := p.effeckSpanning(p.factory.NewVariableDeclaration(name, nil, nil, caught), name.Loc)
 		list := p.effeckSpanning(p.factory.NewVariableDeclarationList(p.newNodeList(name.Loc, []*ast.Node{declaration}), ast.NodeFlagsConst), name.Loc)
 		statement := p.effeckSpanning(p.factory.NewVariableStatement(nil, list), name.Loc)

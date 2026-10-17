@@ -361,6 +361,7 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/module/util.go` | An `.effeck` file's output extension is `.js`, so auto-import can name it | +1 / -1 |
 | `tsc/internal/parser/parser.go` | `try(` starts an expression in an `.effeck` file: the statement switch, `isStartOfLeftHandSideExpression`, `parsePrimaryExpression` (`effeck_hatches.go`) | +9 / -1 |
 | `tsc/internal/parser/parser.go` | `\|>` ends `parseBinaryExpressionRest` and follows `parseConditionalExpressionRest` in `parseAssignmentExpressionOrHigherWorker`; `%` starts an expression in `parsePrimaryExpression` and `isStartOfLeftHandSideExpression` (`effeck_pipes.go`) | +9 / -3 |
+| `tsc/internal/parser/parser.go` | `finally (` reads a binding before the finally block in `parseTryStatement`; an identifier `uninterruptible`, `restore`, or `interruptible` before `{` on its line starts an interruption block in `parseStatement` (`effeck_primitives.go`) | +8 / -1 |
 | `tsc/internal/tsoptions/parsedcommandline.go` | `.effeck` in a project's wildcard include globs, so a new `.effeck` file joins the project | +4 / -4 |
 | `tsc/internal/lsp/server.go` | `.effeck` in the `willRenameFiles` filter; exit with status 0 after `shutdown` and `exit` | +3 / -3 |
 | `tsc/internal/ls/hover.go` | Apply quick info hooks to each hover | +1 |
@@ -1087,6 +1088,10 @@ and gives `await`, `select`, and `for concurrent` hover text; the runtime's
 a case ready at start wins in written order), `$forConcurrent`, `detach`, and
 `forkIn`. A numeric literal synthesized at another token prints its own text
 (`scanner.GetSourceTextOfNodeFromSourceFile`), which the select's indices need.
+
+## Primitives with their own syntax (D176-D180)
+
+`parser/effeck_primitives.go` and `effeck/primitives.go`. A catch clause typed `Cause` puts the try statement's catch in cause mode: the parser makes the catch variable `$cause`, starts the catch block with `const $caught = $failureOf($cause)` so typed and untyped clauses before the Cause clause test the expected failure it holds (`$noFailure` when it holds none), and binds the Cause clause's name to `$cause`; the catch variable hook types `$cause` as `Cause<E>` of the try block, and the lowering wraps the try block with the runtime's `$catchCause` instead of `$catch`, which lets an abandonment's sentinel interrupt (`K.isAbortCause`) unwind through. `throw` of a value whose type has the `~effect/Cause` property lowers to `$failCause` (the plan's `causeThrows`), and `thrownType` adds the Cause's E. `finally (exit)` becomes the finally block with `const exit = $exit()` in front: the call type hook types `$exit()` as `Exit<void, E>` by instantiating the declared `Exit<void, unknown>`'s Success and Failure members with the try statement's E, and the lowering drops the declaration and passes the binding as the parameter of the finally closure under `$finallyExit` (Effect.onExit, success normalized to `Exit.void`). An interruption block is a Block whose first statement calls `$uninterruptibleBlock()`, `$restoreBlock()`, or `$interruptibleBlock()`; the lowering runs the rest as a region under the runtime's `uninterruptible`, `restore`, or `interruptible`, the same prelude functions a call with a program uses. `restore` reads the innermost region's restore from the `effeck/CurrentRestore` fiber reference that `uninterruptible` provides. `$exit` and the markers are recorded as prelude names for resolution only (`isRemovedPrimitiveMarker`), so no emitted file imports them. Any of these statements makes its function an Effect (`hasPrimitiveStatement`). Cases: `primitives-cause`, `primitives-finally-exit`, `primitives-bare`, `primitives-masks`, `primitives.fail`.
 
 ## Code that is not Effect
 

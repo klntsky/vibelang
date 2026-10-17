@@ -194,7 +194,7 @@ func withoutRequirement(c *checker.Checker, info *effectInfo, handled *checker.T
 // handle statement, which make it an Effect: they run Effect.provide and
 // handle.
 func hasEffeckStatement(fn *ast.Node) bool {
-	return hasProvideBlock(fn) || hasHandleStatement(fn)
+	return hasProvideBlock(fn) || hasHandleStatement(fn) || hasPrimitiveStatement(fn)
 }
 
 // hasHandleStatement reports whether fn's own body has a handle statement.

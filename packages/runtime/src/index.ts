@@ -11,6 +11,7 @@ export * from "./boundaries.js"
 export * from "./hatches.js"
 export * from "./fibers.js"
 export { $provideService } from "./provide.js"
+export * from "./primitives.js"
 export * from "./main.js"
 export * from "./prelude.js"
 

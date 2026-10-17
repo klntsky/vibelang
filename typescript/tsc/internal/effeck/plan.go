@@ -27,6 +27,7 @@ type plan struct {
 	producerPlan
 	hatches     map[*ast.Node]hatchForm  // sync and try hatches, lowered to Effect's functions (hatches.go)
 	failureTags map[*ast.Node][]string   // the tags of each typed catch clause's test (catches.go)
+	causeThrows map[*ast.Node]bool       // throw statements whose value is a Cause (primitives.go)
 	methods     map[*ast.Node]methodCall // method calls on Effect data types (datamethods.go)
 
 	pipes         map[*ast.Node]pipeMode    // how each pipe compiles (pipes_lower.go)
@@ -47,6 +48,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p.handlerPlan = newHandlerPlan()
 	p.hatches = map[*ast.Node]hatchForm{}
 	p.failureTags = map[*ast.Node][]string{}
+	p.causeThrows = map[*ast.Node]bool{}
 	p.methods = map[*ast.Node]methodCall{}
 	p.pipes = map[*ast.Node]pipeMode{}
 	p.topicClosures = map[*ast.Node][]*ast.Node{}
@@ -83,6 +85,11 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			}
 			if form, ok := hatchFormOf(c, node); ok {
 				p.hatches[node] = form
+			}
+			if node.Kind == ast.KindThrowStatement && inLowerableBody(node) {
+				if _, ok := causeErrorOf(c, c.GetTypeAtLocation(node.Expression())); ok {
+					p.causeThrows[node] = true
+				}
 			}
 			if isFailureTest(node) {
 				p.failureTags[node], _ = failureTags(c, c.GetTypeFromTypeNode(node.TypeArguments()[0]))

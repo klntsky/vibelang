@@ -15,6 +15,9 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 	if !ast.IsCallExpression(call) || !inLowerableBody(call) && analyzerFor(c).directCallee(call) == nil {
 		return t
 	}
+	if isExitMarkerCall(call) {
+		return exitCallType(c, call, t) // finally (exit) (primitives.go)
+	}
 	if success := successType(c, t); success != nil {
 		return success
 	}

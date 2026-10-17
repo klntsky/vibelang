@@ -111,6 +111,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitTryStatement(node)
 	case tx.inEffect && isProvideBlock(node):
 		return tx.visitProvideBlock(node)
+	case tx.inEffect && maskWord(node) != "":
+		return tx.visitMaskBlock(node, maskWord(node)) // uninterruptible { ... } (primitives.go)
+	case maskMarkerWord(node) != "" || exitBindingOf(node) != nil:
+		return nil // the marker of an interruption block, or finally (exit)'s binding (primitives.go)
 	case isFailureTest(node):
 		return tx.visitFailureTest(node)
 	case isProvideLayer(node):
@@ -222,8 +226,12 @@ func (tx *lowering) effectName() *ast.IdentifierNode {
 // TypeScript's narrowing after the throw in the generated code.
 func (tx *lowering) visitThrowStatement(node *ast.Node) *ast.Node {
 	f := tx.Factory()
+	callee := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("fail"), ast.NodeFlagsNone)
+	if tx.plan.causeThrows[node] {
+		callee = tx.runtimeMember("$failCause") // throw cause (D177, primitives.go)
+	}
 	fail := f.NewCallExpression(
-		f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("fail"), ast.NodeFlagsNone),
+		callee,
 		nil, /*questionDotToken*/
 		nil, /*typeArguments*/
 		f.NewNodeList([]*ast.Node{tx.Visitor().VisitNode(node.Expression())}),

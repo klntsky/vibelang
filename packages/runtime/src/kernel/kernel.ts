@@ -111,6 +111,12 @@ let abortIds = 0
 const isAbortReason = (reason: Cause.Reason<unknown>) =>
   Cause.isInterruptReason(reason) && reason.fiberId !== undefined && reason.fiberId < 0
 
+/**
+ * Whether cause carries an abandonment's sentinel interrupt: a control
+ * operation unwinding its continuation, which code must not recover from.
+ */
+export const isAbortCause = (cause: Cause.Cause<unknown>): boolean => cause.reasons.some(isAbortReason)
+
 const isAbortReasonOf = (abortId: number) => (reason: Cause.Reason<unknown>) =>
   Cause.isInterruptReason(reason) && reason.fiberId === abortId
 

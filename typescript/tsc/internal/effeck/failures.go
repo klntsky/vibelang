@@ -62,7 +62,11 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 // thrownType returns the expected failure that throw adds to E.
 func (a *analyzer) thrownType(throw *ast.Node) *checker.Type {
 	c := a.checker
-	return c.GetWidenedType(c.GetWidenedLiteralType(c.GetTypeOfExpressionBeforeWidening(throw.Expression())))
+	t := c.GetWidenedType(c.GetWidenedLiteralType(c.GetTypeOfExpressionBeforeWidening(throw.Expression())))
+	if e, ok := causeErrorOf(c, t); ok {
+		return e // throw cause: every reason it holds (D177, primitives.go)
+	}
+	return t
 }
 
 // hasEscapingThrow reports whether a throw statement in fn's own body can end
@@ -166,6 +170,9 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 // the try block can raise, and never when it raises none. A catch elsewhere,
 // such as at a module's top level, keeps TypeScript's meaning.
 func catchVariableType(c *checker.Checker, declaration *ast.Node) *checker.Type {
+	if t := causeVariableType(c, declaration); t != nil {
+		return t // catch (cause: Cause) (primitives.go)
+	}
 	clause := declaration.Parent
 	if clause == nil || clause.Kind != ast.KindCatchClause || !inLowerableBody(clause.Parent) || isHandleStatement(clause.Parent) {
 		return nil
@@ -186,7 +193,7 @@ func init() {
 func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if node.Kind == ast.KindTryStatement && catches(node) && inLowerableBody(node) {
+		if node.Kind == ast.KindTryStatement && catches(node) && !isCauseCatch(node) && inLowerableBody(node) {
 			try := node.AsTryStatement()
 			if c.GetUnionType(analyzerFor(c).tryBlockFlow(try.TryBlock).errors).Flags()&checker.TypeFlagsNever != 0 {
 				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, try.CatchClause.Pos()), EK2004)

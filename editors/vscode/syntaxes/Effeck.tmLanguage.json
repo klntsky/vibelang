@@ -56,6 +56,12 @@
 					"include": "#effeck-fork"
 				},
 				{
+					"include": "#effeck-interruption-block"
+				},
+				{
+					"include": "#effeck-finally-exit"
+				},
+				{
 					"include": "#declaration"
 				},
 				{
@@ -227,6 +233,12 @@
 			"patterns": [
 				{
 					"include": "#effeck-fork"
+				},
+				{
+					"include": "#effeck-interruption-block"
+				},
+				{
+					"include": "#effeck-finally-exit"
 				},
 				{
 					"include": "#expressionWithoutIdentifiers"
@@ -5875,6 +5887,31 @@
 			"captures": {
 				"1": {
 					"name": "keyword.control.trycatch.ts"
+				}
+			}
+		},
+		"effeck-interruption-block": {
+			"match": "(?<![_$[:alnum:].])(uninterruptible|restore|interruptible)\\s*(?=\\{)",
+			"captures": {
+				"1": {
+					"name": "keyword.control.flow.ts"
+				}
+			}
+		},
+		"effeck-finally-exit": {
+			"match": "\\b(finally)\\s*(\\()\\s*([_$[:alpha:]][_$[:alnum:]]*)\\s*(\\))",
+			"captures": {
+				"1": {
+					"name": "keyword.control.trycatch.ts"
+				},
+				"2": {
+					"name": "meta.brace.round.ts"
+				},
+				"3": {
+					"name": "variable.parameter.ts"
+				},
+				"4": {
+					"name": "meta.brace.round.ts"
 				}
 			}
 		},

@@ -35,7 +35,7 @@ type effectRootExport struct {
 // Effect.scoped and acquireRelease are using, and Effect.sync, promise, try,
 // and tryPromise are the hatches.
 var effectFunctionNames = map[string]bool{
-	"all": true, "die": true, "forEach": true, "log": true, "logDebug": true, "logError": true,
+	"all": true, "die": true, "exit": true, "forEach": true, "log": true, "logDebug": true, "logError": true,
 	"logInfo": true, "logWarning": true, "race": true, "repeat": true, "retry": true, "sleep": true,
 	"timeout": true, "withSpan": true,
 }

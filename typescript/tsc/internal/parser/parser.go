@@ -1137,6 +1137,9 @@ func (p *Parser) parseStatement() *ast.Statement {
 		if p.isStartOfEffeckProvide() {
 			return p.parseEffeckProvideStatement() // provide Layer { ... } (effeck.go)
 		}
+		if p.isStartOfEffeckMaskBlock() {
+			return p.parseEffeckMaskBlock() // uninterruptible { ... }, restore { ... }, interruptible { ... } (effeck_primitives.go)
+		}
 	}
 	return p.parseExpressionOrLabeledStatement()
 }
@@ -1521,7 +1524,11 @@ func (p *Parser) parseTryStatement() *ast.Node {
 	var finallyBlock *ast.Node
 	if catchClause == nil || p.token == ast.KindFinallyKeyword {
 		p.parseExpectedWithDiagnostic(ast.KindFinallyKeyword, diagnostics.X_catch_or_finally_expected, true /*shouldAdvance*/)
-		finallyBlock = p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
+		if p.isEffeckFile() && p.token == ast.KindOpenParenToken {
+			finallyBlock = p.parseEffeckFinallyBlock() // finally (exit) { ... } (effeck_primitives.go)
+		} else {
+			finallyBlock = p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
+		}
 	}
 	result := p.finishNode(p.factory.NewTryStatement(tryBlock, catchClause, finallyBlock), pos)
 	p.withJSDoc(result, jsdoc)

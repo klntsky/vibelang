@@ -210,12 +210,25 @@ func (tx *lowering) visitTryStatement(node *ast.Node) *ast.Node {
 		if usesThis(catchClause.Block) {
 			handler = tx.Factory().NewFunctionBindCall(handler, tx.Factory().NewThisExpression(), nil /*argumentsList*/)
 		}
-		run = tx.runtimeCall("$catch", run, handler)
+		helper := "$catch"
+		if isCauseCatch(node) {
+			helper = "$catchCause" // catch (cause: Cause) (primitives.go)
+		}
+		run = tx.runtimeCall(helper, run, handler)
 	}
 	if try.FinallyBlock != nil {
 		cleanup := &region{}
 		finallyBlock := tx.regionStatements(cleanup, try.FinallyBlock)
-		run = tx.runtimeCall("$finally", run, tx.runNow(tx.regionFunction(cleanup, "finally", nil, try.FinallyBlock, finallyBlock), try.FinallyBlock))
+		if binding := exitBinding(try.FinallyBlock); binding != nil {
+			// finally (exit) { ... }: the closure takes the Exit (primitives.go).
+			finalizer := tx.regionFunction(cleanup, "finally", binding, try.FinallyBlock, finallyBlock)
+			if usesThis(try.FinallyBlock) {
+				finalizer = tx.Factory().NewFunctionBindCall(finalizer, tx.Factory().NewThisExpression(), nil /*argumentsList*/)
+			}
+			run = tx.runtimeCall("$finallyExit", run, finalizer)
+		} else {
+			run = tx.runtimeCall("$finally", run, tx.runNow(tx.regionFunction(cleanup, "finally", nil, try.FinallyBlock, finallyBlock), try.FinallyBlock))
+		}
 	}
 	return tx.runRegion(node, run, r)
 }

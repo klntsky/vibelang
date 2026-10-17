@@ -1,0 +1,28 @@
+// expect-result: {"exitTag":"Failure","yielded":true,"interrupted":true}
+error Boom
+
+function boom() {
+  throw new Boom()
+}
+
+function exitTag() {
+  const result = exit(boom())
+  return result._tag
+}
+
+function yielded() {
+  yieldNow()
+  yieldNow(5)
+  return true
+}
+
+function interrupted() {
+  const fiber = fork {
+    interrupt()
+  }
+  return exit(fiber.join())._tag === "Failure"
+}
+
+export function main() {
+  return { exitTag: exitTag(), yielded: yielded(), interrupted: interrupted() }
+}

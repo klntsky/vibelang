@@ -1,0 +1,39 @@
+// expect-result: {"ok":"Success","failing":"Failure:Boom","returned":"value"}
+error Boom
+
+function ok() {
+  let tag = ""
+  try {
+    sleep("1 millis")
+  } finally (exit) {
+    tag = exit._tag
+  }
+  return tag
+}
+
+// The finally block sees the failure; the failure still propagates.
+function failing() {
+  let tag = ""
+  try {
+    try {
+      throw new Boom()
+    } finally (exit) {
+      tag = Exit.isFailure(exit) ? "Failure" : "Success"
+    }
+  } catch (e: Boom) {
+    tag += ":" + e._tag
+  }
+  return tag
+}
+
+function returned() {
+  try {
+    return "value"
+  } finally (exit) {
+    Console.log(exit._tag)
+  }
+}
+
+export function main() {
+  return { ok: ok(), failing: failing(), returned: returned() }
+}

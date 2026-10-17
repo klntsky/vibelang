@@ -107,6 +107,8 @@ var (
 	// EK2108: a control's operation without a clause in a handle statement. {0} lists the operations, {1} is the control.
 	EK2108 = message(2108, errorCategory, "{0} has no clause: a handle statement answers every operation of {1}.")
 	// EK2109: a schema declaration's field whose type has no schema form. {0} is the type.
+	// EK2111: a restore block that no uninterruptible block encloses (D180).
+	EK2111 = message(2111, errorCategory, "This restore block is not inside an uninterruptible block, so it has no interruptibility to restore.")
 	EK2109 = message(2109, errorCategory, "{0} has no schema form: a schema declaration's field is a primitive, a literal, a union, an array, a tuple, a record, an object type, or another schema.")
 	// EK2102: a recursive function whose A depends on its own result. {0} is the function.
 	EK2102 = message(2102, errorCategory, "{0} calls itself, and its success type depends on that call, so its contract must be written.")
