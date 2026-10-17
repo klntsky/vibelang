@@ -10,12 +10,12 @@
   "files": ["bin", "editor", "README.md", "LICENSE", "NOTICE"],
   "scripts": { "test": "node --test test/" },
   "optionalDependencies": {
-    "@effeck/darwin-arm64": "0.0.1",
-    "@effeck/darwin-x64": "0.0.1",
-    "@effeck/linux-arm64": "0.0.1",
-    "@effeck/linux-x64": "0.0.1",
-    "@effeck/win32-arm64": "0.0.1",
-    "@effeck/win32-x64": "0.0.1"
+    "effeck-darwin-arm64": "0.0.1",
+    "effeck-darwin-x64": "0.0.1",
+    "effeck-linux-arm64": "0.0.1",
+    "effeck-linux-x64": "0.0.1",
+    "effeck-win32-arm64": "0.0.1",
+    "effeck-win32-x64": "0.0.1"
   },
   "engines": { "node": ">=22" }
 }

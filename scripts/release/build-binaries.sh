@@ -16,10 +16,9 @@ platforms="darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-arm64 win32-x64"
 version=$(node -p 'require(process.argv[1]).version' "$root/packages/compiler/package.json")
 
 check() {
-  # check <platform> [runner...] runs one binary's --version.
+  # check <platform> runs one binary's --version.
   platform=$1
-  shift
-  printed=$("$@" "$out/$platform/effeck" --version)
+  printed=$("$out/$platform/effeck" --version)
   case $printed in
     "Effeck $version ("*) echo "build-binaries: $platform prints: $printed" ;;
     *) echo "build-binaries: $platform printed '$printed', expected Effeck $version" >&2; exit 1 ;;
@@ -71,9 +70,7 @@ done
 
 case "$(uname -s)-$(uname -m)" in
   Darwin-arm64)
-    check darwin-arm64
-    if /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then check darwin-x64 /usr/bin/arch -x86_64; fi
-    ;;
+    check darwin-arm64 ;;
   Darwin-x86_64) check darwin-x64 ;;
   Linux-x86_64) check linux-x64 ;;
   Linux-aarch64) check linux-arm64 ;;

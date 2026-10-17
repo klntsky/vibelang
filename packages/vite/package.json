@@ -43,8 +43,5 @@
     "effeck": {
       "optional": true
     }
-  },
-  "publishConfig": {
-    "access": "public"
   }
 }

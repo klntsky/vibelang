@@ -1,7 +1,7 @@
 Effeck is licensed under the MIT License below, except for the TypeScript fork
 in typescript/, which keeps the Apache License 2.0 in typescript/LICENSE.txt
 and the notices in typescript/NOTICE.txt. The compiler packages built from it,
-effeck and @effeck/<platform>, are distributed under that Apache License 2.0.
+effeck and effeck-<platform>, are distributed under that Apache License 2.0.
 
 MIT License
 

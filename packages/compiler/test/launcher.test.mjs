@@ -97,9 +97,9 @@ function installed(scratch, { native = false, platform = false } = {}) {
   }
   if (native) fake(join(pkg, "native", "effeck"), "native")
   if (platform) {
-    const target = join(scratch, "node_modules", "@effeck", `${process.platform}-${process.arch}`)
+    const target = join(scratch, "node_modules", `effeck-${process.platform}-${process.arch}`)
     mkdirSync(target, { recursive: true })
-    writeFileSync(join(target, "package.json"), JSON.stringify({ name: `@effeck/${process.platform}-${process.arch}` }))
+    writeFileSync(join(target, "package.json"), JSON.stringify({ name: `effeck-${process.platform}-${process.arch}` }))
     fake(join(target, "bin", "effeck"), "platform")
   }
   return join(pkg, "bin", "effeck")

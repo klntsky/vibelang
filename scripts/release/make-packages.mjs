@@ -44,7 +44,7 @@ for (const [name, pkg] of [["effeck", compiler], ["effeck-runtime", runtime], ["
   expect(pkg.version === version, `${name}: version ${pkg.version}, but the compiler is ${version}`)
 }
 const optional = compiler.optionalDependencies ?? {}
-expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.keys(platforms).map((p) => `@effeck/${p}`).sort()),
+expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.keys(platforms).map((p) => `effeck-${p}`).sort()),
   `effeck: optionalDependencies must list exactly ${Object.keys(platforms).join(", ")}`)
 for (const [name, pin] of Object.entries(optional)) expect(pin === version, `effeck: ${name} pinned to ${pin}, expected ${version}`)
 expect(vite.peerDependencies?.effeck === version, `effeck-vite: peer effeck ${vite.peerDependencies?.effeck}, expected ${version}`)
@@ -97,7 +97,7 @@ ${readFileSync(join(root, "typescript/NOTICE.txt"), "utf8")}`
 const warning = "> **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use."
 
 function stage(name, sources, files) {
-  const dir = join(staging, name.replace("@effeck/", "effeck-"))
+  const dir = join(staging, name)
   mkdirSync(dir, { recursive: true })
   for (const [from, to] of sources) cpSync(join(root, from), join(dir, to ?? basename(from)), { recursive: true })
   for (const [to, text] of Object.entries(files)) writeFileSync(join(dir, to), text)
@@ -107,7 +107,7 @@ function stage(name, sources, files) {
 const order = []
 for (const [platform, [os, cpu]] of Object.entries(platforms)) {
   const exe = os === "win32" ? "effeck.exe" : "effeck"
-  const name = `@effeck/${platform}`
+  const name = `effeck-${platform}`
   const dir = stage(name, [], {
     "package.json": JSON.stringify({
       name,
@@ -118,8 +118,7 @@ for (const [platform, [os, cpu]] of Object.entries(platforms)) {
       os: [os],
       cpu: [cpu],
       files: ["bin", "README.md", "LICENSE", "NOTICE"],
-      preferUnplugged: true,
-      publishConfig: { access: "public" }
+      preferUnplugged: true
     }, null, 2) + "\n",
     "README.md": `# ${name}\n\n${warning}\n\nThe native Effeck compiler for ${os} on ${cpu}. Install [\`effeck\`](https://www.npmjs.com/package/effeck) instead: it lists this package as an optional dependency, and npm installs the one that matches your platform.\n`,
     "LICENSE": apache,
