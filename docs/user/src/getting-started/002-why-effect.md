@@ -61,7 +61,7 @@ Use the same foundation for streams, caches, validated input, configuration, and
 
 ## Learn with practical programs
 
-Start with one operation that reads data, validates it, and returns a result. Test its success and failure cases, then add a service boundary and a deadline. Continue with [The Effect Type](003-the-effect-type.md) and [Creating Effects](005-creating-effects.md); use the [Effect community](https://discord.gg/effect-ts) for library questions.
+Start with one operation that reads data, validates it, and returns a result. Test its success and failure cases, then add a service boundary and a deadline. Continue with [The Effect Type](003-the-effect-type.md) and [Creating Effects](005-creating-effects.md).
 
 ## Coming from Effect
 

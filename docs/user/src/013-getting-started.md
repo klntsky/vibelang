@@ -74,8 +74,4 @@ Provide the relevant Effeck guide alongside the Effect API signature. State that
 
 Use compiler feedback and focused tests to check the result. Effect's TypeScript tooling applies to `.ts` integration code; the [Devtools](getting-started/012-devtools.md) page explains Effeck's compiler, language server, linting, and debugging setup.
 
-## Community entry points
-
-Use [Effect Discord](https://discord.gg/effect-ts) for ecosystem help and [Effect on GitHub](https://github.com/Effect-TS) for library sources and issues. Say whether a reproduction is `.effeck` or `.ts`, and include the installed version. For language-specific behavior, include the smallest Effeck function that exhibits it.
-
 [Upstream Effect page](https://effect.website/docs/v4/getting-started)

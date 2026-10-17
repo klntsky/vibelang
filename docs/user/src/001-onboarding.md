@@ -72,10 +72,6 @@ Keep feedback concrete: check the contract, test a failure, and test cleanup whe
 
 Use the [guide index](013-getting-started.md) to return to a topic. The Effect API reference explains library operators; these pages explain how to call them from Effeck.
 
-## Community support
-
-Ask library questions in the [Effect community on Discord](https://discord.gg/effect-ts) or browse [Effect's GitHub organization](https://github.com/Effect-TS). Include the Effect version and a small reproduction. For language questions, identify the source as Effeck and include its inferred contract so readers can distinguish language behavior from TypeScript Effect behavior.
-
 ## Coming from Effect
 
 An ordinary function replaces `Effect.gen` sequencing. Functions, typed errors, services, and resources still run on Effect 4; use Effeck's call rules when reading the examples.
