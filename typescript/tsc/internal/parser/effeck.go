@@ -56,7 +56,9 @@ func (p *Parser) parseEffeckDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 	return nil
 }
 
-// effeckSynthesized finishes node as synthesized at anchor. Identifiers and
+// effeckSynthesized finishes node as synthesized at anchor, the range of the
+// source token it stands for. The anchor must not be empty: TypeScript treats
+// an empty node as missing, and resolves no name for it. Identifiers and
 // string literals print their own text; a string literal anchored on an
 // identifier prints that identifier's text in quotes.
 func (p *Parser) effeckSynthesized(node *ast.Node, anchor core.TextRange) *ast.Node {
@@ -79,9 +81,9 @@ func (p *Parser) effeckSpanning(node *ast.Node, loc core.TextRange) *ast.Node {
 	return node
 }
 
-// effeckReadonly adds a synthesized readonly modifier to the modifiers of the
-// property signature that starts at pos, unless it has one.
-func (p *Parser) effeckReadonly(modifiers *ast.ModifierList, pos int) *ast.ModifierList {
+// effeckReadonly adds a synthesized readonly modifier, anchored on the
+// property's name, to the modifiers of a property signature, unless it has one.
+func (p *Parser) effeckReadonly(modifiers *ast.ModifierList, name *ast.Node) *ast.ModifierList {
 	if modifiers != nil {
 		for _, modifier := range modifiers.Nodes {
 			if modifier.Kind == ast.KindReadonlyKeyword {
@@ -89,10 +91,9 @@ func (p *Parser) effeckReadonly(modifiers *ast.ModifierList, pos int) *ast.Modif
 			}
 		}
 	}
-	anchor := core.NewTextRange(pos, pos)
-	readonly := p.effeckSynthesized(p.factory.NewModifier(ast.KindReadonlyKeyword), anchor)
+	readonly := p.effeckSynthesized(p.factory.NewModifier(ast.KindReadonlyKeyword), name.Loc)
 	if modifiers == nil {
-		return p.newModifierList(anchor, []*ast.Node{readonly})
+		return p.newModifierList(name.Loc, []*ast.Node{readonly})
 	}
 	return p.newModifierList(modifiers.Loc, append([]*ast.Node{readonly}, modifiers.Nodes...))
 }
@@ -118,8 +119,7 @@ func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifier
 		fields = p.parseTypeLiteral()
 		p.effeckReadonlyMembers = saveReadonly
 	} else {
-		empty := core.NewTextRange(name.End(), name.End())
-		fields = p.effeckSynthesized(p.factory.NewTypeLiteralNode(p.newNodeList(empty, nil)), empty)
+		fields = p.effeckSynthesized(p.factory.NewTypeLiteralNode(p.newNodeList(name.Loc, nil)), name.Loc)
 	}
 	end := p.nodePos()
 	tag := p.effeckSynthesized(p.factory.NewStringLiteral(name.Text(), ast.TokenFlagsNone), name.Loc)
@@ -132,4 +132,114 @@ func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifier
 	p.finishNode(result, pos)
 	p.withJSDoc(result, jsdoc)
 	return result
+}
+
+// Effect types.
+//
+// In an .effeck file a type followed by ! is an Effect type written
+// Result!Error!Dependencies:
+//
+//	User!NotFound!Db   Effect.Effect<User, NotFound, Db>
+//	User!NotFound!     Effect.Effect<User, NotFound, never>
+//	User!!Db           Effect.Effect<User, never, Db>
+//	User!!             Effect.Effect<User, never, never>
+//
+// A slot without a type is never. Dependencies left out entirely, as in
+// User!NotFound, are never too, except in the return annotation of a function
+// with a body, where the slot is `infer R` and the body supplies it (D57;
+// parseReturnType calls effeckInferOmitted). Unions bind inside a slot:
+// User!NotFound | Timeout!Db fails with NotFound | Timeout. A slot that starts
+// with { is empty, because in a declaration the { starts the body; put an
+// object type in a slot in parentheses. A slot's type starts on the line of
+// its !, so a member that ends in `void!!` does not take the next member.
+//
+// The reference is Effect.Effect, which names Effect's type whether Effect is
+// the prelude's or imported from "effect", so a declaration file reads
+// Effect.Effect<A, E, R>.
+
+// parseEffeckEffectType parses the slots that follow result when the current
+// token is the ! that makes result an Effect type. Otherwise it returns result.
+func (p *Parser) parseEffeckEffectType(result *ast.TypeNode) *ast.TypeNode {
+	if p.token != ast.KindExclamationToken || p.hasPrecedingLineBreak() || !p.isEffeckFile() {
+		return result
+	}
+	bang := p.scanner.TokenRange() // synthesized nodes stand on the first !
+	errors := p.parseEffeckSlot()
+	var dependencies *ast.Node
+	omitted := p.token != ast.KindExclamationToken
+	if omitted {
+		// Stand on the last character of the errors, so the type arguments
+		// stay in source order and the list does not seem to end in a comma.
+		last := core.NewTextRange(errors.End()-1, errors.End())
+		dependencies = p.effeckSynthesized(p.factory.NewKeywordTypeNode(ast.KindNeverKeyword), last)
+	} else {
+		dependencies = p.parseEffeckSlot()
+	}
+	span := core.NewTextRange(result.Pos(), dependencies.End())
+	module := p.effeckSynthesized(p.factory.NewIdentifier("Effect"), bang)
+	member := p.effeckSynthesized(p.factory.NewIdentifier("Effect"), bang)
+	name := p.effeckSynthesized(p.factory.NewQualifiedName(module, member), bang)
+	arguments := p.newNodeList(span, []*ast.Node{result, errors, dependencies})
+	reference := p.effeckSpanning(p.factory.NewTypeReferenceNode(name, arguments), span)
+	if omitted {
+		if p.effeckOmittedDependencies == nil {
+			p.effeckOmittedDependencies = map[*ast.Node]bool{}
+		}
+		p.effeckOmittedDependencies[reference] = true
+	}
+	return reference
+}
+
+// parseEffeckSlot parses the ! at the current token and the type after it, or
+// returns a synthesized never when no type follows on the same line.
+func (p *Parser) parseEffeckSlot() *ast.Node {
+	bang := p.scanner.TokenRange()
+	p.nextToken()
+	if p.token == ast.KindExclamationToken || p.token == ast.KindOpenBraceToken || p.hasPrecedingLineBreak() || !p.isStartOfType(false /*inStartOfParameter*/) {
+		return p.effeckSynthesized(p.factory.NewKeywordTypeNode(ast.KindNeverKeyword), bang)
+	}
+	return p.parseEffeckSlotType()
+}
+
+// parseEffeckSlotType parses a type as parseType does, but leaves a ! after it
+// for the next slot.
+func (p *Parser) parseEffeckSlotType() *ast.TypeNode {
+	saveContextFlags := p.contextFlags
+	p.setContextFlags(ast.NodeFlagsTypeExcludesFlags, false)
+	var typeNode *ast.TypeNode
+	if p.isStartOfFunctionTypeOrConstructorType() {
+		typeNode = p.parseFunctionOrConstructorType()
+	} else {
+		pos := p.nodePos()
+		typeNode = p.parseUnionTypeOrHigher()
+		if !p.inDisallowConditionalTypesContext() && !p.hasPrecedingLineBreak() && p.parseOptional(ast.KindExtendsKeyword) {
+			extendsType := p.doInContext(ast.NodeFlagsDisallowConditionalTypesContext, true, (*Parser).parseType)
+			p.parseExpected(ast.KindQuestionToken)
+			trueType := p.doInContext(ast.NodeFlagsDisallowConditionalTypesContext, false, (*Parser).parseType)
+			p.parseExpected(ast.KindColonToken)
+			falseType := p.doInContext(ast.NodeFlagsDisallowConditionalTypesContext, false, (*Parser).parseEffeckSlotType)
+			typeNode = p.finishNode(p.factory.NewConditionalTypeNode(typeNode, extendsType, trueType, falseType), pos)
+		}
+	}
+	p.contextFlags = saveContextFlags
+	return typeNode
+}
+
+// effeckInferOmitted turns dependencies left out of returnType into `infer R`
+// when returnType is the whole return annotation of a function whose body
+// follows, so the body supplies them.
+func (p *Parser) effeckInferOmitted(returnType *ast.TypeNode) {
+	if returnType == nil || !p.effeckOmittedDependencies[returnType] {
+		return
+	}
+	if p.token != ast.KindOpenBraceToken && p.token != ast.KindEqualsGreaterThanToken {
+		return
+	}
+	arguments := returnType.TypeArgumentList()
+	slot := arguments.Nodes[2]
+	name := p.effeckSynthesized(p.factory.NewIdentifier("R"), slot.Loc)
+	parameter := p.effeckSynthesized(p.factory.NewTypeParameterDeclaration(nil, name, nil, nil, nil), slot.Loc)
+	infer := p.effeckSynthesized(p.factory.NewInferTypeNode(parameter), slot.Loc)
+	infer.Parent = returnType
+	arguments.Nodes[2] = infer
 }

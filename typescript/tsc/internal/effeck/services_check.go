@@ -80,7 +80,7 @@ func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
 				cover(c, memberName) // TS7010: an implicit any return type
 			}
 			d := report(c, at, EK2101, name+"."+memberName.Text())
-			note(d, "Write Effect<{0}, E, R>; use Effect<{0}, never, never> if it cannot fail and needs nothing.", writtenSuccess(member.Type()))
+			note(d, "Write {0}; use {1} if it cannot fail and needs nothing.", bangText(writtenSuccess(member.Type()), "Errors", "Dependencies"), bangText(writtenSuccess(member.Type()), "never", "never"))
 		}
 	}
 }

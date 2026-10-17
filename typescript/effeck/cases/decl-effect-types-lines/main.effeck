@@ -1,0 +1,24 @@
+// expect-result: {"count":2}
+// A slot's type starts on the line of its !, so an empty last slot does not
+// take the next member's first word.
+export abstract class Counter {
+  abstract increment(): void!!
+
+  static readonly layer = Layer.effect(Counter, () => {
+    const count = Ref.make(0)
+    return {
+      increment: () => Ref.update(count, (n) => n + 1),
+      read: () => Ref.get(count)
+    }
+  })
+
+  abstract read(): number!!
+}
+
+export function main() {
+  return Effect.provide(() => {
+    Counter.increment()
+    Counter.increment()
+    return { count: Counter.read() }
+  }, Counter.layer)
+}

@@ -104,7 +104,7 @@ async function run() {
 
   await check("hover: an .effeck function shows its inferred contract", async () => {
     const shown = await hoverText(main, "lookup(id")
-    assert(/function lookup\(id: number\): (Effect\.)?Effect<string, NotFound, never>/.test(shown), `hover ${JSON.stringify(shown)}`)
+    assert(shown.includes("function lookup(id: number): string!NotFound!"), `hover ${JSON.stringify(shown)}`)
   })
 
   await check("hover: a call that runs shows its success value", async () => {

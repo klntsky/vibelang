@@ -207,9 +207,9 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 		// what the function returns. A method that implements a plain-function
 		// member, such as Equal.symbol, is checked against that member (D55).
 		if fn.Kind != ast.KindMethodDeclaration && (!a.canBePlain(fn) || a.hasEscapingFailure(fn)) {
-			d := report(c, annotation, EK2003.With("{0} is a plain return annotation, but {1} runs Effects, so it returns Effect<A, E, R>."), written, functionDisplayName(fn))
-			note(d, "Write Effect<{0}, infer E, infer R> to infer E and R from the body.", written)
-			note(d, "Or write Effect<{0}, never, never> to check that it cannot fail and needs nothing, or remove the annotation.", written)
+			d := report(c, annotation, EK2003.With("{0} is a plain return annotation, but {1} runs Effects, so it returns an Effect."), written, functionDisplayName(fn))
+			note(d, "Write {0} to check that it cannot fail and needs nothing, or {1} to name its errors and infer its dependencies.", bangText(written, "never", "never"), bangText(written, "Errors"))
+			note(d, "Or remove the annotation to infer the whole contract.")
 		}
 		return
 	case k.reference != nil && len(k.channels) < 3:
@@ -217,12 +217,13 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 			return // TypeScript reports the missing type arguments
 		}
 		channels := channelTexts(k)
-		never := append(channels, "never", "never")[:3]
-		inferred := append(channelTexts(k), "infer E", "infer R")[:3]
-		inferred[channelR] = "infer R"
 		d := report(c, annotation, EK2003, written)
-		note(d, "Write Effect<{0}> to check the missing channels as never.", strings.Join(never, ", "))
-		note(d, "Or write Effect<{0}> to infer them from the body.", strings.Join(inferred, ", "))
+		note(d, "Write {0} to check the missing channels as never.", bangText(channels...))
+		if len(channels) == 2 {
+			note(d, "Or write {0} to infer the dependencies from the body.", strings.TrimSuffix(bangText(channels...), "!"))
+		} else {
+			note(d, "Or remove the annotation to infer them from the body.")
+		}
 		return
 	}
 	info := a.effectOf(fn)
@@ -282,7 +283,7 @@ func escapes(c *checker.Checker, types []*checker.Type, sources []*ast.Node, dec
 }
 
 // contractText writes contract, an Effect<A, E, R>, with extra joined to the
-// given channel, for a fix that widens the contract.
+// given channel, for a fix that widens the contract. It writes the ! form.
 func contractText(c *checker.Checker, contract *checker.Type, channel int, extra *checker.Type) string {
 	channels := []*checker.Type{successType(c, contract), channelType(c, contract, "_E"), channelType(c, contract, "_R")}
 	channels[channel] = c.GetUnionType([]*checker.Type{channels[channel], extra})
@@ -290,7 +291,7 @@ func contractText(c *checker.Checker, contract *checker.Type, channel int, extra
 	for i, t := range channels {
 		texts[i] = c.TypeToString(t)
 	}
-	return "Effect<" + strings.Join(texts, ", ") + ">"
+	return bangText(texts...)
 }
 
 // channelTexts returns the source text of each channel k writes.

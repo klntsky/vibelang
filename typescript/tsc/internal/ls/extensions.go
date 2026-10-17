@@ -23,6 +23,19 @@ func RegisterQuickInfoHook(hook QuickInfoHook) {
 	quickInfoHooks = append(quickInfoHooks, hook)
 }
 
+// QuickInfoTextHook rewrites the quick info line of a hover on node after
+// the QuickInfoHooks ran, for example to write its types another way.
+type QuickInfoTextHook func(c *checker.Checker, node *ast.Node, text string) string
+
+var quickInfoTextHooks []QuickInfoTextHook
+
+// RegisterQuickInfoTextHook adds hook to every hover. Call it only from the
+// init function of an in-tree package that tsc/cmd/tsc imports; registration
+// is not synchronized.
+func RegisterQuickInfoTextHook(hook QuickInfoTextHook) {
+	quickInfoTextHooks = append(quickInfoTextHooks, hook)
+}
+
 // withQuickInfoHooks applies the hooks to a hover on node, whose quick info
 // line and documentation TypeScript computed.
 func withQuickInfoHooks(c *checker.Checker, node *ast.Node, quickInfo string, documentation string) (string, string) {
@@ -35,6 +48,9 @@ func withQuickInfoHooks(c *checker.Checker, node *ast.Node, quickInfo string, do
 		if paragraph != "" {
 			paragraphs = append(paragraphs, paragraph)
 		}
+	}
+	for _, hook := range quickInfoTextHooks {
+		quickInfo = hook(c, node, quickInfo)
 	}
 	if len(paragraphs) == 0 {
 		return quickInfo, documentation

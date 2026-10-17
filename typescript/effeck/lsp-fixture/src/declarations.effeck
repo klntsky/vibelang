@@ -1,0 +1,6 @@
+export error MissingUser { id: string }
+
+export function findUser(id: string): string!MissingUser! {
+  if (id === "") throw new MissingUser({ id })
+  return id
+}

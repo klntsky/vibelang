@@ -99,7 +99,8 @@ type Parser struct {
 	setParentFromContext ast.Visitor
 	reparsedClones       []*ast.Node
 
-	effeckReadonlyMembers bool // property signatures get a readonly modifier (effeck.go)
+	effeckReadonlyMembers     bool              // property signatures get a readonly modifier (effeck.go)
+	effeckOmittedDependencies map[*ast.Node]bool // Effect types whose dependencies were left out (effeck.go)
 }
 
 func newParser() *Parser {
@@ -2709,7 +2710,7 @@ func (p *Parser) parseType() *ast.TypeNode {
 		}
 	}
 	p.contextFlags = saveContextFlags
-	return typeNode
+	return p.parseEffeckEffectType(typeNode)
 }
 
 func (p *Parser) parseUnionTypeOrHigher() *ast.TypeNode {
@@ -2801,6 +2802,9 @@ func (p *Parser) parsePostfixTypeOrHigher() *ast.Node {
 	for !p.hasPrecedingLineBreak() {
 		switch p.token {
 		case ast.KindExclamationToken:
+			if p.isEffeckFile() {
+				return typeNode // ! separates the slots of an Effect type (effeck.go)
+			}
 			p.nextToken()
 			typeNode = p.finishNode(p.factory.NewJSDocNonNullableType(typeNode), pos)
 		case ast.KindQuestionToken:
@@ -3464,7 +3468,11 @@ func (p *Parser) parseNameOfParameter(modifiers *ast.ModifierList) *ast.Node {
 
 func (p *Parser) parseReturnType(returnToken ast.Kind, isType bool) *ast.TypeNode {
 	if p.shouldParseReturnType(returnToken, isType) {
-		return p.doInContext(ast.NodeFlagsDisallowConditionalTypesContext, false, (*Parser).parseTypeOrTypePredicate)
+		returnType := p.doInContext(ast.NodeFlagsDisallowConditionalTypesContext, false, (*Parser).parseTypeOrTypePredicate)
+		if !isType {
+			p.effeckInferOmitted(returnType)
+		}
+		return returnType
 	}
 	return nil
 }
@@ -3673,7 +3681,7 @@ func (p *Parser) parsePropertyOrMethodSignature(pos int, jsdoc jsdocScannerInfo,
 			initializer = p.parseInitializer()
 		}
 		if p.effeckReadonlyMembers {
-			modifiers = p.effeckReadonly(modifiers, pos)
+			modifiers = p.effeckReadonly(modifiers, name)
 		}
 		result = p.factory.NewPropertySignatureDeclaration(modifiers, name, questionToken, typeNode, initializer)
 	}

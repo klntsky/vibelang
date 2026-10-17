@@ -92,7 +92,7 @@ check("hover: a call that runs shows the contract and the success value", functi
       text = text .. (contents.value or vim.inspect(contents))
     end
   end
-  assert(text:find("Effect<string, NotFound, never>", 1, true), "hover " .. text)
+  assert(text:find("string!NotFound!", 1, true), "hover " .. text)
   assert(text:find("Runs here and returns `string`", 1, true), "hover " .. text)
 end)
 

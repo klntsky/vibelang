@@ -289,21 +289,20 @@ try {
   })
 
   const hover = async (relative, needle, options) => hoverText(await connection.request("textDocument/hover", position(relative, needle, options)))
-  const contract = (signature) => new RegExp(signature.replace(/[()]/g, "\\$&").replace("Effect<", "(?:Effect\\.)?Effect<"))
 
   await check("hover: an .effeck function shows its inferred contract", async () => {
     const shown = await hover("src/main.effeck", "lookup(id")
-    assert(contract("function lookup(id: number): Effect<string, NotFound, never>").test(shown), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function lookup(id: number): string!NotFound!"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: an exported .effeck function shows the contract its callee's failure flows into", async () => {
     const shown = await hover("src/main.effeck", "main()", { offset: 1 })
-    assert(contract("function main(): Effect<void, NotFound, never>").test(shown), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function main(): void!NotFound!"), `got ${JSON.stringify(shown)}`)
   })
 
   await check("hover: a call that runs shows the callee's contract and the success value", async () => {
     const shown = await hover("src/main.effeck", "lookup(1)")
-    assert(contract("function lookup(id: number): Effect<string, NotFound, never>").test(shown), `got ${JSON.stringify(shown)}`)
+    assert(shown.includes("function lookup(id: number): string!NotFound!"), `got ${JSON.stringify(shown)}`)
     assert(/Runs here and returns `string`/.test(shown), `no success value in ${JSON.stringify(shown)}`)
   })
 
@@ -397,6 +396,32 @@ try {
   await check("diagnostics: services.effeck, with the prelude and a service, checks clean", async () => {
     const items = await diagnostics("src/services.effeck")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  await check("diagnostics: declarations.effeck, with an error declaration and a ! contract, checks clean", async () => {
+    const items = await diagnostics("src/declarations.effeck")
+    assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  await check("hover: a function with a ! contract shows it in the ! form", async () => {
+    const shown = await hover("src/declarations.effeck", "findUser(id: string)")
+    assert(shown.includes("function findUser(id: string): string!MissingUser!"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: an error declaration's name is a class", async () => {
+    const shown = await hover("src/declarations.effeck", "MissingUser {")
+    assert(shown.includes("class MissingUser"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a field inside an error declaration", async () => {
+    const shown = await hover("src/declarations.effeck", "id: string }")
+    assert(shown.includes("id: string"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("definition: a thrown error goes to its error declaration", async () => {
+    const [location] = await definition("src/declarations.effeck", "MissingUser({ id })")
+    assert(location?.uri === fileUri("src/declarations.effeck"), `went to ${location?.uri}`)
+    assert(location.range.start.line === lineOf("src/declarations.effeck", "export error MissingUser"), `line ${location.range.start.line}`)
   })
 
   await check("diagnostics: report.ts, which imports an .effeck function, checks clean", async () => {
