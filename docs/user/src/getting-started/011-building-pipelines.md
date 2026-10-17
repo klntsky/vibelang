@@ -86,6 +86,34 @@ function validated(value: number) {
 
 `Option` and `Result` are data values, so keep them intact when you want to inspect them. Explicit conversion runs them as computations: a missing option adds `NoSuchElementError`, and a failed result adds its error type. Calling a constructor such as `Option.some` builds the container.
 
+## Call a data type's functions as methods
+
+```ts
+function nickname(id: number) {
+  return Option.some(id)
+    .filter((n) => n > 0)
+    .map((n) => `user-${n}`)
+    .getOrElse(() => "anonymous")
+}
+
+function warnings(readings: Stream.Stream<number>) {
+  return readings
+    .filter((celsius) => celsius > 25)
+    .map((celsius) => `${celsius} C`)
+    .take(3)
+}
+```
+
+A value of one of Effect's data types, such as `Option`, `Stream`, `Chunk`, `Duration`, `Fiber`, or `Ref`, takes its module's functions as methods. `value.map(f)` calls `Option.map(value, f)` when `value` is an `Option`, and `Stream.map(value, f)` when it is a `Stream`. The type's own members come first, so arrays, strings, and Effect's `pipe` keep their meaning. A method that returns an Effect runs where it stands, like any call: `fiber.join()` waits for the fiber. Hover over a method to see the function it calls.
+
+A method exists only in a call. To pass the function itself, name its module:
+
+```ts
+function totals(values: ReadonlyArray<Option.Option<number>>) {
+  return values.map(Option.getOrElse(() => 0))
+}
+```
+
 ## Observe intermediate results
 
 ```ts
@@ -128,6 +156,6 @@ A call in an Effeck statement runs even when its success value is ignored. A fun
 
 ## Coming from Effect
 
-Statements replace `map`, `flatMap`, `andThen`, and `tap` in most functions. Use the global `pipe` with a program first for retry, timeout, provisioning, and tracing; an ordinary program function has no Effect `.pipe` method.
+Statements replace `map`, `flatMap`, `andThen`, and `tap` in most functions. Use the global `pipe` with a program first for retry, timeout, provisioning, and tracing; an ordinary program function has no Effect `.pipe` method. Call a data type's functions as methods, `maybe.map(f).getOrElse(() => 0)`, instead of `pipe(maybe, Option.map(f), Option.getOrElse(() => 0))`.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/building-pipelines)

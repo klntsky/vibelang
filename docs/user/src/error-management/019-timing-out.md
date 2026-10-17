@@ -38,7 +38,7 @@ The interruption used internally to stop the source is separate from the typed t
 ```ts
 function optionalPreview() {
   const preview = Effect.timeoutOption(() => buildPreview(), "500 millis")
-  return Option.isNone(preview) ? "No preview yet" : preview.value
+  return preview.isNone() ? "No preview yet" : preview.value
 }
 ```
 

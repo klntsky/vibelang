@@ -23,7 +23,7 @@ The compiler records the returned object in `A` and `Unavailable` in `E`. `Effec
 ```ts
 function attemptReservation(item: string, available: boolean) {
   const outcome = Effect.result(reserve(item, available))
-  if (Result.isFailure(outcome)) return outcome.failure.item
+  if (outcome.isFailure()) return outcome.failure.item
   return outcome.success.item
 }
 // string!!

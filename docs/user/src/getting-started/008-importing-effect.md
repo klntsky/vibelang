@@ -41,7 +41,7 @@ A host's globals do not shadow Effect's modules: with the DOM in your `lib`, `Op
 ```ts
 function expirationWindow() {
   const short = Duration.seconds(15)
-  return Duration.toMillis(short)
+  return short.toMillis()
 }
 // number!!
 ```

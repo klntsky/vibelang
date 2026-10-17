@@ -75,7 +75,7 @@ JavaScript's built-ins and Effect's own functions ship with contracts that say w
 
 ```ts es
 function displayName(user: User) {
-  return Option.match(Option.fromNullishOr(user.nickname), {
+  return Option.fromNullishOr(user.nickname).match({
     onNone: () => user.name,
     onSome: (nickname) => nickname
   })
@@ -83,7 +83,7 @@ function displayName(user: User) {
 
 function tryCharge(cartId: string) {
   const outcome = Effect.result(Payments.charge(cartId))    // Result<Receipt, PaymentError>
-  return Result.isSuccess(outcome) ? outcome.success : undefined
+  return outcome.isSuccess() ? outcome.success : undefined
 }
 // Receipt | undefined!!Payments
 ```
@@ -118,7 +118,7 @@ function digestActive(users: Stream.Stream<User, DbError>) {
 // void!DbError | MailError!Mailer
 
 function firstErrorLines(path: string) {
-  return Stream.runCollect(Stream.take(Stream.filter(lines(path), isError), 10))
+  return lines(path).filter(isError).take(10).runCollect()
 }
 ```
 
@@ -133,7 +133,7 @@ import { TestClock } from "effect/testing"
 it.effect("a reminder fires after one day", () => {
   const reminder = fork(remindLater("ada", "1 day"))
   TestClock.adjust("1 day")                          // virtual time: nothing waits
-  assert.strictEqual(Fiber.join(reminder), "sent")
+  assert.strictEqual(reminder.join(), "sent")
 })
 ```
 
@@ -216,10 +216,10 @@ function search(query: string) {
   const scan = fork(slowIndexScan(query))
   const cached = SearchCache.lookup(query)
   if (cached !== undefined) {
-    Fiber.interrupt(scan)               // cancels the scan; its finally blocks run first
+    scan.interrupt()               // cancels the scan; its finally blocks run first
     return cached
   }
-  return Fiber.join(scan)
+  return scan.join()
 }
 ```
 
@@ -264,9 +264,9 @@ function countVisits(paths: ReadonlyArray<string>) {
   const visits = Ref.make(0)
   forEach(paths, (path) => {
     Visits.record(path)
-    Ref.update(visits, (n) => n + 1)
+    visits.update((n) => n + 1)
   }, { concurrency: 4 })
-  return Ref.get(visits)
+  return visits.get()
 }
 // number!VisitError!Visits
 ```

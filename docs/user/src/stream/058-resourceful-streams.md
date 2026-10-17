@@ -10,18 +10,13 @@ function openReader() {
   return { lines: ["header", "entry-a", "entry-b"] }
 }
 
-const lines = Stream.scoped(
-  Stream.flatMap(
-    Stream.fromEffect(Effect.acquireRelease(
+const lines = ((Stream.fromEffect(Effect.acquireRelease(
       () => openReader(),
       () => log("reader closed")
-    )),
-    (reader) => Stream.fromArray(reader.lines)
-  )
-)
+    ))).flatMap((reader) => Stream.fromArray(reader.lines))).scoped()
 
 function readLines() {
-  return Stream.runCollect(lines)
+  return lines.runCollect()
 }
 ```
 
@@ -31,13 +26,13 @@ function readLines() {
 
 ```ts
 function readHeader() {
-  return Stream.runCollect(Stream.take(lines, 1))
+  return lines.take(1).runCollect()
 }
 // Returns ["header"] and closes the reader.
 
 function readWithDeadline() {
   return timeout(() => {
-    Stream.runForEach(lines, (line) => {
+    lines.runForEach((line) => {
       sleep("1 second")
       log(line)
     })
@@ -50,13 +45,13 @@ The early consumer closes the reader even though it does not use every line. The
 ## Registering finalizers
 
 ```ts
-const audited = Stream.ensuring(lines, () => {
+const audited = lines.ensuring(() => {
   log("reader resources released")
   log("consumption finished")
 })
 
 function readAudited() {
-  return Stream.runCollect(audited)
+  return audited.runCollect()
 }
 ```
 

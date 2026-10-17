@@ -16,7 +16,7 @@ function runGroup() {
     return 2
   })
   logInfo("tracked workers", FiberSet.size(workers))
-  return [Fiber.join(first), Fiber.join(second)]
+  return [first.join(), second.join()]
 }
 ```
 
@@ -35,7 +35,7 @@ function replacePreview() {
     sleep("20 millis")
     return "new preview"
   })
-  return Fiber.join(current)
+  return current.join()
 }
 ```
 

@@ -83,7 +83,7 @@ const running = Effect.runFork(heartbeat())
 
 Effect.runPromise(() => {
   sleep("650 millis")
-  Fiber.interrupt(running)
+  running.interrupt()
 })
 ```
 

@@ -15,7 +15,7 @@ const messages = Stream.fromEffectRepeat(() => Feed.next())
 // Stream.Stream<string, FeedUnavailable, Feed>
 
 function preview() {
-  return Stream.runCollect(Stream.take(messages, 4))
+  return messages.take(4).runCollect()
 }
 // Array<string>!FeedUnavailable!Feed
 ```
@@ -29,7 +29,7 @@ Effect's Stream, Filter, and Cause value builders are trusted library calls. Cal
 ```ts
 function firstFiveTickets() {
   const tickets = Stream.iterate(100, (n) => n + 1)
-  return Stream.runCollect(Stream.take(tickets, 5))
+  return tickets.take(5).runCollect()
 }
 // Returns [100, 101, 102, 103, 104].
 ```
@@ -51,8 +51,8 @@ const oneBatch = Stream.succeed([12, 24, 36])
 
 function compare() {
   return [
-    Stream.runCollect(readings), // [12, 24, 36]
-    Stream.runCollect(oneBatch)  // [[12, 24, 36]]
+    readings.runCollect(), // [12, 24, 36]
+    oneBatch.runCollect()  // [[12, 24, 36]]
   ]
 }
 ```
@@ -63,11 +63,11 @@ A successful function call returns one result, even if that result is an array. 
 
 ```ts
 function printReadings() {
-  const source = Stream.mapEffect(Stream.range(20, 25), (n) => {
+  const source = Stream.range(20, 25).mapEffect((n) => {
     log(`prepare ${n}`)
     return n
   })
-  Stream.runForEach(source, (n) => {
+  source.runForEach((n) => {
     sleep("50 millis")
     log(`received ${n}`)
   })
@@ -85,7 +85,7 @@ function* readings() {
 }
 
 function printFirstReading() {
-  const source = Stream.map(readings(), (n) => n * 10)
+  const source = readings().map((n) => n * 10)
   for (const n of source) {
     log(n) // 10
     break

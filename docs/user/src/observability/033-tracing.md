@@ -67,7 +67,7 @@ function failingRender() {
     Effect.annotateCurrentSpan("report.format", "unknown")
     throw new RenderFailed({ format: "unknown" })
   }, "render-report"))
-  if (Exit.isFailure(exit)) logError("render failed", exit.cause)
+  if (exit.isFailure()) logError("render failed", exit.cause)
   return exit
 }
 ```

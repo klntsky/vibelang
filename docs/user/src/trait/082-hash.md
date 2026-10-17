@@ -43,7 +43,7 @@ The method compiles to a plain JavaScript method, because `[Hash.symbol]` is typ
 const first = new GridCell(3, 7)
 const equivalent = new GridCell(3, 7)
 const cells = HashSet.make(first, equivalent)
-HashSet.size(cells) // 1
+cells.size() // 1
 Hash.hash(first) === Hash.hash(equivalent) // true
 ```
 

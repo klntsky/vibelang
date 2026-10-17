@@ -6,9 +6,9 @@
 
 ```ts
 const snapshot = HashSet.make("green", "blue")
-const revised = HashSet.add(snapshot, "red")
-HashSet.has(snapshot, "red") // false
-HashSet.has(revised, "red") // true
+const revised = snapshot.add("red")
+snapshot.has("red") // false
+revised.has("red") // true
 
 function buildLocal() {
   const working = MutableHashSet.empty<string>()
@@ -26,7 +26,7 @@ Immutable updates preserve earlier versions, making snapshots suitable for shari
 const a = { region: "west", active: true }
 const b = { region: "west", active: true }
 Equal.equals(a, b) // true
-HashSet.size(HashSet.make(a, b)) // 1
+HashSet.make(a, b).size() // 1
 new Set([a, b]).size // 2
 ```
 
@@ -39,12 +39,12 @@ const empty = HashSet.empty<number>()
 const initial = HashSet.fromIterable([2, 4, 4, 6])
 const changed = pipe(initial, HashSet.add(8), HashSet.remove(2))
 const other = HashSet.make(6, 10)
-const together = HashSet.union(changed, other)
-const common = HashSet.intersection(changed, other)
-const exclusive = HashSet.difference(changed, other)
-const large = HashSet.filter(together, (n) => n > 5)
-const labels = HashSet.map(large, (n) => `item-${n}`)
-const sum = HashSet.reduce(initial, 0, (total, n) => total + n)
+const together = changed.union(other)
+const common = changed.intersection(other)
+const exclusive = changed.difference(other)
+const large = together.filter((n) => n > 5)
+const labels = large.map((n) => `item-${n}`)
+const sum = initial.reduce(0, (total, n) => total + n)
 ```
 
 `empty`, `make`, and `fromIterable` all construct sets. `add` and `remove` return updated sets; union, intersection, and difference return the corresponding set operation. A data pipeline chains immutable updates without changing the original.
@@ -53,11 +53,11 @@ const sum = HashSet.reduce(initial, 0, (total, n) => total + n)
 
 ```ts
 const allowed = HashSet.make("read", "write", "audit")
-HashSet.has(allowed, "write") // true
-HashSet.size(allowed) // 3
-HashSet.some(allowed, (name) => name.startsWith("a")) // true
-HashSet.every(allowed, (name) => name.length > 0) // true
-HashSet.isSubset(HashSet.make("read"), allowed) // true
+allowed.has("write") // true
+allowed.size() // 3
+allowed.some((name) => name.startsWith("a")) // true
+allowed.every((name) => name.length > 0) // true
+HashSet.make("read").isSubset(allowed) // true
 ```
 
 `has` tests one member and `size` counts unique members. `some` and `every` run predicates over members; `isSubset` tests containment of one set in another. Traversal order is not part of the contract.
@@ -86,7 +86,7 @@ function snapshots(values: ReadonlyArray<number>) {
   let current = HashSet.empty<number>()
   const history = [current]
   for (const value of values) {
-    current = HashSet.add(current, value)
+    current = current.add(value)
     history.push(current)
   }
   return history

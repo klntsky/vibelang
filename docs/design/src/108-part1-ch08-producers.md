@@ -68,7 +68,7 @@ To TypeScript, a producer is a `Stream`: the declaration file types `lines` as `
 
 ```ts es
 function errorCount(path: string) {
-  return Stream.runCount(Stream.filter(lines(path), (line) => line.startsWith("ERROR")))
+  return lines(path).filter((line) => line.startsWith("ERROR")).runCount()
 }
 // number!IOError!Files
 ```

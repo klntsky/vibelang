@@ -5,14 +5,14 @@ Stream operators build a new description of how to process a source. Keep transf
 ## Observing and taking elements
 
 ```ts
-const observed = Stream.tap(Stream.range(10, 18), (n) => log(`reading ${n}`))
-const first = Stream.take(observed, 3)
-const below = Stream.takeWhile(observed, (n) => n < 13)
-const through = Stream.takeUntil(observed, (n) => n === 13)
-const last = Stream.takeRight(observed, 2)
+const observed = Stream.range(10, 18).tap((n) => log(`reading ${n}`))
+const first = observed.take(3)
+const below = observed.takeWhile((n) => n < 13)
+const through = observed.takeUntil((n) => n === 13)
+const last = observed.takeRight(2)
 
 function readFirst() {
-  return Stream.runCollect(first) // [10, 11, 12]
+  return first.runCollect() // [10, 11, 12]
 }
 ```
 
@@ -28,7 +28,7 @@ service Exporter {
 }
 
 function exportRows(source: Stream.Stream<string>) {
-  const rows = Stream.toAsyncIterableEffect(source)
+  const rows = source.toAsyncIterableEffect()
   return Exporter.write(rows)
 }
 ```
@@ -37,7 +37,7 @@ function exportRows(source: Stream.Stream<string>) {
 
 ```ts
 function printBatches() {
-  using pull = Stream.toPull(Stream.rechunk(Stream.range(30, 34), 2))
+  using pull = Stream.range(30, 34).rechunk(2).toPull()
   while (true) {
     const batch = Pull.catchDone(() => pull(), () => undefined)
     if (batch === undefined) break
@@ -56,11 +56,11 @@ function loadLabel(id: number) {
   return `item-${id}`
 }
 
-const labels = Stream.mapEffect(Stream.make(4, 7, 9), (id) => loadLabel(id), { concurrency: 2 })
-const upper = Stream.map(labels, (label) => label.toUpperCase())
-const signals = Stream.map(labels, () => null)
-const words = Stream.flattenIterable(Stream.map(Stream.make("red green", "blue"), (line) => line.split(" ")))
-const totals = Stream.mapAccum(Stream.make(4, 7, 9), () => 0, (total, n) => {
+const labels = Stream.make(4, 7, 9).mapEffect((id) => loadLabel(id), { concurrency: 2 })
+const upper = labels.map((label) => label.toUpperCase())
+const signals = labels.map(() => null)
+const words = Stream.make("red green", "blue").map((line) => line.split(" ")).flattenIterable()
+const totals = Stream.make(4, 7, 9).mapAccum(() => 0, (total, n) => {
   const next = total + n
   return [next, [next]] as const
 })
@@ -74,15 +74,15 @@ const totals = Stream.mapAccum(Stream.make(4, 7, 9), () => 0, (total, n) => {
 
 ```ts
 const readings = Stream.make(2, 2, 5, 5, 2)
-const large = Stream.filter(readings, (n) => n >= 5)
-const changes = Stream.changes(readings)
-const running = Stream.scan(readings, () => 0, (total, n) => total + n)
+const large = readings.filter((n) => n >= 5)
+const changes = readings.changes()
+const running = readings.scan(() => 0, (total, n) => total + n)
 
 function inspect() {
   return {
-    large: Stream.runCollect(large),     // [5, 5]
-    changes: Stream.runCollect(changes), // [2, 5, 2]
-    running: Stream.runCollect(running)  // [0, 2, 4, 9, 14, 16]
+    large: large.runCollect(),     // [5, 5]
+    changes: changes.runCollect(), // [2, 5, 2]
+    running: running.runCollect()  // [0, 2, 4, 9, 14, 16]
   }
 }
 ```
@@ -94,13 +94,13 @@ function inspect() {
 ```ts
 const sizes = Stream.make(5, 8, 13)
 const names = Stream.make("small", "large")
-const pairs = Stream.zip(sizes, names)
+const pairs = sizes.zip(names)
 const descriptions = Stream.zipWith(sizes, names, (size, name) => `${name}: ${size}`)
-const indexed = Stream.zipWithIndex(names)
-const neighbors = Stream.zipWithPreviousAndNext(sizes)
+const indexed = names.zipWithIndex()
+const neighbors = sizes.zipWithPreviousAndNext()
 
 function readPairs() {
-  return Stream.runCollect(pairs) // [[5, "small"], [8, "large"]]
+  return pairs.runCollect() // [[5, "small"], [8, "large"]]
 }
 ```
 
@@ -125,15 +125,11 @@ const names = Stream.crossWith(
 
 ```ts
 function partitionReadings() {
-  using branches = Stream.partition(
-    Stream.range(10, 19),
-    Filter.fromPredicate((n: number) => n % 2 === 0),
-    { capacity: 2 }
-  )
+  using branches = Stream.range(10, 19).partition(Filter.fromPredicate((n: number) => n % 2 === 0), { capacity: 2 })
   const [even, odd] = branches
   return all([
-    Stream.runCollect(even),
-    Stream.runCollect(odd)
+    even.runCollect(),
+    odd.runCollect()
   ], { concurrency: 2 })
 }
 ```
@@ -146,16 +142,14 @@ const requests = Stream.make(
   { region: "east", bytes: 20 },
   { region: "west", bytes: 15 }
 )
-const groups = Stream.groupByKey(requests, (request) => request.region)
-const summaries = Stream.flatMap(groups, ([region, group]) =>
+const groups = requests.groupByKey((request) => request.region)
+const summaries = groups.flatMap(([region, group]) =>
   Stream.fromEffect(() => {
-    const bytes = Stream.runFold(group, () => 0, (total, request) => total + request.bytes)
+    const bytes = group.runFold(() => 0, (total, request) => total + request.bytes)
     return { region, bytes }
-  }),
-  { concurrency: "unbounded" }
-)
-const batches = Stream.grouped(requests, 2)
-const timedBatches = Stream.groupedWithin(requests, 20, "1 second")
+  }), { concurrency: "unbounded" })
+const batches = requests.grouped(2)
+const timedBatches = requests.groupedWithin(20, "1 second")
 ```
 
 `groupByKey` produces `[key, groupStream]` pairs. Consume groups concurrently so inactive group consumers do not stall distribution; merged group results have no fixed order. `groupBy` accepts an effectful callback returning `[key, value]`. `grouped` emits arrays of a fixed maximum size, and `groupedWithin` also flushes on elapsed time; both emit a final partial batch.
@@ -165,12 +159,12 @@ const timedBatches = Stream.groupedWithin(requests, 20, "1 second")
 ```ts
 const primary = Stream.make("a1", "a2")
 const secondary = Stream.make("b1", "b2", "b3")
-const sequential = Stream.concat(primary, secondary)
-const flattened = Stream.flatten(Stream.make(primary, secondary))
-const expanded = Stream.flatMap(primary, (label) => Stream.make(label, label.toUpperCase()))
-const merged = Stream.merge(primary, secondary, { haltStrategy: "both" })
-const alternating = Stream.interleave(primary, secondary)
-const selected = Stream.interleaveWith(primary, secondary, Stream.make(true, false, false, true, false))
+const sequential = primary.concat(secondary)
+const flattened = Stream.make(primary, secondary).flatten()
+const expanded = primary.flatMap((label) => Stream.make(label, label.toUpperCase()))
+const merged = primary.merge(secondary, { haltStrategy: "both" })
+const alternating = primary.interleave(secondary)
+const selected = primary.interleaveWith(secondary, Stream.make(true, false, false, true, false))
 ```
 
 `concat` consumes the left source before the right; `flatten` does the same for a stream of streams. `flatMap` builds each inner stream from an element; its default is sequential, while its `concurrency` option runs inner streams together. `switchMap` interrupts the previous inner stream when a new source element arrives, which suits searches where only the newest request matters.
@@ -183,11 +177,11 @@ const selected = Stream.interleaveWith(primary, secondary, Stream.make(true, fal
 
 ```ts
 const fields = Stream.make("name", "email", "role")
-const separated = Stream.intersperse(fields, ",")
-const bracketed = Stream.intersperseAffixes(fields, { start: "[", middle: ",", end: "]" })
+const separated = fields.intersperse(",")
+const bracketed = fields.intersperseAffixes({ start: "[", middle: ",", end: "]" })
 
 function formatFields() {
-  return Stream.mkString(bracketed) // "[name,email,role]"
+  return bracketed.mkString() // "[name,email,role]"
 }
 ```
 
@@ -197,18 +191,18 @@ function formatFields() {
 
 ```ts
 function shareReadings() {
-  using copies = Stream.broadcastN(Stream.range(1, 12), { n: 2, capacity: 3 })
+  using copies = Stream.range(1, 12).broadcastN({ n: 2, capacity: 3 })
   const [totals, audit] = copies
   return all([
-    Stream.runSum(totals),
-    Stream.runForEach(audit, (n) => {
+    totals.runSum(),
+    audit.runForEach((n) => {
       sleep("10 millis")
       log(`audit ${n}`)
     })
   ], { concurrency: 2 })
 }
 
-const buffered = Stream.buffer(Stream.range(1, 12), { capacity: 3 })
+const buffered = Stream.range(1, 12).buffer({ capacity: 3 })
 ```
 
 `broadcastN` starts one source and gives each subscriber the same elements. With bounded suspending buffers, the slowest subscriber limits progress. Keep the subscribers inside the acquired Scope and run their consumers concurrently.
@@ -218,15 +212,12 @@ const buffered = Stream.buffer(Stream.range(1, 12), { capacity: 3 })
 ## Debouncing and throttling
 
 ```ts
-const bursts = Stream.concat(
-  Stream.make("c", "ca", "cat"),
-  Stream.fromEffect(() => {
+const bursts = Stream.make("c", "ca", "cat").concat(Stream.fromEffect(() => {
     sleep("300 millis")
     return "cats"
-  })
-)
-const settled = Stream.debounce(bursts, "100 millis")
-const paced = Stream.throttle(Stream.rechunk(Stream.range(1, 10), 1), {
+  }))
+const settled = bursts.debounce("100 millis")
+const paced = Stream.range(1, 10).rechunk(1).throttle({
   cost: (batch) => batch.length,
   units: 2,
   duration: "1 second",
@@ -240,13 +231,10 @@ const paced = Stream.throttle(Stream.rechunk(Stream.range(1, 10), 1), {
 ## Scheduling delivery
 
 ```ts
-const announcements = Stream.schedule(
-  Stream.make("prepare", "deploy", "verify"),
-  Schedule.spaced("500 millis")
-)
+const announcements = Stream.make("prepare", "deploy", "verify").schedule(Schedule.spaced("500 millis"))
 
 function announce() {
-  Stream.runForEach(announcements, (message) => log(message))
+  announcements.runForEach((message) => log(message))
 }
 ```
 

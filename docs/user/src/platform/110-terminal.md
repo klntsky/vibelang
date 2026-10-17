@@ -81,7 +81,7 @@ function game() {
   while (attempts < 5) {
     terminal.display(`Guess ${attempts + 1}: `)
     const guess = parseGuess(terminal.readLine())
-    if (Option.isNone(guess)) {
+    if (guess.isNone()) {
       terminal.display("Enter a whole number from 1 to 20.\n")
       continue
     }

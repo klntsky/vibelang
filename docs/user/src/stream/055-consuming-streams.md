@@ -6,7 +6,7 @@ A consumer runs a Stream and returns one result. Inside an Effeck function, call
 
 ```ts
 function collectLabels() {
-  return Stream.runCollect(Stream.make("north", "south", "west"))
+  return Stream.make("north", "south", "west").runCollect()
 }
 // Array<string>!!
 ```
@@ -17,7 +17,7 @@ function collectLabels() {
 
 ```ts
 function announce() {
-  Stream.runForEach(Stream.make("build", "test", "package"), (stage) => {
+  Stream.make("build", "test", "package").runForEach((stage) => {
     log(`starting ${stage}`)
     sleep("20 millis")
   })
@@ -32,7 +32,7 @@ function announce() {
 ```ts
 function reachBudget() {
   let total = 0
-  Stream.runForEachWhile(Stream.make(3, 5, 8, 13), (amount) => {
+  Stream.make(3, 5, 8, 13).runForEachWhile((amount) => {
     total += amount
     return total < 10
   })
@@ -46,12 +46,12 @@ The callback returns `true` to continue or `false` to stop. The element that ret
 
 ```ts
 function totalBytes() {
-  return Stream.runFold(Stream.make(256, 512, 128), () => 0, (total, n) => total + n)
+  return Stream.make(256, 512, 128).runFold(() => 0, (total, n) => total + n)
 }
 // Returns 896.
 
 function totalWithProgress() {
-  return Stream.runFoldEffect(Stream.make(256, 512, 128), () => 0, (total, n) => {
+  return Stream.make(256, 512, 128).runFoldEffect(() => 0, (total, n) => {
     const next = total + n
     log(`processed ${next} bytes`)
     return next
@@ -66,7 +66,7 @@ The initial-state callback runs for each consumption, which also supports fresh 
 ```ts
 function readHeader() {
   const source = Stream.make("version", "length", "body")
-  return Stream.run(source, Sink.take<string>(2))
+  return source.run(Sink.take<string>(2))
 }
 // Returns ["version", "length"].
 ```

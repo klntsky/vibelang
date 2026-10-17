@@ -21,17 +21,17 @@ A bounded queue suspends offers when full until consumers free space. A dropping
 ```ts
 function offerWithBackpressure() {
   const queue = Queue.bounded<number>(1)
-  Queue.offer(queue, 10)
-  const secondOffer = fork(Queue.offer(queue, 20))
-  const first = Queue.take(queue)
-  Fiber.join(secondOffer)
-  const second = Queue.take(queue)
+  queue.offer(10)
+  const secondOffer = fork(queue.offer(20))
+  const first = queue.take()
+  secondOffer.join()
+  const second = queue.take()
   return [first, second] // [10, 20]
 }
 
 function rejectedBatch() {
   const queue = Queue.dropping<number>(2)
-  return Queue.offerAll(queue, [10, 20, 30]) // [30]
+  return queue.offerAll([10, 20, 30]) // [30]
 }
 ```
 
@@ -42,12 +42,12 @@ function rejectedBatch() {
 ```ts
 function consumeBatches() {
   const queue = Queue.bounded<number>(8)
-  Queue.offerAll(queue, [1, 2, 3, 4, 5, 6])
-  const first = Queue.take(queue)           // 1
-  const optional = Queue.poll(queue)       // Some(2)
-  const pair = Queue.takeN(queue, 2)        // [3, 4]
-  const batch = Queue.takeBetween(queue, 1, 4) // [5, 6]
-  const empty = Queue.clear(queue)         // []
+  queue.offerAll([1, 2, 3, 4, 5, 6])
+  const first = queue.take()           // 1
+  const optional = queue.poll()       // Some(2)
+  const pair = queue.takeN(2)        // [3, 4]
+  const batch = queue.takeBetween(1, 4) // [5, 6]
+  const empty = queue.clear()         // []
   return { first, optional, pair, batch, empty }
 }
 ```
@@ -59,11 +59,11 @@ function consumeBatches() {
 ```ts
 function inspectQueue() {
   const queue = Queue.bounded<string>(2)
-  Queue.offer(queue, "task")
+  queue.offer("task")
   return {
     capacity: queue.capacity,
-    size: Queue.size(queue),
-    full: Queue.isFull(queue)
+    size: queue.size(),
+    full: queue.isFull()
   }
 }
 // Returns { capacity: 2, size: 1, full: false }.
@@ -76,9 +76,9 @@ Size counts buffered messages, and capacity is the configured limit. These value
 ```ts
 function finishNormally() {
   const queue = Queue.bounded<number, Cause.Done>(4)
-  Queue.offerAll(queue, [7, 8])
-  Queue.end(queue)
-  const values = Queue.collect(queue)
+  queue.offerAll([7, 8])
+  queue.end()
+  const values = queue.collect()
   Queue.await(queue)
   return values // [7, 8]
 }
@@ -92,7 +92,7 @@ function stopImmediately() {
       logInfo("queue closed")
     }
   })
-  Queue.shutdown(queue)
+  queue.shutdown()
   return Fiber.await(waiter)
 }
 ```
@@ -105,17 +105,17 @@ Queues do not automatically close at ordinary block exit. Have their owner call 
 
 ```ts
 function send(outbox: Queue.Enqueue<string>, message: string) {
-  return Queue.offer(outbox, message)
+  return outbox.offer(message)
 }
 
 function receive(inbox: Queue.Dequeue<string>) {
-  return Queue.take(inbox)
+  return inbox.take()
 }
 
 function handoff() {
   const queue = Queue.bounded<string>(2)
-  send(Queue.asEnqueue(queue), "ready")
-  return receive(Queue.asDequeue(queue))
+  send(queue.asEnqueue(), "ready")
+  return receive(queue.asDequeue())
 }
 ```
 

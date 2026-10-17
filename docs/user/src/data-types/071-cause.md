@@ -17,10 +17,7 @@ empty.reasons.length // 0
 ## Combining reasons
 
 ```ts
-const combined = Cause.combine(
-  Cause.fail("export failed"),
-  Cause.die(new Error("cleanup failed"))
-)
+const combined = Cause.fail("export failed").combine(Cause.die(new Error("cleanup failed")))
 combined.reasons.map((reason) => reason._tag) // ["Fail", "Die"]
 ```
 
@@ -37,7 +34,7 @@ function diagnose() {
   const outcome = Effect.exit(() => {
     throw new MissingRecord({ id: "r-9" })
   })
-  if (Exit.isFailure(outcome)) {
+  if (outcome.isFailure()) {
     return Cause.pretty(outcome.cause)
   }
   return "completed"
@@ -51,15 +48,15 @@ function diagnose() {
 ```ts
 function classify<E>(cause: Cause.Cause<E>) {
   const summary = {
-    failed: Cause.hasFails(cause),
-    defective: Cause.hasDies(cause),
-    interrupted: Cause.hasInterrupts(cause),
-    interruptionOnly: Cause.hasInterruptsOnly(cause)
+    failed: cause.hasFails(),
+    defective: cause.hasDies(),
+    interrupted: cause.hasInterrupts(),
+    interruptionOnly: cause.hasInterruptsOnly()
   }
   for (const reason of cause.reasons) {
-    if (Cause.isFailReason(reason)) log("expected failure")
-    else if (Cause.isDieReason(reason)) log("defect")
-    else if (Cause.isInterruptReason(reason)) {
+    if (reason.isFailReason()) log("expected failure")
+    else if (reason.isDieReason()) log("defect")
+    else if (reason.isInterruptReason()) {
       log(`interruption: ${reason.fiberId}`)
     }
   }

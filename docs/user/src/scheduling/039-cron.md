@@ -64,7 +64,7 @@ function runApplication() {
   ))
 
   sleep("30 seconds") // Stand-in for the application's active lifetime.
-  Fiber.interrupt(reports)
+  reports.interrupt()
 }
 ```
 

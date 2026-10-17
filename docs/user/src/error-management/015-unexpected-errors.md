@@ -60,8 +60,8 @@ function startupWithMessage() {
 ```ts
 function inspectStartup() {
   const outcome = Effect.exit(startup())
-  if (Exit.isFailure(outcome)) {
-    return Cause.hasDies(outcome.cause) ? "startup defect" : "startup stopped"
+  if (outcome.isFailure()) {
+    return outcome.cause.hasDies() ? "startup defect" : "startup stopped"
   }
   return "started"
 }
@@ -92,8 +92,8 @@ function isolateDecoder(opcode: number) {
 ```ts
 function decoderBoundary(opcode: number) {
   return Effect.catchCause(decodeOpcode(opcode), (cause) => {
-    if (Cause.hasInterrupts(cause)) return Effect.failCause(cause)
-    if (Cause.hasDies(cause)) {
+    if (cause.hasInterrupts()) return Effect.failCause(cause)
+    if (cause.hasDies()) {
       log("Decoder failed", cause.reasons.map((reason) => reason._tag))
       return "disabled"
     }

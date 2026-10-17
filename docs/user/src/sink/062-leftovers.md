@@ -7,10 +7,10 @@ Leftovers are elements a sink has already received in a batch but has not consum
 ```ts
 function inspectRemainder() {
   const source = Stream.fromArray([21, 34, 55, 89])
-  const sink = Sink.mapEnd(Sink.take<number>(2), ([selected, leftover]) => [
+  const sink = (Sink.take<number>(2)).mapEnd(([selected, leftover]) => [
     { selected, leftover: leftover ?? [] }
   ] as const)
-  return Stream.run(source, sink)
+  return source.run(sink)
 }
 // { selected: [21, 34], leftover: [55, 89] }
 ```
@@ -19,11 +19,11 @@ function inspectRemainder() {
 
 ```ts
 function inspectSmallBatches() {
-  const source = Stream.rechunk(Stream.fromArray([21, 34, 55, 89]), 2)
-  const sink = Sink.mapEnd(Sink.head<number>(), ([first, leftover]) => [
+  const source = Stream.fromArray([21, 34, 55, 89]).rechunk(2)
+  const sink = (Sink.head<number>()).mapEnd(([first, leftover]) => [
     { first, leftover: leftover ?? [] }
   ] as const)
-  return Stream.run(source, sink)
+  return source.run(sink)
 }
 // { first: Option.some(21), leftover: [34] }
 ```
@@ -41,7 +41,7 @@ function discardRemainder() {
       { selected, leftover: leftover ?? [] }
     ] as const)
   )
-  return Stream.run(Stream.fromArray([21, 34, 55, 89]), sink)
+  return Stream.fromArray([21, 34, 55, 89]).run(sink)
 }
 // { selected: [21, 34], leftover: [] }
 ```

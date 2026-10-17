@@ -110,7 +110,7 @@ A `Context` holds implementations that already exist, while a `Layer` describes 
 ```ts
 function optionalAnnouncement(message: string) {
   const reporter = Effect.serviceOption(Reporter)
-  if (Option.isNone(reporter)) return false
+  if (reporter.isNone()) return false
   reporter.value.write(message)
   return true
 }

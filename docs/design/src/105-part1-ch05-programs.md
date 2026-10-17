@@ -71,6 +71,24 @@ On a cause that also holds a defect, Effect's recovery operators and `try`/`catc
 
 Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (`docs/research/pipe-census.md`). Pipelines over plain data stay plain: `pipe(items, Array.filter(isActive), Array.map(toRow))` is an ordinary function call.
 
+#### Methods on Effect's data types
+
+A value of one of Effect's data types takes its module's functions as methods (D152). `x.name(args)` calls `Module.name(x, args)`:
+
+```ts effect
+const alerts = pipe(readings, Stream.filter((c) => c > 25), Stream.map((c) => `${c} C`), Stream.take(3))
+const label = Option.getOrElse(Option.map(user.nickname, (n) => n.toUpperCase()), () => "anonymous")
+```
+
+```ts es
+const alerts = readings.filter((c) => c > 25).map((c) => `${c} C`).take(3)
+const label = user.nickname.map((n) => n.toUpperCase()).getOrElse(() => "anonymous")
+```
+
+The module is the one that declares the value's type: a `Stream` takes `Stream`'s functions, an `Option` takes `Option`'s. Eighteen modules qualify: `BigDecimal`, `Cause`, `Chunk`, `DateTime`, `Deferred`, `Duration`, `Effect`, `Exit`, `Fiber`, `HashMap`, `HashSet`, `Option`, `Queue`, `Ref`, `Result`, `Schedule`, `Sink`, and `Stream`. A type's own members come first, so an `Effect`'s `pipe` is its own, and arrays, strings, and objects keep JavaScript's methods: `[1, 2].map(f)` is `Array.prototype.map`. A method that returns an Effect is a call like any other, so it runs where it stands: `fiber.join()` waits for the fiber, and `counter.update((n) => n + 1)` updates the `Ref`. Chapter 13 states the rule.
+
+The compiled JavaScript calls the module's function, `Stream.take(Stream.map(Stream.filter(readings, …), …), 3)`, so a bundler drops the functions a program never calls, as it does for Effect code.
+
 #### Why there is no `|>`
 
 JavaScript's proposed pipeline operator is not part of Effeck. It conflicts with the rule that calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, the call `fetchUser(id)` runs before the pipe sees it, and so would every stage that calls a combinator. The proposal is also not settled: it has been at Stage 2 since 2021-08, its topic token is undecided (the `%` in its README is disqualified on the proposal's own wiki), the committee's January 2026 review listed it as "somewhat stuck", and TypeScript waits for Stage 3 before implementing it (`docs/research/tc39-syntax.md` §1). Effeck revisits the operator if it reaches Stage 3.

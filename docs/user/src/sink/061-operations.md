@@ -5,10 +5,10 @@ Transform a Sink when its existing consumption rule fits but its input or result
 ## Adapting consumer input
 
 ```ts
-const quantities = Sink.mapInput(Sink.sum, (entry: { readonly quantity: number }) => entry.quantity)
+const quantities = Sink.sum.mapInput((entry: { readonly quantity: number }) => entry.quantity)
 
 function countItems() {
-  return Stream.run(Stream.make({ quantity: 7 }, { quantity: 11 }), quantities)
+  return Stream.make({ quantity: 7 }, { quantity: 11 }).run(quantities)
 }
 // Returns 18.
 ```
@@ -20,7 +20,7 @@ error InvalidQuantity {
   raw: string
 }
 
-const parsedTotal = Sink.mapInputEffect(Sink.sum, (raw: string) => {
+const parsedTotal = Sink.sum.mapInputEffect((raw: string) => {
   const value = Number(raw)
   if (!Number.isFinite(value)) throw new InvalidQuantity({ raw })
   return value
@@ -32,10 +32,10 @@ The new sink accepts strings and can fail with `InvalidQuantity`. A failed input
 ## Mapping consumer output
 
 ```ts
-const report = Sink.map(Sink.sum, (total) => ({ total, unit: "items" }))
+const report = Sink.sum.map((total) => ({ total, unit: "items" }))
 
 function totalReport() {
-  return Stream.run(Stream.make(7, 11), report)
+  return Stream.make(7, 11).run(report)
 }
 // Returns { total: 18, unit: "items" }.
 ```
@@ -52,7 +52,7 @@ const report = pipe(
 )
 
 function byteReport() {
-  return Stream.run(Stream.make({ bytes: 128 }, { bytes: 256 }), report)
+  return Stream.make({ bytes: 128 }, { bytes: 256 }).run(report)
 }
 // Returns "384 bytes".
 ```
@@ -63,9 +63,9 @@ The input stage adapts each element, the original sink accumulates, and the outp
 
 ```ts
 function positiveBatches() {
-  const positive = Stream.filter(Stream.make(-3, 4, 0, 8, -1, 12, 16), (n) => n > 0)
-  const batches = Stream.transduce(positive, Sink.take<number>(3))
-  return Stream.runCollect(batches) // [[4, 8, 12], [16]]
+  const positive = Stream.make(-3, 4, 0, 8, -1, 12, 16).filter((n) => n > 0)
+  const batches = positive.transduce(Sink.take<number>(3))
+  return batches.runCollect() // [[4, 8, 12], [16]]
 }
 ```
 

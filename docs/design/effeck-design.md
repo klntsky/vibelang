@@ -407,19 +407,20 @@ function lookup(raw: string) {
 // User!InvalidId!Users
 ```
 
-To handle some errors and pass the rest on, narrow and rethrow. TypeScript's narrowing works on the caught value:
+To handle some errors and pass the rest on, name them in the clause (D131). `catch (e: UserNotFound)` handles only failures with that type's `_tag`, and the others propagate with their types:
 
 ```ts es
 function lookupOrGuest(raw: string) {
   try {
     return Users.find(String(parseId(raw)))
-  } catch (e) {                          // e: InvalidId | UserNotFound
-    if (e instanceof UserNotFound) return guest
-    throw e                              // e: InvalidId here, so E is InvalidId
+  } catch (e: UserNotFound) {
+    return guest
   }
 }
 // User!InvalidId!Users
 ```
+
+Several clauses can follow one `try`, each naming a type or a union of types, and a final untyped clause catches the rest. A failure raised inside a clause is not tested by the clauses after it. The test compares `_tag`, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A clause type without a literal `_tag` is EK2105, and a clause after an untyped one is EK2106. Narrowing and rethrowing inside an untyped clause still works, since TypeScript's narrowing applies to the caught value.
 
 Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
 
@@ -510,7 +511,7 @@ Two things that look the same mean different things, on purpose.
 ```ts es
 function firstAdmin(users: ReadonlyArray<User>) {
   try {
-    return Option.getOrThrow(Option.fromNullishOr(users.find(isAdmin)))
+    return Option.fromNullishOr(users.find(isAdmin)).getOrThrow()
   } catch (e) {
     return guest
   }
@@ -607,7 +608,7 @@ Calling any member through the service looks the service up, so the service join
 
 #### Writing a provider
 
-A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation.
+A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation. `layer UsersLive: Users { ... }` writes the same provider with less: the statements before the members run once, when the layer is built, the members form the implementation, and a value member is `readonly name = value` (D129). It is short for `Layer.effect(Users, () => { ...; return { ... } })`, or `Layer.succeed(Users, { ... })` when there are no statements. A statement after the members is EK2104.
 
 ```ts effect
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
@@ -627,19 +628,17 @@ const UsersLive = Layer.effect(Users, Effect.gen(function* () {
 ```
 
 ```ts es
-const UsersLive = Layer.effect(Users, () => {
+layer UsersLive: Users {
   const db = Database()              // runs once, when the layer is built
-  return {
-    find(id) {
-      const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
-      if (rows.length === 0) throw new UserNotFound({ id })
-      return toUser(rows[0])
-    },
-    rename(id, name) {
-      Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
-    }
+  find(id) {
+    const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
+    if (rows.length === 0) throw new UserNotFound({ id })
+    return toUser(rows[0])
   }
-})
+  rename(id, name) {
+    Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
+  }
+}
 // Layer<Users, never, Database>
 ```
 
@@ -742,13 +741,11 @@ const DatabaseLive = Layer.effect(Database, Effect.gen(function* () {
 ```
 
 ```ts es
-const DatabaseLive = Layer.effect(Database, () => {
+layer DatabaseLive: Database {
   const pool = Postgres.connect(DatabaseConfig().url)    // no `using`: the pool lives as long as the layer
-  return {
-    query: (sql, params) => pool.query(sql, params),
-    execute: (sql, params) => pool.execute(sql, params)
-  }
-})
+  query(sql, params) { return pool.query(sql, params) }
+  execute(sql, params) { return pool.execute(sql, params) }
+}
 // Layer<Database, ConnectError, DatabaseConfig>
 ```
 
@@ -759,16 +756,14 @@ const DatabaseLive = Layer.effect(Database, () => {
 Sometimes a method looks up another service each time it is called, instead of capturing it when the layer is built. That lookup happens in the *caller's* context, so its requirement belongs to the caller, and the service contract has to say so. The compiler catches the mismatch:
 
 ```ts es
-const UsersAudited = Layer.effect(Users, () => {
+layer UsersAudited: Users {
   const db = Database()
-  return {
-    find(id) {
-      Audit.record(`users.find ${id}`)    // looked up on every call
-      return findIn(db, id)
-    },
-    rename(id, name) { renameIn(db, id, name) }
+  find(id) {
+    Audit.record(`users.find ${id}`)    // looked up on every call
+    return findIn(db, id)
   }
-})
+  rename(id, name) { renameIn(db, id, name) }
+}
 ```
 
 ```text
@@ -823,6 +818,17 @@ function main() {
 
 `main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.
 
+`with AppLive { ... }` provides a layer to a block (D130). It is short for `Effect.provide(() => { ... }, AppLive)`, except that its statements are code of the enclosing function: a `return` returns from the function, and `break` and `continue` leave its loops. Its errors are the block's and the layer's, and its requirements are the block's that the layer does not provide plus the layer's own. Like `Effect.provide`, it accepts a layer, an array of layers, or a `Context`. A `with` block at a module's top level would run a program there, so it is EK1001.
+
+```ts es
+function main() {
+  with AppLive {
+    log(`welcomed ${welcome("42")}`)
+  }
+}
+// void!UserNotFound | MailError | ConfigError | ConnectError!
+```
+
 Each `Effect.provide` builds its layers once, so two sibling `provide` calls build them twice:
 
 ```ts es
@@ -851,10 +857,10 @@ it.effect("welcome returns the user's name", () =>
 ```
 
 ```ts es
-const UsersTest = Layer.succeed(Users, {
-  find: (id) => ({ id, name: "Ada", email: "ada@example.com" }),
-  rename: () => {}
-})
+layer UsersTest: Users {
+  find(id) { return ({ id, name: "Ada", email: "ada@example.com" }) }
+  rename() {}
+}
 
 it.effect("welcome returns the user's name", () => {
   const name = Effect.provide(() => welcome("42"), wire(UsersTest, MailerTest))
@@ -949,6 +955,24 @@ Most pipes you write today disappear:
 On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how.
 
 Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (`docs/research/pipe-census.md`). Pipelines over plain data stay plain: `pipe(items, Array.filter(isActive), Array.map(toRow))` is an ordinary function call.
+
+#### Methods on Effect's data types
+
+A value of one of Effect's data types takes its module's functions as methods (D152). `x.name(args)` calls `Module.name(x, args)`:
+
+```ts effect
+const alerts = pipe(readings, Stream.filter((c) => c > 25), Stream.map((c) => `${c} C`), Stream.take(3))
+const label = Option.getOrElse(Option.map(user.nickname, (n) => n.toUpperCase()), () => "anonymous")
+```
+
+```ts es
+const alerts = readings.filter((c) => c > 25).map((c) => `${c} C`).take(3)
+const label = user.nickname.map((n) => n.toUpperCase()).getOrElse(() => "anonymous")
+```
+
+The module is the one that declares the value's type: a `Stream` takes `Stream`'s functions, an `Option` takes `Option`'s. Eighteen modules qualify: `BigDecimal`, `Cause`, `Chunk`, `DateTime`, `Deferred`, `Duration`, `Effect`, `Exit`, `Fiber`, `HashMap`, `HashSet`, `Option`, `Queue`, `Ref`, `Result`, `Schedule`, `Sink`, and `Stream`. A type's own members come first, so an `Effect`'s `pipe` is its own, and arrays, strings, and objects keep JavaScript's methods: `[1, 2].map(f)` is `Array.prototype.map`. A method that returns an Effect is a call like any other, so it runs where it stands: `fiber.join()` waits for the fiber, and `counter.update((n) => n + 1)` updates the `Ref`. Chapter 13 states the rule.
+
+The compiled JavaScript calls the module's function, `Stream.take(Stream.map(Stream.filter(readings, …), …), 3)`, so a bundler drops the functions a program never calls, as it does for Effect code.
 
 #### Why there is no `|>`
 
@@ -1198,7 +1222,7 @@ function serve(port: number) {
 function withProgress(id: string) {
   const pending = fork(buildReport(id))
   sendProgressEmail(id)
-  return Fiber.join(pending)          // waits for it; fails if it failed
+  return pending.join()          // waits for it; fails if it failed
 }
 // Report!ReportError | MailError!Reports | Mailer
 ```
@@ -1281,7 +1305,7 @@ To TypeScript, a producer is a `Stream`: the declaration file types `lines` as `
 
 ```ts es
 function errorCount(path: string) {
-  return Stream.runCount(Stream.filter(lines(path), (line) => line.startsWith("ERROR")))
+  return lines(path).filter((line) => line.startsWith("ERROR")).runCount()
 }
 // number!IOError!Files
 ```
@@ -1887,7 +1911,7 @@ JavaScript's built-ins and Effect's own functions ship with contracts that say w
 
 ```ts es
 function displayName(user: User) {
-  return Option.match(Option.fromNullishOr(user.nickname), {
+  return Option.fromNullishOr(user.nickname).match({
     onNone: () => user.name,
     onSome: (nickname) => nickname
   })
@@ -1895,7 +1919,7 @@ function displayName(user: User) {
 
 function tryCharge(cartId: string) {
   const outcome = Effect.result(Payments.charge(cartId))    // Result<Receipt, PaymentError>
-  return Result.isSuccess(outcome) ? outcome.success : undefined
+  return outcome.isSuccess() ? outcome.success : undefined
 }
 // Receipt | undefined!!Payments
 ```
@@ -1930,7 +1954,7 @@ function digestActive(users: Stream.Stream<User, DbError>) {
 // void!DbError | MailError!Mailer
 
 function firstErrorLines(path: string) {
-  return Stream.runCollect(Stream.take(Stream.filter(lines(path), isError), 10))
+  return lines(path).filter(isError).take(10).runCollect()
 }
 ```
 
@@ -1945,7 +1969,7 @@ import { TestClock } from "effect/testing"
 it.effect("a reminder fires after one day", () => {
   const reminder = fork(remindLater("ada", "1 day"))
   TestClock.adjust("1 day")                          // virtual time: nothing waits
-  assert.strictEqual(Fiber.join(reminder), "sent")
+  assert.strictEqual(reminder.join(), "sent")
 })
 ```
 
@@ -1986,7 +2010,7 @@ A `Config` is data until you call it (Chapter 13), so `Config.all`, `Config.nest
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
-  Effect.provide(() => serve(8080), AppLive)
+  with AppLive { serve(8080) }
 }
 
 NodeRuntime.runMain(() => main())
@@ -2028,10 +2052,10 @@ function search(query: string) {
   const scan = fork(slowIndexScan(query))
   const cached = SearchCache.lookup(query)
   if (cached !== undefined) {
-    Fiber.interrupt(scan)               // cancels the scan; its finally blocks run first
+    scan.interrupt()               // cancels the scan; its finally blocks run first
     return cached
   }
-  return Fiber.join(scan)
+  return scan.join()
 }
 ```
 
@@ -2076,9 +2100,9 @@ function countVisits(paths: ReadonlyArray<string>) {
   const visits = Ref.make(0)
   forEach(paths, (path) => {
     Visits.record(path)
-    Ref.update(visits, (n) => n + 1)
+    visits.update((n) => n + 1)
   }, { concurrency: 4 })
-  return Ref.get(visits)
+  return visits.get()
 }
 // number!VisitError!Visits
 ```
@@ -2124,6 +2148,7 @@ The full rule:
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
 | A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
+| A method of an Effect data type, `stream.take(3)` or `fiber.join()` | Calls the module's function with the value first (D152), then applies these rules to that call: an `Effect` runs, other data is returned | `Stream.take(stream, 3)`; `yield* Fiber.join(fiber)` |
 | A service, `Users()` | Returns the implementation | `yield* Users` |
 | A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |
 | A JavaScript built-in, or an export of `effect` or `@effect/*` that does not return an `Effect` | A trusted call: listed exceptions join E, others are defects | `f(a)`, with listed exceptions converted |
@@ -2151,6 +2176,26 @@ function serverPort() {
 ```
 
 Without this rule, `Config.Port("PORT")` would read the variable before `Config.withDefault` saw it, and `makeError` would fail instead of returning an error value.
+
+#### Methods on Effect's data types
+
+`x.name(args)` is a method call into a module (D152) when all of these hold:
+
+1. The file is a `.effeck` file, and the access is not part of an optional chain (`x?.name(…)`).
+2. `x`'s type, after TypeScript resolves type parameters to their constraints, has no member `name` of its own.
+3. One of Effect's data-type modules declares `x`'s type in its declaration file, `effect/dist/<Module>.d.ts`. For a union, every member comes from the same module, as `None` and `Some` come from `Option`.
+4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`.
+
+The method's signatures are those overloads with the first parameter moved to `this`. TypeScript checks `x` against it and infers type parameters from it, and a type predicate on it narrows `x`:
+
+```ts es
+function describe(value: Option.Option<number>) {
+  if (value.isSome()) return `some ${value.value}`   // Option.isSome(value): value is Some<number>
+  return "none"
+}
+```
+
+The call compiles to `Module.name(x, args)`, which the rules above then apply to: `Fiber.join(fiber)` returns an `Effect`, so `fiber.join()` runs, while `Stream.take` returns a `Stream`, which is data. The method exists only in the call: `const read = maybe.getOrElse` is EK4501 (D153), because no function value exists to bind; pass `Option.getOrElse` itself.
 
 #### Function values
 
@@ -3870,7 +3915,10 @@ for GitHub highlighting.
 
 Hover shows a running call's success value as "Runs here and returns `T`",
 and a plain helper's direct signature alongside its TypeScript-facing type
-(D77). Prelude names and service members complete in scope (D78). TypeScript
+(D77). Prelude names and service members complete in scope (D78). A method of
+an Effect data type hovers as the function it calls, "Method syntax: calls
+`Option.getOrElse(maybe, …)`", and completes after a dot (D152). A call passed
+by name hovers as "Passed by name to `fork` as a program" (D147). TypeScript
 files retain TypeScript hover behavior. D33's control-class hover text,
 catch-specific completions, mechanical EK code actions, and migration
 refactors remain design targets. Diagnostic messages include repair suggestions
@@ -3908,6 +3956,9 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
 | EK2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
 | EK2103 | A member of a `service` or `control` declaration with a body or an initializer (D128) | Implement it in a layer, or make it static | 4 |
+| EK2104 | A setup statement of a `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
+| EK2105 | A typed catch clause whose type has a member without a literal `_tag` (D131) | Catch a tagged error, or test the value in an untyped clause | 3 |
+| EK2106 | A catch clause after an untyped catch clause (D131) | Move the untyped clause last | 3 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -3926,6 +3977,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
+| EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
 
 #### Linting
 
@@ -4113,12 +4165,17 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D126 | `error NotFound { id: string }` declares a tagged error class with readonly fields | Fewer tokens for the most common declaration | 3 |
 | D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
 | D128 | `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
+| D129 | `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
+| D130 | `with AppLive { ... }` provides a layer to a block whose statements stay code of the enclosing function | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
+| D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
 | D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
 | D149 | `try(…)` parses as a call in `.effeck`; Effect's `{ try, catch }` object is EK4404 | A try statement needs a block, so `try (` is unambiguous | 10, 28 |
 | D150 | `runPromise`, `runFork`, `runSync`, `runCallback` are in the prelude, for TypeScript and hatch bodies | The way back in; EK1005 still applies where a fiber runs | 10, 13 |
 | D151 | `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and seven more Effect functions need no prefix | They were 329 of the 538 `Effect.` member uses in the docs | 1, 27 |
+| D152 | **Controversial.** A value of an Effect data type takes its module's data-first functions as methods: `stream.filter(p).take(3)` is `Stream.take(Stream.filter(stream, p), 3)`; own members win | Removes the module prefix and nesting from data-type code; the emitted calls tree-shake as Effect's do | 5, 13 |
+| D153 | A data type's method exists only in a call; any other access is EK4501 | No function value exists to bind | 13, 28 |
 
 #### Rules of the runtime and compiler
 

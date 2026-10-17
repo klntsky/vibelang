@@ -6,12 +6,12 @@ Many Effect APIs accept either the data followed by options or options followed 
 
 ```ts
 const source = Stream.make(5, 10, 15)
-const direct = Stream.map(source, (n) => n / 5)
+const direct = source.map((n) => n / 5)
 const stage = Stream.map((n: number) => n / 5)
 const piped = pipe(source, stage)
 
 function compare() {
-  return [Stream.runCollect(direct), Stream.runCollect(piped)]
+  return [direct.runCollect(), piped.runCollect()]
 }
 // Both arrays are [1, 2, 3].
 ```

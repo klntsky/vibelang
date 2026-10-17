@@ -9,10 +9,10 @@ const labels = Stream.make("queued", "running", "complete")
 const absent = Stream.empty
 const signal = Stream.succeed(void 0)
 const pages = Stream.range(4, 7)
-const powers = Stream.take(Stream.iterate(2, (n) => n * 2), 4)
+const powers = Stream.iterate(2, (n) => n * 2).take(4)
 
 function readPowers() {
-  return Stream.runCollect(powers) // [2, 4, 8, 16]
+  return powers.runCollect() // [2, 4, 8, 16]
 }
 ```
 
@@ -28,7 +28,7 @@ const closed = Stream.fail(new SourceClosed())
 
 function readClosed() {
   try {
-    return Stream.runCollect(closed)
+    return closed.runCollect()
   } catch (error) {
     return ["source unavailable"]
   }
@@ -73,13 +73,13 @@ Pass an async iterable obtained from a TypeScript adapter or a service. The erro
 const timestamp = Stream.fromEffect(Clock.currentTimeMillis)
 
 const notices = Stream.callback<string>((queue) => {
-  Queue.offer(queue, "connected")
-  Queue.offer(queue, "ready")
-  Queue.end(queue)
+  queue.offer("connected")
+  queue.offer("ready")
+  queue.end()
 })
 
 function readNotices() {
-  return Stream.runCollect(notices) // ["connected", "ready"]
+  return notices.runCollect() // ["connected", "ready"]
 }
 ```
 
@@ -98,9 +98,7 @@ function openSession() {
   )
 }
 
-const sessionNames = Stream.scoped(
-  Stream.map(Stream.fromEffect(openSession()), (session) => session.name)
-)
+const sessionNames = Stream.fromEffect(openSession()).map((session) => session.name).scoped()
 ```
 
 `Stream.scoped` takes a Stream, and supplies its Scope during consumption. `Effect.acquireRelease` registers release in that Scope. Place all operations that use the acquired resource inside the scoped stream; see [Resourceful Streams](058-resourceful-streams.md).
@@ -108,8 +106,8 @@ const sessionNames = Stream.scoped(
 ## Repeating values, streams, and effects
 
 ```ts
-const pings = Stream.forever(Stream.succeed("ping"))
-const rounds = Stream.repeat(Stream.make("start", "finish"), Schedule.recurs(2))
+const pings = Stream.succeed("ping").forever()
+const rounds = Stream.make("start", "finish").repeat(Schedule.recurs(2))
 const times = Stream.fromEffectRepeat(() => Clock.currentTimeMillis())
 
 function countdown() {
@@ -118,7 +116,7 @@ function countdown() {
     if (remaining === 0) Cause.done()
     return remaining--
   })
-  return Stream.runCollect(source) // [3, 2, 1]
+  return source.runCollect() // [3, 2, 1]
 }
 ```
 
@@ -129,10 +127,10 @@ Keep mutable per-run state inside a function, as in `countdown`, so separate con
 ## Periodic elements
 
 ```ts
-const samples = Stream.mapEffect(Stream.tick("250 millis"), () => Clock.currentTimeMillis())
+const samples = Stream.tick("250 millis").mapEffect(() => Clock.currentTimeMillis())
 
 function collectSamples() {
-  return Stream.runCollect(Stream.take(samples, 4))
+  return samples.take(4).runCollect()
 }
 ```
 
@@ -166,10 +164,10 @@ const names = Stream.paginate(0, (cursor) => {
 ```ts
 function queuedNumbers() {
   const queue = Queue.unbounded<number, Cause.Done>()
-  Queue.offer(queue, 8)
-  Queue.offer(queue, 13)
-  Queue.end(queue)
-  return Stream.runCollect(Stream.fromQueue(queue)) // [8, 13]
+  queue.offer(8)
+  queue.offer(13)
+  queue.end()
+  return Stream.fromQueue(queue).runCollect() // [8, 13]
 }
 
 function fromBroadcast(bus: PubSub.PubSub<string>) {
@@ -186,7 +184,7 @@ const policy = pipe(Schedule.spaced("400 millis"), Schedule.upTo({ times: 3 }))
 const pulses = Stream.fromSchedule(policy)
 
 function readPulses() {
-  return Stream.runCollect(pulses) // [0, 1, 2]
+  return pulses.runCollect() // [0, 1, 2]
 }
 ```
 

@@ -25,6 +25,8 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
 | `const x = yield* work()` | `const x = work()` |
 | `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, then call the next function |
+| `Option.getOrElse(Option.map(maybe, f), () => 0)` | `maybe.map(f).getOrElse(() => 0)` |
+| `pipe(stream, Stream.filter(p), Stream.take(3))` | `stream.filter(p).take(3)` |
 | `Context.Service` | `service Users { find(id: string): User!NotFound }`; call `Users.find(id)` |
 | `Layer.effect(Users, Effect.gen(function* () { ... }))` | `layer UsersLive: Users { setup; find(id) { ... } }` |
 | `Effect.provide(program, AppLive)` | `with AppLive { ... }` |
@@ -56,7 +58,7 @@ function concurrent() {
 }
 ```
 
-A call whose result type is Effect runs at that point. Use a function with no arguments wherever an Effect API expects a program. This applies to `Effect.provide`, `Effect.retry`, `Effect.timeout`, and entries in `Effect.all`.
+A call whose result type is Effect runs at that point, except where a parameter expects a program: there the call is passed by name, and runs when the program runs. This applies to `Effect.retry`, `Effect.timeout`, `fork`, and entries in `Effect.all`. A program of several statements is a function with no arguments, `() => { ... }`.
 
 A held Effect value runs when called with no arguments. Data that Effect can also execute, such as `Config` and `Exit`, stays data until explicitly called. A producer call constructs a lazy Stream; see [Producers](112-producers.md).
 

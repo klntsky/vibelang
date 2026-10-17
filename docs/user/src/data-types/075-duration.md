@@ -32,14 +32,14 @@ const checked = Duration.fromInput("3 seconds")
 
 ```ts
 const delay = Duration.minutes(2)
-Duration.toMillis(delay) // 120000
-Duration.toSeconds(delay) // 120
-Duration.toMinutes(delay) // 2
-Duration.toHours(delay) // 1 / 30
-Duration.toDays(Duration.weeks(1)) // 7
-Duration.toWeeks(Duration.days(14)) // 2
-Duration.toNanos(Duration.millis(3)) // Some containing 3000000n
-Duration.toNanos(Duration.infinity) // None
+delay.toMillis() // 120000
+delay.toSeconds() // 120
+delay.toMinutes() // 2
+delay.toHours() // 1 / 30
+Duration.weeks(1).toDays() // 7
+Duration.days(14).toWeeks() // 2
+Duration.millis(3).toNanos() // Some containing 3000000n
+Duration.infinity.toNanos() // None
 ```
 
 Numeric conversions return numbers in the requested unit. `toNanos` returns an `Option<bigint>` because infinity has no bigint representation. `toNanosUnsafe` returns the bigint directly for finite input and throws for infinite input.
@@ -49,11 +49,11 @@ Numeric conversions return numbers in the requested unit. `toNanos` returns an `
 ```ts
 const elapsed = Duration.seconds(9)
 const budget = Duration.seconds(12)
-Duration.isLessThan(elapsed, budget) // true
-Duration.isLessThanOrEqualTo(elapsed, elapsed) // true
-Duration.isGreaterThan(budget, elapsed) // true
-Duration.isGreaterThanOrEqualTo(budget, budget) // true
-Duration.equals(Duration.seconds(1), Duration.millis(1000)) // true
+elapsed.isLessThan(budget) // true
+elapsed.isLessThanOrEqualTo(elapsed) // true
+budget.isGreaterThan(elapsed) // true
+budget.isGreaterThanOrEqualTo(budget) // true
+Duration.seconds(1).equals(Duration.millis(1000)) // true
 ```
 
 Comparison uses the elapsed span, independent of the constructor used. Keep durations in this form rather than converting them all to a less precise unit before comparing.
@@ -63,9 +63,9 @@ Comparison uses the elapsed span, independent of the constructor used. Keep dura
 ```ts
 const attempt = Duration.seconds(4)
 const overhead = Duration.millis(500)
-const total = Duration.sum(attempt, overhead)
-const doubled = Duration.times(total, 2)
-Duration.toMillis(doubled) // 9000
+const total = attempt.sum(overhead)
+const doubled = total.times(2)
+doubled.toMillis() // 9000
 
 function waitBeforeRetry() {
   sleep(doubled)
@@ -77,7 +77,7 @@ function waitBeforeRetry() {
 ## Converting and formatting
 
 ```ts
-Duration.format(Duration.millis(6250)) // "6s 250ms"
+Duration.millis(6250).format() // "6s 250ms"
 String(Duration.infinity) // "Infinity"
 Duration.toNanosUnsafe(Duration.millis(2)) // 2000000n
 ```

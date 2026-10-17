@@ -157,7 +157,7 @@ Two things that look the same mean different things, on purpose.
 ```ts es
 function firstAdmin(users: ReadonlyArray<User>) {
   try {
-    return Option.getOrThrow(Option.fromNullishOr(users.find(isAdmin)))
+    return Option.fromNullishOr(users.find(isAdmin)).getOrThrow()
   } catch (e) {
     return guest
   }

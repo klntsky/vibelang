@@ -15,7 +15,7 @@ function download() {
     Schedule.exponential("500 millis"),
     Schedule.setInputType<Throttled>(),
     Schedule.modifyDelay(({ duration, input }) =>
-      Duration.max(duration, input.retryAfter)),
+      duration.max(input.retryAfter)),
     Schedule.upTo({ times: 3 })
   )
   return retry(() => {
@@ -74,7 +74,7 @@ error Offline
 function readWithDeadline() {
   return pipe(
     () => { throw new Offline() },
-    retry(Schedule.upTo(Schedule.exponential("80 millis"), { times: 5 })),
+    retry(Schedule.exponential("80 millis").upTo({ times: 5 })),
     timeout("350 millis")
   )
 }
@@ -89,10 +89,7 @@ error Disconnected
 
 function reconnect() {
   let attempts = 0
-  const phases = Schedule.concat(
-    Schedule.upTo(Schedule.spaced("200 millis"), { times: 2 }),
-    Schedule.upTo(Schedule.spaced("4 seconds"), { times: 3 })
-  )
+  const phases = Schedule.spaced("200 millis").upTo({ times: 2 }).concat(Schedule.spaced("4 seconds").upTo({ times: 3 }))
   return retry(() => {
     attempts++
     if (attempts < 4) throw new Disconnected()
@@ -120,7 +117,7 @@ function observedRequest() {
       logWarning("retry planned", {
         retry: attempt,
         status: input.status,
-        delayMs: Duration.toMillis(duration)
+        delayMs: duration.toMillis()
       })
     })
   )

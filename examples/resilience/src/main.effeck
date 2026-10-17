@@ -31,7 +31,7 @@ export function scenario() {
   const pending = fork(fetchReport())
   const fastest = race(cachedReport(), slowReport())
   const timed = deadline()
-  const report = Fiber.join(pending)
+  const report = pending.join()
   return { fastest, timed, report }
 }
 

@@ -18,7 +18,7 @@ Sink constructors and operators that return Sink values are trusted library call
 function parseHeader() {
   const source = Stream.make("format-v2", "length-64", "payload")
   const header = Sink.take<string>(2)
-  return Stream.run(source, header)
+  return source.run(header)
 }
 // Array<string>!!
 // Returns ["format-v2", "length-64"].
@@ -30,10 +30,10 @@ function parseHeader() {
 
 ```ts
 function headerWithLeftovers() {
-  const sink = Sink.mapEnd(Sink.take<string>(1), ([header, rest]) => [
+  const sink = (Sink.take<string>(1)).mapEnd(([header, rest]) => [
     { header, rest: rest ?? [] }
   ] as const)
-  return Stream.run(Stream.fromArray(["header", "first", "second"]), sink)
+  return Stream.fromArray(["header", "first", "second"]).run(sink)
 }
 // Returns { header: ["header"], rest: ["first", "second"] }.
 ```

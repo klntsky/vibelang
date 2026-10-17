@@ -11,7 +11,7 @@ function buildDashboard() {
     return "chart"
   })
   logInfo("preparing dashboard frame")
-  return Fiber.join(chart)
+  return chart.join()
 }
 // string!!
 ```
@@ -24,7 +24,7 @@ function buildDashboard() {
 function inspectChild() {
   const child = fork(() => { throw "render failed" })
   const exit = Fiber.await(child)
-  if (Exit.isFailure(exit)) {
+  if (exit.isFailure()) {
     logError("renderer stopped", exit.cause)
   }
   return exit
@@ -45,7 +45,7 @@ function stopWorker() {
     }
   })
   sleep("10 millis")
-  Fiber.interrupt(worker)
+  worker.interrupt()
   logInfo("worker has terminated")
 }
 ```
@@ -64,8 +64,8 @@ function combine() {
     return 18
   })
   const both = all([
-    Fiber.join(title),
-    Fiber.join(rows)
+    title.join(),
+    rows.join()
   ], { concurrency: 2 })
   return both
 }
@@ -114,7 +114,7 @@ function scopedExample() {
 
 function detachedExample() {
   const independent = Effect.forkDetach(() => sleep("50 millis"))
-  Fiber.join(independent)
+  independent.join()
 }
 ```
 
@@ -127,12 +127,12 @@ function waitForReady() {
   const ready = Deferred.make<void>()
   const worker = fork(() => {
     logInfo("worker initialized")
-    Deferred.succeed(ready, undefined)
+    ready.succeed(undefined)
     sleep("20 millis")
   })
   Deferred.await(ready)
   logInfo("initialization is complete")
-  Fiber.join(worker)
+  worker.join()
 }
 ```
 

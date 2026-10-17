@@ -32,7 +32,7 @@ function exportRows(accepted: boolean) {
 ```ts
 function observedExport(accepted: boolean) {
   return Effect.onExit(() => exportRows(accepted), (exit) => {
-    if (Exit.isSuccess(exit)) {
+    if (exit.isSuccess()) {
       log("Export succeeded")
     } else {
       log("Export stopped", exit.cause.reasons.map((reason) => reason._tag))
@@ -48,7 +48,7 @@ function observedExport(accepted: boolean) {
 ```ts
 function reportFailedExport(accepted: boolean) {
   return Effect.onError(() => exportRows(accepted), (cause) => {
-    if (Cause.hasInterrupts(cause)) {
+    if (cause.hasInterrupts()) {
       log("Export cancelled; cleanup complete")
     } else {
       log("Export failed; cleanup complete")

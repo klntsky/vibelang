@@ -162,7 +162,10 @@ for GitHub highlighting.
 
 Hover shows a running call's success value as "Runs here and returns `T`",
 and a plain helper's direct signature alongside its TypeScript-facing type
-(D77). Prelude names and service members complete in scope (D78). TypeScript
+(D77). Prelude names and service members complete in scope (D78). A method of
+an Effect data type hovers as the function it calls, "Method syntax: calls
+`Option.getOrElse(maybe, …)`", and completes after a dot (D152). A call passed
+by name hovers as "Passed by name to `fork` as a program" (D147). TypeScript
 files retain TypeScript hover behavior. D33's control-class hover text,
 catch-specific completions, mechanical EK code actions, and migration
 refactors remain design targets. Diagnostic messages include repair suggestions
@@ -221,6 +224,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
+| EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
 
 #### Linting
 

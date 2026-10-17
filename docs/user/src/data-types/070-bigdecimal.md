@@ -21,8 +21,8 @@ const parsed = BigDecimal.fromString("18.625")
 const invalid = BigDecimal.fromString("eighteen")
 const fromNumber = BigDecimal.fromNumber(2.5)
 
-Option.isSome(parsed) // true
-Option.isNone(invalid) // true
+parsed.isSome() // true
+invalid.isNone() // true
 BigDecimal.format(whole) // "42"
 ```
 
@@ -50,14 +50,14 @@ const fixedRate = BigDecimal.fromNumberUnsafe(1.25)
 ```ts
 const price = BigDecimal.make(875n, 2)
 const quantity = BigDecimal.fromBigInt(4n)
-const subtotal = BigDecimal.multiply(price, quantity)
+const subtotal = price.multiply(quantity)
 const discount = BigDecimal.make(250n, 2)
-const total = BigDecimal.subtract(subtotal, discount)
+const total = subtotal.subtract(discount)
 
 BigDecimal.format(total) // "32.5"
-BigDecimal.format(BigDecimal.sum(total, discount)) // "35"
-BigDecimal.divide(total, quantity) // Some containing 8.125
-BigDecimal.remainder(total, quantity) // Some containing 0.5
+BigDecimal.format(total.sum(discount)) // "35"
+total.divide(quantity) // Some containing 8.125
+total.remainder(quantity) // Some containing 0.5
 BigDecimal.sign(BigDecimal.negate(total)) // -1
 BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total))) // "32.5"
 ```
@@ -69,13 +69,13 @@ BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total))) // "32.5"
 ```ts
 const amount = BigDecimal.make(325n, 1)
 const limit = BigDecimal.fromBigInt(40n)
-BigDecimal.isLessThan(amount, limit) // true
-BigDecimal.isLessThanOrEqualTo(amount, amount) // true
-BigDecimal.isGreaterThan(limit, amount) // true
-BigDecimal.isGreaterThanOrEqualTo(limit, limit) // true
-BigDecimal.min(amount, limit) // amount
-BigDecimal.max(amount, limit) // limit
-BigDecimal.between(amount, {
+amount.isLessThan(limit) // true
+amount.isLessThanOrEqualTo(amount) // true
+limit.isGreaterThan(amount) // true
+limit.isGreaterThanOrEqualTo(limit) // true
+amount.min(limit) // amount
+amount.max(limit) // limit
+amount.between({
   minimum: BigDecimal.fromBigInt(0n), maximum: limit
 }) // true
 BigDecimal.isZero(amount) // false
@@ -90,8 +90,8 @@ Use decimal comparisons rather than converting to numbers. Bounds passed to `bet
 
 ```ts
 const padded = BigDecimal.make(87500n, 4)
-const compact = BigDecimal.normalize(padded)
-BigDecimal.equals(padded, BigDecimal.make(875n, 2)) // true
+const compact = padded.normalize()
+padded.equals(BigDecimal.make(875n, 2)) // true
 BigDecimal.format(compact) // "8.75"
 BigDecimal.toExponential(compact) // "8.75e+0"
 ```

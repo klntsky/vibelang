@@ -23,11 +23,11 @@ const present = Option.some(24)
 const absent = Option.none<number>()
 const positive = Option.liftPredicate((n: number) => n > 0)
 positive(-2) // None
-Option.isSome(present) // true
-Option.isNone(absent) // true
+present.isSome() // true
+absent.isNone() // true
 
 function label(value: Option.Option<number>) {
-  if (Option.isSome(value)) return `Limit: ${value.value}`
+  if (value.isSome()) return `Limit: ${value.value}`
   return "No limit"
 }
 ```
@@ -36,7 +36,7 @@ function label(value: Option.Option<number>) {
 
 ```ts
 function describe(value: Option.Option<string>) {
-  return Option.match(value, {
+  return value.match({
     onNone: () => "Anonymous",
     onSome: (name) => `Signed in as ${name}`
   })
@@ -53,9 +53,9 @@ interface Address {
 }
 
 function streetLabel(address: Option.Option<Address>) {
-  const street = Option.flatMap(address, (value) => value.street)
-  const trimmed = Option.map(street, (value) => value.trim())
-  return Option.filter(trimmed, (value) => value.length > 0)
+  const street = address.flatMap((value) => value.street)
+  const trimmed = street.map((value) => value.trim())
+  return trimmed.filter((value) => value.length > 0)
 }
 ```
 
@@ -66,13 +66,13 @@ function streetLabel(address: Option.Option<Address>) {
 ```ts
 function extract(value: Option.Option<string>) {
   return {
-    defaulted: Option.getOrElse(value, () => "Guest"),
-    nullable: Option.getOrNull(value),
-    optional: Option.getOrUndefined(value)
+    defaulted: value.getOrElse(() => "Guest"),
+    nullable: value.getOrNull(),
+    optional: value.getOrUndefined()
   }
 }
 
-const certain = Option.getOrThrow(Option.some("known"))
+const certain = Option.some("known").getOrThrow()
 ```
 
 `getOrElse` computes its fallback only for `None`. `getOrNull` and `getOrUndefined` adapt to APIs expecting nullish values. `getOrThrow` throws a defect on `None`, which an Effeck `catch` does not handle; prefer a guard, default, or `Effect.fromOption` when absence is expected rather than a programming error. A `catch` around only `getOrThrow` cannot run and receives warning EK2004 by default.
@@ -84,7 +84,7 @@ function choose(
   preferred: Option.Option<string>,
   backup: Option.Option<string>
 ) {
-  return Option.orElse(preferred, () => backup)
+  return preferred.orElse(() => backup)
 }
 
 const first = Option.firstSomeOf([
@@ -130,7 +130,7 @@ function combine(
   name: Option.Option<string>,
   count: Option.Option<number>
 ) {
-  const record = Option.zipWith(name, count, (name, count) => ({ name, count }))
+  const record = name.zipWith(count, (name, count) => ({ name, count }))
   const tuple = Option.all([name, count])
   const fields = Option.all({ name, count })
   return { record, tuple, fields }

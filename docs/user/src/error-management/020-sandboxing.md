@@ -31,8 +31,8 @@ function rowFailureKinds() {
     return sandboxedRow()
   } catch (cause) {
     return cause.reasons.map((reason) => {
-      if (Cause.isFailReason(reason)) return `row ${reason.error.line}`
-      if (Cause.isDieReason(reason)) return "defect"
+      if (reason.isFailReason()) return `row ${reason.error.line}`
+      if (reason.isDieReason()) return "defect"
       return "interruption"
     })
   }
@@ -48,7 +48,7 @@ function rowOrPlaceholder() {
   try {
     return sandboxedRow()
   } catch (cause) {
-    if (!Cause.hasDies(cause) && !Cause.hasInterrupts(cause)) {
+    if (!cause.hasDies() && !cause.hasInterrupts()) {
       return "Malformed row omitted"
     }
     return Effect.failCause(cause)

@@ -43,7 +43,7 @@ function renameStatus() {
 function currentSnapshot() {
   const count = SubscriptionRef.make(7)
   const changes = SubscriptionRef.changes(count)
-  return Stream.runCollect(Stream.take(changes, 1)) // [7]
+  return changes.take(1).runCollect() // [7]
 }
 ```
 
@@ -58,13 +58,10 @@ function observeTwoClients() {
   const secondReady = Deferred.make<void>()
 
   function client(ready: Deferred.Deferred<void>) {
-    return Stream.runForEach(
-      Stream.take(SubscriptionRef.changes(count), 2),
-      (value) => {
+    return SubscriptionRef.changes(count).take(2).runForEach((value) => {
         logInfo("observed", value)
-        Deferred.succeed(ready, undefined)
-      }
-    )
+        ready.succeed(undefined)
+      })
   }
 
   const first = fork(client(firstReady))
@@ -72,8 +69,8 @@ function observeTwoClients() {
   Deferred.await(firstReady)
   Deferred.await(secondReady)
   SubscriptionRef.set(count, 1)
-  Fiber.join(first)
-  Fiber.join(second)
+  first.join()
+  second.join()
 }
 ```
 

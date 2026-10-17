@@ -55,7 +55,7 @@ function decodeWithEffects(input: unknown) {
 
 function decodeAsData(input: unknown) {
   const result = Schema.decodeUnknownResult(Shipment)(input)
-  if (Result.isFailure(result)) return result.failure.message
+  if (result.isFailure()) return result.failure.message
   return `received ${result.success.tracking}`
 }
 

@@ -411,16 +411,16 @@ error <span class="t">MailError</span> {
   }
 }
 <span class="c">// User!InvalidId!Users</span></code></pre></figure></div>
-<p>To handle some errors and pass the rest on, narrow and rethrow. TypeScript&#39;s narrowing works on the caught value:</p>
+<p>To handle some errors and pass the rest on, name them in the clause (D131). <code>catch (e: UserNotFound)</code> handles only failures with that type&#39;s <code>_tag</code>, and the others propagate with their types:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">lookupOrGuest</span>(raw: <span class="l">string</span>) {
   <span class="k">try</span> {
     <span class="k">return</span> <span class="t">Users</span>.<span class="f">find</span>(<span class="t">String</span>(<span class="f">parseId</span>(raw)))
-  } <span class="k">catch</span> (e) {                          <span class="c">// e: InvalidId | UserNotFound</span>
-    <span class="k">if</span> (e <span class="k">instanceof</span> <span class="t">UserNotFound</span>) <span class="k">return</span> guest
-    <span class="k">throw</span> e                              <span class="c">// e: InvalidId here, so E is InvalidId</span>
+  } <span class="k">catch</span> (e: <span class="t">UserNotFound</span>) {
+    <span class="k">return</span> guest
   }
 }
 <span class="c">// User!InvalidId!Users</span></code></pre></figure>
+<p>Several clauses can follow one <code>try</code>, each naming a type or a union of types, and a final untyped clause catches the rest. A failure raised inside a clause is not tested by the clauses after it. The test compares <code>_tag</code>, so it also matches tagged errors from other packages, such as <code>Schema.SchemaError</code>. A clause type without a literal <code>_tag</code> is EK2105, and a clause after an untyped one is EK2106. Narrowing and rethrowing inside an untyped clause still works, since TypeScript&#39;s narrowing applies to the caught value.</p>
 <p>Effect&#39;s combinators still work when an expression reads better than a block. Pass the program as a function:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="t">Effect</span>.<span class="f">catchTag</span>(<span class="t">Users</span>.<span class="f">find</span>(id), <span class="s">"UserNotFound"</span>, () =&gt; guest)</code></pre></figure>
 <h4 id="promising-that-nothing-escapes"><a class="anchor" href="#promising-that-nothing-escapes">Promising that nothing escapes</a></h4>
@@ -475,7 +475,7 @@ error <span class="t">MailError</span> {
 <p><strong><code>catch</code> sees expected failures only.</strong> Inside <code>Effect.gen</code>, a JavaScript <code>catch</code> sees any synchronous exception from the code in its <code>try</code>. In Effeck, an exception that no contract lists is a defect, and <code>catch</code> does not see it. That covers Effect&#39;s &quot;cannot fail here&quot; functions, such as <code>Option.getOrThrow</code> and <code>Schema.decodeUnknownSync</code>, whose exceptions are defects (<a href="#10-working-with-typescript">Chapter 10</a>). Each has a form for code that can fail: <code>Option.getOrElse</code>, <code>Effect.fromOption</code>, <code>Schema.decodeUnknownEffect</code>. A <code>catch</code> that therefore can never run is reported, as a warning by default:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">firstAdmin</span>(users: <span class="t">ReadonlyArray</span>&lt;<span class="t">User</span>&gt;) {
   <span class="k">try</span> {
-    <span class="k">return</span> <span class="t">Option</span>.<span class="f">getOrThrow</span>(<span class="t">Option</span>.<span class="f">fromNullishOr</span>(users.<span class="f">find</span>(isAdmin)))
+    <span class="k">return</span> <span class="t">Option</span>.<span class="f">fromNullishOr</span>(users.<span class="f">find</span>(isAdmin)).<span class="f">getOrThrow</span>()
   } <span class="k">catch</span> (e) {
     <span class="k">return</span> guest
   }
@@ -532,7 +532,7 @@ error <span class="t">MailError</span> {
 <span class="c">// string!!Settings</span></code></pre></figure>
 <p>Calling any member through the service looks the service up, so the service joins R whatever the member returns. <code>Path.join(a, b)</code>, from Effect&#39;s <code>Path</code> service, returns a string and still adds <code>Path</code>. A member that is itself an <code>Effect</code> value runs when called: <code>Terminal.readLine()</code>. A member the service declares wins over the key&#39;s own members, such as <code>pipe</code>, <code>use</code>, and <code>key</code>, so <code>Rpc.call(…)</code> reaches the service even though the key, a class, has a <code>call</code> of its own. A static member with the same name as a service member is EK3006.</p>
 <h4 id="writing-a-provider"><a class="anchor" href="#writing-a-provider">Writing a provider</a></h4>
-<p>A provider is a <code>Layer</code>. Build one with Effect&#39;s own <code>Layer.effect</code>, passing a function that runs when the layer is built and returns the implementation.</p>
+<p>A provider is a <code>Layer</code>. Build one with Effect&#39;s own <code>Layer.effect</code>, passing a function that runs when the layer is built and returns the implementation. <code>layer UsersLive: Users { ... }</code> writes the same provider with less: the statements before the members run once, when the layer is built, the members form the implementation, and a value member is <code>readonly name = value</code> (D129). It is short for <code>Layer.effect(Users, () =&gt; { ...; return { ... } })</code>, or <code>Layer.succeed(Users, { ... })</code> when there are no statements. A statement after the members is EK2104.</p>
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersLive</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Users</span>, <span class="t">Effect</span>.<span class="f">gen</span>(<span class="k">function</span>* () {
   <span class="k">const</span> db = <span class="k">yield</span>* <span class="t">Database</span>
   <span class="k">return</span> <span class="t">Users</span>.<span class="k">of</span>({
@@ -546,19 +546,17 @@ error <span class="t">MailError</span> {
     })
   })
 }))
-<span class="c">// Layer&lt;Users, never, Database&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersLive</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Users</span>, () =&gt; {
+<span class="c">// Layer&lt;Users, never, Database&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">UsersLive</span>: <span class="t">Users</span> {
   <span class="k">const</span> db = <span class="t">Database</span>()              <span class="c">// runs once, when the layer is built</span>
-  <span class="k">return</span> {
-    <span class="f">find</span>(id) {
-      <span class="k">const</span> rows = <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">query</span>(<span class="s">"select * from users where id = $1"</span>, [id]))
-      <span class="k">if</span> (rows.length === <span class="n">0</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">UserNotFound</span>({ id })
-      <span class="k">return</span> <span class="f">toUser</span>(rows[<span class="n">0</span>])
-    },
-    <span class="f">rename</span>(id, name) {
-      <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">execute</span>(<span class="s">"update users set name = $1 where id = $2"</span>, [name, id]))
-    }
+  <span class="f">find</span>(id) {
+    <span class="k">const</span> rows = <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">query</span>(<span class="s">"select * from users where id = $1"</span>, [id]))
+    <span class="k">if</span> (rows.length === <span class="n">0</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">UserNotFound</span>({ id })
+    <span class="k">return</span> <span class="f">toUser</span>(rows[<span class="n">0</span>])
   }
-})
+  <span class="f">rename</span>(id, name) {
+    <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">execute</span>(<span class="s">"update users set name = $1 where id = $2"</span>, [name, id]))
+  }
+}
 <span class="c">// Layer&lt;Users, never, Database&gt;</span></code></pre></figure></div>
 <p><code>Database()</code> runs when the layer is built and captures the implementation in <code>db</code>. <code>Database</code> is therefore a requirement of <em>building</em> <code>UsersLive</code>, not of calling <code>Users.find</code>. Code that calls <code>Users.find</code> needs only <code>Users</code>.</p>
 <p>The compiler checks each method against the service&#39;s contract. Without the <code>Effect.orDie</code>, the database&#39;s <code>DbError</code> would escape:</p>
@@ -633,27 +631,23 @@ error <span class="t">MailError</span> {
     execute: (sql, params) =&gt; pool.<span class="f">execute</span>(sql, params)
   })
 }))
-<span class="c">// Layer&lt;Database, ConnectError, DatabaseConfig&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">DatabaseLive</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Database</span>, () =&gt; {
+<span class="c">// Layer&lt;Database, ConnectError, DatabaseConfig&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">DatabaseLive</span>: <span class="t">Database</span> {
   <span class="k">const</span> pool = <span class="t">Postgres</span>.<span class="f">connect</span>(<span class="t">DatabaseConfig</span>().url)    <span class="c">// no `using`: the pool lives as long as the layer</span>
-  <span class="k">return</span> {
-    query: (sql, params) =&gt; pool.<span class="f">query</span>(sql, params),
-    execute: (sql, params) =&gt; pool.<span class="f">execute</span>(sql, params)
-  }
-})
+  <span class="f">query</span>(sql, params) { <span class="k">return</span> pool.<span class="f">query</span>(sql, params) }
+  <span class="f">execute</span>(sql, params) { <span class="k">return</span> pool.<span class="f">execute</span>(sql, params) }
+}
 <span class="c">// Layer&lt;Database, ConnectError, DatabaseConfig&gt;</span></code></pre></figure></div>
 <p><code>Postgres.connect</code> returns <code>Pool!ConnectError!Scope</code>. Without <code>using</code>, the pool belongs to whoever supplies the <code>Scope</code> (<a href="#6-resources">Chapter 6</a>), and <code>Layer.effect</code> supplies the layer&#39;s own Scope, as it does in Effect today. The pool therefore closes when the program that provided <code>DatabaseLive</code> finishes. Writing <code>using pool = …</code> would close it as soon as the provider function returned, before any query ran.</p>
 <h4 id="requirements-that-would-leak"><a class="anchor" href="#requirements-that-would-leak">Requirements that would leak</a></h4>
 <p>Sometimes a method looks up another service each time it is called, instead of capturing it when the layer is built. That lookup happens in the <em>caller&#39;s</em> context, so its requirement belongs to the caller, and the service contract has to say so. The compiler catches the mismatch:</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersAudited</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Users</span>, () =&gt; {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">UsersAudited</span>: <span class="t">Users</span> {
   <span class="k">const</span> db = <span class="t">Database</span>()
-  <span class="k">return</span> {
-    <span class="f">find</span>(id) {
-      <span class="t">Audit</span>.<span class="f">record</span>(<span class="s">`users.find ${id}`</span>)    <span class="c">// looked up on every call</span>
-      <span class="k">return</span> <span class="f">findIn</span>(db, id)
-    },
-    <span class="f">rename</span>(id, name) { <span class="f">renameIn</span>(db, id, name) }
+  <span class="f">find</span>(id) {
+    <span class="t">Audit</span>.<span class="f">record</span>(<span class="s">`users.find ${id}`</span>)    <span class="c">// looked up on every call</span>
+    <span class="k">return</span> <span class="f">findIn</span>(db, id)
   }
-})</code></pre></figure>
+  <span class="f">rename</span>(id, name) { <span class="f">renameIn</span>(db, id, name) }
+}</code></pre></figure>
 <figure class="code side-none"><pre class="code" data-lang="text"><code>error EK3101: UsersAudited.find looks up Audit each time it is called, but
   Users.find(id: string): Effect&lt;User, UserNotFound, never&gt;
   allows no call-time requirements.
@@ -685,6 +679,13 @@ error EK3203: providers form a cycle: SessionsLive → Database → DatabaseLive
 }
 <span class="c">// void!UserNotFound | MailError | ConfigError | ConnectError!</span></code></pre></figure>
 <p><code>main</code>&#39;s contract shows what providing costs: <code>ConfigError</code> and <code>ConnectError</code> come from building the layers. The layers are built when <code>Effect.provide</code> runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.</p>
+<p><code>with AppLive { ... }</code> provides a layer to a block (D130). It is short for <code>Effect.provide(() =&gt; { ... }, AppLive)</code>, except that its statements are code of the enclosing function: a <code>return</code> returns from the function, and <code>break</code> and <code>continue</code> leave its loops. Its errors are the block&#39;s and the layer&#39;s, and its requirements are the block&#39;s that the layer does not provide plus the layer&#39;s own. Like <code>Effect.provide</code>, it accepts a layer, an array of layers, or a <code>Context</code>. A <code>with</code> block at a module&#39;s top level would run a program there, so it is EK1001.</p>
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">main</span>() {
+  with <span class="t">AppLive</span> {
+    <span class="f">log</span>(<span class="s">`welcomed ${welcome("42")}`</span>)
+  }
+}
+<span class="c">// void!UserNotFound | MailError | ConfigError | ConnectError!</span></code></pre></figure>
 <p>Each <code>Effect.provide</code> builds its layers once, so two sibling <code>provide</code> calls build them twice:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">counts</span>() {
   <span class="k">const</span> users = <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">countUsers</span>(), <span class="t">AppLive</span>)      <span class="c">// opens a database pool</span>
@@ -702,10 +703,10 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   <span class="t">Effect</span>.<span class="f">gen</span>(<span class="k">function</span>* () {
     <span class="k">const</span> name = <span class="k">yield</span>* <span class="f">welcome</span>(<span class="s">"42"</span>).<span class="f">pipe</span>(<span class="t">Effect</span>.<span class="f">provide</span>(<span class="t">Layer</span>.<span class="f">mergeAll</span>(<span class="t">UsersTest</span>, <span class="t">MailerTest</span>)))
     assert.<span class="f">strictEqual</span>(name, <span class="s">"Ada"</span>)
-  }))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersTest</span> = <span class="t">Layer</span>.<span class="f">succeed</span>(<span class="t">Users</span>, {
-  find: (id) =&gt; ({ id, name: <span class="s">"Ada"</span>, email: <span class="s">"ada@example.com"</span> }),
-  rename: () =&gt; {}
-})
+  }))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">UsersTest</span>: <span class="t">Users</span> {
+  <span class="f">find</span>(id) { <span class="k">return</span> ({ id, name: <span class="s">"Ada"</span>, email: <span class="s">"ada@example.com"</span> }) }
+  <span class="f">rename</span>() {}
+}
 
 it.<span class="f">effect</span>(<span class="s">"welcome returns the user's name"</span>, () =&gt; {
   <span class="k">const</span> name = <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">welcome</span>(<span class="s">"42"</span>), <span class="f">wire</span>(<span class="t">UsersTest</span>, <span class="t">MailerTest</span>))
@@ -762,6 +763,13 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <tr><td><code>Effect.retry</code>, <code>Effect.timeout</code>, <code>Effect.withSpan</code>, <code>Effect.cached</code>, <code>Effect.uninterruptible</code></td><td>the same functions, called or piped as above</td></tr></tbody></table></div>
 <p>On a cause that also holds a defect, Effect&#39;s recovery operators and <code>try</code>/<code>catch</code> differ; <a href="#17-failures-defects-interruption-and-cleanup">Chapter 17</a> lists how.</p>
 <p>Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (<code>docs/research/pipe-census.md</code>). Pipelines over plain data stay plain: <code>pipe(items, Array.filter(isActive), Array.map(toRow))</code> is an ordinary function call.</p>
+<h4 id="methods-on-effects-data-types"><a class="anchor" href="#methods-on-effects-data-types">Methods on Effect&#39;s data types</a></h4>
+<p>A value of one of Effect&#39;s data types takes its module&#39;s functions as methods (D152). <code>x.name(args)</code> calls <code>Module.name(x, args)</code>:</p>
+<div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> alerts = <span class="f">pipe</span>(readings, <span class="t">Stream</span>.<span class="f">filter</span>((c) =&gt; c &gt; <span class="n">25</span>), <span class="t">Stream</span>.<span class="f">map</span>((c) =&gt; <span class="s">`${c} C`</span>), <span class="t">Stream</span>.<span class="f">take</span>(<span class="n">3</span>))
+<span class="k">const</span> label = <span class="t">Option</span>.<span class="f">getOrElse</span>(<span class="t">Option</span>.<span class="f">map</span>(user.nickname, (n) =&gt; n.<span class="f">toUpperCase</span>()), () =&gt; <span class="s">"anonymous"</span>)</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> alerts = readings.<span class="f">filter</span>((c) =&gt; c &gt; <span class="n">25</span>).<span class="f">map</span>((c) =&gt; <span class="s">`${c} C`</span>).<span class="f">take</span>(<span class="n">3</span>)
+<span class="k">const</span> label = user.nickname.<span class="f">map</span>((n) =&gt; n.<span class="f">toUpperCase</span>()).<span class="f">getOrElse</span>(() =&gt; <span class="s">"anonymous"</span>)</code></pre></figure></div>
+<p>The module is the one that declares the value&#39;s type: a <code>Stream</code> takes <code>Stream</code>&#39;s functions, an <code>Option</code> takes <code>Option</code>&#39;s. Eighteen modules qualify: <code>BigDecimal</code>, <code>Cause</code>, <code>Chunk</code>, <code>DateTime</code>, <code>Deferred</code>, <code>Duration</code>, <code>Effect</code>, <code>Exit</code>, <code>Fiber</code>, <code>HashMap</code>, <code>HashSet</code>, <code>Option</code>, <code>Queue</code>, <code>Ref</code>, <code>Result</code>, <code>Schedule</code>, <code>Sink</code>, and <code>Stream</code>. A type&#39;s own members come first, so an <code>Effect</code>&#39;s <code>pipe</code> is its own, and arrays, strings, and objects keep JavaScript&#39;s methods: <code>[1, 2].map(f)</code> is <code>Array.prototype.map</code>. A method that returns an Effect is a call like any other, so it runs where it stands: <code>fiber.join()</code> waits for the fiber, and <code>counter.update((n) =&gt; n + 1)</code> updates the <code>Ref</code>. <a href="#13-what-a-call-means">Chapter 13</a> states the rule.</p>
+<p>The compiled JavaScript calls the module&#39;s function, <code>Stream.take(Stream.map(Stream.filter(readings, …), …), 3)</code>, so a bundler drops the functions a program never calls, as it does for Effect code.</p>
 <h4 id="why-there-is-no"><a class="anchor" href="#why-there-is-no">Why there is no <code>|&gt;</code></a></h4>
 <p>JavaScript&#39;s proposed pipeline operator is not part of Effeck. It conflicts with the rule that calls run: in <code>fetchUser(id) |&gt; Effect.retry(%, policy)</code>, the call <code>fetchUser(id)</code> runs before the pipe sees it, and so would every stage that calls a combinator. The proposal is also not settled: it has been at Stage 2 since 2021-08, its topic token is undecided (the <code>%</code> in its README is disqualified on the proposal&#39;s own wiki), the committee&#39;s January 2026 review listed it as &quot;somewhat stuck&quot;, and TypeScript waits for Stage 3 before implementing it (<code>docs/research/tc39-syntax.md</code> §1). Effeck revisits the operator if it reaches Stage 3.</p>
 <h4 id="storing-returning-and-composing-programs"><a class="anchor" href="#storing-returning-and-composing-programs">Storing, returning, and composing programs</a></h4>
@@ -921,7 +929,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">withProgress</span>(id: <span class="l">string</span>) {
   <span class="k">const</span> pending = <span class="f">fork</span>(<span class="f">buildReport</span>(id))
   <span class="f">sendProgressEmail</span>(id)
-  <span class="k">return</span> <span class="t">Fiber</span>.<span class="f">join</span>(pending)          <span class="c">// waits for it; fails if it failed</span>
+  <span class="k">return</span> pending.<span class="f">join</span>()          <span class="c">// waits for it; fails if it failed</span>
 }
 <span class="c">// Report!ReportError | MailError!Reports | Mailer</span></code></pre></figure>
 <p><code>fork</code> adds the child&#39;s requirements to R and nothing else: the fiber cannot outlive <code>withProgress</code>, so no <code>Scope</code> appears in the contract, and its failures reach you only through <code>Fiber.join</code>. For a longer lifetime, say so with Effect&#39;s combinators: <code>Effect.forkScoped</code> ties the fiber to the caller&#39;s scope and adds <code>Scope</code> to R, <code>Effect.forkChild</code> ties it to the current fiber, and <code>Effect.forkDetach</code> ties it to nothing.</p>
@@ -980,7 +988,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <h4 id="producers-and-effect-streams"><a class="anchor" href="#producers-and-effect-streams">Producers and Effect streams</a></h4>
 <p>To TypeScript, a producer is a <code>Stream</code>: the declaration file types <code>lines</code> as <code>(path: string) =&gt; Stream.Stream&lt;string, IOError, Files&gt;</code>. Inside Effeck, a producer converts to a <code>Stream</code> wherever a <code>Stream</code> is expected, so Stream&#39;s operators apply directly:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">errorCount</span>(path: <span class="l">string</span>) {
-  <span class="k">return</span> <span class="t">Stream</span>.<span class="f">runCount</span>(<span class="t">Stream</span>.<span class="f">filter</span>(<span class="f">lines</span>(path), (line) =&gt; line.<span class="f">startsWith</span>(<span class="s">"ERROR"</span>)))
+  <span class="k">return</span> <span class="f">lines</span>(path).<span class="f">filter</span>((line) =&gt; line.<span class="f">startsWith</span>(<span class="s">"ERROR"</span>)).<span class="f">runCount</span>()
 }
 <span class="c">// number!IOError!Files</span></code></pre></figure>
 <p>The conversion runs the producer on a fiber of its own and hands over each element only when the stream pulls it, through a handoff with no buffer, so a pull from any fiber works and the producer never runs ahead of its consumer. Closing the stream interrupts that fiber, which runs the producer&#39;s cleanup.</p>
@@ -1356,7 +1364,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <p>JavaScript&#39;s built-ins and Effect&#39;s own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript <code>catch</code> inside <code>Effect.gen</code>, an Effeck <code>catch</code> does not see it, and a <code>catch</code> that could only have caught such exceptions is reported, EK2004 (<a href="#3-errors-the-e-channel">Chapter 3</a>).</p>
 <h4 id="how-do-i-use-option-and-result"><a class="anchor" href="#how-do-i-use-option-and-result">How do I use <code>Option</code> and <code>Result</code>?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">displayName</span>(user: <span class="t">User</span>) {
-  <span class="k">return</span> <span class="t">Option</span>.<span class="f">match</span>(<span class="t">Option</span>.<span class="f">fromNullishOr</span>(user.nickname), {
+  <span class="k">return</span> <span class="t">Option</span>.<span class="f">fromNullishOr</span>(user.nickname).<span class="f">match</span>({
     onNone: () =&gt; user.name,
     onSome: (nickname) =&gt; nickname
   })
@@ -1364,7 +1372,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 
 <span class="k">function</span> <span class="f">tryCharge</span>(cartId: <span class="l">string</span>) {
   <span class="k">const</span> outcome = <span class="t">Effect</span>.<span class="f">result</span>(<span class="t">Payments</span>.<span class="f">charge</span>(cartId))    <span class="c">// Result&lt;Receipt, PaymentError&gt;</span>
-  <span class="k">return</span> <span class="t">Result</span>.<span class="f">isSuccess</span>(outcome) ? outcome.success : <span class="l">undefined</span>
+  <span class="k">return</span> outcome.<span class="f">isSuccess</span>() ? outcome.success : <span class="l">undefined</span>
 }
 <span class="c">// Receipt | undefined!!Payments</span></code></pre></figure>
 <p><code>Option</code> and <code>Result</code> (Effect 4&#39;s name for <code>Either</code>) are plain data, imported from <code>effect</code> and used as in TypeScript. <code>Effect.result</code> and <code>Effect.option</code> turn a failure into a value; <code>throw</code> turns a value back into a failure. <code>Option.gen</code> and <code>Result.gen</code> take generators, so they stay in <code>.ts</code> files.</p>
@@ -1389,7 +1397,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <span class="c">// void!DbError | MailError!Mailer</span>
 
 <span class="k">function</span> <span class="f">firstErrorLines</span>(path: <span class="l">string</span>) {
-  <span class="k">return</span> <span class="t">Stream</span>.<span class="f">runCollect</span>(<span class="t">Stream</span>.<span class="f">take</span>(<span class="t">Stream</span>.<span class="f">filter</span>(<span class="f">lines</span>(path), isError), <span class="n">10</span>))
+  <span class="k">return</span> <span class="f">lines</span>(path).<span class="f">filter</span>(isError).<span class="f">take</span>(<span class="n">10</span>).<span class="f">runCollect</span>()
 }</code></pre></figure>
 <p>Effect&#39;s <code>Stream</code>, <code>Sink</code>, and <code>Channel</code> modules work unchanged: their operators take plain functions and Effect-returning callbacks, and the <code>Stream.run*</code> functions return Effects, so calling them runs the stream. <code>for...of</code> iterates a <code>Stream</code> directly, and a <code>function*</code> producer such as <code>lines</code> is a <code>Stream</code> wherever a <code>Stream</code> is expected (<a href="#8-producers-streams-of-values">Chapter 8</a>).</p>
 <h4 id="how-do-i-test"><a class="anchor" href="#how-do-i-test">How do I test?</a></h4>
@@ -1399,7 +1407,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day"</span>, () =&gt; {
   <span class="k">const</span> reminder = <span class="f">fork</span>(<span class="f">remindLater</span>(<span class="s">"ada"</span>, <span class="s">"1 day"</span>))
   <span class="t">TestClock</span>.<span class="f">adjust</span>(<span class="s">"1 day"</span>)                          <span class="c">// virtual time: nothing waits</span>
-  assert.<span class="f">strictEqual</span>(<span class="t">Fiber</span>.<span class="f">join</span>(reminder), <span class="s">"sent"</span>)
+  assert.<span class="f">strictEqual</span>(reminder.<span class="f">join</span>(), <span class="s">"sent"</span>)
 })</code></pre></figure>
 <p><code>@effect/vitest</code> works unchanged: <code>it.effect</code> runs an Effeck function as a test, <code>assert</code> comes from the same package, and <code>TestClock</code> controls time. Fake services are Layers (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>), and a control operation is scripted with a handler (<a href="#9-handlers-defining-your-own-effects">Chapter 9</a>). An <code>Exit</code> is data until called, so <code>assert.deepStrictEqual(Effect.exit(() =&gt; f()), Exit.succeed(1))</code> compares two <code>Exit</code> values. A test written as <code>async () =&gt; { await Effect.runPromise(p) }</code> stays in a <code>.ts</code> file: <code>.effeck</code> has no <code>await</code>, and a runner inside a test body is EK1005 (<a href="#13-what-a-call-means">Chapter 13</a>).</p>
 <h4 id="how-do-i-log-trace-and-record-metrics"><a class="anchor" href="#how-do-i-log-trace-and-record-metrics">How do I log, trace, and record metrics?</a></h4>
@@ -1425,7 +1433,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <span class="k">import</span> { <span class="t">NodeRuntime</span> } <span class="k">from</span> <span class="s">"@effect/platform-node"</span>
 
 <span class="k">function</span> <span class="f">main</span>() {
-  <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">serve</span>(<span class="n">8080</span>), <span class="t">AppLive</span>)
+  with <span class="t">AppLive</span> { <span class="f">serve</span>(<span class="n">8080</span>) }
 }
 
 <span class="t">NodeRuntime</span>.<span class="f">runMain</span>(() =&gt; <span class="f">main</span>())</code></pre></figure>
@@ -1452,10 +1460,10 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
   <span class="k">const</span> scan = <span class="f">fork</span>(<span class="f">slowIndexScan</span>(query))
   <span class="k">const</span> cached = <span class="t">SearchCache</span>.<span class="f">lookup</span>(query)
   <span class="k">if</span> (cached !== <span class="l">undefined</span>) {
-    <span class="t">Fiber</span>.<span class="f">interrupt</span>(scan)               <span class="c">// cancels the scan; its finally blocks run first</span>
+    scan.<span class="f">interrupt</span>()               <span class="c">// cancels the scan; its finally blocks run first</span>
     <span class="k">return</span> cached
   }
-  <span class="k">return</span> <span class="t">Fiber</span>.<span class="f">join</span>(scan)
+  <span class="k">return</span> scan.<span class="f">join</span>()
 }</code></pre></figure>
 <p>They are Effect&#39;s. A fiber is Effect&#39;s fiber, <code>fork</code> starts one owned by the enclosing block (<a href="#7-concurrency">Chapter 7</a>), and <code>Fiber.join</code> and <code>Fiber.interrupt</code> work unchanged. Interruption runs every <code>finally</code> block and <code>using</code> release on the way out, and <code>catch</code> never catches it (<a href="#3-errors-the-e-channel">Chapter 3</a>). <code>Effect.uninterruptible(() =&gt; …)</code> protects a region, <code>Effect.onInterrupt</code> reacts to cancellation, and <code>Effect.timeout</code> and <code>Effect.race</code> interrupt the branches they discard. A Promise is cancelled through the <code>AbortSignal</code> that the <code>try</code> and <code>sync</code> hatches pass.</p>
 <h4 id="how-do-i-wrap-a-callback-api"><a class="anchor" href="#how-do-i-wrap-a-callback-api">How do I wrap a callback API?</a></h4>
@@ -1480,9 +1488,9 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
   <span class="k">const</span> visits = <span class="t">Ref</span>.<span class="f">make</span>(<span class="n">0</span>)
   <span class="f">forEach</span>(paths, (path) =&gt; {
     <span class="t">Visits</span>.<span class="f">record</span>(path)
-    <span class="t">Ref</span>.<span class="f">update</span>(visits, (n) =&gt; n + <span class="n">1</span>)
+    visits.<span class="f">update</span>((n) =&gt; n + <span class="n">1</span>)
   }, { concurrency: <span class="n">4</span> })
-  <span class="k">return</span> <span class="t">Ref</span>.<span class="k">get</span>(visits)
+  <span class="k">return</span> visits.<span class="k">get</span>()
 }
 <span class="c">// number!VisitError!Visits</span></code></pre></figure>
 <p>Local variables work inside one function, as in any JavaScript. State shared between fibers uses Effect&#39;s <code>Ref</code>, <code>SynchronizedRef</code>, and <code>SubscriptionRef</code>, unchanged: <code>Ref.make(0)</code> returns an <code>Effect</code>, so the call runs it and gives you the <code>Ref</code>.</p>
@@ -1511,6 +1519,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <tr><td>A value of an <code>Effect</code> type, called as <code>p()</code></td><td>Runs it</td><td><code>yield* p</code></td></tr>
 <tr><td>A service member, <code>Users.find(id)</code> or <code>Path.join(a, b)</code></td><td>Looks the service up in the current Context (it joins R), then applies these rules to the member: an <code>Effect</code> runs, a plain value is a trusted call (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>)</td><td><code>yield* (yield* Users).find(id)</code>; <code>(yield* Path).join(a, b)</code></td></tr>
 <tr><td>A service member that is an <code>Effect</code> value, <code>Terminal.readLine()</code></td><td>Looks the service up, then runs the member</td><td><code>yield* (yield* Terminal).readLine</code></td></tr>
+<tr><td>A method of an Effect data type, <code>stream.take(3)</code> or <code>fiber.join()</code></td><td>Calls the module&#39;s function with the value first (D152), then applies these rules to that call: an <code>Effect</code> runs, other data is returned</td><td><code>Stream.take(stream, 3)</code>; <code>yield* Fiber.join(fiber)</code></td></tr>
 <tr><td>A service, <code>Users()</code></td><td>Returns the implementation</td><td><code>yield* Users</code></td></tr>
 <tr><td>A control operation, <code>Approval.approve(x)</code></td><td>Asks the nearest handler on this fiber</td><td><code>yield* (yield* Approval).approve(x)</code></td></tr>
 <tr><td>A JavaScript built-in, or an export of <code>effect</code> or <code>@effect/*</code> that does not return an <code>Effect</code></td><td>A trusted call: listed exceptions join E, others are defects</td><td><code>f(a)</code>, with listed exceptions converted</td></tr>
@@ -1531,6 +1540,20 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
   <span class="k">return</span> <span class="t">Port</span>()                                                <span class="c">// runs the Config</span>
 }</code></pre></figure>
 <p>Without this rule, <code>Config.Port(&quot;PORT&quot;)</code> would read the variable before <code>Config.withDefault</code> saw it, and <code>makeError</code> would fail instead of returning an error value.</p>
+<h4 id="methods-on-effects-data-types-1"><a class="anchor" href="#methods-on-effects-data-types-1">Methods on Effect&#39;s data types</a></h4>
+<p><code>x.name(args)</code> is a method call into a module (D152) when all of these hold:</p>
+<ol>
+<li>The file is a <code>.effeck</code> file, and the access is not part of an optional chain (<code>x?.name(…)</code>).</li>
+<li><code>x</code>&#39;s type, after TypeScript resolves type parameters to their constraints, has no member <code>name</code> of its own.</li>
+<li>One of Effect&#39;s data-type modules declares <code>x</code>&#39;s type in its declaration file, <code>effect/dist/&lt;Module&gt;.d.ts</code>. For a union, every member comes from the same module, as <code>None</code> and <code>Some</code> come from <code>Option</code>.</li>
+<li>That module exports a function <code>name</code> with an overload whose first parameter is named <code>self</code>, Effect&#39;s name for a dual&#39;s data-first form, or ends in <code>OrOptions</code>.</li>
+</ol>
+<p>The method&#39;s signatures are those overloads with the first parameter moved to <code>this</code>. TypeScript checks <code>x</code> against it and infers type parameters from it, and a type predicate on it narrows <code>x</code>:</p>
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">describe</span>(value: <span class="t">Option</span>.<span class="t">Option</span>&lt;<span class="l">number</span>&gt;) {
+  <span class="k">if</span> (value.<span class="f">isSome</span>()) <span class="k">return</span> <span class="s">`some ${value.value}`</span>   <span class="c">// Option.isSome(value): value is Some&lt;number&gt;</span>
+  <span class="k">return</span> <span class="s">"none"</span>
+}</code></pre></figure>
+<p>The call compiles to <code>Module.name(x, args)</code>, which the rules above then apply to: <code>Fiber.join(fiber)</code> returns an <code>Effect</code>, so <code>fiber.join()</code> runs, while <code>Stream.take</code> returns a <code>Stream</code>, which is data. The method exists only in the call: <code>const read = maybe.getOrElse</code> is EK4501 (D153), because no function value exists to bind; pass <code>Option.getOrElse</code> itself.</p>
 <h4 id="function-values"><a class="anchor" href="#function-values">Function values</a></h4>
 <p>A function used as a value is passed in the form its destination expects:</p>
 <div class="table"><table><thead><tr><th>Expected type</th><th>What is passed</th></tr></thead><tbody><tr><td>A function type that returns an <code>Effect</code>, as Effect&#39;s combinators expect</td><td>The function&#39;s Effect form</td></tr>
@@ -2732,7 +2755,10 @@ for this project. Add <code>*.effeck linguist-language=TypeScript</code> to <cod
 for GitHub highlighting.</p>
 <p>Hover shows a running call&#39;s success value as &quot;Runs here and returns <code>T</code>&quot;,
 and a plain helper&#39;s direct signature alongside its TypeScript-facing type
-(D77). Prelude names and service members complete in scope (D78). TypeScript
+(D77). Prelude names and service members complete in scope (D78). A method of
+an Effect data type hovers as the function it calls, &quot;Method syntax: calls
+<code>Option.getOrElse(maybe, …)</code>&quot;, and completes after a dot (D152). A call passed
+by name hovers as &quot;Passed by name to <code>fork</code> as a program&quot; (D147). TypeScript
 files retain TypeScript hover behavior. D33&#39;s control-class hover text,
 catch-specific completions, mechanical EK code actions, and migration
 refactors remain design targets. Diagnostic messages include repair suggestions
@@ -2760,6 +2786,9 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK2101</td><td>A declaration without a body that has no full contract</td><td>Write <code>T!Errors!Dependencies</code>, or <code>T!!</code></td><td>14</td></tr>
 <tr><td>EK2102</td><td>A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle&#39;s channels are known (D71, D72)</td><td>Write the contract</td><td>14</td></tr>
 <tr><td>EK2103</td><td>A member of a <code>service</code> or <code>control</code> declaration with a body or an initializer (D128)</td><td>Implement it in a layer, or make it static</td><td>4</td></tr>
+<tr><td>EK2104</td><td>A setup statement of a <code>layer</code> declaration that follows one of its members (D129)</td><td>Move the statement above the members</td><td>4</td></tr>
+<tr><td>EK2105</td><td>A typed catch clause whose type has a member without a literal <code>_tag</code> (D131)</td><td>Catch a tagged error, or test the value in an untyped clause</td><td>3</td></tr>
+<tr><td>EK2106</td><td>A catch clause after an untyped catch clause (D131)</td><td>Move the untyped clause last</td><td>3</td></tr>
 <tr><td>EK3001</td><td>Two services share a key</td><td>Rename one</td><td>4</td></tr>
 <tr><td>EK3002</td><td>A class extends a service</td><td>Replace <code>extends</code> with <code>implements</code></td><td>4</td></tr>
 <tr><td>EK3003</td><td><code>new</code> on a service</td><td>Use <code>Users()</code> for the implementation</td><td>4</td></tr>
@@ -2777,7 +2806,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK4401</td><td>A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100)</td><td>Wrap it in <code>try</code>, or tag the declaration <code>@effeck trusted</code></td><td>10</td></tr>
 <tr><td>EK4402</td><td>Running a Node.js or browser API; importing and passing values is allowed (D108)</td><td>Use the Effect module the error names</td><td>11</td></tr>
 <tr><td>EK4403</td><td>A clock or randomness read (an error by default)</td><td>Use <code>Clock</code>, <code>DateTime</code>, or <code>Random</code></td><td>10</td></tr>
-<tr><td>EK4404</td><td><code>try</code> given Effect&#39;s <code>{ try, catch }</code> options object, which it would treat as a value</td><td>Pass the code and the error mapping as two arguments: <code>try(parse(text), (error) =&gt; …)</code></td><td>10</td></tr></tbody></table></div>
+<tr><td>EK4404</td><td><code>try</code> given Effect&#39;s <code>{ try, catch }</code> options object, which it would treat as a value</td><td>Pass the code and the error mapping as two arguments: <code>try(parse(text), (error) =&gt; …)</code></td><td>10</td></tr>
+<tr><td>EK4501</td><td>A method of an Effect data type named without a call, as in <code>const f = stream.filter</code> (D153)</td><td>Call it, or pass <code>Stream.filter</code> itself</td><td>13</td></tr></tbody></table></div>
 <h4 id="linting"><a class="anchor" href="#linting">Linting</a></h4>
 <p>D35 assigns type and language diagnostics to <code>effeck</code> and reserves type-aware
 linting for <code>.ts</code> files. A stock TypeScript checker models different call
@@ -2940,12 +2970,17 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D126</td><td><code>error NotFound { id: string }</code> declares a tagged error class with readonly fields</td><td>Fewer tokens for the most common declaration</td><td>3</td></tr>
 <tr><td>D127</td><td><strong>Controversial.</strong> Effect types are written <code>Result!Error!Dependencies</code>; an empty slot is never, and left-out dependencies are inferred on a function with a body</td><td>Fewer tokens than <code>Effect&lt;A, E, R&gt;</code> in every contract</td><td>14</td></tr>
 <tr><td>D128</td><td><code>service</code> and <code>control</code> declare abstract classes whose bodiless members are abstract; an implemented member is EK2103</td><td>Fewer tokens than <code>abstract class</code> and <code>abstract</code> on every member</td><td>4, 9</td></tr>
+<tr><td>D129</td><td><code>layer UsersLive: Users { setup; find(id) { ... } }</code> is <code>Layer.effect</code> (or <code>Layer.succeed</code> without setup); setup after members is EK2104</td><td>Fewer tokens than <code>Layer.effect(S, () =&gt; { return { ... } })</code></td><td>4</td></tr>
+<tr><td>D130</td><td><code>with AppLive { ... }</code> provides a layer to a block whose statements stay code of the enclosing function</td><td>Fewer tokens than <code>Effect.provide(() =&gt; { ... }, AppLive)</code>, and <code>return</code> keeps its meaning</td><td>4</td></tr>
+<tr><td>D131</td><td><code>catch (e: NotFound)</code> handles only failures with that type&#39;s <code>_tag</code>; several clauses may follow a <code>try</code>, and failures no clause names propagate</td><td>Fewer tokens than narrowing and rethrowing</td><td>3</td></tr>
 <tr><td>D146</td><td>Every export of <code>effect</code>&#39;s root is in scope; JavaScript&#39;s own globals win, host globals do not</td><td>Imports from <code>effect</code> were 5.9% of the docs&#39; tokens</td><td>1, 27</td></tr>
 <tr><td>D147</td><td><strong>Controversial.</strong> A call is passed by name where a parameter expects a program: <code>fork(fetchReport())</code></td><td>Thunks around single calls were 2.6% of the docs&#39; tokens</td><td>5, 13</td></tr>
 <tr><td>D148</td><td><strong>Controversial.</strong> <code>sync</code>, <code>try</code>, and <code>callback</code> are boundary hatches whose arguments are plain TypeScript</td><td>One visible escape hatch replaces five Effect constructors and their lambda rules</td><td>10, 28</td></tr>
 <tr><td>D149</td><td><code>try(…)</code> parses as a call in <code>.effeck</code>; Effect&#39;s <code>{ try, catch }</code> object is EK4404</td><td>A try statement needs a block, so <code>try (</code> is unambiguous</td><td>10, 28</td></tr>
 <tr><td>D150</td><td><code>runPromise</code>, <code>runFork</code>, <code>runSync</code>, <code>runCallback</code> are in the prelude, for TypeScript and hatch bodies</td><td>The way back in; EK1005 still applies where a fiber runs</td><td>10, 13</td></tr>
-<tr><td>D151</td><td><code>sleep</code>, <code>log</code>, <code>retry</code>, <code>timeout</code>, <code>all</code>, <code>forEach</code>, <code>race</code>, and seven more Effect functions need no prefix</td><td>They were 329 of the 538 <code>Effect.</code> member uses in the docs</td><td>1, 27</td></tr></tbody></table></div>
+<tr><td>D151</td><td><code>sleep</code>, <code>log</code>, <code>retry</code>, <code>timeout</code>, <code>all</code>, <code>forEach</code>, <code>race</code>, and seven more Effect functions need no prefix</td><td>They were 329 of the 538 <code>Effect.</code> member uses in the docs</td><td>1, 27</td></tr>
+<tr><td>D152</td><td><strong>Controversial.</strong> A value of an Effect data type takes its module&#39;s data-first functions as methods: <code>stream.filter(p).take(3)</code> is <code>Stream.take(Stream.filter(stream, p), 3)</code>; own members win</td><td>Removes the module prefix and nesting from data-type code; the emitted calls tree-shake as Effect&#39;s do</td><td>5, 13</td></tr>
+<tr><td>D153</td><td>A data type&#39;s method exists only in a call; any other access is EK4501</td><td>No function value exists to bind</td><td>13, 28</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>

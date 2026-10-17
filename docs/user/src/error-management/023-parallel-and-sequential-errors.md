@@ -8,10 +8,7 @@ An operation can stop for several reasons: concurrent work can fail together, or
 
 ```ts
 function failureKinds() {
-  const cause = Cause.combine(
-    Cause.fail("delivery rejected"),
-    Cause.die(new Error("release invariant failed"))
-  )
+  const cause = Cause.fail("delivery rejected").combine(Cause.die(new Error("release invariant failed")))
   return cause.reasons.map((reason) => reason._tag)
 }
 // ["Fail", "Die"]
@@ -32,11 +29,11 @@ function operationWithBrokenCleanup() {
 
 function inspectDelivery() {
   const exit = Effect.exit(operationWithBrokenCleanup())
-  if (Exit.isFailure(exit)) {
+  if (exit.isFailure()) {
     return {
-      expected: Cause.hasFails(exit.cause),
-      defective: Cause.hasDies(exit.cause),
-      interrupted: Cause.hasInterrupts(exit.cause)
+      expected: exit.cause.hasFails(),
+      defective: exit.cause.hasDies(),
+      interrupted: exit.cause.hasInterrupts()
     }
   }
   return { expected: false, defective: false, interrupted: false }

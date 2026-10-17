@@ -44,7 +44,7 @@ A function collects the failures it throws and those its calls can produce. Sequ
 ```ts
 function inspectItem(input: string) {
   const result = Effect.result(findItem(input))
-  return Result.match(result, {
+  return result.match({
     onFailure: (error) => `unavailable: ${error._tag}`,
     onSuccess: (item) => item.label
   })
@@ -52,7 +52,7 @@ function inspectItem(input: string) {
 
 function optionalItem(input: string) {
   const item = Effect.option(findItem(input))
-  return Option.isNone(item) ? "No item" : item.value.label
+  return item.isNone() ? "No item" : item.value.label
 }
 ```
 

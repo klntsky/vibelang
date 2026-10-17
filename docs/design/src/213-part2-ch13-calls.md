@@ -37,6 +37,7 @@ The full rule:
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
 | A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
+| A method of an Effect data type, `stream.take(3)` or `fiber.join()` | Calls the module's function with the value first (D152), then applies these rules to that call: an `Effect` runs, other data is returned | `Stream.take(stream, 3)`; `yield* Fiber.join(fiber)` |
 | A service, `Users()` | Returns the implementation | `yield* Users` |
 | A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |
 | A JavaScript built-in, or an export of `effect` or `@effect/*` that does not return an `Effect` | A trusted call: listed exceptions join E, others are defects | `f(a)`, with listed exceptions converted |
@@ -64,6 +65,26 @@ function serverPort() {
 ```
 
 Without this rule, `Config.Port("PORT")` would read the variable before `Config.withDefault` saw it, and `makeError` would fail instead of returning an error value.
+
+#### Methods on Effect's data types
+
+`x.name(args)` is a method call into a module (D152) when all of these hold:
+
+1. The file is a `.effeck` file, and the access is not part of an optional chain (`x?.name(…)`).
+2. `x`'s type, after TypeScript resolves type parameters to their constraints, has no member `name` of its own.
+3. One of Effect's data-type modules declares `x`'s type in its declaration file, `effect/dist/<Module>.d.ts`. For a union, every member comes from the same module, as `None` and `Some` come from `Option`.
+4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`.
+
+The method's signatures are those overloads with the first parameter moved to `this`. TypeScript checks `x` against it and infers type parameters from it, and a type predicate on it narrows `x`:
+
+```ts es
+function describe(value: Option.Option<number>) {
+  if (value.isSome()) return `some ${value.value}`   // Option.isSome(value): value is Some<number>
+  return "none"
+}
+```
+
+The call compiles to `Module.name(x, args)`, which the rules above then apply to: `Fiber.join(fiber)` returns an `Effect`, so `fiber.join()` runs, while `Stream.take` returns a `Stream`, which is data. The method exists only in the call: `const read = maybe.getOrElse` is EK4501 (D153), because no function value exists to bind; pass `Option.getOrElse` itself.
 
 #### Function values
 

@@ -22,11 +22,11 @@ Returning a failed `Result` does not fail `parseCount`: its success value is the
 const accepted = Result.succeed(8)
 const rejected = Result.fail("limit exceeded")
 Result.isResult(accepted) // true
-Result.isSuccess(accepted) // true
-Result.isFailure(rejected) // true
+accepted.isSuccess() // true
+rejected.isFailure() // true
 
 function label(result: Result.Result<number, string>) {
-  if (Result.isSuccess(result)) return `Count: ${result.success}`
+  if (result.isSuccess()) return `Count: ${result.success}`
   return `Rejected: ${result.failure}`
 }
 ```
@@ -37,13 +37,13 @@ Success stores its payload in `.success`; failure uses `.failure`. Guards narrow
 
 ```ts
 function summarize(result: Result.Result<number, string>) {
-  const increased = Result.map(result, (count) => count + 2)
-  const contextual = Result.mapError(increased, (error) => `count: ${error}`)
-  const both = Result.mapBoth(contextual, {
+  const increased = result.map((count) => count + 2)
+  const contextual = increased.mapError((error) => `count: ${error}`)
+  const both = contextual.mapBoth({
     onSuccess: (count) => String(count),
     onFailure: (error) => error.toUpperCase()
   })
-  return Result.match(both, {
+  return both.match({
     onSuccess: (count) => `Accepted ${count}`,
     onFailure: (error) => `Rejected ${error}`
   })
@@ -85,9 +85,8 @@ function combine(
   name: Result.Result<string, string>,
   count: Result.Result<number, string>
 ) {
-  const chained = Result.flatMap(name, (name) =>
-    Result.map(count, (count) => ({ name: name.trim(), count }))
-  )
+  const chained = name.flatMap((name) =>
+    count.map((count) => ({ name: name.trim(), count })))
   const tuple = Result.all([name, count])
   const record = Result.all({ name, count })
   return { chained, tuple, record }

@@ -73,6 +73,10 @@ clients, see [editors/](editors/README.md).
   a few more need no import, and neither does any other module of `effect`'s root, such as
   `Console`, `Option`, and `Stream`. Import other source files by their source name,
   `import { Todos } from "./todos.effeck"`; the compiler emits `.js` imports.
+- A value of one of Effect's data types takes its module's functions as
+  methods: `maybe.map(f).getOrElse(() => 0)` calls `Option.map` and
+  `Option.getOrElse`, and `stream.filter(p).take(3)` calls `Stream.filter` and
+  `Stream.take`. Arrays, strings, and objects keep JavaScript's methods.
 - A module's top level only declares. A call there that would run a program
   is EK1001, including `Effect.succeed(1)`. Start the program once with a
   runner, which receives `main()` by name: `NodeRuntime.runMain(main())`.

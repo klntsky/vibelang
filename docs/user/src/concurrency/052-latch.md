@@ -13,7 +13,7 @@ function initializeThenWork() {
   })
   sleep("20 millis")
   Latch.open(ready)
-  return Fiber.join(worker)
+  return worker.join()
 }
 ```
 
@@ -28,7 +28,7 @@ function reopenGate() {
   Latch.close(gate)
   const waiting = fork(Latch.whenOpen(gate, () => "allowed again"))
   Latch.open(gate)
-  return Fiber.join(waiting)
+  return waiting.join()
 }
 ```
 

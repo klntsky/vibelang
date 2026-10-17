@@ -8,9 +8,9 @@ Choose a Sink for the result you need, then run it with `Stream.run`. Constructo
 function endpoints() {
   const source = Stream.make("opening", "middle", "closing")
   return {
-    first: Stream.run(source, Sink.head<string>()),
-    last: Stream.run(source, Sink.last<string>()),
-    prefix: Stream.run(source, Sink.take<string>(2))
+    first: source.run(Sink.head<string>()),
+    last: source.run(Sink.last<string>()),
+    prefix: source.run(Sink.take<string>(2))
   }
 }
 // first: Some("opening"), last: Some("closing")
@@ -25,15 +25,15 @@ function endpoints() {
 function summarize() {
   const source = Stream.make(6, 10, 14)
   return {
-    count: Stream.run(source, Sink.count), // 3
-    sum: Stream.run(source, Sink.sum),     // 30
-    duration: Stream.run(source, Sink.timed)
+    count: source.run(Sink.count), // 3
+    sum: source.run(Sink.sum),     // 30
+    duration: source.run(Sink.timed)
   }
 }
 
 function drainObserved() {
-  const source = Stream.tap(Stream.make("ready", "done"), (s) => log(s))
-  Stream.run(source, Sink.drain)
+  const source = Stream.make("ready", "done").tap((s) => log(s))
+  source.run(Sink.drain)
 }
 ```
 
@@ -48,7 +48,7 @@ const print = Sink.forEach((line: string) => {
 })
 
 function writeRecords() {
-  Stream.run(Stream.make("created", "approved"), print)
+  Stream.make("created", "approved").run(print)
 }
 ```
 
@@ -60,11 +60,11 @@ function writeRecords() {
 error Rejected
 
 function immediateResult() {
-  return Stream.run(Stream.make(40, 50), Sink.succeed("already complete"))
+  return Stream.make(40, 50).run(Sink.succeed("already complete"))
 }
 
 function rejectInput() {
-  return Stream.run(Stream.make(40, 50), Sink.fail(new Rejected()))
+  return Stream.make(40, 50).run(Sink.fail(new Rejected()))
 }
 // never!Rejected!
 ```
@@ -77,9 +77,9 @@ function rejectInput() {
 function collectSamples() {
   const source = Stream.make(8, 5, -1, 13)
   return {
-    all: Stream.run(source, Sink.collect<number>()),
-    firstTwo: Stream.run(source, Sink.take<number>(2)),
-    positivePrefix: Stream.run(source, Sink.takeWhile((n: number) => n > 0))
+    all: source.run(Sink.collect<number>()),
+    firstTwo: source.run(Sink.take<number>(2)),
+    positivePrefix: source.run(Sink.takeWhile((n: number) => n > 0))
   }
 }
 // all: [8, 5, -1, 13], firstTwo: [8, 5], positivePrefix: [8, 5]
@@ -98,7 +98,7 @@ const threeUnique = Sink.reduceWhile(
 )
 
 function collectUnique() {
-  return Stream.run(Stream.make("oak", "oak", "ash", "elm", "pine"), threeUnique)
+  return Stream.make("oak", "oak", "ash", "elm", "pine").run(threeUnique)
 }
 // Set containing "oak", "ash", "elm".
 ```
@@ -121,12 +121,12 @@ const twoStations = Sink.reduceWhile(
 )
 
 function summarizeStations() {
-  return Stream.run(Stream.make(
+  return Stream.make(
     { station: "hill", count: 4 },
     { station: "hill", count: 3 },
     { station: "lake", count: 8 },
     { station: "hill", count: 9 }
-  ), twoStations)
+  ).run(twoStations)
 }
 // Map with "hill" -> 7 and "lake" -> 8.
 ```
@@ -150,9 +150,9 @@ const firstThree = Sink.foldUntil(() => 0, 3, (sum, n: number) => sum + n)
 function foldSamples() {
   const source = Stream.make(7, 9, 12, 15)
   return {
-    all: Stream.run(source, total),       // 43
-    budget: Stream.run(source, budget),   // 28
-    first: Stream.run(source, firstThree) // 28
+    all: source.run(total),       // 43
+    budget: source.run(budget),   // 28
+    first: source.run(firstThree) // 28
   }
 }
 ```
@@ -173,10 +173,10 @@ const weighted = Sink.fold<Batch, Packet>(
     bytes: batch.bytes + packet.bytes
   })
 )
-const packets = Sink.map(weighted, (batch) => batch.packets)
+const packets = weighted.map((batch) => batch.packets)
 
 function firstBatch() {
-  return Stream.run(Stream.make({ bytes: 60 }, { bytes: 55 }, { bytes: 10 }), packets)
+  return Stream.make({ bytes: 60 }, { bytes: 55 }, { bytes: 10 }).run(packets)
 }
 // Returns the 60-byte and 55-byte packets.
 ```

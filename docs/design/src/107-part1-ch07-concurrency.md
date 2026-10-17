@@ -70,7 +70,7 @@ function serve(port: number) {
 function withProgress(id: string) {
   const pending = fork(buildReport(id))
   sendProgressEmail(id)
-  return Fiber.join(pending)          // waits for it; fails if it failed
+  return pending.join()          // waits for it; fails if it failed
 }
 // Report!ReportError | MailError!Reports | Mailer
 ```

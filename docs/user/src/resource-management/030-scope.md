@@ -122,7 +122,7 @@ function reserveStep(stage: string) {
   return Effect.acquireRelease(
     () => steps.create(stage),
     (id, exit) => {
-      if (Exit.isFailure(exit)) steps.remove(id)
+      if (exit.isFailure()) steps.remove(id)
     }
   )
 }

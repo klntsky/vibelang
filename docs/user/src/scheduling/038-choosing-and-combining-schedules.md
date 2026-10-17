@@ -31,7 +31,7 @@ function runChecks() {
   repeat(() => {
     logInfo("checking")
     sleep("2 seconds")
-  }, Schedule.upTo(Schedule.spaced("6 seconds"), { times: 2 }))
+  }, Schedule.spaced("6 seconds").upTo({ times: 2 }))
 }
 ```
 
@@ -45,7 +45,7 @@ A schedule step receives input and produces output plus timing metadata. In `ret
 const bounded = pipe(
   Schedule.exponential("300 millis"),
   Schedule.modifyDelay(({ duration }) =>
-    Duration.min(duration, Duration.seconds(8))),
+    duration.min(Duration.seconds(8))),
   Schedule.jittered,
   Schedule.upTo({ times: 6, duration: "40 seconds" })
 )
@@ -61,13 +61,10 @@ const firstThree = Schedule.while(
 ## Requiring every timing rule
 
 ```ts
-const policy = Schedule.upTo(
-  Schedule.max([
+const policy = Schedule.max([
     Schedule.exponential("400 millis"),
     Schedule.spaced("2 seconds")
-  ]),
-  { times: 4 }
-)
+  ]).upTo({ times: 4 })
 ```
 
 `max` continues only while every input schedule can continue and chooses the largest proposed delay. Here the first waits are two seconds, two seconds, two seconds, and 3.2 seconds. The separate limit permits four recurrences.
@@ -76,7 +73,7 @@ const policy = Schedule.upTo(
 
 ```ts
 const startupAndSteady = Schedule.min([
-  Schedule.upTo(Schedule.spaced("500 millis"), { times: 2 }),
+  Schedule.spaced("500 millis").upTo({ times: 2 }),
   Schedule.fixed("12 seconds")
 ])
 ```
@@ -86,10 +83,7 @@ const startupAndSteady = Schedule.min([
 ## Switching rules in phases
 
 ```ts
-const reconnect = Schedule.concat(
-  Schedule.upTo(Schedule.spaced("150 millis"), { times: 2 }),
-  Schedule.upTo(Schedule.spaced("3 seconds"), { times: 5 })
-)
+const reconnect = Schedule.spaced("150 millis").upTo({ times: 2 }).concat(Schedule.spaced("3 seconds").upTo({ times: 5 }))
 ```
 
 `concat` exhausts the first rule before starting the second. With `retry`, this permits an initial attempt, two fast retries, then five slow retries. `Schedule.concatResult` keeps the outputs of the two phases distinguishable when an observer needs to identify the active phase.

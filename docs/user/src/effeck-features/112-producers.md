@@ -63,13 +63,7 @@ A producer can acquire resources with `using`. They stay open between yields and
 
 ```ts
 function alerts() {
-  const selected = Stream.take(
-    Stream.map(
-      Stream.filter(readings(), (value) => value >= 25),
-      (value) => `${value} C`
-    ),
-    2
-  )
+  const selected = readings().filter((value) => value >= 25).map((value) => `${value} C`).take(2)
   const result: string[] = []
   for (const alert of selected) result.push(alert)
   return result

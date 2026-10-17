@@ -23,8 +23,8 @@ The new deferred starts empty and contains neither a success nor a failure. Crea
 function waitForAddress() {
   const address = Deferred.make<string>()
   const listener = fork(Deferred.await(address))
-  Deferred.succeed(address, "127.0.0.1:8080")
-  return Fiber.join(listener)
+  address.succeed("127.0.0.1:8080")
+  return listener.join()
 }
 ```
 
@@ -35,15 +35,15 @@ function waitForAddress() {
 ```ts
 function completeOnce() {
   const result = Deferred.make<number, string>()
-  const accepted = Deferred.succeed(result, 25)
-  const ignored = Deferred.fail(result, "too late")
+  const accepted = result.succeed(25)
+  const ignored = result.fail("too late")
   return { accepted, ignored, value: Deferred.await(result) }
 }
 // Returns { accepted: true, ignored: false, value: 25 }.
 
 function shareFailure() {
   const result = Deferred.make<number, string>()
-  Deferred.fail(result, "configuration missing")
+  result.fail("configuration missing")
   try {
     return Deferred.await(result)
   } catch (error) {
@@ -60,10 +60,10 @@ The first completion wins, and completion operations return `false` when a resul
 ```ts
 function inspectWithoutWaiting() {
   const result = Deferred.make<number>()
-  const before = Deferred.isDone(result) // false
-  Deferred.succeed(result, 9)
-  const observed = Deferred.poll(result)
-  if (Option.isSome(observed)) {
+  const before = result.isDone() // false
+  result.succeed(9)
+  const observed = result.poll()
+  if (observed.isSome()) {
     const stored = observed.value
     return { before, value: stored() }
   }
@@ -80,14 +80,14 @@ function coordinate() {
   const prepared = Deferred.make<ReadonlyArray<string>>()
   const producer = fork(() => {
     sleep("20 millis")
-    Deferred.succeed(prepared, ["part-a", "part-b"])
+    prepared.succeed(["part-a", "part-b"])
   })
   const consumer = fork(() => {
     const parts = Deferred.await(prepared)
     return parts.join("+")
   })
-  const result = Fiber.join(consumer)
-  Fiber.join(producer)
+  const result = consumer.join()
+  producer.join()
   return result
 }
 ```

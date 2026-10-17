@@ -10,10 +10,7 @@ function* readings() {
 }
 
 export function main() {
-  const alerts = Stream.take(
-    Stream.map(Stream.filter(readings(), (value) => value >= 25), (value) => `${value} C`),
-    2
-  )
+  const alerts = readings().filter((value) => value >= 25).map((value) => `${value} C`).take(2)
   for (const alert of alerts) {
     Console.log(`temperature alert: ${alert}`)
   }

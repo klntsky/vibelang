@@ -69,14 +69,14 @@ const seen = HashSet.make(
   new DocumentRevision("doc-8", 2, "reader-a"),
   new DocumentRevision("doc-8", 2, "reader-b")
 )
-HashSet.size(seen) // 1
+seen.size() // 1
 
 const byFolder = HashMap.set(
   HashMap.set(HashMap.empty<{ folder: string }, number>(), { folder: "inbox" }, 4),
   { folder: "inbox" }, 9
 )
-HashMap.size(byFolder) // 1
-Option.getOrElse(HashMap.get(byFolder, { folder: "inbox" }), () => 0) // 9
+byFolder.size() // 1
+byFolder.get({ folder: "inbox" }).getOrElse(() => 0) // 9
 ```
 
 `HashSet` uses equality to deduplicate members and `HashMap` uses it to identify keys. Plain structural keys work without custom classes; implement the protocol when only selected fields determine identity. JavaScript's native `Set` and `Map` do not consult this protocol and keep their normal identity rules.

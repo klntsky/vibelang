@@ -152,7 +152,7 @@ const Form = Schema.Struct({
   note: Schema.optionalKey(Schema.String).pipe(
     Schema.decodeTo(Schema.optionalKey(Schema.String), {
       decode: SchemaGetter.transformOptional((value) =>
-        Option.isSome(value) && value.value === "" ? Option.none() : value
+        value.isSome() && value.value === "" ? Option.none() : value
       ),
       encode: SchemaGetter.transformOptional((value) => value)
     })
@@ -160,20 +160,20 @@ const Form = Schema.Struct({
   label: Schema.optionalKey(Schema.String).pipe(
     Schema.decodeTo(Schema.NullOr(Schema.String), {
       decode: SchemaGetter.transformOptional((value) =>
-        Option.isNone(value) ? Option.some(null) : value
+        value.isNone() ? Option.some(null) : value
       ),
       encode: SchemaGetter.transformOptional((value) =>
-        Option.isNone(value) || value.value === null ? Option.none() : Option.some(value.value)
+        value.isNone() || value.value === null ? Option.none() : Option.some(value.value)
       )
     })
   ),
   memo: Schema.String.pipe(
     Schema.decodeTo(Schema.optionalKey(Schema.String), {
       decode: SchemaGetter.transformOptional((value) =>
-        Option.isSome(value) && value.value === "" ? Option.none() : value
+        value.isSome() && value.value === "" ? Option.none() : value
       ),
       encode: SchemaGetter.transformOptional((value) =>
-        Option.isNone(value) ? Option.some("") : value
+        value.isNone() ? Option.some("") : value
       )
     })
   )

@@ -8,7 +8,7 @@
 function collectBatches(batches: ReadonlyArray<ReadonlyArray<string>>) {
   let result = Chunk.empty<string>()
   for (const batch of batches) {
-    result = Chunk.appendAll(result, Chunk.fromIterable(batch))
+    result = result.appendAll(Chunk.fromIterable(batch))
   }
   return result
 }
@@ -43,10 +43,10 @@ function ownedBatch() {
 
 ```ts
 const original = Chunk.make("draft", "review")
-const extended = Chunk.appendAll(original, Chunk.make("published"))
-const remaining = Chunk.drop(extended, 1)
-Chunk.toReadonlyArray(original) // ["draft", "review"]
-Chunk.toReadonlyArray(remaining) // ["review", "published"]
+const extended = original.appendAll(Chunk.make("published"))
+const remaining = extended.drop(1)
+original.toReadonlyArray() // ["draft", "review"]
+remaining.toReadonlyArray() // ["review", "published"]
 ```
 
 `appendAll` preserves the order of both chunks. `drop` removes a prefix and returns the remaining sequence. Neither operation changes its inputs.
@@ -66,7 +66,7 @@ Equality compares lengths and corresponding elements using Effect's equality rul
 ## Converting to arrays
 
 ```ts
-const nonempty = Chunk.toReadonlyArray(Chunk.make(7, 8))
+const nonempty = Chunk.make(7, 8).toReadonlyArray()
 const none = Chunk.toReadonlyArray(Chunk.empty<number>())
 const mutableCopy = [...nonempty]
 mutableCopy.push(9)

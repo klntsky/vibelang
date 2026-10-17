@@ -51,8 +51,8 @@ it.effect("a deadline returns the fallback", () => {
   }))
 
   TestClock.adjust("30 seconds")
-  const result = Fiber.join(pending)
-  check(Option.isNone(result), "expected the timeout fallback")
+  const result = pending.join()
+  check(result.isNone(), "expected the timeout fallback")
 })
 ```
 
@@ -83,20 +83,20 @@ it.effect("emits once per interval", () => {
   fork(() => {
     while (true) {
       sleep("15 minutes")
-      Queue.offer(queue, "refresh")
+      queue.offer("refresh")
     }
   })
 
   TestClock.adjust("14 minutes")
-  check(Option.isNone(Queue.poll(queue)), "refresh arrived early")
+  check(queue.poll().isNone(), "refresh arrived early")
 
   TestClock.adjust("1 minute")
-  check(Queue.take(queue) === "refresh", "missing first refresh")
-  check(Option.isNone(Queue.poll(queue)), "duplicate refresh")
+  check(queue.take() === "refresh", "missing first refresh")
+  check(queue.poll().isNone(), "duplicate refresh")
 
   TestClock.adjust("15 minutes")
-  check(Queue.take(queue) === "refresh", "missing second refresh")
-  check(Option.isNone(Queue.poll(queue)), "duplicate second refresh")
+  check(queue.take() === "refresh", "missing second refresh")
+  check(queue.poll().isNone(), "duplicate second refresh")
 })
 ```
 
@@ -133,12 +133,12 @@ it.effect("completes a deferred after a delay", () => {
   const ready = Deferred.make<number>()
   const worker = fork(() => {
     sleep("6 seconds")
-    Deferred.succeed(ready, 42)
+    ready.succeed(42)
   })
 
   TestClock.adjust("6 seconds")
   const value = Deferred.await(ready)
-  Fiber.join(worker)
+  worker.join()
   check(value === 42, "unexpected deferred value")
 })
 ```

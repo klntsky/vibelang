@@ -6,11 +6,9 @@
 
 ```ts
 const instant = DateTime.makeUnsafe("2026-04-12T10:00:00Z")
-const paris = DateTime.setZone(
-  instant, DateTime.zoneMakeNamedUnsafe("Europe/Paris")
-)
+const paris = instant.setZone(DateTime.zoneMakeNamedUnsafe("Europe/Paris"))
 instant.epochMilliseconds === paris.epochMilliseconds // true
-DateTime.formatIsoZoned(paris) // "2026-04-12T12:00:00.000+02:00[Europe/Paris]"
+paris.formatIsoZoned() // "2026-04-12T12:00:00.000+02:00[Europe/Paris]"
 ```
 
 A `Utc` holds epoch milliseconds. A `Zoned` holds the same kind of instant plus a `TimeZone`: a fixed millisecond offset or a named region with daylight saving rules. Attaching a zone normally changes the calendar view, not the instant.
@@ -42,7 +40,7 @@ const serialized = DateTime.makeZonedFromString(
 ```ts
 function timestamp() {
   const now = DateTime.now()
-  return DateTime.formatIso(now)
+  return now.formatIso()
 }
 // string!!
 ```
@@ -54,8 +52,8 @@ function timestamp() {
 ```ts
 function describe(value: unknown) {
   if (!DateTime.isDateTime(value)) return "not a timestamp"
-  if (DateTime.isUtc(value)) return "UTC"
-  if (DateTime.isZoned(value)) {
+  if (value.isUtc()) return "UTC"
+  if (value.isZoned()) {
     if (DateTime.isTimeZoneNamed(value.zone)) return value.zone.id
     if (DateTime.isTimeZoneOffset(value.zone)) return String(value.zone.offset)
   }
@@ -71,18 +69,18 @@ function describe(value: unknown) {
 const named = DateTime.zoneMakeNamed("Asia/Tokyo")
 const parsed = DateTime.zoneFromString("+09:00")
 const fixed = DateTime.zoneMakeOffset(9 * 60 * 60 * 1000)
-DateTime.zoneToString(fixed) // "+09:00"
+fixed.zoneToString() // "+09:00"
 
 function inTokyo() {
   const zone = DateTime.zoneMakeNamedEffect("Asia/Tokyo")
   const now = DateTime.now()
-  return DateTime.setZone(now, zone)
+  return now.setZone(zone)
 }
 
 const base = DateTime.makeUnsafe("2026-04-12T10:00:00Z")
-const optional = DateTime.setZoneNamed(base, "Asia/Tokyo")
-const known = DateTime.setZoneNamedUnsafe(base, "Asia/Tokyo")
-const shiftedView = DateTime.setZoneOffset(base, 9 * 60 * 60 * 1000)
+const optional = base.setZoneNamed("Asia/Tokyo")
+const known = base.setZoneNamedUnsafe("Asia/Tokyo")
+const shiftedView = base.setZoneOffset(9 * 60 * 60 * 1000)
 ```
 
 `zoneMakeNamed` and `zoneFromString` return `None` for invalid identifiers. `zoneMakeNamedEffect` raises `IllegalArgumentError` as an expected failure, while `zoneMakeNamedUnsafe` throws. `zoneMakeLocal` reads the host's local zone; prefer a configured zone when output must be reproducible.
@@ -91,14 +89,14 @@ const shiftedView = DateTime.setZoneOffset(base, 9 * 60 * 60 * 1000)
 
 ```ts
 const start = DateTime.makeUnsafe("2026-04-12T10:00:00Z")
-const end = DateTime.add(start, { hours: 3 })
-DateTime.isLessThan(start, end) // true
-DateTime.min(start, end) // start
-DateTime.max(start, end) // end
-Duration.toHours(DateTime.distance(start, end)) // 3
-DateTime.toEpochMillis(start) // numeric Unix timestamp
-const native = DateTime.toDateUtc(start)
-const calendarDate = DateTime.removeTime(start)
+const end = start.add({ hours: 3 })
+start.isLessThan(end) // true
+start.min(end) // start
+start.max(end) // end
+start.distance(end).toHours() // 3
+start.toEpochMillis() // numeric Unix timestamp
+const native = start.toDateUtc()
+const calendarDate = start.removeTime()
 ```
 
 Ordering compares instants, independent of the attached zone. `distance(start, end)` is signed: reversing the arguments produces a negative duration. `toDateUtc` preserves the instant in a JavaScript `Date`; `toDate` represents the zone-adjusted calendar view instead, so do not use it as an interchangeable instant conversion.
@@ -111,12 +109,12 @@ Ordering compares instants, independent of the attached zone. `distance(start, e
 const evening = DateTime.makeZonedUnsafe("2026-04-12T22:30:00Z", {
   timeZone: "Asia/Tokyo"
 })
-DateTime.getPart(evening, "day") // 13
-DateTime.getPartUtc(evening, "day") // 12
-const localParts = DateTime.toParts(evening)
-const utcParts = DateTime.toPartsUtc(evening)
-const rescheduled = DateTime.setParts(evening, { hour: 9, minute: 0 })
-const utcEdited = DateTime.setPartsUtc(evening, { hour: 9 })
+evening.getPart("day") // 13
+evening.getPartUtc("day") // 12
+const localParts = evening.toParts()
+const utcParts = evening.toPartsUtc()
+const rescheduled = evening.setParts({ hour: 9, minute: 0 })
+const utcEdited = evening.setPartsUtc({ hour: 9 })
 ```
 
 `Parts` contains year, month, day, hour, minute, second, and millisecond; months start at one. `PartsWithWeekday` adds `weekDay`. Use the UTC variants when calendar interpretation must ignore an attached zone.
@@ -127,18 +125,18 @@ const utcEdited = DateTime.setPartsUtc(evening, { hour: 9 })
 const appointment = DateTime.makeZonedUnsafe("2026-04-12T10:00:00Z", {
   timeZone: "Europe/Paris"
 })
-const tomorrow = DateTime.add(appointment, { days: 1 })
-const previous = DateTime.subtract(appointment, { months: 1 })
-const elapsedHour = DateTime.addDuration(appointment, Duration.hours(1))
-const earlier = DateTime.subtractDuration(appointment, Duration.minutes(15))
-const dayStart = DateTime.startOf(appointment, "day")
-const dayEnd = DateTime.endOf(appointment, "day")
-const rounded = DateTime.nearest(appointment, "hour")
-DateTime.formatIso(tomorrow) // "2026-04-13T10:00:00.000Z"
-DateTime.formatIsoDate(appointment) // "2026-04-12"
-DateTime.formatIsoDateUtc(appointment) // "2026-04-12"
-DateTime.formatIsoOffset(appointment) // "2026-04-12T12:00:00.000+02:00"
-DateTime.format(appointment, { locale: "en-GB", dateStyle: "long" })
+const tomorrow = appointment.add({ days: 1 })
+const previous = appointment.subtract({ months: 1 })
+const elapsedHour = appointment.addDuration(Duration.hours(1))
+const earlier = appointment.subtractDuration(Duration.minutes(15))
+const dayStart = appointment.startOf("day")
+const dayEnd = appointment.endOf("day")
+const rounded = appointment.nearest("hour")
+tomorrow.formatIso() // "2026-04-13T10:00:00.000Z"
+appointment.formatIsoDate() // "2026-04-12"
+appointment.formatIsoDateUtc() // "2026-04-12"
+appointment.formatIsoOffset() // "2026-04-12T12:00:00.000+02:00"
+appointment.format({ locale: "en-GB", dateStyle: "long" })
 ```
 
 Calendar `add` and `subtract` operate on parts in the value's zone; duration arithmetic adds fixed elapsed time. These differ across daylight saving transitions. Use `formatIsoZoned` to retain a named zone, `formatUtc` to force UTC presentation, `formatLocal` for host-local presentation, or `formatIntl` with an existing formatter.
@@ -147,7 +145,7 @@ Calendar `add` and `subtract` operate on parts in the value's zone; duration ari
 
 ```ts
 function localDate() {
-  return DateTime.formatIsoDate(DateTime.nowInCurrentZone())
+  return DateTime.nowInCurrentZone().formatIsoDate()
 }
 // string!!DateTime.CurrentTimeZone
 

@@ -13,7 +13,7 @@ function inspectExport() {
   const outcome = Effect.exit(() => {
     throw new ExportRejected({ reason: "empty selection" })
   })
-  if (Exit.isFailure(outcome)) return outcome.cause.reasons.length
+  if (outcome.isFailure()) return outcome.cause.reasons.length
   return 0
 }
 ```
@@ -26,10 +26,7 @@ An exit is `Success` with `.value`, or `Failure` with `.cause`. `Effect.exit` ru
 function sampleOutcomes() {
   const successful = Exit.succeed(12)
   const failed = Exit.failCause(
-    Cause.combine(
-      Cause.fail("write rejected"),
-      Cause.die(new Error("release failed"))
-    )
+    Cause.fail("write rejected").combine(Cause.die(new Error("release failed")))
   )
   return { successful, failed }
 }
@@ -46,7 +43,7 @@ function constantSuccess() {
 
 ```ts
 function describe<A, E>(outcome: Exit.Exit<A, E>) {
-  return Exit.match(outcome, {
+  return outcome.match({
     onSuccess: (value) => `Completed: ${String(value)}`,
     onFailure: (cause) => Cause.pretty(cause)
   })
@@ -59,7 +56,7 @@ function describe<A, E>(outcome: Exit.Exit<A, E>) {
 
 ```ts
 function asResult<A, E>(outcome: Exit.Exit<A, E>) {
-  if (Exit.isSuccess(outcome)) return Result.succeed(outcome.value)
+  if (outcome.isSuccess()) return Result.succeed(outcome.value)
   return Result.fail(outcome.cause)
 }
 // Result.Result<A, Cause.Cause<E>>!!

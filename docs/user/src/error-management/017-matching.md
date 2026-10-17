@@ -49,7 +49,7 @@ function reportCount(raw: number) {
 ```ts
 function outcomeLabel() {
   return Effect.matchCause(die(new Error("index invariant")), {
-    onFailure: (cause) => Cause.hasDies(cause) ? "Index defect" : "Index stopped",
+    onFailure: (cause) => cause.hasDies() ? "Index defect" : "Index stopped",
     onSuccess: () => "Index ready"
   })
 }

@@ -91,7 +91,7 @@ function boundedPriceSchema() {
 }
 
 const HoldDuration = Schema.Duration.check(
-  Schema.makeFilter((duration) => Duration.between(duration, {
+  Schema.makeFilter((duration) => duration.between({
     minimum: Duration.seconds(1), maximum: Duration.seconds(30)
   }))
 )

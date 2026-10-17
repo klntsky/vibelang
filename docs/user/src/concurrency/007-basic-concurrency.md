@@ -35,7 +35,7 @@ function cancelWork() {
     sleep("1 minute")
     return "finished"
   })
-  Fiber.interrupt(worker)
+  worker.interrupt()
   return Fiber.await(worker)
 }
 ```
@@ -54,7 +54,7 @@ function cancelWithCleanup() {
     }
   }, () => logInfo("worker cancelled")))
   sleep("10 millis")
-  Fiber.interrupt(worker)
+  worker.interrupt()
 }
 ```
 
@@ -122,7 +122,7 @@ function inspectRace() {
     },
     { onWinner: ({ index }) => { winners.push(index) } }
   ))
-  if (Result.isFailure(outcome)) {
+  if (outcome.isFailure()) {
     logWarning("first completion failed", outcome.failure)
   }
   return { outcome, winners }
