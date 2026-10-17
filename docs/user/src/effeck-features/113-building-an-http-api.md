@@ -6,7 +6,7 @@ Build routes with Effect's HTTP modules and write each handler as an Effeck func
 
 ```ts
 // users.effeck
-export const CreateUser = Schema.Struct({ name: Schema.String })
+export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
 export service Users {
@@ -25,7 +25,7 @@ export layer UsersLive: Users {
 }
 ```
 
-`CreateUser` accepts a JSON object with a string `name`. `Users.create` declares `NameTaken` as an expected failure. The layer owns the set of names and the ID counter, so each layer build starts with isolated state.
+`schema CreateUser { name: string }` declares a struct schema and its type: it accepts a JSON object with a string `name`. `Users.create` declares `NameTaken` as an expected failure. The layer owns the set of names and the ID counter, so each layer build starts with isolated state.
 
 ## Decode the request and map failures
 

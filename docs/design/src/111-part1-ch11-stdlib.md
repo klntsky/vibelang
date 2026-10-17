@@ -68,6 +68,29 @@ function countLines(path: string) {
 // number!PlatformError!FileSystem
 ```
 
+#### Schemas
+
+```ts effect
+const Todo = Schema.Struct({
+  userId: Schema.Number,
+  id: Schema.Number,
+  title: Schema.String,
+  completed: Schema.Boolean
+})
+interface Todo extends Schema.Schema.Type<typeof Todo> {}
+```
+
+```ts es
+schema Todo {
+  userId: number
+  id: number
+  title: string
+  completed: boolean
+}
+```
+
+A `schema` declaration declares both: the constant `Todo`, a `Schema.Struct`, and the interface `Todo`, its decoded type (D133). Each field is written with a type, and the compiler writes its schema: a primitive, a literal or a union, an array, a tuple, a record, an object type, or the name of another schema, which stands for that schema's decoded type. `name?: T` is `Schema.optional`, which accepts an absent key or `undefined`. A field that needs another schema, such as `Schema.DateTimeUtc` or a checked string, names a schema constant: `const Created = Schema.DateTimeUtc`, then `created: Created`. A field type with no schema form is EK2109. The interface comes from the struct, so the two cannot drift apart.
+
 #### HTTP
 
 ```ts effect

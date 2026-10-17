@@ -5,10 +5,10 @@ Schema-derived equivalence works in Effeck exactly as in Effect. It compares dec
 ## Deriving equality from schemas
 
 ```ts
-const Shipment = Schema.Struct({
-  reference: Schema.String,
-  stops: Schema.Array(Schema.String)
-})
+schema Shipment {
+  reference: string
+  stops: ReadonlyArray<string>
+}
 
 function sameShipment(left: unknown, right: unknown) {
   const a = Schema.decodeUnknownEffect(Shipment)(left)

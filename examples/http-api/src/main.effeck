@@ -2,7 +2,7 @@ import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import { NodeHttpServer } from "@effect/platform-node"
 import { createServer } from "node:http"
 
-export const CreateUser = Schema.Struct({ name: Schema.String })
+export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
 export service Users {

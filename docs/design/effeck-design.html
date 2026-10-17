@@ -1269,6 +1269,20 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   <span class="k">return</span> <span class="t">FileSystem</span>.<span class="f">readFileString</span>(path).<span class="f">split</span>(<span class="s">"\n"</span>).length
 }
 <span class="c">// number!PlatformError!FileSystem</span></code></pre></figure></div>
+<h4 id="schemas"><a class="anchor" href="#schemas">Schemas</a></h4>
+<div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">Todo</span> = <span class="t">Schema</span>.<span class="t">Struct</span>({
+  userId: <span class="t">Schema</span>.<span class="t">Number</span>,
+  id: <span class="t">Schema</span>.<span class="t">Number</span>,
+  title: <span class="t">Schema</span>.<span class="t">String</span>,
+  completed: <span class="t">Schema</span>.<span class="t">Boolean</span>
+})
+<span class="k">interface</span> <span class="t">Todo</span> <span class="k">extends</span> <span class="t">Schema</span>.<span class="t">Schema</span>.<span class="t">Type</span>&lt;<span class="k">typeof</span> <span class="t">Todo</span>&gt; {}</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>schema <span class="t">Todo</span> {
+  userId: <span class="l">number</span>
+  id: <span class="l">number</span>
+  title: <span class="l">string</span>
+  completed: <span class="l">boolean</span>
+}</code></pre></figure></div>
+<p>A <code>schema</code> declaration declares both: the constant <code>Todo</code>, a <code>Schema.Struct</code>, and the interface <code>Todo</code>, its decoded type (D133). Each field is written with a type, and the compiler writes its schema: a primitive, a literal or a union, an array, a tuple, a record, an object type, or the name of another schema, which stands for that schema&#39;s decoded type. <code>name?: T</code> is <code>Schema.optional</code>, which accepts an absent key or <code>undefined</code>. A field that needs another schema, such as <code>Schema.DateTimeUtc</code> or a checked string, names a schema constant: <code>const Created = Schema.DateTimeUtc</code>, then <code>created: Created</code>. A field type with no schema form is EK2109. The interface comes from the struct, so the two cannot drift apart.</p>
 <h4 id="http"><a class="anchor" href="#http">HTTP</a></h4>
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> getTodo = <span class="t">Effect</span>.<span class="f">fn</span>(<span class="s">"getTodo"</span>)(<span class="k">function</span>* (id: <span class="l">number</span>) {
   <span class="k">const</span> response = <span class="k">yield</span>* <span class="t">HttpClient</span>.<span class="k">get</span>(<span class="s">`https://jsonplaceholder.typicode.com/todos/${id}`</span>)
@@ -2817,6 +2831,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK2106</td><td>A catch clause after an untyped catch clause (D131)</td><td>Move the untyped clause last</td><td>3</td></tr>
 <tr><td>EK2107</td><td>A handle clause whose control is not a control declaration, such as a service (D132)</td><td>Provide a service with a layer; handle only a control&#39;s operations</td><td>9</td></tr>
 <tr><td>EK2108</td><td>A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132)</td><td>Add the missing clause, or remove the second</td><td>9</td></tr>
+<tr><td>EK2109</td><td>A field of a <code>schema</code> declaration whose type has no schema form, or names a value that is not a schema (D133)</td><td>Declare the schema with <code>Schema.Struct</code>, or name a schema constant</td><td>11</td></tr>
 <tr><td>EK3001</td><td>Two services share a key</td><td>Rename one</td><td>4</td></tr>
 <tr><td>EK3002</td><td>A class extends a service</td><td>Replace <code>extends</code> with <code>implements</code></td><td>4</td></tr>
 <tr><td>EK3003</td><td><code>new</code> on a service</td><td>Use <code>Users()</code> for the implementation</td><td>4</td></tr>
@@ -3002,6 +3017,7 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D130</td><td><code>with AppLive { ... }</code> provides a layer to a block whose statements stay code of the enclosing function</td><td>Fewer tokens than <code>Effect.provide(() =&gt; { ... }, AppLive)</code>, and <code>return</code> keeps its meaning</td><td>4</td></tr>
 <tr><td>D131</td><td><code>catch (e: NotFound)</code> handles only failures with that type&#39;s <code>_tag</code>; several clauses may follow a <code>try</code>, and failures no clause names propagate</td><td>Fewer tokens than narrowing and rethrowing</td><td>3</td></tr>
 <tr><td>D132</td><td><code>try { ... } handle Approval.approve(request) { resume(true) }</code> handles a control&#39;s operations; the block and the clauses stay code of the enclosing function</td><td>Fewer tokens than <code>handle(() =&gt; ..., Approval, { approve(request, k) { return resume(k, true) } })</code>, and <code>return</code> keeps its meaning</td><td>9</td></tr>
+<tr><td>D133</td><td><code>schema User { id: string; role: &quot;admin&quot; | &quot;member&quot; }</code> declares a <code>Schema.Struct</code> and the interface of its decoded type</td><td>Fewer tokens than a struct and a type alias, and the two cannot drift apart</td><td>11</td></tr>
 <tr><td>D146</td><td>Every export of <code>effect</code>&#39;s root is in scope; JavaScript&#39;s own globals win, host globals do not</td><td>Imports from <code>effect</code> were 5.9% of the docs&#39; tokens</td><td>1, 27</td></tr>
 <tr><td>D147</td><td><strong>Controversial.</strong> A call is passed by name where a parameter expects a program: <code>fork(fetchReport())</code></td><td>Thunks around single calls were 2.6% of the docs&#39; tokens</td><td>5, 13</td></tr>
 <tr><td>D148</td><td><strong>Controversial.</strong> <code>sync</code>, <code>try</code>, and <code>callback</code> are boundary hatches whose arguments are plain TypeScript</td><td>One visible escape hatch replaces five Effect constructors and their lambda rules</td><td>10, 28</td></tr>

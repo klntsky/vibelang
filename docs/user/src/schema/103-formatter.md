@@ -25,7 +25,7 @@ function displayDispatch(input: unknown) {
 const Weight = Schema.Finite.pipe(Schema.overrideToFormatter(
   () => (value) => `${value} kg`
 ))
-const Manifest = Schema.Struct({ label: Schema.String, weight: Weight })
+schema Manifest { label: string; weight: Weight }
 
 function displayManifest(input: unknown) {
   const manifest = Schema.decodeUnknownEffect(Manifest)(input)

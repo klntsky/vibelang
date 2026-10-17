@@ -23,6 +23,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | --- | --- |
 | `Effect.gen(function* () { ... })` | An ordinary function with statements |
 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
+| `const User = Schema.Struct({ id: Schema.String })` and `type User = typeof User.Type` | `schema User { id: string }` |
 | `const x = yield* work()` | `const x = work()` |
 | `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, then call the next function |
 | `Option.getOrElse(Option.map(maybe, f), () => 0)` | `maybe.map(f).getOrElse(() => 0)` |

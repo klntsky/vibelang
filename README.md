@@ -57,6 +57,8 @@ clients, see [editors/](editors/README.md).
 - Declare an expected failure with `error NotFound { id: string }`, a tagged
   error class with readonly fields; `throw new NotFound({ id })` adds it to
   the function's errors, and `catch (e: NotFound) { ... }` handles only it.
+- Declare a struct schema and its type with `schema User { id: string; role: "admin" | "member" }`;
+  a field may name another schema.
 - Write a contract as `Result!Error!Dependencies`: `User!NotFound!Db` is
   `Effect<User, NotFound, Db>`, an empty slot is `never` (`User!!`), and
   dependencies left out of a function's return type are inferred from its body.

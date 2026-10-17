@@ -36,15 +36,13 @@ The decoded type has a numeric `pieces`; the encoded type has a string. Both ser
 ## Understanding default immutability
 
 ```ts
-const Batch = Schema.Struct({
-  shipments: Schema.Array(Shipment)
-})
-
-type Batch = typeof Batch.Type
-// { readonly shipments: ReadonlyArray<Shipment> }
+schema Batch {
+  shipments: ReadonlyArray<Shipment>
+}
+// Batch: { readonly shipments: ReadonlyArray<Shipment> }
 ```
 
-Struct fields, arrays, records, and tuples are readonly by default. This describes their TypeScript types; it does not freeze JavaScript objects. Use explicit mutable schema combinators when mutation is part of the model.
+`schema Batch { ... }` declares the struct `Batch` and its decoded type, the interface `Batch`, in one declaration. A field names its type, and a schema such as `Shipment` stands for its own decoded type. Struct fields, arrays, records, and tuples are readonly by default. This describes their TypeScript types; it does not freeze JavaScript objects. Use explicit mutable schema combinators when mutation is part of the model.
 
 ## Choosing synchronous, result, or effect decoding
 
