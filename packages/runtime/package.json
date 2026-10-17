@@ -2,6 +2,14 @@
   "name": "@effeck/runtime",
   "version": "0.0.1",
   "description": "The Effeck continuation kernel and generated-code runtime helpers.",
+  "keywords": [
+    "effeck",
+    "effect",
+    "runtime",
+    "continuations"
+  ],
+  "homepage": "https://effeck.pages.dev",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -17,7 +25,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -33,5 +42,8 @@
   "engines": {
     "node": ">=26",
     "bun": ">=1.4"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

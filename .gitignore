@@ -10,3 +10,4 @@ packages/compiler/native/
 templates/app/dist/
 templates/app/.prototype/
 experiments/scratch-agent-a/v3pkg/
+dist-npm/

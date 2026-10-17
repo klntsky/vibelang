@@ -2,6 +2,15 @@
   "name": "@effeck/vite",
   "version": "0.0.1",
   "description": "Compile Effeck source modules with effeck in Vite and Vitest",
+  "keywords": [
+    "effeck",
+    "effect",
+    "vite",
+    "vite-plugin",
+    "vitest"
+  ],
+  "homepage": "https://effeck.pages.dev",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
@@ -11,7 +20,8 @@
   },
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "test": "node --test test/plugin.test.mjs"
@@ -33,5 +43,8 @@
     "effeck": {
       "optional": true
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

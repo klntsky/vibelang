@@ -46,7 +46,7 @@ $SSH "$HOST" "mkdir -p ~/$dest"
 rsync -a --delete -e "$SSH" \
 	--exclude '/.jj' --exclude '/.git' --exclude 'node_modules' --exclude '/typescript/built' \
 	--exclude 'dist' --exclude '/typescript/effeck/cases/*/out' --exclude '/docs/user/site' \
-	--exclude '/packages/compiler/native' --exclude '*.vsix' --exclude '*.tgz' --exclude '/.cache' --exclude '.effeck' \
+	--exclude '/packages/compiler/native' --exclude '*.vsix' --exclude '*.tgz' --exclude '/.cache' --exclude '/dist-npm' --exclude '.effeck' \
 	"$root/" "$HOST:$dest/"
 
 # Quote each argument for the remote shell.
