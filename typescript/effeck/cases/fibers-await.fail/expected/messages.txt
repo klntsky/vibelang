@@ -1,0 +1,4 @@
+load() already runs here, so there is nothing to await.
+p is a promise, but await in Effeck code waits for a Fiber or a Deferred.
+await waits for a Fiber, a Deferred, or an array or object of them, but this is 42.
+await in a hatch body is JavaScript's await, which needs an async function.

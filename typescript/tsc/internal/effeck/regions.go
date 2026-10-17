@@ -128,7 +128,9 @@ func (tx *lowering) visitJump(node *ast.Node) *ast.Node {
 			j.label = label.Text()
 		}
 	}
-	if tx.frame.lands(j) {
+	if tx.frame.lands(j) || tx.frame.region == nil {
+		// A jump with no target in the function's own body is an error the
+		// checker reported (such as EK4605); emit it as written.
 		return tx.Visitor().VisitEachChild(node)
 	}
 	var value *ast.Node

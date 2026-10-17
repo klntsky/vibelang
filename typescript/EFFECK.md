@@ -1061,6 +1061,32 @@ const l = user |> `${%.first} ${%.last}`             const l = (topic_1 = user, 
 
 Cases: `effeck-pipes` (values, by name, chains, closures, `% % 2`, nested pipes, a hatch, a top-level runner, a forked pipe), `pipe-missing-topic.fail`, `pipe-topic-outside.fail`, `pipe-mixed.fail`. The LSP smoke checks both hovers and that formatting keeps `|>`.
 
+## Fiber forms (D166-D171)
+
+`parser/effeck_fibers.go` writes each fiber form as calls the rest of the
+compiler already understands, so the checker, the analyzer, and the lowering
+need no new node kinds:
+
+| Source | Parses as |
+| --- | --- |
+| `fork getUser(id)` | `fork(getUser(id))`: the prelude's fork, owned by the block (D95) |
+| `fork { ... }` | `fork(() => { ... })` |
+| `await x` (outside `async`) | `$await(x)`, a call that runs: its value and its failures |
+| `select { case const v = a(): S ... default: D }` | `$selectN: { const $selected = $select(hasDefault, () => a(), ...); if ($selected.index === 0) { const v = $selected.value; S } else ... }` |
+| `for concurrent(n) (const x of xs) S` | `$forConcurrent(xs, n, (x) => { S })` |
+
+The synthesized parts are anchored on the keyword they stand for, flagged
+`NodeFlagsReparsed`; the helper calls are known by their synthesized callee, not
+by `NodeFlagsEffeck`, which marks with blocks and schema structs. In a select, an
+unlabeled break that would leave it gets the block's label; in a `for
+concurrent` body, an unlabeled continue becomes a synthesized return and an
+escaping break is flagged for EK4605. `effeck/fibers.go` reports EK4601-EK4606
+and gives `await`, `select`, and `for concurrent` hover text; the runtime's
+`fibers.ts` implements `$await`, `$select` (forked with `startImmediately` so
+a case ready at start wins in written order), `$forConcurrent`, `detach`, and
+`forkIn`. A numeric literal synthesized at another token prints its own text
+(`scanner.GetSourceTextOfNodeFromSourceFile`), which the select's indices need.
+
 ## Code that is not Effect
 
 A call to a function that returns no `Effect` needs a trust level (D5, D22, D23). `trust.go` classifies the callee by the declaration its signature resolves to:

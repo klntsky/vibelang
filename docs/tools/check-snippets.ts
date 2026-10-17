@@ -169,6 +169,10 @@ async function main() {
           }
         }
         for (const statement of ast.statements) {
+          // TypeScript's parser cannot read Effeck's statement forms, such as
+          // `fork { ... }` and `select { ... }`, and its recovery can lift
+          // statements out of a function. Top-level code starts in column 0.
+          if (ast.getLineAndCharacterOfPosition(statement.getStart(ast)).character !== 0) continue
           const before = new Set(names)
           if (ts.isImportDeclaration(statement)) {
             const clause = statement.importClause

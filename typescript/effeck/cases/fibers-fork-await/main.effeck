@@ -1,0 +1,110 @@
+// expect-result: {"pair":["Ada",3],"tuple":["Ada",3],"record":{"user":"Ada","count":3},"block":"done","old":"Ada","deferred":7,"failed":"NotFound","interrupted":true,"detached":"background","scoped":"scoped"}
+error NotFound { id: string }
+
+function getUser(id: string): string!NotFound! {
+  sleep("5 millis")
+  if (id === "missing") throw new NotFound({ id })
+  return "Ada"
+}
+
+function count(): number!! {
+  sleep("2 millis")
+  return 3
+}
+
+function label(): string!! {
+  return "scoped"
+}
+
+// fork starts a fiber; await joins it, and its failure joins E.
+function pair() {
+  const user = fork getUser("42")
+  const n = fork count()
+  return [await user, await n]
+}
+
+// await on an array waits for every element and keeps the shape.
+function tuple() {
+  const [user, n] = await [fork getUser("42"), fork count()]
+  return [user, n]
+}
+
+function record() {
+  return await { user: fork getUser("42"), count: fork count() }
+}
+
+// fork { ... } forks a block.
+function block() {
+  const done = Deferred.make<string>()
+  fork {
+    sleep("1 millis")
+    Deferred.succeed(done, "done")
+  }
+  return await done
+}
+
+// The call form still works.
+function old() {
+  const fiber = fork(getUser("42"))
+  return await fiber
+}
+
+function deferred() {
+  const d = Deferred.make<number>()
+  Deferred.succeed(d, 7)
+  return await d
+}
+
+function failed() {
+  try {
+    const user = fork getUser("missing")
+    return await user
+  } catch (e: NotFound) {
+    return e._tag
+  }
+}
+
+// When one fiber fails, await interrupts the others.
+function interrupted() {
+  const slow = fork {
+    sleep("1 second")
+    return "slow"
+  }
+  const bad = fork getUser("missing")
+  try {
+    await [slow, bad]
+    return false
+  } catch (e: NotFound) {
+    const exit = slow.pollUnsafe()
+    return exit !== undefined && exit._tag === "Failure" && exit.cause.reasons.some((reason) => reason._tag === "Interrupt")
+  }
+}
+
+function detached() {
+  const d = Deferred.make<string>()
+  detach(Deferred.succeed(d, "background"))
+  return await d
+}
+
+function scoped() {
+  const scope = Scope.make()
+  const fiber = forkIn(scope, label())
+  const value = await fiber
+  Scope.close(scope, Exit.void)
+  return value
+}
+
+export function main() {
+  return {
+    pair: pair(),
+    tuple: tuple(),
+    record: record(),
+    block: block(),
+    old: old(),
+    deferred: deferred(),
+    failed: failed(),
+    interrupted: interrupted(),
+    detached: detached(),
+    scoped: scoped()
+  }
+}

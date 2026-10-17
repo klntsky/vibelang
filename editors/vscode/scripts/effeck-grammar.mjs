@@ -38,9 +38,26 @@ export function addEffeckSyntax(grammar) {
     match: `\\b(handle)\\s+(?=${name}\\s*\\.\\s*${name}\\s*\\()`,
     captures: { 1: { name: "keyword.control.trycatch.ts" } }
   }
-  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause"]
+  // The fiber forms (D166-D169): fork operand, select { case ... }, for concurrent (...).
+  repository["effeck-fork"] = {
+    match: "(?<![_$[:alnum:]])(fork)\\s+(?=[_$[:alpha:]{]|this\\b|new\\b|await\\b)",
+    captures: { 1: { name: "keyword.control.flow.ts" } }
+  }
+  repository["effeck-select"] = {
+    patterns: [
+      { match: "(?<![_$[:alnum:]])(select)\\s*(?=\\{)", captures: { 1: { name: "keyword.control.switch.ts" } } },
+      { match: "(?<![_$[:alnum:].])(case|default)(?![_$[:alnum:]])", name: "keyword.control.switch.ts" }
+    ]
+  }
+  repository["effeck-for-concurrent"] = {
+    match: "(?<![_$[:alnum:]])(for)\\s+(concurrent)(?![_$[:alnum:]])",
+    captures: { 1: { name: "keyword.control.loop.ts" }, 2: { name: "keyword.control.loop.ts" } }
+  }
+  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-select", "#effeck-for-concurrent", "#effeck-fork"]
   const statements = repository.statements.patterns.filter((pattern) => !effeckIncludes.includes(pattern.include))
   repository.statements.patterns = [...effeckIncludes.map((include) => ({ include })), ...statements]
+  const expressions = repository.expression.patterns.filter((pattern) => pattern.include !== "#effeck-fork")
+  repository.expression.patterns = [{ include: "#effeck-fork" }, ...expressions]
   // `!` separates the slots of an Effect type: Result!Error!Dependencies.
   const effectSlot = { name: "keyword.operator.type.effect.ts", match: "!" }
   repository.type.patterns = [effectSlot, ...repository.type.patterns.filter((pattern) => pattern.name !== effectSlot.name)]

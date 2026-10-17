@@ -7,8 +7,9 @@ import (
 )
 
 // The checks in this file report TypeScript syntax that Effeck does not
-// have. A call already waits, so async, await, for await, and await using are
-// EK1003 (Chapter 10). A module's top level is not inside a program, so using
+// have. A call already waits, so async, for await, and await using are
+// EK1003 (Chapter 10). The parser writes await outside an async function as
+// $await (fibers.go), so an AwaitExpression here is inside an async function. A module's top level is not inside a program, so using
 // there has no block to release it in: EK1004 (Chapter 6).
 
 func init() {

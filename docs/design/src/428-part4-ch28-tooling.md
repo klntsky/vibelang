@@ -193,7 +193,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | --- | --- | --- | --- |
 | EK1001 | A module's top level runs a program | Export a function instead | 13 |
 | EK1002 | A `function*` passed to an API whose parameter returns a library Generator or Iterator, such as `Effect.gen` (D64) | Convert the function | 10 |
-| EK1003 | `async`, `await`, `for await`, or `await using`: a call already waits | Remove them | 10 |
+| EK1003 | `async`, `for await`, or `await using`, and `await` inside an `async` function outside a hatch: a call already waits | Remove them; `await` in Effeck code waits for fibers (EK4601-EK4604) | 10 |
 | EK1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
 | EK1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
 | EK1006 | A pipe whose body does not use its topic, as in `name \|> "anonymous"` (D156) | Write `%` where the value goes: `name \|> greet(%)` | 5 |
@@ -233,6 +233,12 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
 | EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
+| EK4601 | `await` before a call that already runs (D167) | Remove `await`; to run the call concurrently, fork it and await the fiber | 7 |
+| EK4602 | `await` on a promise in Effeck code (D167) | Wrap it in a hatch: `try(async () => …)` | 7 |
+| EK4603 | `await` on a value that is not a Fiber, a Deferred, or an array or object of them (D167) | Fork the program and await the fiber | 7 |
+| EK4604 | `await` in a hatch body that is not `async` (D167) | Make the hatch's function `async` | 7 |
+| EK4605 | `break` that would leave a `for concurrent` loop (D169) | Use `continue` to end one item, or `throw` to stop every item | 7 |
+| EK4606 | `return` in a `for concurrent` body (D169) | Use `continue` to end one item | 7 |
 
 #### Linting
 

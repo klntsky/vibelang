@@ -101,6 +101,7 @@ type Parser struct {
 
 	effeckMutableMember       bool               // the type member being parsed was written with mutable (effeck.go)
 	effeckAbstractMembers     bool               // bodiless class members become abstract: a service or control body (effeck.go)
+	effeckSelects             int                // select statements parsed so far, which number their labels (effeck_fibers.go)
 	effeckOmittedDependencies map[*ast.Node]bool // Effect types whose dependencies were left out (effeck.go)
 }
 
@@ -1130,6 +1131,9 @@ func (p *Parser) parseStatement() *ast.Statement {
 		if p.isStartOfEffeckDeclaration() {
 			return p.parseDeclaration()
 		}
+		if p.isStartOfEffeckSelect() {
+			return p.parseEffeckSelect() // select { case ... } (effeck_fibers.go)
+		}
 	}
 	return p.parseExpressionOrLabeledStatement()
 }
@@ -1310,6 +1314,11 @@ func (p *Parser) parseForOrForInOrForOfStatement() *ast.Node {
 	pos := p.nodePos()
 	jsdoc := p.jsdocScannerInfo()
 	p.parseExpected(ast.KindForKeyword)
+	if p.isEffeckConcurrentFor() {
+		result := p.parseEffeckConcurrentFor(pos) // for concurrent (...) (effeck_fibers.go)
+		p.withJSDoc(result, jsdoc)
+		return result
+	}
 	awaitToken := p.parseOptionalToken(ast.KindAwaitKeyword)
 	p.parseExpected(ast.KindOpenParenToken)
 	var initializer *ast.ForInitializer
@@ -4800,6 +4809,9 @@ func (p *Parser) parseUnaryExpressionOrHigher() *ast.Expression {
 	//      3) LeftHandSideExpression[?Yield][no LineTerminator here]--
 	//      4) ++UnaryExpression[?Yield]
 	//      5) --UnaryExpression[?Yield]
+	if p.isStartOfEffeckFork() {
+		return p.parseEffeckFork() // fork operand (effeck_fibers.go)
+	}
 	if p.isUpdateExpression() {
 		pos := p.nodePos()
 		updateExpression := p.parseUpdateExpression()
@@ -5208,6 +5220,9 @@ func (p *Parser) parseSimpleUnaryExpression() *ast.Expression {
 		// //      < type > UnaryExpression
 		return p.parseTypeAssertion()
 	case ast.KindAwaitKeyword:
+		if p.isEffeckAwait() {
+			return p.parseEffeckAwait() // await outside async, in an .effeck file (effeck_fibers.go)
+		}
 		if p.isAwaitExpression() {
 			return p.parseAwaitExpression()
 		}

@@ -1,0 +1,22 @@
+// expect: EK4601 EK4602 EK4603 EK4604
+function load(): number!! {
+  return 1
+}
+
+export function alreadyRuns() {
+  return await load()
+}
+
+export function promise(p: Promise<number>) {
+  return await p
+}
+
+export function plain() {
+  return await 42
+}
+
+export function inHatch() {
+  return sync(() => {
+    await Promise.resolve(1)
+  })
+}

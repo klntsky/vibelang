@@ -88,7 +88,9 @@ func GetTextOfNodeFromSourceText(sourceText string, node *ast.Node, includeTrivi
 				return "'" + text + "'"
 			}
 			return "\"" + text + "\""
-		} else if ast.IsIdentifier(node) {
+		} else if ast.IsIdentifier(node) || node.Kind == ast.KindNumericLiteral {
+			// A numeric literal synthesized at another token, as Effeck's select
+			// writes its case indices, prints its own text.
 			return node.Text()
 		}
 		// Only the above node kinds are currently transformed into one another by the reparser, requiring the textual remapping.

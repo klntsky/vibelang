@@ -44,6 +44,15 @@
 					"include": "#effeck-handle-clause"
 				},
 				{
+					"include": "#effeck-select"
+				},
+				{
+					"include": "#effeck-for-concurrent"
+				},
+				{
+					"include": "#effeck-fork"
+				},
+				{
 					"include": "#declaration"
 				},
 				{
@@ -213,6 +222,9 @@
 		},
 		"expression": {
 			"patterns": [
+				{
+					"include": "#effeck-fork"
+				},
 				{
 					"include": "#expressionWithoutIdentifiers"
 				},
@@ -5860,6 +5872,41 @@
 			"captures": {
 				"1": {
 					"name": "keyword.control.trycatch.ts"
+				}
+			}
+		},
+		"effeck-fork": {
+			"match": "(?<![_$[:alnum:]])(fork)\\s+(?=[_$[:alpha:]{]|this\\b|new\\b|await\\b)",
+			"captures": {
+				"1": {
+					"name": "keyword.control.flow.ts"
+				}
+			}
+		},
+		"effeck-select": {
+			"patterns": [
+				{
+					"match": "(?<![_$[:alnum:]])(select)\\s*(?=\\{)",
+					"captures": {
+						"1": {
+							"name": "keyword.control.switch.ts"
+						}
+					}
+				},
+				{
+					"match": "(?<![_$[:alnum:].])(case|default)(?![_$[:alnum:]])",
+					"name": "keyword.control.switch.ts"
+				}
+			]
+		},
+		"effeck-for-concurrent": {
+			"match": "(?<![_$[:alnum:]])(for)\\s+(concurrent)(?![_$[:alnum:]])",
+			"captures": {
+				"1": {
+					"name": "keyword.control.loop.ts"
+				},
+				"2": {
+					"name": "keyword.control.loop.ts"
 				}
 			}
 		}

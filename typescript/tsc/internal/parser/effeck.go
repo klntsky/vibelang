@@ -73,7 +73,7 @@ func (p *Parser) parseEffeckDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 func (p *Parser) effeckSynthesized(node *ast.Node, anchor core.TextRange) *ast.Node {
 	node.Loc = anchor
 	node.Flags |= p.contextFlags | ast.NodeFlagsReparsed
-	if node.Kind == ast.KindIdentifier || node.Kind == ast.KindStringLiteral {
+	if node.Kind == ast.KindIdentifier || node.Kind == ast.KindStringLiteral || node.Kind == ast.KindNumericLiteral {
 		node.Flags |= ast.NodeFlagsReparserTransformedLiteral
 	}
 	p.overrideParentInImmediateChildren(node)

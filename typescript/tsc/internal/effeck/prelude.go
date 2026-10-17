@@ -58,6 +58,13 @@ var preludeModules = map[string]string{
 	// What a handle statement's clause binds, which the parser writes for the
 	// checker and the lowering removes (D132, handles.go).
 	"$clause": runtimeModule,
+	// The fiber forms (D166-D170, fibers.go): the parser writes await, select,
+	// and for concurrent as calls of these; detach and forkIn are fork's variants.
+	"$await":         runtimeModule,
+	"$select":        runtimeModule,
+	"$forConcurrent": runtimeModule,
+	"detach":         runtimeModule,
+	"forkIn":         runtimeModule,
 }
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the

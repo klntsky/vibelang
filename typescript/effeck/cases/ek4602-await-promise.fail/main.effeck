@@ -1,0 +1,9 @@
+// expect: EK4602
+// await in Effeck code waits for a Fiber or a Deferred. A promise needs a
+// hatch, where await keeps its JavaScript meaning.
+declare const pending: Promise<number>
+
+export function total() {
+  const n = await pending
+  return n + 1
+}

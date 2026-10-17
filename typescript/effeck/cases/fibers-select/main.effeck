@@ -1,0 +1,93 @@
+// expect-result: {"first":"job 1","tie":"a","fallback":"default","fallbackReady":"ready","loop":["job 1","job 2","tick"],"failure":"Boom","broke":"after"}
+error Boom
+
+function first() {
+  const jobs = Queue.unbounded<string>()
+  Queue.offer(jobs, "job 1")
+  select {
+    case const job = Queue.take(jobs): return job
+    case sleep("1 second"): return "timeout"
+  }
+}
+
+// Of cases ready at once, the first written wins.
+function tie() {
+  select {
+    case const a = Effect.succeed("a"): return a
+    case const b = Effect.succeed("b"): return b
+  }
+}
+
+// default runs when no case finishes while the cases start.
+function fallback() {
+  const jobs = Queue.unbounded<string>()
+  select {
+    case const job = Queue.take(jobs): return job
+    default: return "default"
+  }
+}
+
+function fallbackReady() {
+  const jobs = Queue.unbounded<string>()
+  Queue.offer(jobs, "ready")
+  select {
+    case const job = Queue.take(jobs): return job
+    default: return "default"
+  }
+}
+
+// continue goes to the loop's next iteration.
+function loop() {
+  const jobs = Queue.unbounded<string>()
+  Queue.offer(jobs, "job 1")
+  Queue.offer(jobs, "job 2")
+  const seen: string[] = []
+  while (seen.length < 3) {
+    select {
+      case const job = Queue.take(jobs):
+        seen.push(job)
+        continue
+      case sleep("10 millis"):
+        seen.push("tick")
+    }
+  }
+  return seen
+}
+
+// A failing case's failure propagates.
+function failure() {
+  try {
+    select {
+      case Effect.fail(new Boom()): return "no"
+      case sleep("1 second"): return "timeout"
+    }
+  } catch (e: Boom) {
+    return e._tag
+  }
+}
+
+// break leaves the select, as it leaves a switch.
+function broke() {
+  let result = "before"
+  for (const _ of [1]) {
+    select {
+      case sleep("1 millis"):
+        result = "inside"
+        break
+    }
+    result = "after"
+  }
+  return result
+}
+
+export function main() {
+  return {
+    first: first(),
+    tie: tie(),
+    fallback: fallback(),
+    fallbackReady: fallbackReady(),
+    loop: loop(),
+    failure: failure(),
+    broke: broke()
+  }
+}

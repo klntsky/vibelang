@@ -65,7 +65,7 @@ var (
 	EK1001 = message(1001, errorCategory, "{0} runs a program, but a module's top level is not inside one.")
 	// EK1002: a generator-based API such as Effect.gen, where function* declares a producer. {0} is the API.
 	EK1002 = message(1002, errorCategory, "{0} expects a JavaScript generator, but in Effeck function* declares a producer.")
-	// EK1003: async, await, for await, or await using. {0} is the keyword.
+	// EK1003: async, for await, await using, or await inside an async function outside a hatch. {0} is the keyword.
 	EK1003 = message(1003, errorCategory, "{0} is not part of Effeck: a call already waits.")
 	// EK1004: using at a module's top level.
 	EK1004 = message(1004, errorCategory, "using needs a block that a program runs, but a module's top level is not inside one.")

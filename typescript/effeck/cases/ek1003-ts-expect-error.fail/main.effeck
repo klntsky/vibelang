@@ -1,10 +1,7 @@
 // expect: EK1003 TS2578
 // An expect-error comment does not apply to EK diagnostics, so the one below
 // expects nothing and is itself reported as unused (TS2578).
-declare const pending: Promise<number>
-
-export function total() {
-  // @ts-expect-error
-  const n = await pending
-  return n
+// @ts-expect-error
+export async function total() {
+  return 1
 }
