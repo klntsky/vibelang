@@ -1,0 +1,48 @@
+// expect-result: {"found":"Ada","missing":"NotFound","lazy":"Ada","picked":"short","tooLong":"TooLong","arrow":"Bo"}
+error NotFound { id: string }
+error TooLong { length: number }
+
+function find(id: string): string | undefined {
+  return id === "1" ? "Ada" : id === "2" ? "Bo" : undefined
+}
+
+// throw in expression position fails as the throw statement does.
+function lookup(id: string) {
+  return find(id) ?? throw new NotFound({ id })
+}
+
+function missing() {
+  try {
+    return lookup("9")
+  } catch (e: NotFound) {
+    return e._tag
+  }
+}
+
+// The right side of ?? runs only when the left side is nullish.
+function lazy() {
+  let ran = false
+  const name = find("1") ?? throw (ran = true, new NotFound({ id: "never" }))
+  return ran ? "ran" : name
+}
+
+function label(text: string) {
+  return text.length < 6 ? "short" : throw new TooLong({ length: text.length })
+}
+
+function tooLong() {
+  try {
+    return label("much too long")
+  } catch (e: TooLong) {
+    return e._tag
+  }
+}
+
+function arrow() {
+  const get = (id: string) => find(id) ?? throw new NotFound({ id })
+  return get("2")
+}
+
+export function main() {
+  return { found: lookup("1"), missing: missing(), lazy: lazy(), picked: label("abc"), tooLong: tooLong(), arrow: arrow() }
+}

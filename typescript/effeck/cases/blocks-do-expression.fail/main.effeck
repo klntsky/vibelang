@@ -1,0 +1,24 @@
+// expect: TS1109 TS1108
+function noElse(n: number) {
+  return do {
+    if (n > 1) {
+      "big"
+    }
+  }
+}
+
+function endsInDeclaration() {
+  return do {
+    const a = 1
+  }
+}
+
+function returns() {
+  return do {
+    return 1
+  }
+}
+
+export function main() {
+  return [noElse(2), endsInDeclaration(), returns()]
+}

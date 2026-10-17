@@ -428,6 +428,19 @@ try {
     assert(formatted.includes('greeting() |> Effect.timeout(%, "1 second") |> `${%}!`'), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("greeting()")))}`)
   })
 
+  await check("formatting: throw and do expressions keep their shape", async () => {
+    const edits = await connection.request("textDocument/formatting", { textDocument: { uri: fileUri("src/main.effeck") }, options: { tabSize: 2, insertSpaces: true } })
+    const lines = text("src/main.effeck").split("\n")
+    for (const edit of [...(edits ?? [])].sort((a, b) => b.range.start.line - a.range.start.line || b.range.start.character - a.range.start.character)) {
+      const { start, end } = edit.range
+      const head = lines[start.line].slice(0, start.character), tail = lines[end.line].slice(end.character)
+      lines.splice(start.line, end.line - start.line + 1, ...(head + edit.newText + tail).split("\n"))
+    }
+    const formatted = lines.join("\n")
+    assert(formatted.includes("return names[id] ?? throw new NotFound({ id })"), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("throw")))}`)
+    assert(formatted.includes("return do {") && formatted.includes("    word.toUpperCase()"), `formatted to ${JSON.stringify(formatted.split("\n").filter((l) => l.includes("do {") || l.includes("toUpperCase")))}`)
+  })
+
   await check("completion: an Effect data type lists its module's functions as methods", async () => {
     const labels = await completionLabels("src/main.effeck", "map((n) =>", { offset: 0 })
     for (const label of ["map", "getOrElse", "flatMap", "pipe"]) assert(labels.includes(label), `no ${label} in ${JSON.stringify(labels.slice(0, 30))}`)

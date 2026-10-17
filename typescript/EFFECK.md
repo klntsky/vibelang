@@ -1152,6 +1152,10 @@ A namespace import's members are values too, until the code runs one: `os.EOL` i
 
 Both apply everywhere in a `.effeck` file, inside boundaries (D23) and at the top level.
 
+## Throw and do expressions
+
+`parser/effeck_blocks.go` parses a throw expression (D186) as `(() => { throw operand })()` and a do expression (D187) as `(() => { ...; return last })()`, rewriting the block's last statement into the return of its completion value and reporting TS1109 or TS1108 where the proposal forbids an ending or a return. Nothing after the parser knows the forms exist: the immediately invoked arrow is an Effeck function, so its call runs where it stands, short-circuits under `??` and `?:`, and is taken by name where a parameter expects a program. `isStartOfLeftHandSideExpression` admits `do {` and `throw` so both start list elements.
+
 ## Where programs start
 
 `runners.go` holds D38's runner registry and two checks. `runnerOf` knows a runner by the declaration its call resolves to: Effect's `runPromise`, `runPromiseExit`, `runSync`, `runSyncExit`, `runFork`, and `runCallback`, and their `*With` forms; `ManagedRuntime`'s `run*` methods; `NodeRuntime.runMain` and `BunRuntime.runMain`; and `@effect/vitest`'s `it.effect` and `it.live`, their modifiers, `.each`, and `.prop`, and `layer(…)`.

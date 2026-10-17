@@ -34,3 +34,15 @@ export function labelled(id: number) {
 export function piped() {
   return greeting() |> Effect.timeout(%, "1 second") |> `${%}!`
 }
+
+// A throw expression and a do expression (D186, D187).
+export function required(id: number) {
+  return names[id] ?? throw new NotFound({ id })
+}
+
+export function shout() {
+  return do {
+    const word = greeting()
+    word.toUpperCase()
+  }
+}

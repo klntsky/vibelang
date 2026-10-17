@@ -4815,6 +4815,9 @@ func (p *Parser) parseUnaryExpressionOrHigher() *ast.Expression {
 	if p.isStartOfEffeckFork() {
 		return p.parseEffeckFork() // fork operand (effeck_fibers.go)
 	}
+	if p.isStartOfEffeckThrowExpression() {
+		return p.parseEffeckThrowExpression() // x ?? throw e (effeck_blocks.go)
+	}
 	if p.isUpdateExpression() {
 		pos := p.nodePos()
 		updateExpression := p.parseUpdateExpression()
@@ -5749,6 +5752,10 @@ func (p *Parser) parsePrimaryExpression() *ast.Expression {
 		if p.isStartOfTryCall() {
 			return p.parseIdentifierName() // the callee of try(…) (effeck_hatches.go)
 		}
+	case ast.KindDoKeyword:
+		if p.isStartOfEffeckDoExpression() {
+			return p.parseEffeckDoExpression() // do { ... } as an expression (effeck_blocks.go)
+		}
 	case ast.KindPercentToken:
 		if p.isEffeckFile() {
 			return p.parseTopicReference() // the topic of a pipe (effeck_pipes.go)
@@ -6348,6 +6355,10 @@ func (p *Parser) isStartOfLeftHandSideExpression() bool {
 		return p.isStartOfTryCall()
 	case ast.KindPercentToken:
 		return p.isEffeckFile()
+	case ast.KindDoKeyword:
+		return p.isStartOfEffeckDoExpression() // do { ... } as an expression (effeck_blocks.go)
+	case ast.KindThrowKeyword:
+		return p.isEffeckFile() // x ?? throw e (effeck_blocks.go)
 	}
 	return p.isIdentifier()
 }
