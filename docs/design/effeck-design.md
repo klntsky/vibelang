@@ -888,7 +888,7 @@ A call runs where it stands, except where a parameter expects a program: there i
 
 ```ts es
 syncInventory(store)                    // runs now
-fork(syncInventory(store))              // passed by name: the forked fiber runs it
+fork syncInventory(store)              // passed by name: the forked fiber runs it
 
 const job = () => syncInventory(store)  // a program: nothing has run
 job()                                   // runs it
@@ -1186,6 +1186,9 @@ Each combinator has its own rule for a failing branch, and Effeck adds nothing t
 | `Effect.race` | The first success | Keeps waiting for the other branch; fails only if both fail, with both failures |
 | `Effect.raceFirst` | Whichever branch finishes first, success or failure | Fails if the first branch to finish failed; the other is interrupted |
 | `Effect.timeout` | The program's result | At the deadline, interrupts the program and fails with `Cause.TimeoutError` |
+| `await [a, b]` | Every fiber's value, in the same shape | Interrupts the other fibers and fails with that failure |
+| `select` | The first case to finish; its statements run | Fails if the first case to finish failed; the other cases are interrupted |
+| `for concurrent` | Nothing: the loop runs its body for each item | Interrupts the other items and fails with that failure |
 
 A `catch` around any of these sees the failure as usual. When `Effect.race` fails because both branches failed, `catch` receives the first failure (Chapter 3).
 
@@ -1208,23 +1211,88 @@ const serve = Effect.fn("serve")(
 ```ts es
 function serve(port: number) {
   using server = Http.listen(port)
-  fork(heartbeat())          // interrupted when serve exits, before the server closes
+  fork heartbeat()          // interrupted when serve exits, before the server closes
   return server.awaitShutdown()
 }
 ```
 
-`fork` returns a `Fiber`, which you can join or interrupt with Effect's `Fiber` module:
+`fork` is a keyword (D166): `fork buildReport(id)` forks one call, and `fork { ... }` forks a block. It returns a `Fiber`, and `await` waits for it (D167):
 
 ```ts es
 function withProgress(id: string) {
-  const pending = fork(buildReport(id))
+  const pending = fork buildReport(id)
   sendProgressEmail(id)
-  return pending.join()          // waits for it; fails if it failed
+  return await pending          // waits for it; fails if it failed
 }
 // Report!ReportError | MailError!Reports | Mailer
 ```
 
-`fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `Fiber.join`. For a longer lifetime, say so with Effect's combinators: `Effect.forkScoped` ties the fiber to the caller's scope and adds `Scope` to R, `Effect.forkChild` ties it to the current fiber, and `Effect.forkDetach` ties it to nothing.
+`fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `await`. The call form `fork(buildReport(id))` means the same. For a longer lifetime, say so: `forkIn(scope, program)` ties the fiber to a scope you hold, `detach(program)` ties it to nothing (D170), `Effect.forkScoped` ties it to the caller's scope and adds `Scope` to R, and `Effect.forkChild` ties it to the current fiber.
+
+`await` waits for a `Fiber`, a `Deferred`, or an array or object of them, and keeps the shape. When one fiber fails, the others still running are interrupted and the failure propagates, as `Effect.all` fails fast:
+
+```ts effect
+const summary = Effect.fn("summary")(function* (id: string) {
+  const profile = yield* Effect.forkChild(loadProfile(id))
+  const orders = yield* Effect.forkChild(recentOrders(id))
+  const [p, o] = yield* Fiber.joinAll([profile, orders])
+  return { profile: p, orders: o }
+})
+```
+
+```ts es
+function summary(id: string) {
+  const [profile, orders] = await [fork loadProfile(id), fork recentOrders(id)]
+  return { profile, orders }
+}
+```
+
+`await` never waits for a call: a call already runs and waits where it stands, so `await loadProfile(id)` is EK4601. A promise is EK4602; wait for one in a hatch, `try(async () => …)`, where `await` keeps its JavaScript meaning. Anything else is EK4603, and an `await` in a hatch's function that is not `async` is EK4604.
+
+#### Selecting the first event
+
+`select` starts each case in its own fiber and runs the statements of the first to finish; the other cases are interrupted (D168):
+
+```ts effect
+const next = (jobs: Queue.Queue<Job>, shutdown: Deferred.Deferred<void>) =>
+  Effect.raceAllFirst([
+    Effect.map(Queue.take(jobs), (job) => ({ kind: "job" as const, job })),
+    Effect.as(Deferred.await(shutdown), { kind: "shutdown" as const }),
+    Effect.as(Effect.sleep("30 seconds"), { kind: "idle" as const })
+  ]).pipe(Effect.flatMap((event) => /* switch on event.kind */ handle(event)))
+```
+
+```ts es
+function next(jobs: Queue.Queue<Job>, shutdown: Deferred.Deferred<void>) {
+  select {
+    case const job = jobs.take(): return run(job)
+    case shutdown.await(): return "stopped"
+    case sleep("30 seconds"): return heartbeat()
+  }
+}
+```
+
+- A case's expression is a program: it is passed, not run, like a by-name argument. `case const x = program:` binds the winner's value.
+- A failing case that finishes first fails the select. Of cases ready at once, the first written wins: a case that finishes while the cases are starting stops the rest from starting.
+- A `default:` clause runs when no case finishes while the cases start, which makes `select` a poll.
+- `break` leaves the select, as it leaves a `switch`; `continue` and `return` keep their meaning in the enclosing loop and function. A select whose clauses all return ends the function.
+
+#### Concurrent loops
+
+`for concurrent` runs its body for each item in its own fiber and joins them all before the loop ends (D169). `for concurrent(n)` runs at most `n` at once:
+
+```ts effect
+const saveAll = (ids: ReadonlyArray<string>) =>
+  Effect.forEach(ids, (id) => Effect.flatMap(fetchPage(id), save), { concurrency: 8, discard: true })
+```
+
+```ts es
+function saveAll(ids: ReadonlyArray<string>) {
+  for concurrent(8) (const id of ids) save(fetchPage(id))
+}
+```
+
+A failure interrupts the items still running and fails the loop. `continue` ends one item. A `break` that would leave the loop is EK4605 and a `return` is EK4606, because each item runs in its own fiber; throw to stop every item. Use `forEach` when you need the results.
 
 An expression-bodied arrow has no block to own its child: `() => fork(p)` uses `Effect.forkScoped` and keeps `Scope` in R, unlike `() => { return fork(p) }` (D96). Returning a block-owned child currently returns a fiber already interrupted when that block exited; the compiler does not warn.
 
@@ -1564,7 +1632,7 @@ error EK1002: Effect.gen expects a JavaScript generator, but in Effeck function*
     function findName(id: string) { return Users.find(id).name }
 ```
 
-The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions and `await` are not part of Effeck either: a call already waits. Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (Chapter 28).
+The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions are not part of Effeck either: a call already waits. `await` waits for a fiber or a Deferred, never for a call (Chapter 7, D167). Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (Chapter 28).
 
 #### Using Effeck code from TypeScript
 
@@ -1663,7 +1731,7 @@ This is a policy change from the original direction, which adapted every plain c
 
 #### Promises
 
-Effeck code has no `await` outside a hatch: a call already waits for the callee. A Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
+Outside a hatch, `await` waits only for a fiber or a Deferred: a call already waits for the callee. A Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
 
 ```ts es
 import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: AbortSignal) => Promise<Charge>
@@ -1913,7 +1981,7 @@ function loadProfile(id: string) {
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` outside a boundary hatch, so there are no "colored" functions: every function can wait. A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function, and `await` never waits for a call, so there are no "colored" functions: every function can wait. In Effeck code, `await` waits for a fiber you forked or a Deferred (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -2028,9 +2096,9 @@ import { assert, it } from "@effect/vitest"
 import { TestClock } from "effect/testing"
 
 it.effect("a reminder fires after one day", () => {
-  const reminder = fork(remindLater("ada", "1 day"))
+  const reminder = fork remindLater("ada", "1 day")
   TestClock.adjust("1 day")                          // virtual time: nothing waits
-  assert.strictEqual(reminder.join(), "sent")
+  assert.strictEqual(await reminder, "sent")
 })
 ```
 
@@ -2110,13 +2178,13 @@ TypeScript's narrowing does most of the work: `switch` on `_tag`, `instanceof`, 
 
 ```ts es
 function search(query: string) {
-  const scan = fork(slowIndexScan(query))
+  const scan = fork slowIndexScan(query)
   const cached = SearchCache.lookup(query)
   if (cached !== undefined) {
     scan.interrupt()               // cancels the scan; its finally blocks run first
     return cached
   }
-  return scan.join()
+  return await scan
 }
 ```
 
@@ -4010,7 +4078,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | --- | --- | --- | --- |
 | EK1001 | A module's top level runs a program | Export a function instead | 13 |
 | EK1002 | A `function*` passed to an API whose parameter returns a library Generator or Iterator, such as `Effect.gen` (D64) | Convert the function | 10 |
-| EK1003 | `async`, `await`, `for await`, or `await using`: a call already waits | Remove them | 10 |
+| EK1003 | `async`, `for await`, or `await using`, and `await` inside an `async` function outside a hatch: a call already waits | Remove them; `await` in Effeck code waits for fibers (EK4601-EK4604) | 10 |
 | EK1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
 | EK1005 | A runner inside code that a fiber runs | Call the program, or `fork` it | 13 |
 | EK1006 | A pipe whose body does not use its topic, as in `name \|> "anonymous"` (D156) | Write `%` where the value goes: `name \|> greet(%)` | 5 |
@@ -4050,6 +4118,12 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
 | EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
+| EK4601 | `await` before a call that already runs (D167) | Remove `await`; to run the call concurrently, fork it and await the fiber | 7 |
+| EK4602 | `await` on a promise in Effeck code (D167) | Wrap it in a hatch: `try(async () => …)` | 7 |
+| EK4603 | `await` on a value that is not a Fiber, a Deferred, or an array or object of them (D167) | Fork the program and await the fiber | 7 |
+| EK4604 | `await` in a hatch body that is not `async` (D167) | Make the hatch's function `async` | 7 |
+| EK4605 | `break` that would leave a `for concurrent` loop (D169) | Use `continue` to end one item, or `throw` to stop every item | 7 |
+| EK4606 | `return` in a `for concurrent` body (D169) | Use `continue` to end one item | 7 |
 
 #### Linting
 
@@ -4255,6 +4329,12 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D154 | **Controversial.** The Hack pipe operator in `.effeck` files: `x \|> f(%, a)`, topic `%`, left-associative, looser than every binary operator; supersedes D8 | Fewer tokens and no nesting for operator chains; any argument position | 5, 27 |
 | D155 | **Controversial.** A topic follows the by-name rule: where `%` stands for a program, the left side is passed by name; elsewhere it runs once, before the body; both in one pipe is EK1008 | `fetchUser(id) \|> retry(%, policy)` must retry the call, as `retry(fetchUser(id), policy)` does | 5, 13 |
 | D156 | A pipe's body must use `%` (EK1006); `%` outside a pipe's body is EK1007; after an operand `%` is still the remainder | The proposal's early errors; `%` keeps its JavaScript meaning where it already has one | 5, 28 |
+| D166 | `fork` is a keyword: `fork x` is `fork(x)` and `fork { ... }` forks a block | Concurrency reads as one word, with no lambda |
+| D167 | **Controversial.** `await` waits for a Fiber, a Deferred, or an array or object of them, failing fast; EK4601-EK4604 | Fibers need a join, and `await` was free outside hatches |
+| D168 | **Controversial.** `select` runs the first case to finish and interrupts the rest; ties go to the first written; `default` polls; `break` leaves it | First-of-several events without `raceAll` plumbing |
+| D169 | `for concurrent(n)` runs the body per item in its own fiber; `continue` ends an item; `break` and `return` are EK4605 and EK4606 | `forEach` with a concurrency option, as a loop |
+| D170 | `detach(program)` and `forkIn(scope, program)` are fork's variants | Longer lifetimes without Effect's names |
+| D171 | `await`'s types accept one level of arrays and objects | Deeper recursive types exceed TypeScript's limits |
 
 #### Rules of the runtime and compiler
 
@@ -4795,7 +4875,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In Effeck | Form |
 | --- | --- | --- |
-| `async` and `await` | Changed | Only inside a hatch's function; elsewhere a call waits (D148) |
+| `async` and `await` | Changed | `async` only inside a hatch's function, where `await` is JavaScript's; elsewhere a call waits, and `await` waits for a fiber or a Deferred (D148, D167) |
 | `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal` cancels on interruption (D148) |
 | `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
 | `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |

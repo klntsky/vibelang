@@ -724,7 +724,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <h4 id="the-one-rule"><a class="anchor" href="#the-one-rule">The one rule</a></h4>
 <p>A call runs where it stands, except where a parameter expects a program: there it is passed by name, and runs when the program runs. A function value does not run.</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="f">syncInventory</span>(store)                    <span class="c">// runs now</span>
-<span class="f">fork</span>(<span class="f">syncInventory</span>(store))              <span class="c">// passed by name: the forked fiber runs it</span>
+fork <span class="f">syncInventory</span>(store)              <span class="c">// passed by name: the forked fiber runs it</span>
 
 <span class="k">const</span> job = () =&gt; <span class="f">syncInventory</span>(store)  <span class="c">// a program: nothing has run</span>
 <span class="f">job</span>()                                   <span class="c">// runs it</span>
@@ -904,7 +904,10 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <div class="table"><table><thead><tr><th>Combinator</th><th>Succeeds with</th><th>When a branch fails</th></tr></thead><tbody><tr><td><code>Effect.all</code>, <code>Effect.forEach</code></td><td>Every result, in order</td><td>Interrupts the other branches, waits for their cleanup, and fails with that failure</td></tr>
 <tr><td><code>Effect.race</code></td><td>The first success</td><td>Keeps waiting for the other branch; fails only if both fail, with both failures</td></tr>
 <tr><td><code>Effect.raceFirst</code></td><td>Whichever branch finishes first, success or failure</td><td>Fails if the first branch to finish failed; the other is interrupted</td></tr>
-<tr><td><code>Effect.timeout</code></td><td>The program&#39;s result</td><td>At the deadline, interrupts the program and fails with <code>Cause.TimeoutError</code></td></tr></tbody></table></div>
+<tr><td><code>Effect.timeout</code></td><td>The program&#39;s result</td><td>At the deadline, interrupts the program and fails with <code>Cause.TimeoutError</code></td></tr>
+<tr><td><code>await [a, b]</code></td><td>Every fiber&#39;s value, in the same shape</td><td>Interrupts the other fibers and fails with that failure</td></tr>
+<tr><td><code>select</code></td><td>The first case to finish; its statements run</td><td>Fails if the first case to finish failed; the other cases are interrupted</td></tr>
+<tr><td><code>for concurrent</code></td><td>Nothing: the loop runs its body for each item</td><td>Interrupts the other items and fails with that failure</td></tr></tbody></table></div>
 <p>A <code>catch</code> around any of these sees the failure as usual. When <code>Effect.race</code> fails because both branches failed, <code>catch</code> receives the first failure (<a href="#3-errors-the-e-channel">Chapter 3</a>).</p>
 <h4 id="background-work-with-a-lifetime"><a class="anchor" href="#background-work-with-a-lifetime">Background work with a lifetime</a></h4>
 <p><code>fork</code> starts a program on a new fiber owned by the enclosing block. When the block exits, by any path, the fiber is interrupted, and the block waits for its cleanup before releasing anything acquired earlier in the block. A function body is a block, so <code>fork</code> needs no <code>using</code> nearby.</p>
@@ -918,17 +921,55 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   <span class="t">Effect</span>.scoped
 )</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">serve</span>(port: <span class="l">number</span>) {
   <span class="k">using</span> server = <span class="t">Http</span>.<span class="f">listen</span>(port)
-  <span class="f">fork</span>(<span class="f">heartbeat</span>())          <span class="c">// interrupted when serve exits, before the server closes</span>
+  fork <span class="f">heartbeat</span>()          <span class="c">// interrupted when serve exits, before the server closes</span>
   <span class="k">return</span> server.<span class="f">awaitShutdown</span>()
 }</code></pre></figure></div>
-<p><code>fork</code> returns a <code>Fiber</code>, which you can join or interrupt with Effect&#39;s <code>Fiber</code> module:</p>
+<p><code>fork</code> is a keyword (D166): <code>fork buildReport(id)</code> forks one call, and <code>fork { ... }</code> forks a block. It returns a <code>Fiber</code>, and <code>await</code> waits for it (D167):</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">withProgress</span>(id: <span class="l">string</span>) {
-  <span class="k">const</span> pending = <span class="f">fork</span>(<span class="f">buildReport</span>(id))
+  <span class="k">const</span> pending = fork <span class="f">buildReport</span>(id)
   <span class="f">sendProgressEmail</span>(id)
-  <span class="k">return</span> pending.<span class="f">join</span>()          <span class="c">// waits for it; fails if it failed</span>
+  <span class="k">return</span> <span class="k">await</span> pending          <span class="c">// waits for it; fails if it failed</span>
 }
 <span class="c">// Report!ReportError | MailError!Reports | Mailer</span></code></pre></figure>
-<p><code>fork</code> adds the child&#39;s requirements to R and nothing else: the fiber cannot outlive <code>withProgress</code>, so no <code>Scope</code> appears in the contract, and its failures reach you only through <code>Fiber.join</code>. For a longer lifetime, say so with Effect&#39;s combinators: <code>Effect.forkScoped</code> ties the fiber to the caller&#39;s scope and adds <code>Scope</code> to R, <code>Effect.forkChild</code> ties it to the current fiber, and <code>Effect.forkDetach</code> ties it to nothing.</p>
+<p><code>fork</code> adds the child&#39;s requirements to R and nothing else: the fiber cannot outlive <code>withProgress</code>, so no <code>Scope</code> appears in the contract, and its failures reach you only through <code>await</code>. The call form <code>fork(buildReport(id))</code> means the same. For a longer lifetime, say so: <code>forkIn(scope, program)</code> ties the fiber to a scope you hold, <code>detach(program)</code> ties it to nothing (D170), <code>Effect.forkScoped</code> ties it to the caller&#39;s scope and adds <code>Scope</code> to R, and <code>Effect.forkChild</code> ties it to the current fiber.</p>
+<p><code>await</code> waits for a <code>Fiber</code>, a <code>Deferred</code>, or an array or object of them, and keeps the shape. When one fiber fails, the others still running are interrupted and the failure propagates, as <code>Effect.all</code> fails fast:</p>
+<div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> summary = <span class="t">Effect</span>.<span class="f">fn</span>(<span class="s">"summary"</span>)(<span class="k">function</span>* (id: <span class="l">string</span>) {
+  <span class="k">const</span> profile = <span class="k">yield</span>* <span class="t">Effect</span>.<span class="f">forkChild</span>(<span class="f">loadProfile</span>(id))
+  <span class="k">const</span> orders = <span class="k">yield</span>* <span class="t">Effect</span>.<span class="f">forkChild</span>(<span class="f">recentOrders</span>(id))
+  <span class="k">const</span> [p, o] = <span class="k">yield</span>* <span class="t">Fiber</span>.<span class="f">joinAll</span>([profile, orders])
+  <span class="k">return</span> { profile: p, orders: o }
+})</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">summary</span>(id: <span class="l">string</span>) {
+  <span class="k">const</span> [profile, orders] = <span class="k">await</span> [fork <span class="f">loadProfile</span>(id), fork <span class="f">recentOrders</span>(id)]
+  <span class="k">return</span> { profile, orders }
+}</code></pre></figure></div>
+<p><code>await</code> never waits for a call: a call already runs and waits where it stands, so <code>await loadProfile(id)</code> is EK4601. A promise is EK4602; wait for one in a hatch, <code>try(async () =&gt; …)</code>, where <code>await</code> keeps its JavaScript meaning. Anything else is EK4603, and an <code>await</code> in a hatch&#39;s function that is not <code>async</code> is EK4604.</p>
+<h4 id="selecting-the-first-event"><a class="anchor" href="#selecting-the-first-event">Selecting the first event</a></h4>
+<p><code>select</code> starts each case in its own fiber and runs the statements of the first to finish; the other cases are interrupted (D168):</p>
+<div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> next = (jobs: <span class="t">Queue</span>.<span class="t">Queue</span>&lt;<span class="t">Job</span>&gt;, shutdown: <span class="t">Deferred</span>.<span class="t">Deferred</span>&lt;<span class="k">void</span>&gt;) =&gt;
+  <span class="t">Effect</span>.<span class="f">raceAllFirst</span>([
+    <span class="t">Effect</span>.<span class="f">map</span>(<span class="t">Queue</span>.<span class="f">take</span>(jobs), (job) =&gt; ({ kind: <span class="s">"job"</span> <span class="k">as</span> <span class="k">const</span>, job })),
+    <span class="t">Effect</span>.<span class="k">as</span>(<span class="t">Deferred</span>.<span class="k">await</span>(shutdown), { kind: <span class="s">"shutdown"</span> <span class="k">as</span> <span class="k">const</span> }),
+    <span class="t">Effect</span>.<span class="k">as</span>(<span class="t">Effect</span>.<span class="f">sleep</span>(<span class="s">"30 seconds"</span>), { kind: <span class="s">"idle"</span> <span class="k">as</span> <span class="k">const</span> })
+  ]).<span class="f">pipe</span>(<span class="t">Effect</span>.<span class="f">flatMap</span>((event) =&gt; <span class="c">/* switch on event.kind */</span> <span class="f">handle</span>(event)))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">next</span>(jobs: <span class="t">Queue</span>.<span class="t">Queue</span>&lt;<span class="t">Job</span>&gt;, shutdown: <span class="t">Deferred</span>.<span class="t">Deferred</span>&lt;<span class="k">void</span>&gt;) {
+  select {
+    <span class="k">case</span> <span class="k">const</span> job = jobs.<span class="f">take</span>(): <span class="k">return</span> <span class="f">run</span>(job)
+    <span class="k">case</span> shutdown.<span class="k">await</span>(): <span class="k">return</span> <span class="s">"stopped"</span>
+    <span class="k">case</span> <span class="f">sleep</span>(<span class="s">"30 seconds"</span>): <span class="k">return</span> <span class="f">heartbeat</span>()
+  }
+}</code></pre></figure></div>
+<ul>
+<li>A case&#39;s expression is a program: it is passed, not run, like a by-name argument. <code>case const x = program:</code> binds the winner&#39;s value.</li>
+<li>A failing case that finishes first fails the select. Of cases ready at once, the first written wins: a case that finishes while the cases are starting stops the rest from starting.</li>
+<li>A <code>default:</code> clause runs when no case finishes while the cases start, which makes <code>select</code> a poll.</li>
+<li><code>break</code> leaves the select, as it leaves a <code>switch</code>; <code>continue</code> and <code>return</code> keep their meaning in the enclosing loop and function. A select whose clauses all return ends the function.</li>
+</ul>
+<h4 id="concurrent-loops"><a class="anchor" href="#concurrent-loops">Concurrent loops</a></h4>
+<p><code>for concurrent</code> runs its body for each item in its own fiber and joins them all before the loop ends (D169). <code>for concurrent(n)</code> runs at most <code>n</code> at once:</p>
+<div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> saveAll = (ids: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) =&gt;
+  <span class="t">Effect</span>.<span class="f">forEach</span>(ids, (id) =&gt; <span class="t">Effect</span>.<span class="f">flatMap</span>(<span class="f">fetchPage</span>(id), save), { concurrency: <span class="n">8</span>, discard: <span class="l">true</span> })</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">saveAll</span>(ids: <span class="t">ReadonlyArray</span>&lt;<span class="l">string</span>&gt;) {
+  <span class="k">for</span> <span class="f">concurrent</span>(<span class="n">8</span>) (<span class="k">const</span> id <span class="k">of</span> ids) <span class="f">save</span>(<span class="f">fetchPage</span>(id))
+}</code></pre></figure></div>
+<p>A failure interrupts the items still running and fails the loop. <code>continue</code> ends one item. A <code>break</code> that would leave the loop is EK4605 and a <code>return</code> is EK4606, because each item runs in its own fiber; throw to stop every item. Use <code>forEach</code> when you need the results.</p>
 <p>An expression-bodied arrow has no block to own its child: <code>() =&gt; fork(p)</code> uses <code>Effect.forkScoped</code> and keeps <code>Scope</code> in R, unlike <code>() =&gt; { return fork(p) }</code> (D96). Returning a block-owned child currently returns a fiber already interrupted when that block exited; the compiler does not warn.</p>
 <h4 id="what-a-new-fiber-sees"><a class="anchor" href="#what-a-new-fiber-sees">What a new fiber sees</a></h4>
 <p>A forked fiber starts with the services of the code that forked it, as in Effect. Later changes in either fiber do not flow to the other. Handlers, introduced in <a href="#9-handlers-defining-your-own-effects">Chapter 9</a>, are the one thing that does not cross to a new fiber; <a href="#9-handlers-defining-your-own-effects">Chapter 9</a> shows the compiler&#39;s check.</p>
@@ -1153,7 +1194,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <figure class="code side-none"><pre class="code" data-lang="text"><code>error EK1002: Effect.gen expects a JavaScript generator, but in Effeck function* declares a producer.
   Write the body as an ordinary function: remove Effect.gen, function*, and yield*.
     function findName(id: string) { return Users.find(id).name }</code></pre></figure>
-<p>The same holds for <code>Option.gen</code>, <code>Result.gen</code>, and any other API that takes a generator. <code>async</code> functions and <code>await</code> are not part of Effeck either: a call already waits. Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (<a href="#28-tooling">Chapter 28</a>).</p>
+<p>The same holds for <code>Option.gen</code>, <code>Result.gen</code>, and any other API that takes a generator. <code>async</code> functions are not part of Effeck either: a call already waits. <code>await</code> waits for a fiber or a Deferred, never for a call (<a href="#7-concurrency">Chapter 7</a>, D167). Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (<a href="#28-tooling">Chapter 28</a>).</p>
 <h4 id="using-effeck-code-from-typescript"><a class="anchor" href="#using-effeck-code-from-typescript">Using Effeck code from TypeScript</a></h4>
 <p>To TypeScript, an exported unannotated or Effect-contract function returns an <code>Effect</code>, and every exported producer is a function that returns a <code>Stream</code>. The compiler writes that into the declaration file:</p>
 <figure class="code side-dts"><figcaption>Generated declaration</figcaption><pre class="code" data-lang="ts"><code><span class="c">// page.d.ts</span>
@@ -1211,7 +1252,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <p>What a boundary cannot do is set by JavaScript, not by Effeck. It cannot discover a dependency the function reaches through a global or a module variable, it cannot cancel synchronous JavaScript once it has started, and it cannot let a synchronous callback pause. Effect code today has the same limits.</p>
 <p>This is a policy change from the original direction, which adapted every plain call automatically, with unknown errors and unknown requirements. The premise is kept: foreign code is untrusted until something vouches for it. What changes is where the vouching happens: once, explicitly, at a boundary or on a declaration, so an unprovidable <code>unknown</code> never enters a requirement and an <code>unknown</code> error never spreads to every caller. Pure helpers written in <code>.effeck</code> get inferred contracts and compile to plain JavaScript (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>), so most project code never needs a boundary at all.</p>
 <h4 id="promises"><a class="anchor" href="#promises">Promises</a></h4>
-<p>Effeck code has no <code>await</code> outside a hatch: a call already waits for the callee. A Promise from a TypeScript library is waited on with the <code>try</code> hatch, which says what a rejection means and passes an <code>AbortSignal</code> so interruption can cancel the request:</p>
+<p>Outside a hatch, <code>await</code> waits only for a fiber or a Deferred: a call already waits for the callee. A Promise from a TypeScript library is waited on with the <code>try</code> hatch, which says what a rejection means and passes an <code>AbortSignal</code> so interruption can cancel the request:</p>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">import</span> { createCharge } <span class="k">from</span> <span class="s">"./payments-sdk.ts"</span>   <span class="c">// (amount: number, signal: AbortSignal) =&gt; Promise&lt;Charge&gt;</span>
 
 <span class="k">function</span> <span class="f">charge</span>(cartId: <span class="l">string</span>, amount: <span class="l">number</span>) {
@@ -1365,7 +1406,7 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   <span class="k">return</span> { user, avatar }
 }
 <span class="c">// { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users</span></code></pre></figure>
-<p>A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no <code>async</code> function and no <code>await</code> outside a boundary hatch, so there are no &quot;colored&quot; functions: every function can wait. A Promise from a TypeScript library crosses with the <code>try</code> hatch, or with <code>sync</code> when a rejection is a bug (D148); inside the hatch&#39;s function, <code>async</code> and <code>await</code> keep their JavaScript meaning. Platform APIs that return Promises, such as <code>fetch</code>, are replaced by Effect modules (<a href="#11-the-standard-library">Chapter 11</a>).</p>
+<p>A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no <code>async</code> function, and <code>await</code> never waits for a call, so there are no &quot;colored&quot; functions: every function can wait. In Effeck code, <code>await</code> waits for a fiber you forked or a Deferred (<a href="#7-concurrency">Chapter 7</a>). A Promise from a TypeScript library crosses with the <code>try</code> hatch, or with <code>sync</code> when a rejection is a bug (D148); inside the hatch&#39;s function, <code>async</code> and <code>await</code> keep their JavaScript meaning. Platform APIs that return Promises, such as <code>fetch</code>, are replaced by Effect modules (<a href="#11-the-standard-library">Chapter 11</a>).</p>
 <h4 id="how-do-i-run-things-concurrently"><a class="anchor" href="#how-do-i-run-things-concurrently">How do I run things concurrently?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">homePage</span>(userId: <span class="l">string</span>) {
   <span class="k">const</span> [feed, unread] = <span class="f">all</span>(
@@ -1442,9 +1483,9 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
 <span class="k">import</span> { <span class="t">TestClock</span> } <span class="k">from</span> <span class="s">"effect/testing"</span>
 
 it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day"</span>, () =&gt; {
-  <span class="k">const</span> reminder = <span class="f">fork</span>(<span class="f">remindLater</span>(<span class="s">"ada"</span>, <span class="s">"1 day"</span>))
+  <span class="k">const</span> reminder = fork <span class="f">remindLater</span>(<span class="s">"ada"</span>, <span class="s">"1 day"</span>)
   <span class="t">TestClock</span>.<span class="f">adjust</span>(<span class="s">"1 day"</span>)                          <span class="c">// virtual time: nothing waits</span>
-  assert.<span class="f">strictEqual</span>(reminder.<span class="f">join</span>(), <span class="s">"sent"</span>)
+  assert.<span class="f">strictEqual</span>(<span class="k">await</span> reminder, <span class="s">"sent"</span>)
 })</code></pre></figure>
 <p><code>@effect/vitest</code> works unchanged: <code>it.effect</code> runs an Effeck function as a test, <code>assert</code> comes from the same package, and <code>TestClock</code> controls time. Fake services are Layers (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>), and a control operation is scripted with a handler (<a href="#9-handlers-defining-your-own-effects">Chapter 9</a>). An <code>Exit</code> is data until called, so <code>assert.deepStrictEqual(Effect.exit(() =&gt; f()), Exit.succeed(1))</code> compares two <code>Exit</code> values. A test written as <code>async () =&gt; { await Effect.runPromise(p) }</code> stays in a <code>.ts</code> file: <code>.effeck</code> has no <code>await</code>, and a runner inside a test body is EK1005 (<a href="#13-what-a-call-means">Chapter 13</a>).</p>
 <h4 id="how-do-i-log-trace-and-record-metrics"><a class="anchor" href="#how-do-i-log-trace-and-record-metrics">How do I log, trace, and record metrics?</a></h4>
@@ -1494,13 +1535,13 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <p>TypeScript&#39;s narrowing does most of the work: <code>switch</code> on <code>_tag</code>, <code>instanceof</code>, and <code>catch</code> narrowing on errors (<a href="#3-errors-the-e-channel">Chapter 3</a>). Effect&#39;s <code>Match</code> module works unchanged; its handlers are plain functions, so they cannot pause (EK4301). TC39&#39;s pattern matching proposal is at Stage 1 and is not used.</p>
 <h4 id="how-do-fibers-interruption-and-cancellation-work"><a class="anchor" href="#how-do-fibers-interruption-and-cancellation-work">How do fibers, interruption, and cancellation work?</a></h4>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">search</span>(query: <span class="l">string</span>) {
-  <span class="k">const</span> scan = <span class="f">fork</span>(<span class="f">slowIndexScan</span>(query))
+  <span class="k">const</span> scan = fork <span class="f">slowIndexScan</span>(query)
   <span class="k">const</span> cached = <span class="t">SearchCache</span>.<span class="f">lookup</span>(query)
   <span class="k">if</span> (cached !== <span class="l">undefined</span>) {
     scan.<span class="f">interrupt</span>()               <span class="c">// cancels the scan; its finally blocks run first</span>
     <span class="k">return</span> cached
   }
-  <span class="k">return</span> scan.<span class="f">join</span>()
+  <span class="k">return</span> <span class="k">await</span> scan
 }</code></pre></figure>
 <p>They are Effect&#39;s. A fiber is Effect&#39;s fiber, <code>fork</code> starts one owned by the enclosing block (<a href="#7-concurrency">Chapter 7</a>), and <code>Fiber.join</code> and <code>Fiber.interrupt</code> work unchanged. Interruption runs every <code>finally</code> block and <code>using</code> release on the way out, and <code>catch</code> never catches it (<a href="#3-errors-the-e-channel">Chapter 3</a>). <code>Effect.uninterruptible(() =&gt; …)</code> protects a region, <code>Effect.onInterrupt</code> reacts to cancellation, and <code>Effect.timeout</code> and <code>Effect.race</code> interrupt the branches they discard. A Promise is cancelled through the <code>AbortSignal</code> that the <code>try</code> and <code>sync</code> hatches pass.</p>
 <h4 id="how-do-i-wrap-a-callback-api"><a class="anchor" href="#how-do-i-wrap-a-callback-api">How do I wrap a callback API?</a></h4>
@@ -2816,7 +2857,7 @@ check or editor code action is implemented; the acceptance suite and compiler
 README track coverage. Repairs below are suggestions, not shipped code actions:</p>
 <div class="table"><table><thead><tr><th>Code</th><th>What it reports</th><th>Suggested repair</th><th>Chapter</th></tr></thead><tbody><tr><td>EK1001</td><td>A module&#39;s top level runs a program</td><td>Export a function instead</td><td>13</td></tr>
 <tr><td>EK1002</td><td>A <code>function*</code> passed to an API whose parameter returns a library Generator or Iterator, such as <code>Effect.gen</code> (D64)</td><td>Convert the function</td><td>10</td></tr>
-<tr><td>EK1003</td><td><code>async</code>, <code>await</code>, <code>for await</code>, or <code>await using</code>: a call already waits</td><td>Remove them</td><td>10</td></tr>
+<tr><td>EK1003</td><td><code>async</code>, <code>for await</code>, or <code>await using</code>, and <code>await</code> inside an <code>async</code> function outside a hatch: a call already waits</td><td>Remove them; <code>await</code> in Effeck code waits for fibers (EK4601-EK4604)</td><td>10</td></tr>
 <tr><td>EK1004</td><td><code>using</code> at a module&#39;s top level or in a class static block</td><td>Move it into a function</td><td>6</td></tr>
 <tr><td>EK1005</td><td>A runner inside code that a fiber runs</td><td>Call the program, or <code>fork</code> it</td><td>13</td></tr>
 <tr><td>EK1006</td><td>A pipe whose body does not use its topic, as in <code>name |&gt; &quot;anonymous&quot;</code> (D156)</td><td>Write <code>%</code> where the value goes: <code>name |&gt; greet(%)</code></td><td>5</td></tr>
@@ -2855,7 +2896,13 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK4402</td><td>Running a Node.js or browser API; importing and passing values is allowed (D108)</td><td>Use the Effect module the error names</td><td>11</td></tr>
 <tr><td>EK4403</td><td>A clock or randomness read (an error by default)</td><td>Use <code>Clock</code>, <code>DateTime</code>, or <code>Random</code></td><td>10</td></tr>
 <tr><td>EK4404</td><td><code>try</code> given Effect&#39;s <code>{ try, catch }</code> options object, which it would treat as a value</td><td>Pass the code and the error mapping as two arguments: <code>try(parse(text), (error) =&gt; …)</code></td><td>10</td></tr>
-<tr><td>EK4501</td><td>A method of an Effect data type named without a call, as in <code>const f = stream.filter</code> (D153)</td><td>Call it, or pass <code>Stream.filter</code> itself</td><td>13</td></tr></tbody></table></div>
+<tr><td>EK4501</td><td>A method of an Effect data type named without a call, as in <code>const f = stream.filter</code> (D153)</td><td>Call it, or pass <code>Stream.filter</code> itself</td><td>13</td></tr>
+<tr><td>EK4601</td><td><code>await</code> before a call that already runs (D167)</td><td>Remove <code>await</code>; to run the call concurrently, fork it and await the fiber</td><td>7</td></tr>
+<tr><td>EK4602</td><td><code>await</code> on a promise in Effeck code (D167)</td><td>Wrap it in a hatch: <code>try(async () =&gt; …)</code></td><td>7</td></tr>
+<tr><td>EK4603</td><td><code>await</code> on a value that is not a Fiber, a Deferred, or an array or object of them (D167)</td><td>Fork the program and await the fiber</td><td>7</td></tr>
+<tr><td>EK4604</td><td><code>await</code> in a hatch body that is not <code>async</code> (D167)</td><td>Make the hatch&#39;s function <code>async</code></td><td>7</td></tr>
+<tr><td>EK4605</td><td><code>break</code> that would leave a <code>for concurrent</code> loop (D169)</td><td>Use <code>continue</code> to end one item, or <code>throw</code> to stop every item</td><td>7</td></tr>
+<tr><td>EK4606</td><td><code>return</code> in a <code>for concurrent</code> body (D169)</td><td>Use <code>continue</code> to end one item</td><td>7</td></tr></tbody></table></div>
 <h4 id="linting"><a class="anchor" href="#linting">Linting</a></h4>
 <p>D35 assigns type and language diagnostics to <code>effeck</code> and reserves type-aware
 linting for <code>.ts</code> files. A stock TypeScript checker models different call
@@ -3035,7 +3082,13 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D153</td><td>A data type&#39;s method exists only in a call; any other access is EK4501</td><td>No function value exists to bind</td><td>13, 28</td></tr>
 <tr><td>D154</td><td><strong>Controversial.</strong> The Hack pipe operator in <code>.effeck</code> files: <code>x |&gt; f(%, a)</code>, topic <code>%</code>, left-associative, looser than every binary operator; supersedes D8</td><td>Fewer tokens and no nesting for operator chains; any argument position</td><td>5, 27</td></tr>
 <tr><td>D155</td><td><strong>Controversial.</strong> A topic follows the by-name rule: where <code>%</code> stands for a program, the left side is passed by name; elsewhere it runs once, before the body; both in one pipe is EK1008</td><td><code>fetchUser(id) |&gt; retry(%, policy)</code> must retry the call, as <code>retry(fetchUser(id), policy)</code> does</td><td>5, 13</td></tr>
-<tr><td>D156</td><td>A pipe&#39;s body must use <code>%</code> (EK1006); <code>%</code> outside a pipe&#39;s body is EK1007; after an operand <code>%</code> is still the remainder</td><td>The proposal&#39;s early errors; <code>%</code> keeps its JavaScript meaning where it already has one</td><td>5, 28</td></tr></tbody></table></div>
+<tr><td>D156</td><td>A pipe&#39;s body must use <code>%</code> (EK1006); <code>%</code> outside a pipe&#39;s body is EK1007; after an operand <code>%</code> is still the remainder</td><td>The proposal&#39;s early errors; <code>%</code> keeps its JavaScript meaning where it already has one</td><td>5, 28</td></tr>
+<tr><td>D166</td><td><code>fork</code> is a keyword: <code>fork x</code> is <code>fork(x)</code> and <code>fork { ... }</code> forks a block</td><td>Concurrency reads as one word, with no lambda</td><td></td></tr>
+<tr><td>D167</td><td><strong>Controversial.</strong> <code>await</code> waits for a Fiber, a Deferred, or an array or object of them, failing fast; EK4601-EK4604</td><td>Fibers need a join, and <code>await</code> was free outside hatches</td><td></td></tr>
+<tr><td>D168</td><td><strong>Controversial.</strong> <code>select</code> runs the first case to finish and interrupts the rest; ties go to the first written; <code>default</code> polls; <code>break</code> leaves it</td><td>First-of-several events without <code>raceAll</code> plumbing</td><td></td></tr>
+<tr><td>D169</td><td><code>for concurrent(n)</code> runs the body per item in its own fiber; <code>continue</code> ends an item; <code>break</code> and <code>return</code> are EK4605 and EK4606</td><td><code>forEach</code> with a concurrency option, as a loop</td><td></td></tr>
+<tr><td>D170</td><td><code>detach(program)</code> and <code>forkIn(scope, program)</code> are fork&#39;s variants</td><td>Longer lifetimes without Effect&#39;s names</td><td></td></tr>
+<tr><td>D171</td><td><code>await</code>&#39;s types accept one level of arrays and objects</td><td>Deeper recursive types exceed TypeScript&#39;s limits</td><td></td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>
@@ -3433,7 +3486,7 @@ effeck/smoke.sh effeck-infer   # one case</code></pre></figure>
 <tr><td>What a forked fiber sees</td><td>Unchanged by design</td><td>A snapshot of the parent&#39;s Context</td></tr>
 <tr><td>Control operations across fibers</td><td>Changed</td><td>EK4201 (<a href="#9-handlers-defining-your-own-effects">Chapter 9</a>)</td></tr></tbody></table></div>
 <h4 id="c13-async-interop"><a class="anchor" href="#c13-async-interop">C13. Async interop</a></h4>
-<div class="table"><table><thead><tr><th>Feature</th><th>In Effeck</th><th>Form</th></tr></thead><tbody><tr><td><code>async</code> and <code>await</code></td><td>Changed</td><td>Only inside a hatch&#39;s function; elsewhere a call waits (D148)</td></tr>
+<div class="table"><table><thead><tr><th>Feature</th><th>In Effeck</th><th>Form</th></tr></thead><tbody><tr><td><code>async</code> and <code>await</code></td><td>Changed</td><td><code>async</code> only inside a hatch&#39;s function, where <code>await</code> is JavaScript&#39;s; elsewhere a call waits, and <code>await</code> waits for a fiber or a Deferred (D148, D167)</td></tr>
 <tr><td><code>Effect.promise</code>, <code>Effect.tryPromise</code></td><td>Changed</td><td><code>sync(async (signal) =&gt; …)</code> and <code>try(async (signal) =&gt; …)</code>; the <code>AbortSignal</code> cancels on interruption (D148)</td></tr>
 <tr><td><code>Effect.callback</code></td><td>Changed</td><td>The <code>callback</code> hatch; <code>resume(value)</code>; <code>suspend</code> for resources (D43, D148)</td></tr>
 <tr><td><code>Effect.runPromise</code> from Promise code</td><td>Changed</td><td><code>runPromise</code>, from TypeScript, a top-level callback, or a hatch&#39;s body (D38, D148)</td></tr>
