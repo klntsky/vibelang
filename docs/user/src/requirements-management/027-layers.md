@@ -179,9 +179,15 @@ function testBannerDependency() {
 function testBannerDirectly() {
   provide BannerTest { return Banner.text("Orders") }
 }
+
+function testBannerWithInlineSettings() {
+  provide Banner.layerWithoutDependencies, Settings = { prefix: "inline" } {
+    return Banner.text("Orders")
+  }
+}
 ```
 
-Replace a dependency to exercise the real factory, or replace the service itself to isolate its consumers. A layer that already includes production dependencies must be changed at its exposed factory boundary if the test needs different construction inputs. Small local overrides can use `Effect.provideService` directly.
+Replace a dependency to exercise the real factory, or replace the service itself to isolate its consumers. A layer that already includes production dependencies must be changed at its exposed factory boundary if the test needs different construction inputs. Small local overrides can use `provide Key = value`, which provides one implementation without writing a layer and mixes with layers in one list (D173).
 
 ## Coming from Effect
 

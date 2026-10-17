@@ -681,6 +681,14 @@ error EK3203: providers form a cycle: SessionsLive → Database → DatabaseLive
   provide <span class="t">AppLive</span> {
     <span class="f">log</span>(<span class="s">`welcomed ${welcome("42")}`</span>)
   }
+}</code></pre></figure>
+<p>A provider written <code>Key = value</code> provides one service without a layer, and providers separated by commas share one block (D173). <code>provide AppLive, Mailer = fakeMailer { ... }</code> is <code>Effect.provide</code> with <code>[AppLive, Layer.succeed(Mailer, fakeMailer)]</code>, so the block&#39;s requirements drop <code>Mailer</code> as well as what <code>AppLive</code> provides. An effect module whose export of the same name is a service key stands for that key: <code>provide Clock = testClock</code> provides <code>Clock.Clock</code>, and <code>provide Scheduler = fifo</code> installs a scheduler (D174). <code>provide(AppLive, Mailer = fakeMailer) { ... }</code> means the same, as <code>fork(x)</code> means <code>fork x</code>. The analyzer reads a provider list element by element, because the list&#39;s own type merges its layers into one union, which for a layer that provides nothing collapses to <code>Layer&lt;never&gt;</code> (D175).</p>
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> fakeMailer = { send: (to: <span class="l">string</span>, text: <span class="l">string</span>) =&gt; <span class="f">log</span>(<span class="s">`to ${to}: ${text}`</span>) }
+
+<span class="k">function</span> <span class="f">preview</span>() {
+  provide <span class="t">AppLive</span>, <span class="t">Mailer</span> = fakeMailer {
+    <span class="f">log</span>(<span class="s">`welcomed ${welcome("42")}`</span>)
+  }
 }
 <span class="c">// void!UserNotFound | MailError | ConfigError | ConnectError!</span></code></pre></figure>
 <p>Each <code>Effect.provide</code> builds its layers once, so two sibling <code>provide</code> calls build them twice:</p>
@@ -3090,7 +3098,10 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D169</td><td><code>for concurrent(n)</code> runs the body per item in its own fiber; <code>continue</code> ends an item; <code>break</code> and <code>return</code> are EK4605 and EK4606</td><td><code>forEach</code> with a concurrency option, as a loop</td><td></td></tr>
 <tr><td>D170</td><td><code>detach(program)</code> and <code>forkIn(scope, program)</code> are fork&#39;s variants</td><td>Longer lifetimes without Effect&#39;s names</td><td></td></tr>
 <tr><td>D171</td><td><code>await</code>&#39;s types accept one level of arrays and objects</td><td>Deeper recursive types exceed TypeScript&#39;s limits</td><td></td></tr>
-<tr><td>D172</td><td><code>provide AppLive { ... }</code> replaces <code>with AppLive { ... }</code>; <code>with</code> still compiles with the warning EK1009 and a quick fix</td><td>Effeck keywords reuse Effect&#39;s own names, so <code>provide</code> reads as <code>Effect.provide</code></td><td>4</td></tr></tbody></table></div>
+<tr><td>D172</td><td><code>provide AppLive { ... }</code> replaces <code>with AppLive { ... }</code>; <code>with</code> still compiles with the warning EK1009 and a quick fix</td><td>Effeck keywords reuse Effect&#39;s own names, so <code>provide</code> reads as <code>Effect.provide</code></td><td>4</td></tr>
+<tr><td>D173</td><td><code>provide Key = value</code> provides one service; providers separated by commas mix layers and services; <code>provide(...) { }</code> means the same</td><td><code>Effect.provideService</code> without a layer, in the same block form</td><td>4</td></tr>
+<tr><td>D174</td><td>In a provider, an effect module stands for its key of the same name: <code>Clock</code> for <code>Clock.Clock</code></td><td><code>provide Clock = testClock</code> and <code>provide Scheduler = fifo</code> swap runtime services</td><td>4, 28</td></tr>
+<tr><td>D175</td><td>The analyzer reads an array of providers element by element</td><td>A layer that provides nothing would otherwise hide the others&#39; services</td><td>4</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>

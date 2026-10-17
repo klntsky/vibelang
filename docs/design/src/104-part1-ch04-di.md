@@ -298,6 +298,18 @@ function main() {
     log(`welcomed ${welcome("42")}`)
   }
 }
+```
+
+A provider written `Key = value` provides one service without a layer, and providers separated by commas share one block (D173). `provide AppLive, Mailer = fakeMailer { ... }` is `Effect.provide` with `[AppLive, Layer.succeed(Mailer, fakeMailer)]`, so the block's requirements drop `Mailer` as well as what `AppLive` provides. An effect module whose export of the same name is a service key stands for that key: `provide Clock = testClock` provides `Clock.Clock`, and `provide Scheduler = fifo` installs a scheduler (D174). `provide(AppLive, Mailer = fakeMailer) { ... }` means the same, as `fork(x)` means `fork x`. The analyzer reads a provider list element by element, because the list's own type merges its layers into one union, which for a layer that provides nothing collapses to `Layer<never>` (D175).
+
+```ts es
+const fakeMailer = { send: (to: string, text: string) => log(`to ${to}: ${text}`) }
+
+function preview() {
+  provide AppLive, Mailer = fakeMailer {
+    log(`welcomed ${welcome("42")}`)
+  }
+}
 // void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
 

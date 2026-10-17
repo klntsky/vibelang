@@ -188,6 +188,26 @@ function program() {
 }
 ```
 
+**Providing one service** (D173, D174). `provide Key = value` provides one implementation without a layer; layers and services mix in one list, and an effect module such as `Random` stands for its key, `Random.Random`.
+
+```ts effect
+const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
+const roll = Random.nextInt.pipe(
+  Effect.provideService(Random.Random, seeded),
+  Effect.provide(Logger.layer([]))
+)
+```
+
+```ts es
+const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
+
+function roll(): number!! {
+  provide Logger.layer([]), Random = seeded {
+    return Random.nextInt()
+  }
+}
+```
+
 **Catching by tag** (D131). A failure no clause names keeps propagating.
 
 ```ts effect

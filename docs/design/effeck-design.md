@@ -823,6 +823,18 @@ function main() {
     log(`welcomed ${welcome("42")}`)
   }
 }
+```
+
+A provider written `Key = value` provides one service without a layer, and providers separated by commas share one block (D173). `provide AppLive, Mailer = fakeMailer { ... }` is `Effect.provide` with `[AppLive, Layer.succeed(Mailer, fakeMailer)]`, so the block's requirements drop `Mailer` as well as what `AppLive` provides. An effect module whose export of the same name is a service key stands for that key: `provide Clock = testClock` provides `Clock.Clock`, and `provide Scheduler = fifo` installs a scheduler (D174). `provide(AppLive, Mailer = fakeMailer) { ... }` means the same, as `fork(x)` means `fork x`. The analyzer reads a provider list element by element, because the list's own type merges its layers into one union, which for a layer that provides nothing collapses to `Layer<never>` (D175).
+
+```ts es
+const fakeMailer = { send: (to: string, text: string) => log(`to ${to}: ${text}`) }
+
+function preview() {
+  provide AppLive, Mailer = fakeMailer {
+    log(`welcomed ${welcome("42")}`)
+  }
+}
 // void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
 
@@ -4337,6 +4349,9 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D170 | `detach(program)` and `forkIn(scope, program)` are fork's variants | Longer lifetimes without Effect's names |
 | D171 | `await`'s types accept one level of arrays and objects | Deeper recursive types exceed TypeScript's limits |
 | D172 | `provide AppLive { ... }` replaces `with AppLive { ... }`; `with` still compiles with the warning EK1009 and a quick fix | Effeck keywords reuse Effect's own names, so `provide` reads as `Effect.provide` | 4 |
+| D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
+| D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
+| D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
 
 #### Rules of the runtime and compiler
 

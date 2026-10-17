@@ -33,6 +33,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Context.Service` | `service Users { find(id: string): User!NotFound }`; call `Users.find(id)` |
 | `Layer.effect(Users, Effect.gen(function* () { ... }))` | `layer UsersLive: Users { setup; find(id) { ... } }` |
 | `Effect.provide(program, AppLive)` | `provide AppLive { ... }` |
+| `Effect.provideService(program, Random.Random, seeded)` | `provide Random = seeded { ... }` |
 | `Effect.catchTag(program, "Missing", recover)` | `try { ... } catch (e: Missing) { ... }` |
 | `Effect.ensuring(program, cleanup)` | `try` / `finally` |
 | `Effect.scoped` with `Effect.acquireRelease` | Acquire with `using` in the block that owns the resource |

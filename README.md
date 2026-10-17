@@ -69,7 +69,8 @@ clients, see [editors/](editors/README.md).
 - Implement a service with `layer UsersLive: Users { find(id) { ... } }`;
   statements before the members run once, when the layer builds.
 - Provide a layer to a block with `provide AppLive { ... }`; a `return` inside
-  returns from the enclosing function.
+  returns from the enclosing function. `provide Clock = testClock { ... }`
+  provides one service, and layers and services mix in one list.
 - Start work concurrently with `fork work()` and wait for it with `await`:
   `const [a, b] = await [fork left(), fork right()]`. `select { case ... }`
   takes the first of several events, and `for concurrent(8) (const x of xs)`

@@ -59,6 +59,20 @@ function startup() {
 
 To emit a different format, supply a logger such as `Logger.consoleJson` through `Logger.layer([Logger.consoleJson])`. This uses Effect's console integration instead of a browser or Node global.
 
+## Replace a runtime service for a block
+
+```ts
+const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
+
+function roll(): number!! {
+  provide Random = seeded {
+    return Random.nextInt()
+  }
+}
+```
+
+`provide Key = value` provides one service to a block (D173). `Random`, `Clock`, and `Scheduler` are references: each has a default, so none appears in a contract's dependencies, and a provide block replaces the default for its statements and for the fibers they start. The effect module stands for its key of the same name, so `provide Random = seeded` provides `Random.Random`, `provide Clock = testClock` replaces the clock that `sleep` reads, and `provide Scheduler = fifo` runs the block's fibers on another scheduler (D174). Layers and services share one list: `provide Logger.layer([]), Random = seeded { ... }`.
+
 ## Build and dispose managed runtimes
 
 ```ts
