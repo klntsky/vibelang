@@ -514,10 +514,35 @@ func (p *Parser) isStartOfEffeckProvide() bool {
 
 func (p *Parser) scanStartOfEffeckProvide() bool {
 	p.nextToken()
-	if p.hasPrecedingLineBreak() || p.token == ast.KindOpenBraceToken || !p.isStartOfExpression() {
+	if p.hasPrecedingLineBreak() || p.token == ast.KindOpenBraceToken {
+		return false
+	}
+	if p.token == ast.KindOpenParenToken && p.lookAhead((*Parser).scanEffeckProvideArguments) {
+		return true
+	}
+	if !p.isStartOfExpression() {
 		return false
 	}
 	p.parseExpression()
+	return p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak()
+}
+
+// scanEffeckProvideArguments reports whether the current token, (, opens the
+// call shape of a provide block, provide(A, Key = value) { ... }: a provider
+// list, a closing parenthesis, and { on the same line. The list is read as an
+// expression, not as the parameters of an arrow function, which (a, b = {})
+// followed by { would otherwise look like. It moves the scanner; call it
+// through lookAhead.
+func (p *Parser) scanEffeckProvideArguments() bool {
+	p.nextToken()
+	if p.token == ast.KindCloseParenToken {
+		return false
+	}
+	p.parseExpression()
+	if p.token != ast.KindCloseParenToken {
+		return false
+	}
+	p.nextToken()
 	return p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak()
 }
 
@@ -539,7 +564,17 @@ func (p *Parser) scanStartOfEffeckProvide() bool {
 func (p *Parser) parseEffeckProvideStatement() *ast.Node {
 	pos := p.nodePos()
 	p.nextToken() // provide, or the old spelling with
-	layer := p.parseExpression()
+	var providers *ast.Node
+	if p.token == ast.KindOpenParenToken && p.lookAhead((*Parser).scanEffeckProvideArguments) {
+		// provide(A, Key = value) { ... } means provide A, Key = value { ... },
+		// as fork(x) means fork x.
+		p.nextToken()
+		providers = p.parseExpression()
+		p.parseExpected(ast.KindCloseParenToken)
+	} else {
+		providers = p.parseExpression()
+	}
+	layer := p.effeckProviders(providers)
 	statement := p.effeckSpanning(p.factory.NewExpressionStatement(layer), layer.Loc)
 	statement.Flags |= ast.NodeFlagsEffeck
 	statements := []*ast.Node{statement}
@@ -552,6 +587,69 @@ func (p *Parser) parseEffeckProvideStatement() *ast.Node {
 	p.finishNode(block, pos)
 	block.Flags |= ast.NodeFlagsEffeck
 	return block
+}
+
+// effeckProviders rewrites the provider list of a provide block (D173).
+// Providers separated by commas, which parse as a comma expression, become an
+// array of layers, and a provider written Key = value becomes
+// $provideService(Key, value, "Key"), a layer that provides that one service:
+//
+//	provide AppLive, Clock = testClock { ... }
+//
+// provides [AppLive, $provideService(Clock, testClock, "Clock")]. The name
+// lets the runtime use a module's eponymous key, so Clock, the effect module,
+// stands for Clock.Clock. An array literal provider adds its elements. A
+// single provider that is not Key = value is returned unchanged.
+func (p *Parser) effeckProviders(expression *ast.Node) *ast.Node {
+	var items []*ast.Node
+	var collect func(node *ast.Node)
+	collect = func(node *ast.Node) {
+		if ast.IsBinaryExpression(node) && node.AsBinaryExpression().OperatorToken.Kind == ast.KindCommaToken {
+			collect(node.AsBinaryExpression().Left)
+			collect(node.AsBinaryExpression().Right)
+			return
+		}
+		items = append(items, node)
+	}
+	list := expression
+	for ast.IsParenthesizedExpression(list) {
+		list = list.Expression() // provide(A, Key = value) { ... } reads as provide A, Key = value { ... }
+	}
+	collect(list)
+	services := false
+	for i, item := range items {
+		if !ast.IsBinaryExpression(item) || item.AsBinaryExpression().OperatorToken.Kind != ast.KindEqualsToken {
+			continue
+		}
+		key, value := item.AsBinaryExpression().Left, item.AsBinaryExpression().Right
+		name := key
+		if ast.IsPropertyAccessExpression(name) {
+			name = name.Name()
+		}
+		if !ast.IsIdentifier(name) {
+			continue
+		}
+		services = true
+		callee := p.effeckSynthesized(p.factory.NewIdentifier("$provideService"), key.Loc)
+		label := p.effeckSynthesized(p.factory.NewStringLiteral(name.Text(), ast.TokenFlagsNone), key.Loc)
+		args := p.newNodeList(item.Loc, []*ast.Node{key, value, label})
+		items[i] = p.effeckSpanning(p.factory.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, args, ast.NodeFlagsNone), item.Loc)
+	}
+	if len(items) == 1 && !services {
+		return expression
+	}
+	var elements []*ast.Node
+	for _, item := range items {
+		if ast.IsArrayLiteralExpression(item) {
+			elements = append(elements, item.AsArrayLiteralExpression().Elements.Nodes...)
+			continue
+		}
+		elements = append(elements, item)
+	}
+	if len(elements) == 1 {
+		return elements[0]
+	}
+	return p.effeckSpanning(p.factory.NewArrayLiteralExpression(p.newNodeList(expression.Loc, elements), false /*multiLine*/), expression.Loc)
 }
 
 // parseEffeckCatchClauses parses the catch clauses that follow first, a parsed

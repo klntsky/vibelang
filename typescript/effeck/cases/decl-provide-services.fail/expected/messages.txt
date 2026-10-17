@@ -1,0 +1,2 @@
+Argument of type 'number' is not assignable to parameter of type 'Key<unknown, unknown>'.
+Object literal may only specify known properties, and 'words' does not exist in type 'Greeting'.

@@ -65,6 +65,8 @@ var preludeModules = map[string]string{
 	"$forConcurrent": runtimeModule,
 	"detach":         runtimeModule,
 	"forkIn":         runtimeModule,
+	// A provide block's Key = value provider, which the parser writes (D173, provide.go).
+	"$provideService": runtimeModule,
 }
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the

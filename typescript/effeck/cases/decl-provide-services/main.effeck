@@ -1,0 +1,60 @@
+// expect-result: {"single":"hi","mixed":"Ada hi","module":7,"qualified":7,"both":"Ada 7","called":"Ada hi"}
+// provide Key = value provides one service (D173). Every function here
+// declares no dependencies (!!), so each provide block must remove the keys
+// its body needs.
+service Greeting {
+  text(): string!!
+}
+
+service Names {
+  name(): string!!
+}
+
+layer NamesLive: Names {
+  name() { return "Ada" }
+}
+
+const fixedRandom = { nextIntUnsafe: () => 7, nextDoubleUnsafe: () => 0.25 }
+
+function single(): string!! {
+  provide Greeting = { text: () => "hi" } {
+    return Greeting.text()
+  }
+}
+
+// Layers and services mix in one list.
+function mixed(): string!! {
+  provide NamesLive, Greeting = { text: () => "hi" } {
+    return `${Names.name()} ${Greeting.text()}`
+  }
+}
+
+// An effect module stands for its key of the same name: Random is Random.Random.
+function module(): number!! {
+  provide Random = fixedRandom {
+    return Random.nextInt()
+  }
+}
+
+function qualified(): number!! {
+  provide Random.Random = fixedRandom {
+    return Random.nextInt()
+  }
+}
+
+function both(): string!! {
+  provide NamesLive, Random = fixedRandom {
+    return `${Names.name()} ${Random.nextInt()}`
+  }
+}
+
+// The call shape means the same: provide(...) { ... } is provide ... { ... }.
+function called(): string!! {
+  provide(NamesLive, Greeting = { text: () => "hi" }) {
+    return `${Names.name()} ${Greeting.text()}`
+  }
+}
+
+export function main() {
+  return { single: single(), mixed: mixed(), module: module(), qualified: qualified(), both: both(), called: called() }
+}

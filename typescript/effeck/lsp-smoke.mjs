@@ -493,6 +493,17 @@ try {
     assert(shown.includes("function balanceWith(id: string): number!MissingUser!"), `got ${JSON.stringify(shown)}`)
   })
 
+  await check("hover: a provider's key names the service the provide block receives", async () => {
+    const shown = await hover("src/provide-services.effeck", "Random = seeded")
+    assert(shown.includes("Provides the service `Random.Random`"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("diagnostics: provide-services.effeck, with a module key, checks clean", async () => {
+    open("src/provide-services.effeck", "effeck")
+    const items = await diagnostics("src/provide-services.effeck")
+    assert(items.length === 0, `expected no diagnostics, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
   await check("hover: a typed catch clause's variable has the clause's type", async () => {
     const shown = await hover("src/declarations.effeck", "e.id")
     assert(shown.includes("e: MissingUser"), `got ${JSON.stringify(shown)}`)

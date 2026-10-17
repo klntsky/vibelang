@@ -37,6 +37,7 @@ import (
 func init() {
 	fileChecks = append(fileChecks, checkProvideBlocks, checkProvideSpelling)
 	ls.RegisterCodeFixProvider(provideSpellingFix)
+	ls.RegisterQuickInfoHook(providerQuickInfo)
 }
 
 // isProvideBlock reports whether node is the block of a provide statement.
@@ -85,7 +86,7 @@ func (a *analyzer) provideFlow(block *ast.Node) *effectInfo {
 	if info.effect == nil {
 		info.effect = body.effect
 	}
-	provided, errors, needs := providerChannels(c, c.GetTypeAtLocation(layer))
+	provided, errors, needs := providerChannelsOf(c, layer)
 	info.errors = append(info.errors, body.errors...)
 	info.errorSources = append(info.errorSources, body.errorSources...)
 	for i, requirement := range body.requirements {
@@ -107,6 +108,40 @@ func (a *analyzer) provideFlow(block *ast.Node) *effectInfo {
 // providerChannels returns what a provide block's layer expression provides,
 // fails with, and needs. Like Effect.provide, it accepts a Layer, a Context,
 // or an array of layers, whose channels join.
+// providerChannelsOf returns what a provide block's provider expression
+// provides, fails with, and needs. An array literal, such as the list that
+// provide A, Clock = testClock { ... } becomes (D173), is read element by
+// element: its own type merges the elements into one union, and because a
+// layer is contravariant in what it provides, Layer<Names> | Layer<never>
+// reduces to Layer<never>, which would provide nothing.
+func providerChannelsOf(c *checker.Checker, layer *ast.Node) (provided, errors, needs *checker.Type) {
+	list := ast.SkipParentheses(layer)
+	if !ast.IsArrayLiteralExpression(list) || core.Some(list.AsArrayLiteralExpression().Elements.Nodes, ast.IsSpreadElement) {
+		return providerChannels(c, c.GetTypeAtLocation(layer))
+	}
+	var outs, errs, ins []*checker.Type
+	for _, element := range list.AsArrayLiteralExpression().Elements.Nodes {
+		out, e, in := providerChannels(c, c.GetTypeAtLocation(element))
+		if out == nil {
+			return providerChannels(c, c.GetTypeAtLocation(layer))
+		}
+		outs = append(outs, out)
+		if e != nil {
+			errs = append(errs, e)
+		}
+		if in != nil {
+			ins = append(ins, in)
+		}
+	}
+	join := func(types []*checker.Type) *checker.Type {
+		if len(types) == 0 {
+			return nil
+		}
+		return c.GetUnionType(types)
+	}
+	return join(outs), join(errs), join(ins)
+}
+
 func providerChannels(c *checker.Checker, t *checker.Type) (provided, errors, needs *checker.Type) {
 	var outs, errs, ins []*checker.Type
 	var add func(t *checker.Type) bool
@@ -268,4 +303,41 @@ var provideSpellingFix = &ls.CodeFixProvider{
 			Changes:     []*lsproto.TextEdit{{Range: fix.Diagnostic.Range, NewText: "provide"}},
 		}}, nil
 	},
+}
+
+// providerCall returns the $provideService call that the parser wrote for a
+// Key = value provider (D173) when node is part of its key, or nil.
+func providerCall(node *ast.Node) *ast.Node {
+	for n := node; n != nil; n = n.Parent {
+		if !ast.IsCallExpression(n) {
+			continue
+		}
+		callee := n.Expression()
+		if !ast.IsIdentifier(callee) || callee.Text() != "$provideService" || callee.Flags&ast.NodeFlagsReparsed == 0 {
+			return nil
+		}
+		args := n.Arguments()
+		if len(args) != 3 || node.Pos() < args[0].Pos() || node.End() > args[0].End() {
+			return nil
+		}
+		return n
+	}
+	return nil
+}
+
+// providerQuickInfo adds a line to a hover over the key of a Key = value
+// provider naming the service the block receives. A module whose export of
+// the same name is the key, such as Random, names that export: Random.Random.
+func providerQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
+	call := providerCall(node)
+	if call == nil {
+		return "", ""
+	}
+	args := call.Arguments()
+	key := scanner.GetSourceTextOfNodeFromSourceFile(ast.GetSourceFileOfNode(call), args[0], false /*includeTrivia*/)
+	name := args[2].Text()
+	if c.GetPropertyOfType(c.GetTypeAtLocation(args[0]), name) != nil {
+		key += "." + name
+	}
+	return "", "Provides the service `" + key + "` to this provide block's statements."
 }
