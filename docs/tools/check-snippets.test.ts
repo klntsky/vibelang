@@ -9,6 +9,10 @@ test("extracts ts fences, skips TypeScript examples, and preserves lines and dir
   expect(blocks[0].expected).toEqual(["EK2001", "TS2322"])
   expect(blocks[1].gap).toBe("return contract")
 })
+test("skips Effect comparison fences without numbering them", () => {
+  const blocks = extract('```ts effect\nconst x = yield* work\n```\n```ts es\nconst x = work()\n```')
+  expect(blocks.map(b => [b.number, b.firstLine])).toEqual([[1, "const x = work()"]])
+})
 test("only unresolved names and local imports are automatic fragments", () => {
   expect(classify(block, []).status).toBe("ok")
   expect(classify(block, [diagnostic("TS2304")]).status).toBe("fragment")

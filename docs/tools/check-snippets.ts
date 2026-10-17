@@ -20,7 +20,10 @@ export function extract(markdown: string): Block[] {
     const body: string[] = []
     const close = new RegExp(`^\\s{0,3}${fence[1][0]}{${fence[1].length},}\\s*$`)
     while (++i < lines.length && !close.test(lines[i])) body.push(lines[i])
-    if (fence[2].trim().split(/\s+/)[0] !== "ts") continue
+    const [lang, role] = fence[2].trim().split(/\s+/)
+    if (lang !== "ts") continue
+    // ```ts effect marks Effect TypeScript shown for comparison, not Effeck.
+    if (role === "effect") continue
     number++
     const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:effeck|ts))\s*$/.exec(line)?.[1]).find(Boolean)
     if (filename?.split("/").some(part => part === "." || part === "..")) throw new Error(`Invalid snippet filename: ${filename}`)

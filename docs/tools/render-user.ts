@@ -12,6 +12,7 @@ const output = (s: string) => s.replace(/\.md$/i, ".html")
 // Code block roles, written after the language in the fence: ```ts effect
 const CAPTIONS: Record<string, string> = {
   effect: "Effect today (TypeScript)",
+  long: "Effeck long form",
   es: "Effeck",
   gen: "Generated TypeScript",
   dts: "Generated declaration",
@@ -282,7 +283,7 @@ async function render(source: string, markdown: string, destination: string, cou
     }
   })
   const body = (marked.parse(markdown) as string).replace(
-    /(<figure class="code side-effect">(?:(?!<\/figure>)[\s\S])*<\/figure>)\s*(<figure class="code side-es">(?:(?!<\/figure>)[\s\S])*<\/figure>)/g,
+    /(<figure class="code side-(?:effect|long)">(?:(?!<\/figure>)[\s\S])*<\/figure>)\s*(<figure class="code side-es">(?:(?!<\/figure>)[\s\S])*<\/figure>)/g,
     '<div class="compare">$1$2</div>'
   )
   // Include reference-style links and raw HTML anchors in validation and rewriting.
