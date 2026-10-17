@@ -2,17 +2,17 @@
 // provide Key = value provides one service (D173). Every function here
 // declares no dependencies (!!), so each provide block must remove the keys
 // its body needs.
-service Greeting {
+service class Greeting {
   text(): string!!
 }
 
-service Names {
+service class Names {
   name(): string!!
 }
 
-layer NamesLive: Names {
+const NamesLive = Layer.succeed(Names, {
   name() { return "Ada" }
-}
+})
 
 const fixedRandom = { nextIntUnsafe: () => 7, nextDoubleUnsafe: () => 0.25 }
 

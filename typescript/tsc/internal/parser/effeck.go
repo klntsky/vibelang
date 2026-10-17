@@ -35,9 +35,26 @@ func isEffeckDeclarationWord(text string) bool {
 }
 
 // scanStartOfEffeckDeclaration reports whether the current token starts an
-// Effeck declaration. It moves the scanner; call it through lookAhead.
+// Effeck declaration. service and control may also be followed by class on the
+// same line (D220): service class Users { ... }. An identifier followed by
+// class on the same line is a TypeScript syntax error too. It moves the
+// scanner; call it through lookAhead.
 func (p *Parser) scanStartOfEffeckDeclaration() bool {
-	return p.token == ast.KindIdentifier && isEffeckDeclarationWord(p.scanner.TokenValue()) && p.nextTokenIsIdentifierOnSameLine()
+	if p.token != ast.KindIdentifier {
+		return false
+	}
+	word := p.scanner.TokenValue()
+	if !isEffeckDeclarationWord(word) {
+		return false
+	}
+	p.nextToken()
+	if p.hasPrecedingLineBreak() {
+		return false
+	}
+	if p.token == ast.KindClassKeyword {
+		return word == "service" || word == "control"
+	}
+	return p.isIdentifier()
 }
 
 func (p *Parser) isStartOfEffeckDeclaration() bool {
@@ -312,10 +329,13 @@ func (p *Parser) effeckInferOmitted(returnType *ast.TypeNode) {
 
 // parseServiceDeclaration parses
 //
-//	service Users { find(id: string): User!NotFound; readonly region: string }
-//	control Approval { approve(request: string): boolean!! }
+//	service class Users { find(id: string): User!NotFound; region: string }
+//	control class Approval { approve(request: string): boolean!! }
 //
-// as the abstract classes they abbreviate:
+// as the abstract classes they abbreviate. The word before class is a
+// modifier, as declare is in declare class, and the members have no bodies,
+// as a declare class's do (D220). The older spelling without class, service
+// Users { ... }, parses the same way; the checker warns about it (EK2120):
 //
 //	abstract class Users { abstract find(id: string): User!NotFound; abstract readonly region: string }
 //	abstract class Approval extends Control { abstract approve(request: string): boolean!! }
@@ -327,6 +347,7 @@ func (p *Parser) effeckInferOmitted(returnType *ast.TypeNode) {
 func (p *Parser) parseServiceDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList, control bool) *ast.Node {
 	word := p.scanner.TokenRange()
 	p.nextToken() // service or control
+	p.parseOptional(ast.KindClassKeyword)
 	name := p.parseBindingIdentifier()
 	typeParameters := p.parseTypeParameters()
 	var heritage *ast.NodeList

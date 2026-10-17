@@ -3,9 +3,9 @@
 // declaration like a class and a handle clause like catch.
 //
 //   error NotFound { id: string }          schema User { name: string }
-//   service Users { find(id: string): User!NotFound }
-//   control Approval { approve(request: string): boolean }
-//   layer UsersLive: Users { find(id) { ... } }
+//   service class Users { find(id: string): User!NotFound }
+//   control class Approval { approve(request: string): boolean }
+//   layer UsersLive: Users { find(id) { ... } }   (the old spelling, D221)
 //   try { ... } handle Approval.approve(request) { ... }
 //   function find(id: string): User!NotFound!Db { ... }
 
@@ -32,7 +32,20 @@ function declaration(words, body, header = "") {
 export function addEffeckSyntax(grammar) {
   const { repository } = grammar
   repository["effeck-type-declaration"] = declaration("error|schema", "#type-object")
-  repository["effeck-member-declaration"] = declaration("service|control", "#class-or-interface-body")
+  // service class and control class (D220): the word is a modifier, like
+  // declare; the older spelling without class matches too.
+  repository["effeck-member-declaration"] = {
+    name: "meta.class.ts",
+    begin: `${start}\\b(service|control)\\s+(?:(class)\\s+)?(${name})`,
+    beginCaptures: {
+      1: { name: "keyword.control.export.ts" },
+      2: { name: "storage.modifier.ts" },
+      3: { name: "storage.type.class.ts" },
+      4: { name: "entity.name.type.class.ts" }
+    },
+    end,
+    patterns: [{ include: "#comment" }, { include: "#type-parameters" }, { include: "#class-or-interface-body" }]
+  }
   repository["effeck-layer-declaration"] = declaration("layer", "#class-or-interface-body", `\\s*:\\s*(${name}(?:\\.${name})*)`)
   repository["effeck-handle-clause"] = {
     match: `\\b(handle)\\s+(?=${name}\\s*\\.\\s*${name}\\s*\\()`,

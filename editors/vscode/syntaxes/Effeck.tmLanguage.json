@@ -5821,19 +5821,19 @@
 		},
 		"effeck-member-declaration": {
 			"name": "meta.class.ts",
-			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(service|control)\\s+([_$[:alpha:]][_$[:alnum:]]*)",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(service|control)\\s+(?:(class)\\s+)?([_$[:alpha:]][_$[:alnum:]]*)",
 			"beginCaptures": {
 				"1": {
 					"name": "keyword.control.export.ts"
 				},
 				"2": {
-					"name": "storage.type.class.ts"
+					"name": "storage.modifier.ts"
 				},
 				"3": {
-					"name": "entity.name.type.class.ts"
+					"name": "storage.type.class.ts"
 				},
 				"4": {
-					"name": "entity.name.type.ts"
+					"name": "entity.name.type.class.ts"
 				}
 			},
 			"end": "(?<=\\})|(?<=[_$[:alnum:]>])(?=\\s*(?:$|;|//))",

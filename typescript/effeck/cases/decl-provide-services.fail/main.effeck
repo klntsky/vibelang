@@ -1,7 +1,7 @@
 // expect: TS2769 TS2769
 // A provider written Key = value needs a service key, or a module whose
 // export of the same name is one, and a value of that service's shape (D173).
-service Greeting {
+service class Greeting {
   text(): string!!
 }
 

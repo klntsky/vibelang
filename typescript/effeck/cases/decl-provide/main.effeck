@@ -1,26 +1,28 @@
 // expect-result: {"greeting":"Hello, Ada","early":"early","count":2,"both":"Ada 1"}
 error NotFound { id: string }
 
-service Names {
+service class Names {
   name(id: string): string!NotFound
 }
 
-service Counter {
+service class Counter {
   next(): number!!
 }
 
-layer NamesLive: Names {
+const NamesLive = Layer.succeed(Names, {
   name(id) {
     if (id === "42") return "Ada"
     throw new NotFound({ id })
   }
-}
+})
 
-layer CounterLive: Counter {
+const CounterLive = Layer.effect(Counter) {
   const count = Ref.make(0)
-  next() {
-    Ref.update(count, (n) => n + 1)
-    return Ref.get(count)
+  return {
+    next() {
+      Ref.update(count, (n) => n + 1)
+      return Ref.get(count)
+    }
   }
 }
 

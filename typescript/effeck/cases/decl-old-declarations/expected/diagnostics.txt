@@ -1,0 +1,5 @@
+main.effeck(5,1): warning EK2120
+main.effeck(9,1): warning EK2120
+main.effeck(13,1): warning EK2120
+main.effeck(17,1): warning EK2121
+main.effeck(21,1): warning EK2121

@@ -1,10 +1,10 @@
 // expect: EK1001 EK2005 EK2107 EK2108
-control Approval {
+control class Approval {
   approve(request: string): boolean!!
   note(text: string): void!!
 }
 
-service Users {
+service class Users {
   find(id: string): string!!
 }
 
@@ -39,11 +39,11 @@ function service() {
   }
 }
 
-service Secret {
+service class Secret {
   read(): string!!
 }
 
-control Ask {
+control class Ask {
   ask(question: string): string!!
 }
 

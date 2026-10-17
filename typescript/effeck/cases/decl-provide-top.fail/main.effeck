@@ -1,13 +1,13 @@
 // expect: EK1001
-service Names {
+service class Names {
   name(): string!!
 }
 
-layer NamesLive: Names {
+const NamesLive = Layer.succeed(Names, {
   name() {
     return "Ada"
   }
-}
+})
 
 provide NamesLive {
 }

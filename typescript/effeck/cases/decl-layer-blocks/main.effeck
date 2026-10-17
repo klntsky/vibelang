@@ -1,0 +1,98 @@
+// expect-result: {"found":"Ada","missing":"No user 7","region":"eu","stats":"2 lookups","log":["open","close"]}
+// Layers are calls (D221): Layer.succeed(Service, { ... }) without setup, and
+// Layer.effect(Service) { setup; return { ... } } through block params, where
+// the block is the layer's effect and its members are typed by the service.
+error UserNotFound { id: string }
+
+service class Directory {
+  lookup(id: string): string | undefined!!
+}
+
+service class Users {
+  find(id: string): string!UserNotFound
+  region: string
+}
+
+service class Stats {
+  count(): number!!
+  record(): void!!
+}
+
+const DirectoryLive = Layer.succeed(Directory, {
+  lookup(id) {
+    return id === "42" ? "Ada" : undefined
+  }
+})
+
+export const UsersLive = Layer.effect(Users) {
+  const directory = Directory()
+  const stats = Stats()
+  return {
+    find(id) {
+      stats.record()
+      const name = directory.lookup(id)
+      if (name === undefined) throw new UserNotFound({ id })
+      return name
+    },
+    region: "eu"
+  }
+}
+
+const log: string[] = []
+
+const StatsLive = Layer.effect(Stats) {
+  const lookups = Ref.make(0)
+  return {
+    count() {
+      return Ref.get(lookups)
+    },
+    record() {
+      Ref.update(lookups, (n) => n + 1)
+    }
+  }
+}
+
+service class Session {
+  name(): string!!
+}
+
+// Setup that acquires a resource with using: the layer releases it when its scope closes.
+const SessionLive = Layer.effect(Session) {
+  using _ = Effect.acquireRelease(
+    () => { log.push("open"); return "session" },
+    () => { log.push("close") }
+  )
+  return {
+    name() {
+      return "session"
+    }
+  }
+}
+
+function greet(id: string) {
+  try {
+    return Users.find(id)
+  } catch (error) {
+    return `No user ${error.id}`
+  }
+}
+
+function lookups() {
+  provide wire(UsersLive, DirectoryLive, StatsLive) {
+    const found = greet("42")
+    const missing = greet("7")
+    return { found, missing, region: Users().region, stats: `${Stats.count()} lookups` }
+  }
+}
+
+function session() {
+  provide SessionLive {
+    return Session.name()
+  }
+}
+
+export function main() {
+  const result = lookups()
+  session()
+  return { ...result, log }
+}

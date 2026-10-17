@@ -314,6 +314,32 @@ try {
     assert(deferredEdits.length === 1 && deferredEdits[0].newText === "d.await()" && deferredEdits[0].range.start.line === start.line && deferredEdits[0].range.start.character === start.character && deferredEdits[0].range.end.character === start.character + "await d".length, `edits ${JSON.stringify(deferredEdits)}`)
   })
 
+  await check("code action: EK2120 and EK2121 warn at the old service and layer spellings, and their quick fixes write the current ones", async () => {
+    const file = "src/old-declarations.effeck"
+    open(file, "effeck")
+    const items = await diagnostics(file)
+    const codes = items.map((d) => `${d.source} ${d.code} ${d.severity}`).sort()
+    assert(JSON.stringify(codes) === JSON.stringify(["EK 2120 2", "EK 2121 2"]), `diagnostics ${JSON.stringify(codes)}`)
+    const uri = fileUri(file)
+    const service = items.find((d) => d.code === 2120)
+    const serviceStart = at(file, "service Greeting")
+    assert(service.range.start.line === serviceStart.line && service.range.start.character === serviceStart.character, `EK2120 range ${JSON.stringify(service.range)}`)
+    const serviceActions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: service.range, context: { diagnostics: [service], only: ["quickfix"] } })) ?? []
+    const serviceFix = serviceActions.find((a) => a.title === "Write service class")
+    assert(serviceFix, `no EK2120 quick fix among ${JSON.stringify(serviceActions.map((a) => a.title))}`)
+    const serviceEdits = serviceFix.edit?.changes?.[uri] ?? []
+    assert(serviceEdits.length === 1 && serviceEdits[0].newText === " class" && JSON.stringify(serviceEdits[0].range.start) === JSON.stringify(service.range.end), `EK2120 edits ${JSON.stringify(serviceEdits)}`)
+    const layer = items.find((d) => d.code === 2121)
+    const layerStart = at(file, "layer GreetingLive")
+    assert(layer.range.start.line === layerStart.line && layer.range.start.character === layerStart.character, `EK2121 range ${JSON.stringify(layer.range)}`)
+    const layerActions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: layer.range, context: { diagnostics: [layer], only: ["quickfix"] } })) ?? []
+    const layerFix = layerActions.find((a) => a.title === "Rewrite the layer declaration as a Layer call")
+    assert(layerFix, `no EK2121 quick fix among ${JSON.stringify(layerActions.map((a) => a.title))}`)
+    const layerEdits = layerFix.edit?.changes?.[uri] ?? []
+    const want = "const GreetingLive = Layer.effect(Greeting) {\n  const word = \"hi\"\n  return {\n    text() { return word }\n  }\n}"
+    assert(layerEdits.length === 1 && layerEdits[0].newText === want, `EK2121 edits ${JSON.stringify(layerEdits)}`)
+    assert(layerEdits[0].range.start.line === layerStart.line && layerEdits[0].range.end.line === lineOf(file, "text() { return word }") + 1, `EK2121 edit range ${JSON.stringify(layerEdits[0].range)}`)
+  })
   await check("diagnostics: an edit to main.effeck is checked with Effeck types", async () => {
     // name is the success value of lookup(1), a string, so toFixed does not exist.
     const broken = text("src/main.effeck").replace("name.toUpperCase()", "name.toFixed()")

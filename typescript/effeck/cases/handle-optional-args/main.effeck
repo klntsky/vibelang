@@ -2,7 +2,7 @@
 // then its continuation. An optional argument left out at the call site still
 // takes its position, so the continuation stays last, also when the clause
 // gives that parameter a default.
-control Log {
+control class Log {
   write(message: string, level?: string): string!!
 }
 

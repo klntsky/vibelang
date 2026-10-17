@@ -5,7 +5,7 @@ export function findUser(id: string): string!MissingUser! {
   return id
 }
 
-export service Accounts {
+export service class Accounts {
   balance(id: string): number!MissingUser
 }
 
@@ -13,10 +13,12 @@ export function total(id: string) {
   return Accounts.balance(id)
 }
 
-export layer AccountsLive: Accounts {
+export const AccountsLive = Layer.effect(Accounts) {
   const rate = 2
-  balance(id) {
-    return id.length * rate
+  return {
+    balance(id) {
+      return id.length * rate
+    }
   }
 }
 
@@ -34,7 +36,7 @@ export function recover(id: string) {
   }
 }
 
-export control Approval {
+export control class Approval {
   approve(request: string): boolean!!
 }
 

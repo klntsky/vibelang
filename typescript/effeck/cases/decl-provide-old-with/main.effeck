@@ -2,13 +2,13 @@
 // The old spelling, with Layer { ... }, still compiles and runs the same way,
 // with the warning EK1009 at its keyword (D172). The word provide alone stays
 // an ordinary identifier: a call, an element access, and a local name.
-service Names {
+service class Names {
   name(): string!!
 }
 
-layer NamesLive: Names {
+const NamesLive = Layer.succeed(Names, {
   name() { return "Ada" }
-}
+})
 
 function old() {
   with NamesLive {

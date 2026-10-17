@@ -1,0 +1,16 @@
+// The spellings before D220 and D221: EK2120 and EK2121 warn, and their quick
+// fixes write service class and the Layer.effect block.
+service Greeting {
+  text(): string!!
+}
+
+layer GreetingLive: Greeting {
+  const word = "hi"
+  text() { return word }
+}
+
+export function greetingOld() {
+  provide GreetingLive {
+    return Greeting.text()
+  }
+}

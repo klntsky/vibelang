@@ -1,0 +1,48 @@
+// expect-result: {"name":"Ada","greeting":"hi Ada","approved":"released v1"}
+// The spellings before D220 and D221 still compile and run the same way, with
+// warnings: service and control without class (EK2120) and the layer
+// declaration (EK2121). Their quick fixes write the current spellings.
+service Names {
+  name(): string!!
+}
+
+service Greeter {
+  greet(name: string): string!!
+}
+
+control Approval {
+  approve(request: string): boolean!!
+}
+
+layer NamesLive: Names {
+  name() { return "Ada" }
+}
+
+layer GreeterLive: Greeter {
+  const prefix = "hi"
+  greet(name) { return `${prefix} ${name}` }
+}
+
+function release(version: string) {
+  if (!Approval.approve(`deploy ${version}`)) return "declined"
+  return `released ${version}`
+}
+
+function approveAll(version: string) {
+  try {
+    return release(version)
+  } handle Approval.approve(_request) {
+    resume(true)
+  }
+}
+
+function names() {
+  provide NamesLive, GreeterLive {
+    const name = Names.name()
+    return { name, greeting: Greeter.greet(name) }
+  }
+}
+
+export function main() {
+  return { ...names(), approved: approveAll("v1") }
+}
