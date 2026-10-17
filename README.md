@@ -5,7 +5,7 @@ A language for writing Effect programs: TypeScript syntax in which every functio
 > [!WARNING]
 > Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-Docs: [effeck.pages.dev](https://effeck.pages.dev) for the guides and [effeck.pages.dev/spec/](https://effeck.pages.dev/spec/) for the specification.
+Docs: [effeck.willcory10.workers.dev](https://effeck.willcory10.workers.dev) for the guides and [effeck.willcory10.workers.dev/spec/](https://effeck.willcory10.workers.dev/spec/) for the specification.
 
 ## Quickstart
 
@@ -130,7 +130,7 @@ bun prototype/esc/examples/run-all.ts              # prototype compiler examples
 cd typescript && sh effeck/smoke.sh                # build effeck and run its cases
 bun docs/tools/check-snippets.ts                   # compile every user-doc code block
 sh scripts/check-examples.sh                       # build and run the examples
-sh scripts/deploy-docs.sh                          # publish the docs to Cloudflare Pages
+sh scripts/deploy-docs.sh                          # publish the docs on Cloudflare
 ```
 
 To run any of these on a Linux build host instead of this machine, set `ES_REMOTE_HOST` (and `ES_REMOTE_KEY`) and prefix the command with `scripts/remote.sh` from the directory it runs in, for example `cd typescript && ../scripts/remote.sh sh effeck/smoke.sh --status`.

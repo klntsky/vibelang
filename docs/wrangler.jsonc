@@ -1,0 +1,10 @@
+// The docs site: a Worker that serves only static assets on workers.dev.
+// scripts/deploy-docs.sh assembles ../.cache/docs-site and deploys it.
+{
+  "name": "effeck",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "../.cache/docs-site",
+    "not_found_handling": "404-page"
+  }
+}
