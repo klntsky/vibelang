@@ -152,10 +152,7 @@ function localDate() {
 // string!!DateTime.CurrentTimeZone
 
 function main() {
-  return Effect.provide(
-    () => localDate(),
-    DateTime.layerCurrentZoneNamed("Asia/Tokyo")
-  )
+  with DateTime.layerCurrentZoneNamed("Asia/Tokyo") { return localDate() }
 }
 ```
 

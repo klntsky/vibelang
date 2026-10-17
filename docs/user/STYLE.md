@@ -40,7 +40,7 @@ Code blocks use the `ts` fence and are Effeck unless the first line says otherwi
 - **Pipelines** take the program first: `pipe(() => fetchUser(id), Effect.retry({ times: 3 }), Effect.timeout("2 seconds"))`. Statements replace `map`, `flatMap`, `andThen`, `tap`, `catch`, and `ensuring`.
 - **Contracts are inferred.** Write `function f(): A!E!R` to check a promise; an empty slot is `never`, and dependencies left out of a return annotation with a body, as in `A!E`, are inferred (D127). `Effect<A, infer E, infer R>` still works. D12's callback rule stands.
 - **Errors.** `error UserNotFound { id: string }` declares a tagged error class with readonly fields (short for `class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}`); `throw new UserNotFound({ id })` adds it to E; `try`/`catch` handles expected failures only, and the caught value is narrowed by `instanceof` or `_tag`; `finally` always runs. Serializable errors use `Schema.TaggedError`. `Effect.orDie(() => f())` turns failures into defects; `Effect.catchDefect` observes defects at a boundary.
-- **Services are `service` declarations**, abstract classes whose members state their contracts.
+- **Services are `service` declarations**, abstract classes whose members state their contracts. Provide a layer to a block with `with AppLive { ... }`.
 
   ```ts
   service Users {

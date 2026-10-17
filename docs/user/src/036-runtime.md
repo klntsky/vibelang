@@ -48,9 +48,9 @@ const Quiet = Logger.layer([])
 
 function startup() {
   log("visible before")
-  Effect.provide(() => {
+  with Quiet {
     log("suppressed in this region")
-  }, Quiet)
+  }
   log("visible after")
 }
 ```

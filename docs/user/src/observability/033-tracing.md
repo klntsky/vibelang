@@ -47,7 +47,7 @@ const Tracing = pipe(
 )
 
 function exportedReport() {
-  return Effect.provide(() => renderReport("csv"), Tracing)
+  with Tracing { return renderReport("csv") }
 }
 ```
 
@@ -116,7 +116,7 @@ The inner spans inherit the outer span as parent. Their trace IDs match, while e
 
 ```ts
 function demonstration() {
-  Effect.provide(() => generate(), Tracing)
+  with Tracing { generate() }
 }
 ```
 
@@ -143,7 +143,7 @@ const VendorTracing = Layer.unwrap(() => {
 })
 
 function productionReport() {
-  return Effect.provide(() => generate(), VendorTracing)
+  with VendorTracing { return generate() }
 }
 ```
 

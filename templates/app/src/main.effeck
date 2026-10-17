@@ -10,14 +10,14 @@ layer GreeterLive: Greeter {
 }
 
 export function main() {
-  Effect.provide(() => {
+  with GreeterLive {
     Console.log(Greeter.greet("Effeck"))
     try {
       Greeter.greet("")
     } catch (error) {
       Console.log(`Recovered from ${error._tag}`)
     }
-  }, GreeterLive)
+  }
 }
 
 NodeRuntime.runMain(() => main())

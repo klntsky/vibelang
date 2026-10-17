@@ -79,11 +79,11 @@ const ConfiguredLevel = Layer.unwrap(() => {
 })
 
 function quiet() {
-  Effect.provide(() => logInfo("suppressed"), Silent)
+  with Silent { logInfo("suppressed") }
 }
 
 function configured() {
-  Effect.provide(() => logDebug("configuration loaded"), ConfiguredLevel)
+  with ConfiguredLevel { logDebug("configuration loaded") }
 }
 ```
 
@@ -97,10 +97,10 @@ function captureLogs() {
   const capture = Logger.make(({ logLevel, message }) => {
     records.push({ level: logLevel, message })
   })
-  Effect.provide(() => {
+  with Logger.layer([capture, Logger.tracerLogger]) {
     logInfo("batch accepted", { count: 3 })
     logWarning("one retry required")
-  }, Logger.layer([capture, Logger.tracerLogger]))
+  }
   return records
 }
 ```
@@ -116,7 +116,7 @@ const ObjectLogs = Logger.layer([Logger.consoleStructured, Logger.tracerLogger])
 const JsonLogs = Logger.layer([Logger.consoleJson, Logger.tracerLogger])
 
 function jsonExample() {
-  Effect.provide(() => logInfo("started", { workers: 4 }), JsonLogs)
+  with JsonLogs { logInfo("started", { workers: 4 }) }
 }
 ```
 
@@ -133,7 +133,7 @@ function consoleAndCapture() {
     audit,
     Logger.tracerLogger
   ])
-  Effect.provide(() => logInfo("job finished"), destinations)
+  with destinations { logInfo("job finished") }
   return auditMessages
 }
 ```

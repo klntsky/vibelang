@@ -36,7 +36,7 @@ const Shared = Layer.merge(
 )
 
 function documentLabels() {
-  return Effect.provide(() => [Heading().value, Footer().value], Shared)
+  with Shared { return [Heading().value, Footer().value] }
 }
 ```
 
@@ -53,7 +53,7 @@ const Separate = Layer.merge(
 )
 
 function isolatedLabels() {
-  return Effect.provide(() => [Heading().value, Footer().value], Separate)
+  with Separate { return [Heading().value, Footer().value] }
 }
 ```
 
@@ -69,11 +69,11 @@ function twoLocalReads() {
 }
 
 function oneSharedReadBoundary() {
-  return Effect.provide(() => {
+  with PrefixLive {
     const first = Prefix().value
     const second = Prefix().value
     return [first, second]
-  }, PrefixLive)
+  }
 }
 ```
 

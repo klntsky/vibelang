@@ -116,7 +116,7 @@ layer LeaseStoreTest: LeaseStore {
 }
 
 function example() {
-  return Effect.provide(() => leaseId(), LeaseStoreTest)
+  with LeaseStoreTest { return leaseId() }
 }
 ```
 

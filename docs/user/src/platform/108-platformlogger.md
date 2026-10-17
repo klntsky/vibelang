@@ -34,9 +34,9 @@ const LoggerLive = Layer.provide(
 )
 
 function main() {
-  Effect.provide(() => {
+  with LoggerLive {
     log("Report generated")
-  }, LoggerLive)
+  }
   // LoggerLive's scope has closed and its final batch has flushed.
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./application.log")

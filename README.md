@@ -64,6 +64,8 @@ clients, see [editors/](editors/README.md).
   and call `Users.find(id)`; `control` declares a control operation the same way.
 - Implement a service with `layer UsersLive: Users { find(id) { ... } }`;
   statements before the members run once, when the layer builds.
+- Provide a layer to a block with `with AppLive { ... }`; a `return` inside
+  returns from the enclosing function.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`, the boundary
   hatches `sync`, `try`, and `callback`, the runners, and the Effect

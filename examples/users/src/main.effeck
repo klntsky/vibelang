@@ -42,8 +42,8 @@ export function greet(id: string) {
 }
 
 export function main() {
-  Effect.provide(() => {
+  with AppLive {
     Console.log(greet("42"))
     Console.log(greet("missing"))
-  }, AppLive)
+  }
 }

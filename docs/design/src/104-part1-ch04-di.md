@@ -290,6 +290,17 @@ function main() {
 
 `main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.
 
+`with AppLive { ... }` provides a layer to a block (D130). It is short for `Effect.provide(() => { ... }, AppLive)`, except that its statements are code of the enclosing function: a `return` returns from the function, and `break` and `continue` leave its loops. Its errors are the block's and the layer's, and its requirements are the block's that the layer does not provide plus the layer's own. Like `Effect.provide`, it accepts a layer, an array of layers, or a `Context`. A `with` block at a module's top level would run a program there, so it is EK1001.
+
+```ts es
+function main() {
+  with AppLive {
+    log(`welcomed ${welcome("42")}`)
+  }
+}
+// void!UserNotFound | MailError | ConfigError | ConnectError!
+```
+
 Each `Effect.provide` builds its layers once, so two sibling `provide` calls build them twice:
 
 ```ts es

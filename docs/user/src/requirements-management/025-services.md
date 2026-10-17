@@ -85,7 +85,7 @@ layer SequenceTest: Sequence { next() { return 17 } }
 layer ReporterTest: Reporter { write(_message) {} }
 
 function testAnnouncement() {
-  return Effect.provide(() => announceTicket(), wire(SequenceTest, ReporterTest))
+  with wire(SequenceTest, ReporterTest) { return announceTicket() }
 }
 ```
 
@@ -99,11 +99,11 @@ const testContext = Context.add(
 )
 
 function testWithContext() {
-  return Effect.provide(() => announceTicket(), testContext)
+  with testContext { return announceTicket() }
 }
 ```
 
-A `Context` holds implementations that already exist, while a `Layer` describes how to build them. `Effect.provide` accepts either. Keep resource-owning implementations within the lifetime that created them.
+A `Context` holds implementations that already exist, while a `Layer` describes how to build them. A `with` block, like `Effect.provide`, accepts either. Keep resource-owning implementations within the lifetime that created them.
 
 ## Requesting optional services
 

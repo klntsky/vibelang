@@ -33,5 +33,5 @@ function summarize(root: string) {
 }
 
 export function main() {
-  Effect.provide(() => summarize("fixtures"), NodeServices.layer)
+  with NodeServices.layer { summarize("fixtures") }
 }

@@ -100,23 +100,23 @@ Reuse the same layer value when several paths need a shared instance. Reconstruc
 
 ```ts
 function main() {
-  return Effect.provide(() => {
+  with AppLive {
     const first = report("Inventory")
     const second = report("Forecast")
     return [first, second]
-  }, AppLive)
+  }
 }
 // string[]!!
 
 function withBuiltContext() {
   return Effect.scoped(() => {
     const context = Layer.build(AppLive)
-    return Effect.provide(() => report("Inventory"), context)
+    with context { return report("Inventory") }
   })
 }
 ```
 
-Each `Effect.provide` builds its layers once for its program and releases their resources when it exits. Repeated calls to `report` inside that boundary share the provided implementations. Separate provision boundaries acquire separately; use `ManagedRuntime` when several entry points need one application lifetime.
+`with AppLive { ... }` provides the layer to its statements: it builds the layer once, every call inside shares the implementations, and the layer's resources are released when the block exits. The statements are code of the enclosing function, so the `return` inside returns from `main`. The block is short for `Effect.provide(() => { ... }, AppLive)`, and like it accepts a layer, an array of layers, or a `Context`. Separate provision boundaries acquire separately; use `ManagedRuntime` when several entry points need one application lifetime.
 
 `Layer.build` produces a `Context` and requires a `Scope`, supplied here by `Effect.scoped`. Consume resource-owning services inside that scope. For an application represented entirely by a layer, `Layer.launch(AppLive)` builds it and waits until interruption, keeping its resources alive.
 
@@ -175,11 +175,11 @@ const BannerWithTestSettings = Layer.provide(Banner.layerWithoutDependencies, Se
 layer BannerTest: Banner { text(title) { return `fixture/${title}` } }
 
 function testBannerDependency() {
-  return Effect.provide(() => Banner.text("Orders"), BannerWithTestSettings)
+  with BannerWithTestSettings { return Banner.text("Orders") }
 }
 
 function testBannerDirectly() {
-  return Effect.provide(() => Banner.text("Orders"), BannerTest)
+  with BannerTest { return Banner.text("Orders") }
 }
 ```
 
