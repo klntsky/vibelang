@@ -15,18 +15,24 @@ function sample() {
 
 Install `effeck` as a dev dependency. Its `effeck --lsp --stdio` command starts the language server from the project's compiler, with one server for `.effeck` and `.ts` files.
 
-For VS Code and Cursor, run `sh scripts/setup.sh` in the repository. When
-`editors/vscode` is available, setup builds a `.vsix` and prints its install
-command. Install that local file, then open the application directory. The
-extension is not published to the marketplace. If setup reports that the editor
-package is absent, rerun setup after updating the checkout.
+For VS Code and Cursor, install the extension that ships in `effeck`, then open
+the application directory:
+
+```sh
+code --install-extension node_modules/effeck/editor/effeck.vsix
+# Or, for Cursor:
+cursor --install-extension node_modules/effeck/editor/effeck.vsix
+```
+
+The extension is not on the VS Code Marketplace or Open VSX yet. Install it
+again from `node_modules` after you update `effeck`.
 
 Other editors configure their LSP client to run `effeck --lsp --stdio` for `*.effeck`
 and `*.ts`, with `tsconfig.json` as the root marker. Turn off the other TypeScript
 server for this project to avoid duplicate diagnostics. JetBrains IDEs can use
 LSP4IJ.
 
-For GitHub highlighting, add `*.effeck linguist-language=TypeScript` to `.gitattributes`; otherwise GitHub highlights `.effeck` as JavaScript. Effect's own `@effect/tsgo` tooling remains for `.ts` files and does not check Effeck semantics.
+For GitHub highlighting, add `*.effeck linguist-language=TypeScript` to `.gitattributes`; otherwise GitHub shows `.effeck` files without highlighting. The starter's `.gitattributes` already has this line. Effect's own `@effect/tsgo` tooling remains for `.ts` files and does not check Effeck semantics.
 
 ## Inspect inferred information
 

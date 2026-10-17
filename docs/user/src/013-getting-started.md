@@ -4,19 +4,14 @@ These guides teach Effeck one topic at a time and also serve as a reference whil
 
 ## Create and run your first project
 
-Run setup once from the Effeck repository, then scaffold wherever you
-keep projects:
-
 ```sh
-sh scripts/setup.sh
-bun create effeck my-app --no-git
+bun create effeck my-app
 cd my-app
-bun run build
 bun run start
 bun run test
 ```
 
-The starter prints:
+With npm, run `npm create effeck@latest my-app`. The starter prints:
 
 ```out
 Hello, Effeck!
@@ -30,13 +25,15 @@ recovers a typed failure with `try`/`catch`, and starts the program with
 and recovery. Vitest compiles `src/**/*.test.effeck` through `@effeck/vite`; tests need no prior build.
 
 Run `bun run dev` to compile on changes and restart Node when output changes.
-Press Ctrl+C to stop both watchers. Open this project in VS Code or Cursor after
-installing the `.vsix` printed by setup. The extension uses the local compiler
-for diagnostics and hovers.
+Press Ctrl+C to stop both watchers. For diagnostics and hovers in VS Code or
+Cursor, install the extension that ships in `effeck`, then open the project:
 
-Keep the Effeck checkout available: the project's local package paths
-point to it. See [Installation](getting-started/004-installation.md) for
-prerequisites, setup details, and the end-to-end verification command.
+```sh
+code --install-extension node_modules/effeck/editor/effeck.vsix
+```
+
+See [Installation](getting-started/004-installation.md) for prerequisites,
+supported platforms, editor setup, and adding Effeck to an existing project.
 
 ## Guides and reference material
 

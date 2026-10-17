@@ -5,45 +5,46 @@ A language for writing Effect programs: TypeScript syntax in which every functio
 > [!WARNING]
 > Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
+Docs: [effeck.pages.dev](https://effeck.pages.dev) for the guides and [effeck.pages.dev/spec/](https://effeck.pages.dev/spec/) for the specification.
+
 ## Quickstart
 
-From this checkout, install the local compiler, runtime, and Bun project template:
-
 ```sh
-sh scripts/setup.sh
-bun create effeck my-app --no-git
+bun create effeck my-app
 cd my-app
-bun run build
 bun run start
 bun run test
 ```
 
-Setup requires Go, Bun, and Node on `PATH`. The tested toolchain is Go 1.26
-(with automatic Go 1.27 download), Bun 1.4.1, and Node 26.10. Nothing needs to
-be published to npm. Keep this checkout available: scaffolded projects use
-absolute `file:` dependencies on its compiler and Vite packages and on the
-runtime tarball that setup packs. Rerun setup after updating the checkout, then
-run `bun update @effeck/runtime effeck @effeck/vite` in
-existing projects to install the new packages.
+With npm, run `npm create effeck@latest my-app`. You need Node 26 or later and
+Bun 1.4 or later. The command copies a starter, pins `effeck`,
+`@effeck/runtime`, and `@effeck/vite` to one version, and installs dependencies;
+`--no-install` skips installation. The compiler is a native binary from a
+per-platform package for macOS, Linux, and Windows on arm64 and x64. Version
+0.0.1 is tested on macOS on Apple silicon and on Linux on x64.
 
-`bun run dev` builds once, watches `.effeck` sources with `effeck --watch`, and runs
-Node with `--watch` on the output. `bun run test` compiles `.effeck` tests before
-running Vitest with `@effect/vitest`. The starter demonstrates an abstract-class
-service, a layer, a tagged failure, and `try`/`catch` recovery.
+`bun run start` prints `Hello, Effeck!` and `Recovered from EmptyName`.
+`bun run dev` builds once, watches `.effeck` sources with `effeck --watch`, and
+runs Node with `--watch` on the output. `bun run test` compiles `.effeck` tests
+before running Vitest with `@effect/vitest`. The starter demonstrates an
+abstract-class service, a layer, a tagged failure, and `try`/`catch` recovery.
 
-Setup builds the editor extension when `editors/vscode` is available and prints
-its exact `.vsix` path. Install it with `code --install-extension <path>` or
-`cursor --install-extension <path>`, then open your project directory.
+To add Effeck to an existing project, see
+[Installation](docs/user/src/getting-started/004-installation.md).
 
-During the parallel build, setup reports missing runtime or editor packages.
-The end-to-end check fails at the first incomplete step with its diagnostics:
+## Editor setup
 
 ```sh
-sh scripts/e2e.sh
+code --install-extension node_modules/effeck/editor/effeck.vsix
+# Or, for Cursor:
+cursor --install-extension node_modules/effeck/editor/effeck.vsix
 ```
 
-See [Installation](docs/user/src/getting-started/004-installation.md) and
-[Getting Started](docs/user/src/013-getting-started.md) for the full workflow.
+Run the command from the project directory after installing dependencies, then
+open the project. The extension runs the project's compiler as the language
+server, `effeck --lsp --stdio`, for diagnostics, hovers, and completions. It is
+not on the VS Code Marketplace or Open VSX yet. For Neovim, Zed, and other LSP
+clients, see [editors/](editors/README.md).
 
 ## Before you write your first file
 
@@ -80,6 +81,36 @@ See [Installation](docs/user/src/getting-started/004-installation.md) and
   that calls `HttpRouter.toHttpEffect` provides them with
   `HttpRouter.provideRequest(layer)(routes)`.
 
+## Develop Effeck
+
+Work on the compiler, runtime, editor, or docs from this checkout. Setup
+requires Go, Bun, and Node on `PATH`. The tested toolchain is Go 1.26 (with
+automatic Go 1.27 download), Bun 1.4.1, and Node 26.10.
+
+```sh
+sh scripts/setup.sh
+bun create effeck my-app --no-git
+```
+
+Setup builds the native compiler into `packages/compiler/native/effeck`, packs
+the runtime, builds the editor extension and prints its `.vsix` path, and
+installs a local template into `~/.bun-create/effeck`. `bun create effeck`
+prefers that local template over the npm package, so projects created after
+setup use absolute `file:` dependencies on this checkout's compiler and Vite
+packages and on the runtime tarball that setup packs. Keep the checkout
+available. Rerun setup after updating it, then run
+`bun update @effeck/runtime effeck @effeck/vite` in those projects. To scaffold
+from npm instead, run `npm create effeck@latest`, or remove
+`~/.bun-create/effeck`.
+
+The end-to-end check runs setup, scaffolding, installation, the build, the
+program, and its tests in a temporary project, and fails at the first
+incomplete step:
+
+```sh
+sh scripts/e2e.sh
+```
+
 | Path | What it is |
 | --- | --- |
 | `docs/design/` | The spec (`effeck-design.html`, built from `src/` by `docs/tools/render.ts`) and the decision log (`DECISIONS.md`) |
@@ -87,7 +118,7 @@ See [Installation](docs/user/src/getting-started/004-installation.md) and
 | `docs/research/` | Research behind the design: Effect 4's runtime, continuation prior art, the TypeScript compiler, TC39 proposals, usage censuses, feature coverage |
 | `docs/reviews/` | Independent reviews of the design |
 | `experiments/` | The continuation kernel prototype on `effect@4.0.5` and its law suite (`bun test`); the design build refuses to run if any test fails |
-| `prototype/esc/` | A prototype compiler on the TypeScript API that lowers `.effeck` files to Effect TypeScript; the executable reference for lowering |
+| `prototype/esc/` | A prototype compiler on the TypeScript API, from before the rename, that lowers `.es` files (the old extension) to Effect TypeScript; the executable reference for lowering |
 | `prototype/single-pass/` | The experiment that settled single-pass lowering (D56) on a patched TypeScript 5.9 checker |
 | `typescript/` | The compiler, `effeck`: microsoft/TypeScript 7 (Go) with the Effeck commits on top; `typescript/EFFECK.md` describes them |
 | `artifacts/` | The earlier design-space proposal, kept for history; superseded by `docs/design/` |
@@ -96,9 +127,10 @@ See [Installation](docs/user/src/getting-started/004-installation.md) and
 cd experiments && bun install && bun test          # kernel laws
 cd docs/tools && bun install && bun render.ts      # build the spec
 bun prototype/esc/examples/run-all.ts              # prototype compiler examples
-cd typescript && sh effeck/smoke.sh          # build effeck and run its cases
+cd typescript && sh effeck/smoke.sh                # build effeck and run its cases
 bun docs/tools/check-snippets.ts                   # compile every user-doc code block
 sh scripts/check-examples.sh                       # build and run the examples
+sh scripts/deploy-docs.sh                          # publish the docs to Cloudflare Pages
 ```
 
 To run any of these on a Linux build host instead of this machine, set `ES_REMOTE_HOST` (and `ES_REMOTE_KEY`) and prefix the command with `scripts/remote.sh` from the directory it runs in, for example `cd typescript && ../scripts/remote.sh sh effeck/smoke.sh --status`.

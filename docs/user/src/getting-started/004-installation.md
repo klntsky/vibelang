@@ -1,89 +1,161 @@
 # Installation
 
-Effeck compiles `.effeck` sources to JavaScript with the native `effeck` compiler.
-This private preview installs from your local repository. The `@effeck`
-packages are not published to npm.
+```sh
+bun create effeck my-app
+cd my-app
+bun run start
+```
+
+Effeck compiles `.effeck` sources to JavaScript with the native `effeck`
+compiler. Version 0.0.1 installs from npm.
 
 ## Prerequisites
 
-Install Go, Bun, and Node and make them available on `PATH`. The tested versions
-are Go 1.26, Bun 1.4.1, and Node 26.10. Go downloads the compiler repository's
-Go 1.27 toolchain automatically on its first build. Setup requires network access
-for that download and package installation.
+Install Node 26 or later and Bun 1.4 or later. The compiler is a native binary.
+`effeck` lists one package per platform as an optional dependency, and your
+package manager installs only the one that matches your machine:
 
-The starter pins `effect` and `@effect/platform-node` to **4.0.5**. Its tests pin
-`@effect/vitest` to **4.0.5** and `vitest` to **5.0.5**. Keep those versions together.
+| Platform | Package | Tested for 0.0.1 |
+| --- | --- | --- |
+| macOS on Apple silicon | `@effeck/darwin-arm64` | Yes |
+| macOS on Intel | `@effeck/darwin-x64` | No |
+| Linux on x64 | `@effeck/linux-x64` | Yes |
+| Linux on arm64 | `@effeck/linux-arm64` | No |
+| Windows on x64 | `@effeck/win32-x64` | No |
+| Windows on arm64 | `@effeck/win32-arm64` | No |
 
-## Install from the repository
-
-Run this command from the Effeck checkout:
-
-```sh
-sh scripts/setup.sh
-```
-
-Setup builds `packages/compiler/native/effeck`, installs and builds the runtime,
-packs the runtime into `packages/runtime/effeck-runtime.tgz`, and copies
-the starter into `~/.bun-create/effeck`. It writes absolute `file:`
-dependencies pointing to this checkout's compiler and Vite packages and to the
-runtime tarball. A project installs its own copy of the runtime, so the runtime
-and your program load the project's one copy of `effect`.
-Keep the checkout at that path. Rerun setup after moving or updating it, then
-run `bun update @effeck/runtime effeck @effeck/vite`
-in existing projects. If you move the checkout, update those projects' `file:`
-paths in `package.json` before reinstalling.
-
-Setup creates an `effeck` launcher in `~/.local/bin` when that directory is already
-on `PATH`. Otherwise, use the project scripts below, which find the project's
-compiler automatically. Setup never edits your shell configuration or replaces
-an unrelated executable or template. It does replace a link to another
-checkout's launcher or to a missing file, which an earlier setup left when its
-checkout moved. `EFFECK_BINARY` overrides the native binary
-when you need to test another build.
-
-If `packages/runtime` or `editors/vscode` has not landed yet, setup prints the
-missing path. Rerun setup after those packages land. The compiler still builds;
-installing and running the starter requires the runtime.
+Keep optional dependencies enabled. If an install skips them, for example with
+`npm install --omit=optional`, `effeck` cannot find its binary and exits with an
+error.
 
 ## Create a project
 
 ```sh
-bun create effeck my-app --no-git
+bun create effeck my-app
 cd my-app
-bun run build
 bun run start
 bun run test
 ```
 
-Bun installs dependencies while scaffolding. If installation is interrupted, run
-`bun install` in the project before building. `--no-git` leaves repository setup
-under your control. See [Getting Started](../013-getting-started.md) for the
-starter files and [Running Effects](009-running-effects.md) for execution.
+With npm, run `npm create effeck@latest my-app`. Either command copies the
+starter into `my-app`, pins the Effeck packages to the version that created it,
+and installs dependencies. Pass `--no-install` to skip installation, then run
+`bun install` in the project before building.
 
-These commands use the real native compiler. They never fall back to the
-TypeScript-API prototype. Run `sh scripts/e2e.sh` in the Effeck repository
-to check setup, scaffold, install, build, execution, and tests in a temporary
-project. It reports the first failing step and returns a nonzero status.
+`bun run start` builds the project and prints:
+
+```out
+Hello, Effeck!
+Recovered from EmptyName
+```
+
+See [Getting Started](../013-getting-started.md) for the starter's files and
+[Running Effects](009-running-effects.md) for execution.
+
+## Add Effeck to an existing project
+
+```sh
+bun add @effeck/runtime@0.0.1 effect@4.0.5 @effect/platform-node@4.0.5
+bun add -d effeck@0.0.1 @effeck/vite@0.0.1 vitest@5.0.5 @effect/vitest@4.0.5
+```
+
+With npm, run `npm install --save-exact` for the first line and
+`npm install --save-dev --save-exact` for the second.
+
+| Package | Install as | Purpose |
+| --- | --- | --- |
+| `@effeck/runtime` | Dependency | The continuation kernel and helpers that compiled code imports |
+| `effect`, `@effect/platform-node` | Dependency | Effect 4.0.5 and its Node platform |
+| `effeck` | Dev dependency | The compiler and language server, its native binary, and the VS Code extension |
+| `@effeck/vite` | Dev dependency | Compiles `.effeck` modules for Vite and Vitest |
+| `vitest`, `@effect/vitest` | Dev dependency | Vitest 5.0.5 and `@effect/vitest` 4.0.5 for tests |
+
+`@effeck/runtime` requires `effect` 4.0.5 exactly and checks Effect's version
+when it loads. Keep `effect`, `@effect/platform-node`, and `@effect/vitest` at
+4.0.5, so the runtime and your program share one copy of `effect`. Keep
+`effeck`, `@effeck/runtime`, and `@effeck/vite` at the same version: they are
+released together.
+
+Add a `tsconfig.json` that selects `.effeck` sources and emits Node ESM to
+`dist/`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmitOnError": true,
+    "rewriteRelativeImportExtensions": true,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["src/**/*.effeck"]
+}
+```
+
+Add scripts to `package.json`, which must have `"type": "module"`:
+
+```json
+{
+  "type": "module",
+  "scripts": {
+    "build": "effeck",
+    "start": "effeck && node --enable-source-maps dist/main.js",
+    "test": "vitest run"
+  }
+}
+```
+
+Test `.effeck` files through the Vite plugin:
+
+```ts
+// TypeScript (.ts)
+// vitest.config.ts
+import { defineConfig } from "vitest/config"
+import effeck from "@effeck/vite"
+
+export default defineConfig({
+  plugins: [effeck()],
+  test: { include: ["src/**/*.test.effeck"] }
+})
+```
+
+To update, install the new version of all three Effeck packages together:
+
+```sh
+bun add @effeck/runtime@latest
+bun add -d effeck@latest @effeck/vite@latest
+```
+
+Effeck is v0, so a new version can change the language in breaking ways. Read
+its release notes before updating.
 
 ## Configure your editor
 
-When `editors/vscode` exists, setup builds its `.vsix` and prints the exact install
-commands for VS Code and Cursor:
+From the project directory, after installing dependencies:
 
 ```sh
-code --install-extension /path/to/effeck/editors/vscode/effeck.vsix
-# Or use cursor --install-extension with the same path.
+code --install-extension node_modules/effeck/editor/effeck.vsix
+# Or, for Cursor:
+cursor --install-extension node_modules/effeck/editor/effeck.vsix
 ```
 
-Open the scaffolded project directory. The extension uses the project's
-`effeck` to start `effeck --lsp --stdio`. Other editors can run that
-same command through their LSP client for `.effeck` and `.ts` files.
+Open the project directory. The extension starts the project's compiler as the
+language server, `effeck --lsp --stdio`, for diagnostics, hovers, and
+completions. The extension is not on the VS Code Marketplace or Open VSX yet;
+install it again from `node_modules` after you update `effeck`.
 
-Setup builds the extension but does not install it for you.
+Other editors run `effeck --lsp --stdio` through their LSP client for `.effeck`
+and `.ts` files. See [Devtools](012-devtools.md).
 
 ## Compiler commands
 
-From a scaffolded project, run:
+From a project, run:
 
 ```sh
 bun run build
@@ -92,16 +164,17 @@ bun run test
 bun x --no-install effeck --noEmit
 ```
 
-The template's `tsconfig.json` selects `.effeck` files under `src/`, emits Node ESM
-to `dist/`, enables strict checking and source maps, and prevents emit on errors.
-Local source imports use `.effeck`; generated JavaScript imports use `.js`.
-`effeck` accepts TypeScript compiler flags such as `--noEmit`, `--watch`, and `-b`.
+The starter's `tsconfig.json` selects `.effeck` files under `src/`, emits Node
+ESM to `dist/`, enables strict checking and source maps, and prevents emit on
+errors. Local source imports use `.effeck`; generated JavaScript imports use
+`.js`. `effeck` accepts TypeScript compiler flags such as `--noEmit`, `--watch`,
+and `-b`.
 
 ## Coming from Effect
 
-Use the local `effeck` for `.effeck` compilation and
-`@effeck/runtime` alongside `effect@4.0.5`. Write application logic in `.effeck`
-and keep ordinary TypeScript integrations in `.ts`. The compiler checks both
-file types as one program.
+Install `effeck` for `.effeck` compilation and `@effeck/runtime` alongside
+`effect@4.0.5`. Write application logic in `.effeck` and keep ordinary
+TypeScript integrations in `.ts`. The compiler checks both file types as one
+program.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/installation)
