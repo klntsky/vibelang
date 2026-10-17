@@ -20,14 +20,14 @@ function heartbeat() {
 ```ts
 function waitForBuild() {
   let checks = 0
-  const status = repeat(() => {
-    checks++
-    return checks >= 4 ? "ready" : "building"
-  }, {
+  const status = repeat({
     schedule: Schedule.spaced("200 millis"),
     until: (status) => status === "ready",
     times: 7
-  })
+  }) {
+    checks++
+    return checks >= 4 ? "ready" : "building"
+  }
   return { status, checks }
 }
 // { status: string; checks: number }!!
@@ -55,11 +55,11 @@ error Busy
 
 function reserveSlot() {
   let attempts = 0
-  return retry(() => {
+  return retry(Schedule.recurs(3)) {
     attempts++
     if (attempts < 3) throw new Busy()
     return "reserved"
-  }, Schedule.recurs(3))
+  }
 }
 // string!Busy!
 ```
@@ -76,13 +76,13 @@ service Sensor {
 }
 
 function sampleContinuously() {
-  repeat(() => {
+  repeat(Schedule.spaced("5 seconds")) {
     try {
       logInfo("sample", Sensor.read())
     } catch (error) {
       logWarning("sample unavailable", error._tag)
     }
-  }, Schedule.spaced("5 seconds"))
+  }
 }
 ```
 

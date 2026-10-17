@@ -38,14 +38,8 @@ A function value describes work. Calling it runs that work in the current progra
 ```ts
 function prepare() {
   return all([
-    () => {
-      sleep("20 millis")
-      return "catalog"
-    },
-    () => {
-      log("checking inventory")
-      return "inventory"
-    }
+    do { sleep("20 millis"); "catalog" },
+    do { log("checking inventory"); "inventory" }
   ], { concurrency: 2 })
 }
 

@@ -19,10 +19,10 @@ A span describes one operation with a name, identifiers, timestamps, status, and
 
 ```ts
 function renderReport(format: string) {
-  return withSpan(() => {
+  return withSpan("render-report", { attributes: { "report.format": format } }) {
     sleep("20 millis")
     return `report.${format}`
-  }, "render-report", { attributes: { "report.format": format } })
+  }
 }
 // string!!
 ```

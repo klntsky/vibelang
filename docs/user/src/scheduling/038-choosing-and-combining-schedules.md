@@ -28,10 +28,10 @@ These declarations build reusable values without running work. Choose a rule acc
 
 ```ts
 function runChecks() {
-  repeat(() => {
+  repeat(Schedule.spaced("6 seconds").upTo({ times: 2 })) {
     logInfo("checking")
     sleep("2 seconds")
-  }, Schedule.spaced("6 seconds").upTo({ times: 2 }))
+  }
 }
 ```
 

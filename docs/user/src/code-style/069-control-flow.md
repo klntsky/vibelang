@@ -21,10 +21,10 @@ function requiredSize(size: number) {
 // number!InvalidSize!
 
 function announceIfEnabled(enabled: boolean) {
-  return Effect.when(() => {
+  return Effect.when(() => enabled) {
     log("notifications enabled")
     return "announced"
-  }, () => enabled)
+  }
 }
 ```
 

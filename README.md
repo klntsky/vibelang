@@ -7,6 +7,44 @@ A language for writing Effect programs: TypeScript syntax in which every functio
 
 Docs: [effeck.willcory10.workers.dev](https://effeck.willcory10.workers.dev) for the guides and [effeck.willcory10.workers.dev/spec/](https://effeck.willcory10.workers.dev/spec/) for the specification.
 
+## A short tour
+
+```ts
+error NotFound { id: string }
+
+interface User { id: string; name: string }
+
+service Users {
+  find(id: string): User!NotFound
+}
+
+layer UsersLive: Users {
+  find(id) {
+    if (id !== "42") throw new NotFound({ id })
+    return { id, name: "Ada" }
+  }
+}
+
+function greet(id: string) {
+  try {
+    return `Welcome, ${Users.find(id).name}`
+  } catch (e: NotFound) {
+    return `No user ${e.id}`
+  }
+}
+
+export function main() {
+  provide UsersLive {
+    const [ada, missing] = await.all [greet("42"), greet("7")]
+    const first = await.race [greet("42"), do { sleep("1 second"); "timeout" }]
+    const shout = ada |> %.toUpperCase()
+    Console.log(shout, missing, first)
+  }
+}
+```
+
+Every function is an Effect: `greet` has the contract `string!!Users` (no expected failures, because `catch` handles `NotFound`). Calls run where they stand, `throw` fails with a typed error, `provide` supplies a layer, and `await.all` and `await.race` run programs concurrently. The [cheat sheet](https://effeck.willcory10.workers.dev/effeck-features/115-cheat-sheet) shows every form next to the Effect code it replaces.
+
 ## Quickstart
 
 ```sh
@@ -27,7 +65,7 @@ per-platform package for macOS, Linux, and Windows on arm64 and x64. Version
 `bun run dev` builds once, watches `.effeck` sources with `effeck --watch`, and
 runs Node with `--watch` on the output. `bun run test` compiles `.effeck` tests
 before running Vitest with `@effect/vitest`. The starter demonstrates an
-abstract-class service, a layer, a tagged failure, and `try`/`catch` recovery.
+`service`, a `layer`, an `error`, and `try`/`catch` recovery.
 
 To add Effeck to an existing project, see
 [Installation](docs/user/src/getting-started/004-installation.md).
