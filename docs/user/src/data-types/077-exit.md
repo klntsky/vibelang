@@ -10,9 +10,9 @@ error ExportRejected {
 }
 
 function inspectExport() {
-  const outcome = Effect.exit(() => {
+  const outcome = Effect.exit {
     throw new ExportRejected({ reason: "empty selection" })
-  })
+  }
   if (outcome.isFailure()) return outcome.cause.reasons.length
   return 0
 }

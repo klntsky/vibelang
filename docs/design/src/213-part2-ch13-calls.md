@@ -225,3 +225,26 @@ function first() {
 }
 ```
 
+#### Blocks after calls
+
+A block on the same line after a call or a name is the call's program (D188, the TC39 [block params](https://github.com/samuelgoto/proposal-block-params) proposal). The block is the call's last argument, except where the callee is an Effect dual: there it takes the place of the program, as `withSpan(block, "guarded")` or `semaphore.withPermits(1)(block)`, and the call infers its type parameters from the arguments and the block together:
+
+```ts
+function work(): string!! {
+  sleep("1 millis")
+  return "done"
+}
+
+function guarded() {
+  const semaphore = Semaphore.make(1)
+  const result = semaphore.withPermits(1) {
+    return work()
+  }
+  return withSpan("guarded") {
+    return result.toUpperCase()
+  }
+}
+```
+
+The block is a function body, so a value needs `return`.
+

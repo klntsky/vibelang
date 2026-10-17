@@ -36,11 +36,11 @@ const DemoCatalog = new Map<string, Part>([
 const PartResolver = RequestResolver.make<FindPart>((entries) => {
   log(`catalog batch size=${entries.length}`)
   for (const entry of entries) {
-    Request.completeEffect(entry, () => {
+    Request.completeEffect(entry) {
       const part = DemoCatalog.get(entry.request.code)
       if (part === undefined) throw new PartMissing({ code: entry.request.code })
       return part
-    })
+    }
   }
 })
 ```
@@ -104,18 +104,18 @@ service CatalogApi {
 service Parts {
   find(code: string): Part!PartMissing | CatalogUnavailable
 
-  static readonly layer = Layer.effect(Parts, () => {
+  static readonly layer = Layer.effect(Parts) {
     const api = CatalogApi()
     const resolver = RequestResolver.make<FindPart>((entries) => {
       try {
         const codes = entries.map((entry) => entry.request.code)
         const rows = api.fetchMany(codes)
         for (const entry of entries) {
-          Request.completeEffect(entry, () => {
+          Request.completeEffect(entry) {
             const part = rows.get(entry.request.code)
             if (part === undefined) throw new PartMissing({ code: entry.request.code })
             return part
-          })
+          }
         }
       } catch (error) {
         for (const entry of entries) Request.fail(entry, error)
@@ -124,7 +124,7 @@ service Parts {
     return {
       find: (code) => Effect.request(FindPart({ code }), resolver)
     }
-  })
+  }
 }
 // Parts.layer: Layer<Parts, never, CatalogApi>
 ```

@@ -117,13 +117,13 @@ error EK2005: resumeWith runs this code at the perform site, inside the handled 
 #### Testing with a handler
 
 ```ts es
-it.effect("checkout charges when approved", () => {
+it.effect("checkout charges when approved") {
   try {
     assert.isTrue(checkout("c-42").paid)
   } handle Approval.approve(_request) {
     resume(true)
   }
-})
+}
 ```
 
 #### The full API

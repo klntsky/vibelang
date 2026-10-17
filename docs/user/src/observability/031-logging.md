@@ -17,14 +17,14 @@ function reportProgress() {
 
 ```ts
 function diagnostics() {
-  Effect.provideService(() => {
+  Effect.provideService(References.MinimumLogLevel, "Debug") {
     Effect.logTrace("entered parser")
     logDebug("parsed header")
     logInfo("input accepted")
     logWarning("using fallback settings")
     logError("destination unavailable")
     Effect.logFatal("application cannot start")
-  }, References.MinimumLogLevel, "Debug")
+  }
 }
 ```
 
@@ -34,19 +34,19 @@ The default threshold is Info, which filters Debug and Trace messages. Providing
 
 ```ts
 function annotatedExport() {
-  Effect.annotateLogs(() => {
+  Effect.annotateLogs({ operation: "weekly-export", format: "csv" }) {
     logInfo("preparing")
     Effect.annotateLogs(() => logInfo("writing"), "stage", "write")
-  }, { operation: "weekly-export", format: "csv" })
+  }
   logInfo("outside annotated operation")
 }
 
 function scopedAnnotations() {
-  Effect.scoped(() => {
+  Effect.scoped {
     Effect.annotateLogsScoped({ component: "importer" })
     logInfo("reading input")
     logInfo("validating rows")
-  })
+  }
   logInfo("outside importer scope")
 }
 ```
@@ -57,11 +57,11 @@ function scopedAnnotations() {
 
 ```ts
 function timedExport() {
-  Effect.withLogSpan(() => {
+  Effect.withLogSpan("write-output") {
     logInfo("opening output")
     sleep("30 millis")
     logInfo("output written")
-  }, "write-output")
+  }
 }
 ```
 
@@ -73,10 +73,10 @@ Each record inside the log span includes the elapsed time since that span began.
 const Silent = Layer.succeed(References.MinimumLogLevel, "None")
 const LogLevel = Config.LogLevel("LOG_LEVEL")
 
-const ConfiguredLevel = Layer.unwrap(() => {
+const ConfiguredLevel = Layer.unwrap {
   const minimum = LogLevel()
   return Layer.succeed(References.MinimumLogLevel, minimum)
-})
+}
 
 function quiet() {
   provide Silent { logInfo("suppressed") }

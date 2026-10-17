@@ -55,9 +55,9 @@ function answer() {
   return Effect.succeed(42)
 }
 
-it.effect("answers", () => {
+it.effect("answers") {
   assert.strictEqual(answer(), 42)
-})
+}
 ```
 
 Run `bunx vitest run` or `bunx vitest` for watch mode. No prior emission to

@@ -96,9 +96,9 @@ export const connect = (host: string, port: number) =>
   Effect.acquireRelease(
     suspend<net.Socket>((waiter) => {
       const socket = net.connect(port, host)
-      socket.once("connect", () => {
+      socket.once("connect") {
         if (!waiter.resume(socket)) socket.destroy()   // the waiter was cancelled first: still ours
-      })
+      }
       return () => socket.destroy()                    // cancelled while connecting
     }, { release: (socket) => socket.destroy() }),     // accepted, but cancelled before delivery
     (socket) => Effect.sync(() => socket.destroy()),

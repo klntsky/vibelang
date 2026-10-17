@@ -11,11 +11,11 @@ error Busy { attempt: number }
 
 function loadWithRetries() {
   let attempts = 0
-  return retry(() => {
+  return retry({ times: 3 }) {
     attempts += 1
     if (attempts < 3) throw new Busy({ attempt: attempts })
     return "Snapshot ready"
-  }, { times: 3 })
+  }
 }
 ```
 

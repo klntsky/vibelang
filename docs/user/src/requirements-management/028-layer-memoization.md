@@ -83,7 +83,7 @@ function oneSharedReadBoundary() {
 
 ```ts
 function manualSharing() {
-  return Effect.scoped(() => {
+  return Effect.scoped {
     const memoMap = Layer.makeMemoMap()
     const scope = Effect.scope()
     const first = Layer.buildWithMemoMap(PrefixLive, memoMap, scope)
@@ -92,7 +92,7 @@ function manualSharing() {
       Effect.provide(() => Prefix().value, first),
       Effect.provide(() => Prefix().value, second)
     ]
-  })
+  }
 }
 ```
 

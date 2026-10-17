@@ -144,10 +144,10 @@ const requests = Stream.make(
 )
 const groups = requests.groupByKey((request) => request.region)
 const summaries = groups.flatMap(([region, group]) =>
-  Stream.fromEffect(() => {
+  Stream.fromEffect {
     const bytes = group.runFold(() => 0, (total, request) => total + request.bytes)
     return { region, bytes }
-  }), { concurrency: "unbounded" })
+  }, { concurrency: "unbounded" })
 const batches = requests.grouped(2)
 const timedBatches = requests.groupedWithin(20, "1 second")
 ```
@@ -212,10 +212,10 @@ const buffered = Stream.range(1, 12).buffer({ capacity: 3 })
 ## Debouncing and throttling
 
 ```ts
-const bursts = Stream.make("c", "ca", "cat").concat(Stream.fromEffect(() => {
+const bursts = Stream.make("c", "ca", "cat").concat(Stream.fromEffect {
     sleep("300 millis")
     return "cats"
-  }))
+  })
 const settled = bursts.debounce("100 millis")
 const paced = Stream.range(1, 10).rechunk(1).throttle({
   cost: (batch) => batch.length,

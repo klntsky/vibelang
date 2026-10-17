@@ -81,10 +81,10 @@ function heartbeat() {
 
 const running = Effect.runFork(heartbeat())
 
-Effect.runPromise(() => {
+Effect.runPromise {
   sleep("650 millis")
   running.interrupt()
-})
+}
 ```
 
 `Effect.runFork` returns a running `Fiber`, which you can join, observe, or interrupt. `Fiber.interrupt` waits for its cleanup. This example uses a second runner to act as an external owner; inside application logic, use block-owned `fork(() => heartbeat())` and let the enclosing block bound its lifetime.

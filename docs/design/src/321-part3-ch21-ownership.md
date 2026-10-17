@@ -8,9 +8,9 @@ approve(request, k) {
 ```
 
 ```ts ts
-socket.once("connect", () => {
+socket.once("connect") {
   if (!waiter.resume(socket)) socket.destroy()   // lost the race to cancellation: still ours to release
-})
+}
 ```
 
 Both snippets consume a continuation a second time, or too late, and the machine answers differently in each case. One representation has three holders, and the law for a second consumption depends on the holder:

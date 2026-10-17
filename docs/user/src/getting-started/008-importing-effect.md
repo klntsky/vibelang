@@ -62,10 +62,10 @@ function withinSecond<A, E, R>(program: () => A!E!R) {
 }
 
 function example() {
-  return withinSecond(() => {
+  return withinSecond {
     sleep("10 millis")
     return "ready"
-  })
+  }
 }
 ```
 

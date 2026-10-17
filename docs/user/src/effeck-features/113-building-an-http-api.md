@@ -90,15 +90,15 @@ function request(body: unknown) {
   return HttpServerRequest.fromClientRequest(client)
 }
 
-it.effect("validates bodies and rejects duplicate names", () => {
-  Effect.scoped(() => {
+it.effect("validates bodies and rejects duplicate names") {
+  Effect.scoped {
     const app = HttpRouter.toHttpEffect(App)
     const created = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: "Ada" }))
     const conflict = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: "Ada" }))
     const bad = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: 123 }))
     assert.deepStrictEqual([created.status, conflict.status, bad.status], [201, 409, 400])
-  })
-})
+  }
+}
 ```
 
 `HttpRouter.toHttpEffect` builds a request program without starting a server. Hold that program as `app`, then provide a request for each execution. The scope shares the service layer across these requests and releases it after the test. A new test scope builds a fresh directory.

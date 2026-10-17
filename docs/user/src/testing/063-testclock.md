@@ -41,7 +41,7 @@ function check(condition: boolean, message: string) {
   if (!condition) throw new Error(message)
 }
 
-it.effect("a deadline returns the fallback", () => {
+it.effect("a deadline returns the fallback") {
   const pending = fork(Effect.timeoutOrElse(() => {
     sleep("10 minutes")
     return Option.some("finished")
@@ -53,7 +53,7 @@ it.effect("a deadline returns the fallback", () => {
   TestClock.adjust("30 seconds")
   const result = await pending
   check(result.isNone(), "expected the timeout fallback")
-})
+}
 ```
 
 `it.effect` provides the test services, including virtual time. `adjust` advances by a duration and runs sleepers whose deadlines fall within that interval; `setTime` sets an absolute timestamp in milliseconds. Fork the timed work first so the test's own fiber remains free to adjust the clock. The block owns `pending` and interrupts it if the test exits early.
@@ -78,7 +78,7 @@ Outside the test harness, explicitly provide `TestClock.layer()`. The virtual cl
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 
-it.effect("emits once per interval", () => {
+it.effect("emits once per interval") {
   const queue = Queue.unbounded<string>()
   fork {
     while (true) {
@@ -97,7 +97,7 @@ it.effect("emits once per interval", () => {
   TestClock.adjust("15 minutes")
   check(queue.take() === "refresh", "missing second refresh")
   check(queue.poll().isNone(), "duplicate second refresh")
-})
+}
 ```
 
 Use the `check` helper from the first example. Advancing to each boundary lets the loop schedule its next sleep before the next adjustment. The queue makes each recurrence observable without relying on real-time delays, and the background loop stops when the test block exits.
@@ -112,13 +112,13 @@ function isExpired(createdAt: number, lifetimeMillis: number) {
   return Clock.currentTimeMillis() - createdAt >= lifetimeMillis
 }
 
-it.effect("expires at the boundary", () => {
+it.effect("expires at the boundary") {
   const createdAt = Clock.currentTimeMillis()
   TestClock.adjust("9 seconds")
   check(!isExpired(createdAt, 10_000), "expired too soon")
   TestClock.adjust("1 second")
   check(isExpired(createdAt, 10_000), "should expire at ten seconds")
-})
+}
 ```
 
 Calls to `Clock.currentTimeMillis()` read the supplied clock and remain deterministic under the test layer. `Date.now()`, zero-argument `new Date()`, and platform timers are not application time sources in Effeck. Testing just before and at a boundary catches comparison mistakes that checking only a later timestamp misses.
@@ -129,7 +129,7 @@ Calls to `Clock.currentTimeMillis()` read the supplied clock and remain determin
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 
-it.effect("completes a deferred after a delay", () => {
+it.effect("completes a deferred after a delay") {
   const ready = Deferred.make<number>()
   const worker = fork {
     sleep("6 seconds")
@@ -140,7 +140,7 @@ it.effect("completes a deferred after a delay", () => {
   const value = await ready
   await worker
   check(value === 42, "unexpected deferred value")
-})
+}
 ```
 
 The sleep precedes completion in the worker, so the test checks delayed completion. After advancing time, await the Deferred or join the worker to synchronize with the observable outcome. A fork alone says work has started, not that its result is ready.

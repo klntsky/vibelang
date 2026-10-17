@@ -174,7 +174,8 @@ async function main() {
         const typeOnly = new Set<string>()
         const localValues = new Set<string>()
         const bindings = (node: any) => {
-          if (ts.isIdentifier(node)) names.add(node.text)
+          // Recovery from Effeck forms, such as a block param, can yield a nameless declaration.
+          if (ts.isIdentifier(node)) { if (node.text) names.add(node.text) }
           else if (ts.isObjectBindingPattern(node) || ts.isArrayBindingPattern(node)) {
             for (const e of node.elements) if (ts.isBindingElement(e)) bindings(e.name)
           }
@@ -192,7 +193,11 @@ async function main() {
             if (named && ts.isNamespaceImport(named)) bindings(named.name)
             else if (named) for (const element of named.elements) bindings(element.name)
           } else if (ts.isVariableStatement(statement)) {
-            for (const d of statement.declarationList.declarations) {
+            // Recovery from a block param, `const x = f(a) { ... }`, reads the
+            // block as another declaration; real ones follow a comma.
+            const declarations = statement.declarationList.declarations
+            for (const [i, d] of declarations.entries()) {
+              if (i > 0 && !block.source.slice(declarations[i - 1].end, d.getStart(ast)).includes(",")) continue
               bindings(d.name)
               if (ts.isIdentifier(d.name)) localValues.add(d.name.text)
             }

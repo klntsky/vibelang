@@ -130,11 +130,11 @@ Effect's `Stream`, `Sink`, and `Channel` modules work unchanged: their operators
 import { assert, it } from "@effect/vitest"
 import { TestClock } from "effect/testing"
 
-it.effect("a reminder fires after one day", () => {
+it.effect("a reminder fires after one day") {
   const reminder = fork remindLater("ada", "1 day")
   TestClock.adjust("1 day")                          // virtual time: nothing waits
   assert.strictEqual(await reminder, "sent")
-})
+}
 ```
 
 `@effect/vitest` works unchanged: `it.effect` runs an Effeck function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.effeck` has no `await`, and a runner inside a test body is EK1005 (Chapter 13).

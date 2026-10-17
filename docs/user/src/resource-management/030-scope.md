@@ -91,10 +91,10 @@ function mixedOwnership() {
 // void!!Scope
 
 function observeOwnership() {
-  Effect.scoped(() => {
+  Effect.scoped {
     mixedOwnership()
     log("Local closed; caller buffer still open")
-  })
+  }
 }
 ```
 
@@ -129,11 +129,11 @@ function reserveStep(stage: string) {
 // string!SetupFailed!ProjectSteps | Scope
 
 function setupProject() {
-  return Effect.scoped(() => {
+  return Effect.scoped {
     const storage = reserveStep("storage")
     const index = reserveStep("index")
     return ProjectSteps.finish(storage, index)
-  })
+  }
 }
 // string!SetupFailed!ProjectSteps
 ```

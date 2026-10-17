@@ -31,9 +31,9 @@ error MissingRecord {
 }
 
 function diagnose() {
-  const outcome = exit(() => {
+  const outcome = exit {
     throw new MissingRecord({ id: "r-9" })
-  })
+  }
   if (outcome.isFailure()) {
     return Cause.pretty(outcome.cause)
   }

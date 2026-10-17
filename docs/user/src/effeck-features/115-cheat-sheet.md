@@ -434,7 +434,7 @@ function piped() {
 }
 ```
 
-## TC39 expression forms
+## TC39 forms
 
 **Throw in an expression** (D186, [throw expressions](https://github.com/tc39/proposal-throw-expressions)).
 
@@ -464,6 +464,40 @@ function label(id: string) {
     else "short"
   }
   return name
+}
+```
+
+**Blocks after calls** (D188, [block params](https://github.com/samuelgoto/proposal-block-params)). The block is the call's program; it needs `return` for a value.
+
+```ts effect
+const loaded = Effect.withSpan(
+  Effect.gen(function* () {
+    const user = yield* getUser("1")
+    return user.name
+  }),
+  "load"
+)
+
+it.effect("finds a user", () =>
+  Effect.gen(function* () {
+    const user = yield* getUser("1")
+    assert.strictEqual(user.name, "Ada")
+  }))
+```
+
+```ts es
+import { assert, it } from "@effect/vitest"
+
+function loaded() {
+  return withSpan("load") {
+    const user = getUser("1")
+    return user.name
+  }
+}
+
+it.effect("finds a user") {
+  const user = getUser("1")
+  assert.strictEqual(user.name, "Ada")
 }
 ```
 

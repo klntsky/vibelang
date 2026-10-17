@@ -31,12 +31,12 @@ function readHeader() {
 // Returns ["header"] and closes the reader.
 
 function readWithDeadline() {
-  return timeout(() => {
+  return timeout("100 millis") {
     lines.runForEach((line) => {
       sleep("1 second")
       log(line)
     })
-  }, "100 millis")
+  }
 }
 ```
 
@@ -45,10 +45,10 @@ The early consumer closes the reader even though it does not use every line. The
 ## Registering finalizers
 
 ```ts
-const audited = lines.ensuring(() => {
+const audited = lines.ensuring {
   log("reader resources released")
   log("consumption finished")
-})
+}
 
 function readAudited() {
   return audited.runCollect()

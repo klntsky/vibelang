@@ -105,14 +105,14 @@ const apiRequests = Metric.withAttributes(
 const failures = Metric.counter("guide_api_failures", { incremental: true })
 
 function attributed() {
-  return Effect.provideService(() => {
+  return Effect.provideService(Metric.CurrentMetricAttributes, { environment: "staging" }) {
     Metric.update(apiRequests, 1)
     Metric.update(failures, 1)
     return {
       requests: Metric.value(apiRequests),
       failures: Metric.value(failures)
     }
-  }, Metric.CurrentMetricAttributes, { environment: "staging" })
+  }
 }
 ```
 

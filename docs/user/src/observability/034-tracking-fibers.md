@@ -7,14 +7,14 @@
 ```ts
 function runGroup() {
   using workers = FiberSet.make<number>()
-  const first = FiberSet.run(workers, () => {
+  const first = FiberSet.run(workers) {
     sleep("30 millis")
     return 1
-  })
-  const second = FiberSet.run(workers, () => {
+  }
+  const second = FiberSet.run(workers) {
     sleep("50 millis")
     return 2
-  })
+  }
   logInfo("tracked workers", FiberSet.size(workers))
   return [first.join(), second.join()]
 }
@@ -27,14 +27,14 @@ function runGroup() {
 ```ts
 function replacePreview() {
   using previews = FiberMap.make<string, string>()
-  FiberMap.run(previews, "editor-1", () => {
+  FiberMap.run(previews, "editor-1") {
     sleep("1 second")
     return "old preview"
-  })
-  const current = FiberMap.run(previews, "editor-1", () => {
+  }
+  const current = FiberMap.run(previews, "editor-1") {
     sleep("20 millis")
     return "new preview"
-  })
+  }
   return current.join()
 }
 ```
@@ -61,13 +61,13 @@ Completed fibers are removed automatically, so a long-lived owner does not accum
 function serveBriefly() {
   {
     using workers = FiberSet.make<void>()
-    FiberSet.run(workers, () => {
+    FiberSet.run(workers) {
       try {
         sleep("1 minute")
       } finally {
         logInfo("tracked worker cleaned up")
       }
-    })
+    }
     sleep("20 millis")
   }
   logInfo("worker scope has closed")

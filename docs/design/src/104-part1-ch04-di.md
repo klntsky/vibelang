@@ -132,13 +132,13 @@ service Users {
   find(id: string): User!UserNotFound
   rename(id: string, name: string): void!UserNotFound
 
-  static readonly layer = Layer.effect(Users, () => {
+  static readonly layer = Layer.effect(Users) {
     const db = Database()
     return {
       find(id) { … },
       rename(id, name) { … }
     }
-  })
+  }
 }
 ```
 
@@ -346,10 +346,10 @@ layer UsersTest: Users {
   rename() {}
 }
 
-it.effect("welcome returns the user's name", () => {
+it.effect("welcome returns the user's name") {
   const name = Effect.provide(() => welcome("42"), wire(UsersTest, MailerTest))
   assert.strictEqual(name, "Ada")
-})
+}
 ```
 
 To replace one service for part of a program, provide it around that part. The override applies only inside:

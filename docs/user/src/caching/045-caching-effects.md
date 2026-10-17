@@ -31,11 +31,11 @@ Each key has its own stored outcome. Repeated calls for a key reuse it, and conc
 ```ts
 function cachedSettings() {
   let loads = 0
-  const settings = Effect.cached(() => {
+  const settings = Effect.cached {
     loads++
     sleep("20 millis")
     return { theme: "dark", revision: loads }
-  })
+  }
   // The settings loader has not run yet.
   const first = settings()
   const again = settings()

@@ -112,10 +112,10 @@ const times = Stream.fromEffectRepeat(() => Clock.currentTimeMillis())
 
 function countdown() {
   let remaining = 3
-  const source = Stream.fromEffectRepeat(() => {
+  const source = Stream.fromEffectRepeat {
     if (remaining === 0) Cause.done()
     return remaining--
-  })
+  }
   return source.runCollect() // [3, 2, 1]
 }
 ```

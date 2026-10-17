@@ -58,10 +58,10 @@ Interruption can be held off for a block of work with Effect's own combinators:
 
 ```ts es
 function moveFunds(from: Account, to: Account, amount: number) {
-  Effect.uninterruptible(() => {
+  Effect.uninterruptible {
     Ledger.debit(from, amount)
     Ledger.credit(to, amount)     // an interruption waits until both have run
-  })
+  }
 }
 ```
 

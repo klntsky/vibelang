@@ -109,10 +109,10 @@ function main() {
 // string[]!!
 
 function withBuiltContext() {
-  return Effect.scoped(() => {
+  return Effect.scoped {
     const context = Layer.build(AppLive)
     provide context { return report("Inventory") }
-  })
+  }
 }
 ```
 
@@ -125,9 +125,9 @@ function withBuiltContext() {
 ```ts
 error InitializationFailed
 
-const ReportsUnavailable = Layer.effect(Reports, () => {
+const ReportsUnavailable = Layer.effect(Reports) {
   throw new InitializationFailed()
-})
+}
 
 layer ReportsFallback: Reports {
   render(title) { return `Offline report: ${title}` }

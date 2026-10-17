@@ -6,10 +6,10 @@ Tracing records an operation's duration and its relationship to other operations
 
 ```ts
 function requestTrace() {
-  return withSpan(() => {
+  return withSpan("report-request") {
     sleep("10 millis")
     return "response"
-  }, "report-request")
+  }
 }
 ```
 
@@ -61,10 +61,10 @@ error RenderFailed {
 }
 
 function failingRender() {
-  const exit = Effect.exit(withSpan(() => {
+  const exit = Effect.exit(withSpan("render-report") {
     Effect.annotateCurrentSpan("report.format", "unknown")
     throw new RenderFailed({ format: "unknown" })
-  }, "render-report"))
+  })
   if (exit.isFailure()) logError("render failed", exit.cause)
   return exit
 }
@@ -76,11 +76,11 @@ An exported failure includes error status and failure details, while attributes 
 
 ```ts
 function tracedLogs() {
-  Effect.provide(() => withSpan(() => {
+  Effect.provide(() => withSpan("generate-artifact") {
     logInfo("input validated")
     sleep("10 millis")
     logInfo("artifact written")
-  }, "generate-artifact"), Logger.layer([
+  }, Logger.layer([
     Logger.defaultLogger,
     Logger.tracerLogger
   ]))
@@ -93,18 +93,18 @@ The tracer logger records logs within an active span as timestamped events. Thos
 
 ```ts
 function loadTemplate() {
-  return withSpan(() => {
+  return withSpan("load-template") {
     sleep("10 millis")
     return "weekly-template"
-  }, "load-template")
+  }
 }
 
 function generate() {
-  return withSpan(() => {
+  return withSpan("generate-report") {
     const template = loadTemplate()
     const output = renderReport("csv")
     return { template, output }
-  }, "generate-report")
+  }
 }
 ```
 
@@ -131,12 +131,12 @@ import * as OtlpTracer from "effect/observability/OtlpTracer"
 
 const TraceEndpoint = Config.String("TRACE_ENDPOINT")
 
-const VendorTracing = Layer.unwrap(() => {
+const VendorTracing = Layer.unwrap {
   const url = TraceEndpoint()
   return OtlpTracer.layer({ url, resource: { serviceName: "report-worker" } })
     |> Layer.provide(%, OtlpSerialization.layerJson)
     |> Layer.provide(%, FetchHttpClient.layer)
-})
+}
 
 function productionReport() {
   provide VendorTracing { return generate() }

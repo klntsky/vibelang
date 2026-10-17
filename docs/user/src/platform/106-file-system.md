@@ -84,10 +84,10 @@ const FilesTest = FileSystem.layerNoop({
   readFileString: () => "Release notes"
 })
 
-it.effect("reads the configured title", () => {
+it.effect("reads the configured title") {
   const title = Effect.provide(() => readFixture(), FilesTest)
   if (title !== "Release notes") throw new Error("Unexpected title")
-})
+}
 ```
 
 `layerNoop` supplies a complete service with selected method overrides. Its defaults fail or die for unsupported operations; it is not an in-memory file system. Override every operation the test exercises and let unexpected access expose a missing test behavior.

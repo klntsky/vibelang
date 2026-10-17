@@ -18,13 +18,13 @@ function download() {
       duration.max(input.retryAfter)),
     Schedule.upTo({ times: 3 })
   )
-  return retry(() => {
+  return retry(policy) {
     calls++
     if (calls < 3) {
       throw new Throttled({ retryAfter: Duration.seconds(2) })
     }
     return "archive ready"
-  }, policy)
+  }
 }
 // string!Throttled!
 ```
@@ -90,11 +90,11 @@ error Disconnected
 function reconnect() {
   let attempts = 0
   const phases = Schedule.spaced("200 millis").upTo({ times: 2 }).concat(Schedule.spaced("4 seconds").upTo({ times: 3 }))
-  return retry(() => {
+  return retry(phases) {
     attempts++
     if (attempts < 4) throw new Disconnected()
     return "connected"
-  }, phases)
+  }
 }
 ```
 
@@ -121,11 +121,11 @@ function observedRequest() {
       })
     })
   )
-  return retry(() => {
+  return retry(policy) {
     attempts++
     if (attempts < 3) throw new Unavailable({ status: 503 })
     return "accepted"
-  }, policy)
+  }
 }
 ```
 
