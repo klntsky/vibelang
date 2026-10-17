@@ -1,13 +1,20 @@
 package effeck
 
 import (
+	"context"
+	"strings"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/ls"
+	"github.com/microsoft/TypeScript/tsc/internal/lsp/lsproto"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
-// with blocks (D130).
+// provide blocks (D130, D172).
 //
-//	with UsersLive {
+//	provide UsersLive {
 //	  return greet("42")
 //	}
 //
@@ -19,32 +26,38 @@ import (
 // statements that the layer does not provide plus the layer's own. The
 // lowering runs the statements as a region closure under Effect.provide:
 //
-//	const completion = yield* Effect.provide(Effect.fnUntraced(function* f$with() {
+//	const completion = yield* Effect.provide(Effect.fnUntraced(function* f$provide() {
 //	  return { kind: "return", value: yield* greet("42") };
 //	})(), UsersLive);
 //	if (completion.kind === "return") return completion.value;
+//
+// The keyword matches Effect.provide. The old spelling, with UsersLive { ... },
+// still compiles and draws the warning EK1009, whose quick fix writes provide.
 
-func init() { fileChecks = append(fileChecks, checkWithBlocks) }
+func init() {
+	fileChecks = append(fileChecks, checkProvideBlocks, checkProvideSpelling)
+	ls.RegisterCodeFixProvider(provideSpellingFix)
+}
 
-// isWithBlock reports whether node is the block of a with statement.
-func isWithBlock(node *ast.Node) bool {
+// isProvideBlock reports whether node is the block of a provide statement.
+func isProvideBlock(node *ast.Node) bool {
 	return node.Kind == ast.KindBlock && node.Flags&ast.NodeFlagsEffeck != 0
 }
 
-// isWithLayer reports whether node is the statement that holds the layer
-// expression of a with block.
-func isWithLayer(node *ast.Node) bool {
+// isProvideLayer reports whether node is the statement that holds the layer
+// expression of a provide block.
+func isProvideLayer(node *ast.Node) bool {
 	return node.Kind == ast.KindExpressionStatement && node.Flags&ast.NodeFlagsEffeck != 0
 }
 
-// withLayer returns the layer expression of block, a with block.
-func withLayer(block *ast.Node) *ast.Node {
+// provideLayer returns the layer expression of block, a provide block.
+func provideLayer(block *ast.Node) *ast.Node {
 	return block.AsBlock().Statements.Nodes[0].Expression()
 }
 
-// hasWithBlock reports whether fn's own body has a with block, which makes it
+// hasProvideBlock reports whether fn's own body has a provide block, which makes it
 // an Effect: the block runs Effect.provide.
-func hasWithBlock(fn *ast.Node) bool {
+func hasProvideBlock(fn *ast.Node) bool {
 	if fn.Body() == nil {
 		return false
 	}
@@ -53,17 +66,17 @@ func hasWithBlock(fn *ast.Node) bool {
 		if isFunctionBoundary(n) {
 			return false
 		}
-		return isWithBlock(n) || n.ForEachChild(visit)
+		return isProvideBlock(n) || n.ForEachChild(visit)
 	}
-	return fn.Body().ForEachChild(visit) || isWithBlock(fn.Body())
+	return fn.Body().ForEachChild(visit) || isProvideBlock(fn.Body())
 }
 
-// withFlow collects what can escape a with block: the errors of its
+// provideFlow collects what can escape a provide block: the errors of its
 // statements and of building the layer, and the requirements of its
 // statements that the layer does not provide, plus the layer's own.
-func (a *analyzer) withFlow(block *ast.Node) *effectInfo {
+func (a *analyzer) provideFlow(block *ast.Node) *effectInfo {
 	c := a.checker
-	layer := withLayer(block)
+	layer := provideLayer(block)
 	info := a.flowOf(layer)
 	body := &effectInfo{}
 	for _, statement := range block.AsBlock().Statements.Nodes[1:] {
@@ -91,7 +104,7 @@ func (a *analyzer) withFlow(block *ast.Node) *effectInfo {
 	return info
 }
 
-// providerChannels returns what a with block's layer expression provides,
+// providerChannels returns what a provide block's layer expression provides,
 // fails with, and needs. Like Effect.provide, it accepts a Layer, a Context,
 // or an array of layers, whose channels join.
 func providerChannels(c *checker.Checker, t *checker.Type) (provided, errors, needs *checker.Type) {
@@ -196,31 +209,63 @@ func layerChannels(c *checker.Checker, t *checker.Type) (provided, errors, needs
 	return nil, nil, nil
 }
 
-// visitWithBlock lowers node, a with block, to a region closure that runs
+// visitProvideBlock lowers node, a provide block, to a region closure that runs
 // under Effect.provide with the block's layer.
-func (tx *lowering) visitWithBlock(node *ast.Node) *ast.Node {
+func (tx *lowering) visitProvideBlock(node *ast.Node) *ast.Node {
 	f := tx.Factory()
-	layer := tx.Visitor().VisitNode(withLayer(node))
+	layer := tx.Visitor().VisitNode(provideLayer(node))
 	r := &region{}
 	statements := tx.regionStatements(r, node)
-	run := tx.runNow(tx.regionFunction(r, "with", nil, node, statements), node)
+	run := tx.runNow(tx.regionFunction(r, "provide", nil, node, statements), node)
 	provide := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("provide"), ast.NodeFlagsNone)
 	run = f.NewCallExpression(provide, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{run, layer}), ast.NodeFlagsNone)
 	return tx.runRegion(node, run, r)
 }
 
-// checkWithBlocks reports EK1001 at a with block that no function encloses:
+// checkProvideBlocks reports EK1001 at a provide block that no function encloses:
 // a module's top level only declares, and such a block would run a program.
-func checkWithBlocks(c *checker.Checker, file *ast.SourceFile) {
+func checkProvideBlocks(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		if isFunctionBoundary(n) {
 			return false
 		}
-		if isWithBlock(n) {
-			report(c, n.AsBlock().Statements.Nodes[0], EK1001.With("This with block runs a program, but a module's top level is not inside one."))
+		if isProvideBlock(n) {
+			report(c, n.AsBlock().Statements.Nodes[0], EK1001.With("This provide block runs a program, but a module's top level is not inside one."))
 		}
 		return n.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
+}
+
+// checkProvideSpelling reports EK1009, a warning, at a provide block written
+// with its old keyword, with (D172). The block compiles the same either way.
+func checkProvideSpelling(c *checker.Checker, file *ast.SourceFile) {
+	text := file.Text()
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if isProvideBlock(n) {
+			if start := scanner.SkipTrivia(text, n.Pos()); strings.HasPrefix(text[start:], "with") {
+				reportAt(c, file, core.NewTextRange(start, start+len("with")), EK1009)
+			}
+		}
+		return n.ForEachChild(visit)
+	}
+	file.AsNode().ForEachChild(visit)
+}
+
+// provideSpellingFix is EK1009's quick fix: it replaces with by provide.
+var provideSpellingFix = &ls.CodeFixProvider{
+	Source:     diagnosticSource,
+	ErrorCodes: []int32{EK1009.Code},
+	GetCodeActions: func(_ context.Context, fix *ls.CodeFixContext) ([]*ls.CodeAction, error) {
+		text := fix.SourceFile.Text()
+		if fix.Diagnostic == nil || fix.Span.End() > len(text) || text[fix.Span.Pos():fix.Span.End()] != "with" {
+			return nil, nil
+		}
+		return []*ls.CodeAction{{
+			Description: "Write provide instead of with",
+			Changes:     []*lsproto.TextEdit{{Range: fix.Diagnostic.Range, NewText: "provide"}},
+		}}, nil
+	},
 }

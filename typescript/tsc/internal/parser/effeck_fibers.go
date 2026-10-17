@@ -280,7 +280,7 @@ func (p *Parser) parseEffeckSelect() *ast.Node {
 			p.labelSelectBreaks(statement, labelName)
 		}
 	}
-	// The block is not flagged: a Block flagged NodeFlagsEffeck is a with block (with.go).
+	// The block is not flagged: a Block flagged NodeFlagsEffeck is a provide block (provide.go).
 	block := p.finishNode(p.factory.NewBlock(p.newNodeList(core.NewTextRange(anchor.End(), p.nodePos()), statements), true /*multiLine*/), anchor.End())
 	result := p.finishNode(p.factory.NewLabeledStatement(label, block), pos)
 	result.Flags |= ast.NodeFlagsEffeck

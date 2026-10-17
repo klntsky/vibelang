@@ -9,5 +9,5 @@ layer NamesLive: Names {
   }
 }
 
-with NamesLive {
+provide NamesLive {
 }

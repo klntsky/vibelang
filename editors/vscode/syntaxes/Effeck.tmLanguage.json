@@ -47,6 +47,9 @@
 					"include": "#effeck-select"
 				},
 				{
+					"include": "#effeck-provide"
+				},
+				{
 					"include": "#effeck-for-concurrent"
 				},
 				{
@@ -5898,6 +5901,14 @@
 					"name": "keyword.control.switch.ts"
 				}
 			]
+		},
+		"effeck-provide": {
+			"match": "^\\s*(provide)(?=\\s+[_$[:alpha:]\\[])",
+			"captures": {
+				"1": {
+					"name": "keyword.control.with.ts"
+				}
+			}
 		},
 		"effeck-for-concurrent": {
 			"match": "(?<![_$[:alnum:]])(for)\\s+(concurrent)(?![_$[:alnum:]])",

@@ -1,0 +1,42 @@
+// expect-result: {"old":"Ada","called":3,"indexed":[20,20],"shadowed":"local"}
+// The old spelling, with Layer { ... }, still compiles and runs the same way,
+// with the warning EK1009 at its keyword (D172). The word provide alone stays
+// an ordinary identifier: a call, an element access, and a local name.
+service Names {
+  name(): string!!
+}
+
+layer NamesLive: Names {
+  name() { return "Ada" }
+}
+
+function old() {
+  with NamesLive {
+    return Names.name()
+  }
+}
+
+function provide(n: number) {
+  return n + 1
+}
+
+function called() {
+  provide(1)
+  return provide(2)
+}
+
+function indexed() {
+  const values = [10, 20]
+  const provide = values
+  provide[0] = provide[1]
+  return provide
+}
+
+function shadowed() {
+  const provide = "local"
+  return provide
+}
+
+export function main() {
+  return { old: old(), called: called(), indexed: indexed(), shadowed: shadowed() }
+}

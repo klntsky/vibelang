@@ -175,7 +175,7 @@ as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic is an error, except two. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. The two exceptions are policy, not soundness: EK2004, a `catch` that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
+Every EK diagnostic is an error, except three. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. EK1009, the old `with` spelling of a `provide` block, is a warning: the block compiles the same either way. The other two exceptions are policy, not soundness: EK2004, a `catch` that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
 
 | Option in `compilerOptions.effeck` | Values | Default |
 | --- | --- | --- |
@@ -199,6 +199,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK1006 | A pipe whose body does not use its topic, as in `name \|> "anonymous"` (D156) | Write `%` where the value goes: `name \|> greet(%)` | 5 |
 | EK1007 | `%` outside every pipe's body (D156) | Use `%` only after `\|>`; `%` between two operands is still the remainder | 5 |
 | EK1008 | A pipe that passes its left side by name to one program and also uses it as a value (D155) | Bind the value first with `const`, or pass it by name everywhere | 5, 13 |
+| EK1009 | A `provide` block written with its old keyword, `with` (a warning; D172) | Write `provide`; the quick fix replaces the keyword | 4 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, suggest `T!!` or removing the annotation; for a bare `T`, suggest `T!!` or `T!Errors` | 14 |

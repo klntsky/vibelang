@@ -19,6 +19,7 @@ import (
 
 // CodeFixProvider represents a provider for a specific type of code fix
 type CodeFixProvider struct {
+	Source            string // the diagnostics' source; "" is TypeScript's own ("ts")
 	ErrorCodes        []int32
 	GetCodeActions    func(ctx context.Context, fixContext *CodeFixContext) ([]*CodeAction, error)
 	FixIds            []string
@@ -230,7 +231,11 @@ func hasMultipleFixableDiagnostics(ctx context.Context, program *compiler.Progra
 }
 
 func codeFixProviderMatchesLSPDiagnostic(provider *CodeFixProvider, diagnostic *lsproto.Diagnostic) bool {
-	if diagnostic.Source != nil && *diagnostic.Source != "ts" {
+	source := provider.Source
+	if source == "" {
+		source = "ts"
+	}
+	if diagnostic.Source != nil && *diagnostic.Source != source || diagnostic.Source == nil && provider.Source != "" {
 		return false
 	}
 	return diagnostic.Code != nil && diagnostic.Code.Integer != nil && containsErrorCode(provider.ErrorCodes, *diagnostic.Code.Integer)

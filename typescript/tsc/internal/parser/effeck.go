@@ -503,23 +503,42 @@ func (p *Parser) scanLayerMethodStart() bool {
 	return p.token == ast.KindColonToken || p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak()
 }
 
-// parseEffeckWithStatement parses
+// isStartOfEffeckProvide reports whether the current token starts a provide
+// block: the word provide followed, on the same line, by a layer expression
+// and an opening brace (D172). provide followed by anything else stays an
+// identifier, so a local function or variable named provide keeps its
+// meaning: provide(x) or provide[i] = v parse as before.
+func (p *Parser) isStartOfEffeckProvide() bool {
+	return p.token == ast.KindIdentifier && p.scanner.TokenValue() == "provide" && p.isEffeckFile() && p.lookAhead((*Parser).scanStartOfEffeckProvide)
+}
+
+func (p *Parser) scanStartOfEffeckProvide() bool {
+	p.nextToken()
+	if p.hasPrecedingLineBreak() || p.token == ast.KindOpenBraceToken || !p.isStartOfExpression() {
+		return false
+	}
+	p.parseExpression()
+	return p.token == ast.KindOpenBraceToken && !p.hasPrecedingLineBreak()
+}
+
+// parseEffeckProvideStatement parses
 //
-//	with UsersLive {
+//	provide UsersLive {
 //	  greet("42")
 //	}
 //
 // which runs its statements with the services the layer provides, as
 // Effect.provide(() => { ... }, UsersLive) would, except that the statements
 // are code of the enclosing function: a return returns from it, and a break
-// or continue leaves its loops (D130). The block parses as a Block flagged
-// NodeFlagsEffeck whose first statement holds the layer expression, so the
-// checker reads both as ordinary code; the analyzer and the lowering
-// recognize the flag. In an .effeck file, a module, JavaScript's with
-// statement is a syntax error, so the form takes nothing away.
-func (p *Parser) parseEffeckWithStatement() *ast.Node {
+// or continue leaves its loops (D130, D172). The block parses as a Block
+// flagged NodeFlagsEffeck whose first statement holds the layer expression,
+// so the checker reads both as ordinary code; the analyzer and the lowering
+// recognize the flag. The old spelling, with UsersLive { ... }, parses the
+// same way and draws the warning EK1009; in an .effeck file, a module,
+// JavaScript's with statement is a syntax error, so it took nothing away.
+func (p *Parser) parseEffeckProvideStatement() *ast.Node {
 	pos := p.nodePos()
-	p.parseExpected(ast.KindWithKeyword)
+	p.nextToken() // provide, or the old spelling with
 	layer := p.parseExpression()
 	statement := p.effeckSpanning(p.factory.NewExpressionStatement(layer), layer.Loc)
 	statement.Flags |= ast.NodeFlagsEffeck

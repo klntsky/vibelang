@@ -26,15 +26,15 @@ layer CounterLive: Counter {
 
 // The block provides Names, so the function needs no services.
 function greeting(id: string): string!NotFound! {
-  with NamesLive {
+  provide NamesLive {
     return `Hello, ${Names.name(id)}`
   }
 }
 
-// A return inside a with block returns from the enclosing function.
+// A return inside a provide block returns from the enclosing function.
 function early() {
   for (const step of [1, 2, 3]) {
-    with CounterLive {
+    provide CounterLive {
       if (step === 1) return "early"
     }
   }
@@ -43,7 +43,7 @@ function early() {
 
 // One layer instance serves the whole block.
 function counted() {
-  with CounterLive {
+  provide CounterLive {
     Counter.next()
     return Counter.next()
   }
@@ -51,7 +51,7 @@ function counted() {
 
 // An array of layers provides all of their services.
 function both(): string!NotFound! {
-  with [NamesLive, CounterLive] {
+  provide [NamesLive, CounterLive] {
     return `${Names.name("42")} ${Counter.next()}`
   }
 }

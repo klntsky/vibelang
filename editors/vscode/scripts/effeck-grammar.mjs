@@ -49,11 +49,16 @@ export function addEffeckSyntax(grammar) {
       { match: "(?<![_$[:alnum:].])(case|default)(?![_$[:alnum:]])", name: "keyword.control.switch.ts" }
     ]
   }
+  // provide Layer { ... } (D130, D172): the keyword at the start of a statement.
+  repository["effeck-provide"] = {
+    match: "^\\s*(provide)(?=\\s+[_$[:alpha:]\\[])",
+    captures: { 1: { name: "keyword.control.with.ts" } }
+  }
   repository["effeck-for-concurrent"] = {
     match: "(?<![_$[:alnum:]])(for)\\s+(concurrent)(?![_$[:alnum:]])",
     captures: { 1: { name: "keyword.control.loop.ts" }, 2: { name: "keyword.control.loop.ts" } }
   }
-  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-select", "#effeck-for-concurrent", "#effeck-fork"]
+  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-select", "#effeck-provide", "#effeck-for-concurrent", "#effeck-fork"]
   const statements = repository.statements.patterns.filter((pattern) => !effeckIncludes.includes(pattern.include))
   repository.statements.patterns = [...effeckIncludes.map((include) => ({ include })), ...statements]
   const expressions = repository.expression.patterns.filter((pattern) => pattern.include !== "#effeck-fork")

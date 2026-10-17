@@ -317,7 +317,7 @@ A declaration form starts with a word that an identifier follows on the same lin
 | `User!NotFound!Db`, `User!!`, `User!NotFound` | `Effect.Effect<User, NotFound, Db>`; an empty slot is `never`; left-out dependencies are `infer R` on a function with a body (`parseReturnType`), else `never` | D127 |
 | `service Users { find(id: string): User!NotFound }`, `control Approval { ... }` | `abstract class Users { abstract find(...) }`, with `extends Control` for `control`; bodiless instance members become abstract, value members also readonly (`effeckAbstractMembers`, cleared inside nested classes); an implemented member is EK2103 | D128 |
 | `layer UsersLive: Users { setup; find(id) { ... }; readonly region = "eu" }` | `const UsersLive = Layer.effect(Users, () => { setup; return { find(id) { ... }, region: "eu" } })`, or `Layer.succeed` without setup; setup after a member is EK2104 (`layers_check.go`) | D129 |
-| `with AppLive { ... }` | A `Block` flagged `NodeFlagsEffeck` whose first statement holds the layer; the analyzer (`withFlow`) and the lowering (`visitWithBlock`, a region under `Effect.provide`) recognize it (`with.go`) | D130 |
+| `provide AppLive { ... }` | A `Block` flagged `NodeFlagsEffeck` whose first statement holds the layer; the analyzer (`provideFlow`) and the lowering (`visitProvideBlock`, a region under `Effect.provide`) recognize it (`provide.go`). The old spelling `with AppLive { ... }` parses the same way and draws the warning EK1009, whose quick fix writes `provide` | D130, D172 |
 | `catch (e: NotFound) { A } catch (e) { B }` | One `catch ($caught)` whose block is `if ($isFailure<NotFound>($caught)) { const e = $caught; A } else { const e = $caught; B }`, ending in `throw $caught` without an untyped clause; the lowering adds the tags (`catches.go`) | D131 |
 | `interface Cart { id: string; mutable items: Array<Item> }` | `interface Cart { readonly id: string; items: Array<Item> }`: every property and index signature of an interface or object type gets a synthesized `readonly` unless written `mutable` (`parseEffeckMutable`, read in `scanTypeMemberStart` and `parseTypeMember`) | D134 |
 | `schema User { id: string; home?: Address }` | `const User = Schema.Struct({ id: Schema.String, home: Schema.optional(Address) })` and, through `p.reparseList`, `interface User extends Schema.Schema.Type<typeof User> {}` before it; a field type with no schema form becomes `Schema.Unknown` flagged `NodeFlagsEffeck`, which is EK2109, as is a named value that is not a schema (`schemas.go`) | D133 |
@@ -335,8 +335,9 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 
 | Upstream file | Change | Lines (+/-) |
 | --- | --- | --- |
-| `tsc/internal/parser/parser.go` | Hand an identifier that starts a short form to `effeck.go` in `parseStatement`, `parseDeclarationWorker`, and `scanStartOfDeclaration`; add a readonly modifier in `parsePropertyOrMethodSignature` while `effeckReadonlyMembers` is set; read Effect types after `parseType`, stop `parsePostfixTypeOrHigher` at `!`, and infer left-out dependencies in `parseReturnType`; make bodiless members of a service or control body abstract in `parseMethodDeclaration` and `parsePropertyDeclaration`, and clear that inside `parseClassDeclarationOrExpression`; parse `with` as a with block in `parseStatement`; read typed and repeated catch clauses, and handle clauses, in `parseTryStatement`; read `mutable` in `scanTypeMemberStart` and `parseTypeMember`, and make other property and index signatures readonly | +64 / -1 |
-| `tsc/internal/ls/extensions.go` | `RegisterQuickInfoTextHook` rewrites a hover's quick info line after the quick info hooks | +14 / -0 |
+| `tsc/internal/parser/parser.go` | Hand an identifier that starts a short form to `effeck.go` in `parseStatement`, `parseDeclarationWorker`, and `scanStartOfDeclaration`; add a readonly modifier in `parsePropertyOrMethodSignature` while `effeckReadonlyMembers` is set; read Effect types after `parseType`, stop `parsePostfixTypeOrHigher` at `!`, and infer left-out dependencies in `parseReturnType`; make bodiless members of a service or control body abstract in `parseMethodDeclaration` and `parsePropertyDeclaration`, and clear that inside `parseClassDeclarationOrExpression`; parse `provide` (and its old spelling `with`) as a provide block in `parseStatement`; read typed and repeated catch clauses, and handle clauses, in `parseTryStatement`; read `mutable` in `scanTypeMemberStart` and `parseTypeMember`, and make other property and index signatures readonly | +64 / -1 |
+| `tsc/internal/ls/extensions.go` | `RegisterQuickInfoTextHook` rewrites a hover's quick info line after the quick info hooks; `RegisterCodeFixProvider` adds a quick fix, such as EK1009's | +22 / -0 |
+| `tsc/internal/ls/codeactions.go` | `CodeFixProvider.Source` lets a provider fix diagnostics from a source other than `ts`, such as `EK` | +7 / -1 |
 | `tsc/internal/ast/nodeflags.go` | `NodeFlagsEffeck` marks a node that stands for an Effeck form the checker reads as ordinary code | +1 / -0 |
 | `tsc/internal/tspath/extension.go` | `ExtensionEffeck` in the TypeScript extension lists; `.effeck` declares to `.d.ts` | +9 / -8 |
 | `tsc/internal/core/core.go` | `.effeck` is `ScriptKindTS` | +1 / -1 |
@@ -1077,7 +1078,7 @@ need no new node kinds:
 
 The synthesized parts are anchored on the keyword they stand for, flagged
 `NodeFlagsReparsed`; the helper calls are known by their synthesized callee, not
-by `NodeFlagsEffeck`, which marks with blocks and schema structs. In a select, an
+by `NodeFlagsEffeck`, which marks provide blocks and schema structs. In a select, an
 unlabeled break that would leave it gets the block's label; in a `for
 concurrent` body, an unlabeled continue becomes a synthesized return and an
 escaping break is flagged for EK4605. `effeck/fibers.go` reports EK4601-EK4606

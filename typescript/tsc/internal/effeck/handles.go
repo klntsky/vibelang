@@ -190,11 +190,11 @@ func withoutRequirement(c *checker.Checker, info *effectInfo, handled *checker.T
 	return out
 }
 
-// hasEffeckStatement reports whether fn's own body has a with block or a
+// hasEffeckStatement reports whether fn's own body has a provide block or a
 // handle statement, which make it an Effect: they run Effect.provide and
 // handle.
 func hasEffeckStatement(fn *ast.Node) bool {
-	return hasWithBlock(fn) || hasHandleStatement(fn)
+	return hasProvideBlock(fn) || hasHandleStatement(fn)
 }
 
 // hasHandleStatement reports whether fn's own body has a handle statement.
@@ -242,7 +242,7 @@ func checkHandleClauses(c *checker.Checker, node *ast.Node) {
 		if shape == nil || !isControlDeclaration(c, control) {
 			d := report(c, control, EK2107, entityText(control))
 			if shape != nil {
-				note(d, "A service's members return to their caller once. Provide {0} with a layer or a with block.", entityText(control))
+				note(d, "A service's members return to their caller once. Provide {0} with a layer or a provide block.", entityText(control))
 			}
 			continue
 		}

@@ -34,8 +34,8 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			info.add(a.handleFlow(n)) // try { ... } handle Control.op(...) { ... } (handles.go)
 		case n.Kind == ast.KindTryStatement:
 			info.add(a.tryFlow(n))
-		case isWithBlock(n):
-			info.add(a.withFlow(n)) // with Layer { ... } (with.go)
+		case isProvideBlock(n):
+			info.add(a.provideFlow(n)) // provide Layer { ... } (provide.go)
 		case n.Kind == ast.KindThrowStatement:
 			n.ForEachChild(visit)
 			info.addError(a.thrownType(n), n.Expression())

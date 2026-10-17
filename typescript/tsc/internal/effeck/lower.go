@@ -109,12 +109,12 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitHandleStatement(node) // try { ... } handle Control.op(...) { ... } (handles.go)
 	case tx.inEffect && node.Kind == ast.KindTryStatement:
 		return tx.visitTryStatement(node)
-	case tx.inEffect && isWithBlock(node):
-		return tx.visitWithBlock(node)
+	case tx.inEffect && isProvideBlock(node):
+		return tx.visitProvideBlock(node)
 	case isFailureTest(node):
 		return tx.visitFailureTest(node)
-	case isWithLayer(node):
-		return nil // visitWithBlock lowers the layer expression itself
+	case isProvideLayer(node):
+		return nil // visitProvideBlock lowers the layer expression itself
 	case isClauseBinding(node):
 		return nil // clauseFunction binds a handle clause's parameters itself
 	case tx.inEffect && tx.frame.handleClause != nil && node.Kind == ast.KindReturnStatement && tx.isClauseResume(node.Expression()):

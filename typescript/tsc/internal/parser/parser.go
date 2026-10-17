@@ -1104,7 +1104,7 @@ func (p *Parser) parseStatement() *ast.Statement {
 		return p.parseReturnStatement()
 	case ast.KindWithKeyword:
 		if p.isEffeckFile() {
-			return p.parseEffeckWithStatement() // with Layer { ... } (effeck.go)
+			return p.parseEffeckProvideStatement() // old spelling of provide Layer { ... } (effeck.go)
 		}
 		return p.parseWithStatement()
 	case ast.KindSwitchKeyword:
@@ -1133,6 +1133,9 @@ func (p *Parser) parseStatement() *ast.Statement {
 		}
 		if p.isStartOfEffeckSelect() {
 			return p.parseEffeckSelect() // select { case ... } (effeck_fibers.go)
+		}
+		if p.isStartOfEffeckProvide() {
+			return p.parseEffeckProvideStatement() // provide Layer { ... } (effeck.go)
 		}
 	}
 	return p.parseExpressionOrLabeledStatement()

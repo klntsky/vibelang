@@ -23,6 +23,14 @@ func RegisterQuickInfoHook(hook QuickInfoHook) {
 	quickInfoHooks = append(quickInfoHooks, hook)
 }
 
+// RegisterCodeFixProvider adds provider to the quick fixes. A provider whose
+// Source is not "" fixes diagnostics from that source, such as "EK". Call it
+// only from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterCodeFixProvider(provider *CodeFixProvider) {
+	codeFixProviders = append(codeFixProviders, provider)
+}
+
 // QuickInfoTextHook rewrites the quick info line of a hover on node after
 // the QuickInfoHooks ran, for example to write its types another way.
 type QuickInfoTextHook func(c *checker.Checker, node *ast.Node, text string) string

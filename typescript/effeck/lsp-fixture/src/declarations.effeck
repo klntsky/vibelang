@@ -21,7 +21,7 @@ export layer AccountsLive: Accounts {
 }
 
 export function balanceWith(id: string) {
-  with AccountsLive {
+  provide AccountsLive {
     return Accounts.balance(id)
   }
 }
