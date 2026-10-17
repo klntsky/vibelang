@@ -53,7 +53,7 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | `class E extends Data.TaggedError("E")<{ ... }> {}` | `error E { ... }` | [3](#3-errors-the-e-channel) |
 | `Effect.catchTag("E", h)` | `try { … } catch (e) { … }` | [3](#3-errors-the-e-channel) |
 | `Effect.ensuring(cleanup)` | `finally { … }` | [3](#3-errors-the-e-channel) |
-| `class S extends Context.Service<…>()("key") {}` | `abstract class S { abstract method(): Effect<…> }` | [4](#4-dependency-injection-the-r-channel) |
+| `class S extends Context.Service<…>()("key") {}` | `service S { method(): A!E }` | [4](#4-dependency-injection-the-r-channel) |
 | `const s = yield* S` then `yield* s.method()` | `S.method()` | [4](#4-dependency-injection-the-r-channel) |
 | `Layer.effect(S, Effect.gen(…))` | `Layer.effect(S, () => { … })` | [4](#4-dependency-injection-the-r-channel) |
 | `program.pipe(Effect.provide(layer))` | `Effect.provide(() => program(), layer)` | [4](#4-dependency-injection-the-r-channel) |
@@ -62,7 +62,7 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | `Effect.all([a, b], { concurrency: 2 })` | `Effect.all([() => a(), () => b()], { concurrency: 2 })` | [7](#7-concurrency) |
 | `Effect.forkScoped(effect)` | `fork(() => f())`, owned by the enclosing block | [7](#7-concurrency) |
 | a `Stream` you build by hand | a `function*` producer and `for...of` | [8](#8-producers-streams-of-values) |
-| nothing comparable | `abstract class Op extends Control` and `handle` | [9](#9-handlers-defining-your-own-effects) |
+| nothing comparable | `control Op { ... }` and `handle` | [9](#9-handlers-defining-your-own-effects) |
 | `node:fs`, `fetch`, `process.env`, `child_process` | `FileSystem`, `HttpClient`, `Config`, `ChildProcessSpawner` | [11](#11-the-standard-library) |
 
 Where `async`, `Option`, `Schema`, `Stream`, testing, and the rest of Effect fit is answered in [Chapter 12](#12-questions-effect-users-ask) and, feature by feature, in [Appendix C](#c-every-effect-feature-in-effeck).

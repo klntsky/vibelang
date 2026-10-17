@@ -5,12 +5,12 @@ export interface User {
 
 export error UserNotFound { id: string }
 
-export abstract class Directory {
-  abstract lookup(id: string): User | undefined!!
+export service Directory {
+  lookup(id: string): User | undefined!!
 }
 
-export abstract class Users {
-  abstract find(id: string): User!UserNotFound!
+export service Users {
+  find(id: string): User!UserNotFound
 }
 
 export const DirectoryLive = Layer.succeed(Directory, {

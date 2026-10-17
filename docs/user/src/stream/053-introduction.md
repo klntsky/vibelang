@@ -7,8 +7,8 @@
 ```ts
 error FeedUnavailable
 
-abstract class Feed {
-  abstract next(): string!FeedUnavailable!
+service Feed {
+  next(): string!FeedUnavailable
 }
 
 const messages = Stream.fromEffectRepeat(() => Feed.next())

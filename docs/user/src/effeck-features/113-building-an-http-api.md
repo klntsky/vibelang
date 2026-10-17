@@ -9,8 +9,8 @@ Build routes with Effect's HTTP modules and write each handler as an Effeck func
 export const CreateUser = Schema.Struct({ name: Schema.String })
 export error NameTaken { name: string }
 
-export abstract class Users {
-  abstract create(name: string): { readonly id: string; readonly name: string }!NameTaken!
+export service Users {
+  create(name: string): { readonly id: string; readonly name: string }!NameTaken
 }
 
 export const UsersLive = Layer.effect(Users, () => {

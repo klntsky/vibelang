@@ -18,8 +18,8 @@ function reportConfiguration() {
 ## Revealing values deliberately
 
 ```ts
-abstract class CredentialsClient {
-  abstract authenticate(token: string): boolean!!
+service CredentialsClient {
+  authenticate(token: string): boolean!!
 }
 
 function authenticate(token: Redacted.Redacted<string>) {

@@ -70,7 +70,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In Effeck | Form |
 | --- | --- | --- |
-| `Context.Service` class | Changed | `abstract class Users { abstract find(id: string): User!UserNotFound! }` (D1) |
+| `Context.Service` class | Changed | `service Users { find(id: string): User!UserNotFound }` (D1, D128) |
 | Service keys | Changed | Derived from package, path, and class name; duplicates are EK3001 |
 | `yield* Users`, then a method | Changed | `Users.find(id)`; `Users()` gives the implementation |
 | `Users.use`, `useSync` | Changed | Call the member: `Users.find(id)` |

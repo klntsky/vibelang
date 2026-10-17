@@ -8,8 +8,8 @@ A control operation lets a handler decide how the caller continues. Use one when
 // approval.effeck
 export error ReviewBusy { request: string }
 
-export abstract class Approval extends Control {
-  abstract approve(request: string): boolean!ReviewBusy!
+export control Approval {
+  approve(request: string): boolean!ReviewBusy
 }
 
 export function release(version: string) {

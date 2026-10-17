@@ -9,8 +9,8 @@ error MissingRate {
   currency: string
 }
 
-abstract class Rates {
-  abstract lookup(currency: string): number!MissingRate!
+service Rates {
+  lookup(currency: string): number!MissingRate
 }
 
 function convert(amount: number, currency: string) {

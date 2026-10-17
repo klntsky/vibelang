@@ -23,8 +23,8 @@ const quote = () => unitPrice(72, 6)
 ## Share an application foundation
 
 ```ts
-abstract class Prices {
-  abstract total(sku: string): number!InvalidQuantity!
+service Prices {
+  total(sku: string): number!InvalidQuantity
 }
 
 function receipt(sku: string) {

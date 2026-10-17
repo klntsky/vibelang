@@ -74,8 +74,8 @@ The contract has exactly three channels. Whether a function can pause is a separ
 Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `A!!`. Service and control methods require all three Effect type arguments; `Effect<A>` is EK2101 there (D93, amending D57):
 
 ```ts es
-abstract class Rates {
-  abstract lookup(currency: string): number
+service Rates {
+  lookup(currency: string): number
 }
 ```
 

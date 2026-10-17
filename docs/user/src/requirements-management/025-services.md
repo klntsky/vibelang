@@ -1,18 +1,18 @@
 # Managing Services
 
-A service gives a program a named capability without passing an implementation through every function. Effeck declares service keys as abstract classes and infers their use in the `R` channel.
+A service gives a program a named capability without passing an implementation through every function. Effeck declares a service with `service`, an abstract class whose members state their contracts, and infers its use in the `R` channel.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/services)
 
 ## Declaring typed service keys
 
 ```ts
-abstract class Sequence {
-  abstract next(): number!!
+service Sequence {
+  next(): number!!
 }
 
-abstract class Reporter {
-  abstract write(message: string): void!!
+service Reporter {
+  write(message: string): void!!
 }
 ```
 
@@ -45,8 +45,8 @@ function readImplementation() {
 `Sequence.next()` looks up the service and runs its method. `Sequence()` returns the implementation itself, which is useful for capturing it or reading value members. A runner needs a program whose remaining requirements have been supplied.
 
 ```ts
-abstract class Settings {
-  abstract readonly baseUrl: string
+service Settings {
+  baseUrl: string
 }
 
 function endpoint(path: string) {
@@ -122,8 +122,8 @@ function optionalAnnouncement(message: string) {
 ## Handling dependencies between services
 
 ```ts
-abstract class ReportSettings {
-  abstract readonly prefix: string
+service ReportSettings {
+  prefix: string
 }
 
 const ReporterLive = Layer.effect(Reporter, () => {

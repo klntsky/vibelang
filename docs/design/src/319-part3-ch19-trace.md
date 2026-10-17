@@ -3,12 +3,12 @@
 This chapter follows one program through the machine before Chapter 20 defines the machine. The program is the checkout from Chapter 9, simplified, with a request-scoped audit log added so the trace shows which Context each piece of code sees. Kernel test T1 runs exactly this program, lowered by hand.
 
 ```ts es
-abstract class AuditLog  { abstract info(message: string): void!! }
-abstract class Inventory { abstract reserve(cartId: string): Hold!!Scope }
-abstract class Reviewers { abstract decide(request: string): boolean!! }
+service AuditLog { info(message: string): void!! }
+service Inventory { reserve(cartId: string): Hold!!Scope }
+service Reviewers { decide(request: string): boolean!! }
 
-abstract class Approval extends Control {
-  abstract approve(request: string): boolean!!
+control Approval {
+  approve(request: string): boolean!!
 }
 
 function checkout(cartId: string) {

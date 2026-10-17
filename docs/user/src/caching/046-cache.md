@@ -9,8 +9,8 @@ error MissingProduct {
   sku: string
 }
 
-abstract class Products {
-  abstract price(sku: string): number!MissingProduct!
+service Products {
+  price(sku: string): number!MissingProduct
 }
 
 function makePrices() {

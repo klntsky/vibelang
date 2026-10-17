@@ -62,8 +62,8 @@ error UnknownRoute {
   code: string
 }
 
-abstract class Routes {
-  abstract check(code: string): void!UnknownRoute!
+service Routes {
+  check(code: string): void!UnknownRoute
 }
 
 const RouteCode = Schema.String.pipe(

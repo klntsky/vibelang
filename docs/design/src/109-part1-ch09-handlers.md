@@ -13,11 +13,11 @@ A **control operation** is a request whose handler receives the rest of the call
 
 #### Declaring and performing an operation
 
-A control operation is declared like a service, as an abstract class, but it extends the global `Control`:
+A control operation is declared like a service, with `control`, which is short for an abstract class that extends the global `Control` (D128):
 
 ```ts es
-abstract class Approval extends Control {
-  abstract approve(request: string): boolean!ReviewBusy!
+control Approval {
+  approve(request: string): boolean!ReviewBusy
 }
 
 function checkout(cartId: string) {
@@ -52,8 +52,8 @@ While the reviewer decides, the cart's hold is still reserved and `checkout` is 
 A handler that returns without calling `resume` ends the handled program with the handler's result. Everything the program had open is cleaned up first.
 
 ```ts es
-abstract class Found extends Control {
-  abstract found(cell: Cell): never!!
+control Found {
+  found(cell: Cell): never!!
 }
 
 function locate(grid: Grid, target: number) {

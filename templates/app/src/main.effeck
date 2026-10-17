@@ -1,8 +1,8 @@
 import { NodeRuntime } from "@effect/platform-node"
 import { EmptyName, greeting } from "./greeting.effeck"
 
-abstract class Greeter {
-  abstract greet(name: string): string!EmptyName!
+service Greeter {
+  greet(name: string): string!EmptyName
 }
 
 const GreeterLive = Layer.succeed(Greeter, {

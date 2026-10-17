@@ -60,6 +60,8 @@ clients, see [editors/](editors/README.md).
 - Write a contract as `Result!Error!Dependencies`: `User!NotFound!Db` is
   `Effect<User, NotFound, Db>`, an empty slot is `never` (`User!!`), and
   dependencies left out of a function's return type are inferred from its body.
+- Declare a service with `service Users { find(id: string): User!NotFound }`
+  and call `Users.find(id)`; `control` declares a control operation the same way.
 - `Effect`, `Layer`, `Schema`, `Scope`, `TaggedError`, `Control`, `pipe`,
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no
   import, and neither does any other module of `effect`'s root, such as

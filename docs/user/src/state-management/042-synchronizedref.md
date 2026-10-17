@@ -38,8 +38,8 @@ function inspect() {
 ```ts
 error RefreshFailed
 
-abstract class Versions {
-  abstract loadAfter(version: number): number!RefreshFailed!
+service Versions {
+  loadAfter(version: number): number!RefreshFailed
 }
 
 function refreshTwice() {

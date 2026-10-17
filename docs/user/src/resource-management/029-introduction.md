@@ -66,9 +66,9 @@ interface Lease {
   readonly id: string
 }
 
-abstract class LeaseStore {
-  abstract acquire(): Lease!!
-  abstract release(lease: Lease): void!!
+service LeaseStore {
+  acquire(): Lease!!
+  release(lease: Lease): void!!
 }
 
 function withLease() {

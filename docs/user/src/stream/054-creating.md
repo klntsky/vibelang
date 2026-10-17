@@ -44,8 +44,8 @@ const fromArray = Stream.fromArray([11, 22])
 const fromBatches = Stream.fromArrays([11, 22], [33])
 const fromSet = Stream.fromIterable(new Set(["east", "west"]))
 
-abstract class Catalog {
-  abstract codes(): ReadonlyArray<string>!!
+service Catalog {
+  codes(): ReadonlyArray<string>!!
 }
 
 const codes = Stream.fromIterableEffect(() => Catalog.codes())
@@ -146,8 +146,8 @@ const halving = Stream.unfold(32, (n) => {
   return [n, n / 2] as const
 })
 
-abstract class Directory {
-  abstract page(cursor: number): Effect<{
+service Directory {
+  page(cursor: number): Effect<{
     readonly names: ReadonlyArray<string>
     readonly next: number | undefined
   }, never, never>

@@ -7,14 +7,14 @@ Effect shares repeated uses of the same layer value within one build graph. Effe
 ## Sharing acquisition across a graph
 
 ```ts
-abstract class Prefix {
-  abstract readonly value: string
+service Prefix {
+  value: string
 }
-abstract class Heading {
-  abstract readonly value: string
+service Heading {
+  value: string
 }
-abstract class Footer {
-  abstract readonly value: string
+service Footer {
+  value: string
 }
 
 const PrefixLive = Layer.effect(Prefix, () => {

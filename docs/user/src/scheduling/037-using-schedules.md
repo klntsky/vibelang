@@ -71,8 +71,8 @@ function reserveSlot() {
 ```ts
 error SensorOffline
 
-abstract class Sensor {
-  abstract read(): number!SensorOffline!
+service Sensor {
+  read(): number!SensorOffline
 }
 
 function sampleContinuously() {

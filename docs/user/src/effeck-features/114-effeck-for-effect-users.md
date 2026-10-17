@@ -25,7 +25,7 @@ function main() {
 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
 | `const x = yield* work()` | `const x = work()` |
 | `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, then call the next function |
-| `Context.Service` | An abstract class with fully contracted members; call `Users.find(id)` |
+| `Context.Service` | `service Users { find(id: string): User!NotFound }`; call `Users.find(id)` |
 | `Effect.catchTag(program, "Missing", recover)` | `try` / `catch`, narrowed by `instanceof` or `_tag` |
 | `Effect.ensuring(program, cleanup)` | `try` / `finally` |
 | `Effect.scoped` with `Effect.acquireRelease` | Acquire with `using` in the block that owns the resource |

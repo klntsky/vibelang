@@ -5,8 +5,8 @@ import { createServer } from "node:http"
 export const CreateUser = Schema.Struct({ name: Schema.String })
 export error NameTaken { name: string }
 
-export abstract class Users {
-  abstract create(name: string): { readonly id: string; readonly name: string }!NameTaken!
+export service Users {
+  create(name: string): { readonly id: string; readonly name: string }!NameTaken
 }
 
 // The layer owns its state; each test builds an isolated directory.

@@ -79,8 +79,8 @@ function consumeChecked() {
 ```ts
 error Offline
 
-abstract class Sensor {
-  abstract read(): number!Offline!
+service Sensor {
+  read(): number!Offline
 }
 
 const readings = Stream.retry(

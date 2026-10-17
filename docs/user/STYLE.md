@@ -38,13 +38,13 @@ Code blocks use the `ts` fence and are Effeck unless the first line says otherwi
 - **An Effect value runs when called.** A function that returns an Effect runs when called (`Effect.log("hi")`, `Effect.sleep("1 second")`). An Effect value you hold runs when you call it: `const now = Clock.currentTimeMillis()`.
 - **Programs are functions with no arguments.** Pass `() => f(x)` wherever Effect expects an Effect: `Effect.retry(() => fetchUser(id), Schedule.exponential("100 millis"))`, `Effect.timeout(() => slowQuery(), "1 second")`, `Effect.all([() => a(), () => b()], { concurrency: 2 })`, `Effect.forEach(ids, (id) => load(id), { concurrency: 4 })`, `Effect.race(() => fromCache(id), () => fromNetwork(id))`.
 - **Pipelines** take the program first: `pipe(() => fetchUser(id), Effect.retry({ times: 3 }), Effect.timeout("2 seconds"))`. Statements replace `map`, `flatMap`, `andThen`, `tap`, `catch`, and `ensuring`.
-- **Contracts are inferred.** Write `function f(): Effect<A, E, R>` to check a promise. In a return annotation with a body, write `infer Name` for each channel to infer, such as `Effect<A, infer E, infer R>`. All three slots are required; omission is EK2003. Parameter types, aliases, abstract members, and `.ts` files keep TypeScript's defaults (D57). D12's callback rule stands.
+- **Contracts are inferred.** Write `function f(): A!E!R` to check a promise; an empty slot is `never`, and dependencies left out of a return annotation with a body, as in `A!E`, are inferred (D127). `Effect<A, infer E, infer R>` still works. D12's callback rule stands.
 - **Errors.** `error UserNotFound { id: string }` declares a tagged error class with readonly fields (short for `class UserNotFound extends TaggedError("UserNotFound")<{ readonly id: string }> {}`); `throw new UserNotFound({ id })` adds it to E; `try`/`catch` handles expected failures only, and the caught value is narrowed by `instanceof` or `_tag`; `finally` always runs. Serializable errors use `Schema.TaggedError`. `Effect.orDie(() => f())` turns failures into defects; `Effect.catchDefect` observes defects at a boundary.
-- **Services are abstract classes.**
+- **Services are `service` declarations**, abstract classes whose members state their contracts.
 
   ```ts
-  abstract class Users {
-    abstract find(id: string): User!UserNotFound!
+  service Users {
+    find(id: string): User!UserNotFound
     static readonly layer = Layer.effect(Users, () => {
       const db = Database()                       // captured once, when the layer is built
       return { find: (id) => db.findUser(id) }
@@ -56,7 +56,7 @@ Code blocks use the `ts` fence and are Effeck unless the first line says otherwi
 - **Resources.** `using file = Files.open(path)` releases at block exit. `Effect.acquireRelease(() => acquire(), (x) => release(x))` defines one. Only `using` acquisitions belong to the block; anything acquired without `using` belongs to the caller (`Scope` stays in R).
 - **Concurrency.** Effect's combinators with programs, as above. `fork(() => work())` starts a fiber owned by the enclosing block, interrupted when the block exits; `Fiber.join(fiber)` waits. `Effect.forkScoped` and `Effect.forkDetach` give longer lifetimes.
 - **Producers.** `function*` with `yield` produces values one at a time and may call services between them; `for (const x of producer())` consumes it, and `break` runs its cleanup. Consume an Effect `Stream` with Stream's functions: `Stream.runForEach(stream, (x) => handle(x))`.
-- **Control operations** (advanced): `abstract class Approval extends Control { abstract approve(request: string): boolean!ReviewBusy! }`, handled with `handle(() => checkout(id), Approval, { approve(request, k) { return resume(k, true) } })`.
+- **Control operations** (advanced): `control Approval { approve(request: string): boolean!ReviewBusy }`, handled with `handle(() => checkout(id), Approval, { approve(request, k) { return resume(k, true) } })`.
 - **Globals** (no import): `Effect` (also the `Effect<A, E, R>` type), `Schema`, `Layer`, `TaggedError`, `Control`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`. Import everything else from `effect`: `import { Option, Stream, Schedule, Duration, Fiber, Queue, Ref } from "effect"`.
 - **Code that is not Effect.** JavaScript built-ins (`String`, `Array`, `Math`, `JSON`, `Map`, `Set`, `Number`, `Object`, `RegExp`) are called directly. Running Node.js and browser APIs is EK4402 (D108); imports and passing bindings as values are allowed. Use Effect's modules: `FileSystem`, `Path`, `HttpClient`, `effect/process`, `Config`, `Console`, `Clock`, `DateTime`, `Random`, `KeyValueStore`. Any other plain function is called through `Effect.try` or `Effect.tryPromise`, which say what an exception or rejection means.
 - **Running.** `NodeRuntime.runMain(() => main())` from `@effect/platform-node`. Tests: `it.effect("name", () => { … })` from `@effect/vitest`.

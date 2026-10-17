@@ -111,10 +111,10 @@ error SetupFailed {
   stage: string
 }
 
-abstract class ProjectSteps {
-  abstract create(stage: string): string!SetupFailed!
-  abstract remove(id: string): void!!
-  abstract finish(storage: string, index: string): string!SetupFailed!
+service ProjectSteps {
+  create(stage: string): string!SetupFailed
+  remove(id: string): void!!
+  finish(storage: string, index: string): string!SetupFailed
 }
 
 function reserveStep(stage: string) {

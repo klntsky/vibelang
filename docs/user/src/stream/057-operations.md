@@ -23,8 +23,8 @@ function readFirst() {
 ## Async iteration and manual pulls
 
 ```ts
-abstract class Exporter {
-  abstract write(rows: AsyncIterable<string>): number!Error!
+service Exporter {
+  write(rows: AsyncIterable<string>): number!Error
 }
 
 function exportRows(source: Stream.Stream<string>) {
