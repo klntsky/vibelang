@@ -916,7 +916,7 @@ fork <span class="f">syncInventory</span>(store)              <span class="c">//
 }</code></pre></figure></div>
 <figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> thumbnails = <span class="f">forEach</span>(images, (image) =&gt; <span class="f">resize</span>(image), { concurrency: <span class="n">8</span> })
 <span class="k">const</span> fastest = <span class="f">race</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))
-<span class="k">const</span> first = <span class="t">Effect</span>.<span class="f">raceFirst</span>(<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id))
+<span class="k">const</span> first = <span class="k">await</span>.race [<span class="f">fromCache</span>(id), <span class="f">fromNetwork</span>(id)]
 <span class="k">const</span> quick = <span class="f">timeout</span>(<span class="f">slowQuery</span>(id), <span class="s">"500 millis"</span>)</code></pre></figure>
 <p>Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect&#39;s semantics here:</p>
 <div class="table"><table><thead><tr><th>Combinator</th><th>Succeeds with</th><th>When a branch fails</th></tr></thead><tbody><tr><td><code>Effect.all</code>, <code>Effect.forEach</code></td><td>Every result, in order</td><td>Interrupts the other branches, waits for their cleanup, and fails with that failure</td></tr>
@@ -924,7 +924,10 @@ fork <span class="f">syncInventory</span>(store)              <span class="c">//
 <tr><td><code>Effect.raceFirst</code></td><td>Whichever branch finishes first, success or failure</td><td>Fails if the first branch to finish failed; the other is interrupted</td></tr>
 <tr><td><code>Effect.timeout</code></td><td>The program&#39;s result</td><td>At the deadline, interrupts the program and fails with <code>Cause.TimeoutError</code></td></tr>
 <tr><td><code>await [a, b]</code></td><td>Every fiber&#39;s value, in the same shape</td><td>Interrupts the other fibers and fails with that failure</td></tr>
-<tr><td><code>select</code></td><td>The first case to finish; its statements run</td><td>Fails if the first case to finish failed; the other cases are interrupted</td></tr>
+<tr><td><code>await.all [a(), b()]</code></td><td>Every result, in the same shape</td><td>Interrupts the other elements and fails with that failure</td></tr>
+<tr><td><code>await.allSettled [a(), b()]</code></td><td>Every outcome as a <code>Result</code>, in the same shape</td><td>Never fails</td></tr>
+<tr><td><code>await.race [a(), b()]</code></td><td>Whichever element finishes first, success or failure</td><td>Fails if the first to finish failed; the others are interrupted</td></tr>
+<tr><td><code>await.any [a(), b()]</code></td><td>The first success</td><td>Keeps waiting; fails only if every element fails, with every failure</td></tr>
 <tr><td><code>for concurrent</code></td><td>Nothing: the loop runs its body for each item</td><td>Interrupts the other items and fails with that failure</td></tr></tbody></table></div>
 <p>A <code>catch</code> around any of these sees the failure as usual. When <code>Effect.race</code> fails because both branches failed, <code>catch</code> receives the first failure (<a href="#3-errors-the-e-channel">Chapter 3</a>).</p>
 <h4 id="background-work-with-a-lifetime"><a class="anchor" href="#background-work-with-a-lifetime">Background work with a lifetime</a></h4>
@@ -957,29 +960,40 @@ fork <span class="f">syncInventory</span>(store)              <span class="c">//
   <span class="k">const</span> [p, o] = <span class="k">yield</span>* <span class="t">Fiber</span>.<span class="f">joinAll</span>([profile, orders])
   <span class="k">return</span> { profile: p, orders: o }
 })</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">summary</span>(id: <span class="l">string</span>) {
-  <span class="k">const</span> [profile, orders] = <span class="k">await</span> [fork <span class="f">loadProfile</span>(id), fork <span class="f">recentOrders</span>(id)]
-  <span class="k">return</span> { profile, orders }
+  <span class="k">const</span> profile = fork <span class="f">loadProfile</span>(id)
+  <span class="k">const</span> orders = fork <span class="f">recentOrders</span>(id)
+  <span class="k">return</span> { profile: <span class="k">await</span> profile, orders: <span class="k">await</span> orders }
 }</code></pre></figure></div>
+<p>To start several programs and wait for them in one step, use an await operation instead of forking each: <code>await.all [loadProfile(id), recentOrders(id)]</code> (below).</p>
 <p><code>await</code> never waits for a call: a call already runs and waits where it stands, so <code>await loadProfile(id)</code> is EK4601. A promise is EK4602; wait for one in a hatch, <code>try(async () =&gt; …)</code>, where <code>await</code> keeps its JavaScript meaning. Anything else is EK4603, and an <code>await</code> in a hatch&#39;s function that is not <code>async</code> is EK4604.</p>
-<h4 id="selecting-the-first-event"><a class="anchor" href="#selecting-the-first-event">Selecting the first event</a></h4>
-<p><code>select</code> starts each case in its own fiber and runs the statements of the first to finish; the other cases are interrupted (D168):</p>
+<h4 id="await-operations"><a class="anchor" href="#await-operations">Await operations</a></h4>
+<p><code>await.all</code>, <code>await.allSettled</code>, <code>await.race</code>, and <code>await.any</code> (D196) come from the TC39 <a href="https://github.com/tc39/proposal-await.ops">await operations</a> proposal (stage 1) and, for an object operand, the <a href="https://github.com/tc39/proposal-await-dictionary">Await Dictionary</a> proposal (stage 3). Each behaves as the <code>Promise</code> method of the same name. Each element is a program passed by name (D147), started in its own fiber; an element that is a fiber or a <code>Deferred</code> already running is waited for, not restarted.</p>
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> next = (jobs: <span class="t">Queue</span>.<span class="t">Queue</span>&lt;<span class="t">Job</span>&gt;, shutdown: <span class="t">Deferred</span>.<span class="t">Deferred</span>&lt;<span class="k">void</span>&gt;) =&gt;
   <span class="t">Effect</span>.<span class="f">raceAllFirst</span>([
-    <span class="t">Effect</span>.<span class="f">map</span>(<span class="t">Queue</span>.<span class="f">take</span>(jobs), (job) =&gt; ({ kind: <span class="s">"job"</span> <span class="k">as</span> <span class="k">const</span>, job })),
-    <span class="t">Effect</span>.<span class="k">as</span>(<span class="t">Deferred</span>.<span class="k">await</span>(shutdown), { kind: <span class="s">"shutdown"</span> <span class="k">as</span> <span class="k">const</span> }),
-    <span class="t">Effect</span>.<span class="k">as</span>(<span class="t">Effect</span>.<span class="f">sleep</span>(<span class="s">"30 seconds"</span>), { kind: <span class="s">"idle"</span> <span class="k">as</span> <span class="k">const</span> })
-  ]).<span class="f">pipe</span>(<span class="t">Effect</span>.<span class="f">flatMap</span>((event) =&gt; <span class="c">/* switch on event.kind */</span> <span class="f">handle</span>(event)))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">next</span>(jobs: <span class="t">Queue</span>.<span class="t">Queue</span>&lt;<span class="t">Job</span>&gt;, shutdown: <span class="t">Deferred</span>.<span class="t">Deferred</span>&lt;<span class="k">void</span>&gt;) {
-  select {
-    <span class="k">case</span> <span class="k">const</span> job = jobs.<span class="f">take</span>(): <span class="k">return</span> <span class="f">run</span>(job)
-    <span class="k">case</span> shutdown.<span class="k">await</span>(): <span class="k">return</span> <span class="s">"stopped"</span>
-    <span class="k">case</span> <span class="f">sleep</span>(<span class="s">"30 seconds"</span>): <span class="k">return</span> <span class="f">heartbeat</span>()
-  }
+    <span class="t">Effect</span>.<span class="f">map</span>(<span class="t">Queue</span>.<span class="f">take</span>(jobs), (job) =&gt; <span class="f">run</span>(job)),
+    <span class="t">Effect</span>.<span class="k">as</span>(<span class="t">Deferred</span>.<span class="k">await</span>(shutdown), <span class="s">"stopped"</span>),
+    <span class="t">Effect</span>.<span class="f">flatMap</span>(<span class="t">Effect</span>.<span class="f">sleep</span>(<span class="s">"30 seconds"</span>), () =&gt; <span class="f">heartbeat</span>())
+  ])</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">function</span> <span class="f">next</span>(jobs: <span class="t">Queue</span>.<span class="t">Queue</span>&lt;<span class="t">Job</span>&gt;, shutdown: <span class="t">Deferred</span>.<span class="t">Deferred</span>&lt;<span class="k">void</span>&gt;) {
+  <span class="k">return</span> <span class="k">await</span>.race [
+    <span class="f">run</span>(jobs.<span class="f">take</span>()),
+    <span class="k">do</span> {
+      shutdown.<span class="k">await</span>()
+      <span class="s">"stopped"</span>
+    },
+    <span class="k">do</span> {
+      <span class="f">sleep</span>(<span class="s">"30 seconds"</span>)
+      <span class="f">heartbeat</span>()
+    }
+  ]
 }</code></pre></figure></div>
 <ul>
-<li>A case&#39;s expression is a program: it is passed, not run, like a by-name argument. <code>case const x = program:</code> binds the winner&#39;s value.</li>
-<li>A failing case that finishes first fails the select. Of cases ready at once, the first written wins: a case that finishes while the cases are starting stops the rest from starting.</li>
-<li>A <code>default:</code> clause runs when no case finishes while the cases start, which makes <code>select</code> a poll.</li>
-<li><code>break</code> leaves the select, as it leaves a <code>switch</code>; <code>continue</code> and <code>return</code> keep their meaning in the enclosing loop and function. A select whose clauses all return ends the function.</li>
+<li><code>await.all [a(), b()]</code> and <code>await.all { x: a(), y: b() }</code> are <code>Effect.all</code> with unbounded concurrency: every result, the shape kept, an object&#39;s keys in the order written, and a failure interrupts the rest.</li>
+<li><code>await.allSettled</code> is <code>Effect.all</code> with <code>mode: &quot;result&quot;</code>: each outcome is a <code>Result</code>, and it never fails.</li>
+<li><code>await.race</code> is <code>Effect.raceFirst</code> over any number of elements: the first to finish wins, success or failure, and the others are interrupted. Of elements ready at once, the first written wins. An empty race never finishes, as <code>Promise.race([])</code> does not.</li>
+<li><code>await.any</code> is <code>Effect.raceAll</code>: the first success wins; it fails only when every element fails, with every failure.</li>
+<li>A <code>do { ... }</code> expression (D187) gives an element statements of its own. A race over an object is EK4608.</li>
+<li><strong>Controversial</strong> (D196): <code>await.x</code> behaves like <code>Promise.x</code>, while a named Effect function keeps Effect&#39;s meaning, so <code>await.race [a(), b()]</code> takes the first to finish and <code>race(a(), b())</code> the first success.</li>
+<li><code>select</code> (D168) was replaced by <code>await.race</code> (D197) and is EK4607. To poll without waiting, call <code>Queue.poll</code> and test the result with an <code>if</code>.</li>
 </ul>
 <h4 id="concurrent-loops"><a class="anchor" href="#concurrent-loops">Concurrent loops</a></h4>
 <p><code>for concurrent</code> runs its body for each item in its own fiber and joins them all before the loop ends (D169). <code>for concurrent(n)</code> runs at most <code>n</code> at once:</p>
@@ -2968,7 +2982,9 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK4603</td><td><code>await</code> on a value that is not a Fiber, a Deferred, or an array or object of them (D167)</td><td>Fork the program and await the fiber</td><td>7</td></tr>
 <tr><td>EK4604</td><td><code>await</code> in a hatch body that is not <code>async</code> (D167)</td><td>Make the hatch&#39;s function <code>async</code></td><td>7</td></tr>
 <tr><td>EK4605</td><td><code>break</code> that would leave a <code>for concurrent</code> loop (D169)</td><td>Use <code>continue</code> to end one item, or <code>throw</code> to stop every item</td><td>7</td></tr>
-<tr><td>EK4606</td><td><code>return</code> in a <code>for concurrent</code> body (D169)</td><td>Use <code>continue</code> to end one item</td><td>7</td></tr></tbody></table></div>
+<tr><td>EK4606</td><td><code>return</code> in a <code>for concurrent</code> body (D169)</td><td>Use <code>continue</code> to end one item</td><td>7</td></tr>
+<tr><td>EK4607</td><td><code>select</code>, which <code>await.race</code> replaced (D197)</td><td>Write <code>await.race [a(), b()]</code>; for a <code>default:</code> clause, poll with <code>Queue.poll</code> and an <code>if</code></td><td>7</td></tr>
+<tr><td>EK4608</td><td><code>await.race</code> or <code>await.any</code> on an object (D196)</td><td>Write the elements in an array: <code>await.race [a(), b()]</code></td><td>7</td></tr></tbody></table></div>
 <h4 id="linting"><a class="anchor" href="#linting">Linting</a></h4>
 <p>D35 assigns type and language diagnostics to <code>effeck</code> and reserves type-aware
 linting for <code>.ts</code> files. A stock TypeScript checker models different call
@@ -3151,7 +3167,7 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D156</td><td>A pipe&#39;s body must use <code>%</code> (EK1006); <code>%</code> outside a pipe&#39;s body is EK1007; after an operand <code>%</code> is still the remainder</td><td>The proposal&#39;s early errors; <code>%</code> keeps its JavaScript meaning where it already has one</td><td>5, 28</td></tr>
 <tr><td>D166</td><td><code>fork</code> is a keyword: <code>fork x</code> is <code>fork(x)</code> and <code>fork { ... }</code> forks a block</td><td>Concurrency reads as one word, with no lambda</td><td></td></tr>
 <tr><td>D167</td><td><strong>Controversial.</strong> <code>await</code> waits for a Fiber, a Deferred, or an array or object of them, failing fast; EK4601-EK4604</td><td>Fibers need a join, and <code>await</code> was free outside hatches</td><td></td></tr>
-<tr><td>D168</td><td><strong>Controversial.</strong> <code>select</code> runs the first case to finish and interrupts the rest; ties go to the first written; <code>default</code> polls; <code>break</code> leaves it</td><td>First-of-several events without <code>raceAll</code> plumbing</td><td></td></tr>
+<tr><td>D168</td><td><strong>Superseded by D197.</strong> <strong>Controversial.</strong> <code>select</code> runs the first case to finish and interrupts the rest; ties go to the first written; <code>default</code> polls; <code>break</code> leaves it</td><td>First-of-several events without <code>raceAll</code> plumbing</td><td></td></tr>
 <tr><td>D169</td><td><code>for concurrent(n)</code> runs the body per item in its own fiber; <code>continue</code> ends an item; <code>break</code> and <code>return</code> are EK4605 and EK4606</td><td><code>forEach</code> with a concurrency option, as a loop</td><td></td></tr>
 <tr><td>D170</td><td><code>detach(program)</code> and <code>forkIn(scope, program)</code> are fork&#39;s variants</td><td>Longer lifetimes without Effect&#39;s names</td><td></td></tr>
 <tr><td>D171</td><td><code>await</code>&#39;s types accept one level of arrays and objects</td><td>Deeper recursive types exceed TypeScript&#39;s limits</td><td></td></tr>
@@ -3165,7 +3181,9 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D179</td><td><code>exit</code>, <code>interrupt</code>, and <code>yieldNow</code> are bare functions</td><td>Effect&#39;s names; no bare <code>yield</code></td><td>7, 17</td></tr>
 <tr><td>D180</td><td><strong>Controversial.</strong> <code>uninterruptible</code>, <code>restore</code>, and <code>interruptible</code> blocks</td><td>Effect&#39;s names in a block that keeps jumps</td><td>17</td></tr>
 <tr><td>D186</td><td><code>throw</code> is also an expression: <code>x ?? throw new NotFound({ id })</code></td><td>TC39 throw expressions (stage 2); fails as the throw statement does</td><td>3</td></tr>
-<tr><td>D187</td><td><code>do { }</code> is an expression whose value is its last statement&#39;s</td><td>TC39 do expressions (stage 1); a racer or an arm gets several statements</td><td>13</td></tr></tbody></table></div>
+<tr><td>D187</td><td><code>do { }</code> is an expression whose value is its last statement&#39;s</td><td>TC39 do expressions (stage 1); a racer or an arm gets several statements</td><td>13</td></tr>
+<tr><td>D196</td><td><strong>Controversial.</strong> <code>await.all</code>, <code>await.allSettled</code>, <code>await.race</code>, <code>await.any</code> start programs by name and behave as the <code>Promise</code> methods; EK4608</td><td>TC39 await operations and Await Dictionary; <code>await.x</code> reads as <code>Promise.x</code></td><td></td></tr>
+<tr><td>D197</td><td><code>await.race [...]</code> replaces <code>select</code>, which is EK4607</td><td><code>case</code> read as value comparison and &quot;select&quot; is not Effect&#39;s word</td><td></td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>
