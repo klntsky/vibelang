@@ -33,7 +33,15 @@ func (a *analyzer) expectedAt(call *ast.Node, signature *checker.Signature, path
 // declaredSignature returns the uninstantiated signature behind a candidate.
 func (a *analyzer) declaredSignature(signature *checker.Signature) *checker.Signature {
 	if d := signature.Declaration(); d != nil && !ast.IsJSDocSignature(d) && ast.IsFunctionLike(d) {
-		return a.checker.GetSignatureFromDeclaration(d)
+		declared := a.checker.GetSignatureFromDeclaration(d)
+		// A method of an Effect data type (datamethods.go) is its function's
+		// data-first form with self as this, so its arguments start one later.
+		if signature.ThisParameter() != nil && takesSelfFirst(declared) && len(signature.Parameters()) == len(declared.Parameters())-1 {
+			if method := a.checker.SignatureWithThisFromFirstParameter(declared); method != nil {
+				return method
+			}
+		}
+		return declared
 	}
 	for signature.Target() != nil {
 		signature = signature.Target()

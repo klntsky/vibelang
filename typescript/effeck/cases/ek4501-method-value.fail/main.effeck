@@ -1,0 +1,8 @@
+// expect: EK4501
+// Method syntax exists only in a call (D152): stream.filter without a call
+// would name nothing on a Stream at run time.
+export function predicateOf() {
+  const numbers = Stream.make(1, 2, 3)
+  const filter = numbers.filter
+  return filter
+}

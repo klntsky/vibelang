@@ -339,6 +339,7 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/cmd/tsc/main.go` | Blank import of `internal/effeck` | +2 / -0 |
 | `tsc/internal/checker/checker.go` | Apply call-type hooks where `checkCallExpression` returns and on the `getQuickTypeOfExpression` call shortcut; wrap `getReturnTypeFromBody`; hold extension state; run file check hooks at the end of `checkSourceFile`; filter what `getDiagnostics` returns; ask class base hooks in `getBaseConstructorTypeOfClass` and `resolveBaseTypesOfClass`; ask member receiver hooks before `checkPropertyAccessExpressionOrQualifiedName` looks up a member; ask call signatures hooks in `resolveCallExpression` when the callee has none; set `ResolveBeforeGlobals`; ask skipped function type hooks where `checkFunctionExpressionOrObjectLiteralMethod` skips a context-sensitive function | +23 / -5 |
 | `tsc/internal/checker/checker.go` | Ask the catch clause variable type hook in `getTypeForVariableLikeDeclaration`; a catch variable is always initialized | +4 / -1 |
+| `tsc/internal/checker/checker.go` | Ask missing property hooks in `checkPropertyAccessExpressionOrQualifiedName` when a property access finds no member (`datamethods.go`) | +3 |
 | `tsc/internal/checker/checker.go` | Ask using initializer hooks before `checkVariableLikeDeclaration` requires a `using` initializer to be a Disposable | +1 / -1 |
 | `tsc/internal/checker/checker.go` | Ask iterated element type hooks in `checkRightHandSideOfForOf` and, for `yield*`, in `getYieldedTypeOfYieldExpression`, `checkYieldExpression`, and `checkAndAggregateYieldOperandTypes` | +14 / -3 |
 | `tsc/internal/checker/checker.go` | Check what a function returns against `unwrapReturnTypeOf` at the four places that check it against `unwrapReturnType`; complete an annotated return type through annotated return type hooks in `getReturnTypeOfSignature`; ask infer type hooks in `checkInferType` | +9 / -7 |
@@ -377,6 +378,7 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/execute/tsc/extensions.go` (new) | `SetIdentity` | +56 |
 | `tsc/internal/checker/extensions_signatures.go` (new) | `SignatureWithReturnType` | +8 |
 | `tsc/internal/checker/extensions_loops.go` (new) | `RegisterIteratedElementTypeHook` | +29 |
+| `tsc/internal/checker/extensions_methods.go` (new) | `RegisterMissingPropertyHook`, `NewMethodProperty`, `SignatureWithThisFromFirstParameter`, `NewFunctionType`, `GetIntersectionType` | +77 |
 | `tsc/internal/core/effeck.go` (new) | `EffeckOptions` | +22 |
 | `tsc/internal/tsoptions/effeck.go` (new) | Parse, validate, and serialize `compilerOptions.effeck` | +149 |
 
@@ -1011,6 +1013,25 @@ const body = try(async (signal) => fetchBody(signal))  const body = yield* Effec
 - **EK4404.** `try({ try, catch })` is an error: the object would be the hatch's value.
 
 Cases: `effeck-hatches` (every form, an inert Effect, `setTimeout` in a hatch, `runPromise` back in), `effeck-hatches-shadow` (a parameter named `callback`), `ek1005-prelude-runner.fail`, `ek4404-try-options.fail`.
+
+## Method syntax on Effect data types (D152, D153)
+
+A value of one of Effect's data types takes its module's data-first functions as methods (`datamethods.go`). `x.name(args)` checks and compiles as `Module.name(x, args)`:
+
+```ts
+// main.effeck                                    // main.js
+const alerts = readings().filter(hot).take(2)      const alerts = Stream.take(Stream.filter(readings(), hot), 2)
+const label = maybe.map(format).getOrElse(none)    const label = Option.getOrElse(Option.map(maybe, format), none)
+const done = fiber.join()                          const done = yield* Fiber.join(fiber)
+```
+
+- **Lookup.** The checker asks missing property hooks only when a property access finds no member, so a type's own members always win: an Effect's `pipe`, an array's `map`. `moduleMethod` answers in `.effeck` files outside optional chains: `homeModule` finds the module whose declaration file, `effect/dist/<Module>.d.ts`, declares the receiver's apparent type, and every member of a union must come from the same module. Eighteen modules qualify (`methodModules`).
+- **Typing.** The method is a property whose type has one call signature for each overload of `Module.name` that takes the value first: its first parameter is named `self`, or ends in `OrOptions`, as in `Stream.flatten`'s conditional dual. `SignatureWithThisFromFirstParameter` moves that parameter to `this`, so TypeScript checks the receiver against it and infers type parameters from it, and turns a type predicate on it into `this is …`, so `if (maybe.isSome())` narrows `maybe`. `declaredSignature` (`expected.go`) gives such a candidate the same shifted parameters, so lambda forms (D44) read the right parameter.
+- **Lowering.** `plan.methods` records each call through a method; `visitModuleMethodCall` emits `Module.name(receiver, args)`, run with `yield*` where the call runs. `Module` is the prelude's import when the module's name means it at the call (`namesPreludeModule`, which records the prelude use); under a local declaration of that name, the lowering adds its own namespace import under a free name, such as `Option_1`.
+- **Language service.** Hover on a method's name says which function the call reaches (`moduleMethodQuickInfo`); completion after a dot adds the module's methods to the receiver's members (`moduleMethodCompletions`, through `RegisterMemberCompletionHook`).
+- **EK4501.** A method access that is not a call's callee is an error (`checkModuleMethods`): no function value exists to bind.
+
+Cases: `effeck-methods` (Stream, Option, Duration, Chunk, Fiber, and Ref chains; `pipe` and arrays keep their members; `isSome` narrowing; a shadowed module name), `ek4501-method-value.fail`, `methods-optional-chain.fail`. The LSP smoke checks a hover and a completion.
 
 ## Code that is not Effect
 

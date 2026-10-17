@@ -193,12 +193,18 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 		return nil
 	}
 	if isValueReference(location, name, meaning) && !isLoweredHatchCallee(location) {
-		if state.uses[file] == nil {
-			state.uses[file] = map[string]bool{}
-		}
-		state.uses[file][name] = true
+		recordPreludeUse(state, file, name)
 	}
 	return symbol
+}
+
+// recordPreludeUse records that file uses name, a prelude name or effect root
+// export, as a value, so the lowering imports it.
+func recordPreludeUse(state *preludeState, file *ast.SourceFile, name string) {
+	if state.uses[file] == nil {
+		state.uses[file] = map[string]bool{}
+	}
+	state.uses[file][name] = true
 }
 
 // preludeSymbol returns the export that name, a prelude name or the name of an

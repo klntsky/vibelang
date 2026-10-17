@@ -25,8 +25,9 @@ type plan struct {
 	scopePlan
 	handlerPlan
 	producerPlan
-	hatches     map[*ast.Node]hatchForm // sync and try hatches, lowered to Effect's functions (hatches.go)
-	failureTags map[*ast.Node][]string  // the tags of each typed catch clause's test (catches.go)
+	hatches     map[*ast.Node]hatchForm  // sync and try hatches, lowered to Effect's functions (hatches.go)
+	failureTags map[*ast.Node][]string   // the tags of each typed catch clause's test (catches.go)
+	methods     map[*ast.Node]methodCall // method calls on Effect data types (datamethods.go)
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -41,6 +42,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p.handlerPlan = newHandlerPlan()
 	p.hatches = map[*ast.Node]hatchForm{}
 	p.failureTags = map[*ast.Node][]string{}
+	p.methods = map[*ast.Node]methodCall{}
 	p.producerPlan = newProducerPlan()
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
@@ -77,6 +79,11 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			}
 			if isFailureTest(node) {
 				p.failureTags[node], _ = failureTags(c, c.GetTypeFromTypeNode(node.TypeArguments()[0]))
+			}
+			if ast.IsCallExpression(node) && ast.IsPropertyAccessExpression(node.Expression()) {
+				if call, ok := methodCallOf(c, node.Expression()); ok {
+					p.methods[node] = call
+				}
 			}
 			p.planPlain(a, node)
 			p.planServiceNode(c, node)

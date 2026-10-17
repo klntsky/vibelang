@@ -132,6 +132,8 @@ var (
 	EK4402 = message(4402, errorCategory, "{0} is a platform API, which Effeck code does not call directly.")
 	// EK4403: a clock or randomness read. {0} is the read, such as "Date.now()".
 	EK4403 = message(4403, errorCategory, "{0} reads the clock or randomness; use Clock, DateTime, or Random so tests control it.")
+	// EK4501: method syntax without a call. {0} is the method, {1} the module.
+	EK4501 = message(4501, errorCategory, "{0} is a method of {1}'s values only in a call: x.{0}(…) calls {1}.{0}(x, …).")
 	// EK4404: a hatch given Effect's options object. {0} is the hatch.
 	EK4404 = message(4404, errorCategory, "{0} takes the code and the error mapping as two arguments, not Effect's options object.")
 )
@@ -144,7 +146,7 @@ func init() {
 		EK1001, EK1002, EK1003, EK1004, EK1005,
 		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
-		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404,
+		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4501,
 	} {
 		registry[m.Code] = m
 	}

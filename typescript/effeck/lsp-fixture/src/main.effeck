@@ -23,3 +23,8 @@ function greeting() {
 export function eventually() {
   return Effect.timeout(greeting(), "1 second")
 }
+
+// Method syntax on an Effect data type (D152).
+export function labelled(id: number) {
+  return Option.some(id).map((n) => `#${n}`).getOrElse(() => "none")
+}

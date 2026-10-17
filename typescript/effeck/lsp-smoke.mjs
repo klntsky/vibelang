@@ -385,6 +385,16 @@ try {
     assert(labels.includes("log") && labels.includes("error"), `labels ${JSON.stringify(labels.slice(0, 20))}`)
   })
 
+  await check("hover: a method of an Effect data type names the function it calls", async () => {
+    const shown = await hover("src/main.effeck", "getOrElse(() =>")
+    assert(/Method syntax: calls `Option\.getOrElse\(/.test(shown), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("completion: an Effect data type lists its module's functions as methods", async () => {
+    const labels = await completionLabels("src/main.effeck", "map((n) =>", { offset: 0 })
+    for (const label of ["map", "getOrElse", "flatMap", "pipe"]) assert(labels.includes(label), `no ${label} in ${JSON.stringify(labels.slice(0, 30))}`)
+  })
+
   await check("completion: .effeck declarations in scope", async () => {
     const labels = await completionLabels("src/main.effeck", "name.toUpperCase", { offset: 0 })
     for (const label of ["lookup", "name", "NotFound", "findName"]) assert(labels.includes(label), `no ${label} in completions`)

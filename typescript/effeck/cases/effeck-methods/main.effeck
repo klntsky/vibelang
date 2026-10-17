@@ -1,0 +1,45 @@
+// Method syntax on Effect data types (D152): x.name(args) calls the module's
+// data-first function Module.name(x, args) when x's type, declared by that
+// module, has no member of that name. Own members win, so pipe stays a
+// method, and arrays keep their own map.
+function* readings() {
+  for (const celsius of [18, 21, 25, 19, 28, 30]) {
+    yield celsius
+  }
+}
+
+// A guard on self guards the receiver: value.isSome() narrows value.
+function describe(value: Option.Option<number>) {
+  if (value.isSome()) return `some ${value.value}`
+  return "none"
+}
+
+// A local Option shadows the prelude's, so the call reaches effect's Option
+// through an import of its own.
+function shadowed(maybe: Option.Option<number>) {
+  const Option = "local"
+  return maybe.map((n) => `${Option} ${n}`).getOrElse(() => Option)
+}
+
+function after() {
+  sleep("1 millis")
+  return "done"
+}
+
+// expect-result: {"alerts":["25 C","28 C"],"some":4,"none":0,"millis":1500,"size":3,"piped":3,"doubled":[2,4],"joined":"done","counter":2,"described":"some 5","shadowed":"local 7"}
+export function main() {
+  const alerts = readings().filter((v) => v >= 25).map((v) => `${v} C`).take(2)
+  const collected: string[] = []
+  for (const alert of alerts) collected.push(alert)
+  const some = Option.some(2).map((n) => n * 2).getOrElse(() => 0)
+  const none = Option.none<number>().map((n) => n * 2).getOrElse(() => 0)
+  const millis = Duration.seconds(1).sum(Duration.millis(500)).toMillis()
+  const size = Chunk.make(1, 2, 3).size()
+  const piped = Option.some(2).pipe(Option.map((n) => n + 1)).getOrElse(() => 0)
+  const doubled = [1, 2].map((n) => n * 2)
+  const fiber = fork(after())
+  const joined = fiber.join()
+  const counter = Ref.make(1)
+  counter.update((n) => n + 1)
+  return { alerts: collected, some, none, millis, size, piped, doubled, joined, counter: counter.get(), described: describe(Option.some(5)), shadowed: shadowed(Option.some(7)) }
+}

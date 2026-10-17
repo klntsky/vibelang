@@ -37,6 +37,11 @@ type lowering struct {
 
 	// scopes maps each Scope region's block to the name of its Scope (scopes_lower.go).
 	scopes map[*ast.Node]*ast.Node
+
+	// modules maps an effect module, such as effect/Stream, to the local name
+	// of its namespace import, for method calls (datamethods.go).
+	modules     map[string]*ast.IdentifierNode
+	moduleOrder []string
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
@@ -70,6 +75,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitImportOrExport(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.hatches[node] != (hatchForm{}):
 		return tx.visitHatchCall(node)
+	case node.Kind == ast.KindCallExpression && tx.plan.methods[node].module != "":
+		return tx.visitModuleMethodCall(node)
 	case tx.inEffect && tx.plan.scoped(node):
 		return tx.visitScoped(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
@@ -145,6 +152,9 @@ func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 	}
 	if tx.runtime != nil {
 		imports = append(imports, tx.namespaceImport(tx.runtime, "effeck-runtime"))
+	}
+	for _, module := range tx.moduleOrder {
+		imports = append(imports, tx.namespaceImport(tx.modules[module], module))
 	}
 	imports = append(imports, tx.namedImportDeclarations()...)
 	if len(imports) == 0 {

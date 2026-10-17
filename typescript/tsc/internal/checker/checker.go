@@ -11571,6 +11571,9 @@ func (c *Checker) checkPropertyAccessExpressionOrQualifiedName(node *ast.Node, l
 		}
 		apparentType = c.memberReceiverFromHooks(node, apparentType)
 		prop = c.getPropertyOfTypeEx(apparentType, right.Text(), isConstEnumObjectType(apparentType) /*skipObjectFunctionPropertyAugment*/, node.Kind == ast.KindQualifiedName /*includeTypeOnlyMembers*/)
+		if prop == nil && node.Kind == ast.KindPropertyAccessExpression {
+			prop = c.missingPropertyFromHooks(node, apparentType, right.Text())
+		}
 	}
 	c.markLinkedReferences(node, ReferenceHintProperty, prop, leftType)
 	var propType *Type
