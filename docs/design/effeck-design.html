@@ -2848,8 +2848,8 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D27</td><td><code>wire</code> is an intrinsic with a bounded contract (EK3201-EK3204)</td><td>Layer types carry outputs and inputs</td><td>4</td></tr>
 <tr><td>D28</td><td>A <code>catch</code> over several expected failures receives the first</td><td>K14a</td><td>3, 17</td></tr>
 <tr><td>D29</td><td>P1-P22 are the spec&#39;s rules, as revised below</td><td>The reviews&#39; verified findings</td><td>29</td></tr>
-<tr><td>D30</td><td>Installation: <code>effeck</code> (<code>effeck</code>) and <code>@effeck/runtime</code>; <code>effect</code> 4.0.5 exactly</td><td>Mirrors <code>typescript@7</code> packaging</td><td>28</td></tr>
-<tr><td>D31</td><td>Builds: <code>effeck --watch</code>; <code>@effeck/vite</code> for Vite</td><td>One checker for CLI, editor, and bundler</td><td>28</td></tr>
+<tr><td>D30</td><td>Installation: <code>effeck</code> (<code>effeck</code>) and <code>effeck-runtime</code>; <code>effect</code> 4.0.5 exactly</td><td>Mirrors <code>typescript@7</code> packaging</td><td>28</td></tr>
+<tr><td>D31</td><td>Builds: <code>effeck --watch</code>; <code>effeck-vite</code> for Vite</td><td>One checker for CLI, editor, and bundler</td><td>28</td></tr>
 <tr><td>D32</td><td>The editor: <code>effeck --lsp --stdio</code>; the <code>effeck.effeck</code> extension</td><td>The fork&#39;s binary already serves LSP</td><td>28</td></tr>
 <tr><td>D33</td><td>v0 editor features: hover, completions, quick fixes, four refactors</td><td>The diagnostics with mechanical fixes</td><td>28</td></tr>
 <tr><td>D34</td><td>Diagnostics: errors, except the policies EK2004 (a warning) and EK4403; <code>compilerOptions.effeck</code></td><td>Soundness errors cannot be lowered</td><td>28</td></tr>
@@ -2934,7 +2934,7 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D122</td><td>Every runner checks all services it does not supply; it.effect supplies Scope and its layer services</td><td>Diagnose missing services before execution</td><td>4, 28</td></tr>
 <tr><td>D123</td><td>Declaration prelude imports use free aliases when names are already bound</td><td>Avoid duplicate identifiers in declaration consumers</td><td>27</td></tr>
 <tr><td>D124</td><td>Setup relinks effeck launchers pointing into another checkout or at missing files</td><td>Keep the launcher usable after workspace changes</td><td>28</td></tr>
-<tr><td>D125</td><td><strong>Controversial.</strong> The language is Effeck: binary <code>effeck</code>, files <code>.effeck</code>, codes <code>EK</code>, npm <code>effeck</code> and <code>@effeck</code></td><td>The <code>@effectscript</code> npm scope belongs to another language</td><td>28</td></tr></tbody></table></div>
+<tr><td>D125</td><td><strong>Controversial.</strong> The language is Effeck: binary <code>effeck</code>, files <code>.effeck</code>, codes <code>EK</code>, unscoped npm packages <code>effeck</code>, <code>effeck-runtime</code>, <code>effeck-vite</code></td><td>The <code>@effectscript</code> npm scope belongs to another language</td><td>28</td></tr></tbody></table></div>
 <h4 id="rules-of-the-runtime-and-compiler"><a class="anchor" href="#rules-of-the-runtime-and-compiler">Rules of the runtime and compiler</a></h4>
 <p>Proposed in the first draft as P1-P22 and adopted by D29. A row marked <strong>revised</strong> changed because a review verified a counterexample.</p>
 <div class="table"><table><thead><tr><th>#</th><th>Rule</th><th>Evidence</th><th>Chapters</th></tr></thead><tbody><tr><td>P1</td><td>The machine in <a href="#20-the-machine">Chapter 20</a> is the specification. Every feature is a rule over it</td><td><a href="#18-why-a-continuation-runtime">Chapter 18</a></td><td>All</td></tr>
@@ -2971,7 +2971,7 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <h4 id="closed-calls-for-the-end-to-end-build"><a class="anchor" href="#closed-calls-for-the-end-to-end-build">Closed calls for the end-to-end build</a></h4>
 <div class="table"><table><thead><tr><th>Former item</th><th>Decision</th><th>Result</th></tr></thead><tbody><tr><td>O7</td><td>D57 (<strong>controversial</strong>)</td><td><code>infer Name</code> marks an inferred channel; all three return-annotation slots are required; D12 stands</td></tr>
 <tr><td>O8</td><td>D59</td><td>Upstream issues and proposals are drafted in <code>docs/upstream/</code>, not filed</td></tr>
-<tr><td>O9</td><td>D58, superseded by D125 (<strong>controversial</strong>)</td><td>Effeck: <code>effeck</code>, <code>.effeck</code>, <code>EK</code> codes, and <code>@effeck</code></td></tr>
+<tr><td>O9</td><td>D58, superseded by D125 (<strong>controversial</strong>)</td><td>Effeck: <code>effeck</code>, <code>.effeck</code>, <code>EK</code> codes, and unscoped npm packages</td></tr>
 <tr><td>Remote and repository layout</td><td>D60</td><td>The one repository is private at <code>github.com/roninjin10/effectscript</code>, with the compiler in <code>typescript/</code></td></tr></tbody></table></div>
 <p>No language or repository decision waits on the owner. D59&#39;s filing boundary remains: these drafts are ready to file, and none is filed without his go-ahead. The build lanes land locally; the orchestrator handles any push.</p>
 <h3 id="30-risks-and-experiments"><a class="anchor" href="#30-risks-and-experiments">30. Risks and experiments</a></h3>

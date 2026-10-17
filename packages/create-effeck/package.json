@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "Create an Effeck application: bun create effeck my-app",
   "keywords": ["effeck", "effect", "typescript", "create", "template"],
-  "homepage": "https://effeck.pages.dev",
+  "homepage": "https://effeck.willcory10.workers.dev",
   "license": "MIT",
   "type": "module",
   "bin": { "create-effeck": "bin/create-effeck.mjs" },
