@@ -62,6 +62,11 @@ var preludeModules = map[string]string{
 	// and for concurrent as calls of these; detach and forkIn are fork's variants.
 	"$await":         runtimeModule,
 	"$select":        runtimeModule,
+	// The await operations (D196): await.all, await.allSettled, await.race, await.any.
+	"$awaitAll":        runtimeModule,
+	"$awaitAllSettled": runtimeModule,
+	"$awaitRace":       runtimeModule,
+	"$awaitAny":        runtimeModule,
 	"$forConcurrent": runtimeModule,
 	"detach":         runtimeModule,
 	"forkIn":         runtimeModule,

@@ -120,6 +120,57 @@ func (p *Parser) parseEffeckAwait() *ast.Node {
 	return call
 }
 
+// awaitOperations maps each await operation (TC39 await operations, stage 1,
+// and Await Dictionary, stage 3) to the runtime helper the parser calls
+// (D196). Each behaves as the Promise method of the same name.
+var awaitOperations = map[string]string{
+	"all":        "$awaitAll",
+	"allSettled": "$awaitAllSettled",
+	"race":       "$awaitRace",
+	"any":        "$awaitAny",
+}
+
+// isEffeckAwaitOperation reports whether the current token, await, starts an
+// await operation: in an .effeck file, outside an async function, await
+// followed on the same line by a dot, one of the operations, and an operand.
+// await. is a syntax error in a module, so the form takes no code that
+// parses today.
+func (p *Parser) isEffeckAwaitOperation() bool {
+	return p.token == ast.KindAwaitKeyword && p.isEffeckFile() && !p.inAwaitContext() && p.lookAhead((*Parser).nextTokensStartAwaitOperation)
+}
+
+func (p *Parser) nextTokensStartAwaitOperation() bool {
+	p.nextToken()
+	if p.token != ast.KindDotToken || p.hasPrecedingLineBreak() {
+		return false
+	}
+	p.nextToken()
+	if !tokenIsIdentifierOrKeyword(p.token) || p.hasPrecedingLineBreak() {
+		return false
+	}
+	if _, ok := awaitOperations[p.scanner.TokenValue()]; !ok {
+		return false
+	}
+	return p.nextTokenStartsAwaitOperand()
+}
+
+// parseEffeckAwaitOperation parses `await.all operand` as $awaitAll(operand),
+// and likewise allSettled, race, and any (D196). The operand binds as await's
+// does. The helper's callee stands on the await keyword alone: a synthesized
+// node spans one token, and the dot and the operation's name belong to no
+// child.
+func (p *Parser) parseEffeckAwaitOperation() *ast.Node {
+	pos := p.nodePos()
+	anchor := p.tokenRange()
+	p.nextToken() // await
+	p.nextToken() // .
+	helper := awaitOperations[p.scanner.TokenValue()]
+	p.nextToken() // the operation
+	operand := p.parseSimpleUnaryExpression()
+	callee := p.effeckSynthesized(p.factory.NewIdentifier(helper), anchor)
+	return p.finishNode(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(operand.Loc, []*ast.Node{operand}), ast.NodeFlagsNone), pos)
+}
+
 // isStartOfEffeckSelect reports whether the current token starts a select
 // statement: in an .effeck file, the identifier select followed by { on the
 // same line, which TypeScript cannot parse.

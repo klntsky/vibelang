@@ -7,11 +7,13 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
-// The fiber forms (D166-D170) parse into calls (parser/effeck_fibers.go):
-// `fork x` is fork(x), `await x` is $await(x), select is a labeled block
-// around $select(...), and `for concurrent` is $forConcurrent(...). The
-// checker, the analyzer, and the lowering read them as those calls; this file
-// reports what each form cannot mean and tells a hover what it does.
+// The fiber forms (D166-D170, D196-D197) parse into calls
+// (parser/effeck_fibers.go): `fork x` is fork(x), `await x` is $await(x),
+// `await.all x` is $awaitAll(x) (and likewise allSettled, race, and any), and
+// `for concurrent` is $forConcurrent(...). The checker, the analyzer, and the
+// lowering read them as those calls; this file reports what each form cannot
+// mean and tells a hover what it does. select still parses, as a labeled
+// block around $select(...), so that EK4607 can name its replacement.
 
 var (
 	// EK4601: await before a call that already runs. {0} is the call.
@@ -26,10 +28,14 @@ var (
 	EK4605 = message(4605, errorCategory, "break cannot leave a for concurrent loop: each item runs in its own fiber.")
 	// EK4606: a return in the body of a for concurrent loop.
 	EK4606 = message(4606, errorCategory, "return cannot leave a for concurrent loop: each item runs in its own fiber.")
+	// EK4607: a select statement, replaced by await.race (D197).
+	EK4607 = message(4607, errorCategory, "select was replaced by await.race.")
+	// EK4608: await.race or await.any on an object. {0} is the operation.
+	EK4608 = message(4608, errorCategory, "{0} takes an array of programs, fibers, or deferreds: a race has no keys.")
 )
 
 func init() {
-	for _, m := range []*Message{EK4601, EK4602, EK4603, EK4604, EK4605, EK4606} {
+	for _, m := range []*Message{EK4601, EK4602, EK4603, EK4604, EK4605, EK4606, EK4607, EK4608} {
 		registry[m.Code] = m
 	}
 	fileChecks = append(fileChecks, checkFiberForms)
@@ -37,8 +43,10 @@ func init() {
 }
 
 // fiberHelper returns the runtime helper that call, a call the parser wrote
-// for a fiber form (its callee is synthesized), calls: "$await", "$select", or "$forConcurrent". It
-// returns "" for any other node.
+// for a fiber form (its callee is synthesized), calls: "$await", an await
+// operation's helper ("$awaitAll", "$awaitAllSettled", "$awaitRace",
+// "$awaitAny"), "$select", or "$forConcurrent". It returns "" for any other
+// node.
 func fiberHelper(call *ast.Node) string {
 	if call == nil || !ast.IsCallExpression(call) {
 		return ""
@@ -48,7 +56,7 @@ func fiberHelper(call *ast.Node) string {
 		return ""
 	}
 	switch name := callee.Text(); name {
-	case "$await", "$select", "$forConcurrent":
+	case "$await", "$awaitAll", "$awaitAllSettled", "$awaitRace", "$awaitAny", "$select", "$forConcurrent":
 		return name
 	}
 	return ""
@@ -57,9 +65,14 @@ func fiberHelper(call *ast.Node) string {
 func checkFiberForms(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		switch fiberHelper(node) {
+		switch helper := fiberHelper(node); helper {
 		case "$await":
 			checkAwait(c, file, node)
+		case "$awaitAll", "$awaitAllSettled", "$awaitRace", "$awaitAny":
+			checkAwaitOperation(c, file, node, helper)
+		case "$select":
+			keyword := scanner.GetRangeOfTokenAtPosition(file, node.Pos())
+			note(reportAt(c, file, keyword, EK4607), "Write await.race [a(), b()], one element per case; give a case statements with do { ... }. For a default clause, poll instead: Queue.poll(queue) and an if.")
 		case "$forConcurrent":
 			if args := node.Arguments(); len(args) == 3 {
 				checkConcurrentBody(c, args[2].Body())
@@ -102,6 +115,34 @@ func checkAwait(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 		if isEffectType(c, t) {
 			note(d, "A program runs when you call it; fork it to run it concurrently, then await the fiber.")
 		}
+		cover(c, call)
+	}
+}
+
+// awaitOperationNames maps an await operation's helper to the operation as
+// written.
+var awaitOperationNames = map[string]string{
+	"$awaitAll":        "await.all",
+	"$awaitAllSettled": "await.allSettled",
+	"$awaitRace":       "await.race",
+	"$awaitAny":        "await.any",
+}
+
+// checkAwaitOperation reports an await operation in a hatch body, where await
+// is JavaScript's, and a race over an object, which has no order.
+func checkAwaitOperation(c *checker.Checker, file *ast.SourceFile, call *ast.Node, helper string) {
+	keyword := scanner.GetRangeOfTokenAtPosition(file, call.Pos())
+	if inHatch(call) {
+		note(reportAt(c, file, keyword, EK4604), "Make the function async, or move the await out of the hatch.")
+		cover(c, call)
+		return
+	}
+	args := call.Arguments()
+	if len(args) != 1 {
+		return
+	}
+	if (helper == "$awaitRace" || helper == "$awaitAny") && ast.SkipParentheses(args[0]).Kind == ast.KindObjectLiteralExpression {
+		note(reportAt(c, file, keyword, EK4608, awaitOperationNames[helper]), "Write the elements in an array: "+awaitOperationNames[helper]+" [a(), b()].")
 		cover(c, call)
 	}
 }
@@ -193,10 +234,33 @@ func fiberFormQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
 			}
 		}
 		return "await", paragraph
+	case "$awaitAll":
+		return "await.all", awaitOperationHover(c, call, "Starts each program in its own fiber and waits for all of them, keeping the shape (Effect.all, unbounded). A failure interrupts the rest.")
+	case "$awaitAllSettled":
+		return "await.allSettled", awaitOperationHover(c, call, "Starts each program in its own fiber and waits for all of them, returning each outcome as a Result (Effect.all with mode \"result\"). It never fails.")
+	case "$awaitRace":
+		return "await.race", awaitOperationHover(c, call, "Starts each program in its own fiber; the first to finish wins, success or failure, and the others are interrupted (Effect.raceFirst).")
+	case "$awaitAny":
+		return "await.any", awaitOperationHover(c, call, "Starts each program in its own fiber; the first to succeed wins and the others are interrupted. It fails only if every one fails (Effect.raceAll).")
 	case "$select":
-		return "select", "Starts each case in its own fiber; the first to finish wins, its statements run, and the other cases are interrupted. A failure propagates."
+		return "select", "Replaced by await.race (EK4607)."
 	case "$forConcurrent":
 		return "for concurrent", "Runs the body for each item in its own fiber and joins them all before the loop ends; a failure interrupts the rest."
 	}
 	return "", ""
+}
+
+// awaitOperationHover appends what call returns and can fail with to what.
+func awaitOperationHover(c *checker.Checker, call *ast.Node, what string) string {
+	paragraph := what
+	if signature := c.GetResolvedSignature(call); signature != nil {
+		returned := c.GetReturnTypeOfSignature(signature)
+		if value := channelType(c, returned, "_A"); value != nil {
+			paragraph += " Returns `" + c.TypeToStringEx(value, call, hoverTypeFlags, nil) + "`."
+		}
+		if errors := channelType(c, returned, "_E"); errors != nil && errors.Flags()&checker.TypeFlagsNever == 0 {
+			paragraph += " Its failures propagate: `" + c.TypeToStringEx(errors, call, hoverTypeFlags, nil) + "`."
+		}
+	}
+	return paragraph
 }

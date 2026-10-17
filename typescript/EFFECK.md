@@ -1074,7 +1074,8 @@ need no new node kinds:
 | `fork getUser(id)` | `fork(getUser(id))`: the prelude's fork, owned by the block (D95) |
 | `fork { ... }` | `fork(() => { ... })` |
 | `await x` (outside `async`) | `$await(x)`, a call that runs: its value and its failures |
-| `select { case const v = a(): S ... default: D }` | `$selectN: { const $selected = $select(hasDefault, () => a(), ...); if ($selected.index === 0) { const v = $selected.value; S } else ... }` |
+| `await.all x`, `await.allSettled x`, `await.race x`, `await.any x` | `$awaitAll(x)`, `$awaitAllSettled(x)`, `$awaitRace(x)`, `$awaitAny(x)` (D196); the callee stands on `await` alone |
+| `select { case const v = a(): S ... default: D }` | `$selectN: { const $selected = $select(hasDefault, () => a(), ...); ... }`, kept only so that EK4607 names its replacement (D197) |
 | `for concurrent(n) (const x of xs) S` | `$forConcurrent(xs, n, (x) => { S })` |
 
 The synthesized parts are anchored on the keyword they stand for, flagged
@@ -1082,11 +1083,16 @@ The synthesized parts are anchored on the keyword they stand for, flagged
 by `NodeFlagsEffeck`, which marks provide blocks and schema structs. In a select, an
 unlabeled break that would leave it gets the block's label; in a `for
 concurrent` body, an unlabeled continue becomes a synthesized return and an
-escaping break is flagged for EK4605. `effeck/fibers.go` reports EK4601-EK4606
-and gives `await`, `select`, and `for concurrent` hover text; the runtime's
-`fibers.ts` implements `$await`, `$select` (forked with `startImmediately` so
-a case ready at start wins in written order), `$forConcurrent`, `detach`, and
-`forkIn`. A numeric literal synthesized at another token prints its own text
+escaping break is flagged for EK4605. `effeck/fibers.go` reports EK4601-EK4608
+(EK4607 on a select, EK4608 on a race over an object) and gives `await`, the
+await operations, and `for concurrent` hover text; the runtime's `fibers.ts`
+implements `$await`, the await operations (`$awaitRace` races through
+`$select`, forked with `startImmediately` so an element ready at start wins in
+written order; `$awaitAll` and `$awaitAllSettled` put an object's keys back in
+the order written), `$forConcurrent`, `detach`, and `forkIn`. An await
+operation's elements are by-name programs because each helper's parameter
+expects Effects (the union `AwaitElement` includes `Fiber` and `Deferred`, so
+those pass as values). A numeric literal synthesized at another token prints its own text
 (`scanner.GetSourceTextOfNodeFromSourceFile`), which the select's indices need.
 
 ## Primitives with their own syntax (D176-D180)

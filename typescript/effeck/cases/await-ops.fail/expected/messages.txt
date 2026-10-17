@@ -1,0 +1,3 @@
+select was replaced by await.race.
+await.race takes an array of programs, fibers, or deferreds: a race has no keys.
+await in a hatch body is JavaScript's await, which needs an async function.

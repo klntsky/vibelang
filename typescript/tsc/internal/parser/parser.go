@@ -5233,6 +5233,9 @@ func (p *Parser) parseSimpleUnaryExpression() *ast.Expression {
 		// //      < type > UnaryExpression
 		return p.parseTypeAssertion()
 	case ast.KindAwaitKeyword:
+		if p.isEffeckAwaitOperation() {
+			return p.parseEffeckAwaitOperation() // await.all, await.race, ... (effeck_fibers.go)
+		}
 		if p.isEffeckAwait() {
 			return p.parseEffeckAwait() // await outside async, in an .effeck file (effeck_fibers.go)
 		}

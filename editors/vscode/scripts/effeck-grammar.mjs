@@ -38,16 +38,18 @@ export function addEffeckSyntax(grammar) {
     match: `\\b(handle)\\s+(?=${name}\\s*\\.\\s*${name}\\s*\\()`,
     captures: { 1: { name: "keyword.control.trycatch.ts" } }
   }
-  // The fiber forms (D166-D169): fork operand, select { case ... }, for concurrent (...).
+  // The fiber forms (D166, D169, D196): fork operand, await.all [...] and the other await operations, for concurrent (...).
   repository["effeck-fork"] = {
     match: "(?<![_$[:alnum:]])(fork)\\s+(?=[_$[:alpha:]{]|this\\b|new\\b|await\\b)",
     captures: { 1: { name: "keyword.control.flow.ts" } }
   }
-  repository["effeck-select"] = {
-    patterns: [
-      { match: "(?<![_$[:alnum:]])(select)\\s*(?=\\{)", captures: { 1: { name: "keyword.control.switch.ts" } } },
-      { match: "(?<![_$[:alnum:].])(case|default)(?![_$[:alnum:]])", name: "keyword.control.switch.ts" }
-    ]
+  repository["effeck-await-operation"] = {
+    match: "(?<![_$[:alnum:].])(await)\\s*(\\.)\\s*(all|allSettled|race|any)(?![_$[:alnum:]])",
+    captures: {
+      1: { name: "keyword.control.flow.ts" },
+      2: { name: "punctuation.accessor.ts" },
+      3: { name: "keyword.control.flow.ts" }
+    }
   }
   // provide Layer { ... } (D130, D172): the keyword at the start of a statement.
   repository["effeck-provide"] = {
@@ -58,11 +60,12 @@ export function addEffeckSyntax(grammar) {
     match: "(?<![_$[:alnum:]])(for)\\s+(concurrent)(?![_$[:alnum:]])",
     captures: { 1: { name: "keyword.control.loop.ts" }, 2: { name: "keyword.control.loop.ts" } }
   }
-  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-select", "#effeck-provide", "#effeck-for-concurrent", "#effeck-fork"]
+  const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-provide", "#effeck-for-concurrent", "#effeck-fork"]
   const statements = repository.statements.patterns.filter((pattern) => !effeckIncludes.includes(pattern.include))
   repository.statements.patterns = [...effeckIncludes.map((include) => ({ include })), ...statements]
-  const expressions = repository.expression.patterns.filter((pattern) => pattern.include !== "#effeck-fork")
-  repository.expression.patterns = [{ include: "#effeck-fork" }, ...expressions]
+  const effeckExpressions = ["#effeck-await-operation", "#effeck-fork"]
+  const expressions = repository.expression.patterns.filter((pattern) => !effeckExpressions.includes(pattern.include))
+  repository.expression.patterns = [...effeckExpressions.map((include) => ({ include })), ...expressions]
   // `!` separates the slots of an Effect type: Result!Error!Dependencies.
   const effectSlot = { name: "keyword.operator.type.effect.ts", match: "!" }
   repository.type.patterns = [effectSlot, ...repository.type.patterns.filter((pattern) => pattern.name !== effectSlot.name)]

@@ -44,9 +44,6 @@
 					"include": "#effeck-handle-clause"
 				},
 				{
-					"include": "#effeck-select"
-				},
-				{
 					"include": "#effeck-provide"
 				},
 				{
@@ -231,6 +228,9 @@
 		},
 		"expression": {
 			"patterns": [
+				{
+					"include": "#effeck-await-operation"
+				},
 				{
 					"include": "#effeck-fork"
 				},
@@ -5923,21 +5923,19 @@
 				}
 			}
 		},
-		"effeck-select": {
-			"patterns": [
-				{
-					"match": "(?<![_$[:alnum:]])(select)\\s*(?=\\{)",
-					"captures": {
-						"1": {
-							"name": "keyword.control.switch.ts"
-						}
-					}
+		"effeck-await-operation": {
+			"match": "(?<![_$[:alnum:].])(await)\\s*(\\.)\\s*(all|allSettled|race|any)(?![_$[:alnum:]])",
+			"captures": {
+				"1": {
+					"name": "keyword.control.flow.ts"
 				},
-				{
-					"match": "(?<![_$[:alnum:].])(case|default)(?![_$[:alnum:]])",
-					"name": "keyword.control.switch.ts"
+				"2": {
+					"name": "punctuation.accessor.ts"
+				},
+				"3": {
+					"name": "keyword.control.flow.ts"
 				}
-			]
+			}
 		},
 		"effeck-provide": {
 			"match": "^\\s*(provide)(?=\\s+[_$[:alpha:]\\[])",
