@@ -25,6 +25,7 @@ type plan struct {
 	scopePlan
 	handlerPlan
 	producerPlan
+	hatches map[*ast.Node]hatchForm // sync and try hatches, lowered to Effect's functions (hatches.go)
 }
 
 func (p *plan) isEffect(fn *ast.Node) bool             { return p.effects[fn] }
@@ -37,6 +38,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
 	p.handlerPlan = newHandlerPlan()
+	p.hatches = map[*ast.Node]hatchForm{}
 	p.producerPlan = newProducerPlan()
 	r, ok := resolver.(*checker.EmitResolver)
 	if !ok {
@@ -67,6 +69,9 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			}
 			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertPrograms || conversion == convertByName {
 				p.converts[node] = conversion
+			}
+			if form, ok := hatchFormOf(c, node); ok {
+				p.hatches[node] = form
 			}
 			p.planPlain(a, node)
 			p.planServiceNode(c, node)
@@ -197,6 +202,9 @@ func (a *analyzer) performs(call *ast.Node) bool {
 
 // runs reports whether call runs an Effect, which the lowering spells yield*.
 func (a *analyzer) runs(call *ast.Node) bool {
+	if inHatch(call) {
+		return false // a hatch's arguments are TypeScript (hatches.go)
+	}
 	sig := a.checker.GetResolvedSignature(call)
 	if sig == nil {
 		return false

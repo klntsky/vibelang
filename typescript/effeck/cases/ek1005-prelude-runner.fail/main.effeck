@@ -1,0 +1,13 @@
+// expect: EK1005
+// The prelude's runPromise leads back in from TypeScript, such as a hatch's
+// body (D148). Called in code a fiber runs, it starts a second root: EK1005.
+function later() {
+  Effect.sleep("1 millis")
+  return "later"
+}
+
+export function main() {
+  const fine = sync(async () => runPromise(later()))
+  runPromise(later())
+  return fine
+}

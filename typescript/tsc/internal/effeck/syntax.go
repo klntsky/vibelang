@@ -18,6 +18,9 @@ func init() {
 func checkSyntax(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
+		if hatchOf(node) != "" {
+			return false // async and await keep their JavaScript meaning in a hatch (D148)
+		}
 		switch node.Kind {
 		case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
 			if modifiers := node.Modifiers(); modifiers != nil {

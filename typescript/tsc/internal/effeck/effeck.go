@@ -53,9 +53,10 @@ func isEffeckFile(file *ast.SourceFile) bool {
 
 // isLowerable reports whether node is a function that the lowering can turn
 // into an Effect: a function declaration, function expression, arrow
-// function, or method with a body, declared in an .effeck file, that is not
-// async, and is not a generator unless it is a producer (producers.go), whose
-// body is an Effect body too. Accessors and constructors stay as they are.
+// function, or method with a body, declared in an .effeck file outside a
+// boundary hatch's arguments, that is not async, and is not a generator
+// unless it is a producer (producers.go), whose body is an Effect body too.
+// Accessors and constructors stay as they are.
 func isLowerable(node *ast.Node) bool {
 	switch node.Kind {
 	case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
@@ -66,7 +67,7 @@ func isLowerable(node *ast.Node) bool {
 	if node.Body() == nil || flags&ast.FunctionFlagsAsync != 0 || flags&ast.FunctionFlagsGenerator != 0 && !isProducer(node) {
 		return false
 	}
-	return isEffeckFile(ast.GetSourceFileOfNode(node))
+	return isEffeckFile(ast.GetSourceFileOfNode(node)) && !inHatch(node) // a hatch's body is TypeScript (hatches.go)
 }
 
 // isFunctionBoundary reports whether node starts code that runs in a different

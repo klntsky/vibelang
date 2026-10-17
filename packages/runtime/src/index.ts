@@ -8,6 +8,7 @@ export type { ReferenceKey, ServiceKey } from "./services.js"
 export * from "./handlers.js"
 export * from "./producers.js"
 export * from "./boundaries.js"
+export * from "./hatches.js"
 export * from "./prelude.js"
 
 // TypeScript adapters for asynchronous sources (D43).

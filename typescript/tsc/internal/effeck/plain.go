@@ -232,8 +232,8 @@ func (a *analyzer) declares(symbol *ast.Symbol, fn *ast.Node) bool {
 // call runs inline wherever it is, at a module's top level too: it computes a
 // value and runs no program, as Chapter 13's table says.
 func (a *analyzer) directCallee(call *ast.Node) *directReference {
-	if !isEffeckFile(ast.GetSourceFileOfNode(call)) {
-		return nil
+	if !isEffeckFile(ast.GetSourceFileOfNode(call)) || inHatch(call) {
+		return nil // in a hatch, an .effeck function's call is an inert Effect value
 	}
 	fn := esFunctionOf(a.checker, call.Expression())
 	if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {

@@ -1108,6 +1108,9 @@ func (p *Parser) parseStatement() *ast.Statement {
 	case ast.KindThrowKeyword:
 		return p.parseThrowStatement()
 	case ast.KindTryKeyword, ast.KindCatchKeyword, ast.KindFinallyKeyword:
+		if p.isStartOfTryCall() {
+			break // try(…), an Effeck boundary hatch (effeck_hatches.go)
+		}
 		return p.parseTryStatement()
 	case ast.KindDebuggerKeyword:
 		return p.parseDebuggerStatement()
@@ -5708,6 +5711,10 @@ func (p *Parser) parsePrimaryExpression() *ast.Expression {
 		return p.parseTemplateExpression(false /*isTaggedTemplate*/)
 	case ast.KindPrivateIdentifier:
 		return p.parsePrivateIdentifier()
+	case ast.KindTryKeyword:
+		if p.isStartOfTryCall() {
+			return p.parseIdentifierName() // the callee of try(…) (effeck_hatches.go)
+		}
 	}
 	return p.parseIdentifierWithDiagnostic(diagnostics.Expression_expected, nil)
 }
@@ -6296,6 +6303,8 @@ func (p *Parser) isStartOfLeftHandSideExpression() bool {
 		return true
 	case ast.KindImportKeyword:
 		return p.isNextTokenOpenParenOrLessThanOrDot()
+	case ast.KindTryKeyword:
+		return p.isStartOfTryCall()
 	}
 	return p.isIdentifier()
 }

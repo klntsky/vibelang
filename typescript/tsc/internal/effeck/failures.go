@@ -28,6 +28,8 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 		case isFunctionBoundary(n):
 		case n != node && a.isByName(n):
 			// Passed as a program (D147): it runs where the callee runs it.
+		case isHatchArgument(n):
+			// TypeScript inside a boundary hatch (D148): nothing there runs.
 		case n.Kind == ast.KindTryStatement:
 			info.add(a.tryFlow(n))
 		case n.Kind == ast.KindThrowStatement:
@@ -185,7 +187,7 @@ func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 			if c.GetUnionType(analyzerFor(c).tryBlockFlow(try.TryBlock).errors).Flags()&checker.TypeFlagsNever != 0 {
 				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, try.CatchClause.Pos()), EK2004)
 				if d != nil {
-					note(d, "Use a form that can fail, such as Option.getOrElse or Schema.decodeUnknownEffect, or bound the call with Effect.try.")
+					note(d, "Use a form that can fail, such as Option.getOrElse or Schema.decodeUnknownEffect, or bound the call with try.")
 					cover(c, try.CatchClause)
 				}
 			}

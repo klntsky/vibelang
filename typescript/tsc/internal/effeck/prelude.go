@@ -45,6 +45,14 @@ var preludeModules = map[string]string{
 	"resume":      runtimeModule,
 	"resumeWith":  runtimeModule,
 	"abandon":     runtimeModule,
+	// The boundary hatches and the runners that lead back in (D148, hatches.go).
+	"sync":        runtimeModule,
+	"try":         runtimeModule,
+	"callback":    runtimeModule,
+	"runPromise":  runtimeModule,
+	"runFork":     runtimeModule,
+	"runSync":     runtimeModule,
+	"runCallback": runtimeModule,
 }
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the
@@ -182,7 +190,7 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 	if symbol == nil || !hasMeaning(c, symbol, meaning) {
 		return nil
 	}
-	if isValueReference(location, name, meaning) {
+	if isValueReference(location, name, meaning) && !isLoweredHatchCallee(location) {
 		if state.uses[file] == nil {
 			state.uses[file] = map[string]bool{}
 		}
@@ -209,6 +217,14 @@ func preludeSymbol(c *checker.Checker, state *preludeState, file *ast.SourceFile
 		return c.TryGetMemberInModuleExports(name, module)
 	}
 	return nil
+}
+
+// isLoweredHatchCallee reports whether location names the callee of a sync or
+// try hatch, which the lowering replaces with Effect's function, so the
+// emitted JavaScript needs no import of it. try cannot be imported at all.
+func isLoweredHatchCallee(location *ast.Node) bool {
+	parent := location.Parent
+	return parent != nil && ast.IsCallExpression(parent) && parent.Expression() == location && (location.Text() == "sync" || location.Text() == "try")
 }
 
 // isBuiltinGlobal reports whether name is a global value that JavaScript

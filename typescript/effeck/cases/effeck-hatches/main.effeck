@@ -1,0 +1,66 @@
+// Boundary hatches (D148): sync, try, and callback run plain TypeScript. In
+// a hatch's arguments calls do not run, throw and async keep their JavaScript
+// meaning, platform APIs such as setTimeout are allowed, and runPromise leads
+// back in to Effeck.
+error BadJson { error: unknown }
+
+function parse(text: string) {
+  return try(() => JSON.parse(text), (error) => new BadJson({ error }))
+}
+
+function lengthOf(text: string) {
+  return try(() => {
+    if (text === "") throw new Error("empty")
+    return text.length
+  })
+}
+
+function later() {
+  Effect.sleep("1 millis")
+  return "later"
+}
+
+function tick() {
+  return callback<number>((resume) => {
+    const timer = setTimeout(() => resume(7), 1)
+    return () => clearTimeout(timer)
+  })
+}
+
+function refuse() {
+  return callback<number, BadJson>((resume) => resume.fail(new BadJson({ error: "refused" })))
+}
+
+// expect-result: {"id":"id-42","doubled":[2,4,6],"awaited":"awaited","fetched":"fetched","parsed":{"a":1},"bad":"BadJson","unknown":"UnknownError","ticked":7,"refused":"BadJson","inert":"object","viaRunner":"later"}
+export function main() {
+  const id = sync("id-" + String(40 + 2))
+  const doubled = sync(() => [1, 2, 3].map((n) => n * 2))
+  const awaited = sync(async () => {
+    await Promise.resolve()
+    return "awaited"
+  })
+  const fetched = try(async (signal) => (signal.aborted ? "aborted" : "fetched"))
+  const parsed = parse('{"a":1}')
+  let bad = "none"
+  try {
+    parse("{")
+  } catch (error) {
+    bad = error._tag
+  }
+  let unknown = "none"
+  try {
+    lengthOf("")
+  } catch (error) {
+    unknown = error._tag
+  }
+  const ticked = tick()
+  let refused = "none"
+  try {
+    refuse()
+  } catch (error) {
+    refused = error._tag
+  }
+  const inert = sync(() => typeof later())
+  const viaRunner = sync(async () => runPromise(later()))
+  return { id, doubled, awaited, fetched, parsed, bad, unknown, ticked, refused, inert, viaRunner }
+}

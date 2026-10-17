@@ -392,6 +392,9 @@ func isBoundaryCallback(c *checker.Checker, fn *ast.Node) bool {
 // may be called there (D38), and a plain call there is an ordinary JavaScript
 // call, as at the top level (D51).
 func outsideFibers(c *checker.Checker, a *analyzer, node *ast.Node) bool {
+	if inHatch(node) {
+		return true // a hatch's body is the way back in to TypeScript (D148)
+	}
 	fn := enclosingFunction(node)
 	if fn == nil {
 		return true
@@ -446,7 +449,8 @@ func checkTrust(c *checker.Checker, file *ast.SourceFile) {
 		if ast.IsCallExpression(node) && !boundary && !outsideFibers(c, a, node) {
 			checkCall(c, a, file, node)
 		}
-		return node.ForEachChild(func(child *ast.Node) bool { return visit(child, boundary) })
+		inside := boundary || hatchOf(node) != "" // a hatch's arguments are a boundary (D148)
+		return node.ForEachChild(func(child *ast.Node) bool { return visit(child, inside) })
 	}
 	file.AsNode().ForEachChild(func(child *ast.Node) bool { return visit(child, false) })
 }
@@ -461,7 +465,7 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 	switch {
 	case (t.kind == trustForeign || t.kind == trustTagged) && t.promise:
 		d := report(c, callee, promiseCall, name)
-		note(d, "Wait for it with Effect.tryPromise({ try: (signal) => {0}, catch: (cause) => … }).", nodeText(file, call))
+		note(d, "Wait for it with try({0}), or name its failure: try({0}, (error) => …).", nodeText(file, call))
 	case t.kind == trustForeign:
 		d := report(c, callee, EK4401, name)
 		// Another package's declaration cannot carry the tag; a re-export can (D23).
@@ -471,12 +475,12 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 		} else {
 			trusted = "tag its declaration in " + path.Base(string(declared.FileName())) + " with /** @effeck trusted */"
 		}
-		// A callback of Effect.try is plain code, so the operands that run an
+		// A hatch's argument is TypeScript (D148), so the operands that run an
 		// Effect must run before it.
 		if operand := performingOperand(c, a, call); operand != nil {
-			note(d, "Bind {0} to a const first, then call it through Effect.try, whose callback cannot run an Effect; or {1}.", nodeText(file, operand), trusted)
+			note(d, "Bind {0} to a const first, then call it through try, whose argument cannot run an Effect; or {1}.", nodeText(file, operand), trusted)
 		} else {
-			note(d, "Call it through Effect.try(() => {0}), or {1}.", nodeText(file, call), trusted)
+			note(d, "Call it through try({0}), or {1}.", nodeText(file, call), trusted)
 		}
 	case t.kind == trustTagged && t.unreachable != "":
 		d := report(c, callee, unreachableThrows, name, t.unreachable)

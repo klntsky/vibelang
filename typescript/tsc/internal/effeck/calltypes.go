@@ -26,6 +26,9 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 // parameter list, or the module's top level.
 func inLowerableBody(node *ast.Node) bool {
 	for n := node; n.Parent != nil; n = n.Parent {
+		if isHatchArgument(n) {
+			return false // TypeScript, inside a boundary hatch (hatches.go)
+		}
 		if fn := n.Parent; isFunctionBoundary(fn) {
 			return n == fn.Body() && isLowerable(fn)
 		}

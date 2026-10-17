@@ -346,6 +346,7 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/module/resolver.go` | Try `.effeck`, then `.d.ts`, for `./welcome.effeck`, and `.effeck` after `.tsx` for `./welcome.js` | +19 |
 | `tsc/internal/module/util.go` | An `.effeck` resolution is always allowed | +2 / -1 |
 | `tsc/internal/module/util.go` | An `.effeck` file's output extension is `.js`, so auto-import can name it | +1 / -1 |
+| `tsc/internal/parser/parser.go` | `try(` starts an expression in an `.effeck` file: the statement switch, `isStartOfLeftHandSideExpression`, `parsePrimaryExpression` (`effeck_hatches.go`) | +9 / -1 |
 | `tsc/internal/tsoptions/parsedcommandline.go` | `.effeck` in a project's wildcard include globs, so a new `.effeck` file joins the project | +4 / -4 |
 | `tsc/internal/lsp/server.go` | `.effeck` in the `willRenameFiles` filter; exit with status 0 after `shutdown` and `exit` | +3 / -3 |
 | `tsc/internal/ls/hover.go` | Apply quick info hooks to each hover | +1 |
@@ -986,6 +987,26 @@ Case `effeck-imports` covers an `.effeck` file calling an `.effeck` Effect funct
 ## The runtime
 
 Generated JavaScript imports only `effect` and `effeck-runtime` (D30): the prelude names it uses, `effect/Effect` for `Effect.fnUntraced` under a free name (`Effect`, else `Effect_1`, …), and the helpers as one namespace under a free name (`runtime`, else `runtime_1`, …), called as `runtime.$catch(…)`. The runtime's exports are the ABI between compiler and runtime, so a compiler change that needs a new helper adds it to `packages/runtime` in the same commit; `smoke.sh` builds the runtime from source and every case links it, so the commit is tested as one. Case `effeck-runtime-name` declares `runtime` and `Effect_1` itself and still runs.
+
+## Boundary hatches (D148-D150)
+
+`sync`, `try`, and `callback` are prelude names whose arguments are TypeScript, not Effeck (`hatches.go`). A hatch is a call whose callee is one of those names with no declaration in any scope around it (`shadowed` reads the binder's locals); `try` is a keyword nothing can declare.
+
+```ts
+// main.effeck                                         // main.js
+const id = sync("id-" + suffix)                        const id = yield* Effect.sync(() => "id-" + suffix)
+const page = sync(async () => (await load()).text())   const page = yield* Effect.promise(async () => (await load()).text())
+const json = try(() => JSON.parse(text), toBadJson)    const json = yield* Effect.try({ try: () => JSON.parse(text), catch: toBadJson })
+const body = try(async (signal) => fetchBody(signal))  const body = yield* Effect.tryPromise(async (signal) => fetchBody(signal))
+```
+
+- **Parsing.** `parser/effeck_hatches.go`: in an `.effeck` file, `try` followed by `(` starts an expression; the callee parses as an identifier named `try`. Seams in `parser.go`: the statement switch, `isStartOfLeftHandSideExpression`, and `parsePrimaryExpression`.
+- **Typing.** The runtime declares the overloads (`packages/runtime/src/hatches.ts`) and names each overload's first parameter for the compiler: `evaluateAsync`, `evaluate`, `promise`, or `value`. `hatchFormOf` reads the name from the resolved signature, so `sync(fetchText())`, whose value is a Promise, lowers to `Effect.promise`.
+- **TypeScript inside.** `inHatch` makes a hatch's arguments TypeScript everywhere the compiler asks: `isLowerable` and `inLowerableBody` are false there, so calls do not run and an `.effeck` function's call is an inert Effect; `runs`, `directCallee`, and `flowOf` skip them; EK1003 (`async`, `await`), EK4401, EK4402, EK4403, and EK1005 do not apply.
+- **Lowering.** `visitHatchCall` emits Effect's function under the module's `Effect` name, wraps a single expression in `() =>`, and turns a second argument into `{ try, catch }`. `callback` stays a call of the runtime's `callback`, which adapts `resume(value)`, `resume.fail`, and `resume.exit` to Effect's `resume(effect)` and runs a returned function on interruption. The emitted JavaScript never imports `sync` or `try`.
+- **EK4404.** `try({ try, catch })` is an error: the object would be the hatch's value.
+
+Cases: `effeck-hatches` (every form, an inert Effect, `setTimeout` in a hatch, `runPromise` back in), `effeck-hatches-shadow` (a parameter named `callback`), `ek1005-prelude-runner.fail`, `ek4404-try-options.fail`.
 
 ## Code that is not Effect
 

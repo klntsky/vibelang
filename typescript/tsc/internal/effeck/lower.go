@@ -68,6 +68,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitImportWithDirectVariants(node)
 	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
 		return tx.visitImportOrExport(node)
+	case node.Kind == ast.KindCallExpression && tx.plan.hatches[node] != (hatchForm{}):
+		return tx.visitHatchCall(node)
 	case tx.inEffect && tx.plan.scoped(node):
 		return tx.visitScoped(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:

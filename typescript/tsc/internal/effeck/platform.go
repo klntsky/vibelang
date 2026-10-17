@@ -153,6 +153,8 @@ func checkPlatform(c *checker.Checker, file *ast.SourceFile) {
 					noteReplacement(report(c, arguments[0], platformModule, arguments[0].Text()), replacements[r])
 				}
 			}
+		case hatchOf(node) != "":
+			return false // a hatch's arguments may use the platform (D148)
 		case ast.IsCallExpression(node) || ast.IsNewExpression(node):
 			checkClockRead(c, file, node)
 		case ast.IsIdentifier(node):
@@ -344,7 +346,7 @@ func isValueUse(id *ast.Node) bool {
 // noteReplacement adds the lines that say what replaces a platform API.
 func noteReplacement(d *ast.Diagnostic, r *replacement) {
 	if r == nil {
-		note(d, "Effect has no module for it: keep the code in a TypeScript module, and call that module through Effect.try or a trusted contract.")
+		note(d, "Effect has no module for it: keep the code in a TypeScript module, and call that module through try or a trusted contract.")
 		return
 	}
 	switch {
