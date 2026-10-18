@@ -15,6 +15,7 @@
 
 import type * as EffectModule from "effect/Effect"
 import type * as ScopeModule from "effect/Scope"
+import type * as StreamModule from "effect/Stream"
 import type { Cause, Config, Context, Exit } from "effect"
 import type * as Runtime from "effeck-runtime"
 
@@ -162,6 +163,45 @@ export declare function $run<T>(value: T & HasRunning<T>): EffectModule.Effect<
   EffectModule.Services<Running<T>>
 >
 export declare function $run<T>(value: T): EffectModule.Effect<T, never, never>
+
+// ---------------------------------------------------------------- producers
+
+declare const emitBrand: unique symbol
+/** What a producer's `yield x` yields: x, as an element of its Stream (D26). */
+export interface $Emit<A> {
+  readonly [emitBrand]: A
+}
+/** `yield x` in a producer projects to `yield $emit(x)`. */
+export declare function $emit<A>(value: A): $Emit<A>
+type Emitted<Y> = Y extends $Emit<infer A> ? A : never
+
+/**
+ * A producer, a generator function in an .effeck file (D26):
+ * `function* f() { body }` projects to `function f() { return $produce(function* () { body }) }`.
+ * Its Stream's A is what it emits; E and R are what it runs.
+ */
+export declare function $produce<Y>(
+  body: () => Generator<Y, unknown, any>
+): StreamModule.Stream<Emitted<Y>, YieldE<Exclude<Y, $Emit<any>>>, YieldR<Exclude<Y, $Emit<any>>>>
+export declare function $produce<Self, Y>(
+  options: { readonly self: Self },
+  body: (this: Self) => Generator<Y, unknown, any>
+): StreamModule.Stream<Emitted<Y>, YieldE<Exclude<Y, $Emit<any>>>, YieldR<Exclude<Y, $Emit<any>>>>
+
+/** `yield* p` in a producer emits each element of the producer or Stream p. */
+export declare function $delegate<A, E, R>(
+  producer: StreamModule.Stream<A, E, R>
+): Generator<$Emit<A> | EffectModule.Effect<never, E, R>, void, unknown>
+export declare function $delegate<T>(iterable: Iterable<T>): Generator<$Emit<T>, void, unknown>
+
+/**
+ * A for...of in an Effect body or a producer iterates `(yield* $each(xs))`:
+ * a Stream's elements, with its E and R, or an iterable as itself (D26).
+ * The iterable overload comes first, so a value of type any iterates as
+ * any, adding nothing to E and R; a Stream is not iterable.
+ */
+export declare function $each<T>(iterable: Iterable<T>): EffectModule.Effect<Iterable<T>, never, never>
+export declare function $each<A, E, R>(stream: StreamModule.Stream<A, E, R>): EffectModule.Effect<Iterable<A>, E, R>
 
 /**
  * L1's dual form: a parameterless lambda that is both a program and a

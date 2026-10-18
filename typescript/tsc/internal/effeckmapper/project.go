@@ -102,6 +102,9 @@ type env struct {
 	frame *frame
 	// continuation names a handle clause's continuation inside the clause.
 	continuation string
+	// producer reports that the generator is a producer's (producers.go):
+	// yield emits, and a try statement stays the generator's own.
+	producer bool
 	// voidFail reports that a throw must not make A never: the function is
 	// a declaration or a method that returns no value, whose TypeScript
 	// return type is void even when every path throws.
@@ -225,6 +228,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 		}
 		p.blockCall(node, blockArgument(node), e)
 		return
+	case isProducer(node):
+		p.producerDeclaration(node)
+		return
 	case isProjectedFunction(node):
 		p.functionDeclaration(node)
 		return
@@ -251,19 +257,25 @@ func (p *projector) visit(node *ast.Node, e env) {
 		case node.Kind == ast.KindBreakStatement || node.Kind == ast.KindContinueStatement:
 			p.jumpStatement(node, e)
 			return
+		case node.Kind == ast.KindYieldExpression && e.producer:
+			p.yieldExpression(node, e)
+			return
+		case node.Kind == ast.KindForOfStatement && node.Flags&ast.NodeFlagsReparsed == 0:
+			p.forOfStatement(node, e)
+			return
 		case isJumpTarget(node):
 			p.jumpTarget(node, e)
 			return
-		case node.Kind == ast.KindTryStatement && node.Flags&ast.NodeFlagsEffeck != 0:
+		case node.Kind == ast.KindTryStatement && node.Flags&ast.NodeFlagsEffeck != 0 && !e.producer:
 			p.handleStatement(node, e)
 			return
-		case node.Kind == ast.KindTryStatement:
+		case node.Kind == ast.KindTryStatement && !e.producer:
 			p.tryStatement(node, e)
 			return
-		case isProvideBlock(node):
+		case isProvideBlock(node) && !e.producer:
 			p.provideBlock(node, e)
 			return
-		case maskWord(node) != "":
+		case maskWord(node) != "" && !e.producer:
 			p.maskBlock(node, maskWord(node), e)
 			return
 		case isUsingDeclaration(node):

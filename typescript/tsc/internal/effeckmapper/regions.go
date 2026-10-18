@@ -91,7 +91,7 @@ func newEffectEnv() env {
 
 // regionEnv returns the env of one block of region r, inside the code of e.
 func regionEnv(r *region, e env) env {
-	return env{effect: true, frame: &frame{region: r}, continuation: e.continuation, voidFail: e.voidFail}
+	return env{effect: true, frame: &frame{region: r}, continuation: e.continuation, voidFail: e.voidFail, producer: e.producer}
 }
 
 // lands reports whether j lands in f, so that f can jump itself instead of

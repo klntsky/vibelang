@@ -117,9 +117,9 @@ var projectionCases = []struct {
 		virtual: "function double(n: number): number {\n  return twice(n)\n}\n",
 	},
 	{
-		name:    "top-level calls, async and generator functions stay",
+		name:    "top-level calls and async functions stay; a generator function is a producer (D26)",
 		source:  "const top = f()\nasync function a() { return f() }\nfunction* g() { yield f() }\n",
-		virtual: "const top = f()\nasync function a() { return f() }\nfunction* g() { yield f() }\n",
+		virtual: "const top = f()\nasync function a() { return f() }\nfunction g() { return $produce(function* () { yield $emit((yield* $run($value(f)()))) })}\n",
 	},
 	{
 		name:    "a service is an interface and a key (D45)",
@@ -169,7 +169,7 @@ var projectionCases = []struct {
 	{
 		name:    "a break that leaves a region is a jump the loop takes",
 		source:  "function g(xs: number[]) {\n  for (const x of xs) {\n    try {\n      if (x) break\n      g(x)\n    } finally {\n      h(x)\n    }\n  }\n}\n",
-		virtual: "function g(xs: number[]) { return $gen(function* () {\n  for (const x of xs) {\n    const $c = yield* $finally($gen(function* () {\n      if (x) return $jump(\"break:\")\n      ;(yield* $run(g(x)))\n    ; return $end }), $gen(function* () {\n      ;(yield* $run(h(x)))\n    ; return $end })); if ($jumped($c, \"break:\")) break\n  }\n})}\n",
+		virtual: "function g(xs: number[]) { return $gen(function* () {\n  for (const x of (yield* $each(xs))) {\n    const $c = yield* $finally($gen(function* () {\n      if (x) return $jump(\"break:\")\n      ;(yield* $run(g(x)))\n    ; return $end }), $gen(function* () {\n      ;(yield* $run(h(x)))\n    ; return $end })); if ($jumped($c, \"break:\")) break\n  }\n})}\n",
 	},
 	{
 		name:    "a jump that leaves two regions passes the completion on",
@@ -215,6 +215,11 @@ var projectionCases = []struct {
 		name:    "a tail region falls off its end for TypeScript's reachability",
 		source:  "function describe(e: Failure) {\n  try {\n    return find(e)\n  } catch (error) {\n    switch (error._tag) {\n      case \"A\": return \"a\"\n      case \"B\": return \"b\"\n    }\n  }\n}\n",
 		virtual: "function describe(e: Failure) { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    return $box((yield* $run(find(e))))\n  }), (error) => $gen(function* () {\n    switch (error._tag) {\n      case \"A\": return $box(\"a\")\n      case \"B\": return $box(\"b\")\n    }\n  })); return $unboxed($c)\n})}\n",
+	},
+	{
+		name:    "a producer is a Stream that emits its yields (D26)",
+		source:  "function* lookups(keys: string[]) {\n  for (const key of keys) yield Store.get(key)\n  yield* more()\n}\nfunction total() {\n  let sum = 0\n  for (const n of lookups([\"a\"])) sum += n\n  return sum\n}\n",
+		virtual: "function lookups(keys: string[]) { return $produce(function* () {\n  for (const key of (yield* $each(keys))) yield $emit((yield* $run($use(Store).get(key))))\n  yield* $delegate((yield* $run($value(more)())))\n})}\nfunction total() { return $gen(function* () {\n  let sum = 0\n  for (const n of (yield* $each((yield* $run(lookups([\"a\"])))))) sum += n\n  return sum\n})}\n",
 	},
 	{
 		name:    "a layer without statements succeeds with its members",

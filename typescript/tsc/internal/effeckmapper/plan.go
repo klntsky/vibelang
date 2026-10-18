@@ -70,6 +70,14 @@ const (
 	// editProgramValue converts a function value at a program position to
 	// its program (D7).
 	editProgramValue
+	// editProducer makes a generator function's body a producer, a Stream (D26).
+	editProducer
+	// editEmit is a producer's yield: it emits a value, or with arg
+	// "delegate" every element of another producer.
+	editEmit
+	// editEach iterates a for...of's value: a Stream's elements, or an
+	// iterable as itself (D26).
+	editEach
 )
 
 // part says which part of a kind an edit is.
@@ -199,6 +207,23 @@ func (r checking) text(e edit) (string, bool) {
 		text = pick(e.part, helperRef("$scoped")+"(", "", ")")
 	case editProgramValue:
 		text = pick(e.part, helperRef("$asProgram")+"(", "", ")")
+	case editProducer:
+		open := " return " + helperRef("$produce") + "(function* () {"
+		if e.arg == "self" {
+			open = " return " + helperRef("$produce") + "({ self: this }, function* () {"
+		}
+		text = pick(e.part, open, "", "})")
+	case editEmit:
+		switch e.arg {
+		case "delegate":
+			text = pick(e.part, helperRef("$delegate")+"(", "", ")")
+		case "undefined":
+			text = " " + helperRef("$emit") + "(undefined)"
+		default:
+			text = pick(e.part, helperRef("$emit")+"(", "", ")")
+		}
+	case editEach:
+		text = pick(e.part, "(yield* "+helperRef("$each")+"(", "", "))")
 	case editFail:
 		if e.arg == "void" {
 			text = pick(e.part, "return (yield* "+helperRef("$fail")+"(", "", ")) as void")
@@ -234,7 +259,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value"}[k]
+		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out
