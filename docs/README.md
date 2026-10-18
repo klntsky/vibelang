@@ -37,4 +37,6 @@ npm run deploy:plan
 npm run deploy
 ```
 
-Both need `CLOUDFLARE_ACCOUNT_ID`, plus `CLOUDFLARE_API_TOKEN` with Workers Scripts edit and Account Secrets Store read access. Alchemy's state store keeps its own credentials in the account's Secrets Store, so a token without Secrets Store access fails with `Unauthorized: Authentication error` before planning.
+Both need `CLOUDFLARE_ACCOUNT_ID`, plus `CLOUDFLARE_API_TOKEN` with Workers Scripts edit and Account Secrets Store Edit access. Alchemy's state store keeps its own credentials in the account's Secrets Store and reads them through a temporary Worker binding. Secrets Store Read allows metadata access but cannot create that binding; [Cloudflare requires Edit for bindings](https://developers.cloudflare.com/secrets-store/access-control/).
+
+If planning fails with `Unauthorized: Authentication error`, check the token's access to the selected account's Secrets Store. A token without metadata access fails at `GET /accounts/{account_id}/secrets_store/stores` before a deployment plan can be generated.
