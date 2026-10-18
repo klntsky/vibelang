@@ -366,7 +366,15 @@ func (p *plainPlan) planPlainExports(a *analyzer, node *ast.Node) {
 		if specifier.AsExportSpecifier().IsTypeOnly {
 			continue
 		}
-		fn := esFunctionOf(a.checker, specifier.Name())
+		symbol := a.checker.GetExportSpecifierLocalTargetSymbol(specifier)
+		if symbol == nil {
+			continue
+		}
+		target := symbol
+		if target.Flags()&ast.SymbolFlagsAlias != 0 {
+			target = a.checker.GetAliasedSymbol(target)
+		}
+		fn := target.ValueDeclaration()
 		if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {
 			continue
 		}
@@ -376,12 +384,8 @@ func (p *plainPlan) planPlainExports(a *analyzer, node *ast.Node) {
 		}
 		// A local export can refer to an imported binding. Its direct
 		// variant needs an import even if no local call uses the binding.
-		symbol := a.checker.GetExportSpecifierLocalTargetSymbol(specifier)
-		if symbol == nil {
-			continue
-		}
 		for _, imported := range symbol.Declarations() {
-			if !ast.IsImportSpecifier(imported) {
+			if !ast.IsImportSpecifier(imported) && imported.Kind != ast.KindImportClause {
 				continue
 			}
 			declaration := ast.FindAncestor(imported, ast.IsImportDeclaration)

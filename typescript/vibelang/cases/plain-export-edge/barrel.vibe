@@ -1,0 +1,4 @@
+export { default as namedDefault } from "./default.vibe"
+import localDefault from "./default.vibe"
+export { localDefault as forwardedDefault }
+export { "three-times" as quoted } from "./quoted.vibe"

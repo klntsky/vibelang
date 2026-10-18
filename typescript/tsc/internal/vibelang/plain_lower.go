@@ -44,6 +44,11 @@ func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 	wrapperBody := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(sync)}), false /*multiLine*/)
 	wrapper := f.UpdateFunctionDeclaration(node.AsFunctionDeclaration(), node.Modifiers(), nil /*asteriskToken*/, node.Name(), nil /*typeParameters*/, f.NewNodeList([]*ast.Node{rest}), nil /*type*/, nil /*fullSignature*/, wrapperBody)
 	ec.SetOriginal(wrapper, node)
+	if ast.HasSyntacticModifier(node, ast.ModifierFlagsDefault) {
+		alias := f.NewExportSpecifier(false, f.NewIdentifier(name+"$direct"), f.NewIdentifier("default$direct"))
+		export := f.NewExportDeclaration(nil, false, f.NewNamedExports(f.NewNodeList([]*ast.Node{alias})), nil, nil)
+		return f.NewSyntaxList([]*ast.Node{direct, wrapper, export})
+	}
 	return f.NewSyntaxList([]*ast.Node{direct, wrapper})
 }
 
@@ -88,11 +93,16 @@ func (tx *lowering) visitImportWithDirectVariants(node *ast.Node) *ast.Node {
 	for _, specifier := range tx.plan.directImports[node] {
 		local := specifier.Name().Text()
 		imported := local
-		if property := specifier.AsImportSpecifier().PropertyName; property != nil {
-			imported = property.Text()
-		}
 		var propertyName *ast.Node
-		if imported != local {
+		if specifier.Kind == ast.KindImportClause {
+			imported = "default"
+		} else if property := specifier.AsImportSpecifier().PropertyName; property != nil {
+			imported = property.Text()
+			if ast.IsStringLiteral(property) {
+				propertyName = f.NewStringLiteral(imported+"$direct", ast.TokenFlagsNone)
+			}
+		}
+		if imported != local && propertyName == nil {
 			propertyName = f.NewIdentifier(imported + "$direct")
 		}
 		specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, propertyName, f.NewIdentifier(local+"$direct")))
