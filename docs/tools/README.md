@@ -104,7 +104,7 @@ Nonzero exits, execution timeouts (10 seconds by default, changed with
 Examples that import `@effect/vitest`, including through earlier blocks, run
 inside Vitest after compilation. Registered `it.effect` tests must all pass.
 An empty output marker checks their assertions without adding printed output;
-a `// run:` header runs as an additional Effect test with stdout enabled.
+a `// run:` header runs as an additional live-clock Effect test with stdout enabled.
 
 Marked fragments, expected-error blocks, and compiler gaps fail instead of
 silently skipping execution. Unmarked blocks keep their compile-only checks.

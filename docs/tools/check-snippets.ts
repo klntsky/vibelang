@@ -317,7 +317,7 @@ async function runVitest(dir: string, emitted: string, helper: string | undefine
   writeFileSync(join(dir, entry), helper
     ? `import { ${helper} } from ${JSON.stringify("./" + emitted)};\n` +
       `import { it } from "@effect/vitest";\nimport { Console, Effect } from "effect";\n` +
-      `it.effect("docs run header", () => Effect.provideService(Effect.suspend(() => { const value = ${helper}(); return Effect.isEffect(value) ? value : Effect.succeed(value); }), Console.Console, globalThis.console));\n`
+      `it.live("docs run header", () => Effect.provideService(Effect.suspend(() => { const value = ${helper}(); return Effect.isEffect(value) ? value : Effect.succeed(value); }), Console.Console, globalThis.console));\n`
     : `import ${JSON.stringify("./" + emitted)};\n`)
   // Keep stdout exclusively for the example. Report failures to stderr so an
   // empty output assertion still requires every registered test to pass.

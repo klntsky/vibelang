@@ -46,8 +46,9 @@ entry module. For a function excerpt, add a header comment such as
 `// run: Console.log(greet("Ada"))`; the checker runs that expression in a
 VibeLang entry function with the excerpt's declarations in scope. Use
 `Console.log` for stable output. Match spaces and line order exactly; only line
-endings and one final newline are normalized. Keep examples deterministic and
-under ten seconds. See [the checker conventions](../tools/README.md#running-examples).
+endings and one final newline are normalized. Marked `@effect/vitest` examples
+run in Vitest; an empty output marker checks that their assertions pass silently.
+Keep examples deterministic and under ten seconds. See [the checker conventions](../tools/README.md#running-examples).
 
 ## The language in one page
 
