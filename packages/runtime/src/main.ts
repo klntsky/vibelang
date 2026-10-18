@@ -22,6 +22,9 @@ export const $runMain = Runtime.makeRunMain(({ fiber, teardown }) => {
     receivedSignal = true
     fiber.interruptUnsafe(fiber.id)
   }
+  // addObserver runs immediately when main already completed synchronously.
+  host?.on("SIGINT", onSignal)
+  host?.on("SIGTERM", onSignal)
   fiber.addObserver((exit) => {
     host?.removeListener("SIGINT", onSignal)
     host?.removeListener("SIGTERM", onSignal)
@@ -29,6 +32,4 @@ export const $runMain = Runtime.makeRunMain(({ fiber, teardown }) => {
       if (host !== undefined && (receivedSignal || code !== 0)) host.exit(code)
     })
   })
-  host?.on("SIGINT", onSignal)
-  host?.on("SIGTERM", onSignal)
 })
