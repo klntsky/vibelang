@@ -95,6 +95,10 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitHatchCall(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.methods[node].module != "":
 		return tx.visitModuleMethodCall(node)
+	// A provide block may also own using resources or forked fibers. Keep
+	// provision outside its Scope region; regionStatements lowers that region.
+	case tx.inEffect && isProvideBlock(node):
+		return tx.visitProvideBlock(node)
 	case tx.inEffect && tx.plan.scoped(node):
 		return tx.visitScoped(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
@@ -115,8 +119,6 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitHandleStatement(node) // try { ... } handle Control.op(...) { ... } (handles.go)
 	case tx.inEffect && node.Kind == ast.KindTryStatement:
 		return tx.visitTryStatement(node)
-	case tx.inEffect && isProvideBlock(node):
-		return tx.visitProvideBlock(node)
 	case tx.inEffect && maskWord(node) != "":
 		return tx.visitMaskBlock(node, maskWord(node)) // uninterruptible { ... } (primitives.go)
 	case maskMarkerWord(node) != "" || exitBindingOf(node) != nil:

@@ -1,0 +1,61 @@
+package vibelang
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/microsoft/TypeScript/tsc/internal/compiler"
+	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
+	"github.com/microsoft/TypeScript/tsc/internal/tspath"
+)
+
+// A provide block can own a lexical Scope as well as provide services. Lowering
+// the Scope first used to discard its provider marker and emit an unprovided
+// $region, even though the inferred contract removed the supplied requirements.
+func TestProvideBlockKeepsProviderWhenScoped(t *testing.T) {
+	t.Parallel()
+	for _, body := range []string{
+		`using value = Effect.succeed(1); return value`,
+		`const child = fork(() => Effect.succeed(1)); return 1`,
+	} {
+		t.Run(body, func(t *testing.T) {
+			t.Parallel()
+			files := computedKeyFiles(false)
+			base := "/Users/x/src/node_modules/"
+			files[base+"effect/Effect.d.ts"] += `
+export declare function succeed<A>(value: A): Effect<A>
+`
+			files[base+"vibelang-runtime/index.d.ts"] += `
+export declare function fork<A, E, R>(program: import("effect/Effect").Effect<A, E, R>): import("effect/Effect").Effect<unknown, never, R>
+`
+			files["/Users/x/src/main.vibe"] = `
+import { provider } from "./provider.js"
+export function example() { provide provider { ` + body + ` } }
+`
+			// Provider channels have the same variance structure as Effect's Layer.
+			files["/Users/x/src/provider.d.ts"] = `
+export declare const provider: { readonly "~effect/Layer": {
+  readonly _ROut: (_: never) => void
+  readonly _E: (_: never) => never
+  readonly _RIn: (_: never) => never
+} }
+`
+			p := computedKeyProgram(t, files)
+			for _, d := range p.GetSemanticDiagnostics(t.Context(), nil) {
+				if d.Category() == diagnostics.CategoryError {
+					t.Fatalf("source: %s", d.String())
+				}
+			}
+			var js string
+			p.Emit(t.Context(), compiler.EmitOptions{WriteFile: func(name tspath.RootedFilePath, text string, _ *compiler.WriteFileData) error {
+				if strings.HasSuffix(string(name), "main.js") {
+					js = text
+				}
+				return nil
+			}})
+			if !strings.Contains(js, ".provide(") || !strings.Contains(js, ", provider)") || !strings.Contains(js, ".$region(") {
+				t.Fatalf("scoped provide must retain both provision and resource ownership:\n%s", js)
+			}
+		})
+	}
+}
