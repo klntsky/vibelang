@@ -9,12 +9,14 @@
 # Run scripts/release/build-binaries.sh and make-packages.mjs first.
 # EFFECK_SKIP=win32 leaves out every package whose name contains win32, the way
 # publish.sh does, to rehearse a release that ships without those packages.
+# Both scripts repack effeck to omit those optional dependencies too.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 tarballs="$root/dist-npm/tarballs"
 verdaccio=verdaccio@6.10.4
 [ -f "$tarballs/manifest.json" ] || { echo "rehearse: run scripts/release/make-packages.mjs first" >&2; exit 1; }
 version=$(node -p 'require(process.argv[1]).version' "$tarballs/manifest.json")
+node "$root/scripts/release/repack.mjs" "$tarballs"
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/effeck-rehearse.XXXXXX")
 pid=""
 # npx runs Verdaccio as a descendant process, and on Linux Verdaccio renames

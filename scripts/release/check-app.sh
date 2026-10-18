@@ -1,6 +1,7 @@
 #!/bin/sh
 # Scaffolds a new Effeck app from a registry with each named package manager,
 # then installs, builds, starts, and tests it, and checks the compiler version.
+# npm also reinstalls from its generated lockfile with npm ci.
 #
 #   sh scripts/release/check-app.sh <registry-url> <version> npm bun
 #
@@ -45,6 +46,10 @@ for manager in "$@"; do
   esac
   cd "$app"
   [ -d node_modules ] || { step "install"; "$manager" install; }
+  if [ "$manager" = npm ]; then
+    step "npm ci"
+    npm ci
+  fi
 
   step "installed packages"
   node --input-type=module - "$version" "$platform" <<'JS'

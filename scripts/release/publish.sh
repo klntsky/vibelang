@@ -6,7 +6,7 @@
 #   sh scripts/release/publish.sh            # asks for a one-time password once
 #   sh scripts/release/publish.sh --dry-run  # checks everything, publishes nothing
 #   NPM_OTP=123456 sh scripts/release/publish.sh
-#   EFFECK_SKIP=win32 sh scripts/release/publish.sh  # skips every package whose name contains win32
+#   EFFECK_SKIP=win32 sh scripts/release/publish.sh  # omits win32 packages and their optional dependencies
 #
 # A package already published at this version is skipped, so rerunning after a
 # failure resumes where it stopped. If npm rejects the one-time password, the
@@ -24,6 +24,7 @@ dry=""
   exit 1
 }
 version=$(node -p 'require(process.argv[1]).version' "$tarballs/manifest.json")
+node "$root/scripts/release/repack.mjs" "$tarballs"
 
 if user=$(npm whoami --registry "$registry" 2>/dev/null); then
   echo "publish: logged in to npm as $user; publishing Effeck $version"
