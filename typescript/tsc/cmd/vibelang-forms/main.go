@@ -428,7 +428,7 @@ func exportPaths(paths map[string][]string, nodeModules, pkg string) error {
 			continue
 		}
 		name := pkg + strings.TrimPrefix(sub, ".")
-		if !strings.HasSuffix(target, ".json") {
+		if !strings.HasSuffix(target, ".json") && !tspath.IsDeclarationFileName(target) {
 			target = strings.TrimSuffix(target, ".js") + ".d.ts"
 		}
 		paths[name] = []string{root + "/" + strings.TrimPrefix(target, "./")}
