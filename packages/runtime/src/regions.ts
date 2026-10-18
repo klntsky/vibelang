@@ -11,7 +11,8 @@ export const $catch: <A, E, R, B, E2, R2>(
 
 /**
  * A typed catch clause, `catch (e: NotFound)`, tests the caught failure with
- * the _tag of each type it names (D131); the compiler passes the tags.
+ * the _tag of each type it names (D131); the compiler passes the tags. The
+ * form is retired (D216) but still compiles, with the warning EK2112.
  */
 export function $isFailure<T>(value: unknown, ...tags: ReadonlyArray<string>): value is T {
   return typeof value === "object" && value !== null && tags.includes((value as { readonly _tag?: unknown })._tag as string)

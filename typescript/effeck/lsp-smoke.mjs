@@ -340,6 +340,38 @@ try {
     assert(layerEdits.length === 1 && layerEdits[0].newText === want, `EK2121 edits ${JSON.stringify(layerEdits)}`)
     assert(layerEdits[0].range.start.line === layerStart.line && layerEdits[0].range.end.line === lineOf(file, "text() { return word }") + 1, `EK2121 edit range ${JSON.stringify(layerEdits[0].range)}`)
   })
+  await check("code action: EK2112 warns at a typed catch clause, and its quick fix writes a match", async () => {
+    open("src/old-catch.effeck", "effeck")
+    const items = (await diagnostics("src/old-catch.effeck")).filter((d) => d.code === 2112)
+    assert(items.length === 2, `expected two EK2112 warnings, got ${JSON.stringify(items.map((d) => d.message))}`)
+    const [item] = items
+    assert(item.source === "EK" && item.severity === 2, `expected warning EK 2112, got ${item.source} severity ${item.severity}`)
+    const start = at("src/old-catch.effeck", "Missing) {")
+    assert(item.range.start.line === start.line && item.range.start.character === start.character, `range ${JSON.stringify(item.range)}`)
+    const uri = fileUri("src/old-catch.effeck")
+    const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
+    const fix = actions.find((a) => a.title === "Test the failure with match")
+    assert(fix, `no quick fix among ${JSON.stringify(actions.map((a) => a.title))}`)
+    const edits = fix.edit?.changes?.[uri] ?? []
+    const want = "catch (e) {\n    return match (e) {\n      when Missing: `missing ${e.id}`;\n      when Late: \"late\";\n      default: throw e;\n    }\n  }"
+    assert(edits.length === 1 && edits[0].newText === want, `edits ${JSON.stringify(edits)}`)
+    const catchAt = at("src/old-catch.effeck", "catch (e: Missing)")
+    assert(edits[0].range.start.line === catchAt.line && edits[0].range.start.character === catchAt.character, `edit range ${JSON.stringify(edits[0].range)}`)
+  })
+
+  await check("code action: EK2113 warns at a Cause clause, and its quick fix matches on exit", async () => {
+    const items = (await diagnostics("src/old-catch.effeck")).filter((d) => d.code === 2113)
+    assert(items.length === 1, `expected one EK2113 warning, got ${JSON.stringify(items.map((d) => d.message))}`)
+    const [item] = items
+    const uri = fileUri("src/old-catch.effeck")
+    const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
+    const fix = actions.find((a) => a.title === "Match on exit(…)")
+    assert(fix, `no quick fix among ${JSON.stringify(actions.map((a) => a.title))}`)
+    const edits = fix.edit?.changes?.[uri] ?? []
+    const want = "return match (exit(lookupUser(id))) {\n    when Exit.Success(let value): value;\n    when Exit.Failure(let cause): \"fallback\";\n  }"
+    assert(edits.length === 1 && edits[0].newText === want, `edits ${JSON.stringify(edits)}`)
+  })
+
   await check("diagnostics: an edit to main.effeck is checked with Effeck types", async () => {
     // name is the success value of lookup(1), a string, so toFixed does not exist.
     const broken = text("src/main.effeck").replace("name.toUpperCase()", "name.toFixed()")
@@ -565,7 +597,7 @@ try {
     assert(items.length === 0, `expected no diagnostics, got ${JSON.stringify(items.map((d) => d.message))}`)
   })
 
-  await check("hover: a typed catch clause's variable has the clause's type", async () => {
+  await check("hover: a match arm in a catch clause narrows the caught failure", async () => {
     const shown = await hover("src/declarations.effeck", "e.id")
     assert(shown.includes("e: MissingUser"), `got ${JSON.stringify(shown)}`)
   })

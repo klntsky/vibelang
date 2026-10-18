@@ -1,0 +1,27 @@
+// Retired catch clauses: EK2112 and EK2113 warn, and their quick fixes rewrite them.
+error Missing { id: string }
+error Late
+
+function lookupUser(id: string): string!Missing | Late! {
+  if (id === "") throw new Missing({ id })
+  if (id === "late") throw new Late()
+  return id
+}
+
+export function label(id: string) {
+  try {
+    return lookupUser(id)
+  } catch (e: Missing) {
+    return `missing ${e.id}`
+  } catch (e: Late) {
+    return "late"
+  }
+}
+
+export function whole(id: string) {
+  try {
+    return lookupUser(id)
+  } catch (cause: Cause) {
+    return "fallback"
+  }
+}

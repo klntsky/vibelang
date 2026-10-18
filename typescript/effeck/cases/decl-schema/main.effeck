@@ -20,7 +20,7 @@ export schema User {
 function decode(input: unknown) {
   try {
     return Schema.decodeUnknownEffect(User)(input)
-  } catch (e: Schema.SchemaError) {
+  } catch (e) {
     return "invalid"
   }
 }

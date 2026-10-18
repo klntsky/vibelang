@@ -20,7 +20,7 @@ function failing() {
     } finally (exit) {
       tag = Exit.isFailure(exit) ? "Failure" : "Success"
     }
-  } catch (e: Boom) {
+  } catch (e) {
     tag += ":" + e._tag
   }
   return tag

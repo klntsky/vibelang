@@ -57,9 +57,10 @@ const (
 
 // The registry: every EK code in Chapter 28 of the spec
 // (docs/design/src/428-part4-ch28-tooling.md) with its default category and
-// the headline the spec prints for it. Every code is an error except EK2004
-// and EK1009, which are warnings by default; a project may change the
-// category of EK2004 and EK4403 (design decisions D34, D53, and D172).
+// the headline the spec prints for it. Every code is an error except EK2004,
+// EK1009, EK2112, EK2113, EK2120, and EK2121, which are warnings by default; a
+// project may change the category of EK2004 and EK4403 (design decisions D34,
+// D53, and D172).
 var (
 	// EK1001: a module's top level runs a program. {0} is the call, such as "loadConfig()".
 	EK1001 = message(1001, errorCategory, "{0} runs a program, but a module's top level is not inside one.")
@@ -107,6 +108,10 @@ var (
 	// EK2108: a control's operation without a clause in a handle statement. {0} lists the operations, {1} is the control.
 	EK2108 = message(2108, errorCategory, "{0} has no clause: a handle statement answers every operation of {1}.")
 	// EK2109: a schema declaration's field whose type has no schema form. {0} is the type.
+	// EK2112: a catch clause that tests a failure's type, retired (D216). A warning. {0} is the clause's variable.
+	EK2112 = message(2112, warningCategory, "A catch clause no longer tests a failure's type; write catch ({0}) and test {0} with match or is.")
+	// EK2113: a catch clause typed Cause, retired (D217). A warning.
+	EK2113 = message(2113, warningCategory, "A catch clause no longer catches a whole Cause; match on exit(…) with Exit.Success and Exit.Failure arms.")
 	// EK2111: a restore block that no uninterruptible block encloses (D180).
 	EK2111 = message(2111, errorCategory, "This restore block is not inside an uninterruptible block, so it has no interruptibility to restore.")
 	EK2109 = message(2109, errorCategory, "{0} has no schema form: a schema declaration's field is a primitive, a literal, a union, an array, a tuple, a record, an object type, or another schema.")
@@ -160,7 +165,7 @@ var registry = map[int32]*Message{}
 func init() {
 	for _, m := range []*Message{
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009,
-		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109,
+		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4501,
 	} {

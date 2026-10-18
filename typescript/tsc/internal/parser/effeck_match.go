@@ -899,8 +899,17 @@ func (p *Parser) emitSteps(steps []matchStep, success []*ast.Node, at core.TextR
 		i++
 	}
 	inner := p.emitSteps(steps[i:], success, at)
-	then := p.mBlock(inner, at)
-	return append(out, p.effeckSpanning(p.factory.NewIfStatement(p.joinTests(tests, ast.KindAmpersandAmpersandToken, at), then, nil), at))
+	// The if and its block span the statements they hold, such as an arm's
+	// return of its value, so that a position in the value is inside them
+	// and the language service can find the value's tokens there.
+	span := at
+	for _, statement := range inner {
+		if statement.End() > span.End() {
+			span = core.NewTextRange(at.Pos(), statement.End())
+		}
+	}
+	then := p.mBlock(inner, span)
+	return append(out, p.effeckSpanning(p.factory.NewIfStatement(p.joinTests(tests, ast.KindAmpersandAmpersandToken, at), then, nil), span))
 }
 
 // isExpression writes subject is pattern, a pattern without bindings, as a

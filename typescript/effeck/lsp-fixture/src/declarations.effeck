@@ -31,8 +31,10 @@ export function balanceWith(id: string) {
 export function recover(id: string) {
   try {
     return findUser(id)
-  } catch (e: MissingUser) {
-    return e.id
+  } catch (e) {
+    return match (e) {
+      when MissingUser: e.id;
+    }
   }
 }
 

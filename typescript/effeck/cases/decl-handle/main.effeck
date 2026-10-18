@@ -101,7 +101,7 @@ function busy(version: string) {
     resumeWith(() => { throw new ReviewBusy({ request }) })
   } handle Approval.note(text) {
     resume()
-  } catch (e: ReviewBusy) {
+  } catch (e) {
     return `busy ${e.request}`
   }
 }

@@ -2,7 +2,7 @@ import { Cause, Context, Effect, Exit } from "effect"
 import * as K from "./kernel/kernel.js"
 
 // The primitives of an .effeck file that have their own syntax (D176-D180):
-// `catch (cause: Cause)`, `throw cause`, `finally (exit)`, and the
+// `catch (cause: Cause)` (retired by D217; it still compiles), `throw cause`, `finally (exit)`, and the
 // interruption blocks. The parser writes the markers below for the checker;
 // the lowering replaces them with the helpers.
 

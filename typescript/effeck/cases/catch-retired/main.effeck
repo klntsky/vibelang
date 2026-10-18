@@ -1,0 +1,35 @@
+// expect-result: {"typed":["missing 7","retry","user 1"],"caused":["user 1","fallback"]}
+// The retired catch clauses still compile and run, with warnings EK2112 and EK2113.
+error NotFound { id: string }
+error Timeout
+
+function find(id: string): string!NotFound | Timeout! {
+  if (id === "7") throw new NotFound({ id })
+  if (id === "slow") throw new Timeout()
+  return `user ${id}`
+}
+
+function typed(id: string) {
+  try {
+    return find(id)
+  } catch (e: NotFound) {
+    return `missing ${e.id}`
+  } catch (e: Timeout) {
+    return "retry"
+  }
+}
+
+function caused(id: string) {
+  try {
+    return find(id)
+  } catch (cause: Cause) {
+    return "fallback"
+  }
+}
+
+export function main() {
+  return {
+    typed: [typed("7"), typed("slow"), typed("1")],
+    caused: [caused("1"), caused("7")]
+  }
+}

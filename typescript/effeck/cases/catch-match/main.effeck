@@ -1,0 +1,69 @@
+// expect-result: {"describe":["user 1","no user missing","retry"],"partial":"missing","partialSlow":"Timeout","chain":["missing missing","other"],"cause":["user 1","failed"]}
+error NotFound { id: string }
+error Timeout
+
+function find(id: string): string!NotFound | Timeout! {
+  if (id === "missing") throw new NotFound({ id })
+  if (id === "slow") throw new Timeout()
+  return `user ${id}`
+}
+
+// A complete match over the caught failure needs no rethrow.
+function describe(id: string): string!! {
+  try {
+    return find(id)
+  } catch (e) {
+    return match (e) {
+      when NotFound and { let id }: `no user ${id}`;
+      when Timeout: "retry";
+    }
+  }
+}
+
+// Partial handling rethrows the rest with a throw expression.
+function partial(id: string): string!Timeout! {
+  try {
+    return find(id)
+  } catch (e) {
+    return match (e) {
+      when NotFound: "missing";
+      default: throw e;
+    }
+  }
+}
+
+// An is chain narrows statement bodies.
+function chain(id: string): string!! {
+  try {
+    return find(id)
+  } catch (e) {
+    if (e is NotFound) {
+      return `missing ${e.id}`
+    }
+    return "other"
+  }
+}
+
+// A whole cause: match on the exit.
+function outcome(id: string): string!! {
+  return match (exit(find(id))) {
+    when Exit.Success(let value): value;
+    when Exit.Failure(let cause): Cause.hasFails(cause) ? "failed" : "other";
+  }
+}
+
+export function main() {
+  let partialSlow = "none"
+  try {
+    partial("slow")
+  } catch (e) {
+    partialSlow = e._tag
+  }
+  return {
+    describe: [describe("1"), describe("missing"), describe("slow")],
+    partial: partial("missing"),
+    partialSlow,
+    chain: [chain("missing"), chain("slow")],
+    cause: [outcome("1"), outcome("missing")]
+  }
+}

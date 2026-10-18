@@ -14,7 +14,7 @@ function lookup(id: string) {
 function missing() {
   try {
     return lookup("9")
-  } catch (e: NotFound) {
+  } catch (e) {
     return e._tag
   }
 }
@@ -33,7 +33,7 @@ function label(text: string) {
 function tooLong() {
   try {
     return label("much too long")
-  } catch (e: TooLong) {
+  } catch (e) {
     return e._tag
   }
 }

@@ -59,7 +59,7 @@ function failed() {
   try {
     const user = fork getUser("missing")
     return join user
-  } catch (e: NotFound) {
+  } catch (e) {
     return e._tag
   }
 }
@@ -74,7 +74,7 @@ function interrupted() {
   try {
     join [slow, bad]
     return false
-  } catch (e: NotFound) {
+  } catch (e) {
     const exit = slow.pollUnsafe()
     return exit !== undefined && exit._tag === "Failure" && exit.cause.reasons.some((reason) => reason._tag === "Interrupt")
   }

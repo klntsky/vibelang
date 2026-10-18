@@ -47,7 +47,7 @@ function failFast() {
   try {
     await.all [slow(), boom()]
     return "no"
-  } catch (e: Boom) {
+  } catch (e) {
     return e._tag
   }
 }
@@ -66,7 +66,7 @@ function race() {
 function raceFailure() {
   try {
     return await.race [slow(), boom()]
-  } catch (e: Boom) {
+  } catch (e) {
     return e._tag
   }
 }

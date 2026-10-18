@@ -38,7 +38,7 @@ function caught() {
     try {
       fail()
       "unreachable"
-    } catch (e: Boom) {
+    } catch (e) {
       "recovered"
     }
   }

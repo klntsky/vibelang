@@ -41,7 +41,7 @@ function failed() {
       sleep("1 second")
     }
     return "no"
-  } catch (e: Boom) {
+  } catch (e) {
     return e._tag
   }
 }
@@ -58,7 +58,7 @@ function stopped() {
       sleep("50 millis")
       finished = true
     }
-  } catch (e: Boom) {}
+  } catch {}
   sleep("100 millis")
   return !finished
 }
