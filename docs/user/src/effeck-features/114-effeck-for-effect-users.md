@@ -35,6 +35,8 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.provide(program, AppLive)` | `provide AppLive { ... }` |
 | `Effect.provideService(program, Random.Random, seeded)` | `provide Random = seeded { ... }` |
 | `Effect.catchTag(program, "Missing", recover)` | `try { ... } catch (e) { return match (e) { when Missing: ...; default: throw e; } }` |
+| `Effect.catch(program, (e) => recover(e))` | `program catch (e) => recover(e)` |
+| `Effect.orElseSucceed(program, () => value)` | `program catch value` |
 | `Effect.ensuring(program, cleanup)` | `try` / `finally` |
 | `Effect.scoped` with `Effect.acquireRelease` | Acquire with `using` in the block that owns the resource |
 | `Effect.forkScoped(program)` | `fork work()` for a child owned by the enclosing block; `fork { ... }` forks a block |

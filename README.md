@@ -26,11 +26,7 @@ const UsersLive = Layer.succeed(Users, {
 })
 
 function greet(id: string) {
-  try {
-    return `Welcome, ${Users.find(id).name}`
-  } catch (e) {
-    return `No user ${e.id}`
-  }
+  return `Welcome, ${Users.find(id).name}` catch (e) => `No user ${e.id}`
 }
 
 export function main() {
@@ -96,6 +92,8 @@ clients, see [editors/](editors/README.md).
   error class with readonly fields; `throw new NotFound({ id })` adds it to
   the function's errors. `catch (e)` receives expected failures; test which one
   with `match (e) { when NotFound: …; default: throw e; }` or `e is NotFound`.
+  In an expression, `x catch fallback` and `x catch (e) => …` recover the same
+  failures.
 - Declare a struct schema and its type with `schema User { id: string; role: "admin" | "member" }`;
   a field may name another schema.
 - Members of interfaces and object types are readonly unless written

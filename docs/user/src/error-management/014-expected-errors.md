@@ -86,6 +86,15 @@ function itemLabel(input: string) {
 
 The catch receives `InvalidCode | ItemMissing` and handles both here. It handles only causes with no defect and no interruption. If several expected failures occur together, it receives the first and handles their whole cause.
 
+```ts
+function itemLabelInline(input: string) {
+  return findItem(input).label catch (error) => `Unavailable (${error._tag})`
+}
+// string!!
+```
+
+`catch` also works after an expression. `x catch (error) => handler` runs `x` and passes an expected failure to the handler, as `Effect.catch` does, with the same guard as the statement: defects and interruption pass through. `x catch fallback` evaluates the fallback instead, as `Effect.orElseSucceed` does; see [Fallback](016-fallback.md).
+
 `Effect.catch(() => findItem(input), handler)` also recovers expected failures, but keeps Effect's own policy: it can recover a mixed cause containing an expected failure and drop the other reasons. `Effect.catchEager` uses that same policy and can apply recovery immediately when given an already computed `Exit`. Neither combinator has source catch's mixed-cause guard.
 
 ## Recovering selected failures
@@ -112,7 +121,7 @@ function labelByTag(input: string) {
 }
 ```
 
-Catch the failure, then `match` on it: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types, as `string!InvalidCode!` shows. A `match` without `default` must handle every failure the `try` block can raise, or it is a compile error (EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
+Catch the failure, then `match` on it: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types, as `string!InvalidCode!` shows. The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise, or it is a compile error (EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
 
 ```ts
 function withTagTable(input: string) {

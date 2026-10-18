@@ -71,11 +71,26 @@ function lookupOrGuest(raw: string) {
 
 An arm names an error class, or several with `or`, and tests instances of it, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A `match` without `default` must handle every failure the `try` block can raise (EK4701), so a complete match needs no rethrow. In statement form, `if (e is UserNotFound) { ... }` tests one class, and TypeScript narrows `e` after it. The earlier form, a catch clause that names a type, `catch (e: UserNotFound)` (D131), still compiles but is retired: it draws the warning EK2112, whose quick fix writes the `match`.
 
-Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
+#### Catching in an expression
+
+`catch` also works after an expression (D236), as Zig's inline catch does. `x catch fallback` runs `x` and, after an expected failure, evaluates the fallback instead, as `Effect.orElseSucceed` does. `x catch (e) => handler` passes the expected failure to the handler, as `Effect.catch` does:
 
 ```ts es
-const user = Effect.catchTag(Users.find(id), "UserNotFound", () => guest)
+function nameOrGuest(id: string) {
+  return Users.find(id).name catch "guest"
+}
+// string!!Users
+
+function nameOrReason(raw: string) {
+  return Users.find(String(parseId(raw))).name catch (e) => match (e) {
+    when UserNotFound: "guest";
+    when InvalidId: "invalid id";
+  }
+}
+// string!!Users
 ```
+
+The left side runs inside the catch, and the fallback runs only when the left side fails. Defects and interrupts pass through, as they pass through the statement. The value is the left side's or the handler's, and E is what the fallback or handler lets escape: the `match` above handles every failure, so none escapes, and `default: throw e` would pass the rest on. `catch` binds looser than `??` and `||` and tighter than `? :` and assignment, and it associates to the left, so `a() catch b() catch c` tries each in turn (D237). Effect's combinators still work, and a call in a program position is passed by name (D147): `Effect.catchTag(Users.find(id), "UserNotFound", () => guest)`.
 
 #### Promising that nothing escapes
 

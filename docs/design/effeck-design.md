@@ -422,11 +422,26 @@ function lookupOrGuest(raw: string) {
 
 An arm names an error class, or several with `or`, and tests instances of it, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A `match` without `default` must handle every failure the `try` block can raise (EK4701), so a complete match needs no rethrow. In statement form, `if (e is UserNotFound) { ... }` tests one class, and TypeScript narrows `e` after it. The earlier form, a catch clause that names a type, `catch (e: UserNotFound)` (D131), still compiles but is retired: it draws the warning EK2112, whose quick fix writes the `match`.
 
-Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
+#### Catching in an expression
+
+`catch` also works after an expression (D236), as Zig's inline catch does. `x catch fallback` runs `x` and, after an expected failure, evaluates the fallback instead, as `Effect.orElseSucceed` does. `x catch (e) => handler` passes the expected failure to the handler, as `Effect.catch` does:
 
 ```ts es
-const user = Effect.catchTag(Users.find(id), "UserNotFound", () => guest)
+function nameOrGuest(id: string) {
+  return Users.find(id).name catch "guest"
+}
+// string!!Users
+
+function nameOrReason(raw: string) {
+  return Users.find(String(parseId(raw))).name catch (e) => match (e) {
+    when UserNotFound: "guest";
+    when InvalidId: "invalid id";
+  }
+}
+// string!!Users
 ```
+
+The left side runs inside the catch, and the fallback runs only when the left side fails. Defects and interrupts pass through, as they pass through the statement. The value is the left side's or the handler's, and E is what the fallback or handler lets escape: the `match` above handles every failure, so none escapes, and `default: throw e` would pass the rest on. `catch` binds looser than `??` and `||` and tighter than `? :` and assignment, and it associates to the left, so `a() catch b() catch c` tries each in turn (D237). Effect's combinators still work, and a call in a program position is passed by name (D147): `Effect.catchTag(Users.find(id), "UserNotFound", () => guest)`.
 
 #### Promising that nothing escapes
 
@@ -999,14 +1014,15 @@ Most pipes you write today disappear:
 | You pipe today | In Effeck |
 | --- | --- |
 | `Effect.map`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap` | statements |
-| `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch`, testing the failure with `match` or `is` (D216) |
+| `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch`, testing the failure with `match` or `is` (D216), or `x catch (e) => …` (D236) |
+| `Effect.orElseSucceed`, `Effect.orElse` | `x catch fallback` (D236) |
 | `Effect.ensuring` | `finally` |
 | `Effect.provide`, `Effect.provideService` | the same functions, with a program argument |
 | `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached` | the same functions, called or piped with `\|>` as above |
 | `Effect.catchCause`, `Effect.failCause`, `Effect.onExit` | `match (exit(…))`, `throw cause`, `finally (exit)` (D217, D177, D178) |
 | `Effect.uninterruptibleMask`, `Effect.interruptible` | `uninterruptible { … restore { … } }`, `interruptible { … }` (D180) |
 
-On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how.
+On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how. A catch expression recovers as `try`/`catch` does.
 
 Measured on two large Effect codebases, once statements replace sequencing, error handling, and cleanup, only 1.1% (Smithers) and 2.6% (opencode) of the Effect pipes outside tests keep two or more stages (`docs/research/pipe-census.md`). Pipelines over plain data stay plain: `items |> Arr.filter(%, isActive) |> Arr.map(%, toRow)` is `Arr.map(Arr.filter(items, isActive), toRow)`.
 
@@ -2952,7 +2968,7 @@ If the 30 seconds run out during the upload, the upload is interrupted, the `cat
 Rules:
 
 - **E comes from `throw` and from contracts.** A `throw` written in Effeck, a callee's E, and the exceptions a trusted contract lists are expected failures. Any other JavaScript exception is a defect, as in Effect today.
-- **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds a defect or an interruption passes through `catch` untouched, including its expected failures. Effect's own `Effect.catch` recovers such a cause and drops the defect (Codex review R1, `internal/effect.ts:158-165, 2665-2685`); source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26).
+- **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds a defect or an interruption passes through `catch` untouched, including its expected failures. Effect's own `Effect.catch` recovers such a cause and drops the defect (Codex review R1, `internal/effect.ts:158-165, 2665-2685`); source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26). A catch expression, `x catch fallback` or `x catch (e) => …` (D236), compiles to `catchExpected` too, so it recovers exactly what the statement recovers.
 - **Cleanup runs in reverse order of acquisition**, once per exit, with interruption held off until it finishes.
 - **A failure during cleanup is never dropped.** It is added to the cause being reported, on every path: a block's exit, a clause that abandons, an explicit `abandon` while an interruption is pending, a scope that closes, and a fiber that exits (K12a-K12e, K13d).
 - **Control cannot leave a `finally` block.** A `return`, `break`, or `continue` there would replace the block's exit, and in JavaScript it discards a failure in flight, so it is EK2006.
@@ -4217,7 +4233,7 @@ as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service` or `control` declaration without `class`; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, a `catch` that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
+Every EK diagnostic is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service class` or `control class` declaration; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, a `catch` statement or catch expression that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
 
 | Option in `compilerOptions.effeck` | Values | Default |
 | --- | --- | --- |
@@ -4245,7 +4261,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
 | EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`, suggest `T!!` or removing the annotation; for a bare `T`, suggest `T!!` or `T!Errors` | 14 |
-| EK2004 | A `catch` that can never run (a warning by default) | Use the form that can fail, or `try` | 3 |
+| EK2004 | A `catch` that can never run, a statement or a catch expression (D238) (a warning by default) | Use the form that can fail, or `try` | 3 |
 | EK2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
@@ -4260,6 +4276,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2111 | A `restore` block that no `uninterruptible` block of the same function encloses (D180) | Put it inside `uninterruptible { … }`, or use `interruptible { … }` | 6 |
 | EK2112 | Warning: a catch clause that tests a failure's type, `catch (e: NotFound)`, retired (D216) | `catch (e)` and test `e` with `match` or `is`; the quick fix rewrites the clauses | 3 |
 | EK2113 | Warning: a catch clause typed `Cause`, retired (D217) | `match (exit(…))` with `Exit.Success` and `Exit.Failure` arms; the quick fix rewrites `try { return X } catch (c: Cause) { return Y }` | 3 |
+| EK2114 | A catch expression, `x catch y` or `x catch (e) => …`, inside a hatch body, which is plain TypeScript (D239) | Move the catch out of the hatch, or use a try statement inside it | 3 |
 | EK2120 | A warning: a `service class` or `control class` declaration, the older spelling (D223) | Write `service` or `control` without `class`; the quick fix removes `class` | 4 |
 | EK2121 | A warning: a `layer` declaration, the old spelling of a layer (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |
@@ -4550,6 +4567,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D230 | Inputs, the arguments after a hatch's function, fill its first parameters, before the signal or `resume`; `Resume<A, E>` annotates `resume` | `bind` lowers it, and parameters line up with the arguments as written | 10 |
 | D231 | `try`'s error mapper stays the second argument, and inputs follow it | D148's `try(f, mapper)` keeps its meaning | 10 |
 | D232 | Only a hatch's first argument is TypeScript; inputs and the mapper are Effeck; the function decides sync or async | Inputs run before the hatch, as Effeck calls do | 10 |
+| D236 | `catch` is also an expression: `x catch fallback` is Effect.orElseSucceed and `x catch (e) => …` is Effect.catch; the left side runs inside the catch, and defects and interrupts pass through | Zig's inline catch; one expression replaces a try statement whose blocks only return | 3 |
+| D237 | `catch` binds looser than `??` and `\|\|` and tighter than `? :`, assignment, and `\|>`, associating to the left; a handler's body extends as an arrow function's does | `a() catch b() catch c` chains | 3 |
+| D238 | A catch expression's value is `A \| B` and its E is what the fallback or handler lets escape; a handler's exhaustive `match` removes the failures; a left side that cannot fail is EK2004 | The statement's checks, applied to the expression | 3 |
+| D239 | A catch expression in a hatch body is EK2114 | A hatch body is plain TypeScript | 28 |
 
 #### Rules of the runtime and compiler
 

@@ -231,6 +231,38 @@ function describe(id: string) {
 }
 ```
 
+**Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through.
+
+```ts effect
+const nameOrGuest = (id: string) =>
+  Effect.map(getUser(id), (user) => user.name).pipe(
+    Effect.orElseSucceed(() => "guest")
+  )
+```
+
+```ts es
+function nameOrGuest(id: string) {
+  return getUser(id).name catch "guest"
+}
+```
+
+**Catching in an expression** (D236). `x catch (e) => …` passes the failure to a handler, which can `match` on it; a match that names every failure removes them all.
+
+```ts effect
+const nameOrReason = (id: string) =>
+  Effect.map(getUser(id), (user) => user.name).pipe(
+    Effect.catch((e) => Effect.succeed(`no user ${e.id}`))
+  )
+```
+
+```ts es
+function nameOrReason(id: string) {
+  return getUser(id).name catch (e) => match (e) {
+    when NotFound: `no user ${e.id}`;
+  }
+}
+```
+
 **Handling control operations** (D132). Effect has none, so the left column is Effeck's long form.
 
 ```ts long

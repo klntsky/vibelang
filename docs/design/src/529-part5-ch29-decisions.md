@@ -219,6 +219,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D230 | Inputs, the arguments after a hatch's function, fill its first parameters, before the signal or `resume`; `Resume<A, E>` annotates `resume` | `bind` lowers it, and parameters line up with the arguments as written | 10 |
 | D231 | `try`'s error mapper stays the second argument, and inputs follow it | D148's `try(f, mapper)` keeps its meaning | 10 |
 | D232 | Only a hatch's first argument is TypeScript; inputs and the mapper are Effeck; the function decides sync or async | Inputs run before the hatch, as Effeck calls do | 10 |
+| D236 | `catch` is also an expression: `x catch fallback` is Effect.orElseSucceed and `x catch (e) => …` is Effect.catch; the left side runs inside the catch, and defects and interrupts pass through | Zig's inline catch; one expression replaces a try statement whose blocks only return | 3 |
+| D237 | `catch` binds looser than `??` and `\|\|` and tighter than `? :`, assignment, and `\|>`, associating to the left; a handler's body extends as an arrow function's does | `a() catch b() catch c` chains | 3 |
+| D238 | A catch expression's value is `A \| B` and its E is what the fallback or handler lets escape; a handler's exhaustive `match` removes the failures; a left side that cannot fail is EK2004 | The statement's checks, applied to the expression | 3 |
+| D239 | A catch expression in a hatch body is EK2114 | A hatch body is plain TypeScript | 28 |
 
 #### Rules of the runtime and compiler
 
