@@ -67,12 +67,19 @@ const (
 // runners (prelude.d.ts).
 var effectOperations = setOf(`all die exit forEach log logDebug logError logInfo logWarning race repeat retry sleep timeout withSpan
 	fork handle resume resumeWith abandon sync callback runPromise runFork runSync runCallback detach forkIn interrupt yieldNow
-	uninterruptible restore interruptible`)
+	uninterruptible restore interruptible try attempt suspend handoff`)
 
-// effectModules are effect's modules whose functions return Effects for the
-// most part, so a call of one of their members is an Effect it names.
-var effectModules = setOf(`Effect Console Clock Random Ref SynchronizedRef SubscriptionRef Deferred Fiber FiberHandle FiberMap
-	FiberSet Queue PubSub Semaphore Latch Pool Scope Metric TxRef`)
+// effectModules conservatively covers modules with Effect-returning call
+// signatures in effect@4.0.5's root exports. Derived from dist/index.d.ts by
+// inspecting each exported module's callable exports (including curried
+// return signatures), rather than selecting only familiar Effect modules.
+// A module can also have plain members; without types we must not recommend
+// a plain annotation for a call that could run an Effect.
+var effectModules = setOf(`Arbitrary Cache Cause Channel Clock ConfigProvider Console DateTime Deferred Effect Effectable
+	ErrorReporter Fiber FiberHandle FiberMap FiberSet Filter Latch Layer LayerMap LayerRef LogLevel Logger Metric
+	PartitionedSemaphore Pool PubSub Pull Queue Random RcMap RcRef Ref Request RequestResolver Resource Schedule Schema
+	SchemaGetter SchemaParser Scope ScopedCache ScopedRef Semaphore Stream SubscriptionRef SynchronizedRef TxChunk
+	TxDeferred TxHashMap TxHashSet TxPriorityQueue TxPubSub TxQueue TxReentrantLock TxRef TxSemaphore TxSubscriptionRef`)
 
 // purity returns the purity of each top-level function that the plan
 // lowers as an Effect function and that is the file's only declaration of
@@ -83,12 +90,13 @@ var effectModules = setOf(`Effect Console Clock Random Ref SynchronizedRef Subsc
 func (p *projector) purity() []FunctionPurity {
 	var functions []*ast.Node
 	index := map[string]int{}
+	declarations := p.purityDeclarations()
 	for _, statement := range p.file.Statements.Nodes {
 		if !isProjectedFunction(statement) || statement.Name() == nil || ast.HasSyntacticModifier(statement, ast.ModifierFlagsAmbient) {
 			continue
 		}
 		name := statement.Name().Text()
-		if p.names.declarations[name] != 1 || !p.hasEffectBody(statement) {
+		if declarations[name] != 1 || !p.hasEffectBody(statement) {
 			continue
 		}
 		index[name] = len(functions)
@@ -145,6 +153,25 @@ func (p *projector) purity() []FunctionPurity {
 	return result
 }
 
+// purityDeclarations counts bindings, excluding export specifiers, which
+// reference existing bindings. Keep this local to purity: projection still
+// uses names' conservative accounting for its other decisions.
+func (p *projector) purityDeclarations() map[string]int {
+	counts := map[string]int{}
+	var visit func(*ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if node.Kind == ast.KindIdentifier && node.Flags&ast.NodeFlagsReparsed == 0 &&
+			!isMemberName(node) && ast.IsDeclarationName(node) &&
+			node.Parent.Kind != ast.KindShorthandPropertyAssignment && node.Parent.Kind != ast.KindExportSpecifier {
+			counts[node.Text()]++
+		}
+		node.ForEachChild(visit)
+		return false
+	}
+	p.file.AsNode().ForEachChild(visit)
+	return counts
+}
+
 // hasEffectBody reports whether the plan lowers fn's body as an Effect
 // function's: an Effect body edit right after its brace, or a contract
 // (D57) that closes after it.
@@ -181,7 +208,8 @@ func (p *projector) plainEdits(fn *ast.Node) bool {
 }
 
 // bodyObstacle returns the worst obstacle in fn's body, outside the
-// functions and classes nested in it. callee answers for a call of a name:
+// functions and classes nested in it, except immediately invoked functions
+// whose bodies execute here. callee answers for a call of a name:
 // the obstacle a same-file function's call is, and whether the name is one.
 func (p *projector) bodyObstacle(fn *ast.Node, callee func(name string) (obstacle, bool)) obstacle {
 	worst := obstacleNone
@@ -214,7 +242,14 @@ func (p *projector) bodyObstacle(fn *ast.Node, callee func(name string) (obstacl
 		case ast.KindTaggedTemplateExpression:
 			raise(obstacleUnknown)
 		case ast.KindCallExpression:
-			if raise(p.callObstacle(node, callee)) {
+			target := ast.SkipParentheses(node.Expression())
+			if target.Kind == ast.KindArrowFunction || target.Kind == ast.KindFunctionExpression {
+				// An IIFE's body executes in this call; uncalled closures
+				// below still do not affect PlainLooking.
+				if visit(target.Body()) {
+					return true
+				}
+			} else if raise(p.callObstacle(node, callee)) {
 				return true
 			}
 		}
@@ -252,7 +287,7 @@ func (p *projector) callObstacle(call *ast.Node, callee func(name string) (obsta
 		receiver := target.Expression()
 		if receiver.Kind == ast.KindIdentifier {
 			name := receiver.Text()
-			if effectModules[name] && (p.isPreludeName(name) || p.isEffectImport(name)) {
+			if p.isEffectImport(name) || effectModules[name] && p.isPreludeName(name) {
 				return obstacleBlocking
 			}
 			if p.mayBeServiceKey(receiver) {
@@ -301,12 +336,14 @@ func (p *projector) isPureGlobal(call *ast.Node) bool {
 // isPreludeName reports whether name, written in the file, means the
 // prelude's export: no declaration of the file declares it.
 func (p *projector) isPreludeName(name string) bool {
-	return preludeNames[name] && !p.names.declared[name] && !p.names.topLevel[name]
+	// The parser accepts the runtime hatch named try as a call even though
+	// the ordinary prelude identifier table omits the keyword.
+	return (preludeNames[name] || name == "try") && !p.names.declared[name] && !p.names.topLevel[name]
 }
 
 // isEffectImport reports whether name is imported from effect, one of its
-// modules, or effeck-runtime, and nothing else of the file declares it.
+// modules, an @effect package, or effeck-runtime, and nothing else of the file declares it.
 func (p *projector) isEffectImport(name string) bool {
 	from, ok := p.names.importedFrom[name]
-	return ok && (from == "effect" || strings.HasPrefix(from, "effect/") || from == "effeck-runtime") && p.names.declarations[name] == 1
+	return ok && (from == "effect" || strings.HasPrefix(from, "effect/") || strings.HasPrefix(from, "@effect/") || from == "effeck-runtime") && p.names.declarations[name] == 1
 }

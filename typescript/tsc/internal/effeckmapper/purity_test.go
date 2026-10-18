@@ -1,6 +1,8 @@
 package effeckmapper
 
 import (
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -224,5 +226,75 @@ func TestEmitPuritySplits(t *testing.T) {
 				assert.Assert(t, !strings.Contains(js, name+"[$direct"), "unexpected direct property for %s in\n%s", name, js)
 			}
 		})
+	}
+}
+
+// TestPurityRegressions keeps Effect operations out of the plain-return
+// warning and keeps export references from hiding direct-call candidates.
+func TestPurityRegressions(t *testing.T) {
+	for _, c := range []struct{ name, source, want string }{
+		{"stream", `function f(s) { return Stream.runCollect(s) }`, "effect"},
+		{"shadowedService", `function f(Stream: any) { return Stream.runCollect() }`, "effect"},
+		{"pureModule", `function f() { return Option.some(1) }`, "plain"},
+		{"layer", `function f(l) { return Layer.launch(l) }`, "effect"},
+		{"service", `import { FileSystem } from "effect/FileSystem"; function f(p) { return FileSystem.realPath(p) }`, "effect"},
+		{"rootAlias", `import { FileSystem as fs } from "effect"; function f(p) { return fs.realPath(p) }`, "effect"},
+		{"platformAlias", `import { NodeFileSystem as fs } from "@effect/platform-node"; function f() { return fs.layer() }`, "effect"},
+		{"try", `function f() { return try(() => g(), (e) => e) }`, "effect"},
+		{"suspend", `import { suspend } from "effeck-runtime"; function f() { return suspend(() => {}) }`, "effect"},
+		{"handoff", `import { handoff } from "effeck-runtime"; function f() { return handoff(() => g(), () => g()) }`, "effect"},
+		{"attempt", `import { attempt } from "effeck-runtime"; function f() { return attempt(() => g()) }`, "effect"},
+		{"throwExpression", `function f(x) { return x ?? throw new Error() }`, "effect"},
+		{"doExpression", `function f() { return do { Effect.log("hi") } }`, "effect"},
+		{"arrow", `function f() { return (() => { Effect.log("hi") })() }`, "effect"},
+		{"expression", `function f() { return (function () { throw new Error() })() }`, "effect"},
+		{"export", `function f(xs: number[]) { return xs.at(0) } export { f }`, "plain"},
+		{"exportPure", `function f(x: number) { return x * 2 } export { f }`, "pure"},
+		{"exportAlias", `function f(x: number) { return x * 2 } export { f as twice }`, "pure"},
+		{"nested", `function f() { const g = () => { throw new Error() }; return 1 }`, "plain"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			assert.DeepEqual(t, purityOf(t, c.source), map[string]string{"f": c.want})
+		})
+	}
+}
+
+// TestPurityCorpus records all case functions and checks that executable
+// direct entries agree with the purity decision, including exported names.
+func TestPurityCorpus(t *testing.T) {
+	var files []string
+	err := filepath.WalkDir("../../../effeck/cases", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && strings.HasSuffix(path, ".effeck") {
+			files = append(files, path)
+		}
+		return nil
+	})
+	assert.NilError(t, err)
+	var rows []string
+	pure, plain, total := 0, 0, 0
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		assert.NilError(t, err)
+		source := string(data)
+		result := Project(source, testContext)
+		js, _, _ := Emit(source, testContext)
+		for _, f := range result.Purity {
+			total++
+			if f.ProvablyPure {
+				pure++
+			}
+			if f.PlainLooking {
+				plain++
+			}
+			rows = append(rows, fmt.Sprintf("%s:%d:%s %t %t", file, f.Start, f.Name, f.ProvablyPure, f.PlainLooking))
+			assert.Equal(t, strings.Contains(js, "function "+f.Name+"$direct("), f.ProvablyPure, "%s: %s", file, f.Name)
+		}
+	}
+	t.Logf("corpus: functions=%d ProvablyPure=%d PlainLooking=%d", total, pure, plain)
+	if output := os.Getenv("EFFECK_PURITY_SNAPSHOT"); output != "" {
+		assert.NilError(t, os.WriteFile(output, []byte(strings.Join(rows, "\n")+"\n"), 0600))
 	}
 }
