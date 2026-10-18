@@ -5,6 +5,7 @@
 ## Choosing sequence storage
 
 ```vibe
+// run: Console.log(JSON.stringify(collectBatches([["queued"], ["running", "done"]]).toReadonlyArray()))
 function collectBatches(batches: ReadonlyArray<ReadonlyArray<string>>) {
   let result = Chunk.empty<string>()
   for (const batch of batches) {
@@ -14,15 +15,24 @@ function collectBatches(batches: ReadonlyArray<ReadonlyArray<string>>) {
 }
 ```
 
+```output
+["queued","running","done"]
+```
+
 A chunk preserves sequence order and shares internal structure across updates. That makes repeated concatenation useful without repeatedly copying the whole prefix. Its bookkeeping adds overhead, so it is not a general replacement for arrays.
 
 ## Building chunks
 
 ```vibe
+// run: Console.log(JSON.stringify([empty.toReadonlyArray(), pair.toReadonlyArray(), fromArray.toReadonlyArray(), fromSet.toReadonlyArray()]))
 const empty = Chunk.empty<string>()
 const pair = Chunk.make("north", "south")
 const fromArray = Chunk.fromIterable(["east", "west"])
 const fromSet = Chunk.fromIterable(new Set(["center"]))
+```
+
+```output
+[[],["north","south"],["east","west"],["center"]]
 ```
 
 `make` returns a nonempty chunk, while `empty` represents a sequence with no elements. `fromIterable` accepts arrays, sets, and other iterables; it reuses input arrays and existing chunks. Copy an array before passing it when other code can still mutate it. Immutability applies to the sequence, not to mutable objects stored as its elements.
@@ -30,6 +40,7 @@ const fromSet = Chunk.fromIterable(new Set(["center"]))
 ## Reusing an array unsafely
 
 ```vibe
+// run: Console.log(JSON.stringify(ownedBatch().toReadonlyArray()))
 function ownedBatch() {
   const values = ["queued", "running"]
   return Chunk.fromArrayUnsafe(values)
@@ -37,11 +48,16 @@ function ownedBatch() {
 }
 ```
 
+```output
+["queued","running"]
+```
+
 `fromArrayUnsafe` avoids copying its input. Any later mutation of that array breaks the chunk's immutability guarantees, including through aliases held elsewhere. Use `Chunk.fromIterable([...values])` when you need a copy; `fromIterable(values)` alone also reuses an array.
 
 ## Concatenating and dropping elements
 
 ```vibe
+// run: Console.log(JSON.stringify([original.toReadonlyArray(), remaining.toReadonlyArray()]))
 const original = Chunk.make("draft", "review")
 const extended = original.appendAll(Chunk.make("published"))
 const remaining = extended.drop(1)
@@ -49,11 +65,16 @@ original.toReadonlyArray() // ["draft", "review"]
 remaining.toReadonlyArray() // ["review", "published"]
 ```
 
+```output
+[["draft","review"],["review","published"]]
+```
+
 `appendAll` preserves the order of both chunks. `drop` removes a prefix and returns the remaining sequence. Neither operation changes its inputs.
 
 ## Checking structural equality
 
 ```vibe
+// run: Console.log(Equal.equals(first, same), Equal.equals(first, reversed))
 const first = Chunk.make({ code: "A" }, { code: "B" })
 const same = Chunk.make({ code: "A" }, { code: "B" })
 const reversed = Chunk.make({ code: "B" }, { code: "A" })
@@ -61,15 +82,24 @@ Equal.equals(first, same) // true
 Equal.equals(first, reversed) // false
 ```
 
+```output
+true false
+```
+
 Equality compares lengths and corresponding elements using Effect's equality rules. Distinct chunk objects can therefore be equal, including when their plain object elements were created separately. Element order matters.
 
 ## Converting to arrays
 
 ```vibe
+// run: Console.log(JSON.stringify([nonempty, none, mutableCopy]))
 const nonempty = Chunk.make(7, 8).toReadonlyArray()
 const none = Chunk.toReadonlyArray(Chunk.empty<number>())
 const mutableCopy = [...nonempty]
 mutableCopy.push(9)
+```
+
+```output
+[[7,8],[],[7,8,9]]
 ```
 
 `toReadonlyArray` exposes a readonly view, preserving nonempty information when the input is known to be nonempty. Do not cast the result to a mutable array. Copy it with spread when a JavaScript consumer needs mutable storage.

@@ -5,6 +5,7 @@
 ## Creating values with structural equality
 
 ```vibe
+// run: Console.log(Equal.equals(first, second), Equal.equals(["inbox", 5] as const, ["inbox", 5] as const), Equal.equals([2, 4, 6], [2, 4, 6]), Equal.equals(makeRoute("inbox"), makeRoute("inbox")))
 const first = { route: "inbox", filters: { unread: true } }
 const second = { route: "inbox", filters: { unread: true } }
 Equal.equals(first, second) // true
@@ -17,11 +18,16 @@ function makeRoute(name: string) {
 Equal.equals(makeRoute("inbox"), makeRoute("inbox")) // true
 ```
 
+```output
+true true true true
+```
+
 Plain records, tuples, arrays, maps, and sets need no `Data` wrapper for structural equality. Comparison descends into nested values. Treat compared data as immutable: equality and hashing cache information about objects.
 
 ## Building ordinary and tagged classes
 
 ```vibe
+// run: Console.log(label.upper, Equal.equals(label, new Label({ text: "pending" })), new Archived({ documentId: "doc-3" })._tag)
 class Label extends Data.Class<{ text: string }> {
   get upper() { return this.text.toUpperCase() }
 }
@@ -36,11 +42,16 @@ Equal.equals(label, new Label({ text: "pending" })) // true
 new Archived({ documentId: "doc-3" })._tag // "Archived"
 ```
 
+```output
+PENDING true Archived
+```
+
 `Class` supplies a field-object constructor plus equality and hashing. `TaggedClass` also supplies a fixed `_tag`, useful when narrowing union members. These concrete data classes are distinct from the abstract classes used to declare services.
 
 ## Defining tagged unions with matching helpers
 
 ```vibe
+// run: Console.log(isSent(sent)); Console.log(describe(waiting)); Console.log(describe(sent)); Console.log(describe(rejected))
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
   Sent: { tracking: string }
@@ -62,11 +73,19 @@ const describe = Delivery.$match({
 describe(sent) // "Tracking: parcel-8"
 ```
 
+```output
+true
+Waiting for dispatch
+Tracking: parcel-8
+Rejected: address missing
+```
+
 `TaggedEnum` describes the union from a mapping of tags to payloads. `taggedEnum` creates constructors that insert `_tag`, a `$is` guard factory, and a `$match` helper that requires a case for each variant. Matching callbacks here are synchronous value computations; run service work after narrowing in an ordinary function.
 
 ## Adding generic union cases
 
 ```vibe
+// run: Console.log(JSON.stringify([loaded, failed, idle]))
 type LoadState<A, E> = Data.TaggedEnum<{
   Idle: {}
   Ready: { value: A }
@@ -83,11 +102,16 @@ const failed = LoadState.Failed({ error: "offline" })
 const idle = LoadState.Idle()
 ```
 
+```output
+[{"value":["one","two"],"_tag":"Ready"},{"error":"offline","_tag":"Failed"},{"_tag":"Idle"}]
+```
+
 `WithGenerics<2>` gives the definition two type parameters, addressed as `A` and `B`. The generated constructors infer their payload types at each call. Keep the generic definition in a type or interface; it is not a generic service class.
 
 ## Defining ordinary and tagged errors
 
 ```vibe
+// run: Console.log(new InvalidDocument({ message: "invalid", line: 3 }).line); Console.log(JSON.stringify([documentOrDraft("doc-3"), documentOrDraft("")])); try { requireDocument("") } catch (error) { Console.log(error._tag) }
 class InvalidDocument extends Data.Error<{
   message: string
   line: number
@@ -112,11 +136,18 @@ function documentOrDraft(id: string) {
 }
 ```
 
+```output
+3
+[{"id":"doc-3"},{"id":"draft"}]
+DocumentMissing
+```
+
 `Data.Error` creates a native error with additional fields. The global `TaggedError` is Effect's `Data.TaggedError`, with an automatically populated `_tag`; use `throw` to raise it as an expected failure. Use `Schema.TaggedError` when the error needs a schema for serialization.
 
 ## Preserving native error causes
 
 ```vibe
+// run: Console.log(JSON.stringify(decodeDocument("{\"id\":3}"))); try { decodeDocument("{") } catch (error) { Console.log(error._tag, error.cause instanceof SyntaxError) }
 error DocumentDecodeError {
   cause: unknown
 }
@@ -125,6 +156,11 @@ function decodeDocument(text: string) {
   return try((text) => JSON.parse(text), (cause) => new DocumentDecodeError({ cause }), text)
 }
 // any!DocumentDecodeError!
+```
+
+```output
+{"id":3}
+DocumentDecodeError true
 ```
 
 A `cause` field preserves the original exception using native error-cause support. It is separate from Effect's `Cause`, which describes an entire execution failure. Preserve the original error for diagnosis, and avoid adding document contents or credentials to diagnostic fields.

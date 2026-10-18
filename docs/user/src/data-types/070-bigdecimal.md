@@ -5,10 +5,16 @@
 ## Representing decimal values
 
 ```vibe
+// run: Console.log(BigDecimal.format(unitPrice)); Console.log(BigDecimal.format(bulkPrice))
 const unitPrice = BigDecimal.make(875n, 2)
 const bulkPrice = BigDecimal.make(875n, -1)
 BigDecimal.format(unitPrice) // "8.75"
 BigDecimal.format(bulkPrice) // "8750"
+```
+
+```output
+8.75
+8750
 ```
 
 A value stores an integer coefficient and a scale: coefficient × 10 to the power of negative scale. Positive scales place digits after the decimal point; negative scales add integer zeros. Precision is arbitrary within implementation and memory limits, rather than limited to JavaScript's number precision.
@@ -16,6 +22,7 @@ A value stores an integer coefficient and a scale: coefficient × 10 to the powe
 ## Constructing decimals
 
 ```vibe
+// run: Console.log(parsed.isSome(), invalid.isNone(), BigDecimal.format(whole), fromNumber.isSome())
 const whole = BigDecimal.fromBigInt(42n)
 const parsed = BigDecimal.fromString("18.625")
 const invalid = BigDecimal.fromString("eighteen")
@@ -26,11 +33,16 @@ invalid.isNone() // true
 BigDecimal.format(whole) // "42"
 ```
 
+```output
+true true 42 true
+```
+
 `make` accepts a coefficient and scale, while `fromBigInt` uses scale zero. `fromString` and `fromNumber` return an `Option`, so invalid input stays data. Prefer strings for externally supplied decimals: converting a number cannot recover digits already lost in floating point calculations.
 
 ## Safe and unsafe constructors
 
 ```vibe
+// run: Console.log(BigDecimal.format(parsePrice("18.625")), BigDecimal.format(fixedRate)); try { parsePrice("invalid") } catch (error) { Console.log(error._tag, error.input) }
 error InvalidPrice {
   input: string
 }
@@ -43,11 +55,17 @@ function parsePrice(input: string) {
 const fixedRate = BigDecimal.fromNumberUnsafe(1.25)
 ```
 
+```output
+18.625 1.25
+InvalidPrice invalid
+```
+
 `fromStringUnsafe` throws for invalid text; `fromNumberUnsafe` throws for non-finite numbers. Use an unsafe constructor for a known valid constant, or put it inside an explicit boundary that declares the expected error. The safe constructors are usually simpler for validation.
 
 ## Performing arithmetic
 
 ```vibe
+// run: Console.log(JSON.stringify([BigDecimal.format(total), BigDecimal.format(total.sum(discount)), total.divide(quantity).map(BigDecimal.format).getOrNull(), total.remainder(quantity).map(BigDecimal.format).getOrNull(), BigDecimal.sign(BigDecimal.negate(total)), BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total)))]))
 const price = BigDecimal.make(875n, 2)
 const quantity = BigDecimal.fromBigInt(4n)
 const subtotal = price.multiply(quantity)
@@ -62,11 +80,16 @@ BigDecimal.sign(BigDecimal.negate(total)) // -1
 BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total))) // "32.5"
 ```
 
+```output
+["32.5","35","8.125","0.5",-1,"32.5"]
+```
+
 `sum`, `subtract`, and `multiply` produce new decimals. `divide` and `remainder` return `None` for a zero divisor; `divideUnsafe` and `remainderUnsafe` throw instead. Division with a nonterminating decimal expansion uses the library's precision policy, so arbitrary precision does not mean an infinitely long quotient.
 
 ## Comparing values
 
 ```vibe
+// run: Console.log(JSON.stringify([amount.isLessThan(limit), amount.isLessThanOrEqualTo(amount), limit.isGreaterThan(amount), limit.isGreaterThanOrEqualTo(limit), BigDecimal.format(amount.min(limit)), BigDecimal.format(amount.max(limit)), amount.between({ minimum: BigDecimal.fromBigInt(0n), maximum: limit }), BigDecimal.isZero(amount), BigDecimal.isPositive(amount), BigDecimal.isNegative(amount), BigDecimal.isInteger(amount)]))
 const amount = BigDecimal.make(325n, 1)
 const limit = BigDecimal.fromBigInt(40n)
 amount.isLessThan(limit) // true
@@ -84,16 +107,25 @@ BigDecimal.isNegative(amount) // false
 BigDecimal.isInteger(amount) // false
 ```
 
+```output
+[true,true,true,true,"32.5","40",true,false,true,false,false]
+```
+
 Use decimal comparisons rather than converting to numbers. Bounds passed to `between` are inclusive. The sign and integer predicates inspect the decimal value, independent of its stored scale.
 
 ## Normalization and equality
 
 ```vibe
+// run: Console.log(padded.equals(BigDecimal.make(875n, 2)), BigDecimal.format(compact), BigDecimal.toExponential(compact))
 const padded = BigDecimal.make(87500n, 4)
 const compact = padded.normalize()
 padded.equals(BigDecimal.make(875n, 2)) // true
 BigDecimal.format(compact) // "8.75"
 BigDecimal.toExponential(compact) // "8.75e+0"
+```
+
+```output
+true 8.75 8.75e+0
 ```
 
 Normalization removes unnecessary trailing coefficient zeros and adjusts the scale. Numeric equality already ignores those representation differences; normalize when you need a compact representation, not as a prerequisite for comparison.
