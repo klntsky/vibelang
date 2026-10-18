@@ -355,7 +355,7 @@ var (
 // DefaultTable returns the embedded table.
 func DefaultTable() (*Table, error) {
 	defaultTableOnce.Do(func() {
-		defaultTable, defaultTableErr = ReadTable(bytes.NewReader(embeddedTable))
+		defaultTable, defaultTableErr = readTable(embeddedTable)
 	})
 	return defaultTable, defaultTableErr
 }
@@ -695,70 +695,13 @@ func encodeSignature(s Signature) signatureJSON {
 	return out
 }
 
-// ReadTable parses a table in the file format.
+// ReadTable parses a table in the file format that WriteTable writes.
 func ReadTable(r io.Reader) (*Table, error) {
-	t := &Table{entries: map[string][]Signature{}, aliases: map[string]string{}, values: map[string]string{}}
-	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 0, 1<<16), 1<<24)
-	first := true
-	for lineNo := 1; sc.Scan(); lineNo++ {
-		data := sc.Bytes()
-		if len(bytes.TrimSpace(data)) == 0 {
-			continue
-		}
-		if first {
-			first = false
-			if err := json.Unmarshal(data, &t.Header); err != nil {
-				return nil, fmt.Errorf("forms: line %d: header: %w", lineNo, err)
-			}
-			continue
-		}
-		var probe struct {
-			Alias  *string `json:"alias"`
-			Value  *string `json:"value"`
-			Module *string `json:"module"`
-		}
-		if err := json.Unmarshal(data, &probe); err != nil {
-			return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
-		}
-		if probe.Alias != nil {
-			var a aliasLine
-			if err := json.Unmarshal(data, &a); err != nil {
-				return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
-			}
-			t.aliases[a.Alias] = a.To
-			continue
-		}
-		if probe.Module != nil && probe.Value == nil {
-			t.modules = append(t.modules, *probe.Module)
-			continue
-		}
-		if probe.Value != nil {
-			var v valueLine
-			if err := json.Unmarshal(data, &v); err != nil {
-				return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
-			}
-			t.values[v.Value] = v.Module
-			continue
-		}
-		var k keyLine
-		if err := json.Unmarshal(data, &k); err != nil {
-			return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
-		}
-		sigs := make([]Signature, 0, len(k.Sigs))
-		for _, sj := range k.Sigs {
-			s, err := decodeSignature(sj)
-			if err != nil {
-				return nil, fmt.Errorf("forms: line %d: %s: %w", lineNo, k.Key, err)
-			}
-			sigs = append(sigs, s)
-		}
-		t.entries[k.Key] = sigs
-	}
-	if err := sc.Err(); err != nil {
+	data, err := io.ReadAll(r)
+	if err != nil {
 		return nil, err
 	}
-	return t, nil
+	return readTable(data)
 }
 
 func decodeSignature(sj signatureJSON) (Signature, error) {
