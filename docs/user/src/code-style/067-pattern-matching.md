@@ -5,6 +5,7 @@ VibeLang matches values with `match` and tests them with `is`, from the TC39 pat
 ## Matching values
 
 ```vibe
+// run: Console.log(describeInput(3)); Console.log(describeInput("news")); Console.log(describeJob({ state: "queued", attempts: 2 })); Console.log(describeJob({ state: "done", attempts: 1 }))
 function describeInput(input: number | string) {
   return match (input) {
     when Number: `count ${input}`;
@@ -20,11 +21,19 @@ function describeJob(input: { state: string; attempts: number }) {
 }
 ```
 
+```output
+count 3
+label news
+waiting: 2
+state: done
+```
+
 Arms are tried in order, and the first arm whose pattern matches gives the value. `Number` and `String` test `typeof`. An object pattern checks only the properties it names.
 
 ## Shapes, guards, and tags
 
 ```vibe
+// run: Console.log(classifyRetry({ status: "failed", attempts: 3 }), classifyRetry({ status: "failed", attempts: 2 }), classifyRetry({ status: "done", attempts: 5 })); Console.log(jobLabel({ _tag: "Queued" })); Console.log(jobLabel({ _tag: "Running", worker: "w-1" })); Console.log(jobLabel({ _tag: "Done", output: "report.csv" }))
 function classifyRetry(input: { status: string; attempts: number }) {
   return match (input) {
     when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
@@ -47,11 +56,19 @@ function jobLabel(job: Job) {
 }
 ```
 
+```output
+escalate retry leave unchanged
+waiting
+worker w-1
+report.csv
+```
+
 `let n` binds a property, and a guard, `if (condition)`, tests the bindings before it. Matching `_tag` narrows a tagged union. An `error` class is itself a pattern: `when NotFound:` matches its instances.
 
 ## Negating and combining patterns
 
 ```vibe
+// run: Console.log(availability("active"), availability("paused"), availability("closed")); Console.log(weekend("Saturday"), weekend("Sunday"), weekend("Monday"))
 function availability(status: "active" | "paused" | "closed") {
   return match (status) {
     when not "closed": "can reopen";
@@ -67,11 +84,17 @@ function weekend(day: string) {
 }
 ```
 
+```output
+can reopen can reopen archived
+true true false
+```
+
 `not` matches what its pattern does not; `or` matches either pattern. Order still matters: a broad arm can consume inputs that a later arm was meant to handle.
 
 ## Fixing the return type
 
 ```vibe
+// run: Console.log(display(3), display(true), display(false))
 function display(input: number | boolean): string {
   return match (input) {
     when Number: input.toFixed(1);
@@ -80,11 +103,16 @@ function display(input: number | boolean): string {
 }
 ```
 
+```output
+3.0 enabled disabled
+```
+
 A match's type is the union of its arms' types. Annotate the function's return type to require one type from every arm, which catches an arm that returns a number from a text formatter.
 
 ## Exhaustive handling
 
 ```vibe
+// run: Console.log(phaseLabel("draft"), phaseLabel("published"))
 type Phase = "draft" | "published"
 
 function phaseLabel(phase: Phase) {
@@ -95,11 +123,16 @@ function phaseLabel(phase: Phase) {
 }
 ```
 
+```output
+Draft Published
+```
+
 A match without a `default` arm over a finite union, such as literals, `error` classes, `Option`, `Exit`, or `Result`, must handle every case. Adding a member to `Phase` makes this match EK4701 until it gets an arm. A guard does not prove that every value of a type is covered. Over other types, a match that no arm fits throws a `TypeError` when it runs.
 
 ## Defaults, optional outputs, and result outputs
 
 ```vibe
+// run: Console.log(withDefault("start"), withDefault("stop")); Console.log(optionalCommand("start").getOrNull(), optionalCommand("help").isNone()); Console.log(commandResult("start").getOrElse((error) => error), commandResult("help").getOrElse((error) => error))
 type Command = "start" | "stop" | "help"
 
 function withDefault(command: Command) {
@@ -124,11 +157,18 @@ function commandResult(command: Command) {
 }
 ```
 
+```output
+starting unhandled: stop
+starting true
+starting help
+```
+
 A `default` arm comes last and receives every unmatched input, narrowed to the cases no arm took. Return an `Option` or a `Result` from the arms when the caller needs to know whether a case matched. That failed Result is a returned value, not a typed Effect failure.
 
 ## Reusable matchers with the Match module
 
 ```vibe
+// run: Console.log(JSON.stringify(describeAll([3, "news"])))
 const describe = pipe(
   Match.type<number | string>(),
   Match.when(Match.number, (n) => `count ${n}`),
@@ -139,6 +179,10 @@ const describe = pipe(
 function describeAll(inputs: ReadonlyArray<number | string>) {
   return inputs.map(describe)
 }
+```
+
+```output
+["count 3","label news"]
 ```
 
 `Match.type<T>()` builds a matcher without choosing an input, and its finalizer produces a plain function to pass as a callback. Match callbacks are synchronous value computations, and Match functions are trusted Effect library functions: their exceptions are defects that an ordinary `catch` does not recover. Use `match` when an arm performs Effect work.

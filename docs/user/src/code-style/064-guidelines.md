@@ -5,19 +5,28 @@ Run a VibeLang application through its platform runtime, keep its lifetime in `m
 ## Running application entry points
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork(() => main()); TestClock.adjust("2 seconds"); worker.interrupt() }
 // main.vibe
+import { TestClock } from "effect/testing"
+
 export function main() {
   try {
-    log("worker started")
+    Console.log("worker started")
     while (true) {
       sleep("2 seconds")
-      log("checking work")
+      Console.log("checking work")
     }
   } finally {
-    log("worker stopped")
+    Console.log("worker stopped")
   }
 }
 // node main.js runs main with NodeRuntime.runMain
+```
+
+```output
+worker started
+checking work
+worker stopped
 ```
 
 Export `main` from the entry module. When node starts the module, the compiled JavaScript passes `main()` to `NodeRuntime.runMain`, which starts it and coordinates interruption and shutdown; importing the module starts nothing. The `finally` block runs when the worker stops, including on interruption. Acquire application resources with `using` inside `main`, and provide the application layer once around the main program so its services share one lifetime.
@@ -33,10 +42,14 @@ Call runners only where no fiber runs the code: at the module's top level or in 
 import { BunRuntime } from "@effect/platform-bun"
 
 function main() {
-  log("running on Bun")
+  Console.log("running on Bun")
 }
 
 BunRuntime.runMain(() => main())
+```
+
+```output
+running on Bun
 ```
 
 Choose the runtime matching the host and install that platform package. The application still uses Effect's services rather than directly calling Node.js modules or browser globals.
@@ -50,16 +63,18 @@ Choose the runtime matching the host and install that platform package. The appl
 ## Making argument forwarding explicit
 
 ```vibe
-// run: Console.log(JSON.stringify(parseDecimalTokens(["10", "10", "10"])))
+// run: Console.log(JSON.stringify(parseDecimalTokens(["10", "10", "10"]))); printValues([10, 20])
 function parseDecimalTokens(tokens: ReadonlyArray<string>) {
   return tokens.map((text) => Number.parseInt(text, 10))
 }
 // parseDecimalTokens(["10", "10", "10"]) returns [10, 10, 10].
 
 function printValues(values: ReadonlyArray<number>) {
-  forEach(values, (value) => log(value), { discard: true })
+  forEach(values, (value) => Console.log(value), { discard: true })
 }
 // Output: [10,10,10]
+// Output: 10
+// Output: 20
 ```
 
 Write a lambda that names the arguments you intend to pass. Passing `Number.parseInt` directly to array `map` would forward the array index as its radix argument. Explicit lambdas also preserve overload selection and make generic inference easier to inspect.
