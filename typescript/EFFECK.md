@@ -1291,6 +1291,50 @@ Upstream code needed four fixes for `.effeck` files in the server: auto-import p
 | `pzsnyzmw` | effeck: document the editor and effeck in EFFECK.md |
 | `yppyvsqw` | editors: run effeck through the compiler package's launcher in editor tests |
 
+## Performance
+
+Run the benchmarks on the build host, which is quieter and larger than a laptop; other suites running there at the same time add noise, so the tables report medians:
+
+```sh
+# Upstream tsgo for the baseline: build the import commit's compiler once.
+jj workspace add ~/es-ws/upstream --name upstream -r 0c804b2f
+(cd ~/es-ws/upstream && sh ~/effectscript/scripts/remote.sh sh -c 'cd typescript/tsc && go build -o ../built/local/tsc ./cmd/tsc')
+# The compiler benchmark, then the language server benchmark.
+scripts/remote.sh sh -c 'cd typescript/tsc && go build -o ../built/local/tsc ./cmd/tsc && cd ../.. && sh scripts/bench/compiler.sh --upstream $HOME/es-remote/upstream/typescript/built/local/tsc --runs 5'
+scripts/remote.sh sh -c 'node scripts/bench/gen-synthetic.mjs /tmp/lsp 400 && node scripts/bench/lsp.mjs typescript/built/local/tsc /tmp/lsp/effeck'
+```
+
+`scripts/bench/gen-synthetic.mjs` writes the same N modules twice, in Effeck and in hand-written Effect 4 TypeScript. Each module declares two errors, a schema, a service and its layer, a plain helper, and functions that call into the previous module, catch with `match`, fork and join two fibers, provide the layer, and pipe the result. Its shapes are `chain` (small contracts), `dense` (each module's `deep` function also loads four earlier modules' services and calls the previous `deep`, so requirement and error unions grow with depth), and `single` (every module in one file). `compiler.sh` compiles the synthetic projects, the examples, the template, and the docs snippet corpus as one program with `--extendedDiagnostics`, and measures wall time and peak RSS with `scripts/bench/measure.py`.
+
+Measured 2026-10-17 on msb-lat-nyc-01, Effeck at `main` plus the plain-function fix below, against upstream tsgo 7.1.0-dev at 257e874 (medians of 5 runs; seconds and MiB):
+
+| Project | Effeck wall | Effeck check | Effect TS wall (upstream) | Effect TS check | Peak RSS, Effeck / Effect TS |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| chain, 200 modules | 0.39 | 0.13 | 0.31 | 0.15 | 281 / 221 |
+| chain, 400 modules | 0.62 | 0.29 | 0.50 | 0.30 | 348 / 313 |
+| dense, 200 modules | 0.53 | 0.26 | 1.98 | 1.75 | 336 / 440 |
+| dense, 400 modules | 1.15 | 0.71 | 12.34 | 11.95 | 549 / 977 |
+| single file, 400 modules | 1.59 | 1.01 | 2.96 | 2.25 | 254 / 286 |
+
+- **No Effeck pass is superlinear.** Chain and single-file time grow linearly with module count. Dense time roughly doubles per doubling, as its contracts grow. Hand-written Effect TypeScript is the one that blows up on the dense shape: checking `yield*` over requirement and error unions that grow with depth takes 12 s at 400 modules, against Effeck's 1.2 s, because Effeck infers each function's contract once instead of through generator types.
+- **Effeck's own passes** take 19% of the CPU samples on the 400-module chain and 27% on the dense shape (`go tool pprof -focus='internal/effeck\.'` over `--pprofDir` profiles); TypeScript's checker does the rest. The largest are contract inference (`effectTypeOf`, `solve`) and expected-failure and trust analysis (`expectedFailures`, `callTrust`).
+- **The hooks cost nothing on plain TypeScript:** this compiler checks the Effect TS project 3% slower than upstream tsgo.
+- **The fixed cost is the effect root.** A file that uses any effect root name (D146), even `log`, makes the program import `effect` itself, whose index loads every module: about 515 more declaration files. The examples load 738 files, spend about 0.10 s parsing them and 2 ms checking, and peak at 220 MiB; the single-file shape, which uses no root name, loads 241. Importing each used module implicitly (`effect/Console`, `effect/Effect` for the bare functions), as the emitted JavaScript already does, would remove most of that. Name resolution (`preludeSymbol`), completions (`completions.go`), and method syntax (`effectModuleNamespace`) read the root module's symbol today and would need the per-module symbols instead.
+- **The docs corpus** (684 Effeck and TypeScript files as one program, 1594 files with dependencies) compiles in 0.57 s.
+
+Language server, `scripts/bench/lsp.mjs` on the chain shape (open the last module, pull its diagnostics, hover the call into the previous module):
+
+| | Effeck, 200 modules | Effeck, 400 modules | Effect TS (upstream), 200 or 400 |
+| --- | ---: | ---: | ---: |
+| First diagnostics, before the fix | 270 ms | 380 ms | 80 to 90 ms |
+| First diagnostics, after | 150 ms | 175 ms | |
+| First hover, before the fix | 105 ms | 200 ms | 3 to 6 ms |
+| First hover, after | 11 ms | 12 ms | |
+| Later hovers | 0.2 ms | 0.2 ms | 0.2 ms |
+| Peak RSS, after | 260 MiB | 277 MiB | 130 to 145 MiB |
+
+**The fix:** `isPlainFunction` (plain.go) explored the transitive closure of a function's callees before deciding, even when the function's own body ruled it out, such as a `provide` block or a `throw` outside a `try`. The CLI pays that once per program, but the language server's checkers start empty, so the first hover in a module walked every function the call graph reached, through each module's `run` into the one before it. It now stops at a body that rules itself out and stops walking a body at the first call that rules it out; verdicts are unchanged. `TestPlainFunctionStopsAtItsOwnBody` pins it: deciding the last of 50 throwing functions decides only that one (before the fix, all 50). What remains of the first-diagnostics gap is parsing the effect root's declaration files (55% of the server's CPU in a 400-module session).
+
 ## What it cannot do yet
 
 - `arguments` inside a region's closure is the closure's, not the function's, and a function whose body declares `using` or calls `fork` runs its whole body in such a closure.
