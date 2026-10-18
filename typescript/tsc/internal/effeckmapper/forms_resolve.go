@@ -1,0 +1,1502 @@
+package effeckmapper
+
+// The forms resolver: the per-node answers the projector needs from the
+// forms table, read from one file's syntax alone. No checker is involved,
+// so the answers depend only on the file's text and the table.
+//
+// For a lambda, a block, or an argument expression, the resolver finds the
+// owner call and the path from its arguments down to the node (an argument,
+// then an array element or an object property), names the callee from
+// scope, picks a signature, and reads the class at the path:
+//
+//  1. Callee (Resolver.Callee). The root identifier of f(…), A.f(…), or
+//     A.b.f(…) is resolved lexically: a local binding shadows an import,
+//     and an import shadows a prelude name. An import from a package gives
+//     the key spec#imported.chain, through an alias (import { Effect as E })
+//     too; a name no scope binds is a prelude name, prelude#name.chain. The
+//     table's aliases lead both to the canonical key. A function or const
+//     lambda declared in this file gives the signature its written
+//     annotations describe, and a member of a service this file declares
+//     gives the member's written signature. A member of a value (xs.map), a
+//     call result, a parameter, and an import from a relative module have
+//     no key.
+//  2. Signature (formsShapeFit). Among the candidates that take the call's
+//     argument count, most required arguments first, the first one the
+//     written arguments do not rule out: a lambda where no form fits, or a
+//     literal where only a function fits. When the candidates left
+//     disagree at the node's path, the decision says Ambiguous.
+//  3. Lambda form (formsFormFor). The class picks the form. Where both a plain
+//     function and an Effect form fit (D39), or no class is known, the body
+//     decides: a call outside tail position, a throw, an Effeck statement,
+//     or a using declaration make it an Effect function. A parameterless
+//     lambda takes the program or Effect function form its class names, and
+//     the dual form (both at once) where its class accepts both, or no class
+//     is known and its body calls anything.
+//  4. Blocks (Resolver.Block). D188's order: a data-first dual takes the
+//     block first, a data-last dual is applied to it, and any other callee
+//     takes it appended. A moved block is a program.
+//  5. By name (Resolver.Argument). An argument whose text calls something
+//     outside the functions nested in it, at a position whose class accepts
+//     a program, is passed by name (D147). Elsewhere a call runs.
+//  6. Service context. A lambda or method that is a member of an object
+//     literal providing a service (Layer.succeed(K, {…}), K.of({…}), the
+//     object a Layer.effect program returns, Context.make, Context.add,
+//     Effect.provideService) takes the member's written signature when this
+//     file declares K (a service, a control, a D1 abstract class, or a
+//     class K extends Context.Service<K, Shape>()), and the Effect function
+//     form when K is imported from
+//     another .effeck module, since every member of an Effeck service is an
+//     Effect contract (D92, D128). A key from a package, such as effect's
+//     Random.Random, may have plain members, so its members take the
+//     defaults. This applies only where the call gives no class.
+//
+// Every decision records its provenance: the table, a written annotation in
+// this file, a service context, or the fallback defaults.
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
+)
+
+// Form is the form a lambda or block compiles to.
+type Form uint8
+
+const (
+	FormNone Form = iota
+	// FormPlain is a plain JavaScript function.
+	FormPlain
+	// FormEffectFn is a function that returns an Effect.
+	FormEffectFn
+	// FormProgram is an Effect value: the lambda's body as a program.
+	FormProgram
+	// FormDual is a parameterless lambda that is both a program and a
+	// function that returns it (research/typedirected/stock/perf/dual.mjs).
+	FormDual
+)
+
+func (f Form) String() string {
+	return [...]string{"none", "plain", "effectFn", "program", "dual"}[f]
+}
+
+// Provenance says where a decision's class came from.
+type Provenance uint8
+
+const (
+	// FromFallback is the L1 defaults: no key, or no class at the path.
+	FromFallback Provenance = iota
+	// FromTable is the generated forms table.
+	FromTable
+	// FromAnnotation is a written annotation of a declaration in this file.
+	FromAnnotation
+	// FromService is a service context: the member's written signature
+	// when this file declares the service, else the Effect function form.
+	FromService
+)
+
+func (p Provenance) String() string {
+	return [...]string{"fallback", "table", "annotation", "service"}[p]
+}
+
+// Placement is where a block param call passes its block (D188).
+type Placement uint8
+
+const (
+	// BlockAppended passes it last: the callee's own signature, f(args, block).
+	BlockAppended Placement = iota
+	// BlockPrepended passes it first: a data-first dual, f(block, args).
+	BlockPrepended
+	// BlockApplied applies the call to it: a data-last dual, f(args)(block).
+	BlockApplied
+)
+
+func (p Placement) String() string {
+	return [...]string{"appended", "prepended", "applied"}[p]
+}
+
+// PathStep is one step below a call argument: an array element or an
+// object property.
+type PathStep struct {
+	Element  bool
+	Property string
+}
+
+// CalleeKind says how scope names a callee.
+type CalleeKind uint8
+
+const (
+	// CalleeNone has no key: a member of a value, a call result, a
+	// parameter, or a local without a written signature.
+	CalleeNone CalleeKind = iota
+	// CalleeTable is a package import or a prelude name; Key is a table key.
+	CalleeTable
+	// CalleeLocal is a function or const lambda this file declares;
+	// Signatures come from its written annotations.
+	CalleeLocal
+	// CalleeService is a member of a service this file declares;
+	// Signatures come from the member's written annotations.
+	CalleeService
+	// CalleeOtherFile is an import from a relative module, which a per-file
+	// projection cannot read.
+	CalleeOtherFile
+)
+
+func (k CalleeKind) String() string {
+	return [...]string{"none", "table", "local", "service", "otherfile"}[k]
+}
+
+// Callee is a call's callee as scope names it.
+type Callee struct {
+	Kind CalleeKind
+	// Key is the key as written, such as prelude#forEach or
+	// effect#Effect.all, for CalleeTable; Canonical is where the table's
+	// aliases lead it.
+	Key, Canonical string
+	// Signatures are the written signatures of a CalleeLocal or
+	// CalleeService callee.
+	Signatures []Signature
+}
+
+// Decision is the resolver's answer for one node.
+type Decision struct {
+	// Node is the lambda, method, block, or argument expression decided.
+	Node *ast.Node
+	// Call is Node's owner call, or nil. Argument and Steps are the path
+	// from Call's arguments down to Node.
+	Call     *ast.Node
+	Argument int
+	Steps    []PathStep
+	Callee   Callee
+	// Class is what the chosen signature accepts at the path.
+	Class Class
+	// Form is a lambda's or a block's form.
+	Form Form
+	// ByName reports whether an argument expression is passed by name.
+	ByName bool
+	// Block reports whether Node is a block param; Placement is where it goes.
+	Block      bool
+	Placement  Placement
+	Provenance Provenance
+	// Ambiguous reports that candidates the arguments did not rule out
+	// disagree at the path; the first, ranked by required arguments, won.
+	Ambiguous bool
+	// Note names the rule or the gap behind the decision.
+	Note string
+}
+
+// Resolver answers form decisions for one parsed .effeck file.
+type Resolver struct {
+	file  *ast.SourceFile
+	text  string
+	table *Table
+}
+
+// NewResolver returns a resolver for file, a parse of an .effeck file, over
+// table.
+func NewResolver(file *ast.SourceFile, table *Table) *Resolver {
+	return &Resolver{file: file, text: file.Text(), table: table}
+}
+
+// formsProviderCallees are the canonical keys of calls whose object literal
+// argument, or whose program's returned object literal, implements a
+// service, with the index of the argument that names the service's key.
+var formsProviderCallees = map[string]int{
+	"effect/Layer#succeed":               0,
+	"effect/Layer#sync":                  0,
+	"effect/Layer#effect":                0,
+	"effect/Context#make":                0,
+	"effect/Context#add":                 1,
+	"effect/Effect#provideService":       1, // data-first; providerKeyArgument handles the data-last form
+	"effect/Effect#provideServiceEffect": 1,
+	// Not effeck-runtime#$provideService, a provide block's Key = value
+	// (D173): the fork types that value through
+	// NoInfer<Context.Service.Shape<…>> and does not apply D92 to it
+	// (research/typedirected.md section 5, defect 2), so its members take the
+	// defaults, as they do in the fork.
+}
+
+// Lambda decides the form of fn, an arrow function, a function
+// expression, or a method of an object literal.
+func (r *Resolver) Lambda(fn *ast.Node) Decision {
+	d := Decision{Node: fn}
+	params := len(fn.Parameters())
+	facts := formsBodyFacts(fn)
+	call, arg, steps := formsOwnerCall(fn)
+	d.Call, d.Argument, d.Steps = call, arg, steps
+	if call != nil {
+		if r.isBlockArgument(call, fn) {
+			return r.Block(call)
+		}
+		d.Callee = r.Callee(call)
+		cls, prov, ambiguous, note := r.classAt(call, d.Callee, arg, steps)
+		if cls != 0 {
+			d.Class, d.Provenance, d.Ambiguous, d.Note = cls, prov, ambiguous, note
+			d.Form = formsFormFor(cls, params, facts)
+			return d
+		}
+		d.Note = note
+	} else if cls := r.annotatedClass(fn); cls != 0 {
+		d.Class, d.Provenance, d.Note = cls, FromAnnotation, "variable annotation"
+		d.Form = formsFormFor(cls, params, facts)
+		return d
+	}
+	if cls, note, ok := r.serviceMember(fn); ok {
+		d.Class, d.Provenance, d.Note = cls, FromService, note
+		d.Form = formsFormFor(cls, params, facts)
+		return d
+	}
+	if call == nil {
+		d.Note = "no owner call"
+	}
+	d.Provenance = FromFallback
+	d.Form = formsFormFor(0, params, facts)
+	return d
+}
+
+// Block decides where call's block param goes and its form. call's last
+// argument is the block.
+func (r *Resolver) Block(call *ast.Node) Decision {
+	args := call.Arguments()
+	block := args[len(args)-1]
+	n := len(args) - 1
+	d := Decision{Node: block, Call: call, Argument: n, Block: true, Callee: r.Callee(call)}
+	sigs, prov := r.signaturesOf(d.Callee)
+	d.Placement = formsPlacement(sigs, n)
+	if d.Placement == BlockPrepended && formsIsTopic(ast.SkipParentheses(args[0])) {
+		// f(%, args) { block }: the topic already fills the data-first
+		// dual's Effect slot, so the block goes where the rest of the
+		// signature takes it, as the fork's overload resolution decides.
+		d.Placement = formsPlacementAfterData(sigs, n)
+	}
+	switch d.Placement {
+	case BlockPrepended, BlockApplied:
+		d.Class, d.Provenance, d.Note = ClassProgram, prov, "D188 "+d.Placement.String()
+	default:
+		if s, ok, ambiguous := formsShapeFit(formsCandidates(sigs, len(args)), args); ok {
+			d.Class, d.Ambiguous = s.Param(n).Top, ambiguous(n, nil)
+			d.Provenance = prov
+		}
+	}
+	if d.Class == 0 {
+		d.Provenance = FromFallback
+	}
+	d.Form = formsFormFor(d.Class, 0, formsBodyFacts(block))
+	return d
+}
+
+// Argument decides whether expr, an argument expression that is not a
+// lambda, is passed by name.
+func (r *Resolver) Argument(expr *ast.Node) Decision {
+	d := Decision{Node: expr}
+	call, arg, steps := formsOwnerCall(expr)
+	if call == nil {
+		d.Note = "no owner call"
+		return d
+	}
+	d.Call, d.Argument, d.Steps = call, arg, steps
+	d.Callee = r.Callee(call)
+	d.Class, d.Provenance, d.Ambiguous, d.Note = r.classAt(call, d.Callee, arg, steps)
+	if d.Class == 0 {
+		d.Provenance = FromFallback
+	}
+	d.ByName = d.Class&ClassProgram != 0 && (formsHoldsCall(expr) || formsIsTopic(expr))
+	return d
+}
+
+// classAt reads the class at argument arg and steps of call, where the
+// block of a block param call moves its other arguments.
+func (r *Resolver) classAt(call *ast.Node, callee Callee, arg int, steps []PathStep) (Class, Provenance, bool, string) {
+	sigs, prov := r.signaturesOf(callee)
+	if len(sigs) == 0 {
+		return 0, FromFallback, false, "callee " + callee.Kind.String() + " " + callee.Key
+	}
+	args := call.Arguments()
+	argc := len(args)
+	if formsIsBlockCall(r.text, call) && arg < argc-1 {
+		n := argc - 1
+		placement := formsPlacement(sigs, n)
+		if placement == BlockPrepended && formsIsTopic(ast.SkipParentheses(args[0])) {
+			placement = formsPlacementAfterData(sigs, n)
+		}
+		switch placement {
+		case BlockPrepended:
+			// The data-first signature takes the block first: argument i is
+			// its parameter i + 1.
+			for _, s := range sigs {
+				if s.DataFirst && s.Accepts(n+1) {
+					return s.Param(arg + 1).At(steps), prov, false, "data-first, block moved"
+				}
+			}
+		case BlockApplied:
+			for _, s := range sigs {
+				if s.DataLast && s.Accepts(n) {
+					return s.Param(arg).At(steps), prov, false, "data-last, block applied"
+				}
+			}
+		}
+	}
+	s, ok, ambiguous := formsShapeFit(formsCandidates(sigs, argc), args)
+	if !ok {
+		return 0, FromFallback, false, "no signature takes " + strconv.Itoa(argc) + " arguments"
+	}
+	cls := s.Param(arg).At(steps)
+	if cls == 0 {
+		return 0, FromFallback, false, "no class at the path"
+	}
+	return cls, prov, ambiguous(arg, steps), ""
+}
+
+// signaturesOf returns callee's signatures and where they come from.
+func (r *Resolver) signaturesOf(callee Callee) ([]Signature, Provenance) {
+	switch callee.Kind {
+	case CalleeTable:
+		if r.table == nil {
+			return nil, FromFallback
+		}
+		_, sigs, _ := r.table.Lookup(callee.Key)
+		return sigs, FromTable
+	case CalleeLocal:
+		return callee.Signatures, FromAnnotation
+	case CalleeService:
+		return callee.Signatures, FromService
+	}
+	return nil, FromFallback
+}
+
+// formsCandidates returns the signatures that take argc arguments, the one that
+// requires the most first, then in declaration order.
+func formsCandidates(sigs []Signature, argc int) []Signature {
+	var out []Signature
+	for _, s := range sigs {
+		if s.Accepts(argc) {
+			out = append(out, s)
+		}
+	}
+	for i := 1; i < len(out); i++ { // stable insertion sort by Min, descending
+		for j := i; j > 0 && out[j].Min > out[j-1].Min; j-- {
+			out[j], out[j-1] = out[j-1], out[j]
+		}
+	}
+	return out
+}
+
+// formsShapeFit picks the first candidate the written arguments do not rule
+// out, else the first candidate. The returned function reports whether the
+// candidates left disagree at a path.
+func formsShapeFit(cands []Signature, args []*ast.Node) (Signature, bool, func(int, []PathStep) bool) {
+	none := func(int, []PathStep) bool { return false }
+	if len(cands) == 0 {
+		return Signature{}, false, none
+	}
+	var fits []Signature
+	for _, s := range cands {
+		if formsArgumentsFit(s, args) {
+			fits = append(fits, s)
+		}
+	}
+	if len(fits) == 0 {
+		fits = cands
+	}
+	chosen := fits[0]
+	return chosen, true, func(arg int, steps []PathStep) bool {
+		want := chosen.Param(arg).At(steps)
+		for _, s := range fits[1:] {
+			if s.Param(arg).At(steps) != want {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// formsArgumentsFit reports whether no written argument rules s out: a lambda
+// where s's parameter accepts no form, or a literal where it accepts only
+// functions, or a string, number, or template literal where it accepts
+// forms but not a program.
+func formsArgumentsFit(s Signature, args []*ast.Node) bool {
+	for i, arg := range args {
+		top := s.Param(i).Top
+		x := ast.SkipParentheses(arg)
+		switch x.Kind {
+		case ast.KindArrowFunction, ast.KindFunctionExpression:
+			if top == 0 {
+				return false
+			}
+		case ast.KindStringLiteral, ast.KindNumericLiteral, ast.KindTemplateExpression, ast.KindNoSubstitutionTemplateLiteral:
+			if top != 0 && top&ClassProgram == 0 {
+				return false
+			}
+		case ast.KindObjectLiteralExpression, ast.KindArrayLiteralExpression:
+			if top != 0 && top&ClassProgram == 0 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// formsPlacement applies D188's order for a block after n arguments.
+func formsPlacement(sigs []Signature, n int) Placement {
+	for _, s := range sigs {
+		if n > 0 && s.DataFirst && s.Accepts(n+1) {
+			return BlockPrepended
+		}
+	}
+	for _, s := range sigs {
+		if s.DataLast && s.Accepts(n) {
+			return BlockApplied
+		}
+	}
+	return BlockAppended
+}
+
+// formsPlacementAfterData places a block after n arguments whose first
+// is the pipe topic: the call is a data-first dual's own form with its data
+// written, so a data-first signature that takes the block last appends it.
+// Otherwise D188's order without the data-first form applies.
+func formsPlacementAfterData(sigs []Signature, n int) Placement {
+	for _, s := range sigs {
+		if s.DataFirst && s.Accepts(n+1) {
+			return BlockAppended
+		}
+	}
+	for _, s := range sigs {
+		if s.DataLast && s.Accepts(n) {
+			return BlockApplied
+		}
+	}
+	return BlockAppended
+}
+
+// formsBody is what the text of a function's own body shows.
+type formsBody struct {
+	tail    bool // the body is one call, or one statement returning one
+	pauses  bool // a call outside tail position, a throw, an Effeck statement, or a using declaration
+	anyCall bool
+}
+
+func formsBodyFacts(fn *ast.Node) formsBody {
+	var f formsBody
+	body := fn.Body()
+	if body == nil {
+		return f
+	}
+	var tail *ast.Node
+	if body.Kind != ast.KindBlock {
+		if x := ast.SkipParentheses(body); ast.IsCallExpression(x) {
+			tail = x
+		}
+	} else if statements := body.Statements(); len(statements) == 1 {
+		s := statements[0]
+		if (ast.IsReturnStatement(s) || s.Kind == ast.KindExpressionStatement) && s.Expression() != nil {
+			if x := ast.SkipParentheses(s.Expression()); ast.IsCallExpression(x) {
+				tail = x
+			}
+		}
+	}
+	f.tail = tail != nil
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if formsBoundary(n) {
+			return false
+		}
+		switch {
+		case ast.IsCallExpression(n):
+			f.anyCall = true
+			if n != tail {
+				f.pauses = true
+			}
+		case n.Kind == ast.KindThrowStatement:
+			f.pauses = true
+		case n.Flags&ast.NodeFlagsEffeck != 0:
+			f.pauses = true
+		case n.Kind == ast.KindVariableDeclarationList && n.Flags&ast.NodeFlagsUsing != 0:
+			f.pauses = true
+		}
+		n.ForEachChild(visit)
+		return false
+	}
+	if body.Kind == ast.KindBlock {
+		body.ForEachChild(visit)
+	} else {
+		visit(body)
+	}
+	return f
+}
+
+// formsFormFor picks a lambda's form from its class, its parameter count, and
+// what its body shows.
+func formsFormFor(cls Class, params int, f formsBody) Form {
+	p, e, plain := cls&ClassProgram != 0, cls&ClassEffectFn != 0, cls&ClassPlainFn != 0
+	effectful := f.pauses || params == 0 && f.anyCall
+	parameterless := func() Form {
+		switch {
+		case p && e:
+			return FormDual
+		case p:
+			return FormProgram
+		}
+		return FormEffectFn
+	}
+	switch {
+	case cls == 0:
+		if !effectful {
+			return FormPlain
+		}
+		if params == 0 {
+			return FormDual
+		}
+		return FormEffectFn
+	case plain && !p && !e:
+		return FormPlain
+	case !plain: // only Effect forms fit
+		if params == 0 {
+			return parameterless()
+		}
+		if e {
+			return FormEffectFn
+		}
+		return FormProgram
+	default: // a plain function or an Effect form fits (D39, D112): the body decides
+		if !effectful {
+			return FormPlain
+		}
+		if params == 0 {
+			return parameterless()
+		}
+		if e {
+			return FormEffectFn
+		}
+		return FormPlain
+	}
+}
+
+// formsBoundary reports whether node starts code that runs in another
+// function: a call in it does not run where its parent's calls do.
+func formsBoundary(node *ast.Node) bool {
+	return ast.IsFunctionLike(node) || ast.IsClassLike(node) || node.Kind == ast.KindClassStaticBlockDeclaration
+}
+
+// formsHoldsCall reports whether expr calls something outside the functions
+// nested in it: the text a by-name argument shows.
+func formsHoldsCall(expr *ast.Node) bool {
+	if ast.IsCallExpression(expr) {
+		return true
+	}
+	if formsBoundary(expr) {
+		return false
+	}
+	found := false
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if found || formsBoundary(n) {
+			return false
+		}
+		if ast.IsCallExpression(n) {
+			found = true
+			return true
+		}
+		return n.ForEachChild(visit)
+	}
+	expr.ForEachChild(visit)
+	return found
+}
+
+// formsIsTopic reports whether node is a pipe's topic, %: an identifier
+// the parser flags as an Effeck form (parser/effeck_pipes.go). The topic
+// stands for the pipe's left side, so it reads as the call it holds.
+func formsIsTopic(node *ast.Node) bool {
+	return ast.IsIdentifier(node) && node.Flags&ast.NodeFlagsEffeck != 0 && node.Text() == "%"
+}
+
+// formsOwnerCall returns the call whose arguments hold node, the argument's
+// index, and the steps from that argument down to node through array
+// elements, object properties, and object methods.
+func formsOwnerCall(node *ast.Node) (*ast.Node, int, []PathStep) {
+	var steps []PathStep
+	for parent := node.Parent; parent != nil; node, parent = parent, parent.Parent {
+		switch parent.Kind {
+		case ast.KindParenthesizedExpression:
+			continue
+		case ast.KindObjectLiteralExpression:
+			if node.Kind == ast.KindMethodDeclaration {
+				name, ok := formsPropertyName(node)
+				if !ok {
+					return nil, 0, nil
+				}
+				steps = append(steps, PathStep{Property: name})
+			}
+			continue
+		case ast.KindArrayLiteralExpression:
+			steps = append(steps, PathStep{Element: true})
+			continue
+		case ast.KindPropertyAssignment:
+			name, ok := formsPropertyName(parent)
+			if parent.Initializer() != node || !ok {
+				return nil, 0, nil
+			}
+			steps = append(steps, PathStep{Property: name})
+			continue
+		case ast.KindCallExpression:
+			for i, arg := range parent.Arguments() {
+				if arg == node {
+					for a, b := 0, len(steps)-1; a < b; a, b = a+1, b-1 {
+						steps[a], steps[b] = steps[b], steps[a]
+					}
+					return parent, i, steps
+				}
+			}
+		}
+		return nil, 0, nil
+	}
+	return nil, 0, nil
+}
+
+func formsPropertyName(member *ast.Node) (string, bool) {
+	name := member.Name()
+	if name == nil || !(ast.IsIdentifier(name) || ast.IsStringLiteral(name) || ast.IsNumericLiteral(name)) {
+		return "", false
+	}
+	return name.Text(), true
+}
+
+// isBlockArgument reports whether fn is call's block param.
+func (r *Resolver) isBlockArgument(call, fn *ast.Node) bool {
+	args := call.Arguments()
+	return len(args) > 0 && args[len(args)-1] == fn && formsIsBlockCall(r.text, call)
+}
+
+// formsIsBlockCall reports whether call passes a block param: its last argument
+// is a parameterless arrow function with a block body that the source
+// writes as a bare block, so its text starts with { rather than (.
+func formsIsBlockCall(text string, call *ast.Node) bool {
+	if !ast.IsCallExpression(call) {
+		return false
+	}
+	args := call.Arguments()
+	if len(args) == 0 {
+		return false
+	}
+	arrow := args[len(args)-1]
+	if arrow.Kind != ast.KindArrowFunction || len(arrow.Parameters()) != 0 || arrow.Body() == nil || arrow.Body().Kind != ast.KindBlock {
+		return false
+	}
+	start := scanner.SkipTrivia(text, arrow.Pos())
+	return start < len(text) && text[start] == '{'
+}
+
+// Callee names call's callee from scope alone.
+func (r *Resolver) Callee(call *ast.Node) Callee {
+	root, chain, ok := formsNameChain(call.Expression())
+	if !ok {
+		return Callee{}
+	}
+	return r.calleeOf(root, chain, 0)
+}
+
+// formsNameChain splits a.b.c into the identifier a and [b, c].
+func formsNameChain(expr *ast.Node) (*ast.Node, []string, bool) {
+	var chain []string
+	e := ast.SkipParentheses(expr)
+	for ast.IsPropertyAccessExpression(e) {
+		name := e.Name()
+		if !ast.IsIdentifier(name) {
+			return nil, nil, false
+		}
+		chain = append([]string{name.Text()}, chain...)
+		e = ast.SkipParentheses(e.Expression())
+	}
+	if !ast.IsIdentifier(e) {
+		return nil, nil, false
+	}
+	return e, chain, true
+}
+
+func (r *Resolver) calleeOf(root *ast.Node, chain []string, depth int) Callee {
+	name := root.Text()
+	decl := r.binding(root, name)
+	tableKey := func(prefix string) Callee {
+		key := prefix
+		if len(chain) > 0 {
+			if !strings.HasSuffix(prefix, "#") {
+				key += "."
+			}
+			key += strings.Join(chain, ".")
+		}
+		c := Callee{Kind: CalleeTable, Key: key, Canonical: key}
+		if r.table != nil {
+			c.Canonical = r.table.Canonical(key)
+		}
+		return c
+	}
+	if decl == nil {
+		return tableKey("prelude#" + name)
+	}
+	switch decl.Kind {
+	case ast.KindImportSpecifier:
+		spec := formsModuleSpecifier(decl)
+		if spec == "" || strings.HasPrefix(spec, ".") {
+			return Callee{Kind: CalleeOtherFile, Key: spec}
+		}
+		imported := name
+		if pn := decl.AsImportSpecifier().PropertyName; pn != nil {
+			imported = pn.Text()
+		}
+		return tableKey(spec + "#" + imported)
+	case ast.KindNamespaceImport:
+		spec := formsModuleSpecifier(decl)
+		if spec == "" || strings.HasPrefix(spec, ".") {
+			return Callee{Kind: CalleeOtherFile, Key: spec}
+		}
+		if len(chain) == 0 {
+			return Callee{}
+		}
+		return tableKey(spec + "#")
+	case ast.KindImportClause:
+		spec := formsModuleSpecifier(decl)
+		if spec == "" || strings.HasPrefix(spec, ".") {
+			return Callee{Kind: CalleeOtherFile, Key: spec}
+		}
+		return tableKey(spec + "#default")
+	case ast.KindFunctionDeclaration:
+		if len(chain) != 0 {
+			return Callee{}
+		}
+		return Callee{Kind: CalleeLocal, Key: name, Signatures: r.functionSignatures(decl)}
+	case ast.KindVariableDeclaration:
+		init := decl.Initializer()
+		if init != nil {
+			init = ast.SkipParentheses(init)
+		}
+		if t := decl.Type(); t != nil && len(chain) == 0 && t.Kind == ast.KindFunctionType {
+			return Callee{Kind: CalleeLocal, Key: name, Signatures: []Signature{r.writtenSignature(t.Parameters(), t.Type())}}
+		}
+		if init == nil {
+			return Callee{}
+		}
+		if init.Kind == ast.KindArrowFunction || init.Kind == ast.KindFunctionExpression {
+			if len(chain) != 0 {
+				return Callee{}
+			}
+			return Callee{Kind: CalleeLocal, Key: name, Signatures: []Signature{r.writtenSignature(init.Parameters(), init.Type())}}
+		}
+		// const E = Effect, const all = Effect.all: follow the alias.
+		if depth < 4 && decl.Parent != nil && decl.Parent.Flags&ast.NodeFlagsConst != 0 {
+			if next, more, ok := formsNameChain(init); ok {
+				return r.calleeOf(next, append(more, chain...), depth+1)
+			}
+		}
+		return Callee{}
+	case ast.KindClassDeclaration:
+		if len(chain) == 1 && formsIsServiceClass(decl) {
+			if m := formsClassMember(decl, chain[0]); m != nil {
+				switch {
+				case m.Kind == ast.KindMethodDeclaration:
+					return Callee{Kind: CalleeService, Key: name + "." + chain[0], Signatures: []Signature{r.writtenSignature(m.Parameters(), m.Type())}}
+				case m.Kind == ast.KindPropertyDeclaration && m.Type() != nil && m.Type().Kind == ast.KindFunctionType:
+					t := m.Type()
+					return Callee{Kind: CalleeService, Key: name + "." + chain[0], Signatures: []Signature{r.writtenSignature(t.Parameters(), t.Type())}}
+				}
+			}
+		}
+		return Callee{}
+	}
+	return Callee{}
+}
+
+func formsModuleSpecifier(decl *ast.Node) string {
+	for n := decl; n != nil; n = n.Parent {
+		if n.Kind == ast.KindImportDeclaration {
+			if spec := n.ModuleSpecifier(); spec != nil && ast.IsStringLiteral(spec) {
+				return spec.Text()
+			}
+			return ""
+		}
+	}
+	return ""
+}
+
+// binding returns the declaration that binds name where id stands: an
+// import, a variable, a function, a class, or a parameter, or nil when no
+// scope in the file binds it.
+func (r *Resolver) binding(id *ast.Node, name string) *ast.Node {
+	for n := id.Parent; n != nil; n = n.Parent {
+		if d := formsDeclaredIn(n, name, id); d != nil {
+			return d
+		}
+	}
+	return nil
+}
+
+// formsDeclaredIn returns the declaration of name that scope introduces.
+func formsDeclaredIn(scope *ast.Node, name string, from *ast.Node) *ast.Node {
+	switch {
+	case scope.Kind == ast.KindSourceFile:
+		for _, s := range scope.AsSourceFile().Statements.Nodes {
+			if d := formsStatementDeclares(s, name); d != nil {
+				return d
+			}
+			if s.Kind == ast.KindImportDeclaration {
+				if d := formsImportDeclares(s, name); d != nil {
+					return d
+				}
+			}
+		}
+	case scope.Kind == ast.KindBlock || scope.Kind == ast.KindModuleBlock || scope.Kind == ast.KindCaseClause || scope.Kind == ast.KindDefaultClause:
+		for _, s := range scope.Statements() {
+			if d := formsStatementDeclares(s, name); d != nil {
+				return d
+			}
+		}
+	case ast.IsFunctionLike(scope):
+		for _, p := range scope.Parameters() {
+			if d := formsBindingDeclares(p.Name(), name, p); d != nil {
+				return d
+			}
+		}
+		if scope.Kind == ast.KindFunctionExpression && scope.Name() != nil && scope.Name().Text() == name {
+			return scope
+		}
+		if body := scope.Body(); body != nil && body.Kind == ast.KindBlock {
+			if d := formsHoistedVar(body, name); d != nil {
+				return d
+			}
+		}
+	case scope.Kind == ast.KindCatchClause:
+		if v := scope.AsCatchClause().VariableDeclaration; v != nil {
+			if d := formsBindingDeclares(v.Name(), name, v); d != nil {
+				return d
+			}
+		}
+	case scope.Kind == ast.KindForStatement || scope.Kind == ast.KindForInStatement || scope.Kind == ast.KindForOfStatement:
+		if init := scope.Initializer(); init != nil && init.Kind == ast.KindVariableDeclarationList {
+			for _, v := range init.AsVariableDeclarationList().Declarations.Nodes {
+				if d := formsBindingDeclares(v.Name(), name, v); d != nil {
+					return d
+				}
+			}
+		}
+	case scope.Kind == ast.KindClassExpression:
+		if scope.Name() != nil && scope.Name().Text() == name {
+			return scope
+		}
+	}
+	return nil
+}
+
+// formsStatementDeclares returns the declaration of name that statement s makes
+// in its own block.
+func formsStatementDeclares(s *ast.Node, name string) *ast.Node {
+	switch s.Kind {
+	case ast.KindVariableStatement:
+		for _, v := range s.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes {
+			if d := formsBindingDeclares(v.Name(), name, v); d != nil {
+				return d
+			}
+		}
+	case ast.KindFunctionDeclaration, ast.KindClassDeclaration, ast.KindEnumDeclaration, ast.KindModuleDeclaration:
+		if n := s.Name(); n != nil && ast.IsIdentifier(n) && n.Text() == name {
+			return s
+		}
+	}
+	return nil
+}
+
+// formsImportDeclares returns the import specifier, namespace import, or default
+// import clause that binds name.
+func formsImportDeclares(s *ast.Node, name string) *ast.Node {
+	clause := s.AsImportDeclaration().ImportClause
+	if clause == nil {
+		return nil
+	}
+	if n := clause.Name(); n != nil && n.Text() == name {
+		return clause
+	}
+	bindings := clause.AsImportClause().NamedBindings
+	switch {
+	case bindings == nil:
+	case bindings.Kind == ast.KindNamespaceImport:
+		if bindings.Name().Text() == name {
+			return bindings
+		}
+	case bindings.Kind == ast.KindNamedImports:
+		for _, e := range bindings.AsNamedImports().Elements.Nodes {
+			if e.Name().Text() == name {
+				return e
+			}
+		}
+	}
+	return nil
+}
+
+// formsBindingDeclares returns decl when the binding name, an identifier or a
+// destructuring pattern, binds name.
+func formsBindingDeclares(binding *ast.Node, name string, decl *ast.Node) *ast.Node {
+	if binding == nil {
+		return nil
+	}
+	if ast.IsIdentifier(binding) {
+		if binding.Text() == name {
+			return decl
+		}
+		return nil
+	}
+	var found *ast.Node
+	binding.ForEachChild(func(child *ast.Node) bool {
+		if child.Kind == ast.KindBindingElement {
+			if d := formsBindingDeclares(child.Name(), name, child); d != nil {
+				found = d
+				return true
+			}
+		}
+		return false
+	})
+	return found
+}
+
+// formsHoistedVar returns a var declaration of name anywhere in body outside
+// nested functions.
+func formsHoistedVar(body *ast.Node, name string) *ast.Node {
+	var found *ast.Node
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if found != nil || formsBoundary(n) {
+			return false
+		}
+		if n.Kind == ast.KindVariableDeclarationList && n.Flags&(ast.NodeFlagsLet|ast.NodeFlagsConst|ast.NodeFlagsUsing) == 0 {
+			for _, v := range n.AsVariableDeclarationList().Declarations.Nodes {
+				if d := formsBindingDeclares(v.Name(), name, v); d != nil {
+					found = d
+					return true
+				}
+			}
+		}
+		return n.ForEachChild(visit)
+	}
+	body.ForEachChild(visit)
+	return found
+}
+
+// functionSignatures returns the written signatures of a function this
+// file declares: its overloads, else the implementation.
+func (r *Resolver) functionSignatures(decl *ast.Node) []Signature {
+	name := decl.Name().Text()
+	var overloads, impls []Signature
+	scope := decl.Parent
+	var statements []*ast.Node
+	switch {
+	case scope != nil && scope.Kind == ast.KindSourceFile:
+		statements = scope.AsSourceFile().Statements.Nodes
+	case scope != nil && scope.Kind == ast.KindBlock:
+		statements = scope.Statements()
+	default:
+		statements = []*ast.Node{decl}
+	}
+	for _, s := range statements {
+		if s.Kind != ast.KindFunctionDeclaration || s.Name() == nil || s.Name().Text() != name {
+			continue
+		}
+		sig := r.writtenSignature(s.Parameters(), s.Type())
+		if s.Body() == nil {
+			overloads = append(overloads, sig)
+		} else {
+			impls = append(impls, sig)
+		}
+	}
+	if len(overloads) > 0 {
+		return overloads
+	}
+	return impls
+}
+
+// writtenSignature reads a signature from written parameters and a written
+// return type.
+func (r *Resolver) writtenSignature(params []*ast.Node, returnType *ast.Node) Signature {
+	s := Signature{Max: len(params)}
+	required := true
+	for _, p := range params {
+		pd := p.AsParameterDeclaration()
+		if pd.DotDotDotToken != nil {
+			s.Rest = true
+			required = false
+		}
+		if pd.QuestionToken != nil || pd.Initializer != nil {
+			required = false
+		}
+		if required {
+			s.Min++
+		}
+		s.Params = append(s.Params, r.paramOfType(p.Type(), s.Rest))
+	}
+	if len(params) > 0 {
+		s.DataFirst = r.isEffectTypeNode(params[0].Type(), 0)
+	}
+	if returnType != nil && returnType.Kind == ast.KindFunctionType {
+		if ps := returnType.Parameters(); len(ps) > 0 && r.isEffectTypeNode(ps[0].Type(), 0) {
+			s.DataLast = true
+		}
+	}
+	return s
+}
+
+// paramOfType reads what a parameter whose written type is t accepts. A
+// rest parameter's type is an array of the argument type.
+func (r *Resolver) paramOfType(t *ast.Node, rest bool) Param {
+	if t == nil {
+		return Param{}
+	}
+	if rest {
+		if elem := formsElementType(t); elem != nil {
+			t = elem
+		}
+	}
+	p := Param{Top: r.classOfType(t, 0)}
+	if elem := formsElementType(formsUnwrapType(t)); elem != nil {
+		p.Elem = r.classOfType(elem, 0)
+	}
+	if lit := r.typeLiteral(t, 0); lit != nil {
+		for _, m := range lit.Members() {
+			switch m.Kind {
+			case ast.KindPropertySignature:
+				if name, ok := formsPropertyName(m); ok {
+					if c := r.classOfType(m.Type(), 0); c != 0 {
+						if p.Props == nil {
+							p.Props = map[string]Class{}
+						}
+						p.Props[name] = c
+					}
+				}
+			case ast.KindMethodSignature:
+				if name, ok := formsPropertyName(m); ok {
+					if p.Props == nil {
+						p.Props = map[string]Class{}
+					}
+					p.Props[name] = r.callbackClass(m.Type())
+				}
+			case ast.KindIndexSignature:
+				p.AnyProp = r.classOfType(m.Type(), 0)
+			}
+		}
+	}
+	return p
+}
+
+// formsUnwrapType drops parentheses and readonly from a written type.
+func formsUnwrapType(t *ast.Node) *ast.Node {
+	for t != nil {
+		switch {
+		case t.Kind == ast.KindParenthesizedType:
+			t = t.Type()
+		case t.Kind == ast.KindTypeOperator:
+			t = t.AsTypeOperatorNode().Type
+		default:
+			return t
+		}
+	}
+	return t
+}
+
+// formsElementType returns the element type of a written array, readonly
+// array, or iterable type.
+func formsElementType(t *ast.Node) *ast.Node {
+	t = formsUnwrapType(t)
+	if t == nil {
+		return nil
+	}
+	switch t.Kind {
+	case ast.KindArrayType:
+		return t.AsArrayTypeNode().ElementType
+	case ast.KindTypeReference:
+		name := t.AsTypeReferenceNode().TypeName
+		if ast.IsIdentifier(name) && len(t.TypeArguments()) == 1 {
+			switch name.Text() {
+			case "Array", "ReadonlyArray", "Iterable", "NonEmptyArray", "NonEmptyReadonlyArray":
+				return t.TypeArguments()[0]
+			}
+		}
+	}
+	return nil
+}
+
+// typeLiteral returns the written object type t names: a type literal, or
+// a type alias or interface of this file that is one.
+func (r *Resolver) typeLiteral(t *ast.Node, depth int) *ast.Node {
+	t = formsUnwrapType(t)
+	if t == nil || depth > 4 {
+		return nil
+	}
+	switch t.Kind {
+	case ast.KindTypeLiteral:
+		return t
+	case ast.KindTypeReference:
+		if d := r.localType(t); d != nil {
+			if d.Kind == ast.KindInterfaceDeclaration {
+				return d
+			}
+			return r.typeLiteral(d.Type(), depth+1)
+		}
+	}
+	return nil
+}
+
+// localType returns the top-level type alias or interface a written type
+// reference names, when this file declares it without type parameters.
+func (r *Resolver) localType(ref *ast.Node) *ast.Node {
+	name := ref.AsTypeReferenceNode().TypeName
+	if !ast.IsIdentifier(name) {
+		return nil
+	}
+	for _, s := range r.file.Statements.Nodes {
+		if (s.Kind == ast.KindTypeAliasDeclaration || s.Kind == ast.KindInterfaceDeclaration) && s.Name().Text() == name.Text() && s.TypeParameters() == nil {
+			return s
+		}
+	}
+	return nil
+}
+
+// classOfType reads the forms a written parameter type accepts: an Effect
+// is a program; a function type is an Effect function (callbackClass); a
+// union accepts what its members accept. A type parameter, an imported
+// type, or anything else carries no class.
+func (r *Resolver) classOfType(t *ast.Node, depth int) Class {
+	t = formsUnwrapType(t)
+	if t == nil || depth > 4 {
+		return 0
+	}
+	switch t.Kind {
+	case ast.KindUnionType:
+		var c Class
+		for _, m := range t.AsUnionTypeNode().Types.Nodes {
+			c |= r.classOfType(m, depth+1)
+		}
+		return c
+	case ast.KindFunctionType:
+		return r.callbackClass(t.Type())
+	case ast.KindTypeReference:
+		if r.isEffectTypeNode(t, depth) {
+			return ClassProgram
+		}
+		if d := r.localType(t); d != nil && d.Kind == ast.KindTypeAliasDeclaration {
+			return r.classOfType(d.Type(), depth+1)
+		}
+	}
+	return 0
+}
+
+// callbackClass is the class of a function type written in a parameter of
+// a declaration in this file, whose written return type is ret. A callback
+// type without an Effect contract accepts any contract (D12, D68): the fork
+// reads (a: A) => B as (a: A) => Effect<B, E, R>, so a lambda passed there
+// is an Effect function. A union with an Effect accepts either form.
+func (r *Resolver) callbackClass(ret *ast.Node) Class {
+	ret = formsUnwrapType(ret)
+	if ret != nil && ret.Kind == ast.KindUnionType {
+		for _, m := range ret.AsUnionTypeNode().Types.Nodes {
+			if r.isEffectTypeNode(m, 0) {
+				return ClassEffectFn | ClassPlainFn
+			}
+		}
+	}
+	return ClassEffectFn
+}
+
+// memberClass is the class of a service member whose written result is
+// ret: an Effect function when ret is an Effect or a contract, as every
+// member of a service or control is (D128), and plain otherwise.
+func (r *Resolver) memberClass(ret *ast.Node) Class {
+	ret = formsUnwrapType(ret)
+	switch {
+	case ret == nil:
+		return ClassEffectFn
+	case r.isEffectTypeNode(ret, 0):
+		return ClassEffectFn
+	case ret.Kind == ast.KindUnionType:
+		for _, m := range ret.AsUnionTypeNode().Types.Nodes {
+			if r.isEffectTypeNode(m, 0) {
+				return ClassEffectFn | ClassPlainFn
+			}
+		}
+	}
+	return ClassPlainFn
+}
+
+// isEffectTypeNode reports whether written type t is effect's Effect: an
+// Effeck contract (A!E!R), Effect.Effect<…> through an import of effect or
+// effect/Effect or through the prelude, or the prelude's Effect<…> (D4).
+func (r *Resolver) isEffectTypeNode(t *ast.Node, depth int) bool {
+	t = formsUnwrapType(t)
+	if t == nil || t.Kind != ast.KindTypeReference {
+		return false
+	}
+	name := t.AsTypeReferenceNode().TypeName
+	if name.Kind == ast.KindQualifiedName && name.Flags&ast.NodeFlagsReparsed != 0 && len(t.TypeArguments()) == 3 {
+		return true // A!E!R
+	}
+	var parts []string
+	for name.Kind == ast.KindQualifiedName {
+		q := name.AsQualifiedName()
+		parts = append([]string{q.Right.Text()}, parts...)
+		name = q.Left
+	}
+	if !ast.IsIdentifier(name) {
+		return false
+	}
+	root := name.Text()
+	decl := r.binding(name, root)
+	switch {
+	case decl == nil:
+		if len(parts) == 0 {
+			return root == "Effect" // the prelude's type Effect<A, E, R> (D4)
+		}
+		return r.canonicalIsEffect("prelude#" + root + "." + strings.Join(parts, "."))
+	case decl.Kind == ast.KindImportSpecifier:
+		spec := formsModuleSpecifier(decl)
+		imported := root
+		if pn := decl.AsImportSpecifier().PropertyName; pn != nil {
+			imported = pn.Text()
+		}
+		key := spec + "#" + imported
+		if len(parts) > 0 {
+			key += "." + strings.Join(parts, ".")
+		}
+		return r.canonicalIsEffect(key)
+	case decl.Kind == ast.KindNamespaceImport && len(parts) > 0:
+		return r.canonicalIsEffect(formsModuleSpecifier(decl) + "#" + strings.Join(parts, "."))
+	case decl.Kind == ast.KindTypeAliasDeclaration && depth < 4:
+		return r.isEffectTypeNode(decl.Type(), depth+1)
+	}
+	return false
+}
+
+func (r *Resolver) canonicalIsEffect(key string) bool {
+	if key == "effect/Effect#Effect" || key == "effect#Effect.Effect" {
+		return true
+	}
+	return r.table != nil && r.table.Canonical(key) == "effect/Effect#Effect"
+}
+
+// annotatedClass returns the class a free lambda's variable annotation
+// gives it: const f: (x: number) => Effect<…> = (x) => ….
+func (r *Resolver) annotatedClass(fn *ast.Node) Class {
+	n := fn
+	for n.Parent != nil && n.Parent.Kind == ast.KindParenthesizedExpression {
+		n = n.Parent
+	}
+	if p := n.Parent; p != nil && p.Kind == ast.KindVariableDeclaration && p.Initializer() == n && p.Type() != nil {
+		return r.classOfType(p.Type(), 0)
+	}
+	return 0
+}
+
+// serviceMember decides a lambda or method in a service context: a member
+// of an object literal that a provider call takes, or that a program
+// passed to Layer.effect returns.
+func (r *Resolver) serviceMember(fn *ast.Node) (Class, string, bool) {
+	member, obj := fn, fn.Parent
+	if obj != nil && obj.Kind == ast.KindPropertyAssignment && obj.Initializer() == fn {
+		member, obj = obj, obj.Parent
+	}
+	for obj != nil && obj.Kind == ast.KindParenthesizedExpression {
+		obj = obj.Parent
+	}
+	if obj == nil || obj.Kind != ast.KindObjectLiteralExpression {
+		return 0, "", false
+	}
+	name, ok := formsPropertyName(member)
+	if !ok {
+		return 0, "", false
+	}
+	key := r.providedKey(obj)
+	if key == nil {
+		return 0, "", false
+	}
+	root, chain, ok := formsNameChain(key)
+	if ok && len(chain) == 0 {
+		if class := r.serviceClassOf(root); class != nil {
+			if m := formsClassMember(class, name); m != nil {
+				switch m.Kind {
+				case ast.KindMethodDeclaration:
+					return r.memberClass(m.Type()), "member " + class.Name().Text() + "." + name, true
+				case ast.KindPropertyDeclaration:
+					if t := formsUnwrapType(m.Type()); t != nil && t.Kind == ast.KindFunctionType {
+						return r.memberClass(t.Type()), "member " + class.Name().Text() + "." + name, true
+					}
+					return r.classOfType(m.Type(), 0), "member " + class.Name().Text() + "." + name, true
+				}
+			}
+		}
+	}
+	if ok && len(chain) == 0 {
+		if d := r.binding(root, root.Text()); d != nil && d.Kind == ast.KindClassDeclaration {
+			if shape := r.typeLiteral(formsServiceShape(d), 0); shape != nil {
+				if m := formsShapeMember(shape, name); m != nil {
+					note := "member " + d.Name().Text() + "." + name
+					switch m.Kind {
+					case ast.KindMethodSignature:
+						return r.memberClass(m.Type()), note, true
+					case ast.KindPropertySignature:
+						if t := formsUnwrapType(m.Type()); t != nil && t.Kind == ast.KindFunctionType {
+							return r.memberClass(t.Type()), note, true
+						}
+						return r.classOfType(m.Type(), 0), note, true
+					}
+				}
+			}
+		}
+	}
+	if ok {
+		if d := r.binding(root, root.Text()); d != nil && (d.Kind == ast.KindImportSpecifier || d.Kind == ast.KindNamespaceImport || d.Kind == ast.KindImportClause) {
+			if spec := formsModuleSpecifier(d); strings.HasPrefix(spec, ".") && strings.HasSuffix(spec, ".effeck") {
+				return ClassEffectFn, "provider of a service from " + spec, true
+			}
+		}
+	}
+	return 0, "", false
+}
+
+// providedKey returns the expression naming the service that obj, an
+// object literal, implements, or nil when obj is not a provider.
+func (r *Resolver) providedKey(obj *ast.Node) *ast.Node {
+	up := obj.Parent
+	for up != nil && up.Kind == ast.KindParenthesizedExpression {
+		up = up.Parent
+	}
+	if up == nil {
+		return nil
+	}
+	if ast.IsCallExpression(up) {
+		return r.providerKeyArgument(up, obj)
+	}
+	if up.Kind == ast.KindReturnStatement || formsBoundary(up) && up.Body() == obj {
+		// The object a program returns: find the enclosing lambda and its call.
+		fn := up
+		for fn != nil && !formsBoundary(fn) {
+			fn = fn.Parent
+		}
+		if fn == nil || !(fn.Kind == ast.KindArrowFunction || fn.Kind == ast.KindFunctionExpression) {
+			return nil
+		}
+		if call, _, steps := formsOwnerCall(fn); call != nil && len(steps) == 0 {
+			return r.providerKeyArgument(call, fn)
+		}
+	}
+	return nil
+}
+
+// providerKeyArgument returns the key argument of call when call is a
+// provider call and arg is the argument that implements the service.
+func (r *Resolver) providerKeyArgument(call, arg *ast.Node) *ast.Node {
+	args := call.Arguments()
+	index := -1
+	for i, a := range args {
+		if ast.SkipParentheses(a) == arg || a == arg {
+			index = i
+		}
+	}
+	if index < 0 {
+		return nil
+	}
+	if e := ast.SkipParentheses(call.Expression()); ast.IsPropertyAccessExpression(e) && e.Name().Text() == "of" && index == 0 {
+		return e.Expression() // K.of({ … })
+	}
+	c := r.Callee(call)
+	if c.Kind != CalleeTable {
+		return nil
+	}
+	at, ok := formsProviderCallees[c.Canonical]
+	if !ok {
+		return nil
+	}
+	if at >= len(args) || at >= index {
+		at = index - 1 // a data-last form: the key comes just before the value
+	}
+	if at < 0 {
+		return nil
+	}
+	return ast.SkipParentheses(args[at])
+}
+
+// serviceClassOf returns the service class this file declares that id
+// names where it stands.
+func (r *Resolver) serviceClassOf(id *ast.Node) *ast.Node {
+	d := r.binding(id, id.Text())
+	if d != nil && formsIsServiceClass(d) {
+		return d
+	}
+	return nil
+}
+
+// formsIsServiceClass reports whether node declares a service or control: an
+// abstract class with no type parameters, no implements clause, no extends
+// clause other than Control, and only abstract instance members (D1, D128).
+// The parser writes service and control declarations in this shape.
+func formsIsServiceClass(node *ast.Node) bool {
+	if node == nil || node.Kind != ast.KindClassDeclaration || node.Name() == nil || node.TypeParameters() != nil {
+		return false
+	}
+	if !ast.HasSyntacticModifier(node, ast.ModifierFlagsAbstract) || len(ast.GetImplementsHeritageClauseElements(node)) != 0 {
+		return false
+	}
+	if extends := ast.GetClassExtendsHeritageElement(node); extends != nil {
+		if e := extends.Expression(); !ast.IsIdentifier(e) || e.Text() != "Control" {
+			return false
+		}
+	}
+	members := 0
+	for _, m := range node.Members() {
+		if ast.IsSemicolonClassElement(m) || ast.IsStatic(m) {
+			continue
+		}
+		if !ast.IsMethodDeclaration(m) && !ast.IsPropertyDeclaration(m) || !ast.HasSyntacticModifier(m, ast.ModifierFlagsAbstract) {
+			return false
+		}
+		members++
+	}
+	return members > 0
+}
+
+// formsServiceShape returns the written shape of a service class declared
+// TypeScript's way, class K extends Context.Service<K, Shape>()("K") {}:
+// the second type argument of the call its extends clause calls. It
+// returns nil for any other class.
+func formsServiceShape(class *ast.Node) *ast.Node {
+	extends := ast.GetClassExtendsHeritageElement(class)
+	if extends == nil {
+		return nil
+	}
+	outer := ast.SkipParentheses(extends.Expression())
+	if !ast.IsCallExpression(outer) {
+		return nil
+	}
+	inner := ast.SkipParentheses(outer.Expression())
+	if !ast.IsCallExpression(inner) || len(inner.TypeArguments()) != 2 {
+		return nil
+	}
+	_, chain, ok := formsNameChain(inner.Expression())
+	if !ok || len(chain) == 0 || chain[len(chain)-1] != "Service" && chain[len(chain)-1] != "Tag" {
+		return nil
+	}
+	return inner.TypeArguments()[1]
+}
+
+// formsShapeMember returns the member named name of a written object type.
+func formsShapeMember(shape *ast.Node, name string) *ast.Node {
+	for _, m := range shape.Members() {
+		if n, ok := formsPropertyName(m); ok && n == name {
+			return m
+		}
+	}
+	return nil
+}
+
+// formsClassMember returns class's instance member named name.
+func formsClassMember(class *ast.Node, name string) *ast.Node {
+	for _, m := range class.Members() {
+		if n, ok := formsPropertyName(m); ok && n == name && !ast.IsStatic(m) {
+			return m
+		}
+	}
+	return nil
+}
