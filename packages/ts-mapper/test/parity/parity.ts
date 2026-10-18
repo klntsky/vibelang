@@ -218,6 +218,7 @@ const describeReexports = (module: string) =>
 
 const normalizationRules = [
   "Comments and layout are dropped; tokens are compared one by one.",
+  "D268 phantom namespaces carrying only the mapper $plain signature are stripped; public Effect signatures stay unchanged.",
   "A relative specifier names a module without its extension: ./users.js, ./users.vibe, and ./users are one module.",
   "A qualified name resolves to the module that declares it: import(\"effect/Effect\").Effect, an imported Effect.Effect, and import(\"effect\").Effect.Effect are all effect/Effect#Effect; the resolution-mode attribute is dropped.",
   `A name that ${preludeModule} or vibelang-runtime re-exports unchanged resolves to its origin: ${preludeModule} re-exports ${describeReexports(preludeModule)}; vibelang-runtime re-exports ${describeReexports("vibelang-runtime")}.`,
@@ -231,6 +232,8 @@ const normalizationRules = [
 // public export resolves to the exact same installed file. Resolving examples
 // exposes these filesystem spellings in the fork's declaration emit.
 function parseSideDeclaration(text: string, emittedFile: string): DeclarationFile {
+  // D268 strips only the exact generated phantom namespace, never user members.
+  text = text.replace(/(?:export\s+)?declare\s+namespace\s+([\w$]+)\s*\{\s*const\s+\$plain:\s*import\("vibelang-ts-mapper\/prelude"\)\.\$Plain<typeof\s+\1>;?\s*\}/g, "")
   const file = parseDeclarationFile(text)
   const require = createRequire(emittedFile)
   const canonical = (specifier: string) => {

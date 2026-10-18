@@ -381,6 +381,13 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 		return d
 	}
 	if call == nil {
+		if cls := r.boundLambdaClass(fn); cls != 0 {
+			d.Class, d.Provenance, d.Note = cls, FromTable, "local binding callback position"
+			d.Form = formsFormFor(cls, params, facts)
+			return d
+		}
+	}
+	if call == nil {
 		d.Note = "no owner call"
 	}
 	d.Provenance = FromFallback
@@ -395,7 +402,7 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 // lambda the parser writes for VibeLang syntax is decided by that syntax.
 func (r *Resolver) choiceFor(d Decision, facts formsBody) *Choice {
 	fn := d.Node
-	if fn.Flags&ast.NodeFlagsReparsed != 0 || fn.Type() != nil || formsInvoked(fn) {
+	if fn.Flags&ast.NodeFlagsReparsed != 0 || fn.Type() != nil || formsInvoked(fn) || r.boundLambdaUsed(fn) {
 		return nil
 	}
 	reason, ok := r.keyless(d)
@@ -2376,4 +2383,97 @@ func formsClassMember(class *ast.Node, name string) *ast.Node {
 		}
 	}
 	return nil
+}
+
+// D9: a local binding called by this file is not an unknown host callback.
+// Resolve references by binding, so a shadowed name supplies no evidence.
+func (r *Resolver) boundLambdaUsed(fn *ast.Node) bool {
+	decl, property := formsLambdaBinding(fn)
+	if decl == nil {
+		return false
+	}
+	var visit func(*ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if n.Kind == ast.KindCallExpression && r.isLambdaBindingReference(n.Expression(), decl, property) {
+			return true
+		}
+		return n.ForEachChild(visit)
+	}
+	return r.file.AsNode().ForEachChild(visit)
+}
+
+// D9's local calls identify an object callback by its binding and property,
+// not by the property's spelling as a possible generator name (D34).
+func formsLambdaBinding(fn *ast.Node) (*ast.Node, string) {
+	member := fn
+	property := ""
+	if fn.Parent != nil && fn.Parent.Kind == ast.KindPropertyAssignment {
+		member = fn.Parent
+	}
+	decl := member.Parent
+	if decl != nil && decl.Kind == ast.KindObjectLiteralExpression {
+		var ok bool
+		property, ok = formsPropertyName(member)
+		if !ok {
+			return nil, ""
+		}
+		decl = decl.Parent
+	}
+	if decl == nil || decl.Kind != ast.KindVariableDeclaration || !ast.IsIdentifier(decl.Name()) {
+		return nil, ""
+	}
+	return decl, property
+}
+
+func (r *Resolver) isLambdaBindingReference(expr, decl *ast.Node, property string) bool {
+	root := ast.SkipParentheses(expr)
+	if property != "" {
+		switch root.Kind {
+		case ast.KindPropertyAccessExpression:
+			if root.Name().Text() != property {
+				return false
+			}
+			root = ast.SkipParentheses(root.Expression())
+		case ast.KindElementAccessExpression:
+			key := root.AsElementAccessExpression().ArgumentExpression
+			if !ast.IsStringLiteral(key) || key.Text() != property {
+				return false
+			}
+			root = ast.SkipParentheses(root.Expression())
+		default:
+			return false
+		}
+	}
+	return ast.IsIdentifier(root) && root.Text() == decl.Name().Text() && r.binding(root, root.Text()) == decl
+}
+
+// D9 follows a bound callback into known parameter positions. Conflicting
+// positions retain the ordinary form choice rather than guessing a host form.
+func (r *Resolver) boundLambdaClass(fn *ast.Node) Class {
+	decl := fn.Parent
+	if decl == nil || decl.Kind != ast.KindVariableDeclaration || !ast.IsIdentifier(decl.Name()) {
+		return 0
+	}
+	name := decl.Name().Text()
+	var result Class
+	conflict := false
+	var visit func(*ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if ast.IsIdentifier(n) && n.Text() == name && n != decl.Name() && r.binding(n, name) == decl {
+			d := r.Argument(n)
+			if d.Class != 0 {
+				if result != 0 && result != d.Class {
+					conflict = true
+				}
+				result = d.Class
+			}
+		}
+		n.ForEachChild(visit)
+		return false
+	}
+	r.file.AsNode().ForEachChild(visit)
+	if conflict {
+		return 0
+	}
+	return result
 }

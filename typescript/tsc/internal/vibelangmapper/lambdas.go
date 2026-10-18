@@ -76,6 +76,9 @@ func (p *projector) lambda(fn *ast.Node, e env) {
 	case FormProgram, FormDual:
 		p.programLambda(fn, form == FormDual)
 	default:
+		if contractOf(fn.Type()) == contractPlain || d.Provenance == FromAnnotation || d.Provenance == FromService {
+			p.checkPlainContractEffects(fn)
+		}
 		p.plainLambda(fn)
 	}
 }
@@ -349,6 +352,19 @@ func (p *projector) callArguments(call *ast.Node, e env) bool {
 // property paths. APIs such as Effect.all take programs inside a container;
 // visiting only its outer array would run those programs before the API.
 func (p *projector) callArgument(argument *ast.Node, e env) {
+	// D268 adapts imported values only in plain callback positions. The
+	// phantom brand selects the type; the runtime marker alone selects the call.
+	// Known Effect imports have no brand: leave generic stages in their
+	// contextual position rather than introducing an inference boundary.
+	root := argument
+	for ast.IsPropertyAccessExpression(root) {
+		root = root.Expression()
+	}
+	if ast.IsIdentifier(root) && p.names.importedFrom[root.Text()] != "" && !p.isEffectImport(root.Text()) && p.forms.Argument(argument).Class == ClassPlainFn {
+		p.plan.insert(p.tokenStart(argument), helperRef("$adapt")+"(")
+		p.plan.insert(argument.End(), ")")
+		return
+	}
 	if p.programPipeArgument(argument, e) || p.programCollection(argument, e) || p.byNameArgument(argument, e) {
 		return
 	}

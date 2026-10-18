@@ -64,6 +64,12 @@ export {
 export { $trusted } from "vibelang-runtime"
 /** A syntax-proven D54 synchronous entry in a plain callback. */
 export declare function $plain<Args extends unknown[], A>(fn: (...args: Args) => EffectModule.Effect<A, never, never>): (...args: Args) => A
+
+// D268: the phantom brand changes callback typing; only the marker controls execution.
+export type $Plain<F> = F extends (...args: infer Args) => EffectModule.Effect<infer A, infer _E, infer _R> ? (...args: Args) => A : F
+export declare function $adapt<P>(fn: { readonly $plain: P }): P
+export declare function $adapt<F>(fn: F): F
+
 /** Preserve a built-in's optional parameters before entering its failure boundary. */
 export type $BuiltinArgs<F extends (...args: any[]) => any> = Parameters<F>
 /** Keep the shipped failure class in E rather than widening its constructor to Error. */

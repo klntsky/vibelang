@@ -295,7 +295,7 @@ var execHelpers = map[string]execSource{
 // (execRendering.prologue); temporaries are declared there too.
 var prologueHelpers = map[string]bool{
 	"$fail": true, "$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
-	"$plain": true, "$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
+	"$adapt": true, "$plain": true, "$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
 	"$t": true, "$s": true, "$scope": true, "$iterate": true, "$producerGen": true,
 }
 
@@ -418,6 +418,9 @@ func (r *execRendering) prologue() string {
 		r.local("$value")
 	}
 	var parts []string
+	if r.used["$adapt"] {
+		parts = append(parts, "const "+r.local("$adapt")+" = (f) => f["+r.local("$direct")+"] ?? f;")
+	}
 	if r.used["$plain"] {
 		parts = append(parts, "const "+r.local("$plain")+" = (f) => f["+r.local("$direct")+"] ?? f;")
 	}

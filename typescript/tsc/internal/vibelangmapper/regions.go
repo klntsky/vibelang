@@ -922,8 +922,15 @@ func (p *projector) usingDeclaration(node *ast.Node, e env) {
 // run, though its callee and arguments are lowered as in any call.
 func (p *projector) byName(expr *ast.Node, e env) {
 	if expr.Kind == ast.KindCallExpression && isRunnableCall(expr) {
-		p.callee(expr, e)
-		p.callArguments(expr, e)
+		// D14: defer only the outer run, retaining data-method rewrites
+		// and the runs of nested receivers and arguments.
+		first := len(p.plan.edits)
+		p.runCall(expr, e)
+		last := len(p.plan.edits) - 1
+		if first <= last && p.plan.edits[first].kind == editRun && p.plan.edits[last].kind == editRun && p.plan.edits[first].pos == p.tokenStart(expr) && p.plan.edits[last].pos == expr.End() {
+			p.plan.edits = append(p.plan.edits[:last], p.plan.edits[last+1:]...)
+			p.plan.edits = append(p.plan.edits[:first], p.plan.edits[first+1:]...)
+		}
 		return
 	}
 	p.visit(expr, e)

@@ -716,8 +716,8 @@ typescript/vibelang/cases/producers/main.vibe:181:8 lambda effectFn service
 typescript/vibelang/cases/producers/main.vibe:204:25 lambda program table
 typescript/vibelang/cases/producers/main.vibe:95:38 lambda plain table
 typescript/vibelang/cases/program-values/main.vibe:16:10 lambda dual fallback
-typescript/vibelang/cases/program-values/main.vibe:30:15 lambda dual fallback
-typescript/vibelang/cases/program-values/main.vibe:32:17 lambda dual fallback
+typescript/vibelang/cases/program-values/main.vibe:30:15 lambda program table
+typescript/vibelang/cases/program-values/main.vibe:32:17 lambda program table
 typescript/vibelang/cases/programs-iterables/main.vibe:10:29 lambda program table
 typescript/vibelang/cases/programs-iterables/main.vibe:10:39 lambda program table
 typescript/vibelang/cases/programs-iterables/main.vibe:11:38 lambda program table
@@ -782,7 +782,7 @@ typescript/vibelang/cases/ref4-callbacks/ref4-callbacks.vibe:54:9 lambda effectF
 typescript/vibelang/cases/ref4-callbacks/ref4-callbacks.vibe:64:20 lambda program table
 typescript/vibelang/cases/ref4-callbacks/ref4-callbacks.vibe:73:25 lambda program table
 typescript/vibelang/cases/ref5-programs-as-data/ref5-programs-as-data.vibe:25:10 lambda dual fallback
-typescript/vibelang/cases/ref5-programs-as-data/ref5-programs-as-data.vibe:36:18 lambda dual fallback
+typescript/vibelang/cases/ref5-programs-as-data/ref5-programs-as-data.vibe:36:18 lambda program table
 typescript/vibelang/cases/ref6-fork.fail/ref6-fork.fail.vibe:11:17 lambda program table
 typescript/vibelang/cases/ref6-fork.fail/ref6-fork.fail.vibe:12:24 lambda program table
 typescript/vibelang/cases/ref6-fork.fail/ref6-fork.fail.vibe:15:5 lambda effectFn table
@@ -806,11 +806,11 @@ typescript/vibelang/cases/regions-jumps/main.vibe:95:3 lambda effectFn annotatio
 typescript/vibelang/cases/regions/regions.vibe:40:5 lambda program table
 typescript/vibelang/cases/regions/regions.vibe:44:5 lambda effectFn table
 typescript/vibelang/cases/retry-effectful-predicate/main.vibe:12:14 lambda effectFn table
-typescript/vibelang/cases/retry-effectful-predicate/main.vibe:24:17 lambda choice fallback
-typescript/vibelang/cases/retry-effectful-predicate/main.vibe:29:14 lambda choice fallback
-typescript/vibelang/cases/retry-effectful-predicate/main.vibe:30:26 lambda choice fallback
-typescript/vibelang/cases/retry-effectful-predicate/main.vibe:31:16 lambda choice fallback
-typescript/vibelang/cases/retry-effectful-predicate/main.vibe:32:12 lambda choice fallback
+typescript/vibelang/cases/retry-effectful-predicate/main.vibe:24:17 lambda dual fallback
+typescript/vibelang/cases/retry-effectful-predicate/main.vibe:29:14 lambda effectFn fallback
+typescript/vibelang/cases/retry-effectful-predicate/main.vibe:30:26 lambda effectFn fallback
+typescript/vibelang/cases/retry-effectful-predicate/main.vibe:31:16 lambda effectFn fallback
+typescript/vibelang/cases/retry-effectful-predicate/main.vibe:32:12 lambda effectFn fallback
 typescript/vibelang/cases/retry-effectful-predicate/main.vibe:7:18 lambda program table
 typescript/vibelang/cases/scopes-callback.fail/main.vibe:11:18 lambda plain protocol
 typescript/vibelang/cases/scopes-callback.fail/main.vibe:15:18 lambda plain table
@@ -940,7 +940,7 @@ typescript/vibelang/cases/vibelang-layer-programs/main.vibe:30:5 lambda effectFn
 typescript/vibelang/cases/vibelang-layer-programs/main.vibe:35:12 lambda effectFn service
 typescript/vibelang/cases/vibelang-layer-programs/main.vibe:44:25 lambda program table
 typescript/vibelang/cases/vibelang-layer-programs/main.vibe:47:33 lambda program table
-typescript/vibelang/cases/vibelang-lower/main.vibe:18:15 lambda choice fallback
+typescript/vibelang/cases/vibelang-lower/main.vibe:18:15 lambda effectFn fallback
 typescript/vibelang/cases/vibelang-methods/main.vibe:21:20 lambda plain table
 typescript/vibelang/cases/vibelang-methods/main.vibe:21:55 lambda plain fallback
 typescript/vibelang/cases/vibelang-methods/main.vibe:31:36 lambda plain fallback
@@ -966,7 +966,7 @@ typescript/vibelang/cases/vibelang-pipes/main.vibe:63:67 lambda plain fallback
 typescript/vibelang/cases/vibelang-pipes/main.vibe:67:24 lambda plain table
 typescript/vibelang/cases/vibelang-prelude-dts-shadow/main.vibe:14:3 lambda plain service
 typescript/vibelang/cases/vibelang-prelude-ts.fail/main.vibe:4:21 lambda plain table
-typescript/vibelang/cases/vibelang-prelude/main.vibe:16:16 lambda plain fallback
+typescript/vibelang/cases/vibelang-prelude/main.vibe:16:16 lambda plain table
 typescript/vibelang/cases/vibelang-prelude/main.vibe:21:26 lambda plain table
 typescript/vibelang/cases/vibelang-prelude/main.vibe:29:42 lambda program annotation
 typescript/vibelang/cases/vibelang-provider-audited.fail/main.vibe:27:49 lambda program table

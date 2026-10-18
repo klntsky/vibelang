@@ -44,12 +44,17 @@ func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 	wrapperBody := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(sync)}), false /*multiLine*/)
 	wrapper := f.UpdateFunctionDeclaration(node.AsFunctionDeclaration(), node.Modifiers(), nil /*asteriskToken*/, node.Name(), nil /*typeParameters*/, f.NewNodeList([]*ast.Node{rest}), nil /*type*/, nil /*fullSignature*/, wrapperBody)
 	ec.SetOriginal(wrapper, node)
+	// D268 puts purity on the function object, so export aliases preserve it.
+	marker := f.NewElementAccessExpression(f.NewIdentifier(name), nil, tx.runtimeMember("$direct"), ast.NodeFlagsNone)
+	assign := f.NewBinaryExpression(nil, marker, nil, f.NewToken(ast.KindEqualsToken), f.NewIdentifier(name+"$direct"))
+	marked := f.NewExpressionStatement(assign)
+
 	if ast.HasSyntacticModifier(node, ast.ModifierFlagsDefault) {
 		alias := f.NewExportSpecifier(false, f.NewIdentifier(name+"$direct"), f.NewIdentifier("default$direct"))
 		export := f.NewExportDeclaration(nil, false, f.NewNamedExports(f.NewNodeList([]*ast.Node{alias})), nil, nil)
-		return f.NewSyntaxList([]*ast.Node{direct, wrapper, export})
+		return f.NewSyntaxList([]*ast.Node{direct, wrapper, marked, export})
 	}
-	return f.NewSyntaxList([]*ast.Node{direct, wrapper})
+	return f.NewSyntaxList([]*ast.Node{direct, wrapper, marked})
 }
 
 // visitDirectReference writes the $direct variant in place of node: the

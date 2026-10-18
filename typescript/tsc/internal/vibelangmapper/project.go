@@ -55,6 +55,8 @@ const PreludeModule = "vibelang-ts-mapper/prelude"
 
 // Diagnostic codes the projector reports, under the source EK.
 const (
+	// CodePlainContractEffect marks an Effect call under a plain contract (D263).
+	CodePlainContractEffect = 2003
 	// CodeUnprojectedForm marks VibeLang syntax the projector does not lower yet.
 	CodeUnprojectedForm = 9001
 	// CodeVersionMismatch marks a project whose effect or @effect packages
@@ -166,6 +168,7 @@ type projector struct {
 // lower yet draws an EK9001 diagnostic.
 func Project(text string, ctx FileContext) Projection {
 	p := lower(text, ctx)
+	p.brandPureExports()
 	out, segments, overlap, ok := p.plan.render(checking{names: p.names}, text, p.names.importLine)
 	if !ok {
 		// Invalid or overlapping edits cannot render; pass the file through
@@ -298,6 +301,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 		return
 	case isProjectedFunction(node):
 		p.functionDeclaration(node)
+		return
+	case node.Kind == ast.KindMethodDeclaration && ast.IsClassLike(node.Parent) && node.Body() != nil && contractOf(node.Type()) == contractPlain:
+		p.functionLike(node, node.Body())
 		return
 	case node.Kind == ast.KindMethodDeclaration && ast.IsClassLike(node.Parent) && p.isEffectMethod(node):
 		p.functionLike(node, node.Body())
@@ -511,6 +517,7 @@ func (p *projector) functionLike(fn *ast.Node, body *ast.Node) {
 	})
 	switch kind {
 	case contractPlain:
+		p.checkPlainContractEffects(fn)
 		p.visit(returnType, env{})
 		p.visitList(body.Statements(), env{})
 		return
