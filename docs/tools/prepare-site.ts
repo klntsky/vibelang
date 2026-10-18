@@ -9,6 +9,7 @@
 // environment. It never prints a credential.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join, relative } from "node:path"
+import { leaks } from "./leaks"
 
 const site = process.argv[2]
 if (!site) throw new Error("usage: bun docs/tools/prepare-site.ts <site dir>")
@@ -22,19 +23,6 @@ const rewrites: [RegExp, string][] = [
   [/<code>github\.com\/roninjin10\/effectscript<\/code>/g, "<code>effectscript</code> on GitHub"],
   [/`github\.com\/roninjin10\/effectscript`/g, "`effectscript` on GitHub"],
 ]
-
-const forbidden: [string, RegExp][] = [
-  ["a local path", /\/Users\/[A-Za-z]|\/home\/[a-z]/],
-  ["a user name", /williamcory/i],
-  ["the build host", /64\.34\.80\.163|160\.202\.128\.229|msb-lat|smithers-baremetal/],
-  ["a LAN address", /\b(?:10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})\b/],
-  ["the private repository", /roninjin10/],
-  ["a private key path", /\.ssh\//],
-]
-
-const credentials = Object.entries(process.env)
-  .filter(([name, value]) => /TOKEN|KEY|SECRET|PASSWORD/.test(name) && value && value.length >= 16)
-  .map(([name, value]) => [name, value!] as const)
 
 const notFound = `<!doctype html>
 <html lang="en">
@@ -68,18 +56,9 @@ for (const file of all) {
   let text = readFileSync(file, "utf8")
   for (const [pattern, replacement] of rewrites) text = text.replace(pattern, replacement)
   writeFileSync(file, text)
-  for (const [what, pattern] of forbidden) {
-    const match = pattern.exec(text)
-    if (match) {
-      problems++
-      console.error(`${relative(site, file)}: ${what}: ${JSON.stringify(match[0])}`)
-    }
-  }
-  for (const [name, value] of credentials) {
-    if (text.includes(value)) {
-      problems++
-      console.error(`${relative(site, file)}: the value of ${name}`)
-    }
+  for (const problem of leaks(text)) {
+    problems++
+    console.error(`${relative(site, file)}: ${problem}`)
   }
 }
 if (problems) {

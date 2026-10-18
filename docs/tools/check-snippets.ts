@@ -103,6 +103,138 @@ export function markdownPages(root: string): string[] {
   return walk(root).sort()
 }
 
+// The compiler that EFFECK_BINARY names, else the local build, else effeck on PATH.
+export function defaultCompiler(): string {
+  const local = join(repo, "typescript/built/local/tsc")
+  return process.env.EFFECK_BINARY || (existsSync(local) ? local : "effeck")
+}
+
+// The experiments package pins this parser. It only discovers declarations;
+// all language checking belongs to the native Effeck compiler.
+let parser: typeof import("../../experiments/node_modules/typescript") | undefined
+const typescript = () => parser ??= createRequire(join(repo, "experiments/package.json"))("typescript") as NonNullable<typeof parser>
+
+// Links the packages that every page project imports into temp/node_modules.
+export function linkModules(temp: string) {
+  const modules = join(temp, "node_modules")
+  mkdirSync(modules, { recursive: true })
+  // effeck-runtime is a symlink to packages/runtime, which resolves effect
+  // from its own node_modules. Give the project that same copy: TypeScript
+  // merges two copies of a package only for files an import loads, so with
+  // two copies a module augmentation such as `declare module "effect/Schema"`
+  // can name the copy outside the program and fail with TS2664, depending on
+  // which copy the parallel file loader reaches first.
+  const runtimeEffect = join(repo, "packages/runtime/node_modules/effect")
+  if (existsSync(join(runtimeEffect, "package.json"))) symlinkSync(realpathSync(runtimeEffect), join(modules, "effect"))
+  const dependencies = [join(repo, "experiments/node_modules"), join(repo, "docs/tools/node_modules")]
+  for (const source of dependencies) {
+    if (!existsSync(source)) continue
+    for (const name of readdirSync(source).filter(n => !n.startsWith("."))) {
+      if (name === "effeck-runtime" || name === "effeck-vite") continue
+      const target = join(modules, name)
+      if (!existsSync(target)) symlinkSync(join(source, name), target)
+    }
+  }
+  for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, `effeck-${name}`))
+  if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(repo, "packages/runtime/dist/index.d.ts"))) {
+    throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
+  }
+}
+
+// Writes one page's blocks to dir, inside a directory that linkModules
+// prepared, as a project: one module per block, whose prefix imports the
+// names that earlier blocks declare, and a tsconfig.json that lists them.
+// offsets holds the number of prefix lines in each module.
+export function writeProject(dir: string, blocks: Block[]): { filenames: Map<number, string>; offsets: Map<string, number> } {
+  const ts = typescript()
+  mkdirSync(dir)
+  writeFileSync(join(dir, "package.json"), '{"type":"module","name":"docs-snippets"}')
+  const filenames = blockFilenames(blocks)
+  const scope = new Map<string, { from: string; value: boolean }>()
+  const offsets = new Map<string, number>()
+  for (const block of blocks) {
+    const filename = filenames.get(block.number)!
+    mkdirSync(dirname(join(dir, filename)), { recursive: true })
+    if (filename.endsWith(".ts")) {
+      offsets.set(filename, 0)
+      writeFileSync(join(dir, filename), block.source + "\n")
+      continue
+    }
+    const ast = ts.createSourceFile(filename, block.source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+    const names = new Set<string>()
+    const exported = new Set<string>()
+    const typeOnly = new Set<string>()
+    const localValues = new Set<string>()
+    const bindings = (node: any) => {
+      // Recovery from Effeck forms, such as a block param, can yield a nameless declaration.
+      if (ts.isIdentifier(node)) { if (node.text) names.add(node.text) }
+      else if (ts.isObjectBindingPattern(node) || ts.isArrayBindingPattern(node)) {
+        for (const e of node.elements) if (ts.isBindingElement(e)) bindings(e.name)
+      }
+    }
+    for (const statement of ast.statements) {
+      // TypeScript's parser cannot read Effeck's statement forms, such as
+      // `fork { ... }` and `select { ... }`, and its recovery can lift
+      // statements out of a function. Top-level code starts in column 0.
+      if (ast.getLineAndCharacterOfPosition(statement.getStart(ast)).character !== 0) continue
+      const before = new Set(names)
+      if (ts.isImportDeclaration(statement)) {
+        const clause = statement.importClause
+        if (clause?.name) bindings(clause.name)
+        const named = clause?.namedBindings
+        if (named && ts.isNamespaceImport(named)) bindings(named.name)
+        else if (named) for (const element of named.elements) bindings(element.name)
+      } else if (ts.isVariableStatement(statement)) {
+        // Recovery from a block param, `const x = f(a) { ... }`, reads the
+        // block as another declaration; real ones follow a comma.
+        const declarations = statement.declarationList.declarations
+        for (const [i, d] of declarations.entries()) {
+          if (i > 0 && !block.source.slice(declarations[i - 1].end, d.getStart(ast)).includes(",")) continue
+          bindings(d.name)
+          if (ts.isIdentifier(d.name)) localValues.add(d.name.text)
+        }
+      } else if ("name" in statement && statement.name && ts.isIdentifier(statement.name)) bindings(statement.name)
+      if (ts.isTypeAliasDeclaration(statement) || ts.isInterfaceDeclaration(statement)) typeOnly.add(statement.name.text)
+      else for (const name of names) if (!before.has(name)) localValues.add(name)
+      if (ts.canHaveModifiers(statement) && ts.getModifiers(statement)?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) && !ts.getModifiers(statement)?.some(m => m.kind === ts.SyntaxKind.DefaultKeyword)) {
+        for (const name of names) if (!before.has(name)) exported.add(name)
+      }
+    }
+    // TypeScript's parser reads Effeck's declaration forms, such as
+    // `error NotFound { id: string }`, as expression statements, so their
+    // names come from the source text. Each declares a value. `service`
+    // and `control` may be followed by `class`, the older spelling (D223).
+    for (const m of block.source.matchAll(/^(export\s+)?(?:error|(?:service|control)(?:\s+class)?|layer|schema)\s+([A-Za-z_$][\w$]*)/gm)) {
+      names.add(m[2])
+      localValues.add(m[2])
+      if (m[1]) exported.add(m[2])
+    }
+    for (const name of localValues) typeOnly.delete(name)
+    const imports = new Map<string, string[]>()
+    const values: string[] = []
+    for (const [name, previous] of scope) {
+      if (names.has(name) && !(typeOnly.has(name) && previous.value)) continue
+      const list = imports.get(previous.from) ?? []
+      if (typeOnly.has(name)) {
+        list.push(`${name} as $doc_${name}`)
+        values.push(`const ${name} = $doc_${name}`)
+      } else list.push(name)
+      imports.set(previous.from, list)
+    }
+    const prefix = [...[...imports].map(([from, ids]) => `import { ${ids.join(", ")} } from "${localImport(filename, from)}"`), ...values].join("\n") + "\n"
+    offsets.set(filename, prefix.split("\n").length - 1)
+    writeFileSync(join(dir, filename), `${prefix}${block.source}\nexport { ${[...names].filter(n => !exported.has(n)).join(", ")} }\n`)
+    // An example that deliberately fails or opts out cannot supply reliable
+    // definitions to later examples. Other blocks share their latest names.
+    if (!block.fragment && !block.expected.length) for (const name of names) scope.set(name, { from: filename, value: !typeOnly.has(name) || values.some(v => v.startsWith(`const ${name} =`)) })
+  }
+  writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: {
+    strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext",
+    skipLibCheck: true, noEmit: true, types: [], rewriteRelativeImportExtensions: true
+  }, files: [...filenames.values()] }))
+  return { filenames, offsets }
+}
+
 async function main() {
   const args = process.argv.slice(2)
   function option(name: string, fallback?: string) {
@@ -117,133 +249,23 @@ async function main() {
     console.log("bun docs/tools/check-snippets.ts [--compiler path] [--root docs/user] [--filter text] [--json path] [--keep]")
     return
   }
-  const selectedCompiler = option("--compiler", process.env.EFFECK_BINARY || (existsSync(join(repo, "typescript/built/local/tsc")) ? join(repo, "typescript/built/local/tsc") : "effeck"))!
+  const selectedCompiler = option("--compiler", defaultCompiler())!
   const compiler = selectedCompiler.includes("/") ? resolve(selectedCompiler) : selectedCompiler
   const root = resolve(option("--root", join(repo, "docs/user"))!)
   const filter = option("--filter", "")!
   const json = option("--json")
   const keep = args.includes("--keep")
   if (args.some(a => a !== "--keep")) throw new Error(`Unknown argument: ${args.join(" ")}`)
-  // The experiments package pins this parser. It only discovers declarations;
-  // all language checking belongs to the native Effeck compiler.
-  const require = createRequire(join(repo, "experiments/package.json"))
-  const ts = require("typescript") as typeof import("../../experiments/node_modules/typescript")
   const temp = mkdtempSync(join(tmpdir(), "effeck-docs-"))
   const pages: { page: string; blocks: Result[] }[] = []
   try {
-    const modules = join(temp, "node_modules")
-    mkdirSync(modules, { recursive: true })
-    // effeck-runtime is a symlink to packages/runtime, which resolves effect
-    // from its own node_modules. Give the project that same copy: TypeScript
-    // merges two copies of a package only for files an import loads, so with
-    // two copies a module augmentation such as `declare module "effect/Schema"`
-    // can name the copy outside the program and fail with TS2664, depending on
-    // which copy the parallel file loader reaches first.
-    const runtimeEffect = join(repo, "packages/runtime/node_modules/effect")
-    if (existsSync(join(runtimeEffect, "package.json"))) symlinkSync(realpathSync(runtimeEffect), join(modules, "effect"))
-    const dependencies = [join(repo, "experiments/node_modules"), join(repo, "docs/tools/node_modules")]
-    for (const source of dependencies) {
-      if (!existsSync(source)) continue
-      for (const name of readdirSync(source).filter(n => !n.startsWith("."))) {
-        if (name === "effeck-runtime" || name === "effeck-vite") continue
-        const target = join(modules, name)
-        if (!existsSync(target)) symlinkSync(join(source, name), target)
-      }
-    }
-    for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, `effeck-${name}`))
-    if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(repo, "packages/runtime/dist/index.d.ts"))) {
-      throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
-    }
+    linkModules(temp)
     let index = 0
     for (const page of markdownPages(root).filter(p => relative(root, p).includes(filter))) {
       const blocks = extract(readFileSync(page, "utf8"))
       if (!blocks.length) continue
       const dir = join(temp, String(++index))
-      mkdirSync(dir)
-      writeFileSync(join(dir, "package.json"), '{"type":"module","name":"docs-snippets"}')
-      const filenames = blockFilenames(blocks)
-      const scope = new Map<string, { from: string; value: boolean }>()
-      const offsets = new Map<string, number>()
-      for (const block of blocks) {
-        const filename = filenames.get(block.number)!
-        mkdirSync(dirname(join(dir, filename)), { recursive: true })
-        if (filename.endsWith(".ts")) {
-          offsets.set(filename, 0)
-          writeFileSync(join(dir, filename), block.source + "\n")
-          continue
-        }
-        const ast = ts.createSourceFile(filename, block.source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
-        const names = new Set<string>()
-        const exported = new Set<string>()
-        const typeOnly = new Set<string>()
-        const localValues = new Set<string>()
-        const bindings = (node: any) => {
-          // Recovery from Effeck forms, such as a block param, can yield a nameless declaration.
-          if (ts.isIdentifier(node)) { if (node.text) names.add(node.text) }
-          else if (ts.isObjectBindingPattern(node) || ts.isArrayBindingPattern(node)) {
-            for (const e of node.elements) if (ts.isBindingElement(e)) bindings(e.name)
-          }
-        }
-        for (const statement of ast.statements) {
-          // TypeScript's parser cannot read Effeck's statement forms, such as
-          // `fork { ... }` and `select { ... }`, and its recovery can lift
-          // statements out of a function. Top-level code starts in column 0.
-          if (ast.getLineAndCharacterOfPosition(statement.getStart(ast)).character !== 0) continue
-          const before = new Set(names)
-          if (ts.isImportDeclaration(statement)) {
-            const clause = statement.importClause
-            if (clause?.name) bindings(clause.name)
-            const named = clause?.namedBindings
-            if (named && ts.isNamespaceImport(named)) bindings(named.name)
-            else if (named) for (const element of named.elements) bindings(element.name)
-          } else if (ts.isVariableStatement(statement)) {
-            // Recovery from a block param, `const x = f(a) { ... }`, reads the
-            // block as another declaration; real ones follow a comma.
-            const declarations = statement.declarationList.declarations
-            for (const [i, d] of declarations.entries()) {
-              if (i > 0 && !block.source.slice(declarations[i - 1].end, d.getStart(ast)).includes(",")) continue
-              bindings(d.name)
-              if (ts.isIdentifier(d.name)) localValues.add(d.name.text)
-            }
-          } else if ("name" in statement && statement.name && ts.isIdentifier(statement.name)) bindings(statement.name)
-          if (ts.isTypeAliasDeclaration(statement) || ts.isInterfaceDeclaration(statement)) typeOnly.add(statement.name.text)
-          else for (const name of names) if (!before.has(name)) localValues.add(name)
-          if (ts.canHaveModifiers(statement) && ts.getModifiers(statement)?.some(m => m.kind === ts.SyntaxKind.ExportKeyword) && !ts.getModifiers(statement)?.some(m => m.kind === ts.SyntaxKind.DefaultKeyword)) {
-            for (const name of names) if (!before.has(name)) exported.add(name)
-          }
-        }
-        // TypeScript's parser reads Effeck's declaration forms, such as
-        // `error NotFound { id: string }`, as expression statements, so their
-        // names come from the source text. Each declares a value. `service`
-        // and `control` may be followed by `class`, the older spelling (D223).
-        for (const m of block.source.matchAll(/^(export\s+)?(?:error|(?:service|control)(?:\s+class)?|layer|schema)\s+([A-Za-z_$][\w$]*)/gm)) {
-          names.add(m[2])
-          localValues.add(m[2])
-          if (m[1]) exported.add(m[2])
-        }
-        for (const name of localValues) typeOnly.delete(name)
-        const imports = new Map<string, string[]>()
-        const values: string[] = []
-        for (const [name, previous] of scope) {
-          if (names.has(name) && !(typeOnly.has(name) && previous.value)) continue
-          const list = imports.get(previous.from) ?? []
-          if (typeOnly.has(name)) {
-            list.push(`${name} as $doc_${name}`)
-            values.push(`const ${name} = $doc_${name}`)
-          } else list.push(name)
-          imports.set(previous.from, list)
-        }
-        const prefix = [...[...imports].map(([from, ids]) => `import { ${ids.join(", ")} } from "${localImport(filename, from)}"`), ...values].join("\n") + "\n"
-        offsets.set(filename, prefix.split("\n").length - 1)
-        writeFileSync(join(dir, filename), `${prefix}${block.source}\nexport { ${[...names].filter(n => !exported.has(n)).join(", ")} }\n`)
-        // An example that deliberately fails or opts out cannot supply reliable
-        // definitions to later examples. Other blocks share their latest names.
-        if (!block.fragment && !block.expected.length) for (const name of names) scope.set(name, { from: filename, value: !typeOnly.has(name) || values.some(v => v.startsWith(`const ${name} =`)) })
-      }
-      writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: {
-        strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext",
-        skipLibCheck: true, noEmit: true, types: [], rewriteRelativeImportExtensions: true
-      }, files: [...filenames.values()] }))
+      const { filenames, offsets } = writeProject(dir, blocks)
       const child = Bun.spawn([compiler, "--noEmit", "--pretty", "false", "-p", join(dir, "tsconfig.json")], { cwd: dir, stdout: "pipe", stderr: "pipe" })
       const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
       const output = `${stdout}\n${stderr}`
