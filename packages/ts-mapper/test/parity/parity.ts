@@ -743,6 +743,23 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
       declarations.filter((d) => d.isFunction && !d.generator && d.annotatedReturn === false).map((d) => d.name)
     )
   )
+  // L2 reaches past the declaration that passes a plain function as a value: a same-file
+  // declaration that uses one of those (directly or through another) changes type with it.
+  const l2Reach = new Map<string, Set<string>>()
+  for (const [rel, { declarations }] of scanned) {
+    const reach = new Set(declarations.filter((d) => passesPlainValue(d, plainValues)).map((d) => d.name))
+    for (let grew = true; grew; ) {
+      grew = false
+      for (const d of declarations) {
+        if (reach.has(d.name)) continue
+        if ([...reach].some((name) => new RegExp(`(?<![\\w$.])${name.replace(/[$]/g, "\\$")}(?![\\w$])`).test(d.body))) {
+          reach.add(d.name)
+          grew = true
+        }
+      }
+    }
+    l2Reach.set(rel, reach)
+  }
   const declarations: DeclarationEntry[] = []
   const reference: Record<string, string> = {}
   const probed = new Set((run.probeExports ?? []).flatMap((p) => p.names))
@@ -769,7 +786,7 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
       // function as a value, as in `xs.map(double)`. The fork hands such a
       // callee its plain $direct variant; under L2 it is an Effect function
       // until its return type is annotated plain.
-      if (decl && !lanes.includes("L2") && passesPlainValue(decl, plainValues)) lanes.push("L2")
+      if (decl && !lanes.includes("L2") && (passesPlainValue(decl, plainValues) || (source !== null && l2Reach.get(source)?.has(decl.name)))) lanes.push("L2")
       lanes.sort()
       let klass: string
       if (sourceKind === "ts") klass = failing ? "failing" : "ts-helper"
