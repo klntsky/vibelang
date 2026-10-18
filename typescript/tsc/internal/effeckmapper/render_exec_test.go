@@ -53,6 +53,11 @@ var emitCases = []struct {
 	absent   []string
 }{
 
+	{name: "unproven data method dispatches with receiver and arguments",
+		source:   `import { maybe } from "./opaque.js"; function f() { return maybe.getOrElse((): number => 0) }`,
+		contains: []string{`$method(maybe, "getOrElse", [() => 0], $methodCandidates_getOrElse)`},
+		absent:   []string{`maybe.getOrElse(`}},
+
 	{name: "service value calls bind ordinary methods and evaluate the receiver once",
 		source:   `import { Users } from "./users.ts"; function f() { return Users.all() }`,
 		contains: []string{`$member((($s = Users), $isKey($s) && !("all" in $s) ? (yield* $s) : $s), "all")()`, `const v = self[key]`, `v.bind(self)`},
@@ -318,7 +323,7 @@ var emitCases = []struct {
 	{
 		name:     "a member call on another key reads the service only when the key lacks the member",
 		source:   "import { Sessions } from \"./sessions.effeck\"\nfunction f() {\n  return Sessions.get(\"t\")\n}\n",
-		contains: []string{`(($s = Sessions), $isKey($s) && !("get" in $s) ? (yield* $s) : $s).get("t")`},
+		contains: []string{`$method((($s = Sessions), $isKey($s) && !("get" in $s) ? (yield* $s) : $s), "get", ["t"], $methodCandidates_get)`},
 	},
 	{
 		name:     "a control registers its operations and their parameter counts",
@@ -705,16 +710,59 @@ func TestThrowCauseRuntime(t *testing.T) {
 	if err != nil {
 		t.Skip("node is unavailable")
 	}
-	source, err := os.ReadFile(filepath.Join(root, "typescript/effeck/cases/throw-cause/main.effeck"))
-	assert.NilError(t, err)
-	js, _, diagnostics := Emit(string(source), testContext)
+	// Use a local fixture: the language corpus awaits D253's separate
+	// annotation migration, while this test exercises Cause boundaries.
+	source := `import { map as mapReasons } from "effect/Array"
+error Expected
+
+function fail() {
+  throw Cause.fail(new Expected())
+}
+
+function defect() {
+  throw Cause.die("defect")
+}
+
+function combined() {
+  throw Cause.combine(Cause.fail(new Expected()), Cause.die("combined defect"))
+}
+
+function caught() {
+  try {
+    fail()
+    return "missing"
+  } catch (e) {
+    return match (e) {
+      when Expected: "expected";
+      default: throw e;
+    }
+  }
+}
+
+function reasons(outcome: Exit.Exit<unknown, Expected>) {
+  return match (outcome) {
+    when Exit.Success(let value): ["Success"];
+    when Exit.Failure(let cause): mapReasons(cause.reasons, (reason) => reason._tag);
+  }
+}
+
+export function main() {
+  return {
+    caught: caught(),
+    defect: reasons(exit(defect())),
+    combined: reasons(exit(combined())),
+    escaped: reasons(exit(fail()))
+  }
+}
+`
+	js, _, diagnostics := Emit(source, testContext)
 	assert.Equal(t, len(diagnostics), 0, "%v", diagnostics)
 	cmd := exec.Command(node, "--no-warnings", "--input-type=module")
 	cmd.Dir = scope
 	cmd.Stdin = strings.NewReader(js + "\nimport { runPromise as runCauseTest } from 'effect/Effect'; console.log(JSON.stringify(await runCauseTest(main())))")
 	out, err := cmd.CombinedOutput()
 	assert.NilError(t, err, "%s\n%s", out, js)
-	expected := strings.TrimPrefix(strings.SplitN(string(source), "\n", 2)[0], "// expect-result: ")
+	expected := `{"caught":"expected","defect":["Die"],"combined":["Fail","Die"],"escaped":["Fail"]}`
 	assert.Equal(t, strings.TrimSpace(string(out)), expected)
 }
 

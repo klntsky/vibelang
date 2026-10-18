@@ -79,4 +79,9 @@ if ! cmp -s "$tmp/forms_decisions.txt" "$decisions"; then
   status=1
 fi
 [ "$status" = 0 ] && echo "check-forms-table: ok, forms_table.jsonl and forms_decisions.txt match a fresh generation"
+
+# D252 checking declarations and runtime dispatch share pinned D152 inputs.
+generator="$root/typescript/tsc/cmd/effeck-data-methods"
+[ -d "$generator/node_modules" ] || (cd "$generator" && bun install --frozen-lockfile)
+bun "$generator/generate.ts" --check
 exit "$status"

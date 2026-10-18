@@ -141,7 +141,8 @@ function setupModules(o: RuntimeOptions): string {
   fs.mkdirSync(shim)
   fs.copyFileSync(path.join(here, "runtime-shim.mjs"), path.join(shim, "index.js"))
   fs.writeFileSync(path.join(shim, "kernel.js"), `export * from "effeck-runtime-real/kernel"\n`)
-  fs.writeFileSync(path.join(shim, "package.json"), `${JSON.stringify({ name: "effeck-runtime", type: "module", exports: { ".": "./index.js", "./kernel": "./kernel.js" } }, null, 2)}\n`)
+  fs.writeFileSync(path.join(shim, "data-methods.js"), `export { $method } from "effeck-runtime-real/data-methods"\n`)
+  fs.writeFileSync(path.join(shim, "package.json"), `${JSON.stringify({ name: "effeck-runtime", type: "module", exports: { ".": "./index.js", "./kernel": "./kernel.js", "./data-methods": "./data-methods.js" } }, null, 2)}\n`)
   return nm
 }
 

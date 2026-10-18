@@ -31,11 +31,15 @@ var projectionCases = []struct {
 
 	{name: "tail resume in a cleanup block cannot invent clause fallthrough",
 		source:  `control Ask { get(): boolean!! } function f() { try { return Ask.get() } handle Ask.get() { if (true) { using r = acquire(); resume(true) } else { resume(false) } } }`,
-		virtual: `interface Ask { get(): Effect.Effect<boolean, never, never>; readonly "~effeck/service"?: "app/src/main#Ask" } abstract class Ask extends $service<Ask>("app/src/main#Ask") {} function f() { return $gen(function* () { const $c = yield* handle_1($gen(function* () { return $box((yield* $run($member($use(Ask), "get")()))) }) , Ask, { get: ($k) => $gen(function* () { if (true) { const $c_1 = yield* $scopedBody($gen(function* () { const r = (yield* $acquire($value(acquire)())); return $tailResume($k, true) })); return $c_1 } else { return $tailResume($k, false) } }) }); return $unboxed($c) })}`},
+		virtual: `interface Ask { get(): Effect.Effect<boolean, never, never>; readonly "~effeck/service"?: "app/src/main#Ask" } abstract class Ask extends $service<Ask>("app/src/main#Ask") {} function f() { return $gen(function* () { const $c = yield* handle_1($gen(function* () { return $box((yield* $run($use(Ask).get()))) }) , Ask, { get: ($k) => $gen(function* () { if (true) { const $c_1 = yield* $scopedBody($gen(function* () { const r = (yield* $acquire($value(acquire)())); return $tailResume($k, true) })); return $c_1 } else { return $tailResume($k, false) } }) }); return $unboxed($c) })}`},
 
 	{name: "Match generic stages retain contextual pipe inference",
 		source:  "import { Match } from \"effect\"; function phase(x: \"a\" | \"b\") { return pipe(Match.value(x), Match.when(\"a\", () => \"A\"), Match.orElse((s) => `other ${s}`)) }",
 		virtual: "import { Match } from \"effect\"; function phase(x: \"a\" | \"b\") { return $gen(function* () { return (yield* $run(pipe((yield* $run(Match.value(x))), Match.when(\"a\", () => \"A\"), Match.orElse((s) => `other ${s}`)))) })}"},
+
+	{name: "unproven predicate retains narrowing syntax",
+		source:  `import { maybe } from "./opaque.js"; function f() { if (maybe.isSome()) return maybe.value; return 0 }`,
+		virtual: `import { maybe } from "./opaque.js"; function f() { return $gen(function* () { if ($dataGuard(maybe, "isSome", [], (yield* $run(maybe.isSome())))) return maybe.value; return 0 })}`},
 
 	{name: "external service Effect member is a receiver preserving value call",
 		source:  `import { Users } from "./users.ts"; function f() { return Users.all() }`,

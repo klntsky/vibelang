@@ -43,6 +43,13 @@ func renderExec(e edit) (text string, keep bool) {
 		return e.fields[1], true
 	case editHatch:
 		return e.arg, true
+	case editDataMethod:
+		if len(e.fields) > 0 {
+			// Only execution supplies dispatch candidates. In particular, a
+			// checking predicate witness keeps its original argument tuple.
+			return strings.Replace(e.arg, "]", "], "+helperRef("$methodCandidates_"+e.fields[0]), 1), true
+		}
+		return e.arg, true
 	case editWitness:
 		return "", false
 	case editSyntax, editRegion, editDispatch:
@@ -163,6 +170,16 @@ func renderExec(e edit) (text string, keep bool) {
 	panic("exec: kind " + e.kind.String() + " not implemented")
 }
 
+// dataMethodCandidateText supplies the name's generated module functions as
+// direct imports, so an opaque receiver retains no unrelated method exports.
+func dataMethodCandidateText(name string) string {
+	var candidates []string
+	for _, module := range dataMethodCandidates[name] {
+		candidates = append(candidates, "["+strconv.Quote(module)+", "+helperRef("$method_"+module+"_"+name)+"]")
+	}
+	return "[" + strings.Join(candidates, ", ") + "]"
+}
+
 // generatorText opens the generator of an Effect body or program whose
 // edit has arg: one that receives the function's this when arg says self.
 func generatorText(arg string) string {
@@ -247,6 +264,7 @@ type execSource struct {
 // or from the runtime. Every other helper that starts with $ is an export of
 // effeck-runtime under its own name.
 var execHelpers = map[string]execSource{
+	"$method": {"effeck-runtime/data-methods", "$method"},
 
 	"$gen":          {"effect/Effect", "gen"},
 	"$failValue":    {"effect/Effect", "fail"},
@@ -304,6 +322,10 @@ func sourceOf(name string) execSource {
 	if s, ok := execHelpers[name]; ok {
 		return s
 	}
+	if strings.HasPrefix(name, "$method_") {
+		module, method, _ := strings.Cut(strings.TrimPrefix(name, "$method_"), "_")
+		return execSource{"effect/" + module, method}
+	}
 	switch {
 	case runtimePreludeNames[name], strings.HasPrefix(name, "$"):
 		return execSource{"effeck-runtime", name}
@@ -318,11 +340,12 @@ func sourceOf(name string) execSource {
 // then the temporaries and the prologue helpers. It runs after the edits
 // are rendered, which records the helpers they use.
 func (r *execRendering) prefix() string {
+	candidates := r.candidateConstants()
 	prologue := r.prologue()
 	byModule := map[string][]string{}
 	for export, local := range r.names.imports {
 		name := strings.TrimPrefix(export, "\x00")
-		if typeOnlyPrelude[name] || typeHelpers[name] || prologueHelpers[name] || identityHelpers[name] {
+		if typeOnlyPrelude[name] || typeHelpers[name] || prologueHelpers[name] || identityHelpers[name] || strings.HasPrefix(name, "$methodCandidates_") {
 			continue
 		}
 		if strings.HasPrefix(name, "$") && !r.used[name] {
@@ -347,9 +370,28 @@ func (r *execRendering) prefix() string {
 		slices.Sort(specifiers)
 		out.WriteString("import { " + strings.Join(specifiers, ", ") + " } from " + strconv.Quote(module) + "; ")
 	}
+	out.WriteString(candidates)
 	out.WriteString(prologue)
 	if out.Len() > 0 {
 		out.WriteString("\n")
+	}
+	return out.String()
+}
+
+// candidateConstants allocates one hygienic array per method name per file,
+// before execution enters any function, and records its direct function imports.
+func (r *execRendering) candidateConstants() string {
+	var helpers []string
+	for helper := range r.used {
+		if strings.HasPrefix(helper, "$methodCandidates_") {
+			helpers = append(helpers, helper)
+		}
+	}
+	slices.Sort(helpers)
+	var out strings.Builder
+	for _, helper := range helpers {
+		name := strings.TrimPrefix(helper, "$methodCandidates_")
+		out.WriteString("const " + r.names.helper(helper) + " = " + r.resolve(dataMethodCandidateText(name)) + "; ")
 	}
 	return out.String()
 }

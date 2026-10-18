@@ -96,6 +96,9 @@ const (
 	editScopeRegion
 	// editHatch carries the checking and executable spelling of a hatch boundary.
 	editHatch
+	// editDataMethod retains checking syntax and dispatches unproven receivers in execution.
+	// A closing fragment's fields name the method whose candidates execution imports.
+	editDataMethod
 	// editRegionVar hoists storage, with a checker-only type witness.
 	editRegionVar
 )
@@ -246,7 +249,7 @@ func (r checking) text(e edit) (string, bool) {
 		text = e.text
 	case editRegionVar:
 		text = e.fields[0]
-	case editHatch:
+	case editHatch, editDataMethod:
 		text = e.text
 	case editRecord:
 		switch e.arg {
@@ -370,7 +373,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region", "hatch", "region var"}[k]
+		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region", "hatch", "data method", "region var"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out

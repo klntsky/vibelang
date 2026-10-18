@@ -17,11 +17,15 @@ var testScope struct {
 	err  error
 }
 
-// TestMain owns the fallback scope until every parallel test has finished.
+// TestMain owns the fallback scope and the data-method tests' runtime until
+// every parallel test has finished.
 func TestMain(m *testing.M) {
 	code := m.Run()
 	if testScope.path != "" {
 		os.RemoveAll(testScope.path)
+	}
+	if currentRuntime.path != "" {
+		os.RemoveAll(currentRuntime.path)
 	}
 	os.Exit(code)
 }

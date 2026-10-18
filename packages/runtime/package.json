@@ -21,6 +21,11 @@
       "types": "./dist/kernel/kernel.d.ts",
       "import": "./dist/kernel/kernel.js",
       "default": "./dist/kernel/kernel.js"
+    },
+    "./data-methods": {
+      "types": "./dist/data-methods.d.ts",
+      "import": "./dist/data-methods.js",
+      "default": "./dist/data-methods.js"
     }
   },
   "files": [

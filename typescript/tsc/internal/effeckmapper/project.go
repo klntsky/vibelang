@@ -299,6 +299,7 @@ func (p *projector) visit(node *ast.Node, e env) {
 		p.lambda(node, e)
 		return
 	case node.Kind == ast.KindCallExpression && !e.effect:
+		// moduleCall applies D152 outside the hatch's TypeScript island.
 		p.moduleCall(node, e)
 		return
 	case isProducer(node):
@@ -313,6 +314,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case node.Flags&ast.NodeFlagsReparsed != 0:
 		p.unprojected(node)
 		return
+	}
+	if ast.IsPropertyAccessExpression(node) {
+		p.checkDataMethodAccess(node)
 	}
 	if e.effect {
 		switch {
