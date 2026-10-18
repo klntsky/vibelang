@@ -15,7 +15,7 @@ function main() {
 }
 ```
 
-Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.retry`, whose parameter expects a program, the same call is passed by name: retry runs it again on each attempt. Write neither `async` nor `await` outside a boundary hatch.
+Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.retry`, whose parameter expects a program, the same call is passed by name: retry runs it again on each attempt. Use `async` and plain `await` only inside a boundary hatch. The concurrent `await.all`, `await.allSettled`, `await.any`, and `await.race` operations are VibeLang forms.
 
 ## Translate the idioms
 
@@ -86,7 +86,7 @@ export function main() {
 
 Declare functions, services, schemas, and layers at module scope. Do not run a program there: even `Effect.succeed(1)` is EK1001 at the top level. Export a `main` without parameters instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing the module runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
 
-`Effect`, `Schema`, `Layer`, `Scope`, `TaggedError`, `Control`, `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon` need no imports. Import other APIs from their Effect packages.
+Every export of Effect's root is in scope without an import, along with VibeLang's runtime helpers. This includes `Console`, `Clock`, `Option`, `Schedule`, and `Stream`. JavaScript globals such as `Array` keep their meaning; import Effect's conflicting modules under another name. Subpaths such as `effect/http` still need imports.
 
 ## Keep platform work in Effect
 
@@ -123,6 +123,6 @@ function displayName(id: string) {
 
 `throw` adds an expected failure to the function's error channel, and `catch` receives those failures. Defects and interruption bypass `catch`; `finally` still runs. Use `Effect.orDie(() => work())` to promote an expected failure to a defect, and Effect's cause APIs at a boundary when you need to inspect defects.
 
-Contracts remain `Effect<A, E, R>`. Most functions infer them. A return contract with a body must spell all three channels; `infer E` or `infer R` asks the compiler to infer that channel.
+Contracts remain `Effect<A, E, R>` and can be written `A!E!R`. Most functions infer them. In the shorthand, `A!E` checks the success and error channels and infers dependencies from the body; an empty slot is `never`. With `Effect<A, E, R>`, write all three channels and use `infer E` or `infer R` to infer a channel.
 
 For the feature with no direct Effect equivalent, see [Control operations and handlers](111-control-operations-and-handlers.md).

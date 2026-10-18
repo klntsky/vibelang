@@ -49,7 +49,7 @@ A function named `match` still works. Only `match (value) {` followed by `when`,
 | Object | A value with those properties; `{ let id }` binds `id` | `when { status: 200, let body }:` |
 | Matcher | An instance of a class, or what a custom matcher accepts | `when NotFound:` |
 | Extractor | A matcher's values, matched by the list in parentheses | `when Option.Some(let user):` |
-| `and`, `or`, `not` | Both, either, or neither | `when "a" or "e":` |
+| `and`, `or`, `not` | Conjunction, alternative, or negation | `when "a" or "e":` |
 | Guard | A condition that is true | `when [let n] and if (n > 0):` |
 
 ```vibe
@@ -125,7 +125,7 @@ For an extractor, the method receives `{ matchType: "extractor" }` as its second
 
 ## Combining patterns
 
-`and` needs both patterns, `or` either, and `not` neither. A guard, `if (condition)`, tests any expression and sees the bindings before it:
+`and` requires both patterns, `or` accepts either, and `not` rejects its pattern. A guard, `if (condition)`, tests any expression and sees the bindings before it:
 
 ```vibe
 function classify(job: { status: string; attempts: number }) {

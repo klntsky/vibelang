@@ -81,4 +81,4 @@ Only the entry point changes: the same `main` uses Bun's implementations. A targ
 
 ## Coming from Effect
 
-Pass `main()` wherever an Effect program is expected: it is passed by name, so nothing runs until the runner runs it. VibeLang functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.
+Pass `main()` to a runner or another parameter that expects an Effect program: it is passed by name, so nothing runs until that program is executed. VibeLang functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.

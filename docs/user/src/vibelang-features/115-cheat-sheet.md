@@ -510,7 +510,7 @@ const loaded = Effect.withSpan(
   "load"
 )
 
-it.effect("finds a user", () =>
+it.live("finds a user", () =>
   Effect.gen(function* () {
     const user = yield* getUser("1")
     assert.strictEqual(user.name, "Ada")
@@ -527,11 +527,13 @@ function loaded() {
   }
 }
 
-it.effect("finds a user") {
+it.live("finds a user") {
   const user = getUser("1")
   assert.strictEqual(user.name, "Ada")
 }
 ```
+
+`it.live` uses the live clock because this page's `getUser` sleeps. `it.effect` supplies a test clock; a test that sleeps there must advance it with `TestClock.adjust`.
 
 ## Pattern matching
 
@@ -678,7 +680,7 @@ function many() {
 }
 ```
 
-**First success, every outcome** (D196). `await.any` behaves like `Promise.any` and `await.allSettled` like `Promise.allSettled`.
+**First success, expected outcomes** (D196). `await.any` waits for the first success. `await.allSettled` returns successes and expected failures as `Result` values, rather than JavaScript's settlement objects. A cause with no expected failure still propagates; wrap each element in `exit(...)` when every cause must become data.
 
 ```ts effect
 const fastest = yield* Effect.raceAll([getUser("1"), getUser("2")])

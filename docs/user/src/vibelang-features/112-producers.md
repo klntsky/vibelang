@@ -89,7 +89,7 @@ function sumStream() {
 
 `for...of` pulls an Effect Stream and closes it when the loop exits, including on `break`. Arrays, maps, sets, and strings keep JavaScript's ordinary iteration behavior.
 
-Use `for (const value of source)` for producers. This preview does not support `for (using value of source)` over a producer, and `Array.from(source)` is not a Stream consumer. Use `Stream.runCollect(source)` when you need all the elements as a `Chunk`.
+Use `for (const value of source)` for producers. This preview does not support `for (using value of source)` over a producer, and `Array.from(source)` is not a Stream consumer. Use `Stream.runCollect(source)` when you need all the elements as an array.
 
 ## Coming from Effect
 
