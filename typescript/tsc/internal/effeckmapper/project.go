@@ -94,6 +94,9 @@ type Projection struct {
 	Segments []spanmap.Segment
 	// Diagnostics are the projector's own errors, in original coordinates.
 	Diagnostics []Diagnostic
+	// Purity says, for each top-level Effect function, whether its body is
+	// provably pure or only looks plain, from syntax (purity.go).
+	Purity []FunctionPurity
 }
 
 // Diagnostic is an error the projector reports about the original text.
@@ -170,7 +173,7 @@ func Project(text string, ctx FileContext) Projection {
 			Message: "The TypeScript 7 mapper produced overlapping edits here; the file is passed through unchanged.",
 		})
 	}
-	return Projection{Text: out, Segments: segments, Diagnostics: p.diagnostics}
+	return Projection{Text: out, Segments: segments, Diagnostics: p.diagnostics, Purity: p.purity()}
 }
 
 // lower parses text and walks it in context ctx, recording the lowering
