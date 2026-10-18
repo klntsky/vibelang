@@ -107,8 +107,9 @@ export function $extract(matcher: unknown, subject: unknown): ReadonlyArray<any>
 /** The own enumerable properties of an object pattern's subject that its clauses do not name. */
 export function $rest<T, K extends PropertyKey>(subject: T, keys: ReadonlyArray<K>): Omit<T, K> {
   const result: Record<PropertyKey, unknown> = {}
+  const excluded = new Set<PropertyKey>(keys.map(key => typeof key === "number" ? String(key) : key))
   for (const key of Reflect.ownKeys(subject as object)) {
-    if (!keys.includes(key as K) && Object.prototype.propertyIsEnumerable.call(subject, key)) {
+    if (!excluded.has(key) && Object.prototype.propertyIsEnumerable.call(subject, key)) {
       // Object rest creates data properties, including a literal __proto__.
       Object.defineProperty(result, key, {
         value: (subject as any)[key], enumerable: true, configurable: true, writable: true

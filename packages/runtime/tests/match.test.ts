@@ -84,6 +84,14 @@ test("match: object rest reads only included enumerable getters, once in propert
   expect(reads).toEqual(["first", "second"])
 })
 
+test("match: computed numeric rest exclusions use JavaScript property-key coercion", () => {
+  const subject = { "0": "zero", "42": "answer", "1.5": "fraction", NaN: "nan", Infinity: "infinity", keep: true }
+  for (const key of [0, -0, 42, 1.5, NaN, Infinity]) {
+    const { [key]: _excluded, ...expected } = subject as Record<string, unknown>
+    expect($rest(subject, [key])).toEqual(expected)
+  }
+})
+
 test("match: a custom matcher sees its receiver and the boolean or extractor hint", () => {
   const calls: unknown[] = []
   const matcher = {
