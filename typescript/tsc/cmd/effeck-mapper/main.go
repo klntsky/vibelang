@@ -4,6 +4,9 @@
 //
 //	effeck-mapper                    serve the content mapper protocol on stdio
 //	effeck-mapper --print f.effeck   print f's virtual TypeScript, its segments and diagnostics
+//	effeck-mapper --emit f.effeck    print f's JavaScript; diagnostics go to stderr
+//	effeck-mapper --emit f.effeck --out f.js
+//	                                 write f.js and its source map, f.js.map
 package main
 
 import (
@@ -11,6 +14,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/effeckmapper"
 )
@@ -20,8 +24,14 @@ func main() {
 	if len(os.Args) == 3 && os.Args[1] == "--print" {
 		os.Exit(printProjection(os.Args[2]))
 	}
+	if len(os.Args) == 3 && os.Args[1] == "--emit" {
+		os.Exit(emit(os.Args[2], ""))
+	}
+	if len(os.Args) == 5 && os.Args[1] == "--emit" && os.Args[3] == "--out" {
+		os.Exit(emit(os.Args[2], os.Args[4]))
+	}
 	if len(os.Args) != 1 {
-		fmt.Fprintln(os.Stderr, "usage: effeck-mapper [--print file.effeck]")
+		fmt.Fprintln(os.Stderr, "usage: effeck-mapper [--print file.effeck | --emit file.effeck [--out file.js]]")
 		os.Exit(2)
 	}
 	if err := effeckmapper.Serve(context.Background(), stdio{}); err != nil {
@@ -53,6 +63,55 @@ func printProjection(path string) int {
 		fmt.Printf("// %s%d at [%d, %d): %s\n", effeckmapper.DiagnosticSource, d.Code, d.Start, d.Start+d.Length, d.Message)
 	}
 	return 0
+}
+
+// emit compiles the file at path to JavaScript with effeckmapper.Emit. With
+// out, it writes the JavaScript there, with a sourceMappingURL comment, and
+// the source map beside it; without, it prints the JavaScript. Diagnostics
+// go to stderr, one per line, as file(line,column): EKcode message. The exit
+// status is 1 only when the file cannot be read or written: JavaScript is
+// written even for a file with diagnostics, as tsc writes it.
+func emit(path string, out string) int {
+	text, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
+		return 1
+	}
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
+		return 1
+	}
+	js, sourceMap, diagnostics := effeckmapper.Emit(string(text), effeckmapper.FileContextOf(filepath.ToSlash(absolute)))
+	for _, d := range diagnostics {
+		line, column := lineAndColumn(string(text), d.Start)
+		fmt.Fprintf(os.Stderr, "%s(%d,%d): error %s%d: %s\n", path, line, column, effeckmapper.DiagnosticSource, d.Code, d.Message)
+	}
+	if out == "" {
+		fmt.Print(js)
+		return 0
+	}
+	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
+		return 1
+	}
+	js += "//# sourceMappingURL=" + filepath.Base(out) + ".map\n"
+	if err := os.WriteFile(out, []byte(js), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
+		return 1
+	}
+	if err := os.WriteFile(out+".map", []byte(sourceMap), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
+		return 1
+	}
+	return 0
+}
+
+// lineAndColumn returns the one-based line and column of pos in text.
+func lineAndColumn(text string, pos int) (int, int) {
+	pos = min(max(pos, 0), len(text))
+	line := 1 + strings.Count(text[:pos], "\n")
+	return line, pos - (strings.LastIndex(text[:pos], "\n") + 1) + 1
 }
 
 // stdio joins the process's stdin and stdout into the connection the

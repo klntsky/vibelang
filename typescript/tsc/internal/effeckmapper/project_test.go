@@ -359,15 +359,16 @@ func TestProjectionIsDeterministic(t *testing.T) {
 }
 
 // TestExecutableRendering checks that the executable rendering drops
-// checker-only witnesses and reports each kind it does not implement.
+// checker-only witnesses and runs a call by a run-time test (L3,
+// render_exec.go).
 func TestExecutableRendering(t *testing.T) {
 	t.Parallel()
 	text, keep := executable{}.text(edit{kind: editWitness, text: ", g(x)"})
 	assert.Assert(t, !keep && text == "")
-	defer func() {
-		assert.Equal(t, recover(), "exec: kind run not implemented")
-	}()
-	executable{}.text(edit{kind: editRun})
+	open, _ := executable{}.text(edit{kind: editRun, part: partOpen})
+	close, _ := executable{}.text(edit{kind: editRun, part: partClose})
+	tmp := helperRef("$t")
+	assert.Equal(t, open+"c"+close, "(("+tmp+" = c), "+helperRef("$isRun")+"("+tmp+") ? (yield* "+tmp+") : "+tmp+")")
 }
 
 // TestModuleKey checks the fork's key rule: the nearest package.json's name,

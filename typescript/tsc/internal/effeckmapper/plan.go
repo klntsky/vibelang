@@ -270,7 +270,7 @@ func (executable) text(e edit) (string, bool) {
 	if e.kind == editWitness {
 		return "", false
 	}
-	panic("exec: kind " + e.kind.String() + " not implemented")
+	return renderExec(e)
 }
 
 // pick returns the text of part p among open, middle, and close.
