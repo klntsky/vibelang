@@ -62,6 +62,14 @@ const (
 	// editUsing acquires a using declaration's value in the block's Scope
 	// (D47, D94): its initializer, passed by name.
 	editUsing
+	// editDual makes a parameterless lambda's program also a function that
+	// returns it (L1's dual form).
+	editDual
+	// editScoped is a fork in a block, whose Scope owns the fiber (D19).
+	editScoped
+	// editProgramValue converts a function value at a program position to
+	// its program (D7).
+	editProgramValue
 )
 
 // part says which part of a kind an edit is.
@@ -154,11 +162,21 @@ func (r checking) text(e edit) (string, bool) {
 	case editRun:
 		text = pick(e.part, "(yield* "+helperRef("$run")+"(", "", "))")
 	case editEffectBody:
-		open := " return " + helperRef("$gen") + "(function* () {"
-		if e.arg == "self" {
-			open = " return " + helperRef("$gen") + "({ self: this }, function* () {"
+		gen := helperRef("$gen") + "(function* () "
+		if strings.Contains(e.arg, "self") {
+			gen = helperRef("$gen") + "({ self: this }, function* () "
 		}
-		text = pick(e.part, open, "", "})")
+		switch {
+		case strings.HasPrefix(e.arg, "expr"):
+			// (x) => expr
+			text = pick(e.part, gen+"{ return ", "", " })")
+		case strings.HasPrefix(e.arg, "block"):
+			// a block param in the Effect function form
+			text = pick(e.part, "() => "+gen, "", ")")
+		default:
+			// a function's braced body
+			text = pick(e.part, " return "+gen+"{", "", "})")
+		}
 	case editContract:
 		gen := helperRef("$gen") + "(function* () "
 		if e.arg == "self" {
@@ -166,7 +184,21 @@ func (r checking) text(e edit) (string, bool) {
 		}
 		text = pick(e.part, " { return "+helperRef("$contract")+"<", ">()("+gen, "))}")
 	case editProgram:
-		text = pick(e.part, helperRef("$gen")+"(function* () ", "", ")")
+		gen := helperRef("$gen") + "(function* () "
+		if strings.Contains(e.arg, "self") {
+			gen = helperRef("$gen") + "({ self: this }, function* () "
+		}
+		if strings.HasPrefix(e.arg, "expr") {
+			text = pick(e.part, gen+"{ return ", "", " })")
+		} else {
+			text = pick(e.part, gen, "", ")")
+		}
+	case editDual:
+		text = pick(e.part, helperRef("$dual")+"(", "", ")")
+	case editScoped:
+		text = pick(e.part, helperRef("$scoped")+"(", "", ")")
+	case editProgramValue:
+		text = pick(e.part, helperRef("$asProgram")+"(", "", ")")
 	case editFail:
 		if e.arg == "void" {
 			text = pick(e.part, "return (yield* "+helperRef("$fail")+"(", "", ")) as void")
@@ -202,7 +234,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch", "using"}[k]
+		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out

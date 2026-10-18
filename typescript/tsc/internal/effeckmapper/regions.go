@@ -38,6 +38,27 @@ type jump struct {
 // region collects the jumps that leave a region while the walk lowers its blocks.
 type region struct {
 	jumps []jump
+	// tail reports that the region's statement ends its Effect function's
+	// own body (isTailRegion).
+	tail bool
+}
+
+// isTailRegion reports whether node, a region statement, is the last
+// statement of an Effect function's own body. After it the function ends,
+// so the region's blocks may fall off their ends: the generator's return
+// type then holds undefined exactly where TypeScript finds the end
+// reachable, an exhaustive switch included, and the dispatch returns the
+// completion unconditionally, as the function's own end would.
+func isTailRegion(node *ast.Node, e env) bool {
+	if e.frame == nil || e.frame.region != nil || len(e.frame.targets) != 0 {
+		return false
+	}
+	block := node.Parent
+	if block == nil || block.Kind != ast.KindBlock || block.Parent == nil || !ast.IsFunctionLike(block.Parent) {
+		return false
+	}
+	statements := block.Statements()
+	return len(statements) > 0 && statements[len(statements)-1] == node
 }
 
 func (r *region) add(j jump) {
@@ -51,6 +72,9 @@ func (r *region) add(j jump) {
 type frame struct {
 	region  *region  // the region whose block this is; nil for an Effect function's body
 	targets []target // the statements a break or continue can jump to, innermost last
+	// expression reports that the generator's body is one expression, a
+	// lambda's, which no block holds.
+	expression bool
 }
 
 // A target is a statement that break or continue can jump to: a loop, a
@@ -128,17 +152,17 @@ func (p *projector) returnStatement(node *ast.Node, e env) {
 	e.frame.region.add(jump{kind: ast.KindReturnStatement})
 	start := p.tokenStart(node)
 	expression := node.Expression()
-	if expression == nil || !strings.HasPrefix(p.text[start:], "return") || p.tokenStart(expression) <= start {
-		// A return the parser wrote, such as an arm of a returned match,
-		// has no return keyword of its own to box.
+	if expression == nil {
 		p.plan.mark(editRecord, partOpen, start, start, "return")
-		if expression != nil {
-			p.visit(expression, e)
-		}
 		p.plan.mark(editRecord, partClose, node.End(), node.End(), "return")
 		return
 	}
-	p.plan.mark(editRecord, partOpen, start, p.tokenStart(expression), "return value")
+	from := start
+	if p.isCompletionReturn(node) {
+		// A do expression's completion value: no return keyword to replace.
+		from = p.tokenStart(expression)
+	}
+	p.plan.mark(editRecord, partOpen, from, p.tokenStart(expression), "return value")
 	p.visit(expression, e)
 	p.plan.mark(editRecord, partClose, expression.End(), expression.End(), "return value")
 }
@@ -173,6 +197,9 @@ func openRegion(r *region, name string) string {
 // completion. When the statement cannot end normally, the last one is
 // unconditional.
 func (p *projector) dispatch(r *region, name string, normal bool, e env) string {
+	if r.tail {
+		normal = false
+	}
 	var out []string
 	for i, j := range r.jumps {
 		var action string
@@ -219,7 +246,7 @@ func (p *projector) regionBlock(block *ast.Node, statements []*ast.Node, r *regi
 	normal = canCompleteNormally(statements)
 	closing := block.End() - 1
 	return normal, func() {
-		if normal && len(r.jumps) > 0 && closing >= 0 && p.text[closing] == '}' {
+		if normal && len(r.jumps) > 0 && !r.tail && closing >= 0 && p.text[closing] == '}' {
 			p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
 		}
 	}
@@ -264,7 +291,7 @@ func (p *projector) tryStatement(node *ast.Node, e env) {
 			return
 		}
 	}
-	r := &region{}
+	r := &region{tail: isTailRegion(node, e)}
 	name := p.freshCompletion()
 	tryNormal, closeTry := p.regionBlock(tryBlock, tryBlock.Statements(), r, e)
 	normal := tryNormal
@@ -376,12 +403,12 @@ func (p *projector) provideBlock(node *ast.Node, e env) {
 		p.unprojected(node)
 		return
 	}
-	r := &region{}
+	r := &region{tail: isTailRegion(node, e)}
 	name := p.freshCompletion()
 	body := statements[1:]
 	p.visitList(body, regionEnv(r, e))
 	normal := canCompleteNormally(body)
-	if normal && len(r.jumps) > 0 {
+	if normal && len(r.jumps) > 0 && !r.tail {
 		p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
 	}
 
@@ -591,7 +618,7 @@ func (p *projector) handleStatement(node *ast.Node, e env) {
 		p.unprojected(node)
 		return
 	}
-	r := &region{}
+	r := &region{tail: isTailRegion(node, e)}
 	name := p.freshCompletion()
 	k := p.freshWord("$k")
 	var closers []func()
@@ -614,7 +641,7 @@ func (p *projector) handleStatement(node *ast.Node, e env) {
 			clauseNormal := canCompleteNormally(clause.body)
 			normal = normal || clauseNormal
 			closers = append(closers, func() {
-				if clauseNormal && len(r.jumps) > 0 {
+				if clauseNormal && len(r.jumps) > 0 && !r.tail {
 					p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
 				}
 			})
@@ -806,9 +833,7 @@ func (p *projector) usingDeclaration(node *ast.Node, e env) {
 func (p *projector) byName(expr *ast.Node, e env) {
 	if expr.Kind == ast.KindCallExpression && isRunnableCall(expr) {
 		p.callee(expr, e)
-		for _, argument := range expr.Arguments() {
-			p.visit(argument, e)
-		}
+		p.callArguments(expr, e)
 		return
 	}
 	p.visit(expr, e)
@@ -851,12 +876,12 @@ func (p *projector) maskBlock(node *ast.Node, word string, e env) {
 		p.unprojected(node)
 		return
 	}
-	r := &region{}
+	r := &region{tail: isTailRegion(node, e)}
 	name := p.freshCompletion()
 	body := node.Statements()[1:]
 	p.visitList(body, regionEnv(r, e))
 	normal := canCompleteNormally(body)
-	if normal && len(r.jumps) > 0 {
+	if normal && len(r.jumps) > 0 && !r.tail {
 		p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
 	}
 	p.plan.markText(editRegion, partOpen, start, brace, openRegion(r, name)+p.names.prelude(word)+"("+generatorOpen(node))

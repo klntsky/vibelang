@@ -215,6 +215,16 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case p.isMatchForm(node):
 		p.synthesized(node, p.tokenStart(node), node.End(), e)
 		return
+	case isLambda(node):
+		p.lambda(node, e)
+		return
+	case node.Kind == ast.KindCallExpression && !e.effect && blockArgument(node) != nil:
+		p.visit(node.Expression(), e)
+		if arguments := node.TypeArgumentList(); arguments != nil {
+			p.visitList(arguments.Nodes, e)
+		}
+		p.blockCall(node, blockArgument(node), e)
+		return
 	case isProjectedFunction(node):
 		p.functionDeclaration(node)
 		return
@@ -232,6 +242,11 @@ func (p *projector) visit(node *ast.Node, e env) {
 			return
 		case node.Kind == ast.KindReturnStatement && e.frame.region != nil:
 			p.returnStatement(node, e)
+			return
+		case node.Kind == ast.KindReturnStatement && p.isCompletionReturn(node):
+			// A do expression's completion value, which the parser returns.
+			p.plan.insert(p.tokenStart(node.Expression()), "return ")
+			p.visit(node.Expression(), e)
 			return
 		case node.Kind == ast.KindBreakStatement || node.Kind == ast.KindContinueStatement:
 			p.jumpStatement(node, e)
@@ -573,15 +588,36 @@ func (p *projector) runCall(call *ast.Node, e env) {
 		delete(p.statementStarts, start)
 	}
 	p.plan.mark(editRun, partOpen, start, start, "")
+	scoped := p.isBlockFork(call, e)
+	if scoped {
+		p.plan.mark(editScoped, partOpen, start, start, "")
+	}
 	p.callee(call, e)
 	if arguments := call.Arguments(); e.continuation != "" && len(arguments) > 0 && isContinuationArgument(arguments[0]) {
 		p.continuationArguments(call, e)
 	} else {
-		for _, argument := range arguments {
-			p.visit(argument, e)
-		}
+		p.callArguments(call, e)
+	}
+	if scoped {
+		p.plan.mark(editScoped, partClose, call.End(), call.End(), "")
 	}
 	p.plan.mark(editRun, partClose, call.End(), call.End(), "")
+}
+
+// isBlockFork reports whether call, in an Effect body, is the prelude's fork
+// called in a block: the block is a Scope region whose Scope owns the fiber,
+// so the fork's Scope leaves R (D19, D96). A fork that is a lambda's
+// expression body keeps Scope in R.
+func (p *projector) isBlockFork(call *ast.Node, e env) bool {
+	callee := call.Expression()
+	if e.frame == nil || e.frame.expression || !ast.IsIdentifier(callee) || callee.Text() != "fork" {
+		return false
+	}
+	// The prelude's fork, or the runtime's imported by name.
+	if from, ok := p.names.importedFrom["fork"]; ok {
+		return from == "effeck-runtime" && p.names.declarations["fork"] == 1
+	}
+	return !p.names.declared["fork"]
 }
 
 // callee walks call's callee and type arguments. A member call S.m(...) on
@@ -597,8 +633,8 @@ func (p *projector) callee(call *ast.Node, e env) {
 		p.visit(receiver, e)
 		p.plan.mark(editServiceCall, partClose, receiver.End(), receiver.End(), "")
 		p.visit(callee.Name(), e)
-	case callee.Kind == ast.KindIdentifier && len(call.Arguments()) == 0 && call.TypeArguments() == nil &&
-		call.QuestionDotToken() == nil && !p.functions[callee.Text()]:
+	case len(call.Arguments()) == 0 && call.TypeArguments() == nil && call.QuestionDotToken() == nil &&
+		(callee.Kind == ast.KindIdentifier && !p.functions[callee.Text()] || p.isModuleMember(callee)):
 		p.plan.mark(editValueCall, partOpen, p.tokenStart(callee), p.tokenStart(callee), "")
 		p.visit(callee, e)
 		p.plan.mark(editValueCall, partClose, callee.End(), callee.End(), "")
@@ -608,6 +644,34 @@ func (p *projector) callee(call *ast.Node, e env) {
 	if arguments := call.TypeArgumentList(); arguments != nil {
 		p.visitList(arguments.Nodes, e)
 	}
+}
+
+// isCompletionReturn reports whether node is a return the parser wrote for
+// a do expression's completion value (D187), which has no return keyword
+// of its own in the source.
+func (p *projector) isCompletionReturn(node *ast.Node) bool {
+	expression := node.Expression()
+	start := p.tokenStart(node)
+	return expression != nil && !startsWord(p.text[start:], "return") && p.tokenStart(expression) == start
+}
+
+// isModuleMember reports whether callee is a member of one of effect's
+// modules, such as Effect.currentSpan: a namespace's member is a function
+// or a value, never a method, so a call of it with no arguments can go
+// through $value, which runs an Effect value (D90).
+func (p *projector) isModuleMember(callee *ast.Node) bool {
+	if callee.Kind != ast.KindPropertyAccessExpression || callee.QuestionDotToken() != nil {
+		return false
+	}
+	receiver := callee.Expression()
+	if receiver.Kind != ast.KindIdentifier || receiver.Flags&ast.NodeFlagsReparsed != 0 {
+		return false
+	}
+	name := receiver.Text()
+	if from, ok := p.names.importedFrom[name]; ok {
+		return (from == "effect" || strings.HasPrefix(from, "effect/")) && p.names.declarations[name] == 1
+	}
+	return preludeNames[name] && !builtinGlobals[name] && !p.names.declared[name] && name[0] >= 'A' && name[0] <= 'Z'
 }
 
 // mayBeServiceKey reports whether receiver, the object of a member call, is

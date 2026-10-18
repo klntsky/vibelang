@@ -98,8 +98,8 @@ var projectionCases = []struct {
 	},
 	{
 		name:    "a function that only throws keeps A void",
-		source:  "function find(id: string) {\n  if (id === \"\") throw new Timeout()\n  throw new NotFound({ id })\n}\nconst f = function () { throw new Timeout() }\n",
-		virtual: "function find(id: string) { return $gen(function* () {\n  if (id === \"\") return (yield* $fail(new Timeout())) as void\n  return (yield* $fail(new NotFound({ id }))) as void\n})}\nconst f = function () { throw new Timeout() }\n",
+		source:  "function find(id: string) {\n  if (id === \"\") throw new Timeout()\n  throw new NotFound({ id })\n}\n",
+		virtual: "function find(id: string) { return $gen(function* () {\n  if (id === \"\") return (yield* $fail(new Timeout())) as void\n  return (yield* $fail(new NotFound({ id }))) as void\n})}\n",
 	},
 	{
 		name:    "an infer channel wraps the body in $contract (D57)",
@@ -212,6 +212,11 @@ var projectionCases = []struct {
 		virtual: "function f() { return $gen(function* () {\n  const $c = yield* uninterruptible($gen(function* () {\n    const conn = (yield* $run($value(acquire)()))\n    const $c_1 = yield* $finallyExit($gen(function* () { const $c_2 = yield* restore($gen(function* () { return $box((yield* $run(use(conn)))) })); return $c_2 }), (exit) => $gen(function* () { ;(yield* $run(release(conn, exit))) ; return $end })); return $c_1\n  })); return $unboxed($c)\n})}\n",
 	},
 	{
+		name:    "a tail region falls off its end for TypeScript's reachability",
+		source:  "function describe(e: Failure) {\n  try {\n    return find(e)\n  } catch (error) {\n    switch (error._tag) {\n      case \"A\": return \"a\"\n      case \"B\": return \"b\"\n    }\n  }\n}\n",
+		virtual: "function describe(e: Failure) { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    return $box((yield* $run(find(e))))\n  }), (error) => $gen(function* () {\n    switch (error._tag) {\n      case \"A\": return $box(\"a\")\n      case \"B\": return $box(\"b\")\n    }\n  })); return $unboxed($c)\n})}\n",
+	},
+	{
 		name:    "a layer without statements succeeds with its members",
 		source:  "layer UsersLive: Users {\n  find(id) { return lookup(id) }\n  readonly region = \"eu\";\n}\n",
 		virtual: "const UsersLive = Layer.succeed(Users, {\n  find(id) { return $gen(function* () { return (yield* $run(lookup(id))) })},\n  region: \"eu\"\n})\n",
@@ -315,12 +320,27 @@ func TestVerbatimSegmentsCoverSourceText(t *testing.T) {
 // through unchanged and draws one EK9001 at the form.
 func TestUnprojectedForm(t *testing.T) {
 	t.Parallel()
-	source := "function f() {\n  return withSpan(\"x\") { g(1) }\n}\n"
+	source := "function f() {\n  return await.all [g(1), g(2)]\n}\n"
 	projection := Project(source, testContext)
 	assert.Equal(t, len(projection.Diagnostics), 1)
 	d := projection.Diagnostics[0]
 	assert.Equal(t, d.Code, int32(CodeUnprojectedForm))
 	assertValidMap(t, projection, source)
+}
+
+// TestFormChoice checks that a lambda whose form the rules cannot decide
+// draws EK9100 at the lambda, with the resolver's message, and still lowers
+// the default's guess.
+func TestFormChoice(t *testing.T) {
+	t.Parallel()
+	source := "function f(xs: Items) {\n  xs.forEach((x) => {\n    log(x)\n    g(x)\n  })\n}\n"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 1)
+	d := projection.Diagnostics[0]
+	assert.Equal(t, d.Code, int32(CodeFormChoice))
+	assert.Equal(t, source[d.Start:d.Start+d.Length], "(x) => {\n    log(x)\n    g(x)\n  }")
+	assert.Assert(t, strings.HasPrefix(d.Message, "Cannot tell whether the lambda at argument 1 of xs.forEach is a plain function or an Effect function"), d.Message)
+	assert.Assert(t, strings.Contains(projection.Text, "(x) => { return $gen(function* () {"), projection.Text)
 }
 
 // TestProjectionIsDeterministic checks that equal text projects to equal

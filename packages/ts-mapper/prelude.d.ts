@@ -71,6 +71,9 @@ export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from 
 export declare function $acquire<A, E, R>(acquisition: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, Exclude<R, ScopeModule.Scope>>
 export declare function $acquire<T>(value: T): EffectModule.Effect<T, never, never>
 
+/** A fork in a block (D19, D96): the block's Scope owns the fiber, so Scope leaves R. */
+export declare function $scoped<A, E, R>(fork: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, Exclude<R, ScopeModule.Scope>>
+
 // finally (exit) { ... } (D178), and the interruption blocks (D179, D180).
 export { $finallyExit, uninterruptible, restore, interruptible } from "effeck-runtime"
 
@@ -111,10 +114,24 @@ export declare function $returned<T>(completion: T): completion is Exclude<T, $J
 /** The completion is the jump kind. */
 export declare function $jumped<T, const K extends string>(completion: T, kind: K): completion is Extract<T, $Jump<K>>
 
-/** A function body: `function f() { body }` projects to `function f() { return $gen(function* () { body }) }`. */
-export declare const $gen: typeof EffectModule.gen
-
 type AnyEffect = EffectModule.Effect<any, any, any>
+
+/**
+ * The E and R of what a generator yields, member by member: a union of the
+ * yielded Effects' channels without subtype reduction, as the fork joins
+ * them. (Effect.gen's own [Eff] extends [Effect<…, infer E, …>] merges the
+ * candidates with subtype reduction, so an error that structurally extends
+ * another, such as a TaggedError with a name field, would vanish from E.)
+ */
+type YieldE<Eff> = Eff extends EffectModule.Effect<infer _A, infer E, infer _R> ? E : never
+type YieldR<Eff> = Eff extends EffectModule.Effect<infer _A, infer _E, infer R> ? R : never
+
+/** A function body: `function f() { body }` projects to `function f() { return $gen(function* () { body }) }`. */
+export declare function $gen<Eff extends AnyEffect, AEff>(f: () => Generator<Eff, AEff, never>): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
+export declare function $gen<Self, Eff extends AnyEffect, AEff>(
+  options: { readonly self: Self },
+  f: (this: Self) => Generator<Eff, AEff, never>
+): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
 
 /**
  * Effect subtypes that a call gives as data, not runs (D24): a Config, an
@@ -145,6 +162,19 @@ export declare function $run<T>(value: T & HasRunning<T>): EffectModule.Effect<
   EffectModule.Services<Running<T>>
 >
 export declare function $run<T>(value: T): EffectModule.Effect<T, never, never>
+
+/**
+ * L1's dual form: a parameterless lambda that is both a program and a
+ * function that returns it, `() => body` at a position that accepts either.
+ */
+export declare function $dual<A, E, R>(program: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R> & (() => EffectModule.Effect<A, E, R>)
+
+/**
+ * A function value at a position that takes a program (D7): the function
+ * runs as its program, `Effect.suspend(f)`. Any other value is itself.
+ */
+export declare function $asProgram<A, E, R>(f: () => EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R>
+export declare function $asProgram<T>(value: T): T
 
 /** `throw x` in an Effect body projects to `return yield* $fail(x)`. */
 export declare const $fail: typeof EffectModule.fail
