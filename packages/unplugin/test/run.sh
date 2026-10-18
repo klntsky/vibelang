@@ -48,4 +48,4 @@ ln -s "$runtime" "$modules/vibelang-runtime"
 (cd "$package" && bun install --frozen-lockfile --no-cache)
 
 cd "$package"
-exec node --test "$@" test/bundlers.test.mjs
+exec node --test "$@" test/backend.test.mjs test/bundlers.test.mjs
