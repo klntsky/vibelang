@@ -184,39 +184,6 @@
   text-align: center;
 }
 
-.vibe-home__cards {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-top: 4rem;
-  position: relative;
-}
-
-.vibe-home__card {
-  backdrop-filter: blur(3px);
-  background: color-mix(in srgb, var(--vocs-background-color-surface) 70%, transparent);
-  border: 1px solid var(--vocs-border-color-primary);
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 168px;
-  padding: 1.35rem;
-}
-
-.vibe-home__card h2 {
-  color: var(--vocs-text-color-heading);
-  font-size: 1.08rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.vibe-home__card div {
-  color: var(--vocs-text-color-secondary);
-  font-size: 0.96rem;
-  line-height: 1.55;
-}
-
 .vibe-home__content {
   box-sizing: border-box;
   margin: 0 auto;
@@ -316,10 +283,6 @@
     padding: 0;
     width: 100%;
   }
-
-  .vibe-home__cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 560px) {
@@ -351,15 +314,6 @@
 
   .vibe-home__try {
     display: none;
-  }
-
-  .vibe-home__cards {
-    grid-template-columns: 1fr;
-    margin-top: 3rem;
-  }
-
-  .vibe-home__card {
-    min-height: 140px;
   }
 
   .vibe-home__content {
