@@ -651,3 +651,56 @@ export function main() {
 		t.Errorf("a single loose candidate = %+v, want its program form", d)
 	}
 }
+
+func TestResolverWellKnownSymbolMethodsArePlain(t *testing.T) {
+	// The language calls a Disposable's [Symbol.dispose]() synchronously
+	// (D94) and an iterable's [Symbol.iterator](), and uses what they
+	// return: plain, not the dual a parameterless method with a call gets.
+	r := resolve(t, `const events: string[] = []
+function timer(name: string) {
+  return {
+    name,
+    [Symbol.dispose]() {
+      events.push("dispose " + name)
+    },
+    [Symbol.iterator]: () => events.values(),
+  }
+}
+function shadowed() {
+  const Symbol = { dispose: "d" }
+  return { [Symbol.dispose]() { events.push("x") } }
+}`)
+	for _, prefix := range []string{"[Symbol.dispose]() {\n      events", "() => events.values()"} {
+		if d := r.lambda(t, prefix); d.Form != FormPlain || d.Provenance != FromProtocol {
+			t.Errorf("%q = %v from %v, want plain from the protocol", prefix, d.Form, d.Provenance)
+		}
+	}
+	// A local Symbol is not the global one.
+	if d := r.lambda(t, `[Symbol.dispose]() { events.push("x") }`); d.Provenance == FromProtocol {
+		t.Errorf("a shadowed Symbol = %+v, want no protocol", d)
+	}
+}
+
+func TestResolverHandleClausesAreEffectFunctions(t *testing.T) {
+	// handle(program, Control, clauses): the runtime's Clauses<S, H> is a
+	// mapped type, whose template the generator reads, so every clause is an
+	// Effect function, even one whose body pauses nowhere.
+	f := forms(t, "effeck-runtime#handle", 3)
+	if c := f.Params[2].AnyProp; c != ClassEffectFn {
+		t.Errorf("handle's clauses = %v, want E for every member", c)
+	}
+	r := resolve(t, `control Ask { ask(question: string): number!! }
+export function stopEarly() {
+  return handle(() => Ask.ask("stop"), Ask, {
+    ask(question, _k) { return 0 }
+  })
+}
+export function arrow() {
+  return handle(() => Ask.ask("go"), Ask, { ask: (question, k) => resume(k, question.length) })
+}`)
+	for _, prefix := range []string{"ask(question, _k)", "(question, k) => resume"} {
+		if d := r.lambda(t, prefix); d.Form != FormEffectFn || d.Provenance != FromTable || d.Choice != nil {
+			t.Errorf("%q = %+v, want an Effect function from the table", prefix, d)
+		}
+	}
+}

@@ -8,3 +8,39 @@
 #
 # Entries stay as the history of reviewed moves. Bump effeckmapper.RulesVersion
 # when the classifier, the generator, or the resolver moved them.
+
+# rules 2: a method keyed by a well-known symbol is plain (D94), and the generator reads a mapped type's template, so handle's Clauses<S, H> makes every clause an Effect function.
+typescript/effeck/cases/ch06-disposable/ch06-disposable.effeck:10:5 lambda: dual fallback -> plain protocol # a well-known symbol's method is plain: the language calls it (D94)
+typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:116:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:129:14 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:67:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:90:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/decl-service/main.effeck:36:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/effeck-control/main.effeck:20:14 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/effeck-control/main.effeck:28:60 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ek2005.fail/main.effeck:21:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ek2005.fail/main.effeck:27:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ek2005.fail/main.effeck:33:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ek4201.fail/main.effeck:46:16 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handle-optional-args/main.effeck:15:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handle-optional-args/main.effeck:23:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:116:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:145:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:31:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:33:10 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:52:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:67:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:85:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:92:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/handlers/main.effeck:99:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-fork.fail/ref6-fork.fail.effeck:15:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:28:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:30:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:42:7 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:46:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:53:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:73:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:89:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/effeck/cases/scopes-callback.fail/main.effeck:11:18 lambda: plain fallback -> plain protocol # a well-known symbol's method is plain: the language calls it (D94)
+typescript/effeck/cases/scopes-using/main.effeck:29:5 lambda: dual fallback -> plain protocol # a well-known symbol's method is plain: the language calls it (D94)
+typescript/effeck/cases/stack-depth/stack-depth.effeck:54:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function

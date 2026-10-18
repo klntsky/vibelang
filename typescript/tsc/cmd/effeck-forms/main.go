@@ -976,7 +976,39 @@ func (w *walker) param(pt *checker.Type) effeckmapper.Param {
 		}
 	}
 	p.AnyProp = class(c, pt, anyProperty)
+	if p.AnyProp == 0 && len(p.Props) == 0 {
+		p.AnyProp = w.mappedTemplateClass(base)
+	}
 	return p
+}
+
+// mappedTemplateClass classifies the template of a mapped type, the type
+// every key of a record such as the runtime's Clauses<S, H> or
+// Effect.catchTags' handlers gets: generic in its keys, it has no
+// properties for the walk to read. A conditional template is read through
+// both branches. The template is read from the mapped type's declaration,
+// since the checker does not export it.
+func (w *walker) mappedTemplateClass(t *checker.Type) effeckmapper.Class {
+	if t == nil || t.Flags()&checker.TypeFlagsObject == 0 || t.ObjectFlags()&checker.ObjectFlagsMapped == 0 || t.Symbol() == nil {
+		return 0
+	}
+	for _, d := range t.Symbol().Declarations() {
+		if d.Kind != ast.KindMappedType || d.AsMappedTypeNode().Type == nil {
+			continue
+		}
+		template := d.AsMappedTypeNode().Type
+		nodes := []*ast.Node{template}
+		if template.Kind == ast.KindConditionalType {
+			cond := template.AsConditionalTypeNode()
+			nodes = []*ast.Node{cond.TrueType, cond.FalseType}
+		}
+		var cls effeckmapper.Class
+		for _, n := range nodes {
+			cls |= class(w.c, w.c.GetTypeFromTypeNode(n))
+		}
+		return cls
+	}
+	return 0
 }
 
 func class(c *checker.Checker, t *checker.Type, steps ...string) effeckmapper.Class {

@@ -75,8 +75,13 @@ package effeckmapper
 //     Effect function that a host could silently ignore, so the user writes
 //     the form. Decision.Choice; CodeFormChoice.
 //
+//  9. Protocols. A method keyed by a well-known symbol of the global
+//     Symbol ([Symbol.dispose], [Symbol.asyncDispose], [Symbol.iterator],
+//     …) is plain unless its return annotation says otherwise: the language
+//     calls it and uses what it returns (D94).
+//
 // Every decision records its provenance: the table, a written annotation in
-// this file, a service context, or the fallback defaults.
+// this file, a service context, a protocol, or the fallback defaults.
 
 import (
 	"strconv"
@@ -119,10 +124,13 @@ const (
 	// FromService is a service context: the member's written signature
 	// when this file declares the service, else the Effect function form.
 	FromService
+	// FromProtocol is a JavaScript protocol: a method keyed by a
+	// well-known symbol, which the language calls and which is plain.
+	FromProtocol
 )
 
 func (p Provenance) String() string {
-	return [...]string{"fallback", "table", "annotation", "service"}[p]
+	return [...]string{"fallback", "table", "annotation", "service", "protocol"}[p]
 }
 
 // Placement is where a block param call passes its block (D188).
@@ -326,6 +334,13 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 	if cls, note, ok := r.annotatedMember(fn); ok {
 		d.Class, d.Provenance, d.Note = cls, FromAnnotation, note
 		d.Form = formsFormFor(cls, params, facts)
+		return d
+	}
+	if name, ok := r.wellKnownSymbolKey(fn); ok && fn.Type() == nil {
+		// [Symbol.dispose]() { … }: the language calls it, synchronously for
+		// a Disposable (D94), and uses what it returns, so it is plain.
+		d.Class, d.Provenance, d.Note = ClassPlainFn, FromProtocol, "keyed by Symbol."+name
+		d.Form = FormPlain
 		return d
 	}
 	if ret := fn.Type(); ret != nil {
@@ -1899,6 +1914,39 @@ func (r *Resolver) annotatedClass(fn *ast.Node) Class {
 		return r.classOfType(p.Type(), 0)
 	}
 	return 0
+}
+
+// formsWellKnownSymbols are the symbols JavaScript, and the pattern
+// matching proposal's customMatcher (D215), call methods by.
+var formsWellKnownSymbols = map[string]bool{
+	"dispose": true, "asyncDispose": true, "iterator": true, "asyncIterator": true, "hasInstance": true,
+	"toPrimitive": true, "toStringTag": true, "species": true, "isConcatSpreadable": true, "unscopables": true,
+	"match": true, "matchAll": true, "replace": true, "search": true, "split": true, "customMatcher": true,
+}
+
+// wellKnownSymbolKey reports whether fn is a method, or a property's
+// lambda, keyed by a well-known symbol of the global Symbol:
+// [Symbol.dispose]() { … } or [Symbol.iterator]: () => ….
+func (r *Resolver) wellKnownSymbolKey(fn *ast.Node) (string, bool) {
+	member := fn
+	if fn.Kind != ast.KindMethodDeclaration {
+		member = fn.Parent
+		for member != nil && member.Kind == ast.KindParenthesizedExpression {
+			member = member.Parent
+		}
+		if member == nil || member.Kind != ast.KindPropertyAssignment {
+			return "", false
+		}
+	}
+	name := member.Name()
+	if name == nil || name.Kind != ast.KindComputedPropertyName {
+		return "", false
+	}
+	root, chain, ok := formsNameChain(name.Expression())
+	if !ok || len(chain) != 1 || root.Text() != "Symbol" || r.binding(root, "Symbol") != nil || !formsWellKnownSymbols[chain[0]] {
+		return "", false
+	}
+	return chain[0], true
 }
 
 // annotatedMember decides a lambda or method that is a member of an object
