@@ -35,6 +35,9 @@ export function settings(env = process.env) {
   const project = env.VIBELANG_WORKER_PROJECT ?? join(here, "project")
   const binary = env.VIBELANG_WORKER_BINARY ?? platformBinary(project)
   const timeoutMs = Number(env.VIBELANG_WORKER_TIMEOUT_MS ?? 10_000)
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647) {
+    throw new Error("VIBELANG_WORKER_TIMEOUT_MS must be a positive number no greater than 2147483647")
+  }
   const network = env.VIBELANG_WORKER_NETWORK ?? "unshare"
   if (network !== "unshare" && network !== "policy") throw new Error(`VIBELANG_WORKER_NETWORK must be unshare or policy, not ${network}`)
   return { project, binary, timeoutMs, network }
