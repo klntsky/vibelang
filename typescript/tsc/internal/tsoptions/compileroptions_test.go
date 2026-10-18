@@ -68,6 +68,13 @@ func TestGeneratedCompilerOptionParsingAndClone(t *testing.T) {
 			var input any
 			var expected any
 			switch {
+			case field.Type == reflect.TypeFor[*core.VibeLangOptions]():
+				codes := &collections.OrderedMap[string, any]{}
+				codes.Set("EK4403", "warning")
+				settings := &collections.OrderedMap[string, any]{}
+				settings.Set("tracing", "all")
+				settings.Set("diagnostics", codes)
+				input, expected = settings, &core.VibeLangOptions{Tracing: "all", Diagnostics: map[string]string{"EK4403": "warning"}}
 			case field.Type == reflect.TypeFor[core.Tristate]():
 				input, expected = true, core.TSTrue
 			case field.Type.Kind() == reflect.String:
@@ -239,6 +246,14 @@ func TestCompilerOptionsEquality(t *testing.T) {
 
 func compilerOptionTestValues(t *testing.T, field reflect.StructField) []reflect.Value {
 	t.Helper()
+	if field.Type == reflect.TypeFor[*core.VibeLangOptions]() {
+		return []reflect.Value{
+			reflect.Zero(field.Type),
+			reflect.ValueOf(&core.VibeLangOptions{}),
+			reflect.ValueOf(&core.VibeLangOptions{Tracing: "all", Diagnostics: map[string]string{"EK4403": "off", "EK2004": "warning"}}),
+			reflect.ValueOf(&core.VibeLangOptions{Tracing: "exported", Diagnostics: map[string]string{"EK4403": "error"}}),
+		}
+	}
 	values := []reflect.Value{reflect.Zero(field.Type)}
 	for _, n := range []int64{1, 2} {
 		value := reflect.New(field.Type).Elem()

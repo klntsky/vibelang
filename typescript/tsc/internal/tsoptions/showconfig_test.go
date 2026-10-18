@@ -9,6 +9,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/debug"
 	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
+	"github.com/microsoft/TypeScript/tsc/internal/json"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
@@ -31,6 +32,22 @@ func reflectedSerializeCompilerOptions(options *core.CompilerOptions, configFile
 			continue
 		}
 		value := fieldValue.Interface()
+		if _, ok := value.(*core.VibeLangOptions); ok {
+			// Normalize the struct through its public JSON tags independently
+			// of the generated serializer, preserving the full deep comparison.
+			encoded, err := json.Marshal(value, json.Deterministic(true))
+			if err != nil {
+				panic(err)
+			}
+			decoded, errors := ParseConfigFileTextToJson("/options.json", "/options.json", string(encoded))
+			if len(errors) != 0 {
+				panic(errors[0])
+			}
+			value = decoded
+			if object := decoded.(*collections.OrderedMap[string, any]); object.Size() == 0 {
+				value = collections.NewOrderedMapWithSizeHint[string, any](0)
+			}
+		}
 		if enumMap := option.EnumMap(); enumMap != nil {
 			for key, enumValue := range enumMap.Entries() {
 				if reflect.ValueOf(enumValue).Int() == fieldValue.Int() {
