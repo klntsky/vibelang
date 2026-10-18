@@ -1,4 +1,4 @@
-// bun docs/tools/check-landing.ts [--online]
+// EFFECK_LANDING=1 bun docs/tools/render-user.ts, then bun docs/tools/check-landing.ts [--online]
 // Checks the assembled Monday landing without making any first-load requests.
 // --online also checks the external navigation destination, without credentials.
 import { existsSync, readFileSync } from "node:fs"

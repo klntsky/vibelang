@@ -406,7 +406,9 @@ const first = order[0]!
 rendered.set("index.html", await render(first.path, sources.get(first.path)!, "index.html", false))
 // The landing is a static template; the checked hero pair remains its source of truth.
 const landing = join(repo, "docs/landing/index.html")
-if (existsSync(landing)) {
+// EFFECK_LANDING=1 turns it on. Its copy is a draft until Will rewrites it, so a plain deploy keeps
+// the onboarding page as the site's index.
+if (process.env.EFFECK_LANDING === "1" && existsSync(landing)) {
   const hero = JSON.parse(readFileSync(join(repo, "docs/site/converter/hero.json"), "utf8"))
   let html = readFileSync(landing, "utf8")
   for (const side of ["effect", "effeck"] as const) {
