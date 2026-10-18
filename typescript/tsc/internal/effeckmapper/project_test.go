@@ -187,6 +187,21 @@ var projectionCases = []struct {
 		virtual: "function k(version: string) { return $gen(function* () {\n  const $c = yield* handle_1($gen(function* () {\n    return $box((yield* $run(release(version))))\n  }) , Approval, { approve: (request, $k) => $gen(function* () {\n    ;(yield* $run(log(request)))\n    return $tailResume($k, true)\n  }) }); return $unboxed($c)\n})}\n",
 	},
 	{
+		name:    "a match expression in an Effect body runs as a program (D206)",
+		source:  "function f(e: Failure) {\n  const label = match (e) {\n    when NotFound and { let id }: `no user ${id}`;\n    default: describe(e);\n  }\n  return label\n}\n",
+		virtual: "function f(e: Failure) { return $gen(function* () {\n  const label = (yield* $run($gen(function* () { { if ($is(NotFound, e) && typeof e === \"object\" && e !== null && \"id\" in e) { let id = e.id; return `no user ${id}`; } } return (yield* $run(describe(e))); })))\n  return label\n})}\n",
+	},
+	{
+		name:    "a returned match returns from its arms, exhaustively (D209)",
+		source:  "function g(o: Option.Option<number>) {\n  return match (o) {\n    when Option.Some(let v): v;\n    when Option.None: 0;\n  }\n}\n",
+		virtual: "function g(o: Option.Option<number>) { return $gen(function* () {\n  { { if (Option.isSome(o)) { let v = o.value; return v; } } { if (Option.isNone(o)) { return 0; } } return $noMatch(o); }\n})}\n",
+	},
+	{
+		name:    "a match statement and an is test",
+		source:  "function h(n: number) {\n  match (n) {\n    when 1: log(\"one\");\n    default: log(\"other\");\n  }\n  return n is 1 or 2\n}\n",
+		virtual: "function h(n: number) { return $gen(function* () {\n  $match1: { { if (n === 1) { (yield* $run(log(\"one\"))); break $match1; } } (yield* $run(log(\"other\"))); break $match1; } \n  return (((n === 1) || (n === 2)))\n})}\n",
+	},
+	{
 		name:    "a layer without statements succeeds with its members",
 		source:  "layer UsersLive: Users {\n  find(id) { return lookup(id) }\n  readonly region = \"eu\";\n}\n",
 		virtual: "const UsersLive = Layer.succeed(Users, {\n  find(id) { return $gen(function* () { return (yield* $run(lookup(id))) })},\n  region: \"eu\"\n})\n",

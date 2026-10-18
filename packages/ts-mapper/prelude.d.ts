@@ -63,6 +63,9 @@ export {
 // statements, and provide blocks lower onto these.
 export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from "effeck-runtime"
 
+// The pattern matching helpers the parser writes for match and is (D206-D225).
+export { $is, $extract, $rest, $noMatch, $patternError } from "effeck-runtime"
+
 /*
  * Completion records, as the checker sees them. A return in a region's
  * block returns $box(value): the value itself, joined with a brand, so the

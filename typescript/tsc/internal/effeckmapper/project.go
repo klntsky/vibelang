@@ -117,6 +117,8 @@ type projector struct {
 	plan  plan
 	// forms answers the L1 form decisions (forms_resolve.go).
 	forms formResolver
+	// sources memoizes isSource (synth.go).
+	sources map[*ast.Node]bool
 	// services are the services, controls, and D1 abstract classes the file
 	// declares at its top level, by name.
 	services map[string]*ast.Node
@@ -148,6 +150,7 @@ func Project(text string, ctx FileContext) Projection {
 		ctx:             ctx,
 		names:           newNames(file, text),
 		forms:           newFormResolver(file),
+		sources:         map[*ast.Node]bool{},
 		services:        map[string]*ast.Node{},
 		functions:       map[string]bool{},
 		statementStarts: map[int]bool{},
@@ -208,6 +211,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 		return
 	case node.Kind == ast.KindPropertySignature || node.Kind == ast.KindIndexSignature:
 		p.readonlyMember(node, e)
+		return
+	case p.isMatchForm(node):
+		p.synthesized(node, p.tokenStart(node), node.End(), e)
 		return
 	case isProjectedFunction(node):
 		p.functionDeclaration(node)
