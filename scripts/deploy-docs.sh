@@ -25,18 +25,27 @@ esac
 for dir in docs/tools experiments packages/runtime; do
 	[ -d "$root/$dir/node_modules" ] || (cd "$root/$dir" && bun install --silent)
 done
-bun "$root/docs/tools/render-user.ts"
-
-# Until 0.0.2 ships, every docs example must compile with the release that
-# `npm create effeck@latest` installs: the 0.0.1 native compiler and runtime
-# from the release tarballs, not this checkout's build.
-# EFFECK_SKIP_RELEASE_SNIPPETS=1 skips the check, and needs
-# EFFECK_SKIP_RELEASE_SNIPPETS_REASON, which is printed.
+# Until 0.0.2 ships, the docs are checked and annotated with the release that
+# `npm create effeck@latest` installs: the 0.0.1 native compiler and runtime from
+# the release tarballs (dist-npm/tarballs, or EFFECK_RELEASE_TARBALLS), not this
+# checkout's build.
+# - Every docs example must compile with it. EFFECK_SKIP_RELEASE_SNIPPETS=1 skips
+#   that check, and needs EFFECK_SKIP_RELEASE_SNIPPETS_REASON, which is printed.
+# - Code blocks get its hovers (docs/tools/hovers.ts). EFFECK_DOCS_HOVERS=0 turns
+#   them off; the default is on, so every redeploy ships the same site.
 release=${EFFECK_RELEASE_VERSION:-0.0.1}
 tarballs=${EFFECK_RELEASE_TARBALLS:-$root/dist-npm/tarballs}
+hovers=${EFFECK_DOCS_HOVERS:-1}
+case "$hovers" in
+	0 | 1) export EFFECK_DOCS_HOVERS="$hovers" ;;
+	*) echo "deploy-docs: EFFECK_DOCS_HOVERS must be 0 or 1, not $hovers" >&2; exit 2 ;;
+esac
+check_snippets=true
 if [ "${EFFECK_SKIP_RELEASE_SNIPPETS:-}" = 1 ]; then
 	echo "deploy-docs: skipping the $release release snippet check: ${EFFECK_SKIP_RELEASE_SNIPPETS_REASON:?deploy-docs: set EFFECK_SKIP_RELEASE_SNIPPETS_REASON to say why}"
-else
+	check_snippets=false
+fi
+if $check_snippets || [ "$hovers" = 1 ]; then
 	case "$(uname -s)-$(uname -m)" in
 		Darwin-arm64) platform=darwin-arm64 ;;
 		Darwin-x86_64) platform=darwin-x64 ;;
@@ -55,12 +64,24 @@ else
 	# the repository's pinned effect, so its declarations resolve their imports.
 	mkdir -p "$release_dir/effeck-runtime/package/node_modules"
 	ln -s "$(cd "$root/packages/runtime/node_modules/effect" && pwd -P)" "$release_dir/effeck-runtime/package/node_modules/effect"
+	release_binary="$release_dir/effeck-$platform/package/bin/effeck"
+	release_runtime="$release_dir/effeck-runtime/package"
+fi
+if $check_snippets; then
 	echo "deploy-docs: compiling every docs example with effeck $release ($platform) and effeck-runtime $release"
-	EFFECK_BINARY="$release_dir/effeck-$platform/package/bin/effeck" EFFECK_RUNTIME_DIR="$release_dir/effeck-runtime/package" \
+	EFFECK_BINARY="$release_binary" EFFECK_RUNTIME_DIR="$release_runtime" \
 		bun "$root/docs/tools/check-snippets.ts" > "$release_dir/snippets.log" ||
 		{ tail -40 "$release_dir/snippets.log" >&2; echo "deploy-docs: a docs example does not compile with the $release release" >&2; exit 1; }
 	tail -1 "$release_dir/snippets.log"
 fi
+if [ "$hovers" = 1 ]; then
+	echo "deploy-docs: building code-block hovers with effeck $release"
+	EFFECK_BINARY="$release_binary" EFFECK_RUNTIME_DIR="$release_runtime" \
+		bun "$root/docs/tools/hovers.ts" > "$release_dir/hovers.log" 2>&1 ||
+		{ tail -40 "$release_dir/hovers.log" >&2; echo "deploy-docs: building hovers failed; EFFECK_DOCS_HOVERS=0 deploys without them" >&2; exit 1; }
+	head -1 "$release_dir/hovers.log"
+fi
+bun "$root/docs/tools/render-user.ts"
 
 rm -rf "$site"
 mkdir -p "$site"

@@ -64,6 +64,8 @@ bun docs/tools/render-user.ts
 
 ## Compiler hovers
 
+scripts/deploy-docs.sh builds hovers by default with the 0.0.1 release compiler, so popups show what readers' compiler shows; `EFFECK_DOCS_HOVERS=0` deploys without them. Until 0.0.2 ships, about 400 hover requests on Effeck form words (`service`, `provide`, `when`, `match`, `schema`, `all`) fail with a 0.0.1 language-server panic, fixed on main in 8fadacb5; those words have no popup, and hovers.ts records each failure in the page's cache entry.
+
 `hovers.ts` asks the Effeck language server for the hovers and diagnostics of
 the same blocks and caches them for a renderer:
 
