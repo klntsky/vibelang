@@ -24,7 +24,11 @@ package effeckmapper
 //     argument count, most required arguments first, the first one the
 //     written arguments do not rule out: a lambda where no form fits, or a
 //     literal where only a function fits. When the candidates left
-//     disagree at the node's path, the decision says Ambiguous.
+//     disagree at the node's path, the decision says Ambiguous. When the
+//     arguments rule out every candidate, the candidates answer only where
+//     they all agree; where they disagree, the decision is Ambiguous and
+//     takes the fallback, with a Choice where its body pauses (rule 8).
+//     Overload order never decides.
 //  3. Lambda form (formsFormFor). The class picks the form. Where the call
 //     gives no class, the lambda's own return annotation does: an Effect or
 //     a contract (A!E) makes it an Effect function, any other type plain.
@@ -308,7 +312,7 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 			d.Form = formsFormFor(cls, params, facts)
 			return d
 		}
-		d.Note = note
+		d.Note, d.Ambiguous = note, ambiguous
 	} else if cls := r.annotatedClass(fn); cls != 0 {
 		d.Class, d.Provenance, d.Note = cls, FromAnnotation, "variable annotation"
 		d.Form = formsFormFor(cls, params, facts)
@@ -404,6 +408,9 @@ func (r *Resolver) keyless(d Decision) (string, bool) {
 				}
 				return d.Callee.Canonical + " is not in the forms table", true
 			}
+		}
+		if d.Ambiguous {
+			return "no overload of " + d.Callee.Canonical + " fits the written arguments, and the overloads disagree here", true
 		}
 		return "the forms table gives no form at this position of " + d.Callee.Canonical, true
 	case d.Callee.Kind == CalleeLocal || d.Callee.Kind == CalleeService:
@@ -510,7 +517,11 @@ func (r *Resolver) Block(call *ast.Node) Decision {
 	case BlockPrepended, BlockApplied:
 		d.Class, d.Provenance, d.Note = ClassProgram, prov, "D188 "+d.Placement.String()
 	default:
-		if s, ok, ambiguous := formsShapeFit(formsCandidates(sigs, len(args)), args); ok {
+		s, fit, ambiguous := formsShapeFit(formsCandidates(sigs, len(args)), args)
+		switch {
+		case fit == fitLoose && ambiguous(n, nil):
+			d.Ambiguous, d.Note = true, "no overload fits the written arguments, and the overloads disagree here"
+		case fit != fitNoCandidate:
 			d.Class, d.Ambiguous = s.Param(n).Top, ambiguous(n, nil)
 			d.Provenance = prov
 		}
@@ -582,9 +593,12 @@ func (r *Resolver) classAt(call *ast.Node, callee Callee, arg int, steps []PathS
 			}
 		}
 	}
-	s, ok, ambiguous := formsShapeFit(formsCandidates(sigs, argc), args)
-	if !ok {
+	s, fit, ambiguous := formsShapeFit(formsCandidates(sigs, argc), args)
+	switch {
+	case fit == fitNoCandidate:
 		return 0, FromFallback, false, "no signature takes " + strconv.Itoa(argc) + " arguments"
+	case fit == fitLoose && ambiguous(arg, steps):
+		return 0, FromFallback, true, "no overload fits the written arguments, and the overloads disagree here"
 	}
 	cls := s.Param(arg).At(steps)
 	if cls == 0 {
@@ -632,8 +646,8 @@ func (r *Resolver) methodClassAt(name string, call *ast.Node, arg int, steps []P
 		if m.self {
 			sigs = formsDropSelf(sigs)
 		}
-		s, ok, _ := formsShapeFit(formsCandidates(sigs, len(args)), args)
-		if !ok {
+		s, fit, _ := formsShapeFit(formsCandidates(sigs, len(args)), args)
+		if fit != fitOK {
 			continue
 		}
 		c := s.Param(arg).At(steps)
@@ -876,8 +890,8 @@ func (r *Resolver) methodBlock(name string, call *ast.Node, n int) (Placement, C
 		p := formsPlacement(sigs, n)
 		c := ClassProgram
 		if p == BlockAppended {
-			s, ok, _ := formsShapeFit(formsCandidates(sigs, len(args)), args)
-			if !ok {
+			s, fit, _ := formsShapeFit(formsCandidates(sigs, len(args)), args)
+			if fit != fitOK {
 				continue
 			}
 			c = s.Param(n).Top
@@ -947,25 +961,45 @@ func formsCandidates(sigs []Signature, argc int) []Signature {
 	return out
 }
 
+// formsFit says how a call's written arguments fit its candidates.
+type formsFit uint8
+
+const (
+	fitNoCandidate formsFit = iota // no signature takes the argument count
+	fitLoose                       // the written arguments rule out every candidate; only where they all agree is there an answer
+	fitOK
+)
+
 // formsShapeFit picks the first candidate the written arguments do not rule
-// out, else the first candidate. The returned function reports whether the
-// candidates left disagree at a path.
-func formsShapeFit(cands []Signature, args []*ast.Node) (Signature, bool, func(int, []PathStep) bool) {
+// out. The checks read classes, which record only the callable forms a
+// type accepts, so a candidate they rule out may still fit (a string at
+// Duration.Input, a union with a function member). When they rule out
+// every candidate, the result is fitLoose: the candidates stand, and the
+// caller takes an answer only where they all agree, so overload order
+// never decides. The returned function reports whether the candidates left
+// disagree at a path.
+func formsShapeFit(cands []Signature, args []*ast.Node) (Signature, formsFit, func(int, []PathStep) bool) {
 	none := func(int, []PathStep) bool { return false }
 	if len(cands) == 0 {
-		return Signature{}, false, none
+		return Signature{}, fitNoCandidate, none
 	}
 	var fits []Signature
-	for _, s := range cands {
-		if formsArgumentsFit(s, args) {
-			fits = append(fits, s)
+	for _, strict := range []bool{true, false} {
+		for _, s := range cands {
+			if formsArgumentsFit(s, args, strict) {
+				fits = append(fits, s)
+			}
+		}
+		if len(fits) > 0 {
+			break
 		}
 	}
+	fit := fitOK
 	if len(fits) == 0 {
-		fits = cands
+		fits, fit = cands, fitLoose
 	}
 	chosen := fits[0]
-	return chosen, true, func(arg int, steps []PathStep) bool {
+	return chosen, fit, func(arg int, steps []PathStep) bool {
 		want := chosen.Param(arg).At(steps)
 		for _, s := range fits[1:] {
 			if s.Param(arg).At(steps) != want {
@@ -976,17 +1010,19 @@ func formsShapeFit(cands []Signature, args []*ast.Node) (Signature, bool, func(i
 	}
 }
 
-// formsArgumentsFit reports whether no written argument rules s out: a lambda
-// where s's parameter accepts no form, or a literal where it accepts only
-// functions, or a string, number, or template literal where it accepts
-// forms but not a program.
-func formsArgumentsFit(s Signature, args []*ast.Node) bool {
+// formsArgumentsFit reports whether no written argument rules s out: a
+// literal where s's parameter accepts only functions, or a string, number,
+// or template literal where it accepts forms but not a program. With
+// strict, a lambda where the parameter carries no form rules s out too: a
+// preference among overloads, not a mismatch, so formsShapeFit drops it
+// when no candidate passes otherwise.
+func formsArgumentsFit(s Signature, args []*ast.Node, strict bool) bool {
 	for i, arg := range args {
 		top := s.Param(i).Top
 		x := ast.SkipParentheses(arg)
 		switch x.Kind {
 		case ast.KindArrowFunction, ast.KindFunctionExpression:
-			if top == 0 {
+			if strict && top == 0 {
 				return false
 			}
 		case ast.KindStringLiteral, ast.KindNumericLiteral, ast.KindTemplateExpression, ast.KindNoSubstitutionTemplateLiteral:

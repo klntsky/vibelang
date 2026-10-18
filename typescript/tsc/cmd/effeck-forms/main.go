@@ -5,7 +5,7 @@
 //
 // It loads effect, the @effect/* packages the corpus uses, and
 // effeck-runtime's sources through the fork's checker, walks every callable
-// export of the modules in forms.Modules, and classifies each signature's
+// export of every module the packages' exports maps publish, and classifies each signature's
 // declared parameters with the fork's own classifier (effeck.FormsOfType,
 // the code behind D56, D147, D188, D7, and D49). The output is sorted and
 // holds no machine paths, so the same inputs always give the same bytes;
@@ -50,27 +50,10 @@ import (
 // Command is what the table's header names as the way to regenerate it.
 const Command = "scripts/check-forms-table.sh --write"
 
-// Modules are the module specifiers whose exports the table covers: the
-// ones the corpus imports (research/typedirected.md section 6.2). A module
-// another one exports as a namespace, such as effect/Effect from effect, is
-// walked too, under its own path.
-var Modules = []string{
-	"effect",
-	"effect/http",
-	"effect/testing",
-	"effect/process",
-	"effect/schema",
-	"effect/observability/OtlpTracer",
-	"effect/observability/OtlpSerialization",
-	"effect/http/FetchHttpClient",
-	"effect/process/ChildProcessSpawner",
-	"effect/schema/SchemaAOTCompiler",
-	"@effect/vitest",
-	"@effect/platform-node",
-	"@effect/platform-bun",
-	"effeck-runtime",
-	"effeck-runtime/kernel",
-}
+// runtimeModules are effeck-runtime's public modules, which its sources
+// declare: its package.json maps them to dist, which the generator does not
+// read.
+var runtimeModules = []string{"effeck-runtime", "effeck-runtime/kernel"}
 
 // methodModules are effect's modules whose data types take the module's
 // self-first functions as methods (D152). It mirrors methodModules in
@@ -119,7 +102,7 @@ func main() {
 		}
 		w = f
 	}
-	if err := effeckmapper.WriteTable(w, g.header, g.entries, g.aliases, g.values); err != nil {
+	if err := effeckmapper.WriteTable(w, g.header, g.modules, g.entries, g.aliases, g.values); err != nil {
 		fail(err)
 	}
 	if f != nil {
@@ -171,6 +154,7 @@ func findRepo() (string, error) {
 
 type generated struct {
 	header  effeckmapper.Header
+	modules []string
 	entries map[string][]effeckmapper.Signature
 	aliases map[string]string
 	values  map[string]string
@@ -178,7 +162,7 @@ type generated struct {
 }
 
 // generate builds a program whose one root file, an .effeck file kept in
-// memory, imports every module in Modules as a namespace, and walks them.
+// memory, imports every published module as a namespace, and walks them.
 func generate(nodeModules, runtime string) (*generated, error) {
 	for _, pkg := range distPackages {
 		if _, err := os.Stat(filepath.Join(nodeModules, pkg, "package.json")); err != nil {
@@ -188,6 +172,11 @@ func generate(nodeModules, runtime string) (*generated, error) {
 	if _, err := os.Stat(filepath.Join(runtime, "index.ts")); err != nil {
 		return nil, fmt.Errorf("no effeck-runtime sources: %w", err)
 	}
+	modules, err := publishedModules(nodeModules)
+	if err != nil {
+		return nil, err
+	}
+	modules = append(modules, runtimeModules...)
 	// The program's own directory exists only in memory. Every package is
 	// reached through paths, so one copy of effect serves the runtime's
 	// sources and the @effect packages alike.
@@ -209,11 +198,11 @@ func generate(nodeModules, runtime string) (*generated, error) {
 		"files": []string{"forms.effeck"},
 	})
 	var source strings.Builder
-	for i, m := range Modules {
+	for i, m := range modules {
 		fmt.Fprintf(&source, "import * as M%d from %q\n", i, m)
 	}
 	source.WriteString("export const keep = [")
-	for i := range Modules {
+	for i := range modules {
 		if i > 0 {
 			source.WriteString(", ")
 		}
@@ -228,12 +217,15 @@ func generate(nodeModules, runtime string) (*generated, error) {
 	}
 	p := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: compiler.NewCompilerHost(fs, bundled.LibPath(), nil, nil, nil)})
 	p.BindSourceFiles()
-	c, done := p.GetTypeChecker(context.Background())
-	defer done()
 	file := p.GetSourceFile(tspath.RootedFilePathFromAbsolute(dir + "/forms.effeck"))
 	if file == nil {
 		return nil, fmt.Errorf("the root file did not load")
 	}
+	if err := rejectDiagnostics(p, runtime); err != nil {
+		return nil, err
+	}
+	c, done := p.GetTypeChecker(context.Background())
+	defer done()
 	w := &walker{c: c, runtime: runtime, nodeModules: nodeModules, reach: map[*ast.Symbol][]reached{}, modulePaths: map[*ast.Symbol]string{}, sigs: map[string][]effeckmapper.Signature{}, aliases: map[string]string{}, valueTypes: map[string]string{}}
 	for i, statement := range file.Statements.Nodes {
 		if statement.Kind != ast.KindImportDeclaration {
@@ -241,9 +233,9 @@ func generate(nodeModules, runtime string) (*generated, error) {
 		}
 		module := c.ResolveExternalModuleName(statement.ModuleSpecifier(), nil)
 		if module == nil {
-			return nil, fmt.Errorf("cannot resolve %s", Modules[i])
+			return nil, fmt.Errorf("cannot resolve %s", modules[i])
 		}
-		w.enqueue(module, Modules[i])
+		w.enqueue(module, modules[i])
 	}
 	w.run()
 	w.prelude(file)
@@ -259,8 +251,119 @@ func generate(nodeModules, runtime string) (*generated, error) {
 	for _, m := range methodModules {
 		methodPaths = append(methodPaths, "effect/"+m)
 	}
-	g.header = effeckmapper.Header{Notice: "generated; do not edit", Command: Command, Inputs: inputs, Modules: Modules, MethodModules: methodPaths}
+	g.header = effeckmapper.Header{Notice: "generated; do not edit", Command: Command, Rules: effeckmapper.RulesVersion, Inputs: inputs, MethodModules: methodPaths}
+	g.modules = modules
 	return g, nil
+}
+
+// publishedModules lists every module the dist packages publish: each
+// exact subpath of a package.json exports map, and each declaration file a
+// wildcard subpath reaches, less the subpaths it maps to null (internal/*,
+// */index). It is the table's coverage, so a callee from any published
+// module has a key.
+func publishedModules(nodeModules string) ([]string, error) {
+	var out []string
+	for _, pkg := range distPackages {
+		root := filepath.Join(nodeModules, pkg)
+		data, err := os.ReadFile(filepath.Join(root, "package.json"))
+		if err != nil {
+			return nil, err
+		}
+		var manifest struct {
+			Exports map[string]json.RawMessage `json:"exports"`
+		}
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			return nil, fmt.Errorf("%s/package.json: %w", root, err)
+		}
+		var excluded []string
+		subpaths := map[string]bool{}
+		wildcard := ""
+		for sub, raw := range manifest.Exports {
+			switch {
+			case string(raw) == "null":
+				excluded = append(excluded, sub)
+			case sub == "./package.json":
+			case strings.Contains(sub, "*"):
+				var target string
+				if json.Unmarshal(raw, &target) == nil && sub == "./*" {
+					wildcard = strings.TrimSuffix(strings.TrimPrefix(strings.TrimSuffix(target, "*.js"), "./"), "/")
+				}
+			default:
+				subpaths[sub] = true
+			}
+		}
+		if wildcard != "" {
+			dist := filepath.Join(root, filepath.FromSlash(wildcard))
+			err := filepath.WalkDir(dist, func(path string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() || !strings.HasSuffix(path, ".d.ts") {
+					return err
+				}
+				rel, _ := filepath.Rel(dist, path)
+				sub := "./" + strings.TrimSuffix(filepath.ToSlash(rel), ".d.ts")
+				for _, x := range excluded {
+					if matchSubpath(x, sub) {
+						return nil
+					}
+				}
+				subpaths[sub] = true
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+		}
+		for sub := range subpaths {
+			out = append(out, pkg+strings.TrimPrefix(sub, "."))
+		}
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+// matchSubpath reports whether sub matches an exports pattern with at
+// most one *, as Node matches subpath patterns.
+func matchSubpath(pattern, sub string) bool {
+	before, after, wild := strings.Cut(pattern, "*")
+	if !wild {
+		return pattern == sub
+	}
+	return len(sub) >= len(before)+len(after) && strings.HasPrefix(sub, before) && strings.HasSuffix(sub, after)
+}
+
+// rejectDiagnostics fails generation on any diagnostic of the program:
+// options, syntax in any file, and semantics in the root and the runtime's
+// sources. A broken declaration would otherwise erase types silently.
+func rejectDiagnostics(p *compiler.Program, runtime string) error {
+	ctx := context.Background()
+	diags := append([]*ast.Diagnostic{}, p.GetConfigFileParsingDiagnostics()...)
+	diags = append(diags, p.GetProgramDiagnostics()...)
+	diags = append(diags, p.GetSyntacticDiagnostics(ctx, nil)...)
+	diags = append(diags, p.GetGlobalDiagnostics(ctx)...)
+	for _, f := range p.SourceFiles() {
+		if f.IsDeclarationFile && !strings.HasPrefix(string(f.FileName()), filepath.ToSlash(runtime)+"/") {
+			continue
+		}
+		if strings.HasPrefix(string(f.FileName()), "bundled:") {
+			continue
+		}
+		diags = append(diags, p.GetSemanticDiagnostics(ctx, f)...)
+	}
+	if len(diags) == 0 {
+		return nil
+	}
+	var b strings.Builder
+	for i, d := range diags {
+		if i == 5 {
+			fmt.Fprintf(&b, "\n  … %d more", len(diags)-5)
+			break
+		}
+		name := ""
+		if d.File() != nil {
+			name = string(d.File().FileName()) + ": "
+		}
+		fmt.Fprintf(&b, "\n  %s%s", name, d.String())
+	}
+	return fmt.Errorf("the program has %d diagnostics:%s", len(diags), b.String())
 }
 
 // exportPaths adds a paths entry for each subpath pkg's package.json
@@ -820,6 +923,9 @@ func (w *walker) param(pt *checker.Type) effeckmapper.Param {
 			base = k
 		}
 	}
+	// An optional parameter's declared type is X | undefined, whose only
+	// properties are those of every member: none. Walk X's.
+	base = c.GetNonNullableType(base)
 	if base.Flags()&(checker.TypeFlagsObject|checker.TypeFlagsUnion|checker.TypeFlagsIntersection) == 0 || len(c.GetSignaturesOfType(base, checker.SignatureKindCall)) != 0 {
 		return p
 	}

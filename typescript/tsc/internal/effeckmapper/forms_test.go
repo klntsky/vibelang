@@ -222,7 +222,7 @@ func TestTableFormatRoundTrips(t *testing.T) {
 		entries[k] = table.Signatures(k)
 	}
 	var buf bytes.Buffer
-	if err := WriteTable(&buf, table.Header, entries, table.Aliases(), table.Values()); err != nil {
+	if err := WriteTable(&buf, table.Header, table.Modules(), entries, table.Aliases(), table.Values()); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(buf.Bytes(), embeddedTable) {
@@ -553,5 +553,74 @@ export function f(obj, xs: number[], socket) {
 	d := r.block(t, `socket.once("connect")`)
 	if d.Choice == nil || d.Choice.Path != "its block" || d.Choice.Plain != "(): T => { … }" || d.Choice.Forms[1] != FormDual {
 		t.Errorf("block after a method of an unnamed receiver: %+v", d.Choice)
+	}
+}
+
+func TestGeneratorReadsOptionalRecordsAndEveryModule(t *testing.T) {
+	// raceAll(all, options?: { onWinner?: … }): the property walk sees the
+	// record through its optional parameter's undefined.
+	f := forms(t, "effect/Effect#raceAll", 2)
+	if c := f.Params[1].Props["onWinner"]; c != ClassPlainFn {
+		t.Errorf("raceAll options.onWinner = %v, want F", c)
+	}
+	table, err := DefaultTable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if table.Header.Rules != RulesVersion {
+		t.Errorf("the table was generated under rules %d; the resolver is at %d: run scripts/check-forms-table.sh --write", table.Header.Rules, RulesVersion)
+	}
+	modules := map[string]bool{}
+	for _, m := range table.Modules() {
+		modules[m] = true
+	}
+	// Every published subpath, not a hand list: a module the corpus never
+	// imported, and none of the subpaths the exports map hides.
+	for _, m := range []string{"effect", "effect/Effect", "effect/sql", "effect/http/HttpClient", "@effect/platform-node/NodeRuntime", "effeck-runtime/kernel"} {
+		if !modules[m] {
+			t.Errorf("module %s is not walked", m)
+		}
+	}
+	// effect's exports map hides internal/*, cli/internal/*,
+	// cluster/internal/*, and */index; other internal paths stay published.
+	for m := range modules {
+		for _, hidden := range []string{"effect/internal/", "effect/cli/internal/", "effect/cluster/internal/"} {
+			if strings.HasPrefix(m, hidden) || strings.HasSuffix(m, "/index") {
+				t.Errorf("module %s is not published", m)
+			}
+		}
+	}
+	if table.Header.Modules != len(table.Modules()) {
+		t.Errorf("header counts %d modules; the table lists %d", table.Header.Modules, len(table.Modules()))
+	}
+}
+
+func TestShapeFitNeverDefaultsToTheFirstCandidate(t *testing.T) {
+	// f's two overloads both put a plain function second, so the string
+	// rules both out; they disagree on the lambda's position (a program
+	// against an Effect function), so overload order must not decide.
+	table := NewTable(Header{}, map[string][]Signature{
+		"pkg/m#f": {
+			{Min: 2, Max: 2, Params: []Param{{Top: ClassProgram}, {Top: ClassPlainFn}}},
+			{Min: 2, Max: 2, Params: []Param{{Top: ClassEffectFn}, {Top: ClassPlainFn}}},
+		},
+		"pkg/m#g": {{Min: 2, Max: 2, Params: []Param{{Top: ClassProgram}, {Top: ClassPlainFn}}}},
+	}, nil)
+	text := `import { f, g } from "pkg/m"
+export function main() {
+  f(() => { log(1); log(2) }, "x")
+  g(() => 1, "100 millis")
+}`
+	file := parser.ParseSourceFile(ast.SourceFileParseOptions{FileName: tspath.RootedFilePathFromAbsolute("/test.effeck")}, text, core.ScriptKindTS)
+	r := resolved{Resolver: NewResolver(file, table), text: text, file: file}
+	d := r.lambda(t, "() => { log")
+	if !d.Ambiguous || d.Provenance != FromFallback || d.Choice == nil || !strings.Contains(d.Choice.Reason, "overloads disagree") {
+		t.Errorf("disagreeing overloads = %+v, want ambiguous, from the fallback, with a choice", d)
+	}
+	// One candidate cannot disagree with itself: a string at a class the
+	// checks misread (Duration.Input is a union with a function member)
+	// still leaves g's only signature to answer.
+	if d := r.lambda(t, "() => 1"); d.Ambiguous || d.Form != FormProgram || d.Provenance != FromTable {
+		t.Errorf("a single loose candidate = %+v, want its program form", d)
 	}
 }

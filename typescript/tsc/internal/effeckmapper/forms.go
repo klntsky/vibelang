@@ -218,16 +218,27 @@ type Forms struct {
 // the first one left; the decision then carries Ambiguous.
 func (f Forms) Agreed() bool { return !slices.Contains(f.Agree, false) }
 
+// RulesVersion numbers the rules that turn declarations into the table and
+// the table into decisions: the fork's classifier (effeck.FormsOfType), the
+// generator (cmd/effeck-forms), and the resolver (forms_resolve.go). Bump it
+// in any change that moves a decision, so a table change says whether its
+// inputs or its rules moved; scripts/check-forms-table.sh checks the
+// decisions themselves.
+const RulesVersion = 1
+
 // Header is the table's first line: what generated it, from what.
 type Header struct {
 	// Notice is "generated; do not edit".
 	Notice string `json:"generated"`
 	// Command regenerates the table, from the repository root.
 	Command string `json:"command"`
+	// Rules is the RulesVersion the table was generated under.
+	Rules int `json:"rules"`
 	// Inputs are the declaration packages the table was generated from.
 	Inputs []Input `json:"inputs"`
-	// Modules are the module specifiers the generator walked.
-	Modules []string `json:"modules"`
+	// Modules counts the module specifiers the generator walked; the
+	// table lists them, one {"module":m} line each.
+	Modules int `json:"modules"`
 	// MethodModules are the modules whose data types take their self-first
 	// functions as methods (D152), as module paths.
 	MethodModules []string `json:"methodModules,omitempty"`
@@ -251,6 +262,7 @@ type Input struct {
 // Table is a parsed forms table.
 type Table struct {
 	Header  Header
+	modules []string
 	entries map[string][]Signature
 	aliases map[string]string
 	values  map[string]string // value export -> the module of its type, when it has methods
@@ -268,6 +280,12 @@ func NewTable(header Header, entries map[string][]Signature, aliases map[string]
 // SetValues records, for value exports such as effect/Stream#never, the
 // module whose type they have, when that module's values have methods.
 func (t *Table) SetValues(values map[string]string) { t.values = values }
+
+// Modules returns the module specifiers the table covers, sorted.
+func (t *Table) Modules() []string { return t.modules }
+
+// SetModules records the module specifiers the table covers.
+func (t *Table) SetModules(modules []string) { t.modules = modules }
 
 // Values returns the value exports SetValues recorded.
 func (t *Table) Values() map[string]string { return t.values }
@@ -472,7 +490,7 @@ func (t *Table) Signatures(key string) []Signature { return t.entries[key] }
 func (t *Table) Aliases() map[string]string { return t.aliases }
 
 // The file format: JSON lines. The first line is the Header. Then one line
-// per alias, {"alias":name,"to":target}, sorted by name, and one line per
+// per walked module, {"module":m}, sorted, one line per alias, {"alias":name,"to":target}, sorted by name, and one line per
 // value export whose type's module has methods, {"value":key,"module":m},
 // sorted, and one line per key, {"key":key,"sigs":[signature...]}, sorted by
 // key. A signature is {"n":arity,"p":[param...],"df":1,"dl":1,"sf":1,"r":m}:
@@ -488,6 +506,10 @@ type aliasLine struct {
 type keyLine struct {
 	Key  string          `json:"key"`
 	Sigs []signatureJSON `json:"sigs"`
+}
+
+type moduleLine struct {
+	Module string `json:"module"`
 }
 
 type valueLine struct {
@@ -514,8 +536,8 @@ type paramJSON struct {
 
 // WriteTable writes header, aliases, values, and entries in the file
 // format, sorted, so the same inputs always give the same bytes.
-func WriteTable(w io.Writer, header Header, entries map[string][]Signature, aliases map[string]string, values map[string]string) error {
-	header.Keys, header.Aliases = len(entries), len(aliases)
+func WriteTable(w io.Writer, header Header, modules []string, entries map[string][]Signature, aliases map[string]string, values map[string]string) error {
+	header.Keys, header.Aliases, header.Modules = len(entries), len(aliases), len(modules)
 	bw := bufio.NewWriter(w)
 	line := func(v any) error {
 		data, err := marshalLine(v)
@@ -527,6 +549,13 @@ func WriteTable(w io.Writer, header Header, entries map[string][]Signature, alia
 	}
 	if err := line(header); err != nil {
 		return err
+	}
+	sorted := slices.Clone(modules)
+	slices.Sort(sorted)
+	for _, m := range sorted {
+		if err := line(moduleLine{Module: m}); err != nil {
+			return err
+		}
 	}
 	names := make([]string, 0, len(aliases))
 	for name := range aliases {
@@ -638,8 +667,9 @@ func ReadTable(r io.Reader) (*Table, error) {
 			continue
 		}
 		var probe struct {
-			Alias *string `json:"alias"`
-			Value *string `json:"value"`
+			Alias  *string `json:"alias"`
+			Value  *string `json:"value"`
+			Module *string `json:"module"`
 		}
 		if err := json.Unmarshal(data, &probe); err != nil {
 			return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
@@ -650,6 +680,10 @@ func ReadTable(r io.Reader) (*Table, error) {
 				return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
 			}
 			t.aliases[a.Alias] = a.To
+			continue
+		}
+		if probe.Module != nil && probe.Value == nil {
+			t.modules = append(t.modules, *probe.Module)
 			continue
 		}
 		if probe.Value != nil {
