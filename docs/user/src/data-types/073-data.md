@@ -22,12 +22,12 @@ Plain records, tuples, arrays, maps, and sets need no `Data` wrapper for structu
 ## Building ordinary and tagged classes
 
 ```vibe
-class Label extends Data.Class<{ readonly text: string }> {
+class Label extends Data.Class<{ text: string }> {
   get upper() { return this.text.toUpperCase() }
 }
 
 class Archived extends Data.TaggedClass("Archived")<{
-  readonly documentId: string
+  documentId: string
 }> {}
 
 const label = new Label({ text: "pending" })
@@ -89,8 +89,8 @@ const idle = LoadState.Idle()
 
 ```vibe
 class InvalidDocument extends Data.Error<{
-  readonly message: string
-  readonly line: number
+  message: string
+  line: number
 }> {}
 
 error DocumentMissing {

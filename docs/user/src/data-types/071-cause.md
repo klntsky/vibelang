@@ -19,9 +19,10 @@ empty.reasons.length // 0
 ```vibe
 const combined = Cause.fail("export failed").combine(Cause.die(new Error("cleanup failed")))
 combined.reasons.map((reason) => reason._tag) // ["Fail", "Die"]
+Cause.fail("same error").combine(Cause.fail("same error")).reasons.length // 1
 ```
 
-Effect 4 stores reasons in a flat array. `combine` retains both sets of reasons; it does not encode a sequential or parallel tree. A mixed cause must be inspected as a whole to avoid hiding a defect behind an expected failure.
+Effect 4 stores reasons in a flat array. `combine` merges both sets of reasons and removes equal duplicates; it does not encode a sequential or parallel tree. A mixed cause must be inspected as a whole to avoid hiding a defect behind an expected failure.
 
 ## Extracting a computation's cause
 
