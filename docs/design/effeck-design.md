@@ -53,7 +53,7 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | `class E extends Data.TaggedError("E")<{ ... }> {}` | `error E { ... }` | [3](#3-errors-the-e-channel) |
 | `Effect.catchTag("E", h)` | `try { … } catch (e) { … }` | [3](#3-errors-the-e-channel) |
 | `Effect.ensuring(cleanup)` | `finally { … }` | [3](#3-errors-the-e-channel) |
-| `class S extends Context.Service<…>()("key") {}` | `service S { method(): A!E }` | [4](#4-dependency-injection-the-r-channel) |
+| `class S extends Context.Service<…>()("key") {}` | `service class S { method(): A!E }` | [4](#4-dependency-injection-the-r-channel) |
 | `const s = yield* S` then `yield* s.method()` | `S.method()` | [4](#4-dependency-injection-the-r-channel) |
 | `Layer.effect(S, Effect.gen(…))` | `Layer.effect(S, () => { … })` | [4](#4-dependency-injection-the-r-channel) |
 | `program.pipe(Effect.provide(layer))` | `Effect.provide(() => program(), layer)` | [4](#4-dependency-injection-the-r-channel) |
@@ -62,7 +62,7 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | `Effect.all([a, b], { concurrency: 2 })` | `Effect.all([() => a(), () => b()], { concurrency: 2 })` | [7](#7-concurrency) |
 | `Effect.forkScoped(effect)` | `fork(() => f())`, owned by the enclosing block | [7](#7-concurrency) |
 | a `Stream` you build by hand | a `function*` producer and `for...of` | [8](#8-producers-streams-of-values) |
-| nothing comparable | `control Op { ... }` and `handle` | [9](#9-handlers-defining-your-own-effects) |
+| nothing comparable | `control class Op { ... }` and `handle` | [9](#9-handlers-defining-your-own-effects) |
 | `node:fs`, `fetch`, `process.env`, `child_process` | `FileSystem`, `HttpClient`, `Config`, `ChildProcessSpawner` | [11](#11-the-standard-library) |
 
 Where `async`, `Option`, `Schema`, `Stream`, testing, and the rest of Effect fit is answered in [Chapter 12](#12-questions-effect-users-ask) and, feature by feature, in [Appendix C](#c-every-effect-feature-in-effeck).
@@ -116,11 +116,11 @@ error MailError {
   reason: string
 }
 
-service Users {
+service class Users {
   find(id: string): User!UserNotFound
 }
 
-service Mailer {
+service class Mailer {
   send(to: string, body: string): void!MailError
 }
 
@@ -134,7 +134,7 @@ export function welcome(id: string) {
 Four things changed:
 
 - **`welcome` is a plain function.** No `Effect.fn`, no generator, no `yield*`. Calling `Users.find(id)` runs it and gives you the `User`; if it fails, `welcome` fails with the same error.
-- **A service is a `service` declaration.** `service Users`, an abstract class, replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
+- **A service is a `service class` declaration.** `service class Users`, an abstract class, replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
 - **The contract is inferred.** `welcome` is `string!UserNotFound | MailError!Users | Mailer`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
 - **Errors are the same classes.** `error UserNotFound { id: string }` declares a class that extends `TaggedError`, Effect's `Data.TaggedError`, in scope without an import.
 
@@ -571,13 +571,13 @@ class Users extends Context.Service<Users, {
 ```
 
 ```ts es
-service Users {
+service class Users {
   find(id: string): User!UserNotFound
   rename(id: string, name: string): void!UserNotFound
 }
 ```
 
-`service Users { ... }` declares a service, and it does the job of the class on the left. It is short for `abstract class Users { ... }` in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:
+`service class Users { ... }` declares a service, and it does the job of the class on the left. `service` is a modifier of the class declaration, as `declare` is, and the members have no bodies, as a `declare class`'s do (D220). It is short for `abstract class Users { ... }` in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). The older spelling without `class` still compiles, with the warning EK2120. An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:
 
 - **What makes a class a service.** In an `.effeck` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
 - **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (EK3001).
@@ -624,7 +624,7 @@ const user = Users.find(id)
 Calling the service itself with no arguments, `Users()`, gives you its implementation object, the equivalent of `yield* Users`. You need it inside providers, and to read a service's value members:
 
 ```ts es
-service Settings {
+service class Settings {
   baseUrl: string
   scale(): number!!
 }
@@ -639,7 +639,7 @@ Calling any member through the service looks the service up, so the service join
 
 #### Writing a provider
 
-A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation. `layer UsersLive: Users { ... }` writes the same provider with less: the statements before the members run once, when the layer is built, the members form the implementation, and a value member is `readonly name = value` (D129). It is short for `Layer.effect(Users, () => { ...; return { ... } })`, or `Layer.succeed(Users, { ... })` when there are no statements. A statement after the members is EK2104.
+A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation. In Effeck the function is a block after the call, through block params (D188): `Layer.effect(Users) { ... }` runs its statements once, when the layer is built, and returns the implementation, an object whose members the service types (D221). Without setup, write `Layer.succeed(Users, { ... })`. The older `layer UsersLive: Users { ... }` declaration (D129) still compiles, with the warning EK2121 and a quick fix that rewrites it.
 
 ```ts effect
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
@@ -659,15 +659,17 @@ const UsersLive = Layer.effect(Users, Effect.gen(function* () {
 ```
 
 ```ts es
-layer UsersLive: Users {
+const UsersLive = Layer.effect(Users) {
   const db = Database()              // runs once, when the layer is built
-  find(id) {
-    const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
-    if (rows.length === 0) throw new UserNotFound({ id })
-    return toUser(rows[0])
-  }
-  rename(id, name) {
-    Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
+  return {
+    find(id) {
+      const rows = Effect.orDie(db.query("select * from users where id = $1", [id]))
+      if (rows.length === 0) throw new UserNotFound({ id })
+      return toUser(rows[0])
+    },
+    rename(id, name) {
+      Effect.orDie(db.execute("update users set name = $1 where id = $2", [name, id]))
+    }
   }
 }
 // Layer<Users, never, Database>
@@ -687,7 +689,7 @@ error EK2001: DbError can escape UsersLive.find, but Users.find's contract allow
 Effect 4 code often keeps the default Layer on the service class as `static readonly layer`. A service class can do the same, because static members stay on the class:
 
 ```ts es
-service Users {
+service class Users {
   find(id: string): User!UserNotFound
   rename(id: string, name: string): void!UserNotFound
 
@@ -727,7 +729,7 @@ const UsersInMemoryLive = Layer.sync(Users, () => new UsersInMemory())
 Effect 4's `make` option becomes a static method, and a service that should work without any provider declares a default:
 
 ```ts es
-service Sessions {
+service class Sessions {
   get(token: string): Session | undefined!!
   set(token: string, session: Session): void!!
 
@@ -742,7 +744,7 @@ service Sessions {
   static readonly layer = Layer.effect(Sessions, Sessions.make())
 }
 
-service FeatureFlags {
+service class FeatureFlags {
   newCheckout: boolean
   static readonly default: FeatureFlags = { newCheckout: false }
 }
@@ -772,10 +774,12 @@ const DatabaseLive = Layer.effect(Database, Effect.gen(function* () {
 ```
 
 ```ts es
-layer DatabaseLive: Database {
+const DatabaseLive = Layer.effect(Database) {
   const pool = Postgres.connect(DatabaseConfig().url)    // no `using`: the pool lives as long as the layer
-  query(sql, params) { return pool.query(sql, params) }
-  execute(sql, params) { return pool.execute(sql, params) }
+  return {
+    query(sql, params) { return pool.query(sql, params) },
+    execute(sql, params) { return pool.execute(sql, params) }
+  }
 }
 // Layer<Database, ConnectError, DatabaseConfig>
 ```
@@ -787,13 +791,15 @@ layer DatabaseLive: Database {
 Sometimes a method looks up another service each time it is called, instead of capturing it when the layer is built. That lookup happens in the *caller's* context, so its requirement belongs to the caller, and the service contract has to say so. The compiler catches the mismatch:
 
 ```ts es
-layer UsersAudited: Users {
+const UsersAudited = Layer.effect(Users) {
   const db = Database()
-  find(id) {
-    Audit.record(`users.find ${id}`)    // looked up on every call
-    return findIn(db, id)
+  return {
+    find(id) {
+      Audit.record(`users.find ${id}`)    // looked up on every call
+      return findIn(db, id)
+    },
+    rename(id, name) { renameIn(db, id, name) }
   }
-  rename(id, name) { renameIn(db, id, name) }
 }
 ```
 
@@ -900,10 +906,10 @@ it.effect("welcome returns the user's name", () =>
 ```
 
 ```ts es
-layer UsersTest: Users {
-  find(id) { return ({ id, name: "Ada", email: "ada@example.com" }) }
+const UsersTest = Layer.succeed(Users, {
+  find(id) { return ({ id, name: "Ada", email: "ada@example.com" }) },
   rename() {}
-}
+})
 
 it.effect("welcome returns the user's name") {
   const name = Effect.provide(() => welcome("42"), wire(UsersTest, MailerTest))
@@ -1467,7 +1473,7 @@ A **control operation** is a request whose handler receives the rest of the call
 A control operation is declared like a service, with `control`, which is short for an abstract class that extends the global `Control` (D128):
 
 ```ts es
-control Approval {
+control class Approval {
   approve(request: string): boolean!ReviewBusy
 }
 
@@ -1521,7 +1527,7 @@ const receipt = handle(() => checkout("c-42"), Approval, {
 A handler that returns without calling `resume` ends the handled program with the handler's result. Everything the program had open is cleaned up first.
 
 ```ts es
-control Found {
+control class Found {
   found(cell: Cell): never!!
 }
 
@@ -2627,7 +2633,7 @@ The contract has exactly three channels. Whether a function can pause is a separ
 Service members, control operations, `declare function`, and fields typed as functions have no body to infer from, so each states its contract without `infer`. A bare return type is an error, never a silent `A!!`. Service and control methods require all three Effect type arguments; `Effect<A>` is EK2101 there (D93, amending D57):
 
 ```ts es
-service Rates {
+service class Rates {
   lookup(currency: string): number
 }
 ```
@@ -3096,11 +3102,11 @@ Features checked against the claim and kept out:
 This chapter follows one program through the machine before Chapter 20 defines the machine. The program is the checkout from Chapter 9, simplified, with a request-scoped audit log added so the trace shows which Context each piece of code sees. Kernel test T1 runs exactly this program, lowered by hand.
 
 ```ts es
-service AuditLog { info(message: string): void!! }
-service Inventory { reserve(cartId: string): Hold!!Scope }
-service Reviewers { decide(request: string): boolean!! }
+service class AuditLog { info(message: string): void!! }
+service class Inventory { reserve(cartId: string): Hold!!Scope }
+service class Reviewers { decide(request: string): boolean!! }
 
-control Approval {
+control class Approval {
   approve(request: string): boolean!!
 }
 
@@ -4235,14 +4241,16 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
 | EK2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
-| EK2103 | A member of a `service` or `control` declaration with a body or an initializer (D128) | Implement it in a layer, or make it static | 4 |
-| EK2104 | A setup statement of a `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
+| EK2103 | A member of a `service class` or `control class` declaration with a body or an initializer (D128, D220) | Implement it in a layer, or make it static | 4 |
+| EK2104 | A setup statement of an old `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
 | EK2105 | A typed catch clause whose type has a member without a literal `_tag` (D131) | Catch a tagged error, or test the value in an untyped clause | 3 |
 | EK2106 | A catch clause after one that catches every failure: an untyped clause or a `Cause` clause (D131, D176) | Move that clause last | 3 |
 | EK2107 | A handle clause whose control is not a control declaration, such as a service (D132) | Provide a service with a layer; handle only a control's operations | 9 |
 | EK2108 | A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132) | Add the missing clause, or remove the second | 9 |
 | EK2109 | A field of a `schema` declaration whose type has no schema form, or names a value that is not a schema (D133) | Declare the schema with `Schema.Struct`, or name a schema constant | 11 |
 | EK2111 | A `restore` block that no `uninterruptible` block of the same function encloses (D180) | Put it inside `uninterruptible { … }`, or use `interruptible { … }` | 6 |
+| EK2120 | A warning: a `service` or `control` declaration written without `class` (D220) | Write `service class` or `control class`; the quick fix adds `class` | 4 |
+| EK2121 | A warning: a `layer` declaration, the old spelling of a layer (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |
 | EK3003 | `new` on a service | Use `Users()` for the implementation | 4 |
@@ -4465,8 +4473,8 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
 | D126 | `error NotFound { id: string }` declares a tagged error class with readonly fields | Fewer tokens for the most common declaration | 3 |
 | D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
-| D128 | `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
-| D129 | `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
+| D128 | (Amended by D220.) `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
+| D129 | (Superseded by D221.) `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
 | D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
 | D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
@@ -4514,6 +4522,9 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D213 | **Deviation.** A matcher is a custom matcher, a primitive class (`typeof`), a class (`instanceof`), a predicate, or a value (SameValue) | Built-in brand checks cannot be written in a runtime helper | 3 |
 | D214 | A match lowers to a returning block, a labeled block, or an immediately invoked arrow function | TypeScript narrows each arm and arms run Effects in every position | 3 |
 | D215 | `customMatcher` is exported, and every `error` class matches by `instanceof` and extracts itself | Same-tag classes stay distinct | 3 |
+| D220 | **Controversial.** `service class Users { ... }` and `control class Approval { ... }`: the word is a modifier, as `declare` is; the spelling without `class` warns (EK2120) | Reads as a TypeScript class and keeps Effect's word; Will was on the fence | 4, 9 |
+| D221 | **Controversial.** A layer is Effect's own call, `Layer.effect(Users) { setup; return { ... } }` through block params, or `Layer.succeed(Users, { ... })`; `layer X: Y { }` warns (EK2121) | No syntax of its own; Will expected D129 to be reworked | 4 |
+| D222 | A layer block's returned members are typed by the service; a mismatch is TS2769 at the call, and failures, requirements, and `using` setup flow into the layer | Contextual typing through `Layer.effect` | 4 |
 | D225 | `join` is a keyword: `join f`, `join [a, b]`, `join { a, b }` join fibers (Fiber.join), failing fast; `join(` stays a call; EK4611, EK4612 | `await` on fibers confused readers about promises; Effect's own word is join |
 | D226 | **Controversial.** A plain `await` in Effeck code is an error: EK4609 (fix: `join`), EK4610 (fix: `d.await()`), EK4601-EK4604; the await operations stay | In JavaScript `await` means a promise; keep that meaning |
 | D227 | A Deferred waits with `d.await()` | Method syntax (D152) already names Deferred.await |

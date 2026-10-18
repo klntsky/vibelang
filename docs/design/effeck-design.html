@@ -172,7 +172,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
 <tr><td><code>class E extends Data.TaggedError(&quot;E&quot;)&lt;{ ... }&gt; {}</code></td><td><code>error E { ... }</code></td><td><a href="#3-errors-the-e-channel">3</a></td></tr>
 <tr><td><code>Effect.catchTag(&quot;E&quot;, h)</code></td><td><code>try { … } catch (e) { … }</code></td><td><a href="#3-errors-the-e-channel">3</a></td></tr>
 <tr><td><code>Effect.ensuring(cleanup)</code></td><td><code>finally { … }</code></td><td><a href="#3-errors-the-e-channel">3</a></td></tr>
-<tr><td><code>class S extends Context.Service&lt;…&gt;()(&quot;key&quot;) {}</code></td><td><code>service S { method(): A!E }</code></td><td><a href="#4-dependency-injection-the-r-channel">4</a></td></tr>
+<tr><td><code>class S extends Context.Service&lt;…&gt;()(&quot;key&quot;) {}</code></td><td><code>service class S { method(): A!E }</code></td><td><a href="#4-dependency-injection-the-r-channel">4</a></td></tr>
 <tr><td><code>const s = yield* S</code> then <code>yield* s.method()</code></td><td><code>S.method()</code></td><td><a href="#4-dependency-injection-the-r-channel">4</a></td></tr>
 <tr><td><code>Layer.effect(S, Effect.gen(…))</code></td><td><code>Layer.effect(S, () =&gt; { … })</code></td><td><a href="#4-dependency-injection-the-r-channel">4</a></td></tr>
 <tr><td><code>program.pipe(Effect.provide(layer))</code></td><td><code>Effect.provide(() =&gt; program(), layer)</code></td><td><a href="#4-dependency-injection-the-r-channel">4</a></td></tr>
@@ -181,7 +181,7 @@ hr { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
 <tr><td><code>Effect.all([a, b], { concurrency: 2 })</code></td><td><code>Effect.all([() =&gt; a(), () =&gt; b()], { concurrency: 2 })</code></td><td><a href="#7-concurrency">7</a></td></tr>
 <tr><td><code>Effect.forkScoped(effect)</code></td><td><code>fork(() =&gt; f())</code>, owned by the enclosing block</td><td><a href="#7-concurrency">7</a></td></tr>
 <tr><td>a <code>Stream</code> you build by hand</td><td>a <code>function*</code> producer and <code>for...of</code></td><td><a href="#8-producers-streams-of-values">8</a></td></tr>
-<tr><td>nothing comparable</td><td><code>control Op { ... }</code> and <code>handle</code></td><td><a href="#9-handlers-defining-your-own-effects">9</a></td></tr>
+<tr><td>nothing comparable</td><td><code>control class Op { ... }</code> and <code>handle</code></td><td><a href="#9-handlers-defining-your-own-effects">9</a></td></tr>
 <tr><td><code>node:fs</code>, <code>fetch</code>, <code>process.env</code>, <code>child_process</code></td><td><code>FileSystem</code>, <code>HttpClient</code>, <code>Config</code>, <code>ChildProcessSpawner</code></td><td><a href="#11-the-standard-library">11</a></td></tr></tbody></table></div>
 <p>Where <code>async</code>, <code>Option</code>, <code>Schema</code>, <code>Stream</code>, testing, and the rest of Effect fit is answered in <a href="#12-questions-effect-users-ask">Chapter 12</a> and, feature by feature, in <a href="#c-every-effect-feature-in-effeck">Appendix C</a>.</p>
 <h2 id="part-i-the-language-by-example"><a class="anchor" href="#part-i-the-language-by-example">Part I. The language by example</a></h2>
@@ -222,11 +222,11 @@ error <span class="t">MailError</span> {
   reason: <span class="l">string</span>
 }
 
-<span class="k">service</span> <span class="t">Users</span> {
+<span class="k">service</span> <span class="k">class</span> <span class="t">Users</span> {
   <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">User</span>!<span class="t">UserNotFound</span>
 }
 
-<span class="k">service</span> <span class="t">Mailer</span> {
+<span class="k">service</span> <span class="k">class</span> <span class="t">Mailer</span> {
   <span class="f">send</span>(to: <span class="l">string</span>, body: <span class="l">string</span>): <span class="k">void</span>!<span class="t">MailError</span>
 }
 
@@ -238,7 +238,7 @@ error <span class="t">MailError</span> {
 <p>Four things changed:</p>
 <ul>
 <li><strong><code>welcome</code> is a plain function.</strong> No <code>Effect.fn</code>, no generator, no <code>yield*</code>. Calling <code>Users.find(id)</code> runs it and gives you the <code>User</code>; if it fails, <code>welcome</code> fails with the same error.</li>
-<li><strong>A service is a <code>service</code> declaration.</strong> <code>service Users</code>, an abstract class, replaces the <code>Context.Service</code> class: no key string and no <code>Context</code> import. You call <code>Users.find(id)</code> directly instead of first getting the service with <code>yield* Users</code> (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>).</li>
+<li><strong>A service is a <code>service class</code> declaration.</strong> <code>service class Users</code>, an abstract class, replaces the <code>Context.Service</code> class: no key string and no <code>Context</code> import. You call <code>Users.find(id)</code> directly instead of first getting the service with <code>yield* Users</code> (<a href="#4-dependency-injection-the-r-channel">Chapter 4</a>).</li>
 <li><strong>The contract is inferred.</strong> <code>welcome</code> is <code>string!UserNotFound | MailError!Users | Mailer</code>: it succeeds with a <code>string</code>, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (<a href="#2-functions-and-calls">Chapter 2</a>).</li>
 <li><strong>Errors are the same classes.</strong> <code>error UserNotFound { id: string }</code> declares a class that extends <code>TaggedError</code>, Effect&#39;s <code>Data.TaggedError</code>, in scope without an import.</li>
 </ul>
@@ -511,11 +511,11 @@ error <span class="t">MailError</span> {
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">class</span> <span class="t">Users</span> <span class="k">extends</span> <span class="t">Context</span>.<span class="t">Service</span>&lt;<span class="t">Users</span>, {
   <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">Effect</span>.<span class="t">Effect</span>&lt;<span class="t">User</span>, <span class="t">UserNotFound</span>&gt;
   <span class="f">rename</span>(id: <span class="l">string</span>, name: <span class="l">string</span>): <span class="t">Effect</span>.<span class="t">Effect</span>&lt;<span class="k">void</span>, <span class="t">UserNotFound</span>&gt;
-}&gt;()(<span class="s">"app/Users"</span>) {}</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="t">Users</span> {
+}&gt;()(<span class="s">"app/Users"</span>) {}</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="k">class</span> <span class="t">Users</span> {
   <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">User</span>!<span class="t">UserNotFound</span>
   <span class="f">rename</span>(id: <span class="l">string</span>, name: <span class="l">string</span>): <span class="k">void</span>!<span class="t">UserNotFound</span>
 }</code></pre></figure></div>
-<p><code>service Users { ... }</code> declares a service, and it does the job of the class on the left. It is short for <code>abstract class Users { ... }</code> in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:</p>
+<p><code>service class Users { ... }</code> declares a service, and it does the job of the class on the left. <code>service</code> is a modifier of the class declaration, as <code>declare</code> is, and the members have no bodies, as a <code>declare class</code>&#39;s do (D220). It is short for <code>abstract class Users { ... }</code> in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). The older spelling without <code>class</code> still compiles, with the warning EK2120. An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:</p>
 <ul>
 <li><strong>What makes a class a service.</strong> In an <code>.effeck</code> file, a class is a service when it is <code>abstract</code>, has no <code>extends</code> clause and no type parameters, and every instance member is abstract: methods with full contracts, and <code>abstract readonly</code> values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.</li>
 <li><strong>Identity.</strong> Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (<code>@acme/app/src/users#Users</code>) and rejects a duplicate anywhere in the program (EK3001).</li>
@@ -541,7 +541,7 @@ error <span class="t">MailError</span> {
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> users = <span class="k">yield</span>* <span class="t">Users</span>
 <span class="k">const</span> user = <span class="k">yield</span>* users.<span class="f">find</span>(id)</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> user = <span class="t">Users</span>.<span class="f">find</span>(id)</code></pre></figure></div>
 <p>Calling the service itself with no arguments, <code>Users()</code>, gives you its implementation object, the equivalent of <code>yield* Users</code>. You need it inside providers, and to read a service&#39;s value members:</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="t">Settings</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="k">class</span> <span class="t">Settings</span> {
   baseUrl: <span class="l">string</span>
   <span class="f">scale</span>(): <span class="l">number</span>!!
 }
@@ -552,7 +552,7 @@ error <span class="t">MailError</span> {
 <span class="c">// string!!Settings</span></code></pre></figure>
 <p>Calling any member through the service looks the service up, so the service joins R whatever the member returns. <code>Path.join(a, b)</code>, from Effect&#39;s <code>Path</code> service, returns a string and still adds <code>Path</code>. A member that is itself an <code>Effect</code> value runs when called: <code>Terminal.readLine()</code>. A member the service declares wins over the key&#39;s own members, such as <code>pipe</code>, <code>use</code>, and <code>key</code>, so <code>Rpc.call(…)</code> reaches the service even though the key, a class, has a <code>call</code> of its own. A static member with the same name as a service member is EK3006.</p>
 <h4 id="writing-a-provider"><a class="anchor" href="#writing-a-provider">Writing a provider</a></h4>
-<p>A provider is a <code>Layer</code>. Build one with Effect&#39;s own <code>Layer.effect</code>, passing a function that runs when the layer is built and returns the implementation. <code>layer UsersLive: Users { ... }</code> writes the same provider with less: the statements before the members run once, when the layer is built, the members form the implementation, and a value member is <code>readonly name = value</code> (D129). It is short for <code>Layer.effect(Users, () =&gt; { ...; return { ... } })</code>, or <code>Layer.succeed(Users, { ... })</code> when there are no statements. A statement after the members is EK2104.</p>
+<p>A provider is a <code>Layer</code>. Build one with Effect&#39;s own <code>Layer.effect</code>, passing a function that runs when the layer is built and returns the implementation. In Effeck the function is a block after the call, through block params (D188): <code>Layer.effect(Users) { ... }</code> runs its statements once, when the layer is built, and returns the implementation, an object whose members the service types (D221). Without setup, write <code>Layer.succeed(Users, { ... })</code>. The older <code>layer UsersLive: Users { ... }</code> declaration (D129) still compiles, with the warning EK2121 and a quick fix that rewrites it.</p>
 <div class="compare"><figure class="code side-effect"><figcaption>Effect today (TypeScript)</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersLive</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Users</span>, <span class="t">Effect</span>.<span class="f">gen</span>(<span class="k">function</span>* () {
   <span class="k">const</span> db = <span class="k">yield</span>* <span class="t">Database</span>
   <span class="k">return</span> <span class="t">Users</span>.<span class="k">of</span>({
@@ -566,15 +566,17 @@ error <span class="t">MailError</span> {
     })
   })
 }))
-<span class="c">// Layer&lt;Users, never, Database&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">UsersLive</span>: <span class="t">Users</span> {
+<span class="c">// Layer&lt;Users, never, Database&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersLive</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Users</span>) {
   <span class="k">const</span> db = <span class="t">Database</span>()              <span class="c">// runs once, when the layer is built</span>
-  <span class="f">find</span>(id) {
-    <span class="k">const</span> rows = <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">query</span>(<span class="s">"select * from users where id = $1"</span>, [id]))
-    <span class="k">if</span> (rows.length === <span class="n">0</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">UserNotFound</span>({ id })
-    <span class="k">return</span> <span class="f">toUser</span>(rows[<span class="n">0</span>])
-  }
-  <span class="f">rename</span>(id, name) {
-    <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">execute</span>(<span class="s">"update users set name = $1 where id = $2"</span>, [name, id]))
+  <span class="k">return</span> {
+    <span class="f">find</span>(id) {
+      <span class="k">const</span> rows = <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">query</span>(<span class="s">"select * from users where id = $1"</span>, [id]))
+      <span class="k">if</span> (rows.length === <span class="n">0</span>) <span class="k">throw</span> <span class="k">new</span> <span class="t">UserNotFound</span>({ id })
+      <span class="k">return</span> <span class="f">toUser</span>(rows[<span class="n">0</span>])
+    },
+    <span class="f">rename</span>(id, name) {
+      <span class="t">Effect</span>.<span class="f">orDie</span>(db.<span class="f">execute</span>(<span class="s">"update users set name = $1 where id = $2"</span>, [name, id]))
+    }
   }
 }
 <span class="c">// Layer&lt;Users, never, Database&gt;</span></code></pre></figure></div>
@@ -585,7 +587,7 @@ error <span class="t">MailError</span> {
                                     ^^^^^^^^ can fail with DbError
   Handle it, add DbError to Users.find's contract, or make it a defect with Effect.orDie.</code></pre></figure>
 <p>Effect 4 code often keeps the default Layer on the service class as <code>static readonly layer</code>. A service class can do the same, because static members stay on the class:</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="t">Users</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="k">class</span> <span class="t">Users</span> {
   <span class="f">find</span>(id: <span class="l">string</span>): <span class="t">User</span>!<span class="t">UserNotFound</span>
   <span class="f">rename</span>(id: <span class="l">string</span>, name: <span class="l">string</span>): <span class="k">void</span>!<span class="t">UserNotFound</span>
 
@@ -616,7 +618,7 @@ error <span class="t">MailError</span> {
 <span class="c">// Layer&lt;Users, never, never&gt;</span></code></pre></figure>
 <h4 id="constructors-and-defaults"><a class="anchor" href="#constructors-and-defaults">Constructors and defaults</a></h4>
 <p>Effect 4&#39;s <code>make</code> option becomes a static method, and a service that should work without any provider declares a default:</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="t">Sessions</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="k">class</span> <span class="t">Sessions</span> {
   <span class="k">get</span>(token: <span class="l">string</span>): <span class="t">Session</span> | <span class="l">undefined</span>!!
   <span class="k">set</span>(token: <span class="l">string</span>, session: <span class="t">Session</span>): <span class="k">void</span>!!
 
@@ -631,7 +633,7 @@ error <span class="t">MailError</span> {
   <span class="k">static</span> <span class="k">readonly</span> layer = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Sessions</span>, <span class="t">Sessions</span>.<span class="f">make</span>())
 }
 
-<span class="k">service</span> <span class="t">FeatureFlags</span> {
+<span class="k">service</span> <span class="k">class</span> <span class="t">FeatureFlags</span> {
   newCheckout: <span class="l">boolean</span>
   <span class="k">static</span> <span class="k">readonly</span> <span class="k">default</span>: <span class="t">FeatureFlags</span> = { newCheckout: <span class="l">false</span> }
 }
@@ -651,22 +653,26 @@ error <span class="t">MailError</span> {
     execute: (sql, params) =&gt; pool.<span class="f">execute</span>(sql, params)
   })
 }))
-<span class="c">// Layer&lt;Database, ConnectError, DatabaseConfig&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">DatabaseLive</span>: <span class="t">Database</span> {
+<span class="c">// Layer&lt;Database, ConnectError, DatabaseConfig&gt;</span></code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">DatabaseLive</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Database</span>) {
   <span class="k">const</span> pool = <span class="t">Postgres</span>.<span class="f">connect</span>(<span class="t">DatabaseConfig</span>().url)    <span class="c">// no `using`: the pool lives as long as the layer</span>
-  <span class="f">query</span>(sql, params) { <span class="k">return</span> pool.<span class="f">query</span>(sql, params) }
-  <span class="f">execute</span>(sql, params) { <span class="k">return</span> pool.<span class="f">execute</span>(sql, params) }
+  <span class="k">return</span> {
+    <span class="f">query</span>(sql, params) { <span class="k">return</span> pool.<span class="f">query</span>(sql, params) },
+    <span class="f">execute</span>(sql, params) { <span class="k">return</span> pool.<span class="f">execute</span>(sql, params) }
+  }
 }
 <span class="c">// Layer&lt;Database, ConnectError, DatabaseConfig&gt;</span></code></pre></figure></div>
 <p><code>Postgres.connect</code> returns <code>Pool!ConnectError!Scope</code>. Without <code>using</code>, the pool belongs to whoever supplies the <code>Scope</code> (<a href="#6-resources">Chapter 6</a>), and <code>Layer.effect</code> supplies the layer&#39;s own Scope, as it does in Effect today. The pool therefore closes when the program that provided <code>DatabaseLive</code> finishes. Writing <code>using pool = …</code> would close it as soon as the provider function returned, before any query ran.</p>
 <h4 id="requirements-that-would-leak"><a class="anchor" href="#requirements-that-would-leak">Requirements that would leak</a></h4>
 <p>Sometimes a method looks up another service each time it is called, instead of capturing it when the layer is built. That lookup happens in the <em>caller&#39;s</em> context, so its requirement belongs to the caller, and the service contract has to say so. The compiler catches the mismatch:</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">UsersAudited</span>: <span class="t">Users</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersAudited</span> = <span class="t">Layer</span>.<span class="f">effect</span>(<span class="t">Users</span>) {
   <span class="k">const</span> db = <span class="t">Database</span>()
-  <span class="f">find</span>(id) {
-    <span class="t">Audit</span>.<span class="f">record</span>(<span class="s">`users.find ${id}`</span>)    <span class="c">// looked up on every call</span>
-    <span class="k">return</span> <span class="f">findIn</span>(db, id)
+  <span class="k">return</span> {
+    <span class="f">find</span>(id) {
+      <span class="t">Audit</span>.<span class="f">record</span>(<span class="s">`users.find ${id}`</span>)    <span class="c">// looked up on every call</span>
+      <span class="k">return</span> <span class="f">findIn</span>(db, id)
+    },
+    <span class="f">rename</span>(id, name) { <span class="f">renameIn</span>(db, id, name) }
   }
-  <span class="f">rename</span>(id, name) { <span class="f">renameIn</span>(db, id, name) }
 }</code></pre></figure>
 <figure class="code side-none"><pre class="code" data-lang="text"><code>error EK3101: UsersAudited.find looks up Audit each time it is called, but
   Users.find(id: string): Effect&lt;User, UserNotFound, never&gt;
@@ -731,10 +737,10 @@ it.<span class="f">effect</span>(<span class="s">"welcome returns the user's nam
   <span class="t">Effect</span>.<span class="f">gen</span>(<span class="k">function</span>* () {
     <span class="k">const</span> name = <span class="k">yield</span>* <span class="f">welcome</span>(<span class="s">"42"</span>).<span class="f">pipe</span>(<span class="t">Effect</span>.<span class="f">provide</span>(<span class="t">Layer</span>.<span class="f">mergeAll</span>(<span class="t">UsersTest</span>, <span class="t">MailerTest</span>)))
     assert.<span class="f">strictEqual</span>(name, <span class="s">"Ada"</span>)
-  }))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code>layer <span class="t">UsersTest</span>: <span class="t">Users</span> {
-  <span class="f">find</span>(id) { <span class="k">return</span> ({ id, name: <span class="s">"Ada"</span>, email: <span class="s">"ada@example.com"</span> }) }
+  }))</code></pre></figure><figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">const</span> <span class="t">UsersTest</span> = <span class="t">Layer</span>.<span class="f">succeed</span>(<span class="t">Users</span>, {
+  <span class="f">find</span>(id) { <span class="k">return</span> ({ id, name: <span class="s">"Ada"</span>, email: <span class="s">"ada@example.com"</span> }) },
   <span class="f">rename</span>() {}
-}
+})
 
 it.<span class="f">effect</span>(<span class="s">"welcome returns the user's name"</span>) {
   <span class="k">const</span> name = <span class="t">Effect</span>.<span class="f">provide</span>(() =&gt; <span class="f">welcome</span>(<span class="s">"42"</span>), <span class="f">wire</span>(<span class="t">UsersTest</span>, <span class="t">MailerTest</span>))
@@ -1093,7 +1099,7 @@ fork <span class="f">syncInventory</span>(store)              <span class="c">//
 <p>A <strong>control operation</strong> is a request whose handler receives the rest of the caller&#39;s computation and decides what to do with it.</p>
 <h4 id="declaring-and-performing-an-operation"><a class="anchor" href="#declaring-and-performing-an-operation">Declaring and performing an operation</a></h4>
 <p>A control operation is declared like a service, with <code>control</code>, which is short for an abstract class that extends the global <code>Control</code> (D128):</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">control</span> <span class="t">Approval</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">control</span> <span class="k">class</span> <span class="t">Approval</span> {
   <span class="f">approve</span>(request: <span class="l">string</span>): <span class="l">boolean</span>!<span class="t">ReviewBusy</span>
 }
 
@@ -1129,7 +1135,7 @@ fork <span class="f">syncInventory</span>(store)              <span class="c">//
 <p><code>resume</code> returns what the rest of <code>checkout</code> returned, here the <code>Receipt</code>.</p>
 <h4 id="not-continuing"><a class="anchor" href="#not-continuing">Not continuing</a></h4>
 <p>A handler that returns without calling <code>resume</code> ends the handled program with the handler&#39;s result. Everything the program had open is cleaned up first.</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">control</span> <span class="t">Found</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">control</span> <span class="k">class</span> <span class="t">Found</span> {
   <span class="f">found</span>(cell: <span class="t">Cell</span>): <span class="l">never</span>!!
 }
 
@@ -1824,7 +1830,7 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <p>The contract has exactly three channels. Whether a function can pause is a separate fact the compiler tracks, its control class (<a href="#15-which-functions-compile-to-plain-javascript">Chapter 15</a>), not part of the contract.</p>
 <h4 id="declarations-without-bodies"><a class="anchor" href="#declarations-without-bodies">Declarations without bodies</a></h4>
 <p>Service members, control operations, <code>declare function</code>, and fields typed as functions have no body to infer from, so each states its contract without <code>infer</code>. A bare return type is an error, never a silent <code>A!!</code>. Service and control methods require all three Effect type arguments; <code>Effect&lt;A&gt;</code> is EK2101 there (D93, amending D57):</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="t">Rates</span> {
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="k">class</span> <span class="t">Rates</span> {
   <span class="f">lookup</span>(currency: <span class="l">string</span>): <span class="l">number</span>
 }</code></pre></figure>
 <figure class="code side-none"><pre class="code" data-lang="text"><code>error EK2101: Rates.lookup has no body to infer from, so its contract must be written in full.
@@ -2152,11 +2158,11 @@ it.<span class="f">effect</span>(<span class="s">"a reminder fires after one day
 <p><strong>Verdict.</strong> Yes. Two independent reviews (2026-10-16) reached the same verdict and found five defects in how the machine was implemented or lowered, not in what it is; all five are fixed with regression tests (K11-K15). A prototype compiler then lowered 46 example files to the machine mechanically and ran them, with no feature needing a mechanism outside it (<a href="#27-compiler-architecture">Chapter 27</a>). Two qualifications remain, both tracked in <a href="#30-risks-and-experiments">Chapter 30</a>. Prompt capture relies on undocumented Effect fields, so the foundation is real but not yet a supported Effect API (<a href="#25-implementation-strategies-and-costs">Chapter 25</a>, G1). And the checker rules that make it safe to program against (fiber crossing, second-class continuations, control classes) are specified here but not built (G8).</p>
 <h3 id="19-the-checkout-trace-step-by-step"><a class="anchor" href="#19-the-checkout-trace-step-by-step">19. The checkout trace, step by step</a></h3>
 <p>This chapter follows one program through the machine before <a href="#20-the-machine">Chapter 20</a> defines the machine. The program is the checkout from <a href="#9-handlers-defining-your-own-effects">Chapter 9</a>, simplified, with a request-scoped audit log added so the trace shows which Context each piece of code sees. Kernel test T1 runs exactly this program, lowered by hand.</p>
-<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="t">AuditLog</span> { <span class="f">info</span>(message: <span class="l">string</span>): <span class="k">void</span>!! }
-<span class="k">service</span> <span class="t">Inventory</span> { <span class="f">reserve</span>(cartId: <span class="l">string</span>): <span class="t">Hold</span>!!<span class="t">Scope</span> }
-<span class="k">service</span> <span class="t">Reviewers</span> { <span class="f">decide</span>(request: <span class="l">string</span>): <span class="l">boolean</span>!! }
+<figure class="code side-es"><figcaption>Effeck</figcaption><pre class="code" data-lang="ts"><code><span class="k">service</span> <span class="k">class</span> <span class="t">AuditLog</span> { <span class="f">info</span>(message: <span class="l">string</span>): <span class="k">void</span>!! }
+<span class="k">service</span> <span class="k">class</span> <span class="t">Inventory</span> { <span class="f">reserve</span>(cartId: <span class="l">string</span>): <span class="t">Hold</span>!!<span class="t">Scope</span> }
+<span class="k">service</span> <span class="k">class</span> <span class="t">Reviewers</span> { <span class="f">decide</span>(request: <span class="l">string</span>): <span class="l">boolean</span>!! }
 
-<span class="k">control</span> <span class="t">Approval</span> {
+<span class="k">control</span> <span class="k">class</span> <span class="t">Approval</span> {
   <span class="f">approve</span>(request: <span class="l">string</span>): <span class="l">boolean</span>!!
 }
 
@@ -2982,14 +2988,16 @@ README track coverage. Repairs below are suggestions, not shipped code actions:<
 <tr><td>EK2006</td><td>A <code>return</code>, <code>break</code>, or <code>continue</code> that leaves a <code>finally</code> block, which in JavaScript discards the failure in flight</td><td>Move it after the <code>try</code> statement</td><td>17</td></tr>
 <tr><td>EK2101</td><td>A declaration without a body that has no full contract</td><td>Write <code>T!Errors!Dependencies</code>, or <code>T!!</code></td><td>14</td></tr>
 <tr><td>EK2102</td><td>A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle&#39;s channels are known (D71, D72)</td><td>Write the contract</td><td>14</td></tr>
-<tr><td>EK2103</td><td>A member of a <code>service</code> or <code>control</code> declaration with a body or an initializer (D128)</td><td>Implement it in a layer, or make it static</td><td>4</td></tr>
-<tr><td>EK2104</td><td>A setup statement of a <code>layer</code> declaration that follows one of its members (D129)</td><td>Move the statement above the members</td><td>4</td></tr>
+<tr><td>EK2103</td><td>A member of a <code>service class</code> or <code>control class</code> declaration with a body or an initializer (D128, D220)</td><td>Implement it in a layer, or make it static</td><td>4</td></tr>
+<tr><td>EK2104</td><td>A setup statement of an old <code>layer</code> declaration that follows one of its members (D129)</td><td>Move the statement above the members</td><td>4</td></tr>
 <tr><td>EK2105</td><td>A typed catch clause whose type has a member without a literal <code>_tag</code> (D131)</td><td>Catch a tagged error, or test the value in an untyped clause</td><td>3</td></tr>
 <tr><td>EK2106</td><td>A catch clause after one that catches every failure: an untyped clause or a <code>Cause</code> clause (D131, D176)</td><td>Move that clause last</td><td>3</td></tr>
 <tr><td>EK2107</td><td>A handle clause whose control is not a control declaration, such as a service (D132)</td><td>Provide a service with a layer; handle only a control&#39;s operations</td><td>9</td></tr>
 <tr><td>EK2108</td><td>A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132)</td><td>Add the missing clause, or remove the second</td><td>9</td></tr>
 <tr><td>EK2109</td><td>A field of a <code>schema</code> declaration whose type has no schema form, or names a value that is not a schema (D133)</td><td>Declare the schema with <code>Schema.Struct</code>, or name a schema constant</td><td>11</td></tr>
 <tr><td>EK2111</td><td>A <code>restore</code> block that no <code>uninterruptible</code> block of the same function encloses (D180)</td><td>Put it inside <code>uninterruptible { … }</code>, or use <code>interruptible { … }</code></td><td>6</td></tr>
+<tr><td>EK2120</td><td>A warning: a <code>service</code> or <code>control</code> declaration written without <code>class</code> (D220)</td><td>Write <code>service class</code> or <code>control class</code>; the quick fix adds <code>class</code></td><td>4</td></tr>
+<tr><td>EK2121</td><td>A warning: a <code>layer</code> declaration, the old spelling of a layer (D221)</td><td>Write <code>Layer.effect(Service) { … }</code> or <code>Layer.succeed(Service, { … })</code>; the quick fix rewrites it</td><td>4</td></tr>
 <tr><td>EK3001</td><td>Two services share a key</td><td>Rename one</td><td>4</td></tr>
 <tr><td>EK3002</td><td>A class extends a service</td><td>Replace <code>extends</code> with <code>implements</code></td><td>4</td></tr>
 <tr><td>EK3003</td><td><code>new</code> on a service</td><td>Use <code>Users()</code> for the implementation</td><td>4</td></tr>
@@ -3187,8 +3195,8 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D125</td><td><strong>Controversial.</strong> The language is Effeck: binary <code>effeck</code>, files <code>.effeck</code>, codes <code>EK</code>, unscoped npm packages <code>effeck</code>, <code>effeck-runtime</code>, <code>effeck-vite</code></td><td>The <code>@effectscript</code> npm scope belongs to another language</td><td>28</td></tr>
 <tr><td>D126</td><td><code>error NotFound { id: string }</code> declares a tagged error class with readonly fields</td><td>Fewer tokens for the most common declaration</td><td>3</td></tr>
 <tr><td>D127</td><td><strong>Controversial.</strong> Effect types are written <code>Result!Error!Dependencies</code>; an empty slot is never, and left-out dependencies are inferred on a function with a body</td><td>Fewer tokens than <code>Effect&lt;A, E, R&gt;</code> in every contract</td><td>14</td></tr>
-<tr><td>D128</td><td><code>service</code> and <code>control</code> declare abstract classes whose bodiless members are abstract; an implemented member is EK2103</td><td>Fewer tokens than <code>abstract class</code> and <code>abstract</code> on every member</td><td>4, 9</td></tr>
-<tr><td>D129</td><td><code>layer UsersLive: Users { setup; find(id) { ... } }</code> is <code>Layer.effect</code> (or <code>Layer.succeed</code> without setup); setup after members is EK2104</td><td>Fewer tokens than <code>Layer.effect(S, () =&gt; { return { ... } })</code></td><td>4</td></tr>
+<tr><td>D128</td><td>(Amended by D220.) <code>service</code> and <code>control</code> declare abstract classes whose bodiless members are abstract; an implemented member is EK2103</td><td>Fewer tokens than <code>abstract class</code> and <code>abstract</code> on every member</td><td>4, 9</td></tr>
+<tr><td>D129</td><td>(Superseded by D221.) <code>layer UsersLive: Users { setup; find(id) { ... } }</code> is <code>Layer.effect</code> (or <code>Layer.succeed</code> without setup); setup after members is EK2104</td><td>Fewer tokens than <code>Layer.effect(S, () =&gt; { return { ... } })</code></td><td>4</td></tr>
 <tr><td>D130</td><td>A block form provides a layer to statements that stay code of the enclosing function; its keyword is <code>provide</code> since D172</td><td>Fewer tokens than <code>Effect.provide(() =&gt; { ... }, AppLive)</code>, and <code>return</code> keeps its meaning</td><td>4</td></tr>
 <tr><td>D131</td><td><code>catch (e: NotFound)</code> handles only failures with that type&#39;s <code>_tag</code>; several clauses may follow a <code>try</code>, and failures no clause names propagate</td><td>Fewer tokens than narrowing and rethrowing</td><td>3</td></tr>
 <tr><td>D132</td><td><code>try { ... } handle Approval.approve(request) { resume(true) }</code> handles a control&#39;s operations; the block and the clauses stay code of the enclosing function</td><td>Fewer tokens than <code>handle(() =&gt; ..., Approval, { approve(request, k) { return resume(k, true) } })</code>, and <code>return</code> keeps its meaning</td><td>9</td></tr>
@@ -3236,6 +3244,9 @@ end-to-end build calls          D61-D124 recorded below where reported; unreport
 <tr><td>D213</td><td><strong>Deviation.</strong> A matcher is a custom matcher, a primitive class (<code>typeof</code>), a class (<code>instanceof</code>), a predicate, or a value (SameValue)</td><td>Built-in brand checks cannot be written in a runtime helper</td><td>3</td></tr>
 <tr><td>D214</td><td>A match lowers to a returning block, a labeled block, or an immediately invoked arrow function</td><td>TypeScript narrows each arm and arms run Effects in every position</td><td>3</td></tr>
 <tr><td>D215</td><td><code>customMatcher</code> is exported, and every <code>error</code> class matches by <code>instanceof</code> and extracts itself</td><td>Same-tag classes stay distinct</td><td>3</td></tr>
+<tr><td>D220</td><td><strong>Controversial.</strong> <code>service class Users { ... }</code> and <code>control class Approval { ... }</code>: the word is a modifier, as <code>declare</code> is; the spelling without <code>class</code> warns (EK2120)</td><td>Reads as a TypeScript class and keeps Effect&#39;s word; Will was on the fence</td><td>4, 9</td></tr>
+<tr><td>D221</td><td><strong>Controversial.</strong> A layer is Effect&#39;s own call, <code>Layer.effect(Users) { setup; return { ... } }</code> through block params, or <code>Layer.succeed(Users, { ... })</code>; <code>layer X: Y { }</code> warns (EK2121)</td><td>No syntax of its own; Will expected D129 to be reworked</td><td>4</td></tr>
+<tr><td>D222</td><td>A layer block&#39;s returned members are typed by the service; a mismatch is TS2769 at the call, and failures, requirements, and <code>using</code> setup flow into the layer</td><td>Contextual typing through <code>Layer.effect</code></td><td>4</td></tr>
 <tr><td>D225</td><td><code>join</code> is a keyword: <code>join f</code>, <code>join [a, b]</code>, <code>join { a, b }</code> join fibers (Fiber.join), failing fast; <code>join(</code> stays a call; EK4611, EK4612</td><td><code>await</code> on fibers confused readers about promises; Effect&#39;s own word is join</td><td></td></tr>
 <tr><td>D226</td><td><strong>Controversial.</strong> A plain <code>await</code> in Effeck code is an error: EK4609 (fix: <code>join</code>), EK4610 (fix: <code>d.await()</code>), EK4601-EK4604; the await operations stay</td><td>In JavaScript <code>await</code> means a promise; keep that meaning</td><td></td></tr>
 <tr><td>D227</td><td>A Deferred waits with <code>d.await()</code></td><td>Method syntax (D152) already names Deferred.await</td><td></td></tr>
