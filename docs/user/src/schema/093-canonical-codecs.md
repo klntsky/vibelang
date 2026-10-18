@@ -2,7 +2,7 @@
 
 Canonical codec derivation works as in Effect. It preserves a schema's decoded type while choosing a standard external representation for JSON, string trees, or structural updates. Derivation builds a codec; parsing and encoding happen in separate calls. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
-## Deriving standard JSON, string-tree, and identity codecs
+## Deriving JSON, string-tree, and isomorphism codecs
 
 ```vibe
 const AuditRecord = Schema.Struct({

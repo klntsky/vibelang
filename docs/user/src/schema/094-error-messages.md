@@ -33,7 +33,9 @@ const LabeledPackage = Schema.Struct({ tracking: Tracking, count: Count }).annot
 })
 ```
 
-An identifier replaces a generic expected-value description with a stable domain name. `expected` supplies readable expected-value text, while titles can also help describe unnamed nodes. Naming the whole struct changes errors for the struct itself; an invalid nested tracking value still reports the tracking schema's own identity.
+An identifier replaces a generic expected-value description with a stable domain name. `expected` supplies readable text for the annotated node or check. `Count` annotates the finite-number check: `NaN` reports `Expected a finite package count`, while a string reports `Expected number` before that check runs. `title` is documentation metadata and does not change the default validation message.
+
+Naming the whole struct changes errors for the struct itself; an invalid nested tracking value still reports the tracking schema's own identity.
 
 ## Customizing messages for checks and conversions
 
