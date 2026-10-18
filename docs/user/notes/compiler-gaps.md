@@ -27,3 +27,15 @@ configuration package is shipped.
 No checked block has a compiler gap. Record a new one in a table with the
 columns page and block, first code line, diagnostic, and rule and
 disagreement.
+
+## Editor transport compatibility
+
+`setup/zed.md` was tested with Zed 0.195.3. The configured server starts and
+receives `.vibe` documents with language id `typescript`, but Zed sends
+`previousResultId: null` in `textDocument/diagnostic`. Both the published 0.0.1
+server and the local compiler reject the request with -32602 (`InvalidParams`).
+The field is optional but nonnullable in LSP 3.17; the shared protocol decoder
+intentionally rejects null for such fields. A request that omits the field
+returns the expected TS2322 diagnostic, and hover requests work. Use
+`npx vibelang --noEmit` for diagnostics in that Zed version. This is a transport
+compatibility issue, so it has no snippet-level `compiler-gap` marker.

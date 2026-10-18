@@ -227,14 +227,14 @@ If `package.json` has no `test` script, add `"test": "vitest run"`. Run `npx vit
 
 ## 8. Type-check and build
 
-No type checker covers a `.vue` file that imports a `.vibe` module. vue-tsc reads `.vue` files with TypeScript 6, which cannot resolve `.vibe` modules, so the template's `vue-tsc -b` fails. vue-tsc 3.3.13 reports TS2307 for each import of `./todos.vibe`, and TS2876 for each `.vue` import, because `rewriteRelativeImportExtensions` cannot rewrite those paths:
+vue-tsc does not understand `.vibe` files. With `rewriteRelativeImportExtensions` enabled, vue-tsc 3.3.13 stops with TS2876 for `.vue` imports, before checking the program:
 
 ```out
-src/runtime.ts(4,27): error TS2307: Cannot find module './todos.vibe' or its corresponding type declarations.
-src/TodoBoard.vue(4,39): error TS2307: Cannot find module './todos.vibe' or its corresponding type declarations.
+error TS2876: This relative import path is unsafe to rewrite because it looks like a file name, but actually resolves to "./App.vue".
+error TS2876: This relative import path is unsafe to rewrite because it looks like a file name, but actually resolves to "./TodoBoard.vue".
 ```
 
-The gap closes when VibeLang's TypeScript 7 content mapper ships and these checkers can load `.vibe` files. Until then, type-check with `vibelang -b` instead. It builds the same project references and checks `.vibe` and `.ts` files as one program; it does not check the script blocks of `.vue` files. Keep those blocks thin: import a program, run it, and render its result, as `TodoBoard.vue` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `build` script:
+Disabling `rewriteRelativeImportExtensions` lets vue-tsc reach type checking, where `.vibe` imports fail with TS2307. Use `vibelang -b` for the mixed `.vibe` and `.ts` program instead. It builds the same project references and checks `.vibe` and `.ts` files as one program; it does not check the script blocks of `.vue` files. Keep those blocks thin: import a program, run it, and render its result, as `TodoBoard.vue` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `build` script:
 
 ```json
 {

@@ -191,7 +191,7 @@ If `package.json` has no `test` script, add `"test": "vitest run"`. Run `npx vit
 
 ## 7. Type-check and build
 
-No type checker covers a `.svelte` file that imports a `.vibe` module. svelte-check reads `.svelte` files with TypeScript 6, which cannot resolve `.vibe` modules, so the template's `check` script fails. svelte-check 4.7.6 reports TS2307 for each import of `./cart.vibe`, and then TS2345 for the `{#each}` block, whose `lines` it types as `unknown`. With `--output human`, it prints each file's absolute path; here they are shortened to `src/`:
+svelte-check does not understand `.vibe` files, so the template's `check` script fails. svelte-check 4.7.7 reports TS2307 for each import of `./cart.vibe`, and then TS2345 for the `{#each}` block, whose `lines` it types as `unknown`. With `--output human`, it prints each file's absolute path; here they are shortened to `src/`:
 
 ```out
 src/runtime.ts:4:31
@@ -201,7 +201,7 @@ src/CartQuote.svelte:3:29
 Error: Cannot find module './cart.vibe' or its corresponding type declarations. (ts)
 ```
 
-The gap closes when VibeLang's TypeScript 7 content mapper ships and these checkers can load `.vibe` files. Until then, type-check with `vibelang -b` instead. It builds the same project references and checks `.vibe` and `.ts` files as one program; it does not check the script blocks of `.svelte` files. Keep those blocks thin: import a program, run it, and render its result, as `CartQuote.svelte` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `check` script:
+Use `vibelang -b` for the mixed `.vibe` and `.ts` program instead. It builds the same project references and checks `.vibe` and `.ts` files as one program; it does not check the script blocks of `.svelte` files. Keep those blocks thin: import a program, run it, and render its result, as `CartQuote.svelte` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `check` script:
 
 ```json
 {
