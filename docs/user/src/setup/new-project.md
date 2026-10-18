@@ -16,7 +16,7 @@ With npm, run:
 npm create vibelang@latest my-app
 ```
 
-The output begins:
+The starter prints:
 
 ```out
 Created my-app with VibeLang 0.0.1.
