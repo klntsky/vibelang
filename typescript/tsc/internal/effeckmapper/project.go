@@ -726,18 +726,22 @@ func (p *projector) isPreludeFork() bool {
 // callee walks call's callee and type arguments. A member call S.m(...) on
 // a name that may be a service key reads the member through $use, which adds
 // the service to R (D41); a call of a name with no arguments goes through
-// $value, so an Effect value, a key or a Config, runs (D90).
+// $value, so an Effect value, a key or a Config, runs (D90). Returned
+// callees use the same adapter; member calls retain their receiver.
 func (p *projector) callee(call *ast.Node, e env) {
 	callee := call.Expression()
+	if p.memberValueCall(call, e) {
+		return
+	}
 	switch {
-	case ast.IsPropertyAccessExpression(callee) && call.QuestionDotToken() == nil && p.mayBeServiceKey(callee.Expression()):
+	case ast.IsPropertyAccessExpression(callee) && call.QuestionDotToken() == nil && p.mayBeServiceKey(callee.Expression()) && !p.keyOwnedMember(callee):
 		receiver := callee.Expression()
 		p.plan.mark(editServiceCall, partOpen, p.tokenStart(receiver), p.tokenStart(receiver), "")
 		p.visit(receiver, e)
 		p.plan.mark(editServiceCall, partClose, receiver.End(), receiver.End(), "")
 		p.visit(callee.Name(), e)
 	case len(call.Arguments()) == 0 && call.TypeArguments() == nil && call.QuestionDotToken() == nil &&
-		(callee.Kind == ast.KindIdentifier && !p.functions[callee.Text()] || p.isModuleMember(callee)):
+		(callee.Kind == ast.KindIdentifier && !p.functions[callee.Text()] || p.isModuleMember(callee) || ast.IsCallExpression(ast.SkipParentheses(callee))):
 		p.plan.mark(editValueCall, partOpen, p.tokenStart(callee), p.tokenStart(callee), "")
 		p.visit(callee, e)
 		p.plan.mark(editValueCall, partClose, callee.End(), callee.End(), "")
@@ -778,10 +782,14 @@ func (p *projector) isModuleMember(callee *ast.Node) bool {
 }
 
 // mayBeServiceKey reports whether receiver, the object of a member call, is
-// a name that may hold a Context key: a capitalized identifier that is not
-// one of effect's modules or the runtime's prelude names. $use leaves any
-// other value unchanged, so a name that holds no key costs only the call.
+// a pinned Context key export, or a name that may hold a key. The pinned
+// table recognizes package keys through aliases, including namespace
+// members. $use leaves other values unchanged by a structural type/runtime
+// test; no name alone is taken as proof of a service lookup.
 func (p *projector) mayBeServiceKey(receiver *ast.Node) bool {
+	if p.pinnedContextKey(receiver) {
+		return true
+	}
 	if receiver.Kind != ast.KindIdentifier || receiver.Flags&ast.NodeFlagsReparsed != 0 {
 		return false
 	}

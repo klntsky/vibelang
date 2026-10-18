@@ -129,7 +129,7 @@ func renderExec(e edit) (text string, keep bool) {
 	case editValueCall:
 		// D90: a function is called; an Effect value, such as a key or a
 		// Config, becomes a function whose result runs it.
-		return pick(e.part, helperRef("$value")+"(", "", ")"), true
+		return renderValueCall(e), true
 	case editUsing:
 		// using x = acquire(): the acquisition runs in the Scope of the code
 		// around it (execPrologue's $acquire).
@@ -268,7 +268,7 @@ var execHelpers = map[string]execSource{
 // (execRendering.prologue); temporaries are declared there too.
 var prologueHelpers = map[string]bool{
 	"$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
-	"$dual": true, "$asProgram": true, "$programs": true, "$each": true,
+	"$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
 	"$t": true, "$s": true, "$scope": true, "$iterate": true, "$producerGen": true,
 }
 
@@ -363,6 +363,9 @@ func (r *execRendering) prologue() string {
 			r.local(helper)
 		}
 	}
+	if r.used["$member"] {
+		r.local("$value")
+	}
 	var parts []string
 	var temps []string
 	for _, temp := range []string{"$t", "$s"} {
@@ -394,6 +397,9 @@ func (r *execRendering) prologue() string {
 	if r.used["$value"] {
 		// A Context key is a class, so a function that is a key runs too.
 		parts = append(parts, "const "+r.local("$value")+" = (v) => typeof v === \"function\" && !"+r.local("$isKey")+"(v) ? v : () => "+r.local("$gen")+"(function* () { return yield* v });")
+	}
+	if r.used["$member"] {
+		parts = append(parts, "const "+r.local("$member")+" = (self, key) => { const v = self[key]; return "+r.local("$value")+"(typeof v === \"function\" ? v.bind(self) : v); };")
 	}
 	if r.used["$acquire"] {
 		// D14: the acquisition alone receives the region's Scope; the
@@ -553,7 +559,7 @@ func (l *execLowering) collect(node *ast.Node) {
 		case ast.KindCallExpression:
 			l.calls[[2]int{l.p.tokenStart(child), child.End()}] = child
 		case ast.KindPropertyAccessExpression:
-			if receiver := child.Expression(); receiver.Kind == ast.KindIdentifier {
+			if receiver := child.Expression(); receiver != nil {
 				l.receivers[[2]int{l.p.tokenStart(receiver), receiver.End()}] = receiver
 			}
 		}
@@ -943,7 +949,11 @@ func (l *execLowering) lowerServiceCalls() {
 		}
 		member := receiver.Parent.Name().Text()
 		declared := false
-		if service := l.p.services[receiver.Text()]; service != nil {
+		var service *ast.Node
+		if ast.IsIdentifier(receiver) {
+			service = l.p.services[receiver.Text()]
+		}
+		if service != nil {
 			for _, m := range service.Members() {
 				if m.Name() != nil && m.Name().Text() == member && !ast.IsStatic(m) {
 					declared = true

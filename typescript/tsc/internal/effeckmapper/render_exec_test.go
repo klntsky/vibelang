@@ -53,6 +53,20 @@ var emitCases = []struct {
 	absent   []string
 }{
 
+	{name: "service value calls bind ordinary methods and evaluate the receiver once",
+		source:   `import { Users } from "./users.ts"; function f() { return Users.all() }`,
+		contains: []string{`$member((($s = Users), $isKey($s) && !("all" in $s) ? (yield* $s) : $s), "all")()`, `const v = self[key]`, `v.bind(self)`},
+		absent:   []string{`.all()`}},
+	{name: "chained Config value calls adapt the result before invoking it",
+		source:   `function f() { return config("HOST")() }`,
+		contains: []string{`$value((($t = config("HOST")), $isRun($t) ? (yield* $t) : $t))()`}},
+	{name: "pinned service tail lambda has an Effect boundary",
+		source:   `import { Path as Paths } from "effect/Path"; const f = (part: string) => Paths.join("root", part)`,
+		contains: []string{`(part) => $gen(function* ()`, `(($s = Paths), $isKey($s) && !("join" in $s) ? (yield* $s) : $s).join("root", part)`}},
+	{name: "a tagged error value call replays through a generator",
+		source:   `function f(error: Cause.YieldableError) { return error() }`,
+		contains: []string{`$value(error)()`, `function* () { return yield* v`}},
+
 	{
 		name:     "resume expressions hide normal and jump sentinels while retaining pending completion",
 		source:   "control Ask { answer(): number!! } function f() { try { Ask.answer() } handle Ask.answer() { const value = resume(1); record(value) } }",

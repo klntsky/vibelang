@@ -331,7 +331,7 @@ func (r checking) text(e edit) (string, bool) {
 	case editServiceCall:
 		text = pick(e.part, helperRef("$use")+"(", "", ")")
 	case editValueCall:
-		text = pick(e.part, helperRef("$value")+"(", "", ")")
+		text = renderValueCall(e)
 	case editUsing:
 		text = pick(e.part, "(yield* "+helperRef("$acquire")+"(", "", "))")
 	}

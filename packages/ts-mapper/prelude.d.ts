@@ -263,13 +263,16 @@ export declare function $contract<A, E, R>(): <A2 extends Pin<A, unknown>, E2 ex
   effect: EffectModule.Effect<A2, E2, R2>
 ) => EffectModule.Effect<Pin<A, A2>, Pin<E, E2>, Pin<R, R2>>
 
-/** What a service member call reads: each member, with the service added to R (D41). */
+/** D41: callable and Effect members add the service to R. Plain fields stay
+ * non-callable; read them with Key().field rather than inventing a call. */
 type Accessors<I, S> = {
-  readonly [M in keyof S]: S[M] extends (...args: infer P) => EffectModule.Effect<infer A, infer E, infer R>
+  readonly [M in keyof S]: S[M] extends (...args: infer P extends readonly unknown[]) => EffectModule.Effect<infer A, infer E, infer R>
     ? (...args: P) => EffectModule.Effect<A, E, R | I>
-    : S[M] extends (...args: infer P) => infer B
+    : S[M] extends (...args: infer P extends readonly unknown[]) => infer B
       ? (...args: P) => EffectModule.Effect<B, never, I>
-      : EffectModule.Effect<S[M], never, I>
+      : S[M] extends EffectModule.Effect<infer A, infer E, infer R>
+        ? EffectModule.Effect<A, E, R | I>
+        : S[M]
 }
 
 /**
@@ -289,8 +292,15 @@ export declare function $use<T>(value: T): T
  * value, such as a Context key or a Config, becomes a function that runs it.
  */
 export declare function $value<F extends (...args: never[]) => unknown>(f: F): F
+export declare function $value<E extends Cause.YieldableError>(error: E): () => EffectModule.Effect<never, E>
 export declare function $value<A, E, R>(effect: EffectModule.Effect<A, E, R>): () => EffectModule.Effect<A, E, R>
 export declare function $value<T>(value: T): T
+
+/** D90 member calls retain their receiver when the member is a method. */
+export declare function $member<T, K extends keyof T>(self: T, key: K):
+  T[K] extends (...args: any[]) => any ? T[K] :
+  T[K] extends Cause.YieldableError ? () => EffectModule.Effect<never, T[K]> :
+  T[K] extends EffectModule.Effect<infer A, infer E, infer R> ? () => EffectModule.Effect<A, E, R> : T[K]
 
 // ---------------------------------------------------------------- sentinel
 

@@ -48,6 +48,9 @@ func (p *projector) lambda(fn *ast.Node, e env) {
 	d := p.forms.Lambda(fn)
 	p.choice(d, fn)
 	form := d.Form
+	if form == FormPlain && d.Call == nil && d.Provenance == FromFallback && fn.Type() == nil && p.keyLookupLambda(fn) {
+		form = FormEffectFn
+	}
 	if form == FormProgram && len(fn.Parameters()) > 0 {
 		// A program takes no arguments; one written with parameters is an
 		// Effect function, which TypeScript then reports at the position.

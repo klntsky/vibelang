@@ -29,6 +29,19 @@ var projectionCases = []struct {
 	virtual string
 }{
 
+	{name: "external service Effect member is a receiver preserving value call",
+		source:  `import { Users } from "./users.ts"; function f() { return Users.all() }`,
+		virtual: `import { Users } from "./users.ts"; function f() { return $gen(function* () { return (yield* $run($member($use(Users), "all")())) })}`},
+	{name: "a chained Config value call runs the returned data",
+		source:  `function f() { return config("HOST")() }`,
+		virtual: `function f() { return $gen(function* () { return (yield* $run($value((yield* $run(config("HOST"))))())) })}`},
+	{name: "a pinned service alias contributes R in a tail only lambda",
+		source:  `import { Path as Paths } from "effect/Path"; const f = (part: string) => Paths.join("root", part)`,
+		virtual: `import { Path as Paths } from "effect/Path"; const f = (part: string) => $gen(function* () { return (yield* $run($use(Paths).join("root", part))) })`},
+	{name: "L8 leaves an external key owned member on the key",
+		source:  `import { Users } from "./users.ts"; function f() { return Users.pipe() }`,
+		virtual: `import { Users } from "./users.ts"; function f() { return $gen(function* () { return (yield* $run(Users.pipe())) })}`},
+
 	{
 		name:    "pipe topics use the data method module behind a local shadow",
 		source:  "function f(xs: Stream.Stream<number>) { const Stream = 1; return xs |> %.map((n) => n + Stream) }",
@@ -83,7 +96,7 @@ var projectionCases = []struct {
 	{
 		name:    "non-tail handle fallthrough has an undefined success",
 		source:  "function f() { try { return Ask.answer() } handle Ask.answer() { const n = resume(1); log(n) } }",
-		virtual: "function f() { return $gen(function* () { const $c = yield* handle_1($gen(function* () { return $box((yield* $run($use(Ask).answer()))) }) , Ask, { answer: ($k) => $gen(function* () { const n = (yield* $run(resume($k, 1))); ;(yield* $run(log(n))) ; return undefined; }) }); return $unboxed($c) })}",
+		virtual: "function f() { return $gen(function* () { const $c = yield* handle_1($gen(function* () { return $box((yield* $run($member($use(Ask), \"answer\")()))) }) , Ask, { answer: ($k) => $gen(function* () { const n = (yield* $run(resume($k, 1))); ;(yield* $run(log(n))) ; return undefined; }) }); return $unboxed($c) })}",
 	},
 	{
 		name:    "a never completing try has no void success path",
