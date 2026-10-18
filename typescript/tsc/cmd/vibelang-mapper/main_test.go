@@ -142,3 +142,52 @@ func TestLineAndColumnASCII(t *testing.T) {
 		}
 	}
 }
+
+// CLI diagnostics use the same ECMAScript lines and UTF-16 columns as tsc
+// (D34), even when the mapper itself works with UTF-8 byte offsets.
+func TestLineAndColumnUnicode(t *testing.T) {
+	for _, tc := range []struct {
+		text              string
+		pos, line, column int
+	}{
+		{"éx", len("é"), 1, 2},
+		{"😀x", len("😀"), 1, 3},
+		{"a\rb", len("a\r"), 2, 1},
+		{"a\u2028b", len("a\u2028"), 2, 1},
+		{"a\u2029b", len("a\u2029"), 2, 1},
+		{"é\r\n😀x", len("é\r\n😀"), 2, 3},
+	} {
+		line, column := lineAndColumn(tc.text, tc.pos)
+		if line != tc.line || column != tc.column {
+			t.Errorf("%q at %d = (%d,%d), want (%d,%d)", tc.text, tc.pos, line, column, tc.line, tc.column)
+		}
+	}
+}
+
+func TestEmitDiagnosticGolden(t *testing.T) {
+	// A Unicode prefix and a Unicode line separator exercise the actual
+	// byte-offset-to-tsc-coordinate path, not just the coordinate helper.
+	const source = "const title = \"😀\"; import { maybe } from \"./host\"; maybe?.isSome()\u2028maybe?.isSome()"
+	file := sourceFile(t, source)
+	status, stdout, stderr := captureCommand(t, func() int { return emit(file, "") })
+	if status != 1 || stdout == "" {
+		t.Fatalf("status %d, stdout %s, stderr %s", status, stdout, stderr)
+	}
+	got := strings.ReplaceAll(stderr, file, "main.vibe")
+	golden := filepath.Join("testdata", "diagnostics.txt")
+	if os.Getenv("UPDATE_CLI_GOLDENS") == "1" {
+		if err := os.MkdirAll(filepath.Dir(golden), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(golden, []byte(got), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(golden)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != string(want) {
+		t.Fatalf("diagnostics differ:\ngot: %s\nwant: %s", got, want)
+	}
+}

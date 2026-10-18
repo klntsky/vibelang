@@ -14,7 +14,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 
 	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
@@ -114,8 +116,9 @@ func emit(path string, out string) int {
 // lineAndColumn returns the one-based line and column of pos in text.
 func lineAndColumn(text string, pos int) (int, int) {
 	pos = min(max(pos, 0), len(text))
-	line := 1 + strings.Count(text[:pos], "\n")
-	return line, pos - (strings.LastIndex(text[:pos], "\n") + 1) + 1
+	starts := core.ComputeECMALineStarts(text)
+	line := scanner.ComputeLineOfPosition(starts, pos)
+	return line + 1, int(core.UTF16Len(text[starts[line]:pos])) + 1
 }
 
 // stdio joins the process's stdin and stdout into the connection the
