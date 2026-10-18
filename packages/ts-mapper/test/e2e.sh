@@ -76,6 +76,9 @@ ln -s "$effect_dir" "$work/.runtime-build/node_modules/effect"
 cp "$root/packages/runtime/package.json" "$runtime/"
 echo "$work"
 
+step "cross-file impure recursion stays stack-safe (B)"
+node "$here/cross-file-stack.mjs" "$package/bin/effeck-mapper" "$work"
+
 step "tsc --runExternalCode"
 status=0
 (cd "$work" && "$tsc" -p . --pretty false --runExternalCode) > "$work/tsc.txt" 2>&1 || status=$?
