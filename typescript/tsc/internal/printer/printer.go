@@ -2883,6 +2883,11 @@ func (p *Printer) emitBinaryExpression(node *ast.BinaryExpression) {
 	linesAfterOperator := p.getLinesBetweenNodes(node.AsNode(), node.OperatorToken, node.Right)
 	p.writeLinesAndIndent(linesBeforeOperator, node.OperatorToken.Kind != ast.KindCommaToken /*writeSpaceIfNotIndenting*/)
 	p.emitTokenNodeEx(node.OperatorToken, tefNoSourceMaps)
+	if node.Flags&ast.NodeFlagsVibeLang != 0 && node.OperatorToken.Kind == ast.KindBarToken {
+		// The parser stores |> as a flagged binary expression whose token
+		// covers only |. Keep the second character when printing source ASTs.
+		p.writeOperator(">")
+	}
 	p.writeLinesAndIndent(linesAfterOperator, true /*writeSpaceIfNotIndenting*/) // Binary operators should have a space before the comment starts
 	p.emitExpression(node.Right, rightPrec)
 	p.decreaseIndentIf(linesAfterOperator > 0)

@@ -3043,6 +3043,11 @@ func (p *Parser) parseTypeReference() *ast.Node {
 }
 
 func (p *Parser) parseEntityNameOfTypeReference() *ast.Node {
+	if p.isVibeLangFile() && p.token == ast.KindPrivateIdentifier {
+		// Private names cannot be types. Diagnose them before a short
+		// contract wraps the name in Effect's synthesized type arguments.
+		p.parseErrorAtCurrentToken(diagnostics.Type_expected)
+	}
 	return p.parseEntityName(true /*allowReservedWords*/, false /*allowPrivateName*/, diagnostics.Type_expected)
 }
 
