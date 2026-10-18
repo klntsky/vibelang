@@ -2008,6 +2008,12 @@ type ProgramLike interface {
 	Program() *Program
 }
 
+func diagnosticsHaveError(diags []*ast.Diagnostic) bool {
+	return slices.ContainsFunc(diags, func(d *ast.Diagnostic) bool {
+		return d.Category() == diagnostics.CategoryError
+	})
+}
+
 // HandleNoEmitOptions mirrors tsc's handleNoEmitOptions.
 func HandleNoEmitOptions(ctx context.Context, program ProgramLike, files []*ast.SourceFile, emitBuildInfo func() *EmitResult) *EmitResult {
 	if !program.Options().NoEmit.IsTrue() {
@@ -2023,8 +2029,8 @@ func HandleNoEmitOptions(ctx context.Context, program ProgramLike, files []*ast.
 			program.GetBindDiagnostics,
 			program.GetSemanticDiagnostics,
 		)
-		if len(diagnostics) == 0 {
-			return nil // NoEmitOnError is enabled, but no diagnostics were found, so we can proceed with emitting
+		if !diagnosticsHaveError(diagnostics) {
+			return nil // Warnings are reported by the caller, but must not prevent emit.
 		}
 		return &EmitResult{
 			Diagnostics: diagnostics,
@@ -2092,7 +2098,7 @@ func GetDiagnosticsOfAnyProgram(
 				}
 			}
 
-			if (skipNoEmitCheckForDtsDiagnostics || program.Options().NoEmit.IsTrue()) && program.Options().GetEmitDeclarations() && len(allDiagnostics) == configFileParsingDiagnosticsLength {
+			if (skipNoEmitCheckForDtsDiagnostics || program.Options().NoEmit.IsTrue()) && program.Options().GetEmitDeclarations() && !diagnosticsHaveError(allDiagnostics) {
 				allDiagnostics = appendDiagnosticsForAllFiles(allDiagnostics, program.GetDeclarationDiagnostics)
 			}
 		}
