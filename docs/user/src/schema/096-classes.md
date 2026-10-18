@@ -156,7 +156,7 @@ class InsuredPackage extends Package.extend<InsuredPackage>("InsuredPackage")({
 function reportMissing(reference: string) {
   throw MissingPackage.makeEffect({ reference })
 }
-// never!MissingPackage | SchemaIssue.Issue!
+// void!MissingPackage | SchemaIssue.Issue!
 ```
 
 `TaggedClass` adds `_tag` with a constructor default. `Schema.TaggedError` also supplies Error behavior and a serializable schema; the constructed instance is data until thrown or called. `new` constructs it without running it; throw it for an expected failure. The example also retains the constructor's issue channel. For errors that do not need serialization, use the global `TaggedError` instead.

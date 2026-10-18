@@ -49,7 +49,7 @@ function sampleRepresentations() {
 }
 ```
 
-Schema generation targets the decoded type, so a string-to-number codec generates numbers. Derive from `toEncoded` to generate the input representation instead. Opaque predicates without constructive metadata still run, but rejected candidates consume the discard budget. Sampling then fails with `SampleError` when the budget is exhausted; property checking instead returns `Exhausted`.
+Schema generation targets the decoded type, so a string-to-number codec generates numbers. Derive from `toEncoded` to generate values accepted by the encoded-side schema instead. Here that schema is `String`, so its generated strings need not decode as finite numbers. Encode generated decoded values when a test needs valid wire values. Opaque predicates without constructive metadata still run, but rejected candidates consume the discard budget. Sampling then fails with `SampleError` when the budget is exhausted; property checking instead returns `Exhausted`.
 
 ## Checking properties
 

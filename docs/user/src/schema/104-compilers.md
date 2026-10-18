@@ -59,6 +59,7 @@ JIT uses dynamic function construction. When the engine or Content Security Poli
 ```ts
 // TypeScript (.ts)
 // build-schema-aot.ts
+import { fileURLToPath } from "node:url"
 import { Effect } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import * as Build from "effect/schema/SchemaAOTCompiler/Build"
@@ -69,7 +70,7 @@ export const buildSchemas = () => Effect.provide(
       "./schemas/Parcel.js": () => import("./schemas/Parcel.js")
     },
     baseUrl: import.meta.url,
-    outFile: "./generated/parcel-validators.js",
+    outFile: fileURLToPath(new URL("./generated/parcel-validators.js", import.meta.url)),
     operations: ["decode", "encode", "is", "make"]
   }),
   [NodeFileSystem.layer, NodePath.layer]
@@ -80,13 +81,25 @@ export const buildSchemas = () => Effect.provide(
 // build.vibe
 import { buildSchemas } from "./build-schema-aot.ts"
 
-function build() {
+export function main() {
   const result = buildSchemas()
   log(`Prepared ${result.schemas} schema exports in ${result.outFile}`)
 }
 ```
 
-The build Effect finds directly exported schema values in the listed modules and writes a self-installing ES module. The module keys resolve relative to `baseUrl`; each loader must load the module named by its key. The TypeScript helper keeps Promise-returning dynamic module loaders at the foreign-code boundary. Build requires FileSystem and Path; this helper provides the Node layers.
+The build Effect finds directly exported schema values in the listed modules and writes a self-installing ES module. The module keys resolve relative to `baseUrl`; each loader must load the module named by its key. The TypeScript helper keeps Promise-returning dynamic module loaders at the foreign-code boundary. Build requires FileSystem and Path; this helper provides the Node layers. The output URL is relative to the emitted helper, so a helper in `dist/` writes `dist/generated/parcel-validators.js` regardless of the working directory. A relative `outFile` string instead resolves from the process working directory.
+
+For a project with these source files under `src/` and JavaScript output in `dist/`, compile the build entry separately so the application does not need the generated module yet:
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "files": ["src/build.vibe"],
+  "include": []
+}
+```
+
+Save this as `tsconfig.aot.json`, then run `vibelang -p tsconfig.aot.json` and `node dist/build.js`. The compiler follows the build entry's imports to the helper and schema module. Exporting `main` makes the build entry executable. For the application compilation, set `compilerOptions.rootDirs` to `["src", "dist"]` so its generated-module import resolves in `dist/`. Then compile and run the application.
 
 Decoding is the default operation. Add encoding, guards, and construction only when needed. Nested dependencies do not need direct exports unless a separate target is required for an otherwise undiscovered graph.
 
