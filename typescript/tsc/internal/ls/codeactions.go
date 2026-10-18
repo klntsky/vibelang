@@ -37,8 +37,15 @@ type CodeFixContext struct {
 	Params     *lsproto.CodeActionParams
 }
 
-// CodeAction represents a single code action fix
+// FileTextChanges carries edits for another document in an atomic quick fix.
+type FileTextChanges struct {
+	URI     lsproto.DocumentUri
+	Changes []*lsproto.TextEdit
+}
+
+// CodeAction represents a single code action fix, including edits to other files.
 type CodeAction struct {
+	AdditionalChanges []FileTextChanges
 	Description       string
 	Changes           []*lsproto.TextEdit
 	FixID             string
@@ -57,6 +64,23 @@ func (a *CodeAction) Compare(b *CodeAction) int {
 	for i, edit := range a.Changes {
 		if c := edit.Compare(b.Changes[i]); c != 0 {
 			return c
+		}
+	}
+	if c := cmp.Compare(len(a.AdditionalChanges), len(b.AdditionalChanges)); c != 0 {
+		return c
+	}
+	for i, file := range a.AdditionalChanges {
+		other := b.AdditionalChanges[i]
+		if c := cmp.Compare(file.URI, other.URI); c != 0 {
+			return c
+		}
+		if c := cmp.Compare(len(file.Changes), len(other.Changes)); c != 0 {
+			return c
+		}
+		for j, edit := range file.Changes {
+			if c := edit.Compare(other.Changes[j]); c != 0 {
+				return c
+			}
 		}
 	}
 	return 0
@@ -452,6 +476,9 @@ func convertToLSPCodeAction(action *CodeAction, diag *lsproto.Diagnostic, uri ls
 	kind := lsproto.CodeActionKindQuickFix
 	changes := map[lsproto.DocumentUri][]*lsproto.TextEdit{
 		uri: action.Changes,
+	}
+	for _, file := range action.AdditionalChanges {
+		changes[file.URI] = append(changes[file.URI], file.Changes...)
 	}
 	diagnostics := []*lsproto.Diagnostic{diag}
 

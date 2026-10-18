@@ -962,6 +962,8 @@ typescript/effeck/cases/trust-levels/main.effeck:52:30 lambda plain table
 typescript/effeck/cases/trust-levels/main.effeck:52:62 lambda plain table
 typescript/effeck/cases/trust-levels/main.effeck:88:28 lambda plain table
 typescript/effeck/cases/trust-levels/main.effeck:93:18 lambda effectFn annotation
+typescript/effeck/cases/trusted-value/main.effeck:11:30 lambda program table
+typescript/effeck/cases/trusted-value/main.effeck:14:32 lambda program table
 typescript/effeck/lsp-fixture/src/catch-expression.effeck:12:10 lambda effectFn table
 typescript/effeck/lsp-fixture/src/catch-expression.effeck:12:29 lambda effectFn table
 typescript/effeck/lsp-fixture/src/catch-expression.effeck:16:10 lambda effectFn table

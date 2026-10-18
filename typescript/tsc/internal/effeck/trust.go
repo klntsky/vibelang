@@ -38,6 +38,7 @@ const (
 
 // trust is what Effeck knows about calling one callee.
 type trust struct {
+	declaration *ast.Node // the tagged declaration, retained for D249 migration edits
 	kind        trustKind
 	failures    []failure // the exceptions that are expected failures, which join E
 	promise     bool      // the call returns a Promise
@@ -175,7 +176,7 @@ func tagged(c *checker.Checker, call *ast.Node, candidates []*ast.Node, otherwis
 		}
 		for _, host := range jsdocHosts(candidate) {
 			if hasTrustedTag(host) {
-				t := &trust{kind: trustTagged, promise: returnsPromise(c, call)}
+				t := &trust{kind: trustTagged, promise: returnsPromise(c, call), declaration: candidate}
 				t.failures, t.unreachable = throwsOf(c, host)
 				return t
 			}
@@ -470,6 +471,9 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 	t := callTrust(c, call)
 	callee := call.Expression()
 	name := nodeText(file, callee)
+	if t.kind == trustTagged && len(t.failures) > 0 && a.legacyTrustUsesTag(call) {
+		reportLegacyTrust(c, callee, t)
+	}
 	switch {
 	case (t.kind == trustForeign || t.kind == trustTagged) && t.promise:
 		d := report(c, callee, promiseCall, name)
@@ -562,4 +566,40 @@ func reachClass(c *checker.Checker, file *ast.SourceFile, f failure) (module str
 		}
 	}
 	return "", "", false
+}
+
+// legacyTrustUsesTag matches planTrustedCalls' function/body predicate so
+// EK4406 only offers a migration where lowering uses the failure contract.
+// A plain callback's uncaught call stays plain; a caught D54 call uses the tag.
+func (a *analyzer) legacyTrustUsesTag(call *ast.Node) bool {
+	fn := enclosingFunction(call)
+	if fn == nil || !isLowerable(fn) {
+		return false
+	}
+	effect := a.isEffect(fn) // planFile records these as Effects or programs.
+	return a.forEachFailingCall(fn, func(candidate *ast.Node, caught bool) bool {
+		return candidate == call && (effect || caught)
+	})
+}
+
+// reportLegacyTrust names the declaration and its actual contract, because
+// methods need a receiver adapter rather than a bare-function quick fix.
+func reportLegacyTrust(c *checker.Checker, callee *ast.Node, t *trust) {
+	decl := t.declaration
+	name := declarationName(decl)
+	if name == "" {
+		name = declarationName(ownerOf(signatureDeclaration(c, callee.Parent)))
+	}
+	var classes []string
+	for _, f := range t.failures {
+		classes = append(classes, f.name)
+	}
+	fix := "export const " + name + "Trusted = trusted(" + name + ", [" + strings.Join(classes, ", ") + "]) beside the TypeScript declaration and call that value instead"
+	if decl != nil && (ast.IsMethodDeclaration(decl) || decl.Kind == ast.KindMethodSignature) {
+		if owner := containerName(decl); owner != "" {
+			name = owner + "." + name
+		}
+		fix = "write an adapter beside " + name + " using trusted(impl, [" + strings.Join(classes, ", ") + "]) and call that value instead"
+	}
+	report(c, callee, EK4406, name, fix)
 }

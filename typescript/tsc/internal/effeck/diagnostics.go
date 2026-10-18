@@ -59,8 +59,8 @@ const (
 // The registry: every EK code in Chapter 28 of the spec
 // (docs/design/src/428-part4-ch28-tooling.md) with its default category and
 // the headline the spec prints for it. Every code is an error except EK2004,
-// EK1009, EK2112, EK2113, EK2120, and EK2121, which are warnings by default; a
-// project may change the category of EK2004 and EK4403 (design decisions D34,
+// EK1009, EK2112, EK2113, EK2120, EK2121, and EK4406, which are warnings by default; a
+// project may change the category of EK2004, EK4403, and EK4406 (design decisions D34,
 // D53, and D172).
 var (
 	// EK1001: a module's top level runs a program. {0} is the call, such as "loadConfig()".
@@ -160,6 +160,8 @@ var (
 	EK4404 = message(4404, errorCategory, "{0} takes the code and the error mapping as two arguments, not Effect's options object.")
 	// EK4405: a hatch's TypeScript reads a binding of the .effeck file. {0} is the binding, {1} the hatch.
 	EK4405 = message(4405, errorCategory, "{0} is declared outside the hatch, and a hatch's TypeScript is self-contained: pass {0} to {1} as an input.")
+	// EK4406: a declaration tag cannot reach the per-file emit (D249).
+	EK4406 = message(4406, legacyTrustCategory, "{0}: @effeck trusted and @throws tags will not survive the emit switch; {1}.")
 )
 
 // registry lists every message above by code.
@@ -170,7 +172,7 @@ func init() {
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009,
 		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
-		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4501,
+		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4406, EK4501,
 	} {
 		registry[m.Code] = m
 	}
@@ -187,6 +189,11 @@ var adjustableCodes = func() []int32 {
 	}
 	return codes
 }()
+
+// legacyTrustCategory is the D249 emit-switch point: change this to
+// errorCategory when (B) emit becomes the default. Projects can opt in now
+// with EK4406:error, independently of the legacy emitter.
+const legacyTrustCategory = warningCategory
 
 // category returns the category options give code, and false when they turn
 // it off.

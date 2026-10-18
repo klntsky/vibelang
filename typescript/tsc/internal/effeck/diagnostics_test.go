@@ -24,6 +24,9 @@ func TestCategory(t *testing.T) {
 		want    diagnostics.Category
 		on      bool
 	}{
+		{"EK4406 can be an error", EK4406, with(map[string]string{"EK4406": "error"}), diagnostics.CategoryError, true},
+		{"EK4406 can be a warning", EK4406, with(map[string]string{"EK4406": "warning"}), diagnostics.CategoryWarning, true},
+		{"EK4406 is a migration warning", EK4406, nil, diagnostics.CategoryWarning, true},
 		{"EK2004 is a warning by default", EK2004, nil, diagnostics.CategoryWarning, true},
 		{"EK4403 is an error by default", EK4403, &core.CompilerOptions{}, diagnostics.CategoryError, true},
 		{"EK2004 can be an error", EK2004, with(map[string]string{"EK2004": "error"}), diagnostics.CategoryError, true},

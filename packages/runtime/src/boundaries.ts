@@ -33,3 +33,13 @@ export const $trustedPlain = <A>(thunk: () => A, classes: ReadonlyArray<FailureC
     throw classes.some((c) => e instanceof c) ? $expected(e) : e
   }
 }
+
+/**
+ * D249: keep a synchronous foreign function's failure contract in its value,
+ * so callers and the per-file projector need no declaration metadata.
+ */
+export const trusted = <Args extends unknown[], A, const Classes extends ReadonlyArray<FailureClass<unknown>>>(
+  impl: ((...args: Args) => A) & (Extract<A, PromiseLike<unknown> | Effect.Effect<any, any, any>> extends never ? unknown : never),
+  classes: Classes
+): ((...args: Args) => Effect.Effect<A, InstanceType<Classes[number]>>) =>
+  (...args) => $trusted(() => impl(...args), classes as ReadonlyArray<FailureClass<InstanceType<Classes[number]>>>)

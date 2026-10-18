@@ -123,6 +123,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$yieldAll` | Yield every element of another producer, a Stream, or an iterable (`yield*`) | D26 |
 | `$forOf` | Iterate a producer under a `Yield` handler, or pull a Stream, and lower loop completion records | D18, D26 |
 | `$forStream`, `$toStream` | Kept for the prototype compiler's output: `$forOf`, and the identity | D26 |
+| `trusted` | Wrap a synchronous implementation with a value-level expected-failure contract | D249 |
 | `$trusted` | Run a trusted call: an instance of a listed class is an expected failure, any other exception a defect | D5, D23 |
 | `$trustedPlain` | The same in a function that compiles to plain JavaScript: throw a listed exception as `$expected` for its `catch` | D54 |
 | `Effect` | Supply the prelude Effect namespace | D4 |

@@ -25,10 +25,10 @@ type plan struct {
 	scopePlan
 	handlerPlan
 	producerPlan
-	hatches     map[*ast.Node]hatchForm  // sync and try hatches, lowered to Effect's functions (hatches.go)
-	failureTags map[*ast.Node][]string   // the tags of each typed catch clause's test (catches.go)
-	causeThrows map[*ast.Node]bool       // throw statements whose value is a Cause (primitives.go)
-	methods     map[*ast.Node]methodCall // method calls on Effect data types (datamethods.go)
+	hatches     map[*ast.Node]hatchForm      // sync and try hatches, lowered to Effect's functions (hatches.go)
+	failureTags map[*ast.Node][]string       // the tags of each typed catch clause's test (catches.go)
+	causeThrows map[*ast.Node]bool           // throw statements whose value is a Cause (primitives.go)
+	methods     map[*ast.Node]methodCall     // method calls on Effect data types (datamethods.go)
 	blockForms  map[*ast.Node]blockParamForm // block param calls that move their block (blockparams.go)
 
 	pipes         map[*ast.Node]pipeMode    // how each pipe compiles (pipes_lower.go)

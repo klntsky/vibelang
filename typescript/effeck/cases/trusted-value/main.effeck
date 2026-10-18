@@ -1,0 +1,22 @@
+import { Cause, Effect, Exit } from "effect"
+import { calls, parsePort, throwingArgument } from "./parsers.ts"
+
+function port(text: string) {
+  try { return parsePort(text) } catch (e) { return e._tag }
+}
+
+// expect-result: {"port":"PortError","defect":true,"loaded":8443,"argument":true,"calls":3}
+export function main() {
+  const failure = port("x")
+  const defect = Effect.exit(() => parsePort("boom"))
+  const loaded = parsePort(Effect.succeed("8443"))
+  // Argument evaluation fails before parsePort's implementation can run.
+  const argument = Effect.exit(() => parsePort(throwingArgument()))
+  return {
+    port: failure,
+    defect: Exit.isFailure(defect) && Cause.hasDies(defect.cause),
+    loaded,
+    argument: Exit.isFailure(argument) && Cause.hasDies(argument.cause),
+    calls: calls()
+  }
+}

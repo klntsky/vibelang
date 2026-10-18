@@ -1,5 +1,5 @@
 // Compile a consumer against the installed package export and emitted .d.ts files.
-import { $bind, $direct, $done, $fast, $isRun, $program, $settle, $produce, $region, $using, $yield, Effect, Layer, Scope, suspend, type Producer } from "effeck-runtime"
+import { trusted, $bind, $direct, $done, $fast, $isRun, $program, $settle, $produce, $region, $using, $yield, Effect, Layer, Scope, suspend, type Producer } from "effeck-runtime"
 
 const bound: Effect.Effect<number> = $bind(42)
 const program: Effect.Effect<number> = $program(() => bound)
@@ -16,3 +16,20 @@ const it = body(1), s = it.next()
 const step: number | Effect.Effect<number, "Bad", never> = s.done ? $done(s.value) : $settle(it, s)
 const settled: Effect.Effect<number, "Bad"> = Effect.gen(function* () { const t = entry(1); return Effect.isEffect(t) ? yield* t : t })
 void [program, producer, region, callback, layer, runs, key, step, settled]
+
+class PortError extends Error { readonly kind = "port" }
+class HostError extends Error { readonly kind = "host" }
+const parse = trusted((text: string, ...suffix: string[]) => text.length + suffix.length, [PortError, HostError])
+const parsed: Effect.Effect<number, PortError | HostError> = parse("80", "a", "b")
+// @ts-expect-error Listed failures remain in E.
+const noFailure: Effect.Effect<number, never> = parsed
+// @ts-expect-error The implementation's parameters are preserved.
+parse(80)
+const pure: Effect.Effect<string, never> = trusted((n: number) => String(n), [])(1)
+// @ts-expect-error Promise implementations need an asynchronous boundary.
+trusted(async () => 1, [])
+// @ts-expect-error Effect implementations already carry their own contract.
+trusted(() => Effect.succeed(1), [])
+// @ts-expect-error A union cannot hide a Promise return.
+trusted((n: boolean) => n ? 1 : Promise.resolve(1), [])
+void [parsed, pure]
