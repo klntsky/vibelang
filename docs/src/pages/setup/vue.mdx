@@ -1,0 +1,256 @@
+---
+title: "Vue"
+description: "Add VibeLang to a Vue app that builds with Vite. A single-file component runs a VibeLang program with a ManagedRuntime and renders three states: loading, the program's result, and an error the..."
+---
+
+# Vue
+
+Add VibeLang to a Vue app that builds with Vite. A single-file component runs a VibeLang program with a `ManagedRuntime` and renders three states: loading, the program's result, and an error the program recovers from. Install the packages with [Add VibeLang to an existing project](/setup/existing-project) first. Follow this page instead of [Vite and Vitest](/setup/vite): it covers the same plugin, tsconfig.json, Vitest, and build steps.
+
+## 1. Install the test packages
+
+With Bun, run:
+
+```sh
+bun add -d happy-dom@20.14.6 @vue/test-utils@2.5.1
+```
+
+With npm, run:
+
+```sh
+npm install --save-dev --save-exact happy-dom@20.14.6 @vue/test-utils@2.5.1
+```
+
+## 2. Configure tsconfig.json
+
+Find the configuration that includes `src`. In an app from Vite's `vue-ts` template, `tsconfig.json` has `"files": []` and lists `tsconfig.app.json` and `tsconfig.node.json` as `references`; the one that includes `src` is `tsconfig.app.json`. Make two changes there:
+
+1. In `compilerOptions`, set `"rewriteRelativeImportExtensions": true`. Without it, `vite build` fails with TS5096, because `@vue/tsconfig` sets `allowImportingTsExtensions` and the plugin emits JavaScript. A configuration without `allowImportingTsExtensions` fails with TS5097 instead.
+2. Add `"src/**/*.vibe"` to `include`. The template lists `.ts`, `.tsx`, and `.vue` globs only. Without the `.vibe` glob, the compiler skips `.vibe` files that no other file imports, such as tests, and Vitest fails with `ENOENT`.
+
+```json
+{
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.vibe"]
+}
+```
+
+## 3. Declare .vue modules
+
+`vibelang` checks `.ts` and `.vibe` files and does not read `.vue` files. It sees a component only through a module declaration. Create `src/env.d.ts`. Without it, `vibelang -b` reports TS2307 for every `.vue` import, such as `./App.vue` in `src/main.ts`.
+
+```ts
+// TypeScript (.ts)
+declare module "*.vue" {
+  import type { DefineComponent } from "vue"
+  const component: DefineComponent
+  export default component
+}
+```
+
+## 4. Configure Vite and Vitest
+
+Replace `vite.config.ts` with this file. It adds `vibelang()` before `vue()`, passes the configuration that includes `src` as `project`, and imports `defineConfig` from `vitest/config`, so the same file configures Vitest. Keep any other plugins the app has. If `tsconfig.json` itself includes `src`, call `vibelang()` without the `project` option.
+
+```ts
+// TypeScript (.ts)
+import vue from "@vitejs/plugin-vue"
+import vibelang from "vibelang-vite"
+import { defineConfig } from "vitest/config"
+
+export default defineConfig({
+  plugins: [vibelang({ project: "tsconfig.app.json" }), vue()],
+  test: {
+    environment: "happy-dom",
+    include: ["src/**/*.test.vibe", "src/**/*.test.ts"]
+  }
+})
+```
+
+## 5. Add a VibeLang module
+
+Create `src/todos.vibe`. The `TodosLive` layer keeps the list in a `Map` that its setup creates once, when the layer builds. `completeTodo` recovers from `TodoNotFound`, and `loadBoard` declares the contract `Board!!Todos`, so the compiler rejects an error that escapes it:
+
+```vibe
+// src/todos.vibe
+export schema Todo { id: number; title: string; done: boolean }
+
+export error TodoNotFound { id: number }
+
+export service Todos {
+  list(): ReadonlyArray<Todo>!!
+  complete(id: number): Todo!TodoNotFound
+}
+
+export const TodosLive = Layer.effect(Todos) {
+  const items = new Map<number, Todo>([
+    [1, { id: 1, title: "Declare the schema", done: true }],
+    [2, { id: 2, title: "Write the service", done: false }],
+    [3, { id: 3, title: "Render the board", done: false }]
+  ])
+  return {
+    list() { return [...items.values()] },
+    complete(id) {
+      const todo = items.get(id)
+      if (todo === undefined) throw new TodoNotFound({ id })
+      const done = { ...todo, done: true }
+      items.set(id, done)
+      return done
+    }
+  }
+}
+
+export function completeTodo(id: number) {
+  try {
+    const todo = Todos.complete(id)
+    return `Completed: ${todo.title}`
+  } catch (error) {
+    return `No todo #${error.id}`
+  }
+}
+
+export interface Board {
+  todos: ReadonlyArray<Todo>
+  messages: ReadonlyArray<string>
+}
+
+export function loadBoard(): Board!!Todos {
+  const messages = [completeTodo(2), completeTodo(99)]
+  return { todos: Todos.list(), messages }
+}
+```
+
+## 6. Run a program from a component
+
+Create `src/runtime.ts`. One `ManagedRuntime` builds `TodosLive` once and runs every program in the app:
+
+```ts
+// TypeScript (.ts)
+// src/runtime.ts
+import { ManagedRuntime } from "effect"
+import { TodosLive } from "./todos.vibe"
+
+export const runtime = ManagedRuntime.make(TodosLive)
+```
+
+Create `src/TodoBoard.vue`. Its `<script setup lang="ts">` block imports `./todos.vibe` by its source name. `runtime.runPromise(loadBoard())` provides `Todos` and returns a `Promise<Board>`:
+
+```vue
+<script setup lang="ts">
+import { onMounted, shallowRef } from "vue"
+import { runtime } from "./runtime.ts"
+import { loadBoard, type Board } from "./todos.vibe"
+
+const board = shallowRef<Board>()
+onMounted(async () => {
+  board.value = await runtime.runPromise(loadBoard())
+})
+</script>
+
+<template>
+  <main>
+    <h1>Todos</h1>
+    <p v-if="board === undefined">Loading…</p>
+    <template v-else>
+      <ul>
+        <li v-for="todo in board.todos" :key="todo.id">
+          {{ todo.done ? "[x]" : "[ ]" }} {{ todo.title }}
+        </li>
+      </ul>
+      <p v-for="message in board.messages" :key="message">{{ message }}</p>
+    </template>
+  </main>
+</template>
+```
+
+Render it from a component the app already has, such as `src/App.vue`: add `import TodoBoard from "./TodoBoard.vue"` to its script block and `<TodoBoard />` to its template. The page shows `Loading…`, then the three todos, `Completed: Write the service`, and `No todo #99`.
+
+## 7. Test the module and the component
+
+Create `src/todos.test.vibe`:
+
+```vibe
+// src/todos.test.vibe
+import { assert, it } from "@effect/vitest"
+import { completeTodo, loadBoard, TodoNotFound, Todos, TodosLive } from "./todos.vibe"
+
+it.effect("completes a todo") {
+  const message = Effect.provide(() => completeTodo(2), TodosLive)
+  assert.strictEqual(message, "Completed: Write the service")
+}
+
+it.effect("fails with TodoNotFound for an unknown id") {
+  provide TodosLive {
+    try {
+      Todos.complete(99)
+      assert.fail("expected TodoNotFound")
+    } catch (error) {
+      assert.instanceOf(error, TodoNotFound)
+      assert.strictEqual(error.id, 99)
+    }
+  }
+}
+
+it.effect("recovers TodoNotFound in completeTodo") {
+  const message = Effect.provide(() => completeTodo(99), TodosLive)
+  assert.strictEqual(message, "No todo #99")
+}
+
+it.effect("loads the board after both completions") {
+  const board = Effect.provide(() => loadBoard(), TodosLive)
+  assert.deepStrictEqual(board.messages, ["Completed: Write the service", "No todo #99"])
+  assert.deepStrictEqual(board.todos.map((todo) => todo.done), [true, true, false])
+}
+```
+
+Create `src/TodoBoard.test.ts`:
+
+```ts
+// TypeScript (.ts)
+import { mount } from "@vue/test-utils"
+import { expect, it, vi } from "vitest"
+import TodoBoard from "./TodoBoard.vue"
+
+it("shows loading, then the board and the recovered error", async () => {
+  const wrapper = mount(TodoBoard)
+  expect(wrapper.text()).toContain("Loading…")
+  await vi.waitFor(() => expect(wrapper.text()).toContain("No todo #99"))
+  expect(wrapper.findAll("li").map((item) => item.text())).toEqual([
+    "[x] Declare the schema",
+    "[x] Write the service",
+    "[ ] Render the board"
+  ])
+  expect(wrapper.text()).toContain("Completed: Write the service")
+})
+```
+
+If `package.json` has no `test` script, add `"test": "vitest run"`. Run `npx vitest run`. The output includes:
+
+```text
+ Test Files  2 passed (2)
+      Tests  5 passed (5)
+```
+
+## 8. Type-check and build
+
+No type checker covers a `.vue` file that imports a `.vibe` module. vue-tsc reads `.vue` files with TypeScript 6, which cannot resolve `.vibe` modules, so the template's `vue-tsc -b` fails. vue-tsc 3.3.13 reports TS2307 for each import of `./todos.vibe`, and TS2876 for each `.vue` import, because `rewriteRelativeImportExtensions` cannot rewrite those paths:
+
+```text
+src/runtime.ts(4,27): error TS2307: Cannot find module './todos.vibe' or its corresponding type declarations.
+src/TodoBoard.vue(4,39): error TS2307: Cannot find module './todos.vibe' or its corresponding type declarations.
+```
+
+The gap closes when VibeLang's TypeScript 7 content mapper ships and these checkers can load `.vibe` files. Until then, type-check with `vibelang -b` instead. It builds the same project references and checks `.vibe` and `.ts` files as one program; it does not check the script blocks of `.vue` files. Keep those blocks thin: import a program, run it, and render its result, as `TodoBoard.vue` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `build` script:
+
+```json
+{
+  "scripts": {
+    "build": "vibelang -b && vite build"
+  }
+}
+```
+
+Run `npx vibelang -b`. It prints nothing and exits with status 0. Then run `npm run build`, or `bun run build`. It exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added and changed, and that `vue-tsc` no longer runs in the build.
+
+## Next
+
+Set up the editor: [VS Code and Cursor](/setup/vscode), [Neovim](/setup/neovim), [Zed](/setup/zed), or [other editors](/setup/other-editors). Then verify the setup with step 4 of [Set up VibeLang](/setup).

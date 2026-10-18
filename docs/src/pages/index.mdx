@@ -1,7 +1,7 @@
 ---
-title: VibeLang · A new programming language for Agents
+title: VibeLang · Effect, as a language
 layout: minimal
-description: A TypeScript superset with the language-level primitives for building reliable tools and agents.
+description: VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.
 showAskAi: false
 showLogo: true
 showOutline: false
@@ -15,15 +15,15 @@ import { HomePage } from 'vocs'
 
   <section className="vibe-home__hero">
     <div className="vibe-home__intro">
-      <div className="vibe-home__eyebrow">A new programming language for Agents</div>
+      <div className="vibe-home__eyebrow">Effect, as a language</div>
       <h1><span className="vibe-gradient">Vibe</span>Lang</h1>
       <div className="vibe-home__tagline">
-        A TypeScript superset with the <span>language-level primitives</span> for building <span>reliable tools and agents</span>.
+        VibeLang gives <span>Effect</span> a simple, readable syntax that <span>compiles to TypeScript</span>, with first-class access to the TypeScript ecosystem.
       </div>
       <div className="vibe-home__actions">
-        <HomePage.Button href="/introduction/getting-started" variant="accent">Get started</HomePage.Button>
-        <HomePage.Button href="/introduction/why-vibelang">Why VibeLang?</HomePage.Button>
-        <HomePage.Button href="https://github.com/smithersai/vibelang">GitHub</HomePage.Button>
+        <HomePage.Button href="/013-getting-started" variant="accent">Get started</HomePage.Button>
+        <HomePage.Button href="/vibelang-features/115-cheat-sheet">Cheat sheet</HomePage.Button>
+        <HomePage.Button href="https://smithers.sh/effeck/effeck">Source on Smithers</HomePage.Button>
       </div>
     </div>
 
@@ -33,18 +33,15 @@ import { HomePage } from 'vocs'
   :::code-group{syncKey=""}
 
   ```bash [npm]
-  npm install --save-dev vibelang
-  npx vibelang init
-  ```
-
-  ```bash [pnpm]
-  pnpm add --save-dev vibelang
-  pnpm exec vibelang init
+  npm create vibelang@latest my-app
+  cd my-app
+  npm run start
   ```
 
   ```bash [bun]
-  bun add --dev vibelang
-  bunx vibelang init
+  bun create vibelang my-app
+  cd my-app
+  bun run start
   ```
 
   :::
@@ -54,11 +51,11 @@ import { HomePage } from 'vocs'
       <div className="vibe-home__stats">
         <div className="vibe-stat">
           <span>stage</span>
-          <strong>prealpha</strong>
+          <strong>v0</strong>
         </div>
         <div className="vibe-stat">
-          <span>license</span>
-          <strong>MIT</strong>
+          <span>version</span>
+          <strong>0.0.1</strong>
         </div>
       </div>
     </div>
@@ -66,20 +63,20 @@ import { HomePage } from 'vocs'
 
   <section className="vibe-home__cards">
     <article className="vibe-home__card">
-      <h2>TypeScript compatible</h2>
-      <div>Import TypeScript packages, use both languages side by side, and compile VibeLang to TypeScript.</div>
+      <h2>Every function is an Effect</h2>
+      <div>A call runs where it stands. The compiler infers what each function returns, how it fails, and what it needs.</div>
     </article>
     <article className="vibe-home__card">
-      <h2>Native when ready</h2>
-      <div>Optionally compile to native code—the easiest path from a TypeScript codebase to native performance.</div>
+      <h2>Typed errors</h2>
+      <div>`error` declares a tagged error. `throw` adds it to the function's type, and `catch` handles it.</div>
     </article>
     <article className="vibe-home__card">
-      <h2>Comptime</h2>
-      <div>Run deterministic code, generate types, and derive validators during compilation.</div>
+      <h2>Services and layers</h2>
+      <div>`service` declares a dependency, and `provide` supplies a layer to a block of code.</div>
     </article>
     <article className="vibe-home__card">
-      <h2>Durable execution</h2>
-      <div>Compile selected Actions and Flows into typed, resumable execution plans.</div>
+      <h2>Compiles to TypeScript</h2>
+      <div>The compiler is TypeScript's compiler, extended. npm packages, `.ts` files, and Effect libraries work unchanged.</div>
     </article>
   </section>
 </div>
@@ -88,480 +85,215 @@ import { HomePage } from 'vocs'
 
 ## Overview
 
-VibeLang starts with TypeScript, then makes the minimal number of intentional changes needed to supercharge it for building reliable programs in the AI era.
+VibeLang is [Effect](https://effect.website) as its own language, written in TypeScript syntax. Effect puts what a function returns, what can fail, and what it depends on into one type, `Effect<Success, Error, Requirements>`, and the compiler checks it. As a library, Effect builds every feature out of generators, `yield*`, `pipe`, and classes. VibeLang gives each Effect idea its own syntax, and its compiler builds the same Effect program you would have written by hand.
 
-### 99% TypeScript
+### Every function is an Effect
 
-VibeLang is almost TypeScript. The vast majority of its syntax is indistinguishable from TypeScript. You can import `.ts` files directly and use any TypeScript or JavaScript dependency. On the TypeScript target, VibeLang compiles to ordinary TypeScript that fits into the ecosystem you already use.
+:::code-group
 
-:::code-group{syncKey=""}
+```vibe [VibeLang]
+interface User { id: string; name: string }
 
-```ts [VibeLang]
-import { clamp } from "lodash-es"
+error UserNotFound { id: string }
 
-export function normalizeConfidence(score: number): number {
-  return clamp(score, 0, 1)
+service Users {
+  find(id: string): User!UserNotFound
 }
-```
 
-```ts [TypeScript]
-import { clamp } from "lodash-es"
-
-export function normalizeConfidence(score: number): number {
-  return clamp(score, 0, 1)
+function greet(id: string) {
+  const name = Users.find(id).name catch "guest"
+  return `Hello, ${name}`
 }
+// string!!Users
 ```
 
 ```ts [Effect]
-import { clamp } from "lodash-es"
+class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
+  id: Schema.String
+}) {}
 
-export function normalizeConfidence(score: number): number {
-  return clamp(score, 0, 1)
-}
+class Users extends Context.Service<Users, {
+  find(id: string): Effect.Effect<User, UserNotFound>
+}>()("app/Users") {}
+
+const greet = Effect.fn("greet")(function* (id: string) {
+  const users = yield* Users
+  const user = yield* users.find(id).pipe(
+    Effect.catchTag("UserNotFound", () => Effect.succeed({ name: "guest" }))
+  )
+  return `Hello, ${user.name}`
+})
 ```
 
 :::
 
-For ordinary code, there is nothing to learn or rewrite—the three versions are identical.
+The comment under `greet` is the type your editor shows. `string!!Users` is VibeLang's spelling of `Effect<string, never, Users>`: `greet` returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type.
 
-### Typesafe Errors as Values
+Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber.
 
-One of VibeLang's only changes to TypeScript is that errors are treated as strongly typed values that must be handled.
+### Retries, timeouts, and concurrency
 
-:::code-group{syncKey=""}
+:::code-group
 
-```ts [VibeLang]
-class NotFound extends Error {
-  constructor(readonly id: string) {
-    super(`User not found: ${id}`)
+```vibe [VibeLang]
+error ApiError { status: number }
+
+service Users {
+  name(id: string): string!ApiError
+}
+
+function nameOf(id: string) {
+  return Users.name(id)
+    |> retry(%, Schedule.exponential("100 millis"))
+    |> timeout(%, "2 seconds")
+    catch "unknown"
+}
+
+export function names(ids: ReadonlyArray<string>) {
+  const all = forEach(ids, nameOf, { concurrency: 8 })
+  log(`Loaded ${all.length} names`)
+  return all
+}
+```
+
+```ts [Effect]
+import { Context, Effect, Schedule, Schema } from "effect"
+
+class ApiError extends Schema.TaggedError<ApiError>()("ApiError", {
+  status: Schema.Number
+}) {}
+
+class Users extends Context.Service<Users, {
+  name(id: string): Effect.Effect<string, ApiError>
+}>()("app/Users") {}
+
+const nameOf = Effect.fn("nameOf")(function* (id: string) {
+  const users = yield* Users
+  return yield* users.name(id).pipe(
+    Effect.retry(Schedule.exponential("100 millis")),
+    Effect.timeout("2 seconds"),
+    Effect.orElseSucceed(() => "unknown")
+  )
+})
+
+export const names = Effect.fn("names")(function* (ids: ReadonlyArray<string>) {
+  const all = yield* Effect.forEach(ids, nameOf, { concurrency: 8 })
+  yield* Effect.log(`Loaded ${all.length} names`)
+  return all
+})
+```
+
+:::
+
+Both versions compile. The pipe operator `|>` passes `Users.name(id)` to `retry` and `timeout` by name, so they can run it again. `catch "unknown"` removes every failure, including the timeout, so `nameOf` is `string!!Users`. `forEach` with `{ concurrency: 8 }` loads up to eight names at once.
+
+### Hello, VibeLang
+
+Create a project from the starter. You need Node 26 or later and Bun 1.4 or later.
+
+```bash
+npm create vibelang@latest my-app
+cd my-app
+npm run start
+```
+
+The starter's two source files:
+
+:::code-group
+
+```vibe [src/greeting.vibe]
+export error EmptyName
+
+export function greeting(name: string) {
+  if (name.length === 0) throw new EmptyName()
+  return `Hello, ${name}!`
+}
+```
+
+```vibe [src/main.vibe]
+import { EmptyName, greeting } from "./greeting.vibe"
+
+service Greeter {
+  greet(name: string): string!EmptyName
+}
+
+const GreeterLive = Layer.succeed(Greeter, {
+  greet(name: string) { return greeting(name) }
+})
+
+export function main() {
+  provide GreeterLive {
+    Console.log(Greeter.greet("VibeLang"))
+    try {
+      Greeter.greet("")
+    } catch (error) {
+      Console.log(`Recovered from ${error._tag}`)
+    }
   }
 }
-
-function getUser(users: Map<string, User>, id: string) {
-  const user = users.get(id)
-  if (user === undefined) throw new NotFound(id)
-  return user
-}
-
-const user = getUser(users, id) catch (error) {
-  switch (error.constructor) {
-    case NotFound:
-      User.guest()
-  }
-}
-```
-
-```ts [TypeScript]
-class NotFound extends Error {
-  constructor(readonly id: string) {
-    super(`User not found: ${id}`)
-  }
-}
-
-function getUser(users: Map<string, User>, id: string) {
-  const user = users.get(id)
-  if (user === undefined) throw new NotFound(id)
-  return user
-}
-
-let user: User
-try {
-  user = getUser(users, id)
-} catch (error) {
-  if (error instanceof NotFound) user = User.guest()
-  else throw error
-}
-// NotFound is still invisible in getUser's type.
-```
-
-```ts [Effect]
-import { Effect } from "effect"
-
-class NotFound extends Error {
-  constructor(readonly id: string) {
-    super(`User not found: ${id}`)
-  }
-}
-
-function getUser(users: Map<string, User>, id: string) {
-  const user = users.get(id)
-  return user === undefined
-    ? Effect.fail(new NotFound(id))
-    : Effect.succeed(user)
-}
-
-const user = getUser(users, id).pipe(
-  Effect.catchAll(() => Effect.succeed(User.guest())),
-)
 ```
 
 :::
 
-The compiler sees `throw new NotFound(id)` and infers both the `User` success type and the `NotFound` failure type from the function body. The caller must propagate or handle that failure. Inside `catch`, the error is a typed value, so the `switch` must cover the complete failure set.
+`npm run start` compiles the project and runs `main`, which prints:
 
-There is no wrapper value, generator ceremony, or universal effect interpreter. These are still eager functions with ordinary stacks.
+```text
+Hello, VibeLang!
+Recovered from EmptyName
+```
 
-### Dependencies in the function signature
+[Getting Started](/013-getting-started) walks through the starter, and [Installation](/getting-started/004-installation) covers editors and existing projects.
 
-VibeLang uses an Effect-inspired context package instead of adding dependency-injection syntax. Its API looks like an ordinary library, but the compiler tracks every accessed service in the function's type signature.
+### TypeScript stays one step away
 
-:::code-group{syncKey=""}
+VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and every Effect library work unchanged. TypeScript code calls VibeLang functions as ordinary Effect functions.
 
-```ts [VibeLang]
-import { Context } from "vibelang/context"
+When you need plain TypeScript, `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
-abstract class Clock extends Context {
-  abstract now(): Date
+```vibe
+function slug(title: string) {
+  return sync((title) => {
+    // Plain TypeScript: nothing in here is an Effect.
+    let s = title.trim().toLowerCase()
+    s = s.replaceAll(/[^a-z0-9]+/g, "-")
+    return s
+  }, title)
 }
-
-abstract class AuditLog extends Context {
-  abstract write(event: AuditEvent): void throws AuditError
-}
-
-function issueToken(user: User) {
-  const clock = Clock.context()
-  const audit = AuditLog.context()
-  const token = Token.create(user, clock.now())
-  try audit.write({ type: "token.issued", userId: user.id })
-  return token
-}
-
-// Inferred context: Clock | AuditLog
+// string!!
 ```
-
-```ts [TypeScript]
-interface Clock {
-  now(): Date
-}
-
-interface AuditLog {
-  write(event: AuditEvent): void
-}
-
-function issueToken(
-  user: User,
-  clock: Clock,
-  audit: AuditLog,
-): Token {
-  const token = Token.create(user, clock.now())
-  audit.write({ type: "token.issued", userId: user.id })
-  return token
-}
-```
-
-```ts [Effect]
-import { Context, Effect } from "effect"
-
-class Clock extends Context.Tag("Clock")<
-  Clock,
-  { readonly now: () => Date }
->() {}
-
-class AuditLog extends Context.Tag("AuditLog")<
-  AuditLog,
-  { readonly write: (event: AuditEvent) => Effect.Effect<void, AuditError> }
->() {}
-
-function issueToken(
-  user: User,
-): Effect.Effect<Token, AuditError, Clock | AuditLog> {
-  return Effect.gen(function* () {
-    const clock = yield* Clock
-    const audit = yield* AuditLog
-    const token = Token.create(user, clock.now())
-    yield* audit.write({ type: "token.issued", userId: user.id })
-    return token
-  })
-}
-```
-
-:::
-
-The inherited `context()` method is compiler-aware. It adds the capability class to the function's inferred context channel, and that requirement propagates through ordinary calls until a context or layer provides it. The function stays eager and callers never pass a context argument by hand.
-
-### Comptime can produce real types
-
-VibeLang can run deterministic code during compilation—and the result can be a real TypeScript type. Here, a project-defined comptime function turns a tracked model file into a type the rest of the program uses normally.
-
-:::code-group{syncKey=""}
-
-```ts [VibeLang]
-import { comptime } from "vibelang:comptime"
-
-const model = comptime(JSON.parse(embed("./account.model.json")))
-const Account = comptime(deriveType(model))
-
-function displayName(account: Account) {
-  return `${account.name} (${account.plan})`
-}
-```
-
-```ts [TypeScript]
-// TypeScript cannot return a type from an ordinary build-time function.
-// Declare this by hand or add a separate code-generation step.
-type Account = {
-  id: string
-  name: string
-  plan: "free" | "pro"
-}
-
-function displayName(account: Account) {
-  return `${account.name} (${account.plan})`
-}
-```
-
-```ts [Effect]
-import { Schema } from "effect"
-
-const Account = Schema.Struct({
-  id: Schema.String,
-  name: Schema.String,
-  plan: Schema.Literal("free", "pro"),
-})
-type Account = typeof Account.Type
-
-function displayName(account: Account) {
-  return `${account.name} (${account.plan})`
-}
-```
-
-:::
-
-Effect can derive a type from an Effect schema, but the schema must become the source of truth. VibeLang comptime can execute an ordinary, project-defined derivation and return a type. The compiler tracks every input, caches the result, and reports a compile error if evaluation depends on runtime state.
-
-### Files become typed modules
-
-Compiler-known files participate in the same type system and incremental build graph. VibeLang takes the direct-import ergonomics of [Bun's loaders](https://bun.sh/docs/bundler/loaders) and extends them with compile-time types and dependency tracking.
-
-#### JSON that keeps its literals
-
-Ordinary TypeScript can import JSON, but values such as strings and numbers are widened. VibeLang's const form preserves the file as a deeply readonly literal value.
-
-:::code-group{syncKey=""}
-
-```ts [VibeLang]
-import config from "./agent.config.json" as const
-
-// "reasoning" — not string
-type Model = typeof config.model
-// readonly ["search", "write"] — not string[]
-type Tools = typeof config.tools
-```
-
-```ts [TypeScript]
-// agent.config.ts
-// Move the data into TypeScript to keep its exact values.
-export const config = {
-  model: "reasoning",
-  tools: ["search", "write"],
-} as const
-```
-
-```ts [Effect]
-// Effect does not change TypeScript's JSON import inference.
-// The exact-value workaround is still a TypeScript source file.
-export const config = {
-  model: "reasoning",
-  tools: ["search", "write"],
-} as const
-```
-
-:::
-
-#### Markdown is a prompt module
-
-A Markdown file imports as a string at compile time. It can go straight into a model request without runtime filesystem access, a raw-loader suffix, or a declaration file.
-
-:::code-group{syncKey=""}
-
-```ts [VibeLang]
-import systemPrompt from "./system.md"
-
-const response = await model.generate({
-  system: systemPrompt,
-  prompt: question,
-})
-```
-
-```ts [TypeScript]
-import { readFile } from "node:fs/promises"
-
-const systemPrompt = await readFile(
-  new URL("./system.md", import.meta.url),
-  "utf8",
-)
-
-const response = await model.generate({
-  system: systemPrompt,
-  prompt: question,
-})
-```
-
-```ts [Effect]
-import { FileSystem } from "@effect/platform"
-import { Effect } from "effect"
-
-const response = Effect.gen(function* () {
-  const fs = yield* FileSystem.FileSystem
-  const system = yield* fs.readFileString("./system.md")
-  return yield* model.generate({ system, prompt: question })
-})
-```
-
-:::
-
-#### Rust and Zig import like source modules
-
-Existing Node-API packages built with napi-rs remain ordinary npm dependencies. Local Rust and Zig sources can also be imported directly; VibeLang drives the foreign compiler and generates checked bindings for the selected TypeScript, native, or Wasm target.
-
-:::code-group{syncKey=""}
-
-```ts [VibeLang]
-import { createCanvas } from "@napi-rs/canvas"
-import { rank } from "./rank.rs"
-import { tokenize } from "./tokenize.zig"
-
-const canvas = createCanvas(512, 512)
-const ranked = rank(tokenize(source))
-```
-
-```ts [TypeScript]
-import { createCanvas } from "@napi-rs/canvas"
-import { rank } from "./native/rank.js"
-
-// napi-rs packages work, but local Rust needs a Cargo build,
-// a generated .node binary, a JS wrapper, and declarations.
-const canvas = createCanvas(512, 512)
-const ranked = rank(tokens)
-```
-
-```ts [Effect]
-import { Effect } from "effect"
-import { rank } from "./native/rank.js"
-
-// Effect can wrap the native call, but it does not build the binding.
-const ranked = Effect.try({
-  try: () => rank(tokens),
-  catch: (cause) => new NativeError({ cause }),
-})
-```
-
-:::
-
-This follows Bun's proven loader model: text files can import as strings, `.node` files use its N-API loader, and [Node-API](https://bun.sh/docs/runtime/node-api) is its stable native boundary. VibeLang adds generated source bindings and records source locations, toolchain versions, and dependency edges so diagnostics, watch mode, and remote caching stay correct across every format.
-
-### Concurrency stays structured
-
-Async functions remain ordinary async functions. A structured join owns its child work and combines success values and typed failure sets without introducing a fiber runtime.
-
-:::code-group{syncKey=""}
-
-```ts [VibeLang]
-const [profile, activity] = try await.all(
-  loadProfile(userId),
-  loadActivity(userId),
-)
-```
-
-```ts [TypeScript]
-const [profile, activity] = await Promise.all([
-  loadProfile(userId),
-  loadActivity(userId),
-])
-// A rejection does not cancel or join the remaining work.
-```
-
-```ts [Effect]
-import { Effect } from "effect"
-
-const load = Effect.all([
-  loadProfile(userId),
-  loadActivity(userId),
-])
-```
-
-:::
-
-TypeScript's `Promise.all` rejects early while sibling work may continue. VibeLang's join cancels remaining children on failure and waits for their cleanup, so work cannot silently outlive the code responsible for it. Effect provides the same structured guarantee through Effect values and its fiber runtime.
-
-### Make execution durable where it matters
-
-Durability is explicit. Actions define persistence boundaries, while the compiler lowers functions passed to `durable(...)` into typed, resumable execution plans.
-
-:::code-group{syncKey=""}
-
-```ts [VibeLang]
-import { durable } from "vibelang:flows"
-
-abstract class Research extends Action<
-  (input: ResearchInput) => Report throws ResearchFailed
-> {}
-
-abstract class Publish extends Action<
-  (input: PublishInput) => Publication throws PublishFailed
-> {}
-
-const Release = durable((input: ReleaseInput) => {
-  const report = Research.run({ topic: input.topic })
-  return Publish.run({ report })
-})
-```
-
-```ts [TypeScript]
-async function release(input: ReleaseInput) {
-  const report = await research({ topic: input.topic })
-  return publish({ report })
-}
-
-// Persistence, retries, idempotency, and resume state need a
-// workflow SDK or application-specific storage around this function.
-```
-
-```ts [Effect]
-import { Effect } from "effect"
-
-const release = (input: ReleaseInput) =>
-  Effect.gen(function* () {
-    const report = yield* research({ topic: input.topic })
-    return yield* publish({ report })
-  })
-```
-
-:::
-
-The compiler derives schemas, failure channels, plan edges, and worker contracts. Completed Actions can be replayed after interruption without rerunning work that already succeeded. Effect adds typed composition and retry policies, but an Effect program is not durably journaled across process restarts by itself.
-
-### TypeScript today, native when ready
-
-VibeLang can emit TypeScript for immediate compatibility, then optionally compile portable parts of the same program to native code or Wasm. The compiler checks the complete dependency graph and explains which call, package, or capability still requires the TypeScript runtime.
-
-This gives teams a gradual path to native deployment: start inside an existing TypeScript codebase, move boundaries when they become valuable, and avoid a ground-up rewrite.
 
 ## Features
 
-VibeLang is designed to provide these capabilities out of the box:
+Everything Effect does, VibeLang does, because the output is Effect. The common features have their own syntax:
 
-- **TypeScript compatible** — import TypeScript packages, adopt VibeLang incrementally, and compile back to TypeScript
-- **Optional native compilation** — move from TypeScript to native code gradually instead of committing to a rewrite
-- **Comptime type generation** — derive validators, codecs, and real types without maintaining a parallel schema language
-- **Durable programs** — turn explicit Action and Flow boundaries into persistent, distributed execution plans
-- **Typed failures** — use the same inferred, exhaustive failure model across synchronous and asynchronous functions
-- **Capability-based dependencies** — make databases, clocks, filesystems, and other services visible in function types
-- **Typed asset imports** — load JSON, Markdown, MDX, SQL, GraphQL, Zig, and Rust through compiler-tracked loaders
-- **Structured concurrency** — use typed workers, structured joins, and cancellation without a fiber runtime
+| Effect feature | VibeLang |
+| --- | --- |
+| Effect types | `User!NotFound!Users`: returns `User`, fails with `NotFound`, needs `Users` |
+| Typed errors | `error NotFound { id: string }`, `throw new NotFound({ id })`, `x catch fallback` |
+| Dependency injection | `service Users { ... }`, `provide UsersLive { ... }` |
+| Structured concurrency | `fork`, `join`, `await.all [a(), b()]`, `for concurrent(8) (const id of ids)` |
+| Retries and timeouts | `work() \|> retry(%, policy) \|> timeout(%, "1 second")` |
+| Resource safety | `using conn = connect()`, `finally` |
+| Tracing | `withSpan("checkout") { ... }` |
+| Schema validation | `schema User { id: string; role: "admin" \| "member" }` |
+| Pattern matching | `match (e) { when NotFound: ...; }` |
 
-## Built for tools and agents
+Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages need no syntax of their own: call them as you would in TypeScript. The [cheat sheet](/vibelang-features/115-cheat-sheet) puts every VibeLang form beside the Effect code it replaces.
 
-Reliable agents need more than a tool-call protocol. They need explicit authority, recoverable failures, runtime validation, deterministic compilation, and durable work that can resume after interruption.
+## Built for coding agents
 
-VibeLang makes those concerns part of one language model. Generated TypeScript runs with an explicit function surface, platform access is capability-based, and Actions or Flows add durability only where the program asks for it.
+When coding agents write a growing share of your code, the hard part moves from writing code to trusting it.
 
-Read the [Agent Library guide](/guide/agent-library) or start with [Why VibeLang?](/introduction/why-vibelang).
+- **The compiler checks what agents write.** Every function's type lists what it can fail with and what it needs, and code that breaks a declared type does not compile.
+- **People can review what agents write.** VibeLang code is about half the size of the Effect code it replaces, and it reads as plain TypeScript.
+- **Agents write less.** Fewer tokens per program means less to generate and less context to read back.
 
-## Help shape the language
+## Where to go next
 
-VibeLang is in active design. The syntax, compiler architecture, and core semantics are being specified before the production toolchain is built. This is the stage where concrete feedback can change the language at the lowest cost.
+- **Coming from Effect:** the [cheat sheet](/vibelang-features/115-cheat-sheet) shows every change, and [VibeLang for Effect users](/vibelang-features/114-vibelang-for-effect-users) explains the rules.
+- **New to Effect:** start with [Welcome](/001-onboarding), then [The Effect Type](/getting-started/003-the-effect-type) and [Expected Errors](/error-management/014-expected-errors).
+- **Set up a project or editor:** [Set up VibeLang](/setup) covers new and existing projects, Vite, React, Vue, Svelte, VS Code, Neovim, and Zed.
 
-Review the [specification](/specification/) or join the project on [GitHub](https://github.com/smithersai/vibelang).
+VibeLang is v0. The language will change in major, breaking ways, and it is not ready for production use. Version 0.0.1 is tested on macOS on Apple silicon and on Linux on x64.
 
 </article>

@@ -1,0 +1,116 @@
+---
+title: "Error Messages"
+description: "Schema error messages work as in Effect. A SchemaError combines a readable message with a structured issue, including paths into nested values. Customize messages at the node that fails so users..."
+---
+
+# Error Messages
+
+Schema error messages work as in Effect. A `SchemaError` combines a readable message with a structured issue, including paths into nested values. Customize messages at the node that fails so users receive an explanation appropriate to that field. Plain builders follow the [trusted call rules](/schema/085-introduction#configuring-compiler-prerequisites).
+
+## Understanding default validation messages
+
+```vibe
+const Package = Schema.Struct({
+  label: Schema.String,
+  pieces: Schema.Finite
+})
+
+function explainPackage(input: unknown) {
+  try {
+    Schema.decodeUnknownEffect(Package)(input, { errors: "all" })
+    return "Accepted"
+  } catch (error) {
+    return error.message
+  }
+}
+// { label: 7, pieces: "several" } reports both expected types and their paths.
+```
+
+A base-type mismatch reports what type was expected. An absent required field reports `Missing key`; a nested mismatch adds a key or index path. `errors: "all"` collects independent issues instead of stopping at the first. Checks run only after their underlying type is accepted.
+
+## Identifying schemas in error output
+
+```vibe
+const Tracking = Schema.String.annotate({ identifier: "TrackingReference" })
+const Count = Schema.Finite.annotate({ expected: "a finite package count" })
+const LabeledPackage = Schema.Struct({ tracking: Tracking, count: Count }).annotate({
+  identifier: "LabeledPackage"
+})
+```
+
+An identifier replaces a generic expected-value description with a stable domain name. `expected` supplies readable expected-value text, while titles can also help describe unnamed nodes. Naming the whole struct changes errors for the struct itself; an invalid nested tracking value still reports the tracking schema's own identity.
+
+## Customizing messages for checks and conversions
+
+```vibe
+const WholeCount = Schema.String.annotate({
+  message: "Enter the count as text"
+}).pipe(
+  Schema.decodeTo(
+    Schema.Int.annotate({ message: "Use a whole package count" }),
+    {
+      decode: SchemaGetter.transformEffect((text) => {
+        if (text.trim() === "" || !Number.isFinite(Number(text))) {
+          throw new SchemaIssue.InvalidValue({ message: "Count is not numeric" })
+        }
+        return Number(text)
+      }),
+      encode: SchemaGetter.transform((count) => String(count))
+    }
+  )
+)
+const TrackingText = Schema.String.check(
+  Schema.isMinLength(4, { message: "Reference needs at least four characters" }),
+  Schema.isMaxLength(24, { message: "Reference is too long" })
+)
+```
+
+The conversion has three failure sites: the encoded string, the conversion function, and the decoded integer check. Each message targets its own stage. For checks, pass a message to the check constructor; applying `.annotate({ message })` after several checks targets the last check rather than replacing every earlier failure.
+
+## Assigning messages to scalar and compound values
+
+```vibe
+const Contact = Schema.String.annotate({ message: "Contact must be text" })
+const Delivery = Schema.Union([
+  Schema.Literal("collect"), Schema.Literal("courier")
+]).annotate({ message: "Choose collection or courier" })
+const Orders = Schema.Struct({
+  contacts: Schema.Array(Contact).check(
+    Schema.isMinLength(1, { message: "Add a delivery contact" })
+  ),
+  delivery: Delivery
+})
+
+function explainOrders(input: unknown) {
+  try {
+    Schema.decodeUnknownEffect(Orders)(input, { errors: "all" })
+    return "Accepted"
+  } catch (error) {
+    return error.message
+  }
+}
+```
+
+A scalar message replaces a mismatch at that scalar. A union message summarizes failure of all alternatives, and a collection check explains failure of the collection's size. Nested failures retain their own messages and paths; a message on an outer node does not automatically replace every inner issue.
+
+## Explaining missing fields
+
+```vibe
+const Dispatch = Schema.Struct({
+  tracking: Schema.String.annotateKey({
+    messageMissingKey: "Supply a tracking reference"
+  })
+})
+const Coordinates = Schema.Tuple([
+  Schema.Finite.annotateKey({ messageMissingKey: "Supply longitude" }),
+  Schema.Finite.annotateKey({ messageMissingKey: "Supply latitude" })
+])
+
+function readCoordinates(input: unknown) {
+  return Schema.decodeUnknownEffect(Coordinates)(input, { errors: "all" })
+}
+```
+
+`messageMissingKey` belongs to a field or tuple position and explains absence. An explicitly present wrong value still uses its value schema's message. Keep those cases separate when a form needs different instructions for a missing answer and an invalid answer.
+
+[Upstream page](https://effect.website/docs/v4/schema/error-messages)

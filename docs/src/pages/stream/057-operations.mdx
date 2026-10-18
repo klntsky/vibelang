@@ -1,0 +1,246 @@
+---
+title: "Operations"
+description: "Stream operators build a new description of how to process a source. Keep transformations that only compute values synchronous, and use the effectful variants when callbacks call services, fail,..."
+---
+
+# Operations
+
+Stream operators build a new description of how to process a source. Keep transformations that only compute values synchronous, and use the effectful variants when callbacks call services, fail, or wait. Stream consumption determines when those callbacks run.
+
+## Observing and taking elements
+
+```vibe
+const observed = Stream.range(10, 18).tap((n) => log(`reading ${n}`))
+const first = observed.take(3)
+const below = observed.takeWhile((n) => n < 13)
+const through = observed.takeUntil((n) => n === 13)
+const last = observed.takeRight(2)
+
+function readFirst() {
+  return first.runCollect() // [10, 11, 12]
+}
+```
+
+`tap` observes elements without replacing them. `takeWhile` excludes the first element that fails its predicate; `takeUntil` includes the first element that satisfies its predicate. `takeRight` needs the source to end before it can emit its final elements, so it does not suit an infinite source.
+
+`takeWhileEffect` and `takeUntilEffect` accept effectful predicates. A tap or predicate that fails also fails the resulting stream.
+
+## Async iteration and manual pulls
+
+```vibe
+service Exporter {
+  write(rows: AsyncIterable<string>): number!Error
+}
+
+function exportRows(source: Stream.Stream<string>) {
+  const rows = source.toAsyncIterableEffect()
+  return Exporter.write(rows)
+}
+```
+
+`toAsyncIterableEffect` captures the current services and returns an async iterable for a TypeScript consumer. `toAsyncIterable` is the direct variant for a source with no service requirements. Iteration failures cross as JavaScript errors, so a foreign consumer must map them back into its declared failure channel; conversion itself does not consume the stream.
+
+```vibe
+function printBatches() {
+  using pull = Stream.range(30, 34).rechunk(2).toPull()
+  while (true) {
+    const batch = Pull.catchDone(() => pull(), () => undefined)
+    if (batch === undefined) break
+    log(batch)
+  }
+}
+```
+
+`toPull` returns an Effect value that yields a non-empty array on each call. Normal completion uses `Cause.Done`, handled here with `Pull.catchDone`; other failures propagate. Keep the pull within its Scope. For ordinary element processing, use Stream's consumers or `for (const element of source) { … }`, which pulls a Stream and closes it when the loop exits. `for...of` also consumes VibeLang producers; async iterables use Stream adaptation or a TypeScript consumer.
+
+## Mapping, flattening, and state
+
+```vibe
+function loadLabel(id: number) {
+  sleep("10 millis")
+  return `item-${id}`
+}
+
+const labels = Stream.make(4, 7, 9).mapEffect((id) => loadLabel(id), { concurrency: 2 })
+const upper = labels.map((label) => label.toUpperCase())
+const signals = labels.map(() => null)
+const words = Stream.make("red green", "blue").map((line) => line.split(" ")).flattenIterable()
+const totals = Stream.make(4, 7, 9).mapAccum(() => 0, (total, n) => {
+  const next = total + n
+  return [next, [next]] as const
+})
+```
+
+`map` is a synchronous value transformation; `mapEffect` accepts VibeLang calls. With concurrency greater than one, `mapEffect` runs multiple callbacks but preserves input order by default; `{ unordered: true }` allows completion order. `flattenIterable` emits each member of each iterable.
+
+`mapAccum` initializes fresh state for each run and returns `[nextState, emittedValues]` per input. The output array can contain zero or more values. Use `mapAccumEffect` when the transition performs Effect work, and `Stream.drain(source)` when work should run but its emitted values should be suppressed.
+
+## Filtering, scanning, and changes
+
+```vibe
+const readings = Stream.make(2, 2, 5, 5, 2)
+const large = readings.filter((n) => n >= 5)
+const changes = readings.changes()
+const running = readings.scan(() => 0, (total, n) => total + n)
+
+function inspect() {
+  return {
+    large: large.runCollect(),     // [5, 5]
+    changes: changes.runCollect(), // [2, 5, 2]
+    running: running.runCollect()  // [0, 2, 4, 9, 14, 16]
+  }
+}
+```
+
+`filter` removes elements without changing the survivors. `scan` emits the initial state and each updated state, while `runFold` returns only the final state. `changes` removes consecutive equal elements; it does not remember every distinct value ever seen. `filterEffect`, `scanEffect`, and `changesWithEffect` support Effect work; `changesWith` accepts a custom synchronous equality test.
+
+## Zipping and indexing
+
+```vibe
+const sizes = Stream.make(5, 8, 13)
+const names = Stream.make("small", "large")
+const pairs = sizes.zip(names)
+const descriptions = Stream.zipWith(sizes, names, (size, name) => `${name}: ${size}`)
+const indexed = names.zipWithIndex()
+const neighbors = sizes.zipWithPreviousAndNext()
+
+function readPairs() {
+  return pairs.runCollect() // [[5, "small"], [8, "large"]]
+}
+```
+
+`zip` pairs by position and ends when either side cannot provide another element. `zipWith` computes a value for each pair; `zipWithIndex` adds a zero-based index. `zipWithPrevious`, `zipWithNext`, and `zipWithPreviousAndNext` represent missing neighbors with `Option.none()`.
+
+For sources with different rates, `zipLatest` waits for both sides to produce, then pairs new arrivals with the other side's latest value. `zipLatestWith` applies a combining callback. Timing determines the pairs, so avoid relying on an exact interleaving in real-time examples.
+
+## Cartesian products
+
+```vibe
+const variants = Stream.cross(Stream.make("linen", "wool"), Stream.make("blue", "gray"))
+const names = Stream.crossWith(
+  Stream.make("linen", "wool"),
+  Stream.make("blue", "gray"),
+  (fabric, color) => `${color} ${fabric}`
+)
+```
+
+`cross` emits every left/right combination. `crossWith` transforms each combination. The right source runs again for each left element, including its effects; an infinite right source prevents progress to the next left element.
+
+## Partitioning and grouping
+
+```vibe
+function partitionReadings() {
+  using branches = Stream.range(10, 19).partition(Filter.fromPredicate((n: number) => n % 2 === 0), { capacity: 2 })
+  const [even, odd] = branches
+  return all([
+    even.runCollect(),
+    odd.runCollect()
+  ], { concurrency: 2 })
+}
+```
+
+`partition` runs one source and returns the passing and failing streams in that order. It is an Effect requiring Scope, so keep both consumers within the lifetime of `using`. Consume branches concurrently: a full, unconsumed branch can backpressure the other branch. `partitionEffect` accepts a `Filter.FilterEffect`, whose successes select the passing branch and failures of its Result select the other branch.
+
+```vibe
+const requests = Stream.make(
+  { region: "west", bytes: 10 },
+  { region: "east", bytes: 20 },
+  { region: "west", bytes: 15 }
+)
+const groups = requests.groupByKey((request) => request.region)
+const summaries = groups.flatMap(([region, group]) =>
+  Stream.fromEffect {
+    const bytes = group.runFold(() => 0, (total, request) => total + request.bytes)
+    return { region, bytes }
+  }, { concurrency: "unbounded" })
+const batches = requests.grouped(2)
+const timedBatches = requests.groupedWithin(20, "1 second")
+```
+
+`groupByKey` produces `[key, groupStream]` pairs. Consume groups concurrently so inactive group consumers do not stall distribution; merged group results have no fixed order. `groupBy` accepts an effectful callback returning `[key, value]`. `grouped` emits arrays of a fixed maximum size, and `groupedWithin` also flushes on elapsed time; both emit a final partial batch.
+
+## Concatenating, merging, and interleaving
+
+```vibe
+const primary = Stream.make("a1", "a2")
+const secondary = Stream.make("b1", "b2", "b3")
+const sequential = primary.concat(secondary)
+const flattened = Stream.make(primary, secondary).flatten()
+const expanded = primary.flatMap((label) => Stream.make(label, label.toUpperCase()))
+const merged = primary.merge(secondary, { haltStrategy: "both" })
+const alternating = primary.interleave(secondary)
+const selected = primary.interleaveWith(secondary, Stream.make(true, false, false, true, false))
+```
+
+`concat` consumes the left source before the right; `flatten` does the same for a stream of streams. `flatMap` builds each inner stream from an element; its default is sequential, while its `concurrency` option runs inner streams together. `switchMap` interrupts the previous inner stream when a new source element arrives, which suits searches where only the newest request matters.
+
+`merge` emits whichever side is ready and preserves each side's order. Its `haltStrategy` accepts `"both"` (the default), `"left"`, `"right"`, or `"either"`; a source failure still fails the merge. Transform each side with `map` before merging when the output needs a common representation.
+
+`interleave` alternates elements and drains the surviving source after the other ends. `interleaveWith` uses a boolean stream: `true` requests left and `false` requests right. It ends when the selector ends or both data streams are exhausted.
+
+## Separators and affixes
+
+```vibe
+const fields = Stream.make("name", "email", "role")
+const separated = fields.intersperse(",")
+const bracketed = fields.intersperseAffixes({ start: "[", middle: ",", end: "]" })
+
+function formatFields() {
+  return bracketed.mkString() // "[name,email,role]"
+}
+```
+
+`intersperse` inserts a separator between adjacent elements. `intersperseAffixes` also emits a prefix and suffix. These are stream elements, so downstream transformations see them too.
+
+## Broadcasting and buffering
+
+```vibe
+function shareReadings() {
+  using copies = Stream.range(1, 12).broadcastN({ n: 2, capacity: 3 })
+  const [totals, audit] = copies
+  return all([
+    totals.runSum(),
+    audit.runForEach((n) => {
+      sleep("10 millis")
+      log(`audit ${n}`)
+    })
+  ], { concurrency: 2 })
+}
+
+const buffered = Stream.range(1, 12).buffer({ capacity: 3 })
+```
+
+`broadcastN` starts one source and gives each subscriber the same elements. With bounded suspending buffers, the slowest subscriber limits progress. Keep the subscribers inside the acquired Scope and run their consumers concurrently.
+
+`buffer` lets upstream run ahead of one consumer. `{ capacity: n }` applies backpressure when full; `"unbounded"` removes that limit. With a numeric capacity, `strategy: "sliding"` drops old queued values and `strategy: "dropping"` rejects new ones, trading completeness for throughput.
+
+## Debouncing and throttling
+
+```vibe
+const bursts = Stream.make("c", "ca", "cat").concat(Stream.fromEffect {
+    sleep("300 millis")
+    return "cats"
+  })
+const settled = bursts.debounce("100 millis")
+const paced = Stream.range(1, 10).rechunk(1).throttle({
+  cost: (batch) => batch.length,
+  units: 2,
+  duration: "1 second",
+  strategy: "shape",
+  burst: 1
+})
+```
+
+`debounce` keeps the latest element during a burst and emits it after the quiet interval. `throttle` uses a token bucket: `units` replenish per `duration`, `cost` charges each internal batch, and `burst` adds bucket capacity. The default `"shape"` strategy waits for tokens; `"enforce"` drops batches that exceed the budget. Rechunk to size one when each element should be charged independently.
+
+## Scheduling delivery
+
+```vibe
+const announcements = Stream.make("prepare", "deploy", "verify").schedule(Schedule.spaced("500 millis"))
+
+function announce() {
+  announcements.runForEach((message) => log(message))
+}
+```
+
+`schedule` controls when elements are delivered according to a Schedule. It preserves the elements and can also end when the schedule ends. Use `Stream.tick` to generate periodic signals, and `Stream.fromEffectSchedule` to repeat an operation under a schedule.

@@ -1,11 +1,44 @@
+import type { LanguageRegistration } from 'shiki'
 import { defineConfig } from 'vocs/config'
+import vibeGrammar from './vibe.tmLanguage.json' with { type: 'json' }
+import { sidebar } from './sidebar.ts'
+
+// The JSON's inferred type is narrower than Shiki's grammar type, hence the cast.
+const vibe: LanguageRegistration = {
+  ...(vibeGrammar as unknown as LanguageRegistration),
+  name: 'vibe',
+  aliases: ['vibelang'],
+}
 
 export default defineConfig({
   accentColor: 'light-dark(#646cff, #a5a9ff)',
+  baseUrl: 'https://vibelang.sh',
+  banner:
+    'VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.',
   checkDeadlinks: true,
+  codeHighlight: {
+    // ```vibe blocks use the grammar from VibeLang's editor extension
+    // (editors/vscode/syntaxes/VibeLang.tmLanguage.json in the language repo).
+    langs: [
+      'bash',
+      'json',
+      'jsx',
+      'lua',
+      'markdown',
+      'md',
+      'mdx',
+      'sh',
+      'svelte',
+      'ts',
+      'tsx',
+      'vue',
+      'zsh',
+      vibe,
+    ],
+  },
   colorScheme: 'light dark',
   description:
-    'VibeLang is TypeScript with typed failures, capability-based dependencies, comptime, and durable execution compiled in.',
+    'VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.',
   editLink: {
     link: 'https://github.com/smithersai/vibelang/edit/main/docs/src/pages/:path',
   },
@@ -15,98 +48,16 @@ export default defineConfig({
     dark: '/logo-dark.svg',
   },
   renderStrategy: 'full-static',
-  sidebar: [
-    {
-      text: 'Introduction',
-      collapsed: false,
-      items: [
-        { text: 'Getting Started', link: '/introduction/getting-started' },
-        { text: 'Philosophy', link: '/introduction/philosophy' },
-        { text: 'Why VibeLang', link: '/introduction/why-vibelang' },
-      ],
-    },
-    {
-      text: 'Guide',
-      collapsed: false,
-      items: [
-        { text: 'Features', link: '/guide/features' },
-        { text: 'Typed Failures', link: '/guide/typed-failures' },
-        { text: 'Capabilities & Layers', link: '/guide/capabilities-and-layers' },
-        { text: 'Optionals', link: '/guide/optionals' },
-        { text: 'Control Flow', link: '/guide/control-flow' },
-        { text: 'Comptime', link: '/guide/comptime' },
-        { text: 'Runtime Validation', link: '/guide/runtime-validation' },
-        { text: 'Asset Imports', link: '/guide/asset-imports' },
-        { text: 'Platforms & Targets', link: '/guide/platforms-and-targets' },
-        { text: 'Concurrency', link: '/guide/concurrency' },
-        { text: 'Durable Execution', link: '/guide/durable-execution' },
-        { text: 'TypeScript Interop', link: '/guide/typescript-interop' },
-        { text: 'Agent Library', link: '/guide/agent-library' },
-      ],
-    },
-    {
-      text: 'Reference',
-      collapsed: false,
-      items: [
-        { text: 'Language Syntax', link: '/reference/language-syntax' },
-        { text: 'Function Channels', link: '/reference/function-channels' },
-        { text: 'Errors', link: '/reference/errors' },
-        { text: 'Capabilities', link: '/reference/capabilities' },
-        { text: 'Comptime', link: '/reference/comptime' },
-        { text: 'Actions & Flows', link: '/reference/actions-and-flows' },
-        { text: 'CLI', link: '/reference/cli' },
-        { text: 'Standard Library', link: '/reference/standard-library' },
-      ],
-    },
-    {
-      text: 'Specification',
-      collapsed: false,
-      items: [
-        { text: 'Status & Conventions', link: '/specification/' },
-        { text: 'Compatibility', link: '/specification/compatibility' },
-        { text: 'Type System', link: '/specification/type-system' },
-        { text: 'Failure Semantics', link: '/specification/failures' },
-        { text: 'Requirements', link: '/specification/requirements' },
-        { text: 'Control Flow', link: '/specification/control-flow' },
-        { text: 'Comptime', link: '/specification/comptime' },
-        { text: 'Durable Execution', link: '/specification/durable-execution' },
-      ],
-    },
-  ],
+  sidebar,
   socials: [
     { icon: 'github', link: 'https://github.com/smithersai/vibelang' },
   ],
   title: 'VibeLang',
   titleTemplate: '%s | VibeLang',
   topNav: [
-    {
-      text: 'Guide',
-      link: '/introduction/getting-started',
-      match: (path) =>
-        Boolean(path?.startsWith('/introduction') || path?.startsWith('/guide')),
-    },
-    {
-      text: 'Reference',
-      link: '/reference/language-syntax',
-      match: '/reference',
-    },
-    {
-      text: 'Specification',
-      link: '/specification/',
-      match: '/specification',
-    },
-    {
-      text: 'Design draft',
-      items: [
-        {
-          text: 'Decision ledger',
-          link: 'https://github.com/smithersai/vibelang/blob/main/docs/DECISIONS.md',
-        },
-        {
-          text: 'Roadmap',
-          link: '/introduction/getting-started#project-status',
-        },
-      ],
-    },
+    { text: 'Welcome', link: '/001-onboarding' },
+    { text: 'Guides', link: '/013-getting-started' },
+    { text: 'Cheat sheet', link: '/vibelang-features/115-cheat-sheet' },
+    { text: 'Specification', link: 'https://effeck.dev/spec/' },
   ],
 })

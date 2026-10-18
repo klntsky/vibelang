@@ -1,0 +1,212 @@
+---
+title: "Pattern matching with match and is"
+description: "match picks the first arm whose pattern fits a value. is tests a value against one pattern. Both come from the TC39 pattern matching proposal (stage 1). They compile to plain conditionals, so..."
+---
+
+# Pattern matching with match and is
+
+`match` picks the first arm whose pattern fits a value. `is` tests a value against one pattern. Both come from the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1). They compile to plain conditionals, so TypeScript narrows the value in each arm, and an arm can call Effect functions.
+
+## match
+
+```vibe
+error NotFound { id: string }
+error Timeout
+error Denied { user: string; reason: string }
+
+type Failure = NotFound | Timeout | Denied
+
+function describe(failure: Failure) {
+  return match (failure) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+    when Denied and { reason: "root" or "admin" }: "denied by policy";
+    when Denied: `denied ${failure.user}`;
+  }
+}
+```
+
+Each arm is `when pattern: expression;`. Arms are tried in order, and the first match gives the value. A `default: expression;` arm matches anything and must come last. `match` is an expression, so it can appear after `return`, in a `const` initializer, or as an argument.
+
+An arm is one expression. Use `do { }` for several statements; its value is its last statement's:
+
+```vibe
+function retryDelay(failure: Failure) {
+  return match (failure) {
+    when Timeout: do {
+      Console.log("timed out")
+      "1 second"
+    };
+    default: "0 millis";
+  }
+}
+```
+
+A function named `match` still works. Only `match (value) {` followed by `when`, `default`, or `}` starts a match.
+
+## Patterns
+
+| Pattern | Matches | Example |
+| --- | --- | --- |
+| Literal | An equal string, number, boolean, `null`, or `undefined` | `when 404:` |
+| Binding | Anything, and names it with `let`, `const`, or `var` | `when let other:` |
+| Array | An array of that length; `...` allows more | `when [let first, ...let rest]:` |
+| Object | A value with those properties; `{ let id }` binds `id` | `when { status: 200, let body }:` |
+| Matcher | An instance of a class, or what a custom matcher accepts | `when NotFound:` |
+| Extractor | A matcher's values, matched by the list in parentheses | `when Option.Some(let user):` |
+| `and`, `or`, `not` | Both, either, or neither | `when "a" or "e":` |
+| Guard | A condition that is true | `when [let n] and if (n > 0):` |
+
+```vibe
+function shape(value: ReadonlyArray<number> | { kind: string; size?: number }) {
+  return match (value) {
+    when []: "empty";
+    when [let only]: `one: ${only}`;
+    when [let first, ...let rest]: `${first} then ${rest.length} more`;
+    when { kind: "box", let size }: `box of ${size}`;
+    when { kind: "point", ...let others }: `point with ${Object.keys(others).length} more keys`;
+    default: "other";
+  }
+}
+```
+
+An object pattern checks only the properties it names, and `...let rest` collects the others. A property that is not a valid name needs quotes, `{ "content-type": let type }`, and a computed key must be a name or a literal, `{ [key]: let value }`.
+
+## Option, Exit, Result, and primitives
+
+These matchers compile to the module's own test, so the bindings have exact types:
+
+| Matcher | Test | Extracts |
+| --- | --- | --- |
+| `Option.Some`, `Option.None` | `Option.isSome`, `Option.isNone` | the value |
+| `Exit.Success`, `Exit.Failure` | `Exit.isSuccess`, `Exit.isFailure` | the value, the cause |
+| `Result.Success`, `Result.Failure` | `Result.isSuccess`, `Result.isFailure` | the success, the failure |
+| `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | `typeof` | the value |
+
+```vibe
+function greeting(name: Option.Option<string>) {
+  return match (name) {
+    when Option.Some(let n): `Hello, ${n}`;
+    when Option.None: "Hello";
+  }
+}
+
+function report(id: string) {
+  const outcome = exit(getUser(id))
+  return match (outcome) {
+    when Exit.Success(let user): user.name;
+    when Exit.Failure(let cause): Cause.pretty(cause);
+  }
+}
+
+function getUser(id: string): { name: string }!NotFound {
+  if (id === "") throw new NotFound({ id })
+  return { name: "Ada" }
+}
+```
+
+## Errors and custom matchers
+
+An `error` class matches its own instances, by `instanceof`, so two classes with the same tag stay distinct. As an extractor it gives the instance: `when NotFound(let error):`. Any other class matches by `instanceof` as well.
+
+A value with a `[customMatcher]` method decides for itself. `customMatcher` is the proposal's `Symbol.customMatcher`:
+
+```vibe
+const Even = {
+  [customMatcher](subject: unknown) {
+    return typeof subject === "number" && subject % 2 === 0
+  }
+}
+
+function parity(n: number) {
+  return match (n) {
+    when Even: "even";
+    default: "odd";
+  }
+}
+```
+
+For an extractor, the method receives `{ matchType: "extractor" }` as its second argument and returns `false` or the values to match against the list. Any other value matches when it is equal, with `NaN` matching `NaN`.
+
+## Combining patterns
+
+`and` needs both patterns, `or` either, and `not` neither. A guard, `if (condition)`, tests any expression and sees the bindings before it:
+
+```vibe
+function classify(job: { status: string; attempts: number }) {
+  return match (job) {
+    when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
+    when { status: "failed" }: "retry";
+    when { status: not ("done" or "cancelled") }: "running";
+    default: "leave";
+  }
+}
+```
+
+`and`, `or`, and `not` cannot share a level: write `(a and b) or c`, not `a and b or c` (EK4705). An `or` or `not` pattern cannot bind names yet (EK4702).
+
+## is
+
+`value is pattern` is `true` when the pattern matches. It binds as tightly as `instanceof`:
+
+```vibe
+function isRetryable(failure: Failure) {
+  return failure is Timeout or Denied
+}
+```
+
+In the condition of an `if` or a `while`, joined by `&&`, the pattern can bind names. They are in scope in the rest of the condition and in the `if`'s first branch or the loop's body:
+
+```vibe
+function firstFailure(id: string) {
+  const outcome = exit(getUser(id))
+  if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) {
+    return Cause.pretty(cause)
+  }
+  return "ok"
+}
+```
+
+Elsewhere, an `is` with bindings is EK4703.
+
+## Exhaustiveness
+
+A match without a `default` arm whose value is a finite union must handle every case: literals, `null`, `undefined`, `error` classes, `Option`, `Exit`, `Result`, and other objects with a literal `_tag`. A missing case is a compile error:
+
+```vibe
+// expect-error: EK4701
+type Phase = "draft" | "review" | "published"
+
+function phaseLabel(phase: Phase) {
+  return match (phase) {
+    when "draft": "Draft";
+    when "published": "Published";
+  }
+}
+```
+
+```text
+error EK4701: This match does not handle every case of Phase: "review" is left.
+```
+
+For any other type, a match without `default` that no arm fits throws a `TypeError` when it runs, as the proposal specifies.
+
+## Errors
+
+| Code | Cause | Fix |
+| --- | --- | --- |
+| EK4701 | A match without `default` misses a case of a finite union | Add an arm for each case left, or a `default` arm |
+| EK4702 | A binding inside an `or` or `not` pattern | Bind outside the combinator, or give each alternative its own arm |
+| EK4703 | An `is` with bindings outside an `if` or `while` condition | Move the test into the condition, or use `match` |
+| EK4704 | A regular expression pattern, a relational pattern such as `< 10`, or a computed key other than a name or a literal | Use a guard: `and if (n < 10)` |
+| EK4705 | `and`, `or`, and `not` at one level without parentheses | Add parentheses |
+
+## Not yet supported
+
+- Array patterns match arrays only, not other iterables.
+- Object patterns do not match primitives, so `{ length: let n }` does not match a string.
+- An extractor with a custom matcher types its bindings loosely; a class or a listed matcher types them exactly.
+- `is` bindings are not in scope in an `else` branch or after the statement.
+- A subject such as `user.role` is read once per test, not once, so a getter there runs more than once. Assign it to a `const` first when that matters.
+- A match inside a larger expression runs its arms in their own function, so an arm there cannot `yield`. A match after `return` or as a statement can.
+- `async match` and the proposal's regular expression and relational patterns.
