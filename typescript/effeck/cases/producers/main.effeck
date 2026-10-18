@@ -168,7 +168,7 @@ function outerBreak() {
 
 function big() {
   let maxDepth = 0
-  hooks.onResume = (fiber) => {
+  hooks.onResume = (fiber): void => {
     maxDepth = Math.max(maxDepth, fiber._stack.length)
   }
   let sum = 0

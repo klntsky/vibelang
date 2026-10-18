@@ -1,7 +1,7 @@
 // A function that declares const or let, and runs no Effect, compiles to
 // plain JavaScript (D10), so Array.prototype.map can call it. Only a using
 // declaration makes a function compile to frames (D54).
-function double(n: number) {
+function double(n: number): number {
   const twice = n * 2
   let result = twice
   return result

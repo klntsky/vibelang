@@ -6,7 +6,7 @@ abstract class Settings {
 
 const order: string[] = []
 
-function double(n: number) {
+function double(n: number): number {
   return n * 2
 }
 

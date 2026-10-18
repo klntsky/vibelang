@@ -5,6 +5,6 @@ export function double(n: number) {
   return n * 2
 }
 
-export function square(n: number) {
+export function square(n: number): number {
   return n * n
 }

@@ -182,7 +182,7 @@ class Counter {
   }
 }
 
-const arrow = (name: string) => {
+const arrow = (name: string): number!! => {
   using r = resource(name)
   return r.length
 }

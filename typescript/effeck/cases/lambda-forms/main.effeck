@@ -7,39 +7,40 @@ import { apply, attach, find, register, start } from "./helpers.ts"
 
 // No call in the body: overload 1 accepts the plain form.
 function plainBody() {
-  return register((x) => x + 1)
+  return register((x): number => x + 1)
 }
 
 // A plain call: still overload 1.
 function plainCall() {
-  return register((x) => Math.max(x, 0))
+  return register((x): number => Math.max(x, 0))
 }
 
 // The body runs an Effect, which a plain function cannot do, so overload 1
 // rejects the lambda and overload 2 accepts it as an Effect function.
 function effectCall() {
-  return register((x) => find(String(x)).id.length)
+  return register((x): number!! => find(String(x)).id.length)
 }
 
 // The Effect callback comes first, so it wins even for a body with no call.
 function effectFirst() {
-  return attach((x) => x + 1)
+  return attach((x): number!! => x + 1)
 }
 
-// A program comes first: a lambda with no parameters is a program there.
+// A program comes first: firstProgram, a lambda with no parameters, is a
+// program because its annotation is an Effect.
 function programFirst() {
-  return start(() => Math.max(1, 2))
+  return start(firstProgram)
 }
 
 // No expected type: the lambda is plain because its body runs nothing (D10).
 function bare() {
-  const f = apply((x: number) => Math.max(x, 0))
+  const f = apply((x: number): number => Math.max(x, 0))
   return f(-3)
 }
 
 // No expected type and a body that runs an Effect: an Effect function.
 function bareEffect() {
-  const f = apply((id: string) => find(id).id)
+  const f = apply((id: string): string!! => find(id).id)
   return f("z")
 }
 
@@ -56,6 +57,8 @@ function traversals(ids: ReadonlyArray<string>) {
   const found = Effect.forEach(trimmed, (id) => find(id).id)
   return found.join("")
 }
+
+const firstProgram: number!! = () => Math.max(1, 2)
 
 // expect-result: {"plainBody":"plain 2","plainCall":"plain 1","effectCall":"effect 1","effectFirst":"effect 2","programFirst":"program 2","bare":0,"bareEffect":"z","traversals":"ab","returned":5}
 export function main() {

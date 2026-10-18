@@ -16,7 +16,7 @@ abstract class Users {
   abstract find(id: string): Effect<User, UserNotFound, never>
 }
 
-function double(n: number) {
+function double(n: number): number {
   return n * 2
 }
 
