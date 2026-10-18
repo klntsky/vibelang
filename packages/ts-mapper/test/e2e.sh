@@ -37,7 +37,7 @@ step "go test ./internal/effeckmapper"
 
 step "forms table matches its generator"
 [ -d "$root/docs/tools/node_modules" ] || (cd "$root/docs/tools" && bun install --silent)
-sh "$root/scripts/check-forms-table.sh"
+bash "$root/scripts/check-forms-table.sh"
 
 step "build bin/effeck-mapper"
 (cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$package/bin/effeck-mapper" ./cmd/effeck-mapper)
