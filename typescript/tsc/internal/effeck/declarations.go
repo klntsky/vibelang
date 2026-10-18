@@ -43,12 +43,18 @@ func preludeNameVisible(c *checker.Checker, entityName *ast.Node, symbol *ast.Sy
 	if preludeSymbol(c, state, file, name) != symbol {
 		return false
 	}
+	recordTypeUse(state, file, first)
+	return true
+}
+
+// recordTypeUse records that the declaration file of file writes identifier,
+// a prelude name or effect root export, so transformDeclarations imports it.
+func recordTypeUse(state *preludeState, file *ast.SourceFile, identifier *ast.Node) {
 	if state.typeUses[file] == nil {
 		state.typeUses[file] = map[string]bool{}
 	}
-	state.typeUses[file][name] = true
-	state.typeRefs[first] = true
-	return true
+	state.typeUses[file][identifier.Text()] = true
+	state.typeRefs[identifier] = true
 }
 
 // transformDeclarations returns the transform for the declaration file of a
@@ -64,6 +70,7 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 		// without an entity-visibility callback. Qualify their bang references
 		// directly, retaining the same public spelling as inferred signatures.
 		bang := &bangDeclarationRewriter{types: map[*ast.Node]*ast.Node{}}
+		keys := &computedKeyRewriter{keys: map[string]computedKey{}, bound: map[string]bool{}}
 		r.WithChecker(func(c *checker.Checker) {
 			if namespace := preludeSymbol(c, preludeStateOf(c), sourceFile, "Effect"); namespace != nil {
 				if effect := effectInterfaceOfModule(c, namespace); effect != nil {
@@ -91,6 +98,9 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 						bang.types[first] = c.TypeToTypeNode(c.GetTypeFromTypeNode(n), n, nodebuilder.FlagsNoTruncation|nodebuilder.FlagsUseFullyQualifiedType, nil)
 					}
 				}
+				if ast.IsComputedPropertyName(n) {
+					keys.add(c, sourceFile, n.Expression())
+				}
 				return n.ForEachChild(visit)
 			}
 			sourceFile.AsNode().ForEachChild(visit)
@@ -99,11 +109,21 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 		declarations = bang.TransformSourceFile(declarations)
 		rewriter.NewTransformer(rewriter.visit, resolver.EmitContext())
 		declarations = rewriter.TransformSourceFile(declarations)
+		if len(keys.keys) > 0 {
+			for _, statement := range declarations.Statements.Nodes {
+				forEachTopLevelName(statement, func(name string) { keys.bound[name] = true })
+			}
+			keys.NewTransformer(keys.visit, resolver.EmitContext())
+			declarations = keys.TransformSourceFile(declarations)
+		}
 
 		var names []string
 		var refs map[*ast.Node]bool
 		r.WithChecker(func(c *checker.Checker) {
 			state := preludeStateOf(c)
+			for _, identifier := range keys.written {
+				recordTypeUse(state, sourceFile, identifier)
+			}
 			for name := range state.typeUses[sourceFile] {
 				names = append(names, name)
 			}
@@ -290,4 +310,90 @@ func (tx *bangDeclarationRewriter) visit(node *ast.Node) *ast.Node {
 		}
 	}
 	return tx.Visitor().VisitEachChild(node)
+}
+
+// computedKeyRewriter writes a computed key that the source took from the
+// prelude or effect's root as the source wrote it, and records its first name
+// for import:
+//
+//	// main.effeck                               // main.d.ts
+//	export const Even = {                        import type { customMatcher } from "effeck-runtime";
+//	  [customMatcher](x: unknown) { … }          export declare const Even: {
+//	}                                                [customMatcher](x: unknown): boolean;
+//	                                             };
+//
+// The node builder prints a unique symbol key by its declared name alone,
+// [customMatcher] or [NodeInspectSymbol], because no scope it searches holds
+// the prelude, and it never asks preludeNameVisible.
+type computedKeyRewriter struct {
+	transformers.Transformer
+	keys    map[string]computedKey // by the declared name of the key's symbol
+	bound   map[string]bool        // names the declaration file declares at its top level
+	written []*ast.Node            // the first identifier of each key it wrote
+}
+
+// computedKey is a key the source writes, such as Inspectable.NodeInspectSymbol.
+// Two keys whose symbols share a declared name make it ambiguous.
+type computedKey struct {
+	expression *ast.Node
+	symbol     *ast.Symbol
+	ambiguous  bool
+}
+
+// add records key, a computed property name's expression in file, when its
+// first name resolves to the prelude or effect's root.
+func (tx *computedKeyRewriter) add(c *checker.Checker, file *ast.SourceFile, key *ast.Node) {
+	if !ast.IsEntityNameExpression(key) {
+		return
+	}
+	first := ast.GetFirstIdentifier(key)
+	_, isPrelude := preludeModules[first.Text()]
+	_, isRoot := effectRootNames[first.Text()]
+	if !isPrelude && !isRoot {
+		return
+	}
+	if prelude := preludeSymbol(c, preludeStateOf(c), file, first.Text()); prelude == nil || c.GetSymbolAtLocation(first) != prelude {
+		return
+	}
+	symbol := c.GetSymbolAtLocation(key)
+	if symbol == nil {
+		return
+	}
+	if symbol.Flags()&ast.SymbolFlagsAlias != 0 {
+		symbol = c.GetAliasedSymbol(symbol)
+	}
+	if existing, ok := tx.keys[symbol.Name()]; ok {
+		existing.ambiguous = existing.ambiguous || existing.symbol != symbol
+		tx.keys[symbol.Name()] = existing
+		return
+	}
+	tx.keys[symbol.Name()] = computedKey{expression: key, symbol: symbol}
+}
+
+// visit rewrites a key printed as a bare name that the declaration file does
+// not declare, so a local binding with the same name keeps its key.
+func (tx *computedKeyRewriter) visit(node *ast.Node) *ast.Node {
+	if ast.IsComputedPropertyName(node) {
+		name := node.Expression()
+		if !ast.IsIdentifier(name) || tx.bound[name.Text()] {
+			return node
+		}
+		if key, ok := tx.keys[name.Text()]; ok && !key.ambiguous {
+			return tx.Factory().UpdateComputedPropertyName(node.AsComputedPropertyName(), tx.entityExpression(key.expression))
+		}
+		return node
+	}
+	return tx.Visitor().VisitEachChild(node)
+}
+
+// entityExpression returns a new copy of key, an identifier or a property
+// access of one, and keeps its first identifier in written.
+func (tx *computedKeyRewriter) entityExpression(key *ast.Node) *ast.Node {
+	f := tx.Factory()
+	if ast.IsPropertyAccessExpression(key) {
+		return f.NewPropertyAccessExpression(tx.entityExpression(key.Expression()), nil /*questionDotToken*/, f.NewIdentifier(key.Name().Text()), ast.NodeFlagsNone)
+	}
+	identifier := f.NewIdentifier(key.Text())
+	tx.written = append(tx.written, identifier)
+	return identifier
 }
