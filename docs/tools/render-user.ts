@@ -410,7 +410,7 @@ async function render(source: string, markdown: string, destination: string, cou
         used.add(id)
         if (spec && token.depth === 2 && PART.test(plain)) return `<p class="part" id="${escape(id)}"><a class="anchor" href="#${escape(id)}">${html}</a></p>\n`
         const depth = token.depth - shift
-        if (depth === 1 && firstHeading) { title = plain; firstHeading = false }
+        if (depth === 1 && firstHeading) { title = unescape(plain); firstHeading = false }
         if (spec && depth === 1 && /^\d+-/.test(id)) chapterIds.set(id.split("-")[0]!, id)
         if (depth === 2) toc.push({ id, text: unescape(plain) })
         return `<h${depth} id="${escape(id)}"><a class="anchor" href="#${escape(id)}">${html}</a></h${depth}>\n`
