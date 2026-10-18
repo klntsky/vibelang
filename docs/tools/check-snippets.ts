@@ -307,7 +307,8 @@ function importsVitest(dir: string): boolean {
   return readdirSync(dir, { withFileTypes: true }).some(file => {
     const path = join(dir, file.name)
     return file.isDirectory() ? importsVitest(path) :
-      file.name.endsWith(".js") && /["']@effect\/vitest["']/.test(readFileSync(path, "utf8"))
+      file.name.endsWith(".js") && new Bun.Transpiler({ loader: "js" })
+        .scanImports(readFileSync(path, "utf8")).some(imported => imported.path === "@effect/vitest")
   })
 }
 

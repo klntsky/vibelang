@@ -237,6 +237,14 @@ test.skipIf(!existsSync(compiler))("runs Effect Vitest snippets, shared assertio
       "```vibe", 'import { assert, it } from "@effect/vitest"',
       'it.effect("reports assertion failures") { assert.strictEqual(1, 2) }', '// Output:', "```"
     ].join("\n"))
+    writeFileSync(join(root, "pending.md"), [
+      "```ts", "// TypeScript (.ts)", "// pending.ts", '// run: return new Promise<void>(() => {})',
+      'import { it } from "@effect/vitest"', 'import { Effect } from "effect"',
+      'it.effect("baseline", () => Effect.void)', '// Output:', "```"
+    ].join("\n"))
+    writeFileSync(join(root, "literal.md"), [
+      "```ts", "// TypeScript (.ts)", "// literal.ts", 'console.log("@effect/vitest")', '// Output: @effect/vitest', "```"
+    ].join("\n"))
     const output = join(root, "report.json")
     const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--json", output], { stdout: "pipe", stderr: "pipe" })
     const [, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
@@ -245,8 +253,14 @@ test.skipIf(!existsSync(compiler))("runs Effect Vitest snippets, shared assertio
     const pass = report.pages.find((p: any) => p.page.endsWith("/pass.md")).blocks
     expect(pass.map((b: any) => b.execution.status)).toEqual(["passed", "passed"])
     expect(pass[1].execution.stdout).toBe("checked\n")
+    const pending = report.pages.find((p: any) => p.page.endsWith("/pending.md")).blocks[0]
+    const literal = report.pages.find((p: any) => p.page.endsWith("/literal.md")).blocks[0]
+    expect({ pending: pending.execution.status, literal: literal.execution.status }).toEqual({ pending: "failed", literal: "passed" })
+    expect(pending.execution).toMatchObject({ phase: "run", timedOut: true })
+    expect(pending.execution.exitCode).not.toBe(0)
+    expect(literal.execution.stdout).toBe("@effect/vitest\n")
     const failure = report.pages.find((p: any) => p.page.endsWith("/failure.md")).blocks[0]
     expect(failure.execution.exitCode).not.toBe(0)
     expect(failure.execution.stderr).toContain("AssertionError")
   } finally { rmSync(root, { recursive: true, force: true }) }
-}, 30000)
+}, 60000)
