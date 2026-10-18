@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { blockFilenames, classify, extract, parseDiagnostics } from "./check-snippets"
+import { blockFilenames, classify, extract, markdownPages, parseDiagnostics } from "./check-snippets"
 
 const block = extract('```ts\nconst answer = 42\n```')[0]
 const diagnostic = (code: string, message = "example") => ({ code, message })
@@ -43,7 +43,7 @@ test("parses native ES and TS errors and ignores notes and warnings", () => {
   ])
 })
 
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 import { tmpdir } from "node:os"
 const compiler = resolve(import.meta.dir, "../../typescript/built/local/tsc")
@@ -100,4 +100,16 @@ test.skipIf(!existsSync(compiler))("checks named TypeScript companions and maps 
     expect(report.pages[0].blocks[2].diagnostics[0].line).toBe(15)
     expect(report.pages[0].blocks[3].diagnostics[0].line).toBe(20)
   } finally { rmSync(root, { recursive: true, force: true }) }
+})
+test("markdownPages skips the built site, which holds each page's Markdown copy", () => {
+  const root = mkdtempSync(join(tmpdir(), "check-snippets-pages-"))
+  try {
+    for (const path of ["a.md", "guide/b.md", "site/a.md", "site/spec/c.md", "guide/site/d.md"]) {
+      mkdirSync(join(root, path, ".."), { recursive: true })
+      writeFileSync(join(root, path), "# Page\n")
+    }
+    expect(markdownPages(root).map(p => relative(root, p))).toEqual(["a.md", "guide/b.md", "guide/site/d.md"])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })

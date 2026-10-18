@@ -15,7 +15,8 @@ Then run one command from the repository root:
 bun docs/tools/check-snippets.ts
 ```
 
-The checker extracts `ts` fences under `docs/user`, except blocks whose first
+The checker extracts `ts` fences under `docs/user`, except the built site in
+`docs/user/site` and blocks whose first
 line is `// TypeScript (.ts)` and has no filename caption. It creates one
 temporary project per page and runs `effeck --noEmit` once per page. Each block
 gets its own module. A filename comment in either of the first two lines,
@@ -73,3 +74,9 @@ specification link to a heading on another chapter's page, written as a bare
 fragment such as `#20-the-machine`, and "Chapter 20" in specification prose
 both link to that page. A link to a repository file that is not a page keeps
 its text and drops the link.
+
+Each page is also written as Markdown beside its HTML, at the same path with
+`.md`, with links to pages rewritten to their `.md` copies on
+`https://effeck.dev`. `index.md` and `spec/index.md` repeat the first pages.
+`llms.txt` lists every copy in the llmstxt.org format, one section per sidebar
+view, with a page's sidebar group as its note.

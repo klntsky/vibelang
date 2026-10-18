@@ -1,7 +1,8 @@
 // Run: cd docs/tools && bun render-user.ts
 // Builds the one docs site in docs/user/site: the user pages in docs/user/src
 // and, under spec/, one page per specification chapter in docs/design/src.
-// docs/user/inventory.md orders the sidebar. Uses the package.json pin: marked 18.0.12.
+// docs/user/inventory.md orders the sidebar. Each page also gets a Markdown copy
+// beside its HTML, and llms.txt lists the copies. Uses the package.json pin: marked 18.0.12.
 import { Marked, type Tokens } from "marked"
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, extname, join, relative, resolve } from "node:path"
@@ -220,7 +221,8 @@ pre { max-width: 100%; overflow-x: auto; overflow-wrap: normal; }
 }
 `
 
-type Page = { path: string; label: string }
+// group is the bold sidebar label a page is indented under, if any.
+type Page = { path: string; label: string; group?: string }
 type NavItem = { kind: "view" | "group"; label: string } | { kind: "page"; page: Page }
 const inventory = readFileSync(join(root, "inventory.md"), "utf8")
 const lines = inventory.split("\n")
@@ -228,18 +230,19 @@ const start = lines.findIndex(line => /^## V4 sidebar in order\s*$/.test(line))
 if (start < 0) throw new Error('inventory.md: missing "V4 sidebar in order" section')
 const navigation: NavItem[] = []
 const order: Page[] = []
+let lastGroup: string | undefined
 for (const line of lines.slice(start + 1)) {
   if (/^## /.test(line)) break
   const view = /^### (.+)$/.exec(line)
   const group = /^- \*\*(.+)\*\*\s*$/.exec(line)
   const page = /^\s*- \[([^\]]+)\]\(((?:src|\.\.\/design\/src)\/[^)]+\.md)\)/.exec(line)
   if (view) navigation.push({ kind: "view", label: view[1]! })
-  else if (group) navigation.push({ kind: "group", label: group[1]! })
+  else if (group) navigation.push({ kind: "group", label: lastGroup = group[1]! })
   else if (page) {
     const path = keyOf(resolve(root, page[2]!))
     if (!path) throw new Error(`inventory.md: page outside docs/user/src and docs/design/src: ${page[2]}`)
     if (order.some(p => p.path === path)) throw new Error(`inventory.md: duplicate page: ${path}`)
-    const entry = { path, label: page[1]! }
+    const entry = { path, label: page[1]!, group: /^\s/.test(line) ? lastGroup : undefined }
     order.push(entry)
     navigation.push({ kind: "page", page: entry })
   } else if (line.trim().startsWith("-")) throw new Error(`inventory.md: unrecognized sidebar entry: ${line.trim()}`)
@@ -450,13 +453,86 @@ for (const [destination, html] of rendered) {
   }).transform(new Response(text)).text())
 }
 fail("checking links")
+
+// Every page is also published as Markdown, at its path with .md beside its
+// HTML, for coding agents and other plain-text readers. A copy is the page's
+// source text: each link to a page becomes that page's .md copy on the site, a
+// bare specification fragment moves to its chapter as on the HTML page, and a
+// link to a repository file that is not a page keeps only its text. Code keeps
+// its text. llms.txt (llmstxt.org) lists the copies, one section per sidebar view.
+const origin = "https://effeck.dev"
+// A code span, which stays as written, or an inline link, the only link form the sources use.
+const LINK = /(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)|\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\(([^()\s]*)\)/g
+const lexer = new Marked({ gfm: true })
+function markdownLink(href: string, source: string): string | undefined {
+  if (!href || external(href) || href.startsWith("?")) return href
+  if (href.startsWith("#")) {
+    const id = decodeURIComponent(href.slice(1))
+    const owner = source.startsWith("spec/") && !ids.get(output(source))!.has(id) ? owners.get(id) : undefined
+    return owner?.length === 1 ? `${origin}/${owner[0]!.replace(/\.html$/, ".md")}${href}` : href
+  }
+  const link = pageLink(href, source, "index.html")
+  return link === undefined ? undefined : `${origin}/${link.replace(/\.html(?=[?#]|$)/, ".md")}`
+}
+function markdownCopy(source: string, markdown: string): string {
+  const found: string[] = []
+  const out: string[] = []
+  let prose: string[] = []
+  let fence: string | undefined
+  const flush = () => {
+    if (prose.length) out.push(prose.join("\n").replace(LINK, (match, ticks: string | undefined, text: string, href: string) => {
+      if (ticks !== undefined) return match
+      found.push(href)
+      const link = markdownLink(href, source)
+      return link === undefined ? text : `[${text}](${link})`
+    }))
+    prose = []
+  }
+  for (const line of markdown.split("\n")) {
+    const bare = line.replace(/^[\s>]*/, "").trimEnd()
+    const marker = /^(`{3,}|~{3,})/.exec(bare)?.[1]
+    if (fence === undefined && marker) { flush(); fence = marker; out.push(line) }
+    else if (fence !== undefined) {
+      out.push(line)
+      if (marker?.[0] === fence[0] && marker.length >= fence.length && bare === marker) fence = undefined
+    } else prose.push(line)
+  }
+  flush()
+  // The scan must find exactly the links marked finds, or a link would keep its repository path.
+  const expected: string[] = []
+  lexer.walkTokens(lexer.lexer(markdown), token => {
+    if (token.type === "link" && token.raw.startsWith("[")) expected.push((token as Tokens.Link).href)
+  })
+  if (found.join("\n") !== expected.join("\n")) errors.push(`${where(source)}: the Markdown copy finds ${found.length} links where marked finds ${expected.length}`)
+  return out.join("\n")
+}
+const copies = new Map<string, string>()
+for (const [source, markdown] of sources) copies.set(source, markdownCopy(source, markdown))
+for (const [copy, page] of [["index.md", first], ["spec/index.md", firstChapter]] as const) {
+  if (copies.has(copy)) errors.push(`${where(copy)} would collide with the Markdown copy of ${output(copy)}`)
+  copies.set(copy, copies.get(page.path)!)
+}
+// The summary repeats the README's first paragraph.
+const llms = [
+  "# Effeck",
+  "",
+  "> Effeck is a language for building reliable TypeScript in the AI era, built on Effect. It gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.",
+  "",
+  `Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use. To set up Effeck in a project, read [Set up Effeck](${origin}/setup.md) and follow it. Each link below is a page's Markdown; replace \`.md\` with \`.html\` for the page with navigation.`,
+  ...navigation.flatMap(item => item.kind === "view" ? ["", `## ${item.label}`, ""]
+    : item.kind === "page" ? [`- [${item.page.label}](${origin}/${item.page.path})${item.page.group ? `: ${item.page.group}` : ""}`] : []),
+  ""
+].join("\n")
+fail("copying pages as Markdown")
 rmSync(site, { recursive: true, force: true })
 for (const [path, html] of rendered) {
   const destination = join(site, path)
   mkdirSync(dirname(destination), { recursive: true })
   writeFileSync(destination, html)
 }
+for (const [path, text] of [...copies, ["llms.txt", llms] as const]) writeFileSync(join(site, path), text)
 const specPages = [...sources.keys()].filter(key => key.startsWith("spec/")).length
 console.log(`Wrote ${rendered.size} pages: ${sources.size - specPages} user pages, ${specPages} specification pages, index.html, and spec/index.html.`)
 console.log(`Specification: ${facts.testCount} kernel law tests passed; kernel ${facts.kernelLines} lines; ${crossLinks} links moved to another chapter's page.`)
 console.log(`Callouts: ${proposed} Proposed; ${notDesigned} Not designed yet (user source pages, excluding duplicate index).`)
+console.log(`Markdown: ${copies.size} copies beside the HTML pages, and llms.txt with ${order.length} links.`)

@@ -95,8 +95,12 @@ export function parseDiagnostics(output: string): { file?: string; diagnostic: D
   return result
 }
 
-function files(path: string): string[] {
-  return readdirSync(path, { withFileTypes: true }).flatMap(e => e.isDirectory() ? files(join(path, e.name)) : e.name.endsWith(".md") ? [join(path, e.name)] : []).sort()
+// The Markdown pages under root, except root/site: render-user.ts builds the
+// site there, with a Markdown copy of every page and specification chapter.
+export function markdownPages(root: string): string[] {
+  const walk = (path: string): string[] => readdirSync(path, { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? (join(path, e.name) === join(root, "site") ? [] : walk(join(path, e.name))) : e.name.endsWith(".md") ? [join(path, e.name)] : [])
+  return walk(root).sort()
 }
 
 async function main() {
@@ -151,7 +155,7 @@ async function main() {
       throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
     }
     let index = 0
-    for (const page of files(root).filter(p => relative(root, p).includes(filter))) {
+    for (const page of markdownPages(root).filter(p => relative(root, p).includes(filter))) {
       const blocks = extract(readFileSync(page, "utf8"))
       if (!blocks.length) continue
       const dir = join(temp, String(++index))
