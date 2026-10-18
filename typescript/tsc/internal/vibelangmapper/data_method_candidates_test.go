@@ -17,7 +17,9 @@ func TestDataMethodCandidateImports(t *testing.T) {
 	checking := Project(source, testContext)
 	assert.Equal(t, virtualBody(t, checking), source)
 	executable := Executable(source, testContext)
-	assert.Equal(t, executable.Text, `import { $method } from "vibelang-runtime/data-methods"; import { isSome as $method_Option_isSome } from "effect/Option"; const $methodCandidates_isSome = [["Option", $method_Option_isSome]]; `+"\n"+`import { opaque } from "./opaque.js"; export const value = $method(opaque, "isSome", [], $methodCandidates_isSome);`)
+	// The renderer sorts module specifiers. Keep the complete golden so it
+	// still rejects unrelated candidate imports or changes to the call.
+	assert.Equal(t, executable.Text, `import { isSome as $method_Option_isSome } from "effect/Option"; import { $method } from "vibelang-runtime/data-methods"; const $methodCandidates_isSome = [["Option", $method_Option_isSome]]; `+"\n"+`import { opaque } from "./opaque.js"; export const value = $method(opaque, "isSome", [], $methodCandidates_isSome);`)
 	assertParses(t, executable.Text)
 }
 
