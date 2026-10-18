@@ -21,6 +21,7 @@ const greet = Effect.fn("greet")(function* (id: string) {
 ```
 
 ```vibe
+// run: Console.log(Effect.provide(greet("ada"), Layer.succeed(Users, { find: (id) => ({ id, name: "Ada" }) })))
 interface User { id: string; name: string }
 
 error UserNotFound { id: string }
@@ -34,6 +35,7 @@ function greet(id: string) {
   return `Hello, ${name}`
 }
 // string!!Users
+// Output: Hello, Ada
 ```
 
 A user service, a typed error, and a fallback, in Effect and in VibeLang. The comment under `greet` is the type your editor shows: `string!!Users` is VibeLang's spelling of `Effect<string, never, Users>`. It returns a `string`, has no expected failures, and needs the `Users` service. Defects and interruption remain possible. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The TypeScript example adds a tracing span with `Effect.fn("greet")`; the VibeLang function is untraced by default.
@@ -56,6 +58,7 @@ VibeLang shares TypeScript's ecosystem in two ways:
 2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
 ```vibe
+// run: Console.log(slug("Hello VibeLang"))
 function slug(title: string) {
   return sync((title) => {
     // Plain TypeScript: nothing in here is an Effect.
@@ -65,6 +68,7 @@ function slug(title: string) {
   }, title)
 }
 // string!!
+// Output: hello-vibelang
 ```
 
 A hatch's function is self-contained: it reads the `.vibe` file's values only as the arguments passed after it, here `title`.

@@ -30,12 +30,14 @@ service layer and typed failure both run.
 ## Execute synchronous computations
 
 ```vibe
+// run: Console.log(total)
 function subtotal() {
   return 7 * 8
 }
 
 const total = Effect.runSync(subtotal())
 // total: number, 56
+// Output: 56
 ```
 
 `Effect.runSync` starts the program immediately and returns its result. An unhandled failure or defect escapes as a JavaScript exception at this boundary. If execution reaches asynchronous work, the runner throws `AsyncFiberError`; use it only when the whole computation is known to stay synchronous.
@@ -43,6 +45,7 @@ const total = Effect.runSync(subtotal())
 ## Run promise-based computations
 
 ```vibe
+// run: Console.log(sync((value: Promise<string>) => value, pending))
 function preparedMessage() {
   sleep("15 millis")
   return "prepared"
@@ -50,6 +53,7 @@ function preparedMessage() {
 
 const pending = Effect.runPromise(preparedMessage())
 // pending: Promise<string>
+// Output: prepared
 ```
 
 `Effect.runPromise` starts execution and returns a promise for the success value. The promise rejects when the program fails. A foreign TypeScript caller can await that promise; a VibeLang caller should call `preparedMessage()` directly inside its own program.
@@ -57,6 +61,7 @@ const pending = Effect.runPromise(preparedMessage())
 ## Collect complete execution results
 
 ```vibe
+// run: Console.log(immediate._tag)
 error BadInput
 
 function validate(input: string) {
@@ -68,6 +73,7 @@ const immediate = Effect.runSyncExit(() => validate(""))
 const eventual = Effect.runPromiseExit(preparedMessage())
 // immediate: Exit<number, BadInput>
 // eventual: Promise<Exit<string, never>>
+// Output: Failure
 ```
 
 An `Exit` is either a success with a value or a failure with a `Cause`. That cause retains expected failures, defects, and interruption rather than reducing them to an ordinary error value. `runSyncExit` reports asynchronous execution as a defect in its failure result; `runPromiseExit` supports work that pauses.

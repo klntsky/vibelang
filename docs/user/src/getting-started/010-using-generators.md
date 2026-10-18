@@ -18,6 +18,7 @@ Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")
 ## Relate calls to async functions
 
 ```vibe
+// run: Console.log(greeting())
 function delayedLabel(name: string) {
   sleep("30 millis")
   return name.toUpperCase()
@@ -27,6 +28,7 @@ function greeting() {
   const label = delayedLabel("sora")
   return `Hello ${label}`
 }
+// Output: Hello SORA
 ```
 
 `greeting` waits for the callee without `async` or `await`. The computation can pause while retaining typed errors, service requirements, and interruption support. At a promise-based framework boundary, run the exported function through a runner from `.ts`.
@@ -51,6 +53,7 @@ Conditions, local variables, `break`, `continue`, and early returns keep JavaScr
 ## Raise failures and stop early
 
 ```vibe
+// run: Console.log(optionalTitle(undefined))
 error MissingTitle
 
 function titleLength(title: string | undefined) {
@@ -66,6 +69,7 @@ function optionalTitle(title: string | undefined) {
     return 0
   }
 }
+// Output: 0
 ```
 
 A throw stops the current sequence and adds its type to `E`. Control-flow analysis knows that the missing-title branch cannot continue, so `title` is narrowed afterward. `try`/`catch` handles expected failures; defects and interruption propagate, while `finally` still runs. A cause containing a defect or interruption bypasses `catch` as a whole, even if it also contains an expected failure.
@@ -97,6 +101,7 @@ Ordinary method calls preserve `this` and evaluate the receiver once. There is n
 ## Generators produce values and streams
 
 ```vibe
+// run: Console.log(JSON.stringify(firstTwo()))
 function* ticks() {
   for (let n = 0; n < 3; n += 1) {
     sleep("10 millis")
@@ -112,6 +117,7 @@ function firstTwo() {
   }
   return values
 }
+// Output: [0,1]
 ```
 
 A VibeLang generator produces values for `for...of`; `yield` delivers a value rather than running an Effect. Early loop exit runs the producer's cleanup. Existing `Effect.gen` code stays in `.ts` files, where JavaScript generators keep their usual Effect meaning.

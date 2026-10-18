@@ -5,6 +5,7 @@ VibeLang uses Effect to make a program's expected failures and dependencies visi
 ## Describe work before running it
 
 ```vibe
+// run: Console.log(quote())
 error InvalidQuantity {
   quantity: number
 }
@@ -16,6 +17,7 @@ function unitPrice(total: number, quantity: number) {
 // number!InvalidQuantity!
 
 const quote = () => unitPrice(72, 6)
+// Output: 12
 ```
 
 `quote` holds a reusable program. Calling `quote()` inside another function runs it and returns the number. The error channel records the validation failure, so callers can handle it without inspecting this implementation.
@@ -23,6 +25,7 @@ const quote = () => unitPrice(72, 6)
 ## Share an application foundation
 
 ```vibe
+// run: Console.log(preview())
 service Prices {
   total(sku: string): number!InvalidQuantity
 }
@@ -40,6 +43,7 @@ const PricesTest = Layer.succeed(Prices, {
 function preview() {
   provide PricesTest { return receipt("pencil-box") }
 }
+// Output: Total: 18
 ```
 
 Services carry dependencies through the same contract as errors and successes. Layers supply implementations and manage their resources. Tests can provide an in-memory implementation while the application provides a database or HTTP implementation.
@@ -47,12 +51,14 @@ Services carry dependencies through the same contract as errors and successes. L
 ## Apply composable production tools
 
 ```vibe
+// run: Console.log(Effect.provide(resilientReceipt("pencil-box"), PricesTest))
 function resilientReceipt(sku: string) {
   return receipt(sku)
     |> retry(%, { times: 2 })
     |> timeout(%, "800 millis")
     |> withSpan(%, "receipt")
 }
+// Output: Total: 18
 ```
 
 These operators share Effect's execution and cleanup rules. Retry repeats the program from the beginning; timeout interrupts work that exceeds its deadline; the span describes the whole operation. Choose retry only for failures worth repeating, and make repeated writes safe before retrying them.

@@ -13,6 +13,7 @@ The core package supplies Effect's data types, schedules, concurrency tools, and
 ## Module and namespace imports
 
 ```vibe
+// run: Console.log(Number.isFinite(pauseBeforeRetry()))
 function pauseBeforeRetry() {
   const started = Clock.currentTimeMillis()
   sleep(Duration.millis(25))
@@ -20,6 +21,7 @@ function pauseBeforeRetry() {
 }
 
 const backoff = Schedule.exponential("50 millis")
+// Output: true
 ```
 
 `Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `File!IOError!Scope`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`; the boundary hatches `sync`, `try`, and `callback`; the runners `runPromise`, `runFork`, `runSync`, and `runCallback`; and the Effect module's most used functions without the `Effect.` prefix: `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, and `die`. The other Effect functions keep the prefix, as in `Effect.result(work())`. `Clock`, `Duration`, `Schedule`, and every other module of `effect`'s root need no import either, and neither do `flow` and `identity`.
@@ -27,11 +29,13 @@ const backoff = Schedule.exponential("50 millis")
 JavaScript's own globals keep their names. `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules with those names under another name:
 
 ```vibe
+// run: Console.log(JSON.stringify(firstTwo([1, 2, 3])))
 import { Array as Arr } from "effect"
 
 function firstTwo(values: ReadonlyArray<number>) {
   return Arr.take(values, 2)
 }
+// Output: [1,2]
 ```
 
 A host's globals do not shadow Effect's modules: with the DOM in your `lib`, `Option` is still Effect's. An import or a local declaration with the same name as a module shadows it, as `import * as Duration from "effect/Duration"` would. Value constructors such as `Duration.millis` build data; `Clock.currentTimeMillis()` and `Effect.sleep(...)` run computations. Effect's own packages are trusted, so their data functions need no foreign-call boundary; exceptions from those functions are defects.
@@ -39,11 +43,13 @@ A host's globals do not shadow Effect's modules: with the DOM in your `lib`, `Op
 ## Compose standalone functions
 
 ```vibe
+// run: Console.log(expirationWindow())
 function expirationWindow() {
   const short = Duration.seconds(15)
   return short.toMillis()
 }
 // number!!
+// Output: 15000
 ```
 
 Effect exposes operations as module functions. Call them with their data argument or use their curried form in `pipe` where available. An Effect pipeline starts with a program, as in `pipe(() => work(), Effect.timeout("1 second"))`.
@@ -57,6 +63,7 @@ VibeLang's global names are source conveniences. They refer to Effect and langua
 ## Reusable operators
 
 ```vibe
+// run: Console.log(example())
 function withinSecond<A, E, R>(program: () => A!E!R) {
   return timeout(program, "1 second")
 }
@@ -67,6 +74,7 @@ function example() {
     return "ready"
   }
 }
+// Output: ready
 ```
 
 A helper can accept a program and apply library operators to it. Its contract preserves the program's errors and services and adds `TimeoutError` here. You can extend your application without changing Effect's prototypes.

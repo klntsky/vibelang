@@ -5,6 +5,7 @@
 ## Success, failure, and services
 
 ```vibe
+// run: Console.log(Effect.provide(convert(30, "EUR"), Layer.succeed(Rates, { lookup: (_currency) => 2 })))
 error MissingRate {
   currency: string
 }
@@ -17,6 +18,7 @@ function convert(amount: number, currency: string) {
   return amount * Rates.lookup(currency)
 }
 // number!MissingRate!Rates
+// Output: 60
 ```
 
 `A` is `number`, `E` is `MissingRate`, and `R` is `Rates`. A service method states its complete contract because it has no body to infer from. Using that method also adds the service itself to the caller's requirements.
@@ -32,6 +34,7 @@ Errors and services from several calls accumulate as unions. Catching a failure 
 ## Write a contract
 
 ```vibe
+// run: Console.log(Effect.provide(safeRate("EUR"), Layer.succeed(Rates, { lookup: (_currency) => 2 })))
 function rateOf(currency: string): number!MissingRate!Rates {
   return Rates.lookup(currency)
 }
@@ -44,6 +47,7 @@ function anyRate(currency: string): number!MissingRate {
   return Rates.lookup(currency)
 }
 // Dependencies inferred: number!MissingRate!Rates
+// Output: 2
 ```
 
 `.vibe` code writes `Effect<A, E, R>` as `Result!Error!Dependencies`. A slot without a type is `never`: `number!MissingRate!` cannot need a service, and `number!!` neither fails nor needs one. On a function with a body, dependencies left out entirely, as in `anyRate`, are inferred from the body; on a declaration without a body, such as a service member, they are `never`. A union belongs to its slot: `string!MissingRate | Offline!Rates` fails with either error. Put a function type, a conditional type, or, after a `!`, an object type in parentheses; the `{` of an object type would start the function's body.
@@ -53,6 +57,7 @@ Hovers show contracts this way, and declaration files keep `Effect.Effect<A, E, 
 ## Check selected channels
 
 ```vibe
+// run: Console.log(Effect.provide(checkedConversion(30, "EUR"), Layer.succeed(Rates, { lookup: (_currency) => 2 })))
 function rate(currency: string): Effect<number, infer E, Rates> {
   return Rates.lookup(currency)
 }
@@ -72,6 +77,7 @@ function checkedConversion(amount: number, currency: string): Effect<number, inf
   return convert(amount, currency)
 }
 // Checks number; infers MissingRate and Rates.
+// Output: 60
 ```
 
 In a return annotation on a function with a body, `infer` followed by any name infers that channel from the body. Other slots are promises the compiler checks. The name is documentation only and is not in scope in the body or other slots. `infer _` is allowed, including `Effect<infer _, infer _, infer _>` to infer all three channels.
@@ -83,12 +89,14 @@ This applies only to function return annotations with bodies in `.vibe`. In para
 ## Description and execution
 
 ```vibe
+// run: Console.log(Effect.provide(displayedPrice(), Layer.succeed(Rates, { lookup: (_currency) => 2 })))
 const conversion = () => convert(30, "EUR")
 
 function displayedPrice() {
   const amount = conversion()
   return amount.toFixed(2)
 }
+// Output: 60.00
 ```
 
 Creating `conversion` does no work. Calling it runs the computation within the current program and gives you its success value. A call does not start a new fiber; runners start execution at the application edge.
@@ -101,10 +109,12 @@ The result type must be `Effect` itself for a call to run it automatically. `Con
 
 ```vibe
 // convert.vibe
+// run: Console.log(double(30))
 export function double(amount: number) {
   return amount * 2
 }
 // number!!
+// Output: 60
 ```
 
 ```ts

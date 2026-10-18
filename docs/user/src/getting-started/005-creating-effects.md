@@ -5,6 +5,7 @@ Write an ordinary function to describe a VibeLang computation. Return a value fo
 ## Success and failure
 
 ```vibe
+// run: Console.log(reserve("notebook", true).item)
 error Unavailable {
   item: string
 }
@@ -14,6 +15,7 @@ function reserve(item: string, available: boolean) {
   return { item, reserved: true }
 }
 // { item: string; reserved: boolean }!Unavailable!
+// Output: notebook
 ```
 
 The compiler records the returned object in `A` and `Unavailable` in `E`. `Effect.succeed(value)` and `Effect.fail(error)` remain available inside a function, but those calls run immediately. To store the work, write `const reservation = () => reserve("notebook", true)`.
@@ -21,12 +23,14 @@ The compiler records the returned object in `A` and `Unavailable` in `E`. `Effec
 ## Track errors as values
 
 ```vibe
+// run: Console.log(attemptReservation("notebook", false))
 function attemptReservation(item: string, available: boolean) {
   const outcome = Effect.result(reserve(item, available))
   if (outcome.isFailure()) return outcome.failure.item
   return outcome.success.item
 }
 // string!!
+// Output: notebook
 ```
 
 `Effect.result` captures an expected failure as a `Result` value so the function can continue. Defects and interruption still propagate. Unlike an unchecked JavaScript exception, a VibeLang `throw` contributes to the inferred contract; using `Effect.fail` gives the same expected failure channel.
@@ -103,6 +107,7 @@ For resource acquisition, cancellation must also release a resource that arrives
 ## Suspend work
 
 ```vibe
+// run: Console.log(JSON.stringify(counters()))
 function nextCounter() {
   let count = 0
   return () => {
@@ -116,11 +121,13 @@ function counters() {
   return [next(), next()]
 }
 // number[]!!; returns [1, 2]
+// Output: [1,2]
 ```
 
 The returned function delays its body until each call. Wrap an entire computation, including mutable setup, if retry should create new state each time. `Effect.suspend` remains useful in TypeScript adapters to delay construction of an Effect; in VibeLang, passing a program already delays its body.
 
 ```vibe
+// run: Console.log(countdown(3))
 function countdown(n: number): number!! {
   if (n <= 0) return 0
   sleep("1 millis")
@@ -132,6 +139,7 @@ function checkedQuantity(n: number) {
   return n
 }
 // number!Unavailable!
+// Output: 3
 ```
 
 Suspending recursion uses runtime frames, so it does not accumulate JavaScript stack frames. Pure recursion without Effect operations uses the JavaScript stack and can overflow. Ordinary returns and throws also unify success and failure channels across branches without an extra suspension wrapper.
