@@ -412,8 +412,11 @@ func (l *plan) render(r rendering, original string, prefix func() string) (text 
 	var body strings.Builder
 	cursor := 0
 	for _, e := range edits {
-		if e.pos < cursor {
-			return "", nil, e.pos, false
+		if e.pos < cursor || e.end < e.pos || e.end > len(original) {
+			// Missing parser-recovery nodes can have synthetic (-1) ranges.
+			// Reject these before advancing the cursor or slicing source text,
+			// and keep the diagnostic inside the original file.
+			return "", nil, min(max(e.pos, 0), len(original)), false
 		}
 		segments = appendVerbatim(segments, &body, original, cursor, e.pos)
 		if t, keep := r.text(e); keep {

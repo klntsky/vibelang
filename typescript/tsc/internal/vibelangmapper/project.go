@@ -168,14 +168,14 @@ func Project(text string, ctx FileContext) Projection {
 	p := lower(text, ctx)
 	out, segments, overlap, ok := p.plan.render(checking{names: p.names}, text, p.names.importLine)
 	if !ok {
-		// Overlapping edits are a projector bug; pass the file through
+		// Invalid or overlapping edits cannot render; pass the file through
 		// unchanged rather than send TypeScript a broken map.
 		var verbatim plan
 		out, segments, _, _ = verbatim.render(checking{names: p.names}, text, func() string { return "" })
 		p.diagnostics = append(p.diagnostics, Diagnostic{
 			Start:   overlap,
 			Code:    CodeUnprojectedForm,
-			Message: "The TypeScript 7 mapper produced overlapping edits here; the file is passed through unchanged.",
+			Message: "The TypeScript 7 mapper produced invalid or overlapping edits here; the file is passed through unchanged.",
 		})
 	}
 	return Projection{Text: out, Segments: segments, Diagnostics: p.diagnostics, Purity: p.purity()}

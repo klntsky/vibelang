@@ -223,7 +223,7 @@ func (p *projector) dispatchStatements(r *region, name string, normal bool, e en
 	for i, j := range r.jumps {
 		var action string
 		switch {
-		case !e.frame.lands(j):
+		case !e.frame.lands(j) && e.frame.region != nil:
 			// Passed on to the enclosing region. A narrowed return value
 			// is boxed again, so the enclosing generator does not widen it.
 			e.frame.region.add(j)
@@ -237,6 +237,8 @@ func (p *projector) dispatchStatements(r *region, name string, normal bool, e en
 				action = "return " + helperRef("$unboxed") + "(" + name + ")"
 			}
 		case j.kind == ast.KindBreakStatement:
+			// At a function boundary, preserve an unresolved jump for
+			// TypeScript to diagnose instead of forwarding to a nil region.
 			action = strings.TrimSpace("break " + j.label)
 		default:
 			action = strings.TrimSpace("continue " + j.label)

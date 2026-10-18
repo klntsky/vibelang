@@ -95,7 +95,7 @@ func Executable(text string, ctx FileContext) Projection {
 		diagnostics = append(diagnostics, Diagnostic{
 			Start:   overlap,
 			Code:    CodeUnprojectedForm,
-			Message: "The executable rendering produced overlapping edits here; the file emits no JavaScript.",
+			Message: "The executable rendering produced invalid or overlapping edits here; the file emits no JavaScript.",
 		})
 		return Projection{Diagnostics: diagnostics}
 	}
