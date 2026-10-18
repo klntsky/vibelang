@@ -21,6 +21,7 @@ export npm_config_cache="$scratch/npm-cache" BUN_INSTALL_CACHE_DIR="$scratch/bun
 # bun create runs bunx, which keeps create-effeck@latest under $TMPDIR across
 # runs and reuses it even when the registry has a newer tarball, so an earlier
 # rehearsal's template would be scaffolded. A scratch TMPDIR starts it clean.
+# (https://github.com/oven-sh/bun/issues/12245; bunx re-resolves a bare name only after 24 hours.)
 export TMPDIR="$scratch/tmp"
 mkdir -p "$TMPDIR"
 export npm_config_yes=true npm_config_fund=false npm_config_audit=false npm_config_update_notifier=false
