@@ -317,16 +317,20 @@ type plainPlan struct {
 	directs       map[*ast.Node]bool             // function declarations split into a $direct variant and an Effect wrapper
 	directRefs    map[*ast.Node]*directReference // calls and function values that reach a $direct variant
 	directImports map[*ast.Node][]*ast.Node      // import declarations, and the specifiers whose $direct variants they bring in
+	directExports map[*ast.Node][]*ast.Node      // named export declarations, and their plain-function specifiers
 }
 
 func newPlainPlan() plainPlan {
-	return plainPlan{directs: map[*ast.Node]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}}
+	return plainPlan{directs: map[*ast.Node]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}, directExports: map[*ast.Node][]*ast.Node{}}
 }
 
 // planPlain records how the lowering treats node with respect to plain
 // functions: a declaration to split, a call that runs inline, or a function
 // value passed as its plain variant.
 func (p *plainPlan) planPlain(a *analyzer, node *ast.Node) {
+	if node.Kind == ast.KindExportDeclaration {
+		p.planPlainExports(a, node)
+	}
 	if a.isSplittable(node) && a.isPlainFunction(node) {
 		p.directs[node] = true
 	}
@@ -347,6 +351,43 @@ func (p *plainPlan) planPlain(a *analyzer, node *ast.Node) {
 		declaration := ast.FindAncestor(ref.specifier, ast.IsImportDeclaration)
 		if declaration != nil && !slices.Contains(p.directImports[declaration], ref.specifier) {
 			p.directImports[declaration] = append(p.directImports[declaration], ref.specifier)
+		}
+	}
+}
+
+// Named exports must forward the same direct variants that their importers
+// use. This includes local export lists, aliases, and barrel re-exports.
+func (p *plainPlan) planPlainExports(a *analyzer, node *ast.Node) {
+	decl := node.AsExportDeclaration()
+	if decl.IsTypeOnly || decl.ExportClause == nil || decl.ExportClause.Kind != ast.KindNamedExports {
+		return
+	}
+	for _, specifier := range decl.ExportClause.AsNamedExports().Elements.Nodes {
+		if specifier.AsExportSpecifier().IsTypeOnly {
+			continue
+		}
+		fn := esFunctionOf(a.checker, specifier.Name())
+		if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {
+			continue
+		}
+		p.directExports[node] = append(p.directExports[node], specifier)
+		if decl.ModuleSpecifier != nil {
+			continue
+		}
+		// A local export can refer to an imported binding. Its direct
+		// variant needs an import even if no local call uses the binding.
+		symbol := a.checker.GetExportSpecifierLocalTargetSymbol(specifier)
+		if symbol == nil {
+			continue
+		}
+		for _, imported := range symbol.Declarations() {
+			if !ast.IsImportSpecifier(imported) {
+				continue
+			}
+			declaration := ast.FindAncestor(imported, ast.IsImportDeclaration)
+			if declaration != nil && !slices.Contains(p.directImports[declaration], imported) {
+				p.directImports[declaration] = append(p.directImports[declaration], imported)
+			}
 		}
 	}
 }

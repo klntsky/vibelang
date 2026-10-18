@@ -103,3 +103,28 @@ func (tx *lowering) visitImportWithDirectVariants(node *ast.Node) *ast.Node {
 	ast.SetParentInChildren(variants)
 	return f.NewSyntaxList([]*ast.Node{visited, variants})
 }
+
+// Preserve public Effect wrappers and export their plain variants under
+// matching names. Export-star declarations already forward both forms.
+func (tx *lowering) visitExportWithDirectVariants(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	visited := tx.visitImportOrExport(node)
+	var specifiers []*ast.Node
+	for _, specifier := range tx.plan.directExports[node] {
+		local := specifier.AsExportSpecifier().PropertyName
+		if local == nil {
+			local = specifier.Name()
+		}
+		name := func(node *ast.Node) *ast.Node {
+			if ast.IsStringLiteral(node) {
+				return f.NewStringLiteral(node.Text()+"$direct", ast.TokenFlagsNone)
+			}
+			return f.NewIdentifier(node.Text() + "$direct")
+		}
+		specifiers = append(specifiers, f.NewExportSpecifier(false /*isTypeOnly*/, name(local), name(specifier.Name())))
+	}
+	decl := visited.AsExportDeclaration()
+	variants := f.NewExportDeclaration(nil /*modifiers*/, false /*isTypeOnly*/, f.NewNamedExports(f.NewNodeList(specifiers)), decl.ModuleSpecifier, decl.Attributes)
+	ast.SetParentInChildren(variants)
+	return f.NewSyntaxList([]*ast.Node{visited, variants})
+}
