@@ -16,7 +16,7 @@
 import type * as EffectModule from "effect/Effect"
 import type * as ScopeModule from "effect/Scope"
 import type * as StreamModule from "effect/Stream"
-import type { Cause, Config, Context } from "effect"
+import type { Cause, Config, Context, Exit } from "effect"
 import type * as Runtime from "effeck-runtime"
 
 // ---------------------------------------------------------------- prelude names
@@ -139,22 +139,22 @@ type AnyEffect = EffectModule.Effect<any, any, any>
 type YieldE<Eff> = Eff extends EffectModule.Effect<infer _A, infer E, infer _R> ? E : never
 type YieldR<Eff> = Eff extends EffectModule.Effect<infer _A, infer _E, infer R> ? R : never
 
+// Keep the value and channels inferred even in a rejected body. A non-iterable
+// $run result would poison those declarations with any/unknown (gate 1).
+type DataRunAnnotation = "D251: data in a run position; wrap the call in sync((): Exit.Exit<A, E> (or Config.Config<A>, Context.Key<I, S>, Cause.YieldableError) => call()) to keep it data"
+type ValidYields<Y> = [Extract<Y, DataRunAnnotation>] extends [never] ? unknown : DataRunAnnotation
+
 /** A function body: `function f() { body }` projects to `function f() { return $gen(function* () { body }) }`. */
-export declare function $gen<Eff extends AnyEffect, AEff>(f: () => Generator<Eff, AEff, never>): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
-export declare function $gen<Self, Eff extends AnyEffect, AEff>(
+export declare function $gen<Eff, AEff>(f: (() => Generator<Eff, AEff, never>) & ValidYields<Eff>): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
+export declare function $gen<Self, Eff, AEff>(
   options: { readonly self: Self },
-  f: (this: Self) => Generator<Eff, AEff, never>
+  f: ((this: Self) => Generator<Eff, AEff, never>) & ValidYields<Eff>
 ): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
 
-/**
- * Effect subtypes that a call gives as data, not runs (L3): a Config, a
- * Context key, and a yieldable error are Effects to TypeScript, and the run
- * time check tells them apart by key. An Exit is an Effect at run time with
- * no key of its own (Exit.succeed(1) and Effect.succeed(1) are the same kind
- * of object), so a call that returns one runs, as the executable rendering
- * runs it.
+/** D24 data subtypes require a written data boundary at an opaque call (D251).
+ * Runtime identity cannot distinguish Exit from an ordinary succeed program.
  */
-type DataEffect = Config.Config<any> | Context.Key<any, any> | Cause.YieldableError
+type DataEffect = Exit.Exit<any, any> | Config.Config<any> | Context.Key<any, any> | Cause.YieldableError
 
 /** The members of T that run: Effects that are not data subtypes. */
 type Running<T> = Extract<Exclude<T, DataEffect>, AnyEffect>
@@ -166,12 +166,15 @@ type HasRunning<T> = [Running<T>] extends [never] ? never : unknown
  * Runs a call (L3): a call `c` in an Effect body projects to
  * `(yield* $run(c))`. An Effect runs and gives its success type; a union
  * runs its Effect members, so `Effect<A, E, R> | U` gives `A | U`. Data
- * subtypes, values of other types, and a type parameter's values are data,
- * lifted to an Effect that succeeds with them. Overloads, not a conditional
+ * subtypes are rejected with the annotation that keeps them data (D251).
+ * Values of other types and a type parameter's values are data, lifted to
+ * an Effect that succeeds with them. Overloads, not a conditional
  * type, so a generic body's `T | undefined` resolves to data instead of a
  * deferred type (research/typedirected.md section 6.5).
  */
-export declare function $run<T extends DataEffect>(value: T): EffectModule.Effect<T, never, never>
+export declare function $run<T>(value: T & DataEffect): Generator<DataRunAnnotation, T, any>
+// Also reject a union containing data; it must not fall through as a program.
+export declare function $run<T>(value: T & ([Extract<T, DataEffect>] extends [never] ? never : unknown)): Generator<DataRunAnnotation, T, any>
 export declare function $run<A, E, R>(value: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R>
 export declare function $run<T>(value: T & HasRunning<T>): EffectModule.Effect<
   EffectModule.Success<Running<T>> | Exclude<T, Running<T>>,
@@ -197,11 +200,11 @@ type Emitted<Y> = Y extends $Emit<infer A> ? A : never
  * Its Stream's A is what it emits; E and R are what it runs.
  */
 export declare function $produce<Y>(
-  body: () => Generator<Y, unknown, any>
+  body: (() => Generator<Y, unknown, any>) & ValidYields<Y>
 ): StreamModule.Stream<Emitted<Y>, YieldE<Exclude<Y, $Emit<any>>>, YieldR<Exclude<Y, $Emit<any>>>>
 export declare function $produce<Self, Y>(
   options: { readonly self: Self },
-  body: (this: Self) => Generator<Y, unknown, any>
+  body: ((this: Self) => Generator<Y, unknown, any>) & ValidYields<Y>
 ): StreamModule.Stream<Emitted<Y>, YieldE<Exclude<Y, $Emit<any>>>, YieldR<Exclude<Y, $Emit<any>>>>
 
 /** `yield* p` in a producer emits each element of the producer or Stream p. */
