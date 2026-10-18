@@ -73,7 +73,7 @@ function label(id: string) {
 
 `try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`. Pass its signal to an API that supports cancellation; otherwise interruption stops waiting without necessarily stopping the foreign operation. Without a second argument the failure is `UnknownError`.
 
-`sync` with such a function treats rejection as a defect and belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: an Effeck function waits by calling, and `await` waits only for a fiber or a Deferred. Use Effect's HTTP modules for HTTP rather than wrapping a browser `fetch` call.
+`sync` with such a function treats rejection as a defect and belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: an Effeck function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. Use Effect's HTTP modules for HTTP rather than wrapping a browser `fetch` call.
 
 ## Adapt callbacks and cancellation
 

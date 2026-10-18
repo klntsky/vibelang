@@ -38,7 +38,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.ensuring(program, cleanup)` | `try` / `finally` |
 | `Effect.scoped` with `Effect.acquireRelease` | Acquire with `using` in the block that owns the resource |
 | `Effect.forkScoped(program)` | `fork work()` for a child owned by the enclosing block; `fork { ... }` forks a block |
-| `Fiber.join(fiber)` | `await fiber`; `await [a, b]` waits for several and interrupts the rest on a failure |
+| `Fiber.join(fiber)` | `join fiber`; `join [a, b]` joins several and interrupts the rest on a failure |
 | `Effect.all([a, b], { concurrency: "unbounded" })` | `await.all [a(), b()]`, like `Promise.all`; `await.all { x: a(), y: b() }` keeps the keys |
 | `Effect.all(effects, { concurrency: "unbounded", mode: "result" })` | `await.allSettled [a(), b()]`, like `Promise.allSettled` |
 | `Effect.raceFirst(a, b)` | `await.race [a(), b()]`, like `Promise.race`: the first to finish wins |

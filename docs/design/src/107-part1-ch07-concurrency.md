@@ -37,7 +37,7 @@ Each combinator has its own rule for a failing branch, and Effeck adds nothing t
 | `Effect.race` | The first success | Keeps waiting for the other branch; fails only if both fail, with both failures |
 | `Effect.raceFirst` | Whichever branch finishes first, success or failure | Fails if the first branch to finish failed; the other is interrupted |
 | `Effect.timeout` | The program's result | At the deadline, interrupts the program and fails with `Cause.TimeoutError` |
-| `await [a, b]` | Every fiber's value, in the same shape | Interrupts the other fibers and fails with that failure |
+| `join [a, b]` | Every fiber's value, in the same shape | Interrupts the other fibers and fails with that failure |
 | `await.all [a(), b()]` | Every result, in the same shape | Interrupts the other elements and fails with that failure |
 | `await.allSettled [a(), b()]` | Every outcome as a `Result`, in the same shape | Never fails |
 | `await.race [a(), b()]` | Whichever element finishes first, success or failure | Fails if the first to finish failed; the others are interrupted |
@@ -70,20 +70,20 @@ function serve(port: number) {
 }
 ```
 
-`fork` is a keyword (D166): `fork buildReport(id)` forks one call, and `fork { ... }` forks a block. It returns a `Fiber`, and `await` waits for it (D167):
+`fork` is a keyword (D166): `fork buildReport(id)` forks one call, and `fork { ... }` forks a block. It returns a `Fiber`, and `join` waits for it (D225):
 
 ```ts es
 function withProgress(id: string) {
   const pending = fork buildReport(id)
   sendProgressEmail(id)
-  return await pending          // waits for it; fails if it failed
+  return join pending           // waits for it; fails if it failed
 }
 // Report!ReportError | MailError!Reports | Mailer
 ```
 
-`fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `await`. The call form `fork(buildReport(id))` means the same. For a longer lifetime, say so: `forkIn(scope, program)` ties the fiber to a scope you hold, `detach(program)` ties it to nothing (D170), `Effect.forkScoped` ties it to the caller's scope and adds `Scope` to R, and `Effect.forkChild` ties it to the current fiber.
+`fork` adds the child's requirements to R and nothing else: the fiber cannot outlive `withProgress`, so no `Scope` appears in the contract, and its failures reach you only through `join`. The call form `fork(buildReport(id))` means the same. For a longer lifetime, say so: `forkIn(scope, program)` ties the fiber to a scope you hold, `detach(program)` ties it to nothing (D170), `Effect.forkScoped` ties it to the caller's scope and adds `Scope` to R, and `Effect.forkChild` ties it to the current fiber.
 
-`await` waits for a `Fiber`, a `Deferred`, or an array or object of them, and keeps the shape. When one fiber fails, the others still running are interrupted and the failure propagates, as `Effect.all` fails fast:
+`join` waits for a `Fiber`, or an array or object of fibers, and keeps the shape (`Fiber.join`). When one fiber fails, the others still running are interrupted and the failure propagates, as `Effect.all` fails fast. A `Deferred` waits with its method, `d.await()` (D227):
 
 ```ts effect
 const summary = Effect.fn("summary")(function* (id: string) {
@@ -98,13 +98,13 @@ const summary = Effect.fn("summary")(function* (id: string) {
 function summary(id: string) {
   const profile = fork loadProfile(id)
   const orders = fork recentOrders(id)
-  return { profile: await profile, orders: await orders }
+  return { profile: join profile, orders: join orders }
 }
 ```
 
 To start several programs and wait for them in one step, use an await operation instead of forking each: `await.all [loadProfile(id), recentOrders(id)]` (below).
 
-`await` never waits for a call: a call already runs and waits where it stands, so `await loadProfile(id)` is EK4601. A promise is EK4602; wait for one in a hatch, `try(async () => …)`, where `await` keeps its JavaScript meaning. Anything else is EK4603, and an `await` in a hatch's function that is not `async` is EK4604.
+`await` waits for promises in JavaScript, so in Effeck code a plain `await` is an error that names its replacement (D226): `await fiber` is EK4609, whose quick fix writes `join fiber`; `await d` on a Deferred is EK4610, whose quick fix writes `d.await()`; `await loadProfile(id)` is EK4601, because a call already runs and waits where it stands; a promise is EK4602, and waits in a hatch, `try(async () => …)`, where `await` keeps its JavaScript meaning; anything else is EK4603. An `await` in a hatch's function that is not `async` is EK4604. `join` on anything but fibers is EK4611, and `join` inside a hatch's function, which is plain TypeScript, is EK4612.
 
 #### Await operations
 

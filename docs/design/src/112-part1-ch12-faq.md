@@ -16,7 +16,7 @@ function loadProfile(id: string) {
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function, and `await` never waits for a call, so there are no "colored" functions: every function can wait. In Effeck code, `await` waits for a fiber you forked or a Deferred (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In Effeck code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -133,11 +133,11 @@ import { TestClock } from "effect/testing"
 it.effect("a reminder fires after one day") {
   const reminder = fork remindLater("ada", "1 day")
   TestClock.adjust("1 day")                          // virtual time: nothing waits
-  assert.strictEqual(await reminder, "sent")
+  assert.strictEqual(join reminder, "sent")
 }
 ```
 
-`@effect/vitest` works unchanged: `it.effect` runs an Effeck function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.effeck` has no `await`, and a runner inside a test body is EK1005 (Chapter 13).
+`@effect/vitest` works unchanged: `it.effect` runs an Effeck function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.effeck` code has no `await` except the await operations, and a runner inside a test body is EK1005 (Chapter 13).
 
 #### How do I log, trace, and record metrics?
 
@@ -219,7 +219,7 @@ function search(query: string) {
     scan.interrupt()               // cancels the scan; its finally blocks run first
     return cached
   }
-  return await scan
+  return join scan
 }
 ```
 

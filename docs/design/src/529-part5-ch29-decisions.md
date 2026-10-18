@@ -174,11 +174,11 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D155 | **Controversial.** A topic follows the by-name rule: where `%` stands for a program, the left side is passed by name; elsewhere it runs once, before the body; both in one pipe is EK1008 | `fetchUser(id) \|> retry(%, policy)` must retry the call, as `retry(fetchUser(id), policy)` does | 5, 13 |
 | D156 | A pipe's body must use `%` (EK1006); `%` outside a pipe's body is EK1007; after an operand `%` is still the remainder | The proposal's early errors; `%` keeps its JavaScript meaning where it already has one | 5, 28 |
 | D166 | `fork` is a keyword: `fork x` is `fork(x)` and `fork { ... }` forks a block | Concurrency reads as one word, with no lambda |
-| D167 | **Controversial.** `await` waits for a Fiber, a Deferred, or an array or object of them, failing fast; EK4601-EK4604 | Fibers need a join, and `await` was free outside hatches |
+| D167 | **Controversial.** `await` waits for a Fiber, a Deferred, or an array or object of them, failing fast; superseded by D225 and D226 | Fibers need a join, and `await` was free outside hatches |
 | D168 | **Superseded by D197.** **Controversial.** `select` runs the first case to finish and interrupts the rest; ties go to the first written; `default` polls; `break` leaves it | First-of-several events without `raceAll` plumbing |
 | D169 | `for concurrent(n)` runs the body per item in its own fiber; `continue` ends an item; `break` and `return` are EK4605 and EK4606 | `forEach` with a concurrency option, as a loop |
 | D170 | `detach(program)` and `forkIn(scope, program)` are fork's variants | Longer lifetimes without Effect's names |
-| D171 | `await`'s types accept one level of arrays and objects | Deeper recursive types exceed TypeScript's limits |
+| D171 | `await`'s types accept one level of arrays and objects; D228 carries the rule to `join` | Deeper recursive types exceed TypeScript's limits |
 | D172 | `provide AppLive { ... }` replaces `with AppLive { ... }`; `with` still compiles with the warning EK1009 and a quick fix | Effeck keywords reuse Effect's own names, so `provide` reads as `Effect.provide` | 4 |
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
@@ -203,6 +203,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D213 | **Deviation.** A matcher is a custom matcher, a primitive class (`typeof`), a class (`instanceof`), a predicate, or a value (SameValue) | Built-in brand checks cannot be written in a runtime helper | 3 |
 | D214 | A match lowers to a returning block, a labeled block, or an immediately invoked arrow function | TypeScript narrows each arm and arms run Effects in every position | 3 |
 | D215 | `customMatcher` is exported, and every `error` class matches by `instanceof` and extracts itself | Same-tag classes stay distinct | 3 |
+| D225 | `join` is a keyword: `join f`, `join [a, b]`, `join { a, b }` join fibers (Fiber.join), failing fast; `join(` stays a call; EK4611, EK4612 | `await` on fibers confused readers about promises; Effect's own word is join |
+| D226 | **Controversial.** A plain `await` in Effeck code is an error: EK4609 (fix: `join`), EK4610 (fix: `d.await()`), EK4601-EK4604; the await operations stay | In JavaScript `await` means a promise; keep that meaning |
+| D227 | A Deferred waits with `d.await()` | Method syntax (D152) already names Deferred.await |
+| D228 | `join`'s types reach one level of arrays and objects, as D171's did | Deeper recursive types exceed TypeScript's limits |
 
 #### Rules of the runtime and compiler
 

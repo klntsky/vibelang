@@ -13,7 +13,7 @@ function initializeThenWork() {
   }
   sleep("20 millis")
   Latch.open(ready)
-  return await worker
+  return join worker
 }
 ```
 
@@ -28,7 +28,7 @@ function reopenGate() {
   Latch.close(gate)
   const waiting = fork Latch.whenOpen(gate, () => "allowed again")
   Latch.open(gate)
-  return await waiting
+  return join waiting
 }
 ```
 

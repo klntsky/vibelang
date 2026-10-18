@@ -24,7 +24,7 @@ function offerWithBackpressure() {
   queue.offer(10)
   const secondOffer = fork queue.offer(20)
   const first = queue.take()
-  await secondOffer
+  join secondOffer
   const second = queue.take()
   return [first, second] // [10, 20]
 }

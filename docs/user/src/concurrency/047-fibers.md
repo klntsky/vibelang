@@ -11,14 +11,14 @@ function buildDashboard() {
     return "chart"
   }
   logInfo("preparing dashboard frame")
-  return await chart
+  return join chart
 }
 // string!!
 ```
 
-`fork` starts a child fiber and returns its handle, here a `Fiber<string>`, without waiting for its result. `await` waits for the child and returns its value, or propagates its failure. Unlike an ordinary call, the fork lets the parent continue while its child is waiting.
+`fork` starts a child fiber and returns its handle, here a `Fiber<string>`, without waiting for its result. `join` waits for the child and returns its value, or propagates its failure. Unlike an ordinary call, the fork lets the parent continue while its child is waiting.
 
-`fork loadChart()` forks one call, and `fork { ... }` forks a block. The call form, `fork(loadChart())`, means the same. `await` never waits for a call: a call already runs and waits where it stands, so `await loadChart()` is an error (EK4601).
+`fork loadChart()` forks one call, and `fork { ... }` forks a block. The call form, `fork(loadChart())`, means the same. `join` takes a fiber, not a call: a call already runs and waits where it stands. `await` in Effeck code means only the await operations below; `await chart` is EK4609, whose quick fix writes `join chart`.
 
 ## Awaiting completion as data
 
@@ -33,7 +33,7 @@ function inspectChild() {
 }
 ```
 
-`Fiber.await` succeeds with an `Exit`, so it does not rethrow the child's failure into the caller. The exit also represents defects and interruption. Use `await child` when failure should propagate and `Fiber.await(child)` when the caller needs to decide what the outcome means.
+`Fiber.await` succeeds with an `Exit`, so it does not rethrow the child's failure into the caller. The exit also represents defects and interruption. Use `join child` when failure should propagate and `Fiber.await(child)` when the caller needs to decide what the outcome means.
 
 ## Handling asynchronous interruption
 
@@ -54,7 +54,7 @@ function stopWorker() {
 
 Cancellation does not require a hand-written polling loop. Effect delivers it at runtime boundaries, defers it in uninterruptible regions, and runs cleanup before `interrupt` returns. A long plain JavaScript calculation still occupies the host thread until it returns or reaches an Effect operation.
 
-When the caller needs to continue during cleanup, fork the interruption, `fork worker.interrupt()`, and await that fiber before its owner exits. Avoid immediate unsafe runtime methods when cleanup ordering matters.
+When the caller needs to continue during cleanup, fork the interruption, `fork worker.interrupt()`, and join that fiber before its owner exits. Avoid immediate unsafe runtime methods when cleanup ordering matters.
 
 ## Protecting work from interruption
 
@@ -100,7 +100,7 @@ function combine() {
 
 `await.all [...]` starts every element in its own fiber and waits for all of them, keeping the shape of an array or an object, like `Promise.all`. Each element is passed by name, so `rowCount()` starts in its fiber instead of running before the operation. When one fails, `await.all` interrupts the others still running and propagates the failure, as `all` fails fast. For an expected-failure fallback, put `try` around it and recover in `catch`; defects and interruption still propagate. `await.allSettled [...]` never fails and returns each outcome as a `Result`.
 
-To wait for fibers you already hold, use `await` alone: `const [name, count] = await [titleFiber, rowsFiber]`. An await operation also accepts a fiber or a `Deferred` as an element and waits for it without restarting it.
+To wait for fibers you already hold, use `join`: `const [name, count] = join [titleFiber, rowsFiber]`. An await operation also accepts a fiber or a `Deferred` as an element and waits for it without restarting it.
 
 ## Racing events
 
@@ -154,7 +154,7 @@ function request() {
       }
     }
     sleep("20 millis")
-    // The nested block owns progress, even without an await.
+    // The nested block owns progress, even without a join.
   }
   logInfo("request finishing")
 }
@@ -176,11 +176,11 @@ function inCallerScope(scope: Scope) {
 
 function detachedExample() {
   const independent = detach(sleep("50 millis"))
-  await independent
+  join independent
 }
 ```
 
-`forkIn(scope, program)` attaches the child to a scope you hold, so it lives until that scope closes. `detach(program)` ties the child to nothing: it survives its parent and needs an explicit shutdown strategy; awaiting it above keeps the example bounded. `Effect.forkScoped` attaches the child to the caller's scope and leaves `Scope` in the caller's requirements until a scope is supplied.
+`forkIn(scope, program)` attaches the child to a scope you hold, so it lives until that scope closes. `detach(program)` ties the child to nothing: it survives its parent and needs an explicit shutdown strategy; joining it above keeps the example bounded. `Effect.forkScoped` attaches the child to the caller's scope and leaves `Scope` in the caller's requirements until a scope is supplied.
 
 ## Understanding execution scheduling
 
@@ -192,10 +192,10 @@ function waitForReady() {
     ready.succeed(undefined)
     sleep("20 millis")
   }
-  await ready
+  ready.await()
   logInfo("initialization is complete")
-  await worker
+  join worker
 }
 ```
 
-Forking schedules a child; it does not prove the child has reached a particular statement. `yieldNow()` gives other work a chance to run, but it is not a readiness guarantee. Use a `Deferred`, as above, when ordering matters; `await ready` waits until the child completes it. Sleeping for an estimated startup time leaves a race.
+Forking schedules a child; it does not prove the child has reached a particular statement. `yieldNow()` gives other work a chance to run, but it is not a readiness guarantee. Use a `Deferred`, as above, when ordering matters; `ready.await()` waits until the child completes it. Sleeping for an estimated startup time leaves a race.

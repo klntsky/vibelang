@@ -205,12 +205,13 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `race`, `raceFirst`, `raceAll` | Changed | Programs as functions; each has its own exit rule (Chapter 7) |
 | `forkChild`, `forkDetach`, `forkScoped`, `forkIn` | Changed | Programs as functions |
 | Background work owned by a block | Changed | `fork(() => heartbeat())` (D19) |
-| `Fiber.join`, `await`, `interrupt`, `joinAll`, `interruptAll` | Unchanged by design | The same calls |
+| `Fiber.join`, `joinAll` | Changed | `join fiber` and `join [a, b]` (D225) |
+| `Fiber.await`, `interrupt`, `interruptAll` | Unchanged by design | The same calls, or `fiber.await()` and `fiber.interrupt()` |
 | Interruption is not an error | Changed | `catch` never sees it; `finally` and `using` always run |
 | `uninterruptible`, `uninterruptibleMask`, `interruptibleMask` | Changed | `uninterruptible { … restore { … } }` and `interruptible { … }` blocks, or the prelude functions with a program (D180) |
 | `onInterrupt` | Changed | `Effect.onInterrupt(() => task(), () => Console.log("stopped"))` |
 | `Effect.forever` | Changed | `while (true) tick()` |
-| `Deferred` | Unchanged by design | `Deferred.make<number>()`, `Deferred.await(d)` |
+| `Deferred` | Unchanged by design | `Deferred.make<number>()`, `d.await()` (D227) |
 | `Deferred.complete` with a program | Changed | `Deferred.complete(d, () => task())` |
 | `Queue` | Unchanged by design | `Queue.offer(queue, 1)` |
 | `PubSub.subscribe` | Changed | `using subscription = PubSub.subscribe(pubsub)` |
@@ -224,7 +225,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In Effeck | Form |
 | --- | --- | --- |
-| `async` and `await` | Changed | `async` only inside a hatch's function, where `await` is JavaScript's; elsewhere a call waits, and `await` waits for a fiber or a Deferred (D148, D167) |
+| `async` and `await` | Changed | `async` only inside a hatch's function, where `await` is JavaScript's; elsewhere a call waits, `join` waits for a fiber, and `await` appears only in the await operations (D148, D226) |
 | `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal` cancels on interruption (D148) |
 | `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
 | `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |

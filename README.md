@@ -112,9 +112,10 @@ clients, see [editors/](editors/README.md).
 - Run programs concurrently with the TC39 await operations, which behave as
   the `Promise` methods: `const [a, b] = await.all [left(), right()]`,
   `await.race [...]`, `await.any [...]`, `await.allSettled [...]`. Start
-  background work with `fork work()` and wait for the fiber with `await`;
-  `for concurrent(8) (const x of xs)` runs a loop body in parallel. `await`
-  never waits for a call: a call already waits.
+  background work with `fork work()` and wait for the fiber with `join`;
+  `for concurrent(8) (const x of xs)` runs a loop body in parallel. A plain
+  `await` is an error with a quick fix: `join` for a fiber, `d.await()` for a
+  Deferred, and a call already waits.
 - Answer a control operation with a handle clause:
   `try { return release(v) } handle Approval.approve(request) { resume(true) }`.
   A `return` in the try block or a clause returns from the enclosing function.

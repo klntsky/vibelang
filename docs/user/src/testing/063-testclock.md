@@ -51,7 +51,7 @@ it.effect("a deadline returns the fallback") {
   }))
 
   TestClock.adjust("30 seconds")
-  const result = await pending
+  const result = join pending
   check(result.isNone(), "expected the timeout fallback")
 }
 ```
@@ -137,10 +137,10 @@ it.effect("completes a deferred after a delay") {
   }
 
   TestClock.adjust("6 seconds")
-  const value = await ready
-  await worker
+  const value = ready.await()
+  join worker
   check(value === 42, "unexpected deferred value")
 }
 ```
 
-The sleep precedes completion in the worker, so the test checks delayed completion. After advancing time, await the Deferred or join the worker to synchronize with the observable outcome. A fork alone says work has started, not that its result is ready.
+The sleep precedes completion in the worker, so the test checks delayed completion. After advancing time, wait for the Deferred with `ready.await()` or join the worker to synchronize with the observable outcome. A fork alone says work has started, not that its result is ready.

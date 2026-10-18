@@ -615,7 +615,7 @@ function hatches(text: string, url: string) {
 
 ## Fibers
 
-**Fork and wait** (D166, D167). A fiber belongs to the block that forks it.
+**Fork and join** (D166, D225). A fiber belongs to the block that forks it. `join [a, b]` joins several and interrupts the rest on a failure.
 
 ```ts effect
 const user = yield* Effect.forkChild(getUser("1"))
@@ -627,7 +627,7 @@ return [yield* Fiber.join(user), yield* Fiber.join(orders)]
 function both() {
   const user = fork getUser("1")
   const orders = fork getOrders("1")
-  return [await user, await orders]
+  return [join user, join orders]
 }
 ```
 
@@ -700,7 +700,7 @@ function background() {
 }
 ```
 
-**Wait for a Deferred** (D167).
+**Wait for a Deferred** (D227). `await` waits for promises in JavaScript, so a Deferred uses its method.
 
 ```ts effect
 const ready = yield* Deferred.make<string>()
@@ -712,7 +712,7 @@ const value = yield* Deferred.await(ready)
 function signal() {
   const ready = Deferred.make<string>()
   Deferred.succeed(ready, "go")
-  return await ready
+  return ready.await()
 }
 ```
 

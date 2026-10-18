@@ -66,11 +66,11 @@ function observeTwoClients() {
 
   const first = fork client(firstReady)
   const second = fork client(secondReady)
-  await firstReady
-  await secondReady
+  firstReady.await()
+  secondReady.await()
   SubscriptionRef.set(count, 1)
-  await first
-  await second
+  join first
+  join second
 }
 ```
 

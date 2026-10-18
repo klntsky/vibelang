@@ -22,13 +22,13 @@ The new deferred starts empty and contains neither a success nor a failure. Crea
 ```ts
 function waitForAddress() {
   const address = Deferred.make<string>()
-  const listener = fork await address
+  const listener = fork address.await()
   address.succeed("127.0.0.1:8080")
-  return await listener
+  return join listener
 }
 ```
 
-`Deferred.await` waits while the handle is empty and returns immediately after completion. Several fibers can await the same deferred and receive the same result. Cancelling one waiter does not require completing the deferred for everyone else.
+`address.await()` (`Deferred.await`) waits while the handle is empty and returns immediately after completion. Several fibers can await the same deferred and receive the same result. Cancelling one waiter does not require completing the deferred for everyone else.
 
 ## Completing with success or failure
 
@@ -37,7 +37,7 @@ function completeOnce() {
   const result = Deferred.make<number, string>()
   const accepted = result.succeed(25)
   const ignored = result.fail("too late")
-  return { accepted, ignored, value: await result }
+  return { accepted, ignored, value: result.await() }
 }
 // Returns { accepted: true, ignored: false, value: 25 }.
 
@@ -45,7 +45,7 @@ function shareFailure() {
   const result = Deferred.make<number, string>()
   result.fail("configuration missing")
   try {
-    return await result
+    return result.await()
   } catch (error) {
     logError(error)
     return 0
@@ -83,11 +83,11 @@ function coordinate() {
     prepared.succeed(["part-a", "part-b"])
   }
   const consumer = fork {
-    const parts = await prepared
+    const parts = prepared.await()
     return parts.join("+")
   }
-  const result = await consumer
-  await producer
+  const result = join consumer
+  join producer
   return result
 }
 ```

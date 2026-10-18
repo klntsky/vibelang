@@ -47,7 +47,7 @@ error EK1002: Effect.gen expects a JavaScript generator, but in Effeck function*
     function findName(id: string) { return Users.find(id).name }
 ```
 
-The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions are not part of Effeck either: a call already waits. `await` waits for a fiber or a Deferred, never for a call (Chapter 7, D167). Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (Chapter 28).
+The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions are not part of Effeck either: a call already waits. `join` waits for a fiber and `d.await()` for a Deferred; `await` appears only in the await operations (Chapter 7, D225, D226). Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (Chapter 28).
 
 #### Using Effeck code from TypeScript
 
@@ -146,7 +146,7 @@ This is a policy change from the original direction, which adapted every plain c
 
 #### Promises
 
-Outside a hatch, `await` waits only for a fiber or a Deferred: a call already waits for the callee. A Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
+Outside a hatch, a call already waits for the callee, `join` waits for a fiber, and `await` appears only in the await operations (D226). A Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
 
 ```ts es
 import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: AbortSignal) => Promise<Charge>
