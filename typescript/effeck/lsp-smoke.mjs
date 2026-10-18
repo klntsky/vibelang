@@ -444,6 +444,78 @@ try {
     assert(renameEdits.length === 1 && renameEdits[0].newText === "catch", `edits ${JSON.stringify(renameEdits)}`)
   })
 
+  // apply returns a file's text after edits, which do not overlap.
+  const apply = (relative, edits) => {
+    const lines = text(relative).split("\n")
+    const offset = (p) => lines.slice(0, p.line).reduce((n, l) => n + l.length + 1, 0) + p.character
+    let result = text(relative)
+    for (const e of [...edits].sort((a, b) => offset(b.range.start) - offset(a.range.start))) {
+      result = result.slice(0, offset(e.range.start)) + e.newText + result.slice(offset(e.range.end))
+    }
+    return result
+  }
+
+  await check("refactor: Effect's language service refactors write a contract, a schema, an Effeck function, pipes, and a pipe style", async () => {
+    open("src/lsrules-editor.effeck", "effeck")
+    const relative = "src/lsrules-editor.effeck"
+    const uri = fileUri(relative)
+    const refactor = async (needle, title, options) => {
+      const start = at(relative, needle, options)
+      const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: { start, end: start }, context: { diagnostics: [], only: ["refactor"] } })) ?? []
+      const action = actions.find((a) => a.title === title)
+      assert(action, `no refactor ${title} at ${needle} among ${JSON.stringify(actions.map((a) => a.title))}`)
+      assert(action.kind === "refactor.rewrite", `kind ${action.kind}`)
+      return apply(relative, action.edit?.changes?.[uri] ?? [])
+    }
+    const contract = await refactor("greet()", "Write the inferred contract")
+    assert(contract.includes("export function greet(): string!!Greeting {"), `contract: ${contract.split("\n").find((l) => l.includes("greet("))}`)
+    const schema = await refactor("interface Point", "Convert to a schema declaration")
+    assert(schema.includes("schema Point {\n  x: number\n  y: number\n}"), "schema not written")
+    const plain = await refactor("async function", "Convert to an Effeck function")
+    assert(plain.includes("export function size(text: string) {\n  const length = try((text) => Promise.resolve(text.length), text)"), `async: ${plain.split("\n").filter((l) => l.includes("size") || l.includes("length =")).join(" / ")}`)
+    const mapped = await refactor("async function", "Convert to an Effeck function with an error per await")
+    assert(mapped.includes("error ResolveFailed { cause: unknown }\nexport function size(") && mapped.includes("(cause) => new ResolveFailed({ cause }), text)"), "errors not written")
+    const toPipe = await refactor("inc(double(1))", "Convert to a pipe")
+    assert(toPipe.includes("export const piped = 1 |> double(%) |> inc(%)"), "pipe not written")
+    const toCalls = await refactor("1 |> double", "Convert the pipe to calls", { offset: 2 })
+    assert(toCalls.includes("export const unpiped = inc(double(1))"), "calls not written")
+    const style = await refactor(".pipe(Option.map", "Write pipe(x, …)", { offset: 1 })
+    assert(style.includes("export const styled = pipe(Option.some(1), Option.map((n: number) => n + 1))"), "pipe style not toggled")
+  })
+
+  await check("hover: a layer shows what it provides and needs, and wire the order it builds in", async () => {
+    const relative = "src/lsrules-editor.effeck"
+    const layer = hoverText(await connection.request("textDocument/hover", position(relative, "AppLive =")))
+    assert(/Layer: provides `(Greeting|Name)` and `(Greeting|Name)`; needs nothing\./.test(layer), `layer hover: ${layer}`)
+    const wire = hoverText(await connection.request("textDocument/hover", position(relative, "wire(GreetingLive")))
+    assert(wire.includes("wire builds its layers in this order:\n1. `NameLive` provides `Name`\n2. `GreetingLive` provides `Greeting`, using `NameLive`"), `wire hover: ${wire}`)
+  })
+
+  await check("completion: Duration strings, a brand's name, and @effeck-diagnostics codes", async () => {
+    const relative = "src/lsrules-editor.effeck"
+    const labels = async (needle, offset) => {
+      const result = await connection.request("textDocument/completion", position(relative, needle, { offset }))
+      return (Array.isArray(result) ? result : result?.items ?? []).map((item) => item.label)
+    }
+    const durations = await labels("\"2 seconds\"", 4)
+    assert(durations.includes("2 seconds") && durations.includes("2 millis"), `durations ${JSON.stringify(durations)}`)
+    const brands = await labels("brand(\"UserId\")", 7)
+    assert(JSON.stringify(brands) === JSON.stringify(["UserId"]), `brands ${JSON.stringify(brands)}`)
+    const codes = await labels("EK4823:warning", 4)
+    assert(codes.includes("EK4801:off") && codes.includes("*:off"), `codes ${JSON.stringify(codes.slice(0, 5))}`)
+  })
+
+  await check("code action: a comment turns EK4823 on, and its quick fix writes the value as the body", async () => {
+    const relative = "src/lsrules-editor.effeck"
+    const items = (await diagnostics(relative)).filter((d) => d.code === 4823)
+    assert(items.length === 1 && items[0].severity === 2, `EK4823 ${JSON.stringify(items)}`)
+    const uri = fileUri(relative)
+    const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: items[0].range, context: { diagnostics: items, only: ["quickfix"] } })) ?? []
+    const fix = actions.find((a) => a.title === "Write the value as the body")
+    assert(fix, `no quick fix among ${JSON.stringify(actions.map((a) => a.title))}`)
+    assert(apply(relative, fix.edit.changes[uri]).includes("export const increment = (n: number) => n + 1\n"), "body not written")
+  })
+
   await check("diagnostics: an edit to main.effeck is checked with Effeck types", async () => {
     // name is the success value of lookup(1), a string, so toFixed does not exist.
     const broken = text("src/main.effeck").replace("name.toUpperCase()", "name.toFixed()")

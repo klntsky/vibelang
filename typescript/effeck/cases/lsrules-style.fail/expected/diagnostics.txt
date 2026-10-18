@@ -1,0 +1,5 @@
+main.effeck(7,23): error EK4821
+main.effeck(16,7): error EK4822
+main.effeck(21,41): error EK4823
+main.effeck(24,21): error EK4824
+main.effeck(25,22): error EK4825

@@ -1,0 +1,25 @@
+// expect: EK4821 EK4822 EK4823 EK4824 EK4825
+// The style rules of Effect's language service (D240), off by default and
+// turned on here by tsconfig.json.
+
+// EK4821: a Schema.Struct with a literal _tag; a schema declaration's own
+// struct is the compiler's and draws nothing.
+export const Opened = Schema.Struct({ _tag: Schema.Literal("Opened"), at: Schema.Number })
+
+schema Closed {
+  _tag: "Closed"
+  at: number
+}
+
+// EK4822: a condition that is not a boolean.
+export function check(count: number) {
+  if (count) return 1
+  return count > 0 ? 2 : 0
+}
+
+// EK4823: an arrow function whose block only returns.
+export const increment = (n: number) => { return n + 1 }
+
+// EK4824: a pipe with no functions. EK4825: a pipe of a pipe.
+export const same = pipe(1)
+export const twice = Option.some(1).pipe(Option.map((n: number) => n + 1)).pipe(Option.getOrElse(() => 0))

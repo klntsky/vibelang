@@ -170,17 +170,24 @@ an Effect data type hovers as the function it calls, "Method syntax: calls
 by name hovers as "Passed by name to `fork` as a program" (D147), and so does a
 pipe's topic that passes its left side by name; any other topic hovers as its
 value, "(topic) %: T" (D155). TypeScript
-files retain TypeScript hover behavior. D33's control-class hover text,
-catch-specific completions, and migration refactors remain design targets;
-quick fixes exist for retired spellings and for the EK48xx rules whose repair
-is mechanical (D240). Diagnostic messages include repair suggestions
+files retain TypeScript hover behavior. D33's control-class hover text and
+catch-specific completions remain design targets. Quick fixes exist for
+retired spellings and for the EK48xx rules whose repair is mechanical (D240).
+Refactors, code actions of kind `refactor.rewrite`, write or remove a
+function's contract, convert an interface to a `schema` declaration, convert
+an `async` function to an Effeck function, with or without an `error`
+declaration per `await`, convert nested calls to a `|>` pipe and back, and
+toggle `x.pipe(f)` and `pipe(x, f)` (D245). A layer's hover lists what it
+provides, needs, and fails with, and `wire`'s hover the order it builds its
+layers in; a `Duration.Input` string, the name in `Schema.brand("…")`, and the
+codes of an `@effeck-diagnostics` comment complete (D246). Diagnostic messages include repair suggestions
 as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
 Every EK diagnostic before EK4801 is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service class` or `control class` declaration; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, a `catch` statement or catch expression that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
 
-EK4801-EK4820 carry the rules of Effect's language service that Effeck's syntax does not already rule out (D240). They are lint, not soundness: each has a default category, error, warning, or off, and every one except EK4813, which stands in for TypeScript's TS2339, can be set in `compilerOptions.effeck.diagnostics` or by a comment (D241):
+EK4801-EK4825 carry the rules of Effect's language service that Effeck's syntax does not already rule out (D240). They are lint, not soundness: each has a default category, error, warning, or off, and every one except EK4813, which stands in for TypeScript's TS2339, can be set in `compilerOptions.effeck.diagnostics` or by a comment (D241):
 
 ```ts
 // @effeck-diagnostics EK4818:warning            from here to the end of the file
@@ -192,7 +199,7 @@ A later comment overrides an earlier one, and within one comment a code named on
 
 | Option in `compilerOptions.effeck` | Values | Default |
 | --- | --- | --- |
-| `diagnostics` | `"EK2004"`, `"EK4403"`, and EK4801-EK4820 except `"EK4813"`, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
+| `diagnostics` | `"EK2004"`, `"EK4403"`, and EK4801-EK4825 except `"EK4813"`, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
 | `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas do not (D104) | `"none"` |
 
 `effeck` exits non-zero when any error is reported. The CLI prints `error EK1003:`; LSP sends source `EK` and numeric code `1003`, which VS Code displays as `EK(1003)` (D61). Diagnostics print at `.effeck` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
@@ -291,6 +298,11 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4818 | Off by default: `JSON.parse` or `JSON.stringify` in Effeck code (D240) | Decode with `Schema.fromJsonString` | 11 |
 | EK4819 | In a `.ts` file: `yield` of an Effect in a generator passed to an Effect function such as `Effect.gen` (D242) | Write `yield*` (quick fix) | 10 |
 | EK4820 | In a `.ts` file: `yield*` of an Effect that never succeeds, as a statement (D242) | Write `return yield*` (quick fix) | 10 |
+| EK4821 | Off by default: `Schema.Struct` with a `_tag: Schema.Literal(…)` field (D240) | `Schema.TaggedStruct("Opened", { … })` (quick fix) | 11 |
+| EK4822 | Off by default: a condition whose type is not boolean (D240) | Compare explicitly: `if (count > 0)` | 2 |
+| EK4823 | Off by default: an arrow function whose block only returns a value (D240) | Write the value as the body (quick fix) | 2 |
+| EK4824 | Off by default: a `pipe` with no functions (D240) | Remove the pipe (quick fix) | 5 |
+| EK4825 | Off by default: a pipe of a pipe, `x.pipe(f).pipe(g)` (D240) | Pass every function to one pipe (quick fix) | 5 |
 
 #### Linting
 

@@ -430,6 +430,10 @@ func (l *LanguageService) getCompletionsAtPosition(
 	checker, done := l.GetProgram().GetTypeCheckerForFile(ctx, file)
 	defer done()
 
+	if hookCompletions := l.completionsFromHooks(checker, file, position); hookCompletions != nil {
+		return hookCompletions, nil
+	}
+
 	stringCompletions := l.getStringLiteralCompletions(
 		ctx,
 		file,

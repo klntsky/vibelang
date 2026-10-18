@@ -156,7 +156,66 @@ func (l *LanguageService) ProvideCodeActions(ctx context.Context, params *lsprot
 		actions = append(actions, fixAllActions...)
 	}
 
+	if len(refactorProviders) > 0 && (params.Context == nil || wantsKind(params.Context.Only, lsproto.CodeActionKindRefactorRewrite)) {
+		for _, mapped := range l.converters.FromLSPRangeForSourceFile(file, params.Range, spanmap.FeatureCodeActions) {
+			refactorContext := &RefactorContext{SourceFile: mapped.Script, Span: mapped.Span, Program: program, LS: l}
+			for _, provider := range refactorProviders {
+				for _, action := range provider(ctx, refactorContext) {
+					actions = append(actions, convertToLSPRefactor(action, params.TextDocument.Uri))
+				}
+			}
+		}
+	}
+
 	return lsproto.CommandOrCodeActionArrayOrNull{CommandOrCodeActionArray: &actions}, nil
+}
+
+// RefactorProvider returns the refactors it offers for refactor's span:
+// code actions of kind refactor.rewrite, which change code that has no
+// diagnostic to fix.
+type RefactorProvider func(ctx context.Context, refactor *RefactorContext) []*CodeAction
+
+// RefactorContext is what a RefactorProvider is asked about.
+type RefactorContext struct {
+	SourceFile *ast.SourceFile
+	Span       core.TextRange // the selection, or the cursor as an empty span
+	Program    *compiler.Program
+	LS         *LanguageService
+}
+
+var refactorProviders []RefactorProvider
+
+// RegisterRefactorProvider adds provider to the code actions. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterRefactorProvider(provider RefactorProvider) {
+	refactorProviders = append(refactorProviders, provider)
+}
+
+// wantsKind reports whether only, a request's filter, is empty or asks for
+// kind.
+func wantsKind(only *[]lsproto.CodeActionKind, kind lsproto.CodeActionKind) bool {
+	if only == nil || len(*only) == 0 {
+		return true
+	}
+	for _, requested := range *only {
+		if requested.Contains(kind) {
+			return true
+		}
+	}
+	return false
+}
+
+func convertToLSPRefactor(action *CodeAction, uri lsproto.DocumentUri) lsproto.CommandOrCodeAction {
+	kind := lsproto.CodeActionKindRefactorRewrite
+	changes := map[lsproto.DocumentUri][]*lsproto.TextEdit{uri: action.Changes}
+	return lsproto.CommandOrCodeAction{
+		CodeAction: &lsproto.CodeAction{
+			Title: action.Description,
+			Kind:  &kind,
+			Edit:  &lsproto.WorkspaceEdit{Changes: &changes},
+		},
+	}
 }
 
 // getFixAllQuickFixes returns per-provider "Fix all in file" quickfix entries for providers

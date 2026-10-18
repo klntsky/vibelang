@@ -21,6 +21,7 @@ func expectedCodeActionKinds() []lsproto.CodeActionKind {
 		"source.removeUnusedImports.ts",
 		"source.sortImports.ts",
 		"source.fixAll.ts",
+		lsproto.CodeActionKindRefactorRewrite,
 	}
 }
 

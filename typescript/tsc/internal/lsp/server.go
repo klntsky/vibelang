@@ -393,6 +393,7 @@ func supportedCodeActionKinds() []lsproto.CodeActionKind {
 		lsproto.CodeActionKindSourceRemoveUnusedImportsTs,
 		lsproto.CodeActionKindSourceSortImportsTs,
 		lsproto.CodeActionKindSourceFixAllTs,
+		lsproto.CodeActionKindRefactorRewrite,
 	}
 }
 

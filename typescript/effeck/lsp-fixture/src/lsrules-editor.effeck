@@ -1,0 +1,62 @@
+// Refactors, hovers, and completions from Effect's language service (D245, D246).
+service Name {
+  value(): string!!
+}
+
+service Greeting {
+  text(): string!!
+}
+
+const NameLive = Layer.succeed(Name, {
+  value() {
+    return "Ada"
+  }
+})
+
+const GreetingLive = Layer.effect(Greeting) {
+  const name = Name()
+  return {
+    text() {
+      return `Hello, ${name.value()}`
+    }
+  }
+}
+
+export const AppLive = wire(GreetingLive, NameLive)
+
+export function greet() {
+  return Greeting.text()
+}
+
+interface Point {
+  x: number
+  y: number
+}
+
+export const origin: Point = { x: 0, y: 0 }
+
+export async function size(text: string): Promise<number> {
+  const length = await Promise.resolve(text.length)
+  return length
+}
+
+function double(n: number) {
+  return n * 2
+}
+
+function inc(n: number) {
+  return n + 1
+}
+
+export const piped = inc(double(1))
+export const unpiped = 1 |> double(%) |> inc(%)
+export const styled = Option.some(1).pipe(Option.map((n: number) => n + 1))
+
+export function pause() {
+  Effect.sleep("2 seconds")
+}
+
+export const UserId = Schema.String.pipe(Schema.brand("UserId"))
+
+// @effeck-diagnostics-next-line EK4823:warning
+export const increment = (n: number) => { return n + 1 }

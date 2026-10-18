@@ -66,9 +66,11 @@ Inside functions, plain foreign calls need a boundary hatch such as `try` or `sy
 
 The server exposes TypeScript completions through the Effeck checker,
 including service member types. Quick fixes repair retired spellings and the
-mechanical cases of Effect's language service rules, below. D33 also calls for
-catch-specific completions and migration refactors, which are not implemented.
-Other diagnostic messages include suggested repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen`
+mechanical cases of Effect's language service rules, below, and refactors
+write a function's inferred contract, convert an `async` function or an
+interface, and convert between calls and pipes (D245). D33's catch-specific
+completions are not implemented. Other diagnostic messages include suggested
+repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen`
 or `yield*` inside `.effeck`.
 
 ## Configure compiler checks
@@ -94,13 +96,13 @@ A contract gives the compiler a promise to check. To infer selected channels, wr
 }
 ```
 
-EK2004, EK4403, and the rules from Effect's language service, EK4801-EK4820 except EK4813, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. All other EK diagnostics are errors whose severity cannot change, and `@ts-expect-error` does not suppress them. `effeck` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
+EK2004, EK4403, and the rules from Effect's language service, EK4801-EK4825 except EK4813, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. All other EK diagnostics are errors whose severity cannot change, and `@ts-expect-error` does not suppress them. `effeck` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
 
 ## Effect language service rules
 
-Effeck supports every feature of Effect's language service, `@effect/language-service` 0.87.5 (D240). Most of its 108 rules guard against mistakes that Effeck's syntax rules out: there is no `Effect.gen` to misuse, a call already runs, and `catch` catches failures. Existing EK diagnostics cover others. The rest are EK4801-EK4820, with quick fixes where the repair is mechanical.
+Effeck supports every feature of Effect's language service, `@effect/language-service` 0.87.5 (D240). Most of its 108 rules guard against mistakes that Effeck's syntax rules out: there is no `Effect.gen` to misuse, a call already runs, and `catch` catches failures. Existing EK diagnostics cover others. The rest are EK4801-EK4825, with quick fixes where the repair is mechanical, and refactors, hovers, and completions in the editor.
 
-EK4801-EK4820 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in `compilerOptions.effeck.diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
+EK4801-EK4825 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in `compilerOptions.effeck.diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
 
 ```ts
 function discard(program: Effect.Effect<number>) {
@@ -178,48 +180,48 @@ function discard(program: Effect.Effect<number>) {
 | Style | `effectSucceedWithVoid` | Not needed: a function that returns nothing | `function done() { }` |
 | Style | `flatMapToMap` | Not needed: statements | `return g(f())` |
 | Style | `importFromBarrel` | Not needed: the compiler writes the imports for effect's root names (D146) | `Option.some(1)` with no import |
-| Style | `missedPipeableOpportunity` | Planned: a refactor that writes a `|>` pipe | `f(g(h(x)))` becomes `x \|> h(%) \|> g(%) \|> f(%)` |
+| Style | `missedPipeableOpportunity` | Refactor: "Convert to a pipe" | `f(g(h(x)))` becomes `x \|> h(%) \|> g(%) \|> f(%)` |
 | Style | `missingEffectServiceDependency` | Effect 3 only; `wire` computes dependencies | `wire(UsersLive, DbLive)` |
 | Style | `nestedEffectGenYield` | Not needed: no `Effect.gen` | None |
 | Style | `redundantSchemaTagIdentifier` | Not needed: `error` and `schema` declarations take their tag from their name | `error NotFound { id: string }` |
-| Style | `schemaStructWithTag` | Planned: EK4821, off by default, with a quick fix | `Schema.Struct({ _tag: Schema.Literal("A"), … })` |
+| Style | `schemaStructWithTag` | EK4821, off by default, with a quick fix to `Schema.TaggedStruct` | `Schema.Struct({ _tag: Schema.Literal("A"), … })` |
 | Style | `schemaUnionOfLiterals` | Effect 3 only | None |
 | Style | `serviceNotAsClass` | Not needed: `service` declarations | `service Users { … }` |
-| Style | `strictBooleanExpressions` | Planned: EK4822, off by default | `if (count) { … }` |
-| Style | `unnecessaryArrowBlock` | Planned: EK4823, off by default, with a quick fix | `(x) => { return x + 1 }` |
+| Style | `strictBooleanExpressions` | EK4822, off by default | `if (count) { … }` |
+| Style | `unnecessaryArrowBlock` | EK4823, off by default, with a quick fix | `(x) => { return x + 1 }` |
 | Style | `unnecessaryEffectGen` | Not needed: no `Effect.gen` | None |
 | Style | `unnecessaryFailYieldableError` | Not needed: `throw new NotFound({ id })` | `throw new NotFound({ id })` |
-| Style | `unnecessaryPipe` | Planned: EK4824, off by default, with a quick fix | `pipe(x)` |
-| Style | `unnecessaryPipeChain` | Planned: EK4825, off by default, with a quick fix | `x.pipe(f).pipe(g)` |
+| Style | `unnecessaryPipe` | EK4824, off by default, with a quick fix | `pipe(x)` |
+| Style | `unnecessaryPipeChain` | EK4825, off by default, with a quick fix | `x.pipe(f).pipe(g)` |
 | Hover | Extended Effect type | Covered: a function's hover shows its contract, `A!E!R` (D77) | `string!UserNotFound!Users` |
 | Hover | `yield*` hover | Not needed: a running call's hover shows its success value (D77) | Runs here and returns `User` |
-| Hover | Layer service involvement | Planned: a layer's hover lists what it provides, needs, and fails with | Hover on `UsersLive` |
-| Hover | Layer graph | Planned: a `wire` call's hover lists the order it builds in | Hover on `wire(UsersLive, DbLive)` |
+| Hover | Layer service involvement | Hover: a layer lists what it provides, needs, and fails with | Hover on `UsersLive` |
+| Hover | Layer graph | Hover: `wire` lists the order it builds its layers in, and what each uses | Hover on `wire(UsersLive, DbLive)` |
 | Completion | `Self` in classes | Not needed: declarations have no `Self` | None |
 | Completion | `Effect.gen` snippet | Not needed: no `Effect.gen` | None |
 | Completion | `Effect.fn` span name | Not needed: `tracing` names spans after functions (D104) | `"tracing": "exported"` |
-| Completion | Duration strings | Planned: completion of `"1 second"` and the other units where a `Duration.Input` goes | `Effect.sleep("1 second")` |
+| Completion | Duration strings | Completion: `"2 seconds"` and the other units where a `Duration.Input` goes | `Effect.sleep("1 second")` |
 | Completion | Namespace import style | Not needed: effect's root names are in scope (D146) | `Option.some(1)` |
-| Completion | `Schema.brand` name | Planned: completion of the declared name in `Schema.brand(…)` | `schema UserId = Schema.String.pipe(Schema.brand("UserId"))` |
-| Completion | Comment directives | `@effeck-diagnostics` comments (D241); completion planned | `// @effeck-diagnostics-next-line EK4801:off` |
-| Refactor | async function to `Effect.gen` | Planned: "Convert to an Effeck function" | `async function f() { await p }` becomes `function f() { try(async () => p) }` |
-| Refactor | async function to `Effect.gen`, with an error per promise | Planned: the same refactor, with an `error` declaration per `await` | `try(async () => p, (cause) => new FetchFailed({ cause }))` |
-| Refactor | async function to `Effect.fn` | Planned: the same refactor; Effeck has one function form | As above |
-| Refactor | async function to `Effect.fn`, with an error per promise | Planned: the same refactor | As above |
+| Completion | `Schema.brand` name | Completion: the declared name in `Schema.brand("…")` | `schema UserId = Schema.String.pipe(Schema.brand("UserId"))` |
+| Completion | Comment directives | `@effeck-diagnostics` comments (D241), whose codes complete | `// @effeck-diagnostics-next-line EK4801:off` |
+| Refactor | async function to `Effect.gen` | Refactor: "Convert to an Effeck function" | `await fetch(url)` becomes `try((url) => fetch(url), url)` |
+| Refactor | async function to `Effect.gen`, with an error per promise | Refactor: "Convert to an Effeck function with an error per await" | `try(fetch(url), (cause) => new FetchFailed({ cause }))` |
+| Refactor | async function to `Effect.fn` | Refactor: "Convert to an Effeck function"; Effeck has one function form | As above |
+| Refactor | async function to `Effect.fn`, with an error per promise | Refactor: "Convert to an Effeck function with an error per await" | As above |
 | Refactor | `Effect.gen` to `Effect.fn` | Not needed: one function form | None |
 | Refactor | Implement service accessors | Not needed: `Users.find(id)` | None |
-| Refactor | Function calls to pipe | Planned: "Convert to a pipe" | `f(g(x))` becomes `x \|> g(%) \|> f(%)` |
-| Refactor | Pipe to data-first | Planned: "Convert the pipe to calls" | `x \|> g(%) \|> f(%)` becomes `f(g(x))` |
-| Refactor | Toggle return type signature | Planned: "Write the inferred contract" and "Remove the contract" | `function load(id: string): User!NotFound!Users` |
+| Refactor | Function calls to pipe | Refactor: "Convert to a pipe" | `f(g(x))` becomes `x \|> g(%) \|> f(%)` |
+| Refactor | Pipe to data-first | Refactor: "Convert the pipe to calls" | `x \|> g(%) \|> f(%)` becomes `f(g(x))` |
+| Refactor | Toggle return type signature | Refactor: "Write the inferred contract" and "Remove the contract" | `function load(id: string): User!NotFound!Users` |
 | Refactor | Remove an unnecessary `Effect.gen` | Not needed: no `Effect.gen` | None |
 | Refactor | Wrap with `Effect.gen` | Not needed: every function is one | None |
-| Refactor | Toggle pipe styles | Planned: toggles `x.pipe(f)` and `pipe(x, f)` | `x.pipe(f, g)` and `pipe(x, f, g)` |
+| Refactor | Toggle pipe styles | Refactor: "Write pipe(x, …)" and "Write x.pipe(…)" | `x.pipe(f, g)` and `pipe(x, f, g)` |
 | Refactor | Layer Magic | Not needed: `wire` composes layers in dependency order (D27) | `wire(AppLive, UsersLive, DbLive)` |
-| Refactor | Structural type to Schema | Planned: "Convert to a schema declaration" | `interface User { name: string }` becomes `schema User { name: string }` |
+| Refactor | Structural type to Schema | Refactor: "Convert to a schema declaration" | `interface User { name: string }` becomes `schema User { name: string }` |
 | Refactor | `Effect.Service` to `Context.Tag` | Not needed: `service` declarations | None |
-| Codegen | `annotate` | Planned: the "Write the inferred contract" refactor | `function load(id: string): User!NotFound!Users` |
+| Codegen | `annotate` | Refactor: "Write the inferred contract" | `function load(id: string): User!NotFound!Users` |
 | Codegen | `accessors` | Not needed: `Users.find(id)` | None |
-| Codegen | `typeToSchema` | Planned: the "Convert to a schema declaration" refactor | `schema User { name: string }` |
+| Codegen | `typeToSchema` | Refactor: "Convert to a schema declaration" | `schema User { name: string }` |
 | Other | Renaming a tagged class renames its tag | Not needed: an `error` declaration's tag is its name, so a rename renames both | `error NotFound { }` renamed to `Missing` |
 | Other | Go to definition for `RpcClient` | Not adopted yet: the language server has no definition hook | None |
 

@@ -1,6 +1,7 @@
 package ls
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
@@ -122,6 +123,54 @@ func applyMemberCompletionHooks(c *checker.Checker, left *ast.Node, t *checker.T
 		t = hook(c, left, t)
 	}
 	return t
+}
+
+// CompletionHook can answer a completion request at position in file before
+// TypeScript does, such as inside a comment, or inside a string literal whose
+// type TypeScript does not list. When it returns completions, they replace
+// TypeScript's own; nil leaves TypeScript's. c is the checker for file.
+type CompletionHook func(c *checker.Checker, file *ast.SourceFile, position int) []TextCompletion
+
+// TextCompletion is one completion that a CompletionHook offers: the text
+// from Start to End, or to the cursor when End is 0, becomes Label.
+type TextCompletion struct {
+	Label  string
+	Detail string
+	Start  int
+	End    int
+}
+
+var completionHooks []CompletionHook
+
+// RegisterCompletionHook adds hook to every completion request. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterCompletionHook(hook CompletionHook) {
+	completionHooks = append(completionHooks, hook)
+}
+
+// completionsFromHooks returns the completions the first hook that has any
+// offers at position, or nil.
+func (l *LanguageService) completionsFromHooks(c *checker.Checker, file *ast.SourceFile, position int) *CompletionList {
+	for _, hook := range completionHooks {
+		completions := hook(c, file, position)
+		if len(completions) == 0 {
+			continue
+		}
+		list := &CompletionList{}
+		for i, completion := range completions {
+			rng := l.ToLSPRange(file, core.NewTextRange(completion.Start, core.IfElse(completion.End > 0, completion.End, position)))
+			list.Items = append(list.Items, &CompletionItem{CompletionItem: &lsproto.CompletionItem{
+				Label:    completion.Label,
+				Kind:     new(lsproto.CompletionItemKindValue),
+				Detail:   new(completion.Detail),
+				SortText: new(fmt.Sprintf("%04d", i)),
+				TextEdit: &lsproto.TextEditOrInsertReplaceEdit{TextEdit: &lsproto.TextEdit{Range: rng, NewText: completion.Label}},
+			}})
+		}
+		return list
+	}
+	return nil
 }
 
 // ToLSPRange converts textRange in file to an LSP range, for a quick fix
