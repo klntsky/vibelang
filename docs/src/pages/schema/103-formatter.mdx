@@ -42,7 +42,7 @@ function displayManifest(input: unknown) {
 }
 ```
 
-`overrideToFormatter` replaces formatting at one schema node, such as the weight above. `onBefore` intercepts selected AST nodes before normal derivation; returning undefined keeps the default behavior. The example changes string rendering while retaining the weight formatter.
+`overrideToFormatter` replaces formatting at one schema node, such as the weight above. `onBefore` intercepts selected AST nodes after any `toFormatter` annotation has taken priority and before built-in derivation; returning undefined keeps the default behavior. The example changes string rendering while retaining the weight formatter.
 
 Opaque declarations can supply `toFormatter` when declared. A parameterized declaration receives the formatter for each parameter. Keep hooks and generated formatter functions synchronous and pure; compute service-dependent display data before formatting. Review custom output for secret exposure before using it in logs.
 

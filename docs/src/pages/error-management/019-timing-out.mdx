@@ -22,7 +22,7 @@ function previewWithDeadline() {
 // string!Cause.TimeoutError!
 ```
 
-`Effect.timeout` adds `Cause.TimeoutError` to `E`; import `Cause` from `effect` if you write that type explicitly. A timely success returns its original value, and a domain failure before the deadline keeps its original error. The source is a program function so the timer surrounds the work itself.
+`Effect.timeout` adds `Cause.TimeoutError` to `E`. A timely success returns its original value, and a domain failure before the deadline keeps its original error. The source call is passed by name because the parameter expects an Effect, so the timer surrounds the work itself; an explicit `() => buildPreview()` also works.
 
 ```vibe
 function previewLabel() {
@@ -35,7 +35,9 @@ function previewLabel() {
 }
 ```
 
-The interruption used internally to stop the source is separate from the typed timeout error returned to its caller. Ordinary catch inside `buildPreview` cannot consume that interruption. Cleanup failures remain visible in the resulting cause.
+The interruption used internally to stop the source is separate from the typed timeout error returned to its caller. Ordinary catch inside `buildPreview` cannot consume that interruption.
+
+> **Current limitation.** Timeout waits for the interrupted source's cleanup, but Effect 4.0.5 drops failures from that cleanup at the timeout boundary. This affects `timeout`, `timeoutOption`, and `timeoutOrElse`, including `finally` and `using` cleanup. It disagrees with VibeLang's guarantee that cleanup failures remain visible; see the [runtime gap](https://github.com/roninjin10/effectscript/blob/main/docs/user/notes/compiler-gaps.md#timeout-discards-failures-from-interrupted-cleanup).
 
 ## Representing timeout as absence
 

@@ -61,7 +61,7 @@ Use `annotateEncoded` for metadata attached to the wire representation; `.annota
 
 ```vibe
 const DepotRequest = Schema.Struct({
-  code: Schema.String.check(Schema.isPattern(/^[A-Z]{2}[0-9]{3}$/)),
+  code: Schema.String.check(Schema.isPattern(/^[A-Z]{2}[0-9]{3}$/u)),
   note: Schema.optionalKey(Schema.String),
   alias: Schema.optional(Schema.String),
   capacity: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 120 }))
@@ -72,7 +72,7 @@ function requestDocument() {
 }
 ```
 
-Built-in filters contribute constraints such as numeric bounds, lengths, patterns, and uniqueness. An exact optional key is omitted from `required`; `optional` also allows undefined, which the canonical JSON representation expresses as null. Custom filters need a `toJsonSchema` annotation to describe a representable constraint.
+Built-in filters contribute constraints such as numeric bounds, lengths, patterns, and uniqueness. An exact optional key is omitted from `required`; `optional` also allows undefined, which the canonical JSON representation expresses as null. Custom filters need a `toJsonSchema` annotation to describe a representable constraint. `isPattern` exports a pattern only with the Unicode `u` flag and no flags other than `d`, `g`, or `y` alongside it. Other flag combinations leave the check out of JSON Schema unless its annotations override `toJsonSchema`.
 
 String lengths have a representational difference: JavaScript counts UTF-16 code units while JSON Schema counts Unicode code points. Built-in export uses conservative bounds where needed; `isMinLength(3)` can become `minLength: 2`. Arbitrary predicates and opaque declarations without a structural JSON codec cannot always be described exactly.
 
@@ -93,7 +93,7 @@ function treeDocument() {
 }
 ```
 
-An identifier creates a named definition referenced through `$ref`. Recursive export needs an identifier so the cycle can be represented as a reference rather than an infinite expansion. Reuse stable identifiers for shared descriptions and avoid assigning the same identifier to different shapes.
+An identifier creates a named definition referenced through `$ref`. Recursive export also works without an identifier: the exporter allocates a name such as `Objects_` for the cycle. Supply an identifier when consumers need a stable reference name. Reuse stable identifiers for shared descriptions and avoid assigning the same identifier to different shapes.
 
 ## Adjusting document generation
 
@@ -119,7 +119,7 @@ function jsonTextDocument() {
 }
 ```
 
-The external value is a string containing JSON, so the root schema is a string with `contentMediaType: "application/json"`. Its content metadata describes the embedded representation. This differs from exporting `Depot` itself, whose external JSON value is an object. Content keywords document the embedded format; validator support for enforcing them varies.
+The external value is a string containing JSON, so the root schema is a string with `contentMediaType: "application/json"`. Effect 4.0.5 does not automatically include `contentSchema` for the embedded object. Export `Depot` separately to describe that object, or add `contentSchema` explicitly with `annotateEncoded`. Content keywords document the embedded format; validator support for enforcing them varies.
 
 ---
 

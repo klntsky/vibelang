@@ -27,7 +27,7 @@ const PrioritySchema = Schema.Enum(Priority)
 
 `Schema.String`, `Boolean`, `BigInt`, and `Symbol` describe their JavaScript primitives. `Finite` rejects `NaN` and infinities; `Number` permits them. `ObjectKeyword` describes objects, `Undefined` and `Void` describe undefined values, `Null` describes null, `Unknown` accepts anything safely, `Any` opts out of type safety, and `Never` accepts nothing.
 
-`Literal(value)` accepts one string, number, boolean, bigint, or null; `Literals([...])` combines exact values. Literal collections expose `.literals`, enum schemas expose `.enums`, and `revealCodec(schema)` reveals the full codec type without changing the value. `UniqueSymbol` checks the particular symbol, rather than any symbol.
+`Literal(value)` accepts one string, number, boolean, or bigint; `Literals([...])` combines exact values. Use `Schema.Null` for null. Literal collections expose `.literals`, enum schemas expose `.enums`, and `revealCodec(schema)` reveals the full codec type without changing the value. `UniqueSymbol` checks the particular symbol, rather than any symbol.
 
 ```vibe
 const BinPosition = Schema.TemplateLiteralParser([
@@ -82,7 +82,7 @@ const BoundedReadings = Schema.TupleWithRest(
 )
 ```
 
-Tuples are readonly and position-sensitive. Optional elements use `optionalKey`; a present element must still match its schema. `TupleWithRest` takes a fixed tuple and a rest list whose first schema repeats; later schemas are required trailing elements. `Readings` accepts a label, an optional finite reading, then booleans; `BoundedReadings` ends with a boolean after any repeated numbers.
+Tuples are readonly and position-sensitive. Optional elements use `optionalKey`; a present element must still match its schema. `TupleWithRest` takes a fixed tuple and a rest list whose first schema repeats; later schemas are required trailing elements. `Readings` accepts a label, an optional finite reading, then booleans. It can end after the label, but adding booleans requires the reading in its fixed position: `["sensor", 2, true]` is valid and `["sensor", true]` is not. `BoundedReadings` ends with a boolean after any repeated numbers.
 
 Access fixed elements with `.elements`, or with `.schema.elements` on a tuple with rest. Its `.rest` describes the repeating and trailing schemas. Element annotations describe individual positions.
 
@@ -111,6 +111,10 @@ const RegionalStock = Schema.Record(Schema.Literals(["east", "west"]), Schema.In
 const NamedCounters = Schema.Record(
   Schema.TemplateLiteral(["count_", Schema.String]), Schema.Int
 )
+const NormalizedStock = Schema.Record(
+  Schema.String.pipe(Schema.decodeTo(Schema.String, SchemaTransformation.toLowerCase())),
+  Schema.Int
+)
 const LabeledCounters = Schema.StructWithRest(
   Schema.Struct({ total: Schema.Int }),
   [Schema.Record(Schema.String, Schema.Int)]
@@ -119,7 +123,9 @@ const LabeledCounters = Schema.StructWithRest(
 
 Records describe string or symbol keys and a value schema. A finite literal key set describes required properties; template literals and string checks restrict an open key space. A key that fails a record's key check is normally discarded as excess; pass `onExcessProperty: "error"` to reject it.
 
-Record keys cannot contain transformations: normalize keys in an explicit whole-object transformation and define a collision policy. `StructWithRest` combines fixed fields with index signatures and permits at most one signature for each key kind. Keep fixed-field types compatible with the index value type; otherwise split the fixed and indexed data into separate structures.
+Record key codecs can transform selected keys. `NormalizedStock` decodes `{ NORTH: 2 }` to `{ north: 2 }`. Selection uses encoded property names before transforming them. With sequential parsing, when transformed keys collide, the later selected property overwrites the earlier value. Use a whole-object transformation when you need a different collision policy.
+
+`StructWithRest` combines fixed fields with index signatures, including several signatures for the same key kind. Keep fixed-field types compatible with the index value type; otherwise split the fixed and indexed data into separate structures.
 
 Use `.key` and `.value` to inspect a record; a struct with rest exposes `.schema.fields` and `.records`. Use `Schema.mutableKey` on the value schema for mutable record entries.
 

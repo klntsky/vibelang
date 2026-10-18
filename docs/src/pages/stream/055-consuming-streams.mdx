@@ -13,7 +13,7 @@ A consumer runs a Stream and returns one result. Inside a VibeLang function, cal
 function collectLabels() {
   return Stream.make("north", "south", "west").runCollect()
 }
-// Array<string>!!
+// Array<"north" | "south" | "west">!!
 ```
 
 `runCollect` returns an array in emission order. It retains every element, so use it for finite results that fit in memory. It fails if the source fails; it does not return a partial array as a successful result.

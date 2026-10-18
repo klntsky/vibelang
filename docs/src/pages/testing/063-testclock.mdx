@@ -40,10 +40,10 @@ TypeScript, which is EK4401 inside a test. The examples below use a local
 
 ```vibe
 import { TestClock } from "effect/testing"
-import { it } from "@effect/vitest"
+import { assert, it } from "@effect/vitest"
 
 function check(condition: boolean, message: string) {
-  if (!condition) throw new Error(message)
+  assert.isTrue(condition, message)
 }
 
 it.effect("a deadline returns the fallback") {

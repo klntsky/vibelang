@@ -110,6 +110,6 @@ it.effect("validates bodies and rejects duplicate names") {
 }
 ```
 
-`HttpRouter.toHttpEffect` builds a request program without starting a server. Hold that program as `app`, then provide a request for each execution. The scope shares the service layer across these requests and releases it after the test. A new test scope builds a fresh directory.
+`HttpRouter.toHttpEffect` builds a request program without starting a server. Hold that program as `app`, then provide a request for each execution. The scope shares the service layer across these requests and releases it after the test. A new test scope builds a fresh user registry.
 
 Import assertions from `@effect/vitest`; the compiler trusts its re-exports. Use the [installation guide](/getting-started/004-installation) to set up the compiler and test plugin. The complete project, including its Vite configuration, is in `examples/http-api`.

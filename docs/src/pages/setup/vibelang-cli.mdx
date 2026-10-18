@@ -63,7 +63,29 @@ Run `npx vibelang`. It prints nothing, exits with status 0, and writes `hello.js
 
 In `.vibe` files, import local modules by their source name: `import { hello } from "./hello.vibe"`. In `.ts` files, import `./hello.js`, which resolves to `hello.vibe`.
 
-## 4. Test with Vitest
+## 4. Add an entry point
+
+The `start` script runs `dist/main.js`, so create `src/main.vibe`:
+
+```vibe
+// src/main.vibe
+import { Console } from "effect"
+import { hello } from "./hello.vibe"
+
+export function main() {
+  Console.log(hello("VibeLang"))
+}
+```
+
+Run `npm run start`, or `bun run start`. The output ends with:
+
+```text
+Hello, VibeLang!
+```
+
+The compiler runs the exported `main` when Node executes the file directly. Importing the module does not run it.
+
+## 5. Test with Vitest
 
 Create `vitest.config.ts`, which compiles `.vibe` tests through `vibelang-vite`:
 
@@ -98,7 +120,7 @@ Run `npx vitest run`. The output includes:
       Tests  1 passed (1)
 ```
 
-Tell the user that you added `src/hello.vibe` and `src/hello.test.vibe`. They can keep them as a starting point or delete them.
+Tell the user that you added `src/hello.vibe`, `src/main.vibe`, and `src/hello.test.vibe`. They can keep them as a starting point or delete them.
 
 ## Next
 
