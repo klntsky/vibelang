@@ -118,7 +118,9 @@ function demonstration() {
 }
 ```
 
-Run an OTLP/HTTP collector and a trace viewer on the endpoints configured above. For a local Grafana LGTM container, run `docker run --rm --name vibelang-telemetry --publish 3000:3000 --publish 4318:4318 grafana/otel-lgtm`. It supplies a collector and Tempo for trace storage, with Grafana for inspection. Run `demonstration` through the application runner, let the exporter close cleanly, then open `http://localhost:3000/explore` and search Tempo for service `report-worker`.
+Run an OTLP/HTTP collector and a trace viewer on the endpoints configured above. For a local Grafana LGTM container, run `docker run --rm --name vibelang-telemetry --publish 3000:3000 --publish 4318:4318 grafana/otel-lgtm`. It supplies a collector and Tempo for trace storage, with Grafana for inspection. Keep the container running and wait until it reports that the stack is ready.
+
+In another terminal, run `demonstration` through the application runner and let the exporter close cleanly. Open `http://localhost:3000/explore`, sign in using the container's startup instructions, and search Tempo for service `report-worker`. Tempo needs time to index received spans before search returns them.
 
 Open a `generate-report` trace to compare parent duration, child durations, attributes, events, and failure status. If nothing arrives, check the trace URL, HTTP transport, serialization, and exporter diagnostics before adding more instrumentation.
 
