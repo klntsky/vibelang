@@ -22,6 +22,7 @@ async function isNodeLauncher(path) {
 /** @param {import('./index.d.ts').VibeLangOptions} options */
 export default function vibelang(options = {}) {
   let root, project, compiler, cache, pending
+  let discoveredLauncher = false
   let revision = 0
   let compiled = -1
   let logger
@@ -41,7 +42,7 @@ export default function vibelang(options = {}) {
       "--noEmit", "false", "--emitDeclarationOnly", "false", "--noEmitOnError", "true",
       "--incremental", "false"
     ]
-    const command = await isNodeLauncher(compiler)
+    const command = discoveredLauncher || await isNodeLauncher(compiler)
       ? [process.execPath, [compiler, ...args]] : [compiler, args]
     await new Promise((accept, reject) => {
       let output = ""
@@ -84,6 +85,8 @@ export default function vibelang(options = {}) {
       project = resolve(root, options.project || "tsconfig.json")
       logger = config.logger
       compiler = options.compiler || process.env.VIBELANG_BINARY
+      // vibelang itself ships a Node entry, including on Windows.
+      discoveredLauncher = !compiler
       if (compiler) compiler = resolve(root, compiler)
       else {
         const require = createRequire(join(root, "package.json"))
