@@ -41,6 +41,28 @@ test("explains how to supply a missing native compiler", () => {
   assert.match(result.stderr, /EFFECK_BINARY/)
 })
 
+test("says Windows binaries are not published yet, without a stack trace", () => {
+  const scratch = mkdtempSync(join(tmpdir(), "effeck-win32-"))
+  try {
+    // A copy outside the checkout finds neither native/effeck nor a platform package.
+    mkdirSync(join(scratch, "bin"))
+    writeFileSync(join(scratch, "package.json"), '{"type":"module"}')
+    copyFileSync(launcher, join(scratch, "bin", "effeck"))
+    const env = { ...process.env }
+    delete env.EFFECK_BINARY
+    const asWindows = 'data:text/javascript,Object.defineProperty(process,"platform",{value:"win32"})'
+    const result = spawnSync(process.execPath, ["--import", asWindows, join(scratch, "bin", "effeck"), "--version"], {
+      env, encoding: "utf8"
+    })
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /Windows binaries are not published yet/)
+    assert.match(result.stderr, /EFFECK_BINARY/)
+    assert.doesNotMatch(result.stderr, /\n\s+at /)
+  } finally {
+    rmSync(scratch, { recursive: true, force: true })
+  }
+})
+
 test("preserves native termination signals", () => {
   const scratch = mkdtempSync(join(tmpdir(), "effeck-signal-"))
   try {

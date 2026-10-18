@@ -7,6 +7,8 @@
 #   sh scripts/release/rehearse.sh
 #
 # Run scripts/release/build-binaries.sh and make-packages.mjs first.
+# EFFECK_SKIP=win32 leaves out every package whose name contains win32, the way
+# publish.sh does, to rehearse a release that ships without those packages.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 tarballs="$root/dist-npm/tarballs"
@@ -70,6 +72,11 @@ printf '//127.0.0.1:%s/:_authToken=%s\n' "$port" "$token" >"$scratch/publish.npm
 
 node -e 'for (const p of require(process.argv[1]).packages) console.log(p.name, p.file)' "$tarballs/manifest.json" |
   while read -r name file; do
+    skip=""
+    for pattern in $(printf '%s' "${EFFECK_SKIP:-}" | tr ',' ' '); do
+      case $name in *"$pattern"*) skip=1 ;; esac
+    done
+    [ -z "$skip" ] || { echo "rehearse: left out $name (EFFECK_SKIP)"; continue; }
     npm publish "$tarballs/$file" --registry "$registry" --userconfig "$scratch/publish.npmrc" --access public --ignore-scripts >/dev/null 2>"$scratch/publish.err" ||
       { cat "$scratch/publish.err" >&2; echo "rehearse: publishing $name failed" >&2; exit 1; }
     echo "rehearse: published $name@$version"

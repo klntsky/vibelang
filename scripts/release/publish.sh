@@ -6,6 +6,7 @@
 #   sh scripts/release/publish.sh            # asks for a one-time password once
 #   sh scripts/release/publish.sh --dry-run  # checks everything, publishes nothing
 #   NPM_OTP=123456 sh scripts/release/publish.sh
+#   EFFECK_SKIP=win32 sh scripts/release/publish.sh  # skips every package whose name contains win32
 #
 # A package already published at this version is skipped, so rerunning after a
 # failure resumes where it stopped. If npm rejects the one-time password, the
@@ -39,13 +40,19 @@ for item in $(node -e 'for (const p of require(process.argv[1]).packages) consol
   file=${item#*=}
   packed=$(tar -xOzf "$tarballs/$file" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0, "utf8")); `${p.name}@${p.version}`')
   [ "$packed" = "$name@$version" ] || { echo "publish: $file contains $packed, expected $name@$version" >&2; exit 1; }
-  if npm view "$name@$version" version --registry "$registry" >/dev/null 2>&1; then
+  skipped=""
+  for pattern in $(printf '%s' "${EFFECK_SKIP:-}" | tr ',' ' '); do
+    case $name in *"$pattern"*) skipped=$pattern ;; esac
+  done
+  if [ -n "$skipped" ]; then
+    echo "publish: skipping $name@$version (EFFECK_SKIP=$skipped)"
+  elif npm view "$name@$version" version --registry "$registry" >/dev/null 2>&1; then
     echo "publish: $name@$version is already on npm; skipping"
   else
     todo="$todo $item"
   fi
 done
-[ -n "$todo" ] || { echo "publish: all ten packages are already on npm at $version."; exit 0; }
+[ -n "$todo" ] || { echo "publish: every package not skipped is already on npm at $version."; exit 0; }
 
 otp=${NPM_OTP:-}
 if [ -z "$dry" ] && [ -z "$otp" ]; then

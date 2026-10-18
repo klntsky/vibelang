@@ -20,6 +20,12 @@ function findBinary() {
     const manifest = createRequire(import.meta.url).resolve(`effeck-${target}/package.json`)
     return join(dirname(manifest), "bin", executable)
   } catch {
+    if (process.platform === "win32") {
+      // 0.0.1 shipped without its Windows packages: npm refused their names.
+      console.error("effeck: Windows binaries are not published yet.")
+      console.error(`effeck-${target} is not on npm for this version. Use WSL, or build the compiler from the Effeck repository and set EFFECK_BINARY.`)
+      process.exit(1)
+    }
     console.error(`effeck: no native compiler is installed for ${target}.`)
     console.error(`effeck ships native compilers for ${platforms.join(", ")}.`)
     if (platforms.includes(target)) {
