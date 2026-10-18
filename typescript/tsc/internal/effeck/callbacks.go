@@ -50,7 +50,11 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 			if a.finalConversion(node) == convertRejected {
 				call, _ := ownerCall(node)
 				d := report(c, node, EK4301, node.Text(), calleeName(c, file, call))
-				note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
+				if a.isCallbackParameterValue(node) {
+					note(d, "{0} has no contract, so it accepts any callback, including one that pauses. Call it in a for...of loop, or give it a named function type such as a type alias, which takes only plain functions.", node.Text())
+				} else {
+					note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
+				}
 			}
 		}
 		return node.ForEachChild(visit)

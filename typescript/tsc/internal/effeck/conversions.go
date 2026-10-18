@@ -1,6 +1,8 @@
 package effeck
 
 import (
+	"slices"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 )
@@ -71,7 +73,7 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 			if program := a.byNameType(node, a.valueTypeOf(node, t)); program != nil {
 				return program
 			}
-		case convertProgram, convertPrograms, convertDirect:
+		case convertProgram, convertPrograms, convertDirect, convertRejected:
 			return s.types[key]
 		}
 		return t
@@ -155,6 +157,12 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 			return convertProgram, effect
 		}
 	case position.plainFn && !position.effectFn:
+		if a.isCallbackParameterValue(node) {
+			// A callback parameter without a contract holds a function that
+			// can pause and has no plain form (D12, D68). TypeScript checks
+			// it in the plain form, so EK4301 alone reports it.
+			return convertRejected, a.plainTypeOf(t)
+		}
 		fn := esFunctionOf(a.checker, node)
 		switch {
 		case fn == nil:
@@ -421,6 +429,26 @@ func (a *analyzer) finalConversion(node *ast.Node) conversion {
 		}
 	}
 	return s.first
+}
+
+// isCallbackParameterValue reports whether node, an identifier, names a
+// callback parameter without a contract (D12), such as p in
+// function findFirst<T>(xs: ReadonlyArray<T>, p: (x: T) => boolean). Its
+// value is an Effect function whatever the caller passed (D68).
+func (a *analyzer) isCallbackParameterValue(node *ast.Node) bool {
+	if !ast.IsIdentifier(node) {
+		return false
+	}
+	symbol := a.checker.GetSymbolAtLocation(node)
+	if symbol == nil {
+		return false
+	}
+	parameter := symbol.ValueDeclaration()
+	if parameter == nil || !ast.IsParameterDeclaration(parameter) || parameter.Parent == nil {
+		return false
+	}
+	s := a.callbackContractsOf(parameter.Parent)
+	return s != nil && slices.Contains(s.parameters, parameter)
 }
 
 // esFunctionOf returns the .effeck function that node, an identifier or a

@@ -1,0 +1,14 @@
+// expect-result: 2
+// A callback parameter without a contract accepts any contract (D12), so the
+// function calls it where calls run: in a loop, not inside a JavaScript
+// callback. The caller's lambda may then pause or fail too.
+export function findFirst<T>(xs: ReadonlyArray<T>, p: (x: T) => boolean) {
+  for (const x of xs) {
+    if (p(x)) return x
+  }
+  return undefined
+}
+
+export function main() {
+  return findFirst([1, 2, 3], (x) => x > 1)
+}

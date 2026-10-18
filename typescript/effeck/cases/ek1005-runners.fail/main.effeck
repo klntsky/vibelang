@@ -30,7 +30,7 @@ function nestedMain() {
   NodeRuntime.runMain(() => refresh("m"))
 }
 
-const handlers: Array<() => void> = []
+const handlers: unknown[] = []
 
 function register(f: () => void) {
   handlers.push(f)

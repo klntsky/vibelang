@@ -1,0 +1,3 @@
+p can pause, but ReadonlyArray.prototype.find calls it synchronously.
+compare can pause, but Array.prototype.sort calls it synchronously.
+p has no contract, so it accepts any callback, including one that pauses. Call it in a for...of loop, or give it a named function type such as a type alias, which takes only plain functions.
