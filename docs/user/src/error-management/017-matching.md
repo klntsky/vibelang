@@ -100,10 +100,7 @@ function ignoreRejectedCount() {
 function discardBoundaryOutcome() {
   Effect.ignoreCause(() => die(new Error("isolated task failed")))
 }
-```
-
-```output
-
+// Output:
 ```
 
 `ignore` discards the success value and typed failures. Causes without an expected failure propagate, but a mixed cause containing one can be consumed too. `ignoreCause` consumes the full failure cause even when it contains no expected failure. Use complete cause discarding only where losing both diagnostics and cancellation is deliberate.

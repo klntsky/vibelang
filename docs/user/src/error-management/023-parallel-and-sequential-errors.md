@@ -7,6 +7,7 @@ An operation can stop for several reasons: concurrent work can fail together, or
 ## Representing multiple failures
 
 ```vibe
+// run: Console.log(JSON.stringify(failureKinds()))
 function failureKinds() {
   const cause = Cause.fail("delivery rejected").combine(Cause.die(new Error("release invariant failed")))
   return cause.reasons.map((reason) => reason._tag)
@@ -14,11 +15,16 @@ function failureKinds() {
 // ["Fail", "Die"]
 ```
 
+```output
+["Fail","Die"]
+```
+
 A `Cause.Cause<E>` contains a readonly array of `Cause.Reason<E>`. Each reason is `Fail` with an `error`, `Die` with a `defect`, or `Interrupt` with interruption information. There is no separate sequential or parallel tree to traverse.
 
 ## Combining concurrent or sequential reasons
 
 ```vibe
+// run: Console.log(JSON.stringify(inspectDelivery()))
 function operationWithBrokenCleanup() {
   try {
     throw "delivery rejected"
@@ -40,6 +46,10 @@ function inspectDelivery() {
 }
 ```
 
+```output
+{"expected":true,"defective":true,"interrupted":false}
+```
+
 Cleanup failure is retained alongside the original failure. Concurrent combinators normally stop after a failure and interrupt siblings, but overlapping failures can still contribute several reasons. Their flat representation does not preserve a causal tree or prove which task completed first.
 
 Ordinary `catch` does not recover a mixed cause containing a defect or interruption, even when a typed failure is present. Use `Effect.exit` or `Effect.catchCause` to examine the whole outcome. `Cause.findError` and `Cause.findDefect` return a `Result` for extracting one matching value; inspect `reasons` when all values matter.
@@ -49,6 +59,7 @@ When every reason is an expected failure, ordinary catch receives the first fail
 ## Runtime causes and domain error collections
 
 ```vibe
+// run: Console.log(JSON.stringify(Effect.flip(() => validatePorts()).map((error) => error.port)))
 error InvalidPort { port: number }
 
 function validatePorts() {
@@ -58,6 +69,10 @@ function validatePorts() {
   })
 }
 // number[]![InvalidPort, ...InvalidPort[]]!
+```
+
+```output
+[-1,70000]
 ```
 
 Validation produces one typed failure containing a collection of domain errors. That is different from several runtime cause reasons. Use `Effect.partition` instead when you want successful values alongside the collected errors.
