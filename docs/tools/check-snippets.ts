@@ -124,7 +124,11 @@ export function linkModules(temp: string) {
   // two copies a module augmentation such as `declare module "effect/Schema"`
   // can name the copy outside the program and fail with TS2664, depending on
   // which copy the parallel file loader reaches first.
-  const runtimeEffect = join(repo, "packages/runtime/node_modules/effect")
+  // EFFECK_RUNTIME_DIR checks against another effeck-runtime, such as a release
+  // tarball's package; without its own node_modules it shares the repo's effect.
+  const runtime = process.env.EFFECK_RUNTIME_DIR || join(repo, "packages/runtime")
+  const ownEffect = join(runtime, "node_modules/effect")
+  const runtimeEffect = existsSync(join(ownEffect, "package.json")) ? ownEffect : join(repo, "packages/runtime/node_modules/effect")
   if (existsSync(join(runtimeEffect, "package.json"))) symlinkSync(realpathSync(runtimeEffect), join(modules, "effect"))
   const dependencies = [join(repo, "experiments/node_modules"), join(repo, "docs/tools/node_modules")]
   for (const source of dependencies) {
@@ -135,8 +139,9 @@ export function linkModules(temp: string) {
       if (!existsSync(target)) symlinkSync(join(source, name), target)
     }
   }
-  for (const name of ["runtime", "vite"]) symlinkSync(join(repo, "packages", name), join(modules, `effeck-${name}`))
-  if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(repo, "packages/runtime/dist/index.d.ts"))) {
+  symlinkSync(runtime, join(modules, "effeck-runtime"))
+  symlinkSync(join(repo, "packages/vite"), join(modules, "effeck-vite"))
+  if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(runtime, "dist/index.d.ts"))) {
     throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
   }
 }

@@ -27,6 +27,41 @@ for dir in docs/tools experiments packages/runtime; do
 done
 bun "$root/docs/tools/render-user.ts"
 
+# Until 0.0.2 ships, every docs example must compile with the release that
+# `npm create effeck@latest` installs: the 0.0.1 native compiler and runtime
+# from the release tarballs, not this checkout's build.
+# EFFECK_SKIP_RELEASE_SNIPPETS=1 skips the check, and needs
+# EFFECK_SKIP_RELEASE_SNIPPETS_REASON, which is printed.
+release=${EFFECK_RELEASE_VERSION:-0.0.1}
+tarballs=${EFFECK_RELEASE_TARBALLS:-$root/dist-npm/tarballs}
+if [ "${EFFECK_SKIP_RELEASE_SNIPPETS:-}" = 1 ]; then
+	echo "deploy-docs: skipping the $release release snippet check: ${EFFECK_SKIP_RELEASE_SNIPPETS_REASON:?deploy-docs: set EFFECK_SKIP_RELEASE_SNIPPETS_REASON to say why}"
+else
+	case "$(uname -s)-$(uname -m)" in
+		Darwin-arm64) platform=darwin-arm64 ;;
+		Darwin-x86_64) platform=darwin-x64 ;;
+		Linux-aarch64 | Linux-arm64) platform=linux-arm64 ;;
+		Linux-x86_64) platform=linux-x64 ;;
+		*) echo "deploy-docs: no $release release compiler for $(uname -s)-$(uname -m)" >&2; exit 1 ;;
+	esac
+	release_dir=$(mktemp -d "${TMPDIR:-/tmp}/effeck-release.XXXXXX")
+	trap 'rm -rf "$release_dir"' EXIT
+	for name in "effeck-$platform" effeck-runtime; do
+		mkdir -p "$release_dir/$name"
+		tar xzf "$tarballs/$name-$release.tgz" -C "$release_dir/$name" 2>/dev/null ||
+			{ echo "deploy-docs: missing $tarballs/$name-$release.tgz; set EFFECK_RELEASE_TARBALLS" >&2; exit 1; }
+	done
+	# As an npm install puts effect beside effeck-runtime, give the extracted runtime
+	# the repository's pinned effect, so its declarations resolve their imports.
+	mkdir -p "$release_dir/effeck-runtime/package/node_modules"
+	ln -s "$(cd "$root/packages/runtime/node_modules/effect" && pwd -P)" "$release_dir/effeck-runtime/package/node_modules/effect"
+	echo "deploy-docs: compiling every docs example with effeck $release ($platform) and effeck-runtime $release"
+	EFFECK_BINARY="$release_dir/effeck-$platform/package/bin/effeck" EFFECK_RUNTIME_DIR="$release_dir/effeck-runtime/package" \
+		bun "$root/docs/tools/check-snippets.ts" > "$release_dir/snippets.log" ||
+		{ tail -40 "$release_dir/snippets.log" >&2; echo "deploy-docs: a docs example does not compile with the $release release" >&2; exit 1; }
+	tail -1 "$release_dir/snippets.log"
+fi
+
 rm -rf "$site"
 mkdir -p "$site"
 cp -R "$root/docs/user/site/." "$site/"
