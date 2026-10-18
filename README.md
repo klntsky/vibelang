@@ -54,9 +54,9 @@ With npm, run `npm create vibelang@latest my-app`. You need Node 26 or later and
 Bun 1.4 or later. The command copies a starter, pins `vibelang`,
 `vibelang-runtime`, and `vibelang-vite` to one version, and installs dependencies;
 `--no-install` skips installation. The compiler is a native binary from a
-per-platform package for macOS and Linux on arm64 and x64. Windows binaries
-are not published for 0.0.1. Version 0.0.1 is tested on macOS on Apple silicon
-and on Linux on x64.
+per-platform package for macOS, Linux, and Windows on arm64 and x64. Version
+0.0.2 cross-compiles all six binaries and rehearses npm and Bun installs on
+Linux on x64.
 
 `bun run start` prints `Hello, VibeLang!` and `Recovered from EmptyName`.
 `bun run dev` builds once, watches `.vibe` sources with `vibelang --watch`, and

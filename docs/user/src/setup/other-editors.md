@@ -10,7 +10,7 @@ From the project directory, run:
 npx vibelang --version
 ```
 
-The output is `VibeLang 0.0.1 (TypeScript 7.1.0-dev)`.
+The output is `VibeLang 0.0.2 (TypeScript 7.1.0-dev)`.
 
 ## 2. Configure the LSP client
 

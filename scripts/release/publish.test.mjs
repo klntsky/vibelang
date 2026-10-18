@@ -2,7 +2,7 @@
 // publication unless --dry-run is present. No registry or credentials are used.
 import assert from "node:assert/strict"
 import { execFileSync, spawnSync } from "node:child_process"
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { test } from "node:test"
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url"
 const repo = fileURLToPath(new URL("../../", import.meta.url))
 const names = ["vibelang-linux-x64", "vibelang-runtime", "vibelang"]
 function fixture(t) {
-  const root = mkdtempSync(join(tmpdir(), "vibelang-publish-dry-test-"))
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "vibelang-publish-dry-test-")))
   t.after(() => rmSync(root, { recursive: true, force: true }))
   mkdirSync(join(root, "scripts/release"), { recursive: true })
   for (const file of ["publish.sh", "repack.mjs"]) cpSync(join(repo, "scripts/release", file), join(root, "scripts/release", file))
@@ -30,6 +30,7 @@ function fixture(t) {
   const bin = join(root, "bin")
   mkdirSync(bin)
   const calls = join(root, "calls.jsonl")
+  writeFileSync(calls, "")
   writeFileSync(join(bin, "npm"), `#!${process.execPath}
 import { appendFileSync } from "node:fs"
 const args = process.argv.slice(2)
@@ -74,13 +75,14 @@ test("already published packages and comma-separated skip patterns are not publi
   assert.match(result.stdout, /vibelang@0\.0\.1 is already on npm/)
 })
 
-test("archive identity is checked for every package before any dry-run publish", (t) => {
+test("a mismatched launcher archive is rejected before invoking npm", (t) => {
   const f = fixture(t)
   writeFileSync(join(f.root, "vibelang/package/package.json"), '{"name":"vibelang","version":"0.0.2"}')
   execFileSync("tar", ["-czf", join(f.tarballs, "vibelang-0.0.1.tgz"), "-C", join(f.root, "vibelang"), "package"])
   const result = run(f)
   assert.equal(result.status, 1)
-  assert.match(result.stderr, /contains vibelang@0\.0\.2, expected vibelang@0\.0\.1/)
+  assert.match(result.stderr, /expected vibelang@0\.0\.1, got vibelang@0\.0\.2/)
+  assert.equal(result.calls.length, 0)
   assert.equal(result.publishes.length, 0)
 })
 

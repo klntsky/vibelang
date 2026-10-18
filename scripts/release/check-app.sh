@@ -85,6 +85,48 @@ JS
   /usr/bin/grep -Fq 'Recovered from EmptyName' "$scratch/$manager-start.txt"
   step "run test"
   "$manager" run test
+  # A warning used to exit 0 while suppressing emit under noEmitOnError.
+  # Import that module through Vite, which always enables noEmitOnError.
+  step "Vite warning-only .vibe import"
+  mkdir warning-vite
+  cat >warning-vite/tsconfig.json <<'JSON'
+{
+  "compilerOptions": {
+    "target": "ES2022", "lib": ["ESNext", "DOM"],
+    "module": "ESNext", "moduleResolution": "Bundler",
+    "strict": true, "types": [], "skipLibCheck": true,
+    "rewriteRelativeImportExtensions": true, "noEmitOnError": true,
+    "vibelang": { "diagnostics": { "EK4403": "warning" } }
+  },
+  "include": ["*.ts", "*.vibe"]
+}
+JSON
+  cat >warning-vite/warning.vibe <<'VIBE'
+import { Effect } from "effect"
+export function stamp() {
+  Effect.sleep("1 millis")
+  return Date.now()
+}
+VIBE
+  cat >warning-vite/main.ts <<'TS'
+import { stamp } from "./warning.vibe"
+console.log("warning-only-vite-import", stamp)
+TS
+  cat >warning-vite/index.html <<'HTML'
+<script type="module" src="/main.ts"></script>
+HTML
+  cat >warning-vite/vite.config.mjs <<'JS'
+import vibelang from "vibelang-vite"
+export default { plugins: [vibelang()] }
+JS
+  if ! node_modules/.bin/vite build warning-vite >"$scratch/$manager-vite.txt" 2>&1; then
+    cat "$scratch/$manager-vite.txt"
+    exit 1
+  fi
+  cat "$scratch/$manager-vite.txt"
+  /usr/bin/grep -Fq 'warning EK4403' "$scratch/$manager-vite.txt"
+  /usr/bin/grep -Fq 'warning-only-vite-import' warning-vite/dist/assets/*.js
+  step "Vite warning-only .vibe import: PASS (1 warning, emitted bundle)"
   if [ "$manager" = npm ]; then
     step "install vibelang-unplugin"
     npm install --save-dev --save-exact "vibelang-unplugin@$version"

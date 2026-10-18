@@ -6,9 +6,9 @@ VibeLang is a language for writing Effect programs with TypeScript syntax. These
 
 Run `node --version` and expect `v26.0.0` or later. If the project uses Bun, run `bun --version` and expect `1.4.0` or later.
 
-Version 0.0.1 ships binaries for macOS and Linux: `darwin-arm64`, `darwin-x64`, `linux-arm64`, and `linux-x64`. `win32` binaries come in a later release.
+Version 0.0.2 ships binaries for macOS, Linux, and Windows: `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`. All six are cross-compiled; the end-to-end npm and Bun rehearsal runs on Linux x64.
 
-Run `npm view vibelang@0.0.1 version` and expect `0.0.1`. An `E404` error means that version is unavailable from the configured registry: report the registry and error before continuing.
+Run `npm view vibelang@0.0.2 version` and expect `0.0.2`. An `E404` error means that version is unavailable from the configured registry: report the registry and error before continuing.
 
 ## 2. Detect the project
 
@@ -22,7 +22,7 @@ Read the project's root directory and record what you find:
 | | `package-lock.json`, or no lockfile | npm |
 | | `pnpm-lock.yaml` or `yarn.lock` | pnpm or Yarn: install the packages the npm commands name with `pnpm add` or `yarn add` |
 | Build | `vite` or `vitest` in `package.json`, or a `vite.config.*` or `vitest.config.*` file | Vite |
-| | `webpack`, `rollup`, `esbuild`, or `@rspack/core` in `package.json`, or `bun build` in a script | Another bundler: no published plugin in 0.0.1 |
+| | `webpack`, `rollup`, `esbuild`, or `@rspack/core` in `package.json`, or `bun build` in a script | Another bundler: `vibelang-unplugin` |
 | | None of these | The `vibelang` CLI |
 | Framework | `react`, `vue`, or `svelte` in `package.json`, and the build is Vite | React, Vue, or Svelte. With `@sveltejs/kit` or `nuxt`, tell the user these pages do not cover it |
 | Editor | A `.vscode/` or `.cursor/` directory | VS Code or Cursor |
@@ -45,7 +45,7 @@ Read each page that matches and follow its steps, in this order: project, build 
 | Zed | [Zed](setup/zed.md) |
 | Another editor with an LSP client | [Other editors](setup/other-editors.md) |
 
-Version 0.0.1 has no published integration for webpack, Rollup, esbuild, Rspack, or `bun build`. The repository contains `vibelang-unplugin`, but it is not on npm. If the project builds with one of them, tell the user, and ask whether to build the `.vibe` sources with the `vibelang` CLI instead.
+Version 0.0.2 includes `vibelang-unplugin` for webpack, Rspack, Rollup, Rolldown, esbuild, and `bun build`. Install `vibelang@0.0.2` and `vibelang-unplugin@0.0.2` as dev dependencies, and follow the [plugin configuration](https://www.npmjs.com/package/vibelang-unplugin#configure) for the project's bundler. For Vite and Vitest, use `vibelang-vite`.
 
 ## 4. Verify the setup
 
@@ -56,4 +56,4 @@ npx vibelang --version
 npx vibelang --noEmit
 ```
 
-The first command prints `VibeLang 0.0.1 (TypeScript 7.1.0-dev)`. The second prints nothing and exits with status 0. Then run the project's `build` and `test` scripts; each must exit with status 0. Report to the user the pages you followed and each command's output.
+The first command prints `VibeLang 0.0.2 (TypeScript 7.1.0-dev)`. The second prints nothing and exits with status 0. Then run the project's `build` and `test` scripts; each must exit with status 0. Report to the user the pages you followed and each command's output.

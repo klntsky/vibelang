@@ -202,7 +202,7 @@ func TestEmbeddedTableHeader(t *testing.T) {
 			t.Errorf("input %+v has no content hash", in)
 		}
 	}
-	for pkg, version := range map[string]string{"effect": "4.0.5", "@effect/vitest": "4.0.5", "@effect/platform-node": "4.0.5", "@effect/platform-bun": "4.0.5", "vibelang-runtime": "0.0.1"} {
+	for pkg, version := range map[string]string{"effect": "4.0.5", "@effect/vitest": "4.0.5", "@effect/platform-node": "4.0.5", "@effect/platform-bun": "4.0.5", "vibelang-runtime": "0.0.2"} {
 		if pinned[pkg].Version != version {
 			t.Errorf("%s pinned at %q, want %s", pkg, pinned[pkg].Version, version)
 		}

@@ -62,10 +62,10 @@ The extension starts the project's own `vibelang` as the language server.
 
 ## How the package finds the native compiler
 
-`vibelang` is a small Node launcher. In 0.0.1, the native compiler comes from one of four
+`vibelang` is a small Node launcher. In 0.0.2, the native compiler comes from one of six
 optional dependencies, and npm installs the one that matches your platform:
 `vibelang-darwin-arm64`, `vibelang-darwin-x64`, `vibelang-linux-arm64`,
-or `vibelang-linux-x64`. `win32` binaries come in a later release. The launcher
+`vibelang-linux-x64`, `vibelang-win32-arm64`, or `vibelang-win32-x64`. The launcher
 runs `VIBELANG_BINARY` when it is set, then `native/vibelang` beside the package in
 a VibeLang checkout, then the platform package. If you installed with optional
 dependencies omitted, reinstall without that option. The launcher forwards

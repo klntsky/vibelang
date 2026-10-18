@@ -115,7 +115,7 @@ access, and interactive programs need deterministic fixtures before opting in.
 
 ## Compiler hovers
 
-scripts/deploy-docs.sh builds hovers by default with the 0.0.1 release compiler, so popups show what readers' compiler shows. `VIBELANG_DOCS_HOVERS=0` deploys without them. The tool records hover request failures in each page's cache entry and prints examples so language-server defects remain visible.
+scripts/deploy-docs.sh builds hovers by default with the 0.0.2 release compiler, so popups show what readers' compiler shows. `VIBELANG_DOCS_HOVERS=0` deploys without them. The tool records hover request failures in each page's cache entry and prints examples so language-server defects remain visible.
 
 `hovers.ts` asks the VibeLang language server for the hovers and diagnostics of
 the same blocks and caches them for a renderer:

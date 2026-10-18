@@ -1,6 +1,6 @@
 {
   "name": "vibelang",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "The VibeLang compiler and language server: a readable syntax for Effect that compiles to TypeScript",
   "keywords": ["vibelang", "effect", "typescript", "compiler", "language-server"],
   "homepage": "https://effeck.dev",
@@ -10,12 +10,12 @@
   "files": ["bin", "editor", "README.md", "LICENSE", "NOTICE"],
   "scripts": { "test": "node --test test/" },
   "optionalDependencies": {
-    "vibelang-darwin-arm64": "0.0.1",
-    "vibelang-darwin-x64": "0.0.1",
-    "vibelang-linux-arm64": "0.0.1",
-    "vibelang-linux-x64": "0.0.1",
-    "vibelang-win32-arm64": "0.0.1",
-    "vibelang-win32-x64": "0.0.1"
+    "vibelang-darwin-arm64": "0.0.2",
+    "vibelang-darwin-x64": "0.0.2",
+    "vibelang-linux-arm64": "0.0.2",
+    "vibelang-linux-x64": "0.0.2",
+    "vibelang-win32-arm64": "0.0.2",
+    "vibelang-win32-x64": "0.0.2"
   },
   "engines": { "node": ">=22" }
 }

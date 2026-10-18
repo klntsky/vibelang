@@ -10,7 +10,7 @@ bun run dev
 bun x --no-install vibelang --noEmit
 ```
 
-VibeLang 0.0.1 installs from npm as unscoped packages: `vibelang`,
+VibeLang 0.0.2 installs from npm as unscoped packages: `vibelang`,
 `vibelang-runtime`, `vibelang-vite`, `vibelang-unplugin`, `create-vibelang`, and one `vibelang-<os>-<cpu>`
 package per platform. `create-vibelang`
 copies the starter, pins the VibeLang packages to its own version, and installs
@@ -20,15 +20,18 @@ package per platform as an optional dependency, and the package manager
 installs the one that matches the machine, the per-platform distribution D30
 planned:
 
-| Platform | Package | Tested for 0.0.1 |
+| Platform | Package | Rehearsed for 0.0.2 |
 | --- | --- | --- |
-| macOS on Apple silicon | `vibelang-darwin-arm64` | Yes |
+| macOS on Apple silicon | `vibelang-darwin-arm64` | No |
 | macOS on Intel | `vibelang-darwin-x64` | No |
 | Linux on x64 | `vibelang-linux-x64` | Yes |
 | Linux on arm64 | `vibelang-linux-arm64` | No |
+| Windows on x64 | `vibelang-win32-x64` | No |
+| Windows on arm64 | `vibelang-win32-arm64` | No |
 
-Version 0.0.1 ships `darwin-arm64`, `darwin-x64`, `linux-arm64`, and
-`linux-x64` binaries. `win32` binaries come in a later release.
+Version 0.0.2 ships `darwin-arm64`, `darwin-x64`, `linux-arm64`,
+`linux-x64`, `win32-arm64`, and `win32-x64` binaries. All six are
+cross-compiled; the end-to-end npm and Bun rehearsal runs on Linux x64.
 
 To work on VibeLang itself, install from a checkout instead. `sh scripts/setup.sh`
 requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
@@ -135,7 +138,7 @@ API transport yet. Sources must stay under Vite's root so emit paths and source 
 #### The editor
 
 The server is the fork's own, `vibelang --lsp --stdio`, from the project's compiler
-(D32). The same binary identifies as `VibeLang 0.0.1 (TypeScript 7.1.0-dev)`
+(D32). The same binary identifies as `VibeLang 0.0.2 (TypeScript 7.1.0-dev)`
 with `--version`; there is no separate compiler entry point (D75). `vibelang`
 ships the extension as `editor/vibelang.vsix`. Install it from a project:
 

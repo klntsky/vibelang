@@ -11,7 +11,7 @@ echo "$PWD/node_modules/.bin/vibelang"
 "$PWD/node_modules/.bin/vibelang" --version
 ```
 
-The first line is the path to use in step 2. The second command prints `VibeLang 0.0.1 (TypeScript 7.1.0-dev)`.
+The first line is the path to use in step 2. The second command prints `VibeLang 0.0.2 (TypeScript 7.1.0-dev)`.
 
 ## 2. Add the project settings
 

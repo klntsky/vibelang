@@ -22,7 +22,7 @@ cd my-app
 npm run start
 ```
 
-`npm create vibelang` installs the dependencies itself. VibeLang 0.0.1 runs on macOS (arm64, x64) and Linux (arm64, x64); the Windows compiler packages are not published yet. For VS Code or Cursor, after the install:
+`npm create vibelang` installs the dependencies itself. VibeLang 0.0.2 ships binaries for macOS, Linux, and Windows on arm64 and x64. The npm and Bun release rehearsal runs on Linux x64. For VS Code or Cursor, after the install:
 
 ```sh
 code --install-extension node_modules/vibelang/editor/vibelang.vsix

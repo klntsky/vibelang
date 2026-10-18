@@ -16,7 +16,7 @@
         "webpack": "5.111.1",
       },
       "peerDependencies": {
-        "vibelang": "0.0.1",
+        "vibelang": "0.0.2",
       },
       "optionalPeers": [
         "vibelang",

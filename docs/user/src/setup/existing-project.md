@@ -13,15 +13,15 @@ If `package.json` depends on a version of `effect` other than 4.0.5, stop and as
 With Bun, run:
 
 ```sh
-bun add vibelang-runtime@0.0.1 effect@4.0.5 @effect/platform-node@4.0.5
-bun add -d vibelang@0.0.1 vibelang-vite@0.0.1 vitest@5.0.5 @effect/vitest@4.0.5
+bun add vibelang-runtime@0.0.2 effect@4.0.5 @effect/platform-node@4.0.5
+bun add -d vibelang@0.0.2 vibelang-vite@0.0.2 vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 With npm, run:
 
 ```sh
-npm install --save-exact vibelang-runtime@0.0.1 effect@4.0.5 @effect/platform-node@4.0.5
-npm install --save-dev --save-exact vibelang@0.0.1 vibelang-vite@0.0.1 vitest@5.0.5 @effect/vitest@4.0.5
+npm install --save-exact vibelang-runtime@0.0.2 effect@4.0.5 @effect/platform-node@4.0.5
+npm install --save-dev --save-exact vibelang@0.0.2 vibelang-vite@0.0.2 vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 | Package | Install as | Purpose |
@@ -45,7 +45,7 @@ npx vibelang --version
 The output is:
 
 ```out
-VibeLang 0.0.1 (TypeScript 7.1.0-dev)
+VibeLang 0.0.2 (TypeScript 7.1.0-dev)
 ```
 
 ## Next
