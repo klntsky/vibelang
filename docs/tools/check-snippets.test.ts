@@ -178,6 +178,7 @@ test.skipIf(!existsSync(compiler))("runs marked blocks and reports output mismat
         "```vibe", "export function main() { Console.log('native entry') }", "// Output: native entry", "```",
         "```ts", "// TypeScript (.ts)", "// plain.ts", "console.log('plain entry')", "// Output: plain entry", "```"
       ],
+      "pending": ["```ts", "// TypeScript (.ts)", "// pending.ts", "// run: return new Promise<void>(() => {})", "export const value = 1", "// Output:", "```"],
       "mismatch": ["```vibe", "export function main() { Console.log('actual') }", "// Output: claimed", "```"],
       "exit": ["```vibe", "export function main() { Effect.die('failure') }", "// Output:", "```"],
       "fragment": ["```vibe", "// fragment", "missing()", "// Output: impossible", "```"],
@@ -194,6 +195,8 @@ test.skipIf(!existsSync(compiler))("runs marked blocks and reports output mismat
     if (page("pass").some((b: any) => b.status === "fail")) console.log(JSON.stringify(page("pass").map((b: any) => ({ number: b.number, reason: b.reason, execution: b.execution })), null, 2))
     expect(page("pass").map((b: any) => b.status)).toEqual(["ok", "fragment", "ok", "ok", "ok", "ok"])
     expect(page("pass").slice(3).map((b: any) => b.execution.stdout)).toEqual(["Hello, Ada!\n", "native entry\n", "plain entry\n"])
+    expect(page("pending")[0]).toMatchObject({ status: "fail", execution: { phase: "run", status: "failed" } })
+    expect(page("pending")[0].execution.exitCode).not.toBe(0)
     expect(page("mismatch")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("stdout mismatch"), execution: { stdout: "actual\n", expectedStdout: "claimed" } })
     expect(page("exit")[0]).toMatchObject({ status: "fail", execution: { exitCode: 1 } })
     expect(page("fragment")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("cannot run") })

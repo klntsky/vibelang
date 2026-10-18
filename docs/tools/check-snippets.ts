@@ -366,10 +366,10 @@ async function runBlock(dir: string, blocks: Block[], result: Result, compiler: 
   let entry = join(dir, "dist", emitted)
   if (result.run) {
     // Importing suppresses the example's native main entry. TypeScript
-    // helpers can return plain values; VibeLang helpers return Effects.
+    // helpers can return values or Promises; VibeLang helpers return Effects.
     entry = join(dir, "dist", "$docs-entry.js")
     writeFileSync(entry, `import { ${helper} } from ${JSON.stringify("./" + emitted)};\n` +
-      `import { Effect } from "effect";\nconst result = ${helper}();\nif (Effect.isEffect(result)) await Effect.runPromise(result);\n`)
+      `import { Effect } from "effect";\nconst result = ${helper}();\nif (Effect.isEffect(result)) await Effect.runPromise(result);\nelse await result;\n`)
   }
   const executed = importsVitest(join(dir, "dist"))
     ? await runVitest(dir, emitted, result.run ? helper : undefined, timeout)
