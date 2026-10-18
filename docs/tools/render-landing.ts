@@ -26,13 +26,13 @@ export async function nameOfHover(code: string): Promise<string> {
   try {
     linkModules(temp)
     writeFileSync(join(temp, "package.json"), '{"type":"module"}')
-    writeFileSync(join(temp, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext", skipLibCheck: true }, files: ["hero.vibelang"] }))
-    writeFileSync(join(temp, "hero.vibelang"), code)
+    writeFileSync(join(temp, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext", skipLibCheck: true }, files: ["hero.vibe"] }))
+    writeFileSync(join(temp, "hero.vibe"), code)
     // Deploy provides its release binary; direct builds resolve vibelang from PATH.
     server = startServer([process.env.VIBELANG_BINARY || "vibelang", "--lsp", "--stdio"])
     await server.request("initialize", { processId: process.pid, rootUri: pathToFileURL(temp).href, capabilities: { textDocument: { hover: { contentFormat: ["markdown"] } } } })
     server.notify("initialized", {})
-    const uri = pathToFileURL(join(temp, "hero.vibelang")).href
+    const uri = pathToFileURL(join(temp, "hero.vibe")).href
     server.notify("textDocument/didOpen", { textDocument: { uri, languageId: "vibe", version: 1, text: code } })
     const start = code.indexOf("nameOf")
     if (start < 0) throw new Error("Landing hero has no nameOf")
