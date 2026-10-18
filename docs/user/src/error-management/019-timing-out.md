@@ -46,7 +46,7 @@ Preview still unavailable
 
 The interruption used internally to stop the source is separate from the typed timeout error returned to its caller. Ordinary catch inside `buildPreview` cannot consume that interruption.
 
-> **Current limitation.** Timeout waits for the interrupted source's cleanup, but Effect 4.0.5 drops failures from that cleanup at the timeout boundary. This affects `timeout`, `timeoutOption`, and `timeoutOrElse`, including `finally` and `using` cleanup. D256 clarifies that D15 binds cleanup VibeLang itself runs; Effect operators keep Effect's semantics under D22, including dropping a loser's cleanup failure. See the [runtime limitation](https://github.com/roninjin10/effectscript/blob/main/docs/user/notes/compiler-gaps.md#timeout-discards-failures-from-interrupted-cleanup).
+> **Current limitation.** Timeout waits for the interrupted source's cleanup, but Effect 4.0.5 drops failures from that cleanup at the timeout boundary. This affects `timeout`, `timeoutOption`, and `timeoutOrElse`, including `finally` and `using` cleanup. D256 clarifies that D15 binds cleanup VibeLang itself runs; Effect operators keep Effect's semantics under D22, including dropping a loser's cleanup failure.
 
 ## Representing timeout as absence
 
