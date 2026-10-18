@@ -1,0 +1,22 @@
+// expect: EK2002 EK2001
+// A contract wider than the body binds its callers: the call below can fail
+// with Gone and needs Needed, although longForm's body runs nothing.
+error Gone {}
+
+service Needed {
+  id: string
+}
+
+function longForm(): number!Gone!Needed {
+  return 1
+}
+
+// R = never, but the call needs Needed.
+export function needsNothing(): number!Gone! {
+  return longForm()
+}
+
+// E = never, but the call can fail with Gone.
+export function failsNever(): number!!Needed {
+  return longForm()
+}

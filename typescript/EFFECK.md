@@ -78,6 +78,8 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives expected failures and rethrows a `TypeError` defect (D54) |
 | `ek2004-dead-catch.fail` | A `catch` over a `try` that raises no expected failure is EK2004, which `compilerOptions.effeck` makes an error here; a live `catch` is not reported |
 | `contracts` | Written contracts: returns checked against A, a contract wider than the body, a contract on a body that runs nothing, `infer` in each channel (D57), and the `.d.ts` with the inferred channels filled in |
+| `contract-wider-callers` | A caller sees a contract wider than a body that runs nothing: callers of `Effect<number, Gone, Needed>` and `number!Gone!Needed` take `Gone` and `Needed`, and `number!!` keeps the plain path (Chapter 15) |
+| `contract-wider-callers.fail` | Calling such a function under a narrower contract is EK2002 for its requirement and EK2001 for its failure |
 | `contracts-success.fail` | A returned value that A does not accept is TypeScript's TS2322 |
 | `ek2001-escaping-failure.fail` | A failure from a call and one from a `throw` escape their contracts; a `catch` keeps a third function within its contract |
 | `ek2002-escaping-requirement.fail` | A service the body needs escapes the contract's R |

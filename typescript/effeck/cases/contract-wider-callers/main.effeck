@@ -1,0 +1,51 @@
+// A caller sees a written contract, not the body (D10): a function whose
+// body runs nothing still gives its callers the contract's E and R, in the
+// caller's inferred contract and in the declaration file.
+error Gone {}
+
+service Needed {
+  id: string
+}
+
+export function longForm(): Effect<number, Gone, Needed> {
+  return 1
+}
+
+export function shortForm(): number!Gone!Needed {
+  return 2
+}
+
+// No failures and no requirements: callers see Effect<number, never, never>.
+export function plain(): number!! {
+  return 3
+}
+
+const box = {
+  get(): number!Gone!Needed {
+    return 4
+  }
+}
+
+export function callerOfLong() {
+  const n = longForm()
+  return n
+}
+
+export function callerOfShort() {
+  return shortForm() + 1
+}
+
+export function callerOfPlain() {
+  return plain() + 1
+}
+
+export function callerOfMethod() {
+  return box.get()
+}
+
+// expect-result: [1,3,4,4]
+export function main() {
+  provide Needed = { id: "x" } {
+    return [callerOfLong(), callerOfShort(), callerOfPlain(), callerOfMethod()]
+  }
+}

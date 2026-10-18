@@ -55,6 +55,29 @@ func (a *analyzer) isSplittable(fn *ast.Node) bool {
 	return t == nil || a.isEffectAnnotation(t)
 }
 
+// widensContract reports whether fn's contract writes an error or a
+// requirement that its body need not raise or use, such as
+// `number!Gone!Needed` on a body that returns 1. A caller sees the contract,
+// not the body (Chapter 14), so such a function is an Effect and has no
+// $direct variant. A channel written `infer Name` comes from the body, and a
+// contract whose E and R are never, such as `number!!`, keeps the plain path.
+func (a *analyzer) widensContract(fn *ast.Node) bool {
+	k := a.contractOf(fn)
+	if k == nil {
+		return false
+	}
+	t := a.checker.GetTypeFromTypeNode(k.annotation)
+	for channel, name := range map[int]string{channelE: "_E", channelR: "_R"} {
+		if k.inferred(channel) {
+			continue
+		}
+		if written := channelType(a.checker, t, name); written == nil || written.Flags()&checker.TypeFlagsNever == 0 {
+			return true
+		}
+	}
+	return false
+}
+
 // isEffectAnnotation reports whether the type node t names an Effect.
 func (a *analyzer) isEffectAnnotation(t *ast.Node) bool {
 	return isEffectType(a.checker, a.checker.GetTypeFromTypeNode(t))
@@ -85,7 +108,7 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			continue
 		}
 		a.plain[d] = plainExploring
-		m := &member{ok: !hasEscapingThrow(d) && !declaresUsing(d) && !hasEffeckStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d)}
+		m := &member{ok: !a.widensContract(d) && !hasEscapingThrow(d) && !declaresUsing(d) && !hasEffeckStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d)}
 		group[d] = m
 		if !m.ok {
 			// d's own body rules it out, whatever its callees compile to, so

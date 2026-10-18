@@ -28,10 +28,11 @@ export const area = Effect.fnUntraced(function* (w: number, h: number) {
 
 #### The rule
 
-A function compiles to plain JavaScript when both hold:
+A function compiles to plain JavaScript when all three hold:
 
 1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript Effeck functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary hatch such as `sync`. Its control class is `pure` or `sync`.
 2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. Exceptions become typed failures only where they are raised: at the call of a trusted function, whose listed exceptions are converted there (Chapter 26), and inside the plain function's own `try`, whose `catch` handles them (below). Bridging across calls is experiment G15.
+3. **Its contract, if it has one, writes E and R as `never`.** A caller sees the contract, not the body (Chapter 14), so `function answer(): number!Gone!Needed { return 1 }` is an Effect: its callers can fail with `Gone` and need `Needed`, and EK2001 and EK2002 hold them to it. `number!!` keeps the plain path, and a channel written `infer Name` counts what the body raises.
 
 The test is "can it reach an Effect operation", not "are E and R empty". `Effect.sleep("1 second")` has E = `never` and R = `never`, and it pauses the fiber. So the compiler tracks a separate fact for each function, its **control class**:
 
