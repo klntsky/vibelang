@@ -72,6 +72,16 @@ var Modules = []string{
 	"effeck-runtime/kernel",
 }
 
+// methodModules are effect's modules whose data types take the module's
+// self-first functions as methods (D152). It mirrors methodModules in
+// internal/effeck/datamethods.go, which is not exported.
+var methodModules = []string{"BigDecimal", "Cause", "Chunk", "DateTime", "Deferred", "Duration", "Effect", "Exit", "Fiber",
+	"HashMap", "HashSet", "Option", "Queue", "Ref", "Result", "Schedule", "Sink", "Stream"}
+
+// libReceivers are the lib's types whose own methods a lambda is most
+// often passed to: xs.map(f), promise.then(f), set.forEach(f).
+var libReceivers = []string{"Array", "ReadonlyArray", "Map", "ReadonlyMap", "Set", "ReadonlySet", "Promise"}
+
 // distPackages are the packages whose modules live under dist/, one
 // declaration file per module path (package.json maps "./*" to "./dist/*").
 var distPackages = []string{"effect", "@effect/vitest", "@effect/platform-node", "@effect/platform-bun"}
@@ -236,12 +246,18 @@ func generate(nodeModules, runtime string) (*generated, error) {
 	}
 	w.run()
 	w.prelude(file)
-	g := &generated{entries: w.finish(), aliases: w.aliases, walked: w.walked}
+	entries := w.finish()
+	w.methods(entries)
+	g := &generated{entries: entries, aliases: w.aliases, walked: w.walked}
 	inputs, err := pinInputs(p, runtime)
 	if err != nil {
 		return nil, err
 	}
-	g.header = effeckmapper.Header{Notice: "generated; do not edit", Command: Command, Inputs: inputs, Modules: Modules}
+	var methodPaths []string
+	for _, m := range methodModules {
+		methodPaths = append(methodPaths, "effect/"+m)
+	}
+	g.header = effeckmapper.Header{Notice: "generated; do not edit", Command: Command, Inputs: inputs, Modules: Modules, MethodModules: methodPaths}
 	return g, nil
 }
 
@@ -478,6 +494,64 @@ func (w *walker) finish() map[string][]effeckmapper.Signature {
 	return entries
 }
 
+// methods records the own methods of the lib's collection types and of
+// each effect module's main type (the interface or class named like the
+// module, as Semaphore in effect/Semaphore), keyed method:<receiver>#<name>.
+// A method module's self-first functions need no entries: the resolver
+// reads them from the module's own keys (Signature.Self).
+func (w *walker) methods(entries map[string][]effeckmapper.Signature) {
+	for _, name := range libReceivers {
+		if symbol := w.c.GlobalSymbol(name, ast.SymbolFlagsType); symbol != nil {
+			w.ownMethods(entries, "method:lib/"+name, w.c.GetDeclaredTypeOfSymbol(symbol))
+		}
+	}
+	paths := make([]string, 0, len(w.modulePaths))
+	byPath := map[string]*ast.Symbol{}
+	for module, path := range w.modulePaths {
+		paths = append(paths, path)
+		byPath[path] = module
+	}
+	sort.Strings(paths)
+	for _, path := range paths {
+		if !strings.HasPrefix(path, "effect/") {
+			continue
+		}
+		base := path[strings.LastIndex(path, "/")+1:]
+		for _, e := range w.c.GetExportsOfModule(byPath[path]) {
+			if e.Name() != base {
+				continue
+			}
+			target := e
+			if target.Flags()&ast.SymbolFlagsAlias != 0 {
+				target = w.c.GetAliasedSymbol(target)
+			}
+			if target != nil && target.Flags()&(ast.SymbolFlagsInterface|ast.SymbolFlagsClass) != 0 {
+				w.ownMethods(entries, "method:"+path, w.c.GetDeclaredTypeOfSymbol(target))
+			}
+		}
+	}
+}
+
+// ownMethods records the callable members of t that carry a form.
+func (w *walker) ownMethods(entries map[string][]effeckmapper.Signature, prefix string, t *checker.Type) {
+	if t == nil {
+		return
+	}
+	for _, prop := range w.c.GetPropertiesOfType(t) {
+		name := prop.Name()
+		if skipMembers[name] || strings.HasPrefix(name, "\xfe") || strings.HasPrefix(name, "__@") || strings.HasPrefix(name, "~") {
+			continue
+		}
+		pt := w.c.GetTypeOfSymbol(prop)
+		if pt == nil {
+			continue
+		}
+		if sigs := w.signatures(pt); len(sigs) > 0 && carriesForm(sigs) {
+			entries[prefix+"#"+name] = sigs
+		}
+	}
+}
+
 // homeOf returns the module path of the file that declares value.
 func (w *walker) homeOf(value *ast.Symbol) string {
 	for _, d := range value.Declarations() {
@@ -572,6 +646,7 @@ func (w *walker) signatures(t *checker.Type) []effeckmapper.Signature {
 		}
 		if n > 0 {
 			_, s.DataFirst = effeck.FormsOfType(c, c.GetTypeOfSymbol(declared.Parameters()[0]))
+			s.Self = takesSelfFirst(declared)
 		}
 		for _, inner := range c.GetSignaturesOfType(c.GetReturnTypeOfSignature(declared), checker.SignatureKindCall) {
 			if ps := inner.Parameters(); len(ps) > 0 {
@@ -583,6 +658,22 @@ func (w *walker) signatures(t *checker.Type) []effeckmapper.Signature {
 		out = append(out, s)
 	}
 	return out
+}
+
+// takesSelfFirst reports whether sig's first parameter is named self or
+// ends in OrOptions: effect's data-first form, which D152 offers as a
+// method. It mirrors takesSelfFirst in internal/effeck/datamethods.go.
+func takesSelfFirst(sig *checker.Signature) bool {
+	d := sig.Declaration()
+	if d == nil {
+		return false
+	}
+	params := d.Parameters()
+	if len(params) == 0 || !ast.IsIdentifier(params[0].Name()) {
+		return false
+	}
+	name := params[0].Name().Text()
+	return name == "self" || strings.HasSuffix(name, "OrOptions")
 }
 
 // declaredSignature returns the uninstantiated signature behind sig, whose

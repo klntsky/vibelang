@@ -40,7 +40,14 @@ package effeckmapper
 //  5. By name (Resolver.Argument). An argument whose text calls something
 //     outside the functions nested in it, at a position whose class accepts
 //     a program, is passed by name (D147). Elsewhere a call runs.
-//  6. Service context. A lambda or method that is a member of an object
+//  6. Methods. A call of a value's member, x.name(…), whose receiver scope
+//     cannot name takes the forms that every receiver with a method of that
+//     name accepts: the lib's arrays, maps, sets, and promises, the own
+//     members of effect's data types, and the self-first functions D152
+//     makes their methods. xs.map(f) passes a plain function; flatMap,
+//     whose callback is an Effect function on an Effect and plain on a
+//     Stream, gives no class.
+//  7. Service context. A lambda or method that is a member of an object
 //     literal providing a service (Layer.succeed(K, {…}), K.of({…}), the
 //     object a Layer.effect program returns, Context.make, Context.add,
 //     Effect.provideService) takes the member's written signature when this
@@ -329,6 +336,11 @@ func (r *Resolver) Argument(expr *ast.Node) Decision {
 func (r *Resolver) classAt(call *ast.Node, callee Callee, arg int, steps []PathStep) (Class, Provenance, bool, string) {
 	sigs, prov := r.signaturesOf(callee)
 	if len(sigs) == 0 {
+		if name, ok := formsMethodName(call, callee); ok {
+			if cls, ambiguous, note := r.methodClassAt(name, call, arg, steps); cls != 0 {
+				return cls, FromTable, ambiguous, note
+			}
+		}
 		return 0, FromFallback, false, "callee " + callee.Kind.String() + " " + callee.Key
 	}
 	args := call.Arguments()
@@ -365,6 +377,80 @@ func (r *Resolver) classAt(call *ast.Node, callee Callee, arg int, steps []PathS
 		return 0, FromFallback, false, "no class at the path"
 	}
 	return cls, prov, ambiguous(arg, steps), ""
+}
+
+// formsMethodName returns the method name of a call of a value's member,
+// x.name(…), whose callee has no key or a key the table lacks.
+func formsMethodName(call *ast.Node, callee Callee) (string, bool) {
+	if callee.Kind != CalleeNone && callee.Kind != CalleeTable {
+		return "", false
+	}
+	e := ast.SkipParentheses(call.Expression())
+	if !ast.IsPropertyAccessExpression(e) || !ast.IsIdentifier(e.Name()) {
+		return "", false
+	}
+	if callee.Kind == CalleeTable && !strings.Contains(callee.Canonical[strings.IndexByte(callee.Canonical, '#')+1:], ".") {
+		return "", false // a module function the table omits carries no form
+	}
+	return e.Name().Text(), true
+}
+
+// methodClassAt reads the class at argument arg and steps of a method call
+// whose receiver is unknown: the forms every receiver with a method of that
+// name accepts there, among the lib's collections, effect's data types'
+// own members, and D152's self-first functions. Receivers whose method
+// takes no such argument do not count; receivers that share no form give
+// no class.
+func (r *Resolver) methodClassAt(name string, call *ast.Node, arg int, steps []PathStep) (Class, bool, string) {
+	if r.table == nil {
+		return 0, false, ""
+	}
+	args := call.Arguments()
+	all := ClassProgram | ClassEffectFn | ClassPlainFn
+	cls, seen, differ := all, 0, false
+	var first Class
+	for _, m := range r.table.methodReceivers(name) {
+		sigs := m.sigs
+		if m.self {
+			sigs = formsDropSelf(sigs)
+		}
+		s, ok, _ := formsShapeFit(formsCandidates(sigs, len(args)), args)
+		if !ok {
+			continue
+		}
+		c := s.Param(arg).At(steps)
+		if c == 0 {
+			continue
+		}
+		if seen > 0 && c != first {
+			differ = true
+		}
+		if seen == 0 {
+			first = c
+		}
+		seen++
+		cls &= c
+	}
+	if seen == 0 || cls == 0 {
+		return 0, false, ""
+	}
+	return cls, differ, "method " + name + " on " + strconv.Itoa(seen) + " receivers"
+}
+
+// formsDropSelf returns D152 methods: sigs without their self parameter.
+func formsDropSelf(sigs []Signature) []Signature {
+	out := make([]Signature, 0, len(sigs))
+	for _, s := range sigs {
+		if s.Max == 0 || s.Rest && s.Max == 1 {
+			continue
+		}
+		m := Signature{Min: max(s.Min-1, 0), Max: s.Max - 1, Rest: s.Rest, DataLast: s.DataLast}
+		if len(s.Params) > 1 {
+			m.Params = s.Params[1:]
+		}
+		out = append(out, m)
+	}
+	return out
 }
 
 // signaturesOf returns callee's signatures and where they come from.

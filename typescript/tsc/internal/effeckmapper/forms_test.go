@@ -84,10 +84,12 @@ func TestFormsForArrayPrototypeMapAbsent(t *testing.T) {
 	if f := forms(t, "effect/Array#map", 2); f.Params[1].Top != ClassPlainFn {
 		t.Errorf("effect/Array#map callback = %v, want F", f.Params[1].Top)
 	}
-	r := resolve(t, `export function f(xs: number[]) { return xs.map((x) => x + 1) }`)
+	// xs.map has no key, but every receiver with a map method takes a
+	// plain callback, so the method table answers.
+	r := resolve(t, `export function f(xs: number[]) { return xs.map((x) => String(x)) }`)
 	d := r.lambda(t, "(x) =>")
-	if d.Callee.Kind != CalleeNone || d.Provenance != FromFallback || d.Form != FormPlain {
-		t.Errorf("xs.map's lambda = %+v, want no key, the fallback, plain", d)
+	if d.Callee.Kind != CalleeNone || d.Provenance != FromTable || d.Form != FormPlain || !strings.HasPrefix(d.Note, "method map") {
+		t.Errorf("xs.map's lambda = %+v, want no key, the method table, plain", d)
 	}
 }
 
@@ -401,14 +403,15 @@ func (r resolved) argument(t *testing.T, prefix string) Decision {
 }
 
 func TestResolverLambdaReturnAnnotation(t *testing.T) {
-	// Where the call gives no class, a lambda's own return annotation
+	// Where the call gives no class (here a function from another file), a lambda's own return annotation
 	// decides: a plain type keeps it plain, a contract makes it an Effect
 	// function. Without one, the call outside tail position decides.
-	r := resolve(t, `function double(x: number): number { return x * 2 }
-export function f(xs: number[]) {
-  const a = xs.map((x): number => double(x) + 1)
-  const b = xs.map((x): number!! => double(x) + 1)
-  const c = xs.map((x) => double(x) + 1)
+	r := resolve(t, `import { apply } from "./other.effeck"
+function double(x: number): number { return x * 2 }
+export function f() {
+  const a = apply((x): number => double(x) + 1)
+  const b = apply((x): number!! => double(x) + 1)
+  const c = apply((x) => double(x) + 1)
 }`)
 	for _, c := range []struct {
 		text string

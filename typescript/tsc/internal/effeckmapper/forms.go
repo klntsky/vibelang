@@ -22,6 +22,12 @@ package effeckmapper
 // A callee is absent when none of its parameters carries a form: a lambda or
 // a call passed to it takes the defaults (forms_resolve.go), as for a callee
 // the table does not cover.
+//
+// Methods of values are keyed by receiver: method:lib/Array#map for the
+// lib's arrays, method:effect/Semaphore#withPermits for a member of
+// effect/Semaphore's main type, Semaphore. A value of a method module's data
+// type (Header.MethodModules, D152) also takes the module's self-first
+// functions: stream.flatMap(f) is effect/Stream#flatMap(stream, f).
 
 import (
 	"bufio"
@@ -156,6 +162,10 @@ type Signature struct {
 	// DataLast reports whether the result is a function whose first
 	// parameter is an Effect: the data-last form, which a block is applied to.
 	DataLast bool
+	// Self reports whether the first parameter is named self (or ends in
+	// OrOptions): effect's data-first form, which D152 offers as a method of
+	// the module's data type with that parameter as the receiver.
+	Self bool
 }
 
 // Accepts reports whether s takes argc arguments.
@@ -211,6 +221,9 @@ type Header struct {
 	Inputs []Input `json:"inputs"`
 	// Modules are the module specifiers the generator walked.
 	Modules []string `json:"modules"`
+	// MethodModules are the modules whose data types take their self-first
+	// functions as methods (D152), as module paths.
+	MethodModules []string `json:"methodModules,omitempty"`
 	// Keys and Aliases count the table's entries.
 	Keys    int `json:"keys"`
 	Aliases int `json:"aliases"`
@@ -233,6 +246,9 @@ type Table struct {
 	Header  Header
 	entries map[string][]Signature
 	aliases map[string]string
+
+	methodOnce sync.Once
+	methods    map[string][]methodReceiver // method name -> receivers
 }
 
 // NewTable returns a table that holds entries and aliases. An alias maps a
@@ -363,6 +379,58 @@ func (t *Table) resolveAlias(key string) (string, bool) {
 	return "", false
 }
 
+// methodReceivers returns, for a method name, the receivers that have it:
+// each one's key prefix and signatures, and whether the signatures take the
+// receiver as their first argument (D152's self-first functions).
+func (t *Table) methodReceivers(name string) []methodReceiver {
+	t.methodOnce.Do(func() {
+		t.methods = map[string][]methodReceiver{}
+		own := map[string]bool{}
+		for key, sigs := range t.entries {
+			rest, ok := strings.CutPrefix(key, "method:")
+			if !ok {
+				continue
+			}
+			receiver, method, ok := strings.Cut(rest, "#")
+			if !ok {
+				continue
+			}
+			own[receiver+"#"+method] = true
+			t.methods[method] = append(t.methods[method], methodReceiver{receiver: receiver, sigs: sigs})
+		}
+		modules := map[string]bool{}
+		for _, m := range t.Header.MethodModules {
+			modules[m] = true
+		}
+		for key, sigs := range t.entries {
+			module, method, ok := strings.Cut(key, "#")
+			if !ok || !modules[module] || strings.Contains(method, ".") || own[module+"#"+method] {
+				continue
+			}
+			var self []Signature
+			for _, s := range sigs {
+				if s.Self {
+					self = append(self, s)
+				}
+			}
+			if len(self) > 0 {
+				t.methods[method] = append(t.methods[method], methodReceiver{receiver: module, sigs: self, self: true})
+			}
+		}
+		for _, rs := range t.methods {
+			slices.SortFunc(rs, func(a, b methodReceiver) int { return strings.Compare(a.receiver, b.receiver) })
+		}
+	})
+	return t.methods[name]
+}
+
+// methodReceiver is one receiver that has a method.
+type methodReceiver struct {
+	receiver string
+	sigs     []Signature
+	self     bool // the signatures take the receiver first (D152)
+}
+
 // Keys returns the table's keys, sorted.
 func (t *Table) Keys() []string {
 	keys := make([]string, 0, len(t.entries))
@@ -401,6 +469,7 @@ type signatureJSON struct {
 	P         []json.RawMessage `json:"p,omitempty"`
 	DataFirst int               `json:"df,omitempty"`
 	DataLast  int               `json:"dl,omitempty"`
+	Self      int               `json:"sf,omitempty"`
 }
 
 type paramJSON struct {
@@ -499,6 +568,9 @@ func encodeSignature(s Signature) signatureJSON {
 	}
 	if s.DataLast {
 		out.DataLast = 1
+	}
+	if s.Self {
+		out.Self = 1
 	}
 	return out
 }
@@ -609,5 +681,6 @@ func decodeSignature(sj signatureJSON) (Signature, error) {
 	}
 	s.DataFirst = sj.DataFirst != 0
 	s.DataLast = sj.DataLast != 0
+	s.Self = sj.Self != 0
 	return s, nil
 }
