@@ -166,9 +166,9 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 }
 
 // catchVariableType types the variable of a catch clause in a function that
-// the lowering can turn into an Effect: it is a union of the expected failures
-// the try block can raise, and never when it raises none. A catch elsewhere,
-// such as at a module's top level, keeps TypeScript's meaning.
+// runs Effects: it is a union of the expected failures the try block can
+// raise, and never when it raises none. A plain function catches every
+// JavaScript exception as unknown (D260).
 func catchVariableType(c *checker.Checker, declaration *ast.Node) *checker.Type {
 	if t := causeVariableType(c, declaration); t != nil {
 		return t // catch (cause: Cause) (primitives.go)
@@ -177,7 +177,15 @@ func catchVariableType(c *checker.Checker, declaration *ast.Node) *checker.Type 
 	if clause == nil || clause.Kind != ast.KindCatchClause || !inLowerableBody(clause.Parent) || isHandleStatement(clause.Parent) {
 		return nil
 	}
-	info := analyzerFor(c).tryBlockFlow(clause.Parent.AsTryStatement().TryBlock)
+	a := analyzerFor(c)
+	block := clause.Parent.AsTryStatement().TryBlock
+	info := a.tryBlockFlow(block)
+	// A catch binding can be requested while its owner's plain-function
+	// fixpoint is still exploring. A running call in the try block proves
+	// the Effect form without trusting that provisional plain verdict.
+	if !a.blockRunsEffects(block) && !a.isEffect(ownerFunction(clause)) {
+		return c.GetUnknownType()
+	}
 	return c.GetUnionType(info.errors)
 }
 
@@ -185,17 +193,40 @@ func init() {
 	fileChecks = append(fileChecks, checkDeadCatches)
 }
 
-// checkDeadCatches reports EK2004 at each catch whose try block can raise no
-// expected failure (D37). Such a catch can never run: an exception that no
-// contract lists, such as Option.getOrThrow's, is a defect, which catch does
-// not see. A warning by default (D34). Its variable has type never, so the
-// warning covers TypeScript's errors about that inside the catch.
+// blockRunsEffects tests operations, rather than E/R or effectInfo.effect:
+// a call through a written contract and a Stream loop can run Effects without
+// supplying an Effect interface to flowOf. Nested functions and lazy program
+// arguments do not run as part of this block.
+func (a *analyzer) blockRunsEffects(block *ast.Node) bool {
+	var visit func(*ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if isFunctionBoundary(n) || isHatchArgument(n) || n != block && a.isByName(n) {
+			return false
+		}
+		if n.Kind == ast.KindCallExpression && a.performs(n) ||
+			isHandleStatement(n) ||
+			isProvideBlock(n) || maskWord(n) != "" ||
+			n.Kind == ast.KindVariableDeclarationList && isUsingList(n) ||
+			isStreamLoop(a.checker, n) {
+			return true
+		}
+		return n.ForEachChild(visit)
+	}
+	return visit(block)
+}
+
+// checkDeadCatches reports EK2004 when a try block runs Effects but its E is
+// never (D260). Defects pass through this catch. Plain JavaScript catches
+// accept every exception and need no warning. The warning covers TypeScript's
+// errors about the never binding in an Effect catch.
 func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		if node.Kind == ast.KindTryStatement && catches(node) && !isCauseCatch(node) && inLowerableBody(node) {
 			try := node.AsTryStatement()
-			if c.GetUnionType(analyzerFor(c).tryBlockFlow(try.TryBlock).errors).Flags()&checker.TypeFlagsNever != 0 {
+			a := analyzerFor(c)
+			info := a.tryBlockFlow(try.TryBlock)
+			if a.isEffect(ownerFunction(node)) && c.GetUnionType(info.errors).Flags()&checker.TypeFlagsNever != 0 && a.blockRunsEffects(try.TryBlock) {
 				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, try.CatchClause.Pos()), EK2004)
 				if d != nil {
 					note(d, "Use a form that can fail, such as Option.getOrElse or Schema.decodeUnknownEffect, or bound the call with try.")

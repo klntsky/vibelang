@@ -38,7 +38,7 @@ function describeReport() {
 // Output: {"joined":"reports/weekly.txt","normalized":"reports/weekly.txt","base":"weekly.txt","directory":"reports","extension":".txt","absolute":false,"rebuilt":"reports/weekly.txt"}
 ```
 
-Most `Path` methods are plain synchronous TypeScript functions. Effect's own packages are trusted, so call these methods directly; any exceptions are defects, which ordinary `catch` does not handle. Calling a member through the key, such as `Path.Path.join("reports", "weekly.txt")`, looks up the service and adds `Path.Path` to R even though the member returns a string.
+Most `Path` methods are plain synchronous TypeScript functions. Effect's own packages are trusted, so call these methods directly; exceptions escaping into Effect code are defects, which its catch does not handle. A plain-contract function keeps JavaScript catch and can recover the exception as `unknown` (D260). Calling a member through the key, such as `Path.Path.join("reports", "weekly.txt")`, looks up the service and adds `Path.Path` to R even though the member returns a string.
 
 | Operation | Result |
 | --- | --- |

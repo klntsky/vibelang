@@ -31,7 +31,7 @@ export const area = Effect.fnUntraced(function* (w: number, h: number) {
 A function compiles to plain JavaScript when all three hold:
 
 1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript VibeLang functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary hatch such as `sync`. Its control class is `pure` or `sync`.
-2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. Exceptions become typed failures only where they are raised: at the call of a trusted function, whose listed exceptions are converted there (Chapter 26), and inside the plain function's own `try`, whose `catch` handles them (below). Bridging across calls is experiment G15.
+2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. In Effect code, a trusted function's listed exceptions become typed failures at its call (Chapter 26). A plain function instead keeps JavaScript exceptions: its own catch handles them as `unknown`, and an exception escaping into an Effect caller becomes a defect (D260). Bridging across calls is experiment G15.
 3. **Its contract, if it has one, writes E and R as `never`.** A caller sees the contract, not the body (Chapter 14), so `function answer(): number!Gone!Needed { return 1 }` is an Effect: its callers can fail with `Gone` and need `Needed`, and EK2001 and EK2002 hold them to it. `number!!` keeps the plain path, and a channel written `infer Name` counts what the body raises.
 
 The test is "can it reach an Effect operation", not "are E and R empty". `Effect.sleep("1 second")` has E = `never` and R = `never`, and it pauses the fiber. So the compiler tracks a separate fact for each function, its **control class**:
@@ -54,13 +54,13 @@ The test is "can it reach an Effect operation", not "are E and R empty". `Effect
 
 #### Regions inside a plain function
 
-A plain JavaScript function may contain `try`, `catch`, and `finally`, and they compile to JavaScript's own statements. Nothing inside can pause or be interrupted, so JavaScript's semantics match the machine's. The generated `catch` rethrows anything that is not one of the region's expected failures, so defects still pass through:
+A plain JavaScript function may contain `try`, `catch`, and `finally`, and they compile to JavaScript's own statements. Nothing inside can pause or be interrupted, so JavaScript's semantics match the machine's. Its catch receives every exception from the try block as `unknown`, exactly as TypeScript does (D260). An exception becomes a defect only when it escapes into an Effect caller:
 
 ```ts es
 function readPort(text: string) {
   try {
     return JSON.parse(text).port as number
-  } catch (e) {                                // e: SyntaxError
+  } catch (e) {                                // e: unknown
     return 8080
   }
 }
@@ -71,7 +71,6 @@ export function readPort$direct(text: string): number {
   try {
     return JSON.parse(text).port as number
   } catch (e) {
-    if (!(e instanceof SyntaxError)) throw e     // a defect: not caught
     return 8080
   }
 }

@@ -146,9 +146,7 @@ func (p *projector) moduleCall(call *ast.Node, e env) {
 	if !island && !(parent != nil && p.isHatchCall(parent) && len(parent.Arguments()) > 0 && parent.Arguments()[0] == call) && p.dataMethod(call, e) {
 		return
 	}
-	if p.plainBuiltin && p.builtinFailure(call) != "" {
-		p.builtinCallee(call)
-	} else if !p.plainBuiltinCall(call) {
+	if !p.plainBuiltinCall(call) {
 		p.visit(call.Expression(), e)
 	}
 	p.visitList(call.TypeArguments(), e)

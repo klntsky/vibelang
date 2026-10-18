@@ -2,9 +2,10 @@ package vibelangmapper
 
 import "github.com/microsoft/TypeScript/tsc/internal/ast"
 
-// plainBuiltinFunction proves the D54 direct path from syntax: shipped
-// failures and throws are caught locally, and every call is known to stay
-// synchronous. Unknown calls retain their Effect entry rather than guessing.
+// plainBuiltinFunction proves the D260 direct path from syntax: the body
+// has a native catch, its explicit throws and shipped failures are caught
+// locally, and every call stays synchronous. Unknown calls retain the Effect
+// entry rather than guessing. JavaScript property access can throw too.
 func (p *projector) plainBuiltinFunction(fn *ast.Node) bool {
 	if !isProjectedFunction(fn) || fn.Name() == nil || fn.Parent != p.file.AsNode() || fn.Type() != nil || p.purityDeclarations()[fn.Name().Text()] != 1 {
 		return false
@@ -27,6 +28,7 @@ func (p *projector) plainBuiltinFunction(fn *ast.Node) bool {
 		case ast.KindTryStatement:
 			stmt := n.AsTryStatement()
 			if stmt.CatchClause != nil {
+				found = true
 				v := stmt.CatchClause.AsCatchClause().VariableDeclaration
 				if v != nil && (!ast.IsIdentifier(v.Name()) || v.Type() != nil) {
 					safe = false
@@ -85,21 +87,7 @@ func (p *projector) preparePlainBuiltinBody(fn *ast.Node) {
 	if p.plainBuiltinBodies == nil {
 		p.plainBuiltinBodies = map[*ast.Node][]edit{}
 	}
-	p.plainBuiltinBodies[fn] = q.plan.edits
-}
-
-// plainBuiltinCatch unwraps expected failures and rethrows defects before a
-// native catch body runs, including a catch without a written binding (D54).
-func (p *projector) plainBuiltinCatch(clause *ast.Node) {
-	c := clause.AsCatchClause()
-	name := p.freshWord("$caughtError")
-	if c.VariableDeclaration != nil {
-		name = c.VariableDeclaration.Name().Text()
-	} else {
-		p.plan.replace(p.tokenStart(clause), p.tokenStart(c.Block), "catch ("+name+") ")
-	}
-	p.plan.insert(p.tokenStart(c.Block)+1, name+" = "+helperRef("$caught")+"("+name+");")
-	p.visitChildren(clause, env{})
+	p.plainBuiltinBodies[fn] = append([]edit{}, q.plan.edits...) // non-nil even when the native body needs no edits
 }
 
 // directBuiltinEdits substitutes native bodies only for execution. Retaining

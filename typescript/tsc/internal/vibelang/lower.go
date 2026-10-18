@@ -32,7 +32,6 @@ type lowering struct {
 	runtime  *ast.IdentifierNode // local name for vibelang-runtime, imported on first use
 	inEffect bool                // visiting code that runs inside a lowered generator
 	frame    *frame              // the generator being emitted while inEffect
-	plain    bool                // visiting the body of a .vibe function that compiles to plain JavaScript
 	imports  []namedImport       // named imports the lowering adds, such as a @throws class
 
 	// scopes maps each Scope region's block to the name of its Scope (scopes_lower.go).
@@ -109,8 +108,6 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitRunningCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.trusted[node] != nil:
 		return tx.visitTrustedCall(node)
-	case node.Kind == ast.KindCallExpression && tx.plain && tx.plan.trusted[node] != nil:
-		return tx.visitTrustedPlainCall(node)
 	case node.Kind == ast.KindPropertyAccessExpression && tx.inEffect && tx.plan.looksUp(node):
 		return tx.visitServiceLookup(node)
 	case node.Kind == ast.KindClassDeclaration && tx.plan.keys[node] != "":
@@ -149,10 +146,6 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitJumpTarget(node)
 	case tx.inEffect && tx.frame.region != nil && varList(node) != nil:
 		return tx.visitVar(node)
-	case tx.plain && node.Kind == ast.KindThrowStatement:
-		return tx.visitPlainThrowStatement(node)
-	case tx.plain && node.Kind == ast.KindCatchClause:
-		return tx.visitPlainCatchClause(node)
 	case node.Kind == ast.KindFunctionDeclaration && tx.plan.directs[node]:
 		return tx.visitPlainFunctionDeclaration(node)
 	case node.Kind == ast.KindCallExpression && tx.plan.wireOrders[node] != nil:
@@ -168,10 +161,9 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	case tx.plan.isProgram(node):
 		return tx.lowerProgram(node)
 	case isFunctionBoundary(node):
-		saved, savedPlain := tx.inEffect, tx.plain
+		saved := tx.inEffect
 		tx.inEffect = false
-		tx.plain = isLowerable(node) // a .vibe function that is not an Effect
-		defer func() { tx.inEffect, tx.plain = saved, savedPlain }()
+		defer func() { tx.inEffect = saved }()
 	}
 	return tx.Visitor().VisitEachChild(node)
 }
@@ -289,8 +281,8 @@ func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
 func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
-	saved, savedFrame, savedPlain := tx.inEffect, tx.frame, tx.plain
-	tx.inEffect, tx.plain = true, false
+	saved, savedFrame := tx.inEffect, tx.frame
+	tx.inEffect = true
 	tx.frame = &frame{}
 	subject := byNameSubject(node) // a topic passes its pipe's left side (pipes.go)
 	var value *ast.Node
@@ -299,7 +291,7 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	} else {
 		value = tx.visitNode(subject)
 	}
-	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
+	tx.inEffect, tx.frame = saved, savedFrame
 	body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(value)}), false /*multiLine*/)
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
 	ec.SetOriginal(generator, node)
@@ -373,13 +365,13 @@ func keepsThis(node *ast.Node) bool {
 func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
 	ec := tx.EmitContext()
 
-	saved, savedFrame, savedPlain := tx.inEffect, tx.frame, tx.plain
-	tx.inEffect, tx.plain = false, false // a generator's parameter list cannot yield
+	saved, savedFrame := tx.inEffect, tx.frame
+	tx.inEffect = false // a generator's parameter list cannot yield
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
 	tx.frame = &frame{name: sourceName(node), clause: tx.plan.resumesInTail(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
-	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
+	tx.inEffect, tx.frame = saved, savedFrame
 	if !ast.IsBlock(body) {
 		body = ec.ConvertToFunctionBlock(body, false /*multiLine*/)
 		// The printer emits the comments before the closing brace from the end

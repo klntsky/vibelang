@@ -103,7 +103,7 @@ The package checks `effect@4.0.5` at load time and rejects other versions.
 | --- | --- |
 | `$programs` | Convert collections of program functions |
 | `$catch`, `$finally` | Expected-failure handling and cleanup |
-| `$expected`, `$caught` | Expected failures in plain JavaScript regions |
+| `$expected`, `$caught` | Legacy helpers for pre-D260 output; new plain contracts keep JavaScript exceptions |
 | `$region`, `$using`, `$fork` | Block-owned scopes, resources, and children |
 | `$service`, `$reference`, `$control` | Service keys, defaults, and control operations |
 | `$trusted`, `$trustedPlain` | Classify listed foreign exceptions |

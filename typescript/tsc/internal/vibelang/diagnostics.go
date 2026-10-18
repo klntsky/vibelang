@@ -88,8 +88,8 @@ var (
 	EK2002 = message(2002, errorCategory, "{0} needs {1}, but its contract says R = {2}.")
 	// EK2003: a return annotation that is not a full Effect<A, E, R>. {0} is the annotation.
 	EK2003 = message(2003, errorCategory, "{0} leaves contract channels unspecified. Did you mean never or inferred?")
-	// EK2004: a catch that can never run.
-	EK2004 = message(2004, warningCategory, "this catch can never run: nothing in its try block fails with an expected error.")
+	// EK2004: an Effect try block with E = never; defects pass through.
+	EK2004 = message(2004, warningCategory, "this try block runs Effects but has no expected errors; defects pass through this catch.")
 	// EK2005: a resumeWith program that needs a service or fails outside the operation's contract. {0} is what it needs.
 	EK2005 = message(2005, errorCategory, "resumeWith runs this code at the perform site, inside the handled program, where the clause's providers are not in scope. It needs {0}.")
 	// EK2006: a return, break, or continue that leaves a finally block. {0} is the statement's keyword.

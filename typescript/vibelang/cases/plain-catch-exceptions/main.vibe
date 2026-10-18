@@ -1,0 +1,34 @@
+// D260: plain contracts retain JavaScript catch, including exceptions from
+// coercion, property access, revoked proxies, and prototype lookup.
+import { primitive, getter, revoked, prototype } from "./fixtures.js"
+
+export const f = (x: unknown): string => {
+  try {
+    return String(x)
+  } catch {
+    return ""
+  }
+}
+
+const messageOf = (x: { message: string }) => {
+  try { return x.message } catch (e) {
+    // @ts-expect-error A plain catch receives unknown, not never or a typed failure.
+    const text: string = e
+    return ""
+  }
+}
+
+const prototypeOf = (x: object): string => {
+  try { Object.getPrototypeOf(x); return "ok" } catch { return "" }
+}
+
+const parseOr = (text: string): string => {
+  try { JSON.parse(text); return "parsed" } catch (e) {
+    return e instanceof SyntaxError ? "syntax" : "other"
+  }
+}
+
+// expect-result: ["","","","","syntax"]
+export function main() {
+  return [f(primitive), messageOf(getter), f(revoked), prototypeOf(prototype), parseOr("{")]
+}

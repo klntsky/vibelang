@@ -119,7 +119,7 @@ coastal
 Route is unavailable
 ```
 
-The getter can pause while its service runs. Decoding requires `Routes`; encoding does not, because its getter only passes through the value. Use the Effect interpreter whenever services or asynchronous work are involved. Plain `catch` translates expected service failures and leaves defects and interruption intact.
+The getter can pause while its service runs. Decoding requires `Routes`; encoding does not, because its getter only passes through the value. Use the Effect interpreter whenever services or asynchronous work are involved. The Effect catch translates expected service failures and leaves defects and interruption intact.
 
 ## Forbidding an encoding direction
 

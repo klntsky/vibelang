@@ -106,7 +106,7 @@ known
 true false
 ```
 
-`getOrElse` computes its fallback only for `None`. `getOrNull` and `getOrUndefined` adapt to APIs expecting nullish values. `getOrThrow` throws a defect on `None`, which a VibeLang `catch` does not handle; prefer a guard, default, or `Effect.fromOption` when absence is expected rather than a programming error. A `catch` around only `getOrThrow` cannot run and receives warning EK2004 by default.
+`getOrElse` computes its fallback only for `None`. `getOrNull` and `getOrUndefined` adapt to APIs expecting nullish values. `getOrThrow` throws a defect on `None`, which an Effect catch does not handle; prefer a guard, default, or `Effect.fromOption` when absence is expected rather than a programming error. A plain-contract function can catch the JavaScript exception as `unknown`. EK2004 warns only when a try block runs Effects with E = `never`, and says defects pass through its catch (D260).
 
 ## Choosing fallback options
 

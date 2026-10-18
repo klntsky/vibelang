@@ -70,7 +70,7 @@ function readPort(text: string) {
 // number!!
 ```
 
-JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, a VibeLang `catch` does not see it, and a `catch` that could only have caught such exceptions is reported, EK2004 (Chapter 3).
+JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, an Effect catch does not see it. EK2004 warns when a try block runs Effects with E = `never`: defects pass through (Chapter 3). A plain contract keeps JavaScript catch and receives every exception as `unknown` (D260).
 
 #### How do I use `Option` and `Result`?
 

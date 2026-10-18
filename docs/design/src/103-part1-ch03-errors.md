@@ -170,11 +170,12 @@ Two things that look the same mean different things, on purpose.
 
 **`throw` is `Effect.fail`.** Inside `Effect.gen`, `throw new Error("unreachable")` is a defect. In VibeLang, every `throw` is a typed failure: `Error` joins E, and a `catch` can handle it. To signal a bug, die explicitly: `Effect.die(new Error("unreachable"))`.
 
-**`catch` sees expected failures only.** Inside `Effect.gen`, a JavaScript `catch` sees any synchronous exception from the code in its `try`. In VibeLang, an exception that no contract lists is a defect, and `catch` does not see it. That covers Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, whose exceptions are defects (Chapter 10). Each has a form for code that can fail: `Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`. A `catch` that therefore can never run is reported, as a warning by default:
+**Effect `catch` sees expected failures only.** Inside `Effect.gen`, a JavaScript `catch` sees any synchronous exception from the code in its `try`. In an Effect region, an exception that no contract lists is a defect, and `catch` does not see it. A function with a plain contract keeps JavaScript catch: it receives every exception as `unknown` (D260). That covers Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, whose exceptions are defects (Chapter 10). Each has a form for code that can fail: `Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`. A try block that runs Effects with E = `never` reports EK2004, a warning by default; defects pass through its catch:
 
 ```ts es
 function firstAdmin(users: ReadonlyArray<User>) {
   try {
+    Effect.succeed(undefined)
     return Option.fromNullishOr(users.find(isAdmin)).getOrThrow()
   } catch (e) {
     return guest
@@ -183,7 +184,7 @@ function firstAdmin(users: ReadonlyArray<User>) {
 ```
 
 ```text
-warning EK2004: this catch can never run: nothing in its try block fails with an expected error.
+warning EK2004: this try block runs Effects but has no expected errors; defects pass through this catch.
   admins.vibe:3:12   return Option.getOrThrow(Option.fromNullishOr(users.find(isAdmin)))
                           ^^^^^^^^^^^^^^^^^ its exceptions are defects
   Use a form that can fail:   return users.find(isAdmin) ?? guest

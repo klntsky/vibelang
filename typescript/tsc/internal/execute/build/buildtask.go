@@ -276,7 +276,8 @@ func (t *BuildTask) compileAndEmit(orchestrator *Orchestrator, path tspath.PathK
 	t.result.exitStatus = result.Status
 	t.result.statistics = statistics
 	t.packageJsons = t.result.program.PackageJsonLookupPaths()
-	if (!program.Options().NoEmitOnError.IsTrue() || len(result.Diagnostics) == 0) &&
+	hasErrors := slices.ContainsFunc(result.Diagnostics, func(d *ast.Diagnostic) bool { return d.Category() == diagnostics.CategoryError })
+	if (!program.Options().NoEmitOnError.IsTrue() || !hasErrors) &&
 		(len(result.EmitResult.EmittedFiles) > 0 || t.status.kind != upToDateStatusTypeOutOfDateBuildInfoWithErrors) {
 		// Update time stamps for rest of the outputs
 		t.updateTimeStamps(orchestrator, result.EmitResult.EmittedFiles, diagnostics.Updating_unchanged_output_timestamps_of_project_0)

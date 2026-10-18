@@ -1,0 +1,1 @@
+noEmitOnError: 6 project checks passed

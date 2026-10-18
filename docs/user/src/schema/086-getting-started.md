@@ -89,7 +89,7 @@ Missing key
 
 Prefer `decodeUnknownEffect` inside VibeLang: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and requires a synchronous, service-free decoding path. Unexpected exceptions from synchronous callbacks are defects; ordinary `catch` does not handle them.
 
-`decodeUnknownSync` throws on invalid input. A direct call makes that exception a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A `catch` around a direct call alone cannot run and produces warning EK2004. The `Exit` and `Option` variants provide other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant supports asynchronous decoding without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even when no service is needed.
+`decodeUnknownSync` throws on invalid input. A direct call makes that exception a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A plain-contract function keeps JavaScript catch and can recover that exception as `unknown` (D260). EK2004 warns only when a try block runs Effects with E = `never`, and says defects pass through its catch. The `Exit` and `Option` variants provide other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant supports asynchronous decoding without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even when no service is needed.
 
 ## Encoding values
 

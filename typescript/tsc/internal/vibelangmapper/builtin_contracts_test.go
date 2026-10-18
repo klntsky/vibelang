@@ -25,12 +25,12 @@ func TestBuiltinUncaughtContract(t *testing.T) {
 }
 
 // TestBuiltinPlainCatch pins D54's synchronous direct entry, which a plain
-// Array.map callback must call while preserving typed expected failures.
+// Array.map callback must call with JavaScript exception handling (D260).
 func TestBuiltinPlainCatch(t *testing.T) {
 	source := `function parseOr(text: string, fallback: number) { try { return JSON.parse(text) as number } catch(e) { return fallback } } export function main() { return ["1", "{"].map((text) => parseOr(text, 0)) }`
 	p := Executable(source, testContext)
-	if !strings.Contains(p.Text, "function parseOr$direct(") || !strings.Contains(p.Text, "$trustedPlain") || !strings.Contains(p.Text, "$caught") {
-		t.Fatalf("missing D54 direct body:\n%s", p.Text)
+	if !strings.Contains(p.Text, "function parseOr$direct(") || strings.Contains(p.Text, "$trustedPlain") || strings.Contains(p.Text, "$caught") {
+		t.Fatalf("plain body must retain native exceptions:\n%s", p.Text)
 	}
 }
 
@@ -151,13 +151,16 @@ func TestBuiltinContractsCase(t *testing.T) {
 	}
 }
 
-// TestBuiltinPlainCatchDefects proves that D54 catches expected failures only,
-// including nested catches, a catch without a binding, and explicit throws.
-func TestBuiltinPlainCatchDefects(t *testing.T) {
-	source := `export function read(text: string) { try { return JSON.parse(text) as number } catch (e) { return e.name } }
+// TestBuiltinPlainCatchExceptions pins D260 for nested catches, catches
+// without a binding, and explicit throws, under every tracing mode. An
+// Effect catch still lets an unlisted exception through as a defect.
+func TestBuiltinPlainCatchExceptions(t *testing.T) {
+	source := `import { Effect } from "effect";
+export function read(text: string) { try { return JSON.parse(text) as number } catch (e) { return e.name } }
 export function anonymous(text: string) { try { return JSON.parse(text) as number } catch { return "fallback" } }
 export function nested(text: string) { try { try { return JSON.parse(text) as number } catch (e) { throw e } } catch (e) { return e.name } }
-export function unsafe(text: string) { try { return JSON.parse(text) as number } catch(e) { throw e } }`
+export function unsafe(text: string) { try { return JSON.parse(text) as number } catch(e) { throw e } }
+export function effectful(text: string) { try { Effect.succeed(0); return JSON.parse(text) as number } catch { return "caught" } }`
 	for _, tracing := range []string{"", "all", "exported"} {
 		t.Run(tracing, func(t *testing.T) {
 			dir, _ := stockBuiltinProject(t)
@@ -173,9 +176,10 @@ const expected = [await Runner.runPromise(read("{")), await Runner.runPromise(an
 const escaped = await Runner.runPromise(Runner.flip(unsafe("{")));
 const original = JSON.parse;
 JSON.parse = () => { throw new TypeError("defect") };
-const defects = await Promise.all([read("{"), anonymous("{"), nested("{")].map((p) => Runner.runPromise(Runner.exit(p))));
+const caught = await Promise.all([read("{"), anonymous("{"), nested("{")].map((p) => Runner.runPromise(p)));
+const defects = await Promise.all([unsafe("{"), effectful("{")].map((p) => Runner.runPromise(Runner.exit(p))));
 JSON.parse = original;
-console.log(JSON.stringify([expected, escaped.name, defects.every((e) => RunnerExit.isFailure(e) && RunnerCause.hasDies(e.cause))]));`
+console.log(JSON.stringify([expected, escaped.name, caught, defects.every((e) => RunnerExit.isFailure(e) && RunnerCause.hasDies(e.cause))]));`
 			if err := os.WriteFile(filepath.Join(dir, "main.mjs"), []byte(js+runner), 0600); err != nil {
 				t.Fatal(err)
 			}
@@ -185,8 +189,8 @@ console.log(JSON.stringify([expected, escaped.name, defects.every((e) => RunnerE
 			if err != nil {
 				t.Fatalf("exec: %v\n%s\n%s", err, out, js)
 			}
-			if strings.TrimSpace(string(out)) != `[["SyntaxError","fallback","SyntaxError"],"SyntaxError",true]` {
-				t.Fatalf("wrong failure/defect split: %s", out)
+			if strings.TrimSpace(string(out)) != `[["SyntaxError","fallback","SyntaxError"],"SyntaxError",["TypeError","fallback","TypeError"],true]` {
+				t.Fatalf("wrong plain/Effect catch behavior: %s", out)
 			}
 		})
 	}

@@ -46,7 +46,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | --- | --- | --- |
 | Expected errors and defects | Changed | `throw` is expected; an exception no contract lists, `Effect.die`, and `Effect.orDie` are defects (Chapter 3) |
 | A JavaScript `throw` | Changed | Always a typed failure; `Effect.die(new Error(…))` for a bug |
-| A JavaScript `catch` around a throwing call | Changed | `catch` sees expected failures only; a dead `catch` is EK2004 (D37) |
+| A JavaScript `catch` around a throwing call | Changed | Plain contracts keep JavaScript catch; Effect catches handle expected failures only, and EK2004 marks an Effect try with E = `never` (D260) |
 | `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `error E { ... }` declares a `TaggedError` class; `Schema.TaggedError` is unchanged |
 | Error tracking in E | Changed | Inferred: what a function throws, plus its callees' E, minus what it catches |
 | `Effect.catch`, `catchTag`, `catchTags`, `catchIf` | Changed | `try`/`catch` with narrowing; the combinators still work with a program |
@@ -230,7 +230,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
 | `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |
 | Async iterables and event emitters | Unchanged by design | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
-| Synchronous code that throws | Changed | `try(…)`; a dead `catch` is EK2004 (D37) |
+| Synchronous code that throws | Changed | Plain contracts catch JavaScript exceptions; use `try(…)` for typed Effect failures (D260) |
 | Effect 3 libraries | Changed | Foreign code: `try((p) => Effect3.runPromise(p), (error) => …, p)` |
 
 #### C14. Streams

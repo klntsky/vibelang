@@ -67,7 +67,7 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D34 | Diagnostics: errors, except the policies EK2004 (a warning) and EK4403; `compilerOptions.vibelang` | Soundness errors cannot be lowered | 28 |
 | D35 | One owner per diagnostic: `vibelang` for types and language, Oxlint for lint | tsgolint embeds TypeScript's checker | 28 |
 | D36 | Debugging through composed source maps; spans for logical stacks | The frame invariant keeps callers off the JavaScript stack | 28 |
-| D37 | `catch` never sees an unlisted exception; a dead `catch` is the warning EK2004 | Coverage audit X2; prototype finding 16 | 3, 10 |
+| D37 | Effect `catch` lets defects pass through; an Effect try with E = `never` is warning EK2004 (amended by D260) | Coverage audit X2; prototype finding 16 | 3, 10 |
 | D38 | Runners only where no fiber runs the code; EK1005 elsewhere | Coverage audit X4 | 13 |
 | D39 | A function-or-Effect parameter: a function if plain, a program if it can pause | Coverage audit X9 | 13 |
 | D40 | Service statics: `layer`, `make`; `static readonly default` makes a `Context.Reference` | Coverage audit X12 | 4 |
@@ -230,6 +230,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D244 | **Controversial.** VibeLang warns where Effect's defaults are off: `extendsNativeError`, `newPromise`, `unsafeEffectTypeAssertion` | Failures are `error` declarations, promises cannot be awaited, contracts check types | 28 |
 | D245 | Refactors are `refactor.rewrite` code actions: write or remove a contract, interface to `schema`, async to a VibeLang function (with an `error` per `await`), calls to a pipe and back, and the two pipe styles | Effect's 15 refactors, for one function form | 28 |
 | D246 | A layer's hover lists what it provides, needs, and fails with; `wire`'s hover its build order; `Duration.Input` strings, a brand's name, and `@vibelang-diagnostics` codes complete | Effect's hovers and completions that still apply | 28 |
+| D260 | Plain contracts keep JavaScript catch with an `unknown` binding; only Effect try blocks with E = `never` get EK2004, which says defects pass through | Smithers twin failures; effectscript-4a ruling `d-syzjja` | 3, 15 |
 
 #### Rules of the runtime and compiler
 

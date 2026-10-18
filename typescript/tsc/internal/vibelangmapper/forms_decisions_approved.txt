@@ -93,3 +93,8 @@ typescript/vibelang/cases/programs/main.vibe:49:15 lambda: choice fallback -> ef
 typescript/vibelang/cases/regions-jumps/main.vibe:95:3 lambda: choice fallback -> effectFn annotation # bump: number!! answers EK9100; the fork already lowered it to an Effect function
 typescript/vibelang/cases/stack-depth/stack-depth.vibe:45:20 lambda: choice fallback -> plain annotation # hooks.onResume: void answers EK9100; the fork already kept it an ordinary arrow
 typescript/vibelang/cases/contracts/main.vibe:60:22 lambda: effectFn annotation -> plain annotation # twice: number replaces Effect<number, never, never>; the fork already kept it a plain arrow, (n: number) => number in expected/main.d.ts
+
+# D260 runtime cases write their plain contracts for the projector; no runtime behavior changes. The original unannotated arrow also runs in noemit-on-error's project checks.
+typescript/vibelang/cases/plain-catch-exceptions/main.vibe:5:18 lambda: choice fallback -> plain annotation # f returns string and keeps JavaScript catch (D260)
+typescript/vibelang/cases/plain-catch-exceptions/main.vibe:21:21 lambda: choice fallback -> plain annotation # prototypeOf returns a string after native prototype lookup (D260)
+typescript/vibelang/cases/plain-catch-exceptions/main.vibe:25:17 lambda: choice fallback -> plain annotation # parseOr returns a string after a native JSON.parse call (D260)

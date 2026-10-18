@@ -94,8 +94,8 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$catchExpression` | Run a catch expression's left side and recover as `$catch` does | D236 |
 | `$isFailure` | Test a caught failure's `_tag` against a retired typed catch clause's tags | D131, D216 |
 | `$finally` | Run cleanup on every exit and retain cleanup failures | D15, D46 |
-| `$expected` | Mark a value thrown in a plain-JavaScript function as an expected failure | D54 |
-| `$caught` | Unwrap an expected failure in a plain-JavaScript `catch`, and rethrow a defect | D13, D54 |
+| `$expected` | Legacy expected-failure wrapper for pre-D260 emitted code | D54, D260 |
+| `$caught` | Legacy helper for pre-D260 emitted code; new plain contracts keep JavaScript catch | D54, D260 |
 | `$region` | Create a block-owned scope without adding it to the body's Context | D14, D47 |
 | `$using` | Run an acquisition with a block's scope, keeping the acquisition's own interruptibility, and register `Symbol.dispose` cleanup with interruption masked | D14, D25 |
 | `$fork` | Fork into a block's scope, with `forkIn`'s options, or require a scope from the caller | D19, D47 |
@@ -125,7 +125,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$forStream`, `$toStream` | Kept for the prototype compiler's output: `$forOf`, and the identity | D26 |
 | `trusted` | Wrap a synchronous implementation with a value-level expected-failure contract | D249 |
 | `$trusted` | Run a trusted call: an instance of a listed class is an expected failure, any other exception a defect | D5, D23 |
-| `$trustedPlain` | The same in a function that compiles to plain JavaScript: throw a listed exception as `$expected` for its `catch` | D54 |
+| `$trustedPlain` | Legacy trusted-call wrapper for pre-D260 emitted code; new plain functions call directly | D54, D260 |
 | `Effect` | Supply the prelude Effect namespace | D4 |
 | `Layer` | Supply the prelude Layer namespace | D4 |
 | `Schema` | Supply the prelude Schema namespace | D4 |

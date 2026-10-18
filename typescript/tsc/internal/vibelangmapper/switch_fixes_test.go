@@ -13,14 +13,24 @@ import (
 	"testing"
 )
 
-// TestBuiltinContractRenderings prevents expected built-in failures from
-// silently becoming defects when execution switches to the projector.
+// TestBuiltinContractRenderings retains built-in failure contracts in Effect
+// regions; a plain executable body keeps JavaScript calls and catch (D260).
 func TestBuiltinContractRenderings(t *testing.T) {
-	source := `export function main() { try { return JSON.parse("{") } catch (e) { return e instanceof SyntaxError ? "caught SyntaxError" : "wrong" } }`
-	for name, projection := range map[string]Projection{"checking": Project(source, testContext), "executable": Executable(source, testContext)} {
+	plain := `export function main() { try { return JSON.parse("{") } catch (e) { return e instanceof SyntaxError ? "caught SyntaxError" : "wrong" } }`
+	effect := `import { Effect } from "effect"; export function main() { try { Effect.succeed(0); return JSON.parse("{") } catch (e) { return e instanceof SyntaxError ? "caught SyntaxError" : "wrong" } }`
+	for name, pair := range map[string][2]Projection{
+		"checking":   {Project(plain, testContext), Project(effect, testContext)},
+		"executable": {Executable(plain, testContext), Executable(effect, testContext)},
+	} {
 		t.Run(name, func(t *testing.T) {
-			if !strings.Contains(projection.Text, "$trusted") || !strings.Contains(projection.Text, "[SyntaxError]") {
-				t.Fatalf("missing built-in contract:\n%s", projection.Text)
+			for i, projection := range pair {
+				if name == "executable" && i == 0 {
+					if strings.Contains(projection.Text, "$trusted") || !strings.Contains(projection.Text, "JSON.parse") || !strings.Contains(projection.Text, "catch (e)") {
+						t.Fatalf("plain body lost JavaScript catch:\n%s", projection.Text)
+					}
+				} else if !strings.Contains(projection.Text, "$trusted") || !strings.Contains(projection.Text, "[SyntaxError]") {
+					t.Fatalf("missing built-in contract:\n%s", projection.Text)
+				}
 			}
 		})
 	}

@@ -177,15 +177,6 @@ func (tx *lowering) visitTrustedCall(node *ast.Node) *ast.Node {
 	return run
 }
 
-// visitTrustedPlainCall turns a call with expected failures in a function
-// that compiles to plain JavaScript into `runtime.$trustedPlain(thunk, [classes])`.
-func (tx *lowering) visitTrustedPlainCall(node *ast.Node) *ast.Node {
-	call := tx.runtimeCall("$trustedPlain", tx.trustedThunk(node), tx.classArray(node))
-	tx.EmitContext().SetOriginal(call, node)
-	tx.EmitContext().AssignCommentAndSourceMapRanges(call, node)
-	return call
-}
-
 func (tx *lowering) classArray(node *ast.Node) *ast.Node {
 	var classes []*ast.Node
 	for _, ref := range tx.plan.trusted[node] {

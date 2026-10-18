@@ -66,7 +66,7 @@ function promised(value: number): number!! {
 
 The language design diagnoses this as `EK2001`. Handle `Rejected` inside the function or widen its contract. Related checks include unmet services (`EK2002`), running a program at module top level (`EK1001`), and passing a suspending callback to synchronous JavaScript (`EK4301`).
 
-Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages are trusted. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a `catch` that can never receive an expected failure is `EK2004`, a warning by default.
+Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages are trusted. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a try block that runs Effects with E = `never` gets `EK2004` (defects pass through), a warning by default.
 
 The server exposes TypeScript completions through the VibeLang checker,
 including service member types. Quick fixes repair retired spellings and the
@@ -140,7 +140,7 @@ function discard(program: Effect.Effect<number>) {
 | Correctness | `outdatedEffectCodegen` | Not adopted: VibeLang has no codegen comments | None |
 | Correctness | `overriddenSchemaConstructor` | EK4814, error | `class Person extends Schema.Class<Person>("Person")({ … }) { constructor() { … } }` |
 | Correctness | `unsupportedServiceAccessors` | Not needed: `Users.find(id)` calls a member through the key, generic or not | `Users.find(id)` |
-| Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { pure() } catch (e) { … }` is EK2004 |
+| Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { Effect.succeed(1) } catch (e) { … }` is EK2004; plain catches keep JavaScript semantics |
 | Anti-pattern | `effectFnIife` | Not needed: no `Effect.fn`; an immediately called function is a call | `(() => load())()` |
 | Anti-pattern | `effectGenUsesAdapter` | Not needed: no `Effect.gen` | None |
 | Anti-pattern | `effectInFailure` | EK4815, warning | `throw program`; run it: `program()` |

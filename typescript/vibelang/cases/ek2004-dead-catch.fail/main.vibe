@@ -1,21 +1,22 @@
 // expect: EK2004 EK2004
-// A catch whose try block can raise no expected failure can never run (D37):
+// An Effect try block with E = never warns that defects pass through (D260):
 // Option.getOrThrow's exception is a defect. EK2004 is a warning by default;
 // this project makes it an error. TypeScript's complaint about e._tag on
 // never is covered.
-import { Console, Data, Option } from "effect"
+import { Console, Data, Effect, Option } from "effect"
 
 class Missing extends Data.TaggedError("Missing")<{}> {}
 
 function firstAdmin(names: ReadonlyArray<string>) {
   try {
+    Effect.succeed(0)
     return Option.getOrThrow(Option.fromNullishOr(names.find((name) => name.startsWith("admin"))))
   } catch (e) {
     return e._tag
   }
 }
 
-// A plain function's catch over a try that throws nothing is dead too.
+// A plain function keeps JavaScript catch and receives no EK2004.
 function parse(text: string) {
   try {
     return text.length
@@ -33,4 +34,22 @@ function live(names: ReadonlyArray<string>) {
     return e._tag
   }
   return "found"
+}
+
+// A written contract's E and R are never, but its call still runs an Effect.
+function infallible(): Effect.Effect<number, never, never> {
+  return Effect.succeed(1)
+}
+function annotatedCall() {
+  try {
+    return infallible()
+  } catch (e) {
+    return e._tag
+  }
+}
+
+// Even in an Effect function, a plain try block does not get EK2004.
+function plainBlock() {
+  Effect.succeed(0)
+  try { return "ok" } catch { return "fallback" }
 }

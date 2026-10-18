@@ -142,7 +142,7 @@ The rule is deliberately strict, so a hatch's function reads like a standalone T
 
 `runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude as the way back in. They are called from plain TypeScript: a `.ts` file, a hatch's body, or a module's top level, never from code a fiber runs (EK1005).
 
-An exception that no contract lists is a defect, and a VibeLang `catch` does not see it, unlike a JavaScript `catch` inside `Effect.gen` (Chapter 3). That includes the exceptions of Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, which `effect`'s trusted contracts classify as defects.
+An exception that no contract lists is a defect, and an Effect catch does not see it, unlike JavaScript catch inside `Effect.gen`. A plain contract keeps JavaScript catch with an `unknown` binding (D260) (Chapter 3). That includes the exceptions of Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, which `effect`'s trusted contracts classify as defects.
 
 What a boundary cannot do is set by JavaScript, not by VibeLang. It cannot discover a dependency the function reaches through a global or a module variable, it cannot cancel synchronous JavaScript once it has started, and it cannot let a synchronous callback pause. Effect code today has the same limits.
 

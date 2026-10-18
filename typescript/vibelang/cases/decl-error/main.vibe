@@ -20,7 +20,7 @@ function unwrap() {
   try {
     throw new Wrapped({ value: 7 })
   } catch (error) {
-    return error.value
+    return error instanceof Wrapped && typeof error.value === "number" ? error.value : -1
   }
 }
 

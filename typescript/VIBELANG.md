@@ -77,8 +77,11 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `vibelang-service-dts` | A service's `.d.ts` is an interface plus a key class: TypeScript code compiled against it with `skipLibCheck` off implements `Users`, provides it with `Layer.succeed`, and yields `Users` and a default service in `Effect.gen` |
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
-| `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives expected failures and rethrows a `TypeError` defect (D54) |
-| `ek2004-dead-catch.fail` | A `catch` over a `try` that raises no expected failure is EK2004, which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported |
+| `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives every exception as `unknown` (D260) |
+| `ek2004-dead-catch.fail` | An Effect `try` block with E = `never` is EK2004 (defects pass through), which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported |
+| `plain-catch-exceptions` | Plain catches recover coercion, getter, revoked Proxy, and prototype-lookup exceptions, and trusted built-in calls keep their original exception values (D260) |
+| `ek2004-defect` | An Effect try with E = `never` warns with the new EK2004 text and still propagates a defect (D260) |
+| `noemit-on-error` | Warning-only projects emit under `noEmitOnError`; errors and mixed warning/error projects do not, in both project and build mode (six checks) |
 | `contracts` | Written contracts: returns checked against A, a contract wider than the body, a contract on a body that runs nothing, `infer` in each channel (D57), and the `.d.ts` with the inferred channels filled in |
 | `contract-wider-callers` | A caller sees a contract wider than a body that runs nothing: callers of `Effect<number, Gone, Needed>` and `number!Gone!Needed` take `Gone` and `Needed`, and `number!!` keeps the plain path (Chapter 15) |
 | `contract-wider-callers.fail` | Calling such a function under a narrower contract is EK2002 for its requirement and EK2001 for its failure |
@@ -111,7 +114,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `callbacks-result-unions` | A callback declared to return a plain value or an Effect, as `Arbitrary.checkEffect`'s property is, is plain when D10 allows it and an Effect function when it can pause |
 | `contract-lambdas-plain` | A lambda with a contract where only a plain function fits is plain and returns A: `Schema.suspend` and `SchemaTransformation.transform`. Pending on F3's D57 return check |
 | `trust-levels` | A `trusted(impl, [Errors])` value's listed class joins E and reaches a `catch` (D249): `PortError` from a TypeScript function, `SyntaxError` from `JSON.parse` trusted as a value, and `PortError` from a method through a receiver adapter; an unlisted exception is a defect; operands that run Effects run before the trusted call; Effect's exports, a boundary, and a parameter's callee need nothing |
-| `builtin-contracts` | `JSON.parse`'s shipped contract (D5) and a plain catch (D54): in an Effect function its `SyntaxError` joins E, so `Effect.flip` and a `catch` receive it; a function that catches its own failure compiles to plain JavaScript (`$trustedPlain`) that `Array.prototype.map` calls; a successful parse returns its value |
+| `builtin-contracts` | `JSON.parse`'s shipped contract (D5) and a plain catch (D54): in an Effect function its `SyntaxError` joins E, so `Effect.flip` and a `catch` receive it; a function that catches its own failure compiles to plain JavaScript (native calls) that `Array.prototype.map` calls; a successful parse returns its value |
 | `ek4401-plain-call.fail` | EK4401 for a plain TypeScript call, one that returns a Promise, one in a plain callback, and a trusted contract whose `@throws` class the file cannot import; none for a trusted call, a boundary, or the top level |
 | `ek4401-boundary-operands.fail` | EK4401's note for a call whose argument or receiver runs an Effect says to pass it to `try` as an input, since `try`'s function cannot run one; a call with plain operands gets `try((titles) => sortTitles(titles), titles)`, with the bindings it reads as inputs |
 | `ek4401-effect-reexports.fail` | D22 through re-exports: `assert` and `expect` imported from `@effect/vitest`, which re-exports vitest's, are trusted, and so is `.toBe` on what `expect` returned; the same `expect` imported from `vitest`, and the program's own method on a value `Option.getOrThrow` returned, keep EK4401 |
@@ -592,7 +595,7 @@ The checks so far:
 | EK2001 | The call or `throw` that adds an expected failure the function's contract does not allow | `contracts.go` |
 | EK2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
 | EK2003 | A return annotation that leaves a contract channel out, or a plain return annotation on a function whose body runs an Effect | `contracts.go` |
-| EK2004 | The `catch` keyword, when the `try` block can raise no expected failure (D37); covers TypeScript's errors about the `never` caught value | `failures.go` |
+| EK2004 | The `catch` keyword, when the `try` block runs Effects with E = `never`; defects pass through (D260); covers TypeScript's errors about the `never` caught value | `failures.go` |
 | EK2005 | The program passed to `resumeWith` when it needs a service or fails with an error the operation does not declare (D17); covers TypeScript's TS2345 there | `handlers.go` |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript would discard the failure in flight | `regions.go` |
 | EK2102 | The name of an Effect function on a call cycle whose A TypeScript cannot infer because it depends on the function's own result, covering TS7022, TS7023, and TS7024 there; a `catch` variable, or a function, on a cycle that the checker typed before the cycle's E and R were known | `recursion.go` |
@@ -762,20 +765,7 @@ The arrows are VibeLang lambdas whose parameter types expect Effects, so they lo
 
 ### Regions in plain functions
 
-A function that compiles to plain JavaScript cannot pause, so its `try`, `catch`, and `finally` stay JavaScript's (D54). Each of its throws is caught by one of its own `catch` clauses, or a throw could end it and it would be an Effect. A throw there marks the thrown value as an expected failure, and each `catch` unwraps it or rethrows anything else, a defect, so D13 holds:
-
-```ts
-// clamp.vibe                                  // clamp.js
-function clamp(n: number) {                  function clamp(n) {
-  try {                                          try {
-    if (n > 10) throw new Invalid({ n })             if (n > 10) throw runtime.$expected(new Invalid({ n }));
-    return n                                         return n;
-  } catch (e) {                                  } catch (e) {
-    return -10                                       e = runtime.$caught(e);
-  }                                                  return -10;
-}                                                }
-                                             }
-```
+A function with a plain contract keeps JavaScript's `try`, `catch`, `finally`, and `throw` (D260, amending D54). Its catch receives every exception from its try block as `unknown`, including exceptions from getters, coercion, proxies, and prototype lookup. The compiler adds no `$caught` filter, `$expected` wrapper, or trusted-call wrapper there. An exception becomes a defect only if it escapes the plain function into an Effect caller. An Effect region still handles expected failures only; EK2004 warns when its try block runs Effects with E = `never` and says defects pass through.
 
 `regions.go` holds the machinery as an API for every region kind: Scope regions ([Scope regions: using and fork](#scope-regions-using-and-fork)) use it, and so will loops over producers (F7):
 
@@ -1172,7 +1162,7 @@ function port(text: string) {           const port = Effect.fnUntraced(function*
 }                                       });
 ```
 
-The listed classes join E (`addFailures`, from `flowOf`), and a call whose failures can end a function makes it an Effect (`hasEscapingFailure`, which D10's fixpoint asks too). Inside a `try` with a `catch` in a function that compiles to plain JavaScript (D54), the helper is `runtime.$trustedPlain`, which throws a listed exception as `$expected`, so the `catch` receives it. In a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, a trusted call stays an ordinary call and its exceptions are defects. When an operand runs an Effect, the operands are evaluated first, in order, and passed to the thunk: `((receiver, args) => () => receiver.m(...args))(yield* r(), [yield* x()])`.
+The listed classes join E (`addFailures`, from `flowOf`), and a call whose failures can end a function makes it an Effect (`hasEscapingFailure`, which D10's fixpoint asks too). In a function that compiles to plain JavaScript, including a plain callback such as one `Array.prototype.map` calls, a trusted call stays an ordinary JavaScript call (D260). Its catch receives any exception unchanged as `unknown`; an exception becomes a defect only when it escapes into an Effect caller. When an operand runs an Effect, the operands are evaluated first, in order, and passed to the thunk: `((receiver, args) => () => receiver.m(...args))(yield* r(), [yield* x()])`.
 
 The generated code imports each class from a module the `.vibe` file imports that exports it, usually the one it imports the trusted function from: `import { PortError } from "./parsers.ts"`. A global class such as `SyntaxError` needs no import. A class that no imported module exports is EK4401 (`reachClass`). The code is `trust_lower.go`.
 

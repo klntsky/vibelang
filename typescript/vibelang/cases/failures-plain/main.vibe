@@ -1,7 +1,7 @@
 // A function that runs no Effect and whose throws are all caught inside it
 // compiles to plain JavaScript, and its try, catch, and finally stay
-// JavaScript's (D54). Its catch still sees expected failures only: anything
-// else, a defect, is rethrown (D13).
+// JavaScript's (D260). Its catch receives every JavaScript exception as
+// unknown; an exception escaping into an Effect caller becomes a defect.
 import { Data, Effect, Exit } from "effect"
 
 class Invalid extends Data.TaggedError("Invalid")<{ readonly n: number }> {}
@@ -11,17 +11,17 @@ export function clamp(n: number) {
     if (n > 10) throw new Invalid({ n })
     return n
   } catch (e) {
-    return e.n > 100 ? -100 : -10
+    return e instanceof Invalid && e.n > 100 ? -100 : -10
   }
 }
 
-// A destructured catch, and a TypeError that passes through it.
+// A property access can throw a TypeError that this plain catch receives.
 export function length(value: any) {
   try {
     if (value === 0) throw new Invalid({ n: 0 })
     return value.length
-  } catch ({ n }) {
-    return n
+  } catch (e) {
+    return e instanceof Invalid ? e.n : -1
   }
 }
 
@@ -37,18 +37,18 @@ export function rethrown(n: number) {
       steps.push(`finally ${n}`)
     }
   } catch (e) {
-    return e
+    return typeof e === "string" ? e : "unexpected"
   }
 }
 
 const steps: string[] = []
 
-// expect-result: {"clamp":[5,-10,-100],"length":[0,3],"defect":["Die"],"rethrown":["negative",2],"steps":["finally -1","finally 2"]}
+// expect-result: {"clamp":[5,-10,-100],"length":[0,3,-1],"defect":["Die"],"rethrown":["negative",2],"steps":["finally -1","finally 2"]}
 export function main() {
-  const defect = Effect.exit(() => Effect.suspend(() => length(undefined)))
+  const defect = Effect.exit(() => Effect.sync(() => { const broken: any = undefined; return broken.length }))
   return {
     clamp: [clamp(5), clamp(50), clamp(500)],
-    length: [length(0), length("abc")],
+    length: [length(0), length("abc"), length(undefined)],
     defect: Exit.isFailure(defect) ? (defect.cause.reasons as ReadonlyArray<(typeof defect.cause.reasons)[number]>).map((reason) => reason._tag) : ["Success"],
     rethrown: [rethrown(-1), rethrown(2)],
     steps
