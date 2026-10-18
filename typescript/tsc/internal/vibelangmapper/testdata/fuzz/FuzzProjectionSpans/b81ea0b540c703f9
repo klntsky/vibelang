@@ -1,0 +1,2 @@
+go test fuzz v1
+string("function{for const of A)}")

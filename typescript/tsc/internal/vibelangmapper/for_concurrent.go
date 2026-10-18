@@ -18,6 +18,12 @@ func (p *projector) forConcurrent(call *ast.Node, e env) {
 	args := call.Arguments()
 	items, limit, fn := args[0], args[1], args[2]
 	body := fn.Body()
+	bodyStart := p.tokenStart(body)
+	if bodyStart >= len(p.text) {
+		// An unfinished loop's synthetic body can start at EOF.
+		p.unprojected(call)
+		return
+	}
 	start := p.tokenStart(call.Parent)
 	if call.Parent.Kind != ast.KindExpressionStatement {
 		start = p.tokenStart(call)
@@ -44,7 +50,7 @@ func (p *projector) forConcurrent(call *ast.Node, e env) {
 	p.plan.mark(editProgram, partOpen, p.tokenStart(body), p.tokenStart(body), selfArg(body))
 	// The parser gives an unbraced statement a synthetic block at the
 	// statement's own span. Supply only those braces the source lacks.
-	braced := p.text[p.tokenStart(body)] == '{'
+	braced := p.text[bodyStart] == '{'
 	if !braced {
 		p.plan.insert(p.tokenStart(body), "{ ")
 	}

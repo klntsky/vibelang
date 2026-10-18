@@ -57,6 +57,28 @@ func TestQualifiedControlProjection(t *testing.T) {
 	}
 }
 
+func TestIncompleteLoopBindingProjection(t *testing.T) {
+	for _, source := range []string{"function{for const of A)}", "function f() { for (const of xs) {} }"} {
+		checking := Project(source, testContext)
+		executable := Executable(source, testContext)
+		if len(executable.Diagnostics) == 0 {
+			t.Fatalf("missing diagnostic for incomplete loop: %q", source)
+		}
+		assertValidMap(t, checking, source)
+		assertValidMap(t, executable, source)
+	}
+}
+
+func TestIncompleteConcurrentBodyProjection(t *testing.T) {
+	const source = "A{for concurrent(0\"}"
+	for _, projection := range []Projection{Project(source, testContext), Executable(source, testContext)} {
+		if len(projection.Diagnostics) == 0 {
+			t.Fatalf("missing diagnostic for incomplete concurrent loop: %q", source)
+		}
+		assertValidMap(t, projection, source)
+	}
+}
+
 // FuzzProjectionSpans checks the contracts TypeScript's cache and editor
 // depend on: identical source/context has identical projections, diagnostics
 // stay inside the original text, and verbatim spans map to their exact source.
@@ -65,7 +87,7 @@ func FuzzProjectionSpans(f *testing.F) {
 	for _, tc := range projectionCases {
 		f.Add(tc.source)
 	}
-	for _, source := range []string{"", "\x00", "service", "function f( {", "// 😀\u2028export const café = 1", "service S { read(): #Bad!0 }"} {
+	for _, source := range []string{"", "\x00", "service", "function f( {", "// 😀\u2028export const café = 1", "service S { read(): #Bad!0 }", "function f(xs: number[]) { for concurrent (const x of xs)"} {
 		f.Add(source)
 	}
 	f.Fuzz(func(t *testing.T, source string) {

@@ -1122,6 +1122,12 @@ func (l *execLowering) lowerLoops() {
 			return
 		}
 		loop := n.AsForInOrOfStatement()
+		if init := loop.Initializer; init.Kind == ast.KindVariableDeclarationList && len(init.AsVariableDeclarationList().Declarations.Nodes) == 0 {
+			// A partially written loop can have a declaration list with no
+			// binding. Leave it for diagnostics instead of indexing a name.
+			l.p.unprojected(n)
+			return
+		}
 		s, ok := each[[2]int{l.p.tokenStart(loop.Expression), loop.Expression.End()}]
 		if !ok {
 			return
