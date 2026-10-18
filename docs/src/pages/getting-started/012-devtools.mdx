@@ -69,9 +69,9 @@ function promised(value: number): number!! {
 }
 ```
 
-The language design diagnoses this as `EK2001`. Handle `Rejected` inside the function or widen its contract. Related checks include unmet services (`EK2002`), running a program at module top level (`EK1001`), and passing a suspending callback to synchronous JavaScript (`EK4301`).
+The language design diagnoses this as `EK2001`. Handle `Rejected` inside the function or widen its contract. Related checks include unmet services (`EK2002`), running a program at module top level without an explicit Effect type on a `const` (`EK1001`), and passing a suspending callback to synchronous JavaScript (`EK4301`).
 
-Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages are trusted. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a try block that runs Effects with E = `never` gets `EK2004` (defects pass through), a warning by default.
+Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages and packages matching `compilerOptions.vibelang.trustedPackages` are trusted: plain calls are synchronous, their exceptions are defects, and Effect-returning calls run. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a try block that runs Effects with E = `never` gets `EK2004` (defects pass through), a warning by default.
 
 The server exposes TypeScript completions through the VibeLang checker,
 including service member types. Quick fixes repair retired spellings and the
@@ -101,13 +101,16 @@ A contract gives the compiler a promise to check. To infer selected channels, wr
     "sourceMap": true,
     "vibelang": {
       "diagnostics": { "EK2004": "warning", "EK4403": "error" },
-      "tracing": "exported"
+      "tracing": "exported",
+      "trustedPackages": ["@smthrs/*"]
     }
   }
 }
 ```
 
 EK2004, EK4403, EK4406, and the rules from Effect's language service, EK4801-EK4825 except EK4813, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity. Core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
+
+`trustedPackages` accepts package-name globs matched against `package.json` names, including workspace packages. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment. For example, `"@smthrs/*"` trusts packages in that scope. Omit the option to retain EK4401 for foreign calls. Use `trusted(impl, [Errors])` from `vibelang-runtime` in TypeScript for expected failures on an individual function.
 
 ## Effect language service rules
 
@@ -143,7 +146,7 @@ function discard(program: Effect.Effect<number>) {
 | Correctness | `nonObjectEffectServiceType` | Effect 3 only, and a `service` declares members | `service Port { value: number }` |
 | Correctness | `outdatedApi` | EK4813, error, in place of TS2339, with a quick fix; the same fix on TS2339 in `.ts` files | `Effect.catchAll`; the fix writes `Effect.catch` |
 | Correctness | `outdatedEffectCodegen` | Not adopted: VibeLang has no codegen comments | None |
-| Correctness | `overriddenSchemaConstructor` | EK4814, error | `class Person extends Schema.Class<Person>("Person")({ … }) { constructor() { … } }` |
+| Correctness | `overriddenSchemaConstructor` | EK4814, warning | `class Person extends Schema.Class<Person>("Person")({ … }) { constructor() { … } }` |
 | Correctness | `unsupportedServiceAccessors` | Not needed: `Users.find(id)` calls a member through the key, generic or not | `Users.find(id)` |
 | Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { Effect.succeed(1) } catch (e) { … }` is EK2004; plain catches keep JavaScript semantics |
 | Anti-pattern | `effectFnIife` | Not needed: no `Effect.fn`; an immediately called function is a call | `(() => load())()` |
@@ -212,7 +215,8 @@ function discard(program: Effect.Effect<number>) {
 | Hover | Layer graph | Hover: `wire` lists the order it builds its layers in, and what each uses | Hover on `wire(UsersLive, DbLive)` |
 | Completion | `Self` in classes | Not needed: declarations have no `Self` | None |
 | Completion | `Effect.gen` snippet | Not needed: no `Effect.gen` | None |
-| Completion | `Effect.fn` span name | Not needed: `tracing` names spans after functions (D104) | `"tracing": "exported"` |
+| Completion | `Effect.fn` span name | Not needed: `tracing` names spans after functions (D104) | `"tracing": "exported",
+      "trustedPackages": ["@smthrs/*"]` |
 | Completion | Duration strings | Completion: `"2 seconds"` and the other units where a `Duration.Input` goes | `Effect.sleep("1 second")` |
 | Completion | Namespace import style | Not needed: effect's root names are in scope (D146) | `Option.some(1)` |
 | Completion | `Schema.brand` name | Completion: the declared name in `Schema.brand("…")` | `schema UserId = Schema.String.pipe(Schema.brand("UserId"))` |

@@ -101,7 +101,7 @@ export function main() {
 // Output: started
 ```
 
-Declare functions, services, schemas, and layers at module scope. Do not run a program there: even `Effect.succeed(1)` is EK1001 at the top level. Export a `main` without parameters instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing the module runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
+Declare functions, services, schemas, and layers at module scope. Do not run a program there: `const answer = Effect.succeed(1)` is EK1001. An explicitly Effect-typed const, such as `const answer: Effect.Effect<number, never, never> = Effect.succeed(1)`, stores a cold program and runs nothing at import (D262). Export a `main` without parameters instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing the module runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
 
 Every export of Effect's root is in scope without an import, along with VibeLang's runtime helpers. This includes `Console`, `Clock`, `Option`, `Schedule`, and `Stream`. JavaScript globals such as `Array` keep their meaning; import Effect's conflicting modules under another name. Subpaths such as `effect/http` still need imports.
 
@@ -120,7 +120,7 @@ function reportTime() {
 
 `console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe`. Use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. Importing a Node function or passing it as a value is allowed; directly running it is a platform API error. [Building an HTTP API](/vibelang-features/113-building-an-http-api) shows `createServer` passed to a server layer.
 
-A plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a value of the `.vibe` file, such as `text`, only as an input: an argument after the function, bound to its first parameter. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
+A plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a value of the `.vibe` file, such as `text`, only as an input: an argument after the function, bound to its first parameter. Projects can also trust workspace or other TypeScript packages with `compilerOptions.vibelang.trustedPackages: ["@smthrs/*"]` (D261). Matching packages have synchronous plain calls whose exceptions are defects; their Effects run, and EK4401 does not fire. Use `trusted(impl, [Errors])` for a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
 ## Catch expected failures only
 

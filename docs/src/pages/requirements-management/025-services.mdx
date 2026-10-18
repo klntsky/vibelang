@@ -66,7 +66,7 @@ function endpoint(path: string) {
 // Output: https://example.test/tickets
 ```
 
-Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members are trusted; a plain TypeScript member from another package needs `@vibelang trusted`, or the call is EK4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
+Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members and packages matching `compilerOptions.vibelang.trustedPackages` are trusted. Other plain TypeScript members need a boundary or `trusted(impl, [Errors])`, or the call is EK4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
 
 A declared service member wins over the key's own members, including `pipe`, `use`, `key`, and `call`. A static member with the same name as a service member is error EK3006.
 
