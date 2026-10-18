@@ -6,6 +6,8 @@ Effect's experimental Schema compilers work behind the ordinary Schema APIs in V
 
 ```vibe
 // schemas/Parcel.vibe
+// run: Console.log(JSON.stringify(readParcel({ reference: "pkg-94", count: 2 }))); try { readParcel({ reference: "pkg-94", count: "2" }) } catch (error) { Console.log(error._tag) }
+import { Console } from "effect"
 export const Parcel = Schema.Struct({
   reference: Schema.String,
   count: Schema.Int
@@ -16,6 +18,11 @@ function readParcel(input: unknown) {
 }
 ```
 
+```output
+{"reference":"pkg-94","count":2}
+SchemaError
+```
+
 A compiler installs optimized operations for exact schema ASTs. The decoder or constructor can try a synchronous fast path; success returns immediately, while failure falls through to the detailed parser that produces normal issues. Guards can return false directly because they do not need detailed failures.
 
 Compilation must be active for the relevant AST and operation before a consumer captures its parser. Checks and property getters can run twice after a failed fast path, so keep them deterministic and free of side effects. The compiler avoids fast paths that would replay defaults, class construction, transformations, middleware, or other effectful work unsafely.
@@ -24,6 +31,7 @@ Compilation must be active for the relevant AST and operation before a consumer 
 
 ```vibe
 // main.vibe
+// run: Console.log(JSON.stringify(receiveCompiled({ reference: "pkg-94", count: 2 }))); try { receiveCompiled({}) } catch (error) { Console.log(error.message) }
 import "effect/schema/SchemaJITCompiler/enable"
 
 const CompiledParcel = Schema.Struct({
@@ -36,9 +44,16 @@ function receiveCompiled(input: unknown) {
 }
 ```
 
+```output
+{"reference":"pkg-94","count":2}
+Missing key
+  at ["reference"]
+```
+
 Put the enabling import before code that creates or runs parsers. Importing the compiler namespace alone does not enable it. Operations compile lazily on first use, without eagerly executing every check or default.
 
 ```vibe
+// run: enableSelectedDirections(); Console.log(Schema.decodeEffect(Schema.FiniteFromString)("2")); Console.log(Schema.is(Schema.toType(Schema.FiniteFromString))(2)); Console.log(Schema.encodeEffect(Schema.FiniteFromString)(2))
 import { SchemaJITCompiler } from "effect/schema"
 
 function enableSelectedDirections() {
@@ -50,6 +65,12 @@ function enableSelectedDirections() {
 }
 ```
 
+```output
+2
+true
+2
+```
+
 Selective enabling applies to the exact AST and dependencies reached while parsing it. The original AST decodes, the type projection validates and constructs decoded values, and the flipped AST encodes. Global enabling handles those roots as operations encounter them.
 
 JIT uses dynamic function construction. When the engine or Content Security Policy blocks it, or generation or initialization fails, parsing stays interpreted. An exception thrown by a compiled parser that is already running is an ordinary parser exception, not a compiler-initialization failure that triggers a retry.
@@ -59,8 +80,9 @@ JIT uses dynamic function construction. When the engine or Content Security Poli
 ```ts
 // TypeScript (.ts)
 // build-schema-aot.ts
+// run: return Effect.flatMap(buildSchemas(), (result) => Console.log(`Prepared ${result.schemas} schema exports`))
 import { fileURLToPath } from "node:url"
-import { Effect } from "effect"
+import { Console, Effect } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import * as Build from "effect/schema/SchemaAOTCompiler/Build"
 
@@ -77,14 +99,23 @@ export const buildSchemas = () => Effect.provide(
 )
 ```
 
+```output
+Prepared 1 schema exports
+```
+
 ```vibe
 // build.vibe
+// run: main()
 import { buildSchemas } from "./build-schema-aot.ts"
 
 export function main() {
   const result = buildSchemas()
-  log(`Prepared ${result.schemas} schema exports in ${result.outFile}`)
+  Console.log(`Prepared ${result.schemas} schema exports`)
 }
+```
+
+```output
+Prepared 1 schema exports
 ```
 
 The build Effect finds directly exported schema values in the listed modules and writes a self-installing ES module. The module keys resolve relative to `baseUrl`; each loader must load the module named by its key. The TypeScript helper keeps Promise-returning dynamic module loaders at the foreign-code boundary. Build requires FileSystem and Path; this helper provides the Node layers. The output URL is relative to the emitted helper, so a helper in `dist/` writes `dist/generated/parcel-validators.js` regardless of the working directory. A relative `outFile` string instead resolves from the process working directory.
@@ -119,6 +150,7 @@ Load the generated module before using the schemas and ensure the bundler preser
 ## Using lower-level compiler APIs
 
 ```vibe
+// run: Console.log(generateSource().includes("export function install"))
 import * as SchemaAOTCompiler from "effect/schema/SchemaAOTCompiler"
 
 function generateSource() {
@@ -128,6 +160,10 @@ function generateSource() {
     { ast: SchemaAST.flip(Parcel.ast), operations: ["decode"] }
   ]))
 }
+```
+
+```output
+true
 ```
 
 The low-level compiler returns source text and leaves file writing and installation to you. Save that source as a module and call its exported `install` with the same ASTs in exactly the same order. The application build API performs the projections and installation wiring automatically.
@@ -144,11 +180,18 @@ The low-level API names directional parsing `decode`, including the flipped enco
 ## Specialized operations, registries, startup behavior, and limits
 
 ```vibe
+// run: Console.log(JSON.stringify(parseNormally({ reference: "pkg-94", count: 2 }))); try { parseNormally({ reference: "pkg-94", count: 2, extra: true }) } catch (error) { Console.log(error.message) }
 function parseNormally(input: unknown) {
   return Schema.decodeUnknownEffect(Parcel)(input, {
     errors: "all", onExcessProperty: "error"
   })
 }
+```
+
+```output
+{"reference":"pkg-94","count":2}
+Expected no excess property
+  at ["extra"]
 ```
 
 Supported primitives, objects, arrays, tuples, unions, and template literals can use generated validation. Struct and homogeneous-array decoding have specialized loops, and pure fixed-struct and homogeneous-array construction can use fast paths. Transformations, middleware, and declarations often keep interpreted callbacks while eligible nested schemas compile.

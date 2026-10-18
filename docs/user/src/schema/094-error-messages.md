@@ -5,6 +5,8 @@ Schema error messages work as in Effect. A `SchemaError` combines a readable mes
 ## Understanding default validation messages
 
 ```vibe
+// run: Console.log(explainPackage({ label: 7, pieces: "several" })); Console.log(explainPackage({ label: "crate", pieces: 2 }))
+import { Console } from "effect"
 const Package = Schema.Struct({
   label: Schema.String,
   pieces: Schema.Finite
@@ -21,16 +23,34 @@ function explainPackage(input: unknown) {
 // { label: 7, pieces: "several" } reports both expected types and their paths.
 ```
 
+```output
+Expected string
+  at ["label"]
+Expected number
+  at ["pieces"]
+Accepted
+```
+
 A base-type mismatch reports what type was expected. An absent required field reports `Missing key`; a nested mismatch adds a key or index path. `errors: "all"` collects independent issues instead of stopping at the first. Checks run only after their underlying type is accepted.
 
 ## Identifying schemas in error output
 
 ```vibe
+// run: for (const input of [{ tracking: 1, count: 1 }, { tracking: "pkg", count: NaN }, { tracking: "pkg", count: "1" }]) { try { Schema.decodeUnknownEffect(LabeledPackage)(input) } catch (error) { Console.log(error.message) } }
 const Tracking = Schema.String.annotate({ identifier: "TrackingReference" })
 const Count = Schema.Finite.annotate({ expected: "a finite package count" })
 const LabeledPackage = Schema.Struct({ tracking: Tracking, count: Count }).annotate({
   identifier: "LabeledPackage"
 })
+```
+
+```output
+Expected TrackingReference
+  at ["tracking"]
+Expected a finite package count
+  at ["count"]
+Expected number
+  at ["count"]
 ```
 
 An identifier replaces a generic expected-value description with a stable domain name. `expected` supplies readable text for the annotated node or check. `Count` annotates the finite-number check: `NaN` reports `Expected a finite package count`, while a string reports `Expected number` before that check runs. `title` is documentation metadata and does not change the default validation message.
@@ -40,6 +60,7 @@ Naming the whole struct changes errors for the struct itself; an invalid nested 
 ## Customizing messages for checks and conversions
 
 ```vibe
+// run: for (const input of [2, "no", "1.5"]) { try { Schema.decodeUnknownEffect(WholeCount)(input) } catch (error) { Console.log(error.message) } }; try { Schema.decodeUnknownEffect(TrackingText)("x") } catch (error) { Console.log(error.message) }
 const WholeCount = Schema.String.annotate({
   message: "Enter the count as text"
 }).pipe(
@@ -62,11 +83,19 @@ const TrackingText = Schema.String.check(
 )
 ```
 
+```output
+Enter the count as text
+Count is not numeric
+Use a whole package count
+Reference needs at least four characters
+```
+
 The conversion has three failure sites: the encoded string, the conversion function, and the decoded integer check. Each message targets its own stage. For checks, pass a message to the check constructor; applying `.annotate({ message })` after several checks targets the last check rather than replacing every earlier failure.
 
 ## Assigning messages to scalar and compound values
 
 ```vibe
+// run: Console.log(explainOrders({ contacts: [], delivery: "air" })); Console.log(explainOrders({ contacts: [1], delivery: "courier" }))
 const Contact = Schema.String.annotate({ message: "Contact must be text" })
 const Delivery = Schema.Union([
   Schema.Literal("collect"), Schema.Literal("courier")
@@ -88,11 +117,21 @@ function explainOrders(input: unknown) {
 }
 ```
 
+```output
+Add a delivery contact
+  at ["contacts"]
+Choose collection or courier
+  at ["delivery"]
+Contact must be text
+  at ["contacts"][0]
+```
+
 A scalar message replaces a mismatch at that scalar. A union message summarizes failure of all alternatives, and a collection check explains failure of the collection's size. Nested failures retain their own messages and paths; a message on an outer node does not automatically replace every inner issue.
 
 ## Explaining missing fields
 
 ```vibe
+// run: try { Schema.decodeUnknownEffect(Dispatch)({}) } catch (error) { Console.log(error.message) }; try { readCoordinates([]) } catch (error) { Console.log(error.message) }
 const Dispatch = Schema.Struct({
   tracking: Schema.String.annotateKey({
     messageMissingKey: "Supply a tracking reference"
@@ -106,6 +145,15 @@ const Coordinates = Schema.Tuple([
 function readCoordinates(input: unknown) {
   return Schema.decodeUnknownEffect(Coordinates)(input, { errors: "all" })
 }
+```
+
+```output
+Supply a tracking reference
+  at ["tracking"]
+Supply longitude
+  at [0]
+Supply latitude
+  at [1]
 ```
 
 `messageMissingKey` belongs to a field or tuple position and explains absence. An explicitly present wrong value still uses its value schema's message. Keep those cases separate when a form needs different instructions for a missing answer and an invalid answer.

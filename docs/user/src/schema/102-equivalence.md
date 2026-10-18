@@ -5,6 +5,8 @@ Schema-derived equivalence works in VibeLang exactly as in Effect. It compares d
 ## Deriving equality from schemas
 
 ```vibe
+// run: Console.log(sameShipment({ reference: "pkg-94", stops: ["east"], extra: 1 }, { reference: "pkg-94", stops: ["east"], extra: 2 })); Console.log(sameShipment({ reference: "pkg-94", stops: ["east"] }, { reference: "pkg-94", stops: ["west"] }))
+import { Console } from "effect"
 schema Shipment {
   reference: string
   stops: ReadonlyArray<string>
@@ -17,11 +19,17 @@ function sameShipment(left: unknown, right: unknown) {
 }
 ```
 
+```output
+true
+false
+```
+
 `toEquivalence` derives a comparison for the schema's decoded type. Arrays and nested structs are compared recursively. For a nonempty struct, only the fields described by the schema participate; unmodeled fields do not become extra equality conditions. Decode untrusted inputs before comparing them.
 
 ## Handling broad schemas and custom declarations
 
 ```vibe
+// run: Console.log(sameUnknown({ stops: ["east"] }, { stops: ["east"] })); Console.log(sameRef())
 function sameUnknown(left: unknown, right: unknown) {
   return try((left, right) => Schema.toEquivalence(Schema.Unknown)(left, right), left, right)
 }
@@ -40,11 +48,17 @@ function sameRef() {
 }
 ```
 
+```output
+true
+true
+```
+
 `Any`, `Unknown`, `ObjectKeyword`, and the empty struct use `Equal.equals`, including its structural handling of arrays and objects. Opaque declarations also default to `Equal.equals`; add a `toEquivalence` annotation when domain identity follows a particular field. Parameterized declarations receive the derived comparator for each type parameter.
 
 ## Overriding generated comparison behavior
 
 ```vibe
+// run: Console.log(sameIdentity({ reference: "pkg-94", stops: ["east"] }, { reference: "pkg-94", stops: ["west"] })); Console.log(sameIdentity({ reference: "pkg-94", stops: [] }, { reference: "pkg-95", stops: [] }))
 const ShipmentIdentity = Shipment.pipe(Schema.overrideToEquivalence(
   () => (left, right) => left.reference === right.reference
 ))
@@ -52,6 +66,11 @@ const ShipmentIdentity = Shipment.pipe(Schema.overrideToEquivalence(
 function sameIdentity(left: typeof Shipment.Type, right: typeof Shipment.Type) {
   return try((schema, left, right) => Schema.toEquivalence(schema)(left, right), ShipmentIdentity, left, right)
 }
+```
+
+```output
+true
+false
 ```
 
 `overrideToEquivalence` replaces the comparison derived at that schema node. This comparison intentionally ignores stops. Keep custom comparisons reflexive, symmetric, and transitive; otherwise consumers cannot treat them as an equivalence relation. A comparator callback is synchronous and should not call services or perform effects.

@@ -5,6 +5,8 @@ Schemas for Effect data types work as in Effect. Runtime collection schemas expe
 ## Building configuration-compatible codecs
 
 ```vibe
+// run: Console.log(JSON.stringify(configurationExample()))
+import { Console } from "effect"
 const DispatchConfig = Config.schema(Schema.Struct({
   depot: Schema.String,
   capacity: Schema.Finite
@@ -18,11 +20,16 @@ function configurationExample() {
 }
 ```
 
+```output
+{"depot":"north","capacity":24}
+```
+
 `Config.schema` builds a Config value without reading it. Calling `DispatchConfig()` reads the current provider; `DispatchConfig.parse(provider)` reads the explicit provider and decodes its representation to the schema's type. The example uses a structured provider with a numeric capacity. String-based providers need a representation that accepts strings, such as a string-tree codec or explicit `FiniteFromString` fields. Configuration errors use Config's error model rather than exposing the raw Schema parser unchanged.
 
 ## Encoding options, results, and exits
 
 ```vibe
+// run: const values = decodeContainers(); Console.log(values.option.isSome() ? values.option.value : "none"); Console.log(values.result.isFailure() ? values.result.failure : "success"); Console.log(values.exit._tag); Console.log(values.exit())
 const OptionalCount = Schema.Option(Schema.FiniteFromString)
 const CountResult = Schema.Result(Schema.FiniteFromString, Schema.Trim)
 const CountExit = Schema.Exit(Schema.FiniteFromString, Schema.String, Schema.Defect())
@@ -35,14 +42,26 @@ function decodeContainers() {
 }
 ```
 
+```output
+9
+delayed
+Success
+9
+```
+
 `Option` applies its value schema to `Some` and retains `None`. `Result(success, failure)` transforms each channel independently. `Exit(success, failure, defect)` also describes failures and defects inside the cause. `Exit.succeed` and `Exit.fail` construct data, and an Exit returned by the parser stays data. A failure stored inside it does not itself fail the surrounding parser. Calling the Exit runs it, succeeding or failing with its stored outcome.
 
 ```vibe
+// run: Console.log(JSON.stringify(encodeResult()))
 function encodeResult() {
   const codec = try(Schema.toCodecJson(CountResult))
   return Schema.encodeEffect(codec)(Result.succeed(9))
 }
 // { _tag: "Success", success: "9" }
+```
+
+```output
+{"_tag":"Success","success":"9"}
 ```
 
 Canonical JSON uses `{ _tag: "Some", value }` and `{ _tag: "None" }` for options, and `Success/success` or `Failure/failure` for results. Exit JSON uses `Success/value` or `Failure/cause`; causes preserve their failure reasons. `Schema.Defect()` reconstructs supported error-shaped defect data, including name, message, and optional stack.
@@ -61,6 +80,7 @@ Canonical JSON uses `{ _tag: "Some", value }` and `{ _tag: "None" }` for options
 ## Supporting native and Effect collections
 
 ```vibe
+// run: const values = collectionsFromJson(); Console.log(JSON.stringify(Array.from(values.set))); Console.log(JSON.stringify(Array.from(values.map))); Console.log(JSON.stringify(Array.from(Schema.decodeUnknownEffect(NativeSet)(new Set(["4", "7"]))))); Console.log(JSON.stringify(Array.from(Schema.decodeUnknownEffect(NativeMap)(new Map([["cold", "4"]])))))
 const NativeSet = Schema.ReadonlySet(Schema.FiniteFromString)
 const NativeMap = Schema.ReadonlyMap(Schema.String, Schema.FiniteFromString)
 const PersistentSet = Schema.HashSet(Schema.FiniteFromString)
@@ -75,11 +95,19 @@ function collectionsFromJson() {
 }
 ```
 
+```output
+[4,7]
+[["cold",4]]
+[4,7]
+[["cold",4]]
+```
+
 `ReadonlySet` and `ReadonlyMap` describe native Set and Map containers; `HashSet` and `HashMap` describe Effect's persistent collections. Runtime schemas transform each element or entry while retaining the container kind. Their canonical JSON codecs use arrays of values for sets and arrays of key-value pairs for maps. The inner codec's explicit string encoding remains in the JSON representation.
 
 ## Converting durations and protected values
 
 ```vibe
+// run: const value = durations(); Console.log(value.milliseconds, Duration.toMillis(value.nanoseconds)); Console.log(JSON.stringify(value.json))
 function durations() {
   const hold = Schema.decodeEffect(Schema.DurationFromString)("3 seconds")
   const milliseconds = Schema.encodeEffect(Schema.DurationFromMillis)(hold)
@@ -91,9 +119,15 @@ function durations() {
 // json: { _tag: "Millis", value: 3000 }
 ```
 
+```output
+3000 3000
+{"_tag":"Millis","value":3000}
+```
+
 `Schema.Duration` validates an existing Duration. `DurationFromString`, `DurationFromMillis`, and `DurationFromNanos` select text, numeric milliseconds, or bigint nanoseconds. The canonical Duration representation is tagged and preserves the supported precision and infinity cases.
 
 ```vibe
+// run: const value = readToken("example-token"); Console.log(String(value)); const codec = try((schema) => Schema.toCodecJson(schema), NonSerializableToken); try { Schema.encodeEffect(codec)(value) } catch (error) { Console.log(error._tag) }
 const AccessToken = Schema.RedactedFromValue(Schema.NonEmptyString)
 const NonSerializableToken = Schema.Redacted(Schema.String, {
   label: "DispatchToken",
@@ -103,6 +137,11 @@ const NonSerializableToken = Schema.Redacted(Schema.String, {
 function readToken(input: unknown) {
   return Schema.decodeUnknownEffect(AccessToken)(input)
 }
+```
+
+```output
+<redacted>
+SchemaError
 ```
 
 `RedactedFromValue` validates a raw value and wraps it; `Redacted` expects a Redacted container and validates its hidden contents. Redaction protects display, not every serialization path: encoding a raw-value codec or a default canonical JSON codec can expose the contents. Use `disallowJsonEncode: true` on the Redacted schema when its canonical JSON codec must refuse encoding, and avoid logging decoded secrets.

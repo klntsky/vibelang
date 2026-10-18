@@ -5,6 +5,8 @@ Effect's native `Arbitrary` module derives generators and shrinkers from schemas
 ## Generating schema-conforming random values
 
 ```vibe
+// run: const values = sampleParcels(); Console.log(values.length, values.every(Schema.is(Parcel)))
+import { Console } from "effect"
 const Parcel = Schema.Struct({
   label: Schema.NonEmptyString,
   count: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 24 }))
@@ -16,11 +18,16 @@ function sampleParcels() {
 }
 ```
 
+```output
+12 true
+```
+
 `Arbitrary.schema` derives a generator immediately and can throw when derivation is unsupported, so the example puts it inside a boundary. `sampleEffect` runs generation and accepts `count`, `size`, `maxDiscards`, and `seed`. A seed makes sampling reproducible; `size` is a local complexity budget for each collection or recursive component, not one global maximum length.
 
 ## Translating filters into generation constraints
 
 ```vibe
+// run: const generator = try((schema) => Arbitrary.schema(schema), EvenCapacity); const values = Arbitrary.sampleEffect(generator, { count: 12, seed: 17 }); Console.log(values.length, values.every(Schema.is(EvenCapacity)))
 const EvenCapacity = Schema.Number.check(Schema.makeFilter(
   (value) => Number.isInteger(value) && value >= 2 && value <= 40 && value % 2 === 0,
   {
@@ -35,11 +42,16 @@ const EvenCapacity = Schema.Number.check(Schema.makeFilter(
 ))
 ```
 
+```output
+12 true
+```
+
 Built-in bounds, lengths, patterns, property counts, and uniqueness checks provide constructive constraints where supported. Custom `arbitraryConstraint` metadata guides construction but does not replace the predicate. The example constructs integers in the desired range and lets the predicate reject odd candidates. Every generated root and shrink candidate still passes the schema's filters.
 
 ## Handling opaque checks and transformed values
 
 ```vibe
+// run: const values = sampleRepresentations(); Console.log(values.numbers.length, values.numbers.every(Number.isFinite)); Console.log(values.strings.length, values.strings.every((value) => typeof value === "string")); Console.log(values.strings.some((value) => Schema.decodeUnknownResult(Schema.FiniteFromString)(value).isFailure()))
 function sampleRepresentations() {
   const decoded = try(Arbitrary.schema(Schema.FiniteFromString))
   const encoded = try(Arbitrary.schema(Schema.toEncoded(Schema.FiniteFromString)))
@@ -49,11 +61,18 @@ function sampleRepresentations() {
 }
 ```
 
+```output
+4 true
+4 true
+true
+```
+
 Schema generation targets the decoded type, so a string-to-number codec generates numbers. Derive from `toEncoded` to generate values accepted by the encoded-side schema instead. Here that schema is `String`, so its generated strings need not decode as finite numbers. Encode generated decoded values when a test needs valid wire values. Opaque predicates without constructive metadata still run, but rejected candidates consume the discard budget. Sampling then fails with `SampleError` when the budget is exhausted; property checking instead returns `Exhausted`.
 
 ## Checking properties
 
 ```vibe
+// run: Console.log(checkCountRoundTrip()._tag)
 function checkCountRoundTrip() {
   const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
   const generator = try((schema) => Arbitrary.schema(schema), Count)
@@ -65,6 +84,10 @@ function checkCountRoundTrip() {
 }
 ```
 
+```output
+Passed
+```
+
 `checkEffect` accepts a pure boolean property or an effectful boolean property. False results and expected failures are shrinkable falsifications; defects and interruption fail the checking Effect itself. Its result is `Passed`, `Falsified`, `Exhausted`, or `ReplayMismatch`.
 
 A falsification includes `shrunkInput` and a `replay` token. Call `checkEffect` with the same property and `{ replay: result.replay }` to reproduce it; the token controls the seed, attempt, size, and shrink path, overriding other checking options. `formatCheckFailure` returns a diagnostic for unsuccessful results and undefined for `Passed`.
@@ -72,6 +95,7 @@ A falsification includes `shrunkInput` and a `replay` token. Call `checkEffect` 
 ## Composing generators and customizing shrinking
 
 ```vibe
+// run: const values = sampleDispatchPlans(); Console.log(values.length, values.every((plan) => plan.label === "test-dispatch" && Number.isInteger(plan.count) && plan.count >= 0 && plan.count <= 32))
 function sampleDispatchPlans() {
   const counts = try(() => Arbitrary.schema(Schema.Int.check(
     Schema.isBetween({ minimum: 0, maximum: 32 })
@@ -86,6 +110,10 @@ function sampleDispatchPlans() {
 }
 ```
 
+```output
+6 true
+```
+
 `map` transforms values and shrink candidates; `flatMap` selects dependent generators; `all` combines a tuple, iterable, or record. `filter` and `filterMap` discard rejected values, while `Constant` produces one value with no shrink candidates. Prefer constructive schema constraints when valid values are rare.
 
 A custom `shrink` replaces the derived shrink strategy without replacing root generation. It must be synchronous, deterministic, terminating, and free of mutation. Candidates are validated against the schema before the property sees them. Treat generated values as immutable because checking, shrinking, and replay can examine them repeatedly.
@@ -93,6 +121,7 @@ A custom `shrink` replaces the derived shrink strategy without replacing root ge
 ## Supporting custom declarations
 
 ```vibe
+// run: const values = sampleShelves(); Console.log(values.length, values.every((shelf) => shelf instanceof ShelfRef && shelf.code.startsWith("shelf_")))
 class ShelfRef {
   constructor(readonly code: `shelf_${string}`) {}
 }
@@ -112,19 +141,29 @@ function sampleShelves() {
 }
 ```
 
+```output
+5 true
+```
+
 An opaque declaration needs a generatable representation through `toCodecArbitrary`. The link converts generated representation values into domain values. Parameterized declarations receive decoded parameter schemas and normalized constraints in their annotation callback.
 
 ## Diagnosing derivation failures
 
 ```vibe
+// run: try { tryImpossibleGenerator() } catch (error) { Console.log("Empty domain rejected") }
 function tryImpossibleGenerator() {
   try {
     return try(Arbitrary.schema(Schema.Never))
   } catch (error) {
-    log("Arbitrary derivation failed for the empty domain")
+    Console.log("Arbitrary derivation failed for the empty domain")
     throw error
   }
 }
+```
+
+```output
+Arbitrary derivation failed for the empty domain
+Empty domain rejected
 ```
 
 Derivation fails immediately for impossible constraints, `Never`, unsupported declarations, and recursion with no finite generation path. Runtime exhaustion is different: inspect the effective seed and discard budget, then add constructive constraints or correct the predicate. Preserve the seed and replay token with a failing test so the same counterexample can be examined again.

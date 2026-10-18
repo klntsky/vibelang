@@ -5,6 +5,8 @@ Schema issue formatters work as in Effect. Use readable strings for diagnostics 
 ## Rendering schema issues as readable strings
 
 ```vibe
+// run: Console.log(readableFailure({})); Console.log(readableFailure({ destination: "north", packages: 2 }))
+import { Console } from "effect"
 const Dispatch = Schema.Struct({
   destination: Schema.String,
   packages: Schema.Int
@@ -20,11 +22,18 @@ function readableFailure(input: unknown) {
 }
 ```
 
+```output
+Missing key
+  at ["destination"]
+Accepted
+```
+
 `makeFormatterDefault()` creates a function from an issue to a multiline string. Paths identify nested keys and indices. `SchemaError.message` already uses this format, so reading it directly is enough when no custom formatting is required.
 
 ## Reporting several issues
 
 ```vibe
+// run: Console.log(allFailures({}))
 function allFailures(input: unknown) {
   try {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
@@ -36,11 +45,19 @@ function allFailures(input: unknown) {
 // {} reports missing destination and packages fields.
 ```
 
+```output
+Missing key
+  at ["destination"]
+Missing key
+  at ["packages"]
+```
+
 Formatting cannot recover issues that parsing did not collect. Set `errors: "all"` on the parser to collect multiple independent failures. Nested prerequisites still apply: a struct-level check cannot run until its input has been validated.
 
 ## Formatting Standard Schema validation errors
 
 ```vibe
+// run: Console.log(JSON.stringify(formFailures({})))
 function formFailures(input: unknown) {
   try {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
@@ -52,11 +69,16 @@ function formFailures(input: unknown) {
 // An issue has a message and a path such as ["destination"].
 ```
 
+```output
+[{"path":["destination"],"message":"Missing key"},{"path":["packages"],"message":"Missing key"}]
+```
+
 The Standard Schema formatter produces a failure object with an `issues` array. Leaf issues carry a full path, making it possible to associate each message with a form field. Keep paths structured when field names contain dots or when array indices matter; joining path segments into a string can lose that distinction.
 
 ## Customizing leaf messages
 
 ```vibe
+// run: Console.log(JSON.stringify(localizedFailures({}))); Console.log(JSON.stringify(localizedFailures({ destination: 2, packages: 1 })))
 const formFormatter = SchemaIssue.makeFormatterStandardSchemaV1({
   leafHook: (issue) => issue._tag === "MissingKey"
     ? "Complete this field"
@@ -73,11 +95,17 @@ function localizedFailures(input: unknown) {
 }
 ```
 
+```output
+[{"path":["destination"],"message":"Complete this field"},{"path":["packages"],"message":"Complete this field"}]
+[{"path":["destination"],"message":"Expected string"}]
+```
+
 `leafHook` replaces selected terminal messages. Delegate unhandled cases to `defaultLeafHook` so built-in messages continue to work. Keep the hook synchronous and free of service calls; load translated strings before creating it.
 
 ## Connecting validation to form libraries
 
 ```vibe
+// run: Console.log(try((schema) => JSON.stringify(schema["~standard"].validate({})), formSchema()))
 const DispatchForm = Schema.toStandardSchemaV1(Dispatch, {
   parseOptions: { errors: "all" },
   leafHook: (issue) => issue._tag === "MissingKey"
@@ -88,6 +116,10 @@ const DispatchForm = Schema.toStandardSchemaV1(Dispatch, {
 function formSchema() {
   return DispatchForm
 }
+```
+
+```output
+{"issues":[{"path":["destination"],"message":"Complete this field"},{"path":["packages"],"message":"Complete this field"}]}
 ```
 
 Pass the adapter to a form library that accepts Standard Schema V1, keeping the UI integration in its normal TypeScript module. The adapter exposes structured issues and also retains the original Schema operations. Its decoding services must be `never`.

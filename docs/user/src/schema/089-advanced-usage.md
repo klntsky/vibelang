@@ -5,6 +5,8 @@ The advanced Schema APIs work as in Effect. Use declarations for opaque runtime 
 ## Declaring custom scalar and parameterized schemas
 
 ```vibe
+// run: Console.log(readShelf(new Shelf("S-12")).code); try { readShelf({ code: "S-12" }) } catch (error) { Console.log(error._tag) }
+import { Console } from "effect"
 class Shelf {
   constructor(readonly code: string) {}
 }
@@ -19,9 +21,15 @@ function readShelf(input: unknown) {
 }
 ```
 
+```output
+S-12
+SchemaError
+```
+
 A declaration's guard establishes identity; its type predicate is inferred from `instanceof`. It does not validate every member automatically. Add checks when fields need validation. Unlike a struct, an opaque declaration gives interpreters no structural description to traverse.
 
 ```vibe
+// run: Console.log(Schema.decodeUnknownEffect(BoxedCount)(new Box("12")).value); Console.log(Schema.encodeEffect(BoxedCount)(new Box(12)).value)
 class Box<A> {
   constructor(readonly value: A) {}
 }
@@ -41,11 +49,17 @@ function BoxSchema<S extends Schema.Constraint>(value: S) {
 const BoxedCount = BoxSchema(Schema.FiniteFromString)
 ```
 
+```output
+12
+12
+```
+
 `declareConstructor` passes codecs for the type parameters to its parser factory. The parser returns the declared decoded value or fails with a raw `SchemaIssue.Issue`; the outer Schema interpreter adds a `SchemaError` wrapper. Encoding reuses the declaration machinery with the directional parameter codecs. Additional service requirements must come from the parameter schemas; the declaration parser cannot introduce an unrelated service.
 
 ## Adding interpreter support
 
 ```vibe
+// run: const codec = try((schema) => Schema.toCodecJson(schema), PortableShelf); Console.log(Schema.encodeEffect(codec)(new Shelf("S-12"))); Console.log(Schema.decodeUnknownEffect(codec)("S-12") instanceof Shelf)
 const PortableShelf = Schema.declare(
   (input: unknown) => input instanceof Shelf,
   {
@@ -70,18 +84,29 @@ const PortableShelf = Schema.declare(
 )
 ```
 
+```output
+S-12
+true
+```
+
 `toCodec` supplies a shared structural representation for canonical codecs. Use `toCodecJson`, `toCodecStringTree`, or `toCodecIso` when a format needs its own representation. `toCodecArbitrary` supplies a generatable representation, and formatter and equivalence annotations supply behavior for those interpreters. For parameterized declarations, interpreter callbacks receive the corresponding parameter interpretations.
 
 ## Creating branded schemas
 
 ```vibe
+// run: Console.log(ShelfId.makeEffect("rack-18")); Console.log(TrackingIdSchema.makeEffect("pkg-76")); Console.log(Schema.is(ShelfId)(""))
 const ShelfId = Schema.NonEmptyString.pipe(Schema.brand("ShelfId"))
 type ShelfId = typeof ShelfId.Type
 
 type TrackingId = string & Brand.Brand<"TrackingId">
 const TrackingId = Brand.nominal<TrackingId>()
 const TrackingIdSchema = Schema.String.pipe(Schema.fromBrand("TrackingId", TrackingId))
+```
 
+```output
+rack-18
+pkg-76
+false
 ```
 
 A brand distinguishes values statically without changing their runtime representation. A brand alone adds no check; combine it with a validating schema. `fromBrand` reuses an existing branded constructor.
@@ -89,6 +114,7 @@ A brand distinguishes values statically without changing their runtime represent
 ## Applying constructor defaults
 
 ```vibe
+// run: Console.log(JSON.stringify(createParcel())); Console.log(Schema.is(Parcel)({ shelf: "rack-18" }))
 const Parcel = Schema.Struct({
   shelf: ShelfId,
   priority: Schema.Int.pipe(Schema.withConstructorDefault(() => 1))
@@ -100,11 +126,17 @@ function createParcel() {
 }
 ```
 
+```output
+{"shelf":"rack-18","priority":1}
+false
+```
+
 `withConstructorDefault` makes a field optional for construction and evaluates its program when needed. It does not make that field optional during decoding. Constructor failures are raw schema issues in local Effect 4.0.5.
 
 ## Distinguishing optional keys, optional values, null, and absence
 
 ```vibe
+// run: Console.log(Schema.is(Presence)({ requiredUndefined: undefined, requiredNullable: null })); Console.log(Schema.is(Presence)({ exact: undefined, requiredUndefined: undefined, requiredNullable: null })); Console.log(JSON.stringify(Schema.decodeUnknownEffect(WithDecodeDefault)({ copies: undefined }))); try { Schema.decodeUnknownEffect(WithDecodeDefault)({ rank: undefined }) } catch (error) { Console.log(error._tag) }
 const Presence = Schema.Struct({
   exact: Schema.optionalKey(Schema.String),
   loose: Schema.optional(Schema.String),
@@ -116,6 +148,13 @@ const WithDecodeDefault = Schema.Struct({
   copies: Schema.FiniteFromString.pipe(Schema.withDecodingDefaultType(() => 1)),
   rank: Schema.FiniteFromString.pipe(Schema.withDecodingDefaultTypeKey(() => 0))
 })
+```
+
+```output
+true
+false
+{"copies":1,"rank":0}
+SchemaError
 ```
 
 | Field form | Missing key | Explicit `undefined` | Explicit `null` |
@@ -131,6 +170,7 @@ const WithDecodeDefault = Schema.Struct({
 ## Mapping optional fields to options
 
 ```vibe
+// run: const value = readPreferences(); Console.log(value.note.isNone(), value.weight.isNone(), value.alias.isNone()); Console.log(JSON.stringify(Schema.encodeEffect(Preferences)(value)))
 const Preferences = Schema.Struct({
   note: Schema.OptionFromOptionalKey(Schema.String),
   weight: Schema.OptionFromOptional(Schema.FiniteFromString),
@@ -143,11 +183,17 @@ function readPreferences() {
 // All three fields contain Option.none().
 ```
 
+```output
+true true true
+{}
+```
+
 The decoded keys are required and hold `Option` values. The exact-key variant rejects explicit `undefined`; `OptionFromOptional` treats it as absent, and `OptionFromOptionalNullOr` also treats null as absent. By default, encoding `None` omits the key. For a required value containing null or undefined, use the corresponding `OptionFromNullOr`, `OptionFromUndefinedOr`, or `OptionFromNullishOr` instead.
 
 ## Transforming field presence
 
 ```vibe
+// run: const value = Schema.decodeUnknownEffect(Form)({ note: "", memo: "" }); Console.log(JSON.stringify(value)); Console.log(JSON.stringify(Schema.encodeEffect(Form)(value)))
 const Form = Schema.Struct({
   note: Schema.optionalKey(Schema.String).pipe(
     Schema.decodeTo(Schema.optionalKey(Schema.String), {
@@ -180,15 +226,25 @@ const Form = Schema.Struct({
 })
 ```
 
+```output
+{"label":null}
+{"memo":""}
+```
+
 Optional getters receive an `Option`: `None` means that the key is absent, while `Some(undefined)` means it is present with an undefined value. Returning `None` removes a key. `note` demonstrates optional-to-optional conversion, `label` supplies a required nullable output, and `memo` turns a required empty string into an absent decoded field while restoring it during encoding. Filter a nullable value out of the input Option when null should count as absence.
 
 ## Extending and renaming fields
 
 ```vibe
+// run: Console.log(JSON.stringify(Schema.encodeEffect(WireDestination)({ city: "Oslo", dock: 2, route: "north" })))
 const Address = Schema.Struct({ city: Schema.String })
 const Destination = Schema.Struct({ ...Address.fields, dock: Schema.Int })
 const Routed = Destination.pipe(Schema.fieldsAssign({ route: Schema.String }))
 const WireDestination = Routed.pipe(Schema.encodeKeys({ dock: "dock_number" }))
+```
+
+```output
+{"city":"Oslo","dock_number":2,"route":"north"}
 ```
 
 Spread `.fields` or use `fieldsAssign` to add fields. `encodeKeys` maps decoded names to external names and preserves field optionality. To rename the decoded model, create a field map with the desired name and map it back to the original wire key. Apply the operation to each struct in a union with `mapMembers`.
@@ -196,6 +252,7 @@ Spread `.fields` or use `fieldsAssign` to add fields. `encodeKeys` maps decoded 
 ## Modeling recursive and mutually recursive codecs
 
 ```vibe
+// run: Console.log(JSON.stringify(readCrate({ count: "2", children: [{ count: "1", children: [] }] }))); Console.log(JSON.stringify(Schema.decodeUnknownEffect(Branch)({ leaves: [{ owner: null }] })))
 interface Crate {
   count: number
   children: ReadonlyArray<Crate>
@@ -223,6 +280,11 @@ const Leaf = Schema.Struct({ owner: Schema.NullOr(Branch) })
 function readCrate(input: unknown) {
   return Schema.decodeUnknownEffect(Crate)(input)
 }
+```
+
+```output
+{"count":2,"children":[{"count":1,"children":[]}]}
+{"leaves":[{"owner":null}]}
 ```
 
 `suspend` delays resolving a schema reference, allowing self-reference or mutual reference without accessing an uninitialized binding. Write the recursive callback's full contract to break the inference cycle. It returns a codec as data, performs no Effect operation, and has `never` for E and R, so Schema receives its plain JavaScript form. When encoded and decoded fields differ, define both recursive interfaces and retain both in `Codec`; `Codec<Crate>` would incorrectly claim the wire count is already a number. Keep any decoding and encoding services in the inner `Schema.Codec<T, E, RD, RE>` type; the callback's own E and R stay `never`.
