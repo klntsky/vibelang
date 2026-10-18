@@ -31,6 +31,7 @@ import {
   type NormalizeContext,
   type Unit,
 } from "./dts.ts"
+import { expectedResult, runtimeParity, type RuntimeResult } from "./runtime.ts"
 
 const started = performance.now()
 const here = import.meta.dir
@@ -627,8 +628,8 @@ type CaseEntry = {
   class: string
   failing: boolean
   expectCodes: string[]
-  // runnable: the case's `// expect-result:` JSON. runtime is runtime parity,
-  // null until the mapper side emits JavaScript to run.
+  // runnable: the case's `// expect-result:` JSON. runtime stays null: runtime
+  // parity is a result, not part of the denominator (CaseResult.runtime).
   runnable: { expectResult: string; runtime: null | { ok: boolean; detail: string } } | null
   files: Record<string, string>
   fork: { exit: number | string; errors: number; errorCodes: string[] }
@@ -957,6 +958,9 @@ type CaseResult = {
   runnable: boolean
   // typeChecks: the mapper side reports no error at all (EK9001 included).
   typeChecks: boolean
+  // runtime: the mapper's JavaScript run against the expected result
+  // (runtime.ts); null for a case that is not runnable.
+  runtime: RuntimeResult | null
   missingFiles: string[]
   // declarations: top-level declarations each side printed, probe aliases excluded.
   declarations: { fork: number; mapper: number }
@@ -1021,6 +1025,7 @@ function compareCase(run: Run, entry: CaseEntry | undefined): CaseResult {
     probeExports: (run.probeExports ?? []).reduce((n, p) => n + p.names.length, 0),
     runnable: Boolean(entry?.runnable),
     typeChecks: false,
+    runtime: null,
     missingFiles: [],
     declarations: { fork: 0, mapper: 0 },
     units: [],
@@ -1325,7 +1330,13 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
     migration: { declarations: migration.length, expectationMissing: count(migration, (u) => u.status === "expectation-missing"), lanes: Object.fromEntries([...lanes].sort()) },
     coverage: { missingDeclarations, missingFiles, extraDeclarations: extra.length, degraded, ek9001: ek9001Positive, stockErrors: stockPositive },
     negative: { cases: negatives.length, mapperReportsError: negativeDetected },
-    runnable: { cases: runnable.length, mapperTypeChecks: runnable.filter((r) => r.typeChecks).length, runtimeParity: "pending: the mapper emits no JavaScript yet (manifest cases[].runnable.runtime)" },
+    runnable: {
+      cases: runnable.length,
+      mapperTypeChecks: runnable.filter((r) => r.typeChecks).length,
+      runtimeParity: runnable.filter((r) => r.runtime?.ok).length,
+      runtimeParityTypeChecking: runnable.filter((r) => r.typeChecks && r.runtime?.ok).length,
+      runtimeFailures: runnable.filter((r) => !r.runtime?.ok).map((r) => ({ case: r.id, typeChecks: r.typeChecks, expected: r.runtime?.expected ?? "", actual: r.runtime?.actual ?? null, detail: r.runtime?.detail ?? "not run" })),
+    },
     probes: { count: probes.length, markers: probes.reduce((n, p) => n + p.markers.length, 0), failTypeCheck: probes.reduce((n, p) => n + p.markers.filter((m) => m.mapper !== null).length, 0) },
     tsHelpers: { declarations: helpers.length, identical: count(helpers, pass) },
     pass: concrete.length > 0 && unchanged.every(pass) && missingFiles === 0 && ek9001Positive === 0 && stockPositive === 0 && degraded === 0 && probes.every((p) => p.ok),
@@ -1359,7 +1370,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   const g = gate1
   const L: string[] = []
   L.push(`# Parity: gate 1 of decision (B), manifest ${hash.slice(0, 12)}`, "")
-  L.push(`Ran ${json.ranAt} in ${timing.total.toFixed(0)} s wall (build ${timing.build.toFixed(0)} s, compile ${timing.compile.toFixed(0)} s, compare ${timing.compare.toFixed(1)} s, probes ${timing.probes.toFixed(0)} s), ${jobs} jobs${partial ? `, **partial run** (${results.length} of ${manifest.cases.length} cases)` : ""}.`)
+  L.push(`Ran ${json.ranAt} in ${timing.total.toFixed(0)} s wall (build ${timing.build.toFixed(0)} s, compile ${timing.compile.toFixed(0)} s, compare ${timing.compare.toFixed(1)} s, probes ${timing.probes.toFixed(0)} s, runtime ${timing.runtime.toFixed(0)} s), ${jobs} jobs${partial ? `, **partial run** (${results.length} of ${manifest.cases.length} cases)` : ""}.`)
   L.push(`Fork ${revisions.fork.source}, binary ${revisions.fork.binarySha256.slice(0, 12)}; mapper binary ${revisions.mapper.binarySha256.slice(0, 12)}; stock TypeScript ${stockVersion}; effect ${inputs.effect.version}; effeck-runtime ${inputs["effeck-runtime"].version}.`)
   L.push(`Manifest ${hash} (${path.relative(root, manifestPath)}): ${manifest.cases.length} cases, ${json.manifest.declarations} declarations, generated from this run's fork; expectations.json ${manifest.expectations.sha256.slice(0, 12)}.`)
   L.push("", "## Gate 1", "", "```")
@@ -1372,7 +1383,8 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push(`migration group: ${g.migration.declarations} declarations, ${g.migration.expectationMissing} expectation-missing (${Object.entries(g.migration.lanes).map(([k, v]) => `${k} ${v}`).join(", ") || "no lanes"})`)
   L.push(`coverage failures: ${g.coverage.missingDeclarations} missing declarations, ${g.coverage.missingFiles} missing .d.ts files, ${g.coverage.extraDeclarations} extra, ${g.coverage.degraded} degraded to any/unknown, ${g.coverage.ek9001} EK9001, ${g.coverage.stockErrors} stock errors`)
   L.push(`negative cases: ${g.negative.cases}; the mapper side reports an error in ${g.negative.mapperReportsError}`)
-  L.push(`runnable cases: ${g.runnable.cases}; the mapper side type-checks in ${g.runnable.mapperTypeChecks}; runtime parity pending JS emit`)
+  L.push(`runnable cases: ${g.runnable.cases}; the mapper side type-checks in ${g.runnable.mapperTypeChecks}`)
+  L.push(`runtime parity: ${g.runnable.runtimeParity}/${g.runnable.cases} print the expected result from the mapper's JavaScript (${g.runnable.runtimeParityTypeChecking}/${g.runnable.mapperTypeChecks} of those that type-check)`)
   L.push(`probes: ${g.probes.count} (${g.probes.markers} marked statements); the mapper side rejects ${g.probes.failTypeCheck}`)
   L.push(`.ts helper declarations (not gated): ${g.tsHelpers.declarations}, ${g.tsHelpers.identical} identical`)
   L.push(`gate 1: ${g.pass ? "PASS" : "not yet"}`)
@@ -1412,7 +1424,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push("", "Declaration normalization, separate from the adapter:", "")
   for (const rule of normalizationRules) L.push(`- ${rule}`)
   L.push("", "## Cases", "")
-  L.push("| case | class | fork | mapper | signatures | identical | migration | EK9001 | stock errors | first mismatch |", "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |")
+  L.push("| case | class | fork | mapper | signatures | identical | migration | EK9001 | stock errors | runtime | first mismatch |", "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |")
   for (const r of results) {
     const units = gated(r)
     const firstBad = units.find((u) => u.group !== "migration" && !pass(u))
@@ -1420,9 +1432,14 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
       ? r.negativeDetected ? "negative: the mapper reports an error" : "negative: **the mapper reports no error**"
       : firstBad ? `\`${md(firstBad.name)}\` ${firstBad.status}${firstBad.difference ? `: fork \`${md(clip(firstBad.difference.fork, 70))}\` vs mapper \`${md(clip(firstBad.difference.mapper, 70))}\`` : ""}`
       : r.missingFiles.length ? `missing ${r.missingFiles.join(", ")}` : ""
-    L.push(`| ${md(r.id)} | ${r.class} | ${r.declarations.fork} | ${r.declarations.mapper} | ${units.length} | ${units.filter(pass).length} | ${units.filter((u) => u.group === "migration").length} | ${r.ek9001.count} | ${r.stockErrors.count} | ${note} |`)
+    const runtime = r.runtime ? (r.runtime.ok ? "ok" : "FAIL") : "-"
+    L.push(`| ${md(r.id)} | ${r.class} | ${r.declarations.fork} | ${r.declarations.mapper} | ${units.length} | ${units.filter(pass).length} | ${units.filter((u) => u.group === "migration").length} | ${r.ek9001.count} | ${r.stockErrors.count} | ${runtime} | ${note} |`)
   }
-  L.push("", "fork and mapper: top-level declarations each side printed, .ts helpers included. signatures: those of .effeck sources, which the gate compares.", "")
+  L.push("", "fork and mapper: top-level declarations each side printed, .ts helpers included. signatures: those of .effeck sources, which the gate compares. runtime: the mapper's JavaScript prints the case's expect-result (runtime.ts).", "")
+  L.push("## Runtime failures", "")
+  L.push("Runnable cases whose JavaScript from the mapper's Emit does not print the expected result. A case whose mapper side does not type-check usually uses a form the projector does not lower yet.", "")
+  L.push("| case | type-checks | expected | printed |", "| --- | --- | --- | --- |")
+  for (const f of g.runnable.runtimeFailures) L.push(`| ${md(f.case)} | ${f.typeChecks ? "yes" : "no"} | \`${md(clip(f.expected, 70))}\` | ${md(clip(f.actual === null ? f.detail : f.actual, 110))} |`)
   L.push("## Concrete mismatches", "")
   L.push("| case | declaration | status | fork | mapper |", "| --- | --- | --- | --- | --- |")
   for (const u of concrete.filter((u) => !pass(u))) L.push(`| ${md(u.case)} | \`${md(u.file)}#${md(u.name)}\`${u.exported ? "" : " (unexported)"}${u.degraded ? " (degraded)" : ""} | ${u.status} | \`${md(clip(u.difference?.fork ?? u.fork ?? "", 100))}\` | \`${md(clip(u.difference?.mapper ?? u.mapper ?? "∅", 100))}\` |`)
@@ -1466,21 +1483,27 @@ async function main() {
     if (done % 50 === 0 || done === tasks.length) console.error(`parity: ${done}/${tasks.length} compiles`)
   })
   const compileSeconds = (performance.now() - t0) / 1000
+  const t3 = performance.now()
+  const runnableRuns = runs.filter((r) => r.ref.origin === "case" && expectedResult(r.ref.dir) !== undefined)
+  const runtime = await runtimeParity(runnableRuns.map((r) => ({ id: r.ref.id, dir: r.ref.dir })), { outDir, mapper: mapperBin, stockTsc, effectDir, runtimeDir, jobs })
+  const runtimeSeconds = (performance.now() - t3) / 1000
   const manifest = buildManifest(runs, stockVersion)
   const hash = manifestHash(manifest)
   const t1 = performance.now()
   const entries = new Map(manifest.cases.map((c) => [c.id, c]))
   const results = runs.map((run) => compareCase(run, entries.get(run.ref.id)))
+  for (const r of results) r.runtime = runtime.get(r.id) ?? null
   const compareSeconds = (performance.now() - t1) / 1000
   const t2 = performance.now()
   const probes = await runProbes()
   const probeSeconds = (performance.now() - t2) / 1000
-  const timing = { build: buildSeconds, compile: compileSeconds, compare: compareSeconds, probes: probeSeconds, total: buildSeconds + (performance.now() - started) / 1000 }
+  const timing = { build: buildSeconds, compile: compileSeconds, compare: compareSeconds, probes: probeSeconds, runtime: runtimeSeconds, total: buildSeconds + (performance.now() - started) / 1000 }
   const json = summarize(results, manifest, hash, probes, timing, stockVersion, partial)
   const g = json.gate1
   console.log(`manifest ${hash.slice(0, 12)}: ${manifest.cases.length} cases`)
   console.log(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched`)
   console.log(`EK9001 ${g.coverage.ek9001}, stock errors ${g.coverage.stockErrors}, missing declarations ${g.coverage.missingDeclarations}; wall ${timing.total.toFixed(0)} s`)
+  console.log(`runtime parity: ${g.runnable.runtimeParity}/${g.runnable.cases} (${g.runnable.runtimeParityTypeChecking}/${g.runnable.mapperTypeChecks} of the cases that type-check)`)
   console.log(`wrote ${path.relative(root, path.join(outDir, "summary.md"))} and summary.json`)
   if (gate) {
     // A gate verdict cites this file: the revision, both binaries, the

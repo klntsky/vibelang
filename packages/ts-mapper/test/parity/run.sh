@@ -21,7 +21,9 @@
 #   3. Build packages/runtime with the fork's tsc, linking effect the way
 #      typescript/effeck/smoke.sh does.
 #   4. Find stock tsc: the typescript@$TS7_VERSION cache e2e.sh uses, else install it there.
-#   5. Run parity.ts with bun.
+#   5. Run parity.ts with bun. Its runtime column (runtime.ts) compiles each
+#      runnable case with effeck-mapper --emit and runs it against the case's
+#      expect-result, under out/work/runtime.
 #
 # Environment:
 #   TS7_VERSION          stock TypeScript version (default 7.1.0-dev.20261017.1, as e2e.sh)
