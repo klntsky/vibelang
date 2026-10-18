@@ -171,7 +171,7 @@ function twiceExpressions() {
 
 function defects(result: Exit.Exit<unknown, unknown>) {
   return Exit.isFailure(result)
-    ? result.cause.reasons.map((reason) => reason._tag === "Die"
+    ? (result.cause.reasons as ReadonlyArray<(typeof result.cause.reasons)[number]>).map((reason) => reason._tag === "Die"
       ? (reason.defect as { _tag?: string })._tag
       : reason._tag)
     : ["Success"]

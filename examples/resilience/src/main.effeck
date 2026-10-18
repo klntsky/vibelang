@@ -36,7 +36,9 @@ export function scenario() {
 }
 
 export function main() {
-  const result = scenario()
+  // timed is also an Effect data method. The written type says it is this
+  // object's field (EK9101).
+  const result: { fastest: string; timed: string; report: string } = scenario()
   Console.log(result.fastest)
   Console.log(result.timed)
   Console.log(result.report)

@@ -150,7 +150,7 @@ function scenario() {
     rule,
     combined,
     piped: pipedName,
-    reports: reports.map((report) => report.store),
+    reports: (reports as ReadonlyArray<(typeof reports)[number]>).map((report) => report.store),
     syncRuns,
     server,
     configLoads,

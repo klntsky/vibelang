@@ -160,7 +160,7 @@ export function main() {
   const twice = doubled()
   const exit = Effect.exit(() => resumeTwice())
   const again = Exit.isFailure(exit)
-    ? exit.cause.reasons.map((reason) => (reason._tag === "Die" ? (reason.defect as { _tag?: string })._tag : reason._tag))
+    ? (exit.cause.reasons as ReadonlyArray<(typeof exit.cause.reasons)[number]>).map((reason) => (reason._tag === "Die" ? (reason.defect as { _tag?: string })._tag : reason._tag))
     : ["Success"]
   const leased = leaseWhileResuming()
   const many = manyTicks()

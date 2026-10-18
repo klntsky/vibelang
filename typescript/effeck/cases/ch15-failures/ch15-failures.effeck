@@ -178,8 +178,8 @@ function scenario() {
     second,
     third,
     deadline,
-    defect: Exit.isFailure(defect) ? defect.cause.reasons.map((reason) => reason._tag) : ["Success"],
-    mixed: Exit.isFailure(mixed) ? mixed.cause.reasons.map((reason) => reason._tag) : ["Success"],
+    defect: Exit.isFailure(defect) ? (defect.cause.reasons as ReadonlyArray<(typeof defect.cause.reasons)[number]>).map((reason) => reason._tag) : ["Success"],
+    mixed: Exit.isFailure(mixed) ? (mixed.cause.reasons as ReadonlyArray<(typeof mixed.cause.reasons)[number]>).map((reason) => reason._tag) : ["Success"],
     moved,
     events
   }

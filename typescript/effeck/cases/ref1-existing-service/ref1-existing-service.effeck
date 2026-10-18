@@ -11,7 +11,7 @@ function teamOf(id: string) {
 
 function teamNames(ids: ReadonlyArray<string>) {
   const members = lookup(ids)                // overloaded: the many-ids signature
-  return members.map((member) => member.name)
+  return (members as ReadonlyArray<(typeof members)[number]>).map((member) => member.name)
 }
 // Effect<string[], UserNotFound | DbError, UserRepo>
 

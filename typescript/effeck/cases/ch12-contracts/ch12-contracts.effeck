@@ -90,7 +90,7 @@ export function welcome(id: string): Effect<string, UserNotFound | MailError, Us
 // Recursion
 
 function totalSize(path: string): Effect<number, IOError, Files> {
-  const entry = Files.stat(path)
+  const entry: Entry = Files.stat(path)
   if (!entry.isDirectory) return entry.size
   let total = 0
   for (const child of Files.list(path)) total += totalSize(`${path}/${child}`)

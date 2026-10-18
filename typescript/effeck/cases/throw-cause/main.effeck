@@ -28,7 +28,7 @@ function caught() {
 function reasons(outcome: Exit.Exit<unknown, Expected>) {
   return match (outcome) {
     when Exit.Success(let value): ["Success"];
-    when Exit.Failure(let cause): cause.reasons.map((reason) => reason._tag);
+    when Exit.Failure(let cause): (cause.reasons as ReadonlyArray<(typeof cause.reasons)[number]>).map((reason) => reason._tag);
   }
 }
 

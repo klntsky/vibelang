@@ -98,7 +98,7 @@ function makeGrid(values: ReadonlyArray<ReadonlyArray<number>>) {
     open: (row) => Effect.acquireRelease(
       () => {
         events.push(`open row ${row}`)
-        const cursor: Cursor = { cells: values[row].map((value) => ({ row, value })) }
+        const cursor: Cursor = { cells: (values[row] as ReadonlyArray<number>).map((value) => ({ row, value })) }
         return cursor
       },
       () => {

@@ -55,7 +55,7 @@ function failFast() {
 // await.allSettled never fails; each outcome is a Result.
 function settled() {
   const outcomes = await.allSettled [count(), boom()]
-  return outcomes.map((outcome) => outcome._tag)
+  return (outcomes as ReadonlyArray<(typeof outcomes)[number]>).map((outcome) => outcome._tag)
 }
 
 // await.race: the first to finish wins, success or failure.

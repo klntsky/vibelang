@@ -102,7 +102,7 @@ function busy(version: string) {
   } handle Approval.note(text) {
     resume()
   } catch (e) {
-    return `busy ${e.request}`
+    return `busy ${(e as { readonly request: string }).request}`
   }
 }
 

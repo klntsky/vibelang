@@ -49,7 +49,7 @@ export function main() {
   return {
     clamp: [clamp(5), clamp(50), clamp(500)],
     length: [length(0), length("abc")],
-    defect: Exit.isFailure(defect) ? defect.cause.reasons.map((reason) => reason._tag) : ["Success"],
+    defect: Exit.isFailure(defect) ? (defect.cause.reasons as ReadonlyArray<(typeof defect.cause.reasons)[number]>).map((reason) => reason._tag) : ["Success"],
     rethrown: [rethrown(-1), rethrown(2)],
     steps
   }

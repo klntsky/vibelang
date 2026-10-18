@@ -83,7 +83,7 @@ const OrdersLive = Layer.effect(Orders, () => {
   return {
     forUser(userId) {
       const rows = Effect.orDie(() => db.query("orders", userId))
-      return rows.map((row): Order => {
+      return (rows as ReadonlyArray<(typeof rows)[number]>).map((row): Order => {
         const [id, total] = row.split(":")
         return { id, userId, total: Number(total) }
       })

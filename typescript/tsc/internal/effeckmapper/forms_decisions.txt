@@ -52,7 +52,7 @@ examples/vue-vite/src/todos.test.effeck:21:52 block appended/effectFn table
 examples/vue-vite/src/todos.test.effeck:22:34 lambda program table
 examples/vue-vite/src/todos.test.effeck:26:53 block appended/effectFn table
 examples/vue-vite/src/todos.test.effeck:27:32 lambda program table
-examples/vue-vite/src/todos.test.effeck:29:42 lambda plain fallback
+examples/vue-vite/src/todos.test.effeck:32:36 lambda plain table
 examples/vue-vite/src/todos.test.effeck:4:31 block appended/effectFn table
 examples/vue-vite/src/todos.test.effeck:5:34 lambda program table
 examples/vue-vite/src/todos.test.effeck:9:56 block appended/effectFn table
@@ -82,7 +82,7 @@ typescript/effeck/cases/await-ops/main.effeck:48:16 byname program table
 typescript/effeck/cases/await-ops/main.effeck:48:24 byname program table
 typescript/effeck/cases/await-ops/main.effeck:57:38 byname program table
 typescript/effeck/cases/await-ops/main.effeck:57:47 byname program table
-typescript/effeck/cases/await-ops/main.effeck:58:23 lambda plain fallback
+typescript/effeck/cases/await-ops/main.effeck:58:69 lambda plain fallback
 typescript/effeck/cases/await-ops/main.effeck:63:22 byname program table
 typescript/effeck/cases/await-ops/main.effeck:63:30 byname program table
 typescript/effeck/cases/await-ops/main.effeck:68:24 byname program table
@@ -249,7 +249,7 @@ typescript/effeck/cases/ch05-programs/ch05-programs.effeck:103:10 lambda dual fa
 typescript/effeck/cases/ch05-programs/ch05-programs.effeck:120:38 lambda program table
 typescript/effeck/cases/ch05-programs/ch05-programs.effeck:135:9 lambda effectFn service
 typescript/effeck/cases/ch05-programs/ch05-programs.effeck:139:11 lambda effectFn service
-typescript/effeck/cases/ch05-programs/ch05-programs.effeck:153:26 lambda plain fallback
+typescript/effeck/cases/ch05-programs/ch05-programs.effeck:153:71 lambda plain fallback
 typescript/effeck/cases/ch05-programs/ch05-programs.effeck:164:25 lambda program table
 typescript/effeck/cases/ch05-programs/ch05-programs.effeck:67:15 lambda dual fallback
 typescript/effeck/cases/ch05-programs/ch05-programs.effeck:75:29 lambda program table
@@ -295,7 +295,7 @@ typescript/effeck/cases/ch08-producers/ch08-producers.effeck:68:19 lambda effect
 typescript/effeck/cases/ch08-producers/ch08-producers.effeck:78:5 lambda effectFn table
 typescript/effeck/cases/ch08-producers/ch08-producers.effeck:97:25 lambda program table
 typescript/effeck/cases/ch09-approve-all-forked.fail/ch09-approve-all-forked.fail.effeck:12:30 lambda effectFn table
-typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:101:57 lambda plain fallback
+typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:101:84 lambda plain fallback
 typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:104:7 lambda effectFn table
 typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:115:26 lambda program table
 typescript/effeck/cases/ch09-handlers/ch09-handlers.effeck:116:5 lambda effectFn table
@@ -360,8 +360,8 @@ typescript/effeck/cases/ch15-failures/ch15-failures.effeck:149:11 lambda effectF
 typescript/effeck/cases/ch15-failures/ch15-failures.effeck:168:30 lambda program table
 typescript/effeck/cases/ch15-failures/ch15-failures.effeck:169:29 lambda program table
 typescript/effeck/cases/ch15-failures/ch15-failures.effeck:172:20 lambda program table
-typescript/effeck/cases/ch15-failures/ch15-failures.effeck:181:63 lambda plain fallback
-typescript/effeck/cases/ch15-failures/ch15-failures.effeck:182:60 lambda plain fallback
+typescript/effeck/cases/ch15-failures/ch15-failures.effeck:181:121 lambda plain fallback
+typescript/effeck/cases/ch15-failures/ch15-failures.effeck:182:117 lambda plain fallback
 typescript/effeck/cases/ch15-failures/ch15-failures.effeck:191:5 lambda program table
 typescript/effeck/cases/ch15-failures/ch15-failures.effeck:61:25 lambda program table
 typescript/effeck/cases/ch15-failures/ch15-failures.effeck:66:25 lambda program table
@@ -654,7 +654,7 @@ typescript/effeck/cases/ek4405-self-contained.fail/main.effeck:29:17 lambda plai
 typescript/effeck/cases/ek4405-self-contained.fail/main.effeck:30:18 lambda plain table
 typescript/effeck/cases/ek4405-self-contained.fail/main.effeck:31:18 lambda plain table
 typescript/effeck/cases/entry-main-runner/main.effeck:7:12 byname program table
-typescript/effeck/cases/failures-causes/main.effeck:12:56 lambda plain fallback
+typescript/effeck/cases/failures-causes/main.effeck:12:112 lambda plain fallback
 typescript/effeck/cases/failures-causes/main.effeck:69:33 lambda program table
 typescript/effeck/cases/failures-causes/main.effeck:70:32 lambda program table
 typescript/effeck/cases/failures-causes/main.effeck:71:34 lambda program table
@@ -663,7 +663,7 @@ typescript/effeck/cases/failures-causes/main.effeck:73:34 lambda program table
 typescript/effeck/cases/failures-causes/main.effeck:73:55 lambda program table
 typescript/effeck/cases/failures-plain/main.effeck:48:30 lambda program table
 typescript/effeck/cases/failures-plain/main.effeck:48:51 lambda effectFn table
-typescript/effeck/cases/failures-plain/main.effeck:52:63 lambda plain fallback
+typescript/effeck/cases/failures-plain/main.effeck:52:121 lambda plain fallback
 typescript/effeck/cases/failures-throw/main.effeck:100:40 lambda program table
 typescript/effeck/cases/failures-throw/main.effeck:100:59 lambda effectFn table
 typescript/effeck/cases/failures-throw/main.effeck:72:17 lambda effectFn annotation
@@ -702,7 +702,7 @@ typescript/effeck/cases/handle-optional-args/main.effeck:22:17 lambda program ta
 typescript/effeck/cases/handle-optional-args/main.effeck:23:5 lambda effectFn table
 typescript/effeck/cases/handle-resume-values/main.effeck:118:30 lambda program table
 typescript/effeck/cases/handle-resume-values/main.effeck:131:30 lambda program table
-typescript/effeck/cases/handle-resume-values/main.effeck:174:32 lambda plain fallback
+typescript/effeck/cases/handle-resume-values/main.effeck:174:90 lambda plain fallback
 typescript/effeck/cases/handle-resume-values/main.effeck:193:42 lambda program table
 typescript/effeck/cases/handle-resume-values/main.effeck:194:43 lambda program table
 typescript/effeck/cases/handle-resume-values/main.effeck:91:40 lambda program table
@@ -715,7 +715,7 @@ typescript/effeck/cases/handlers/main.effeck:141:20 lambda plain annotation
 typescript/effeck/cases/handlers/main.effeck:144:24 lambda program table
 typescript/effeck/cases/handlers/main.effeck:145:5 lambda effectFn table
 typescript/effeck/cases/handlers/main.effeck:161:28 lambda program table
-typescript/effeck/cases/handlers/main.effeck:163:30 lambda plain fallback
+typescript/effeck/cases/handlers/main.effeck:163:86 lambda plain fallback
 typescript/effeck/cases/handlers/main.effeck:30:17 lambda program table
 typescript/effeck/cases/handlers/main.effeck:30:30 lambda program table
 typescript/effeck/cases/handlers/main.effeck:31:5 lambda effectFn table
@@ -848,7 +848,7 @@ typescript/effeck/cases/programs/main.effeck:60:55 lambda effectFn table
 typescript/effeck/cases/programs/main.effeck:66:10 lambda effectFn service
 typescript/effeck/cases/programs/main.effeck:70:34 lambda effectFn table
 typescript/effeck/cases/programs/main.effeck:82:29 lambda program table
-typescript/effeck/cases/ref1-existing-service/ref1-existing-service.effeck:14:22 lambda plain fallback
+typescript/effeck/cases/ref1-existing-service/ref1-existing-service.effeck:14:67 lambda plain fallback
 typescript/effeck/cases/ref1-existing-service/ref1-existing-service.effeck:60:25 lambda program table
 typescript/effeck/cases/ref2-ambiguous-provider.fail/ref2-ambiguous-provider.fail.effeck:13:9 lambda effectFn service
 typescript/effeck/cases/ref2-ambiguous-provider.fail/ref2-ambiguous-provider.fail.effeck:9:9 lambda effectFn service
@@ -874,7 +874,7 @@ typescript/effeck/cases/ref2-provider-graph/ref2-provider-graph.effeck:73:33 lam
 typescript/effeck/cases/ref2-provider-graph/ref2-provider-graph.effeck:81:41 lambda program table
 typescript/effeck/cases/ref2-provider-graph/ref2-provider-graph.effeck:84:5 lambda effectFn service
 typescript/effeck/cases/ref2-provider-graph/ref2-provider-graph.effeck:85:33 lambda program table
-typescript/effeck/cases/ref2-provider-graph/ref2-provider-graph.effeck:86:23 lambda plain annotation
+typescript/effeck/cases/ref2-provider-graph/ref2-provider-graph.effeck:86:65 lambda plain annotation
 typescript/effeck/cases/ref3-resourceful-retry/ref3-resourceful-retry.effeck:43:12 lambda effectFn service
 typescript/effeck/cases/ref3-resourceful-retry/ref3-resourceful-retry.effeck:44:5 lambda program table
 typescript/effeck/cases/ref3-resourceful-retry/ref3-resourceful-retry.effeck:50:5 lambda effectFn table
@@ -893,7 +893,7 @@ typescript/effeck/cases/ref6-fork.fail/ref6-fork.fail.effeck:11:17 lambda progra
 typescript/effeck/cases/ref6-fork.fail/ref6-fork.fail.effeck:12:24 lambda program table
 typescript/effeck/cases/ref6-fork.fail/ref6-fork.fail.effeck:15:5 lambda effectFn table
 typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:135:31 lambda program table
-typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:144:35 lambda plain fallback
+typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:144:94 lambda plain fallback
 typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:27:17 lambda program table
 typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:27:30 lambda program table
 typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:28:5 lambda effectFn table
@@ -956,7 +956,7 @@ typescript/effeck/cases/stack-depth/stack-depth.effeck:45:20 lambda plain annota
 typescript/effeck/cases/stack-depth/stack-depth.effeck:53:25 lambda program table
 typescript/effeck/cases/stack-depth/stack-depth.effeck:54:5 lambda effectFn table
 typescript/effeck/cases/throw-cause/main.effeck:23:16 lambda dual fallback
-typescript/effeck/cases/throw-cause/main.effeck:31:53 lambda plain fallback
+typescript/effeck/cases/throw-cause/main.effeck:31:104 lambda plain fallback
 typescript/effeck/cases/throw-cause/main.effeck:38:26 byname program table
 typescript/effeck/cases/throw-cause/main.effeck:39:28 byname program table
 typescript/effeck/cases/throw-cause/main.effeck:40:27 byname program table

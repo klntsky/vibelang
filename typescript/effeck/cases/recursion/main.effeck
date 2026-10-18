@@ -48,7 +48,7 @@ function stat(path: string) {
 }
 
 export function totalSize(path: string): Effect<number, Missing, never> {
-  const entry = stat(path)
+  const entry: Entry = stat(path)
   let total = entry.size
   for (const child of entry.children) total += totalSize(path === "/" ? `/${child}` : `${path}/${child}`)
   return total

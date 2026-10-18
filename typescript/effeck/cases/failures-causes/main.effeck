@@ -9,7 +9,7 @@ class Cleanup extends Data.TaggedError("Cleanup")<{}> {}
 const events: string[] = []
 
 function reasons(exit: Exit.Exit<unknown, unknown>) {
-  return Exit.isFailure(exit) ? exit.cause.reasons.map((reason) => reason._tag) : ["Success"]
+  return Exit.isFailure(exit) ? (exit.cause.reasons as ReadonlyArray<(typeof exit.cause.reasons)[number]>).map((reason) => reason._tag) : ["Success"]
 }
 
 // A JavaScript TypeError is a defect: the catch does not run, the finally does.
