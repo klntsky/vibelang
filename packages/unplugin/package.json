@@ -1,0 +1,80 @@
+{
+  "name": "effeck-unplugin",
+  "version": "0.0.1",
+  "description": "Compile Effeck source modules with effeck in webpack, Rollup, Rolldown, esbuild, Rspack, and Bun",
+  "keywords": [
+    "effeck",
+    "effect",
+    "unplugin",
+    "webpack-plugin",
+    "rollup-plugin",
+    "rolldown-plugin",
+    "esbuild-plugin",
+    "rspack-plugin",
+    "bun-plugin"
+  ],
+  "homepage": "https://effeck.dev",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./webpack": {
+      "types": "./src/webpack.d.ts",
+      "import": "./src/webpack.js"
+    },
+    "./rollup": {
+      "types": "./src/rollup.d.ts",
+      "import": "./src/rollup.js"
+    },
+    "./rolldown": {
+      "types": "./src/rolldown.d.ts",
+      "import": "./src/rolldown.js"
+    },
+    "./esbuild": {
+      "types": "./src/esbuild.d.ts",
+      "import": "./src/esbuild.js"
+    },
+    "./rspack": {
+      "types": "./src/rspack.d.ts",
+      "import": "./src/rspack.js"
+    },
+    "./bun": {
+      "types": "./src/bun.d.ts",
+      "import": "./src/bun.js"
+    },
+    "./vite": {
+      "types": "./src/vite.d.ts",
+      "import": "./src/vite.js"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "sh test/run.sh"
+  },
+  "peerDependencies": {
+    "effeck": "0.0.1"
+  },
+  "peerDependenciesMeta": {
+    "effeck": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@rspack/core": "2.2.8",
+    "esbuild": "0.28.2",
+    "rolldown": "1.2.13",
+    "rollup": "4.64.5",
+    "vite": "8.3.4",
+    "webpack": "5.111.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

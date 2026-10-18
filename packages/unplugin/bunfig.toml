@@ -1,0 +1,7 @@
+# Install only releases published at least 7 days (604800 seconds) ago.
+# No exclusions: this package installs none of the versions that the
+# repository's own packages pin exactly (effect, @effect/vitest, vitest).
+# Bun 1.4.3 skips the age check when a manifest is already cached
+# (https://github.com/oven-sh/bun/issues/45831); test/run.sh installs with --no-cache.
+[install]
+minimumReleaseAge = 604800
