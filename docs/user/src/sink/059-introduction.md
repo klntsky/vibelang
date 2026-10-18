@@ -5,7 +5,9 @@ A Sink describes how to consume a Stream and return one result. Use a sink when 
 ## Consumers and result types
 
 ```vibe
+// run: Console.log(JSON.stringify(Stream.make("one", "two", "three").run(header)))
 const header: Sink.Sink<Array<string>, string, string, never, never> = Sink.take<string>(2)
+// Output: ["one","two"]
 ```
 
 `Sink.Sink<A, In, L, E, R>` returns `A`, accepts input elements `In`, and can leave unconsumed elements of type `L`. `E` describes its typed failures and `R` its required services. A sink can consume no elements, stop early, or read the entire source before returning.
@@ -15,6 +17,7 @@ Sink constructors and operators that return Sink values are trusted library call
 ## Running a consumer against a source
 
 ```vibe
+// run: Console.log(JSON.stringify(parseHeader()))
 function parseHeader() {
   const source = Stream.make("format-v2", "length-64", "payload")
   const header = Sink.take<string>(2)
@@ -22,6 +25,7 @@ function parseHeader() {
 }
 // Array<string>!!
 // Returns ["format-v2", "length-64"].
+// Output: ["format-v2","length-64"]
 ```
 
 `Stream.run` runs at the call and returns the sink's result. Failures and services from both source and sink join the consuming function's contract. Provide those services around consumption, or supply them through the source and sink's own provision operators.
@@ -29,6 +33,7 @@ function parseHeader() {
 ## Unconsumed elements
 
 ```vibe
+// run: Console.log(JSON.stringify(headerWithLeftovers()))
 function headerWithLeftovers() {
   const sink = (Sink.take<string>(1)).mapEnd(([header, rest]) => [
     { header, rest: rest ?? [] }
@@ -36,6 +41,7 @@ function headerWithLeftovers() {
   return Stream.fromArray(["header", "first", "second"]).run(sink)
 }
 // Returns { header: ["header"], rest: ["first", "second"] }.
+// Output: {"header":["header"],"rest":["first","second"]}
 ```
 
 Streams deliver batches internally. When the sink stops within a batch, its unused suffix becomes leftovers. This differs from the entire unread tail of the source, which can include batches that were never requested. `Stream.run` returns only `A`; use `Sink.mapEnd` to move leftovers into `A` when they matter.
