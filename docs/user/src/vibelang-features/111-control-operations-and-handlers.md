@@ -6,6 +6,7 @@ A control operation lets a handler decide how the caller continues. Use one when
 
 ```vibe
 // approval.vibe
+// run: Console.log(handle(() => release("v1"), Approval, { approve: (_request, k) => resume(k, true) }))
 export error ReviewBusy { request: string }
 
 export control Approval {
@@ -18,6 +19,7 @@ export function release(version: string) {
   return `released ${version}`
 }
 // string!ReviewBusy!Approval
+// Output: released v1
 ```
 
 `Approval.approve` returns a boolean at the call. `Approval` stays in the program's requirements until a handler answers it. Each abstract operation states all three channels of its contract.
@@ -28,6 +30,7 @@ export function release(version: string) {
 
 ```vibe
 // policies.vibe
+// run: Console.log(JSON.stringify(comparePolicies()))
 import { Approval, release } from "./approval.vibe"
 
 export function autoApprove(version: string) {
@@ -53,6 +56,7 @@ export function comparePolicies() {
   return [autoApprove("v1"), scriptedReview("v1", [true, false])]
   // ["released v1", "production declined"]
 }
+// Output: ["released v1","production declined"]
 ```
 
 The business program stays the same. A `handle` clause after a try block names an operation, `Approval.approve`, and parameters that take the operation's parameter types. Each time the try block performs the operation, the clause runs.
@@ -69,6 +73,7 @@ A continuation can be consumed once. Call `resume`, `resumeWith`, and `abandon` 
 
 ```vibe
 // stopping.vibe
+// run: Console.log(stopDeployment())
 import { Approval } from "./approval.vibe"
 
 function deployment() {
@@ -89,6 +94,9 @@ export function stopDeployment() {
     return "cancelled"
   }
 }
+// Output: deployment hold released
+// Output: cleanup finished
+// Output: cancelled
 ```
 
 `abandon()` runs the try block's cleanup before the clause continues. It skips the block's `catch` blocks and runs its `finally` blocks and resource releases. Cleanup failures still fail the operation.
@@ -99,6 +107,7 @@ A clause that ends without resuming also stops the try block and cleans it up fi
 
 ```vibe
 // busy.vibe
+// run: Console.log(busyReviewer())
 import { Approval, ReviewBusy } from "./approval.vibe"
 
 export function busyReviewer() {
@@ -110,6 +119,7 @@ export function busyReviewer() {
     return `review unavailable: ${error.request}`
   }
 }
+// Output: review unavailable: deploy now
 ```
 
 `resumeWith` runs its program at the original operation call, inside the try block. This program can raise only errors declared by the operation, and it must need no services. Read services in the clause first, then capture their values in the program passed to `resumeWith`.
@@ -122,6 +132,7 @@ The statement is short for the `handle` function, which takes a program and retu
 
 ```vibe
 // expression.vibe
+// run: Console.log(countReleased(["v1", "v2"]))
 import { Approval, release } from "./approval.vibe"
 
 export function countReleased(versions: ReadonlyArray<string>) {
@@ -136,6 +147,7 @@ export function countReleased(versions: ReadonlyArray<string>) {
   }
   return released
 }
+// Output: 2
 ```
 
 `handle(program, Control, clauses, onReturn?)` takes a program, the control class, and a clause for every operation. A clause receives the operation's arguments followed by `k`, the continuation, which `resume(k, value)`, `resumeWith(k, program)`, and `abandon(k)` take. `resume` returns the resumed program's result. The optional fourth argument of `handle` transforms normal returns. In this preview, `resume` is typed with the program's original result, or `never` when that fourth argument is supplied; avoid inspecting the resumed result when clauses return different types. Keep `k` inside its clause; never save it or return it.
@@ -144,6 +156,7 @@ export function countReleased(versions: ReadonlyArray<string>) {
 
 ```vibe
 // concurrent.vibe
+// run: Console.log(JSON.stringify(approveAll(["staging", "production"])))
 import { Approval } from "./approval.vibe"
 
 export function approveAll(requests: ReadonlyArray<string>) {
@@ -155,6 +168,7 @@ export function approveAll(requests: ReadonlyArray<string>) {
     }
   }, { concurrency: 4 })
 }
+// Output: [true,true]
 ```
 
 Handle the operation inside each concurrent branch. A handler on the parent fiber cannot answer a child fiber's control operations.

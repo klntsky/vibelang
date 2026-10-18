@@ -5,6 +5,7 @@
 ## match
 
 ```vibe
+// run: Console.log(JSON.stringify([describe(new NotFound({ id: "7" })), describe(new Timeout()), describe(new Denied({ user: "Ada", reason: "admin" })), describe(new Denied({ user: "Ada", reason: "other" }))]))
 error NotFound { id: string }
 error Timeout
 error Denied { user: string; reason: string }
@@ -19,6 +20,7 @@ function describe(failure: Failure) {
     when Denied: `denied ${failure.user}`;
   }
 }
+// Output: ["no user 7","retry","denied by policy","denied Ada"]
 ```
 
 Each arm is `when pattern: expression;`. Arms are tried in order, and the first match gives the value. A `default: expression;` arm matches anything and must come last. `match` is an expression, so it can appear after `return`, in a `const` initializer, or as an argument.
@@ -26,6 +28,7 @@ Each arm is `when pattern: expression;`. Arms are tried in order, and the first 
 An arm is one expression. Use `do { }` for several statements; its value is its last statement's:
 
 ```vibe
+// run: Console.log(retryDelay(new Timeout())); Console.log(retryDelay(new NotFound({ id: "7" })))
 function retryDelay(failure: Failure) {
   return match (failure) {
     when Timeout: do {
@@ -35,6 +38,9 @@ function retryDelay(failure: Failure) {
     default: "0 millis";
   }
 }
+// Output: timed out
+// Output: 1 second
+// Output: 0 millis
 ```
 
 A function named `match` still works. Only `match (value) {` followed by `when`, `default`, or `}` starts a match.
@@ -53,6 +59,7 @@ A function named `match` still works. Only `match (value) {` followed by `when`,
 | Guard | A condition that is true | `when [let n] and if (n > 0):` |
 
 ```vibe
+// run: Console.log(JSON.stringify([shape([]), shape([2]), shape([2, 3, 4]), shape({ kind: "box", size: 5 }), shape({ kind: "point", size: 1 }), shape({ kind: "other" })]))
 function shape(value: ReadonlyArray<number> | { kind: string; size?: number }) {
   return match (value) {
     when []: "empty";
@@ -63,6 +70,7 @@ function shape(value: ReadonlyArray<number> | { kind: string; size?: number }) {
     default: "other";
   }
 }
+// Output: ["empty","one: 2","2 then 2 more","box of 5","point with 1 more keys","other"]
 ```
 
 An object pattern checks only the properties it names, and `...let rest` collects the others. A property that is not a valid name needs quotes, `{ "content-type": let type }`, and a computed key must be a name or a literal, `{ [key]: let value }`.
@@ -79,6 +87,7 @@ These matchers compile to the module's own test, so the bindings have exact type
 | `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | `typeof` | the value |
 
 ```vibe
+// run: Console.log(greeting(Option.some("Ada"))); Console.log(greeting(Option.none())); Console.log(report("ada")); Console.log(report("").includes("NotFound"))
 function greeting(name: Option.Option<string>) {
   return match (name) {
     when Option.Some(let n): `Hello, ${n}`;
@@ -98,6 +107,10 @@ function getUser(id: string): { name: string }!NotFound {
   if (id === "") throw new NotFound({ id })
   return { name: "Ada" }
 }
+// Output: Hello, Ada
+// Output: Hello
+// Output: Ada
+// Output: true
 ```
 
 ## Errors and custom matchers
@@ -107,6 +120,7 @@ An `error` class matches its own instances, by `instanceof`, so two classes with
 A value with a `[customMatcher]` method decides for itself. `customMatcher` is the proposal's `Symbol.customMatcher`:
 
 ```vibe
+// run: Console.log([parity(2), parity(3)].join(", "))
 const Even = {
   [customMatcher](subject: unknown) {
     return typeof subject === "number" && subject % 2 === 0
@@ -119,6 +133,7 @@ function parity(n: number) {
     default: "odd";
   }
 }
+// Output: even, odd
 ```
 
 For an extractor, the method receives `{ matchType: "extractor" }` as its second argument and returns `false` or the values to match against the list. Any other value matches when it is equal, with `NaN` matching `NaN`.
@@ -128,6 +143,7 @@ For an extractor, the method receives `{ matchType: "extractor" }` as its second
 `and` requires both patterns, `or` accepts either, and `not` rejects its pattern. A guard, `if (condition)`, tests any expression and sees the bindings before it:
 
 ```vibe
+// run: Console.log(JSON.stringify([classify({ status: "failed", attempts: 3 }), classify({ status: "failed", attempts: 1 }), classify({ status: "queued", attempts: 0 }), classify({ status: "done", attempts: 0 }), classify({ status: "cancelled", attempts: 0 })]))
 function classify(job: { status: string; attempts: number }) {
   return match (job) {
     when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
@@ -136,6 +152,7 @@ function classify(job: { status: string; attempts: number }) {
     default: "leave";
   }
 }
+// Output: ["escalate","retry","running","leave","leave"]
 ```
 
 `and`, `or`, and `not` cannot share a level: write `(a and b) or c`, not `a and b or c` (EK4705). An `or` or `not` pattern cannot bind names yet (EK4702).
@@ -145,14 +162,17 @@ function classify(job: { status: string; attempts: number }) {
 `value is pattern` is `true` when the pattern matches. It binds as tightly as `instanceof`:
 
 ```vibe
+// run: Console.log(JSON.stringify([isRetryable(new Timeout()), isRetryable(new Denied({ user: "Ada", reason: "root" })), isRetryable(new NotFound({ id: "7" }))]))
 function isRetryable(failure: Failure) {
   return failure is Timeout or Denied
 }
+// Output: [true,true,false]
 ```
 
 In the condition of an `if` or a `while`, joined by `&&`, the pattern can bind names. They are in scope in the rest of the condition and in the `if`'s first branch or the loop's body:
 
 ```vibe
+// run: Console.log(firstFailure("ada")); Console.log(firstFailure("").includes("NotFound"))
 function firstFailure(id: string) {
   const outcome = exit(getUser(id))
   if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) {
@@ -160,6 +180,8 @@ function firstFailure(id: string) {
   }
   return "ok"
 }
+// Output: ok
+// Output: true
 ```
 
 Elsewhere, an `is` with bindings is EK4703.

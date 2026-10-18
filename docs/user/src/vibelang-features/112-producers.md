@@ -5,6 +5,7 @@ A producer yields values one at a time and can run Effects between yields. Use `
 ## Yield values on demand
 
 ```vibe
+// run: Console.log(firstAlert())
 function* readings() {
   try {
     for (const celsius of [18, 21, 25, 19, 28, 30]) {
@@ -22,6 +23,8 @@ function firstAlert() {
   return undefined
 }
 // number | undefined!!
+// Output: sensor closed
+// Output: 25
 ```
 
 Calling `readings()` constructs a lazy source. Its body starts when a consumer asks for a value. Each `yield` hands one value to the loop, and the producer waits until the consumer continues.
@@ -33,8 +36,10 @@ In `.vibe`, `function*` declares a producer. Do not use it to write `Effect.gen`
 ## Call services between yields
 
 ```vibe
+// run: provide NodeServices.layer { const fs = Effect.service(FileSystem); using dir = fs.makeTempDirectoryScoped(); fs.writeFileString(`${dir}/a.txt`, "short"); fs.writeFileString(`${dir}/b.txt`, "x".repeat(1001)); Console.log(firstLargeFile(dir) === `${dir}/b.txt`) }
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
+import { NodeServices } from "@effect/platform-node"
 
 function* fileTexts(directory: string) {
   const names = FileSystem.readDirectory(directory).sort()
@@ -53,6 +58,7 @@ function firstLargeFile(directory: string) {
   }
   return undefined
 }
+// Output: true
 ```
 
 Service calls run as they do in an ordinary function. The producer's failures and requirements join the consuming function's contract. Provide `NodeServices.layer` at the application boundary to supply `FileSystem` and `Path`, as in `examples/file-tree`.
@@ -62,6 +68,7 @@ A producer can acquire resources with `using`. They stay open between yields and
 ## Use a producer as a Stream
 
 ```vibe
+// run: Console.log(JSON.stringify(alerts()))
 function alerts() {
   const selected = readings().filter((value) => value >= 25).map((value) => `${value} C`).take(2)
   const result: string[] = []
@@ -69,6 +76,8 @@ function alerts() {
   return result
   // ["25 C", "28 C"]; sensor closed
 }
+// Output: sensor closed
+// Output: ["25 C","28 C"]
 ```
 
 A producer has type `Stream.Stream<Value, Error, Requirements>`. Stream operators accept it directly, and TypeScript consumers see a Stream in its declaration file. The `examples/pipeline` program uses this filter, map, and take pattern.
@@ -78,6 +87,7 @@ When Stream operators consume a producer, the runtime starts it on its own fiber
 ## Iterate any Stream
 
 ```vibe
+// run: Console.log(sumStream())
 function sumStream() {
   let total = 0
   for (const value of Stream.fromIterable([1, 2, 3])) {
@@ -85,6 +95,7 @@ function sumStream() {
   }
   return total
 }
+// Output: 6
 ```
 
 `for...of` pulls an Effect Stream and closes it when the loop exits, including on `break`. Arrays, maps, sets, and strings keep JavaScript's ordinary iteration behavior.
