@@ -40,6 +40,8 @@ const facts: Record<string, string> = {
   kernelLines: String(lineCount("packages/runtime/src/kernel/kernel.ts") + lineCount("packages/runtime/src/kernel/internals.ts"))
 }
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
+// The inverse for text marked has already escaped, such as a heading's plain text.
+const unescape = (s: string) => s.replace(/&(amp|lt|gt|quot|#39);/g, (_, e: string) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" })[e]!)
 const slug = (s: string) => s.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^\p{L}\p{N}\s-]/gu, "").trim().replace(/\s/g, "-")
 const output = (s: string) => s.replace(/\.md$/i, ".html")
 // Code block roles, written after the language in the fence: ```ts effect
@@ -324,7 +326,7 @@ async function render(source: string, markdown: string, destination: string, cou
         const depth = token.depth - shift
         if (depth === 1 && firstHeading) { title = plain; firstHeading = false }
         if (spec && depth === 1 && /^\d+-/.test(id)) chapterIds.set(id.split("-")[0]!, id)
-        if (depth === 2) toc.push({ id, text: plain })
+        if (depth === 2) toc.push({ id, text: unescape(plain) })
         return `<h${depth} id="${escape(id)}"><a class="anchor" href="#${escape(id)}">${html}</a></h${depth}>\n`
       },
       code(token: Tokens.Code) {
