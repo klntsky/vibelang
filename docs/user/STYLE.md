@@ -5,7 +5,7 @@ These docs mirror the Effect 4 documentation one page for one page: same section
 ## Sources of truth
 
 1. `docs/design/DECISIONS.md`: the decision log. It wins every conflict.
-2. `docs/design/effeck-design.md`: the spec, especially Part I (the language by example) and Part II (the rules). Chapter numbers are changing; refer to topics, not chapter numbers.
+2. `docs/design/src/`: the spec, one file per chapter, especially Part I (the language by example) and Part II (the rules). Chapter numbers are changing; refer to topics, not chapter numbers.
 3. Effect 4.0.5's API, in `experiments/node_modules/effect/src`. Check every Effect name you use there.
 
 ## Voice
@@ -74,7 +74,7 @@ Write the answer most consistent with the rules above, and mark it with a block 
 
 ## Updates after the spec rewrite (decisions D22-D54)
 
-The spec is now `docs/design/effeck-design.md` with 30 chapters; chapter 11 is the standard library, chapter 12 the FAQ, chapter 28 tooling, and appendix C maps every Effect feature. Where a page disagrees with these, the page changes.
+The spec is now `docs/design/src/` with 30 chapters; chapter 11 is the standard library, chapter 12 the FAQ, chapter 28 tooling, and appendix C maps every Effect feature. Where a page disagrees with these, the page changes.
 
 - **Prelude** adds `Scope` (D48): the module, and the type `Scope` means `Scope.Scope`. Write `File!IOError!Scope`.
 - **Data until called** (D24): a call runs its result only when its type is `Effect` itself. `Config`, `Exit`, Context keys, and error instances are data: `const Port = Config.withDefault(Config.Port("PORT"), 3000)` composes, and `const port = Port()` reads it.

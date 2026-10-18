@@ -2,8 +2,6 @@
 
 A language for writing Effect programs. Specification, 2026-10-16. Runtime: `effect@4.0.5`.
 
-> **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
-
 Effeck is TypeScript syntax in which every function is an Effect. You call functions normally, `throw` and `catch` typed errors, and ask for services by name. The compiler infers each function's `Effect<A, E, R>` and emits the Effect code you would have written by hand, so TypeScript code uses it like any other Effect library.
 
 ```ts effect
@@ -39,6 +37,8 @@ The two functions do the same work, with two differences. `Effect.fn("welcome")`
 | [IV. The compiler](#part-iv-the-compiler) | The fork of the TypeScript compiler, the pipeline, declarations, and editor support | You will build it |
 | [V. Decisions](#part-v-decisions) | Every decision with its reason and evidence, the closed end-to-end build calls, and the experiments that confirm the implementation | You want to check or change a decision |
 | [Appendices](#appendices) | The evidence index, prior art, and every Effect feature mapped to Effeck | You want to check a claim |
+
+To learn Effeck by task rather than by rule, start with the [user guide](../../user/src/001-onboarding.md). The [cheat sheet](../../user/src/effeck-features/115-cheat-sheet.md) puts every change beside the Effect code it replaces.
 
 **Status.** This is the specification. Every rule in it is decided: the owner's decisions and the defaults made to complete the design are logged in `docs/design/DECISIONS.md` (D1-D60) and collected in [Part V](#29-decisions), which records the closed end-to-end build calls. D57 and D58 are controversial defaults. The runtime in Part III is a working prototype: {{testCount}} tests pass in `experiments/`. The compiler exists as two prototypes: `prototype/esc`, on TypeScript's API, compiles 46 example files written from this document, and the Go fork of TypeScript in `typescript/` lowers calls by type and infers contracts (Chapter 27). The compiler, spec, runtime, and tooling share one private repository (D60).
 

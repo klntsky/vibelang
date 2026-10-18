@@ -1,6 +1,6 @@
 # Cheat sheet
 
-Every Effeck change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is Effeck. The examples share these declarations:
+Every Effeck change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is Effeck. The [specification](../../../design/src/000-intro.md) states the rules behind each change. The examples share these declarations:
 
 ```ts es
 error NotFound { id: string }

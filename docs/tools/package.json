@@ -2,9 +2,9 @@
   "name": "effeck-docs-tools",
   "private": true,
   "type": "module",
-  "description": "Builds docs/design/effeck-design.md and a self-contained HTML rendering from docs/design/src/*.md.",
+  "description": "Builds the docs site from docs/user/src and the specification chapters in docs/design/src, and checks the user docs' code blocks.",
   "scripts": {
-    "build": "bun render.ts",
+    "build": "bun render-user.ts",
     "check:snippets": "bun check-snippets.ts"
   },
   "devDependencies": {

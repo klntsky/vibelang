@@ -1,7 +1,8 @@
 #!/bin/sh
-# Publishes the docs on Cloudflare: the user guide at / and the specification
-# at /spec/, served by a static-assets Worker on effeck.dev. A second Worker
-# (docs/redirect/) sends www.effeck.dev and the other effeck.* domains there.
+# Publishes the docs on Cloudflare: one site with the user guide at / and the
+# specification's chapters under /spec/, served by a static-assets Worker on
+# effeck.dev. A second Worker (docs/redirect/) sends www.effeck.dev and the
+# other effeck.* domains there.
 #
 #   sh scripts/deploy-docs.sh             # build, check, and deploy
 #   sh scripts/deploy-docs.sh --dry-run   # build and check into .cache/docs-site only
@@ -20,17 +21,15 @@ case "${1:-}" in
 	*) echo "usage: sh scripts/deploy-docs.sh [--dry-run]" >&2; exit 2 ;;
 esac
 
-# The spec build runs the kernel's law suite first, which needs these installs.
+# The site build runs the kernel's law suite first, which needs these installs.
 for dir in docs/tools experiments packages/runtime; do
 	[ -d "$root/$dir/node_modules" ] || (cd "$root/$dir" && bun install --silent)
 done
-(cd "$root/docs/tools" && bun render.ts)
 bun "$root/docs/tools/render-user.ts"
 
 rm -rf "$site"
-mkdir -p "$site/spec"
+mkdir -p "$site"
 cp -R "$root/docs/user/site/." "$site/"
-cp "$root/docs/design/effeck-design.html" "$site/spec/index.html"
 bun "$root/docs/tools/prepare-site.ts" "$site"
 
 if $dry_run; then

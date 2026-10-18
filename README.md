@@ -5,7 +5,7 @@ A language for writing Effect programs: TypeScript syntax in which every functio
 > [!WARNING]
 > Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-Docs: [effeck.dev](https://effeck.dev) for the guides and [effeck.dev/spec/](https://effeck.dev/spec/) for the specification.
+Docs: [effeck.dev](https://effeck.dev), with the guides and, under [effeck.dev/spec/](https://effeck.dev/spec/), the specification.
 
 ## A short tour
 
@@ -192,11 +192,11 @@ sh scripts/e2e.sh
 
 | Path | What it is |
 | --- | --- |
-| `docs/design/` | The spec (`effeck-design.html`, built from `src/` by `docs/tools/render.ts`) and the decision log (`DECISIONS.md`) |
-| `docs/user/` | End-user docs that mirror Effect 4's documentation page for page, in original Effeck writing; build with `docs/tools/render-user.ts` |
+| `docs/design/` | The spec, one Markdown file per chapter in `src/`, and the decision log (`DECISIONS.md`); the docs site renders each chapter as a page |
+| `docs/user/` | End-user docs that mirror Effect 4's documentation page for page, in original Effeck writing; `docs/tools/render-user.ts` builds them and the spec into one site |
 | `docs/research/` | Research behind the design: Effect 4's runtime, continuation prior art, the TypeScript compiler, TC39 proposals, usage censuses, feature coverage |
 | `docs/reviews/` | Independent reviews of the design |
-| `experiments/` | The continuation kernel prototype on `effect@4.0.5` and its law suite (`bun test`); the design build refuses to run if any test fails |
+| `experiments/` | The continuation kernel prototype on `effect@4.0.5` and its law suite (`bun test`); the docs build refuses to run if any test fails |
 | `prototype/esc/` | A prototype compiler on the TypeScript API, from before the rename, that lowers `.es` files (the old extension) to Effect TypeScript; the executable reference for lowering |
 | `prototype/single-pass/` | The experiment that settled single-pass lowering (D56) on a patched TypeScript 5.9 checker |
 | `typescript/` | The compiler, `effeck`: microsoft/TypeScript 7 (Go) with the Effeck commits on top; `typescript/EFFECK.md` describes them |
@@ -204,7 +204,7 @@ sh scripts/e2e.sh
 
 ```sh
 cd experiments && bun install && bun test          # kernel laws
-cd docs/tools && bun install && bun render.ts      # build the spec
+cd docs/tools && bun install && bun render-user.ts # build the docs site and the spec
 bun prototype/esc/examples/run-all.ts              # prototype compiler examples
 cd typescript && sh effeck/smoke.sh                # build effeck and run its cases
 bun docs/tools/check-snippets.ts                   # compile every user-doc code block

@@ -8,7 +8,7 @@ Only page titles, navigation labels, paths, API identifiers, counts, and origina
 
 Order follows the two upstream sidebar views: onboarding first, then guides. Onboarding pages are excluded from guides, just as in the upstream navigation. Guide sections and root pages interleave by configured rank; pages within a section sort by frontmatter `sidebar.order`, then sidebar label. Labels may differ from page titles.
 
-Local paths retain each upstream directory and page slug, replace `.mdx` with `.md`, and add a three-digit global reading-order prefix to the filename. The linked sidebar below defines navigation across directories and preserves onboarding groups without duplicating their pages.
+Local paths retain each upstream directory and page slug, replace `.mdx` with `.md`, and add a three-digit global reading-order prefix to the filename. The linked sidebar below defines navigation across directories and preserves onboarding groups without duplicating their pages. After the two upstream views, the Effeck features view lists the original guides, and the Specification view lists one page per chapter of the specification in `docs/design/src`, grouped by part in the specification's order. The docs build fails if a specification chapter is missing from it.
 
 Code example count: one example per fenced code block in the source body, including commands, configuration, and separately presented package-manager variants. Blocks explicitly marked `text`, `plaintext`, `output`, or `console` are excluded. Inline code, rendered output outside fences, and imported components are not counted. Counts describe source blocks, not distinct executable programs.
 
@@ -159,6 +159,48 @@ Code example count: one example per fenced code block in the source body, includ
 - [Effeck for Effect users](src/effeck-features/114-effeck-for-effect-users.md)
 - [Cheat sheet](src/effeck-features/115-cheat-sheet.md)
 - [Pattern matching with match and is](src/effeck-features/116-match-and-is.md)
+
+### Specification
+
+- [Introduction](../design/src/000-intro.md)
+- **Part I. The language by example**
+  - [1. A first look](../design/src/101-part1-ch01-first-look.md)
+  - [2. Functions and calls](../design/src/102-part1-ch02-functions.md)
+  - [3. Errors: the E channel](../design/src/103-part1-ch03-errors.md)
+  - [4. Dependency injection: the R channel](../design/src/104-part1-ch04-di.md)
+  - [5. Programs as values: retry, timeout, and pipe](../design/src/105-part1-ch05-programs.md)
+  - [6. Resources](../design/src/106-part1-ch06-resources.md)
+  - [7. Concurrency](../design/src/107-part1-ch07-concurrency.md)
+  - [8. Producers: streams of values](../design/src/108-part1-ch08-producers.md)
+  - [9. Handlers: defining your own effects](../design/src/109-part1-ch09-handlers.md)
+  - [10. Working with TypeScript](../design/src/110-part1-ch10-typescript.md)
+  - [11. The standard library](../design/src/111-part1-ch11-stdlib.md)
+  - [12. Questions Effect users ask](../design/src/112-part1-ch12-faq.md)
+- **Part II. The rules**
+  - [13. What a call means](../design/src/213-part2-ch13-calls.md)
+  - [14. Contracts and inference](../design/src/214-part2-ch14-contracts.md)
+  - [15. Which functions compile to plain JavaScript](../design/src/215-part2-ch15-direct.md)
+  - [16. Callbacks and higher-order functions](../design/src/216-part2-ch16-callbacks.md)
+  - [17. Failures, defects, interruption, and cleanup](../design/src/217-part2-ch17-failures.md)
+- **Part III. The runtime**
+  - [18. Why a continuation runtime](../design/src/318-part3-ch18-why.md)
+  - [19. The checkout trace, step by step](../design/src/319-part3-ch19-trace.md)
+  - [20. The machine](../design/src/320-part3-ch20-machine.md)
+  - [21. One-shot ownership and races](../design/src/321-part3-ch21-ownership.md)
+  - [22. What resume restores](../design/src/322-part3-ch22-restore.md)
+  - [23. Boundaries and finalization](../design/src/323-part3-ch23-boundaries.md)
+  - [24. What Effect provides and what the kernel adds](../design/src/324-part3-ch24-effect.md)
+  - [25. Implementation strategies and costs](../design/src/325-part3-ch25-strategies.md)
+  - [26. What compiled code must guarantee](../design/src/326-part3-ch26-compiled.md)
+- **Part IV. The compiler**
+  - [27. Compiler architecture](../design/src/427-part4-ch27-compiler.md)
+  - [28. Tooling](../design/src/428-part4-ch28-tooling.md)
+- **Part V. Decisions**
+  - [29. Decisions](../design/src/529-part5-ch29-decisions.md)
+  - [30. Risks and experiments](../design/src/530-part5-ch30-risks.md)
+- **Appendices**
+  - [A. Evidence index and B. Prior art](../design/src/900-appendices.md)
+  - [C. Every Effect feature in Effeck](../design/src/901-appendix-c-coverage.md)
 
 ## Page inventory
 

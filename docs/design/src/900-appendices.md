@@ -17,7 +17,7 @@ node scripts/v3-wakeup-chain.mjs 100000  # F10b: the same chain on effect 3.22.3
 cd reference-machine && bun install && bun test   # strategy B, 20 tests, about 18 s
 ```
 
-The design document's build (`docs/tools/render.ts`) runs `bun test` and refuses to build if any test fails.
+The docs site build (`docs/tools/render-user.ts`) runs this suite first and refuses to build if any test fails.
 
 #### How this revision was checked
 
@@ -160,7 +160,7 @@ effeck/smoke.sh effeck-infer   # one case
 - `prototype/esc/FINDINGS.md`: what the prototype compiler found.
 - `prototype/single-pass/RESULTS.md`: the single-pass experiment (D56, D52).
 - `typescript/EFFECK.md`: the Go fork's base, commits, seams, and gaps.
-- [Upstream draft index](../upstream/README.md): nine Effect runtime, tooling, documentation, and API drafts with reproductions; all drafted, not filed (D59).
+- [Upstream draft index](../../upstream/README.md): nine Effect runtime, tooling, documentation, and API drafts with reproductions; all drafted, not filed (D59).
 
 ### B. Prior art
 

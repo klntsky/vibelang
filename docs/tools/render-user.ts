@@ -1,11 +1,41 @@
 // Run: cd docs/tools && bun render-user.ts
-// Independent of render.ts; uses its package.json pin: marked 18.0.12.
+// Builds the one docs site in docs/user/site: the user pages in docs/user/src
+// and, under spec/, one page per specification chapter in docs/design/src.
+// docs/user/inventory.md orders the sidebar. Uses the package.json pin: marked 18.0.12.
 import { Marked, type Tokens } from "marked"
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, extname, join, relative, resolve } from "node:path"
-const root = resolve(import.meta.dir, "../user")
+const repo = resolve(import.meta.dir, "../..")
+const root = join(repo, "docs/user")
 const src = join(root, "src")
+const design = join(repo, "docs/design/src")
 const site = join(root, "site")
+// Page keys are site paths with a .md extension. Specification chapters live under spec/.
+const fileOf = (key: string) => key.startsWith("spec/") ? join(design, key.slice(5)) : join(src, key)
+const keyOf = (file: string) =>
+  file.startsWith(design + "/") ? "spec/" + relative(design, file) : file.startsWith(src + "/") ? relative(src, file) : undefined
+const where = (key: string) => relative(repo, fileOf(key))
+if (existsSync(join(src, "spec"))) throw new Error("docs/user/src/spec would collide with the specification's pages")
+
+// The facts the specification states are derived here, not typed by hand. The
+// build refuses to run if the kernel's law suite fails: no [Kernel] claim
+// outlives a broken law. The 100,000-element stress cases also run while build
+// lanes share the host. The suite needs bun install in experiments and packages/runtime.
+const experiments = join(repo, "experiments")
+const suite = Bun.spawnSync(["bun", "test", "--timeout=30000"], { cwd: experiments, stdout: "pipe", stderr: "pipe" })
+const suiteOutput = suite.stdout.toString() + suite.stderr.toString()
+const ran = /Ran (\d+) tests? across (\d+) files?/.exec(suiteOutput)
+const failed = /(\d+) fail/.exec(suiteOutput)
+if (suite.exitCode !== 0 || ran === null || failed === null || failed[1] !== "0") {
+  console.error(suiteOutput.split("\n").slice(-30).join("\n"))
+  throw new Error("the kernel law suite in experiments/ failed; refusing to build the docs site")
+}
+const lineCount = (path: string) => readFileSync(join(repo, path), "utf8").split("\n").length - 1
+const facts: Record<string, string> = {
+  testCount: ran[1]!,
+  testFiles: ran[2]!,
+  kernelLines: String(lineCount("packages/runtime/src/kernel/kernel.ts") + lineCount("packages/runtime/src/kernel/internals.ts"))
+}
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;")
 const slug = (s: string) => s.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^\p{L}\p{N}\s-]/gu, "").trim().replace(/\s/g, "-")
 const output = (s: string) => s.replace(/\.md$/i, ".html")
@@ -166,6 +196,8 @@ body { overflow-wrap: anywhere; }
 .callout.not-designed { border-left-style: double; border-left-width: 6px; }
 .callout strong:first-child { color: var(--accent); }
 .v0-warning { margin: 0 0 24px; padding: 10px 18px; border-radius: 0 8px 8px 0; }
+article > .part { margin: 8px 0 18px; color: var(--accent); font-size: 13px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
+.part a.anchor { color: inherit; text-decoration: none; }
 img, svg, video { max-width: 100%; height: auto; }
 pre { max-width: 100%; overflow-x: auto; overflow-wrap: normal; }
 .table { max-width: 100%; }
@@ -200,12 +232,12 @@ for (const line of lines.slice(start + 1)) {
   if (/^## /.test(line)) break
   const view = /^### (.+)$/.exec(line)
   const group = /^- \*\*(.+)\*\*\s*$/.exec(line)
-  const page = /^\s*- \[([^\]]+)\]\((src\/[^)]+\.md)\)/.exec(line)
+  const page = /^\s*- \[([^\]]+)\]\(((?:src|\.\.\/design\/src)\/[^)]+\.md)\)/.exec(line)
   if (view) navigation.push({ kind: "view", label: view[1]! })
   else if (group) navigation.push({ kind: "group", label: group[1]! })
   else if (page) {
-    const path = relative(src, resolve(root, page[2]!))
-    if (path.startsWith("../")) throw new Error(`inventory.md: page outside src: ${page[2]}`)
+    const path = keyOf(resolve(root, page[2]!))
+    if (!path) throw new Error(`inventory.md: page outside docs/user/src and docs/design/src: ${page[2]}`)
     if (order.some(p => p.path === path)) throw new Error(`inventory.md: duplicate page: ${path}`)
     const entry = { path, label: page[1]! }
     order.push(entry)
@@ -220,35 +252,51 @@ function files(dir: string): string[] {
 // Read a snapshot: writers can keep working, and validation and rendering use the same bytes.
 const sources = new Map(files(src).map(path => [path, readFileSync(join(src, path), "utf8")]))
 const errors: string[] = []
-for (const page of order) if (!sources.has(page.path)) errors.push(`inventory.md: missing src/${page.path}`)
+for (const name of readdirSync(design).filter(f => f.endsWith(".md")).sort()) {
+  const markdown = readFileSync(join(design, name), "utf8").replace(/\{\{(\w+)\}\}/g, (match, fact: string) => {
+    if (!(fact in facts)) errors.push(`docs/design/src/${name}: unknown placeholder ${match}`)
+    return facts[fact] ?? match
+  })
+  sources.set(`spec/${name}`, markdown)
+  if (!order.some(p => p.path === `spec/${name}`)) errors.push(`inventory.md: the sidebar is missing docs/design/src/${name}`)
+}
+for (const page of order) if (!sources.has(page.path)) errors.push(`inventory.md: missing ${where(page.path)}`)
 if (errors.length) throw new Error(errors.join("\n"))
 const external = (href: string) => /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href)
-function pageLink(href: string, source: string, destination: string): string {
+// Returns the link to write, or undefined for a repository file that is not a
+// page: the site publishes only pages, so such a link keeps its text and loses its target.
+function pageLink(href: string, source: string, destination: string): string | undefined {
   if (!href || external(href) || href.startsWith("#") || href.startsWith("?")) return href
   const [, encoded = "", suffix = ""] = /^([^?#]*)([\s\S]*)$/.exec(href)!
   let path: string
   try { path = decodeURIComponent(encoded) } catch {
-    errors.push(`src/${source}: malformed internal link ${JSON.stringify(href)}`)
+    errors.push(`${where(source)}: malformed internal link ${JSON.stringify(href)}`)
     return href
   }
-  // A leading slash means the source/site root, not the host filesystem root.
-  const target = relative(src, path.startsWith("/") ? resolve(src, "." + path) : resolve(src, dirname(source), path))
+  // A leading slash means the site root, not the host filesystem root.
+  const target = path.startsWith("/") ? fileOf(join(".", path)) : resolve(dirname(fileOf(source)), path)
   const md = target.replace(/\.html$/i, ".md")
-  const resolved = sources.has(md) ? md : !extname(md) && sources.has(md + ".md") ? md + ".md" : undefined
-  if (!resolved) {
-    errors.push(`src/${source}: internal link ${JSON.stringify(href)} points to missing page src/${md}`)
-    return href
-  }
-  return relative(dirname(destination), output(resolved)).split("/").map(encodeURIComponent).join("/") + suffix
+  const resolved = [md, extname(md) ? "" : md + ".md"].map(keyOf).find(key => key !== undefined && sources.has(key))
+  if (resolved) return relative(dirname(destination), output(resolved)).split("/").map(encodeURIComponent).join("/") + suffix
+  if (!path.startsWith("/") && target.startsWith(repo + "/") && existsSync(target)) return undefined
+  errors.push(`${where(source)}: internal link ${JSON.stringify(href)} points to missing page ${relative(repo, md)}`)
+  return href
 }
 let proposed = 0
 let notDesigned = 0
+// Filled while rendering: each output page's ids, and each specification chapter's heading id by number.
+const ids = new Map<string, Set<string>>()
+const chapterIds = new Map<string, string>()
+// A specification part opener, such as "## Part I. The language by example", heads its first chapter's page.
+const PART = /^Part [IVX]+\. /
 
 async function render(source: string, markdown: string, destination: string, count: boolean): Promise<string> {
+  const spec = source.startsWith("spec/")
   const toc: { id: string; text: string }[] = []
   const used = new Set<string>()
+  // A specification page uses its sidebar label, such as "3. Errors: the E channel".
   let title = order.find(p => p.path === source)?.label ?? source.replace(/\.md$/, "")
-  let firstHeading = true
+  let firstHeading = !spec
   const marked = new Marked({
     gfm: true,
     renderer: {
@@ -260,9 +308,12 @@ async function render(source: string, markdown: string, destination: string, cou
         let n = 0
         while (used.has(id)) id = `${base}-${++n}`
         used.add(id)
-        if (token.depth === 1 && firstHeading) { title = plain; firstHeading = false }
-        if (token.depth === 2) toc.push({ id, text: plain })
-        return `<h${token.depth} id="${escape(id)}"><a class="anchor" href="#${escape(id)}">${html}</a></h${token.depth}>\n`
+        if (spec && token.depth === 2 && PART.test(plain)) return `<p class="part" id="${escape(id)}"><a class="anchor" href="#${escape(id)}">${html}</a></p>\n`
+        const depth = token.depth - shift
+        if (depth === 1 && firstHeading) { title = plain; firstHeading = false }
+        if (spec && depth === 1 && /^\d+-/.test(id)) chapterIds.set(id.split("-")[0]!, id)
+        if (depth === 2) toc.push({ id, text: plain })
+        return `<h${depth} id="${escape(id)}"><a class="anchor" href="#${escape(id)}">${html}</a></h${depth}>\n`
       },
       code(token: Tokens.Code) {
         const [lang = "", role = ""] = (token.lang ?? "").split(/\s+/)
@@ -282,25 +333,33 @@ async function render(source: string, markdown: string, destination: string, cou
       }
     }
   })
+  // Specification chapters are written as sections of one document, a chapter
+  // under ###; each page's top heading becomes its h1.
+  const depths = spec ? marked.lexer(markdown).flatMap(t => t.type === "heading" && !(t.depth === 2 && PART.test(t.text)) ? [(t as Tokens.Heading).depth] : []) : []
+  const shift = depths.length ? Math.min(...depths) - 1 : 0
   const body = (marked.parse(markdown) as string).replace(
     /(<figure class="code side-(?:effect|long)">(?:(?!<\/figure>)[\s\S])*<\/figure>)\s*(<figure class="code side-es">(?:(?!<\/figure>)[\s\S])*<\/figure>)/g,
     '<div class="compare">$1$2</div>'
   )
   // Include reference-style links and raw HTML anchors in validation and rewriting.
   const rewritten = await new HTMLRewriter().on("a[href]", {
-    element(element) { element.setAttribute("href", pageLink(element.getAttribute("href")!, source, destination)) }
+    element(element) {
+      const link = pageLink(element.getAttribute("href")!, source, destination)
+      if (link === undefined) element.removeAndKeepContent()
+      else element.setAttribute("href", link)
+    }
   }).on("img[src]", {
     element(element) {
       const url = element.getAttribute("src")!
       if (url.startsWith("data:")) return
-      if (external(url)) { errors.push(`src/${source}: external image ${JSON.stringify(url)} cannot be self-contained`); return }
+      if (external(url)) { errors.push(`${where(source)}: external image ${JSON.stringify(url)} cannot be self-contained`); return }
       try {
-        const path = resolve(src, dirname(source), decodeURIComponent(url))
+        const path = resolve(dirname(fileOf(source)), decodeURIComponent(url))
         const mime: Record<string, string> = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml" }
         if (!mime[extname(path)]) throw new Error("unsupported image format")
         element.setAttribute("src", `data:${mime[extname(path)]};base64,${readFileSync(path).toString("base64")}`)
         element.removeAttribute("srcset")
-      } catch { errors.push(`src/${source}: missing or unsupported image ${JSON.stringify(url)}`) }
+      } catch { errors.push(`${where(source)}: missing or unsupported image ${JSON.stringify(url)}`) }
     }
   }).transform(new Response(body)).text()
   const href = (path: string) => escape(relative(dirname(destination), output(path)).split("/").map(encodeURIComponent).join("/"))
@@ -311,13 +370,13 @@ async function render(source: string, markdown: string, destination: string, cou
   const prev = index > 0 ? order[index - 1] : undefined
   const next = index >= 0 ? order[index + 1] : undefined
   const pager = (page: Page | undefined, direction: "previous" | "next") => page ? `<a class="${direction}" rel="${direction === "previous" ? "prev" : "next"}" href="${href(page.path)}"><span>${direction === "previous" ? "Previous" : "Next"}</span>${escape(page.label)}</a>` : ""
-  return `<!doctype html>
+  const page = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
-<title>${escape(title)} · Effeck Docs</title>
+<title>${escape(title)} · ${spec ? "Effeck Specification" : "Effeck Docs"}</title>
 <style>${css}${userCss}</style>
 </head>
 <body>
@@ -329,18 +388,75 @@ async function render(source: string, markdown: string, destination: string, cou
 </div>
 </body>
 </html>\n`
+  const found = new Set<string>()
+  await new HTMLRewriter().on("[id]", { element(element) { found.add(element.getAttribute("id")!) } }).transform(new Response(page)).text()
+  ids.set(destination, found)
+  return page
 }
 
 // Complete validation before writing output, so a broken link cannot leave a partial build.
 const rendered = new Map<string, string>()
-for (const [source, markdown] of sources) rendered.set(output(source), await render(source, markdown, output(source), true))
+for (const [source, markdown] of sources) rendered.set(output(source), await render(source, markdown, output(source), !source.startsWith("spec/")))
 const first = order[0]!
 rendered.set("index.html", await render(first.path, sources.get(first.path)!, "index.html", false))
-if (errors.length) throw new Error(`User docs build failed (${new Set(errors).size} problems):\n${[...new Set(errors)].map(e => `  - ${e}`).join("\n")}`)
+// /spec/ opens the specification's first page, so links to the old single-page specification still land on it.
+const firstChapter = order.find(p => p.path.startsWith("spec/"))!
+rendered.set("spec/index.html", await render(firstChapter.path, sources.get(firstChapter.path)!, "spec/index.html", false))
+const fail = (what: string) => {
+  if (errors.length) throw new Error(`Docs build failed ${what} (${new Set(errors).size} problems):\n${[...new Set(errors)].map(e => `  - ${e}`).join("\n")}`)
+}
+fail("while rendering")
+
+// With every page's ids known, check each local link's page and id. The
+// specification was one document, so its links name headings with a bare
+// fragment; one that names a heading on another chapter's page moves there.
+// "Chapter 9" and "Chapters 12 and 14" in specification prose become such
+// links; code, headings, and existing links are left alone.
+const owners = new Map<string, string[]>()
+for (const [path, found] of ids) {
+  if (!path.startsWith("spec/") || path === "spec/index.html") continue
+  for (const id of found) owners.set(id, [...owners.get(id) ?? [], path])
+}
+const linkChapter = (n: string) => chapterIds.has(n) ? `<a href="#${chapterIds.get(n)}">${n}</a>` : n
+const linkChapters = (article: string) => article.replace(
+  /(<pre[\s\S]*?<\/pre>|<code>[\s\S]*?<\/code>|<a [\s\S]*?<\/a>|<h[1-6][\s\S]*?<\/h[1-6]>)|\b(Chapters?) (\d+(?:(?:, and |, | and )\d+)*)\b/g,
+  (match, skip: string | undefined, word: string, numbers: string) =>
+    skip !== undefined ? skip
+      : /^\d+$/.test(numbers) && chapterIds.has(numbers) ? `<a href="#${chapterIds.get(numbers)}">${word} ${numbers}</a>`
+      : `${word} ${numbers.replace(/\d+/g, linkChapter)}`
+)
+let crossLinks = 0
+for (const [destination, html] of rendered) {
+  const spec = destination.startsWith("spec/")
+  const text = spec ? html.replace(/<article>[\s\S]*<\/article>/, linkChapters) : html
+  rendered.set(destination, await new HTMLRewriter().on("a[href]", {
+    element(element) {
+      const href = element.getAttribute("href")!
+      if (external(href)) return
+      const [, encoded = "", fragment = ""] = /^([^?#]*)(?:\?[^#]*)?(?:#([\s\S]*))?$/.exec(href)!
+      let target: string
+      let id: string
+      try {
+        target = encoded ? join(dirname(destination), decodeURIComponent(encoded)) : destination
+        id = decodeURIComponent(fragment)
+      } catch { errors.push(`${destination}: malformed link ${JSON.stringify(href)}`); return }
+      if (!rendered.has(target)) { errors.push(`${destination}: link ${JSON.stringify(href)} points to missing page ${target}`); return }
+      if (!id || ids.get(target)!.has(id)) return
+      const owner = spec && !encoded ? owners.get(id) : undefined
+      if (owner?.length !== 1) { errors.push(`${destination}: link ${JSON.stringify(href)} names no heading on ${target}${owner ? `; ${owner.length} chapters have it` : ""}`); return }
+      element.setAttribute("href", `${relative(dirname(destination), owner[0]!).split("/").map(encodeURIComponent).join("/")}#${fragment}`)
+      crossLinks++
+    }
+  }).transform(new Response(text)).text())
+}
+fail("checking links")
+rmSync(site, { recursive: true, force: true })
 for (const [path, html] of rendered) {
   const destination = join(site, path)
   mkdirSync(dirname(destination), { recursive: true })
   writeFileSync(destination, html)
 }
-console.log(`Wrote ${rendered.size} pages (${sources.size} source pages + index.html).`)
-console.log(`Callouts: ${proposed} Proposed; ${notDesigned} Not designed yet (source pages, excluding duplicate index).`)
+const specPages = [...sources.keys()].filter(key => key.startsWith("spec/")).length
+console.log(`Wrote ${rendered.size} pages: ${sources.size - specPages} user pages, ${specPages} specification pages, index.html, and spec/index.html.`)
+console.log(`Specification: ${facts.testCount} kernel law tests passed; kernel ${facts.kernelLines} lines; ${crossLinks} links moved to another chapter's page.`)
+console.log(`Callouts: ${proposed} Proposed; ${notDesigned} Not designed yet (user source pages, excluding duplicate index).`)

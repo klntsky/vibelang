@@ -58,8 +58,18 @@ Temporary files are removed on success and failure unless `--keep` is set.
 
 ```sh
 bun test docs/tools/check-snippets.test.ts
-(cd docs/tools && bun render.ts)
 bun docs/tools/render-user.ts
 ```
 
-The user renderer checks local page links while building the 114-page site (110 mirrored pages and four Effeck guides).
+`render-user.ts` builds the one docs site in `docs/user/site`: the user pages
+from `docs/user/src` and one page per specification chapter from
+`docs/design/src` under `spec/`, in the order of the sidebar in
+`docs/user/inventory.md`. `spec/index.html` repeats the specification's first
+page, so `/spec/` still opens the specification. Before rendering, it runs the
+kernel law suite in `experiments` and refuses to build if any test fails; the
+suite also supplies the specification's `{{testCount}}`, `{{testFiles}}`, and
+`{{kernelLines}}` facts. It checks every local link's page and heading id. A
+specification link to a heading on another chapter's page, written as a bare
+fragment such as `#20-the-machine`, and "Chapter 20" in specification prose
+both link to that page. A link to a repository file that is not a page keeps
+its text and drops the link.

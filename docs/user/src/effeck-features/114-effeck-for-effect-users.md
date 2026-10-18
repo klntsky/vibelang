@@ -1,6 +1,6 @@
 # Effeck for Effect users
 
-Keep Effect's runtime, libraries, layers, and error channels. In `.effeck` files, write the sequential work as ordinary functions and statements. For every change side by side with Effect code, see the [cheat sheet](115-cheat-sheet.md).
+Keep Effect's runtime, libraries, layers, and error channels. In `.effeck` files, write the sequential work as ordinary functions and statements. For every change side by side with Effect code, see the [cheat sheet](115-cheat-sheet.md). For the rules behind each change, read the [specification](../../../design/src/000-intro.md).
 
 ```ts
 function greet(name: string) {

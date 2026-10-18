@@ -1,8 +1,9 @@
 // Run from the repository root: bun docs/tools/prepare-site.ts <site dir>
 //
-// Prepares the assembled docs site for publication. Links to the upstream
-// issue drafts and the private repository's address work only inside the
-// repository, so the published copy keeps their text without them. The script
+// Prepares the assembled docs site for publication. The private repository's
+// address works only inside the repository, so the published copy names the
+// repository without it. render-user.ts already drops links to repository
+// files, such as the upstream issue drafts, that are not pages. The script
 // adds a 404 page, then refuses to publish local paths, the build host, LAN
 // addresses, the private repository, or any credential value present in the
 // environment. It never prints a credential.
@@ -17,7 +18,6 @@ function files(dir: string): string[] {
 }
 
 const rewrites: [RegExp, string][] = [
-  [/<a href="\.\.\/upstream\/[^"]*">([\s\S]*?)<\/a>/g, "$1"],
   [/<code>github\.com\/roninjin10\/effectscript<\/code>/g, "<code>effectscript</code> on GitHub"],
 ]
 
