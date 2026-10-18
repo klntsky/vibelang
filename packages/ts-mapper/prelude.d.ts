@@ -58,6 +58,13 @@ export {
   customMatcher
 } from "effeck-runtime"
 
+/** D5/D54: shipped built-in failures use the same value boundary as trusted implementations. */
+export { $trusted } from "effeck-runtime"
+/** Preserve a built-in's optional parameters before entering its failure boundary. */
+export type $BuiltinArgs<F extends (...args: any[]) => any> = Parameters<F>
+/** Keep the shipped failure class in E rather than widening its constructor to Error. */
+export type $BuiltinResult<F extends (...args: any[]) => any> = ReturnType<F>
+
 // ---------------------------------------------------------------- helpers
 
 // The runtime's region helpers (D13, D15, D132, D173): regions, handle

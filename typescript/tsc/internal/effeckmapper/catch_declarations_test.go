@@ -17,9 +17,9 @@ func TestCatchDeclarationGoldens(t *testing.T) {
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
 	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
-	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261017.1/node_modules/.bin/tsc")
+	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
 	if _, err := os.Stat(stock); err != nil {
-		t.Skip("stock TypeScript is installed by e2e.sh")
+		t.Fatal("stock TypeScript is installed by e2e.sh")
 	}
 	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
 		t.Skip("runtime is built by parity")

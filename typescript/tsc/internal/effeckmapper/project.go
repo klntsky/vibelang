@@ -488,6 +488,9 @@ func (p *projector) functionLike(fn *ast.Node, body *ast.Node) {
 	}
 	returnType := fn.Type()
 	kind := contractOf(returnType)
+	if kind != contractPlain {
+		p.callbackParameters(fn)
+	}
 	fn.ForEachChild(func(child *ast.Node) bool {
 		if child != body && child != returnType {
 			p.visit(child, env{})
@@ -724,7 +727,7 @@ func (p *projector) isPreludeFork() bool {
 // callees use the same adapter; member calls retain their receiver.
 func (p *projector) callee(call *ast.Node, e env) {
 	callee := call.Expression()
-	if p.memberValueCall(call, e) {
+	if p.builtinCallee(call) || p.memberValueCall(call, e) {
 		return
 	}
 	switch {

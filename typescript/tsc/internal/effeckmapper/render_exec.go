@@ -128,6 +128,8 @@ func renderExec(e edit) (text string, keep bool) {
 	case editServiceCall:
 		// D41: a Context key's member call reads the service first.
 		return pick(e.part, "(("+s+" = ", "", "), "+helperRef("$isKey")+"("+s+") ? (yield* "+s+") : "+s+")"), true
+	case editBuiltinCall:
+		return builtinCallText(e, false), true
 	case editValueCall:
 		// D90: a function is called; an Effect value, such as a key or a
 		// Config, becomes a function whose result runs it.
@@ -243,6 +245,7 @@ type execSource struct {
 // or from the runtime. Every other helper that starts with $ is an export of
 // effeck-runtime under its own name.
 var execHelpers = map[string]execSource{
+
 	"$gen":          {"effect/Effect", "gen"},
 	"$failValue":    {"effect/Effect", "fail"},
 	"$failCause":    {"effect/Effect", "failCause"},
@@ -909,7 +912,7 @@ func (l *execLowering) lowerCalls() {
 		if call == nil {
 			continue
 		}
-		if l.p.isPureGlobal(call) {
+		if l.p.isPureGlobal(call) && l.p.caughtBuiltinFailure(call) == "" {
 			l.set(s.open, "")
 			l.set(s.close, "")
 			continue

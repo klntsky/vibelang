@@ -72,3 +72,55 @@ export function main() { return read("x", "y") }
 		t.Errorf("caller:\n%s\nwant:\n%s", got, wantCaller)
 	}
 }
+
+// TestTrustedValueNames keeps migration names stable for already trusted
+// implementations, and reuses an exact exported wrapper when available.
+func TestTrustedValueNames(t *testing.T) {
+	for _, tc := range []struct {
+		name, export, want string
+		reuse              bool
+	}{
+		{"parseTrusted", "", "parseTrusted2", false},
+		{"parse", `import { trusted } from "effeck-runtime"; export const parseTrusted = trusted(parse, [Bad]);`, "parseTrusted", true},
+		{"parseTrusted", `import { trusted } from "effeck-runtime"; export const parseTrusted2 = trusted(parseTrusted, [Bad]);`, "parseTrusted2", true},
+	} {
+		t.Run(tc.want+tc.name, func(t *testing.T) {
+			helper := "export class Bad extends Error {}\n/** @effeck trusted\n * @throws {Bad}\n */\nexport function " + tc.name + "(x: string): number { return x.length }\n" + tc.export
+			caller := "import { " + tc.name + " as read } from \"./helpers\"; export function main() { return read(\"x\") }"
+			fs := bundled.WrapFS(vfstest.FromMap(map[string]string{
+				"/helpers.ts":    helper,
+				"/main.effeck":   caller,
+				"/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["helpers.ts","main.effeck"]}`,
+			}, tspath.CaseInsensitive))
+			parsed, errors := tsoptions.GetParsedCommandLineOfConfigFile("/tsconfig.json", &core.CompilerOptions{}, nil, fs, nil)
+			if len(errors) != 0 {
+				t.Fatalf("config: %v", errors)
+			}
+			p := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: compiler.NewCompilerHost(fs, bundled.LibPath(), nil, nil, nil)})
+			p.BindSourceFiles()
+			file := p.GetSourceFile("/main.effeck")
+			var call *ast.Node
+			var visit func(*ast.Node) bool
+			visit = func(n *ast.Node) bool {
+				if ast.IsCallExpression(n) && ast.IsIdentifier(n.Expression()) && n.Expression().Text() == "read" {
+					call = n
+					return true
+				}
+				return n.ForEachChild(visit)
+			}
+			file.AsNode().ForEachChild(visit)
+			c, done := p.GetTypeChecker(t.Context())
+			defer done()
+			plan := trustedValueEdits(c, file, call)
+			if plan == nil {
+				t.Fatal("no migration for imported tagged function")
+			}
+			if plan.name != tc.want {
+				t.Fatalf("name = %s, want %s", plan.name, tc.want)
+			}
+			if tc.reuse && len(plan.declaration) != 0 {
+				t.Fatalf("existing wrapper not reused: %v", plan.declaration)
+			}
+		})
+	}
+}

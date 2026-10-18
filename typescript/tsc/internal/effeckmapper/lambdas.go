@@ -46,8 +46,14 @@ func isLambda(node *ast.Node) bool {
 // lambda lowers fn, a lambda, to the form the resolver decides for it.
 func (p *projector) lambda(fn *ast.Node, e env) {
 	d := p.forms.Lambda(fn)
-	p.choice(d, fn)
 	form := d.Form
+	if p.providedMember(fn) && contractOf(fn.Type()) != contractPlain {
+		// D173 gives the implementation the service member form, including pure methods.
+		form = FormEffectFn
+	} else {
+		p.choice(d, fn)
+	}
+
 	if form == FormPlain && d.Call == nil && d.Provenance == FromFallback && fn.Type() == nil && p.keyLookupLambda(fn) {
 		form = FormEffectFn
 	}
@@ -72,6 +78,17 @@ func (p *projector) lambda(fn *ast.Node, e env) {
 	default:
 		p.visitChildren(fn, env{})
 	}
+}
+
+// providedMember recognizes direct methods and function-valued properties of
+// a D173 provider, without treating nested objects as service implementations.
+func (p *projector) providedMember(fn *ast.Node) bool {
+	member := fn
+	if fn.Parent != nil && fn.Parent.Kind == ast.KindPropertyAssignment && fn.Parent.Initializer() == fn {
+		member = fn.Parent
+	}
+	object := member.Parent
+	return object != nil && object.Kind == ast.KindObjectLiteralExpression && object.Parent != nil && isProvideService(object.Parent) && object.Parent.Arguments()[2] == object
 }
 
 // choice reports EK9100 at d's node when the rules leave the form to the
@@ -101,6 +118,7 @@ func (p *projector) effectLambda(fn *ast.Node) {
 		p.functionLike(fn, body)
 		return
 	}
+	p.callbackParameters(fn)
 	// (x) => expr   (x) => $gen(function* () { return expr })
 	fn.ForEachChild(func(child *ast.Node) bool {
 		if child != body {

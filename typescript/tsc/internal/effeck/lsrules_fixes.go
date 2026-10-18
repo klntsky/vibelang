@@ -355,7 +355,10 @@ func trustedValueEdits(c *checker.Checker, file *ast.SourceFile, call *ast.Node)
 		return name
 	}
 	plan := &trustedValuePlan{file: source}
-	stem := decl.Name().Text() + "Trusted"
+	stem := decl.Name().Text()
+	if !strings.HasSuffix(stem, "Trusted") {
+		stem += "Trusted"
+	}
 	// Reuse only a wrapper with this implementation and these exact classes;
 	// a similarly named user value must not silently change the contract.
 	for _, stmt := range source.Statements.Nodes {

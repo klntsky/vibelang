@@ -52,6 +52,8 @@ const (
 	editServiceCall
 	// editValueCall calls a value with no arguments, which runs an Effect value (D90).
 	editValueCall
+	// editBuiltinCall supplies the shipped failure contract of a caught built-in.
+	editBuiltinCall
 	// editRegion runs a block of an Effect function as an Effect of its own:
 	// arg names the region's helper chain and completion variable.
 	editRegion
@@ -334,6 +336,8 @@ func (r checking) text(e edit) (string, bool) {
 		}
 	case editServiceCall:
 		text = pick(e.part, helperRef("$use")+"(", "", ")")
+	case editBuiltinCall:
+		text = renderBuiltinCall(e)
 	case editValueCall:
 		text = renderValueCall(e)
 	case editUsing:
