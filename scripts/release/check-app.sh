@@ -18,6 +18,11 @@ export HOME="$scratch/home"
 mkdir -p "$HOME"
 export npm_config_registry="$registry" NPM_CONFIG_REGISTRY="$registry" BUN_CONFIG_REGISTRY="$registry"
 export npm_config_cache="$scratch/npm-cache" BUN_INSTALL_CACHE_DIR="$scratch/bun-cache"
+# bun create runs bunx, which keeps create-effeck@latest under $TMPDIR across
+# runs and reuses it even when the registry has a newer tarball, so an earlier
+# rehearsal's template would be scaffolded. A scratch TMPDIR starts it clean.
+export TMPDIR="$scratch/tmp"
+mkdir -p "$TMPDIR"
 export npm_config_yes=true npm_config_fund=false npm_config_audit=false npm_config_update_notifier=false
 
 case "$(uname -s)-$(uname -m)" in
