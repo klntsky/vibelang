@@ -1,0 +1,24 @@
+{
+  "name": "effeck-ts-mapper",
+  "version": "0.0.1",
+  "description": "Effeck's TypeScript 7 content mapper: stock tsc and the TypeScript 7 language server check .effeck files.",
+  "keywords": ["effeck", "effect", "typescript", "content-mapper"],
+  "homepage": "https://effeck.dev",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    "./prelude": { "types": "./prelude.d.ts" },
+    "./package.json": "./package.json"
+  },
+  "files": ["bin", "prelude.d.ts"],
+  "typescript": {
+    "contentMapper": {
+      "exec": ["./bin/effeck-mapper"],
+      "compilerOptions": [],
+      "dynamicConfig": false
+    }
+  },
+  "peerDependencies": {
+    "effect": "4.0.5"
+  }
+}
