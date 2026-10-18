@@ -10,6 +10,8 @@ Schema constructors work in VibeLang as they do in Effect. Combine small descrip
 ## Modeling primitives, symbols, literals, enums, and template strings
 
 ```vibe
+// run: Console.log(Schema.is(Measurement)(Infinity), Schema.is(UnrestrictedNumber)(Infinity)); Console.log(Schema.is(MarkerSchema)(Marker), Schema.is(MarkerSchema)(Symbol("shipping/marker"))); Console.log(Schema.is(PendingState)("sent"), Schema.is(TrackingCode)("pkg_76"), Schema.is(PrioritySchema)("urgent"))
+import { Console } from "effect"
 const Measurement = Schema.Finite
 const UnrestrictedNumber = Schema.Number
 const Enabled = Schema.Boolean
@@ -25,11 +27,18 @@ enum Priority { Normal = "normal", Urgent = "urgent" }
 const PrioritySchema = Schema.Enum(Priority)
 ```
 
+```text
+false true
+true false
+false true true
+```
+
 `Schema.String`, `Boolean`, `BigInt`, and `Symbol` describe their JavaScript primitives. `Finite` rejects `NaN` and infinities; `Number` permits them. `ObjectKeyword` describes objects, `Undefined` and `Void` describe undefined values, `Null` describes null, `Unknown` accepts anything safely, `Any` opts out of type safety, and `Never` accepts nothing.
 
 `Literal(value)` accepts one string, number, boolean, or bigint; `Literals([...])` combines exact values. Use `Schema.Null` for null. Literal collections expose `.literals`, enum schemas expose `.enums`, and `revealCodec(schema)` reveals the full codec type without changing the value. `UniqueSymbol` checks the particular symbol, rather than any symbol.
 
 ```vibe
+// run: Console.log(JSON.stringify(locateBin("bin:12/upper")))
 const BinPosition = Schema.TemplateLiteralParser([
   "bin:", Schema.FiniteFromString, "/", Schema.NonEmptyString
 ])
@@ -40,11 +49,16 @@ function locateBin(input: unknown) {
 // "bin:12/upper" becomes ["bin:", 12, "/", "upper"]
 ```
 
+```text
+["bin:",12,"/","upper"]
+```
+
 `TemplateLiteral` validates a string pattern using literal, string, finite-number, union, or branded spans. `TemplateLiteralParser` also splits it into a tuple and applies the spans' conversions. Encoding that tuple reconstructs the string.
 
 ## Building unions and tagged alternatives
 
 ```vibe
+// run: Console.log(describeLocation({ _tag: "Warehouse", aisle: "A3" })); Console.log(describeLocation({ _tag: "Courier", route: 7 }))
 const Warehouse = Schema.TaggedStruct("Warehouse", { aisle: Schema.String })
 const Courier = Schema.TaggedStruct("Courier", { route: Schema.Int })
 const Location = Schema.Union([Warehouse, Courier])
@@ -59,6 +73,11 @@ function describeLocation(input: unknown) {
 }
 ```
 
+```text
+A3
+7
+```
+
 A union accepts one of its members and exposes them through `.members`. With overlapping alternatives, the first successful member wins; put the more specific object first to avoid stripping fields through a broader match. Literal discriminator fields make alternatives unambiguous and enable ordinary TypeScript narrowing.
 
 To attach a tag that is absent from the wire representation, add a field with `Schema.tagDefaultOmit("Warehouse")`. It supplies the tag during decoding and omits it during encoding. `NullOr`, `UndefinedOr`, and `NullishOr` accept values in addition to the wrapped schema; they do not make an object key optional.
@@ -66,6 +85,7 @@ To attach a tag that is absent from the wire representation, add a field with `S
 ## Defining tuples with optional and rest elements
 
 ```vibe
+// run: Console.log(Schema.is(Coordinate)([1, 2]), Schema.is(Extended)([1, 2, "dock", true])); Console.log(Schema.is(Readings)(["sensor"]), Schema.is(Readings)(["sensor", 2, true]), Schema.is(Readings)(["sensor", true])); Console.log(Schema.is(BoundedReadings)(["sensor", 1, 2, false]))
 const Coordinate = Schema.Tuple([
   Schema.Finite.annotateKey({ title: "Longitude" }),
   Schema.Finite,
@@ -82,6 +102,12 @@ const BoundedReadings = Schema.TupleWithRest(
 )
 ```
 
+```text
+true true
+true true false
+true
+```
+
 Tuples are readonly and position-sensitive. Optional elements use `optionalKey`; a present element must still match its schema. `TupleWithRest` takes a fixed tuple and a rest list whose first schema repeats; later schemas are required trailing elements. `Readings` accepts a label, an optional finite reading, then booleans. It can end after the label, but adding booleans requires the reading in its fixed position: `["sensor", 2, true]` is valid and `["sensor", true]` is not. `BoundedReadings` ends with a boolean after any repeated numbers.
 
 Access fixed elements with `.elements`, or with `.schema.elements` on a tuple with rest. Its `.rest` describes the repeating and trailing schemas. Element annotations describe individual positions.
@@ -89,6 +115,7 @@ Access fixed elements with `.elements`, or with `.schema.elements` on a tuple wi
 ## Modeling mutable and nonempty arrays
 
 ```vibe
+// run: Console.log(JSON.stringify(addLabel(["fragile"]))); Console.log(Schema.is(RequiredLabels)([]))
 const Labels = Schema.Array(Schema.String)
 const EditableLabels = Schema.mutable(Labels)
 const RequiredLabels = Schema.NonEmptyArray(Schema.NonEmptyString)
@@ -100,11 +127,17 @@ function addLabel(input: unknown) {
 }
 ```
 
+```text
+["fragile","inspected"]
+false
+```
+
 `Array` accepts zero or more elements; `NonEmptyArray` requires at least one. Both expose the element schema as `.value`. `mutable` changes the array's mutability at the outer level and does not make nested structs mutable.
 
 ## Declaring records and index signatures
 
 ```vibe
+// run: Console.log(JSON.stringify(Schema.decodeUnknownEffect(NormalizedStock)({ NORTH: 2, north: 3 }))); Console.log(Schema.is(RegionalStock)({ east: 1 }), Schema.is(LabeledCounters)({ total: 3, east: 3 }))
 const Stock = Schema.Record(Schema.String, Schema.Int)
 const SymbolStock = Schema.Record(Schema.Symbol, Schema.Int)
 const RegionalStock = Schema.Record(Schema.Literals(["east", "west"]), Schema.Int)
@@ -121,6 +154,11 @@ const LabeledCounters = Schema.StructWithRest(
 )
 ```
 
+```text
+{"north":3}
+false true
+```
+
 Records describe string or symbol keys and a value schema. A finite literal key set describes required properties; template literals and string checks restrict an open key space. A key that fails a record's key check is normally discarded as excess; pass `onExcessProperty: "error"` to reject it.
 
 Record key codecs can transform selected keys. `NormalizedStock` decodes `{ NORTH: 2 }` to `{ north: 2 }`. Selection uses encoded property names before transforming them. With sequential parsing, when transformed keys collide, the later selected property overwrites the earlier value. Use a whole-object transformation when you need a different collision policy.
@@ -132,6 +170,7 @@ Use `.key` and `.value` to inspect a record; a struct with rest exposes `.schema
 ## Creating structs and tagged structs
 
 ```vibe
+// run: Console.log(JSON.stringify(createPacked())); Console.log(Schema.is(Packed)({ reference: "box-76", weight: 2 }))
 const Package = Schema.Struct({
   reference: Schema.String,
   weight: Schema.Finite,
@@ -149,6 +188,11 @@ function createPacked() {
 }
 ```
 
+```text
+{"_tag":"Packed","reference":"box-76","weight":2}
+false
+```
+
 Structs describe fixed fields and expose them through `.fields`. `Struct({})` accepts any non-nullish value, so use a more specific description when an actual object shape matters. Change a field's mutability with `mutableKey`.
 
 `tag` supplies a constructor default, while `TaggedStruct` adds a `_tag` field for you. Construction can omit the tag, but ordinary decoding requires it in the input. Use `tagDefaultOmit` when decoding should supply it too.
@@ -156,6 +200,7 @@ Structs describe fixed fields and expose them through `.fields`. `Struct({})` ac
 ## Validating class instances
 
 ```vibe
+// run: Console.log(readPallet(new Pallet("P-1")).code); try { readPallet({ code: "P-1" }) } catch (error) { Console.log(error._tag) }
 class Pallet {
   constructor(readonly code: string) {}
 }
@@ -169,17 +214,28 @@ function readPallet(input: unknown) {
 }
 ```
 
+```text
+P-1
+SchemaError
+```
+
 `instanceOf` checks class identity; an object with a matching `code` field is not an instance. Add checks to validate fields after identity succeeds. Classes with private constructors need `Schema.declare` with a type guard instead of `instanceOf`.
 
 ## Selecting, removing, and changing optional fields
 
 ```vibe
+// run: Console.log(JSON.stringify(Schema.decodeUnknownEffect(PackageSummary)({ reference: "box-76", weight: 2, comment: "ok" }))); Console.log(Schema.is(Patch)({ comment: undefined }), Schema.is(LoosePatch)({ comment: undefined }), Schema.is(RequiredPatch)({}))
 const PackageSummary = Package.mapFields(Struct.pick(["reference", "weight"]))
 const WithoutComment = Package.mapFields(Struct.omit(["comment"]))
 const Patch = Package.mapFields(Struct.map(Schema.optionalKey))
 const LoosePatch = Package.mapFields(Struct.map(Schema.optional))
 const RequiredPatch = Patch.mapFields(Struct.map(Schema.requiredKey))
 const Editable = Package.mapFields(Struct.map(Schema.mutableKey))
+```
+
+```text
+{"reference":"box-76","weight":2}
+false true false
 ```
 
 `mapFields` builds a new struct from transformed field descriptions. `optionalKey` permits omission while `optional` also accepts explicit `undefined`. `requiredKey` removes key optionality but does not remove an existing `undefined` union. Field transformations do not automatically preserve whole-struct checks, so reapply checks that still describe the new shape.

@@ -10,6 +10,8 @@ Value formatters work in VibeLang exactly as in Effect. A schema-derived formatt
 ## Deriving value formatters from schemas
 
 ```vibe
+// run: Console.log(displayDispatch({ depot: "east", counts: [2, 4] }))
+import { Console } from "effect"
 const Dispatch = Schema.Struct({
   depot: Schema.String,
   counts: Schema.Array(Schema.Int)
@@ -22,11 +24,16 @@ function displayDispatch(input: unknown) {
 // For { depot: "east", counts: [2, 4] }, produces a readable object representation.
 ```
 
+```text
+{ "depot": "east", "counts": [2, 4] }
+```
+
 `toFormatter` walks structs, arrays, unions, and supported declarations. Its argument type is the schema's decoded type, even when the codec accepts a different wire representation. The example decodes first so the formatter receives valid data. The explicit boundary accounts for exceptions from generated or custom formatting callbacks.
 
 ## Customizing formatting at selected syntax-tree nodes
 
 ```vibe
+// run: Console.log(displayManifest({ label: "crate", weight: 2 }))
 const Weight = Schema.Finite.pipe(Schema.overrideToFormatter(
   () => (value) => `${value} kg`
 ))
@@ -40,6 +47,10 @@ function displayManifest(input: unknown) {
       : undefined
   })(manifest), Manifest, manifest)
 }
+```
+
+```text
+{ "label": [crate], "weight": 2 kg }
 ```
 
 `overrideToFormatter` replaces formatting at one schema node, such as the weight above. `onBefore` intercepts selected AST nodes after any `toFormatter` annotation has taken priority and before built-in derivation; returning undefined keeps the default behavior. The example changes string rendering while retaining the weight formatter.

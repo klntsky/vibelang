@@ -10,6 +10,7 @@ Use `Config` to load typed settings and `ConfigProvider` to choose their source.
 ## Declare typed configuration
 
 ```vibe
+// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ HOST: "localhost", PORT: 9091 })) { Console.log(JSON.stringify(serverSettings())) }
 const Host = Config.NonEmptyString("HOST")
 const Port = Config.Port("PORT")
 
@@ -19,6 +20,7 @@ function serverSettings() {
   return { host, port }
 }
 // { host: string; port: number }!ConfigError!
+// Output: {"host":"localhost","port":9091}
 ```
 
 `Host()` and `Port()` load values from the active provider, which defaults to the environment. Constructing the descriptors reads nothing. Missing or invalid input fails with `ConfigError`. No direct environment access is needed in `.vibe` files.
@@ -40,6 +42,7 @@ Prefer `Finite` to `Number` for ordinary numeric settings: `Number` also accepts
 ## Parse with schemas
 
 ```vibe
+// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ TEAM_NAME: "search" })) { Console.log(teamName()) }; provide ConfigProvider.layer(ConfigProvider.fromUnknown({ TEAM_NAME: "ab" })) { try { teamName() } catch (error) { Console.log(error._tag) } }
 function teamName() {
   return Config.schema(
     Schema.String.check(Schema.isMinLength(3)),
@@ -47,19 +50,24 @@ function teamName() {
   )()
 }
 // string!ConfigError!
+// Output: search
+// Output: ConfigError
 ```
 
 `Config.schema` builds a descriptor that decodes the provider's representation using the schema. Calling it returns the decoded value. Put constraints in the schema so invalid input reports a configuration failure. A structured schema can describe an entire object, with field paths mapping to environment keys or object properties.
 
 ```vibe
+// run: Console.log(JSON.stringify(server.parse(ConfigProvider.fromUnknown({ server: { host: "localhost", port: 9091 } }))))
 // descriptors.vibe
 export const server = Config.schema(Schema.Struct({
   host: Schema.String,
   port: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))
 }), "server")
+// Output: {"host":"localhost","port":9091}
 ```
 
 ```vibe
+// run: Console.log(JSON.stringify(localServer()))
 import { server } from "./descriptors.vibe"
 
 function localServer() {
@@ -67,6 +75,7 @@ function localServer() {
     server: { host: "127.0.0.1", port: 9091 }
   }))
 }
+// Output: {"host":"127.0.0.1","port":9091}
 ```
 
 Use `descriptor.parse(provider)` when the source is explicit, especially in tests. Its result is an `Effect`, so the call runs it. Calling the descriptor as `server()` instead uses the active provider.
@@ -74,11 +83,13 @@ Use `descriptor.parse(provider)` when the source is explicit, especially in test
 ## Read arrays and records
 
 ```vibe
+// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ REGIONS: "north,south", LABELS: "team=search,tier=internal" })) { Console.log(JSON.stringify(routingSettings())) }
 function routingSettings() {
   const regions = Config.Array(Schema.String, "REGIONS")()
   const labels = Config.Record(Schema.String, Schema.String, "LABELS")()
   return { regions, labels }
 }
+// Output: {"regions":["north","south"],"labels":{"team":"search","tier":"internal"}}
 ```
 
 Arrays accept structural values or a separated string such as `north,south`. Records accept objects or text such as `team=search,tier=internal`. Both constructors take separator options; use plain schema arrays or records through `Config.schema` when only structural input should be accepted.
@@ -86,14 +97,17 @@ Arrays accept structural values or a separated string such as `north,south`. Rec
 ## Nest and combine configuration
 
 ```vibe
+// run: Console.log(JSON.stringify(database.parse(ConfigProvider.fromEnv({ env: { DATABASE_HOST: "db.internal", DATABASE_PORT: "5433" } }))))
 // database-config.vibe
 export const database = Config.nested(Config.all({
   host: Config.NonEmptyString("HOST"),
   port: Config.Port("PORT")
 }), "DATABASE")
+// Output: {"host":"db.internal","port":5433}
 ```
 
 ```vibe
+// run: Console.log(JSON.stringify(testDatabaseSettings()))
 import { database } from "./database-config.vibe"
 
 function testDatabaseSettings() {
@@ -101,6 +115,7 @@ function testDatabaseSettings() {
     env: { DATABASE_HOST: "db.internal", DATABASE_PORT: "5433" }
   }))
 }
+// Output: {"host":"db.internal","port":5433}
 ```
 
 `Config.all` preserves the input's tuple or named-object shape. `Config.nested` prepends a path to every lookup; the environment provider joins segments with `_`. Libraries accepting nested records of descriptors can use `Config.Wrap<T>` for the input type and `Config.unwrap` to build the combined descriptor.
@@ -108,6 +123,7 @@ function testDatabaseSettings() {
 ## Defaults and fallbacks
 
 ```vibe
+// run: const provider = ConfigProvider.fromUnknown({ BACKUP_HOST: "standby.internal" }); Console.log(port.parse(provider), Option.isNone(apiKey.parse(provider)), host.parse(provider)); try { port.parse(ConfigProvider.fromUnknown({ PORT: "invalid" })) } catch (error) { Console.log(error._tag) }
 // optional-config.vibe
 export const port = Config.withDefault(Config.Port("PORT"), 9091)
 export const apiKey = Config.option(Config.String("API_KEY"))
@@ -115,9 +131,12 @@ export const host = Config.orElse(
   Config.NonEmptyString("HOST"),
   () => Config.NonEmptyString("BACKUP_HOST")
 )
+// Output: 9091 true standby.internal
+// Output: ConfigError
 ```
 
 ```vibe
+// run: const result = defaultsExample(); Console.log(result.port, Option.isNone(result.apiKey), result.host)
 import { port, apiKey, host } from "./optional-config.vibe"
 
 function defaultsExample() {
@@ -128,6 +147,7 @@ function defaultsExample() {
     host: host.parse(provider)
   }
 }
+// Output: 9091 true standby.internal
 ```
 
 `withDefault` replaces missing input and preserves validation failures. `option` returns `Option.none()` for absence. `orElse` tries another descriptor after any `ConfigError`, including invalid input, so use that broader recovery deliberately.
@@ -137,21 +157,25 @@ A default on a `Config.all` group replaces the whole group when any child is abs
 ## Transform parsed values
 
 ```vibe
+// run: Console.log(origin.parse(ConfigProvider.fromUnknown({ HOST: "example.test", PORT: 9091 })))
 // origin-config.vibe
 export const origin = Config.map(Config.all({
   host: Config.NonEmptyString("HOST"),
   port: Config.Port("PORT")
 }), ({ host, port }) => `https://${host}:${port}`)
+// Output: https://example.test:9091
 ```
 
 ```vibe
+// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ HOST: "example.test", PORT: 9091 })) { reportOrigin() }
 import { origin } from "./origin-config.vibe"
 
 function reportOrigin() {
   const value = origin()
-  log(value)
+  Console.log(value)
   return value
 }
+// Output: https://example.test:9091
 ```
 
 Use `Config.map` for a transformation that cannot fail. Express validation in a schema; use `Config.mapEffect` when transformation needs an Effect with `ConfigError`. Loading first and transforming with ordinary VibeLang statements also works when you do not need a reusable descriptor.
@@ -159,11 +183,14 @@ Use `Config.map` for a transformation that cannot fail. Express validation in a 
 ## Protect secrets
 
 ```vibe
+// run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({ ACCESS_TOKEN: "documentation-placeholder" })) { Console.log(String(secretSetting())) }
 function secretSetting() {
   const token = Config.Redacted("ACCESS_TOKEN")()
-  log(token)
+  Console.log(String(token))
   return token
 }
+// Output: <redacted>
+// Output: <redacted>
 ```
 
 `Redacted` hides its contents in ordinary string representations. Import `Redacted` from `effect` and use `Redacted.value(token)` only at the point that needs the raw secret. For a decoded secret, combine `Config.schema` with `Schema.RedactedFromValue`, such as a protected number decoded with `Schema.FiniteFromString`.
@@ -171,6 +198,7 @@ function secretSetting() {
 ## Load providers
 
 ```vibe
+// run: Console.log(testPort(), Config.Port("PORT").parse(EnvProvider), Config.Port("PORT").parse(DotEnvProvider))
 const TestProvider = ConfigProvider.fromUnknown({ PORT: 9091 })
 const EnvProvider = ConfigProvider.fromEnv({ env: { PORT: "9092" } })
 const DotEnvProvider = ConfigProvider.fromDotEnvContents("PORT=9093")
@@ -182,6 +210,7 @@ function testPort() {
 function fileProvider() {
   return ConfigProvider.fromDotEnv({ path: ".env.local" })
 }
+// Output: 9091 9092 9093
 ```
 
 `fromUnknown` reads object properties and array indexes as path segments. `fromEnv()` reads the host environment; an explicit `{ env }` replaces that source for tests. Both normally treat empty strings as missing; use `preserveEmptyStrings: true` when empty text has meaning.
@@ -191,6 +220,7 @@ function fileProvider() {
 ## Remap provider paths
 
 ```vibe
+// run: Console.log(deploymentPort())
 const DeploymentProvider = ConfigProvider.constantCase(
   ConfigProvider.fromEnv({ env: { SERVICE_PORT: "9094" } })
 )
@@ -198,6 +228,7 @@ const DeploymentProvider = ConfigProvider.constantCase(
 function deploymentPort() {
   provide ConfigProvider.layer(DeploymentProvider) { return Config.Port("servicePort")() }
 }
+// Output: 9094
 ```
 
 `constantCase` converts requested string segments to environment-style names. `ConfigProvider.nested` adds a fixed prefix, and `ConfigProvider.mapInput` transforms a requested path. Adapt the provider when an entire source uses a naming convention; nest a descriptor when just one settings group has a prefix.
@@ -205,6 +236,7 @@ function deploymentPort() {
 ## Compose and install providers
 
 ```vibe
+// run: Console.log(JSON.stringify(configuredServer()))
 const Combined = ConfigProvider.orElse(
   ConfigProvider.fromEnv({ env: { HOST: "edge.internal" } }),
   ConfigProvider.fromUnknown({ HOST: "localhost", PORT: 9091 })
@@ -215,6 +247,7 @@ function configuredServer() {
     return { host: Config.String("HOST")(), port: Config.Port("PORT")() }
   }
 }
+// Output: {"host":"edge.internal","port":9091}
 ```
 
 Provider fallback fills absent paths; it does not recover from source or validation errors. `ConfigProvider.layer` replaces the active provider for the supplied region. `layerAdd` adds a fallback to the current provider, or takes `{ asPrimary: true }` to give the added source precedence.

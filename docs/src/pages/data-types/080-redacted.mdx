@@ -10,12 +10,19 @@ description: "Redacted works in VibeLang exactly as in Effect. It hides a sensit
 ## Wrapping sensitive values
 
 ```vibe
+// run: Console.log(String(exampleKey)); reportConfiguration(); Console.log(JSON.stringify(exampleKey))
 const exampleKey = Redacted.make("example-key-not-a-real-secret")
 String(exampleKey) // "<redacted>"
 
 function reportConfiguration() {
-  log({ apiKey: exampleKey })
+  Console.log(JSON.stringify({ apiKey: exampleKey }))
 }
+```
+
+```text
+<redacted>
+{"apiKey":"<redacted>"}
+"<redacted>"
 ```
 
 `make` retains the original value behind a wrapper whose display is redacted. The wrapper is not encryption and does not prevent code from retrieving the secret. Wrap a value as soon as it enters the application, before diagnostic code sees it.
@@ -23,6 +30,7 @@ function reportConfiguration() {
 ## Revealing values deliberately
 
 ```vibe
+// run: provide Layer.succeed(CredentialsClient, { authenticate: (token) => token === "example-token" }) { Console.log(authenticate(Redacted.make("example-token")), authenticate(Redacted.make("wrong-token"))) }
 service CredentialsClient {
   authenticate(token: string): boolean!!
 }
@@ -33,11 +41,16 @@ function authenticate(token: Redacted.Redacted<string>) {
 // boolean!!CredentialsClient
 ```
 
+```text
+true false
+```
+
 `value` returns the stored payload. Reveal it only at the operation that requires the raw value and keep it out of messages, error fields, and log annotations. Redaction cannot protect a string that has already been extracted.
 
 ## Wiping stored secrets
 
 ```vibe
+// run: provide Layer.succeed(CredentialsClient, { authenticate: (token) => token === "example-token" }) { Console.log(useOnce("example-token")) }; const wiped = Redacted.make("example-token"); Redacted.wipeUnsafe(wiped); const failed = Effect.exit(() => Redacted.value(wiped)); Console.log(failed.isFailure(), String(wiped))
 function useOnce(raw: string) {
   const token = Redacted.make(raw)
   try {
@@ -48,17 +61,27 @@ function useOnce(raw: string) {
 }
 ```
 
+```text
+true
+true <redacted>
+```
+
 `wipeUnsafe` removes the wrapper's stored value; later `Redacted.value` calls throw. Cleanup runs on success, failure, and interruption, so this releases the wrapper's reference at the operation boundary. It does not erase the original `raw` string, other aliases, or bytes already copied elsewhere in memory.
 
 ## Comparing protected values
 
 ```vibe
+// run: Console.log(same(first, second), same(first, third))
 const same = Redacted.makeEquivalence(Equivalence.String)
 const first = Redacted.make("example-a")
 const second = Redacted.make("example-a")
 const third = Redacted.make("example-b")
 same(first, second) // true
 same(first, third) // false
+```
+
+```text
+true false
 ```
 
 `makeEquivalence` lifts a relation for payloads to a relation for wrappers. The comparison does not print the secret, but its boolean result still reveals whether they match. This helper provides no constant-time cryptographic comparison guarantee; compare before wiping, while both payloads remain available.

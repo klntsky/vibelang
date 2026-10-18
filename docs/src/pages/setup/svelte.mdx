@@ -60,6 +60,7 @@ Create `src/cart.vibe`. `quote` reserves a product and recovers from `OutOfStock
 
 ```vibe
 // src/cart.vibe
+// run: provide InventoryLive { Console.log(quoteCart().join("\n")); Console.log(quote("missing", 1)); try { Inventory.reserve("coffee", 3) } catch (error) { Console.log(error._tag, error.sku, error.available) } }
 export schema Product { sku: string; name: string; cents: number; stock: number }
 
 export error OutOfStock { sku: string; available: number }
@@ -97,6 +98,13 @@ export function quoteCart() {
 }
 ```
 
+```text
+2 x Green tea: $8.00
+Only 1 coffee left
+Only 0 missing left
+OutOfStock coffee 1
+```
+
 ## 5. Run a program from a component
 
 Create `src/runtime.ts`. One `ManagedRuntime` builds `InventoryLive` once and runs every program in the app:
@@ -104,10 +112,16 @@ Create `src/runtime.ts`. One `ManagedRuntime` builds `InventoryLive` once and ru
 ```ts
 // TypeScript (.ts)
 // src/runtime.ts
+// run: return import("./cart.vibe").then(({ quoteCart }) => runtime.runPromise(quoteCart())).then((lines) => console.log(lines.join("\n"))).finally(() => runtime.dispose())
 import { ManagedRuntime } from "effect"
 import { InventoryLive } from "./cart.vibe"
 
 export const runtime = ManagedRuntime.make(InventoryLive)
+```
+
+```text
+2 x Green tea: $8.00
+Only 1 coffee left
 ```
 
 Create `src/CartQuote.svelte`. Its `<script lang="ts">` block imports `./cart.vibe` by its source name. `runtime.runPromise(quoteCart())` provides `Inventory` and returns a `Promise`, which the `{#await}` block renders:

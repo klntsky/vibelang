@@ -10,6 +10,8 @@ Transformations work in VibeLang as in Effect: a codec validates one representat
 ## Defining reversible infallible conversions
 
 ```vibe
+// run: Console.log(readAvailability("ready"), readAvailability("held")); Console.log(Schema.encodeEffect(Availability)(true))
+import { Console } from "effect"
 const Availability = Schema.Literals(["ready", "held"]).pipe(
   Schema.decodeTo(Schema.Boolean, SchemaTransformation.transform({
     decode: (status) => status === "ready",
@@ -22,11 +24,17 @@ function readAvailability(input: unknown) {
 }
 ```
 
+```text
+true false
+ready
+```
+
 `SchemaTransformation.transform` takes two synchronous, infallible functions. Input validation can still fail before either function runs, and output validation can fail afterward. Pure callbacks cannot call services or throw typed failures; choose effectful getters for those operations.
 
 ## Understanding transformation inputs and outputs
 
 ```vibe
+// run: Console.log(readNumericAvailability()); Console.log(Schema.encodeEffect(NumericAvailability)(true))
 const NumericAvailability = Schema.FiniteFromString.pipe(
   Schema.decodeTo(Availability, SchemaTransformation.transform({
     decode: (quantity) => quantity > 0 ? "ready" : "held",
@@ -39,6 +47,11 @@ function readNumericAvailability() {
 }
 ```
 
+```text
+true
+1
+```
+
 Decoding first runs the source codec, then converts the source's `Type` to the target's `Encoded`, then runs the target codec. Encoding performs the reverse sequence. The complete codec has the source's `Encoded` and the target's `Type`.
 
 The middle functions above handle a number and a status string, even though the complete codec connects strings to booleans. This conversion normalizes quantities: encoding `true` produces `"1"`, so the original `"12"` is not preserved.
@@ -46,6 +59,7 @@ The middle functions above handle a number and a status string, even though the 
 ## Defining fallible conversions
 
 ```vibe
+// run: Console.log(Schema.decodeUnknownEffect(DeliveryMode)(" RAIL ")); try { Schema.decodeUnknownEffect(DeliveryMode)("air") } catch (error) { Console.log(error.message) }
 const DeliveryMode = Schema.String.pipe(
   Schema.decodeTo(Schema.Literals(["road", "rail"]), {
     decode: SchemaGetter.transformEffect<"road" | "rail", string>((text) => {
@@ -58,11 +72,17 @@ const DeliveryMode = Schema.String.pipe(
 )
 ```
 
+```text
+rail
+Choose road or rail
+```
+
 `transformEffect` receives the converted input and active parse options. Its callback returns a value directly in VibeLang and throws a `SchemaIssue.Issue` for an expected conversion failure. The outer Schema parser wraps issues in `SchemaError`. A domain error from a service must be translated to an issue before it escapes the getter.
 
 ## Running asynchronous conversions with dependencies
 
 ```vibe
+// run: Console.log(previewRoute()); provide Routes = { check(code) { throw new UnknownRoute({ code }) } } { try { readRoute("missing") } catch (error) { Console.log(error.message) } }
 error UnknownRoute {
   code: string
 }
@@ -99,11 +119,17 @@ function previewRoute() {
 }
 ```
 
+```text
+coastal
+Route is unavailable
+```
+
 The getter can pause while its service runs. Decoding requires `Routes`; encoding does not, because its getter only passes through the value. Use the Effect interpreter whenever services or asynchronous work are involved. Plain `catch` translates expected service failures and leaves defects and interruption intact.
 
 ## Forbidding an encoding direction
 
 ```vibe
+// run: Console.log(readInitial("Ada")); try { Schema.encodeEffect(Initial)("A") } catch (error) { Console.log(error.message) }
 const Initial = Schema.NonEmptyString.pipe(
   Schema.decodeTo(Schema.String, {
     decode: SchemaGetter.transform((name) => name[0]),
@@ -116,11 +142,17 @@ function readInitial(input: unknown) {
 }
 ```
 
+```text
+A
+An initial cannot recover the full name
+```
+
 A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue when that direction runs, rather than pretending to reconstruct discarded information. The codec still has an encoding API, but using it fails.
 
 ## Composing transformations and effectful checks
 
 ```vibe
+// run: Console.log(JSON.stringify(readNumbers())); Console.log(Schema.decodeEffect(DeferredLabel)("crate")); try { Schema.decodeEffect(DeferredLabel)("x") } catch (error) { Console.log(error.message) }
 const SemicolonNumbers = Schema.String.pipe(
   Schema.decodeTo(Schema.Array(Schema.String), SchemaTransformation.transform({
     decode: (text): ReadonlyArray<string>!! => text.split(";"),
@@ -144,6 +176,12 @@ function readNumbers() {
 }
 ```
 
+```text
+[2,5,8]
+crate
+Label is too short
+```
+
 Omit the custom conversion when the source's decoded type already fits the target's encoded type. `checkEffect` validates without changing the value and returns the same filter outputs as a synchronous predicate. It can pause or require services but cannot leak arbitrary domain errors; convert those into schema issues.
 
 When converting a collection whose elements have already been decoded, use `Schema.toType(elementSchema)` on the target collection. Otherwise the element transformations run twice.
@@ -151,6 +189,7 @@ When converting a collection whose elements have already been decoded, use `Sche
 ## Converting string case, JSON, and binary encodings
 
 ```vibe
+// run: Console.log(JSON.stringify(decodeTextFormats()))
 const LowerLabel = Schema.String.pipe(
   Schema.decodeTo(
     Schema.String.check(Schema.isLowercased()),
@@ -169,6 +208,10 @@ function decodeTextFormats() {
 }
 ```
 
+```text
+{"trimmed":"crate","lower":"crate","data":{"label":"crate"},"base64":"crate","hex":"crate"}
+```
+
 `Schema.Trim` removes surrounding whitespace. `SchemaTransformation.toUpperCase`, `capitalize`, and `uncapitalize` provide the other case conversions; pair each with an appropriate target check. Case conversion and trimming normalize values rather than preserving the original spelling.
 
 `fromJsonString(schema)` parses JSON text and validates its contents; encoding serializes the encoded contents back to text. `StringFromBase64`, `StringFromBase64Url`, `StringFromHex`, and `StringFromUriComponent` decode encoded text to a UTF-8 string and encode it in the reverse direction. Compose the URI codec with a JSON-string codec for structured URL data.
@@ -176,6 +219,7 @@ function decodeTextFormats() {
 ## Parsing numeric, date, and decimal values
 
 ```vibe
+// run: const value = readManifest({ units: "3.5", sequence: "12", departure: "2026-01-02T00:00:00Z", price: "1.25" }); Console.log(value.units, String(value.sequence), value.departure.toISOString(), BigDecimal.format(value.price)); try { readManifest({ units: "Infinity", sequence: "12", departure: "invalid", price: "bad" }) } catch (error) { Console.log(error._tag) }
 const Manifest = Schema.Struct({
   units: Schema.FiniteFromString,
   sequence: Schema.BigIntFromString,
@@ -186,6 +230,11 @@ const Manifest = Schema.Struct({
 function readManifest(input: unknown) {
   return Schema.decodeUnknownEffect(Manifest)(input)
 }
+```
+
+```text
+3.5 12 2026-01-02T00:00:00.000Z 1.25
+SchemaError
 ```
 
 `FiniteFromString` rejects unparseable and nonfinite numbers; it does not require an integer unless you add a check. `BigIntFromString` rejects fractions and invalid bigint text. `DateFromString` produces a valid `Date` and rejects invalid dates; encoding uses its normalized string representation. `BigDecimalFromString` preserves decimal precision without converting through a JavaScript number.

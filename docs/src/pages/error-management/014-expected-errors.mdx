@@ -11,6 +11,7 @@ Expected errors describe situations callers can handle: invalid input, a denied 
 ## Constructing typed failures
 
 ```vibe
+// run: Console.log(normalizeCode(" pen ")); Console.log(Effect.flip(() => normalizeCode(" "))._tag)
 error InvalidCode {
   input: string
 }
@@ -26,6 +27,11 @@ function normalizeCode(input: string) {
 // string!InvalidCode!
 ```
 
+```text
+PEN
+InvalidCode
+```
+
 `error InvalidCode { input: string }` declares an expected failure. The declaration is a class: its constructor takes the fields, every field is readonly, and each instance has a readonly `_tag` equal to the class name. `throw` adds the class to `E`. `error Timeout` declares an error without fields. The declaration is short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
 
 Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a wrapper created with `trusted(implementation, [ErrorClass])` in a `.ts` module. Import `trusted` from `vibelang-runtime`: instances of the listed classes join `E`, and unlisted exceptions are defects. The older `/** @vibelang trusted */` and `@throws` declaration tags still work but produce a migration warning at VibeLang call sites. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
@@ -33,6 +39,7 @@ Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`
 ## Failing in an expression
 
 ```vibe
+// run: Console.log(port(new Map([["PORT", "3000"]]))); Console.log(Effect.flip(() => port(new Map()))._tag)
 error MissingPort
 
 function port(env: Map<string, string>) {
@@ -41,11 +48,17 @@ function port(env: Map<string, string>) {
 // string!MissingPort!
 ```
 
+```text
+3000
+MissingPort
+```
+
 `throw` also works in expression position, as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it, and fails the same way the statement does. The right side of `??`, `||`, `&&`, and `?:` runs only when it is chosen.
 
 ## Tracking several error cases
 
 ```vibe
+// run: Console.log(findItem("pen").label); Console.log(Effect.flip(() => findItem("book"))._tag); Console.log(Effect.flip(() => findItem(""))._tag)
 function findItem(input: string) {
   const code = normalizeCode(input)
   if (code !== "PEN") throw new ItemMissing({ code })
@@ -54,11 +67,18 @@ function findItem(input: string) {
 // { code: string; label: string }!InvalidCode | ItemMissing!
 ```
 
+```text
+Fountain pen
+ItemMissing
+InvalidCode
+```
+
 A function collects the failures it throws and those its calls can produce. Sequential statements stop at the first failure, so no lookup happens after normalization fails. An explicit full contract checks this inferred union rather than replacing it.
 
 ## Turning failures into values
 
 ```vibe
+// run: Console.log(inspectItem("pen")); Console.log(inspectItem("")); Console.log(inspectItem("book")); Console.log(optionalItem("pen")); Console.log(optionalItem("book"))
 function inspectItem(input: string) {
   const result = Effect.result(findItem(input))
   return result.match({
@@ -73,11 +93,20 @@ function optionalItem(input: string) {
 }
 ```
 
+```text
+Fountain pen
+unavailable: InvalidCode
+unavailable: ItemMissing
+Fountain pen
+No item
+```
+
 `Effect.result` returns `Result<A, E>` in the success channel and removes the typed failure channel. `Effect.option` returns `Some` on success and discards a typed error as `None`. Use the latter only when every domain failure means absence. Causes without any expected failure still propagate; these Effect combinators can consume a mixed cause when it also contains an expected failure. Use ordinary catch when defects and interruption must always propagate intact.
 
 ## Recovering all failures
 
 ```vibe
+// run: Console.log(itemLabel("pen")); Console.log(itemLabel("")); Console.log(itemLabel("book"))
 function itemLabel(input: string) {
   try {
     return findItem(input).label
@@ -88,13 +117,26 @@ function itemLabel(input: string) {
 // string!!
 ```
 
+```text
+Fountain pen
+Unavailable (InvalidCode)
+Unavailable (ItemMissing)
+```
+
 The catch receives `InvalidCode | ItemMissing` and handles both here. It handles only causes with no defect and no interruption. If several expected failures occur together, it receives the first and handles their whole cause.
 
 ```vibe
+// run: Console.log(itemLabelInline("pen")); Console.log(itemLabelInline("")); Console.log(itemLabelInline("book"))
 function itemLabelInline(input: string) {
   return findItem(input).label catch (error) => `Unavailable (${error._tag})`
 }
 // string!!
+```
+
+```text
+Fountain pen
+Unavailable (InvalidCode)
+Unavailable (ItemMissing)
 ```
 
 `catch` also works after an expression. `x catch (error) => handler` runs `x` and passes an expected failure to the handler, as `Effect.catch` does, with the same guard as the statement: defects and interruption pass through. `x catch fallback` evaluates the fallback instead, as `Effect.orElseSucceed` does; see [Fallback](/error-management/016-fallback).
@@ -104,6 +146,7 @@ function itemLabelInline(input: string) {
 ## Recovering selected failures
 
 ```vibe
+// run: Console.log(labelOrMissing("book")); Console.log(Effect.flip(() => labelOrMissing(""))._tag); Console.log(labelByTag("book").label); Console.log(Effect.flip(() => labelByTag(""))._tag)
 function labelOrMissing(input: string) {
   try {
     return findItem(input).label
@@ -125,9 +168,17 @@ function labelByTag(input: string) {
 }
 ```
 
+```text
+Out of catalog
+InvalidCode
+Out of catalog
+InvalidCode
+```
+
 Catch the failure, then `match` on it: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types, as `string!InvalidCode!` shows. The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise, or it is a compile error (EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
 
 ```vibe
+// run: Console.log(withTagTable("").label); Console.log(withFilter("book").label); Console.log(withPredicate("book").label); Console.log(Effect.flip(() => withFilter(""))._tag); Console.log(Effect.flip(() => withPredicate(""))._tag)
 function withTagTable(input: string) {
   return Effect.catchTags(findItem(input), {
     InvalidCode: () => ({ code: "", label: "Enter a code" }),
@@ -152,11 +203,20 @@ function withPredicate(input: string) {
 }
 ```
 
+```text
+Enter a code
+Out of catalog
+Out of catalog
+InvalidCode
+InvalidCode
+```
+
 `catchIf` selects errors using a predicate or type guard. `catchFilter` accepts reusable selection logic from `Filter`; a narrowing filter removes the handled subtype. A boolean condition that handles only some values cannot promise that the whole subtype is gone.
 
 ## Filtering nested reasons
 
 ```vibe
+// run: Console.log(explainBusy()); Console.log(explainReasons()); Console.log(Effect.flip(() => exposeReasons())._tag)
 error Busy { seconds: number }
 error Rejected
 error CatalogError {
@@ -185,6 +245,12 @@ function exposeReasons() {
   return Effect.unwrapReason(() => remoteLabel(), "CatalogError")
 }
 // string!Busy | Rejected!
+```
+
+```text
+Try again in 4 seconds
+Wait 4 seconds
+Busy
 ```
 
 These operators inspect the tagged error's readonly `reason` field. `catchReason` keeps the parent wrapper for unhandled reasons, while `catchReasons` selects several reasons at once. `unwrapReason` replaces the wrapper with its nested reason in `E` without recovering.

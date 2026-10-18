@@ -11,6 +11,7 @@ Error-channel operations transform, observe, or expose failures without immediat
 ## Mapping failures or both outcomes
 
 ```vibe
+// run: Console.log(publicQuantity(2)); Console.log(Effect.flip(() => publicQuantity(0))); Console.log(quantityMessage(2)); Console.log(Effect.flip(() => quantityMessage(0)))
 error InvalidQuantity {
   value: number
 }
@@ -37,6 +38,13 @@ function quantityMessage(value: number) {
 // string!string!
 ```
 
+```text
+2
+Quantity must be positive: 0
+2 units
+Rejected quantity 0
+```
+
 `mapError` changes `E` and preserves successes. `mapBoth` maps each outcome channel separately; it does not turn failures into successes. The callbacks must be eligible synchronous functions; use a catch block or an effectful operator when a transformation needs Effect operations.
 
 These combinators keep Effect's own failure-selection policy: when a mixed cause contains an expected failure, mapping it can discard the other reasons. Ordinary catch maps only causes made entirely of expected failures and preserves mixed causes intact.
@@ -46,6 +54,7 @@ These combinators keep Effect's own failure-selection policy: when a mixed cause
 ## Rejecting successes with a predicate
 
 ```vibe
+// run: Console.log(boundedQuantity(20)); Console.log(Effect.flip(() => boundedQuantity(21))); Console.log(cappedQuantity(21)); Console.log(Effect.flip(() => cappedQuantity(0))._tag)
 function boundedQuantity(value: number) {
   return Effect.filterOrFail(
     () => quantity(value),
@@ -63,6 +72,13 @@ function cappedQuantity(value: number) {
 }
 ```
 
+```text
+20
+Maximum is 20; received 21
+20
+InvalidQuantity
+```
+
 `filterOrFail` keeps a success that passes the predicate and otherwise adds the generated error to `E`. A type guard can narrow the success type. `filterOrElse` runs a replacement computation on a rejected success, so that branch can use services or fail.
 
 A normal `if` followed by `throw` is the statement form. Neither form changes existing failures from the source.
@@ -70,21 +86,32 @@ A normal `if` followed by `throw` is the statement form. Neither form changes ex
 ## Observing errors, tags, causes, and defects
 
 ```vibe
+// run: Console.log(observeQuantity(2)); Console.log(Effect.flip(() => observeQuantity(0))._tag); Console.log(Effect.matchCause(() => observeDefect(), { onFailure: (cause) => cause.hasDies(), onSuccess: () => false }))
 function observeQuantity(value: number) {
   return quantity(value)
-    |> Effect.tapError(%, (error) => log(`Rejected quantity ${error.value}`))
-    |> Effect.tapErrorTag(%, "InvalidQuantity", () => log("Quantity validation failed"))
+    |> Effect.tapError(%, (error) => Console.log(`Rejected quantity ${error.value}`))
+    |> Effect.tapErrorTag(%, "InvalidQuantity", () => Console.log("Quantity validation failed"))
     |> Effect.tapCause(%, (cause) => {
-      log("Failure kinds", cause.reasons.map((reason) => reason._tag))
+      Console.log("Failure kinds", JSON.stringify(cause.reasons.map((reason) => reason._tag)))
     })
 }
 
 function observeDefect() {
   return Effect.tapDefect(
     () => die(new Error("inventory invariant")),
-    () => log("Inventory defect recorded")
+    () => Console.log("Inventory defect recorded")
   )
 }
+```
+
+```text
+2
+Rejected quantity 0
+Quantity validation failed
+Failure kinds ["Fail"]
+InvalidQuantity
+Inventory defect recorded
+true
 ```
 
 `tapError` observes typed errors, and `tapErrorTag` selects a tagged member without handling it. `tapCause` sees the full cause, including interruption and combined reasons; `tapDefect` observes defect values. On a successful observation, the original outcome propagates.
@@ -94,6 +121,7 @@ If observation fails, its failure can change the resulting cause, so use observa
 ## Exposing failures as successes
 
 ```vibe
+// run: Console.log(JSON.stringify(inspectQuantity(2))); Console.log(JSON.stringify(inspectQuantity(0))); Console.log(quantityOrErrorValue(2)); const value = quantityOrErrorValue(0); Console.log(typeof value === "number" ? value : value._tag)
 function inspectQuantity(value: number) {
   const result = Effect.result(quantity(value))
   const summary = result.match({
@@ -110,15 +138,27 @@ function quantityOrErrorValue(value: number) {
 // number | InvalidQuantity!!
 ```
 
+```text
+{"summary":"Accepted 2","completed":true}
+{"summary":"Rejected","completed":false}
+2
+InvalidQuantity
+```
+
 `result` exposes typed errors as `Result` data; `exit` captures the complete outcome with its cause. The last example instead puts either the original number or the original error directly into one success union. Removing `E` this way does not mean an error has been resolved at the application level.
 
 ## Swapping channels
 
 ```vibe
+// run: Console.log(rejectedQuantity()._tag)
 function rejectedQuantity() {
   return Effect.flip(() => quantity(0))
 }
 // InvalidQuantity!number!
+```
+
+```text
+InvalidQuantity
 ```
 
 `flip` makes typed errors successful values and successful values typed failures. A cause without an expected failure still propagates; a mixed cause containing one can become a success and lose its other reasons. This is useful for inspecting an error in a focused test, while `mapError` and catch usually express production transformations more clearly.

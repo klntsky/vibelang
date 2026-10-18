@@ -10,6 +10,7 @@ A `SubscriptionRef` combines shared state with a stream of changes. Use it for o
 ## Combining state with subscriptions
 
 ```vibe
+// run: const progress = makeProgress(); advance(progress); Console.log(JSON.stringify(SubscriptionRef.get(progress)))
 function makeProgress() {
   return SubscriptionRef.make({ completed: 0, total: 12 })
 }
@@ -23,6 +24,7 @@ function advance(progress: SubscriptionRef.SubscriptionRef<{
     completed: state.completed + 1
   }))
 }
+// Output: {"completed":1,"total":12}
 ```
 
 Creating the reference establishes its initial state. Updating through `SubscriptionRef` commits the value and publishes the change to subscribers. Keep values immutable so observers receive meaningful snapshots.
@@ -30,6 +32,7 @@ Creating the reference establishes its initial state. Updating through `Subscrip
 ## Reading and updating observable state
 
 ```vibe
+// run: Console.log(JSON.stringify(renameStatus()))
 function renameStatus() {
   const status = SubscriptionRef.make("starting")
   const before = SubscriptionRef.get(status)
@@ -38,6 +41,7 @@ function renameStatus() {
   return { before, after }
 }
 // Returns { before: "starting", after: "RUNNING" }.
+// Output: {"before":"starting","after":"RUNNING"}
 ```
 
 `get` reads without subscribing. `set`, `update`, and `modify` change the value; their effectful variants can compute replacements while holding the update lock. A read outside an update callback is a snapshot, not a reservation of the value for a later write.
@@ -45,11 +49,13 @@ function renameStatus() {
 ## Consuming current and future values
 
 ```vibe
+// run: Console.log(JSON.stringify(currentSnapshot()))
 function currentSnapshot() {
   const count = SubscriptionRef.make(7)
   const changes = SubscriptionRef.changes(count)
   return changes.take(1).runCollect() // [7]
 }
+// Output: [7]
 ```
 
 `changes` builds a Stream; it does not begin listening until that stream runs. Each run first emits the value current at subscription time, then receives future updates. Consume it with Stream operators such as `take` and `runForEach`, or iterate it directly with `for...of`. Leaving the loop closes the stream and its subscription.
@@ -57,6 +63,7 @@ function currentSnapshot() {
 ## Coordinating concurrent subscribers
 
 ```vibe
+// run: observeTwoClients()
 function observeTwoClients() {
   const count = SubscriptionRef.make(0)
   const firstReady = Deferred.make<void>()
@@ -64,7 +71,7 @@ function observeTwoClients() {
 
   function client(ready: Deferred.Deferred<void>) {
     return SubscriptionRef.changes(count).take(2).runForEach((value) => {
-        logInfo("observed", value)
+        Console.log("observed", value)
         ready.succeed(undefined)
       })
   }
@@ -77,6 +84,10 @@ function observeTwoClients() {
   join first
   join second
 }
+// Output: observed 0
+// Output: observed 0
+// Output: observed 1
+// Output: observed 1
 ```
 
 The readiness signals come from each subscriber's first stream element, so both subscriptions exist before the update. Each client observes zero and then one, and its `take(2)` ends its subscription. A sleep or one scheduler yield does not establish that ordering; use explicit readiness when every observer must see a particular change.

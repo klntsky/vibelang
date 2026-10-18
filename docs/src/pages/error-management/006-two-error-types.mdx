@@ -11,6 +11,7 @@ A missing record and a broken invariant need different responses. VibeLang track
 ## Separating failures from defects
 
 ```vibe
+// run: Console.log(displayPrice("notebook")); Console.log(displayPrice("pen"))
 error UnknownProduct {
   sku: string
 }
@@ -30,6 +31,11 @@ function displayPrice(sku: string) {
 }
 ```
 
+```text
+$12
+No price for pen
+```
+
 `throw` declares an expected failure. A caller can recover with `try`/`catch`, and the caught value has the error type inferred from the protected code. A defect, such as an invalid property access or `Effect.die(new Error("broken invariant"))`, bypasses this catch.
 
 Expected failures also come from a callee's `E` and exceptions listed by a trusted contract. An exception that no contract lists is a defect. When a cause contains several expected failures and nothing else, `catch` receives the first and handles the cause as a whole; use `Effect.catchCause` to inspect every reason.
@@ -39,6 +45,7 @@ Interruption is a third kind of termination. It also bypasses `catch`; both inte
 ## Choosing the error type
 
 ```vibe
+// run: Console.log(percentage(1, 4)); Console.log(Effect.matchCause(() => percentage(1, 0), { onFailure: (cause) => cause.hasDies(), onSuccess: () => false }))
 function percentage(part: number, total: number) {
   if (total <= 0) {
     die(new Error("validated total must be positive"))
@@ -46,6 +53,11 @@ function percentage(part: number, total: number) {
   return part / total * 100
 }
 // number!!
+```
+
+```text
+25
+true
 ```
 
 Use this contract only when validation has already established the invariant. If users can submit an invalid total, represent that case with a typed error instead. Put a failure in `E` when callers have a useful response, such as asking for corrected input or choosing another source.

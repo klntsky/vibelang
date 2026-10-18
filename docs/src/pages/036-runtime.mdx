@@ -10,12 +10,15 @@ Effect's runtime executes computations, carries service implementations, schedul
 ## Execution infrastructure
 
 ```vibe
+// run: const result = Effect.promise(() => outcome); Console.log(result._tag); if (result.isSuccess()) Console.log(result.value)
 function operation() {
   sleep("10 millis")
   return "complete"
 }
 
 const outcome = Effect.runPromiseExit(operation())
+// Output: Success
+// Output: complete
 ```
 
 A runner starts a root fiber with its context, fiber-local settings, and initial program. The runtime steps through the work, waits for asynchronous results, coordinates interruption, and executes finalizers. `outcome` is a promise for an `Exit` that records either the success or the complete failure cause.
@@ -25,6 +28,7 @@ A function value remains a description until it is called or handed to a runner.
 ## Run with an explicit service context
 
 ```vibe
+// run: Console.log(result)
 service Labels {
   format(value: string): string!!
 }
@@ -38,6 +42,7 @@ function label() {
 }
 
 const result = Effect.runSyncWith(context)(() => label())
+// Output: [queued]
 ```
 
 `Context.make` associates a service key with its implementation. The `run*With` variants accept that context and execute a program whose requirements it satisfies. `runPromiseWith` and `runForkWith` serve asynchronous and fiber-based entry points; plain runners require no remaining application services.
@@ -49,6 +54,7 @@ Most applications build their context through layers instead. Use an explicit co
 ## Change runtime behavior within a region
 
 ```vibe
+// run: Effect.provide(startup(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))
 const Quiet = Logger.layer([])
 
 function startup() {
@@ -58,6 +64,8 @@ function startup() {
   }
   log("visible after")
 }
+// Output: visible before
+// Output: visible after
 ```
 
 `Effect.provide` installs the layer only around its program. The previous logger configuration is restored afterward, including on failure. Nested regions can override it again, and child fibers inherit the configuration in effect when they start.
@@ -67,6 +75,7 @@ To emit a different format, supply a logger such as `Logger.consoleJson` through
 ## Replace a runtime service for a block
 
 ```vibe
+// run: Console.log(roll())
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
 function roll(): number!! {
@@ -74,6 +83,7 @@ function roll(): number!! {
     return Random.nextInt()
   }
 }
+// Output: 4
 ```
 
 `provide Key = value` provides one service to a block (D173). `Random`, `Clock`, and `Scheduler` are references: each has a default, so none appears in a contract's dependencies, and a provide block replaces the default for its statements and for the fibers they start. The effect module stands for its key of the same name, so `provide Random = seeded` provides `Random.Random`, `provide Clock = testClock` replaces the clock that `sleep` reads, and `provide Scheduler = fifo` runs the block's fibers on another scheduler (D174). Layers and services share one list: `provide Logger.layer([]), Random = seeded { ... }`.
@@ -81,6 +91,7 @@ function roll(): number!! {
 ## Build and dispose managed runtimes
 
 ```vibe
+// run: provide Notifications.layer { notify("direct event") }
 // notifications.vibe
 export service Notifications {
   send(message: string): void!!
@@ -93,11 +104,13 @@ export service Notifications {
 export function notify(message: string) {
   Notifications.send(message)
 }
+// Output: direct event
 ```
 
 ```ts
 // TypeScript (.ts)
 // host.ts
+// run: return example()
 import { ManagedRuntime } from "effect"
 import { Notifications, notify } from "./notifications.js"
 
@@ -111,6 +124,8 @@ export async function example() {
     await runtime.dispose()
   }
 }
+// Output: first event
+// Output: second event
 ```
 
 `ManagedRuntime.make` builds its layer lazily on first use and shares the resulting context across executions. The layer's resources live until disposal rather than until each call completes. Dispose the runtime when its owner shuts down, and create a fresh runtime for a new owner.
@@ -122,6 +137,7 @@ Each `Effect.provide` builds its layers once for that invocation. Repeating `pro
 ```ts
 // TypeScript (.ts)
 // notification-host.ts
+// run: const host = makeNotificationHost(); return host.onMessage("framework event").finally(() => host.close())
 import { ManagedRuntime } from "effect"
 import { Notifications, notify } from "./notifications.js"
 
@@ -132,6 +148,7 @@ export function makeNotificationHost() {
     close: () => runtime.dispose()
   }
 }
+// Output: framework event
 ```
 
 The framework owns this adapter: call `onMessage` at an entry point and `close` when the application, test fixture, or component owner ends. Its promise reports failures back to the host. Keep the runtime stable across repeated requests or renders so layer resources are shared as intended.

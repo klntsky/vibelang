@@ -10,6 +10,7 @@ VibeLang uses Effect's `Metric` module to count events, record current values, a
 ## Recording counters and gauges
 
 ```vibe
+// run: Console.log(JSON.stringify(recordBatch())); Console.log(String(Metric.value(bytes).count)); Console.log(JSON.stringify(recordBatch()))
 const requests = Metric.counter("guide_requests", { incremental: true })
 const queued = Metric.gauge("guide_queued")
 const bytes = Metric.counter("guide_bytes", { bigint: true })
@@ -27,9 +28,16 @@ function recordBatch() {
 }
 ```
 
+```text
+{"requests":4,"queued":5}
+4096
+{"requests":8,"queued":5}
+```
+
 A counter accumulates changes, while a gauge retains its most recent value. `incremental: true` ignores negative counter inputs; counters without it also support decrements, and both counters and gauges support bigint variants. Metric state is shared across updates to the same metric identity, so totals above accumulate across repeated runs.
 
 ```vibe
+// run: Console.log(instrumentedValue(), Metric.value(completions).count)
 const completions = Metric.withConstantInput(
   Metric.counter("guide_completions", { incremental: true }),
   1
@@ -40,11 +48,16 @@ function instrumentedValue() {
 }
 ```
 
+```text
+processed 1
+```
+
 `trackSuccesses` sends a successful return value to a metric without changing the program's result. `withConstantInput` replaces that input with one, so this metric counts successful completions regardless of the returned string.
 
 ## Measuring distributions
 
 ```vibe
+// run: const result = recordSizes(); Console.log(JSON.stringify({ count: result.histogram.count, sum: result.histogram.sum, min: result.histogram.min, max: result.histogram.max, buckets: result.histogram.buckets })); Console.log(result.summary.count, result.summary.sum, result.summary.min, result.summary.max)
 const batchSizes = Metric.histogram("guide_batch_size", {
   boundaries: Metric.linearBoundaries({ start: 0, width: 20, count: 6 })
 })
@@ -66,11 +79,19 @@ function recordSizes() {
 }
 ```
 
+```text
+{"count":4,"sum":147,"min":8,"max":91,"buckets":[[20,2],[40,3],[60,3],[80,3],[null,4]]}
+4 147 8 91
+```
+
 A histogram groups observations into configured buckets and tracks count, sum, minimum, and maximum. Bucket boundaries control its precision and support aggregation across instances. A summary retains bounded recent samples and computes quantiles over that window, with `maxAge` and `maxSize` limiting retention; its calculated quantiles are not values to average across instances.
 
 ## Timing computations
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork(() => render()); TestClock.adjust("30 millis"); Console.log(join worker); const state = Metric.value(renderTime); Console.log(state.count, state.sum, state.min, state.max) }
+import { TestClock } from "effect/testing"
+
 const renderTime = Metric.timer("guide_render_duration", {
   boundaries: [5, 20, 50, 100, 500]
 })
@@ -83,11 +104,17 @@ function render() {
 }
 ```
 
+```text
+rendered
+1 30 30 30
+```
+
 `trackDuration` measures the wrapped computation and records its duration without replacing its return value. `Metric.timer` is a duration-input histogram whose bucket boundaries and stored values use milliseconds. The measurement includes time spent waiting inside the wrapped program.
 
 ## Counting categorical events
 
 ```vibe
+// run: Console.log(JSON.stringify(Array.from(recordOutcomes()).sort(([a], [b]) => Order.String(a, b))))
 const outcomes = Metric.frequency("guide_validation_outcomes")
 
 function recordOutcomes() {
@@ -98,11 +125,16 @@ function recordOutcomes() {
 }
 ```
 
+```text
+[["accepted",2],["rejected",1]]
+```
+
 A frequency metric keeps a count per observed string. Use a bounded set of categories such as result kinds or error tags. User IDs and request IDs produce an unbounded number of categories and belong in logs or span attributes instead.
 
 ## Attaching attributes to metrics and regions
 
 ```vibe
+// run: const result = attributed(); Console.log(result.requests.count, result.failures.count); Console.log(Metric.value(apiRequests).count, Metric.value(failures).count)
 const apiRequests = Metric.withAttributes(
   Metric.counter("guide_api_requests", { incremental: true }),
   { route: "/reports" }
@@ -119,6 +151,11 @@ function attributed() {
     }
   }
 }
+```
+
+```text
+1 1
+0 0
 ```
 
 `withAttributes` adds attributes to one metric. `CurrentMetricAttributes` supplies attributes to every metric operation in a region, including reads; read state under the same attributes used to update it. Each attribute combination identifies a separate series, so prefer bounded categories such as deployment and route.

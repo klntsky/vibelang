@@ -53,6 +53,7 @@ Create `src/users.vibe`. It declares a `Users` service and its layer, and `greet
 
 ```vibe
 // src/users.vibe
+// run: provide UsersLive { Console.log(greet("42")); Console.log(greet("404")); try { Users.find("404") } catch (error) { Console.log(error._tag, error.id) } }
 export schema User { id: string; name: string }
 
 export error UserNotFound { id: string }
@@ -84,6 +85,12 @@ export function greet(id: string) {
 }
 ```
 
+```text
+Welcome, Ada Lovelace
+No user 404
+UserNotFound 404
+```
+
 ## 5. Run a program from a component
 
 Create `src/runtime.ts`. One `ManagedRuntime` builds `UsersLive` once and runs every program in the app:
@@ -91,10 +98,15 @@ Create `src/runtime.ts`. One `ManagedRuntime` builds `UsersLive` once and runs e
 ```ts
 // TypeScript (.ts)
 // src/runtime.ts
+// run: return import("./users.vibe").then(({ greet }) => runtime.runPromise(greet("42"))).then(console.log).finally(() => runtime.dispose())
 import { ManagedRuntime } from "effect"
 import { UsersLive } from "./users.vibe"
 
 export const runtime = ManagedRuntime.make(UsersLive)
+```
+
+```text
+Welcome, Ada Lovelace
 ```
 
 Create `src/Greeting.tsx`. To TypeScript, `greet(id)` returns `Effect<string, never, Users>`; `runtime.runPromise` provides `Users` and returns a `Promise<string>`. The `AbortSignal` interrupts the program when the component unmounts or `id` changes:

@@ -11,9 +11,10 @@ A scope owns registered finalizers and runs them when its lifetime ends. Use `us
 ## Registering finalizers
 
 ```vibe
+// run: Console.log(runRegisteredWork())
 function registeredWork() {
   Effect.addFinalizer((exit) => {
-    log(`Work scope closed with ${exit._tag}`)
+    Console.log(`Work scope closed with ${exit._tag}`)
   })
   return "Prepared"
 }
@@ -23,6 +24,8 @@ function runRegisteredWork() {
   return Effect.scoped(() => registeredWork())
 }
 // string!!
+// Output: Work scope closed with Success
+// Output: Prepared
 ```
 
 `Effect.addFinalizer` attaches cleanup to the current scope, not to the function's return. `Scope` is in the prelude: it names the module, and in a contract it means `Scope.Scope`, so no import is needed. `Effect.scoped` creates a scope, runs the program, and closes that scope with its outcome. On success the finalizer receives a success exit; typed failure, defects, and interruption produce failure exits.
@@ -32,17 +35,22 @@ Finalizers run in reverse registration order by default, with interruption defer
 ## Opening and closing scopes explicitly
 
 ```vibe
+// run: Console.log(manuallyManagedWork())
 function manuallyManagedWork() {
   return Effect.acquireUseRelease(
     () => Scope.make(),
     (scope) => {
-      Scope.addFinalizer(scope, () => log("First finalizer"))
-      Scope.addFinalizer(scope, () => log("Second finalizer"))
+      Scope.addFinalizer(scope, () => Console.log("First finalizer"))
+      Scope.addFinalizer(scope, () => Console.log("Second finalizer"))
       return Scope.provide(() => registeredWork(), scope)
     },
     (scope, exit) => Scope.close(scope, exit)
   )
 }
+// Output: Work scope closed with Success
+// Output: Second finalizer
+// Output: First finalizer
+// Output: Prepared
 ```
 
 `Scope.make` creates a closeable scope; `Scope.close` supplies the exit that its finalizers observe. The bracket guarantees closure even if work fails or is cancelled, and passes that actual outcome to release. The finalizer from `registeredWork` runs first, then the second explicit finalizer, then the first.
@@ -52,13 +60,14 @@ function manuallyManagedWork() {
 ## Acquiring resources with automatic release
 
 ```vibe
+// run: Console.log(copyLabels())
 function openBuffer(label: string) {
   return Effect.acquireRelease(
     () => {
-      log(`Opened ${label}`)
+      Console.log(`Opened ${label}`)
       return { label }
     },
-    (buffer) => log(`Closed ${buffer.label}`)
+    (buffer) => Console.log(`Closed ${buffer.label}`)
   )
 }
 // { label: string }!!Scope
@@ -69,6 +78,11 @@ function copyLabels() {
   return `${source.label} -> ${destination.label}`
 }
 // string!!
+// Output: Opened source
+// Output: Opened destination
+// Output: Closed destination
+// Output: Closed source
+// Output: source -> destination
 ```
 
 `acquireRelease` makes acquisition uninterruptible by default and registers release before exposing the resource. Its third argument `{ interruptible: true }` permits cancellation during acquisition; `using` keeps that choice. Successful acquisition gets exactly one release when its scope closes; failed acquisition does not register one. Release order here is destination, then source.
@@ -78,28 +92,41 @@ function copyLabels() {
 ## Arranging nested resource lifetimes
 
 ```vibe
+// run: nestedLifetimes(); observeOwnership()
 function nestedLifetimes() {
   using outer = openBuffer("session")
   {
     using inner = openBuffer("request")
-    log(`${outer.label}/${inner.label}`)
+    Console.log(`${outer.label}/${inner.label}`)
   }
-  log("Request buffer closed; session still open")
+  Console.log("Request buffer closed; session still open")
 }
 
 function mixedOwnership() {
   const callerOwned = openBuffer("caller")
   using local = openBuffer("local")
-  log(`${callerOwned.label}/${local.label}`)
+  Console.log(`${callerOwned.label}/${local.label}`)
 }
 // void!!Scope
 
 function observeOwnership() {
   Effect.scoped {
     mixedOwnership()
-    log("Local closed; caller buffer still open")
+    Console.log("Local closed; caller buffer still open")
   }
 }
+// Output: Opened session
+// Output: Opened request
+// Output: session/request
+// Output: Closed request
+// Output: Request buffer closed; session still open
+// Output: Closed session
+// Output: Opened caller
+// Output: Opened local
+// Output: caller/local
+// Output: Closed local
+// Output: Local closed; caller buffer still open
+// Output: Closed caller
 ```
 
 The inner `using` resource closes before the outer block continues. In `mixedOwnership`, the acquisition without `using` belongs to the caller's scope even though the function also owns a local resource. The caller's buffer closes only when `Effect.scoped` exits.
@@ -111,6 +138,7 @@ A block that calls `fork` also owns a scope region, even without `using`. Its ch
 ## Sequencing scoped operations with rollback
 
 ```vibe
+// run: provide ProjectSteps = { create: (stage) => { Console.log(`create ${stage}`); return stage }, remove: (id) => Console.log(`remove ${id}`), finish: () => "ready" } { Console.log(setupProject()) }; provide ProjectSteps = { create: (stage) => { Console.log(`create ${stage}`); if (stage === "index") throw new SetupFailed({ stage }); return stage }, remove: (id) => Console.log(`remove ${id}`), finish: () => "ready" } { try { setupProject() } catch (error) { Console.log(error.stage) } }
 error SetupFailed {
   stage: string
 }
@@ -140,6 +168,13 @@ function setupProject() {
   }
 }
 // string!SetupFailed!ProjectSteps
+// Output: create storage
+// Output: create index
+// Output: ready
+// Output: create storage
+// Output: create index
+// Output: remove storage
+// Output: index
 ```
 
 Both reservations register in the same scope because neither uses lexical `using`. A successful scope exit keeps the created artifacts. If index creation fails, storage is removed; if `finish` fails, index is removed before storage.
@@ -147,6 +182,7 @@ Both reservations register in the same scope because neither uses lexical `using
 The finalizers see the whole setup operation's exit, so defects and interruption trigger the same rollback. Separate nested `using` blocks would end those lifetimes earlier and would not give every finalizer the overall setup outcome. This is compensation for successfully completed steps, not an atomic transaction with an external system.
 
 ```vibe
+// run: const result = exerciseRollback(); Console.log(JSON.stringify({ outcome: result.outcome._tag, removed: result.removed }))
 function exerciseRollback() {
   const removed: string[] = []
   const testLayer = Layer.succeed(ProjectSteps, {
@@ -157,6 +193,7 @@ function exerciseRollback() {
   const outcome = Effect.result(Effect.provide(() => setupProject(), testLayer))
   return { outcome, removed } // removed: ["index", "storage"]
 }
+// Output: {"outcome":"Failure","removed":["index","storage"]}
 ```
 
 Test failure at each stage to confirm which steps were acquired and which compensations ran. If compensation can fail, handle its expected failure in the release callback and preserve unrecoverable cleanup failures as defects. Do not discard cleanup failures to make rollback appear successful.

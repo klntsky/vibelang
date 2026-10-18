@@ -10,6 +10,8 @@ Canonical codec derivation works as in Effect. It preserves a schema's decoded t
 ## Deriving JSON, string-tree, and isomorphism codecs
 
 ```vibe
+// run: Console.log(JSON.stringify(encodeAudit({ created: new Date("2026-01-02T00:00:00Z"), sequence: 12n, labels: ["fragile"] })))
+import { Console } from "effect"
 const AuditRecord = Schema.Struct({
   created: Schema.Date,
   sequence: Schema.BigInt,
@@ -24,9 +26,14 @@ function encodeAudit(input: unknown) {
 // The JSON representation contains date and bigint strings.
 ```
 
+```text
+{"created":"2026-01-02T00:00:00.000Z","sequence":"12","labels":["fragile"]}
+```
+
 `toCodecJson` recursively chooses JSON-compatible encodings for domain values, including nested declarations with built-in representations. It preserves explicit encodings already present: a date explicitly encoded as epoch milliseconds remains numeric. Its output is a JSON value, not serialized JSON text; use `fromJsonString` when text is required.
 
 ```vibe
+// run: Console.log(JSON.stringify(encodeSearch()))
 const Search = Schema.Struct({
   offset: Schema.Int,
   archived: Schema.Boolean,
@@ -40,9 +47,14 @@ function encodeSearch() {
 // { offset: "20", archived: "false", labels: ["large"] }
 ```
 
+```text
+{"offset":"20","archived":"false","labels":["large"]}
+```
+
 `toCodecStringTree` preserves object and array structure and converts leaves to strings. A string tree can also contain `undefined`, so it is not limited to JSON values. This representation suits configuration, forms, and query parameters.
 
 ```vibe
+// run: const slot = slotRepresentation({ row: 2, column: 3 }); Console.log(slot instanceof Slot, slot.row, slot.column)
 class Slot extends Schema.Class<Slot>("Slot")({
   row: Schema.Int,
   column: Schema.Int
@@ -56,11 +68,16 @@ function slotRepresentation(input: unknown) {
 }
 ```
 
+```text
+true 2 3
+```
+
 `toCodecIso` selects the schema's `Iso` representation, such as plain fields for a class. It supports tools that update plain objects and arrays, then reconstruct the domain value. It is a structural isomorphism codec rather than a guarantee that the original runtime object is retained by identity.
 
 ## Supplying canonical conversions for custom declarations
 
 ```vibe
+// run: Console.log(JSON.stringify(encodeDepot()))
 class DepotRef {
   constructor(readonly region: string, readonly number: number) {}
 }
@@ -82,6 +99,10 @@ function encodeDepot() {
 // { region: "nw", number: "14" }
 ```
 
+```text
+{"region":"nw","number":"14"}
+```
+
 Declarations are opaque, so give derivation a structural codec. JSON prefers `toCodecJson`, then `toCodec`; StringTree prefers `toCodecStringTree`, then `toCodecJson`, then `toCodec`; Iso prefers `toCodecIso`, then `toCodec`. A JSON or StringTree hook can return `undefined` to say that the declaration is already canonical.
 
 Without a hook, JSON uses an unconstrained JSON fallback and parsing can still fail; StringTree derivation throws; Iso keeps the declaration's own representation. Hooks can use effectful conversions, but cannot add services absent from the resulting codec's service type. The separate `Schema.toIso` helper consumes its Iso conversion synchronously.
@@ -89,9 +110,14 @@ Without a hook, JSON uses an unconstrained JSON fallback and parsing can still f
 ## Relating canonical representations to JSON Schema output
 
 ```vibe
+// run: Console.log(JSON.stringify(describeDepotJson()))
 function describeDepotJson() {
   return try(Schema.toJsonSchemaDocument(DepotRefSchema))
 }
+```
+
+```text
+{"dialect":"draft-2020-12","schema":{"type":"object","properties":{"region":{"type":"string"},"number":{"type":"integer","minimum":-9007199254740991,"maximum":9007199254740991}},"required":["region","number"],"additionalProperties":true},"definitions":{}}
 ```
 
 JSON Schema export derives the canonical JSON codec first and describes its encoded side. The custom depot representation therefore appears as an object with a region and number. A custom JSON hook controls both runtime serialization and the exported shape; an opaque declaration without a structural hook yields an unconstrained document.

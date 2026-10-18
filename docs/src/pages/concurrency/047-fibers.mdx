@@ -10,15 +10,18 @@ A fiber is a running computation with a result and a lifetime. VibeLang uses Eff
 ## Forking and awaiting
 
 ```vibe
+// run: Console.log(buildDashboard())
 function buildDashboard() {
   const chart = fork {
     sleep("30 millis")
     return "chart"
   }
-  logInfo("preparing dashboard frame")
+  Console.log("preparing dashboard frame")
   return join chart
 }
 // string!!
+// Output: preparing dashboard frame
+// Output: chart
 ```
 
 `fork` starts a child fiber and returns its handle, here a `Fiber<string>`, without waiting for its result. `join` waits for the child and returns its value, or propagates its failure. Unlike an ordinary call, the fork lets the parent continue while its child is waiting.
@@ -28,14 +31,17 @@ function buildDashboard() {
 ## Awaiting completion as data
 
 ```vibe
+// run: Console.log(inspectChild().isFailure())
 function inspectChild() {
   const child = fork { throw "render failed" }
   const exit = Fiber.await(child)
   if (exit.isFailure()) {
-    logError("renderer stopped", exit.cause)
+    Console.log("renderer stopped", Cause.squash(exit.cause))
   }
   return exit
 }
+// Output: renderer stopped render failed
+// Output: true
 ```
 
 `Fiber.await` succeeds with an `Exit`, so it does not rethrow the child's failure into the caller. The exit also represents defects and interruption. Use `join child` when failure should propagate and `Fiber.await(child)` when the caller needs to decide what the outcome means.
@@ -43,18 +49,21 @@ function inspectChild() {
 ## Handling asynchronous interruption
 
 ```vibe
+// run: stopWorker()
 function stopWorker() {
   const worker = fork {
     try {
       sleep("1 minute")
     } finally {
-      logInfo("worker finalizer")
+      Console.log("worker finalizer")
     }
   }
   sleep("10 millis")
   worker.interrupt()
-  logInfo("worker has terminated")
+  Console.log("worker has terminated")
 }
+// Output: worker finalizer
+// Output: worker has terminated
 ```
 
 Cancellation does not require a hand-written polling loop. Effect delivers it at runtime boundaries, defers it in uninterruptible regions, and runs cleanup before `interrupt` returns. A long plain JavaScript calculation still occupies the host thread until it returns or reaches an Effect operation.
@@ -64,13 +73,14 @@ When the caller needs to continue during cleanup, fork the interruption, `fork w
 ## Protecting work from interruption
 
 ```vibe
+// run: saveReport(); pollStatus(false); const stopped = Effect.exit(() => pollStatus(true)); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause))
 function saveReport() {
   uninterruptible {
-    logInfo("saving; an interruption waits until the block ends")
+    Console.log("saving; an interruption waits until the block ends")
     restore {
       sleep("1 second")
     }
-    logInfo("saved")
+    Console.log("saved")
   }
 }
 
@@ -80,6 +90,9 @@ function pollStatus(cancelled: boolean) {
   }
   if (cancelled) interrupt()
 }
+// Output: saving; an interruption waits until the block ends
+// Output: saved
+// Output: true
 ```
 
 An `uninterruptible` block runs without interruption, as `Effect.uninterruptibleMask` does: an interruption that arrives waits until the block ends. A `restore` block inside it brings back the interruptibility the fiber had before, so long waits stay cancellable. An `interruptible` block makes its code interruptible even inside an uninterruptible region, as `Effect.interruptible` does. Statements inside these blocks stay code of the enclosing function, so `return` returns from it. The blocks call prelude functions of the same names, so `uninterruptible(saveRows())` passes a program instead. `interrupt()` interrupts the running fiber, as `Effect.interrupt` does.
@@ -87,6 +100,7 @@ An `uninterruptible` block runs without interruption, as `Effect.uninterruptible
 ## Combining results
 
 ```vibe
+// run: Console.log(combine())
 function title() {
   return "Inventory"
 }
@@ -101,6 +115,7 @@ function combine() {
   return `${name}: ${count}`
 }
 // string!!
+// Output: Inventory: 18
 ```
 
 `await.all [...]` starts every element in its own fiber and waits for all of them, keeping the shape of an array or an object, like `Promise.all`. Each element is passed by name, so `rowCount()` starts in its fiber instead of running before the operation. When one fails, `await.all` interrupts the others still running and propagates the failure, as `all` fails fast. For an expected-failure fallback, put `try` around it and recover in `catch`; defects and interruption still propagate.
@@ -112,6 +127,9 @@ To wait for fibers you already hold, use `join`: `const [name, count] = join [ti
 ## Racing events
 
 ```vibe
+// run: provide TestClock.layer() { const jobs = Queue.unbounded<string>(); const shutdown = Deferred.make<void>(); jobs.offer("build"); Console.log(nextEvent(jobs, shutdown)); shutdown.succeed(undefined); Console.log(nextEvent(jobs, shutdown)); const idle = fork nextEvent(jobs, Deferred.make<void>()); TestClock.adjust("30 seconds"); Console.log(join idle) }
+import { TestClock } from "effect/testing"
+
 function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>) {
   return await.race [
     `job: ${Queue.take(jobs)}`,
@@ -126,6 +144,9 @@ function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>)
   ]
 }
 // string!!
+// Output: job: build
+// Output: shutdown
+// Output: idle
 ```
 
 `await.race [...]` starts each element in its own fiber and returns the first to finish, success or failure, like `Promise.race` (`Effect.raceFirst`); the others are interrupted. A `do { ... }` expression gives an element statements of its own; its last expression is the element's value. Of elements ready at once, the first written wins. `await.any [...]` returns the first success instead and fails only when every element fails (`Effect.raceAll`). To poll without waiting, call `Queue.poll(jobs)` and test the result with an `if`.
@@ -133,6 +154,7 @@ function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>)
 ## Running a loop body concurrently
 
 ```vibe
+// run: printAll(["a", "", "b"])
 function fetchPage(id: string) {
   sleep("5 millis")
   return `page ${id}`
@@ -141,9 +163,11 @@ function fetchPage(id: string) {
 function printAll(ids: ReadonlyArray<string>) {
   for concurrent(8) (const id of ids) {
     if (id === "") continue
-    logInfo(fetchPage(id))
+    Console.log(fetchPage(id))
   }
 }
+// Output: page a
+// Output: page b
 ```
 
 `for concurrent` runs its body for each item in its own fiber and waits for them all before the loop ends; `for concurrent(8)` runs at most eight at once, and `for concurrent (...)` sets no limit. A failure interrupts the items still running and fails the loop. `continue` ends one item. Because each item runs in its own fiber, a `break` that would leave the loop (EK4605) and a `return` (EK4606) are errors; throw to stop every item. Use `forEach` when you need the results.
@@ -151,20 +175,23 @@ function printAll(ids: ReadonlyArray<string>) {
 ## Supervising child lifetimes
 
 ```vibe
+// run: request()
 function request() {
   {
     const progress = fork {
       try {
         sleep("1 minute")
       } finally {
-        logInfo("progress reporter stopped")
+        Console.log("progress reporter stopped")
       }
     }
     sleep("20 millis")
     // The nested block owns progress, even without a join.
   }
-  logInfo("request finishing")
+  Console.log("request finishing")
 }
+// Output: progress reporter stopped
+// Output: request finishing
 ```
 
 The VibeLang `fork` belongs to its enclosing block. Leaving that block interrupts unfinished children and waits for their cleanup. `Effect.forkChild` remains available when ownership should follow the parent fiber instead of the lexical block.
@@ -174,6 +201,7 @@ Forked fibers inherit the current services and tracing context. Control-operatio
 ## Selecting scoped or detached lifetimes
 
 ```vibe
+// run: const scope = Scope.make(); const background = inCallerScope(scope); Scope.close(scope, Exit.succeed(undefined)); const stopped = Fiber.await(background); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause)); detachedExample(); Console.log("detached finished")
 function inCallerScope(scope: Scope) {
   const background = forkIn(scope, sleep("1 minute"))
   sleep("20 millis")
@@ -185,6 +213,8 @@ function detachedExample() {
   const independent = detach(sleep("50 millis"))
   join independent
 }
+// Output: true
+// Output: detached finished
 ```
 
 `forkIn(scope, program)` attaches the child to a scope you hold, so it lives until that scope closes. `detach(program)` ties the child to nothing: it survives its parent and needs an explicit shutdown strategy; joining it above keeps the example bounded. `Effect.forkScoped` attaches the child to the caller's scope and leaves `Scope` in the caller's requirements until a scope is supplied.
@@ -192,17 +222,20 @@ function detachedExample() {
 ## Understanding execution scheduling
 
 ```vibe
+// run: waitForReady()
 function waitForReady() {
   const ready = Deferred.make<void>()
   const worker = fork {
-    logInfo("worker initialized")
+    Console.log("worker initialized")
     ready.succeed(undefined)
     sleep("20 millis")
   }
   ready.await()
-  logInfo("initialization is complete")
+  Console.log("initialization is complete")
   join worker
 }
+// Output: worker initialized
+// Output: initialization is complete
 ```
 
 Forking schedules a child; it does not prove the child has reached a particular statement. `yieldNow()` gives other work a chance to run, but it is not a readiness guarantee. Use a `Deferred`, as above, when ordering matters; `ready.await()` waits until the child completes it. Sleeping for an estimated startup time leaves a race.

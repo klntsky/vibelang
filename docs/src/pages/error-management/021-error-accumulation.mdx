@@ -11,6 +11,7 @@ Independent checks often need to report every problem in one response. Use valid
 ## Validating every computation
 
 ```vibe
+// run: Console.log(validateHandle(" RIVER ")); Console.log(JSON.stringify(Effect.flip(() => validateTeam()).map((error) => error.input)))
 error InvalidHandle {
   input: string
 }
@@ -31,15 +32,25 @@ function validateTeam() {
 // string[]![InvalidHandle, ...InvalidHandle[]]!
 ```
 
+```text
+river
+["Jo",""]
+```
+
 `Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel contains a nonempty array of every domain error and the successful values are discarded. If all succeed, it returns an array of successes.
 
 ```vibe
+// run: checkTeamOnly(); Console.log("All handles valid")
 function checkTeamOnly() {
   Effect.validate(["RIVER", "SKY"], (input) => validateHandle(input), {
     discard: true,
     concurrency: 2
   })
 }
+```
+
+```text
+All handles valid
 ```
 
 `discard: true` returns `void` on success when you only need validation. Concurrency controls how many independent checks run at once. A cause without an expected failure still terminates the computation. These APIs use Effect's error-to-result conversion, so a mixed cause containing an expected failure can be reduced to that error and lose its other reasons; use cause-level inspection when those reasons matter.

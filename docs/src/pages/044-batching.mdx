@@ -10,6 +10,7 @@ Use requests and resolvers when independent lookups can share a backend call. A 
 ## Model requests and domain errors
 
 ```vibe
+// run: const first = FindPart({ code: "ink-blue" }); const same = FindPart({ code: "ink-blue" }); Console.log(Equal.equals(first, same), Hash.hash(first) === Hash.hash(same)); Console.log(Equal.equals(first, FindPart({ code: "ink-black" })))
 type Part = { code: string; label: string }
 
 error PartMissing {
@@ -24,6 +25,8 @@ interface FindPart extends Request.Request<Part, PartMissing | CatalogUnavailabl
 }
 
 const FindPart = Request.tagged<FindPart>("FindPart")
+// Output: true true
+// Output: false
 ```
 
 The request carries the input, success type, and expected errors. `Request.tagged` supplies structural equality and hashing so equal request values can be compared for cache reuse. Include every input that affects the answer, such as a tenant or locale, in a real request model.
@@ -33,13 +36,14 @@ A direct service call for each item performs repeated backend work. Batching hel
 ## Define request resolvers
 
 ```vibe
+// run: Console.log(JSON.stringify(Effect.request(FindPart({ code: "ink-blue" }), PartResolver)))
 const DemoCatalog = new Map<string, Part>([
   ["ink-black", { code: "ink-black", label: "Black ink" }],
   ["ink-blue", { code: "ink-blue", label: "Blue ink" }]
 ])
 
 const PartResolver = RequestResolver.make<FindPart>((entries) => {
-  log(`catalog batch size=${entries.length}`)
+  Console.log(`catalog batch size=${entries.length}`)
   for (const entry of entries) {
     Request.completeEffect(entry) {
       const part = DemoCatalog.get(entry.request.code)
@@ -48,6 +52,8 @@ const PartResolver = RequestResolver.make<FindPart>((entries) => {
     }
   }
 })
+// Output: catalog batch size=1
+// Output: {"code":"ink-blue","label":"Blue ink"}
 ```
 
 This executable fixture resolves a batch from a map. A backend resolver replaces the map lookup with one bulk operation, then matches the returned rows to entries. `Request.completeEffect` runs its program and completes the entry with that result, including an expected failure.
@@ -57,6 +63,7 @@ Complete every entry, including requests for absent rows. Use `Request.succeed` 
 ## Build queries from requests
 
 ```vibe
+// run: Console.log(partLabel("ink-black")); const missing = Effect.result(() => findPart("missing")); if (missing.isFailure()) Console.log(missing.failure._tag)
 function findPart(code: string) {
   return Effect.request(FindPart({ code }), PartResolver)
 }
@@ -65,6 +72,10 @@ function findPart(code: string) {
 function partLabel(code: string) {
   return findPart(code).label
 }
+// Output: catalog batch size=1
+// Output: Black ink
+// Output: catalog batch size=1
+// Output: PartMissing
 ```
 
 `Effect.request` submits the request to its resolver and waits for that entry's answer. The returned success value is available directly in VibeLang. The resolver's pending work, rather than the query function's syntax, determines which calls share a backend operation.
@@ -72,11 +83,14 @@ function partLabel(code: string) {
 ## Combine compatible requests into batches
 
 ```vibe
+// run: Console.log(JSON.stringify(labels(["ink-black", "ink-blue"])))
 function labels(codes: ReadonlyArray<string>) {
   return forEach(codes, (code) => partLabel(code), {
     concurrency: "unbounded"
   })
 }
+// Output: catalog batch size=2
+// Output: ["Black ink","Blue ink"]
 ```
 
 Requests using the same resolver and batch key can join the same pending batch. The default resolver delay yields before running the collected work, allowing requests started together to accumulate. Dependencies introduce later waves: a query that needs an earlier answer starts after that answer arrives.
@@ -86,6 +100,7 @@ Requests using the same resolver and batch key can join the same pending batch. 
 ## Control batch execution
 
 ```vibe
+// run: const parts = forEach(Array.from({ length: 65 }, () => "ink-blue"), (code) => tunedLookup(code), { concurrency: "unbounded" }); Console.log(parts.length, parts.every((part) => part.label === "Blue ink"))
 const TunedResolver = PartResolver
   |> RequestResolver.setDelay(%, "8 millis")
   |> RequestResolver.batchN(%, 64)
@@ -93,6 +108,9 @@ const TunedResolver = PartResolver
 function tunedLookup(code: string) {
   return Effect.request(FindPart({ code }), TunedResolver)
 }
+// Output: catalog batch size=64
+// Output: catalog batch size=1
+// Output: 65 true
 ```
 
 `setDelay` trades latency for a larger collection window, and `batchN` caps each backend batch. `setDelayEffect` takes a program for a custom delay, while `grouped` partitions requests by a key. Reuse the same configured resolver for callers that should share pending batches.
@@ -102,6 +120,7 @@ For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `colle
 ## Supply resolver dependencies
 
 ```vibe
+// run: provide Layer.provide(Parts.layer, Layer.succeed(CatalogApi, { fetchMany: (codes) => new Map<string, Part>(codes.filter((code) => code !== "missing").map((code) => [code, { code, label: code.toUpperCase() }])) })) { const results = forEach(["ink", "missing"], (code) => Effect.result(() => Parts.find(code)), { concurrency: "unbounded" }); Console.log(JSON.stringify(results.map((result) => result.isSuccess() ? result.success.label : result.failure._tag))) }; provide Layer.provide(Parts.layer, Layer.succeed(CatalogApi, { fetchMany: () => { throw new CatalogUnavailable() } })) { const results = forEach(["ink", "blue"], (code) => Effect.result(() => Parts.find(code)), { concurrency: "unbounded" }); Console.log(JSON.stringify(results.map((result) => result.isFailure() ? result.failure._tag : "unexpected success"))) }
 service CatalogApi {
   fetchMany(codes: ReadonlyArray<string>): ReadonlyMap<string, Part>!CatalogUnavailable
 }
@@ -132,6 +151,8 @@ service Parts {
   }
 }
 // Parts.layer: Layer<Parts, never, CatalogApi>
+// Output: ["INK","PartMissing"]
+// Output: ["CatalogUnavailable","CatalogUnavailable"]
 ```
 
 Resolve `CatalogApi()` while building the layer, then close over its implementation. Resolver execution has no remaining service requirements, while building `Parts.layer` requires `CatalogApi`. All calls to the provided `Parts` implementation share the resolver built for that layer.
@@ -141,6 +162,7 @@ Match results by identifier rather than assuming the backend preserves request o
 ## Share and tune request caches
 
 ```vibe
+// run: Console.log(JSON.stringify(cachedExample())); const queries = cachedQueries(); for (let i = 0; i < 2; i++) { const result = Effect.result(() => queries.find("missing")); if (result.isFailure()) Console.log(result.failure._tag) }
 function cachedQueries() {
   const resolver = RequestResolver.withCache(PartResolver, {
     capacity: 128,
@@ -157,6 +179,11 @@ function cachedExample() {
   const again = parts.find("ink-blue")
   return [first, again]
 }
+// Output: catalog batch size=1
+// Output: [{"code":"ink-blue","label":"Blue ink"},{"code":"ink-blue","label":"Blue ink"}]
+// Output: catalog batch size=1
+// Output: PartMissing
+// Output: PartMissing
 ```
 
 `withCache` runs to allocate a cache and returns a wrapped resolver. Build it once in a service layer or another shared owner, then reuse it for every query that should share answers. Allocating it inside each lookup creates a fresh cache each time.
@@ -164,6 +191,7 @@ function cachedExample() {
 The cache is bounded by `capacity`, with `"lru"` eviction by default or `"fifo"` for insertion order. Completed expected failures are cached too; interrupted results are not. Entries have no time-based expiry, and cache hits depend on request equality.
 
 ```vibe
+// run: Console.log(JSON.stringify(expiringLookup()))
 function expiringLookup() {
   const cache = RequestResolver.asCache(PartResolver, {
     capacity: 128,
@@ -174,6 +202,8 @@ function expiringLookup() {
   Cache.invalidate(cache, request)
   return first
 }
+// Output: catalog batch size=1
+// Output: {"code":"ink-black","label":"Black ink"}
 ```
 
 Use `asCache` when you need a first-class cache with expiry, refresh, and invalidation. Its `timeToLive` function receives the request's `Exit` and request value, so success and failure can have different lifetimes. Cache read requests whose answers can be reused; keep commands that must execute every time out of that cache.

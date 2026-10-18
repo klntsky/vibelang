@@ -29,7 +29,7 @@ function endpoints() {
 ## Counting, summing, draining, and timing
 
 ```vibe
-// run: Console.log(JSON.stringify([summarize().count, summarize().sum]))
+// run: (() => { const result = summarize(); Console.log(JSON.stringify([result.count, result.sum, Duration.isDuration(result.duration)])); drainObserved() })()
 function summarize() {
   const source = Stream.make(6, 10, 14)
   return {
@@ -40,10 +40,12 @@ function summarize() {
 }
 
 function drainObserved() {
-  const source = Stream.make("ready", "done").tap((s) => log(s))
+  const source = Stream.make("ready", "done").tap((s) => Console.log(s))
   source.run(Sink.drain)
 }
-// Output: [3,30]
+// Output: [3,30,true]
+// Output: ready
+// Output: done
 ```
 
 These sinks consume the whole source. `drain` discards elements but still executes source effects; `timed` also drains and returns a `Duration.Duration`. `Sink.withDuration(otherSink)` returns `[result, duration]` when both the other sink's result and elapsed time are useful. Each field in `summarize` runs a separate consumption.
@@ -51,14 +53,17 @@ These sinks consume the whole source. `drain` discards elements but still execut
 ## Per-element work
 
 ```vibe
+// run: writeRecords()
 const print = Sink.forEach((line: string) => {
-  log(`record: ${line}`)
+  Console.log(`record: ${line}`)
   sleep("10 millis")
 })
 
 function writeRecords() {
   Stream.make("created", "approved").run(print)
 }
+// Output: record: created
+// Output: record: approved
 ```
 
 `forEach` runs work sequentially and returns `void`. Its callback's expected failures and services become the sink's `E` and `R`. `forEachWhile` stops when its effectful callback returns `false`; `forEachArray` works on internal batches.
@@ -66,6 +71,7 @@ function writeRecords() {
 ## Successful and failed sinks
 
 ```vibe
+// run: (() => { Console.log(immediateResult()); try { rejectInput() } catch (error) { Console.log(error._tag) } })()
 error Rejected
 
 function immediateResult() {
@@ -76,6 +82,8 @@ function rejectInput() {
   return Stream.make(40, 50).run(Sink.fail(new Rejected()))
 }
 // never!Rejected!
+// Output: already complete
+// Output: Rejected
 ```
 
 `succeed` and `fail` finish without requesting source elements. Construction itself does not succeed or fail a running program; that happens when the sink runs. `Sink.fromEffect(() => work())` creates the same kind of immediate sink from a VibeLang program.
@@ -101,6 +109,7 @@ function collectSamples() {
 ## Uniqueness and key limits
 
 ```vibe
+// run: Console.log(JSON.stringify(Array.from(collectUnique())))
 const unique = Sink.reduce(() => new Set<string>(), (set, value: string) => set.add(value))
 const threeUnique = Sink.reduceWhile(
   () => new Set<string>(),
@@ -112,11 +121,13 @@ function collectUnique() {
   return Stream.make("oak", "oak", "ash", "elm", "pine").run(threeUnique)
 }
 // Set containing "oak", "ash", "elm".
+// Output: ["oak","ash","elm"]
 ```
 
 Use a native Set when JavaScript value equality is appropriate. A size limit counts unique values, so duplicates do not consume another slot. The initializer creates a fresh Set on every run, avoiding shared mutable sink state.
 
 ```vibe
+// run: Console.log(JSON.stringify(Array.from(summarizeStations())))
 type Reading = { station: string; count: number }
 
 function addReading(totals: Map<string, number>, reading: Reading) {
@@ -140,6 +151,7 @@ function summarizeStations() {
   ).run(twoStations)
 }
 // Map with "hill" -> 7 and "lake" -> 8.
+// Output: [["hill",7],["lake",8]]
 ```
 
 The reducer defines both the grouping key and the merge rule. This limited sink stops immediately after reaching two keys, so even later updates for existing keys remain unread. It limits the consumed prefix, rather than scanning all input while rejecting new keys.
@@ -178,6 +190,7 @@ function foldSamples() {
 ## Folding by weight
 
 ```vibe
+// run: Console.log(JSON.stringify(firstBatch()))
 type Packet = { bytes: number }
 type Batch = { packets: ReadonlyArray<Packet>; bytes: number }
 
@@ -195,6 +208,7 @@ function firstBatch() {
   return Stream.make({ bytes: 60 }, { bytes: 55 }, { bytes: 10 }).run(packets)
 }
 // Returns the 60-byte and 55-byte packets.
+// Output: [{"bytes":60},{"bytes":55}]
 ```
 
 The state tracks total cost instead of element count. This rule stops after reaching the threshold, so the final element can exceed the target; it is not a strict maximum-size packing algorithm. `Stream.transduce(source, packets)` repeats the sink to emit successive batches and feeds its leftovers into the next run. A sink that consumes nothing can produce an empty final result at end of input, so account for that in batch consumers.

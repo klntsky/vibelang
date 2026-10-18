@@ -10,6 +10,8 @@ Schema constructors work as in Effect and operate on decoded values. They apply 
 ## Constructing structs and records
 
 ```vibe
+// run: Console.log(JSON.stringify(makeLabels()))
+import { Console } from "effect"
 const Label = Schema.Struct({ text: Schema.NonEmptyString })
 const LabelsById = Schema.Record(Schema.String, Schema.NonEmptyString)
 
@@ -20,11 +22,16 @@ function makeLabels() {
 }
 ```
 
+```text
+{"label":{"text":"Keep upright"},"byId":{"handling":"Keep upright"}}
+```
+
 Every schema exposes `make`, `makeOption`, and `makeEffect`. A constructor takes the schema's constructor input and returns its decoded type. `FiniteFromString.makeEffect(6)` constructs a number; its decoder instead accepts text. Struct and record constructors validate fields and entries.
 
 ## Applying filters and brands during construction
 
 ```vibe
+// run: Console.log(makeCaseCount(6)); try { makeCaseCount(0) } catch (issue) { Console.log(issue._tag) }
 const CaseCount = Schema.FiniteFromString.check(
   Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 48 })
 ).pipe(Schema.brand("CaseCount"))
@@ -34,11 +41,17 @@ function makeCaseCount(value: number) {
 }
 ```
 
+```text
+6
+Composite
+```
+
 Filters run during construction as well as parsing. A filter leaves the static type unchanged; a brand returns a branded number while keeping the runtime number representation. `{ disableChecks: true }` deliberately skips checks, but does not decode an encoded input or establish that the value is valid.
 
 ## Handling constructor failures
 
 ```vibe
+// run: Console.log(constructOrExplain(6)); Console.log(constructAsOption(0).isNone()); try { constructWithThrowingApi(0) } catch (error) { Console.log("Construction rejected") }
 function constructOrExplain(value: number) {
   try {
     return String(CaseCount.makeEffect(value))
@@ -56,11 +69,18 @@ function constructWithThrowingApi(value: number) {
 }
 ```
 
+```text
+6
+true
+Construction rejected
+```
+
 `makeEffect` fails with `SchemaIssue.Issue`, not the `SchemaError` wrapper returned by Schema decoders. Format the issue directly or translate it to an application error. `makeOption` discards schema-validation details, while `make` throws a generic validation Error with the issue in `cause`. Both synchronous APIs can throw for non-schema causes or asynchronous work, so their explicit boundaries remain useful.
 
 ## Setting nested and lazy defaults
 
 ```vibe
+// run: const first = makePacking(); const second = makePacking(); Console.log(JSON.stringify(first)); Console.log(first.labels === second.labels)
 const Packing = Schema.Struct({
   handling: Schema.String.pipe(Schema.withConstructorDefault(() => "standard")),
   dimensions: Schema.Struct({
@@ -76,6 +96,11 @@ function makePacking() {
 // { handling: "standard", dimensions: { unit: "cm", width: 10 }, labels: [] }
 ```
 
+```text
+{"handling":"standard","dimensions":{"unit":"cm","width":10},"labels":[]}
+false
+```
+
 Pass a program to `withConstructorDefault`; the constructor runs it only when the field needs a default. An outer default supplies nested constructor input, after which inner defaults fill their own fields. A fresh `[]` is created each time the labels default runs, rather than sharing one mutable array.
 
 The default program may fail with schema issues but cannot require services. `make` and `makeOption` need defaults that complete synchronously; use `makeEffect` if a default pauses. Read service-dependent values in the enclosing program and pass them as explicit fields instead.
@@ -83,6 +108,7 @@ The default program may fail with schema issues but cannot require services. `ma
 ## Reusing defaults
 
 ```vibe
+// run: Console.log(JSON.stringify(makeReturnPacking()))
 const ReturnPacking = Schema.Struct({
   reason: Schema.String,
   handling: Packing.fields.handling,
@@ -94,11 +120,16 @@ function makeReturnPacking() {
 }
 ```
 
+```text
+{"reason":"inspection","handling":"standard","labels":[]}
+```
+
 Defaults belong to field descriptions. Reusing a field carries its constructor default into the new struct. A documented `default` annotation is metadata only, and a constructor default does not make decoding accept a missing field; add a decoding default separately when both behaviors are required.
 
 ## Initializing schema-backed classes
 
 ```vibe
+// run: const value = createPackingRequest("pkg-94"); Console.log(value instanceof PackingRequest); Console.log(JSON.stringify(value))
 class PackingRequest extends Schema.Class<PackingRequest>("PackingRequest")({
   reference: Schema.String,
   handling: Packing.fields.handling,
@@ -108,6 +139,11 @@ class PackingRequest extends Schema.Class<PackingRequest>("PackingRequest")({
 function createPackingRequest(reference: string) {
   return PackingRequest.makeEffect({ reference })
 }
+```
+
+```text
+true
+{"reference":"pkg-94","handling":"standard","labels":[]}
 ```
 
 Classes use the same default-bearing field descriptions as structs. The result is a validated instance with its class behavior. `new PackingRequest(...)` also applies defaults. Its exceptions are defects unless an explicit `try` hatch gives them an expected error type; `new` itself never runs a program.

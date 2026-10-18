@@ -72,6 +72,7 @@ Create `src/todos.vibe`. The `TodosLive` layer keeps the list in a `Map` that it
 
 ```vibe
 // src/todos.vibe
+// run: provide TodosLive { Console.log(JSON.stringify(loadBoard())); try { Todos.complete(99) } catch (error) { Console.log(error._tag, error.id) } }
 export schema Todo { id: number; title: string; done: boolean }
 
 export error TodoNotFound { id: number }
@@ -119,6 +120,11 @@ export function loadBoard(): Board!!Todos {
 }
 ```
 
+```text
+{"todos":[{"id":1,"title":"Declare the schema","done":true},{"id":2,"title":"Write the service","done":true},{"id":3,"title":"Render the board","done":false}],"messages":["Completed: Write the service","No todo #99"]}
+TodoNotFound 99
+```
+
 ## 6. Run a program from a component
 
 Create `src/runtime.ts`. One `ManagedRuntime` builds `TodosLive` once and runs every program in the app:
@@ -126,10 +132,15 @@ Create `src/runtime.ts`. One `ManagedRuntime` builds `TodosLive` once and runs e
 ```ts
 // TypeScript (.ts)
 // src/runtime.ts
+// run: return import("./todos.vibe").then(({ completeTodo, loadBoard }) => runtime.runPromise(completeTodo(3)).then(() => runtime.runPromise(loadBoard()))).then((board) => console.log(JSON.stringify(board))).finally(() => runtime.dispose())
 import { ManagedRuntime } from "effect"
 import { TodosLive } from "./todos.vibe"
 
 export const runtime = ManagedRuntime.make(TodosLive)
+```
+
+```text
+{"todos":[{"id":1,"title":"Declare the schema","done":true},{"id":2,"title":"Write the service","done":true},{"id":3,"title":"Render the board","done":true}],"messages":["Completed: Write the service","No todo #99"]}
 ```
 
 Create `src/TodoBoard.vue`. Its `<script setup lang="ts">` block imports `./todos.vibe` by its source name. `runtime.runPromise(loadBoard())` provides `Todos` and returns a `Promise<Board>`:
