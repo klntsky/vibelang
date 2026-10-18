@@ -459,7 +459,6 @@ func (p *projector) execPlan() *plan {
 	l.splitFunctions()
 	l.lowerCalls()
 	l.lowerServiceCalls()
-	l.lowerDeclarations()
 	l.lowerImports()
 	l.entry()
 	return &plan{edits: l.edits}
@@ -537,10 +536,8 @@ func (l *execLowering) replace(pos int, end int, text string) {
 // rewrites its declaration. A function is a candidate when it has a body,
 // is projected as an Effect function (no plain return annotation), and is
 // the file's only declaration of its name, so no overload, parameter, or
-// inner declaration shadows it at a call. The pure candidates are the
-// greatest fixpoint of pureBody over the candidates (D56's rule, from
-// syntax): a group of functions that call only one another and pure
-// globals is pure, so pure recursion runs on the JavaScript stack.
+// inner declaration shadows it at a call. The projector's purity result
+// decides which candidates get a direct entry (D10, D56).
 func (l *execLowering) splitFunctions() {
 	bodies := map[int]*span{}
 	for i := range l.spans[editEffectBody] {
@@ -577,17 +574,8 @@ func (l *execLowering) splitFunctions() {
 		order = append(order, f)
 	}
 	pure := map[string]bool{}
-	for _, f := range order {
-		pure[f.name] = true
-	}
-	for changed := true; changed; {
-		changed = false
-		for _, f := range order {
-			if pure[f.name] && !l.pureBody(f, pure) {
-				pure[f.name] = false
-				changed = true
-			}
-		}
+	for _, f := range l.p.purity() {
+		pure[f.Name] = f.ProvablyPure
 	}
 	for _, f := range order {
 		f.pure = pure[f.name]
@@ -641,91 +629,6 @@ func (l *execLowering) scopeBodies() {
 		l.set(b.open, open[:gen]+helperRef("$scopedBody")+"("+open[gen:])
 		l.set(b.close, close+")")
 	}
-}
-
-// pureBody reports whether f's body, read from syntax, behaves the same as
-// plain JavaScript and as an Effect body, given that the functions in pure
-// are pure: it calls only those functions and pure globals, and it has no
-// throw, try (a region), yield, await, using, this, arguments, or Effeck
-// syntax. Nested functions and classes are not part of the body. The edits
-// inside the body must be calls or syntax, so a form the walk lowers some
-// other way is never taken for plain code.
-func (l *execLowering) pureBody(f *execFunction, pure map[string]bool) bool {
-	body := f.node.Body()
-	lo, hi := l.p.tokenStart(body)+1, body.End()-1
-	own := map[int]bool{}
-	if f.effectBody != nil {
-		own[f.effectBody.open], own[f.effectBody.close] = true, true
-	}
-	for i, e := range l.edits {
-		if e.pos < lo || e.pos > hi || own[i] {
-			continue
-		}
-		if e.kind != editRun && e.kind != editSyntax {
-			return false
-		}
-	}
-	var visit func(node *ast.Node) bool // true: impure
-	visit = func(node *ast.Node) bool {
-		if node.Flags&(ast.NodeFlagsEffeck|ast.NodeFlagsReparsed) != 0 {
-			return true
-		}
-		switch node.Kind {
-		case ast.KindThisKeyword, ast.KindSuperKeyword, ast.KindThrowStatement, ast.KindTryStatement,
-			ast.KindYieldExpression, ast.KindAwaitExpression, ast.KindTaggedTemplateExpression, ast.KindForOfStatement:
-			return true
-		case ast.KindIdentifier:
-			return node.Text() == "arguments"
-		case ast.KindVariableDeclarationList:
-			if node.Flags&ast.NodeFlagsUsing != 0 {
-				return true
-			}
-		case ast.KindCallExpression:
-			if node.QuestionDotToken() != nil {
-				return true
-			}
-			callee := node.Expression()
-			if !(callee.Kind == ast.KindIdentifier && pure[callee.Text()]) && !l.isPureGlobalCall(node) {
-				return true
-			}
-		}
-		if ast.IsFunctionLike(node) || ast.IsClassLike(node) {
-			return false
-		}
-		return node.ForEachChild(visit)
-	}
-	return !body.ForEachChild(visit)
-}
-
-// pureGlobalObjects and pureGlobalFunctions are JavaScript globals whose
-// calls never return an Effect and run no Effect, so a call of one runs the
-// same in plain JavaScript and in an Effect body. A file that declares the
-// name shadows it.
-var pureGlobalObjects = setOf(`Math Number JSON`)
-var pureGlobalFunctions = setOf(`String Number Boolean parseInt parseFloat isNaN isFinite`)
-var pureGlobalMembers = map[string]map[string]bool{
-	"Object": setOf(`keys values entries`),
-	"Array":  setOf(`isArray`),
-	"String": setOf(`fromCharCode fromCodePoint`),
-}
-
-// isPureGlobalCall reports whether call calls a pure global.
-func (l *execLowering) isPureGlobalCall(call *ast.Node) bool {
-	if call.QuestionDotToken() != nil {
-		return false
-	}
-	callee := call.Expression()
-	switch callee.Kind {
-	case ast.KindIdentifier:
-		return pureGlobalFunctions[callee.Text()] && !l.p.names.declared[callee.Text()]
-	case ast.KindPropertyAccessExpression:
-		receiver := callee.Expression()
-		if receiver.Kind != ast.KindIdentifier || callee.QuestionDotToken() != nil || l.p.names.declared[receiver.Text()] {
-			return false
-		}
-		return pureGlobalObjects[receiver.Text()] || pureGlobalMembers[receiver.Text()][callee.Name().Text()]
-	}
-	return false
 }
 
 // splitFunction rewrites f's declaration. A pure function:
@@ -807,7 +710,7 @@ func (l *execLowering) lowerCalls() {
 		if call == nil {
 			continue
 		}
-		if l.isPureGlobalCall(call) {
+		if l.p.isPureGlobal(call) {
 			l.set(s.open, "")
 			l.set(s.close, "")
 			continue
@@ -873,50 +776,6 @@ func (l *execLowering) lowerServiceCalls() {
 			test += " && !(" + strconv.Quote(member) + " in " + t + ")"
 		}
 		l.set(s.close, "), "+test+" ? (yield* "+t+") : "+t+")")
-	}
-}
-
-// lowerDeclarations adds what a declaration needs at run time beyond its
-// checking text: a control registers its operations with their parameter
-// counts (the fork's $control), and a service with a static default passes
-// its default to $reference (D40).
-func (l *execLowering) lowerDeclarations() {
-	reference := helperRef("$reference")
-	for i, e := range l.edits {
-		if e.kind != editSyntax || !strings.Contains(e.text, reference) {
-			continue
-		}
-		at := strings.Index(e.text, reference)
-		rest := e.text[at+len(reference):]
-		open := strings.Index(rest, ">(")
-		closing := strings.Index(rest, ")")
-		if !strings.HasPrefix(rest, "<") || open < 0 || closing < open+2 {
-			continue
-		}
-		name := rest[1:open]
-		text := e.text[:at+len(reference)] + rest[:closing] + ", () => " + name + ".default" + rest[closing:]
-		l.edits[i].text = text
-	}
-	for _, statement := range l.p.file.Statements.Nodes {
-		if !isServiceClass(statement) || ast.GetClassExtendsHeritageElement(statement) == nil {
-			continue
-		}
-		var methods, arities []string
-		for _, member := range statement.Members() {
-			if !ast.IsMethodDeclaration(member) || ast.IsStatic(member) || member.Name() == nil {
-				continue
-			}
-			arity := len(member.Parameters())
-			for _, parameter := range member.Parameters() {
-				if parameter.AsParameterDeclaration().DotDotDotToken != nil {
-					arity = -1
-				}
-			}
-			methods = append(methods, strconv.Quote(member.Name().Text()))
-			arities = append(arities, strconv.Itoa(arity))
-		}
-		name := statement.Name().Text()
-		l.insert(statement.End(), "\n"+helperRef("$control")+"("+name+", ["+strings.Join(methods, ", ")+"], ["+strings.Join(arities, ", ")+"]);")
 	}
 }
 

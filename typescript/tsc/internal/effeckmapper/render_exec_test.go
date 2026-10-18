@@ -2,6 +2,8 @@ package effeckmapper
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -208,6 +210,51 @@ func TestEmit(t *testing.T) {
 	}
 }
 
+// TestEmitCorpusDeclarations checks the controls and static-default service
+// in the corpus, both before and after TypeScript erases their types.
+func TestEmitCorpusDeclarations(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name          string
+		registrations []string
+		reference     string
+	}{
+		{
+			name: "handle-tail-resume",
+			registrations: []string{
+				`$control(Approval, ["approve"], [1]);`,
+				`$control(Notes, ["note"], [1]);`,
+			},
+		},
+		{
+			name:      "effeck-services-default",
+			reference: "FeatureFlags",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := os.ReadFile(filepath.Join("../../../effeck/cases", c.name, "main.effeck"))
+			assert.NilError(t, err)
+			source := string(data)
+			executable := Executable(source, testContext)
+			js, _, diagnostics := Emit(source, testContext)
+			assert.Equal(t, len(executable.Diagnostics), 0, "diagnostics: %v", executable.Diagnostics)
+			assert.Equal(t, len(diagnostics), 0, "diagnostics: %v", diagnostics)
+			for _, text := range []string{executable.Text, js} {
+				assert.Equal(t, strings.Count(text, "$control("), len(c.registrations), "%s", text)
+				for _, registration := range c.registrations {
+					assert.Equal(t, strings.Count(text, registration), 1, "%s", text)
+				}
+			}
+			if name := c.reference; name != "" {
+				args := `("app/src/main#` + name + `", () => ` + name + `.default)`
+				assert.Assert(t, strings.Contains(executable.Text, "$reference<"+name+">"+args), "%s", executable.Text)
+				assert.Assert(t, strings.Contains(js, "$reference"+args), "%s", js)
+			}
+		})
+	}
+}
+
 // TestEmitIsDeterministic checks that equal text emits equal output.
 func TestEmitIsDeterministic(t *testing.T) {
 	t.Parallel()
@@ -265,19 +312,5 @@ func TestEmitReportsUnparsedText(t *testing.T) {
 		assert.Equal(t, d.Code, int32(CodeExecSyntax))
 		assert.Assert(t, d.Start >= 0 && d.Start+d.Length <= len(source), "diagnostic %v out of range", d)
 		assert.Assert(t, strings.Contains(d.Message, "TS1109: Expression expected."), d.Message)
-	}
-}
-
-// TestWalkMatchesProject checks that Emit's walk, which repeats Project's
-// setup, builds the plan Project renders: for every projection golden, the
-// checking rendering of the walk's plan is Project's text. A field Project
-// adds to the projector and walk lacks fails here, not at a user's emit.
-func TestWalkMatchesProject(t *testing.T) {
-	t.Parallel()
-	for _, c := range projectionCases {
-		p := walk(c.source, testContext)
-		text, _, _, ok := p.plan.render(checking{names: p.names}, c.source, p.names.importLine)
-		assert.Assert(t, ok, c.name)
-		assert.Equal(t, text, Project(c.source, testContext).Text, c.name)
 	}
 }

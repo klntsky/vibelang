@@ -9,10 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/locale"
-	"github.com/microsoft/TypeScript/tsc/internal/parser"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 	"github.com/microsoft/TypeScript/tsc/internal/sourcemap"
 	"github.com/microsoft/TypeScript/tsc/internal/spanmap"
@@ -88,7 +86,7 @@ func Emit(text string, ctx FileContext) (js string, sourceMap string, diagnostic
 // on a single-file program of its own. Text is "" when the lowered plan's
 // edits overlap, a projector bug, which a diagnostic reports.
 func Executable(text string, ctx FileContext) Projection {
-	p := walk(text, ctx)
+	p := lower(text, ctx)
 	lowered := p.execPlan()
 	r := newExecRendering(p.names)
 	exec, segments, overlap, ok := lowered.render(r, text, r.prefix)
@@ -102,37 +100,6 @@ func Executable(text string, ctx FileContext) Projection {
 		return Projection{Diagnostics: diagnostics}
 	}
 	return Projection{Text: exec, Segments: segments, Diagnostics: diagnostics}
-}
-
-// walk runs the projector's walk over text and returns the projector with
-// its plan, as Project does before it renders.
-func walk(text string, ctx FileContext) *projector {
-	file := parser.ParseSourceFile(ast.SourceFileParseOptions{FileName: projectedFileName}, text, core.ScriptKindTS)
-	p := &projector{
-		file:            file,
-		text:            text,
-		ctx:             ctx,
-		names:           newNames(file, text),
-		forms:           newFormResolver(file),
-		sources:         map[*ast.Node]bool{},
-		services:        map[string]*ast.Node{},
-		functions:       map[string]bool{},
-		statementStarts: map[int]bool{},
-		reported:        map[*ast.Node]bool{},
-	}
-	for _, statement := range file.Statements.Nodes {
-		if isServiceClass(statement) {
-			p.services[statement.Name().Text()] = statement
-		}
-		if statement.Kind == ast.KindFunctionDeclaration && statement.Name() != nil {
-			p.functions[statement.Name().Text()] = true
-		}
-	}
-	for _, statement := range file.Statements.Nodes {
-		p.statement = statement
-		p.visit(statement, env{})
-	}
-	return p
 }
 
 // originalPosition maps pos, a position in a rendering, to the original

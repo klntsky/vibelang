@@ -3,6 +3,7 @@ package effeckmapper
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -184,40 +185,44 @@ function delegates(n: number) {
 	})
 }
 
-// TestPurityAgreesWithExec checks, over every .effeck file of the cases,
-// that the functions Purity calls provably pure are the ones the
-// executable rendering splits into f$direct (D10), so the warning and the
-// emitted code never disagree.
-func TestPurityAgreesWithExec(t *testing.T) {
+// TestEmitPuritySplits checks the D10 output on the corpus's plain-function
+// shapes: pure functions get a direct body and property; plain-looking
+// calls of methods and plain-annotated functions still use Effect wrappers.
+func TestEmitPuritySplits(t *testing.T) {
 	t.Parallel()
-	files, err := filepath.Glob("../../../effeck/cases/*/*.effeck")
-	assert.NilError(t, err)
-	assert.Assert(t, len(files) > 100)
-	splits := 0
-	for _, file := range files {
-		data, err := os.ReadFile(file)
-		assert.NilError(t, err)
-		text := string(data)
-		ctx := FileContext{FileName: "/cases/" + filepath.Base(file), ModuleKey: "cases/" + strings.TrimSuffix(filepath.Base(file), ".effeck")}
-		p := walk(text, ctx)
-		split := map[string]bool{}
-		for _, e := range p.execPlan().edits {
-			if e.kind != editSyntax {
-				continue
+	for _, c := range []struct {
+		name   string
+		file   string
+		pure   []string
+		others []string
+	}{
+		{
+			name: "plain-functions", file: "main.effeck",
+			pure:   []string{"double"},
+			others: []string{"traced", "parity", "area", "maps", "main", "sumTo", "isEven", "isOdd"},
+		},
+		{
+			name: "ch13-plain", file: "ch13-plain.effeck",
+			pure:   []string{"double", "sumTo", "gcd"},
+			others: []string{"area", "tracedDouble", "tracedArea", "doubleAll", "scenario", "main"},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := os.ReadFile(filepath.Join("../../../effeck/cases", c.name, c.file))
+			assert.NilError(t, err)
+			js, _, diagnostics := Emit(string(data), testContext)
+			assert.Equal(t, len(diagnostics), 0, "diagnostics: %v", diagnostics)
+			for _, name := range c.pure {
+				assert.Assert(t, strings.Contains(js, "function "+name+"$direct("), "missing direct body for %s in\n%s", name, js)
+				// The corpus's comments can reserve $direct, so its import may have an alias.
+				assignment := regexp.MustCompile(regexp.QuoteMeta(name) + `\[\$direct(?:_\d+)?\] = ` + regexp.QuoteMeta(name) + `\$direct;`)
+				assert.Assert(t, assignment.MatchString(js), "missing direct property for %s in\n%s", name, js)
 			}
-			if at := strings.Index(e.text, "["+helperRef("$direct")+"] = "); at >= 0 {
-				head := e.text[:at]
-				split[head[strings.LastIndexAny(head, " \n}")+1:]] = true
+			for _, name := range c.others {
+				assert.Assert(t, !strings.Contains(js, name+"$direct"), "unexpected direct entry for %s in\n%s", name, js)
+				assert.Assert(t, !strings.Contains(js, name+"[$direct"), "unexpected direct property for %s in\n%s", name, js)
 			}
-		}
-		pure := map[string]bool{}
-		for _, f := range Project(text, ctx).Purity {
-			if f.ProvablyPure {
-				pure[f.Name] = true
-			}
-		}
-		assert.DeepEqual(t, pure, split)
-		splits += len(split)
+		})
 	}
-	assert.Assert(t, splits >= 20, "only %d split functions in the corpus", splits)
 }

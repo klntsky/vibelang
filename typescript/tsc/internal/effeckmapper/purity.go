@@ -266,8 +266,20 @@ func (p *projector) callObstacle(call *ast.Node, callee func(name string) (obsta
 	return obstacleUnknown
 }
 
+// pureGlobalObjects and pureGlobalFunctions are JavaScript globals whose
+// calls never return an Effect and run no Effect, so a call of one runs the
+// same in plain JavaScript and in an Effect body. A file that declares the
+// name shadows it.
+var pureGlobalObjects = setOf(`Math Number JSON`)
+var pureGlobalFunctions = setOf(`String Number Boolean parseInt parseFloat isNaN isFinite`)
+var pureGlobalMembers = map[string]map[string]bool{
+	"Object": setOf(`keys values entries`),
+	"Array":  setOf(`isArray`),
+	"String": setOf(`fromCharCode fromCodePoint`),
+}
+
 // isPureGlobal reports whether call calls a pure global that no
-// declaration of the file shadows (render_exec.go's tables).
+// declaration of the file shadows.
 func (p *projector) isPureGlobal(call *ast.Node) bool {
 	if call.QuestionDotToken() != nil {
 		return false
