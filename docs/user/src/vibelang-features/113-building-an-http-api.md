@@ -6,6 +6,7 @@ Build routes with Effect's HTTP modules and write each handler as a VibeLang fun
 
 ```vibe
 // users.vibe
+// run: provide UsersLive { Console.log(JSON.stringify(Users.create("Ada"))); const repeated = Effect.result(Users.create("Ada")); if (repeated.isFailure()) Console.log(repeated.failure.name) }
 export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
@@ -25,6 +26,8 @@ export const UsersLive = Layer.effect(Users) {
     }
   }
 }
+// Output: {"id":"1","name":"Ada"}
+// Output: Ada
 ```
 
 `schema CreateUser { name: string }` declares a struct schema and its type: it accepts a JSON object with a string `name`. `Users.create` declares `NameTaken` as an expected failure. The layer owns the set of names and the ID counter, so each layer build starts with isolated state.
@@ -33,7 +36,8 @@ export const UsersLive = Layer.effect(Users) {
 
 ```vibe
 // routes.vibe
-import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
+// run: Effect.scoped { const app = HttpRouter.toHttpEffect(App); const statuses: number[] = []; for (const body of [{ name: "Ada" }, { name: "Ada" }, { name: 123 }]) { const request = HttpServerRequest.fromClientRequest(HttpClientRequest.bodyJson(HttpClientRequest.post("http://local/users"), body)); statuses.push(Effect.provideService(app, HttpServerRequest.HttpServerRequest, request).status) }; Console.log(JSON.stringify(statuses)) }
+import { HttpClientRequest, HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import { CreateUser, NameTaken, Users, UsersLive } from "./users.vibe"
 
 export function createUser() {
@@ -52,6 +56,7 @@ export function createUser() {
 
 export const Routes = HttpRouter.add("POST", "/users", createUser())
 export const App = HttpRouter.provideRequest(UsersLive)(Routes)
+// Output: [201,409,400]
 ```
 
 The JSON decoder runs at the call and returns the validated body. `Users.create` runs next, and the response is JSON with status 201. A repeated name becomes 409; a body that fails the schema becomes 400. The `match` handles each error class it names, and `default: throw error` passes any other failure on to the HTTP boundary.
@@ -64,17 +69,23 @@ The JSON decoder runs at the call and returns the validated body. `Users.create`
 
 ```vibe
 // server.vibe
+// run: provide Logger.layer([]) { Effect.scoped { Layer.build(server(0)); Console.log("server acquired") }; Console.log("server released") }
 import { HttpRouter } from "effect/http"
 import { NodeHttpServer } from "@effect/platform-node"
 import { createServer } from "node:http"
 import { App } from "./routes.vibe"
 
-const Server = NodeHttpServer.layer(createServer, { port: 3000 })
-const Live = Layer.provide(HttpRouter.serve(App), Server)
+function server(port: number) {
+  const Server = NodeHttpServer.layer(createServer, { port })
+  return Layer.provide(HttpRouter.serve(App), Server)
+}
+const Live = server(3000)
 
 export function main() {
   Layer.launch(Live)
 }
+// Output: server acquired
+// Output: server released
 ```
 
 Pass `createServer` as a value. `NodeHttpServer.layer` runs the Node API and owns its lifetime; calling `createServer()` directly in `.vibe` is a platform API error. `HttpRouter.serve` builds the serving layer, and `Layer.launch` keeps it alive until shutdown.
@@ -103,8 +114,10 @@ it.effect("validates bodies and rejects duplicate names") {
     assert.deepStrictEqual([created.status, conflict.status, bad.status], [201, 409, 400])
   }
 }
+// Output:
 ```
 
 `HttpRouter.toHttpEffect` builds a request program without starting a server. Hold that program as `app`, then provide a request for each execution. The scope shares the service layer across these requests and releases it after the test. A new test scope builds a fresh user registry.
 
 Import assertions from `@effect/vitest`; the compiler trusts its re-exports. Use the [installation guide](../getting-started/004-installation.md) to set up the compiler and test plugin. The complete project, including its Vite configuration, is in `examples/http-api`.
+

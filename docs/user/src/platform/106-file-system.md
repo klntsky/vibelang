@@ -5,11 +5,13 @@
 ## Requesting the file-system service
 
 ```vibe
+// run: provide FileSystem.layerNoop({ readFileString: () => '{"theme":"dark"}' }) { Console.log(readSettings()) }
 function readSettings() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./settings.json")
 }
 // string!PlatformError.PlatformError!FileSystem.FileSystem
+// Output: {"theme":"dark"}
 ```
 
 `FileSystem` is the imported module; `FileSystem.FileSystem` is its service key. `Effect.service` retrieves the implementation and adds that service to R. `readFileString` returns text on success and reports a `PlatformError` as an expected failure.
@@ -17,6 +19,8 @@ function readSettings() {
 ## Performing file operations
 
 ```vibe
+// run: provide NodeFileSystem.layer { Console.log(JSON.stringify(saveSummary("ready"))) }
+import { NodeFileSystem } from "@effect/platform-node"
 function saveSummary(text: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   fs.makeDirectory("./output", { recursive: true })
@@ -24,6 +28,7 @@ function saveSummary(text: string) {
   const content = fs.readFileString("./output/summary.txt", "utf8")
   return { content, entries: fs.readDirectory("./output") }
 }
+// Output: {"content":"ready","entries":["summary.txt"]}
 ```
 
 Calls run sequentially: the write completes before the read starts. Expected I/O failures enter E and can be handled with `try`/`catch`. `readFile` and `writeFile` handle byte arrays when text encoding is not appropriate.
@@ -45,11 +50,13 @@ Calls run sequentially: the write completes before the read starts. Expected I/O
 | `stream`, `sink`, `watch` | Stream bytes, write through a sink, or observe changes |
 
 ```vibe
+// run: provide NodeFileSystem.layer { const fs = Effect.service(FileSystem.FileSystem); using path = fs.makeTempFileScoped(); fs.writeFileString(path, "hello"); Console.log(String(fileSize(path))) }
 function fileSize(path: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   using file = fs.open(path)
   return file.stat().size
 }
+// Output: 5
 ```
 
 `open` requires a Scope and registers closing automatically. `using` makes that acquisition belong to the enclosing block, so the handle closes when the function exits, including on failure or interruption. Without `using`, the acquisition keeps Scope in R and belongs to the caller's scope.
@@ -61,10 +68,13 @@ function fileSize(path: string) {
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 function main() {
   const fs = Effect.service(FileSystem.FileSystem)
-  log(fs.readFileString("./README.md"))
+  using path = fs.makeTempFileScoped()
+  fs.writeFileString(path, "Project notes")
+  Console.log(fs.readFileString(path))
 }
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
+// Output: Project notes
 ```
 
 `NodeFileSystem.layer` supplies just the file-system implementation. `NodeServices.layer` supplies the broader Node platform bundle, and Bun applications use the corresponding Bun adapter. Application functions need only `FileSystem`, not a concrete adapter package.
@@ -72,7 +82,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 ## Replacing behavior in tests
 
 ```vibe
-import { it } from "@effect/vitest"
+// run: provide FilesTest { Console.log(readFixture()) }
 function readFixture() {
   const fs = Effect.service(FileSystem.FileSystem)
   if (!fs.exists("/fixtures/title.txt")) return "Untitled"
@@ -83,11 +93,18 @@ const FilesTest = FileSystem.layerNoop({
   exists: (path) => path === "/fixtures/title.txt",
   readFileString: () => "Release notes"
 })
+// Output: Release notes
+```
+
+```vibe
+// files.test.vibe
+import { it } from "@effect/vitest"
 
 it.effect("reads the configured title") {
   const title = Effect.provide(() => readFixture(), FilesTest)
   if (title !== "Release notes") throw new Error("Unexpected title")
 }
+// Output:
 ```
 
 `layerNoop` supplies a complete service with selected method overrides. Its defaults fail or die for unsupported operations; it is not an in-memory file system. Override every operation the test exercises and let unexpected access expose a missing test behavior.
@@ -95,3 +112,4 @@ it.effect("reads the configured title") {
 ## Coming from Effect
 
 Test overrides use ordinary VibeLang functions. Contextual typing converts them to the Effect-returning methods the service interface expects, so `readFileString: () => "Release notes"` replaces a TypeScript `Effect.succeed` body.
+

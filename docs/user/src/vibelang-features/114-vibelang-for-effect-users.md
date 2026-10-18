@@ -3,6 +3,7 @@
 Keep Effect's runtime, libraries, layers, and error channels. In `.vibe` files, write the sequential work as ordinary functions and statements. For every change side by side with Effect code, see the [cheat sheet](115-cheat-sheet.md). For the rules behind each change, read the [specification](../../../design/src/000-intro.md).
 
 ```vibe
+// run: Console.log(main())
 function greet(name: string) {
   sleep("10 millis")
   const message = `Hello, ${name}`
@@ -13,6 +14,8 @@ function greet(name: string) {
 function main() {
   return retry(greet("Ada"), Schedule.recurs(2))
 }
+// Output: Hello, Ada
+// Output: Hello, Ada
 ```
 
 Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.retry`, whose parameter expects a program, the same call is passed by name: retry runs it again on each attempt. Use `async` and plain `await` only inside a boundary hatch. The concurrent `await.all`, `await.allSettled`, `await.any`, and `await.race` operations are VibeLang forms.
@@ -61,6 +64,7 @@ Use Effect's operators for retries, timeouts, concurrency, and Stream transforma
 ## Calls run; programs stay cold
 
 ```vibe
+// run: Console.log(JSON.stringify([sequential(), concurrent()]))
 function sequential() {
   const first = greet("Ada")
   const second = greet("Grace")
@@ -70,6 +74,11 @@ function sequential() {
 function concurrent() {
   return all([greet("Ada"), greet("Grace")], { concurrency: 2 })
 }
+// Output: Hello, Ada
+// Output: Hello, Grace
+// Output: Hello, Ada
+// Output: Hello, Grace
+// Output: [["Hello, Ada","Hello, Grace"],["Hello, Ada","Hello, Grace"]]
 ```
 
 A call whose result type is Effect runs at that point, except where a parameter expects a program: there the call is passed by name, and runs when the program runs. This applies to `Effect.retry`, `Effect.timeout`, `fork`, and entries in `Effect.all`. A program of several statements is a function with no arguments, `() => { ... }`.
@@ -84,6 +93,7 @@ export function main() {
   Console.log("started")
 }
 // node start.js runs main
+// Output: started
 ```
 
 Declare functions, services, schemas, and layers at module scope. Do not run a program there: even `Effect.succeed(1)` is EK1001 at the top level. Export a `main` without parameters instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing the module runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
@@ -93,11 +103,14 @@ Every export of Effect's root is in scope without an import, along with VibeLang
 ## Keep platform work in Effect
 
 ```vibe
+// run: provide Clock.Clock = { ...Clock.Clock(), currentTimeMillis: () => 123, currentTimeMillisUnsafe: () => 123 } { Console.log(reportTime()) }
 function reportTime() {
   const now = Clock.currentTimeMillis()
   Console.log(now)
   return now
 }
+// Output: 123
+// Output: 123
 ```
 
 `console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe`. Use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. Importing a Node function or passing it as a value is allowed; directly running it is a platform API error. [Building an HTTP API](113-building-an-http-api.md) shows `createServer` passed to a server layer.
@@ -107,6 +120,7 @@ A plain function from your `.ts` code or a foreign package needs a boundary hatc
 ## Catch expected failures only
 
 ```vibe
+// run: Console.log(JSON.stringify([displayName("ada"), displayName("missing")]))
 error Missing { id: string }
 
 function lookup(id: string) {
@@ -121,6 +135,7 @@ function displayName(id: string) {
     return `Unknown user: ${error.id}`
   }
 }
+// Output: ["Ada","Unknown user: missing"]
 ```
 
 `throw` adds an expected failure to the function's error channel, and `catch` receives those failures. Defects and interruption bypass `catch`; `finally` still runs. Use `Effect.orDie(() => work())` to promote an expected failure to a defect, and Effect's cause APIs at a boundary when you need to inspect defects.

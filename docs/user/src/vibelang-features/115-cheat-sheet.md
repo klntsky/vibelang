@@ -3,6 +3,7 @@
 Every VibeLang change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is VibeLang. The [specification](../../../design/src/000-intro.md) states the rules behind each change. The examples share these declarations:
 
 ```vibe es
+// run: Console.log(JSON.stringify([getUser("1"), getOrders("1"), handle(() => release("v1"), Approval, { approve: (_request, k) => resume(k, true) })]))
 error NotFound { id: string }
 
 interface User { id: string; name: string }
@@ -24,6 +25,7 @@ control Approval {
 function release(version: string) {
   return Approval.approve(`deploy ${version}`) ? `released ${version}` : "declined"
 }
+// Output: [{"id":"1","name":"Ada"},1,"released v1"]
 ```
 
 ## Types
@@ -39,12 +41,14 @@ const hello = (id: string): Effect.Effect<string, NotFound> =>
 ```
 
 ```vibe es
+// run: Console.log(hello("1"))
 type Find = (id: string) => User!NotFound
 type Release = (version: string) => string!!Approval
 type Load = () => string!!
 function hello(id: string): string!NotFound {
   return `Hello, ${getUser(id).name}`
 }
+// Output: Hello, Ada
 ```
 
 ## Declarations
@@ -101,6 +105,7 @@ const UsersLive = Layer.effect(Users, Effect.gen(function* () {
 ```
 
 ```vibe es
+// run: provide UsersLive { Console.log(JSON.stringify(Users.find("1"))); Console.log(Users().region) }
 const UsersLive = Layer.effect(Users) {
   const seen = new Set<string>()
   return {
@@ -108,6 +113,8 @@ const UsersLive = Layer.effect(Users) {
     region: "eu"
   }
 }
+// Output: {"id":"1","name":"Ada"}
+// Output: eu
 ```
 
 **Schemas** (D133). One declaration gives the schema and its type.
@@ -122,11 +129,13 @@ interface Account extends Schema.Schema.Type<typeof Account> {}
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(Schema.decodeUnknownEffect(Account)({ id: "1", role: "admin" })))
 schema Account {
   id: string
   nickname?: string
   role: "admin" | "member"
 }
+// Output: {"id":"1","role":"admin"}
 ```
 
 **Readonly by default** (D134). Write `mutable` for a member you assign.
@@ -146,17 +155,20 @@ interface Cart { id: string; mutable items: Array<string> }
 ```ts effect
 const greetUser = Effect.fn("greetUser")(function* (id: string) {
   const user = yield* getUser(id)
-  yield* Effect.log(`Hello, ${user.name}`)
+  yield* Effect.Console.log(`Hello, ${user.name}`)
   return user.name
 })
 ```
 
 ```vibe es
+// run: Console.log(Effect.provide(() => greetUser("1"), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))])))
 function greetUser(id: string) {
   const user = getUser(id)
-  log(`Hello, ${user.name}`)
+  Console.log(`Hello, ${user.name}`)
   return user.name
 }
+// Output: Hello, Ada
+// Output: Ada
 ```
 
 **Programs passed by name** (D147). A call runs where it stands, and is passed as a program where a parameter expects one.
@@ -167,10 +179,12 @@ const first = yield* Effect.race(getUser("1"), getUser("2"))
 ```
 
 ```vibe es
+// run: Console.log(fastest().name)
 function fastest() {
   const user = getUser("1")
   return race(getUser("1"), getUser("2"))
 }
+// Output: Ada
 ```
 
 **Providing layers** (D130). `return` inside the block returns from the function.
@@ -183,11 +197,13 @@ const program = Effect.gen(function* () {
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(program()))
 function program() {
   provide UsersLive {
     return Users.find("1")
   }
 }
+// Output: {"id":"1","name":"Ada"}
 ```
 
 **Providing one service** (D173, D174). `provide Key = value` provides one implementation without a layer; layers and services mix in one list, and an effect module such as `Random` stands for its key, `Random.Random`.
@@ -201,6 +217,7 @@ const roll = Random.nextInt.pipe(
 ```
 
 ```vibe es
+// run: Console.log(roll())
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
 function roll(): number!! {
@@ -208,6 +225,7 @@ function roll(): number!! {
     return Random.nextInt()
   }
 }
+// Output: 4
 ```
 
 **Catching by tag** (D216). Catch the failure and `match` on it. A match that names every failure needs no rethrow; `default: throw e` passes on the ones it does not name.
@@ -220,6 +238,7 @@ const describe = (id: string) =>
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify([describe("1"), describe("missing")]))
 function describe(id: string) {
   try {
     return getUser(id).name
@@ -229,6 +248,7 @@ function describe(id: string) {
     }
   }
 }
+// Output: ["Ada","no user missing"]
 ```
 
 **Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through.
@@ -241,9 +261,11 @@ const nameOrGuest = (id: string) =>
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify([nameOrGuest("1"), nameOrGuest("missing")]))
 function nameOrGuest(id: string) {
   return getUser(id).name catch "guest"
 }
+// Output: ["Ada","guest"]
 ```
 
 **Catching in an expression** (D236). `x catch (e) => …` passes the failure to a handler, which can `match` on it; a match that names every failure removes them all.
@@ -256,16 +278,19 @@ const nameOrReason = (id: string) =>
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify([nameOrReason("1"), nameOrReason("missing")]))
 function nameOrReason(id: string) {
   return getUser(id).name catch (e) => match (e) {
     when NotFound: `no user ${e.id}`;
   }
 }
+// Output: ["Ada","no user missing"]
 ```
 
 **Handling control operations** (D132). Effect has none, so the left column is VibeLang's long form.
 
 ```vibe long
+// run: Console.log(auto("v1"))
 function auto(version: string) {
   return handle(() => release(version), Approval, {
     approve(_request, continuation) {
@@ -273,9 +298,11 @@ function auto(version: string) {
     }
   })
 }
+// Output: released v1
 ```
 
 ```vibe es
+// run: Console.log(auto("v1"))
 function auto(version: string) {
   try {
     return release(version)
@@ -283,6 +310,7 @@ function auto(version: string) {
     resume(true)
   }
 }
+// Output: released v1
 ```
 
 **Entry point** (D135). An exported `main` runs when Node starts its module, and not when a test imports it.
@@ -295,9 +323,11 @@ NodeRuntime.runMain(main)
 ```
 
 ```vibe es
+// run: Effect.provide(main(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))
 export function main() {
   log("Hello")
 }
+// Output: Hello
 ```
 
 ## Causes, exits, and interruption
@@ -312,12 +342,15 @@ const safe = (id: string) =>
 ```
 
 ```vibe es
+// run: Console.log(safe("1")); Console.log(safe("missing").includes("NotFound"))
 function safe(id: string) {
   return match (exit(getUser(id))) {
     when Exit.Success(let user): user.name;
     when Exit.Failure(let cause): `failed: ${Cause.pretty(cause)}`;
   }
 }
+// Output: Ada
+// Output: true
 ```
 
 **Rethrow a cause** (D177). `throw` with a `Cause` fails with every reason it holds.
@@ -329,6 +362,7 @@ const logged = getUser("1").pipe(
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(logged()))
 function logged() {
   const outcome = exit(getUser("1"))
   if (outcome is Exit.Failure(let cause)) {
@@ -337,6 +371,7 @@ function logged() {
   }
   return outcome.value
 }
+// Output: {"id":"1","name":"Ada"}
 ```
 
 **Run on every exit** (D178). The block runs without interruption; a success carries no value.
@@ -348,6 +383,7 @@ const tracked = getUser("1").pipe(
 ```
 
 ```vibe es
+// run: Console.log(Effect.provide(() => tracked().name, Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))])))
 function tracked() {
   try {
     return getUser("1")
@@ -355,6 +391,8 @@ function tracked() {
     log(`lookup ${exit._tag}`)
   }
 }
+// Output: lookup Success
+// Output: Ada
 ```
 
 **Exit, yield, and interrupt** (D179). `exit` takes its program by name.
@@ -366,12 +404,14 @@ if (result._tag === "Failure") yield* Effect.interrupt
 ```
 
 ```vibe es
+// run: Console.log(outcome()._tag)
 function outcome() {
   const result = exit(getUser("1"))
   yieldNow()
   if (result is Exit.Failure) interrupt()
   return result
 }
+// Output: Success
 ```
 
 **Interruption** (D180). The blocks keep `return` and `break` meaning what they mean in the function; `uninterruptible(program)` also works.
@@ -388,6 +428,7 @@ const cancellable = Effect.interruptible(getOrders("1"))
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify([guarded(), cancellable()]))
 function guarded() {
   uninterruptible {
     const user = getUser("1")
@@ -402,6 +443,7 @@ function cancellable() {
     return getOrders("1")
   }
 }
+// Output: [{"user":{"id":"1","name":"Ada"},"orders":1},1]
 ```
 
 ## Calls
@@ -415,9 +457,11 @@ const ready = Console.log("ready")
 ```
 
 ```vibe es
+// run: ready()
 function ready() {
   Console.log("ready")
 }
+// Output: ready
 ```
 
 **Common functions without the `Effect.` prefix** (D151): `sleep`, `log`, `retry`, `repeat`, `timeout`, `race`, `all`, `forEach`, `die`, `withSpan`, and the `log` levels.
@@ -430,10 +474,12 @@ const patient = Effect.gen(function* () {
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(patient()))
 function patient() {
   sleep("10 millis")
   return timeout(retry(getUser("1"), Schedule.recurs(2)), "1 second")
 }
+// Output: {"id":"1","name":"Ada"}
 ```
 
 **Methods on Effect's data types** (D152).
@@ -446,9 +492,11 @@ const hot = Stream.take(
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(Stream.runCollect(hot())))
 function hot() {
   return Stream.make(18, 25, 30).filter((c) => c >= 25).map((c) => `${c} C`).take(2)
 }
+// Output: ["25 C","30 C"]
 ```
 
 **The pipe operator** (D154). `%` is the value on the left; where it lands in a program parameter, the left side is passed as a program.
@@ -461,9 +509,11 @@ const piped = getUser("1").pipe(
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(piped()))
 function piped() {
   return getUser("1") |> retry(%, Schedule.recurs(2)) |> timeout(%, "1 second")
 }
+// Output: {"id":"1","name":"Ada"}
 ```
 
 ## TC39 forms
@@ -476,9 +526,12 @@ const findUser = (users: Map<string, User>, id: string) =>
 ```
 
 ```vibe es
+// run: Console.log(findUser(new Map([["1", { id: "1", name: "Ada" }]]), "1").name); Console.log(Effect.result(findUser(new Map<string, User>(), "missing"))._tag)
 function findUser(users: Map<string, User>, id: string) {
   return users.get(id) ?? throw new NotFound({ id })
 }
+// Output: Ada
+// Output: Failure
 ```
 
 **Blocks as values** (D187, [do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
@@ -489,6 +542,7 @@ const label = (id: string) =>
 ```
 
 ```vibe es
+// run: Console.log(label("1"))
 function label(id: string) {
   const name = do {
     const user = getUser(id)
@@ -497,6 +551,7 @@ function label(id: string) {
   }
   return name
 }
+// Output: short
 ```
 
 **Blocks after calls** (D188, [block params](https://github.com/samuelgoto/proposal-block-params)). The block is the call's program; it needs `return` for a value.
@@ -518,8 +573,7 @@ it.live("finds a user", () =>
 ```
 
 ```vibe es
-import { assert, it } from "@effect/vitest"
-
+// run: Console.log(loaded())
 function loaded() {
   return withSpan("load") {
     const user = getUser("1")
@@ -527,10 +581,18 @@ function loaded() {
   }
 }
 
+// Output: Ada
+```
+
+```vibe
+// block-params.test.vibe
+import { assert, it } from "@effect/vitest"
+
 it.live("finds a user") {
   const user = getUser("1")
   assert.strictEqual(user.name, "Ada")
 }
+// Output:
 ```
 
 `it.live` uses the live clock because this page's `getUser` sleeps. `it.effect` supplies a test clock; a test that sleeps there must advance it with `TestClock.adjust`.
@@ -551,12 +613,14 @@ const phaseLabel = (phase: "draft" | "published") =>
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify([phaseLabel("draft"), phaseLabel("published")]))
 function phaseLabel(phase: "draft" | "published") {
   return match (phase) {
     when "draft": "Draft";
     when "published": "Published";
   }
 }
+// Output: ["Draft","Published"]
 ```
 
 **Match errors by class** (D215). An `error` class is a pattern; `and { let id }` binds a property.
@@ -571,12 +635,14 @@ const describeFailure = (failure: NotFound | Timeout) =>
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify([describeFailure(new NotFound({ id: "7" })), describeFailure(new Timeout())]))
 function describeFailure(failure: NotFound | Timeout) {
   return match (failure) {
     when NotFound and { let id }: `no user ${id}`;
     when Timeout: "retry";
   }
 }
+// Output: ["no user 7","retry"]
 ```
 
 **Option, Exit, and Result** (D208). The arms can run Effect functions.
@@ -588,6 +654,7 @@ const failed = (outcome: Exit.Exit<User, NotFound>) => Exit.isFailure(outcome)
 ```
 
 ```vibe es
+// run: Console.log(greet(Option.some("Ada"))); Console.log(greet(Option.none())); Console.log(failed(Exit.fail(new NotFound({ id: "7" })))); Console.log(failed(Exit.succeed({ id: "1", name: "Ada" })))
 function greet(name: Option.Option<string>) {
   return match (name) {
     when Option.Some(let n): `Hello, ${n}`;
@@ -598,6 +665,10 @@ function greet(name: Option.Option<string>) {
 function failed(outcome: Exit.Exit<User, NotFound>) {
   return outcome is Exit.Failure
 }
+// Output: Hello, Ada
+// Output: Hello
+// Output: true
+// Output: false
 ```
 
 **Test and bind** (D211). Bindings in an `is` work in an `if` or `while` condition.
@@ -608,10 +679,13 @@ const firstFailure = (outcome: Exit.Exit<User, NotFound>) =>
 ```
 
 ```vibe es
+// run: Console.log(firstFailure(Exit.succeed({ id: "1", name: "Ada" }))); Console.log(firstFailure(Exit.fail(new NotFound({ id: "7" }))).includes("NotFound"))
 function firstFailure(outcome: Exit.Exit<User, NotFound>) {
   if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) return Cause.pretty(cause)
   return "ok"
 }
+// Output: ok
+// Output: true
 ```
 
 ## Escape hatches
@@ -631,6 +705,7 @@ const name = await Effect.runPromise(greetUser("1"))
 ```
 
 ```vibe es
+// run: provide Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]) { const value = hatches('{"ok":true}', "data:text/plain,hello"); Console.log(JSON.stringify({ ...value, id: /^[0-9a-f-]{36}$/.test(value.id) })) }
 error BadJson { error: unknown }
 
 function hatches(text: string, url: string) {
@@ -645,6 +720,8 @@ function hatches(text: string, url: string) {
   const name = sync(async (greet) => runPromise(greet("1")), greetUser)
   return { id, parsed, loaded, status: fetched.status, tick, name }
 }
+// Output: Hello, Ada
+// Output: {"id":true,"parsed":{"ok":true},"loaded":42,"status":200,"tick":7,"name":"Ada"}
 ```
 
 ## Fibers
@@ -658,11 +735,13 @@ return [yield* Fiber.join(user), yield* Fiber.join(orders)]
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(both()))
 function both() {
   const user = fork getUser("1")
   const orders = fork getOrders("1")
   return [join user, join orders]
 }
+// Output: [{"id":"1","name":"Ada"},1]
 ```
 
 **Wait for several** (D196). `await.all` behaves like `Promise.all`: it starts each element in its own fiber, keeps the shape, and a failure interrupts the rest.
@@ -673,11 +752,13 @@ const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, {
 ```
 
 ```vibe es
+// run: Console.log(JSON.stringify(many()))
 function many() {
   const [user, orders] = await.all [getUser("1"), getOrders("1")]
   const pair = await.all { user: getUser("1"), orders: getOrders("1") }
   return { user, orders, pair }
 }
+// Output: {"user":{"id":"1","name":"Ada"},"orders":1,"pair":{"user":{"id":"1","name":"Ada"},"orders":1}}
 ```
 
 **First success, expected outcomes** (D196, D258). `await.any` waits for the first success. `await.allSettled` returns successes and typed failures as `Result` values, rather than JavaScript's settlement objects, and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`; a cause with no typed failure still propagates. Wrap each element in `exit(...)` when every cause must become data.
@@ -688,11 +769,16 @@ const outcomes = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency
 ```
 
 ```vibe es
+// run: const value = outcomes(); Console.log(value.fastest.name); Console.log(JSON.stringify(value.results.map((result) => result._tag))); Console.log(JSON.stringify((await.allSettled [getUser("missing"), getOrders("1")]).map((result) => result._tag))); Console.log(Exit.isFailure(exit(await.allSettled [die("defect"), getOrders("1")])))
 function outcomes() {
   const fastest = await.any [getUser("1"), getUser("2")]
   const results = await.allSettled [getUser("1"), getOrders("1")]
   return { fastest, results }
 }
+// Output: Ada
+// Output: ["Success","Success"]
+// Output: ["Failure","Success"]
+// Output: true
 ```
 
 **Fork a block** (D166). The loop stops when the enclosing block exits.
@@ -705,6 +791,7 @@ const withHeartbeat = Effect.scoped(Effect.gen(function* () {
 ```
 
 ```vibe es
+// run: provide Logger.layer([]) { Console.log(withHeartbeat().name) }
 function withHeartbeat() {
   fork {
     while (true) {
@@ -714,6 +801,7 @@ function withHeartbeat() {
   }
   return getUser("1")
 }
+// Output: Ada
 ```
 
 **Detached and scoped fibers** (D170).
@@ -725,6 +813,7 @@ const fiber = yield* Effect.forkIn(getUser("2"), scope)
 ```
 
 ```vibe es
+// run: Console.log(Exit.isFailure(Fiber.await(background())))
 function background() {
   detach(getUser("1"))
   const scope = Scope.make()
@@ -732,6 +821,7 @@ function background() {
   Scope.close(scope, Exit.void)
   return fiber
 }
+// Output: true
 ```
 
 **Wait for a Deferred** (D227). `await` waits for promises in JavaScript, so a Deferred uses its method.
@@ -743,11 +833,13 @@ const value = yield* Deferred.await(ready)
 ```
 
 ```vibe es
+// run: Console.log(signal())
 function signal() {
   const ready = Deferred.make<string>()
   Deferred.succeed(ready, "go")
   return ready.await()
 }
+// Output: go
 ```
 
 **Race** (D196, D197). `await.race` behaves like `Promise.race`: the first to finish wins, success or failure, and the rest are interrupted. It replaced `select` (EK4607); poll with `Queue.poll` and an `if`.
@@ -760,6 +852,7 @@ const next = yield* Effect.raceFirst(
 ```
 
 ```vibe es
+// run: Console.log(next())
 function next() {
   const jobs = Queue.unbounded<string>()
   Queue.offer(jobs, "build")
@@ -771,6 +864,7 @@ function next() {
     }
   ]
 }
+// Output: ran build
 ```
 
 **A concurrent loop** (D169). At most `n` items run at once, and all finish before the loop ends.
@@ -783,7 +877,11 @@ yield* Effect.forEach(ids, (id) => Effect.flatMap(getUser(id), (user) => Effect.
 ```
 
 ```vibe es
+// run: Effect.provide(logAll(["1", "2"]), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))
 function logAll(ids: string[]) {
   for concurrent(8) (const id of ids) log(getUser(id).name)
 }
+// Output: Ada
+// Output: Ada
 ```
+

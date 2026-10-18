@@ -5,11 +5,13 @@
 ## Requesting the path service
 
 ```vibe
+// run: provide Path.layer { Console.log(pathSeparator()) }
 function pathSeparator() {
   const path = Effect.service(Path.Path)
   return path.sep
 }
 // string!!Path.Path
+// Output: /
 ```
 
 `Path` is the module and `Path.Path` is its service key. `Effect.service` obtains the implementation from the current environment. Reading `sep` returns that implementation's path separator.
@@ -17,6 +19,7 @@ function pathSeparator() {
 ## Manipulating paths portably
 
 ```vibe
+// run: provide Path.layer { Console.log(JSON.stringify(describeReport())) }
 function describeReport() {
   const path = Effect.service(Path.Path)
   const joined = path.join("reports", "weekly.txt")
@@ -32,6 +35,7 @@ function describeReport() {
     rebuilt: path.format(parsed)
   }
 }
+// Output: {"joined":"reports/weekly.txt","normalized":"reports/weekly.txt","base":"weekly.txt","directory":"reports","extension":".txt","absolute":false,"rebuilt":"reports/weekly.txt"}
 ```
 
 Most `Path` methods are plain synchronous TypeScript functions. Effect's own packages are trusted, so call these methods directly; any exceptions are defects, which ordinary `catch` does not handle. Calling a member through the key, such as `Path.Path.join("reports", "weekly.txt")`, looks up the service and adds `Path.Path` to R even though the member returns a string.
@@ -48,12 +52,14 @@ Most `Path` methods are plain synchronous TypeScript functions. Effect's own pac
 | `toFileUrl`, `fromFileUrl` | Effectful file-URL conversion |
 
 ```vibe
+// run: provide Path.layer { Console.log(asFileUrl("/reports/weekly.txt")) }
 function asFileUrl(file: string) {
   const path = Effect.service(Path.Path)
   const absolute = path.resolve(file)
   const url = path.toFileUrl(absolute)
   return path.fromFileUrl(url)
 }
+// Output: /reports/weekly.txt
 ```
 
 URL conversions return Effects and run directly when called, reporting `BadArgument` on invalid input. Path string operations are lexical: normalizing or resolving a path does not check that a file exists. Use FileSystem when filesystem state matters.
@@ -66,10 +72,11 @@ import { NodeRuntime, NodeServices } from "@effect/platform-node"
 
 function main() {
   const output = Path.Path.join("reports", "weekly.txt")
-  log(output)
+  Console.log(output)
 }
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
+// Output: reports/weekly.txt
 ```
 
 The Node service bundle supplies host path behavior. `Path.layer` supplies the built-in POSIX implementation for programs that intentionally use POSIX paths, including deterministic tests. Use Bun's service bundle when the rest of the application runs against Bun platform services.

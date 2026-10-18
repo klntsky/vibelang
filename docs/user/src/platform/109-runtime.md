@@ -5,16 +5,18 @@ A platform `runMain` starts a VibeLang application and connects its lifetime to 
 ## Running an application entry point
 
 ```vibe
-// main.vibe
+// preparation.vibe
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
-  log("Preparing export")
+  Console.log("Preparing export")
   sleep("100 millis")
-  log("Export complete")
+  Console.log("Export complete")
 }
 
 NodeRuntime.runMain(() => main())
+// Output: Preparing export
+// Output: Export complete
 ```
 
 Pass the runner a program: `main()` passed to a runner is passed by name, so it has not run yet. A module's top level can call the recognized runner, while the application work runs inside `main`. Supply application layers with `Effect.provide(() => main(), AppLive)` inside that runner's program.
@@ -26,7 +28,7 @@ Bun applications use `BunRuntime.runMain` from `@effect/platform-bun`; Node.js a
 ## Configuring runtime launch behavior
 
 ```vibe
-// main.vibe
+// startup-rejected.vibe
 import { NodeRuntime } from "@effect/platform-node"
 
 error StartupRejected {
@@ -55,15 +57,16 @@ export const launchOptions = {
 ```
 
 ```vibe
-// main.vibe
+// custom-entry.vibe
 import { NodeRuntime } from "@effect/platform-node"
 import { launchOptions } from "./launch-options.ts"
 
 function main() {
-  log("Starting with custom exit handling")
+  Console.log("Starting with custom exit handling")
 }
 
 NodeRuntime.runMain(() => main(), launchOptions)
+// Output: Starting with custom exit handling
 ```
 
 Teardown is a plain host callback, not an Effect-returning program. Keep a custom callback in TypeScript when it calls the host's plain `onExit` function; put effectful cleanup in the application before teardown runs. This example deliberately maps every failure to exit code 2.
@@ -71,7 +74,7 @@ Teardown is a plain host callback, not an Effect-returning program. Keep a custo
 ## Handling completion and failures
 
 ```vibe
-// main.vibe
+// invalid-batch.vibe
 import { NodeRuntime } from "@effect/platform-node"
 
 error InvalidBatch {
@@ -81,9 +84,9 @@ error InvalidBatch {
 function exportBatch(count: number) {
   try {
     if (count <= 0) throw new InvalidBatch({ count })
-    log(`Exporting ${count} records`)
+    Console.log(`Exporting ${count} records`)
   } finally {
-    log("Export cleanup finished")
+    Console.log("Export cleanup finished")
   }
 }
 
@@ -93,3 +96,38 @@ NodeRuntime.runMain(() => exportBatch(0))
 Normal return is success; a value returned from `main` is not automatically printed. An unhandled expected failure or defect is reported by default and receives a failing exit code. Effect 4.0.5's default teardown uses 0 for success, 130 for interruption-only causes, and 1 for other failures unless a supported error-specific exit code overrides it.
 
 On a termination signal, the platform interrupts the application and waits for registered cleanup. VibeLang `finally` and `using` run during interruption, while ordinary `catch` does not catch it. Handle recoverable failures inside the program, and let the runner report failures that remain unhandled.
+
+## Check process completion
+
+These host-side checks run the emitted entries in separate processes. They verify silent failure, cleanup before a failing exit, and both outcomes of the custom teardown.
+
+```ts
+// TypeScript (.ts)
+// runtime-checks.ts
+import type {} from "./startup-rejected.vibe"
+import type {} from "./invalid-batch.vibe"
+import type {} from "./custom-entry.vibe"
+import { spawnSync } from "node:child_process"
+import { fileURLToPath } from "node:url"
+
+function launch(file: string) {
+  return spawnSync(process.execPath, [fileURLToPath(new URL(file, import.meta.url))], { encoding: "utf8" })
+}
+
+const rejected = launch("./startup-rejected.js")
+console.log(`rejected: ${rejected.status}, silent: ${rejected.stdout === "" && rejected.stderr === ""}`)
+console.log(`custom: ${launch("./custom-entry.js").status}`)
+const batch = launch("./invalid-batch.js")
+console.log(`batch: ${batch.status}, cleaned: ${batch.stdout.includes("Export cleanup finished")}`)
+const failedCustom = spawnSync(process.execPath, ["--input-type=module", "-e", `
+  import { Effect } from "effect"
+  import { NodeRuntime } from "@effect/platform-node"
+  import { launchOptions } from "./launch-options.js"
+  NodeRuntime.runMain(Effect.fail("rejected"), { ...launchOptions, disableErrorReporting: true })
+`], { cwd: fileURLToPath(new URL(".", import.meta.url)), encoding: "utf8" })
+console.log(`custom failure: ${failedCustom.status}`)
+// Output: rejected: 1, silent: true
+// Output: custom: 0
+// Output: batch: 1, cleaned: true
+// Output: custom failure: 2
+```

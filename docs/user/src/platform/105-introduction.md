@@ -5,11 +5,13 @@ VibeLang uses Effect's platform services for files, paths, terminals, and applic
 ## Choosing portable platform services
 
 ```vibe
+// run: provide FileSystem.layerNoop({ readFileString: () => "Hello, VibeLang!" }) { Console.log(readGreeting()) }
 export function readGreeting() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./greeting.txt")
 }
 // string!PlatformError.PlatformError!FileSystem.FileSystem
+// Output: Hello, VibeLang!
 ```
 
 `FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use these interfaces instead of calling `node:*` APIs or browser globals from `.vibe` files. Portability depends on the target actually implementing the services your program needs; a browser does not automatically gain arbitrary disk access.
@@ -46,11 +48,13 @@ bun add effect@4.0.5 @effect/platform-bun
 
 ```vibe
 // greeting.vibe
+// run: provide FileSystem.layerNoop({ readFileString: () => "  Hello, VibeLang!\n" }) { main() }
 export function main() {
   const fs = Effect.service(FileSystem.FileSystem)
   const greeting = fs.readFileString("./greeting.txt")
-  log(greeting.trim())
+  Console.log(greeting.trim())
 }
+// Output: Hello, VibeLang!
 ```
 
 `Effect.service` runs and returns the implementation associated with an existing Effect service key. Calls to its Effect-returning methods run normally and contribute their failures to E. Keep the runtime package import in the entry file so the application function can also run with test implementations.
@@ -62,7 +66,8 @@ export function main() {
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { main } from "./greeting.vibe"
 
-NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
+NodeRuntime.runMain(() => Effect.provide(() => { const fs = Effect.service(FileSystem.FileSystem); fs.writeFileString("./greeting.txt", "Hello, VibeLang!"); main() }, NodeServices.layer))
+// Output: Hello, VibeLang!
 ```
 
 `NodeServices.layer` supplies the Node platform service bundle. The same package supports Deno's Node compatibility environment, subject to Deno permissions. Run the generated entry module with Node or Deno and grant only the permissions needed by the application.
@@ -74,7 +79,8 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
 import { BunRuntime, BunServices } from "@effect/platform-bun"
 import { main } from "./greeting.vibe"
 
-BunRuntime.runMain(() => Effect.provide(() => main(), BunServices.layer))
+BunRuntime.runMain(() => Effect.provide(() => { const fs = Effect.service(FileSystem.FileSystem); fs.writeFileString("./greeting.txt", "Hello, VibeLang!"); main() }, BunServices.layer))
+// Output: Hello, VibeLang!
 ```
 
 Only the entry point changes: the same `main` uses Bun's implementations. A target-specific package can supply a narrower layer when the whole service bundle is unnecessary. See the FileSystem, Path, PlatformLogger, Runtime, and Terminal pages for individual integrations.

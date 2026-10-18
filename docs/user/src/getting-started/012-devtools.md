@@ -111,11 +111,13 @@ The table below accounts for the 108 diagnostics and editor features in `@effect
 EK4801-EK4825 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in `compilerOptions.vibelang.diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
 
 ```vibe
+// run: Console.log(discard(() => { Console.log("unused") ; return 42 }))
 function discard(program: Effect.Effect<number>) {
   // @vibelang-diagnostics-next-line EK4801:off
   program
   return 0
 }
+// Output: 0
 ```
 
 `// @vibelang-diagnostics EK4818:warning` applies from its line to the end of the file, and `*` names every adjustable code. EK4801, EK4819, and EK4820 also report in the `.ts` files that the program checks; for Effect's other rules in `.ts` files, serve them with Effect's own TypeScript 7 server, `@effect/tsgo` (D242).

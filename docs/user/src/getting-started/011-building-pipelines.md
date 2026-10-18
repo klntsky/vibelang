@@ -129,11 +129,14 @@ function totals(values: ReadonlyArray<Option.Option<number>>) {
 ## Observe intermediate results
 
 ```vibe
+// run: Console.log(quotedTotal())
 function quotedTotal() {
   const amount = total()
-  log(`quoted amount=${amount}`)
+  Console.log(`quoted amount=${amount}`)
   return amount
 }
+// Output: quoted amount=27.52
+// Output: 27.52
 ```
 
 The local variable remains available after logging, giving the behavior of `Effect.tap`. An observation that fails also fails the enclosing function. Use `try`/`catch` around the observation only when ignoring that failure is intentional.
@@ -159,11 +162,14 @@ For a dynamic collection, use `Effect.forEach(values, (value) => work(value), { 
 ## Avoid discarded programs
 
 ```vibe
+// run: saveNotice()
 function saveNotice() {
-  const notice = () => log("saved")
+  const notice = () => Console.log("saved")
   notice()
-  log("finished")
+  Console.log("finished")
 }
+// Output: saved
+// Output: finished
 ```
 
 A call in a VibeLang statement runs even when its success value is ignored. A function value such as `notice` describes work and needs a call to execute. Merely writing `() => Effect.log("saved")` creates a value that no runner or caller uses.

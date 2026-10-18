@@ -5,11 +5,13 @@
 ## Requesting terminal services
 
 ```vibe
+// run: provide Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => " Ada ", display: (text) => Console.log(text.trimEnd()) }) { Console.log(JSON.stringify(dimensions())) }
 function dimensions() {
   const terminal = Effect.service(Terminal.Terminal)
   return { columns: terminal.columns(), rows: terminal.rows() }
 }
 // { columns: number; rows: number }!!Terminal.Terminal
+// Output: {"columns":80,"rows":24}
 ```
 
 `Terminal.Terminal` is the service key; `Effect.service` retrieves its implementation. `columns`, `rows`, and `readLine` are Effect values, so call them to run them. `display` is an Effect-returning method and runs on a normal method call.
@@ -25,6 +27,7 @@ function main() {
 }
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), NodeTerminal.layer))
+// Output: Package prepared.
 ```
 
 `display` writes the string you provide; add a newline when the output should occupy a complete line. Output can fail with `PlatformError`. The Node terminal layer supplies the service without requiring your application to call native standard-output APIs.
@@ -32,6 +35,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeTerminal.layer))
 ## Reading standard input
 
 ```vibe
+// run: provide Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => " Ada ", display: (text) => Console.log(text.trimEnd()) }) { askName() }
 function askName() {
   const terminal = Effect.service(Terminal.Terminal)
   terminal.display("Your name: ")
@@ -39,6 +43,8 @@ function askName() {
   terminal.display(`Hello, ${name.trim() || "visitor"}.\n`)
 }
 // void!Terminal.QuitError | PlatformError.PlatformError!Terminal.Terminal
+// Output: Your name:
+// Output: Hello, Ada.
 ```
 
 `readLine()` waits for a line and returns its text. Reading and display happen in order, so the prompt is issued before input is requested. Low-level `readInput` exposes scoped input events when line-oriented interaction is insufficient.
@@ -46,6 +52,7 @@ function askName() {
 ## Handling terminal quit errors
 
 ```vibe
+// run: provide Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => throw new Terminal.QuitError(), display: (text) => Console.log(text.trimEnd()) }) { askNameOrQuit(); Console.log("quit handled") }
 function askNameOrQuit() {
   try {
     askName()
@@ -54,6 +61,8 @@ function askNameOrQuit() {
     throw error
   }
 }
+// Output: Your name:
+// Output: quit handled
 ```
 
 `QuitError` signals that terminal input ended. Handle it when end-of-input should count as normal application completion, and rethrow unrelated failures. In Effect 4.0.5, the Node adapter's `readLine` raises it on end-of-input; a Ctrl+C keypress does not stop that line reader. The quit keys configured by `NodeTerminal.make` govern `readInput`.
@@ -64,7 +73,7 @@ A host SIGINT or SIGTERM is a separate termination path: the runner interrupts t
 
 ```vibe
 // guessing.vibe
-import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
+// run: const inputs = ["no", "2", "19", "11"]; provide Random = { nextIntUnsafe: () => 0, nextDoubleUnsafe: () => 0.5 }, Terminal.Terminal = Terminal.make({ columns: () => 80, rows: () => 24, readInput: () => Queue.unbounded<Terminal.UserInput>(), readLine: () => inputs.shift() ?? throw new Terminal.QuitError(), display: (text) => Console.log(text.trimEnd()) }) { main() }
 function parseGuess(input: string) {
   const text = input.trim()
   const number = Number(text)
@@ -98,7 +107,7 @@ function game() {
 }
 // void!Terminal.QuitError | PlatformError.PlatformError!Terminal.Terminal
 
-function main() {
+export function main() {
   try {
     game()
   } catch (error) {
@@ -107,7 +116,16 @@ function main() {
   }
 }
 
-NodeRuntime.runMain(() => Effect.provide(() => main(), NodeTerminal.layer))
+
+// Output: Guess an integer from 1 to 20. You have five guesses.
+// Output: Guess 1:
+// Output: Enter a whole number from 1 to 20.
+// Output: Guess 1:
+// Output: Try higher.
+// Output: Guess 2:
+// Output: Try lower.
+// Output: Guess 3:
+// Output: Correct!
 ```
 
 The random service selects the secret once per game, with both endpoints included. Invalid input repeats the prompt without consuming a guess; valid input increments the attempt count. The loop stops on success, after five valid guesses, or on a quit request, and the runner still reports unexpected output failures.
@@ -115,3 +133,15 @@ The random service selects the secret once per game, with both endpoints include
 ## Coming from Effect
 
 A held Effect such as `terminal.readLine` is executed with `terminal.readLine()`. Ordinary functions and loops replace the generator and recursive Effect construction used for the same interaction in TypeScript.
+
+Keep the interactive entry in a separate module so tests can import `main` and supply terminal input:
+
+```vibe
+// guessing-main.vibe
+import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
+import { main } from "./guessing.vibe"
+
+NodeRuntime.runMain(() => Effect.provide(() => main(), NodeTerminal.layer))
+// Output: Guess an integer from 1 to 20. You have five guesses.
+// Output: Guess 1: 
+```

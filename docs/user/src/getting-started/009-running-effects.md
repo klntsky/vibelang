@@ -81,28 +81,31 @@ An `Exit` is either a success with a value or a failure with a `Cause`. That cau
 ## Start and interrupt a fiber
 
 ```vibe
+// run: Console.log(Exit.isFailure(Fiber.await(running)))
 function heartbeat() {
   repeat(log("alive"), Schedule.spaced("200 millis"))
 }
 
-const running = Effect.runFork(heartbeat())
+const running = Effect.runFork(Effect.provide(heartbeat(), Logger.layer([])))
 
 Effect.runPromise {
   sleep("650 millis")
   running.interrupt()
 }
+// Output: true
 ```
 
-`Effect.runFork` returns a running `Fiber`, which you can join, observe, or interrupt. `Fiber.interrupt` waits for its cleanup. This example uses a second runner to act as an external owner; inside application logic, use block-owned `fork(() => heartbeat())` and let the enclosing block bound its lifetime.
+The empty logger layer keeps this heartbeat quiet. `Effect.runFork` returns a running `Fiber`, which you can join, observe, or interrupt. `Fiber.interrupt` waits for its cleanup. This example uses a second runner to act as an external owner; inside application logic, use block-owned `fork(() => heartbeat())` and let the enclosing block bound its lifetime.
 
 ## Select an application boundary
 
 ```vibe
 // main.vibe
 export function main() {
-  log("application started")
+  Console.log("application started")
 }
 // node main.js runs main with NodeRuntime.runMain
+// Output: application started
 ```
 
 A module that exports a `main` without parameters runs it with the platform runner when node starts the module, so shutdown follows platform conventions; without `@effect/platform-node` installed, the compiler uses the runtime's copy of that runner. Call a runner at the top level yourself to pass options or layers; the module then runs only that. Supply the application layer once around `main`; a runner needs all application requirements satisfied. For multiple framework entry points sharing services, use [ManagedRuntime](../036-runtime.md).
