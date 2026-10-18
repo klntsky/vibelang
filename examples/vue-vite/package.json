@@ -1,0 +1,20 @@
+{
+  "name": "effeck-example-vue-vite",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "effect": "4.0.5",
+    "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz",
+    "vue": "3.5.43"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.5",
+    "@vitejs/plugin-vue": "6.0.10",
+    "@vue/test-utils": "2.5.1",
+    "effeck": "file:../../packages/compiler",
+    "effeck-vite": "file:../../packages/vite",
+    "happy-dom": "20.14.6",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

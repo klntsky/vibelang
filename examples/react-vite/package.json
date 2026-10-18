@@ -1,0 +1,24 @@
+{
+  "name": "effeck-example-react-vite",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "effect": "4.0.5",
+    "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.5",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "effeck": "file:../../packages/compiler",
+    "effeck-vite": "file:../../packages/vite",
+    "happy-dom": "20.14.6",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

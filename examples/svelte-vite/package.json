@@ -1,0 +1,20 @@
+{
+  "name": "effeck-example-svelte-vite",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "effect": "4.0.5",
+    "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz",
+    "svelte": "5.57.2"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.0.5",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@testing-library/svelte": "5.4.2",
+    "effeck": "file:../../packages/compiler",
+    "effeck-vite": "file:../../packages/vite",
+    "happy-dom": "20.14.6",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}
