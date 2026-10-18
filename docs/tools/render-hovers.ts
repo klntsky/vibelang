@@ -13,15 +13,27 @@ const markdown = new Marked({ renderer: {
 const shortDocs = (docs: string) => {
   const summary = docs.trim().split(/\n\s*\n/).slice(0, 2).join("\n\n")
   const short = summary.length > 600 ? summary.slice(0, 599) + "…" : summary
-  return short.split(/\n\s*\n/).filter(Boolean).map(p => `<span class="docs-paragraph">${markdown.parseInline(p)}</span>`).join("")
+  return short.split(/\n\s*\n/).filter(Boolean).map(p => `<span class="docs-docs">${markdown.parseInline(p)}</span>`).join("")
+}
+const hoverContent = (node: HoverNode) => escape(node.text) + (node.docs ? shortDocs(node.docs) : "")
+
+// Both reading paths use exactly the ranges that can be shown in the source.
+function hoverNodes(code: string, nodes: (HoverNode | ErrorNode)[]): HoverNode[] {
+  let end = 0
+  return nodes.filter((n): n is HoverNode => n.type === "hover" && Number.isInteger(n.start) && Number.isInteger(n.length) && n.start >= 0 && n.length > 0 && n.start + n.length <= code.length && code.slice(n.start, n.start + n.length) === n.target)
+    .sort((a, b) => a.start - b.start || b.length - a.length)
+    .filter(n => {
+      if (n.start < end) return false
+      end = n.start + n.length
+      return true
+    })
 }
 
 /** Offsets are UTF-16, as in the LSP cache. Invalid/stale ranges never eat code. */
 export function renderHovers(code: string, nodes: (HoverNode | ErrorNode)[], highlight: (text: string) => string = escape): string {
   const valid = nodes.filter(n => Number.isInteger(n.start) && Number.isInteger(n.length) && n.start >= 0 && n.start <= code.length && n.length >= 0)
   const errors = valid.filter((n): n is ErrorNode => n.type === "error")
-  const hovers = valid.filter((n): n is HoverNode => n.type === "hover" && n.length > 0 && n.start + n.length <= code.length && code.slice(n.start, n.start + n.length) === n.target)
-    .sort((a, b) => a.start - b.start || b.length - a.length)
+  const hovers = hoverNodes(code, nodes)
   const part = (start: number, end: number) => {
     const cuts = [...new Set([start, end, ...errors.flatMap(n => [n.start, n.start + n.length]).filter(p => p > start && p < end)])].sort((a, b) => a - b)
     return cuts.slice(0, -1).map((from, i) => {
@@ -33,10 +45,11 @@ export function renderHovers(code: string, nodes: (HoverNode | ErrorNode)[], hig
   }
   let out = "", cursor = 0
   for (const node of hovers) {
-    if (node.start < cursor) continue
     const end = node.start + node.length
     out += part(cursor, node.start)
-    out += `<span class="docs-hover" tabindex="0">${part(node.start, end)}<span class="docs-popup" role="tooltip"><span class="docs-type">${escape(node.text)}</span>${node.docs ? `<span class="docs-docs">${shortDocs(node.docs)}</span>` : ""}</span></span>`
+    // The block's type list supplies the accessible text; pointer popups must
+    // not interrupt the source when a screen reader reads the code.
+    out += `<span class="docs-hover">${part(node.start, end)}<span class="docs-popup" aria-hidden="true">${hoverContent(node)}</span></span>`
     cursor = end
   }
   out += part(cursor, code.length)
@@ -50,20 +63,25 @@ export function renderHovers(code: string, nodes: (HoverNode | ErrorNode)[], hig
 // also keeps long compiler signatures readable on narrow screens, in both themes.
 export const hoverCss = process.env.EFFECK_DOCS_HOVERS === "1" ? `
 .docs-hover { cursor: help; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
-.docs-hover:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+pre.code[tabindex]:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .docs-popup {
   display: none; position: fixed; z-index: 10; left: 50%; bottom: 16px; transform: translateX(-50%);
   width: max-content; max-width: min(60ch, calc(100vw - 32px)); max-height: 45vh; overflow: auto;
   padding: 12px 16px; border: 1px solid var(--rule); border-radius: 8px;
   background: var(--panel); color: var(--fg); box-shadow: 0 4px 20px color-mix(in srgb, var(--fg) 20%, transparent);
-  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  white-space: normal; overflow-wrap: anywhere; text-decoration: none; cursor: auto;
+  text-decoration: none; cursor: auto;
 }
-.docs-hover:hover > .docs-popup, .docs-hover:focus-within > .docs-popup { display: block; }
-.docs-type { display: block; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
-.docs-docs { display: block; margin-top: 8px; border-top: 1px solid var(--rule); padding-top: 8px; }
-.docs-paragraph { display: block; margin: 4px 0; }
+.docs-hover:hover > .docs-popup { display: block; }
+.docs-popup, .docs-types dd { font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.docs-docs { display: block; margin: 4px 0; font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; white-space: normal; }
+.docs-docs:first-of-type { margin-top: 8px; border-top: 1px solid var(--rule); padding-top: 8px; }
 pre.code .docs-popup code { white-space: normal; font-size: 13px; }
+.docs-types { display: none; margin-top: 8px; padding: 12px 16px; border: 1px solid var(--rule); border-radius: 8px; background: var(--panel); }
+pre.code:focus-visible + .docs-types { display: block; }
+.docs-types p { margin: 0 0 8px; font-weight: 600; }
+.docs-types dl { margin: 0; }
+.docs-types dt { margin-top: 12px; font-weight: 600; }
+.docs-types dd { margin: 4px 0 0; }
 .docs-error { text-decoration: underline wavy var(--accent); text-underline-offset: 3px; }
 .docs-error-end { display: inline-block; width: .6ch; border-bottom: 2px solid var(--accent); }
 ` : ""
@@ -81,14 +99,26 @@ export function useHoverRenderer(marked: Marked, source: string, highlight: (tex
     blocks.set(key, [...blocks.get(key) ?? [], block])
   }
   const originalCode = marked.defaults.renderer!.code
+  let example = 0
   marked.use({ renderer: { code(token: Tokens.Code) {
     const [lang, role] = (token.lang ?? "").split(/\s+/)
     if (!["effeck", "ts"].includes(lang) || role === "effect") return false
     const block = blocks.get(normalized(token.text))?.shift()
     if (!block?.nodes.length) return false
-    // Keep the existing caption, figure and pre markup byte for byte.
+    // Keep captions and figures, including the comparison layout. One focus
+    // stop reveals a type list after the scrollable pre. aria-describedby also
+    // exposes its text to screen readers while CSS hides it from the pointer
+    // view. No script, extra disclosure stop, or focusable identifier is needed.
     const renderer = marked.defaults.renderer!
     const original = originalCode.call(renderer, token) as string
-    return original.replace(/<code>[\s\S]*<\/code>/, () => `<code>${renderHovers(token.text, block.nodes, text => highlight(text, lang))}</code>`)
+    const rendered = original.replace(/<code>[\s\S]*<\/code>/, () => `<code>${renderHovers(token.text, block.nodes, text => highlight(text, lang))}</code>`)
+    const hovers = hoverNodes(token.text, block.nodes)
+    if (!hovers.length) return rendered
+    const id = `docs-types-${++example}`
+    // Repeated occurrences with identical popups need one entry. Different
+    // types or docs for the same identifier stay distinct.
+    const entries = [...new Set(hovers.map(node => `<dt><code>${escape(node.target)}</code></dt><dd>${hoverContent(node)}</dd>`))].join("")
+    return rendered.replace(/<pre\b/, `<pre tabindex="0" role="group" aria-label="Code example with types" aria-describedby="${id}"`)
+      .replace("</pre>", () => `</pre><div class="docs-types" id="${id}"><p>Types in this example</p><dl>${entries}</dl></div>`)
   } } })
 }
