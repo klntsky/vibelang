@@ -7,7 +7,8 @@
 # launcher and effeck-vite; the default is packages/compiler/native/effeck.
 # Each example gets one status line. Logs stay in .cache/frameworks-check/.
 # bun install --no-cache fetches fresh manifests, so each example's
-# bunfig.toml minimumReleaseAge applies; a warm manifest cache skips it.
+# bunfig.toml minimumReleaseAge applies; a warm manifest cache skips it
+# (https://github.com/oven-sh/bun/issues/45831). Keep --no-cache until that is fixed.
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(dirname -- "$here")
