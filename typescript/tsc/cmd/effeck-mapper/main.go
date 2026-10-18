@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/microsoft/TypeScript/tsc/internal/effeckmapper"
 )
@@ -37,7 +38,12 @@ func printProjection(path string) int {
 		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
 		return 1
 	}
-	projection := effeckmapper.Project(string(text))
+	absolute, err := filepath.Abs(path)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
+		return 1
+	}
+	projection := effeckmapper.Project(string(text), effeckmapper.FileContextOf(filepath.ToSlash(absolute)))
 	fmt.Print(projection.Text)
 	fmt.Println("\n// --- segments [virtualStart, virtualEnd) <- [originalStart, originalEnd)")
 	for _, s := range projection.Segments {

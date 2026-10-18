@@ -12,12 +12,15 @@
 #   2. Build bin/effeck-mapper.
 #   3. Install typescript@next and effect 4.0.5 into test/.cache, then
 #      assemble the fixture in a temporary directory whose node_modules hold
-#      a copy of this package and effect.
+#      a copy of this package, effect, and effeck-runtime built from
+#      packages/runtime.
 #   4. tsc --runExternalCode must print exactly test/expected-tsc.txt: one
 #      error in main.ts (a misuse of greet's inferred type) and one in
 #      greet.effeck, at its .effeck position.
 #   5. The stock language server must answer hovers and diagnostics at
 #      .effeck positions (test/lsp-hover.mjs).
+#   6. Without effect beside the prelude, the sentinel on each projected
+#      file's first line must report TS1360 at line 1, naming the fix.
 #
 # Environment:
 #   TS7_VERSION  typescript version to test (default 7.1.0-dev.20261017.1)
@@ -60,6 +63,15 @@ cp -R "$here/fixture/." "$work/"
 mkdir -p "$work/node_modules/effeck-ts-mapper"
 cp -R "$package/package.json" "$package/prelude.d.ts" "$package/bin" "$work/node_modules/effeck-ts-mapper/"
 ln -s "$effect_dir" "$work/node_modules/effect"
+# The prelude re-exports effeck-runtime's prelude names, so the runtime's
+# declarations sit beside effect. Build them from a copy of the sources whose
+# node_modules holds the same effect, without touching packages/runtime.
+runtime="$work/node_modules/effeck-runtime"
+mkdir -p "$work/.runtime-build/node_modules" "$runtime"
+cp -R "$root/packages/runtime/src" "$root/packages/runtime/tsconfig.json" "$work/.runtime-build/"
+ln -s "$effect_dir" "$work/.runtime-build/node_modules/effect"
+"$tsc" -p "$work/.runtime-build/tsconfig.json" --outDir "$runtime/dist" --declarationMap false --sourceMap false --inlineSources false
+cp "$root/packages/runtime/package.json" "$runtime/"
 echo "$work"
 
 step "tsc --runExternalCode"
@@ -74,5 +86,21 @@ step "tsc --lsp --stdio: hover and diagnostics at .effeck positions"
 # bin/tsc is a Node launcher; the language server is the native binary it starts.
 native="$(node -e 'const r=require("node:module").createRequire(process.argv[1]);const p=`@typescript/typescript-${process.platform}-${process.arch}`;console.log(require("node:path").join(require("node:path").dirname(r.resolve(p+"/package.json")),"lib","tsc"))' "$cache/node_modules/typescript/package.json")"
 node "$here/lsp-hover.mjs" "$native" "$work"
+
+step "the prelude sentinel: no effect beside the prelude fails at line 1"
+# skipLibCheck hides prelude.d.ts's own failed imports, which would turn every
+# helper into the error type; the sentinel on each file's first line names the fix.
+# A directory of its own: inside $work, resolution would find $work/node_modules/effect.
+bare="$(mktemp -d "${TMPDIR:-/tmp}/effeck-ts-mapper-no-effect.XXXXXX")"
+if [ "${KEEP:-}" = 1 ]; then echo "e2e: keeping $bare"; else trap 'rm -rf "$work" "$bare"' EXIT; fi
+mkdir -p "$bare/src" "$bare/node_modules/effeck-ts-mapper"
+cp "$here/fixture/tsconfig.json" "$here/fixture/package.json" "$bare/"
+cp "$here/fixture/src/greet.effeck" "$bare/src/"
+cp -R "$package/package.json" "$package/prelude.d.ts" "$package/bin" "$bare/node_modules/effeck-ts-mapper/"
+(cd "$bare" && "$tsc" -p . --pretty false --runExternalCode) > "$bare/tsc.txt" 2>&1 || true
+if ! grep -q '^src/greet.effeck(1,[0-9]*): error TS1360: .*the prelude cannot resolve effect from its own location; install effect 4.0.5 beside effeck-ts-mapper' "$bare/tsc.txt"; then
+  cat "$bare/tsc.txt"; echo "e2e: the prelude sentinel did not report a missing effect at line 1" >&2; exit 1
+fi
+echo "ok   TS1360 at greet.effeck line 1 names the fix"
 
 step "e2e: all checks passed"

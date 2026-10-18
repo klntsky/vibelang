@@ -15,10 +15,11 @@
     "contentMapper": {
       "exec": ["./bin/effeck-mapper"],
       "compilerOptions": [],
-      "dynamicConfig": false
+      "dynamicConfig": true
     }
   },
   "peerDependencies": {
-    "effect": "4.0.5"
+    "effect": "4.0.5",
+    "effeck-runtime": "0.0.1"
   }
 }

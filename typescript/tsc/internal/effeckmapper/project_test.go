@@ -1,6 +1,7 @@
 package effeckmapper
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -12,8 +13,14 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// projectionCases are the skeleton's lowering rules, one source and its
-// virtual TypeScript each, without the prelude import line.
+// errNotFound is what a test file system returns for a missing file.
+var errNotFound = errors.New("not found")
+
+// testContext is the context of every golden: src/main.effeck in the package app.
+var testContext = FileContext{FileName: "/app/src/main.effeck", ModuleKey: "app/src/main"}
+
+// projectionCases are the lowering rules, one source and its virtual
+// TypeScript each, without the prelude import line (TestImportLine).
 var projectionCases = []struct {
 	name    string
 	source  string
@@ -22,17 +29,27 @@ var projectionCases = []struct {
 	{
 		name:    "error with fields",
 		source:  "error NotFound { id: string }\n",
-		virtual: "class NotFound extends $TaggedError(\"NotFound\")<{ id: string }> {}\n",
+		virtual: "class NotFound extends TaggedError(\"NotFound\")<{ readonly id: string }> {}\n",
 	},
 	{
 		name:    "exported error without fields",
 		source:  "export error Timeout\n",
-		virtual: "export class Timeout extends $TaggedError(\"Timeout\")<{}> {}\n",
+		virtual: "export class Timeout extends TaggedError(\"Timeout\")<{}> {}\n",
 	},
 	{
 		name:    "generic error",
 		source:  "error Wrapped<T> { value: T }\n",
-		virtual: "class Wrapped<T> extends $TaggedError(\"Wrapped\")<{ value: T }> {}\n",
+		virtual: "class Wrapped<T> extends TaggedError(\"Wrapped\")<{ readonly value: T }> {}\n",
+	},
+	{
+		name:    "members are readonly unless mutable (D134)",
+		source:  "interface Counter {\n  label: string\n  mutable count: number\n  [key: string]: unknown\n  tick(): void\n}\ntype P = { x: number; mutable y: number }\n",
+		virtual: "interface Counter {\n  readonly label: string\n  count: number\n  readonly [key: string]: unknown\n  tick(): void\n}\ntype P = { readonly x: number; y: number }\n",
+	},
+	{
+		name:    "a member named mutable stays",
+		source:  "interface M { mutable: boolean }\n",
+		virtual: "interface M { readonly mutable: boolean }\n",
 	},
 	{
 		name:    "contract with every slot",
@@ -52,33 +69,101 @@ var projectionCases = []struct {
 	{
 		name:    "calls run in a function body",
 		source:  "function greet(id: string) {\n  const user = find(id)\n  return user.name\n}\n",
-		virtual: "function greet(id: string) { return $gen(function* () {\n  const user = (yield* $(find(id)))\n  return user.name\n})}\n",
+		virtual: "function greet(id: string) { return $gen(function* () {\n  const user = (yield* $run(find(id)))\n  return user.name\n})}\n",
 	},
 	{
 		name:    "nested and chained calls",
 		source:  "function f(x: number) {\n  const y = f(g(x))\n  a(b)(c)\n  f().x\n}\n",
-		virtual: "function f(x: number) { return $gen(function* () {\n  const y = (yield* $(f((yield* $(g(x))))))\n  ;(yield* $((yield* $(a(b)))(c)))\n  ;(yield* $(f())).x\n})}\n",
+		virtual: "function f(x: number) { return $gen(function* () {\n  const y = (yield* $run(f((yield* $run(g(x))))))\n  ;(yield* $run((yield* $run(a(b)))(c)))\n  ;(yield* $run(f())).x\n})}\n",
+	},
+	{
+		name:    "a run in an unbraced body takes no semicolon",
+		source:  "function f(x: boolean) {\n  if (x) g(1)\n  else h(2)\n  while (x) g(3)\n  for (;;) h(4)\n}\n",
+		virtual: "function f(x: boolean) { return $gen(function* () {\n  if (x) (yield* $run(g(1)))\n  else (yield* $run(h(2)))\n  while (x) (yield* $run(g(3)))\n  for (;;) (yield* $run(h(4)))\n})}\n",
 	},
 	{
 		name:    "calls in a nested lambda stay",
 		source:  "function f() {\n  return xs.map((x) => g(x))\n}\n",
-		virtual: "function f() { return $gen(function* () {\n  return (yield* $(xs.map((x) => g(x))))\n})}\n",
+		virtual: "function f() { return $gen(function* () {\n  return (yield* $run(xs.map((x) => g(x))))\n})}\n",
 	},
 	{
 		name:    "a nested function declaration is its own Effect",
-		source:  "function f() {\n  function inner() { return h() }\n  return inner\n}\n",
-		virtual: "function f() { return $gen(function* () {\n  function inner() { return $gen(function* () { return (yield* $(h())) })}\n  return inner\n})}\n",
+		source:  "function f() {\n  function inner() { return h(1) }\n  return inner\n}\n",
+		virtual: "function f() { return $gen(function* () {\n  function inner() { return $gen(function* () { return (yield* $run(h(1))) })}\n  return inner\n})}\n",
 	},
 	{
 		name:    "throw fails",
-		source:  "function annotated(): User!NotFound {\n  throw new NotFound({ id: f() })\n}\n",
-		virtual: "function annotated(): Effect.Effect<User, NotFound, never> { return $gen(function* () {\n  return yield* $fail(new NotFound({ id: (yield* $(f())) }))\n})}\n",
+		source:  "function annotated(): User!NotFound! {\n  throw new NotFound({ id: f(1) })\n}\n",
+		virtual: "function annotated(): Effect.Effect<User, NotFound, never> { return $gen(function* () {\n  return yield* $fail(new NotFound({ id: (yield* $run(f(1))) }))\n})}\n",
+	},
+	{
+		name:    "an infer channel wraps the body in $contract (D57)",
+		source:  "function find(id: string): string!infer E!Db {\n  return id\n}\n",
+		virtual: "function find(id: string) { return $contract<string, $Infer, Db>()($gen(function* () {\n  return id\n}))}\n",
+	},
+	{
+		name:    "omitted dependencies of a contract are inferred (D57)",
+		source:  "function find(id: string): string!NotFound {\n  return id\n}\n",
+		virtual: "function find(id: string) { return $contract<string, NotFound, $Infer>()($gen(function* () {\n  return id\n}))}\n",
+	},
+	{
+		name:    "a plain return annotation keeps a plain function (L2)",
+		source:  "function double(n: number): number {\n  return twice(n)\n}\n",
+		virtual: "function double(n: number): number {\n  return twice(n)\n}\n",
 	},
 	{
 		name:    "top-level calls, async and generator functions stay",
 		source:  "const top = f()\nasync function a() { return f() }\nfunction* g() { yield f() }\n",
 		virtual: "const top = f()\nasync function a() { return f() }\nfunction* g() { yield f() }\n",
 	},
+	{
+		name:    "a service is an interface and a key (D45)",
+		source:  "export service Users {\n  find(id: string): User!NotFound\n  region: string\n}\n",
+		virtual: "export interface Users {\n  find(id: string): Effect.Effect<User, NotFound, never>\n  readonly region: string; readonly \"~effeck/service\"?: \"app/src/main#Users\" } export abstract class Users extends $service<Users>(\"app/src/main#Users\") {}\n",
+	},
+	{
+		name:    "a control is a service whose base goes",
+		source:  "control Approval { approve(request: string): boolean!! }\n",
+		virtual: "interface Approval { approve(request: string): Effect.Effect<boolean, never, never>; readonly \"~effeck/service\"?: \"app/src/main#Approval\" } abstract class Approval extends $service<Approval>(\"app/src/main#Approval\") {}\n",
+	},
+	{
+		name:    "a D1 abstract class keeps its static members in the key",
+		source:  "abstract class Clock extends Control {\n  abstract now(): Effect<number>;\n  static readonly zero = 0\n}\n",
+		virtual: "interface Clock {\n  now(): Effect<number>; readonly \"~effeck/service\"?: \"app/src/main#Clock\" } abstract class Clock extends $service<Clock>(\"app/src/main#Clock\") {\n  static readonly zero = 0\n}\n",
+	},
+	{
+		name:    "a service without members is an abstract class",
+		source:  "service Empty {}\n",
+		virtual: "abstract class Empty {}\n",
+	},
+	{
+		name:    "a layer without statements succeeds with its members",
+		source:  "layer UsersLive: Users {\n  find(id) { return lookup(id) }\n  readonly region = \"eu\";\n}\n",
+		virtual: "const UsersLive = Layer.succeed(Users, {\n  find(id) { return $gen(function* () { return (yield* $run(lookup(id))) })},\n  region: \"eu\"\n})\n",
+	},
+	{
+		name:    "a layer with statements builds in an Effect",
+		source:  "export layer UsersLive: Users {\n  const d = Directory()\n  find(id) { return d.lookup(id) }\n  readonly region = name()\n}\n",
+		virtual: "export const UsersLive = Layer.effect(Users, $gen(function* () {\n  const d = (yield* $run($value(Directory)()))\n  return { find(id) { return $gen(function* () { return (yield* $run(d.lookup(id))) })},\n  region: (yield* $run($value(name)())) }\n}))\n",
+	},
+	{
+		name:    "service member calls read the service (D41)",
+		source:  "function f(id: string) {\n  return Users.find(id)\n}\n",
+		virtual: "function f(id: string) { return $gen(function* () {\n  return (yield* $run($use(Users).find(id)))\n})}\n",
+	},
+	{
+		name:    "effect modules and JavaScript globals are not keys",
+		source:  "function f() {\n  Console.log(Math.max(1, 2))\n}\n",
+		virtual: "function f() { return $gen(function* () {\n  ;(yield* $run(Console.log((yield* $run(Math.max(1, 2))))))\n})}\n",
+	},
+}
+
+// virtualBody returns projection's text without its first line, the import line.
+func virtualBody(t *testing.T, projection Projection) string {
+	t.Helper()
+	line, rest, ok := strings.Cut(projection.Text, "\n")
+	assert.Assert(t, ok && strings.HasPrefix(line, "import {"), "first line: %q", line)
+	return rest
 }
 
 // TestProjection checks each lowering rule's virtual text, that its span map
@@ -89,8 +174,8 @@ func TestProjection(t *testing.T) {
 	for _, c := range projectionCases {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			projection := Project(c.source)
-			assert.Equal(t, projection.Text, effectPreludeImport+c.virtual)
+			projection := Project(c.source, testContext)
+			assert.Equal(t, virtualBody(t, projection), c.virtual)
 			assert.Assert(t, len(projection.Diagnostics) == 0, "diagnostics: %v", projection.Diagnostics)
 			assertValidMap(t, projection, c.source)
 			assertParses(t, projection.Text)
@@ -98,43 +183,56 @@ func TestProjection(t *testing.T) {
 	}
 }
 
+// TestImportLine checks the first line: the prelude names the source uses
+// and does not declare, the helpers under names no word of the file
+// spells, and the sentinel that fails at line 1 when the prelude cannot
+// resolve effect or effeck-runtime.
+func TestImportLine(t *testing.T) {
+	t.Parallel()
+	source := "const Option = 1\nfunction f() {\n  const $run = 2\n  Console.log(Option)\n}\nconst L = Layer.empty\n"
+	projection := Project(source, testContext)
+	line, _, _ := strings.Cut(projection.Text, "\n")
+	assert.Equal(t, line, `import { type $PreludeLoaded, $gen, $run as $run_1, Console, Layer } from "effeck-ts-mapper/prelude"; true satisfies $PreludeLoaded;`)
+}
+
+// TestSynthesizedNamesAvoidDeclarations checks that synthesized text names
+// a prelude module through an alias when the file declares that name.
+func TestSynthesizedNamesAvoidDeclarations(t *testing.T) {
+	t.Parallel()
+	source := "import { Layer } from \"./mine\"\ntype A = User!!\nfunction g(Effect: number) { return Effect }\nlayer L: S { readonly x = 1 }\n"
+	projection := Project(source, testContext)
+	line, rest, _ := strings.Cut(projection.Text, "\n")
+	assert.Assert(t, strings.Contains(line, "Effect as Effect_1") && strings.Contains(line, "Layer as Layer_1"), line)
+	assert.Assert(t, strings.Contains(rest, "type A = Effect_1.Effect<User, never, never>"), rest)
+	assert.Assert(t, strings.Contains(rest, "const L = Layer_1.succeed(S, { x: 1 })"), rest)
+	assertParses(t, projection.Text)
+}
+
 // TestVerbatimSegmentsCoverSourceText checks that the identifiers a user
 // hovers map back to their own text, so TypeScript's answers at virtual
 // positions land on the original ones.
 func TestVerbatimSegmentsCoverSourceText(t *testing.T) {
 	t.Parallel()
-	source := "error EmptyName { name: string }\n\nexport function greet(name: string): string!EmptyName {\n  const loud = shout(name)\n  return loud\n}\n"
-	projection := Project(source)
+	source := "error EmptyName { name: string }\n\nexport function greet(name: string): string!EmptyName!! {\n  const loud = shout(name)\n  return loud\n}\n"
+	projection := Project(source, testContext)
 	m := spanmap.New(projection.Segments)
 	for _, word := range []string{"EmptyName", "greet", "loud", "shout", "string"} {
-		virtual := strings.Index(projection.Text, word)
+		virtual := strings.Index(virtualBody(t, projection), word) + strings.Index(projection.Text, "\n") + 1
 		original, fidelity := m.VirtualToOriginalSpan(core.NewTextRange(virtual, virtual+len(word)))
 		assert.Assert(t, fidelity.IsExact(), "%s maps with fidelity %v", word, fidelity)
 		assert.Equal(t, source[original.Pos():original.End()], word)
 	}
 }
 
-// TestFileThatBindsEffect checks that a file with its own Effect does not
-// import the prelude's, and that its contracts name Effect's type directly.
-func TestFileThatBindsEffect(t *testing.T) {
-	t.Parallel()
-	source := "import { Effect } from \"effect\"\ntype A = User!!\n"
-	projection := Project(source)
-	assert.Equal(t, projection.Text, preludeImport+"import { Effect } from \"effect\"\ntype A = import(\"effect\").Effect.Effect<User, never, never>\n")
-	assertValidMap(t, projection, source)
-}
-
 // TestUnprojectedForm checks that Effeck syntax without a lowering passes
 // through unchanged and draws one EK9001 at the form.
 func TestUnprojectedForm(t *testing.T) {
 	t.Parallel()
-	source := "service Users { find(id: string): User!NotFound }\n"
-	projection := Project(source)
-	assert.Equal(t, projection.Text, effectPreludeImport+"service Users { find(id: string): Effect.Effect<User, NotFound, never> }\n")
+	source := "function f() {\n  return withSpan(\"x\") { g(1) }\n}\n"
+	projection := Project(source, testContext)
 	assert.Equal(t, len(projection.Diagnostics), 1)
 	d := projection.Diagnostics[0]
 	assert.Equal(t, d.Code, int32(CodeUnprojectedForm))
-	assert.Equal(t, source[d.Start:d.Start+d.Length], "service")
 	assertValidMap(t, projection, source)
 }
 
@@ -143,9 +241,28 @@ func TestUnprojectedForm(t *testing.T) {
 func TestProjectionIsDeterministic(t *testing.T) {
 	t.Parallel()
 	for _, c := range projectionCases {
-		first, second := Project(c.source), Project(c.source)
+		first, second := Project(c.source, testContext), Project(c.source, testContext)
 		assert.DeepEqual(t, first, second)
 	}
+}
+
+// TestModuleKey checks the fork's key rule: the nearest package.json's name,
+// or its directory's, and the module path within it.
+func TestModuleKey(t *testing.T) {
+	t.Parallel()
+	files := map[string]string{
+		"/repo/package.json":            `{"name": "@acme/app"}`,
+		"/repo/cases/ch01/package.json": `{"private": true}`,
+	}
+	read := func(name string) ([]byte, error) {
+		if text, ok := files[name]; ok {
+			return []byte(text), nil
+		}
+		return nil, errNotFound
+	}
+	assert.Equal(t, moduleKey("/repo/src/users.effeck", read), "@acme/app/src/users")
+	assert.Equal(t, moduleKey("/repo/cases/ch01/main.effeck", read), "ch01/main")
+	assert.Equal(t, moduleKey("/elsewhere/main.effeck", read), "main")
 }
 
 // assertValidMap fails unless projection's span map passes the validation

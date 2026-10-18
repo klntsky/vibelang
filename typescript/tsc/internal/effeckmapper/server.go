@@ -30,8 +30,9 @@ func Serve(ctx context.Context, rwc io.ReadWriteCloser) error {
 
 // Handler implements the content mapper protocol: initialize, openProject,
 // transform and closeProject. The protocol is driven by TypeScript alone,
-// and the mapper keeps no per-project state, because the projection depends
-// only on each file's text.
+// and the mapper keeps no per-project state: a projection depends only on
+// its file's text and context (FileContextOf), which reads package.json
+// files that openProject reports as watched.
 type Handler struct{}
 
 // HandleRequest answers one protocol request.
@@ -40,9 +41,7 @@ func (Handler) HandleRequest(ctx context.Context, method string, params json.Val
 	case contentmapper.MethodInitialize:
 		return initialize(params)
 	case contentmapper.MethodOpenProject:
-		// No options and no dynamic configuration: the transform identity is
-		// the package's name and version.
-		return contentmapper.OpenProjectResult{}, nil
+		return openProject(params)
 	case contentmapper.MethodCloseProject:
 		return nil, nil
 	case contentmapper.MethodTransform:
@@ -73,14 +72,27 @@ func initialize(params json.Value) (any, error) {
 	}, nil
 }
 
-// transform projects one file. It reads only the file's content; the file
-// name and project handle do not change the result.
+// openProject reports the package.json files whose names enter the
+// project's module keys as watched files (the manifest declares
+// dynamicConfig), with an identity of their names, so a renamed package
+// invalidates every projection of the project.
+func openProject(params json.Value) (any, error) {
+	var p contentmapper.OpenProjectParams
+	if err := json.Unmarshal(params, &p); err != nil {
+		return nil, err
+	}
+	files, identity := projectPackageFiles(p.ConfigFileName)
+	return contentmapper.OpenProjectResult{ConfigIdentity: identity, WatchedFiles: files}, nil
+}
+
+// transform projects one file from its content and its context; the project
+// handle does not change the result.
 func transform(params json.Value) (any, error) {
 	var p contentmapper.TransformParams
 	if err := json.Unmarshal(params, &p); err != nil {
 		return nil, err
 	}
-	return TransformResult(Project(p.Content))
+	return TransformResult(Project(p.Content, FileContextOf(p.FileName)))
 }
 
 // TransformResult encodes projection as the protocol's transform result.

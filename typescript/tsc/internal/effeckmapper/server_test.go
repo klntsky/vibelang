@@ -27,21 +27,21 @@ func TestHostTransform(t *testing.T) {
 	defer host.Close()
 	mapper := &contentmapper.Mapper{
 		Definition: contentmapper.Definition{Package: "effeck-ts-mapper", Extensions: []string{".effeck"}},
-		Manifest:   contentmapper.Manifest{Name: "effeck-ts-mapper", Version: "0.0.1", Exec: []string{"./bin/effeck-mapper"}},
+		Manifest:   contentmapper.Manifest{Name: "effeck-ts-mapper", Version: "0.0.1", Exec: []string{"./bin/effeck-mapper"}, DynamicConfig: true},
 	}
 	project := host.Project(contentmapper.ProjectSpec{ConfigFileName: "/p/tsconfig.json", Mappers: []*contentmapper.Mapper{mapper}})
 	defer project.Close()
 
 	fileName := tspath.RootedFilePathFromAbsolute("/p/greet.effeck")
-	content := "error EmptyName { name: string }\nservice Users {}\nexport function greet(name: string) {\n  if (name === \"\") throw new EmptyName({ name })\n  return name\n}\n"
+	content := "error EmptyName { name: string }\nexport function greet(name: string) {\n  if (name === \"\") throw new EmptyName({ name })\n  return withSpan(\"greet\") { name }\n}\n"
 	files, err := contentmapper.TransformAndParse(ast.SourceFileParseOptions{FileName: fileName}, content, mapper, project)
 	assert.NilError(t, err)
 
 	file := files.Canonical
 	assert.Equal(t, file.VirtualFileName(), fileName.AppendSuffix(".ts"))
 	assert.Equal(t, file.OriginalText(), content)
-	assert.Equal(t, file.Text(), Project(content).Text)
-	// The mapper's EK9001 on service arrives in original coordinates. Filter
+	assert.Equal(t, file.Text(), Project(content, FileContextOf(fileName.AsString())).Text)
+	// The mapper's EK9001 on the block param arrives in original coordinates. Filter
 	// by source: ParseResult parses the virtual text under the original
 	// name, greet.effeck, so in the fork the parser reads it with Effeck
 	// syntax and reports none of the TS1434 errors stock tsc reports there.
@@ -53,7 +53,7 @@ func TestHostTransform(t *testing.T) {
 	}
 	assert.Equal(t, len(mapperDiagnostics), 1)
 	assert.Equal(t, mapperDiagnostics[0].Code(), int32(CodeUnprojectedForm))
-	assert.Equal(t, content[mapperDiagnostics[0].Pos():mapperDiagnostics[0].End()], "service")
+	assert.Equal(t, content[mapperDiagnostics[0].Pos():mapperDiagnostics[0].End()], "{")
 }
 
 // TestInitializeRequiresUTF8 checks that the mapper refuses a host that does
