@@ -35,6 +35,13 @@ uses the same compiler options and diagnostics as `effeck -p tsconfig.json`.
 Import local sources with `./welcome.effeck`. Imports rewritten by `effeck` to
 `./welcome.js` resolve back to `welcome.effeck` in Vite's module graph.
 
+Set `"rewriteRelativeImportExtensions": true` in `compilerOptions`. Without it,
+a `.ts` file that imports `./welcome.effeck` fails with TS5097, and
+`"allowImportingTsExtensions": true` alone fails with TS5096, because the
+plugin emits JavaScript. If `tsconfig.json` has `"files": []` and only lists
+`references`, as Vite's templates do, pass the referenced configuration that
+includes your sources: `effeck({ project: "tsconfig.app.json" })`.
+
 ## Configure Vitest
 
 ```ts

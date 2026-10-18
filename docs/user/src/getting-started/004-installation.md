@@ -135,6 +135,14 @@ export default defineConfig({
 })
 ```
 
+The plugin compiles the project that `tsconfig.json` describes, so keep
+`"rewriteRelativeImportExtensions": true` from the configuration above. Without
+it, a `.ts` file that imports an `.effeck` module fails with TS5097. If your
+`tsconfig.json` has `"files": []` and only lists `references`, as Vite's
+templates do, pass the referenced configuration that includes your sources:
+`effeck({ project: "tsconfig.app.json" })`. [Vite and Vitest](../setup/vite.md)
+covers the setup step by step.
+
 To update, install the new version of all three Effeck packages together:
 
 ```sh

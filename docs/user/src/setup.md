@@ -20,9 +20,8 @@ Read the project's root directory and record what you find:
 | | `package-lock.json`, or no lockfile | npm |
 | | `pnpm-lock.yaml` or `yarn.lock` | pnpm or Yarn: install the packages the npm commands name with `pnpm add` or `yarn add` |
 | Build | `vite` or `vitest` in `package.json`, or a `vite.config.*` or `vitest.config.*` file | Vite |
-| | `webpack`, `rollup`, `esbuild`, or `@rspack/core` in `package.json`, or `bun build` in a script | Another bundler |
+| | `webpack`, `rollup`, `esbuild`, or `@rspack/core` in `package.json`, or `bun build` in a script | Another bundler: not supported yet |
 | | None of these | The `effeck` CLI |
-| Framework | `react`, `svelte`, or `vue` in `package.json` | That framework |
 | Editor | A `.vscode/` or `.cursor/` directory | VS Code or Cursor |
 | | A `.zed/` directory | Zed |
 | | None of these | Ask the user |
@@ -42,11 +41,7 @@ Read each page that matches and follow its steps, in this order: project, build,
 | Zed | [Zed](setup/zed.md) |
 | Another editor with an LSP client | [Other editors](setup/other-editors.md) |
 
-These integrations are coming soon. Their pages have no steps yet. If the project needs one, tell the user that it is not available yet, and ask whether to build with the `effeck` CLI instead.
-
-- Stock TypeScript 7 `tsc`, through a content mapper: [TypeScript 7](setup/typescript-7.md)
-- webpack, Rollup, esbuild, Rspack, and Bun, through one bundler plugin: [Bundlers](setup/bundlers.md)
-- [React](setup/react.md), [Svelte](setup/svelte.md), and [Vue](setup/vue.md) example apps
+Effeck does not support webpack, Rollup, esbuild, Rspack, or `bun build` yet. If the project builds with one of them, tell the user, and ask whether to build the `.effeck` sources with the `effeck` CLI instead.
 
 ## 4. Verify the setup
 
