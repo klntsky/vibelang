@@ -1,0 +1,10 @@
+function work(n: number) {
+  sleep("10 millis")
+  return n
+}
+
+export function both() {
+  const a = fork work(1)
+  const b = fork work(2)
+  return [join a, join b]
+}

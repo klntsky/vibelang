@@ -1,0 +1,13 @@
+function cache() {
+  sleep("50 millis")
+  return "cache"
+}
+
+function network() {
+  sleep("10 millis")
+  return "network"
+}
+
+export function fastest() {
+  return race(cache(), network())
+}

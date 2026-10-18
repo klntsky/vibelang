@@ -1,0 +1,13 @@
+service Clock2 {
+  now(): number!!
+}
+
+const ClockLive = Layer.succeed(Clock2, {
+  now() { return 42 }
+})
+
+export function program() {
+  provide ClockLive {
+    return Clock2.now() * 2
+  }
+}

@@ -1,0 +1,11 @@
+service Greeter {
+  greet(name: string): string!!
+}
+
+export const GreeterLive = Layer.effect(Greeter) {
+  const prefix = "Hello"
+  log("greeter ready")
+  return {
+    greet(name) { return `${prefix}, ${name}` }
+  }
+}

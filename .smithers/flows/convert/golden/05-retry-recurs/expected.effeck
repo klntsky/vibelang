@@ -1,0 +1,7 @@
+error Flaky
+
+declare function fetchScore(): number!Flaky
+
+export function score() {
+  return fetchScore() |> retry(%, Schedule.recurs(3))
+}

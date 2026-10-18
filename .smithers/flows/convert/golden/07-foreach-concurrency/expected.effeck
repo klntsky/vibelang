@@ -1,0 +1,7 @@
+function double(n: number) {
+  return n * 2
+}
+
+export function doubled() {
+  return forEach([1, 2, 3, 4], (n) => double(n), { concurrency: 2 })
+}

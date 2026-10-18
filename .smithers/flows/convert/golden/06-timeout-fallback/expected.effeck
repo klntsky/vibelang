@@ -1,0 +1,8 @@
+function slow() {
+  sleep("5 seconds")
+  return "done"
+}
+
+export function quick() {
+  return slow() |> timeout(%, "1 second") catch "too slow"
+}

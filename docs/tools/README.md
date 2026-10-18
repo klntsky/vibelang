@@ -118,3 +118,23 @@ Each page is also written as Markdown beside its HTML, at the same path with
 `https://effeck.dev`. `index.md` and `spec/index.md` repeat the first pages.
 `llms.txt` lists every copy in the llmstxt.org format, one section per sidebar
 view, with a page's sidebar group as its note.
+
+## What smithers.sh serves for Effeck
+
+```sh
+bun docs/tools/check-smithers-content.ts
+```
+
+Checks the files smithers.sh reads from Effeck's `main`, and the effeck.dev hero. It exits 1 on any problem.
+
+- `.smithers/instructions/app.md`, the guest chat's whole knowledge base:
+  - it stays under 24 KiB;
+  - every link resolves to a docs page source or a repository file;
+  - every Effeck block passes `check-snippets.ts`;
+  - the install block equals what `create-effeck` prints.
+- `.smithers/home.json`: only blocks smithers.sh renders, and every markdown path exists.
+- `.smithers/flows/convert/prompt.md`: matches `build-prompt.mjs`'s output.
+- `docs/site/converter/hero.json`: equals golden case 01, with matching hashes.
+
+It needs the same compiler and runtime build as `check-snippets.ts`. `bun test check-smithers-content.test.ts` covers the link, section and home rules.
+

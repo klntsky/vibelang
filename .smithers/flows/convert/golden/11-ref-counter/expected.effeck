@@ -1,0 +1,6 @@
+export function counted() {
+  const ref = Ref.make(0)
+  Ref.update(ref, (n) => n + 1)
+  Ref.update(ref, (n) => n + 1)
+  return Ref.get(ref)
+}

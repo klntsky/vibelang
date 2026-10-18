@@ -208,6 +208,7 @@ cd docs/tools && bun install && bun render-user.ts # build the docs site and the
 bun prototype/esc/examples/run-all.ts              # prototype compiler examples
 cd typescript && sh effeck/smoke.sh                # build effeck and run its cases
 bun docs/tools/check-snippets.ts                   # compile every user-doc code block
+bun docs/tools/check-smithers-content.ts           # check app.md, home.json, the convert prompt and hero
 sh scripts/check-examples.sh                       # build and run the examples
 sh scripts/deploy-docs.sh                          # publish the docs on Cloudflare
 ```

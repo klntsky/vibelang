@@ -1,0 +1,9 @@
+error BadJson { error: unknown }
+
+export function parsed(text: string) {
+  return try((text) => JSON.parse(text) as unknown, (error) => new BadJson({ error }), text)
+}
+
+export function id() {
+  return sync(crypto.randomUUID())
+}

@@ -1,0 +1,7 @@
+export function tracked() {
+  try {
+    return 1
+  } finally {
+    log("cleanup")
+  }
+}

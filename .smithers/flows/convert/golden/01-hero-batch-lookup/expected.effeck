@@ -1,0 +1,18 @@
+error ApiError { status: number }
+
+service Users {
+  name(id: string): string!ApiError
+}
+
+function nameOf(id: string) {
+  return Users.name(id)
+    |> retry(%, Schedule.exponential("100 millis"))
+    |> timeout(%, "2 seconds")
+    catch "unknown"
+}
+
+export function names(ids: ReadonlyArray<string>) {
+  const all = forEach(ids, nameOf, { concurrency: 8 })
+  log(`Loaded ${all.length} names`)
+  return all
+}
