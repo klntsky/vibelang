@@ -209,6 +209,7 @@ func lower(text string, ctx FileContext) *projector {
 		p.visit(statement, env{})
 	}
 	p.checkCatchExpressionHatches()
+	p.normalizeRegionResults()
 	return p
 }
 
@@ -658,6 +659,9 @@ func isRunnableCall(call *ast.Node) bool {
 // starts with a semicolon, because Effeck code omits semicolons and a line
 // that starts with ( would otherwise continue the previous one.
 func (p *projector) runCall(call *ast.Node, e env) {
+	if p.dataMethod(call, e) || p.predicateCall(call, e) {
+		return
+	}
 	start := p.tokenStart(call)
 	if p.statementStarts[start] {
 		p.plan.insert(start, ";")

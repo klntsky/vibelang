@@ -492,6 +492,7 @@ func (p *projector) execPlan() *plan {
 	l.lowerCalls()
 	l.lowerServiceCalls()
 	l.lowerClauses()
+	l.lowerResumeValues()
 	l.lowerImports()
 	l.entry()
 	l.lowerLoops()

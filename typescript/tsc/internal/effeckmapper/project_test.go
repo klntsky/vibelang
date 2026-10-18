@@ -28,6 +28,39 @@ var projectionCases = []struct {
 	source  string
 	virtual string
 }{
+
+	{
+		name:    "data method call punctuation skips comments",
+		source:  "function f(o: Option.Option<number>) { return o.getOrElse /* ( */ (() => 0) }",
+		virtual: "function f(o: Option.Option<number>) { return $gen(function* () { return (yield* $run(Option.getOrElse(o, () => 0))) })}",
+	},
+
+	{
+		name:    "non-tail handle fallthrough has an undefined success",
+		source:  "function f() { try { return Ask.answer() } handle Ask.answer() { const n = resume(1); log(n) } }",
+		virtual: "function f() { return $gen(function* () { const $c = yield* handle_1($gen(function* () { return $box((yield* $run($use(Ask).answer()))) }) , Ask, { answer: ($k) => $gen(function* () { const n = (yield* $run(resume($k, 1))); ;(yield* $run(log(n))) ; return undefined; }) }); return $unboxed($c) })}",
+	},
+	{
+		name:    "a never completing try has no void success path",
+		source:  "function f() { try { throw 1 } finally { cleanup() } }",
+		virtual: "function f() { return $gen(function* () { return yield* $finally($gen(function* () { return (yield* $fail(1)) as void }), $gen(function* () { ;(yield* $run($value(cleanup)())) })) })}",
+	},
+
+	{
+		name:    "data predicate narrows the original receiver",
+		source:  "function f(o: Option.Option<number>) { if (o.isSome()) return o.value; return 0 }",
+		virtual: "function f(o: Option.Option<number>) { return $gen(function* () { if (Option.isSome(o)) return o.value; return 0 })}",
+	},
+	{
+		name:    "module predicate retains stock narrowing",
+		source:  "function f(e: Exit.Exit<number, string>) { return Exit.isFailure(e) ? e.cause : undefined }",
+		virtual: "function f(e: Exit.Exit<number, string>) { return $gen(function* () { return Exit.isFailure(e) ? e.cause : undefined })}",
+	},
+	{
+		name:    "data method uses the module behind a local shadow",
+		source:  "function f(o: Option.Option<number>) { const Option = 1; return o.getOrElse(() => Option) }",
+		virtual: "function f(o: Option.Option<number>) { return $gen(function* () { const Option = 1; return (yield* $run(Option_1.getOrElse(o, () => Option))) })}",
+	},
 	{
 		name:    "join a held Fiber",
 		source:  "function f(a: Fiber.Fiber<number>) { return join a }",
@@ -926,4 +959,15 @@ func TestFiberFormsInSynthesizedExpressions(t *testing.T) {
 		}
 		assert.Assert(t, strings.Contains(projection.Text, want), "%s", projection.Text)
 	}
+}
+
+// TestDataMethodTypeArgumentsRequireAnnotation keeps unsupported written
+// method instantiations visible instead of guessing a type-argument offset.
+func TestDataMethodTypeArgumentsRequireAnnotation(t *testing.T) {
+	t.Parallel()
+	source := "function f(o: Option.Option<number>) { return o.map<number, string>((n) => String(n)) }"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 1)
+	assert.Assert(t, strings.Contains(projection.Diagnostics[0].Message, "annotated module function call"))
+	assert.Assert(t, strings.Contains(projection.Text, "o.map<number, string>"))
 }

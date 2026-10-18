@@ -52,6 +52,19 @@ var emitCases = []struct {
 	contains []string
 	absent   []string
 }{
+
+	{
+		name:     "resume expressions hide normal and jump sentinels while retaining pending completion",
+		source:   "control Ask { answer(): number!! } function f() { try { Ask.answer() } handle Ask.answer() { const value = resume(1); record(value) } }",
+		contains: []string{"$returned($pending) ? $pending : undefined", "return $pending"},
+	},
+
+	{
+		name:     "data methods and predicates call the module without prototypes",
+		source:   "function f(o: Option.Option<number>) { if (o.isSome()) return o.getOrElse(() => 0); return 0 }",
+		contains: []string{"Option.isSome(o)", "Option.getOrElse(o, () => 0)"},
+		absent:   []string{"o.isSome()", "o.getOrElse("},
+	},
 	{
 		name:     "acyclic entries forward defaults rest and destructuring once",
 		source:   "function f(a = seed(), { x } = object(), [y] = array(), ...rest: number[]) { return unknown(a, x, y, rest) }",
