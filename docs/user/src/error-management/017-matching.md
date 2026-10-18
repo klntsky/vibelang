@@ -7,6 +7,7 @@ Matching turns an outcome into one value or selects the next computation. Use ty
 ## Folding success and failure into values
 
 ```vibe
+// run: Console.log(countLabel(3)); Console.log(countLabel(-1))
 error InvalidCount
 
 function itemCount(raw: number) {
@@ -23,23 +24,36 @@ function countLabel(raw: number) {
 // string!!
 ```
 
+```output
+3 items
+Count unavailable
+```
+
 `Effect.match` applies synchronous value callbacks. Neither callback can perform an Effect operation; a callback that only formats text is eligible for plain JavaScript compilation. A cause without an expected failure propagates. If a mixed cause includes an expected failure, Effect selects that failure and can discard its other reasons; ordinary catch preserves the whole mixed cause.
 
 ## Choosing effectful branches
 
 ```vibe
+// run: Console.log(reportCount(3)); Console.log(reportCount(-1))
 function reportCount(raw: number) {
   return Effect.matchEffect(() => itemCount(raw), {
     onFailure: () => {
-      log("Invalid count received")
+      Console.log("Invalid count received")
       return "Count unavailable"
     },
     onSuccess: (count) => {
-      log("Count accepted")
+      Console.log("Count accepted")
       return `${count} items`
     }
   })
 }
+```
+
+```output
+Count accepted
+3 items
+Invalid count received
+Count unavailable
 ```
 
 `matchEffect` accepts VibeLang functions that can pause, fail, or use services. Only the selected branch runs, and its errors and requirements join the result's contract. A `try`/`catch` is also useful when the two branches are easier to read as statements.
@@ -47,6 +61,7 @@ function reportCount(raw: number) {
 ## Matching complete failure causes
 
 ```vibe
+// run: Console.log(outcomeLabel()); Console.log(reportOutcome())
 function outcomeLabel() {
   return Effect.matchCause(die(new Error("index invariant")), {
     onFailure: (cause) => cause.hasDies() ? "Index defect" : "Index stopped",
@@ -57,7 +72,7 @@ function outcomeLabel() {
 function reportOutcome() {
   return Effect.matchCauseEffect(() => die(new Error("index invariant")), {
     onFailure: (cause) => {
-      log("Index stopped", cause.reasons.map((reason) => reason._tag))
+      Console.log("Index stopped", JSON.stringify(cause.reasons.map((reason) => reason._tag)))
       return "Unavailable"
     },
     onSuccess: () => "Ready"
@@ -65,11 +80,18 @@ function reportOutcome() {
 }
 ```
 
+```output
+Index defect
+Index stopped ["Die"]
+Unavailable
+```
+
 `matchCause` passes the full cause to a synchronous failure callback. `matchCauseEffect` allows Effect operations in both callbacks. These APIs can consume cancellation and mixed causes, so choose them where that handling is part of the boundary's policy.
 
 ## Discarding failures or all causes
 
 ```vibe
+// run: ignoreRejectedCount(); discardBoundaryOutcome()
 function ignoreRejectedCount() {
   Effect.ignore(itemCount(-2))
 }
@@ -78,6 +100,10 @@ function ignoreRejectedCount() {
 function discardBoundaryOutcome() {
   Effect.ignoreCause(() => die(new Error("isolated task failed")))
 }
+```
+
+```output
+
 ```
 
 `ignore` discards the success value and typed failures. Causes without an expected failure propagate, but a mixed cause containing one can be consumed too. `ignoreCause` consumes the full failure cause even when it contains no expected failure. Use complete cause discarding only where losing both diagnostics and cancellation is deliberate.

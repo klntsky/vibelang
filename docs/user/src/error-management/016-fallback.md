@@ -7,6 +7,7 @@ A fallback runs another computation after an expected failure. A catch expressio
 ## Recovering with another computation
 
 ```vibe
+// run: Console.log(title())
 error SourceOffline
 
 function latestTitle(): string!SourceOffline! {
@@ -14,7 +15,7 @@ function latestTitle(): string!SourceOffline! {
 }
 
 function cachedTitle() {
-  log("Reading saved title")
+  Console.log("Reading saved title")
   return "Saved issue"
 }
 
@@ -28,13 +29,24 @@ function title() {
 // string!!
 ```
 
+```output
+Reading saved title
+Saved issue
+```
+
 The cache is read only if the primary computation fails. Errors from the fallback become errors of `title`; handling the primary does not handle the fallback too. Ordinary catch propagates defects, interruption, and mixed causes containing either.
 
 ```vibe
+// run: Console.log(titleInline())
 function titleInline() {
   return latestTitle() catch cachedTitle()
 }
 // string!!
+```
+
+```output
+Reading saved title
+Saved issue
 ```
 
 `x catch fallback` is the expression form. The left side runs inside the catch, and the fallback runs only after an expected failure, so the cache is read only when needed. It recovers exactly what the statement recovers. `catch` binds looser than `??` and `||` and tighter than `? :`, so `a ?? b catch c` applies the default inside the catch.
@@ -44,10 +56,15 @@ function titleInline() {
 ## Supplying a default success
 
 ```vibe
+// run: Console.log(titleOrPlaceholder())
 function titleOrPlaceholder() {
   return latestTitle() catch "No title available"
 }
 // string!!
+```
+
+```output
+No title available
 ```
 
 `x catch value` is `Effect.orElseSucceed(x, () => value)`: the value is computed only after an expected failure, and every expected error of `x` is discarded. To keep some failures visible, take the failure and rethrow the rest: `latestTitle() catch (error) => match (error) { when SourceOffline: "No title available"; default: throw error; }`. The fallback is VibeLang code, so it may also call functions that fail or need services; their errors become the expression's. `Effect.orElseSucceed(latestTitle(), () => "No title available")` still works, with a synchronous callback.
@@ -55,6 +72,7 @@ function titleOrPlaceholder() {
 ## Trying alternatives until one succeeds
 
 ```vibe
+// run: Console.log(bestTitle())
 function bestTitle() {
   return Effect.firstSuccessOf([
     () => latestTitle(),
@@ -62,6 +80,11 @@ function bestTitle() {
     () => "Untitled issue"
   ])
 }
+```
+
+```output
+Reading saved title
+Saved issue
 ```
 
 `firstSuccessOf` tries programs sequentially in priority order and stops on success. If all alternatives fail with expected errors, it reports the final error. A cause without an expected failure stops the search; a mixed cause containing one can activate the next alternative. An empty iterable is a defect, so construct at least one alternative.
