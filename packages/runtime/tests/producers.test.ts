@@ -174,3 +174,111 @@ test("a 100,000-element delegated producer keeps a bounded continuation stack", 
     hooks.onCapture = previous
   }
 })
+
+for (const outcome of ["normal", "break", "return", "failure", "defect", "interrupt"] as const) {
+  test(`iterable ${outcome}: loop closes a JavaScript generator exactly once`, async () => {
+    const events: string[] = []
+    const values = {
+      *[Symbol.iterator]() {
+        try {
+          yield 1
+          yield 2
+          events.push("exhausted")
+        } finally {
+          events.push("closed")
+        }
+      }
+    }
+    const body = () => outcome === "failure" ? Effect.fail("body")
+      : outcome === "defect" ? Effect.die("body")
+      : outcome === "interrupt" ? Effect.interrupt
+      : Effect.succeed(outcome === "normal" ? $normal : { kind: outcome, label: "", value: 42 })
+    const exit = await Effect.runPromiseExit($forOf(values, body))
+    if (outcome === "normal") expect(exit).toEqual(Exit.succeed($normal))
+    else if (outcome === "break") expect(exit).toEqual(Exit.succeed($normal))
+    else if (outcome === "return") expect(exit).toEqual(Exit.succeed({ kind: "return", label: "", value: 42 }))
+    else expect(Exit.isFailure(exit)).toBe(true)
+    expect(events).toEqual(outcome === "normal" ? ["exhausted", "closed"] : ["closed"])
+  })
+}
+
+test("abandoning yield delegation closes the delegated JavaScript generator", async () => {
+  let closed = 0
+  const values = {
+    *[Symbol.iterator]() {
+      try { yield 1; yield 2 } finally { closed++ }
+    }
+  }
+  const input = $produce(() => $yieldAll(values))
+  await Effect.runPromise($forOf(input, () => Effect.succeed({ kind: "break", label: "" })))
+  expect(closed).toBe(1)
+})
+
+test("iterable cleanup failures accompany body failures, and exhausted iterators are not closed twice", async () => {
+  let returned = 0
+  const values = {
+    [Symbol.iterator]() {
+      return {
+        next: () => ({ done: false as const, value: 1 }),
+        return() { returned++; throw new Error("close failed") }
+      }
+    }
+  }
+  const exit = await Effect.runPromiseExit($forOf(values, () => Effect.fail("body failed")))
+  expect(returned).toBe(1)
+  expect(Exit.isFailure(exit) && exit.cause.reasons.filter(Cause.isFailReason).map(r => r.error)).toEqual(["body failed"])
+  expect(Exit.isFailure(exit) && String(exit.cause.reasons.find(Cause.isDieReason)?.defect)).toContain("close failed")
+  const exhausted = {
+    [Symbol.iterator]() {
+      return {
+        next: () => ({ done: true as const, value: undefined }),
+        return() { returned++; return { done: true as const, value: undefined } }
+      }
+    }
+  }
+  await Effect.runPromise($forOf(exhausted, () => Effect.die("unreachable")))
+  expect(returned).toBe(1)
+})
+
+test("iterable next failures and invalid results match JavaScript iterator validation", async () => {
+  let returned = 0
+  const invalid = (next: () => unknown, close?: () => unknown) => ({
+    [Symbol.iterator]() { return { next, return: close ?? (() => { returned++; return { done: true } }) } }
+  }) as Iterable<number>
+  const defect = new Error("next failed")
+  expect(await Effect.runPromiseExit($forOf(invalid(() => { throw defect }), () => Effect.void))).toEqual(Exit.die(defect))
+  expect(returned).toBe(0)
+  for (const source of [invalid(() => 1), invalid(() => ({ done: false, value: 1 }), () => 42), invalid(() => ({ done: false, value: 1 }), () => undefined)]) {
+    const exit = await Effect.runPromiseExit($forOf(source, () => Effect.succeed({ kind: "break", label: "" })))
+    expect(Exit.isFailure(exit) && exit.cause.reasons.find(Cause.isDieReason)?.defect).toBeInstanceOf(TypeError)
+  }
+})
+
+test("iterable loops cache next, preserve its receiver, and skip return when a value getter throws", async () => {
+  const events: string[] = []
+  let index = 0
+  const iterator = {
+    get next() {
+      events.push("get next")
+      return function(this: unknown) {
+        expect(this).toBe(iterator)
+        return Object.assign(() => {}, { done: false, value: ++index })
+      }
+    },
+    return() { events.push("return"); return Object.assign(() => {}, { done: true }) }
+  }
+  await Effect.runPromise($forOf({ [Symbol.iterator]: () => iterator }, value => Effect.succeed(value === 2 ? { kind: "break", label: "" } : $normal)))
+  expect(events).toEqual(["get next", "return"])
+  expect(index).toBe(2)
+  const defect = new Error("value getter failed")
+  const broken = {
+    [Symbol.iterator]() {
+      return {
+        next: () => ({ done: false, get value(): number { throw defect } }),
+        return() { events.push("unexpected return"); return { done: true, value: undefined } }
+      }
+    }
+  }
+  expect(await Effect.runPromiseExit($forOf(broken, () => Effect.void))).toEqual(Exit.die(defect))
+  expect(events).toEqual(["get next", "return"])
+})
