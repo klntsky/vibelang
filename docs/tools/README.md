@@ -61,7 +61,7 @@ builds, and project configuration errors exit 2. Snippet failures exit 1.
 Temporary files are removed on success and failure unless `--keep` is set.
 
 ```sh
-bun test docs/tools/check-snippets.test.ts docs/tools/hovers.test.ts
+bun test docs/tools/check-snippets.test.ts docs/tools/first-run.test.ts docs/tools/hovers.test.ts
 bun docs/tools/render-user.ts
 ```
 
@@ -90,7 +90,9 @@ export `function main()` or include an explicit top-level runner. Markers never
 cause a function to run in the published example itself.
 
 The `check:snippets` package script and the pre-deploy snippet check both use
-`--run`.
+`--run`. Both also test the locally scaffolded starter, including Vitest without
+a prior build, and compare its stdout to the `out` fences in the getting-started
+and installation guides. Shell commands are not executed by the snippet checker.
 
 With `--run`, the checker emits marked blocks and their dependencies with the
 selected compiler, then runs each entry separately with Node and the linked

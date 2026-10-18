@@ -5,7 +5,7 @@
   "description": "Builds the docs site from docs/user/src and the specification chapters in docs/design/src, and checks the user docs' code blocks.",
   "scripts": {
     "build": "bun render-user.ts",
-    "check:snippets": "bun check-snippets.ts --run",
+    "check:snippets": "bun test first-run.test.ts && bun check-snippets.ts --run",
     "check:content": "bun check-smithers-content.ts"
   },
   "devDependencies": {

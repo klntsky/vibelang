@@ -373,8 +373,11 @@ async function main() {
         }))
         return classify(block, diagnostics)
       })
+      // Automatic fragments have been identified by the page check. Do not
+      // import their missing fixtures into otherwise independent run examples.
+      const runnableBlocks = results.filter(block => block.status === "ok" && !block.expected.length)
       if (run) for (let i = 0; i < results.length; i++) {
-        if (results[i].output !== undefined) results[i] = await runBlock(join(dir, `run-${results[i].number}`), blocks, results[i], compiler, timeout)
+        if (results[i].output !== undefined) results[i] = await runBlock(join(dir, `run-${results[i].number}`), runnableBlocks, results[i], compiler, timeout)
       }
       pages.push({ page: relative(repo, page), blocks: results })
       console.log(`\n${relative(repo, page)}\n| Block | Line | Status | Diagnostics | Execution |\n| --- | --- | --- | --- | --- |`)

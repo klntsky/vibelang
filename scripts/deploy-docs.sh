@@ -75,6 +75,10 @@ if $check_snippets || [ "$hovers" = 1 ]; then
 	release_runtime="$release_dir/vibelang-runtime/package"
 fi
 if $check_snippets; then
+	echo "deploy-docs: checking the starter output and tests with vibelang $release"
+	VIBELANG_BINARY="$release_binary" VIBELANG_RUNTIME_DIR="$release_runtime" \
+		bun test "$root/docs/tools/first-run.test.ts" > "$release_dir/first-run.log" 2>&1 ||
+		{ tail -40 "$release_dir/first-run.log" >&2; echo "deploy-docs: the starter does not match its documented behavior" >&2; exit 1; }
 	echo "deploy-docs: compiling docs examples and checking declared output with vibelang $release ($platform) and vibelang-runtime $release"
 	VIBELANG_BINARY="$release_binary" VIBELANG_RUNTIME_DIR="$release_runtime" \
 		bun "$root/docs/tools/check-snippets.ts" --run > "$release_dir/snippets.log" ||

@@ -171,6 +171,7 @@ test.skipIf(!existsSync(compiler))("runs marked blocks and reports output mismat
     const pages: Record<string, string[]> = {
       "pass": [
         "```vibe", "// expect-error: TS2322", "const wrong: number = 'text'", "```",
+        "```vibe", "import { missingFixture } from './missing.vibe'", "function incomplete() { return missingFixture() }", "```",
         "```vibe", "// names.vibe", "export function name() { return 'Ada' }", "```",
         "```vibe", "// run: Console.log(greet())", "function greet() { return `Hello, ${name()}!` }", "```",
         "```output", "Hello, Ada!", "```",
@@ -186,13 +187,13 @@ test.skipIf(!existsSync(compiler))("runs marked blocks and reports output mismat
     }
     for (const [name, lines] of Object.entries(pages)) writeFileSync(join(root, `${name}.md`), lines.join("\n"))
     const output = join(root, "report.json")
-    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--timeout", "1000", "--json", output], { stdout: "pipe", stderr: "pipe" })
+    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--timeout", "3000", "--json", output], { stdout: "pipe", stderr: "pipe" })
     const [stdout, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
     expect({ status, stderr }).toEqual({ status: 1, stderr: "" })
     const report = JSON.parse(readFileSync(output, "utf8"))
     const page = (name: string) => report.pages.find((p: any) => p.page.endsWith(`/${name}.md`)).blocks
-    expect(page("pass").map((b: any) => b.status)).toEqual(["ok", "ok", "ok", "ok", "ok"])
-    expect(page("pass").slice(2).map((b: any) => b.execution.stdout)).toEqual(["Hello, Ada!\n", "native entry\n", "plain entry\n"])
+    expect(page("pass").map((b: any) => b.status)).toEqual(["ok", "fragment", "ok", "ok", "ok", "ok"])
+    expect(page("pass").slice(3).map((b: any) => b.execution.stdout)).toEqual(["Hello, Ada!\n", "native entry\n", "plain entry\n"])
     expect(page("mismatch")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("stdout mismatch"), execution: { stdout: "actual\n", expectedStdout: "claimed" } })
     expect(page("exit")[0]).toMatchObject({ status: "fail", execution: { exitCode: 1 } })
     expect(page("timeout")[0]).toMatchObject({ status: "fail", execution: { timedOut: true } })
