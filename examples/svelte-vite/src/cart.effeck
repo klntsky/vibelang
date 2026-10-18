@@ -1,0 +1,35 @@
+export schema Product { sku: string; name: string; cents: number; stock: number }
+
+export error OutOfStock { sku: string; available: number }
+
+export service Inventory {
+  reserve(sku: string, quantity: number): Product!OutOfStock
+}
+
+const catalog: ReadonlyArray<Product> = [
+  { sku: "tea", name: "Green tea", cents: 400, stock: 5 },
+  { sku: "coffee", name: "Coffee beans", cents: 1200, stock: 1 }
+]
+
+export const InventoryLive = Layer.succeed(Inventory, {
+  reserve(sku, quantity) {
+    const product = catalog.find((entry) => entry.sku === sku)
+    const available = product?.stock ?? 0
+    if (product === undefined || available < quantity) throw new OutOfStock({ sku, available })
+    return product
+  }
+})
+
+export function quote(sku: string, quantity: number) {
+  try {
+    const product = Inventory.reserve(sku, quantity)
+    const total = (product.cents * quantity / 100).toFixed(2)
+    return `${quantity} x ${product.name}: $${total}`
+  } catch (error) {
+    return `Only ${error.available} ${error.sku} left`
+  }
+}
+
+export function quoteCart() {
+  return await.all [quote("tea", 2), quote("coffee", 3)]
+}

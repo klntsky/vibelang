@@ -12,6 +12,9 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 | [resilience](resilience/) | Retry schedules, deadlines, races, block-owned fibers, and virtual-time tests. |
 | [approval](approval/) | One release program under automatic and scripted control handlers. |
 | [pipeline](pipeline/) | A producer flowing through Stream operators and a `for...of` consumer. |
+| [react-vite](react-vite/) | A React component that runs an Effeck service lookup through a `ManagedRuntime` and renders its recovered error. |
+| [vue-vite](vue-vite/) | A Vue single-file component over an Effeck layer whose setup holds the todo list. |
+| [svelte-vite](svelte-vite/) | A Svelte 5 `{#await}` block over quotes that `await.all` runs concurrently. |
 
 Set up the repository's local compiler and runtime first using the repository
 setup instructions. The manifests install `effeck` from

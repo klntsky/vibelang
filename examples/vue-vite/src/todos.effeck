@@ -1,0 +1,47 @@
+export schema Todo { id: number; title: string; done: boolean }
+
+export error TodoNotFound { id: number }
+
+export service Todos {
+  list(): ReadonlyArray<Todo>!!
+  complete(id: number): Todo!TodoNotFound
+}
+
+// The setup runs once, when the layer builds, so the list lives as long as
+// the runtime that built it.
+export const TodosLive = Layer.effect(Todos) {
+  const items = new Map<number, Todo>([
+    [1, { id: 1, title: "Declare the schema", done: true }],
+    [2, { id: 2, title: "Write the service", done: false }],
+    [3, { id: 3, title: "Render the board", done: false }]
+  ])
+  return {
+    list() { return [...items.values()] },
+    complete(id) {
+      const todo = items.get(id)
+      if (todo === undefined) throw new TodoNotFound({ id })
+      const done = { ...todo, done: true }
+      items.set(id, done)
+      return done
+    }
+  }
+}
+
+export function completeTodo(id: number) {
+  try {
+    const todo = Todos.complete(id)
+    return `Completed: ${todo.title}`
+  } catch (error) {
+    return `No todo #${error.id}`
+  }
+}
+
+export interface Board {
+  todos: ReadonlyArray<Todo>
+  messages: ReadonlyArray<string>
+}
+
+export function loadBoard(): Board!!Todos {
+  const messages = [completeTodo(2), completeTodo(99)]
+  return { todos: Todos.list(), messages }
+}

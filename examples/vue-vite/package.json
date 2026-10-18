@@ -2,6 +2,12 @@
   "name": "effeck-example-vue-vite",
   "private": true,
   "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "effeck -p tsconfig.json --noEmit",
+    "test": "effeck -p tsconfig.json --noEmit && vitest run && vite build"
+  },
   "dependencies": {
     "effect": "4.0.5",
     "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz",

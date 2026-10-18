@@ -1,0 +1,24 @@
+import { assert, it } from "@effect/vitest"
+import { greet, UserNotFound, Users, UsersLive } from "./users.effeck"
+
+it.effect("greets a known user") {
+  const message = Effect.provide(() => greet("42"), UsersLive)
+  assert.strictEqual(message, "Welcome, Ada Lovelace")
+}
+
+it.effect("fails a lookup with UserNotFound") {
+  provide UsersLive {
+    try {
+      Users.find("404")
+      assert.fail("expected UserNotFound")
+    } catch (error) {
+      assert.instanceOf(error, UserNotFound)
+      assert.strictEqual(error.id, "404")
+    }
+  }
+}
+
+it.effect("recovers UserNotFound in greet") {
+  const message = Effect.provide(() => greet("404"), UsersLive)
+  assert.strictEqual(message, "No user 404")
+}

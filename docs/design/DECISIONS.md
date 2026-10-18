@@ -519,6 +519,7 @@ Will: "we need to support all of the effect.ts rules in the effect lsp plugin. I
 
 ### Known gaps
 
+- **Integration (content mapper):** vue-tsc 3.3.13 and svelte-check 4.7.7 run on TypeScript 6.0.3, not 7.0.2. TypeScript 6 cannot resolve `.effeck` imports, so both report TS2307 on them in `examples/vue-vite` and `examples/svelte-vite`. `effeck -p` checks those apps' `.effeck` and `.ts` files. The gap closes when the TypeScript 7 content mapper (`packages/ts-mapper`) ships and the framework checkers run on TypeScript 7.
 - **Catch expressions (D236-D239):** no quick fix rewrites `try { return x } catch (e) { return y }` as `return x catch y`. The editor tests cover hover and coloring of the keyword, not completion inside a handler.
 - **Catching with match (D216-D219):** EK2112 has no quick fix for a clause type that is a type alias, an object type, or a generic reference; EK2113's quick fix covers only `try { return X } catch (cause: Cause) { return Y }` without `finally`. EK2105 and EK2106 still report on the retired forms.
 - **Compile and editor performance (lane perf):** a file that uses any effect root name (D146) imports `effect` itself, whose index loads about 515 more declaration files; small programs spend most of their compile time parsing them (0.10 s of 0.14 s for an example, 220 MiB peak), and the language server's first diagnostics take about 2x upstream tsgo's on Effect TypeScript. Importing each used module instead would remove it; see the Performance section of `typescript/EFFECK.md`.

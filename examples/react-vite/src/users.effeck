@@ -1,0 +1,29 @@
+export schema User { id: string; name: string }
+
+export error UserNotFound { id: string }
+
+export service Users {
+  find(id: string): User!UserNotFound
+}
+
+const directory: ReadonlyArray<User> = [
+  { id: "42", name: "Ada Lovelace" },
+  { id: "7", name: "Grace Hopper" }
+]
+
+export const UsersLive = Layer.succeed(Users, {
+  find(id) {
+    const user = directory.find((entry) => entry.id === id)
+    if (user === undefined) throw new UserNotFound({ id })
+    return user
+  }
+})
+
+export function greet(id: string) {
+  try {
+    const user = Users.find(id)
+    return `Welcome, ${user.name}`
+  } catch (error) {
+    return `No user ${error.id}`
+  }
+}

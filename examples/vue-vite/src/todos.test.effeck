@@ -1,0 +1,30 @@
+import { assert, it } from "@effect/vitest"
+import { completeTodo, loadBoard, TodoNotFound, Todos, TodosLive } from "./todos.effeck"
+
+it.effect("completes a todo") {
+  const message = Effect.provide(() => completeTodo(2), TodosLive)
+  assert.strictEqual(message, "Completed: Write the service")
+}
+
+it.effect("fails with TodoNotFound for an unknown id") {
+  provide TodosLive {
+    try {
+      Todos.complete(99)
+      assert.fail("expected TodoNotFound")
+    } catch (error) {
+      assert.instanceOf(error, TodoNotFound)
+      assert.strictEqual(error.id, 99)
+    }
+  }
+}
+
+it.effect("recovers TodoNotFound in completeTodo") {
+  const message = Effect.provide(() => completeTodo(99), TodosLive)
+  assert.strictEqual(message, "No todo #99")
+}
+
+it.effect("loads the board after both completions") {
+  const board = Effect.provide(() => loadBoard(), TodosLive)
+  assert.deepStrictEqual(board.messages, ["Completed: Write the service", "No todo #99"])
+  assert.deepStrictEqual(board.todos.map((todo) => todo.done), [true, true, false])
+}
