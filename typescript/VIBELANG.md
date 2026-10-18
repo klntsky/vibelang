@@ -79,6 +79,9 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives every exception as `unknown` (D260) |
 | `ek2004-dead-catch.fail` | An Effect `try` block with E = `never` is EK2004 (defects pass through), which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported |
+| `plain-contract-validate`, `plain-contract-render`, `plain-contract-callback` | Smithers A-1, B-4, E-1: plain contracts preserve synchronous throws, callback calls, and declaration types (D263) |
+| `plain-contract-exceptions` | Plain declarations, contextual lambdas, methods, and imports preserve exceptions; escaping into an Effect caller creates a defect (D263) |
+| `plain-contract-effect.fail` | Running an Effect under a plain contract remains EK2003 (D263) |
 | `plain-catch-exceptions` | Plain catches recover coercion, getter, revoked Proxy, and prototype-lookup exceptions, and trusted built-in calls keep their original exception values (D260) |
 | `ek2004-defect` | An Effect try with E = `never` warns with the new EK2004 text and still propagates a defect (D260) |
 | `noemit-on-error` | Warning-only projects emit under `noEmitOnError`; errors and mixed warning/error projects do not, in both project and build mode (six checks) |
@@ -88,7 +91,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `contracts-success.fail` | A returned value that A does not accept is TypeScript's TS2322 |
 | `ek2001-escaping-failure.fail` | A failure from a call and one from a `throw` escape their contracts; a `catch` keeps a third function within its contract |
 | `ek2002-escaping-requirement.fail` | A service the body needs escapes the contract's R |
-| `ek2003-bare-return.fail` | A plain return annotation is EK2003 on a function that runs an Effect or throws, and allowed on one that compiles to plain JavaScript (D67) |
+| `ek2003-bare-return.fail` | A plain return annotation is EK2003 on a function that runs an Effect; JavaScript throws and plain calls keep the plain contract (D263) |
 | `ek2003-missing-channels.fail` | `Effect<string>` and `Effect<string, UserNotFound>` leave channels out |
 | `recursion` | `isOdd` and `isEven` call each other under written contracts, a caller outside reads them, and a self-recursive `totalSize` writes its contract too |
 | `ek2102-recursive-success.fail` | Effect functions whose A depends on their own result need a contract; a pure recursive function keeps TypeScript's rules |

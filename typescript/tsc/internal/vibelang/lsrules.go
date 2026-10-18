@@ -194,11 +194,11 @@ func (r *ruleCheck) checkReturnedEffect(fn *ast.Node, value *ast.Node) {
 
 // checkThrow reports what a VibeLang function's throw statement fails with:
 // an Effect value (EK4815), any or unknown (EK4811), or a global Error
-// (EK4804). A hatch's throw is JavaScript's.
+// (EK4804). Hatches and plain contracts keep JavaScript throws (D263).
 func (r *ruleCheck) checkThrow(statement *ast.Node) {
 	fn := ast.GetContainingFunction(statement)
 	value := statement.Expression()
-	if fn == nil || !isLowerable(fn) || value == nil {
+	if fn == nil || !isLowerable(fn) || value == nil || !r.a.isSplittable(fn) && !r.a.isEffect(fn) {
 		return
 	}
 	t := r.c.GetTypeAtLocation(value)

@@ -77,7 +77,7 @@ package vibelangmapper
 //     different result for each); or the defaults would pick the dual for a
 //     one-call body whose call is not known to return an Effect (the dual
 //     defers the call, which a host that ignores the result never runs). A
-//     plain return annotation on a body that throws, uses using, or runs an
+//     plain return annotation on a body that uses using or runs a
 //     VibeLang statement carries a Choice too. Decision.Choice; CodeFormChoice.
 //
 //  9. Protocols. A method keyed by a well-known symbol of the global
@@ -374,10 +374,9 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 		d.Class, d.Provenance, d.Note = cls, FromAnnotation, "return annotation"
 		d.Form = formsFormFor(cls, params, facts)
 		if cls == ClassPlainFn && facts.effectOnly && fn.Flags&ast.NodeFlagsReparsed == 0 {
-			// (n): number => { if (n < 0) throw … }: a plain function cannot
-			// throw a failure, and quietly making it a JavaScript throw
-			// would change what the throw means (the fork reports EK2003).
-			d.Choice = r.choiceText(d, "its return annotation is plain, but its body throws, uses using, or runs a VibeLang statement, which only an Effect function can")
+			// D263 permits JavaScript throws under a plain contract.
+			// Effect-only statements still require an Effect contract.
+			d.Choice = r.choiceText(d, "its return annotation is plain, but its body uses using or runs a VibeLang statement, which only an Effect function can")
 		}
 		return d
 	}
@@ -1210,7 +1209,7 @@ type formsBody struct {
 	tailCall   *ast.Node // that call
 	pauses     bool      // a call outside tail position, a throw, a VibeLang statement, or a using declaration
 	anyCall    bool
-	effectOnly bool // a throw, a VibeLang statement, or a using declaration: what only an Effect function can do
+	effectOnly bool // a VibeLang statement or a using declaration: what only an Effect function can do
 }
 
 func formsBodyFacts(fn *ast.Node) formsBody {
@@ -1245,7 +1244,7 @@ func formsBodyFacts(fn *ast.Node) formsBody {
 				f.pauses = true
 			}
 		case n.Kind == ast.KindThrowStatement:
-			f.pauses, f.effectOnly = true, true
+			f.pauses = true // a plain contract keeps JavaScript throw (D263)
 		case n.Flags&ast.NodeFlagsVibeLang != 0 && !formsIsTopic(n): // %, a pipe's topic, is a value
 			f.pauses, f.effectOnly = true, true
 		case n.Kind == ast.KindVariableDeclarationList && n.Flags&ast.NodeFlagsUsing != 0:
@@ -1937,6 +1936,16 @@ func (r *Resolver) classOfType(t *ast.Node, depth int) Class {
 // reads (a: A) => B as (a: A) => Effect<B, E, R>, so a lambda passed there
 // is an Effect function. A union with an Effect accepts either form.
 func (r *Resolver) callbackClass(ret *ast.Node) Class {
+	// D263: direct callback types under a plain owner contract keep their
+	// JavaScript return types instead of gaining D12's Effect channels.
+	for owner := ret; owner != nil; owner = owner.Parent {
+		if ast.IsFunctionLike(owner) && owner.Body() != nil {
+			if annotation := owner.Type(); annotation != nil && !r.isEffectTypeNode(annotation, 0) && !r.isEffectTypeNode(ret, 0) {
+				return ClassPlainFn
+			}
+			break
+		}
+	}
 	ret = formsUnwrapType(ret)
 	if ret != nil && ret.Kind == ast.KindUnionType {
 		for _, m := range ret.AsUnionTypeNode().Types.Nodes {
@@ -2031,6 +2040,9 @@ func (r *Resolver) annotatedClass(fn *ast.Node) Class {
 		n = n.Parent
 	}
 	if p := n.Parent; p != nil && p.Kind == ast.KindVariableDeclaration && p.Initializer() == n && p.Type() != nil {
+		if t := formsUnwrapType(p.Type()); t.Kind == ast.KindFunctionType {
+			return r.memberClass(t.Type()) // D263: a variable contract is not a D12 callback parameter
+		}
 		return r.classOfType(p.Type(), 0)
 	}
 	return 0

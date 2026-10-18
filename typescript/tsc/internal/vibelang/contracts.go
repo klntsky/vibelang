@@ -22,7 +22,8 @@ import (
 // A channel written `infer Name` comes from the body (D57). The signature's
 // return type holds what was inferred, so callers and declaration files see
 // the full contract. A return annotation that leaves a channel out, such as
-// Effect<User>, or that is not an Effect, such as number, is EK2003.
+// Effect<User>, is EK2003. A non-Effect annotation is a JavaScript contract
+// (D263); running an Effect under that contract is EK2003.
 
 func init() {
 	fileChecks = append(fileChecks, checkContracts)
@@ -82,6 +83,26 @@ func (a *analyzer) contractOf(fn *ast.Node) *contract {
 // is an Effect. Such a function is an Effect whatever its body runs.
 func (a *analyzer) hasContract(fn *ast.Node) bool {
 	return a.contractOf(fn) != nil
+}
+
+// hasPlainContract identifies a JavaScript contract without inspecting the
+// body (D263). In particular, asking about a callback parameter must not
+// first lift that parameter under D12 and then infer an Effect from its call.
+func (a *analyzer) hasPlainContract(fn *ast.Node) bool {
+	if fn == nil || !isLowerable(fn) || isProducer(fn) {
+		return false
+	}
+	if annotation := fn.Type(); annotation != nil {
+		return !a.isEffectAnnotation(annotation)
+	}
+	if fn.Kind == ast.KindMethodDeclaration {
+		return a.plainMemberOwner(fn) != ""
+	}
+	if isLambda(fn) {
+		e := a.classify(a.contextualTypes(fn))
+		return e.plainFn && !e.effectFn && !e.program
+	}
+	return false
 }
 
 // hasInferredChannel reports whether node is a .vibe function whose return
@@ -206,7 +227,7 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 		// plain JavaScript (D67). On one whose body runs an Effect it is not
 		// what the function returns. A method that implements a plain-function
 		// member, such as Equal.symbol, is checked against that member (D55).
-		if fn.Kind != ast.KindMethodDeclaration && (!a.canBePlain(fn) || a.hasEscapingFailure(fn)) {
+		if fn.Kind != ast.KindMethodDeclaration && !a.canBePlain(fn) {
 			d := report(c, annotation, EK2003.With("{0} is a plain return annotation, but {1} runs Effects, so it returns an Effect."), written, functionDisplayName(fn))
 			note(d, "Write {0} to check that it cannot fail and needs nothing, or {1} to name its errors and infer its dependencies.", bangText(written, "never", "never"), bangText(written, "Errors"))
 			note(d, "Or remove the annotation to infer the whole contract.")

@@ -15,7 +15,7 @@ import (
 )
 
 // TestTrustedMigrationWarnsAtChangedCalls keeps calls whose lowering does not
-// use a failure contract quiet, while covering Effect and caught D54 calls.
+// use a failure contract quiet, including plain-contract calls (D263).
 func TestTrustedMigrationWarnsAtChangedCalls(t *testing.T) {
 	t.Parallel()
 	files := map[string]string{
@@ -78,9 +78,8 @@ export function recovered(text: string): number {
 				allowed := []int{
 					strings.Index(text, `parse("2")`),
 					strings.Index(text, "ports.offset()"),
-					strings.Index(text, "parse(text) } catch"),
 				}
-				if d.Pos() != allowed[0] && d.Pos() != allowed[1] && d.Pos() != allowed[2] {
+				if d.Pos() != allowed[0] && d.Pos() != allowed[1] {
 					t.Errorf("migration diagnostic for a call whose lowering does not use the tag at %d", d.Pos())
 				}
 				message := d.MessageText()
@@ -94,8 +93,8 @@ export function recovered(text: string): number {
 				positions = append(positions, d.Pos())
 			}
 		}
-		if len(positions) != 3 {
-			t.Fatalf("migration warnings at %v; want only the Effect calls and caught D54 call whose tags affect emit", positions)
+		if len(positions) != 2 {
+			t.Fatalf("migration warnings at %v; want only the Effect calls whose tags affect emit", positions)
 		}
 	}
 

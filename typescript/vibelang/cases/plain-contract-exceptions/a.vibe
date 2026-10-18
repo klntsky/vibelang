@@ -1,0 +1,42 @@
+import { foreign, tagged } from "./fixtures.js"
+
+export function declared(value: string): string {
+  try {
+    if (!value) throw new Error("try")
+    return value
+  } catch (e) {
+    throw e
+  } finally {
+    if (value === "finally") throw new Error("finally")
+  }
+}
+
+export const contextual: (text: string) => string = (text) => {
+  if (!text) throw new Error("contextual")
+  return foreign(text)
+}
+
+export const inferred = (text: string) => foreign(text)
+export const callForeign = (text: string): string => foreign(text)
+export const callTagged = (text: string): string => tagged(text)
+export const callBuiltin = (text: string): unknown => JSON.parse(text)
+export const recover = (): string => {
+  try { tagged(""); return "unreachable" } catch (e) {
+    // @ts-expect-error JavaScript catches every exception as unknown.
+    const message: string = e
+    return e instanceof SyntaxError ? e.message : "other"
+  }
+}
+
+export const callContextual: (f: () => string) => string = (f) => f()
+export class Validator {
+  validate(text: string): string {
+    if (!text) throw new Error("method")
+    return text
+  }
+}
+
+export function effectful(): Effect<string, never, never> {
+  Effect.succeed(0)
+  return declared("")
+}

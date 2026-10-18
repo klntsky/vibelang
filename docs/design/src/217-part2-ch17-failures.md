@@ -31,7 +31,7 @@ If the 30 seconds run out during the upload, the upload is interrupted, the `cat
 
 Rules:
 
-- **E comes from `throw` and from contracts.** A `throw` written in VibeLang, a callee's E, and the exceptions a trusted contract lists are expected failures. Any other JavaScript exception is a defect, as in Effect today.
+- **E comes from `throw` and from contracts.** A `throw` in an Effect function, a callee's E, and the exceptions a trusted contract lists are expected failures. Any other JavaScript exception is a defect, as in Effect today.
 - **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds a defect or an interruption passes through `catch` untouched, including its expected failures. Effect's own `Effect.catch` recovers such a cause and drops the defect (Codex review R1, `internal/effect.ts:158-165, 2665-2685`); source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26). A catch expression, `x catch fallback` or `x catch (e) => …` (D236), compiles to `catchExpected` too, so it recovers exactly what the statement recovers.
 - **Cleanup runs in reverse order of acquisition**, once per exit, with interruption held off until it finishes.
 - **A failure during cleanup is never dropped.** It is added to the cause being reported, on every path: a block's exit, a clause that abandons, an explicit `abandon` while an interruption is pending, a scope that closes, and a fiber that exits (K12a-K12e, K13d).

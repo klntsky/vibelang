@@ -38,7 +38,9 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			info.add(a.provideFlow(n)) // provide Layer { ... } (provide.go)
 		case n.Kind == ast.KindThrowStatement:
 			n.ForEachChild(visit)
-			info.addError(a.thrownType(n), n.Expression())
+			if !a.hasPlainContract(enclosingFunction(n)) {
+				info.addError(a.thrownType(n), n.Expression())
+			}
 		case n.Kind == ast.KindCallExpression && a.getsScope(n):
 			n.ForEachChild(visit)
 			a.addScoped(info, n) // a fork or acquisition in a Scope region (scopes.go)

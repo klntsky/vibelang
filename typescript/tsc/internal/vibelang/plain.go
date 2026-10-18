@@ -108,7 +108,7 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			continue
 		}
 		a.plain[d] = plainExploring
-		m := &member{ok: !a.widensContract(d) && !hasEscapingThrow(d) && !declaresUsing(d) && !hasVibeLangStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d)}
+		m := &member{ok: !a.widensContract(d) && (!hasEscapingThrow(d) || a.hasPlainContract(d)) && !declaresUsing(d) && !hasVibeLangStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d)}
 		group[d] = m
 		if !m.ok {
 			// d's own body rules it out, whatever its callees compile to, so

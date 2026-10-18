@@ -98,3 +98,6 @@ typescript/vibelang/cases/contracts/main.vibe:60:22 lambda: effectFn annotation 
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:5:18 lambda: choice fallback -> plain annotation # f returns string and keeps JavaScript catch (D260)
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:21:21 lambda: choice fallback -> plain annotation # prototypeOf returns a string after native prototype lookup (D260)
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:25:17 lambda: choice fallback -> plain annotation # parseOr returns a string after a native JSON.parse call (D260)
+
+# D263: throws under a plain return annotation are JavaScript exceptions.
+typescript/vibelang/cases/ek2003-bare-return.fail/main.vibe:16:21 lambda: choice annotation -> plain annotation # half keeps its number return contract; only greet runs an Effect and remains EK2003

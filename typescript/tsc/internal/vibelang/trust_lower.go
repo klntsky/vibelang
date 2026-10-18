@@ -25,7 +25,7 @@ import (
 // from the module this file imports it, or the trusted function, from
 // (reachClass); a global class such as SyntaxError needs no import. In a
 // callback that compiles to plain JavaScript, the call stays an ordinary call
-// and its exceptions are defects.
+// and its exceptions propagate as JavaScript exceptions (D263).
 
 // trustedPlan records the calls whose expected failures the lowering
 // converts.
@@ -84,7 +84,7 @@ func (a *analyzer) expectedFailures(call *ast.Node) []failure {
 	// Trust first: a call to VibeLang code has no contract of its own, so
 	// this never asks whether a .vibe callee is an Effect.
 	t := callTrust(a.checker, call)
-	if len(t.failures) == 0 || t.promise || a.performs(call) {
+	if len(t.failures) == 0 || t.promise || a.hasPlainContract(enclosingFunction(call)) || a.performs(call) {
 		return nil
 	}
 	return t.failures

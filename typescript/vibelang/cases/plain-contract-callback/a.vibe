@@ -1,0 +1,3 @@
+export const apply = (build: (payload: Readonly<Record<string, unknown>>) => string, payload: Readonly<Record<string, unknown>>): string => build(payload).trim()
+
+export const line = apply((payload) => String(payload.label), { label: " x " })

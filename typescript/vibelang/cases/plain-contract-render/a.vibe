@@ -1,0 +1,4 @@
+export const render = (valid: boolean): string => {
+ if (!valid) throw new TypeError("invalid")
+ return "valid"
+}

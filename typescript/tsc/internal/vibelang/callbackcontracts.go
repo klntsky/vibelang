@@ -35,7 +35,7 @@ func (a *analyzer) callbackContractsOf(fn *ast.Node) *callbackContracts {
 		return s
 	}
 	a.callbacks[fn] = nil // while fn's parameters are read
-	if !acceptsAnyContract(fn) {
+	if !acceptsAnyContract(fn) || a.hasPlainContract(fn) {
 		return nil
 	}
 	var parameters []*ast.Node

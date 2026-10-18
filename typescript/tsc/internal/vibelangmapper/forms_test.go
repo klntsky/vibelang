@@ -727,9 +727,23 @@ export function f(emitter) {
 	if d := r.lambda(t, `() => log("tick")`); d.Choice != nil || d.Form != FormDual {
 		t.Errorf("a dual over an Effect call = %+v, want the dual with no choice", d)
 	}
-	// A plain annotation cannot throw a failure.
-	if c := r.lambda(t, "(n: number): number =>").Choice; c == nil || !strings.Contains(c.Reason, "return annotation is plain") {
-		t.Errorf("a plain annotation over a throw: choice = %+v", c)
+	// D263: a throw under a plain annotation is JavaScript.
+	if d := r.lambda(t, "(n: number): number =>"); d.Choice != nil || d.Form != FormPlain {
+		t.Errorf("a plain annotation over a throw = %+v, want plain without a choice", d)
+	}
+}
+
+// D263: both written return annotations and contextual plain contracts keep
+// JavaScript lambdas; plain callback parameters do not gain D12 channels.
+func TestResolverPlainContracts(t *testing.T) {
+	r := resolve(t, `export const validate = (text: string): string => { if (!text) throw new Error("empty"); return text }
+export const contextual: (text: string) => string = (value) => { if (!value) throw new Error("empty"); return value }
+export const apply = (build: (payload: Readonly<Record<string, unknown>>) => string, payload: Readonly<Record<string, unknown>>): string => build(payload)
+export const line = apply((payload) => String(payload.label), { label: "x" })`)
+	for _, prefix := range []string{"(text: string): string =>", "(value) =>", "(payload) =>"} {
+		if d := r.lambda(t, prefix); d.Form != FormPlain || d.Choice != nil {
+			t.Errorf("%q = %+v, want plain without a choice", prefix, d)
+		}
 	}
 }
 

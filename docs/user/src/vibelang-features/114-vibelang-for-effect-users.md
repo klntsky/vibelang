@@ -115,7 +115,7 @@ function reportTime() {
 
 `console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe`. Use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. Importing a Node function or passing it as a value is allowed; directly running it is a platform API error. [Building an HTTP API](113-building-an-http-api.md) shows `createServer` passed to a server layer.
 
-A plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a value of the `.vibe` file, such as `text`, only as an input: an argument after the function, bound to its first parameter. Projects can also trust workspace or other TypeScript packages with `compilerOptions.vibelang.trustedPackages: ["@smthrs/*"]` (D261). Matching packages have synchronous plain calls whose exceptions are defects; their Effects run, and EK4401 does not fire. Use `trusted(impl, [Errors])` for a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
+Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a value of the `.vibe` file, such as `text`, only as an input: an argument after the function, bound to its first parameter. Projects can also trust workspace or other TypeScript packages with `compilerOptions.vibelang.trustedPackages: ["@smthrs/*"]` (D261). Matching packages have synchronous plain calls whose exceptions are defects; their Effects run, and EK4401 does not fire. Use `trusted(impl, [Errors])` for a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
 ## Catch expected failures only
 
@@ -138,7 +138,7 @@ function displayName(id: string) {
 // Output: ["Ada","Unknown user: missing"]
 ```
 
-`throw` adds an expected failure to the function's error channel, and `catch` receives those failures. Defects and interruption bypass `catch`; `finally` still runs. Use `Effect.orDie(() => work())` to promote an expected failure to a defect, and Effect's cause APIs at a boundary when you need to inspect defects.
+Inside an Effect function, `throw` adds an expected failure to the function's error channel, and `catch` receives those failures. Defects and interruption bypass `catch`; `finally` still runs. Use `Effect.orDie(() => work())` to promote an expected failure to a defect, and Effect's cause APIs at a boundary when you need to inspect defects.
 
 Contracts remain `Effect<A, E, R>` and can be written `A!E!R`. Most functions infer them. In the shorthand, `A!E` checks the success and error channels and infers dependencies from the body; an empty slot is `never`. With `Effect<A, E, R>`, write all three channels and use `infer E` or `infer R` to infer a channel.
 

@@ -45,7 +45,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Expected errors and defects | Changed | `throw` is expected; an exception no contract lists, `Effect.die`, and `Effect.orDie` are defects (Chapter 3) |
-| A JavaScript `throw` | Changed | Always a typed failure; `Effect.die(new Error(…))` for a bug |
+| A JavaScript `throw` | Changed | A typed failure in an Effect function; a JavaScript exception under a plain contract (D263); `Effect.die(new Error(…))` for a bug in Effect code |
 | A JavaScript `catch` around a throwing call | Changed | Plain contracts keep JavaScript catch; Effect catches handle expected failures only, and EK2004 marks an Effect try with E = `never` (D260) |
 | `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `error E { ... }` declares a `TaggedError` class; `Schema.TaggedError` is unchanged |
 | Error tracking in E | Changed | Inferred: what a function throws, plus its callees' E, minus what it catches |

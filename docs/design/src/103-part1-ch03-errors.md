@@ -2,7 +2,7 @@
 
 #### Throwing a typed error
 
-Errors are the same tagged error classes you use today. `error InvalidId { raw: string }` declares one. It is short for `class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}`, where `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.vibe` file. The tag is the class name, every field is readonly, and `error Timeout` declares an error without fields (D126). Errors that must be serialized use `Schema.TaggedError`. `throw` adds the error to the function's E.
+Errors are the same tagged error classes you use today. `error InvalidId { raw: string }` declares one. It is short for `class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}`, where `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.vibe` file. The tag is the class name, every field is readonly, and `error Timeout` declares an error without fields (D126). Errors that must be serialized use `Schema.TaggedError`. In an Effect function, `throw` adds the error to E.
 
 ```ts effect
 class InvalidId extends Data.TaggedError("InvalidId")<{ readonly raw: string }> {}
@@ -25,7 +25,7 @@ function parseId(raw: string) {
 
 Errors from callees flow upward the same way. A function's E is everything it throws plus everything its callees can fail with, minus what it catches.
 
-Any value can be thrown, and it joins E with its static type: `throw new Error("bad")` adds `Error`, and `throw "bad"` adds `string`, as `Effect.fail` would. Tagged error classes are the convention because `catch` can tell them apart with `instanceof` or `_tag`.
+In an Effect function, any value can be thrown, and it joins E with its static type: `throw new Error("bad")` adds `Error`, and `throw "bad"` adds `string`, as `Effect.fail` would. Tagged error classes are the convention because `catch` can tell them apart with `instanceof` or `_tag`.
 
 #### Catching
 
@@ -168,7 +168,7 @@ A `catch` that caught bugs or cancellation would hide them, so it does not. To d
 
 Two things that look the same mean different things, on purpose.
 
-**`throw` is `Effect.fail`.** Inside `Effect.gen`, `throw new Error("unreachable")` is a defect. In VibeLang, every `throw` is a typed failure: `Error` joins E, and a `catch` can handle it. To signal a bug, die explicitly: `Effect.die(new Error("unreachable"))`.
+**`throw` is `Effect.fail`.** Inside `Effect.gen`, `throw new Error("unreachable")` is a defect. In an Effect function, `throw` is a typed failure: `Error` joins E, and a `catch` can handle it. To signal a bug, die explicitly: `Effect.die(new Error("unreachable"))`.
 
 **Effect `catch` sees expected failures only.** Inside `Effect.gen`, a JavaScript `catch` sees any synchronous exception from the code in its `try`. In an Effect region, an exception that no contract lists is a defect, and `catch` does not see it. A function with a plain contract keeps JavaScript catch: it receives every exception as `unknown` (D260). That covers Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, whose exceptions are defects (Chapter 10). Each has a form for code that can fail: `Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`. A try block that runs Effects with E = `never` reports EK2004, a warning by default; defects pass through its catch:
 

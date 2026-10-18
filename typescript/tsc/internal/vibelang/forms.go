@@ -235,8 +235,11 @@ func (a *analyzer) freeForm(fn *ast.Node) form {
 // Where a function or an Effect is expected (D39), a function with parameters
 // is a function, and one without is a program when it can pause.
 func (a *analyzer) decide(fn *ast.Node, e expectation) form {
+	if fn.Type() != nil && a.hasPlainContract(fn) && a.canBePlain(fn) {
+		return formPlain // D263: an explicit JavaScript contract keeps its calling convention
+	}
 	plainOrEffect := func() form {
-		if a.canBePlain(fn) && !a.hasEscapingFailure(fn) {
+		if a.canBePlain(fn) && (a.hasPlainContract(fn) || !a.hasEscapingFailure(fn)) {
 			return formPlain
 		}
 		return formEffect
@@ -287,10 +290,10 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 }
 
 // canBePlain reports whether fn compiles to plain JavaScript (D10): its body
-// runs no Effect and looks up no service, no throw can end it, and it
-// declares no using (D54).
+// runs no Effect, looks up no service, and declares no using (D54).
+// A throw can escape only under a JavaScript contract (D263).
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
-	return !forEachCallInBody(fn, a.performs) && !hasEscapingThrow(fn) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn)
+	return !forEachCallInBody(fn, a.performs) && (!hasEscapingThrow(fn) || a.hasPlainContract(fn)) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript

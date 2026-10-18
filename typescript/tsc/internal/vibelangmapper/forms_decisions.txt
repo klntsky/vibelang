@@ -481,7 +481,7 @@ typescript/vibelang/cases/ek1005-runners.fail/main.vibe:56:22 lambda effectFn ta
 typescript/vibelang/cases/ek1005-runners.fail/main.vibe:57:34 lambda choice fallback
 typescript/vibelang/cases/ek1005-runners.fail/main.vibe:59:36 lambda plain fallback
 typescript/vibelang/cases/ek1005-runners.fail/main.vibe:60:22 lambda dual fallback
-typescript/vibelang/cases/ek2003-bare-return.fail/main.vibe:16:21 lambda choice annotation
+typescript/vibelang/cases/ek2003-bare-return.fail/main.vibe:16:21 lambda plain annotation
 typescript/vibelang/cases/ek2004-dead-catch.fail/main.vibe:13:62 lambda plain table
 typescript/vibelang/cases/ek2004-defect/main.vibe:15:30 lambda program table
 typescript/vibelang/cases/ek2004-defect/main.vibe:16:118 lambda plain fallback
@@ -681,6 +681,18 @@ typescript/vibelang/cases/plain-catch-exceptions/main.vibe:13:19 lambda plain fa
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:21:21 lambda plain annotation
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:25:17 lambda plain annotation
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:5:18 lambda plain annotation
+typescript/vibelang/cases/plain-contract-callback/a.vibe:1:22 lambda plain annotation
+typescript/vibelang/cases/plain-contract-callback/a.vibe:3:27 lambda plain annotation
+typescript/vibelang/cases/plain-contract-effect.fail/a.vibe:2:24 lambda plain annotation
+typescript/vibelang/cases/plain-contract-exceptions/a.vibe:14:53 lambda plain annotation
+typescript/vibelang/cases/plain-contract-exceptions/a.vibe:19:25 lambda plain fallback
+typescript/vibelang/cases/plain-contract-exceptions/a.vibe:20:28 lambda plain annotation
+typescript/vibelang/cases/plain-contract-exceptions/a.vibe:21:27 lambda plain annotation
+typescript/vibelang/cases/plain-contract-exceptions/a.vibe:22:28 lambda plain annotation
+typescript/vibelang/cases/plain-contract-exceptions/a.vibe:23:24 lambda plain annotation
+typescript/vibelang/cases/plain-contract-exceptions/a.vibe:31:60 lambda plain annotation
+typescript/vibelang/cases/plain-contract-render/a.vibe:1:23 lambda plain annotation
+typescript/vibelang/cases/plain-contract-validate/a.vibe:1:25 lambda plain annotation
 typescript/vibelang/cases/plain-functions/main.vibe:49:28 lambda plain table
 typescript/vibelang/cases/plain-functions/main.vibe:50:40 lambda effectFn table
 typescript/vibelang/cases/primitives-bare/main.vibe:20:22 block appended/program table

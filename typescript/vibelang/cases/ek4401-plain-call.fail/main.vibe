@@ -1,6 +1,6 @@
 // expect: EK4401
-// D5: a bare call to a plain TypeScript function inside a function is EK4401;
-// a boundary, a trusted contract, or the module's top level (D51) allows it.
+// D5: a bare TypeScript call inside an Effect-contract function is EK4401;
+// plain callbacks (D263), boundaries, trust, and the top level (D51) allow it.
 import { Effect } from "effect"
 import { fetchName, formatName, parseHidden, shout, type User } from "./helpers.ts"
 

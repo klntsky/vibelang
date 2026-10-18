@@ -1,0 +1,5 @@
+// expect: EK2003
+export const invalid = (): number => {
+  Effect.succeed(1)
+  return 1
+}

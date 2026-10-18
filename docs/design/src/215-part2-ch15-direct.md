@@ -28,7 +28,9 @@ export const area = Effect.fnUntraced(function* (w: number, h: number) {
 
 #### The rule
 
-A function compiles to plain JavaScript when all three hold:
+A function with a plain contract (an explicit non-Effect return annotation or one inferred by the checker) is JavaScript (D263). Its `throw` statements, inside or outside `try`, throw JavaScript exceptions. Calls returning non-Effect values, including callback parameters and trusted or untrusted TypeScript imports, are ordinary calls and need no trust boundary. Its `.d.ts` keeps the plain return type. Exceptions become defects only where they escape into an effectful caller. Running an Effect under a plain contract remains EK2003.
+
+For an unannotated function declaration or an Effect-contract function, the compiler can provide a plain `$direct` variant when all three hold:
 
 1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript VibeLang functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary hatch such as `sync`. Its control class is `pure` or `sync`.
 2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. In Effect code, a trusted function's listed exceptions become typed failures at its call (Chapter 26). A plain function instead keeps JavaScript exceptions: its own catch handles them as `unknown`, and an exception escaping into an Effect caller becomes a defect (D260). Bridging across calls is experiment G15.
@@ -114,4 +116,4 @@ function walk(node: TreeNode): number!!Nodes {
 
 #### Higher-order functions
 
-A function that calls a callback it receives compiles to frames in v0, because its control class depends on the callback's. `mapAll` in Chapter 16 runs a loop of frames whether its callback pauses or not. Compiling a plain-JavaScript copy per call site, or per class of callback, is a later optimization that changes no rule here.
+An Effect-contract function that calls a callback it receives compiles to frames in v0, because its control class depends on the callback's. `mapAll` in Chapter 16 runs a loop of frames whether its callback pauses or not. Compiling a plain-JavaScript copy per call site, or per class of callback, is a later optimization that changes no rule here.

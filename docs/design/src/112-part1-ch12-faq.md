@@ -55,7 +55,7 @@ function parseId(raw: string) {
 // number!InvalidId!
 ```
 
-`throw` is `Effect.fail`. Every thrown value joins E with its type and can be caught, including `throw new Error("unreachable")`, which inside `Effect.gen` would be a defect. To signal a bug, die explicitly with `Effect.die`. Defects also come from exceptions no contract lists, and from `Effect.orDie(() => …)` (Chapter 3).
+In an Effect function, `throw` is `Effect.fail`. Every thrown value joins E with its type and can be caught, including `throw new Error("unreachable")`, which inside `Effect.gen` would be a defect. To signal a bug, die explicitly with `Effect.die`. Defects also come from exceptions no contract lists, and from `Effect.orDie(() => …)` (Chapter 3).
 
 #### What happens when code that is not Effect throws?
 
