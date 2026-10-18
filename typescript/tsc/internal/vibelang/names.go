@@ -2,6 +2,8 @@ package vibelang
 
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
 // Debugging (design D36). A compiled function is a generator function named
@@ -25,6 +27,14 @@ import (
 // so it stays one.
 func (tx *lowering) generatorExpression(original *ast.Node, name string, parameters *ast.NodeList, body *ast.Node) *ast.Node {
 	f := tx.Factory()
+	// A property key is not necessarily a legal generator binding: retry's
+	// `while` callback, `yield`, `arguments`, and quoted keys need the method
+	// form. Quoting the method and its access also keeps arbitrary keys valid.
+	if name != "" && (!scanner.IsIdentifierText(name, core.LanguageVariantStandard) || ast.IsKeyword(scanner.StringToToken(name)) || name == "eval" || name == "arguments") {
+		method := f.NewMethodDeclaration(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), f.NewStringLiteral(name, ast.TokenFlagsNone), nil /*postfixToken*/, nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
+		object := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{method}), false /*multiLine*/)
+		return f.NewElementAccessExpression(object, nil /*questionDotToken*/, f.NewStringLiteral(name, ast.TokenFlagsNone), ast.NodeFlagsNone)
+	}
 	ownName := original.Kind == ast.KindFunctionExpression && original.Name() != nil
 	if name == "" || ownName || !refersTo(original.Body(), name) {
 		var id *ast.Node

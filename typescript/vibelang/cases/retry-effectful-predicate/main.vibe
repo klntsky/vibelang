@@ -1,0 +1,37 @@
+// Effectful callbacks can take their debug names from reserved or quoted keys.
+error Busy { attempt: number }
+
+function retryWhileBusy() {
+  let attempts = 0
+  try {
+    return retry(() => {
+      attempts++
+      throw new Busy({ attempt: attempts })
+    }, {
+      times: 5,
+      while: (error) => {
+        sleep("1 millis")
+        return error.attempt < 3
+      }
+    })
+  } catch (error) {
+    return attempts
+  }
+}
+
+// expect-result: {"attempts":3,"reserved":2,"quoted":3,"strict":4,"generator":5}
+export function main() {
+  const handlers = {
+    default: (n: number) => { sleep("1 millis"); return n + 1 },
+    "not-an-identifier": (n: number) => { sleep("1 millis"); return n + 2 },
+    arguments: (n: number) => { sleep("1 millis"); return n + 3 },
+    yield: (n: number) => { sleep("1 millis"); return n + 4 }
+  }
+  return {
+    attempts: retryWhileBusy(),
+    reserved: handlers.default(1),
+    quoted: handlers["not-an-identifier"](1),
+    strict: handlers.arguments(1),
+    generator: handlers.yield(1)
+  }
+}
