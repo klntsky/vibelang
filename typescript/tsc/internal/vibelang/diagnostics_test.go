@@ -8,8 +8,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
+	"github.com/microsoft/TypeScript/tsc/internal/parser"
+	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
 func TestCategory(t *testing.T) {
@@ -120,5 +123,26 @@ func TestDirectiveCategory(t *testing.T) {
 		if got != test.want || gotOn != test.on {
 			t.Errorf("line %d, %s: got %v, %v; want %v, %v", test.line, test.m, got, gotOn, test.want, test.on)
 		}
+	}
+}
+
+// Every registered EK code shares the file-kind boundary, even when a project
+// or a source directive explicitly asks for an error.
+func TestEKDiagnosticsOnlyAttachToVibeLang(t *testing.T) {
+	for _, ext := range []string{"ts", "tsx", "mts", "cts", "js", "jsx", "vibe"} {
+		t.Run(ext, func(t *testing.T) {
+			name := "/main." + ext
+			file := parser.ParseSourceFile(ast.SourceFileParseOptions{FileName: tspath.RootedFilePathFromAbsolute(name)}, "// @vibelang-diagnostics *:error\nconst x = 1", core.ScriptKindTS)
+			for code, m := range registry {
+				options := &core.CompilerOptions{VibeLang: &core.VibeLangOptions{Diagnostics: map[string]string{"EK" + strconv.Itoa(int(code)): "error"}}}
+				got := newDiagnosticAt(options, file, core.NewTextRange(len("// @vibelang-diagnostics *:error\n"), len("// @vibelang-diagnostics *:error\n")+1), m)
+				if ext != "vibe" && got != nil {
+					t.Errorf("EK%d attached to .%s", code, ext)
+				}
+				if ext == "vibe" && got == nil {
+					t.Errorf("EK%d suppressed in .vibe", code)
+				}
+			}
+		})
 	}
 }

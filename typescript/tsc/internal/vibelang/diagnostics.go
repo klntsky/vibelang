@@ -237,8 +237,14 @@ func newDiagnostic(options *core.CompilerOptions, node *ast.Node, m *Message, ar
 }
 
 // newDiagnosticAt makes a diagnostic with message m at loc in file, or returns
-// nil when options turn m's code off.
+// nil outside VibeLang source files or when options turn m's code off.
 func newDiagnosticAt(options *core.CompilerOptions, file *ast.SourceFile, loc core.TextRange, m *Message, args ...any) *ast.Diagnostic {
+	// D266: TypeScript owns diagnostics in ordinary source files. Keep this
+	// gate at the shared attachment point so no EK rule can reject them,
+	// including rules enabled by project options or inline directives.
+	if !isVibeLangFile(file) {
+		return nil
+	}
 	category, on := category(options, m)
 	if slices.Contains(adjustableCodes, m.Code) {
 		category, on = directiveCategory(file, loc.Pos(), m, category, on)

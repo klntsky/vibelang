@@ -52,6 +52,9 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | Case | Proves |
 | --- | --- |
 | `ts-hello` | The stock compiler still compiles and runs plain TypeScript |
+| `ts-ownership-interrupt` | D266: terminal interrupt in an unchanged Effect generator compiles with zero errors in `.ts`, `.tsx`, `.mts`, and `.cts`, even with EK rules configured as errors |
+| `vibe-ownership-interrupt.fail` | The same program in `.vibe` keeps EK1001 (module-level Effect call) and EK1002 (generator argument) |
+| `ts-ordinary-error.fail` | D266 preserves ordinary TS2322 and TS2339 |
 | `vibelang-parse` | A `.vibe` file parses and checks as TypeScript and emits `main.js` and `main.d.ts`; JavaScript prints its value, because `console` is a platform API |
 | `vibelang-wrap` | Exported functions and arrow functions lower to `Effect.fnUntraced`, and JavaScript runs them with `Effect.runSync` |
 | `vibelang-lower` | Type-directed `yield*`: pure helpers stay plain, Effect-returning TypeScript calls and `.vibe` calls run, operands run left to right, a `Config` stays data |
@@ -614,7 +617,7 @@ The checks so far:
 | EK4405 | A hatch callback reads a binding outside the hatch | `hatches.go` |
 | EK4406 | A call whose D23-tagged declaration affects emit, in code a fiber runs and outside a boundary; warns that tags cannot survive the emit switch and asks for a `trusted(impl, [Errors])` value (D249) | `trust.go` |
 | EK4801-EK4818, EK4821-EK4825 | The rules of Effect's language service (D240-D244): an Effect value a statement discards, an Effect returned from an Effect function, a global `Error` failure, `Layer.mergeAll` dependencies, nested `provide` blocks, an Effect 3 name in place of TS2339, and the rest of Chapter 28's EK48xx rows. One walk per file; quick fixes in `lsrules_fixes.go`, the Effect 3 table in `outdated.go`, and the style rules EK4821-EK4825, off by default, in `lsrules_style.go`. The refactors (`refactors.go`) use `ls.RegisterRefactorProvider`, and the layer hover and the Duration, brand, and directive completions (`lsrules_editor.go`) use `ls.RegisterCompletionHook` | `lsrules.go` |
-| EK4801, EK4819, EK4820 | In a `.ts` file outside `node_modules`: a discarded Effect, `yield` without `*` in an Effect generator, `yield*` of a never-succeeding Effect without `return` (D242). `typeScriptFileChecks` runs them, as `fileChecks` runs the `.vibe` checks | `lsrules_ts.go` |
+| EK4801, EK4819, EK4820 | Historical D242 rules: discarded Effect, `yield` without `*`, and `yield*` without `return`. D266 suppresses every EK diagnostic outside `.vibe` at the shared diagnostic constructor; TypeScript keeps its own verdict | `lsrules_ts.go` |
 
 `compilerOptions.vibelang` (D34) sets adjustable diagnostic categories (including the EK4406 migration setting) and the tracing mode:
 

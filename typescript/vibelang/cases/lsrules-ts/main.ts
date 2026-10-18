@@ -1,6 +1,4 @@
-// expect: EK4801 EK4819 EK4820
-// The rules of Effect's language service that VibeLang reports in .ts files
-// (D242): a discarded Effect, yield without *, and yield* without return.
+// D266: TypeScript accepts these Effect patterns; no EK diagnostic may reject them.
 import { Data, Effect } from "effect"
 
 class Boom extends Data.TaggedError("Boom")<{}> {}

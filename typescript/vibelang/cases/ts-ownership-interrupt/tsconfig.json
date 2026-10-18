@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "types": [],
+    "skipLibCheck": true,
+    "outDir": "out",
+    "jsx": "preserve",
+    "vibelang": {
+      "diagnostics": {
+        "EK4801": "error",
+        "EK4819": "error",
+        "EK4820": "error"
+      }
+    }
+  },
+  "include": [
+    "*.ts",
+    "*.tsx",
+    "*.mts",
+    "*.cts"
+  ]
+}

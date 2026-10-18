@@ -10,14 +10,9 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
-// Three rules of Effect's language service also apply to the .ts files that
-// VibeLang checks (D242), because each marks Effect code that runs differently
-// from how it reads and the language server that serves those files replaces
-// @effect/tsgo: a discarded Effect (EK4801), a yield without * in an
-// Effect generator (EK4819), and a yield* of an Effect that never succeeds
-// without return (EK4820). The other rules are about VibeLang's own forms, or
-// are style, and @effect/tsgo reports them in projects whose .ts files it
-// serves.
+// D266 supersedes D242: these Effect-rule candidates no longer attach EK
+// diagnostics to TypeScript files. The shared diagnostic constructor enforces
+// that boundary for every code; retain the editor fixes for these codes.
 
 var (
 	// EK4819 (missingStarInYieldEffectGen): yield of an Effect in an Effect generator.

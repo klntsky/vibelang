@@ -200,7 +200,7 @@ EK4801-EK4825 carry the rules of Effect's language service that VibeLang's synta
 // @vibelang-diagnostics *:off                      every adjustable code
 ```
 
-A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`. EK4801, EK4819, and EK4820 also apply to `.ts` files that the program checks outside `node_modules` (D242).
+A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`. D266 supersedes D242: every EK diagnostic is restricted to `.vibe` files. Ordinary TypeScript sources keep TypeScript diagnostics regardless of these settings.
 
 | Option in `compilerOptions.vibelang` | Values | Default |
 | --- | --- | --- |
@@ -302,8 +302,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4816 | Off by default: a layer provided outside a function named `main` (D240) | Provide layers in the entry module's `main` | 4 |
 | EK4817 | Off by default: `instanceof` a Schema class (D240) | `Schema.is(Person)(value)` (quick fix) | 11 |
 | EK4818 | Off by default: `JSON.parse` or `JSON.stringify` in VibeLang code (D240) | Decode with `Schema.fromJsonString` | 11 |
-| EK4819 | In a `.ts` file: `yield` of an Effect in a generator passed to an Effect function such as `Effect.gen` (D242) | Write `yield*` (quick fix) | 10 |
-| EK4820 | In a `.ts` file: `yield*` of an Effect that never succeeds, as a statement (D242) | Write `return yield*` (quick fix) | 10 |
+| EK4819 | Reserved historical D242 rule: `yield` of an Effect in an Effect generator; suppressed in TypeScript by D266 | Write `yield*` (quick fix) | 10 |
+| EK4820 | Reserved historical D242 rule: `yield*` of an Effect that never succeeds, as a statement; suppressed in TypeScript by D266 | Write `return yield*` (quick fix) | 10 |
 | EK4821 | Off by default: `Schema.Struct` with a `_tag: Schema.Literal(…)` field (D240) | `Schema.TaggedStruct("Opened", { … })` (quick fix) | 11 |
 | EK4822 | Off by default: a condition whose type is not boolean (D240) | Compare explicitly: `if (count > 0)` | 2 |
 | EK4823 | Off by default: an arrow function whose block only returns a value (D240) | Write the value as the body (quick fix) | 2 |
