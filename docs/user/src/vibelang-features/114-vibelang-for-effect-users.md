@@ -42,7 +42,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.forkScoped(program)` | `fork work()` for a child owned by the enclosing block; `fork { ... }` forks a block |
 | `Fiber.join(fiber)` | `join fiber`; `join [a, b]` joins several and interrupts the rest on a failure |
 | `Effect.all([a, b], { concurrency: "unbounded" })` | `await.all [a(), b()]`, like `Promise.all`; `await.all { x: a(), y: b() }` keeps the keys |
-| `Effect.all(effects, { concurrency: "unbounded", mode: "result" })` | `await.allSettled [a(), b()]`, like `Promise.allSettled` |
+| `Effect.all(effects, { concurrency: "unbounded", mode: "result" })` | `await.allSettled [a(), b()]`, with a `Result` for each success or expected failure |
 | `Effect.raceFirst(a, b)` | `await.race [a(), b()]`, like `Promise.race`: the first to finish wins |
 | `Effect.raceAll([a, b])` | `await.any [a(), b()]`, like `Promise.any`: the first success wins |
 | `Effect.forEach(items, f, { concurrency: 8, discard: true })` | `for concurrent(8) (const item of items) f(item)` |
