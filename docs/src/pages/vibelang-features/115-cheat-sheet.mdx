@@ -825,7 +825,7 @@ const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, {
 
 :::
 
-**First success, expected outcomes** (D196). `await.any` waits for the first success. `await.allSettled` returns successes and expected failures as `Result` values, rather than JavaScript's settlement objects. A cause with no expected failure still propagates; wrap each element in `exit(...)` when every cause must become data.
+**First success, expected outcomes** (D196, D258). `await.any` waits for the first success. `await.allSettled` returns successes and typed failures as `Result` values, rather than JavaScript's settlement objects, and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`; a cause with no typed failure still propagates. Wrap each element in `exit(...)` when every cause must become data.
 
 :::code-group
 

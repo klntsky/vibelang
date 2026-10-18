@@ -59,6 +59,8 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.runPromise(program)` in TypeScript | `runPromise(main())` in a `.ts` file or a hatch's body |
 | `Stream.fromIterable` or a generator-based source | A producer: `function*` with `yield value` |
 
+`await.allSettled` never fails with a typed error: it captures typed failures as `Result.fail`. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258).
+
 Use Effect's operators for retries, timeouts, concurrency, and Stream transformations. Statements replace the operators that only sequence ordinary work.
 
 ## Calls run; programs stay cold
