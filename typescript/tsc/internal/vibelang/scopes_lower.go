@@ -190,7 +190,14 @@ func (tx *lowering) acquisition(initializer *ast.Node) *ast.Node {
 		case tx.plan.values[call]:
 			return tx.Visitor().VisitNode(call.Expression()) // p(), where p is an Effect value
 		case tx.plan.runsCall(call):
-			return tx.Visitor().VisitEachChild(call)
+			// Visit the call itself so module methods and other call rewrites
+			// still apply. Only defer its outer run: $using must supply Scope
+			// before the acquisition runs, while nested calls run as usual.
+			lowered := tx.Visitor().VisitNode(call)
+			if lowered.Kind == ast.KindYieldExpression {
+				return lowered.Expression()
+			}
+			return lowered
 		}
 	}
 	return tx.succeed(tx.Visitor().VisitNode(initializer))
