@@ -521,6 +521,13 @@ func (w *walker) typeModule(t *checker.Type) string {
 	if symbol == nil || strings.HasPrefix(symbol.Name(), "__") || symbol.Flags()&(ast.SymbolFlagsInterface|ast.SymbolFlagsClass|ast.SymbolFlagsTypeAlias) == 0 {
 		return "" // a function or object literal type is no receiver
 	}
+	if slices.Contains(libReceivers, symbol.Name()) {
+		for _, d := range symbol.Declarations() {
+			if file := ast.GetSourceFileOfNode(d); file != nil && strings.HasPrefix(string(file.FileName()), "bundled:") {
+				return "lib/" + symbol.Name() // the lib's own Array, Map, Set, or Promise
+			}
+		}
+	}
 	// An interface merged across files belongs to the module named like it:
 	// Stream to effect/Stream, not to a module that augments it.
 	home := ""
@@ -549,6 +556,9 @@ func (w *walker) receiverModules(entries map[string][]effeckmapper.Signature) ma
 	for _, m := range methodModules {
 		receivers["effect/"+m] = true
 	}
+	for _, m := range libReceivers {
+		receivers["lib/"+m] = true
+	}
 	for key := range entries {
 		if rest, ok := strings.CutPrefix(key, "method:"); ok {
 			receivers[rest[:strings.IndexByte(rest, '#')]] = true
@@ -558,6 +568,9 @@ func (w *walker) receiverModules(entries map[string][]effeckmapper.Signature) ma
 		for i := range sigs {
 			if !receivers[sigs[i].Result] {
 				sigs[i].Result = ""
+			}
+			if !receivers[sigs[i].Runs] {
+				sigs[i].Runs = ""
 			}
 		}
 		if !carriesForm(sigs) && !hasResult(sigs) {
@@ -690,7 +703,7 @@ func (w *walker) record(entries map[string][]effeckmapper.Signature, key string,
 
 func hasResult(sigs []effeckmapper.Signature) bool {
 	for _, s := range sigs {
-		if s.Result != "" {
+		if s.Result != "" || s.Runs != "" {
 			return true
 		}
 	}
@@ -730,7 +743,13 @@ func (w *walker) signatures(t *checker.Type) []effeckmapper.Signature {
 	for _, sig := range c.GetSignaturesOfType(t, checker.SignatureKindCall) {
 		declared := declaredSignature(c, sig)
 		n := len(declared.Parameters())
-		s := effeckmapper.Signature{Min: declared.MinArgumentCount(), Max: n, Rest: declared.HasRestParameter(), Result: w.typeModule(c.GetReturnTypeOfSignature(declared))}
+		ret := c.GetReturnTypeOfSignature(declared)
+		s := effeckmapper.Signature{Min: declared.MinArgumentCount(), Max: n, Rest: declared.HasRestParameter(), Result: w.typeModule(ret)}
+		if _, effect := effeck.FormsOfType(c, ret); effect {
+			if args := c.GetTypeArguments(ret); len(args) > 0 {
+				s.Runs = w.typeModule(args[0])
+			}
+		}
 		for i := range n {
 			s.Params = append(s.Params, w.param(c.GetTypeAtPosition(declared, i)))
 		}

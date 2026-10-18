@@ -169,6 +169,10 @@ type Signature struct {
 	// Result is the module whose type the signature returns, when that
 	// module's values have methods: effect/Stream for Stream.make.
 	Result string
+	// Runs is, for a signature that returns an Effect, the module of the
+	// Effect's success type, which a call that runs produces:
+	// effect/Semaphore for Semaphore.make.
+	Runs string
 }
 
 // Accepts reports whether s takes argc arguments.
@@ -474,7 +478,7 @@ func (t *Table) Aliases() map[string]string { return t.aliases }
 // key. A signature is {"n":arity,"p":[param...],"df":1,"dl":1,"sf":1,"r":m}:
 // arity "2" or "1-3", with "+" for a rest parameter ("1-2+"); a param is ""
 // or a class string when only its top level has a class, else
-// {"t":top,"e":elem,"p":{name:class},"a":any}; r is Result.
+// {"t":top,"e":elem,"p":{name:class},"a":any}; r is Result, ra Runs.
 
 type aliasLine struct {
 	Alias string `json:"alias"`
@@ -498,6 +502,7 @@ type signatureJSON struct {
 	DataLast  int               `json:"dl,omitempty"`
 	Self      int               `json:"sf,omitempty"`
 	Result    string            `json:"r,omitempty"`
+	Runs      string            `json:"ra,omitempty"`
 }
 
 type paramJSON struct {
@@ -610,7 +615,7 @@ func encodeSignature(s Signature) signatureJSON {
 	if s.Self {
 		out.Self = 1
 	}
-	out.Result = s.Result
+	out.Result, out.Runs = s.Result, s.Runs
 	return out
 }
 
@@ -730,6 +735,6 @@ func decodeSignature(sj signatureJSON) (Signature, error) {
 	s.DataFirst = sj.DataFirst != 0
 	s.DataLast = sj.DataLast != 0
 	s.Self = sj.Self != 0
-	s.Result = sj.Result
+	s.Result, s.Runs = sj.Result, sj.Runs
 	return s, nil
 }

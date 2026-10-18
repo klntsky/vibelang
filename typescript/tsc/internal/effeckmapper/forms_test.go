@@ -511,3 +511,47 @@ export const bumped = Effect.succeed(1).flatMap((n) => Effect.succeed(n + 1))`)
 		}
 	}
 }
+
+func TestResolverNeedsAChoice(t *testing.T) {
+	r := resolve(t, `import { route } from "./helpers.ts"
+const hooks: { onResume?: (n: number) => void } = {}
+let maxDepth = 0
+function double(x: number): number { return x * 2 }
+export function f(obj, xs: number[], socket) {
+  hooks.onResume = (depth) => { maxDepth = Math.max(maxDepth, depth) }
+  const a = obj.map((x) => double(x) + 1)
+  const b = xs.map((x) => double(x) + 1)
+  const c = route((request) => { log(request); return request })
+  const d = (() => { log("now"); return 1 })()
+  const e = obj.map((x): number => double(x) + 1)
+  const g = obj.map((x) => x + 1)
+  socket.once("connect") {
+    socket.destroy()
+    log("closed")
+  }
+}`)
+	choice := func(prefix string) *Choice { return r.lambda(t, prefix).Choice }
+	if c := choice("(depth) =>"); c == nil || c.Callee != "" || c.Path != "assigned to hooks.onResume" || c.Plain != "(depth): T =>" || c.Effect != "(depth): T!! =>" {
+		t.Errorf("free lambda a host calls: choice = %+v", c)
+	} else if got, want := c.Message(), "Cannot tell whether the lambda assigned to hooks.onResume is a plain function or an Effect function: no call gives it a form, and a host that calls it may ignore what it returns. Write `(depth): T =>` for a plain function or `(depth): T!! =>` for an Effect function."; got != want {
+		t.Errorf("message = %q\nwant      %q", got, want)
+	}
+	if c := choice("(x) => double(x) + 1)\n  const b"); c == nil || c.Callee != "obj.map" || c.Path != "argument 1" || c.Reason != "the receiver of map is a value whose type this file does not name" {
+		t.Errorf("method of an unnamed receiver: choice = %+v", c)
+	}
+	if d := r.lambdas(t, "(x) => double(x) + 1")[1]; d.Choice != nil || d.Form != FormPlain || d.Note != "method map of lib/Array" {
+		t.Errorf("xs: number[] names the receiver; decision = %+v", d)
+	}
+	if c := choice("(request) =>"); c == nil || c.Callee != "route" || !strings.Contains(c.Reason, "another file") {
+		t.Errorf("function from another file: choice = %+v", c)
+	}
+	for _, prefix := range []string{`() => { log("now")`, "(x): number =>", "(x) => x + 1"} {
+		if c := choice(prefix); c != nil {
+			t.Errorf("%s: invoked, annotated, or not pausing, yet choice = %+v", prefix, c)
+		}
+	}
+	d := r.block(t, `socket.once("connect")`)
+	if d.Choice == nil || d.Choice.Path != "its block" || d.Choice.Plain != "(): T => { … }" || d.Choice.Forms[1] != FormDual {
+		t.Errorf("block after a method of an unnamed receiver: %+v", d.Choice)
+	}
+}

@@ -40,17 +40,18 @@ package effeckmapper
 //  5. By name (Resolver.Argument). An argument whose text calls something
 //     outside the functions nested in it, at a position whose class accepts
 //     a program, is passed by name (D147). Elsewhere a call runs.
-//  6. Methods. A call of a value's member, x.name(…), whose receiver scope
-//     cannot name takes the forms that every receiver with a method of that
-//     name accepts: the lib's arrays, maps, sets, and promises, the own
-//     members of effect's data types, and the self-first functions D152
-//     makes their methods. xs.map(f) passes a plain function; flatMap,
-//     whose callback is an Effect function on an Effect and plain on a
-//     Stream, gives no class, unless scope names the receiver's module: a
-//     written type (s: Stream.Stream<A>), a call whose result the table
-//     records (Stream.make(…)), or a value export (Stream.never). A block
-//     after such a call goes where every
-//     receiver whose method takes the arguments puts it, as D188 orders.
+//  6. Methods. A call of a value's member, x.name(…), takes its forms
+//     from the method table when scope names the receiver's module: a
+//     written type (s: Stream.Stream<A>, xs: number[]), an array literal,
+//     new Map(…), Array.from(…), a call whose result the table records
+//     (Stream.make(…), and inside a function body, where an Effect call
+//     runs, the Effect's success type: Semaphore.make(1) is a Semaphore), a
+//     method of a named receiver (xs.filter(…)), or a value export
+//     (Stream.never). The receiver's own members come first, then the
+//     self-first functions D152 makes methods of its module's data type. A
+//     receiver scope cannot name gives no class, so a pausing callback
+//     there needs a choice (rule 8). A block after a method of a named
+//     receiver goes where the method puts it, as D188 orders.
 //  7. Service context. A lambda or method that is a member of an object
 //     literal providing a service (Layer.succeed(K, {…}), K.of({…}), the
 //     object a Layer.effect program returns, Context.make, Context.add,
@@ -62,6 +63,13 @@ package effeckmapper
 //     Effect contract (D92, D128). A key from a package, such as effect's
 //     Random.Random, may have plain members, so its members take the
 //     defaults. This applies only where the call gives no class.
+//  8. Needs a choice. A fallback decision whose position nothing names (a
+//     method of an unnamed receiver, a function from another file, a lambda
+//     no call takes, a parameter the table or this file leaves unclassified)
+//     carries a Choice when the lambda is not invoked where it stands, has
+//     no return annotation, and its body pauses: the defaults would pick an
+//     Effect function that a host could silently ignore, so the user writes
+//     the form. Decision.Choice; CodeFormChoice.
 //
 // Every decision records its provenance: the table, a written annotation in
 // this file, a service context, or the fallback defaults.
@@ -197,6 +205,57 @@ type Decision struct {
 	Ambiguous bool
 	// Note names the rule or the gap behind the decision.
 	Note string
+	// Choice is set when the rules cannot decide the form and the user must
+	// (gate 2: no position may produce a silent wrong result). Form then
+	// holds the defaults' guess, for error recovery only; the projector
+	// reports Choice.Message() as CodeFormChoice.
+	Choice *Choice
+}
+
+// CodeFormChoice is the diagnostic code, under the source EK, for a lambda
+// or block whose form the user must write.
+const CodeFormChoice = 9100
+
+// Choice describes a lambda or block whose form the rules cannot decide:
+// its body pauses (a call outside tail position, a throw, a using, or an
+// Effeck statement), so the defaults would make it an Effect function, but
+// nothing names the position's form: a method of a receiver that syntax
+// cannot name, a function from another file, a lambda no call takes, or a
+// parameter the table or this file leaves unclassified.
+type Choice struct {
+	// Callee is the callee as written (xs.map, route), or "" for a lambda
+	// that no call takes.
+	Callee string
+	// Path says where the lambda is: "argument 1", "argument 2, property
+	// orElse", "argument 1, element", or, for a lambda no call takes,
+	// "assigned to hooks.onResume", "the value of sameLabel", and so on.
+	Path string
+	// Forms are the candidate forms: plain and Effect function, or plain and
+	// dual for a parameterless lambda.
+	Forms []Form
+	// Plain and Effect are the repairs, written with the lambda's own
+	// parameters: "(fiber): T =>" and "(fiber): T!! =>".
+	Plain, Effect string
+	// Reason says why the position has no form.
+	Reason string
+}
+
+// Message is the diagnostic text, stable for tests and documentation:
+//
+//	Cannot tell whether the lambda at argument 1 of xs.map is a plain
+//	function or an Effect function: the receiver of map is a value whose
+//	type this file does not name. Write `(x): T =>` for a plain function or
+//	`(x): T!! =>` for an Effect function.
+func (c *Choice) Message() string {
+	where := "this lambda"
+	switch {
+	case c.Callee != "":
+		where = "the lambda at " + c.Path + " of " + c.Callee
+	case c.Path != "":
+		where = "the lambda " + c.Path
+	}
+	return "Cannot tell whether " + where + " is a plain function or an Effect function: " + c.Reason +
+		". Write `" + c.Plain + "` for a plain function or `" + c.Effect + "` for an Effect function."
 }
 
 // Resolver answers form decisions for one parsed .effeck file.
@@ -282,7 +341,145 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 	}
 	d.Provenance = FromFallback
 	d.Form = formsFormFor(0, params, facts)
+	d.Choice = r.choiceFor(d, facts)
 	return d
+}
+
+// choiceFor returns the Choice for a fallback decision d when the rules
+// cannot decide it: no key names the position, the lambda is not invoked
+// where it stands and has no return annotation, and its body pauses. A
+// lambda the parser writes for Effeck syntax is decided by that syntax.
+func (r *Resolver) choiceFor(d Decision, facts formsBody) *Choice {
+	fn := d.Node
+	if !facts.pauses || fn.Flags&ast.NodeFlagsReparsed != 0 || fn.Type() != nil || formsInvoked(fn) {
+		return nil
+	}
+	reason, ok := r.keyless(d)
+	if !ok {
+		return nil
+	}
+	c := &Choice{Reason: reason, Forms: []Form{FormPlain, FormEffectFn}}
+	if len(fn.Parameters()) == 0 {
+		c.Forms = []Form{FormPlain, FormDual}
+	}
+	params := r.parameterText(fn)
+	switch {
+	case d.Block:
+		c.Plain, c.Effect = "(): T => { … }", "(): T!! => { … }"
+	case fn.Kind == ast.KindMethodDeclaration:
+		name, _ := formsPropertyName(fn)
+		c.Plain, c.Effect = name+params+": T { … }", name+params+": T!! { … }"
+	default:
+		c.Plain, c.Effect = params+": T =>", params+": T!! =>"
+	}
+	if d.Call != nil {
+		c.Callee = r.snippet(d.Call.Expression())
+		c.Path = formsPathText(d.Argument, d.Steps)
+		if d.Block {
+			c.Path = "its block"
+		}
+	} else {
+		c.Path = r.freePosition(fn)
+	}
+	return c
+}
+
+// keyless reports why d's position has no form, when nothing names it.
+func (r *Resolver) keyless(d Decision) (string, bool) {
+	switch {
+	case d.Call == nil:
+		return "no call gives it a form, and a host that calls it may ignore what it returns", true
+	case d.Callee.Kind == CalleeOtherFile:
+		return r.snippet(d.Call.Expression()) + " comes from another file, which a per-file projection cannot read", true
+	case d.Callee.Kind == CalleeNone:
+		if name, ok := formsMethodName(d.Call, d.Callee); ok {
+			return "the receiver of " + name + " is a value whose type this file does not name", true
+		}
+		return "the callee is not a name this file can resolve", true
+	case d.Callee.Kind == CalleeTable:
+		if r.table != nil {
+			if _, _, found := r.table.Lookup(d.Callee.Key); !found {
+				if name, ok := formsMethodName(d.Call, d.Callee); ok {
+					return "the receiver of " + name + " is a value whose type this file does not name", true
+				}
+				return d.Callee.Canonical + " is not in the forms table", true
+			}
+		}
+		return "the forms table gives no form at this position of " + d.Callee.Canonical, true
+	case d.Callee.Kind == CalleeLocal || d.Callee.Kind == CalleeService:
+		return "this file declares no type for this parameter of " + d.Callee.Key, true
+	}
+	return "", false
+}
+
+// formsInvoked reports whether fn is called where it stands, (() => …)(),
+// as do, throw, and match expressions are: its call runs it in place.
+func formsInvoked(fn *ast.Node) bool {
+	n := fn
+	for n.Parent != nil && n.Parent.Kind == ast.KindParenthesizedExpression {
+		n = n.Parent
+	}
+	return n.Parent != nil && ast.IsCallExpression(n.Parent) && n.Parent.Expression() == n
+}
+
+// parameterText returns fn's parameter list as written, in parentheses.
+func (r *Resolver) parameterText(fn *ast.Node) string {
+	ps := fn.Parameters()
+	if len(ps) == 0 {
+		return "()"
+	}
+	start := scanner.SkipTrivia(r.text, ps[0].Pos())
+	end := ps[len(ps)-1].End()
+	return "(" + strings.Join(strings.Fields(r.text[start:end]), " ") + ")"
+}
+
+// snippet returns node's text on one line, shortened.
+func (r *Resolver) snippet(node *ast.Node) string {
+	text := strings.Join(strings.Fields(r.text[scanner.SkipTrivia(r.text, node.Pos()):node.End()]), " ")
+	if len(text) > 60 {
+		text = text[:57] + "..."
+	}
+	return text
+}
+
+// formsPathText writes a path below a call's arguments, 1-based.
+func formsPathText(arg int, steps []PathStep) string {
+	text := "argument " + strconv.Itoa(arg+1)
+	for _, step := range steps {
+		if step.Element {
+			text += ", element"
+		} else {
+			text += ", property " + step.Property
+		}
+	}
+	return text
+}
+
+// freePosition describes where a lambda that no call takes stands.
+func (r *Resolver) freePosition(fn *ast.Node) string {
+	n := fn
+	for n.Parent != nil && n.Parent.Kind == ast.KindParenthesizedExpression {
+		n = n.Parent
+	}
+	switch p := n.Parent; {
+	case p == nil:
+		return ""
+	case p.Kind == ast.KindBinaryExpression && p.AsBinaryExpression().OperatorToken.Kind == ast.KindEqualsToken:
+		return "assigned to " + r.snippet(p.AsBinaryExpression().Left)
+	case p.Kind == ast.KindVariableDeclaration:
+		return "that is the value of " + r.snippet(p.Name())
+	case p.Kind == ast.KindPropertyAssignment:
+		if name, ok := formsPropertyName(p); ok {
+			return "that is property " + name + " of an object literal"
+		}
+	case p.Kind == ast.KindObjectLiteralExpression && fn.Kind == ast.KindMethodDeclaration:
+		if name, ok := formsPropertyName(fn); ok {
+			return "that is method " + name + " of an object literal"
+		}
+	case p.Kind == ast.KindReturnStatement:
+		return "that a function returns"
+	}
+	return ""
 }
 
 // Block decides where call's block param goes and its form. call's last
@@ -321,7 +518,11 @@ func (r *Resolver) Block(call *ast.Node) Decision {
 	if d.Class == 0 {
 		d.Provenance = FromFallback
 	}
-	d.Form = formsFormFor(d.Class, 0, formsBodyFacts(block))
+	facts := formsBodyFacts(block)
+	d.Form = formsFormFor(d.Class, 0, facts)
+	if d.Provenance == FromFallback {
+		d.Choice = r.choiceFor(d, facts)
+	}
 	return d
 }
 
@@ -423,6 +624,9 @@ func (r *Resolver) methodClassAt(name string, call *ast.Node, arg int, steps []P
 	cls, seen, differ := all, 0, false
 	var first Class
 	receivers, module := r.receiversOf(call, name)
+	if module == "" {
+		return 0, false, "" // the receiver is unnamed: a guess across receivers could be silently wrong
+	}
 	for _, m := range receivers {
 		sigs := m.sigs
 		if m.self {
@@ -490,7 +694,31 @@ func (r *Resolver) receiverModule(expr *ast.Node, depth int) string {
 	if depth > 3 || r.table == nil {
 		return ""
 	}
+	switch expr.Kind {
+	case ast.KindArrayLiteralExpression:
+		return "lib/Array"
+	case ast.KindNewExpression:
+		if ctor := ast.SkipParentheses(expr.Expression()); ast.IsIdentifier(ctor) && r.binding(ctor, ctor.Text()) == nil && formsLibReceivers[ctor.Text()] {
+			return "lib/" + ctor.Text()
+		}
+		return ""
+	}
 	if ast.IsCallExpression(expr) {
+		if e := ast.SkipParentheses(expr.Expression()); ast.IsPropertyAccessExpression(e) {
+			// Array.from(…), Promise.all(…): the global's own constructors.
+			if root := ast.SkipParentheses(e.Expression()); ast.IsIdentifier(root) && r.binding(root, root.Text()) == nil {
+				switch root.Text() + "." + e.Name().Text() {
+				case "Array.from", "Array.of":
+					return "lib/Array"
+				case "Promise.all", "Promise.resolve", "Promise.reject", "Promise.race", "Promise.allSettled", "Promise.any":
+					return "lib/Promise"
+				}
+			}
+			// x.m(…) on a receiver scope names: the method's result.
+			if receiver := r.receiverModule(e.Expression(), depth+1); receiver != "" {
+				return r.methodResult(receiver, e.Name().Text(), len(expr.Arguments()))
+			}
+		}
 		c := r.Callee(expr)
 		if c.Kind != CalleeTable {
 			return ""
@@ -499,15 +727,17 @@ func (r *Resolver) receiverModule(expr *ast.Node, depth int) string {
 		if !ok {
 			return ""
 		}
+		runs := formsInFunction(expr) // an Effect call in a function body runs there (D24)
 		module := ""
 		for _, s := range formsCandidates(sigs, len(expr.Arguments())) {
-			if s.Result == "" || module != "" && s.Result != module {
+			result := s.Result
+			if runs && result == "effect/Effect" {
+				result = s.Runs
+			}
+			if result == "" || module != "" && result != module {
 				return ""
 			}
-			module = s.Result
-		}
-		if module == "effect/Effect" && formsInFunction(expr) {
-			return ""
+			module = result
 		}
 		return module
 	}
@@ -541,14 +771,55 @@ func (r *Resolver) receiverModule(expr *ast.Node, depth int) string {
 	return ""
 }
 
+// formsLibReceivers are the lib's types whose own methods the table records.
+var formsLibReceivers = map[string]bool{"Array": true, "ReadonlyArray": true, "Map": true, "ReadonlyMap": true, "Set": true, "ReadonlySet": true, "Promise": true}
+
+// methodResult returns the module whose type the method name of receiver
+// returns when called with argc arguments, when the table records it.
+func (r *Resolver) methodResult(receiver, name string, argc int) string {
+	for _, m := range r.table.methodReceivers(name) {
+		if m.receiver != receiver {
+			continue
+		}
+		sigs := m.sigs
+		if m.self {
+			sigs = formsDropSelf(sigs)
+		}
+		result := ""
+		for _, s := range formsCandidates(sigs, argc) {
+			if s.Result == "" || result != "" && s.Result != result {
+				return ""
+			}
+			result = s.Result
+		}
+		return result
+	}
+	return ""
+}
+
 // typeModuleOf returns the module a written type names as its own data
-// type: Stream.Stream<A> is effect/Stream's Stream.
+// type: Stream.Stream<A> is effect/Stream's Stream, and number[] or
+// ReadonlyArray<number> is the lib's array.
 func (r *Resolver) typeModuleOf(t *ast.Node) string {
+	if t != nil && t.Kind == ast.KindTypeOperator {
+		if inner := formsUnwrapType(t); inner != nil && inner.Kind == ast.KindArrayType {
+			return "lib/ReadonlyArray"
+		}
+	}
 	t = formsUnwrapType(t)
+	if t != nil && t.Kind == ast.KindArrayType {
+		return "lib/Array"
+	}
 	if t == nil || t.Kind != ast.KindTypeReference {
 		return ""
 	}
 	name := t.AsTypeReferenceNode().TypeName
+	if ast.IsIdentifier(name) {
+		if formsLibReceivers[name.Text()] && r.binding(name, name.Text()) == nil {
+			return "lib/" + name.Text()
+		}
+		return ""
+	}
 	if name.Kind != ast.KindQualifiedName {
 		return ""
 	}
@@ -590,7 +861,10 @@ func (r *Resolver) methodBlock(name string, call *ast.Node, n int) (Placement, C
 	var placement Placement
 	var cls Class
 	seen := 0
-	receivers, _ := r.receiversOf(call, name)
+	receivers, module := r.receiversOf(call, name)
+	if module == "" {
+		return 0, 0, "", false
+	}
 	for _, m := range receivers {
 		sigs := m.sigs
 		if m.self {
