@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import { Effect, Exit } from "effect"
-import { declared, contextual, inferred, callForeign, callTagged, callBuiltin, recover, callContextual, Validator, effectful } from "./out/a.js"
+import { declared, contextual, half, inferred, callForeign, callTagged, callBuiltin, recover, callContextual, Validator, effectful } from "./out/a.js"
 for (const f of [declared, contextual, inferred, callForeign, callTagged]) assert.equal(f("x"), "x")
 for (const [f, name, message] of [
   [declared, "Error", "try"], [contextual, "Error", "contextual"],
@@ -9,6 +9,8 @@ for (const [f, name, message] of [
   [callTagged, "SyntaxError", "tagged"]
 ]) assert.throws(() => f(""), { name, message })
 assert.throws(() => declared("finally"), { message: "finally" })
+assert.equal(half(4), 2)
+assert.throws(() => half(-1), (e) => e === "negative")
 assert.deepEqual(callBuiltin('{"ok":true}'), { ok: true })
 assert.throws(() => callBuiltin("{"), SyntaxError)
 assert.equal(recover(), "tagged")

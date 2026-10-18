@@ -40,3 +40,8 @@ export function effectful(): Effect<string, never, never> {
   Effect.succeed(0)
   return declared("")
 }
+
+export const half = (n: number): number => {
+  if (n < 0) throw "negative"
+  return n / 2
+}
