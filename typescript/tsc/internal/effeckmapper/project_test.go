@@ -88,6 +88,24 @@ var projectionCases = []struct {
 	},
 
 	{
+		name:    "a service keeps multiline empty channels around interleaved statics",
+		source:  "export abstract class Counter {\n abstract increment(): void!!\n static readonly layer = Layer.succeed(Counter, { increment: () => {}, read: () => 2 })\n abstract read(): number!!\n}",
+		virtual: "export interface Counter {\n increment(): Effect.Effect<void, never, never>\n read(): Effect.Effect<number, never, never>; readonly \"~effeck/service\"?: \"app/src/main#Counter\" } export abstract class Counter extends $service<Counter>(\"app/src/main#Counter\") { static readonly layer = Layer.succeed(Counter, { increment: () => { return $gen(function* () {})}, read: () => $gen(function* () { return 2 }) })\n \n}",
+	},
+
+	{
+		name:    "using in a loop body keeps a statement block",
+		source:  "function f(xs: string[]) { for (const x of xs) { using r = lease(x); if (x) continue\n return r }\n return \"end\" }",
+		virtual: "function f(xs: string[]) { return $gen(function* () { for (const x of (yield* $each(xs))) { const $c = yield* $scopedBody($gen(function* () { const r = (yield* $acquire(lease(x))); if (x) return $jump(\"continue:\")\n return $box(r) })); if ($jumped($c, \"continue:\")) continue; return $unboxed($c) }\n return \"end\" })}",
+	},
+
+	{
+		name:    "function scoped var escapes a region and a for initializer",
+		source:  "function f() { try { var x = g(1); for (var i = 0; i < 2; i++) x += i } finally { h() }\n return x + i }",
+		virtual: "function f() { return $gen(function* () {var x = $varType($gen(function* () { return (yield* $run(g(1))) })); var i = $varType($gen(function* () { return 0 }));  yield* $finally($gen(function* () {  x = (yield* $run(g(1))); for ( i = 0; i < 2; i++) x += i }), $gen(function* () { ;(yield* $run($value(h)())) }))\n return x + i })}",
+	},
+
+	{
 		name:    "data method call punctuation skips comments",
 		source:  "function f(o: Option.Option<number>) { return o.getOrElse /* ( */ (() => 0) }",
 		virtual: "function f(o: Option.Option<number>) { return $gen(function* () { return (yield* $run(Option.getOrElse(o, () => 0))) })}",
@@ -717,18 +735,6 @@ func TestAwaitLocalLambdaCall(t *testing.T) {
 	assert.Assert(t, strings.Contains(js, "$awaitRace([$gen(function* () { return"), "%s", js)
 }
 
-// TestVarInRegion checks that a var in a region's block draws EK9001, since
-// the block's generator would hide it from the code after the region.
-func TestVarInRegion(t *testing.T) {
-	t.Parallel()
-	source := "function f() {\n  try {\n    var x = g(1)\n  } finally {\n    h(2)\n  }\n  return x\n}\n"
-	projection := Project(source, testContext)
-	assert.Equal(t, len(projection.Diagnostics), 1)
-	d := projection.Diagnostics[0]
-	assert.Equal(t, d.Code, int32(CodeUnprojectedForm))
-	assert.Equal(t, source[d.Start:d.Start+d.Length], "var")
-}
-
 // TestFormChoice checks that a lambda whose form the rules cannot decide
 // draws EK9100 at the lambda, with the resolver's message, and still lowers
 // the default's guess.
@@ -1090,4 +1096,22 @@ func TestHatchOptions(t *testing.T) {
 	projection := Project(source, testContext)
 	assert.Equal(t, len(projection.Diagnostics), 1)
 	assert.Equal(t, projection.Diagnostics[0].Code, int32(4404))
+}
+
+// TestRegionVarNeedsAnnotation keeps lexical dependencies and repeated
+// declarations from acquiring a type from the wrong generator's scope.
+func TestRegionVarNeedsAnnotation(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"function f() { try { const n = 1; var x = n } finally {} return x }",
+		"const e = 0; function f() { try { g() } catch (e) { var x = e } return x }",
+		"const n = 0; function f() { try { const { n } = read(); var x = n } finally {} return x }",
+		"const n = 0; function f() { for (let n = 0; n < 2; n++) { try { var x = n } finally {} } return x }",
+		"function f() { try { var x = 1; var x = 2 } finally {} return x }",
+		"function f() { try { var { x } = read() } finally {} return x }",
+	} {
+		p := Project(source, testContext)
+		assert.Assert(t, len(p.Diagnostics) > 0, "%s", source)
+		assert.Assert(t, strings.Contains(p.Diagnostics[0].Message, "Annotate"), "%v", p.Diagnostics)
+	}
 }

@@ -68,6 +68,25 @@ var emitCases = []struct {
 		contains: []string{`$value(error)()`, `function* () { return yield* v`}},
 
 	{
+		name:     "interleaved static service retains its key and erased instance shape",
+		source:   "export abstract class Counter { abstract increment(): void!!\n static readonly layer = Layer.succeed(Counter, { increment: () => {}, read: () => 2 })\n abstract read(): number!!\n}",
+		contains: []string{`class Counter extends $service("app/src/main#Counter")`, `static layer = Layer.succeed(Counter`},
+		absent:   []string{"abstract read", "interface Counter", "number!!"},
+	},
+	{
+		name:     "region var storage escapes while its initializer runs at its source site",
+		source:   "function f() { try { var x = g(1); for (var i = 0; i < 2; i++) x += i } finally { h() }\n return x + i }",
+		contains: []string{"var x;", "var i;", "x = (($t = g(1))", "return x + i"},
+		absent:   []string{"$varType", "var x =", "var i ="},
+	},
+	{
+		name:     "using region in loop retains per iteration scope and jump dispatch",
+		source:   "function f() { for (let i = 0; i < 3; i++) { using r = lease(i)\n if (i) continue\n return r }\n return 0 }",
+		contains: []string{"for (let i = 0; i < 3; i++) {", "$region(($scope)", `$jump("continue:")`, "continue;"},
+		absent:   []string{"$scopedBody", "using r"},
+	},
+
+	{
 		name:     "resume expressions hide normal and jump sentinels while retaining pending completion",
 		source:   "control Ask { answer(): number!! } function f() { try { Ask.answer() } handle Ask.answer() { const value = resume(1); record(value) } }",
 		contains: []string{"$returned($pending) ? $pending : undefined", "return $pending"},

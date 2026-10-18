@@ -92,6 +92,8 @@ const (
 	editScopeRegion
 	// editHatch carries the checking and executable spelling of a hatch boundary.
 	editHatch
+	// editRegionVar hoists storage, with a checker-only type witness.
+	editRegionVar
 )
 
 // part says which part of a kind an edit is.
@@ -238,6 +240,8 @@ func (r checking) text(e edit) (string, bool) {
 	switch e.kind {
 	case editSyntax, editWitness, editRegion, editDispatch:
 		text = e.text
+	case editRegionVar:
+		text = e.fields[0]
 	case editHatch:
 		text = e.text
 	case editRecord:
@@ -357,7 +361,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region", "hatch"}[k]
+		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region", "hatch", "region var"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out

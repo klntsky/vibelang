@@ -356,3 +356,6 @@ export declare function $programs<T extends Record<string, unknown>>(values: T):
 declare const $yieldSite: unique symbol
 type $YieldAt<Id, E, R> = EffectModule.Effect<never, E, R> & { readonly [$yieldSite]: Id }
 export declare function $runAt<A, E, R, const Id extends number>(value: EffectModule.Effect<A, E, R>, site: Id): Generator<$YieldAt<Id, E, R>, A, any>
+
+/** Checker-only success witness for function-scoped variables crossing regions. */
+export declare function $varType<A, E, R>(value: EffectModule.Effect<A, E, R>): A

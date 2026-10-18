@@ -222,6 +222,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case isErrorDeclaration(node):
 		p.errorDeclaration(node)
 		return
+	case hasInterleavedServiceMembers(node):
+		p.interleavedServiceDeclaration(node)
+		return
 	case isServiceClass(node):
 		p.serviceDeclaration(node)
 		return
@@ -302,18 +305,8 @@ func (p *projector) visit(node *ast.Node, e env) {
 		case node.Kind == ast.KindReturnStatement && e.frame.region != nil:
 			p.returnStatement(node, e)
 			return
-		case node.Kind == ast.KindVariableStatement && e.frame.region != nil &&
-			node.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsBlockScoped == 0:
-			// A var in a region's block is local to the block's generator, so
-			// the code after the region would not see it.
-			start := p.tokenStart(node)
-			p.diagnostics = append(p.diagnostics, Diagnostic{
-				Start:   start,
-				Length:  len("var"),
-				Code:    CodeUnprojectedForm,
-				Message: "The TypeScript 7 mapper does not lower var inside a try, handle, provide, or using block: the block runs in a function of its own, so code after the block would not see the variable. Declare it with let before the block.",
-			})
-			p.visitChildren(node, e)
+		case node.Kind == ast.KindVariableDeclarationList && e.frame.region != nil && node.Flags&ast.NodeFlagsBlockScoped == 0:
+			p.regionVar(node, e)
 			return
 		case node.Kind == ast.KindReturnStatement && p.isCompletionReturn(node):
 			// A do expression's completion value, which the parser returns.
@@ -349,7 +342,7 @@ func (p *projector) visit(node *ast.Node, e env) {
 			return
 		case node.Kind == ast.KindBlock && node.Flags&ast.NodeFlagsEffeck == 0 && maskWord(node) == "" && !e.producer &&
 			p.holdsScope(node.Statements()):
-			p.scopeBlock(node, e)
+			p.scopeStatement(node, e)
 			return
 		}
 		switch node.Kind {
