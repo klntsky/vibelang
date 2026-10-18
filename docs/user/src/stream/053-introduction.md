@@ -5,6 +5,7 @@
 ## Element, error, and service types
 
 ```vibe
+// run: provide Feed = { next: () => "message" } { Console.log(JSON.stringify(preview())) }
 error FeedUnavailable
 
 service Feed {
@@ -18,6 +19,7 @@ function preview() {
   return messages.take(4).runCollect()
 }
 // Array<string>!FeedUnavailable!Feed
+// Output: ["message","message","message","message"]
 ```
 
 `Stream.Stream<A, E, R>` emits elements of type `A`, can fail with `E`, and needs services `R` during consumption. A failure ends that run of the source unless an operator recovers. Constructing `messages` does not look up `Feed` or request a message.
@@ -27,11 +29,13 @@ Effect's Stream, Filter, and Cause value builders are trusted library calls. Cal
 ## Choosing a streaming use case
 
 ```vibe
+// run: Console.log(JSON.stringify(firstFiveTickets()))
 function firstFiveTickets() {
   const tickets = Stream.iterate(100, (n) => n + 1)
   return tickets.take(5).runCollect()
 }
 // Returns [100, 101, 102, 103, 104].
+// Output: [100,101,102,103,104]
 ```
 
 The source has no natural end, but the consumer requests only five elements. The same approach works for log tails, paginated APIs, or incoming messages. For a small collection already in memory, an array and an ordinary loop often suffice.
@@ -39,7 +43,7 @@ The source has no natural end, but the consumer requests only five elements. The
 ## Streams and individual effects
 
 ```vibe
-// run: Console.log(JSON.stringify(compare()))
+// run: Console.log(JSON.stringify([oneResult(), noReadings.runCollect(), oneReading.runCollect(), ...compare()]))
 function oneResult() {
   return [12, 24, 36]
 }
@@ -56,7 +60,7 @@ function compare() {
     oneBatch.runCollect()  // [[12, 24, 36]]
   ]
 }
-// Output: [[12,24,36],[[12,24,36]]]
+// Output: [[12,24,36],[],[12],[12,24,36],[[12,24,36]]]
 ```
 
 A successful function call returns one result, even if that result is an array. A stream emits zero or more elements; an array can be either one element or the source of many elements. Streams can be empty, finite, or infinite.
@@ -64,16 +68,29 @@ A successful function call returns one result, even if that result is an array. 
 ## Incremental production and backpressure
 
 ```vibe
+// run: printReadings()
 function printReadings() {
   const source = Stream.range(20, 25).mapEffect((n) => {
-    log(`prepare ${n}`)
+    Console.log(`prepare ${n}`)
     return n
   })
   source.runForEach((n) => {
     sleep("50 millis")
-    log(`received ${n}`)
+    Console.log(`received ${n}`)
   })
 }
+// Output: prepare 20
+// Output: received 20
+// Output: prepare 21
+// Output: received 21
+// Output: prepare 22
+// Output: received 22
+// Output: prepare 23
+// Output: received 23
+// Output: prepare 24
+// Output: received 24
+// Output: prepare 25
+// Output: received 25
 ```
 
 The consumer controls demand, so production slows when consumption slows. Streams exchange internal batches, so a source can prepare more than one element per pull. Buffering and concurrency introduce explicit read-ahead; backpressure does not mean exactly one element is ever in memory.

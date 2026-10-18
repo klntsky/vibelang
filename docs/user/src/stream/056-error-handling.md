@@ -5,7 +5,7 @@ Stream recovery replaces a failed source with another source. Use stream operato
 ## Recovering typed failures and defects
 
 ```vibe
-// run: Console.log(JSON.stringify(readRecovered()))
+// run: Console.log(JSON.stringify([readRecovered(), tagged.runCollect().map((result) => result._tag)]))
 error Disconnected
 
 const primary = Stream.make("live-a", "live-b").concat(Stream.fail(new Disconnected()))
@@ -19,13 +19,15 @@ const tagged = Stream.catch(
   primary.map((value) => Result.succeed(value)),
   () => Stream.make("cached").map((value) => Result.fail(value))
 )
-// Output: ["live-a","live-b","cached"]
+// Output: [["live-a","live-b","cached"],["Success","Success","Failure"]]
 ```
 
 `Stream.catch` receives a typed failure and returns the replacement Stream. Recovery abandons the rest of the failed source; it does not resume after its failing step. Tagging each source with `Result` is useful when downstream code needs to distinguish live data from fallback data.
 
 ```vibe
+// run: Console.log(JSON.stringify(boundary.runCollect()))
 const boundary = Stream.die(new Error("decoder invariant failed")).catchDefect(() => Stream.succeed("unreadable"))
+// Output: ["unreadable"]
 ```
 
 `catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, including failure, defect, and interruption reasons; use it only when that full information is needed. Ordinary VibeLang `catch` handles typed failures only, and propagates a mixed cause containing defects or interruption.
@@ -33,6 +35,7 @@ const boundary = Stream.die(new Error("decoder invariant failed")).catchDefect((
 ## Selective recovery
 
 ```vibe
+// run: Console.log(JSON.stringify([recoverKnown(Stream.fail(new NotReady())).runCollect(), selected.runCollect(), defectOnly.runCollect()])); try { recoverKnown(Stream.fail(new AccessDenied())).runCollect() } catch (error) { Console.log(error._tag) }
 error NotReady
 error AccessDenied
 
@@ -43,6 +46,8 @@ function recoverKnown(source: Stream.Stream<string, NotReady | AccessDenied>) {
 const selected = Stream.fail("busy" as "busy" | "forbidden").catchFilter(Filter.fromPredicate((error: "busy" | "forbidden") => error === "busy"), () => Stream.succeed("try later"))
 
 const defectOnly = Stream.die("corrupt frame").catchCauseFilter(Cause.findDie, () => Stream.empty)
+// Output: [["pending"],["try later"],[]]
+// Output: AccessDenied
 ```
 
 `catchTag` removes the handled tagged error from the output failure type. `catchFilter` handles values selected by a Filter and preserves failures it rejects. `catchCauseFilter` selects from the full Cause; `Cause.findDie` selects a defect reason rather than treating every failure as recoverable.
@@ -50,16 +55,20 @@ const defectOnly = Stream.die("corrupt frame").catchCauseFilter(Cause.findDie, (
 ## Cleanup after failure
 
 ```vibe
+// run: try { consumeChecked() } catch (error) { Console.log(error) }
 function consumeChecked() {
   const source = Stream.succeed("accepted")
     .concat(Stream.fail("read failed"))
-    .onError(() => log("input failed; closing reader"))
+    .onError(() => Console.log("input failed; closing reader"))
   try {
     return source.runCollect()
   } finally {
-    log("consumer finished")
+    Console.log("consumer finished")
   }
 }
+// Output: input failed; closing reader
+// Output: consumer finished
+// Output: read failed
 ```
 
 `onError` runs its callback on an unsuccessful stream exit and preserves the failure if that callback succeeds. It is useful for diagnostics tied to a source. Use `Stream.ensuring` for all exits or `finally` for cleanup belonging to the consuming function; cleanup failure is never silently discarded.
@@ -67,6 +76,7 @@ function consumeChecked() {
 ## Retrying a source
 
 ```vibe
+// run: (() => { let attempts = 0; provide Sensor = { read: () => { attempts++; if (attempts < 4) throw new Offline(); return 42 } } { Console.log(JSON.stringify(readings.runCollect()), attempts) } })()
 error Offline
 
 service Sensor {
@@ -74,6 +84,7 @@ service Sensor {
 }
 
 const readings = Stream.fromEffect(() => Sensor.read()).retry(Schedule.recurs(3))
+// Output: [42] 4
 ```
 
 `retry` starts the wrapped source again after a typed failure, according to its schedule. Retrying a multi-element source can repeat elements already delivered. Retry the smallest source that represents the intended operation, and make downstream side effects safe to repeat. An exponential schedule adds backoff; a finite recurrence schedule bounds the number of retries.
@@ -81,6 +92,7 @@ const readings = Stream.fromEffect(() => Sensor.read()).retry(Schedule.recurs(3)
 ## Narrowing error types
 
 ```vibe
+// run: try { keepSyntaxErrors(Stream.fail(new SyntaxError("bad syntax"))).runCollect() } catch (error) { Console.log(error.message) }; Console.log(exit(keepSyntaxErrors(Stream.fail(new Error("defect"))).runCollect()).isFailure())
 function keepSyntaxErrors(source: Stream.Stream<string, Error>) {
   return Stream.catch(source, (error) => {
     if (error instanceof SyntaxError) return Stream.fail(error)
@@ -88,6 +100,8 @@ function keepSyntaxErrors(source: Stream.Stream<string, Error>) {
   })
 }
 // The returned Stream has E = SyntaxError.
+// Output: bad syntax
+// Output: true
 ```
 
 Refail the errors callers are expected to handle and turn impossible failures into defects. `Stream.orDie(source)` makes every typed failure a defect. These operators change the failure channel; they do not make a faulty source succeed.
@@ -95,6 +109,7 @@ Refail the errors callers are expected to handle and turn impossible failures in
 ## Timeout failures and replacement sources
 
 ```vibe
+// run: Console.log(JSON.stringify(all([() => endWhenIdle.runCollect(), () => { const result = Effect.result(() => failWhenIdle.runCollect()); return result._tag }, () => { const outcome = exit(defectWhenIdle.runCollect()); return outcome.isFailure() }, () => fallbackWhenIdle.runCollect()], { concurrency: 4 })))
 error Idle
 
 const endWhenIdle = Stream.never.timeout("3 seconds")
@@ -110,6 +125,7 @@ const fallbackWhenIdle = Stream.never.timeoutOrElse({
   duration: "3 seconds",
   orElse: () => Stream.make("backup-a", "backup-b")
 })
+// Output: [[],"Failure",true,["backup-a","backup-b"]]
 ```
 
 `timeout` completes normally when an upstream pull waits too long. `timeoutOrElse` switches to the Stream returned by `orElse`, so that Stream can fail, defect, or emit fallback data. The timeout applies to each upstream pull, not to total consumption time, and does not time the replacement stream.

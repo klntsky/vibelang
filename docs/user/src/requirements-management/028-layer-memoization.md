@@ -7,6 +7,7 @@ Effect shares repeated uses of the same layer value within one build graph. Vibe
 ## Sharing acquisition across a graph
 
 ```vibe
+// run: Console.log(JSON.stringify(documentLabels()))
 service Prefix {
   value: string
 }
@@ -18,7 +19,7 @@ service Footer {
 }
 
 const PrefixLive = Layer.effect(Prefix) {
-  log("Prefix initialized")
+  Console.log("Prefix initialized")
   return {
     value: "Monthly"
   }
@@ -44,6 +45,8 @@ const Shared = Layer.merge(
 function documentLabels() {
   provide Shared { return [Heading().value, Footer().value] }
 }
+// Output: Prefix initialized
+// Output: ["Monthly report","Monthly archive"]
 ```
 
 Both graph branches reference `PrefixLive`, so its initialization logs once per `documentLabels` call. Memoization uses layer object identity, not the output service type or structural equivalence. If a factory builds a layer, call it once and reuse the resulting value when sharing matters.
@@ -53,6 +56,7 @@ Sharing lasts for the graph's managed lifetime; it is not a process-wide singlet
 ## Requesting fresh acquisition
 
 ```vibe
+// run: Console.log(JSON.stringify(isolatedLabels()))
 const Separate = Layer.merge(
   Layer.provide(HeadingLive, Layer.fresh(PrefixLive)),
   Layer.provide(FooterLive, Layer.fresh(PrefixLive))
@@ -61,6 +65,9 @@ const Separate = Layer.merge(
 function isolatedLabels() {
   provide Separate { return [Heading().value, Footer().value] }
 }
+// Output: Prefix initialized
+// Output: Prefix initialized
+// Output: ["Monthly report","Monthly archive"]
 ```
 
 Each fresh branch acquires its own prefix implementation, producing two initialization messages. `Layer.fresh` isolates acquisition from the surrounding graph's memoization. Use it when separate state or resource ownership is part of the intended behavior.
@@ -68,6 +75,7 @@ Each fresh branch acquires its own prefix implementation, producing two initiali
 ## Local provision boundaries
 
 ```vibe
+// run: Console.log(JSON.stringify(twoLocalReads())); Console.log(JSON.stringify(oneSharedReadBoundary()))
 function twoLocalReads() {
   const first = Effect.provide(() => Prefix().value, PrefixLive)
   const second = Effect.provide(() => Prefix().value, PrefixLive)
@@ -81,6 +89,11 @@ function oneSharedReadBoundary() {
     return [first, second]
   }
 }
+// Output: Prefix initialized
+// Output: Prefix initialized
+// Output: ["Monthly","Monthly"]
+// Output: Prefix initialized
+// Output: ["Monthly","Monthly"]
 ```
 
 `twoLocalReads` builds twice because each `Effect.provide` starts a separate build boundary. `oneSharedReadBoundary` builds once and shares within it. Provide the application layer around the entry point; use `ManagedRuntime` for multiple entry points that need a common runtime lifetime.
@@ -88,6 +101,7 @@ function oneSharedReadBoundary() {
 ## Controlling memoization explicitly
 
 ```vibe
+// run: Console.log(JSON.stringify(manualSharing()))
 function manualSharing() {
   return Effect.scoped {
     const memoMap = Layer.makeMemoMap()
@@ -100,6 +114,8 @@ function manualSharing() {
     ]
   }
 }
+// Output: Prefix initialized
+// Output: ["Monthly","Monthly"]
 ```
 
 `Layer.makeMemoMap` is an Effect value, so call it to obtain the map. Building the same layer with the same map reuses its acquisition; providing the resulting contexts does not rebuild it. The explicit scope owns resource release, and both contexts are consumed before that scope closes.

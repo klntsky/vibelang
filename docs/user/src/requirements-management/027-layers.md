@@ -7,6 +7,7 @@ A layer describes how to construct services, including their dependencies, initi
 ## Describing a dependency graph
 
 ```vibe
+// run: provide Reports = { render: (title) => `report/${title}` } { Console.log(report("Inventory")) }
 service Settings {
   prefix: string
 }
@@ -21,6 +22,7 @@ function report(title: string) {
   return Reports.render(title)
 }
 // string!!Reports
+// Output: report/Inventory
 ```
 
 The implementation graph on this page has `Printer` depend on `Settings`, and `Reports` depend on both. `Layer.Layer<Out, E, In>` describes the services produced, construction failures, and construction requirements. The global `Layer` namespace provides the constructors and that type.
@@ -28,15 +30,17 @@ The implementation graph on this page has `Printer` depend on `Settings`, and `R
 ## Preventing dependency leakage
 
 ```vibe
+// run: provide Settings = { prefix: "test" } { provide PrinterLive { Printer.print("ready") } }
 const PrinterLive = Layer.effect(Printer) {
   const settings = Settings()
   return {
     print(text) {
-      log(`${settings.prefix}: ${text}`)
+      Console.log(`${settings.prefix}: ${text}`)
     }
   }
 }
 // Layer<Printer, never, Settings>
+// Output: test: ready
 ```
 
 `Layer.effect(Printer) { ... }` builds a `Printer`: the block is the layer's effect, passed to Effect's `Layer.effect` through block params. Its statements run once, when the layer builds, and the object it returns is the implementation, whose members the service types, so `print(text)` needs no annotation. A layer without setup is `Layer.succeed(Printer, { ... })`. `Settings()` runs once when the layer builds, and the method captures that implementation, so callers need `Printer` without also needing `Settings`. Looking up a service inside a method instead makes it a call-time requirement, which must appear in the member's full contract.
@@ -46,6 +50,7 @@ Keep method requirements at `never` when dependencies are implementation details
 ## Constructing service layers
 
 ```vibe
+// run: provide SettingsLive { provide PrinterLive { provide ReportsLive { Console.log(report("Inventory")) } } }
 const SettingsLive = Layer.succeed(Settings, {
   prefix: "reports"
 })
@@ -62,6 +67,8 @@ const ReportsLive = Layer.effect(Reports) {
   }
 }
 // Layer<Reports, never, Settings | Printer>
+// Output: reports: Rendering report
+// Output: reports/Inventory
 ```
 
 Use `Layer.succeed` for an existing implementation and `Layer.effect` for a factory that performs Effect operations. `Layer.sync` accepts an eligible synchronous constructor when no Effect work is required. Constructing a layer value does not run its initialization program.
@@ -71,11 +78,15 @@ A factory can also register `Effect.addFinalizer` or acquire with `Effect.acquir
 ## Merging independent layers
 
 ```vibe
+// run: provide SettingsLive { provide PrinterLive { provide Merged { Printer.print("merged") }; provide Many { Console.log(report("many")) } } }
 const Merged = Layer.merge(SettingsLive, PrinterLive)
 // Layer<Settings | Printer, never, Settings>
 
 const Many = Layer.mergeAll(SettingsLive, PrinterLive, ReportsLive)
 // Layer<Settings | Printer | Reports, never, Settings | Printer>
+// Output: reports: merged
+// Output: reports: Rendering report
+// Output: reports/many
 ```
 
 Merging combines outputs and inputs, and can initialize independent branches concurrently. It does not automatically feed one sibling's output into another's input. `Merged` therefore still needs `Settings` to build `PrinterLive`, even though another branch produces `Settings`.
@@ -83,6 +94,7 @@ Merging combines outputs and inputs, and can initialize independent branches con
 ## Wiring dependent layers
 
 ```vibe
+// run: provide PrinterReady { Printer.print("ready") }; provide PrinterAndSettings { Console.log(Settings().prefix) }; provide ReportsReady { Console.log(report("wired")) }; provide AppLive { Console.log(report("app")) }
 const PrinterReady = Layer.provide(PrinterLive, SettingsLive)
 // Layer<Printer, never, never>
 
@@ -94,6 +106,12 @@ const ReportsReady = Layer.provide(ReportsLive, PrinterAndSettings)
 
 const AppLive = wire(ReportsLive, PrinterLive, SettingsLive)
 // Layer<Reports | Printer | Settings, never, never>
+// Output: reports: ready
+// Output: reports
+// Output: reports: Rendering report
+// Output: reports/wired
+// Output: reports: Rendering report
+// Output: reports/app
 ```
 
 `Layer.provide(consumer, dependencies)` feeds dependency outputs into the consumer and retains the consumer's outputs. `provideMerge` also retains the supplied dependency outputs. `wire` derives this ordering from the layer contracts and rejects duplicate providers (EK3202) and cycles (EK3203).
@@ -105,6 +123,7 @@ Reuse the same layer value when several paths need a shared instance. Reconstruc
 ## Providing and building layers
 
 ```vibe
+// run: Console.log(JSON.stringify(main())); Console.log(withBuiltContext())
 function main() {
   provide AppLive {
     const first = report("Inventory")
@@ -120,6 +139,11 @@ function withBuiltContext() {
     provide context { return report("Inventory") }
   }
 }
+// Output: reports: Rendering report
+// Output: reports: Rendering report
+// Output: ["reports/Inventory","reports/Forecast"]
+// Output: reports: Rendering report
+// Output: reports/Inventory
 ```
 
 `provide AppLive { ... }` provides the layer to its statements: it builds the layer once, every call inside shares the implementations, and the layer's resources are released when the block exits. The statements are code of the enclosing function, so the `return` inside returns from `main`. The block is short for `Effect.provide(() => { ... }, AppLive)`, and like it accepts a layer, an array of layers, or a `Context`. Separate provision boundaries acquire separately; use `ManagedRuntime` when several entry points need one application lifetime.
@@ -129,6 +153,7 @@ function withBuiltContext() {
 ## Observing initialization and recovering failures
 
 ```vibe
+// run: provide ResilientReports { Console.log(report("Inventory")) }
 error InitializationFailed
 
 const ReportsUnavailable = Layer.effect(Reports) {
@@ -140,10 +165,12 @@ const ReportsFallback = Layer.succeed(Reports, {
 })
 
 const ObservedReports = ReportsUnavailable
-  |> Layer.tap(%, () => log("Reports initialized"))
-  |> Layer.tapError(%, (error) => log(`Reports initialization failed: ${error._tag}`))
+  |> Layer.tap(%, () => Console.log("Reports initialized"))
+  |> Layer.tapError(%, (error) => Console.log(`Reports initialization failed: ${error._tag}`))
 
 const ResilientReports = Layer.catch(ObservedReports, () => ReportsFallback)
+// Output: Reports initialization failed: InitializationFailed
+// Output: Offline report: Inventory
 ```
 
 `Layer.tap` observes successful acquisition; `Layer.tapError` observes typed construction failures. Observers can add their own errors or requirements, so use infallible logging when you want to preserve the original signature. `Layer.catch` recovers construction errors with another layer; it does not handle errors from later service calls.
@@ -153,6 +180,7 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 ## Declaring service factories and dependencies
 
 ```vibe
+// run: provide Banner.layer { Console.log(Banner.text("Orders")) }
 service Banner {
   text(title: string): string!!
 
@@ -165,6 +193,7 @@ service Banner {
 
   static readonly layer = Layer.provide(Banner.layerWithoutDependencies, SettingsLive)
 }
+// Output: reports: Orders
 ```
 
 Static members stay on the service class. `static make()` builds the implementation, taking the place of Effect 4's service `make` option. `layerWithoutDependencies` exposes a factory requiring `Settings`; `static readonly layer` holds the chosen default layer. The compiler does not generate a layer automatically.
@@ -174,6 +203,7 @@ A constant factory can use `Layer.succeed`; synchronous factories can use `Layer
 ## Replacing services in tests
 
 ```vibe
+// run: Console.log(JSON.stringify([testBannerDependency(), testBannerDirectly(), testBannerWithInlineSettings()]))
 const SettingsTest = Layer.succeed(Settings, {
   prefix: "test"
 })
@@ -195,6 +225,7 @@ function testBannerWithInlineSettings() {
     return Effect.provide(() => Banner.text("Orders"), Banner.layerWithoutDependencies)
   }
 }
+// Output: ["test: Orders","fixture/Orders","inline: Orders"]
 ```
 
 Replace a dependency to exercise the real factory, or replace the service itself to isolate its consumers. A layer that already includes production dependencies must be changed at its exposed factory boundary if the test needs different construction inputs. Small local overrides can use `provide Key = value`, which provides one implementation without writing a layer. Put construction dependencies in an outer block so they are available while the inner layer builds. Providers in one list supply the block together; they do not feed one another's construction dependencies.
