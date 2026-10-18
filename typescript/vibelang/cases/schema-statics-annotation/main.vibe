@@ -1,0 +1,29 @@
+// Smithers twin C-5 (agent/model ModelRequest): a lambda whose return
+// annotation names the variable its enclosing call initializes. TypeScript
+// resolves the annotation while it checks the lambda's signature, and that
+// types the lambda again; there the lambda keeps the type TypeScript gives
+// it, so the annotation is not resolved inside its own resolution, a cycle
+// (TS7022, TS2577, TS2456 before).
+import { Schema } from "effect"
+import * as Effect from "effect/Effect"
+
+const withStatics = <S extends object, Statics extends object>(schema: S, statics: Statics): S & Statics =>
+  Object.defineProperties(schema, Object.getOwnPropertyDescriptors(statics)) as S & Statics
+
+export const TextPart = withStatics(Schema.Struct({ type: Schema.Literal("text"), text: Schema.String }), {
+  make: (input: { readonly text: string }): TextPart => ({ type: "text", text: input.text })
+})
+export type TextPart = typeof TextPart.Type
+
+// With an Effect contract, the type TypeScript gave the lambda returns the
+// Effect, so the lambda is an Effect function, never plain.
+export const Counter = withStatics(Schema.Struct({ n: Schema.Number }), {
+  make: (n: number): Effect.Effect<typeof Counter.Type, never, never> => ({ n })
+})
+
+// expect-result: {"part":{"type":"text","text":"hi"},"counter":2}
+export function main() {
+  const part = TextPart.make({ text: "hi" })
+  const counter = Counter.make(2)
+  return { part, counter: counter.n }
+}

@@ -47,11 +47,13 @@ func keyOf(signature *checker.Signature) candidateKey {
 
 // lambdaState is what the analyzer knows about one lambda.
 type lambdaState struct {
-	byCandidate map[candidateKey]form // the first form each candidate asked for
-	first       form                  // the form the first candidate to check the lambda asked for
-	free        form                  // the form outside every call's candidates
-	deciding    bool                  // free is being decided; a recursive call sees plain
-	types       [4]*checker.Type      // the lambda's type in each form
+	byCandidate    map[candidateKey]form // the first form each candidate asked for
+	first          form                  // the form the first candidate to check the lambda asked for
+	free           form                  // the form outside every call's candidates
+	deciding       bool                  // free is being decided; a recursive call sees provisionalForm
+	reentered      bool                  // a recursive call saw provisionalForm while free was being decided
+	typedAsWritten bool                  // TypeScript typed fn while checking its signature, before any form (functionExpressionType)
+	types          [4]*checker.Type      // the lambda's type in each form
 }
 
 func (a *analyzer) lambda(fn *ast.Node) *lambdaState {
@@ -106,6 +108,16 @@ func functionExpressionType(c *checker.Checker, fn *ast.Node, t *checker.Type) *
 		return t
 	}
 	a := analyzerFor(c)
+	if c.IsCheckingSignatureOf(fn) {
+		// Resolving fn's own annotations typed fn again, as in
+		// `const TextPart = withStatics(schema, { make: (input): TextPart => … })`
+		// (C-5): its form depends on its return annotation, which has no type
+		// yet. fn keeps the type TypeScript gives it, as in TypeScript; with
+		// an Effect contract that type returns the Effect, so fn cannot be
+		// plain (canBePlain).
+		a.lambda(fn).typedAsWritten = true
+		return t
+	}
 	return a.typeInForm(fn, t, a.formHere(fn))
 }
 
@@ -210,21 +222,40 @@ func (a *analyzer) firstPause(fn *ast.Node) *ast.Node {
 
 // freeForm is fn's form where no candidate decides it: from its contextual
 // type, else from its body. While it is being decided, a call from fn's body
-// back to fn counts as plain, so a recursive lambda that runs nothing else is
-// plain (the greatest fixpoint, as D56 says for D10).
+// back to fn sees provisionalForm. The checker keeps what that call sees: the
+// call resolves fn's variable afresh (getResolvedSignature restarts
+// TypeScript's cycle detection), types fn in the provisional form, and caches
+// that type as the variable's. So when such a call happened, fn takes the
+// provisional form. A recursive lambda that runs nothing else is plain (the
+// greatest fixpoint, as D56 says for D10), unless it has an Effect contract:
+// then the recursive call runs an Effect and fn is an Effect function, the
+// form its contract allows wherever it calls itself.
 func (a *analyzer) freeForm(fn *ast.Node) form {
 	s := a.lambda(fn)
 	if s.free != formNone {
 		return s.free
 	}
 	if s.deciding {
-		return formPlain
+		s.reentered = true
+		return a.provisionalForm(fn)
 	}
 	s.deciding = true
 	f := a.decide(fn, a.classify(a.contextualTypes(fn)))
 	s.deciding = false
+	if s.reentered && f == formPlain {
+		f = a.provisionalForm(fn)
+	}
 	s.free = f
 	return f
+}
+
+// provisionalForm is the form a recursive call sees while fn's free form is
+// being decided: an Effect function when fn has an Effect contract, else plain.
+func (a *analyzer) provisionalForm(fn *ast.Node) form {
+	if a.contractOf(fn) != nil {
+		return formEffect
+	}
+	return formPlain
 }
 
 // decide turns an expectation into a form for fn. Without one, fn is plain
@@ -293,6 +324,9 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 // runs no Effect, looks up no service, and declares no using (D54).
 // A throw can escape only under a JavaScript contract (D263).
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
+	if s := a.lambdas[fn]; s != nil && s.typedAsWritten && a.contractOf(fn) != nil {
+		return false // TypeScript gave fn its contract's Effect type (functionExpressionType)
+	}
 	return !forEachCallInBody(fn, a.performs) && (!hasEscapingThrow(fn) || a.hasPlainContract(fn)) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn)
 }
 

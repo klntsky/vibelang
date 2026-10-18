@@ -1,0 +1,122 @@
+// Smithers twins D-5, A-7, and S11-1: a lambda with an Effect contract that calls
+// itself, directly or through other lambdas, is an Effect function. While its
+// form is being decided, the recursive call sees the Effect form, and the
+// type the checker caches for its variable is the type it compiles to.
+import * as Effect from "effect/Effect"
+
+// D-5 (testing MemoryEngine, executeRace): a map of cold branch programs
+// passed to Effect.raceAll, where a branch can be a race again.
+type Step =
+  | { readonly kind: "slow" }
+  | { readonly kind: "leaf"; readonly value: number }
+  | { readonly kind: "race"; readonly branches: ReadonlyArray<Step> }
+
+const runBranch = (branch: Step, index: number): Effect.Effect<number, never, never> => {
+  if (branch.kind === "slow") {
+    Effect.sleep(3_600_000)
+    return -1
+  }
+  if (branch.kind === "leaf") return branch.value + index
+  return runRace(branch.branches)
+}
+
+const runRace = (branches: ReadonlyArray<Step>): Effect.Effect<number, never, never> =>
+  Effect.raceAll(sync(({ branches, execute }) => branches.map(execute), {
+    branches,
+    execute: (branch: Step, index: number): Effect.Effect<number, never, never> => runBranch(branch, index)
+  }))
+
+// A-7 (registry Executable, reserveSibling): the recursive call is in a catch
+// handler, and a caller passes a call by name.
+const attempt = (n: number): Effect.Effect<string, string, never> => {
+  if (n > 1) throw `busy ${n}`
+  return `slot ${n}`
+}
+
+export const reserve = (attempts: number): Effect.Effect<string, string, never> =>
+  Effect.catch(attempt(attempts), (cause) => attempts > 1 ? reserve(attempts - 1) : (throw cause))
+
+export const load = (): Effect.Effect<string, never, never> => Effect.orElseSucceed(reserve(3), () => "none")
+
+// A-7 (flows patterns, Supervisor): the recursive call comes before the
+// body's first Effect operation.
+export const depth = (n: number): Effect.Effect<number, never, never> => {
+  if (n === 0) return 0
+  const below = depth(n - 1)
+  Effect.logDebug(`depth ${n}`)
+  return below + 1
+}
+
+// A-7 (registry Discovery, holdsEntry): a local lambda calls itself inside a
+// program.
+interface Tree {
+  readonly name: string
+  readonly children: ReadonlyArray<Tree>
+}
+
+export const holds = (tree: Tree, name: string): Effect.Effect<boolean, never, never> =>
+  Effect.suspend(() => {
+    const visit = (node: Tree, level: number): Effect.Effect<boolean, never, never> =>
+      Effect.suspend(() => {
+        if (node.name === name) return true
+        for (const child of node.children) {
+          if (visit(child, level + 1)) return true
+        }
+        return false
+      })
+    return visit(tree, 0)
+  })
+
+// A lambda reaches the recursion through another lambda, used as a value.
+export const walk = (n: number): Effect.Effect<number, never, never> => {
+  const step = (m: number): Effect.Effect<number, never, never> => walk(m)
+  if (n === 0) return 0
+  const below = Effect.forEach([n - 1], step)
+  return below[0] + 1
+}
+
+// A recursive lambda with an Effect contract is an Effect function even when
+// it runs nothing else; with a plain contract it stays plain (D263).
+export const count = (n: number): number!! => n === 0 ? 0 : count(n - 1) + 1
+export const plainCount = (n: number): number => n === 0 ? 0 : plainCount(n - 1) + 1
+
+// S11-1 (flows sandbox RemoteChildProcessSpawner, validateCommand): a
+// self-recursive arrow with a full contract that throws.
+error Rejected { message: string }
+
+export const validate = (depth: number): Effect.Effect<void, Rejected, never> => {
+  if (depth > 0) return validate(depth - 1)
+  throw new Rejected({ message: `rejected at ${depth}` })
+}
+
+// S11-1 (agent/triggers Scheduler, processTrigger): the recursive call sits in
+// a block-param body.
+export const processTrigger = (n: number): number!! =>
+  withSpan("processTrigger") {
+    if (n > 0) return processTrigger(n - 1) + 1
+    return 0
+  }
+
+const tree: Tree = { name: "a", children: [{ name: "b", children: [] }, { name: "c", children: [{ name: "d", children: [] }] }] }
+
+// expect-result: {"race":9,"reserve":"slot 1","depth":3,"holds":[true,false],"walk":2,"count":4,"plainCounts":[1,2,3],"validate":"rejected at 0","processTrigger":2}
+export function main() {
+  let rejected = ""
+  try {
+    validate(2)
+  } catch (e) {
+    rejected = e.message
+  }
+  const race = runRace([{ kind: "slow" }, { kind: "race", branches: [{ kind: "slow" }, { kind: "leaf", value: 8 }] }])
+  return {
+    race,
+    reserve: load(),
+    depth: depth(3),
+    holds: Effect.forEach(["d", "z"], (name) => holds(tree, name)),
+    walk: walk(2),
+    count: count(4),
+    plainCounts: [1, 2, 3].map(plainCount),
+    validate: rejected,
+    processTrigger: processTrigger(2)
+  }
+}

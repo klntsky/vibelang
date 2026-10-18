@@ -10460,7 +10460,7 @@ func (c *Checker) contextuallyCheckFunctionExpressionOrObjectLiteralMethod(node 
 					signature.resolvedReturnType = returnType
 				}
 			}
-			c.checkSignatureDeclaration(node)
+			c.checkContextualSignatureDeclaration(node) // extensions_signatures.go
 		}
 	}
 }

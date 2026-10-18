@@ -197,7 +197,13 @@ func (a *analyzer) calleeContract(callee *ast.Node, call *ast.Node, sig *checker
 		return nil, nil, false
 	}
 	t := runningCallResult(a.checker, call, sig)
-	return channelType(a.checker, t, "_E"), channelType(a.checker, t, "_R"), true
+	e, r = channelType(a.checker, t, "_E"), channelType(a.checker, t, "_R")
+	if e == nil || r == nil {
+		// The call resolved to a form that returns no Effect, such as a
+		// lambda's plain form (D113): the caller reads the callee's body.
+		return nil, nil, false
+	}
+	return e, r, true
 }
 
 // checkContracts reports, for each function in file that the lowering can
