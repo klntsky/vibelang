@@ -1,0 +1,7 @@
+// expect: EK4803
+// Two versions of one Effect package (D240): vendor/one and vendor/two are both
+// @effect/fake, so EK4803 reports at the first statement.
+import { one } from "./vendor/one/index.js"
+import { two } from "./vendor/two/index.js"
+
+export const both = one + two

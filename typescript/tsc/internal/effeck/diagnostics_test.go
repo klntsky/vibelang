@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/microsoft/TypeScript/tsc/internal/core"
@@ -29,6 +30,10 @@ func TestCategory(t *testing.T) {
 		{"EK4403 can be a warning", EK4403, with(map[string]string{"EK4403": "warning"}), diagnostics.CategoryWarning, true},
 		{"EK4403 can be off", EK4403, with(map[string]string{"EK4403": "off"}), 0, false},
 		{"other codes stay errors", EK2001, with(map[string]string{"EK2001": "off"}), diagnostics.CategoryError, true},
+		{"EK4801 is an error by default", EK4801, nil, diagnostics.CategoryError, true},
+		{"EK4818 is off by default", EK4818, nil, 0, false},
+		{"EK4818 can be a warning", EK4818, with(map[string]string{"EK4818": "warning"}), diagnostics.CategoryWarning, true},
+		{"EK4813 stays an error", EK4813, with(map[string]string{"EK4813": "off"}), diagnostics.CategoryError, true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -62,5 +67,49 @@ func TestRegistryMatchesSpec(t *testing.T) {
 	slices.Sort(got)
 	if len(want) == 0 || !slices.Equal(got, want) {
 		t.Errorf("registry codes %v differ from Chapter 28's %v", got, want)
+	}
+}
+
+func TestDirectiveCategory(t *testing.T) {
+	t.Parallel()
+	text := strings.Join([]string{
+		"a()", // 0
+		"// @effeck-diagnostics-next-line EK4801:off",
+		"b()", // 2: off for the next line only
+		"c()", // 3
+		"/* @effeck-diagnostics EK4801:warning */",
+		"d()", // 5: a warning from here on
+		`const s = "@effeck-diagnostics EK4801:off"`,
+		"e()", // 7: a string is not a comment
+		"// @effeck-diagnostics *:off EK4818:warning",
+		"f()", // 9: * turns EK4801 off, and EK4818 named on its own is a warning
+		"// @effeck-diagnostics EK4801:error",
+		"g()", // 11: a later comment overrides *
+	}, "\n")
+	at := func(line int) int {
+		return len(strings.Join(strings.Split(text, "\n")[:line], "\n")) + core.IfElse(line > 0, 1, 0)
+	}
+	tests := []struct {
+		line int
+		m    *Message
+		want diagnostics.Category
+		on   bool
+	}{
+		{0, EK4801, diagnostics.CategoryError, true},
+		{2, EK4801, 0, false},
+		{3, EK4801, diagnostics.CategoryError, true},
+		{5, EK4801, diagnostics.CategoryWarning, true},
+		{7, EK4801, diagnostics.CategoryWarning, true},
+		{9, EK4801, 0, false},
+		{9, EK4818, diagnostics.CategoryWarning, true},
+		{11, EK4801, diagnostics.CategoryError, true},
+		{11, EK4818, diagnostics.CategoryWarning, true},
+	}
+	for _, test := range tests {
+		category, on := category(nil, test.m)
+		got, gotOn := directiveCategoryIn(text, at(test.line), test.m, category, on)
+		if got != test.want || gotOn != test.on {
+			t.Errorf("line %d, %s: got %v, %v; want %v, %v", test.line, test.m, got, gotOn, test.want, test.on)
+		}
 	}
 }

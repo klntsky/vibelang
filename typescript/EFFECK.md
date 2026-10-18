@@ -595,6 +595,8 @@ The checks so far:
 | EK4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
 | EK4402 | Where code runs a platform API (D108): the callee of a call, `new`, or tagged template, or the property read, whose root is a binding imported from a platform module or a platform global; inside boundaries and at the top level too. It covers TypeScript's "cannot find name" for an unresolved platform global it reports | `platform.go` |
 | EK4403 | A clock or randomness read, everywhere in a `.effeck` file | `platform.go` |
+| EK4801-EK4818 | The rules of Effect's language service (D240-D244): an Effect value a statement discards, an Effect returned from an Effect function, a global `Error` failure, `Layer.mergeAll` dependencies, nested `provide` blocks, an Effect 3 name in place of TS2339, and the rest of Chapter 28's EK48xx rows. One walk per file; quick fixes in `lsrules_fixes.go`, the Effect 3 table in `outdated.go` | `lsrules.go` |
+| EK4801, EK4819, EK4820 | In a `.ts` file outside `node_modules`: a discarded Effect, `yield` without `*` in an Effect generator, `yield*` of a never-succeeding Effect without `return` (D242). `typeScriptFileChecks` runs them, as `fileChecks` runs the `.effeck` checks | `lsrules_ts.go` |
 
 `compilerOptions.effeck` (D34) sets the category of the two codes that are policy, not soundness, and the tracing mode:
 
@@ -602,7 +604,7 @@ The checks so far:
 "effeck": { "diagnostics": { "EK2004": "off", "EK4403": "warning" }, "tracing": "exported" }
 ```
 
-EK2004 defaults to `"warning"` and EK4403 to `"error"`; every other ES code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.Effeck.Tracing` selects the functions that compile with spans (see "Tracing"). `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
+EK2004 defaults to `"warning"` and EK4403 to `"error"`; the EK48xx rules have their own defaults, and every one but EK4813 is adjustable too (D241), from `core.EffeckAdjustableCodes`, which both `tsoptions` and the registry read. A `Message` with `Off` set reports nothing until a project or a comment turns it on. `directives.go` reads `// @effeck-diagnostics EK4801:off` (to the end of the file) and `// @effeck-diagnostics-next-line EK4801:off` comments for the adjustable codes. Every other EK code is always an error. An unknown key or invalid value is reported at its node in `tsconfig.json` with TypeScript's own messages (TS5023, TS6046). `CompilerOptions.Effeck.Tracing` selects the functions that compile with spans (see "Tracing"). `tsc --showConfig` prints the block; `.tsbuildinfo` does not record it yet, so changing it does not invalidate an incremental build.
 
 ## Services and control operations
 

@@ -65,10 +65,10 @@ The language design diagnoses this as `EK2001`. Handle `Rejected` inside the fun
 Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages are trusted. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a `catch` that can never receive an expected failure is `EK2004`, a warning by default.
 
 The server exposes TypeScript completions through the Effeck checker,
-including service member types. D33 also calls for catch-specific completions,
-mechanical ES quick fixes, and migration refactors. Those features are not
-implemented by the current compiler. Diagnostic messages include suggested
-repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen`
+including service member types. Quick fixes repair retired spellings and the
+mechanical cases of Effect's language service rules, below. D33 also calls for
+catch-specific completions and migration refactors, which are not implemented.
+Other diagnostic messages include suggested repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen`
 or `yield*` inside `.effeck`.
 
 ## Configure compiler checks
@@ -94,7 +94,134 @@ A contract gives the compiler a promise to check. To infer selected channels, wr
 }
 ```
 
-Only EK2004 and EK4403 can be set to `"error"`, `"warning"`, or `"off"`; the values shown are their defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. All other EK diagnostics are errors whose severity cannot change, and `@ts-expect-error` does not suppress them. `effeck` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
+EK2004, EK4403, and the rules from Effect's language service, EK4801-EK4820 except EK4813, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. All other EK diagnostics are errors whose severity cannot change, and `@ts-expect-error` does not suppress them. `effeck` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
+
+## Effect language service rules
+
+Effeck supports every feature of Effect's language service, `@effect/language-service` 0.87.5 (D240). Most of its 108 rules guard against mistakes that Effeck's syntax rules out: there is no `Effect.gen` to misuse, a call already runs, and `catch` catches failures. Existing EK diagnostics cover others. The rest are EK4801-EK4820, with quick fixes where the repair is mechanical.
+
+EK4801-EK4820 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in `compilerOptions.effeck.diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
+
+```ts
+function discard(program: Effect.Effect<number>) {
+  // @effeck-diagnostics-next-line EK4801:off
+  program
+  return 0
+}
+```
+
+`// @effeck-diagnostics EK4818:warning` applies from its line to the end of the file, and `*` names every adjustable code. EK4801, EK4819, and EK4820 also report in the `.ts` files that the program checks; for Effect's other rules in `.ts` files, serve them with Effect's own TypeScript 7 server, `@effect/tsgo` (D242).
+
+| Group | Effect's rule or feature | In Effeck | Example |
+| --- | --- | --- | --- |
+| Correctness | `anyUnknownInErrorContext` | EK4811, off by default | `throw cause` where `cause: unknown` |
+| Correctness | `classSelfMismatch` | Not needed: a `service` declaration has no `Self` parameter | `service Users { find(id: string): User!NotFound }` |
+| Correctness | `duplicatePackage` | EK4803, warning | two versions of `effect` in one program |
+| Correctness | `effectFnImplicitAny` | Not needed: an Effeck function's parameters are TypeScript's, so `strict` reports TS7006 | `function load(id) { … }` is TS7006 |
+| Correctness | `floatingEffect` | EK4801, error, with a quick fix; also in `.ts` files | `program` alone on a line; the fix writes `program()` |
+| Correctness | `genericEffectServices` | Covered: EK3005 | `service Repo<T> { … }` is EK3005 |
+| Correctness | `missingEffectContext` | Covered: EK2002 at a contract, EK3201 at a runner | `function f(): User!NotFound! { return Users.find(id) }` is EK2002 |
+| Correctness | `missingEffectError` | Covered: EK2001 | `function f(): User!! { return Users.find(id) }` is EK2001 |
+| Correctness | `missingLayerContext` | Covered: EK2002 and EK3201; `wire` places providers | `provide UsersLive { … }` without the database layer is EK3201 at the runner |
+| Correctness | `missingReturnYieldStar` | Not needed in `.effeck`: `throw` ends the function. EK4820 in `.ts` files | `throw new NotFound({ id })` |
+| Correctness | `missingStarInYieldEffectGen` | Not needed in `.effeck`: a call runs, and `Effect.gen` with `function*` is EK1002. EK4819 in `.ts` files | `const user = Users.find(id)` |
+| Correctness | `nonObjectEffectServiceType` | Effect 3 only, and a `service` declares members | `service Port { value: number }` |
+| Correctness | `outdatedApi` | EK4813, error, in place of TS2339, with a quick fix; the same fix on TS2339 in `.ts` files | `Effect.catchAll`; the fix writes `Effect.catch` |
+| Correctness | `outdatedEffectCodegen` | Not adopted: Effeck has no codegen comments | None |
+| Correctness | `overriddenSchemaConstructor` | EK4814, error | `class Person extends Schema.Class<Person>("Person")({ … }) { constructor() { … } }` |
+| Correctness | `unsupportedServiceAccessors` | Not needed: `Users.find(id)` calls a member through the key, generic or not | `Users.find(id)` |
+| Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { pure() } catch (e) { … }` is EK2004 |
+| Anti-pattern | `effectFnIife` | Not needed: no `Effect.fn`; an immediately called function is a call | `(() => load())()` |
+| Anti-pattern | `effectGenUsesAdapter` | Not needed: no `Effect.gen` | None |
+| Anti-pattern | `effectInFailure` | EK4815, warning | `throw program`; run it: `program()` |
+| Anti-pattern | `effectInVoidSuccess` | EK4802, warning, with a quick fix; TS2322 under a `void!!` contract | `return program` from a function that runs Effects |
+| Anti-pattern | `globalErrorInEffectCatch` | EK4804, warning | `try(code, (cause) => new Error(String(cause)))` |
+| Anti-pattern | `globalErrorInEffectFailure` | EK4804, warning | `throw new Error("boom")`; declare `error Boom { }` |
+| Anti-pattern | `layerMergeAllWithDependencies` | EK4807, warning, with a quick fix | `Layer.mergeAll(DbLive, UsersLive)`; the fix writes `wire` |
+| Anti-pattern | `lazyPromiseInEffectSync` | Not needed: `sync(() => promise)` already compiles to `Effect.promise` (D148) | `sync(async () => fetch(url))` |
+| Anti-pattern | `leakingRequirements` | EK4809, warning; `@effeck leakable` exempts a service | `service Users { find(): User!!Db; all(): User[]!!Db }` |
+| Anti-pattern | `multipleEffectProvide` | EK4808, warning, with a quick fix | `provide A { provide B { … } }`; the fix writes `provide A, B { … }` or `provide wire(A, B) { … }` |
+| Anti-pattern | `returnEffectInGen` | EK4802, warning, with a quick fix | `return program`; the fix writes `return program()` |
+| Anti-pattern | `runEffectInsideEffect` | Covered: EK1005 | `Effect.runPromise(load())` inside a function is EK1005 |
+| Anti-pattern | `schemaSyncInEffect` | Effect 3 only | None |
+| Anti-pattern | `scopeInLayerEffect` | Effect 3 only: Effect 4's `Layer.effect` owns its scope | `Layer.effect(Users) { using pool = open(); … }` |
+| Anti-pattern | `strictEffectProvide` | EK4816, off by default | `provide AppLive { … }` outside `main` |
+| Anti-pattern | `tryCatchInEffectGen` | Not needed: `catch` catches failures | `try { Users.find(id) } catch (e) { … }` |
+| Anti-pattern | `unknownInEffectCatch` | EK4806, warning | `try(code, (cause) => cause)` |
+| Effect-native | `asyncFunction` | Covered: EK1003 | `async function load() { … }` is EK1003 |
+| Effect-native | `cryptoRandomUUID` | Covered: EK4403 | `crypto.randomUUID()` is EK4403 |
+| Effect-native | `cryptoRandomUUIDInEffect` | Covered: EK4403 | `crypto.randomUUID()` is EK4403 |
+| Effect-native | `extendsNativeError` | EK4805, warning | `class Boom extends Error {}`; declare `error Boom { }` |
+| Effect-native | `globalConsole` | Covered: EK4402 | `console.log(x)` is EK4402 |
+| Effect-native | `globalConsoleInEffect` | Covered: EK4402 | `console.log(x)` is EK4402 |
+| Effect-native | `globalDate` | Covered: EK4403 | `Date.now()` is EK4403 |
+| Effect-native | `globalDateInEffect` | Covered: EK4403 | `new Date()` is EK4403 |
+| Effect-native | `globalFetch` | Covered: EK4402 | `fetch(url)` is EK4402 |
+| Effect-native | `globalFetchInEffect` | Covered: EK4402 | `fetch(url)` is EK4402 |
+| Effect-native | `globalRandom` | Covered: EK4403 | `Math.random()` is EK4403 |
+| Effect-native | `globalRandomInEffect` | Covered: EK4403 | `Math.random()` is EK4403 |
+| Effect-native | `globalTimers` | Covered: EK4402 | `setTimeout(f, 10)` is EK4402 |
+| Effect-native | `globalTimersInEffect` | Covered: EK4402 | `setTimeout(f, 10)` is EK4402 |
+| Effect-native | `instanceOfSchema` | EK4817, off by default, with a quick fix | `value instanceof Person`; the fix writes `Schema.is(Person)(value)` |
+| Effect-native | `newPromise` | EK4812, warning | `new Promise((resolve) => …)`; use `callback((resume) => …)` |
+| Effect-native | `nodeBuiltinImport` | Covered: EK4402 where the code runs the import; importing is allowed (D108) | `readFile(path)` from `node:fs/promises` is EK4402 |
+| Effect-native | `preferSchemaOverJson` | EK4818, off by default | `JSON.parse(text)` |
+| Effect-native | `processEnv` | Covered: EK4402 | `process.env.PORT` is EK4402; use `Config` |
+| Effect-native | `processEnvInEffect` | Covered: EK4402 | `process.env.PORT` is EK4402 |
+| Effect-native | `unsafeEffectTypeAssertion` | EK4810, warning, with a quick fix | `program as Effect.Effect<number>` drops a failure |
+| Style | `catchAllToMapError` | Not needed: a catch that rethrows is the one form | `catch (e) { throw new Failed({ cause: e }) }` |
+| Style | `deterministicKeys` | Not needed: the compiler derives each service key from its package, module, and name | `@acme/app/src/users#Users` |
+| Style | `effectDoNotation` | Not needed: `const` statements bind values | `const user = Users.find(id)` |
+| Style | `effectFnOpportunity` | Not needed: every function is one | `function load(id: string) { … }` |
+| Style | `effectMapFlatten` | Not needed: statements | `const a = f(); return g(a)` |
+| Style | `effectMapVoid` | Not needed: statements | `f()` on its own line |
+| Style | `effectSucceedWithVoid` | Not needed: a function that returns nothing | `function done() { }` |
+| Style | `flatMapToMap` | Not needed: statements | `return g(f())` |
+| Style | `importFromBarrel` | Not needed: the compiler writes the imports for effect's root names (D146) | `Option.some(1)` with no import |
+| Style | `missedPipeableOpportunity` | Planned: a refactor that writes a `|>` pipe | `f(g(h(x)))` becomes `x \|> h(%) \|> g(%) \|> f(%)` |
+| Style | `missingEffectServiceDependency` | Effect 3 only; `wire` computes dependencies | `wire(UsersLive, DbLive)` |
+| Style | `nestedEffectGenYield` | Not needed: no `Effect.gen` | None |
+| Style | `redundantSchemaTagIdentifier` | Not needed: `error` and `schema` declarations take their tag from their name | `error NotFound { id: string }` |
+| Style | `schemaStructWithTag` | Planned: EK4821, off by default, with a quick fix | `Schema.Struct({ _tag: Schema.Literal("A"), … })` |
+| Style | `schemaUnionOfLiterals` | Effect 3 only | None |
+| Style | `serviceNotAsClass` | Not needed: `service` declarations | `service Users { … }` |
+| Style | `strictBooleanExpressions` | Planned: EK4822, off by default | `if (count) { … }` |
+| Style | `unnecessaryArrowBlock` | Planned: EK4823, off by default, with a quick fix | `(x) => { return x + 1 }` |
+| Style | `unnecessaryEffectGen` | Not needed: no `Effect.gen` | None |
+| Style | `unnecessaryFailYieldableError` | Not needed: `throw new NotFound({ id })` | `throw new NotFound({ id })` |
+| Style | `unnecessaryPipe` | Planned: EK4824, off by default, with a quick fix | `pipe(x)` |
+| Style | `unnecessaryPipeChain` | Planned: EK4825, off by default, with a quick fix | `x.pipe(f).pipe(g)` |
+| Hover | Extended Effect type | Covered: a function's hover shows its contract, `A!E!R` (D77) | `string!UserNotFound!Users` |
+| Hover | `yield*` hover | Not needed: a running call's hover shows its success value (D77) | Runs here and returns `User` |
+| Hover | Layer service involvement | Planned: a layer's hover lists what it provides, needs, and fails with | Hover on `UsersLive` |
+| Hover | Layer graph | Planned: a `wire` call's hover lists the order it builds in | Hover on `wire(UsersLive, DbLive)` |
+| Completion | `Self` in classes | Not needed: declarations have no `Self` | None |
+| Completion | `Effect.gen` snippet | Not needed: no `Effect.gen` | None |
+| Completion | `Effect.fn` span name | Not needed: `tracing` names spans after functions (D104) | `"tracing": "exported"` |
+| Completion | Duration strings | Planned: completion of `"1 second"` and the other units where a `Duration.Input` goes | `Effect.sleep("1 second")` |
+| Completion | Namespace import style | Not needed: effect's root names are in scope (D146) | `Option.some(1)` |
+| Completion | `Schema.brand` name | Planned: completion of the declared name in `Schema.brand(…)` | `schema UserId = Schema.String.pipe(Schema.brand("UserId"))` |
+| Completion | Comment directives | `@effeck-diagnostics` comments (D241); completion planned | `// @effeck-diagnostics-next-line EK4801:off` |
+| Refactor | async function to `Effect.gen` | Planned: "Convert to an Effeck function" | `async function f() { await p }` becomes `function f() { try(async () => p) }` |
+| Refactor | async function to `Effect.gen`, with an error per promise | Planned: the same refactor, with an `error` declaration per `await` | `try(async () => p, (cause) => new FetchFailed({ cause }))` |
+| Refactor | async function to `Effect.fn` | Planned: the same refactor; Effeck has one function form | As above |
+| Refactor | async function to `Effect.fn`, with an error per promise | Planned: the same refactor | As above |
+| Refactor | `Effect.gen` to `Effect.fn` | Not needed: one function form | None |
+| Refactor | Implement service accessors | Not needed: `Users.find(id)` | None |
+| Refactor | Function calls to pipe | Planned: "Convert to a pipe" | `f(g(x))` becomes `x \|> g(%) \|> f(%)` |
+| Refactor | Pipe to data-first | Planned: "Convert the pipe to calls" | `x \|> g(%) \|> f(%)` becomes `f(g(x))` |
+| Refactor | Toggle return type signature | Planned: "Write the inferred contract" and "Remove the contract" | `function load(id: string): User!NotFound!Users` |
+| Refactor | Remove an unnecessary `Effect.gen` | Not needed: no `Effect.gen` | None |
+| Refactor | Wrap with `Effect.gen` | Not needed: every function is one | None |
+| Refactor | Toggle pipe styles | Planned: toggles `x.pipe(f)` and `pipe(x, f)` | `x.pipe(f, g)` and `pipe(x, f, g)` |
+| Refactor | Layer Magic | Not needed: `wire` composes layers in dependency order (D27) | `wire(AppLive, UsersLive, DbLive)` |
+| Refactor | Structural type to Schema | Planned: "Convert to a schema declaration" | `interface User { name: string }` becomes `schema User { name: string }` |
+| Refactor | `Effect.Service` to `Context.Tag` | Not needed: `service` declarations | None |
+| Codegen | `annotate` | Planned: the "Write the inferred contract" refactor | `function load(id: string): User!NotFound!Users` |
+| Codegen | `accessors` | Not needed: `Users.find(id)` | None |
+| Codegen | `typeToSchema` | Planned: the "Convert to a schema declaration" refactor | `schema User { name: string }` |
+| Other | Renaming a tagged class renames its tag | Not needed: an `error` declaration's tag is its name, so a rename renames both | `error NotFound { }` renamed to `Missing` |
+| Other | Go to definition for `RpcClient` | Not adopted yet: the language server has no definition hook | None |
 
 ## Lint and build integration
 

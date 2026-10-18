@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
@@ -63,9 +64,12 @@ func EmitAndReportStatistics(input EmitInput) (CompileAndEmitResult, *Statistics
 		statistics.Report(input.Writer, input.Testing)
 	}
 
-	if result.EmitResult.EmitSkipped && len(result.Diagnostics) > 0 {
+	// Effeck: only errors make the exit status non-zero; warnings, such as
+	// EK2004 and the EK48xx lint rules (D241), do not fail a build.
+	hasErrors := slices.ContainsFunc(result.Diagnostics, func(d *ast.Diagnostic) bool { return d.Category() == diagnostics.CategoryError })
+	if result.EmitResult.EmitSkipped && hasErrors {
 		result.Status = ExitStatusDiagnosticsPresent_OutputsSkipped
-	} else if len(result.Diagnostics) > 0 {
+	} else if hasErrors {
 		result.Status = ExitStatusDiagnosticsPresent_OutputsGenerated
 	}
 	return result, statistics

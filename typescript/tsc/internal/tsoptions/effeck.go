@@ -24,9 +24,9 @@ import (
 // cases in options_generated.go; and core.CompilerOptions.Effeck.
 
 var (
-	// effectScriptAdjustableCodes are the ES codes whose category a project may
-	// change. Every other EK diagnostic is an error.
-	effectScriptAdjustableCodes = []string{"EK2004", "EK4403"}
+	// effectScriptAdjustableCodes are the EK codes whose category a project may
+	// change. Every other EK diagnostic keeps its category.
+	effectScriptAdjustableCodes = core.EffeckAdjustableCodes
 	effectScriptCategories      = []string{"error", "warning", "off"}
 	effectScriptTracing         = []string{"none", "exported", "all"}
 )
@@ -82,7 +82,7 @@ func validateEffeckOptions(value any, valueExpression *ast.Expression, sourceFil
 				if !slices.Contains(effectScriptAdjustableCodes, code) {
 					d := report(jsonName(codeProperty), diagnostics.Unknown_compiler_option_0, "effeck.diagnostics."+code)
 					d.AddMessageChain(ast.NewExternalDiagnostic(nil, core.TextRange{}, "", diagnostics.CategoryMessage, 0,
-						"Only EK2004 and EK4403 can be configured; every other EK diagnostic is an error."))
+						"Only these EK codes can be configured: "+strings.Join(effectScriptAdjustableCodes, ", ")+"."))
 					continue
 				}
 				if category, ok := category.(string); !ok || !slices.Contains(effectScriptCategories, category) {

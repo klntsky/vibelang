@@ -1,0 +1,118 @@
+// expect: EK4801 EK4802 EK4804 EK4805 EK4806 EK4807 EK4808 EK4809 EK4810 EK4811 EK4812 EK4813 EK4814 EK4815 EK4816 EK4817 EK4818
+// The rules of Effect's language service that apply to .effeck code (D240),
+// each raised to an error by tsconfig.json so that the off ones report too.
+error NotFound { id: string }
+
+service Directory {
+  lookup(id: string): string!!
+}
+
+service Users {
+  find(id: string): string!NotFound
+}
+
+const DirectoryLive = Layer.succeed(Directory, {
+  lookup(id) {
+    return id
+  }
+})
+
+const UsersLive = Layer.effect(Users) {
+  const directory = Directory()
+  return {
+    find(id) {
+      return directory.lookup(id)
+    }
+  }
+}
+
+// EK4801: a statement that discards an Effect value, in Effeck code and in a hatch.
+export function floating(program: Effect.Effect<number>) {
+  program
+  return 1
+}
+
+export function hatched() {
+  return sync(() => {
+    Effect.log("lost")
+    return 1
+  })
+}
+
+// EK4802: an Effect function that returns an Effect value.
+export function nested(program: Effect.Effect<number>) {
+  Directory.lookup("1")
+  return program
+}
+
+// EK4804: a global Error as an expected failure.
+export function negative(n: number) {
+  if (n < 0) throw new Error("negative")
+  return n
+}
+
+// EK4805: a class that extends Error.
+export class Legacy extends Error {}
+
+// EK4806: a try mapping that returns unknown.
+export function decoded(text: string) {
+  return try((text) => Number(text), (cause) => cause, text)
+}
+
+// EK4807: Layer.mergeAll of a layer that needs another.
+export const AppLive = Layer.mergeAll(DirectoryLive, UsersLive)
+
+// EK4808 and EK4816: a provide block that is all of another, outside main.
+export function lookUp() {
+  provide DirectoryLive {
+    provide UsersLive {
+      return Users.find("1")
+    }
+  }
+}
+
+// EK4809: every member of a service needs the same service.
+service Reports {
+  daily(): string!!Directory
+  weekly(): string!!Directory
+}
+
+// EK4810: an assertion that drops a failure.
+export function dropped(program: Effect.Effect<number, NotFound>) {
+  return program as Effect.Effect<number>
+}
+
+// EK4811: a throw of unknown.
+export function rethrow(cause: unknown) {
+  throw cause
+}
+
+// EK4812: new Promise.
+export function promised() {
+  const pending = new Promise<number>((resolve) => resolve(1))
+  return 1
+}
+
+// EK4813: an Effect 3 name.
+export const recover = Effect.catchAll
+
+// EK4814: a constructor in a Schema class. EK4817: instanceof that class.
+export class Person extends Schema.Class<Person>("Person")({ name: Schema.String }) {
+  constructor(props: { readonly name: string }) {
+    super(props)
+  }
+}
+
+export function isPerson(value: unknown) {
+  return value instanceof Person
+}
+
+// EK4815: a throw of an Effect value.
+export function thrown(program: Effect.Effect<number, NotFound>) {
+  throw program
+}
+
+// EK4818: JSON.parse.
+export function parsed(text: string) {
+  return JSON.parse(text) as number
+}

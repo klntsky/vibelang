@@ -223,6 +223,11 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D237 | `catch` binds looser than `??` and `\|\|` and tighter than `? :`, assignment, and `\|>`, associating to the left; a handler's body extends as an arrow function's does | `a() catch b() catch c` chains | 3 |
 | D238 | A catch expression's value is `A \| B` and its E is what the fallback or handler lets escape; a handler's exhaustive `match` removes the failures; a left side that cannot fail is EK2004 | The statement's checks, applied to the expression | 3 |
 | D239 | A catch expression in a hatch body is EK2114 | A hatch body is plain TypeScript | 28 |
+| D240 | Every rule and feature of `@effect/language-service` 0.87.5 is answered: ruled out by syntax, covered by an EK code, Effect 3 only, or implemented as EK4801-EK4820, a quick fix, a refactor, a hover, or a completion | Will: support every rule, preferring syntax over lint | 28 |
+| D241 | EK4801-EK4820 are lint: defaults of error, warning, or off; all but EK4813 adjustable in `compilerOptions.effeck` and by `@effeck-diagnostics` comments | They mark style and likely bugs, not code without meaning | 28 |
+| D242 | **Controversial.** EK4801, EK4819, and EK4820 also report in `.ts` files outside `node_modules` | Effeck replaces the server that would run `@effect/tsgo` | 10, 28 |
+| D243 | EK4813 replaces TS2339 for an Effect 3 name of the Effect module and writes the Effect 4 name; `.ts` files get the quick fix on TS2339 | A type error with a known repair | 28 |
+| D244 | **Controversial.** Effeck warns where Effect's defaults are off: `extendsNativeError`, `newPromise`, `unsafeEffectTypeAssertion` | Failures are `error` declarations, promises cannot be awaited, contracts check types | 28 |
 
 #### Rules of the runtime and compiler
 

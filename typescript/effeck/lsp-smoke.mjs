@@ -401,6 +401,49 @@ try {
     assert(fixed.includes("return sync((text) => text.length, text)"), `fixed text: ${fixed}`)
   })
 
+  await check("code action: Effect's language service rules report in .effeck, and their quick fixes call, merge, and rename", async () => {
+    open("src/lsrules.effeck", "effeck")
+    const items = await diagnostics("src/lsrules.effeck")
+    const codes = items.map((d) => `${d.source}${d.code}:${d.severity}`).sort()
+    assert(JSON.stringify(codes) === JSON.stringify(["EK4801:1", "EK4808:2", "EK4813:1"]), `codes ${JSON.stringify(codes)}`)
+    const uri = fileUri("src/lsrules.effeck")
+    const fixFor = async (item, title) => {
+      const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
+      const fix = actions.find((a) => a.title === title)
+      assert(fix, `no quick fix ${title} among ${JSON.stringify(actions.map((a) => a.title))}`)
+      return fix.edit?.changes?.[uri] ?? []
+    }
+    const floating = items.find((d) => d.code === 4801)
+    const start = at("src/lsrules.effeck", "program\n  //")
+    assert(floating.range.start.line === start.line && floating.range.start.character === start.character, `range ${JSON.stringify(floating.range)}`)
+    const callEdits = await fixFor(floating, "Call it to run it")
+    assert(callEdits.length === 1 && callEdits[0].newText === "()" && callEdits[0].range.start.character === start.character + "program".length, `edits ${JSON.stringify(callEdits)}`)
+    const mergeEdits = await fixFor(items.find((d) => d.code === 4808), "Provide both layers in one block")
+    const merged = "provide wire(NameLive, GreetingLive) {\n    return Greeting.text()\n  }"
+    assert(mergeEdits.length === 1 && mergeEdits[0].newText === merged, `edits ${JSON.stringify(mergeEdits)}`)
+    const renameEdits = await fixFor(items.find((d) => d.code === 4813), "Write Effect.catch")
+    assert(renameEdits.length === 1 && renameEdits[0].newText === "catch", `edits ${JSON.stringify(renameEdits)}`)
+  })
+
+  await check("code action: in a .ts file, yield without * is EK4819, whose quick fix writes yield*, and TS2339 on an Effect 3 name renames it", async () => {
+    open("src/lsrules-gen.ts", "typescript")
+    const items = await diagnostics("src/lsrules-gen.ts")
+    const codes = items.map((d) => `${d.source ?? "ts"}${d.code}`).sort()
+    assert(JSON.stringify(codes) === JSON.stringify(["EK4819", "ts2339"]), `codes ${JSON.stringify(codes)}`)
+    const uri = fileUri("src/lsrules-gen.ts")
+    const fixFor = async (item, title) => {
+      const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
+      const fix = actions.find((a) => a.title === title)
+      assert(fix, `no quick fix ${title} among ${JSON.stringify(actions.map((a) => a.title))}`)
+      return fix.edit?.changes?.[uri] ?? []
+    }
+    const yieldEdits = await fixFor(items.find((d) => d.code === 4819), "Write yield*")
+    const yieldAt = at("src/lsrules-gen.ts", "yield Effect")
+    assert(yieldEdits.length === 1 && yieldEdits[0].newText === "*" && yieldEdits[0].range.start.line === yieldAt.line && yieldEdits[0].range.start.character === yieldAt.character + "yield".length, `edits ${JSON.stringify(yieldEdits)}`)
+    const renameEdits = await fixFor(items.find((d) => d.code === 2339), "Write Effect.catch")
+    assert(renameEdits.length === 1 && renameEdits[0].newText === "catch", `edits ${JSON.stringify(renameEdits)}`)
+  })
+
   await check("diagnostics: an edit to main.effeck is checked with Effeck types", async () => {
     // name is the success value of lookup(1), a string, so toFixed does not exist.
     const broken = text("src/main.effeck").replace("name.toUpperCase()", "name.toFixed()")

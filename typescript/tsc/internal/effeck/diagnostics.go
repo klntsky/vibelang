@@ -33,6 +33,7 @@ type Message struct {
 	Code     int32
 	Category diagnostics.Category // the default; compilerOptions.effeck may change it
 	Text     string
+	Off      bool // off unless compilerOptions.effeck or a comment turns it on, in Category
 }
 
 // String returns the code as the spec writes it, for example "EK2001".
@@ -43,7 +44,7 @@ func (m *Message) String() string {
 // With returns a message with m's code and category and a different text,
 // for a situation that the registry's text does not fit.
 func (m *Message) With(text string) *Message {
-	return &Message{Code: m.Code, Category: m.Category, Text: text}
+	return &Message{Code: m.Code, Category: m.Category, Text: text, Off: m.Off}
 }
 
 func message(code int32, category diagnostics.Category, text string) *Message {
@@ -176,23 +177,44 @@ func init() {
 }
 
 // adjustableCodes are the codes whose category compilerOptions.effeck.diagnostics
-// may change (D34). tsoptions validates the same list.
-var adjustableCodes = []int32{2004, 4403}
+// and @effeck-diagnostics comments may change (D34, D241), the list that
+// tsoptions validates.
+var adjustableCodes = func() []int32 {
+	var codes []int32
+	for _, code := range core.EffeckAdjustableCodes {
+		n, _ := strconv.Atoi(strings.TrimPrefix(code, diagnosticSource))
+		codes = append(codes, int32(n))
+	}
+	return codes
+}()
 
 // category returns the category options give code, and false when they turn
 // it off.
 func category(options *core.CompilerOptions, m *Message) (diagnostics.Category, bool) {
 	if options != nil && options.Effeck != nil && slices.Contains(adjustableCodes, m.Code) {
-		switch options.Effeck.Diagnostics[m.String()] {
-		case "error":
-			return errorCategory, true
-		case "warning":
-			return warningCategory, true
-		case "off":
-			return 0, false
+		if category, on, ok := categoryNamed(options.Effeck.Diagnostics[m.String()], m); ok {
+			return category, on
 		}
 	}
+	if m.Off {
+		return 0, false
+	}
 	return m.Category, true
+}
+
+// categoryNamed returns the category that name, a value of
+// compilerOptions.effeck.diagnostics or of an @effeck-diagnostics comment,
+// gives m, and false when name is not one.
+func categoryNamed(name string, m *Message) (category diagnostics.Category, on bool, ok bool) {
+	switch name {
+	case "error":
+		return errorCategory, true, true
+	case "warning":
+		return warningCategory, true, true
+	case "off":
+		return 0, false, true
+	}
+	return 0, false, false
 }
 
 // newDiagnostic makes a diagnostic with message m at node, or returns nil when
@@ -207,6 +229,9 @@ func newDiagnostic(options *core.CompilerOptions, node *ast.Node, m *Message, ar
 // nil when options turn m's code off.
 func newDiagnosticAt(options *core.CompilerOptions, file *ast.SourceFile, loc core.TextRange, m *Message, args ...any) *ast.Diagnostic {
 	category, on := category(options, m)
+	if slices.Contains(adjustableCodes, m.Code) {
+		category, on = directiveCategory(file, loc.Pos(), m, category, on)
+	}
 	if !on {
 		return nil
 	}
@@ -255,6 +280,12 @@ func format(text string, args []any) string {
 var fileChecks []func(c *checker.Checker, file *ast.SourceFile)
 
 func checkSourceFile(c *checker.Checker, file *ast.SourceFile) {
+	if isCheckedTypeScriptFile(file) {
+		for _, check := range typeScriptFileChecks {
+			check(c, file)
+		}
+		return
+	}
 	if !isEffeckFile(file) {
 		return
 	}

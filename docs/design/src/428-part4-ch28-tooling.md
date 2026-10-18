@@ -171,17 +171,28 @@ by name hovers as "Passed by name to `fork` as a program" (D147), and so does a
 pipe's topic that passes its left side by name; any other topic hovers as its
 value, "(topic) %: T" (D155). TypeScript
 files retain TypeScript hover behavior. D33's control-class hover text,
-catch-specific completions, mechanical EK code actions, and migration
-refactors remain design targets. Diagnostic messages include repair suggestions
+catch-specific completions, and migration refactors remain design targets;
+quick fixes exist for retired spellings and for the EK48xx rules whose repair
+is mechanical (D240). Diagnostic messages include repair suggestions
 as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service class` or `control class` declaration; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, a `catch` statement or catch expression that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
+Every EK diagnostic before EK4801 is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service class` or `control class` declaration; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, a `catch` statement or catch expression that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
+
+EK4801-EK4820 carry the rules of Effect's language service that Effeck's syntax does not already rule out (D240). They are lint, not soundness: each has a default category, error, warning, or off, and every one except EK4813, which stands in for TypeScript's TS2339, can be set in `compilerOptions.effeck.diagnostics` or by a comment (D241):
+
+```ts
+// @effeck-diagnostics EK4818:warning            from here to the end of the file
+// @effeck-diagnostics-next-line EK4801:off       the next line only
+// @effeck-diagnostics *:off                      every adjustable code
+```
+
+A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`. EK4801, EK4819, and EK4820 also apply to `.ts` files that the program checks outside `node_modules` (D242).
 
 | Option in `compilerOptions.effeck` | Values | Default |
 | --- | --- | --- |
-| `diagnostics` | `"EK2004"` and `"EK4403"`, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"` |
+| `diagnostics` | `"EK2004"`, `"EK4403"`, and EK4801-EK4820 except `"EK4813"`, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
 | `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas do not (D104) | `"none"` |
 
 `effeck` exits non-zero when any error is reported. The CLI prints `error EK1003:`; LSP sends source `EK` and numeric code `1003`, which VS Code displays as `EK(1003)` (D61). Diagnostics print at `.effeck` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
@@ -260,6 +271,26 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4703 | An `is` whose pattern binds names outside the condition of an `if` or `while` (D211) | Move the test into an `if` or `while` condition, or use `match` | 3 |
 | EK4704 | A pattern form Effeck does not support yet: regular expression, relational, or a computed key other than a name or literal (D212) | Use a guard: `if (/re/.test(x))` or `if (x < 5)` | 3 |
 | EK4705 | `and`, `or`, and `not` combined at one level without parentheses (D206) | Add parentheses: `(a and b) or c` | 3 |
+| EK4801 | A statement that discards an Effect value, as `program` alone on a line; an error by default (D240) | Call it: `program()` (quick fix) | 2 |
+| EK4802 | A warning: an Effect function without a contract that returns an Effect value, so its caller gets the program (D240) | Call it: `return program()` (quick fix), or write the contract | 2 |
+| EK4803 | A warning: the program loads two versions of `effect`, an `@effect/*` package, or `effeck-runtime` (D240) | Install one version | 28 |
+| EK4804 | A warning: a failure that is a global `Error`, thrown or returned by a `try` mapping (D240) | Declare it: `error Failed { message: string }` | 3 |
+| EK4805 | A warning: a class that extends `Error` (D240) | Write an `error` declaration | 3 |
+| EK4806 | A warning: a `try` mapping that returns `unknown` or `any` (D240) | Return an error declaration's instance | 3 |
+| EK4807 | A warning: `Layer.mergeAll` of a layer that needs a service another argument provides (D240) | Write `wire` (quick fix) | 4 |
+| EK4808 | A warning: a `provide` block that holds only another `provide` block (D240) | `provide A, B { … }`, or `provide wire(A, B) { … }` when one needs the other (quick fix) | 4 |
+| EK4809 | A warning: a service whose every Effect member needs the same service (D240) | Read it where the layer is built, or mark it `@effeck leakable` | 4 |
+| EK4810 | A warning: an assertion from one Effect type to another that drops failures or services (D240) | Remove the assertion (quick fix) | 14 |
+| EK4811 | Off by default: a throw of `any` or `unknown`, or a call that adds one to E or R (D240) | Throw an error declaration's instance; give the callee a contract | 3 |
+| EK4812 | A warning: `new Promise` in Effeck code (D240) | `callback((resume) => …)`, or `sync(promise)` | 10 |
+| EK4813 | An Effect 3 name of the Effect module, such as `Effect.catchAll`; it replaces TypeScript's TS2339 (D240) | Write the Effect 4 name, `Effect.catch` (quick fix, also for TS2339 in `.ts` files) | 11 |
+| EK4814 | A constructor in a class that extends a Schema class, which decoding does not call (D240) | Add a static function that makes an instance | 11 |
+| EK4815 | A warning: a throw of an Effect value (D240) | Run it: `program()` | 3 |
+| EK4816 | Off by default: a layer provided outside a function named `main` (D240) | Provide layers in the entry module's `main` | 4 |
+| EK4817 | Off by default: `instanceof` a Schema class (D240) | `Schema.is(Person)(value)` (quick fix) | 11 |
+| EK4818 | Off by default: `JSON.parse` or `JSON.stringify` in Effeck code (D240) | Decode with `Schema.fromJsonString` | 11 |
+| EK4819 | In a `.ts` file: `yield` of an Effect in a generator passed to an Effect function such as `Effect.gen` (D242) | Write `yield*` (quick fix) | 10 |
+| EK4820 | In a `.ts` file: `yield*` of an Effect that never succeeds, as a statement (D242) | Write `return yield*` (quick fix) | 10 |
 
 #### Linting
 
