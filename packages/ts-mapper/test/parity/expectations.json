@@ -1,0 +1,3 @@
+{
+  "$comment": "Migration-site expectations for the parity harness (parity.ts): for each declaration the manifest puts in the migration group (lanes L2, L4-L8), the declaration the mapper must produce, as .d.ts text. Keyed by case id, then by declaration name, or by \"stem#name\" where a case declares the name in more than one file. Example: { \"recursion\": { \"isOdd\": \"export declare function isOdd(n: number): Effect.Effect<boolean, Even | Odd, never>;\" } }. A site without an entry is reported as expectation-missing. Hand-maintained; run.sh never writes it."
+}

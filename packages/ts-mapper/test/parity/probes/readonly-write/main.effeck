@@ -1,0 +1,12 @@
+// A probe: an interface property is readonly unless written mutable (D134),
+// so the write below must fail on the mapper side, as it does in the fork.
+interface Point {
+  x: number
+  mutable y: number
+}
+
+export function move(point: Point) {
+  point.y = point.y + 1
+  point.x = point.x + 1 // probe-error: TS2540
+  return point
+}
