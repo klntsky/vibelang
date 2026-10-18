@@ -416,6 +416,8 @@ typescript/vibelang/cases/contract-arrow-api.fail/a.vibe:3:24 lambda effectFn an
 typescript/vibelang/cases/contract-arrow-api.fail/a.vibe:4:23 lambda effectFn annotation
 typescript/vibelang/cases/contract-arrow-api/a.vibe:2:20 lambda effectFn annotation
 typescript/vibelang/cases/contract-arrow-api/a.vibe:3:20 lambda effectFn annotation
+typescript/vibelang/cases/contract-exclude-scoped.fail/main.vibe:7:24 byname program table
+typescript/vibelang/cases/contract-exclude-scoped/main.vibe:4:24 byname program table
 typescript/vibelang/cases/contract-lambdas-plain/main.vibe:18:41 lambda plain table
 typescript/vibelang/cases/contract-lambdas-plain/main.vibe:23:13 lambda plain table
 typescript/vibelang/cases/contract-lambdas-plain/main.vibe:24:13 lambda plain table

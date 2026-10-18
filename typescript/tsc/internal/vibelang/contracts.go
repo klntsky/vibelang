@@ -298,7 +298,7 @@ func escapes(c *checker.Checker, types []*checker.Type, sources []*ast.Node, dec
 	bySource := map[*ast.Node][]*checker.Type{}
 	for i, t := range types {
 		for _, member := range unionMembers(t) {
-			if c.IsTypeAssignableTo(member, declared) {
+			if channelAssignableTo(c, member, declared, nil) {
 				continue
 			}
 			source := sources[i]
@@ -313,6 +313,27 @@ func escapes(c *checker.Checker, types []*checker.Type, sources []*ast.Node, dec
 		result = append(result, escape{t: c.GetUnionType(bySource[source]), source: source})
 	}
 	return result
+}
+
+// channelAssignableTo checks the whole channel before inspecting a conditional's
+// branches. Alias variance can reject two different instantiations of Exclude
+// even when both possible source branches fit the target (C-7). Checking both
+// branches with the checker proves the same upper bound without assuming that
+// a particular conditional branch will be selected.
+func channelAssignableTo(c *checker.Checker, source, target *checker.Type, visiting map[*checker.Type]bool) bool {
+	if c.IsTypeAssignableTo(source, target) {
+		return true
+	}
+	if source.Flags()&checker.TypeFlagsConditional == 0 || visiting[source] {
+		return false
+	}
+	if visiting == nil {
+		visiting = map[*checker.Type]bool{}
+	}
+	visiting[source] = true
+	defer delete(visiting, source)
+	return channelAssignableTo(c, c.GetTrueTypeOfConditionalType(source), target, visiting) &&
+		channelAssignableTo(c, c.GetFalseTypeOfConditionalType(source), target, visiting)
 }
 
 // contractText writes contract, an Effect<A, E, R>, with extra joined to the
