@@ -468,3 +468,19 @@ export function f() {
 		t.Errorf("runner.run block = %+v, want an appended Effect function", d)
 	}
 }
+
+func TestBlockPlacementOnAValue(t *testing.T) {
+	// semaphore has no key, but the only withPermits that takes one
+	// argument is Semaphore's own, which returns a function of the program:
+	// the block is applied, as a program.
+	r := resolve(t, `export function f() {
+  const semaphore = Semaphore.make(1)
+  return semaphore.withPermits(1) {
+    return "guarded"
+  }
+}`)
+	d := r.block(t, "semaphore.withPermits(1)")
+	if d.Placement != BlockApplied || d.Form != FormProgram || d.Provenance != FromTable {
+		t.Errorf("semaphore.withPermits block = %+v, want applied program from the method table", d)
+	}
+}

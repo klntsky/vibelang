@@ -46,7 +46,8 @@ package effeckmapper
 //     members of effect's data types, and the self-first functions D152
 //     makes their methods. xs.map(f) passes a plain function; flatMap,
 //     whose callback is an Effect function on an Effect and plain on a
-//     Stream, gives no class.
+//     Stream, gives no class. A block after such a call goes where every
+//     receiver whose method takes the arguments puts it, as D188 orders.
 //  7. Service context. A lambda or method that is a member of an object
 //     literal providing a service (Layer.succeed(K, {…}), K.of({…}), the
 //     object a Layer.effect program returns, Context.make, Context.add,
@@ -289,6 +290,15 @@ func (r *Resolver) Block(call *ast.Node) Decision {
 	n := len(args) - 1
 	d := Decision{Node: block, Call: call, Argument: n, Block: true, Callee: r.Callee(call)}
 	sigs, prov := r.signaturesOf(d.Callee)
+	if len(sigs) == 0 {
+		if name, ok := formsMethodName(call, d.Callee); ok {
+			if placement, cls, note, ok := r.methodBlock(name, call, n); ok {
+				d.Placement, d.Class, d.Provenance, d.Note = placement, cls, FromTable, note
+				d.Form = formsFormFor(d.Class, 0, formsBodyFacts(block))
+				return d
+			}
+		}
+	}
 	d.Placement = formsPlacement(sigs, n)
 	if d.Placement == BlockPrepended && formsIsTopic(ast.SkipParentheses(args[0])) {
 		// f(%, args) { block }: the topic already fills the data-first
@@ -435,6 +445,50 @@ func (r *Resolver) methodClassAt(name string, call *ast.Node, arg int, steps []P
 		return 0, false, ""
 	}
 	return cls, differ, "method " + name + " on " + strconv.Itoa(seen) + " receivers"
+}
+
+// methodBlock places the block of a method call whose receiver is unknown,
+// x.name(args) { block }, where every receiver whose method takes the
+// arguments agrees: semaphore.withPermits(1) { … } is applied, because
+// Semaphore's own withPermits(permits) returns a function of the program.
+func (r *Resolver) methodBlock(name string, call *ast.Node, n int) (Placement, Class, string, bool) {
+	if r.table == nil {
+		return 0, 0, "", false
+	}
+	args := call.Arguments()
+	var placement Placement
+	var cls Class
+	seen := 0
+	for _, m := range r.table.methodReceivers(name) {
+		sigs := m.sigs
+		if m.self {
+			sigs = formsDropSelf(sigs)
+		}
+		if len(formsCandidates(sigs, n)) == 0 && len(formsCandidates(sigs, n+1)) == 0 {
+			continue // this receiver's method takes other arguments
+		}
+		p := formsPlacement(sigs, n)
+		c := ClassProgram
+		if p == BlockAppended {
+			s, ok, _ := formsShapeFit(formsCandidates(sigs, len(args)), args)
+			if !ok {
+				continue
+			}
+			c = s.Param(n).Top
+		}
+		if c == 0 {
+			continue // no form fits a block there: this method takes no block
+		}
+		if seen > 0 && (p != placement || c != cls) {
+			return 0, 0, "", false // receivers disagree
+		}
+		placement, cls = p, c
+		seen++
+	}
+	if seen == 0 {
+		return 0, 0, "", false
+	}
+	return placement, cls, "method " + name + " on " + strconv.Itoa(seen) + " receivers, D188 " + placement.String(), true
 }
 
 // formsDropSelf returns D152 methods: sigs without their self parameter.
