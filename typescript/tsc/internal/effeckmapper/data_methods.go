@@ -84,7 +84,7 @@ func (p *projector) dataMethod(call *ast.Node, e env) bool {
 		p.plan.insert(start, ";")
 		delete(p.statementStarts, start)
 	}
-	if !guard {
+	if e.effect && !guard {
 		p.plan.mark(editRun, partOpen, start, start, "")
 	}
 	namespace := strings.TrimPrefix(module, "effect/")
@@ -97,7 +97,7 @@ func (p *projector) dataMethod(call *ast.Node, e env) bool {
 	}
 	p.plan.replace(receiver.End(), end, comma)
 	p.callArguments(call, e)
-	if !guard {
+	if e.effect && !guard {
 		p.plan.mark(editRun, partClose, call.End(), call.End(), "")
 	}
 	return true

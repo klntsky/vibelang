@@ -45,6 +45,8 @@ func (p *projector) hatchCall(call *ast.Node, e env) {
 	if name == "try" {
 		calleeEdit = len(p.plan.edits)
 		checking := helperRef("$hatchTry")
+		// A written arrow fixes the mapper position (D231). Parameter
+		// arity or uses of the input cannot reopen the callable-input overload.
 		if len(args) > 1 && ast.IsFunctionExpressionOrArrowFunction(ast.SkipParentheses(args[1])) {
 			checking = helperRef("$hatchTryMapped")
 		}
@@ -55,22 +57,12 @@ func (p *projector) hatchCall(call *ast.Node, e env) {
 		if !ast.IsFunctionExpressionOrArrowFunction(second) && !p.hatchValueInput(second, map[*ast.Node]bool{}) {
 			// An opaque function input and an error mapper occupy the same
 			// position. Only an annotation or an explicit arrow can decide.
-			p.diagnostics = append(p.diagnostics, Diagnostic{Start: p.tokenStart(second), Length: second.End() - p.tokenStart(second), Code: CodeUnprojectedForm, Message: "The mapper cannot decide whether this argument maps a failure or supplies an input. Write an annotated mapper arrow or an explicit value expression."})
+			p.diagnostics = append(p.diagnostics, Diagnostic{Start: p.tokenStart(second), Length: second.End() - p.tokenStart(second), Code: CodeUnprojectedForm, Message: "The mapper cannot decide whether this argument maps a failure or supplies an input. For a mapper, write (error: unknown) => mapError(error). For a scalar input, annotate the binding with its non-callable type (for example, const text: string = value), or assert it at the call as value as string. For an opaque or callable input, write try((input) => code(input), (error: unknown) => new Cause.UnknownError(error), value)."})
 		}
 	}
 	if len(args) > 0 && name != "callback" {
 		first := ast.SkipParentheses(args[0])
 		function := ast.IsFunctionExpressionOrArrowFunction(first)
-		if name == "try" && function && len(args) > 1 && ast.IsFunctionExpressionOrArrowFunction(ast.SkipParentheses(args[1])) {
-			parameters := first.Parameters()
-			capacity := len(args) - 2
-			if ast.GetFunctionFlags(first)&ast.FunctionFlagsAsync != 0 {
-				capacity++
-			}
-			if len(parameters) > capacity || p.hatchMapperNeedsAnnotation(first, ast.SkipParentheses(args[1])) {
-				p.diagnostics = append(p.diagnostics, Diagnostic{Start: p.tokenStart(args[1]), Length: args[1].End() - p.tokenStart(args[1]), Code: CodeUnprojectedForm, Message: "This function may be a callable hatch input rather than an error mapper. Write an explicit mapper annotated (error: unknown) before the inputs, so the mapper need not guess the overload."})
-			}
-		}
 		if !function && !p.hatchValueInput(first, map[*ast.Node]bool{}) {
 			p.diagnostics = append(p.diagnostics, Diagnostic{Start: p.tokenStart(first), Length: first.End() - p.tokenStart(first), Code: CodeUnprojectedForm, Message: "The mapper cannot decide whether this hatch argument is a function or a value. Write an annotated arrow that calls the function or returns the value."})
 		}
@@ -160,6 +152,15 @@ func (p *projector) hatchValueInput(node *ast.Node, seen map[*ast.Node]bool) boo
 			return true
 		}
 	case ast.KindCallExpression:
+		// These library operations return data, never an evaluate function.
+		// Resolve their canonical export so aliases work and locals cannot
+		// borrow the library's non-callable result guarantee.
+		switch p.forms.(*Resolver).Callee(node).Canonical {
+		case "effect/BigDecimal#fromNumberUnsafe", "effect/Schema#toJsonSchemaDocument",
+			"effect/Schema#toCodecJson", "effect/Arbitrary#schema":
+			return true
+		}
+
 		callee := node.Expression()
 		if ast.IsIdentifier(callee) && (callee.Text() == "String" || callee.Text() == "Number" || callee.Text() == "Boolean") && p.forms.(*Resolver).binding(callee, callee.Text()) == nil {
 			return true
@@ -214,50 +215,4 @@ func hatchScalarType(typ *ast.Node) bool {
 		return true
 	}
 	return false
-}
-
-// hatchMapperNeedsAnnotation rejects a function input that overload resolution
-// could confuse with a mapper. A written unknown error parameter fixes the
-// intent; otherwise opaque uses of the hatch parameters need that annotation.
-func (p *projector) hatchMapperNeedsAnnotation(fn, mapper *ast.Node) bool {
-	for _, parameter := range mapper.Parameters() {
-		if parameter.Type() != nil && parameter.Type().Kind == ast.KindUnknownKeyword {
-			return false
-		}
-	}
-	parameters := map[string]bool{}
-	for _, parameter := range fn.Parameters() {
-		if !ast.IsIdentifier(parameter.Name()) {
-			return true
-		}
-		parameters[parameter.Name().Text()] = true
-		if typ := parameter.Type(); typ != nil && !hatchScalarType(typ) {
-			return true
-		}
-	}
-	ambiguous := false
-	var visit func(*ast.Node) bool
-	visit = func(node *ast.Node) bool {
-		if ast.IsIdentifier(node) && parameters[node.Text()] && !ast.IsDeclarationName(node) && node.Parent != nil {
-			parent := node.Parent
-			switch parent.Kind {
-			case ast.KindPropertyAccessExpression, ast.KindElementAccessExpression, ast.KindNewExpression:
-				ambiguous = true
-			case ast.KindCallExpression:
-				callee := parent.Expression()
-				known := ast.IsIdentifier(callee) && (callee.Text() == "String" || callee.Text() == "Number" || callee.Text() == "Boolean") && p.forms.(*Resolver).binding(callee, callee.Text()) == nil
-				if ast.IsPropertyAccessExpression(callee) && ast.IsIdentifier(callee.Expression()) && callee.Expression().Text() == "JSON" && callee.Name().Text() == "parse" && p.forms.(*Resolver).binding(callee.Expression(), "JSON") == nil {
-					known = true
-				}
-				if !known {
-					ambiguous = true
-				}
-			case ast.KindVariableDeclaration, ast.KindBindingElement:
-				ambiguous = true
-			}
-		}
-		return node.ForEachChild(visit)
-	}
-	visit(fn.Body())
-	return ambiguous
 }

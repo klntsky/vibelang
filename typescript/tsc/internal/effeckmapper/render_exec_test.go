@@ -111,6 +111,13 @@ var emitCases = []struct {
 		absent:   []string{"$hatchTry(async", "return yield* $fail(n)"},
 	},
 	{
+		name:     "library data call stays lazy plain TypeScript",
+		source:   "function f() { return try(BigDecimal.fromNumberUnsafe(0)) }",
+		contains: []string{"$hatchTry(() => (BigDecimal.fromNumberUnsafe(0)))"},
+		absent:   []string{"$value(BigDecimal", "yield* BigDecimal"},
+	},
+
+	{
 		name:     "try value expression is lazy plain TypeScript",
 		source:   "function f() { return try(JSON.parse(\"bad\") as number) }",
 		contains: []string{"$hatchTry(() => JSON.parse(\"bad\"))"},
@@ -813,4 +820,37 @@ export function scenario() {
 	out, err := cmd.CombinedOutput()
 	assert.NilError(t, err, "%s", out)
 	assert.Equal(t, strings.TrimSpace(string(out)), `{"sum":4999950000,"seen":100000,"called":100000,"stated":100000,"bounded":true}`)
+}
+
+// TestHatchMappingRuntime checks unannotated mappers with callable inputs and
+// lazy data expressions, including the failure path, against the fork's values.
+func TestHatchMappingRuntime(t *testing.T) {
+	root, err := filepath.Abs("../../../..")
+	assert.NilError(t, err)
+	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
+	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
+		t.Skip("runtime dependencies are built by the parity harness")
+	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is unavailable")
+	}
+	source := `const cold = BigDecimal.make(2n, 0).multiply(BigDecimal.make(3n, 0))
+export function scenario() {
+ const make = (n: number): number => n + 1
+ const mapped = try((fn, n) => fn(n), (cause) => String(cause), make, 7)
+ const failed = Effect.flip(try((fn, n) => { throw fn(n) }, (cause) => String(cause), make, 7))
+ const zero = try(BigDecimal.fromNumberUnsafe(0))
+ const codec = try(Schema.toCodecJson(Schema.String))
+ const arbitrary = try(Arbitrary.schema(Schema.Never)) |> Effect.flip(%)
+ return { cold: BigDecimal.format(cold), mapped, failed, zero: BigDecimal.format(zero), codec: codec.ast._tag, arbitrary: arbitrary._tag }
+}`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v", diagnostics)
+	cmd := exec.Command(node, "--no-warnings", "--input-type=module")
+	cmd.Dir = scope
+	cmd.Stdin = strings.NewReader(js + "\nconsole.log(JSON.stringify(await Effect.runPromise(scenario())))")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "%s\n%s", out, js)
+	assert.Equal(t, strings.TrimSpace(string(out)), `{"cold":"6","mapped":8,"failed":"8","zero":"0","codec":"String","arbitrary":"UnknownError"}`)
 }

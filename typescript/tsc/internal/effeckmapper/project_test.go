@@ -186,6 +186,28 @@ var projectionCases = []struct {
 		virtual: "function f() { return $gen(function* () { return (yield* $run($hatchTryMapped(() => { throw new Error(\"x\") }, (error) => error))) })}",
 	},
 	{
+		name:    "untyped mapper arrow is decisive with callable inputs",
+		source:  "function f(make: Function) { return try((make, n) => make(n), (error) => error, make, 7) }",
+		virtual: "function f(make: Function) { return $gen(function* () { return (yield* $run($hatchTryMapped((make, n) => make(n), (error) => error, make, 7))) })}",
+	},
+	{
+		name:    "library data call is evaluated lazily in a hatch",
+		source:  "function f() { return try(BigDecimal.fromNumberUnsafe(0)) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($hatchTry(() => (BigDecimal.fromNumberUnsafe(0))))) })}",
+	},
+
+	{
+		name:    "cold data methods use module functions without running",
+		source:  "const price = BigDecimal.make(875n, 2); const total = price.multiply(BigDecimal.fromBigInt(4n))",
+		virtual: "const price = BigDecimal.make(875n, 2); const total = BigDecimal.multiply(price, BigDecimal.fromBigInt(4n))",
+	},
+	{
+		name:    "hatch body retains plain JavaScript member semantics",
+		source:  "function f() { return sync(() => BigDecimal.make(1n, 0).normalize()) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run(sync(() => BigDecimal.make(1n, 0).normalize()))) })}",
+	},
+
+	{
 		name:    "hatch value is deferred and its inputs run",
 		source:  "function f() { return sync(String(7)) + sync((n) => n * 2, read()) }",
 		virtual: "function f() { return $gen(function* () { return (yield* $run(sync(() => (String(7))))) + (yield* $run(sync((n) => n * 2, (yield* $run($value(read)()))))) })}",
@@ -1096,10 +1118,6 @@ func TestHatchAnnotations(t *testing.T) {
 		"import { opaque } from './foreign'; function f() { return sync(opaque()) }",
 		"import { evaluate } from './foreign'; function f() { return sync(evaluate) }",
 		"import { opaque } from './foreign'; function f() { return try(() => 1, opaque) }",
-		"function f() { return try((fn: () => number) => fn(), () => 1) }",
-		"function f() { return try((fn) => fn(), () => 1, 2) }",
-		"function f() { return try(async (fn: () => number, signal) => fn(), () => 1) }",
-		"function f() { return try(async (fn, n, signal) => fn(n), (x: number) => x + 1, 2) }",
 	} {
 		projection := Project(source, testContext)
 		assert.Equal(t, len(projection.Diagnostics), 1, "%s: %v", source, projection.Diagnostics)
@@ -1168,4 +1186,21 @@ func TestDoControlFlow(t *testing.T) {
 		_, _, diagnostics := Emit(c.source, testContext)
 		assert.DeepEqual(t, diagnostics, got.Diagnostics)
 	}
+}
+
+// TestHatchDataExports checks provenance so a callable local cannot inherit
+// a library data result's permission to project without an annotation.
+func TestHatchDataExports(t *testing.T) {
+	for _, source := range []string{
+		`function f() { return try(Schema.toCodecJson(Schema.String)) }`,
+		`function f() { return try(Schema.toJsonSchemaDocument(Schema.String)) }`,
+		`function f() { return try(Arbitrary.schema(Schema.String)) }`,
+		`import { BigDecimal as B } from "effect"; function f() { return try(B.fromNumberUnsafe(0)) }`,
+	} {
+		assert.Equal(t, len(Project(source, testContext).Diagnostics), 0, "%s", source)
+		assert.Equal(t, len(Executable(source, testContext).Diagnostics), 0, "%s", source)
+	}
+	source := `function f(BigDecimal: { fromNumberUnsafe(n: number): () => number }) { return try(BigDecimal.fromNumberUnsafe(0)) }`
+	assert.Equal(t, len(Project(source, testContext).Diagnostics), 1)
+	assert.Equal(t, len(Executable(source, testContext).Diagnostics), 1)
 }

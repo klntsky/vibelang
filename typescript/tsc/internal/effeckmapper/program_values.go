@@ -139,6 +139,13 @@ func (p *projector) plainArrayPipeStage(call *ast.Node, key string) bool {
 // moduleCall visits cold call arguments with the same by-name rules as a
 // body call, without running the enclosing module-level call itself.
 func (p *projector) moduleCall(call *ast.Node, e env) {
+	// D152 also applies to cold calls and plain callbacks outside a hatch.
+	// Inside its TypeScript island, keep JavaScript member semantics (D148).
+	_, island := p.forms.(*Resolver).inHatch(call)
+	parent := call.Parent
+	if !island && !(parent != nil && p.isHatchCall(parent) && len(parent.Arguments()) > 0 && parent.Arguments()[0] == call) && p.dataMethod(call, e) {
+		return
+	}
 	if p.plainBuiltin && p.builtinFailure(call) != "" {
 		p.builtinCallee(call)
 	} else if !p.plainBuiltinCall(call) {
