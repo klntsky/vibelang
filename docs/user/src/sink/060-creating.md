@@ -4,7 +4,7 @@ Choose a Sink for the result you need, then run it with `Stream.run`. Constructo
 
 ## Basic consumers and endpoint values
 
-```ts
+```effeck
 function endpoints() {
   const source = Stream.make("opening", "middle", "closing")
   return {
@@ -21,7 +21,7 @@ function endpoints() {
 
 ## Counting, summing, draining, and timing
 
-```ts
+```effeck
 function summarize() {
   const source = Stream.make(6, 10, 14)
   return {
@@ -41,7 +41,7 @@ These sinks consume the whole source. `drain` discards elements but still execut
 
 ## Per-element work
 
-```ts
+```effeck
 const print = Sink.forEach((line: string) => {
   log(`record: ${line}`)
   sleep("10 millis")
@@ -56,7 +56,7 @@ function writeRecords() {
 
 ## Successful and failed sinks
 
-```ts
+```effeck
 error Rejected
 
 function immediateResult() {
@@ -73,7 +73,7 @@ function rejectInput() {
 
 ## Collecting by size or condition
 
-```ts
+```effeck
 function collectSamples() {
   const source = Stream.make(8, 5, -1, 13)
   return {
@@ -89,7 +89,7 @@ function collectSamples() {
 
 ## Uniqueness and key limits
 
-```ts
+```effeck
 const unique = Sink.reduce(() => new Set<string>(), (set, value: string) => set.add(value))
 const threeUnique = Sink.reduceWhile(
   () => new Set<string>(),
@@ -105,7 +105,7 @@ function collectUnique() {
 
 Use a native Set when JavaScript value equality is appropriate. A size limit counts unique values, so duplicates do not consume another slot. The initializer creates a fresh Set on every run, avoiding shared mutable sink state.
 
-```ts
+```effeck
 type Reading = { station: string; count: number }
 
 function addReading(totals: Map<string, number>, reading: Reading) {
@@ -135,7 +135,7 @@ The reducer defines both the grouping key and the merge rule. This limited sink 
 
 ## Folding with termination and count limits
 
-```ts
+```effeck
 const total = Sink.reduce(() => 0, (sum, n: number) => sum + n)
 const budget = Sink.fold(
   () => 0,
@@ -161,7 +161,7 @@ function foldSamples() {
 
 ## Folding by weight
 
-```ts
+```effeck
 type Packet = { bytes: number }
 type Batch = { packets: ReadonlyArray<Packet>; bytes: number }
 

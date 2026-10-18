@@ -4,7 +4,7 @@ Effeck uses Effect's platform services for files, paths, terminals, and applicat
 
 ## Choosing portable platform services
 
-```ts
+```effeck
 export function readGreeting() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./greeting.txt")
@@ -44,7 +44,7 @@ bun add effect@4.0.5 @effect/platform-bun
 
 ## Writing platform-independent programs
 
-```ts
+```effeck
 // greeting.effeck
 export function main() {
   const fs = Effect.service(FileSystem.FileSystem)
@@ -57,7 +57,7 @@ export function main() {
 
 ## Supplying Node or Deno implementations
 
-```ts
+```effeck
 // main-node.effeck
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { main } from "./greeting.effeck"
@@ -69,7 +69,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
 
 ## Supplying Bun implementations
 
-```ts
+```effeck
 // main-bun.effeck
 import { BunRuntime, BunServices } from "@effect/platform-bun"
 import { main } from "./greeting.effeck"

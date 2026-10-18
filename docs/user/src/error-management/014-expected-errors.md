@@ -6,7 +6,7 @@ Expected errors describe situations callers can handle: invalid input, a denied 
 
 ## Constructing typed failures
 
-```ts
+```effeck
 error InvalidCode {
   input: string
 }
@@ -28,7 +28,7 @@ Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`
 
 ## Failing in an expression
 
-```ts
+```effeck
 error MissingPort
 
 function port(env: Map<string, string>) {
@@ -41,7 +41,7 @@ function port(env: Map<string, string>) {
 
 ## Tracking several error cases
 
-```ts
+```effeck
 function findItem(input: string) {
   const code = normalizeCode(input)
   if (code !== "PEN") throw new ItemMissing({ code })
@@ -54,7 +54,7 @@ A function collects the failures it throws and those its calls can produce. Sequ
 
 ## Turning failures into values
 
-```ts
+```effeck
 function inspectItem(input: string) {
   const result = Effect.result(findItem(input))
   return result.match({
@@ -73,7 +73,7 @@ function optionalItem(input: string) {
 
 ## Recovering all failures
 
-```ts
+```effeck
 function itemLabel(input: string) {
   try {
     return findItem(input).label
@@ -86,7 +86,7 @@ function itemLabel(input: string) {
 
 The catch receives `InvalidCode | ItemMissing` and handles both here. It handles only causes with no defect and no interruption. If several expected failures occur together, it receives the first and handles their whole cause.
 
-```ts
+```effeck
 function itemLabelInline(input: string) {
   return findItem(input).label catch (error) => `Unavailable (${error._tag})`
 }
@@ -99,7 +99,7 @@ function itemLabelInline(input: string) {
 
 ## Recovering selected failures
 
-```ts
+```effeck
 function labelOrMissing(input: string) {
   try {
     return findItem(input).label
@@ -123,7 +123,7 @@ function labelByTag(input: string) {
 
 Catch the failure, then `match` on it: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types, as `string!InvalidCode!` shows. The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise, or it is a compile error (EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
 
-```ts
+```effeck
 function withTagTable(input: string) {
   return Effect.catchTags(findItem(input), {
     InvalidCode: () => ({ code: "", label: "Enter a code" }),
@@ -152,7 +152,7 @@ function withPredicate(input: string) {
 
 ## Filtering nested reasons
 
-```ts
+```effeck
 error Busy { seconds: number }
 error Rejected
 error CatalogError {

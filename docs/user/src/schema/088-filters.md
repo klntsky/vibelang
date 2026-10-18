@@ -4,7 +4,7 @@ Filters add validation to a schema without changing its decoded type. They work 
 
 ## Defining predicate-based checks
 
-```ts
+```effeck
 const ShelfCode = Schema.String.check(
   Schema.makeFilter((code) => code.startsWith("S-") || "Use an S- shelf code")
 )
@@ -20,7 +20,7 @@ Filters keep the original TypeScript type. Add a brand when you need validated v
 
 ## Annotating validation checks
 
-```ts
+```effeck
 const FourDigits = Schema.String.check(
   Schema.makeFilter((text) => /^\d{4}$/.test(text), {
     expected: "four decimal digits",
@@ -34,7 +34,7 @@ const FourDigits = Schema.String.check(
 
 ## Assigning issue paths and reporting several issues
 
-```ts
+```effeck
 const DispatchWindow = Schema.Struct({
   start: Schema.Int,
   end: Schema.Int,
@@ -61,7 +61,7 @@ Paths are relative to the checked value and can contain keys or array indices. R
 
 ## Applying built-in constraints
 
-```ts
+```effeck
 const Label = Schema.String.check(
   Schema.isMinLength(2), Schema.isMaxLength(40), Schema.isTrimmed()
 )
@@ -77,7 +77,7 @@ String checks include `isNonEmpty`, `isPattern`, `isStartingWith`, `isEndingWith
 
 Numbers support strict and inclusive lower and upper bounds, `isBetween`, `isInt`, and `isMultipleOf`. Bigints have the corresponding `BigInt` bounds, including `isBetweenBigInt`. Checks validate their input; they do not round numbers, change case, or trim strings.
 
-```ts
+```effeck
 const ShipDate = Schema.Date.check(
   Schema.isBetweenDate({
     minimum: new Date("2026-01-01T00:00:00.000Z"),

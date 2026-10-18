@@ -6,7 +6,7 @@ A fallback runs another computation after an expected failure. Pass computations
 
 ## Recovering with another computation
 
-```ts
+```effeck
 error SourceOffline
 
 function latestTitle(): string!SourceOffline! {
@@ -30,7 +30,7 @@ function title() {
 
 The cache is read only if the primary computation fails. Errors from the fallback become errors of `title`; handling the primary does not handle the fallback too. Ordinary catch propagates defects, interruption, and mixed causes containing either.
 
-```ts
+```effeck
 function titleInline() {
   return latestTitle() catch cachedTitle()
 }
@@ -43,7 +43,7 @@ function titleInline() {
 
 ## Supplying a default success
 
-```ts
+```effeck
 function titleOrPlaceholder() {
   return latestTitle() catch "No title available"
 }
@@ -54,7 +54,7 @@ function titleOrPlaceholder() {
 
 ## Trying alternatives until one succeeds
 
-```ts
+```effeck
 function bestTitle() {
   return Effect.firstSuccessOf([
     () => latestTitle(),

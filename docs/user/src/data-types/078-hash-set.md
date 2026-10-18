@@ -4,7 +4,7 @@
 
 ## Choosing immutable or mutable sets
 
-```ts
+```effeck
 const snapshot = HashSet.make("green", "blue")
 const revised = snapshot.add("red")
 snapshot.has("red") // false
@@ -22,7 +22,7 @@ Immutable updates preserve earlier versions, making snapshots suitable for shari
 
 ## Equality and uniqueness
 
-```ts
+```effeck
 const a = { region: "west", active: true }
 const b = { region: "west", active: true }
 Equal.equals(a, b) // true
@@ -34,7 +34,7 @@ Plain objects compare structurally in Effect 4.0.5, so separately allocated reco
 
 ## Constructing and changing immutable sets
 
-```ts
+```effeck
 const empty = HashSet.empty<number>()
 const initial = HashSet.fromIterable([2, 4, 4, 6])
 const changed = initial.add(8).remove(2)
@@ -51,7 +51,7 @@ const sum = initial.reduce(0, (total, n) => total + n)
 
 ## Querying membership and size
 
-```ts
+```effeck
 const allowed = HashSet.make("read", "write", "audit")
 allowed.has("write") // true
 allowed.size() // 3
@@ -64,7 +64,7 @@ HashSet.make("read").isSubset(allowed) // true
 
 ## Updating mutable sets
 
-```ts
+```effeck
 function uniqueRegions(regions: ReadonlyArray<string>) {
   const seen = MutableHashSet.fromIterable(regions)
   MutableHashSet.add(seen, "unknown")
@@ -81,7 +81,7 @@ function uniqueRegions(regions: ReadonlyArray<string>) {
 
 ## Balancing performance and persistence
 
-```ts
+```effeck
 function snapshots(values: ReadonlyArray<number>) {
   let current = HashSet.empty<number>()
   const history = [current]
@@ -97,7 +97,7 @@ Persistent sets share storage between versions; mutable sets avoid persistent-up
 
 ## Converting to JavaScript collections
 
-```ts
+```effeck
 const regions = HashSet.make("west", "east")
 const array = Array.from(regions)
 const copy = [...regions]

@@ -46,7 +46,7 @@ export default defineConfig({
 
 Create `src/users.effeck`. It declares a `Users` service and its layer, and `greet` recovers from `UserNotFound`, so `greet` cannot fail:
 
-```ts
+```effeck
 // src/users.effeck
 export schema User { id: string; name: string }
 
@@ -119,7 +119,7 @@ Render it from a component the app already has, such as `App` in `src/App.tsx`: 
 
 Create `src/users.test.effeck`:
 
-```ts
+```effeck
 // src/users.test.effeck
 import { assert, it } from "@effect/vitest"
 import { greet, UserNotFound, Users, UsersLive } from "./users.effeck"

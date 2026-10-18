@@ -4,7 +4,7 @@ A `Deferred<A, E>` is a result that another fiber can complete once. Use it to s
 
 ## Creating a one-time result
 
-```ts
+```effeck
 error StartupFailed {
   stage: string
 }
@@ -19,7 +19,7 @@ The new deferred starts empty and contains neither a success nor a failure. Crea
 
 ## Waiting for completion
 
-```ts
+```effeck
 function waitForAddress() {
   const address = Deferred.make<string>()
   const listener = fork address.await()
@@ -32,7 +32,7 @@ function waitForAddress() {
 
 ## Completing with success or failure
 
-```ts
+```effeck
 function completeOnce() {
   const result = Deferred.make<number, string>()
   const accepted = result.succeed(25)
@@ -57,7 +57,7 @@ The first completion wins, and completion operations return `false` when a resul
 
 ## Polling completion state
 
-```ts
+```effeck
 function inspectWithoutWaiting() {
   const result = Deferred.make<number>()
   const before = result.isDone() // false
@@ -75,7 +75,7 @@ function inspectWithoutWaiting() {
 
 ## Coordinating work across fibers
 
-```ts
+```effeck
 function coordinate() {
   const prepared = Deferred.make<ReadonlyArray<string>>()
   const producer = fork {

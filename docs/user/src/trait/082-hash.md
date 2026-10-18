@@ -4,7 +4,7 @@
 
 ## Connecting hashing to equality
 
-```ts
+```effeck
 const first = { section: "billing", page: 2 }
 const same = { section: "billing", page: 2 }
 Equal.equals(first, same) // true
@@ -15,7 +15,7 @@ Equal values must have equal hashes. A hash collision does not prove equality: d
 
 ## Implementing the hashing protocol
 
-```ts
+```effeck
 class GridCell implements Equal.Equal {
   constructor(readonly row: number, readonly column: number) {}
 
@@ -39,7 +39,7 @@ The method compiles to a plain JavaScript method, because `[Hash.symbol]` is typ
 
 ## Keeping equal values hash-consistent
 
-```ts
+```effeck
 const first = new GridCell(3, 7)
 const equivalent = new GridCell(3, 7)
 const cells = HashSet.make(first, equivalent)

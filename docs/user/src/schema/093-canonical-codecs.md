@@ -4,7 +4,7 @@ Canonical codec derivation works as in Effect. It preserves a schema's decoded t
 
 ## Deriving standard JSON, string-tree, and identity codecs
 
-```ts
+```effeck
 const AuditRecord = Schema.Struct({
   created: Schema.Date,
   sequence: Schema.BigInt,
@@ -21,7 +21,7 @@ function encodeAudit(input: unknown) {
 
 `toCodecJson` recursively chooses JSON-compatible encodings for domain values, including nested declarations with built-in representations. It preserves explicit encodings already present: a date explicitly encoded as epoch milliseconds remains numeric. Its output is a JSON value, not serialized JSON text; use `fromJsonString` when text is required.
 
-```ts
+```effeck
 const Search = Schema.Struct({
   offset: Schema.Int,
   archived: Schema.Boolean,
@@ -37,7 +37,7 @@ function encodeSearch() {
 
 `toCodecStringTree` preserves object and array structure and converts leaves to strings. A string tree can also contain `undefined`, so it is not limited to JSON values. This representation suits configuration, forms, and query parameters.
 
-```ts
+```effeck
 class Slot extends Schema.Class<Slot>("Slot")({
   row: Schema.Int,
   column: Schema.Int
@@ -55,7 +55,7 @@ function slotRepresentation(input: unknown) {
 
 ## Supplying canonical conversions for custom declarations
 
-```ts
+```effeck
 class DepotRef {
   constructor(readonly region: string, readonly number: number) {}
 }
@@ -83,7 +83,7 @@ Without a hook, JSON uses an unconstrained JSON fallback and parsing can still f
 
 ## Relating canonical representations to JSON Schema output
 
-```ts
+```effeck
 function describeDepotJson() {
   return try(Schema.toJsonSchemaDocument(DepotRefSchema))
 }

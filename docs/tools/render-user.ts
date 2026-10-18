@@ -54,7 +54,8 @@ const CAPTIONS: Record<string, string> = {
 }
 
 // A small build-time TypeScript highlighter: comments, strings, numbers,
-// keywords, literals, capitalized names, and called functions.
+// keywords, literals, capitalized names, and called functions. Effeck code,
+// fenced ```effeck, shares it.
 const KEYWORDS = new Set([
   "abstract", "as", "async", "await", "break", "case", "catch", "class", "const", "continue", "control",
   "declare", "default", "do", "else", "enum", "export", "extends", "finally", "for", "from", "function",
@@ -69,7 +70,7 @@ const LITERALS = new Set([
 const TOKEN =
   /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d[\d_]*(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)|(\s+)|([\s\S])/g
 const highlight = (code: string, lang: string): string => {
-  if (!["ts", "tsx", "js", "typescript"].includes(lang)) return escape(code)
+  if (!["effeck", "ts", "tsx", "js", "typescript"].includes(lang)) return escape(code)
   let out = ""
   for (const m of code.matchAll(TOKEN)) {
     const [text, comment, str, num, ident] = m

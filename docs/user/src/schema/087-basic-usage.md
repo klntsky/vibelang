@@ -4,7 +4,7 @@ Schema constructors work in Effeck as they do in Effect. Combine small descripti
 
 ## Modeling primitives, symbols, literals, enums, and template strings
 
-```ts
+```effeck
 const Measurement = Schema.Finite
 const UnrestrictedNumber = Schema.Number
 const Enabled = Schema.Boolean
@@ -24,7 +24,7 @@ const PrioritySchema = Schema.Enum(Priority)
 
 `Literal(value)` accepts one string, number, boolean, bigint, or null; `Literals([...])` combines exact values. Literal collections expose `.literals`, enum schemas expose `.enums`, and `revealCodec(schema)` reveals the full codec type without changing the value. `UniqueSymbol` checks the particular symbol, rather than any symbol.
 
-```ts
+```effeck
 const BinPosition = Schema.TemplateLiteralParser([
   "bin:", Schema.FiniteFromString, "/", Schema.NonEmptyString
 ])
@@ -39,7 +39,7 @@ function locateBin(input: unknown) {
 
 ## Building unions and tagged alternatives
 
-```ts
+```effeck
 const Warehouse = Schema.TaggedStruct("Warehouse", { aisle: Schema.String })
 const Courier = Schema.TaggedStruct("Courier", { route: Schema.Int })
 const Location = Schema.Union([Warehouse, Courier])
@@ -60,7 +60,7 @@ To attach a tag that is absent from the wire representation, add a field with `S
 
 ## Defining tuples with optional and rest elements
 
-```ts
+```effeck
 const Coordinate = Schema.Tuple([
   Schema.Finite.annotateKey({ title: "Longitude" }),
   Schema.Finite,
@@ -83,7 +83,7 @@ Access fixed elements with `.elements`, or with `.schema.elements` on a tuple wi
 
 ## Modeling mutable and nonempty arrays
 
-```ts
+```effeck
 const Labels = Schema.Array(Schema.String)
 const EditableLabels = Schema.mutable(Labels)
 const RequiredLabels = Schema.NonEmptyArray(Schema.NonEmptyString)
@@ -99,7 +99,7 @@ function addLabel(input: unknown) {
 
 ## Declaring records and index signatures
 
-```ts
+```effeck
 const Stock = Schema.Record(Schema.String, Schema.Int)
 const SymbolStock = Schema.Record(Schema.Symbol, Schema.Int)
 const RegionalStock = Schema.Record(Schema.Literals(["east", "west"]), Schema.Int)
@@ -120,7 +120,7 @@ Use `.key` and `.value` to inspect a record; a struct with rest exposes `.schema
 
 ## Creating structs and tagged structs
 
-```ts
+```effeck
 const Package = Schema.Struct({
   reference: Schema.String,
   weight: Schema.Finite,
@@ -144,7 +144,7 @@ Structs describe fixed fields and expose them through `.fields`. `Struct({})` ac
 
 ## Validating class instances
 
-```ts
+```effeck
 class Pallet {
   constructor(readonly code: string) {}
 }
@@ -162,7 +162,7 @@ function readPallet(input: unknown) {
 
 ## Selecting, removing, and changing optional fields
 
-```ts
+```effeck
 const PackageSummary = Package.mapFields(Struct.pick(["reference", "weight"]))
 const WithoutComment = Package.mapFields(Struct.omit(["comment"]))
 const Patch = Package.mapFields(Struct.map(Schema.optionalKey))

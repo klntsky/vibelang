@@ -4,7 +4,7 @@ Schema classes work in Effeck as in Effect. A class can validate its fields, act
 
 ## Declaring validated classes
 
-```ts
+```effeck
 class Package extends Schema.Class<Package>("Package")({
   reference: Schema.NonEmptyString,
   pieces: Schema.FiniteFromString
@@ -20,7 +20,7 @@ Supply the class itself as the `Self` type, a stable identifier, and its fields.
 
 ## Constructing and checking instances
 
-```ts
+```effeck
 function constructPackage(reference: string, pieces: number) {
   return Package.makeEffect({ reference, pieces })
 }
@@ -36,7 +36,7 @@ Pass a checked `Schema.Struct` instead of a fields object when the class needs a
 
 ## Bypassing checks deliberately
 
-```ts
+```effeck
 function fromVerifiedFields(reference: string, pieces: number) {
   return try((reference, pieces) => new Package({ reference, pieces }, { disableChecks: true }), reference, pieces)
 }
@@ -46,7 +46,7 @@ function fromVerifiedFields(reference: string, pieces: number) {
 
 ## Defining structural equality
 
-```ts
+```effeck
 class Container extends Schema.Class<Container>("Container")({
   labels: Schema.Array(Schema.String)
 }) {}
@@ -62,7 +62,7 @@ Schema-backed class instances support Effect's structural equality, including ne
 
 ## Adding getters and methods
 
-```ts
+```effeck
 class LabeledPackage extends Schema.Class<LabeledPackage>("LabeledPackage")({
   reference: Schema.NonEmptyString
 }) {
@@ -90,7 +90,7 @@ Getters derive synchronous values from fields. Methods follow ordinary Effeck ca
 
 ## Using classes as codecs
 
-```ts
+```effeck
 const Packages = Schema.Array(Package)
 
 function packageWireRoundTrip(input: unknown) {
@@ -103,7 +103,7 @@ A class schema is a transformation: decoding a plain object creates an instance,
 
 ## Annotating classes
 
-```ts
+```effeck
 class Dock extends Schema.Class<Dock>("Dock")(
   { number: Schema.Int },
   { title: "Loading dock", description: "A numbered dispatch location" }
@@ -114,7 +114,7 @@ Pass annotations after the fields or struct. The class identifier also becomes i
 
 ## Modeling recursive classes
 
-```ts
+```effeck
 interface CrateWire {
   count: string
   children: ReadonlyArray<CrateWire>
@@ -136,7 +136,7 @@ Suspend the recursive edge and write the callback's full contract to break the i
 
 ## Creating tagged variants and extending classes
 
-```ts
+```effeck
 class Packed extends Schema.TaggedClass<Packed>()("Packed", {
   reference: Schema.String
 }) {}

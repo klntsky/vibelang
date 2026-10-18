@@ -4,7 +4,7 @@ Use `Config` to load typed settings and `ConfigProvider` to choose their source.
 
 ## Declare typed configuration
 
-```ts
+```effeck
 const Host = Config.NonEmptyString("HOST")
 const Port = Config.Port("PORT")
 
@@ -34,7 +34,7 @@ Prefer `Finite` to `Number` for ordinary numeric settings: `Number` also accepts
 
 ## Parse with schemas
 
-```ts
+```effeck
 function teamName() {
   return Config.schema(
     Schema.String.check(Schema.isMinLength(3)),
@@ -46,7 +46,7 @@ function teamName() {
 
 `Config.schema` builds a descriptor that decodes the provider's representation using the schema. Calling it returns the decoded value. Put constraints in the schema so invalid input reports a configuration failure. A structured schema can describe an entire object, with field paths mapping to environment keys or object properties.
 
-```ts
+```effeck
 // descriptors.effeck
 export const server = Config.schema(Schema.Struct({
   host: Schema.String,
@@ -54,7 +54,7 @@ export const server = Config.schema(Schema.Struct({
 }), "server")
 ```
 
-```ts
+```effeck
 import { server } from "./descriptors.effeck"
 
 function localServer() {
@@ -68,7 +68,7 @@ Use `descriptor.parse(provider)` when the source is explicit, especially in test
 
 ## Read arrays and records
 
-```ts
+```effeck
 function routingSettings() {
   const regions = Config.Array(Schema.String, "REGIONS")()
   const labels = Config.Record(Schema.String, Schema.String, "LABELS")()
@@ -80,7 +80,7 @@ Arrays accept structural values or a separated string such as `north,south`. Rec
 
 ## Nest and combine configuration
 
-```ts
+```effeck
 // database-config.effeck
 export const database = Config.nested(Config.all({
   host: Config.NonEmptyString("HOST"),
@@ -88,7 +88,7 @@ export const database = Config.nested(Config.all({
 }), "DATABASE")
 ```
 
-```ts
+```effeck
 import { database } from "./database-config.effeck"
 
 function testDatabaseSettings() {
@@ -102,7 +102,7 @@ function testDatabaseSettings() {
 
 ## Defaults and fallbacks
 
-```ts
+```effeck
 // optional-config.effeck
 export const port = Config.withDefault(Config.Port("PORT"), 9091)
 export const apiKey = Config.option(Config.String("API_KEY"))
@@ -112,7 +112,7 @@ export const host = Config.orElse(
 )
 ```
 
-```ts
+```effeck
 import { port, apiKey, host } from "./optional-config.effeck"
 
 function defaultsExample() {
@@ -131,7 +131,7 @@ A default on a `Config.all` group replaces the whole group when any child is abs
 
 ## Transform parsed values
 
-```ts
+```effeck
 // origin-config.effeck
 export const origin = Config.map(Config.all({
   host: Config.NonEmptyString("HOST"),
@@ -139,7 +139,7 @@ export const origin = Config.map(Config.all({
 }), ({ host, port }) => `https://${host}:${port}`)
 ```
 
-```ts
+```effeck
 import { origin } from "./origin-config.effeck"
 
 function reportOrigin() {
@@ -153,7 +153,7 @@ Use `Config.map` for a transformation that cannot fail. Express validation in a 
 
 ## Protect secrets
 
-```ts
+```effeck
 function secretSetting() {
   const token = Config.Redacted("ACCESS_TOKEN")()
   log(token)
@@ -165,7 +165,7 @@ function secretSetting() {
 
 ## Load providers
 
-```ts
+```effeck
 const TestProvider = ConfigProvider.fromUnknown({ PORT: 9091 })
 const EnvProvider = ConfigProvider.fromEnv({ env: { PORT: "9092" } })
 const DotEnvProvider = ConfigProvider.fromDotEnvContents("PORT=9093")
@@ -185,7 +185,7 @@ function fileProvider() {
 
 ## Remap provider paths
 
-```ts
+```effeck
 const DeploymentProvider = ConfigProvider.constantCase(
   ConfigProvider.fromEnv({ env: { SERVICE_PORT: "9094" } })
 )
@@ -199,7 +199,7 @@ function deploymentPort() {
 
 ## Compose and install providers
 
-```ts
+```effeck
 const Combined = ConfigProvider.orElse(
   ConfigProvider.fromEnv({ env: { HOST: "edge.internal" } }),
   ConfigProvider.fromUnknown({ HOST: "localhost", PORT: 9091 })

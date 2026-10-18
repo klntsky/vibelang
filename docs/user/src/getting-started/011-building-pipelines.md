@@ -4,7 +4,7 @@ Use statements for dependent steps and the pipe operator, `|>`, for a series of 
 
 ## Compose reusable functions
 
-```ts
+```effeck
 function addMargin(n: number) { return n + 3 }
 function double(n: number) { return n * 2 }
 
@@ -18,7 +18,7 @@ Each body uses the previous stage's result through `%`. Here `%` stands for a va
 
 For program operators, start with the work to run:
 
-```ts
+```effeck
 function preparedPrice() {
   return priceLabel() |> timeout(%, "1 second") |> withSpan(%, "price-label")
 }
@@ -30,7 +30,7 @@ A pipe passes its left side by name or uses it as a value, not both, and its bod
 
 ## Map or replace a success
 
-```ts
+```effeck
 function adjustedPrice() {
   const price = 24
   return price + 5
@@ -46,7 +46,7 @@ Using the returned value replaces `Effect.map` for local transformations. A subs
 
 ## Sequence dependent computations
 
-```ts
+```effeck
 error InvalidRate
 
 function discounted(price: number, percent: number) {
@@ -66,7 +66,7 @@ A call followed by another call expresses the dependency that `flatMap` or `andT
 
 ## Integrate Option and Result
 
-```ts
+```effeck
 function positive(value: number) {
   const optional = value > 0 ? Option.some(value) : Option.none()
   return Effect.fromOption(optional)
@@ -86,7 +86,7 @@ function validated(value: number) {
 
 ## Call a data type's functions as methods
 
-```ts
+```effeck
 function nickname(id: number) {
   return Option.some(id)
     .filter((n) => n > 0)
@@ -106,7 +106,7 @@ A value of one of Effect's data types, such as `Option`, `Stream`, `Chunk`, `Dur
 
 A method exists only in a call. To pass the function itself, name its module:
 
-```ts
+```effeck
 function totals(values: ReadonlyArray<Option.Option<number>>) {
   return values.map(Option.getOrElse(() => 0))
 }
@@ -114,7 +114,7 @@ function totals(values: ReadonlyArray<Option.Option<number>>) {
 
 ## Observe intermediate results
 
-```ts
+```effeck
 function quotedTotal() {
   const amount = total()
   log(`quoted amount=${amount}`)
@@ -126,7 +126,7 @@ The local variable remains available after logging, giving the behavior of `Effe
 
 ## Collect multiple computations
 
-```ts
+```effeck
 function summary() {
   const details = all({
     price: total(),
@@ -142,7 +142,7 @@ For a dynamic collection, use `Effect.forEach(values, (value) => work(value), { 
 
 ## Avoid discarded programs
 
-```ts
+```effeck
 function saveNotice() {
   const notice = () => log("saved")
   notice()

@@ -6,7 +6,7 @@ import { createRequire } from "node:module"
 
 const repo = resolve(import.meta.dir, "../..")
 export type Diagnostic = { code: string; message: string; line?: number; column?: number }
-export type Block = { number: number; line: number; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string }
+export type Block = { number: number; line: number; language: "effeck" | "ts"; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string }
 export type Result = Block & { status: "ok" | "fragment" | "compiler-gap" | "fail"; diagnostics: Diagnostic[]; reason?: string }
 
 export function extract(markdown: string): Block[] {
@@ -20,21 +20,26 @@ export function extract(markdown: string): Block[] {
     const body: string[] = []
     const close = new RegExp(`^\\s{0,3}${fence[1][0]}{${fence[1].length},}\\s*$`)
     while (++i < lines.length && !close.test(lines[i])) body.push(lines[i])
+    // The fence decides the language: ```effeck is Effeck and ```ts is
+    // TypeScript. ```ts effect marks Effect TypeScript shown for comparison,
+    // which is not checked.
     const [lang, role] = fence[2].trim().split(/\s+/)
-    if (lang !== "ts") continue
-    // ```ts effect marks Effect TypeScript shown for comparison, not Effeck.
-    if (role === "effect") continue
+    if (lang !== "effeck" && lang !== "ts") continue
+    if (lang === "ts" && role === "effect") continue
+    const language = lang
     number++
     const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:effeck|ts))\s*$/.exec(line)?.[1]).find(Boolean)
     if (filename?.split("/").some(part => part === "." || part === "..")) throw new Error(`Invalid snippet filename: ${filename}`)
-    if (/^\s*\/\/ TypeScript \(\.ts\)/.test(body[0] ?? "") && !filename) continue
+    if (filename && !filename.endsWith(`.${language}`)) throw new Error(`${language === "ts" ? "A ts" : "An effeck"} fence names ${filename}; the fence decides the language`)
+    // A TypeScript example without a filename, such as a framework's config, opts out.
+    if (language === "ts" && /^\s*\/\/ TypeScript \(\.ts\)/.test(body[0] ?? "") && !filename) continue
     const headers: string[] = []
     for (const line of body) {
       if (!/^\s*\/\//.test(line)) break
       headers.push(line)
     }
     const header = headers.join("\n")
-    blocks.push({ number, line: start + 1, source: body.join("\n"), filename,
+    blocks.push({ number, line: start + 1, language, source: body.join("\n"), filename,
       firstLine: body.find(l => l.trim() && !/^\s*\/\//.test(l)) ?? body[0] ?? "",
       expected: [...(header.match(/\/\/ expect-error:\s*([^\n]+)/)?.[1] ?? "").matchAll(/(?:EK|TS)\d+/g)].map(m => m[0]),
       fragment: /\/\/ fragment\s*(?:$|\n)/.test(header),
@@ -51,9 +56,8 @@ export function blockFilenames(blocks: Block[]): Map<number, string> {
   const used = new Set([...counts].filter(([, count]) => count === 1).map(([name]) => name))
   return new Map(blocks.map(block => {
     if (block.filename && counts.get(block.filename) === 1) return [block.number, block.filename]
-    const extension = block.filename?.endsWith(".ts") ? "ts" : "effeck"
-    let filename = `block-${block.number}.${extension}`
-    for (let suffix = 2; used.has(filename); suffix++) filename = `block-${block.number}-${suffix}.${extension}`
+    let filename = `block-${block.number}.${block.language}`
+    for (let suffix = 2; used.has(filename); suffix++) filename = `block-${block.number}-${suffix}.${block.language}`
     used.add(filename)
     return [block.number, filename]
   }))

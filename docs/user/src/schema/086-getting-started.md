@@ -4,7 +4,7 @@
 
 ## Declaring schemas
 
-```ts
+```effeck
 const Shipment = Schema.Struct({
   tracking: Schema.NonEmptyString,
   pieces: Schema.FiniteFromString
@@ -19,7 +19,7 @@ Each field describes its own representation and checks. The struct combines them
 
 ## Extracting decoded, encoded, and service types
 
-```ts
+```effeck
 type Shipment = typeof Shipment.Type
 type ShipmentWire = typeof Shipment.Encoded
 type ReadServices = typeof Shipment.DecodingServices
@@ -35,7 +35,7 @@ The decoded type has a numeric `pieces`; the encoded type has a string. Both ser
 
 ## Understanding default immutability
 
-```ts
+```effeck
 schema Batch {
   shipments: ReadonlyArray<Shipment>
 }
@@ -46,7 +46,7 @@ schema Batch {
 
 ## Choosing synchronous, result, or effect decoding
 
-```ts
+```effeck
 function decodeWithEffects(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input)
 }
@@ -72,7 +72,7 @@ Prefer `decodeUnknownEffect` inside Effeck: it can pause, requires the codec's d
 
 ## Encoding values
 
-```ts
+```effeck
 function send(shipment: Shipment) {
   return Schema.encodeEffect(Shipment)(shipment)
 }
@@ -87,7 +87,7 @@ Encoding reverses the conversion, including the numeric `pieces` field. `encodeE
 
 ## Handling schema failures
 
-```ts
+```effeck
 function receiveOrExplain(input: unknown) {
   try {
     const shipment = receive(input)
@@ -103,7 +103,7 @@ The parser's expected failure is a `SchemaError` with `_tag: "SchemaError"`. Its
 
 ## Configuring excess properties and error collection
 
-```ts
+```effeck
 function receiveStrict(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input, {
     onExcessProperty: "error",
@@ -122,7 +122,7 @@ Options can be supplied when creating the parser or when calling it; call option
 
 ## Deriving guards and assertions
 
-```ts
+```effeck
 const isShipment = Schema.is(Shipment)
 
 function shipmentTracking(input: unknown) {

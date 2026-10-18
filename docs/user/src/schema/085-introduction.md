@@ -4,7 +4,7 @@
 
 ## Configuring compiler prerequisites
 
-```ts
+```effeck
 // settings.effeck
 const Settings = Schema.Struct({
   label: Schema.String,
@@ -23,7 +23,7 @@ Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods,
 
 ## Understanding schemas and codecs
 
-```ts
+```effeck
 const Quantity = Schema.FiniteFromString
 const Line = Schema.Struct({ sku: Schema.NonEmptyString, quantity: Quantity })
 
@@ -38,7 +38,7 @@ A schema is an immutable description. Adding fields, checks, or annotations prod
 
 ## Distinguishing decoded and encoded views
 
-```ts
+```effeck
 const Parcel = Schema.Struct({ weight: Schema.FiniteFromString })
 
 type Parcel = typeof Parcel.Type       // { readonly weight: number }
@@ -57,7 +57,7 @@ Decoding goes from `Encoded` to `Type`; encoding goes from `Type` to `Encoded`. 
 
 ## Decoding or encoding unknown inputs
 
-```ts
+```effeck
 function inspectBoundary(incoming: unknown, outgoing: unknown) {
   const quantity = Schema.decodeUnknownEffect(Schema.FiniteFromString)(incoming)
   const text = Schema.encodeUnknownEffect(Schema.FiniteFromString)(outgoing)
@@ -72,7 +72,7 @@ Calling an Effect-returning parser runs it. The result is the decoded or encoded
 
 ## Reasoning about conversion round trips
 
-```ts
+```effeck
 function roundTrip(value: number) {
   const wire = Schema.encodeEffect(Schema.FiniteFromString)(value)
   return Schema.decodeEffect(Schema.FiniteFromString)(wire)

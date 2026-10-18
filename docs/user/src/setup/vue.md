@@ -65,7 +65,7 @@ export default defineConfig({
 
 Create `src/todos.effeck`. The `TodosLive` layer keeps the list in a `Map` that its setup creates once, when the layer builds. `completeTodo` recovers from `TodoNotFound`, and `loadBoard` declares the contract `Board!!Todos`, so the compiler rejects an error that escapes it:
 
-```ts
+```effeck
 // src/todos.effeck
 export schema Todo { id: number; title: string; done: boolean }
 
@@ -163,7 +163,7 @@ Render it from a component the app already has, such as `src/App.vue`: add `impo
 
 Create `src/todos.test.effeck`:
 
-```ts
+```effeck
 // src/todos.test.effeck
 import { assert, it } from "@effect/vitest"
 import { completeTodo, loadBoard, TodoNotFound, Todos, TodosLive } from "./todos.effeck"

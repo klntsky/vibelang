@@ -4,7 +4,7 @@ A platform `runMain` starts an Effeck application and connects its lifetime to t
 
 ## Running an application entry point
 
-```ts
+```effeck
 // main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
@@ -25,7 +25,7 @@ Bun applications use `BunRuntime.runMain` from `@effect/platform-bun`; Node.js a
 
 ## Configuring runtime launch behavior
 
-```ts
+```effeck
 // main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 
@@ -54,7 +54,7 @@ export const launchOptions = {
 }
 ```
 
-```ts
+```effeck
 // main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 import { launchOptions } from "./launch-options.ts"
@@ -70,7 +70,7 @@ Teardown is a plain host callback, not an Effect-returning program. Keep a custo
 
 ## Handling completion and failures
 
-```ts
+```effeck
 // main.effeck
 import { NodeRuntime } from "@effect/platform-node"
 

@@ -4,7 +4,7 @@ A fiber is a running computation with a result and a lifetime. Effeck uses Effec
 
 ## Forking and awaiting
 
-```ts
+```effeck
 function buildDashboard() {
   const chart = fork {
     sleep("30 millis")
@@ -22,7 +22,7 @@ function buildDashboard() {
 
 ## Awaiting completion as data
 
-```ts
+```effeck
 function inspectChild() {
   const child = fork { throw "render failed" }
   const exit = Fiber.await(child)
@@ -37,7 +37,7 @@ function inspectChild() {
 
 ## Handling asynchronous interruption
 
-```ts
+```effeck
 function stopWorker() {
   const worker = fork {
     try {
@@ -58,7 +58,7 @@ When the caller needs to continue during cleanup, fork the interruption, `fork w
 
 ## Protecting work from interruption
 
-```ts
+```effeck
 function saveReport() {
   uninterruptible {
     logInfo("saving; an interruption waits until the block ends")
@@ -81,7 +81,7 @@ An `uninterruptible` block runs without interruption, as `Effect.uninterruptible
 
 ## Combining results
 
-```ts
+```effeck
 function title() {
   return "Inventory"
 }
@@ -104,7 +104,7 @@ To wait for fibers you already hold, use `join`: `const [name, count] = join [ti
 
 ## Racing events
 
-```ts
+```effeck
 function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>) {
   return await.race [
     `job: ${Queue.take(jobs)}`,
@@ -125,7 +125,7 @@ function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>)
 
 ## Running a loop body concurrently
 
-```ts
+```effeck
 function fetchPage(id: string) {
   sleep("5 millis")
   return `page ${id}`
@@ -143,7 +143,7 @@ function printAll(ids: ReadonlyArray<string>) {
 
 ## Supervising child lifetimes
 
-```ts
+```effeck
 function request() {
   {
     const progress = fork {
@@ -166,7 +166,7 @@ Forked fibers inherit the current services and tracing context. Control-operatio
 
 ## Selecting scoped or detached lifetimes
 
-```ts
+```effeck
 function inCallerScope(scope: Scope) {
   const background = forkIn(scope, sleep("1 minute"))
   sleep("20 millis")
@@ -184,7 +184,7 @@ function detachedExample() {
 
 ## Understanding execution scheduling
 
-```ts
+```effeck
 function waitForReady() {
   const ready = Deferred.make<void>()
   const worker = fork {

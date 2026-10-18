@@ -4,7 +4,7 @@ Effeck matches values with `match` and tests them with `is`, from the TC39 patte
 
 ## Matching values
 
-```ts
+```effeck
 function describeInput(input: number | string) {
   return match (input) {
     when Number: `count ${input}`;
@@ -24,7 +24,7 @@ Arms are tried in order, and the first arm whose pattern matches gives the value
 
 ## Shapes, guards, and tags
 
-```ts
+```effeck
 function classifyRetry(input: { status: string; attempts: number }) {
   return match (input) {
     when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
@@ -51,7 +51,7 @@ function jobLabel(job: Job) {
 
 ## Negating and combining patterns
 
-```ts
+```effeck
 function availability(status: "active" | "paused" | "closed") {
   return match (status) {
     when not "closed": "can reopen";
@@ -71,7 +71,7 @@ function weekend(day: string) {
 
 ## Fixing the return type
 
-```ts
+```effeck
 function display(input: number | boolean): string {
   return match (input) {
     when Number: input.toFixed(1);
@@ -84,7 +84,7 @@ A match's type is the union of its arms' types. Annotate the function's return t
 
 ## Exhaustive handling
 
-```ts
+```effeck
 type Phase = "draft" | "published"
 
 function phaseLabel(phase: Phase) {
@@ -99,7 +99,7 @@ A match without a `default` arm over a finite union, such as literals, `error` c
 
 ## Defaults, optional outputs, and result outputs
 
-```ts
+```effeck
 type Command = "start" | "stop" | "help"
 
 function withDefault(command: Command) {
@@ -128,7 +128,7 @@ A `default` arm comes last and receives every unmatched input, narrowed to the c
 
 ## Reusable matchers with the Match module
 
-```ts
+```effeck
 const describe = pipe(
   Match.type<number | string>(),
   Match.when(Match.number, (n) => `count ${n}`),

@@ -6,7 +6,7 @@ Defects report bugs and broken invariants outside the typed error contract. Keep
 
 ## Creating defects
 
-```ts
+```effeck
 function decodeOpcode(opcode: number) {
   if (opcode !== 1) die(new Error("unknown internal opcode"))
   return "start"
@@ -16,7 +16,7 @@ function decodeOpcode(opcode: number) {
 
 `Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit Effeck `throw`, including `throw new Error(...)`, is a typed failure instead.
 
-```ts
+```effeck
 function firstLabel(labels: ReadonlyArray<string>) {
   try {
     return Effect.fromOption(Option.fromNullishOr(labels[0]))
@@ -30,7 +30,7 @@ function firstLabel(labels: ReadonlyArray<string>) {
 
 ## Promoting typed failures to defects
 
-```ts
+```effeck
 error MissingSetting {
   name: string
 }
@@ -55,7 +55,7 @@ function startupWithMessage() {
 
 ## Examining complete execution results
 
-```ts
+```effeck
 function inspectStartup() {
   const outcome = Effect.exit(startup())
   if (outcome.isFailure()) {
@@ -71,7 +71,7 @@ An `Exit` stays data when returned by a call. Constructing one with `Exit.succee
 
 ## Recovering defects at a boundary
 
-```ts
+```effeck
 function isolateDecoder(opcode: number) {
   return Effect.catchDefect(() => decodeOpcode(opcode), (defect) => {
     if (defect instanceof Error && defect.message === "unknown internal opcode") {
@@ -87,7 +87,7 @@ function isolateDecoder(opcode: number) {
 
 ## Recovering a complete cause
 
-```ts
+```effeck
 function decoderBoundary(opcode: number) {
   const outcome = exit(decodeOpcode(opcode))
   if (outcome is Exit.Success(let value)) return value

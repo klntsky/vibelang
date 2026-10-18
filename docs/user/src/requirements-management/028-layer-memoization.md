@@ -6,7 +6,7 @@ Effect shares repeated uses of the same layer value within one build graph. Effe
 
 ## Sharing acquisition across a graph
 
-```ts
+```effeck
 service Prefix {
   value: string
 }
@@ -52,7 +52,7 @@ Sharing lasts for the graph's managed lifetime; it is not a process-wide singlet
 
 ## Requesting fresh acquisition
 
-```ts
+```effeck
 const Separate = Layer.merge(
   Layer.provide(HeadingLive, Layer.fresh(PrefixLive)),
   Layer.provide(FooterLive, Layer.fresh(PrefixLive))
@@ -67,7 +67,7 @@ Each fresh branch acquires its own prefix implementation, producing two initiali
 
 ## Local provision boundaries
 
-```ts
+```effeck
 function twoLocalReads() {
   const first = Effect.provide(() => Prefix().value, PrefixLive)
   const second = Effect.provide(() => Prefix().value, PrefixLive)
@@ -87,7 +87,7 @@ function oneSharedReadBoundary() {
 
 ## Controlling memoization explicitly
 
-```ts
+```effeck
 function manualSharing() {
   return Effect.scoped {
     const memoMap = Layer.makeMemoMap()

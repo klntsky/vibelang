@@ -4,7 +4,7 @@ Write an ordinary function to describe an Effeck computation. Return a value for
 
 ## Success and failure
 
-```ts
+```effeck
 error Unavailable {
   item: string
 }
@@ -20,7 +20,7 @@ The compiler records the returned object in `A` and `Unavailable` in `E`. `Effec
 
 ## Track errors as values
 
-```ts
+```effeck
 function attemptReservation(item: string, available: boolean) {
   const outcome = Effect.result(reserve(item, available))
   if (outcome.isFailure()) return outcome.failure.item
@@ -33,7 +33,7 @@ function attemptReservation(item: string, available: boolean) {
 
 ## Wrap synchronous operations
 
-```ts
+```effeck
 // Assume ./legacy-codec.ts exports encode(value: string): string.
 import { encode } from "./legacy-codec.ts"
 
@@ -57,7 +57,7 @@ A synchronous TypeScript function can declare trust once with `/** @effeck trust
 
 ## Create effects from promises
 
-```ts
+```effeck
 // Assume this SDK function returns Promise<string> and accepts AbortSignal.
 import { lookupLabel } from "./legacy-sdk.ts"
 
@@ -77,7 +77,7 @@ function label(id: string) {
 
 ## Adapt callbacks and cancellation
 
-```ts
+```effeck
 // A one-shot read ends its registration when either callback fires.
 type Source = {
   read: (onValue: (n: number) => void, onError: (e: Error) => void) => () => void
@@ -102,7 +102,7 @@ For resource acquisition, cancellation must also release a resource that arrives
 
 ## Suspend work
 
-```ts
+```effeck
 function nextCounter() {
   let count = 0
   return () => {
@@ -120,7 +120,7 @@ function counters() {
 
 The returned function delays its body until each call. Wrap an entire computation, including mutable setup, if retry should create new state each time. `Effect.suspend` remains useful in TypeScript adapters to delay construction of an Effect; in Effeck, passing a program already delays its body.
 
-```ts
+```effeck
 function countdown(n: number): number!! {
   if (n <= 0) return 0
   sleep("1 millis")

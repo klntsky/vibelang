@@ -4,7 +4,7 @@ Schemas for Effect data types work as in Effect. Runtime collection schemas expe
 
 ## Building configuration-compatible codecs
 
-```ts
+```effeck
 const DispatchConfig = Config.schema(Schema.Struct({
   depot: Schema.String,
   capacity: Schema.Finite
@@ -22,7 +22,7 @@ function configurationExample() {
 
 ## Encoding options, results, and exits
 
-```ts
+```effeck
 const OptionalCount = Schema.Option(Schema.FiniteFromString)
 const CountResult = Schema.Result(Schema.FiniteFromString, Schema.Trim)
 const CountExit = Schema.Exit(Schema.FiniteFromString, Schema.String, Schema.Defect())
@@ -37,7 +37,7 @@ function decodeContainers() {
 
 `Option` applies its value schema to `Some` and retains `None`. `Result(success, failure)` transforms each channel independently. `Exit(success, failure, defect)` also describes failures and defects inside the cause. `Exit.succeed` and `Exit.fail` construct data, and an Exit returned by the parser stays data. A failure stored inside it does not itself fail the surrounding parser. Calling the Exit runs it, succeeding or failing with its stored outcome.
 
-```ts
+```effeck
 function encodeResult() {
   const codec = try(Schema.toCodecJson(CountResult))
   return Schema.encodeEffect(codec)(Result.succeed(9))
@@ -60,7 +60,7 @@ Canonical JSON uses `{ _tag: "Some", value }` and `{ _tag: "None" }` for options
 
 ## Supporting native and Effect collections
 
-```ts
+```effeck
 const NativeSet = Schema.ReadonlySet(Schema.FiniteFromString)
 const NativeMap = Schema.ReadonlyMap(Schema.String, Schema.FiniteFromString)
 const PersistentSet = Schema.HashSet(Schema.FiniteFromString)
@@ -79,7 +79,7 @@ function collectionsFromJson() {
 
 ## Converting durations and protected values
 
-```ts
+```effeck
 function durations() {
   const hold = Schema.decodeEffect(Schema.DurationFromString)("3 seconds")
   const milliseconds = Schema.encodeEffect(Schema.DurationFromMillis)(hold)
@@ -93,7 +93,7 @@ function durations() {
 
 `Schema.Duration` validates an existing Duration. `DurationFromString`, `DurationFromMillis`, and `DurationFromNanos` select text, numeric milliseconds, or bigint nanoseconds. The canonical Duration representation is tagged and preserves the supported precision and infinity cases.
 
-```ts
+```effeck
 const AccessToken = Schema.RedactedFromValue(Schema.NonEmptyString)
 const NonSerializableToken = Schema.Redacted(Schema.String, {
   label: "DispatchToken",

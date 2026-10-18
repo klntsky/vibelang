@@ -4,7 +4,7 @@ File logging uses Effect's `Logger` module in Effeck. Combine a string formatter
 
 ## Writing formatted logs to a file
 
-```ts
+```effeck
 const FileLogger = Logger.layer([
   () => Logger.toFile(Logger.formatLogFmt, "./application.log", {
     batchWindow: "250 millis"
@@ -23,7 +23,7 @@ In Effect 4.0.5, `toFile` batches by default with a one-second window; `batchWin
 
 ## Supplying file-system dependencies
 
-```ts
+```effeck
 // main.effeck
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 const LoggerLive = Layer.provide(
@@ -49,7 +49,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 
 ## Combining file and console output
 
-```ts
+```effeck
 // main.effeck
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 const LoggerLive = Layer.provide(

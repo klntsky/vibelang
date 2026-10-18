@@ -37,7 +37,7 @@ supported platforms, editor setup, and adding Effeck to an existing project.
 
 ## Guides and reference material
 
-```ts
+```effeck
 function main() {
   const label = "first program"
   log(label)

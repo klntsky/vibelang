@@ -4,7 +4,7 @@ The advanced Schema APIs work as in Effect. Use declarations for opaque runtime 
 
 ## Declaring custom scalar and parameterized schemas
 
-```ts
+```effeck
 class Shelf {
   constructor(readonly code: string) {}
 }
@@ -21,7 +21,7 @@ function readShelf(input: unknown) {
 
 A declaration's guard establishes identity; its type predicate is inferred from `instanceof`. It does not validate every member automatically. Add checks when fields need validation. Unlike a struct, an opaque declaration gives interpreters no structural description to traverse.
 
-```ts
+```effeck
 class Box<A> {
   constructor(readonly value: A) {}
 }
@@ -45,7 +45,7 @@ const BoxedCount = BoxSchema(Schema.FiniteFromString)
 
 ## Adding interpreter support
 
-```ts
+```effeck
 const PortableShelf = Schema.declare(
   (input: unknown) => input instanceof Shelf,
   {
@@ -74,7 +74,7 @@ const PortableShelf = Schema.declare(
 
 ## Creating branded schemas
 
-```ts
+```effeck
 const ShelfId = Schema.NonEmptyString.pipe(Schema.brand("ShelfId"))
 type ShelfId = typeof ShelfId.Type
 
@@ -88,7 +88,7 @@ A brand distinguishes values statically without changing their runtime represent
 
 ## Applying constructor defaults
 
-```ts
+```effeck
 const Parcel = Schema.Struct({
   shelf: ShelfId,
   priority: Schema.Int.pipe(Schema.withConstructorDefault(() => 1))
@@ -104,7 +104,7 @@ function createParcel() {
 
 ## Distinguishing optional keys, optional values, null, and absence
 
-```ts
+```effeck
 const Presence = Schema.Struct({
   exact: Schema.optionalKey(Schema.String),
   loose: Schema.optional(Schema.String),
@@ -130,7 +130,7 @@ const WithDecodeDefault = Schema.Struct({
 
 ## Mapping optional fields to options
 
-```ts
+```effeck
 const Preferences = Schema.Struct({
   note: Schema.OptionFromOptionalKey(Schema.String),
   weight: Schema.OptionFromOptional(Schema.FiniteFromString),
@@ -147,7 +147,7 @@ The decoded keys are required and hold `Option` values. The exact-key variant re
 
 ## Transforming field presence
 
-```ts
+```effeck
 const Form = Schema.Struct({
   note: Schema.optionalKey(Schema.String).pipe(
     Schema.decodeTo(Schema.optionalKey(Schema.String), {
@@ -184,7 +184,7 @@ Optional getters receive an `Option`: `None` means that the key is absent, while
 
 ## Extending and renaming fields
 
-```ts
+```effeck
 const Address = Schema.Struct({ city: Schema.String })
 const Destination = Schema.Struct({ ...Address.fields, dock: Schema.Int })
 const Routed = Destination.pipe(Schema.fieldsAssign({ route: Schema.String }))
@@ -195,7 +195,7 @@ Spread `.fields` or use `fieldsAssign` to add fields. `encodeKeys` maps decoded 
 
 ## Modeling recursive and mutually recursive codecs
 
-```ts
+```effeck
 interface Crate {
   count: number
   children: ReadonlyArray<Crate>

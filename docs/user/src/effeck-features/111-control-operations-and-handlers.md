@@ -4,7 +4,7 @@ A control operation lets a handler decide how the caller continues. Use one when
 
 ## Declare and perform an operation
 
-```ts
+```effeck
 // approval.effeck
 export error ReviewBusy { request: string }
 
@@ -26,7 +26,7 @@ export function release(version: string) {
 
 ## Run one program with two policies
 
-```ts
+```effeck
 // policies.effeck
 import { Approval, release } from "./approval.effeck"
 
@@ -67,7 +67,7 @@ A continuation can be consumed once. Call `resume`, `resumeWith`, and `abandon` 
 
 ## Stop and clean up
 
-```ts
+```effeck
 // stopping.effeck
 import { Approval } from "./approval.effeck"
 
@@ -97,7 +97,7 @@ A clause that ends without resuming also stops the try block and cleans it up fi
 
 ## Resume with an expected failure
 
-```ts
+```effeck
 // busy.effeck
 import { Approval, ReviewBusy } from "./approval.effeck"
 
@@ -120,7 +120,7 @@ Catch clauses and a `finally` block may follow the handle clauses. They cover th
 
 The statement is short for the `handle` function, which takes a program and returns its result:
 
-```ts
+```effeck
 // expression.effeck
 import { Approval, release } from "./approval.effeck"
 
@@ -142,7 +142,7 @@ export function countReleased(versions: ReadonlyArray<string>) {
 
 ## Keep handlers on the executing fiber
 
-```ts
+```effeck
 // concurrent.effeck
 import { Approval } from "./approval.effeck"
 

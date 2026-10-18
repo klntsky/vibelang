@@ -6,7 +6,7 @@ A service gives a program a named capability without passing an implementation t
 
 ## Declaring typed service keys
 
-```ts
+```effeck
 service Sequence {
   next(): number!!
 }
@@ -22,7 +22,7 @@ The compiler gives each service nominal identity and derives its key from packag
 
 ## Requesting and supplying implementations
 
-```ts
+```effeck
 function nextLabel() {
   return `ticket-${Sequence.next()}`
 }
@@ -44,7 +44,7 @@ function readImplementation() {
 
 `Sequence.next()` looks up the service and runs its method. `Sequence()` returns the implementation itself, which is useful for capturing it or reading value members. A runner needs a program whose remaining requirements have been supplied.
 
-```ts
+```effeck
 service Settings {
   baseUrl: string
 }
@@ -63,7 +63,7 @@ A declared service member wins over the key's own members, including `pipe`, `us
 
 ## Extracting service shapes
 
-```ts
+```effeck
 type SequenceImplementation = Context.Service.Shape<typeof Sequence>
 ```
 
@@ -73,7 +73,7 @@ Normal providers already infer and check their implementation from the key argum
 
 ## Combining multiple dependencies
 
-```ts
+```effeck
 function announceTicket() {
   const label = nextLabel()
   Reporter.write(`Created ${label}`)
@@ -95,7 +95,7 @@ function testAnnouncement() {
 
 A union in `R` means both capabilities are needed. Layers let you supply the group together; `wire` composes their graph and rejects duplicate providers and cycles. Inputs no argument provides remain requirements of the resulting layer; a missing provider is reported where a runner or contract requires those requirements to be satisfied. Direct service provision can also be nested when a small local override is enough.
 
-```ts
+```effeck
 const testContext = Context.add(
   Context.make(Sequence, { next: () => 17 }),
   Reporter,
@@ -111,7 +111,7 @@ A `Context` holds implementations that already exist, while a `Layer` describes 
 
 ## Requesting optional services
 
-```ts
+```effeck
 function optionalAnnouncement(message: string) {
   const reporter = Effect.serviceOption(Reporter)
   if (reporter.isNone()) return false
@@ -125,7 +125,7 @@ function optionalAnnouncement(message: string) {
 
 ## Handling dependencies between services
 
-```ts
+```effeck
 service ReportSettings {
   prefix: string
 }

@@ -20,7 +20,7 @@ const greet = Effect.fn("greet")(function* (id: string) {
 })
 ```
 
-```ts
+```effeck
 interface User { id: string; name: string }
 
 error UserNotFound { id: string }
@@ -55,7 +55,7 @@ A new language usually leaves its host's ecosystem behind. Effeck keeps it in tw
 1. **It compiles to TypeScript.** Effeck's compiler is TypeScript's compiler, extended. It checks `.effeck` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and every Effect library work unchanged, and TypeScript code calls Effeck functions as ordinary Effect functions.
 2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.effeck` file.
 
-```ts
+```effeck
 function slug(title: string) {
   return sync((title) => {
     // Plain TypeScript: nothing in here is an Effect.

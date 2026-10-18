@@ -4,7 +4,7 @@ A `PubSub` broadcasts values to independent subscribers. Each active subscriber 
 
 ## Broadcasting to independent subscribers
 
-```ts
+```effeck
 function broadcast() {
   const hub = PubSub.bounded<string>(4)
   try {
@@ -23,7 +23,7 @@ Subscribe before publishing a message that must be received. Without replay conf
 
 ## Selecting capacity and overflow behavior
 
-```ts
+```effeck
 function makeHubs() {
   return {
     reliable: PubSub.bounded<string>(64),
@@ -38,7 +38,7 @@ A bounded hub backpressures publishers when its buffer is full, so a slow subscr
 
 ## Managing scoped subscriptions
 
-```ts
+```effeck
 function listen(hub: PubSub.PubSub<string>) {
   using subscription = PubSub.subscribe(hub)
   const message = PubSub.take(subscription)
@@ -52,7 +52,7 @@ In Effect 4, consume the returned `PubSub.Subscription` with `PubSub.take` and t
 
 ## Publishing batches
 
-```ts
+```effeck
 function batch() {
   const hub = PubSub.bounded<string>(3)
   try {
@@ -70,7 +70,7 @@ function batch() {
 
 ## Inspecting size and capacity
 
-```ts
+```effeck
 function inspect() {
   const hub = PubSub.bounded<number>(5)
   try {
@@ -92,7 +92,7 @@ Capacity is a plain value, while size and fullness queries run Effects. Size mea
 
 ## Ending subscriptions and shutting down
 
-```ts
+```effeck
 function ownHub() {
   const hub = PubSub.bounded<string>(8)
   try {

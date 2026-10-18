@@ -4,7 +4,7 @@ Effeck sequences computations with ordinary functions and calls. This page cover
 
 ## Sequence computations
 
-```ts
+```effeck
 function invoice(quantity: number) {
   const unitPrice = Config.Finite("UNIT_PRICE")()
   const subtotal = quantity * unitPrice
@@ -17,7 +17,7 @@ Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")
 
 ## Relate calls to async functions
 
-```ts
+```effeck
 function delayedLabel(name: string) {
   sleep("30 millis")
   return name.toUpperCase()
@@ -33,7 +33,7 @@ function greeting() {
 
 ## Branches and loops
 
-```ts
+```effeck
 function reportEven(values: ReadonlyArray<number>) {
   let count = 0
   for (const value of values) {
@@ -50,7 +50,7 @@ Conditions, local variables, `break`, `continue`, and early returns keep JavaScr
 
 ## Raise failures and stop early
 
-```ts
+```effeck
 error MissingTitle
 
 function titleLength(title: string | undefined) {
@@ -76,7 +76,7 @@ To keep processing after a failure without catching it immediately, use `Effect.
 
 ## Retain the receiver
 
-```ts
+```effeck
 class Prefixer {
   constructor(readonly prefix: string) {}
 
@@ -96,7 +96,7 @@ Ordinary method calls preserve `this` and evaluate the receiver once. There is n
 
 ## Producers use `function*`
 
-```ts
+```effeck
 function* ticks() {
   for (let n = 0; n < 3; n += 1) {
     sleep("10 millis")

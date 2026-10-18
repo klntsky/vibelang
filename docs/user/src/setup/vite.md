@@ -27,7 +27,7 @@ The plugin compiles the project that `tsconfig.json` describes, with its options
 
 Create `src/greet.effeck`:
 
-```ts
+```effeck
 // src/greet.effeck
 export function greet(name: string) {
   return `Hello, ${name}!`
@@ -63,7 +63,7 @@ export default defineConfig({
 
 Create `src/greet.test.effeck`:
 
-```ts
+```effeck
 // src/greet.test.effeck
 import { assert, it } from "@effect/vitest"
 import { greet } from "./greet.effeck"

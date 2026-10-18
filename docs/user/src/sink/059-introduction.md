@@ -4,7 +4,7 @@ A Sink describes how to consume a Stream and return one result. Use a sink when 
 
 ## Consumers and result types
 
-```ts
+```effeck
 const header: Sink.Sink<Array<string>, string, string, never, never> = Sink.take<string>(2)
 ```
 
@@ -14,7 +14,7 @@ Sink constructors and operators that return Sink values are trusted library call
 
 ## Running a consumer against a source
 
-```ts
+```effeck
 function parseHeader() {
   const source = Stream.make("format-v2", "length-64", "payload")
   const header = Sink.take<string>(2)
@@ -28,7 +28,7 @@ function parseHeader() {
 
 ## Unconsumed elements
 
-```ts
+```effeck
 function headerWithLeftovers() {
   const sink = (Sink.take<string>(1)).mapEnd(([header, rest]) => [
     { header, rest: rest ?? [] }

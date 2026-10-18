@@ -4,7 +4,7 @@ Run an Effeck application through its platform runtime, keep its lifetime in `ma
 
 ## Running application entry points
 
-```ts
+```effeck
 // main.effeck
 export function main() {
   try {
@@ -28,7 +28,7 @@ Call runners only where no fiber runs the code: at the module's top level or in 
 
 ## Selecting a platform runtime
 
-```ts
+```effeck
 // main.effeck
 import { BunRuntime } from "@effect/platform-bun"
 
@@ -49,7 +49,7 @@ Choose the runtime matching the host and install that platform package. The appl
 
 ## Making argument forwarding explicit
 
-```ts
+```effeck
 function parseDecimalTokens(tokens: ReadonlyArray<string>) {
   return tokens.map((text) => Number.parseInt(text, 10))
 }

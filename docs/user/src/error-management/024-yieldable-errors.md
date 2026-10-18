@@ -6,7 +6,7 @@ Effect's custom error values can be yielded inside TypeScript generators. In Eff
 
 ## Defining an error without a tag
 
-```ts
+```effeck
 class EmptyDocument extends Data.Error<{
   readonly documentId: string
 }> {}
@@ -20,7 +20,7 @@ function requireText(documentId: string, text: string) {
 
 `Data.Error` creates an error class with typed fields and Effect's yieldable behavior. Effeck does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
 
-```ts
+```effeck
 function emptyDocumentError(documentId: string) {
   return new EmptyDocument({ documentId })
 }
@@ -36,7 +36,7 @@ function rejectDocument(documentId: string) {
 
 ## Creating tagged error classes
 
-```ts
+```effeck
 error EmptyTitle
 error TitleTooLong {
   length: number
@@ -56,7 +56,7 @@ Choose distinct tags for distinct error cases. Tag-based matching compares strin
 
 ## Recovering failures by tag
 
-```ts
+```effeck
 function displayTitle(text: string) {
   return Effect.catchTag(title(text), "EmptyTitle", () => "Untitled")
 }

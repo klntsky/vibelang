@@ -4,7 +4,7 @@ Use compiler diagnostics to inspect Effeck contracts and catch failures or requi
 
 ## Install language tooling
 
-```ts
+```effeck
 // example.effeck
 function sample() {
   sleep("5 millis")
@@ -36,7 +36,7 @@ For GitHub highlighting, add `*.effeck linguist-language=TypeScript` to `.gitatt
 
 ## Inspect inferred information
 
-```ts
+```effeck
 error Rejected
 
 function accepted(value: number) {
@@ -52,7 +52,7 @@ Hover over a function to see its inferred `Effect<A, E, R>`; hover over a call t
 
 ## Diagnostics, completions, and refactors
 
-```ts
+```effeck
 // expect-error: EK2001
 // Rejected escapes a contract promising no failures.
 function promised(value: number): number!! {
@@ -75,7 +75,7 @@ or `yield*` inside `.effeck`.
 
 ## Configure compiler checks
 
-```ts
+```effeck
 function checked(value: number): number!Rejected! {
   return accepted(value)
 }
@@ -104,7 +104,7 @@ Effeck supports every feature of Effect's language service, `@effect/language-se
 
 EK4801-EK4825 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in `compilerOptions.effeck.diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
 
-```ts
+```effeck
 function discard(program: Effect.Effect<number>) {
   // @effeck-diagnostics-next-line EK4801:off
   program
@@ -257,7 +257,7 @@ different call semantics.
 
 ## Debugging in editors
 
-```ts
+```effeck
 function tracedSample() {
   return withSpan(sample(), "sample")
 }

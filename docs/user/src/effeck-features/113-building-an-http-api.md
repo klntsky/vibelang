@@ -4,7 +4,7 @@ Build routes with Effect's HTTP modules and write each handler as an Effeck func
 
 ## Define the body and the service
 
-```ts
+```effeck
 // users.effeck
 export schema CreateUser { name: string }
 export error NameTaken { name: string }
@@ -31,7 +31,7 @@ export const UsersLive = Layer.effect(Users) {
 
 ## Decode the request and map failures
 
-```ts
+```effeck
 // routes.effeck
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import { CreateUser, NameTaken, Users, UsersLive } from "./users.effeck"
@@ -62,7 +62,7 @@ The JSON decoder runs at the call and returns the validated body. `Users.create`
 
 ## Start the Node server
 
-```ts
+```effeck
 // server.effeck
 import { HttpRouter } from "effect/http"
 import { NodeHttpServer } from "@effect/platform-node"
@@ -83,7 +83,7 @@ The module top level constructs schemas, routes, and layers. `node server.js` st
 
 ## Test a route without a socket
 
-```ts
+```effeck
 // routes.test.effeck
 import { assert, it } from "@effect/vitest"
 import { HttpClientRequest, HttpRouter, HttpServerRequest } from "effect/http"

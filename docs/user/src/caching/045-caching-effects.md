@@ -4,7 +4,7 @@ Caching shares a computation's outcome across callers instead of repeating the w
 
 ## Memoizing parameterized computations
 
-```ts
+```effeck
 function memoizeLengths() {
   let lookups = 0
   const cache = Cache.make({
@@ -28,7 +28,7 @@ Each key has its own stored outcome. Repeated calls for a key reuse it, and conc
 
 ## Reusing one computed result
 
-```ts
+```effeck
 function cachedSettings() {
   let loads = 0
   const settings = Effect.cached {
@@ -47,7 +47,7 @@ Calling `Effect.cached` allocates a reusable Effect value; calling that value ru
 
 ## Expiring results after a duration
 
-```ts
+```effeck
 function expiringSnapshot() {
   let revision = 0
   const snapshot = Effect.cachedWithTTL(() => ++revision, "100 millis")
@@ -63,7 +63,7 @@ The TTL bounds how long an outcome is reused. Expiration does not start backgrou
 
 ## Invalidating explicitly
 
-```ts
+```effeck
 function reloadableSnapshot() {
   let revision = 0
   const [snapshot, invalidate] = Effect.cachedInvalidateWithTTL(

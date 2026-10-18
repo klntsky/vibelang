@@ -6,7 +6,7 @@ Resources need cleanup on success, failure, and cancellation. Effeck uses `final
 
 ## Guaranteeing cleanup
 
-```ts
+```effeck
 error ExportRejected
 
 function exportRows(accepted: boolean) {
@@ -29,7 +29,7 @@ function exportRows(accepted: boolean) {
 
 ## Finalizing based on the outcome
 
-```ts
+```effeck
 function observedExport(accepted: boolean) {
   try {
     return exportRows(accepted)
@@ -47,7 +47,7 @@ function observedExport(accepted: boolean) {
 
 ## Cleaning up failed work
 
-```ts
+```effeck
 function reportFailedExport(accepted: boolean) {
   return Effect.onError(() => exportRows(accepted), (cause) => {
     if (cause.hasInterrupts()) {
@@ -63,7 +63,7 @@ function reportFailedExport(accepted: boolean) {
 
 ## Bracketing acquisition, use, and release
 
-```ts
+```effeck
 interface Lease {
   id: string
 }
@@ -96,7 +96,7 @@ The release callback receives both the resource and the use phase's `Exit`. The 
 
 ## Giving the caller resource ownership
 
-```ts
+```effeck
 function acquireLease() {
   const store = LeaseStore()
   return Effect.acquireRelease(

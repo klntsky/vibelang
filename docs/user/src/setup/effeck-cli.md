@@ -47,7 +47,7 @@ In `package.json`, replace `tsc` with `effeck` in every script. If the project h
 
 Create `src/hello.effeck`, in a directory that `include` selects:
 
-```ts
+```effeck
 // src/hello.effeck
 export function hello(name: string) {
   return `Hello, ${name}!`
@@ -76,7 +76,7 @@ export default defineConfig({
 
 Create `src/hello.test.effeck`:
 
-```ts
+```effeck
 // src/hello.test.effeck
 import { assert, it } from "@effect/vitest"
 import { hello } from "./hello.effeck"

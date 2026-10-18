@@ -4,7 +4,7 @@ Effect's runtime executes computations, carries service implementations, schedul
 
 ## Execution infrastructure
 
-```ts
+```effeck
 function operation() {
   sleep("10 millis")
   return "complete"
@@ -19,7 +19,7 @@ A function value remains a description until it is called or handed to a runner.
 
 ## Run with an explicit service context
 
-```ts
+```effeck
 service Labels {
   format(value: string): string!!
 }
@@ -43,7 +43,7 @@ Most applications build their context through layers instead. Use an explicit co
 
 ## Change runtime behavior within a region
 
-```ts
+```effeck
 const Quiet = Logger.layer([])
 
 function startup() {
@@ -61,7 +61,7 @@ To emit a different format, supply a logger such as `Logger.consoleJson` through
 
 ## Replace a runtime service for a block
 
-```ts
+```effeck
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
 function roll(): number!! {
@@ -75,7 +75,7 @@ function roll(): number!! {
 
 ## Build and dispose managed runtimes
 
-```ts
+```effeck
 // notifications.effeck
 export service Notifications {
   send(message: string): void!!

@@ -4,7 +4,7 @@ Effect's experimental Schema compilers work behind the ordinary Schema APIs in E
 
 ## Understanding optimized validation paths
 
-```ts
+```effeck
 // schemas/Parcel.effeck
 export const Parcel = Schema.Struct({
   reference: Schema.String,
@@ -22,7 +22,7 @@ Compilation must be active for the relevant AST and operation before a consumer 
 
 ## Enabling just-in-time compilation and fallback
 
-```ts
+```effeck
 // main.effeck
 import "effect/schema/SchemaJITCompiler/enable"
 
@@ -38,7 +38,7 @@ function receiveCompiled(input: unknown) {
 
 Put the enabling import before code that creates or runs parsers. Importing the compiler namespace alone does not enable it. Operations compile lazily on first use, without eagerly executing every check or default.
 
-```ts
+```effeck
 import { SchemaJITCompiler } from "effect/schema"
 
 function enableSelectedDirections() {
@@ -76,7 +76,7 @@ export const buildSchemas = () => Effect.provide(
 )
 ```
 
-```ts
+```effeck
 // build.effeck
 import { buildSchemas } from "./build-schema-aot.ts"
 
@@ -90,7 +90,7 @@ The build Effect finds directly exported schema values in the listed modules and
 
 Decoding is the default operation. Add encoding, guards, and construction only when needed. Nested dependencies do not need direct exports unless a separate target is required for an otherwise undiscovered graph.
 
-```ts
+```effeck
 // fragment
 // application.effeck
 import "./generated/parcel-validators.js"
@@ -105,7 +105,7 @@ Load the generated module before using the schemas and ensure the bundler preser
 
 ## Using lower-level compiler APIs
 
-```ts
+```effeck
 import * as SchemaAOTCompiler from "effect/schema/SchemaAOTCompiler"
 
 function generateSource() {
@@ -130,7 +130,7 @@ The low-level API names directional parsing `decode`, including the flipped enco
 
 ## Specialized operations, registries, startup behavior, and limits
 
-```ts
+```effeck
 function parseNormally(input: unknown) {
   return Schema.decodeUnknownEffect(Parcel)(input, {
     errors: "all", onExcessProperty: "error"

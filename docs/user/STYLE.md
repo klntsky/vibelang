@@ -30,7 +30,7 @@ Example first, then two to five sentences.
 - `Effect.gen(function* () { … })` becomes an ordinary function.
 ```
 
-Code blocks use the `ts` fence and are Effeck unless the first line says otherwise (`// TypeScript (.ts)`). Show a file name in a first-line comment when it matters (`// main.effeck`). After a function, show the inferred contract as a comment when it teaches something: `// User!UserNotFound!Users`.
+Effeck code blocks use the `effeck` fence. Real TypeScript uses the `ts` fence and starts with `// TypeScript (.ts)`; Effect TypeScript shown for comparison uses `ts effect`. Show a file name in a first-line comment when it matters (`// main.effeck`, `// vite.config.ts`); its extension matches the fence. After a function, show the inferred contract as a comment when it teaches something: `// User!UserNotFound!Users`.
 
 ## The language in one page
 
@@ -44,7 +44,7 @@ Code blocks use the `ts` fence and are Effeck unless the first line says otherwi
 - **Data.** `schema User { id: string; role: "admin" | "member"; tags: ReadonlyArray<string>; home: Address }` declares the struct schema `User` and its decoded type in one declaration (short for `const User = Schema.Struct({ ... })` with `interface User extends Schema.Schema.Type<typeof User> {}`). A field may name another schema or a schema constant, such as `const Created = Schema.DateTimeUtc`. Use `Schema.Struct` for checks, transformations, and exact optional keys.
 - **Services are `service` declarations** (D128, D223): the members are bodiless contracts. A layer is a call: `Layer.effect(Users) { setup; return { ...members } }` through block params, or `Layer.succeed(Users, { ...members })` without setup (D221). Provide a layer to a block with `provide AppLive { ... }`, the keyword that matches `Effect.provide`, and one service with `provide Key = value { ... }`. Do not write `service class Users { }` or `layer UsersLive: Users { }`; both are old spellings that warn (EK2120, EK2121).
 
-  ```ts
+  ```effeck
   service Users {
     find(id: string): User!UserNotFound
   }

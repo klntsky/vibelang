@@ -4,7 +4,7 @@
 
 ## match
 
-```ts
+```effeck
 error NotFound { id: string }
 error Timeout
 error Denied { user: string; reason: string }
@@ -25,7 +25,7 @@ Each arm is `when pattern: expression;`. Arms are tried in order, and the first 
 
 An arm is one expression. Use `do { }` for several statements; its value is its last statement's:
 
-```ts
+```effeck
 function retryDelay(failure: Failure) {
   return match (failure) {
     when Timeout: do {
@@ -52,7 +52,7 @@ A function named `match` still works. Only `match (value) {` followed by `when`,
 | `and`, `or`, `not` | Both, either, or neither | `when "a" or "e":` |
 | Guard | A condition that is true | `when [let n] and if (n > 0):` |
 
-```ts
+```effeck
 function shape(value: ReadonlyArray<number> | { kind: string; size?: number }) {
   return match (value) {
     when []: "empty";
@@ -78,7 +78,7 @@ These matchers compile to the module's own test, so the bindings have exact type
 | `Result.Success`, `Result.Failure` | `Result.isSuccess`, `Result.isFailure` | the success, the failure |
 | `String`, `Number`, `Boolean`, `BigInt`, `Symbol` | `typeof` | the value |
 
-```ts
+```effeck
 function greeting(name: Option.Option<string>) {
   return match (name) {
     when Option.Some(let n): `Hello, ${n}`;
@@ -106,7 +106,7 @@ An `error` class matches its own instances, by `instanceof`, so two classes with
 
 A value with a `[customMatcher]` method decides for itself. `customMatcher` is the proposal's `Symbol.customMatcher`:
 
-```ts
+```effeck
 const Even = {
   [customMatcher](subject: unknown) {
     return typeof subject === "number" && subject % 2 === 0
@@ -127,7 +127,7 @@ For an extractor, the method receives `{ matchType: "extractor" }` as its second
 
 `and` needs both patterns, `or` either, and `not` neither. A guard, `if (condition)`, tests any expression and sees the bindings before it:
 
-```ts
+```effeck
 function classify(job: { status: string; attempts: number }) {
   return match (job) {
     when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
@@ -144,7 +144,7 @@ function classify(job: { status: string; attempts: number }) {
 
 `value is pattern` is `true` when the pattern matches. It binds as tightly as `instanceof`:
 
-```ts
+```effeck
 function isRetryable(failure: Failure) {
   return failure is Timeout or Denied
 }
@@ -152,7 +152,7 @@ function isRetryable(failure: Failure) {
 
 In the condition of an `if` or a `while`, joined by `&&`, the pattern can bind names. They are in scope in the rest of the condition and in the `if`'s first branch or the loop's body:
 
-```ts
+```effeck
 function firstFailure(id: string) {
   const outcome = exit(getUser(id))
   if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) {
@@ -168,7 +168,7 @@ Elsewhere, an `is` with bindings is EK4703.
 
 A match without a `default` arm whose value is a finite union must handle every case: literals, `null`, `undefined`, `error` classes, `Option`, `Exit`, `Result`, and other objects with a literal `_tag`. A missing case is a compile error:
 
-```ts
+```effeck
 // expect-error: EK4701
 type Phase = "draft" | "review" | "published"
 

@@ -6,7 +6,7 @@ Matching turns an outcome into one value or selects the next computation. Use ty
 
 ## Folding success and failure into values
 
-```ts
+```effeck
 error InvalidCount
 
 function itemCount(raw: number) {
@@ -27,7 +27,7 @@ function countLabel(raw: number) {
 
 ## Choosing effectful branches
 
-```ts
+```effeck
 function reportCount(raw: number) {
   return Effect.matchEffect(() => itemCount(raw), {
     onFailure: () => {
@@ -46,7 +46,7 @@ function reportCount(raw: number) {
 
 ## Matching complete failure causes
 
-```ts
+```effeck
 function outcomeLabel() {
   return Effect.matchCause(die(new Error("index invariant")), {
     onFailure: (cause) => cause.hasDies() ? "Index defect" : "Index stopped",
@@ -69,7 +69,7 @@ function reportOutcome() {
 
 ## Discarding failures or all causes
 
-```ts
+```effeck
 function ignoreRejectedCount() {
   Effect.ignore(itemCount(-2))
 }

@@ -4,7 +4,7 @@ Build a Stream from values, effectful work, or an existing source. Construction 
 
 ## Finite and empty streams
 
-```ts
+```effeck
 const labels = Stream.make("queued", "running", "complete")
 const absent = Stream.empty
 const signal = Stream.succeed(void 0)
@@ -20,7 +20,7 @@ function readPowers() {
 
 ## Successes and failures
 
-```ts
+```effeck
 error SourceClosed
 
 const ready = Stream.succeed("ready")
@@ -39,7 +39,7 @@ function readClosed() {
 
 ## Arrays and iterables
 
-```ts
+```effeck
 const fromArray = Stream.fromArray([11, 22])
 const fromBatches = Stream.fromArrays([11, 22], [33])
 const fromSet = Stream.fromIterable(new Set(["east", "west"]))
@@ -55,7 +55,7 @@ const codes = Stream.fromIterableEffect(() => Catalog.codes())
 
 ## Async iterables
 
-```ts
+```effeck
 error IteratorFailed {
   cause: unknown
 }
@@ -69,7 +69,7 @@ Pass an async iterable obtained from a TypeScript adapter or a service. The erro
 
 ## Effects and callbacks
 
-```ts
+```effeck
 const timestamp = Stream.fromEffect(Clock.currentTimeMillis)
 
 const notices = Stream.callback<string>((queue) => {
@@ -89,7 +89,7 @@ For a foreign event API, put the raw callback registration in a TypeScript adapt
 
 ## Scoped sources
 
-```ts
+```effeck
 function openSession() {
   log("open session")
   return Effect.acquireRelease(
@@ -105,7 +105,7 @@ const sessionNames = Stream.fromEffect(openSession()).map((session) => session.n
 
 ## Repeating values, streams, and effects
 
-```ts
+```effeck
 const pings = Stream.succeed("ping").forever()
 const rounds = Stream.make("start", "finish").repeat(Schedule.recurs(2))
 const times = Stream.fromEffectRepeat(() => Clock.currentTimeMillis())
@@ -126,7 +126,7 @@ Keep mutable per-run state inside a function, as in `countdown`, so separate con
 
 ## Periodic elements
 
-```ts
+```effeck
 const samples = Stream.tick("250 millis").mapEffect(() => Clock.currentTimeMillis())
 
 function collectSamples() {
@@ -138,7 +138,7 @@ function collectSamples() {
 
 ## Unfolding state and paginating responses
 
-```ts
+```effeck
 const halving = Stream.unfold(32, (n) => {
   if (n < 2) return undefined
   return [n, n / 2] as const
@@ -161,7 +161,7 @@ const names = Stream.paginate(0, (cursor) => {
 
 ## Queues and broadcasts
 
-```ts
+```effeck
 function queuedNumbers() {
   const queue = Queue.unbounded<number, Cause.Done>()
   queue.offer(8)
@@ -179,7 +179,7 @@ function fromBroadcast(bus: PubSub.PubSub<string>) {
 
 ## Schedules as sources
 
-```ts
+```effeck
 const policy = Schedule.spaced("400 millis").upTo({ times: 3 })
 const pulses = Stream.fromSchedule(policy)
 

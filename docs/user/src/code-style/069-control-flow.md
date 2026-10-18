@@ -4,7 +4,7 @@ Effeck uses ordinary branches and loops for sequential work. Effect's operators 
 
 ## Branching and conditional computations
 
-```ts
+```effeck
 error InvalidSize {
   size: number
 }
@@ -32,7 +32,7 @@ function announceIfEnabled(enabled: boolean) {
 
 ## Combining two results
 
-```ts
+```effeck
 function amount() {
   sleep("30 millis")
   return 18
@@ -66,7 +66,7 @@ function formattedPair() {
 
 ## Repeating work in loops
 
-```ts
+```effeck
 function inspectPages() {
   const inspected: number[] = []
   let page = 1
@@ -87,7 +87,7 @@ function logAttempts() {
 
 A loop can call services, pause, fail, and use `break` or `continue`. Keep accumulated results only when the caller needs them; a loop without an explicit return completes with `void`. Local state is recreated when the function runs again.
 
-```ts
+```effeck
 function operatorLoop() {
   let index = 0
   Effect.whileLoop({
@@ -102,7 +102,7 @@ In Effect 4.0.5, `whileLoop` accepts one options object and returns `void`. Its 
 
 ## Traversing collections and discarding values
 
-```ts
+```effeck
 function prepare(id: number) {
   sleep("10 millis")
   return `prepared-${id}`
@@ -124,7 +124,7 @@ function logAll() {
 
 ## Collecting programs
 
-```ts
+```effeck
 function collected() {
   const tuple = all([() => 12, () => "ready"] as const)
   const object = all({ count: () => 12, status: () => "ready" })
@@ -141,7 +141,7 @@ function collected() {
 
 ## Early termination and alternate collection modes
 
-```ts
+```effeck
 error Unavailable {
   id: number
 }

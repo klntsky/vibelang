@@ -4,7 +4,7 @@
 
 ## Representing full outcomes
 
-```ts
+```effeck
 error ExportRejected {
   reason: string
 }
@@ -22,7 +22,7 @@ An exit is `Success` with `.value`, or `Failure` with `.cause`. `Effect.exit` ru
 
 ## Creating success and cause-based failure exits
 
-```ts
+```effeck
 function sampleOutcomes() {
   const successful = Exit.succeed(12)
   const failed = Exit.failCause(
@@ -41,7 +41,7 @@ function constantSuccess() {
 
 ## Matching exit variants
 
-```ts
+```effeck
 function describe<A, E>(outcome: Exit.Exit<A, E>) {
   return match (outcome) {
     when Exit.Success(let value): `Completed: ${String(value)}`;
@@ -54,7 +54,7 @@ function describe<A, E>(outcome: Exit.Exit<A, E>) {
 
 ## Relating exits to results
 
-```ts
+```effeck
 function asResult<A, E>(outcome: Exit.Exit<A, E>) {
   if (outcome.isSuccess()) return Result.succeed(outcome.value)
   return Result.fail(outcome.cause)
@@ -66,7 +66,7 @@ An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result
 
 ## Relating exits to effects
 
-```ts
+```effeck
 function replay<A, E>(outcome: Exit.Exit<A, E>) {
   return outcome()
 }

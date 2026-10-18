@@ -4,7 +4,7 @@ Tracing records an operation's duration and its relationship to other operations
 
 ## Relating spans to traces
 
-```ts
+```effeck
 function requestTrace() {
   return withSpan("report-request") {
     sleep("10 millis")
@@ -17,7 +17,7 @@ A span describes one operation with a name, identifiers, timestamps, status, and
 
 ## Adding spans around computations
 
-```ts
+```effeck
 function renderReport(format: string) {
   return withSpan("render-report", { attributes: { "report.format": format } }) {
     sleep("20 millis")
@@ -31,7 +31,7 @@ function renderReport(format: string) {
 
 ## Exporting spans and SDK boundaries
 
-```ts
+```effeck
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"
@@ -55,7 +55,7 @@ An application that already owns an OpenTelemetry SDK tracer provider can initia
 
 ## Inspecting failures and attributes
 
-```ts
+```effeck
 error RenderFailed {
   format: string
 }
@@ -74,7 +74,7 @@ An exported failure includes error status and failure details, while attributes 
 
 ## Representing logs as span events
 
-```ts
+```effeck
 function tracedLogs() {
   Effect.provide(() => withSpan("generate-artifact") {
     logInfo("input validated")
@@ -91,7 +91,7 @@ The tracer logger records logs within an active span as timestamped events. Thos
 
 ## Nesting operations
 
-```ts
+```effeck
 function loadTemplate() {
   return withSpan("load-template") {
     sleep("10 millis")
@@ -112,7 +112,7 @@ The inner spans inherit the outer span as parent. Their trace IDs match, while e
 
 ## Viewing traces locally
 
-```ts
+```effeck
 function demonstration() {
   provide Tracing { generate() }
 }
@@ -124,7 +124,7 @@ Open a `generate-report` trace to compare parent duration, child durations, attr
 
 ## Connecting external tracing services
 
-```ts
+```effeck
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"

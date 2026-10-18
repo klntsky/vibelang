@@ -6,7 +6,7 @@ A missing record and a broken invariant need different responses. Effeck tracks 
 
 ## Separating failures from defects
 
-```ts
+```effeck
 error UnknownProduct {
   sku: string
 }
@@ -34,7 +34,7 @@ Interruption is a third kind of termination. It also bypasses `catch`; both inte
 
 ## Choosing the error type
 
-```ts
+```effeck
 function percentage(part: number, total: number) {
   if (total <= 0) {
     die(new Error("validated total must be positive"))

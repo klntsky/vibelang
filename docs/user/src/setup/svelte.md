@@ -53,7 +53,7 @@ export default defineConfig({
 
 Create `src/cart.effeck`. `quote` reserves a product and recovers from `OutOfStock`, and `quoteCart` runs two quotes concurrently with `await.all`:
 
-```ts
+```effeck
 // src/cart.effeck
 export schema Product { sku: string; name: string; cents: number; stock: number }
 
@@ -133,7 +133,7 @@ Render it from a component the app already has, such as `src/App.svelte`: add `i
 
 Create `src/cart.test.effeck`:
 
-```ts
+```effeck
 // src/cart.test.effeck
 import { assert, it } from "@effect/vitest"
 import { InventoryLive, Inventory, OutOfStock, quote, quoteCart } from "./cart.effeck"

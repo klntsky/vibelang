@@ -4,7 +4,7 @@ Many Effect APIs accept either the data followed by options or options followed 
 
 ## Data first or data last
 
-```ts
+```effeck
 const source = Stream.make(5, 10, 15)
 const direct = source.map((n) => n / 5)
 const stage = Stream.map((n: number) => n / 5)
@@ -20,7 +20,7 @@ The direct form supplies `source` in the first call. The data-last form first bu
 
 ## Direct calls and program pipelines
 
-```ts
+```effeck
 function lookup() {
   sleep("10 millis")
   return "found"
@@ -39,7 +39,7 @@ Each `%` stands for the expression before its `|>`. Where `%` is an argument tha
 
 ## Choosing a form
 
-```ts
+```effeck
 function boundedLookup() {
   return retry(lookup(), { times: 2 })
 }

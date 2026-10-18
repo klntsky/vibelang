@@ -23,7 +23,7 @@ export async function runDocs(root: string, out: string, scope: string, fork: st
   const pages = fixture ? ["self-test.md"] : markdownPages(path.join(root, "docs/user"))
   for (const page of pages) {
     const markdown = fixture ? path.join(base, page) : page
-    if (fixture) fs.writeFileSync(markdown, '```ts\nfunction f(xs: Items) {\n  xs.forEach((x) => {\n    log(x)\n    g(x)\n  })\n}\n```')
+    if (fixture) fs.writeFileSync(markdown, '```effeck\nfunction f(xs: Items) {\n  xs.forEach((x) => {\n    log(x)\n    g(x)\n  })\n}\n```')
     const blocks = extract(fs.readFileSync(markdown,"utf8"))
     if (!blocks.length) continue
     const dir = path.join(base, `page-${projects.length}`)

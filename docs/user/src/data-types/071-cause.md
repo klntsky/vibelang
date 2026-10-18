@@ -4,7 +4,7 @@
 
 ## Representing failure reasons
 
-```ts
+```effeck
 const expected = Cause.fail("record missing")
 const defect = Cause.die(new Error("invariant broken"))
 const interrupted = Cause.interrupt(17)
@@ -16,7 +16,7 @@ empty.reasons.length // 0
 
 ## Combining reasons
 
-```ts
+```effeck
 const combined = Cause.fail("export failed").combine(Cause.die(new Error("cleanup failed")))
 combined.reasons.map((reason) => reason._tag) // ["Fail", "Die"]
 ```
@@ -25,7 +25,7 @@ Effect 4 stores reasons in a flat array. `combine` retains both sets of reasons;
 
 ## Extracting a computation's cause
 
-```ts
+```effeck
 error MissingRecord {
   id: string
 }
@@ -45,7 +45,7 @@ function diagnose() {
 
 ## Identifying reason variants
 
-```ts
+```effeck
 function classify<E>(cause: Cause.Cause<E>) {
   const summary = {
     failed: cause.hasFails(),
@@ -68,7 +68,7 @@ Cause predicates answer whether a kind of reason is present. Reason guards narro
 
 ## Formatting and inspecting errors
 
-```ts
+```effeck
 function inspect<E>(cause: Cause.Cause<E>) {
   const failures = cause.reasons
     .filter(Cause.isFailReason)

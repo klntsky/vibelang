@@ -4,7 +4,7 @@ Transformations work in Effeck as in Effect: a codec validates one representatio
 
 ## Defining reversible infallible conversions
 
-```ts
+```effeck
 const Availability = Schema.Literals(["ready", "held"]).pipe(
   Schema.decodeTo(Schema.Boolean, SchemaTransformation.transform({
     decode: (status) => status === "ready",
@@ -21,7 +21,7 @@ function readAvailability(input: unknown) {
 
 ## Understanding transformation inputs and outputs
 
-```ts
+```effeck
 const NumericAvailability = Schema.FiniteFromString.pipe(
   Schema.decodeTo(Availability, SchemaTransformation.transform({
     decode: (quantity) => quantity > 0 ? "ready" : "held",
@@ -40,7 +40,7 @@ The middle functions above handle a number and a status string, even though the 
 
 ## Defining fallible conversions
 
-```ts
+```effeck
 const DeliveryMode = Schema.String.pipe(
   Schema.decodeTo(Schema.Literals(["road", "rail"]), {
     decode: SchemaGetter.transformEffect<"road" | "rail", string>((text) => {
@@ -57,7 +57,7 @@ const DeliveryMode = Schema.String.pipe(
 
 ## Running asynchronous conversions with dependencies
 
-```ts
+```effeck
 error UnknownRoute {
   code: string
 }
@@ -98,7 +98,7 @@ The getter can pause while its service runs. Decoding requires `Routes`; encodin
 
 ## Forbidding an encoding direction
 
-```ts
+```effeck
 const Initial = Schema.NonEmptyString.pipe(
   Schema.decodeTo(Schema.String, {
     decode: SchemaGetter.transform((name) => name[0]),
@@ -115,7 +115,7 @@ A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue
 
 ## Composing transformations and effectful checks
 
-```ts
+```effeck
 const SemicolonNumbers = Schema.String.pipe(
   Schema.decodeTo(Schema.Array(Schema.String), SchemaTransformation.transform({
     decode: (text): ReadonlyArray<string>!! => text.split(";"),
@@ -145,7 +145,7 @@ When converting a collection whose elements have already been decoded, use `Sche
 
 ## Converting string case, JSON, and binary encodings
 
-```ts
+```effeck
 const LowerLabel = Schema.String.pipe(
   Schema.decodeTo(
     Schema.String.check(Schema.isLowercased()),
@@ -170,7 +170,7 @@ function decodeTextFormats() {
 
 ## Parsing numeric, date, and decimal values
 
-```ts
+```effeck
 const Manifest = Schema.Struct({
   units: Schema.FiniteFromString,
   sequence: Schema.BigIntFromString,

@@ -4,7 +4,7 @@ A `SynchronizedRef` serializes updates that need to run Effects. Use it when the
 
 ## Serializing effectful updates
 
-```ts
+```effeck
 function recordRevisions() {
   const revisions = SynchronizedRef.make<ReadonlyArray<number>>([])
   forEach([1, 2, 3], (id) => {
@@ -21,7 +21,7 @@ The callbacks acquire the reference's update lock one at a time, even though thr
 
 ## Reading synchronized references
 
-```ts
+```effeck
 function inspect() {
   const state = SynchronizedRef.make({ version: 0, ready: false })
   const before = SynchronizedRef.get(state)
@@ -35,7 +35,7 @@ function inspect() {
 
 ## Keeping dependent asynchronous updates atomic
 
-```ts
+```effeck
 error RefreshFailed
 
 service Versions {

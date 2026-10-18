@@ -4,7 +4,7 @@
 
 ## Element, error, and service types
 
-```ts
+```effeck
 error FeedUnavailable
 
 service Feed {
@@ -26,7 +26,7 @@ Effect's Stream, Filter, and Cause value builders are trusted library calls. Cal
 
 ## Choosing a streaming use case
 
-```ts
+```effeck
 function firstFiveTickets() {
   const tickets = Stream.iterate(100, (n) => n + 1)
   return tickets.take(5).runCollect()
@@ -38,7 +38,7 @@ The source has no natural end, but the consumer requests only five elements. The
 
 ## Streams and individual effects
 
-```ts
+```effeck
 function oneResult() {
   return [12, 24, 36]
 }
@@ -61,7 +61,7 @@ A successful function call returns one result, even if that result is an array. 
 
 ## Incremental production and backpressure
 
-```ts
+```effeck
 function printReadings() {
   const source = Stream.range(20, 25).mapEffect((n) => {
     log(`prepare ${n}`)
@@ -76,7 +76,7 @@ function printReadings() {
 
 The consumer controls demand, so production slows when consumption slows. Streams exchange internal batches, so a source can prepare more than one element per pull. Buffering and concurrency introduce explicit read-ahead; backpressure does not mean exactly one element is ever in memory.
 
-```ts
+```effeck
 function* readings() {
   for (let n = 1; n <= 3; n++) {
     sleep("50 millis")

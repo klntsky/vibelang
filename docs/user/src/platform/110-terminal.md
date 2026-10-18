@@ -4,7 +4,7 @@
 
 ## Requesting terminal services
 
-```ts
+```effeck
 function dimensions() {
   const terminal = Effect.service(Terminal.Terminal)
   return { columns: terminal.columns(), rows: terminal.rows() }
@@ -16,7 +16,7 @@ function dimensions() {
 
 ## Writing standard output
 
-```ts
+```effeck
 // main.effeck
 import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
 function main() {
@@ -31,7 +31,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeTerminal.layer))
 
 ## Reading standard input
 
-```ts
+```effeck
 function askName() {
   const terminal = Effect.service(Terminal.Terminal)
   terminal.display("Your name: ")
@@ -45,7 +45,7 @@ function askName() {
 
 ## Handling terminal quit errors
 
-```ts
+```effeck
 function askNameOrQuit() {
   try {
     askName()
@@ -60,7 +60,7 @@ function askNameOrQuit() {
 
 ## Building an interactive guessing program
 
-```ts
+```effeck
 // guessing.effeck
 import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
 function parseGuess(input: string) {

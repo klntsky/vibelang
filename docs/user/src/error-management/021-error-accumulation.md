@@ -6,7 +6,7 @@ Independent checks often need to report every problem in one response. Use valid
 
 ## Validating every computation
 
-```ts
+```effeck
 error InvalidHandle {
   input: string
 }
@@ -29,7 +29,7 @@ function validateTeam() {
 
 `Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel contains a nonempty array of every domain error and the successful values are discarded. If all succeed, it returns an array of successes.
 
-```ts
+```effeck
 function checkTeamOnly() {
   Effect.validate(["RIVER", "SKY"], (input) => validateHandle(input), {
     discard: true,
@@ -42,7 +42,7 @@ function checkTeamOnly() {
 
 ## Partitioning successes and failures
 
-```ts
+```effeck
 function inspectTeam() {
   const [handles, errors] = Effect.partition(
     ["Jo", "RIVER", ""],

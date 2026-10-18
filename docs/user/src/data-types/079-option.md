@@ -4,7 +4,7 @@
 
 ## Representing optional values and properties
 
-```ts
+```effeck
 interface Contact {
   name: string
   nickname: Option.Option<string>
@@ -18,7 +18,7 @@ The `nickname` property always exists; its value records presence or absence. An
 
 ## Constructing and identifying variants
 
-```ts
+```effeck
 const present = Option.some(24)
 const absent = Option.none<number>()
 const positive = Option.liftPredicate((n: number) => n > 0)
@@ -34,7 +34,7 @@ function label(value: Option.Option<number>) {
 
 `some` wraps a value, while `none` carries no payload. `liftPredicate` creates a function that returns `Some` only for values passing its predicate. Guards narrow the union so `.value` is available only for `Some`.
 
-```ts
+```effeck
 function describe(value: Option.Option<string>) {
   return value.match({
     onNone: () => "Anonymous",
@@ -47,7 +47,7 @@ function describe(value: Option.Option<string>) {
 
 ## Mapping, sequencing, and filtering present values
 
-```ts
+```effeck
 interface Address {
   street: Option.Option<string>
 }
@@ -63,7 +63,7 @@ function streetLabel(address: Option.Option<Address>) {
 
 ## Extracting values with defaults or exceptions
 
-```ts
+```effeck
 function extract(value: Option.Option<string>) {
   return {
     defaulted: value.getOrElse(() => "Guest"),
@@ -79,7 +79,7 @@ const certain = Option.some("known").getOrThrow()
 
 ## Choosing fallback options
 
-```ts
+```effeck
 function choose(
   preferred: Option.Option<string>,
   backup: Option.Option<string>
@@ -96,7 +96,7 @@ const first = Option.firstSomeOf([
 
 ## Adapting nullable values
 
-```ts
+```effeck
 Option.fromNullishOr(null) // None
 Option.fromNullishOr(undefined) // None
 Option.fromNullishOr(0) // Some containing 0
@@ -107,7 +107,7 @@ Option.fromNullishOr("") // Some containing ""
 
 ## Converting options into effects
 
-```ts
+```effeck
 function requiredName(name: Option.Option<string>) {
   return Effect.fromOption(name)
 }
@@ -125,7 +125,7 @@ function requiredPair() {
 
 ## Combining options
 
-```ts
+```effeck
 function combine(
   name: Option.Option<string>,
   count: Option.Option<number>
@@ -158,7 +158,7 @@ export function combineOptions(
 }
 ```
 
-```ts
+```effeck
 import { combineOptions } from "./combine-options.ts"
 
 function combinedData() {
@@ -172,7 +172,7 @@ function combinedData() {
 
 ## Deriving equality and ordering
 
-```ts
+```effeck
 import { Array as Arr } from "effect"
 const same = Option.makeEquivalence(Equivalence.Number)
 same(Option.some(4), Option.some(4)) // true

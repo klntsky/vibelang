@@ -4,7 +4,7 @@ A consumer runs a Stream and returns one result. Inside an Effeck function, call
 
 ## Collecting elements
 
-```ts
+```effeck
 function collectLabels() {
   return Stream.make("north", "south", "west").runCollect()
 }
@@ -15,7 +15,7 @@ function collectLabels() {
 
 ## Executing per-element effects
 
-```ts
+```effeck
 function announce() {
   Stream.make("build", "test", "package").runForEach((stage) => {
     log(`starting ${stage}`)
@@ -29,7 +29,7 @@ function announce() {
 
 ## Stopping conditionally
 
-```ts
+```effeck
 function reachBudget() {
   let total = 0
   Stream.make(3, 5, 8, 13).runForEachWhile((amount) => {
@@ -44,7 +44,7 @@ The callback returns `true` to continue or `false` to stop. The element that ret
 
 ## Folding into an accumulator
 
-```ts
+```effeck
 function totalBytes() {
   return Stream.make(256, 512, 128).runFold(() => 0, (total, n) => total + n)
 }
@@ -63,7 +63,7 @@ The initial-state callback runs for each consumption, which also supports fresh 
 
 ## Running a sink
 
-```ts
+```effeck
 function readHeader() {
   const source = Stream.make("version", "length", "body")
   return source.run(Sink.take<string>(2))

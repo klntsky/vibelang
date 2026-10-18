@@ -4,7 +4,7 @@ Schema constructors work as in Effect and operate on decoded values. They apply 
 
 ## Constructing structs and records
 
-```ts
+```effeck
 const Label = Schema.Struct({ text: Schema.NonEmptyString })
 const LabelsById = Schema.Record(Schema.String, Schema.NonEmptyString)
 
@@ -19,7 +19,7 @@ Every schema exposes `make`, `makeOption`, and `makeEffect`. A constructor takes
 
 ## Applying filters and brands during construction
 
-```ts
+```effeck
 const CaseCount = Schema.FiniteFromString.check(
   Schema.isInt(), Schema.isBetween({ minimum: 1, maximum: 48 })
 ).pipe(Schema.brand("CaseCount"))
@@ -33,7 +33,7 @@ Filters run during construction as well as parsing. A filter leaves the static t
 
 ## Handling constructor failures
 
-```ts
+```effeck
 function constructOrExplain(value: number) {
   try {
     return String(CaseCount.makeEffect(value))
@@ -55,7 +55,7 @@ function constructWithThrowingApi(value: number) {
 
 ## Setting nested and lazy defaults
 
-```ts
+```effeck
 const Packing = Schema.Struct({
   handling: Schema.String.pipe(Schema.withConstructorDefault(() => "standard")),
   dimensions: Schema.Struct({
@@ -77,7 +77,7 @@ The default program may fail with schema issues but cannot require services. `ma
 
 ## Reusing defaults
 
-```ts
+```effeck
 const ReturnPacking = Schema.Struct({
   reason: Schema.String,
   handling: Packing.fields.handling,
@@ -93,7 +93,7 @@ Defaults belong to field descriptions. Reusing a field carries its constructor d
 
 ## Initializing schema-backed classes
 
-```ts
+```effeck
 class PackingRequest extends Schema.Class<PackingRequest>("PackingRequest")({
   reference: Schema.String,
   handling: Packing.fields.handling,

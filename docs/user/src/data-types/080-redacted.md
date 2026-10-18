@@ -4,7 +4,7 @@
 
 ## Wrapping sensitive values
 
-```ts
+```effeck
 const exampleKey = Redacted.make("example-key-not-a-real-secret")
 String(exampleKey) // "<redacted>"
 
@@ -17,7 +17,7 @@ function reportConfiguration() {
 
 ## Revealing values deliberately
 
-```ts
+```effeck
 service CredentialsClient {
   authenticate(token: string): boolean!!
 }
@@ -32,7 +32,7 @@ function authenticate(token: Redacted.Redacted<string>) {
 
 ## Wiping stored secrets
 
-```ts
+```effeck
 function useOnce(raw: string) {
   const token = Redacted.make(raw)
   try {
@@ -47,7 +47,7 @@ function useOnce(raw: string) {
 
 ## Comparing protected values
 
-```ts
+```effeck
 const same = Redacted.makeEquivalence(Equivalence.String)
 const first = Redacted.make("example-a")
 const second = Redacted.make("example-a")

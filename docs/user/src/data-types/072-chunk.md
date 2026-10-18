@@ -4,7 +4,7 @@
 
 ## Choosing sequence storage
 
-```ts
+```effeck
 function collectBatches(batches: ReadonlyArray<ReadonlyArray<string>>) {
   let result = Chunk.empty<string>()
   for (const batch of batches) {
@@ -18,7 +18,7 @@ A chunk preserves sequence order and shares internal structure across updates. T
 
 ## Building chunks
 
-```ts
+```effeck
 const empty = Chunk.empty<string>()
 const pair = Chunk.make("north", "south")
 const fromArray = Chunk.fromIterable(["east", "west"])
@@ -29,7 +29,7 @@ const fromSet = Chunk.fromIterable(new Set(["center"]))
 
 ## Reusing an array unsafely
 
-```ts
+```effeck
 function ownedBatch() {
   const values = ["queued", "running"]
   return Chunk.fromArrayUnsafe(values)
@@ -41,7 +41,7 @@ function ownedBatch() {
 
 ## Concatenating and dropping elements
 
-```ts
+```effeck
 const original = Chunk.make("draft", "review")
 const extended = original.appendAll(Chunk.make("published"))
 const remaining = extended.drop(1)
@@ -53,7 +53,7 @@ remaining.toReadonlyArray() // ["review", "published"]
 
 ## Checking structural equality
 
-```ts
+```effeck
 const first = Chunk.make({ code: "A" }, { code: "B" })
 const same = Chunk.make({ code: "A" }, { code: "B" })
 const reversed = Chunk.make({ code: "B" }, { code: "A" })
@@ -65,7 +65,7 @@ Equality compares lengths and corresponding elements using Effect's equality rul
 
 ## Converting to arrays
 
-```ts
+```effeck
 const nonempty = Chunk.make(7, 8).toReadonlyArray()
 const none = Chunk.toReadonlyArray(Chunk.empty<number>())
 const mutableCopy = [...nonempty]

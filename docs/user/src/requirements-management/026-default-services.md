@@ -6,7 +6,7 @@ Clock, random generation, console output, configuration sources, and tracing hav
 
 ## Using the clock, random, and console
 
-```ts
+```effeck
 function startupMessage() {
   const started = Clock.currentTimeMillis()
   const sample = Random.next()
@@ -19,7 +19,7 @@ function startupMessage() {
 
 The five default references are `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, and `Tracer.Tracer`. Import their modules from `effect` when using them. Their defaults explain why the example's `R` is `never` even though it reads time and random state.
 
-```ts
+```effeck
 const Port = Config.withDefault(Config.Port("PORT"), 3000)
 
 function configuredPort() {
@@ -32,7 +32,7 @@ function configuredPort() {
 
 ## Replacing default implementations
 
-```ts
+```effeck
 function fixedRandomSample() {
   return Effect.provideService(Random.next(), Random.Random, {
     nextDoubleUnsafe: () => 0.25,
@@ -45,7 +45,7 @@ function fixedRandomSample() {
 
 An override remains in effect across pauses and is inherited by new child fibers. It does not change unrelated programs. Prefer module helpers when they supply the behavior you need without implementing a whole service.
 
-```ts
+```effeck
 service DisplaySettings {
   prefix: string
   static readonly default: DisplaySettings = { prefix: "Ticket" }
@@ -61,7 +61,7 @@ A service with `static readonly default` compiles to a `Context.Reference`, so u
 
 ## Reproducible random computations
 
-```ts
+```effeck
 function pair() {
   return [Random.next(), Random.next()]
 }

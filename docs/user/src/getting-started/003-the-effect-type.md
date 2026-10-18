@@ -4,7 +4,7 @@
 
 ## Success, failure, and services
 
-```ts
+```effeck
 error MissingRate {
   currency: string
 }
@@ -31,7 +31,7 @@ Errors and services from several calls accumulate as unions. Catching a failure 
 
 ## Write a contract
 
-```ts
+```effeck
 function rateOf(currency: string): number!MissingRate!Rates {
   return Rates.lookup(currency)
 }
@@ -52,7 +52,7 @@ Hovers show contracts this way, and declaration files keep `Effect.Effect<A, E, 
 
 ## Check selected channels
 
-```ts
+```effeck
 function rate(currency: string): Effect<number, infer E, Rates> {
   return Rates.lookup(currency)
 }
@@ -82,7 +82,7 @@ This applies only to function return annotations with bodies in `.effeck`. In pa
 
 ## Description and execution
 
-```ts
+```effeck
 const conversion = () => convert(30, "EUR")
 
 function displayedPrice() {
@@ -99,7 +99,7 @@ The result type must be `Effect` itself for a call to run it automatically. `Con
 
 ## Extract inferred channel types
 
-```ts
+```effeck
 // convert.effeck
 export function double(amount: number) {
   return amount * 2

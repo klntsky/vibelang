@@ -4,7 +4,7 @@ These recipes use ordinary functions as repeatable programs. Each recipe bounds 
 
 ## Honoring server retry hints
 
-```ts
+```effeck
 error Throttled {
   retryAfter: Duration.Duration
 }
@@ -33,7 +33,7 @@ Parse the response's retry hint into a duration at the HTTP boundary. The policy
 
 ## Polling with response-dependent delays
 
-```ts
+```effeck
 type Status =
   | { _tag: "Pending"; pollAfter: Duration.Duration }
   | { _tag: "Ready"; path: string }
@@ -68,7 +68,7 @@ A pending response is a success, so it feeds `repeat` rather than `retry`. This 
 
 ## Bounding the whole retry operation
 
-```ts
+```effeck
 error Offline
 
 function readWithDeadline() {
@@ -84,7 +84,7 @@ The outer timeout covers the first attempt, every wait, and every retry. Placing
 
 ## Switching from rapid to slower retries
 
-```ts
+```effeck
 error Disconnected
 
 function reconnect() {
@@ -102,7 +102,7 @@ The first two retries use short waits; later retries use four second waits. This
 
 ## Recording retry decisions
 
-```ts
+```effeck
 error Unavailable {
   status: number
 }

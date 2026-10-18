@@ -12,7 +12,7 @@ The core package supplies Effect's data types, schedules, concurrency tools, and
 
 ## Module and namespace imports
 
-```ts
+```effeck
 function pauseBeforeRetry() {
   const started = Clock.currentTimeMillis()
   sleep(Duration.millis(25))
@@ -26,7 +26,7 @@ const backoff = Schedule.exponential("50 millis")
 
 JavaScript's own globals keep their names. `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules with those names under another name:
 
-```ts
+```effeck
 import { Array as Arr } from "effect"
 
 function firstTwo(values: ReadonlyArray<number>) {
@@ -38,7 +38,7 @@ A host's globals do not shadow Effect's modules: with the DOM in your `lib`, `Op
 
 ## Compose standalone functions
 
-```ts
+```effeck
 function expirationWindow() {
   const short = Duration.seconds(15)
   return short.toMillis()
@@ -56,7 +56,7 @@ Effeck's global names are source conveniences. They refer to Effect and language
 
 ## Reusable operators
 
-```ts
+```effeck
 function withinSecond<A, E, R>(program: () => A!E!R) {
   return timeout(program, "1 second")
 }

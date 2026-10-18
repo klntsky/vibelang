@@ -4,7 +4,7 @@
 
 ## Creating values with structural equality
 
-```ts
+```effeck
 const first = { route: "inbox", filters: { unread: true } }
 const second = { route: "inbox", filters: { unread: true } }
 Equal.equals(first, second) // true
@@ -21,7 +21,7 @@ Plain records, tuples, arrays, maps, and sets need no `Data` wrapper for structu
 
 ## Building ordinary and tagged classes
 
-```ts
+```effeck
 class Label extends Data.Class<{ readonly text: string }> {
   get upper() { return this.text.toUpperCase() }
 }
@@ -40,7 +40,7 @@ new Archived({ documentId: "doc-3" })._tag // "Archived"
 
 ## Defining tagged unions with matching helpers
 
-```ts
+```effeck
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
   Sent: { tracking: string }
@@ -66,7 +66,7 @@ describe(sent) // "Tracking: parcel-8"
 
 ## Adding generic union cases
 
-```ts
+```effeck
 type LoadState<A, E> = Data.TaggedEnum<{
   Idle: {}
   Ready: { value: A }
@@ -87,7 +87,7 @@ const idle = LoadState.Idle()
 
 ## Defining ordinary and tagged errors
 
-```ts
+```effeck
 class InvalidDocument extends Data.Error<{
   readonly message: string
   readonly line: number
@@ -116,7 +116,7 @@ function documentOrDraft(id: string) {
 
 ## Preserving native error causes
 
-```ts
+```effeck
 error DocumentDecodeError {
   cause: unknown
 }

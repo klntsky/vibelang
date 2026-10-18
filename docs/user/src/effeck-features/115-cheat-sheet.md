@@ -2,7 +2,7 @@
 
 Every Effeck change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is Effeck. The [specification](../../../design/src/000-intro.md) states the rules behind each change. The examples share these declarations:
 
-```ts es
+```effeck es
 error NotFound { id: string }
 
 interface User { id: string; name: string }
@@ -38,7 +38,7 @@ const hello = (id: string): Effect.Effect<string, NotFound> =>
   Effect.map(getUser(id), (user) => `Hello, ${user.name}`)
 ```
 
-```ts es
+```effeck es
 type Find = (id: string) => User!NotFound
 type Release = (version: string) => string!!Approval
 type Load = () => string!!
@@ -56,7 +56,7 @@ class Missing extends Data.TaggedError("Missing")<{ readonly id: string }> {}
 class Timeout extends Data.TaggedError("Timeout") {}
 ```
 
-```ts es
+```effeck es
 error Missing { id: string }
 error Timeout
 ```
@@ -70,7 +70,7 @@ class Users extends Context.Service<Users, {
 }>()("app/Users") {}
 ```
 
-```ts es
+```effeck es
 service Users {
   find(id: string): User!NotFound
   region: string
@@ -79,13 +79,13 @@ service Users {
 
 **Control operations** (D128, D223). Effect has none, so the left column is Effeck's long form.
 
-```ts long
+```effeck long
 abstract class Review extends Control {
   abstract approve(request: string): Effect<boolean, never, never>
 }
 ```
 
-```ts es
+```effeck es
 control Review {
   approve(request: string): boolean!!
 }
@@ -100,7 +100,7 @@ const UsersLive = Layer.effect(Users, Effect.gen(function* () {
 }))
 ```
 
-```ts es
+```effeck es
 const UsersLive = Layer.effect(Users) {
   const seen = new Set<string>()
   return {
@@ -121,7 +121,7 @@ const Account = Schema.Struct({
 interface Account extends Schema.Schema.Type<typeof Account> {}
 ```
 
-```ts es
+```effeck es
 schema Account {
   id: string
   nickname?: string
@@ -135,7 +135,7 @@ schema Account {
 interface Cart { readonly id: string; items: Array<string> }
 ```
 
-```ts es
+```effeck es
 interface Cart { id: string; mutable items: Array<string> }
 ```
 
@@ -151,7 +151,7 @@ const greetUser = Effect.fn("greetUser")(function* (id: string) {
 })
 ```
 
-```ts es
+```effeck es
 function greetUser(id: string) {
   const user = getUser(id)
   log(`Hello, ${user.name}`)
@@ -166,7 +166,7 @@ const user = yield* getUser("1")
 const first = yield* Effect.race(getUser("1"), getUser("2"))
 ```
 
-```ts es
+```effeck es
 function fastest() {
   const user = getUser("1")
   return race(getUser("1"), getUser("2"))
@@ -182,7 +182,7 @@ const program = Effect.gen(function* () {
 }).pipe(Effect.provide(UsersLive))
 ```
 
-```ts es
+```effeck es
 function program() {
   provide UsersLive {
     return Users.find("1")
@@ -200,7 +200,7 @@ const roll = Random.nextInt.pipe(
 )
 ```
 
-```ts es
+```effeck es
 const seeded = { nextIntUnsafe: () => 4, nextDoubleUnsafe: () => 0.5 }
 
 function roll(): number!! {
@@ -219,7 +219,7 @@ const describe = (id: string) =>
   )
 ```
 
-```ts es
+```effeck es
 function describe(id: string) {
   try {
     return getUser(id).name
@@ -240,7 +240,7 @@ const nameOrGuest = (id: string) =>
   )
 ```
 
-```ts es
+```effeck es
 function nameOrGuest(id: string) {
   return getUser(id).name catch "guest"
 }
@@ -255,7 +255,7 @@ const nameOrReason = (id: string) =>
   )
 ```
 
-```ts es
+```effeck es
 function nameOrReason(id: string) {
   return getUser(id).name catch (e) => match (e) {
     when NotFound: `no user ${e.id}`;
@@ -265,7 +265,7 @@ function nameOrReason(id: string) {
 
 **Handling control operations** (D132). Effect has none, so the left column is Effeck's long form.
 
-```ts long
+```effeck long
 function auto(version: string) {
   return handle(() => release(version), Approval, {
     approve(_request, continuation) {
@@ -275,7 +275,7 @@ function auto(version: string) {
 }
 ```
 
-```ts es
+```effeck es
 function auto(version: string) {
   try {
     return release(version)
@@ -294,7 +294,7 @@ export const main = Effect.log("Hello")
 NodeRuntime.runMain(main)
 ```
 
-```ts es
+```effeck es
 export function main() {
   log("Hello")
 }
@@ -311,7 +311,7 @@ const safe = (id: string) =>
   )
 ```
 
-```ts es
+```effeck es
 function safe(id: string) {
   return match (exit(getUser(id))) {
     when Exit.Success(let user): user.name;
@@ -328,7 +328,7 @@ const logged = getUser("1").pipe(
 )
 ```
 
-```ts es
+```effeck es
 function logged() {
   const outcome = exit(getUser("1"))
   if (outcome is Exit.Failure(let cause)) {
@@ -347,7 +347,7 @@ const tracked = getUser("1").pipe(
 )
 ```
 
-```ts es
+```effeck es
 function tracked() {
   try {
     return getUser("1")
@@ -365,7 +365,7 @@ yield* Effect.yieldNow
 if (result._tag === "Failure") yield* Effect.interrupt
 ```
 
-```ts es
+```effeck es
 function outcome() {
   const result = exit(getUser("1"))
   yieldNow()
@@ -387,7 +387,7 @@ const guarded = Effect.uninterruptibleMask((restore) =>
 const cancellable = Effect.interruptible(getOrders("1"))
 ```
 
-```ts es
+```effeck es
 function guarded() {
   uninterruptible {
     const user = getUser("1")
@@ -414,7 +414,7 @@ import { Console } from "effect"
 const ready = Console.log("ready")
 ```
 
-```ts es
+```effeck es
 function ready() {
   Console.log("ready")
 }
@@ -429,7 +429,7 @@ const patient = Effect.gen(function* () {
 })
 ```
 
-```ts es
+```effeck es
 function patient() {
   sleep("10 millis")
   return timeout(retry(getUser("1"), Schedule.recurs(2)), "1 second")
@@ -445,7 +445,7 @@ const hot = Stream.take(
 )
 ```
 
-```ts es
+```effeck es
 function hot() {
   return Stream.make(18, 25, 30).filter((c) => c >= 25).map((c) => `${c} C`).take(2)
 }
@@ -460,7 +460,7 @@ const piped = getUser("1").pipe(
 )
 ```
 
-```ts es
+```effeck es
 function piped() {
   return getUser("1") |> retry(%, Schedule.recurs(2)) |> timeout(%, "1 second")
 }
@@ -475,7 +475,7 @@ const findUser = (users: Map<string, User>, id: string) =>
   Effect.fromNullishOr(users.get(id)).pipe(Effect.mapError(() => new NotFound({ id })))
 ```
 
-```ts es
+```effeck es
 function findUser(users: Map<string, User>, id: string) {
   return users.get(id) ?? throw new NotFound({ id })
 }
@@ -488,7 +488,7 @@ const label = (id: string) =>
   Effect.map(getUser(id), (user) => (user.name.length > 3 ? user.name : "short"))
 ```
 
-```ts es
+```effeck es
 function label(id: string) {
   const name = do {
     const user = getUser(id)
@@ -517,7 +517,7 @@ it.effect("finds a user", () =>
   }))
 ```
 
-```ts es
+```effeck es
 import { assert, it } from "@effect/vitest"
 
 function loaded() {
@@ -548,7 +548,7 @@ const phaseLabel = (phase: "draft" | "published") =>
   )
 ```
 
-```ts es
+```effeck es
 function phaseLabel(phase: "draft" | "published") {
   return match (phase) {
     when "draft": "Draft";
@@ -568,7 +568,7 @@ const describeFailure = (failure: NotFound | Timeout) =>
   )
 ```
 
-```ts es
+```effeck es
 function describeFailure(failure: NotFound | Timeout) {
   return match (failure) {
     when NotFound and { let id }: `no user ${id}`;
@@ -585,7 +585,7 @@ const greet = (name: Option.Option<string>) =>
 const failed = (outcome: Exit.Exit<User, NotFound>) => Exit.isFailure(outcome)
 ```
 
-```ts es
+```effeck es
 function greet(name: Option.Option<string>) {
   return match (name) {
     when Option.Some(let n): `Hello, ${n}`;
@@ -605,7 +605,7 @@ const firstFailure = (outcome: Exit.Exit<User, NotFound>) =>
   Exit.isFailure(outcome) && Cause.hasFails(outcome.cause) ? Cause.pretty(outcome.cause) : "ok"
 ```
 
-```ts es
+```effeck es
 function firstFailure(outcome: Exit.Exit<User, NotFound>) {
   if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) return Cause.pretty(cause)
   return "ok"
@@ -628,7 +628,7 @@ const tick = Effect.callback<number>((resume) => {
 const name = await Effect.runPromise(greetUser("1"))
 ```
 
-```ts es
+```effeck es
 error BadJson { error: unknown }
 
 function hatches(text: string, url: string) {
@@ -655,7 +655,7 @@ const orders = yield* Effect.forkChild(getOrders("1"))
 return [yield* Fiber.join(user), yield* Fiber.join(orders)]
 ```
 
-```ts es
+```effeck es
 function both() {
   const user = fork getUser("1")
   const orders = fork getOrders("1")
@@ -670,7 +670,7 @@ const [user, orders] = yield* Effect.all([getUser("1"), getOrders("1")], { concu
 const pair = yield* Effect.all({ user: getUser("1"), orders: getOrders("1") }, { concurrency: "unbounded" })
 ```
 
-```ts es
+```effeck es
 function many() {
   const [user, orders] = await.all [getUser("1"), getOrders("1")]
   const pair = await.all { user: getUser("1"), orders: getOrders("1") }
@@ -685,7 +685,7 @@ const fastest = yield* Effect.raceAll([getUser("1"), getUser("2")])
 const outcomes = yield* Effect.all([getUser("1"), getOrders("1")], { concurrency: "unbounded", mode: "result" })
 ```
 
-```ts es
+```effeck es
 function outcomes() {
   const fastest = await.any [getUser("1"), getUser("2")]
   const results = await.allSettled [getUser("1"), getOrders("1")]
@@ -702,7 +702,7 @@ const withHeartbeat = Effect.scoped(Effect.gen(function* () {
 }))
 ```
 
-```ts es
+```effeck es
 function withHeartbeat() {
   fork {
     while (true) {
@@ -722,7 +722,7 @@ const scope = yield* Scope.make()
 const fiber = yield* Effect.forkIn(getUser("2"), scope)
 ```
 
-```ts es
+```effeck es
 function background() {
   detach(getUser("1"))
   const scope = Scope.make()
@@ -740,7 +740,7 @@ yield* Deferred.succeed(ready, "go")
 const value = yield* Deferred.await(ready)
 ```
 
-```ts es
+```effeck es
 function signal() {
   const ready = Deferred.make<string>()
   Deferred.succeed(ready, "go")
@@ -757,7 +757,7 @@ const next = yield* Effect.raceFirst(
 )
 ```
 
-```ts es
+```effeck es
 function next() {
   const jobs = Queue.unbounded<string>()
   Queue.offer(jobs, "build")
@@ -780,7 +780,7 @@ yield* Effect.forEach(ids, (id) => Effect.flatMap(getUser(id), (user) => Effect.
 })
 ```
 
-```ts es
+```effeck es
 function logAll(ids: string[]) {
   for concurrent(8) (const id of ids) log(getUser(id).name)
 }

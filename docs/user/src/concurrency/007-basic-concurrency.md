@@ -4,7 +4,7 @@ Ordinary Effeck calls run in sequence. Use Effect's concurrency combinators to o
 
 ## Sequential, bounded, and unbounded work
 
-```ts
+```effeck
 function task(id: number) {
   logInfo("starting", id)
   sleep("40 millis")
@@ -25,7 +25,7 @@ The default is sequential execution. A positive numeric limit bounds active oper
 
 ## Interrupting computations
 
-```ts
+```effeck
 function cancelWork() {
   const worker = fork {
     sleep("1 minute")
@@ -40,7 +40,7 @@ function cancelWork() {
 
 ## Attaching interruption cleanup
 
-```ts
+```effeck
 function cancelWithCleanup() {
   const worker = fork(Effect.onInterrupt(() => {
     try {
@@ -58,7 +58,7 @@ function cancelWithCleanup() {
 
 ## Propagating cancellation across concurrent work
 
-```ts
+```effeck
 function cancelBatch() {
   for concurrent (const id of [1, 2, 3]) {
     try {
@@ -78,7 +78,7 @@ function cancelBatch() {
 
 ## Racing under different winner rules
 
-```ts
+```effeck
 function answer(label: string, delay: Duration.Input) {
   sleep(delay)
   return label
@@ -106,7 +106,7 @@ The await operations come from the TC39 await operations proposal, and each beha
 
 ## Inspecting the winner
 
-```ts
+```effeck
 function inspectRace() {
   const winners: number[] = []
   const outcome = Effect.result(Effect.raceFirst(

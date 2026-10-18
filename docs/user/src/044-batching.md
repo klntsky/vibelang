@@ -4,7 +4,7 @@ Use requests and resolvers when independent lookups can share a backend call. A 
 
 ## Model requests and domain errors
 
-```ts
+```effeck
 type Part = { code: string; label: string }
 
 error PartMissing {
@@ -27,7 +27,7 @@ A direct service call for each item performs repeated backend work. Batching hel
 
 ## Define request resolvers
 
-```ts
+```effeck
 const DemoCatalog = new Map<string, Part>([
   ["ink-black", { code: "ink-black", label: "Black ink" }],
   ["ink-blue", { code: "ink-blue", label: "Blue ink" }]
@@ -51,7 +51,7 @@ Complete every entry, including requests for absent rows. Use `Request.succeed` 
 
 ## Build queries from requests
 
-```ts
+```effeck
 function findPart(code: string) {
   return Effect.request(FindPart({ code }), PartResolver)
 }
@@ -66,7 +66,7 @@ function partLabel(code: string) {
 
 ## Combine compatible requests into batches
 
-```ts
+```effeck
 function labels(codes: ReadonlyArray<string>) {
   return forEach(codes, (code) => partLabel(code), {
     concurrency: "unbounded"
@@ -80,7 +80,7 @@ Requests using the same resolver and batch key can join the same pending batch. 
 
 ## Control batch execution
 
-```ts
+```effeck
 const TunedResolver = PartResolver
   |> RequestResolver.setDelay(%, "8 millis")
   |> RequestResolver.batchN(%, 64)
@@ -96,7 +96,7 @@ For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `colle
 
 ## Supply resolver dependencies
 
-```ts
+```effeck
 service CatalogApi {
   fetchMany(codes: ReadonlyArray<string>): ReadonlyMap<string, Part>!CatalogUnavailable
 }
@@ -135,7 +135,7 @@ Match results by identifier rather than assuming the backend preserves request o
 
 ## Share and tune request caches
 
-```ts
+```effeck
 function cachedQueries() {
   const resolver = RequestResolver.withCache(PartResolver, {
     capacity: 128,
@@ -158,7 +158,7 @@ function cachedExample() {
 
 The cache is bounded by `capacity`, with `"lru"` eviction by default or `"fifo"` for insertion order. Completed expected failures are cached too; interrupted results are not. Entries have no time-based expiry, and cache hits depend on request equality.
 
-```ts
+```effeck
 function expiringLookup() {
   const cache = RequestResolver.asCache(PartResolver, {
     capacity: 128,

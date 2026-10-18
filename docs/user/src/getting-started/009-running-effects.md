@@ -29,7 +29,7 @@ service layer and typed failure both run.
 
 ## Execute synchronous computations
 
-```ts
+```effeck
 function subtotal() {
   return 7 * 8
 }
@@ -42,7 +42,7 @@ const total = Effect.runSync(subtotal())
 
 ## Run promise-based computations
 
-```ts
+```effeck
 function preparedMessage() {
   sleep("15 millis")
   return "prepared"
@@ -56,7 +56,7 @@ const pending = Effect.runPromise(preparedMessage())
 
 ## Collect complete execution results
 
-```ts
+```effeck
 error BadInput
 
 function validate(input: string) {
@@ -74,7 +74,7 @@ An `Exit` is either a success with a value or a failure with a `Cause`. That cau
 
 ## Start and interrupt a fiber
 
-```ts
+```effeck
 function heartbeat() {
   repeat(log("alive"), Schedule.spaced("200 millis"))
 }
@@ -91,7 +91,7 @@ Effect.runPromise {
 
 ## Select an application boundary
 
-```ts
+```effeck
 // main.effeck
 export function main() {
   log("application started")

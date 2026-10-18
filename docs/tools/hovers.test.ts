@@ -50,7 +50,7 @@ const writeWrapper = (build: number) => {
 }
 const writePage = (name: string) => {
   mkdirSync(join(root, "src"), { recursive: true })
-  writeFileSync(page, ["# Page", "", "```ts", 'import { Effect } from "effect"', "",
+  writeFileSync(page, ["# Page", "", "```effeck", 'import { Effect } from "effect"', "",
     "/** Wraps {@link Effect.succeed} for the docs. */", `function ${name}(n: number) {`, "  return n + 1", "}", `const answer = ${name}(41)`, "```", ""].join("\n"))
 }
 const run = () => updateHovers({ compiler: wrapper, root, cache })

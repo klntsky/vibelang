@@ -4,7 +4,7 @@ Standard Schema adaptation works as in Effect. It exposes a codec to libraries t
 
 ## Adapting codecs to the standard validation interface
 
-```ts
+```effeck
 const Dispatch = Schema.Struct({
   reference: Schema.NonEmptyString,
   count: Schema.FiniteFromString
@@ -22,7 +22,7 @@ function standardMetadata() {
 
 ## Choosing synchronous or asynchronous validation
 
-```ts
+```effeck
 const ReviewedDispatch = Dispatch.pipe(Schema.decode({
   decode: SchemaGetter.checkEffect((_dispatch) => {
     sleep("5 millis")
@@ -47,7 +47,7 @@ Inside the `try` hatch, plain TypeScript calls are allowed. `Promise.resolve` pr
 
 ## Handling defects during validation
 
-```ts
+```effeck
 const BrokenLabel = Schema.String.pipe(Schema.decode({
   decode: SchemaGetter.transformEffect((_label) => die("label invariant failed")),
   encode: SchemaGetter.passthrough()

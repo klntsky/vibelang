@@ -4,7 +4,7 @@ Stream operators build a new description of how to process a source. Keep transf
 
 ## Observing and taking elements
 
-```ts
+```effeck
 const observed = Stream.range(10, 18).tap((n) => log(`reading ${n}`))
 const first = observed.take(3)
 const below = observed.takeWhile((n) => n < 13)
@@ -22,7 +22,7 @@ function readFirst() {
 
 ## Async iteration and manual pulls
 
-```ts
+```effeck
 service Exporter {
   write(rows: AsyncIterable<string>): number!Error
 }
@@ -35,7 +35,7 @@ function exportRows(source: Stream.Stream<string>) {
 
 `toAsyncIterableEffect` captures the current services and returns an async iterable for a TypeScript consumer. `toAsyncIterable` is the direct variant for a source with no service requirements. Iteration failures cross as JavaScript errors, so a foreign consumer must map them back into its declared failure channel; conversion itself does not consume the stream.
 
-```ts
+```effeck
 function printBatches() {
   using pull = Stream.range(30, 34).rechunk(2).toPull()
   while (true) {
@@ -50,7 +50,7 @@ function printBatches() {
 
 ## Mapping, flattening, and state
 
-```ts
+```effeck
 function loadLabel(id: number) {
   sleep("10 millis")
   return `item-${id}`
@@ -72,7 +72,7 @@ const totals = Stream.make(4, 7, 9).mapAccum(() => 0, (total, n) => {
 
 ## Filtering, scanning, and changes
 
-```ts
+```effeck
 const readings = Stream.make(2, 2, 5, 5, 2)
 const large = readings.filter((n) => n >= 5)
 const changes = readings.changes()
@@ -91,7 +91,7 @@ function inspect() {
 
 ## Zipping and indexing
 
-```ts
+```effeck
 const sizes = Stream.make(5, 8, 13)
 const names = Stream.make("small", "large")
 const pairs = sizes.zip(names)
@@ -110,7 +110,7 @@ For sources with different rates, `zipLatest` waits for both sides to produce, t
 
 ## Cartesian products
 
-```ts
+```effeck
 const variants = Stream.cross(Stream.make("linen", "wool"), Stream.make("blue", "gray"))
 const names = Stream.crossWith(
   Stream.make("linen", "wool"),
@@ -123,7 +123,7 @@ const names = Stream.crossWith(
 
 ## Partitioning and grouping
 
-```ts
+```effeck
 function partitionReadings() {
   using branches = Stream.range(10, 19).partition(Filter.fromPredicate((n: number) => n % 2 === 0), { capacity: 2 })
   const [even, odd] = branches
@@ -136,7 +136,7 @@ function partitionReadings() {
 
 `partition` runs one source and returns the passing and failing streams in that order. It is an Effect requiring Scope, so keep both consumers within the lifetime of `using`. Consume branches concurrently: a full, unconsumed branch can backpressure the other branch. `partitionEffect` accepts a `Filter.FilterEffect`, whose successes select the passing branch and failures of its Result select the other branch.
 
-```ts
+```effeck
 const requests = Stream.make(
   { region: "west", bytes: 10 },
   { region: "east", bytes: 20 },
@@ -156,7 +156,7 @@ const timedBatches = requests.groupedWithin(20, "1 second")
 
 ## Concatenating, merging, and interleaving
 
-```ts
+```effeck
 const primary = Stream.make("a1", "a2")
 const secondary = Stream.make("b1", "b2", "b3")
 const sequential = primary.concat(secondary)
@@ -175,7 +175,7 @@ const selected = primary.interleaveWith(secondary, Stream.make(true, false, fals
 
 ## Separators and affixes
 
-```ts
+```effeck
 const fields = Stream.make("name", "email", "role")
 const separated = fields.intersperse(",")
 const bracketed = fields.intersperseAffixes({ start: "[", middle: ",", end: "]" })
@@ -189,7 +189,7 @@ function formatFields() {
 
 ## Broadcasting and buffering
 
-```ts
+```effeck
 function shareReadings() {
   using copies = Stream.range(1, 12).broadcastN({ n: 2, capacity: 3 })
   const [totals, audit] = copies
@@ -211,7 +211,7 @@ const buffered = Stream.range(1, 12).buffer({ capacity: 3 })
 
 ## Debouncing and throttling
 
-```ts
+```effeck
 const bursts = Stream.make("c", "ca", "cat").concat(Stream.fromEffect {
     sleep("300 millis")
     return "cats"
@@ -230,7 +230,7 @@ const paced = Stream.range(1, 10).rechunk(1).throttle({
 
 ## Scheduling delivery
 
-```ts
+```effeck
 const announcements = Stream.make("prepare", "deploy", "verify").schedule(Schedule.spaced("500 millis"))
 
 function announce() {

@@ -6,7 +6,7 @@ Retry transient domain failures when a new attempt has a useful chance of succee
 
 ## Retrying failed computations
 
-```ts
+```effeck
 error Busy { attempt: number }
 
 function loadWithRetries() {
@@ -25,7 +25,7 @@ Failures stop the current attempt before retry begins. Defects and interruption 
 
 ## Selecting retryable domain errors
 
-```ts
+```effeck
 error RequestRejected {
   transient: boolean
 }
@@ -46,7 +46,7 @@ function sendTransient() {
 
 ## Controlling timing and limits
 
-```ts
+```effeck
 function sendWithBackoff() {
   return retry(sendRequest(), {
     times: 4,
@@ -64,7 +64,7 @@ A schedule controls delay and can add its own stopping condition. Combining `tim
 
 ## Recovering after retries end
 
-```ts
+```effeck
 function sendOrQueue() {
   return Effect.retryOrElse(
     () => sendRequest(),

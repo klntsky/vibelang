@@ -4,7 +4,7 @@ Effeck uses Effect to make a program's expected failures and dependencies visibl
 
 ## Describe work before running it
 
-```ts
+```effeck
 error InvalidQuantity {
   quantity: number
 }
@@ -22,7 +22,7 @@ const quote = () => unitPrice(72, 6)
 
 ## Share an application foundation
 
-```ts
+```effeck
 service Prices {
   total(sku: string): number!InvalidQuantity
 }
@@ -46,7 +46,7 @@ Services carry dependencies through the same contract as errors and successes. L
 
 ## Apply composable production tools
 
-```ts
+```effeck
 function resilientReceipt(sku: string) {
   return receipt(sku)
     |> retry(%, { times: 2 })

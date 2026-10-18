@@ -4,7 +4,7 @@ Schema-derived equivalence works in Effeck exactly as in Effect. It compares dec
 
 ## Deriving equality from schemas
 
-```ts
+```effeck
 schema Shipment {
   reference: string
   stops: ReadonlyArray<string>
@@ -21,7 +21,7 @@ function sameShipment(left: unknown, right: unknown) {
 
 ## Handling broad schemas and custom declarations
 
-```ts
+```effeck
 function sameUnknown(left: unknown, right: unknown) {
   return try((left, right) => Schema.toEquivalence(Schema.Unknown)(left, right), left, right)
 }
@@ -44,7 +44,7 @@ function sameRef() {
 
 ## Overriding generated comparison behavior
 
-```ts
+```effeck
 const ShipmentIdentity = Shipment.pipe(Schema.overrideToEquivalence(
   () => (left, right) => left.reference === right.reference
 ))

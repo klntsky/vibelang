@@ -6,7 +6,7 @@ Error-channel operations transform, observe, or expose failures without immediat
 
 ## Mapping failures or both outcomes
 
-```ts
+```effeck
 error InvalidQuantity {
   value: number
 }
@@ -41,7 +41,7 @@ These combinators keep Effect's own failure-selection policy: when a mixed cause
 
 ## Rejecting successes with a predicate
 
-```ts
+```effeck
 function boundedQuantity(value: number) {
   return Effect.filterOrFail(
     () => quantity(value),
@@ -65,7 +65,7 @@ A normal `if` followed by `throw` is the statement form. Neither form changes ex
 
 ## Observing errors, tags, causes, and defects
 
-```ts
+```effeck
 function observeQuantity(value: number) {
   return quantity(value)
     |> Effect.tapError(%, (error) => log(`Rejected quantity ${error.value}`))
@@ -89,7 +89,7 @@ If observation fails, its failure can change the resulting cause, so use observa
 
 ## Exposing failures as successes
 
-```ts
+```effeck
 function inspectQuantity(value: number) {
   const result = Effect.result(quantity(value))
   const summary = result.match({
@@ -110,7 +110,7 @@ function quantityOrErrorValue(value: number) {
 
 ## Swapping channels
 
-```ts
+```effeck
 function rejectedQuantity() {
   return Effect.flip(() => quantity(0))
 }

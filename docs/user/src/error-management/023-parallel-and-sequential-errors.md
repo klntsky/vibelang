@@ -6,7 +6,7 @@ An operation can stop for several reasons: concurrent work can fail together, or
 
 ## Representing multiple failures
 
-```ts
+```effeck
 function failureKinds() {
   const cause = Cause.fail("delivery rejected").combine(Cause.die(new Error("release invariant failed")))
   return cause.reasons.map((reason) => reason._tag)
@@ -18,7 +18,7 @@ A `Cause.Cause<E>` contains a readonly array of `Cause.Reason<E>`. Each reason i
 
 ## Combining concurrent or sequential reasons
 
-```ts
+```effeck
 function operationWithBrokenCleanup() {
   try {
     throw "delivery rejected"
@@ -48,7 +48,7 @@ When every reason is an expected failure, ordinary catch receives the first fail
 
 ## Runtime causes and domain error collections
 
-```ts
+```effeck
 error InvalidPort { port: number }
 
 function validatePorts() {

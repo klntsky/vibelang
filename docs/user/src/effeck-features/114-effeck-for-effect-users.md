@@ -2,7 +2,7 @@
 
 Keep Effect's runtime, libraries, layers, and error channels. In `.effeck` files, write the sequential work as ordinary functions and statements. For every change side by side with Effect code, see the [cheat sheet](115-cheat-sheet.md). For the rules behind each change, read the [specification](../../../design/src/000-intro.md).
 
-```ts
+```effeck
 function greet(name: string) {
   sleep("10 millis")
   const message = `Hello, ${name}`
@@ -58,7 +58,7 @@ Use Effect's operators for retries, timeouts, concurrency, and Stream transforma
 
 ## Calls run; programs stay cold
 
-```ts
+```effeck
 function sequential() {
   const first = greet("Ada")
   const second = greet("Grace")
@@ -76,7 +76,7 @@ A held Effect value runs when called with no arguments. Data that Effect can als
 
 ## Declare at the module top level
 
-```ts
+```effeck
 // start.effeck
 export function main() {
   Console.log("started")
@@ -90,7 +90,7 @@ Declare functions, services, schemas, and layers at module scope. Do not run a p
 
 ## Keep platform work in Effect
 
-```ts
+```effeck
 function reportTime() {
   const now = Clock.currentTimeMillis()
   Console.log(now)
@@ -104,7 +104,7 @@ A plain function from your `.ts` code or a foreign package needs a boundary hatc
 
 ## Catch expected failures only
 
-```ts
+```effeck
 error Missing { id: string }
 
 function lookup(id: string) {

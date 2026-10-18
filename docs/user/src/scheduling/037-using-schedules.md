@@ -4,7 +4,7 @@ A schedule decides when work runs again and when it stops. `Schedule` values wor
 
 ## Repeating successful computations
 
-```ts
+```effeck
 function heartbeat() {
   repeat(
     logInfo("worker available"),
@@ -17,7 +17,7 @@ function heartbeat() {
 
 ## Stopping based on a result
 
-```ts
+```effeck
 function waitForBuild() {
   let checks = 0
   const status = repeat({
@@ -37,7 +37,7 @@ The initial check is separate from the seven permitted repetitions, so this loop
 
 ## Delaying the initial run
 
-```ts
+```effeck
 function delayedCleanup() {
   Effect.schedule(
     logInfo("sweeping expired sessions"),
@@ -50,7 +50,7 @@ function delayedCleanup() {
 
 ## Retrying failed computations
 
-```ts
+```effeck
 error Busy
 
 function reserveSlot() {
@@ -68,7 +68,7 @@ function reserveSlot() {
 
 ## Handling failures while repeating
 
-```ts
+```effeck
 error SensorOffline
 
 service Sensor {

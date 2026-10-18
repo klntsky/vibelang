@@ -4,7 +4,7 @@ Schema error messages work as in Effect. A `SchemaError` combines a readable mes
 
 ## Understanding default validation messages
 
-```ts
+```effeck
 const Package = Schema.Struct({
   label: Schema.String,
   pieces: Schema.Finite
@@ -25,7 +25,7 @@ A base-type mismatch reports what type was expected. An absent required field re
 
 ## Identifying schemas in error output
 
-```ts
+```effeck
 const Tracking = Schema.String.annotate({ identifier: "TrackingReference" })
 const Count = Schema.Finite.annotate({ expected: "a finite package count" })
 const LabeledPackage = Schema.Struct({ tracking: Tracking, count: Count }).annotate({
@@ -37,7 +37,7 @@ An identifier replaces a generic expected-value description with a stable domain
 
 ## Customizing messages for checks and conversions
 
-```ts
+```effeck
 const WholeCount = Schema.String.annotate({
   message: "Enter the count as text"
 }).pipe(
@@ -64,7 +64,7 @@ The conversion has three failure sites: the encoded string, the conversion funct
 
 ## Assigning messages to scalar and compound values
 
-```ts
+```effeck
 const Contact = Schema.String.annotate({ message: "Contact must be text" })
 const Delivery = Schema.Union([
   Schema.Literal("collect"), Schema.Literal("courier")
@@ -90,7 +90,7 @@ A scalar message replaces a mismatch at that scalar. A union message summarizes 
 
 ## Explaining missing fields
 
-```ts
+```effeck
 const Dispatch = Schema.Struct({
   tracking: Schema.String.annotateKey({
     messageMissingKey: "Supply a tracking reference"

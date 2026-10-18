@@ -4,7 +4,7 @@ Annotations work in Effeck exactly as in Effect. They attach metadata or interpr
 
 ## Attaching built-in metadata
 
-```ts
+```effeck
 const Destination = Schema.String.annotate({
   message: "Destination must be text"
 }).check(Schema.isNonEmpty({ message: "Choose a destination" })).annotate({
@@ -29,7 +29,7 @@ Representation hooks include `toCodec`, `toCodecJson`, `toCodecStringTree`, `toC
 
 ## Controlling decoding concurrency
 
-```ts
+```effeck
 const ReviewedLabel = Schema.String.pipe(Schema.decode({
   decode: SchemaGetter.checkEffect((label) => {
     sleep("10 millis")
@@ -48,7 +48,7 @@ Product schemas such as arrays, structs, and tuples can run effectful child pars
 
 ## Recovering decoding failures with fallback values
 
-```ts
+```effeck
 const OptionalLabel = Schema.String.pipe(
   Schema.catchDecoding((issue) => {
     log(`label fallback: ${issue._tag}`)
@@ -67,7 +67,7 @@ Log the issue tag or stage when diagnostics help. Avoid recording the rejected p
 
 ## Defining custom schema annotations
 
-```ts
+```effeck
 const InternalOnly = Symbol.for("warehouse/schema/internal-only")
 
 declare module "effect/Schema" {

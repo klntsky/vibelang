@@ -6,7 +6,7 @@ A scope owns registered finalizers and runs them when its lifetime ends. Use `us
 
 ## Registering finalizers
 
-```ts
+```effeck
 function registeredWork() {
   Effect.addFinalizer((exit) => {
     log(`Work scope closed with ${exit._tag}`)
@@ -27,7 +27,7 @@ Finalizers run in reverse registration order by default, with interruption defer
 
 ## Opening and closing scopes explicitly
 
-```ts
+```effeck
 function manuallyManagedWork() {
   return Effect.acquireUseRelease(
     () => Scope.make(),
@@ -47,7 +47,7 @@ function manuallyManagedWork() {
 
 ## Acquiring resources with automatic release
 
-```ts
+```effeck
 function openBuffer(label: string) {
   return Effect.acquireRelease(
     () => {
@@ -73,7 +73,7 @@ function copyLabels() {
 
 ## Arranging nested resource lifetimes
 
-```ts
+```effeck
 function nestedLifetimes() {
   using outer = openBuffer("session")
   {
@@ -106,7 +106,7 @@ A block that calls `fork` also owns a scope region, even without `using`. Its ch
 
 ## Sequencing scoped operations with rollback
 
-```ts
+```effeck
 error SetupFailed {
   stage: string
 }
@@ -142,7 +142,7 @@ Both reservations register in the same scope because neither uses lexical `using
 
 The finalizers see the whole setup operation's exit, so defects and interruption trigger the same rollback. Separate nested `using` blocks would end those lifetimes earlier and would not give every finalizer the overall setup outcome. This is compensation for successfully completed steps, not an atomic transaction with an external system.
 
-```ts
+```effeck
 function exerciseRollback() {
   const removed: string[] = []
   const testLayer = Layer.succeed(ProjectSteps, {

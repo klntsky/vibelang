@@ -4,7 +4,7 @@ Effeck uses Effect's `Metric` module to count events, record current values, and
 
 ## Recording counters and gauges
 
-```ts
+```effeck
 const requests = Metric.counter("guide_requests", { incremental: true })
 const queued = Metric.gauge("guide_queued")
 const bytes = Metric.counter("guide_bytes", { bigint: true })
@@ -24,7 +24,7 @@ function recordBatch() {
 
 A counter accumulates changes, while a gauge retains its most recent value. `incremental: true` ignores negative counter inputs; counters without it also support decrements, and both counters and gauges support bigint variants. Metric state is shared across updates to the same metric identity, so totals above accumulate across repeated runs.
 
-```ts
+```effeck
 const completions = Metric.withConstantInput(
   Metric.counter("guide_completions", { incremental: true }),
   1
@@ -39,7 +39,7 @@ function instrumentedValue() {
 
 ## Measuring distributions
 
-```ts
+```effeck
 const batchSizes = Metric.histogram("guide_batch_size", {
   boundaries: Metric.linearBoundaries({ start: 0, width: 20, count: 6 })
 })
@@ -65,7 +65,7 @@ A histogram groups observations into configured buckets and tracks count, sum, m
 
 ## Timing computations
 
-```ts
+```effeck
 const renderTime = Metric.timer("guide_render_duration", {
   boundaries: [5, 20, 50, 100, 500]
 })
@@ -82,7 +82,7 @@ function render() {
 
 ## Counting categorical events
 
-```ts
+```effeck
 const outcomes = Metric.frequency("guide_validation_outcomes")
 
 function recordOutcomes() {
@@ -97,7 +97,7 @@ A frequency metric keeps a count per observed string. Use a bounded set of categ
 
 ## Attaching attributes to metrics and regions
 
-```ts
+```effeck
 const apiRequests = Metric.withAttributes(
   Metric.counter("guide_api_requests", { incremental: true }),
   { route: "/reports" }

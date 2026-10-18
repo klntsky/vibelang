@@ -4,7 +4,7 @@
 
 ## Modeling UTC and zoned instants
 
-```ts
+```effeck
 const instant = DateTime.makeUnsafe("2026-04-12T10:00:00Z")
 const paris = instant.setZone(DateTime.zoneMakeNamedUnsafe("Europe/Paris"))
 instant.epochMilliseconds === paris.epochMilliseconds // true
@@ -15,7 +15,7 @@ A `Utc` holds epoch milliseconds. A `Zoned` holds the same kind of instant plus 
 
 ## Constructing timestamps from supported inputs
 
-```ts
+```effeck
 const text = DateTime.make("2026-04-12T10:00:00Z")
 const epoch = DateTime.make(0)
 const parts = DateTime.make({ year: 2026, month: 4, day: 12 })
@@ -37,7 +37,7 @@ const serialized = DateTime.makeZonedFromString(
 
 ## Reading current time
 
-```ts
+```effeck
 function timestamp() {
   const now = DateTime.now()
   return now.formatIso()
@@ -49,7 +49,7 @@ function timestamp() {
 
 ## Identifying timestamp variants
 
-```ts
+```effeck
 function describe(value: unknown) {
   if (!DateTime.isDateTime(value)) return "not a timestamp"
   if (value.isUtc()) return "UTC"
@@ -65,7 +65,7 @@ function describe(value: unknown) {
 
 ## Parsing and changing time zones
 
-```ts
+```effeck
 const named = DateTime.zoneMakeNamed("Asia/Tokyo")
 const parsed = DateTime.zoneFromString("+09:00")
 const fixed = DateTime.zoneMakeOffset(9 * 60 * 60 * 1000)
@@ -87,7 +87,7 @@ const shiftedView = base.setZoneOffset(9 * 60 * 60 * 1000)
 
 ## Comparing and converting instants
 
-```ts
+```effeck
 const start = DateTime.makeUnsafe("2026-04-12T10:00:00Z")
 const end = start.add({ hours: 3 })
 start.isLessThan(end) // true
@@ -105,7 +105,7 @@ Ordering compares instants, independent of the attached zone. `distance(start, e
 
 ## Accessing calendar components
 
-```ts
+```effeck
 const evening = DateTime.makeZonedUnsafe("2026-04-12T22:30:00Z", {
   timeZone: "Asia/Tokyo"
 })
@@ -121,7 +121,7 @@ const utcEdited = evening.setPartsUtc({ hour: 9 })
 
 ## Calendar arithmetic and formatting
 
-```ts
+```effeck
 const appointment = DateTime.makeZonedUnsafe("2026-04-12T10:00:00Z", {
   timeZone: "Europe/Paris"
 })
@@ -143,7 +143,7 @@ Calendar `add` and `subtract` operate on parts in the value's zone; duration ari
 
 ## Providing a default time zone
 
-```ts
+```effeck
 function localDate() {
   return DateTime.nowInCurrentZone().formatIsoDate()
 }

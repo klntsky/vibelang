@@ -6,7 +6,7 @@ Sandboxing places the complete runtime failure cause in the typed error channel.
 
 ## Moving causes into the error channel
 
-```ts
+```effeck
 error InvalidRow {
   line: number
 }
@@ -25,7 +25,7 @@ Import `Cause` from `effect` when naming the contract explicitly. `sandbox` chan
 
 ## Inspecting individual reasons
 
-```ts
+```effeck
 function rowFailureKinds() {
   try {
     return sandboxedRow()
@@ -43,7 +43,7 @@ Effect 4 stores reasons in a flat readonly array. `isFailReason` exposes `error`
 
 ## Recovering selected variants
 
-```ts
+```effeck
 function rowOrPlaceholder() {
   try {
     return sandboxedRow()
@@ -60,7 +60,7 @@ This boundary recovers only causes made entirely of domain failures. Checking fo
 
 ## Restoring causes after inspection
 
-```ts
+```effeck
 function readWithInspection() {
   try {
     return sandboxedRow()

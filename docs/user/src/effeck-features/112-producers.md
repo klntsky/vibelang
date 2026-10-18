@@ -4,7 +4,7 @@ A producer yields values one at a time and can run Effects between yields. Use `
 
 ## Yield values on demand
 
-```ts
+```effeck
 function* readings() {
   try {
     for (const celsius of [18, 21, 25, 19, 28, 30]) {
@@ -32,7 +32,7 @@ In `.effeck`, `function*` declares a producer. Do not use it to write `Effect.ge
 
 ## Call services between yields
 
-```ts
+```effeck
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
 
@@ -61,7 +61,7 @@ A producer can acquire resources with `using`. They stay open between yields and
 
 ## Use a producer as a Stream
 
-```ts
+```effeck
 function alerts() {
   const selected = readings().filter((value) => value >= 25).map((value) => `${value} C`).take(2)
   const result: string[] = []
@@ -77,7 +77,7 @@ When Stream operators consume a producer, the runtime starts it on its own fiber
 
 ## Iterate any Stream
 
-```ts
+```effeck
 function sumStream() {
   let total = 0
   for (const value of Stream.fromIterable([1, 2, 3])) {

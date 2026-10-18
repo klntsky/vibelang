@@ -4,7 +4,7 @@ Value formatters work in Effeck exactly as in Effect. A schema-derived formatter
 
 ## Deriving value formatters from schemas
 
-```ts
+```effeck
 const Dispatch = Schema.Struct({
   depot: Schema.String,
   counts: Schema.Array(Schema.Int)
@@ -21,7 +21,7 @@ function displayDispatch(input: unknown) {
 
 ## Customizing formatting at selected syntax-tree nodes
 
-```ts
+```effeck
 const Weight = Schema.Finite.pipe(Schema.overrideToFormatter(
   () => (value) => `${value} kg`
 ))

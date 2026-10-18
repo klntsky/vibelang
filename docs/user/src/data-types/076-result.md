@@ -4,7 +4,7 @@
 
 ## Results and execution exits
 
-```ts
+```effeck
 function parseCount(text: string) {
   const count = Number(text)
   return text.trim() !== "" && Number.isInteger(count) && count >= 0
@@ -18,7 +18,7 @@ Returning a failed `Result` does not fail `parseCount`: its success value is the
 
 ## Constructing and identifying variants
 
-```ts
+```effeck
 const accepted = Result.succeed(8)
 const rejected = Result.fail("limit exceeded")
 Result.isResult(accepted) // true
@@ -35,7 +35,7 @@ Success stores its payload in `.success`; failure uses `.failure`. Guards narrow
 
 ## Matching and mapping outcomes
 
-```ts
+```effeck
 function summarize(result: Result.Result<number, string>) {
   const increased = result.map((count) => count + 2)
   const contextual = increased.mapError((error) => `count: ${error}`)
@@ -54,7 +54,7 @@ function summarize(result: Result.Result<number, string>) {
 
 ## Converting results into effects
 
-```ts
+```effeck
 error InvalidCount {
   input: string
 }
@@ -80,7 +80,7 @@ function validatePair() {
 
 ## Sequencing and combining results
 
-```ts
+```effeck
 function combine(
   name: Result.Result<string, string>,
   count: Result.Result<number, string>
@@ -112,7 +112,7 @@ export function combineResults(
 }
 ```
 
-```ts
+```effeck
 import { combineResults } from "./combine-results.ts"
 
 function combinedData() {

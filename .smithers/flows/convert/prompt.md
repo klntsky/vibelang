@@ -30,7 +30,7 @@ Each row is one Effect form and the Effeck that replaces it.
 
 All of it in one program:
 
-```ts
+```effeck
 interface User { id: string; name: string }
 
 error NotFound { id: string }

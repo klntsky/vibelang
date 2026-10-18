@@ -6,7 +6,7 @@ A timeout limits how long a caller waits for work to finish. Effect interrupts t
 
 ## Limiting execution duration
 
-```ts
+```effeck
 function buildPreview() {
   sleep("3 seconds")
   return "Rendered preview"
@@ -20,7 +20,7 @@ function previewWithDeadline() {
 
 `Effect.timeout` adds `Cause.TimeoutError` to `E`; import `Cause` from `effect` if you write that type explicitly. A timely success returns its original value, and a domain failure before the deadline keeps its original error. The source is a program function so the timer surrounds the work itself.
 
-```ts
+```effeck
 function previewLabel() {
   try {
     return previewWithDeadline()
@@ -35,7 +35,7 @@ The interruption used internally to stop the source is separate from the typed t
 
 ## Representing timeout as absence
 
-```ts
+```effeck
 function optionalPreview() {
   const preview = Effect.timeoutOption(() => buildPreview(), "500 millis")
   return preview.isNone() ? "No preview yet" : preview.value
@@ -46,7 +46,7 @@ function optionalPreview() {
 
 ## Choosing an alternative or custom failure
 
-```ts
+```effeck
 function previewOrPlaceholder() {
   return Effect.timeoutOrElse(buildPreview(), {
     duration: "500 millis",
@@ -71,7 +71,7 @@ The alternative runs lazily after the timer wins. It can use services, fail, or 
 
 ## Interruption of protected work
 
-```ts
+```effeck
 function protectedPreview() {
   return timeout(
     () => Effect.uninterruptible(buildPreview()),

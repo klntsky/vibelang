@@ -4,7 +4,7 @@
 
 ## Requesting the file-system service
 
-```ts
+```effeck
 function readSettings() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./settings.json")
@@ -16,7 +16,7 @@ function readSettings() {
 
 ## Performing file operations
 
-```ts
+```effeck
 function saveSummary(text: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   fs.makeDirectory("./output", { recursive: true })
@@ -44,7 +44,7 @@ Calls run sequentially: the write completes before the read starts. Expected I/O
 | `remove`, `rename`, `truncate`, `utimes` | Remove, move, resize, or change timestamps |
 | `stream`, `sink`, `watch` | Stream bytes, write through a sink, or observe changes |
 
-```ts
+```effeck
 function fileSize(path: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   using file = fs.open(path)
@@ -56,7 +56,7 @@ function fileSize(path: string) {
 
 ## Supplying platform implementations
 
-```ts
+```effeck
 // main.effeck
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 function main() {
@@ -71,7 +71,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 
 ## Replacing behavior in tests
 
-```ts
+```effeck
 import { it } from "@effect/vitest"
 function readFixture() {
   const fs = Effect.service(FileSystem.FileSystem)
