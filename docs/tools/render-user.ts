@@ -6,6 +6,7 @@
 import { Marked, type Tokens } from "marked"
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, extname, join, relative, resolve } from "node:path"
+import { hoverCss, useHoverRenderer } from "./render-hovers"
 const repo = resolve(import.meta.dir, "../..")
 const root = join(repo, "docs/user")
 const src = join(root, "src")
@@ -336,6 +337,7 @@ async function render(source: string, markdown: string, destination: string, cou
       }
     }
   })
+  useHoverRenderer(marked, source, highlight)
   // Specification chapters are written as sections of one document, a chapter
   // under ###; each page's top heading becomes its h1.
   const depths = spec ? marked.lexer(markdown).flatMap(t => t.type === "heading" && !(t.depth === 2 && PART.test(t.text)) ? [(t as Tokens.Heading).depth] : []) : []
@@ -380,14 +382,14 @@ async function render(source: string, markdown: string, destination: string, cou
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
 <title>${escape(title)} · ${spec ? "Effeck Specification" : "Effeck Docs"}</title>
-<style>${css}${userCss}</style>
+<style>${css}${userCss}${hoverCss}</style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <div class="layout">
 <nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), output(order[0]!.path)))}">Effeck Docs</a>${sidebar}</nav>
 <nav class="page-toc" aria-label="On this page"><h2>On this page</h2>${toc.map(t => `<a href="#${escape(t.id)}">${escape(t.text)}</a>`).join("\n")}</nav>
-<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav></main>
+<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav><footer><a href="mailto:support@smithers.sh?subject=${escape(encodeURIComponent(`Effeck docs: ${title} (${source})`))}">Report a bug</a></footer></main>
 </div>
 </body>
 </html>\n`
