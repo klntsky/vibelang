@@ -238,6 +238,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case node.Kind == ast.KindPropertySignature || node.Kind == ast.KindIndexSignature:
 		p.readonlyMember(node, e)
 		return
+	case awaitOperationHelper(node) != "":
+		p.awaitOperation(node, e)
+		return
 	case p.isMatchForm(node):
 		p.synthesized(node, p.tokenStart(node), node.End(), e)
 		return
@@ -645,10 +648,22 @@ func (p *projector) runCall(call *ast.Node, e env) {
 		p.plan.mark(editScoped, partOpen, start, start, "")
 	}
 	p.callee(call, e)
+	// The parser represents `fork program` as a call without source
+	// parentheses. Supply them before lowering its by-name operand, so a
+	// fiber held by an await operation is started once at its declaration.
+	keywordFork := ast.IsIdentifier(call.Expression()) && call.Expression().Text() == "fork" &&
+		len(call.Arguments()) == 1 && blockArgument(call) == nil &&
+		scanner.SkipTrivia(p.text, call.Expression().End()) == p.tokenStart(call.Arguments()[0])
+	if keywordFork {
+		p.plan.replace(call.Expression().End(), p.tokenStart(call.Arguments()[0]), "(")
+	}
 	if arguments := call.Arguments(); e.continuation != "" && len(arguments) > 0 && isContinuationArgument(arguments[0]) {
 		p.continuationArguments(call, e)
 	} else {
 		p.callArguments(call, e)
+	}
+	if keywordFork {
+		p.plan.insert(call.End(), ")")
 	}
 	if scoped {
 		p.plan.mark(editScoped, partClose, call.End(), call.End(), "")

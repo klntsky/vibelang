@@ -89,6 +89,10 @@ export { $finallyExit, uninterruptible, restore, interruptible } from "effeck-ru
 // The pattern matching helpers the parser writes for match and is (D206-D225).
 export { $is, $extract, $rest, $noMatch, $patternError } from "effeck-runtime"
 
+// D196: concurrent programs and held Fibers/Deferreds keep the runtime's
+// tuple, record, result, and race channel inference under stock TypeScript.
+export { $awaitAll, $awaitAllSettled, $awaitRace, $awaitAny } from "effeck-runtime"
+
 /*
  * Completion records, as the checker sees them. A return in a region's
  * block returns $box(value): the value itself, joined with a brand, so the

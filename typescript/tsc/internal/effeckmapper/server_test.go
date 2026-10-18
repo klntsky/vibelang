@@ -37,7 +37,7 @@ func TestHostTransform(t *testing.T) {
 	defer project.Close()
 
 	fileName := tspath.RootedFilePathFromAbsolute("/p/greet.effeck")
-	content := "error EmptyName { name: string }\nexport function greet(name: string) {\n  if (name === \"\") throw new EmptyName({ name })\n  return await.all [name]\n}\n"
+	content := "error EmptyName { name: string }\nexport function greet(name: string) {\n  if (name === \"\") throw new EmptyName({ name })\n  return join name\n}\n"
 	files, err := contentmapper.TransformAndParse(ast.SourceFileParseOptions{FileName: fileName}, content, mapper, project)
 	assert.NilError(t, err)
 
@@ -45,7 +45,7 @@ func TestHostTransform(t *testing.T) {
 	assert.Equal(t, file.VirtualFileName(), fileName.AppendSuffix(".ts"))
 	assert.Equal(t, file.OriginalText(), content)
 	assert.Equal(t, file.Text(), Project(content, FileContextOf(fileName.AsString())).Text)
-	// The mapper's EK9001 on the await operation arrives in original coordinates. Filter
+	// The mapper's EK9001 on the join arrives in original coordinates. Filter
 	// by source: ParseResult parses the virtual text under the original
 	// name, greet.effeck, so in the fork the parser reads it with Effeck
 	// syntax and reports none of the TS1434 errors stock tsc reports there.
@@ -57,7 +57,7 @@ func TestHostTransform(t *testing.T) {
 	}
 	assert.Equal(t, len(mapperDiagnostics), 1)
 	assert.Equal(t, mapperDiagnostics[0].Code(), int32(CodeUnprojectedForm))
-	assert.Equal(t, content[mapperDiagnostics[0].Pos():mapperDiagnostics[0].End()], "await")
+	assert.Equal(t, content[mapperDiagnostics[0].Pos():mapperDiagnostics[0].End()], "join")
 }
 
 // TestVersionMismatchDiagnostic checks that openProject reports EK9002 for
