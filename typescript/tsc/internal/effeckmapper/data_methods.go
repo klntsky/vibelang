@@ -38,10 +38,15 @@ func (p *projector) dataReceiver(expr *ast.Node, depth int) string {
 		}
 		return ""
 	}
+	if ast.IsPropertyAccessExpression(expr) {
+		if module := dataAccessTypeModule(r, p.dataReceiverType(expr, 0), 0); module != "" {
+			return module
+		}
+	}
 	if ast.IsIdentifier(expr) {
 		d := r.binding(expr, expr.Text())
 		if d != nil && d.Type() != nil {
-			if module := dataAccessTypeModule(r, d.Type(), 0); strings.HasPrefix(module, "lib/") {
+			if module := dataAccessTypeModule(r, d.Type(), 0); module != "" {
 				return module
 			}
 		}
@@ -71,6 +76,38 @@ func (p *projector) dataReceiver(expr *ast.Node, depth int) string {
 		}
 	}
 	return r.receiverModule(expr, 0)
+}
+
+// dataReceiverType follows written property shapes to their member types,
+// allowing a receiver annotation to prove nested native and module members.
+func (p *projector) dataReceiverType(expr *ast.Node, depth int) *ast.Node {
+	if expr == nil || depth > 24 {
+		return nil
+	}
+	r := p.forms.(*Resolver)
+	expr = ast.SkipParentheses(expr)
+	if expr.Kind == ast.KindAsExpression || expr.Kind == ast.KindTypeAssertionExpression {
+		return expr.Type()
+	}
+	if ast.IsIdentifier(expr) {
+		if d := r.binding(expr, expr.Text()); d != nil {
+			return d.Type()
+		}
+		return nil
+	}
+	if ast.IsElementAccessExpression(expr) {
+		return formsElementType(p.dataReceiverType(expr.Expression(), depth+1))
+	}
+	if ast.IsPropertyAccessExpression(expr) {
+		if shape := r.typeLiteral(p.dataReceiverType(expr.Expression(), depth+1), 0); shape != nil {
+			for _, member := range shape.Members() {
+				if name, ok := formsPropertyName(member); ok && name == expr.Name().Text() {
+					return member.Type()
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // dataMethod lowers proven D152 calls to module functions and delegates
@@ -218,7 +255,7 @@ func (p *projector) dynamicDataMethod(call *ast.Node, e env) bool {
 		return false
 	}
 	if dataMethodAmbiguous[name] {
-		p.dataMethodDiagnostic(access, "D253 cannot select a module for this unproven data method: its candidate TypeIds can coexist. Add a receiver annotation or write an explicit Module."+name+"(value, ...) call.")
+		p.dataMethodDiagnostic(access, "D253 cannot select a module for this unproven data method: its candidate TypeIds can coexist.")
 		return false
 	}
 	guard := false
@@ -325,6 +362,7 @@ func (p *projector) dynamicDataMethod(call *ast.Node, e env) bool {
 // dataMethodDiagnostic reports each unsafe access once, even when a call's
 // callee and the expression walk both visit an optional chain.
 func (p *projector) dataMethodDiagnostic(access *ast.Node, message string) {
+	message += p.dataMethodGuidance(access)
 	start := p.tokenStart(access)
 	for _, d := range p.diagnostics {
 		if d.Code == CodeDataMethod && d.Start == start {
@@ -332,6 +370,53 @@ func (p *projector) dataMethodDiagnostic(access *ast.Node, message string) {
 		}
 	}
 	p.diagnostics = append(p.diagnostics, Diagnostic{Start: start, Length: access.End() - start, Code: CodeDataMethod, Message: message})
+}
+
+// dataMethodGuidance names the actual receiver and every candidate function,
+// so a text-only refusal gives the author a concrete next edit without guessing.
+func (p *projector) dataMethodGuidance(access *ast.Node) string {
+	name := access.Name().Text()
+	receiver := ast.SkipParentheses(access.Expression())
+	binding := "value"
+	value := p.text[p.tokenStart(receiver):receiver.End()]
+	var properties []string
+	root := receiver
+	for ast.IsPropertyAccessExpression(root) {
+		properties = append(properties, root.Name().Text())
+		root = ast.SkipParentheses(root.Expression())
+	}
+	if ast.IsIdentifier(root) {
+		binding = root.Text()
+	}
+	if ast.IsIdentifier(receiver) {
+		binding = receiver.Text()
+	}
+	call := access.Parent
+	if call == nil || !ast.IsCallExpression(call) || call.Expression() != access {
+		typ := "{ " + name + ": unknown }"
+		for _, property := range properties {
+			typ = "{ " + property + ": " + typ + " }"
+		}
+		return " Annotate the receiver binding with its native field type, for example `const " + binding + ": " + typ + " = …`."
+	}
+	modules := append([]string(nil), dataMethodCandidates[name]...)
+	if name == "map" {
+		modules = append([]string{"Array"}, modules...)
+	}
+	types := make([]string, 0, len(modules))
+	calls := make([]string, 0, len(modules))
+	for _, module := range modules {
+		typ := module + "." + module + "<…>"
+		if module == "Array" {
+			typ = "Todo[]"
+		}
+		for _, property := range properties {
+			typ = "{ " + property + ": " + typ + " }"
+		}
+		types = append(types, "`const "+binding+": "+typ+" = …`")
+		calls = append(calls, "`"+module+"."+name+"("+value+", ...)`")
+	}
+	return " Annotate the receiver binding with a type annotation, for example " + strings.Join(types, " or ") + ", or call the module function explicitly: " + strings.Join(calls, ", ") + "."
 }
 
 // checkDataMethodAccess keeps augmentation from admitting optional or uncalled
@@ -368,7 +453,11 @@ func (p *projector) checkDataMethodAccess(access *ast.Node) {
 	if module != "" && (!dataMethods[module][name] || dataOwnMembers[module][name]) {
 		return
 	}
-	p.dataMethodDiagnostic(access, "D253 data methods require a direct call without optional chaining or uncalled access. Add a receiver annotation or write an explicit Module."+name+"(value, ...) call.")
+	message := "D253 data methods require a direct call without optional chaining or uncalled access."
+	if !called {
+		message = "The mapper cannot decide whether this is a native field or an uncalled data method."
+	}
+	p.dataMethodDiagnostic(access, message)
 }
 
 // dataAccessTypeModule follows nullable written types and aliases, so native
@@ -381,6 +470,18 @@ func dataAccessTypeModule(r *Resolver, t *ast.Node, depth int) string {
 		return module
 	}
 	t = formsUnwrapType(t)
+	if t != nil && t.Kind == ast.KindImportType {
+		imp := t.AsImportTypeNode()
+		if !imp.IsTypeOf && imp.Argument.Kind == ast.KindLiteralType && imp.Qualifier != nil && ast.IsIdentifier(imp.Qualifier) {
+			literal := imp.Argument.AsLiteralTypeNode().Literal
+			if ast.IsStringLiteral(literal) {
+				module := literal.Text()
+				if strings.HasPrefix(module, "effect/") && strings.TrimPrefix(module, "effect/") == imp.Qualifier.Text() && dataMethods[module] != nil {
+					return module
+				}
+			}
+		}
+	}
 	if t != nil {
 		switch t.Kind {
 		case ast.KindStringKeyword:
@@ -409,6 +510,17 @@ func dataAccessTypeModule(r *Resolver, t *ast.Node, depth int) string {
 		return module
 	}
 	if t.Kind == ast.KindTypeReference {
+		name := t.AsTypeReferenceNode().TypeName
+		if ast.IsIdentifier(name) {
+			c := r.calleeOf(name, nil, 0)
+			module, export, ok := strings.Cut(c.Canonical, "#")
+			if ok && dataMethods[module] != nil && strings.TrimPrefix(module, "effect/") == export {
+				return module
+			}
+			if r.binding(name, name.Text()) == nil && dataMethods["effect/"+name.Text()] != nil {
+				return "effect/" + name.Text()
+			}
+		}
 		if d := r.localType(t); d != nil && d.Kind == ast.KindTypeAliasDeclaration {
 			return dataAccessTypeModule(r, d.Type(), depth+1)
 		}
@@ -416,7 +528,8 @@ func dataAccessTypeModule(r *Resolver, t *ast.Node, depth int) string {
 	return ""
 }
 
-// nativeDataMember proves an own member from a written local shape or literal.
+// nativeDataMember accepts field access on a written native receiver type,
+// and proves callable members only from a written local shape or literal.
 // This preserves ordinary fields and callable members without attributing them
 // to a data module merely because their names also occur in the D152 table.
 func (p *projector) nativeDataMember(receiver *ast.Node, name string, callable bool, depth int) bool {
@@ -428,6 +541,9 @@ func (p *projector) nativeDataMember(receiver *ast.Node, name string, callable b
 		return false
 	}
 	receiver = ast.SkipParentheses(receiver)
+	if !callable && p.nativeDataAnnotation(receiver, 0) {
+		return true
+	}
 	var shape *ast.Node
 	switch {
 	case formsIsTopic(receiver):
@@ -474,6 +590,74 @@ func (p *projector) nativeDataMember(receiver *ast.Node, name string, callable b
 		if init := member.Initializer(); init != nil && (ast.IsArrowFunction(init) || ast.IsFunctionExpression(init)) {
 			return true
 		}
+	}
+	return false
+}
+
+// nativeDataAnnotation follows a receiver's written native type, including
+// imported names and array elements, without inferring a module from a field.
+func (p *projector) nativeDataAnnotation(receiver *ast.Node, depth int) bool {
+	if receiver == nil || depth > 24 {
+		return false
+	}
+	r := p.forms.(*Resolver)
+	receiver = ast.SkipParentheses(receiver)
+	if typ := p.dataReceiverType(receiver, 0); typ != nil {
+		return nativeDataType(r, typ, 0)
+	}
+	switch receiver.Kind {
+	case ast.KindIdentifier:
+		if d := r.binding(receiver, receiver.Text()); d != nil && d.Kind == ast.KindVariableDeclaration {
+			return p.nativeDataAnnotation(d.Initializer(), depth+1)
+		}
+	case ast.KindPropertyAccessExpression, ast.KindElementAccessExpression, ast.KindNonNullExpression:
+		return p.nativeDataAnnotation(receiver.Expression(), depth+1)
+	}
+	return false
+}
+
+// nativeDataType treats a written non-Effect type as the author's native
+// boundary; any, unknown and known data modules cannot hide unsafe dispatch.
+func nativeDataType(r *Resolver, typ *ast.Node, depth int) bool {
+	if typ == nil || depth > 24 {
+		return false
+	}
+	if module := dataAccessTypeModule(r, typ, 0); module != "" {
+		return strings.HasPrefix(module, "lib/")
+	}
+	typ = formsUnwrapType(typ)
+	if typ == nil {
+		return false
+	}
+	switch typ.Kind {
+	case ast.KindTypeReference:
+		if d := r.localType(typ); d != nil && d.Kind == ast.KindTypeAliasDeclaration {
+			return nativeDataType(r, d.Type(), depth+1)
+		}
+		return true
+	case ast.KindTypeLiteral, ast.KindArrayType, ast.KindTupleType, ast.KindLiteralType:
+		return true
+	case ast.KindImportType:
+		imp := typ.AsImportTypeNode()
+		return !imp.IsTypeOf && imp.Argument.Kind == ast.KindLiteralType && !strings.HasPrefix(imp.Argument.AsLiteralTypeNode().Literal.Text(), "effect/")
+	case ast.KindUnionType, ast.KindIntersectionType:
+		found := false
+		var members []*ast.Node
+		if typ.Kind == ast.KindUnionType {
+			members = typ.AsUnionTypeNode().Types.Nodes
+		} else {
+			members = typ.AsIntersectionTypeNode().Types.Nodes
+		}
+		for _, member := range members {
+			if member.Kind == ast.KindUndefinedKeyword || member.Kind == ast.KindNullKeyword || member.Kind == ast.KindLiteralType && member.AsLiteralTypeNode().Literal.Kind == ast.KindNullKeyword {
+				continue
+			}
+			if !nativeDataType(r, member, depth+1) {
+				return false
+			}
+			found = true
+		}
+		return found
 	}
 	return false
 }

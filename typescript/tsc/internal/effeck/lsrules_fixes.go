@@ -12,6 +12,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/compiler"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
 	"github.com/microsoft/TypeScript/tsc/internal/effeckmapper"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
 	"github.com/microsoft/TypeScript/tsc/internal/ls/lsconv"
@@ -513,12 +514,17 @@ func trustedImportEdit(file *ast.SourceFile, module, binding string) trustedValu
 	return trustedValueEdit{pos, pos, "\nimport { " + binding + " } from " + strconv.Quote(module) + ";\n"}
 }
 
+// EK9101 exposes unsafe data-method accesses as editor-only annotation fixes.
+var EK9101 = message(9101, diagnostics.CategorySuggestion, "{0}")
+
 // EK9100 asks for the annotation the text-only projector cannot infer. It is
 // an editor warning before the emit switch; the CLI does not run this check.
 var EK9100 = message(9100, legacyFormChoiceCategory, "{0}")
 
 func init() {
 	registry[EK9100.Code] = EK9100
+	registry[EK9101.Code] = EK9101
+	ls.RegisterCodeFixProvider(inferredReceiverFix)
 	ls.RegisterFileDiagnosticsHook(formChoiceDiagnostics)
 }
 
@@ -602,7 +608,7 @@ func resolveFormChoiceDiagnostics(ctx context.Context, service *ls.LanguageServi
 			}
 			file.AsNode().ForEachChild(visit)
 		}
-		if d := newDiagnosticAt(c.CompilerOptions(), file, core.NewTextRange(choice.Start, choice.Start+choice.Length), EK9100, message); d != nil {
+		if d := newDiagnosticAt(c.CompilerOptions(), file, core.NewTextRange(choice.Start, choice.Start+choice.Length), formChoiceMessage(choice.Code), message); d != nil {
 			result = append(result, d)
 		}
 	}
@@ -717,4 +723,63 @@ func isFormChoiceBlock(n *ast.Node) bool {
 	}
 	args := n.Parent.Arguments()
 	return args[len(args)-1] == n
+}
+
+// formChoiceMessage preserves the editor category for each projector choice.
+func formChoiceMessage(code int32) *Message {
+	if code == effeckmapper.CodeDataMethod {
+		return EK9101
+	}
+	return EK9100
+}
+
+// inferredReceiverFix freezes the checker type on a local declaration or
+// expression assertion, preserving shadows and leaving imported declarations alone.
+var inferredReceiverFix = &ls.CodeFixProvider{
+	Source:     diagnosticSource,
+	ErrorCodes: []int32{9101},
+	GetCodeActions: func(ctx context.Context, fix *ls.CodeFixContext) ([]*ls.CodeAction, error) {
+		var receiver *ast.Node
+		var visit func(*ast.Node) bool
+		visit = func(n *ast.Node) bool {
+			if ast.IsPropertyAccessExpression(n) && nodeStart(fix.SourceFile, n) == fix.Span.Pos() && n.End() == fix.Span.End() {
+				receiver = ast.SkipParentheses(n.Expression())
+				for ast.IsPropertyAccessExpression(receiver) {
+					receiver = ast.SkipParentheses(receiver.Expression())
+				}
+				return true
+			}
+			return n.ForEachChild(visit)
+		}
+		fix.SourceFile.AsNode().ForEachChild(visit)
+		if receiver == nil {
+			return nil, nil
+		}
+		c, done := fix.Program.GetTypeCheckerForFile(ctx, fix.SourceFile)
+		defer done()
+		if !ast.IsIdentifier(receiver) {
+			annotation := c.TypeToStringEx(c.GetTypeAtLocation(receiver), receiver, checker.TypeFormatFlagsNoTruncation|checker.TypeFormatFlagsUseFullyQualifiedType, nil)
+			if annotation == "any" || annotation == "unknown" {
+				return nil, nil
+			}
+			start := nodeStart(fix.SourceFile, receiver)
+			changes := replaceRange(fix, start, start, "(")
+			changes = append(changes, replaceRange(fix, receiver.End(), receiver.End(), " as "+annotation+")")...)
+			return []*ls.CodeAction{{Description: "Annotate as the fork infers", Changes: changes}}, nil
+		}
+		symbol := c.GetSymbolAtLocation(receiver)
+		if symbol == nil {
+			return nil, nil
+		}
+		declaration := symbol.ValueDeclaration()
+		if declaration == nil || !ast.IsVariableDeclaration(declaration) && !ast.IsParameterDeclaration(declaration) || declaration.Type() != nil || !ast.IsIdentifier(declaration.Name()) || ast.GetSourceFileOfNode(declaration) != fix.SourceFile {
+			return nil, nil
+		}
+		annotation := c.TypeToStringEx(c.GetTypeAtLocation(declaration.Name()), declaration, checker.TypeFormatFlagsNoTruncation|checker.TypeFormatFlagsUseFullyQualifiedType, nil)
+		if annotation == "any" || annotation == "unknown" {
+			return nil, nil
+		}
+		at := declaration.Name().End()
+		return []*ls.CodeAction{{Description: "Annotate as the fork infers", Changes: replaceRange(fix, at, at, ": "+annotation)}}, nil
+	},
 }

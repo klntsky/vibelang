@@ -54,14 +54,14 @@ func TestCategory(t *testing.T) {
 }
 
 // TestRegistryMatchesSpec checks that the registry lists exactly the codes in
-// the table of Chapter 28, plus the projector migration diagnostic.
+// the table of Chapter 28, plus the projector migration diagnostics.
 func TestRegistryMatchesSpec(t *testing.T) {
 	t.Parallel()
 	spec, err := os.ReadFile("../../../../docs/design/src/428-part4-ch28-tooling.md")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var want []int32
+	want := []int32{9101} // The LS-only projector suggestion has no Chapter 28 row yet.
 	for _, m := range regexp.MustCompile(`(?m)^\| EK(\d{4}) \|`).FindAllStringSubmatch(string(spec), -1) {
 		code, _ := strconv.Atoi(m[1])
 		want = append(want, int32(code))

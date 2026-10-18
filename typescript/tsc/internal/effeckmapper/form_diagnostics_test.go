@@ -41,7 +41,7 @@ func TestFormDiagnosticsMatchesProjection(t *testing.T) {
 			got := FormDiagnostics(file)
 			var want []Diagnostic
 			for _, d := range Project(tc.source, testContext).Diagnostics {
-				if d.Code == CodeFormChoice {
+				if d.Code == CodeFormChoice || d.Code == CodeDataMethod {
 					want = append(want, d)
 				}
 			}

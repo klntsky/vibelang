@@ -3,6 +3,7 @@ package checker
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
 )
 
 // WithChecker calls fn with the checker behind r while holding the checker's
@@ -109,10 +110,14 @@ func (c *Checker) CompilerOptions() *core.CompilerOptions {
 	return c.compilerOptions
 }
 
-// AddDiagnostic records d in the semantic diagnostic collection.
+// AddDiagnostic records d in the matching semantic or suggestion collection,
+// so editor suggestions do not become CLI semantic errors.
 // Its node must belong to the file being checked: the program reads each
 // file's diagnostics from the checker that checks that file.
 func (c *Checker) AddDiagnostic(d *ast.Diagnostic) *ast.Diagnostic {
+	if d.Category() == diagnostics.CategorySuggestion {
+		return c.addSuggestionDiagnostic(d)
+	}
 	return c.addDiagnostic(d)
 }
 

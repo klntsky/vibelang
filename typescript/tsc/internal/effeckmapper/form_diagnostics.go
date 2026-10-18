@@ -6,7 +6,12 @@ import "github.com/microsoft/TypeScript/tsc/internal/ast"
 // It builds no lowering plan, renders no virtual file, and reads no package
 // metadata, so an open-file suggestion need not pay for a full projection.
 func FormDiagnostics(file *ast.SourceFile) []Diagnostic {
-	p := &projector{file: file, text: file.Text(), forms: newFormResolver(file)}
+	p := &projector{file: file, text: file.Text(), forms: newFormResolver(file), names: newNames(file, file.Text()), services: map[string]*ast.Node{}}
+	for _, statement := range file.Statements.Nodes {
+		if isServiceClass(statement) {
+			p.services[statement.Name().Text()] = statement
+		}
+	}
 	// callArgument tries pipe routing before the ordinary lambda resolver,
 	// including through transparent expression wrappers.
 	pipeLambdas := map[*ast.Node]bool{}
@@ -29,6 +34,15 @@ func FormDiagnostics(file *ast.SourceFile) []Diagnostic {
 	var visit func(*ast.Node, bool)
 	visit = func(n *ast.Node, effect bool) {
 		bodyEffect := effect
+		if ast.IsPropertyAccessExpression(n) && p.sourceDataMethodAccess(n) {
+			p.checkDataMethodAccess(n)
+			call := n.Parent
+			if call != nil && ast.IsCallExpression(call) && call.Expression() == n && !ast.IsOptionalChain(n) && !ast.IsOptionalChain(call) && p.dataReceiver(n.Expression(), 0) == "" && dataMethodAmbiguous[n.Name().Text()] && !p.nativeDataMember(n.Expression(), n.Name().Text(), true, 0) {
+				if r := p.forms.(*Resolver); r.Callee(call).Canonical == "" {
+					p.dataMethodDiagnostic(n, "D253 cannot select a module for this unproven data method: its candidate TypeIds can coexist.")
+				}
+			}
+		}
 		if ast.IsCallExpression(n) {
 			if block := blockArgument(n); block != nil {
 				p.choice(p.forms.Block(n), block)
@@ -143,4 +157,26 @@ func (p *projector) awaitElementFormChoice(element *ast.Node) {
 	} else if !p.awaitKnownValue(element, 0) {
 		p.awaitChoice(element, "The mapper cannot decide this await element's form from text. Add an Effect, Fiber, or Deferred annotation, or an explicit parameterless Effect function annotation.")
 	}
+}
+
+// sourceDataMethodAccess excludes synthesized pattern and handler scaffolding,
+// which the projector lowers as a unit rather than as data-method expressions.
+func (p *projector) sourceDataMethodAccess(n *ast.Node) bool {
+	for parent := n; parent != nil; parent = parent.Parent {
+		if parent.Kind == ast.KindTryStatement && parent.Flags&ast.NodeFlagsEffeck != 0 {
+			if groups, ok := handleClauses(parent); ok {
+				for _, group := range groups {
+					for _, clause := range group.clauses {
+						if clause.operation == n {
+							return false
+						}
+					}
+				}
+			}
+		}
+		if parent.Flags&ast.NodeFlagsReparsed != 0 || p.isMatchForm(parent) {
+			return false
+		}
+	}
+	return true
 }
