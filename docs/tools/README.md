@@ -91,8 +91,9 @@ cause a function to run in the published example itself.
 
 The `check:snippets` package script and the pre-deploy snippet check both use
 `--run`. Both also test the locally scaffolded starter, including Vitest without
-a prior build, and compare its stdout to the `out` fences in the getting-started
-and installation guides. Shell commands are not executed by the snippet checker.
+a prior build, and compare its stdout to the `out` fences in the getting-started,
+installation, and new-project guides. It also checks the compiler version shown
+in the existing-project guide. Shell commands are not executed by the snippet checker.
 
 With `--run`, the checker emits marked blocks and their dependencies with the
 selected compiler, then runs each entry separately with Node and the linked
@@ -109,7 +110,7 @@ access, and interactive programs need deterministic fixtures before opting in.
 
 ## Compiler hovers
 
-scripts/deploy-docs.sh builds hovers by default with the 0.0.1 release compiler, so popups show what readers' compiler shows; `VIBELANG_DOCS_HOVERS=0` deploys without them. Until 0.0.2 ships, about 400 hover requests on VibeLang form words (`service`, `provide`, `when`, `match`, `schema`, `all`) fail with a 0.0.1 language-server panic, fixed on main in 8fadacb5; those words have no popup, and hovers.ts records each failure in the page's cache entry.
+scripts/deploy-docs.sh builds hovers by default with the 0.0.1 release compiler, so popups show what readers' compiler shows. `VIBELANG_DOCS_HOVERS=0` deploys without them. The tool records hover request failures in each page's cache entry and prints examples so language-server defects remain visible.
 
 `hovers.ts` asks the VibeLang language server for the hovers and diagnostics of
 the same blocks and caches them for a renderer:
