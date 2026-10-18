@@ -195,6 +195,10 @@ var adjustableCodes = func() []int32 {
 // with EK4406:error, independently of the legacy emitter.
 const legacyTrustCategory = warningCategory
 
+// legacyFormChoiceCategory is the release-before-switch category for EK9100.
+// Editor-only until the switch, it becomes an error when (B) emit is default.
+const legacyFormChoiceCategory = warningCategory
+
 // category returns the category options give code, and false when they turn
 // it off.
 func category(options *core.CompilerOptions, m *Message) (diagnostics.Category, bool) {

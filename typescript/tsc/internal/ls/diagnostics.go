@@ -42,6 +42,7 @@ func (l *LanguageService) ProvideDiagnostics(ctx context.Context, uri lsproto.Do
 	}
 
 	diagnostics := getAllDiagnostics(ctx, program, file)
+	diagnostics = append(diagnostics, l.fileDiagnostics(ctx, file)...)
 
 	return lsproto.RelatedFullDocumentDiagnosticReportOrUnchangedDocumentDiagnosticReport{
 		FullDocumentDiagnosticReport: &lsproto.RelatedFullDocumentDiagnosticReport{

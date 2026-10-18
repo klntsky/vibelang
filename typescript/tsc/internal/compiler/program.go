@@ -477,6 +477,9 @@ func (p *Program) canReplaceFileInProgram(file1 *ast.SourceFile, file2 *ast.Sour
 		file1.ScriptKind == file2.ScriptKind &&
 		ast.IsExternalOrCommonJSModule(file1) == ast.IsExternalOrCommonJSModule(file2) &&
 		file1.UsesUriStyleNodeCoreModules == file2.UsesUriStyleNodeCoreModules &&
+		// A changed prelude dependency must rebuild module resolution even
+		// when every written import is unchanged (for example, the first !).
+		slices.Equal(implicitImports(file1), implicitImports(file2)) &&
 		slices.EqualFunc(file1.Imports(), file2.Imports(), func(n1 *ast.Node, n2 *ast.Node) bool {
 			return equalModuleSpecifiers(n1, n2) &&
 				p.GetModeForUsageLocation(file1, n1) == p.GetModeForUsageLocation(file2, n2) &&

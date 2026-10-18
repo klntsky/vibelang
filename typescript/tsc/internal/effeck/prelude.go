@@ -386,9 +386,10 @@ func effectRootModuleSymbol(c *checker.Checker, state *preludeState, file *ast.S
 }
 
 // resolvedModuleSymbol returns the symbol of the module named name that file
-// resolves, remembered in cache, or nil when it does not resolve.
+// resolves in the current program. Cache successful resolutions only; a miss
+// during an editor update must not poison later lookups.
 func resolvedModuleSymbol(c *checker.Checker, cache map[*ast.SourceFile]*ast.Symbol, file *ast.SourceFile, name string) *ast.Symbol {
-	if module, ok := cache[file]; ok {
+	if module := cache[file]; module != nil {
 		return module
 	}
 	var module *ast.Symbol
@@ -401,7 +402,9 @@ func resolvedModuleSymbol(c *checker.Checker, cache map[*ast.SourceFile]*ast.Sym
 			}
 		}
 	}
-	cache[file] = module
+	if module != nil {
+		cache[file] = module
+	}
 	return module
 }
 

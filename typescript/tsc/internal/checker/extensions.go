@@ -109,9 +109,9 @@ func (c *Checker) CompilerOptions() *core.CompilerOptions {
 	return c.compilerOptions
 }
 
-// AddDiagnostic records d with c's diagnostics. d must belong to a node of
-// the file that c is checking: the program reads each file's diagnostics from
-// the checker that checks that file.
+// AddDiagnostic records d in the semantic diagnostic collection.
+// Its node must belong to the file being checked: the program reads each
+// file's diagnostics from the checker that checks that file.
 func (c *Checker) AddDiagnostic(d *ast.Diagnostic) *ast.Diagnostic {
 	return c.addDiagnostic(d)
 }

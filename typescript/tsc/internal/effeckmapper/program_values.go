@@ -39,6 +39,25 @@ func (p *projector) programCollection(node *ast.Node, e env) bool {
 // to recognize D8's program input. Unknown stages retain ordinary TypeScript
 // checking; no argument-position heuristic decides their input form.
 func (p *projector) programPipeArgument(node *ast.Node, e env) bool {
+	if !p.programPipeInput(node) {
+		return false
+	}
+	if isLambda(node) && len(node.Parameters()) == 0 {
+		p.programLambda(node, false)
+	} else if formsHoldsCall(node) {
+		start := p.tokenStart(node)
+		p.plan.mark(editProgram, partOpen, start, start, "expr "+selfArg(node))
+		p.visit(node, expressionEnv())
+		p.plan.mark(editProgram, partClose, node.End(), node.End(), "expr")
+	} else {
+		return p.programValue(node, Decision{Class: ClassProgram}, e)
+	}
+	return true
+}
+
+// programPipeInput shares the projector's pipe argument routing with the
+// editor diagnostic walk, including an undecidable first-stage diagnostic.
+func (p *projector) programPipeInput(node *ast.Node) bool {
 	d := p.forms.Argument(node)
 	if d.Call == nil || d.Argument != 0 || len(d.Steps) != 0 || len(d.Call.Arguments()) < 2 {
 		return false
@@ -70,20 +89,7 @@ func (p *projector) programPipeArgument(node *ast.Node, e env) bool {
 		}
 		return false
 	}
-	if !program {
-		return false
-	}
-	if isLambda(node) && len(node.Parameters()) == 0 {
-		p.programLambda(node, false)
-	} else if formsHoldsCall(node) {
-		start := p.tokenStart(node)
-		p.plan.mark(editProgram, partOpen, start, start, "expr "+selfArg(node))
-		p.visit(node, expressionEnv())
-		p.plan.mark(editProgram, partClose, node.End(), node.End(), "expr")
-	} else {
-		return p.programValue(node, Decision{Class: ClassProgram}, e)
-	}
-	return true
+	return program
 }
 
 // pipeProgramTopic reads only this pipe's topics, including a nested pipe's

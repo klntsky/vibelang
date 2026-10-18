@@ -1,6 +1,7 @@
 package ls
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/lsp/lsproto"
+	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
 // RangeOf returns the LSP range of textRange in file, for the edits of a code
@@ -185,4 +187,31 @@ func (l *LanguageService) completionsFromHooks(c *checker.Checker, file *ast.Sou
 func (l *LanguageService) ToLSPRange(file *ast.SourceFile, textRange core.TextRange) lsproto.Range {
 	rng, _ := l.converters.ToLSPRange(file, textRange)
 	return rng
+}
+
+// FileDiagnosticsHook supplies diagnostics that belong only to an on-demand
+// editor request, so the compiler never runs migration analyses it discards.
+type FileDiagnosticsHook func(context.Context, *LanguageService, *ast.SourceFile) []*ast.Diagnostic
+
+var fileDiagnosticsHooks []FileDiagnosticsHook
+
+// RegisterFileDiagnosticsHook installs an editor-only diagnostic provider.
+// Registration happens during init, like quick fixes, before LS requests start.
+func RegisterFileDiagnosticsHook(hook FileDiagnosticsHook) {
+	fileDiagnosticsHooks = append(fileDiagnosticsHooks, hook)
+}
+
+// fileDiagnostics runs editor analyses only for open files. Hosts without
+// overlays treat explicit diagnostic requests as open, as the standalone LS does.
+func (l *LanguageService) fileDiagnostics(ctx context.Context, file *ast.SourceFile) []*ast.Diagnostic {
+	if host, ok := l.host.(interface {
+		IsFileOpen(tspath.RootedFilePath) bool
+	}); ok && !host.IsFileOpen(file.FileName()) {
+		return nil
+	}
+	var result []*ast.Diagnostic
+	for _, hook := range fileDiagnosticsHooks {
+		result = append(result, hook(ctx, l, file)...)
+	}
+	return result
 }

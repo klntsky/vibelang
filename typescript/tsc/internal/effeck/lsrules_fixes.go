@@ -2,12 +2,17 @@ package effeck
 
 import (
 	"context"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
+	"weak"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/compiler"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/effeckmapper"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
 	"github.com/microsoft/TypeScript/tsc/internal/ls/lsconv"
 	"github.com/microsoft/TypeScript/tsc/internal/lsp/lsproto"
@@ -506,4 +511,210 @@ func trustedImportEdit(file *ast.SourceFile, module, binding string) trustedValu
 		return trustedValueEdit{at, at, text}
 	}
 	return trustedValueEdit{pos, pos, "\nimport { " + binding + " } from " + strconv.Quote(module) + ";\n"}
+}
+
+// EK9100 asks for the annotation the text-only projector cannot infer. It is
+// an editor warning before the emit switch; the CLI does not run this check.
+var EK9100 = message(9100, legacyFormChoiceCategory, "{0}")
+
+func init() {
+	registry[EK9100.Code] = EK9100
+	ls.RegisterFileDiagnosticsHook(formChoiceDiagnostics)
+}
+
+// formChoiceCache holds syntax-only results under weak source-file identities.
+// A new file version gets a new AST; neither results nor cleanup retain it.
+var formChoiceCache sync.Map // weak.Pointer[ast.SourceFile] -> func() []effeckmapper.Diagnostic
+
+// cachedFormChoices resolves only the requested file, once per immutable AST,
+// and shares results across LS pulls and checker instances without retaining files.
+func cachedFormChoices(file *ast.SourceFile) []effeckmapper.Diagnostic {
+	key := weak.Make(file)
+	compute := sync.OnceValue(func() []effeckmapper.Diagnostic {
+		return effeckmapper.FormDiagnostics(file)
+	})
+	cached, loaded := formChoiceCache.LoadOrStore(key, compute)
+	if !loaded {
+		runtime.AddCleanup(file, func(k weak.Pointer[ast.SourceFile]) { formChoiceCache.Delete(k) }, key)
+	}
+	return cached.(func() []effeckmapper.Diagnostic)()
+}
+
+// formDiagnosticCache retains materialized editor diagnostics only while the
+// owning program is alive; imported types and category settings can change
+// across programs even when the open file's syntax has not changed.
+var formDiagnosticCache sync.Map // weak.Pointer[compiler.Program] -> *sync.Map
+
+// formChoiceDiagnostics shares one editor analysis per file and program across
+// repeated pulls. Neither this cache nor the syntax cache retains a program.
+func formChoiceDiagnostics(ctx context.Context, service *ls.LanguageService, file *ast.SourceFile) []*ast.Diagnostic {
+	if !isEffeckFile(file) {
+		return nil
+	}
+	program := service.GetProgram()
+	key := weak.Make(program)
+	cache, loaded := formDiagnosticCache.LoadOrStore(key, &sync.Map{})
+	if !loaded {
+		runtime.AddCleanup(program, func(k weak.Pointer[compiler.Program]) { formDiagnosticCache.Delete(k) }, key)
+	}
+	compute := sync.OnceValue(func() []*ast.Diagnostic {
+		// A canceled checker request must not poison later pulls of this version.
+		defer func() {
+			if reason := recover(); reason != nil {
+				cache.(*sync.Map).Delete(file)
+				panic(reason)
+			}
+		}()
+		result := resolveFormChoiceDiagnostics(ctx, service, file)
+		if ctx.Err() != nil {
+			cache.(*sync.Map).Delete(file)
+		}
+		return result
+	})
+	result, _ := cache.(*sync.Map).LoadOrStore(file, compute)
+	return result.(func() []*ast.Diagnostic)()
+}
+
+// resolveFormChoiceDiagnostics materializes cached syntax choices on demand.
+// The CLI never calls this provider or pays for the forms resolver.
+func resolveFormChoiceDiagnostics(ctx context.Context, service *ls.LanguageService, file *ast.SourceFile) []*ast.Diagnostic {
+	choices := cachedFormChoices(file)
+	if len(choices) == 0 {
+		return nil
+	}
+	c, done := service.GetProgram().GetTypeCheckerForFile(ctx, file)
+	defer done()
+	var result []*ast.Diagnostic
+	for _, choice := range choices {
+		message := choice.Message
+		if strings.HasPrefix(message, "The mapper cannot decide this await element") {
+			var visit func(*ast.Node) bool
+			visit = func(n *ast.Node) bool {
+				if nodeStart(file, n) == choice.Start && n.End() == choice.Start+choice.Length {
+					inferred := c.GetTypeAtLocation(n)
+					if success := successType(c, inferred); success != nil {
+						inferred = success
+					}
+					message += " The fork infers the success type " + c.TypeToStringEx(inferred, n, checker.TypeFormatFlagsNoTruncation|checker.TypeFormatFlagsUseFullyQualifiedType, nil) + "."
+					return true
+				}
+				return n.ForEachChild(visit)
+			}
+			file.AsNode().ForEachChild(visit)
+		}
+		if d := newDiagnosticAt(c.CompilerOptions(), file, core.NewTextRange(choice.Start, choice.Start+choice.Length), EK9100, message); d != nil {
+			result = append(result, d)
+		}
+	}
+	return result
+}
+
+// isFormChoiceLambda mirrors the projector's source lambdas, excluding parser
+// helpers and JavaScript async/generator functions whose forms are fixed.
+func isFormChoiceLambda(n *ast.Node) bool {
+	if n.Flags&ast.NodeFlagsReparsed != 0 || n.Body() == nil || ast.HasSyntacticModifier(n, ast.ModifierFlagsAsync) {
+		return false
+	}
+	switch n.Kind {
+	case ast.KindArrowFunction:
+		token := n.AsArrowFunction().EqualsGreaterThanToken
+		return token != nil && token.Flags&ast.NodeFlagsReparsed == 0
+	case ast.KindFunctionExpression:
+		return n.AsFunctionExpression().AsteriskToken == nil
+	case ast.KindMethodDeclaration:
+		return n.Parent != nil && ast.IsObjectLiteralExpression(n.Parent) && n.AsMethodDeclaration().AsteriskToken == nil
+	}
+	return false
+}
+
+// inferredFormFix freezes the fork's selected lowering and inferred channels
+// in source, so answering a projector choice preserves existing execution.
+var inferredFormFix = &ls.CodeFixProvider{
+	Source:     diagnosticSource,
+	ErrorCodes: []int32{9100},
+	GetCodeActions: func(ctx context.Context, fix *ls.CodeFixContext) ([]*ls.CodeAction, error) {
+		var fn *ast.Node
+		var visit func(*ast.Node) bool
+		visit = func(n *ast.Node) bool {
+			if (isFormChoiceLambda(n) || isFormChoiceBlock(n)) && nodeStart(fix.SourceFile, n) == fix.Span.Pos() && n.End() == fix.Span.End() {
+				fn = n
+				return true
+			}
+			return n.ForEachChild(visit)
+		}
+		fix.SourceFile.AsNode().ForEachChild(visit)
+		if fn == nil {
+			// Await expressions and held values have no written lambda to annotate.
+			// Introducing one changes collection conversions in the fork.
+			return nil, nil
+		}
+		c, done := fix.Program.GetTypeCheckerForFile(ctx, fix.SourceFile)
+		defer done()
+		a := analyzerFor(c)
+		f := a.finalForm(fn)
+		if f == formProgram {
+			return nil, nil
+		}
+		if ast.IsMethodDeclaration(fn) {
+			f = formPlain
+			if a.isEffect(fn) {
+				f = formEffect
+			}
+		}
+		printType := func(t *checker.Type) string {
+			return c.TypeToStringEx(t, fn, checker.TypeFormatFlagsNoTruncation|checker.TypeFormatFlagsUseFullyQualifiedType, nil)
+		}
+		annotation := printType(c.GetReturnTypeFromBody(fn))
+		if f != formPlain && f != formNone {
+			info := a.effectOf(fn)
+			if info == nil {
+				return nil, nil
+			}
+			annotation = bangTypes("Effect<" + annotation + ", " + printType(c.GetUnionType(info.errors)) + ", " + printType(c.GetUnionType(info.requirements)) + ">")
+		}
+		var changes []*lsproto.TextEdit
+		if isFormChoiceBlock(fn) {
+			call := fn.Parent
+			if blockParamFormOf(c, call) != blockAppended {
+				return nil, nil
+			}
+			start := nodeStart(fix.SourceFile, call)
+			brace := nodeStart(fix.SourceFile, fn.Body())
+			head := strings.TrimRight(fix.SourceFile.Text()[start:brace], " \t\r\n")
+			if strings.HasSuffix(head, ")") {
+				head = strings.TrimSuffix(head, ")")
+				if len(call.Arguments()) > 1 {
+					head += ", "
+				}
+			} else {
+				head += "("
+			}
+			changes = replaceRange(fix, start, brace, head+"(): "+annotation+" => ")
+			changes = append(changes, replaceRange(fix, fn.End(), fn.End(), ")")...)
+		} else if fn.Type() != nil {
+			changes = replaceRange(fix, nodeStart(fix.SourceFile, fn.Type()), fn.Type().End(), annotation)
+		} else {
+			at := nodeStart(fix.SourceFile, fn.Body())
+			if ast.IsArrowFunction(fn) {
+				at = nodeStart(fix.SourceFile, fn.AsArrowFunction().EqualsGreaterThanToken)
+				params := fn.Parameters()
+				if len(params) == 1 && fix.SourceFile.Text()[nodeStart(fix.SourceFile, fn):nodeStart(fix.SourceFile, params[0])] == "" {
+					changes = append(changes, replaceRange(fix, nodeStart(fix.SourceFile, params[0]), nodeStart(fix.SourceFile, params[0]), "(")...)
+					changes = append(changes, replaceRange(fix, params[0].End(), params[0].End(), ")")...)
+				}
+			}
+			changes = append(changes, replaceRange(fix, at, at, ": "+annotation+" ")...)
+		}
+		return []*ls.CodeAction{{Description: "Annotate as the fork infers", Changes: changes}}, nil
+	},
+}
+
+// isFormChoiceBlock recognizes the parser's block-parameter lambda so choices
+// on bare blocks are surfaced and can be rewritten as annotated arguments.
+func isFormChoiceBlock(n *ast.Node) bool {
+	if n.Parent == nil || !isBlockParamCall(n.Parent) {
+		return false
+	}
+	args := n.Parent.Arguments()
+	return args[len(args)-1] == n
 }

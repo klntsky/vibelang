@@ -304,6 +304,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4823 | Off by default: an arrow function whose block only returns a value (D240) | Write the value as the body (quick fix) | 2 |
 | EK4824 | Off by default: a `pipe` with no functions (D240) | Remove the pipe (quick fix) | 5 |
 | EK4825 | Off by default: a pipe of a pipe, `x.pipe(f).pipe(g)` (D240) | Pass every function to one pipe (quick fix) | 5 |
+| EK9100 | The text projector cannot decide a lambda or await element’s form (editor warning before the emit switch) | Annotate with the fork’s inferred form and channels where safe; program-form and await sites require an author’s annotation | 10 |
 
 #### Linting
 

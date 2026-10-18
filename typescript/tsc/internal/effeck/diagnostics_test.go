@@ -24,6 +24,10 @@ func TestCategory(t *testing.T) {
 		want    diagnostics.Category
 		on      bool
 	}{
+		{"EK9100 is a migration warning", EK9100, nil, diagnostics.CategoryWarning, true},
+		{"EK9100 can be an error", EK9100, with(map[string]string{"EK9100": "error"}), diagnostics.CategoryError, true},
+		{"EK9100 can be a warning", EK9100, with(map[string]string{"EK9100": "warning"}), diagnostics.CategoryWarning, true},
+		{"EK9100 can be off", EK9100, with(map[string]string{"EK9100": "off"}), 0, false},
 		{"EK4406 can be an error", EK4406, with(map[string]string{"EK4406": "error"}), diagnostics.CategoryError, true},
 		{"EK4406 can be a warning", EK4406, with(map[string]string{"EK4406": "warning"}), diagnostics.CategoryWarning, true},
 		{"EK4406 is a migration warning", EK4406, nil, diagnostics.CategoryWarning, true},
@@ -50,7 +54,7 @@ func TestCategory(t *testing.T) {
 }
 
 // TestRegistryMatchesSpec checks that the registry lists exactly the codes in
-// the table of Chapter 28 of the spec.
+// the table of Chapter 28, plus the projector migration diagnostic.
 func TestRegistryMatchesSpec(t *testing.T) {
 	t.Parallel()
 	spec, err := os.ReadFile("../../../../docs/design/src/428-part4-ch28-tooling.md")

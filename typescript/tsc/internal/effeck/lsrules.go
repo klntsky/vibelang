@@ -75,6 +75,7 @@ func init() {
 		registry[m.Code] = m
 	}
 	fileChecks = append(fileChecks, checkEffectRules)
+	ls.RegisterCodeFixProvider(inferredFormFix)
 	ls.RegisterCodeFixProvider(trustedValueFix)
 	ls.RegisterCodeFixProvider(callEffectFix)
 	ls.RegisterCodeFixProvider(mergeAllFix)

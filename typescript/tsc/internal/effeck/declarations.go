@@ -6,8 +6,10 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/nodebuilder"
 	"github.com/microsoft/TypeScript/tsc/internal/printer"
 	"github.com/microsoft/TypeScript/tsc/internal/transformers"
+	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
 // The declaration file of a .effeck file is ordinary TypeScript, so it must import
@@ -57,7 +59,44 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 		return nil
 	}
 	return func(declarations *ast.SourceFile) *ast.SourceFile {
-		rewriter := &specifierRewriter{}
+		rewriter := &specifierRewriter{sourceDirectory: tspath.GetDirectoryPath(string(sourceFile.FileName()))}
+		// Function-expression signatures may be recycled by the node builder
+		// without an entity-visibility callback. Qualify their bang references
+		// directly, retaining the same public spelling as inferred signatures.
+		bang := &bangDeclarationRewriter{types: map[*ast.Node]*ast.Node{}}
+		r.WithChecker(func(c *checker.Checker) {
+			if namespace := preludeSymbol(c, preludeStateOf(c), sourceFile, "Effect"); namespace != nil {
+				if effect := effectInterfaceOfModule(c, namespace); effect != nil {
+					rewriter.effectPath = effectModulePath(c, effect)
+				}
+			}
+			var visit func(*ast.Node) bool
+			visit = func(n *ast.Node) bool {
+				// An inferred arrow may load Effect only through its callee,
+				// without any prelude import in this source file.
+				if rewriter.effectPath == "" && isLowerable(n) && n.Body() != nil {
+					for _, signature := range c.GetSignaturesOfType(c.GetTypeAtLocation(n), checker.SignatureKindCall) {
+						if path := effectModulePath(c, c.GetReturnTypeOfSignature(signature)); path != "" {
+							rewriter.effectPath = path
+							break
+						}
+					}
+				}
+				if ast.IsTypeReferenceNode(n) {
+					first := ast.GetFirstIdentifier(n.AsTypeReferenceNode().TypeName)
+					owner := ast.FindAncestor(first, func(n *ast.Node) bool {
+						return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsMethodDeclaration(n) || ast.IsFunctionDeclaration(n)
+					})
+					if owner != nil && owner.Body() != nil && (ast.IsArrowFunction(owner) || ast.IsFunctionExpression(owner) || ast.IsMethodDeclaration(owner) && ast.IsObjectLiteralExpression(owner.Parent)) && first.Flags&ast.NodeFlagsReparsed != 0 && isEffectType(c, c.GetTypeFromTypeNode(n)) {
+						bang.types[first] = c.TypeToTypeNode(c.GetTypeFromTypeNode(n), n, nodebuilder.FlagsNoTruncation|nodebuilder.FlagsUseFullyQualifiedType, nil)
+					}
+				}
+				return n.ForEachChild(visit)
+			}
+			sourceFile.AsNode().ForEachChild(visit)
+		})
+		bang.NewTransformer(bang.visit, resolver.EmitContext())
+		declarations = bang.TransformSourceFile(declarations)
 		rewriter.NewTransformer(rewriter.visit, resolver.EmitContext())
 		declarations = rewriter.TransformSourceFile(declarations)
 
@@ -106,6 +145,17 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 		statements := append(imports, declarations.Statements.Nodes...)
 		return f.UpdateSourceFile(declarations, f.NewNodeList(statements), declarations.EndOfFileToken).AsSourceFile()
 	}
+}
+
+// effectModulePath identifies Effect's defining module by its interface symbol,
+// so declaration import rewriting never guesses from a package-path suffix.
+func effectModulePath(c *checker.Checker, t *checker.Type) string {
+	if symbol := effectInterfaceSymbol(c, t); symbol != nil {
+		for _, declaration := range symbol.Declarations() {
+			return tspath.RemoveFileExtension(string(ast.GetSourceFileOfNode(declaration).FileName()))
+		}
+	}
+	return ""
 }
 
 // preludeAliases returns a free local name for each prelude name in names
@@ -161,9 +211,12 @@ func (tx *preludeRenamer) visit(node *ast.Node) *ast.Node {
 // specifierRewriter makes a declaration file name modules by output: the
 // specifier of an import or export declaration, and the argument of an
 // import type that the checker wrote for an inferred type, such as
-// import("./users.effeck").NotFound.
+// import("./users.effeck").NotFound. Effect's physical path is named by its
+// public module even when a symlink led the checker outside node_modules.
 type specifierRewriter struct {
 	transformers.Transformer
+	sourceDirectory string
+	effectPath      string // extensionless path of the resolved Effect interface's module
 }
 
 func (tx *specifierRewriter) visit(node *ast.Node) *ast.Node {
@@ -184,7 +237,14 @@ func (tx *specifierRewriter) visit(node *ast.Node) *ast.Node {
 	case ast.KindImportType:
 		visited := tx.Visitor().VisitEachChild(node).AsImportTypeNode()
 		if argument := visited.Argument; argument != nil && ast.IsLiteralTypeNode(argument) {
-			if specifier, changed := outputSpecifier(f, argument.AsLiteralTypeNode().Literal); changed {
+			literal := argument.AsLiteralTypeNode().Literal
+			// Match the resolved interface's file, not a package-path suffix:
+			// only that module is known to have the public name effect/Effect.
+			if ast.IsStringLiteral(literal) && tx.effectPath != "" && tspath.IsExternalModuleNameRelative(literal.Text()) && tspath.RemoveFileExtension(tspath.ResolvePath(tx.sourceDirectory, literal.Text())) == tx.effectPath {
+				specifier := f.NewStringLiteral("effect/Effect", ast.TokenFlagsNone)
+				return f.UpdateImportTypeNode(visited, visited.IsTypeOf, f.UpdateLiteralTypeNode(argument.AsLiteralTypeNode(), specifier), visited.Attributes, visited.Qualifier, visited.TypeArguments)
+			}
+			if specifier, changed := outputSpecifier(f, literal); changed {
 				return f.UpdateImportTypeNode(visited, visited.IsTypeOf, f.UpdateLiteralTypeNode(argument.AsLiteralTypeNode(), specifier), visited.Attributes, visited.Qualifier, visited.TypeArguments)
 			}
 		}
@@ -204,4 +264,30 @@ func outputSpecifier(f *printer.NodeFactory, specifier *ast.Node) (*ast.Node, bo
 		return specifier, false
 	}
 	return f.NewStringLiteral(text, specifier.AsStringLiteral().TokenFlags), true
+}
+
+// bangDeclarationRewriter qualifies the parser's synthetic Effect.Effect in
+// serialized lambda signatures. Named declarations keep their existing imports.
+type bangDeclarationRewriter struct {
+	transformers.Transformer
+	types map[*ast.Node]*ast.Node
+}
+
+// visit replaces only bang references owned by expressions or object methods,
+// leaving user-defined Effect names and generic shadowing untouched.
+func (tx *bangDeclarationRewriter) visit(node *ast.Node) *ast.Node {
+	if ast.IsTypeReferenceNode(node) {
+		name := node.AsTypeReferenceNode().TypeName
+		first := ast.GetFirstIdentifier(name)
+		original := tx.EmitContext().MostOriginal(first)
+		if tx.types[original] != nil && first.Text() == "Effect" && ast.IsQualifiedName(name) && name.AsQualifiedName().Right.Text() == "Effect" {
+			owner := ast.FindAncestor(original, func(n *ast.Node) bool {
+				return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsMethodDeclaration(n) || ast.IsFunctionDeclaration(n)
+			})
+			if owner != nil && !ast.IsFunctionDeclaration(owner) {
+				return tx.types[original]
+			}
+		}
+	}
+	return tx.Visitor().VisitEachChild(node)
 }

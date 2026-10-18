@@ -803,3 +803,9 @@ func (s *Snapshot) dispose() {
 		}
 	}
 }
+
+// IsFileOpen lets editor-only diagnostics distinguish client overlays from
+// imported files, without adding that analysis to the compiler's checking path.
+func (s *Snapshot) IsFileOpen(fileName tspath.RootedFilePath) bool {
+	return s.isOpenFile(fileName)
+}
