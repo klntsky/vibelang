@@ -18,6 +18,15 @@ test("keeps Effeck's notes and the JSDoc's first paragraph", () => {
   expect(trimDocs("")).toBe("")
 })
 
+test("splits Effeck's notes from the JSDoc at the server's rule", () => {
+  // Notes the opening list does not know stay notes when the rule marks them.
+  expect(trimDocs("A brand-new note.\n\nAnother one.\n\n---\n\nLogs one or more messages.\n\n**Example**\n\n```ts\nEffect.log(1)\n```"))
+    .toBe("A brand-new note.\n\nAnother one.\n\nLogs one or more messages.")
+  expect(trimDocs("A brand-new note.\n\n---\n\n*@since* — 2.0.0")).toBe("A brand-new note.")
+  // Without a rule, a hover with only notes keeps them.
+  expect(trimDocs("Runs here and returns `void`.")).toBe("Runs here and returns `void`.")
+})
+
 test("strips local links and paths", () => {
   const raw = "Like [`String`](file:///Users/someone/effectscript/packages/runtime/node_modules/effect/src/Config.ts#1439,17-1439,23) " +
     "from /Users/someone/effectscript/packages/runtime/node_modules/effect/dist/Config.d.ts in /private/var/folders/x/T/effeck-hovers-1/3/block-1.effeck"

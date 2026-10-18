@@ -86,19 +86,29 @@ export function sanitize(text: string, projects: string[]): string {
 }
 
 // Effeck's notes, which the quick info hooks in typescript/tsc/internal/effeck
-// write, come before the declaration's JSDoc in a hover. The server joins both
-// into one Markdown string, so the notes are known by their openings. A note
-// missing here is kept as if it were the JSDoc's first paragraph.
+// write, come before the declaration's JSDoc in a hover. The server separates
+// them with a `---` rule when there is JSDoc (1742d881). Older servers joined
+// both into one Markdown string, so without the rule the notes are known by
+// their openings; a note missing here is kept as if it were the JSDoc's first
+// paragraph.
 const NOTE = /^(?:Runs (?:here|the left side|the body|the block)|Passed by name|Plain JavaScript:|Method syntax:|An escape hatch:|Layer:|Provides the service|Waits for the operand|Joins the fiber|Starts each program|Replaced by|The value of `)/
+const RULE = "\n\n---\n\n"
 
-// Keeps the notes and the JSDoc's first paragraph, unless that paragraph is
-// a tag, a heading, or an example.
+const paragraphsOf = (text: string) => text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+// A JSDoc summary is its first paragraph, unless that is a tag, a heading, or an example.
+const summaryOf = (paragraph: string | undefined) => (paragraph && !/^(?:\*@|\*\*|`{3})/.test(paragraph) ? [paragraph] : [])
+
+// Keeps the notes and the JSDoc's first paragraph.
 export function trimDocs(documentation: string): string {
-  const paragraphs = documentation.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean)
+  const rule = documentation.indexOf(RULE)
+  if (rule >= 0) {
+    const notes = paragraphsOf(documentation.slice(0, rule))
+    return [...notes, ...summaryOf(paragraphsOf(documentation.slice(rule + RULE.length))[0])].join("\n\n")
+  }
+  const paragraphs = paragraphsOf(documentation)
   let i = 0
   while (i < paragraphs.length && NOTE.test(paragraphs[i])) i++
-  const summary = paragraphs[i]
-  return [...paragraphs.slice(0, i), ...(summary && !/^(?:\*@|\*\*|`{3})/.test(summary) ? [summary] : [])].join("\n\n")
+  return [...paragraphs.slice(0, i), ...summaryOf(paragraphs[i])].join("\n\n")
 }
 
 // The server writes a hover as a typescript fence holding the quick info,
