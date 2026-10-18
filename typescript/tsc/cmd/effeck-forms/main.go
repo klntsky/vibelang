@@ -986,9 +986,18 @@ func (w *walker) param(pt *checker.Type) effeckmapper.Param {
 // every key of a record such as the runtime's Clauses<S, H> or
 // Effect.catchTags' handlers gets: generic in its keys, it has no
 // properties for the walk to read. A conditional template is read through
-// both branches. The template is read from the mapped type's declaration,
+// both branches, and an intersection or union through its mapped members. The template is read from the mapped type's declaration,
 // since the checker does not export it.
 func (w *walker) mappedTemplateClass(t *checker.Type) effeckmapper.Class {
+	if t != nil && t.Flags()&(checker.TypeFlagsIntersection|checker.TypeFlagsUnion) != 0 {
+		// catchTags' Cases is { [K in tags]+?: handler } & (…: never for the
+		// rest): the mapped members give the record's class.
+		var cls effeckmapper.Class
+		for _, member := range t.Types() {
+			cls |= w.mappedTemplateClass(member)
+		}
+		return cls
+	}
 	if t == nil || t.Flags()&checker.TypeFlagsObject == 0 || t.ObjectFlags()&checker.ObjectFlagsMapped == 0 || t.Symbol() == nil {
 		return 0
 	}

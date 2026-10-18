@@ -704,3 +704,61 @@ export function arrow() {
 		}
 	}
 }
+
+func TestResolverNoSilentDefaults(t *testing.T) {
+	r := resolve(t, `import { attach } from "./helpers.ts"
+const events: string[] = []
+export function f(emitter) {
+  const a = attach((x) => x + 1)
+  emitter.on("start", () => events.push("started"))
+  emitter.on("tick", () => log("tick"))
+  const half = (n: number): number => { if (n < 0) throw "negative"; return n / 2 }
+}`)
+	// attach(f: (x) => Effect<number>) and a trusted attach(f: (x) => number)
+	// give different results; a pure body cannot say which the user means.
+	if c := r.lambda(t, "(x) => x + 1").Choice; c == nil || !strings.Contains(c.Reason, "another file") {
+		t.Errorf("a lambda passed to another file's function: choice = %+v", c)
+	}
+	// The dual would defer events.push, which a host that ignores the result
+	// never runs; log returns an Effect, so the dual is safe there.
+	if c := r.lambda(t, `() => events.push`).Choice; c == nil || c.Forms[1] != FormDual {
+		t.Errorf("a dual over a plain call: choice = %+v", c)
+	}
+	if d := r.lambda(t, `() => log("tick")`); d.Choice != nil || d.Form != FormDual {
+		t.Errorf("a dual over an Effect call = %+v, want the dual with no choice", d)
+	}
+	// A plain annotation cannot throw a failure.
+	if c := r.lambda(t, "(n: number): number =>").Choice; c == nil || !strings.Contains(c.Reason, "return annotation is plain") {
+		t.Errorf("a plain annotation over a throw: choice = %+v", c)
+	}
+}
+
+func TestResolverHatchTypeScriptIsPlain(t *testing.T) {
+	// A hatch's first argument is TypeScript (D148): lambdas inside it are
+	// plain at any depth, even where the defaults would make a dual.
+	r := resolve(t, `export function f() {
+  const doubled = sync(() => [1, 2, 3].map((n) => n * 2))
+  const later = callback((resume) => {
+    const timer = setTimeout(() => resume(7), 1)
+    return () => clearTimeout(timer)
+  })
+}
+export function g() {
+  const sync = (f: () => number) => f()
+  return sync(() => [1].map((n) => n + 1))
+}`)
+	for _, prefix := range []string{"(n) => n * 2", "() => resume(7)", "() => clearTimeout"} {
+		if d := r.lambda(t, prefix); d.Form != FormPlain || d.Provenance != FromHatch {
+			t.Errorf("%q = %v from %v, want plain from the hatch", prefix, d.Form, d.Provenance)
+		}
+	}
+	// A local sync is not the hatch.
+	if d := r.lambda(t, "(n) => n + 1"); d.Provenance == FromHatch {
+		t.Errorf("a shadowed sync = %+v, want no hatch", d)
+	}
+	// catchTags' handler record: an intersection whose mapped member types
+	// every handler as an Effect function.
+	if c := forms(t, "effect/Effect#catchTags", 2).Params[1].AnyProp; c != ClassEffectFn {
+		t.Errorf("catchTags' cases = %v, want E", c)
+	}
+}

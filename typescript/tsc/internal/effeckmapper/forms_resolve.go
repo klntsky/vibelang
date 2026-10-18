@@ -70,10 +70,15 @@ package effeckmapper
 //  8. Needs a choice. A fallback decision whose position nothing names (a
 //     method of an unnamed receiver, a function from another file, a lambda
 //     no call takes, a parameter the table or this file leaves unclassified)
-//     carries a Choice when the lambda is not invoked where it stands, has
-//     no return annotation, and its body pauses: the defaults would pick an
-//     Effect function that a host could silently ignore, so the user writes
-//     the form. Decision.Choice; CodeFormChoice.
+//     carries a Choice when the lambda is not invoked where it stands and
+//     has no return annotation, and: its body pauses (the defaults would
+//     pick an Effect function a host could silently ignore); or the callee
+//     is in another file (it may take either form by overload, with a
+//     different result for each); or the defaults would pick the dual for a
+//     one-call body whose call is not known to return an Effect (the dual
+//     defers the call, which a host that ignores the result never runs). A
+//     plain return annotation on a body that throws, uses using, or runs an
+//     Effeck statement carries a Choice too. Decision.Choice; CodeFormChoice.
 //
 //  9. Protocols. A method keyed by a well-known symbol of the global
 //     Symbol ([Symbol.dispose], [Symbol.asyncDispose], [Symbol.iterator],
@@ -127,10 +132,13 @@ const (
 	// FromProtocol is a JavaScript protocol: a method keyed by a
 	// well-known symbol, which the language calls and which is plain.
 	FromProtocol
+	// FromHatch is a hatch's TypeScript (D148): a lambda inside the first
+	// argument of sync, try, or callback is plain JavaScript.
+	FromHatch
 )
 
 func (p Provenance) String() string {
-	return [...]string{"fallback", "table", "annotation", "service", "protocol"}[p]
+	return [...]string{"fallback", "table", "annotation", "service", "protocol", "hatch"}[p]
 }
 
 // Placement is where a block param call passes its block (D188).
@@ -310,6 +318,18 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 	call, arg, steps := formsOwnerCall(fn)
 	d.Call, d.Argument, d.Steps = call, arg, steps
 	if call != nil {
+		d.Callee = r.Callee(call)
+	}
+	// Effeck syntax inside a hatch (x catch y, whose lambdas the parser
+	// passes to a synthesized $catchExpression) keeps its own decision.
+	synthesized := fn.Flags&ast.NodeFlagsReparsed != 0 || call != nil && call.Expression().Flags&ast.NodeFlagsReparsed != 0
+	if hatch, ok := r.inHatch(fn); ok && !synthesized {
+		// A hatch's first argument is TypeScript (D148), at any depth: its
+		// lambdas are plain JavaScript functions.
+		d.Class, d.Provenance, d.Note, d.Form = ClassPlainFn, FromHatch, "inside "+hatch+"'s TypeScript", FormPlain
+		return d
+	}
+	if call != nil {
 		if r.isBlockArgument(call, fn) {
 			return r.Block(call)
 		}
@@ -353,6 +373,12 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 		}
 		d.Class, d.Provenance, d.Note = cls, FromAnnotation, "return annotation"
 		d.Form = formsFormFor(cls, params, facts)
+		if cls == ClassPlainFn && facts.effectOnly && fn.Flags&ast.NodeFlagsReparsed == 0 {
+			// (n): number => { if (n < 0) throw … }: a plain function cannot
+			// throw a failure, and quietly making it a JavaScript throw
+			// would change what the throw means (the fork reports EK2003).
+			d.Choice = r.choiceText(d, "its return annotation is plain, but its body throws, uses using, or runs an Effeck statement, which only an Effect function can")
+		}
 		return d
 	}
 	if call == nil {
@@ -370,13 +396,75 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 // lambda the parser writes for Effeck syntax is decided by that syntax.
 func (r *Resolver) choiceFor(d Decision, facts formsBody) *Choice {
 	fn := d.Node
-	if !facts.pauses || fn.Flags&ast.NodeFlagsReparsed != 0 || fn.Type() != nil || formsInvoked(fn) {
+	if fn.Flags&ast.NodeFlagsReparsed != 0 || fn.Type() != nil || formsInvoked(fn) {
 		return nil
 	}
 	reason, ok := r.keyless(d)
 	if !ok {
 		return nil
 	}
+	switch {
+	case facts.pauses:
+		// The defaults would pick an Effect function that a host could ignore.
+	case d.Callee.Kind == CalleeOtherFile:
+		// A function from another file may take either form, by overload
+		// (lambda-forms' attach: an Effect function first, then a trusted
+		// plain one), and give a different result for each, with no error.
+	case d.Form == FormDual && !r.returnsEffect(facts.tailCall):
+		// The dual defers its one call into a program. A host that calls it
+		// and ignores the result never runs the call (onRequest(() => {
+		// Effect.runFork(…) })), unless the call returns an Effect anyway.
+	default:
+		return nil
+	}
+	return r.choiceText(d, reason)
+}
+
+// returnsEffect reports whether call is known to return an Effect: a table
+// function whose signatures for its argument count return one, a function
+// this file declares without a plain return annotation (an Effect function,
+// L2), or a member of a service this file declares.
+func (r *Resolver) returnsEffect(call *ast.Node) bool {
+	if call == nil {
+		return false
+	}
+	c := r.Callee(call)
+	switch c.Kind {
+	case CalleeTable:
+		if r.table == nil {
+			return false
+		}
+		_, sigs, ok := r.table.Lookup(c.Key)
+		cands := formsCandidates(sigs, len(call.Arguments()))
+		if !ok || len(cands) == 0 {
+			return false
+		}
+		for _, s := range cands {
+			if s.Result != "effect/Effect" {
+				return false
+			}
+		}
+		return true
+	case CalleeService:
+		return true
+	case CalleeLocal:
+		root, _, ok := formsNameChain(call.Expression())
+		if !ok {
+			return false
+		}
+		d := r.binding(root, root.Text())
+		if d == nil || d.Kind != ast.KindFunctionDeclaration {
+			return false
+		}
+		ret := d.Type()
+		return ret == nil || r.isEffectTypeNode(ret, 0)
+	}
+	return false
+}
+
+// choiceText builds the Choice for d, with reason.
+func (r *Resolver) choiceText(d Decision, reason string) *Choice {
+	fn := d.Node
 	c := &Choice{Reason: reason, Forms: []Form{FormPlain, FormEffectFn}}
 	if len(fn.Parameters()) == 0 {
 		c.Forms = []Form{FormPlain, FormDual}
@@ -430,6 +518,36 @@ func (r *Resolver) keyless(d Decision) (string, bool) {
 		return "the forms table gives no form at this position of " + d.Callee.Canonical, true
 	case d.Callee.Kind == CalleeLocal || d.Callee.Kind == CalleeService:
 		return "this file declares no type for this parameter of " + d.Callee.Key, true
+	}
+	return "", false
+}
+
+// formsHatchNames are the hatches (D148): a call of one of these names,
+// unshadowed, takes TypeScript as its first argument.
+var formsHatchNames = map[string]bool{"sync": true, "try": true, "callback": true}
+
+// inHatch reports whether node is inside the first argument of a hatch,
+// sync(…), try(…), or callback(…), but not the argument itself, which the
+// table decides. try cannot be shadowed, being a keyword; the others are
+// hatches only when no scope binds their names.
+func (r *Resolver) inHatch(node *ast.Node) (string, bool) {
+	for n := node; n.Parent != nil; n = n.Parent {
+		p := n.Parent
+		if !ast.IsCallExpression(p) || p.Expression() == n {
+			continue
+		}
+		args := p.Arguments()
+		if len(args) == 0 || args[0] != n || n == node {
+			continue
+		}
+		callee := p.Expression()
+		if !ast.IsIdentifier(callee) || !formsHatchNames[callee.Text()] {
+			continue
+		}
+		if callee.Text() != "try" && r.binding(callee, callee.Text()) != nil {
+			continue
+		}
+		return callee.Text(), true
 	}
 	return "", false
 }
@@ -1088,9 +1206,11 @@ func formsPlacementAfterData(sigs []Signature, n int) Placement {
 
 // formsBody is what the text of a function's own body shows.
 type formsBody struct {
-	tail    bool // the body is one call, or one statement returning one
-	pauses  bool // a call outside tail position, a throw, an Effeck statement, or a using declaration
-	anyCall bool
+	tail       bool      // the body is one call, or one statement returning one
+	tailCall   *ast.Node // that call
+	pauses     bool      // a call outside tail position, a throw, an Effeck statement, or a using declaration
+	anyCall    bool
+	effectOnly bool // a throw, an Effeck statement, or a using declaration: what only an Effect function can do
 }
 
 func formsBodyFacts(fn *ast.Node) formsBody {
@@ -1112,7 +1232,7 @@ func formsBodyFacts(fn *ast.Node) formsBody {
 			}
 		}
 	}
-	f.tail = tail != nil
+	f.tail, f.tailCall = tail != nil, tail
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		if formsBoundary(n) {
@@ -1125,11 +1245,11 @@ func formsBodyFacts(fn *ast.Node) formsBody {
 				f.pauses = true
 			}
 		case n.Kind == ast.KindThrowStatement:
-			f.pauses = true
+			f.pauses, f.effectOnly = true, true
 		case n.Flags&ast.NodeFlagsEffeck != 0 && !formsIsTopic(n): // %, a pipe's topic, is a value
-			f.pauses = true
+			f.pauses, f.effectOnly = true, true
 		case n.Kind == ast.KindVariableDeclarationList && n.Flags&ast.NodeFlagsUsing != 0:
-			f.pauses = true
+			f.pauses, f.effectOnly = true, true
 		}
 		n.ForEachChild(visit)
 		return false
