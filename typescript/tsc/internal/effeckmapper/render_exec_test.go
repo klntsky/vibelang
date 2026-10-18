@@ -734,3 +734,69 @@ func TestEmitDoControlFlowCLI(t *testing.T) {
 		}
 	}
 }
+
+// TestEmitCallTailResume checks D18 for method and lambda clauses, while
+// retaining ordinary resumes in nested functions and cleanup regions.
+func TestEmitCallTailResume(t *testing.T) {
+	for _, clause := range []string{
+		`ask(q, k) { return resume(k, 1) }`,
+		`ask: (q, k) => resume(k, 1)`,
+		`ask: function(q, k) { return (resume(k, 1)) }`,
+		`ask(q, k) { if (q) return resume(k, 1); return resume(k, 2) }`,
+		`ask(q, k) { return resumeWith(k, () => 1) }`,
+	} {
+		js, _, ds := Emit(`control Ask { ask(q: string): number!! } function f() { return handle(() => Ask.ask("q"), Ask, {`+clause+`}) }`, testContext)
+		assert.Equal(t, len(ds), 0, "%v", ds)
+		assert.Assert(t, strings.Contains(js, "$tailResume"), js)
+		assert.Assert(t, !strings.Contains(js, "$t = resume("), js)
+	}
+	for _, clause := range []string{
+		`ask(q, k) { try { return resume(k, 1) } finally { log() } }`,
+		`ask(q, k) { using r = lease(); return resume(k, 1) }`,
+		`ask(q, k) { const nested = () => resume(k, 1); return nested() }`,
+		`ask(q, k) { const n = resume(k, 1); return n + 1 }`,
+	} {
+		js, _, ds := Emit(`control Ask { ask(q: string): number!! } function f() { return handle(() => Ask.ask("q"), Ask, {`+clause+`}) }`, testContext)
+		assert.Equal(t, len(ds), 0, "%v", ds)
+		assert.Assert(t, !strings.Contains(js, "$tailResume"), js)
+	}
+}
+
+// TestTailResumeDepthRuntime exercises 100,000 producer elements and both
+// handle forms: checking results alone misses suspended clause stack growth.
+func TestTailResumeDepthRuntime(t *testing.T) {
+	root, err := filepath.Abs("../../../..")
+	assert.NilError(t, err)
+	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
+	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
+		t.Skip("runtime dependencies are built by the parity harness")
+	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is unavailable")
+	}
+	source := `import { hooks } from "effeck-runtime/kernel"
+control Tick { tick(n: number): void!! }
+function* count() { for (let i = 0; i < 100000; i++) yield i }
+function ticks() { for (let i = 0; i < 100000; i++) Tick.tick(i); return 100000 }
+export function scenario() {
+ let depth = 0
+ hooks.onResume = (fiber): void => { depth = Math.max(depth, fiber._stack.length) }
+ let sum = 0
+ for (const n of count()) sum += n
+ let seen = 0
+ const called = handle(() => ticks(), Tick, { tick(n, k) { seen++; return resume(k, undefined) } })
+ let stated = 0
+ try { ticks() } handle Tick.tick(n) { stated++; resume() }
+ hooks.onResume = undefined
+ return { sum, seen, called, stated, bounded: depth < 50 }
+}`
+	js, _, ds := Emit(source, testContext)
+	assert.Equal(t, len(ds), 0, "%v", ds)
+	cmd := exec.Command(node, "--no-warnings", "--input-type=module")
+	cmd.Dir = scope
+	cmd.Stdin = strings.NewReader(js + "\nimport { runPromise as runDepthTest } from 'effect/Effect'; console.log(JSON.stringify(await runDepthTest(scenario())))")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "%s", out)
+	assert.Equal(t, strings.TrimSpace(string(out)), `{"sum":4999950000,"seen":100000,"called":100000,"stated":100000,"bounded":true}`)
+}

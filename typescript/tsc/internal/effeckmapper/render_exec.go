@@ -517,6 +517,7 @@ func (p *projector) execPlan() *plan {
 	l.lowerCalls()
 	l.lowerServiceCalls()
 	l.lowerClauses()
+	l.lowerCallClauseResumes()
 	l.lowerResumeValues()
 	l.lowerImports()
 	l.entry()
@@ -1392,4 +1393,69 @@ func (l *execLowering) traceBodies() {
 		n.ForEachChild(func(c *ast.Node) bool { visit(c); return false })
 	}
 	visit(l.p.file.AsNode())
+}
+
+// lowerCallClauseResumes returns the kernel's D18 request for a resume in
+// a call-form clause's own frame. Finishing the clause before continuing
+// the producer prevents one suspended generator per element. Regions and
+// scopes retain ordinary resumes so their cleanup runs after continuation.
+func (l *execLowering) lowerCallClauseResumes() {
+	r, ok := l.p.forms.(*Resolver)
+	if !ok {
+		return
+	}
+	for _, span := range l.spans[editRun] {
+		call := l.calls[[2]int{l.edits[span.open].pos, l.edits[span.close].pos}]
+		if call == nil {
+			continue
+		}
+		key := r.Callee(call).Canonical
+		helper := ""
+		switch key {
+		case "effeck-runtime#resume":
+			helper = "$tailResume"
+		case "effeck-runtime#resumeWith":
+			helper = "$tailResumeWith"
+		default:
+			continue
+		}
+		n := call
+		for n.Parent != nil && ast.IsParenthesizedExpression(n.Parent) {
+			n = n.Parent
+		}
+		if n.Parent == nil {
+			continue
+		}
+		if n.Parent.Kind == ast.KindReturnStatement {
+			n = n.Parent
+		}
+		fn := n.Parent
+		cleanup := false
+		for fn != nil && !ast.IsFunctionLike(fn) {
+			if fn.Kind == ast.KindTryStatement || fn.Kind == ast.KindBlock && l.p.holdsScope(fn.Statements()) {
+				cleanup = true
+			}
+			fn = fn.Parent
+		}
+		if fn == nil || cleanup {
+			continue
+		}
+		if n.Kind != ast.KindReturnStatement && (fn.Kind != ast.KindArrowFunction || fn.Body() != n) {
+			continue
+		}
+		object := fn.Parent
+		if object != nil && ast.IsPropertyAssignment(object) && object.Initializer() == fn {
+			object = object.Parent
+		}
+		if object == nil || !ast.IsObjectLiteralExpression(object) {
+			continue
+		}
+		owner := object.Parent
+		if owner == nil || !ast.IsCallExpression(owner) || len(owner.Arguments()) < 3 || owner.Arguments()[2] != object || r.Callee(owner).Canonical != "effeck-runtime#handle" {
+			continue
+		}
+		l.set(span.open, "")
+		l.set(span.close, "")
+		l.replace(l.p.tokenStart(call.Expression()), call.Expression().End(), helperRef(helper))
+	}
 }
