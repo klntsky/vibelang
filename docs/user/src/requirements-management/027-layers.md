@@ -98,7 +98,7 @@ const AppLive = wire(ReportsLive, PrinterLive, SettingsLive)
 
 `Layer.provide(consumer, dependencies)` feeds dependency outputs into the consumer and retains the consumer's outputs. `provideMerge` also retains the supplied dependency outputs. `wire` derives this ordering from the layer contracts and rejects duplicate providers (EK3202) and cycles (EK3203).
 
-Inputs no argument provides stay in the resulting layer's `In`, so a partial graph is valid. Missing providers are reported with their dependency paths where a runner or contract requires them to be supplied (EK3201). An argument whose type does not name its outputs, such as `Layer.Layer<any>`, is EK3204; compose it with `Layer.provide` instead.
+Inputs no argument provides stay in the resulting layer's `In`, so a partial graph is valid. At a runner, missing providers report EK3201 with the unsatisfied layer inputs. A written contract that excludes a remaining requirement reports EK2002. An argument whose type does not name its outputs, such as `Layer.Layer<any>`, is EK3204; compose it with `Layer.provide` instead.
 
 Reuse the same layer value when several paths need a shared instance. Reconstructing equivalent layer values does not give them the same memoization identity.
 
@@ -191,13 +191,13 @@ function testBannerDirectly() {
 }
 
 function testBannerWithInlineSettings() {
-  provide Banner.layerWithoutDependencies, Settings = { prefix: "inline" } {
-    return Banner.text("Orders")
+  provide Settings = { prefix: "inline" } {
+    return Effect.provide(() => Banner.text("Orders"), Banner.layerWithoutDependencies)
   }
 }
 ```
 
-Replace a dependency to exercise the real factory, or replace the service itself to isolate its consumers. A layer that already includes production dependencies must be changed at its exposed factory boundary if the test needs different construction inputs. Small local overrides can use `provide Key = value`, which provides one implementation without writing a layer and mixes with layers in one list (D173).
+Replace a dependency to exercise the real factory, or replace the service itself to isolate its consumers. A layer that already includes production dependencies must be changed at its exposed factory boundary if the test needs different construction inputs. Small local overrides can use `provide Key = value`, which provides one implementation without writing a layer. Put construction dependencies in an outer block so they are available while the inner layer builds. Providers in one list supply the block together; they do not feed one another's construction dependencies.
 
 ## Coming from Effect
 

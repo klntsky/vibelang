@@ -17,7 +17,7 @@ function startupMessage() {
 
 `Clock.currentTimeMillis` and `Random.next` are Effect values; calling them runs them. `Console.log` returns an Effect, so its call runs too. Use these modules instead of `Date.now()`, `Math.random()`, or the browser console so tests and local overrides can control the behavior.
 
-The five default references are `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, and `Tracer.Tracer`. Import their modules from `effect` when using them. Their defaults explain why the example's `R` is `never` even though it reads time and random state.
+Default references include `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, `Tracer.Tracer`, and `Scheduler.Scheduler`. Their module names are available without imports in `.vibe` files. Their defaults explain why the example's `R` is `never` even though it reads time and random state.
 
 ```vibe
 const Port = Config.withDefault(Config.Port("PORT"), 3000)
