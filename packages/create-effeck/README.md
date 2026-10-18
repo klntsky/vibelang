@@ -2,8 +2,8 @@
 
 > **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-Create an [Effeck](https://effeck.dev) application: TypeScript syntax in
-which every function is an Effect.
+Create an [Effeck](https://effeck.dev) application. Effeck is a readable
+syntax for Effect that compiles to TypeScript.
 
 ```sh
 bun create effeck my-app

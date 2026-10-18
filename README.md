@@ -1,6 +1,6 @@
 # Effeck
 
-A language for writing Effect programs: TypeScript syntax in which every function is an Effect, built on one-shot delimited continuations over Effect 4's fiber runtime.
+A language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). Effeck gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.
 
 > [!WARNING]
 > Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.

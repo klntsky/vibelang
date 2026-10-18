@@ -1,7 +1,7 @@
 {
   "name": "effeck",
   "version": "0.0.1",
-  "description": "The Effeck compiler and language server: TypeScript syntax in which every function is an Effect",
+  "description": "The Effeck compiler and language server: a readable syntax for Effect that compiles to TypeScript",
   "keywords": ["effeck", "effect", "typescript", "compiler", "language-server"],
   "homepage": "https://effeck.dev",
   "license": "Apache-2.0",

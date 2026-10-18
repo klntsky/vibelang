@@ -1,10 +1,20 @@
 # Welcome to Effeck
 
-Effeck is TypeScript in which every function is an [Effect](https://effect.website). You write ordinary functions; the compiler turns them into Effect programs, with typed errors, dependency injection, and safe concurrency, and no `yield*`, `pipe`, or generators.
+Effeck is a language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). It gives Effect a simple, readable syntax that compiles to TypeScript, so your team can ship production-ready systems with first-class access to the TypeScript ecosystem.
+
+Effeck is v0. The language will change in major, breaking ways, and it is not ready for production use.
+
+## Why a language
+
+**Effect makes TypeScript reliable.** A TypeScript signature says what a function returns, but not what can fail or what it depends on. Effect puts all three in one type, `Effect<Success, Error, Requirements>`, and the compiler checks it. Retries, timeouts, concurrency, resource cleanup, and tracing come with it.
+
+**Effect pays for it in syntax.** Effect is a library, so it builds every feature out of what TypeScript already has: generators and `yield*` to run steps in order, `pipe` to compose them, and classes to declare errors and services. The code reads like a separate language written in library calls.
+
+**Effeck makes it a real language.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
 
 ## The same program, twice
 
-A service that finds users, a typed error, and a fallback. On the left is Effect today; on the right is Effeck.
+A service that finds users, a typed error, and a fallback. On the left is Effect; on the right is Effeck.
 
 ```ts effect
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
@@ -40,24 +50,54 @@ function greet(id: string) {
 // string!!Users
 ```
 
-Both compile to the same kind of program. The comment under `greet` is the type your editor shows on hover: it returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body.
+The comment under `greet` is the type your editor shows: `string!!Users` is Effeck's spelling of `Effect<string, never, Users>`. It returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The Effeck version is about half the size: 71 tokens against 143.
 
-## What you get
+## TypeScript stays one step away
 
-- **Plain code.** A call runs; statements run in order; `throw` fails; `try`, `catch`, and `finally` work as you expect. No generators, `yield*`, or `pipe`.
-- **Every function's type tells the truth.** `User!UserNotFound!Db` reads as: returns a `User`, can fail with `UserNotFound`, needs `Db`. The compiler infers it and checks it everywhere.
-- **All of Effect.** Effeck compiles to ordinary Effect 4 JavaScript. Effect's libraries, your `.ts` files, and any npm package work unchanged, and TypeScript code can call Effeck functions.
-- **Less to write and read.** Effect's ideas get first-class syntax: `error`, `service`, `provide`, `fork` and `join`, `match`, `await.race`, and the `|>` pipe. The Effeck half of the example above is about half the size of the Effect half.
+A new language usually leaves its host's ecosystem behind. Effeck keeps it in two ways:
 
-## Why use it
+1. **It compiles to TypeScript.** Effeck's compiler is TypeScript's compiler, extended. It checks `.effeck` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and every Effect library work unchanged, and TypeScript code calls Effeck functions as ordinary Effect functions.
+2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.effeck` file.
 
-Use Effeck when you want what Effect gives you, errors in the type, services injected and swappable in tests, structured concurrency, resources that always close, tracing, without writing Effect's plumbing by hand.
+```ts
+function slug(title: string) {
+  return sync((title) => {
+    // Plain TypeScript: nothing in here is an Effect.
+    let s = title.trim().toLowerCase()
+    s = s.replaceAll(/[^a-z0-9]+/g, "-")
+    return s
+  }, title)
+}
+// string!!
+```
 
-- **If you use Effect today**, Effeck removes the ceremony and keeps the runtime, the libraries, and the mental model.
-- **If you write TypeScript and Effect looked like too much**, Effeck lets you start with plain functions and add typed errors and services as you need them.
-- **If AI agents write your code**, Effeck is shorter to generate, and its types reject unhandled failures and missing dependencies at compile time.
+A hatch's function is self-contained: it reads the `.effeck` file's values only as the arguments passed after it, here `title`.
 
-Effeck is v0: expect breaking changes, and do not use it in production yet.
+## Effect's features, in Effeck syntax
+
+Everything Effect does, Effeck does, because the output is Effect. The common features have their own syntax:
+
+| Effect feature | Effeck |
+| --- | --- |
+| Effect types | `User!NotFound!Users`: returns `User`, fails with `NotFound`, needs `Users` |
+| Typed errors | `error NotFound { id: string }`, `throw new NotFound({ id })`, `x catch fallback` |
+| Dependency injection | `service Users { ... }`, `provide UsersLive { ... }` |
+| Structured concurrency | `fork`, `join`, `await.all [a(), b()]`, `for concurrent(8) (const id of ids)` |
+| Retries and timeouts | `work() \|> retry(%, policy) \|> timeout(%, "1 second")` |
+| Resource safety | `using conn = connect()`, `finally` |
+| Tracing | `withSpan("checkout") { ... }` |
+| Schema validation | `schema User { id: string; role: "admin" \| "member" }` |
+| Pattern matching | `match (e) { when NotFound: ...; }` |
+
+Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages need no syntax of their own: call them as you would in TypeScript. The [cheat sheet](effeck-features/115-cheat-sheet.md) puts every Effeck form beside the Effect code it replaces.
+
+## Built for the AI era
+
+When coding agents write a growing share of your code, the hard part moves from writing code to trusting it. Effect's answer is to make failures and dependencies visible to the compiler. Effeck keeps that and makes the code worth reading:
+
+- **The compiler checks what agents write.** Every function's type lists what it can fail with and what it needs, and code that breaks a declared type does not compile, so an agent gets precise feedback to act on.
+- **People can review what agents write.** Effeck code is about half the size of the Effect code it replaces, and it reads as plain TypeScript.
+- **Agents write less.** Fewer tokens per program means less to generate and less context to read back.
 
 ## Try it
 
@@ -71,6 +111,6 @@ Then open the folder in VS Code or Cursor and install the editor extension that 
 
 ## Where to go next
 
-- **Coming from Effect:** the [cheat sheet](effeck-features/115-cheat-sheet.md) puts every Effeck form beside the Effect code it replaces.
+- **Coming from Effect:** the [cheat sheet](effeck-features/115-cheat-sheet.md) shows every change, and [Effeck for Effect users](effeck-features/114-effeck-for-effect-users.md) explains the rules.
 - **New to Effect:** start with [The Effect Type](getting-started/003-the-effect-type.md), then [Creating Effects](getting-started/005-creating-effects.md) and [Expected Errors](error-management/014-expected-errors.md).
-- **The full language:** [Effeck for Effect users](effeck-features/114-effeck-for-effect-users.md) explains the rules, and the specification defines them.
+- **The full language:** the [specification](../../design/src/000-intro.md) defines every rule.

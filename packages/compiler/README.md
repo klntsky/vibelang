@@ -2,9 +2,9 @@
 
 > **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-The Effeck compiler and language server. Effeck is TypeScript syntax in which
-every function is an Effect: `effeck` checks `.effeck` and `.ts` files together
-and emits JavaScript that runs on Effect 4. Documentation:
+The Effeck compiler and language server. Effeck is a readable syntax for
+Effect that compiles to TypeScript: `effeck` checks `.effeck` and `.ts` files
+together and emits JavaScript that runs on Effect 4. Documentation:
 [effeck.dev](https://effeck.dev).
 
 ## Start a project
