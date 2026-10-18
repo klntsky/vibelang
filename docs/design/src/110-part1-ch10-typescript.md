@@ -129,12 +129,16 @@ An explicit boundary says what an exception means at the call. The boundary hatc
 
 ```ts es
 function parseLegacy(text: string) {
-  return try(legacyParse(text), (cause) => new LegacyFormatError({ cause }))   // plain TypeScript inside
+  return try((text) => legacyParse(text), (cause) => new LegacyFormatError({ cause }), text)   // plain TypeScript inside
 }
 // LegacyDoc!LegacyFormatError!
 ```
 
-`try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `try(legacyParse(text))`. A hatch's argument is plain TypeScript, not Effeck: calls there do not run, so calling an `.effeck` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
+`try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `sync(crypto.randomUUID())`. A hatch's first argument is plain TypeScript, not Effeck: calls there do not run, so calling an `.effeck` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
+
+That TypeScript is self-contained (D229). It may use its own parameters and locals, globals, imports, and the file's error declarations, but no other binding of the `.effeck` file: not a local, a parameter, or a module declaration. A value reaches it as an input (D230), an argument after the function that fills the function's first parameters, as `text` does above. An async function receives its `AbortSignal` after the inputs, and a callback's register function receives `resume` and the signal after them. `try`'s error mapper stays the second argument, so inputs follow it (D231). Only the first argument is TypeScript: the mapper and the inputs are Effeck, so a call among the inputs runs before the hatch starts, and the mapper may read the file's bindings, as `cartId` below (D232). A binding read from outside is EK4405, whose quick fix passes it as an input. An `.effeck` function is a binding too, so a hatch that leads back in takes it as an input: `sync(async (load) => runPromise(load()), loadReport)`. Inputs keep `callback`'s type arguments from being written, so its `resume` parameter takes the prelude type instead: `callback((source, resume: Resume<number, Error>) => …, source)`.
+
+The rule is deliberately strict, so a hatch's function reads like a standalone TypeScript function and could move to a `.ts` file unchanged; a later version may relax it.
 
 `runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude as the way back in. They are called from plain TypeScript: a `.ts` file, a hatch's body, or a module's top level, never from code a fiber runs (EK1005).
 
@@ -152,7 +156,7 @@ Outside a hatch, a call already waits for the callee, `join` waits for a fiber, 
 import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: AbortSignal) => Promise<Charge>
 
 function charge(cartId: string, amount: number) {
-  return try((signal) => createCharge(amount, signal), (cause) => new ChargeFailed({ cartId, cause }))
+  return try((amount, signal) => createCharge(amount, signal), (cause) => new ChargeFailed({ cartId, cause }), amount)
 }
 // Charge!ChargeFailed!
 ```
@@ -177,4 +181,4 @@ Effect's own combinators, such as `Effect.forEach`, expect callbacks that return
 
 #### Effect 3
 
-Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try(Effect3.runPromise(program), (error) => …)`.
+Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try((program) => Effect3.runPromise(program), (error) => …, program)`.

@@ -58,7 +58,7 @@ function decodeAsData(input: unknown) {
 }
 
 function decodeSynchronously(input: unknown) {
-  return try(Schema.decodeUnknownSync(Shipment)(input), (cause) => new InvalidShipment({ cause }))
+  return try((schema, input) => Schema.decodeUnknownSync(schema)(input), (cause) => new InvalidShipment({ cause }), Shipment, input)
 }
 
 error InvalidShipment {

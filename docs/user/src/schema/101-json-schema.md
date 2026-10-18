@@ -11,7 +11,7 @@ const Depot = Schema.Struct({
 })
 
 function depotDocument() {
-  return try(Schema.toJsonSchemaDocument(Depot))
+  return try((schema) => Schema.toJsonSchemaDocument(schema), Depot)
 }
 ```
 
@@ -24,8 +24,8 @@ function alternateDrafts() {
   const document = try(() => Schema.toJsonSchemaDocument(
     Schema.Tuple([Schema.String, Schema.FiniteFromString])
   ))
-  const draft07 = try(JsonSchema.toDocumentDraft07(document))
-  const draft04 = try(JsonSchema.toDocumentDraft04(document))
+  const draft07 = try((document) => JsonSchema.toDocumentDraft07(document), document)
+  const draft04 = try((document) => JsonSchema.toDocumentDraft04(document), document)
   return { draft07, draft04 }
 }
 ```
@@ -44,9 +44,9 @@ const DepotName = Schema.Trim.pipe(Schema.annotateEncoded({
 }))
 
 function nameDocument() {
-  return try(() => Schema.toJsonSchemaDocument(DepotName, {
+  return try((schema) => Schema.toJsonSchemaDocument(schema, {
     includeAnnotationKey: (key) => key.startsWith("x-")
-  }))
+  }), DepotName)
 }
 ```
 
@@ -63,7 +63,7 @@ const DepotRequest = Schema.Struct({
 })
 
 function requestDocument() {
-  return try(Schema.toJsonSchemaDocument(DepotRequest))
+  return try((schema) => Schema.toJsonSchemaDocument(schema), DepotRequest)
 }
 ```
 
@@ -84,7 +84,7 @@ const DepotTree = Schema.Struct({
 }).annotate({ identifier: "DepotTree" })
 
 function treeDocument() {
-  return try(Schema.toJsonSchemaDocument(DepotTree))
+  return try((schema) => Schema.toJsonSchemaDocument(schema), DepotTree)
 }
 ```
 
@@ -110,7 +110,7 @@ function strictDocument() {
 const DepotText = Schema.fromJsonString(Depot)
 
 function jsonTextDocument() {
-  return try(Schema.toJsonSchemaDocument(DepotText))
+  return try((schema) => Schema.toJsonSchemaDocument(schema), DepotText)
 }
 ```
 

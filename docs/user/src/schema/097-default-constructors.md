@@ -38,16 +38,16 @@ function constructOrExplain(value: number) {
   try {
     return String(CaseCount.makeEffect(value))
   } catch (issue) {
-    return try(SchemaIssue.makeFormatterDefault()(issue))
+    return try((issue) => SchemaIssue.makeFormatterDefault()(issue), issue)
   }
 }
 
 function constructAsOption(value: number) {
-  return try(CaseCount.makeOption(value))
+  return try((value) => CaseCount.makeOption(value), value)
 }
 
 function constructWithThrowingApi(value: number) {
-  return try(CaseCount.make(value))
+  return try((value) => CaseCount.make(value), value)
 }
 ```
 

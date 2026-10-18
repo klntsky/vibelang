@@ -45,8 +45,8 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.raceAll([a, b])` | `await.any [a(), b()]`, like `Promise.any`: the first success wins |
 | `Effect.forEach(items, f, { concurrency: 8, discard: true })` | `for concurrent(8) (const item of items) f(item)` |
 | `Effect.sync(() => crypto.randomUUID())` | `sync(crypto.randomUUID())` |
-| `Effect.try({ try: () => parse(text), catch: (e) => new BadInput({ e }) })` | `try(parse(text), (e) => new BadInput({ e }))` |
-| `Effect.tryPromise((signal) => fetchJson(url, signal))` | `try(async (signal) => fetchJson(url, signal))` |
+| `Effect.try({ try: () => parse(text), catch: (e) => new BadInput({ e }) })` | `try((text) => parse(text), (e) => new BadInput({ e }), text)` |
+| `Effect.tryPromise((signal) => fetchJson(url, signal))` | `try(async (url, signal) => fetchJson(url, signal), url)` |
 | `Effect.promise(() => load())` | `sync(async () => load())` |
 | `Effect.callback((resume) => …resume(Effect.succeed(x))…)` | `callback((resume) => …resume(x)…)` |
 | `Effect.runPromise(program)` in TypeScript | `runPromise(main())` in a `.ts` file or a hatch's body |
@@ -98,7 +98,7 @@ function reportTime() {
 
 `console.log`, `fetch`, timers, and `Date.now()` are errors in `.effeck`. Use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. Importing a Node function or passing it as a value is allowed; directly running it is a platform API error. [Building an HTTP API](113-building-an-http-api.md) shows `createServer` passed to a server layer.
 
-A plain function from your `.ts` code or a foreign package needs a boundary hatch, `try(parse(text))` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's argument is plain TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
+A plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a value of the `.effeck` file, such as `text`, only as an input: an argument after the function, bound to its first parameter. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
 ## Catch expected failures only
 

@@ -8,15 +8,16 @@ Short answers, each with the code. Appendix C maps every section of Effect's doc
 function loadProfile(id: string) {
   const user = Users.find(id)                       // waits for the database: no await
   const avatar = try(                               // a Promise from a TypeScript library
-    (signal) => avatarSdk.fetch(user.avatarId, { signal }),
-    (cause) => new AvatarError({ cause })
+    (avatarId, signal) => avatarSdk.fetch(avatarId, { signal }),
+    (cause) => new AvatarError({ cause }),
+    user.avatarId                                   // an input: the hatch reads its own parameters
   )
   return { user, avatar }
 }
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In Effeck code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In Effeck code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning, and a value of the `.effeck` file, such as `user.avatarId`, arrives as an input (D229). Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -252,7 +253,7 @@ Yes, in one program: `effeck` checks both, and the editor serves both (Chapter 2
 #### Is there anything from Effect I cannot use?
 
 ```ts es
-const legacy = try(Effect3.runPromise(oldProgram), (cause) => new LegacyError({ cause }))
+const legacy = try((program) => Effect3.runPromise(program), (cause) => new LegacyError({ cause }), oldProgram)
 ```
 
 Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.effeck` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.

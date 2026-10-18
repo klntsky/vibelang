@@ -42,12 +42,12 @@ error EncodingFailed {
 }
 
 function encodeLabel(value: string) {
-  return try(encode(value), (cause) => new EncodingFailed({ cause }))
+  return try((value) => encode(value), (cause) => new EncodingFailed({ cause }), value)
 }
 // string!EncodingFailed!
 ```
 
-A plain imported function needs a boundary or a trusted contract that declares what its exceptions mean. `try` is a boundary hatch: `try(encode(value))` turns an exception into the expected failure `UnknownError`, and a second argument, as above, gives the failure a domain name. The hatch's argument is plain TypeScript, evaluated when the Effect runs: calls there do not run as Effects, and platform APIs are allowed. JavaScript language built-ins have compiler trust contracts, so operations such as string trimming can be called directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls, and their exceptions are defects.
+A plain imported function needs a boundary or a trusted contract that declares what its exceptions mean. `try` is a boundary hatch: `try((value) => encode(value), value)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name. The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls there do not run as Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports such as `encode`, and the file's error declarations, but not another binding of the `.effeck` file, such as the parameter `value`. Pass such a value as an input, an argument after the function and after the error mapper, which fills the function's first parameter. EK4405 reports a binding read from outside, and its quick fix passes the binding as an input. JavaScript language built-ins have compiler trust contracts, so operations such as string trimming can be called directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls, and their exceptions are defects.
 
 A synchronous TypeScript function can declare trust once with `/** @effeck trusted */` on its declaration. Each `@throws {T}` names an exported exception class whose instances become expected failures; unlisted exceptions remain defects. Re-export a function from a package you cannot edit through a tagged `.ts` module. The tag is not allowed on Promise- or Effect-returning functions.
 
@@ -66,12 +66,12 @@ error LookupFailed {
 }
 
 function label(id: string) {
-  return try((signal) => lookupLabel(id, signal), (cause) => new LookupFailed({ cause }))
+  return try((id, signal) => lookupLabel(id, signal), (cause) => new LookupFailed({ cause }), id)
 }
 // string!LookupFailed!
 ```
 
-`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`. Pass its signal to an API that supports cancellation; otherwise interruption stops waiting without necessarily stopping the foreign operation. Without a second argument the failure is `UnknownError`.
+`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`. The function receives an `AbortSignal` after its inputs. Pass the signal to an API that supports cancellation; otherwise interruption stops waiting without necessarily stopping the foreign operation. Without a second argument the failure is `UnknownError`.
 
 `sync` with such a function treats rejection as a defect and belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: an Effeck function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. Use Effect's HTTP modules for HTTP rather than wrapping a browser `fetch` call.
 
@@ -84,9 +84,9 @@ type Source = {
 }
 
 function nextReading(source: Source) {
-  return callback<number, Error>((resume) =>
-    source.read((n) => resume(n), (error) => resume.fail(error))
-  )
+  return callback((source, resume: Resume<number, Error>) => {
+    return source.read((n) => resume(n), (error) => resume.fail(error))
+  }, source)
 }
 
 function readAndReport(source: Source) {
@@ -96,7 +96,7 @@ function readAndReport(source: Source) {
 }
 ```
 
-`callback` is the boundary hatch for a callback API. It registers a plain callback and waits for its first completion: `resume(value)` succeeds, `resume.fail(error)` fails with an expected failure, and `resume.exit(exit)` adopts an `Exit`. Later completions are ignored. A function that the registration returns runs if waiting is interrupted, so this adapter cancels the one-shot read on interruption. The registration also receives an `AbortSignal` as its second argument. Name the success and failure types, `callback<number, Error>`, because calls to `resume` inside the body cannot infer them. The body is plain TypeScript, so it may call platform APIs.
+`callback` is the boundary hatch for a callback API. It registers a plain callback and waits for its first completion: `resume(value)` succeeds, `resume.fail(error)` fails with an expected failure, and `resume.exit(exit)` adopts an `Exit`. Later completions are ignored. A function that the registration returns runs if waiting is interrupted, so this adapter cancels the one-shot read on interruption. The registration receives its inputs first, here `source`, then `resume`, then an `AbortSignal`. Annotate `resume` with the success and failure types, `Resume<number, Error>`, because calls to `resume` inside the body cannot infer them. The body is plain, self-contained TypeScript, so it may call platform APIs but reads `source` only as an input.
 
 For resource acquisition, cancellation must also release a resource that arrives after the waiter has gone away; merely ignoring a late callback is insufficient. Prefer an existing Effect resource API, or a TypeScript adapter using the runtime's `suspend`, which reports whether delivery lost the cancellation race.
 

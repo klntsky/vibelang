@@ -141,7 +141,7 @@ clients, see [editors/](editors/README.md).
   importing the module runs nothing. A runner you call at the top level,
   `NodeRuntime.runMain(main())`, replaces that.
 - Plain functions from other packages need a boundary, such as
-  `try(parse(text))`, or a `/** @effeck trusted */`
+  `try((text) => parse(text), text)`, or a `/** @effeck trusted */`
   re-export from a `.ts` file (EK4401). Effect's packages are trusted,
   including `assert` and `expect` from `@effect/vitest`: import them from
   `@effect/vitest`, not from `vitest`.

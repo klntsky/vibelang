@@ -582,7 +582,7 @@ function firstFailure(outcome: Exit.Exit<User, NotFound>) {
 
 ## Escape hatches
 
-**Plain TypeScript inside `sync`, `try`, and `callback`** (D148). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. `runPromise` leads back in from a hatch's body or a `.ts` file.
+**Plain, self-contained TypeScript inside `sync`, `try`, and `callback`** (D148, D229-D232). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. A hatch's function reads values of the `.effeck` file only as inputs, the arguments after it, which fill its first parameters; `try`'s error mapper stays second (EK4405). `runPromise` leads back in from a hatch's body or a `.ts` file.
 
 ```ts effect
 const id = Effect.sync(() => crypto.randomUUID())
@@ -601,14 +601,14 @@ error BadJson { error: unknown }
 
 function hatches(text: string, url: string) {
   const id = sync(crypto.randomUUID())
-  const parsed = try(() => JSON.parse(text), (error) => new BadJson({ error }))
+  const parsed = try((text) => JSON.parse(text), (error) => new BadJson({ error }), text)
   const loaded = sync(async () => Promise.resolve(42))
-  const fetched = try(async (signal) => fetch(url, { signal }))
+  const fetched = try(async (url, signal) => fetch(url, { signal }), url)
   const tick = callback<number>((resume) => {
     const timer = setTimeout(() => resume(7), 10)
     return () => clearTimeout(timer)
   })
-  const name = sync(async () => runPromise(greetUser("1")))
+  const name = sync(async (greet) => runPromise(greet("1")), greetUser)
   return { id, parsed, loaded, status: fetched.status, tick, name }
 }
 ```

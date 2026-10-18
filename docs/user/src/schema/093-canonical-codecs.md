@@ -13,7 +13,7 @@ const AuditRecord = Schema.Struct({
 
 function encodeAudit(input: unknown) {
   const value = Schema.decodeUnknownEffect(AuditRecord)(input)
-  const jsonCodec = try(Schema.toCodecJson(AuditRecord))
+  const jsonCodec = try((schema) => Schema.toCodecJson(schema), AuditRecord)
   return Schema.encodeEffect(jsonCodec)(value)
 }
 // The JSON representation contains date and bigint strings.
@@ -29,7 +29,7 @@ const Search = Schema.Struct({
 })
 
 function encodeSearch() {
-  const codec = try(Schema.toCodecStringTree(Search))
+  const codec = try((schema) => Schema.toCodecStringTree(schema), Search)
   return Schema.encodeEffect(codec)({ offset: 20, archived: false, labels: ["large"] })
 }
 // { offset: "20", archived: "false", labels: ["large"] }
@@ -45,7 +45,7 @@ class Slot extends Schema.Class<Slot>("Slot")({
 
 function slotRepresentation(input: unknown) {
   const slot = Schema.decodeUnknownEffect(Slot)(input)
-  const codec = try(Schema.toCodecIso(Slot))
+  const codec = try((schema) => Schema.toCodecIso(schema), Slot)
   const structural = Schema.encodeEffect(codec)(slot)
   return Schema.decodeUnknownEffect(codec)(structural)
 }
@@ -71,7 +71,7 @@ const DepotRefSchema = Schema.instanceOf(DepotRef, {
 })
 
 function encodeDepot() {
-  const codec = try(Schema.toCodecStringTree(DepotRefSchema))
+  const codec = try((schema) => Schema.toCodecStringTree(schema), DepotRefSchema)
   return Schema.encodeEffect(codec)(new DepotRef("nw", 14))
 }
 // { region: "nw", number: "14" }

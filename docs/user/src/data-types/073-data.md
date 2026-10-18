@@ -122,7 +122,7 @@ error DocumentDecodeError {
 }
 
 function decodeDocument(text: string) {
-  return try(JSON.parse(text), (cause) => new DocumentDecodeError({ cause }))
+  return try((text) => JSON.parse(text), (cause) => new DocumentDecodeError({ cause }), text)
 }
 // any!DocumentDecodeError!
 ```

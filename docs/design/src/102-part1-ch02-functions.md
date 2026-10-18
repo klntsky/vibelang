@@ -148,7 +148,7 @@ A TypeScript function that returns an `Effect` is treated exactly like an Effeck
 error EK4401: formatName is a plain TypeScript function, and nothing says what its exceptions mean.
   profile-card.effeck:7:12   title: formatName(user),
   Declare it trusted once:  add /** @effeck trusted */ to formatName in format.ts
-  Or bound this call:       try(formatName(user), (cause) => new FormatError({ cause }))
+  Or bound this call:       try((user) => formatName(user), (cause) => new FormatError({ cause }), user)
   Or move it into a .effeck file, where its contract is inferred.
 ```
 

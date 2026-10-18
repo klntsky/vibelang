@@ -46,7 +46,7 @@ error InvalidAmount {
 }
 
 function parseAmount(raw: number) {
-  return try(WholeCents(raw), (cause) => new InvalidAmount({ cause }))
+  return try((make, raw) => make(raw), (cause) => new InvalidAmount({ cause }), WholeCents, raw)
 }
 // WholeCents!InvalidAmount!
 ```
@@ -83,7 +83,7 @@ error InvalidCharge {
 }
 
 function chargeAmount(raw: number) {
-  return try(Charge(raw), (cause) => new InvalidCharge({ cause }))
+  return try((make, raw) => make(raw), (cause) => new InvalidCharge({ cause }), Charge, raw)
 }
 // chargeAmount(125) succeeds; -5 and 1.5 fail with InvalidCharge.
 ```

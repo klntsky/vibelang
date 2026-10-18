@@ -128,7 +128,7 @@ The two acquisition policies behave differently when cancellation arrives during
 
 Without `{ interruptible: true }`, `sessionWithin` would wait for a connection that never completes, and the race branches in the adapter would never run (Chapter 21).
 
-A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with the `callback` hatch (D148). Its register function is plain TypeScript, so it may call the SDK directly; `resume(value)` succeeds, `resume.fail(error)` fails, `resume.exit(exit)` adopts an `Exit`, and a function it returns runs on interruption:
+A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with the `callback` hatch (D148). Its register function is plain, self-contained TypeScript, so it may call the SDK directly and takes values of the file as inputs before `resume` (D230); `resume(value)` succeeds, `resume.fail(error)` fails, `resume.exit(exit)` adopts an `Exit`, and a function it returns runs on interruption:
 
 ```ts es
 import { onceReady } from "./sdk.ts"     // (callback: (sdk: Sdk) => void) => void

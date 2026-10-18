@@ -13,7 +13,7 @@ schema Shipment {
 function sameShipment(left: unknown, right: unknown) {
   const a = Schema.decodeUnknownEffect(Shipment)(left)
   const b = Schema.decodeUnknownEffect(Shipment)(right)
-  return try(Schema.toEquivalence(Shipment)(a, b))
+  return try((schema, a, b) => Schema.toEquivalence(schema)(a, b), Shipment, a, b)
 }
 ```
 
@@ -23,7 +23,7 @@ function sameShipment(left: unknown, right: unknown) {
 
 ```ts
 function sameUnknown(left: unknown, right: unknown) {
-  return try(Schema.toEquivalence(Schema.Unknown)(left, right))
+  return try((left, right) => Schema.toEquivalence(Schema.Unknown)(left, right), left, right)
 }
 
 class ShipmentRef {
@@ -34,10 +34,9 @@ const ShipmentRefSchema = Schema.instanceOf(ShipmentRef, {
 })
 
 function sameRef() {
-  return try(() => Schema.toEquivalence(ShipmentRefSchema)(
-    new ShipmentRef("ref-61", "morning"),
-    new ShipmentRef("ref-61", "afternoon")
-  )) // true
+  const morning = new ShipmentRef("ref-61", "morning")
+  const afternoon = new ShipmentRef("ref-61", "afternoon")
+  return try((schema, a, b) => Schema.toEquivalence(schema)(a, b), ShipmentRefSchema, morning, afternoon) // true
 }
 ```
 
@@ -51,7 +50,7 @@ const ShipmentIdentity = Shipment.pipe(Schema.overrideToEquivalence(
 ))
 
 function sameIdentity(left: typeof Shipment.Type, right: typeof Shipment.Type) {
-  return try(Schema.toEquivalence(ShipmentIdentity)(left, right))
+  return try((schema, left, right) => Schema.toEquivalence(schema)(left, right), ShipmentIdentity, left, right)
 }
 ```
 

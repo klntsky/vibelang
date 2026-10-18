@@ -164,7 +164,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D135 | A module that exports a parameterless `main` runs it with `NodeRuntime.runMain`, or the runtime's copy without `@effect/platform-node`, when the host starts the module | No `run.effeck` file or runner line per program; importing the module still runs nothing | 1 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
-| D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
+| D148 | **Controversial.** (Amended by D229-D232.) `sync`, `try`, and `callback` are boundary hatches whose first arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
 | D149 | `try(…)` parses as a call in `.effeck`; Effect's `{ try, catch }` object is EK4404 | A try statement needs a block, so `try (` is unambiguous | 10, 28 |
 | D150 | `runPromise`, `runFork`, `runSync`, `runCallback` are in the prelude, for TypeScript and hatch bodies | The way back in; EK1005 still applies where a fiber runs | 10, 13 |
 | D151 | `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and seven more Effect functions need no prefix | They were 329 of the 538 `Effect.` member uses in the docs | 1, 27 |
@@ -215,6 +215,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D226 | **Controversial.** A plain `await` in Effeck code is an error: EK4609 (fix: `join`), EK4610 (fix: `d.await()`), EK4601-EK4604; the await operations stay | In JavaScript `await` means a promise; keep that meaning |
 | D227 | A Deferred waits with `d.await()` | Method syntax (D152) already names Deferred.await |
 | D228 | `join`'s types reach one level of arrays and objects, as D171's did | Deeper recursive types exceed TypeScript's limits |
+| D229 | **Controversial.** A hatch's TypeScript is self-contained: it reads no binding of the `.effeck` file except error declarations (EK4405, with a quick fix) | Will: TypeScript in a hatch uses no values or closures from outside; may change later | 10, 28 |
+| D230 | Inputs, the arguments after a hatch's function, fill its first parameters, before the signal or `resume`; `Resume<A, E>` annotates `resume` | `bind` lowers it, and parameters line up with the arguments as written | 10 |
+| D231 | `try`'s error mapper stays the second argument, and inputs follow it | D148's `try(f, mapper)` keeps its meaning | 10 |
+| D232 | Only a hatch's first argument is TypeScript; inputs and the mapper are Effeck; the function decides sync or async | Inputs run before the hatch, as Effeck calls do | 10 |
 
 #### Rules of the runtime and compiler
 

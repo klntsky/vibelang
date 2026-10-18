@@ -33,7 +33,7 @@ const ReviewedDispatch = Dispatch.pipe(Schema.decode({
 const ReviewedStandard = Schema.toStandardSchemaV1(ReviewedDispatch)
 
 function validateDispatch(input: unknown) {
-  return try(Promise.resolve(ReviewedStandard["~standard"].validate(input)), (cause) => new ValidationBoundaryError({ cause }))
+  return try((standard, input) => Promise.resolve(standard["~standard"].validate(input)), (cause) => new ValidationBoundaryError({ cause }), ReviewedStandard, input)
 }
 
 error ValidationBoundaryError {
@@ -55,7 +55,7 @@ const BrokenLabel = Schema.String.pipe(Schema.decode({
 const BrokenStandard = Schema.toStandardSchemaV1(BrokenLabel)
 
 function inspectBrokenValidation() {
-  return try(BrokenStandard["~standard"].validate("crate"))
+  return try((standard) => standard["~standard"].validate("crate"), BrokenStandard)
 }
 ```
 

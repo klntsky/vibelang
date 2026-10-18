@@ -11,7 +11,7 @@ const Parcel = Schema.Struct({
 })
 
 function sampleParcels() {
-  const generator = try(Arbitrary.schema(Parcel))
+  const generator = try((schema) => Arbitrary.schema(schema), Parcel)
   return Arbitrary.sampleEffect(generator, { count: 12, seed: "parcel-samples" })
 }
 ```
@@ -56,7 +56,7 @@ Schema generation targets the decoded type, so a string-to-number codec generate
 ```ts
 function checkCountRoundTrip() {
   const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
-  const generator = try(Arbitrary.schema(Count))
+  const generator = try((schema) => Arbitrary.schema(schema), Count)
   const result = Arbitrary.checkEffect(generator, (count) => {
     const wire = Schema.encodeEffect(Schema.FiniteFromString)(count)
     return Schema.decodeEffect(Schema.FiniteFromString)(wire) === count
@@ -107,7 +107,7 @@ const ShelfRefSchema = Schema.instanceOf(ShelfRef, {
 })
 
 function sampleShelves() {
-  const generator = try(Arbitrary.schema(ShelfRefSchema))
+  const generator = try((schema) => Arbitrary.schema(schema), ShelfRefSchema)
   return Arbitrary.sampleEffect(generator, { count: 5, seed: 23 })
 }
 ```

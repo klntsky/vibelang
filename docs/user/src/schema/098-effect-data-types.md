@@ -67,8 +67,8 @@ const PersistentSet = Schema.HashSet(Schema.FiniteFromString)
 const PersistentMap = Schema.HashMap(Schema.String, Schema.FiniteFromString)
 
 function collectionsFromJson() {
-  const setCodec = try(Schema.toCodecJson(PersistentSet))
-  const mapCodec = try(Schema.toCodecJson(PersistentMap))
+  const setCodec = try((schema) => Schema.toCodecJson(schema), PersistentSet)
+  const mapCodec = try((schema) => Schema.toCodecJson(schema), PersistentMap)
   const set = Schema.decodeUnknownEffect(setCodec)(["4", "7"])
   const map = Schema.decodeUnknownEffect(mapCodec)([["cold", "4"]])
   return { set, map }
