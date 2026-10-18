@@ -15,8 +15,8 @@ Then run one command from the repository root:
 bun docs/tools/check-snippets.ts
 ```
 
-The checker extracts `vibelang` and `ts` fences under `docs/user`, except the
-built site in `docs/user/site`. The fence decides the language: a `vibelang`
+The checker extracts `vibe` and `ts` fences under `docs/user`, except the
+built site in `docs/user/site`. The fence decides the language: a `vibe`
 block compiles as a `.vibe` module and a `ts` block as a `.ts` module. It
 skips `ts effect` blocks, Effect TypeScript shown for comparison, and `ts`
 blocks whose first line is `// TypeScript (.ts)` and that name no file. It
