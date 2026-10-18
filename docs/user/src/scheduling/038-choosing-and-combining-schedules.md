@@ -5,11 +5,19 @@
 ## Choosing a starting rule
 
 ```vibe
+// run: const rules: ReadonlyArray<Schedule.Schedule<unknown, unknown, Cron.CronParseError>> = [immediate, afterCompletion, cadence, backoff, calendar]; for (const rule of rules) { const step = Schedule.toStep(rule); const result = Effect.result(step(Date.parse("2026-11-02T00:00:00Z"), undefined)); if (result.isSuccess()) Console.log(result.success[1].toMillis()) }
+import { TestClock } from "effect/testing"
+
 const immediate = Schedule.recurs(4)
 const afterCompletion = Schedule.spaced("20 seconds")
 const cadence = Schedule.fixed("20 seconds")
 const backoff = Schedule.exponential("300 millis")
 const calendar = Schedule.cron("15 4 * * *", "UTC")
+// Output: 0
+// Output: 20000
+// Output: 20000
+// Output: 300
+// Output: 15300000
 ```
 
 These declarations build reusable values without running work. Choose a rule according to the requirement:
@@ -27,12 +35,16 @@ These declarations build reusable values without running work. Choose a rule acc
 ## Understanding schedule steps
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork runChecks(); TestClock.adjust("18 seconds"); join worker }
 function runChecks() {
   repeat(Schedule.spaced("6 seconds").upTo({ times: 2 })) {
-    logInfo("checking")
+    Console.log("checking", Clock.currentTimeMillis())
     sleep("2 seconds")
   }
 }
+// Output: checking 0
+// Output: checking 8000
+// Output: checking 16000
 ```
 
 With `repeat`, the initial action runs before the schedule advances. This example has three action starts roughly at zero, eight, and sixteen seconds. Replacing `spaced` with `fixed` gives starts roughly at zero, eight, and fourteen seconds in this version: the fixed schedule anchors its cadence at its first step, after the initial two-second action. Later starts follow that cadence instead of adding a full delay after every action; overruns do not replay every missed interval.
@@ -42,6 +54,9 @@ A schedule step receives input and produces output plus timing metadata. In `ret
 ## Limiting duration and adjusting delays
 
 ```vibe
+// run: Random.withSeed(() => { const rules: ReadonlyArray<Schedule.Schedule<unknown>> = [bounded, firstThree]; for (const rule of rules) { const step = Schedule.toStep(rule); let now = 0; const waits: number[] = []; for (let i = 0; i < 10; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(waits.length, waits.every((ms) => ms >= 0 && ms <= 9600)) } }, "docs-schedule")
+import { Random } from "effect"
+
 const bounded = Schedule.exponential("300 millis")
   .modifyDelay(({ duration }) => duration.min(Duration.seconds(8)))
   .jittered()
@@ -51,17 +66,21 @@ const firstThree = Schedule.while(
   Schedule.spaced("1 second"),
   ({ attempt }) => attempt <= 3
 )
+// Output: 6 true
+// Output: 3 true
 ```
 
-`upTo` stops when either configured limit is reached. Its duration limit is checked at schedule steps; it does not interrupt a running attempt or wait, so use `Effect.timeout` around the whole operation for a deadline. `modifyDelay` replaces the selected wait, `jittered` spreads retries across time, and `while` can stop based on metadata.
+`upTo` stops when either configured limit is reached. Its duration limit is checked at schedule steps; it does not interrupt a running attempt or wait, so use `Effect.timeout` around the whole operation for a deadline. `modifyDelay` replaces the selected wait, and `while` can stop based on metadata. `jittered` multiplies each delay by a factor between 0.8 and 1.2. Here it runs after the eight second cap, so the final wait can reach 9.6 seconds; put the cap after `jittered` when it must bound the final wait.
 
 ## Requiring every timing rule
 
 ```vibe
+// run: const step = Schedule.toStep(policy); let now = 0; const waits: number[] = []; for (let i = 0; i < 5; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(JSON.stringify(waits))
 const policy = Schedule.max([
     Schedule.exponential("400 millis"),
     Schedule.spaced("2 seconds")
   ]).upTo({ times: 4 })
+// Output: [2000,2000,2000,3200]
 ```
 
 `max` continues only while every input schedule can continue and chooses the largest proposed delay. Here the first waits are two seconds, two seconds, two seconds, and 3.2 seconds. The separate limit permits four recurrences.
@@ -69,10 +88,12 @@ const policy = Schedule.max([
 ## Accepting any timing rule
 
 ```vibe
+// run: const step = Schedule.toStep(startupAndSteady); let now = 0; const waits: number[] = []; for (let i = 0; i < 5; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(JSON.stringify(waits))
 const startupAndSteady = Schedule.min([
   Schedule.spaced("500 millis").upTo({ times: 2 }),
   Schedule.fixed("12 seconds")
 ])
+// Output: [500,500,11000,12000,12000]
 ```
 
 `min` continues while at least one rule remains active and chooses the shortest active delay. Both rules advance from the start, so the two quick probes do not restart the twelve second cadence. The combined schedule stops only when every input has stopped.
@@ -80,7 +101,9 @@ const startupAndSteady = Schedule.min([
 ## Switching rules in phases
 
 ```vibe
+// run: const step = Schedule.toStep(reconnect); let now = 0; const waits: number[] = []; for (let i = 0; i < 8; i++) { const result = Effect.result(step(now, undefined)); if (result.isFailure()) break; const ms = result.success[1].toMillis(); waits.push(ms); now += ms }; Console.log(JSON.stringify(waits))
 const reconnect = Schedule.spaced("150 millis").upTo({ times: 2 }).concat(Schedule.spaced("3 seconds").upTo({ times: 5 }))
+// Output: [150,150,3000,3000,3000,3000,3000]
 ```
 
 `concat` exhausts the first rule before starting the second. With `retry`, this permits an initial attempt, two fast retries, then five slow retries. `Schedule.concatResult` keeps the outputs of the two phases distinguishable when an observer needs to identify the active phase.

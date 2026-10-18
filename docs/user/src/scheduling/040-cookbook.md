@@ -5,6 +5,9 @@ These recipes use ordinary functions as repeatable programs. Each recipe bounds 
 ## Honoring server retry hints
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork download(); TestClock.adjust("5 seconds"); Console.log(join worker) }
+import { TestClock } from "effect/testing"
+
 error Throttled {
   retryAfter: Duration.Duration
 }
@@ -27,6 +30,7 @@ function download() {
   }
 }
 // string!Throttled!
+// Output: archive ready
 ```
 
 Parse the response's retry hint into a duration at the HTTP boundary. The policy compares that duration with the backoff for the same failure, so the first two waits above are two seconds each. Three permitted retries mean at most four requests, and exhausting them propagates the last `Throttled` failure.
@@ -34,6 +38,7 @@ Parse the response's retry hint into a duration at the HTTP boundary. The policy
 ## Polling with response-dependent delays
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork waitForArchive(); TestClock.adjust("1 second"); Console.log(join worker) }
 type Status =
   | { _tag: "Pending"; pollAfter: Duration.Duration }
   | { _tag: "Ready"; path: string }
@@ -62,6 +67,7 @@ function waitForArchive() {
   return result.path
 }
 // string!PollLimit!
+// Output: /archives/week.csv
 ```
 
 A pending response is a success, so it feeds `repeat` rather than `retry`. This simulation waits 300 milliseconds, then 600 milliseconds, and returns the path on its third check. The count limit permits at most six checks; reaching it with another pending result becomes `PollLimit`.
@@ -69,6 +75,7 @@ A pending response is a success, so it feeds `repeat` rather than `retry`. This 
 ## Bounding the whole retry operation
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork Effect.result(() => readWithDeadline()); TestClock.adjust("1 second"); const result = join worker; if (result.isFailure()) Console.log(result.failure._tag) }
 error Offline
 
 function readWithDeadline() {
@@ -78,6 +85,7 @@ function readWithDeadline() {
     timeout("350 millis")
   )
 }
+// Output: TimeoutError
 ```
 
 The outer timeout covers the first attempt, every wait, and every retry. Placing a timeout inside the retried program instead gives each attempt a separate budget. A schedule's elapsed-duration limit is checked only at its steps and cannot interrupt an attempt already in progress; a timeout interrupts the work and waits for its cleanup.
@@ -85,6 +93,7 @@ The outer timeout covers the first attempt, every wait, and every retry. Placing
 ## Switching from rapid to slower retries
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork reconnect(); TestClock.adjust("5 seconds"); Console.log(join worker) }
 error Disconnected
 
 function reconnect() {
@@ -96,6 +105,7 @@ function reconnect() {
     return "connected"
   }
 }
+// Output: connected
 ```
 
 The first two retries use short waits; later retries use four second waits. This simulation succeeds on attempt four, after entering the slow phase. If every attempt fails, the two phases allow five retries plus the initial attempt.
@@ -103,6 +113,7 @@ The first two retries use short waits; later retries use four second waits. This
 ## Recording retry decisions
 
 ```vibe
+// run: provide TestClock.layer() { const worker = fork observedRequest(); TestClock.adjust("1 second"); Console.log(join worker) }
 error Unavailable {
   status: number
 }
@@ -114,7 +125,7 @@ function observedRequest() {
     Schedule.setInputType<Unavailable>(),
     Schedule.upTo({ times: 3 }),
     Schedule.tap(({ attempt, duration, input }) => {
-      logWarning("retry planned", {
+      Console.log("retry planned", {
         retry: attempt,
         status: input.status,
         delayMs: duration.toMillis()
@@ -127,6 +138,9 @@ function observedRequest() {
     return "accepted"
   }
 }
+// Output: retry planned { retry: 1, status: 503, delayMs: 250 }
+// Output: retry planned { retry: 2, status: 503, delayMs: 500 }
+// Output: accepted
 ```
 
 Put `tap` after the limit so it records accepted retries only. The retry number starts at one and describes the next planned attempt, before its wait begins. Telemetry failures also fail the schedule, so handle an export failure inside the callback when it must not stop the request.
