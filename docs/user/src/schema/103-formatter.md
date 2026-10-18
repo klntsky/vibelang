@@ -1,10 +1,10 @@
 # Schema to Formatter
 
-Value formatters work in Effeck exactly as in Effect. A schema-derived formatter renders decoded values as readable strings for diagnostics or display. It does not validate input or serialize a value for transport; use a codec for serialization and an issue formatter for failures. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Value formatters work in VibeLang exactly as in Effect. A schema-derived formatter renders decoded values as readable strings for diagnostics or display. It does not validate input or serialize a value for transport; use a codec for serialization and an issue formatter for failures. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Deriving value formatters from schemas
 
-```effeck
+```vibe
 const Dispatch = Schema.Struct({
   depot: Schema.String,
   counts: Schema.Array(Schema.Int)
@@ -21,7 +21,7 @@ function displayDispatch(input: unknown) {
 
 ## Customizing formatting at selected syntax-tree nodes
 
-```effeck
+```vibe
 const Weight = Schema.Finite.pipe(Schema.overrideToFormatter(
   () => (value) => `${value} kg`
 ))

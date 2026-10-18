@@ -4,15 +4,15 @@ import { fileURLToPath } from "node:url"
 
 const root = fileURLToPath(new URL("../", import.meta.url))
 const base = process.env.BUN_CREATE_DIR || join(process.env.HOME, ".bun-create")
-const destination = resolve(base, "effeck")
+const destination = resolve(base, "vibelang")
 // A template is setup's own when its package.json depends on the compiler.
 // Templates from earlier setups carry a marker file instead, which bun create
 // copied into every project.
 function isOwnTemplate(directory) {
-  if (existsSync(join(directory, ".effeck-template"))) return true
+  if (existsSync(join(directory, ".vibelang-template"))) return true
   try {
     const pkg = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"))
-    return Boolean(pkg.devDependencies?.["effeck"])
+    return Boolean(pkg.devDependencies?.["vibelang"])
   } catch {
     return false
   }
@@ -29,8 +29,8 @@ cpSync(join(root, "templates/app"), destination, {
 })
 const packagePath = join(destination, "package.json")
 const pkg = JSON.parse(readFileSync(packagePath, "utf8"))
-pkg.dependencies["effeck-runtime"] = `file:${join(root, "packages/runtime/effeck-runtime.tgz")}`
-pkg.devDependencies["effeck"] = `file:${join(root, "packages/compiler")}`
-pkg.devDependencies["effeck-vite"] = `file:${join(root, "packages/vite")}`
+pkg.dependencies["vibelang-runtime"] = `file:${join(root, "packages/runtime/vibelang-runtime.tgz")}`
+pkg.devDependencies["vibelang"] = `file:${join(root, "packages/compiler")}`
+pkg.devDependencies["vibelang-vite"] = `file:${join(root, "packages/vite")}`
 writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n")
 console.log(`setup: installed template at ${destination}`)

@@ -1,10 +1,10 @@
 # Creating Effects
 
-Write an ordinary function to describe an Effeck computation. Return a value for success, throw a typed value for an expected failure, and use explicit Effect boundaries when integrating plain TypeScript libraries.
+Write an ordinary function to describe a VibeLang computation. Return a value for success, throw a typed value for an expected failure, and use explicit Effect boundaries when integrating plain TypeScript libraries.
 
 ## Success and failure
 
-```effeck
+```vibe
 error Unavailable {
   item: string
 }
@@ -20,7 +20,7 @@ The compiler records the returned object in `A` and `Unavailable` in `E`. `Effec
 
 ## Track errors as values
 
-```effeck
+```vibe
 function attemptReservation(item: string, available: boolean) {
   const outcome = Effect.result(reserve(item, available))
   if (outcome.isFailure()) return outcome.failure.item
@@ -29,11 +29,11 @@ function attemptReservation(item: string, available: boolean) {
 // string!!
 ```
 
-`Effect.result` captures an expected failure as a `Result` value so the function can continue. Defects and interruption still propagate. Unlike an unchecked JavaScript exception, an Effeck `throw` contributes to the inferred contract; using `Effect.fail` gives the same expected failure channel.
+`Effect.result` captures an expected failure as a `Result` value so the function can continue. Defects and interruption still propagate. Unlike an unchecked JavaScript exception, a VibeLang `throw` contributes to the inferred contract; using `Effect.fail` gives the same expected failure channel.
 
 ## Wrap synchronous operations
 
-```effeck
+```vibe
 // Assume ./legacy-codec.ts exports encode(value: string): string.
 import { encode } from "./legacy-codec.ts"
 
@@ -47,17 +47,17 @@ function encodeLabel(value: string) {
 // string!EncodingFailed!
 ```
 
-A plain imported function needs a boundary or a trusted contract that declares what its exceptions mean. `try` is a boundary hatch: `try((value) => encode(value), value)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name. The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls there do not run as Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports such as `encode`, and the file's error declarations, but not another binding of the `.effeck` file, such as the parameter `value`. Pass such a value as an input, an argument after the function and after the error mapper, which fills the function's first parameter. EK4405 reports a binding read from outside, and its quick fix passes the binding as an input. JavaScript language built-ins have compiler trust contracts, so operations such as string trimming can be called directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls, and their exceptions are defects.
+A plain imported function needs a boundary or a trusted contract that declares what its exceptions mean. `try` is a boundary hatch: `try((value) => encode(value), value)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name. The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls there do not run as Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports such as `encode`, and the file's error declarations, but not another binding of the `.vibe` file, such as the parameter `value`. Pass such a value as an input, an argument after the function and after the error mapper, which fills the function's first parameter. EK4405 reports a binding read from outside, and its quick fix passes the binding as an input. JavaScript language built-ins have compiler trust contracts, so operations such as string trimming can be called directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls, and their exceptions are defects.
 
-A synchronous TypeScript function can declare trust once with `/** @effeck trusted */` on its declaration. Each `@throws {T}` names an exported exception class whose instances become expected failures; unlisted exceptions remain defects. Re-export a function from a package you cannot edit through a tagged `.ts` module. The tag is not allowed on Promise- or Effect-returning functions.
+A synchronous TypeScript function can declare trust once with `/** @vibelang trusted */` on its declaration. Each `@throws {T}` names an exported exception class whose instances become expected failures; unlisted exceptions remain defects. Re-export a function from a package you cannot edit through a tagged `.ts` module. The tag is not allowed on Promise- or Effect-returning functions.
 
 `catch` sees expected failures only. It does not catch defects from `Option.getOrThrow` or `Schema.decodeUnknownSync`; use `Option.getOrElse`, `Effect.fromOption`, or `Schema.decodeUnknownEffect` for recoverable input. A `catch` whose `try` can raise no expected failure is EK2004, a warning by default. Plain foreign calls at module top level are ordinary JavaScript calls, so their exceptions fail the module's import.
 
-`sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in `.effeck` inside a hatch; keep larger foreign-library adapters in `.ts`. Ordinary `.effeck` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
+`sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in `.vibe` inside a hatch; keep larger foreign-library adapters in `.ts`. Ordinary `.vibe` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
 
 ## Create effects from promises
 
-```effeck
+```vibe
 // Assume this SDK function returns Promise<string> and accepts AbortSignal.
 import { lookupLabel } from "./legacy-sdk.ts"
 
@@ -73,11 +73,11 @@ function label(id: string) {
 
 `try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`. The function receives an `AbortSignal` after its inputs. Pass the signal to an API that supports cancellation; otherwise interruption stops waiting without necessarily stopping the foreign operation. Without a second argument the failure is `UnknownError`.
 
-`sync` with such a function treats rejection as a defect and belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: an Effeck function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. Use Effect's HTTP modules for HTTP rather than wrapping a browser `fetch` call.
+`sync` with such a function treats rejection as a defect and belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: a VibeLang function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. Use Effect's HTTP modules for HTTP rather than wrapping a browser `fetch` call.
 
 ## Adapt callbacks and cancellation
 
-```effeck
+```vibe
 // A one-shot read ends its registration when either callback fires.
 type Source = {
   read: (onValue: (n: number) => void, onError: (e: Error) => void) => () => void
@@ -102,7 +102,7 @@ For resource acquisition, cancellation must also release a resource that arrives
 
 ## Suspend work
 
-```effeck
+```vibe
 function nextCounter() {
   let count = 0
   return () => {
@@ -118,9 +118,9 @@ function counters() {
 // number[]!!; returns [1, 2]
 ```
 
-The returned function delays its body until each call. Wrap an entire computation, including mutable setup, if retry should create new state each time. `Effect.suspend` remains useful in TypeScript adapters to delay construction of an Effect; in Effeck, passing a program already delays its body.
+The returned function delays its body until each call. Wrap an entire computation, including mutable setup, if retry should create new state each time. `Effect.suspend` remains useful in TypeScript adapters to delay construction of an Effect; in VibeLang, passing a program already delays its body.
 
-```effeck
+```vibe
 function countdown(n: number): number!! {
   if (n <= 0) return 0
   sleep("1 millis")

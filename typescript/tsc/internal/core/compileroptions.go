@@ -88,11 +88,11 @@ func (options *CompilerOptions) GetAllowImportingTsExtensions() bool {
 }
 
 // AllowImportingTsExtensionsFrom reports whether fileName may import a
-// TypeScript source by its own extension. An Effeck (.effeck) file always
-// may: it imports ./welcome.effeck and ./format.ts, and its emitted JavaScript
+// TypeScript source by its own extension. A VibeLang (.vibe) file always
+// may: it imports ./welcome.vibe and ./format.ts, and its emitted JavaScript
 // imports ./welcome.js and ./format.js.
 func (options *CompilerOptions) AllowImportingTsExtensionsFrom(fileName tspath.RootedFilePath) bool {
-	return options.GetAllowImportingTsExtensions() || fileName.IsDeclarationFile() || fileName.ExtensionIs(tspath.ExtensionEffeck)
+	return options.GetAllowImportingTsExtensions() || fileName.IsDeclarationFile() || fileName.ExtensionIs(tspath.ExtensionVibe)
 }
 
 func (options *CompilerOptions) GetResolveJsonModule() bool {

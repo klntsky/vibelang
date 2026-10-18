@@ -64,7 +64,7 @@ func EmitAndReportStatistics(input EmitInput) (CompileAndEmitResult, *Statistics
 		statistics.Report(input.Writer, input.Testing)
 	}
 
-	// Effeck: only errors make the exit status non-zero; warnings, such as
+	// VibeLang: only errors make the exit status non-zero; warnings, such as
 	// EK2004 and the EK48xx lint rules (D241), do not fail a build.
 	hasErrors := slices.ContainsFunc(result.Diagnostics, func(d *ast.Diagnostic) bool { return d.Category() == diagnostics.CategoryError })
 	if result.EmitResult.EmitSkipped && hasErrors {

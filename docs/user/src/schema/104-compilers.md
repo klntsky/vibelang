@@ -1,11 +1,11 @@
 # Schema Compilers
 
-Effect's experimental Schema compilers work behind the ordinary Schema APIs in Effeck. They generate JavaScript for supported parsing operations while leaving unsupported work to the interpreter. Measure the change on your schemas before relying on a performance improvement. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Effect's experimental Schema compilers work behind the ordinary Schema APIs in VibeLang. They generate JavaScript for supported parsing operations while leaving unsupported work to the interpreter. Measure the change on your schemas before relying on a performance improvement. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Understanding optimized validation paths
 
-```effeck
-// schemas/Parcel.effeck
+```vibe
+// schemas/Parcel.vibe
 export const Parcel = Schema.Struct({
   reference: Schema.String,
   count: Schema.Int
@@ -22,8 +22,8 @@ Compilation must be active for the relevant AST and operation before a consumer 
 
 ## Enabling just-in-time compilation and fallback
 
-```effeck
-// main.effeck
+```vibe
+// main.vibe
 import "effect/schema/SchemaJITCompiler/enable"
 
 const CompiledParcel = Schema.Struct({
@@ -38,7 +38,7 @@ function receiveCompiled(input: unknown) {
 
 Put the enabling import before code that creates or runs parsers. Importing the compiler namespace alone does not enable it. Operations compile lazily on first use, without eagerly executing every check or default.
 
-```effeck
+```vibe
 import { SchemaJITCompiler } from "effect/schema"
 
 function enableSelectedDirections() {
@@ -76,8 +76,8 @@ export const buildSchemas = () => Effect.provide(
 )
 ```
 
-```effeck
-// build.effeck
+```vibe
+// build.vibe
 import { buildSchemas } from "./build-schema-aot.ts"
 
 function build() {
@@ -90,11 +90,11 @@ The build Effect finds directly exported schema values in the listed modules and
 
 Decoding is the default operation. Add encoding, guards, and construction only when needed. Nested dependencies do not need direct exports unless a separate target is required for an otherwise undiscovered graph.
 
-```effeck
+```vibe
 // fragment
-// application.effeck
+// application.vibe
 import "./generated/parcel-validators.js"
-import { Parcel } from "./schemas/Parcel.effeck"
+import { Parcel } from "./schemas/Parcel.vibe"
 
 function receive(input: unknown) {
   return Schema.decodeUnknownEffect(Parcel)(input)
@@ -105,7 +105,7 @@ Load the generated module before using the schemas and ensure the bundler preser
 
 ## Using lower-level compiler APIs
 
-```effeck
+```vibe
 import * as SchemaAOTCompiler from "effect/schema/SchemaAOTCompiler"
 
 function generateSource() {
@@ -130,7 +130,7 @@ The low-level API names directional parsing `decode`, including the flipped enco
 
 ## Specialized operations, registries, startup behavior, and limits
 
-```effeck
+```vibe
 function parseNormally(input: unknown) {
   return Schema.decodeUnknownEffect(Parcel)(input, {
     errors: "all", onExcessProperty: "error"

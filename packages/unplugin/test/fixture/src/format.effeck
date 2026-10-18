@@ -1,4 +1,0 @@
-// The compiler rewrites shop.effeck's import of this module to ./format.js.
-export function receipt(verb: string, quantity: number, item: string) {
-  return `${verb} ${quantity} ${item}`
-}

@@ -1,0 +1,2 @@
+import { type $PreludeLoaded, $gen } from "vibelang-ts-mapper/prelude"; true satisfies $PreludeLoaded;
+import { name } from "./names.js"; export { name } from "./names.js"; export function value() { return $gen(function* () { return name })}

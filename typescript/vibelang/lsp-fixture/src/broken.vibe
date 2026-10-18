@@ -1,0 +1,2 @@
+// A type error: the language server reports TS2322 at this .vibe span.
+export const count: number = "three"

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { $extract, $is, $noMatch, $patternError, $rest, customMatcher, TaggedError } from "effeck-runtime"
+import { $extract, $is, $noMatch, $patternError, $rest, customMatcher, TaggedError } from "vibelang-runtime"
 
 class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}
 class Timeout extends TaggedError("Timeout")<{}> {}

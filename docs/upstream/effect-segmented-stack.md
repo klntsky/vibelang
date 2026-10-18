@@ -6,7 +6,7 @@ dependent on the [supported-prompt proposal](effect-prompt-primitive.md).
 
 ## Current behavior and reproduction
 
-The fiber stores continuation frames in one array. The Effeck kernel
+The fiber stores continuation frames in one array. The VibeLang kernel
 copies the segment above a prompt during capture and reinstallation. Capturing
 once at every level of a depth-N recursive call therefore copies a quadratic
 total number of frames. This is a cost of the current integration, not a
@@ -44,7 +44,7 @@ Capturing a segment should detach or share opaque chunks without copying all
 its frames. The normal Effect run loop and finalizer unwinding must stay fast,
 and resume and abandon must retain one-shot, same-fiber ownership.
 
-## Why it matters to Effeck
+## Why it matters to VibeLang
 
 Deep nested producers and recursive handlers pay for copies at each perform.
 The kernel cannot substitute a segmented `_stack` itself while Effect's

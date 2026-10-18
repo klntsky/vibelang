@@ -41,7 +41,7 @@ function userName(id: string) {
 }
 ```
 
-Where Effect code sequences with `Effect.map`, `flatMap`, `andThen`, or `tap`, Effeck uses the value and then the next statement.
+Where Effect code sequences with `Effect.map`, `flatMap`, `andThen`, or `tap`, VibeLang uses the value and then the next statement.
 
 #### Control flow is ordinary JavaScript
 
@@ -79,7 +79,7 @@ The loop runs one `welcome` at a time, in order. Running several at once is alwa
 
 #### Tracing
 
-`Effect.fn("welcome")` gives every call a span. Effeck functions compile to untraced frames by default, because a traced frame costs 10 to 20 times more (Chapter 24). Add a span where you want one, with Effect's own `withSpan`:
+`Effect.fn("welcome")` gives every call a span. VibeLang functions compile to untraced frames by default, because a traced frame costs 10 to 20 times more (Chapter 24). Add a span where you want one, with Effect's own `withSpan`:
 
 ```ts es
 function welcomeTraced(id: string) {
@@ -108,7 +108,7 @@ export function greeting(id: string): string!!Users {
 
 ```text
 error EK2001: UserNotFound can escape greeting, but its contract says E = never.
-  greeting.effeck:2:22   return `Hello, ${Users.find(id).name}`
+  greeting.vibe:2:22   return `Hello, ${Users.find(id).name}`
                                       ^^^^^^^^^^^^^ Users.find can fail with UserNotFound
   Catch it inside greeting, or change the contract to Effect<string, UserNotFound, Users>.
 ```
@@ -126,7 +126,7 @@ Here A is checked, and E and R come from the body. `Effect<string, never, infer 
 
 #### Calling TypeScript
 
-Effeck calls TypeScript functions directly. What a call does depends on what the function returns:
+VibeLang calls TypeScript functions directly. What a call does depends on what the function returns:
 
 ```ts es
 import { loadAvatar } from "./avatars.ts"    // (id: string) => Avatar!AvatarError!Storage
@@ -142,14 +142,14 @@ function profileCard(id: string) {
 // { title: string; avatar: Avatar }!UserNotFound | AvatarError!Users | Storage
 ```
 
-A TypeScript function that returns an `Effect` is treated exactly like an Effeck function: calling it runs it. A TypeScript function that returns anything else is foreign code, and nothing says what its exceptions mean, so the compiler asks you to say it once. `formatName` carries a trusted contract, a one-line tag on its declaration (Chapter 10). Without one, the call is an error that offers the fixes:
+A TypeScript function that returns an `Effect` is treated exactly like a VibeLang function: calling it runs it. A TypeScript function that returns anything else is foreign code, and nothing says what its exceptions mean, so the compiler asks you to say it once. `formatName` carries a trusted contract, a one-line tag on its declaration (Chapter 10). Without one, the call is an error that offers the fixes:
 
 ```text
 error EK4401: formatName is a plain TypeScript function, and nothing says what its exceptions mean.
-  profile-card.effeck:7:12   title: formatName(user),
-  Declare it trusted once:  add /** @effeck trusted */ to formatName in format.ts
+  profile-card.vibe:7:12   title: formatName(user),
+  Declare it trusted once:  add /** @vibelang trusted */ to formatName in format.ts
   Or bound this call:       try((user) => formatName(user), (cause) => new FormatError({ cause }), user)
-  Or move it into a .effeck file, where its contract is inferred.
+  Or move it into a .vibe file, where its contract is inferred.
 ```
 
 Effect's own modules (`Option`, `Array`, `Schedule`, and the rest) and JavaScript's built-ins (`String`, `Math`, `JSON`, and the rest) need none of this: their contracts ship with the compiler. Node.js and browser APIs are replaced by Effect's modules (Chapter 11).

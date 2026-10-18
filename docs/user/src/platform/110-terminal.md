@@ -1,10 +1,10 @@
 # Terminal
 
-`Terminal` exposes Effect's interactive input and output service in Effeck. Use it for prompts and line input, provide a runtime terminal layer, and handle a user's quit request as a typed error where appropriate.
+`Terminal` exposes Effect's interactive input and output service in VibeLang. Use it for prompts and line input, provide a runtime terminal layer, and handle a user's quit request as a typed error where appropriate.
 
 ## Requesting terminal services
 
-```effeck
+```vibe
 function dimensions() {
   const terminal = Effect.service(Terminal.Terminal)
   return { columns: terminal.columns(), rows: terminal.rows() }
@@ -16,8 +16,8 @@ function dimensions() {
 
 ## Writing standard output
 
-```effeck
-// main.effeck
+```vibe
+// main.vibe
 import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
 function main() {
   const terminal = Effect.service(Terminal.Terminal)
@@ -31,7 +31,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeTerminal.layer))
 
 ## Reading standard input
 
-```effeck
+```vibe
 function askName() {
   const terminal = Effect.service(Terminal.Terminal)
   terminal.display("Your name: ")
@@ -45,7 +45,7 @@ function askName() {
 
 ## Handling terminal quit errors
 
-```effeck
+```vibe
 function askNameOrQuit() {
   try {
     askName()
@@ -60,8 +60,8 @@ function askNameOrQuit() {
 
 ## Building an interactive guessing program
 
-```effeck
-// guessing.effeck
+```vibe
+// guessing.vibe
 import { NodeRuntime, NodeTerminal } from "@effect/platform-node"
 function parseGuess(input: string) {
   const text = input.trim()

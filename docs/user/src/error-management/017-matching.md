@@ -6,7 +6,7 @@ Matching turns an outcome into one value or selects the next computation. Use ty
 
 ## Folding success and failure into values
 
-```effeck
+```vibe
 error InvalidCount
 
 function itemCount(raw: number) {
@@ -27,7 +27,7 @@ function countLabel(raw: number) {
 
 ## Choosing effectful branches
 
-```effeck
+```vibe
 function reportCount(raw: number) {
   return Effect.matchEffect(() => itemCount(raw), {
     onFailure: () => {
@@ -42,11 +42,11 @@ function reportCount(raw: number) {
 }
 ```
 
-`matchEffect` accepts Effeck functions that can pause, fail, or use services. Only the selected branch runs, and its errors and requirements join the result's contract. A `try`/`catch` is also useful when the two branches are easier to read as statements.
+`matchEffect` accepts VibeLang functions that can pause, fail, or use services. Only the selected branch runs, and its errors and requirements join the result's contract. A `try`/`catch` is also useful when the two branches are easier to read as statements.
 
 ## Matching complete failure causes
 
-```effeck
+```vibe
 function outcomeLabel() {
   return Effect.matchCause(die(new Error("index invariant")), {
     onFailure: (cause) => cause.hasDies() ? "Index defect" : "Index stopped",
@@ -69,7 +69,7 @@ function reportOutcome() {
 
 ## Discarding failures or all causes
 
-```effeck
+```vibe
 function ignoreRejectedCount() {
   Effect.ignore(itemCount(-2))
 }

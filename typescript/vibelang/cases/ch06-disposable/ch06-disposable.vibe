@@ -1,0 +1,27 @@
+// Chapter 24 "Resources": `using` on a TypeScript Disposable pushes a Final frame that calls
+// [Symbol.dispose](). Separate from ch06-resources.vibe because it needs the esnext.disposable lib.
+
+const events: string[] = []
+
+function timer(name: string) {
+  events.push(`start ${name}`)
+  return {
+    name,
+    [Symbol.dispose]() {
+      events.push(`dispose ${name}`)
+    }
+  }
+}
+
+function timed() {
+  using outer = timer("outer")
+  using inner = timer("inner")
+  events.push("work")
+  return `${outer.name}+${inner.name}`
+}
+
+// expect-result: {"result":"outer+inner","events":["start outer","start inner","work","dispose inner","dispose outer"]}
+export function main() {
+  const result = timed()
+  return { result, events }
+}

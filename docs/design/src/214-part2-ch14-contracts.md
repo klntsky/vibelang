@@ -15,7 +15,7 @@ function quoteCart(cartId: string) {
   try {
     return Pricing.quote(cart)                 // E: PricingDown    R: Pricing
   } catch (e) {                                // e: PricingDown
-    return estimate(cart)                      // a pure Effeck helper
+    return estimate(cart)                      // a pure VibeLang helper
   }
 }
 // Quote!CartNotFound | EmptyCart!Carts | Pricing
@@ -23,11 +23,11 @@ function quoteCart(cartId: string) {
 
 `PricingDown` is caught, so it is not in E. `Pricing` is still in R: catching an error does not remove the need for the service.
 
-Precisely, E is the type of the expected failures in a cause made only of expected failures. A cause that also holds a defect or an interruption can carry `Fail` reasons outside E, because `catch` passes such a cause through untouched (Chapter 17); no Effeck `catch` recovers it, and only cause-level tools see those reasons.
+Precisely, E is the type of the expected failures in a cause made only of expected failures. A cause that also holds a defect or an interruption can carry `Fail` reasons outside E, because `catch` passes such a cause through untouched (Chapter 17); no VibeLang `catch` recovers it, and only cause-level tools see those reasons.
 
 #### Writing contracts
 
-`.effeck` code writes `Effect<A, E, R>` as `A!E!R` (D127), anywhere a type can appear: return annotations, service members, parameters, and aliases. The parser expands it to `Effect.Effect<A, E, R>`.
+`.vibe` code writes `Effect<A, E, R>` as `A!E!R` (D127), anywhere a type can appear: return annotations, service members, parameters, and aliases. The parser expands it to `Effect.Effect<A, E, R>`.
 
 | Written | Means |
 | --- | --- |
@@ -38,7 +38,7 @@ Precisely, E is the type of the expected failures in a cause made only of expect
 | `User!NotFound` on a function with a body | `Effect<User, NotFound, infer R>`: R comes from the body |
 | `User!NotFound` without a body | `Effect<User, NotFound, never>` |
 
-A slot without a type is `never`. Dependencies left out entirely are inferred on a function with a body and `never` everywhere else. Unions bind inside a slot, so `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`. A function type, a conditional type, or an Effect type inside a slot needs parentheses, and so does an object type after a `!`: a `{` there starts the function's body, so `User!NotFound! { ... }` has no dependencies. Hovers and messages about `.effeck` code show contracts in this form; declaration files keep `Effect.Effect<A, E, R>`, so TypeScript callers are unaffected. `Effect<A, E, R>` is accepted everywhere, including `infer` slots (D57).
+A slot without a type is `never`. Dependencies left out entirely are inferred on a function with a body and `never` everywhere else. Unions bind inside a slot, so `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`. A function type, a conditional type, or an Effect type inside a slot needs parentheses, and so does an object type after a `!`: a `{` there starts the function's body, so `User!NotFound! { ... }` has no dependencies. Hovers and messages about `.vibe` code show contracts in this form; declaration files keep `Effect.Effect<A, E, R>`, so TypeScript callers are unaffected. `Effect<A, E, R>` is accepted everywhere, including `infer` slots (D57).
 
 #### Checking a written contract
 
@@ -54,7 +54,7 @@ export function welcome(id: string): string!UserNotFound | MailError!Users {
 
 ```text
 error EK2002: welcome needs Mailer, but its contract says R = Users.
-  welcome.effeck:3:3   Mailer.send(user.email, "Welcome")
+  welcome.vibe:3:3   Mailer.send(user.email, "Welcome")
   Provide Mailer inside welcome, or add it: Effect<string, UserNotFound | MailError, Users | Mailer>.
 ```
 
@@ -81,7 +81,7 @@ service Rates {
 
 ```text
 error EK2101: Rates.lookup has no body to infer from, so its contract must be written in full.
-  rates.effeck:2:38   abstract lookup(currency: string): number
+  rates.vibe:2:38   abstract lookup(currency: string): number
   Write Effect<number, E, R>; use Effect<number, never, never> if it cannot fail and needs nothing.
 ```
 
@@ -136,7 +136,7 @@ error EK2003: Effect<User> leaves contract channels unspecified. Did you mean ne
 
 These are two distinct quick fixes. The first can then report EK2001 or EK2002 when the body fails or needs services. The second keeps those channels inferred.
 
-This rule applies only to the return annotation of an Effeck function with a body. Parameter types, type aliases, and `.ts` files keep TypeScript's meaning of `Effect<User>`, including its `never` defaults. Service and control methods instead require a complete contract (D93). They do not gain channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
+This rule applies only to the return annotation of a VibeLang function with a body. Parameter types, type aliases, and `.ts` files keep TypeScript's meaning of `Effect<User>`, including its `never` defaults. Service and control methods instead require a complete contract (D93). They do not gain channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
 
 #### Recursion
 

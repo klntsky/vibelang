@@ -1,10 +1,10 @@
 # Redacted
 
-`Redacted` works in Effeck exactly as in Effect. It hides a sensitive value from ordinary string, JSON, and inspection output, helping prevent accidental disclosure while allowing deliberate access.
+`Redacted` works in VibeLang exactly as in Effect. It hides a sensitive value from ordinary string, JSON, and inspection output, helping prevent accidental disclosure while allowing deliberate access.
 
 ## Wrapping sensitive values
 
-```effeck
+```vibe
 const exampleKey = Redacted.make("example-key-not-a-real-secret")
 String(exampleKey) // "<redacted>"
 
@@ -17,7 +17,7 @@ function reportConfiguration() {
 
 ## Revealing values deliberately
 
-```effeck
+```vibe
 service CredentialsClient {
   authenticate(token: string): boolean!!
 }
@@ -32,7 +32,7 @@ function authenticate(token: Redacted.Redacted<string>) {
 
 ## Wiping stored secrets
 
-```effeck
+```vibe
 function useOnce(raw: string) {
   const token = Redacted.make(raw)
   try {
@@ -47,7 +47,7 @@ function useOnce(raw: string) {
 
 ## Comparing protected values
 
-```effeck
+```vibe
 const same = Redacted.makeEquivalence(Equivalence.String)
 const first = Redacted.make("example-a")
 const second = Redacted.make("example-a")

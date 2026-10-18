@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "types": []
   },
-  "include": ["src/**/*.effeck"]
+  "include": ["src/**/*.vibe"]
 }

@@ -1,12 +1,12 @@
 # Two Types of Errors
 
-A missing record and a broken invariant need different responses. Effeck tracks recoverable domain failures in `Effect<A, E, R>` and keeps defects in the runtime's failure cause.
+A missing record and a broken invariant need different responses. VibeLang tracks recoverable domain failures in `Effect<A, E, R>` and keeps defects in the runtime's failure cause.
 
 [Upstream page](https://effect.website/docs/v4/error-management/two-error-types)
 
 ## Separating failures from defects
 
-```effeck
+```vibe
 error UnknownProduct {
   sku: string
 }
@@ -34,7 +34,7 @@ Interruption is a third kind of termination. It also bypasses `catch`; both inte
 
 ## Choosing the error type
 
-```effeck
+```vibe
 function percentage(part: number, total: number) {
   if (total <= 0) {
     die(new Error("validated total must be positive"))

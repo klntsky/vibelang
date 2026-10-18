@@ -24,7 +24,7 @@
 !.smithers/flows/convert/
 !.smithers/flows/convert/golden/
 !.smithers/flows/convert/golden/01-hero-batch-lookup/
-!.smithers/flows/convert/golden/01-hero-batch-lookup/expected.effeck
+!.smithers/flows/convert/golden/01-hero-batch-lookup/expected.vibe
 **/node_modules/**
 **/dist/**
 **/*.tgz

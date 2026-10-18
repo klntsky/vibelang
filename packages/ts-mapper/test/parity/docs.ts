@@ -16,33 +16,33 @@ export async function runDocs(root: string, out: string, scope: string, fork: st
   fs.mkdirSync(base, { recursive: true })
   const modules = path.join(base, "node_modules")
   fs.mkdirSync(modules)
-  for (const name of ["effect", "effeck-runtime"]) fs.symlinkSync(path.join(scope, "node_modules", name), path.join(modules, name))
-  fs.symlinkSync(scope, path.join(modules, "effeck-ts-mapper"))
+  for (const name of ["effect", "vibelang-runtime"]) fs.symlinkSync(path.join(scope, "node_modules", name), path.join(modules, name))
+  fs.symlinkSync(scope, path.join(modules, "vibelang-ts-mapper"))
   const projects: { dir: string; label: string; sources: Source[]; files: string[] }[] = []
   const walk = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).sort((a,b) => a.name.localeCompare(b.name, "en")).flatMap(e => e.name.startsWith(".") || ["node_modules", "dist", "out"].includes(e.name) ? [] : e.isDirectory() ? walk(path.join(dir,e.name)) : [path.join(dir,e.name)])
   const pages = fixture ? ["self-test.md"] : markdownPages(path.join(root, "docs/user"))
   for (const page of pages) {
     const markdown = fixture ? path.join(base, page) : page
-    if (fixture) fs.writeFileSync(markdown, '```effeck\nfunction f(xs: Items) {\n  xs.forEach((x) => {\n    log(x)\n    g(x)\n  })\n}\n```')
+    if (fixture) fs.writeFileSync(markdown, '```vibe\nfunction f(xs: Items) {\n  xs.forEach((x) => {\n    log(x)\n    g(x)\n  })\n}\n```')
     const blocks = extract(fs.readFileSync(markdown,"utf8"))
     if (!blocks.length) continue
     const dir = path.join(base, `page-${projects.length}`)
     const { filenames, offsets } = writeProject(dir, blocks)
-    projects.push({ dir, label: fixture ? page : path.relative(root,page), files: [...filenames.values()], sources: blocks.filter(b => filenames.get(b.number)!.endsWith(".effeck")).map(b => ({file: filenames.get(b.number)!, label: `${fixture ? page : path.relative(root,page)}#block-${b.number}`, offset: offsets.get(filenames.get(b.number)!)!, line: b.line})) })
+    projects.push({ dir, label: fixture ? page : path.relative(root,page), files: [...filenames.values()], sources: blocks.filter(b => filenames.get(b.number)!.endsWith(".vibe")).map(b => ({file: filenames.get(b.number)!, label: `${fixture ? page : path.relative(root,page)}#block-${b.number}`, offset: offsets.get(filenames.get(b.number)!)!, line: b.line})) })
   }
   if (!fixture) for (const category of ["examples", "templates"]) {
     // Group by the first directory, retaining all companion sources and assets.
     const sourceRoot = path.join(root,category)
     const all = walk(sourceRoot)
-    for (const name of [...new Set(all.filter(f => f.endsWith(".effeck")).map(f => path.relative(sourceRoot,f).split(path.sep)[0]))].sort()) {
+    for (const name of [...new Set(all.filter(f => f.endsWith(".vibe")).map(f => path.relative(sourceRoot,f).split(path.sep)[0]))].sort()) {
       const src = path.join(sourceRoot,name)
       const single = fs.statSync(src).isFile()
       const dir = path.join(base,`${category}-${name}`)
       fs.mkdirSync(dir)
       const copied = single ? [src] : all.filter(f => f.startsWith(src + path.sep))
       for (const f of copied) { const target = path.join(dir,single ? name : path.relative(src,f)); fs.mkdirSync(path.dirname(target),{recursive:true}); fs.copyFileSync(f,target) }
-      const files = copied.filter(f => /\.(effeck|tsx?|mts|cts)$/.test(f)).map(f => single ? name : path.relative(src,f))
-      projects.push({dir,label:`${category}/${name}`,files,sources: copied.filter(f => f.endsWith(".effeck")).map(f => ({file: single ? name : path.relative(src,f),label:path.relative(root,f),offset:0,line:1}))})
+      const files = copied.filter(f => /\.(vibe|tsx?|mts|cts)$/.test(f)).map(f => single ? name : path.relative(src,f))
+      projects.push({dir,label:`${category}/${name}`,files,sources: copied.filter(f => f.endsWith(".vibe")).map(f => ({file: single ? name : path.relative(src,f),label:path.relative(root,f),offset:0,line:1}))})
     }
   }
   async function run(argv: string[], cwd: string) {
@@ -71,12 +71,12 @@ export async function runDocs(root: string, out: string, scope: string, fork: st
         const target = path.join(dir,f), text = fs.readFileSync(target,"utf8")
         fs.writeFileSync(target,text.replace(/((?:from\s*|import\s*\(\s*)["'])(\.{1,2}\/[^"'\n]+)(["'])/g,(whole,a,b,c) => {
           const stem = b.replace(/\.m?js$/,"")
-          return fs.existsSync(path.resolve(path.dirname(target),stem+".effeck")) ? a+stem+".effeck"+c : whole
+          return fs.existsSync(path.resolve(path.dirname(target),stem+".vibe")) ? a+stem+".vibe"+c : whole
         }))
       }
       const config = {compilerOptions:{strict:true,target:"ESNext",module:"NodeNext",moduleResolution:"NodeNext",skipLibCheck:true,noEmit:true,types:[],rewriteRelativeImportExtensions:true,jsx:"react-jsx"},files}
       fs.writeFileSync(path.join(dir,"fork.json"),JSON.stringify(config))
-      fs.writeFileSync(path.join(dir,"stock.json"),JSON.stringify({...config,contentMappers:[{package:"effeck-ts-mapper",extensions:[".effeck"]}]}))
+      fs.writeFileSync(path.join(dir,"stock.json"),JSON.stringify({...config,contentMappers:[{package:"vibelang-ts-mapper",extensions:[".vibe"]}]}))
       const forkOutput = await run([fork,"-p","fork.json","--pretty","false"],dir)
       const stockOutput = await run([stock,"-p","stock.json","--pretty","false","--runExternalCode"],dir)
       fs.writeFileSync(path.join(dir,"fork.log"),forkOutput)

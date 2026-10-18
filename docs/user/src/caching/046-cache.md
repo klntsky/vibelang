@@ -4,7 +4,7 @@ A `Cache` stores lookup outcomes by key and shares in-progress lookups across ca
 
 ## Building a lookup cache
 
-```effeck
+```vibe
 error MissingProduct {
   sku: string
 }
@@ -27,7 +27,7 @@ The default cache captures lookup services when it is created. `Cache.get(cache,
 
 ## Sharing concurrent requests
 
-```effeck
+```vibe
 function concurrentLookup() {
   let calls = 0
   const cache = Cache.make({
@@ -52,7 +52,7 @@ Requests for the same missing key wait on one computation without blocking the J
 
 ## Setting capacity and expiration
 
-```effeck
+```vibe
 function makePermanentNames() {
   return Cache.make({
     capacity: 50,
@@ -66,7 +66,7 @@ Capacity is a bound on entries, not bytes, and recently used entries take priori
 
 ## Inspecting cache state
 
-```effeck
+```vibe
 function inspect() {
   const cache = Cache.make({ capacity: 5, lookup: (key: string) => key.length })
   Cache.get(cache, "paper")
@@ -83,7 +83,7 @@ function inspect() {
 
 ## Invalidating and refreshing entries
 
-```effeck
+```vibe
 function refreshExample() {
   let version = 0
   const cache = Cache.make({

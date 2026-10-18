@@ -1,10 +1,10 @@
 # Scheduling work with cron
 
-`Cron` and `Schedule.cron` work in Effeck exactly as in Effect. Use them for work tied to calendar dates, such as a weekday report, and use interval schedules when only elapsed time matters.
+`Cron` and `Schedule.cron` work in VibeLang exactly as in Effect. Use them for work tied to calendar dates, such as a weekday report, and use interval schedules when only elapsed time matters.
 
 ## Defining calendar execution
 
-```effeck
+```vibe
 const weekdayReport = Schedule.cron("45 7 * * 1-5", "UTC")
 
 function reportJob() {
@@ -18,7 +18,7 @@ When both day of month and weekday restrict dates, either field can match. For a
 
 ## Selecting a time zone
 
-```effeck
+```vibe
 const localMorning = Schedule.cron("45 7 * * 1-5", "America/Los_Angeles")
 const fixedUtc = Schedule.cron("45 7 * * 1-5", "UTC")
 ```
@@ -27,7 +27,7 @@ A named zone follows its local calendar, including daylight saving changes. `UTC
 
 ## Validating expressions
 
-```effeck
+```vibe
 function validateRule(expression: string, timeZone: string) {
   return Effect.fromResult(Cron.parse(expression, timeZone))
 }
@@ -38,7 +38,7 @@ function validateRule(expression: string, timeZone: string) {
 
 ## Previewing future runs
 
-```effeck
+```vibe
 function preview() {
   const rule = Effect.fromResult(Cron.parse("45 7 * * 1-5", "UTC"))
   let after = new Date("2026-11-02T00:00:00Z")
@@ -55,7 +55,7 @@ function preview() {
 
 ## Starting and stopping a job
 
-```effeck
+```vibe
 function runApplication() {
   const rule = Effect.fromResult(Cron.parse("*/10 * * * *", "UTC"))
   const reports = fork(() => Effect.schedule(

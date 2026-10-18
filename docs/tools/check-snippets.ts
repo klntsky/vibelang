@@ -6,7 +6,7 @@ import { createRequire } from "node:module"
 
 const repo = resolve(import.meta.dir, "../..")
 export type Diagnostic = { code: string; message: string; line?: number; column?: number }
-export type Block = { number: number; line: number; language: "effeck" | "ts"; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string }
+export type Block = { number: number; line: number; language: "vibe" | "ts"; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string }
 export type Result = Block & { status: "ok" | "fragment" | "compiler-gap" | "fail"; diagnostics: Diagnostic[]; reason?: string }
 
 export function extract(markdown: string): Block[] {
@@ -20,17 +20,17 @@ export function extract(markdown: string): Block[] {
     const body: string[] = []
     const close = new RegExp(`^\\s{0,3}${fence[1][0]}{${fence[1].length},}\\s*$`)
     while (++i < lines.length && !close.test(lines[i])) body.push(lines[i])
-    // The fence decides the language: ```effeck is Effeck and ```ts is
+    // The fence decides the language: ```vibe is VibeLang and ```ts is
     // TypeScript. ```ts effect marks Effect TypeScript shown for comparison,
     // which is not checked.
     const [lang, role] = fence[2].trim().split(/\s+/)
-    if (lang !== "effeck" && lang !== "ts") continue
+    if (lang !== "vibe" && lang !== "ts") continue
     if (lang === "ts" && role === "effect") continue
     const language = lang
     number++
-    const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:effeck|ts))\s*$/.exec(line)?.[1]).find(Boolean)
+    const filename = body.slice(0, 2).map(line => /^\s*\/\/\s+((?:[\w.-]+\/)*[\w.-]+\.(?:vibe|ts))\s*$/.exec(line)?.[1]).find(Boolean)
     if (filename?.split("/").some(part => part === "." || part === "..")) throw new Error(`Invalid snippet filename: ${filename}`)
-    if (filename && !filename.endsWith(`.${language}`)) throw new Error(`${language === "ts" ? "A ts" : "An effeck"} fence names ${filename}; the fence decides the language`)
+    if (filename && !filename.endsWith(`.${language}`)) throw new Error(`${language === "ts" ? "A ts" : "A vibe"} fence names ${filename}; the fence decides the language`)
     // A TypeScript example without a filename, such as a framework's config, opts out.
     if (language === "ts" && /^\s*\/\/ TypeScript \(\.ts\)/.test(body[0] ?? "") && !filename) continue
     const headers: string[] = []
@@ -107,28 +107,28 @@ export function markdownPages(root: string): string[] {
   return walk(root).sort()
 }
 
-// The compiler that EFFECK_BINARY names, else the local build, else effeck on PATH.
+// The compiler that VIBELANG_BINARY names, else the local build, else vibelang on PATH.
 export function defaultCompiler(): string {
   const local = join(repo, "typescript/built/local/tsc")
-  return process.env.EFFECK_BINARY || (existsSync(local) ? local : "effeck")
+  return process.env.VIBELANG_BINARY || (existsSync(local) ? local : "vibelang")
 }
 
 // The experiments package pins this parser. It only discovers declarations;
-// all language checking belongs to the native Effeck compiler.
+// all language checking belongs to the native VibeLang compiler.
 let parser: typeof import("../../experiments/node_modules/typescript") | undefined
 const typescript = () => parser ??= createRequire(join(repo, "experiments/package.json"))("typescript") as NonNullable<typeof parser>
 
-// The effeck-runtime that page projects import. EFFECK_RUNTIME_DIR checks
+// The vibelang-runtime that page projects import. VIBELANG_RUNTIME_DIR checks
 // against another one, such as a release tarball's package.
 export function runtimeDir(): string {
-  return process.env.EFFECK_RUNTIME_DIR || join(repo, "packages/runtime")
+  return process.env.VIBELANG_RUNTIME_DIR || join(repo, "packages/runtime")
 }
 
 // Links the packages that every page project imports into temp/node_modules.
 export function linkModules(temp: string) {
   const modules = join(temp, "node_modules")
   mkdirSync(modules, { recursive: true })
-  // effeck-runtime is a symlink to packages/runtime, which resolves effect
+  // vibelang-runtime is a symlink to packages/runtime, which resolves effect
   // from its own node_modules. Give the project that same copy: TypeScript
   // merges two copies of a package only for files an import loads, so with
   // two copies a module augmentation such as `declare module "effect/Schema"`
@@ -144,13 +144,13 @@ export function linkModules(temp: string) {
   for (const source of dependencies) {
     if (!existsSync(source)) continue
     for (const name of readdirSync(source).filter(n => !n.startsWith("."))) {
-      if (name === "effeck-runtime" || name === "effeck-vite") continue
+      if (name === "vibelang-runtime" || name === "vibelang-vite") continue
       const target = join(modules, name)
       if (!existsSync(target)) symlinkSync(join(source, name), target)
     }
   }
-  symlinkSync(runtime, join(modules, "effeck-runtime"))
-  symlinkSync(join(repo, "packages/vite"), join(modules, "effeck-vite"))
+  symlinkSync(runtime, join(modules, "vibelang-runtime"))
+  symlinkSync(join(repo, "packages/vite"), join(modules, "vibelang-vite"))
   if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(runtime, "dist/index.d.ts"))) {
     throw new Error("Install experiments dependencies and build packages/runtime before checking snippets (see docs/tools/README.md)")
   }
@@ -181,14 +181,14 @@ export function writeProject(dir: string, blocks: Block[]): { filenames: Map<num
     const typeOnly = new Set<string>()
     const localValues = new Set<string>()
     const bindings = (node: any) => {
-      // Recovery from Effeck forms, such as a block param, can yield a nameless declaration.
+      // Recovery from VibeLang forms, such as a block param, can yield a nameless declaration.
       if (ts.isIdentifier(node)) { if (node.text) names.add(node.text) }
       else if (ts.isObjectBindingPattern(node) || ts.isArrayBindingPattern(node)) {
         for (const e of node.elements) if (ts.isBindingElement(e)) bindings(e.name)
       }
     }
     for (const statement of ast.statements) {
-      // TypeScript's parser cannot read Effeck's statement forms, such as
+      // TypeScript's parser cannot read VibeLang's statement forms, such as
       // `fork { ... }` and `select { ... }`, and its recovery can lift
       // statements out of a function. Top-level code starts in column 0.
       if (ast.getLineAndCharacterOfPosition(statement.getStart(ast)).character !== 0) continue
@@ -215,7 +215,7 @@ export function writeProject(dir: string, blocks: Block[]): { filenames: Map<num
         for (const name of names) if (!before.has(name)) exported.add(name)
       }
     }
-    // TypeScript's parser reads Effeck's declaration forms, such as
+    // TypeScript's parser reads VibeLang's declaration forms, such as
     // `error NotFound { id: string }`, as expression statements, so their
     // names come from the source text. Each declares a value. `service`
     // and `control` may be followed by `class`, the older spelling (D223).
@@ -271,7 +271,7 @@ async function main() {
   const json = option("--json")
   const keep = args.includes("--keep")
   if (args.some(a => a !== "--keep")) throw new Error(`Unknown argument: ${args.join(" ")}`)
-  const temp = mkdtempSync(join(tmpdir(), "effeck-docs-"))
+  const temp = mkdtempSync(join(tmpdir(), "vibelang-docs-"))
   const pages: { page: string; blocks: Result[] }[] = []
   try {
     linkModules(temp)

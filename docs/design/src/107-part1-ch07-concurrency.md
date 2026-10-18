@@ -29,7 +29,7 @@ const first = await.race [fromCache(id), fromNetwork(id)]
 const quick = timeout(slowQuery(id), "500 millis")
 ```
 
-Each combinator has its own rule for a failing branch, and Effeck adds nothing to Effect's semantics here:
+Each combinator has its own rule for a failing branch, and VibeLang adds nothing to Effect's semantics here:
 
 | Combinator | Succeeds with | When a branch fails |
 | --- | --- | --- |
@@ -104,7 +104,7 @@ function summary(id: string) {
 
 To start several programs and wait for them in one step, use an await operation instead of forking each: `await.all [loadProfile(id), recentOrders(id)]` (below).
 
-`await` waits for promises in JavaScript, so in Effeck code a plain `await` is an error that names its replacement (D226): `await fiber` is EK4609, whose quick fix writes `join fiber`; `await d` on a Deferred is EK4610, whose quick fix writes `d.await()`; `await loadProfile(id)` is EK4601, because a call already runs and waits where it stands; a promise is EK4602, and waits in a hatch, `try(async () => …)`, where `await` keeps its JavaScript meaning; anything else is EK4603. An `await` in a hatch's function that is not `async` is EK4604. `join` on anything but fibers is EK4611, and `join` inside a hatch's function, which is plain TypeScript, is EK4612.
+`await` waits for promises in JavaScript, so in VibeLang code a plain `await` is an error that names its replacement (D226): `await fiber` is EK4609, whose quick fix writes `join fiber`; `await d` on a Deferred is EK4610, whose quick fix writes `d.await()`; `await loadProfile(id)` is EK4601, because a call already runs and waits where it stands; a promise is EK4602, and waits in a hatch, `try(async () => …)`, where `await` keeps its JavaScript meaning; anything else is EK4603. An `await` in a hatch's function that is not `async` is EK4604. `join` on anything but fibers is EK4611, and `join` inside a hatch's function, which is plain TypeScript, is EK4612.
 
 #### Await operations
 

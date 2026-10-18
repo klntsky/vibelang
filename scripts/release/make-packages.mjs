@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// make-packages assembles Effeck's ten npm packages under dist-npm/pkg/ and
+// make-packages assembles VibeLang's ten npm packages under dist-npm/pkg/ and
 // packs them into dist-npm/tarballs/, with manifest.json listing the tarballs
 // in publish order. Run scripts/release/build-binaries.sh first.
 //
 //   node scripts/release/make-packages.mjs [--skip-build]
 //
-// --skip-build reuses packages/runtime/dist and editors/vscode/effeck.vsix.
+// --skip-build reuses packages/runtime/dist and editors/vscode/vibelang.vsix.
 // The script fails unless every package version equals the compiler's own
-// version (typescript/tsc/internal/effeck/identity.go) and every pin agrees.
+// version (typescript/tsc/internal/vibelang/identity.go) and every pin agrees.
 import { execFileSync } from "node:child_process"
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path"
@@ -31,29 +31,29 @@ const readJson = (path) => JSON.parse(readFileSync(join(root, path), "utf8"))
 const compiler = readJson("packages/compiler/package.json")
 const runtime = readJson("packages/runtime/package.json")
 const vite = readJson("packages/vite/package.json")
-const create = readJson("packages/create-effeck/package.json")
+const create = readJson("packages/create-vibelang/package.json")
 const template = readJson("templates/app/package.json")
-const identity = readFileSync(join(root, "typescript/tsc/internal/effeck/identity.go"), "utf8")
+const identity = readFileSync(join(root, "typescript/tsc/internal/vibelang/identity.go"), "utf8")
 const version = /const Version = "([^"]+)"/.exec(identity)?.[1]
 
 const problems = []
 const expect = (ok, message) => { if (!ok) problems.push(message) }
 expect(version, "identity.go: no Version constant")
-for (const [name, pkg] of [["effeck", compiler], ["effeck-runtime", runtime], ["effeck-vite", vite], ["create-effeck", create]]) {
+for (const [name, pkg] of [["vibelang", compiler], ["vibelang-runtime", runtime], ["vibelang-vite", vite], ["create-vibelang", create]]) {
   expect(pkg.name === name, `${name}: package.json names ${pkg.name}`)
   expect(pkg.version === version, `${name}: version ${pkg.version}, but the compiler is ${version}`)
 }
 const optional = compiler.optionalDependencies ?? {}
-expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.keys(platforms).map((p) => `effeck-${p}`).sort()),
-  `effeck: optionalDependencies must list exactly ${Object.keys(platforms).join(", ")}`)
-for (const [name, pin] of Object.entries(optional)) expect(pin === version, `effeck: ${name} pinned to ${pin}, expected ${version}`)
-expect(vite.peerDependencies?.effeck === version, `effeck-vite: peer effeck ${vite.peerDependencies?.effeck}, expected ${version}`)
+expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.keys(platforms).map((p) => `vibelang-${p}`).sort()),
+  `vibelang: optionalDependencies must list exactly ${Object.keys(platforms).join(", ")}`)
+for (const [name, pin] of Object.entries(optional)) expect(pin === version, `vibelang: ${name} pinned to ${pin}, expected ${version}`)
+expect(vite.peerDependencies?.vibelang === version, `vibelang-vite: peer vibelang ${vite.peerDependencies?.vibelang}, expected ${version}`)
 const effect = runtime.peerDependencies?.effect
 expect(template.dependencies?.effect === effect, `template: effect ${template.dependencies?.effect}, but the runtime requires ${effect}`)
 expect(template.dependencies?.["@effect/platform-node"] === effect, `template: @effect/platform-node must match effect ${effect}`)
 expect(template.devDependencies?.["@effect/vitest"] === effect, `template: @effect/vitest must match effect ${effect}`)
 for (const [platform, [os]] of Object.entries(platforms)) {
-  const binary = join(out, "bin", platform, os === "win32" ? "effeck.exe" : "effeck")
+  const binary = join(out, "bin", platform, os === "win32" ? "vibelang.exe" : "vibelang")
   expect(existsSync(binary), `missing ${binary.slice(root.length)}; run scripts/release/build-binaries.sh`)
 }
 if (problems.length) {
@@ -70,7 +70,7 @@ if (!skipBuild) {
   run("bun", ["install", "--frozen-lockfile"], join(root, "editors/vscode"))
   run("bun", ["run", "package"], join(root, "editors/vscode"))
 }
-const vsix = join(root, "editors/vscode/effeck.vsix")
+const vsix = join(root, "editors/vscode/vibelang.vsix")
 for (const file of [vsix, join(root, "packages/runtime/dist/index.js")]) {
   if (!existsSync(file)) {
     console.error(`make-packages: missing ${file.slice(root.length)}; run without --skip-build`)
@@ -85,16 +85,16 @@ mkdirSync(tarballs, { recursive: true })
 const rootLicense = readFileSync(join(root, "LICENSE"), "utf8")
 const mit = rootLicense.slice(rootLicense.indexOf("MIT License"))
 const apache = readFileSync(join(root, "typescript/LICENSE.txt"), "utf8")
-const notice = `Effeck
-Copyright (c) 2026 the Effeck authors
+const notice = `VibeLang
+Copyright (c) 2026 the VibeLang authors
 
-The Effeck compiler is a modified version of the TypeScript compiler
+The VibeLang compiler is a modified version of the TypeScript compiler
 (typescript-go), Copyright (c) Microsoft Corporation, licensed under the
-Apache License 2.0. Effeck's changes are licensed under the same license.
+Apache License 2.0. VibeLang's changes are licensed under the same license.
 The TypeScript notices follow.
 
 ${readFileSync(join(root, "typescript/NOTICE.txt"), "utf8")}`
-const warning = "> **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use."
+const warning = "> **Warning:** VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use."
 
 function stage(name, sources, files) {
   const dir = join(staging, name)
@@ -106,13 +106,13 @@ function stage(name, sources, files) {
 
 const order = []
 for (const [platform, [os, cpu]] of Object.entries(platforms)) {
-  const exe = os === "win32" ? "effeck.exe" : "effeck"
-  const name = `effeck-${platform}`
+  const exe = os === "win32" ? "vibelang.exe" : "vibelang"
+  const name = `vibelang-${platform}`
   const dir = stage(name, [], {
     "package.json": JSON.stringify({
       name,
       version,
-      description: `The native Effeck compiler for ${os} on ${cpu}. Install effeck instead; it selects this package.`,
+      description: `The native VibeLang compiler for ${os} on ${cpu}. Install vibelang instead; it selects this package.`,
       homepage: compiler.homepage,
       license: "Apache-2.0",
       os: [os],
@@ -120,7 +120,7 @@ for (const [platform, [os, cpu]] of Object.entries(platforms)) {
       files: ["bin", "README.md", "LICENSE", "NOTICE"],
       preferUnplugged: true
     }, null, 2) + "\n",
-    "README.md": `# ${name}\n\n${warning}\n\nThe native Effeck compiler for ${os} on ${cpu}. Install [\`effeck\`](https://www.npmjs.com/package/effeck) instead: it lists this package as an optional dependency, and npm installs the one that matches your platform.\n`,
+    "README.md": `# ${name}\n\n${warning}\n\nThe native VibeLang compiler for ${os} on ${cpu}. Install [\`vibelang\`](https://www.npmjs.com/package/vibelang) instead: it lists this package as an optional dependency, and npm installs the one that matches your platform.\n`,
     "LICENSE": apache,
     "NOTICE": notice
   })
@@ -130,38 +130,38 @@ for (const [platform, [os, cpu]] of Object.entries(platforms)) {
   order.push({ name, dir, required: [`bin/${exe}`, "LICENSE", "NOTICE"], executable: `bin/${exe}` })
 }
 
-const effeckDir = stage("effeck", [["packages/compiler/bin", "bin"], ["packages/compiler/README.md"], ["packages/compiler/package.json"]], { LICENSE: apache, NOTICE: notice })
-mkdirSync(join(effeckDir, "editor"))
-copyFileSync(vsix, join(effeckDir, "editor", "effeck.vsix"))
-order.push({ name: "effeck", dir: effeckDir, required: ["bin/effeck", "editor/effeck.vsix", "LICENSE", "NOTICE"], forbidden: /^native\// })
+const vibelangDir = stage("vibelang", [["packages/compiler/bin", "bin"], ["packages/compiler/README.md"], ["packages/compiler/package.json"]], { LICENSE: apache, NOTICE: notice })
+mkdirSync(join(vibelangDir, "editor"))
+copyFileSync(vsix, join(vibelangDir, "editor", "vibelang.vsix"))
+order.push({ name: "vibelang", dir: vibelangDir, required: ["bin/vibelang", "editor/vibelang.vsix", "LICENSE", "NOTICE"], forbidden: /^native\// })
 
 order.push({
-  name: "effeck-runtime",
-  dir: stage("effeck-runtime", [["packages/runtime/dist", "dist"], ["packages/runtime/README.md"], ["packages/runtime/package.json"]], { LICENSE: mit }),
+  name: "vibelang-runtime",
+  dir: stage("vibelang-runtime", [["packages/runtime/dist", "dist"], ["packages/runtime/README.md"], ["packages/runtime/package.json"]], { LICENSE: mit }),
   required: ["dist/index.js", "dist/index.d.ts", "dist/kernel/kernel.js", "LICENSE"]
 })
 order.push({
-  name: "effeck-vite",
-  dir: stage("effeck-vite", [["packages/vite/src", "src"], ["packages/vite/README.md"], ["packages/vite/package.json"]], { LICENSE: mit }),
+  name: "vibelang-vite",
+  dir: stage("vibelang-vite", [["packages/vite/src", "src"], ["packages/vite/README.md"], ["packages/vite/package.json"]], { LICENSE: mit }),
   required: ["src/index.js", "src/index.d.ts", "LICENSE"]
 })
 
-const createDir = stage("create-effeck", [["packages/create-effeck/bin", "bin"], ["packages/create-effeck/README.md"], ["packages/create-effeck/package.json"]], { LICENSE: mit })
+const createDir = stage("create-vibelang", [["packages/create-vibelang/bin", "bin"], ["packages/create-vibelang/README.md"], ["packages/create-vibelang/package.json"]], { LICENSE: mit })
 cpSync(join(root, "templates/app"), join(createDir, "template"), {
   recursive: true,
-  filter: (path) => !["node_modules", "dist", "bun.lock", ".prototype", ".effeck"].includes(basename(path))
+  filter: (path) => !["node_modules", "dist", "bun.lock", ".prototype", ".vibe"].includes(basename(path))
 })
-// npm drops .gitignore from packages; create-effeck restores the dot.
+// npm drops .gitignore from packages; create-vibelang restores the dot.
 for (const name of [".gitignore", ".gitattributes"]) renameSync(join(createDir, "template", name), join(createDir, "template", name.slice(1)))
 const appManifest = JSON.parse(readFileSync(join(createDir, "template/package.json"), "utf8"))
-appManifest.dependencies["effeck-runtime"] = version
-appManifest.devDependencies.effeck = version
-appManifest.devDependencies["effeck-vite"] = version
+appManifest.dependencies["vibelang-runtime"] = version
+appManifest.devDependencies.vibelang = version
+appManifest.devDependencies["vibelang-vite"] = version
 writeFileSync(join(createDir, "template/package.json"), JSON.stringify(appManifest, null, 2) + "\n")
 order.push({
-  name: "create-effeck",
+  name: "create-vibelang",
   dir: createDir,
-  required: ["bin/create-effeck.mjs", "template/package.json", "template/gitignore", "template/gitattributes", "template/src/main.effeck", "LICENSE"]
+  required: ["bin/create-vibelang.mjs", "template/package.json", "template/gitignore", "template/gitattributes", "template/src/main.vibe", "LICENSE"]
 })
 
 const manifest = []

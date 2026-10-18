@@ -1,10 +1,10 @@
 # Schema to JSON Schema
 
-JSON Schema export works in Effeck as in Effect. It describes the encoded side of a schema's canonical JSON codec, so the exported shape matches the selected JSON representation. Export is best-effort and does not replace runtime decoding. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+JSON Schema export works in VibeLang as in Effect. It describes the encoded side of a schema's canonical JSON codec, so the exported shape matches the selected JSON representation. Export is best-effort and does not replace runtime decoding. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Exporting JSON Schema documents
 
-```effeck
+```vibe
 const Depot = Schema.Struct({
   name: Schema.String,
   capacity: Schema.Finite
@@ -19,7 +19,7 @@ The returned document contains `dialect`, the root `schema`, and a separate `def
 
 ## Selecting canonical representations and specification drafts
 
-```effeck
+```vibe
 function alternateDrafts() {
   const document = try(() => Schema.toJsonSchemaDocument(
     Schema.Tuple([Schema.String, Schema.FiniteFromString])
@@ -34,7 +34,7 @@ Export first derives `toCodecJson`, then describes its encoded side. `FiniteFrom
 
 ## Carrying annotations and encoded-side metadata
 
-```effeck
+```vibe
 const DepotName = Schema.Trim.pipe(Schema.annotateEncoded({
   title: "Depot input",
   description: "Text entered before surrounding whitespace is removed",
@@ -54,7 +54,7 @@ Use `annotateEncoded` for metadata attached to the wire representation; `.annota
 
 ## Exporting constraints and optional fields
 
-```effeck
+```vibe
 const DepotRequest = Schema.Struct({
   code: Schema.String.check(Schema.isPattern(/^[A-Z]{2}[0-9]{3}$/)),
   note: Schema.optionalKey(Schema.String),
@@ -73,7 +73,7 @@ String lengths have a representational difference: JavaScript counts UTF-16 code
 
 ## Emitting references for recursive definitions
 
-```effeck
+```vibe
 interface DepotTree {
   name: string
   branches: ReadonlyArray<DepotTree>
@@ -92,7 +92,7 @@ An identifier creates a named definition referenced through `$ref`. Recursive ex
 
 ## Adjusting document generation
 
-```effeck
+```vibe
 function strictDocument() {
   return try(() => Schema.toJsonSchemaDocument(DepotRequest, {
     onExcessProperty: "error",
@@ -106,7 +106,7 @@ function strictDocument() {
 
 ## Describing JSON string codecs
 
-```effeck
+```vibe
 const DepotText = Schema.fromJsonString(Depot)
 
 function jsonTextDocument() {

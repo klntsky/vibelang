@@ -21,8 +21,8 @@ import (
 )
 
 const (
-	fileGlobPattern          = "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,effeck}"
-	recursiveFileGlobPattern = "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,effeck}"
+	fileGlobPattern          = "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,vibe}"
+	recursiveFileGlobPattern = "**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,vibe}"
 )
 
 // fileGlobPatterns returns the include file glob patterns for this command line, augmenting the
@@ -34,7 +34,7 @@ func (p *ParsedCommandLine) fileGlobPatterns() (fileGlob string, recursiveFileGl
 		return fileGlobPattern, recursiveFileGlobPattern
 	}
 	extensions := make([]string, 0, 10+len(mapperExtensions))
-	extensions = append(extensions, "js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts", "json", "effeck")
+	extensions = append(extensions, "js", "jsx", "mjs", "cjs", "ts", "tsx", "mts", "cts", "json", "vibelang")
 	for _, extension := range mapperExtensions {
 		extensions = append(extensions, strings.TrimPrefix(extension, "."))
 	}

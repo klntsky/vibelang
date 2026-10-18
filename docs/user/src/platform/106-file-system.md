@@ -1,10 +1,10 @@
 # FileSystem
 
-`FileSystem` exposes Effect's portable file operations in Effeck. Request the service inside a function, call its operations, and provide a runtime implementation or test layer around the application.
+`FileSystem` exposes Effect's portable file operations in VibeLang. Request the service inside a function, call its operations, and provide a runtime implementation or test layer around the application.
 
 ## Requesting the file-system service
 
-```effeck
+```vibe
 function readSettings() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./settings.json")
@@ -16,7 +16,7 @@ function readSettings() {
 
 ## Performing file operations
 
-```effeck
+```vibe
 function saveSummary(text: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   fs.makeDirectory("./output", { recursive: true })
@@ -44,7 +44,7 @@ Calls run sequentially: the write completes before the read starts. Expected I/O
 | `remove`, `rename`, `truncate`, `utimes` | Remove, move, resize, or change timestamps |
 | `stream`, `sink`, `watch` | Stream bytes, write through a sink, or observe changes |
 
-```effeck
+```vibe
 function fileSize(path: string) {
   const fs = Effect.service(FileSystem.FileSystem)
   using file = fs.open(path)
@@ -56,8 +56,8 @@ function fileSize(path: string) {
 
 ## Supplying platform implementations
 
-```effeck
-// main.effeck
+```vibe
+// main.vibe
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 function main() {
   const fs = Effect.service(FileSystem.FileSystem)
@@ -71,7 +71,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 
 ## Replacing behavior in tests
 
-```effeck
+```vibe
 import { it } from "@effect/vitest"
 function readFixture() {
   const fs = Effect.service(FileSystem.FileSystem)
@@ -94,4 +94,4 @@ it.effect("reads the configured title") {
 
 ## Coming from Effect
 
-Test overrides use ordinary Effeck functions. Contextual typing converts them to the Effect-returning methods the service interface expects, so `readFileString: () => "Release notes"` replaces a TypeScript `Effect.succeed` body.
+Test overrides use ordinary VibeLang functions. Contextual typing converts them to the Effect-returning methods the service interface expects, so `readFileString: () => "Release notes"` replaces a TypeScript `Effect.succeed` body.

@@ -1,22 +1,22 @@
 # Hello
 
-The smallest Node.js Effeck program: one function and one log.
+The smallest Node.js VibeLang program: one function and one log.
 `Console.log` runs when called. The module exports `main`, so running its
 JavaScript with `node dist/main.js` runs `main` with `NodeRuntime.runMain`.
 
-From this directory, with `effeck` on `PATH`:
+From this directory, with `vibelang` on `PATH`:
 ```sh
 bun install
 bun run build
 bun run start
 ```
 
-Expected output: `Hello, Effeck!`.
+Expected output: `Hello, VibeLang!`.
 The key function in Effect TypeScript is:
 ```ts
 import { Console, Effect } from "effect"
 const main = Effect.fnUntraced(function* () {
-  yield* Console.log("Hello, Effeck!")
+  yield* Console.log("Hello, VibeLang!")
 })
 ```
 

@@ -1,6 +1,6 @@
-# Welcome to Effeck
+# Welcome to VibeLang
 
-Effeck is a language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). It gives Effect a simple, readable syntax that compiles to TypeScript, so your team can ship production-ready systems with first-class access to the TypeScript ecosystem.
+VibeLang is a language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). It gives Effect a simple, readable syntax that compiles to TypeScript, so your team can ship production-ready systems with first-class access to the TypeScript ecosystem.
 
 ```ts effect
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
@@ -20,7 +20,7 @@ const greet = Effect.fn("greet")(function* (id: string) {
 })
 ```
 
-```effeck
+```vibe
 interface User { id: string; name: string }
 
 error UserNotFound { id: string }
@@ -36,9 +36,9 @@ function greet(id: string) {
 // string!!Users
 ```
 
-A user service, a typed error, and a fallback, in Effect and in Effeck. The comment under `greet` is the type your editor shows: `string!!Users` is Effeck's spelling of `Effect<string, never, Users>`. It returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The Effeck version is about half the size: 71 tokens against 143.
+A user service, a typed error, and a fallback, in Effect and in VibeLang. The comment under `greet` is the type your editor shows: `string!!Users` is VibeLang's spelling of `Effect<string, never, Users>`. It returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The VibeLang version is about half the size: 71 tokens against 143.
 
-Effeck is v0. The language will change in major, breaking ways, and it is not ready for production use.
+VibeLang is v0. The language will change in major, breaking ways, and it is not ready for production use.
 
 ## Why a language
 
@@ -46,16 +46,16 @@ Effeck is v0. The language will change in major, breaking ways, and it is not re
 
 **Effect pays for it in syntax.** Effect is a library, so it builds every feature out of what TypeScript already has: generators and `yield*` to run steps in order, `pipe` to compose them, and classes to declare errors and services. The code reads like a separate language written in library calls.
 
-**Effeck makes it a real language.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
+**VibeLang makes it a real language.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
 
 ## TypeScript stays one step away
 
-A new language usually leaves its host's ecosystem behind. Effeck keeps it in two ways:
+A new language usually leaves its host's ecosystem behind. VibeLang keeps it in two ways:
 
-1. **It compiles to TypeScript.** Effeck's compiler is TypeScript's compiler, extended. It checks `.effeck` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and every Effect library work unchanged, and TypeScript code calls Effeck functions as ordinary Effect functions.
-2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.effeck` file.
+1. **It compiles to TypeScript.** VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and every Effect library work unchanged, and TypeScript code calls VibeLang functions as ordinary Effect functions.
+2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
-```effeck
+```vibe
 function slug(title: string) {
   return sync((title) => {
     // Plain TypeScript: nothing in here is an Effect.
@@ -67,13 +67,13 @@ function slug(title: string) {
 // string!!
 ```
 
-A hatch's function is self-contained: it reads the `.effeck` file's values only as the arguments passed after it, here `title`.
+A hatch's function is self-contained: it reads the `.vibe` file's values only as the arguments passed after it, here `title`.
 
-## Effect's features, in Effeck syntax
+## Effect's features, in VibeLang syntax
 
-Everything Effect does, Effeck does, because the output is Effect. The common features have their own syntax:
+Everything Effect does, VibeLang does, because the output is Effect. The common features have their own syntax:
 
-| Effect feature | Effeck |
+| Effect feature | VibeLang |
 | --- | --- |
 | Effect types | `User!NotFound!Users`: returns `User`, fails with `NotFound`, needs `Users` |
 | Typed errors | `error NotFound { id: string }`, `throw new NotFound({ id })`, `x catch fallback` |
@@ -85,28 +85,28 @@ Everything Effect does, Effeck does, because the output is Effect. The common fe
 | Schema validation | `schema User { id: string; role: "admin" \| "member" }` |
 | Pattern matching | `match (e) { when NotFound: ...; }` |
 
-Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages need no syntax of their own: call them as you would in TypeScript. The [cheat sheet](effeck-features/115-cheat-sheet.md) puts every Effeck form beside the Effect code it replaces.
+Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages need no syntax of their own: call them as you would in TypeScript. The [cheat sheet](vibelang-features/115-cheat-sheet.md) puts every VibeLang form beside the Effect code it replaces.
 
 ## Built for the AI era
 
-When coding agents write a growing share of your code, the hard part moves from writing code to trusting it. Effect's answer is to make failures and dependencies visible to the compiler. Effeck keeps that and makes the code worth reading:
+When coding agents write a growing share of your code, the hard part moves from writing code to trusting it. Effect's answer is to make failures and dependencies visible to the compiler. VibeLang keeps that and makes the code worth reading:
 
 - **The compiler checks what agents write.** Every function's type lists what it can fail with and what it needs, and code that breaks a declared type does not compile, so an agent gets precise feedback to act on.
-- **People can review what agents write.** Effeck code is about half the size of the Effect code it replaces, and it reads as plain TypeScript.
+- **People can review what agents write.** VibeLang code is about half the size of the Effect code it replaces, and it reads as plain TypeScript.
 - **Agents write less.** Fewer tokens per program means less to generate and less context to read back.
 
 ## Try it
 
 ```sh
-bun create effeck my-app
+bun create vibelang my-app
 cd my-app
 bun run dev
 ```
 
-Then open the folder in VS Code or Cursor and install the editor extension that comes with the compiler: `code --install-extension node_modules/effeck/editor/effeck.vsix`. [Installation](getting-started/004-installation.md) covers existing projects.
+Then open the folder in VS Code or Cursor and install the editor extension that comes with the compiler: `code --install-extension node_modules/vibelang/editor/vibelang.vsix`. [Installation](getting-started/004-installation.md) covers existing projects.
 
 ## Where to go next
 
-- **Coming from Effect:** the [cheat sheet](effeck-features/115-cheat-sheet.md) shows every change, and [Effeck for Effect users](effeck-features/114-effeck-for-effect-users.md) explains the rules.
+- **Coming from Effect:** the [cheat sheet](vibelang-features/115-cheat-sheet.md) shows every change, and [VibeLang for Effect users](vibelang-features/114-vibelang-for-effect-users.md) explains the rules.
 - **New to Effect:** start with [The Effect Type](getting-started/003-the-effect-type.md), then [Creating Effects](getting-started/005-creating-effects.md) and [Expected Errors](error-management/014-expected-errors.md).
 - **The full language:** the [specification](../../design/src/000-intro.md) defines every rule.

@@ -1,26 +1,26 @@
-# effeck-runtime
+# vibelang-runtime
 
-> **Warning:** Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
+> **Warning:** VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-The Effeck runtime: the one-shot continuation kernel and the helpers that the
-[`effeck`](https://www.npmjs.com/package/effeck) compiler emits. It runs on
+The VibeLang runtime: the one-shot continuation kernel and the helpers that the
+[`vibelang`](https://www.npmjs.com/package/vibelang) compiler emits. It runs on
 Effect 4's fibers, scopes, and services.
 
 ## Install
 
 ```sh
-npm install effeck-runtime effect@4.0.5
+npm install vibelang-runtime effect@4.0.5
 ```
 
-JavaScript compiled by `effeck` imports `effect` and `effeck-runtime`, so an
-application lists both as dependencies; apps made with `create-effeck` already
+JavaScript compiled by `vibelang` imports `effect` and `vibelang-runtime`, so an
+application lists both as dependencies; apps made with `create-vibelang` already
 do. The runtime requires **effect@4.0.5 exactly**, because the kernel accesses
 that version's fiber continuation stack. Install one copy of `effect`: with two
 copies, a Scope can miss the fibers it must stop.
 
 ## Build and test
 
-For contributors, from this directory of the Effeck repository:
+For contributors, from this directory of the VibeLang repository:
 
 ```sh
 bun install
@@ -49,13 +49,13 @@ bun prototype/esc/examples/run-all.ts          # 46 compiler examples
 For example, generated JavaScript can compose helpers directly:
 
 ```js
-import { Effect, $bind, $program } from "effeck-runtime"
+import { Effect, $bind, $program } from "vibelang-runtime"
 
 const answer = $program(() => $bind(42))
 console.log(await Effect.runPromise(answer))
 ```
 
-Applications normally write `.effeck` programs and let the compiler select these
+Applications normally write `.vibe` programs and let the compiler select these
 helpers. Programs stay lazy: a helper that receives a program does not start a
 root fiber. An explicit Effect runner starts execution at the application
 boundary.
@@ -144,7 +144,7 @@ The kernel's implementation modules are private package files. Their source
 remains in `src/kernel/` so the original law and trace suites can test the
 continuation machine directly. Generated code uses the package root. Tests and
 instrumentation import the kernel module itself from
-`effeck-runtime/kernel`, for example its `hooks`, which report each
+`vibelang-runtime/kernel`, for example its `hooks`, which report each
 capture and resumption; the compiler's acceptance case `stack-depth` uses them
 to check that loops run in constant stack.
 
@@ -160,7 +160,7 @@ a call computes.
 | Call in an Effect body | JavaScript the projector writes |
 | --- | --- |
 | A same-file pure function | `f$direct(x)` |
-| A function another `.effeck` module exports | `(($t = (f[$direct] ?? f)(x)), f[$direct] ? $t : ($isRun($t) ? (yield* $t) : $t))` |
+| A function another `.vibe` module exports | `(($t = (f[$direct] ?? f)(x)), f[$direct] ? $t : ($isRun($t) ? (yield* $t) : $t))` |
 | Any other same-file function | `(($t = f$fast(x)), $isRun($t) ? (yield* $t) : $t)` |
 | Anything else | `(($t = c), $isRun($t) ? (yield* $t) : $t)` |
 

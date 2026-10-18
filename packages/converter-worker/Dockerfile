@@ -4,7 +4,7 @@ WORKDIR /src
 COPY typescript/tsc/go.mod typescript/tsc/go.sum ./
 RUN go mod download
 COPY typescript/tsc/ ./
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o /effeck ./cmd/tsc
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o /vibelang ./cmd/tsc
 
 FROM node:26-bookworm-slim AS packages
 WORKDIR /src
@@ -14,7 +14,7 @@ COPY packages/runtime/ packages/runtime/
 RUN cd packages/runtime && npm install --ignore-scripts --no-audit --no-fund && npm run build
 COPY packages/compiler/ packages/compiler/
 COPY packages/converter-worker/prepare-packages.mjs packages/converter-worker/
-COPY --from=compiler /effeck packages/compiler/native/effeck
+COPY --from=compiler /vibelang packages/compiler/native/vibelang
 RUN node packages/converter-worker/prepare-packages.mjs /tarballs
 
 FROM node:26-bookworm-slim AS installed
@@ -32,7 +32,7 @@ WORKDIR /opt/converter
 COPY --from=installed /opt/converter/project/ project/
 COPY packages/converter-worker/package.json packages/converter-worker/compile.mjs packages/converter-worker/server.mjs ./
 USER 1000:1000
-ENV EFFECK_WORKER_NETWORK=policy PORT=8080 NODE_ENV=production TMPDIR=/tmp
+ENV VIBELANG_WORKER_NETWORK=policy PORT=8080 NODE_ENV=production TMPDIR=/tmp
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/node"]
 CMD ["server.mjs"]

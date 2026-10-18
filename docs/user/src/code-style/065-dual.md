@@ -1,10 +1,10 @@
 # Dual APIs
 
-Many Effect APIs accept either the data followed by options or options followed by the data. These are the data-first and data-last forms of a dual API. Effeck preserves both forms. With the pipe operator, `|>`, and method syntax on Effect's data types, the data-first form usually reads best.
+Many Effect APIs accept either the data followed by options or options followed by the data. These are the data-first and data-last forms of a dual API. VibeLang preserves both forms. With the pipe operator, `|>`, and method syntax on Effect's data types, the data-first form usually reads best.
 
 ## Data first or data last
 
-```effeck
+```vibe
 const source = Stream.make(5, 10, 15)
 const direct = source.map((n) => n / 5)
 const stage = Stream.map((n: number) => n / 5)
@@ -20,7 +20,7 @@ The direct form supplies `source` in the first call. The data-last form first bu
 
 ## Direct calls and program pipelines
 
-```effeck
+```vibe
 function lookup() {
   sleep("10 millis")
   return "found"
@@ -39,7 +39,7 @@ Each `%` stands for the expression before its `|>`. Where `%` is an argument tha
 
 ## Choosing a form
 
-```effeck
+```vibe
 function boundedLookup() {
   return retry(lookup(), { times: 2 })
 }

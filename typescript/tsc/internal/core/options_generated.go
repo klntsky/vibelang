@@ -18,8 +18,8 @@ type PluginImport struct {
 // CompilerOptions contains the compiler options exposed by the API.
 type CompilerOptions struct {
 	_ noCopy
-	// Effeck is compilerOptions.effeck. It is added by hand, not generated.
-	Effeck                                    *EffeckOptions                            `json:"effeck,omitzero"`
+	// VibeLang is compilerOptions.vibelang. It is added by hand, not generated.
+	VibeLang                                  *VibeLangOptions                          `json:"vibelang,omitzero"`
 	AllowJs                                   Tristate                                  `json:"allowJs,omitzero"`
 	AllowArbitraryExtensions                  Tristate                                  `json:"allowArbitraryExtensions,omitzero"`
 	AllowImportingTsExtensions                Tristate                                  `json:"allowImportingTsExtensions,omitzero"`
@@ -167,7 +167,7 @@ type CompilerOptions struct {
 // Clone creates a shallow copy of the CompilerOptions.
 func (options *CompilerOptions) Clone() *CompilerOptions {
 	return &CompilerOptions{
-		Effeck:                     options.Effeck,
+		VibeLang:                   options.VibeLang,
 		AllowJs:                    options.AllowJs,
 		AllowArbitraryExtensions:   options.AllowArbitraryExtensions,
 		AllowImportingTsExtensions: options.AllowImportingTsExtensions,
@@ -312,7 +312,7 @@ func (options *CompilerOptions) Equals(other *CompilerOptions) bool {
 	if options == nil || other == nil {
 		return false
 	}
-	if !options.Effeck.Equals(other.Effeck) {
+	if !options.VibeLang.Equals(other.VibeLang) {
 		return false
 	}
 	if options.AllowJs != other.AllowJs {

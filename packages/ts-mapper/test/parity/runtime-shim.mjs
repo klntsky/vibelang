@@ -1,12 +1,12 @@
 // The runtime the parity harness runs the mapper's JavaScript against:
-// effeck-runtime, plus the exports the executable rendering calls that the
+// vibelang-runtime, plus the exports the executable rendering calls that the
 // runtime does not have yet. runtime.ts installs this file as the package
-// effeck-runtime in the runtime column's node_modules, beside the real
-// runtime as effeck-runtime-real. It lives in the test only: when the
+// vibelang-runtime in the runtime column's node_modules, beside the real
+// runtime as vibelang-runtime-real. It lives in the test only: when the
 // runtime exports $isRun, $direct, and $fast, the real ones win (see the
 // end of this file) and this shim adds nothing.
 //
-// The protocols, as the executable rendering (internal/effeckmapper,
+// The protocols, as the executable rendering (internal/vibelangmapper,
 // render_exec.go) writes their calls:
 //
 //   $isRun(v)    L3: v runs where a call stands. An Effect runs, except a
@@ -20,10 +20,10 @@
 //                fnUntracedEager does. Past DEPTH nested eager runs it
 //                defers the body to the fiber, so recursion keeps heap
 //                frames (research/typedirected.md section 6.6).
-import * as Real from "effeck-runtime-real"
+import * as Real from "vibelang-runtime-real"
 import { Config, Context, Effect } from "effect"
 
-export * from "effeck-runtime-real"
+export * from "vibelang-runtime-real"
 
 const isRunShim = (v) =>
   v !== null &&
@@ -33,7 +33,7 @@ const isRunShim = (v) =>
   !Context.isKey(v) &&
   !(v instanceof globalThis.Error)
 
-const directShim = Symbol.for("effeck-runtime/direct")
+const directShim = Symbol.for("vibelang-runtime/direct")
 
 const DEPTH = 1000
 let depth = 0
@@ -64,7 +64,7 @@ class Resume {
     return this.it.return(v)
   }
   [Symbol.iterator]() {
-    if (this.state !== 0) throw new Error("effeck: a fast call's continuation ran twice")
+    if (this.state !== 0) throw new Error("vibelang: a fast call's continuation ran twice")
     return this
   }
 }

@@ -9,7 +9,7 @@ Part I showed the language by example. This part states the rules behind those e
 A call is always written `f(x)`. What it compiles to depends on what `f` is, and the compiler decides from the types:
 
 ```ts es
-const n = double(4)                    // Effeck function that compiles to plain JavaScript
+const n = double(4)                    // VibeLang function that compiles to plain JavaScript
 const user = Users.find(id)            // service method
 const row = findUser(id)               // TypeScript function returning an Effect
 const label = formatName(user)         // trusted TypeScript function
@@ -30,8 +30,8 @@ The full rule:
 
 | The callee is | The call | Generated |
 | --- | --- | --- |
-| An Effeck function that can pause | Runs it on the current fiber | `yield* f(a)` |
-| An Effeck function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)`, or `f(a)` with a plain return annotation (D67) |
+| A VibeLang function that can pause | Runs it on the current fiber | `yield* f(a)` |
+| A VibeLang function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)`, or `f(a)` with a plain return annotation (D67) |
 | A TypeScript function whose call has the type `Effect<A, E, R>` | Runs the returned program | `yield* f(a)` |
 | A TypeScript function whose R contains a control operation | Rejected in v0: EK4202 (Chapter 9) | |
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
@@ -42,12 +42,12 @@ The full rule:
 | A service, `Users()` | Returns the implementation | `yield* Users` |
 | A control operation, `Approval.approve(x)` | Asks the nearest handler on this fiber | `yield* (yield* Approval).approve(x)` |
 | A JavaScript built-in, or an export of `effect` or `@effect/*` that does not return an `Effect` | A trusted call: listed exceptions join E, others are defects | `f(a)`, with listed exceptions converted |
-| A TypeScript function tagged `@effeck trusted` | The same | `f(a)`, with listed exceptions converted |
+| A TypeScript function tagged `@vibelang trusted` | The same | `f(a)`, with listed exceptions converted |
 | Any other plain TypeScript or JavaScript function | Rejected: EK4401 (Chapter 10) | |
 | A platform API, or a clock or randomness read | Rejected: EK4402, EK4403 (Chapters 10, 11) | |
 | `new C(…)` | Constructs; never runs a program | `new C(…)` |
 
-Because the meaning depends on types, the compiler needs TypeScript's type checker, not a source transform. That is why Effeck is a fork of the TypeScript compiler (Chapter 27).
+Because the meaning depends on types, the compiler needs TypeScript's type checker, not a source transform. That is why VibeLang is a fork of the TypeScript compiler (Chapter 27).
 
 #### Calls run `Effect` itself, not everything that extends it
 
@@ -71,7 +71,7 @@ Without this rule, `Config.Port("PORT")` would read the variable before `Config.
 
 `x.name(args)` is a method call into a module (D152) when all of these hold:
 
-1. The file is a `.effeck` file, and the access is not part of an optional chain (`x?.name(…)`).
+1. The file is a `.vibe` file, and the access is not part of an optional chain (`x?.name(…)`).
 2. `x`'s type, after TypeScript resolves type parameters to their constraints, has no member `name` of its own.
 3. One of Effect's data-type modules declares `x`'s type in its declaration file, `effect/dist/<Module>.d.ts`. For a union, every member comes from the same module, as `None` and `Some` come from `Option`.
 4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`.
@@ -117,7 +117,7 @@ Two kinds of "rest of the work" appear in this document, and they behave differe
 
 #### How program values are spelled
 
-A call runs where it stands, except where the expected type is `Effect`: there an expression that calls an `.effeck` function or a function that returns an `Effect`, or looks up a service, is passed by name (D147). The compiler passes a program that evaluates the expression each time it runs, as if the source had written `() =>` before it, so `Effect.retry(syncInventory(store), Schedule.recurs(3))` retries the call and `fork(fetchReport())` runs nothing at the call site. This holds for arguments, array elements, and record fields, in function bodies and at a module's top level. A position that accepts any value, such as `Console.log`'s parameters or `Effect.succeed`'s, still runs the call where it stands, and an expression whose value is already an `Effect` keeps its meaning. Each overload candidate decides by its own declared parameter, as it does for a lambda (D56). A hover on the callee of a call passed by name says so.
+A call runs where it stands, except where the expected type is `Effect`: there an expression that calls a `.vibe` function or a function that returns an `Effect`, or looks up a service, is passed by name (D147). The compiler passes a program that evaluates the expression each time it runs, as if the source had written `() =>` before it, so `Effect.retry(syncInventory(store), Schedule.recurs(3))` retries the call and `fork(fetchReport())` runs nothing at the call site. This holds for arguments, array elements, and record fields, in function bodies and at a module's top level. A position that accepts any value, such as `Console.log`'s parameters or `Effect.succeed`'s, still runs the call where it stands, and an expression whose value is already an `Effect` keeps its meaning. Each overload candidate decides by its own declared parameter, as it does for a lambda (D56). A hover on the callee of a call passed by name says so.
 
 A program of several statements needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
 
@@ -136,7 +136,7 @@ With overloads, the first candidate that accepts the lambda in the form that can
 // helpers.d.ts: a plain callback first, an Effect callback second
 import { Effect } from "effect"
 
-/** @effeck trusted */
+/** @vibelang trusted */
 export declare function register(f: (x: number) => number): string
 export declare function register<E, R>(f: (x: number) => number!E!R): string!E!R
 ```
@@ -153,7 +153,7 @@ Against overload 1, `b`'s lambda is a plain function, and a plain function canno
 A call never starts a fiber. A program starts only when a **runner** receives it. The compiler recognizes runners by their resolved symbols: `Effect.runPromise`, `runPromiseExit`, `runSync`, `runSyncExit`, `runFork`, `runCallback`, and their `*With` forms; `ManagedRuntime`'s `run*` methods; `NodeRuntime.runMain` and `BunRuntime.runMain`; and `@effect/vitest`'s `it.effect`, `it.live`, their `.each` and `.prop` forms, and `layer(…)`.
 
 ```ts es
-// main.effeck
+// main.vibe
 export function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
   log(`welcomed ${name}`)
@@ -175,13 +175,13 @@ NodeRuntime.runMain(main())
 A module's top level is not inside any program. A call there may build values, such as `Layer.effect(…)`, `wire(…)`, `Config.Port(…)`, or `Schedule.exponential(…)`, but it may not run a program:
 
 ```ts es
-// config.effeck
+// config.vibe
 export const config = loadConfig()
 ```
 
 ```text
 error EK1001: loadConfig() runs a program, but a module's top level is not inside one.
-  config.effeck:2:23   export const config = loadConfig()
+  config.vibe:2:23   export const config = loadConfig()
   Export a function instead, or provide the value as a service with a Layer.
 ```
 
@@ -195,11 +195,11 @@ function refreshAll(ids: ReadonlyArray<string>) {
 
 ```text
 error EK1005: Effect.runFork starts a new root fiber, but refreshAll already runs on one.
-  refresh.effeck:2:25   for (const id of ids) Effect.runFork(() => refresh(id))
+  refresh.vibe:2:25   for (const id of ids) Effect.runFork(() => refresh(id))
   Call the program, or fork it so the block owns it:   fork(() => refresh(id))
 ```
 
-Tests in `.effeck` use `it.effect`. A test that must `await` a Promise stays in a `.ts` file.
+Tests in `.vibe` use `it.effect`. A test that must `await` a Promise stays in a `.ts` file.
 
 #### Evaluation order
 

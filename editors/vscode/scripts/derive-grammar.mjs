@@ -1,9 +1,9 @@
-// Derives the Effeck TextMate grammar from VS Code's TypeScript grammar.
+// Derives the VibeLang TextMate grammar from VS Code's TypeScript grammar.
 //
 // The grammar is TypeScript's with a new name and root scope,
-// source.effeck, plus Effeck's declaration and statement forms
-// (effeck-grammar.mjs). Inner scopes keep their .ts suffix, so every
-// theme rule written for TypeScript colors Effeck the same way. The JSDoc injection is retargeted to the new
+// source.vibe, plus VibeLang's declaration and statement forms
+// (vibelang-grammar.mjs). Inner scopes keep their .ts suffix, so every
+// theme rule written for TypeScript colors VibeLang the same way. The JSDoc injection is retargeted to the new
 // root scope. Both source files are MIT-licensed; see ThirdPartyNotices.txt.
 //
 // Usage: node scripts/derive-grammar.mjs [typescript-basics directory]
@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
-import { addEffeckSyntax } from "./effeck-grammar.mjs"
+import { addVibeLangSyntax } from "./vibelang-grammar.mjs"
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const source =
@@ -23,19 +23,19 @@ const read = (file) => JSON.parse(readFileSync(path.join(source, "syntaxes", fil
 const write = (file, json) => writeFileSync(path.join(syntaxes, file), JSON.stringify(json, null, "\t") + "\n")
 
 const note =
-  "Derived for Effeck by editors/vscode/scripts/derive-grammar.mjs from the TypeScript grammar that VS Code ships; it adds the Effeck forms in effeck-grammar.mjs."
+  "Derived for VibeLang by editors/vscode/scripts/derive-grammar.mjs from the TypeScript grammar that VS Code ships; it adds the VibeLang forms in vibelang-grammar.mjs."
 
 const grammar = read("TypeScript.tmLanguage.json")
 const { information_for_contributors: info = [], version, name, scopeName, patterns, repository, ...other } = grammar
 if (name !== "TypeScript" || scopeName !== "source.ts") throw new Error(`unexpected grammar ${name} (${scopeName})`)
 if (Object.keys(other).length > 0) throw new Error(`unexpected grammar keys: ${Object.keys(other).join(", ")}`)
 write(
-  "Effeck.tmLanguage.json",
-  addEffeckSyntax({
+  "VibeLang.tmLanguage.json",
+  addVibeLangSyntax({
     information_for_contributors: [note, ...info],
     version,
-    name: "Effeck",
-    scopeName: "source.effeck",
+    name: "VibeLang",
+    scopeName: "source.vibe",
     patterns,
     repository
   })
@@ -45,12 +45,12 @@ const injection = read("jsdoc.ts.injection.tmLanguage.json")
 const text = JSON.stringify(injection)
 if (!text.includes("source.ts#docblock")) throw new Error("the JSDoc injection no longer includes source.ts#docblock")
 write(
-  "jsdoc.effeck.injection.tmLanguage.json",
+  "jsdoc.vibe.injection.tmLanguage.json",
   JSON.parse(
-    text.replaceAll("source.ts#docblock", "source.effeck#docblock").replace(
+    text.replaceAll("source.ts#docblock", "source.vibe#docblock").replace(
       '"scopeName":"documentation.injection.ts"',
-      '"scopeName":"documentation.injection.effeck"'
+      '"scopeName":"documentation.injection.vibe"'
     )
   )
 )
-console.log(`wrote ${path.relative(process.cwd(), syntaxes)}/Effeck.tmLanguage.json (TypeScript-TmLanguage ${version})`)
+console.log(`wrote ${path.relative(process.cwd(), syntaxes)}/VibeLang.tmLanguage.json (TypeScript-TmLanguage ${version})`)

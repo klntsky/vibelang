@@ -6,7 +6,7 @@
 //
 //   bun run build && node tests/fastcalls-bench.mjs
 import { Effect } from "effect"
-import { $direct, $done, $fast, $isRun, $settle } from "effeck-runtime"
+import { $direct, $done, $fast, $isRun, $settle } from "vibelang-runtime"
 
 const N = 200_000
 const expected = N * (N - 1) // the sum of 2i for i < N

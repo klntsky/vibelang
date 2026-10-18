@@ -1,4 +1,4 @@
-// Builds test/fixture with each bundler through effeck-unplugin, runs the
+// Builds test/fixture with each bundler through vibelang-unplugin, runs the
 // bundle, and checks its output, its source map, compiler diagnostics, and
 // watch-mode recompiles. Run test/run.sh, which builds the compiler and the
 // runtime and links the fixtures' node_modules first.
@@ -20,7 +20,7 @@ const hasBun = spawnSync("bun", ["--version"]).status === 0
 
 // The plugin compiles into os.tmpdir(). A compile that close() interrupts
 // leaves its directory there; keep this run's directories in one place.
-process.env.TMPDIR = await mkdtemp(join(tmpdir(), "effeck-unplugin-test-"))
+process.env.TMPDIR = await mkdtemp(join(tmpdir(), "vibelang-unplugin-test-"))
 after(() => rm(process.env.TMPDIR, { recursive: true, force: true }))
 
 // Bun.build has no watch mode.
@@ -91,7 +91,7 @@ async function printsEventually(bundler, root, text) {
 function watchBundle(bundler, root, env = {}) {
   // A process group of its own: close() stops the bundler and its compiler, as Ctrl-C does.
   const child = spawn(process.execPath, ["--no-warnings", build, bundler, "--watch"], {
-    cwd: root, detached: true, env: { ...process.env, EFFECK_UNPLUGIN_DEBUG: "1", ...env }
+    cwd: root, detached: true, env: { ...process.env, VIBELANG_UNPLUGIN_DEBUG: "1", ...env }
   })
   const started = Date.now()
   // The failure message shows each build result, edit, and trace line in order.
@@ -141,7 +141,7 @@ function watchBundle(bundler, root, env = {}) {
   }
 }
 
-// Edits a .effeck source, a type-only .ts import, and the tsconfig under a
+// Edits a .vibe source, a type-only .ts import, and the tsconfig under a
 // running watcher, and waits for the rebuild each edit causes.
 async function watchEdits(bundler, root, watcher) {
   // Each edit waits for the bundler to re-arm its watcher after a build.
@@ -152,15 +152,15 @@ async function watchEdits(bundler, root, watcher) {
   assert.ok(await printsEventually(bundler, root, expected))
   await settle(1000)
 
-  await edit(join(root, "src/shop.effeck"), 'receipt("ordered"', 'receipt("booked"', watcher)
-  await watcher.next("with the .effeck edit", (event) => event.ok && printsEventually(bundler, root, "booked 2 tea"))
+  await edit(join(root, "src/shop.vibe"), 'receipt("ordered"', 'receipt("booked"', watcher)
+  await watcher.next("with the .vibe edit", (event) => event.ok && printsEventually(bundler, root, "booked 2 tea"))
 
   // order.ts is a type-only import: only the compiler reads it.
   const order = join(root, "src/order.ts")
   await settle()
   await edit(order, "quantity: number", "quantity: string", watcher)
   const failed = await watcher.next("failure after the .ts edit", (event) => !event.ok)
-  assert.match(failed.message, new RegExp(`${escape(join(root, "src/shop.effeck"))}:\\d+:\\d+ - error TS\\d+`))
+  assert.match(failed.message, new RegExp(`${escape(join(root, "src/shop.vibe"))}:\\d+:\\d+ - error TS\\d+`))
   await settle()
   await edit(order, "quantity: string", "quantity: number", watcher)
   await watcher.next("success after the .ts fix", (event) => event.ok)
@@ -177,41 +177,41 @@ async function watchEdits(bundler, root, watcher) {
 
 const concurrency = Math.max(2, Math.min(8, availableParallelism() >> 1))
 
-describe("effeck-unplugin", { concurrency }, () => {
+describe("vibelang-unplugin", { concurrency }, () => {
   for (const [bundler, { bundle, watch }] of Object.entries(bundlers)) {
     const skip = bundler === "bun" && !hasBun && "bun is not installed"
 
-    it(`${bundler}: builds the fixture, runs it, and maps it to .effeck sources`, { skip }, async (t) => {
+    it(`${bundler}: builds the fixture, runs it, and maps it to .vibe sources`, { skip }, async (t) => {
       const root = await fixture(t, bundler)
       const result = await bundleOnce(bundler, root)
       assert.deepEqual(result.event, { ok: true }, result.stderr)
       assert.equal(result.code, 0)
       assert.equal(await runBundle(bundler, root), expected)
 
-      // "coffee" is at shop.effeck line 32, column 19.
+      // "coffee" is at shop.vibe line 32, column 19.
       const code = await readFile(join(root, bundle), "utf8")
       const payload = JSON.parse(await readFile(join(root, bundle + ".map"), "utf8"))
-      const source = payload.sources.findIndex((path) => path.endsWith("src/shop.effeck"))
-      assert.ok(source >= 0, `no shop.effeck in ${payload.sources.join(", ")}`)
+      const source = payload.sources.findIndex((path) => path.endsWith("src/shop.vibe"))
+      assert.ok(source >= 0, `no shop.vibe in ${payload.sources.join(", ")}`)
       const lines = code.split("\n")
       const line = lines.findIndex((text) => /"coffee"/.test(text))
       const entry = new SourceMap(payload).findEntry(line, lines[line].indexOf('"coffee"'))
-      assert.match(entry.originalSource, /src\/shop\.effeck$/)
+      assert.match(entry.originalSource, /src\/shop\.vibe$/)
       if (bundler === "bun") {
         // Bun ignores plugin source maps: its map points into the compiled JavaScript.
         assert.ok(!payload.sourcesContent[source].includes("service Inventory"))
         return
       }
-      assert.ok(payload.sourcesContent[source].includes("service Inventory"), "the map embeds the .effeck source")
+      assert.ok(payload.sourcesContent[source].includes("service Inventory"), "the map embeds the .vibe source")
       assert.deepEqual([entry.originalLine + 1, entry.originalColumn + 1], [32, 19])
     })
 
-    it(`${bundler}: a type error fails the build at its .effeck position`, { skip }, async (t) => {
+    it(`${bundler}: a type error fails the build at its .vibe position`, { skip }, async (t) => {
       const root = await fixture(t, `${bundler}-error`)
-      const file = join(root, "src/shop.effeck")
+      const file = join(root, "src/shop.vibe")
       await writeFile(file, (await readFile(file, "utf8")) + 'export const broken: number = "wrong"\n')
-      // Two .effeck modules load from the failed compile; it is reported once.
-      await edit(join(root, "src/main.ts"), 'import { Effect }', 'import "./format.effeck"\nimport { Effect }')
+      // Two .vibe modules load from the failed compile; it is reported once.
+      await edit(join(root, "src/main.ts"), 'import { Effect }', 'import "./format.vibe"\nimport { Effect }')
       const result = await bundleOnce(bundler, root)
       assert.equal(result.code, 1)
       assert.equal(result.event.ok, false)
@@ -221,17 +221,17 @@ describe("effeck-unplugin", { concurrency }, () => {
     })
 
     if (bundler === "esbuild") {
-      it("esbuild: a type error uses the .effeck source in its code frame", async (t) => {
+      it("esbuild: a type error uses the .vibe source in its code frame", async (t) => {
         const root = await fixture(t, "esbuild-frame")
-        const file = join(root, "src/shop.effeck")
+        const file = join(root, "src/shop.vibe")
         const lineText = 'export const broken: number = "wrong"'
         await writeFile(file, `export const answer = 42\n\n${lineText}\n`)
-        await writeFile(join(root, "src/main.ts"), 'import "./shop.effeck"\n')
+        await writeFile(join(root, "src/main.ts"), 'import "./shop.vibe"\n')
         const { build } = await import("esbuild")
-        const { default: effeck } = await import("effeck-unplugin/esbuild")
+        const { default: vibelang } = await import("vibelang-unplugin/esbuild")
         await assert.rejects(build({
           absWorkingDir: root, entryPoints: ["src/main.ts"], bundle: true,
-          platform: "node", write: false, plugins: [effeck()], logLevel: "silent"
+          platform: "node", write: false, plugins: [vibelang()], logLevel: "silent"
         }), (error) => {
           assert.equal(error.errors.length, 1)
           const { location } = error.errors[0]
@@ -245,7 +245,7 @@ describe("effeck-unplugin", { concurrency }, () => {
     }
 
     if (!watch) continue
-    it(`${bundler}: watch mode recompiles on .effeck, .ts and tsconfig changes`, async (t) => {
+    it(`${bundler}: watch mode recompiles on .vibe, .ts and tsconfig changes`, async (t) => {
       const root = await fixture(t, `${bundler}-watch`)
       const watcher = watchBundle(bundler, root)
       try {
@@ -258,13 +258,13 @@ describe("effeck-unplugin", { concurrency }, () => {
     it(`${bundler}: watch mode keeps a save made during a compile`, async (t) => {
       const root = await fixture(t, `${bundler}-save`)
       const watcher = watchBundle(bundler, root, {
-        EFFECK_BINARY: join(here, "save-during-compile.mjs"), EFFECK_REAL: process.env.EFFECK_BINARY
+        VIBELANG_BINARY: join(here, "save-during-compile.mjs"), VIBELANG_REAL: process.env.VIBELANG_BINARY
       })
       try {
         await watcher.next("success", (event) => event.ok)
         await new Promise((accept) => setTimeout(accept, 1000))
         // The rebuild's compiler reads "booked"; the save to "sold" lands before its output is used.
-        await edit(join(root, "src/shop.effeck"), 'receipt("ordered"', 'receipt("booked"', watcher)
+        await edit(join(root, "src/shop.vibe"), 'receipt("ordered"', 'receipt("booked"', watcher)
         await watcher.next("with the save made during the compile", (event) => event.ok && printsEventually(bundler, root, "sold 2 tea"))
       } finally {
         await watcher.close()

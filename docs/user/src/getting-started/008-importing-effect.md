@@ -1,6 +1,6 @@
 # Importing Effect
 
-Effect's modules are already in scope in `.effeck` files: the prelude, and every module that `effect` exports from its root, such as `Console`, `Option`, `Stream`, and `Schedule`. Import modules from `effect`'s subpath packages, such as `effect/http`, as you need them.
+Effect's modules are already in scope in `.vibe` files: the prelude, and every module that `effect` exports from its root, such as `Console`, `Option`, `Stream`, and `Schedule`. Import modules from `effect`'s subpath packages, such as `effect/http`, as you need them.
 
 ## Install the core package
 
@@ -8,11 +8,11 @@ Effect's modules are already in scope in `.effeck` files: the prelude, and every
 npm install effect@4.0.5
 ```
 
-The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](004-installation.md) for platform packages, `effeck`, and `effeck-runtime`.
+The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](004-installation.md) for platform packages, `vibelang`, and `vibelang-runtime`.
 
 ## Module and namespace imports
 
-```effeck
+```vibe
 function pauseBeforeRetry() {
   const started = Clock.currentTimeMillis()
   sleep(Duration.millis(25))
@@ -26,7 +26,7 @@ const backoff = Schedule.exponential("50 millis")
 
 JavaScript's own globals keep their names. `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules with those names under another name:
 
-```effeck
+```vibe
 import { Array as Arr } from "effect"
 
 function firstTwo(values: ReadonlyArray<number>) {
@@ -38,7 +38,7 @@ A host's globals do not shadow Effect's modules: with the DOM in your `lib`, `Op
 
 ## Compose standalone functions
 
-```effeck
+```vibe
 function expirationWindow() {
   const short = Duration.seconds(15)
   return short.toMillis()
@@ -52,11 +52,11 @@ Effect exposes operations as module functions. Call them with their data argumen
 
 Named module imports and direct namespace imports both expose the library without adding methods to your objects. Bundlers can eliminate unused exports when their module analysis supports it. Check the generated bundle when size matters; the import spelling alone does not guarantee a particular size.
 
-Effeck's global names are source conveniences. They refer to Effect and language support code, which still participates in the emitted module graph.
+VibeLang's global names are source conveniences. They refer to Effect and language support code, which still participates in the emitted module graph.
 
 ## Reusable operators
 
-```effeck
+```vibe
 function withinSecond<A, E, R>(program: () => A!E!R) {
   return timeout(program, "1 second")
 }
@@ -73,6 +73,6 @@ A helper can accept a program and apply library operators to it. Its contract pr
 
 ## Coming from Effect
 
-Skip imports from `effect`'s root in `.effeck`. In `.ts` integration files, import `Effect`, `Layer`, and the other names you use as usual.
+Skip imports from `effect`'s root in `.vibe`. In `.ts` integration files, import `Effect`, `Layer`, and the other names you use as usual.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/importing-effect)

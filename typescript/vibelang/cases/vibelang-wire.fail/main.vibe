@@ -1,0 +1,37 @@
+// expect: EK3202 EK3203 EK3204
+// wire rejects a graph it cannot order (D27): two providers for one service
+// (EK3202), providers that need each other (EK3203), and an argument whose
+// type does not name its outputs (EK3204).
+import { Effect, Layer } from "effect"
+import { wire } from "vibelang-runtime"
+
+abstract class Users {
+  abstract find(id: string): Effect.Effect<string, never, never>
+}
+
+abstract class Cache {
+  abstract get(key: string): Effect.Effect<string, never, never>
+}
+
+abstract class Database {
+  abstract query(sql: string): Effect.Effect<string, never, never>
+}
+
+const UsersLive = Layer.succeed(Users, { find: (id: string) => Effect.succeed(`live-${id}`) })
+const UsersTest = Layer.succeed(Users, { find: (id: string) => Effect.succeed(`test-${id}`) })
+
+const CacheLive = Layer.effect(Cache, () => {
+  const db = Database()
+  return { get: (key: string) => db.query(key) }
+})
+
+const DatabaseLive = Layer.effect(Database, () => {
+  const cache = Cache()
+  return { query: (sql: string) => cache.get(sql) }
+})
+
+const UsersOpaque: Layer.Any = Layer.succeed(Users, { find: (id: string) => Effect.succeed(id) })
+
+export const Ambiguous = wire(UsersLive, UsersTest)
+export const Cyclic = wire(CacheLive, DatabaseLive)
+export const Opaque = wire(UsersOpaque)

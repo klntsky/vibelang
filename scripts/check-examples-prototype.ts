@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Check the examples with the executable language reference while effeck is built.
+// Check the examples with the executable language reference while vibelang is built.
 import fs from "node:fs"
 import path from "node:path"
 import { spawnSync } from "node:child_process"
@@ -19,14 +19,14 @@ for (const name of names) {
   // Keep disposable emitted modules and their source maps inside the project
   // so package imports resolve through its installed dependencies.
   for (const file of fs.readdirSync(path.join(dir, "src"))) {
-    if (!file.endsWith(".effeck")) continue
+    if (!file.endsWith(".vibe")) continue
     const source = fs.readFileSync(path.join(dir, "src", file), "utf8")
     fs.writeFileSync(path.join(staging, file), source)
   }
-  const entry = "main.effeck"
-  const test = fs.existsSync(path.join(staging, "main.test.effeck"))
+  const entry = "main.vibe"
+  const test = fs.existsSync(path.join(staging, "main.test.vibe"))
   const entries = [path.join(staging, entry)]
-  if (test) entries.push(path.join(staging, "main.test.effeck"))
+  if (test) entries.push(path.join(staging, "main.test.vibe"))
   fs.writeFileSync(log, "")
   try {
     const result = compile(entries, { outDir: output })

@@ -1,10 +1,10 @@
-# Why Effeck?
+# Why VibeLang?
 
-Effeck uses Effect to make a program's expected failures and dependencies visible to the compiler. Choose it when application logic needs coordinated retries, cancellation, resource cleanup, and service substitution.
+VibeLang uses Effect to make a program's expected failures and dependencies visible to the compiler. Choose it when application logic needs coordinated retries, cancellation, resource cleanup, and service substitution.
 
 ## Describe work before running it
 
-```effeck
+```vibe
 error InvalidQuantity {
   quantity: number
 }
@@ -22,7 +22,7 @@ const quote = () => unitPrice(72, 6)
 
 ## Share an application foundation
 
-```effeck
+```vibe
 service Prices {
   total(sku: string): number!InvalidQuantity
 }
@@ -46,7 +46,7 @@ Services carry dependencies through the same contract as errors and successes. L
 
 ## Apply composable production tools
 
-```effeck
+```vibe
 function resilientReceipt(sku: string) {
   return receipt(sku)
     |> retry(%, { times: 2 })
@@ -65,6 +65,6 @@ Start with one operation that reads data, validates it, and returns a result. Te
 
 ## Coming from Effect
 
-Effeck keeps Effect's library and runtime. Ordinary statements replace most sequencing operators, while retry, timeout, concurrency, and provisioning keep their library APIs with program arguments.
+VibeLang keeps Effect's library and runtime. Ordinary statements replace most sequencing operators, while retry, timeout, concurrency, and provisioning keep their library APIs with program arguments.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/why-effect)

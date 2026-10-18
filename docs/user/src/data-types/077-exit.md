@@ -1,10 +1,10 @@
 # Exit
 
-`Exit` works in Effeck exactly as in Effect. Use `Exit<A, E>` to inspect success or an entire failure cause, including defects and interruption. A call that returns an Exit returns data; calling that data runs its recorded outcome.
+`Exit` works in VibeLang exactly as in Effect. Use `Exit<A, E>` to inspect success or an entire failure cause, including defects and interruption. A call that returns an Exit returns data; calling that data runs its recorded outcome.
 
 ## Representing full outcomes
 
-```effeck
+```vibe
 error ExportRejected {
   reason: string
 }
@@ -22,7 +22,7 @@ An exit is `Success` with `.value`, or `Failure` with `.cause`. `Effect.exit` ru
 
 ## Creating success and cause-based failure exits
 
-```effeck
+```vibe
 function sampleOutcomes() {
   const successful = Exit.succeed(12)
   const failed = Exit.failCause(
@@ -41,7 +41,7 @@ function constantSuccess() {
 
 ## Matching exit variants
 
-```effeck
+```vibe
 function describe<A, E>(outcome: Exit.Exit<A, E>) {
   return match (outcome) {
     when Exit.Success(let value): `Completed: ${String(value)}`;
@@ -54,7 +54,7 @@ function describe<A, E>(outcome: Exit.Exit<A, E>) {
 
 ## Relating exits to results
 
-```effeck
+```vibe
 function asResult<A, E>(outcome: Exit.Exit<A, E>) {
   if (outcome.isSuccess()) return Result.succeed(outcome.value)
   return Result.fail(outcome.cause)
@@ -66,7 +66,7 @@ An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result
 
 ## Relating exits to effects
 
-```effeck
+```vibe
 function replay<A, E>(outcome: Exit.Exit<A, E>) {
   return outcome()
 }

@@ -1,11 +1,11 @@
-Effeck for VS Code includes material from the projects below.
+VibeLang for VS Code includes material from the projects below.
 
 ---------------------------------------------------------
 
 microsoft/TypeScript-TmLanguage - MIT
 https://github.com/microsoft/TypeScript-TmLanguage
 
-syntaxes/Effeck.tmLanguage.json is the TypeScript grammar at commit
+syntaxes/VibeLang.tmLanguage.json is the TypeScript grammar at commit
 48f608692aa6d6ad7bd65b478187906c798234a8, as VS Code ships it, with a new name
 and root scope (scripts/derive-grammar.mjs).
 
@@ -38,8 +38,8 @@ microsoft/vscode - MIT
 https://github.com/microsoft/vscode
 
 language-configuration.json is VS Code's TypeScript language configuration,
-and syntaxes/jsdoc.effeck.injection.tmLanguage.json is its JSDoc
-injection grammar retargeted to source.effeck, both from
+and syntaxes/jsdoc.vibe.injection.tmLanguage.json is its JSDoc
+injection grammar retargeted to source.vibe, both from
 extensions/typescript-basics.
 
 Copyright (c) 2015 - present Microsoft Corporation

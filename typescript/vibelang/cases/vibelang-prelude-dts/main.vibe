@@ -1,0 +1,12 @@
+// The declaration file of a .vibe file imports the prelude types its
+// declarations name, and names its imports by output (./users.js).
+import { lookup } from "./users.vibe"
+export { NotFound } from "./users.vibe"
+
+export const one: Effect<number> = Effect.never
+export const scoped: Effect<void, never, Scope> = Effect.void
+
+// expect-result: "ada"
+export function main() {
+  return lookup(0)
+}

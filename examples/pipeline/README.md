@@ -5,7 +5,7 @@ and `Stream.take`. A `for...of` loop consumes the resulting Stream.
 The producer closes after the second matching reading, before reading 30 C.
 Its finalizer logs closure, including when downstream stops early.
 
-From this directory, with `effeck` on `PATH`:
+From this directory, with `vibelang` on `PATH`:
 ```sh
 bun install
 bun run build

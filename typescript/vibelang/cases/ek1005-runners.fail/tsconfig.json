@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "types": [],
+    "skipLibCheck": true,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "out",
+    "paths": {
+      "@effect/platform-node": ["./stubs/platform-node/index.d.ts"],
+      "@effect/vitest": ["./stubs/vitest/index.d.ts"]
+    }
+  },
+  "include": [
+    "*.vibe",
+    "*.ts"
+  ]
+}

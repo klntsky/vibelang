@@ -1,5 +1,5 @@
 // A dependency-free JSON-RPC client for a language server on stdio, such as
-// `effeck --lsp --stdio`. It frames messages with Content-Length headers,
+// `vibelang --lsp --stdio`. It frames messages with Content-Length headers,
 // matches responses to requests, and answers the server's own requests.
 export type Server = {
   request(method: string, params: unknown): Promise<any>

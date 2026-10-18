@@ -29,7 +29,7 @@ const notFound = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Page not found · Effeck Docs</title>
+<title>Page not found · VibeLang Docs</title>
 <style>
 :root { color-scheme: light dark; --bg: #fbfbf9; --fg: #1d1d1f; --muted: #5d6066; --link: #1f5fbf; }
 @media (prefers-color-scheme: dark) { :root { --bg: #15161a; --fg: #e6e4df; --muted: #a2a3a8; --link: #7fb0ff; } }
@@ -42,7 +42,7 @@ a { color: var(--link); }
 <body>
 <main>
 <h1>Page not found</h1>
-<p>This page does not exist. Start from the <a href="/">Effeck Docs</a> or read the <a href="/spec/">specification</a>.</p>
+<p>This page does not exist. Start from the <a href="/">VibeLang Docs</a> or read the <a href="/spec/">specification</a>.</p>
 </main>
 </body>
 </html>

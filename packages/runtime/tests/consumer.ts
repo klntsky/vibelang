@@ -1,5 +1,5 @@
 // Compile a consumer against the installed package export and emitted .d.ts files.
-import { trusted, $bind, $direct, $done, $fast, $isRun, $program, $settle, $produce, $region, $using, $yield, Effect, Layer, Scope, suspend, type Producer } from "effeck-runtime"
+import { trusted, $bind, $direct, $done, $fast, $isRun, $program, $settle, $produce, $region, $using, $yield, Effect, Layer, Scope, suspend, type Producer } from "vibelang-runtime"
 
 const bound: Effect.Effect<number> = $bind(42)
 const program: Effect.Effect<number> = $program(() => bound)
@@ -9,7 +9,7 @@ const region: Effect.Effect<string> = $region(scope => $using(scope, acquire))
 const callback: Effect.Effect<number> = suspend<number>(resumer => { resumer.resume(42) })
 const layer: Layer.Layer<never> = Layer.empty
 const runs: boolean = $isRun(bound)
-const key: typeof $direct = Symbol.for("effeck/direct") as typeof $direct
+const key: typeof $direct = Symbol.for("vibelang/direct") as typeof $direct
 const body = function* (n: number) { return n + ((yield* Effect.fail("Bad" as const)) as number) }
 const entry: (n: number) => number | Effect.Effect<number, "Bad", never> = $fast(body)
 const it = body(1), s = it.next()

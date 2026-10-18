@@ -1,0 +1,75 @@
+// wire (D27) composes layers from their Layer<Out, E, In> types. The
+// arguments here are listed consumers first (L7), the order the runtime's
+// fold needs, so one Database serves both Users and Orders, and Config
+// reaches Database.
+import { Data, Effect, Layer } from "effect"
+import { wire } from "vibelang-runtime"
+
+class UserNotFound extends Data.TaggedError("UserNotFound")<{ readonly id: string }> {}
+
+interface User {
+  id: string
+  name: string
+}
+
+abstract class Config {
+  abstract readonly url: string
+}
+
+abstract class Database {
+  abstract query(table: string, key: string): Effect.Effect<ReadonlyArray<string>, never, never>
+}
+
+abstract class Users {
+  abstract find(id: string): Effect.Effect<User, UserNotFound, never>
+}
+
+abstract class Orders {
+  abstract count(userId: string): Effect.Effect<number, never, never>
+}
+
+const events: string[] = []
+const data = new Map<string, ReadonlyArray<string>>([["users/1", ["Ada"]], ["orders/1", ["o1", "o2"]]])
+
+const ConfigLive = Layer.succeed(Config, { url: "memory://shop" })
+
+const DatabaseLive = Layer.effect(Database, () => {
+  const url = Config().url
+  Effect.sync(() => events.push(`connect ${url}`))
+  return {
+    query: (table: string, key: string) => Effect.succeed(data.get(`${table}/${key}`) ?? [])
+  }
+})
+
+const UsersLive = Layer.effect(Users, () => {
+  const db = Database()
+  return {
+    find(id) {
+      const rows = db.query("users", id)
+      if (rows.length === 0) return Effect.fail(new UserNotFound({ id }))
+      return Effect.succeed({ id, name: rows[0] })
+    }
+  }
+})
+
+const OrdersLive = Layer.effect(Orders, () => {
+  const db = Database()
+  return {
+    count(userId) {
+      return db.query("orders", userId).length
+    }
+  }
+})
+
+const AppLive = wire(OrdersLive, UsersLive, DatabaseLive, ConfigLive)
+
+function summary(id: string) {
+  const user = Users.find(id)
+  return `${user.name}: ${Orders.count(id)} orders`
+}
+
+// expect-result: {"summary":"Ada: 2 orders","events":["connect memory://shop"]}
+export function main() {
+  const text = Effect.provide(() => summary("1"), AppLive)
+  return { summary: text, events }
+}

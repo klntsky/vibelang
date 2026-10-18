@@ -4,7 +4,7 @@ A stream can keep a connection, file, or subscription open while its elements ar
 
 ## Acquiring for the stream lifetime
 
-```effeck
+```vibe
 function openReader() {
   log("reader opened")
   return { lines: ["header", "entry-a", "entry-b"] }
@@ -24,7 +24,7 @@ function readLines() {
 
 ## Release after stopping or interruption
 
-```effeck
+```vibe
 function readHeader() {
   return lines.take(1).runCollect()
 }
@@ -44,7 +44,7 @@ The early consumer closes the reader even though it does not use every line. The
 
 ## Registering finalizers
 
-```effeck
+```vibe
 const audited = lines.ensuring {
   log("reader resources released")
   log("consumption finished")

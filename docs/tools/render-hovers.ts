@@ -61,7 +61,7 @@ export function renderHovers(code: string, nodes: (HoverNode | ErrorNode)[], hig
 
 // Fixed positioning escapes pre's overflow-x scrollport. A viewport-sized panel
 // also keeps long compiler signatures readable on narrow screens, in both themes.
-export const hoverCss = process.env.EFFECK_DOCS_HOVERS === "1" ? `
+export const hoverCss = process.env.VIBELANG_DOCS_HOVERS === "1" ? `
 .docs-hover { cursor: help; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
 pre.code[tabindex]:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 .docs-popup {
@@ -88,7 +88,7 @@ pre.code:focus-visible + .docs-types { display: block; }
 
 /** One opt-in renderer swap per page; an absent cache leaves Marked untouched. */
 export function useHoverRenderer(marked: Marked, source: string, highlight: (text: string, lang: string) => string): void {
-  if (process.env.EFFECK_DOCS_HOVERS !== "1" || source.startsWith("spec/")) return
+  if (process.env.VIBELANG_DOCS_HOVERS !== "1" || source.startsWith("spec/")) return
   const file = resolve(import.meta.dir, "../../.cache/docs-hovers", "src", source.replace(/\.md$/, ".json"))
   if (!existsSync(file)) return
   const page: PageHovers = JSON.parse(readFileSync(file, "utf8"))
@@ -102,7 +102,7 @@ export function useHoverRenderer(marked: Marked, source: string, highlight: (tex
   let example = 0
   marked.use({ renderer: { code(token: Tokens.Code) {
     const [lang, role] = (token.lang ?? "").split(/\s+/)
-    if (!["effeck", "ts"].includes(lang) || role === "effect") return false
+    if (!["vibe", "ts"].includes(lang) || role === "effect") return false
     const block = blocks.get(normalized(token.text))?.shift()
     if (!block?.nodes.length) return false
     // Keep captions and figures, including the comparison layout. One focus

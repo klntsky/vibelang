@@ -6,8 +6,8 @@ import { findCompiler, formatDiagnostic, projectBackend } from "./backend.js"
 
 const cleanId = (id) => id.split("?")[0]
 
-// EFFECK_UNPLUGIN_DEBUG=1 traces each compile and module load on stderr.
-const debug = process.env.EFFECK_UNPLUGIN_DEBUG ? (text) => console.error(`effeck-unplugin: ${text}`) : () => {}
+// VIBELANG_UNPLUGIN_DEBUG=1 traces each compile and module load on stderr.
+const debug = process.env.VIBELANG_UNPLUGIN_DEBUG ? (text) => console.error(`vibelang-unplugin: ${text}`) : () => {}
 
 // Returns a file modified after time, or one that is gone.
 function changedSince(files, time) {
@@ -31,7 +31,7 @@ async function esbuildMessage(diagnostic) {
 }
 
 // Module code for a failed build. The bundler reports the real error.
-const failed = "throw new Error(\"effeck: this module did not compile; see the build errors\")\n"
+const failed = "throw new Error(\"vibelang: this module did not compile; see the build errors\")\n"
 
 /** @type {import('./index.d.ts').unplugin} */
 export const unplugin = createUnplugin((options = {}, meta) => {
@@ -78,7 +78,7 @@ export const unplugin = createUnplugin((options = {}, meta) => {
     const file = cleanId(id)
     const { outputs, inputs, errors, warnings } = await ensureCompiled()
     debug(`load ${file} from compile ${compiled}`)
-    // Every .effeck module shares the project's diagnostics. Report them once per compile.
+    // Every .vibe module shares the project's diagnostics. Report them once per compile.
     const report = reported !== compiled
     if (errors.length || warnings.length) reported = compiled
     if (errors.length) {
@@ -89,13 +89,13 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       code: output?.code ?? failed, map: output?.map, inputs,
       errors: [], warnings: report ? warnings : [],
       error: !output && {
-        message: `effeck: ${file} is not part of ${project}. Add it to the tsconfig's include.`, id: file
+        message: `vibelang: ${file} is not part of ${project}. Add it to the tsconfig's include.`, id: file
       }
     }
   }
 
   return {
-    name: "effeck",
+    name: "vibelang",
     enforce: "pre",
     // Every build, and every watch rebuild, compiles the project once.
     buildStart() {
@@ -104,7 +104,7 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       debug(`build start: revision ${revision}`)
     },
     watchChange(id) {
-      if (/\.(?:effeck|[cm]?tsx?|json)$/.test(id)) revision++
+      if (/\.(?:vibe|[cm]?tsx?|json)$/.test(id)) revision++
       debug(`watch change ${id}: revision ${revision}`)
     },
     resolveId(source, importer) {
@@ -113,19 +113,19 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       // An absolute id is resolved; webpack sends each result back through this hook.
       if (isAbsolute(path) || (importer && !path.startsWith("."))) return
       const target = resolve(importer ? dirname(cleanId(importer)) : root || process.cwd(), path)
-      // Resolve .effeck here too, so esbuild loads every .effeck module in one namespace.
-      if (path.endsWith(".effeck")) return existsSync(target) ? target + query : undefined
-      // effeck rewrites `./x.effeck` and `./x.ts` imports to `./x.js`. Map them back to the source.
+      // Resolve .vibe here too, so esbuild loads every .vibe module in one namespace.
+      if (path.endsWith(".vibe")) return existsSync(target) ? target + query : undefined
+      // vibelang rewrites `./x.vibe` and `./x.ts` imports to `./x.js`. Map them back to the source.
       if (!importer || !path.endsWith(".js") || existsSync(target)) return
       const stem = target.slice(0, -3)
-      // Only a compiled .effeck module has rewritten .ts imports. esbuild maps those itself,
-      // and a plugin result would load the .ts file in the effeck namespace.
-      const sources = cleanId(importer).endsWith(".effeck") && meta.framework !== "esbuild"
-        ? [".effeck", ".ts", ".tsx"] : [".effeck"]
+      // Only a compiled .vibe module has rewritten .ts imports. esbuild maps those itself,
+      // and a plugin result would load the .ts file in the vibelang namespace.
+      const sources = cleanId(importer).endsWith(".vibe") && meta.framework !== "esbuild"
+        ? [".vibe", ".ts", ".tsx"] : [".vibe"]
       for (const extension of sources) if (existsSync(stem + extension)) return stem + extension + query
     },
     loadInclude(id) {
-      return cleanId(id).endsWith(".effeck")
+      return cleanId(id).endsWith(".vibe")
     },
     async load(id) {
       const { code, map, inputs, errors, warnings, error } = await loadModule(id)
@@ -151,7 +151,7 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       // No path matches /a^/: use the native loader to preserve diagnostic lineText.
       onLoadFilter: /a^/,
       setup(build) {
-        build.onLoad({ filter: /\.effeck(?:\?.*)?$/ }, async ({ path }) => {
+        build.onLoad({ filter: /\.vibe(?:\?.*)?$/ }, async ({ path }) => {
           const { code, map, inputs, errors, warnings, error } = await loadModule(path)
           const messages = []
           if (errors.length) {

@@ -1,6 +1,6 @@
 import { Deferred, Effect, Fiber, Scope } from "effect"
 
-// The fiber forms of an .effeck file (D166-D170). The parser writes `await x`
+// The fiber forms of a .vibe file (D166-D170). The parser writes `await x`
 // as $await(x), `select { ... }` as a call of $select, and `for concurrent`
 // as a call of $forConcurrent; `fork x` is the prelude's fork.
 

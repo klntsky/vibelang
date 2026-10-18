@@ -1,5 +1,5 @@
 #!/bin/sh
-# Checks a published Effeck release from the public npm registry: scaffolds an
+# Checks a published VibeLang release from the public npm registry: scaffolds an
 # app with npm and with Bun, installs, builds, starts, and tests it.
 #
 #   sh scripts/release/verify-published.sh [version]

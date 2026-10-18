@@ -4,7 +4,7 @@ Build a Stream from values, effectful work, or an existing source. Construction 
 
 ## Finite and empty streams
 
-```effeck
+```vibe
 const labels = Stream.make("queued", "running", "complete")
 const absent = Stream.empty
 const signal = Stream.succeed(void 0)
@@ -20,7 +20,7 @@ function readPowers() {
 
 ## Successes and failures
 
-```effeck
+```vibe
 error SourceClosed
 
 const ready = Stream.succeed("ready")
@@ -39,7 +39,7 @@ function readClosed() {
 
 ## Arrays and iterables
 
-```effeck
+```vibe
 const fromArray = Stream.fromArray([11, 22])
 const fromBatches = Stream.fromArrays([11, 22], [33])
 const fromSet = Stream.fromIterable(new Set(["east", "west"]))
@@ -55,7 +55,7 @@ const codes = Stream.fromIterableEffect(() => Catalog.codes())
 
 ## Async iterables
 
-```effeck
+```vibe
 error IteratorFailed {
   cause: unknown
 }
@@ -65,11 +65,11 @@ function adaptRows(rows: AsyncIterable<string>) {
 }
 ```
 
-Pass an async iterable obtained from a TypeScript adapter or a service. The error mapper turns iteration exceptions and rejections into the stream's failure type. Effeck has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
+Pass an async iterable obtained from a TypeScript adapter or a service. The error mapper turns iteration exceptions and rejections into the stream's failure type. VibeLang has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
 
 ## Effects and callbacks
 
-```effeck
+```vibe
 const timestamp = Stream.fromEffect(Clock.currentTimeMillis)
 
 const notices = Stream.callback<string>((queue) => {
@@ -85,11 +85,11 @@ function readNotices() {
 
 `fromEffect` emits one success value. `callback` gives its registration program a queue: `Queue.offer` emits an element, `Queue.end` completes normally, and `Queue.fail` terminates with a typed error. Its optional second argument accepts `bufferSize` and a `strategy` of `"suspend"`, `"dropping"`, or `"sliding"`.
 
-For a foreign event API, put the raw callback registration in a TypeScript adapter and register unsubscription with `Effect.acquireRelease`. The registration callback's Scope remains open for the stream lifetime. Platform callbacks cannot call Effeck programs directly as synchronous JavaScript callbacks.
+For a foreign event API, put the raw callback registration in a TypeScript adapter and register unsubscription with `Effect.acquireRelease`. The registration callback's Scope remains open for the stream lifetime. Platform callbacks cannot call VibeLang programs directly as synchronous JavaScript callbacks.
 
 ## Scoped sources
 
-```effeck
+```vibe
 function openSession() {
   log("open session")
   return Effect.acquireRelease(
@@ -105,7 +105,7 @@ const sessionNames = Stream.fromEffect(openSession()).map((session) => session.n
 
 ## Repeating values, streams, and effects
 
-```effeck
+```vibe
 const pings = Stream.succeed("ping").forever()
 const rounds = Stream.make("start", "finish").repeat(Schedule.recurs(2))
 const times = Stream.fromEffectRepeat(() => Clock.currentTimeMillis())
@@ -126,7 +126,7 @@ Keep mutable per-run state inside a function, as in `countdown`, so separate con
 
 ## Periodic elements
 
-```effeck
+```vibe
 const samples = Stream.tick("250 millis").mapEffect(() => Clock.currentTimeMillis())
 
 function collectSamples() {
@@ -138,7 +138,7 @@ function collectSamples() {
 
 ## Unfolding state and paginating responses
 
-```effeck
+```vibe
 const halving = Stream.unfold(32, (n) => {
   if (n < 2) return undefined
   return [n, n / 2] as const
@@ -157,11 +157,11 @@ const names = Stream.paginate(0, (cursor) => {
 })
 ```
 
-`unfold` returns either `[element, nextState]` or `undefined` to stop without emitting. Its callback expects an Effect, so ordinary Effeck statements can perform work between steps. `paginate` instead returns `[batch, nextStateOption]`; it emits the whole batch, including the final page whose next state is `None`.
+`unfold` returns either `[element, nextState]` or `undefined` to stop without emitting. Its callback expects an Effect, so ordinary VibeLang statements can perform work between steps. `paginate` instead returns `[batch, nextStateOption]`; it emits the whole batch, including the final page whose next state is `None`.
 
 ## Queues and broadcasts
 
-```effeck
+```vibe
 function queuedNumbers() {
   const queue = Queue.unbounded<number, Cause.Done>()
   queue.offer(8)
@@ -179,7 +179,7 @@ function fromBroadcast(bus: PubSub.PubSub<string>) {
 
 ## Schedules as sources
 
-```effeck
+```vibe
 const policy = Schedule.spaced("400 millis").upTo({ times: 3 })
 const pulses = Stream.fromSchedule(policy)
 

@@ -4,7 +4,7 @@ A `SubscriptionRef` combines shared state with a stream of changes. Use it for o
 
 ## Combining state with subscriptions
 
-```effeck
+```vibe
 function makeProgress() {
   return SubscriptionRef.make({ completed: 0, total: 12 })
 }
@@ -24,7 +24,7 @@ Creating the reference establishes its initial state. Updating through `Subscrip
 
 ## Reading and updating observable state
 
-```effeck
+```vibe
 function renameStatus() {
   const status = SubscriptionRef.make("starting")
   const before = SubscriptionRef.get(status)
@@ -39,7 +39,7 @@ function renameStatus() {
 
 ## Consuming current and future values
 
-```effeck
+```vibe
 function currentSnapshot() {
   const count = SubscriptionRef.make(7)
   const changes = SubscriptionRef.changes(count)
@@ -51,7 +51,7 @@ function currentSnapshot() {
 
 ## Coordinating concurrent subscribers
 
-```effeck
+```vibe
 function observeTwoClients() {
   const count = SubscriptionRef.make(0)
   const firstReady = Deferred.make<void>()

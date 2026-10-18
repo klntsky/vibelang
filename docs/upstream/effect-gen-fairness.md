@@ -38,11 +38,11 @@ a chance to run other fibers. Completed Effects should have a bounded inline
 fast path, rather than making a loop atomic for an unbounded number of yields.
 Ordinary JavaScript loops without yielded Effects remain atomic.
 
-## Why it matters to Effeck
+## Why it matters to VibeLang
 
 The compiler avoids emitting known-completed Effect yields in loops because
 they do not provide fairness or interruption delivery. TypeScript-authored
-generators that Effeck calls can still encounter the same starvation.
+generators that VibeLang calls can still encounter the same starvation.
 
 ## Suggested fix
 

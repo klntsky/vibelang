@@ -9,13 +9,13 @@ function loadSettings(path: string) {
 ```
 
 ```text
-error EK4402: node:fs/promises is a platform API, which Effeck code does not call directly.
-  settings.effeck:4:21   return JSON.parse(readFile(path, "utf8"))
+error EK4402: node:fs/promises is a platform API, which VibeLang code does not call directly.
+  settings.vibe:4:21   return JSON.parse(readFile(path, "utf8"))
   Use FileSystem from "effect/FileSystem":   FileSystem.readFileString(path)
   Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.
 ```
 
-Effeck's standard library is Effect's. Node.js and browser APIs are not callable from `.effeck` files, and each error names the Effect module that replaces the API. Effeck adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
+VibeLang's standard library is Effect's. Node.js and browser APIs are not callable from `.vibe` files, and each error names the Effect module that replaces the API. VibeLang adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
 
 Imports, re-exports, and passing platform values to adapters are allowed (D108). For example, `NodeHttpServer.layer(createServer, { port })` passes a host function without calling it. EK4402 reports execution: calls, construction, tagged templates, and reads of platform properties, including destructuring and spreading. Namespace members used as values, such as `os.EOL`, are allowed. The current check does not follow platform functions through local aliases, parameters, or objects returned by platform calls.
 
@@ -23,7 +23,7 @@ There are three reasons. Platform APIs throw and reject in ways their types do n
 
 #### What replaces what
 
-| You would use | In Effeck | Import from |
+| You would use | In VibeLang | Import from |
 | --- | --- | --- |
 | `fs`, `fs/promises` | `FileSystem` | `effect/FileSystem` |
 | `path` | `Path` | `effect/Path` |
@@ -183,7 +183,7 @@ function currentBranch() {
 #### Providing the platform
 
 ```ts es
-// main.effeck
+// main.vibe
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { FetchHttpClient } from "effect/http"
 

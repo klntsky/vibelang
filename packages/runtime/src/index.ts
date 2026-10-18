@@ -1,5 +1,5 @@
 import "./version.js"
-// Runtime ABI used by generated Effeck modules.
+// Runtime ABI used by generated VibeLang modules.
 export * from "./calls.js"
 export { $direct, $done, $fast, $isRun, $settle } from "./fastcalls.js"
 export type { Fast } from "./fastcalls.js"

@@ -51,7 +51,7 @@ test("separate pairs and prompt sources pass", () => {
   assert.deepEqual(check([unrelated], fenced(unrelated.input) + fenced(unrelated.expected)), [])
 })
 
-for (const [file, field] of [["input.ts", "input"], ["expected.effeck", "expected"]]) {
+for (const [file, field] of [["input.ts", "input"], ["expected.vibe", "expected"]]) {
   test(`a renamed example cannot reuse a golden ${file}`, () => {
     const problems = check([{ ...unrelated, name: "renamed", [field]: `/* copied */\n${hero[field]} // disguised` }])
     assert.equal(problems.length, 1)
@@ -72,11 +72,11 @@ test("the hero's output is held out even if placed in an example input", () => {
 })
 
 test("all gate cases are held out, including the last case", () => {
-  assert(check([unrelated], fenced(unrelated.expected), [hero, { ...unrelated, name: "20-last" }]).some((p) => p.includes("golden/20-last/expected.effeck")))
+  assert(check([unrelated], fenced(unrelated.expected), [hero, { ...unrelated, name: "20-last" }]).some((p) => p.includes("golden/20-last/expected.vibe")))
 })
 
 test("tilde fences, longer fences, CRLF and unfenced source are checked", () => {
-  for (const prompt of [`~~~ts\r\n${hero.expected}\r\n~~~`, `\`\`\`\`effeck\n${hero.expected}\n\`\`\`\``, hero.expected]) {
+  for (const prompt of [`~~~ts\r\n${hero.expected}\r\n~~~`, `\`\`\`\`vibe\n${hero.expected}\n\`\`\`\``, hero.expected]) {
     assert.equal(check([], prompt).length, 1)
   }
 })
@@ -92,22 +92,22 @@ test("the generated prompt contains the 10 separate examples and no gate source"
 })
 
 test("the check exits nonzero for normalized overlap on disk", () => {
-  const dir = mkdtempSync(join(tmpdir(), "effeck-heldout-"))
+  const dir = mkdtempSync(join(tmpdir(), "vibelang-heldout-"))
   try {
     for (const file of ["check-heldout.mjs", "cases.mjs"]) cpSync(new URL(file, import.meta.url), join(dir, file))
     for (const [suite, entry] of [["golden", hero], ["examples", unrelated]]) {
       const pair = join(dir, suite, entry.name)
       mkdirSync(pair, { recursive: true })
       writeFileSync(join(pair, "input.ts"), entry.input)
-      writeFileSync(join(pair, "expected.effeck"), entry.expected)
+      writeFileSync(join(pair, "expected.vibe"), entry.expected)
     }
     writeFileSync(join(dir, "prompt.md"), fenced(unrelated.input))
     const run = () => spawnSync(process.execPath, [join(dir, "check-heldout.mjs")], { encoding: "utf8" })
     assert.equal(run().status, 0)
-    writeFileSync(join(dir, "examples", unrelated.name, "expected.effeck"), hero.expected.replace('return 19', 'return /* leak */\n19'))
+    writeFileSync(join(dir, "examples", unrelated.name, "expected.vibe"), hero.expected.replace('return 19', 'return /* leak */\n19'))
     const result = run()
     assert.equal(result.status, 1)
-    assert.match(result.stderr, /overlaps held-out golden\/01-hero\/expected.effeck/)
+    assert.match(result.stderr, /overlaps held-out golden\/01-hero\/expected.vibe/)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -126,7 +126,7 @@ test("every real gate input and output, including the hero, is rejected under a 
 })
 
 test("building the prompt does not need or read golden/", () => {
-  const dir = mkdtempSync(join(tmpdir(), "effeck-prompt-"))
+  const dir = mkdtempSync(join(tmpdir(), "vibelang-prompt-"))
   try {
     const flow = join(dir, ".smithers/flows/convert")
     const instructions = join(dir, ".smithers/instructions")
@@ -136,7 +136,7 @@ test("building the prompt does not need or read golden/", () => {
     const example = join(flow, "examples", unrelated.name)
     mkdirSync(example, { recursive: true })
     writeFileSync(join(example, "input.ts"), unrelated.input)
-    writeFileSync(join(example, "expected.effeck"), unrelated.expected)
+    writeFileSync(join(example, "expected.vibe"), unrelated.expected)
     writeFileSync(join(instructions, "app.md"), "## Syntax cheat sheet\n\nSeparate forms\n\n## Next\n")
     const result = spawnSync(process.execPath, [join(flow, "build-prompt.mjs")], { encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)

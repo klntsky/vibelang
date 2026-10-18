@@ -1,10 +1,10 @@
 # Control Flow Operators
 
-Effeck uses ordinary branches and loops for sequential work. Effect's operators remain useful when you need concurrent execution, a collected set of results, or a policy that applies to whole programs. Pass functions to operators so they decide when each computation starts.
+VibeLang uses ordinary branches and loops for sequential work. Effect's operators remain useful when you need concurrent execution, a collected set of results, or a policy that applies to whole programs. Pass functions to operators so they decide when each computation starts.
 
 ## Branching and conditional computations
 
-```effeck
+```vibe
 error InvalidSize {
   size: number
 }
@@ -28,11 +28,11 @@ function announceIfEnabled(enabled: boolean) {
 }
 ```
 
-`if`, early `return`, and `throw` work inside an Effeck function, including after a service call. `Effect.when` evaluates its condition program first, runs its source only for `true`, and returns an `Option` indicating whether it ran. `false` produces `None`; a condition failure propagates instead of skipping work.
+`if`, early `return`, and `throw` work inside a VibeLang function, including after a service call. `Effect.when` evaluates its condition program first, runs its source only for `true`, and returns an `Option` indicating whether it ran. `false` produces `None`; a condition failure propagates instead of skipping work.
 
 ## Combining two results
 
-```effeck
+```vibe
 function amount() {
   sleep("30 millis")
   return 18
@@ -66,7 +66,7 @@ function formattedPair() {
 
 ## Repeating work in loops
 
-```effeck
+```vibe
 function inspectPages() {
   const inspected: number[] = []
   let page = 1
@@ -87,7 +87,7 @@ function logAttempts() {
 
 A loop can call services, pause, fail, and use `break` or `continue`. Keep accumulated results only when the caller needs them; a loop without an explicit return completes with `void`. Local state is recreated when the function runs again.
 
-```effeck
+```vibe
 function operatorLoop() {
   let index = 0
   Effect.whileLoop({
@@ -102,7 +102,7 @@ In Effect 4.0.5, `whileLoop` accepts one options object and returns `void`. Its 
 
 ## Traversing collections and discarding values
 
-```effeck
+```vibe
 function prepare(id: number) {
   sleep("10 millis")
   return `prepared-${id}`
@@ -124,7 +124,7 @@ function logAll() {
 
 ## Collecting programs
 
-```effeck
+```vibe
 function collected() {
   const tuple = all([() => 12, () => "ready"] as const)
   const object = all({ count: () => 12, status: () => "ready" })
@@ -141,7 +141,7 @@ function collected() {
 
 ## Early termination and alternate collection modes
 
-```effeck
+```vibe
 error Unavailable {
   id: number
 }

@@ -1,6 +1,6 @@
 import type { UnpluginInstance } from "unplugin"
 
-export interface EffeckOptions {
+export interface VibeLangOptions {
   /** tsconfig path relative to the root. Defaults to tsconfig.json. */
   project?: string
   /**
@@ -9,9 +9,9 @@ export interface EffeckOptions {
    * absWorkingDir, or process.cwd().
    */
   root?: string
-  /** Native effeck binary or Node launcher path. Defaults to EFFECK_BINARY, then the effeck package. */
+  /** Native vibelang binary or Node launcher path. Defaults to VIBELANG_BINARY, then the vibelang package. */
   compiler?: string
 }
 
-export declare const unplugin: UnpluginInstance<EffeckOptions | undefined, false>
+export declare const unplugin: UnpluginInstance<VibeLangOptions | undefined, false>
 export default unplugin

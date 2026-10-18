@@ -10,8 +10,8 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/execute"
 	"github.com/microsoft/TypeScript/tsc/internal/osutil"
 
-	// Effeck registers its compiler hooks from init.
-	_ "github.com/microsoft/TypeScript/tsc/internal/effeck"
+	// VibeLang registers its compiler hooks from init.
+	_ "github.com/microsoft/TypeScript/tsc/internal/vibelang"
 )
 
 func main() {

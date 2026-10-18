@@ -251,12 +251,12 @@ export type NormalizeContext = {
   // effectModules maps a namespace that effect's index re-exports (Effect,
   // Layer, ...) to its subpath module (effect/Effect).
   effectModules: Map<string, string>
-  // reexports maps a package (the mapper's prelude, effeck-runtime) to the
+  // reexports maps a package (the mapper's prelude, vibelang-runtime) to the
   // names it re-exports unchanged and their origin:
-  // effeck-runtime -> Effect -> { module: "effect", member: "Effect" }.
+  // vibelang-runtime -> Effect -> { module: "effect", member: "Effect" }.
   reexports: Map<string, Map<string, { module: string; member: string }>>
   // aliases maps a package to the type aliases it exports for another
-  // module's type, as canonical names: effeck-runtime -> Effect ->
+  // module's type, as canonical names: vibelang-runtime -> Effect ->
   // effect/Effect#Effect, for its `type Effect<A, E, R> = EffectModule.Effect<A, E, R>`.
   // A bare name with no member access means the alias; the mapper's prelude
   // exports Effect only as a namespace, so its bare Effect<...> stays apart.
@@ -264,10 +264,10 @@ export type NormalizeContext = {
 }
 
 // canonicalSpecifier: a relative specifier names a source without its
-// extension, so ./users.js, ./users.effeck, and ./users are one module.
+// extension, so ./users.js, ./users.vibe, and ./users are one module.
 export function canonicalSpecifier(specifier: string): string {
   if (!specifier.startsWith(".")) return specifier
-  return specifier.replace(/(\.d)?(\.effeck)?\.(js|mjs|cjs|ts|mts|cts|tsx|jsx|effeck)$/, "")
+  return specifier.replace(/(\.d)?(\.vibe)?\.(js|mjs|cjs|ts|mts|cts|tsx|jsx|vibe)$/, "")
 }
 
 function resolveRoot(ctx: NormalizeContext, module: string, members: string[]): string {

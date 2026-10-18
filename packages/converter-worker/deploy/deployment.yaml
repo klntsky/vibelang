@@ -30,8 +30,8 @@ spec:
           image: us-central1-docker.pkg.dev/plue-prod-1771780303/smithers/effeck-converter-worker@sha256:35959205db8ff1a25e7d69db381189ffbbded8e50b43c3f3f24d9f34741f73f6
           ports: [{ name: http, containerPort: 8080 }]
           env:
-            - { name: EFFECK_WORKER_NETWORK, value: policy }
-            - { name: EFFECK_WORKER_TIMEOUT_MS, value: "10000" }
+            - { name: VIBELANG_WORKER_NETWORK, value: policy }
+            - { name: VIBELANG_WORKER_TIMEOUT_MS, value: "10000" }
             - { name: TMPDIR, value: /tmp }
             - { name: NODE_OPTIONS, value: "--max-old-space-size=32" }
           resources:

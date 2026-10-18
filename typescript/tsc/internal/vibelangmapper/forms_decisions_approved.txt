@@ -1,0 +1,95 @@
+# Approved decision moves for forms_decisions.txt (scripts/check-forms-table.sh --write).
+#
+# A regenerated table or a resolver change that changes what the resolver
+# decides at a site forms_decisions.txt already has must name each move here,
+# with a reason, before --write records it. One line per move:
+#
+#   <path>:<line>:<col> <kind>: <old result> <old provenance> -> <new result> <new provenance> # reason
+#
+# Entries stay as the history of reviewed moves. Bump vibelangmapper.RulesVersion
+# when the classifier, the generator, or the resolver moved them.
+
+# rules 2: a method keyed by a well-known symbol is plain (D94), and the generator reads a mapped type's template, so handle's Clauses<S, H> makes every clause an Effect function.
+typescript/vibelang/cases/ch06-disposable/ch06-disposable.vibe:10:5 lambda: dual fallback -> plain protocol # a well-known symbol's method is plain: the language calls it (D94)
+typescript/vibelang/cases/ch09-handlers/ch09-handlers.vibe:116:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ch09-handlers/ch09-handlers.vibe:129:14 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ch09-handlers/ch09-handlers.vibe:67:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ch09-handlers/ch09-handlers.vibe:90:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/decl-service/main.vibe:36:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/vibelang-control/main.vibe:20:14 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/vibelang-control/main.vibe:28:60 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ek2005.fail/main.vibe:21:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ek2005.fail/main.vibe:27:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ek2005.fail/main.vibe:33:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ek4201.fail/main.vibe:46:16 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handle-optional-args/main.vibe:15:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handle-optional-args/main.vibe:23:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:116:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:145:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:31:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:33:10 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:52:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:67:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:85:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:92:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/handlers/main.vibe:99:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-fork.fail/ref6-fork.fail.vibe:15:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:28:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:30:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:42:7 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:46:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:53:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:73:5 lambda: plain fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:89:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+typescript/vibelang/cases/scopes-callback.fail/main.vibe:11:18 lambda: plain fallback -> plain protocol # a well-known symbol's method is plain: the language calls it (D94)
+typescript/vibelang/cases/scopes-using/main.vibe:29:5 lambda: dual fallback -> plain protocol # a well-known symbol's method is plain: the language calls it (D94)
+typescript/vibelang/cases/stack-depth/stack-depth.vibe:54:5 lambda: choice fallback -> effectFn table # a handle clause: the runtime's Clauses<S, H> requires an Effect function
+
+# rules 3: no silent defaults. A lambda passed to another file's function needs a choice (it may be overloaded on the form); a fallback dual whose one call is not known to return an Effect needs a choice (the dual defers the call); a plain annotation on a body that throws needs a choice; a hatch's TypeScript is plain (D148); catchTags' handler record is classified.
+typescript/vibelang/cases/callbacks-result-unions/main.vibe:25:18 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/callbacks-result-unions/main.vibe:26:20 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/d39-unions/main.vibe:14:26 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/d39-unions/main.vibe:15:20 lambda: dual fallback -> choice fallback # a function from another file may take either form by overload: the user chooses
+typescript/vibelang/cases/d39-unions/main.vibe:16:18 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/vibelang-hatches/main.vibe:26:30 lambda: dual fallback -> plain hatch # a hatch's first argument is TypeScript (D148): its lambdas are plain
+typescript/vibelang/cases/vibelang-hatches/main.vibe:27:12 lambda: dual fallback -> plain hatch # a hatch's first argument is TypeScript (D148): its lambdas are plain
+typescript/vibelang/cases/vibelang-hatches/main.vibe:38:44 lambda: plain table -> plain hatch # a hatch's first argument is TypeScript (D148): its lambdas are plain
+typescript/vibelang/cases/ek1001-top-level.fail/main.vibe:27:24 lambda: dual fallback -> choice fallback # the dual would defer port(), a call of a Config value, which is not known to return an Effect: the user chooses
+typescript/vibelang/cases/ek1005-runners.fail/main.vibe:52:11 lambda: dual fallback -> choice fallback # a function from another file may take either form by overload: the user chooses
+typescript/vibelang/cases/ek2003-bare-return.fail/main.vibe:16:21 lambda: plain annotation -> choice annotation # a plain return annotation cannot throw a failure (the fork reports EK2003)
+typescript/vibelang/cases/ek4202.fail/main.vibe:14:16 lambda: dual fallback -> choice fallback # a function from another file (helpers.ts) may take either form by overload: the user chooses
+typescript/vibelang/cases/ek4404-try-options.fail/main.vibe:8:21 lambda: dual fallback -> plain hatch # a hatch's first argument is TypeScript (D148): its lambdas are plain
+typescript/vibelang/cases/ek4404-try-options.fail/main.vibe:8:52 lambda: plain fallback -> plain hatch # a hatch's first argument is TypeScript (D148): its lambdas are plain
+typescript/vibelang/cases/hatches-inputs/main.vibe:40:30 lambda: dual fallback -> plain hatch # a hatch's first argument is TypeScript (D148): its lambdas are plain
+typescript/vibelang/cases/hatches-inputs/main.vibe:41:12 lambda: dual fallback -> plain hatch # a hatch's first argument is TypeScript (D148): its lambdas are plain
+typescript/vibelang/cases/lambda-forms/main.vibe:10:19 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/lambda-forms/main.vibe:15:19 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/lambda-forms/main.vibe:26:17 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/lambda-forms/main.vibe:31:16 lambda: dual fallback -> choice fallback # a function from another file may take either form by overload: the user chooses
+typescript/vibelang/cases/lambda-forms/main.vibe:36:19 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
+typescript/vibelang/cases/scopes-types/main.vibe:50:27 lambda: dual fallback -> choice fallback # the dual would defer a call not known to return an Effect: the user chooses
+
+# rules 4: a conditional or alias return type takes the module its branches agree on (a dual's data-last function branch counts as its result's module), so fork, forkScoped, forkChild, Effect.all, … return an Effect and the dual over them is safe.
+typescript/vibelang/cases/scopes-types/main.vibe:50:27 lambda: choice fallback -> dual fallback # fork is Effect.forkScoped, whose conditional return is an Effect in both branches: the dual over it builds the same program
+
+# 809cf132 (cases: migrate eleven cases to L1, L2 and L7): the author answered EK9100 at each site with an annotation, so the choice became that annotation.
+typescript/vibelang/cases/lambda-forms/main.vibe:10:19 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/vibelang/cases/lambda-forms/main.vibe:15:19 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/vibelang/cases/lambda-forms/main.vibe:21:19 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
+typescript/vibelang/cases/lambda-forms/main.vibe:26:17 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
+typescript/vibelang/cases/producers/main.vibe:171:20 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/vibelang/cases/ref2-provider-graph/ref2-provider-graph.vibe:86:23 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/vibelang/cases/scopes-using/main.vibe:185:15 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
+typescript/vibelang/cases/tracing-all/main.vibe:21:18 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
+
+# cases: migrate fifteen cases to L1, L2, L8, D249 and D251: the author answered EK9100 at each site with an annotation (a written return type), so the choice became that annotation.
+typescript/vibelang/cases/blocks-throw-expression/main.vibe:42:15 lambda: choice fallback -> effectFn annotation # get: string!NotFound! answers EK9100; the fork already lowered it to an Effect function
+typescript/vibelang/cases/callbacks-result-unions/main.vibe:25:18 lambda: choice fallback -> plain annotation # (n): boolean answers EK9100; the fork already emitted a plain arrow
+typescript/vibelang/cases/callbacks-result-unions/main.vibe:26:20 lambda: choice fallback -> effectFn annotation # (n): boolean!! answers EK9100; the fork already emitted an Effect callback
+typescript/vibelang/cases/decl-provide-service-methods/main.vibe:13:5 lambda: choice fallback -> effectFn annotation # count(): number!! answers EK9100; the fork already lowered it to an Effect function
+typescript/vibelang/cases/failures-throw/main.vibe:72:17 lambda: choice fallback -> effectFn annotation # doubled: number!InvalidId! answers EK9100; the fork already lowered it to an Effect function
+typescript/vibelang/cases/handlers/main.vibe:141:20 lambda: choice fallback -> plain annotation # hooks.onResume: void answers EK9100; the fork already kept it an ordinary arrow
+typescript/vibelang/cases/programs/main.vibe:49:15 lambda: choice fallback -> effectFn annotation # job: string!! answers EK9100; the fork already lowered it to an Effect function
+typescript/vibelang/cases/regions-jumps/main.vibe:95:3 lambda: choice fallback -> effectFn annotation # bump: number!! answers EK9100; the fork already lowered it to an Effect function
+typescript/vibelang/cases/stack-depth/stack-depth.vibe:45:20 lambda: choice fallback -> plain annotation # hooks.onResume: void answers EK9100; the fork already kept it an ordinary arrow
+typescript/vibelang/cases/contracts/main.vibe:60:22 lambda: effectFn annotation -> plain annotation # twice: number replaces Effect<number, never, never>; the fork already kept it a plain arrow, (n: number) => number in expected/main.d.ts

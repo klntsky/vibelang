@@ -1,4 +1,0 @@
-// EK1003: a call already waits, so async is not part of Effeck.
-export async function wait() {
-  return 1
-}

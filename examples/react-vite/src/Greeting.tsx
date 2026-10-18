@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { runtime } from "./runtime.ts"
-import { greet } from "./users.effeck"
+import { greet } from "./users.vibe"
 
 export function Greeting({ id }: { readonly id: string }) {
   const [text, setText] = useState<string>()

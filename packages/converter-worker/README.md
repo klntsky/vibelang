@@ -1,7 +1,7 @@
 # Converter compile worker
 
-The worker checks one Effeck source file with the pinned compiler and dependencies.
-It runs `effeck --noEmit --pretty false -p <fixed project>` in a fresh temporary
+The worker checks one VibeLang source file with the pinned compiler and dependencies.
+It runs `vibelang --noEmit --pretty false -p <fixed project>` in a fresh temporary
 directory. It never runs the submitted program. `POST /compile` accepts
 `{"source":"..."}` and returns the exit code, bounded diagnostics, compiler version,
 compiler digest, and dependencies digest. `GET /healthz` returns the worker identity.
@@ -46,7 +46,7 @@ then run these commands through `scripts/remote.sh`:
 ```sh
 node packages/converter-worker/prepare-packages.mjs dist-npm/tarballs
 sh packages/converter-worker/test/setup-project.sh dist-npm/tarballs
-EFFECK_WORKER_NETWORK=policy node --test packages/converter-worker/test/*.test.mjs
+VIBELANG_WORKER_NETWORK=policy node --test packages/converter-worker/test/*.test.mjs
 ```
 
 Policy-mode host tests do not prove Kubernetes network isolation. The Cloud Build
@@ -135,7 +135,7 @@ const post = async source => {
   assert.equal(response.status, 200)
   return response.json()
 }
-const hero = readFileSync(".smithers/flows/convert/golden/01-hero-batch-lookup/expected.effeck", "utf8")
+const hero = readFileSync(".smithers/flows/convert/golden/01-hero-batch-lookup/expected.vibe", "utf8")
 const good = await post(hero)
 assert.equal(good.exitCode, 0)
 assert.equal(good.timedOut, false)

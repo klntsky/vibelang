@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "effeck-unplugin",
+      "name": "vibelang-unplugin",
       "dependencies": {
         "unplugin": "3.4.0",
       },
@@ -16,10 +16,10 @@
         "webpack": "5.111.1",
       },
       "peerDependencies": {
-        "effeck": "0.0.1",
+        "vibelang": "0.0.1",
       },
       "optionalPeers": [
-        "effeck",
+        "vibelang",
       ],
     },
   },

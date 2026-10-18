@@ -1,7 +1,7 @@
 import { defineConfig } from "vitest/config"
-import effeck from "effeck-vite"
+import vibelang from "vibelang-vite"
 
 export default defineConfig({
-  plugins: [effeck()],
-  test: { include: ["src/**/*.test.effeck"] }
+  plugins: [vibelang()],
+  test: { include: ["src/**/*.test.vibe"] }
 })

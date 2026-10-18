@@ -1,0 +1,13 @@
+{
+  "name": "create-vibelang",
+  "version": "0.0.1",
+  "description": "Create a VibeLang application: bun create vibelang my-app",
+  "keywords": ["vibelang", "effect", "typescript", "create", "template"],
+  "homepage": "https://effeck.dev",
+  "license": "MIT",
+  "type": "module",
+  "bin": { "create-vibelang": "bin/create-vibelang.mjs" },
+  "files": ["bin", "template", "README.md", "LICENSE"],
+  "scripts": { "test": "node --test test/" },
+  "engines": { "node": ">=22" }
+}

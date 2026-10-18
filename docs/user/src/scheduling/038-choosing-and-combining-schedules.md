@@ -1,10 +1,10 @@
 # Choosing and combining schedules
 
-`Schedule` works in Effeck exactly as in Effect. Start with the timing rule you need, add limits to it, and combine separate rules only when the job needs them. The consumer determines whether schedule input is a successful result (`repeat`) or an expected error (`retry`).
+`Schedule` works in VibeLang exactly as in Effect. Start with the timing rule you need, add limits to it, and combine separate rules only when the job needs them. The consumer determines whether schedule input is a successful result (`repeat`) or an expected error (`retry`).
 
 ## Choosing a starting rule
 
-```effeck
+```vibe
 const immediate = Schedule.recurs(4)
 const afterCompletion = Schedule.spaced("20 seconds")
 const cadence = Schedule.fixed("20 seconds")
@@ -26,7 +26,7 @@ These declarations build reusable values without running work. Choose a rule acc
 
 ## Understanding schedule steps
 
-```effeck
+```vibe
 function runChecks() {
   repeat(Schedule.spaced("6 seconds").upTo({ times: 2 })) {
     logInfo("checking")
@@ -41,7 +41,7 @@ A schedule step receives input and produces output plus timing metadata. In `ret
 
 ## Limiting duration and adjusting delays
 
-```effeck
+```vibe
 const bounded = Schedule.exponential("300 millis")
   .modifyDelay(({ duration }) => duration.min(Duration.seconds(8)))
   .jittered()
@@ -57,7 +57,7 @@ const firstThree = Schedule.while(
 
 ## Requiring every timing rule
 
-```effeck
+```vibe
 const policy = Schedule.max([
     Schedule.exponential("400 millis"),
     Schedule.spaced("2 seconds")
@@ -68,7 +68,7 @@ const policy = Schedule.max([
 
 ## Accepting any timing rule
 
-```effeck
+```vibe
 const startupAndSteady = Schedule.min([
   Schedule.spaced("500 millis").upTo({ times: 2 }),
   Schedule.fixed("12 seconds")
@@ -79,7 +79,7 @@ const startupAndSteady = Schedule.min([
 
 ## Switching rules in phases
 
-```effeck
+```vibe
 const reconnect = Schedule.spaced("150 millis").upTo({ times: 2 }).concat(Schedule.spaced("3 seconds").upTo({ times: 5 }))
 ```
 

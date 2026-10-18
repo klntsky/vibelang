@@ -1,10 +1,10 @@
 # Consuming Streams
 
-A consumer runs a Stream and returns one result. Inside an Effeck function, calls such as `Stream.runCollect` wait for consumption and give you the result directly. An unbounded source needs a stopping condition before a consumer that waits for its end.
+A consumer runs a Stream and returns one result. Inside a VibeLang function, calls such as `Stream.runCollect` wait for consumption and give you the result directly. An unbounded source needs a stopping condition before a consumer that waits for its end.
 
 ## Collecting elements
 
-```effeck
+```vibe
 function collectLabels() {
   return Stream.make("north", "south", "west").runCollect()
 }
@@ -15,7 +15,7 @@ function collectLabels() {
 
 ## Executing per-element effects
 
-```effeck
+```vibe
 function announce() {
   Stream.make("build", "test", "package").runForEach((stage) => {
     log(`starting ${stage}`)
@@ -29,7 +29,7 @@ function announce() {
 
 ## Stopping conditionally
 
-```effeck
+```vibe
 function reachBudget() {
   let total = 0
   Stream.make(3, 5, 8, 13).runForEachWhile((amount) => {
@@ -44,7 +44,7 @@ The callback returns `true` to continue or `false` to stop. The element that ret
 
 ## Folding into an accumulator
 
-```effeck
+```vibe
 function totalBytes() {
   return Stream.make(256, 512, 128).runFold(() => 0, (total, n) => total + n)
 }
@@ -59,11 +59,11 @@ function totalWithProgress() {
 }
 ```
 
-The initial-state callback runs for each consumption, which also supports fresh mutable accumulators. `runFold` requires a synchronous, non-failing reducer; `runFoldEffect` accepts Effeck work. Both wait for the source to finish; use `runForEachWhile` when the accumulator should trigger early termination.
+The initial-state callback runs for each consumption, which also supports fresh mutable accumulators. `runFold` requires a synchronous, non-failing reducer; `runFoldEffect` accepts VibeLang work. Both wait for the source to finish; use `runForEachWhile` when the accumulator should trigger early termination.
 
 ## Running a sink
 
-```effeck
+```vibe
 function readHeader() {
   const source = Stream.make("version", "length", "body")
   return source.run(Sink.take<string>(2))

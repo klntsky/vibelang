@@ -116,7 +116,7 @@ type extraValidation string
 
 const extraValidationLocale extraValidation = "locale"
 
-const extraValidationEffeck extraValidation = "effeck"
+const extraValidationVibeLang extraValidation = "vibelang"
 
 func (o *CommandLineOption) DeprecatedKeys() *collections.Set[string] {
 	if o.Kind != CommandLineOptionTypeEnum {

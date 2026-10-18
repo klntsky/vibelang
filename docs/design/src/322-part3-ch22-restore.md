@@ -34,7 +34,7 @@ A resumed computation gets back exactly the state it had when it was captured, a
 
 TC39's AsyncContext (Stage 2) is the closest analogue in JavaScript itself. Its specification text snapshots the context at each `await`, so code after the `await` resumes in the context it had at the `await`, and it runs a generator body in the context captured when the generator object was created, never in the context of whoever calls `.next()` (`docs/research/tc39-syntax.md` §8).
 
-Effeck takes the snapshot rule for three reasons:
+VibeLang takes the snapshot rule for three reasons:
 
 1. **Effect's frames can only carry a snapshot.** `updateContext` pushes a frame that restores an absolute previous Context, captured in a closure (`internal/effect.ts:2186-2211`). Under DDB, a segment spliced under a different resumer would still restore the capture-time outer Context when its inner `provide` exits. That is wrong under DDB, and closures cannot be rebased. DDB would need Effect to store Context deltas instead.
 2. **Dependency injection stays stable.** A resumed computation keeps the providers it selected. Under DDB, where and when a continuation is resumed would change which `Database` a half-finished service method talks to.
@@ -44,7 +44,7 @@ The cost is real, and it applies to handler lookup. A continuation transferred o
 
 #### `AsyncLocalStorage` is fiber-wide, not delimited
 
-[Kernel] [Rule] Node offers no public way to switch the async context in the middle of a run loop; `AsyncResource.runInAsyncScope` only scopes a callback. G6b shows the consequence: a store entered inside a handled region leaks into the clause. Request-scoped values in Effeck therefore live in Context, which the kernel does delimit. `AsyncLocalStorage` remains a bridge for foreign libraries at fiber granularity, and Effeck code does not write to it.
+[Kernel] [Rule] Node offers no public way to switch the async context in the middle of a run loop; `AsyncResource.runInAsyncScope` only scopes a callback. G6b shows the consequence: a store entered inside a handled region leaks into the clause. Request-scoped values in VibeLang therefore live in Context, which the kernel does delimit. `AsyncLocalStorage` remains a bridge for foreign libraries at fiber granularity, and VibeLang code does not write to it.
 
 #### Why the reinstalled prompt records the resume site's Context
 

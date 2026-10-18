@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-// Repack only effeck's existing tarball when EFFECK_SKIP leaves platforms out.
+// Repack only vibelang's existing tarball when VIBELANG_SKIP leaves platforms out.
 // No build or staging tree is used. All payloads except package.json must stay
 // byte-identical, including the launcher and the packaged editor extension.
 //
-//   EFFECK_SKIP=win32 node scripts/release/repack.mjs [tarball-directory]
+//   VIBELANG_SKIP=win32 node scripts/release/repack.mjs [tarball-directory]
 import { deepStrictEqual } from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
@@ -21,21 +21,21 @@ function payload(dir) {
   })
 }
 
-export function repack(tarballs, skip = process.env.EFFECK_SKIP ?? "") {
+export function repack(tarballs, skip = process.env.VIBELANG_SKIP ?? "") {
   tarballs = resolve(tarballs)
   const manifestPath = join(tarballs, "manifest.json")
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"))
-  const entry = manifest.packages.find((pkg) => pkg.name === "effeck")
-  if (!entry) throw new Error("repack: manifest.json has no effeck package")
+  const entry = manifest.packages.find((pkg) => pkg.name === "vibelang")
+  if (!entry) throw new Error("repack: manifest.json has no vibelang package")
   const tarball = join(tarballs, entry.file)
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-repack-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-repack-"))
   try {
     execFileSync("tar", ["-xzf", tarball, "-C", scratch])
     const dir = join(scratch, "package")
     const packagePath = join(dir, "package.json")
     const pkg = JSON.parse(readFileSync(packagePath, "utf8"))
-    if (pkg.name !== "effeck" || pkg.version !== manifest.version || pkg.version !== entry.version) {
-      throw new Error(`repack: expected effeck@${manifest.version}, got ${pkg.name}@${pkg.version}`)
+    if (pkg.name !== "vibelang" || pkg.version !== manifest.version || pkg.version !== entry.version) {
+      throw new Error(`repack: expected vibelang@${manifest.version}, got ${pkg.name}@${pkg.version}`)
     }
     const patterns = skip.split(/[,\s]+/).filter(Boolean)
     const removed = Object.keys(pkg.optionalDependencies ?? {}).filter((name) => patterns.some((pattern) => name.includes(pattern)))
@@ -66,9 +66,9 @@ export function repack(tarballs, skip = process.env.EFFECK_SKIP ?? "") {
         rmSync(next, { force: true })
       }
       writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n")
-      console.log(`repack: removed ${removed.join(", ")} from effeck@${pkg.version}`)
+      console.log(`repack: removed ${removed.join(", ")} from vibelang@${pkg.version}`)
     }
-    console.log(`repack: effeck@${pkg.version} optionalDependencies: ${JSON.stringify(pkg.optionalDependencies ?? {})}`)
+    console.log(`repack: vibelang@${pkg.version} optionalDependencies: ${JSON.stringify(pkg.optionalDependencies ?? {})}`)
     console.log(`repack: ${entry.file} sha256 ${createHash("sha256").update(readFileSync(tarball)).digest("hex")}`)
   } finally {
     rmSync(scratch, { recursive: true, force: true })

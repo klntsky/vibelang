@@ -1,6 +1,6 @@
-# Writing the Effeck user docs
+# Writing the VibeLang user docs
 
-These docs mirror the Effect 4 documentation one page for one page: same sections, same order, same topics (see `inventory.md`). Every page is original writing about Effeck. Read the upstream page to learn what it covers; never copy its prose or code (see `ATTRIBUTION.md`).
+These docs mirror the Effect 4 documentation one page for one page: same sections, same order, same topics (see `inventory.md`). Every page is original writing about VibeLang. Read the upstream page to learn what it covers; never copy its prose or code (see `ATTRIBUTION.md`).
 
 ## Sources of truth
 
@@ -10,7 +10,7 @@ These docs mirror the Effect 4 documentation one page for one page: same section
 
 ## Voice
 
-- Write for a developer learning Effeck. Many readers know Effect in TypeScript; serve them with a short "Coming from Effect" section at the end of a page, not by comparing on every line.
+- Write for a developer learning VibeLang. Many readers know Effect in TypeScript; serve them with a short "Coming from Effect" section at the end of a page, not by comparing on every line.
 - Plain, concrete, active sentences. Code first, then the explanation. Short paragraphs.
 - No em dashes or en dashes. No hedging ("might", "could potentially"). No marketing words.
 
@@ -30,11 +30,11 @@ Example first, then two to five sentences.
 - `Effect.gen(function* () { … })` becomes an ordinary function.
 ```
 
-Effeck code blocks use the `effeck` fence. Real TypeScript uses the `ts` fence and starts with `// TypeScript (.ts)`; Effect TypeScript shown for comparison uses `ts effect`. Show a file name in a first-line comment when it matters (`// main.effeck`, `// vite.config.ts`); its extension matches the fence. After a function, show the inferred contract as a comment when it teaches something: `// User!UserNotFound!Users`.
+VibeLang code blocks use the `vibelang` fence. Real TypeScript uses the `ts` fence and starts with `// TypeScript (.ts)`; Effect TypeScript shown for comparison uses `ts effect`. Show a file name in a first-line comment when it matters (`// main.vibe`, `// vite.config.ts`); its extension matches the fence. After a function, show the inferred contract as a comment when it teaches something: `// User!UserNotFound!Users`.
 
 ## The language in one page
 
-- **Every function is an Effect, and calls run.** `const user = Users.find(id)` gives a `User`. There is no `Effect.gen`, `yield*`, `async`, or `await` in `.effeck` files.
+- **Every function is an Effect, and calls run.** `const user = Users.find(id)` gives a `User`. There is no `Effect.gen`, `yield*`, `async`, or `await` in `.vibe` files.
 - **An Effect value runs when called.** A function that returns an Effect runs when called (`Effect.log("hi")`, `Effect.sleep("1 second")`). An Effect value you hold runs when you call it: `const now = Clock.currentTimeMillis()`.
 - **Programs are functions with no arguments.** Pass `() => f(x)` wherever Effect expects an Effect: `Effect.retry(() => fetchUser(id), Schedule.exponential("100 millis"))`, `Effect.timeout(() => slowQuery(), "1 second")`, `Effect.all([() => a(), () => b()], { concurrency: 2 })`, `Effect.forEach(ids, (id) => load(id), { concurrency: 4 })`, `Effect.race(() => fromCache(id), () => fromNetwork(id))`.
 - **Pipelines** take the program first: `pipe(() => fetchUser(id), Effect.retry({ times: 3 }), Effect.timeout("2 seconds"))`. Statements replace `map`, `flatMap`, `andThen`, `tap`, `catch`, and `ensuring`.
@@ -44,7 +44,7 @@ Effeck code blocks use the `effeck` fence. Real TypeScript uses the `ts` fence a
 - **Data.** `schema User { id: string; role: "admin" | "member"; tags: ReadonlyArray<string>; home: Address }` declares the struct schema `User` and its decoded type in one declaration (short for `const User = Schema.Struct({ ... })` with `interface User extends Schema.Schema.Type<typeof User> {}`). A field may name another schema or a schema constant, such as `const Created = Schema.DateTimeUtc`. Use `Schema.Struct` for checks, transformations, and exact optional keys.
 - **Services are `service` declarations** (D128, D223): the members are bodiless contracts. A layer is a call: `Layer.effect(Users) { setup; return { ...members } }` through block params, or `Layer.succeed(Users, { ...members })` without setup (D221). Provide a layer to a block with `provide AppLive { ... }`, the keyword that matches `Effect.provide`, and one service with `provide Key = value { ... }`. Do not write `service class Users { }` or `layer UsersLive: Users { }`; both are old spellings that warn (EK2120, EK2121).
 
-  ```effeck
+  ```vibe
   service Users {
     find(id: string): User!UserNotFound
   }
@@ -66,7 +66,7 @@ Effeck code blocks use the `effeck` fence. Real TypeScript uses the `ts` fence a
 
 ## Pages about APIs that do not change
 
-Many modules work exactly as in Effect: `Option`, `Chunk`, `HashMap`, `Duration`, `DateTime`, `BigDecimal`, `Equal`, `Hash`, `Order`, `Schedule`, most of `Schema`, and more. Say so in the first paragraph ("`Duration` works in Effeck exactly as in Effect.") and show Effeck usage, where building a value is a plain call and only Effect-returning functions run.
+Many modules work exactly as in Effect: `Option`, `Chunk`, `HashMap`, `Duration`, `DateTime`, `BigDecimal`, `Equal`, `Hash`, `Order`, `Schedule`, most of `Schema`, and more. Say so in the first paragraph ("`Duration` works in VibeLang exactly as in Effect.") and show VibeLang usage, where building a value is a plain call and only Effect-returning functions run.
 
 ## When the spec has no answer
 
@@ -78,11 +78,11 @@ The spec is now `docs/design/src/` with 30 chapters; chapter 11 is the standard 
 
 - **Prelude** adds `Scope` (D48): the module, and the type `Scope` means `Scope.Scope`. Write `File!IOError!Scope`.
 - **Data until called** (D24): a call runs its result only when its type is `Effect` itself. `Config`, `Exit`, Context keys, and error instances are data: `const Port = Config.withDefault(Config.Port("PORT"), 3000)` composes, and `const port = Port()` reads it.
-- **Effect's own packages are trusted** (D22): `Option.map`, `Schema.is`, `Duration.millis` are plain calls; their exceptions are defects. A plain TypeScript function is trusted with `/** @effeck trusted */` and `@throws {T}` (D23).
+- **Effect's own packages are trusted** (D22): `Option.map`, `Schema.is`, `Duration.millis` are plain calls; their exceptions are defects. A plain TypeScript function is trusted with `/** @vibelang trusted */` and `@throws {T}` (D23).
 - **`catch`** sees expected failures only (D13, D37). A defect from `Option.getOrThrow` or `Schema.decodeUnknownSync` is not caught; use the typed forms (`Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`). A `catch` that cannot run is warning EK2004. With several expected failures, `catch` receives the first (D28).
-- **Runners** (D38) run only where no fiber runs the code: a module's top level, or a plain callback such as a `describe` body. Tests in `.effeck` use `it.effect`; Promise-style tests stay in `.ts`.
+- **Runners** (D38) run only where no fiber runs the code: a module's top level, or a plain callback such as a `describe` body. Tests in `.vibe` use `it.effect`; Promise-style tests stay in `.ts`.
 - **Services** (D40, D41): `static readonly layer` holds the default Layer; `static make()` builds the implementation; `static readonly default` makes the service a `Context.Reference` that needs no provider. `S.member(args)` adds `S` to R whatever the member returns; value members are read as `Settings().baseUrl`.
 - **Collections of programs convert** (D49): `Effect.all(stores.map(makeSync), { concurrency: 4 })` works.
 - **Producers and streams** (D26): a producer is a `Stream` wherever a `Stream` is expected, and `for...of` over a `Stream` pulls from it and closes it when the loop exits.
-- **Tooling** (D30-D36): install `effeck`, which ships the `effeck` binary (it accepts every `tsc` flag); Vite apps use `effeck-vite`; the language server is `effeck --lsp --stdio`; diagnostics are configured in `compilerOptions.effeck` in `tsconfig.json`; Oxlint lints, the compiler type-checks; source maps go from `.effeck` to JavaScript. Read chapter 28 for exact names before writing about tooling.
+- **Tooling** (D30-D36): install `vibelang`, which ships the `vibelang` binary (it accepts every `tsc` flag); Vite apps use `vibelang-vite`; the language server is `vibelang --lsp --stdio`; diagnostics are configured in `compilerOptions.vibelang` in `tsconfig.json`; Oxlint lints, the compiler type-checks; source maps go from `.vibe` to JavaScript. Read chapter 28 for exact names before writing about tooling.
 - **Diagnostic codes** follow D53 and chapter 13 onward of the spec; cite only codes the spec defines.

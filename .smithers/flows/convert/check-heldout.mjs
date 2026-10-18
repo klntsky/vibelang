@@ -104,13 +104,13 @@ function promptSources(prompt) {
 export function heldoutProblems({ golden = casesIn(join(here, "golden")), examples = casesIn(join(here, "examples")), prompt = readFileSync(join(here, "prompt.md"), "utf8") } = {}) {
   const candidates = examples.flatMap((entry) => [
     { location: `examples/${entry.name}/input.ts`, source: entry.input },
-    { location: `examples/${entry.name}/expected.effeck`, source: entry.expected }
+    { location: `examples/${entry.name}/expected.vibe`, source: entry.expected }
   ])
   candidates.push(...promptSources(prompt).map((source) => ({ location: "prompt.md", source })))
   const normalized = candidates.map((entry) => ({ ...entry, source: normalizeSource(entry.source) }))
   const problems = new Set()
   for (const entry of golden) {
-    for (const [file, source] of [["input.ts", entry.input], ["expected.effeck", entry.expected]]) {
+    for (const [file, source] of [["input.ts", entry.input], ["expected.vibe", entry.expected]]) {
       const heldout = normalizeSource(source)
       if (!heldout) throw new Error(`golden/${entry.name}/${file} has no source tokens`)
       for (const candidate of normalized) {

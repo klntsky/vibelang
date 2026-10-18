@@ -7,7 +7,7 @@
     "skipLibCheck": true
   },
   "contentMappers": [
-    { "package": "effeck-ts-mapper", "extensions": [".effeck"] }
+    { "package": "vibelang-ts-mapper", "extensions": [".vibe"] }
   ],
   "include": ["src"]
 }

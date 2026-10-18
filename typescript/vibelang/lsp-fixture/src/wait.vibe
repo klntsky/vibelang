@@ -1,0 +1,4 @@
+// EK1003: a call already waits, so async is not part of VibeLang.
+export async function wait() {
+  return 1
+}

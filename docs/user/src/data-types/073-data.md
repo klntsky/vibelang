@@ -1,10 +1,10 @@
 # Data
 
-`Data` works in Effeck exactly as in Effect. Use it for classes, tagged unions, and errors with Effect's equality and hashing support; ordinary objects and arrays already compare structurally in Effect 4.
+`Data` works in VibeLang exactly as in Effect. Use it for classes, tagged unions, and errors with Effect's equality and hashing support; ordinary objects and arrays already compare structurally in Effect 4.
 
 ## Creating values with structural equality
 
-```effeck
+```vibe
 const first = { route: "inbox", filters: { unread: true } }
 const second = { route: "inbox", filters: { unread: true } }
 Equal.equals(first, second) // true
@@ -21,7 +21,7 @@ Plain records, tuples, arrays, maps, and sets need no `Data` wrapper for structu
 
 ## Building ordinary and tagged classes
 
-```effeck
+```vibe
 class Label extends Data.Class<{ readonly text: string }> {
   get upper() { return this.text.toUpperCase() }
 }
@@ -40,7 +40,7 @@ new Archived({ documentId: "doc-3" })._tag // "Archived"
 
 ## Defining tagged unions with matching helpers
 
-```effeck
+```vibe
 type Delivery = Data.TaggedEnum<{
   Waiting: {}
   Sent: { tracking: string }
@@ -66,7 +66,7 @@ describe(sent) // "Tracking: parcel-8"
 
 ## Adding generic union cases
 
-```effeck
+```vibe
 type LoadState<A, E> = Data.TaggedEnum<{
   Idle: {}
   Ready: { value: A }
@@ -87,7 +87,7 @@ const idle = LoadState.Idle()
 
 ## Defining ordinary and tagged errors
 
-```effeck
+```vibe
 class InvalidDocument extends Data.Error<{
   readonly message: string
   readonly line: number
@@ -116,7 +116,7 @@ function documentOrDraft(id: string) {
 
 ## Preserving native error causes
 
-```effeck
+```vibe
 error DocumentDecodeError {
   cause: unknown
 }
@@ -131,4 +131,4 @@ A `cause` field preserves the original exception using native error-cause suppor
 
 ## Coming from Effect
 
-Raise a data error with `throw new DocumentMissing({ id })`. Generator yielding and `Effect.fail` are unnecessary for ordinary Effeck error propagation.
+Raise a data error with `throw new DocumentMissing({ id })`. Generator yielding and `Effect.fail` are unnecessary for ordinary VibeLang error propagation.

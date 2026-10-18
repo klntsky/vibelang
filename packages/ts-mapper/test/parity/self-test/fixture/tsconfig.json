@@ -11,5 +11,5 @@
     "declaration": true,
     "outDir": "out"
   },
-  "include": ["*.effeck", "*.ts"]
+  "include": ["*.vibe", "*.ts"]
 }

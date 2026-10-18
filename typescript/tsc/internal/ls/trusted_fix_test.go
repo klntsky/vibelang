@@ -8,7 +8,6 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/bundled"
 	"github.com/microsoft/TypeScript/tsc/internal/compiler"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
-	_ "github.com/microsoft/TypeScript/tsc/internal/effeck"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
 	"github.com/microsoft/TypeScript/tsc/internal/ls/lsconv"
 	"github.com/microsoft/TypeScript/tsc/internal/ls/lsutil"
@@ -16,6 +15,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/tsoptions"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 	"github.com/microsoft/TypeScript/tsc/internal/vfs/vfstest"
+	_ "github.com/microsoft/TypeScript/tsc/internal/vibelang"
 )
 
 // trustedFixHost supplies the snapshot conversion used by the real LS action.
@@ -43,8 +43,8 @@ func trustedActions(t *testing.T, files map[string]string) []*lsproto.CodeAction
 	converters := lsconv.NewConverters(lsproto.PositionEncodingKindUTF16, func(name tspath.RootedFilePath) *lsconv.LSPLineMap {
 		return lsconv.ComputeLSPLineStarts(files[string(name)])
 	})
-	service := ls.NewLanguageService(nil, p, trustedFixHost{converters: converters}, "/Users/x/src/main.effeck")
-	file := p.GetSourceFile("/Users/x/src/main.effeck")
+	service := ls.NewLanguageService(nil, p, trustedFixHost{converters: converters}, "/Users/x/src/main.vibe")
+	file := p.GetSourceFile("/Users/x/src/main.vibe")
 	for _, d := range p.GetSemanticDiagnostics(t.Context(), file) {
 		if d.Code() != 4406 {
 			continue
@@ -112,7 +112,7 @@ func applyTrustedAction(t *testing.T, files map[string]string, action *lsproto.C
 func TestTrustedFixAcrossFiles(t *testing.T) {
 	t.Parallel()
 	const helper = `export class Bad extends Error {}
-/** @effeck trusted
+/** @vibelang trusted
  * @throws {Bad}
  */
 export function parse(text: string, ...rest: string[]) { return text.length + rest.length }
@@ -122,8 +122,8 @@ export function parse(text: string, ...rest: string[]) { return text.length + re
 		barrel              bool
 	}{
 		{name: "new import"},
-		{name: "existing helper alias", extra: `import { trusted as safe } from "effeck-runtime"` + "\n"},
-		{name: "existing caller alias", extra: `import { trusted } from "effeck-runtime"` + "\n" + `export const parseTrusted = trusted(parse, [Bad])` + "\n", caller: ", parseTrusted as safeParse"},
+		{name: "existing helper alias", extra: `import { trusted as safe } from "vibelang-runtime"` + "\n"},
+		{name: "existing caller alias", extra: `import { trusted } from "vibelang-runtime"` + "\n" + `export const parseTrusted = trusted(parse, [Bad])` + "\n", caller: ", parseTrusted as safeParse"},
 		{name: "helper collision", extra: "const trusted = 1\n"},
 		{name: "barrel", barrel: true},
 	} {
@@ -133,15 +133,15 @@ export function parse(text: string, ...rest: string[]) { return text.length + re
 				module = "./index"
 			}
 			files := map[string]string{
-				"/Users/x/src/tsconfig.json":                            `{"compilerOptions":{"strict":true},"include":["*.ts","*.effeck"]}`,
-				"/Users/x/src/helpers.ts":                               test.extra + helper,
-				"/Users/x/src/index.ts":                                 `export { parse, Bad } from "./helpers"`,
-				"/Users/x/src/main.effeck":                              "import { parse as read" + test.caller + " } from " + `"` + module + `"` + "\nexport function main() { return [read(\"x\"), read(\"y\")] }\n",
-				"/Users/x/src/node_modules/effeck-runtime/package.json": `{"name":"effeck-runtime","types":"index.d.ts"}`,
-				"/Users/x/src/node_modules/effeck-runtime/index.d.ts":   `export declare function trusted<A extends unknown[], B>(f: (...args: A) => B, classes: readonly unknown[]): (...args: A) => B`,
+				"/Users/x/src/tsconfig.json":                              `{"compilerOptions":{"strict":true},"include":["*.ts","*.vibe"]}`,
+				"/Users/x/src/helpers.ts":                                 test.extra + helper,
+				"/Users/x/src/index.ts":                                   `export { parse, Bad } from "./helpers"`,
+				"/Users/x/src/main.vibe":                                  "import { parse as read" + test.caller + " } from " + `"` + module + `"` + "\nexport function main() { return [read(\"x\"), read(\"y\")] }\n",
+				"/Users/x/src/node_modules/vibelang-runtime/package.json": `{"name":"vibelang-runtime","types":"index.d.ts"}`,
+				"/Users/x/src/node_modules/vibelang-runtime/index.d.ts":   `export declare function trusted<A extends unknown[], B>(f: (...args: A) => B, classes: readonly unknown[]): (...args: A) => B`,
 			}
 			if test.name == "existing caller alias" {
-				files["/Users/x/src/helpers.ts"] = "import { trusted } from \"effeck-runtime\"\n" + helper + "export const parseTrusted = trusted(parse, [Bad])\n"
+				files["/Users/x/src/helpers.ts"] = "import { trusted } from \"vibelang-runtime\"\n" + helper + "export const parseTrusted = trusted(parse, [Bad])\n"
 			}
 			for step := range 2 {
 				actions := trustedActions(t, files)
@@ -165,13 +165,13 @@ export function parse(text: string, ...rest: string[]) { return text.length + re
 				applyTrustedAction(t, files, actions[0])
 			}
 			got := files["/Users/x/src/helpers.ts"]
-			if strings.Count(got, "export const parseTrusted =") != 1 || strings.Count(got, `from "effeck-runtime"`) != 1 {
+			if strings.Count(got, "export const parseTrusted =") != 1 || strings.Count(got, `from "vibelang-runtime"`) != 1 {
 				t.Fatalf("duplicate wrapper/import:\n%s", got)
 			}
 			if !strings.Contains(got, "export function parse(") {
 				t.Fatal("original implementation removed")
 			}
-			caller := files["/Users/x/src/main.effeck"]
+			caller := files["/Users/x/src/main.vibe"]
 			if strings.Contains(caller, "read(\"") || strings.Count(caller, `from "./helpers"`) != 1 {
 				t.Fatalf("caller not migrated once:\n%s", caller)
 			}

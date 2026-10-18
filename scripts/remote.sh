@@ -5,7 +5,7 @@
 # share one cache.
 #
 #   export ES_REMOTE_HOST=ubuntu@<host> ES_REMOTE_KEY=~/.ssh/<key>
-#   cd <workspace>/typescript && ../scripts/remote.sh sh effeck/smoke.sh --status
+#   cd <workspace>/typescript && ../scripts/remote.sh sh vibelang/smoke.sh --status
 #   scripts/remote.sh --clean            # delete this workspace's copy on the host
 #
 # It syncs the workspace's source tree (no .jj, node_modules, or build
@@ -45,8 +45,8 @@ fi
 $SSH "$HOST" "mkdir -p ~/$dest"
 rsync -a --delete -e "$SSH" \
 	--exclude '/.jj' --exclude '/.git' --exclude 'node_modules' --exclude '/typescript/built' \
-	--exclude 'dist' --exclude '/typescript/effeck/cases/*/out' --exclude '/docs/user/site' \
-	--exclude '/packages/compiler/native' --exclude '*.vsix' --exclude '*.tgz' --exclude '/.cache' --exclude '/dist-npm' --exclude '.effeck' \
+	--exclude 'dist' --exclude '/typescript/vibelang/cases/*/out' --exclude '/docs/user/site' \
+	--exclude '/packages/compiler/native' --exclude '*.vsix' --exclude '*.tgz' --exclude '/.cache' --exclude '/dist-npm' --exclude '.vibe' \
 	"$root/" "$HOST:$dest/"
 
 # Quote each argument for the remote shell.

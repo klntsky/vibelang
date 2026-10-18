@@ -314,8 +314,8 @@ func validateJsonOptionValue(
 		if _, ok := locale.Parse(val.(string)); !ok {
 			errors = append(errors, CreateDiagnosticForNodeInSourceFileOrCompilerDiagnostic(sourceFile, valueExpression, diagnostics.Locale_must_be_an_IETF_BCP_47_language_tag_Examples_Colon_0_1, "en", "ja-jp"))
 		}
-	case extraValidationEffeck:
-		errors = append(errors, validateEffeckOptions(val, valueExpression, sourceFile)...)
+	case extraValidationVibeLang:
+		errors = append(errors, validateVibeLangOptions(val, valueExpression, sourceFile)...)
 	}
 
 	if len(errors) > 0 {

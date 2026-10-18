@@ -1,10 +1,10 @@
 # Class APIs
 
-Schema classes work in Effeck as in Effect. A class can validate its fields, act as a codec, and expose domain behavior on its instances. Use one when methods or class identity help the model; use `Struct` for plain records. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema classes work in VibeLang as in Effect. A class can validate its fields, act as a codec, and expose domain behavior on its instances. Use one when methods or class identity help the model; use `Struct` for plain records. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Declaring validated classes
 
-```effeck
+```vibe
 class Package extends Schema.Class<Package>("Package")({
   reference: Schema.NonEmptyString,
   pieces: Schema.FiniteFromString
@@ -16,11 +16,11 @@ function readPackage(input: unknown) {
 // Package!Schema.SchemaError!
 ```
 
-Supply the class itself as the `Self` type, a stable identifier, and its fields. The class extends a generated base and is an ordinary data class, not an Effeck service. The identifier is available as `Package.identifier` and helps Effect recognize class instances across module reloads.
+Supply the class itself as the `Self` type, a stable identifier, and its fields. The class extends a generated base and is an ordinary data class, not a VibeLang service. The identifier is available as `Package.identifier` and helps Effect recognize class instances across module reloads.
 
 ## Constructing and checking instances
 
-```effeck
+```vibe
 function constructPackage(reference: string, pieces: number) {
   return Package.makeEffect({ reference, pieces })
 }
@@ -36,7 +36,7 @@ Pass a checked `Schema.Struct` instead of a fields object when the class needs a
 
 ## Bypassing checks deliberately
 
-```effeck
+```vibe
 function fromVerifiedFields(reference: string, pieces: number) {
   return try((reference, pieces) => new Package({ reference, pieces }, { disableChecks: true }), reference, pieces)
 }
@@ -46,7 +46,7 @@ function fromVerifiedFields(reference: string, pieces: number) {
 
 ## Defining structural equality
 
-```effeck
+```vibe
 class Container extends Schema.Class<Container>("Container")({
   labels: Schema.Array(Schema.String)
 }) {}
@@ -62,7 +62,7 @@ Schema-backed class instances support Effect's structural equality, including ne
 
 ## Adding getters and methods
 
-```effeck
+```vibe
 class LabeledPackage extends Schema.Class<LabeledPackage>("LabeledPackage")({
   reference: Schema.NonEmptyString
 }) {
@@ -86,11 +86,11 @@ function announcePackage() {
 }
 ```
 
-Getters derive synchronous values from fields. Methods follow ordinary Effeck call rules and can run effects; calling `announce` logs before returning. Keep getters pure so formatting, checks, and compiled validators can read properties safely.
+Getters derive synchronous values from fields. Methods follow ordinary VibeLang call rules and can run effects; calling `announce` logs before returning. Keep getters pure so formatting, checks, and compiled validators can read properties safely.
 
 ## Using classes as codecs
 
-```effeck
+```vibe
 const Packages = Schema.Array(Package)
 
 function packageWireRoundTrip(input: unknown) {
@@ -103,7 +103,7 @@ A class schema is a transformation: decoding a plain object creates an instance,
 
 ## Annotating classes
 
-```effeck
+```vibe
 class Dock extends Schema.Class<Dock>("Dock")(
   { number: Schema.Int },
   { title: "Loading dock", description: "A numbered dispatch location" }
@@ -114,7 +114,7 @@ Pass annotations after the fields or struct. The class identifier also becomes i
 
 ## Modeling recursive classes
 
-```effeck
+```vibe
 interface CrateWire {
   count: string
   children: ReadonlyArray<CrateWire>
@@ -136,7 +136,7 @@ Suspend the recursive edge and write the callback's full contract to break the i
 
 ## Creating tagged variants and extending classes
 
-```effeck
+```vibe
 class Packed extends Schema.TaggedClass<Packed>()("Packed", {
   reference: Schema.String
 }) {}

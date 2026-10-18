@@ -1,4 +1,4 @@
-// Call helpers for the JavaScript that Effeck's text-only projector emits.
+// Call helpers for the JavaScript that VibeLang's text-only projector emits.
 //
 // The projector reads one file's text, so it cannot see the types the fork
 // used to decide how a call runs. These helpers make the same decisions at run
@@ -62,7 +62,7 @@ export const $isRun = (value: unknown): boolean => {
  * yet. The symbol is registered (`Symbol.for`), so two copies of the runtime
  * agree on it.
  */
-export const $direct: unique symbol = Symbol.for("effeck/direct")
+export const $direct: unique symbol = Symbol.for("vibelang/direct")
 
 // ---------------------------------------------------------------------------
 // L2: the fast-call protocol
@@ -113,7 +113,7 @@ class FastCallRanTwice extends Error {
 }
 
 // Pending.step once the fiber has run the Pending.
-const ran: unique symbol = Symbol("effeck/fast/ran")
+const ran: unique symbol = Symbol("vibelang/fast/ran")
 
 /**
  * A body that suspended: a one-shot Effect that runs the Effect the body
@@ -162,7 +162,7 @@ class Pending {
 // an Effect to $isRun, yield*, pipe, and inspection.
 Object.assign(Pending.prototype, {
   [EffectTypeId]: (Effect.void as any)[EffectTypeId],
-  [identifier]: "effeck/FastCall",
+  [identifier]: "vibelang/FastCall",
   [Symbol.iterator](this: Pending) {
     return new SingleShotGen(this)
   },
@@ -170,7 +170,7 @@ Object.assign(Pending.prototype, {
     return pipeArguments(this, arguments)
   },
   toJSON() {
-    return { _id: "Effect", op: "effeck/FastCall" }
+    return { _id: "Effect", op: "vibelang/FastCall" }
   },
   [NodeInspectSymbol](this: { toJSON(): unknown }) {
     return this.toJSON()

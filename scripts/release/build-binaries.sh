@@ -1,6 +1,6 @@
 #!/bin/sh
-# Cross-compiles the native Effeck compiler for the six npm platforms into
-# dist-npm/bin/<platform>/effeck (effeck.exe on Windows).
+# Cross-compiles the native VibeLang compiler for the six npm platforms into
+# dist-npm/bin/<platform>/vibelang (vibelang.exe on Windows).
 #
 #   ES_REMOTE_HOST=user@host ES_REMOTE_KEY=~/.ssh/key sh scripts/release/build-binaries.sh
 #   sh scripts/release/build-binaries.sh --local
@@ -18,10 +18,10 @@ version=$(node -p 'require(process.argv[1]).version' "$root/packages/compiler/pa
 check() {
   # check <platform> runs one binary's --version.
   platform=$1
-  printed=$("$out/$platform/effeck" --version)
+  printed=$("$out/$platform/vibelang" --version)
   case $printed in
-    "Effeck $version ("*) echo "build-binaries: $platform prints: $printed" ;;
-    *) echo "build-binaries: $platform printed '$printed', expected Effeck $version" >&2; exit 1 ;;
+    "VibeLang $version ("*) echo "build-binaries: $platform prints: $printed" ;;
+    *) echo "build-binaries: $platform printed '$printed', expected VibeLang $version" >&2; exit 1 ;;
   esac
 }
 
@@ -40,9 +40,9 @@ else
   for platform in $platforms; do
     os=${platform%-*}
     cpu=${platform#*-}
-    exe=effeck
+    exe=vibelang
     goos=$os
-    [ "$os" = win32 ] && { goos=windows; exe=effeck.exe; }
+    [ "$os" = win32 ] && { goos=windows; exe=vibelang.exe; }
     goarch=$cpu
     [ "$cpu" = x64 ] && goarch=amd64
     mkdir -p "$out/$platform"
@@ -62,8 +62,8 @@ else
 fi
 
 for platform in $platforms; do
-  exe=effeck
-  case $platform in win32-*) exe=effeck.exe ;; esac
+  exe=vibelang
+  case $platform in win32-*) exe=vibelang.exe ;; esac
   [ -f "$out/$platform/$exe" ] || { echo "build-binaries: missing dist-npm/bin/$platform/$exe" >&2; exit 1; }
   printf 'build-binaries: %-13s %s bytes\n' "$platform" "$(wc -c <"$out/$platform/$exe" | tr -d ' ')"
 done

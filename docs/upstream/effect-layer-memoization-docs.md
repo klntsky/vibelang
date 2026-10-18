@@ -40,10 +40,10 @@ already-built ancestor entry, and independent sibling provides. It should not
 promise that siblings build a Layer once just because their Layer objects are
 identical or their lifetimes overlap.
 
-## Why it matters to Effeck
+## Why it matters to VibeLang
 
 Applications expect one database pool or one background resource per
-application. Effeck preserves Effect's memoization boundaries (D21);
+application. VibeLang preserves Effect's memoization boundaries (D21);
 `wire` composes providers but does not install a global cache.
 
 ## Suggested fix

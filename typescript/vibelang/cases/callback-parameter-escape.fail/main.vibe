@@ -1,0 +1,18 @@
+// expect: EK4301
+// A callback parameter without a contract accepts any contract (D12, D68), so
+// it holds a function that can pause, with no plain form. Passed on as a value
+// where JavaScript calls it synchronously, it is rejected like a VibeLang
+// function without a plain form (D9, D66), never passed as is: Array.prototype.find
+// would see an Effect, which is truthy, for every element.
+
+export function findFirst<T>(xs: ReadonlyArray<T>, p: (x: T) => boolean) {
+  return xs.find(p)
+}
+
+export function sorted<T>(xs: ReadonlyArray<T>, compare: (a: T, b: T) => number) {
+  return [...xs].sort(compare)
+}
+
+export function main() {
+  return findFirst([1, 2, 3], (x) => x > 1)
+}

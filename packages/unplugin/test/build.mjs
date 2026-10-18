@@ -1,12 +1,12 @@
 // Bundles src/main.ts of the fixture in the current directory into out/
-// with one bundler and effeck-unplugin, and prints one JSON line per build:
+// with one bundler and vibelang-unplugin, and prints one JSON line per build:
 //   {"ok":true}  or  {"ok":false,"message":"..."}
 //
 // Usage, from a fixture copy:
 //   node build.mjs webpack|rspack|rollup|rolldown|esbuild|vite [--watch]
 //   bun build.mjs bun
 //
-// The plugin finds the compiler through EFFECK_BINARY. A build without
+// The plugin finds the compiler through VIBELANG_BINARY. A build without
 // --watch exits 1 when it fails.
 import module from "node:module"
 import { join, resolve } from "node:path"
@@ -17,7 +17,7 @@ const watch = mode === "--watch"
 const root = process.cwd()
 const entry = resolve(root, "src/main.ts")
 const outDir = resolve(root, "out")
-const { default: effeck } = await import(`effeck-unplugin/${bundler}`)
+const { default: vibelang } = await import(`vibelang-unplugin/${bundler}`)
 
 function report(ok, message) {
   console.log(JSON.stringify(ok ? { ok } : { ok, message }))
@@ -39,14 +39,14 @@ const stripTypes = createUnplugin(() => ({
 }))
 
 // Rollup does not resolve packages; Node resolves these from out/ at run time.
-const external = (id) => /^(?:effect|effeck-runtime)(?:\/|$)/.test(id)
+const external = (id) => /^(?:effect|vibelang-runtime)(?:\/|$)/.test(id)
 
 if (bundler === "webpack" || bundler === "rspack") {
   const create = bundler === "webpack" ? (await import("webpack")).default : (await import("@rspack/core")).rspack
   const compiler = create({
     mode: "none", context: root, target: "node", devtool: "source-map", entry,
     output: { path: outDir, filename: "main.cjs" },
-    plugins: [stripTypes[bundler](), effeck()],
+    plugins: [stripTypes[bundler](), vibelang()],
     infrastructureLogging: { level: "error" }
   })
   const done = (error, stats) => {
@@ -59,8 +59,8 @@ if (bundler === "webpack" || bundler === "rspack") {
 } else if (bundler === "rollup" || bundler === "rolldown") {
   const api = await import(bundler)
   const input = bundler === "rollup"
-    ? { input: entry, external, plugins: [stripTypes.rollup(), effeck()], onwarn() {} }
-    : { input: entry, platform: "node", plugins: [effeck()], onLog() {} }
+    ? { input: entry, external, plugins: [stripTypes.rollup(), vibelang()], onwarn() {} }
+    : { input: entry, platform: "node", plugins: [vibelang()], onLog() {} }
   const output = { dir: outDir, format: "es", sourcemap: true, entryFileNames: "main.js" }
   if (watch) {
     const watcher = api.watch({ ...input, output, watch: { clearScreen: false } })
@@ -94,7 +94,7 @@ if (bundler === "webpack" || bundler === "rspack") {
   }
   const options = {
     entryPoints: [entry], bundle: true, platform: "node", format: "esm", sourcemap: true,
-    outfile: join(outDir, "main.js"), plugins: [effeck(), reporter], logLevel: "silent"
+    outfile: join(outDir, "main.js"), plugins: [vibelang(), reporter], logLevel: "silent"
   }
   if (watch) await (await esbuild.context(options)).watch()
   else await esbuild.build(options).catch(() => {})
@@ -102,7 +102,7 @@ if (bundler === "webpack" || bundler === "rspack") {
   try {
     const result = await Bun.build({
       entrypoints: [entry], outdir: outDir, target: "bun", format: "esm", sourcemap: "external",
-      naming: "main.js", plugins: [effeck()]
+      naming: "main.js", plugins: [vibelang()]
     })
     report(result.success, result.logs.map(String).join("\n"))
   } catch (error) {
@@ -111,7 +111,7 @@ if (bundler === "webpack" || bundler === "rspack") {
 } else if (bundler === "vite") {
   const { build } = await import("vite")
   const result = build({
-    root, configFile: false, logLevel: "silent", plugins: [effeck()],
+    root, configFile: false, logLevel: "silent", plugins: [vibelang()],
     build: {
       ssr: entry, outDir, sourcemap: true, emptyOutDir: true, watch: watch ? { clearScreen: false } : null,
       rolldownOptions: { output: { entryFileNames: "main.js" } }

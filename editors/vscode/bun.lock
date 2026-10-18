@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "effeck",
+      "name": "vibelang",
       "dependencies": {
         "vscode-languageclient": "10.1.1",
       },

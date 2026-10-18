@@ -1,6 +1,6 @@
 // Drives the stock TypeScript 7 language server over stdio and checks that it
-// answers hovers and diagnostics at positions in a .effeck file through the
-// effeck-ts-mapper content mapper. No editor and no dependencies.
+// answers hovers and diagnostics at positions in a .vibe file through the
+// vibelang-ts-mapper content mapper. No editor and no dependencies.
 //
 //   node lsp-hover.mjs <tsc> <project dir>
 //
@@ -17,11 +17,11 @@ if (!tsc || !projectDir) {
   process.exit(2)
 }
 
-const greetPath = join(projectDir, "src", "greet.effeck")
+const greetPath = join(projectDir, "src", "greet.vibe")
 const greetText = readFileSync(greetPath, "utf8")
 const greetUri = pathToFileURL(greetPath).href
 
-// Each expectation names a token in greet.effeck by the text around it, and
+// Each expectation names a token in greet.vibe by the text around it, and
 // the text the hover must contain.
 const hovers = [
   // Inferred: greet's Effect type comes from its projected generator.
@@ -116,7 +116,7 @@ try {
     initializationOptions: { runExternalCode: true },
   })
   send({ method: "initialized", params: {} })
-  send({ method: "textDocument/didOpen", params: { textDocument: { uri: greetUri, languageId: "effeck", version: 1, text: greetText } } })
+  send({ method: "textDocument/didOpen", params: { textDocument: { uri: greetUri, languageId: "vibe", version: 1, text: greetText } } })
 
   for (const hover of hovers) {
     const at = position(hover.at, hover.token)
@@ -124,16 +124,16 @@ try {
     const contents = result?.contents?.value ?? JSON.stringify(result)
     const ok = contents.includes(hover.expect)
     if (!ok) failures++
-    console.log(`${ok ? "ok  " : "FAIL"} hover greet.effeck:${at.line + 1}:${at.character + 1} ${hover.token}`)
+    console.log(`${ok ? "ok  " : "FAIL"} hover greet.vibe:${at.line + 1}:${at.character + 1} ${hover.token}`)
     console.log(`     ${contents.replace(/\n/g, "\n     ")}`)
   }
 
   const report = await request("textDocument/diagnostic", { textDocument: { uri: greetUri } })
-  const diagnostics = (report?.items ?? []).filter((d) => d.severity === 1).map((d) => `greet.effeck:${d.range.start.line + 1}:${d.range.start.character + 1} TS${d.code}: ${d.message}`)
-  const expected = "greet.effeck:11:9 TS2322: Type 'string' is not assignable to type 'number'."
+  const diagnostics = (report?.items ?? []).filter((d) => d.severity === 1).map((d) => `greet.vibe:${d.range.start.line + 1}:${d.range.start.character + 1} TS${d.code}: ${d.message}`)
+  const expected = "greet.vibe:11:9 TS2322: Type 'string' is not assignable to type 'number'."
   const ok = diagnostics.length === 1 && diagnostics[0] === expected
   if (!ok) failures++
-  console.log(`${ok ? "ok  " : "FAIL"} diagnostics greet.effeck`)
+  console.log(`${ok ? "ok  " : "FAIL"} diagnostics greet.vibe`)
   for (const line of diagnostics) console.log(`     ${line}`)
 
   await request("shutdown")

@@ -1,11 +1,11 @@
 import react from "@vitejs/plugin-react"
-import effeck from "effeck-vite"
+import vibelang from "vibelang-vite"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
-  plugins: [effeck(), react()],
+  plugins: [vibelang(), react()],
   test: {
     environment: "happy-dom",
-    include: ["src/**/*.test.effeck", "src/**/*.test.tsx"]
+    include: ["src/**/*.test.vibe", "src/**/*.test.tsx"]
   }
 })

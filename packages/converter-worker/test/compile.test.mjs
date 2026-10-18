@@ -9,7 +9,7 @@ import { compile, identity, maxSourceBytes, parseDiagnostics, proveNoEgress, set
 
 const root = fileURLToPath(new URL("../../..", import.meta.url))
 const config = settings()
-const hero = readFileSync(join(root, ".smithers/flows/convert/golden/01-hero-batch-lookup/expected.effeck"), "utf8")
+const hero = readFileSync(join(root, ".smithers/flows/convert/golden/01-hero-batch-lookup/expected.vibe"), "utf8")
 
 test("compiles the hero with no diagnostics", async () => {
   const result = await compile(hero, config)
@@ -43,7 +43,7 @@ test("bounds the diagnostics it returns", async () => {
 })
 
 test("never runs the program", async () => {
-  const marker = `/tmp/effeck-worker-ran-${process.pid}`
+  const marker = `/tmp/vibelang-worker-ran-${process.pid}`
   rmSync(marker, { force: true })
   await compile(`export function main() {\n  sync(() => require("fs").writeFileSync(${JSON.stringify(marker)}, "ran"))\n}\n`, config)
   assert.equal(existsSync(marker), false)
@@ -55,12 +55,12 @@ test("the compile environment has no network", { skip: config.network !== "unsha
 
 test("names the compiler and dependencies by digest", () => {
   const id = identity(config)
-  assert.equal(id.effeckVersion, "0.0.1")
+  assert.equal(id.vibelangVersion, "0.0.1")
   assert.match(id.compilerDigest, /^sha256:[0-9a-f]{64}$/)
   assert.match(id.dependenciesDigest, /^sha256:[0-9a-f]{64}$/)
 })
 
 test("parses only the converted file's diagnostics", () => {
-  const out = "x/main.effeck(3,5): error TS2322: Type 'string' is not assignable.\n../lib.d.ts(1,1): error TS1: other\n"
+  const out = "x/main.vibe(3,5): error TS2322: Type 'string' is not assignable.\n../lib.d.ts(1,1): error TS1: other\n"
   assert.deepEqual(parseDiagnostics(out), [{ line: 3, column: 5, severity: "error", code: "TS2322", message: "Type 'string' is not assignable." }])
 })

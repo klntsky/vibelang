@@ -1,0 +1,32 @@
+// expect: EK4801
+// Default categories (D241): EK4801 is an error, EK4804 a warning, and EK4818
+// off. tsconfig.json turns EK4805 off, and comments adjust the rest.
+export function floating(program: Effect.Effect<number>) {
+  program
+  // @vibelang-diagnostics-next-line EK4801:off
+  program
+  return 1
+}
+
+export function negative(n: number) {
+  if (n < 0) throw new Error("negative")
+  return n
+}
+
+export class Legacy extends Error {}
+
+export function parsed(text: string) {
+  return JSON.parse(text) as number
+}
+
+// @vibelang-diagnostics EK4818:warning
+export function parsedAgain(text: string) {
+  return JSON.parse(text) as number
+}
+
+// @vibelang-diagnostics *:off EK4801:error
+export function discarded(program: Effect.Effect<number>) {
+  program
+  if (Number.isNaN(0)) throw new Error("never")
+  return JSON.stringify(1)
+}

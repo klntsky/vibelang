@@ -1,10 +1,10 @@
 # Fibers
 
-A fiber is a running computation with a result and a lifetime. Effeck uses Effect's lightweight fibers to overlap waiting work, inspect completion, and cancel safely. Fibers provide concurrency on the runtime's scheduler; they do not turn JavaScript computation into parallel CPU execution.
+A fiber is a running computation with a result and a lifetime. VibeLang uses Effect's lightweight fibers to overlap waiting work, inspect completion, and cancel safely. Fibers provide concurrency on the runtime's scheduler; they do not turn JavaScript computation into parallel CPU execution.
 
 ## Forking and awaiting
 
-```effeck
+```vibe
 function buildDashboard() {
   const chart = fork {
     sleep("30 millis")
@@ -18,11 +18,11 @@ function buildDashboard() {
 
 `fork` starts a child fiber and returns its handle, here a `Fiber<string>`, without waiting for its result. `join` waits for the child and returns its value, or propagates its failure. Unlike an ordinary call, the fork lets the parent continue while its child is waiting.
 
-`fork loadChart()` forks one call, and `fork { ... }` forks a block. The call form, `fork(loadChart())`, means the same. `join` takes a fiber, not a call: a call already runs and waits where it stands. `await` in Effeck code means only the await operations below; `await chart` is EK4609, whose quick fix writes `join chart`.
+`fork loadChart()` forks one call, and `fork { ... }` forks a block. The call form, `fork(loadChart())`, means the same. `join` takes a fiber, not a call: a call already runs and waits where it stands. `await` in VibeLang code means only the await operations below; `await chart` is EK4609, whose quick fix writes `join chart`.
 
 ## Awaiting completion as data
 
-```effeck
+```vibe
 function inspectChild() {
   const child = fork { throw "render failed" }
   const exit = Fiber.await(child)
@@ -37,7 +37,7 @@ function inspectChild() {
 
 ## Handling asynchronous interruption
 
-```effeck
+```vibe
 function stopWorker() {
   const worker = fork {
     try {
@@ -58,7 +58,7 @@ When the caller needs to continue during cleanup, fork the interruption, `fork w
 
 ## Protecting work from interruption
 
-```effeck
+```vibe
 function saveReport() {
   uninterruptible {
     logInfo("saving; an interruption waits until the block ends")
@@ -81,7 +81,7 @@ An `uninterruptible` block runs without interruption, as `Effect.uninterruptible
 
 ## Combining results
 
-```effeck
+```vibe
 function title() {
   return "Inventory"
 }
@@ -104,7 +104,7 @@ To wait for fibers you already hold, use `join`: `const [name, count] = join [ti
 
 ## Racing events
 
-```effeck
+```vibe
 function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>) {
   return await.race [
     `job: ${Queue.take(jobs)}`,
@@ -125,7 +125,7 @@ function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>)
 
 ## Running a loop body concurrently
 
-```effeck
+```vibe
 function fetchPage(id: string) {
   sleep("5 millis")
   return `page ${id}`
@@ -143,7 +143,7 @@ function printAll(ids: ReadonlyArray<string>) {
 
 ## Supervising child lifetimes
 
-```effeck
+```vibe
 function request() {
   {
     const progress = fork {
@@ -160,13 +160,13 @@ function request() {
 }
 ```
 
-The Effeck `fork` belongs to its enclosing block. Leaving that block interrupts unfinished children and waits for their cleanup. `Effect.forkChild` remains available when ownership should follow the parent fiber instead of the lexical block.
+The VibeLang `fork` belongs to its enclosing block. Leaving that block interrupts unfinished children and waits for their cleanup. `Effect.forkChild` remains available when ownership should follow the parent fiber instead of the lexical block.
 
 Forked fibers inherit the current services and tracing context. Control-operation handlers belong to one fiber, so handle those operations inside each child that performs them.
 
 ## Selecting scoped or detached lifetimes
 
-```effeck
+```vibe
 function inCallerScope(scope: Scope) {
   const background = forkIn(scope, sleep("1 minute"))
   sleep("20 millis")
@@ -184,7 +184,7 @@ function detachedExample() {
 
 ## Understanding execution scheduling
 
-```effeck
+```vibe
 function waitForReady() {
   const ready = Deferred.make<void>()
   const worker = fork {

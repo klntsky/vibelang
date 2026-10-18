@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "effeck-runtime",
+      "name": "vibelang-runtime",
       "devDependencies": {
         "effect": "4.0.5",
         "typescript": "5.9.3",

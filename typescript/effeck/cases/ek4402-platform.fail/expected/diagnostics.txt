@@ -1,9 +1,0 @@
-main.effeck(14,34): error EK4402
-main.effeck(18,28): error EK4402
-main.effeck(22,28): error EK4402
-main.effeck(26,22): error EK4402
-main.effeck(30,34): error EK4402
-main.effeck(34,56): error EK4402
-main.effeck(38,3): error EK4402
-main.effeck(42,19): error EK4402
-main.effeck(47,14): error EK4402

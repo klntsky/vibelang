@@ -53,19 +53,19 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D20 | A TypeScript function whose R holds a control operation is EK4202 in v0 | Codex review R6 | 9, 16 |
 | D21 | Each `Effect.provide` builds its layers once; provide at `main`; `ManagedRuntime` for several entry points | Fable review, finding 6; conformance test D05 | 4 |
 | D22 | Effect's own packages are trusted, with the functions and values they return | D6; `Option` and `Result` are data in Effect 4 | 10 |
-| D23 | A trusted contract is the `@effeck trusted` JSDoc tag, with `@throws` | TypeScript syntax only; the compiler's metadata channel | 10, 27 |
+| D23 | A trusted contract is the `@vibelang trusted` JSDoc tag, with `@throws` | TypeScript syntax only; the compiler's metadata channel | 10, 27 |
 | D24 | A call runs only `Effect` itself; subtypes are data until called; `new` never runs | `Config`, `Exit`, keys, and errors extend `Effect` | 13 |
 | D25 | `using` adds no masking policy | K15a-K15c | 6, 21 |
 | D26 | Producers: `for...of` by type; a producer is a `Stream` to TypeScript; the adapter runs it on its own fiber behind a zero-capacity handoff | Stream operators pull on other fibers; continuations are fiber-affine; a one-element buffer runs ahead (prototype finding 26) | 8, 26 |
 | D27 | `wire` is an intrinsic with a bounded contract (EK3201-EK3204) | Layer types carry outputs and inputs | 4 |
 | D28 | A `catch` over several expected failures receives the first | K14a | 3, 17 |
 | D29 | P1-P22 are the spec's rules, as revised below | The reviews' verified findings | 29 |
-| D30 | Installation: `effeck` (`effeck`) and `effeck-runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
-| D31 | Builds: `effeck --watch`; `effeck-vite` for Vite | One checker for CLI, editor, and bundler | 28 |
-| D32 | The editor: `effeck --lsp --stdio`; the `effeck.effeck` extension | The fork's binary already serves LSP | 28 |
+| D30 | Installation: `vibelang` (`vibelang`) and `vibelang-runtime`; `effect` 4.0.5 exactly | Mirrors `typescript@7` packaging | 28 |
+| D31 | Builds: `vibelang --watch`; `vibelang-vite` for Vite | One checker for CLI, editor, and bundler | 28 |
+| D32 | The editor: `vibelang --lsp --stdio`; the `vibelang.vibelang` extension | The fork's binary already serves LSP | 28 |
 | D33 | v0 editor features: hover, completions, quick fixes, four refactors | The diagnostics with mechanical fixes | 28 |
-| D34 | Diagnostics: errors, except the policies EK2004 (a warning) and EK4403; `compilerOptions.effeck` | Soundness errors cannot be lowered | 28 |
-| D35 | One owner per diagnostic: `effeck` for types and language, Oxlint for lint | tsgolint embeds TypeScript's checker | 28 |
+| D34 | Diagnostics: errors, except the policies EK2004 (a warning) and EK4403; `compilerOptions.vibelang` | Soundness errors cannot be lowered | 28 |
+| D35 | One owner per diagnostic: `vibelang` for types and language, Oxlint for lint | tsgolint embeds TypeScript's checker | 28 |
 | D36 | Debugging through composed source maps; spans for logical stacks | The frame invariant keeps callers off the JavaScript stack | 28 |
 | D37 | `catch` never sees an unlisted exception; a dead `catch` is the warning EK2004 | Coverage audit X2; prototype finding 16 | 3, 10 |
 | D38 | Runners only where no fiber runs the code; EK1005 elsewhere | Coverage audit X4 | 13 |
@@ -73,7 +73,7 @@ D57 supplies the partial-annotation spelling required by decision 2: explicit `i
 | D40 | Service statics: `layer`, `make`; `static readonly default` makes a `Context.Reference` | Coverage audit X12 | 4 |
 | D41 | `S.member(…)` always adds `S` to R; service members win over the key's members; EK3006 for a static that shares a member's name | Coverage audit X13; prototype findings 3, 4 | 4, 13 |
 | D42 | Workflow bodies are ordinary programs: interrupted on durable suspension, rerun on replay | Coverage audit X17; `workflow/Workflow.ts:695-780, 1031-1036` | 23 |
-| D43 | `Effect.callback` is an explicit boundary; its `resume` takes an Effect, and `.effeck` passes an `Exit` | Coverage audit X11; `Effect.ts` | 6, 10 |
+| D43 | `Effect.callback` is an explicit boundary; its `resume` takes an Effect, and `.vibe` passes an `Exit` | Coverage audit X11; `Effect.ts` | 6, 10 |
 | D44 | "The expected type" is the declared, uninstantiated parameter type of the resolved overload | Prototype finding 1: the contextual type is inferred from the lambda itself | 13 |
 | D45 | A service compiles to an interface plus a `Context.Key` class, with an optional brand | Prototype finding 19: Effect's class form breaks `implements` (TS2720) | 4, 27 |
 | D46 | `finally` lowers to `Effect.onExit`; `throw` to `return yield* Effect.fail(e)`; E is the type of causes made only of expected failures | Prototype findings 11, 12, 14 | 14, 17, 26 |
@@ -100,10 +100,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | --- | --- | --- | --- |
 | D61 | **Controversial.** An EK diagnostic is a TypeScript diagnostic with source `EK`, on upstream's content-mapper path | One diagnostic path for CLI and LSP | 28 |
 | D62 | The prelude is the runtime's exports | Lazy imports preserve files that use no prelude names | 1, 27 |
-| D63 | A `.effeck` file imports `./x.effeck` or `./x.ts` by source name with no flag (no TS5097); specifiers become `.js` in JavaScript and `.d.ts` output | Source names for checking, output names for JavaScript | 10, 27, 28 |
+| D63 | A `.vibe` file imports `./x.vibe` or `./x.ts` by source name with no flag (no TS5097); specifiers become `.js` in JavaScript and `.d.ts` output | Source names for checking, output names for JavaScript | 10, 27, 28 |
 | D64 | A failing compiler case passes when its exact set of error codes matches (TypeScript codes count, warnings do not); a runnable case compares only its `@@result` line, so programs may log | Exact codes detect regressions while result markers allow logging | 10, 27, 28 |
-| D65 | A call from a `.effeck` file to a plain function runs inline as `f$direct(a)` everywhere, including a module's top level, because it computes a value and runs no program | Plain computation runs no program | 13, 15 |
-| D66 | An overload candidate that asks for a plain function rejects an `.effeck` function value that can pause, as it rejects such a lambda (D56 extended to function values); a TypeScript function that returns an Effect passes as data; when every candidate rejects, EK4301 reports against the first candidate's form | Named values and lambdas need the same callback safety | 13, 16 |
+| D65 | A call from a `.vibe` file to a plain function runs inline as `f$direct(a)` everywhere, including a module's top level, because it computes a value and runs no program | Plain computation runs no program | 13, 15 |
+| D66 | An overload candidate that asks for a plain function rejects a `.vibe` function value that can pause, as it rejects such a lambda (D56 extended to function values); a TypeScript function that returns an Effect passes as data; when every candidate rejects, EK4301 reports against the first candidate's form | Named values and lambdas need the same callback safety | 13, 16 |
 | D67 | **Controversial.** A function with a plain return annotation keeps that type and compiles to one plain function; only unannotated or Effect-contract functions get the `$direct` plus `Effect.sync` pair, whose TypeScript type is `(…) => Effect<A, never, never>` (chapter 15's one calling convention) | Plain annotations support JavaScript protocols | 10, 14, 15 |
 | D68 | **Controversial.** D12 (a callback parameter without a contract accepts any contract) applies to declarations, methods, and function expressions that are not call arguments; the added type parameters are named E and R (then E2, R2) and appear in `.d.ts` output | Missing callback channels must not mean never | 16, 27 |
 | D69 | A program lambda lowers to `Effect.gen(function* …)`, a converted function value to `Effect.suspend(v)`, and an array or record of programs built at run time to `$programs` | Conversions must preserve cold execution | 5, 13, 27 |
@@ -112,19 +112,19 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D72 | EK2102 applies only to functions that run Effects; a pure recursive function keeps TypeScript's TS7023, which a plain annotation fixes (consistent with D67) | Pure recursion needs no Effect channel analysis | 14, 15 |
 | D73 | A call to a function with a complete written contract adds the contract's E and R, not what its body does | Callers rely on the public contract | 14 |
 | D74 | Methods are exempt from EK2003 for a plain annotation, because a method implementing a plain-function member is declared that way (D55) | Plain protocol members need plain annotations | 14, 15 |
-| D75 | The `tsc/cmd/tsc` binary identifies as Effeck; there is no separate cmd/effeck | One upstream entry-point seam | 27, 28 |
-| D76 | **Controversial.** The editor serves `.ts` only when the built-in TypeScript extension is disabled, or with Cursor's useTsgo | Disabling validation also hides Effeck diagnostics; amends D32 | 28 |
+| D75 | The `tsc/cmd/tsc` binary identifies as VibeLang; there is no separate cmd/vibelang | One upstream entry-point seam | 27, 28 |
+| D76 | **Controversial.** The editor serves `.ts` only when the built-in TypeScript extension is disabled, or with Cursor's useTsgo | Disabling validation also hides VibeLang diagnostics; amends D32 | 28 |
 | D77 | **Controversial.** Hover shows a running call's success value and a plain helper's direct and TypeScript-facing signatures; `.ts` hover stays unchanged | Explain both call semantics and helper ABI | 15, 28 |
 | D78 | Prelude names and service members complete in scope; local declarations shadow prelude names | Discoverability without explicit imports | 1, 4, 28 |
-| D79 | Reuse TypeScript TextMate grammar; resolve effeck from setting, project, then PATH; require workspace trust | Keep theme support and project compiler ownership | 28 |
+| D79 | Reuse TypeScript TextMate grammar; resolve vibelang from setting, project, then PATH; require workspace trust | Keep theme support and project compiler ownership | 28 |
 | D80 | The runtime checks Effect's version by importing effect's package metadata with a static JSON import attribute; works in Node, Bun, and bundlers | JSON attributes work in Node, Bun, and bundlers | 27, 28 |
 | D81 | The runtime exports `suspend`, `handoff`, `Resumer`, and `HandoffProtocolViolation` for TypeScript callback adapters (D43) | Resource adapters need cancellation and lost-race reporting | 6, 21 |
 | D82 | The extraction kept the prototype helpers' behavior and continuation parameter order; discrepancies with the spec are documented in packages/runtime/README.md, not fixed silently | Extraction must preserve compiler compatibility | 26, 27 |
 | D83 | Setup writes absolute `file:` dependencies on the repository's packages into new projects instead of `bun link`; nothing registers globally and nothing is published, so a project keeps working only while the checkout stays where it is | Local setup needs no registration or publication | 28 |
 | D84-D89 | No decisions reported in the build inbox | Leave these numbers unassigned | |
-| D90 | The member-call rule (D41) is structural: it applies to any Context key whose service type declares the member, which covers `.effeck` services, TypeScript `Context.Service` classes, and Effect's `FileSystem` and `Path` | Context keys and Effeck services share call behavior | 4, 13 |
+| D90 | The member-call rule (D41) is structural: it applies to any Context key whose service type declares the member, which covers `.vibe` services, TypeScript `Context.Service` classes, and Effect's `FileSystem` and `Path` | Context keys and VibeLang services share call behavior | 4, 13 |
 | D91 | **Controversial.** A control-operation call lowers like a service call, `yield* (yield* Approval).approve(x)`, as the prototype did (amending the original Chapter 13 lowering); `handle` provides an implementation that performs the kernel operations | Preserves the prototype implementation pending F7 | 9, 13 |
-| D92 | A method in a `.effeck` file becomes an Effect when its body runs or looks up an Effect, or when its expected type returns one; it stays a method whose body is `return Effect.gen({ self: this }, function* () { … })` | Generators must retain the method receiver | 15, 27 |
+| D92 | A method in a `.vibe` file becomes an Effect when its body runs or looks up an Effect, or when its expected type returns one; it stays a method whose body is `return Effect.gen({ self: this }, function* () { … })` | Generators must retain the method receiver | 15, 27 |
 | D93 | **Controversial.** Service keys use package, module, and name; defaults require `static readonly`; EK2101 requires all three Effect channels; wire emits consumers first | Stable service identity and bounded provider analysis | 4, 14 |
 | D94 | Effect acquisitions receive the block Scope; other initializers need Disposable, null, or undefined; Disposable results also run Symbol.dispose | Effect acquisitions and ordinary Disposables have different ownership | 6 |
 | D95 | In an Effect function, `for (using x of values)` makes each iteration's body a Scope region; the value is taken first, and `using` or `fork` inside the body join that region | Cleanup belongs to the iteration that owns it | 6, 7 |
@@ -137,8 +137,8 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D102 | **Controversial.** Original platform-import restriction; import half superseded by D108; globals and allowed web standards retained | Platform work needs typed, replaceable Effect services | 10, 11 |
 | D103 | EK1001 covers any top-level call that would run a program, including service member calls and Effect-value calls, reported once at the outermost call | One outer call identifies attempted program execution | 13, 28 |
 | D104 | Compiled generators are named after their function, variable, or property (an object method `{ *name() {} }.name` when the body refers to that name); `tracing: "exported"` spans exported functions, `"all"` every named lowered function plus methods through `Effect.withSpan("Class.method")`; anonymous lambdas get no span | Names and spans identify source failures | 19, 26, 28 |
-| D105 | Vite compiles a project through one shared effeck subprocess per source revision, with cached output; amends D31 | Whole-project checking keeps caller contracts consistent | 28 |
-| D106 | After an edit the plugin invalidates every loaded `.effeck` module and its transitive importers, because callers compile differently when a contract changes | Contract changes can change caller lowering | 28 |
+| D105 | Vite compiles a project through one shared vibelang subprocess per source revision, with cached output; amends D31 | Whole-project checking keeps caller contracts consistent | 28 |
+| D106 | After an edit the plugin invalidates every loaded `.vibe` module and its transitive importers, because callers compile differently when a contract changes | Contract changes can change caller lowering | 28 |
 | D107 | **Controversial.** Sources must sit under Vite's root; the plugin overrides emit paths and source roots there so output lookup and source maps are predictable | One source root makes output lookup predictable | 28 |
 | D108 | EK4402 reports platform execution, including calls and property reads; imports and passing values are allowed. Supersedes the import half of D102 | Effect adapters must accept host function values | 10, 11, 28 |
 | D109 | An expected callback or program asks for the Effect form only when its type is effect's own `Effect` interface, or a type parameter constrained to it; subtypes such as `Config` are data (D24), so `Config.orElse`'s fallback stays plain | D24 keeps structured subtypes as data | 13, 16 |
@@ -150,7 +150,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D121 | **Controversial.** Effect trust follows re-exports and returned values, including assertions from @effect/vitest | Tests need usable assertions; direct Vitest imports and local TypeScript retain boundary checks | 10, 16 |
 | D122 | Every runner checks all services it does not supply; it.effect supplies Scope and its layer services | Diagnose missing services before execution | 4, 28 |
 | D123 | Declaration prelude imports use free aliases when names are already bound | Avoid duplicate identifiers in declaration consumers | 27 |
-| D124 | Setup relinks effeck launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
+| D124 | Setup relinks vibelang launchers pointing into another checkout or at missing files | Keep the launcher usable after workspace changes | 28 |
 | D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
 | D126 | `error NotFound { id: string }` declares a tagged error class with readonly fields | Fewer tokens for the most common declaration | 3 |
 | D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
@@ -161,16 +161,16 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias, and the two cannot drift apart | 11 |
 | D134 | **Controversial.** Members of interfaces and object types are readonly unless written `mutable` | Immutable data is the common case and no longer repeats `readonly` | 10 |
-| D135 | A module that exports a parameterless `main` runs it with `NodeRuntime.runMain`, or the runtime's copy without `@effect/platform-node`, when the host starts the module | No `run.effeck` file or runner line per program; importing the module still runs nothing | 1 |
+| D135 | A module that exports a parameterless `main` runs it with `NodeRuntime.runMain`, or the runtime's copy without `@effect/platform-node`, when the host starts the module | No `run.vibe` file or runner line per program; importing the module still runs nothing | 1 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
 | D148 | **Controversial.** (Amended by D229-D232.) `sync`, `try`, and `callback` are boundary hatches whose first arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
-| D149 | `try(…)` parses as a call in `.effeck`; Effect's `{ try, catch }` object is EK4404 | A try statement needs a block, so `try (` is unambiguous | 10, 28 |
+| D149 | `try(…)` parses as a call in `.vibe`; Effect's `{ try, catch }` object is EK4404 | A try statement needs a block, so `try (` is unambiguous | 10, 28 |
 | D150 | `runPromise`, `runFork`, `runSync`, `runCallback` are in the prelude, for TypeScript and hatch bodies | The way back in; EK1005 still applies where a fiber runs | 10, 13 |
 | D151 | `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and seven more Effect functions need no prefix | They were 329 of the 538 `Effect.` member uses in the docs | 1, 27 |
 | D152 | **Controversial.** A value of an Effect data type takes its module's data-first functions as methods: `stream.filter(p).take(3)` is `Stream.take(Stream.filter(stream, p), 3)`; own members win | Removes the module prefix and nesting from data-type code; the emitted calls tree-shake as Effect's do | 5, 13 |
 | D153 | A data type's method exists only in a call; any other access is EK4501 | No function value exists to bind | 13, 28 |
-| D154 | **Controversial.** The Hack pipe operator in `.effeck` files: `x \|> f(%, a)`, topic `%`, left-associative, looser than every binary operator; supersedes D8 | Fewer tokens and no nesting for operator chains; any argument position | 5, 27 |
+| D154 | **Controversial.** The Hack pipe operator in `.vibe` files: `x \|> f(%, a)`, topic `%`, left-associative, looser than every binary operator; supersedes D8 | Fewer tokens and no nesting for operator chains; any argument position | 5, 27 |
 | D155 | **Controversial.** A topic follows the by-name rule: where `%` stands for a program, the left side is passed by name; elsewhere it runs once, before the body; both in one pipe is EK1008 | `fetchUser(id) \|> retry(%, policy)` must retry the call, as `retry(fetchUser(id), policy)` does | 5, 13 |
 | D156 | A pipe's body must use `%` (EK1006); `%` outside a pipe's body is EK1007; after an operand `%` is still the remainder | The proposal's early errors; `%` keeps its JavaScript meaning where it already has one | 5, 28 |
 | D166 | `fork` is a keyword: `fork x` is `fork(x)` and `fork { ... }` forks a block | Concurrency reads as one word, with no lambda |
@@ -179,7 +179,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D169 | `for concurrent(n)` runs the body per item in its own fiber; `continue` ends an item; `break` and `return` are EK4605 and EK4606 | `forEach` with a concurrency option, as a loop |
 | D170 | `detach(program)` and `forkIn(scope, program)` are fork's variants | Longer lifetimes without Effect's names |
 | D171 | `await`'s types accept one level of arrays and objects; D228 carries the rule to `join` | Deeper recursive types exceed TypeScript's limits |
-| D172 | `provide AppLive { ... }` replaces `with AppLive { ... }`; `with` still compiles with the warning EK1009 and a quick fix | Effeck keywords reuse Effect's own names, so `provide` reads as `Effect.provide` | 4 |
+| D172 | `provide AppLive { ... }` replaces `with AppLive { ... }`; `with` still compiles with the warning EK1009 and a quick fix | VibeLang keywords reuse Effect's own names, so `provide` reads as `Effect.provide` | 4 |
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
 | D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
@@ -212,24 +212,24 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D222 | A layer block's returned members are typed by the service; a mismatch is TS2769 at the call, and failures, requirements, and `using` setup flow into the layer | Contextual typing through `Layer.effect` | 4 |
 | D223 | `service Users { ... }` and `control Approval { ... }` are the spelling again; `service class` and `control class` warn (EK2120), and the quick fix removes `class` | Will: "class is redundant and we don't use class in other stuff in the api" | 4, 9 |
 | D225 | `join` is a keyword: `join f`, `join [a, b]`, `join { a, b }` join fibers (Fiber.join), failing fast; `join(` stays a call; EK4611, EK4612 | `await` on fibers confused readers about promises; Effect's own word is join |
-| D226 | **Controversial.** A plain `await` in Effeck code is an error: EK4609 (fix: `join`), EK4610 (fix: `d.await()`), EK4601-EK4604; the await operations stay | In JavaScript `await` means a promise; keep that meaning |
+| D226 | **Controversial.** A plain `await` in VibeLang code is an error: EK4609 (fix: `join`), EK4610 (fix: `d.await()`), EK4601-EK4604; the await operations stay | In JavaScript `await` means a promise; keep that meaning |
 | D227 | A Deferred waits with `d.await()` | Method syntax (D152) already names Deferred.await |
 | D228 | `join`'s types reach one level of arrays and objects, as D171's did | Deeper recursive types exceed TypeScript's limits |
-| D229 | **Controversial.** A hatch's TypeScript is self-contained: it reads no binding of the `.effeck` file except error declarations (EK4405, with a quick fix) | Will: TypeScript in a hatch uses no values or closures from outside; may change later | 10, 28 |
+| D229 | **Controversial.** A hatch's TypeScript is self-contained: it reads no binding of the `.vibe` file except error declarations (EK4405, with a quick fix) | Will: TypeScript in a hatch uses no values or closures from outside; may change later | 10, 28 |
 | D230 | Inputs, the arguments after a hatch's function, fill its first parameters, before the signal or `resume`; `Resume<A, E>` annotates `resume` | `bind` lowers it, and parameters line up with the arguments as written | 10 |
 | D231 | `try`'s error mapper stays the second argument, and inputs follow it | D148's `try(f, mapper)` keeps its meaning | 10 |
-| D232 | Only a hatch's first argument is TypeScript; inputs and the mapper are Effeck; the function decides sync or async | Inputs run before the hatch, as Effeck calls do | 10 |
+| D232 | Only a hatch's first argument is TypeScript; inputs and the mapper are VibeLang; the function decides sync or async | Inputs run before the hatch, as VibeLang calls do | 10 |
 | D236 | `catch` is also an expression: `x catch fallback` is Effect.orElseSucceed and `x catch (e) => …` is Effect.catch; the left side runs inside the catch, and defects and interrupts pass through | Zig's inline catch; one expression replaces a try statement whose blocks only return | 3 |
 | D237 | `catch` binds looser than `??` and `\|\|` and tighter than `? :`, assignment, and `\|>`, associating to the left; a handler's body extends as an arrow function's does | `a() catch b() catch c` chains | 3 |
 | D238 | A catch expression's value is `A \| B` and its E is what the fallback or handler lets escape; a handler's exhaustive `match` removes the failures; a left side that cannot fail is EK2004 | The statement's checks, applied to the expression | 3 |
 | D239 | A catch expression in a hatch body is EK2114 | A hatch body is plain TypeScript | 28 |
 | D240 | Every rule and feature of `@effect/language-service` 0.87.5 is answered: ruled out by syntax, covered by an EK code, Effect 3 only, or implemented as EK4801-EK4825, a quick fix, a refactor, a hover, or a completion | Will: support every rule, preferring syntax over lint | 28 |
-| D241 | EK4801-EK4825 are lint: defaults of error, warning, or off; all but EK4813 adjustable in `compilerOptions.effeck` and by `@effeck-diagnostics` comments | They mark style and likely bugs, not code without meaning | 28 |
-| D242 | **Controversial.** EK4801, EK4819, and EK4820 also report in `.ts` files outside `node_modules` | Effeck replaces the server that would run `@effect/tsgo` | 10, 28 |
+| D241 | EK4801-EK4825 are lint: defaults of error, warning, or off; all but EK4813 adjustable in `compilerOptions.vibelang` and by `@vibelang-diagnostics` comments | They mark style and likely bugs, not code without meaning | 28 |
+| D242 | **Controversial.** EK4801, EK4819, and EK4820 also report in `.ts` files outside `node_modules` | VibeLang replaces the server that would run `@effect/tsgo` | 10, 28 |
 | D243 | EK4813 replaces TS2339 for an Effect 3 name of the Effect module and writes the Effect 4 name; `.ts` files get the quick fix on TS2339 | A type error with a known repair | 28 |
-| D244 | **Controversial.** Effeck warns where Effect's defaults are off: `extendsNativeError`, `newPromise`, `unsafeEffectTypeAssertion` | Failures are `error` declarations, promises cannot be awaited, contracts check types | 28 |
-| D245 | Refactors are `refactor.rewrite` code actions: write or remove a contract, interface to `schema`, async to an Effeck function (with an `error` per `await`), calls to a pipe and back, and the two pipe styles | Effect's 15 refactors, for one function form | 28 |
-| D246 | A layer's hover lists what it provides, needs, and fails with; `wire`'s hover its build order; `Duration.Input` strings, a brand's name, and `@effeck-diagnostics` codes complete | Effect's hovers and completions that still apply | 28 |
+| D244 | **Controversial.** VibeLang warns where Effect's defaults are off: `extendsNativeError`, `newPromise`, `unsafeEffectTypeAssertion` | Failures are `error` declarations, promises cannot be awaited, contracts check types | 28 |
+| D245 | Refactors are `refactor.rewrite` code actions: write or remove a contract, interface to `schema`, async to a VibeLang function (with an `error` per `await`), calls to a pipe and back, and the two pipe styles | Effect's 15 refactors, for one function form | 28 |
+| D246 | A layer's hover lists what it provides, needs, and fails with; `wire`'s hover its build order; `Duration.Input` strings, a brand's name, and `@vibelang-diagnostics` codes complete | Effect's hovers and completions that still apply | 28 |
 
 #### Rules of the runtime and compiler
 
@@ -279,7 +279,7 @@ Proposed in the first draft as P1-P22 and adopted by D29. A row marked **revised
 | --- | --- | --- |
 | O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
 | O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
-| O9 | D58, superseded by D125 (**controversial**) | Effeck: `effeck`, `.effeck`, `EK` codes, and unscoped npm packages |
+| O9 | D58, superseded by D125, then D255 (**controversial**) | VibeLang: `vibelang`, `.vibe`, `EK` codes, and unscoped npm packages |
 | Remote and repository layout | D60 | The one repository is private at `github.com/roninjin10/effectscript`, with the compiler in `typescript/` |
 
 No language or repository decision waits on the owner. D59's filing boundary remains: these drafts are ready to file, and none is filed without his go-ahead. The build lanes land locally; the orchestrator handles any push.

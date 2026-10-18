@@ -18,7 +18,7 @@ later releases or the current state of upstream issues.
 | [Explain repeated interruption reasons](effect-interrupt-reasons.md) | Effect runtime | Tracing adds several Interrupt reasons for one interruptor; preserve trace information without misleading counts. | drafted, not filed |
 
 Each draft contains a minimal reproduction, the expected behavior or proposed
-contract, the Effeck impact, and a suggested fix. Runtime observations
+contract, the VibeLang impact, and a suggested fix. Runtime observations
 come from the [Effect research](../research/effect4-runtime.md),
 [kernel changes](../../experiments/KERNEL-CHANGES.md),
 [prototype findings](../../prototype/esc/FINDINGS.md), and the tests linked in
@@ -26,7 +26,7 @@ each draft. The supported-prompt and segmented-stack entries are API and
 performance proposals, not claims that Effect violates a public contract.
 
 The review's abandonment, tail-resume, and transferred-owner defects were in
-the Effeck kernel and are fixed by K11-K13. They are not Effect bugs.
+the VibeLang kernel and are fixed by K11-K13. They are not Effect bugs.
 Masked acquisition is an existing policy with an `interruptible` option
 (K15). Service class identity, Layer provider precedence, and hidden forks
 also have local language rules; these drafts do not request upstream semantic

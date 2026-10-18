@@ -1,10 +1,10 @@
 # Schema Transformations
 
-Transformations work in Effeck as in Effect: a codec validates one representation, converts it, and validates the result. Use `decodeTo` to connect schemas, then supply pure conversions or effectful getters as needed. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Transformations work in VibeLang as in Effect: a codec validates one representation, converts it, and validates the result. Use `decodeTo` to connect schemas, then supply pure conversions or effectful getters as needed. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Defining reversible infallible conversions
 
-```effeck
+```vibe
 const Availability = Schema.Literals(["ready", "held"]).pipe(
   Schema.decodeTo(Schema.Boolean, SchemaTransformation.transform({
     decode: (status) => status === "ready",
@@ -21,7 +21,7 @@ function readAvailability(input: unknown) {
 
 ## Understanding transformation inputs and outputs
 
-```effeck
+```vibe
 const NumericAvailability = Schema.FiniteFromString.pipe(
   Schema.decodeTo(Availability, SchemaTransformation.transform({
     decode: (quantity) => quantity > 0 ? "ready" : "held",
@@ -40,7 +40,7 @@ The middle functions above handle a number and a status string, even though the 
 
 ## Defining fallible conversions
 
-```effeck
+```vibe
 const DeliveryMode = Schema.String.pipe(
   Schema.decodeTo(Schema.Literals(["road", "rail"]), {
     decode: SchemaGetter.transformEffect<"road" | "rail", string>((text) => {
@@ -53,11 +53,11 @@ const DeliveryMode = Schema.String.pipe(
 )
 ```
 
-`transformEffect` receives the converted input and active parse options. Its callback returns a value directly in Effeck and throws a `SchemaIssue.Issue` for an expected conversion failure. The outer Schema parser wraps issues in `SchemaError`. A domain error from a service must be translated to an issue before it escapes the getter.
+`transformEffect` receives the converted input and active parse options. Its callback returns a value directly in VibeLang and throws a `SchemaIssue.Issue` for an expected conversion failure. The outer Schema parser wraps issues in `SchemaError`. A domain error from a service must be translated to an issue before it escapes the getter.
 
 ## Running asynchronous conversions with dependencies
 
-```effeck
+```vibe
 error UnknownRoute {
   code: string
 }
@@ -98,7 +98,7 @@ The getter can pause while its service runs. Decoding requires `Routes`; encodin
 
 ## Forbidding an encoding direction
 
-```effeck
+```vibe
 const Initial = Schema.NonEmptyString.pipe(
   Schema.decodeTo(Schema.String, {
     decode: SchemaGetter.transform((name) => name[0]),
@@ -115,7 +115,7 @@ A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue
 
 ## Composing transformations and effectful checks
 
-```effeck
+```vibe
 const SemicolonNumbers = Schema.String.pipe(
   Schema.decodeTo(Schema.Array(Schema.String), SchemaTransformation.transform({
     decode: (text): ReadonlyArray<string>!! => text.split(";"),
@@ -145,7 +145,7 @@ When converting a collection whose elements have already been decoded, use `Sche
 
 ## Converting string case, JSON, and binary encodings
 
-```effeck
+```vibe
 const LowerLabel = Schema.String.pipe(
   Schema.decodeTo(
     Schema.String.check(Schema.isLowercased()),
@@ -170,7 +170,7 @@ function decodeTextFormats() {
 
 ## Parsing numeric, date, and decimal values
 
-```effeck
+```vibe
 const Manifest = Schema.Struct({
   units: Schema.FiniteFromString,
   sequence: Schema.BigIntFromString,
@@ -187,6 +187,6 @@ function readManifest(input: unknown) {
 
 ## Coming from Effect
 
-Inside `SchemaGetter.transformEffect`, write ordinary statements and `throw` schema issues. Effeck turns the callback into the Effect expected by the getter, including its directional service requirements.
+Inside `SchemaGetter.transformEffect`, write ordinary statements and `throw` schema issues. VibeLang turns the callback into the Effect expected by the getter, including its directional service requirements.
 
 [Upstream page](https://effect.website/docs/v4/schema/transformations)

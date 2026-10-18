@@ -1,8 +1,8 @@
 import { Cause, Effect, Exit } from "effect"
 
 // The boundary hatches (D148): `sync`, `try`, and `callback` run plain
-// TypeScript inside Effeck. In a .effeck file a hatch's first argument is not
-// Effeck: calls do not run, `throw`, `async`, and `await` keep their
+// TypeScript inside VibeLang. In a .vibe file a hatch's first argument is not
+// VibeLang: calls do not run, `throw`, `async`, and `await` keep their
 // JavaScript meaning, and platform APIs are allowed. That TypeScript is
 // self-contained (D229): values reach it as inputs, the arguments after the
 // function, which fill its first parameters (D230); an async function then
@@ -79,7 +79,7 @@ export function attempt(evaluate: unknown, ...rest: Array<unknown>): Effect.Effe
 export { attempt as try }
 
 /**
- * The `resume` a `callback` hatch receives. A .effeck file names it without an
+ * The `resume` a `callback` hatch receives. A .vibe file names it without an
  * import, to annotate `resume` where inputs keep callback's type arguments
  * from being written: `callback((source, resume: Resume<number, Error>) => …, source)`.
  */

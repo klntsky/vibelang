@@ -1,3 +1,0 @@
-main.effeck(4,9): error EK2109
-main.effeck(6,3): error EK2109
-main.effeck(8,10): error EK2109

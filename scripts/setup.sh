@@ -1,5 +1,5 @@
 #!/bin/sh
-# Local, unpublished packages. BUN_CREATE_DIR and EFFECK_BIN_DIR let tests
+# Local, unpublished packages. BUN_CREATE_DIR and VIBELANG_BIN_DIR let tests
 # isolate template and launcher installation without changing HOME.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -7,7 +7,7 @@ for tool in go bun node; do
   command -v "$tool" >/dev/null 2>&1 || { echo "setup: install $tool and rerun sh scripts/setup.sh" >&2; exit 1; }
 done
 echo "setup: Node $(node --version), Bun $(bun --version), $(go version)"
-sh "$root/scripts/build-effeck.sh"
+sh "$root/scripts/build-vibelang.sh"
 
 if [ -f "$root/packages/runtime/package.json" ]; then
   echo "setup: install runtime dependencies"
@@ -22,26 +22,26 @@ if [ -f "$root/packages/runtime/package.json" ]; then
   # files into the checkout, where Node resolves the runtime's own effect, and
   # two copies of effect let a Scope miss the fibers it must stop.
   echo "setup: pack runtime"
-  (cd "$root/packages/runtime" && bun pm pack --quiet --filename "$root/packages/runtime/effeck-runtime.tgz" >/dev/null)
+  (cd "$root/packages/runtime" && bun pm pack --quiet --filename "$root/packages/runtime/vibelang-runtime.tgz" >/dev/null)
 else
   echo "setup: WARNING: packages/runtime is absent. The compiler is ready; projects need the runtime lane before they can install." >&2
 fi
 
 node "$root/scripts/install-template.mjs"
 
-bin_dir=${EFFECK_BIN_DIR:-$HOME/.local/bin}
+bin_dir=${VIBELANG_BIN_DIR:-$HOME/.local/bin}
 case ":$PATH:" in
   *":$bin_dir:"*)
     mkdir -p "$bin_dir"
-    link="$bin_dir/effeck"
-    launcher="$root/packages/compiler/bin/effeck"
+    link="$bin_dir/vibelang"
+    launcher="$root/packages/compiler/bin/vibelang"
     if [ -L "$link" ]; then
       # A link to a moved or deleted checkout, or to another checkout's
       # launcher, is one an earlier setup made: point it here.
       previous=$(readlink "$link")
       case "$previous" in
         "$launcher") ;;
-        */packages/compiler/bin/effeck) ln -sfn "$launcher" "$link"; echo "setup: linked $link (it pointed to $previous)" ;;
+        */packages/compiler/bin/vibelang) ln -sfn "$launcher" "$link"; echo "setup: linked $link (it pointed to $previous)" ;;
         *)
           if [ -e "$link" ]; then
             echo "setup: preserving existing $link; use the project's bun run build"
@@ -59,7 +59,7 @@ case ":$PATH:" in
     fi
     ;;
   *)
-    echo "setup: $bin_dir is not on PATH. Project scripts find effeck after bun install."
+    echo "setup: $bin_dir is not on PATH. Project scripts find vibelang after bun install."
     echo "setup: for a global command, add $bin_dir to PATH and rerun setup."
     ;;
 esac
@@ -79,5 +79,5 @@ else
 fi
 
 echo "setup: local file dependencies point to $root; keep this checkout available."
-echo "setup: in projects created before this run, run bun update effeck-runtime to install the new runtime."
-printf '\nNext commands:\n  bun create effeck my-app --no-git\n  cd my-app\n  bun run start\n'
+echo "setup: in projects created before this run, run bun update vibelang-runtime to install the new runtime."
+printf '\nNext commands:\n  bun create vibelang my-app --no-git\n  cd my-app\n  bun run start\n'

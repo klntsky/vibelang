@@ -4,7 +4,7 @@ Stream recovery replaces a failed source with another source. Use stream operato
 
 ## Recovering typed failures and defects
 
-```effeck
+```vibe
 error Disconnected
 
 const primary = Stream.make("live-a", "live-b").concat(Stream.fail(new Disconnected()))
@@ -22,15 +22,15 @@ const tagged = Stream.catch(
 
 `Stream.catch` receives a typed failure and returns the replacement Stream. Recovery abandons the rest of the failed source; it does not resume after its failing step. Tagging each source with `Result` is useful when downstream code needs to distinguish live data from fallback data.
 
-```effeck
+```vibe
 const boundary = Stream.die(new Error("decoder invariant failed")).catchDefect(() => Stream.succeed("unreadable"))
 ```
 
-`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, including failure, defect, and interruption reasons; use it only when that full information is needed. Ordinary Effeck `catch` handles typed failures only, and propagates a mixed cause containing defects or interruption.
+`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, including failure, defect, and interruption reasons; use it only when that full information is needed. Ordinary VibeLang `catch` handles typed failures only, and propagates a mixed cause containing defects or interruption.
 
 ## Selective recovery
 
-```effeck
+```vibe
 error NotReady
 error AccessDenied
 
@@ -47,7 +47,7 @@ const defectOnly = Stream.die("corrupt frame").catchCauseFilter(Cause.findDie, (
 
 ## Cleanup after failure
 
-```effeck
+```vibe
 function consumeChecked() {
   const source = Stream.succeed("accepted")
     .concat(Stream.fail("read failed"))
@@ -64,7 +64,7 @@ function consumeChecked() {
 
 ## Retrying a source
 
-```effeck
+```vibe
 error Offline
 
 service Sensor {
@@ -78,7 +78,7 @@ const readings = Stream.fromEffect(() => Sensor.read()).retry(Schedule.recurs(3)
 
 ## Narrowing error types
 
-```effeck
+```vibe
 function keepSyntaxErrors(source: Stream.Stream<string, Error>) {
   return Stream.catch(source, (error) => {
     if (error instanceof SyntaxError) return Stream.fail(error)
@@ -92,7 +92,7 @@ Refail the errors callers are expected to handle and turn impossible failures in
 
 ## Timeout failures and replacement sources
 
-```effeck
+```vibe
 error Idle
 
 const endWhenIdle = Stream.never.timeout("3 seconds")

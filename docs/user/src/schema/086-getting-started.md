@@ -1,10 +1,10 @@
 # Getting Started
 
-`Schema` uses the same descriptions and interpreters in Effeck as in Effect. Start with a struct, extract its types, then choose a parser whose failure behavior fits the caller. The [trusted call rules](085-introduction.md#configuring-compiler-prerequisites) apply to the plain Schema builders below.
+`Schema` uses the same descriptions and interpreters in VibeLang as in Effect. Start with a struct, extract its types, then choose a parser whose failure behavior fits the caller. The [trusted call rules](085-introduction.md#configuring-compiler-prerequisites) apply to the plain Schema builders below.
 
 ## Declaring schemas
 
-```effeck
+```vibe
 const Shipment = Schema.Struct({
   tracking: Schema.NonEmptyString,
   pieces: Schema.FiniteFromString
@@ -19,7 +19,7 @@ Each field describes its own representation and checks. The struct combines them
 
 ## Extracting decoded, encoded, and service types
 
-```effeck
+```vibe
 type Shipment = typeof Shipment.Type
 type ShipmentWire = typeof Shipment.Encoded
 type ReadServices = typeof Shipment.DecodingServices
@@ -35,7 +35,7 @@ The decoded type has a numeric `pieces`; the encoded type has a string. Both ser
 
 ## Understanding default immutability
 
-```effeck
+```vibe
 schema Batch {
   shipments: ReadonlyArray<Shipment>
 }
@@ -46,7 +46,7 @@ schema Batch {
 
 ## Choosing synchronous, result, or effect decoding
 
-```effeck
+```vibe
 function decodeWithEffects(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input)
 }
@@ -66,13 +66,13 @@ error InvalidShipment {
 }
 ```
 
-Prefer `decodeUnknownEffect` inside Effeck: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and requires a synchronous, service-free decoding path. Unexpected exceptions from synchronous callbacks are defects; ordinary `catch` does not handle them.
+Prefer `decodeUnknownEffect` inside VibeLang: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and requires a synchronous, service-free decoding path. Unexpected exceptions from synchronous callbacks are defects; ordinary `catch` does not handle them.
 
 `decodeUnknownSync` throws on invalid input. A direct call makes that exception a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A `catch` around a direct call alone cannot run and produces warning EK2004. The `Exit` and `Option` variants provide other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant supports asynchronous decoding without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even when no service is needed.
 
 ## Encoding values
 
-```effeck
+```vibe
 function send(shipment: Shipment) {
   return Schema.encodeEffect(Shipment)(shipment)
 }
@@ -87,7 +87,7 @@ Encoding reverses the conversion, including the numeric `pieces` field. `encodeE
 
 ## Handling schema failures
 
-```effeck
+```vibe
 function receiveOrExplain(input: unknown) {
   try {
     const shipment = receive(input)
@@ -103,7 +103,7 @@ The parser's expected failure is a `SchemaError` with `_tag: "SchemaError"`. Its
 
 ## Configuring excess properties and error collection
 
-```effeck
+```vibe
 function receiveStrict(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input, {
     onExcessProperty: "error",
@@ -122,7 +122,7 @@ Options can be supplied when creating the parser or when calling it; call option
 
 ## Deriving guards and assertions
 
-```effeck
+```vibe
 const isShipment = Schema.is(Shipment)
 
 function shipmentTracking(input: unknown) {

@@ -245,13 +245,13 @@ var commonOptionsWithBuild = []*CommandLineOption{
 }
 
 var optionsForCompiler = []*CommandLineOption{
-	// effeck is added by hand, not generated; see effeck.go.
+	// vibelang is added by hand, not generated; see vibelang.go.
 	{
-		Name:            "effeck",
+		Name:            "vibelang",
 		Kind:            CommandLineOptionTypeObject,
 		IsTSConfigOnly:  true,
 		Category:        diagnostics.Language_and_Environment,
-		extraValidation: extraValidationEffeck,
+		extraValidation: extraValidationVibeLang,
 	},
 	{
 		Name:                     "all",

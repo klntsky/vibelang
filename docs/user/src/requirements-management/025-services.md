@@ -1,12 +1,12 @@
 # Managing Services
 
-A service gives a program a named capability without passing an implementation through every function. Effeck declares a service with `service`, an abstract class whose members state their contracts, and infers its use in the `R` channel.
+A service gives a program a named capability without passing an implementation through every function. VibeLang declares a service with `service`, an abstract class whose members state their contracts, and infers its use in the `R` channel.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/services)
 
 ## Declaring typed service keys
 
-```effeck
+```vibe
 service Sequence {
   next(): number!!
 }
@@ -22,7 +22,7 @@ The compiler gives each service nominal identity and derives its key from packag
 
 ## Requesting and supplying implementations
 
-```effeck
+```vibe
 function nextLabel() {
   return `ticket-${Sequence.next()}`
 }
@@ -44,7 +44,7 @@ function readImplementation() {
 
 `Sequence.next()` looks up the service and runs its method. `Sequence()` returns the implementation itself, which is useful for capturing it or reading value members. A runner needs a program whose remaining requirements have been supplied.
 
-```effeck
+```vibe
 service Settings {
   baseUrl: string
 }
@@ -55,7 +55,7 @@ function endpoint(path: string) {
 // string!!Settings
 ```
 
-Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members are trusted; a plain TypeScript member from another package needs `@effeck trusted`, or the call is EK4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
+Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members are trusted; a plain TypeScript member from another package needs `@vibelang trusted`, or the call is EK4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
 
 A declared service member wins over the key's own members, including `pipe`, `use`, `key`, and `call`. A static member with the same name as a service member is error EK3006.
 
@@ -63,7 +63,7 @@ A declared service member wins over the key's own members, including `pipe`, `us
 
 ## Extracting service shapes
 
-```effeck
+```vibe
 type SequenceImplementation = Context.Service.Shape<typeof Sequence>
 ```
 
@@ -73,7 +73,7 @@ Normal providers already infer and check their implementation from the key argum
 
 ## Combining multiple dependencies
 
-```effeck
+```vibe
 function announceTicket() {
   const label = nextLabel()
   Reporter.write(`Created ${label}`)
@@ -95,7 +95,7 @@ function testAnnouncement() {
 
 A union in `R` means both capabilities are needed. Layers let you supply the group together; `wire` composes their graph and rejects duplicate providers and cycles. Inputs no argument provides remain requirements of the resulting layer; a missing provider is reported where a runner or contract requires those requirements to be satisfied. Direct service provision can also be nested when a small local override is enough.
 
-```effeck
+```vibe
 const testContext = Context.add(
   Context.make(Sequence, { next: () => 17 }),
   Reporter,
@@ -111,7 +111,7 @@ A `Context` holds implementations that already exist, while a `Layer` describes 
 
 ## Requesting optional services
 
-```effeck
+```vibe
 function optionalAnnouncement(message: string) {
   const reporter = Effect.serviceOption(Reporter)
   if (reporter.isNone()) return false
@@ -125,7 +125,7 @@ function optionalAnnouncement(message: string) {
 
 ## Handling dependencies between services
 
-```effeck
+```vibe
 service ReportSettings {
   prefix: string
 }
@@ -145,4 +145,4 @@ Capture construction dependencies in the layer factory. Calling `Reporter.write`
 
 ## Coming from Effect
 
-Abstract classes replace hand-written `Context.Service` declarations in `.effeck` files. Call service methods directly, and use `ServiceName()` where a TypeScript generator would yield the key to obtain its implementation.
+Abstract classes replace hand-written `Context.Service` declarations in `.vibe` files. Call service methods directly, and use `ServiceName()` where a TypeScript generator would yield the key to obtain its implementation.

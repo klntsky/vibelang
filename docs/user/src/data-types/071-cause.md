@@ -1,10 +1,10 @@
 # Cause
 
-`Cause` works in Effeck exactly as in Effect. It records every reason a computation failed, including typed errors, defects, and interruption, so use it when the error channel alone cannot explain an outcome.
+`Cause` works in VibeLang exactly as in Effect. It records every reason a computation failed, including typed errors, defects, and interruption, so use it when the error channel alone cannot explain an outcome.
 
 ## Representing failure reasons
 
-```effeck
+```vibe
 const expected = Cause.fail("record missing")
 const defect = Cause.die(new Error("invariant broken"))
 const interrupted = Cause.interrupt(17)
@@ -16,7 +16,7 @@ empty.reasons.length // 0
 
 ## Combining reasons
 
-```effeck
+```vibe
 const combined = Cause.fail("export failed").combine(Cause.die(new Error("cleanup failed")))
 combined.reasons.map((reason) => reason._tag) // ["Fail", "Die"]
 ```
@@ -25,7 +25,7 @@ Effect 4 stores reasons in a flat array. `combine` retains both sets of reasons;
 
 ## Extracting a computation's cause
 
-```effeck
+```vibe
 error MissingRecord {
   id: string
 }
@@ -45,7 +45,7 @@ function diagnose() {
 
 ## Identifying reason variants
 
-```effeck
+```vibe
 function classify<E>(cause: Cause.Cause<E>) {
   const summary = {
     failed: cause.hasFails(),
@@ -68,7 +68,7 @@ Cause predicates answer whether a kind of reason is present. Reason guards narro
 
 ## Formatting and inspecting errors
 
-```effeck
+```vibe
 function inspect<E>(cause: Cause.Cause<E>) {
   const failures = cause.reasons
     .filter(Cause.isFailReason)
@@ -84,4 +84,4 @@ function inspect<E>(cause: Cause.Cause<E>) {
 
 ## Coming from Effect
 
-An Effeck `catch` handles a cause only when it contains no defect and no interruption. For full outcome inspection, use `Effect.exit(() => work())` and keep the complete cause available.
+A VibeLang `catch` handles a cause only when it contains no defect and no interruption. For full outcome inspection, use `Effect.exit(() => work())` and keep the complete cause available.

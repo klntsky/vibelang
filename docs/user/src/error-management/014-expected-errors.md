@@ -1,12 +1,12 @@
 # Expected Errors
 
-Expected errors describe situations callers can handle: invalid input, a denied operation, or an unavailable dependency. Effeck infers them in the `E` channel and narrows them inside `catch`.
+Expected errors describe situations callers can handle: invalid input, a denied operation, or an unavailable dependency. VibeLang infers them in the `E` channel and narrows them inside `catch`.
 
 [Upstream page](https://effect.website/docs/v4/error-management/expected-errors)
 
 ## Constructing typed failures
 
-```effeck
+```vibe
 error InvalidCode {
   input: string
 }
@@ -24,11 +24,11 @@ function normalizeCode(input: string) {
 
 `error InvalidCode { input: string }` declares an expected failure. The declaration is a class: its constructor takes the fields, every field is readonly, and each instance has a readonly `_tag` equal to the class name. `throw` adds the class to `E`. `error Timeout` declares an error without fields. The declaration is short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
 
-Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a trusted declaration, `/** @effeck trusted */`; each `@throws {T}` names an exported exception class that joins `E`, and unlisted exceptions are defects. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
+Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a trusted declaration, `/** @vibelang trusted */`; each `@throws {T}` names an exported exception class that joins `E`, and unlisted exceptions are defects. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
 
 ## Failing in an expression
 
-```effeck
+```vibe
 error MissingPort
 
 function port(env: Map<string, string>) {
@@ -41,7 +41,7 @@ function port(env: Map<string, string>) {
 
 ## Tracking several error cases
 
-```effeck
+```vibe
 function findItem(input: string) {
   const code = normalizeCode(input)
   if (code !== "PEN") throw new ItemMissing({ code })
@@ -54,7 +54,7 @@ A function collects the failures it throws and those its calls can produce. Sequ
 
 ## Turning failures into values
 
-```effeck
+```vibe
 function inspectItem(input: string) {
   const result = Effect.result(findItem(input))
   return result.match({
@@ -73,7 +73,7 @@ function optionalItem(input: string) {
 
 ## Recovering all failures
 
-```effeck
+```vibe
 function itemLabel(input: string) {
   try {
     return findItem(input).label
@@ -86,7 +86,7 @@ function itemLabel(input: string) {
 
 The catch receives `InvalidCode | ItemMissing` and handles both here. It handles only causes with no defect and no interruption. If several expected failures occur together, it receives the first and handles their whole cause.
 
-```effeck
+```vibe
 function itemLabelInline(input: string) {
   return findItem(input).label catch (error) => `Unavailable (${error._tag})`
 }
@@ -99,7 +99,7 @@ function itemLabelInline(input: string) {
 
 ## Recovering selected failures
 
-```effeck
+```vibe
 function labelOrMissing(input: string) {
   try {
     return findItem(input).label
@@ -123,7 +123,7 @@ function labelByTag(input: string) {
 
 Catch the failure, then `match` on it: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types, as `string!InvalidCode!` shows. The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise, or it is a compile error (EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
 
-```effeck
+```vibe
 function withTagTable(input: string) {
   return Effect.catchTags(findItem(input), {
     InvalidCode: () => ({ code: "", label: "Enter a code" }),
@@ -152,7 +152,7 @@ function withPredicate(input: string) {
 
 ## Filtering nested reasons
 
-```effeck
+```vibe
 error Busy { seconds: number }
 error Rejected
 error CatalogError {

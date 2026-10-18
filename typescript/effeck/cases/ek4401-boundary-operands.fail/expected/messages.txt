@@ -1,3 +1,0 @@
-Pass Todos.list() to try as an input, an argument after try's function, which cannot run an Effect; or tag its declaration in legacy.ts with /** @effeck trusted */.
-Pass Todos.shelf() to try as an input, an argument after try's function, which cannot run an Effect; or tag its declaration in legacy.ts with /** @effeck trusted */.
-Call it through try((titles) => sortTitles(titles), titles), or tag its declaration in legacy.ts with /** @effeck trusted */.

@@ -6,7 +6,7 @@ A fallback runs another computation after an expected failure. Pass computations
 
 ## Recovering with another computation
 
-```effeck
+```vibe
 error SourceOffline
 
 function latestTitle(): string!SourceOffline! {
@@ -30,7 +30,7 @@ function title() {
 
 The cache is read only if the primary computation fails. Errors from the fallback become errors of `title`; handling the primary does not handle the fallback too. Ordinary catch propagates defects, interruption, and mixed causes containing either.
 
-```effeck
+```vibe
 function titleInline() {
   return latestTitle() catch cachedTitle()
 }
@@ -43,18 +43,18 @@ function titleInline() {
 
 ## Supplying a default success
 
-```effeck
+```vibe
 function titleOrPlaceholder() {
   return latestTitle() catch "No title available"
 }
 // string!!
 ```
 
-`x catch value` is `Effect.orElseSucceed(x, () => value)`: the value is computed only after an expected failure, and every expected error of `x` is discarded. To keep some failures visible, take the failure and rethrow the rest: `latestTitle() catch (error) => match (error) { when SourceOffline: "No title available"; default: throw error; }`. The fallback is Effeck code, so it may also call functions that fail or need services; their errors become the expression's. `Effect.orElseSucceed(latestTitle(), () => "No title available")` still works, with a synchronous callback.
+`x catch value` is `Effect.orElseSucceed(x, () => value)`: the value is computed only after an expected failure, and every expected error of `x` is discarded. To keep some failures visible, take the failure and rethrow the rest: `latestTitle() catch (error) => match (error) { when SourceOffline: "No title available"; default: throw error; }`. The fallback is VibeLang code, so it may also call functions that fail or need services; their errors become the expression's. `Effect.orElseSucceed(latestTitle(), () => "No title available")` still works, with a synchronous callback.
 
 ## Trying alternatives until one succeeds
 
-```effeck
+```vibe
 function bestTitle() {
   return Effect.firstSuccessOf([
     () => latestTitle(),
@@ -70,4 +70,4 @@ A chain of catch expressions also tries alternatives in order: `latestTitle() ca
 
 ## Coming from Effect
 
-Write alternatives as `() => fetchTitle()` rather than calling `fetchTitle()` while assembling the collection. A call runs immediately in Effeck.
+Write alternatives as `() => fetchTitle()` rather than calling `fetchTitle()` while assembling the collection. A call runs immediately in VibeLang.

@@ -9,7 +9,6 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/compiler"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
-	"github.com/microsoft/TypeScript/tsc/internal/effeckmapper"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
 	"github.com/microsoft/TypeScript/tsc/internal/ls/lsconv"
 	"github.com/microsoft/TypeScript/tsc/internal/lsp/lsproto"
@@ -17,6 +16,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 	"github.com/microsoft/TypeScript/tsc/internal/vfs"
 	"github.com/microsoft/TypeScript/tsc/internal/vfs/vfstest"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
 
 // inferredActions exercises the public LS transaction and records JavaScript
@@ -32,8 +32,8 @@ func inferredActions(t *testing.T, files map[string]string) ([]*lsproto.CodeActi
 	converters := lsconv.NewConverters(lsproto.PositionEncodingKindUTF16, func(name tspath.RootedFilePath) *lsconv.LSPLineMap {
 		return lsconv.ComputeLSPLineStarts(files[string(name)])
 	})
-	service := ls.NewLanguageService(nil, p, trustedFixHost{converters: converters}, "/Users/x/src/main.effeck")
-	file := p.GetSourceFile("/Users/x/src/main.effeck")
+	service := ls.NewLanguageService(nil, p, trustedFixHost{converters: converters}, "/Users/x/src/main.vibe")
+	file := p.GetSourceFile("/Users/x/src/main.vibe")
 	var actions []*lsproto.CodeAction
 	// Compiler collections must stay free of the editor-only resolver, even
 	// when the editor warning is configured as an error.
@@ -75,7 +75,7 @@ func inferredActions(t *testing.T, files map[string]string) ([]*lsproto.CodeActi
 		}
 	}
 	projectorChoices := 0
-	for _, d := range effeckmapper.Project(file.Text(), effeckmapper.FileContext{}).Diagnostics {
+	for _, d := range vibelangmapper.Project(file.Text(), vibelangmapper.FileContext{}).Diagnostics {
 		if d.Code == 9100 {
 			projectorChoices++
 		}
@@ -144,14 +144,14 @@ func TestInferredFormFix(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			files := map[string]string{
-				"/Users/x/src/tsconfig.json":                            `{"compilerOptions":{"strict":true,"target":"ESNext","declaration":true},"files":["main.effeck","host.ts"]}`,
-				"/Users/x/src/host.ts":                                  `import type { Effect } from "effect/Effect"; export declare const host: any; export declare function work(x: number): Effect<number,never,never>; export declare function get(x: number): Effect<number,never,never>; export declare function takesProgram(p: Effect<number,never,never>): Effect<number,never,never>; export declare function takesFn(f:(x:number)=>Effect<number,never,never>): Effect<number,never,never>`,
-				"/Users/x/src/main.effeck":                              `import { work } from "./host"; ` + test.source,
-				"/Users/x/src/node_modules/effeck-runtime/package.json": `{"name":"effeck-runtime","types":"index.d.ts"}`,
-				"/Users/x/src/node_modules/effeck-runtime/index.d.ts":   `export * as Effect from "effect/Effect"; import type { Effect } from "effect/Effect"; export declare function $awaitAll<A,E,R>(xs: readonly Effect<A,E,R>[]): Effect<A[],E,R>; export declare function sync<A>(f:()=>A, mapper?: (error: unknown)=>unknown): A`,
-				"/Users/x/src/node_modules/effect/package.json":         `{"name":"effect","types":"index.d.ts"}`,
-				"/Users/x/src/node_modules/effect/index.d.ts":           `export * as Effect from "./Effect"`,
-				"/Users/x/src/node_modules/effect/Effect.d.ts":          `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,
+				"/Users/x/src/tsconfig.json":                              `{"compilerOptions":{"strict":true,"target":"ESNext","declaration":true},"files":["main.vibe","host.ts"]}`,
+				"/Users/x/src/host.ts":                                    `import type { Effect } from "effect/Effect"; export declare const host: any; export declare function work(x: number): Effect<number,never,never>; export declare function get(x: number): Effect<number,never,never>; export declare function takesProgram(p: Effect<number,never,never>): Effect<number,never,never>; export declare function takesFn(f:(x:number)=>Effect<number,never,never>): Effect<number,never,never>`,
+				"/Users/x/src/main.vibe":                                  `import { work } from "./host"; ` + test.source,
+				"/Users/x/src/node_modules/vibelang-runtime/package.json": `{"name":"vibelang-runtime","types":"index.d.ts"}`,
+				"/Users/x/src/node_modules/vibelang-runtime/index.d.ts":   `export * as Effect from "effect/Effect"; import type { Effect } from "effect/Effect"; export declare function $awaitAll<A,E,R>(xs: readonly Effect<A,E,R>[]): Effect<A[],E,R>; export declare function sync<A>(f:()=>A, mapper?: (error: unknown)=>unknown): A`,
+				"/Users/x/src/node_modules/effect/package.json":           `{"name":"effect","types":"index.d.ts"}`,
+				"/Users/x/src/node_modules/effect/index.d.ts":             `export * as Effect from "./Effect"`,
+				"/Users/x/src/node_modules/effect/Effect.d.ts":            `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,
 			}
 			if strings.HasPrefix(test.name, "symlinked ") {
 				// The package's real path is outside every ancestor node_modules,
@@ -166,24 +166,24 @@ func TestInferredFormFix(t *testing.T) {
 				files["/external/experiments/node_modules/effect/dist/Effect.d.ts"] = files["/external/experiments/node_modules/effect/Effect.d.ts"]
 				delete(files, "/external/experiments/node_modules/effect/Effect.d.ts")
 				files["/external/experiments/node_modules/effect/index.d.ts"] = `export * as Effect from "./dist/Effect.js"`
-				files["/Users/x/src/host.ts"] = `export { work } from "effeck-runtime"`
+				files["/Users/x/src/host.ts"] = `export { work } from "vibelang-runtime"`
 				for name, text := range files {
-					if strings.HasPrefix(name, "/Users/x/src/node_modules/effeck-runtime/") {
+					if strings.HasPrefix(name, "/Users/x/src/node_modules/vibelang-runtime/") {
 						delete(files, name)
 						if strings.HasSuffix(name, "/index.d.ts") {
 							text += `; export declare function work(x: number): Effect<number,never,never>`
 						}
-						files[strings.Replace(name, "/Users/x/src/node_modules/effeck-runtime/", "/external/runtime/", 1)] = text
+						files[strings.Replace(name, "/Users/x/src/node_modules/vibelang-runtime/", "/external/runtime/", 1)] = text
 					}
 				}
 				files["/Users/x/src/package.json"] = `{"type":"module"}`
-				files["/Users/x/src/tsconfig.json"] = `{"compilerOptions":{"strict":true,"target":"ESNext","module":"NodeNext","declaration":true},"files":["main.effeck","host.ts"]}`
-				files["/Users/x/src/main.effeck"] = strings.ReplaceAll(files["/Users/x/src/main.effeck"], `"./host"`, `"./host.js"`)
+				files["/Users/x/src/tsconfig.json"] = `{"compilerOptions":{"strict":true,"target":"ESNext","module":"NodeNext","declaration":true},"files":["main.vibe","host.ts"]}`
+				files["/Users/x/src/main.vibe"] = strings.ReplaceAll(files["/Users/x/src/main.vibe"], `"./host"`, `"./host.js"`)
 			}
-			source := files["/Users/x/src/main.effeck"]
+			source := files["/Users/x/src/main.vibe"]
 			count := func(text string) int {
 				n := 0
-				for _, d := range effeckmapper.Project(text, effeckmapper.FileContext{}).Diagnostics {
+				for _, d := range vibelangmapper.Project(text, vibelangmapper.FileContext{}).Diagnostics {
 					if d.Code == 9100 {
 						n++
 					}
@@ -206,11 +206,11 @@ func TestInferredFormFix(t *testing.T) {
 			for step := 0; step < test.choices; step++ {
 				actions, _ := inferredActions(t, files)
 				if len(actions) == 0 {
-					t.Fatalf("no fix at step %d: %s", step, files["/Users/x/src/main.effeck"])
+					t.Fatalf("no fix at step %d: %s", step, files["/Users/x/src/main.vibe"])
 				}
 				applyTrustedAction(t, files, actions[0])
 			}
-			fixed := files["/Users/x/src/main.effeck"]
+			fixed := files["/Users/x/src/main.vibe"]
 			if test.name == "failure and requirement" && !strings.Contains(fixed, ": number!Bad!Env") {
 				t.Fatalf("lost inferred channels: %s", fixed)
 			}
@@ -267,7 +267,7 @@ func inferredFileSystem(files map[string]string) vfs.FS {
 	}
 	if _, linked := files["/external/experiments/node_modules/effect/package.json"]; linked {
 		entries["/Users/x/src/node_modules/effect"] = vfstest.Symlink("/external/experiments/node_modules/effect")
-		entries["/Users/x/src/node_modules/effeck-runtime"] = vfstest.Symlink("/external/runtime")
+		entries["/Users/x/src/node_modules/vibelang-runtime"] = vfstest.Symlink("/external/runtime")
 		entries["/external/runtime/node_modules/effect"] = vfstest.Symlink("/external/experiments/node_modules/effect")
 	}
 	return bundled.WrapFS(vfstest.FromMap(entries, tspath.CaseInsensitive))

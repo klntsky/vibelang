@@ -5,7 +5,7 @@
 // A variable pattern calls $is, an extractor pattern with an argument list
 // that the compiler does not know calls $extract, an object pattern's rest
 // calls $rest, and a match without a default arm that no arm matched calls
-// $noMatch. $patternError marks a pattern Effeck does not support; the
+// $noMatch. $patternError marks a pattern VibeLang does not support; the
 // compiler reports it, so it never runs in a program that compiled.
 
 /**
@@ -126,7 +126,7 @@ export function $noMatch(subject: unknown): never {
   throw new TypeError(`No match arm matched ${shown}`)
 }
 
-/** A pattern Effeck does not support; the compiler reports it (EK4702-EK4705). */
+/** A pattern VibeLang does not support; the compiler reports it (EK4702-EK4705). */
 export function $patternError(_code: number, _detail?: string): boolean {
   throw new TypeError("This pattern is not supported")
 }

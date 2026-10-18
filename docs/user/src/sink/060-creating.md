@@ -1,10 +1,10 @@
 # Creating Sinks
 
-Choose a Sink for the result you need, then run it with `Stream.run`. Constructors stay reusable: state supplied by an initializer is fresh on each run. This page uses [trusted Sink builders](059-introduction.md) and keeps effectful callbacks as ordinary Effeck functions.
+Choose a Sink for the result you need, then run it with `Stream.run`. Constructors stay reusable: state supplied by an initializer is fresh on each run. This page uses [trusted Sink builders](059-introduction.md) and keeps effectful callbacks as ordinary VibeLang functions.
 
 ## Basic consumers and endpoint values
 
-```effeck
+```vibe
 function endpoints() {
   const source = Stream.make("opening", "middle", "closing")
   return {
@@ -21,7 +21,7 @@ function endpoints() {
 
 ## Counting, summing, draining, and timing
 
-```effeck
+```vibe
 function summarize() {
   const source = Stream.make(6, 10, 14)
   return {
@@ -41,7 +41,7 @@ These sinks consume the whole source. `drain` discards elements but still execut
 
 ## Per-element work
 
-```effeck
+```vibe
 const print = Sink.forEach((line: string) => {
   log(`record: ${line}`)
   sleep("10 millis")
@@ -56,7 +56,7 @@ function writeRecords() {
 
 ## Successful and failed sinks
 
-```effeck
+```vibe
 error Rejected
 
 function immediateResult() {
@@ -69,11 +69,11 @@ function rejectInput() {
 // never!Rejected!
 ```
 
-`succeed` and `fail` finish without requesting source elements. Construction itself does not succeed or fail a running program; that happens when the sink runs. `Sink.fromEffect(() => work())` creates the same kind of immediate sink from an Effeck program.
+`succeed` and `fail` finish without requesting source elements. Construction itself does not succeed or fail a running program; that happens when the sink runs. `Sink.fromEffect(() => work())` creates the same kind of immediate sink from a VibeLang program.
 
 ## Collecting by size or condition
 
-```effeck
+```vibe
 function collectSamples() {
   const source = Stream.make(8, 5, -1, 13)
   return {
@@ -89,7 +89,7 @@ function collectSamples() {
 
 ## Uniqueness and key limits
 
-```effeck
+```vibe
 const unique = Sink.reduce(() => new Set<string>(), (set, value: string) => set.add(value))
 const threeUnique = Sink.reduceWhile(
   () => new Set<string>(),
@@ -105,7 +105,7 @@ function collectUnique() {
 
 Use a native Set when JavaScript value equality is appropriate. A size limit counts unique values, so duplicates do not consume another slot. The initializer creates a fresh Set on every run, avoiding shared mutable sink state.
 
-```effeck
+```vibe
 type Reading = { station: string; count: number }
 
 function addReading(totals: Map<string, number>, reading: Reading) {
@@ -135,7 +135,7 @@ The reducer defines both the grouping key and the merge rule. This limited sink 
 
 ## Folding with termination and count limits
 
-```effeck
+```vibe
 const total = Sink.reduce(() => 0, (sum, n: number) => sum + n)
 const budget = Sink.fold(
   () => 0,
@@ -161,7 +161,7 @@ function foldSamples() {
 
 ## Folding by weight
 
-```effeck
+```vibe
 type Packet = { bytes: number }
 type Batch = { packets: ReadonlyArray<Packet>; bytes: number }
 

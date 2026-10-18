@@ -3,14 +3,14 @@
 ### 27. Compiler architecture
 
 ```ts dts
-import type { Effect } from "effeck-runtime"
+import type { Effect } from "vibelang-runtime"
 export declare function double(n: number): number!!
 ```
 
 The compiler writes ordinary TypeScript declarations with Effect contracts.
-TypeScript consumers call an Effect-returning function; Effeck consumers
+TypeScript consumers call an Effect-returning function; VibeLang consumers
 run that Effect through an ordinary call. The current implementation is in
-`typescript/tsc/internal/effeck/`. `typescript/EFFECK.md` lists the
+`typescript/tsc/internal/vibelang/`. `typescript/VIBELANG.md` lists the
 hooks, acceptance cases, and remaining limitations.
 
 #### The Go fork
@@ -24,13 +24,13 @@ cd typescript/tsc
 CGO_ENABLED=0 GOFLAGS=-trimpath go build -o ../built/local/tsc ./cmd/tsc
 ```
 
-Use `sh scripts/build-effeck.sh` instead to place the native executable in
-`packages/compiler/native/effeck` for the package launcher. `-trimpath` lets jj
+Use `sh scripts/build-vibelang.sh` instead to place the native executable in
+`packages/compiler/native/vibelang` for the package launcher. `-trimpath` lets jj
 workspaces share Go build-cache entries. The compiler embeds its library
 `.d.ts` files, so the executable needs no adjacent library directory.
 
-Effeck lives in-tree and registers hooks through a blank import in
-`cmd/tsc/main.go`. Upstream seams handle `.effeck` recognition, module resolution,
+VibeLang lives in-tree and registers hooks through a blank import in
+`cmd/tsc/main.go`. Upstream seams handle `.vibe` recognition, module resolution,
 checker queries and extension state, diagnostics, compiler options, and
 transform registration. The implementation uses no unsafe struct mirrors or
 `go:linkname` bindings. The seams are small commits in the repository's jj
@@ -39,14 +39,14 @@ history, rather than a separately applied patch series.
 #### Pipeline
 
 ```text
-.effeck and .ts sources
+.vibe and .ts sources
   -> TypeScript parser and binder
-  -> TypeScript checker with Effeck hooks
+  -> TypeScript checker with VibeLang hooks
        prelude and service keys
        lambda forms inside overload resolution (D56)
        contracts, failures, requirements, provider graphs
        trust levels and diagnostics
-  -> Effeck AST transform under the checker lock
+  -> VibeLang AST transform under the checker lock
        Effect.fnUntraced generators and Effect regions
        runtime helpers and plain $direct variants
   -> TypeScript emit
@@ -54,7 +54,7 @@ history, rather than a separately applied patch series.
 ```
 
 The parser keeps TypeScript's grammar. The checker resolves prelude names as
-implicit imports from `effeck-runtime`, and the other exports of `effect`'s
+implicit imports from `vibelang-runtime`, and the other exports of `effect`'s
 root as implicit imports from `effect`, unless a local declaration or import
 shadows them (D4, D48, D146). Class hooks give fully abstract service classes
 the static side of an Effect Context key and the instance shape of their
@@ -83,18 +83,18 @@ expects programs (D7, D49). D10 eligibility uses a greatest fixpoint over the
 callee group. D12 callback parameters carry inferred E and R type parameters.
 
 D52 requires recursive E and R inference inside a call-graph component. The
-compiler's acceptance cases and `typescript/EFFECK.md` record its current
+compiler's acceptance cases and `typescript/VIBELANG.md` record its current
 coverage; no whole-program iterative lowering pass runs.
 
 The earlier `prototype/esc` uses TypeScript 5.9.3 and repeated checks as an
 executable reference. Its 46 examples are now native-compiler acceptance cases
-under `typescript/effeck/cases/`. `prototype/single-pass/RESULTS.md`
+under `typescript/vibelang/cases/`. `prototype/single-pass/RESULTS.md`
 records the experiments that established D56. The native implementation does
 not duplicate source text per lambda form.
 
 #### Runtime boundary
 
-Generated JavaScript imports only `effect` and `effeck-runtime` (D30).
+Generated JavaScript imports only `effect` and `vibelang-runtime` (D30).
 The runtime contains the continuation kernel and the helpers the compiler
 emits. It runs on Effect's fiber, Context, and Scope; it adds no scheduler.
 The package checks `effect@4.0.5` at load time and rejects other versions.
@@ -123,9 +123,9 @@ shape as an interface and a class whose base has the `ServiceKey<Users>` type
 ```ts dts
 export interface Users {
   find(id: string): User!UserNotFound!
-  readonly "~effeck/service"?: "@acme/app/src/users#Users"
+  readonly "~vibelang/service"?: "@acme/app/src/users#Users"
 }
-declare const Users_base: import("effeck-runtime").ServiceKey<Users>
+declare const Users_base: import("vibelang-runtime").ServiceKey<Users>
 export declare abstract class Users extends Users_base {}
 ```
 
@@ -138,19 +138,19 @@ Chapter 15's control-class and `$direct` JSDoc metadata is a design target.
 The current compiler does not emit or read that metadata. A consumer compiled
 against a declaration uses the Effect form, which preserves correctness at
 the cost of the direct-call optimization. Trusted TypeScript declarations do
-support `/** @effeck trusted */` and `@throws {T}` (D23): each listed
+support `/** @vibelang trusted */` and `@throws {T}` (D23): each listed
 exception class joins E and generated code tests it with `instanceof` (D51).
 
 #### Acceptance checks
 
 ```sh
 cd typescript
-sh effeck/smoke.sh --status
+sh vibelang/smoke.sh --status
 ```
 
 The harness compiles cases in parallel, runs successful programs on Node, and
 checks expected failure codes and optional diagnostic positions. Cases marked
 `pending` report their owning compiler lane and do not fail the suite.
-Source-map and tracing cases check original `.effeck` frames and generated spans
+Source-map and tracing cases check original `.vibe` frames and generated spans
 (D34, D36). The docs checker independently checks user-guide snippets with
 `bun docs/tools/check-snippets.ts` from the repository root.

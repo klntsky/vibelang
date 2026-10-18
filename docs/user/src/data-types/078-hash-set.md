@@ -1,10 +1,10 @@
 # HashSet
 
-`HashSet` and `MutableHashSet` work in Effeck exactly as in Effect. They store unique, unordered values using Effect's equality and hashing rules; choose them for frequent membership checks and set operations.
+`HashSet` and `MutableHashSet` work in VibeLang exactly as in Effect. They store unique, unordered values using Effect's equality and hashing rules; choose them for frequent membership checks and set operations.
 
 ## Choosing immutable or mutable sets
 
-```effeck
+```vibe
 const snapshot = HashSet.make("green", "blue")
 const revised = snapshot.add("red")
 snapshot.has("red") // false
@@ -22,7 +22,7 @@ Immutable updates preserve earlier versions, making snapshots suitable for shari
 
 ## Equality and uniqueness
 
-```effeck
+```vibe
 const a = { region: "west", active: true }
 const b = { region: "west", active: true }
 Equal.equals(a, b) // true
@@ -34,7 +34,7 @@ Plain objects compare structurally in Effect 4.0.5, so separately allocated reco
 
 ## Constructing and changing immutable sets
 
-```effeck
+```vibe
 const empty = HashSet.empty<number>()
 const initial = HashSet.fromIterable([2, 4, 4, 6])
 const changed = initial.add(8).remove(2)
@@ -51,7 +51,7 @@ const sum = initial.reduce(0, (total, n) => total + n)
 
 ## Querying membership and size
 
-```effeck
+```vibe
 const allowed = HashSet.make("read", "write", "audit")
 allowed.has("write") // true
 allowed.size() // 3
@@ -64,7 +64,7 @@ HashSet.make("read").isSubset(allowed) // true
 
 ## Updating mutable sets
 
-```effeck
+```vibe
 function uniqueRegions(regions: ReadonlyArray<string>) {
   const seen = MutableHashSet.fromIterable(regions)
   MutableHashSet.add(seen, "unknown")
@@ -81,7 +81,7 @@ function uniqueRegions(regions: ReadonlyArray<string>) {
 
 ## Balancing performance and persistence
 
-```effeck
+```vibe
 function snapshots(values: ReadonlyArray<number>) {
   let current = HashSet.empty<number>()
   const history = [current]
@@ -97,7 +97,7 @@ Persistent sets share storage between versions; mutable sets avoid persistent-up
 
 ## Converting to JavaScript collections
 
-```effeck
+```vibe
 const regions = HashSet.make("west", "east")
 const array = Array.from(regions)
 const copy = [...regions]

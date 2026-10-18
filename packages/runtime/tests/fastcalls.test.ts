@@ -11,7 +11,7 @@ import { Cause, Config, Context, Data, Deferred, Fiber, Option, Stream } from "e
 import {
   $catch, $catchCause, $control, $direct, $done, $fast, $finally, $isRun, $service, $settle, $tailResume,
   Effect, Exit, handle, resume, TaggedError
-} from "effeck-runtime"
+} from "vibelang-runtime"
 
 type Body<A> = Generator<any, A, any>
 type Entry<Args extends Array<any>, A> = (...args: Args) => unknown
@@ -78,7 +78,7 @@ describe("$isRun", () => {
     })
   }
 
-  test("Effeck's own keys, other errors, and Effects that fail are told apart", () => {
+  test("VibeLang's own keys, other errors, and Effects that fail are told apart", () => {
     expect($isRun(Users)).toBe(false)
     expect($isRun(new Gone())).toBe(false)
     expect($isRun(new Cause.NoSuchElementError())).toBe(false)
@@ -139,8 +139,8 @@ describe("$isRun", () => {
 })
 
 describe("$direct", () => {
-  test("is the registered symbol effeck/direct", () => {
-    expect($direct).toBe(Symbol.for("effeck/direct"))
+  test("is the registered symbol vibelang/direct", () => {
+    expect($direct).toBe(Symbol.for("vibelang/direct"))
   })
 
   test("a caller uses the plain body when it is there and the Effect function when it is not", async () => {
@@ -372,7 +372,7 @@ describe("fast calls", () => {
       const sum = Array.from({ length: 80 }, (_, i) => `v${i}`).join(" + ")
       const script = `
         import { Effect } from "effect"
-        import { $fast, $isRun } from "effeck-runtime"
+        import { $fast, $isRun } from "vibelang-runtime"
         const site = function* (t) { return $isRun(t) ? yield* t : t }
         const small$fast = $fast(function* (n) { if (n === 0) return yield* Effect.sync(() => 0); return 1 + (yield* site(small$fast(n - 1))) })
         const large$fast = $fast(function* (n) { if (n === 0) return 0; ${locals}; const r = yield* site(large$fast(n - 1)); return r + 1 + (${sum}) - (${sum}) })
@@ -391,7 +391,7 @@ describe("fast calls", () => {
       const sum = Array.from({ length: 200 }, (_, i) => `v${i}`).join(" + ")
       const script = `
         import { Effect } from "effect"
-        import { $fast, $isRun } from "effeck-runtime"
+        import { $fast, $isRun } from "vibelang-runtime"
         const site = function* (t) { return $isRun(t) ? yield* t : t }
         const recurse$fast = $fast(function* (n) {
           if (n === 0) return 0

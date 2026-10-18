@@ -146,8 +146,8 @@ func isNotForContext(context *FormattingContext) bool {
 func isBinaryOpContext(context *FormattingContext) bool {
 	switch context.contextNode.Kind {
 	case ast.KindBinaryExpression:
-		if context.contextNode.Flags&ast.NodeFlagsEffeck != 0 && context.currentTokenSpan.Kind == ast.KindBarToken && context.nextTokenSpan.Kind == ast.KindGreaterThanToken {
-			return false // the two characters of |>, an .effeck file's pipe operator (parser/effeck_pipes.go)
+		if context.contextNode.Flags&ast.NodeFlagsVibeLang != 0 && context.currentTokenSpan.Kind == ast.KindBarToken && context.nextTokenSpan.Kind == ast.KindGreaterThanToken {
+			return false // the two characters of |>, a .vibe file's pipe operator (parser/vibelang_pipes.go)
 		}
 		return context.contextNode.AsBinaryExpression().OperatorToken.Kind != ast.KindCommaToken
 	case ast.KindConditionalExpression,

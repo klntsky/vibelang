@@ -1,6 +1,0 @@
-main.effeck(27,24): error EK4405
-main.effeck(28,24): error EK4405
-main.effeck(28,33): error EK4405
-main.effeck(29,23): error EK4405
-main.effeck(30,24): error EK4405
-main.effeck(31,27): error EK4405

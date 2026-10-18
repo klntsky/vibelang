@@ -1,4 +1,0 @@
-main.effeck(5,3): error EK4801
-main.effeck(12,20): warning EK4804
-main.effeck(24,10): warning EK4818
-main.effeck(29,3): error EK4801

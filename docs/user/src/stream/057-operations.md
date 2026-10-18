@@ -4,7 +4,7 @@ Stream operators build a new description of how to process a source. Keep transf
 
 ## Observing and taking elements
 
-```effeck
+```vibe
 const observed = Stream.range(10, 18).tap((n) => log(`reading ${n}`))
 const first = observed.take(3)
 const below = observed.takeWhile((n) => n < 13)
@@ -22,7 +22,7 @@ function readFirst() {
 
 ## Async iteration and manual pulls
 
-```effeck
+```vibe
 service Exporter {
   write(rows: AsyncIterable<string>): number!Error
 }
@@ -35,7 +35,7 @@ function exportRows(source: Stream.Stream<string>) {
 
 `toAsyncIterableEffect` captures the current services and returns an async iterable for a TypeScript consumer. `toAsyncIterable` is the direct variant for a source with no service requirements. Iteration failures cross as JavaScript errors, so a foreign consumer must map them back into its declared failure channel; conversion itself does not consume the stream.
 
-```effeck
+```vibe
 function printBatches() {
   using pull = Stream.range(30, 34).rechunk(2).toPull()
   while (true) {
@@ -46,11 +46,11 @@ function printBatches() {
 }
 ```
 
-`toPull` returns an Effect value that yields a non-empty array on each call. Normal completion uses `Cause.Done`, handled here with `Pull.catchDone`; other failures propagate. Keep the pull within its Scope. For ordinary element processing, use Stream's consumers or `for (const element of source) { … }`, which pulls a Stream and closes it when the loop exits. `for...of` also consumes Effeck producers; async iterables use Stream adaptation or a TypeScript consumer.
+`toPull` returns an Effect value that yields a non-empty array on each call. Normal completion uses `Cause.Done`, handled here with `Pull.catchDone`; other failures propagate. Keep the pull within its Scope. For ordinary element processing, use Stream's consumers or `for (const element of source) { … }`, which pulls a Stream and closes it when the loop exits. `for...of` also consumes VibeLang producers; async iterables use Stream adaptation or a TypeScript consumer.
 
 ## Mapping, flattening, and state
 
-```effeck
+```vibe
 function loadLabel(id: number) {
   sleep("10 millis")
   return `item-${id}`
@@ -66,13 +66,13 @@ const totals = Stream.make(4, 7, 9).mapAccum(() => 0, (total, n) => {
 })
 ```
 
-`map` is a synchronous value transformation; `mapEffect` accepts Effeck calls. With concurrency greater than one, `mapEffect` runs multiple callbacks but preserves input order by default; `{ unordered: true }` allows completion order. `flattenIterable` emits each member of each iterable.
+`map` is a synchronous value transformation; `mapEffect` accepts VibeLang calls. With concurrency greater than one, `mapEffect` runs multiple callbacks but preserves input order by default; `{ unordered: true }` allows completion order. `flattenIterable` emits each member of each iterable.
 
 `mapAccum` initializes fresh state for each run and returns `[nextState, emittedValues]` per input. The output array can contain zero or more values. Use `mapAccumEffect` when the transition performs Effect work, and `Stream.drain(source)` when work should run but its emitted values should be suppressed.
 
 ## Filtering, scanning, and changes
 
-```effeck
+```vibe
 const readings = Stream.make(2, 2, 5, 5, 2)
 const large = readings.filter((n) => n >= 5)
 const changes = readings.changes()
@@ -91,7 +91,7 @@ function inspect() {
 
 ## Zipping and indexing
 
-```effeck
+```vibe
 const sizes = Stream.make(5, 8, 13)
 const names = Stream.make("small", "large")
 const pairs = sizes.zip(names)
@@ -110,7 +110,7 @@ For sources with different rates, `zipLatest` waits for both sides to produce, t
 
 ## Cartesian products
 
-```effeck
+```vibe
 const variants = Stream.cross(Stream.make("linen", "wool"), Stream.make("blue", "gray"))
 const names = Stream.crossWith(
   Stream.make("linen", "wool"),
@@ -123,7 +123,7 @@ const names = Stream.crossWith(
 
 ## Partitioning and grouping
 
-```effeck
+```vibe
 function partitionReadings() {
   using branches = Stream.range(10, 19).partition(Filter.fromPredicate((n: number) => n % 2 === 0), { capacity: 2 })
   const [even, odd] = branches
@@ -136,7 +136,7 @@ function partitionReadings() {
 
 `partition` runs one source and returns the passing and failing streams in that order. It is an Effect requiring Scope, so keep both consumers within the lifetime of `using`. Consume branches concurrently: a full, unconsumed branch can backpressure the other branch. `partitionEffect` accepts a `Filter.FilterEffect`, whose successes select the passing branch and failures of its Result select the other branch.
 
-```effeck
+```vibe
 const requests = Stream.make(
   { region: "west", bytes: 10 },
   { region: "east", bytes: 20 },
@@ -156,7 +156,7 @@ const timedBatches = requests.groupedWithin(20, "1 second")
 
 ## Concatenating, merging, and interleaving
 
-```effeck
+```vibe
 const primary = Stream.make("a1", "a2")
 const secondary = Stream.make("b1", "b2", "b3")
 const sequential = primary.concat(secondary)
@@ -175,7 +175,7 @@ const selected = primary.interleaveWith(secondary, Stream.make(true, false, fals
 
 ## Separators and affixes
 
-```effeck
+```vibe
 const fields = Stream.make("name", "email", "role")
 const separated = fields.intersperse(",")
 const bracketed = fields.intersperseAffixes({ start: "[", middle: ",", end: "]" })
@@ -189,7 +189,7 @@ function formatFields() {
 
 ## Broadcasting and buffering
 
-```effeck
+```vibe
 function shareReadings() {
   using copies = Stream.range(1, 12).broadcastN({ n: 2, capacity: 3 })
   const [totals, audit] = copies
@@ -211,7 +211,7 @@ const buffered = Stream.range(1, 12).buffer({ capacity: 3 })
 
 ## Debouncing and throttling
 
-```effeck
+```vibe
 const bursts = Stream.make("c", "ca", "cat").concat(Stream.fromEffect {
     sleep("300 millis")
     return "cats"
@@ -230,7 +230,7 @@ const paced = Stream.range(1, 10).rechunk(1).throttle({
 
 ## Scheduling delivery
 
-```effeck
+```vibe
 const announcements = Stream.make("prepare", "deploy", "verify").schedule(Schedule.spaced("500 millis"))
 
 function announce() {

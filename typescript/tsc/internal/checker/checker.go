@@ -8734,7 +8734,7 @@ func (c *Checker) resolveCallExpression(node *ast.Node, candidatesOutArray *[]*S
 	if len(callSignatures) == 0 {
 		callSignatures = c.callSignaturesFromHooks(node, funcType)
 	}
-	callSignatures = c.filterCallSignaturesByHooks(node, callSignatures) // Effeck block params (extensions_blockparams.go)
+	callSignatures = c.filterCallSignaturesByHooks(node, callSignatures) // VibeLang block params (extensions_blockparams.go)
 	numConstructSignatures := len(c.getSignaturesOfType(apparentType, SignatureKindConstruct))
 	// TS 1.0 Spec: 4.12
 	// In an untyped function call no TypeArgs are permitted, Args can be any argument list, no contextual
@@ -12597,7 +12597,7 @@ func (c *Checker) checkBinaryLikeExpression(left *ast.Node, operatorToken *ast.N
 	}
 	leftType := c.checkExpressionEx(left, checkMode)
 	rightType := c.checkExpressionEx(right, checkMode)
-	if isEffeckPipe(errorNode) {
+	if isVibeLangPipe(errorNode) {
 		return rightType // left |> body has its body's type (extensions_pipes.go)
 	}
 	if ast.IsLogicalOrCoalescingBinaryOperator(operator) {
@@ -30535,7 +30535,7 @@ func (c *Checker) getContextualTypeForBinaryOperand(node *ast.Node, contextFlags
 			return c.getContextualType(binary.AsNode(), contextFlags)
 		}
 	case ast.KindBarToken:
-		if node == binary.Right && isEffeckPipe(binary.AsNode()) {
+		if node == binary.Right && isVibeLangPipe(binary.AsNode()) {
 			return c.getContextualType(binary.AsNode(), contextFlags) // a pipe's body (extensions_pipes.go)
 		}
 	}

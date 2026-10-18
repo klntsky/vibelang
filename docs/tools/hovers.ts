@@ -1,9 +1,9 @@
 // Run from the repository root: bun docs/tools/hovers.ts [--compiler path] [--root docs/user] [--cache dir] [--filter text]
 //
-// Asks the Effeck language server for the hovers and diagnostics of the docs'
+// Asks the VibeLang language server for the hovers and diagnostics of the docs'
 // code blocks and caches them per page as Twoslash nodes, so that a Twoslash
 // renderer can show the compiler's own hovers without running the compiler.
-// One `effeck --lsp --stdio` session reads the projects that check-snippets.ts
+// One `vibelang --lsp --stdio` session reads the projects that check-snippets.ts
 // builds. A page's entry is reused while its blocks, the compiler binary, the
 // packages its projects import, and these tools are unchanged.
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
@@ -53,7 +53,7 @@ export function pageKey(base: string, blocks: Block[]): string {
 }
 
 // The words of code that a reader can hover, outside comments and strings:
-// identifiers and keywords, since Effeck describes its keywords, and the
+// identifiers and keywords, since VibeLang describes its keywords, and the
 // topic % of a pipe. A template literal's substitutions are code.
 const TOKEN = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|(`(?:[^`\\]|\\.)*`)|(\d[\w.]*)|([A-Za-z_$][\w$]*|%)/g
 export function words(code: string, offset = 0): { start: number; target: string }[] {
@@ -86,7 +86,7 @@ export function sanitize(text: string, projects: string[]): string {
     .replaceAll(repo + "/", "")
 }
 
-// Effeck's notes, which the quick info hooks in typescript/tsc/internal/effeck
+// VibeLang's notes, which the quick info hooks in typescript/tsc/internal/vibelang
 // write, come before the declaration's JSDoc in a hover. The server separates
 // them with a `---` rule when there is JSDoc (1742d881). Older servers joined
 // both into one Markdown string, so without the rule the notes are known by
@@ -144,7 +144,7 @@ async function pageHovers(server: Server, dir: string, blocks: Block[]): Promise
   const uri = (block: Block) => pathToFileURL(join(dir, filenames.get(block.number)!)).href
   for (const block of blocks) {
     const file = filenames.get(block.number)!
-    server.notify("textDocument/didOpen", { textDocument: { uri: uri(block), languageId: file.endsWith(".ts") ? "typescript" : "effeck", version: 1, text: readFileSync(join(dir, file), "utf8") } })
+    server.notify("textDocument/didOpen", { textDocument: { uri: uri(block), languageId: file.endsWith(".ts") ? "typescript" : "vibe", version: 1, text: readFileSync(join(dir, file), "utf8") } })
   }
   const failures: Failure[] = []
   const result = await Promise.all(blocks.map(async (block): Promise<BlockHovers> => {
@@ -193,7 +193,7 @@ export async function updateHovers(options: { compiler: string; root: string; ca
   const entries = new Map(pages.map(p => [p.file, read(p.file)]))
   const stale = pages.filter(p => entries.get(p.file)?.key !== p.key)
   if (stale.length) {
-    const temp = mkdtempSync(join(tmpdir(), "effeck-hovers-"))
+    const temp = mkdtempSync(join(tmpdir(), "vibelang-hovers-"))
     const server = startServer([options.compiler, "--lsp", "--stdio"])
     try {
       linkModules(temp)

@@ -1,10 +1,10 @@
 # Path
 
-`Path` provides Effect's platform-specific path service to Effeck. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module.
+`Path` provides Effect's platform-specific path service to VibeLang. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module.
 
 ## Requesting the path service
 
-```effeck
+```vibe
 function pathSeparator() {
   const path = Effect.service(Path.Path)
   return path.sep
@@ -16,7 +16,7 @@ function pathSeparator() {
 
 ## Manipulating paths portably
 
-```effeck
+```vibe
 function describeReport() {
   const path = Effect.service(Path.Path)
   const joined = path.join("reports", "weekly.txt")
@@ -47,7 +47,7 @@ Most `Path` methods are plain synchronous TypeScript functions. Effect's own pac
 | `toNamespacedPath` | A Windows namespace path where applicable |
 | `toFileUrl`, `fromFileUrl` | Effectful file-URL conversion |
 
-```effeck
+```vibe
 function asFileUrl(file: string) {
   const path = Effect.service(Path.Path)
   const absolute = path.resolve(file)
@@ -60,8 +60,8 @@ URL conversions return Effects and run directly when called, reporting `BadArgum
 
 ## Supplying a platform path implementation
 
-```effeck
-// main.effeck
+```vibe
+// main.vibe
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 
 function main() {

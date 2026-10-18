@@ -4,7 +4,7 @@ Use `Config` to load typed settings and `ConfigProvider` to choose their source.
 
 ## Declare typed configuration
 
-```effeck
+```vibe
 const Host = Config.NonEmptyString("HOST")
 const Port = Config.Port("PORT")
 
@@ -16,7 +16,7 @@ function serverSettings() {
 // { host: string; port: number }!ConfigError!
 ```
 
-`Host()` and `Port()` load values from the active provider, which defaults to the environment. Constructing the descriptors reads nothing. Missing or invalid input fails with `ConfigError`. No direct environment access is needed in `.effeck` files.
+`Host()` and `Port()` load values from the active provider, which defaults to the environment. Constructing the descriptors reads nothing. Missing or invalid input fails with `ConfigError`. No direct environment access is needed in `.vibe` files.
 
 | Constructor | Decoded value |
 | --- | --- |
@@ -30,11 +30,11 @@ function serverSettings() {
 
 Prefer `Finite` to `Number` for ordinary numeric settings: `Number` also accepts non-finite values. Boolean text is case sensitive and supports `true`/`false`, `yes`/`no`, `on`/`off`, `1`/`0`, and `y`/`n`.
 
-`Config.all`, `Config.nested`, and `Config.withDefault` compose descriptors as data in `.effeck`. A type that extends `Effect` with its own structure stays data when returned by a call; only a call whose result type is `Effect` itself runs that result automatically.
+`Config.all`, `Config.nested`, and `Config.withDefault` compose descriptors as data in `.vibe`. A type that extends `Effect` with its own structure stays data when returned by a call; only a call whose result type is `Effect` itself runs that result automatically.
 
 ## Parse with schemas
 
-```effeck
+```vibe
 function teamName() {
   return Config.schema(
     Schema.String.check(Schema.isMinLength(3)),
@@ -46,16 +46,16 @@ function teamName() {
 
 `Config.schema` builds a descriptor that decodes the provider's representation using the schema. Calling it returns the decoded value. Put constraints in the schema so invalid input reports a configuration failure. A structured schema can describe an entire object, with field paths mapping to environment keys or object properties.
 
-```effeck
-// descriptors.effeck
+```vibe
+// descriptors.vibe
 export const server = Config.schema(Schema.Struct({
   host: Schema.String,
   port: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 65535 }))
 }), "server")
 ```
 
-```effeck
-import { server } from "./descriptors.effeck"
+```vibe
+import { server } from "./descriptors.vibe"
 
 function localServer() {
   return server.parse(ConfigProvider.fromUnknown({
@@ -68,7 +68,7 @@ Use `descriptor.parse(provider)` when the source is explicit, especially in test
 
 ## Read arrays and records
 
-```effeck
+```vibe
 function routingSettings() {
   const regions = Config.Array(Schema.String, "REGIONS")()
   const labels = Config.Record(Schema.String, Schema.String, "LABELS")()
@@ -80,16 +80,16 @@ Arrays accept structural values or a separated string such as `north,south`. Rec
 
 ## Nest and combine configuration
 
-```effeck
-// database-config.effeck
+```vibe
+// database-config.vibe
 export const database = Config.nested(Config.all({
   host: Config.NonEmptyString("HOST"),
   port: Config.Port("PORT")
 }), "DATABASE")
 ```
 
-```effeck
-import { database } from "./database-config.effeck"
+```vibe
+import { database } from "./database-config.vibe"
 
 function testDatabaseSettings() {
   return database.parse(ConfigProvider.fromEnv({
@@ -102,8 +102,8 @@ function testDatabaseSettings() {
 
 ## Defaults and fallbacks
 
-```effeck
-// optional-config.effeck
+```vibe
+// optional-config.vibe
 export const port = Config.withDefault(Config.Port("PORT"), 9091)
 export const apiKey = Config.option(Config.String("API_KEY"))
 export const host = Config.orElse(
@@ -112,8 +112,8 @@ export const host = Config.orElse(
 )
 ```
 
-```effeck
-import { port, apiKey, host } from "./optional-config.effeck"
+```vibe
+import { port, apiKey, host } from "./optional-config.vibe"
 
 function defaultsExample() {
   const provider = ConfigProvider.fromUnknown({ BACKUP_HOST: "standby.internal" })
@@ -131,16 +131,16 @@ A default on a `Config.all` group replaces the whole group when any child is abs
 
 ## Transform parsed values
 
-```effeck
-// origin-config.effeck
+```vibe
+// origin-config.vibe
 export const origin = Config.map(Config.all({
   host: Config.NonEmptyString("HOST"),
   port: Config.Port("PORT")
 }), ({ host, port }) => `https://${host}:${port}`)
 ```
 
-```effeck
-import { origin } from "./origin-config.effeck"
+```vibe
+import { origin } from "./origin-config.vibe"
 
 function reportOrigin() {
   const value = origin()
@@ -149,11 +149,11 @@ function reportOrigin() {
 }
 ```
 
-Use `Config.map` for a transformation that cannot fail. Express validation in a schema; use `Config.mapEffect` when transformation needs an Effect with `ConfigError`. Loading first and transforming with ordinary Effeck statements also works when you do not need a reusable descriptor.
+Use `Config.map` for a transformation that cannot fail. Express validation in a schema; use `Config.mapEffect` when transformation needs an Effect with `ConfigError`. Loading first and transforming with ordinary VibeLang statements also works when you do not need a reusable descriptor.
 
 ## Protect secrets
 
-```effeck
+```vibe
 function secretSetting() {
   const token = Config.Redacted("ACCESS_TOKEN")()
   log(token)
@@ -165,7 +165,7 @@ function secretSetting() {
 
 ## Load providers
 
-```effeck
+```vibe
 const TestProvider = ConfigProvider.fromUnknown({ PORT: 9091 })
 const EnvProvider = ConfigProvider.fromEnv({ env: { PORT: "9092" } })
 const DotEnvProvider = ConfigProvider.fromDotEnvContents("PORT=9093")
@@ -185,7 +185,7 @@ function fileProvider() {
 
 ## Remap provider paths
 
-```effeck
+```vibe
 const DeploymentProvider = ConfigProvider.constantCase(
   ConfigProvider.fromEnv({ env: { SERVICE_PORT: "9094" } })
 )
@@ -199,7 +199,7 @@ function deploymentPort() {
 
 ## Compose and install providers
 
-```effeck
+```vibe
 const Combined = ConfigProvider.orElse(
   ConfigProvider.fromEnv({ env: { HOST: "edge.internal" } }),
   ConfigProvider.fromUnknown({ HOST: "localhost", PORT: 9091 })
@@ -216,6 +216,6 @@ Provider fallback fills absent paths; it does not recover from source or validat
 
 ## Coming from Effect
 
-Compose Config descriptors directly in `.effeck`, then call a descriptor to load it, or call its `parse` method with an explicit provider. Returning a descriptor does not read it, just as returning an `Exit`, a Context key, or an error instance does not run that value. `new` constructs an instance and never runs it.
+Compose Config descriptors directly in `.vibe`, then call a descriptor to load it, or call its `parse` method with an explicit provider. Returning a descriptor does not read it, just as returning an `Exit`, a Context key, or an error instance does not run that value. `new` constructs an instance and never runs it.
 
 [Upstream Effect page](https://effect.website/docs/v4/configuration)

@@ -1,8 +1,8 @@
 ## Part I. The language by example
 
-Each chapter shows something you do in Effect today and the same thing in Effeck. Effeck code uses Effect's own modules unchanged; what changes is that you stop writing generators, `yield*`, and most combinators.
+Each chapter shows something you do in Effect today and the same thing in VibeLang. VibeLang code uses Effect's own modules unchanged; what changes is that you stop writing generators, `yield*`, and most combinators.
 
-Three conventions for the snippets. A snippet shown without an enclosing function sits inside one, because a module's top level cannot run a program (Chapter 13). Names such as `User`, `guest`, and `MailerTest` are declared nearby, and helpers such as `toUser` are Effeck functions. Imports of Effect modules outside the prelude (`Schedule`, `Stream`, `Fiber`, and so on) are left out.
+Three conventions for the snippets. A snippet shown without an enclosing function sits inside one, because a module's top level cannot run a program (Chapter 13). Names such as `User`, `guest`, and `MailerTest` are declared nearby, and helpers such as `toUser` are VibeLang functions. Imports of Effect modules outside the prelude (`Schedule`, `Stream`, `Fiber`, and so on) are left out.
 
 ### 1. A first look
 
@@ -71,7 +71,7 @@ Four things changed:
 
 #### What is in scope
 
-Every `.effeck` file starts with a small prelude in scope, so the program above has no imports:
+Every `.vibe` file starts with a small prelude in scope, so the program above has no imports:
 
 | Name | What it is |
 | --- | --- |
@@ -80,7 +80,7 @@ Every `.effeck` file starts with a small prelude in scope, so the program above 
 | `Scope` | Effect's `Scope` module, and the type `Scope`, which is Effect's `Scope.Scope` |
 | `TaggedError` | Effect's `Data.TaggedError` |
 | `Control` | The base class of control operations (Chapter 9) |
-| `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | Effeck's built-ins, each introduced where it is first used |
+| `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | VibeLang's built-ins, each introduced where it is first used |
 | `sync`, `try`, `callback` | Boundary hatches: their first argument is self-contained TypeScript, and values reach it as inputs (D148, D229) |
 | `runPromise`, `runFork`, `runSync`, `runCallback` | Effect's runners, the way back in from TypeScript (D150) |
 | `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, `die` | The Effect module's functions without the `Effect.` prefix (D151) |
@@ -91,9 +91,9 @@ Modules from `effect`'s subpath packages, such as `effect/http`, are imported as
 #### Running it
 
 ```ts es
-// main.effeck
-import { AppLive } from "./app.effeck"
-import { welcome } from "./welcome.effeck"
+// main.vibe
+import { AppLive } from "./app.vibe"
+import { welcome } from "./welcome.vibe"
 
 export function main() {
   const name = Effect.provide(() => welcome("42"), AppLive)
@@ -105,7 +105,7 @@ export function main() {
 
 #### What the compiler produces
 
-Effeck compiles to TypeScript. This is the output for `welcome`:
+VibeLang compiles to TypeScript. This is the output for `welcome`:
 
 ```ts gen
 export const welcome = Effect.fnUntraced(function* (id: string) {
@@ -122,4 +122,4 @@ export declare const welcome: (id: string) =>
   string!UserNotFound | MailError!Users | Mailer
 ```
 
-TypeScript code that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so a TypeScript program can provide `Users` with an ordinary Layer, and Effeck can use services written in TypeScript.
+TypeScript code that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so a TypeScript program can provide `Users` with an ordinary Layer, and VibeLang can use services written in TypeScript.

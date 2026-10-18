@@ -6,7 +6,7 @@ import {
   $tailResumeWith, $trusted, $trustedPlain, $using, $yield, $yieldAll, abandon, Control,
   Effect, Exit, fork, handle, handoff, Layer, pipe, resume,
   resumeWith, runMain, Schema, Scope, suspend, TaggedError, wire
-} from "effeck-runtime"
+} from "vibelang-runtime"
 
 test("calls: programs are lazy and rerunnable; bind accepts data and Effects", async () => {
   let runs = 0

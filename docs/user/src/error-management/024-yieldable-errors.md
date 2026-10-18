@@ -1,12 +1,12 @@
 # Yieldable Errors
 
-Effect's custom error values can be yielded inside TypeScript generators. In Effeck, signal those same domain failures with `throw`; `function*` produces values rather than sequencing an Effect program.
+Effect's custom error values can be yielded inside TypeScript generators. In VibeLang, signal those same domain failures with `throw`; `function*` produces values rather than sequencing an Effect program.
 
 [Upstream page](https://effect.website/docs/v4/error-management/yieldable-errors)
 
 ## Defining an error without a tag
 
-```effeck
+```vibe
 class EmptyDocument extends Data.Error<{
   readonly documentId: string
 }> {}
@@ -18,9 +18,9 @@ function requireText(documentId: string, text: string) {
 // string!EmptyDocument!
 ```
 
-`Data.Error` creates an error class with typed fields and Effect's yieldable behavior. Effeck does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
+`Data.Error` creates an error class with typed fields and Effect's yieldable behavior. VibeLang does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
 
-```effeck
+```vibe
 function emptyDocumentError(documentId: string) {
   return new EmptyDocument({ documentId })
 }
@@ -36,7 +36,7 @@ function rejectDocument(documentId: string) {
 
 ## Creating tagged error classes
 
-```effeck
+```vibe
 error EmptyTitle
 error TitleTooLong {
   length: number
@@ -56,7 +56,7 @@ Choose distinct tags for distinct error cases. Tag-based matching compares strin
 
 ## Recovering failures by tag
 
-```effeck
+```vibe
 function displayTitle(text: string) {
   return Effect.catchTag(title(text), "EmptyTitle", () => "Untitled")
 }
@@ -77,6 +77,6 @@ Both versions remove `EmptyTitle` from `E` while preserving `TitleTooLong`. `Eff
 
 ## Coming from Effect
 
-Existing `.ts` functions that yield `Data.Error` or `Data.TaggedError` stay in TypeScript and are called normally from `.effeck` files. Replace `return yield* new ErrorCase(...)` with `throw new ErrorCase(...)` when writing the Effeck implementation.
+Existing `.ts` functions that yield `Data.Error` or `Data.TaggedError` stay in TypeScript and are called normally from `.vibe` files. Replace `return yield* new ErrorCase(...)` with `throw new ErrorCase(...)` when writing the VibeLang implementation.
 
-An Effeck `function*` is a producer that yields elements. It converts to an Effect `Stream` wherever one is expected; it is not a place to paste `Effect.gen` or `yield*` error sequencing.
+A VibeLang `function*` is a producer that yields elements. It converts to an Effect `Stream` wherever one is expected; it is not a place to paste `Effect.gen` or `yield*` error sequencing.

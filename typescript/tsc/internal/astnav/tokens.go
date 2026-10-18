@@ -251,26 +251,26 @@ func getTokenAtPosition(
 						if ast.IsJSDocKind(current.Kind) {
 							return current
 						}
-						if isEffeckSourceFile(sourceFile) {
-							// effeck.go: a desugared node's source child, or an Effeck form's word.
-							if found := effeckSourceToken(sourceFile, current, scanner.TokenStart(), tokenEnd); found != nil {
+						if isVibeLangSourceFile(sourceFile) {
+							// vibelang.go: a desugared node's source child, or a VibeLang form's word.
+							if found := vibelangSourceToken(sourceFile, current, scanner.TokenStart(), tokenEnd); found != nil {
 								return found
 							}
-							return effeckWordNode(sourceFile, current, scanner, tokenFullStart, tokenEnd, flags)
+							return vibelangWordNode(sourceFile, current, scanner, tokenFullStart, tokenEnd, flags)
 						}
 						panic(fmt.Sprintf("did not expect %s to have %s in its trivia", current.Kind.String(), token.String()))
 					}
 					return sourceFile.GetOrCreateToken(token, tokenFullStart, tokenEnd, current, flags)
 				}
 				if includePrecedingTokenAtEndPosition != nil && tokenEnd == position {
-					if (token == ast.KindIdentifier || !ast.IsTokenKind(token)) && isEffeckSourceFile(sourceFile) {
-						// An Effeck form's word, or a desugared node's source child, ends here (effeck.go).
-						if found := effeckSourceToken(sourceFile, current, scanner.TokenStart(), tokenEnd); found != nil {
+					if (token == ast.KindIdentifier || !ast.IsTokenKind(token)) && isVibeLangSourceFile(sourceFile) {
+						// A VibeLang form's word, or a desugared node's source child, ends here (vibelang.go).
+						if found := vibelangSourceToken(sourceFile, current, scanner.TokenStart(), tokenEnd); found != nil {
 							if includePrecedingTokenAtEndPosition(found) {
 								return found
 							}
 						} else {
-							if word := effeckWordNode(sourceFile, current, scanner, tokenFullStart, tokenEnd, flags); word != current && includePrecedingTokenAtEndPosition(word) {
+							if word := vibelangWordNode(sourceFile, current, scanner, tokenFullStart, tokenEnd, flags); word != current && includePrecedingTokenAtEndPosition(word) {
 								return word
 							}
 						}

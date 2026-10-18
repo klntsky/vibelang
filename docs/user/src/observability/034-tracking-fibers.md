@@ -4,7 +4,7 @@
 
 ## Managing groups of running fibers
 
-```effeck
+```vibe
 function runGroup() {
   using workers = FiberSet.make<number>()
   const first = FiberSet.run(workers) {
@@ -24,7 +24,7 @@ function runGroup() {
 
 ## Tracking fibers by key
 
-```effeck
+```vibe
 function replacePreview() {
   using previews = FiberMap.make<string, string>()
   FiberMap.run(previews, "editor-1") {
@@ -43,7 +43,7 @@ Starting another fiber under an existing key interrupts the previous fiber for t
 
 ## Removing completed work
 
-```effeck
+```vibe
 function waitForAllTracked() {
   using workers = FiberSet.make<void>()
   FiberSet.run(workers, sleep("10 millis"))
@@ -57,7 +57,7 @@ Completed fibers are removed automatically, so a long-lived owner does not accum
 
 ## Interrupting tracked work on scope closure
 
-```effeck
+```vibe
 function serveBriefly() {
   {
     using workers = FiberSet.make<void>()

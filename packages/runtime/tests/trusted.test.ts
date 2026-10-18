@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { Effect, Exit, trusted } from "effeck-runtime"
+import { Effect, Exit, trusted } from "vibelang-runtime"
 
 class PortError extends Error { readonly kind = "port" }
 class HostError extends Error { readonly kind = "host" }

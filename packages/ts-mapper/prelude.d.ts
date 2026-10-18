@@ -1,9 +1,9 @@
 /// <reference lib="esnext.disposable" />
 // Effect 4.0.5 exposes disposal protocols even when the source uses no using.
-// The prelude of Effeck's TypeScript 7 content mapper. Every file the mapper
+// The prelude of VibeLang's TypeScript 7 content mapper. Every file the mapper
 // projects starts with one import from this module:
 //
-//   import { Effect, Layer, $gen, $run, ... } from "effeck-ts-mapper/prelude"; true satisfies $PreludeLoaded;
+//   import { Effect, Layer, $gen, $run, ... } from "vibelang-ts-mapper/prelude"; true satisfies $PreludeLoaded;
 //
 // It imports the prelude names the file uses and does not declare itself
 // (D4, D48, D146, D151), as the fork resolves them, and the helpers the
@@ -11,7 +11,7 @@
 //
 // These declarations are types only: tsc emits no JavaScript for a mapped
 // file, so nothing here runs. The projector that writes the calls lives in
-// typescript/tsc/internal/effeckmapper. Namespaces are re-exported straight
+// typescript/tsc/internal/vibelangmapper. Namespaces are re-exported straight
 // from effect, so a declaration file that names Effect.Effect, Layer.Layer,
 // or Option.Option names effect's own modules.
 
@@ -19,11 +19,11 @@ import type * as EffectModule from "effect/Effect"
 import type * as ScopeModule from "effect/Scope"
 import type * as StreamModule from "effect/Stream"
 import type { Cause, Config, Context, Exit, Fiber } from "effect"
-import type * as Runtime from "effeck-runtime"
+import type * as Runtime from "vibelang-runtime"
 
 // ---------------------------------------------------------------- prelude names
 
-// D4, D146: effect's root modules, every one in scope in a .effeck file.
+// D4, D146: effect's root modules, every one in scope in a .vibe file.
 export {
   Arbitrary, Array, BigDecimal, BigInt, Boolean, Brand, ByteSize, Cache, Cause, Channel, ChannelSchema, Chunk,
   Clock, Combiner, Config, ConfigProvider, Console, Context, Cron, Crypto, Data, DateTime, Deferred, Differ,
@@ -42,13 +42,13 @@ export {
   absurd, cast, flow, hole, identity
 } from "effect"
 
-/** D4: in a .effeck file, `Effect<A, E, R>` is `Effect.Effect<A, E, R>`. */
+/** D4: in a .vibe file, `Effect<A, E, R>` is `Effect.Effect<A, E, R>`. */
 export type Effect<A, E = never, R = never> = EffectModule.Effect<A, E, R>;
 
-/** D48: in a .effeck file, the type `Scope` is `Scope.Scope`. */
+/** D48: in a .vibe file, the type `Scope` is `Scope.Scope`. */
 export type Scope = ScopeModule.Scope;
 
-// D151: the Effect functions a .effeck file calls without the Effect. prefix.
+// D151: the Effect functions a .vibe file calls without the Effect. prefix.
 export {
   all, die, exit, forEach, log, logDebug, logError, logInfo, logWarning, race, repeat, retry, sleep, timeout, withSpan
 } from "effect/Effect"
@@ -58,10 +58,10 @@ export {
   TaggedError, Control, pipe, wire, fork, handle, resume, resumeWith, abandon, sync, callback, Resume, runPromise,
   runFork, runSync, runCallback, detach, forkIn, interrupt, yieldNow, uninterruptible, restore, interruptible,
   customMatcher
-} from "effeck-runtime"
+} from "vibelang-runtime"
 
 /** D5/D54: shipped built-in failures use the same value boundary as trusted implementations. */
-export { $trusted } from "effeck-runtime"
+export { $trusted } from "vibelang-runtime"
 /** A syntax-proven D54 synchronous entry in a plain callback. */
 export declare function $plain<Args extends unknown[], A>(fn: (...args: Args) => EffectModule.Effect<A, never, never>): (...args: Args) => A
 /** Preserve a built-in's optional parameters before entering its failure boundary. */
@@ -73,7 +73,7 @@ export type $BuiltinResult<F extends (...args: any[]) => any> = ReturnType<F>
 
 // The runtime's region helpers (D13, D15, D132, D173): regions, handle
 // statements, and provide blocks lower onto these.
-export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from "effeck-runtime"
+export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from "vibelang-runtime"
 
 /**
  * `using x = acquire()` in an Effect body (D47, D94, D14): the block's Scope
@@ -101,14 +101,14 @@ export declare function $scoped(fork: typeof Runtime.fork): {
 }
 
 // finally (exit) { ... } (D178), and the interruption blocks (D179, D180).
-export { $finallyExit } from "effeck-runtime"
+export { $finallyExit } from "vibelang-runtime"
 
 // The pattern matching helpers the parser writes for match and is (D206-D225).
-export { $is, $extract, $rest, $noMatch, $patternError } from "effeck-runtime"
+export { $is, $extract, $rest, $noMatch, $patternError } from "vibelang-runtime"
 
 // D196: concurrent programs and held Fibers/Deferreds keep the runtime's
 // tuple, record, result, and race channel inference under stock TypeScript.
-export { $awaitAll, $awaitAllSettled, $awaitRace, $awaitAny } from "effeck-runtime"
+export { $awaitAll, $awaitAllSettled, $awaitRace, $awaitAny } from "vibelang-runtime"
 
 /*
  * Completion records, as the checker sees them. A return in a region's
@@ -223,7 +223,7 @@ export declare function $emit<A>(value: A): $Emit<A>
 type Emitted<Y> = Y extends $Emit<infer A> ? A : never
 
 /**
- * A producer, a generator function in an .effeck file (D26):
+ * A producer, a generator function in a .vibe file (D26):
  * `function* f() { body }` projects to `function f() { return $produce(function* () { body }) }`.
  * Its Stream's A is what it emits; E and R are what it runs.
  */
@@ -341,24 +341,24 @@ export declare function $member<T, K extends keyof T>(self: T, key: K):
  * `0 extends 1 & T` test gives the error type too; only an unwrapped
  * comparison against a type no real value has gives an answer.
  */
-type Unresolved<T> = [T] extends [{ readonly "~effeck-ts-mapper/unresolved": true }] ? true : false
+type Unresolved<T> = [T] extends [{ readonly "~vibelang-ts-mapper/unresolved": true }] ? true : false
 
 /**
  * The first line of every projected file states `true satisfies $PreludeLoaded`.
- * When this module cannot resolve effect or effeck-runtime from its own
+ * When this module cannot resolve effect or vibelang-runtime from its own
  * location, every helper above is the error type, and skipLibCheck hides the
- * failed import; the statement then fails at line 1 of the .effeck file with
+ * failed import; the statement then fails at line 1 of the .vibe file with
  * the fix (TS1360).
  */
 export type $PreludeLoaded =
   Unresolved<typeof EffectModule.gen> extends true
-    ? "effeck-ts-mapper: the prelude cannot resolve effect from its own location; install effect 4.0.5 beside effeck-ts-mapper"
+    ? "vibelang-ts-mapper: the prelude cannot resolve effect from its own location; install effect 4.0.5 beside vibelang-ts-mapper"
     : Unresolved<typeof Runtime.$service> extends true
-      ? "effeck-ts-mapper: the prelude cannot resolve effeck-runtime from its own location; install effeck-runtime beside effeck-ts-mapper"
+      ? "vibelang-ts-mapper: the prelude cannot resolve vibelang-runtime from its own location; install vibelang-runtime beside vibelang-ts-mapper"
       : true
 
 /** D148: a legal TypeScript identifier for the try hatch, preserving its overloads. */
-export { try as $hatchTry } from "effeck-runtime"
+export { try as $hatchTry } from "vibelang-runtime"
 
 /** D231: a written mapper arrow selects only mapper overloads. This prevents
  * stock TypeScript from silently retrying it as a callable input. */
@@ -374,7 +374,7 @@ export declare function $hatchTryMapped<R, E, Args extends ReadonlyArray<unknown
 ): EffectModule.Effect<Awaited<R>, E>
 
 // D169, D225: fiber forms share the runtime declarations in both renderings.
-export { $join, $forConcurrent } from "effeck-runtime"
+export { $join, $forConcurrent } from "vibelang-runtime"
 
 /** D49: stored collections convert parameterless Effect functions elementwise. */
 type $ProgramOf<T> = T extends () => EffectModule.Effect<infer A, infer E, infer R> ? EffectModule.Effect<A, E, R> : T
@@ -392,7 +392,7 @@ export declare function $runAt<A, E, R, const Id extends number>(value: EffectMo
 export declare function $varType<A, E, R>(value: EffectModule.Effect<A, E, R>): A
 
 // BEGIN GENERATED D252 DATA METHODS
-// Generated by cmd/effeck-data-methods/generate.ts; do not edit.
+// Generated by cmd/vibelang-data-methods/generate.ts; do not edit.
 import type * as $D152BigDecimal_Equal from "effect/Equal"
 import type * as $D152BigDecimal_Equ from "effect/Equivalence"
 import type { Inspectable as $D152BigDecimal_Inspectable } from "effect/Inspectable"

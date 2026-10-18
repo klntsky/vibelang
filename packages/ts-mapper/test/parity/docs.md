@@ -6,11 +6,11 @@ Case selectors continue to select only declaration cases.
 The lane imports `extract`, `markdownPages`, and `writeProject` directly from
 `docs/tools/check-snippets.ts`. It includes fragments, expected errors, compiler
 gaps, and TypeScript companion blocks under docs/user (excluding generated site),
-and every Effeck source under examples and templates. Each page or example is a
+and every VibeLang source under examples and templates. Each page or example is a
 project. Companion sources participate in checking; the module denominator and
-reported diagnostic sites are Effeck sources. Project options are strict NodeNext,
+reported diagnostic sites are VibeLang sources. Project options are strict NodeNext,
 no emit, skipLibCheck, and no ambient types; example build configs are not used.
-Relative JavaScript/extensionless imports targeting Effeck are adapted on both
+Relative JavaScript/extensionless imports targeting VibeLang are adapted on both
 compiler sides. The stock compiler and mapper/runtime/effect package scope are
 exactly those built by run.sh; no source-workspace node_modules are inherited.
 

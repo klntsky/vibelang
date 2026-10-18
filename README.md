@@ -1,9 +1,9 @@
-# Effeck
+# VibeLang
 
-A language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). Effeck gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.
+A language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.
 
 > [!WARNING]
-> Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
+> VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
 Docs: [effeck.dev](https://effeck.dev), with the guides and, under [effeck.dev/spec/](https://effeck.dev/spec/), the specification.
 
@@ -39,50 +39,50 @@ export function main() {
 }
 ```
 
-Every function is an Effect: `greet` has the contract `string!!Users` (no expected failures, because `catch` handles `NotFound`). Calls run where they stand, `throw` fails with a typed error, `provide` supplies a layer, and `await.all` and `await.race` run programs concurrently. The [cheat sheet](https://effeck.dev/effeck-features/115-cheat-sheet) shows every form next to the Effect code it replaces.
+Every function is an Effect: `greet` has the contract `string!!Users` (no expected failures, because `catch` handles `NotFound`). Calls run where they stand, `throw` fails with a typed error, `provide` supplies a layer, and `await.all` and `await.race` run programs concurrently. The [cheat sheet](https://effeck.dev/vibelang-features/115-cheat-sheet) shows every form next to the Effect code it replaces.
 
 ## Quickstart
 
 ```sh
-bun create effeck my-app
+bun create vibelang my-app
 cd my-app
 bun run start
 bun run test
 ```
 
-With npm, run `npm create effeck@latest my-app`. You need Node 26 or later and
-Bun 1.4 or later. The command copies a starter, pins `effeck`,
-`effeck-runtime`, and `effeck-vite` to one version, and installs dependencies;
+With npm, run `npm create vibelang@latest my-app`. You need Node 26 or later and
+Bun 1.4 or later. The command copies a starter, pins `vibelang`,
+`vibelang-runtime`, and `vibelang-vite` to one version, and installs dependencies;
 `--no-install` skips installation. The compiler is a native binary from a
 per-platform package for macOS, Linux, and Windows on arm64 and x64. Version
 0.0.1 is tested on macOS on Apple silicon and on Linux on x64.
 
-`bun run start` prints `Hello, Effeck!` and `Recovered from EmptyName`.
-`bun run dev` builds once, watches `.effeck` sources with `effeck --watch`, and
-runs Node with `--watch` on the output. `bun run test` compiles `.effeck` tests
+`bun run start` prints `Hello, VibeLang!` and `Recovered from EmptyName`.
+`bun run dev` builds once, watches `.vibe` sources with `vibelang --watch`, and
+runs Node with `--watch` on the output. `bun run test` compiles `.vibe` tests
 before running Vitest with `@effect/vitest`. The starter demonstrates an
 `service`, a `Layer.effect` layer, an `error`, and `try`/`catch` recovery.
 
-To add Effeck to an existing project, see
+To add VibeLang to an existing project, see
 [Installation](docs/user/src/getting-started/004-installation.md).
 
 ## Editor setup
 
 ```sh
-code --install-extension node_modules/effeck/editor/effeck.vsix
+code --install-extension node_modules/vibelang/editor/vibelang.vsix
 # Or, for Cursor:
-cursor --install-extension node_modules/effeck/editor/effeck.vsix
+cursor --install-extension node_modules/vibelang/editor/vibelang.vsix
 ```
 
 Run the command from the project directory after installing dependencies, then
 open the project. The extension runs the project's compiler as the language
-server, `effeck --lsp --stdio`, for diagnostics, hovers, and completions. It is
+server, `vibelang --lsp --stdio`, for diagnostics, hovers, and completions. It is
 not on the VS Code Marketplace or Open VSX yet. For Neovim, Zed, and other LSP
 clients, see [editors/](editors/README.md).
 
 ## Before you write your first file
 
-- Every function in a `.effeck` file is an Effect, and a call runs it:
+- Every function in a `.vibe` file is an Effect, and a call runs it:
   `const todo = Todos.get(id)` is a `Todo`. Where an Effect operator expects a
   program, pass the call itself; it is passed by name and runs when the
   operator runs it:
@@ -124,7 +124,7 @@ clients, see [editors/](editors/README.md).
   functions `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and
   a few more need no import, and neither does any other module of `effect`'s root, such as
   `Console`, `Option`, and `Stream`. Import other source files by their source name,
-  `import { Todos } from "./todos.effeck"`; the compiler emits `.js` imports.
+  `import { Todos } from "./todos.vibe"`; the compiler emits `.js` imports.
 - A value of one of Effect's data types takes its module's functions as
   methods: `maybe.map(f).getOrElse(() => 0)` calls `Option.map` and
   `Option.getOrElse`, and `stream.filter(p).take(3)` calls `Stream.filter` and
@@ -139,28 +139,28 @@ clients, see [editors/](editors/README.md).
   importing the module runs nothing. A runner you call at the top level,
   `NodeRuntime.runMain(main())`, replaces that.
 - Plain functions from other packages need a boundary, such as
-  `try((text) => parse(text), text)`, or a `/** @effeck trusted */`
+  `try((text) => parse(text), text)`, or a `/** @vibelang trusted */`
   re-export from a `.ts` file (EK4401). Effect's packages are trusted,
   including `assert` and `expect` from `@effect/vitest`: import them from
   `@effect/vitest`, not from `vitest`.
-- `console.log`, `fetch`, timers, and `Date.now()` are errors in `.effeck` code
+- `console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe` code
   (EK4402, EK4403). Use `Effect.log` or `Console`, `Effect.sleep`, `Clock`,
   and Effect's HTTP modules: `effect/http` with `NodeHttpServer` from
   `@effect/platform-node`.
 - A `Disposable`'s `[Symbol.dispose]` runs synchronously and cannot run an
   Effect (EK4301). Acquire a resource whose release logs or waits with
   `Effect.acquireRelease`, and hold it with `using`.
-- The user docs mirror Effect's pages and add an Effeck features section:
-  [control operations and handlers](docs/user/src/effeck-features/111-control-operations-and-handlers.md),
-  [producers](docs/user/src/effeck-features/112-producers.md),
-  [building an HTTP API](docs/user/src/effeck-features/113-building-an-http-api.md),
-  and [Effeck for Effect users](docs/user/src/effeck-features/114-effeck-for-effect-users.md).
+- The user docs mirror Effect's pages and add a VibeLang features section:
+  [control operations and handlers](docs/user/src/vibelang-features/111-control-operations-and-handlers.md),
+  [producers](docs/user/src/vibelang-features/112-producers.md),
+  [building an HTTP API](docs/user/src/vibelang-features/113-building-an-http-api.md),
+  and [VibeLang for Effect users](docs/user/src/vibelang-features/114-vibelang-for-effect-users.md).
 - A route handler's services are request requirements. `HttpRouter.serve`
   turns them into the server layer's inputs, which `wire` provides; a test
   that calls `HttpRouter.toHttpEffect` provides them with
   `HttpRouter.provideRequest(layer)(routes)`.
 
-## Develop Effeck
+## Develop VibeLang
 
 Work on the compiler, runtime, editor, or docs from this checkout. Setup
 requires Go, Bun, and Node on `PATH`. The tested toolchain is Go 1.26 (with
@@ -168,19 +168,19 @@ automatic Go 1.27 download), Bun 1.4.1, and Node 26.10.
 
 ```sh
 sh scripts/setup.sh
-bun create effeck my-app --no-git
+bun create vibelang my-app --no-git
 ```
 
-Setup builds the native compiler into `packages/compiler/native/effeck`, packs
+Setup builds the native compiler into `packages/compiler/native/vibelang`, packs
 the runtime, builds the editor extension and prints its `.vsix` path, and
-installs a local template into `~/.bun-create/effeck`. `bun create effeck`
+installs a local template into `~/.bun-create/vibelang`. `bun create vibelang`
 prefers that local template over the npm package, so projects created after
 setup use absolute `file:` dependencies on this checkout's compiler and Vite
 packages and on the runtime tarball that setup packs. Keep the checkout
 available. Rerun setup after updating it, then run
-`bun update effeck-runtime effeck effeck-vite` in those projects. To scaffold
-from npm instead, run `npm create effeck@latest`, or remove
-`~/.bun-create/effeck`.
+`bun update vibelang-runtime vibelang vibelang-vite` in those projects. To scaffold
+from npm instead, run `npm create vibelang@latest`, or remove
+`~/.bun-create/vibelang`.
 
 The end-to-end check runs setup, scaffolding, installation, the build, the
 program, and its tests in a temporary project, and fails at the first
@@ -193,26 +193,27 @@ sh scripts/e2e.sh
 | Path | What it is |
 | --- | --- |
 | `docs/design/` | The spec, one Markdown file per chapter in `src/`, and the decision log (`DECISIONS.md`); the docs site renders each chapter as a page |
-| `docs/user/` | End-user docs that mirror Effect 4's documentation page for page, in original Effeck writing; `docs/tools/render-user.ts` builds them and the spec into one site |
+| `docs/user/` | End-user docs that mirror Effect 4's documentation page for page, in original VibeLang writing; `docs/tools/render-user.ts` builds them and the spec into one site |
 | `docs/research/` | Research behind the design: Effect 4's runtime, continuation prior art, the TypeScript compiler, TC39 proposals, usage censuses, feature coverage |
 | `docs/reviews/` | Independent reviews of the design |
 | `experiments/` | The continuation kernel prototype on `effect@4.0.5` and its law suite (`bun test`); the docs build refuses to run if any test fails |
 | `prototype/esc/` | A prototype compiler on the TypeScript API, from before the rename, that lowers `.es` files (the old extension) to Effect TypeScript; the executable reference for lowering |
 | `prototype/single-pass/` | The experiment that settled single-pass lowering (D56) on a patched TypeScript 5.9 checker |
-| `typescript/` | The compiler, `effeck`: microsoft/TypeScript 7 (Go) with the Effeck commits on top; `typescript/EFFECK.md` describes them |
+| `typescript/` | The compiler, `vibelang`: microsoft/TypeScript 7 (Go) with the VibeLang commits on top; `typescript/VIBELANG.md` describes them |
 | `artifacts/` | The earlier design-space proposal, kept for history; superseded by `docs/design/` |
 
 ```sh
 cd experiments && bun install && bun test          # kernel laws
 cd docs/tools && bun install && bun render-user.ts # build the docs site and the spec
 bun prototype/esc/examples/run-all.ts              # prototype compiler examples
-cd typescript && sh effeck/smoke.sh                # build effeck and run its cases
+cd typescript && sh vibelang/smoke.sh                # build vibelang and run its cases
 bun docs/tools/check-snippets.ts                   # compile every user-doc code block
 bun docs/tools/check-smithers-content.ts           # check app.md, home.json, the convert prompt and hero
+node --test scripts/brand-gate.test.mjs            # no retired brand spelling outside the gate's exemptions
 sh scripts/check-examples.sh                       # build and run the examples
 sh scripts/deploy-docs.sh                          # publish the docs on Cloudflare
 ```
 
-To run any of these on a Linux build host instead of this machine, set `ES_REMOTE_HOST` (and `ES_REMOTE_KEY`) and prefix the command with `scripts/remote.sh` from the directory it runs in, for example `cd typescript && ../scripts/remote.sh sh effeck/smoke.sh --status`.
+To run any of these on a Linux build host instead of this machine, set `ES_REMOTE_HOST` (and `ES_REMOTE_KEY`) and prefix the command with `scripts/remote.sh` from the directory it runs in, for example `cd typescript && ../scripts/remote.sh sh vibelang/smoke.sh --status`.
 
 `experiments/scripts/v3-wakeup-chain.mjs` needs Effect 3.22.3 unpacked in `experiments/scratch-agent-a/v3pkg/` (`npm pack effect@3.22.3`), which is not checked in.

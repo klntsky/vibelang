@@ -18,7 +18,7 @@ fiber._stack while Payments.charge runs, bottom to top:
            a call          `using`                            `try`/`catch`                  a call
 ```
 
-Every construct in the function is a frame on the fiber's stack. The machine defines what every Effeck program means; syntax, types, and the compiler exist to produce and check its states. It is not a model of Effect's runtime that we hope matches: it is Effect's runtime plus a few frame kinds and four operations, and the kernel prototype runs it.
+Every construct in the function is a frame on the fiber's stack. The machine defines what every VibeLang program means; syntax, types, and the compiler exist to produce and check its states. It is not a model of Effect's runtime that we hope matches: it is Effect's runtime plus a few frame kinds and four operations, and the kernel prototype runs it.
 
 In the machine's terms, Effect supplies two things. It supplies the representation: frames on `_stack` and the Context. It also supplies the **root handler**: the scheduler at the bottom of every fiber, which handles the runtime operations (wait, yield, fork, interrupt) by parking and resuming whole fiber stacks. Every other handler is a prompt above the root. That is the precise sense in which the language is the effect system: every feature is a rule over frames, prompts, and one-shot continuations, and Effect's run loop is one handler in that semantics rather than a library the language calls.
 

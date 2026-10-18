@@ -1,12 +1,12 @@
 # Layer Memoization
 
-Effect shares repeated uses of the same layer value within one build graph. Effeck keeps this behavior, so reuse a layer value when consumers should share its initialization and resources.
+Effect shares repeated uses of the same layer value within one build graph. VibeLang keeps this behavior, so reuse a layer value when consumers should share its initialization and resources.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/layer-memoization)
 
 ## Sharing acquisition across a graph
 
-```effeck
+```vibe
 service Prefix {
   value: string
 }
@@ -52,7 +52,7 @@ Sharing lasts for the graph's managed lifetime; it is not a process-wide singlet
 
 ## Requesting fresh acquisition
 
-```effeck
+```vibe
 const Separate = Layer.merge(
   Layer.provide(HeadingLive, Layer.fresh(PrefixLive)),
   Layer.provide(FooterLive, Layer.fresh(PrefixLive))
@@ -67,7 +67,7 @@ Each fresh branch acquires its own prefix implementation, producing two initiali
 
 ## Local provision boundaries
 
-```effeck
+```vibe
 function twoLocalReads() {
   const first = Effect.provide(() => Prefix().value, PrefixLive)
   const second = Effect.provide(() => Prefix().value, PrefixLive)
@@ -87,7 +87,7 @@ function oneSharedReadBoundary() {
 
 ## Controlling memoization explicitly
 
-```effeck
+```vibe
 function manualSharing() {
   return Effect.scoped {
     const memoMap = Layer.makeMemoMap()

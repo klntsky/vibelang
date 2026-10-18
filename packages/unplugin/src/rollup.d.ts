@@ -1,4 +1,4 @@
 import type { unplugin } from "./index.js"
 
-declare const effeck: typeof unplugin.rollup
-export default effeck
+declare const vibelang: typeof unplugin.rollup
+export default vibelang

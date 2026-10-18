@@ -1,16 +1,16 @@
 {
-  "name": "effeck-example-react-vite",
+  "name": "vibelang-example-react-vite",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "effeck -p tsconfig.json --noEmit",
-    "test": "effeck -p tsconfig.json --noEmit && vitest run && vite build"
+    "typecheck": "vibelang -p tsconfig.json --noEmit",
+    "test": "vibelang -p tsconfig.json --noEmit && vitest run && vite build"
   },
   "dependencies": {
     "effect": "4.0.5",
-    "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz",
+    "vibelang-runtime": "file:../../packages/runtime/vibelang-runtime.tgz",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
@@ -21,8 +21,8 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
-    "effeck": "file:../../packages/compiler",
-    "effeck-vite": "file:../../packages/vite",
+    "vibelang": "file:../../packages/compiler",
+    "vibelang-vite": "file:../../packages/vite",
     "happy-dom": "20.14.6",
     "vite": "8.3.4",
     "vitest": "5.0.5"

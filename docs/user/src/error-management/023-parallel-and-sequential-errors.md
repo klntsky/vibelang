@@ -6,7 +6,7 @@ An operation can stop for several reasons: concurrent work can fail together, or
 
 ## Representing multiple failures
 
-```effeck
+```vibe
 function failureKinds() {
   const cause = Cause.fail("delivery rejected").combine(Cause.die(new Error("release invariant failed")))
   return cause.reasons.map((reason) => reason._tag)
@@ -18,7 +18,7 @@ A `Cause.Cause<E>` contains a readonly array of `Cause.Reason<E>`. Each reason i
 
 ## Combining concurrent or sequential reasons
 
-```effeck
+```vibe
 function operationWithBrokenCleanup() {
   try {
     throw "delivery rejected"
@@ -48,7 +48,7 @@ When every reason is an expected failure, ordinary catch receives the first fail
 
 ## Runtime causes and domain error collections
 
-```effeck
+```vibe
 error InvalidPort { port: number }
 
 function validatePorts() {
@@ -64,4 +64,4 @@ Validation produces one typed failure containing a collection of domain errors. 
 
 ## Coming from Effect
 
-Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup, with Effeck's guarantee that cleanup failure never replaces and drops an earlier failure.
+Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup, with VibeLang's guarantee that cleanup failure never replaces and drops an earlier failure.

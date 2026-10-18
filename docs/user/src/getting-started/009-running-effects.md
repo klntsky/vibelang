@@ -1,8 +1,8 @@
 # Running Effects
 
-Runners start a program at an application boundary. Inside a running Effeck function, ordinary calls already run computations on the current fiber, so reserve runners for entry points and framework adapters.
+Runners start a program at an application boundary. Inside a running VibeLang function, ordinary calls already run computations on the current fiber, so reserve runners for entry points and framework adapters.
 
-Call a runner at module top level or in a plain callback registered there with a TypeScript function, such as a `describe` body or framework route handler. Calling a runner inside code a fiber runs is EK1005; call the program or use `fork` instead. Tests in `.effeck` use `it.effect` from `@effect/vitest`; Promise-style tests stay in `.ts`.
+Call a runner at module top level or in a plain callback registered there with a TypeScript function, such as a `describe` body or framework route handler. Calling a runner inside code a fiber runs is EK1005; call the program or use `fork` instead. Tests in `.vibe` use `it.effect` from `@effect/vitest`; Promise-style tests stay in `.ts`.
 
 ## Build and run a local project
 
@@ -15,21 +15,21 @@ bun run dev
 bun run test
 ```
 
-`build` invokes `effeck` with the project's `tsconfig.json`. `start` builds, then
+`build` invokes `vibelang` with the project's `tsconfig.json`. `start` builds, then
 runs `node --enable-source-maps dist/main.js`. `dev` builds once, then runs
-`effeck --watch` alongside `node --watch --enable-source-maps dist/main.js`.
-`test` runs Vitest on `src/**/*.test.effeck` through `effeck-vite`, which
-compiles the project with `effeck` and serves the JavaScript, so tests need no
-prior build. Node and Vitest receive JavaScript; neither interprets `.effeck`
+`vibelang --watch` alongside `node --watch --enable-source-maps dist/main.js`.
+`test` runs Vitest on `src/**/*.test.vibe` through `vibelang-vite`, which
+compiles the project with `vibelang` and serves the JavaScript, so tests need no
+prior build. Node and Vitest receive JavaScript; neither interprets `.vibe`
 sources directly.
 
-The starter's `main.effeck` exports `main`, so `node dist/main.js` runs it with
+The starter's `main.vibe` exports `main`, so `node dist/main.js` runs it with
 `NodeRuntime.runMain`, the application boundary. Its greeting and recovery messages provide a quick check that the
 service layer and typed failure both run.
 
 ## Execute synchronous computations
 
-```effeck
+```vibe
 function subtotal() {
   return 7 * 8
 }
@@ -42,7 +42,7 @@ const total = Effect.runSync(subtotal())
 
 ## Run promise-based computations
 
-```effeck
+```vibe
 function preparedMessage() {
   sleep("15 millis")
   return "prepared"
@@ -52,11 +52,11 @@ const pending = Effect.runPromise(preparedMessage())
 // pending: Promise<string>
 ```
 
-`Effect.runPromise` starts execution and returns a promise for the success value. The promise rejects when the program fails. A foreign TypeScript caller can await that promise; an Effeck caller should call `preparedMessage()` directly inside its own program.
+`Effect.runPromise` starts execution and returns a promise for the success value. The promise rejects when the program fails. A foreign TypeScript caller can await that promise; a VibeLang caller should call `preparedMessage()` directly inside its own program.
 
 ## Collect complete execution results
 
-```effeck
+```vibe
 error BadInput
 
 function validate(input: string) {
@@ -74,7 +74,7 @@ An `Exit` is either a success with a value or a failure with a `Cause`. That cau
 
 ## Start and interrupt a fiber
 
-```effeck
+```vibe
 function heartbeat() {
   repeat(log("alive"), Schedule.spaced("200 millis"))
 }
@@ -91,8 +91,8 @@ Effect.runPromise {
 
 ## Select an application boundary
 
-```effeck
-// main.effeck
+```vibe
+// main.vibe
 export function main() {
   log("application started")
 }
@@ -113,6 +113,6 @@ The three contract channels do not say whether work runs synchronously. Prefer a
 
 ## Coming from Effect
 
-In `.effeck` files, pass `main()` too: the runner receives the call by name, as a program, and `() => main()` means the same. A TypeScript caller receives a cold Effect from an exported Effeck function and passes `main()` to the runner the same way.
+In `.vibe` files, pass `main()` too: the runner receives the call by name, as a program, and `() => main()` means the same. A TypeScript caller receives a cold Effect from an exported VibeLang function and passes `main()` to the runner the same way.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/running-effects)

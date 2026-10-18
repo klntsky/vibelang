@@ -109,7 +109,7 @@ function skipSpace(code: string, i: number): number {
 }
 
 // statementStarts returns the offsets of the top-level statements of one
-// .effeck or .ts source in blanked code. A top-level statement starts at
+// .vibe or .ts source in blanked code. A top-level statement starts at
 // column 0 outside any bracket, which holds for every source in the corpus.
 export function statementStarts(code: string): number[] {
   const starts: number[] = []
@@ -265,14 +265,14 @@ function escape(s: string): string {
 }
 
 // trustedNames: names declared right after a JSDoc block that holds
-// `@effeck trusted` or `@throws` (D5, D23), in any source of the case. L5
+// `@vibelang trusted` or `@throws` (D5, D23), in any source of the case. L5
 // makes trust a value, so their callers' declarations migrate.
 export function trustedNames(text: string): Set<string> {
   const names = new Set<string>()
   const doc = /\/\*\*[\s\S]*?\*\//g
   let m: RegExpExecArray | null
   while ((m = doc.exec(text))) {
-    if (!/@effeck\s+trusted|@throws\b/.test(m[0])) continue
+    if (!/@vibelang\s+trusted|@throws\b/.test(m[0])) continue
     const after = text.slice(m.index + m[0].length, m.index + m[0].length + 200)
     const decl = /^\s*(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:function\s*\*?|const|let|class)?\s*([A-Za-z_$][\w$]*)/.exec(after)
     if (decl) names.add(decl[1])

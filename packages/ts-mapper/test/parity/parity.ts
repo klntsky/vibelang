@@ -1,6 +1,6 @@
 import { runtimeExclusions, exclusionNote, typeExclusions, typeExclusionNote } from "./runtime-exclusions.ts"
 // The parity harness for gate 1 of decision (B): does stock TypeScript 7,
-// through Effeck's content mapper, declare the same A, E, and R as the fork?
+// through VibeLang's content mapper, declare the same A, E, and R as the fork?
 //
 //   packages/ts-mapper/test/parity/run.sh [--gate] [--self-test] [--jobs N] [case...]
 //
@@ -147,7 +147,7 @@ async function pool<T>(items: T[], size: number, fn: (item: T) => Promise<void>)
 
 type Diagnostic = { file: string; line: number; column: number; category: string; code: string; text: string }
 
-// Diagnostics as `tsc --pretty false` prints them, as effeck/harness.mjs reads them.
+// Diagnostics as `tsc --pretty false` prints them, as vibelang/harness.mjs reads them.
 const diagnosticLine = /^(?:(.+)\((\d+),(\d+)\): )?(error|warning|message|suggestion) ([A-Za-z]+\d+): (.*)$/
 
 function parseDiagnostics(text: string): Diagnostic[] {
@@ -170,7 +170,7 @@ function clip(text: string, n: number): string {
 
 // ---------------------------------------------------------- normalization
 
-const preludeModule = "effeck-ts-mapper/prelude"
+const preludeModule = "vibelang-ts-mapper/prelude"
 
 function normalizeContext(): NormalizeContext {
   const effectModules = new Map<string, string>()
@@ -208,8 +208,8 @@ function normalizeContext(): NormalizeContext {
   const runtime = new Map<string, { module: string; member: string }>()
   const runtimeAliases = new Map<string, string>()
   reexportsOf(path.join(runtimeDir, "dist", "index.d.ts"), runtime, runtimeAliases)
-  reexports.set("effeck-runtime", runtime)
-  aliases.set("effeck-runtime", runtimeAliases)
+  reexports.set("vibelang-runtime", runtime)
+  aliases.set("vibelang-runtime", runtimeAliases)
   return { effectModules, reexports, aliases }
 }
 const ctx = normalizeContext()
@@ -218,9 +218,9 @@ const describeReexports = (module: string) =>
 
 const normalizationRules = [
   "Comments and layout are dropped; tokens are compared one by one.",
-  "A relative specifier names a module without its extension: ./users.js, ./users.effeck, and ./users are one module.",
+  "A relative specifier names a module without its extension: ./users.js, ./users.vibe, and ./users are one module.",
   "A qualified name resolves to the module that declares it: import(\"effect/Effect\").Effect, an imported Effect.Effect, and import(\"effect\").Effect.Effect are all effect/Effect#Effect; the resolution-mode attribute is dropped.",
-  `A name that ${preludeModule} or effeck-runtime re-exports unchanged resolves to its origin: ${preludeModule} re-exports ${describeReexports(preludeModule)}; effeck-runtime re-exports ${describeReexports("effeck-runtime")}.`,
+  `A name that ${preludeModule} or vibelang-runtime re-exports unchanged resolves to its origin: ${preludeModule} re-exports ${describeReexports(preludeModule)}; vibelang-runtime re-exports ${describeReexports("vibelang-runtime")}.`,
   `A bare name (no member access) that a package exports as a type alias of another module's type resolves to that type: ${[...ctx.aliases].flatMap(([m, a]) => [...a].map(([k, v]) => `${k} from ${m} is ${v}`)).join(", ") || "none"}. The mapper's prelude exports Effect only as a namespace, so its bare Effect<...> does not match.`,
   "The members of a simple union are sorted (TypeScript prints unions in type-creation order); a match that needs this is reported as union-order.",
   "A relative Effect import and a public package import are one module only when Node resolves both to the exact same installed file; different copies and private paths stay distinct.",
@@ -371,15 +371,15 @@ type CaseRef = { id: string; rel: string; dir: string; origin: "case" | "example
 
 function discover(): CaseRef[] {
   const refs: CaseRef[] = []
-  const casesDir = path.join(root, "typescript", "effeck", "cases")
+  const casesDir = path.join(root, "typescript", "vibelang", "cases")
   for (const name of fs.readdirSync(casesDir).sort()) {
-    if (fs.existsSync(path.join(casesDir, name, "tsconfig.json"))) refs.push({ id: name, rel: `typescript/effeck/cases/${name}`, dir: path.join(casesDir, name), origin: "case" })
+    if (fs.existsSync(path.join(casesDir, name, "tsconfig.json"))) refs.push({ id: name, rel: `typescript/vibelang/cases/${name}`, dir: path.join(casesDir, name), origin: "case" })
   }
   const examplesDir = path.join(root, "examples")
   for (const name of fs.readdirSync(examplesDir).sort()) {
     const dir = path.join(examplesDir, name)
     if (!fs.existsSync(path.join(dir, "tsconfig.json"))) continue
-    if (!walk(dir, () => true).some((f) => f.endsWith(".effeck"))) continue
+    if (!walk(dir, () => true).some((f) => f.endsWith(".vibe"))) continue
     refs.push({ id: `examples/${name}`, rel: `examples/${name}`, dir, origin: "example" })
   }
   return refs
@@ -394,8 +394,8 @@ function probeRefs(): CaseRef[] {
     .map((name) => ({ id: `probe/${name}`, rel: `packages/ts-mapper/test/parity/probes/${name}`, dir: path.join(dir, name), origin: "probe" as const }))
 }
 
-const sourcePattern = /\.(effeck|ts|mts|cts|tsx)$/
-const inputPattern = /\.(effeck|ts|mts|cts|tsx|json)$/
+const sourcePattern = /\.(vibe|ts|mts|cts|tsx)$/
+const inputPattern = /\.(vibe|ts|mts|cts|tsx|json)$/
 
 // --------------------------------------------------------- node_modules
 
@@ -417,33 +417,33 @@ function link(target: string, at: string) {
 function setupNodeModules() {
   const dependencies = path.join(outDir, "snippet-dependencies")
   fs.rmSync(dependencies, { recursive: true, force: true })
-  const previousRuntime = process.env.EFFECK_RUNTIME_DIR
-  process.env.EFFECK_RUNTIME_DIR = runtimeDir
+  const previousRuntime = process.env.VIBELANG_RUNTIME_DIR
+  process.env.VIBELANG_RUNTIME_DIR = runtimeDir
   try {
     linkModules(dependencies)
   } finally {
-    if (previousRuntime === undefined) delete process.env.EFFECK_RUNTIME_DIR
-    else process.env.EFFECK_RUNTIME_DIR = previousRuntime
+    if (previousRuntime === undefined) delete process.env.VIBELANG_RUNTIME_DIR
+    else process.env.VIBELANG_RUNTIME_DIR = previousRuntime
   }
   for (const nm of [nmFork, nmMapper]) {
     fs.rmSync(nm, { recursive: true, force: true })
     fs.mkdirSync(nm, { recursive: true })
     link(effectDir, path.join(nm, "effect"))
-    link(runtimeDir, path.join(nm, "effeck-runtime"))
+    link(runtimeDir, path.join(nm, "vibelang-runtime"))
   }
   for (const nm of [path.join(mapperPackage, "node_modules")]) {
     for (const name of fs.readdirSync(path.join(dependencies, "node_modules"))) {
-      if (name === "effect" || name === "effeck-runtime") continue
+      if (name === "effect" || name === "vibelang-runtime") continue
       link(fs.realpathSync(path.join(dependencies, "node_modules", name)), path.join(nm, name))
     }
   }
-  link(mapperPackage, path.join(nmMapper, "effeck-ts-mapper"))
+  link(mapperPackage, path.join(nmMapper, "vibelang-ts-mapper"))
 }
 
 // ------------------------------------------------------ stock adapter
 
 // Options the fork reads and stock TypeScript rejects.
-const forkOnlyOptions = ["effeck"]
+const forkOnlyOptions = ["vibelang"]
 
 type Migration = { file: string; from: string; to: string; why: string }
 type Adapter = { stripped: string[]; forced: Record<string, unknown>; migrations: Migration[] }
@@ -491,10 +491,10 @@ function adaptStockProject(dir: string, tsconfig: any): Adapter {
       let to: string | undefined
       const base = spec.replace(/\.(m?js)$/, "")
       const hasTs = [".ts", ".tsx", ".mts", ".d.ts"].some((ext) => exists(base + ext))
-      if (/\.m?js$/.test(spec) && exists(`${base}.effeck`) && !hasTs) to = `${base}.effeck`
-      else if (!/\.[a-z]+$/.test(spec) && exists(`${spec}.effeck`) && !hasTs && !exists(spec)) to = `${spec}.effeck`
+      if (/\.m?js$/.test(spec) && exists(`${base}.vibe`) && !hasTs) to = `${base}.vibe`
+      else if (!/\.[a-z]+$/.test(spec) && exists(`${spec}.vibe`) && !hasTs && !exists(spec)) to = `${spec}.vibe`
       if (!to) return whole
-      adapter.migrations.push({ file: rel, from: spec, to, why: "stock TypeScript resolves no .js or extensionless specifier to a .effeck source (microsoft/TypeScript#64546)" })
+      adapter.migrations.push({ file: rel, from: spec, to, why: "stock TypeScript resolves no .js or extensionless specifier to a .vibe source (microsoft/TypeScript#64546)" })
       return `${lead}${quote}${to}${quote}`
     })
     if (migrated !== text) fs.writeFileSync(file, migrated)
@@ -522,7 +522,7 @@ type Run = {
   probeExports?: ProbeExports
 }
 
-const declarationSuffix = /\.d(\.effeck)?\.(ts|mts|cts)$/
+const declarationSuffix = /\.d(\.vibe)?\.(ts|mts|cts)$/
 // The outDir a project without one gets on both sides.
 const defaultOutDir = "out"
 
@@ -557,7 +557,7 @@ function workDir(ref: CaseRef, side: "fork" | "mapper"): string {
 // Probe exports make the declaration file show unexported top-level
 // bindings too: a wrong lambda form inside an unexported DatabaseLive changes
 // no exported signature, only DatabaseLive's own type. Both sides get the
-// same lines, appended to each .effeck source of the copy:
+// same lines, appended to each .vibe source of the copy:
 //
 //   export type __probe_DatabaseLive = typeof DatabaseLive   (a value)
 //   export type __probe_type_User = User                     (a non-generic type)
@@ -574,7 +574,7 @@ type ProbeExports = { file: string; names: string[] }[]
 function addProbeExports(dir: string, sources: Map<string, string>): ProbeExports {
   const added: ProbeExports = []
   for (const [rel, text] of sources) {
-    if (!rel.endsWith(".effeck")) continue
+    if (!rel.endsWith(".vibe")) continue
     const lines: string[] = []
     const names: string[] = []
     const seen = new Set<string>()
@@ -654,8 +654,8 @@ async function runMapperIn(run: Run, dir: string, mutate?: (dir: string) => void
   let frameworkDiagnostics: Diagnostic[] = []
   if (/^examples\/(react|vue|svelte)-vite$/.test(run.ref.id)) {
     // Let TypeScript resolve the entire import closure from the projected roots.
-    // Filtering extensions would hide missing framework packages imported by Effeck.
-    const scoped = { ...tsconfig, files: [...run.sources.keys()].filter((f) => f.endsWith(".effeck")), include: [] }
+    // Filtering extensions would hide missing framework packages imported by VibeLang.
+    const scoped = { ...tsconfig, files: [...run.sources.keys()].filter((f) => f.endsWith(".vibe")), include: [] }
     fs.writeFileSync(path.join(dir, "tsconfig.gate1.json"), JSON.stringify(scoped, null, 2) + "\n")
     const checked = await exec([stockTsc, "-p", "tsconfig.gate1.json", "--pretty", "false", "--runExternalCode"], dir)
     const gateDiagnostics = parseDiagnostics(checked.output)
@@ -680,7 +680,7 @@ type DeclarationEntry = {
   // probed: unexported, and printed only because a probe export names it.
   probed: boolean
   overloads: number
-  sourceKind: "effeck" | "ts" | "unknown"
+  sourceKind: "vibelang" | "ts" | "unknown"
   class: string
   group: "unchanged" | "migration" | "negative"
   lanes: string[]
@@ -746,7 +746,7 @@ function sourceFor(stem: string, sources: Map<string, string>): string | null {
     const noExt = rel.replace(sourcePattern, "")
     return noExt === stem || noExt.endsWith(`/${stem}`) || stem.endsWith(`/${noExt}`)
   }
-  return candidates.find((rel) => rel.endsWith(".effeck") && match(rel)) ?? candidates.find(match) ?? null
+  return candidates.find((rel) => rel.endsWith(".vibe") && match(rel)) ?? candidates.find(match) ?? null
 }
 
 function bareImports(text: string): string[] {
@@ -768,7 +768,7 @@ function unresolvedPackages(run: Run): string[] {
   for (const text of run.sources.values()) {
     for (const pkg of bareImports(text)) {
       if (pkg.startsWith("node:") || isBuiltin(pkg) || paths.includes(pkg) || paths.some((p) => p.startsWith(`${pkg}/`))) continue
-      if (pkg === "effect" || pkg === "effeck-runtime") continue
+      if (pkg === "effect" || pkg === "vibelang-runtime") continue
       if (![nmFork, path.join(mapperPackage, "node_modules")].some((nm) => fs.existsSync(path.join(nm, pkg, "package.json")))) missing.add(pkg)
     }
   }
@@ -778,7 +778,7 @@ function unresolvedPackages(run: Run): string[] {
 const classificationRules = [
   "failing: the case name ends in .fail or a source's first line is `// expect:`. Its declarations form the negative group: the mapper side must report an error.",
   "L4: the declaration's source has a typed catch clause, `catch (e: T)` (retired, D131/D216).",
-  "L5: the declaration's source names a function, const, or class whose JSDoc holds `@effeck trusted` or `@throws`, in any source of the case.",
+  "L5: the declaration's source names a function, const, or class whose JSDoc holds `@vibelang trusted` or `@throws`, in any source of the case.",
   "recursive: the function calls itself, or sits on a call cycle with other top-level functions of its file (D52). L6 applies to a recursive function whose return annotation is missing or has an `infer` channel: it must write E and R.",
   "L7: the declaration's source calls `wire(...)` with more than one argument.",
   "L8: the declaration's source calls `K.pipe|of|use|key|name|length|call|apply|bind` where K is a class in the case's .ts files that extends a Context key.",
@@ -786,7 +786,7 @@ const classificationRules = [
   "L2: a top-level function (or const arrow function) with no return annotation whose fork declaration does not return Effect or Stream: under L2 it becomes an Effect function. This rule reads the fork reference, never the projector.",
   "generic: a top-level function with a type parameter list.",
   "Class precedence: failing, l4-l8, recursive, generic, concrete. A declaration with any lane is in the migration group; others are unchanged, whatever their class.",
-  "Unexported top-level bindings of a .effeck source are compared too: the harness appends `export type __probe_X = typeof X` (or `= X` for a non-generic type) to each copy, on both sides.",
+  "Unexported top-level bindings of a .vibe source are compared too: the harness appends `export type __probe_X = typeof X` (or `= X` for a non-generic type) to each copy, on both sides.",
   "A declaration from a .ts source is a ts-helper: compared, reported, and not gated.",
 ]
 
@@ -797,15 +797,15 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
   const keys = new Set<string>()
   for (const [rel, text] of run.sources) {
     for (const name of trustedNames(text)) trusted.add(name)
-    if (!rel.endsWith(".effeck")) for (const key of tsAuthoredKeys(text)) keys.add(key)
+    if (!rel.endsWith(".vibe")) for (const key of tsAuthoredKeys(text)) keys.add(key)
   }
   const scanned = new Map<string, { declarations: SourceDeclaration[]; recursive: Set<string> }>()
   for (const [rel, text] of run.sources) {
-    if (!rel.endsWith(".effeck")) continue
+    if (!rel.endsWith(".vibe")) continue
     const declarations = scanDeclarations(text)
     scanned.set(rel, { declarations, recursive: recursiveNames(declarations) })
   }
-  // The case's unannotated, non-generator .effeck functions: the fork
+  // The case's unannotated, non-generator .vibe functions: the fork
   // compiles them plain (D10) when their bodies run nothing.
   const plainValues = new Set(
     [...scanned.values()].flatMap(({ declarations }) =>
@@ -836,7 +836,7 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
     reference[stem] = sha256(text)
     const file = parseDeclarationFile(text)
     const source = sourceFor(stem, run.sources)
-    const sourceKind = source === null ? "unknown" : source.endsWith(".effeck") ? "effeck" : "ts"
+    const sourceKind = source === null ? "unknown" : source.endsWith(".vibe") ? "vibelang" : "ts"
     const info = source ? scanned.get(source) : undefined
     for (const unit of file.units) {
       if (unit.name.startsWith(probePrefix)) continue
@@ -851,7 +851,7 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
       // L3 a call whose value is an Effect at run time runs, so its type is
       // A | undefined. This reads the fork reference, never the projector.
       if (decl && keepsEffectInUnion(canon(unit, file).exact.join(" "))) lanes.push("L3")
-      // L2 at a use site: the declaration passes an unannotated .effeck
+      // L2 at a use site: the declaration passes an unannotated .vibe
       // function as a value, as in `xs.map(double)`. The fork hands such a
       // callee its plain $direct variant; under L2 it is an Effect function
       // until its return type is annotated plain.
@@ -918,8 +918,8 @@ function inputsNow(): Record<string, unknown> {
   return {
     effect: { version: effectPkg.version, dtsSha256: hashTree(path.join(effectDir, "dist"), (f) => f.endsWith(".d.ts")) },
     "@effect/*": scoped,
-    "effeck-runtime": { version: runtimePkg.version, dtsSha256: hashTree(path.join(runtimeDir, "dist"), (f) => f.endsWith(".d.ts")) },
-    "effeck-ts-mapper/prelude.d.ts": { sha256: sha256(fs.readFileSync(path.join(mapperPackage, "prelude.d.ts"))) },
+    "vibelang-runtime": { version: runtimePkg.version, dtsSha256: hashTree(path.join(runtimeDir, "dist"), (f) => f.endsWith(".d.ts")) },
+    "vibelang-ts-mapper/prelude.d.ts": { sha256: sha256(fs.readFileSync(path.join(mapperPackage, "prelude.d.ts"))) },
   }
 }
 
@@ -1039,7 +1039,7 @@ type CaseResult = {
   unresolvedPackages: string[]
 }
 
-// ek9001Form names the Effeck form at an EK9001 position from the source
+// ek9001Form names the VibeLang form at an EK9001 position from the source
 // text there: the reported token and up to four tokens before it on its line,
 // with local names generalized (x, X) and keywords, effect modules, and their
 // members kept, as in `Effect.withSpan("…") ⟨{⟩` for a block param. The
@@ -1104,7 +1104,7 @@ function compareCase(run: Run, entry: CaseEntry | undefined): CaseResult {
   }
   const onProbeLine = (d: Diagnostic) => {
     const rel = [...run.sources.keys()].find((k) => k === d.file || d.file.endsWith(`/${k}`))
-    return rel !== undefined && rel.endsWith(".effeck") && d.line > run.sources.get(rel)!.split("\n").length
+    return rel !== undefined && rel.endsWith(".vibe") && d.line > run.sources.get(rel)!.split("\n").length
   }
   result.probeLineErrors.fork = fork.diagnostics.filter((d) => d.category === "error" && onProbeLine(d)).length
   for (const d of mapper.diagnostics) {
@@ -1231,7 +1231,7 @@ async function runSelfTest(): Promise<boolean> {
   check("stale missing exclusion", missing.staleExclusions[0]?.detail === "listed id does not exist", "unknown id is stale")
   const unmeasured = runtimeExclusions(["retired"], [], listed)
   check("partial runtime exclusion", unmeasured.exclusions.length === 0 && unmeasured.staleExclusions.length === 0, "unselected case is not stale")
-  const typeResults = (statuses: string[]) => [{ id: "retired", units: statuses.map((status) => ({ status, sourceKind: "effeck", group: "unchanged" })) }]
+  const typeResults = (statuses: string[]) => [{ id: "retired", units: statuses.map((status) => ({ status, sourceKind: "vibelang", group: "unchanged" })) }]
   const typeFailed = typeExclusions(["retired"], typeResults(["identical", "mismatch"]), listed)
   check("type exclusion", typeFailed.exclusions.length === 1 && typeFailed.staleExclusions.length === 0 && typeExclusionNote(typeFailed.exclusions).includes("fixture exclusion"), "mixed declarations remain explicitly excluded")
   check("stale matching type exclusion", typeExclusions(["retired"], typeResults(["identical", "union-order"]), listed).staleExclusions.length === 1, "all matching declarations make exclusion stale")
@@ -1312,9 +1312,9 @@ async function runSelfTest(): Promise<boolean> {
       const baseline = compareUnit({ unit: ticks, file: forkFile }, mapperTicks ? { unit: mapperTicks, file: mapperFile } : undefined)
       check("unexported baseline", baseline.status === "identical" && !ticks.exported, `ticks (exported: ${ticks.exported}) is ${baseline.status}`)
       const side = await runMapperIn(run, path.join(outDir, "work", "mapper-flip", ref.id), (dir) => {
-        const file = path.join(dir, "main.effeck")
+        const file = path.join(dir, "main.vibe")
         const text = fs.readFileSync(file, "utf8")
-        if (!text.includes(plain)) throw new Error(`self-test: main.effeck no longer holds ${plain}`)
+        if (!text.includes(plain)) throw new Error(`self-test: main.vibe no longer holds ${plain}`)
         fs.writeFileSync(file, text.replace(plain, flipped))
       })
       const flippedText = side.declarations.get(stem)?.text ?? ""
@@ -1374,7 +1374,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   const typeExclusionReport = typeExclusions(discover().map((r) => r.id), results)
   const typeExcludedIds = new Set(typeExclusionReport.exclusions.map((e) => e.id))
   const positive = results.filter((r) => !r.failing && !typeExcludedIds.has(r.id))
-  // Gated: declarations of .effeck sources, exported or not.
+  // Gated: declarations of .vibe sources, exported or not.
   const gated = (r: CaseResult) => r.units.filter((u) => u.sourceKind !== "ts" && u.group !== "extra")
   const sites = (rs: CaseResult[], keep: (u: UnitResult) => boolean): Site[] => rs.flatMap((r) => gated(r).filter(keep).map((u) => ({ ...u, case: r.id })))
   const pass = (u: UnitResult) => u.status === "identical" || u.status === "union-order"
@@ -1482,7 +1482,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   const L: string[] = []
   L.push(`# Parity: gate 1 of decision (B), manifest ${hash.slice(0, 12)}`, "")
   L.push(`Ran ${json.ranAt} in ${timing.total.toFixed(0)} s wall (build ${timing.build.toFixed(0)} s, compile ${timing.compile.toFixed(0)} s, compare ${timing.compare.toFixed(1)} s, probes ${timing.probes.toFixed(0)} s, runtime ${timing.runtime.toFixed(0)} s), ${jobs} jobs${partial ? `, **partial run** (${results.length} of ${manifest.cases.length} cases)` : ""}.`)
-  L.push(`Fork ${revisions.fork.source}, binary ${revisions.fork.binarySha256.slice(0, 12)}; mapper binary ${revisions.mapper.binarySha256.slice(0, 12)}; stock TypeScript ${stockVersion}; effect ${inputs.effect.version}; effeck-runtime ${inputs["effeck-runtime"].version}.`)
+  L.push(`Fork ${revisions.fork.source}, binary ${revisions.fork.binarySha256.slice(0, 12)}; mapper binary ${revisions.mapper.binarySha256.slice(0, 12)}; stock TypeScript ${stockVersion}; effect ${inputs.effect.version}; vibelang-runtime ${inputs["vibelang-runtime"].version}.`)
   L.push(`Manifest ${hash} (${path.relative(root, manifestPath)}): ${manifest.cases.length} cases, ${json.manifest.declarations} declarations, generated from this run's fork; expectations.json ${manifest.expectations.sha256.slice(0, 12)}.`)
   L.push("", "## Gate 1", "", "```")
   L.push(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched${typeExclusionNote(g.concrete.exclusions)}`)
@@ -1502,7 +1502,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push(`.ts helper declarations (not gated): ${g.tsHelpers.declarations}, ${g.tsHelpers.identical} identical`)
   L.push(`gate 1: ${g.pass ? "PASS" : "not yet"}`)
   L.push("```", "")
-  L.push("A signature is one top-level declaration of a .effeck source, exported or not, as its .d.ts prints it; a class and its `_base` helper are one. Pass needs every unchanged declaration identical, no missing file, no degraded declaration, 0 EK9001 and 0 stock errors in positive cases, and every probe rejected. Migration declarations need written expectations first.", "")
+  L.push("A signature is one top-level declaration of a .vibe source, exported or not, as its .d.ts prints it; a class and its `_base` helper are one. Pass needs every unchanged declaration identical, no missing file, no degraded declaration, 0 EK9001 and 0 stock errors in positive cases, and every probe rejected. Migration declarations need written expectations first.", "")
   L.push("## Totals per class", "")
   L.push("| class | cases | signatures | identical | union order | mismatched | missing | expectation missing | degraded | EK9001 | stock errors |")
   L.push("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
@@ -1517,7 +1517,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push("Five most frequent first-mismatch shapes (unchanged group, positive cases):", "")
   L.push("| # | count | shape | example |", "| ---: | ---: | --- | --- |")
   shapes.forEach((s, i) => L.push(`| ${i + 1} | ${s.count} | \`${md(clip(s.key, 120))}\` | ${md(s.example.case)} \`${md(s.example.name)}\`: fork \`${md(clip(s.example.difference?.fork ?? s.example.fork ?? "", 90))}\` vs mapper \`${md(clip(s.example.difference?.mapper ?? "∅", 90))}\` |`))
-  L.push("", "Five most frequent unlowered Effeck forms (EK9001 in positive cases; read from the source at each diagnostic, ⟨⟩ marks the reported token):", "")
+  L.push("", "Five most frequent unlowered VibeLang forms (EK9001 in positive cases; read from the source at each diagnostic, ⟨⟩ marks the reported token):", "")
   L.push("| # | count | form | example |", "| ---: | ---: | --- | --- |")
   forms.forEach((f, i) => L.push(`| ${i + 1} | ${f.count} | \`${md(f.key)}\` | \`${md(f.example.context)}\` at ${md(f.example.at)} |`))
   L.push("", `All cases, failing ones included: ${allForms.map((f) => `\`${md(f.key)}\` ${f.count}`).join(", ")}; ${ek9001All} EK9001 in all.`, "")
@@ -1557,7 +1557,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
     const runtime = excludedIds.has(r.id) ? "excluded" : r.runtime ? (r.runtime.ok ? "ok" : "FAIL") : "-"
     L.push(`| ${md(r.id)} | ${r.class} | ${r.declarations.fork} | ${r.declarations.mapper} | ${units.length} | ${units.filter(pass).length} | ${units.filter((u) => u.group === "migration").length} | ${r.ek9001.count} | ${r.stockErrors.count} | ${runtime} | ${note} |`)
   }
-  L.push("", "fork and mapper: top-level declarations each side printed, .ts helpers included. signatures: those of .effeck sources, which the gate compares. runtime: the mapper's JavaScript prints the case's expect-result (runtime.ts).", "")
+  L.push("", "fork and mapper: top-level declarations each side printed, .ts helpers included. signatures: those of .vibe sources, which the gate compares. runtime: the mapper's JavaScript prints the case's expect-result (runtime.ts).", "")
   L.push("## Runtime failures", "")
   L.push("Runnable cases whose JavaScript from the mapper's Emit does not print the expected result. A case whose mapper side does not type-check usually uses a form the projector does not lower yet.", "")
   L.push("| case | type-checks | expected | printed |", "| --- | --- | --- | --- |")

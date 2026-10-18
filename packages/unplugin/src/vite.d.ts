@@ -1,4 +1,4 @@
 import type { unplugin } from "./index.js"
 
-declare const effeck: typeof unplugin.vite
-export default effeck
+declare const vibelang: typeof unplugin.vite
+export default vibelang

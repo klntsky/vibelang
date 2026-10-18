@@ -1,4 +1,4 @@
-### C. Every Effect feature in Effeck
+### C. Every Effect feature in VibeLang
 
 ```ts es
 const Port = Config.withDefault(Config.Port("PORT"), 3000)      // unchanged by design: Effect's API, as is
@@ -8,16 +8,16 @@ function loadUser(id: string) {
 }
 ```
 
-Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to Effeck. **Changed** means Effeck has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
+Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to VibeLang. **Changed** means VibeLang has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
 
 #### C1. Getting started: the Effect type, creating, running, generators, pipelines
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
-| Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of an Effeck function |
+| Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of a VibeLang function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
-| Installation | Changed | `effect@4.0.5`, `effeck-runtime`, and `effeck` (Chapter 28) |
+| Installation | Changed | `effect@4.0.5`, `vibelang-runtime`, and `vibelang` (Chapter 28) |
 | Importing Effect | Changed | Every module of `effect`'s root needs no import (D146); subpath packages such as `effect/http` are imported |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |
@@ -27,7 +27,7 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.callback` | Changed | The hatch `callback((resume, signal) => …)`: `resume(value)`, `resume.fail(error)`; inputs come before `resume` (D43, D148, D230) |
 | `Effect.void`, `never`, `yieldNow`, `interrupt` | Changed | Bare functions: `yieldNow()`, `interrupt()` (D179) |
 | Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | In the prelude; `runPromise(main())` from TypeScript, a top-level call, or a hatch's body, where no fiber runs the code (EK1005, D38, D148) |
-| `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.effeck` is EK1002 |
+| `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.vibe` is EK1002 |
 | `Effect.gen({ self: this }, …)` | Changed | An ordinary method; `this` keeps its JavaScript meaning |
 | `Effect.fn`, `fnUntraced` | Changed | `function f() { … }`, untraced unless `tracing` asks for spans (Chapter 28) |
 | `map`, `flatMap`, `andThen`, `tap`, `as` | Changed | Statements |
@@ -36,13 +36,13 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.all`, `zip`, `zipWith` | Changed | Programs as functions: `Effect.all([() => a(), () => b()])` |
 | `Effect.fromOption`, `fromResult`, `fromNullishOr` | Unchanged by design | `const n = Effect.fromOption(parse(x))` |
 | Control flow inside `Effect.gen` | Changed | `if`, `for`, `while`, and early `return` in an ordinary function |
-| Devtools | Changed | The fork's language server for `.effeck`; `@effect/tsgo` stays on `.ts`; Effect's `DevTools` for fibers and spans (Chapter 28) |
+| Devtools | Changed | The fork's language server for `.vibe`; `@effect/tsgo` stays on `.ts`; Effect's `DevTools` for fibers and spans (Chapter 28) |
 
 #### C2. Error management
 
-On a cause that mixes an expected failure and a defect, Effect's operators below keep their Effect behavior, which differs from Effeck's `catch`; Chapter 17 lists how.
+On a cause that mixes an expected failure and a defect, Effect's operators below keep their Effect behavior, which differs from VibeLang's `catch`; Chapter 17 lists how.
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Expected errors and defects | Changed | `throw` is expected; an exception no contract lists, `Effect.die`, and `Effect.orDie` are defects (Chapter 3) |
 | A JavaScript `throw` | Changed | Always a typed failure; `Effect.die(new Error(…))` for a bug |
@@ -59,7 +59,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Effect.retry`, `retryOrElse` | Changed | `Effect.retry(() => request(), { times: 5 })`, with fresh locals per attempt |
 | `Effect.timeout`, `timeoutOption`, `timeoutOrElse` | Changed | `Effect.timeout(() => task(), "1 second")`; E gains `Cause.TimeoutError` |
 | `Effect.sandbox` | Changed | `Effect.sandbox(() => task())` inside `try`; `catch (cause)` gets the cause |
-| `Effect.validate`, `partition` | Unchanged by design | The same calls, with Effeck callbacks |
+| `Effect.validate`, `partition` | Unchanged by design | The same calls, with VibeLang callbacks |
 | `Effect.all` with `mode: "result"` | Changed | Programs as functions, the same options |
 | `mapError`, `mapBoth`, `tapError`, `flip`, `filterOrFail` | Changed | `catch (e) { throw new Other({ e }) }`; `if (…) throw new E()` |
 | Parallel and sequential errors (`Cause.reasons`) | Unchanged by design | `catch` gets the first expected failure (D28); `Effect.catchCause` sees all |
@@ -68,7 +68,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C3. Requirements management: services, layers, memoization
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Context.Service` class | Changed | `service Users { find(id: string): User!UserNotFound }` (D1, D128) |
 | Service keys | Changed | Derived from package, path, and class name; duplicates are EK3001 |
@@ -94,7 +94,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C4. Resource management
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Effect.scoped` | Changed | A block that declares `using` |
 | `acquireRelease`, `acquireUseRelease` | Changed | `using lock = Effect.acquireRelease(() => acquire(), (l) => release(l))` |
@@ -108,7 +108,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C5. Observability
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Effect.log` and its levels | Unchanged by design | `Effect.logWarning("disk low")` |
 | A minimum log level for a region | Changed | `Effect.provideService(() => program(), References.MinimumLogLevel, "Debug")` |
@@ -129,7 +129,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C6. Configuration
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Config.String`, `Port`, `Int`, `Boolean`, `Duration`, `URL`, `Redacted` | Unchanged by design | Data until called: `const Port = Config.Port("PORT")`, then `Port()` (D24) |
 | `Config.all`, `withDefault`, `nested`, `option`, `orElse`, `schema` | Unchanged by design | Composed as data, read once by calling |
@@ -141,7 +141,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C7. Runtime
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `NodeRuntime.runMain`, `BunRuntime.runMain` | Changed | `NodeRuntime.runMain(() => main())` at a module's top level |
 | `runMain` options | Changed | The same options, with a program |
@@ -153,11 +153,11 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C8. Scheduling
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Schedule constructors (`spaced`, `fixed`, `exponential`, `recurs`, `cron`) | Unchanged by design | `Schedule.exponential("250 millis")` |
 | Schedule combinators | Unchanged by design | `.pipe` over a schedule value |
-| Effectful schedule callbacks (`tap`, `modifyDelay`) | Unchanged by design | Effeck callbacks |
+| Effectful schedule callbacks (`tap`, `modifyDelay`) | Unchanged by design | VibeLang callbacks |
 | `Effect.repeat` | Changed | `Effect.repeat(() => poll(), { schedule, until: (s) => s === "done" })` |
 | `Effect.retry` with a schedule | Changed | `Effect.retry(() => f(), Schedule.exponential("100 millis"))` |
 | `Effect.schedule`, `repeatOrElse` | Changed | Programs as functions |
@@ -166,7 +166,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C9. State management
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Ref` | Unchanged by design | `const ref = Ref.make(0); Ref.update(ref, (n) => n + 1)` |
 | Programs stored as object fields | Changed | `inc = () => Ref.update(this.value, (n) => n + 1)` |
@@ -176,7 +176,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C10. Caching
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Effect.cached` | Changed | `const get = Effect.cached(() => load())`, then `get()` |
 | `cachedWithTTL`, `cachedInvalidateWithTTL` | Changed | Programs as functions; `get()` and `invalidate()` |
@@ -184,10 +184,10 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C11. Batching
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Request.Class`, `TaggedClass` | Unchanged by design | The same classes |
-| `RequestResolver.make`, `fromEffect`, `makeGrouped`, `batchN` | Unchanged by design | Callbacks are Effeck functions |
+| `RequestResolver.make`, `fromEffect`, `makeGrouped`, `batchN` | Unchanged by design | Callbacks are VibeLang functions |
 | `Effect.request` | Unchanged by design | `Effect.request(new GetUser({ id }), resolver)` |
 | Batches form under concurrency | Unchanged by design | Sequential calls never batch, as in Effect |
 | `RequestResolver.withCache` | Unchanged by design | Inside a function or a Layer |
@@ -195,7 +195,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C12. Concurrency
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | The `concurrency` option | Changed | Programs as functions, the same options |
 | Struct and record forms of `Effect.all` | Changed | Record fields convert to programs |
@@ -223,7 +223,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C13. Async interop
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `async` and `await` | Changed | `async` only inside a hatch's function, where `await` is JavaScript's; elsewhere a call waits, `join` waits for a fiber, and `await` appears only in the await operations (D148, D226) |
 | `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal`, after any inputs, cancels on interruption (D148, D230) |
@@ -235,12 +235,12 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C14. Streams
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | A sequence produced by code that waits between values | Changed | A `function*` producer and `for...of` (Chapter 8) |
 | Streams from data (`make`, `range`, `fromIterable`, `tick`) | Unchanged by design | `Stream.range(1, 10)` |
 | `fromEffect`, `fromEffectRepeat` | Changed | Programs as functions |
-| `unfold`, `paginate` | Unchanged by design | Effeck callbacks |
+| `unfold`, `paginate` | Unchanged by design | VibeLang callbacks |
 | `Stream.callback`, `fromQueue`, `fromPubSub`, `fromEventListener` | Unchanged by design | The same calls; inner JavaScript callbacks cannot pause (EK4301) |
 | Operators (`map`, `filter`, `mapEffect`, `merge`, `buffer`, `debounce`, `groupedWithin`) | Unchanged by design | The same calls; a producer converts to a `Stream` (D26) |
 | `runCollect`, `runForEach`, `runFold`, `runDrain`, `run` | Unchanged by design | Calls that run the stream |
@@ -254,15 +254,15 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C15. Sinks
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Sinks (`sum`, `count`, `collect`, `head`, `drain`) | Unchanged by design | `Stream.run(stream, Sink.sum)` |
-| `Sink.fold`, `foldUntil`, `forEach` | Unchanged by design | Effeck callbacks; pure ones pass as plain functions (D9) |
+| `Sink.fold`, `foldUntil`, `forEach` | Unchanged by design | VibeLang callbacks; pure ones pass as plain functions (D9) |
 | A producer into a sink | Changed | The producer converts to a `Stream` (D26) |
 
 #### C16. Testing
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `it.effect` | Changed | `it.effect("name", () => { … })` |
 | `it.live`, `.each`, `.prop`, `it.flakyTest` | Unchanged by design | The same calls |
@@ -278,7 +278,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C17. Code style
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Run once, at the edge | Changed | `NodeRuntime.runMain(() => main())` |
 | Avoid tacit calls | Unchanged by design | The same advice |
@@ -291,7 +291,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C18. Data types
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Option` | Unchanged by design | Plain data; `Option.gen` stays in `.ts` |
 | An `Option` to a typed failure | Changed | `Effect.fromOption(found)`, or `throw` |
@@ -309,21 +309,21 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C19. Traits and behaviours
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Equal`, `Hash` | Unchanged by design | The same functions; `===` keeps its JavaScript meaning. A class implements `[Equal.symbol]` and `[Hash.symbol]` with plain methods (D55, Chapter 15) |
 | `Equivalence`, `Order` | Unchanged by design | The same modules |
 
 #### C20. Schema
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Defining schemas | Unchanged by design | Values, built at the top level |
 | `decodeUnknownEffect`, `decodeEffect`, `encodeEffect` | Unchanged by design | Calls that run; `SchemaError` joins E |
 | `decodeUnknownSync`, `is`, `asserts` | Unchanged by design | Trusted; their exceptions are defects (D37) |
 | `decodeUnknownExit` | Unchanged by design | An `Exit` value (D24) |
 | Filters and transformations | Unchanged by design | The same functions |
-| `transformEffect`, `checkEffect` | Unchanged by design | Effeck callbacks |
+| `transformEffect`, `checkEffect` | Unchanged by design | VibeLang callbacks |
 | Defaults given as Effects (`withConstructorDefault`) | Changed | A program: `Schema.withConstructorDefault(() => Clock.currentTimeMillis())` |
 | `Schema.Class`, `TaggedClass` | Unchanged by design | The same classes |
 | `Schema.TaggedError` | Changed | `throw new HttpError({ status: 500 })` |
@@ -333,9 +333,9 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C21. Platform
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
-| Node.js and browser APIs | Changed | Not callable from `.effeck` (EK4402); Chapter 11 names each replacement |
+| Node.js and browser APIs | Changed | Not callable from `.vibe` (EK4402); Chapter 11 names each replacement |
 | Platform layers (`NodeServices.layer`) | Changed | `Effect.provide(() => main(), NodeServices.layer)` |
 | `FileSystem` | Unchanged by design | `FileSystem.readFileString(path)`, from `effect/FileSystem` |
 | `FileSystem.open` (a scoped `File`) | Changed | `using file = FileSystem.open(path)` |
@@ -345,11 +345,11 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Child processes | Unchanged by design | `ChildProcessSpawner.string(ChildProcess.make("git", ["status"]))`; the command is data (D24) |
 | `KeyValueStore` | Unchanged by design | From `effect/persistence` |
 | Sockets | Changed | `using` for a scoped reader |
-| Workers | Unchanged by design | Effeck handlers |
+| Workers | Unchanged by design | VibeLang handlers |
 
 #### C22. HTTP
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `HttpClient` | Unchanged by design | `HttpClient.get(url)` runs |
 | Response bodies | Unchanged by design | `response.json()` |
@@ -357,12 +357,12 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `HttpRouter.add` handlers | Unchanged by design | A handler function, or a program (D39) |
 | Serving | Changed | `NodeRuntime.runMain(() => Layer.launch(HttpRouter.serve(routes)))` |
 | `HttpApi` definitions, middleware, security | Unchanged by design | Values |
-| `HttpApi` handlers | Unchanged by design | Effeck functions |
+| `HttpApi` handlers | Unchanged by design | VibeLang functions |
 | `HttpApiClient` | Unchanged by design | Calls that run |
 
 #### C23. SQL
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `SqlClient` | Unchanged by design | `const sql = SqlClient.SqlClient()` |
 | `` sql`…` `` statements | Unchanged by design | Data until called (D24): `` sql`SELECT * FROM users`() `` runs it, and `.stream` stays reachable |
@@ -373,7 +373,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C24. CLI
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Command.make`, `withSubcommands`, `withHandler` | Unchanged by design | Data (D24), declared at the top level |
 | Flags and arguments | Unchanged by design | Values |
@@ -382,7 +382,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C25. AI
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `LanguageModel.generateText`, `generateObject` | Unchanged by design | Calls that run |
 | `LanguageModel.streamText` | Unchanged by design | A `Stream` |
@@ -395,20 +395,20 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 #### C26. Cluster, workflow, and RPC
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Rpc.make`, `RpcGroup.make` | Unchanged by design | Values |
-| `group.toLayer(handlers)` | Unchanged by design | An object of Effeck handlers (D39) |
+| `group.toLayer(handlers)` | Unchanged by design | An object of VibeLang handlers (D39) |
 | RPC clients and servers | Changed | `using client = RpcClient.make(UserRpcs)` |
 | Entities | Unchanged by design | `Counter.client()` |
-| Workflows | Unchanged by design | Bodies are Effeck functions (D42) |
+| Workflows | Unchanged by design | Bodies are VibeLang functions (D42) |
 | Activities | Unchanged by design | Data until called (D24) |
 | `DurableClock.sleep`, `DurableDeferred.await` | Unchanged by design | Calls that run |
 | Replay | Unchanged by design | Each execution is a fresh program run; held continuations end with it (D42) |
 
 #### C27. Effect 3 features that Effect 4 removed
 
-| Feature | In Effeck | Form |
+| Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `Micro` | Unchanged by design | Effect 4 has none; Effect 3 code is foreign code (Chapter 10) |
 | `Supervisor` | Unchanged by design | `FiberSet` and `fork` |

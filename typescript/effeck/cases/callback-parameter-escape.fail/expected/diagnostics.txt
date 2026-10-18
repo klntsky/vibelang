@@ -1,2 +1,0 @@
-main.effeck(9,18): error EK4301
-main.effeck(13,23): error EK4301

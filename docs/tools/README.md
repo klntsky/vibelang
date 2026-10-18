@@ -15,20 +15,20 @@ Then run one command from the repository root:
 bun docs/tools/check-snippets.ts
 ```
 
-The checker extracts `effeck` and `ts` fences under `docs/user`, except the
-built site in `docs/user/site`. The fence decides the language: an `effeck`
-block compiles as a `.effeck` module and a `ts` block as a `.ts` module. It
+The checker extracts `vibelang` and `ts` fences under `docs/user`, except the
+built site in `docs/user/site`. The fence decides the language: a `vibelang`
+block compiles as a `.vibe` module and a `ts` block as a `.ts` module. It
 skips `ts effect` blocks, Effect TypeScript shown for comparison, and `ts`
 blocks whose first line is `// TypeScript (.ts)` and that name no file. It
-creates one temporary project per page and runs `effeck --noEmit` once per
+creates one temporary project per page and runs `vibelang --noEmit` once per
 page. Each block gets its own module. A filename comment in either of the
 first two lines, such as `// launch-options.ts` after `// TypeScript (.ts)` or
-`// main.effeck`, names that file and makes it available to relative imports.
+`// main.vibe`, names that file and makes it available to relative imports.
 Its extension must match the fence, or the checker stops with an error. `.ts`
 companions keep TypeScript semantics and must import their own dependencies.
 The temporary project links the local runtime and Vite plugin packages.
 Repeated captions name independent examples, so those blocks keep numbered
-filenames. Unnamed blocks also use numbered files, such as `block-3.effeck`. Imports
+filenames. Unnamed blocks also use numbered files, such as `block-3.vibe`. Imports
 and declarations from earlier examples are available in later blocks; a new
 name shadows the earlier example's name. Blocks that deliberately fail or opt
 out do not supply declarations to later blocks. Local imports with no fixture
@@ -53,8 +53,8 @@ Use a header comment before the code:
   has no unexpected substantive error and every expected code occurs. Stale
   markers fail, so resolved gaps cannot silently accumulate.
 
-`--compiler path` (or `EFFECK_BINARY`) selects a compiler. The default is
-`typescript/built/local/tsc`, then `effeck` on PATH. `--filter text` selects pages,
+`--compiler path` (or `VIBELANG_BINARY`) selects a compiler. The default is
+`typescript/built/local/tsc`, then `vibelang` on PATH. `--filter text` selects pages,
 `--json path` writes diagnostics with Markdown line numbers, and `--keep`
 preserves temporary projects for debugging. Compiler crashes, missing runtime
 builds, and project configuration errors exit 2. Snippet failures exit 1.
@@ -67,9 +67,9 @@ bun docs/tools/render-user.ts
 
 ## Compiler hovers
 
-scripts/deploy-docs.sh builds hovers by default with the 0.0.1 release compiler, so popups show what readers' compiler shows; `EFFECK_DOCS_HOVERS=0` deploys without them. Until 0.0.2 ships, about 400 hover requests on Effeck form words (`service`, `provide`, `when`, `match`, `schema`, `all`) fail with a 0.0.1 language-server panic, fixed on main in 8fadacb5; those words have no popup, and hovers.ts records each failure in the page's cache entry.
+scripts/deploy-docs.sh builds hovers by default with the 0.0.1 release compiler, so popups show what readers' compiler shows; `VIBELANG_DOCS_HOVERS=0` deploys without them. Until 0.0.2 ships, about 400 hover requests on VibeLang form words (`service`, `provide`, `when`, `match`, `schema`, `all`) fail with a 0.0.1 language-server panic, fixed on main in 8fadacb5; those words have no popup, and hovers.ts records each failure in the page's cache entry.
 
-`hovers.ts` asks the Effeck language server for the hovers and diagnostics of
+`hovers.ts` asks the VibeLang language server for the hovers and diagnostics of
 the same blocks and caches them for a renderer:
 
 ```sh
@@ -78,7 +78,7 @@ bun docs/tools/hovers.ts
 
 It builds the projects that the snippet checker builds, with the same
 `--compiler`, `--root`, and `--filter` options, and opens them in one
-`effeck --lsp --stdio` session, four pages at a time. It writes one JSON file
+`vibelang --lsp --stdio` session, four pages at a time. It writes one JSON file
 per page under `.cache/docs-hovers` (`--cache` selects another directory). Each
 block's entry is a Twoslash result: the block's `code` as the fence holds it,
 and `nodes` in the shape of `twoslash-protocol`:
@@ -89,7 +89,7 @@ and `nodes` in the shape of `twoslash-protocol`:
 | `error` | the same position fields, `code` such as `EK2001` or `TS2307`, `level` (`error` or `warning`), `text` |
 
 Positions count UTF-16 code units from 0 within the block. `docs` keeps
-Effeck's notes, such as "Runs here and returns `number`.", and the first
+VibeLang's notes, such as "Runs here and returns `number`.", and the first
 paragraph of the declaration's JSDoc. Links to `file:///` URIs keep only their
 text, and paths into the temporary project or `node_modules` become relative.
 The tool refuses to write a page whose entry still contains anything that
@@ -124,19 +124,19 @@ Each page is also written as Markdown beside its HTML, at the same path with
 `llms.txt` lists every copy in the llmstxt.org format, one section per sidebar
 view, with a page's sidebar group as its note.
 
-## What smithers.sh serves for Effeck
+## What smithers.sh serves for VibeLang
 
 ```sh
 bun docs/tools/check-smithers-content.ts
 ```
 
-Checks the files smithers.sh reads from Effeck's `main`, and the effeck.dev hero. It exits 1 on any problem.
+Checks the files smithers.sh reads from VibeLang's `main`, and the effeck.dev hero. It exits 1 on any problem.
 
 - `.smithers/instructions/app.md`, the guest chat's whole knowledge base:
   - it stays under 24 KiB;
   - every link resolves to a docs page source or a repository file;
-  - every Effeck block passes `check-snippets.ts`;
-  - the install block equals what `create-effeck` prints.
+  - every VibeLang block passes `check-snippets.ts`;
+  - the install block equals what `create-vibelang` prints.
 - `.smithers/home.json`: only blocks smithers.sh renders, and every markdown path exists.
 - `.smithers/flows/convert/prompt.md`: matches `build-prompt.mjs`'s output.
 - `docs/site/converter/hero.json`: equals golden case 01, with matching hashes.

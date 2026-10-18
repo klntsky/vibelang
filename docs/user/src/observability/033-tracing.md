@@ -1,10 +1,10 @@
-# Tracing in Effeck
+# Tracing in VibeLang
 
-Tracing records an operation's duration and its relationship to other operations. Effeck uses Effect's spans, attributes, and exporters, so traces can connect work across services. Functions are untraced by default; add spans around operations that you want to observe.
+Tracing records an operation's duration and its relationship to other operations. VibeLang uses Effect's spans, attributes, and exporters, so traces can connect work across services. Functions are untraced by default; add spans around operations that you want to observe.
 
 ## Relating spans to traces
 
-```effeck
+```vibe
 function requestTrace() {
   return withSpan("report-request") {
     sleep("10 millis")
@@ -17,7 +17,7 @@ A span describes one operation with a name, identifiers, timestamps, status, and
 
 ## Adding spans around computations
 
-```effeck
+```vibe
 function renderReport(format: string) {
   return withSpan("render-report", { attributes: { "report.format": format } }) {
     sleep("20 millis")
@@ -31,7 +31,7 @@ function renderReport(format: string) {
 
 ## Exporting spans and SDK boundaries
 
-```effeck
+```vibe
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"
@@ -51,11 +51,11 @@ function exportedReport() {
 
 This source version provides direct OTLP/HTTP export under `effect/observability`. The layer batches ended spans, uses the supplied HTTP client and serialization, and flushes during scope shutdown. Provide it around the application's lifetime so each request does not create and close its own exporter.
 
-An application that already owns an OpenTelemetry SDK tracer provider can initialize its compatible bridge in a TypeScript bootstrap or adapter and provide the resulting Effect layer to Effeck. Effect's own packages are trusted; a plain third-party SDK call inside an Effeck function needs an explicit boundary such as `try`, or a TypeScript declaration tagged `/** @effeck trusted */`. A synchronous SDK context callback must compile to plain JavaScript, so it cannot call services or perform other Effect operations.
+An application that already owns an OpenTelemetry SDK tracer provider can initialize its compatible bridge in a TypeScript bootstrap or adapter and provide the resulting Effect layer to VibeLang. Effect's own packages are trusted; a plain third-party SDK call inside a VibeLang function needs an explicit boundary such as `try`, or a TypeScript declaration tagged `/** @vibelang trusted */`. A synchronous SDK context callback must compile to plain JavaScript, so it cannot call services or perform other Effect operations.
 
 ## Inspecting failures and attributes
 
-```effeck
+```vibe
 error RenderFailed {
   format: string
 }
@@ -74,7 +74,7 @@ An exported failure includes error status and failure details, while attributes 
 
 ## Representing logs as span events
 
-```effeck
+```vibe
 function tracedLogs() {
   Effect.provide(() => withSpan("generate-artifact") {
     logInfo("input validated")
@@ -91,7 +91,7 @@ The tracer logger records logs within an active span as timestamped events. Thos
 
 ## Nesting operations
 
-```effeck
+```vibe
 function loadTemplate() {
   return withSpan("load-template") {
     sleep("10 millis")
@@ -112,19 +112,19 @@ The inner spans inherit the outer span as parent. Their trace IDs match, while e
 
 ## Viewing traces locally
 
-```effeck
+```vibe
 function demonstration() {
   provide Tracing { generate() }
 }
 ```
 
-Run an OTLP/HTTP collector and a trace viewer on the endpoints configured above. For a local Grafana LGTM container, run `docker run --rm --name effeck-telemetry --publish 3000:3000 --publish 4318:4318 grafana/otel-lgtm`. It supplies a collector and Tempo for trace storage, with Grafana for inspection. Run `demonstration` through the application runner, let the exporter close cleanly, then open `http://localhost:3000/explore` and search Tempo for service `report-worker`.
+Run an OTLP/HTTP collector and a trace viewer on the endpoints configured above. For a local Grafana LGTM container, run `docker run --rm --name vibelang-telemetry --publish 3000:3000 --publish 4318:4318 grafana/otel-lgtm`. It supplies a collector and Tempo for trace storage, with Grafana for inspection. Run `demonstration` through the application runner, let the exporter close cleanly, then open `http://localhost:3000/explore` and search Tempo for service `report-worker`.
 
 Open a `generate-report` trace to compare parent duration, child durations, attributes, events, and failure status. If nothing arrives, check the trace URL, HTTP transport, serialization, and exporter diagnostics before adding more instrumentation.
 
 ## Connecting external tracing services
 
-```effeck
+```vibe
 import * as FetchHttpClient from "effect/http/FetchHttpClient"
 import * as OtlpSerialization from "effect/observability/OtlpSerialization"
 import * as OtlpTracer from "effect/observability/OtlpTracer"

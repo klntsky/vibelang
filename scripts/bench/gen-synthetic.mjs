@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Writes two equivalent synthetic projects for compiler benchmarks: N Effeck
+// Writes two equivalent synthetic projects for compiler benchmarks: N VibeLang
 // modules and the same N modules in Effect 4 TypeScript. Each module declares
 // two errors, a schema, a service and its layer, a plain helper, and four
 // functions that call into the previous module, catch with `match`, fork and
@@ -13,8 +13,8 @@
 // requirement and error unions grow with depth), and "single" (all modules
 // concatenated into one file, for per-file passes).
 //
-// <out-dir>/effeck and <out-dir>/effect-ts each get package.json,
-// tsconfig.json, and src/. Resolve `effect` and `effeck-runtime` from a
+// <out-dir>/vibelang and <out-dir>/effect-ts each get package.json,
+// tsconfig.json, and src/. Resolve `effect` and `vibelang-runtime` from a
 // node_modules directory in <out-dir> or above it.
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import path from "node:path"
@@ -32,10 +32,10 @@ const back = (i) => Array.from({ length: Math.min(fanIn, i) }, (_, k) => i - 1 -
 const tick = "`"
 const key = `${tick}k\${n}${tick}`
 
-function effeckModule(i) {
+function vibelangModule(i) {
   const prev = i - 1
-  const imports = shape === "single" ? "" : (i > 0 ? `import { run${prev}, plain${prev}${fanIn ? `, deep${prev}` : ""} } from "./m${prev}.effeck"\n` : "") +
-    back(i).map((j) => `import { load${j} } from "./m${j}.effeck"\n`).join("") + (i > 0 ? "\n" : "")
+  const imports = shape === "single" ? "" : (i > 0 ? `import { run${prev}, plain${prev}${fanIn ? `, deep${prev}` : ""} } from "./m${prev}.vibe"\n` : "") +
+    back(i).map((j) => `import { load${j} } from "./m${j}.vibe"\n`).join("") + (i > 0 ? "\n" : "")
   const a = i > 0 ? `n > 0 ? run${prev}() + plain${prev}(n) : 0` : "0"
   const extra = back(i).map((j) => ` + load${j}(${key})`).join("") + (fanIn && i > 0 ? ` + deep${prev}(n)` : "")
   return `${imports}export error Missing${i} { id: string }
@@ -189,8 +189,8 @@ function project(dir, ext, module, main) {
   writeFileSync(path.join(dir, "src", `main${ext}`), main)
 }
 
-project(path.join(out, "effeck"), ".effeck", effeckModule,
-  `import { run${count - 1} } from "./m${count - 1}.effeck"\n\nexport function main() {\n  log(run${count - 1}())\n}\n`)
+project(path.join(out, "vibelang"), ".vibe", vibelangModule,
+  `import { run${count - 1} } from "./m${count - 1}.vibe"\n\nexport function main() {\n  log(run${count - 1}())\n}\n`)
 project(path.join(out, "effect-ts"), ".ts", effectModule,
   `import { Effect } from "effect"\nimport { run${count - 1} } from "./m${count - 1}.ts"\n\nexport const main = Effect.flatMap(run${count - 1}(), (n) => Effect.log(n))\n`)
-console.log(`wrote ${count} modules to ${out}/effeck and ${out}/effect-ts`)
+console.log(`wrote ${count} modules to ${out}/vibelang and ${out}/effect-ts`)

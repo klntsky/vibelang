@@ -1,5 +1,5 @@
 {
-  "name": "effeck-docs-tools",
+  "name": "vibelang-docs-tools",
   "private": true,
   "type": "module",
   "description": "Builds the docs site from docs/user/src and the specification chapters in docs/design/src, and checks the user docs' code blocks.",

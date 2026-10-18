@@ -1,10 +1,10 @@
 # Schema Projections
 
-Projections work in Effeck exactly as in Effect. They turn one side of a codec into a schema that validates that representation without running the codec's conversion. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Projections work in VibeLang exactly as in Effect. They turn one side of a codec into a schema that validates that representation without running the codec's conversion. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Projecting a codec to its decoded schema
 
-```effeck
+```vibe
 const CountFromText = Schema.FiniteFromString.check(
   Schema.isInt(), Schema.isGreaterThanOrEqualTo(1)
 )
@@ -20,7 +20,7 @@ function inspectCount(input: unknown) {
 
 ## Projecting a codec to its encoded schema
 
-```effeck
+```vibe
 const Name = Schema.String.check(Schema.isMinLength(3)).pipe(
   Schema.decodeTo(Schema.Trim)
 )
@@ -36,7 +36,7 @@ function inspectWireName(input: unknown) {
 
 ## Retaining checks appropriate to each side
 
-```effeck
+```vibe
 const ParcelCount = Schema.String.check(Schema.isMinLength(2)).pipe(
   Schema.decodeTo(Schema.FiniteFromString),
   Schema.check(Schema.isGreaterThan(5))

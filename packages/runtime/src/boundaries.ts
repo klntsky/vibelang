@@ -6,7 +6,7 @@ export type FailureClass<E> = abstract new (...args: any) => E
 
 /**
  * D5, D23: a call whose contract lists expected failures, such as a function
- * tagged `@effeck trusted` with `@throws {PortError}`, or `JSON.parse`,
+ * tagged `@vibelang trusted` with `@throws {PortError}`, or `JSON.parse`,
  * whose shipped contract lists `SyntaxError`. The compiler passes the listed
  * classes. An exception that is an instance of one of them fails the Effect;
  * any other exception is a defect.

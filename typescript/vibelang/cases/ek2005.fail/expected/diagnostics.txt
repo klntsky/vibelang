@@ -1,0 +1,2 @@
+main.vibe(21,49): error EK2005
+main.vibe(27,49): error EK2005

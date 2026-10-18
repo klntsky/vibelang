@@ -1,6 +1,6 @@
 ### 4. Dependency injection: the R channel
 
-Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. Effeck removes the ceremony and adds compile-time checks of the dependency graph.
+Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. VibeLang removes the ceremony and adds compile-time checks of the dependency graph.
 
 #### Declaring a service
 
@@ -20,7 +20,7 @@ service Users {
 
 `service Users { ... }` declares a service, and it does the job of the class on the left. Its members have no bodies (D128, D223). It is short for `abstract class Users { ... }` in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). The older spelling `service class Users { ... }` still compiles, with the warning EK2120. An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:
 
-- **What makes a class a service.** In an `.effeck` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
+- **What makes a class a service.** In a `.vibe` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
 - **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (EK3001).
 - **Each service is its own type.** TypeScript compares classes by shape, so two abstract classes with the same members would be one type: providing one would type-check as providing the other, and the program would die at run time with `Service not found`. The compiler gives every service class its own identity, as Effect's `Context.Service` classes have.
 - **Contracts are written out.** A service has no body to infer from, so each method states its full `Effect<A, E, R>` (EK2101, Chapter 14).
@@ -28,7 +28,7 @@ service Users {
 
 ```text
 error EK3002: a class cannot extend a service.
-  users-memory.effeck:1:28   class UsersInMemory extends Users {
+  users-memory.vibe:1:28   class UsersInMemory extends Users {
   Implement it instead:  class UsersInMemory implements Users { … }
 ```
 
@@ -38,16 +38,16 @@ What the class compiles to:
 export interface Users {
   find(id: string): Effect.Effect<User, UserNotFound>
   rename(id: string, name: string): Effect.Effect<void, UserNotFound>
-  readonly "~effeck/service"?: "@acme/app/src/users#Users"
+  readonly "~vibelang/service"?: "@acme/app/src/users#Users"
 }
 export class Users extends serviceKey<Users>("@acme/app/src/users#Users") {}
 ```
 
 TypeScript sees `Users` two ways. As a type, it is the interface, so `implements Users` and a parameter typed `db: Users` mean the methods. As a value, it is a `Context.Key`, so `Layer.succeed(Users, …)`, `Effect.provideService`, and `yield* Users` work as they do with a `Context.Service` class. The optional brand keeps two services with the same methods distinct in R. Effect's own class form cannot be the output: it makes the class's instance type the service identifier, so `implements Users` would fail with TS2720 (`prototype/esc/scratch/probe2.ts`).
 
-The syntax takes nothing away from TypeScript. Calling an abstract member through its class (`Users.find(id)`) is error TS2339 today, and calling a class without `new` (`Users()`) is TS2348, so Effeck gives both a meaning. Fully abstract classes are also rare in ordinary code: Smithers has none in 4,461 files, and opencode has five in 3,235, whose only fully abstract one extends another class.
+The syntax takes nothing away from TypeScript. Calling an abstract member through its class (`Users.find(id)`) is error TS2339 today, and calling a class without `new` (`Users()`) is TS2348, so VibeLang gives both a meaning. Fully abstract classes are also rare in ordinary code: Smithers has none in 4,461 files, and opencode has five in 3,235, whose only fully abstract one extends another class.
 
-A `Context.Service` written in TypeScript, as a class or as a value like Effect's own `FileSystem`, is a service too, and Effeck uses it the same way.
+A `Context.Service` written in TypeScript, as a class or as a value like Effect's own `FileSystem`, is a service too, and VibeLang uses it the same way.
 
 #### Using a service
 
@@ -80,7 +80,7 @@ Calling any member through the service looks the service up, so the service join
 
 #### Writing a provider
 
-A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation. In Effeck the function is a block after the call, through block params (D188): `Layer.effect(Users) { ... }` runs its statements once, when the layer is built, and returns the implementation, an object whose members the service types (D221). Without setup, write `Layer.succeed(Users, { ... })`. The older `layer UsersLive: Users { ... }` declaration (D129) still compiles, with the warning EK2121 and a quick fix that rewrites it.
+A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation. In VibeLang the function is a block after the call, through block params (D188): `Layer.effect(Users) { ... }` runs its statements once, when the layer is built, and returns the implementation, an object whose members the service types (D221). Without setup, write `Layer.succeed(Users, { ... })`. The older `layer UsersLive: Users { ... }` declaration (D129) still compiles, with the warning EK2121 and a quick fix that rewrites it.
 
 ```ts effect
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
@@ -122,7 +122,7 @@ The compiler checks each method against the service's contract. Without the `Eff
 
 ```text
 error EK2001: DbError can escape UsersLive.find, but Users.find's contract allows only UserNotFound.
-  users-live.effeck:5:20   const rows = db.query("select * from users where id = $1", [id])
+  users-live.vibe:5:20   const rows = db.query("select * from users where id = $1", [id])
                                     ^^^^^^^^ can fail with DbError
   Handle it, add DbError to Users.find's contract, or make it a defect with Effect.orDie.
 ```
@@ -144,7 +144,7 @@ service Users {
 }
 ```
 
-An implementation can also be a class that `implements` the service. Its methods are Effeck methods, checked against the service's contracts:
+An implementation can also be a class that `implements` the service. Its methods are VibeLang methods, checked against the service's contracts:
 
 ```ts es
 class UsersInMemory implements Users {
@@ -248,7 +248,7 @@ const UsersAudited = Layer.effect(Users) {
 error EK3101: UsersAudited.find looks up Audit each time it is called, but
   Users.find(id: string): Effect<User, UserNotFound, never>
   allows no call-time requirements.
-  users-audited.effeck:5:7   Audit.record(`users.find ${id}`)
+  users-audited.vibe:5:7   Audit.record(`users.find ${id}`)
   Capture it once:      const audit = Audit()   …   audit.record(…)
   or declare it:        abstract find(id: string): Effect<User, UserNotFound, Audit>
 ```
@@ -274,7 +274,7 @@ const AppLive = wire(UsersLive, MailerLive, DatabaseLive, DatabaseConfigLive)
 ```text
 error EK3201: no provider for Smtp.
   welcome → Mailer.send → MailerLive needs Smtp
-error EK3202: two providers for Users: UsersLive (src/users.effeck:12) and UsersTest (test/fakes.effeck:3). Pass one.
+error EK3202: two providers for Users: UsersLive (src/users.vibe:12) and UsersTest (test/fakes.vibe:3). Pass one.
 error EK3203: providers form a cycle: SessionsLive → Database → DatabaseLive → Sessions → SessionsLive
 ```
 

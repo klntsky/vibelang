@@ -99,14 +99,14 @@ type Parser struct {
 	setParentFromContext ast.Visitor
 	reparsedClones       []*ast.Node
 
-	effeckMutableMember       bool                     // the type member being parsed was written with mutable (effeck.go)
-	effeckAbstractMembers     bool                     // bodiless class members become abstract: a service or control body (effeck.go)
-	effeckSelects             int                      // select statements parsed so far, which number their labels (effeck_fibers.go)
-	effeckNoBlockParams       bool                     // a { after an expression is not a block param here: heritage clauses and provide's providers (effeck_blocks.go)
-	effeckMatchTemps          int                      // names written for match and is, numbered per file (effeck_match.go)
-	effeckMatches             map[*ast.Node]*matchInfo // match expressions as written, by the call that stands for each (effeck_match.go)
-	effeckIsBindings          map[*ast.Node]*isInfo    // is expressions whose patterns bind names, by their markers (effeck_match.go)
-	effeckOmittedDependencies map[*ast.Node]bool       // Effect types whose dependencies were left out (effeck.go)
+	vibelangMutableMember       bool                     // the type member being parsed was written with mutable (vibelang.go)
+	vibelangAbstractMembers     bool                     // bodiless class members become abstract: a service or control body (vibelang.go)
+	vibelangSelects             int                      // select statements parsed so far, which number their labels (vibelang_fibers.go)
+	vibelangNoBlockParams       bool                     // a { after an expression is not a block param here: heritage clauses and provide's providers (vibelang_blocks.go)
+	vibelangMatchTemps          int                      // names written for match and is, numbered per file (vibelang_match.go)
+	vibelangMatches             map[*ast.Node]*matchInfo // match expressions as written, by the call that stands for each (vibelang_match.go)
+	vibelangIsBindings          map[*ast.Node]*isInfo    // is expressions whose patterns bind names, by their markers (vibelang_match.go)
+	vibelangOmittedDependencies map[*ast.Node]bool       // Effect types whose dependencies were left out (vibelang.go)
 }
 
 func newParser() *Parser {
@@ -1107,8 +1107,8 @@ func (p *Parser) parseStatement() *ast.Statement {
 	case ast.KindReturnKeyword:
 		return p.parseReturnStatement()
 	case ast.KindWithKeyword:
-		if p.isEffeckFile() {
-			return p.parseEffeckProvideStatement() // old spelling of provide Layer { ... } (effeck.go)
+		if p.isVibeLangFile() {
+			return p.parseVibeLangProvideStatement() // old spelling of provide Layer { ... } (vibelang.go)
 		}
 		return p.parseWithStatement()
 	case ast.KindSwitchKeyword:
@@ -1117,7 +1117,7 @@ func (p *Parser) parseStatement() *ast.Statement {
 		return p.parseThrowStatement()
 	case ast.KindTryKeyword, ast.KindCatchKeyword, ast.KindFinallyKeyword:
 		if p.isStartOfTryCall() {
-			break // try(…), an Effeck boundary hatch (effeck_hatches.go)
+			break // try(…), a VibeLang boundary hatch (vibelang_hatches.go)
 		}
 		return p.parseTryStatement()
 	case ast.KindDebuggerKeyword:
@@ -1132,17 +1132,17 @@ func (p *Parser) parseStatement() *ast.Statement {
 			return p.parseDeclaration()
 		}
 	case ast.KindIdentifier:
-		if p.isStartOfEffeckDeclaration() {
+		if p.isStartOfVibeLangDeclaration() {
 			return p.parseDeclaration()
 		}
-		if p.isStartOfEffeckSelect() {
-			return p.parseEffeckSelect() // select { case ... } (effeck_fibers.go)
+		if p.isStartOfVibeLangSelect() {
+			return p.parseVibeLangSelect() // select { case ... } (vibelang_fibers.go)
 		}
-		if p.isStartOfEffeckProvide() {
-			return p.parseEffeckProvideStatement() // provide Layer { ... } (effeck.go)
+		if p.isStartOfVibeLangProvide() {
+			return p.parseVibeLangProvideStatement() // provide Layer { ... } (vibelang.go)
 		}
-		if p.isStartOfEffeckMaskBlock() {
-			return p.parseEffeckMaskBlock() // uninterruptible { ... }, restore { ... }, interruptible { ... } (effeck_primitives.go)
+		if p.isStartOfVibeLangMaskBlock() {
+			return p.parseVibeLangMaskBlock() // uninterruptible { ... }, restore { ... }, interruptible { ... } (vibelang_primitives.go)
 		}
 	}
 	return p.parseExpressionOrLabeledStatement()
@@ -1198,7 +1198,7 @@ func (p *Parser) parseDeclarationWorker(pos int, jsdoc jsdocScannerInfo, modifie
 	case ast.KindImportKeyword:
 		return p.parseImportDeclarationOrImportEqualsDeclaration(pos, jsdoc, modifiers)
 	case ast.KindIdentifier:
-		if node := p.parseEffeckDeclaration(pos, jsdoc, modifiers); node != nil {
+		if node := p.parseVibeLangDeclaration(pos, jsdoc, modifiers); node != nil {
 			return node
 		}
 	case ast.KindExportKeyword:
@@ -1281,8 +1281,8 @@ func (p *Parser) parseIfStatement() *ast.Node {
 	if p.parseOptional(ast.KindElseKeyword) {
 		elseStatement = p.parseStatement()
 	}
-	if rewritten := p.restructureEffeckIf(expression, thenStatement, elseStatement, pos); rewritten != nil {
-		return rewritten // an is in the condition binds names (effeck_match.go)
+	if rewritten := p.restructureVibeLangIf(expression, thenStatement, elseStatement, pos); rewritten != nil {
+		return rewritten // an is in the condition binds names (vibelang_match.go)
 	}
 	result := p.finishNode(p.factory.NewIfStatement(expression, thenStatement, elseStatement), pos)
 	p.withJSDoc(result, jsdoc)
@@ -1318,8 +1318,8 @@ func (p *Parser) parseWhileStatement() *ast.Node {
 	expression := p.parseExpressionAllowIn()
 	p.parseExpectedMatchingBrackets(ast.KindOpenParenToken, ast.KindCloseParenToken, openParenParsed, openParenPosition)
 	statement := p.parseStatement()
-	if rewritten := p.restructureEffeckWhile(expression, statement, pos); rewritten != nil {
-		return rewritten // an is in the condition binds names (effeck_match.go)
+	if rewritten := p.restructureVibeLangWhile(expression, statement, pos); rewritten != nil {
+		return rewritten // an is in the condition binds names (vibelang_match.go)
 	}
 	result := p.finishNode(p.factory.NewWhileStatement(expression, statement), pos)
 	p.withJSDoc(result, jsdoc)
@@ -1330,8 +1330,8 @@ func (p *Parser) parseForOrForInOrForOfStatement() *ast.Node {
 	pos := p.nodePos()
 	jsdoc := p.jsdocScannerInfo()
 	p.parseExpected(ast.KindForKeyword)
-	if p.isEffeckConcurrentFor() {
-		result := p.parseEffeckConcurrentFor(pos) // for concurrent (...) (effeck_fibers.go)
+	if p.isVibeLangConcurrentFor() {
+		result := p.parseVibeLangConcurrentFor(pos) // for concurrent (...) (vibelang_fibers.go)
 		p.withJSDoc(result, jsdoc)
 		return result
 	}
@@ -1415,8 +1415,8 @@ func (p *Parser) parseReturnStatement() *ast.Node {
 		expression = p.parseExpressionAllowIn()
 	}
 	p.parseSemicolon()
-	if info := p.effeckMatches[expression]; info != nil {
-		return p.matchReturnStatement(info, pos) // return match (...) { ... } (effeck_match.go)
+	if info := p.vibelangMatches[expression]; info != nil {
+		return p.matchReturnStatement(info, pos) // return match (...) { ... } (vibelang_match.go)
 	}
 	result := p.finishNode(p.factory.NewReturnStatement(expression), pos)
 	p.withJSDoc(result, jsdoc)
@@ -1522,14 +1522,14 @@ func (p *Parser) parseTryStatement() *ast.Node {
 	jsdoc := p.jsdocScannerInfo()
 	p.parseExpected(ast.KindTryKeyword)
 	tryBlock := p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
-	if p.isEffeckFile() && p.isStartOfHandleClause() {
-		return p.parseEffeckHandleStatement(pos, jsdoc, tryBlock) // try { ... } handle Control.op(...) { ... } (effeck.go)
+	if p.isVibeLangFile() && p.isStartOfHandleClause() {
+		return p.parseVibeLangHandleStatement(pos, jsdoc, tryBlock) // try { ... } handle Control.op(...) { ... } (vibelang.go)
 	}
 	var catchClause *ast.Node
 	if p.token == ast.KindCatchKeyword {
 		catchClause = p.parseCatchClause()
-		if p.isEffeckFile() {
-			catchClause = p.parseEffeckCatchClauses(catchClause) // typed and repeated catch clauses (effeck.go)
+		if p.isVibeLangFile() {
+			catchClause = p.parseVibeLangCatchClauses(catchClause) // typed and repeated catch clauses (vibelang.go)
 		}
 	}
 	// If we don't have a catch clause, then we must have a finally clause.  Try to parse
@@ -1537,8 +1537,8 @@ func (p *Parser) parseTryStatement() *ast.Node {
 	var finallyBlock *ast.Node
 	if catchClause == nil || p.token == ast.KindFinallyKeyword {
 		p.parseExpectedWithDiagnostic(ast.KindFinallyKeyword, diagnostics.X_catch_or_finally_expected, true /*shouldAdvance*/)
-		if p.isEffeckFile() && p.token == ast.KindOpenParenToken {
-			finallyBlock = p.parseEffeckFinallyBlock() // finally (exit) { ... } (effeck_primitives.go)
+		if p.isVibeLangFile() && p.token == ast.KindOpenParenToken {
+			finallyBlock = p.parseVibeLangFinallyBlock() // finally (exit) { ... } (vibelang_primitives.go)
 		} else {
 			finallyBlock = p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
 		}
@@ -1589,8 +1589,8 @@ func (p *Parser) parseExpressionOrLabeledStatement() *ast.Statement {
 	if !p.tryParseSemicolon() {
 		p.parseErrorForMissingSemicolonAfter(expression)
 	}
-	if info := p.effeckMatches[expression]; info != nil {
-		return p.matchStatement(info, pos) // a match statement (effeck_match.go)
+	if info := p.vibelangMatches[expression]; info != nil {
+		return p.matchStatement(info, pos) // a match statement (vibelang_match.go)
 	}
 	result := p.finishNode(p.factory.NewExpressionStatement(expression), pos)
 	if hasParen {
@@ -1820,10 +1820,10 @@ func (p *Parser) parseClassDeclarationOrExpression(pos int, jsdoc jsdocScannerIn
 	if p.parseExpected(ast.KindOpenBraceToken) {
 		// ClassTail[Yield,Await] : (Modified) See 14.5
 		//      ClassHeritage[?Yield,?Await]opt { ClassBody[?Yield,?Await]opt }
-		saveAbstract := p.effeckAbstractMembers // a class inside a service body is not one (effeck.go)
-		p.effeckAbstractMembers = false
+		saveAbstract := p.vibelangAbstractMembers // a class inside a service body is not one (vibelang.go)
+		p.vibelangAbstractMembers = false
 		members = p.parseList(PCClassMembers, (*Parser).parseClassElement)
-		p.effeckAbstractMembers = saveAbstract
+		p.vibelangAbstractMembers = saveAbstract
 		p.parseExpected(ast.KindCloseBraceToken)
 	} else {
 		members = p.createMissingList()
@@ -1944,10 +1944,10 @@ func (p *Parser) convertEntityNameExpressionToEntityName(node *ast.Node) *ast.No
 
 func (p *Parser) parseExpressionWithTypeArguments() *ast.Node {
 	pos := p.nodePos()
-	saveNoBlockParams := p.effeckNoBlockParams
-	p.effeckNoBlockParams = true // the { after a heritage clause opens the class body (effeck_blocks.go)
+	saveNoBlockParams := p.vibelangNoBlockParams
+	p.vibelangNoBlockParams = true // the { after a heritage clause opens the class body (vibelang_blocks.go)
 	expression := p.parseLeftHandSideExpressionOrHigher()
-	p.effeckNoBlockParams = saveNoBlockParams
+	p.vibelangNoBlockParams = saveNoBlockParams
 	if ast.IsExpressionWithTypeArguments(expression) {
 		return expression
 	}
@@ -2067,7 +2067,7 @@ func (p *Parser) parseMethodDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 	typeNode := p.parseReturnType(ast.KindColonToken, false /*isType*/)
 	body := p.parseFunctionBlockOrSemicolon(signatureFlags, diagnosticMessage)
 	if body == nil {
-		modifiers = p.effeckAbstractMember(modifiers, name, false /*property*/)
+		modifiers = p.vibelangAbstractMember(modifiers, name, false /*property*/)
 	}
 	result := p.finishNode(p.factory.NewMethodDeclaration(modifiers, asteriskToken, name, questionToken, typeParameters, parameters, typeNode, nil /*fullSignature*/, body), pos)
 	p.withJSDoc(result, jsdoc)
@@ -2088,7 +2088,7 @@ func (p *Parser) parsePropertyDeclaration(pos int, jsdoc jsdocScannerInfo, modif
 	initializer := p.doInContext(ast.NodeFlagsYieldContext|ast.NodeFlagsAwaitContext|ast.NodeFlagsDisallowInContext, false, (*Parser).parseInitializer)
 	p.parseSemicolonAfterPropertyName(name, typeNode, initializer)
 	if initializer == nil {
-		modifiers = p.effeckAbstractMember(modifiers, name, true /*property*/)
+		modifiers = p.vibelangAbstractMember(modifiers, name, true /*property*/)
 	}
 	result := p.finishNode(p.factory.NewPropertyDeclaration(modifiers, name, postfixToken, typeNode, initializer), pos)
 	p.withJSDoc(result, jsdoc)
@@ -2770,7 +2770,7 @@ func (p *Parser) parseType() *ast.TypeNode {
 		}
 	}
 	p.contextFlags = saveContextFlags
-	return p.parseEffeckEffectType(typeNode)
+	return p.parseVibeLangEffectType(typeNode)
 }
 
 func (p *Parser) parseUnionTypeOrHigher() *ast.TypeNode {
@@ -2862,8 +2862,8 @@ func (p *Parser) parsePostfixTypeOrHigher() *ast.Node {
 	for !p.hasPrecedingLineBreak() {
 		switch p.token {
 		case ast.KindExclamationToken:
-			if p.isEffeckFile() {
-				return typeNode // ! separates the slots of an Effect type (effeck.go)
+			if p.isVibeLangFile() {
+				return typeNode // ! separates the slots of an Effect type (vibelang.go)
 			}
 			p.nextToken()
 			typeNode = p.finishNode(p.factory.NewJSDocNonNullableType(typeNode), pos)
@@ -3327,7 +3327,7 @@ func (p *Parser) parseTypeMember() *ast.Node {
 	}
 	pos := p.nodePos()
 	jsdoc := p.jsdocScannerInfo()
-	mutable := p.isEffeckFile() && p.parseEffeckMutable() // members are readonly unless written mutable (effeck.go)
+	mutable := p.isVibeLangFile() && p.parseVibeLangMutable() // members are readonly unless written mutable (vibelang.go)
 	modifiers := p.parseModifiers()
 	if p.parseContextualModifier(ast.KindGetKeyword) {
 		return p.parseAccessorDeclaration(pos, jsdoc, modifiers, ast.KindGetAccessor, ParseFlagsType)
@@ -3336,12 +3336,12 @@ func (p *Parser) parseTypeMember() *ast.Node {
 		return p.parseAccessorDeclaration(pos, jsdoc, modifiers, ast.KindSetAccessor, ParseFlagsType)
 	}
 	if p.isIndexSignature() {
-		if p.isEffeckFile() && !mutable {
-			modifiers = p.effeckReadonly(modifiers, p.scanner.TokenRange())
+		if p.isVibeLangFile() && !mutable {
+			modifiers = p.vibelangReadonly(modifiers, p.scanner.TokenRange())
 		}
 		return p.parseIndexSignatureDeclaration(pos, jsdoc, modifiers)
 	}
-	p.effeckMutableMember = mutable
+	p.vibelangMutableMember = mutable
 	return p.parsePropertyOrMethodSignature(pos, jsdoc, modifiers)
 }
 
@@ -3535,7 +3535,7 @@ func (p *Parser) parseReturnType(returnToken ast.Kind, isType bool) *ast.TypeNod
 	if p.shouldParseReturnType(returnToken, isType) {
 		returnType := p.doInContext(ast.NodeFlagsDisallowConditionalTypesContext, false, (*Parser).parseTypeOrTypePredicate)
 		if !isType {
-			p.effeckInferOmitted(returnType)
+			p.vibelangInferOmitted(returnType)
 		}
 		return returnType
 	}
@@ -3726,8 +3726,8 @@ func (p *Parser) parseIndexSignatureDeclaration(pos int, jsdoc jsdocScannerInfo,
 }
 
 func (p *Parser) parsePropertyOrMethodSignature(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList) *ast.Node {
-	mutable := p.effeckMutableMember
-	p.effeckMutableMember = false
+	mutable := p.vibelangMutableMember
+	p.vibelangMutableMember = false
 	name := p.parsePropertyName()
 	questionToken := p.parseOptionalToken(ast.KindQuestionToken)
 	var result *ast.Node
@@ -3747,8 +3747,8 @@ func (p *Parser) parsePropertyOrMethodSignature(pos int, jsdoc jsdocScannerInfo,
 		if p.token == ast.KindEqualsToken {
 			initializer = p.parseInitializer()
 		}
-		if p.isEffeckFile() && !mutable {
-			modifiers = p.effeckReadonly(modifiers, name.Loc)
+		if p.isVibeLangFile() && !mutable {
+			modifiers = p.vibelangReadonly(modifiers, name.Loc)
 		}
 		result = p.factory.NewPropertySignatureDeclaration(modifiers, name, questionToken, typeNode, initializer)
 	}
@@ -4306,8 +4306,8 @@ func (p *Parser) parseAssignmentExpressionOrHigherWorker(allowReturnTypeInArrowF
 		return p.makeBinaryExpression(expr, p.parseTokenNode(), p.parseAssignmentExpressionOrHigherWorker(allowReturnTypeInArrowFunction), pos)
 	}
 	// It wasn't an assignment or a lambda.  This is a conditional expression:
-	expr = p.parseEffeckCatchRest(expr, pos) // x catch fallback, x catch (e) => handler (effeck_catch.go)
-	return p.parsePipeRest(p.parseConditionalExpressionRest(expr, pos, allowReturnTypeInArrowFunction), pos) // x |> body (effeck_pipes.go)
+	expr = p.parseVibeLangCatchRest(expr, pos) // x catch fallback, x catch (e) => handler (vibelang_catch.go)
+	return p.parsePipeRest(p.parseConditionalExpressionRest(expr, pos, allowReturnTypeInArrowFunction), pos) // x |> body (vibelang_pipes.go)
 }
 
 func (p *Parser) isYieldExpression() bool {
@@ -4755,12 +4755,12 @@ func (p *Parser) parseBinaryExpressionRest(precedence ast.OperatorPrecedence, le
 		// We either have a binary operator here, or we're finished.  We call
 		// reScanGreaterToken so that we merge token sequences like > and = into >=
 		operator := p.reScanGreaterThanToken()
-		if p.isEffeckIs() {
-			// subject is pattern binds as instanceof does (effeck_match.go)
+		if p.isVibeLangIs() {
+			// subject is pattern binds as instanceof does (vibelang_match.go)
 			if !shouldConsumeBinaryOperator(ast.KindInstanceOfKeyword, ast.GetBinaryOperatorPrecedence(ast.KindInstanceOfKeyword), precedence) {
 				break
 			}
-			leftOperand = p.parseEffeckIs(leftOperand, pos)
+			leftOperand = p.parseVibeLangIs(leftOperand, pos)
 			lastOperand = leftOperand
 			continue
 		}
@@ -4787,7 +4787,7 @@ func (p *Parser) parseBinaryExpressionRest(precedence ast.OperatorPrecedence, le
 		//      a ** b - c
 		//             ^token; leftOperand = b. Return b to the caller as a rightOperand
 		if !shouldConsumeBinaryOperator(operator, newPrecedence, precedence) || p.isPipeOperator() {
-			break // |>, the pipe operator, binds after every binary operator (effeck_pipes.go)
+			break // |>, the pipe operator, binds after every binary operator (vibelang_pipes.go)
 		}
 		if operator == ast.KindInKeyword && p.inDisallowInContext() {
 			break
@@ -4848,14 +4848,14 @@ func (p *Parser) parseUnaryExpressionOrHigher() *ast.Expression {
 	//      3) LeftHandSideExpression[?Yield][no LineTerminator here]--
 	//      4) ++UnaryExpression[?Yield]
 	//      5) --UnaryExpression[?Yield]
-	if p.isStartOfEffeckFork() {
-		return p.parseEffeckFork() // fork operand (effeck_fibers.go)
+	if p.isStartOfVibeLangFork() {
+		return p.parseVibeLangFork() // fork operand (vibelang_fibers.go)
 	}
-	if p.isStartOfEffeckJoin() {
-		return p.parseEffeckJoin() // join operand (effeck_fibers.go)
+	if p.isStartOfVibeLangJoin() {
+		return p.parseVibeLangJoin() // join operand (vibelang_fibers.go)
 	}
-	if p.isStartOfEffeckThrowExpression() {
-		return p.parseEffeckThrowExpression() // x ?? throw e (effeck_blocks.go)
+	if p.isStartOfVibeLangThrowExpression() {
+		return p.parseVibeLangThrowExpression() // x ?? throw e (vibelang_blocks.go)
 	}
 	if p.isUpdateExpression() {
 		pos := p.nodePos()
@@ -5265,11 +5265,11 @@ func (p *Parser) parseSimpleUnaryExpression() *ast.Expression {
 		// //      < type > UnaryExpression
 		return p.parseTypeAssertion()
 	case ast.KindAwaitKeyword:
-		if p.isEffeckAwaitOperation() {
-			return p.parseEffeckAwaitOperation() // await.all, await.race, ... (effeck_fibers.go)
+		if p.isVibeLangAwaitOperation() {
+			return p.parseVibeLangAwaitOperation() // await.all, await.race, ... (vibelang_fibers.go)
 		}
-		if p.isEffeckAwait() {
-			return p.parseEffeckAwait() // await outside async, in an .effeck file (effeck_fibers.go)
+		if p.isVibeLangAwait() {
+			return p.parseVibeLangAwait() // await outside async, in a .vibe file (vibelang_fibers.go)
 		}
 		if p.isAwaitExpression() {
 			return p.parseAwaitExpression()
@@ -5679,8 +5679,8 @@ func (p *Parser) parseCallExpressionRest(pos int, expression *ast.Expression) *a
 			name := p.createMissingIdentifier()
 			expression = p.finishNode(p.factory.NewPropertyAccessExpression(expression, questionDotToken, name, ast.NodeFlagsOptionalChain), pos)
 		}
-		if p.isStartOfEffeckBlockParam(expression) {
-			expression = p.parseEffeckBlockParam(pos, expression) // f(args) { block } (effeck_blocks.go)
+		if p.isStartOfVibeLangBlockParam(expression) {
+			expression = p.parseVibeLangBlockParam(pos, expression) // f(args) { block } (vibelang_blocks.go)
 		}
 		break
 	}
@@ -5753,8 +5753,8 @@ func (p *Parser) parseTemplateSpan(isTaggedTemplate bool) *ast.Node {
 }
 
 func (p *Parser) parsePrimaryExpression() *ast.Expression {
-	if p.isStartOfEffeckMatch() {
-		return p.parseEffeckMatch() // match (subject) { when ...: ...; } (effeck_match.go)
+	if p.isStartOfVibeLangMatch() {
+		return p.parseVibeLangMatch() // match (subject) { when ...: ...; } (vibelang_match.go)
 	}
 	switch p.token {
 	case ast.KindNoSubstitutionTemplateLiteral:
@@ -5798,15 +5798,15 @@ func (p *Parser) parsePrimaryExpression() *ast.Expression {
 		return p.parsePrivateIdentifier()
 	case ast.KindTryKeyword:
 		if p.isStartOfTryCall() {
-			return p.parseIdentifierName() // the callee of try(…) (effeck_hatches.go)
+			return p.parseIdentifierName() // the callee of try(…) (vibelang_hatches.go)
 		}
 	case ast.KindDoKeyword:
-		if p.isStartOfEffeckDoExpression() {
-			return p.parseEffeckDoExpression() // do { ... } as an expression (effeck_blocks.go)
+		if p.isStartOfVibeLangDoExpression() {
+			return p.parseVibeLangDoExpression() // do { ... } as an expression (vibelang_blocks.go)
 		}
 	case ast.KindPercentToken:
-		if p.isEffeckFile() {
-			return p.parseTopicReference() // the topic of a pipe (effeck_pipes.go)
+		if p.isVibeLangFile() {
+			return p.parseTopicReference() // the topic of a pipe (vibelang_pipes.go)
 		}
 	}
 	return p.parseIdentifierWithDiagnostic(diagnostics.Expression_expected, nil)
@@ -6149,8 +6149,8 @@ func (p *Parser) scanTypeMemberStart() bool {
 		return true
 	}
 	idToken := false
-	if p.isEffeckFile() {
-		p.parseEffeckMutable() // mutable before a member name (effeck.go)
+	if p.isVibeLangFile() {
+		p.parseVibeLangMutable() // mutable before a member name (vibelang.go)
 	}
 	// Eat up all modifiers, but hold on to the last one in case it is actually an identifier
 	for ast.IsModifierKind(p.token) {
@@ -6361,7 +6361,7 @@ func (p *Parser) scanStartOfDeclaration() bool {
 			p.nextToken()
 			continue
 		case ast.KindIdentifier:
-			return p.isEffeckFile() && p.scanStartOfEffeckDeclaration()
+			return p.isVibeLangFile() && p.scanStartOfVibeLangDeclaration()
 		}
 		return false
 	}
@@ -6402,11 +6402,11 @@ func (p *Parser) isStartOfLeftHandSideExpression() bool {
 	case ast.KindTryKeyword:
 		return p.isStartOfTryCall()
 	case ast.KindPercentToken:
-		return p.isEffeckFile()
+		return p.isVibeLangFile()
 	case ast.KindDoKeyword:
-		return p.isStartOfEffeckDoExpression() // do { ... } as an expression (effeck_blocks.go)
+		return p.isStartOfVibeLangDoExpression() // do { ... } as an expression (vibelang_blocks.go)
 	case ast.KindThrowKeyword:
-		return p.isEffeckFile() // x ?? throw e (effeck_blocks.go)
+		return p.isVibeLangFile() // x ?? throw e (vibelang_blocks.go)
 	}
 	return p.isIdentifier()
 }

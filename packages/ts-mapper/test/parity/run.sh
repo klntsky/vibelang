@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The parity harness for gate 1 of decision (B): stock TypeScript 7 through
-# Effeck's content mapper against the fork, declaration by declaration, over
-# every case in typescript/effeck/cases and every example with .effeck sources.
+# VibeLang's content mapper against the fork, declaration by declaration, over
+# every case in typescript/vibelang/cases and every example with .vibe sources.
 #
 #   packages/ts-mapper/test/parity/run.sh               measure: out/summary.md, out/summary.json
 #   packages/ts-mapper/test/parity/run.sh --docs        docs/examples/templates diagnostic census
@@ -18,12 +18,12 @@
 #
 # Steps:
 #   1. Check free disk: stop below 3 GiB.
-#   2. Build the fork's tsc and effeck-mapper once into out/bin.
+#   2. Build the fork's tsc and vibelang-mapper once into out/bin.
 #   3. Assemble a mapper package scope under out/work, with effect 4.0.5
 #      and a copy of packages/runtime built with the fork's tsc beside it.
 #   4. Find stock tsc: the typescript@$TS7_VERSION cache e2e.sh uses, else install it there.
 #   5. Run parity.ts with bun. Its runtime column (runtime.ts) compiles each
-#      runnable case with effeck-mapper --emit and runs it against the case's
+#      runnable case with vibelang-mapper --emit and runs it against the case's
 #      expect-result, under out/work/runtime.
 #
 # Environment:
@@ -51,17 +51,17 @@ mkdir -p "$out/bin"
 # -trimpath keys the Go build cache by module path, so every jj workspace
 # shares one set of entries; -buildvcs=false keeps the binaries' hashes, which
 # the manifest records, the same in every checkout.
-echo "parity: go build ./cmd/tsc ./cmd/effeck-mapper" >&2
+echo "parity: go build ./cmd/tsc ./cmd/vibelang-mapper" >&2
 (cd "$root/typescript/tsc" &&
   CGO_ENABLED=0 go build -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/tsc" ./cmd/tsc &&
-  CGO_ENABLED=0 go build -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/effeck-mapper" ./cmd/effeck-mapper)
+  CGO_ENABLED=0 go build -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/vibelang-mapper" ./cmd/vibelang-mapper)
 
 # The production --emit entry does not accept mapper-entry options yet.
 # Build a test-only entry against the same package with a Go source overlay;
 # the overlay and binary stay in out/, and production sources stay intact.
 bun -e 'console.log(JSON.stringify({ Replace: { [process.argv[1]]: process.argv[2] } }))' \
-  "$root/typescript/tsc/cmd/effeck-mapper/main.go" "$here/emit-main.go" > "$out/emit-overlay.json"
-(cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -overlay "$out/emit-overlay.json" -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/effeck-emit-options" ./cmd/effeck-mapper)
+  "$root/typescript/tsc/cmd/vibelang-mapper/main.go" "$here/emit-main.go" > "$out/emit-overlay.json"
+(cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -overlay "$out/emit-overlay.json" -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/vibelang-emit-options" ./cmd/vibelang-mapper)
 
 effect_modules="${EFFECT_NODE_MODULES:-}"
 if [ -z "$effect_modules" ]; then
@@ -74,19 +74,19 @@ effect_version="$(bun -e 'console.log(require(process.argv[1]).version)' "$effec
 [ "$effect_version" = 4.0.5 ] || { echo "parity: effect is $effect_version, expected 4.0.5" >&2; exit 2; }
 
 # A case without package.json inherits its enclosing package scope. In
-# NodeNext, a self-reference to effeck-ts-mapper/prelude wins over the case's
+# NodeNext, a self-reference to vibelang-ts-mapper/prelude wins over the case's
 # node_modules. Make that enclosing scope our own package, so neither route
 # can reach the repository package's node_modules (catch-match exposed this).
 mapper_package="$out/work"
 rm -rf "$mapper_package/node_modules" "$mapper_package/bin" "$out/runtime-build"
 mkdir -p "$mapper_package/node_modules" "$mapper_package/bin" "$out/runtime-build/node_modules"
 cp "$package/package.json" "$package/prelude.d.ts" "$mapper_package/"
-cp "$out/bin/effeck-mapper" "$mapper_package/bin/"
+cp "$out/bin/vibelang-mapper" "$mapper_package/bin/"
 ln -s "$effect_real" "$mapper_package/node_modules/effect"
 
 # Build from copied sources: all generated runtime files and dependency
 # links belong to the harness, and both compilers use this same runtime.
-runtime="$mapper_package/node_modules/effeck-runtime"
+runtime="$mapper_package/node_modules/vibelang-runtime"
 mkdir -p "$runtime"
 cp "$root/packages/runtime/package.json" "$runtime/"
 cp -R "$root/packages/runtime/src" "$root/packages/runtime/tsconfig.json" "$out/runtime-build/"
@@ -113,8 +113,8 @@ fi
 
 PARITY_ROOT="$root" \
 PARITY_FORK_TSC="$out/bin/tsc" \
-PARITY_MAPPER="$out/bin/effeck-mapper" \
-PARITY_TRACING_EMITTER="$out/bin/effeck-emit-options" \
+PARITY_MAPPER="$out/bin/vibelang-mapper" \
+PARITY_TRACING_EMITTER="$out/bin/vibelang-emit-options" \
 PARITY_STOCK_TSC="$stock_tsc" \
 PARITY_EFFECT_DIR="$effect_real" \
 PARITY_RUNTIME_DIR="$runtime" \

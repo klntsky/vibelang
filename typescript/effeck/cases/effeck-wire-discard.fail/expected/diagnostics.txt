@@ -1,2 +1,0 @@
-main.effeck(22,10): error EK2001
-main.effeck(25,16): error EK3201

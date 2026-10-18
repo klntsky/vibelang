@@ -7,11 +7,11 @@ import { once } from "node:events"
 import { fileURLToPath } from "node:url"
 import { test } from "node:test"
 
-const launcher = fileURLToPath(new URL("../bin/effeck", import.meta.url))
+const launcher = fileURLToPath(new URL("../bin/vibelang", import.meta.url))
 test("forwards arguments, input, streams, working directory, and exit status", () => {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-launcher-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-launcher-"))
   try {
-    const binary = join(scratch, "native effeck")
+    const binary = join(scratch, "native vibelang")
     writeFileSync(binary, `#!/usr/bin/env node
 import fs from "node:fs"
 console.log(JSON.stringify({ args: process.argv.slice(2), cwd: process.cwd(), input: fs.readFileSync(0, "utf8") }))
@@ -20,7 +20,7 @@ process.exit(23)
 `)
     chmodSync(binary, 0o755)
     const result = spawnSync(process.execPath, [launcher, "--pretty", "a b", "$literal"], {
-      cwd: scratch, env: { ...process.env, EFFECK_BINARY: binary }, input: "native stdin", encoding: "utf8"
+      cwd: scratch, env: { ...process.env, VIBELANG_BINARY: binary }, input: "native stdin", encoding: "utf8"
     })
     assert.equal(result.status, 23)
     assert.deepEqual(JSON.parse(result.stdout), {
@@ -34,29 +34,29 @@ process.exit(23)
 
 test("explains how to supply a missing native compiler", () => {
   const result = spawnSync(process.execPath, [launcher], {
-    env: { ...process.env, EFFECK_BINARY: "/nonexistent/effeck/effeck" }, encoding: "utf8"
+    env: { ...process.env, VIBELANG_BINARY: "/nonexistent/vibelang/vibelang" }, encoding: "utf8"
   })
   assert.equal(result.status, 1)
-  assert.match(result.stderr, /scripts\/build-effeck.sh/)
-  assert.match(result.stderr, /EFFECK_BINARY/)
+  assert.match(result.stderr, /scripts\/build-vibelang.sh/)
+  assert.match(result.stderr, /VIBELANG_BINARY/)
 })
 
 test("says Windows binaries are not published yet, without a stack trace", () => {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-win32-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-win32-"))
   try {
-    // A copy outside the checkout finds neither native/effeck nor a platform package.
+    // A copy outside the checkout finds neither native/vibelang nor a platform package.
     mkdirSync(join(scratch, "bin"))
     writeFileSync(join(scratch, "package.json"), '{"type":"module"}')
-    copyFileSync(launcher, join(scratch, "bin", "effeck"))
+    copyFileSync(launcher, join(scratch, "bin", "vibelang"))
     const env = { ...process.env }
-    delete env.EFFECK_BINARY
+    delete env.VIBELANG_BINARY
     const asWindows = 'data:text/javascript,Object.defineProperty(process,"platform",{value:"win32"})'
-    const result = spawnSync(process.execPath, ["--import", asWindows, join(scratch, "bin", "effeck"), "--version"], {
+    const result = spawnSync(process.execPath, ["--import", asWindows, join(scratch, "bin", "vibelang"), "--version"], {
       env, encoding: "utf8"
     })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Windows binaries are not published yet/)
-    assert.match(result.stderr, /EFFECK_BINARY/)
+    assert.match(result.stderr, /VIBELANG_BINARY/)
     assert.doesNotMatch(result.stderr, /\n\s+at /)
   } finally {
     rmSync(scratch, { recursive: true, force: true })
@@ -64,12 +64,12 @@ test("says Windows binaries are not published yet, without a stack trace", () =>
 })
 
 test("preserves native termination signals", () => {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-signal-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-signal-"))
   try {
-    const binary = join(scratch, "native effeck")
+    const binary = join(scratch, "native vibelang")
     writeFileSync(binary, '#!/usr/bin/env node\nprocess.kill(process.pid, "SIGTERM")\n')
     chmodSync(binary, 0o755)
-    const result = spawnSync(process.execPath, [launcher], { env: { ...process.env, EFFECK_BINARY: binary } })
+    const result = spawnSync(process.execPath, [launcher], { env: { ...process.env, VIBELANG_BINARY: binary } })
     assert.equal(result.signal, "SIGTERM")
   } finally {
     rmSync(scratch, { recursive: true, force: true })
@@ -77,15 +77,15 @@ test("preserves native termination signals", () => {
 })
 
 test("forwards termination to a running native watcher", { timeout: 5000 }, async () => {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-watcher-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-watcher-"))
   let wrapper
   let nativePid
   try {
-    const binary = join(scratch, "native effeck")
+    const binary = join(scratch, "native vibelang")
     writeFileSync(binary, '#!/usr/bin/env node\nconsole.log(process.pid)\nsetInterval(() => {}, 1000)\n')
     chmodSync(binary, 0o755)
     wrapper = spawn(process.execPath, [launcher, "--watch"], {
-      env: { ...process.env, EFFECK_BINARY: binary }, stdio: ["ignore", "pipe", "inherit"]
+      env: { ...process.env, VIBELANG_BINARY: binary }, stdio: ["ignore", "pipe", "inherit"]
     })
     const [data] = await once(wrapper.stdout, "data")
     nativePid = Number(data.toString().trim())
@@ -106,35 +106,35 @@ test("forwards termination to a running native watcher", { timeout: 5000 }, asyn
 })
 
 // installed lays out a copy of the launcher as an installed package, with an
-// optional native/effeck beside it and an optional platform package.
+// optional native/vibelang beside it and an optional platform package.
 function installed(scratch, { native = false, platform = false } = {}) {
-  const pkg = join(scratch, "node_modules", "effeck")
+  const pkg = join(scratch, "node_modules", "vibelang")
   mkdirSync(join(pkg, "bin"), { recursive: true })
-  writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "effeck", type: "module" }))
-  copyFileSync(launcher, join(pkg, "bin", "effeck"))
+  writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "vibelang", type: "module" }))
+  copyFileSync(launcher, join(pkg, "bin", "vibelang"))
   const fake = (path, label) => {
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(path, `#!/usr/bin/env node\nconsole.log(${JSON.stringify(label)}, ...process.argv.slice(2))\n`)
     chmodSync(path, 0o755)
   }
-  if (native) fake(join(pkg, "native", "effeck"), "native")
+  if (native) fake(join(pkg, "native", "vibelang"), "native")
   if (platform) {
-    const target = join(scratch, "node_modules", `effeck-${process.platform}-${process.arch}`)
+    const target = join(scratch, "node_modules", `vibelang-${process.platform}-${process.arch}`)
     mkdirSync(target, { recursive: true })
-    writeFileSync(join(target, "package.json"), JSON.stringify({ name: `effeck-${process.platform}-${process.arch}` }))
-    fake(join(target, "bin", "effeck"), "platform")
+    writeFileSync(join(target, "package.json"), JSON.stringify({ name: `vibelang-${process.platform}-${process.arch}` }))
+    fake(join(target, "bin", "vibelang"), "platform")
   }
-  return join(pkg, "bin", "effeck")
+  return join(pkg, "bin", "vibelang")
 }
 
 function withoutOverride() {
   const env = { ...process.env }
-  delete env.EFFECK_BINARY
+  delete env.VIBELANG_BINARY
   return env
 }
 
 test("runs the installed platform package's compiler", { skip: process.platform === "win32" }, () => {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-platform-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-platform-"))
   try {
     const result = spawnSync(process.execPath, [installed(scratch, { platform: true }), "--version"], { env: withoutOverride(), encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
@@ -144,8 +144,8 @@ test("runs the installed platform package's compiler", { skip: process.platform 
   }
 })
 
-test("prefers native/effeck beside the launcher, as in a checkout", { skip: process.platform === "win32" }, () => {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-native-"))
+test("prefers native/vibelang beside the launcher, as in a checkout", { skip: process.platform === "win32" }, () => {
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-native-"))
   try {
     const result = spawnSync(process.execPath, [installed(scratch, { native: true, platform: true }), "-p", "."], { env: withoutOverride(), encoding: "utf8" })
     assert.equal(result.status, 0, result.stderr)
@@ -156,13 +156,13 @@ test("prefers native/effeck beside the launcher, as in a checkout", { skip: proc
 })
 
 test("names the supported platforms when no compiler is installed", () => {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-missing-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-missing-"))
   try {
     const result = spawnSync(process.execPath, [installed(scratch)], { env: withoutOverride(), encoding: "utf8" })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /no native compiler is installed for /)
     assert.match(result.stderr, /darwin-arm64, darwin-x64, linux-arm64, linux-x64, win32-arm64, win32-x64/)
-    assert.match(result.stderr, /EFFECK_BINARY/)
+    assert.match(result.stderr, /VIBELANG_BINARY/)
   } finally {
     rmSync(scratch, { recursive: true, force: true })
   }

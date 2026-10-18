@@ -15,8 +15,8 @@ export function sourceLinks(html: string, source: string, github?: string): stri
   // Both locations are required; a missing or unmatched marker must not publish.
   const spans = [...html.matchAll(/<!-- source-link -->([\s\S]*?)<!-- \/source-link -->/g)]
   if (spans.length !== 2 || html.split(open).length !== 3 || html.split(close).length !== 3 || spans.some(s => s[1].includes(open))) throw new Error("Landing requires paired header and footer source-link markers")
-  if (!["none", "smithers", "github"].includes(source)) throw new Error(`Invalid EFFECK_LANDING_SOURCE: ${source}`)
-  if (source === "github" && !github?.startsWith("https://github.com/")) throw new Error("EFFECK_LANDING_SOURCE=github needs EFFECK_LANDING_GITHUB_URL, a https://github.com/ URL")
+  if (!["none", "smithers", "github"].includes(source)) throw new Error(`Invalid VIBELANG_LANDING_SOURCE: ${source}`)
+  if (source === "github" && !github?.startsWith("https://github.com/")) throw new Error("VIBELANG_LANDING_SOURCE=github needs VIBELANG_LANDING_GITHUB_URL, a https://github.com/ URL")
   return html.replace(/<!-- source-link -->([\s\S]*?)<!-- \/source-link -->/g, (_, link: string) => source === "none" ? "" : source === "smithers" ? link : link.replace(/href="[^"]*"/, `href="${escape(github!)}"`).replace("Source on Smithers", "Source on GitHub"))
 }
 export async function nameOfHover(code: string): Promise<string> {
@@ -26,14 +26,14 @@ export async function nameOfHover(code: string): Promise<string> {
   try {
     linkModules(temp)
     writeFileSync(join(temp, "package.json"), '{"type":"module"}')
-    writeFileSync(join(temp, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext", skipLibCheck: true }, files: ["hero.effeck"] }))
-    writeFileSync(join(temp, "hero.effeck"), code)
-    // Deploy provides its release binary; direct builds resolve effeck from PATH.
-    server = startServer([process.env.EFFECK_BINARY || "effeck", "--lsp", "--stdio"])
+    writeFileSync(join(temp, "tsconfig.json"), JSON.stringify({ compilerOptions: { strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext", skipLibCheck: true }, files: ["hero.vibelang"] }))
+    writeFileSync(join(temp, "hero.vibelang"), code)
+    // Deploy provides its release binary; direct builds resolve vibelang from PATH.
+    server = startServer([process.env.VIBELANG_BINARY || "vibelang", "--lsp", "--stdio"])
     await server.request("initialize", { processId: process.pid, rootUri: pathToFileURL(temp).href, capabilities: { textDocument: { hover: { contentFormat: ["markdown"] } } } })
     server.notify("initialized", {})
-    const uri = pathToFileURL(join(temp, "hero.effeck")).href
-    server.notify("textDocument/didOpen", { textDocument: { uri, languageId: "effeck", version: 1, text: code } })
+    const uri = pathToFileURL(join(temp, "hero.vibelang")).href
+    server.notify("textDocument/didOpen", { textDocument: { uri, languageId: "vibe", version: 1, text: code } })
     const start = code.indexOf("nameOf")
     if (start < 0) throw new Error("Landing hero has no nameOf")
     const before = code.slice(0, start).split("\n")
@@ -47,7 +47,7 @@ export async function nameOfHover(code: string): Promise<string> {
   }
 }
 
-export async function renderLanding(template: string, hero: Record<"effect" | "effeck", string>, highlight: (code: string, lang: string) => string, options: { hovers: boolean; source: string; github?: string; hover?: (code: string) => Promise<string> }): Promise<string> {
+export async function renderLanding(template: string, hero: Record<"effect" | "vibelang", string>, highlight: (code: string, lang: string) => string, options: { hovers: boolean; source: string; github?: string; hover?: (code: string) => Promise<string> }): Promise<string> {
   let html = template
   const tip = /<template id="nameOf-tip">([\s\S]*?)<\/template>/g
   const tips = [...html.matchAll(tip)]
@@ -55,24 +55,24 @@ export async function renderLanding(template: string, hero: Record<"effect" | "e
   let body = tips[0][1]
   if (body.split("<!-- hover:nameOf -->").length !== 2) throw new Error("Landing requires one hover:nameOf marker")
   if (options.hovers) {
-    const hover = await (options.hover ?? nameOfHover)(hero.effeck)
+    const hover = await (options.hover ?? nameOfHover)(hero.vibelang)
     if (!hover?.trim()) throw new Error("Landing requires compiler hover for nameOf")
     body = replaceOne(body, "<!-- hover:nameOf -->", escape(hover))
   }
   html = html.replace(tip, "")
-  const counts = {} as Record<"effect" | "effeck", number>
-  for (const side of ["effect", "effeck"] as const) {
+  const counts = {} as Record<"effect" | "vibelang", number>
+  for (const side of ["effect", "vibelang"] as const) {
     if (typeof hero[side] !== "string" || !hero[side].trim()) throw new Error(`Landing requires nonempty hero.${side}`)
     const lines = hero[side].replace(/\n$/, "").split("\n")
     counts[side] = lines.length
     const code = lines.map((line, i) => {
-      let rendered = highlight(line, side === "effeck" ? "effeck" : "ts")
-      if (side === "effeck" && options.hovers) rendered = rendered.replace(/(<span class="f">)?\bnameOf\b(<\/span>)?/g, match => `<span class="front-tip" tabindex="0">${match}<span class="front-tip-body" role="tooltip">${body}</span></span>`)
+      let rendered = highlight(line, side === "vibelang" ? "vibelang" : "ts")
+      if (side === "vibelang" && options.hovers) rendered = rendered.replace(/(<span class="f">)?\bnameOf\b(<\/span>)?/g, match => `<span class="front-tip" tabindex="0">${match}<span class="front-tip-body" role="tooltip">${body}</span></span>`)
       return `<span class="front-code-line"><span class="front-code-num" aria-hidden="true">${i + 1}</span><span class="front-code-src">${rendered}\n</span></span>`
     }).join("")
     html = replaceOne(html, `<!-- hero:${side} -->`, code)
     html = replaceOne(html, `<!-- lines:${side} -->`, String(lines.length))
   }
-  html = replaceOne(html, "<!-- rows -->", String(Math.max(counts.effect, counts.effeck)))
+  html = replaceOne(html, "<!-- rows -->", String(Math.max(counts.effect, counts.vibe)))
   return sourceLinks(html, options.source, options.github)
 }

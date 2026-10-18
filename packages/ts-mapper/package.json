@@ -1,8 +1,8 @@
 {
-  "name": "effeck-ts-mapper",
+  "name": "vibelang-ts-mapper",
   "version": "0.0.1",
-  "description": "Effeck's TypeScript 7 content mapper: stock tsc and the TypeScript 7 language server check .effeck files.",
-  "keywords": ["effeck", "effect", "typescript", "content-mapper"],
+  "description": "VibeLang's TypeScript 7 content mapper: stock tsc and the TypeScript 7 language server check .vibe files.",
+  "keywords": ["vibelang", "effect", "typescript", "content-mapper"],
   "homepage": "https://effeck.dev",
   "license": "Apache-2.0",
   "type": "module",
@@ -13,13 +13,13 @@
   "files": ["bin", "prelude.d.ts"],
   "typescript": {
     "contentMapper": {
-      "exec": ["./bin/effeck-mapper"],
+      "exec": ["./bin/vibelang-mapper"],
       "compilerOptions": [],
       "dynamicConfig": true
     }
   },
   "peerDependencies": {
     "effect": "4.0.5",
-    "effeck-runtime": "0.0.1"
+    "vibelang-runtime": "0.0.1"
   }
 }

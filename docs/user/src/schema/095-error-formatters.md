@@ -4,7 +4,7 @@ Schema issue formatters work as in Effect. Use readable strings for diagnostics 
 
 ## Rendering schema issues as readable strings
 
-```effeck
+```vibe
 const Dispatch = Schema.Struct({
   destination: Schema.String,
   packages: Schema.Int
@@ -24,7 +24,7 @@ function readableFailure(input: unknown) {
 
 ## Reporting several issues
 
-```effeck
+```vibe
 function allFailures(input: unknown) {
   try {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
@@ -40,7 +40,7 @@ Formatting cannot recover issues that parsing did not collect. Set `errors: "all
 
 ## Formatting Standard Schema validation errors
 
-```effeck
+```vibe
 function formFailures(input: unknown) {
   try {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
@@ -56,7 +56,7 @@ The Standard Schema formatter produces a failure object with an `issues` array. 
 
 ## Customizing leaf messages
 
-```effeck
+```vibe
 const formFormatter = SchemaIssue.makeFormatterStandardSchemaV1({
   leafHook: (issue) => issue._tag === "MissingKey"
     ? "Complete this field"
@@ -77,7 +77,7 @@ function localizedFailures(input: unknown) {
 
 ## Connecting validation to form libraries
 
-```effeck
+```vibe
 const DispatchForm = Schema.toStandardSchemaV1(Dispatch, {
   parseOptions: { errors: "all" },
   leafHook: (issue) => issue._tag === "MissingKey"

@@ -1,29 +1,29 @@
 # Start a new project
 
-Create a project from the Effeck starter. The starter builds with the `effeck` CLI and tests with Vitest through `effeck-vite`, so it needs no build page. Run each command, then compare its output with the expected output.
+Create a project from the VibeLang starter. The starter builds with the `vibelang` CLI and tests with Vitest through `vibelang-vite`, so it needs no build page. Run each command, then compare its output with the expected output.
 
 ## 1. Create the project
 
 Choose a directory name that does not exist yet, or an empty directory. With Bun, run:
 
 ```sh
-bun create effeck my-app
+bun create vibelang my-app
 ```
 
 With npm, run:
 
 ```sh
-npm create effeck@latest my-app
+npm create vibelang@latest my-app
 ```
 
 The output begins:
 
 ```out
-Created my-app with Effeck 0.0.1.
+Created my-app with VibeLang 0.0.1.
 Installing dependencies with bun...
 ```
 
-With npm, the second line names `npm`. The command copies the starter into `my-app`, pins `effeck`, `effeck-runtime`, and `effeck-vite` to its own version, and installs dependencies with the package manager that ran it. It refuses a directory that is not empty, and it never runs `git init`. With `--no-install`, it skips the install; then run `bun install` or `npm install` in `my-app` before step 2.
+With npm, the second line names `npm`. The command copies the starter into `my-app`, pins `vibelang`, `vibelang-runtime`, and `vibelang-vite` to its own version, and installs dependencies with the package manager that ran it. It refuses a directory that is not empty, and it never runs `git init`. With `--no-install`, it skips the install; then run `bun install` or `npm install` in `my-app` before step 2.
 
 ## 2. Build and run
 
@@ -35,7 +35,7 @@ bun run start
 With npm, run `npm run start`. The output ends:
 
 ```out
-Hello, Effeck!
+Hello, VibeLang!
 Recovered from EmptyName
 ```
 
@@ -56,4 +56,4 @@ With npm, run `npm run test`. The output includes:
 
 ## Next
 
-Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify the setup with step 4 of [Set up Effeck](../setup.md).
+Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify the setup with step 4 of [Set up VibeLang](../setup.md).

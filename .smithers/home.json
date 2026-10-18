@@ -1,11 +1,11 @@
 {
   "blocks": [
-    { "type": "text", "text": "Effeck is Effect as a language: TypeScript syntax that compiles to TypeScript." },
-    { "type": "prompt", "title": "Ask about Effeck", "placeholder": "Ask about Effeck…" },
+    { "type": "text", "text": "VibeLang is Effect as a language: TypeScript syntax that compiles to TypeScript." },
+    { "type": "prompt", "title": "Ask about VibeLang", "placeholder": "Ask about VibeLang…" },
     {
       "type": "links",
       "links": [
-        { "label": "Install Effeck", "url": "https://effeck.dev/" },
+        { "label": "Install VibeLang", "url": "https://effeck.dev/" },
         { "label": "Docs", "url": "https://effeck.dev/001-onboarding.html" },
         { "label": "Report a bug", "url": "https://smithers.sh/effeck/effeck/issues" }
       ]

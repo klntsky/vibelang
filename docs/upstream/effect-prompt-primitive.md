@@ -43,7 +43,7 @@ Abandonment must run finalizers and preserve real pending interruptions and
 cleanup failures. A capturing fiber must release its unconsumed transfers
 before publishing its exit.
 
-## Why it matters to Effeck
+## Why it matters to VibeLang
 
 Control handlers and producers use this operation without another scheduler
 or DI container. The kernel currently reads `_stack`, `interruptible`,

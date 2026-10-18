@@ -1,10 +1,10 @@
 # Equal
 
-`Equal` works in Effeck exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can represent the same member or key in an Effect hash collection.
+`Equal` works in VibeLang exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can represent the same member or key in an Effect hash collection.
 
 ## Checking structural equality
 
-```effeck
+```vibe
 const left = { folder: "inbox", flags: ["unread", "starred"] }
 const right = { folder: "inbox", flags: ["unread", "starred"] }
 Object.is(left, right) // false
@@ -17,7 +17,7 @@ Effect 4 compares plain objects, arrays, maps, sets, dates, and regular expressi
 
 ## Implementing the equality protocol
 
-```effeck
+```vibe
 class DocumentRevision implements Equal.Equal {
   constructor(
     readonly documentId: string,
@@ -48,7 +48,7 @@ These methods compile to plain JavaScript methods, because they implement member
 
 ## Opting into reference identity
 
-```effeck
+```vibe
 const record = { state: "ready" }
 const reference = Equal.byReference(record)
 Equal.equals(reference, { state: "ready" }) // false
@@ -64,7 +64,7 @@ Equal.equals(owned, { state: "ready" }) // false
 
 ## Using custom equality in hash-based collections
 
-```effeck
+```vibe
 const seen = HashSet.make(
   new DocumentRevision("doc-8", 2, "reader-a"),
   new DocumentRevision("doc-8", 2, "reader-b")

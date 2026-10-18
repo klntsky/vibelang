@@ -1,10 +1,10 @@
 # Introduction to Effect Platform
 
-Effeck uses Effect's platform services for files, paths, terminals, and application launch. Write the application against those interfaces, then supply implementations for Node.js, Deno, Bun, or the browser at the entry point.
+VibeLang uses Effect's platform services for files, paths, terminals, and application launch. Write the application against those interfaces, then supply implementations for Node.js, Deno, Bun, or the browser at the entry point.
 
 ## Choosing portable platform services
 
-```effeck
+```vibe
 export function readGreeting() {
   const fs = Effect.service(FileSystem.FileSystem)
   return fs.readFileString("./greeting.txt")
@@ -12,7 +12,7 @@ export function readGreeting() {
 // string!PlatformError.PlatformError!FileSystem.FileSystem
 ```
 
-`FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use these interfaces instead of calling `node:*` APIs or browser globals from `.effeck` files. Portability depends on the target actually implementing the services your program needs; a browser does not automatically gain arbitrary disk access.
+`FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use these interfaces instead of calling `node:*` APIs or browser globals from `.vibe` files. Portability depends on the target actually implementing the services your program needs; a browser does not automatically gain arbitrary disk access.
 
 | Capability | API |
 | --- | --- |
@@ -26,8 +26,8 @@ export function readGreeting() {
 
 ```sh
 npm install effect@4.0.5 @effect/platform-node
-npm install effeck-runtime
-npm install --save-dev effeck
+npm install vibelang-runtime
+npm install --save-dev vibelang
 ```
 
 The `effect` package contains the interfaces. Install `@effect/platform-node` for Node.js or Deno, `@effect/platform-bun` for Bun, or `@effect/platform-browser` for browser integrations. Choose adapter releases compatible with the project's Effect version.
@@ -40,12 +40,12 @@ deno add npm:effect@4.0.5 npm:@effect/platform-node
 bun add effect@4.0.5 @effect/platform-bun
 ```
 
-`effeck` ships the `effeck` binary. Run `npx effeck` to check and compile the project's `.effeck` and `.ts` sources before launching the generated JavaScript; `npx effeck --noEmit` checks without emitting. The Bun and Deno projects also need `effeck-runtime` and the compiler. Do not pass `.effeck` files directly to a TypeScript runner.
+`vibelang` ships the `vibelang` binary. Run `npx vibelang` to check and compile the project's `.vibe` and `.ts` sources before launching the generated JavaScript; `npx vibelang --noEmit` checks without emitting. The Bun and Deno projects also need `vibelang-runtime` and the compiler. Do not pass `.vibe` files directly to a TypeScript runner.
 
 ## Writing platform-independent programs
 
-```effeck
-// greeting.effeck
+```vibe
+// greeting.vibe
 export function main() {
   const fs = Effect.service(FileSystem.FileSystem)
   const greeting = fs.readFileString("./greeting.txt")
@@ -57,10 +57,10 @@ export function main() {
 
 ## Supplying Node or Deno implementations
 
-```effeck
-// main-node.effeck
+```vibe
+// main-node.vibe
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
-import { main } from "./greeting.effeck"
+import { main } from "./greeting.vibe"
 
 NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
 ```
@@ -69,10 +69,10 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
 
 ## Supplying Bun implementations
 
-```effeck
-// main-bun.effeck
+```vibe
+// main-bun.vibe
 import { BunRuntime, BunServices } from "@effect/platform-bun"
-import { main } from "./greeting.effeck"
+import { main } from "./greeting.vibe"
 
 BunRuntime.runMain(() => Effect.provide(() => main(), BunServices.layer))
 ```
@@ -81,4 +81,4 @@ Only the entry point changes: the same `main` uses Bun's implementations. A targ
 
 ## Coming from Effect
 
-Pass `main()` wherever an Effect program is expected: it is passed by name, so nothing runs until the runner runs it. Effeck functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.
+Pass `main()` wherever an Effect program is expected: it is passed by name, so nothing runs until the runner runs it. VibeLang functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { runtime } from "./runtime.ts"
-  import { quoteCart } from "./cart.effeck"
+  import { quoteCart } from "./cart.vibe"
 
   const quotes = runtime.runPromise(quoteCart())
 </script>

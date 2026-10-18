@@ -4,7 +4,7 @@ import "github.com/microsoft/TypeScript/tsc/internal/ast"
 
 // CallSignaturesFilterHook can change the signatures that call, a call
 // expression, resolves against, after the checker has found its callee's own.
-// It returns signatures unchanged when it has nothing to say. Effeck's block
+// It returns signatures unchanged when it has nothing to say. VibeLang's block
 // params (D188) use it to offer `f(args) { block }` the forms of f's
 // signatures that take the block where an Effect dual takes its program.
 type CallSignaturesFilterHook func(c *Checker, call *ast.Node, signatures []*Signature) []*Signature

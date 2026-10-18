@@ -1,6 +1,6 @@
 # Vue
 
-Add Effeck to a Vue app that builds with Vite. A single-file component runs an Effeck program with a `ManagedRuntime` and renders three states: loading, the program's result, and an error the program recovers from. Install the packages with [Add Effeck to an existing project](existing-project.md) first. Follow this page instead of [Vite and Vitest](vite.md): it covers the same plugin, tsconfig.json, Vitest, and build steps.
+Add VibeLang to a Vue app that builds with Vite. A single-file component runs a VibeLang program with a `ManagedRuntime` and renders three states: loading, the program's result, and an error the program recovers from. Install the packages with [Add VibeLang to an existing project](existing-project.md) first. Follow this page instead of [Vite and Vitest](vite.md): it covers the same plugin, tsconfig.json, Vitest, and build steps.
 
 ## 1. Install the test packages
 
@@ -21,17 +21,17 @@ npm install --save-dev --save-exact happy-dom@20.14.6 @vue/test-utils@2.5.1
 Find the configuration that includes `src`. In an app from Vite's `vue-ts` template, `tsconfig.json` has `"files": []` and lists `tsconfig.app.json` and `tsconfig.node.json` as `references`; the one that includes `src` is `tsconfig.app.json`. Make two changes there:
 
 1. In `compilerOptions`, set `"rewriteRelativeImportExtensions": true`. Without it, `vite build` fails with TS5096, because `@vue/tsconfig` sets `allowImportingTsExtensions` and the plugin emits JavaScript. A configuration without `allowImportingTsExtensions` fails with TS5097 instead.
-2. Add `"src/**/*.effeck"` to `include`. The template lists `.ts`, `.tsx`, and `.vue` globs only. Without the `.effeck` glob, the compiler skips `.effeck` files that no other file imports, such as tests, and Vitest fails with `ENOENT`.
+2. Add `"src/**/*.vibe"` to `include`. The template lists `.ts`, `.tsx`, and `.vue` globs only. Without the `.vibe` glob, the compiler skips `.vibe` files that no other file imports, such as tests, and Vitest fails with `ENOENT`.
 
 ```json
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.effeck"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.vibe"]
 }
 ```
 
 ## 3. Declare .vue modules
 
-`effeck` checks `.ts` and `.effeck` files and does not read `.vue` files. It sees a component only through a module declaration. Create `src/env.d.ts`. Without it, `effeck -b` reports TS2307 for every `.vue` import, such as `./App.vue` in `src/main.ts`.
+`vibelang` checks `.ts` and `.vibe` files and does not read `.vue` files. It sees a component only through a module declaration. Create `src/env.d.ts`. Without it, `vibelang -b` reports TS2307 for every `.vue` import, such as `./App.vue` in `src/main.ts`.
 
 ```ts
 // TypeScript (.ts)
@@ -44,29 +44,29 @@ declare module "*.vue" {
 
 ## 4. Configure Vite and Vitest
 
-Replace `vite.config.ts` with this file. It adds `effeck()` before `vue()`, passes the configuration that includes `src` as `project`, and imports `defineConfig` from `vitest/config`, so the same file configures Vitest. Keep any other plugins the app has. If `tsconfig.json` itself includes `src`, call `effeck()` without the `project` option.
+Replace `vite.config.ts` with this file. It adds `vibelang()` before `vue()`, passes the configuration that includes `src` as `project`, and imports `defineConfig` from `vitest/config`, so the same file configures Vitest. Keep any other plugins the app has. If `tsconfig.json` itself includes `src`, call `vibelang()` without the `project` option.
 
 ```ts
 // TypeScript (.ts)
 import vue from "@vitejs/plugin-vue"
-import effeck from "effeck-vite"
+import vibelang from "vibelang-vite"
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
-  plugins: [effeck({ project: "tsconfig.app.json" }), vue()],
+  plugins: [vibelang({ project: "tsconfig.app.json" }), vue()],
   test: {
     environment: "happy-dom",
-    include: ["src/**/*.test.effeck", "src/**/*.test.ts"]
+    include: ["src/**/*.test.vibe", "src/**/*.test.ts"]
   }
 })
 ```
 
-## 5. Add an Effeck module
+## 5. Add a VibeLang module
 
-Create `src/todos.effeck`. The `TodosLive` layer keeps the list in a `Map` that its setup creates once, when the layer builds. `completeTodo` recovers from `TodoNotFound`, and `loadBoard` declares the contract `Board!!Todos`, so the compiler rejects an error that escapes it:
+Create `src/todos.vibe`. The `TodosLive` layer keeps the list in a `Map` that its setup creates once, when the layer builds. `completeTodo` recovers from `TodoNotFound`, and `loadBoard` declares the contract `Board!!Todos`, so the compiler rejects an error that escapes it:
 
-```effeck
-// src/todos.effeck
+```vibe
+// src/todos.vibe
 export schema Todo { id: number; title: string; done: boolean }
 
 export error TodoNotFound { id: number }
@@ -122,18 +122,18 @@ Create `src/runtime.ts`. One `ManagedRuntime` builds `TodosLive` once and runs e
 // TypeScript (.ts)
 // src/runtime.ts
 import { ManagedRuntime } from "effect"
-import { TodosLive } from "./todos.effeck"
+import { TodosLive } from "./todos.vibe"
 
 export const runtime = ManagedRuntime.make(TodosLive)
 ```
 
-Create `src/TodoBoard.vue`. Its `<script setup lang="ts">` block imports `./todos.effeck` by its source name. `runtime.runPromise(loadBoard())` provides `Todos` and returns a `Promise<Board>`:
+Create `src/TodoBoard.vue`. Its `<script setup lang="ts">` block imports `./todos.vibe` by its source name. `runtime.runPromise(loadBoard())` provides `Todos` and returns a `Promise<Board>`:
 
 ```vue
 <script setup lang="ts">
 import { onMounted, shallowRef } from "vue"
 import { runtime } from "./runtime.ts"
-import { loadBoard, type Board } from "./todos.effeck"
+import { loadBoard, type Board } from "./todos.vibe"
 
 const board = shallowRef<Board>()
 onMounted(async () => {
@@ -161,12 +161,12 @@ Render it from a component the app already has, such as `src/App.vue`: add `impo
 
 ## 7. Test the module and the component
 
-Create `src/todos.test.effeck`:
+Create `src/todos.test.vibe`:
 
-```effeck
-// src/todos.test.effeck
+```vibe
+// src/todos.test.vibe
 import { assert, it } from "@effect/vitest"
-import { completeTodo, loadBoard, TodoNotFound, Todos, TodosLive } from "./todos.effeck"
+import { completeTodo, loadBoard, TodoNotFound, Todos, TodosLive } from "./todos.vibe"
 
 it.effect("completes a todo") {
   const message = Effect.provide(() => completeTodo(2), TodosLive)
@@ -227,25 +227,25 @@ If `package.json` has no `test` script, add `"test": "vitest run"`. Run `npx vit
 
 ## 8. Type-check and build
 
-No type checker covers a `.vue` file that imports an `.effeck` module. vue-tsc reads `.vue` files with TypeScript 6, which cannot resolve `.effeck` modules, so the template's `vue-tsc -b` fails. vue-tsc 3.3.13 reports TS2307 for each import of `./todos.effeck`, and TS2876 for each `.vue` import, because `rewriteRelativeImportExtensions` cannot rewrite those paths:
+No type checker covers a `.vue` file that imports a `.vibe` module. vue-tsc reads `.vue` files with TypeScript 6, which cannot resolve `.vibe` modules, so the template's `vue-tsc -b` fails. vue-tsc 3.3.13 reports TS2307 for each import of `./todos.vibe`, and TS2876 for each `.vue` import, because `rewriteRelativeImportExtensions` cannot rewrite those paths:
 
 ```out
-src/runtime.ts(4,27): error TS2307: Cannot find module './todos.effeck' or its corresponding type declarations.
-src/TodoBoard.vue(4,39): error TS2307: Cannot find module './todos.effeck' or its corresponding type declarations.
+src/runtime.ts(4,27): error TS2307: Cannot find module './todos.vibe' or its corresponding type declarations.
+src/TodoBoard.vue(4,39): error TS2307: Cannot find module './todos.vibe' or its corresponding type declarations.
 ```
 
-The gap closes when Effeck's TypeScript 7 content mapper ships and these checkers can load `.effeck` files. Until then, type-check with `effeck -b` instead. It builds the same project references and checks `.effeck` and `.ts` files as one program; it does not check the script blocks of `.vue` files. Keep those blocks thin: import a program, run it, and render its result, as `TodoBoard.vue` does. The `.effeck` tests and the component test cover the rest. In `package.json`, change the `build` script:
+The gap closes when VibeLang's TypeScript 7 content mapper ships and these checkers can load `.vibe` files. Until then, type-check with `vibelang -b` instead. It builds the same project references and checks `.vibe` and `.ts` files as one program; it does not check the script blocks of `.vue` files. Keep those blocks thin: import a program, run it, and render its result, as `TodoBoard.vue` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `build` script:
 
 ```json
 {
   "scripts": {
-    "build": "effeck -b && vite build"
+    "build": "vibelang -b && vite build"
   }
 }
 ```
 
-Run `npx effeck -b`. It prints nothing and exits with status 0. Then run `npm run build`, or `bun run build`. It exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added and changed, and that `vue-tsc` no longer runs in the build.
+Run `npx vibelang -b`. It prints nothing and exits with status 0. Then run `npm run build`, or `bun run build`. It exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added and changed, and that `vue-tsc` no longer runs in the build.
 
 ## Next
 
-Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify the setup with step 4 of [Set up Effeck](../setup.md).
+Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify the setup with step 4 of [Set up VibeLang](../setup.md).

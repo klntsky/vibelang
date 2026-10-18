@@ -6,7 +6,7 @@ Defects report bugs and broken invariants outside the typed error contract. Keep
 
 ## Creating defects
 
-```effeck
+```vibe
 function decodeOpcode(opcode: number) {
   if (opcode !== 1) die(new Error("unknown internal opcode"))
   return "start"
@@ -14,9 +14,9 @@ function decodeOpcode(opcode: number) {
 // string!!
 ```
 
-`Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit Effeck `throw`, including `throw new Error(...)`, is a typed failure instead.
+`Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit VibeLang `throw`, including `throw new Error(...)`, is a typed failure instead.
 
-```effeck
+```vibe
 function firstLabel(labels: ReadonlyArray<string>) {
   try {
     return Effect.fromOption(Option.fromNullishOr(labels[0]))
@@ -26,11 +26,11 @@ function firstLabel(labels: ReadonlyArray<string>) {
 }
 ```
 
-`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, so ordinary catch does not see them. A catch whose try block has no expected failures gets warning EK2004 by default. Use a typed form such as `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect` when callers need recovery. A JavaScript catch inside `Effect.gen` can see synchronous exceptions; a catch in `.effeck` follows the expected-failure contract instead.
+`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, so ordinary catch does not see them. A catch whose try block has no expected failures gets warning EK2004 by default. Use a typed form such as `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect` when callers need recovery. A JavaScript catch inside `Effect.gen` can see synchronous exceptions; a catch in `.vibe` follows the expected-failure contract instead.
 
 ## Promoting typed failures to defects
 
-```effeck
+```vibe
 error MissingSetting {
   name: string
 }
@@ -55,7 +55,7 @@ function startupWithMessage() {
 
 ## Examining complete execution results
 
-```effeck
+```vibe
 function inspectStartup() {
   const outcome = Effect.exit(startup())
   if (outcome.isFailure()) {
@@ -71,7 +71,7 @@ An `Exit` stays data when returned by a call. Constructing one with `Exit.succee
 
 ## Recovering defects at a boundary
 
-```effeck
+```vibe
 function isolateDecoder(opcode: number) {
   return Effect.catchDefect(() => decodeOpcode(opcode), (defect) => {
     if (defect instanceof Error && defect.message === "unknown internal opcode") {
@@ -87,7 +87,7 @@ function isolateDecoder(opcode: number) {
 
 ## Recovering a complete cause
 
-```effeck
+```vibe
 function decoderBoundary(opcode: number) {
   const outcome = exit(decodeOpcode(opcode))
   if (outcome is Exit.Success(let value)) return value

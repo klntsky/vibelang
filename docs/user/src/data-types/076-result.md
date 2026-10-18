@@ -1,10 +1,10 @@
 # Result
 
-`Result` works in Effeck exactly as in Effect. A `Result<A, E>` stores either a synchronous success or an expected failure as data, useful when validation should return an outcome without raising it in the caller.
+`Result` works in VibeLang exactly as in Effect. A `Result<A, E>` stores either a synchronous success or an expected failure as data, useful when validation should return an outcome without raising it in the caller.
 
 ## Results and execution exits
 
-```effeck
+```vibe
 function parseCount(text: string) {
   const count = Number(text)
   return text.trim() !== "" && Number.isInteger(count) && count >= 0
@@ -18,7 +18,7 @@ Returning a failed `Result` does not fail `parseCount`: its success value is the
 
 ## Constructing and identifying variants
 
-```effeck
+```vibe
 const accepted = Result.succeed(8)
 const rejected = Result.fail("limit exceeded")
 Result.isResult(accepted) // true
@@ -35,7 +35,7 @@ Success stores its payload in `.success`; failure uses `.failure`. Guards narrow
 
 ## Matching and mapping outcomes
 
-```effeck
+```vibe
 function summarize(result: Result.Result<number, string>) {
   const increased = result.map((count) => count + 2)
   const contextual = increased.mapError((error) => `count: ${error}`)
@@ -54,7 +54,7 @@ function summarize(result: Result.Result<number, string>) {
 
 ## Converting results into effects
 
-```effeck
+```vibe
 error InvalidCount {
   input: string
 }
@@ -80,7 +80,7 @@ function validatePair() {
 
 ## Sequencing and combining results
 
-```effeck
+```vibe
 function combine(
   name: Result.Result<string, string>,
   count: Result.Result<number, string>
@@ -112,7 +112,7 @@ export function combineResults(
 }
 ```
 
-```effeck
+```vibe
 import { combineResults } from "./combine-results.ts"
 
 function combinedData() {
@@ -122,4 +122,4 @@ function combinedData() {
 }
 ```
 
-`Result.gen` is the JavaScript generator sequencing API: the first yielded failure skips the rest. Effeck's `function*` declares a producer, so generator-based APIs stay in `.ts` files; using `Result.gen` in `.effeck` is EK1002. Use `flatMap` and `all` locally, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit `try` hatch; a helper declared with `/** @effeck trusted */` can be called directly.
+`Result.gen` is the JavaScript generator sequencing API: the first yielded failure skips the rest. VibeLang's `function*` declares a producer, so generator-based APIs stay in `.ts` files; using `Result.gen` in `.vibe` is EK1002. Use `flatMap` and `all` locally, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit `try` hatch; a helper declared with `/** @vibelang trusted */` can be called directly.

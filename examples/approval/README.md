@@ -5,7 +5,7 @@ The auto-approve handler resumes both operations with true. The scripted reviewe
 uses supplied answers and defaults to denial when the script runs out.
 The business function depends on `Approval`, without choosing a handler.
 
-From this directory, with `effeck` on `PATH`:
+From this directory, with `vibelang` on `PATH`:
 ```sh
 bun install
 bun run build
@@ -14,7 +14,7 @@ bun run start
 
 Features: a `control` declaration, handle statements, and tail `resume`.
 Effect alone does not provide delimited handlers. Its key control call, expressed
-as Effect TypeScript against Effeck's emitted Approval key and runtime, is:
+as Effect TypeScript against VibeLang's emitted Approval key and runtime, is:
 ```ts
 const release = Effect.fnUntraced(function* (version: string) {
   const approval = yield* Approval

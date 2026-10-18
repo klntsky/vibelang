@@ -1,3 +1,0 @@
-main.effeck(15,15): warning EK2112
-main.effeck(17,15): warning EK2112
-main.effeck(25,19): warning EK2113

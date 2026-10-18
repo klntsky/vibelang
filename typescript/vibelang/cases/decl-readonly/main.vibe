@@ -1,0 +1,50 @@
+// expect-result: {"a":2,"b":{"seen":5},"c":"tags: a","e":"Ada!"}
+// In a .vibe file the members of interfaces and object types are readonly
+// unless written mutable (D134).
+export interface Counter {
+  label: string
+  mutable count: number
+}
+
+function bump(counter: Counter) {
+  counter.count++
+  return counter.count
+}
+
+// An object type and an index signature follow the same rule.
+function tally(words: ReadonlyArray<string>) {
+  const seen: { mutable [word: string]: number } = {}
+  for (const word of words) seen[word] = (seen[word] ?? 0) + 1
+  const totals: { mutable seen: number } = { seen: 0 }
+  for (const word of words) totals.seen += seen[word] ?? 0
+  return totals
+}
+
+// A member named mutable is still a member.
+interface Flags {
+  mutable: boolean
+  tags: ReadonlyArray<string>
+}
+
+function describe(flags: Flags) {
+  return flags.mutable ? "mutable" : `tags: ${flags.tags.join(",")}`
+}
+
+schema Draft {
+  mutable title: string
+}
+
+function edit() {
+  const draft: Draft = Schema.decodeUnknownSync(Draft)({ title: "Ada" })
+  draft.title = `${draft.title}!`
+  return draft.title
+}
+
+export function main() {
+  return {
+    a: bump({ label: "c", count: 1 }),
+    b: tally(["x", "y", "x"]),
+    c: describe({ mutable: false, tags: ["a"] }),
+    e: edit()
+  }
+}

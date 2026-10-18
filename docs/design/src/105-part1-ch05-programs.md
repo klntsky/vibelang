@@ -35,7 +35,7 @@ Each line is a call, so it runs: `user` is a `User`, not an `Effect`. The inner 
 
 #### The pipe operator
 
-Stacking several combinators reads best as a pipeline. Effeck has TC39's proposed pipe operator, Hack style (D154): in `x |> f(%, a)`, the topic `%` stands for `x`.
+Stacking several combinators reads best as a pipeline. VibeLang has TC39's proposed pipe operator, Hack style (D154): in `x |> f(%, a)`, the topic `%` stands for `x`.
 
 ```ts effect
 const user = yield* fetchUser(id).pipe(
@@ -59,7 +59,7 @@ The built-in `pipe` function still works: applied to plain data it is Effect's `
 
 Most pipes you write today disappear:
 
-| You pipe today | In Effeck |
+| You pipe today | In VibeLang |
 | --- | --- |
 | `Effect.map`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap` | statements |
 | `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch`, testing the failure with `match` or `is` (D216), or `x catch (e) => …` (D236) |
@@ -94,7 +94,7 @@ The compiled JavaScript calls the module's function, `Stream.take(Stream.map(Str
 
 #### Why `|>` passes by name
 
-D8 kept the operator out of v0 because calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, a topic that always held a value would run `fetchUser(id)` once, before `Effect.retry` saw it, and retry would have nothing to repeat. The by-name rule (D147) removes the conflict: where `%` stands for a program, the expression before `|>` is passed as one, exactly as `retry(fetchUser(id), policy)` passes it. The proposal itself is still at Stage 2 and its topic token is undecided (`docs/research/tc39-syntax.md` §1); Effeck uses `%`, the token in the proposal's README, and will follow the token TC39 chooses.
+D8 kept the operator out of v0 because calls run: in `fetchUser(id) |> Effect.retry(%, policy)`, a topic that always held a value would run `fetchUser(id)` once, before `Effect.retry` saw it, and retry would have nothing to repeat. The by-name rule (D147) removes the conflict: where `%` stands for a program, the expression before `|>` is passed as one, exactly as `retry(fetchUser(id), policy)` passes it. The proposal itself is still at Stage 2 and its topic token is undecided (`docs/research/tc39-syntax.md` §1); VibeLang uses `%`, the token in the proposal's README, and will follow the token TC39 chooses.
 
 #### Storing, returning, and composing programs
 

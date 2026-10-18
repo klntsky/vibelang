@@ -1,7 +1,7 @@
 # Install only releases published at least 7 days (604800 seconds) ago.
 # The exclusions are versions that this repository's own packages pin
-# exactly. effeck-runtime has the peer dependency effect@4.0.5. bun also
-# installs effeck-vite's devDependencies for a file: dependency, and they pin
+# exactly. vibelang-runtime has the peer dependency effect@4.0.5. bun also
+# installs vibelang-vite's devDependencies for a file: dependency, and they pin
 # effect 4.0.5, @effect/vitest 4.0.5, and vitest 5.0.5, which pins
 # @vitest/mocker and @vitest/spy 5.0.5. All five are 7 days old from
 # 2026-10-23; remove the exclusions then.

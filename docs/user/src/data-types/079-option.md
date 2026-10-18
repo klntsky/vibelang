@@ -1,10 +1,10 @@
 # Option
 
-`Option` works in Effeck exactly as in Effect. It represents a value that is present (`Some<A>`) or absent (`None`), useful for lookups, optional fields, and validation that needs no error description.
+`Option` works in VibeLang exactly as in Effect. It represents a value that is present (`Some<A>`) or absent (`None`), useful for lookups, optional fields, and validation that needs no error description.
 
 ## Representing optional values and properties
 
-```effeck
+```vibe
 interface Contact {
   name: string
   nickname: Option.Option<string>
@@ -18,7 +18,7 @@ The `nickname` property always exists; its value records presence or absence. An
 
 ## Constructing and identifying variants
 
-```effeck
+```vibe
 const present = Option.some(24)
 const absent = Option.none<number>()
 const positive = Option.liftPredicate((n: number) => n > 0)
@@ -34,7 +34,7 @@ function label(value: Option.Option<number>) {
 
 `some` wraps a value, while `none` carries no payload. `liftPredicate` creates a function that returns `Some` only for values passing its predicate. Guards narrow the union so `.value` is available only for `Some`.
 
-```effeck
+```vibe
 function describe(value: Option.Option<string>) {
   return value.match({
     onNone: () => "Anonymous",
@@ -47,7 +47,7 @@ function describe(value: Option.Option<string>) {
 
 ## Mapping, sequencing, and filtering present values
 
-```effeck
+```vibe
 interface Address {
   street: Option.Option<string>
 }
@@ -63,7 +63,7 @@ function streetLabel(address: Option.Option<Address>) {
 
 ## Extracting values with defaults or exceptions
 
-```effeck
+```vibe
 function extract(value: Option.Option<string>) {
   return {
     defaulted: value.getOrElse(() => "Guest"),
@@ -75,11 +75,11 @@ function extract(value: Option.Option<string>) {
 const certain = Option.some("known").getOrThrow()
 ```
 
-`getOrElse` computes its fallback only for `None`. `getOrNull` and `getOrUndefined` adapt to APIs expecting nullish values. `getOrThrow` throws a defect on `None`, which an Effeck `catch` does not handle; prefer a guard, default, or `Effect.fromOption` when absence is expected rather than a programming error. A `catch` around only `getOrThrow` cannot run and receives warning EK2004 by default.
+`getOrElse` computes its fallback only for `None`. `getOrNull` and `getOrUndefined` adapt to APIs expecting nullish values. `getOrThrow` throws a defect on `None`, which a VibeLang `catch` does not handle; prefer a guard, default, or `Effect.fromOption` when absence is expected rather than a programming error. A `catch` around only `getOrThrow` cannot run and receives warning EK2004 by default.
 
 ## Choosing fallback options
 
-```effeck
+```vibe
 function choose(
   preferred: Option.Option<string>,
   backup: Option.Option<string>
@@ -96,7 +96,7 @@ const first = Option.firstSomeOf([
 
 ## Adapting nullable values
 
-```effeck
+```vibe
 Option.fromNullishOr(null) // None
 Option.fromNullishOr(undefined) // None
 Option.fromNullishOr(0) // Some containing 0
@@ -107,7 +107,7 @@ Option.fromNullishOr("") // Some containing ""
 
 ## Converting options into effects
 
-```effeck
+```vibe
 function requiredName(name: Option.Option<string>) {
   return Effect.fromOption(name)
 }
@@ -125,7 +125,7 @@ function requiredPair() {
 
 ## Combining options
 
-```effeck
+```vibe
 function combine(
   name: Option.Option<string>,
   count: Option.Option<number>
@@ -158,7 +158,7 @@ export function combineOptions(
 }
 ```
 
-```effeck
+```vibe
 import { combineOptions } from "./combine-options.ts"
 
 function combinedData() {
@@ -168,11 +168,11 @@ function combinedData() {
 }
 ```
 
-`Option.gen` sequences JavaScript generator yields and stops at the first `None`. In `.effeck`, `function*` creates an Effeck producer instead, so generator-based APIs stay in `.ts` files; using `Option.gen` in `.effeck` is EK1002. Use `flatMap`, `zipWith`, and `all` in Effeck, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit boundary; a helper declared with `/** @effeck trusted */` can be called directly.
+`Option.gen` sequences JavaScript generator yields and stops at the first `None`. In `.vibe`, `function*` creates a VibeLang producer instead, so generator-based APIs stay in `.ts` files; using `Option.gen` in `.vibe` is EK1002. Use `flatMap`, `zipWith`, and `all` in VibeLang, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit boundary; a helper declared with `/** @vibelang trusted */` can be called directly.
 
 ## Deriving equality and ordering
 
-```effeck
+```vibe
 import { Array as Arr } from "effect"
 const same = Option.makeEquivalence(Equivalence.Number)
 same(Option.some(4), Option.some(4)) // true

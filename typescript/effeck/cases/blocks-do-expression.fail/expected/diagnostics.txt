@@ -1,3 +1,0 @@
-main.effeck(4,5): error TS1109
-main.effeck(12,5): error TS1109
-main.effeck(18,5): error TS1108

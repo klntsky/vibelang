@@ -1,7 +1,7 @@
 {
-  "name": "effeck-extension-test",
-  "description": "Hosts test/harness/index.js, which checks the Effeck extension installed from effeck.vsix.",
-  "publisher": "effeck",
+  "name": "vibelang-extension-test",
+  "description": "Hosts test/harness/index.js, which checks the VibeLang extension installed from vibelang.vsix.",
+  "publisher": "vibelang",
   "version": "0.0.0",
   "private": true,
   "engines": {

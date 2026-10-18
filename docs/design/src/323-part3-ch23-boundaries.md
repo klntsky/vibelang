@@ -16,7 +16,7 @@ Three calls look alike and meet three different boundaries. A capture moves fram
 
 | Boundary | Created by | Capture through it | State it restores | Owner of what it delimits |
 | --- | --- | --- | --- | --- |
-| Runner (program entry) | `Effect.runPromise`, `NodeRuntime.runMain`, a test runner such as `it.effect` | Creates a fiber root for a program value. Effeck code never creates roots by calling; only runners and `fork` do (Chapter 13) | | The runner |
+| Runner (program entry) | `Effect.runPromise`, `NodeRuntime.runMain`, a test runner such as `it.effect` | Creates a fiber root for a program value. VibeLang code never creates roots by calling; only runners and `fork` do (Chapter 13) | | The runner |
 | Fiber root | Runners, `fork` | Stops every capture. Runtime operations (wait, sleep, yield) park the whole stack here. | None | The scheduler |
 | Prompt | `handle`, the loop of a `for...of` over a producer (Chapter 26) | Stops capture for its operations. Other operations pass through; this prompt then moves with the captured segment. | Γₒ, ιₒ | The clause invocation, or a Scope after `transfer` |
 | Scope region | A block that declares `using` or calls `fork` | Transparent: its `Final` frame moves with a captured segment and closes the Scope when the segment unwinds | | The block: its `using` acquisitions and forked fibers, nothing else |
@@ -47,6 +47,6 @@ A block opens a Scope region when it directly declares `using` or calls `fork`; 
 | Interruption while a continuation is held | Clause finalizers, then the held continuation's finalizers, then outer finalizers | T4 [Kernel] |
 | Finalizer failure during abandonment | A release that dies fails the boundary that abandoned: the `handle` (kernel-edges), the caller of `abandon` (A02), the closing Scope region (A01), or the exiting fiber (K13d). The abort itself is not reported; a real pending interruption is reported beside the failure (K12a-K12e) | [Kernel] |
 | The capturing fiber exits while it still holds transferred continuations | Each is abandoned on that fiber, newest first, before the fiber's exit is published | K13a-K13d [Kernel] |
-| A finalizer that performs a control operation handled outside it | Works when the outer handler resumes, even mid-abandonment: the abort moves with the capture and returns at resume (I11). If the outer handler abandons instead, the finalizer is cut short. Effeck therefore requires a finalizer's control operations to be handled inside the finalizer [Rule; checker] | I11, I06 [Kernel] |
+| A finalizer that performs a control operation handled outside it | Works when the outer handler resumes, even mid-abandonment: the abort moves with the capture and returns at resume (I11). If the outer handler abandons instead, the finalizer is cut short. VibeLang therefore requires a finalizer's control operations to be handled inside the finalizer [Rule; checker] | I11, I06 [Kernel] |
 
-JavaScript `finally` inside an `Effect.gen` body is not a finalizer: Effect never calls the generator's `return()` or `throw()` (F1, F2, F3). Effeck `finally` and `using` therefore compile to `Final` frames, never to JavaScript `finally`, in every function that compiles to frames (Chapter 26).
+JavaScript `finally` inside an `Effect.gen` body is not a finalizer: Effect never calls the generator's `return()` or `throw()` (F1, F2, F3). VibeLang `finally` and `using` therefore compile to `Final` frames, never to JavaScript `finally`, in every function that compiles to frames (Chapter 26).

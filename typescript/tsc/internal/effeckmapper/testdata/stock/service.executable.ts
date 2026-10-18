@@ -1,2 +1,0 @@
-import { $service } from "effeck-runtime"; import { Effect as Effect_1, Layer } from "effect"; import { gen as $gen } from "effect/Effect"; 
-import { Effect } from "effect"; interface Names { lookup(id: number): Effect_1<string, never, never>; readonly "~effeck/service"?: "app/src/main#Names" } abstract class Names extends $service<Names>("app/src/main#Names") {} export const live = Layer.succeed(Names, { lookup(id) { return $gen(function* () { return String(id) })} })

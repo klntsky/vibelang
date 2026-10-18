@@ -1,7 +1,7 @@
 import { Cause, Context, Effect, Exit } from "effect"
 import * as K from "./kernel/kernel.js"
 
-// The primitives of an .effeck file that have their own syntax (D176-D180):
+// The primitives of a .vibe file that have their own syntax (D176-D180):
 // `catch (cause: Cause)` (retired by D217; it still compiles), `throw cause`, `finally (exit)`, and the
 // interruption blocks. The parser writes the markers below for the checker;
 // the lowering replaces them with the helpers.
@@ -19,7 +19,7 @@ export const $catchCause = <A, E, R, B, E2, R2>(
     K.isAbortCause(cause) ? Effect.failCause(cause as Cause.Cause<never>) : handler(cause))
 
 /** What `$failureOf` returns when a cause holds no expected failure. */
-export const $noFailure: unique symbol = Symbol.for("effeck/noFailure")
+export const $noFailure: unique symbol = Symbol.for("vibelang/noFailure")
 
 /**
  * The first expected failure a cause holds, which the typed and untyped
@@ -62,7 +62,7 @@ export const yieldNow = (priority?: number): Effect.Effect<void> =>
 type Restore = <A, E, R>(program: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
 
 /** The restore of the innermost uninterruptible region a fiber runs in. */
-const CurrentRestore = Context.Reference<Restore | undefined>("effeck/CurrentRestore", {
+const CurrentRestore = Context.Reference<Restore | undefined>("vibelang/CurrentRestore", {
   defaultValue: () => undefined
 })
 

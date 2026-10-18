@@ -1,21 +1,21 @@
 {
-  "name": "effeck-example-users",
+  "name": "vibelang-example-users",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "effeck -p .",
+    "build": "vibelang -p .",
     "start": "node dist/main.js",
     "test": "vitest run"
   },
   "dependencies": {
     "effect": "4.0.5",
     "@effect/platform-node": "4.0.5",
-    "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz"
+    "vibelang-runtime": "file:../../packages/runtime/vibelang-runtime.tgz"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.5",
     "vitest": "5.0.5",
-    "effeck": "file:../../packages/compiler",
-    "effeck-vite": "file:../../packages/vite"
+    "vibelang": "file:../../packages/compiler",
+    "vibelang-vite": "file:../../packages/vite"
   }
 }

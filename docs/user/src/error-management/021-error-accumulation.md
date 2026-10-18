@@ -6,7 +6,7 @@ Independent checks often need to report every problem in one response. Use valid
 
 ## Validating every computation
 
-```effeck
+```vibe
 error InvalidHandle {
   input: string
 }
@@ -29,7 +29,7 @@ function validateTeam() {
 
 `Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel contains a nonempty array of every domain error and the successful values are discarded. If all succeed, it returns an array of successes.
 
-```effeck
+```vibe
 function checkTeamOnly() {
   Effect.validate(["RIVER", "SKY"], (input) => validateHandle(input), {
     discard: true,
@@ -42,7 +42,7 @@ function checkTeamOnly() {
 
 ## Partitioning successes and failures
 
-```effeck
+```vibe
 function inspectTeam() {
   const [handles, errors] = Effect.partition(
     ["Jo", "RIVER", ""],
@@ -61,4 +61,4 @@ The tuple order is `[successes, failures]`. `partition` preserves both arrays an
 
 ## Coming from Effect
 
-Pass an ordinary Effeck callback to `validate` or `partition`. A plain array `map` cannot run a callback that needs services, pauses, or has a typed failure.
+Pass an ordinary VibeLang callback to `validate` or `partition`. A plain array `map` cannot run a callback that needs services, pauses, or has a typed failure.

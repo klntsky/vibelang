@@ -1,15 +1,15 @@
 #!/bin/sh
 # Compile all examples, then compare finite programs with their output fixtures.
-# EFFECK=/absolute/path/to/effeck scripts/check-examples.sh
+# VIBELANG=/absolute/path/to/vibelang scripts/check-examples.sh
 # Detailed diagnostics and output remain in .cache/check-examples/.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 logs="$root/.cache/check-examples"
 mkdir -p "$logs"
-compiler=${EFFECK:-}
+compiler=${VIBELANG:-}
 if [ -z "$compiler" ]; then
-  if command -v effeck >/dev/null 2>&1; then
-    compiler=$(command -v effeck)
+  if command -v vibelang >/dev/null 2>&1; then
+    compiler=$(command -v vibelang)
   else
     compiler="$root/typescript/built/local/tsc"
   fi

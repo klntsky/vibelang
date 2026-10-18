@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, shallowRef } from "vue"
 import { runtime } from "./runtime.ts"
-import { loadBoard, type Board } from "./todos.effeck"
+import { loadBoard, type Board } from "./todos.vibe"
 
 const board = shallowRef<Board>()
 onMounted(async () => {

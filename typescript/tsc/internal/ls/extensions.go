@@ -79,10 +79,10 @@ func withQuickInfoHooks(c *checker.Checker, node *ast.Node, quickInfo string, do
 	if documentation == "" {
 		return quickInfo, notes
 	}
-	// In an .effeck file the hooks' notes come first and a horizontal rule
+	// In a .vibe file the hooks' notes come first and a horizontal rule
 	// separates them from the declaration's own documentation, so clients can
 	// tell the two apart.
-	if strings.HasSuffix(string(ast.GetSourceFileOfNode(node).FileName()), ".effeck") {
+	if strings.HasSuffix(string(ast.GetSourceFileOfNode(node).FileName()), ".vibe") {
 		return quickInfo, notes + "\n\n---\n\n" + documentation
 	}
 	return quickInfo, notes + "\n\n" + documentation

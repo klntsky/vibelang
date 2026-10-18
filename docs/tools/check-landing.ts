@@ -1,4 +1,4 @@
-// EFFECK_LANDING=1 bun docs/tools/render-user.ts, then bun docs/tools/check-landing.ts [--online]
+// VIBELANG_LANDING=1 bun docs/tools/render-user.ts, then bun docs/tools/check-landing.ts [--online]
 // Checks the assembled Monday landing without making any first-load requests.
 // --online also checks the external navigation destination, without credentials.
 import { existsSync, readFileSync } from "node:fs"
@@ -13,13 +13,13 @@ const decode = (text: string) => text.replace(/&(amp|lt|gt|quot|#39);/g, (_, ent
   ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" })[entity]!)
 
 assert(html.includes('class="front-h1">Effect, as a language.</h1>'), "index.html must be the landing")
-assert(readFileSync(join(site, "001-onboarding.html"), "utf8").includes("Welcome to Effeck"), "onboarding must keep its path")
+assert(readFileSync(join(site, "001-onboarding.html"), "utf8").includes("Welcome to VibeLang"), "onboarding must keep its path")
 assert(html.includes('<meta name="converter" content="off">'), "converter must default off")
 assert(!/<!-- hero:|<!-- \/?source-link|contenteditable|Powered by Smithers|Report a bug|Getting started|Convert button/i.test(html))
-// By default (EFFECK_LANDING_SOURCE unset) the landing links to no private repository.
-if (!process.env.EFFECK_LANDING_SOURCE) assert(!html.includes('class="source-link"'), "no source link by default")
+// By default (VIBELANG_LANDING_SOURCE unset) the landing links to no private repository.
+if (!process.env.VIBELANG_LANDING_SOURCE) assert(!html.includes('class="source-link"'), "no source link by default")
 assert(readFileSync(join(site, "001-onboarding.html"), "utf8").includes('<a class="brand" href="001-onboarding.html">'), "the docs brand opens the docs, not the landing")
-assert(html.includes('value="npm create effeck@latest my-app" readonly'), "command must be exact and readonly")
+assert(html.includes('value="npm create vibelang@latest my-app" readonly'), "command must be exact and readonly")
 assert(/<button[^>]*id="copy-button"[^>]*>[\s\S]*?<span[^>]*>Copy<\/span><\/button>/.test(html), "Copy must be a button")
 // The page runs exactly one inline script, the Copy button's, and its CSP allows it by hash alone.
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]!)
@@ -27,7 +27,7 @@ assert.equal(scripts.length, 1, "the landing runs exactly one inline script")
 assert(!/<script\s+src/i.test(html), "the landing loads no script file")
 const digest = new Bun.CryptoHasher("sha256").update(scripts[0]!).digest("base64")
 assert(html.includes(`script-src 'sha256-${digest}'`), "the CSP must allow the Copy script by its hash")
-for (const side of ["effect", "effeck"] as const) {
+for (const side of ["effect", "vibelang"] as const) {
   const panel = new RegExp(`id="${side}-panel"[\\s\\S]*?</section>`).exec(html)?.[0]
   assert(panel !== undefined, `missing ${side} code`)
   const clean = panel.replace(/<span class="front-tip-body"[\s\S]*?<\/code><span>[\s\S]*?<\/span><\/span>/g, "")
@@ -56,10 +56,10 @@ assert(!/@import\b|url\s*\(\s*(?!data:)/i.test(css), "CSS must not load resource
 assert.deepEqual(resources, [], "first load must not fetch resources")
 const sourceLinks: Record<string, string[]> = {
   none: [],
-  smithers: ["https://smithers.sh/effeck/effeck?utm_source=effeck.dev&utm_medium=source&utm_campaign=effeck-launch"],
-  github: [process.env.EFFECK_LANDING_GITHUB_URL ?? ""],
+  smithers: ["https://smithers.sh/effeck/effeck?utm_source=effeck.dev&utm_medium=source&utm_campaign=vibelang-launch"],
+  github: [process.env.VIBELANG_LANDING_GITHUB_URL ?? ""],
 }
-assert.deepEqual(hrefs, Array(2).fill(["/001-onboarding.html", ...sourceLinks[process.env.EFFECK_LANDING_SOURCE ?? "none"]!]).flat())
+assert.deepEqual(hrefs, Array(2).fill(["/001-onboarding.html", ...sourceLinks[process.env.VIBELANG_LANDING_SOURCE ?? "none"]!]).flat())
 console.log("PASS: first-load resource requests = 0 (source audit: one hashed inline script, embedded fonts, no remote assets or CSS imports)")
 
 let failures = 0

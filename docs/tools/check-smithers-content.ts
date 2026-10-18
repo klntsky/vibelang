@@ -1,12 +1,12 @@
-// Checks the repository content smithers.sh serves for Effeck: the guest chat's instructions
+// Checks the repository content smithers.sh serves for VibeLang: the guest chat's instructions
 // (.smithers/instructions/app.md), the repo home (.smithers/home.json), the convert flow's prompt and
 // the effeck.dev hero (docs/site/converter/hero.json). It blocks the docs deploy, because these files
-// are what the converter, the repo home and the chat say about Effeck.
+// are what the converter, the repo home and the chat say about VibeLang.
 //
 //   bun docs/tools/check-smithers-content.ts
 //
-// app.md: under 24 KiB; every link resolves to a docs page or a repository file; every Effeck block
-// passes check-snippets.ts; the install block matches what create-effeck prints. home.json: the
+// app.md: under 24 KiB; every link resolves to a docs page or a repository file; every VibeLang block
+// passes check-snippets.ts; the install block matches what create-vibelang prints. home.json: the
 // blocks smithers.sh accepts, with existing markdown paths. prompt.md: not stale. hero.json: the
 // hero golden case, with matching hashes. Golden source stays out of examples/ and prompt.md.
 import { heldoutProblems } from "../../.smithers/flows/convert/check-heldout.mjs"
@@ -52,19 +52,19 @@ export function sectionBlocks(markdown: string, heading: string, lang: string): 
   return [...section.matchAll(new RegExp("```" + lang + "\\n([\\s\\S]*?)```", "g"))].map((m) => m[1].trim())
 }
 
-/** What create-effeck prints for an npm user: the scaffold command and its next steps. */
-export function createEffeckSteps(): { commands: string[]; editor: string[] } {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-create-"))
+/** What create-vibelang prints for an npm user: the scaffold command and its next steps. */
+export function createVibeLangSteps(): { commands: string[]; editor: string[] } {
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-create-"))
   try {
-    // A relative target, as a reader types it: create-effeck echoes it in its `cd` step.
-    const run = spawnSync("node", [join(repo, "packages/create-effeck/bin/create-effeck.mjs"), "my-app", "--no-install"], {
+    // A relative target, as a reader types it: create-vibelang echoes it in its `cd` step.
+    const run = spawnSync("node", [join(repo, "packages/create-vibelang/bin/create-vibelang.mjs"), "my-app", "--no-install"], {
       cwd: scratch, encoding: "utf8", env: { ...process.env, npm_config_user_agent: "npm/11.0.0 node/v26.0.0" }
     })
-    if (run.status !== 0) throw new Error(`create-effeck failed: ${run.stderr}`)
+    if (run.status !== 0) throw new Error(`create-vibelang failed: ${run.stderr}`)
     const lines = run.stdout.split("\n").map((l) => l.trim())
     const next = lines.slice(lines.indexOf("Next steps:") + 1)
     // --no-install adds the install step; a real `npm create` runs it itself.
-    const commands = ["npm create effeck@latest my-app", ...next.filter((l) => l.startsWith("cd ") || l.startsWith("npm run start")).map((l) => l.replace(/\s{2,}.*$/, ""))]
+    const commands = ["npm create vibelang@latest my-app", ...next.filter((l) => l.startsWith("cd ") || l.startsWith("npm run start")).map((l) => l.replace(/\s{2,}.*$/, ""))]
     const editor = lines.filter((l) => l.startsWith("code --install-extension"))
     return { commands, editor }
   } finally {
@@ -117,18 +117,18 @@ async function main() {
     if (target.error) problems.push(`app.md: ${url}: ${target.error}`)
     else if (target.file && !existsSync(at(target.file))) problems.push(`app.md: ${url} does not resolve (${target.file} is missing)`)
   }
-  const { commands, editor } = createEffeckSteps()
+  const { commands, editor } = createVibeLangSteps()
   const [install, editorBlock] = sectionBlocks(app, "Install", "sh")
   if (install !== commands.join("\n")) problems.push(`app.md's install block must be:\n${commands.join("\n")}\nnot:\n${install ?? "(missing)"}`)
-  for (const line of (editorBlock ?? "").split("\n")) if (line && !editor.includes(line)) problems.push(`app.md: "${line}" is not what create-effeck prints`)
+  for (const line of (editorBlock ?? "").split("\n")) if (line && !editor.includes(line)) problems.push(`app.md: "${line}" is not what create-vibelang prints`)
 
-  const json = mkdtempSync(join(tmpdir(), "effeck-content-")) + "/snippets.json"
+  const json = mkdtempSync(join(tmpdir(), "vibelang-content-")) + "/snippets.json"
   const snippets = spawnSync("bun", [at("docs/tools/check-snippets.ts"), "--root", at(".smithers/instructions"), "--json", json], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
   try {
     const report = JSON.parse(readFileSync(json, "utf8"))
     const blocks = report.pages.flatMap((p: { blocks: Array<{ status: string }> }) => p.blocks)
     const bad = blocks.filter((b: { status: string }) => b.status !== "ok")
-    if (!blocks.length) problems.push("app.md has no checked Effeck block")
+    if (!blocks.length) problems.push("app.md has no checked VibeLang block")
     if (bad.length) problems.push(`app.md: ${bad.length} snippet(s) do not pass check-snippets.ts:\n${snippets.stdout.slice(-1500)}`)
   } catch {
     problems.push(`check-snippets.ts did not report on app.md (exit ${snippets.status}):\n${(snippets.stdout + snippets.stderr).slice(-1500)}`)
@@ -143,8 +143,8 @@ async function main() {
 
   const hero = JSON.parse(readFileSync(at("docs/site/converter/hero.json"), "utf8"))
   const golden = ".smithers/flows/convert/golden/01-hero-batch-lookup/"
-  if (hero.effect !== readFileSync(at(golden + "input.ts"), "utf8") || hero.effeck !== readFileSync(at(golden + "expected.effeck"), "utf8")) problems.push("hero.json differs from golden case 01")
-  if (hero.receipt?.inputSha !== sha(hero.effect) || hero.receipt?.outputSha !== sha(hero.effeck)) problems.push("hero.json's receipt hashes do not match its code")
+  if (hero.effect !== readFileSync(at(golden + "input.ts"), "utf8") || hero.vibelang !== readFileSync(at(golden + "expected.vibe"), "utf8")) problems.push("hero.json differs from golden case 01")
+  if (hero.receipt?.inputSha !== sha(hero.effect) || hero.receipt?.outputSha !== sha(hero.vibelang)) problems.push("hero.json's receipt hashes do not match its code")
 
   if (problems.length) {
     console.error(problems.map((p) => `check-smithers-content: ${p}`).join("\n"))

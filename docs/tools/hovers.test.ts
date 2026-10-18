@@ -11,14 +11,14 @@ test("hovers identifiers, keywords, the topic, and template substitutions, not c
     .toEqual(["const", "n", "f", "const", "s", "n", "length", "g", "a", "return", "%"])
 })
 
-test("keeps Effeck's notes and the JSDoc's first paragraph", () => {
+test("keeps VibeLang's notes and the JSDoc's first paragraph", () => {
   expect(trimDocs("Runs here and returns `void`.\n\nLogs one or more messages.\nAt the default level.\n\n**Example**\n\n```ts\nEffect.log(1)\n```\n\n*@since* — 2.0.0"))
     .toBe("Runs here and returns `void`.\n\nLogs one or more messages.\nAt the default level.")
   expect(trimDocs("*@category* — constructors")).toBe("")
   expect(trimDocs("")).toBe("")
 })
 
-test("splits Effeck's notes from the JSDoc at the server's rule", () => {
+test("splits VibeLang's notes from the JSDoc at the server's rule", () => {
   // Notes the opening list does not know stay notes when the rule marks them.
   expect(trimDocs("A brand-new note.\n\nAnother one.\n\n---\n\nLogs one or more messages.\n\n**Example**\n\n```ts\nEffect.log(1)\n```"))
     .toBe("A brand-new note.\n\nAnother one.\n\nLogs one or more messages.")
@@ -29,10 +29,10 @@ test("splits Effeck's notes from the JSDoc at the server's rule", () => {
 
 test("strips local links and paths", () => {
   const raw = "Like [`String`](file:///Users/someone/effectscript/packages/runtime/node_modules/effect/src/Config.ts#1439,17-1439,23) " +
-    "from /Users/someone/effectscript/packages/runtime/node_modules/effect/dist/Config.d.ts in /private/var/folders/x/T/effeck-hovers-1/3/block-1.effeck"
+    "from /Users/someone/effectscript/packages/runtime/node_modules/effect/dist/Config.d.ts in /private/var/folders/x/T/vibelang-hovers-1/3/block-1.vibe"
   expect(leaks(raw)).not.toEqual([])
-  const clean = sanitize(raw, ["/private/var/folders/x/T/effeck-hovers-1/3"])
-  expect(clean).toBe("Like `String` from effect/dist/Config.d.ts in ./block-1.effeck")
+  const clean = sanitize(raw, ["/private/var/folders/x/T/vibelang-hovers-1/3"])
+  expect(clean).toBe("Like `String` from effect/dist/Config.d.ts in ./block-1.vibe")
   expect(leaks(clean)).toEqual([])
 })
 
@@ -42,7 +42,7 @@ test("strips local links and paths", () => {
 const compiler = resolve(import.meta.dir, "../../typescript/built/local/tsc")
 const root = mkdtempSync(join(tmpdir(), "hovers-test-"))
 const cache = join(root, "cache")
-const wrapper = join(root, "effeck")
+const wrapper = join(root, "vibelang")
 const page = join(root, "src/page.md")
 const writeWrapper = (build: number) => {
   writeFileSync(wrapper, `#!/bin/sh\n# build ${build}\nexec "${compiler}" "$@"\n`)
@@ -50,7 +50,7 @@ const writeWrapper = (build: number) => {
 }
 const writePage = (name: string) => {
   mkdirSync(join(root, "src"), { recursive: true })
-  writeFileSync(page, ["# Page", "", "```effeck", 'import { Effect } from "effect"', "",
+  writeFileSync(page, ["# Page", "", "```vibe", 'import { Effect } from "effect"', "",
     "/** Wraps {@link Effect.succeed} for the docs. */", `function ${name}(n: number) {`, "  return n + 1", "}", `const answer = ${name}(41)`, "```", ""].join("\n"))
 }
 const run = () => updateHovers({ compiler: wrapper, root, cache })
@@ -89,23 +89,23 @@ test.skipIf(!existsSync(compiler))("no cached text contains a forbidden string",
   // node_modules; the link's text remains.
   const hover = entry().blocks[0].nodes.find(n => n.type === "hover" && n.target === "increment" && n.line === 3)
   expect(hover?.type === "hover" && hover.docs).toBe(
-    "Plain JavaScript: Effeck code calls it directly. TypeScript callers see `Effect.Effect<number, never, never>`.\n\nWraps Effect.succeed for the docs.")
+    "Plain JavaScript: VibeLang code calls it directly. TypeScript callers see `Effect.Effect<number, never, never>`.\n\nWraps Effect.succeed for the docs.")
 })
 
 test("another runtime directory changes every page's key", () => {
   const runtime = (name: string, declarations: string) => {
     const dir = join(root, name)
     mkdirSync(join(dir, "dist"), { recursive: true })
-    writeFileSync(join(dir, "package.json"), '{"name":"effeck-runtime","version":"0.0.1"}')
+    writeFileSync(join(dir, "package.json"), '{"name":"vibelang-runtime","version":"0.0.1"}')
     writeFileSync(join(dir, "dist/index.d.ts"), declarations)
     return dir
   }
   const binary = join(root, "key-binary")
   writeFileSync(binary, "binary")
   const keyWith = (dir: string) => {
-    const saved = process.env.EFFECK_RUNTIME_DIR
-    process.env.EFFECK_RUNTIME_DIR = dir
-    try { return baseKey(binary) } finally { if (saved === undefined) delete process.env.EFFECK_RUNTIME_DIR; else process.env.EFFECK_RUNTIME_DIR = saved }
+    const saved = process.env.VIBELANG_RUNTIME_DIR
+    process.env.VIBELANG_RUNTIME_DIR = dir
+    try { return baseKey(binary) } finally { if (saved === undefined) delete process.env.VIBELANG_RUNTIME_DIR; else process.env.VIBELANG_RUNTIME_DIR = saved }
   }
   const release = runtime("runtime-release", "export declare const a: 1\n")
   expect(keyWith(release)).toBe(keyWith(release))

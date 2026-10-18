@@ -1,4 +1,0 @@
-[3,2,1,0]
-at ownerName (main.effeck:12:25)
-at lookup (main.effeck:17:9)
-at audited$try (main.effeck:23:27)

@@ -1,9 +1,9 @@
 // The compile worker's HTTP surface. Smithers' convert flow calls it from a fixed activity; nothing
 // else should reach it (see deploy/network-policy.yaml).
 //
-//   POST /compile  {"source": "<Effeck>"}  ->  {exitCode, timedOut, diagnostics[], truncated,
-//                                               effeckVersion, compilerDigest, dependenciesDigest}
-//   GET  /healthz                          ->  {ok, effeckVersion, compilerDigest, dependenciesDigest, network}
+//   POST /compile  {"source": "<VibeLang>"}  ->  {exitCode, timedOut, diagnostics[], truncated,
+//                                               vibelangVersion, compilerDigest, dependenciesDigest}
+//   GET  /healthz                          ->  {ok, vibelangVersion, compilerDigest, dependenciesDigest, network}
 //
 // One compile runs at a time: the container's one CPU and 512 MiB are the per-compile limits. The
 // server refuses to start when the compile environment can reach the internet.
@@ -31,7 +31,7 @@ const send = (res, status, body) => {
 
 const server = createServer((req, res) => {
   if (req.method === "GET" && req.url === "/healthz") {
-    return send(res, 200, { ok: true, effeckVersion: id.effeckVersion, compilerDigest: id.compilerDigest, dependenciesDigest: id.dependenciesDigest, network: config.network })
+    return send(res, 200, { ok: true, vibelangVersion: id.vibelangVersion, compilerDigest: id.compilerDigest, dependenciesDigest: id.dependenciesDigest, network: config.network })
   }
   if (req.method !== "POST" || req.url !== "/compile") return send(res, 404, { error: "not_found" })
   let size = 0
@@ -49,9 +49,9 @@ const server = createServer((req, res) => {
     if (result.refusal) return send(res, 422, { refusal: result.refusal })
     // Logs carry stage outcomes only: never the source, the diagnostics' text or a client address.
     console.log(JSON.stringify({ event: "compile", exitCode: result.exitCode, timedOut: result.timedOut, diagnostics: result.diagnostics.length }))
-    send(res, 200, { ...result, effeckVersion: id.effeckVersion, compilerDigest: id.compilerDigest, dependenciesDigest: id.dependenciesDigest })
+    send(res, 200, { ...result, vibelangVersion: id.vibelangVersion, compilerDigest: id.compilerDigest, dependenciesDigest: id.dependenciesDigest })
   })
 })
 
 const port = Number(process.env.PORT ?? 8080)
-server.listen(port, () => console.log(JSON.stringify({ event: "listening", port, effeckVersion: id.effeckVersion, network: config.network })))
+server.listen(port, () => console.log(JSON.stringify({ event: "listening", port, vibelangVersion: id.vibelangVersion, network: config.network })))

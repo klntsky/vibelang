@@ -1,9 +1,9 @@
 {
-  "name": "effeck-vite",
+  "name": "vibelang-vite",
   "version": "0.0.1",
-  "description": "Compile Effeck source modules with effeck in Vite and Vitest",
+  "description": "Compile VibeLang source modules with vibelang in Vite and Vitest",
   "keywords": [
-    "effeck",
+    "vibelang",
     "effect",
     "vite",
     "vite-plugin",
@@ -27,7 +27,7 @@
     "test": "node --test test/plugin.test.mjs"
   },
   "peerDependencies": {
-    "effeck": "0.0.1",
+    "vibelang": "0.0.1",
     "vite": ">=7 <9"
   },
   "devDependencies": {
@@ -40,7 +40,7 @@
     "node": ">=22"
   },
   "peerDependenciesMeta": {
-    "effeck": {
+    "vibelang": {
       "optional": true
     }
   }

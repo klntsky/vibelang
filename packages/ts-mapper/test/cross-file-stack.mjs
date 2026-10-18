@@ -30,10 +30,10 @@ for (const helpers of [false, true]) {
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(path.join(dir, "probe.js"), "export const probe = n => n\n")
   for (const [file, own, other, target] of [["a", "f", "b", "g"], ["b", "g", "a", "f"]]) {
-    const source = `import { ${target} } from "./${other}.effeck"\nimport { probe } from "./probe.js"\n` +
+    const source = `import { ${target} } from "./${other}.vibe"\nimport { probe } from "./probe.js"\n` +
       body(own, helpers ? `${own}Helper` : target, !helpers) +
       (helpers ? body(`${own}Helper`, target, true) : "")
-    const input = path.join(dir, `${file}.effeck`)
+    const input = path.join(dir, `${file}.vibe`)
     const output = path.join(dir, `${file}.js`)
     fs.writeFileSync(input, source)
     const emitted = spawnSync(mapper, ["--emit", input, "--out", output], { encoding: "utf8" })

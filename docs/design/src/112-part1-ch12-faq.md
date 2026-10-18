@@ -1,6 +1,6 @@
 ### 12. Questions Effect users ask
 
-Short answers, each with the code. Appendix C maps every section of Effect's documentation to Effeck, including the many features that carry over unchanged.
+Short answers, each with the code. Appendix C maps every section of Effect's documentation to VibeLang, including the many features that carry over unchanged.
 
 #### Where did `async` and `await` go?
 
@@ -17,7 +17,7 @@ function loadProfile(id: string) {
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In Effeck code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning, and a value of the `.effeck` file, such as `user.avatarId`, arrives as an input (D229). Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In VibeLang code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning, and a value of the `.vibe` file, such as `user.avatarId`, arrives as an input (D229). Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -70,7 +70,7 @@ function readPort(text: string) {
 // number!!
 ```
 
-JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, an Effeck `catch` does not see it, and a `catch` that could only have caught such exceptions is reported, EK2004 (Chapter 3).
+JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, a VibeLang `catch` does not see it, and a `catch` that could only have caught such exceptions is reported, EK2004 (Chapter 3).
 
 #### How do I use `Option` and `Result`?
 
@@ -106,7 +106,7 @@ function register(body: unknown) {
 // Account!SchemaError | AccountError!Accounts
 ```
 
-`Schema` is in the prelude and unchanged. A decoder that returns an `Effect` runs when called and fails with a typed `SchemaError`. The other forms (`decodeUnknownSync`, `is`) are trusted functions whose exceptions are defects, so `.effeck` code prefers the `Effect` forms. Errors that must cross a process boundary are `Schema.TaggedError` classes.
+`Schema` is in the prelude and unchanged. A decoder that returns an `Effect` runs when called and fails with a typed `SchemaError`. The other forms (`decodeUnknownSync`, `is`) are trusted functions whose exceptions are defects, so `.vibe` code prefers the `Effect` forms. Errors that must cross a process boundary are `Schema.TaggedError` classes.
 
 #### How do I work with streams?
 
@@ -138,7 +138,7 @@ it.effect("a reminder fires after one day") {
 }
 ```
 
-`@effect/vitest` works unchanged: `it.effect` runs an Effeck function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.effeck` code has no `await` except the await operations, and a runner inside a test body is EK1005 (Chapter 13).
+`@effect/vitest` works unchanged: `it.effect` runs a VibeLang function as a test, `assert` comes from the same package, and `TestClock` controls time. Fake services are Layers (Chapter 4), and a control operation is scripted with a handler (Chapter 9). An `Exit` is data until called, so `assert.deepStrictEqual(Effect.exit(() => f()), Exit.succeed(1))` compares two `Exit` values. A test written as `async () => { await Effect.runPromise(p) }` stays in a `.ts` file: `.vibe` code has no `await` except the await operations, and a runner inside a test body is EK1005 (Chapter 13).
 
 #### How do I log, trace, and record metrics?
 
@@ -171,7 +171,7 @@ A `Config` is data until you call it (Chapter 13), so `Config.all`, `Config.nest
 #### How do I run a program?
 
 ```ts es
-// main.effeck
+// main.vibe
 import { NodeRuntime } from "@effect/platform-node"
 
 function main() {
@@ -238,7 +238,7 @@ function ready() {
 
 The `callback` hatch adapts it (D148): its register function is plain TypeScript, `resume(value)` succeeds, `resume.fail(error)` fails, and a function the register function returns runs on interruption. A callback API that delivers a resource, such as a socket, is adapted in TypeScript with the runtime's `suspend` and `Effect.acquireRelease(…, { interruptible: true })`, so a value that arrives after cancellation is released (Chapter 6). Node.js and browser callback APIs already have Effect modules (Chapter 11).
 
-#### Can I mix `.ts` and `.effeck` files?
+#### Can I mix `.ts` and `.vibe` files?
 
 ```ts es
 import { findUser } from "./users-repo.ts"     // Effect.fn("findUser")(function* …)
@@ -248,7 +248,7 @@ export function title(id: string) {
 }
 ```
 
-Yes, in one program: `effeck` checks both, and the editor serves both (Chapter 28). A TypeScript function that returns an `Effect` is called like an Effeck function, and TypeScript sees every Effeck function as one that returns an `Effect` (Chapter 10).
+Yes, in one program: `vibelang` checks both, and the editor serves both (Chapter 28). A TypeScript function that returns an `Effect` is called like a VibeLang function, and TypeScript sees every VibeLang function as one that returns an `Effect` (Chapter 10).
 
 #### Is there anything from Effect I cannot use?
 
@@ -256,7 +256,7 @@ Yes, in one program: `effeck` checks both, and the editor serves both (Chapter 2
 const legacy = try((program) => Effect3.runPromise(program), (cause) => new LegacyError({ cause }), oldProgram)
 ```
 
-Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.effeck` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.
+Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.vibe` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.
 
 #### How do I keep state that several fibers share?
 

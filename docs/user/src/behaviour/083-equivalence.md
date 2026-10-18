@@ -1,10 +1,10 @@
 # Equivalence
 
-`Equivalence` works in Effeck exactly as in Effect. It packages a reusable rule for deciding whether two values count as equivalent in a particular operation, without changing their global equality behavior.
+`Equivalence` works in VibeLang exactly as in Effect. It packages a reusable rule for deciding whether two values count as equivalent in a particular operation, without changing their global equality behavior.
 
 ## Representing a reusable equality relation
 
-```effeck
+```vibe
 const sameLabel: Equivalence.Equivalence<string> = (a, b) =>
   a.trim().toLowerCase() === b.trim().toLowerCase()
 
@@ -16,7 +16,7 @@ An `Equivalence<A>` is a synchronous function from two A values to a boolean. A 
 
 ## Choosing built-in relations
 
-```effeck
+```vibe
 Equivalence.String("cyan", "cyan") // true
 Equivalence.Number(12, 13) // false
 Equivalence.Boolean(true, true) // true
@@ -33,7 +33,7 @@ The string, boolean, bigint, and `strictEqual` relations use strict equality. `E
 
 ## Deriving comparisons through input projections
 
-```effeck
+```vibe
 interface Product {
   sku: string
   displayName: string

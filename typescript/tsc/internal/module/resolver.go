@@ -1727,11 +1727,11 @@ func (r *resolutionState) tryAddingExtensions(extensionless tspath.FileNameStem,
 			}
 		}
 		return continueSearching()
-	case tspath.ExtensionEffeck:
-		// An Effeck import names its source file, ./welcome.effeck; where only
+	case tspath.ExtensionVibe:
+		// A VibeLang import names its source file, ./welcome.vibe; where only
 		// the declaration file exists, as in a published package, it names that.
 		if extensions&extensionsTypeScript != 0 {
-			if resolved := r.tryExtension(tspath.ExtensionEffeck, extensionless, true); !resolved.shouldContinueSearching() {
+			if resolved := r.tryExtension(tspath.ExtensionVibe, extensionless, true); !resolved.shouldContinueSearching() {
 				return resolved
 			}
 		}
@@ -1749,8 +1749,8 @@ func (r *resolutionState) tryAddingExtensions(extensionless tspath.FileNameStem,
 			if resolved := r.tryExtension(tspath.ExtensionTsx, extensionless, originalExtension == tspath.ExtensionTs || originalExtension == tspath.ExtensionDts); !resolved.shouldContinueSearching() {
 				return resolved
 			}
-			// ./welcome.js resolves to welcome.effeck as it resolves to welcome.ts.
-			if resolved := r.tryExtension(tspath.ExtensionEffeck, extensionless, false); !resolved.shouldContinueSearching() {
+			// ./welcome.js resolves to welcome.vibe as it resolves to welcome.ts.
+			if resolved := r.tryExtension(tspath.ExtensionVibe, extensionless, false); !resolved.shouldContinueSearching() {
 				return resolved
 			}
 		}

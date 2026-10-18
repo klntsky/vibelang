@@ -31,7 +31,7 @@ function withRetry<A>(times: number, program: () => A) {
 
 #### Callbacks into JavaScript
 
-A JavaScript function such as `Array.prototype.map` calls its callback synchronously, on a stack frame the runtime cannot pause or capture. A callback passed where a plain function type is expected must therefore compile to plain JavaScript (Chapter 15): no Effect operation, and E = `never`. Anything else is EK4301 (Chapter 10). The same holds for a named Effeck function passed as a value: `stores.map(makeSync)` passes `makeSync`'s plain form, and a function without one is rejected.
+A JavaScript function such as `Array.prototype.map` calls its callback synchronously, on a stack frame the runtime cannot pause or capture. A callback passed where a plain function type is expected must therefore compile to plain JavaScript (Chapter 15): no Effect operation, and E = `never`. Anything else is EK4301 (Chapter 10). The same holds for a named VibeLang function passed as a value: `stores.map(makeSync)` passes `makeSync`'s plain form, and a function without one is rejected.
 
 #### Which Effect combinators run their argument on another fiber
 
@@ -56,4 +56,4 @@ The runtime is the guarantee and the table is the diagnostic. A control operatio
 
 TypeScript functions are judged by their signatures, because a TypeScript function can fork inside its body without taking a program argument: a TypeScript function whose R contains a control operation is EK4202 (Chapter 9). Services need no such check: their implementations live in the Context, which every forked fiber inherits.
 
-The rule is conservative in one case. TypeScript code can supply an implementation of a control operation that always continues exactly once, and that implementation runs in place like a service and would work on a forked fiber. The compiler cannot see that from Effeck, so it treats every control operation as bound to its fiber.
+The rule is conservative in one case. TypeScript code can supply an implementation of a control operation that always continues exactly once, and that implementation runs in place like a service and would work on a forked fiber. The compiler cannot see that from VibeLang, so it treats every control operation as bound to its fiber.

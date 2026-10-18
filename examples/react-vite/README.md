@@ -1,7 +1,7 @@
 # React and Vite
 
-A React component renders greetings that an Effeck program computes.
-`src/users.effeck` declares a `User` schema, a `UserNotFound` error, and a
+A React component renders greetings that a VibeLang program computes.
+`src/users.vibe` declares a `User` schema, a `UserNotFound` error, and a
 `Users` service with the `UsersLive` layer. `greet` looks up a user and
 recovers `UserNotFound` with `try`/`catch`, so its contract is `string!!Users`:
 it cannot fail. `src/Greeting.tsx` runs `greet(id)` with a `ManagedRuntime`
@@ -35,9 +35,9 @@ bun run test
 
 The command stops at the first failure. It runs three steps:
 
-1. `effeck -p tsconfig.json --noEmit` type-checks `src/users.effeck` and every
+1. `vibelang -p tsconfig.json --noEmit` type-checks `src/users.vibe` and every
    `.ts` and `.tsx` file as one program.
-2. `vitest run` runs two files. `src/users.test.effeck` checks `greet`, the
+2. `vitest run` runs two files. `src/users.test.vibe` checks `greet`, the
    `UserNotFound` failure, and its recovery with `@effect/vitest`.
    `src/App.test.tsx` renders `App` in happy-dom with Testing Library, checks
    the loading text, and waits for both greetings.
@@ -54,10 +54,10 @@ The output ends with:
 
 ## How the pieces connect
 
-- `vite.config.ts` lists `effeck()` from `effeck-vite` before `react()`. The
-  plugin compiles the project with the `effeck` binary, and Vite serves each
-  `.effeck` module as JavaScript. Vitest reads the same file.
-- A `.tsx` file imports `./users.effeck` by its source name.
+- `vite.config.ts` lists `vibelang()` from `vibelang-vite` before `react()`. The
+  plugin compiles the project with the `vibelang` binary, and Vite serves each
+  `.vibe` module as JavaScript. Vitest reads the same file.
+- A `.tsx` file imports `./users.vibe` by its source name.
   `"rewriteRelativeImportExtensions": true` in `tsconfig.json` permits that
   import. Without it, the compiler reports TS5097.
 - To TypeScript, `greet` is a function that returns

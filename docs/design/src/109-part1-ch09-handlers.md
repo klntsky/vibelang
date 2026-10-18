@@ -110,7 +110,7 @@ The code passed to `resumeWith` runs inside the handled program, at the call, so
 ```text
 error EK2005: resumeWith runs this code at the perform site, inside the handled program,
   where the clause's providers are not in scope. It needs Secret.
-  approvals.effeck:4:16   resumeWith(() => Secret.read())
+  approvals.vibe:4:16   resumeWith(() => Secret.read())
   Read it in the clause first:   const secret = Secret.read()   …   resumeWith(() => secret)
 ```
 
@@ -180,17 +180,17 @@ function approveAll(ids: ReadonlyArray<string>) {
 }
 ```
 
-TypeScript code is checked the same way, from its signature. A TypeScript function can fork internally without taking a program argument, where no table can see it, so a TypeScript function whose R contains a control operation cannot be called from Effeck in v0:
+TypeScript code is checked the same way, from its signature. A TypeScript function can fork internally without taking a program argument, where no table can see it, so a TypeScript function whose R contains a control operation cannot be called from VibeLang in v0:
 
 ```text
 error EK4202: retryApproval is a TypeScript function whose requirements include the control
   operation Approval. TypeScript code can perform Approval.approve on another fiber, where
   this handler cannot reach it.
-  Write retryApproval in Effeck, where the compiler sees every fork, or handle Approval inside it.
+  Write retryApproval in VibeLang, where the compiler sees every fork, or handle Approval inside it.
 ```
 
-Effeck functions in other packages are not affected: their declarations carry the compiler's metadata, and the compiler checked their bodies when it built them.
+VibeLang functions in other packages are not affected: their declarations carry the compiler's metadata, and the compiler checked their bodies when it built them.
 
 #### In Effect today
 
-There is no equivalent. A service method can wait and return, but it cannot end its caller with a value, and it cannot hand the caller's remaining work to someone else to continue later. Code that needs those things today restructures itself around queues, `Deferred`s, and extra fibers. Part III explains how Effeck provides this on Effect's runtime, and why it is the foundation everything else in this part is built on.
+There is no equivalent. A service method can wait and return, but it cannot end its caller with a value, and it cannot hand the caller's remaining work to someone else to continue later. Code that needs those things today restructures itself around queues, `Deferred`s, and extra fibers. Part III explains how VibeLang provides this on Effect's runtime, and why it is the foundation everything else in this part is built on.

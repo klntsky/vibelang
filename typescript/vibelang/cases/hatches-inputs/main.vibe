@@ -1,0 +1,49 @@
+// Self-contained hatches (D229-D232): a hatch's TypeScript uses only its own
+// parameters and locals, globals, imports, and the file's error declarations.
+// Values reach it as inputs, the arguments after the function, which fill its
+// first parameters; an async function receives the signal after them, and a
+// callback receives resume and the signal after them. try's error mapper
+// stays the second argument. Inputs and the mapper are VibeLang, so a call
+// among the inputs runs before the hatch starts. Inputs keep callback's type
+// arguments from being written, so its resume parameter takes a Resume type.
+error Rejected { reason: string }
+
+type Pair = readonly [number, number]
+
+function readName() {
+  Effect.sleep("1 millis")
+  return "ada"
+}
+
+// expect-result: {"sum":5,"shouted":"ADA","awaited":"hi!","pair":7,"most":2,"parsed":{"n":1},"mapped":"Rejected","asyncMapped":"Rejected","waited":2,"read":40,"listed":3}
+export function main() {
+  const sum = sync((a, b) => a + b, 2, 3)
+  const shouted = sync((name) => name.toUpperCase(), readName())
+  const awaited = sync(async (word, signal) => (signal.aborted ? "aborted" : `${word}!`), "hi")
+  const pairOf: Pair = [3, 4]
+  const pair = sync((p: Pair) => p[0] + p[1], pairOf)
+  const most = sync(Math.max(1, 2))
+  const parsed = try((text) => JSON.parse(text), (error) => new Rejected({ reason: String(error) }), '{"n":1}')
+  let mapped = "none"
+  try {
+    try((text) => JSON.parse(text), (error) => new Rejected({ reason: String(error) }), "{")
+  } catch (error) {
+    mapped = error._tag
+  }
+  let asyncMapped = "none"
+  try {
+    try(async (n) => { throw new Error(String(n)) }, (error) => new Rejected({ reason: String(error) }), 7)
+  } catch (error) {
+    asyncMapped = error._tag
+  }
+  const waited = callback((ms, resume) => {
+    const timer = setTimeout(() => resume(ms), ms)
+    return () => clearTimeout(timer)
+  }, 2)
+  const read = callback((n, resume: Resume<number, Rejected>) => {
+    if (n > 0) resume(n * 10)
+    else resume.fail(new Rejected({ reason: "empty" }))
+  }, 4)
+  const listed = sync((items) => items.length, [1, 2, 3])
+  return { sum, shouted, awaited, pair, most, parsed, mapped, asyncMapped, waited, read, listed }
+}

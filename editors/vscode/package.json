@@ -1,9 +1,9 @@
 {
-  "name": "effeck",
-  "displayName": "Effeck",
-  "description": "Effeck language support: the effeck language server, diagnostics with EK codes, hovers with inferred contracts, and syntax highlighting for .effeck files.",
+  "name": "vibelang",
+  "displayName": "VibeLang",
+  "description": "VibeLang language support: the vibelang language server, diagnostics with EK codes, hovers with inferred contracts, and syntax highlighting for .vibe files.",
   "version": "0.0.1",
-  "publisher": "effeck",
+  "publisher": "vibelang",
   "private": true,
   "type": "commonjs",
   "engines": {
@@ -14,44 +14,44 @@
   ],
   "keywords": [
     "effect",
-    "effeck",
+    "vibelang",
     "typescript"
   ],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "The extension runs the workspace's effeck binary, which a workspace you do not trust could replace."
+      "description": "The extension runs the workspace's vibelang binary, which a workspace you do not trust could replace."
     },
     "virtualWorkspaces": false
   },
   "activationEvents": [
-    "onLanguage:effeck",
-    "workspaceContains:**/*.effeck"
+    "onLanguage:vibe",
+    "workspaceContains:**/*.vibe"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "languages": [
       {
-        "id": "effeck",
+        "id": "vibe",
         "aliases": [
-          "Effeck",
-          "effeck"
+          "VibeLang",
+          "vibelang"
         ],
         "extensions": [
-          ".effeck"
+          ".vibe"
         ],
         "configuration": "./language-configuration.json",
         "icon": {
-          "light": "./icons/effeck.svg",
-          "dark": "./icons/effeck.svg"
+          "light": "./icons/vibelang.svg",
+          "dark": "./icons/vibelang.svg"
         }
       }
     ],
     "grammars": [
       {
-        "language": "effeck",
-        "scopeName": "source.effeck",
-        "path": "./syntaxes/Effeck.tmLanguage.json",
+        "language": "vibe",
+        "scopeName": "source.vibe",
+        "path": "./syntaxes/VibeLang.tmLanguage.json",
         "unbalancedBracketScopes": [
           "keyword.operator.relational",
           "storage.type.function.arrow",
@@ -71,16 +71,16 @@
         }
       },
       {
-        "scopeName": "documentation.injection.effeck",
-        "path": "./syntaxes/jsdoc.effeck.injection.tmLanguage.json",
+        "scopeName": "documentation.injection.vibe",
+        "path": "./syntaxes/jsdoc.vibe.injection.tmLanguage.json",
         "injectTo": [
-          "source.effeck"
+          "source.vibe"
         ]
       }
     ],
     "semanticTokenScopes": [
       {
-        "language": "effeck",
+        "language": "vibe",
         "scopes": {
           "property": [
             "variable.other.property.ts"
@@ -110,15 +110,15 @@
       }
     ],
     "configuration": {
-      "title": "Effeck",
+      "title": "VibeLang",
       "properties": {
-        "effeck.server.path": {
+        "vibelang.server.path": {
           "type": "string",
           "default": "",
           "scope": "machine-overridable",
-          "markdownDescription": "Path to the `effeck` binary that serves as the language server. A relative path is relative to the first workspace folder. When empty, the extension uses the nearest `node_modules/.bin/effeck`, then `effeck` on `PATH`."
+          "markdownDescription": "Path to the `vibelang` binary that serves as the language server. A relative path is relative to the first workspace folder. When empty, the extension uses the nearest `node_modules/.bin/vibelang`, then `vibelang` on `PATH`."
         },
-        "effeck.server.typeScriptFiles": {
+        "vibelang.server.typeScriptFiles": {
           "type": "string",
           "enum": [
             "auto",
@@ -128,12 +128,12 @@
           "enumDescriptions": [
             "Serve .ts and .js files too when the built-in TypeScript features are off: the built-in extension \"TypeScript and JavaScript Language Features\" is disabled, or, in Cursor, `typescript.experimental.useTsgo` is true.",
             "Always serve .ts and .js files too. VS Code's built-in TypeScript features then report the same files a second time unless they are off.",
-            "Serve only .effeck files."
+            "Serve only .vibe files."
           ],
           "default": "auto",
-          "markdownDescription": "Whether the Effeck language server also serves `.ts` and `.js` files. It always checks them as part of the program; this decides whether it reports their diagnostics, hovers, and completions in the editor."
+          "markdownDescription": "Whether the VibeLang language server also serves `.ts` and `.js` files. It always checks them as part of the program; this decides whether it reports their diagnostics, hovers, and completions in the editor."
         },
-        "effeck.trace.server": {
+        "vibelang.trace.server": {
           "type": "string",
           "enum": [
             "off",
@@ -141,31 +141,31 @@
             "verbose"
           ],
           "default": "off",
-          "description": "Log the messages between VS Code and the Effeck language server to the Effeck output."
+          "description": "Log the messages between VS Code and the VibeLang language server to the VibeLang output."
         }
       }
     },
     "commands": [
       {
-        "command": "effeck.restartServer",
+        "command": "vibelang.restartServer",
         "title": "Restart Language Server",
-        "category": "Effeck"
+        "category": "VibeLang"
       },
       {
-        "command": "effeck.showOutput",
+        "command": "vibelang.showOutput",
         "title": "Show Language Server Output",
-        "category": "Effeck"
+        "category": "VibeLang"
       },
       {
-        "command": "effeck.serveTypeScriptFiles",
+        "command": "vibelang.serveTypeScriptFiles",
         "title": "Serve TypeScript Files in This Workspace",
-        "category": "Effeck"
+        "category": "VibeLang"
       }
     ]
   },
   "scripts": {
     "build": "tsc --noEmit -p . && esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --sourcemap --outfile=dist/extension.js",
-    "package": "bun run build && vsce package --no-dependencies --skip-license --allow-missing-repository --out effeck.vsix",
+    "package": "bun run build && vsce package --no-dependencies --skip-license --allow-missing-repository --out vibelang.vsix",
     "test": "node test/run.mjs",
     "derive-grammar": "node scripts/derive-grammar.mjs"
   },

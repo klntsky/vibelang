@@ -1,10 +1,10 @@
 # Pattern Matching
 
-Effeck matches values with `match` and tests them with `is`, from the TC39 pattern matching proposal. Both compile to plain conditionals: TypeScript narrows the value in each arm, and an arm can call Effect functions. [Pattern matching with match and is](../effeck-features/116-match-and-is.md) lists every pattern. Effect's `Match` module still builds reusable matcher functions.
+VibeLang matches values with `match` and tests them with `is`, from the TC39 pattern matching proposal. Both compile to plain conditionals: TypeScript narrows the value in each arm, and an arm can call Effect functions. [Pattern matching with match and is](../vibelang-features/116-match-and-is.md) lists every pattern. Effect's `Match` module still builds reusable matcher functions.
 
 ## Matching values
 
-```effeck
+```vibe
 function describeInput(input: number | string) {
   return match (input) {
     when Number: `count ${input}`;
@@ -24,7 +24,7 @@ Arms are tried in order, and the first arm whose pattern matches gives the value
 
 ## Shapes, guards, and tags
 
-```effeck
+```vibe
 function classifyRetry(input: { status: string; attempts: number }) {
   return match (input) {
     when { status: "failed", attempts: let n } and if (n >= 3): "escalate";
@@ -51,7 +51,7 @@ function jobLabel(job: Job) {
 
 ## Negating and combining patterns
 
-```effeck
+```vibe
 function availability(status: "active" | "paused" | "closed") {
   return match (status) {
     when not "closed": "can reopen";
@@ -71,7 +71,7 @@ function weekend(day: string) {
 
 ## Fixing the return type
 
-```effeck
+```vibe
 function display(input: number | boolean): string {
   return match (input) {
     when Number: input.toFixed(1);
@@ -84,7 +84,7 @@ A match's type is the union of its arms' types. Annotate the function's return t
 
 ## Exhaustive handling
 
-```effeck
+```vibe
 type Phase = "draft" | "published"
 
 function phaseLabel(phase: Phase) {
@@ -99,7 +99,7 @@ A match without a `default` arm over a finite union, such as literals, `error` c
 
 ## Defaults, optional outputs, and result outputs
 
-```effeck
+```vibe
 type Command = "start" | "stop" | "help"
 
 function withDefault(command: Command) {
@@ -128,7 +128,7 @@ A `default` arm comes last and receives every unmatched input, narrowed to the c
 
 ## Reusable matchers with the Match module
 
-```effeck
+```vibe
 const describe = pipe(
   Match.type<number | string>(),
   Match.when(Match.number, (n) => `count ${n}`),

@@ -1,10 +1,10 @@
 # Basic Concurrency
 
-Ordinary Effeck calls run in sequence. Use Effect's concurrency combinators to overlap work, choose a concurrency limit, and control cancellation. Pass functions describing the work so the combinator starts each operation at the right time.
+Ordinary VibeLang calls run in sequence. Use Effect's concurrency combinators to overlap work, choose a concurrency limit, and control cancellation. Pass functions describing the work so the combinator starts each operation at the right time.
 
 ## Sequential, bounded, and unbounded work
 
-```effeck
+```vibe
 function task(id: number) {
   logInfo("starting", id)
   sleep("40 millis")
@@ -25,7 +25,7 @@ The default is sequential execution. A positive numeric limit bounds active oper
 
 ## Interrupting computations
 
-```effeck
+```vibe
 function cancelWork() {
   const worker = fork {
     sleep("1 minute")
@@ -40,7 +40,7 @@ function cancelWork() {
 
 ## Attaching interruption cleanup
 
-```effeck
+```vibe
 function cancelWithCleanup() {
   const worker = fork(Effect.onInterrupt(() => {
     try {
@@ -58,7 +58,7 @@ function cancelWithCleanup() {
 
 ## Propagating cancellation across concurrent work
 
-```effeck
+```vibe
 function cancelBatch() {
   for concurrent (const id of [1, 2, 3]) {
     try {
@@ -78,7 +78,7 @@ function cancelBatch() {
 
 ## Racing under different winner rules
 
-```effeck
+```vibe
 function answer(label: string, delay: Duration.Input) {
   sleep(delay)
   return label
@@ -106,7 +106,7 @@ The await operations come from the TC39 await operations proposal, and each beha
 
 ## Inspecting the winner
 
-```effeck
+```vibe
 function inspectRace() {
   const winners: number[] = []
   const outcome = Effect.result(Effect.raceFirst(
@@ -124,8 +124,8 @@ function inspectRace() {
 }
 ```
 
-The synchronous `onWinner` callback observes the winning fiber and index, zero for the first branch and one for the second. It does not replace the winning result and cannot run an Effeck operation that pauses. `Effect.result` captures expected failures as data; use `Effect.exit` when defects and interruption must also be represented.
+The synchronous `onWinner` callback observes the winning fiber and index, zero for the first branch and one for the second. It does not replace the winning result and cannot run a VibeLang operation that pauses. `Effect.result` captures expected failures as data; use `Effect.exit` when defects and interruption must also be represented.
 
 ## Coming from Effect
 
-`Effect.all([task(1), task(2)], { concurrency: "unbounded" })` in TypeScript becomes `await.all [task(1), task(2)]` in Effeck, and `Effect.raceFirst(a, b)` becomes `await.race [a(), b()]`. Each element is passed by name, so `task(1)` starts in its own fiber instead of running before the operation.
+`Effect.all([task(1), task(2)], { concurrency: "unbounded" })` in TypeScript becomes `await.all [task(1), task(2)]` in VibeLang, and `Effect.raceFirst(a, b)` becomes `await.race [a(), b()]`. Each element is passed by name, so `task(1)` starts in its own fiber instead of running before the operation.

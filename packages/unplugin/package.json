@@ -1,9 +1,9 @@
 {
-  "name": "effeck-unplugin",
+  "name": "vibelang-unplugin",
   "version": "0.0.1",
-  "description": "Compile Effeck source modules with effeck in webpack, Rollup, Rolldown, esbuild, Rspack, and Bun",
+  "description": "Compile VibeLang source modules with vibelang in webpack, Rollup, Rolldown, esbuild, Rspack, and Bun",
   "keywords": [
-    "effeck",
+    "vibelang",
     "effect",
     "unplugin",
     "webpack-plugin",
@@ -62,10 +62,10 @@
     "unplugin": "3.4.0"
   },
   "peerDependencies": {
-    "effeck": "0.0.1"
+    "vibelang": "0.0.1"
   },
   "peerDependenciesMeta": {
-    "effeck": {
+    "vibelang": {
       "optional": true
     }
   },

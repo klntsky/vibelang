@@ -1,10 +1,10 @@
 # Schema to Arbitrary
 
-Effect's native `Arbitrary` module derives generators and shrinkers from schemas in Effeck exactly as in Effect. Use it to explore valid inputs and check properties across many examples. The module and replay format are unstable in Effect 4.0.5. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Effect's native `Arbitrary` module derives generators and shrinkers from schemas in VibeLang exactly as in Effect. Use it to explore valid inputs and check properties across many examples. The module and replay format are unstable in Effect 4.0.5. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Generating schema-conforming random values
 
-```effeck
+```vibe
 const Parcel = Schema.Struct({
   label: Schema.NonEmptyString,
   count: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 24 }))
@@ -20,7 +20,7 @@ function sampleParcels() {
 
 ## Translating filters into generation constraints
 
-```effeck
+```vibe
 const EvenCapacity = Schema.Number.check(Schema.makeFilter(
   (value) => Number.isInteger(value) && value >= 2 && value <= 40 && value % 2 === 0,
   {
@@ -39,7 +39,7 @@ Built-in bounds, lengths, patterns, property counts, and uniqueness checks provi
 
 ## Handling opaque checks and transformed values
 
-```effeck
+```vibe
 function sampleRepresentations() {
   const decoded = try(Arbitrary.schema(Schema.FiniteFromString))
   const encoded = try(Arbitrary.schema(Schema.toEncoded(Schema.FiniteFromString)))
@@ -53,7 +53,7 @@ Schema generation targets the decoded type, so a string-to-number codec generate
 
 ## Checking properties
 
-```effeck
+```vibe
 function checkCountRoundTrip() {
   const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
   const generator = try((schema) => Arbitrary.schema(schema), Count)
@@ -71,7 +71,7 @@ A falsification includes `shrunkInput` and a `replay` token. Call `checkEffect` 
 
 ## Composing generators and customizing shrinking
 
-```effeck
+```vibe
 function sampleDispatchPlans() {
   const counts = try(() => Arbitrary.schema(Schema.Int.check(
     Schema.isBetween({ minimum: 0, maximum: 32 })
@@ -92,7 +92,7 @@ A custom `shrink` replaces the derived shrink strategy without replacing root ge
 
 ## Supporting custom declarations
 
-```effeck
+```vibe
 class ShelfRef {
   constructor(readonly code: `shelf_${string}`) {}
 }
@@ -116,7 +116,7 @@ An opaque declaration needs a generatable representation through `toCodecArbitra
 
 ## Diagnosing derivation failures
 
-```effeck
+```vibe
 function tryImpossibleGenerator() {
   try {
     return try(Arbitrary.schema(Schema.Never))

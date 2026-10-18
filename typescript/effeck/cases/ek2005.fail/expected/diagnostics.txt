@@ -1,2 +1,0 @@
-main.effeck(21,49): error EK2005
-main.effeck(27,49): error EK2005

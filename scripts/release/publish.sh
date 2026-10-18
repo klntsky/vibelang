@@ -1,12 +1,12 @@
 #!/bin/sh
-# Publishes Effeck's ten npm packages from dist-npm/tarballs/ in order: the six
-# platform compilers, effeck, effeck-runtime, effeck-vite, and create-effeck.
+# Publishes VibeLang's ten npm packages from dist-npm/tarballs/ in order: the six
+# platform compilers, vibelang, vibelang-runtime, vibelang-vite, and create-vibelang.
 # Run it yourself in a terminal, after npm login:
 #
 #   sh scripts/release/publish.sh            # asks for a one-time password once
 #   sh scripts/release/publish.sh --dry-run  # checks everything, publishes nothing
 #   NPM_OTP=123456 sh scripts/release/publish.sh
-#   EFFECK_SKIP=win32 sh scripts/release/publish.sh  # omits win32 packages and their optional dependencies
+#   VIBELANG_SKIP=win32 sh scripts/release/publish.sh  # omits win32 packages and their optional dependencies
 #
 # A package already published at this version is skipped, so rerunning after a
 # failure resumes where it stopped. If npm rejects the one-time password, the
@@ -14,8 +14,8 @@
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 tarballs="$root/dist-npm/tarballs"
-# EFFECK_REGISTRY points the script at another registry, such as a local Verdaccio.
-registry=${EFFECK_REGISTRY:-https://registry.npmjs.org/}
+# VIBELANG_REGISTRY points the script at another registry, such as a local Verdaccio.
+registry=${VIBELANG_REGISTRY:-https://registry.npmjs.org/}
 dry=""
 [ "${1:-}" = "--dry-run" ] && dry=--dry-run
 
@@ -27,7 +27,7 @@ version=$(node -p 'require(process.argv[1]).version' "$tarballs/manifest.json")
 node "$root/scripts/release/repack.mjs" "$tarballs"
 
 if user=$(npm whoami --registry "$registry" 2>/dev/null); then
-  echo "publish: logged in to npm as $user; publishing Effeck $version"
+  echo "publish: logged in to npm as $user; publishing VibeLang $version"
 elif [ -n "$dry" ]; then
   echo "publish: not logged in to npm; the dry run continues"
 else
@@ -42,11 +42,11 @@ for item in $(node -e 'for (const p of require(process.argv[1]).packages) consol
   packed=$(tar -xOzf "$tarballs/$file" package/package.json | node -p 'const p = JSON.parse(require("fs").readFileSync(0, "utf8")); `${p.name}@${p.version}`')
   [ "$packed" = "$name@$version" ] || { echo "publish: $file contains $packed, expected $name@$version" >&2; exit 1; }
   skipped=""
-  for pattern in $(printf '%s' "${EFFECK_SKIP:-}" | tr ',' ' '); do
+  for pattern in $(printf '%s' "${VIBELANG_SKIP:-}" | tr ',' ' '); do
     case $name in *"$pattern"*) skipped=$pattern ;; esac
   done
   if [ -n "$skipped" ]; then
-    echo "publish: skipping $name@$version (EFFECK_SKIP=$skipped)"
+    echo "publish: skipping $name@$version (VIBELANG_SKIP=$skipped)"
   elif npm view "$name@$version" version --registry "$registry" >/dev/null 2>&1; then
     echo "publish: $name@$version is already on npm; skipping"
   else
@@ -80,5 +80,5 @@ for item in $todo; do
 done
 
 [ -n "$dry" ] && { echo "publish: dry run passed for $version"; exit 0; }
-echo "publish: published Effeck $version. Check it from the public registry with:"
+echo "publish: published VibeLang $version. Check it from the public registry with:"
 echo "  sh scripts/release/verify-published.sh $version"

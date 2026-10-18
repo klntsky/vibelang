@@ -9,7 +9,7 @@ import { test } from "node:test"
 import { repack } from "./repack.mjs"
 
 function fixture(t) {
-  const scratch = mkdtempSync(join(tmpdir(), "effeck-repack-test-"))
+  const scratch = mkdtempSync(join(tmpdir(), "vibelang-repack-test-"))
   t.after(() => rmSync(scratch, { recursive: true, force: true }))
   const source = join(scratch, "source")
   const tarballs = join(scratch, "tarballs")
@@ -18,18 +18,18 @@ function fixture(t) {
   mkdirSync(tarballs)
   const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-arm64", "win32-x64"]
   const pkg = {
-    name: "effeck", version: "0.0.1", bin: { effeck: "bin/effeck" },
+    name: "vibelang", version: "0.0.1", bin: { vibelang: "bin/vibelang" },
     files: ["bin", "editor", "LICENSE", "NOTICE", "README.md"],
     scripts: { prepack: "node -e 'process.exit(80)'" },
-    optionalDependencies: Object.fromEntries(platforms.map((p) => [`effeck-${p}`, "0.0.1"]))
+    optionalDependencies: Object.fromEntries(platforms.map((p) => [`vibelang-${p}`, "0.0.1"]))
   }
   writeFileSync(join(source, "package.json"), JSON.stringify(pkg, null, 2) + "\n")
-  for (const [path, content] of Object.entries({ "bin/effeck": "#!/usr/bin/env node\nconsole.log('unchanged launcher')\n", "editor/effeck.vsix": Buffer.from([0, 255, 1, 128]), LICENSE: "license\n", NOTICE: "notice\n", "README.md": "readme\n" })) {
+  for (const [path, content] of Object.entries({ "bin/vibelang": "#!/usr/bin/env node\nconsole.log('unchanged launcher')\n", "editor/vibelang.vsix": Buffer.from([0, 255, 1, 128]), LICENSE: "license\n", NOTICE: "notice\n", "README.md": "readme\n" })) {
     writeFileSync(join(source, path), content)
   }
-  chmodSync(join(source, "bin/effeck"), 0o755)
+  chmodSync(join(source, "bin/vibelang"), 0o755)
   const [packed] = JSON.parse(execFileSync("npm", ["pack", source, "--pack-destination", tarballs, "--ignore-scripts", "--json", "--silent"], { encoding: "utf8" }))
-  const packages = platforms.map((p) => `effeck-${p}`).concat("effeck-runtime", "effeck-vite", "create-effeck").map((name) => {
+  const packages = platforms.map((p) => `vibelang-${p}`).concat("vibelang-runtime", "vibelang-vite", "create-vibelang").map((name) => {
     const file = `${name}-0.0.1.tgz`
     writeFileSync(join(tarballs, file), `unchanged ${name}`)
     return { name, version: "0.0.1", file, sha256: `existing-${name}` }
@@ -40,17 +40,17 @@ function fixture(t) {
   return { scratch, source, tarballs, pkg, entry, manifest, others: packages.map((p) => [p.file, readFileSync(join(tarballs, p.file))]) }
 }
 
-const archiveFile = (tarballs, path) => execFileSync("tar", ["-xOzf", join(tarballs, "effeck-0.0.1.tgz"), `package/${path}`])
+const archiveFile = (tarballs, path) => execFileSync("tar", ["-xOzf", join(tarballs, "vibelang-0.0.1.tgz"), `package/${path}`])
 const manifestFile = (tarballs) => JSON.parse(readFileSync(join(tarballs, "manifest.json"), "utf8"))
 
 test("win32 repack changes only package.json, records sha256, and preserves the other nine tarballs", (t) => {
   const { tarballs, pkg, entry, manifest, others } = fixture(t)
-  const files = ["bin/effeck", "editor/effeck.vsix", "LICENSE", "NOTICE", "README.md"]
+  const files = ["bin/vibelang", "editor/vibelang.vsix", "LICENSE", "NOTICE", "README.md"]
   const before = files.map((path) => [path, archiveFile(tarballs, path)])
   repack(tarballs, "win32")
   const result = JSON.parse(archiveFile(tarballs, "package.json"))
-  delete pkg.optionalDependencies["effeck-win32-arm64"]
-  delete pkg.optionalDependencies["effeck-win32-x64"]
+  delete pkg.optionalDependencies["vibelang-win32-arm64"]
+  delete pkg.optionalDependencies["vibelang-win32-x64"]
   assert.deepEqual(result, pkg)
   assert.equal(Object.keys(result.optionalDependencies).length, 4)
   for (const [path, content] of before) assert.deepEqual(archiveFile(tarballs, path), content, path)
@@ -81,7 +81,7 @@ test("comma and whitespace skip patterns use the publisher's substring matching"
   const { tarballs } = fixture(t)
   repack(tarballs, "win32, darwin-x64\tlinux-arm64")
   assert.deepEqual(JSON.parse(archiveFile(tarballs, "package.json")).optionalDependencies, {
-    "effeck-darwin-arm64": "0.0.1", "effeck-linux-x64": "0.0.1"
+    "vibelang-darwin-arm64": "0.0.1", "vibelang-linux-x64": "0.0.1"
   })
 })
 
@@ -91,7 +91,7 @@ test("a package identity mismatch fails without replacing tarball or manifest", 
   writeFileSync(join(tarballs, "manifest.json"), JSON.stringify(manifest))
   const before = readFileSync(join(tarballs, entry.file))
   const beforeManifest = readFileSync(join(tarballs, "manifest.json"))
-  assert.throws(() => repack(tarballs, "win32"), /expected effeck@0\.0\.2/)
+  assert.throws(() => repack(tarballs, "win32"), /expected vibelang@0\.0\.2/)
   assert.deepEqual(readFileSync(join(tarballs, entry.file)), before)
   assert.deepEqual(readFileSync(join(tarballs, "manifest.json")), beforeManifest)
 })

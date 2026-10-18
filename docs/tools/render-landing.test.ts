@@ -2,7 +2,7 @@ import { test, expect } from "bun:test"
 import { readFileSync } from "node:fs"
 import { renderLanding, sourceLinks } from "./render-landing"
 const template = readFileSync(new URL("../landing/index.html", import.meta.url), "utf8")
-const hero = { effect: "one\n\ntwo\n", effeck: "function nameOf() {}\nnameOf()\n" }
+const hero = { effect: "one\n\ntwo\n", vibelang: "function nameOf() {}\nnameOf()\n" }
 const highlight = (s: string) => s
 const options = { hovers: true, source: "smithers", hover: async () => "compiler <type>" }
 test("numbers, counts, hover and both source locations are derived", async () => {
@@ -24,7 +24,7 @@ test("missing compiler hover fails loudly", async () => {
  await expect(renderLanding(template, hero, highlight, { ...options, hover: async () => "" })).rejects.toThrow("compiler hover")
 })
 test("every required marker fails loudly", async () => {
- for (const marker of ['<!-- hero:effect -->','<!-- hero:effeck -->','<!-- lines:effect -->','<!-- lines:effeck -->','<!-- rows -->','<!-- hover:nameOf -->','<!-- source-link -->','<!-- /source-link -->']) {
+ for (const marker of ['<!-- hero:effect -->','<!-- hero:vibelang -->','<!-- lines:effect -->','<!-- lines:vibelang -->','<!-- rows -->','<!-- hover:nameOf -->','<!-- source-link -->','<!-- /source-link -->']) {
   await expect(renderLanding(template.replace(marker, ""), hero, highlight, options)).rejects.toThrow()
  }
 })
@@ -46,7 +46,7 @@ test("Copy acknowledges success and selects the command on clipboard failure", a
   let click: () => Promise<void> = async () => {}, selected = false, focused = false, copied = ""
   const label = { textContent: "Copy" }, icon = { innerHTML: "copy" }
   const button = { addEventListener: (_: string, callback: any) => { click = () => callback.call(button) }, querySelector: (s: string) => s === "svg" ? icon : label }
-  const input = { value: "npm create effeck@latest my-app", focus: () => { focused = true }, select: () => { selected = true } }
+  const input = { value: "npm create vibelang@latest my-app", focus: () => { focused = true }, select: () => { selected = true } }
   runInNewContext(script, { document: { querySelectorAll: () => [], getElementById: (id: string) => id === "copy-button" ? button : input }, navigator: { clipboard: { writeText: async (text: string) => { if (fails) throw Error("denied"); copied = text } } }, setTimeout: () => 0 })
   await click()
   expect(selected).toBe(fails)

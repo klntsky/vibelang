@@ -22,7 +22,7 @@ If the 30 seconds run out during the upload, the upload is interrupted, the `cat
 
 | Exit | Source | In E | Runs `catch` | Runs `finally` and `using` |
 | --- | --- | --- | --- | --- |
-| Expected failure | `throw` in Effeck; a callee's E; an exception a trusted contract lists | Yes | Yes, narrowed by type | Yes |
+| Expected failure | `throw` in VibeLang; a callee's E; an exception a trusted contract lists | Yes | Yes, narrowed by type | Yes |
 | Defect | Any other JavaScript exception, such as `(undefined as any).x`; `Effect.die` | No | No; observe it with `Effect.catchDefect` at a boundary | Yes |
 | Interruption | Another fiber, a timeout, or an enclosing scope closing | No | No | Yes |
 | Abandonment | A handler that does not continue its program (Chapter 9) | No | No | Yes |
@@ -31,7 +31,7 @@ If the 30 seconds run out during the upload, the upload is interrupted, the `cat
 
 Rules:
 
-- **E comes from `throw` and from contracts.** A `throw` written in Effeck, a callee's E, and the exceptions a trusted contract lists are expected failures. Any other JavaScript exception is a defect, as in Effect today.
+- **E comes from `throw` and from contracts.** A `throw` written in VibeLang, a callee's E, and the exceptions a trusted contract lists are expected failures. Any other JavaScript exception is a defect, as in Effect today.
 - **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds a defect or an interruption passes through `catch` untouched, including its expected failures. Effect's own `Effect.catch` recovers such a cause and drops the defect (Codex review R1, `internal/effect.ts:158-165, 2665-2685`); source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26). A catch expression, `x catch fallback` or `x catch (e) => …` (D236), compiles to `catchExpected` too, so it recovers exactly what the statement recovers.
 - **Cleanup runs in reverse order of acquisition**, once per exit, with interruption held off until it finishes.
 - **A failure during cleanup is never dropped.** It is added to the cause being reported, on every path: a block's exit, a clause that abandons, an explicit `abandon` while an interruption is pending, a scope that closes, and a fiber that exits (K12a-K12e, K13d).
@@ -39,11 +39,11 @@ Rules:
 - **Abandonment unwinds like interruption.** Cleanup sees an interrupted exit, `catch` does not run, and the handler that abandoned the program continues only after cleanup finishes. A cleanup failure during abandonment fails the `handle` or the `abandon` call that abandoned.
 - **Cleanup that uses a control operation handles it inside the cleanup** (Chapter 9). A handler outside could stop the cleanup partway.
 
-A cause with expected failures and a defect keeps both after it passes `catch`, so a cause-level tool such as `Effect.catchCause` or a TypeScript caller's `Effect.catch` can still see the expected failure. No Effeck `catch` will.
+A cause with expected failures and a defect keeps both after it passes `catch`, so a cause-level tool such as `Effect.catchCause` or a TypeScript caller's `Effect.catch` can still see the expected failure. No VibeLang `catch` will.
 
 #### Effect's operators on a mixed cause
 
-Effect's own operators keep their Effect behavior when Effeck calls them. On a cause that holds both an expected failure and a defect, most of them act on one reason and drop the other, unlike `catch`:
+Effect's own operators keep their Effect behavior when VibeLang calls them. On a cause that holds both an expected failure and a defect, most of them act on one reason and drop the other, unlike `catch`:
 
 | Operators | Given a `Fail` plus a `Die` |
 | --- | --- |
@@ -52,7 +52,7 @@ Effect's own operators keep their Effect behavior when Effeck calls them. On a c
 | `Effect.catchDefect` | Acts on the defect and drops the expected failure |
 | `Effect.retry`, `Effect.exit`, `Effect.catchCause` | Keep every reason |
 
-These were checked against `effect@4.0.5` (review probe R1 for `Effect.catch`). Use such an operator where dropping the other reason is what the program means; an Effeck `catch` never drops one.
+These were checked against `effect@4.0.5` (review probe R1 for `Effect.catch`). Use such an operator where dropping the other reason is what the program means; a VibeLang `catch` never drops one.
 
 Interruption can be held off for a block of work with Effect's own combinators:
 

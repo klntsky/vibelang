@@ -1,5 +1,0 @@
-import { helper } from "./lib.effeck"
-
-export function main() {
-  Console.log(`app main uses ${helper()}`)
-}

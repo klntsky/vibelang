@@ -1,0 +1,40 @@
+// Rules from Effect's language service (D240), with their quick fixes.
+service Name {
+  value(): string!!
+}
+
+service Greeting {
+  text(): string!!
+}
+
+const NameLive = Layer.succeed(Name, {
+  value() {
+    return "Ada"
+  }
+})
+
+const GreetingLive = Layer.effect(Greeting) {
+  const name = Name()
+  return {
+    text() {
+      return `Hello, ${name.value()}`
+    }
+  }
+}
+
+export function discard(program: Effect.Effect<number>) {
+  program
+  // @vibelang-diagnostics-next-line EK4801:off
+  program
+  return 0
+}
+
+export function greet() {
+  provide NameLive {
+    provide GreetingLive {
+      return Greeting.text()
+    }
+  }
+}
+
+export const recover = Effect.catchAll

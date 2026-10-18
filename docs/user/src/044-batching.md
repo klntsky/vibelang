@@ -4,7 +4,7 @@ Use requests and resolvers when independent lookups can share a backend call. A 
 
 ## Model requests and domain errors
 
-```effeck
+```vibe
 type Part = { code: string; label: string }
 
 error PartMissing {
@@ -27,7 +27,7 @@ A direct service call for each item performs repeated backend work. Batching hel
 
 ## Define request resolvers
 
-```effeck
+```vibe
 const DemoCatalog = new Map<string, Part>([
   ["ink-black", { code: "ink-black", label: "Black ink" }],
   ["ink-blue", { code: "ink-blue", label: "Blue ink" }]
@@ -51,7 +51,7 @@ Complete every entry, including requests for absent rows. Use `Request.succeed` 
 
 ## Build queries from requests
 
-```effeck
+```vibe
 function findPart(code: string) {
   return Effect.request(FindPart({ code }), PartResolver)
 }
@@ -62,11 +62,11 @@ function partLabel(code: string) {
 }
 ```
 
-`Effect.request` submits the request to its resolver and waits for that entry's answer. The returned success value is available directly in Effeck. The resolver's pending work, rather than the query function's syntax, determines which calls share a backend operation.
+`Effect.request` submits the request to its resolver and waits for that entry's answer. The returned success value is available directly in VibeLang. The resolver's pending work, rather than the query function's syntax, determines which calls share a backend operation.
 
 ## Combine compatible requests into batches
 
-```effeck
+```vibe
 function labels(codes: ReadonlyArray<string>) {
   return forEach(codes, (code) => partLabel(code), {
     concurrency: "unbounded"
@@ -80,7 +80,7 @@ Requests using the same resolver and batch key can join the same pending batch. 
 
 ## Control batch execution
 
-```effeck
+```vibe
 const TunedResolver = PartResolver
   |> RequestResolver.setDelay(%, "8 millis")
   |> RequestResolver.batchN(%, 64)
@@ -96,7 +96,7 @@ For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `colle
 
 ## Supply resolver dependencies
 
-```effeck
+```vibe
 service CatalogApi {
   fetchMany(codes: ReadonlyArray<string>): ReadonlyMap<string, Part>!CatalogUnavailable
 }
@@ -135,7 +135,7 @@ Match results by identifier rather than assuming the backend preserves request o
 
 ## Share and tune request caches
 
-```effeck
+```vibe
 function cachedQueries() {
   const resolver = RequestResolver.withCache(PartResolver, {
     capacity: 128,
@@ -158,7 +158,7 @@ function cachedExample() {
 
 The cache is bounded by `capacity`, with `"lru"` eviction by default or `"fifo"` for insertion order. Completed expected failures are cached too; interrupted results are not. Entries have no time-based expiry, and cache hits depend on request equality.
 
-```effeck
+```vibe
 function expiringLookup() {
   const cache = RequestResolver.asCache(PartResolver, {
     capacity: 128,
@@ -175,6 +175,6 @@ Use `asCache` when you need a first-class cache with expiry, refresh, and invali
 
 ## Coming from Effect
 
-Requests and resolvers keep Effect 4's APIs. Resolver callbacks are ordinary Effeck functions, completion programs use `() => ...`, and cache allocation runs when `withCache` or `asCache` is called inside a function.
+Requests and resolvers keep Effect 4's APIs. Resolver callbacks are ordinary VibeLang functions, completion programs use `() => ...`, and cache allocation runs when `withCache` or `asCache` is called inside a function.
 
 [Upstream Effect page](https://effect.website/docs/v4/batching)

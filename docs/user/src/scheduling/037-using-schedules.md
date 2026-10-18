@@ -1,10 +1,10 @@
 # Using schedules
 
-A schedule decides when work runs again and when it stops. `Schedule` values work in Effeck exactly as in Effect; pass a program to `Effect.repeat`, `Effect.schedule`, or `Effect.retry` to run one. These schedules live in the running process and do not recover jobs missed during downtime.
+A schedule decides when work runs again and when it stops. `Schedule` values work in VibeLang exactly as in Effect; pass a program to `Effect.repeat`, `Effect.schedule`, or `Effect.retry` to run one. These schedules live in the running process and do not recover jobs missed during downtime.
 
 ## Repeating successful computations
 
-```effeck
+```vibe
 function heartbeat() {
   repeat(
     logInfo("worker available"),
@@ -17,7 +17,7 @@ function heartbeat() {
 
 ## Stopping based on a result
 
-```effeck
+```vibe
 function waitForBuild() {
   let checks = 0
   const status = repeat({
@@ -37,7 +37,7 @@ The initial check is separate from the seven permitted repetitions, so this loop
 
 ## Delaying the initial run
 
-```effeck
+```vibe
 function delayedCleanup() {
   Effect.schedule(
     logInfo("sweeping expired sessions"),
@@ -50,7 +50,7 @@ function delayedCleanup() {
 
 ## Retrying failed computations
 
-```effeck
+```vibe
 error Busy
 
 function reserveSlot() {
@@ -68,7 +68,7 @@ function reserveSlot() {
 
 ## Handling failures while repeating
 
-```effeck
+```vibe
 error SensorOffline
 
 service Sensor {

@@ -1,11 +1,11 @@
 # Introduction to Effect Schema
 
-`Schema` works in Effeck exactly as in Effect: it describes values, checks data, and converts between representations. Use a schema at a boundary where incoming data has an unknown shape, or where a domain value needs a storage or transport format. `Schema` is already in scope in `.effeck` files.
+`Schema` works in VibeLang exactly as in Effect: it describes values, checks data, and converts between representations. Use a schema at a boundary where incoming data has an unknown shape, or where a domain value needs a storage or transport format. `Schema` is already in scope in `.vibe` files.
 
 ## Configuring compiler prerequisites
 
-```effeck
-// settings.effeck
+```vibe
+// settings.vibe
 const Settings = Schema.Struct({
   label: Schema.String,
   hint: Schema.optionalKey(Schema.String)
@@ -17,13 +17,13 @@ function readSettings(input: unknown) {
 // typeof Settings.Type!Schema.SchemaError!
 ```
 
-Enable `strict` in the project's compiler options. Enable `exactOptionalPropertyTypes` as well to distinguish an absent `hint` from a present `hint: undefined`. `optionalKey` accepts the absent key but rejects explicit `undefined`; turning the compiler option off does not change that runtime rule. Effeck v0 uses the TypeScript 7.1 checker and supports `effect@4.0.5` exactly. Install `effeck-runtime` and `effect@4.0.5` as dependencies and `effeck` as a dev dependency. Run `effeck --noEmit` to check `.effeck` and `.ts` files together; `effeck` also emits JavaScript and declarations.
+Enable `strict` in the project's compiler options. Enable `exactOptionalPropertyTypes` as well to distinguish an absent `hint` from a present `hint: undefined`. `optionalKey` accepts the absent key but rejects explicit `undefined`; turning the compiler option off does not change that runtime rule. VibeLang v0 uses the TypeScript 7.1 checker and supports `effect@4.0.5` exactly. Install `vibelang-runtime` and `effect@4.0.5` as dependencies and `vibelang` as a dev dependency. Run `vibelang --noEmit` to check `.vibe` and `.ts` files together; `vibelang` also emits JavaScript and declarations.
 
-Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls; their exceptions are defects. `catch` does not handle those defects. Use an Effect-returning parser for typed validation failures, or an explicit `try` hatch to give a synchronous exception an expected error type. External plain TypeScript functions need a boundary or a `/** @effeck trusted */` contract inside a program.
+Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls; their exceptions are defects. `catch` does not handle those defects. Use an Effect-returning parser for typed validation failures, or an explicit `try` hatch to give a synchronous exception an expected error type. External plain TypeScript functions need a boundary or a `/** @vibelang trusted */` contract inside a program.
 
 ## Understanding schemas and codecs
 
-```effeck
+```vibe
 const Quantity = Schema.FiniteFromString
 const Line = Schema.Struct({ sku: Schema.NonEmptyString, quantity: Quantity })
 
@@ -38,7 +38,7 @@ A schema is an immutable description. Adding fields, checks, or annotations prod
 
 ## Distinguishing decoded and encoded views
 
-```effeck
+```vibe
 const Parcel = Schema.Struct({ weight: Schema.FiniteFromString })
 
 type Parcel = typeof Parcel.Type       // { readonly weight: number }
@@ -57,7 +57,7 @@ Decoding goes from `Encoded` to `Type`; encoding goes from `Type` to `Encoded`. 
 
 ## Decoding or encoding unknown inputs
 
-```effeck
+```vibe
 function inspectBoundary(incoming: unknown, outgoing: unknown) {
   const quantity = Schema.decodeUnknownEffect(Schema.FiniteFromString)(incoming)
   const text = Schema.encodeUnknownEffect(Schema.FiniteFromString)(outgoing)
@@ -72,7 +72,7 @@ Calling an Effect-returning parser runs it. The result is the decoded or encoded
 
 ## Reasoning about conversion round trips
 
-```effeck
+```vibe
 function roundTrip(value: number) {
   const wire = Schema.encodeEffect(Schema.FiniteFromString)(value)
   return Schema.decodeEffect(Schema.FiniteFromString)(wire)

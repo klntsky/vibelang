@@ -6,7 +6,7 @@ A layer describes how to construct services, including their dependencies, initi
 
 ## Describing a dependency graph
 
-```effeck
+```vibe
 service Settings {
   prefix: string
 }
@@ -27,7 +27,7 @@ The implementation graph on this page has `Printer` depend on `Settings`, and `R
 
 ## Preventing dependency leakage
 
-```effeck
+```vibe
 const PrinterLive = Layer.effect(Printer) {
   const settings = Settings()
   return {
@@ -45,7 +45,7 @@ Keep method requirements at `never` when dependencies are implementation details
 
 ## Constructing service layers
 
-```effeck
+```vibe
 const SettingsLive = Layer.succeed(Settings, {
   prefix: "reports"
 })
@@ -70,7 +70,7 @@ A factory can also register `Effect.addFinalizer` or acquire with `Effect.acquir
 
 ## Merging independent layers
 
-```effeck
+```vibe
 const Merged = Layer.merge(SettingsLive, PrinterLive)
 // Layer<Settings | Printer, never, Settings>
 
@@ -82,7 +82,7 @@ Merging combines outputs and inputs, and can initialize independent branches con
 
 ## Wiring dependent layers
 
-```effeck
+```vibe
 const PrinterReady = Layer.provide(PrinterLive, SettingsLive)
 // Layer<Printer, never, never>
 
@@ -104,7 +104,7 @@ Reuse the same layer value when several paths need a shared instance. Reconstruc
 
 ## Providing and building layers
 
-```effeck
+```vibe
 function main() {
   provide AppLive {
     const first = report("Inventory")
@@ -128,7 +128,7 @@ function withBuiltContext() {
 
 ## Observing initialization and recovering failures
 
-```effeck
+```vibe
 error InitializationFailed
 
 const ReportsUnavailable = Layer.effect(Reports) {
@@ -152,7 +152,7 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 
 ## Declaring service factories and dependencies
 
-```effeck
+```vibe
 service Banner {
   text(title: string): string!!
 
@@ -173,7 +173,7 @@ A constant factory can use `Layer.succeed`; synchronous factories can use `Layer
 
 ## Replacing services in tests
 
-```effeck
+```vibe
 const SettingsTest = Layer.succeed(Settings, {
   prefix: "test"
 })

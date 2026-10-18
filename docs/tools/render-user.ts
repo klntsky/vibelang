@@ -47,8 +47,8 @@ const output = (s: string) => s.replace(/\.md$/i, ".html")
 // Code block roles, written after the language in the fence: ```ts effect
 const CAPTIONS: Record<string, string> = {
   effect: "Effect today (TypeScript)",
-  long: "Effeck long form",
-  es: "Effeck",
+  long: "VibeLang long form",
+  es: "VibeLang",
   gen: "Generated TypeScript",
   dts: "Generated declaration",
   ts: "TypeScript",
@@ -57,8 +57,8 @@ const CAPTIONS: Record<string, string> = {
 }
 
 // A small build-time TypeScript highlighter: comments, strings, numbers,
-// keywords, literals, capitalized names, and called functions. Effeck code,
-// fenced ```effeck, shares it.
+// keywords, literals, capitalized names, and called functions. VibeLang code,
+// fenced ```vibe, shares it.
 const KEYWORDS = new Set([
   "abstract", "as", "async", "await", "break", "case", "catch", "class", "const", "continue", "control",
   "declare", "default", "do", "else", "enum", "export", "extends", "finally", "for", "from", "function",
@@ -70,14 +70,14 @@ const LITERALS = new Set([
   "true", "false", "null", "undefined", "this", "never", "unknown", "any", "string", "number", "boolean",
   "bigint", "symbol", "object"
 ])
-// The landing colours its hero like the design mock: Effeck's form words are
+// The landing colours its hero like the design mock: VibeLang's form words are
 // keywords, primitive types are types, and !, % and |> are operators.
 const LANDING_KEYWORDS = new Set(["error", "provide", "fork", "join", "match", "when", "schema", "sync", "callback"])
 const LANDING_TYPES = new Set(["string", "number", "boolean", "never", "unknown", "void", "any", "object", "symbol", "bigint"])
 const TOKEN =
   /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d[\d_]*(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)|(\s+)|(\|>|[\s\S])/g
 const highlight = (code: string, lang: string, landing = false): string => {
-  if (!["effeck", "ts", "tsx", "js", "typescript"].includes(lang)) return escape(code)
+  if (!["vibe", "ts", "tsx", "js", "typescript"].includes(lang)) return escape(code)
   let out = ""
   for (const m of code.matchAll(TOKEN)) {
     const [text, comment, str, num, ident] = m
@@ -391,15 +391,15 @@ async function render(source: string, markdown: string, destination: string, cou
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
-<title>${escape(title)} · ${spec ? "Effeck Specification" : "Effeck Docs"}</title>
+<title>${escape(title)} · ${spec ? "VibeLang Specification" : "VibeLang Docs"}</title>
 <style>${css}${userCss}${hoverCss}</style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <div class="layout">
-<nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), output(order[0]!.path)))}">Effeck Docs</a>${sidebar}</nav>
+<nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), output(order[0]!.path)))}">VibeLang Docs</a>${sidebar}</nav>
 <nav class="page-toc" aria-label="On this page"><h2>On this page</h2>${toc.map(t => `<a href="#${escape(t.id)}">${escape(t.text)}</a>`).join("\n")}</nav>
-<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav><footer><a href="mailto:support@smithers.sh?subject=${escape(encodeURIComponent(`Effeck docs: ${title} (${source})`))}">Report a bug</a></footer></main>
+<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav><footer><a href="mailto:support@smithers.sh?subject=${escape(encodeURIComponent(`VibeLang docs: ${title} (${source})`))}">Report a bug</a></footer></main>
 </div>
 </body>
 </html>\n`
@@ -416,14 +416,14 @@ const first = order[0]!
 rendered.set("index.html", await render(first.path, sources.get(first.path)!, "index.html", false))
 // The landing is a static template; the checked hero pair remains its source of truth.
 const landing = join(repo, "docs/landing/index.html")
-// EFFECK_LANDING=1 turns it on. Its copy is a draft until Will rewrites it, so a plain deploy keeps
+// VIBELANG_LANDING=1 turns it on. Its copy is a draft until Will rewrites it, so a plain deploy keeps
 // the onboarding page as the site's index.
-if (process.env.EFFECK_LANDING === "1" && existsSync(landing)) {
+if (process.env.VIBELANG_LANDING === "1" && existsSync(landing)) {
   const hero = JSON.parse(readFileSync(join(repo, "docs/site/converter/hero.json"), "utf8"))
   const html = await renderLanding(readFileSync(landing, "utf8"), hero, (code, lang) => highlight(code, lang, true), {
-    hovers: process.env.EFFECK_DOCS_HOVERS !== "0",
-    source: process.env.EFFECK_LANDING_SOURCE ?? "none",
-    github: process.env.EFFECK_LANDING_GITHUB_URL
+    hovers: process.env.VIBELANG_DOCS_HOVERS !== "0",
+    source: process.env.VIBELANG_LANDING_SOURCE ?? "none",
+    github: process.env.VIBELANG_LANDING_GITHUB_URL
   })
   rendered.set("index.html", html)
 }
@@ -539,11 +539,11 @@ for (const [copy, page] of [["index.md", first], ["spec/index.md", firstChapter]
 }
 // The summary repeats the README's first paragraph.
 const llms = [
-  "# Effeck",
+  "# VibeLang",
   "",
-  "> Effeck is a language for building reliable TypeScript in the AI era, built on Effect. It gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.",
+  "> VibeLang is a language for building reliable TypeScript in the AI era, built on Effect. It gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.",
   "",
-  `Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use. To set up Effeck in a project, read [Set up Effeck](${origin}/setup.md) and follow it. Each link below is a page's Markdown; replace \`.md\` with \`.html\` for the page with navigation.`,
+  `VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use. To set up VibeLang in a project, read [Set up VibeLang](${origin}/setup.md) and follow it. Each link below is a page's Markdown; replace \`.md\` with \`.html\` for the page with navigation.`,
   ...navigation.flatMap(item => item.kind === "view" ? ["", `## ${item.label}`, ""]
     : item.kind === "page" ? [`- [${item.page.label}](${origin}/${item.page.path})${item.page.group ? `: ${item.page.group}` : ""}`] : []),
   ""

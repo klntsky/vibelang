@@ -26,23 +26,23 @@ for dir in docs/tools experiments packages/runtime; do
 	[ -d "$root/$dir/node_modules" ] || (cd "$root/$dir" && bun install --silent)
 done
 # Until 0.0.2 ships, the docs are checked and annotated with the release that
-# `npm create effeck@latest` installs: the 0.0.1 native compiler and runtime from
-# the release tarballs (EFFECK_RELEASE_TARBALLS, else dist-npm/tarballs, else the
+# `npm create vibelang@latest` installs: the 0.0.1 native compiler and runtime from
+# the release tarballs (VIBELANG_RELEASE_TARBALLS, else dist-npm/tarballs, else the
 # registry's own files through npm pack), not this checkout's build.
-# - Every docs example must compile with it. EFFECK_SKIP_RELEASE_SNIPPETS=1 skips
-#   that check, and needs EFFECK_SKIP_RELEASE_SNIPPETS_REASON, which is printed.
-# - Code blocks get its hovers (docs/tools/hovers.ts). EFFECK_DOCS_HOVERS=0 turns
+# - Every docs example must compile with it. VIBELANG_SKIP_RELEASE_SNIPPETS=1 skips
+#   that check, and needs VIBELANG_SKIP_RELEASE_SNIPPETS_REASON, which is printed.
+# - Code blocks get its hovers (docs/tools/hovers.ts). VIBELANG_DOCS_HOVERS=0 turns
 #   them off; the default is on, so every redeploy ships the same site.
-release=${EFFECK_RELEASE_VERSION:-0.0.1}
-tarballs=${EFFECK_RELEASE_TARBALLS:-$root/dist-npm/tarballs}
-hovers=${EFFECK_DOCS_HOVERS:-1}
+release=${VIBELANG_RELEASE_VERSION:-0.0.1}
+tarballs=${VIBELANG_RELEASE_TARBALLS:-$root/dist-npm/tarballs}
+hovers=${VIBELANG_DOCS_HOVERS:-1}
 case "$hovers" in
-	0 | 1) export EFFECK_DOCS_HOVERS="$hovers" ;;
-	*) echo "deploy-docs: EFFECK_DOCS_HOVERS must be 0 or 1, not $hovers" >&2; exit 2 ;;
+	0 | 1) export VIBELANG_DOCS_HOVERS="$hovers" ;;
+	*) echo "deploy-docs: VIBELANG_DOCS_HOVERS must be 0 or 1, not $hovers" >&2; exit 2 ;;
 esac
 check_snippets=true
-if [ "${EFFECK_SKIP_RELEASE_SNIPPETS:-}" = 1 ]; then
-	echo "deploy-docs: skipping the $release release snippet check: ${EFFECK_SKIP_RELEASE_SNIPPETS_REASON:?deploy-docs: set EFFECK_SKIP_RELEASE_SNIPPETS_REASON to say why}"
+if [ "${VIBELANG_SKIP_RELEASE_SNIPPETS:-}" = 1 ]; then
+	echo "deploy-docs: skipping the $release release snippet check: ${VIBELANG_SKIP_RELEASE_SNIPPETS_REASON:?deploy-docs: set VIBELANG_SKIP_RELEASE_SNIPPETS_REASON to say why}"
 	check_snippets=false
 fi
 if $check_snippets || [ "$hovers" = 1 ]; then
@@ -53,42 +53,42 @@ if $check_snippets || [ "$hovers" = 1 ]; then
 		Linux-x86_64) platform=linux-x64 ;;
 		*) echo "deploy-docs: no $release release compiler for $(uname -s)-$(uname -m)" >&2; exit 1 ;;
 	esac
-	release_dir=$(mktemp -d "${TMPDIR:-/tmp}/effeck-release.XXXXXX")
+	release_dir=$(mktemp -d "${TMPDIR:-/tmp}/vibelang-release.XXXXXX")
 	trap 'rm -rf "$release_dir"' EXIT
 	# A machine without the release build checks against what npm serves users.
-	if [ -z "${EFFECK_RELEASE_TARBALLS:-}" ] && [ ! -f "$tarballs/effeck-$platform-$release.tgz" ]; then
+	if [ -z "${VIBELANG_RELEASE_TARBALLS:-}" ] && [ ! -f "$tarballs/vibelang-$platform-$release.tgz" ]; then
 		tarballs="$release_dir/npm"
 		mkdir -p "$tarballs"
-		(cd "$tarballs" && npm pack --silent "effeck-$platform@$release" "effeck-runtime@$release" >/dev/null 2>&1) ||
-			{ echo "deploy-docs: no $release tarballs in dist-npm/tarballs, and npm has no effeck-$platform@$release; set EFFECK_RELEASE_TARBALLS" >&2; exit 1; }
+		(cd "$tarballs" && npm pack --silent "vibelang-$platform@$release" "vibelang-runtime@$release" >/dev/null 2>&1) ||
+			{ echo "deploy-docs: no $release tarballs in dist-npm/tarballs, and npm has no vibelang-$platform@$release; set VIBELANG_RELEASE_TARBALLS" >&2; exit 1; }
 	fi
-	for name in "effeck-$platform" effeck-runtime; do
+	for name in "vibelang-$platform" vibelang-runtime; do
 		mkdir -p "$release_dir/$name"
 		tar xzf "$tarballs/$name-$release.tgz" -C "$release_dir/$name" 2>/dev/null ||
-			{ echo "deploy-docs: missing $tarballs/$name-$release.tgz; set EFFECK_RELEASE_TARBALLS" >&2; exit 1; }
+			{ echo "deploy-docs: missing $tarballs/$name-$release.tgz; set VIBELANG_RELEASE_TARBALLS" >&2; exit 1; }
 	done
-	# As an npm install puts effect beside effeck-runtime, give the extracted runtime
+	# As an npm install puts effect beside vibelang-runtime, give the extracted runtime
 	# the repository's pinned effect, so its declarations resolve their imports.
-	mkdir -p "$release_dir/effeck-runtime/package/node_modules"
-	ln -s "$(cd "$root/packages/runtime/node_modules/effect" && pwd -P)" "$release_dir/effeck-runtime/package/node_modules/effect"
-	release_binary="$release_dir/effeck-$platform/package/bin/effeck"
-	release_runtime="$release_dir/effeck-runtime/package"
+	mkdir -p "$release_dir/vibelang-runtime/package/node_modules"
+	ln -s "$(cd "$root/packages/runtime/node_modules/effect" && pwd -P)" "$release_dir/vibelang-runtime/package/node_modules/effect"
+	release_binary="$release_dir/vibelang-$platform/package/bin/vibelang"
+	release_runtime="$release_dir/vibelang-runtime/package"
 fi
 if $check_snippets; then
-	echo "deploy-docs: compiling every docs example with effeck $release ($platform) and effeck-runtime $release"
-	EFFECK_BINARY="$release_binary" EFFECK_RUNTIME_DIR="$release_runtime" \
+	echo "deploy-docs: compiling every docs example with vibelang $release ($platform) and vibelang-runtime $release"
+	VIBELANG_BINARY="$release_binary" VIBELANG_RUNTIME_DIR="$release_runtime" \
 		bun "$root/docs/tools/check-snippets.ts" > "$release_dir/snippets.log" ||
 		{ tail -40 "$release_dir/snippets.log" >&2; echo "deploy-docs: a docs example does not compile with the $release release" >&2; exit 1; }
 	tail -1 "$release_dir/snippets.log"
 fi
 if [ "$hovers" = 1 ]; then
-	echo "deploy-docs: building code-block hovers with effeck $release"
-	EFFECK_BINARY="$release_binary" EFFECK_RUNTIME_DIR="$release_runtime" \
+	echo "deploy-docs: building code-block hovers with vibelang $release"
+	VIBELANG_BINARY="$release_binary" VIBELANG_RUNTIME_DIR="$release_runtime" \
 		bun "$root/docs/tools/hovers.ts" > "$release_dir/hovers.log" 2>&1 ||
-		{ tail -40 "$release_dir/hovers.log" >&2; echo "deploy-docs: building hovers failed; EFFECK_DOCS_HOVERS=0 deploys without them" >&2; exit 1; }
+		{ tail -40 "$release_dir/hovers.log" >&2; echo "deploy-docs: building hovers failed; VIBELANG_DOCS_HOVERS=0 deploys without them" >&2; exit 1; }
 	head -1 "$release_dir/hovers.log"
 fi
-EFFECK_BINARY="${release_binary:-effeck}" EFFECK_RUNTIME_DIR="${release_runtime:-$root/packages/runtime}" \
+VIBELANG_BINARY="${release_binary:-vibelang}" VIBELANG_RUNTIME_DIR="${release_runtime:-$root/packages/runtime}" \
 	bun "$root/docs/tools/render-user.ts"
 
 rm -rf "$site"

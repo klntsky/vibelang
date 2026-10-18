@@ -38,7 +38,7 @@ whether the handler receives the first failure or all of them.
 This is a request for an explicit policy, not a claim that the present
 `Effect.catch` implementation contradicts its public contract.
 
-## Why it matters to Effeck
+## Why it matters to VibeLang
 
 Source `catch` handles expected failures only. If it recovers a body failure and
 silently drops a release defect, the program appears successful after broken

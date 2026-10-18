@@ -1,21 +1,21 @@
 {
-  "name": "effeck",
+  "name": "vibelang",
   "version": "0.0.1",
-  "description": "The Effeck compiler and language server: a readable syntax for Effect that compiles to TypeScript",
-  "keywords": ["effeck", "effect", "typescript", "compiler", "language-server"],
+  "description": "The VibeLang compiler and language server: a readable syntax for Effect that compiles to TypeScript",
+  "keywords": ["vibelang", "effect", "typescript", "compiler", "language-server"],
   "homepage": "https://effeck.dev",
   "license": "Apache-2.0",
   "type": "module",
-  "bin": { "effeck": "bin/effeck" },
+  "bin": { "vibelang": "bin/vibelang" },
   "files": ["bin", "editor", "README.md", "LICENSE", "NOTICE"],
   "scripts": { "test": "node --test test/" },
   "optionalDependencies": {
-    "effeck-darwin-arm64": "0.0.1",
-    "effeck-darwin-x64": "0.0.1",
-    "effeck-linux-arm64": "0.0.1",
-    "effeck-linux-x64": "0.0.1",
-    "effeck-win32-arm64": "0.0.1",
-    "effeck-win32-x64": "0.0.1"
+    "vibelang-darwin-arm64": "0.0.1",
+    "vibelang-darwin-x64": "0.0.1",
+    "vibelang-linux-arm64": "0.0.1",
+    "vibelang-linux-x64": "0.0.1",
+    "vibelang-win32-arm64": "0.0.1",
+    "vibelang-win32-x64": "0.0.1"
   },
   "engines": { "node": ">=22" }
 }

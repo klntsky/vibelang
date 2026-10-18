@@ -1,9 +1,9 @@
 // The types stock TypeScript gives each form's virtual TypeScript
-// (forms.effeck, and the prelude's own $dual), as exact equalities: a form
+// (forms.vibe, and the prelude's own $dual), as exact equalities: a form
 // that projects to the wrong type fails here with TS2322.
 import type { Cause, Effect } from "effect"
-import { $dual, $gen } from "effeck-ts-mapper/prelude"
-import { type NotFound, each, retried, spanned, timed } from "./forms.effeck"
+import { $dual, $gen } from "vibelang-ts-mapper/prelude"
+import { type NotFound, each, retried, spanned, timed } from "./forms.vibe"
 
 type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2) ? true : false
 

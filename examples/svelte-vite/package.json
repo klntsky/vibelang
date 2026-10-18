@@ -1,24 +1,24 @@
 {
-  "name": "effeck-example-svelte-vite",
+  "name": "vibelang-example-svelte-vite",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "effeck -p tsconfig.json --noEmit",
-    "test": "effeck -p tsconfig.json --noEmit && vitest run && vite build"
+    "typecheck": "vibelang -p tsconfig.json --noEmit",
+    "test": "vibelang -p tsconfig.json --noEmit && vitest run && vite build"
   },
   "dependencies": {
     "effect": "4.0.5",
-    "effeck-runtime": "file:../../packages/runtime/effeck-runtime.tgz",
+    "vibelang-runtime": "file:../../packages/runtime/vibelang-runtime.tgz",
     "svelte": "5.57.2"
   },
   "devDependencies": {
     "@effect/vitest": "4.0.5",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@testing-library/svelte": "5.4.2",
-    "effeck": "file:../../packages/compiler",
-    "effeck-vite": "file:../../packages/vite",
+    "vibelang": "file:../../packages/compiler",
+    "vibelang-vite": "file:../../packages/vite",
     "happy-dom": "20.14.6",
     "vite": "8.3.4",
     "vitest": "5.0.5"

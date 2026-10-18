@@ -1,9 +1,9 @@
 {
-  "name": "effeck-runtime",
+  "name": "vibelang-runtime",
   "version": "0.0.1",
-  "description": "The Effeck continuation kernel and generated-code runtime helpers.",
+  "description": "The VibeLang continuation kernel and generated-code runtime helpers.",
   "keywords": [
-    "effeck",
+    "vibelang",
     "effect",
     "runtime",
     "continuations"

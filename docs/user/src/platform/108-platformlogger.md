@@ -1,10 +1,10 @@
 # PlatformLogger
 
-File logging uses Effect's `Logger` module in Effeck. Combine a string formatter with `Logger.toFile`, then install the resulting logger with a layer whose scope owns the file and pending batches.
+File logging uses Effect's `Logger` module in VibeLang. Combine a string formatter with `Logger.toFile`, then install the resulting logger with a layer whose scope owns the file and pending batches.
 
 ## Writing formatted logs to a file
 
-```effeck
+```vibe
 const FileLogger = Logger.layer([
   () => Logger.toFile(Logger.formatLogFmt, "./application.log", {
     batchWindow: "250 millis"
@@ -23,8 +23,8 @@ In Effect 4.0.5, `toFile` batches by default with a one-second window; `batchWin
 
 ## Supplying file-system dependencies
 
-```effeck
-// main.effeck
+```vibe
+// main.vibe
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 const LoggerLive = Layer.provide(
   Logger.layer([
@@ -49,8 +49,8 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 
 ## Combining file and console output
 
-```effeck
-// main.effeck
+```vibe
+// main.vibe
 import { NodeFileSystem, NodeRuntime } from "@effect/platform-node"
 const LoggerLive = Layer.provide(
   Logger.layer([

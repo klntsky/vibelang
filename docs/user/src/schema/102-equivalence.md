@@ -1,10 +1,10 @@
 # Schema to Equivalence
 
-Schema-derived equivalence works in Effeck exactly as in Effect. It compares decoded values using the structure described by a schema, making it useful for domain comparisons and round-trip checks. It does not decode or validate the compared values. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema-derived equivalence works in VibeLang exactly as in Effect. It compares decoded values using the structure described by a schema, making it useful for domain comparisons and round-trip checks. It does not decode or validate the compared values. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Deriving equality from schemas
 
-```effeck
+```vibe
 schema Shipment {
   reference: string
   stops: ReadonlyArray<string>
@@ -21,7 +21,7 @@ function sameShipment(left: unknown, right: unknown) {
 
 ## Handling broad schemas and custom declarations
 
-```effeck
+```vibe
 function sameUnknown(left: unknown, right: unknown) {
   return try((left, right) => Schema.toEquivalence(Schema.Unknown)(left, right), left, right)
 }
@@ -44,7 +44,7 @@ function sameRef() {
 
 ## Overriding generated comparison behavior
 
-```effeck
+```vibe
 const ShipmentIdentity = Shipment.pipe(Schema.overrideToEquivalence(
   () => (left, right) => left.reference === right.reference
 ))

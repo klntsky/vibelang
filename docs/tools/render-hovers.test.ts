@@ -64,16 +64,16 @@ function page(blocks: BlockHovers[], markdown: string, flag: string | null = "1"
   const source = `${relative(cache, dir)}/page.md`
   const entry: PageHovers = { key: "test", page: `src/${source}`, blocks, failures: [] }
   if (cached) writeFileSync(join(dir, "page.json"), JSON.stringify(entry))
-  const previous = process.env.EFFECK_DOCS_HOVERS
+  const previous = process.env.VIBELANG_DOCS_HOVERS
   try {
-    if (flag === null) delete process.env.EFFECK_DOCS_HOVERS
-    else process.env.EFFECK_DOCS_HOVERS = flag
+    if (flag === null) delete process.env.VIBELANG_DOCS_HOVERS
+    else process.env.VIBELANG_DOCS_HOVERS = flag
     const marked = new Marked({ renderer: { code: ({ text, lang }) => `<figure class="code"><figcaption>${lang}</figcaption><pre class="code"><code>${text}</code></pre></figure>\n` } })
     useHoverRenderer(marked, source, text => text)
     return marked.parse(markdown) as string
   } finally {
-    if (previous === undefined) delete process.env.EFFECK_DOCS_HOVERS
-    else process.env.EFFECK_DOCS_HOVERS = previous
+    if (previous === undefined) delete process.env.VIBELANG_DOCS_HOVERS
+    else process.env.VIBELANG_DOCS_HOVERS = previous
     rmSync(dir, { recursive: true, force: true })
   }
 }
@@ -137,7 +137,7 @@ test("leaves the original renderer unchanged without the flag or a matching cach
 
 test("CSS reveals the adjacent type list on block keyboard focus and keeps pointer popups", () => {
   const child = Bun.spawnSync(["bun", "--eval", `import { hoverCss } from ${JSON.stringify(resolve(import.meta.dir, "render-hovers.ts"))}; process.stdout.write(hoverCss)`], {
-    env: { ...process.env, EFFECK_DOCS_HOVERS: "1" }, stdout: "pipe", stderr: "pipe"
+    env: { ...process.env, VIBELANG_DOCS_HOVERS: "1" }, stdout: "pipe", stderr: "pipe"
   })
   expect(child.exitCode).toBe(0)
   const css = child.stdout.toString()

@@ -5,7 +5,7 @@
 //
 //   node scripts/bench/lsp.mjs <server binary> <project dir> [hovers=20]
 //
-// <project dir> is the effeck or effect-ts directory the generator wrote.
+// <project dir> is the vibelang or effect-ts directory the generator wrote.
 // Prints one line: cold diagnostics ms, warm diagnostics ms (another file),
 // first hover ms, median hover ms, and the server's peak RSS (Linux only).
 import { spawn } from "node:child_process"
@@ -17,7 +17,7 @@ const server = path.resolve(process.argv[2] ?? "")
 const project = path.resolve(process.argv[3] ?? "")
 const hovers = Number(process.argv[4] ?? 20)
 const src = path.join(project, "src")
-const ext = readdirSync(src).some((f) => f.endsWith(".effeck")) ? ".effeck" : ".ts"
+const ext = readdirSync(src).some((f) => f.endsWith(".vibe")) ? ".vibe" : ".ts"
 const count = readdirSync(src).filter((f) => /^m\d+\./.test(f)).length
 const last = path.join(src, `m${count - 1}${ext}`)
 const other = path.join(src, `m${Math.floor(count / 2)}${ext}`)
@@ -60,7 +60,7 @@ function request(method, params) {
     pending.set(id, (message) => { clearTimeout(timer); message.error ? reject(new Error(message.error.message)) : resolve(message.result) })
   })
 }
-const open = (file) => send({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: uri(file), languageId: ext === ".effeck" ? "effeck" : "typescript", version: 1, text: readFileSync(file, "utf8") } } })
+const open = (file) => send({ jsonrpc: "2.0", method: "textDocument/didOpen", params: { textDocument: { uri: uri(file), languageId: ext === ".vibe" ? "vibelang" : "typescript", version: 1, text: readFileSync(file, "utf8") } } })
 async function timed(fn) {
   const start = performance.now()
   const result = await fn()

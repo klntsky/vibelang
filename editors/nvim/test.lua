@@ -1,8 +1,8 @@
--- Headless check of effeck.lua, run by editors/nvim/test.sh on a copy of
--- typescript/effeck/lsp-fixture whose node_modules/.bin/effeck is the
+-- Headless check of vibelang.lua, run by editors/nvim/test.sh on a copy of
+-- typescript/vibelang/lsp-fixture whose node_modules/.bin/vibelang is the
 -- compiler under test:
 --
---   nvim --headless --clean -l editors/nvim/test.lua <project> <effeck.lua>
+--   nvim --headless --clean -l editors/nvim/test.lua <project> <vibelang.lua>
 local project, config = arg[1], arg[2]
 vim.cmd("filetype on")
 dofile(config).setup()
@@ -30,10 +30,10 @@ local function wait_for(what, predicate)
 end
 
 local function client_of(buf)
-  wait_for("effeck to attach", function()
-    return #vim.lsp.get_clients({ bufnr = buf, name = "effeck" }) > 0
+  wait_for("vibelang to attach", function()
+    return #vim.lsp.get_clients({ bufnr = buf, name = "vibelang" }) > 0
   end)
-  return vim.lsp.get_clients({ bufnr = buf, name = "effeck" })[1]
+  return vim.lsp.get_clients({ bufnr = buf, name = "vibelang" })[1]
 end
 
 local function has_diagnostic(buf, code, source)
@@ -55,34 +55,34 @@ local function position_of(buf, needle)
   error("no " .. needle)
 end
 
-check("filetype: .effeck files are effeck, highlighted as TypeScript", function()
-  local buf = edit("src/broken.effeck")
-  assert(vim.bo[buf].filetype == "effeck", "filetype " .. vim.bo[buf].filetype)
+check("filetype: .vibe files are vibe, highlighted as TypeScript", function()
+  local buf = edit("src/broken.vibe")
+  assert(vim.bo[buf].filetype == "vibe", "filetype " .. vim.bo[buf].filetype)
   assert(vim.bo[buf].syntax == "typescript" or vim.treesitter.highlighter.active[buf], "no highlighting")
 end)
 
-check("lsp: the project's node_modules/.bin/effeck attaches", function()
+check("lsp: the project's node_modules/.bin/vibelang attaches", function()
   local client = client_of(vim.api.nvim_get_current_buf())
   local cmd = client.config.cmd[1]
-  assert(cmd:sub(-#"node_modules/.bin/effeck") == "node_modules/.bin/effeck", "command " .. cmd)
+  assert(cmd:sub(-#"node_modules/.bin/vibelang") == "node_modules/.bin/vibelang", "command " .. cmd)
 end)
 
-check("diagnostics: TS2322 on broken.effeck", function()
+check("diagnostics: TS2322 on broken.vibe", function()
   local buf = vim.api.nvim_get_current_buf()
   wait_for("TS2322", function()
     return has_diagnostic(buf, 2322)
   end)
 end)
 
-check("diagnostics: EK1003 with source EK on wait.effeck", function()
-  local buf = edit("src/wait.effeck")
+check("diagnostics: EK1003 with source EK on wait.vibe", function()
+  local buf = edit("src/wait.vibe")
   wait_for("EK1003", function()
     return has_diagnostic(buf, 1003, "EK")
   end)
 end)
 
 check("hover: a call that runs shows the contract and the success value", function()
-  local buf = edit("src/main.effeck")
+  local buf = edit("src/main.vibe")
   client_of(buf)
   local params = { textDocument = vim.lsp.util.make_text_document_params(buf), position = position_of(buf, "lookup(1)") }
   local text = ""

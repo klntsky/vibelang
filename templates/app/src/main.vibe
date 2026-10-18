@@ -1,0 +1,20 @@
+import { EmptyName, greeting } from "./greeting.vibe"
+
+service Greeter {
+  greet(name: string): string!EmptyName
+}
+
+const GreeterLive = Layer.succeed(Greeter, {
+  greet(name: string) { return greeting(name) }
+})
+
+export function main() {
+  provide GreeterLive {
+    Console.log(Greeter.greet("VibeLang"))
+    try {
+      Greeter.greet("")
+    } catch (error) {
+      Console.log(`Recovered from ${error._tag}`)
+    }
+  }
+}

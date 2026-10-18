@@ -1,10 +1,10 @@
 # Schema Annotations
 
-Annotations work in Effeck exactly as in Effect. They attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation choices, and custom tooling. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Annotations work in VibeLang exactly as in Effect. They attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation choices, and custom tooling. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Attaching built-in metadata
 
-```effeck
+```vibe
 const Destination = Schema.String.annotate({
   message: "Destination must be text"
 }).check(Schema.isNonEmpty({ message: "Choose a destination" })).annotate({
@@ -29,7 +29,7 @@ Representation hooks include `toCodec`, `toCodecJson`, `toCodecStringTree`, `toC
 
 ## Controlling decoding concurrency
 
-```effeck
+```vibe
 const ReviewedLabel = Schema.String.pipe(Schema.decode({
   decode: SchemaGetter.checkEffect((label) => {
     sleep("10 millis")
@@ -48,7 +48,7 @@ Product schemas such as arrays, structs, and tuples can run effectful child pars
 
 ## Recovering decoding failures with fallback values
 
-```effeck
+```vibe
 const OptionalLabel = Schema.String.pipe(
   Schema.catchDecoding((issue) => {
     log(`label fallback: ${issue._tag}`)
@@ -67,7 +67,7 @@ Log the issue tag or stage when diagnostics help. Avoid recording the rejected p
 
 ## Defining custom schema annotations
 
-```effeck
+```vibe
 const InternalOnly = Symbol.for("warehouse/schema/internal-only")
 
 declare module "effect/Schema" {

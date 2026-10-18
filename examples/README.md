@@ -1,6 +1,6 @@
-# Effeck examples
+# VibeLang examples
 
-Each project has exact Effect 4.0.5 dependencies, `.effeck` sources in `src`,
+Each project has exact Effect 4.0.5 dependencies, `.vibe` sources in `src`,
 Node ESM output in `dist`, and a short README with an Effect TypeScript equivalent.
 
 | Example | Shows |
@@ -12,27 +12,27 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 | [resilience](resilience/) | Retry schedules, deadlines, races, block-owned fibers, and virtual-time tests. |
 | [approval](approval/) | One release program under automatic and scripted control handlers. |
 | [pipeline](pipeline/) | A producer flowing through Stream operators and a `for...of` consumer. |
-| [react-vite](react-vite/) | A React component that runs an Effeck service lookup through a `ManagedRuntime` and renders its recovered error. |
-| [vue-vite](vue-vite/) | A Vue single-file component over an Effeck layer whose setup holds the todo list. |
+| [react-vite](react-vite/) | A React component that runs a VibeLang service lookup through a `ManagedRuntime` and renders its recovered error. |
+| [vue-vite](vue-vite/) | A Vue single-file component over a VibeLang layer whose setup holds the todo list. |
 | [svelte-vite](svelte-vite/) | A Svelte 5 `{#await}` block over quotes that `await.all` runs concurrently. |
 
 Set up the repository's local compiler and runtime first using the repository
-setup instructions. The manifests install `effeck` from
-`../../packages/compiler` and `effeck-runtime` from the tarball that setup
-packs, `../../packages/runtime/effeck-runtime.tgz`, so the runtime and the
+setup instructions. The manifests install `vibelang` from
+`../../packages/compiler` and `vibelang-runtime` from the tarball that setup
+packs, `../../packages/runtime/vibelang-runtime.tgz`, so the runtime and the
 example load one copy of `effect`. Run repository setup before installing the
-examples, and after rerunning it, run `bun update effeck-runtime` in an
+examples, and after rerunning it, run `bun update vibelang-runtime` in an
 example you installed before.
 Then, in an example directory, run `bun install`,
 `bun run build`, and `bun run start`. The users, http-api, and resilience
-projects also have `bun run test`; Vitest compiles their `.effeck` sources
-through `effeck-vite`, with source maps for assertion stacks.
+projects also have `bun run test`; Vitest compiles their `.vibe` sources
+through `vibelang-vite`, with source maps for assertion stacks.
 Run file-tree from its own directory to find the bundled fixtures.
 
 From the repository root, `scripts/check-examples.sh` compiles every project
 and compares the six finite programs with their output fixtures. It compiles
-http-api without starting its persistent server. Set `EFFECK=/path/to/effeck` to
-select a compiler; otherwise it uses `effeck` on PATH, then `typescript/built/local/tsc`.
+http-api without starting its persistent server. Set `VIBELANG=/path/to/vibelang` to
+select a compiler; otherwise it uses `vibelang` on PATH, then `typescript/built/local/tsc`.
 Each project gets one status line. A failure returns exit code 1 and leaves
 diagnostics in `.cache/check-examples/`. Execution has a 15-second bound.
 
@@ -50,7 +50,7 @@ The prototype check compiles all seven main modules, runs each exported `main`,
 compares finite output,
 and runs the six `it.effect` tests. It creates disposable `.prototype` directories
 inside each example and writes each project's diagnostics to `.prototype/check.log`.
-Project sources use `.effeck` imports per D31; the compiler rewrites them to `.js`.
+Project sources use `.vibe` imports per D31; the compiler rewrites them to `.js`.
 It runs a main module through a TypeScript harness, except hello, whose module
 already contains its runner. The CLI's `run` command would run hello twice.
 File-tree's main runs. The prototype widens an inferred recursive E and R to

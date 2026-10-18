@@ -15,19 +15,19 @@ import (
 // TestReceiverChoiceDidChange keeps EK9101 on demand for open files and
 // invalidates the cached choices when an annotation is applied or removed.
 func TestReceiverChoiceDidChange(t *testing.T) {
-	const name = "/src/main.effeck"
-	const uri = lsproto.DocumentUri("file:///src/main.effeck")
+	const name = "/src/main.vibe"
+	const uri = lsproto.DocumentUri("file:///src/main.vibe")
 	const source = `import { work } from "./host"; export function fn() { const todos = work(1); return todos.map((n: number): number => n) }`
 	files := map[string]string{
-		"/src/tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ESNext"},"files":["main.effeck","closed.effeck","host.ts"]}`,
+		"/src/tsconfig.json": `{"compilerOptions":{"strict":true,"target":"ESNext"},"files":["main.vibe","closed.vibe","host.ts"]}`,
 		name:                 source,
-		"/src/closed.effeck": source,
+		"/src/closed.vibe":   source,
 		"/src/host.ts":       `import type { Effect } from "effect/Effect"; export declare function work(x: number): number[]`,
-		"/src/node_modules/effeck-runtime/package.json": `{"name":"effeck-runtime","types":"index.d.ts"}`,
-		"/src/node_modules/effeck-runtime/index.d.ts":   `export * as Effect from "effect/Effect"`,
-		"/src/node_modules/effect/package.json":         `{"name":"effect","types":"index.d.ts"}`,
-		"/src/node_modules/effect/index.d.ts":           `export * as Effect from "./Effect"`,
-		"/src/node_modules/effect/Effect.d.ts":          `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,
+		"/src/node_modules/vibelang-runtime/package.json": `{"name":"vibelang-runtime","types":"index.d.ts"}`,
+		"/src/node_modules/vibelang-runtime/index.d.ts":   `export * as Effect from "effect/Effect"`,
+		"/src/node_modules/effect/package.json":           `{"name":"effect","types":"index.d.ts"}`,
+		"/src/node_modules/effect/index.d.ts":             `export * as Effect from "./Effect"`,
+		"/src/node_modules/effect/Effect.d.ts":            `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,
 	}
 	fs := bundled.WrapFS(vfstest.FromMap(files, tspath.CaseInsensitive))
 	session := project.NewSession(&project.SessionInit{BackgroundCtx: t.Context(), Options: &project.SessionOptions{CurrentDirectory: "/src", DefaultLibraryPath: bundled.LibPath(), PositionEncoding: lsproto.PositionEncodingKindUTF16, WatchEnabled: false}, FS: fs, Logger: logging.NewTestLogger()})
@@ -56,7 +56,7 @@ func TestReceiverChoiceDidChange(t *testing.T) {
 	if diag == nil {
 		t.Fatal("open file has no EK9101")
 	}
-	for _, d := range report(service, "file:///src/closed.effeck") {
+	for _, d := range report(service, "file:///src/closed.vibe") {
 		if d.Code != nil && d.Code.Integer != nil && *d.Code.Integer == 9101 {
 			t.Fatal("resolver ran for a closed file")
 		}

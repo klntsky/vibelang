@@ -2,9 +2,9 @@
 # Install, type-check, test, and build the React, Vue, and Svelte examples.
 #   sh examples/frameworks-check.sh [react-vite vue-vite svelte-vite]
 # Run sh scripts/setup.sh first: the examples install this checkout's
-# compiler, runtime tarball, and effeck-vite through file: dependencies.
-# EFFECK_BINARY=/absolute/path/to/effeck selects the compiler for the effeck
-# launcher and effeck-vite; the default is packages/compiler/native/effeck.
+# compiler, runtime tarball, and vibelang-vite through file: dependencies.
+# VIBELANG_BINARY=/absolute/path/to/vibelang selects the compiler for the vibelang
+# launcher and vibelang-vite; the default is packages/compiler/native/vibelang.
 # Each example gets one status line. Logs stay in .cache/frameworks-check/.
 # bun install --no-cache fetches fresh manifests, so each example's
 # bunfig.toml minimumReleaseAge applies; a warm manifest cache skips it
@@ -14,17 +14,17 @@ here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 root=$(dirname -- "$here")
 logs="$root/.cache/frameworks-check"
 mkdir -p "$logs"
-EFFECK_BINARY=${EFFECK_BINARY:-$root/packages/compiler/native/effeck}
-case "$EFFECK_BINARY" in
+VIBELANG_BINARY=${VIBELANG_BINARY:-$root/packages/compiler/native/vibelang}
+case "$VIBELANG_BINARY" in
   /*) ;;
-  *) EFFECK_BINARY="$(pwd)/$EFFECK_BINARY" ;;
+  *) VIBELANG_BINARY="$(pwd)/$VIBELANG_BINARY" ;;
 esac
-export EFFECK_BINARY
-if [ ! -x "$EFFECK_BINARY" ]; then
-  echo "frameworks-check: no compiler at $EFFECK_BINARY; run sh scripts/setup.sh" >&2
+export VIBELANG_BINARY
+if [ ! -x "$VIBELANG_BINARY" ]; then
+  echo "frameworks-check: no compiler at $VIBELANG_BINARY; run sh scripts/setup.sh" >&2
   exit 1
 fi
-if [ ! -f "$root/packages/runtime/effeck-runtime.tgz" ]; then
+if [ ! -f "$root/packages/runtime/vibelang-runtime.tgz" ]; then
   echo "frameworks-check: no runtime tarball; run sh scripts/setup.sh" >&2
   exit 1
 fi
@@ -51,6 +51,6 @@ for name in "$@"; do
     step typecheck bun run typecheck &&
     step vitest bun x vitest run &&
     step build bun run build &&
-    printf 'OK   %-12s install, effeck type check, Vitest, vite build\n' "$name"
+    printf 'OK   %-12s install, vibelang type check, Vitest, vite build\n' "$name"
 done
 exit "$failed"

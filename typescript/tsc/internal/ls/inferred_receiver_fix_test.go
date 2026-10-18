@@ -7,12 +7,12 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/bundled"
 	"github.com/microsoft/TypeScript/tsc/internal/compiler"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
-	"github.com/microsoft/TypeScript/tsc/internal/effeckmapper"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
 	"github.com/microsoft/TypeScript/tsc/internal/ls/lsconv"
 	"github.com/microsoft/TypeScript/tsc/internal/lsp/lsproto"
 	"github.com/microsoft/TypeScript/tsc/internal/tsoptions"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
 
 // receiverActions exercises the public LS transaction and records JavaScript
@@ -28,8 +28,8 @@ func receiverActions(t *testing.T, files map[string]string) ([]*lsproto.CodeActi
 	converters := lsconv.NewConverters(lsproto.PositionEncodingKindUTF16, func(name tspath.RootedFilePath) *lsconv.LSPLineMap {
 		return lsconv.ComputeLSPLineStarts(files[string(name)])
 	})
-	service := ls.NewLanguageService(nil, p, trustedFixHost{converters: converters}, "/Users/x/src/main.effeck")
-	file := p.GetSourceFile("/Users/x/src/main.effeck")
+	service := ls.NewLanguageService(nil, p, trustedFixHost{converters: converters}, "/Users/x/src/main.vibe")
+	file := p.GetSourceFile("/Users/x/src/main.vibe")
 	var actions []*lsproto.CodeAction
 	// Compiler collections must stay free of the editor-only resolver, even
 	// when the editor suggestion is configured as an error.
@@ -71,7 +71,7 @@ func receiverActions(t *testing.T, files map[string]string) ([]*lsproto.CodeActi
 		}
 	}
 	projectorChoices := 0
-	for _, d := range effeckmapper.Project(file.Text(), effeckmapper.FileContext{}).Diagnostics {
+	for _, d := range vibelangmapper.Project(file.Text(), vibelangmapper.FileContext{}).Diagnostics {
 		if d.Code == 9101 {
 			projectorChoices++
 		}
@@ -115,26 +115,26 @@ func TestInferredReceiverFix(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			files := map[string]string{
-				"/Users/x/src/tsconfig.json":                            `{"compilerOptions":{"strict":true,"target":"ESNext","declaration":true},"files":["main.effeck","host.ts"]}`,
-				"/Users/x/src/main.effeck":                              test.source,
-				"/Users/x/src/host.ts":                                  `import type { Option } from "effect/Option"; export interface Todo { readonly done: boolean }; export declare function getTodo(): Todo; export declare function board(): { todos: number[] }; export declare function array(): number[]; export declare function option(): Option<number>`,
-				"/Users/x/src/node_modules/effeck-runtime/package.json": `{"name":"effeck-runtime","types":"index.d.ts"}`,
-				"/Users/x/src/node_modules/effeck-runtime/index.d.ts":   `export * as Effect from "effect/Effect"; export * as Option from "effect/Option"`,
-				"/Users/x/src/node_modules/effect/package.json":         `{"name":"effect","types":"index.d.ts"}`,
-				"/Users/x/src/node_modules/effect/index.d.ts":           `export * as Effect from "./Effect"; export * as Option from "./Option"`,
-				"/Users/x/src/node_modules/effect/Effect.d.ts":          `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,
-				"/Users/x/src/node_modules/effect/Option.d.ts":          `export interface Option<A> { readonly "~effect/Option": A }; export declare function map<A,B>(self: Option<A>, f:(a:A)=>B): Option<B>; export declare function isSome<A>(self: Option<A>): boolean`,
+				"/Users/x/src/tsconfig.json":                              `{"compilerOptions":{"strict":true,"target":"ESNext","declaration":true},"files":["main.vibe","host.ts"]}`,
+				"/Users/x/src/main.vibe":                                  test.source,
+				"/Users/x/src/host.ts":                                    `import type { Option } from "effect/Option"; export interface Todo { readonly done: boolean }; export declare function getTodo(): Todo; export declare function board(): { todos: number[] }; export declare function array(): number[]; export declare function option(): Option<number>`,
+				"/Users/x/src/node_modules/vibelang-runtime/package.json": `{"name":"vibelang-runtime","types":"index.d.ts"}`,
+				"/Users/x/src/node_modules/vibelang-runtime/index.d.ts":   `export * as Effect from "effect/Effect"; export * as Option from "effect/Option"`,
+				"/Users/x/src/node_modules/effect/package.json":           `{"name":"effect","types":"index.d.ts"}`,
+				"/Users/x/src/node_modules/effect/index.d.ts":             `export * as Effect from "./Effect"; export * as Option from "./Option"`,
+				"/Users/x/src/node_modules/effect/Effect.d.ts":            `export interface Effect<A,E=never,R=never> { readonly "~effect/Effect": { readonly _A: (_:never)=>A; readonly _E: (_:never)=>E; readonly _R: (_:never)=>R } }`,
+				"/Users/x/src/node_modules/effect/Option.d.ts":            `export interface Option<A> { readonly "~effect/Option": A }; export declare function map<A,B>(self: Option<A>, f:(a:A)=>B): Option<B>; export declare function isSome<A>(self: Option<A>): boolean`,
 			}
 			actions, before := receiverActions(t, files)
 			if len(actions) != 1 {
 				t.Fatalf("actions=%d", len(actions))
 			}
 			applyTrustedAction(t, files, actions[0])
-			if !strings.Contains(files["/Users/x/src/main.effeck"], test.annotation) {
-				t.Fatalf("wrong annotation: %s", files["/Users/x/src/main.effeck"])
+			if !strings.Contains(files["/Users/x/src/main.vibe"], test.annotation) {
+				t.Fatalf("wrong annotation: %s", files["/Users/x/src/main.vibe"])
 			}
 			remaining := 0
-			for _, d := range effeckmapper.Project(files["/Users/x/src/main.effeck"], effeckmapper.FileContext{}).Diagnostics {
+			for _, d := range vibelangmapper.Project(files["/Users/x/src/main.vibe"], vibelangmapper.FileContext{}).Diagnostics {
 				if d.Code == 9101 {
 					remaining++
 				}

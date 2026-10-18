@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/microsoft/TypeScript/tsc/internal/effeckmapper"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
 
 // main emits with explicit file context, so the runtime column exercises
@@ -43,9 +43,9 @@ func main() {
 	if err != nil {
 		fail(err.Error())
 	}
-	ctx := effeckmapper.FileContextOf(filepath.ToSlash(absolute))
+	ctx := vibelangmapper.FileContextOf(filepath.ToSlash(absolute))
 	ctx.Tracing = tracing
-	js, sourceMap, diagnostics := effeckmapper.Emit(string(text), ctx)
+	js, sourceMap, diagnostics := vibelangmapper.Emit(string(text), ctx)
 	for _, d := range diagnostics {
 		fmt.Fprintf(os.Stderr, "%s: error EK%d: %s\n", file, d.Code, d.Message)
 	}

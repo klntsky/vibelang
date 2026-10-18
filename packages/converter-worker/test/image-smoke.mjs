@@ -22,7 +22,7 @@ try {
     assert.equal(response.status, 200)
     return response.json()
   }
-  const hero = readFileSync("/workspace/.smithers/flows/convert/golden/01-hero-batch-lookup/expected.effeck", "utf8")
+  const hero = readFileSync("/workspace/.smithers/flows/convert/golden/01-hero-batch-lookup/expected.vibe", "utf8")
   const good = await post(hero)
   assert.equal(good.exitCode, 0, JSON.stringify(good))
   assert.equal(good.timedOut, false)

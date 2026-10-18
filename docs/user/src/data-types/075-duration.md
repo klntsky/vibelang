@@ -1,10 +1,10 @@
 # Duration
 
-`Duration` works in Effeck exactly as in Effect. Use it to express elapsed time, delays, and timeout budgets with explicit units; Effect 4.0.5 also supports negative durations and infinities.
+`Duration` works in VibeLang exactly as in Effect. Use it to express elapsed time, delays, and timeout budgets with explicit units; Effect 4.0.5 also supports negative durations and infinities.
 
 ## Constructing finite and infinite durations
 
-```effeck
+```vibe
 const small = Duration.nanos(750n)
 const micro = Duration.micros(20n)
 const polling = Duration.millis(250)
@@ -19,7 +19,7 @@ const negative = Duration.seconds(-2)
 
 Constructors identify the unit at the call site. `infinity` represents an unbounded positive span; `negativeInfinity` represents its negative counterpart. A day here is a fixed 24 hours, not a calendar-day operation across daylight saving changes.
 
-```effeck
+```vibe
 const milliseconds = Duration.fromInputUnsafe(240)
 const nanoseconds = Duration.fromInputUnsafe(240n)
 const text = Duration.fromInputUnsafe("3 seconds")
@@ -30,7 +30,7 @@ const checked = Duration.fromInput("3 seconds")
 
 ## Extracting values in chosen units
 
-```effeck
+```vibe
 const delay = Duration.minutes(2)
 delay.toMillis() // 120000
 delay.toSeconds() // 120
@@ -46,7 +46,7 @@ Numeric conversions return numbers in the requested unit. `toNanos` returns an `
 
 ## Comparing durations
 
-```effeck
+```vibe
 const elapsed = Duration.seconds(9)
 const budget = Duration.seconds(12)
 elapsed.isLessThan(budget) // true
@@ -60,7 +60,7 @@ Comparison uses the elapsed span, independent of the constructor used. Keep dura
 
 ## Adding and scaling durations
 
-```effeck
+```vibe
 const attempt = Duration.seconds(4)
 const overhead = Duration.millis(500)
 const total = attempt.sum(overhead)
@@ -76,7 +76,7 @@ function waitBeforeRetry() {
 
 ## Converting and formatting
 
-```effeck
+```vibe
 Duration.millis(6250).format() // "6s 250ms"
 String(Duration.infinity) // "Infinity"
 Duration.toNanosUnsafe(Duration.millis(2)) // 2000000n

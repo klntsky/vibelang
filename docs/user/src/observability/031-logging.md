@@ -1,10 +1,10 @@
 # Logging
 
-Effeck uses Effect's structured logging to record progress, failures, and diagnostic context. Log calls run where they appear, and the current logging configuration determines which records are emitted and where they go.
+VibeLang uses Effect's structured logging to record progress, failures, and diagnostic context. Log calls run where they appear, and the current logging configuration determines which records are emitted and where they go.
 
 ## Emitting structured records
 
-```effeck
+```vibe
 function reportProgress() {
   log("export started", { format: "csv", stage: "prepare" })
   logInfo("export completed", { rows: 240 })
@@ -15,7 +15,7 @@ function reportProgress() {
 
 ## Selecting severity thresholds
 
-```effeck
+```vibe
 function diagnostics() {
   Effect.provideService(References.MinimumLogLevel, "Debug") {
     Effect.logTrace("entered parser")
@@ -32,7 +32,7 @@ The default threshold is Info, which filters Debug and Trace messages. Providing
 
 ## Annotating logs and scoped regions
 
-```effeck
+```vibe
 function annotatedExport() {
   Effect.annotateLogs({ operation: "weekly-export", format: "csv" }) {
     logInfo("preparing")
@@ -55,7 +55,7 @@ function scopedAnnotations() {
 
 ## Measuring log spans
 
-```effeck
+```vibe
 function timedExport() {
   Effect.withLogSpan("write-output") {
     logInfo("opening output")
@@ -69,7 +69,7 @@ Each record inside the log span includes the elapsed time since that span began.
 
 ## Disabling and configuring logging
 
-```effeck
+```vibe
 const Silent = Layer.succeed(References.MinimumLogLevel, "None")
 const LogLevel = Config.LogLevel("LOG_LEVEL")
 
@@ -91,7 +91,7 @@ The None threshold suppresses logging in the provided region. `Config.LogLevel` 
 
 ## Defining a custom output handler
 
-```effeck
+```vibe
 function captureLogs() {
   const records: Array<{ level: string; message: unknown }> = []
   const capture = Logger.make(({ logLevel, message }) => {
@@ -109,7 +109,7 @@ function captureLogs() {
 
 ## Choosing text, structured, and JSON formats
 
-```effeck
+```vibe
 const TextLogs = Logger.layer([Logger.consoleLogFmt, Logger.tracerLogger])
 const PrettyLogs = Logger.layer([Logger.consolePretty(), Logger.tracerLogger])
 const ObjectLogs = Logger.layer([Logger.consoleStructured, Logger.tracerLogger])
@@ -124,7 +124,7 @@ The default logger emits readable text; LogFmt offers compact key/value output a
 
 ## Sending records to multiple destinations
 
-```effeck
+```vibe
 function consoleAndCapture() {
   const auditMessages: unknown[] = []
   const audit = Logger.make(({ message }) => { auditMessages.push(message) })

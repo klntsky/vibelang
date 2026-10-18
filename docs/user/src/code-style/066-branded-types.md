@@ -1,10 +1,10 @@
 # Branded Types
 
-`Brand` uses Effect's branded types in Effeck: a brand distinguishes domain values without changing their runtime representation. Use brands when two strings or numbers mean different things, and construct them at a boundary where their origin or validation is clear.
+`Brand` uses Effect's branded types in VibeLang: a brand distinguishes domain values without changing their runtime representation. Use brands when two strings or numbers mean different things, and construct them at a boundary where their origin or validation is clear.
 
 ## Distinguishing identical representations
 
-```effeck
+```vibe
 type InvoiceId = string & Brand.Brand<"InvoiceId">
 type CustomerId = string & Brand.Brand<"CustomerId">
 
@@ -21,7 +21,7 @@ Two plain aliases for `string` remain interchangeable. These branded types requi
 
 ## Nominal brands
 
-```effeck
+```vibe
 type InvoiceId = string & Brand.Brand<"InvoiceId">
 const InvoiceId = Brand.nominal<InvoiceId>()
 
@@ -35,7 +35,7 @@ function knownInvoice(raw: string) {
 
 ## Refined brands and validation
 
-```effeck
+```vibe
 type WholeCents = number & Brand.Brand<"WholeCents">
 const WholeCents = Brand.make<WholeCents>((n) =>
   Number.isSafeInteger(n) || "amount must be a safe integer"
@@ -53,7 +53,7 @@ function parseAmount(raw: number) {
 
 `Brand.make` accepts a synchronous check that returns `true` for valid input or an explanation for invalid input. The returned constructor throws a `Brand.BrandError` when validation fails. A direct call treats that exception as a defect, which ordinary `catch` does not see. Here the `try` hatch maps it to `InvalidAmount` in the expected error channel.
 
-```effeck
+```vibe
 function inspectAmount(raw: number) {
   const optional = WholeCents.option(raw)
   const result = WholeCents.result(raw)
@@ -66,7 +66,7 @@ function inspectAmount(raw: number) {
 
 ## Composing constraints
 
-```effeck
+```vibe
 type WholeCents = number & Brand.Brand<"WholeCents">
 const WholeCents = Brand.make<WholeCents>((n) =>
   Number.isSafeInteger(n) || "amount must be a safe integer"

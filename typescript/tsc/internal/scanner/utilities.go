@@ -86,14 +86,14 @@ func GetTextOfNodeFromSourceText(sourceText string, node *ast.Node, includeTrivi
 		if ast.IsStringLiteral(node) {
 			// A string literal's own text: the source text for one the JSDoc
 			// reparser made from an identifier, and the written text for one
-			// Effeck's match writes at another token (typeof x === "object").
+			// VibeLang's match writes at another token (typeof x === "object").
 			own := node.Text()
 			if node.AsStringLiteral().TokenFlags&ast.TokenFlagsSingleQuote != 0 {
 				return "'" + escapeQuoted(own, '\'') + "'"
 			}
 			return "\"" + escapeQuoted(own, '"') + "\""
 		} else if ast.IsIdentifier(node) || node.Kind == ast.KindNumericLiteral {
-			// A numeric literal synthesized at another token, as Effeck's select
+			// A numeric literal synthesized at another token, as VibeLang's select
 			// writes its case indices, prints its own text.
 			return node.Text()
 		}

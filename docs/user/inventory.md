@@ -4,11 +4,11 @@ Pinned upstream: [`Effect-TS/website@9b2ad8c7569b7ca65562185052c1122167eae906`](
 
 Structure sources: [sidebar section ranks](https://github.com/Effect-TS/website/blob/9b2ad8c7569b7ca65562185052c1122167eae906/apps/web/src/content/docs/sidebar-config.json), [onboarding groups](https://github.com/Effect-TS/website/blob/9b2ad8c7569b7ca65562185052c1122167eae906/apps/web/src/content/docs/onboarding-groups.json), and [sidebar construction rules](https://github.com/Effect-TS/website/blob/9b2ad8c7569b7ca65562185052c1122167eae906/apps/web/src/lib/docs-sections.ts). The complete pinned repository tree supplies the page list.
 
-Only page titles, navigation labels, paths, API identifiers, counts, and original topic summaries are retained. No upstream body prose or code examples are copied. The stubs are a plan for fresh Effeck writing; the API column identifies upstream Effect APIs, not a promise that Effeck exposes those names.
+Only page titles, navigation labels, paths, API identifiers, counts, and original topic summaries are retained. No upstream body prose or code examples are copied. The stubs are a plan for fresh VibeLang writing; the API column identifies upstream Effect APIs, not a promise that VibeLang exposes those names.
 
 Order follows the two upstream sidebar views: onboarding first, then guides. Onboarding pages are excluded from guides, just as in the upstream navigation. Guide sections and root pages interleave by configured rank; pages within a section sort by frontmatter `sidebar.order`, then sidebar label. Labels may differ from page titles.
 
-Local paths retain each upstream directory and page slug, replace `.mdx` with `.md`, and add a three-digit global reading-order prefix to the filename. The linked sidebar below defines navigation across directories and preserves onboarding groups without duplicating their pages. After the two upstream views, the Effeck features view lists the original guides, and the Specification view lists one page per chapter of the specification in `docs/design/src`, grouped by part in the specification's order. The docs build fails if a specification chapter is missing from it.
+Local paths retain each upstream directory and page slug, replace `.mdx` with `.md`, and add a three-digit global reading-order prefix to the filename. The linked sidebar below defines navigation across directories and preserves onboarding groups without duplicating their pages. After the two upstream views, the VibeLang features view lists the original guides, and the Specification view lists one page per chapter of the specification in `docs/design/src`, grouped by part in the specification's order. The docs build fails if a specification chapter is missing from it.
 
 Code example count: one example per fenced code block in the source body, including commands, configuration, and separately presented package-manager variants. Blocks explicitly marked `text`, `plaintext`, `output`, or `console` are excluded. Inline code, rendered output outside fences, and imported components are not counted. Counts describe source blocks, not distinct executable programs.
 
@@ -19,7 +19,7 @@ Code example count: one example per fenced code block in the source body, includ
 
 - **Start Here**
   - [Welcome](src/001-onboarding.md): `v4/onboarding.mdx`
-  - [Why Effeck?](src/getting-started/002-why-effect.md): `v4/getting-started/why-effect.mdx`
+  - [Why VibeLang?](src/getting-started/002-why-effect.md): `v4/getting-started/why-effect.mdx`
 - **Learning Path**
   - [The Effect Type](src/getting-started/003-the-effect-type.md): `v4/getting-started/the-effect-type.mdx`
   - [Installation](src/getting-started/004-installation.md): `v4/getting-started/installation.mdx`
@@ -35,12 +35,12 @@ Code example count: one example per fenced code block in the source body, includ
 
 ### Setup
 
-- [Set up Effeck](src/setup.md)
+- [Set up VibeLang](src/setup.md)
 - **Start a project**
   - [New project](src/setup/new-project.md)
   - [Existing project](src/setup/existing-project.md)
 - **Build and test**
-  - [effeck CLI](src/setup/effeck-cli.md)
+  - [vibelang CLI](src/setup/vibelang-cli.md)
   - [Vite and Vitest](src/setup/vite.md)
 - **Frameworks**
   - [React](src/setup/react.md)
@@ -170,14 +170,14 @@ Code example count: one example per fenced code block in the source body, includ
   - [Runtime](src/platform/109-runtime.md): `v4/platform/runtime.mdx`
   - [Terminal](src/platform/110-terminal.md): `v4/platform/terminal.mdx`
 
-### Effeck features
+### VibeLang features
 
-- [Control operations and handlers](src/effeck-features/111-control-operations-and-handlers.md)
-- [Producers](src/effeck-features/112-producers.md)
-- [Building an HTTP API](src/effeck-features/113-building-an-http-api.md)
-- [Effeck for Effect users](src/effeck-features/114-effeck-for-effect-users.md)
-- [Cheat sheet](src/effeck-features/115-cheat-sheet.md)
-- [Pattern matching with match and is](src/effeck-features/116-match-and-is.md)
+- [Control operations and handlers](src/vibelang-features/111-control-operations-and-handlers.md)
+- [Producers](src/vibelang-features/112-producers.md)
+- [Building an HTTP API](src/vibelang-features/113-building-an-http-api.md)
+- [VibeLang for Effect users](src/vibelang-features/114-vibelang-for-effect-users.md)
+- [Cheat sheet](src/vibelang-features/115-cheat-sheet.md)
+- [Pattern matching with match and is](src/vibelang-features/116-match-and-is.md)
 
 ### Specification
 
@@ -219,13 +219,13 @@ Code example count: one example per fenced code block in the source body, includ
   - [30. Risks and experiments](../design/src/530-part5-ch30-risks.md)
 - **Appendices**
   - [A. Evidence index and B. Prior art](../design/src/900-appendices.md)
-  - [C. Every Effect feature in Effeck](../design/src/901-appendix-c-coverage.md)
+  - [C. Every Effect feature in VibeLang](../design/src/901-appendix-c-coverage.md)
 
 ## Page inventory
 
 Upstream paths are relative to the repository root. Section names identify the actual sidebar group; ungrouped guide links are marked as root pages.
 
-| Upstream path | Page title | Section | Topics to cover in original Effeck writing | Main upstream Effect APIs (names only) | Code examples |
+| Upstream path | Page title | Section | Topics to cover in original VibeLang writing | Main upstream Effect APIs (names only) | Code examples |
 | --- | --- | --- | --- | --- | ---: |
 | `apps/web/src/content/docs/v4/onboarding.mdx` | Welcome to Effect | Onboarding / Start Here | why typed programs help; representing programs as composable values; errors, concurrency, resources, and telemetry; working with coding assistants; choosing a learning sequence; finding community support | `Effect.gen`, `Effect.succeed`, `Effect.log`, `Effect.runPromise` | 1 |
 | `apps/web/src/content/docs/v4/getting-started/why-effect.mdx` | Why Effect? | Onboarding / Start Here | describing computations before executing them; reusing a shared application foundation; applying composable tools to production problems; learning through practical programs | `Effect.Effect`, `Effect.succeed`, `Effect.fail`, `Effect.runSync` | 2 |
@@ -338,18 +338,18 @@ Upstream paths are relative to the repository root. Section names identify the a
 | `apps/web/src/content/docs/v4/platform/runtime.mdx` | Runtime | Guides / Platform | running a platform application entry point; configuring runtime launch behavior; handling completion and failures | `NodeRuntime.runMain` | 4 |
 | `apps/web/src/content/docs/v4/platform/terminal.mdx` | Terminal | Guides / Platform | requesting terminal services; writing standard output; reading standard input; handling terminal quit errors; building an interactive guessing program | `Terminal.Terminal`, `NodeTerminal.layer`, `Terminal.QuitError` | 4 |
 
-## Effeck feature inventory
+## VibeLang feature inventory
 
 These original pages supplement the 110 mirrored Effect pages. They have no upstream counterparts.
 
 | Local page | Topics |
 | --- | --- |
-| [Control operations and handlers](src/effeck-features/111-control-operations-and-handlers.md) | Declaration, performing, policies, resuming, abandonment, cleanup, fiber diagnostics |
-| [Producers](src/effeck-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
-| [Building an HTTP API](src/effeck-features/113-building-an-http-api.md) | Server layers, routing, Schema bodies, typed errors, socket-free testing |
-| [Effeck for Effect users](src/effeck-features/114-effeck-for-effect-users.md) | Idiom translation, programs, top-level declarations, platform work, expected failures |
-| [Cheat sheet](src/effeck-features/115-cheat-sheet.md) | Every Effeck change beside the Effect code it replaces |
-| [Pattern matching with match and is](src/effeck-features/116-match-and-is.md) | `match` arms, every pattern kind, Option, Exit, and Result matchers, custom matchers, `is` bindings, exhaustiveness |
+| [Control operations and handlers](src/vibelang-features/111-control-operations-and-handlers.md) | Declaration, performing, policies, resuming, abandonment, cleanup, fiber diagnostics |
+| [Producers](src/vibelang-features/112-producers.md) | Lazy yields, services, early cleanup, Stream operators and iteration |
+| [Building an HTTP API](src/vibelang-features/113-building-an-http-api.md) | Server layers, routing, Schema bodies, typed errors, socket-free testing |
+| [VibeLang for Effect users](src/vibelang-features/114-vibelang-for-effect-users.md) | Idiom translation, programs, top-level declarations, platform work, expected failures |
+| [Cheat sheet](src/vibelang-features/115-cheat-sheet.md) | Every VibeLang change beside the Effect code it replaces |
+| [Pattern matching with match and is](src/vibelang-features/116-match-and-is.md) | `match` arms, every pattern kind, Option, Exit, and Result matchers, custom matchers, `is` bindings, exhaustiveness |
 
 ## Counts by sidebar section
 
@@ -379,7 +379,7 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | Guides | Behaviour | 2 |
 | Guides | Schema | 20 |
 | Guides | Platform | 6 |
-| Effeck features | Original language guides | 6 |
+| VibeLang features | Original language guides | 6 |
 | **Total** | | **116** |
 
 ## Counts by upstream directory

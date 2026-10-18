@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process"
 
 // Build first so Node always starts with an entry point and valid imports.
-const build = spawn("effeck", [], { stdio: "inherit" })
+const build = spawn("vibelang", [], { stdio: "inherit" })
 build.on("error", fail)
 build.on("exit", (code, signal) => {
   if (code !== 0 || signal) process.exit(code || 1)
-  const compiler = spawn("effeck", ["--watch"], { stdio: "inherit" })
+  const compiler = spawn("vibelang", ["--watch"], { stdio: "inherit" })
   const runner = spawn(process.execPath, ["--watch", "--enable-source-maps", "dist/main.js"], { stdio: "inherit" })
   const children = [compiler, runner]
   let stopping = false

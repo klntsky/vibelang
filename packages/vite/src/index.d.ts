@@ -1,10 +1,10 @@
 import type { Plugin } from "vite"
 
-export interface EffeckOptions {
+export interface VibeLangOptions {
   /** tsconfig path relative to Vite's root. Defaults to tsconfig.json. */
   project?: string
-  /** Native effeck binary or Node launcher path. Defaults to effeck. */
+  /** Native vibelang binary or Node launcher path. Defaults to vibelang. */
   compiler?: string
 }
 
-export default function effeck(options?: EffeckOptions): Plugin
+export default function vibelang(options?: VibeLangOptions): Plugin

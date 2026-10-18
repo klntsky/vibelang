@@ -1,10 +1,10 @@
 # The Effect Type
 
-`Effect<A, E, R>` is the contract of a computation: its success value, expected errors, and required services. Effeck infers this contract for every function, including small functions that only calculate a value.
+`Effect<A, E, R>` is the contract of a computation: its success value, expected errors, and required services. VibeLang infers this contract for every function, including small functions that only calculate a value.
 
 ## Success, failure, and services
 
-```effeck
+```vibe
 error MissingRate {
   currency: string
 }
@@ -31,7 +31,7 @@ Errors and services from several calls accumulate as unions. Catching a failure 
 
 ## Write a contract
 
-```effeck
+```vibe
 function rateOf(currency: string): number!MissingRate!Rates {
   return Rates.lookup(currency)
 }
@@ -46,13 +46,13 @@ function anyRate(currency: string): number!MissingRate {
 // Dependencies inferred: number!MissingRate!Rates
 ```
 
-`.effeck` code writes `Effect<A, E, R>` as `Result!Error!Dependencies`. A slot without a type is `never`: `number!MissingRate!` cannot need a service, and `number!!` neither fails nor needs one. On a function with a body, dependencies left out entirely, as in `anyRate`, are inferred from the body; on a declaration without a body, such as a service member, they are `never`. A union belongs to its slot: `string!MissingRate | Offline!Rates` fails with either error. Put a function type, a conditional type, or, after a `!`, an object type in parentheses; the `{` of an object type would start the function's body.
+`.vibe` code writes `Effect<A, E, R>` as `Result!Error!Dependencies`. A slot without a type is `never`: `number!MissingRate!` cannot need a service, and `number!!` neither fails nor needs one. On a function with a body, dependencies left out entirely, as in `anyRate`, are inferred from the body; on a declaration without a body, such as a service member, they are `never`. A union belongs to its slot: `string!MissingRate | Offline!Rates` fails with either error. Put a function type, a conditional type, or, after a `!`, an object type in parentheses; the `{` of an object type would start the function's body.
 
 Hovers show contracts this way, and declaration files keep `Effect.Effect<A, E, R>` for TypeScript callers. `Effect<A, E, R>` is accepted anywhere a type is.
 
 ## Check selected channels
 
-```effeck
+```vibe
 function rate(currency: string): Effect<number, infer E, Rates> {
   return Rates.lookup(currency)
 }
@@ -78,11 +78,11 @@ In a return annotation on a function with a body, `infer` followed by any name i
 
 Write all three slots. `Effect<number>` in this position reports EK2003: "Did you mean never or inferred?" The fixes it suggests are `number!!`, to check for no failures or requirements, and removing the annotation to infer them. A plain return annotation such as `: number` is EK2003 on a function whose body runs an Effect; a function that compiles to plain JavaScript keeps it.
 
-This applies only to function return annotations with bodies in `.effeck`. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults: `Effect<number, never, never>`. Those positions do not support this channel inference. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
+This applies only to function return annotations with bodies in `.vibe`. In parameter types, aliases, abstract members, and `.ts` files, `Effect<number>` keeps TypeScript's defaults: `Effect<number, never, never>`. Those positions do not support this channel inference. A callback parameter without an Effect contract, such as `(n: number) => string`, still accepts any contract.
 
 ## Description and execution
 
-```effeck
+```vibe
 const conversion = () => convert(30, "EUR")
 
 function displayedPrice() {
@@ -99,8 +99,8 @@ The result type must be `Effect` itself for a call to run it automatically. `Con
 
 ## Extract inferred channel types
 
-```effeck
-// convert.effeck
+```vibe
+// convert.vibe
 export function double(amount: number) {
   return amount * 2
 }
@@ -109,7 +109,7 @@ export function double(amount: number) {
 
 ```ts
 // TypeScript (.ts)
-// inspect.ts: imports the emitted Effeck module
+// inspect.ts: imports the emitted VibeLang module
 import { Effect } from "effect"
 import { double } from "./convert.js"
 
@@ -119,10 +119,10 @@ type Failure = Effect.Error<Contract>    // never
 type Services = Effect.Services<Contract> // never
 ```
 
-TypeScript consumers see exported Effeck functions as functions returning ordinary Effects. `Effect.Success`, `Effect.Error`, and `Effect.Services` extract the channels from those inferred return types. These utilities inspect types without executing the program.
+TypeScript consumers see exported VibeLang functions as functions returning ordinary Effects. `Effect.Success`, `Effect.Error`, and `Effect.Services` extract the channels from those inferred return types. These utilities inspect types without executing the program.
 
 ## Coming from Effect
 
-`Effect<A, E, R>` is available globally in `.effeck` files. A local call gives `A`; preserve a program with a function value when you need to compose or store it.
+`Effect<A, E, R>` is available globally in `.vibe` files. A local call gives `A`; preserve a program with a function value when you need to compose or store it.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/the-effect-type)
