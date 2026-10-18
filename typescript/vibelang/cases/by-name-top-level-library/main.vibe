@@ -1,0 +1,18 @@
+// A skipped generic call in runner inference must stay an Effect value.
+function work() {
+  Console.log("ran")
+  return 42
+}
+
+const running: Fiber.Fiber<number> = Effect.runFork(Effect.provide(work(), Logger.layer([])))
+const total: number = Effect.runSync(Effect.provide(Effect.succeed(7), Logger.layer([])))
+const pending: Promise<{ left: number; right: number }> = Effect.runPromise(Effect.all({
+  left: Effect.succeed(1),
+  right: Effect.succeed(2)
+}))
+
+Effect.runPromise {
+  Console.log(typeof Fiber.join(running))
+  Console.log(total)
+  Console.log(JSON.stringify(sync((value: Promise<{ left: number; right: number }>) => value, pending)))
+}

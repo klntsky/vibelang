@@ -184,9 +184,15 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 	// by name (D147): fork(fetchReport()) passes fetchReport() as a program,
 	// as if written () => fetchReport(), and runs nothing at the call site. An
 	// expression whose value is itself an Effect keeps its meaning.
-	if position.program && !isEffectType(a.checker, t) && a.pauses(node) {
-		if program := a.byNameType(node, a.valueTypeOf(node, t)); program != nil {
-			return convertByName, program
+	if position.program && a.pauses(node) {
+		// Inference can pass a placeholder never for a skipped generic call.
+		// Inspect its actual value before choosing by-name conversion: a
+		// library call returning an Effect is already a cold program.
+		value := a.valueTypeOf(node, t)
+		if !isEffectType(a.checker, value) {
+			if program := a.byNameType(node, value); program != nil {
+				return convertByName, program
+			}
 		}
 	}
 	return convertNone, t
