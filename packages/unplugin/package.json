@@ -58,6 +58,9 @@
   "scripts": {
     "test": "sh test/run.sh"
   },
+  "dependencies": {
+    "unplugin": "3.4.0"
+  },
   "peerDependencies": {
     "effeck": "0.0.1"
   },
