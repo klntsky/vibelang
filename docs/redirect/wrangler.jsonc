@@ -1,0 +1,23 @@
+// Sends www.effeck.dev and every other effeck.* domain to https://effeck.dev.
+// scripts/deploy-docs.sh deploys it after the docs Worker.
+{
+  "name": "effeck-redirect",
+  "main": "index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "www.effeck.dev", "custom_domain": true },
+    { "pattern": "effeck.ai", "custom_domain": true },
+    { "pattern": "www.effeck.ai", "custom_domain": true },
+    { "pattern": "effeck.app", "custom_domain": true },
+    { "pattern": "www.effeck.app", "custom_domain": true },
+    { "pattern": "effeck.com", "custom_domain": true },
+    { "pattern": "www.effeck.com", "custom_domain": true },
+    { "pattern": "effeck.fun", "custom_domain": true },
+    { "pattern": "www.effeck.fun", "custom_domain": true },
+    { "pattern": "effeck.sh", "custom_domain": true },
+    { "pattern": "www.effeck.sh", "custom_domain": true },
+    { "pattern": "effeck.tech", "custom_domain": true },
+    { "pattern": "www.effeck.tech", "custom_domain": true }
+  ]
+}

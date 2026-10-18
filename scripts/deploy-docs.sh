@@ -1,6 +1,7 @@
 #!/bin/sh
 # Publishes the docs on Cloudflare: the user guide at / and the specification
-# at /spec/, served by a static-assets Worker on workers.dev.
+# at /spec/, served by a static-assets Worker on effeck.dev. A second Worker
+# (docs/redirect/) sends www.effeck.dev and the other effeck.* domains there.
 #
 #   sh scripts/deploy-docs.sh             # build, check, and deploy
 #   sh scripts/deploy-docs.sh --dry-run   # build and check into .cache/docs-site only
@@ -40,3 +41,4 @@ fi
 export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-dd3525a4132493566aeb38de533c8827}"
 cd "$root"
 bunx wrangler@4.151.1 deploy --config docs/wrangler.jsonc
+bunx wrangler@4.151.1 deploy --config docs/redirect/wrangler.jsonc

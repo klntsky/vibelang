@@ -1,8 +1,12 @@
-// The docs site: a Worker that serves only static assets on workers.dev.
+// The docs site: a Worker that serves only static assets, on effeck.dev.
 // scripts/deploy-docs.sh assembles ../.cache/docs-site and deploys it.
+// docs/redirect/ sends every other effeck.* domain to effeck.dev.
 {
   "name": "effeck",
   "compatibility_date": "2026-09-01",
+  "routes": [{ "pattern": "effeck.dev", "custom_domain": true }],
+  // Keep the old workers.dev address alive for links already shared.
+  "workers_dev": true,
   "assets": {
     "directory": "../.cache/docs-site",
     "not_found_handling": "404-page"

@@ -5,7 +5,7 @@ A language for writing Effect programs: TypeScript syntax in which every functio
 > [!WARNING]
 > Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-Docs: [effeck.willcory10.workers.dev](https://effeck.willcory10.workers.dev) for the guides and [effeck.willcory10.workers.dev/spec/](https://effeck.willcory10.workers.dev/spec/) for the specification.
+Docs: [effeck.dev](https://effeck.dev) for the guides and [effeck.dev/spec/](https://effeck.dev/spec/) for the specification.
 
 ## A short tour
 
@@ -43,7 +43,7 @@ export function main() {
 }
 ```
 
-Every function is an Effect: `greet` has the contract `string!!Users` (no expected failures, because `catch` handles `NotFound`). Calls run where they stand, `throw` fails with a typed error, `provide` supplies a layer, and `await.all` and `await.race` run programs concurrently. The [cheat sheet](https://effeck.willcory10.workers.dev/effeck-features/115-cheat-sheet) shows every form next to the Effect code it replaces.
+Every function is an Effect: `greet` has the contract `string!!Users` (no expected failures, because `catch` handles `NotFound`). Calls run where they stand, `throw` fails with a typed error, `provide` supplies a layer, and `await.all` and `await.race` run programs concurrently. The [cheat sheet](https://effeck.dev/effeck-features/115-cheat-sheet) shows every form next to the Effect code it replaces.
 
 ## Quickstart
 
