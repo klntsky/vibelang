@@ -335,7 +335,7 @@ func providerQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
 	}
 	args := call.Arguments()
 	key := scanner.GetSourceTextOfNodeFromSourceFile(ast.GetSourceFileOfNode(call), args[0], false /*includeTrivia*/)
-	name := args[2].Text()
+	name := args[1].Text()
 	if c.GetPropertyOfType(c.GetTypeAtLocation(args[0]), name) != nil {
 		key += "." + name
 	}

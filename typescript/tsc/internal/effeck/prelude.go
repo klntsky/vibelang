@@ -105,8 +105,11 @@ var preludeModules = map[string]string{
 
 // implicitRuntimeImport makes a .effeck file that may use the prelude resolve the
 // runtime, and one that may use an export of effect's root (effectroot.go)
-// resolve effect, so their declarations are in the program. A file that uses
-// neither compiles exactly as TypeScript would.
+// resolve effect, so their declarations are in the program. A file with a
+// function that may compile to plain JavaScript resolves effect too: such a
+// function is still an Effect to TypeScript (plain.go), and its type needs
+// effect's Effect interface. A file with none of these compiles exactly as
+// TypeScript would.
 func implicitRuntimeImport(file *ast.SourceFile) []string {
 	if !isEffeckFile(file) {
 		return nil
@@ -117,7 +120,7 @@ func implicitRuntimeImport(file *ast.SourceFile) []string {
 	if prelude || entry {
 		modules = append(modules, runtimeModule)
 	}
-	if root {
+	if root || maySplitPlainFunction(file) {
 		modules = append(modules, effectRootModule)
 	}
 	if entry {
@@ -151,6 +154,24 @@ func mayUsePrelude(file *ast.SourceFile) (prelude bool, root bool) {
 	}
 	file.AsNode().ForEachChild(visit)
 	return prelude, root
+}
+
+// maySplitPlainFunction reports whether file declares a function that may
+// compile to plain JavaScript with an Effect form (isSplittable): a named
+// function declaration with a body and no return type annotation that is
+// neither async nor a generator. A function annotated with A!E!R names
+// effect's Effect, so mayUsePrelude already loads effect for it, and one
+// annotated with a plain type keeps that type.
+func maySplitPlainFunction(file *ast.SourceFile) bool {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if node.Kind == ast.KindFunctionDeclaration && node.Name() != nil && node.Body() != nil && node.Type() == nil &&
+			ast.GetFunctionFlags(node)&(ast.FunctionFlagsAsync|ast.FunctionFlagsGenerator) == 0 {
+			return true
+		}
+		return node.ForEachChild(visit)
+	}
+	return file.AsNode().ForEachChild(visit)
 }
 
 // forEachTopLevelName calls fn with each name that statement, a statement at

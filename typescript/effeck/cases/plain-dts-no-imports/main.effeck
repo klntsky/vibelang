@@ -1,0 +1,7 @@
+// A function that compiles to plain JavaScript is still an Effect to
+// TypeScript (D10), also in a file that names nothing from effect or the
+// prelude and has no main: its declaration says Effect, as its JavaScript
+// does. No file in the program imports effect, so nothing else loads it.
+export function double(n: number) {
+  return n * 2
+}

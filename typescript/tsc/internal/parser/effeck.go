@@ -618,13 +618,14 @@ func (p *Parser) parseEffeckProvideStatement() *ast.Node {
 // effeckProviders rewrites the provider list of a provide block (D173).
 // Providers separated by commas, which parse as a comma expression, become an
 // array of layers, and a provider written Key = value becomes
-// $provideService(Key, value, "Key"), a layer that provides that one service:
+// $provideService(Key, "Key", value), a layer that provides that one service:
 //
 //	provide AppLive, Clock = testClock { ... }
 //
-// provides [AppLive, $provideService(Clock, testClock, "Clock")]. The name
+// provides [AppLive, $provideService(Clock, "Clock", testClock)]. The name
 // lets the runtime use a module's eponymous key, so Clock, the effect module,
-// stands for Clock.Clock. An array literal provider adds its elements. A
+// stands for Clock.Clock. It comes before the value, so the key and the name
+// are inferred when the value is checked against the key's shape. An array literal provider adds its elements. A
 // single provider that is not Key = value is returned unchanged.
 func (p *Parser) effeckProviders(expression *ast.Node) *ast.Node {
 	var items []*ast.Node
@@ -658,7 +659,7 @@ func (p *Parser) effeckProviders(expression *ast.Node) *ast.Node {
 		services = true
 		callee := p.effeckSynthesized(p.factory.NewIdentifier("$provideService"), key.Loc)
 		label := p.effeckSynthesized(p.factory.NewStringLiteral(name.Text(), ast.TokenFlagsNone), key.Loc)
-		args := p.newNodeList(item.Loc, []*ast.Node{key, value, label})
+		args := p.newNodeList(item.Loc, []*ast.Node{key, label, value})
 		items[i] = p.effeckSpanning(p.factory.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, args, ast.NodeFlagsNone), item.Loc)
 	}
 	if len(items) == 1 && !services {

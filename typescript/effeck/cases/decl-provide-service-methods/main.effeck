@@ -1,0 +1,20 @@
+// expect-result: {"all":["b"],"count":2}
+// A method in the value of provide Key = value is a service member, as in
+// Layer.succeed (D92, D173): its body runs Effects, and calling it returns
+// an Effect.
+service Names {
+  all(): ReadonlyArray<string>!!
+  count(): number!!
+}
+
+export function main() {
+  provide Names = {
+    all() { return ["b"] },
+    count() {
+      sleep("1 millis")
+      return 2
+    }
+  } {
+    return { all: Names.all(), count: Names.count() }
+  }
+}
