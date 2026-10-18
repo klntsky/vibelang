@@ -132,6 +132,9 @@ type projector struct {
 	ctx   FileContext
 	names *names
 	plan  plan
+	// plainBuiltinBodies carries proven synchronous D54 bodies for execution.
+	plainBuiltinBodies map[*ast.Node][]edit
+	plainBuiltin       bool
 	// forms answers the L1 form decisions (forms_resolve.go).
 	forms formResolver
 	// sources memoizes isSource (synth.go).
@@ -275,6 +278,15 @@ func (p *projector) visit(node *ast.Node, e env) {
 		return
 	case p.isMatchForm(node):
 		p.synthesized(node, p.tokenStart(node), node.End(), e)
+		return
+	case p.plainBuiltin && node.Kind == ast.KindCatchClause:
+		p.plainBuiltinCatch(node)
+		return
+	case p.plainBuiltin && node.Kind == ast.KindThrowStatement:
+		expression := node.Expression()
+		p.plan.insert(p.tokenStart(expression), helperRef("$expected")+"(")
+		p.visit(expression, env{})
+		p.plan.insert(expression.End(), ")")
 		return
 	case p.isPlainHatchFunction(node):
 		p.visitChildren(node, env{})
@@ -475,6 +487,7 @@ func isProjectedFunction(node *ast.Node) bool {
 // (L2), whose calls do not run.
 func (p *projector) functionDeclaration(node *ast.Node) {
 	p.functionLike(node, node.Body())
+	p.preparePlainBuiltinBody(node)
 }
 
 // functionLike lowers fn, a function declaration or a method with body, as

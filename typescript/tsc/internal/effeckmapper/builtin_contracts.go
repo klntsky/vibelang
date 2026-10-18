@@ -9,9 +9,9 @@ import (
 
 //go:generate go run gen_builtin_contracts.go
 
-// caughtBuiltinFailure recognizes an unshadowed shipped contract at a caught
-// call (D54). Uncaught plain built-ins retain their direct calling convention.
-func (p *projector) caughtBuiltinFailure(call *ast.Node) string {
+// builtinFailure recognizes an unshadowed shipped contract. Effect bodies
+// use it whether caught or escaping; plain bodies use only caught contracts.
+func (p *projector) builtinFailure(call *ast.Node) string {
 	target := call.Expression()
 	root, chain, ok := formsNameChain(target)
 	if !ok || call.QuestionDotToken() != nil {
@@ -24,31 +24,19 @@ func (p *projector) caughtBuiltinFailure(call *ast.Node) string {
 	for _, part := range chain {
 		key += "." + part
 	}
-	failure := builtinContracts[key]
-	if failure == "" {
-		return ""
-	}
-	for child, parent := call, call.Parent; parent != nil; child, parent = parent, parent.Parent {
-		if ast.IsFunctionLike(parent) {
-			break
-		}
-		if parent.Kind == ast.KindTryStatement && parent.AsTryStatement().TryBlock == child && parent.AsTryStatement().CatchClause != nil {
-			return failure
-		}
-	}
-	return ""
+	return builtinContracts[key]
 }
 
 // builtinCallee adapts just the callee, so arguments run before entering the
 // trusted boundary and their failures cannot be mistaken for built-in errors.
 func (p *projector) builtinCallee(call *ast.Node) bool {
-	failure := p.caughtBuiltinFailure(call)
+	failure := p.builtinFailure(call)
 	if failure == "" {
 		return false
 	}
 	for _, argument := range call.Arguments() {
 		if argument.Kind == ast.KindSpreadElement {
-			p.diagnostics = append(p.diagnostics, Diagnostic{Start: p.tokenStart(argument), Length: argument.End() - p.tokenStart(argument), Code: CodeUnprojectedForm, Message: "The mapper cannot select a caught built-in's overload from spread arguments. Write the arguments explicitly or use an annotated trusted adapter."})
+			p.diagnostics = append(p.diagnostics, Diagnostic{Start: p.tokenStart(argument), Length: argument.End() - p.tokenStart(argument), Code: CodeUnprojectedForm, Message: "The mapper cannot select a built-in's overload from spread arguments. Write the arguments explicitly or use an annotated trusted adapter."})
 			return false
 		}
 	}
@@ -57,7 +45,7 @@ func (p *projector) builtinCallee(call *ast.Node) bool {
 		return false
 	}
 	target := call.Expression()
-	p.plan.markFields(editBuiltinCall, partWhole, p.tokenStart(target), target.End(), failure, p.text[p.tokenStart(target):target.End()], p.freshWord("$builtinArgs"), strconv.Itoa(len(call.Arguments())))
+	p.plan.markFields(editBuiltinCall, partWhole, p.tokenStart(target), target.End(), failure, p.text[p.tokenStart(target):target.End()], p.freshWord("$builtinArgs"), strconv.Itoa(len(call.Arguments())), strconv.FormatBool(p.plainBuiltin))
 	return true
 }
 
@@ -82,7 +70,11 @@ func builtinCallText(e edit, checking bool) string {
 		params = append(params, name)
 	}
 	fn := base + "Fn"
-	trusted := helperRef("$trusted")
+	helper := "$trusted"
+	if len(e.fields) > 4 && e.fields[4] == "true" {
+		helper = "$trustedPlain"
+	}
+	trusted := helperRef(helper)
 	if checking {
 		trusted += "<" + helperRef("$BuiltinResult") + "<typeof " + callee + ">, " + failure + ">"
 	}

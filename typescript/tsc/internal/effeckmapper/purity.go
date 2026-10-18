@@ -11,8 +11,10 @@ import (
 //
 //   - ProvablyPure: the body behaves the same as plain JavaScript and as an
 //     Effect body. It calls only provably pure functions of the same file
-//     and pure globals (Math.max, Number, JSON.stringify), and has no throw,
-//     try, yield, await, using, for...of, this, arguments, or Effeck syntax.
+//     and pure globals (Math.max, Number, JSON.stringify), and has no escaping throw,
+//     yield, await, using, for...of, this, arguments, or Effeck syntax.
+//     D54 also permits locally caught shipped failures with a proven native
+//     body; every catch unwraps expected failures and rethrows defects.
 //     The executable rendering compiles such a function to f$direct and its
 //     Effect wrapper (D10), and a same-file call of it costs what a
 //     JavaScript call costs.
@@ -191,6 +193,9 @@ func (p *projector) hasEffectBody(fn *ast.Node) bool {
 // in it some other way. Nested functions count: their own Effect bodies
 // make the body not provably pure, as the executable rendering decides.
 func (p *projector) plainEdits(fn *ast.Node) bool {
+	if p.plainBuiltinBodies[fn] != nil {
+		return true
+	}
 	body := fn.Body()
 	lo, hi := p.tokenStart(body)+1, body.End()-1
 	for _, e := range p.plan.edits {
@@ -212,6 +217,9 @@ func (p *projector) plainEdits(fn *ast.Node) bool {
 // whose bodies execute here. callee answers for a call of a name:
 // the obstacle a same-file function's call is, and whether the name is one.
 func (p *projector) bodyObstacle(fn *ast.Node, callee func(name string) (obstacle, bool)) obstacle {
+	if p.plainBuiltinBodies[fn] != nil {
+		return obstacleNone
+	}
 	worst := obstacleNone
 	var visit func(node *ast.Node) bool // true: stop, the body is blocked
 	visit = func(node *ast.Node) bool {
@@ -264,6 +272,9 @@ func (p *projector) bodyObstacle(fn *ast.Node, callee func(name string) (obstacl
 
 // callObstacle classifies one call of a body (purity's comment).
 func (p *projector) callObstacle(call *ast.Node, callee func(name string) (obstacle, bool)) obstacle {
+	if p.builtinFailure(call) != "" {
+		return obstacleBlocking
+	}
 	if p.isPureGlobal(call) {
 		return obstacleNone
 	}

@@ -128,6 +128,8 @@ func renderExec(e edit) (text string, keep bool) {
 	case editServiceCall:
 		// D41: a Context key's member call reads the service first.
 		return pick(e.part, "(("+s+" = ", "", "), "+helperRef("$isKey")+"("+s+") ? (yield* "+s+") : "+s+")"), true
+	case editPlainCall:
+		return pick(e.part, helperRef("$plain")+"(", "", ")"), true
 	case editBuiltinCall:
 		return builtinCallText(e, false), true
 	case editValueCall:
@@ -275,7 +277,7 @@ var execHelpers = map[string]execSource{
 // (execRendering.prologue); temporaries are declared there too.
 var prologueHelpers = map[string]bool{
 	"$fail": true, "$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
-	"$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
+	"$plain": true, "$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
 	"$t": true, "$s": true, "$scope": true, "$iterate": true, "$producerGen": true,
 }
 
@@ -374,6 +376,9 @@ func (r *execRendering) prologue() string {
 		r.local("$value")
 	}
 	var parts []string
+	if r.used["$plain"] {
+		parts = append(parts, "const "+r.local("$plain")+" = (f) => f["+r.local("$direct")+"] ?? f;")
+	}
 	if r.used["$fail"] {
 		parts = append(parts, "const "+r.local("$fail")+" = (value) => "+r.local("$isCause")+"(value) ? "+r.local("$failCause")+"(value) : "+r.local("$failValue")+"(value);")
 	}
@@ -502,7 +507,7 @@ type execLowering struct {
 func (p *projector) execPlan() *plan {
 	l := &execLowering{
 		p:          p,
-		edits:      slices.Clone(p.plan.edits),
+		edits:      p.directBuiltinEdits(),
 		calls:      map[[2]int]*ast.Node{},
 		receivers:  map[[2]int]*ast.Node{},
 		valueCalls: map[int]bool{},
@@ -620,7 +625,7 @@ func (l *execLowering) splitFunctions() {
 			continue
 		}
 		name := statement.Name().Text()
-		if l.traceName(statement) != "" {
+		if l.traceName(statement) != "" && l.p.plainBuiltinBodies[statement] == nil {
 			continue
 		}
 		if declarations[name] != 1 || ast.HasSyntacticModifier(statement, ast.ModifierFlagsAmbient) {
@@ -912,7 +917,7 @@ func (l *execLowering) lowerCalls() {
 		if call == nil {
 			continue
 		}
-		if l.p.isPureGlobal(call) && l.p.caughtBuiltinFailure(call) == "" {
+		if l.p.isPureGlobal(call) && l.p.builtinFailure(call) == "" {
 			l.set(s.open, "")
 			l.set(s.close, "")
 			continue

@@ -60,6 +60,8 @@ export {
 
 /** D5/D54: shipped built-in failures use the same value boundary as trusted implementations. */
 export { $trusted } from "effeck-runtime"
+/** A syntax-proven D54 synchronous entry in a plain callback. */
+export declare function $plain<Args extends unknown[], A>(fn: (...args: Args) => EffectModule.Effect<A, never, never>): (...args: Args) => A
 /** Preserve a built-in's optional parameters before entering its failure boundary. */
 export type $BuiltinArgs<F extends (...args: any[]) => any> = Parameters<F>
 /** Keep the shipped failure class in E rather than widening its constructor to Error. */
@@ -179,6 +181,9 @@ type HasRunning<T> = [Running<T>] extends [never] ? never : unknown
  * type, so a generic body's `T | undefined` resolves to data instead of a
  * deferred type (research/typedirected.md section 6.5).
  */
+// An any-valued foreign result is not evidence of a data subtype. Resolve it
+// before contextual cast typing can invent a DataEffect intersection.
+export declare function $run<T>(value: T & (0 extends 1 & T ? unknown : never)): EffectModule.Effect<T, never, never>
 export declare function $run<T>(value: T & DataEffect): Generator<DataRunAnnotation, T, any>
 // Also reject a union containing data; it must not fall through as a program.
 export declare function $run<T>(value: T & ([Extract<T, DataEffect>] extends [never] ? never : unknown)): Generator<DataRunAnnotation, T, any>

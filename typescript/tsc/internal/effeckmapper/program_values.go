@@ -133,7 +133,11 @@ func (p *projector) plainArrayPipeStage(call *ast.Node, key string) bool {
 // moduleCall visits cold call arguments with the same by-name rules as a
 // body call, without running the enclosing module-level call itself.
 func (p *projector) moduleCall(call *ast.Node, e env) {
-	p.visit(call.Expression(), e)
+	if p.plainBuiltin && p.builtinFailure(call) != "" {
+		p.builtinCallee(call)
+	} else if !p.plainBuiltinCall(call) {
+		p.visit(call.Expression(), e)
+	}
 	p.visitList(call.TypeArguments(), e)
 	p.callArguments(call, e)
 }

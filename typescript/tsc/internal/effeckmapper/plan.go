@@ -54,6 +54,8 @@ const (
 	editValueCall
 	// editBuiltinCall supplies the shipped failure contract of a caught built-in.
 	editBuiltinCall
+	// editPlainCall selects a D54 synchronous entry in a plain callback.
+	editPlainCall
 	// editRegion runs a block of an Effect function as an Effect of its own:
 	// arg names the region's helper chain and completion variable.
 	editRegion
@@ -336,6 +338,8 @@ func (r checking) text(e edit) (string, bool) {
 		}
 	case editServiceCall:
 		text = pick(e.part, helperRef("$use")+"(", "", ")")
+	case editPlainCall:
+		text = pick(e.part, helperRef("$plain")+"(", "", ")")
 	case editBuiltinCall:
 		text = renderBuiltinCall(e)
 	case editValueCall:
