@@ -113,7 +113,7 @@ func (p *projector) predicateCall(call *ast.Node, e env) bool {
 		return false
 	}
 	key := r.Callee(call).Canonical
-	plain := dataGuards[key] || p.plainArrayPipeStage(call, key)
+	plain := dataGuards[key] || p.plainArrayPipeStage(call, key) || p.plainMatchPipeStage(call, key)
 	if !plain && dataLastMethods[key] {
 		candidates := formsCandidates(r.table.Signatures(key), len(call.Arguments()))
 		plain = len(candidates) > 0

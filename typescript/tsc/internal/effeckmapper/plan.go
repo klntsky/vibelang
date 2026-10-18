@@ -299,7 +299,8 @@ func (r checking) text(e edit) (string, bool) {
 	case editDual:
 		text = pick(e.part, helperRef("$dual")+"(", "", ")")
 	case editScoped:
-		text = pick(e.part, helperRef("$scoped")+"(", "", ")")
+		// The checking-only scoped signature is selected on the callee.
+		text = ""
 	case editProgramValue:
 		helper := "$asProgram"
 		if e.arg == "collection" {

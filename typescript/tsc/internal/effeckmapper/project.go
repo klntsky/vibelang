@@ -685,6 +685,8 @@ func (p *projector) runCall(call *ast.Node, e env) {
 	scoped := p.isBlockFork(call, e)
 	if scoped {
 		p.plan.mark(editScoped, partOpen, start, start, "")
+		p.plan.witness(p.tokenStart(call.Expression()), helperRef("$scoped")+"(")
+		p.plan.witness(call.Expression().End(), ")")
 	}
 	p.callee(call, e)
 	// The parser represents `fork program` as a call without source

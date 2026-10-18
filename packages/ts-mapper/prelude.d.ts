@@ -16,7 +16,7 @@
 import type * as EffectModule from "effect/Effect"
 import type * as ScopeModule from "effect/Scope"
 import type * as StreamModule from "effect/Stream"
-import type { Cause, Config, Context, Exit } from "effect"
+import type { Cause, Config, Context, Exit, Fiber } from "effect"
 import type * as Runtime from "effeck-runtime"
 
 // ---------------------------------------------------------------- prelude names
@@ -89,8 +89,14 @@ export declare function $acquire<T>(value: T): EffectModule.Effect<T, never, nev
  */
 export declare function $scopedBody<A, E, R>(program: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R>
 
-/** A fork in a block (D19, D96): the block's Scope owns the fiber, so Scope leaves R. */
-export declare function $scoped<A, E, R>(fork: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, Exclude<R, ScopeModule.Scope>>
+/** A block owns the fork's Scope (D19, D96), but the child's own R,
+ * including a Scope needed by an acquisition, still belongs to the caller.
+ * Select the scoped signature before calling: after R | Scope is formed,
+ * subtracting Scope would erase the child's requirement as well. */
+export declare function $scoped(fork: typeof Runtime.fork): {
+  <A, E, R>(program: EffectModule.Effect<A, E, R>, options?: Parameters<typeof Runtime.fork>[1]): EffectModule.Effect<Fiber.Fiber<A, E>, never, R>
+  (options?: Parameters<typeof Runtime.fork>[1]): <A, E, R>(program: EffectModule.Effect<A, E, R>) => EffectModule.Effect<Fiber.Fiber<A, E>, never, R>
+}
 
 // finally (exit) { ... } (D178), and the interruption blocks (D179, D180).
 export { $finallyExit, uninterruptible, restore, interruptible } from "effeck-runtime"

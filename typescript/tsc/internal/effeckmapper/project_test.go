@@ -29,6 +29,14 @@ var projectionCases = []struct {
 	virtual string
 }{
 
+	{name: "tail resume in a cleanup block cannot invent clause fallthrough",
+		source:  `control Ask { get(): boolean!! } function f() { try { return Ask.get() } handle Ask.get() { if (true) { using r = acquire(); resume(true) } else { resume(false) } } }`,
+		virtual: `interface Ask { get(): Effect.Effect<boolean, never, never>; readonly "~effeck/service"?: "app/src/main#Ask" } abstract class Ask extends $service<Ask>("app/src/main#Ask") {} function f() { return $gen(function* () { const $c = yield* handle_1($gen(function* () { return $box((yield* $run($member($use(Ask), "get")()))) }) , Ask, { get: ($k) => $gen(function* () { if (true) { const $c_1 = yield* $scopedBody($gen(function* () { const r = (yield* $acquire($value(acquire)())); return $tailResume($k, true) })); return $c_1 } else { return $tailResume($k, false) } }) }); return $unboxed($c) })}`},
+
+	{name: "Match generic stages retain contextual pipe inference",
+		source:  "import { Match } from \"effect\"; function phase(x: \"a\" | \"b\") { return pipe(Match.value(x), Match.when(\"a\", () => \"A\"), Match.orElse((s) => `other ${s}`)) }",
+		virtual: "import { Match } from \"effect\"; function phase(x: \"a\" | \"b\") { return $gen(function* () { return (yield* $run(pipe((yield* $run(Match.value(x))), Match.when(\"a\", () => \"A\"), Match.orElse((s) => `other ${s}`)))) })}"},
+
 	{name: "external service Effect member is a receiver preserving value call",
 		source:  `import { Users } from "./users.ts"; function f() { return Users.all() }`,
 		virtual: `import { Users } from "./users.ts"; function f() { return $gen(function* () { return (yield* $run($member($use(Users), "all")())) })}`},
@@ -58,7 +66,7 @@ var projectionCases = []struct {
 	{
 		name:    "a held fork program joins through its declared module",
 		source:  "function f() { const fiber = fork(() => 1); return fiber.join() }",
-		virtual: "function f() { return $gen(function* () { const fiber = (yield* $run($scoped(fork($gen(function* () { return 1 }))))); return (yield* $run(Fiber.join(fiber))) })}",
+		virtual: "function f() { return $gen(function* () { const fiber = (yield* $run($scoped(fork)($gen(function* () { return 1 })))); return (yield* $run(Fiber.join(fiber))) })}",
 	},
 
 	{
@@ -724,7 +732,7 @@ func TestAwaitHeldOperands(t *testing.T) {
 		assert.Equal(t, virtualBody(t, projection), want)
 	}
 	source := "function f() { const held = fork Effect.succeed(1); return await.all [held] }"
-	want := "function f() { return $gen(function* () { const held = (yield* $run($scoped(fork($gen(function* () { return (yield* $run(Effect.succeed(1))) }))))); return (yield* $run($awaitAll([$asProgram(held)]))) })}"
+	want := "function f() { return $gen(function* () { const held = (yield* $run($scoped(fork)($gen(function* () { return (yield* $run(Effect.succeed(1))) })))); return (yield* $run($awaitAll([$asProgram(held)]))) })}"
 	projection := Project(source, testContext)
 	assert.Equal(t, len(projection.Diagnostics), 0, "diagnostics: %v", projection.Diagnostics)
 	assert.Equal(t, virtualBody(t, projection), want)

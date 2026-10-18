@@ -1014,6 +1014,12 @@ func (p *projector) scopeBlock(node *ast.Node, e env) {
 	opening := p.plan.reserve(editScopeRegion, partOpen, start, start)
 	statements := node.Statements()
 	p.visitList(statements, regionEnv(r, e))
+	// A tail resume also leaves the cleanup region. Dispatch its completion
+	// alongside explicit returns and loop jumps: discarding it invents a
+	// clause fallthrough, while an unconditional return would skip a jump.
+	if e.continuation != "" && endsInTailResume(node) {
+		r.add(jump{kind: ast.KindReturnStatement})
+	}
 	normal := canCompleteNormally(statements)
 	if normal && len(r.jumps) > 0 && !r.tail {
 		p.plan.markText(editRecord, partWhole, closing, closing, "; return "+helperRef("$end")+" ")
@@ -1057,6 +1063,24 @@ func (p *projector) holdsScope(statements []*ast.Node) bool {
 		if visit(statement) {
 			return true
 		}
+	}
+	return false
+}
+
+// endsInTailResume reports that the last path through a cleanup block resumes.
+// Earlier returns and loop jumps are collected by its region; the final resume
+// must leave that region too, after the resumed continuation and cleanup run.
+func endsInTailResume(node *ast.Node) bool {
+	if isTailResume(node) {
+		return true
+	}
+	switch node.Kind {
+	case ast.KindBlock:
+		statements := node.Statements()
+		return len(statements) > 0 && endsInTailResume(statements[len(statements)-1])
+	case ast.KindIfStatement:
+		s := node.AsIfStatement()
+		return s.ElseStatement != nil && endsInTailResume(s.ThenStatement) && endsInTailResume(s.ElseStatement)
 	}
 	return false
 }

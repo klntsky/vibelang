@@ -201,3 +201,15 @@ func (p *projector) programInputUnannotated(n *ast.Node) bool {
 	}
 	return false
 }
+
+// plainMatchPipeStage keeps the pinned Match stage constructors contextual.
+// Running their generic function result through $run instantiates it before
+// pipe supplies its input, losing the matcher's remaining union and result.
+func (p *projector) plainMatchPipeStage(call *ast.Node, key string) bool {
+	switch key {
+	case "effect/Match#when", "effect/Match#orElse":
+		d := p.forms.Argument(call)
+		return d.Call != nil && d.Argument > 0 && len(d.Steps) == 0 && d.Callee.Canonical == "effect/Function#pipe"
+	}
+	return false
+}
