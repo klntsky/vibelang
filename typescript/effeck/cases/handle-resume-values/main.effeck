@@ -1,0 +1,197 @@
+// expect-result: {"statement":42,"expression":42,"override":"42 clause","normal":["body 1","undefined","clause done","after"],"breaks":["body 1","undefined","clause done","after"],"continues":["body 1","undefined","body 2","undefined","after"],"scoped":42,"inFinally":42,"withValue":42,"withError":"caught busy","record":{"kind":"return","value":"data"},"twiceStatements":["ContinuationAlreadyConsumed"],"twiceExpressions":["ContinuationAlreadyConsumed"],"events":["statement done","expression 42","scoped acquire","scoped 42","scoped release","finally 42","finally done","with 42","error caught busy","twice body true","twice first done","twice body true","twice first true"]}
+
+error Busy { message: string }
+
+control Ask {
+  answer(): number!Busy
+}
+
+control Once {
+  answer(): boolean!!
+}
+
+const events: string[] = []
+
+function statement() {
+  try {
+    return Ask.answer() + 1
+  } handle Ask.answer() {
+    resume(41)
+    events.push("statement done")
+  }
+}
+
+// The expression sees the body's value and fallthrough keeps its return.
+function expression() {
+  try {
+    return Ask.answer() + 1
+  } handle Ask.answer() {
+    const value = (resume(41))
+    events.push(`expression ${value}`)
+  }
+}
+
+// A clause return replaces the pending return, as in finally.
+function override() {
+  try {
+    return Ask.answer() + 1
+  } handle Ask.answer() {
+    return `${resume(41)} clause`
+  }
+}
+
+// Normal completion may have no record at all when no jump leaves the try.
+function normal() {
+  const steps: string[] = []
+  try {
+    steps.push(`body ${Ask.answer()}`)
+  } handle Ask.answer() {
+    steps.push(String(resume(1)))
+    steps.push("clause done")
+  }
+  steps.push("after")
+  return steps
+}
+
+function breaks() {
+  const steps: string[] = []
+  outer: for (;;) {
+    try {
+      steps.push(`body ${Ask.answer()}`)
+      break outer
+    } handle Ask.answer() {
+      steps.push(String(resume(1)))
+      steps.push("clause done")
+    }
+    steps.push("unreachable")
+  }
+  steps.push("after")
+  return steps
+}
+
+function continues() {
+  const steps: string[] = []
+  outer: for (let i = 1; i <= 2; i++) {
+    try {
+      steps.push(`body ${Ask.answer()}`)
+      continue outer
+    } handle Ask.answer() {
+      steps.push(String(resume(i)))
+    }
+    steps.push("unreachable")
+  }
+  steps.push("after")
+  return steps
+}
+
+function scoped() {
+  try {
+    return Ask.answer() + 1
+  } handle Ask.answer() {
+    using held = Effect.acquireRelease(() => {
+      events.push("scoped acquire")
+    }, () => {
+      events.push("scoped release")
+    })
+    const value = resume(41)
+    events.push(`scoped ${value}`)
+  }
+}
+
+function inFinally() {
+  try {
+    return Ask.answer() + 1
+  } handle Ask.answer() {
+    try {
+      const value = resume(41)
+      events.push(`finally ${value}`)
+    } finally {
+      events.push("finally done")
+    }
+  }
+}
+
+function withValue() {
+  try {
+    return Ask.answer() + 1
+  } handle Ask.answer() {
+    const value = resumeWith(() => 41)
+    events.push(`with ${value}`)
+  }
+}
+
+function withError() {
+  try {
+    try {
+      return String(Ask.answer())
+    } catch (e) {
+      return `caught ${e.message}`
+    }
+  } handle Ask.answer() {
+    const value = resumeWith(() => { throw new Busy({ message: "busy" }) })
+    events.push(`error ${value}`)
+  }
+}
+
+// User data that resembles a completion is unwrapped only once.
+function record() {
+  try {
+    Ask.answer()
+    return { kind: "return", value: "data" }
+  } handle Ask.answer() {
+    const value = resume(1)
+    return value
+  }
+}
+
+function twiceStatements() {
+  try {
+    const value = Once.answer()
+    events.push(`twice body ${value}`)
+    return value
+  } handle Once.answer() {
+    resume(true)
+    events.push("twice first done")
+    resume(false)
+  }
+}
+
+function twiceExpressions() {
+  try {
+    const value = Once.answer()
+    events.push(`twice body ${value}`)
+    return value
+  } handle Once.answer() {
+    const first = resume(true)
+    events.push(`twice first ${first}`)
+    const second = resume(false)
+    return second
+  }
+}
+
+function defects(result: Exit.Exit<unknown, unknown>) {
+  return Exit.isFailure(result)
+    ? result.cause.reasons.map((reason) => reason._tag === "Die"
+      ? (reason.defect as { _tag?: string })._tag
+      : reason._tag)
+    : ["Success"]
+}
+
+export function main() {
+  return {
+    statement: statement(),
+    expression: expression(),
+    override: override(),
+    normal: normal(),
+    breaks: breaks(),
+    continues: continues(),
+    scoped: scoped(),
+    inFinally: inFinally(),
+    withValue: withValue(),
+    withError: withError(),
+    record: record(),
+    twiceStatements: defects(Effect.exit(() => twiceStatements())),
+    twiceExpressions: defects(Effect.exit(() => twiceExpressions())),
+    events
+  }
+}

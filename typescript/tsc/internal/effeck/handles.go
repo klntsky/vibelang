@@ -49,7 +49,8 @@ import (
 //
 // A resume in tail position of the clause's own frame returns the kernel's
 // tail-resume request (D18). Any other resume stores what it returns, the
-// block's completion record, in a variable the clause returns at its end; a
+// block's completion record, in a variable the clause returns at its end,
+// and evaluates to the record's value (undefined for other completions). A
 // tail resume inside a region of the clause, such as a using block, does the
 // same and then breaks out of a block labeled $clause that holds the clause.
 
@@ -422,16 +423,18 @@ func (tx *lowering) pendingOf(state *clauseState) *ast.Node {
 	return state.pending
 }
 
-// visitClauseResume lowers a resume or resumeWith statement of a handle
-// clause that is not in tail position: it stores what the call returns, the
-// completion record of the block, for the clause's end.
+// visitClauseResume lowers any non-tail resume or resumeWith in a handle
+// clause to `(pending = yield* resume(...))?.value`. The clause keeps the
+// block's completion for its end, while the expression sees only its value.
+// A block with no outgoing jumps may return undefined instead of $normal.
 func (tx *lowering) visitClauseResume(node *ast.Node) *ast.Node {
 	f := tx.Factory()
-	run := tx.Visitor().VisitNode(node.Expression())
-	statement := f.NewExpressionStatement(f.NewAssignmentExpression(tx.pendingOf(tx.frame.handleClause), run))
-	tx.EmitContext().SetOriginal(statement, node)
-	statement.Loc = node.Loc
-	return statement
+	run := tx.visitRunningCall(node)
+	store := f.NewParenthesizedExpression(f.NewAssignmentExpression(tx.pendingOf(tx.frame.handleClause), run))
+	value := f.NewPropertyAccessExpression(store, f.NewToken(ast.KindQuestionDotToken), f.NewIdentifier("value"), ast.NodeFlagsOptionalChain)
+	tx.EmitContext().SetOriginal(value, node)
+	value.Loc = node.Loc
+	return value
 }
 
 // visitClauseResumeReturn lowers `return resume($k, value)`, a resume in
@@ -445,7 +448,7 @@ func (tx *lowering) visitClauseResumeReturn(node *ast.Node) *ast.Node {
 		return tx.visitTailResumeReturn(node)
 	}
 	f := tx.Factory()
-	store := f.NewExpressionStatement(f.NewAssignmentExpression(tx.pendingOf(state), tx.Visitor().VisitNode(node.Expression())))
+	store := f.NewExpressionStatement(f.NewAssignmentExpression(tx.pendingOf(state), tx.visitRunningCall(ast.SkipParentheses(node.Expression()))))
 	tx.EmitContext().SetOriginal(store, node)
 	store.Loc = node.Loc
 	state.labelled = true

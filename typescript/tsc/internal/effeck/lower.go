@@ -97,6 +97,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitScoped(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.values[node]:
 		return tx.visitEffectValueCall(node)
+	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.frame.handleClause != nil && tx.isClauseResume(node):
+		return tx.visitClauseResume(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):
 		return tx.visitRunningCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.trusted[node] != nil:
@@ -125,8 +127,6 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return nil // clauseFunction binds a handle clause's parameters itself
 	case tx.inEffect && tx.frame.handleClause != nil && node.Kind == ast.KindReturnStatement && tx.isClauseResume(node.Expression()):
 		return tx.visitClauseResumeReturn(node)
-	case tx.inEffect && tx.frame.handleClause != nil && node.Kind == ast.KindExpressionStatement && tx.isClauseResume(node.Expression()):
-		return tx.visitClauseResume(node)
 	case tx.inEffect && node.Kind == ast.KindThrowStatement:
 		return tx.visitThrowStatement(node)
 	case tx.inEffect && tx.frame.clause && node.Kind == ast.KindReturnStatement && tx.plan.tailResumeOf(node.Expression()) != nil:

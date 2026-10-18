@@ -1,0 +1,57 @@
+// expect-result: {"r1":"staging [production declined]","log":["before staging","clause staging","after staging true","before production","clause production","after production false","clause done production","clause done staging"],"deep":20000}
+// Fast calls under handlers, resumes in and out of tail position, a
+// continuation resumed twice, and deep recursion with a pausing leaf.
+import { Effect } from "effect"
+
+control Approval {
+  approve(request: string): boolean!!
+}
+
+const log: string[] = []
+
+function step(name: string) {
+  log.push(`before ${name}`)
+  const ok = Approval.approve(name)
+  log.push(`after ${name} ${ok}`)
+  return ok ? name : `[${name} declined]`
+}
+
+function pipeline() {
+  const a = step("staging")
+  const b = step("production")
+  return `${a} ${b}`
+}
+
+function nonTail() {
+  try {
+    return pipeline()
+  } handle Approval.approve(request) {
+    log.push(`clause ${request}`)
+    const r = resume(request !== "production")
+    log.push(`clause done ${request}`)
+    return r
+  }
+}
+
+function depth(n: number): number!infer E!infer R {
+  if (n === 0) {
+    Effect.sleep("1 millis")
+    return 0
+  }
+  return depth(n - 1) + 1
+}
+
+export function twice() {
+  try {
+    return step("x")
+  } handle Approval.approve(request) {
+    resume(true)
+    resume(false)
+  }
+}
+
+export function main() {
+  const r1 = nonTail()
+  const deep = depth(20000)
+  return { r1, log, deep }
+}

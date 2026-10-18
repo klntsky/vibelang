@@ -695,6 +695,13 @@ typescript/effeck/cases/handle-optional-args/main.effeck:14:17 lambda program ta
 typescript/effeck/cases/handle-optional-args/main.effeck:15:5 lambda effectFn table
 typescript/effeck/cases/handle-optional-args/main.effeck:22:17 lambda program table
 typescript/effeck/cases/handle-optional-args/main.effeck:23:5 lambda effectFn table
+typescript/effeck/cases/handle-resume-values/main.effeck:118:30 lambda program table
+typescript/effeck/cases/handle-resume-values/main.effeck:131:30 lambda program table
+typescript/effeck/cases/handle-resume-values/main.effeck:174:32 lambda plain fallback
+typescript/effeck/cases/handle-resume-values/main.effeck:193:42 lambda program table
+typescript/effeck/cases/handle-resume-values/main.effeck:194:43 lambda program table
+typescript/effeck/cases/handle-resume-values/main.effeck:91:40 lambda program table
+typescript/effeck/cases/handle-resume-values/main.effeck:93:8 lambda effectFn table
 typescript/effeck/cases/handlers/main.effeck:111:25 lambda program table
 typescript/effeck/cases/handlers/main.effeck:116:5 lambda effectFn table
 typescript/effeck/cases/handlers/main.effeck:117:43 lambda program table
