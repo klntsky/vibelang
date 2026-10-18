@@ -291,7 +291,7 @@ func (w *printer) jump(n *ast.Node, e env) {
 	}
 	if e.effect && e.frame.region != nil && !e.frame.lands(j) {
 		e.frame.region.add(j)
-		w.mark(editRecord, partOpen, "return "+helperRef("$jump")+"("+jsonString(jumpKind(j))+"); ")
+		w.mark(editRecord, partWhole, "return "+helperRef("$jump")+"("+jsonString(jumpKind(j))+"); ")
 		return
 	}
 	keyword := "break"

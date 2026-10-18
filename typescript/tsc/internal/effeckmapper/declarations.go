@@ -187,19 +187,48 @@ func (p *projector) serviceDeclaration(node *ast.Node) {
 		separator = " "
 	}
 	brand := separator + `readonly "~effeck/service"?: ` + strconv.Quote(key) + " }"
-	base := "$service"
+	base := "service"
 	if hasStaticDefault(node) {
-		base = "$reference"
+		base = "reference"
 	}
-	classHead := " " + strings.Join(append(kept, "abstract class "+name.Text()+" extends "+helperRef(base)+"<"+name.Text()+">("+strconv.Quote(key)+") {"), " ")
+	classHead := " " + strings.Join(append(kept, "abstract class "+name.Text()+" extends "), " ")
 	at := lastInstance.End()
 	p.plan.insert(at, brand+classHead)
+	// The key: $service<X>(key), or for a static default $reference, whose
+	// executable form passes () => X.default.
+	p.plan.markFields(editServiceBase, partWhole, at, at, base, key, name.Text())
+	p.plan.insert(at, " {")
 	if len(static) == 0 {
 		p.plan.replace(at, closing, "")
 	}
 	for _, member := range static {
 		p.visit(member, env{})
 	}
+	if isControlClass(node) {
+		// A control registers its operations with the kernel (D2): the
+		// executable rendering writes $control(X, operations, arities).
+		fields := []string{name.Text()}
+		for _, member := range members {
+			if ast.IsStatic(member) || !ast.IsMethodDeclaration(member) || member.Name() == nil {
+				continue
+			}
+			arity := strconv.Itoa(len(member.Parameters()))
+			for _, parameter := range member.Parameters() {
+				if parameter.AsParameterDeclaration().DotDotDotToken != nil {
+					arity = "-1"
+				}
+			}
+			fields = append(fields, member.Name().Text(), arity)
+		}
+		p.plan.markFields(editControl, partWhole, node.End(), node.End(), fields...)
+	}
+}
+
+// isControlClass reports whether class, a service class, declares a
+// control: it extends Control, written or written as the control keyword.
+func isControlClass(class *ast.Node) bool {
+	extends := ast.GetClassExtendsHeritageElement(class)
+	return extends != nil && ast.IsIdentifier(extends.Expression()) && extends.Expression().Text() == "Control"
 }
 
 // isServiceKeywordClass reports whether node is a service or control

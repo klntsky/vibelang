@@ -2,6 +2,8 @@ package effeckmapper
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -333,6 +335,18 @@ func TestUnprojectedForm(t *testing.T) {
 	assertValidMap(t, projection, source)
 }
 
+// TestVarInRegion checks that a var in a region's block draws EK9001, since
+// the block's generator would hide it from the code after the region.
+func TestVarInRegion(t *testing.T) {
+	t.Parallel()
+	source := "function f() {\n  try {\n    var x = g(1)\n  } finally {\n    h(2)\n  }\n  return x\n}\n"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 1)
+	d := projection.Diagnostics[0]
+	assert.Equal(t, d.Code, int32(CodeUnprojectedForm))
+	assert.Equal(t, source[d.Start:d.Start+d.Length], "var")
+}
+
 // TestFormChoice checks that a lambda whose form the rules cannot decide
 // draws EK9100 at the lambda, with the resolver's message, and still lowers
 // the default's guess.
@@ -356,6 +370,78 @@ func TestProjectionIsDeterministic(t *testing.T) {
 		first, second := Project(c.source, testContext), Project(c.source, testContext)
 		assert.DeepEqual(t, first, second)
 	}
+}
+
+// TestPlanPairs checks that every construct a golden's plan opens, it
+// closes, and that each open, middle, and close shares one pair id.
+func TestPlanPairs(t *testing.T) {
+	t.Parallel()
+	for _, c := range projectionCases {
+		p := lower(c.source, testContext)
+		assert.Assert(t, len(p.plan.unclosed()) == 0, "%s: unclosed %v", c.name, p.plan.unclosed())
+		parts := map[int][]part{}
+		for _, e := range p.plan.edits {
+			if e.pair != 0 {
+				parts[e.pair] = append(parts[e.pair], e.part)
+			}
+		}
+		for id, ps := range parts {
+			assert.Assert(t, ps[0] == partOpen && ps[len(ps)-1] == partClose, "%s: pair %d has parts %v", c.name, id, ps)
+		}
+	}
+}
+
+// TestCorpusPlans lowers every .effeck file of the case corpus and the
+// examples: each must close every construct it opens and render without
+// overlapping edits, which would pass the file through unchanged.
+func TestCorpusPlans(t *testing.T) {
+	t.Parallel()
+	var files []string
+	for _, pattern := range []string{"../../../effeck/cases/*/*.effeck", "../../../../examples/*/src/*.effeck"} {
+		matches, err := filepath.Glob(pattern)
+		assert.NilError(t, err)
+		files = append(files, matches...)
+	}
+	if len(files) == 0 {
+		t.Skip("no corpus beside this checkout")
+	}
+	for _, name := range files {
+		text, err := os.ReadFile(name)
+		assert.NilError(t, err)
+		p := lower(string(text), testContext)
+		assert.Assert(t, len(p.plan.unclosed()) == 0, "%s: unclosed %v", name, p.plan.unclosed())
+		_, _, overlap, ok := p.plan.render(checking{names: p.names}, string(text), func() string { return "" })
+		assert.Assert(t, ok, "%s: overlapping edits at %d", name, overlap)
+	}
+}
+
+// TestExecutableEdits checks the edits the plan carries for the executable
+// rendering: a service's base, a control's registration, which only the
+// executable rendering writes, and a block that is a Scope region of its own.
+func TestExecutableEdits(t *testing.T) {
+	t.Parallel()
+	source := "control Approval { approve(request: string, ...notes: string[]): boolean!! }\nabstract class Flags { abstract readonly beta: boolean; static readonly default: Flags = { beta: true } }\nfunction f() {\n  g(1)\n  {\n    using r = acquire()\n  }\n}\n"
+	p := lower(source, testContext)
+	var bases, controls [][]string
+	scopes := 0
+	for _, e := range p.plan.edits {
+		switch e.kind {
+		case editServiceBase:
+			bases = append(bases, e.fields)
+		case editControl:
+			controls = append(controls, e.fields)
+		case editScopeRegion:
+			if e.part == partOpen {
+				assert.Equal(t, source[e.pos], byte('{'))
+			} else {
+				assert.Equal(t, source[e.pos-1], byte('}'))
+			}
+			scopes++
+		}
+	}
+	assert.DeepEqual(t, bases, [][]string{{"service", "app/src/main#Approval", "Approval"}, {"reference", "app/src/main#Flags", "Flags"}})
+	assert.DeepEqual(t, controls, [][]string{{"Approval", "approve", "-1"}})
+	assert.Equal(t, scopes, 2) // the inner block's open and close, not the function body's
 }
 
 // TestExecutableRendering checks that the executable rendering drops

@@ -16,7 +16,7 @@
 import type * as EffectModule from "effect/Effect"
 import type * as ScopeModule from "effect/Scope"
 import type * as StreamModule from "effect/Stream"
-import type { Cause, Config, Context, Exit } from "effect"
+import type { Cause, Config, Context } from "effect"
 import type * as Runtime from "effeck-runtime"
 
 // ---------------------------------------------------------------- prelude names
@@ -71,6 +71,14 @@ export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from 
  */
 export declare function $acquire<A, E, R>(acquisition: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, Exclude<R, ScopeModule.Scope>>
 export declare function $acquire<T>(value: T): EffectModule.Effect<T, never, never>
+
+/**
+ * A block that holds a using or a fork (D14, D19) runs as a region under
+ * $scopedBody, whose Scope ends with the block; it is Effect.scoped at run
+ * time. In types it is the identity: $acquire and $scoped already remove
+ * Scope from what they add to R.
+ */
+export declare function $scopedBody<A, E, R>(program: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R>
 
 /** A fork in a block (D19, D96): the block's Scope owns the fiber, so Scope leaves R. */
 export declare function $scoped<A, E, R>(fork: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, Exclude<R, ScopeModule.Scope>>
@@ -135,10 +143,14 @@ export declare function $gen<Self, Eff extends AnyEffect, AEff>(
 ): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
 
 /**
- * Effect subtypes that a call gives as data, not runs (D24): a Config, an
- * Exit, a Context key, and a yieldable error are Effects to TypeScript.
+ * Effect subtypes that a call gives as data, not runs (L3): a Config, a
+ * Context key, and a yieldable error are Effects to TypeScript, and the run
+ * time check tells them apart by key. An Exit is an Effect at run time with
+ * no key of its own (Exit.succeed(1) and Effect.succeed(1) are the same kind
+ * of object), so a call that returns one runs, as the executable rendering
+ * runs it.
  */
-type DataEffect = Config.Config<any> | Exit.Exit<any, any> | Context.Key<any, any> | Cause.YieldableError
+type DataEffect = Config.Config<any> | Context.Key<any, any> | Cause.YieldableError
 
 /** The members of T that run: Effects that are not data subtypes. */
 type Running<T> = Extract<Exclude<T, DataEffect>, AnyEffect>

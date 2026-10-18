@@ -8,6 +8,8 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+	"strconv"
+	"sync"
 
 	"github.com/microsoft/TypeScript/tsc/internal/contentmapper"
 	"github.com/microsoft/TypeScript/tsc/internal/ipc"
@@ -28,34 +30,57 @@ const VirtualExtension = ".ts"
 // the connection handles each in its own goroutine; Project shares no state
 // between calls, so transforms run in parallel.
 func Serve(ctx context.Context, rwc io.ReadWriteCloser) error {
-	return ipc.NewAsyncConn(rwc, Handler{}).Run(ctx)
+	return ipc.NewAsyncConn(rwc, &Handler{}).Run(ctx)
 }
 
 // Handler implements the content mapper protocol: initialize, openProject,
-// transform and closeProject. The protocol is driven by TypeScript alone,
-// and the mapper keeps no per-project state: a projection depends only on
-// its file's text and context (FileContextOf), which reads package.json
-// files that openProject reports as watched.
-type Handler struct{}
+// transform and closeProject. The protocol is driven by TypeScript alone. A
+// projection depends only on its file's text and context (FileContextOf),
+// which reads package.json files that openProject reports as watched, and
+// on the options of the mapper's tsconfig entry, which openProject records
+// per project handle.
+type Handler struct {
+	mu       sync.Mutex
+	projects map[string]Options
+}
+
+// Options are the mapper entry's options in a project's tsconfig:
+//
+//	"contentMappers": [{ "package": "effeck-ts-mapper", "extensions": [".effeck"], "options": { "tracing": "all" } }]
+//
+// TypeScript folds them into the transform identity, so changing one
+// projects every file again.
+type Options struct {
+	// Tracing is the fork's compilerOptions.effeck.tracing (D34):
+	// "exported", "all", or "" for none. Only the executable rendering
+	// reads it; spans change no type.
+	Tracing string `json:"tracing,omitempty"`
+}
 
 // HandleRequest answers one protocol request.
-func (Handler) HandleRequest(ctx context.Context, method string, params json.Value) (any, error) {
+func (h *Handler) HandleRequest(ctx context.Context, method string, params json.Value) (any, error) {
 	switch method {
 	case contentmapper.MethodInitialize:
 		return initialize(params)
 	case contentmapper.MethodOpenProject:
-		return openProject(params)
+		return h.openProject(params)
 	case contentmapper.MethodCloseProject:
+		var p contentmapper.CloseProjectParams
+		if err := json.Unmarshal(params, &p); err == nil {
+			h.mu.Lock()
+			delete(h.projects, p.ProjectHandle)
+			h.mu.Unlock()
+		}
 		return nil, nil
 	case contentmapper.MethodTransform:
-		return transform(params)
+		return h.transform(params)
 	default:
 		return nil, fmt.Errorf("effeck-mapper: unknown method %q", method)
 	}
 }
 
 // HandleNotification ignores notifications; the protocol defines none.
-func (Handler) HandleNotification(ctx context.Context, method string, params json.Value) error {
+func (*Handler) HandleNotification(ctx context.Context, method string, params json.Value) error {
 	return nil
 }
 
@@ -78,16 +103,38 @@ func initialize(params json.Value) (any, error) {
 // openProject reports the package.json files whose names enter the
 // project's module keys as watched files (the manifest declares
 // dynamicConfig), with an identity of their names, so a renamed package
-// invalidates every projection of the project. It also reports EK9002 when
+// invalidates every projection of the project. It also reports EK9004 when
 // the project installs another version of effect or of an @effect package
 // than the forms table was generated from (versionMismatch).
-func openProject(params json.Value) (any, error) {
+func (h *Handler) openProject(params json.Value) (any, error) {
 	var p contentmapper.OpenProjectParams
 	if err := json.Unmarshal(params, &p); err != nil {
 		return nil, err
 	}
 	files, identity := projectPackageFiles(p.ConfigFileName)
 	result := contentmapper.OpenProjectResult{ConfigIdentity: identity, WatchedFiles: files}
+	var options Options
+	if len(p.Options) > 0 && json.Unmarshal(p.Options, &options) != nil {
+		result.OptionDiagnostics = append(result.OptionDiagnostics, contentmapper.OptionDiagnosticResult{
+			Path: []json.Value{}, MessageText: "effeck-ts-mapper's options are an object: { \"tracing\": \"exported\" | \"all\" }.", Code: CodeInvalidOption,
+		})
+	}
+	switch options.Tracing {
+	case "", "exported", "all":
+	default:
+		result.OptionDiagnostics = append(result.OptionDiagnostics, contentmapper.OptionDiagnosticResult{
+			Path:        []json.Value{json.Value(`"tracing"`)},
+			MessageText: "tracing is \"exported\" or \"all\" (D34), not " + strconv.Quote(options.Tracing) + ".",
+			Code:        CodeInvalidOption,
+		})
+		options.Tracing = ""
+	}
+	h.mu.Lock()
+	if h.projects == nil {
+		h.projects = map[string]Options{}
+	}
+	h.projects[p.ProjectHandle] = options
+	h.mu.Unlock()
 	if table, err := DefaultTable(); err == nil && p.ConfigFileName != "" {
 		dir := path.Dir(filepath.ToSlash(p.ConfigFileName))
 		if message := versionMismatch(table.Header, dir, os.ReadFile); message != "" {
@@ -102,14 +149,18 @@ func openProject(params json.Value) (any, error) {
 	return result, nil
 }
 
-// transform projects one file from its content and its context; the project
-// handle does not change the result.
-func transform(params json.Value) (any, error) {
+// transform projects one file from its content and its context, with the
+// options its project's tsconfig entry gives.
+func (h *Handler) transform(params json.Value) (any, error) {
 	var p contentmapper.TransformParams
 	if err := json.Unmarshal(params, &p); err != nil {
 		return nil, err
 	}
-	return TransformResult(Project(p.Content, FileContextOf(p.FileName)))
+	ctx := FileContextOf(p.FileName)
+	h.mu.Lock()
+	ctx.Tracing = h.projects[p.ProjectHandle].Tracing
+	h.mu.Unlock()
+	return TransformResult(Project(p.Content, ctx))
 }
 
 // TransformResult encodes projection as the protocol's transform result.

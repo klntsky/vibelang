@@ -58,8 +58,12 @@ const (
 	// CodeUnprojectedForm marks Effeck syntax the projector does not lower yet.
 	CodeUnprojectedForm = 9001
 	// CodeVersionMismatch marks a project whose effect or @effect packages
-	// differ from the versions the forms table pins (module.go).
-	CodeVersionMismatch = 9002
+	// differ from the versions the forms table pins (module.go). (9002 is
+	// CodeExecSyntax, emit.go.)
+	CodeVersionMismatch = 9004
+	// CodeInvalidOption marks an invalid option of the mapper's tsconfig
+	// entry (server.go, Options).
+	CodeInvalidOption = 9003
 )
 
 // projectedFileName is the name the parser sees. The parser reads Effeck
@@ -75,6 +79,10 @@ type FileContext struct {
 	// declares, as the fork computes it (module.go): "app/src/users" for
 	// src/users.effeck in the package app.
 	ModuleKey string
+	// Tracing is the project's tracing mode (D34, Options): "exported",
+	// "all", or "". Spans change no type, so only the executable
+	// rendering reads it.
+	Tracing string
 }
 
 // Projection is the virtual TypeScript for one .effeck file.
@@ -149,6 +157,27 @@ type projector struct {
 // text it cannot lower passes through verbatim, and Effeck syntax it does not
 // lower yet draws an EK9001 diagnostic.
 func Project(text string, ctx FileContext) Projection {
+	p := lower(text, ctx)
+	out, segments, overlap, ok := p.plan.render(checking{names: p.names}, text, p.names.importLine)
+	if !ok {
+		// Overlapping edits are a projector bug; pass the file through
+		// unchanged rather than send TypeScript a broken map.
+		var verbatim plan
+		out, segments, _, _ = verbatim.render(checking{names: p.names}, text, func() string { return "" })
+		p.diagnostics = append(p.diagnostics, Diagnostic{
+			Start:   overlap,
+			Code:    CodeUnprojectedForm,
+			Message: "The TypeScript 7 mapper produced overlapping edits here; the file is passed through unchanged.",
+		})
+	}
+	return Projection{Text: out, Segments: segments, Diagnostics: p.diagnostics}
+}
+
+// lower parses text and walks it in context ctx, recording the lowering
+// plan that both renderings share: Project renders it for checking, and the
+// executable rendering (emit) renders the same plan. It is the one place the
+// walk is set up, so the two renderings never see different plans.
+func lower(text string, ctx FileContext) *projector {
 	file := parser.ParseSourceFile(ast.SourceFileParseOptions{FileName: projectedFileName}, text, core.ScriptKindTS)
 	p := &projector{
 		file:            file,
@@ -174,19 +203,7 @@ func Project(text string, ctx FileContext) Projection {
 		p.statement = statement
 		p.visit(statement, env{})
 	}
-	out, segments, overlap, ok := p.plan.render(checking{names: p.names}, text, p.names.importLine)
-	if !ok {
-		// Overlapping edits are a projector bug; pass the file through
-		// unchanged rather than send TypeScript a broken map.
-		var verbatim plan
-		out, segments, _, _ = verbatim.render(checking{names: p.names}, text, func() string { return "" })
-		p.diagnostics = append(p.diagnostics, Diagnostic{
-			Start:   overlap,
-			Code:    CodeUnprojectedForm,
-			Message: "The TypeScript 7 mapper produced overlapping edits here; the file is passed through unchanged.",
-		})
-	}
-	return Projection{Text: out, Segments: segments, Diagnostics: p.diagnostics}
+	return p
 }
 
 // visit walks node and records the edits that lower it.
@@ -252,6 +269,19 @@ func (p *projector) visit(node *ast.Node, e env) {
 		case node.Kind == ast.KindReturnStatement && e.frame.region != nil:
 			p.returnStatement(node, e)
 			return
+		case node.Kind == ast.KindVariableStatement && e.frame.region != nil &&
+			node.AsVariableStatement().DeclarationList.Flags&ast.NodeFlagsBlockScoped == 0:
+			// A var in a region's block is local to the block's generator, so
+			// the code after the region would not see it.
+			start := p.tokenStart(node)
+			p.diagnostics = append(p.diagnostics, Diagnostic{
+				Start:   start,
+				Length:  len("var"),
+				Code:    CodeUnprojectedForm,
+				Message: "The TypeScript 7 mapper does not lower var inside a try, handle, provide, or using block: the block runs in a function of its own, so code after the block would not see the variable. Declare it with let before the block.",
+			})
+			p.visitChildren(node, e)
+			return
 		case node.Kind == ast.KindReturnStatement && p.isCompletionReturn(node):
 			// A do expression's completion value, which the parser returns.
 			p.plan.insert(p.tokenStart(node.Expression()), "return ")
@@ -283,6 +313,10 @@ func (p *projector) visit(node *ast.Node, e env) {
 			return
 		case isUsingDeclaration(node):
 			p.usingDeclaration(node, e)
+			return
+		case node.Kind == ast.KindBlock && node.Flags&ast.NodeFlagsEffeck == 0 && maskWord(node) == "" && !e.producer &&
+			p.holdsScope(node.Statements()):
+			p.scopeBlock(node, e)
 			return
 		}
 		switch node.Kind {
@@ -628,7 +662,12 @@ func (p *projector) isBlockFork(call *ast.Node, e env) bool {
 	if e.frame == nil || e.frame.expression || !ast.IsIdentifier(callee) || callee.Text() != "fork" {
 		return false
 	}
-	// The prelude's fork, or the runtime's imported by name.
+	return p.isPreludeFork()
+}
+
+// isPreludeFork reports whether the name fork means the prelude's fork in
+// this file, or the runtime's imported by name.
+func (p *projector) isPreludeFork() bool {
 	if from, ok := p.names.importedFrom["fork"]; ok {
 		return from == "effeck-runtime" && p.names.declarations["fork"] == 1
 	}

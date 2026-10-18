@@ -69,7 +69,7 @@ func (p *projector) yieldExpression(node *ast.Node, e env) {
 	}
 	if expression == nil {
 		// yield emits undefined.
-		p.plan.mark(editEmit, partOpen, node.End(), node.End(), "undefined")
+		p.plan.mark(editEmit, partWhole, node.End(), node.End(), "undefined")
 		return
 	}
 	start := p.tokenStart(expression)

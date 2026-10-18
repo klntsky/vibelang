@@ -41,6 +41,9 @@ type region struct {
 	// tail reports that the region's statement ends its Effect function's
 	// own body (isTailRegion).
 	tail bool
+	// labeled reports that a label marks the region's statement, which then
+	// projects to a block.
+	labeled bool
 }
 
 // isTailRegion reports whether node, a region statement, is the last
@@ -179,16 +182,22 @@ func (p *projector) jumpStatement(node *ast.Node, e env) {
 		return
 	}
 	e.frame.region.add(j)
-	p.plan.markText(editRecord, partOpen, p.tokenStart(node), node.End(), "return "+helperRef("$jump")+"("+strconv.Quote(jumpKind(j))+")")
+	p.plan.markText(editRecord, partWhole, p.tokenStart(node), node.End(), "return "+helperRef("$jump")+"("+strconv.Quote(jumpKind(j))+")")
 }
 
 // openRegion returns the text that starts a region statement whose record
-// is held in name, or "" when no jump leaves r: `const $c = yield* `.
+// is held in name, or "" when no jump leaves r: `const $c = yield* `. A
+// region statement a label marks is a block, since a declaration cannot be
+// labeled: `label: { const $c = ...; dispatch }`.
 func openRegion(r *region, name string) string {
-	if len(r.jumps) == 0 {
-		return "yield* "
+	open := "yield* "
+	if len(r.jumps) > 0 {
+		open = "const " + name + " = yield* "
 	}
-	return "const " + name + " = yield* "
+	if r.labeled {
+		open = "{ " + open
+	}
+	return open
 }
 
 // dispatch returns the statements that act on the completion in name
@@ -197,6 +206,16 @@ func openRegion(r *region, name string) string {
 // completion. When the statement cannot end normally, the last one is
 // unconditional.
 func (p *projector) dispatch(r *region, name string, normal bool, e env) string {
+	text := p.dispatchStatements(r, name, normal, e)
+	if r.labeled {
+		text += " }"
+	}
+	return text
+}
+
+// dispatchStatements returns dispatch's statements, before any closing
+// brace of a labeled region statement.
+func (p *projector) dispatchStatements(r *region, name string, normal bool, e env) string {
 	if r.tail {
 		normal = false
 	}
@@ -247,7 +266,7 @@ func (p *projector) regionBlock(block *ast.Node, statements []*ast.Node, r *regi
 	closing := block.End() - 1
 	return normal, func() {
 		if normal && len(r.jumps) > 0 && !r.tail && closing >= 0 && p.text[closing] == '}' {
-			p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
+			p.plan.markText(editRecord, partWhole, closing, closing, "; return "+helperRef("$end")+" ")
 		}
 	}
 }
@@ -267,13 +286,24 @@ func (p *projector) freshCompletion() string {
 	}
 }
 
-// generatorOpen is the program edit text that opens a region block's
-// generator, with this passed in when the block refers to it.
-func generatorOpen(block *ast.Node) string {
-	if usesThis(block) {
-		return helperRef("$gen") + "({ self: this }, function* () "
+// generatorOpen is the text that opens a region block's generator, with
+// this passed in when the block refers to it. A block whose own statements
+// hold a using or a fork the block owns runs under $scopedBody, so its
+// Scope ends with it (scopeBlock); generatorClose closes what this opens.
+func (p *projector) generatorOpen(block *ast.Node) string {
+	open := helperRef("$gen") + "(" + selfPrefix(block) + "function* () "
+	if p.holdsScope(block.Statements()) {
+		open = helperRef("$scopedBody") + "(" + open
 	}
-	return helperRef("$gen") + "(function* () "
+	return open
+}
+
+// generatorClose closes what generatorOpen opened for block.
+func (p *projector) generatorClose(block *ast.Node) string {
+	if p.holdsScope(block.Statements()) {
+		return "))"
+	}
+	return ")"
 }
 
 // tryStatement lowers a try statement in an Effect body to its region:
@@ -291,9 +321,24 @@ func (p *projector) tryStatement(node *ast.Node, e env) {
 			return
 		}
 	}
-	r := &region{tail: isTailRegion(node, e)}
+	r := &region{tail: isTailRegion(node, e), labeled: node.Parent != nil && node.Parent.Kind == ast.KindLabeledStatement}
 	name := p.freshCompletion()
+	// Reserved first: a handle statement followed by catch or finally is
+	// the try block itself, and its own edits start at the same position.
+	opening := p.plan.reserve(editRegion, partOpen, p.tokenStart(node), p.tokenStart(tryBlock))
+	// The try block of `try { } handle ... catch` is the handle statement,
+	// with no braces of its own; its generator gets them.
+	synthetic := p.text[p.tokenStart(tryBlock)] != '{'
 	tryNormal, closeTry := p.regionBlock(tryBlock, tryBlock.Statements(), r, e)
+	if synthetic {
+		closeTry = func() {
+			text := " }"
+			if tryNormal && len(r.jumps) > 0 && !r.tail {
+				text = "; return " + helperRef("$end") + " }"
+			}
+			p.plan.markText(editRecord, partWhole, tryBlock.End(), tryBlock.End(), text)
+		}
+	}
 	normal := tryNormal
 	var closeCatch, closeFinally func()
 	var catchBlock *ast.Node
@@ -333,36 +378,50 @@ func (p *projector) tryStatement(node *ast.Node, e env) {
 	if catch != nil {
 		open += helperRef("$catch") + "("
 	}
-	p.plan.markText(editRegion, partOpen, p.tokenStart(node), p.tokenStart(tryBlock), open+generatorOpen(tryBlock))
+	if synthetic {
+		open += p.generatorOpen(tryBlock) + "{ "
+	} else {
+		open += p.generatorOpen(tryBlock)
+	}
+	p.plan.edits[opening].text = open
 	after := tryBlock.End()
 	if catch != nil {
 		clause := catch.AsCatchClause()
 		if variable := clause.VariableDeclaration; variable != nil {
-			p.plan.markText(editRegion, partMiddle, after, p.tokenStart(variable), "), (")
+			p.plan.markText(editRegion, partMiddle, after, p.tokenStart(variable), p.generatorClose(tryBlock)+", (")
 			p.visit(variable, env{})
-			p.plan.markText(editRegion, partMiddle, variable.End(), p.tokenStart(catchBlock), ") => "+generatorOpen(catchBlock))
+			p.plan.markText(editRegion, partMiddle, variable.End(), p.tokenStart(catchBlock), ") => "+p.generatorOpen(catchBlock))
 		} else {
-			p.plan.markText(editRegion, partMiddle, after, p.tokenStart(catchBlock), "), () => "+generatorOpen(catchBlock))
+			p.plan.markText(editRegion, partMiddle, after, p.tokenStart(catchBlock), p.generatorClose(tryBlock)+", () => "+p.generatorOpen(catchBlock))
 		}
 		after = catchBlock.End()
-		p.plan.markText(editRegion, partMiddle, after, after, "))")
+		p.plan.markText(editRegion, closeUnless(finally != nil), after, after, p.generatorClose(catchBlock)+")")
 	} else {
-		p.plan.markText(editRegion, partMiddle, after, after, ")")
+		p.plan.markText(editRegion, closeUnless(finally != nil), after, after, p.generatorClose(tryBlock))
 	}
 	if finally != nil && exit != nil {
 		// finally (exit) { ... }: the finalizer receives the try's Exit.
 		brace := p.braceAfter(exit.End())
 		p.plan.markText(editRegion, partMiddle, after, p.tokenStart(exit), ", (")
 		p.visit(exit, env{})
-		p.plan.markText(editRegion, partMiddle, exit.End(), brace, ") => "+generatorOpen(finally))
+		p.plan.markText(editRegion, partMiddle, exit.End(), brace, ") => "+p.generatorOpen(finally))
 		after = finally.End()
-		p.plan.markText(editRegion, partMiddle, after, after, "))")
+		p.plan.markText(editRegion, partClose, after, after, p.generatorClose(finally)+")")
 	} else if finally != nil {
-		p.plan.markText(editRegion, partMiddle, after, p.tokenStart(finally), ", "+generatorOpen(finally))
+		p.plan.markText(editRegion, partMiddle, after, p.tokenStart(finally), ", "+p.generatorOpen(finally))
 		after = finally.End()
-		p.plan.markText(editRegion, partMiddle, after, after, "))")
+		p.plan.markText(editRegion, partClose, after, after, p.generatorClose(finally)+")")
 	}
-	p.plan.markText(editDispatch, partClose, after, after, p.dispatch(r, name, normal, e))
+	p.plan.markText(editDispatch, partWhole, after, after, p.dispatch(r, name, normal, e))
+}
+
+// closeUnless returns partMiddle when more of the construct follows, and
+// partClose when this edit ends it.
+func closeUnless(more bool) part {
+	if more {
+		return partMiddle
+	}
+	return partClose
 }
 
 // isProvideBlock reports whether node is a provide block (D130, D172): a
@@ -403,13 +462,13 @@ func (p *projector) provideBlock(node *ast.Node, e env) {
 		p.unprojected(node)
 		return
 	}
-	r := &region{tail: isTailRegion(node, e)}
+	r := &region{tail: isTailRegion(node, e), labeled: node.Parent != nil && node.Parent.Kind == ast.KindLabeledStatement}
 	name := p.freshCompletion()
 	body := statements[1:]
 	p.visitList(body, regionEnv(r, e))
 	normal := canCompleteNormally(body)
 	if normal && len(r.jumps) > 0 && !r.tail {
-		p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
+		p.plan.markText(editRecord, partWhole, closing, closing, "; return "+helperRef("$end")+" ")
 	}
 
 	open := openRegion(r, name) + p.names.prelude("Effect") + ".provide("
@@ -427,9 +486,9 @@ func (p *projector) provideBlock(node *ast.Node, e env) {
 	if array {
 		middle = "])("
 	}
-	p.plan.markText(editRegion, partMiddle, p.lastTokenEnd(last), brace, middle+generatorOpen(node))
-	p.plan.markText(editRegion, partClose, node.End(), node.End(), "))")
-	p.plan.markText(editDispatch, partClose, node.End(), node.End(), p.dispatch(r, name, normal, e))
+	p.plan.markText(editRegion, partMiddle, p.lastTokenEnd(last), brace, middle+p.generatorOpen(node))
+	p.plan.markText(editRegion, partClose, node.End(), node.End(), p.generatorClose(node)+")")
+	p.plan.markText(editDispatch, partWhole, node.End(), node.End(), p.dispatch(r, name, normal, e))
 }
 
 // isWrittenArray reports whether array, an array literal of providers, is
@@ -618,7 +677,7 @@ func (p *projector) handleStatement(node *ast.Node, e env) {
 		p.unprojected(node)
 		return
 	}
-	r := &region{tail: isTailRegion(node, e)}
+	r := &region{tail: isTailRegion(node, e), labeled: node.Parent != nil && node.Parent.Kind == ast.KindLabeledStatement}
 	name := p.freshCompletion()
 	k := p.freshWord("$k")
 	var closers []func()
@@ -642,7 +701,7 @@ func (p *projector) handleStatement(node *ast.Node, e env) {
 			normal = normal || clauseNormal
 			closers = append(closers, func() {
 				if clauseNormal && len(r.jumps) > 0 && !r.tail {
-					p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
+					p.plan.markText(editRecord, partWhole, closing, closing, "; return "+helperRef("$end")+" ")
 				}
 			})
 		}
@@ -651,9 +710,9 @@ func (p *projector) handleStatement(node *ast.Node, e env) {
 		closer()
 	}
 	open := openRegion(r, name) + strings.Repeat(helperRef("handle")+"(", len(groups))
-	p.plan.markText(editRegion, partOpen, p.tokenStart(node), p.tokenStart(body), open+generatorOpen(body))
-	p.plan.markText(editRegion, partMiddle, body.End(), body.End(), ")")
-	for _, group := range groups {
+	p.plan.markText(editRegion, partOpen, p.tokenStart(node), p.tokenStart(body), open+p.generatorOpen(body))
+	p.plan.markText(editRegion, partMiddle, body.End(), body.End(), p.generatorClose(body))
+	for g, group := range groups {
 		for i, clause := range group.clauses {
 			handleKeyword := p.tokenStart(clause.block)
 			operation := clause.operation
@@ -674,23 +733,23 @@ func (p *projector) handleStatement(node *ast.Node, e env) {
 				}
 			}
 			if len(params) == 0 {
-				p.plan.markText(editRegion, partMiddle, member.End(), b.open, ": ("+k+") => "+generatorOpen(clause.block))
+				p.plan.markText(editRegion, partMiddle, member.End(), b.open, ": ("+k+") => "+p.generatorOpen(clause.block))
 			} else {
 				p.plan.markText(editRegion, partMiddle, member.End(), p.tokenStart(params[0]), ": (")
 				for _, parameter := range params {
 					p.visit(parameter, env{})
 				}
-				p.plan.markText(editRegion, partMiddle, params[len(params)-1].End(), b.open, ", "+k+") => "+generatorOpen(clause.block))
+				p.plan.markText(editRegion, partMiddle, params[len(params)-1].End(), b.open, ", "+k+") => "+p.generatorOpen(clause.block))
 			}
-			separator := ")"
+			separator := p.generatorClose(clause.block)
 			if i == len(group.clauses)-1 {
-				separator = ") })"
+				separator += " })"
 			}
-			p.plan.markText(editRegion, partMiddle, b.close+1, b.close+1, separator)
+			p.plan.markText(editRegion, closeUnless(g < len(groups)-1 || i < len(group.clauses)-1), b.close+1, b.close+1, separator)
 		}
 	}
 	end := node.End()
-	p.plan.markText(editDispatch, partClose, end, end, p.dispatch(r, name, normal, e))
+	p.plan.markText(editDispatch, partWhole, end, end, p.dispatch(r, name, normal, e))
 }
 
 // clauseBodyBrace returns the position of the { that opens a handle
@@ -876,17 +935,17 @@ func (p *projector) maskBlock(node *ast.Node, word string, e env) {
 		p.unprojected(node)
 		return
 	}
-	r := &region{tail: isTailRegion(node, e)}
+	r := &region{tail: isTailRegion(node, e), labeled: node.Parent != nil && node.Parent.Kind == ast.KindLabeledStatement}
 	name := p.freshCompletion()
 	body := node.Statements()[1:]
 	p.visitList(body, regionEnv(r, e))
 	normal := canCompleteNormally(body)
 	if normal && len(r.jumps) > 0 && !r.tail {
-		p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
+		p.plan.markText(editRecord, partWhole, closing, closing, "; return "+helperRef("$end")+" ")
 	}
-	p.plan.markText(editRegion, partOpen, start, brace, openRegion(r, name)+p.names.prelude(word)+"("+generatorOpen(node))
-	p.plan.markText(editRegion, partClose, node.End(), node.End(), "))")
-	p.plan.markText(editDispatch, partClose, node.End(), node.End(), p.dispatch(r, name, normal, e))
+	p.plan.markText(editRegion, partOpen, start, brace, openRegion(r, name)+p.names.prelude(word)+"("+p.generatorOpen(node))
+	p.plan.markText(editRegion, partClose, node.End(), node.End(), p.generatorClose(node)+")")
+	p.plan.markText(editDispatch, partWhole, node.End(), node.End(), p.dispatch(r, name, normal, e))
 }
 
 // exitBinding returns the name a `finally (exit)` block binds (D178): the
@@ -906,4 +965,70 @@ func exitBinding(finally *ast.Node) *ast.Node {
 		return nil
 	}
 	return declarations[0].Name()
+}
+
+// scopeBlock lowers a block of an Effect body whose own statements hold a
+// using declaration or a fork the block owns (D14, D19) to a region of its
+// own under $scopedBody, Effect.scoped at run time: the block's Scope holds
+// its acquisitions and fibers, which it releases when the block ends, and a
+// return, break, or continue that leaves it completes the region. In types
+// $scopedBody is the identity, since $acquire and $scoped already remove
+// Scope from what they add to R.
+func (p *projector) scopeBlock(node *ast.Node, e env) {
+	start := p.tokenStart(node)
+	closing := node.End() - 1
+	if start >= len(p.text) || p.text[start] != '{' || p.text[closing] != '}' {
+		p.visitList(node.Statements(), e)
+		return
+	}
+	r := &region{tail: isTailRegion(node, e), labeled: node.Parent != nil && node.Parent.Kind == ast.KindLabeledStatement}
+	name := p.freshCompletion()
+	opening := p.plan.reserve(editScopeRegion, partOpen, start, start)
+	statements := node.Statements()
+	p.visitList(statements, regionEnv(r, e))
+	normal := canCompleteNormally(statements)
+	if normal && len(r.jumps) > 0 && !r.tail {
+		p.plan.markText(editRecord, partWhole, closing, closing, "; return "+helperRef("$end")+" ")
+	}
+	p.plan.edits[opening].text = openRegion(r, name) + helperRef("$scopedBody") + "(" + helperRef("$gen") + "(" + selfPrefix(node) + "function* () "
+	p.plan.markText(editScopeRegion, partClose, node.End(), node.End(), "))")
+	p.plan.markText(editDispatch, partWhole, node.End(), node.End(), p.dispatch(r, name, normal, e))
+}
+
+// selfPrefix returns the self option of a block's generator, which passes
+// this in when the block refers to it, or "".
+func selfPrefix(block *ast.Node) string {
+	if usesThis(block) {
+		return "{ self: this }, "
+	}
+	return ""
+}
+
+// holdsScope reports whether statements, a block's own, hold a using
+// declaration or a call of the prelude's fork outside the blocks and
+// functions nested in them.
+func (p *projector) holdsScope(statements []*ast.Node) bool {
+	found := false
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		switch {
+		case found:
+			return true
+		case isUsingDeclaration(node):
+			found = true
+			return true
+		case ast.IsFunctionLike(node) || ast.IsClassLike(node) || node.Kind == ast.KindBlock:
+			return false
+		case node.Kind == ast.KindCallExpression && ast.IsIdentifier(node.Expression()) && node.Expression().Text() == "fork" && p.isPreludeFork():
+			found = true
+			return true
+		}
+		return node.ForEachChild(visit)
+	}
+	for _, statement := range statements {
+		if visit(statement) {
+			return true
+		}
+	}
+	return false
 }

@@ -128,6 +128,25 @@ func renderExec(e edit) (text string, keep bool) {
 		// using x = acquire(): the acquisition runs in the Scope of the code
 		// around it (execPrologue's $acquire).
 		return pick(e.part, "(yield* "+helperRef("$acquire")+"(", "", "))"), true
+	case editServiceBase:
+		// D45: the key; D40: a reference passes its default.
+		base, key, name := e.fields[0], e.fields[1], e.fields[2]
+		if base == "reference" {
+			return helperRef("$reference") + "<" + name + ">(" + strconv.Quote(key) + ", () => " + name + ".default)", true
+		}
+		return helperRef("$service") + "<" + name + ">(" + strconv.Quote(key) + ")", true
+	case editControl:
+		// D2: a control registers its operations and their parameter counts.
+		name := e.fields[0]
+		var operations, arities []string
+		for i := 1; i+1 < len(e.fields); i += 2 {
+			operations = append(operations, strconv.Quote(e.fields[i]))
+			arities = append(arities, e.fields[i+1])
+		}
+		return "\n" + helperRef("$control") + "(" + name + ", [" + strings.Join(operations, ", ") + "], [" + strings.Join(arities, ", ") + "]);", true
+	case editScopeRegion:
+		// A block's Scope region: $scopedBody is Effect.scoped (execHelpers).
+		return e.text, true
 	}
 	panic("exec: kind " + e.kind.String() + " not implemented")
 }

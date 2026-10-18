@@ -3,6 +3,7 @@ package effeckmapper
 import (
 	"cmp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/core"
@@ -78,6 +79,17 @@ const (
 	// editEach iterates a for...of's value: a Stream's elements, or an
 	// iterable as itself (D26).
 	editEach
+	// editServiceBase is a service class's key (D45): fields are "service"
+	// or "reference" (D40), the key, and the class's name.
+	editServiceBase
+	// editControl registers a control's operations (D2): fields are the
+	// control's name, then each operation's name and arity, -1 for a rest
+	// parameter. The checking rendering writes nothing.
+	editControl
+	// editScopeRegion is a block that holds a using or a fork, a region of
+	// its own under $scopedBody (regions.go, scopeBlock), whose Scope ends
+	// with the block (D14, D19). Both renderings write its text.
+	editScopeRegion
 )
 
 // part says which part of a kind an edit is.
@@ -87,6 +99,8 @@ const (
 	partOpen part = iota
 	partMiddle
 	partClose
+	// partWhole is an edit of a kind that stands alone, such as a dispatch.
+	partWhole
 )
 
 // edit replaces the original text in [pos, end) with what kind and part
@@ -102,6 +116,13 @@ type edit struct {
 	text string
 	// arg is a kind-specific argument.
 	arg string
+	// pair identifies the edits of one construct: an open, its middles,
+	// and its close share it, so a rendering never pairs them by order.
+	// An edit that stands alone has 0.
+	pair int
+	// fields are a kind's structured data, for the renderings to write
+	// from: a service base's key and name, a control's operations.
+	fields []string
 }
 
 // helperRef writes a reference to a projection helper in edit text. Each
@@ -112,6 +133,51 @@ func helperRef(name string) string { return "\x01" + name + "\x02" }
 // plan is the lowering plan of one file.
 type plan struct {
 	edits []edit
+	// open holds, per kind, the pair ids of the constructs opened and not
+	// yet closed, innermost last. Each kind's edits nest in the order the
+	// walk records them, so the stack pairs them.
+	open  map[editKind][]int
+	pairs int
+}
+
+// pairFor returns the pair id of a new edit of kind and part.
+func (l *plan) pairFor(kind editKind, p part) int {
+	if p == partWhole || kind == editSyntax || kind == editWitness {
+		return 0
+	}
+	if l.open == nil {
+		l.open = map[editKind][]int{}
+	}
+	stack := l.open[kind]
+	switch p {
+	case partOpen:
+		l.pairs++
+		l.open[kind] = append(stack, l.pairs)
+		return l.pairs
+	case partMiddle:
+		if len(stack) == 0 {
+			return 0
+		}
+		return stack[len(stack)-1]
+	default:
+		if len(stack) == 0 {
+			return 0
+		}
+		l.open[kind] = stack[:len(stack)-1]
+		return stack[len(stack)-1]
+	}
+}
+
+// unclosed reports the kinds with a construct opened and never closed, a
+// projector bug.
+func (l *plan) unclosed() []editKind {
+	var kinds []editKind
+	for kind, stack := range l.open {
+		if len(stack) > 0 {
+			kinds = append(kinds, kind)
+		}
+	}
+	return kinds
 }
 
 // insert records syntax text to insert before the original character at pos.
@@ -132,13 +198,26 @@ func (l *plan) witness(pos int, text string) {
 
 // mark records an edit of kind at [pos, end), with arg.
 func (l *plan) mark(kind editKind, p part, pos int, end int, arg string) {
-	l.edits = append(l.edits, edit{pos: pos, end: end, kind: kind, part: p, arg: arg})
+	l.edits = append(l.edits, edit{pos: pos, end: end, kind: kind, part: p, arg: arg, pair: l.pairFor(kind, p)})
 }
 
 // markText records an edit of kind at [pos, end) whose checking text the
 // walk computed.
 func (l *plan) markText(kind editKind, p part, pos int, end int, text string) {
-	l.edits = append(l.edits, edit{pos: pos, end: end, kind: kind, part: p, text: text})
+	l.edits = append(l.edits, edit{pos: pos, end: end, kind: kind, part: p, text: text, pair: l.pairFor(kind, p)})
+}
+
+// reserve records an edit of kind at [pos, end) whose text the walk sets
+// later, through the returned index: an edit that must apply before the
+// edits a nested construct records at the same position.
+func (l *plan) reserve(kind editKind, p part, pos int, end int) int {
+	l.edits = append(l.edits, edit{pos: pos, end: end, kind: kind, part: p, pair: l.pairFor(kind, p)})
+	return len(l.edits) - 1
+}
+
+// markFields records an edit of kind at [pos, end) with structured fields.
+func (l *plan) markFields(kind editKind, p part, pos int, end int, fields ...string) {
+	l.edits = append(l.edits, edit{pos: pos, end: end, kind: kind, part: p, fields: fields, pair: l.pairFor(kind, p)})
 }
 
 // rendering maps a plan's edits to text.
@@ -224,6 +303,13 @@ func (r checking) text(e edit) (string, bool) {
 		}
 	case editEach:
 		text = pick(e.part, "(yield* "+helperRef("$each")+"(", "", "))")
+	case editServiceBase:
+		base, key, name := e.fields[0], e.fields[1], e.fields[2]
+		text = helperRef("$"+base) + "<" + name + ">(" + strconv.Quote(key) + ")"
+	case editScopeRegion:
+		text = e.text
+	case editControl:
+		// Nothing to check: the registration only runs.
 	case editFail:
 		if e.arg == "void" {
 			text = pick(e.part, "return (yield* "+helperRef("$fail")+"(", "", ")) as void")
@@ -259,7 +345,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each"}[k]
+		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out
