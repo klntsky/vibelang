@@ -31,12 +31,17 @@ Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods,
 ## Understanding schemas and codecs
 
 ```vibe
+// run: Console.log(decodedView === Line, completeView === Line)
 const Quantity = Schema.FiniteFromString
 const Line = Schema.Struct({ sku: Schema.NonEmptyString, quantity: Quantity })
 
 // Views of the same value, retaining different information:
 const decodedView: Schema.Schema<typeof Line.Type> = Line
 const completeView: Schema.Codec<typeof Line.Type, typeof Line.Encoded> = Line
+```
+
+```output
+true true
 ```
 
 A schema is an immutable description. Adding fields, checks, or annotations produces a new description. Interpreters use that description to derive parsers, guards, generators, equality, formatters, and JSON Schema documents.
