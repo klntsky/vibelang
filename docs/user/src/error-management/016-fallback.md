@@ -1,6 +1,6 @@
 # Fallback
 
-A fallback runs another computation after an expected failure. Pass computations as functions so the fallback starts only when needed.
+A fallback runs another computation after an expected failure. A catch expression or callback keeps that computation lazy.
 
 [Upstream page](https://effect.website/docs/v4/error-management/fallback)
 
@@ -70,4 +70,4 @@ A chain of catch expressions also tries alternatives in order: `latestTitle() ca
 
 ## Coming from Effect
 
-Write alternatives as `() => fetchTitle()` rather than calling `fetchTitle()` while assembling the collection. A call runs immediately in VibeLang.
+An argument where an Effect is expected is passed by name: `Effect.firstSuccessOf([latestTitle(), cachedTitle()])` runs each call only when that alternative is tried. Explicit programs such as `() => fetchTitle()` also work. Outside such a parameter, a call runs where it appears.

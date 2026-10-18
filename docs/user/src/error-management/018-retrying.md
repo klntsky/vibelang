@@ -81,4 +81,4 @@ function sendOrQueue() {
 
 ## Coming from Effect
 
-Pass `() => sendRequest()` to retry. Passing the result of `sendRequest()` would run the request before the retry policy receives it.
+Both `retry(sendRequest(), policy)` and `Effect.retry(() => sendRequest(), policy)` pass the request as a program. The first form passes the call by name because the parameter expects an Effect. Each attempt runs that call again; use a callback or block when an attempt needs several statements.

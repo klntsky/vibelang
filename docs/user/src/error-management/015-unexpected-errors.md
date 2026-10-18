@@ -42,7 +42,7 @@ function requireSetting(name: string) {
 function startup() {
   return Effect.orDie(requireSetting("region"))
 }
-// never!!
+// void!!
 
 function startupWithMessage() {
   return requireSetting("region")

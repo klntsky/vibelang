@@ -24,7 +24,7 @@ function normalizeCode(input: string) {
 
 `error InvalidCode { input: string }` declares an expected failure. The declaration is a class: its constructor takes the fields, every field is readonly, and each instance has a readonly `_tag` equal to the class name. `throw` adds the class to `E`. `error Timeout` declares an error without fields. The declaration is short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
 
-Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a trusted declaration, `/** @vibelang trusted */`; each `@throws {T}` names an exported exception class that joins `E`, and unlisted exceptions are defects. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
+Trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a wrapper created with `trusted(implementation, [ErrorClass])` in a `.ts` module. Import `trusted` from `vibelang-runtime`: instances of the listed classes join `E`, and unlisted exceptions are defects. The older `/** @vibelang trusted */` and `@throws` declaration tags still work but produce a migration warning at VibeLang call sites. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
 
 ## Failing in an expression
 

@@ -39,3 +39,20 @@ intentionally rejects null for such fields. A request that omits the field
 returns the expected TS2322 diagnostic, and hover requests work. Use
 `npx vibelang --noEmit` for diagnostics in that Zed version. This is a transport
 compatibility issue, so it has no snippet-level `compiler-gap` marker.
+
+## Runtime disagreements
+
+These examples type-check. A `compiler-gap` header would be stale because the
+snippet checker uses that marker for diagnostic disagreements, so the affected
+pages state the runtime limitation in prose.
+
+### Timeout discards failures from interrupted cleanup
+
+`error-management/019-timing-out.md`, "Limiting execution duration": Effect
+4.0.5's `timeout`, `timeoutOption`, and `timeoutOrElse` wait for the interrupted
+source's cleanup but discard failures from that cleanup. Both a `finally` that
+dies and a `using` release that dies reproduce this. A plain `timeout` reports
+only `TimeoutError`. This conflicts with D15 and the failures chapter's cleanup
+guarantee, while the Effect interop rules retain Effect's operator semantics.
+The compiler lead must decide whether VibeLang overrides these operators or
+narrows the guarantee at an Effect concurrency boundary.

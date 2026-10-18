@@ -64,4 +64,4 @@ Validation produces one typed failure containing a collection of domain errors. 
 
 ## Coming from Effect
 
-Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup, with VibeLang's guarantee that cleanup failure never replaces and drops an earlier failure.
+Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup: its failure joins the operation's original cause, as `inspectDelivery` shows. A timeout boundary currently drops failures from the interrupted source's cleanup; see [Timing Out](019-timing-out.md).
