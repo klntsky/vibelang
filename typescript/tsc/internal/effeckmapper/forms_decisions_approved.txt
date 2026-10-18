@@ -71,3 +71,13 @@ typescript/effeck/cases/scopes-types/main.effeck:50:27 lambda: dual fallback -> 
 
 # rules 4: a conditional or alias return type takes the module its branches agree on (a dual's data-last function branch counts as its result's module), so fork, forkScoped, forkChild, Effect.all, … return an Effect and the dual over them is safe.
 typescript/effeck/cases/scopes-types/main.effeck:50:27 lambda: choice fallback -> dual fallback # fork is Effect.forkScoped, whose conditional return is an Effect in both branches: the dual over it builds the same program
+
+# 809cf132 (cases: migrate eleven cases to L1, L2 and L7): the author answered EK9100 at each site with an annotation, so the choice became that annotation.
+typescript/effeck/cases/lambda-forms/main.effeck:10:19 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/effeck/cases/lambda-forms/main.effeck:15:19 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/effeck/cases/lambda-forms/main.effeck:21:19 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
+typescript/effeck/cases/lambda-forms/main.effeck:26:17 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
+typescript/effeck/cases/producers/main.effeck:171:20 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/effeck/cases/ref2-provider-graph/ref2-provider-graph.effeck:86:23 lambda: choice fallback -> plain annotation # 809cf132 annotated it, answering EK9100
+typescript/effeck/cases/scopes-using/main.effeck:185:15 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
+typescript/effeck/cases/tracing-all/main.effeck:21:18 lambda: choice fallback -> effectFn annotation # 809cf132 annotated it, answering EK9100
