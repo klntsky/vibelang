@@ -474,6 +474,7 @@ function adaptStockProject(dir: string, tsconfig: any): Adapter {
     if (value === undefined) delete options[name]
     else options[name] = value
   }
+  if (!options.rootDir) force("rootDir", ".")
   force("declaration", true)
   force("emitDeclarationOnly", true)
   force("noEmit", undefined)
@@ -506,6 +507,7 @@ function adaptStockProject(dir: string, tsconfig: any): Adapter {
 type Side = {
   exec: Exec
   diagnostics: Diagnostic[]
+  frameworkDiagnostics?: Diagnostic[]
   // declarations: d.ts stem (out-relative path without the .d.ts suffix) -> text
   declarations: Map<string, { file: string; text: string }>
 }
@@ -625,7 +627,10 @@ async function runFork(run: Run): Promise<void> {
   link(nmFork, path.join(dir, "node_modules"))
   // Declarations whatever the project says: a project with noEmit (the
   // framework examples) or without outDir still writes them, under out/.
-  const outArgs = run.tsconfig.compilerOptions?.outDir ? [] : ["--outDir", defaultOutDir]
+  const outArgs = [
+    ...run.tsconfig.compilerOptions?.outDir ? [] : ["--outDir", defaultOutDir],
+    ...run.tsconfig.compilerOptions?.rootDir ? [] : ["--rootDir", "."],
+  ]
   const result = await exec([forkTsc, "-p", ".", "--pretty", "false", "--declaration", "--noEmit", "false", "--noEmitOnError", "false", ...outArgs], dir)
   const effective = { ...run.tsconfig, compilerOptions: { ...run.tsconfig.compilerOptions, outDir: run.tsconfig.compilerOptions?.outDir ?? defaultOutDir } }
   run.fork = { exec: result, diagnostics: parseDiagnostics(result.output), declarations: collectDeclarations(dir, effective, new Set(run.sources.keys())) }
@@ -645,7 +650,23 @@ async function runMapperIn(run: Run, dir: string, mutate?: (dir: string) => void
   run.adapter = adaptStockProject(dir, tsconfig)
   mutate?.(dir)
   const result = await exec([stockTsc, "-p", ".", "--pretty", "false", "--runExternalCode"], dir)
-  return { exec: result, diagnostics: parseDiagnostics(result.output), declarations: collectDeclarations(dir, tsconfig, new Set(run.sources.keys())) }
+  let diagnostics = parseDiagnostics(result.output)
+  let frameworkDiagnostics: Diagnostic[] = []
+  if (/^examples\/(react|vue|svelte)-vite$/.test(run.ref.id)) {
+    // Let TypeScript resolve the entire import closure from the projected roots.
+    // Filtering extensions would hide missing framework packages imported by Effeck.
+    const scoped = { ...tsconfig, files: [...run.sources.keys()].filter((f) => f.endsWith(".effeck")), include: [] }
+    fs.writeFileSync(path.join(dir, "tsconfig.gate1.json"), JSON.stringify(scoped, null, 2) + "\n")
+    const checked = await exec([stockTsc, "-p", "tsconfig.gate1.json", "--pretty", "false", "--runExternalCode"], dir)
+    const gateDiagnostics = parseDiagnostics(checked.output)
+    if (checked.code !== 0 && !gateDiagnostics.some((d) => d.category === "error")) {
+      throw new Error(`${run.ref.id}: scoped stock check failed without diagnostics: ${checked.output}`)
+    }
+    const gateKeys = new Set(gateDiagnostics.map((d) => JSON.stringify(d)))
+    frameworkDiagnostics = diagnostics.filter((d) => !gateKeys.has(JSON.stringify(d)))
+    diagnostics = gateDiagnostics
+  }
+  return { exec: result, diagnostics, frameworkDiagnostics, declarations: collectDeclarations(dir, tsconfig, new Set(run.sources.keys())) }
 }
 
 // --------------------------------------------------------------- manifest
@@ -997,6 +1018,7 @@ type CaseResult = {
   fork: { exit: number | string; errors: number; ms: number }
   mapper: { exit: number | string; errors: number; ms: number }
   ek9001: { count: number; forms: { form: string; context: string; at: string }[] }
+  frameworkDiagnostics: Diagnostic[]
   stockErrors: { count: number; codes: Record<string, number>; first: string[] }
   // probeLineErrors: errors on the lines the probe exports appended, counted
   // apart from the case's own.
@@ -1067,6 +1089,7 @@ function compareCase(run: Run, entry: CaseEntry | undefined): CaseResult {
     fork: { exit: fork.exec.code, errors: fork.diagnostics.filter((d) => d.category === "error").length, ms: fork.exec.ms },
     mapper: { exit: mapper.exec.code, errors: mapper.diagnostics.filter((d) => d.category === "error").length, ms: mapper.exec.ms },
     ek9001: { count: 0, forms: [] },
+    frameworkDiagnostics: mapper.frameworkDiagnostics ?? [],
     stockErrors: { count: 0, codes: {}, first: [] },
     probeLineErrors: { fork: 0, mapper: 0 },
     probeExports: (run.probeExports ?? []).reduce((n, p) => n + p.names.length, 0),
@@ -1502,6 +1525,15 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push("## Probes", "")
   L.push("| probe | line | wants | mapper | fork | EK9001 | result |", "| --- | ---: | --- | --- | --- | ---: | --- |")
   for (const p of probes) for (const m of p.markers) L.push(`| ${p.id} | ${m.line} | ${md(m.want)} | ${md(m.mapper ?? "no error")} | ${md(m.fork ?? "no error")} | ${p.ek9001} | ${m.mapper ? "rejected, as required" : "**accepted**"} |`)
+  L.push("", "## Framework sources", "")
+  const frameworkLine = "framework sources, checked by examples' frameworks-check.sh, not gate 1"
+  L.push(frameworkLine, "")
+  console.log(frameworkLine)
+  for (const r of results.filter((r) => /^examples\/(react|vue|svelte)-vite$/.test(r.id))) {
+    const lines = r.frameworkDiagnostics.map((d) => `${r.id}/${d.file}(${d.line},${d.column}): ${d.category} ${d.code} ${d.text}`)
+    if (!lines.length) lines.push(`${r.id}: none`)
+    for (const line of lines) { L.push(line, ""); console.log(line) }
+  }
   L.push("", "## Stock project adapter and source migrations", "")
   L.push(`- Stripped fork-only options in ${stripped.length} cases: ${stripped.map((r) => `${r.id} (${r.adapter.stripped.join(", ")})`).join(", ") || "none"}.`)
   L.push(`- Forced options: ${[...forced].map(([k, n]) => `${k} in ${n} cases`).join(", ")}; contentMappers added in every case.`)
