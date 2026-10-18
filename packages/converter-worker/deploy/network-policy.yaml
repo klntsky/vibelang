@@ -3,14 +3,21 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: effeck-converter-worker
+  namespace: default
 spec:
   podSelector:
     matchLabels: { app: effeck-converter-worker }
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
-        - podSelector:
-            matchLabels: { app: smithers-api }
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: smithers }
+          podSelector:
+            matchLabels:
+              app: smithers-api
+              app.kubernetes.io/name: smithers
+              app.kubernetes.io/instance: smithers
+              app.kubernetes.io/component: api
       ports:
         - { protocol: TCP, port: 8080 }
   egress: []

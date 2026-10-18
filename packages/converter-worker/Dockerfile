@@ -1,18 +1,38 @@
-# The converter's compile worker: credential-free, one CPU, 512 MiB, no egress. Build for linux/amd64:
-#   docker build --platform linux/amd64 --build-context tarballs=dist-npm/tarballs -t effeck-converter-worker packages/converter-worker
-# Run (see README.md): docker run --cpus 1 --memory 512m --pids-limit 256 --read-only --tmpfs /tmp \
-#   --cap-drop ALL --security-opt no-new-privileges -p 8080:8080 effeck-converter-worker
-FROM node:26-bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends util-linux && rm -rf /var/lib/apt/lists/*
+# Build from the repository root with deploy/cloudbuild.yaml. No local release artifacts.
+FROM golang:1.27-bookworm AS compiler
+WORKDIR /src
+COPY typescript/tsc/go.mod typescript/tsc/go.sum ./
+RUN go mod download
+COPY typescript/tsc/ ./
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o /effeck ./cmd/tsc
+
+FROM node:26-bookworm-slim AS packages
+WORKDIR /src
+COPY LICENSE ./
+COPY typescript/LICENSE.txt typescript/
+COPY packages/runtime/ packages/runtime/
+RUN cd packages/runtime && npm install --ignore-scripts --no-audit --no-fund && npm run build
+COPY packages/compiler/ packages/compiler/
+COPY packages/converter-worker/prepare-packages.mjs packages/converter-worker/
+COPY --from=compiler /effeck packages/compiler/native/effeck
+RUN node packages/converter-worker/prepare-packages.mjs /tarballs
+
+FROM node:26-bookworm-slim AS installed
 WORKDIR /opt/converter
-COPY package.json compile.mjs server.mjs ./
-COPY project/package.json project/tsconfig.json project/
-# effeck and effeck-runtime come from the release tarballs until 0.0.1 is on npm; effect from the registry.
-COPY --from=tarballs effeck-0.0.1.tgz effeck-runtime-0.0.1.tgz effeck-linux-x64-0.0.1.tgz /tmp/tarballs/
-RUN cd project && npm install --no-audit --no-fund --omit=dev /tmp/tarballs/*.tgz effect@4.0.5 && rm -rf /tmp/tarballs /root/.npm
-USER node
-# A pod cannot create network namespaces, so the deployment denies egress (deploy/network-policy.yaml)
-# and the server refuses to start if it can reach the internet anyway.
-ENV EFFECK_WORKER_NETWORK=policy PORT=8080 NODE_ENV=production
+COPY packages/converter-worker/project/ project/
+COPY --from=packages /tarballs/ /tmp/tarballs/
+RUN cd project && npm install --ignore-scripts --no-audit --no-fund --omit=dev /tmp/tarballs/*.tgz \
+    && rm -rf /tmp/tarballs /root/.npm
+
+FROM node:26-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux \
+    && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules /opt/yarn* \
+    && rm -f /bin/sh /bin/bash /bin/dash /usr/bin/sh /usr/bin/bash /usr/bin/dash
+WORKDIR /opt/converter
+COPY --from=installed /opt/converter/project/ project/
+COPY packages/converter-worker/package.json packages/converter-worker/compile.mjs packages/converter-worker/server.mjs ./
+USER 1000:1000
+ENV EFFECK_WORKER_NETWORK=policy PORT=8080 NODE_ENV=production TMPDIR=/tmp
 EXPOSE 8080
-CMD ["node", "server.mjs"]
+ENTRYPOINT ["/usr/local/bin/node"]
+CMD ["server.mjs"]

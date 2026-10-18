@@ -138,5 +138,7 @@ export function proveNoEgress(config, target = { host: "1.1.1.1", port: 443 }) {
   const base = [process.execPath, "-e", probe]
   const command = config.network === "unshare" ? ["unshare", "--net", "--map-root-user", "--", ...base] : base
   const result = spawnSync(command[0], command.slice(1), { encoding: "utf8", timeout: 10_000 })
-  return !(result.stdout ?? "").includes("EGRESS")
+  // Only the probe's explicit connection-error or timeout exits prove a blocked connection.
+  // Missing tools, namespace failures, signals, and spawn timeouts must fail closed.
+  return !result.error && [3, 4].includes(result.status) && !(result.stdout ?? "").includes("EGRESS")
 }

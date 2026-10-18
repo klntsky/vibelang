@@ -1,0 +1,6 @@
+# Reuse an existing namespace without the smithers namespace's additive DNS egress grant.
+# Preserve its labels, security policy, and other workloads.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
