@@ -6,7 +6,9 @@
 #   packages/ts-mapper/test/e2e.sh
 #
 # Steps:
-#   1. go test the projector and the protocol server.
+#   1. go test the projector and the protocol server, and check that the
+#      generated L1 forms table matches a fresh generation
+#      (scripts/check-forms-table.sh; never hand-edit the table).
 #   2. Build bin/effeck-mapper.
 #   3. Install typescript@next and effect 4.0.5 into test/.cache, then
 #      assemble the fixture in a temporary directory whose node_modules hold
@@ -32,6 +34,10 @@ step() { printf '\n== %s\n' "$*"; }
 
 step "go test ./internal/effeckmapper"
 (cd "$root/typescript/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/effeckmapper/)
+
+step "forms table matches its generator"
+[ -d "$root/docs/tools/node_modules" ] || (cd "$root/docs/tools" && bun install --silent)
+sh "$root/scripts/check-forms-table.sh"
 
 step "build bin/effeck-mapper"
 (cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$package/bin/effeck-mapper" ./cmd/effeck-mapper)
