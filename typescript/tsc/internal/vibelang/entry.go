@@ -42,11 +42,24 @@ func entryMain(file *ast.SourceFile) *ast.Node {
 			ast.HasSyntacticModifier(statement, ast.ModifierFlagsExport) && !ast.HasSyntacticModifier(statement, ast.ModifierFlagsDefault) &&
 			len(statement.Parameters()) == 0 && statement.Body() != nil:
 			main = statement
-		case statement.Kind == ast.KindExpressionStatement && callsRunner(statement.Expression()):
+		case containsTopLevelRunner(statement):
 			return nil
 		}
 	}
 	return main
+}
+
+// containsTopLevelRunner finds runner calls in expressions and initializers
+// that execute during module evaluation, without descending into delayed
+// function bodies or instance field initializers.
+func containsTopLevelRunner(node *ast.Node) bool {
+	if ast.IsFunctionLike(node) {
+		return false
+	}
+	if node.Kind == ast.KindPropertyDeclaration && !ast.HasSyntacticModifier(node, ast.ModifierFlagsStatic) {
+		return false
+	}
+	return callsRunner(node) || node.ForEachChild(containsTopLevelRunner)
 }
 
 // callsRunner reports whether expression calls a runner, such as
