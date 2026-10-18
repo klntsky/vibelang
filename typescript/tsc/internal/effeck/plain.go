@@ -87,11 +87,20 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 		a.plain[d] = plainExploring
 		m := &member{ok: !hasEscapingThrow(d) && !declaresUsing(d) && !hasEffeckStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d)}
 		group[d] = m
+		if !m.ok {
+			// d's own body rules it out, whatever its callees compile to, so
+			// they need no exploring. Exploring them anyway walked every
+			// function the call graph reaches: in the language server, whose
+			// checkers start empty, the first hover in a module analyzed the
+			// whole program.
+			continue
+		}
 		forEachCallInBody(d, func(call *ast.Node) bool {
 			if callee := a.candidateCallee(call); callee != nil {
 				switch a.plain[callee] {
 				case plainNo:
 					m.ok = false
+					return true // a callee rules d out; the rest of its body cannot change that
 				case plainUnknown, plainExploring:
 					m.deps = append(m.deps, callee)
 					queue = append(queue, callee)
@@ -100,6 +109,7 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			}
 			if a.performs(call) {
 				m.ok = false
+				return true
 			}
 			return false
 		})
