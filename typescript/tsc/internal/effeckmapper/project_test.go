@@ -97,6 +97,11 @@ var projectionCases = []struct {
 		virtual: "function annotated(): Effect.Effect<User, NotFound, never> { return $gen(function* () {\n  return yield* $fail(new NotFound({ id: (yield* $run(f(1))) }))\n})}\n",
 	},
 	{
+		name:    "a function that only throws keeps A void",
+		source:  "function find(id: string) {\n  if (id === \"\") throw new Timeout()\n  throw new NotFound({ id })\n}\nconst f = function () { throw new Timeout() }\n",
+		virtual: "function find(id: string) { return $gen(function* () {\n  if (id === \"\") return (yield* $fail(new Timeout())) as void\n  return (yield* $fail(new NotFound({ id }))) as void\n})}\nconst f = function () { throw new Timeout() }\n",
+	},
+	{
 		name:    "an infer channel wraps the body in $contract (D57)",
 		source:  "function find(id: string): string!infer E!Db {\n  return id\n}\n",
 		virtual: "function find(id: string) { return $contract<string, $Infer, Db>()($gen(function* () {\n  return id\n}))}\n",
@@ -150,6 +155,36 @@ var projectionCases = []struct {
 		name:    "a method takes the form its body decides",
 		source:  "class Cache {\n  get(k: string) { return load(k) }\n  refresh(k: string) {\n    const v = load(k)\n    return v\n  }\n}\n",
 		virtual: "class Cache {\n  get(k: string) { return load(k) }\n  refresh(k: string) { return $gen(function* () {\n    const v = (yield* $run(load(k)))\n    return v\n  })}\n}\n",
+	},
+	{
+		name:    "returns leave a try statement through its completion",
+		source:  "function f(id: string) {\n  try {\n    return find(id)\n  } catch (e) {\n    return \"guest\"\n  }\n}\n",
+		virtual: "function f(id: string) { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    return (yield* $run(find(id)))\n  }), (e) => $gen(function* () {\n    return \"guest\"\n  })); return $c\n})}\n",
+	},
+	{
+		name:    "a region that no jump leaves dispatches nothing",
+		source:  "function f() {\n  try {\n    g(1)\n  } catch {\n    g(2)\n  }\n}\n",
+		virtual: "function f() { return $gen(function* () {\n  yield* $catch($gen(function* () {\n    ;(yield* $run(g(1)))\n  }), () => $gen(function* () {\n    ;(yield* $run(g(2)))\n  }))\n})}\n",
+	},
+	{
+		name:    "a break that leaves a region is a jump the loop takes",
+		source:  "function g(xs: number[]) {\n  for (const x of xs) {\n    try {\n      if (x) break\n      g(x)\n    } finally {\n      h(x)\n    }\n  }\n}\n",
+		virtual: "function g(xs: number[]) { return $gen(function* () {\n  for (const x of xs) {\n    const $c = yield* $finally($gen(function* () {\n      if (x) return $jump(\"break:\")\n      ;(yield* $run(g(x)))\n    ; return $end }), $gen(function* () {\n      ;(yield* $run(h(x)))\n    ; return $end })); if ($jumped($c, \"break:\")) break\n  }\n})}\n",
+	},
+	{
+		name:    "a jump that leaves two regions passes the completion on",
+		source:  "function f() {\n  try {\n    try {\n      return 1\n    } finally {\n      g(1)\n    }\n  } catch {\n    return 2\n  }\n}\n",
+		virtual: "function f() { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    const $c_1 = yield* $finally($gen(function* () {\n      return 1\n    }), $gen(function* () {\n      ;(yield* $run(g(1)))\n    ; return $end })); return $c_1\n  }), () => $gen(function* () {\n    return 2\n  })); return $c\n})}\n",
+	},
+	{
+		name:    "a provide block provides its layers to a region (D172, D173)",
+		source:  "function main() {\n  provide AppLive, Clock = clock {\n    return greet(\"42\")\n  }\n}\n",
+		virtual: "function main() { return $gen(function* () {\n  const $c = yield* Effect.provide([AppLive, $provideService(Clock, \"Clock\", clock)])($gen(function* () {\n    return (yield* $run(greet(\"42\")))\n  })); return $c\n})}\n",
+	},
+	{
+		name:    "a handle statement runs its block under handle (D132)",
+		source:  "function k(version: string) {\n  try {\n    return release(version)\n  } handle Approval.approve(request) {\n    log(request)\n    resume(true)\n  }\n}\n",
+		virtual: "function k(version: string) { return $gen(function* () {\n  const $c = yield* handle_1($gen(function* () {\n    return (yield* $run(release(version)))\n  }) , Approval, { approve: (request, $k) => $gen(function* () {\n    ;(yield* $run(log(request)))\n    return $tailResume($k, true)\n  }) }); return $c\n})}\n",
 	},
 	{
 		name:    "a layer without statements succeeds with its members",

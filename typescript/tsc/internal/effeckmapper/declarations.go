@@ -191,7 +191,7 @@ func (p *projector) serviceDeclaration(node *ast.Node) {
 	if hasStaticDefault(node) {
 		base = "$reference"
 	}
-	classHead := " " + strings.Join(append(kept, "abstract class "+name.Text()+" extends "+p.names.helper(base)+"<"+name.Text()+">("+strconv.Quote(key)+") {"), " ")
+	classHead := " " + strings.Join(append(kept, "abstract class "+name.Text()+" extends "+helperRef(base)+"<"+name.Text()+">("+strconv.Quote(key)+") {"), " ")
 	at := lastInstance.End()
 	p.plan.insert(at, brand+classHead)
 	if len(static) == 0 {
@@ -326,13 +326,14 @@ func (p *projector) layerDeclaration(node *ast.Node) {
 	object := implementation
 	inner := env{}
 	if method == "effect" {
-		p.plan.replace(service.End(), brace, ", "+p.names.helper("$gen")+"(function* () ")
+		p.plan.replace(service.End(), brace, ", ")
+		p.plan.mark(editProgram, partOpen, brace, brace, "")
 		block := implementation.Body()
 		statements := block.Statements()
 		returned := statements[len(statements)-1]
-		p.visitList(statements[:len(statements)-1], env{effect: true})
+		inner = newEffectEnv()
+		p.visitList(statements[:len(statements)-1], inner)
 		object = returned.Expression()
-		inner = env{effect: true}
 	} else {
 		p.plan.replace(service.End(), brace, ", ")
 	}
@@ -361,7 +362,8 @@ func (p *projector) layerDeclaration(node *ast.Node) {
 		if len(members) == 0 {
 			p.plan.insert(closing, "return {} ")
 		}
-		p.plan.insert(closing+1, "))")
+		p.plan.mark(editProgram, partClose, closing+1, closing+1, "")
+		p.plan.insert(closing+1, ")")
 	} else {
 		p.plan.insert(closing+1, ")")
 	}
@@ -460,7 +462,7 @@ func (p *projector) effectType(node *ast.Node, slotsOnly bool) {
 			// A written slot: User!NotFound, or User!infer E.
 			p.plan.replace(bang, bang+1, ", ")
 			if slot.Kind == ast.KindInferType {
-				p.plan.replace(p.tokenStart(slot), slot.End(), p.names.helper("$Infer"))
+				p.plan.replace(p.tokenStart(slot), slot.End(), helperRef("$Infer"))
 			} else {
 				p.visit(slot, env{})
 			}
@@ -469,7 +471,7 @@ func (p *projector) effectType(node *ast.Node, slotsOnly bool) {
 			p.plan.replace(bang, bang+1, ", never")
 		case synthesized && slot.Kind == ast.KindInferType:
 			// Dependencies omitted from a function's contract: inferred (D57).
-			p.plan.insert(previous.End(), ", "+p.names.helper("$Infer"))
+			p.plan.insert(previous.End(), ", "+helperRef("$Infer"))
 		case synthesized:
 			// Omitted dependencies stand on the errors' last character: User!NotFound.
 			p.plan.insert(previous.End(), ", never")

@@ -59,6 +59,33 @@ export {
 
 // ---------------------------------------------------------------- helpers
 
+// The runtime's region helpers (D13, D15, D132, D173): regions, handle
+// statements, and provide blocks lower onto these.
+export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from "effeck-runtime"
+
+/*
+ * Completion records, as the checker sees them. A region's block keeps its
+ * own return statements, so its generator's type is TypeScript's own
+ * inference for them; a break or continue that leaves the region returns
+ * $jump("break:label"), and a block that ends normally returns $end. The
+ * statement after the region narrows the completion with $returned and
+ * $jumped. (The runtime's records are { kind, value } objects; their
+ * property would widen a literal type, which a return keeps.)
+ */
+declare const endBrand: unique symbol
+declare const jumpBrand: unique symbol
+/** The normal end of a region's block. */
+export declare const $end: { readonly [endBrand]: true }
+/** A break or continue that leaves a region: "break:label" or "continue:label". */
+export interface $Jump<K extends string> {
+  readonly [jumpBrand]: K
+}
+export declare function $jump<const K extends string>(kind: K): $Jump<K>
+/** The completion is a return's value. */
+export declare function $returned<T>(completion: T): completion is Exclude<T, $Jump<string> | typeof $end>
+/** The completion is the jump kind. */
+export declare function $jumped<T, const K extends string>(completion: T, kind: K): completion is Extract<T, $Jump<K>>
+
 /** A function body: `function f() { body }` projects to `function f() { return $gen(function* () { body }) }`. */
 export declare const $gen: typeof EffectModule.gen
 

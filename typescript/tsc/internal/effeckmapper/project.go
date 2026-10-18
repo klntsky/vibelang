@@ -98,6 +98,14 @@ type env struct {
 	// effect reports whether the node is in an Effect body, a projected
 	// function's generator, where calls run and throw fails.
 	effect bool
+	// frame is the generator an Effect body's code is in.
+	frame *frame
+	// continuation names a handle clause's continuation inside the clause.
+	continuation string
+	// voidFail reports that a throw must not make A never: the function is
+	// a declaration or a method that returns no value, whose TypeScript
+	// return type is void even when every path throws.
+	voidFail bool
 }
 
 // projector holds the state of one Project call.
@@ -118,6 +126,9 @@ type projector struct {
 	// Effect body that a statement list holds, so a run that begins one can
 	// guard against ASI.
 	statementStarts map[int]bool
+	// completions counts the completion records of region statements, for
+	// their names.
+	completions int
 	// statement is the top-level statement being walked; reported records
 	// which statements already have an EK9001, so each gets at most one.
 	statement   *ast.Node
@@ -154,13 +165,12 @@ func Project(text string, ctx FileContext) Projection {
 		p.statement = statement
 		p.visit(statement, env{})
 	}
-	header := p.names.importLine()
-	out, segments, overlap, ok := p.plan.render(header, text, renderChecking)
+	out, segments, overlap, ok := p.plan.render(checking{names: p.names}, text, p.names.importLine)
 	if !ok {
 		// Overlapping edits are a projector bug; pass the file through
 		// unchanged rather than send TypeScript a broken map.
 		var verbatim plan
-		out, segments, _, _ = verbatim.render("", text, renderChecking)
+		out, segments, _, _ = verbatim.render(checking{names: p.names}, text, func() string { return "" })
 		p.diagnostics = append(p.diagnostics, Diagnostic{
 			Start:   overlap,
 			Code:    CodeUnprojectedForm,
@@ -210,6 +220,29 @@ func (p *projector) visit(node *ast.Node, e env) {
 		return
 	}
 	if e.effect {
+		switch {
+		case isTailResume(node) && e.continuation != "":
+			p.tailResume(node, e)
+			return
+		case node.Kind == ast.KindReturnStatement && e.frame.region != nil:
+			p.returnStatement(node, e)
+			return
+		case node.Kind == ast.KindBreakStatement || node.Kind == ast.KindContinueStatement:
+			p.jumpStatement(node, e)
+			return
+		case isJumpTarget(node):
+			p.jumpTarget(node, e)
+			return
+		case node.Kind == ast.KindTryStatement && node.Flags&ast.NodeFlagsEffeck != 0:
+			p.handleStatement(node, e)
+			return
+		case node.Kind == ast.KindTryStatement:
+			p.tryStatement(node, e)
+			return
+		case isProvideBlock(node):
+			p.provideBlock(node, e)
+			return
+		}
 		switch node.Kind {
 		case ast.KindExpressionStatement:
 			if isStatementListItem(node) {
@@ -371,19 +404,75 @@ func (p *projector) functionLike(fn *ast.Node, body *ast.Node) {
 			p.unprojected(returnType)
 			return
 		}
-		p.plan.replace(colon, p.tokenStart(returnType), " { return "+p.names.helper("$contract")+"<")
+		self := selfArg(body)
+		p.plan.mark(editContract, partOpen, colon, p.tokenStart(returnType), self)
 		p.effectType(returnType, true /*slotsOnly*/)
-		p.plan.replace(returnType.End(), open, ">()("+p.names.helper("$gen")+"(function* () ")
-		p.visitList(body.Statements(), env{effect: true})
-		p.plan.insert(closing+1, "))}")
+		p.plan.mark(editContract, partMiddle, returnType.End(), open, self)
+		p.visitList(body.Statements(), p.bodyEnv(fn, body))
+		p.plan.mark(editContract, partClose, closing+1, closing+1, self)
 		return
 	}
 	if returnType != nil {
 		p.visit(returnType, env{})
 	}
-	p.plan.insert(open+1, " return "+p.names.helper("$gen")+"(function* () {")
-	p.visitList(body.Statements(), env{effect: true})
-	p.plan.insert(closing, "})")
+	p.plan.mark(editEffectBody, partOpen, open+1, open+1, selfArg(body))
+	p.visitList(body.Statements(), p.bodyEnv(fn, body))
+	p.plan.mark(editEffectBody, partClose, closing, closing, "")
+}
+
+// bodyEnv returns the env of fn's Effect body. A function declaration or a
+// method without a return annotation whose body returns no value has the
+// TypeScript return type void, even when every path throws, and the fork's
+// A is that type; its throws must not make A never.
+func (p *projector) bodyEnv(fn *ast.Node, body *ast.Node) env {
+	e := newEffectEnv()
+	if (fn.Kind == ast.KindFunctionDeclaration || fn.Kind == ast.KindMethodDeclaration) && fn.Type() == nil && !returnsValue(body) {
+		e.voidFail = true
+	}
+	return e
+}
+
+// returnsValue reports whether body has a return statement with a value,
+// outside the functions and classes nested in it.
+func returnsValue(body *ast.Node) bool {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		switch {
+		case node.Kind == ast.KindReturnStatement:
+			return node.Expression() != nil
+		case ast.IsFunctionLike(node) || ast.IsClassLike(node):
+			return false
+		}
+		return node.ForEachChild(visit)
+	}
+	return body.ForEachChild(visit)
+}
+
+// selfArg returns the arg of an Effect body whose code refers to this, so
+// its generator receives the function's this: "self", or "".
+func selfArg(body *ast.Node) string {
+	if usesThis(body) {
+		return "self"
+	}
+	return ""
+}
+
+// usesThis reports whether body refers to this, looking into arrow
+// functions, which share their enclosing function's this, but not into
+// other functions or classes.
+func usesThis(body *ast.Node) bool {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		switch {
+		case node.Kind == ast.KindThisKeyword:
+			return true
+		case node.Kind == ast.KindArrowFunction:
+		case ast.IsFunctionLike(node) || ast.IsClassLike(node):
+			return false
+		}
+		return node.ForEachChild(visit)
+	}
+	return body.ForEachChild(visit)
 }
 
 // contractKind says what a function's return annotation makes of its body.
@@ -467,17 +556,20 @@ func isRunnableCall(call *ast.Node) bool {
 // that starts with ( would otherwise continue the previous one.
 func (p *projector) runCall(call *ast.Node, e env) {
 	start := p.tokenStart(call)
-	open := "(yield* " + p.names.helper("$run") + "("
 	if p.statementStarts[start] {
-		open = ";" + open
+		p.plan.insert(start, ";")
 		delete(p.statementStarts, start)
 	}
-	p.plan.insert(start, open)
+	p.plan.mark(editRun, partOpen, start, start, "")
 	p.callee(call, e)
-	for _, argument := range call.Arguments() {
-		p.visit(argument, e)
+	if arguments := call.Arguments(); e.continuation != "" && len(arguments) > 0 && isContinuationArgument(arguments[0]) {
+		p.continuationArguments(call, e)
+	} else {
+		for _, argument := range arguments {
+			p.visit(argument, e)
+		}
 	}
-	p.plan.insert(call.End(), "))")
+	p.plan.mark(editRun, partClose, call.End(), call.End(), "")
 }
 
 // callee walks call's callee and type arguments. A member call S.m(...) on
@@ -489,15 +581,15 @@ func (p *projector) callee(call *ast.Node, e env) {
 	switch {
 	case ast.IsPropertyAccessExpression(callee) && call.QuestionDotToken() == nil && p.mayBeServiceKey(callee.Expression()):
 		receiver := callee.Expression()
-		p.plan.insert(p.tokenStart(receiver), p.names.helper("$use")+"(")
+		p.plan.mark(editServiceCall, partOpen, p.tokenStart(receiver), p.tokenStart(receiver), "")
 		p.visit(receiver, e)
-		p.plan.insert(receiver.End(), ")")
+		p.plan.mark(editServiceCall, partClose, receiver.End(), receiver.End(), "")
 		p.visit(callee.Name(), e)
 	case callee.Kind == ast.KindIdentifier && len(call.Arguments()) == 0 && call.TypeArguments() == nil &&
 		call.QuestionDotToken() == nil && !p.functions[callee.Text()]:
-		p.plan.insert(p.tokenStart(callee), p.names.helper("$value")+"(")
+		p.plan.mark(editValueCall, partOpen, p.tokenStart(callee), p.tokenStart(callee), "")
 		p.visit(callee, e)
-		p.plan.insert(callee.End(), ")")
+		p.plan.mark(editValueCall, partClose, callee.End(), callee.End(), "")
 	default:
 		p.visit(callee, e)
 	}
@@ -537,7 +629,9 @@ var javaScriptGlobals = map[string]bool{
 }
 
 // throwStatement lowers `throw x` in an Effect body to
-// `return yield* $fail(x)`, which adds x's type to the function's errors.
+// `return yield* $fail(x)`, which adds x's type to the function's errors,
+// or, where A must stay void (env.voidFail), to
+// `return (yield* $fail(x)) as void`.
 func (p *projector) throwStatement(node *ast.Node, e env) {
 	start := p.tokenStart(node)
 	if p.text[start:min(start+len("throw"), len(p.text))] != "throw" {
@@ -546,9 +640,13 @@ func (p *projector) throwStatement(node *ast.Node, e env) {
 	}
 	expression := node.Expression()
 	// Replace the space after throw too: `$fail(x)`, not `$fail( x)`.
-	p.plan.replace(start, p.tokenStart(expression), "return yield* "+p.names.helper("$fail")+"(")
+	arg := ""
+	if e.voidFail {
+		arg = "void"
+	}
+	p.plan.mark(editFail, partOpen, start, p.tokenStart(expression), arg)
 	p.visit(expression, e)
-	p.plan.insert(expression.End(), ")")
+	p.plan.mark(editFail, partClose, expression.End(), expression.End(), arg)
 }
 
 // unprojected records that node, a node the parser synthesized for an Effeck
