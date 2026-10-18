@@ -1,5 +1,5 @@
 // Reject gate sources in training examples or the prompt, even under different file names.
-import { readFileSync } from "node:fs"
+import { readFileSync, realpathSync } from "node:fs"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { casesIn } from "./cases.mjs"
@@ -121,7 +121,9 @@ export function heldoutProblems({ golden = casesIn(join(here, "golden")), exampl
   return [...problems]
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+// Compare real paths: on macOS tmpdir() is under /var, a symlink to /private/var, and
+// import.meta.url names the resolved path while argv[1] keeps the one the caller passed.
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) {
   const problems = heldoutProblems()
   if (problems.length) {
     console.error(problems.join("\n"))
