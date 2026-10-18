@@ -5,7 +5,7 @@
     {
       "type": "links",
       "links": [
-        { "label": "Convert Effect code", "url": "https://effeck.dev/" },
+        { "label": "Install Effeck", "url": "https://effeck.dev/" },
         { "label": "Docs", "url": "https://effeck.dev/001-onboarding.html" },
         { "label": "Report a bug", "url": "https://smithers.sh/effeck/effeck/issues" }
       ]
