@@ -4,6 +4,10 @@ import (
 	"context"
 	"io"
 	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
@@ -54,6 +58,23 @@ func TestHostTransform(t *testing.T) {
 	assert.Equal(t, len(mapperDiagnostics), 1)
 	assert.Equal(t, mapperDiagnostics[0].Code(), int32(CodeUnprojectedForm))
 	assert.Equal(t, content[mapperDiagnostics[0].Pos():mapperDiagnostics[0].End()], "await")
+}
+
+// TestVersionMismatchDiagnostic checks that openProject reports EK9002 for
+// a project that installs another effect than the forms table pins, as a
+// diagnostic on the mapper's tsconfig entry.
+func TestVersionMismatchDiagnostic(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	assert.NilError(t, os.MkdirAll(filepath.Join(dir, "node_modules", "effect"), 0o755))
+	assert.NilError(t, os.WriteFile(filepath.Join(dir, "node_modules", "effect", "package.json"), []byte(`{"name": "effect", "version": "3.0.0"}`), 0o644))
+	result, err := Handler{}.HandleRequest(t.Context(), contentmapper.MethodOpenProject,
+		[]byte(`{"configFileName":`+strconv.Quote(filepath.ToSlash(filepath.Join(dir, "tsconfig.json")))+`,"projectHandle":"p","compilerOptions":{}}`))
+	assert.NilError(t, err)
+	diagnostics := result.(contentmapper.OpenProjectResult).OptionDiagnostics
+	assert.Equal(t, len(diagnostics), 1)
+	assert.Equal(t, diagnostics[0].Code, int32(CodeVersionMismatch))
+	assert.Assert(t, strings.Contains(diagnostics[0].MessageText, "effect 3.0.0 (the table pins 4.0.5)"), diagnostics[0].MessageText)
 }
 
 // TestInitializeRequiresUTF8 checks that the mapper refuses a host that does

@@ -1,0 +1,30 @@
+// Each form a lambda, a block, or an argument takes (L1), whose virtual
+// TypeScript types forms-check.ts pins.
+export error NotFound { id: string }
+
+function find(id: string): string!NotFound! {
+  if (id === "") throw new NotFound({ id })
+  return id
+}
+
+// The Effect function form: forEach's callback.
+export function each(ids: ReadonlyArray<string>) {
+  return Effect.forEach(ids, (id) => find(id))
+}
+
+// The program form: retry's first argument.
+export function retried() {
+  return Effect.retry(() => find("x"), { times: 1 })
+}
+
+// By name: timeout's first argument is a program, so the call does not run.
+export function timed() {
+  return Effect.timeout(find("x"), "1 second")
+}
+
+// A block param on a dual: the block is the program.
+export function spanned() {
+  return Effect.withSpan("load") {
+    return find("y")
+  }
+}

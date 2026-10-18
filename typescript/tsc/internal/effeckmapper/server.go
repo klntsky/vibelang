@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path"
+	"path/filepath"
 	"slices"
 
 	"github.com/microsoft/TypeScript/tsc/internal/contentmapper"
@@ -75,14 +78,28 @@ func initialize(params json.Value) (any, error) {
 // openProject reports the package.json files whose names enter the
 // project's module keys as watched files (the manifest declares
 // dynamicConfig), with an identity of their names, so a renamed package
-// invalidates every projection of the project.
+// invalidates every projection of the project. It also reports EK9002 when
+// the project installs another version of effect or of an @effect package
+// than the forms table was generated from (versionMismatch).
 func openProject(params json.Value) (any, error) {
 	var p contentmapper.OpenProjectParams
 	if err := json.Unmarshal(params, &p); err != nil {
 		return nil, err
 	}
 	files, identity := projectPackageFiles(p.ConfigFileName)
-	return contentmapper.OpenProjectResult{ConfigIdentity: identity, WatchedFiles: files}, nil
+	result := contentmapper.OpenProjectResult{ConfigIdentity: identity, WatchedFiles: files}
+	if table, err := DefaultTable(); err == nil && p.ConfigFileName != "" {
+		dir := path.Dir(filepath.ToSlash(p.ConfigFileName))
+		if message := versionMismatch(table.Header, dir, os.ReadFile); message != "" {
+			// A project-level diagnostic, on the mapper's tsconfig entry.
+			result.OptionDiagnostics = append(result.OptionDiagnostics, contentmapper.OptionDiagnosticResult{
+				Path:        []json.Value{},
+				MessageText: message,
+				Code:        CodeVersionMismatch,
+			})
+		}
+	}
+	return result, nil
 }
 
 // transform projects one file from its content and its context; the project

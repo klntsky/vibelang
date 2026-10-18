@@ -57,6 +57,9 @@ const PreludeModule = "effeck-ts-mapper/prelude"
 const (
 	// CodeUnprojectedForm marks Effeck syntax the projector does not lower yet.
 	CodeUnprojectedForm = 9001
+	// CodeVersionMismatch marks a project whose effect or @effect packages
+	// differ from the versions the forms table pins (module.go).
+	CodeVersionMismatch = 9002
 )
 
 // projectedFileName is the name the parser sees. The parser reads Effeck

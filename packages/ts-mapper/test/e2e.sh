@@ -16,7 +16,9 @@
 #      packages/runtime.
 #   4. tsc --runExternalCode must print exactly test/expected-tsc.txt: one
 #      error in main.ts (a misuse of greet's inferred type) and one in
-#      greet.effeck, at its .effeck position.
+#      greet.effeck, at its .effeck position. forms-check.ts pins the
+#      types each lambda form projects to (forms.effeck): a wrong form
+#      adds a TS2322 there.
 #   5. The stock language server must answer hovers and diagnostics at
 #      .effeck positions (test/lsp-hover.mjs).
 #   6. Without effect beside the prelude, the sentinel on each projected

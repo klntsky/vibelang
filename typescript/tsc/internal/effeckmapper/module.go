@@ -114,3 +114,62 @@ func projectPackageFiles(configFileName string) (files []string, identity string
 	}
 	return files, hex.EncodeToString(hash.Sum(nil)[:16])
 }
+
+// The forms table pins the declarations it was generated from (forms.go,
+// Header.Inputs). Lambda forms, by-name arguments, and block placements
+// follow the table, so a project that resolves another version of effect or
+// of an @effect package may get the wrong ones without any other sign.
+// openProject reports each such package once, as a diagnostic on the
+// mapper's entry in the project's tsconfig.
+
+// installedVersions returns, for each package in names, the version of the
+// copy that a file in dir resolves: the first node_modules/<name> on the
+// way up, read by read. A package found nowhere is absent.
+func installedVersions(dir string, names []string, read func(string) ([]byte, error)) map[string]string {
+	found := map[string]string{}
+	for _, name := range names {
+		for d := dir; ; d = path.Dir(d) {
+			if data, err := read(path.Join(d, "node_modules", name, "package.json")); err == nil {
+				var manifest struct {
+					Version string `json:"version"`
+				}
+				if json.Unmarshal(data, &manifest) == nil && manifest.Version != "" {
+					found[name] = manifest.Version
+				}
+				break
+			}
+			if parent := path.Dir(d); parent == d {
+				break
+			}
+		}
+	}
+	return found
+}
+
+// versionMismatch returns the message of the diagnostic for a project in
+// dir whose installed effect or @effect packages differ from the versions
+// the forms table pins, or "" when they agree or none is installed.
+func versionMismatch(header Header, dir string, read func(string) ([]byte, error)) string {
+	pinned := map[string]string{}
+	var names []string
+	for _, input := range header.Inputs {
+		if input.Package == "effect" || strings.HasPrefix(input.Package, "@effect/") {
+			pinned[input.Package] = input.Version
+			names = append(names, input.Package)
+		}
+	}
+	slices.Sort(names)
+	installed := installedVersions(dir, names, read)
+	var differ []string
+	for _, name := range names {
+		if version, ok := installed[name]; ok && version != pinned[name] {
+			differ = append(differ, name+" "+version+" (the table pins "+pinned[name]+")")
+		}
+	}
+	if len(differ) == 0 {
+		return ""
+	}
+	return "effeck-ts-mapper's forms table was generated from other versions than this project installs: " +
+		strings.Join(differ, ", ") + ". Lambda forms, by-name arguments, and block placements follow the table, so some may be wrong. " +
+		"Install the pinned versions, or an effeck-ts-mapper whose table was generated from these."
+}

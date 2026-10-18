@@ -390,6 +390,32 @@ func TestModuleKey(t *testing.T) {
 	assert.Equal(t, moduleKey("/elsewhere/main.effeck", read), "main")
 }
 
+// TestVersionMismatch checks that a project whose installed effect or
+// @effect packages differ from the forms table's pinned versions gets one
+// message naming both versions of each, and that agreeing or absent
+// packages get none.
+func TestVersionMismatch(t *testing.T) {
+	t.Parallel()
+	header := Header{Inputs: []Input{{Package: "effect", Version: "4.0.5"}, {Package: "@effect/vitest", Version: "4.0.5"}, {Package: "vite", Version: "8.3.4"}}}
+	files := map[string]string{
+		"/repo/node_modules/effect/package.json":         `{"version": "4.1.0"}`,
+		"/repo/node_modules/@effect/vitest/package.json": `{"version": "4.0.5"}`,
+		"/repo/node_modules/vite/package.json":           `{"version": "9.0.0"}`,
+		"/ok/node_modules/effect/package.json":           `{"version": "4.0.5"}`,
+	}
+	read := func(name string) ([]byte, error) {
+		if text, ok := files[name]; ok {
+			return []byte(text), nil
+		}
+		return nil, errNotFound
+	}
+	message := versionMismatch(header, "/repo/app", read)
+	assert.Assert(t, strings.Contains(message, "effect 4.1.0 (the table pins 4.0.5)"), message)
+	assert.Assert(t, !strings.Contains(message, "vitest") && !strings.Contains(message, "vite "), message)
+	assert.Equal(t, versionMismatch(header, "/ok", read), "")
+	assert.Equal(t, versionMismatch(header, "/none", read), "")
+}
+
 // assertValidMap fails unless projection's span map passes the validation
 // TypeScript applies to every transform result.
 func assertValidMap(t *testing.T, projection Projection, source string) {
