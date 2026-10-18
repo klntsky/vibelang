@@ -27,7 +27,7 @@ Code example count: one example per fenced code block in the source body, includ
   - [Two Types of Errors](src/error-management/006-two-error-types.md): `v4/error-management/two-error-types.mdx`
   - [Basic Concurrency](src/concurrency/007-basic-concurrency.md): `v4/concurrency/basic-concurrency.mdx`
 - **Core Concepts**
-  - [Importing Effect](src/getting-started/008-importing-effect.md): `v4/getting-started/importing-effect.mdx`
+  - [Effect's Modules](src/getting-started/008-importing-effect.md): `v4/getting-started/importing-effect.mdx`
   - [Running Effects](src/getting-started/009-running-effects.md): `v4/getting-started/running-effects.mdx`
   - [Sequencing Effects](src/getting-started/010-using-generators.md): `v4/getting-started/using-generators.mdx`
   - [Building Pipelines](src/getting-started/011-building-pipelines.md): `v4/getting-started/building-pipelines.mdx`

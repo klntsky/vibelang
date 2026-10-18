@@ -139,7 +139,7 @@ function combine(
 
 `zipWith` combines two present values through a callback. `all` combines tuple, record, or iterable contents into a single option. If any required value is absent, the combined result is `None`.
 
-## Combining options with generators
+## Combining several options
 
 ```ts
 // TypeScript (.ts)

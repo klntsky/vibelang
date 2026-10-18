@@ -1,4 +1,4 @@
-# Importing Effect
+# Effect's Modules
 
 Effect's modules are already in scope in `.vibe` files: the prelude, and every module that `effect` exports from its root, such as `Console`, `Option`, `Stream`, and `Schedule`. Import modules from `effect`'s subpath packages, such as `effect/http`, as you need them.
 
