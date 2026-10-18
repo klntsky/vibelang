@@ -25,7 +25,7 @@
 #      file's first line must report TS1360 at line 1, naming the fix.
 #
 # Environment:
-#   TS7_VERSION  typescript version to test (default 7.1.0-dev.20261017.1)
+#   TS7_VERSION  typescript version to test (default 7.1.0-dev.20261010.1)
 #   EFFECT_DIR   an installed effect 4.0.5 to use instead of the cached one
 #   KEEP=1       keep the temporary project and print its path
 set -euo pipefail
@@ -33,7 +33,7 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 package="$(cd "$here/.." && pwd)"
 root="$(cd "$package/../.." && pwd)"
-ts7_version="${TS7_VERSION:-7.1.0-dev.20261017.1}"
+ts7_version="${TS7_VERSION:-7.1.0-dev.20261010.1}"
 
 step() { printf '\n== %s\n' "$*"; }
 
