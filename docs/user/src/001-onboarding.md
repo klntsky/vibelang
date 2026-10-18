@@ -1,73 +1,76 @@
 # Welcome to Effeck
 
-Effeck gives every function a contract for its result, expected errors, and required services. Use it to write application logic with TypeScript syntax and Effect's execution, resource, and concurrency tools.
+Effeck is TypeScript in which every function is an [Effect](https://effect.website). You write ordinary functions; the compiler turns them into Effect programs, with typed errors, dependency injection, and safe concurrency, and no `yield*`, `pipe`, or generators.
 
-## Why typed programs help
+## The same program, twice
 
-```ts
-error EmptyName
+A service that finds users, a typed error, and a fallback. On the left is Effect today; on the right is Effeck.
 
-function greet(name: string) {
-  if (name.trim() === "") throw new EmptyName()
-  return `Welcome, ${name.trim()}`
-}
-// string!EmptyName!
+```ts effect
+class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
+  id: Schema.String
+}) {}
+
+class Users extends Context.Service<Users, {
+  find(id: string): Effect.Effect<User, UserNotFound>
+}>()("app/Users") {}
+
+const greet = Effect.fn("greet")(function* (id: string) {
+  const users = yield* Users
+  const user = yield* users.find(id).pipe(
+    Effect.catchTag("UserNotFound", () => Effect.succeed({ name: "guest" }))
+  )
+  return `Hello, ${user.name}`
+})
 ```
 
-The contract tells a caller that `greet` returns a string, can fail with `EmptyName`, and needs no services. The compiler infers all three channels from the body. Expected errors remain visible as they pass through callers.
-
-## Programs as values
-
 ```ts
-function announce(name: string) {
-  log(greet(name))
+interface User { id: string; name: string }
+
+error UserNotFound { id: string }
+
+service Users {
+  find(id: string): User!UserNotFound
 }
 
-const announcement = () => announce("Mira")
-
-function twice() {
-  announcement()
-  announcement()
+function greet(id: string) {
+  const name = Users.find(id).name catch "guest"
+  return `Hello, ${name}`
 }
+// string!!Users
 ```
 
-A function value describes work. Calling it runs that work in the current program; calling it again starts a fresh run. Pass `() => announce("Mira")` to an operator when that operator must control when the work starts.
+Both compile to the same kind of program. The comment under `greet` is the type your editor shows on hover: it returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body.
 
-## Errors, concurrency, resources, and telemetry
+## What you get
 
-```ts
-function prepare() {
-  return all([
-    do { sleep("20 millis"); "catalog" },
-    do { log("checking inventory"); "inventory" }
-  ], { concurrency: 2 })
-}
+- **Plain code.** A call runs; statements run in order; `throw` fails; `try`, `catch`, and `finally` work as you expect. No generators, `yield*`, or `pipe`.
+- **Every function's type tells the truth.** `User!UserNotFound!Db` reads as: returns a `User`, can fail with `UserNotFound`, needs `Db`. The compiler infers it and checks it everywhere.
+- **All of Effect.** Effeck compiles to ordinary Effect 4 JavaScript. Effect's libraries, your `.ts` files, and any npm package work unchanged, and TypeScript code can call Effeck functions.
+- **Less to write and read.** Effect's ideas get first-class syntax: `error`, `service`, `provide`, `fork` and `join`, `match`, `await.race`, and the `|>` pipe. The Effeck half of the example above is about half the size of the Effect half.
 
-function main() {
-  return withSpan(prepare(), "startup")
-}
+## Why use it
+
+Use Effeck when you want what Effect gives you, errors in the type, services injected and swappable in tests, structured concurrency, resources that always close, tracing, without writing Effect's plumbing by hand.
+
+- **If you use Effect today**, Effeck removes the ceremony and keeps the runtime, the libraries, and the mental model.
+- **If you write TypeScript and Effect looked like too much**, Effeck lets you start with plain functions and add typed errors and services as you need them.
+- **If AI agents write your code**, Effeck is shorter to generate, and its types reject unhandled failures and missing dependencies at compile time.
+
+Effeck is v0: expect breaking changes, and do not use it in production yet.
+
+## Try it
+
+```sh
+bun create effeck my-app
+cd my-app
+bun run dev
 ```
 
-`Effect.all` starts these two programs concurrently and preserves their result order. An unhandled failure interrupts the other branch and waits for cleanup. Use `try`/`catch` for expected failures, `using` for acquired resources, and `finally` for cleanup on every exit, including interruption. Effect also supplies schedules, streams, schema validation, configuration, logs, metrics, and tracing.
+Then open the folder in VS Code or Cursor and install the editor extension that comes with the compiler: `code --install-extension node_modules/effeck/editor/effeck.vsix`. [Installation](getting-started/004-installation.md) covers existing projects.
 
-## Working with coding assistants
+## Where to go next
 
-Give an assistant the Effeck rules and the version of Effect your project uses. Ask it to write ordinary functions, pass the call itself where an operator expects a program, as in `fork(fetchReport())`, and check inferred errors and services. Examples copied from TypeScript Effect need adaptation: `.effeck` files use calls instead of `yield*`, and platform access goes through Effect modules.
-
-Keep feedback concrete: check the contract, test a failure, and test cleanup when a request is interrupted. An assistant needs the same boundaries as a human author, especially around plain JavaScript libraries.
-
-## Your learning path
-
-1. Read [The Effect Type](getting-started/003-the-effect-type.md) to learn the three contract channels.
-2. Follow [Installation](getting-started/004-installation.md) for dependencies and compiler setup.
-3. Write functions with [Creating Effects](getting-started/005-creating-effects.md), then choose a boundary in [Running Effects](getting-started/009-running-effects.md).
-4. Learn [expected failures and defects](error-management/006-two-error-types.md).
-5. Add [concurrency](concurrency/007-basic-concurrency.md) and [resource management](resource-management/029-introduction.md) as your application needs them.
-
-Use the [guide index](013-getting-started.md) to return to a topic. The Effect API reference explains library operators; these pages explain how to call them from Effeck.
-
-## Coming from Effect
-
-An ordinary function replaces `Effect.gen` sequencing. Functions, typed errors, services, and resources still run on Effect 4; use Effeck's call rules when reading the examples. The [cheat sheet](effeck-features/115-cheat-sheet.md) shows every Effeck change beside the Effect code it replaces, and [Effeck for Effect users](effeck-features/114-effeck-for-effect-users.md) explains the rules.
-
-[Upstream Effect page](https://effect.website/docs/v4/onboarding)
+- **Coming from Effect:** the [cheat sheet](effeck-features/115-cheat-sheet.md) puts every Effeck form beside the Effect code it replaces.
+- **New to Effect:** start with [The Effect Type](getting-started/003-the-effect-type.md), then [Creating Effects](getting-started/005-creating-effects.md) and [Expected Errors](error-management/014-expected-errors.md).
+- **The full language:** [Effeck for Effect users](effeck-features/114-effeck-for-effect-users.md) explains the rules, and the specification defines them.
