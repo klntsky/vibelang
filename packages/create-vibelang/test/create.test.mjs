@@ -30,6 +30,10 @@ test("copies the starter app and pins the VibeLang packages to its own version",
     assert.equal(manifest.devDependencies.vibelang, version)
     assert.equal(manifest.devDependencies["vibelang-vite"], version)
     assert.match(result.stdout, /npm install/)
+    const agents = readFileSync(join(app, "AGENTS.md"), "utf8")
+    assert.match(agents, /`npm run build`/)
+    assert.match(agents, /`npm run test`/)
+    assert.doesNotMatch(agents, /bun run/)
     assert.match(result.stdout, /node_modules\/vibelang\/editor\/vibelang\.vsix/)
   } finally {
     rmSync(scratch, { recursive: true, force: true })

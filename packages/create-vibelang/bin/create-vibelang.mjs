@@ -55,6 +55,10 @@ manifest.devDependencies["vibelang-vite"] = own.version
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n")
 
 const manager = packageManager()
+// AGENTS.md names the commands with the manager that created the app, as the
+// next steps below do, so an agent's first command is one this machine has.
+const agentsPath = join(directory, "AGENTS.md")
+if (existsSync(agentsPath)) writeFileSync(agentsPath, readFileSync(agentsPath, "utf8").replaceAll("bun run ", `${manager} run `))
 console.log(`Created ${target} with VibeLang ${own.version}.`)
 if (install) {
   console.log(`Installing dependencies with ${manager}...`)
