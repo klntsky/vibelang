@@ -300,6 +300,44 @@ async function command(args: string[], cwd: string, timeout: number) {
 
 export const normalizeOutput = (text: string) => text.replaceAll("\r\n", "\n").replace(/\n$/, "")
 
+// Test registrations need Vitest's context, including when a later excerpt
+// imports an assertion helper from an earlier test block. Inspect only emitted
+// dependencies, so unrelated tests on the page do not change the runner.
+function importsVitest(dir: string): boolean {
+  return readdirSync(dir, { withFileTypes: true }).some(file => {
+    const path = join(dir, file.name)
+    return file.isDirectory() ? importsVitest(path) :
+      file.name.endsWith(".js") && /["']@effect\/vitest["']/.test(readFileSync(path, "utf8"))
+  })
+}
+
+async function runVitest(dir: string, emitted: string, helper: string | undefined, timeout: number) {
+  const entry = "dist/$docs-entry.test.js"
+  writeFileSync(join(dir, entry), helper
+    ? `import { ${helper} } from ${JSON.stringify("./" + emitted)};\n` +
+      `import { it } from "@effect/vitest";\nimport { Console, Effect } from "effect";\n` +
+      `it.effect("docs run header", () => Effect.provideService(Effect.suspend(() => { const value = ${helper}(); return Effect.isEffect(value) ? value : Effect.succeed(value); }), Console.Console, globalThis.console));\n`
+    : `import ${JSON.stringify("./" + emitted)};\n`)
+  // Keep stdout exclusively for the example. Report failures to stderr so an
+  // empty output assertion still requires every registered test to pass.
+  writeFileSync(join(dir, "$docs-reporter.mjs"), `export default class {
+    onTestCaseResult(test) {
+      for (const error of test.result().errors ?? []) console.error(error.stack ?? error.message);
+    }
+    onTestRunEnd(modules, errors) {
+      for (const error of [...errors, ...modules.flatMap(module => module.errors())]) console.error(error.stack ?? error.message);
+    }
+  }\n`)
+  writeFileSync(join(dir, "$docs-vitest.config.mjs"), `export default ${JSON.stringify({ test: {
+    include: [entry], reporters: [join(dir, "$docs-reporter.mjs")],
+    disableConsoleIntercept: true, fileParallelism: false, maxWorkers: 1,
+    testTimeout: timeout, hookTimeout: timeout
+  } })}\n`)
+  const require = createRequire(join(repo, "docs/tools/package.json"))
+  const vitest = join(dirname(require.resolve("vitest/package.json")), "vitest.mjs")
+  return command(["node", vitest, "run", "--config", "$docs-vitest.config.mjs"], dir, timeout)
+}
+
 async function runBlock(dir: string, blocks: Block[], result: Result, compiler: string, timeout: number): Promise<Result> {
   if (result.status !== "ok" || result.expected.length || result.diagnostics.length) {
     return { ...result, status: "fail", reason: `Output assertion cannot run a ${result.status} block or a block with expected diagnostics` }
@@ -333,7 +371,9 @@ async function runBlock(dir: string, blocks: Block[], result: Result, compiler: 
     writeFileSync(entry, `import { ${helper} } from ${JSON.stringify("./" + emitted)};\n` +
       `import { Effect } from "effect";\nconst result = ${helper}();\nif (Effect.isEffect(result)) await Effect.runPromise(result);\n`)
   }
-  const executed = await command(["node", entry], dir, timeout)
+  const executed = importsVitest(join(dir, "dist"))
+    ? await runVitest(dir, emitted, result.run ? helper : undefined, timeout)
+    : await command(["node", entry], dir, timeout)
   const reason = executed.timedOut ? `Execution timed out after ${timeout}ms` :
     executed.exitCode !== 0 ? `Node exited with status ${executed.exitCode}` :
     normalizeOutput(executed.stdout) !== normalizeOutput(result.output!) ? "stdout mismatch" : undefined

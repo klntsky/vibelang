@@ -41,6 +41,7 @@ function check(condition: boolean, message: string) {
   assert.isTrue(condition, message)
 }
 
+// Output:
 it.effect("a deadline returns the fallback") {
   const pending = fork(Effect.timeoutOrElse(() => {
     sleep("10 minutes")
@@ -59,6 +60,7 @@ it.effect("a deadline returns the fallback") {
 `it.effect` provides the test services, including virtual time. `adjust` advances by a duration and runs sleepers whose deadlines fall within that interval; `setTime` sets an absolute timestamp in milliseconds. Fork the timed work first so the test's own fiber remains free to adjust the clock. The block owns `pending` and interrupts it if the test exits early.
 
 ```vibe
+// run: Console.log(standaloneClockExample())
 import { TestClock } from "effect/testing"
 
 function standaloneClockExample() {
@@ -70,6 +72,10 @@ function standaloneClockExample() {
 }
 ```
 
+```output
+7000
+```
+
 Outside the test harness, explicitly provide `TestClock.layer()`. The virtual clock does not advance merely because real time passes. Sleeping on the test's own fiber before adjusting time leaves the test waiting for an adjustment it cannot perform.
 
 ## Advancing recurring computations
@@ -78,6 +84,7 @@ Outside the test harness, explicitly provide `TestClock.layer()`. The virtual cl
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 
+// Output:
 it.effect("emits once per interval") {
   const queue = Queue.unbounded<string>()
   fork {
@@ -112,6 +119,7 @@ function isExpired(createdAt: number, lifetimeMillis: number) {
   return Clock.currentTimeMillis() - createdAt >= lifetimeMillis
 }
 
+// Output:
 it.effect("expires at the boundary") {
   const createdAt = Clock.currentTimeMillis()
   TestClock.adjust("9 seconds")
@@ -129,6 +137,7 @@ Calls to `Clock.currentTimeMillis()` read the supplied clock and remain determin
 import { TestClock } from "effect/testing"
 import { it } from "@effect/vitest"
 
+// Output:
 it.effect("completes a deferred after a delay") {
   const ready = Deferred.make<number>()
   const worker = fork {

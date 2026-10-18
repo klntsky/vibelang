@@ -180,29 +180,37 @@ test.skipIf(!existsSync(compiler))("runs marked blocks and reports output mismat
       ],
       "mismatch": ["```vibe", "export function main() { Console.log('actual') }", "// Output: claimed", "```"],
       "exit": ["```vibe", "export function main() { Effect.die('failure') }", "// Output:", "```"],
-      "timeout": ["```vibe", "export function main() { Effect.never() }", "// Output:", "```"],
       "fragment": ["```vibe", "// fragment", "missing()", "// Output: impossible", "```"],
       "expected": ["```vibe", "// expect-error: TS2322", "const invalid: number = 'text'", "// Output:", "```"],
       "compile": ["```vibe", "// run: missing()", "const valid = 1", "// Output:", "```"]
     }
     for (const [name, lines] of Object.entries(pages)) writeFileSync(join(root, `${name}.md`), lines.join("\n"))
     const output = join(root, "report.json")
-    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--timeout", "3000", "--json", output], { stdout: "pipe", stderr: "pipe" })
+    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--json", output], { stdout: "pipe", stderr: "pipe" })
     const [stdout, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
     expect({ status, stderr }).toEqual({ status: 1, stderr: "" })
     const report = JSON.parse(readFileSync(output, "utf8"))
     const page = (name: string) => report.pages.find((p: any) => p.page.endsWith(`/${name}.md`)).blocks
+    if (page("pass").some((b: any) => b.status === "fail")) console.log(JSON.stringify(page("pass").map((b: any) => ({ number: b.number, reason: b.reason, execution: b.execution })), null, 2))
     expect(page("pass").map((b: any) => b.status)).toEqual(["ok", "fragment", "ok", "ok", "ok", "ok"])
     expect(page("pass").slice(3).map((b: any) => b.execution.stdout)).toEqual(["Hello, Ada!\n", "native entry\n", "plain entry\n"])
     expect(page("mismatch")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("stdout mismatch"), execution: { stdout: "actual\n", expectedStdout: "claimed" } })
     expect(page("exit")[0]).toMatchObject({ status: "fail", execution: { exitCode: 1 } })
-    expect(page("timeout")[0]).toMatchObject({ status: "fail", execution: { timedOut: true } })
     expect(page("fragment")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("cannot run") })
     expect(page("expected")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("cannot run") })
     expect(page("compile")[0]).toMatchObject({ status: "fail", execution: { phase: "compile" } })
     expect(stdout).toContain('"passed":3')
+    // Give real entries the normal startup budget. Only the deliberate live
+    // fiber uses a short timeout; busy CI hosts can take over three seconds
+    // to load a native entry's platform runtime.
+    writeFileSync(join(root, "timeout.md"), ["```vibe", "export function main() { Effect.never() }", "// Output:", "```"].join("\n"))
+    const timeoutReport = join(root, "timeout.json")
+    const hanging = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--filter", "timeout.md", "--timeout", "3000", "--json", timeoutReport], { stdout: "pipe", stderr: "pipe" })
+    const [, timeoutStderr, timeoutStatus] = await Promise.all([new Response(hanging.stdout).text(), new Response(hanging.stderr).text(), hanging.exited])
+    expect({ status: timeoutStatus, stderr: timeoutStderr }).toEqual({ status: 1, stderr: "" })
+    expect(JSON.parse(readFileSync(timeoutReport, "utf8")).pages[0].blocks[0]).toMatchObject({ status: "fail", execution: { timedOut: true } })
   } finally { rmSync(root, { recursive: true, force: true }) }
-}, 30000)
+}, 60000)
 
 
 test("output normalization preserves spaces and extra blank lines", () => {
@@ -211,3 +219,31 @@ test("output normalization preserves spaces and extra blank lines", () => {
   expect(normalizeOutput("  one  ")).toBe("  one  ")
   expect(normalizeOutput("")).toBe("")
 })
+
+test.skipIf(!existsSync(compiler))("runs Effect Vitest snippets, shared assertions, and run headers in a test context", async () => {
+  const root = mkdtempSync(join(tmpdir(), "snippet-vitest-test-"))
+  try {
+    writeFileSync(join(root, "pass.md"), [
+      "```vibe", 'import { assert, it } from "@effect/vitest"', 'import { TestClock } from "effect/testing"',
+      'function check(value: number) { assert.strictEqual(value, 42) }',
+      'it.effect("virtual sleep") { const worker = fork { sleep("1 hour"); return 42 }; TestClock.adjust("1 hour"); check(join worker) }',
+      '// Output:', "```",
+      "```vibe", '// run: check(42); Console.log("checked")', 'function example() { return 42 }', '// Output: checked', "```"
+    ].join("\n"))
+    writeFileSync(join(root, "failure.md"), [
+      "```vibe", 'import { assert, it } from "@effect/vitest"',
+      'it.effect("reports assertion failures") { assert.strictEqual(1, 2) }', '// Output:', "```"
+    ].join("\n"))
+    const output = join(root, "report.json")
+    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--json", output], { stdout: "pipe", stderr: "pipe" })
+    const [, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
+    expect({ status, stderr }).toEqual({ status: 1, stderr: "" })
+    const report = JSON.parse(readFileSync(output, "utf8"))
+    const pass = report.pages.find((p: any) => p.page.endsWith("/pass.md")).blocks
+    expect(pass.map((b: any) => b.execution.status)).toEqual(["passed", "passed"])
+    expect(pass[1].execution.stdout).toBe("checked\n")
+    const failure = report.pages.find((p: any) => p.page.endsWith("/failure.md")).blocks[0]
+    expect(failure.execution.exitCode).not.toBe(0)
+    expect(failure.execution.stderr).toContain("AssertionError")
+  } finally { rmSync(root, { recursive: true, force: true }) }
+}, 30000)
