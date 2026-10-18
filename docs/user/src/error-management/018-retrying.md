@@ -7,16 +7,25 @@ Retry transient domain failures when a new attempt has a useful chance of succee
 ## Retrying failed computations
 
 ```vibe
+// run: Console.log(loadWithRetries())
 error Busy { attempt: number }
 
 function loadWithRetries() {
   let attempts = 0
   return retry({ times: 3 }) {
     attempts += 1
+    Console.log(`Attempt ${attempts}`)
     if (attempts < 3) throw new Busy({ attempt: attempts })
     return "Snapshot ready"
   }
 }
+```
+
+```output
+Attempt 1
+Attempt 2
+Attempt 3
+Snapshot ready
 ```
 
 The initial attempt always runs. `{ times: 3 }` allows three additional attempts, for at most four executions; this example succeeds on its third execution. State declared outside the retry callback, such as `attempts`, persists across attempts, while local variables inside it start fresh.
@@ -26,6 +35,7 @@ Failures stop the current attempt before retry begins. Defects and interruption 
 ## Selecting retryable domain errors
 
 ```vibe
+// run: Console.log(Effect.flip(() => sendTransient()).transient)
 error RequestRejected {
   transient: boolean
 }
@@ -42,11 +52,16 @@ function sendTransient() {
 }
 ```
 
+```output
+false
+```
+
 `while` permits retry while its predicate holds; `until` stops retry when its predicate holds. Both can return a boolean or an Effect, so selection can consult a service when needed. Unselected errors remain typed failures rather than becoming successful results.
 
 ## Controlling timing and limits
 
 ```vibe
+// run: Console.log(Effect.flip(() => sendWithBackoff())._tag); Console.log(Effect.flip(() => sendThreeMoreTimes())._tag)
 function sendWithBackoff() {
   return retry(sendRequest(), {
     times: 4,
@@ -60,21 +75,32 @@ function sendThreeMoreTimes() {
 }
 ```
 
+```output
+RequestRejected
+RequestRejected
+```
+
 A schedule controls delay and can add its own stopping condition. Combining `times`, predicates, and a schedule stops when the applicable policy says to stop. `Schedule.recurs(3)` permits three retries; use `Effect.repeat` for repetition after success.
 
 ## Recovering after retries end
 
 ```vibe
+// run: Console.log(sendOrQueue())
 function sendOrQueue() {
   return Effect.retryOrElse(
     () => sendRequest(),
     Schedule.recurs(2),
     (error, retries) => {
-      log(`Queued after ${retries} retries; transient=${error.transient}`)
+      Console.log(`Queued after ${retries} retries; transient=${error.transient}`)
       return "Queued for later"
     }
   )
 }
+```
+
+```output
+Queued after 2 retries; transient=false
+Queued for later
 ```
 
 `retryOrElse` runs recovery after its schedule is exhausted. The callback receives the last error and the schedule's output, which is a retry count for `Schedule.recurs`. The recovery computation can introduce its own errors and requirements.
