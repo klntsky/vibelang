@@ -70,8 +70,8 @@ function portOrDefault(text: string) {
   }
 }
 
-// D23: a plain TypeScript function with a trusted contract (a JSDoc tag) is called bare; its
-// @throws class joins E. NOTE: the contract comment is this file's expectation, not the proposal's.
+// D249: a TypeScript function with a trusted contract, a trusted(impl, [PortError]) value, is
+// called bare; its listed class joins E.
 function portFrom(text: string) {
   return parsePortTrusted(text)
 }

@@ -69,7 +69,7 @@ export function describe(raw: string) {
 }
 
 // A lambda that can throw is an Effect function too.
-const doubled = (n: number) => {
+const doubled = (n: number): number!InvalidId! => {
   if (n < 0) throw new InvalidId({ raw: String(n) })
   return n * 2
 }

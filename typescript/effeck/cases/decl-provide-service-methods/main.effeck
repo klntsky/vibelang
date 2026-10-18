@@ -10,7 +10,7 @@ service Names {
 export function main() {
   provide Names = {
     all() { return ["b"] },
-    count() {
+    count(): number!! {
       sleep("1 millis")
       return 2
     }

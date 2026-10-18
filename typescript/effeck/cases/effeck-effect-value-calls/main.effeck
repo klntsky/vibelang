@@ -25,8 +25,8 @@ export const rejectType: Equals<ReturnType<typeof rejectDocument>, Effect.Effect
 
 // expect-result: {"value":42,"replayedFailure":"EmptyDocument d1","rejection":"EmptyDocument d2"}
 export function main() {
-  const value = replay(Exit.succeed(42))
-  const replayedFailure = Effect.flip(() => replay(Exit.fail(new EmptyDocument({ documentId: "d1" }))))
+  const value = replay(sync((): Exit.Exit<number> => Exit.succeed(42)))
+  const replayedFailure = Effect.flip(() => replay(sync((): Exit.Exit<never, EmptyDocument> => Exit.fail(new EmptyDocument({ documentId: "d1" })))))
   const rejection = Effect.flip(() => rejectDocument("d2"))
   return {
     value,

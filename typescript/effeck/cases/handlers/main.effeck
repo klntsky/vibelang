@@ -138,7 +138,7 @@ function count(n: number) {
 function manyTicks() {
   let maxDepth = 0
   let seen = 0
-  hooks.onResume = (fiber) => {
+  hooks.onResume = (fiber): void => {
     maxDepth = Math.max(maxDepth, fiber._stack.length)
   }
   const total = handle(() => count(100000), Log, {

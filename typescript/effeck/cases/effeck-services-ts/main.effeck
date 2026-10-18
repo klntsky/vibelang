@@ -13,7 +13,7 @@ export function describe(id: string) {
 }
 
 export function piped() {
-  return UserRepo.pipe("label")
+  return UserRepo().pipe("label")
 }
 
 export function joined(a: string, b: string) {

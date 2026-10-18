@@ -75,7 +75,7 @@ function interrupted() {
     join [slow, bad]
     return false
   } catch (e) {
-    const exit = slow.pollUnsafe()
+    const exit = sync((slow): Exit.Exit<string> | undefined => slow.pollUnsafe(), slow)
     return exit !== undefined && exit._tag === "Failure" && exit.cause.reasons.some((reason) => reason._tag === "Interrupt")
   }
 }

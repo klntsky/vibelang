@@ -116,8 +116,10 @@ typescript/effeck/cases/blocks-do-expression/main.effeck:57:25 lambda dual fallb
 typescript/effeck/cases/blocks-throw-expression/main.effeck:11:22 lambda dual fallback
 typescript/effeck/cases/blocks-throw-expression/main.effeck:25:29 lambda dual fallback
 typescript/effeck/cases/blocks-throw-expression/main.effeck:30:38 lambda dual fallback
-typescript/effeck/cases/blocks-throw-expression/main.effeck:42:15 lambda choice fallback
-typescript/effeck/cases/blocks-throw-expression/main.effeck:42:43 lambda dual fallback
+typescript/effeck/cases/blocks-throw-expression/main.effeck:42:15 lambda effectFn annotation
+typescript/effeck/cases/blocks-throw-expression/main.effeck:42:61 lambda dual fallback
+typescript/effeck/cases/builtin-contracts/main.effeck:35:26 lambda program table
+typescript/effeck/cases/builtin-contracts/main.effeck:36:27 lambda plain table
 typescript/effeck/cases/callback-contracts/main.effeck:36:36 lambda effectFn annotation
 typescript/effeck/cases/callback-contracts/main.effeck:37:38 lambda effectFn annotation
 typescript/effeck/cases/callback-contracts/main.effeck:38:29 lambda effectFn annotation
@@ -130,8 +132,8 @@ typescript/effeck/cases/callback-parameter-plain-type/main.effeck:17:65 lambda p
 typescript/effeck/cases/callbacks-pausing.fail/main.effeck:13:25 lambda plain table
 typescript/effeck/cases/callbacks-pausing.fail/main.effeck:14:15 lambda plain table
 typescript/effeck/cases/callbacks-result-unions/main.effeck:15:65 lambda effectFn table
-typescript/effeck/cases/callbacks-result-unions/main.effeck:25:18 lambda choice fallback
-typescript/effeck/cases/callbacks-result-unions/main.effeck:26:20 lambda choice fallback
+typescript/effeck/cases/callbacks-result-unions/main.effeck:25:18 lambda plain annotation
+typescript/effeck/cases/callbacks-result-unions/main.effeck:26:20 lambda effectFn annotation
 typescript/effeck/cases/catch-expression.fail/main.effeck:13:10 lambda effectFn table
 typescript/effeck/cases/catch-expression.fail/main.effeck:13:25 lambda effectFn table
 typescript/effeck/cases/catch-expression.fail/main.effeck:13:38 lambda dual fallback
@@ -418,7 +420,7 @@ typescript/effeck/cases/decl-old-declarations/main.effeck:21:28 block applied/pr
 typescript/effeck/cases/decl-old-declarations/main.effeck:23:3 lambda effectFn service
 typescript/effeck/cases/decl-provide-old-with/main.effeck:10:3 lambda effectFn service
 typescript/effeck/cases/decl-provide-service-methods/main.effeck:12:5 lambda plain fallback
-typescript/effeck/cases/decl-provide-service-methods/main.effeck:13:5 lambda choice fallback
+typescript/effeck/cases/decl-provide-service-methods/main.effeck:13:5 lambda effectFn annotation
 typescript/effeck/cases/decl-provide-services/main.effeck:14:3 lambda effectFn service
 typescript/effeck/cases/decl-provide-services/main.effeck:17:38 lambda plain fallback
 typescript/effeck/cases/decl-provide-services/main.effeck:17:65 lambda plain fallback
@@ -457,7 +459,9 @@ typescript/effeck/cases/effeck-control/main.effeck:19:17 lambda program table
 typescript/effeck/cases/effeck-control/main.effeck:20:14 lambda effectFn table
 typescript/effeck/cases/effeck-control/main.effeck:28:17 lambda program table
 typescript/effeck/cases/effeck-control/main.effeck:28:60 lambda effectFn table
+typescript/effeck/cases/effeck-effect-value-calls/main.effeck:28:29 lambda plain table
 typescript/effeck/cases/effeck-effect-value-calls/main.effeck:29:39 lambda program table
+typescript/effeck/cases/effeck-effect-value-calls/main.effeck:29:57 lambda plain table
 typescript/effeck/cases/effeck-effect-value-calls/main.effeck:30:33 lambda program table
 typescript/effeck/cases/effeck-hatches-shadow/main.effeck:15:23 lambda effectFn annotation
 typescript/effeck/cases/effeck-hatches/main.effeck:13:14 lambda plain table
@@ -662,7 +666,7 @@ typescript/effeck/cases/failures-plain/main.effeck:48:51 lambda effectFn table
 typescript/effeck/cases/failures-plain/main.effeck:52:63 lambda plain fallback
 typescript/effeck/cases/failures-throw/main.effeck:100:40 lambda program table
 typescript/effeck/cases/failures-throw/main.effeck:100:59 lambda effectFn table
-typescript/effeck/cases/failures-throw/main.effeck:72:17 lambda choice fallback
+typescript/effeck/cases/failures-throw/main.effeck:72:17 lambda effectFn annotation
 typescript/effeck/cases/fibers-await.fail/main.effeck:19:15 lambda plain table
 typescript/effeck/cases/fibers-await.fail/main.effeck:26:18 byname program table
 typescript/effeck/cases/fibers-await.fail/main.effeck:45:15 lambda plain table
@@ -684,6 +688,7 @@ typescript/effeck/cases/fibers-fork-join/main.effeck:48:22 byname program table
 typescript/effeck/cases/fibers-fork-join/main.effeck:60:23 byname program table
 typescript/effeck/cases/fibers-fork-join/main.effeck:69:21 block appended/program table
 typescript/effeck/cases/fibers-fork-join/main.effeck:73:20 byname program table
+typescript/effeck/cases/fibers-fork-join/main.effeck:78:23 lambda plain table
 typescript/effeck/cases/fibers-fork-join/main.effeck:79:85 lambda plain fallback
 typescript/effeck/cases/fibers-fork-join/main.effeck:85:10 byname program table
 typescript/effeck/cases/fibers-fork-join/main.effeck:91:31 byname program table
@@ -706,7 +711,7 @@ typescript/effeck/cases/handlers/main.effeck:111:25 lambda program table
 typescript/effeck/cases/handlers/main.effeck:116:5 lambda effectFn table
 typescript/effeck/cases/handlers/main.effeck:117:43 lambda program table
 typescript/effeck/cases/handlers/main.effeck:119:10 lambda effectFn table
-typescript/effeck/cases/handlers/main.effeck:141:20 lambda choice fallback
+typescript/effeck/cases/handlers/main.effeck:141:20 lambda plain annotation
 typescript/effeck/cases/handlers/main.effeck:144:24 lambda program table
 typescript/effeck/cases/handlers/main.effeck:145:5 lambda effectFn table
 typescript/effeck/cases/handlers/main.effeck:161:28 lambda program table
@@ -795,6 +800,7 @@ typescript/effeck/cases/pipe-programs/main.effeck:25:15 lambda dual fallback
 typescript/effeck/cases/pipe-programs/main.effeck:31:34 lambda plain table
 typescript/effeck/cases/pipe-programs/main.effeck:31:63 lambda plain table
 typescript/effeck/cases/plain-functions/main.effeck:49:28 lambda plain table
+typescript/effeck/cases/plain-functions/main.effeck:50:40 lambda effectFn table
 typescript/effeck/cases/primitives-bare/main.effeck:20:22 block appended/program table
 typescript/effeck/cases/primitives-bare/main.effeck:23:15 byname program table
 typescript/effeck/cases/primitives-bare/main.effeck:9:23 byname program table
@@ -836,7 +842,7 @@ typescript/effeck/cases/programs/main.effeck:40:28 lambda program table
 typescript/effeck/cases/programs/main.effeck:40:45 lambda program table
 typescript/effeck/cases/programs/main.effeck:41:34 lambda program table
 typescript/effeck/cases/programs/main.effeck:41:54 lambda program table
-typescript/effeck/cases/programs/main.effeck:49:15 lambda choice fallback
+typescript/effeck/cases/programs/main.effeck:49:15 lambda effectFn annotation
 typescript/effeck/cases/programs/main.effeck:60:29 lambda effectFn table
 typescript/effeck/cases/programs/main.effeck:60:55 lambda effectFn table
 typescript/effeck/cases/programs/main.effeck:66:10 lambda effectFn service
@@ -902,7 +908,7 @@ typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:64:25 lambda program 
 typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:73:5 lambda effectFn table
 typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:81:17 lambda program table
 typescript/effeck/cases/ref6-handlers/ref6-handlers.effeck:89:5 lambda effectFn table
-typescript/effeck/cases/regions-jumps/main.effeck:95:3 lambda choice fallback
+typescript/effeck/cases/regions-jumps/main.effeck:95:3 lambda effectFn annotation
 typescript/effeck/cases/regions/regions.effeck:40:5 lambda program table
 typescript/effeck/cases/regions/regions.effeck:44:5 lambda effectFn table
 typescript/effeck/cases/scopes-callback.fail/main.effeck:11:18 lambda plain protocol
@@ -946,7 +952,7 @@ typescript/effeck/cases/scopes-using/main.effeck:207:20 lambda program table
 typescript/effeck/cases/scopes-using/main.effeck:222:43 lambda effectFn annotation
 typescript/effeck/cases/scopes-using/main.effeck:223:57 lambda effectFn annotation
 typescript/effeck/cases/scopes-using/main.effeck:29:5 lambda plain protocol
-typescript/effeck/cases/stack-depth/stack-depth.effeck:45:20 lambda choice fallback
+typescript/effeck/cases/stack-depth/stack-depth.effeck:45:20 lambda plain annotation
 typescript/effeck/cases/stack-depth/stack-depth.effeck:53:25 lambda program table
 typescript/effeck/cases/stack-depth/stack-depth.effeck:54:5 lambda effectFn table
 typescript/effeck/cases/throw-cause/main.effeck:23:16 lambda dual fallback
@@ -957,11 +963,10 @@ typescript/effeck/cases/throw-cause/main.effeck:40:27 byname program table
 typescript/effeck/cases/tracing-all/main.effeck:21:18 lambda effectFn annotation
 typescript/effeck/cases/tracing-all/main.effeck:25:40 lambda effectFn table
 typescript/effeck/cases/trust-levels/main.effeck:26:22 lambda program table
-typescript/effeck/cases/trust-levels/main.effeck:46:60 lambda plain table
-typescript/effeck/cases/trust-levels/main.effeck:52:30 lambda plain table
-typescript/effeck/cases/trust-levels/main.effeck:52:62 lambda plain table
-typescript/effeck/cases/trust-levels/main.effeck:88:28 lambda plain table
-typescript/effeck/cases/trust-levels/main.effeck:93:18 lambda effectFn annotation
+typescript/effeck/cases/trust-levels/main.effeck:45:60 lambda plain table
+typescript/effeck/cases/trust-levels/main.effeck:51:30 lambda plain table
+typescript/effeck/cases/trust-levels/main.effeck:51:62 lambda plain table
+typescript/effeck/cases/trust-levels/main.effeck:98:18 lambda effectFn annotation
 typescript/effeck/cases/trusted-value/main.effeck:11:30 lambda program table
 typescript/effeck/cases/trusted-value/main.effeck:14:32 lambda program table
 typescript/effeck/lsp-fixture/src/catch-expression.effeck:12:10 lambda effectFn table

@@ -5,7 +5,7 @@ import { Effect } from "effect"
 
 const order: string[] = []
 
-function double(n: number) {
+function double(n: number): number {
   return n * 2
 }
 
@@ -47,7 +47,7 @@ function area(w: number, h: number) {
 function maps(xs: ReadonlyArray<number>) {
   const doubled = xs.map(double)
   const viaLambda = xs.map((x) => double(x) + 1)
-  const viaEffect = Effect.forEach(xs, double)
+  const viaEffect = Effect.forEach(xs, (x) => double(x))
   return { doubled, viaLambda, viaEffect }
 }
 

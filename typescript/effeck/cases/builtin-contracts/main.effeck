@@ -1,0 +1,38 @@
+// Built-in contracts (D5): JSON.parse's shipped contract lists SyntaxError.
+import { Effect } from "effect"
+
+// An Effect function that lets the SyntaxError escape fails with it: the
+// contract makes it an expected failure, so it joins E.
+function parse(text: string) {
+  return JSON.parse(text) as { port: number }
+}
+
+// A catch in an Effect function receives the typed SyntaxError.
+function config(text: string) {
+  try {
+    return parse(text).port
+  } catch (e) {
+    return e instanceof SyntaxError ? -1 : -2
+  }
+}
+
+// A function that catches its own failures compiles to plain JavaScript
+// (D54), so Array.prototype.map can call it, and its catch still receives
+// the SyntaxError.
+function parseOr(text: string, fallback: number) {
+  try {
+    return JSON.parse(text) as number
+  } catch (e) {
+    return fallback
+  }
+}
+
+// expect-result: {"parsed":{"port":8080},"config":[8080,-1],"failure":"SyntaxError","plain":[1,0]}
+export function main() {
+  return {
+    parsed: parse(`{"port":8080}`),
+    config: [config(`{"port":8080}`), config("{")],
+    failure: Effect.flip(() => parse("{")).name,
+    plain: ["1", "{"].map((text) => parseOr(text, 0))
+  }
+}

@@ -42,7 +42,7 @@ function sumWithFinally(n: number) {
 
 // expect-result: {"sum":4999950000,"loopDepthBounded":true,"seen":100000,"ticked":100000,"handlerDepthBounded":true,"withFinally":4999950000,"finallyDepthBounded":true,"events":["last finally"]}
 export function main() {
-  hooks.onResume = (fiber) => {
+  hooks.onResume = (fiber): void => {
     maxDepth = Math.max(maxDepth, fiber._stack.length)
   }
   let sum = 0

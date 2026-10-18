@@ -1,6 +1,7 @@
 // TypeScript side of Chapter 10 (and of ch02-plain-ts-call.fail.effeck): an Effect.fn function, a
 // TypeScript-authored Context.Service, plain functions, and a Promise-returning function.
 import { Context, Data, Effect, Layer } from "effect"
+import { trusted } from "effeck-runtime"
 
 export interface User {
   readonly id: string
@@ -55,11 +56,9 @@ export const parsePort = (text: string): number => {
 export class PortError extends Data.TaggedError("PortError")<{ readonly text: string }> {}
 
 /**
- * The same parser with a trusted contract (D23): .effeck files may call it bare, and PortError joins E.
- * @effeck trusted
- * @throws {PortError} when the text is not an integer
+ * The same parser, throwing PortError; parsePortTrusted below gives it a trusted contract (D249).
  */
-export const parsePortTrusted = (text: string): number => {
+export const parsePortTrustedImpl = (text: string): number => {
   const port = Number(text)
   if (!Number.isInteger(port)) throw new PortError({ text })
   return port
@@ -86,3 +85,6 @@ export const DatabaseTest = Layer.succeed(Database, {
 export const StorageTest = Layer.succeed(Storage, {
   get: (key) => Effect.succeed(key === "avatar/1" ? "https://img.example.com/1.png" : undefined)
 })
+
+// D249: preserve the implementation for TypeScript callers.
+export const parsePortTrusted = trusted(parsePortTrustedImpl, [PortError])

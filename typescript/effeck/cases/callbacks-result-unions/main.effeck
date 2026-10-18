@@ -22,8 +22,8 @@ function roundTrip() {
 // expect-result: {"plain":"plain: true","pausing":"effect: true","roundTrip":"Passed"}
 export function main() {
   return {
-    plain: probe((n) => n > 0),
-    pausing: probe((n) => isSmall(n)),
+    plain: probe((n): boolean => n > 0),
+    pausing: probe((n): boolean!! => isSmall(n)),
     roundTrip: roundTrip()
   }
 }
