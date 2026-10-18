@@ -21,7 +21,7 @@ repo=$(cd "$here/../.." && pwd)
 nvim=${NVIM:-nvim}
 effeck=${EFFECK:-$repo/typescript/built/local/effeck}
 effect_modules=${EFFECT_NODE_MODULES:-$repo/experiments/node_modules}
-[ -d "$effect_modules/effect" ] || effect_modules="$HOME/effeck/experiments/node_modules"
+[ -d "$effect_modules/effect" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
 runtime=${EFFECK_RUNTIME:-$repo/packages/runtime}
 
 scratch=$(mktemp -d)

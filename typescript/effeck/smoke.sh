@@ -22,7 +22,7 @@ tsc="$root/built/local/tsc"
 effect_modules=${EFFECT_NODE_MODULES:-}
 if [ -z "$effect_modules" ]; then
 	effect_modules="$root/../experiments/node_modules"
-	[ -d "$effect_modules/effect" ] || effect_modules="$HOME/effeck/experiments/node_modules"
+	[ -d "$effect_modules/effect" ] || effect_modules="$HOME/effectscript/experiments/node_modules"
 fi
 runtime=${EFFECK_RUNTIME:-$root/../packages/runtime}
 runtime=$(cd "$runtime" && pwd)
