@@ -8,17 +8,14 @@ func isPipeExpression(node *ast.Node) bool {
 	return node.Kind == ast.KindBinaryExpression && node.Flags&ast.NodeFlagsEffeck != 0 && node.AsBinaryExpression().OperatorToken.Kind == ast.KindBarToken
 }
 
-// pipeExpression evaluates the input once, then runs the body with a lexical
-// topic. A program gives nested catch thunks and lambdas access to that value
-// without sharing a mutable temporary between concurrent executions.
+// pipeExpression binds a lexical topic: a value evaluated once, or a cold
+// program at a by-name parameter. Each execution owns its binding, so nested
+// thunks and returned lambdas retain the evaluation that created them.
 func (p *projector) pipeExpression(node *ast.Node, e env) {
 	if !p.pipeValueTopics(node) {
 		return
 	}
-	if !e.effect {
-		p.awaitChoice(node, "A pipe must run in an Effect body; move it into an Effect function with an explicit contract.")
-		return
-	}
+
 	if p.pipeTopics == nil {
 		p.pipeTopics = map[*ast.Node]string{}
 	}
@@ -30,25 +27,45 @@ func (p *projector) pipeExpression(node *ast.Node, e env) {
 		p.plan.insert(start, ";")
 		delete(p.statementStarts, start)
 	}
-	p.plan.mark(editRun, partOpen, start, start, "")
-	p.plan.mark(editProgram, partOpen, start, start, selfArg(node))
+	if e.effect {
+		p.plan.mark(editRun, partOpen, start, start, "")
+		p.plan.mark(editProgram, partOpen, start, start, selfArg(node))
+	} else {
+		p.plan.insert(start, "(() => ")
+	}
 	p.plan.insert(start, "{ const "+topic+" = ")
 	binary := node.AsBinaryExpression()
-	p.visit(binary.Left, expressionEnv())
+	byName := p.pipeProgramTopic(node)
+	if byName {
+		p.plan.mark(editProgram, partOpen, p.tokenStart(binary.Left), p.tokenStart(binary.Left), "expr "+selfArg(binary.Left))
+	}
+	inputEnv := e
+	if byName {
+		inputEnv = expressionEnv()
+	}
+	p.visit(binary.Left, inputEnv)
+	if byName {
+		p.plan.mark(editProgram, partClose, binary.Left.End(), binary.Left.End(), "expr")
+	}
 	p.plan.replace(binary.Left.End(), p.tokenStart(binary.Right), "; return ")
-	p.visit(binary.Right, expressionEnv())
+	p.visit(binary.Right, e)
 	p.plan.insert(node.End(), " }")
-	p.plan.mark(editProgram, partClose, node.End(), node.End(), "")
-	p.plan.mark(editRun, partClose, node.End(), node.End(), "")
+	if e.effect {
+		p.plan.mark(editProgram, partClose, node.End(), node.End(), "")
+		p.plan.mark(editRun, partClose, node.End(), node.End(), "")
+	} else {
+		p.plan.insert(node.End(), ")()")
+	}
 }
 
-// pipeValueTopics limits this lowering to value topics. D155 program topics
-// need a different evaluation boundary, and an opaque callee may expect one;
-// either case draws a diagnostic rather than silently evaluating too early.
+// pipeValueTopics validates the topic boundary before recording edits. Mixed
+// value/program uses and opaque parameter contracts need an annotation rather
+// than silently evaluating the input at the wrong time.
 func (p *projector) pipeValueTopics(pipe *ast.Node) bool {
 	r := p.forms.(*Resolver)
 	ok := true
 	topics := 0
+	program, value := false, false
 	var visit func(*ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		if isPipeExpression(node) {
@@ -59,9 +76,11 @@ func (p *projector) pipeValueTopics(pipe *ast.Node) bool {
 			topics++
 			d := p.forms.Argument(node)
 			if d.ByName {
-				p.awaitChoice(node, "The mapper does not lower a pipe's program topic yet. Bind the input to an explicitly annotated value before the pipe, or pass an explicit program lambda to the combinator.")
-				ok = false
-			} else if d.Call != nil {
+				program = true
+			} else {
+				value = true
+			}
+			if d.Call != nil {
 				sigs, _ := r.signaturesOf(d.Callee)
 				if d.Ambiguous || len(formsCandidates(sigs, len(d.Call.Arguments()))) == 0 {
 					p.awaitChoice(node, "The mapper cannot decide whether this pipe topic is a value or a program. Annotate the callee's parameter, or bind the input to an explicitly annotated value before the pipe.")
@@ -78,6 +97,10 @@ func (p *projector) pipeValueTopics(pipe *ast.Node) bool {
 			Start: p.tokenStart(pipe.AsBinaryExpression().OperatorToken), Length: len("|>"), Code: 1006,
 			Message: "A pipe body must use its topic (%); the input value would otherwise be discarded.",
 		})
+		return false
+	}
+	if program && value {
+		p.awaitChoice(pipe, "A pipe cannot use its topic as both a program and a value; bind an explicitly annotated value or split the pipe.")
 		return false
 	}
 	return ok

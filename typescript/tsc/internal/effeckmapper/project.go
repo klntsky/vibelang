@@ -278,12 +278,8 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case isLambda(node):
 		p.lambda(node, e)
 		return
-	case node.Kind == ast.KindCallExpression && !e.effect && blockArgument(node) != nil:
-		p.visit(node.Expression(), e)
-		if arguments := node.TypeArgumentList(); arguments != nil {
-			p.visitList(arguments.Nodes, e)
-		}
-		p.blockCall(node, blockArgument(node), e)
+	case node.Kind == ast.KindCallExpression && !e.effect:
+		p.moduleCall(node, e)
 		return
 	case isProducer(node):
 		p.producerDeclaration(node)
@@ -676,7 +672,8 @@ func (p *projector) runCall(call *ast.Node, e env) {
 		p.plan.insert(start, ";")
 		delete(p.statementStarts, start)
 	}
-	p.plan.mark(editRun, partOpen, start, start, "")
+	runArg := p.programCallChannels(call)
+	p.plan.mark(editRun, partOpen, start, start, runArg)
 	scoped := p.isBlockFork(call, e)
 	if scoped {
 		p.plan.mark(editScoped, partOpen, start, start, "")
@@ -702,7 +699,7 @@ func (p *projector) runCall(call *ast.Node, e env) {
 	if scoped {
 		p.plan.mark(editScoped, partClose, call.End(), call.End(), "")
 	}
-	p.plan.mark(editRun, partClose, call.End(), call.End(), "")
+	p.plan.mark(editRun, partClose, call.End(), call.End(), runArg)
 }
 
 // isBlockFork reports whether call, in an Effect body, is the prelude's fork

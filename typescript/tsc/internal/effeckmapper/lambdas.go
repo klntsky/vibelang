@@ -156,11 +156,11 @@ func (p *projector) programLambda(fn *ast.Node, dual bool) {
 	}
 }
 
-// byNameArgument lowers argument, an argument of a call in an Effect body,
+// byNameArgument lowers argument, an argument of a call in any context,
 // to a program when its callee takes it by name (D147): the expression runs
 // when the callee runs the program, not where the call stands.
 func (p *projector) byNameArgument(argument *ast.Node, e env) bool {
-	if isLambda(argument) || argument.Flags&ast.NodeFlagsReparsed != 0 {
+	if isLambda(argument) || formsIsTopic(argument) || argument.Flags&ast.NodeFlagsReparsed != 0 {
 		return false
 	}
 	d := p.forms.Argument(argument)
@@ -285,7 +285,7 @@ func (p *projector) blockCall(call *ast.Node, block *ast.Node, e env) {
 }
 
 // callArguments walks call's arguments: a block param where the resolver
-// places it, and, in an Effect body, an argument its callee takes by name
+// places it, and an argument its callee takes by name
 // as a program. It reports whether it lowered a block param, which closes
 // the call itself.
 func (p *projector) callArguments(call *ast.Node, e env) bool {
@@ -303,7 +303,7 @@ func (p *projector) callArguments(call *ast.Node, e env) bool {
 // property paths. APIs such as Effect.all take programs inside a container;
 // visiting only its outer array would run those programs before the API.
 func (p *projector) callArgument(argument *ast.Node, e env) {
-	if e.effect && p.byNameArgument(argument, e) {
+	if p.programPipeArgument(argument, e) || p.programCollection(argument, e) || p.byNameArgument(argument, e) {
 		return
 	}
 	switch argument.Kind {

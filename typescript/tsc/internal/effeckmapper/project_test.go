@@ -30,6 +30,51 @@ var projectionCases = []struct {
 }{
 
 	{
+		name:    "pipe topics use the data method module behind a local shadow",
+		source:  "function f(xs: Stream.Stream<number>) { const Stream = 1; return xs |> %.map((n) => n + Stream) }",
+		virtual: "function f(xs: Stream.Stream<number>) { return $gen(function* () { const Stream = 1; return (yield* $run($gen(function* () { const $topic = xs; return (yield* $run(Stream_1.map($topic, (n) => n + Stream))) }))) })}",
+	},
+
+	{name: "composed calls keep separate error channel witnesses", source: "function f() { return 1 |> % + 1 } function g() { return f() }", virtual: "function f() { return $gen(function* () { return (yield* $run($gen(function* () { const $topic = 1; return $topic + 1 }))) })} function g() { return $gen(function* () { return (yield* $runAt(f(), 57)) })}"},
+
+	{
+		name:    "stream topic method result metadata survives a chain",
+		source:  "function f(xs: Stream.Stream<number>) { return xs.filter((n) => n > 0).map((n) => n + 1) }",
+		virtual: "function f(xs: Stream.Stream<number>) { return $gen(function* () { return (yield* $run(Stream.map((yield* $run(Stream.filter(xs, (n) => n > 0))), (n) => n + 1))) })}",
+	},
+	{
+		name:    "a held fork program joins through its declared module",
+		source:  "function f() { const fiber = fork(() => 1); return fiber.join() }",
+		virtual: "function f() { return $gen(function* () { const fiber = (yield* $run($scoped(fork($gen(function* () { return 1 }))))); return (yield* $run(Fiber.join(fiber))) })}",
+	},
+
+	{
+		name:    "stored iterable programs convert at the collection boundary",
+		source:  "function f(xs: Array<() => Effect.Effect<number>>) { return Effect.all(xs) }",
+		virtual: "function f(xs: Array<() => Effect.Effect<number>>) { return $gen(function* () { return (yield* $run(Effect.all($programs(xs)))) })}",
+	},
+	{
+		name:    "stored pipe programs and generic stages keep their forms",
+		source:  "function f(job: () => Effect.Effect<number>) { return pipe(job, Effect.retry({ times: 2 })) }",
+		virtual: "function f(job: () => Effect.Effect<number>) { return $gen(function* () { return (yield* $run(pipe($asProgram(job), Effect.retry({ times: 2 })))) })}",
+	},
+	{
+		name:    "module runner takes a call by name",
+		source:  "const n = Effect.runSync(Effect.succeed(1))",
+		virtual: "const n = Effect.runSync($gen(function* () { return (yield* $run(Effect.succeed(1))) }))",
+	},
+	{
+		name:    "pure module pipe evaluates once",
+		source:  "const n = 21 |> % * 2",
+		virtual: "const n = (() => { const $topic = 21; return $topic * 2 })()",
+	},
+	{
+		name:    "program topic defers the input and retries the same program",
+		source:  "function f() { return Effect.fail(1) |> Effect.retry(%, { times: 2 }) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($gen(function* () { const $topic = $gen(function* () { return (yield* $run(Effect.fail(1))) }); return (yield* $run(Effect.retry($topic, { times: 2 }))) }))) })}",
+	},
+
+	{
 		name:    "data method call punctuation skips comments",
 		source:  "function f(o: Option.Option<number>) { return o.getOrElse /* ( */ (() => 0) }",
 		virtual: "function f(o: Option.Option<number>) { return $gen(function* () { return (yield* $run(Option.getOrElse(o, () => 0))) })}",
@@ -454,11 +499,12 @@ func TestCatchExpressionCorpus(t *testing.T) {
 }
 
 // TestPipeTopicChoices checks that D155 program topics and opaque callees
-// cannot silently take the value-topic evaluation boundary used by catch.
+// cannot silently choose an evaluation boundary for an opaque or mixed topic.
 func TestPipeTopicChoices(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
-		"function f() { return a() |> retry(%, Schedule.recurs(2)) }",
+		"import { opaque } from './other'; function f() { return pipe(() => a(), opaque) }",
+		"function f() { return a() |> retry(%, Schedule.recurs(2)) + % }",
 		"import { opaque } from './other'; function f() { return a() |> opaque(%) catch 1 }",
 	} {
 		projection := Project(source, testContext)

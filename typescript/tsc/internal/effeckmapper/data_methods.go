@@ -8,8 +8,8 @@ import (
 )
 
 // dataReceiver names a D152 receiver only when its annotation, initializer,
-// or a pinned declaration determines the module. Following bindings rather
-// than names preserves shadows and never chooses a module from a method name.
+// lexical pipe topic, or a pinned declaration determines the module. Following
+// bindings preserves shadows and never chooses a module from a method name.
 func (p *projector) dataReceiver(expr *ast.Node, depth int) string {
 	if expr == nil || depth > 24 {
 		return ""
@@ -19,6 +19,14 @@ func (p *projector) dataReceiver(expr *ast.Node, depth int) string {
 		return ""
 	}
 	expr = ast.SkipParentheses(expr)
+	if formsIsTopic(expr) {
+		for child := expr; child.Parent != nil; child = child.Parent {
+			if isPipeExpression(child.Parent) && child.Parent.AsBinaryExpression().Right == child {
+				return p.dataReceiver(child.Parent.AsBinaryExpression().Left, depth+1)
+			}
+		}
+		return ""
+	}
 	if ast.IsIdentifier(expr) {
 		d := r.binding(expr, expr.Text())
 		if d != nil && d.Kind == ast.KindVariableDeclaration && d.Type() == nil {
@@ -27,7 +35,7 @@ func (p *projector) dataReceiver(expr *ast.Node, depth int) string {
 	}
 	if ast.IsCallExpression(expr) {
 		c := r.Callee(expr)
-		if c.Canonical == "effeck-runtime#fork" {
+		if c.Canonical == "effeck-runtime#fork" || c.Canonical == "effeck-runtime#forkIn" {
 			return "effect/Fiber"
 		}
 		if c.Kind == CalleeLocal && ast.IsIdentifier(expr.Expression()) {
@@ -105,7 +113,7 @@ func (p *projector) predicateCall(call *ast.Node, e env) bool {
 		return false
 	}
 	key := r.Callee(call).Canonical
-	plain := dataGuards[key]
+	plain := dataGuards[key] || p.plainArrayPipeStage(call, key)
 	if !plain && dataLastMethods[key] {
 		candidates := formsCandidates(r.table.Signatures(key), len(call.Arguments()))
 		plain = len(candidates) > 0

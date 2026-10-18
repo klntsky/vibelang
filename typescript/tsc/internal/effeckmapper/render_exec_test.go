@@ -83,6 +83,37 @@ var emitCases = []struct {
 		contains: []string{"$hatchTry(() => JSON.parse(\"bad\"))"},
 		absent:   []string{"$value(JSON", "yield* JSON"},
 	},
+
+	{
+		name:     "composed call channel witnesses never execute",
+		source:   "function f() { return 1 |> % + 1 } function g() { return f() }",
+		contains: []string{"f$fast()"},
+		absent:   []string{"$runAt", "$yieldSite"},
+	},
+
+	{
+		name:     "stored collections convert functions without running them early",
+		source:   "function f(xs: Array<() => Effect.Effect<number>>) { return Effect.all(xs) }",
+		contains: []string{"Effect.all($programs(xs))", "Array.from(xs, $asProgram)", "$suspend(v)"},
+		absent:   []string{"f$direct"},
+	},
+	{
+		name:     "pipe program inputs and generic stages share the checking boundary",
+		source:   "function f(job: () => Effect.Effect<number>) { return pipe(job, Effect.retry({ times: 2 })) }",
+		contains: []string{"pipe($asProgram(job), Effect.retry({ times: 2 }))"},
+	},
+	{
+		name:     "by name topic is a cold generator and module value pipes stay plain",
+		source:   "const n = 21 |> % * 2; function f() { return Effect.fail(1) |> Effect.retry(%, { times: 2 }) }",
+		contains: []string{"const $topic = 21", "const $topic_1 = $gen(function* ()", "Effect.retry($topic_1, { times: 2 })"},
+		absent:   []string{"|>", "(%)"},
+	},
+	{
+		name:     "known stream chains use module functions in both renderings",
+		source:   "function f(xs: Stream.Stream<number>) { return xs.filter((n) => n > 0).map((n) => n + 1) }",
+		contains: []string{"Stream.map(", "Stream.filter(xs, (n) => n > 0)"},
+		absent:   []string{".filter((n)", ".map((n)"},
+	},
 	{
 		name:     "acyclic entries forward defaults rest and destructuring once",
 		source:   "function f(a = seed(), { x } = object(), [y] = array(), ...rest: number[]) { return unknown(a, x, y, rest) }",
@@ -308,7 +339,7 @@ var emitCases = []struct {
 		name:     "a module that calls a runner itself gets no entry statement",
 		source:   "export function main() {\n  return 1\n}\nrunPromise(main())\n",
 		absent:   []string{"import.meta.main"},
-		contains: []string{"runPromise(main())"},
+		contains: []string{"runPromise($gen(function* () { return main$direct(); }))"},
 	},
 	{
 		name:     "an Effect contract with an infer channel erases to the generator (D57)",
@@ -573,4 +604,40 @@ func TestEmitClauseContinuation(t *testing.T) {
 	assert.Assert(t, strings.Contains(js, "const $k = $clauseArgs[$clauseArgs.length - 1]"), js)
 	assert.Assert(t, strings.Contains(js, "return $pending"), js)
 	assert.Assert(t, strings.Contains(js, "yield* $resume($k, undefined)"), js)
+}
+
+// TestProgramValuesRuntime checks that both program conversions and pipe
+// boundaries remain cold and run exactly once per requested execution. A
+// non-entry export keeps the manual runner independent of import.meta.main.
+func TestProgramValuesRuntime(t *testing.T) {
+	t.Parallel()
+	root, err := filepath.Abs("../../../..")
+	assert.NilError(t, err)
+	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
+	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
+		t.Skip("runtime dependencies are built by the parity harness")
+	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is unavailable")
+	}
+	source := `let runs = 0
+function job() { runs++; return runs }
+const top = Effect.runSync(Effect.succeed(8))
+export function scenario() {
+ const jobs = new Set([() => job(), () => job()])
+ const values = Effect.all(jobs)
+ const piped = pipe(() => job(), Effect.retry({ times: 2 }))
+ const topic = job() |> Effect.retry(%, { times: 2 })
+ const block = Effect.retry(do { job(); job() }, { times: 2 })
+ return { values, piped, topic, block, top, runs }
+}`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v", diagnostics)
+	cmd := exec.Command(node, "--no-warnings", "--input-type=module")
+	cmd.Dir = scope
+	cmd.Stdin = strings.NewReader(js + "\nconsole.log(JSON.stringify(await Effect.runPromise(scenario())))")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "%s\n%s", out, js)
+	assert.Equal(t, strings.TrimSpace(string(out)), `{"values":[1,2],"piped":3,"topic":4,"block":6,"top":8,"runs":6}`)
 }

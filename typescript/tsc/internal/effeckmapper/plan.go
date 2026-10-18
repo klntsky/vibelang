@@ -251,7 +251,11 @@ func (r checking) text(e edit) (string, bool) {
 			text = e.text
 		}
 	case editRun:
-		text = pick(e.part, "(yield* "+helperRef("$run")+"(", "", "))")
+		if strings.HasPrefix(e.arg, "channels ") {
+			text = pick(e.part, "(yield* "+helperRef("$runAt")+"(", "", ", "+strings.TrimPrefix(e.arg, "channels ")+"))")
+		} else {
+			text = pick(e.part, "(yield* "+helperRef("$run")+"(", "", "))")
+		}
 	case editEffectBody:
 		gen := helperRef("$gen") + "(function* () "
 		if strings.Contains(e.arg, "self") {
@@ -289,7 +293,11 @@ func (r checking) text(e edit) (string, bool) {
 	case editScoped:
 		text = pick(e.part, helperRef("$scoped")+"(", "", ")")
 	case editProgramValue:
-		text = pick(e.part, helperRef("$asProgram")+"(", "", ")")
+		helper := "$asProgram"
+		if e.arg == "collection" {
+			helper = "$programs"
+		}
+		text = pick(e.part, helperRef(helper)+"(", "", ")")
 	case editProducer:
 		open := " return " + helperRef("$produce") + "(function* () {"
 		if e.arg == "self" {

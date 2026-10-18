@@ -334,3 +334,15 @@ export declare function $hatchTryMapped<R, E, Args extends ReadonlyArray<unknown
 
 // D169, D225: fiber forms share the runtime declarations in both renderings.
 export { $join, $forConcurrent } from "effeck-runtime"
+
+/** D49: stored collections convert parameterless Effect functions elementwise. */
+type $ProgramOf<T> = T extends () => EffectModule.Effect<infer A, infer E, infer R> ? EffectModule.Effect<A, E, R> : T
+export declare function $programs<T extends Iterable<unknown>>(values: T): Array<$ProgramOf<T extends Iterable<infer V> ? V : never>>
+export declare function $programs<T extends Record<string, unknown>>(values: T): { [K in keyof T]: $ProgramOf<T[K]> }
+
+
+// Separate composed-program yields before extracting E/R: TypeScript's
+// generator inference must not discard an explicitly composed error subtype.
+declare const $yieldSite: unique symbol
+type $YieldAt<Id, E, R> = EffectModule.Effect<never, E, R> & { readonly [$yieldSite]: Id }
+export declare function $runAt<A, E, R, const Id extends number>(value: EffectModule.Effect<A, E, R>, site: Id): Generator<$YieldAt<Id, E, R>, A, any>

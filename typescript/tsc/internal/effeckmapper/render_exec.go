@@ -95,7 +95,11 @@ func renderExec(e edit) (text string, keep bool) {
 		return pick(e.part, helperRef("$provideScope")+"(", "", ", "+helperRef("$scope")+")"), true
 	case editProgramValue:
 		// D7: a function value at a program position runs as its program.
-		return pick(e.part, helperRef("$asProgram")+"(", "", ")"), true
+		helper := "$asProgram"
+		if e.arg == "collection" {
+			helper = "$programs"
+		}
+		return pick(e.part, helperRef(helper)+"(", "", ")"), true
 	case editProducer:
 		// D26: the runtime's $produce takes the body as a function that
 		// returns its Effect, and runs it under its Yield handler.
@@ -264,7 +268,7 @@ var execHelpers = map[string]execSource{
 // (execRendering.prologue); temporaries are declared there too.
 var prologueHelpers = map[string]bool{
 	"$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
-	"$dual": true, "$asProgram": true, "$each": true,
+	"$dual": true, "$asProgram": true, "$programs": true, "$each": true,
 	"$t": true, "$s": true, "$scope": true, "$iterate": true, "$producerGen": true,
 }
 
@@ -425,8 +429,11 @@ func (r *execRendering) prologue() string {
 		parts = append(parts, "const "+r.local("$producerGen")+" = (options, body) => "+r.local("$suspend")+"(() => { const it = body ? body.call(options.self) : options(); return "+r.local("$onExit")+"("+gen+"(() => it), () => "+gen+"(function* () { let s = it.return(undefined); while (!s.done) { const v = yield s.value; s = it.next(v) } })); });")
 	}
 
-	if r.used["$asProgram"] {
+	if r.used["$asProgram"] || r.used["$programs"] {
 		parts = append(parts, "const "+r.local("$asProgram")+" = (v) => typeof v === \"function\" && !"+r.local("$isEffect")+"(v) && !"+r.local("$isKey")+"(v) ? "+r.local("$suspend")+"(v) : v;")
+	}
+	if r.used["$programs"] {
+		parts = append(parts, "const "+r.local("$programs")+" = (xs) => Symbol.iterator in xs ? Array.from(xs, "+r.local("$asProgram")+") : Object.fromEntries(Object.entries(xs).map(([k, v]) => [k, "+r.local("$asProgram")+"(v)]));")
 	}
 	return strings.Join(parts, " ")
 }
