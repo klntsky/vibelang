@@ -1,0 +1,11 @@
+function probe(region: string, delay: number) {
+  sleep(delay)
+  return region
+}
+
+export function closest() {
+  const audit = fork log("probe started")
+  const winner = await.race [probe("west", 7), probe("east", 12)]
+  join audit
+  return winner
+}

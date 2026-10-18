@@ -138,3 +138,16 @@ Checks the files smithers.sh reads from Effeck's `main`, and the effeck.dev hero
 
 It needs the same compiler and runtime build as `check-snippets.ts`. `bun test check-smithers-content.test.ts` covers the link, section and home rules.
 
+## Converter content
+
+`bun run --cwd docs/tools check:content` checks the app instructions, repository
+home, generated converter prompt and hero receipt. It also rejects held-out
+golden source in the prompt or worked examples, after normalizing whitespace
+and comments between tokens. The converter prompt uses `examples/` only;
+all 20 cases in `golden/`, including the hero, remain held out.
+
+Run the overlap regression tests with:
+
+```sh
+node --test .smithers/flows/convert/check-heldout.test.mjs
+```

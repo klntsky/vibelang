@@ -1,0 +1,11 @@
+export schema Shipment {
+  tracking: string
+  weight: number
+  note?: string
+  stage: "packed" | "sent" | "received"
+}
+
+export interface Manifest {
+  depot: string
+  mutable parcels: Array<Shipment>
+}

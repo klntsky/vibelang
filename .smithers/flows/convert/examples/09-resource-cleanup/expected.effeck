@@ -1,0 +1,15 @@
+export function inspect() {
+  using lease = Effect.acquireRelease(
+    () => "batch-17",
+    (name) => log(`Released ${name}`)
+  )
+  const visits = Ref.make(10)
+  Ref.update(visits, (n) => n + 3)
+  try {
+    const count = Ref.get(visits)
+    Console.log(lease, count)
+    return count
+  } finally {
+    log("inspection finished")
+  }
+}

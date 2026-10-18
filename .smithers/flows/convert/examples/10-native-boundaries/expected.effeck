@@ -1,0 +1,9 @@
+error InvalidAddress { reason: unknown }
+
+export function hostname(address: string) {
+  return try((address) => new URL(address).hostname, (reason) => new InvalidAddress({ reason }), address)
+}
+
+export function encoded(text: string) {
+  return sync((text) => new TextEncoder().encode(text), text)
+}

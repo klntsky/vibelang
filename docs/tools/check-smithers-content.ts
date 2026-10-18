@@ -8,7 +8,8 @@
 // app.md: under 24 KiB; every link resolves to a docs page or a repository file; every Effeck block
 // passes check-snippets.ts; the install block matches what create-effeck prints. home.json: the
 // blocks smithers.sh accepts, with existing markdown paths. prompt.md: not stale. hero.json: the
-// hero golden case, with matching hashes.
+// hero golden case, with matching hashes. Golden source stays out of examples/ and prompt.md.
+import { heldoutProblems } from "../../.smithers/flows/convert/check-heldout.mjs"
 import { createHash } from "node:crypto"
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -134,6 +135,8 @@ async function main() {
   }
 
   problems.push(...homeProblems(readFileSync(at(".smithers/home.json"), "utf8"), (p) => existsSync(at(p))).map((p) => `home.json: ${p}`))
+
+  problems.push(...heldoutProblems())
 
   const prompt = spawnSync("node", [at(".smithers/flows/convert/build-prompt.mjs"), "--check"], { encoding: "utf8" })
   if (prompt.status !== 0) problems.push(prompt.stderr.trim() || "prompt.md is stale")
