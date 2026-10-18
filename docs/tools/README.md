@@ -58,9 +58,47 @@ builds, and project configuration errors exit 2. Snippet failures exit 1.
 Temporary files are removed on success and failure unless `--keep` is set.
 
 ```sh
-bun test docs/tools/check-snippets.test.ts
+bun test docs/tools/check-snippets.test.ts docs/tools/hovers.test.ts
 bun docs/tools/render-user.ts
 ```
+
+## Compiler hovers
+
+`hovers.ts` asks the Effeck language server for the hovers and diagnostics of
+the same blocks and caches them for a renderer:
+
+```sh
+bun docs/tools/hovers.ts
+```
+
+It builds the projects that the snippet checker builds, with the same
+`--compiler`, `--root`, and `--filter` options, and opens them in one
+`effeck --lsp --stdio` session, four pages at a time. It writes one JSON file
+per page under `.cache/docs-hovers` (`--cache` selects another directory). Each
+block's entry is a Twoslash result: the block's `code` as the fence holds it,
+and `nodes` in the shape of `twoslash-protocol`:
+
+| Node | Fields |
+| --- | --- |
+| `hover` | `start`, `length`, `line`, `character`, `target`, `text` (the quick info), `docs` |
+| `error` | the same position fields, `code` such as `EK2001` or `TS2307`, `level` (`error` or `warning`), `text` |
+
+Positions count UTF-16 code units from 0 within the block. `docs` keeps
+Effeck's notes, such as "Runs here and returns `number`.", and the first
+paragraph of the declaration's JSDoc. Links to `file:///` URIs keep only their
+text, and paths into the temporary project or `node_modules` become relative.
+The tool refuses to write a page whose entry still contains anything that
+`prepare-site.ts` refuses to publish (`leaks.ts`).
+
+A page's entry is reused while its blocks, the compiler binary, the lockfiles,
+the runtime's declarations, and these tools are unchanged; otherwise the
+whole page is refreshed, because later blocks import earlier ones. Pages
+that no longer exist lose their entries unless `--filter` is set. A hover
+request that the server answers with an error is a language server defect:
+the entry keeps it under `failures`, and every run prints one example of each.
+Concurrent hover requests can render a contextually typed property's owner
+generically or instantiated, such as `Key<T>` or `Key<string>`, so a cold run
+can differ from the last one in a few nodes. Upstream tsgo does the same.
 
 `render-user.ts` builds the one docs site in `docs/user/site`: the user pages
 from `docs/user/src` and one page per specification chapter from
