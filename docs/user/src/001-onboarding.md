@@ -2,20 +2,6 @@
 
 Effeck is a language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). It gives Effect a simple, readable syntax that compiles to TypeScript, so your team can ship production-ready systems with first-class access to the TypeScript ecosystem.
 
-Effeck is v0. The language will change in major, breaking ways, and it is not ready for production use.
-
-## Why a language
-
-**Effect makes TypeScript reliable.** A TypeScript signature says what a function returns, but not what can fail or what it depends on. Effect puts all three in one type, `Effect<Success, Error, Requirements>`, and the compiler checks it. Retries, timeouts, concurrency, resource cleanup, and tracing come with it.
-
-**Effect pays for it in syntax.** Effect is a library, so it builds every feature out of what TypeScript already has: generators and `yield*` to run steps in order, `pipe` to compose them, and classes to declare errors and services. The code reads like a separate language written in library calls.
-
-**Effeck makes it a real language.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
-
-## The same program, twice
-
-A service that finds users, a typed error, and a fallback. On the left is Effect; on the right is Effeck.
-
 ```ts effect
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
   id: Schema.String
@@ -50,7 +36,17 @@ function greet(id: string) {
 // string!!Users
 ```
 
-The comment under `greet` is the type your editor shows: `string!!Users` is Effeck's spelling of `Effect<string, never, Users>`. It returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The Effeck version is about half the size: 71 tokens against 143.
+A user service, a typed error, and a fallback, in Effect and in Effeck. The comment under `greet` is the type your editor shows: `string!!Users` is Effeck's spelling of `Effect<string, never, Users>`. It returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The Effeck version is about half the size: 71 tokens against 143.
+
+Effeck is v0. The language will change in major, breaking ways, and it is not ready for production use.
+
+## Why a language
+
+**Effect makes TypeScript reliable.** A TypeScript signature says what a function returns, but not what can fail or what it depends on. Effect puts all three in one type, `Effect<Success, Error, Requirements>`, and the compiler checks it. Retries, timeouts, concurrency, resource cleanup, and tracing come with it.
+
+**Effect pays for it in syntax.** Effect is a library, so it builds every feature out of what TypeScript already has: generators and `yield*` to run steps in order, `pipe` to compose them, and classes to declare errors and services. The code reads like a separate language written in library calls.
+
+**Effeck makes it a real language.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
 
 ## TypeScript stays one step away
 
