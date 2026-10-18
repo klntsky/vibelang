@@ -54,6 +54,25 @@ test("a try mapper that throws produces a defect", async () => {
   }
 })
 
+test("synchronous hatch rest parameters receive exactly the supplied inputs", () => {
+  expect(Effect.runSync(sync((...inputs: number[]) => inputs, 1, 2, 3))).toEqual([1, 2, 3])
+  expect(Effect.runSync(attempt((...inputs: number[]) => inputs, 1, 2, 3))).toEqual([1, 2, 3])
+})
+
+for (const [name, hatch] of [["sync", sync], ["try", attempt]] as const) {
+  // Runtime-valued hatches classify a promise only after invoking the
+  // function, too late to supply its signal. Unconditionally appending one
+  // would break synchronous rest arguments (tested above). A complete fix
+  // needs async dispatch metadata shared with compiler lowering, including
+  // non-async functions returning promises, rather than an AsyncFunction hack.
+  test.skip(`${name}: async AbortSignal after inputs (D230; needs async dispatch metadata)`, async () => {
+    const value = await Effect.runPromise(hatch(async (input: number, signal: AbortSignal) => ({ input, signal }), 42))
+    expect(value.input).toBe(42)
+    expect(value.signal).toBeInstanceOf(AbortSignal)
+    expect(value.signal.aborted).toBe(false)
+  })
+}
+
 describe("callback", () => {
   test("passes inputs before resume and signal, supports synchronous and delayed completion, and reruns registration", async () => {
     let runs = 0
