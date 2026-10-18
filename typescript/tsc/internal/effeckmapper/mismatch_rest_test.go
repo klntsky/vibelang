@@ -17,7 +17,7 @@ func TestRemainingMismatchContracts(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	if err := os.Symlink(filepath.Join(root, "packages/ts-mapper/test/parity/out/work/node_modules"), filepath.Join(dir, "node_modules")); err != nil {
+	if err := os.Symlink(filepath.Join(mapperTestScope(t, root), "node_modules"), filepath.Join(dir, "node_modules")); err != nil {
 		t.Fatal(err)
 	}
 	write := func(name, text string) {

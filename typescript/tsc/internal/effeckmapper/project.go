@@ -220,6 +220,10 @@ func lower(text string, ctx FileContext) *projector {
 // visit walks node and records the edits that lower it.
 func (p *projector) visit(node *ast.Node, e env) {
 	switch {
+	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
+		p.relativeTypeScriptImport(node)
+		p.visitChildren(node, e)
+		return
 	case isSchemaDeclaration(node) || isSchemaInterface(node):
 		p.schemaDeclaration(node)
 		return
@@ -868,4 +872,26 @@ func (p *projector) unprojected(node *ast.Node) {
 // trivia.
 func (p *projector) tokenStart(node *ast.Node) int {
 	return scanner.GetTokenPosOfNode(node, p.file, false /*includeJSDoc*/)
+}
+
+// relativeTypeScriptImport implements D31 for stock checking as well as
+// JavaScript: a relative .js specifier resolves its TypeScript source
+// without requiring allowImportingTsExtensions in the user's project.
+func (p *projector) relativeTypeScriptImport(node *ast.Node) {
+	var specifier *ast.Node
+	if node.Kind == ast.KindImportDeclaration {
+		specifier = node.AsImportDeclaration().ModuleSpecifier
+	} else {
+		specifier = node.AsExportDeclaration().ModuleSpecifier
+	}
+	if specifier == nil || !ast.IsStringLiteral(specifier) {
+		return
+	}
+	module := specifier.Text()
+	if !strings.HasPrefix(module, ".") || !strings.HasSuffix(module, ".ts") {
+		return
+	}
+	start := p.tokenStart(specifier)
+	quote := p.text[start : start+1]
+	p.plan.replace(start, specifier.End(), quote+strings.TrimSuffix(module, ".ts")+".js"+quote)
 }

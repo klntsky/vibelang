@@ -654,7 +654,7 @@ func TestEmitClauseContinuation(t *testing.T) {
  }`
 	js, _, diagnostics := Emit(source, testContext)
 	assert.Equal(t, len(diagnostics), 0, "%v\n%s", diagnostics, js)
-	assert.Assert(t, strings.Contains(js, "write: (message, ...$clauseArgs) =>"), js)
+	assert.Assert(t, strings.Contains(js, "write: (message, $ignored1, ...$clauseArgs) =>"), js)
 	assert.Assert(t, strings.Contains(js, "const $k = $clauseArgs[$clauseArgs.length - 1]"), js)
 	assert.Assert(t, strings.Contains(js, "return $pending"), js)
 	assert.Assert(t, strings.Contains(js, "yield* $resume($k, undefined)"), js)
@@ -667,10 +667,7 @@ func TestProgramValuesRuntime(t *testing.T) {
 	t.Parallel()
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
-	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
-	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
-		t.Skip("runtime dependencies are built by the parity harness")
-	}
+	scope := mapperTestScope(t, root)
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node is unavailable")
@@ -703,10 +700,7 @@ func TestThrowCauseRuntime(t *testing.T) {
 	t.Parallel()
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
-	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
-	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
-		t.Skip("runtime dependencies are built by the parity harness")
-	}
+	scope := mapperTestScope(t, root)
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node is unavailable")
@@ -788,10 +782,7 @@ func TestEmitCallTailResume(t *testing.T) {
 func TestTailResumeDepthRuntime(t *testing.T) {
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
-	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
-	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
-		t.Skip("runtime dependencies are built by the parity harness")
-	}
+	scope := mapperTestScope(t, root)
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node is unavailable")
@@ -827,10 +818,7 @@ export function scenario() {
 func TestHatchMappingRuntime(t *testing.T) {
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
-	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
-	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
-		t.Skip("runtime dependencies are built by the parity harness")
-	}
+	scope := mapperTestScope(t, root)
 	node, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("node is unavailable")

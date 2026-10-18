@@ -47,7 +47,7 @@ func isLambda(node *ast.Node) bool {
 func (p *projector) lambda(fn *ast.Node, e env) {
 	d := p.forms.Lambda(fn)
 	form := d.Form
-	if p.providedMember(fn) && contractOf(fn.Type()) != contractPlain {
+	if p.d4ServiceMember(fn) || p.providedMember(fn) && contractOf(fn.Type()) != contractPlain {
 		// D173 gives the implementation the service member form, including pure methods.
 		form = FormEffectFn
 	} else {
@@ -377,4 +377,40 @@ func (p *projector) callArgument(argument *ast.Node, e env) {
 	default:
 		p.visit(argument, e)
 	}
+}
+
+// d4ServiceMember preserves D4's bare Effect type in a local service's
+// written contract even when a value import also binds the name Effect.
+// The forms resolver resolves that import as a namespace; projection of
+// the declaration already treats its bare type spelling as the D4 alias.
+func (p *projector) d4ServiceMember(fn *ast.Node) bool {
+	if !p.names.shadowsPreludeType("Effect") {
+		return false
+	}
+	member, object := fn, fn.Parent
+	if object != nil && object.Kind == ast.KindPropertyAssignment && object.Initializer() == fn {
+		member, object = object, object.Parent
+	}
+	if object == nil || object.Kind != ast.KindObjectLiteralExpression {
+		return false
+	}
+	resolver, ok := p.forms.(*Resolver)
+	if !ok {
+		return false
+	}
+	key := resolver.providedKey(object)
+	if key == nil || !ast.IsIdentifier(key) {
+		return false
+	}
+	service := resolver.serviceClassOf(key)
+	if service == nil || member.Name() == nil {
+		return false
+	}
+	for _, declaration := range service.Members() {
+		if declaration.Name() != nil && declaration.Name().Text() == member.Name().Text() && ast.IsMethodDeclaration(declaration) {
+			ret := declaration.Type()
+			return ret != nil && isWrittenEffectReference(ret) && ret.AsTypeReferenceNode().TypeName.Kind == ast.KindIdentifier
+		}
+	}
+	return false
 }

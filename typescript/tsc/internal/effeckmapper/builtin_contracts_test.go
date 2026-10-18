@@ -43,7 +43,7 @@ func stockBuiltinProject(t *testing.T) (string, string) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work/node_modules")
+	scope := filepath.Join(mapperTestScope(t, root), "node_modules")
 	if err := os.Symlink(scope, filepath.Join(dir, "node_modules")); err != nil {
 		t.Fatal(err)
 	}

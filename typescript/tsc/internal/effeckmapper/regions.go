@@ -767,7 +767,8 @@ func (p *projector) handleStatement(node *ast.Node, e env) {
 				for _, parameter := range params {
 					p.visit(parameter, env{})
 				}
-				p.plan.markText(editRegion, partMiddle, params[len(params)-1].End(), b.open, ", "+k+") => "+p.generatorOpen(clause.block))
+				padding := p.omittedClauseBindings(control, member, len(params))
+				p.plan.markText(editRegion, partMiddle, params[len(params)-1].End(), b.open, padding+", "+k+") => "+p.generatorOpen(clause.block))
 			}
 			separator := p.generatorClose(clause.block)
 			if i == len(group.clauses)-1 {
@@ -1083,4 +1084,34 @@ func endsInTailResume(node *ast.Node) bool {
 		return s.ElseStatement != nil && endsInTailResume(s.ThenStatement) && endsInTailResume(s.ElseStatement)
 	}
 	return false
+}
+
+// omittedClauseBindings keeps the continuation after every argument of a
+// locally declared operation. Only a fixed written arity can supply padding;
+// imported and variadic operations keep the executable's last-argument rule.
+func (p *projector) omittedClauseBindings(control, member *ast.Node, bound int) string {
+	resolver, ok := p.forms.(*Resolver)
+	if !ok || !ast.IsIdentifier(control) {
+		return ""
+	}
+	service := resolver.serviceClassOf(control)
+	if service == nil {
+		return ""
+	}
+	for _, method := range service.Members() {
+		if !ast.IsMethodDeclaration(method) || method.Name() == nil || method.Name().Text() != member.Text() {
+			continue
+		}
+		for _, parameter := range method.Parameters() {
+			if parameter.AsParameterDeclaration().DotDotDotToken != nil {
+				return ""
+			}
+		}
+		padding := ""
+		for n := bound; n < len(method.Parameters()); n++ {
+			padding += ", " + p.freshWord("$ignored"+strconv.Itoa(n))
+		}
+		return padding
+	}
+	return ""
 }

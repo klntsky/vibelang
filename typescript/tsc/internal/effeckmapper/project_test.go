@@ -39,7 +39,7 @@ var projectionCases = []struct {
 
 	{name: "external service Effect member is a receiver preserving value call",
 		source:  `import { Users } from "./users.ts"; function f() { return Users.all() }`,
-		virtual: `import { Users } from "./users.ts"; function f() { return $gen(function* () { return (yield* $run($member($use(Users), "all")())) })}`},
+		virtual: `import { Users } from "./users.js"; function f() { return $gen(function* () { return (yield* $run($member($use(Users), "all")())) })}`},
 	{name: "a chained Config value call runs the returned data",
 		source:  `function f() { return config("HOST")() }`,
 		virtual: `function f() { return $gen(function* () { return (yield* $run($value((yield* $run(config("HOST"))))())) })}`},
@@ -48,7 +48,7 @@ var projectionCases = []struct {
 		virtual: `import { Path as Paths } from "effect/Path"; const f = (part: string) => $gen(function* () { return (yield* $run($use(Paths).join("root", part))) })`},
 	{name: "L8 leaves an external key owned member on the key",
 		source:  `import { Users } from "./users.ts"; function f() { return Users.pipe() }`,
-		virtual: `import { Users } from "./users.ts"; function f() { return $gen(function* () { return (yield* $run(Users.pipe())) })}`},
+		virtual: `import { Users } from "./users.js"; function f() { return $gen(function* () { return (yield* $run(Users.pipe())) })}`},
 
 	{
 		name:    "pipe topics use the data method module behind a local shadow",

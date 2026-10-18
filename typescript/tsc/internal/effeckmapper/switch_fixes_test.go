@@ -55,7 +55,7 @@ func TestSwitchFixStockTypesAndExecution(t *testing.T) {
 		t.Fatal(err)
 	}
 	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
-	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work/node_modules")
+	scope := filepath.Join(mapperTestScope(t, root), "node_modules")
 	dir := t.TempDir()
 	if err := os.Symlink(scope, filepath.Join(dir, "node_modules")); err != nil {
 		t.Fatal(err)

@@ -1,3 +1,5 @@
+/// <reference lib="esnext.disposable" />
+// Effect 4.0.5 exposes disposal protocols even when the source uses no using.
 // The prelude of Effeck's TypeScript 7 content mapper. Every file the mapper
 // projects starts with one import from this module:
 //
@@ -99,7 +101,7 @@ export declare function $scoped(fork: typeof Runtime.fork): {
 }
 
 // finally (exit) { ... } (D178), and the interruption blocks (D179, D180).
-export { $finallyExit, uninterruptible, restore, interruptible } from "effeck-runtime"
+export { $finallyExit } from "effeck-runtime"
 
 // The pattern matching helpers the parser writes for match and is (D206-D225).
 export { $is, $extract, $rest, $noMatch, $patternError } from "effeck-runtime"

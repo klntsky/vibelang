@@ -15,7 +15,7 @@ import (
 func TestD251StaticDataBoundary(t *testing.T) {
 	root, err := filepath.Abs("../../../..")
 	assert.NilError(t, err)
-	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
+	scope := mapperTestScope(t, root)
 	stock := filepath.Join(root, "packages/ts-mapper/test/.cache/typescript-7.1.0-dev.20261010.1/node_modules/.bin/tsc")
 	if _, err := os.Stat(stock); err != nil {
 		t.Fatal("stock TypeScript is installed by e2e")
