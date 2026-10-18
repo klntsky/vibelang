@@ -7,18 +7,25 @@ Resources need cleanup on success, failure, and cancellation. VibeLang uses `fin
 ## Guaranteeing cleanup
 
 ```vibe
+// run: Console.log(exportRows(true)); try { exportRows(false) } catch (error) { Console.log(error._tag) }
 error ExportRejected
 
 function exportRows(accepted: boolean) {
   try {
-    log("Export started")
+    Console.log("Export started")
     if (!accepted) throw new ExportRejected()
     return "Export complete"
   } finally {
-    log("Export finished")
+    Console.log("Export finished")
   }
 }
 // string!ExportRejected!
+// Output: Export started
+// Output: Export finished
+// Output: Export complete
+// Output: Export started
+// Output: Export finished
+// Output: ExportRejected
 ```
 
 `finally` runs after success, a typed failure, a defect, or interruption. It also runs after early return and when a handler abandons the protected computation. VibeLang gives it Effect cleanup semantics, including deferred interruption while cleanup runs.
@@ -30,17 +37,26 @@ function exportRows(accepted: boolean) {
 ## Finalizing based on the outcome
 
 ```vibe
+// run: Console.log(observedExport(true)); try { observedExport(false) } catch (error) { Console.log(error._tag) }
 function observedExport(accepted: boolean) {
   try {
     return exportRows(accepted)
   } finally (exit) {
     if (exit.isSuccess()) {
-      log("Export succeeded")
+      Console.log("Export succeeded")
     } else {
-      log("Export stopped", exit.cause.reasons.map((reason) => reason._tag))
+      Console.log("Export stopped", JSON.stringify(exit.cause.reasons.map((reason) => reason._tag)))
     }
   }
 }
+// Output: Export started
+// Output: Export finished
+// Output: Export succeeded
+// Output: Export complete
+// Output: Export started
+// Output: Export finished
+// Output: Export stopped ["Fail"]
+// Output: ExportRejected
 ```
 
 `finally (exit)` binds the try statement's `Exit`, as `Effect.onExit` does. A success carries no value, because the try block's statements have none; a failure carries the complete cause. Unlike a boolean success flag, this preserves defects and cancellation as well as domain errors. Its cleanup runs uninterruptibly, and successful cleanup preserves the original result.
@@ -48,15 +64,23 @@ function observedExport(accepted: boolean) {
 ## Cleaning up failed work
 
 ```vibe
+// run: Console.log(reportFailedExport(true)); try { reportFailedExport(false) } catch (error) { Console.log(error._tag) }
 function reportFailedExport(accepted: boolean) {
   return Effect.onError(() => exportRows(accepted), (cause) => {
     if (cause.hasInterrupts()) {
-      log("Export cancelled; cleanup complete")
+      Console.log("Export cancelled; cleanup complete")
     } else {
-      log("Export failed; cleanup complete")
+      Console.log("Export failed; cleanup complete")
     }
   })
 }
+// Output: Export started
+// Output: Export finished
+// Output: Export complete
+// Output: Export started
+// Output: Export finished
+// Output: Export failed; cleanup complete
+// Output: ExportRejected
 ```
 
 `onError` runs only on an unsuccessful outcome, including a defect or interruption. The callback receives a full cause and runs as cleanup; it does not recover the original computation. This differs from ordinary catch, which handles expected failures and skips causes containing defects or interruption.
@@ -64,6 +88,7 @@ function reportFailedExport(accepted: boolean) {
 ## Bracketing acquisition, use, and release
 
 ```vibe
+// run: provide LeaseStore = { acquire: () => ({ id: "test-lease" }), release: (lease) => Console.log(`Released ${lease.id}`) } { Console.log(withLease()) }
 interface Lease {
   id: string
 }
@@ -78,16 +103,20 @@ function withLease() {
   return Effect.acquireUseRelease(
     () => store.acquire(),
     (lease) => {
-      log(`Working with lease ${lease.id}`)
+      Console.log(`Working with lease ${lease.id}`)
       return lease.id
     },
     (lease, exit) => {
-      log(`Releasing after ${exit._tag}`)
+      Console.log(`Releasing after ${exit._tag}`)
       store.release(lease)
     }
   )
 }
 // string!!LeaseStore
+// Output: Working with lease test-lease
+// Output: Releasing after Success
+// Output: Released test-lease
+// Output: test-lease
 ```
 
 `acquireUseRelease` protects acquisition and release while allowing normal interruption during use. Release runs exactly once after successful acquisition, even when use fails or is cancelled; it is not called if acquisition fails. A failing acquisition must clean up any partial work it created before failing.
@@ -97,6 +126,7 @@ The release callback receives both the resource and the use phase's `Exit`. The 
 ## Giving the caller resource ownership
 
 ```vibe
+// run: Console.log(example()); provide LeaseStore = { acquire: () => ({ id: "owned" }), release: (lease) => Console.log(`Released ${lease.id}`) } { Console.log(leaseId()) }
 function acquireLease() {
   const store = LeaseStore()
   return Effect.acquireRelease(
@@ -120,6 +150,9 @@ const LeaseStoreTest = Layer.succeed(LeaseStore, {
 function example() {
   provide LeaseStoreTest { return leaseId() }
 }
+// Output: test-lease
+// Output: Released owned
+// Output: owned
 ```
 
 `acquireRelease` registers a release in a scope and returns the acquired value. `using` supplies a lexical scope for that acquisition and releases it at block exit, removing `Scope` from the caller's requirements. Its release callback must have no typed failure; handle an expected release error explicitly or deliberately promote it with `Effect.orDie`.
