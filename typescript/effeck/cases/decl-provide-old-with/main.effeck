@@ -2,7 +2,7 @@
 // The old spelling, with Layer { ... }, still compiles and runs the same way,
 // with the warning EK1009 at its keyword (D172). The word provide alone stays
 // an ordinary identifier: a call, an element access, and a local name.
-service class Names {
+service Names {
   name(): string!!
 }
 

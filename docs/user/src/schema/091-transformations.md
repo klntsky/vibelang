@@ -62,7 +62,7 @@ error UnknownRoute {
   code: string
 }
 
-service class Routes {
+service Routes {
   check(code: string): void!UnknownRoute
 }
 

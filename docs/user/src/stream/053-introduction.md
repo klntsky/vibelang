@@ -7,7 +7,7 @@
 ```ts
 error FeedUnavailable
 
-service class Feed {
+service Feed {
   next(): string!FeedUnavailable
 }
 

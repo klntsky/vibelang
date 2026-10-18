@@ -5,11 +5,11 @@ export interface User {
 
 export error UserNotFound { id: string }
 
-export service class Directory {
+export service Directory {
   lookup(id: string): User | undefined!!
 }
 
-export service class Users {
+export service Users {
   find(id: string): User!UserNotFound
 }
 

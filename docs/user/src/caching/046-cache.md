@@ -9,7 +9,7 @@ error MissingProduct {
   sku: string
 }
 
-service class Products {
+service Products {
   price(sku: string): number!MissingProduct
 }
 

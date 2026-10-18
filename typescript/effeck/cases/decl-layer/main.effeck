@@ -1,16 +1,16 @@
 // expect-result: {"found":"Ada","missing":"No user 7","region":"eu","stats":"2 lookups"}
 error UserNotFound { id: string }
 
-service class Directory {
+service Directory {
   lookup(id: string): string | undefined!!
 }
 
-service class Users {
+service Users {
   find(id: string): string!UserNotFound
   readonly region: string
 }
 
-service class Stats {
+service Stats {
   count(): number!!
   record(): void!!
 }

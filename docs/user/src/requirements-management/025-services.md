@@ -7,11 +7,11 @@ A service gives a program a named capability without passing an implementation t
 ## Declaring typed service keys
 
 ```ts
-service class Sequence {
+service Sequence {
   next(): number!!
 }
 
-service class Reporter {
+service Reporter {
   write(message: string): void!!
 }
 ```
@@ -45,7 +45,7 @@ function readImplementation() {
 `Sequence.next()` looks up the service and runs its method. `Sequence()` returns the implementation itself, which is useful for capturing it or reading value members. A runner needs a program whose remaining requirements have been supplied.
 
 ```ts
-service class Settings {
+service Settings {
   baseUrl: string
 }
 
@@ -126,7 +126,7 @@ function optionalAnnouncement(message: string) {
 ## Handling dependencies between services
 
 ```ts
-service class ReportSettings {
+service ReportSettings {
   prefix: string
 }
 

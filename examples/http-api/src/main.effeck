@@ -5,7 +5,7 @@ import { createServer } from "node:http"
 export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
-export service class Users {
+export service Users {
   create(name: string): { id: string; name: string }!NameTaken
 }
 

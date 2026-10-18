@@ -14,7 +14,7 @@ error NotFound { id: string }
 
 interface User { id: string; name: string }
 
-service class Users {
+service Users {
   find(id: string): User!NotFound
 }
 
@@ -65,7 +65,7 @@ per-platform package for macOS, Linux, and Windows on arm64 and x64. Version
 `bun run dev` builds once, watches `.effeck` sources with `effeck --watch`, and
 runs Node with `--watch` on the output. `bun run test` compiles `.effeck` tests
 before running Vitest with `@effect/vitest`. The starter demonstrates an
-`service class`, a `Layer.effect` layer, an `error`, and `try`/`catch` recovery.
+`service`, a `Layer.effect` layer, an `error`, and `try`/`catch` recovery.
 
 To add Effeck to an existing project, see
 [Installation](docs/user/src/getting-started/004-installation.md).
@@ -103,8 +103,8 @@ clients, see [editors/](editors/README.md).
 - Write a contract as `Result!Error!Dependencies`: `User!NotFound!Db` is
   `Effect<User, NotFound, Db>`, an empty slot is `never` (`User!!`), and
   dependencies left out of a function's return type are inferred from its body.
-- Declare a service with `service class Users { find(id: string): User!NotFound }`
-  and call `Users.find(id)`; `control class` declares a control operation the same way.
+- Declare a service with `service Users { find(id: string): User!NotFound }`
+  and call `Users.find(id)`; `control` declares a control operation the same way.
 - Implement a service with `Layer.effect(Users) { setup; return { find(id) { ... } } }`;
   the setup runs once, when the layer builds, and `Layer.succeed(Users, { ... })` needs none.
 - Provide a layer to a block with `provide AppLive { ... }`; a `return` inside

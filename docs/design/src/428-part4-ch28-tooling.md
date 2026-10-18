@@ -208,7 +208,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
 | EK2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
-| EK2103 | A member of a `service class` or `control class` declaration with a body or an initializer (D128, D220) | Implement it in a layer, or make it static | 4 |
+| EK2103 | A member of a `service` or `control` declaration with a body or an initializer (D128) | Implement it in a layer, or make it static | 4 |
 | EK2104 | A setup statement of an old `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
 | EK2105 | A retired typed catch clause whose type has a member without a literal `_tag` (D131) | Catch a tagged error, or test the value in an untyped clause | 3 |
 | EK2106 | A retired catch clause after one that catches every failure: an untyped clause or a `Cause` clause (D131, D176) | Move that clause last | 3 |
@@ -218,7 +218,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2111 | A `restore` block that no `uninterruptible` block of the same function encloses (D180) | Put it inside `uninterruptible { … }`, or use `interruptible { … }` | 6 |
 | EK2112 | Warning: a catch clause that tests a failure's type, `catch (e: NotFound)`, retired (D216) | `catch (e)` and test `e` with `match` or `is`; the quick fix rewrites the clauses | 3 |
 | EK2113 | Warning: a catch clause typed `Cause`, retired (D217) | `match (exit(…))` with `Exit.Success` and `Exit.Failure` arms; the quick fix rewrites `try { return X } catch (c: Cause) { return Y }` | 3 |
-| EK2120 | A warning: a `service` or `control` declaration written without `class` (D220) | Write `service class` or `control class`; the quick fix adds `class` | 4 |
+| EK2120 | A warning: a `service class` or `control class` declaration, the older spelling (D223) | Write `service` or `control` without `class`; the quick fix removes `class` | 4 |
 | EK2121 | A warning: a `layer` declaration, the old spelling of a layer (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |
 | EK3002 | A class extends a service | Replace `extends` with `implements` | 4 |

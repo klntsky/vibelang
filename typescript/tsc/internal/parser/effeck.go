@@ -35,10 +35,10 @@ func isEffeckDeclarationWord(text string) bool {
 }
 
 // scanStartOfEffeckDeclaration reports whether the current token starts an
-// Effeck declaration. service and control may also be followed by class on the
-// same line (D220): service class Users { ... }. An identifier followed by
-// class on the same line is a TypeScript syntax error too. It moves the
-// scanner; call it through lookAhead.
+// Effeck declaration. service and control may also be followed by class on
+// the same line, the older spelling (D220, D223): service class Users { ... }.
+// An identifier followed by class on the same line is a TypeScript syntax error
+// too. It moves the scanner; call it through lookAhead.
 func (p *Parser) scanStartOfEffeckDeclaration() bool {
 	if p.token != ast.KindIdentifier {
 		return false
@@ -329,13 +329,12 @@ func (p *Parser) effeckInferOmitted(returnType *ast.TypeNode) {
 
 // parseServiceDeclaration parses
 //
-//	service class Users { find(id: string): User!NotFound; region: string }
-//	control class Approval { approve(request: string): boolean!! }
+//	service Users { find(id: string): User!NotFound; region: string }
+//	control Approval { approve(request: string): boolean!! }
 //
-// as the abstract classes they abbreviate. The word before class is a
-// modifier, as declare is in declare class, and the members have no bodies,
-// as a declare class's do (D220). The older spelling without class, service
-// Users { ... }, parses the same way; the checker warns about it (EK2120):
+// as the abstract classes they abbreviate, with members that have no bodies
+// (D128, D223). The older spelling with class, service class Users { ... },
+// parses the same way; the checker warns about it (EK2120):
 //
 //	abstract class Users { abstract find(id: string): User!NotFound; abstract readonly region: string }
 //	abstract class Approval extends Control { abstract approve(request: string): boolean!! }

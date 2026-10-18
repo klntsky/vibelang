@@ -12,13 +12,13 @@ class Users extends Context.Service<Users, {
 ```
 
 ```ts es
-service class Users {
+service Users {
   find(id: string): User!UserNotFound
   rename(id: string, name: string): void!UserNotFound
 }
 ```
 
-`service class Users { ... }` declares a service, and it does the job of the class on the left. `service` is a modifier of the class declaration, as `declare` is, and the members have no bodies, as a `declare class`'s do (D220). It is short for `abstract class Users { ... }` in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). The older spelling without `class` still compiles, with the warning EK2120. An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:
+`service Users { ... }` declares a service, and it does the job of the class on the left. Its members have no bodies (D128, D223). It is short for `abstract class Users { ... }` in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). The older spelling `service class Users { ... }` still compiles, with the warning EK2120. An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:
 
 - **What makes a class a service.** In an `.effeck` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
 - **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (EK3001).
@@ -65,7 +65,7 @@ const user = Users.find(id)
 Calling the service itself with no arguments, `Users()`, gives you its implementation object, the equivalent of `yield* Users`. You need it inside providers, and to read a service's value members:
 
 ```ts es
-service class Settings {
+service Settings {
   baseUrl: string
   scale(): number!!
 }
@@ -130,7 +130,7 @@ error EK2001: DbError can escape UsersLive.find, but Users.find's contract allow
 Effect 4 code often keeps the default Layer on the service class as `static readonly layer`. A service class can do the same, because static members stay on the class:
 
 ```ts es
-service class Users {
+service Users {
   find(id: string): User!UserNotFound
   rename(id: string, name: string): void!UserNotFound
 
@@ -170,7 +170,7 @@ const UsersInMemoryLive = Layer.sync(Users, () => new UsersInMemory())
 Effect 4's `make` option becomes a static method, and a service that should work without any provider declares a default:
 
 ```ts es
-service class Sessions {
+service Sessions {
   get(token: string): Session | undefined!!
   set(token: string, session: Session): void!!
 
@@ -185,7 +185,7 @@ service class Sessions {
   static readonly layer = Layer.effect(Sessions, Sessions.make())
 }
 
-service class FeatureFlags {
+service FeatureFlags {
   newCheckout: boolean
   static readonly default: FeatureFlags = { newCheckout: false }
 }

@@ -1,5 +1,5 @@
 // expect: EK1001
-service class Names {
+service Names {
   name(): string!!
 }
 

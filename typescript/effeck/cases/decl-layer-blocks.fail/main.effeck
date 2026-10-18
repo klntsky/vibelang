@@ -2,7 +2,7 @@
 // A layer block's returned members are typed by the service (D222): a member
 // whose result is not the contract's success type is TS2769 at the call, and
 // its message chain names the member that does not fit.
-service class Users {
+service Users {
   find(id: string): string!!
 }
 

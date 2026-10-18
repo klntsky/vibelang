@@ -322,13 +322,13 @@ try {
     assert(JSON.stringify(codes) === JSON.stringify(["EK 2120 2", "EK 2121 2"]), `diagnostics ${JSON.stringify(codes)}`)
     const uri = fileUri(file)
     const service = items.find((d) => d.code === 2120)
-    const serviceStart = at(file, "service Greeting")
+    const serviceStart = at(file, "service class Greeting")
     assert(service.range.start.line === serviceStart.line && service.range.start.character === serviceStart.character, `EK2120 range ${JSON.stringify(service.range)}`)
     const serviceActions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: service.range, context: { diagnostics: [service], only: ["quickfix"] } })) ?? []
-    const serviceFix = serviceActions.find((a) => a.title === "Write service class")
+    const serviceFix = serviceActions.find((a) => a.title === "Write service without class")
     assert(serviceFix, `no EK2120 quick fix among ${JSON.stringify(serviceActions.map((a) => a.title))}`)
     const serviceEdits = serviceFix.edit?.changes?.[uri] ?? []
-    assert(serviceEdits.length === 1 && serviceEdits[0].newText === " class" && JSON.stringify(serviceEdits[0].range.start) === JSON.stringify(service.range.end), `EK2120 edits ${JSON.stringify(serviceEdits)}`)
+    assert(serviceEdits.length === 1 && serviceEdits[0].newText === "service" && JSON.stringify(serviceEdits[0].range) === JSON.stringify(service.range), `EK2120 edits ${JSON.stringify(serviceEdits)}`)
     const layer = items.find((d) => d.code === 2121)
     const layerStart = at(file, "layer GreetingLive")
     assert(layer.range.start.line === layerStart.line && layer.range.start.character === layerStart.character, `EK2121 range ${JSON.stringify(layer.range)}`)

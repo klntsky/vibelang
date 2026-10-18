@@ -30,7 +30,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Option.getOrElse(Option.map(maybe, f), () => 0)` | `maybe.map(f).getOrElse(() => 0)` |
 | `pipe(stream, Stream.filter(p), Stream.take(3))` | `stream.filter(p).take(3)` |
 | `work().pipe(Effect.retry(policy), Effect.timeout("1 second"))` | `work() \|> retry(%, policy) \|> timeout(%, "1 second")` |
-| `Context.Service` | `service class Users { find(id: string): User!NotFound }`; call `Users.find(id)` |
+| `Context.Service` | `service Users { find(id: string): User!NotFound }`; call `Users.find(id)` |
 | `Layer.effect(Users, Effect.gen(function* () { ... }))` | `Layer.effect(Users) { setup; return { find(id) { ... } } }` |
 | `Effect.provide(program, AppLive)` | `provide AppLive { ... }` |
 | `Effect.provideService(program, Random.Random, seeded)` | `provide Random = seeded { ... }` |

@@ -46,7 +46,7 @@ function fixedRandomSample() {
 An override remains in effect across pauses and is inherited by new child fibers. It does not change unrelated programs. Prefer module helpers when they supply the behavior you need without implementing a whole service.
 
 ```ts
-service class DisplaySettings {
+service DisplaySettings {
   prefix: string
   static readonly default: DisplaySettings = { prefix: "Ticket" }
 }

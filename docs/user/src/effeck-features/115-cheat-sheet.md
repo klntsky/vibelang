@@ -17,7 +17,7 @@ function getOrders(id: string): number!! {
   return id.length
 }
 
-control class Approval {
+control Approval {
   approve(request: string): boolean!!
 }
 
@@ -61,7 +61,7 @@ error Missing { id: string }
 error Timeout
 ```
 
-**Services** (D128, D220). `service` modifies a class declaration, as `declare` does; members have no bodies, and value members are readonly.
+**Services** (D128, D223). Members have no bodies, and value members are readonly.
 
 ```ts effect
 class Users extends Context.Service<Users, {
@@ -71,13 +71,13 @@ class Users extends Context.Service<Users, {
 ```
 
 ```ts es
-service class Users {
+service Users {
   find(id: string): User!NotFound
   region: string
 }
 ```
 
-**Control operations** (D128, D220). Effect has none, so the left column is Effeck's long form.
+**Control operations** (D128, D223). Effect has none, so the left column is Effeck's long form.
 
 ```ts long
 abstract class Review extends Control {
@@ -86,7 +86,7 @@ abstract class Review extends Control {
 ```
 
 ```ts es
-control class Review {
+control Review {
   approve(request: string): boolean!!
 }
 ```

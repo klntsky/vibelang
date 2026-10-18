@@ -68,7 +68,7 @@ interface Lease {
   id: string
 }
 
-service class LeaseStore {
+service LeaseStore {
   acquire(): Lease!!
   release(lease: Lease): void!!
 }

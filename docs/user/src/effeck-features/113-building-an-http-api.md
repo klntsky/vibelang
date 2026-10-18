@@ -9,7 +9,7 @@ Build routes with Effect's HTTP modules and write each handler as an Effeck func
 export schema CreateUser { name: string }
 export error NameTaken { name: string }
 
-export service class Users {
+export service Users {
   create(name: string): { id: string; name: string }!NameTaken
 }
 

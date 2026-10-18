@@ -71,7 +71,7 @@ function reserveSlot() {
 ```ts
 error SensorOffline
 
-service class Sensor {
+service Sensor {
   read(): number!SensorOffline
 }
 

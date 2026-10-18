@@ -5,7 +5,7 @@ export function findUser(id: string): string!MissingUser! {
   return id
 }
 
-export service class Accounts {
+export service Accounts {
   balance(id: string): number!MissingUser
 }
 
@@ -38,7 +38,7 @@ export function recover(id: string) {
   }
 }
 
-export control class Approval {
+export control Approval {
   approve(request: string): boolean!!
 }
 

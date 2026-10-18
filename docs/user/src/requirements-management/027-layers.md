@@ -7,13 +7,13 @@ A layer describes how to construct services, including their dependencies, initi
 ## Describing a dependency graph
 
 ```ts
-service class Settings {
+service Settings {
   prefix: string
 }
-service class Printer {
+service Printer {
   print(text: string): void!!
 }
-service class Reports {
+service Reports {
   render(title: string): string!!
 }
 
@@ -153,7 +153,7 @@ If a larger graph fails to initialize, acquired resources still release. Keep in
 ## Declaring service factories and dependencies
 
 ```ts
-service class Banner {
+service Banner {
   text(title: string): string!!
 
   static make(): Banner!!Settings {

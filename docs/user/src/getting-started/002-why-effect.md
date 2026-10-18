@@ -23,7 +23,7 @@ const quote = () => unitPrice(72, 6)
 ## Share an application foundation
 
 ```ts
-service class Prices {
+service Prices {
   total(sku: string): number!InvalidQuantity
 }
 

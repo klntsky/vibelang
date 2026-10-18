@@ -111,7 +111,7 @@ error SetupFailed {
   stage: string
 }
 
-service class ProjectSteps {
+service ProjectSteps {
   create(stage: string): string!SetupFailed
   remove(id: string): void!!
   finish(storage: string, index: string): string!SetupFailed

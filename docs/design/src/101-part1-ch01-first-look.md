@@ -47,11 +47,11 @@ error MailError {
   reason: string
 }
 
-service class Users {
+service Users {
   find(id: string): User!UserNotFound
 }
 
-service class Mailer {
+service Mailer {
   send(to: string, body: string): void!MailError
 }
 
@@ -65,7 +65,7 @@ export function welcome(id: string) {
 Four things changed:
 
 - **`welcome` is a plain function.** No `Effect.fn`, no generator, no `yield*`. Calling `Users.find(id)` runs it and gives you the `User`; if it fails, `welcome` fails with the same error.
-- **A service is a `service class` declaration.** `service class Users`, an abstract class, replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
+- **A service is a `service` declaration.** `service Users`, an abstract class, replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
 - **The contract is inferred.** `welcome` is `string!UserNotFound | MailError!Users | Mailer`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
 - **Errors are the same classes.** `error UserNotFound { id: string }` declares a class that extends `TaggedError`, Effect's `Data.TaggedError`, in scope without an import.
 

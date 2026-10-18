@@ -2,11 +2,11 @@
 // provide Key = value provides one service (D173). Every function here
 // declares no dependencies (!!), so each provide block must remove the keys
 // its body needs.
-service class Greeting {
+service Greeting {
   text(): string!!
 }
 
-service class Names {
+service Names {
   name(): string!!
 }
 

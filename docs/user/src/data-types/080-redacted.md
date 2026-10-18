@@ -18,7 +18,7 @@ function reportConfiguration() {
 ## Revealing values deliberately
 
 ```ts
-service class CredentialsClient {
+service CredentialsClient {
   authenticate(token: string): boolean!!
 }
 

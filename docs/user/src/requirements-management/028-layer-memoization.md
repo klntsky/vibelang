@@ -7,13 +7,13 @@ Effect shares repeated uses of the same layer value within one build graph. Effe
 ## Sharing acquisition across a graph
 
 ```ts
-service class Prefix {
+service Prefix {
   value: string
 }
-service class Heading {
+service Heading {
   value: string
 }
-service class Footer {
+service Footer {
   value: string
 }
 

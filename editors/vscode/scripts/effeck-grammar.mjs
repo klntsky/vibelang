@@ -3,8 +3,8 @@
 // declaration like a class and a handle clause like catch.
 //
 //   error NotFound { id: string }          schema User { name: string }
-//   service class Users { find(id: string): User!NotFound }
-//   control class Approval { approve(request: string): boolean }
+//   service Users { find(id: string): User!NotFound }
+//   control Approval { approve(request: string): boolean }
 //   layer UsersLive: Users { find(id) { ... } }   (the old spelling, D221)
 //   try { ... } handle Approval.approve(request) { ... }
 //   function find(id: string): User!NotFound!Db { ... }
@@ -32,8 +32,8 @@ function declaration(words, body, header = "") {
 export function addEffeckSyntax(grammar) {
   const { repository } = grammar
   repository["effeck-type-declaration"] = declaration("error|schema", "#type-object")
-  // service class and control class (D220): the word is a modifier, like
-  // declare; the older spelling without class matches too.
+  // service and control (D128, D223); the older spelling with class
+  // (D220) matches too.
   repository["effeck-member-declaration"] = {
     name: "meta.class.ts",
     begin: `${start}\\b(service|control)\\s+(?:(class)\\s+)?(${name})`,

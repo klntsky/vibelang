@@ -67,7 +67,7 @@ function consumeChecked() {
 ```ts
 error Offline
 
-service class Sensor {
+service Sensor {
   read(): number!Offline
 }
 

@@ -1,7 +1,7 @@
 // expect-result: {"name":"Ada","missing":"No user 7","region":"eu","approved":"released v1"}
 error UserNotFound { id: string }
 
-export service class Users {
+export service Users {
   find(id: string): string!UserNotFound
   readonly region: string
 
@@ -14,7 +14,7 @@ export service class Users {
   })
 }
 
-export control class Approval {
+export control Approval {
   approve(request: string): boolean!!
 }
 

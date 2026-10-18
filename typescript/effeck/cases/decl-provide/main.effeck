@@ -1,11 +1,11 @@
 // expect-result: {"greeting":"Hello, Ada","early":"early","count":2,"both":"Ada 1"}
 error NotFound { id: string }
 
-service class Names {
+service Names {
   name(id: string): string!NotFound
 }
 
-service class Counter {
+service Counter {
   next(): number!!
 }
 

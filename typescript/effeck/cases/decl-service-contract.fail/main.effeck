@@ -1,4 +1,4 @@
 // expect: EK2101
-export service class Users {
+export service Users {
   find(id: string): string
 }

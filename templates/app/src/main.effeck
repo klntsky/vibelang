@@ -1,6 +1,6 @@
 import { EmptyName, greeting } from "./greeting.effeck"
 
-service class Greeter {
+service Greeter {
   greet(name: string): string!EmptyName
 }
 

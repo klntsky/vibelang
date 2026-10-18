@@ -4,16 +4,16 @@
 // the block is the layer's effect and its members are typed by the service.
 error UserNotFound { id: string }
 
-service class Directory {
+service Directory {
   lookup(id: string): string | undefined!!
 }
 
-service class Users {
+service Users {
   find(id: string): string!UserNotFound
   region: string
 }
 
-service class Stats {
+service Stats {
   count(): number!!
   record(): void!!
 }
@@ -52,7 +52,7 @@ const StatsLive = Layer.effect(Stats) {
   }
 }
 
-service class Session {
+service Session {
   name(): string!!
 }
 

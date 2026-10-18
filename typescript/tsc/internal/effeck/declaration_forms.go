@@ -12,20 +12,21 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
-// The current spelling of services, controls, and layers (D220, D221).
+// The current spelling of services, controls, and layers (D223, D221).
 //
-//	service class Users { find(id: string): User!NotFound }
-//	control class Approval { approve(request: string): boolean!! }
+//	service Users { find(id: string): User!NotFound }
+//	control Approval { approve(request: string): boolean!! }
 //	const UsersLive = Layer.effect(Users) { const seen = new Set<string>(); return { find(id) { ... } } }
 //
 // The older spellings still compile and draw warnings with quick fixes:
-// service Users { ... } and control Approval { ... } without class (EK2120),
-// and layer UsersLive: Users { ... } (EK2121), whose fix rewrites it into the
-// Layer.effect block or Layer.succeed call it abbreviates.
+// service class Users { ... } and control class Approval { ... } (EK2120,
+// whose fix removes class), and layer UsersLive: Users { ... } (EK2121), whose
+// fix rewrites it into the Layer.effect block or Layer.succeed call it
+// abbreviates.
 
 var (
-	// EK2120: a service or control declaration written without class (D220). {0} is the word. A warning.
-	EK2120 = message(2120, warningCategory, "{0} is a modifier of a class declaration: write {0} class.")
+	// EK2120: a service or control declaration written with class (D223). {0} is the word. A warning.
+	EK2120 = message(2120, warningCategory, "{0} class is the older spelling: write {0} without class.")
 	// EK2121: a layer declaration (D221). A warning.
 	EK2121 = message(2121, warningCategory, "layer declarations are the old spelling of a layer: write Layer.effect(Service) { ... } or Layer.succeed(Service, { ... }).")
 )
@@ -75,17 +76,32 @@ func layerDeclarationCall(statement *ast.Node) *ast.Node {
 	return call
 }
 
-// checkDeclarationSpelling reports EK2120 at a service or control declared
-// without class, and EK2121 at a layer declaration.
+// classKeywordAfter returns the end of the class keyword that follows the
+// word service or control ending at end, and false when no class follows.
+func classKeywordAfter(text string, end int) (int, bool) {
+	after := scanner.SkipTrivia(text, end)
+	if !strings.HasPrefix(text[after:], "class") {
+		return 0, false
+	}
+	stop := after + len("class")
+	if stop < len(text) {
+		if ch := text[stop]; ch == '_' || ch == '$' || ch >= '0' && ch <= '9' || ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' || ch >= 0x80 {
+			return 0, false
+		}
+	}
+	return stop, true
+}
+
+// checkDeclarationSpelling reports EK2120 over service class or control class,
+// and EK2121 at a layer declaration.
 func checkDeclarationSpelling(c *checker.Checker, file *ast.SourceFile) {
 	text := file.Text()
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		if ast.IsClassDeclaration(n) {
 			if word, ok := declarationWordRange(n); ok {
-				after := scanner.SkipTrivia(text, word.End())
-				if !strings.HasPrefix(text[after:], "class") {
-					reportAt(c, file, word, EK2120, text[word.Pos():word.End()])
+				if stop, ok := classKeywordAfter(text, word.End()); ok {
+					reportAt(c, file, core.NewTextRange(word.Pos(), stop), EK2120, text[word.Pos():word.End()])
 				}
 			}
 		}
@@ -97,7 +113,8 @@ func checkDeclarationSpelling(c *checker.Checker, file *ast.SourceFile) {
 	file.AsNode().ForEachChild(visit)
 }
 
-// serviceClassFix is EK2120's quick fix: it writes class after the word.
+// serviceClassFix is EK2120's quick fix: it replaces service class or control
+// class, which the diagnostic spans, with the word alone.
 var serviceClassFix = &ls.CodeFixProvider{
 	Source:     diagnosticSource,
 	ErrorCodes: []int32{EK2120.Code},
@@ -106,14 +123,14 @@ var serviceClassFix = &ls.CodeFixProvider{
 		if fix.Diagnostic == nil || fix.Span.End() > len(text) {
 			return nil, nil
 		}
-		word := text[fix.Span.Pos():fix.Span.End()]
-		if word != "service" && word != "control" {
+		fields := strings.Fields(text[fix.Span.Pos():fix.Span.End()])
+		if len(fields) != 2 || fields[1] != "class" || fields[0] != "service" && fields[0] != "control" {
 			return nil, nil
 		}
-		end := fix.Diagnostic.Range.End
+		word := fields[0]
 		return []*ls.CodeAction{{
-			Description: "Write " + word + " class",
-			Changes:     []*lsproto.TextEdit{{Range: lsproto.Range{Start: end, End: end}, NewText: " class"}},
+			Description: "Write " + word + " without class",
+			Changes:     []*lsproto.TextEdit{{Range: fix.Diagnostic.Range, NewText: word}},
 		}}, nil
 	},
 }

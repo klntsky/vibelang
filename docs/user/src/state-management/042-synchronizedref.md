@@ -38,7 +38,7 @@ function inspect() {
 ```ts
 error RefreshFailed
 
-service class Versions {
+service Versions {
   loadAfter(version: number): number!RefreshFailed
 }
 

@@ -1,16 +1,16 @@
 // expect-result: {"a":"released v1","b":"declined","c":"stopped: full","d":["deploy v2","released v2","approval done"],"e":"cleanup then cancelled","f":"busy deploy v3","g":[1,3],"h":"hi/info,bye/default","i":"two controls","j":["acquire held","answer true","release held"]}
 error ReviewBusy { request: string }
 
-control class Approval {
+control Approval {
   approve(request: string): boolean!ReviewBusy
   note(text: string): void!!
 }
 
-control class Log {
+control Log {
   write(message: string, level?: string): void!!
 }
 
-control class Stop {
+control Stop {
   stop(reason: string): never!!
 }
 

@@ -154,7 +154,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D125 | **Controversial.** The language is Effeck: binary `effeck`, files `.effeck`, codes `EK`, unscoped npm packages `effeck`, `effeck-runtime`, `effeck-vite` | The `@effectscript` npm scope belongs to another language | 28 |
 | D126 | `error NotFound { id: string }` declares a tagged error class with readonly fields | Fewer tokens for the most common declaration | 3 |
 | D127 | **Controversial.** Effect types are written `Result!Error!Dependencies`; an empty slot is never, and left-out dependencies are inferred on a function with a body | Fewer tokens than `Effect<A, E, R>` in every contract | 14 |
-| D128 | (Amended by D220.) `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
+| D128 | (Amended by D220, reverted by D223.) `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D129 | (Superseded by D221.) `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
 | D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
 | D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; superseded by D216 | Fewer tokens than narrowing and rethrowing | 3 |
@@ -207,9 +207,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D217 | A whole cause is recovered by matching on `exit(…)`; `catch (cause: Cause)` warns (EK2113) | One mechanism, pattern matching, for failures and exits | 17 |
 | D218 | A match on a caught failure must be exhaustive over E or rethrow with `default: throw e` | A complete match needs no rethrow | 3 |
 | D219 | EK2112 and EK2113 quick fixes rewrite retired clauses when the result is exact | Migration without guessing at types | 28 |
-| D220 | **Controversial.** `service class Users { ... }` and `control class Approval { ... }`: the word is a modifier, as `declare` is; the spelling without `class` warns (EK2120) | Reads as a TypeScript class and keeps Effect's word; Will was on the fence | 4, 9 |
+| D220 | (Superseded by D223.) **Controversial.** `service class Users { ... }` and `control class Approval { ... }`: the word is a modifier, as `declare` is; the spelling without `class` warned (EK2120) | Reads as a TypeScript class and keeps Effect's word; Will was on the fence | 4, 9 |
 | D221 | **Controversial.** A layer is Effect's own call, `Layer.effect(Users) { setup; return { ... } }` through block params, or `Layer.succeed(Users, { ... })`; `layer X: Y { }` warns (EK2121) | No syntax of its own; Will expected D129 to be reworked | 4 |
 | D222 | A layer block's returned members are typed by the service; a mismatch is TS2769 at the call, and failures, requirements, and `using` setup flow into the layer | Contextual typing through `Layer.effect` | 4 |
+| D223 | `service Users { ... }` and `control Approval { ... }` are the spelling again; `service class` and `control class` warn (EK2120), and the quick fix removes `class` | Will: "class is redundant and we don't use class in other stuff in the api" | 4, 9 |
 | D225 | `join` is a keyword: `join f`, `join [a, b]`, `join { a, b }` join fibers (Fiber.join), failing fast; `join(` stays a call; EK4611, EK4612 | `await` on fibers confused readers about promises; Effect's own word is join |
 | D226 | **Controversial.** A plain `await` in Effeck code is an error: EK4609 (fix: `join`), EK4610 (fix: `d.await()`), EK4601-EK4604; the await operations stay | In JavaScript `await` means a promise; keep that meaning |
 | D227 | A Deferred waits with `d.await()` | Method syntax (D152) already names Deferred.await |
