@@ -1,4 +1,4 @@
-# Yieldable Errors
+# Custom Error Classes
 
 Effect's custom error values can be yielded inside TypeScript generators. In VibeLang, signal those same domain failures with `throw`; `function*` produces values rather than sequencing an Effect program.
 

@@ -29,7 +29,7 @@ Code example count: one example per fenced code block in the source body, includ
 - **Core Concepts**
   - [Importing Effect](src/getting-started/008-importing-effect.md): `v4/getting-started/importing-effect.mdx`
   - [Running Effects](src/getting-started/009-running-effects.md): `v4/getting-started/running-effects.mdx`
-  - [Using Generators](src/getting-started/010-using-generators.md): `v4/getting-started/using-generators.mdx`
+  - [Sequencing Effects](src/getting-started/010-using-generators.md): `v4/getting-started/using-generators.mdx`
   - [Building Pipelines](src/getting-started/011-building-pipelines.md): `v4/getting-started/building-pipelines.mdx`
   - [Devtools](src/getting-started/012-devtools.md): `v4/getting-started/devtools.mdx`
 
@@ -66,7 +66,7 @@ Code example count: one example per fenced code block in the source body, includ
   - [Error Accumulation](src/error-management/021-error-accumulation.md): `v4/error-management/error-accumulation.mdx`
   - [Error Channel Operations](src/error-management/022-error-channel-operations.md): `v4/error-management/error-channel-operations.mdx`
   - [Parallel and Sequential Errors](src/error-management/023-parallel-and-sequential-errors.md): `v4/error-management/parallel-and-sequential-errors.mdx`
-  - [Yieldable Errors](src/error-management/024-yieldable-errors.md): `v4/error-management/yieldable-errors.mdx`
+  - [Custom Error Classes](src/error-management/024-yieldable-errors.md): `v4/error-management/yieldable-errors.mdx`
 - **Requirements Management**
   - [Managing Services](src/requirements-management/025-services.md): `v4/requirements-management/services.mdx`
   - [Default Services](src/requirements-management/026-default-services.md): `v4/requirements-management/default-services.mdx`

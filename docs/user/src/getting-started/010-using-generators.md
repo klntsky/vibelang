@@ -1,4 +1,4 @@
-# Using Generators
+# Sequencing Effects
 
 VibeLang sequences computations with ordinary functions and calls. This page covers the control-flow tasks handled by `Effect.gen` in TypeScript and explains the separate role of `function*` in VibeLang.
 
@@ -94,7 +94,7 @@ function label() {
 
 Ordinary method calls preserve `this` and evaluate the receiver once. There is no nested generator whose receiver needs a special binding. If passing the method as a program, capture the receiver with `() => prefixer.format("marker")`.
 
-## Producers use `function*`
+## Generators produce values and streams
 
 ```vibe
 function* ticks() {
