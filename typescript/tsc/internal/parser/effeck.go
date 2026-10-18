@@ -865,9 +865,12 @@ const (
 //
 //	try {
 //	  try { BODY } catch ($performed) {
-//	    if ($performed) { const [$k, request] = $clause(Approval.approve); CLAUSE }
+//	    if (true) { const [$k, request] = $clause(Approval.approve); CLAUSE }
 //	  }
 //	} catch (e) { C } finally { F }
+//
+// With several clauses the chain is `if ($performed) { ... } else if
+// ($performed) { ... } else if (true) { ... }`.
 //
 // The inner try statement, flagged NodeFlagsEffeck, is the handle statement
 // (D132). Its catch block stands for the clauses: TypeScript lets a catch
@@ -890,7 +893,16 @@ func (p *Parser) parseEffeckHandleStatement(pos int, jsdoc jsdocScannerInfo, try
 	end := clauses[len(clauses)-1].block.End()
 	for i := len(clauses) - 1; i >= 0; i-- {
 		clause := clauses[i]
-		test := p.effeckSynthesized(p.factory.NewIdentifier(effeckPerformedName), clause.anchor)
+		// The last link tests the literal true, so the binder makes its false
+		// branch unreachable: no path leaves the catch block without running a
+		// clause, and a clause that ends with a resume or a return adds no
+		// completion, such as undefined, to the function's result (D132).
+		var test *ast.Node
+		if i == len(clauses)-1 {
+			test = p.effeckSynthesized(p.factory.NewKeywordExpression(ast.KindTrueKeyword), clause.anchor)
+		} else {
+			test = p.effeckSynthesized(p.factory.NewIdentifier(effeckPerformedName), clause.anchor)
+		}
 		chain = p.effeckSpanning(p.factory.NewIfStatement(test, clause.block, chain), core.NewTextRange(clause.block.Pos(), end))
 	}
 	anchor := clauses[0].anchor

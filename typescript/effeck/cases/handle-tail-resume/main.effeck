@@ -1,0 +1,54 @@
+// expect-result: {"one":"yes","two":"yes","three":"stopped"}
+// A clause that ends with resume, or with return, does not complete normally,
+// so it adds nothing to the function's success type (D132).
+control class Approval {
+  approve(request: string): boolean!!
+}
+
+control class Notes {
+  note(text: string): void!!
+}
+
+function release(version: string) {
+  if (!Approval.approve(`deploy ${version}`)) return "no"
+  return "yes"
+}
+
+function releaseAndNote(version: string) {
+  if (!Approval.approve(`deploy ${version}`)) return "no"
+  Notes.note(`released ${version}`)
+  return "yes"
+}
+
+// One clause.
+export function one(version: string) {
+  try {
+    return release(version)
+  } handle Approval.approve(request) {
+    resume(true)
+  }
+}
+
+// Two clauses for two controls, read as an if-else chain.
+export function two(version: string) {
+  try {
+    return releaseAndNote(version)
+  } handle Approval.approve(request) {
+    resume(true)
+  } handle Notes.note(text) {
+    resume()
+  }
+}
+
+// A clause that returns instead of resuming.
+export function three(version: string) {
+  try {
+    return release(version)
+  } handle Approval.approve(request) {
+    return "stopped"
+  }
+}
+
+export function main() {
+  return { one: one("v1"), two: two("v2"), three: three("v3") }
+}
