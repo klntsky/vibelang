@@ -158,7 +158,7 @@ type YieldR<Eff> = Eff extends EffectModule.Effect<infer _A, infer _E, infer R> 
 
 // Keep the value and channels inferred even in a rejected body. A non-iterable
 // $run result would poison those declarations with any/unknown (gate 1).
-type DataRunAnnotation = "D251: data in a run position; wrap the call in sync((): Exit.Exit<A, E> (or Config.Config<A>, Context.Key<I, S>, Cause.YieldableError) => call()) to keep it data"
+type DataRunAnnotation = "D251: data in a run position; wrap the call in sync((): Exit.Exit<A, E> => call()) to keep it data"
 type ValidYields<Y> = [Extract<Y, DataRunAnnotation>] extends [never] ? unknown : DataRunAnnotation
 
 /** A function body: `function f() { body }` projects to `function f() { return $gen(function* () { body }) }`. */
@@ -168,13 +168,14 @@ export declare function $gen<Self, Eff, AEff>(
   f: ((this: Self) => Generator<Eff, AEff, never>) & ValidYields<Eff>
 ): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
 
-/** D24 data subtypes require a written data boundary at an opaque call (D251).
- * Runtime identity cannot distinguish Exit from an ordinary succeed program.
- */
-type DataEffect = Exit.Exit<any, any> | Config.Config<any> | Context.Key<any, any> | Cause.YieldableError
+/** D24 data that $isRun can identify stays data at opaque calls (D254). */
+type DataEffect = Config.Config<any> | Context.Key<any, any> | Error | Cause.YieldableError
+
+/** Only Exit needs an annotation: runtime identity also marks succeed programs. */
+type RejectedEffect = Exit.Exit<any, any>
 
 /** The members of T that run: Effects that are not data subtypes. */
-type Running<T> = Extract<Exclude<T, DataEffect>, AnyEffect>
+type Running<T> = Extract<Exclude<T, DataEffect | RejectedEffect>, AnyEffect>
 
 /** Accepts T only when some member of T runs, so a union without an Effect falls through. */
 type HasRunning<T> = [Running<T>] extends [never] ? never : unknown
@@ -183,7 +184,7 @@ type HasRunning<T> = [Running<T>] extends [never] ? never : unknown
  * Runs a call (L3): a call `c` in an Effect body projects to
  * `(yield* $run(c))`. An Effect runs and gives its success type; a union
  * runs its Effect members, so `Effect<A, E, R> | U` gives `A | U`. Data
- * subtypes are rejected with the annotation that keeps them data (D251).
+ * subtypes stay data; only Exit requires an annotation (D251, D254).
  * Values of other types and a type parameter's values are data, lifted to
  * an Effect that succeeds with them. Overloads, not a conditional
  * type, so a generic body's `T | undefined` resolves to data instead of a
@@ -192,9 +193,16 @@ type HasRunning<T> = [Running<T>] extends [never] ? never : unknown
 // An any-valued foreign result is not evidence of a data subtype. Resolve it
 // before contextual cast typing can invent a DataEffect intersection.
 export declare function $run<T>(value: T & (0 extends 1 & T ? unknown : never)): EffectModule.Effect<T, never, never>
-export declare function $run<T>(value: T & DataEffect): Generator<DataRunAnnotation, T, any>
-// Also reject a union containing data; it must not fall through as a program.
-export declare function $run<T>(value: T & ([Extract<T, DataEffect>] extends [never] ? never : unknown)): Generator<DataRunAnnotation, T, any>
+export declare function $run<T>(value: T & RejectedEffect): Generator<DataRunAnnotation, T, any>
+// Also reject a union containing Exit; it must not fall through as a program.
+export declare function $run<T>(value: T & ([Extract<T, RejectedEffect>] extends [never] ? never : unknown)): Generator<DataRunAnnotation, T, any>
+export declare function $run<T>(value: T & DataEffect): EffectModule.Effect<T, never, never>
+// Preserve data members of a union before the ordinary Effect overload.
+export declare function $run<T>(value: T & ([Extract<T, DataEffect>] extends [never] ? never : unknown)): EffectModule.Effect<
+  EffectModule.Success<Running<T>> | Exclude<T, Running<T>>,
+  EffectModule.Error<Running<T>>,
+  EffectModule.Services<Running<T>>
+>
 export declare function $run<A, E, R>(value: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R>
 export declare function $run<T>(value: T & HasRunning<T>): EffectModule.Effect<
   EffectModule.Success<Running<T>> | Exclude<T, Running<T>>,
