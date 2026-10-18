@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { blockFilenames, classify, extract, markdownPages, normalizeOutput, parseDiagnostics } from "./check-snippets"
+import { blockFilenames, classify, defaultCompiler, extract, markdownPages, normalizeOutput, parseDiagnostics } from "./check-snippets"
 
 const block = extract('```ts\nconst answer = 42\n```')[0]
 const diagnostic = (code: string, message = "example") => ({ code, message })
@@ -61,7 +61,7 @@ test("parses native ES and TS errors and ignores notes and warnings", () => {
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join, relative, resolve } from "node:path"
 import { tmpdir } from "node:os"
-const compiler = resolve(import.meta.dir, "../../typescript/built/local/tsc")
+const compiler = defaultCompiler()
 test.skipIf(!existsSync(compiler))("checks shared declarations, schema type/value names, captions, and expected errors together", async () => {
   const root = mkdtempSync(join(tmpdir(), "snippet-check-test-"))
   try {
@@ -172,8 +172,8 @@ test.skipIf(!existsSync(compiler))("runs marked blocks and reports output mismat
       "pass": [
         "```vibe", "// expect-error: TS2322", "const wrong: number = 'text'", "```",
         "```vibe", "import { missingFixture } from './missing.vibe'", "function incomplete() { return missingFixture() }", "```",
-        "```vibe", "// names.vibe", "export function name() { return 'Ada' }", "```",
-        "```vibe", "// run: Console.log(greet())", "function greet() { return `Hello, ${name()}!` }", "```",
+        "```vibe", "// names.vibe", "function salutation() { return 'Hello' }", "export function name() { return 'Ada' }", "```",
+        "```vibe", "// run: Console.log(greet())", "function greet() { return `${salutation()}, ${name()}!` }", "```",
         "```output", "Hello, Ada!", "```",
         "```vibe", "export function main() { Console.log('native entry') }", "// Output: native entry", "```",
         "```ts", "// TypeScript (.ts)", "// plain.ts", "console.log('plain entry')", "// Output: plain entry", "```"

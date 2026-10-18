@@ -179,7 +179,7 @@ export function linkModules(temp: string) {
 // prepared, as a project: one module per block, whose prefix imports the
 // names that earlier blocks declare, and a tsconfig.json that lists them.
 // offsets holds the number of prefix lines in each module.
-export function writeProject(dir: string, blocks: Block[]): { filenames: Map<number, string>; offsets: Map<string, number> } {
+export function writeProject(dir: string, blocks: Block[], options: { exportFunctions?: boolean } = {}): { filenames: Map<number, string>; offsets: Map<string, number> } {
   const ts = typescript()
   mkdirSync(dir)
   writeFileSync(join(dir, "package.json"), '{"type":"module","name":"docs-snippets"}')
@@ -195,6 +195,10 @@ export function writeProject(dir: string, blocks: Block[]): { filenames: Map<num
       continue
     }
     const ast = ts.createSourceFile(filename, block.source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+    const exportStarts: number[] = []
+    const explicitExports = new Set(ast.statements.flatMap(statement =>
+      ts.isExportDeclaration(statement) && !statement.moduleSpecifier && statement.exportClause && ts.isNamedExports(statement.exportClause)
+        ? statement.exportClause.elements.map(element => (element.propertyName ?? element.name).text) : []))
     const names = new Set<string>()
     const exported = new Set<string>()
     const typeOnly = new Set<string>()
@@ -211,6 +215,16 @@ export function writeProject(dir: string, blocks: Block[]): { filenames: Map<num
       // `fork { ... }` and `select { ... }`, and its recovery can lift
       // statements out of a function. Top-level code starts in column 0.
       if (ast.getLineAndCharacterOfPosition(statement.getStart(ast)).character !== 0) continue
+      // The 0.0.1 compiler does not forward a pure function's direct variant
+      // through an export list. For execution fixtures, export synthetic
+      // function bindings on their declaration instead. Keep original export
+      // lists unchanged so real code bugs still surface. Hover/check projects
+      // preserve every source column by leaving this option off.
+      if (options.exportFunctions && ts.isFunctionDeclaration(statement) && statement.name &&
+          !explicitExports.has(statement.name.text) && !ts.getModifiers(statement)?.some(m => m.kind === ts.SyntaxKind.ExportKeyword)) {
+        exportStarts.push(statement.getStart(ast))
+        exported.add(statement.name.text)
+      }
       const before = new Set(names)
       if (ts.isImportDeclaration(statement)) {
         const clause = statement.importClause
@@ -257,7 +271,9 @@ export function writeProject(dir: string, blocks: Block[]): { filenames: Map<num
     }
     const prefix = [...[...imports].map(([from, ids]) => `import { ${ids.join(", ")} } from "${localImport(filename, from)}"`), ...values].join("\n") + "\n"
     offsets.set(filename, prefix.split("\n").length - 1)
-    writeFileSync(join(dir, filename), `${prefix}${block.source}\nexport { ${[...names].filter(n => !exported.has(n)).join(", ")} }\n`)
+    let source = block.source
+    for (const start of exportStarts.reverse()) source = source.slice(0, start) + "export " + source.slice(start)
+    writeFileSync(join(dir, filename), `${prefix}${source}\nexport { ${[...names].filter(n => !exported.has(n)).join(", ")} }\n`)
     // An example that deliberately fails or opts out cannot supply reliable
     // definitions to later examples. Other blocks share their latest names.
     if (!block.fragment && !block.gap && !block.expected.length) for (const name of names) scope.set(name, { from: filename, value: !typeOnly.has(name) || values.some(v => v.startsWith(`const ${name} =`)) })
@@ -290,7 +306,7 @@ async function runBlock(dir: string, blocks: Block[], result: Result, compiler: 
   }
   // Emit only this entry and its imports. Other examples on the page can
   // intentionally fail, have missing fixtures, or reuse an entry-point name.
-  const { filenames } = writeProject(dir, blocks)
+  const { filenames } = writeProject(dir, blocks, { exportFunctions: true })
   const filename = filenames.get(result.number)!
   let helper = `$docsRun${result.number}`
   while (result.source.includes(helper)) helper += "$"
