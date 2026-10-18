@@ -354,7 +354,10 @@ async function runBlock(dir: string, blocks: Block[], result: Result, compiler: 
     writeFileSync(file, readFileSync(file, "utf8") + `\nexport function ${helper}() { ${result.run} }\n`)
   }
   const config = JSON.parse(readFileSync(join(dir, "tsconfig.json"), "utf8"))
-  Object.assign(config.compilerOptions, { noEmit: false, noEmitOnError: true, outDir: "dist", rootDir: "." })
+  // The 0.0.1 release suppresses emit on warnings with noEmitOnError, yet
+  // exits 0. Permit warning-only output; compiler errors still stop execution
+  // below. Each run writes only to its own dist directory.
+  Object.assign(config.compilerOptions, { noEmit: false, noEmitOnError: false, outDir: "dist", rootDir: "." })
   config.files = [filename]
   writeFileSync(join(dir, "tsconfig.json"), JSON.stringify(config))
   const compiled = await command([compiler, "--pretty", "false", "-p", join(dir, "tsconfig.json")], dir, 60000)
