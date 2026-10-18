@@ -150,7 +150,7 @@ Every `.effeck` file starts with a small prelude in scope, so the program above 
 | `TaggedError` | Effect's `Data.TaggedError` |
 | `Control` | The base class of control operations (Chapter 9) |
 | `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | Effeck's built-ins, each introduced where it is first used |
-| `sync`, `try`, `callback` | Boundary hatches: their arguments are plain TypeScript (D148) |
+| `sync`, `try`, `callback` | Boundary hatches: their first argument is self-contained TypeScript, and values reach it as inputs (D148, D229) |
 | `runPromise`, `runFork`, `runSync`, `runCallback` | Effect's runners, the way back in from TypeScript (D150) |
 | `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, `die` | The Effect module's functions without the `Effect.` prefix (D151) |
 | Every other export of `effect`'s root | `Console`, `Option`, `Stream`, `Schedule`, `Duration`, and the rest, plus `flow` and `identity` (D146) |
@@ -343,7 +343,7 @@ A TypeScript function that returns an `Effect` is treated exactly like an Effeck
 error EK4401: formatName is a plain TypeScript function, and nothing says what its exceptions mean.
   profile-card.effeck:7:12   title: formatName(user),
   Declare it trusted once:  add /** @effeck trusted */ to formatName in format.ts
-  Or bound this call:       try(formatName(user), (cause) => new FormatError({ cause }))
+  Or bound this call:       try((user) => formatName(user), (cause) => new FormatError({ cause }), user)
   Or move it into a .effeck file, where its contract is inferred.
 ```
 
@@ -1189,7 +1189,7 @@ The two acquisition policies behave differently when cancellation arrives during
 
 Without `{ interruptible: true }`, `sessionWithin` would wait for a connection that never completes, and the race branches in the adapter would never run (Chapter 21).
 
-A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with the `callback` hatch (D148). Its register function is plain TypeScript, so it may call the SDK directly; `resume(value)` succeeds, `resume.fail(error)` fails, `resume.exit(exit)` adopts an `Exit`, and a function it returns runs on interruption:
+A callback API that hands over a plain value, not a resource, can be adapted in `.effeck` with the `callback` hatch (D148). Its register function is plain, self-contained TypeScript, so it may call the SDK directly and takes values of the file as inputs before `resume` (D230); `resume(value)` succeeds, `resume.fail(error)` fails, `resume.exit(exit)` adopts an `Exit`, and a function it returns runs on interruption:
 
 ```ts es
 import { onceReady } from "./sdk.ts"     // (callback: (sdk: Sdk) => void) => void
@@ -1786,12 +1786,16 @@ An explicit boundary says what an exception means at the call. The boundary hatc
 
 ```ts es
 function parseLegacy(text: string) {
-  return try(legacyParse(text), (cause) => new LegacyFormatError({ cause }))   // plain TypeScript inside
+  return try((text) => legacyParse(text), (cause) => new LegacyFormatError({ cause }), text)   // plain TypeScript inside
 }
 // LegacyDoc!LegacyFormatError!
 ```
 
-`try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `try(legacyParse(text))`. A hatch's argument is plain TypeScript, not Effeck: calls there do not run, so calling an `.effeck` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
+`try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `sync(crypto.randomUUID())`. A hatch's first argument is plain TypeScript, not Effeck: calls there do not run, so calling an `.effeck` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
+
+That TypeScript is self-contained (D229). It may use its own parameters and locals, globals, imports, and the file's error declarations, but no other binding of the `.effeck` file: not a local, a parameter, or a module declaration. A value reaches it as an input (D230), an argument after the function that fills the function's first parameters, as `text` does above. An async function receives its `AbortSignal` after the inputs, and a callback's register function receives `resume` and the signal after them. `try`'s error mapper stays the second argument, so inputs follow it (D231). Only the first argument is TypeScript: the mapper and the inputs are Effeck, so a call among the inputs runs before the hatch starts, and the mapper may read the file's bindings, as `cartId` below (D232). A binding read from outside is EK4405, whose quick fix passes it as an input. An `.effeck` function is a binding too, so a hatch that leads back in takes it as an input: `sync(async (load) => runPromise(load()), loadReport)`. Inputs keep `callback`'s type arguments from being written, so its `resume` parameter takes the prelude type instead: `callback((source, resume: Resume<number, Error>) => …, source)`.
+
+The rule is deliberately strict, so a hatch's function reads like a standalone TypeScript function and could move to a `.ts` file unchanged; a later version may relax it.
 
 `runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude as the way back in. They are called from plain TypeScript: a `.ts` file, a hatch's body, or a module's top level, never from code a fiber runs (EK1005).
 
@@ -1809,7 +1813,7 @@ Outside a hatch, a call already waits for the callee, `join` waits for a fiber, 
 import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: AbortSignal) => Promise<Charge>
 
 function charge(cartId: string, amount: number) {
-  return try((signal) => createCharge(amount, signal), (cause) => new ChargeFailed({ cartId, cause }))
+  return try((amount, signal) => createCharge(amount, signal), (cause) => new ChargeFailed({ cartId, cause }), amount)
 }
 // Charge!ChargeFailed!
 ```
@@ -1834,7 +1838,7 @@ Effect's own combinators, such as `Effect.forEach`, expect callbacks that return
 
 #### Effect 3
 
-Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try(Effect3.runPromise(program), (error) => …)`.
+Effeck targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try((program) => Effect3.runPromise(program), (error) => …, program)`.
 
 ### 11. The standard library
 
@@ -2045,15 +2049,16 @@ Short answers, each with the code. Appendix C maps every section of Effect's doc
 function loadProfile(id: string) {
   const user = Users.find(id)                       // waits for the database: no await
   const avatar = try(                               // a Promise from a TypeScript library
-    (signal) => avatarSdk.fetch(user.avatarId, { signal }),
-    (cause) => new AvatarError({ cause })
+    (avatarId, signal) => avatarSdk.fetch(avatarId, { signal }),
+    (cause) => new AvatarError({ cause }),
+    user.avatarId                                   // an input: the hatch reads its own parameters
   )
   return { user, avatar }
 }
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In Effeck code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning. Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In Effeck code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning, and a value of the `.effeck` file, such as `user.avatarId`, arrives as an input (D229). Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -2289,7 +2294,7 @@ Yes, in one program: `effeck` checks both, and the editor serves both (Chapter 2
 #### Is there anything from Effect I cannot use?
 
 ```ts es
-const legacy = try(Effect3.runPromise(oldProgram), (cause) => new LegacyError({ cause }))
+const legacy = try((program) => Effect3.runPromise(program), (cause) => new LegacyError({ cause }), oldProgram)
 ```
 
 Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.effeck` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.
@@ -4151,8 +4156,10 @@ export default defineConfig({
 ```
 
 Register `it.effect` from `@effect/vitest` at the top level or in `describe`
-(D38). Keep foreign assertions inside a boundary such as
-`sync(assert.strictEqual(actual, expected))`. `bun run test`
+(D38). Effect's packages are trusted, so call `assert` from `@effect/vitest`
+directly: `assert.strictEqual(actual, expected)`, whose failure is a defect
+that fails the test. Keep another library's assertions inside a hatch, with
+the values as inputs: `sync((actual) => check(actual), actual)`. `bun run test`
 needs no prior build and maps assertion failures to `.effeck` lines.
 
 For a Vite application, add the same plugin to `vite.config.ts`. The plugin
@@ -4272,7 +4279,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@effeck trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
-| EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
+| EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try((text) => parse(text), (error) => …, text)` | 10 |
+| EK4405 | A hatch's TypeScript reads a binding the `.effeck` file declares outside the hatch: a local, a parameter, or a module declaration (D229) | Pass the value as an input, an argument after the function that fills its first parameter: `sync((text) => text.length, text)`; the quick fix does this | 10 |
 | EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
 | EK4601 | `await` before a call that already runs (D226) | Remove `await`; to run the call concurrently, fork it and join the fiber | 7 |
 | EK4602 | `await` on a promise in Effeck code (D226) | Wrap it in a hatch: `try(async () => …)` | 7 |
@@ -4487,7 +4495,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D135 | A module that exports a parameterless `main` runs it with `NodeRuntime.runMain`, or the runtime's copy without `@effect/platform-node`, when the host starts the module | No `run.effeck` file or runner line per program; importing the module still runs nothing | 1 |
 | D146 | Every export of `effect`'s root is in scope; JavaScript's own globals win, host globals do not | Imports from `effect` were 5.9% of the docs' tokens | 1, 27 |
 | D147 | **Controversial.** A call is passed by name where a parameter expects a program: `fork(fetchReport())` | Thunks around single calls were 2.6% of the docs' tokens | 5, 13 |
-| D148 | **Controversial.** `sync`, `try`, and `callback` are boundary hatches whose arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
+| D148 | **Controversial.** (Amended by D229-D232.) `sync`, `try`, and `callback` are boundary hatches whose first arguments are plain TypeScript | One visible escape hatch replaces five Effect constructors and their lambda rules | 10, 28 |
 | D149 | `try(…)` parses as a call in `.effeck`; Effect's `{ try, catch }` object is EK4404 | A try statement needs a block, so `try (` is unambiguous | 10, 28 |
 | D150 | `runPromise`, `runFork`, `runSync`, `runCallback` are in the prelude, for TypeScript and hatch bodies | The way back in; EK1005 still applies where a fiber runs | 10, 13 |
 | D151 | `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and seven more Effect functions need no prefix | They were 329 of the 538 `Effect.` member uses in the docs | 1, 27 |
@@ -4538,6 +4546,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D226 | **Controversial.** A plain `await` in Effeck code is an error: EK4609 (fix: `join`), EK4610 (fix: `d.await()`), EK4601-EK4604; the await operations stay | In JavaScript `await` means a promise; keep that meaning |
 | D227 | A Deferred waits with `d.await()` | Method syntax (D152) already names Deferred.await |
 | D228 | `join`'s types reach one level of arrays and objects, as D171's did | Deeper recursive types exceed TypeScript's limits |
+| D229 | **Controversial.** A hatch's TypeScript is self-contained: it reads no binding of the `.effeck` file except error declarations (EK4405, with a quick fix) | Will: TypeScript in a hatch uses no values or closures from outside; may change later | 10, 28 |
+| D230 | Inputs, the arguments after a hatch's function, fill its first parameters, before the signal or `resume`; `Resume<A, E>` annotates `resume` | `bind` lowers it, and parameters line up with the arguments as written | 10 |
+| D231 | `try`'s error mapper stays the second argument, and inputs follow it | D148's `try(f, mapper)` keeps its meaning | 10 |
+| D232 | Only a hatch's first argument is TypeScript; inputs and the mapper are Effeck; the function decides sync or async | Inputs run before the hatch, as Effeck calls do | 10 |
 
 #### Rules of the runtime and compiler
 
@@ -4876,9 +4888,9 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |
 | `Effect.sync` around a side effect | Changed | Call the code; platform side effects go through Effect modules (Chapter 11), or the `sync` hatch (D148) |
-| `Effect.try`, `tryPromise`, `promise` | Changed | The hatches `try(…)` and `sync(async () => …)`, whose arguments are plain TypeScript (D148) |
+| `Effect.try`, `tryPromise`, `promise` | Changed | The hatches `try(…)` and `sync(async () => …)`, whose first arguments are self-contained TypeScript that takes values as inputs (D148, D229) |
 | `Effect.suspend` | Changed | A call passed by name where a program is expected, or `() => …` (D147) |
-| `Effect.callback` | Changed | The hatch `callback((resume, signal) => …)`: `resume(value)`, `resume.fail(error)` (D43, D148) |
+| `Effect.callback` | Changed | The hatch `callback((resume, signal) => …)`: `resume(value)`, `resume.fail(error)`; inputs come before `resume` (D43, D148, D230) |
 | `Effect.void`, `never`, `yieldNow`, `interrupt` | Changed | Bare functions: `yieldNow()`, `interrupt()` (D179) |
 | Runners (`runPromise`, `runSync`, `runFork`, `runCallback`) | Changed | In the prelude; `runPromise(main())` from TypeScript, a top-level call, or a hatch's body, where no fiber runs the code (EK1005, D38, D148) |
 | `Effect.gen` and `yield*` | Changed | An ordinary function body, and calls (Chapter 2); `Effect.gen` in `.effeck` is EK1002 |
@@ -5080,12 +5092,12 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Feature | In Effeck | Form |
 | --- | --- | --- |
 | `async` and `await` | Changed | `async` only inside a hatch's function, where `await` is JavaScript's; elsewhere a call waits, `join` waits for a fiber, and `await` appears only in the await operations (D148, D226) |
-| `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal` cancels on interruption (D148) |
+| `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal`, after any inputs, cancels on interruption (D148, D230) |
 | `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
 | `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |
 | Async iterables and event emitters | Unchanged by design | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
 | Synchronous code that throws | Changed | `try(…)`; a dead `catch` is EK2004 (D37) |
-| Effect 3 libraries | Changed | Foreign code: `try(Effect3.runPromise(p), (error) => …)` |
+| Effect 3 libraries | Changed | Foreign code: `try((p) => Effect3.runPromise(p), (error) => …, p)` |
 
 #### C14. Streams
 
