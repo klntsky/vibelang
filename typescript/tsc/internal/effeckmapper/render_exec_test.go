@@ -52,6 +52,24 @@ var emitCases = []struct {
 	absent   []string
 }{
 	{
+		name:   "catch expressions run operands inside lazy generators",
+		source: "function f() { return a() catch e => recover(e) }",
+		contains: []string{
+			`import { $catch, $fast, $isRun } from "effeck-runtime";`,
+			"$catch($gen(function* () { return (($t = $value(a)()), $isRun($t) ? (yield* $t) : $t); }), e => $gen(function* () { return (($t = recover(e)), $isRun($t) ? (yield* $t) : $t); }))",
+		},
+		absent: []string{"$catchExpression", "f$direct"},
+	},
+	{
+		name:   "a catch fallback in a pipe keeps the evaluated topic",
+		source: "declare function input(): string!!; declare function find(id: string): string!!; declare function backup(id: string): string!!; function f() { return input() |> find(%) catch backup(%) }",
+		contains: []string{
+			"const $topic = (($t = input()), $isRun($t) ? (yield* $t) : $t);",
+			"$catch($gen(function* () { return (($t = find($topic)), $isRun($t) ? (yield* $t) : $t); }), () => $gen(function* () { return (($t = backup($topic)), $isRun($t) ? (yield* $t) : $t); }))",
+		},
+		absent: []string{"|>", "(%)", "f$direct"},
+	},
+	{
 		name:   "await operations defer calls and do blocks while preserving a held Fiber",
 		source: "function f(held: Fiber.Fiber<string>) {\n  return await.all [Effect.succeed(1), do { 2 }, held]\n}\n",
 		contains: []string{

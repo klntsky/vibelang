@@ -91,7 +91,14 @@ func (w *printer) node(n *ast.Node, e env) {
 	if n == nil {
 		return
 	}
-	if p.isSource(n) {
+	// These forms have source spans but synthesized descendants. Let their
+	// own lowering preserve lazy operands and lexical pipe topics, including
+	// when a match arm or do expression contains them.
+	if isCatchExpression(n) || isPipeExpression(n) || formsIsTopic(n) || p.isSource(n) ||
+		ast.IsCallExpression(n) && isRunnableCall(n) && p.isSource(n.Expression()) {
+		// A source call with synthesized arguments still needs the normal
+		// call walker: exit(x catch y), for example, takes its operand by
+		// name and must run the call itself before a match inspects its value.
 		w.chunks = append(w.chunks, chunk{node: n, env: e})
 		return
 	}

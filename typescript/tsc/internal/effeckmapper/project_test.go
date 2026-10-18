@@ -39,6 +39,66 @@ var projectionCases = []struct {
 		virtual: "interface Address extends Schema.Schema.Type<typeof Address> {}\nconst Address = Schema.Struct({ city: Schema.String });\ninterface User extends Schema.Schema.Type<typeof User> {}\nconst User = Schema.Struct({ home: Address, point: Schema.Struct({ x: Schema.Number }) });\n",
 	},
 	{
+		name:    "catch expression defers a value fallback (D236)",
+		source:  "function f() { return a() catch 2 }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) }), () => $gen(function* () { return 2 })))) })}",
+	},
+	{
+		name:    "catch expression contextually types a handler arrow (D238)",
+		source:  "function f() { return a() catch (e) => recover(e) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) }), (e) => $gen(function* () { return (yield* $run(recover(e))) })))) })}",
+	},
+	{
+		name:    "catch expressions associate to the left (D237)",
+		source:  "function f() { return a() catch b() catch c }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($catch($gen(function* () { return (yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) }), () => $gen(function* () { return (yield* $run($value(b)())) })))) }), () => $gen(function* () { return c })))) })}",
+	},
+	{
+		name:    "nullish coalescing stays inside the catch (D237)",
+		source:  "function f() { return a() ?? 1 catch 2 }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) ?? 1 }), () => $gen(function* () { return 2 })))) })}",
+	},
+	{
+		name:    "catch expression stays in its conditional branch (D237)",
+		source:  "function f(ok: boolean) { return ok ? a() catch 1 : 2 }",
+		virtual: "function f(ok: boolean) { return $gen(function* () { return ok ? (yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) }), () => $gen(function* () { return 1 })))) : 2 })}",
+	},
+	{
+		name:    "catch in a pipe body captures its topic (D237)",
+		source:  "declare function find(id: string): string!!; function f(id: string) { return id |> find(%) catch 1 }",
+		virtual: "declare function find(id: string): Effect.Effect<string, never, never>; function f(id: string) { return $gen(function* () { return (yield* $run($gen(function* () { const $topic = id; return (yield* $run($catch($gen(function* () { return (yield* $run(find($topic))) }), () => $gen(function* () { return 1 })))) }))) })}",
+	},
+	{
+		name:    "catch expression statement guards ASI",
+		source:  "function f() {\n  a() catch 1\n}",
+		virtual: "function f() { return $gen(function* () {\n  ;(yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) }), () => $gen(function* () { return 1 }))))\n})}",
+	},
+	{
+		name:    "catch handler block runs its own Effect body",
+		source:  "function f() { return a() catch e => { return recover(e) } }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) }), e => { return $gen(function* () { return (yield* $run(recover(e))) })}))) })}",
+	},
+	{
+		name:    "catch expression retains this in both operands",
+		source:  "function f() { return this.a() catch this.b() }",
+		virtual: "function f() { return $gen({ self: this }, function* () { return (yield* $run($catch($gen({ self: this }, function* () { return (yield* $run(this.a())) }), () => $gen({ self: this }, function* () { return (yield* $run(this.b())) })))) })}",
+	},
+	{
+		name:    "a written catch helper call keeps ordinary call semantics",
+		source:  "function f() { return $catchExpression(a, b) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($catchExpression(a, b))) })}",
+	},
+	{
+		name:    "nested pipe bodies have distinct lexical topics",
+		source:  "function f() { return 1 |> % + (2 |> % * 3) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($gen(function* () { const $topic = 1; return $topic + ((yield* $run($gen(function* () { const $topic_1 = 2; return $topic_1 * 3 })))) }))) })}",
+	},
+	{
+		name:    "catch in an await element stays in the element program",
+		source:  "function f() { return await.all [a() catch 1] }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($awaitAll([$gen(function* () { return (yield* $run($catch($gen(function* () { return (yield* $run($value(a)())) }), () => $gen(function* () { return 1 })))) })]))) })}",
+	},
+	{
 		name:    "error with fields",
 		source:  "error NotFound { id: string }\n",
 		virtual: "class NotFound extends TaggedError(\"NotFound\")<{ readonly id: string }> {}\n",
@@ -253,6 +313,77 @@ var projectionCases = []struct {
 		source:  "function f() {\n  Console.log(Math.max(1, 2))\n}\n",
 		virtual: "function f() { return $gen(function* () {\n  ;(yield* $run(Console.log((yield* $run(Math.max(1, 2))))))\n})}\n",
 	},
+}
+
+// TestCatchExpressionHatch checks D239 at the keyword, including nested
+// TypeScript callbacks, while a shadowed hatch name remains ordinary code.
+func TestCatchExpressionHatch(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"function f() { return sync(() => a() catch 1) }",
+		"function f() { return sync(() => [1].map(() => a() catch 1)) }",
+		"function f() { return try(() => a() catch 1, e => e) }",
+		"function f() { return callback(resume => a() catch 1) }",
+	} {
+		projection := Project(source, testContext)
+		assert.Equal(t, len(projection.Diagnostics), 1, "%s: %v", source, projection.Diagnostics)
+		d := projection.Diagnostics[0]
+		assert.Equal(t, d.Code, int32(2114))
+		assert.Equal(t, source[d.Start:d.Start+d.Length], "catch")
+		assertValidMap(t, projection, source)
+	}
+	source := "function f() { function sync(f: () => number!!) { return f() }; return sync(() => a() catch 1) }"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+	assertParses(t, projection.Text)
+}
+
+// TestCatchExpressionOutsideEffect checks that a top-level or plain-body
+// catch asks for an Effect boundary instead of silently returning a program.
+func TestCatchExpressionOutsideEffect(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"export const top = a() catch 1",
+		"function f(): number { return a() catch 1 }",
+	} {
+		projection := Project(source, testContext)
+		assert.Equal(t, len(projection.Diagnostics), 1)
+		assert.Equal(t, projection.Diagnostics[0].Code, int32(1001))
+		assertParses(t, projection.Text)
+	}
+}
+
+// TestCatchExpressionCorpus checks synthesized match and do operands in
+// the runnable fixture, including its throw handler and lazy fallback.
+func TestCatchExpressionCorpus(t *testing.T) {
+	t.Parallel()
+	data, err := os.ReadFile("../../../effeck/cases/catch-expression/main.effeck")
+	assert.NilError(t, err)
+	source := string(data)
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+	assertParses(t, projection.Text)
+	assertValidMap(t, projection, source)
+	assert.Assert(t, strings.Contains(projection.Text, "$run(exit($gen("), "exit must receive its catch operand by name:\n%s", projection.Text)
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v\n%s", diagnostics, js)
+	assert.Assert(t, strings.Contains(js, "exit($gen("), "exit must capture the catch operand's defect:\n%s", js)
+}
+
+// TestPipeTopicChoices checks that D155 program topics and opaque callees
+// cannot silently take the value-topic evaluation boundary used by catch.
+func TestPipeTopicChoices(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		"function f() { return a() |> retry(%, Schedule.recurs(2)) }",
+		"import { opaque } from './other'; function f() { return a() |> opaque(%) catch 1 }",
+	} {
+		projection := Project(source, testContext)
+		assert.Assert(t, len(projection.Diagnostics) > 0, "%s", source)
+		for _, d := range projection.Diagnostics {
+			assert.Equal(t, d.Code, int32(CodeFormChoice), "%v", d)
+		}
+	}
 }
 
 // virtualBody returns projection's text without its first line, the import line.

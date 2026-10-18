@@ -131,8 +131,8 @@ func (p *projector) awaitElement(element *ast.Node, e env) {
 }
 
 // awaitCalls checks whether evaluating an expression runs an Effect and
-// whether every call's form is known. A do/match expression and nested
-// await operations run by construction; nested function bodies run later.
+// whether every call's form is known. A do/match or catch expression and
+// nested await operations run by construction; function bodies run later.
 func (p *projector) awaitCalls(expression *ast.Node) (pauses, known bool) {
 	known = true
 	r := p.forms.(*Resolver)
@@ -142,7 +142,7 @@ func (p *projector) awaitCalls(expression *ast.Node) (pauses, known bool) {
 			return false
 		}
 		if ast.IsCallExpression(node) {
-			if p.isMatchForm(node) || awaitOperationHelper(node) != "" || r.returnsEffect(node) {
+			if isCatchExpression(node) || p.isMatchForm(node) || awaitOperationHelper(node) != "" || r.returnsEffect(node) {
 				pauses = true
 				return false
 			}

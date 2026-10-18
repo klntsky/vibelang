@@ -145,6 +145,8 @@ type projector struct {
 	// Effect body that a statement list holds, so a run that begins one can
 	// guard against ASI.
 	statementStarts map[int]bool
+	// pipeTopics names the lexical value of each pipe's input (D154).
+	pipeTopics map[*ast.Node]string
 	// completions counts the completion records of region statements, for
 	// their names.
 	completions int
@@ -206,6 +208,7 @@ func lower(text string, ctx FileContext) *projector {
 		p.statement = statement
 		p.visit(statement, env{})
 	}
+	p.checkCatchExpressionHatches()
 	return p
 }
 
@@ -243,6 +246,15 @@ func (p *projector) visit(node *ast.Node, e env) {
 		return
 	case awaitOperationHelper(node) != "":
 		p.awaitOperation(node, e)
+		return
+	case isCatchExpression(node):
+		p.catchExpression(node, e)
+		return
+	case isPipeExpression(node):
+		p.pipeExpression(node, e)
+		return
+	case formsIsTopic(node):
+		p.pipeTopic(node)
 		return
 	case p.isMatchForm(node):
 		p.synthesized(node, p.tokenStart(node), node.End(), e)
