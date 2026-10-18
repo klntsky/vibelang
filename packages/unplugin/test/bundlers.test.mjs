@@ -8,7 +8,7 @@ import { once } from "node:events"
 import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { SourceMap } from "node:module"
 import { availableParallelism, tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { createInterface } from "node:readline"
 import { after, describe, it } from "node:test"
 import { fileURLToPath } from "node:url"
@@ -219,6 +219,30 @@ describe("effeck-unplugin", { concurrency }, () => {
         result.event.message)
       assert.equal(result.event.message.match(/TS2322/g).length, 1, "one report per compile")
     })
+
+    if (bundler === "esbuild") {
+      it("esbuild: a type error uses the .effeck source in its code frame", async (t) => {
+        const root = await fixture(t, "esbuild-frame")
+        const file = join(root, "src/shop.effeck")
+        const lineText = 'export const broken: number = "wrong"'
+        await writeFile(file, `export const answer = 42\n\n${lineText}\n`)
+        await writeFile(join(root, "src/main.ts"), 'import "./shop.effeck"\n')
+        const { build } = await import("esbuild")
+        const { default: effeck } = await import("effeck-unplugin/esbuild")
+        await assert.rejects(build({
+          absWorkingDir: root, entryPoints: ["src/main.ts"], bundle: true,
+          platform: "node", write: false, plugins: [effeck()], logLevel: "silent"
+        }), (error) => {
+          assert.equal(error.errors.length, 1)
+          const { location } = error.errors[0]
+          assert.equal(resolve(root, location.file), file)
+          assert.equal(location.line, 3, error.errors[0].text)
+          assert.equal(location.column, 13)
+          assert.equal(location.lineText, lineText)
+          return true
+        })
+      })
+    }
 
     if (!watch) continue
     it(`${bundler}: watch mode recompiles on .effeck, .ts and tsconfig changes`, async (t) => {

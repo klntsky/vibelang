@@ -1,4 +1,5 @@
 import { existsSync, statSync } from "node:fs"
+import { readFile } from "node:fs/promises"
 import { dirname, isAbsolute, resolve } from "node:path"
 import { createUnplugin } from "unplugin"
 import { findCompiler, formatDiagnostic, projectBackend } from "./backend.js"
@@ -17,6 +18,16 @@ function changedSince(files, time) {
       return true
     }
   })
+}
+
+async function esbuildMessage(diagnostic) {
+  return {
+    text: formatDiagnostic(diagnostic),
+    location: diagnostic.file && {
+      file: diagnostic.file, line: diagnostic.line, column: diagnostic.column - 1,
+      lineText: (await readFile(diagnostic.file, "utf8")).split(/\r?\n/)[diagnostic.line - 1]
+    }
+  }
 }
 
 // Module code for a failed build. The bundler reports the real error.
@@ -63,6 +74,26 @@ export const unplugin = createUnplugin((options = {}, meta) => {
     return result
   }
 
+  async function loadModule(id) {
+    const file = cleanId(id)
+    const { outputs, inputs, errors, warnings } = await ensureCompiled()
+    debug(`load ${file} from compile ${compiled}`)
+    // Every .effeck module shares the project's diagnostics. Report them once per compile.
+    const report = reported !== compiled
+    if (errors.length || warnings.length) reported = compiled
+    if (errors.length) {
+      return { code: failed, inputs, errors: report ? errors : [], warnings: [] }
+    }
+    const output = outputs.get(file)
+    return {
+      code: output?.code ?? failed, map: output?.map, inputs,
+      errors: [], warnings: report ? warnings : [],
+      error: !output && {
+        message: `effeck: ${file} is not part of ${project}. Add it to the tsconfig's include.`, id: file
+      }
+    }
+  }
+
   return {
     name: "effeck",
     enforce: "pre",
@@ -97,40 +128,49 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       return cleanId(id).endsWith(".effeck")
     },
     async load(id) {
-      const file = cleanId(id)
-      const { outputs, inputs, errors, warnings } = await ensureCompiled()
-      debug(`load ${file} from compile ${compiled}`)
+      const { code, map, inputs, errors, warnings, error } = await loadModule(id)
       // Any project source or the tsconfig can change the contracts this module compiles against.
       for (const input of [project, ...inputs]) this.addWatchFile(input)
       if (errors.length) {
-        // One report per compile: every .effeck module shares the project's diagnostics.
-        if (reported !== compiled) {
-          reported = compiled
-          const first = errors.find((diagnostic) => diagnostic.file) || {}
-          this.error({
-            message: errors.map(formatDiagnostic).join("\n"),
-            id: first.file || file,
-            loc: first.file && { file: first.file, line: first.line, column: first.column - 1 }
-          })
-        }
-        // esbuild, webpack, Rspack and Bun collect the error and need module code.
-        return { code: failed, moduleType: "js" }
+        const first = errors.find((diagnostic) => diagnostic.file) || {}
+        this.error({
+          message: errors.map(formatDiagnostic).join("\n"),
+          id: first.file || cleanId(id),
+          loc: first.file && { file: first.file, line: first.line, column: first.column - 1 }
+        })
       }
-      if (warnings.length && reported !== compiled) {
-        reported = compiled
-        for (const warning of warnings) this.warn(formatDiagnostic(warning))
-      }
-      const output = outputs.get(file)
-      if (!output) {
-        this.error({ message: `effeck: ${file} is not part of ${project}. Add it to the tsconfig's include.`, id: file })
-        return { code: failed, moduleType: "js" }
-      }
-      return { code: output.code, map: output.map, moduleType: "js" }
+      for (const warning of warnings) this.warn(formatDiagnostic(warning))
+      if (error) this.error(error)
+      return { code, map, moduleType: "js" }
     },
     vite: { configResolved(config) { configure(config.root) } },
     webpack(compiler) { configure(compiler.context) },
     rspack(compiler) { configure(compiler.context) },
-    esbuild: { config(initialOptions) { configure(initialOptions.absWorkingDir) } }
+    esbuild: {
+      config(initialOptions) { configure(initialOptions.absWorkingDir) },
+      // No path matches /a^/: use the native loader to preserve diagnostic lineText.
+      onLoadFilter: /a^/,
+      setup(build) {
+        build.onLoad({ filter: /\.effeck(?:\?.*)?$/ }, async ({ path }) => {
+          const { code, map, inputs, errors, warnings, error } = await loadModule(path)
+          const messages = []
+          if (errors.length) {
+            messages.push({
+              ...await esbuildMessage(errors.find((diagnostic) => diagnostic.file) || errors[0]),
+              text: errors.map(formatDiagnostic).join("\n")
+            })
+          }
+          if (error) messages.push({ text: error.message })
+          return {
+            contents: map
+              ? `${code}\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,${Buffer.from(JSON.stringify(map)).toString("base64")}`
+              : code,
+            loader: "js", resolveDir: dirname(path), watchFiles: [project, ...inputs],
+            errors: messages, warnings: await Promise.all(warnings.map(esbuildMessage))
+          }
+        })
+      }
+    }
   }
 })
 
