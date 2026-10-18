@@ -2,7 +2,8 @@
 
 A recursive function snapshots regular files, then a producer yields their paths.
 `for...of` consumes the producer; `Effect.forEach` reads files with concurrency 4.
-The recursion accumulates into an array and returns void, so its contract is inferred.
+The recursion accumulates into an array and returns void. Because it is recursive,
+it writes out its contract, `void!PlatformError!FileSystem | Path`.
 `FileSystem` and `Path` come from Effect, backed by `NodeServices.layer`.
 Canonical directory paths prevent revisiting a directory through symbolic links.
 
@@ -24,4 +25,4 @@ const lengths = Effect.forEach(files, (path) => Effect.gen(function* () {
 }), { concurrency: 4 })
 ```
 
-The prototype runs this program, but widens recursive E and R to `unknown`.
+The prototype widens an inferred recursive E and R to `unknown`; the written contract states them.

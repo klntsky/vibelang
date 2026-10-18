@@ -1,9 +1,10 @@
 import { FileSystem } from "effect/FileSystem"
 import { Path } from "effect/Path"
+import { PlatformError } from "effect/PlatformError"
 import { NodeServices } from "@effect/platform-node"
 
-// A does not depend on the recursive result, so the whole contract is inferred.
-function collectFiles(directory: string, found: string[], visited: Set<string>) {
+// collectFiles is recursive, so its contract is written out.
+function collectFiles(directory: string, found: string[], visited: Set<string>): void!PlatformError!FileSystem | Path {
   const canonical = FileSystem.realPath(directory)
   if (visited.has(canonical)) return
   visited.add(canonical)

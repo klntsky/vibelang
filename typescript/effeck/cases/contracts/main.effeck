@@ -56,8 +56,8 @@ export function everything(id: string): Effect<infer _, infer _, infer _> {
   return find(id)
 }
 
-// A lambda with a contract.
-export const twice = (n: number): Effect<number, never, never> => n * 2
+// A lambda with a plain return type.
+export const twice = (n: number): number => n * 2
 
 // expect-result: {"find":"Ada","wide":"Ada","answer":42,"point":"point","greeting":"Hello, Ada","safe":"missing 7","named":"Ada","everything":"42","twice":8}
 export function main() {

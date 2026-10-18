@@ -29,7 +29,7 @@ function audited(account: Account) {
 // A recursive function refers to itself, so its generator is an object
 // literal's method, which binds no name: countdown(n - 1, seen) still calls
 // the Effect function.
-function countdown(n: number, seen: number[]) {
+function countdown(n: number, seen: number[]): Effect<number[], never, never> {
   Effect.yieldNow()
   seen.push(n)
   if (n > 0) countdown(n - 1, seen)

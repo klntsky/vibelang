@@ -87,7 +87,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `ek2002-escaping-requirement.fail` | A service the body needs escapes the contract's R |
 | `ek2003-bare-return.fail` | A plain return annotation is EK2003 on a function that runs an Effect or throws, and allowed on one that compiles to plain JavaScript (D67) |
 | `ek2003-missing-channels.fail` | `Effect<string>` and `Effect<string, UserNotFound>` leave channels out |
-| `recursion` | `isOdd` and `isEven` learn each other's failures through their cycle (D52), a caller outside reads the solved contract, and a self-recursive `totalSize` needs no contract |
+| `recursion` | `isOdd` and `isEven` call each other under written contracts, a caller outside reads them, and a self-recursive `totalSize` writes its contract too |
 | `ek2102-recursive-success.fail` | Effect functions whose A depends on their own result need a contract; a pure recursive function keeps TypeScript's rules |
 | `ek2102-cycle-catch.fail` | A `catch` whose `try` block calls into a cycle with inferred contracts needs a written contract on the cycle |
 | `ek2006-finally-jump.fail` | A `return` and a `continue` that leave `finally` blocks are EK2006; a `break` that stays inside one is not |

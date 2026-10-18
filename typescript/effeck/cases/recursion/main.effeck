@@ -1,22 +1,22 @@
-// E and R of functions that call each other are a fixpoint over their call
-// cycle (D52). Each function here learns the other's failure only through the
-// cycle, whichever the checker types first.
+// Functions that call each other write their contracts: a failure that
+// reaches a function only through its call cycle is stated, not inferred, so
+// each function here names both Even and Odd.
 export class Even extends TaggedError("Even")<{ readonly n: number }> {}
 export class Odd extends TaggedError("Odd")<{ readonly n: number }> {}
 
-export function isOdd(n: number): Effect<boolean, infer E, infer R> {
+export function isOdd(n: number): Effect<boolean, Even | Odd, never> {
   if (n === 7) throw new Odd({ n })
   if (n === 0) return false
   return isEven(n - 1)
 }
 
-export function isEven(n: number): Effect<boolean, infer E, infer R> {
+export function isEven(n: number): Effect<boolean, Even | Odd, never> {
   if (n === 100) throw new Even({ n })
   if (n === 0) return true
   return isOdd(n - 1)
 }
 
-// A caller outside the cycle reads the solved contract.
+// A caller outside the cycle reads the written contracts.
 export function parity(n: number) {
   try {
     return isEven(n) ? "even" : "odd"
@@ -25,8 +25,8 @@ export function parity(n: number) {
   }
 }
 
-// Self-recursion whose success type does not depend on itself needs no
-// contract: total is declared as a number.
+// A self-recursive function writes its contract too, even though its success
+// type does not depend on itself: total is declared as a number.
 interface Entry {
   size: number
   children: ReadonlyArray<string>
@@ -47,7 +47,7 @@ function stat(path: string) {
   return entry
 }
 
-export function totalSize(path: string) {
+export function totalSize(path: string): Effect<number, Missing, never> {
   const entry = stat(path)
   let total = entry.size
   for (const child of entry.children) total += totalSize(path === "/" ? `/${child}` : `${path}/${child}`)

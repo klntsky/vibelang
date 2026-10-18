@@ -92,3 +92,4 @@ typescript/effeck/cases/handlers/main.effeck:141:20 lambda: choice fallback -> p
 typescript/effeck/cases/programs/main.effeck:49:15 lambda: choice fallback -> effectFn annotation # job: string!! answers EK9100; the fork already lowered it to an Effect function
 typescript/effeck/cases/regions-jumps/main.effeck:95:3 lambda: choice fallback -> effectFn annotation # bump: number!! answers EK9100; the fork already lowered it to an Effect function
 typescript/effeck/cases/stack-depth/stack-depth.effeck:45:20 lambda: choice fallback -> plain annotation # hooks.onResume: void answers EK9100; the fork already kept it an ordinary arrow
+typescript/effeck/cases/contracts/main.effeck:60:22 lambda: effectFn annotation -> plain annotation # twice: number replaces Effect<number, never, never>; the fork already kept it a plain arrow, (n: number) => number in expected/main.d.ts

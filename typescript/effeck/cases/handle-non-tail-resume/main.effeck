@@ -33,7 +33,7 @@ function nonTail() {
   }
 }
 
-function depth(n: number): number!infer E!infer R {
+function depth(n: number): number!! {
   if (n === 0) {
     Effect.sleep("1 millis")
     return 0

@@ -8,7 +8,7 @@ Node ESM output in `dist`, and a short README with an Effect TypeScript equivale
 | [hello](hello/) | One function and one log; an exported `main` runs when node starts the module. |
 | [users](users/) | Abstract services, layers, `wire`, typed failures, and test layers. |
 | [http-api](http-api/) | A schema-validated HTTP route, conflict errors, and socket-free route tests. |
-| [file-tree](file-tree/) | Inferred recursion, platform services, a producer, and concurrent reads. |
+| [file-tree](file-tree/) | A recursive function with a written contract, platform services, a producer, and concurrent reads. |
 | [resilience](resilience/) | Retry schedules, deadlines, races, block-owned fibers, and virtual-time tests. |
 | [approval](approval/) | One release program under automatic and scripted control handlers. |
 | [pipeline](pipeline/) | A producer flowing through Stream operators and a `for...of` consumer. |
@@ -53,9 +53,8 @@ inside each example and writes each project's diagnostics to `.prototype/check.l
 Project sources use `.effeck` imports per D31; the compiler rewrites them to `.js`.
 It runs a main module through a TypeScript harness, except hello, whose module
 already contains its runner. The CLI's `run` command would run hello twice.
-File-tree's main runs, but the prototype widens recursive E and R to `unknown`;
-checking its Effeck runner then reports EK3201. Its contract stays inferred
-as specified by D52 instead of adding annotations to work around the prototype.
+File-tree's main runs. The prototype widens an inferred recursive E and R to
+`unknown`; file-tree's recursive function writes out its contract instead.
 
 The setup lane provides `sh scripts/setup.sh` to build the local compiler and
 runtime. Both local package directories must exist before installing an example;
