@@ -112,7 +112,7 @@ export function $forOf(
   }
   return Effect.suspend(() => {
     const iterator = (iterable as Iterable<unknown>)[Symbol.iterator]()
-    const advance = iterator.next.bind(iterator)
+    const advance = iterator.next
     let done = false
     // Effect discards its generator frame on failure or abandonment without
     // calling return(), so JavaScript's for-of cannot own iterator cleanup.
@@ -120,7 +120,7 @@ export function $forOf(
       while (true) {
         // As in a JavaScript loop, a throwing next() does not close itself.
         done = true
-        const step = advance()
+        const step = Reflect.apply(advance, iterator, [])
         if (step === null || (typeof step !== "object" && typeof step !== "function")) throw new TypeError("Iterator result is not an object")
         if (step.done) return $normal
         const value = step.value
@@ -133,7 +133,7 @@ export function $forOf(
         done = true
         const close = iterator.return
         if (close != null) {
-          const result = close.call(iterator)
+          const result = Reflect.apply(close, iterator, [])
           if (result === null || (typeof result !== "object" && typeof result !== "function")) {
             throw new TypeError("Iterator return result is not an object")
           }

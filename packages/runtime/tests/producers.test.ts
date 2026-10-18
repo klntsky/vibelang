@@ -295,3 +295,27 @@ test("an input Stream failure is propagated intact after its scope closes", asyn
     expect(events).toEqual(["value:1", "closed"])
   }
 })
+
+for (const shadow of ["bind", "call"] as const) {
+  test(`iterable methods ignore shadowed Function.prototype.${shadow}`, async () => {
+    const events: string[] = []
+    const iterator = {
+      next: Object.assign(function(this: unknown) {
+        expect(this).toBe(iterator)
+        events.push("next")
+        return { done: false as const, value: 1 }
+      }, shadow === "bind" ? { bind: undefined } : {}),
+      return: Object.assign(function(this: unknown) {
+        expect(this).toBe(iterator)
+        events.push("return")
+        return { done: true as const, value: undefined }
+      }, shadow === "call" ? { call: undefined } : {})
+    }
+    const values = { [Symbol.iterator]: () => iterator }
+    for (const value of values) { expect(value).toBe(1); break }
+    expect(events).toEqual(["next", "return"])
+    events.length = 0
+    expect(await Effect.runPromiseExit($forOf(values, () => Effect.succeed({ kind: "break", label: "" })))).toEqual(Exit.succeed($normal))
+    expect(events).toEqual(["next", "return"])
+  })
+}
