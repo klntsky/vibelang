@@ -89,6 +89,9 @@ imports in scope. Without it, Node runs the emitted block as the entry module:
 export `function main()` or include an explicit top-level runner. Markers never
 cause a function to run in the published example itself.
 
+The `check:snippets` package script and the pre-deploy snippet check both use
+`--run`.
+
 With `--run`, the checker emits marked blocks and their dependencies with the
 selected compiler, then runs each entry separately with Node and the linked
 local runtime. It compares stdout exactly, normalizing CRLF to LF and removing

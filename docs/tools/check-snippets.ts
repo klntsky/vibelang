@@ -6,8 +6,9 @@ import { createRequire } from "node:module"
 
 const repo = resolve(import.meta.dir, "../..")
 export type Diagnostic = { code: string; message: string; line?: number; column?: number }
-export type Block = { number: number; line: number; language: "vibe" | "ts"; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string }
-export type Result = Block & { status: "ok" | "fragment" | "compiler-gap" | "fail"; diagnostics: Diagnostic[]; reason?: string }
+export type Block = { number: number; line: number; language: "vibe" | "ts"; source: string; filename?: string; firstLine: string; expected: string[]; fragment: boolean; gap?: string; output?: string; run?: string }
+export type Result = Block & { status: "ok" | "fragment" | "compiler-gap" | "fail"; diagnostics: Diagnostic[]; reason?: string; execution?: Execution }
+export type Execution = { phase: "compile" | "run"; status: "passed" | "failed"; expectedStdout: string; stdout: string; stderr: string; exitCode: number; timedOut: boolean }
 
 export function extract(markdown: string): Block[] {
   const lines = markdown.split(/\r?\n/)
@@ -39,7 +40,25 @@ export function extract(markdown: string): Block[] {
       headers.push(line)
     }
     const header = headers.join("\n")
-    blocks.push({ number, line: start + 1, language, source: body.join("\n"), filename,
+    const inline = body.flatMap(line => {
+      const match = /^\s*\/\/ Output: ?(.*)$/.exec(line)
+      return match ? [match[1]] : []
+    })
+    let next = i + 1
+    while (next < lines.length && !lines[next].trim()) next++
+    const outputFence = /^\s{0,3}(`{3,}|~{3,})output\s*$/.exec(lines[next] ?? "")
+    let output = inline.length ? inline.join("\n") : undefined
+    if (outputFence) {
+      if (inline.length) throw new Error(`Block ${number} declares both inline and fenced output`)
+      const end = new RegExp(`^\\s{0,3}${outputFence[1][0]}{${outputFence[1].length},}\\s*$`)
+      const expected: string[] = []
+      while (++next < lines.length && !end.test(lines[next])) expected.push(lines[next])
+      if (next === lines.length) throw new Error(`Unclosed output fence for block ${number}`)
+      output = expected.join("\n")
+    }
+    const run = header.match(/\/\/ run:\s*([^\n]+)/)?.[1]
+    if (run && output === undefined) throw new Error(`Block ${number} has a run marker without expected output`)
+    blocks.push({ number, line: start + 1, language, source: body.join("\n"), filename, output, run,
       firstLine: body.find(l => l.trim() && !/^\s*\/\//.test(l)) ?? body[0] ?? "",
       expected: [...(header.match(/\/\/ expect-error:\s*([^\n]+)/)?.[1] ?? "").matchAll(/(?:EK|TS)\d+/g)].map(m => m[0]),
       fragment: /\/\/ fragment\s*(?:$|\n)/.test(header),
@@ -241,13 +260,69 @@ export function writeProject(dir: string, blocks: Block[]): { filenames: Map<num
     writeFileSync(join(dir, filename), `${prefix}${block.source}\nexport { ${[...names].filter(n => !exported.has(n)).join(", ")} }\n`)
     // An example that deliberately fails or opts out cannot supply reliable
     // definitions to later examples. Other blocks share their latest names.
-    if (!block.fragment && !block.expected.length) for (const name of names) scope.set(name, { from: filename, value: !typeOnly.has(name) || values.some(v => v.startsWith(`const ${name} =`)) })
+    if (!block.fragment && !block.gap && !block.expected.length) for (const name of names) scope.set(name, { from: filename, value: !typeOnly.has(name) || values.some(v => v.startsWith(`const ${name} =`)) })
   }
   writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: {
     strict: true, target: "ESNext", module: "NodeNext", moduleResolution: "NodeNext",
     skipLibCheck: true, noEmit: true, types: [], rewriteRelativeImportExtensions: true
   }, files: [...filenames.values()] }))
   return { filenames, offsets }
+}
+
+// Keep compile and execution output separate so a failure identifies its stage.
+async function command(args: string[], cwd: string, timeout: number) {
+  const child = Bun.spawn(args, { cwd, stdout: "pipe", stderr: "pipe" })
+  let timedOut = false
+  const timer = setTimeout(() => { timedOut = true; child.kill("SIGKILL") }, timeout)
+  try {
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited
+    ])
+    return { stdout, stderr, exitCode, timedOut }
+  } finally { clearTimeout(timer) }
+}
+
+export const normalizeOutput = (text: string) => text.replaceAll("\r\n", "\n").replace(/\n$/, "")
+
+async function runBlock(dir: string, blocks: Block[], result: Result, compiler: string, timeout: number): Promise<Result> {
+  if (result.status !== "ok" || result.expected.length || result.diagnostics.length) {
+    return { ...result, status: "fail", reason: `Output assertion cannot run a ${result.status} block or a block with expected diagnostics` }
+  }
+  // Emit only this entry and its imports. Other examples on the page can
+  // intentionally fail, have missing fixtures, or reuse an entry-point name.
+  const { filenames } = writeProject(dir, blocks)
+  const filename = filenames.get(result.number)!
+  let helper = `$docsRun${result.number}`
+  while (result.source.includes(helper)) helper += "$"
+  if (result.run) {
+    const file = join(dir, filename)
+    writeFileSync(file, readFileSync(file, "utf8") + `\nexport function ${helper}() { ${result.run} }\n`)
+  }
+  const config = JSON.parse(readFileSync(join(dir, "tsconfig.json"), "utf8"))
+  Object.assign(config.compilerOptions, { noEmit: false, noEmitOnError: true, outDir: "dist", rootDir: "." })
+  config.files = [filename]
+  writeFileSync(join(dir, "tsconfig.json"), JSON.stringify(config))
+  const compiled = await command([compiler, "--pretty", "false", "-p", join(dir, "tsconfig.json")], dir, 60000)
+  writeFileSync(join(dir, "compiler.log"), compiled.stdout + compiled.stderr)
+  if (compiled.exitCode !== 0 || compiled.timedOut) return {
+    ...result, status: "fail", reason: "Output assertion failed to compile its entry or dependencies",
+    execution: { ...compiled, phase: "compile", status: "failed", expectedStdout: result.output! }
+  }
+  const emitted = filename.replace(/\.(?:vibe|ts)$/, ".js")
+  let entry = join(dir, "dist", emitted)
+  if (result.run) {
+    // Importing suppresses the example's native main entry. TypeScript
+    // helpers can return plain values; VibeLang helpers return Effects.
+    entry = join(dir, "dist", "$docs-entry.js")
+    writeFileSync(entry, `import { ${helper} } from ${JSON.stringify("./" + emitted)};\n` +
+      `import { Effect } from "effect";\nconst result = ${helper}();\nif (Effect.isEffect(result)) await Effect.runPromise(result);\n`)
+  }
+  const executed = await command(["node", entry], dir, timeout)
+  const reason = executed.timedOut ? `Execution timed out after ${timeout}ms` :
+    executed.exitCode !== 0 ? `Node exited with status ${executed.exitCode}` :
+    normalizeOutput(executed.stdout) !== normalizeOutput(result.output!) ? "stdout mismatch" : undefined
+  return { ...result, status: reason ? "fail" : "ok", reason,
+    execution: { ...executed, phase: "run", status: reason ? "failed" : "passed", expectedStdout: result.output! } }
 }
 
 async function main() {
@@ -261,7 +336,7 @@ async function main() {
     return value
   }
   if (args.includes("--help")) {
-    console.log("bun docs/tools/check-snippets.ts [--compiler path] [--root docs/user] [--filter text] [--json path] [--keep]")
+    console.log("bun docs/tools/check-snippets.ts [--compiler path] [--root docs/user] [--filter text] [--json path] [--keep] [--run] [--timeout milliseconds]")
     return
   }
   const selectedCompiler = option("--compiler", defaultCompiler())!
@@ -270,7 +345,10 @@ async function main() {
   const filter = option("--filter", "")!
   const json = option("--json")
   const keep = args.includes("--keep")
-  if (args.some(a => a !== "--keep")) throw new Error(`Unknown argument: ${args.join(" ")}`)
+  const run = args.includes("--run")
+  const timeout = Number(option("--timeout", "10000"))
+  if (!Number.isSafeInteger(timeout) || timeout <= 0) throw new Error("--timeout must be a positive integer in milliseconds")
+  if (args.some(a => a !== "--keep" && a !== "--run")) throw new Error(`Unknown argument: ${args.join(" ")}`)
   const temp = mkdtempSync(join(tmpdir(), "vibelang-docs-"))
   const pages: { page: string; blocks: Result[] }[] = []
   try {
@@ -295,20 +373,34 @@ async function main() {
         }))
         return classify(block, diagnostics)
       })
+      if (run) for (let i = 0; i < results.length; i++) {
+        if (results[i].output !== undefined) results[i] = await runBlock(join(dir, `run-${results[i].number}`), blocks, results[i], compiler, timeout)
+      }
       pages.push({ page: relative(repo, page), blocks: results })
-      console.log(`\n${relative(repo, page)}\n| Block | Line | Status | Diagnostics |\n| --- | --- | --- | --- |`)
+      console.log(`\n${relative(repo, page)}\n| Block | Line | Status | Diagnostics | Execution |\n| --- | --- | --- | --- | --- |`)
       for (const result of results) {
-        console.log(`| ${result.number} | ${result.line} | ${result.status} | ${[...new Set(result.diagnostics.map(d => d.code))].join(", ") || "-"} |`)
+        console.log(`| ${result.number} | ${result.line} | ${result.status} | ${[...new Set(result.diagnostics.map(d => d.code))].join(", ") || "-"} | ${result.execution?.status ?? (run && result.output !== undefined ? "blocked" : "-")} |`)
         if (result.status === "fail") {
           if (result.reason) console.log(`  ${result.reason}`)
+          if (result.execution) {
+            console.log(`  Expected stdout: ${JSON.stringify(result.output)}`)
+            console.log(`  Actual stdout: ${JSON.stringify(result.execution.stdout.slice(0, 4000))}`)
+            if (result.execution.stderr) console.log(`  stderr: ${result.execution.stderr.slice(0, 4000)}`)
+          }
           for (const d of result.diagnostics) console.log(`  ${d.line}:${d.column} ${d.code}: ${d.message}`)
         }
       }
     }
     const totals = { pages: pages.length, blocks: 0, ok: 0, fragment: 0, "compiler-gap": 0, fail: 0 }
     for (const page of pages) for (const block of page.blocks) { totals.blocks++; totals[block.status]++ }
+    const execution = { marked: 0, passed: 0, failed: 0 }
+    if (run) for (const page of pages) for (const block of page.blocks) if (block.output !== undefined) {
+      execution.marked++
+      execution[block.execution?.status === "passed" ? "passed" : "failed"]++
+    }
     console.log(`\nTotals: ${JSON.stringify(totals)}`)
-    if (json) writeFileSync(resolve(json), JSON.stringify({ compiler, totals, pages }, null, 2) + "\n")
+    if (run) console.log(`Execution: ${JSON.stringify(execution)}`)
+    if (json) writeFileSync(resolve(json), JSON.stringify({ compiler, totals, ...(run ? { execution } : {}), pages }, null, 2) + "\n")
     if (totals.fail) process.exitCode = 1
   } finally {
     if (keep) console.log(`Temporary projects: ${temp}`)

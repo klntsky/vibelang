@@ -75,10 +75,10 @@ if $check_snippets || [ "$hovers" = 1 ]; then
 	release_runtime="$release_dir/vibelang-runtime/package"
 fi
 if $check_snippets; then
-	echo "deploy-docs: compiling every docs example with vibelang $release ($platform) and vibelang-runtime $release"
+	echo "deploy-docs: compiling docs examples and checking declared output with vibelang $release ($platform) and vibelang-runtime $release"
 	VIBELANG_BINARY="$release_binary" VIBELANG_RUNTIME_DIR="$release_runtime" \
-		bun "$root/docs/tools/check-snippets.ts" > "$release_dir/snippets.log" ||
-		{ tail -40 "$release_dir/snippets.log" >&2; echo "deploy-docs: a docs example does not compile with the $release release" >&2; exit 1; }
+		bun "$root/docs/tools/check-snippets.ts" --run > "$release_dir/snippets.log" ||
+		{ tail -40 "$release_dir/snippets.log" >&2; echo "deploy-docs: a docs example fails compilation or declared output with the $release release" >&2; exit 1; }
 	tail -1 "$release_dir/snippets.log"
 fi
 if [ "$hovers" = 1 ]; then

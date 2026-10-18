@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { blockFilenames, classify, extract, markdownPages, parseDiagnostics } from "./check-snippets"
+import { blockFilenames, classify, extract, markdownPages, normalizeOutput, parseDiagnostics } from "./check-snippets"
 
 const block = extract('```ts\nconst answer = 42\n```')[0]
 const diagnostic = (code: string, message = "example") => ({ code, message })
@@ -141,4 +141,72 @@ test("markdownPages skips the built site, which holds each page's Markdown copy"
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
+})
+
+
+test("extracts exact output fences and inline output, with optional run expressions", () => {
+  const blocks = extract([
+    "```vibe", "// run: Console.log(greet())", "function greet() { return 'hello' }", "```", "",
+    "~~~output", "hello", "  indented  ", "~~~",
+    "```vibe", "export function main() { Console.log('a'); Console.log('b') }", "// Output: a", "// Output: b", "```",
+    "```vibe", "const silent = 1", "// Output:", "```",
+    "```vibe", "const displayOnly = 1", "```", "```out", "not checked", "```"
+  ].join("\n"))
+  expect(blocks.map(b => [b.run, b.output])).toEqual([
+    ["Console.log(greet())", "hello\n  indented  "], [undefined, "a\nb"], [undefined, ""], [undefined, undefined]
+  ])
+})
+
+test("rejects ambiguous output and run markers without an assertion", () => {
+  expect(() => extract("```vibe\n// Output: a\n```\n```output\na\n```")).toThrow("both")
+  expect(() => extract("```vibe\n// run: work()\nfunction work() {}\n```")).toThrow("output")
+})
+
+// Exercise the real compiler, emitted JavaScript, local runtime, and Node.
+// Intentionally wrong output and a live fiber must fail instead of passing a
+// compile-only check. An unrelated expected error must not block emission.
+test.skipIf(!existsSync(compiler))("runs marked blocks and reports output mismatches, exits, timeouts, and unrun fragments", async () => {
+  const root = mkdtempSync(join(tmpdir(), "snippet-run-test-"))
+  try {
+    const pages: Record<string, string[]> = {
+      "pass": [
+        "```vibe", "// expect-error: TS2322", "const wrong: number = 'text'", "```",
+        "```vibe", "// names.vibe", "export function name() { return 'Ada' }", "```",
+        "```vibe", "// run: Console.log(greet())", "function greet() { return `Hello, ${name()}!` }", "```",
+        "```output", "Hello, Ada!", "```",
+        "```vibe", "export function main() { Console.log('native entry') }", "// Output: native entry", "```",
+        "```ts", "// TypeScript (.ts)", "// plain.ts", "console.log('plain entry')", "// Output: plain entry", "```"
+      ],
+      "mismatch": ["```vibe", "export function main() { Console.log('actual') }", "// Output: claimed", "```"],
+      "exit": ["```vibe", "export function main() { Effect.die('failure') }", "// Output:", "```"],
+      "timeout": ["```vibe", "export function main() { Effect.never() }", "// Output:", "```"],
+      "fragment": ["```vibe", "// fragment", "missing()", "// Output: impossible", "```"],
+      "expected": ["```vibe", "// expect-error: TS2322", "const invalid: number = 'text'", "// Output:", "```"],
+      "compile": ["```vibe", "// run: missing()", "const valid = 1", "// Output:", "```"]
+    }
+    for (const [name, lines] of Object.entries(pages)) writeFileSync(join(root, `${name}.md`), lines.join("\n"))
+    const output = join(root, "report.json")
+    const child = Bun.spawn(["bun", join(import.meta.dir, "check-snippets.ts"), "--root", root, "--compiler", compiler, "--run", "--timeout", "1000", "--json", output], { stdout: "pipe", stderr: "pipe" })
+    const [stdout, stderr, status] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited])
+    expect({ status, stderr }).toEqual({ status: 1, stderr: "" })
+    const report = JSON.parse(readFileSync(output, "utf8"))
+    const page = (name: string) => report.pages.find((p: any) => p.page.endsWith(`/${name}.md`)).blocks
+    expect(page("pass").map((b: any) => b.status)).toEqual(["ok", "ok", "ok", "ok", "ok"])
+    expect(page("pass").slice(2).map((b: any) => b.execution.stdout)).toEqual(["Hello, Ada!\n", "native entry\n", "plain entry\n"])
+    expect(page("mismatch")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("stdout mismatch"), execution: { stdout: "actual\n", expectedStdout: "claimed" } })
+    expect(page("exit")[0]).toMatchObject({ status: "fail", execution: { exitCode: 1 } })
+    expect(page("timeout")[0]).toMatchObject({ status: "fail", execution: { timedOut: true } })
+    expect(page("fragment")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("cannot run") })
+    expect(page("expected")[0]).toMatchObject({ status: "fail", reason: expect.stringContaining("cannot run") })
+    expect(page("compile")[0]).toMatchObject({ status: "fail", execution: { phase: "compile" } })
+    expect(stdout).toContain('"passed":3')
+  } finally { rmSync(root, { recursive: true, force: true }) }
+}, 30000)
+
+
+test("output normalization preserves spaces and extra blank lines", () => {
+  expect(normalizeOutput("one\r\ntwo\r\n")).toBe("one\ntwo")
+  expect(normalizeOutput("one \n\n")).toBe("one \n")
+  expect(normalizeOutput("  one  ")).toBe("  one  ")
+  expect(normalizeOutput("")).toBe("")
 })
