@@ -109,7 +109,10 @@ export function $rest<T, K extends PropertyKey>(subject: T, keys: ReadonlyArray<
   const result: Record<PropertyKey, unknown> = {}
   for (const key of Reflect.ownKeys(subject as object)) {
     if (!keys.includes(key as K) && Object.prototype.propertyIsEnumerable.call(subject, key)) {
-      result[key] = (subject as any)[key]
+      // Object rest creates data properties, including a literal __proto__.
+      Object.defineProperty(result, key, {
+        value: (subject as any)[key], enumerable: true, configurable: true, writable: true
+      })
     }
   }
   return result as Omit<T, K>

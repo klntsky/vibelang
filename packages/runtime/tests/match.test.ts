@@ -44,3 +44,71 @@ test("match: $rest keeps the properties the clauses do not name; $noMatch and $p
   expect(() => $noMatch({ _tag: "Timeout" })).toThrow(TypeError)
   expect(() => $patternError(4705)).toThrow(TypeError)
 })
+
+test("match: object rest copies __proto__ as data without changing the result prototype", () => {
+  const subject = JSON.parse('{"__proto__":{"inherited":true},"value":42}')
+  const rest = $rest(subject, [])
+  expect(Object.getPrototypeOf(rest)).toBe(Object.prototype)
+  expect(Object.hasOwn(rest, "__proto__")).toBe(true)
+  expect(rest.__proto__).toEqual({ inherited: true })
+  expect((rest as any).inherited).toBeUndefined()
+  expect(rest.value).toBe(42)
+})
+
+test("match: generated object rests agree with JavaScript destructuring for string and symbol keys", () => {
+  const excluded = Symbol("excluded")
+  const retained = Symbol("retained")
+  const keys = ["exclude", "__proto__", "constructor", "toString", "0", "100", "日本語", retained, excluded]
+  for (let trial = 0; trial < 40; trial++) {
+    const subject = Object.create({ inherited: "must not copy" })
+    for (const [index, key] of keys.entries()) {
+      Object.defineProperty(subject, key, { value: trial * 13 + index, enumerable: (trial + index) % 3 !== 0 })
+    }
+    const { exclude: _first, [excluded]: _second, ...expected } = subject
+    const actual = $rest(subject, ["exclude", excluded])
+    expect(Reflect.ownKeys(actual)).toEqual(Reflect.ownKeys(expected))
+    expect(Object.getOwnPropertyDescriptors(actual)).toEqual(Object.getOwnPropertyDescriptors(expected))
+    expect(Object.getPrototypeOf(actual)).toBe(Object.prototype)
+  }
+})
+
+test("match: object rest reads only included enumerable getters, once in property order", () => {
+  const reads: string[] = []
+  const subject = Object.defineProperties({}, {
+    excluded: { enumerable: true, get() { throw new Error("must not read") } },
+    hidden: { get() { throw new Error("must not read") } },
+    first: { enumerable: true, get() { reads.push("first"); return 1 } },
+    second: { enumerable: true, get() { reads.push("second"); return 2 } }
+  })
+  expect($rest(subject, ["excluded"])).toEqual({ first: 1, second: 2 })
+  expect(reads).toEqual(["first", "second"])
+})
+
+test("match: a custom matcher sees its receiver and the boolean or extractor hint", () => {
+  const calls: unknown[] = []
+  const matcher = {
+    [customMatcher](subject: unknown, hint: unknown) {
+      expect(this).toBe(matcher)
+      calls.push([subject, hint])
+      return new Set([subject])
+    }
+  }
+  expect($is(matcher, 42)).toBe(true)
+  expect($extract(matcher, 42)).toEqual([42])
+  expect(calls).toEqual([[42, { matchType: "boolean" }], [42, { matchType: "extractor" }]])
+  for (const result of [null, undefined, 1, "invalid"]) {
+    expect(() => $extract({ [customMatcher]: () => result }, 42)).toThrow("must return true, false, an array, or an iterable")
+  }
+})
+
+test("match: class extraction, primitive mismatches, and unprintable unmatched values", () => {
+  class Box {}
+  const box = new Box()
+  expect($extract(Box, box)).toEqual([box])
+  expect($extract(Box, {})).toBe(false)
+  expect($extract(Number, "42")).toBe(false)
+  expect($extract(Symbol, Symbol.for("key"))).toEqual([Symbol.for("key")])
+  expect(() => $extract(undefined, 42)).toThrow(TypeError)
+  expect(() => $noMatch("missing")).toThrow('No match arm matched "missing"')
+  expect(() => $noMatch({ [Symbol.toPrimitive]() { throw new Error("cannot print") } })).toThrow("No match arm matched object")
+})
