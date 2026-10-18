@@ -24,7 +24,7 @@ start
 true
 ```
 
-`Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit VibeLang `throw`, including `throw new Error(...)`, is a typed failure instead.
+`Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit `throw` in an Effect function, including `throw new Error(...)`, is a typed failure. In a plain-contract function it is a JavaScript exception; it becomes a defect only if it escapes into Effect code (D263).
 
 ```vibe
 // run: Console.log(firstLabel(["one"])); Console.log(firstLabel([]))
