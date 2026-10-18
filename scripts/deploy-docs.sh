@@ -27,8 +27,8 @@ for dir in docs/tools experiments packages/runtime; do
 done
 # Until 0.0.2 ships, the docs are checked and annotated with the release that
 # `npm create effeck@latest` installs: the 0.0.1 native compiler and runtime from
-# the release tarballs (dist-npm/tarballs, or EFFECK_RELEASE_TARBALLS), not this
-# checkout's build.
+# the release tarballs (EFFECK_RELEASE_TARBALLS, else dist-npm/tarballs, else the
+# registry's own files through npm pack), not this checkout's build.
 # - Every docs example must compile with it. EFFECK_SKIP_RELEASE_SNIPPETS=1 skips
 #   that check, and needs EFFECK_SKIP_RELEASE_SNIPPETS_REASON, which is printed.
 # - Code blocks get its hovers (docs/tools/hovers.ts). EFFECK_DOCS_HOVERS=0 turns
@@ -55,6 +55,13 @@ if $check_snippets || [ "$hovers" = 1 ]; then
 	esac
 	release_dir=$(mktemp -d "${TMPDIR:-/tmp}/effeck-release.XXXXXX")
 	trap 'rm -rf "$release_dir"' EXIT
+	# A machine without the release build checks against what npm serves users.
+	if [ -z "${EFFECK_RELEASE_TARBALLS:-}" ] && [ ! -f "$tarballs/effeck-$platform-$release.tgz" ]; then
+		tarballs="$release_dir/npm"
+		mkdir -p "$tarballs"
+		(cd "$tarballs" && npm pack --silent "effeck-$platform@$release" "effeck-runtime@$release" >/dev/null 2>&1) ||
+			{ echo "deploy-docs: no $release tarballs in dist-npm/tarballs, and npm has no effeck-$platform@$release; set EFFECK_RELEASE_TARBALLS" >&2; exit 1; }
+	fi
 	for name in "effeck-$platform" effeck-runtime; do
 		mkdir -p "$release_dir/$name"
 		tar xzf "$tarballs/$name-$release.tgz" -C "$release_dir/$name" 2>/dev/null ||
