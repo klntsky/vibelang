@@ -40,10 +40,10 @@ export {
 } from "effect"
 
 /** D4: in a .effeck file, `Effect<A, E, R>` is `Effect.Effect<A, E, R>`. */
-export type Effect<A, E = never, R = never> = EffectModule.Effect<A, E, R>
+export type Effect<A, E = never, R = never> = EffectModule.Effect<A, E, R>;
 
 /** D48: in a .effeck file, the type `Scope` is `Scope.Scope`. */
-export type Scope = ScopeModule.Scope
+export type Scope = ScopeModule.Scope;
 
 // D151: the Effect functions a .effeck file calls without the Effect. prefix.
 export {
@@ -102,6 +102,13 @@ export declare const $fail: typeof EffectModule.fail
  * `abstract class Users extends $service<Users>("pkg/users#Users") {}`.
  */
 export declare const $service: typeof Runtime.$service
+
+/**
+ * The base of a service that declares `static readonly default` (D40): a
+ * Context.Reference, which needs no provider and joins no R. Types only;
+ * the executable rendering passes the default.
+ */
+export declare function $reference<I>(key: string): Runtime.ReferenceKey<I>
 
 declare const inferred: unique symbol
 /** A contract channel written `infer` (D57), or dependencies left out of a function's contract. */

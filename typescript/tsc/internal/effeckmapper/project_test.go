@@ -137,6 +137,21 @@ var projectionCases = []struct {
 		virtual: "abstract class Empty {}\n",
 	},
 	{
+		name:    "a service with a static default is a reference (D40)",
+		source:  "abstract class Flags {\n  abstract readonly beta: boolean\n  static readonly default: Flags = { beta: true }\n}\n",
+		virtual: "interface Flags {\n  readonly beta: boolean; readonly \"~effeck/service\"?: \"app/src/main#Flags\" } abstract class Flags extends $reference<Flags>(\"app/src/main#Flags\") {\n  static readonly default: Flags = { beta: true }\n}\n",
+	},
+	{
+		name:    "methods of a class that implements a service are Effect functions (D92)",
+		source:  "service Users { find(id: string): User!NotFound }\nclass Memory implements Users {\n  find(id: string) { return id }\n  static make() { return 1 }\n}\n",
+		virtual: "interface Users { find(id: string): Effect.Effect<User, NotFound, never>; readonly \"~effeck/service\"?: \"app/src/main#Users\" } abstract class Users extends $service<Users>(\"app/src/main#Users\") {}\nclass Memory implements Users {\n  find(id: string) { return $gen(function* () { return id })}\n  static make() { return 1 }\n}\n",
+	},
+	{
+		name:    "a method takes the form its body decides",
+		source:  "class Cache {\n  get(k: string) { return load(k) }\n  refresh(k: string) {\n    const v = load(k)\n    return v\n  }\n}\n",
+		virtual: "class Cache {\n  get(k: string) { return load(k) }\n  refresh(k: string) { return $gen(function* () {\n    const v = (yield* $run(load(k)))\n    return v\n  })}\n}\n",
+	},
+	{
 		name:    "a layer without statements succeeds with its members",
 		source:  "layer UsersLive: Users {\n  find(id) { return lookup(id) }\n  readonly region = \"eu\";\n}\n",
 		virtual: "const UsersLive = Layer.succeed(Users, {\n  find(id) { return $gen(function* () { return (yield* $run(lookup(id))) })},\n  region: \"eu\"\n})\n",
@@ -206,6 +221,18 @@ func TestSynthesizedNamesAvoidDeclarations(t *testing.T) {
 	assert.Assert(t, strings.Contains(rest, "type A = Effect_1.Effect<User, never, never>"), rest)
 	assert.Assert(t, strings.Contains(rest, "const L = Layer_1.succeed(S, { x: 1 })"), rest)
 	assertParses(t, projection.Text)
+}
+
+// TestImportedEffectNamespaceKeepsThePreludeType checks that Effect<...> as
+// a type means the prelude's type in a file that imports effect's Effect
+// module, which has no type (D4), as the fork resolves it.
+func TestImportedEffectNamespaceKeepsThePreludeType(t *testing.T) {
+	t.Parallel()
+	source := "import { Effect } from \"effect\"\ntype A = Effect<string, never, never>\nconst x = Effect.void\nfunction f<Scope>(s: Scope) {}\n"
+	projection := Project(source, testContext)
+	line, rest, _ := strings.Cut(projection.Text, "\n")
+	assert.Assert(t, strings.Contains(line, "Effect as Effect_1"), line)
+	assert.Equal(t, rest, "import { Effect } from \"effect\"\ntype A = Effect_1<string, never, never>\nconst x = Effect.void\nfunction f<Scope>(s: Scope) { return $gen(function* () {})}\n")
 }
 
 // TestVerbatimSegmentsCoverSourceText checks that the identifiers a user

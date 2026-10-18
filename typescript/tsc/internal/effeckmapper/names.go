@@ -74,8 +74,10 @@ type names struct {
 	// words are the identifier-like words of the text, comments and strings
 	// included: a helper alias is never one of them.
 	words map[string]bool
-	// declared are the names some declaration of the file declares, at any depth.
-	declared map[string]bool
+	// declared are the names some declaration of the file declares, at any
+	// depth; declarations counts the declarations of each.
+	declared     map[string]bool
+	declarations map[string]int
 	// topLevel are the names a top-level declaration or import declares.
 	topLevel map[string]bool
 	// importedFrom maps each name a top-level import declares to its module specifier.
@@ -86,7 +88,7 @@ type names struct {
 
 // newNames reads file's bindings and the prelude names its source uses.
 func newNames(file *ast.SourceFile, text string) *names {
-	n := &names{words: wordsOf(text), declared: map[string]bool{}, topLevel: map[string]bool{}, importedFrom: map[string]string{}, imports: map[string]string{}}
+	n := &names{words: wordsOf(text), declared: map[string]bool{}, declarations: map[string]int{}, topLevel: map[string]bool{}, importedFrom: map[string]string{}, imports: map[string]string{}}
 	for _, statement := range file.Statements.Nodes {
 		forEachTopLevelName(statement, func(name string) {
 			n.topLevel[name] = true
@@ -105,6 +107,7 @@ func newNames(file *ast.SourceFile, text string) *names {
 			case isMemberName(node):
 			case ast.IsDeclarationName(node) && node.Parent.Kind != ast.KindShorthandPropertyAssignment:
 				n.declared[name] = true
+				n.declarations[name]++
 			case preludeNames[name] && !builtinGlobals[name] && !n.topLevel[name]:
 				n.imports[name] = name
 			}
@@ -199,6 +202,19 @@ func (n *names) prelude(name string) string {
 	local := n.fresh(name)
 	n.imports[key] = local
 	return local
+}
+
+// preludeTypes are the prelude names that are both one of effect's modules
+// and a type (D4, D48): Effect<A, E, R> and Scope.
+var preludeTypes = map[string]bool{"Effect": true, "Scope": true}
+
+// shadowsPreludeType reports whether a type reference to name, one of
+// preludeTypes, means the prelude's type although the file binds name: its
+// only declaration imports effect's module of that name, a namespace with
+// no type, so the fork resolves the type to the prelude's.
+func (n *names) shadowsPreludeType(name string) bool {
+	from, ok := n.importedFrom[name]
+	return preludeTypes[name] && ok && (from == "effect" || strings.HasPrefix(from, "effect/")) && n.declarations[name] == 1
 }
 
 // importLine returns the projected file's first line: the prelude import and

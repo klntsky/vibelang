@@ -119,7 +119,8 @@ func isServiceClass(node *ast.Node) bool {
 }
 
 // serviceDeclaration lowers a service, a control, or a D1 abstract class to
-// what the fork's declaration file prints for it (D45):
+// what the fork's declaration file prints for it (D45, D40 for a service
+// with a static default, whose base is $reference):
 //
 //	service Users { find(id: string): User!NotFound }
 //	interface Users { find(id: string): Effect.Effect<User, NotFound, never>; readonly "~effeck/service"?: "app/main#Users" }
@@ -186,7 +187,11 @@ func (p *projector) serviceDeclaration(node *ast.Node) {
 		separator = " "
 	}
 	brand := separator + `readonly "~effeck/service"?: ` + strconv.Quote(key) + " }"
-	classHead := " " + strings.Join(append(kept, "abstract class "+name.Text()+" extends "+p.names.helper("$service")+"<"+name.Text()+">("+strconv.Quote(key)+") {"), " ")
+	base := "$service"
+	if hasStaticDefault(node) {
+		base = "$reference"
+	}
+	classHead := " " + strings.Join(append(kept, "abstract class "+name.Text()+" extends "+p.names.helper(base)+"<"+name.Text()+">("+strconv.Quote(key)+") {"), " ")
 	at := lastInstance.End()
 	p.plan.insert(at, brand+classHead)
 	if len(static) == 0 {
@@ -228,6 +233,19 @@ func (p *projector) serviceKeywordClass(node *ast.Node) {
 		p.plan.insert(name.End(), " extends "+p.names.prelude("Control"))
 	}
 	p.visitList(node.Members(), env{})
+}
+
+// hasStaticDefault reports whether class declares `static readonly default`,
+// which makes its key a Context.Reference that needs no provider (D40).
+func hasStaticDefault(class *ast.Node) bool {
+	for _, member := range class.Members() {
+		if ast.IsPropertyDeclaration(member) && ast.IsStatic(member) && ast.HasSyntacticModifier(member, ast.ModifierFlagsReadonly) {
+			if name := member.Name(); name != nil && ast.IsIdentifier(name) && name.Text() == "default" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // abstractMember lowers an abstract member of a service to its interface

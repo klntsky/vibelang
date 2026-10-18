@@ -107,6 +107,8 @@ type projector struct {
 	ctx   FileContext
 	names *names
 	plan  plan
+	// forms answers the L1 form decisions (forms_resolve.go).
+	forms formResolver
 	// services are the services, controls, and D1 abstract classes the file
 	// declares at its top level, by name.
 	services map[string]*ast.Node
@@ -134,6 +136,7 @@ func Project(text string, ctx FileContext) Projection {
 		text:            text,
 		ctx:             ctx,
 		names:           newNames(file, text),
+		forms:           newFormResolver(file),
 		services:        map[string]*ast.Node{},
 		functions:       map[string]bool{},
 		statementStarts: map[int]bool{},
@@ -185,11 +188,22 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case isEffectType(node):
 		p.effectType(node, false /*slotsOnly*/)
 		return
+	case node.Kind == ast.KindTypeReference && ast.IsIdentifier(node.AsTypeReferenceNode().TypeName) &&
+		p.names.shadowsPreludeType(node.AsTypeReferenceNode().TypeName.Text()):
+		// import { Effect } from "effect" binds a namespace; Effect<A, E, R>
+		// as a type is still the prelude's (D4).
+		name := node.AsTypeReferenceNode().TypeName
+		p.plan.replace(p.tokenStart(name), name.End(), p.names.prelude(name.Text()))
+		p.visitList(node.TypeArguments(), e)
+		return
 	case node.Kind == ast.KindPropertySignature || node.Kind == ast.KindIndexSignature:
 		p.readonlyMember(node, e)
 		return
 	case isProjectedFunction(node):
 		p.functionDeclaration(node)
+		return
+	case node.Kind == ast.KindMethodDeclaration && ast.IsClassLike(node.Parent) && p.isEffectMethod(node):
+		p.functionLike(node, node.Body())
 		return
 	case node.Flags&ast.NodeFlagsReparsed != 0:
 		p.unprojected(node)
@@ -235,6 +249,61 @@ func (p *projector) visitList(nodes []*ast.Node, e env) {
 	for _, node := range nodes {
 		p.visit(node, e)
 	}
+}
+
+// formResolver answers the form decisions the projection needs from the
+// file's syntax alone: a lambda's or method's form, a block param's
+// placement, and whether an argument passes by name (L1). *Resolver
+// (forms_resolve.go) implements it over the generated forms table.
+type formResolver interface {
+	Lambda(fn *ast.Node) Decision
+	Block(call *ast.Node) Decision
+	Argument(expr *ast.Node) Decision
+}
+
+// newFormResolver returns the resolver for file over the embedded forms
+// table, or over an empty table if the embedded one does not read, so every
+// decision falls back to L1's defaults.
+func newFormResolver(file *ast.SourceFile) formResolver {
+	table, err := DefaultTable()
+	if err != nil {
+		table = NewTable(Header{}, nil, nil)
+	}
+	return NewResolver(file, table)
+}
+
+// isEffectMethod reports whether method, a method of a class with a body,
+// projects to an Effect function. A class that implements a service, one
+// the file declares or one imported from another module, implements Effect
+// contracts (D92, D128), so its instance methods are Effect functions; any
+// other method takes the form its body decides (L1's defaults), or its
+// return annotation's.
+func (p *projector) isEffectMethod(method *ast.Node) bool {
+	m := method.AsMethodDeclaration()
+	if method.Body() == nil || m.AsteriskToken != nil || ast.HasSyntacticModifier(method, ast.ModifierFlagsAsync) {
+		return false
+	}
+	if !ast.IsStatic(method) {
+		for _, heritage := range ast.GetImplementsHeritageClauseElements(method.Parent) {
+			name := heritage
+			switch heritage.Kind {
+			case ast.KindExpressionWithTypeArguments:
+				name = heritage.Expression()
+			case ast.KindTypeReference:
+				name = heritage.AsTypeReferenceNode().TypeName
+			}
+			if ast.IsIdentifier(name) {
+				if p.services[name.Text()] != nil || strings.HasPrefix(p.names.importedFrom[name.Text()], ".") {
+					return contractOf(method.Type()) != contractPlain
+				}
+			}
+		}
+	}
+	switch p.forms.Lambda(method).Form {
+	case FormEffectFn, FormProgram, FormDual:
+		return true
+	}
+	return false
 }
 
 // isStatementListItem reports whether statement sits in a list of
