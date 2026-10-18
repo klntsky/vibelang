@@ -404,20 +404,23 @@ function lookup(raw: string) {
 // User!InvalidId!Users
 ```
 
-To handle some errors and pass the rest on, name them in the clause (D131). `catch (e: UserNotFound)` handles only failures with that type's `_tag`, and the others propagate with their types:
+To handle some errors and pass the rest on, catch the failure and test it with pattern matching (D216). `default: throw e` passes the rest on with their types:
 
 ```ts es
 function lookupOrGuest(raw: string) {
   try {
     return Users.find(String(parseId(raw)))
-  } catch (e: UserNotFound) {
-    return guest
+  } catch (e) {
+    return match (e) {
+      when UserNotFound: guest;
+      default: throw e;
+    }
   }
 }
 // User!InvalidId!Users
 ```
 
-Several clauses can follow one `try`, each naming a type or a union of types, and a final untyped clause catches the rest. A failure raised inside a clause is not tested by the clauses after it. The test compares `_tag`, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A clause type without a literal `_tag` is EK2105, and a clause after an untyped one is EK2106. Narrowing and rethrowing inside an untyped clause still works, since TypeScript's narrowing applies to the caught value.
+An arm names an error class, or several with `or`, and tests instances of it, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A `match` without `default` must handle every failure the `try` block can raise (EK4701), so a complete match needs no rethrow. In statement form, `if (e is UserNotFound) { ... }` tests one class, and TypeScript narrows `e` after it. The earlier form, a catch clause that names a type, `catch (e: UserNotFound)` (D131), still compiles but is retired: it draws the warning EK2112, whose quick fix writes the `match`.
 
 Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
 
@@ -555,7 +558,7 @@ function firstFailure(id: string) {
 }
 ```
 
-The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case; leaving out `Timeout` above is EK4701 (D209). A typed `catch (e: NotFound)` remains the way to handle a failure as it propagates; `match` is for a failure or an Exit held as a value.
+The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case; leaving out `Timeout` above is EK4701 (D209). The same `match` handles a failure as it propagates, inside `catch (e)`, and a failure or an Exit held as a value.
 
 ### 4. Dependency injection: the R channel
 
@@ -996,11 +999,11 @@ Most pipes you write today disappear:
 | You pipe today | In Effeck |
 | --- | --- |
 | `Effect.map`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap` | statements |
-| `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch` |
+| `Effect.catchTag`, `Effect.catch`, `Effect.mapError` | `try`/`catch`, testing the failure with `match` or `is` (D216) |
 | `Effect.ensuring` | `finally` |
 | `Effect.provide`, `Effect.provideService` | the same functions, with a program argument |
 | `Effect.retry`, `Effect.timeout`, `Effect.withSpan`, `Effect.cached` | the same functions, called or piped with `\|>` as above |
-| `Effect.catchCause`, `Effect.failCause`, `Effect.onExit` | `catch (cause: Cause)`, `throw cause`, `finally (exit)` (D176-D178) |
+| `Effect.catchCause`, `Effect.failCause`, `Effect.onExit` | `match (exit(…))`, `throw cause`, `finally (exit)` (D217, D177, D178) |
 | `Effect.uninterruptibleMask`, `Effect.interruptible` | `uninterruptible { … restore { … } }`, `interruptible { … }` (D180) |
 
 On a cause that also holds a defect, Effect's recovery operators and `try`/`catch` differ; Chapter 17 lists how.
@@ -2991,12 +2994,11 @@ function fetchSnapshot(): string!Unavailable {
 
 function snapshotOrFallback() {
   try {
-    return fetchSnapshot()
-  } catch (e: Unavailable) {
-    return "cached"
-  } catch (cause: Cause) {
+    const outcome = exit(fetchSnapshot())
+    if (outcome is Exit.Success(let snapshot)) return snapshot
+    const cause = outcome.cause
     if (cause.hasInterrupts()) throw cause
-    return "degraded"
+    return cause.hasFails() ? "cached" : "degraded"
   } finally (exit) {
     logDebug(`snapshot ${exit._tag}`)
   }
@@ -3013,7 +3015,7 @@ function commit(rows: ReadonlyArray<string>) {
 }
 ```
 
-A catch clause typed `Cause` catches every reason the failure holds, defects and interrupts included, as `Effect.catchCause` does (D176); clauses before it still see expected failures only, and it must come last (EK2106). A control operation's abandonment unwinds through it untouched. `throw` with a `Cause` fails with every reason it holds, as `Effect.failCause` does, and adds the Cause's E to the function's E (D177). `finally (exit)` binds the statement's `Exit<void, E>`, where E is what the try statement can fail with; the block runs uninterruptibly, as `Effect.onExit`'s finalizer does, and a success carries no value (D178). `exit(program)`, `interrupt()`, and `yieldNow()` are bare functions (D179). An `uninterruptible` block runs as `Effect.uninterruptibleMask`, a `restore` block inside it as the mask's `restore`, and an `interruptible` block as `Effect.interruptible`; their statements stay code of the enclosing function, and each block calls the prelude function of its name, which also takes a program directly (D180). A `restore` block outside an `uninterruptible` block is EK2111.
+`exit(program)` holds every reason a failure holds, defects and interrupts included, as `Effect.exit` does; test it with `is` or `match` on `Exit.Success` and `Exit.Failure` to recover from the whole cause (D217). The earlier form, a catch clause typed `Cause` (D176), still compiles, as `Effect.catchCause` with a control operation's abandonment passed through untouched, but it is retired: it draws the warning EK2113, whose quick fix writes the `match`. `throw` with a `Cause` fails with every reason it holds, as `Effect.failCause` does, and adds the Cause's E to the function's E (D177). `finally (exit)` binds the statement's `Exit<void, E>`, where E is what the try statement can fail with; the block runs uninterruptibly, as `Effect.onExit`'s finalizer does, and a success carries no value (D178). `exit(program)`, `interrupt()`, and `yieldNow()` are bare functions (D179). An `uninterruptible` block runs as `Effect.uninterruptibleMask`, a `restore` block inside it as the mask's `restore`, and an `interruptible` block as `Effect.interruptible`; their statements stay code of the enclosing function, and each block calls the prelude function of its name, which also takes a program directly (D180). A `restore` block outside an `uninterruptible` block is EK2111.
 
 ## Part III. The runtime
 
@@ -4208,7 +4210,7 @@ as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic is an error, except three. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. EK1009, the old `with` spelling of a `provide` block, is a warning: the block compiles the same either way. The other two exceptions are policy, not soundness: EK2004, a `catch` that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
+Every EK diagnostic is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service` or `control` declaration without `class`; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, a `catch` that can never run, is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.effeck.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
 
 | Option in `compilerOptions.effeck` | Values | Default |
 | --- | --- | --- |
@@ -4243,12 +4245,14 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2102 | A recursive Effect function whose success, catch-variable, or return type needs a contract before its cycle's channels are known (D71, D72) | Write the contract | 14 |
 | EK2103 | A member of a `service class` or `control class` declaration with a body or an initializer (D128, D220) | Implement it in a layer, or make it static | 4 |
 | EK2104 | A setup statement of an old `layer` declaration that follows one of its members (D129) | Move the statement above the members | 4 |
-| EK2105 | A typed catch clause whose type has a member without a literal `_tag` (D131) | Catch a tagged error, or test the value in an untyped clause | 3 |
-| EK2106 | A catch clause after one that catches every failure: an untyped clause or a `Cause` clause (D131, D176) | Move that clause last | 3 |
+| EK2105 | A retired typed catch clause whose type has a member without a literal `_tag` (D131) | Catch a tagged error, or test the value in an untyped clause | 3 |
+| EK2106 | A retired catch clause after one that catches every failure: an untyped clause or a `Cause` clause (D131, D176) | Move that clause last | 3 |
 | EK2107 | A handle clause whose control is not a control declaration, such as a service (D132) | Provide a service with a layer; handle only a control's operations | 9 |
 | EK2108 | A handle statement that leaves an operation of a control it handles without a clause, or gives one two clauses (D132) | Add the missing clause, or remove the second | 9 |
 | EK2109 | A field of a `schema` declaration whose type has no schema form, or names a value that is not a schema (D133) | Declare the schema with `Schema.Struct`, or name a schema constant | 11 |
 | EK2111 | A `restore` block that no `uninterruptible` block of the same function encloses (D180) | Put it inside `uninterruptible { … }`, or use `interruptible { … }` | 6 |
+| EK2112 | Warning: a catch clause that tests a failure's type, `catch (e: NotFound)`, retired (D216) | `catch (e)` and test `e` with `match` or `is`; the quick fix rewrites the clauses | 3 |
+| EK2113 | Warning: a catch clause typed `Cause`, retired (D217) | `match (exit(…))` with `Exit.Success` and `Exit.Failure` arms; the quick fix rewrites `try { return X } catch (c: Cause) { return Y }` | 3 |
 | EK2120 | A warning: a `service` or `control` declaration written without `class` (D220) | Write `service class` or `control class`; the quick fix adds `class` | 4 |
 | EK2121 | A warning: a `layer` declaration, the old spelling of a layer (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |
@@ -4476,7 +4480,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D128 | (Amended by D220.) `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D129 | (Superseded by D221.) `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
 | D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
-| D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
+| D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; superseded by D216 | Fewer tokens than narrowing and rethrowing | 3 |
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias, and the two cannot drift apart | 11 |
 | D134 | **Controversial.** Members of interfaces and object types are readonly unless written `mutable` | Immutable data is the common case and no longer repeats `readonly` | 10 |
@@ -4502,7 +4506,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
 | D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
-| D176 | `catch (cause: Cause)` catches every reason, as Effect.catchCause | Effect's catchCause in a typed clause's shape | 17 |
+| D176 | `catch (cause: Cause)` catches every reason, as Effect.catchCause; superseded by D217 | Effect's catchCause in a typed clause's shape | 17 |
 | D177 | `throw cause` with a Cause rethrows every reason | Effect.failCause without a new keyword | 17 |
 | D178 | `finally (exit)` binds the try statement's Exit | Effect.onExit in finally's shape | 17 |
 | D179 | `exit`, `interrupt`, and `yieldNow` are bare functions | Effect's names; no bare `yield` | 7, 17 |
@@ -4522,6 +4526,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D213 | **Deviation.** A matcher is a custom matcher, a primitive class (`typeof`), a class (`instanceof`), a predicate, or a value (SameValue) | Built-in brand checks cannot be written in a runtime helper | 3 |
 | D214 | A match lowers to a returning block, a labeled block, or an immediately invoked arrow function | TypeScript narrows each arm and arms run Effects in every position | 3 |
 | D215 | `customMatcher` is exported, and every `error` class matches by `instanceof` and extracts itself | Same-tag classes stay distinct | 3 |
+| D216 | A catch clause no longer tests a failure's type; `catch (e)` and `match (e)` or `e is T`; typed clauses warn (EK2112) | Catching by tag was too magical; pattern matching covers it | 3 |
+| D217 | A whole cause is recovered by matching on `exit(…)`; `catch (cause: Cause)` warns (EK2113) | One mechanism, pattern matching, for failures and exits | 17 |
+| D218 | A match on a caught failure must be exhaustive over E or rethrow with `default: throw e` | A complete match needs no rethrow | 3 |
+| D219 | EK2112 and EK2113 quick fixes rewrite retired clauses when the result is exact | Migration without guessing at types | 28 |
 | D220 | **Controversial.** `service class Users { ... }` and `control class Approval { ... }`: the word is a modifier, as `declare` is; the spelling without `class` warns (EK2120) | Reads as a TypeScript class and keeps Effect's word; Will was on the fence | 4, 9 |
 | D221 | **Controversial.** A layer is Effect's own call, `Layer.effect(Users) { setup; return { ... } }` through block params, or `Layer.succeed(Users, { ... })`; `layer X: Y { }` warns (EK2121) | No syntax of its own; Will expected D129 to be reworked | 4 |
 | D222 | A layer block's returned members are typed by the service; a mismatch is TS2769 at the call, and failures, requirements, and `using` setup flow into the layer | Contextual typing through `Layer.effect` | 4 |

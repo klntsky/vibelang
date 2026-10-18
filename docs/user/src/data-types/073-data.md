@@ -106,7 +106,7 @@ function requireDocument(id: string) {
 function documentOrDraft(id: string) {
   try {
     return requireDocument(id)
-  } catch (error: DocumentMissing) {
+  } catch (error) {
     return { id: "draft" }
   }
 }

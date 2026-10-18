@@ -210,7 +210,7 @@ function roll(): number!! {
 }
 ```
 
-**Catching by tag** (D131). A failure no clause names keeps propagating.
+**Catching by tag** (D216). Catch the failure and `match` on it. A match that names every failure needs no rethrow; `default: throw e` passes on the ones it does not name.
 
 ```ts effect
 const describe = (id: string) =>
@@ -223,8 +223,10 @@ const describe = (id: string) =>
 function describe(id: string) {
   try {
     return getUser(id).name
-  } catch (e: NotFound) {
-    return `no user ${e.id}`
+  } catch (e) {
+    return match (e) {
+      when NotFound: `no user ${e.id}`;
+    }
   }
 }
 ```
@@ -268,24 +270,20 @@ export function main() {
 
 ## Causes, exits, and interruption
 
-**Catch every cause** (D176). A clause typed `Cause` also sees defects and interrupts; clauses before it still see expected failures only.
+**Catch every cause** (D217). `match` on `exit(…)`: a `Failure` exit's cause also holds defects and interrupts.
 
 ```ts effect
 const safe = (id: string) =>
   Effect.map(getUser(id), (user) => user.name).pipe(
-    Effect.catchTag("NotFound", (e) => Effect.succeed(`no user ${e.id}`)),
     Effect.catchCause((cause) => Effect.succeed(`failed: ${Cause.pretty(cause)}`))
   )
 ```
 
 ```ts es
 function safe(id: string) {
-  try {
-    return getUser(id).name
-  } catch (e: NotFound) {
-    return `no user ${e.id}`
-  } catch (cause: Cause) {
-    return `failed: ${Cause.pretty(cause)}`
+  return match (exit(getUser(id))) {
+    when Exit.Success(let user): user.name;
+    when Exit.Failure(let cause): `failed: ${Cause.pretty(cause)}`;
   }
 }
 ```
@@ -300,12 +298,12 @@ const logged = getUser("1").pipe(
 
 ```ts es
 function logged() {
-  try {
-    return getUser("1")
-  } catch (cause: Cause) {
+  const outcome = exit(getUser("1"))
+  if (outcome is Exit.Failure(let cause)) {
     logError(cause)
     throw cause
   }
+  return outcome.value
 }
 ```
 

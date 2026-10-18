@@ -85,7 +85,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$programs` | Convert an iterable of zero-argument functions to an array of Effects, or a record of them to a record of Effects | D49 |
 | `$normal` | Represent normal completion of a lowered region or loop body | D14, D26 |
 | `$catch` | Recover a cause containing expected failures only | D13, D28, D46 |
-| `$isFailure` | Test a caught failure's `_tag` against a typed catch clause's tags | D131 |
+| `$isFailure` | Test a caught failure's `_tag` against a retired typed catch clause's tags | D131, D216 |
 | `$finally` | Run cleanup on every exit and retain cleanup failures | D15, D46 |
 | `$expected` | Mark a value thrown in a plain-JavaScript function as an expected failure | D54 |
 | `$caught` | Unwrap an expected failure in a plain-JavaScript `catch`, and rethrow a defect | D13, D54 |

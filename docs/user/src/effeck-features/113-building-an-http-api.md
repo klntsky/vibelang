@@ -41,10 +41,12 @@ export function createUser() {
     const input = HttpServerRequest.schemaBodyJson(CreateUser)
     const user = Users.create(input.name)
     return HttpServerResponse.json(user, { status: 201 })
-  } catch (error: NameTaken) {
-    return HttpServerResponse.text(`Name already registered: ${error.name}`, { status: 409 })
-  } catch (error: Schema.SchemaError) {
-    return HttpServerResponse.text("Expected a JSON object with a string name", { status: 400 })
+  } catch (error) {
+    return match (error) {
+      when NameTaken: HttpServerResponse.text(`Name already registered: ${error.name}`, { status: 409 });
+      when Schema.SchemaError: HttpServerResponse.text("Expected a JSON object with a string name", { status: 400 });
+      default: throw error;
+    }
   }
 }
 
@@ -52,7 +54,7 @@ export const Routes = HttpRouter.add("POST", "/users", createUser())
 export const App = HttpRouter.provideRequest(UsersLive)(Routes)
 ```
 
-The JSON decoder runs at the call and returns the validated body. `Users.create` runs next, and the response is JSON with status 201. A repeated name becomes 409; a body that fails the schema becomes 400. Each typed catch clause handles the failures with its type's `_tag`, so a failure that neither names propagates to the HTTP boundary.
+The JSON decoder runs at the call and returns the validated body. `Users.create` runs next, and the response is JSON with status 201. A repeated name becomes 409; a body that fails the schema becomes 400. The `match` handles each error class it names, and `default: throw error` passes any other failure on to the HTTP boundary.
 
 `catch` sees expected failures only. It does not catch defects or interruption. Keep error-to-status mapping explicit so a programming defect cannot become a successful response.
 

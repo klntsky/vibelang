@@ -41,7 +41,7 @@ function diagnose() {
 }
 ```
 
-`exit` runs the program and returns its full outcome as data, as `Effect.exit` does. A failure exit exposes `.cause`, including defects and interruption that ordinary `catch` does not handle. Use `throw cause` when you deliberately want to propagate the entire cause again, or catch it whole with `catch (cause: Cause)`.
+`exit` runs the program and returns its full outcome as data, as `Effect.exit` does. A failure exit exposes `.cause`, including defects and interruption that ordinary `catch` does not handle. Use `throw cause` when you deliberately want to propagate the entire cause again, and `match` on the exit, with `Exit.Success(let value)` and `Exit.Failure(let cause)` arms, to branch on the whole outcome.
 
 ## Identifying reason variants
 

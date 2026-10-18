@@ -89,17 +89,16 @@ function isolateDecoder(opcode: number) {
 
 ```ts
 function decoderBoundary(opcode: number) {
-  try {
-    return decodeOpcode(opcode)
-  } catch (cause: Cause) {
-    if (cause.hasInterrupts()) throw cause
-    if (cause.hasDies()) {
-      log("Decoder failed", cause.reasons.map((reason) => reason._tag))
-      return "disabled"
-    }
-    throw cause
+  const outcome = exit(decodeOpcode(opcode))
+  if (outcome is Exit.Success(let value)) return value
+  const cause = outcome.cause
+  if (cause.hasInterrupts()) throw cause
+  if (cause.hasDies()) {
+    log("Decoder failed", cause.reasons.map((reason) => reason._tag))
+    return "disabled"
   }
+  throw cause
 }
 ```
 
-A catch clause typed `Cause` receives every failure reason, as `Effect.catchCause` does, so it can deliberately handle outcomes that ordinary catch clauses leave alone. Clauses before it still see expected failures only. `throw cause` restores the original failure, every reason included, as `Effect.failCause` does, instead of turning the cause object into a typed error. Inspect every reason before recovering from a mixed cause, and preserve cancellation when the boundary has no reason to consume it.
+`exit(program)` returns the whole outcome, as `Effect.exit` does, so a `Failure` exit's cause holds every reason: failures, defects, and interruption that ordinary catch clauses leave alone. Test it with `is` or `match` on `Exit.Success` and `Exit.Failure`. `throw cause` restores the original failure, every reason included, as `Effect.failCause` does, instead of turning the cause object into a typed error. Inspect every reason before recovering from a mixed cause, and preserve cancellation when the boundary has no reason to consume it.

@@ -106,7 +106,7 @@ export function busyReviewer() {
     return Approval.approve("deploy now") ? "approved" : "declined"
   } handle Approval.approve(request) {
     resumeWith(() => { throw new ReviewBusy({ request }) })
-  } catch (error: ReviewBusy) {
+  } catch (error) {
     return `review unavailable: ${error.request}`
   }
 }

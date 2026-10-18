@@ -53,20 +53,23 @@ function lookup(raw: string) {
 // User!InvalidId!Users
 ```
 
-To handle some errors and pass the rest on, name them in the clause (D131). `catch (e: UserNotFound)` handles only failures with that type's `_tag`, and the others propagate with their types:
+To handle some errors and pass the rest on, catch the failure and test it with pattern matching (D216). `default: throw e` passes the rest on with their types:
 
 ```ts es
 function lookupOrGuest(raw: string) {
   try {
     return Users.find(String(parseId(raw)))
-  } catch (e: UserNotFound) {
-    return guest
+  } catch (e) {
+    return match (e) {
+      when UserNotFound: guest;
+      default: throw e;
+    }
   }
 }
 // User!InvalidId!Users
 ```
 
-Several clauses can follow one `try`, each naming a type or a union of types, and a final untyped clause catches the rest. A failure raised inside a clause is not tested by the clauses after it. The test compares `_tag`, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A clause type without a literal `_tag` is EK2105, and a clause after an untyped one is EK2106. Narrowing and rethrowing inside an untyped clause still works, since TypeScript's narrowing applies to the caught value.
+An arm names an error class, or several with `or`, and tests instances of it, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A `match` without `default` must handle every failure the `try` block can raise (EK4701), so a complete match needs no rethrow. In statement form, `if (e is UserNotFound) { ... }` tests one class, and TypeScript narrows `e` after it. The earlier form, a catch clause that names a type, `catch (e: UserNotFound)` (D131), still compiles but is retired: it draws the warning EK2112, whose quick fix writes the `match`.
 
 Effect's combinators still work when an expression reads better than a block. Pass the program as a function:
 
@@ -204,4 +207,4 @@ function firstFailure(id: string) {
 }
 ```
 
-The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case; leaving out `Timeout` above is EK4701 (D209). A typed `catch (e: NotFound)` remains the way to handle a failure as it propagates; `match` is for a failure or an Exit held as a value.
+The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case; leaving out `Timeout` above is EK4701 (D209). The same `match` handles a failure as it propagates, inside `catch (e)`, and a failure or an Exit held as a value.

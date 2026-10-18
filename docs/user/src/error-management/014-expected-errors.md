@@ -94,8 +94,11 @@ The catch receives `InvalidCode | ItemMissing` and handles both here. It handles
 function labelOrMissing(input: string) {
   try {
     return findItem(input).label
-  } catch (error: ItemMissing) {
-    return "Out of catalog"
+  } catch (error) {
+    return match (error) {
+      when ItemMissing: "Out of catalog";
+      default: throw error;
+    }
   }
 }
 // string!InvalidCode!
@@ -109,7 +112,7 @@ function labelByTag(input: string) {
 }
 ```
 
-A typed catch clause, `catch (error: ItemMissing)`, handles only failures with that type's `_tag`; the others propagate with their types, as `string!InvalidCode!` shows. Several clauses can follow one `try`, `catch (error: A | B)` names several types, and a final untyped clause catches the rest. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
+Catch the failure, then `match` on it: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types, as `string!InvalidCode!` shows. A `match` without `default` must handle every failure the `try` block can raise, or it is a compile error (EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
 
 ```ts
 function withTagTable(input: string) {

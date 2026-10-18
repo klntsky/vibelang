@@ -157,7 +157,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D128 | (Amended by D220.) `service` and `control` declare abstract classes whose bodiless members are abstract; an implemented member is EK2103 | Fewer tokens than `abstract class` and `abstract` on every member | 4, 9 |
 | D129 | (Superseded by D221.) `layer UsersLive: Users { setup; find(id) { ... } }` is `Layer.effect` (or `Layer.succeed` without setup); setup after members is EK2104 | Fewer tokens than `Layer.effect(S, () => { return { ... } })` | 4 |
 | D130 | A block form provides a layer to statements that stay code of the enclosing function; its keyword is `provide` since D172 | Fewer tokens than `Effect.provide(() => { ... }, AppLive)`, and `return` keeps its meaning | 4 |
-| D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; several clauses may follow a `try`, and failures no clause names propagate | Fewer tokens than narrowing and rethrowing | 3 |
+| D131 | `catch (e: NotFound)` handles only failures with that type's `_tag`; superseded by D216 | Fewer tokens than narrowing and rethrowing | 3 |
 | D132 | `try { ... } handle Approval.approve(request) { resume(true) }` handles a control's operations; the block and the clauses stay code of the enclosing function | Fewer tokens than `handle(() => ..., Approval, { approve(request, k) { return resume(k, true) } })`, and `return` keeps its meaning | 9 |
 | D133 | `schema User { id: string; role: "admin" \| "member" }` declares a `Schema.Struct` and the interface of its decoded type | Fewer tokens than a struct and a type alias, and the two cannot drift apart | 11 |
 | D134 | **Controversial.** Members of interfaces and object types are readonly unless written `mutable` | Immutable data is the common case and no longer repeats `readonly` | 10 |
@@ -183,7 +183,7 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D173 | `provide Key = value` provides one service; providers separated by commas mix layers and services; `provide(...) { }` means the same | `Effect.provideService` without a layer, in the same block form | 4 |
 | D174 | In a provider, an effect module stands for its key of the same name: `Clock` for `Clock.Clock` | `provide Clock = testClock` and `provide Scheduler = fifo` swap runtime services | 4, 28 |
 | D175 | The analyzer reads an array of providers element by element | A layer that provides nothing would otherwise hide the others' services | 4 |
-| D176 | `catch (cause: Cause)` catches every reason, as Effect.catchCause | Effect's catchCause in a typed clause's shape | 17 |
+| D176 | `catch (cause: Cause)` catches every reason, as Effect.catchCause; superseded by D217 | Effect's catchCause in a typed clause's shape | 17 |
 | D177 | `throw cause` with a Cause rethrows every reason | Effect.failCause without a new keyword | 17 |
 | D178 | `finally (exit)` binds the try statement's Exit | Effect.onExit in finally's shape | 17 |
 | D179 | `exit`, `interrupt`, and `yieldNow` are bare functions | Effect's names; no bare `yield` | 7, 17 |
@@ -203,6 +203,10 @@ The following rows record build defaults, not new language decisions. Lane U rec
 | D213 | **Deviation.** A matcher is a custom matcher, a primitive class (`typeof`), a class (`instanceof`), a predicate, or a value (SameValue) | Built-in brand checks cannot be written in a runtime helper | 3 |
 | D214 | A match lowers to a returning block, a labeled block, or an immediately invoked arrow function | TypeScript narrows each arm and arms run Effects in every position | 3 |
 | D215 | `customMatcher` is exported, and every `error` class matches by `instanceof` and extracts itself | Same-tag classes stay distinct | 3 |
+| D216 | A catch clause no longer tests a failure's type; `catch (e)` and `match (e)` or `e is T`; typed clauses warn (EK2112) | Catching by tag was too magical; pattern matching covers it | 3 |
+| D217 | A whole cause is recovered by matching on `exit(…)`; `catch (cause: Cause)` warns (EK2113) | One mechanism, pattern matching, for failures and exits | 17 |
+| D218 | A match on a caught failure must be exhaustive over E or rethrow with `default: throw e` | A complete match needs no rethrow | 3 |
+| D219 | EK2112 and EK2113 quick fixes rewrite retired clauses when the result is exact | Migration without guessing at types | 28 |
 | D220 | **Controversial.** `service class Users { ... }` and `control class Approval { ... }`: the word is a modifier, as `declare` is; the spelling without `class` warns (EK2120) | Reads as a TypeScript class and keeps Effect's word; Will was on the fence | 4, 9 |
 | D221 | **Controversial.** A layer is Effect's own call, `Layer.effect(Users) { setup; return { ... } }` through block params, or `Layer.succeed(Users, { ... })`; `layer X: Y { }` warns (EK2121) | No syntax of its own; Will expected D129 to be reworked | 4 |
 | D222 | A layer block's returned members are typed by the service; a mismatch is TS2769 at the call, and failures, requirements, and `using` setup flow into the layer | Contextual typing through `Layer.effect` | 4 |
