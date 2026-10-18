@@ -1,54 +1,30 @@
 ## Essentials
 
-Read this before writing VibeLang. Every function is an Effect. Calls run in order; there is no `yield*`, `Effect.gen` or `Effect.fn`, and `function*` declares a value producer, not a sequence. A function's type is `Success!Errors!Requirements`: `string!NotFound` can fail with `NotFound`, `string!!` cannot fail, and the compiler infers what you leave out.
+Every function is an Effect: calls run in order, with no `yield*` or `Effect.gen`. `A!E` is a result and its failures, `A!!` cannot fail; omitted parts are inferred.
 
 ```vibe
 error NotFound { id: string }
-error Timeout
 
-interface User { id: string; name: string }
-
-function getUser(id: string): User!NotFound {
-  if (id === "") throw new NotFound({ id })
-  return { id, name: "Ada" }
-}
-
-function greet(id: string) {
-  return `Hello, ${getUser(id).name}` catch (e) => `No user ${e.id}`
-}
-
-function label(id: string) {
-  try {
-    return getUser(id).name
-  } catch (error) {
-    return match (error) {
-      when NotFound: "missing";
-      default: throw error;
-    }
-  }
-}
-```
-
-`error` declares a typed error class; `throw` adds it to the error channel. `x catch (e) => y` and `try { } catch { }` recover expected failures; `match` with `when` selects error classes, and a `match` without `default` must cover every failure. `x ?? throw new E()` fails in expression position.
-
-```vibe
 service Users {
-  find(id: string): User!NotFound
+  name(id: string): string!NotFound
 }
 
-const UsersLive = Layer.succeed(Users, {
-  find(id) { return getUser(id) }
-})
+function nameOf(id: string): string!!Users {
+  if (id === "") return "anonymous"
+  return Users.name(id)
+    |> retry(%, Schedule.exponential("100 millis"))
+    |> timeout(%, "2 seconds")
+    catch (e) => "unknown"
+}
 
-export function main() {
-  provide UsersLive {
-    const [ada, other] = await.all [Users.find("42"), Users.find("7")]
-    const shout = ada.name |> %.toUpperCase()
-    Console.log(shout, other.name)
-  }
+export function names(ids: ReadonlyArray<string>) {
+  return forEach(ids, nameOf, { concurrency: 8 })
 }
 ```
 
-`service` declares a dependency; call its members directly, and `provide` a layer to satisfy it. `await.all [...]` and `await.race [...]` run programs concurrently. In `x |> f(%)`, `%` stands for `x`.
-
-Effect's root modules (`Option`, `Schedule`, `Console`, `Stream`, ...) are in scope without imports, and their data types have methods (`maybe.isSome()`). A plain TypeScript function needs a boundary: `sync(() => f(x))` when it cannot throw, `try(() => f(x), (error: unknown) => new MyError())` when it can, or a `/** @vibelang trusted */` declaration. Tests use `@effect/vitest`: `it.effect("name") { ... }` with `assert`. Under a coding agent, vitest hides `console.log` output from passing tests, so check values with `assert` rather than by logging them. The pages below cover each form; the [cheat sheet](vibelang-features/115-cheat-sheet.md) maps every Effect construct to its VibeLang form.
+- `throw new NotFound({ id })` fails; `x catch (e) => y` or `try { } catch (e) { }` recovers; `match (e) { when NotFound: ...; default: throw e; }` picks error classes.
+- Import a sibling module with its extension: `import { User } from "./user.vibe"`. Effect's root modules (`Option`, `Schedule`, `Console`) need no import.
+- `provide UsersLive { ... }` supplies a service; `UsersLive = Layer.succeed(Users, { name(id) { ... } })`.
+- `await.all [a(), b()]` runs programs together; in `x |> f(%)`, `%` is `x`.
+- A plain TypeScript call needs `sync(() => f(x))`, or `try(() => f(x), (error: unknown) => new E())` if it can throw.
+- Tests: `it.effect("name") { assert.strictEqual(a, b) }` from `@effect/vitest`. Under an agent, vitest hides `console.log`; assert instead.

@@ -639,7 +639,9 @@ for (const [copy, page] of [["index.md", first], ["spec/index.md", firstChapter]
 }
 // The summary repeats the README's first paragraph. docs/user/llms-essentials.md
 // follows it: the forms an agent needs before writing code, so it can start
-// without reading pages first (check-snippets compiles its blocks).
+// without reading pages first (check-snippets compiles its blocks). An agent
+// harness may show only the first 2,000 bytes of a large file, so the title,
+// summary and essentials come first and must fit in that.
 const essentials = readFileSync(join(root, "llms-essentials.md"), "utf8").trim()
   .replace(/\]\((?!https?:)([^)]+\.md)\)/g, (_, page: string) => `](${origin}/${page})`)
 const llms = [
@@ -647,9 +649,9 @@ const llms = [
   "",
   "> VibeLang is a language for building reliable TypeScript in the AI era, built on Effect. It gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.",
   "",
-  `VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use. To set up VibeLang in a project, read [Set up VibeLang](${origin}/setup.md) and follow it. Each link below is a page's Markdown; replace \`.md\` with \`.html\` for the page with navigation.`,
-  "",
   essentials,
+  "",
+  `VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use. To set up VibeLang in a project, read [Set up VibeLang](${origin}/setup.md) and follow it. Each link below is a page's Markdown; replace \`.md\` with \`.html\` for the page with navigation.`,
   ...navigation.flatMap(item => item.kind === "view" ? ["", `## ${item.label}`, ""]
     : item.kind === "page" ? [`- [${item.page.label}](${origin}/${item.page.path})${item.page.group ? `: ${item.page.group}` : ""}`] : []),
   ""
