@@ -4,6 +4,7 @@
 # every case in typescript/effeck/cases and every example with .effeck sources.
 #
 #   packages/ts-mapper/test/parity/run.sh               measure: out/summary.md, out/summary.json
+#   packages/ts-mapper/test/parity/run.sh --docs        docs/examples/templates diagnostic census
 #   packages/ts-mapper/test/parity/run.sh --gate        also write out/gate-<date>.json, the record a gate verdict cites
 #   packages/ts-mapper/test/parity/run.sh --self-test   mutation self-test and negative probes; exits 1 on failure
 #   packages/ts-mapper/test/parity/run.sh ch04 ref2     only the cases whose names contain ch04 or ref2

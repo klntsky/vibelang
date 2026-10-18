@@ -15,6 +15,7 @@
 // out/gate-<date>.json, which a gate verdict cites. --self-test checks the
 // harness itself and exits 1 when it is wrong.
 import crypto from "node:crypto"
+import { runDocs } from "./docs.ts"
 import { mapperEntry } from "./mapper-options"
 import fs from "node:fs"
 import { isBuiltin } from "node:module"
@@ -1468,7 +1469,24 @@ async function main() {
     console.error(`parity: stock tsc is ${stockVersion}, expected ${pinned}`)
     process.exit(2)
   }
-  if (selfTest) process.exit((await runSelfTest()) ? 0 : 1)
+  if (selfTest) {
+    const docs = await runDocs(root, outDir, mapperPackage, forkTsc, stockTsc, mapperBin, jobs, true)
+    const planted = docs.summary.codes.EK9100 === 1 && docs.summary.newDiagnostics === 1
+    console.log(`self-test docs: ${planted ? "ok" : "FAIL"} (${docs.line})`)
+    process.exit((await runSelfTest()) && planted ? 0 : 1)
+  }
+  if (args.includes("--docs")) {
+    const docs = await runDocs(root, outDir, mapperPackage, forkTsc, stockTsc, mapperBin, jobs)
+    const file = path.join(outDir, "summary.json")
+    const json = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {}
+    json.docs = docs.summary
+    fs.writeFileSync(file, JSON.stringify(json, null, 1) + "\n")
+    const md = path.join(outDir, "summary.md")
+    const previous = fs.existsSync(md) ? fs.readFileSync(md,"utf8").replace(/^docs:.*\n?/gm, "") : ""
+    fs.writeFileSync(md, previous + "\n" + docs.line + "\n")
+    console.log(`${docs.line}\ndocs wall: ${docs.seconds.toFixed(1)} s`)
+    return
+  }
 
   let refs = discover()
   const partial = selectors.length > 0
@@ -1503,6 +1521,13 @@ async function main() {
   const probeSeconds = (performance.now() - t2) / 1000
   const timing = { build: buildSeconds, compile: compileSeconds, compare: compareSeconds, probes: probeSeconds, runtime: runtimeSeconds, total: buildSeconds + (performance.now() - started) / 1000 }
   const json = summarize(results, manifest, hash, probes, timing, stockVersion, partial)
+  if (!partial) {
+    const docs = await runDocs(root, outDir, mapperPackage, forkTsc, stockTsc, mapperBin, jobs)
+    ;(json as any).docs = docs.summary
+    fs.writeFileSync(path.join(outDir, "summary.json"), JSON.stringify(json, null, 1) + "\n")
+    fs.appendFileSync(path.join(outDir, "summary.md"), "\n" + docs.line + "\n")
+    console.log(docs.line)
+  }
   const g = json.gate1
   console.log(`manifest ${hash.slice(0, 12)}: ${manifest.cases.length} cases`)
   console.log(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched`)
