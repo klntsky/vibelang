@@ -1,3 +1,4 @@
+import { runtimeExclusions, exclusionNote } from "./runtime-exclusions.ts"
 // The parity harness for gate 1 of decision (B): does stock TypeScript 7,
 // through Effeck's content mapper, declare the same A, E, and R as the fork?
 //
@@ -1149,6 +1150,15 @@ async function runSelfTest(): Promise<boolean> {
     ok &&= pass
     lines.push(`${pass ? "ok  " : "FAIL"} ${name}: ${detail}`)
   }
+  const listed = [{ id: "retired", reason: "fixture exclusion" }]
+  const failed = runtimeExclusions(["retired"], [{ id: "retired", runtime: { ok: false } }], listed)
+  check("runtime exclusion", failed.exclusions.length === 1 && failed.staleExclusions.length === 0, "failing excluded case remains explicit")
+  const passing = runtimeExclusions(["retired"], [{ id: "retired", runtime: { ok: true } }], listed)
+  check("stale passing exclusion", passing.staleExclusions[0]?.detail === "excluded case now passes", "passing excluded case is stale")
+  const missing = runtimeExclusions([], [], listed)
+  check("stale missing exclusion", missing.staleExclusions[0]?.detail === "listed id does not exist", "unknown id is stale")
+  const unmeasured = runtimeExclusions(["retired"], [], listed)
+  check("partial runtime exclusion", unmeasured.exclusions.length === 0 && unmeasured.staleExclusions.length === 0, "unselected case is not stale")
   const target = "total"
   const stem = "main"
   const forkText = run.fork!.declarations.get(stem)?.text
@@ -1313,7 +1323,9 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   const missingFiles = sum(positive, (r) => r.missingFiles.length)
   const negatives = results.filter((r) => r.failing)
   const negativeDetected = negatives.filter((r) => r.negativeDetected).length
-  const runnable = positive.filter((r) => r.runnable)
+  const exclusionReport = runtimeExclusions(discover().map((r) => r.id), results)
+  const excludedIds = new Set(exclusionReport.exclusions.map((e) => e.id))
+  const runnable = positive.filter((r) => r.runnable && !excludedIds.has(r.id))
   const migrations = results.flatMap((r) => r.adapter.migrations.map((m) => ({ ...m, case: r.id })))
   const stripped = results.filter((r) => r.adapter.stripped.length > 0)
   const forced = new Map<string, number>()
@@ -1336,6 +1348,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
     coverage: { missingDeclarations, missingFiles, extraDeclarations: extra.length, degraded, ek9001: ek9001Positive, stockErrors: stockPositive },
     negative: { cases: negatives.length, mapperReportsError: negativeDetected },
     runnable: {
+      ...exclusionReport,
       cases: runnable.length,
       mapperTypeChecks: runnable.filter((r) => r.typeChecks).length,
       runtimeParity: runnable.filter((r) => r.runtime?.ok).length,
@@ -1389,7 +1402,8 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push(`coverage failures: ${g.coverage.missingDeclarations} missing declarations, ${g.coverage.missingFiles} missing .d.ts files, ${g.coverage.extraDeclarations} extra, ${g.coverage.degraded} degraded to any/unknown, ${g.coverage.ek9001} EK9001, ${g.coverage.stockErrors} stock errors`)
   L.push(`negative cases: ${g.negative.cases}; the mapper side reports an error in ${g.negative.mapperReportsError}`)
   L.push(`runnable cases: ${g.runnable.cases}; the mapper side type-checks in ${g.runnable.mapperTypeChecks}`)
-  L.push(`runtime parity: ${g.runnable.runtimeParity}/${g.runnable.cases} print the expected result from the mapper's JavaScript (${g.runnable.runtimeParityTypeChecking}/${g.runnable.mapperTypeChecks} of those that type-check)`)
+  for (const e of g.runnable.staleExclusions) L.push(`stale runtime exclusion: ${e.id}, ${e.reason}: ${e.detail}`)
+  L.push(`runtime parity: ${g.runnable.runtimeParity}/${g.runnable.cases} print the expected result${exclusionNote(g.runnable.exclusions)} from the mapper's JavaScript (${g.runnable.runtimeParityTypeChecking}/${g.runnable.mapperTypeChecks} of those that type-check)`)
   L.push(`probes: ${g.probes.count} (${g.probes.markers} marked statements); the mapper side rejects ${g.probes.failTypeCheck}`)
   L.push(`.ts helper declarations (not gated): ${g.tsHelpers.declarations}, ${g.tsHelpers.identical} identical`)
   L.push(`gate 1: ${g.pass ? "PASS" : "not yet"}`)
@@ -1437,7 +1451,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
       ? r.negativeDetected ? "negative: the mapper reports an error" : "negative: **the mapper reports no error**"
       : firstBad ? `\`${md(firstBad.name)}\` ${firstBad.status}${firstBad.difference ? `: fork \`${md(clip(firstBad.difference.fork, 70))}\` vs mapper \`${md(clip(firstBad.difference.mapper, 70))}\`` : ""}`
       : r.missingFiles.length ? `missing ${r.missingFiles.join(", ")}` : ""
-    const runtime = r.runtime ? (r.runtime.ok ? "ok" : "FAIL") : "-"
+    const runtime = excludedIds.has(r.id) ? "excluded" : r.runtime ? (r.runtime.ok ? "ok" : "FAIL") : "-"
     L.push(`| ${md(r.id)} | ${r.class} | ${r.declarations.fork} | ${r.declarations.mapper} | ${units.length} | ${units.filter(pass).length} | ${units.filter((u) => u.group === "migration").length} | ${r.ek9001.count} | ${r.stockErrors.count} | ${runtime} | ${note} |`)
   }
   L.push("", "fork and mapper: top-level declarations each side printed, .ts helpers included. signatures: those of .effeck sources, which the gate compares. runtime: the mapper's JavaScript prints the case's expect-result (runtime.ts).", "")
@@ -1532,7 +1546,8 @@ async function main() {
   console.log(`manifest ${hash.slice(0, 12)}: ${manifest.cases.length} cases`)
   console.log(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched`)
   console.log(`EK9001 ${g.coverage.ek9001}, stock errors ${g.coverage.stockErrors}, missing declarations ${g.coverage.missingDeclarations}; wall ${timing.total.toFixed(0)} s`)
-  console.log(`runtime parity: ${g.runnable.runtimeParity}/${g.runnable.cases} (${g.runnable.runtimeParityTypeChecking}/${g.runnable.mapperTypeChecks} of the cases that type-check)`)
+  console.log(`runtime parity: ${g.runnable.runtimeParity}/${g.runnable.cases} print the expected result${exclusionNote(g.runnable.exclusions)} (${g.runnable.runtimeParityTypeChecking}/${g.runnable.mapperTypeChecks} of the cases that type-check)`)
+  for (const e of g.runnable.staleExclusions) console.log(`stale runtime exclusion: ${e.id}, ${e.reason}: ${e.detail}`)
   console.log(`wrote ${path.relative(root, path.join(outDir, "summary.md"))} and summary.json`)
   if (gate) {
     // A gate verdict cites this file: the revision, both binaries, the

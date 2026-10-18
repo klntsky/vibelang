@@ -1,0 +1,6 @@
+[
+  {
+    "id": "catch-retired",
+    "reason": "pins the retired catch form (EK2112/EK2113); becomes a .fail case at the switch"
+  }
+]
