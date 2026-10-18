@@ -239,3 +239,46 @@ test("forkIn follows its supplied scope; detach survives the creating fiber", as
     expect(Exit.isFailure(scoped.pollUnsafe()!)).toBe(true)
   }))
 })
+
+for (const [name, wait] of [
+  ["join", (fiber: Fiber.Fiber<never>) => $join([fiber])],
+  ["await.all", (fiber: Fiber.Fiber<never>) => $awaitAll([fiber])],
+  ["await.allSettled", (fiber: Fiber.Fiber<never>) => $awaitAllSettled([fiber])],
+  ["await.race", (fiber: Fiber.Fiber<never>) => $awaitRace([fiber])],
+  ["await.any", (fiber: Fiber.Fiber<never>) => $awaitAny([fiber])]
+] as const) {
+  test(`${name}: interruption waits for held fiber cleanup`, async () => {
+    const events: string[] = []
+    await Effect.runPromise(Effect.gen(function*() {
+      const started = yield* Deferred.make<void>()
+      const held = yield* Effect.forkChild(Effect.ensuring(
+        Effect.andThen(Deferred.succeed(started, undefined), Effect.never),
+        Effect.andThen(Effect.yieldNow, Effect.sync(() => { events.push("closed") }))
+      ))
+      yield* Deferred.await(started)
+      yield* Effect.ensuring(Effect.gen(function*() {
+        const waiting = yield* Effect.forkChild(wait(held), { startImmediately: true })
+        yield* Fiber.interrupt(waiting)
+        expect(events).toEqual(["closed"])
+        expect(held.pollUnsafe()).toBeDefined()
+      }), Fiber.interrupt(held))
+    }))
+  })
+}
+
+test("await.allSettled: a defect interrupts held siblings and retains the defect", async () => {
+  const defect = new Error("broken task")
+  await Effect.runPromise(Effect.gen(function*() {
+    const started = yield* Deferred.make<void>()
+    let closed = false
+    const held = yield* Effect.forkChild(Effect.ensuring(
+      Effect.andThen(Deferred.succeed(started, undefined), Effect.never),
+      Effect.sync(() => { closed = true })
+    ))
+    yield* Deferred.await(started)
+    yield* Effect.ensuring(Effect.gen(function*() {
+      expect(yield* Effect.exit($awaitAllSettled([held, Effect.die(defect)]))).toEqual(Exit.die(defect))
+      expect(closed).toBe(true)
+    }), Fiber.interrupt(held))
+  }))
+})

@@ -224,8 +224,11 @@ export function $awaitAllSettled<Arg extends Iterable<AwaitElement> | readonly [
   operand: Arg
 ): AllReturn<Arg, { readonly concurrency: "unbounded"; readonly mode: "result" }>
 export function $awaitAllSettled(operand: unknown): any {
-  const { effects } = operandOf(operand)
-  return inOrderWritten(effects, Effect.all(effects as any, { concurrency: "unbounded", mode: "result" }))
+  const { effects, held } = operandOf(operand)
+  return Effect.onError(
+    inOrderWritten(effects, Effect.all(effects as any, { concurrency: "unbounded", mode: "result" })),
+    () => interruptHeld(held)
+  )
 }
 
 /**
@@ -254,13 +257,13 @@ export function $awaitAny<Arg extends Iterable<AwaitElement>>(operand: Arg): Rac
 export function $awaitAny(operand: unknown): any {
   const { effects, held } = operandOf(operand)
   let winner = -1
-  return Effect.tap(
+  return Effect.onExit(
     Effect.raceAll(effects as ReadonlyArray<Effect.Effect<unknown, unknown, unknown>>, {
       onWinner: ({ index }) => {
         winner = index
       }
     }),
-    () => interruptHeld(held, winner)
+    (exit) => interruptHeld(held, exit._tag === "Success" ? winner : -1)
   )
 }
 
