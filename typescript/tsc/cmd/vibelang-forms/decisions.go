@@ -43,7 +43,8 @@ func decisionLines(repo string, table *vibelangmapper.Table) ([]string, error) {
 				}
 				return err
 			}
-			if d.IsDir() && (d.Name() == "node_modules" || strings.HasPrefix(d.Name(), ".")) {
+			// out/ holds build and test output, such as the projects noemit-on-error writes; no source lives there.
+			if d.IsDir() && (d.Name() == "node_modules" || d.Name() == "out" || strings.HasPrefix(d.Name(), ".")) {
 				return filepath.SkipDir
 			}
 			if !d.IsDir() && strings.HasSuffix(path, ".vibe") {

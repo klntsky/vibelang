@@ -77,6 +77,7 @@ function g(xs: Items) { xs.forEach((x) => { log(x); read(x) }) }
 	writeFixture(t, root, "examples/main.vibe", source)
 	writeFixture(t, root, "examples/node_modules/ignored/main.vibe", source)
 	writeFixture(t, root, "examples/.hidden/main.vibe", source)
+	writeFixture(t, root, "examples/out/p-warning/main.vibe", source)
 	writeFixture(t, root, "examples/ignored.ts", source)
 	table, err := vibelangmapper.DefaultTable()
 	if err != nil {
