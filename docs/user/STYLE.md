@@ -32,6 +32,23 @@ Example first, then two to five sentences.
 
 VibeLang code blocks use the `vibelang` fence. Real TypeScript uses the `ts` fence and starts with `// TypeScript (.ts)`; Effect TypeScript shown for comparison uses `ts effect`. Show a file name in a first-line comment when it matters (`// main.vibe`, `// vite.config.ts`); its extension matches the fence. After a function, show the inferred contract as a comment when it teaches something: `// User!UserNotFound!Users`.
 
+## Tested output
+
+Use an `output` fence immediately after a runnable `vibe` or checked `ts` block
+(blank lines are allowed) to show exact stdout. Alternatively, write one
+`// Output: text` line per stdout line inside the code block. An empty
+`// Output:` asserts no stdout. Do not combine the two forms. `out` and `text`
+fences remain display-only.
+
+The checker runs these examples with `bun docs/tools/check-snippets.ts --run`.
+Export `function main()` or include a top-level runner to make the block an
+entry module. For a function excerpt, add a header comment such as
+`// run: Console.log(greet("Ada"))`; the checker runs that expression in a
+VibeLang entry function with the excerpt's declarations in scope. Use
+`Console.log` for stable output. Match spaces and line order exactly; only line
+endings and one final newline are normalized. Keep examples deterministic and
+under ten seconds. See [the checker conventions](../tools/README.md#running-examples).
+
 ## The language in one page
 
 - **Every function is an Effect, and calls run.** `const user = Users.find(id)` gives a `User`. There is no `Effect.gen`, `yield*`, `async`, or `await` in `.vibe` files.

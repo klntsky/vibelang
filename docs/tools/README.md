@@ -32,7 +32,7 @@ filenames. Unnamed blocks also use numbered files, such as `block-3.vibe`. Impor
 and declarations from earlier examples are available in later blocks; a new
 name shadows the earlier example's name. Blocks that deliberately fail or opt
 out do not supply declarations to later blocks. Local imports with no fixture
-remain fragments. No snippet executes.
+remain fragments. By default, no snippet executes. `--run` also checks declared output (see below).
 
 | Status | Meaning |
 | --- | --- |
@@ -64,6 +64,43 @@ Temporary files are removed on success and failure unless `--keep` is set.
 bun test docs/tools/check-snippets.test.ts docs/tools/hovers.test.ts
 bun docs/tools/render-user.ts
 ```
+
+## Running examples
+
+```sh
+bun docs/tools/check-snippets.ts --run
+bun docs/tools/check-snippets.ts --run --filter getting-started/
+```
+
+Declare stdout with an `output` fence immediately after a checked code fence
+(blank lines are allowed), or put one `// Output: text` comment per output line
+inside the code block. An empty `// Output:` asserts no stdout. Do not use both
+forms for one block. Other output fence labels (`out`, `text`) do not opt in.
+
+```vibe
+// run: Console.log(greet("Ada"))
+function greet(name: string) { return `Hello, ${name}!` }
+// Output: Hello, Ada!
+```
+
+`// run: <expression>` is an optional header comment. It runs that expression
+inside a generated VibeLang entry function, with the block's declarations and
+imports in scope. Without it, Node runs the emitted block as the entry module:
+export `function main()` or include an explicit top-level runner. Markers never
+cause a function to run in the published example itself.
+
+With `--run`, the checker emits marked blocks and their dependencies with the
+selected compiler, then runs each entry separately with Node and the linked
+local runtime. It compares stdout exactly, normalizing CRLF to LF and removing
+one final newline from each side. Spaces, ordering, and extra lines matter.
+Nonzero exits, execution timeouts (10 seconds by default, changed with
+`--timeout milliseconds`), compile errors, and output mismatches fail the check.
+Marked fragments, expected-error blocks, and compiler gaps fail instead of
+silently skipping execution. Unmarked blocks keep their compile-only checks.
+Reports include execution status and captured stdout/stderr for marked blocks.
+Use `Console.log` for stable output. Logs with timestamps, randomness, network
+access, and interactive programs need deterministic fixtures before opting in.
+`--keep` retains emitted files and compiler logs for debugging.
 
 ## Compiler hovers
 
