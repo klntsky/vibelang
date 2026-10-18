@@ -571,10 +571,38 @@ func completes(statement *ast.Node) bool {
 			normal = normal || completes(s.CatchClause.AsCatchClause().Block)
 		}
 		return normal && (s.FinallyBlock == nil || completes(s.FinallyBlock))
+	case ast.KindSwitchStatement:
+		clauses := statement.AsSwitchStatement().CaseBlock.AsCaseBlock().Clauses.Nodes
+		hasDefault, fallsThrough := false, true
+		for i := len(clauses) - 1; i >= 0; i-- {
+			clause := clauses[i]
+			hasDefault = hasDefault || clause.Kind == ast.KindDefaultClause
+			if breaksSwitch(clause) {
+				return true
+			}
+			fallsThrough = canCompleteNormally(clause.Statements()) && fallsThrough
+			if fallsThrough {
+				return true
+			}
+		}
+		return !hasDefault
 	case ast.KindLabeledStatement:
 		return true
 	}
 	return true
+}
+
+// breaksSwitch finds a reachable syntactic exit to the enclosing switch.
+// Nested loops and switches own their unlabeled breaks; functions own theirs.
+// Keeping unreachable breaks is conservative, as completes is elsewhere.
+func breaksSwitch(node *ast.Node) bool {
+	if ast.IsFunctionLike(node) || ast.IsIterationStatement(node, false) || node.Kind == ast.KindSwitchStatement {
+		return false
+	}
+	if node.Kind == ast.KindBreakStatement {
+		return node.AsBreakStatement().Label == nil
+	}
+	return node.ForEachChild(breaksSwitch)
 }
 
 // A handleGroup is the clauses of a handle statement for one control, in
