@@ -53,10 +53,51 @@ var emitCases = []struct {
 	absent   []string
 }{
 	{
+		name:     "acyclic entries forward defaults rest and destructuring once",
+		source:   "function f(a = seed(), { x } = object(), [y] = array(), ...rest: number[]) { return unknown(a, x, y, rest) }",
+		contains: []string{"function f$fast(a, $arg1, $arg2, ...rest)", "f$body(a, $arg1, $arg2, ...rest)", "function* f$body(a = seed(), { x } = object(), [y] = array(), ...rest)"},
+		absent:   []string{"const f$fast", "$fast(f$body)"},
+	},
+	{
+		name:     "a body that reads arguments keeps the counted entry, which forwards every argument",
+		source:   "function f(a: number) { return unknown(arguments.length, () => arguments[1]) }",
+		contains: []string{"const f$fast = $fast(f$body);"},
+		absent:   []string{"function f$fast("},
+	},
+	{
+		name:     "arguments of a nested function don't count",
+		source:   "function f(a: number) { return unknown(function () { return arguments.length }) }",
+		contains: []string{"function f$fast(a)"},
+		absent:   []string{"const f$fast"},
+	},
+	{
+		name:     "direct recursion counts eager depth",
+		source:   "function f(n: number) { unknown(); return n ? f(n - 1) : 0 }",
+		contains: []string{"const f$fast = $fast(f$body);", "f$fast(n - 1)"},
+	},
+	{
+		name:     "mutual recursion counts only cycle members",
+		source:   "function f(n: number) { return n ? g(n - 1) : unknown() } function g(n: number) { return f(n) } function outer(n: number) { return f(n) }",
+		contains: []string{"const f$fast = $fast(f$body);", "const g$fast = $fast(g$body);", "function outer$fast(n)"},
+		absent:   []string{"const outer$fast"},
+	},
+	{
+		name:     "recursion through a lambda starts on the fiber",
+		source:   "function f(n: number) { return unknown(() => f(n - 1)) }",
+		contains: []string{"function f$fast(n)", "f$fast(n - 1)"},
+		absent:   []string{"const f$fast"},
+	},
+	{
+		name:     "export specifiers do not shadow a pure declaration",
+		source:   "function f(n: number) { return n * 3 } export { f }; function g() { return f(2) }",
+		contains: []string{"function f$direct(n)", "f[$direct] = f$direct;", "return f$direct(2);", "export { f };"},
+		absent:   []string{"f$fast"},
+	},
+	{
 		name:   "catch expressions run operands inside lazy generators",
 		source: "function f() { return a() catch e => recover(e) }",
 		contains: []string{
-			`import { $catch, $fast, $isRun } from "effeck-runtime";`,
+			`import { $catch, $done, $isRun, $settle } from "effeck-runtime";`,
 			"$catch($gen(function* () { return (($t = $value(a)()), $isRun($t) ? (yield* $t) : $t); }), e => $gen(function* () { return (($t = recover(e)), $isRun($t) ? (yield* $t) : $t); }))",
 		},
 		absent: []string{"$catchExpression", "f$direct"},
@@ -74,7 +115,7 @@ var emitCases = []struct {
 		name:   "await operations defer calls and do blocks while preserving a held Fiber",
 		source: "function f(held: Fiber.Fiber<string>) {\n  return await.all [Effect.succeed(1), do { 2 }, held]\n}\n",
 		contains: []string{
-			`import { $awaitAll, $fast, $isRun } from "effeck-runtime";`,
+			`import { $awaitAll, $done, $isRun, $settle } from "effeck-runtime";`,
 			"$awaitAll([$gen(function* () { return (($t = Effect.succeed(1)), $isRun($t) ? (yield* $t) : $t); })",
 			"return 2;",
 			"$asProgram(held)",
@@ -108,7 +149,7 @@ var emitCases = []struct {
 		source: "function greet(id: string) {\n  const user = find(id)\n  return user.name\n}\nfunction twice(id: string) {\n  return greet(id) + greet(id)\n}\n",
 		contains: []string{
 			"function greet(...$args) { return (greet$effect ??= $fnUntraced(greet$body)).apply(this, $args); }",
-			"const greet$fast = $fast(greet$body);",
+			"function greet$fast(id) { const it = greet$body(id), s = it.next(); return s.done ? $done(s.value) : $settle(it, s); }",
 			"function* greet$body(id) {",
 			"const user = (($t = find(id)), $isRun($t) ? (yield* $t) : $t);",
 			"return (($t = greet$fast(id)), $isRun($t) ? (yield* $t) : $t) + (($t = greet$fast(id)), $isRun($t) ? (yield* $t) : $t);",
@@ -450,6 +491,10 @@ func TestEmitTracing(t *testing.T) {
 				assert.Equal(t, strings.Contains(js, `}), "`+name+`")`), mode == "all", js)
 			}
 			assert.Assert(t, !strings.Contains(js, "main$fast"), js)
+			if mode == "all" {
+				assert.Assert(t, strings.Contains(js, "(($t = inner()), $isRun($t) ? (yield* $t) : $t)"), js)
+				assert.Assert(t, !strings.Contains(js, "inner$fast"), js)
+			}
 		})
 	}
 }

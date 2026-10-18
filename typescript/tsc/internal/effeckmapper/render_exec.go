@@ -21,8 +21,8 @@ import (
 //     calls f$direct; a call of a function imported from another module looks
 //     the property up, so no type from another file is needed.
 //   - Any other top-level Effect function compiles to its generator, f$body,
-//     the wrapper f, and the fast-call entry f$fast = $fast(f$body), which a
-//     same-file call that runs uses (research/typedirected.md section 6.6).
+//     the wrapper f, and a hoisted fast entry f$fast. Only entries on a
+//     same-file fast-call cycle use $fast(f$body) to count eager depth.
 //   - A function in value position is always the wrapper f (L2): the name f
 //     keeps its meaning, so xs.map(double) passes the Effect function, as the
 //     virtual TypeScript types it.
@@ -441,7 +441,8 @@ type execFunction struct {
 	name string
 	// pure: the body is provably pure from syntax, so f compiles to
 	// f$direct and a wrapper (D10); otherwise to f$body, f, and f$fast.
-	pure bool
+	pure   bool
+	cyclic bool
 	// direct is f$direct or f$fast, the name a same-file call uses; body is
 	// the generator's name, f$body.
 	direct, body string
@@ -582,6 +583,7 @@ func (l *execLowering) splitFunctions() {
 		s := &l.spans[editContract][i]
 		contracts[l.edits[s.close].pos] = s
 	}
+	declarations := l.p.purityDeclarations()
 	var order []*execFunction
 	for _, statement := range l.p.file.Statements.Nodes {
 		if !isProjectedFunction(statement) || statement.Name() == nil {
@@ -591,7 +593,7 @@ func (l *execLowering) splitFunctions() {
 		if l.traceName(statement) != "" {
 			continue
 		}
-		if l.p.names.declarations[name] != 1 || ast.HasSyntacticModifier(statement, ast.ModifierFlagsAmbient) {
+		if declarations[name] != 1 || ast.HasSyntacticModifier(statement, ast.ModifierFlagsAmbient) {
 			continue
 		}
 		body := statement.Body()
@@ -615,6 +617,9 @@ func (l *execLowering) splitFunctions() {
 	}
 	for _, f := range order {
 		f.pure = pure[f.name]
+	}
+	l.markFastCycles()
+	for _, f := range order {
 		l.splitFunction(f)
 	}
 }
@@ -698,6 +703,96 @@ func (l *execLowering) scopeBodies() {
 	}
 }
 
+// markFastCycles counts only cycles of calls lowered to same-file fast entries.
+// Calls inside lambdas start on the fiber and cannot extend eager nesting.
+func (l *execLowering) markFastCycles() {
+	edges := map[*execFunction][]*execFunction{}
+	for _, s := range l.spans[editRun] {
+		call := l.calls[[2]int{l.edits[s.open].pos, l.edits[s.close].pos}]
+		if call == nil {
+			continue
+		}
+		callee := call.Expression()
+		if callee.Kind != ast.KindIdentifier || call.QuestionDotToken() != nil || callee.Flags&ast.NodeFlagsReparsed != 0 {
+			continue
+		}
+		target := l.functions[callee.Text()]
+		if target == nil || target.pure {
+			continue
+		}
+		for owner := call.Parent; owner != nil; owner = owner.Parent {
+			if ast.IsFunctionLike(owner) {
+				if owner.Name() != nil {
+					if from := l.functions[owner.Name().Text()]; from != nil && from.node == owner && !from.pure {
+						edges[from] = append(edges[from], target)
+					}
+				}
+				break
+			}
+		}
+	}
+	for _, start := range l.functions {
+		seen := map[*execFunction]bool{}
+		var reaches func(*execFunction) bool
+		reaches = func(f *execFunction) bool {
+			for _, next := range edges[f] {
+				if next == start {
+					return true
+				}
+				if !seen[next] {
+					seen[next] = true
+					if reaches(next) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+		start.cyclic = reaches(start)
+	}
+}
+
+// readsArguments reports whether fn's own body refers to arguments, outside
+// nested functions other than arrows, which share their enclosing arguments.
+func readsArguments(fn *ast.Node) bool {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if node.Kind == ast.KindIdentifier && node.Text() == "arguments" {
+			return true
+		}
+		if ast.IsFunctionLike(node) && node.Kind != ast.KindArrowFunction {
+			return false
+		}
+		return node.ForEachChild(visit)
+	}
+	body := fn.Body()
+	return body != nil && body.ForEachChild(visit)
+}
+
+// fastParameters forwards each argument once to the body, where defaults and
+// destructuring bind and may throw. Rest arguments spread into that same list.
+func (l *execLowering) fastParameters(f *execFunction) (string, string) {
+	var parameters, arguments []string
+	for i, parameter := range f.node.Parameters() {
+		name := parameter.Name()
+		if name.Kind == ast.KindIdentifier && name.Text() == "this" {
+			continue
+		}
+		var word string
+		if name.Kind == ast.KindIdentifier {
+			word = name.Text()
+		} else {
+			word = l.p.freshWord("$arg" + strconv.Itoa(i))
+		}
+		if parameter.AsParameterDeclaration().DotDotDotToken != nil {
+			word = "..." + word
+		}
+		parameters = append(parameters, word)
+		arguments = append(arguments, word)
+	}
+	return strings.Join(parameters, ", "), strings.Join(arguments, ", ")
+}
+
 // splitFunction rewrites f's declaration. A pure function:
 //
 //	export function add(a, b) { return a + b }
@@ -711,7 +806,8 @@ func (l *execLowering) scopeBodies() {
 //	function* f$body(id) { body }
 //
 // The wrapper is a function declaration, hoisted as the checking
-// rendering's function is; f$fast is a const, as the fork's functions are.
+// rendering's function is. Acyclic fast entries are hoisted too; cycles use
+// the runtime's counted $fast entry to bound eager recursion.
 // The modifiers move to the wrapper, so f$direct and f$body are module
 // locals and an export default stays the wrapper.
 func (l *execLowering) splitFunction(f *execFunction) {
@@ -741,7 +837,16 @@ func (l *execLowering) splitFunction(f *execFunction) {
 		f.body = l.p.freshWord(f.name + "$body")
 		effect := l.p.freshWord(f.name + "$effect")
 		wrapper = head + "(..." + args + ") { return (" + effect + " ??= " + helperRef("$fnUntraced") + "(" + f.body + ")).apply(this, " + args + ") } " +
-			"var " + effect + "; const " + f.direct + " = " + helperRef("$fast") + "(" + f.body + ");\n"
+			"var " + effect + "; "
+		// A body that reads arguments needs every argument, which only the
+		// counted entry forwards; the acyclic entry names the parameters.
+		if f.cyclic || readsArguments(node) {
+			wrapper += "const " + f.direct + " = " + helperRef("$fast") + "(" + f.body + ");\n"
+		} else {
+			parameters, arguments := l.fastParameters(f)
+			it, step := l.p.freshWord("it"), l.p.freshWord("s")
+			wrapper += "function " + f.direct + "(" + parameters + ") { const " + it + " = " + f.body + "(" + arguments + "), " + step + " = " + it + ".next(); return " + step + ".done ? " + helperRef("$done") + "(" + step + ".value) : " + helperRef("$settle") + "(" + it + ", " + step + ") }\n"
+		}
 		l.insert(keyword+len("function"), "*")
 		l.insert(node.Name().End(), strings.TrimPrefix(f.body, f.name))
 	}
