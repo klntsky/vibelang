@@ -42,6 +42,10 @@ Code example count: one example per fenced code block in the source body, includ
 - **Build and test**
   - [effeck CLI](src/setup/effeck-cli.md)
   - [Vite and Vitest](src/setup/vite.md)
+- **Frameworks**
+  - [React](src/setup/react.md)
+  - [Vue](src/setup/vue.md)
+  - [Svelte](src/setup/svelte.md)
 - **Editors**
   - [VS Code and Cursor](src/setup/vscode.md)
   - [Neovim](src/setup/neovim.md)

@@ -50,4 +50,4 @@ Effeck 0.0.1 (TypeScript 7.1.0-dev)
 
 ## Next
 
-Set up the build. For Vite or Vitest, read [Vite and Vitest](vite.md). Without a bundler, read [Build with the effeck CLI](effeck-cli.md). For another bundler or a framework, step 3 of [Set up Effeck](../setup.md) lists what is coming soon.
+Set up the build. For React, Vue, or Svelte with Vite, read [React](react.md), [Vue](vue.md), or [Svelte](svelte.md). For other Vite or Vitest projects, read [Vite and Vitest](vite.md). Without a bundler, read [Build with the effeck CLI](effeck-cli.md). For another bundler, step 3 of [Set up Effeck](../setup.md) says what to do.

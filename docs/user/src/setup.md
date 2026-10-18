@@ -22,20 +22,22 @@ Read the project's root directory and record what you find:
 | Build | `vite` or `vitest` in `package.json`, or a `vite.config.*` or `vitest.config.*` file | Vite |
 | | `webpack`, `rollup`, `esbuild`, or `@rspack/core` in `package.json`, or `bun build` in a script | Another bundler: not supported yet |
 | | None of these | The `effeck` CLI |
+| Framework | `react`, `vue`, or `svelte` in `package.json`, and the build is Vite | React, Vue, or Svelte. With `@sveltejs/kit` or `nuxt`, tell the user these pages do not cover it |
 | Editor | A `.vscode/` or `.cursor/` directory | VS Code or Cursor |
 | | A `.zed/` directory | Zed |
 | | None of these | Ask the user |
 
 ## 3. Follow the matching pages
 
-Read each page that matches and follow its steps, in this order: project, build, editor.
+Read each page that matches and follow its steps, in this order: project, build or framework, editor.
 
 | Case | Page |
 | --- | --- |
 | New project | [Start a new project](setup/new-project.md); it sets up the build and tests |
 | Existing project | [Add Effeck to an existing project](setup/existing-project.md) |
 | Build with the `effeck` CLI, as with `tsc` | [Build with the effeck CLI](setup/effeck-cli.md) |
-| Vite or Vitest | [Vite and Vitest](setup/vite.md) |
+| Vite or Vitest, without React, Vue, or Svelte | [Vite and Vitest](setup/vite.md) |
+| React, Vue, or Svelte with Vite | [React](setup/react.md), [Vue](setup/vue.md), or [Svelte](setup/svelte.md), in place of the Vite page |
 | VS Code or Cursor | [VS Code and Cursor](setup/vscode.md) |
 | Neovim | [Neovim](setup/neovim.md) |
 | Zed | [Zed](setup/zed.md) |
