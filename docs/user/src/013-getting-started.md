@@ -19,7 +19,7 @@ Recovered from EmptyName
 ```
 
 `src/greeting.vibe` defines a greeting function and an `EmptyName` tagged error.
-`src/main.vibe` declares the abstract `Greeter` service, supplies its live layer,
+`src/main.vibe` declares the `Greeter` service, supplies its `Layer.succeed` layer,
 recovers a typed failure with `try`/`catch`, and exports `main`, which
 `node dist/main.js` runs with `NodeRuntime.runMain`. `src/greeting.test.vibe` uses `it.effect` to test success
 and recovery. Vitest compiles `src/**/*.test.vibe` through `vibelang-vite`; tests need no prior build.

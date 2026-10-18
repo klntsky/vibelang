@@ -12,7 +12,7 @@ compiler. Version 0.0.1 installs from npm.
 > **For agents.** To set up VibeLang with a coding agent, give it this prompt:
 >
 > ```text
-> Set up VibeLang in this project: read https://effeck.dev/setup.md and follow it.
+> Set up VibeLang in this project: read https://vibelang.sh/setup and follow it.
 > ```
 >
 > The agent detects the project's package manager, build, and editor, and
@@ -31,8 +31,8 @@ package manager installs only the one that matches your machine:
 | macOS on Intel | `vibelang-darwin-x64` | No |
 | Linux on x64 | `vibelang-linux-x64` | Yes |
 | Linux on arm64 | `vibelang-linux-arm64` | No |
-| Windows on x64 | `vibelang-win32-x64` | No |
-| Windows on arm64 | `vibelang-win32-arm64` | No |
+
+Windows binaries are not published for 0.0.1.
 
 Keep optional dependencies enabled. If an install skips them, for example with
 `npm install --omit=optional`, `vibelang` cannot find its binary and exits with an

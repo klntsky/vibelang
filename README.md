@@ -1,15 +1,15 @@
 # VibeLang
 
-A language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.
+A language for writing [Effect](https://effect.website) programs with TypeScript syntax. The compiler checks `.vibe` and `.ts` files together and emits JavaScript and TypeScript declarations.
 
 > [!WARNING]
 > VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-Docs: [effeck.dev](https://effeck.dev), with the guides and, under [effeck.dev/spec/](https://effeck.dev/spec/), the specification.
+Read the [guides](https://vibelang.sh) and the [specification](docs/design/src/000-intro.md).
 
 ## A short tour
 
-```ts
+```vibe
 error NotFound { id: string }
 
 interface User { id: string; name: string }
@@ -39,7 +39,7 @@ export function main() {
 }
 ```
 
-Every function is an Effect: `greet` has the contract `string!!Users` (no expected failures, because `catch` handles `NotFound`). Calls run where they stand, `throw` fails with a typed error, `provide` supplies a layer, and `await.all` and `await.race` run programs concurrently. The [cheat sheet](https://effeck.dev/vibelang-features/115-cheat-sheet) shows every form next to the Effect code it replaces.
+Every function is an Effect: `greet` has the contract `string!!Users` (no expected failures, because `catch` handles `NotFound`). Calls run where they stand, `throw` fails with a typed error, `provide` supplies a layer, and `await.all` and `await.race` run programs concurrently. The [cheat sheet](https://vibelang.sh/vibelang-features/115-cheat-sheet) shows every form next to the Effect code it replaces.
 
 ## Quickstart
 
@@ -54,14 +54,16 @@ With npm, run `npm create vibelang@latest my-app`. You need Node 26 or later and
 Bun 1.4 or later. The command copies a starter, pins `vibelang`,
 `vibelang-runtime`, and `vibelang-vite` to one version, and installs dependencies;
 `--no-install` skips installation. The compiler is a native binary from a
-per-platform package for macOS, Linux, and Windows on arm64 and x64. Version
-0.0.1 is tested on macOS on Apple silicon and on Linux on x64.
+per-platform package for macOS and Linux on arm64 and x64. Windows binaries
+are not published for 0.0.1. Version 0.0.1 is tested on macOS on Apple silicon
+and on Linux on x64.
 
 `bun run start` prints `Hello, VibeLang!` and `Recovered from EmptyName`.
 `bun run dev` builds once, watches `.vibe` sources with `vibelang --watch`, and
-runs Node with `--watch` on the output. `bun run test` compiles `.vibe` tests
-before running Vitest with `@effect/vitest`. The starter demonstrates an
-`service`, a `Layer.effect` layer, an `error`, and `try`/`catch` recovery.
+runs Node with `--watch` on the output. `bun run test` runs Vitest with
+`@effect/vitest` and compiles source tests through `vibelang-vite`, without a
+prior build. The starter demonstrates a
+`service`, a `Layer.succeed` layer, an `error`, and `try`/`catch` recovery.
 
 To add VibeLang to an existing project, see
 [Installation](docs/user/src/getting-started/004-installation.md).
@@ -122,8 +124,10 @@ clients, see [editors/](editors/README.md).
   `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon`, the boundary
   hatches `sync`, `try`, and `callback`, the runners, and the Effect
   functions `sleep`, `log`, `retry`, `timeout`, `all`, `forEach`, `race`, and
-  a few more need no import, and neither does any other module of `effect`'s root, such as
-  `Console`, `Option`, and `Stream`. Import other source files by their source name,
+  a few more need no import. Modules from `effect`'s root, such as `Console`,
+  `Option`, and `Stream`, are also in scope. JavaScript globals keep their names;
+  use aliases for colliding Effect modules, such as
+  `import { Array as Arr } from "effect"`. Import other source files by their source name,
   `import { Todos } from "./todos.vibe"`; the compiler emits `.js` imports.
 - A value of one of Effect's data types takes its module's functions as
   methods: `maybe.map(f).getOrElse(() => 0)` calls `Option.map` and
@@ -133,7 +137,7 @@ clients, see [editors/](editors/README.md).
   for `x`. Where `%` is an argument that expects a program, `x` is passed by
   name: `fetchUser(id) |> retry(%, policy) |> timeout(%, "1 second")` retries
   and times the call. Elsewhere `x` runs once and `%` is its value.
-- A module's top level only declares. A call there that would run a program
+- A module's top level cannot run a program. A call there that would do so
   is EK1001, including `Effect.succeed(1)`. Export `function main()` from the
   entry module: `node dist/main.js` runs it with `NodeRuntime.runMain`, and
   importing the module runs nothing. A runner you call at the top level,
@@ -203,10 +207,10 @@ sh scripts/e2e.sh
 | `artifacts/` | The earlier design-space proposal, kept for history; superseded by `docs/design/` |
 
 ```sh
-cd experiments && bun install && bun test          # kernel laws
-cd docs/tools && bun install && bun render-user.ts # build the docs site and the spec
+(cd experiments && bun install && bun test)          # kernel laws
+(cd docs/tools && bun install && bun render-user.ts) # build the docs site and the spec
 bun prototype/esc/examples/run-all.ts              # prototype compiler examples
-cd typescript && sh vibelang/smoke.sh                # build vibelang and run its cases
+(cd typescript && sh vibelang/smoke.sh)                # build vibelang and run its cases
 bun docs/tools/check-snippets.ts                   # compile every user-doc code block
 bun docs/tools/check-smithers-content.ts           # check app.md, home.json, the convert prompt and hero
 node --test scripts/brand-gate.test.mjs            # no retired brand spelling outside the gate's exemptions

@@ -1,6 +1,6 @@
 # Welcome to VibeLang
 
-VibeLang is a language for building reliable TypeScript in the AI era, built on [Effect](https://effect.website). It gives Effect a simple, readable syntax that compiles to TypeScript, so your team can ship production-ready systems with first-class access to the TypeScript ecosystem.
+VibeLang is a language for writing [Effect](https://effect.website) programs with TypeScript syntax. Its compiler checks `.vibe` and `.ts` files together and emits JavaScript and TypeScript declarations.
 
 ```ts effect
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
@@ -36,23 +36,23 @@ function greet(id: string) {
 // string!!Users
 ```
 
-A user service, a typed error, and a fallback, in Effect and in VibeLang. The comment under `greet` is the type your editor shows: `string!!Users` is VibeLang's spelling of `Effect<string, never, Users>`. It returns a `string`, cannot fail, and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The VibeLang version is about half the size: 71 tokens against 143.
+A user service, a typed error, and a fallback, in Effect and in VibeLang. The comment under `greet` is the type your editor shows: `string!!Users` is VibeLang's spelling of `Effect<string, never, Users>`. It returns a `string`, has no expected failures, and needs the `Users` service. Defects and interruption remain possible. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The TypeScript example adds a tracing span with `Effect.fn("greet")`; the VibeLang function is untraced by default.
 
 VibeLang is v0. The language will change in major, breaking ways, and it is not ready for production use.
 
 ## Why a language
 
-**Effect makes TypeScript reliable.** A TypeScript signature says what a function returns, but not what can fail or what it depends on. Effect puts all three in one type, `Effect<Success, Error, Requirements>`, and the compiler checks it. Retries, timeouts, concurrency, resource cleanup, and tracing come with it.
+**Effect tracks failures and services.** A TypeScript signature says what a function returns, but not what can fail or what it depends on. Effect puts all three in one type, `Effect<Success, Error, Requirements>`, and the compiler checks it. Retries, timeouts, concurrency, resource cleanup, and tracing come with it.
 
-**Effect pays for it in syntax.** Effect is a library, so it builds every feature out of what TypeScript already has: generators and `yield*` to run steps in order, `pipe` to compose them, and classes to declare errors and services. The code reads like a separate language written in library calls.
+**Effect expresses sequencing through library calls.** Effect is a library, so it builds every feature out of what TypeScript already has: generators and `yield*` to run steps in order, `pipe` to compose them, and classes to declare errors and services. The code reads like a separate language written in library calls.
 
-**VibeLang makes it a real language.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
+**VibeLang adds language syntax.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
 
 ## TypeScript stays one step away
 
-A new language usually leaves its host's ecosystem behind. VibeLang keeps it in two ways:
+VibeLang shares TypeScript's ecosystem in two ways:
 
-1. **It compiles to TypeScript.** VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so npm packages, your `.ts` files, and every Effect library work unchanged, and TypeScript code calls VibeLang functions as ordinary Effect functions.
+1. **It shares TypeScript's compiler and types.** VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so you can use existing Effect code and npm packages through [TypeScript interop](vibelang-features/114-vibelang-for-effect-users.md). TypeScript code calls exported VibeLang functions as ordinary Effect functions.
 2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
 ```vibe
@@ -71,7 +71,7 @@ A hatch's function is self-contained: it reads the `.vibe` file's values only as
 
 ## Effect's features, in VibeLang syntax
 
-Everything Effect does, VibeLang does, because the output is Effect. The common features have their own syntax:
+VibeLang runs on Effect and uses its library modules. Common operations have language syntax:
 
 | Effect feature | VibeLang |
 | --- | --- |
@@ -87,13 +87,9 @@ Everything Effect does, VibeLang does, because the output is Effect. The common 
 
 Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages need no syntax of their own: call them as you would in TypeScript. The [cheat sheet](vibelang-features/115-cheat-sheet.md) puts every VibeLang form beside the Effect code it replaces.
 
-## Built for the AI era
+## Check application code
 
-When coding agents write a growing share of your code, the hard part moves from writing code to trusting it. Effect's answer is to make failures and dependencies visible to the compiler. VibeLang keeps that and makes the code worth reading:
-
-- **The compiler checks what agents write.** Every function's type lists what it can fail with and what it needs, and code that breaks a declared type does not compile, so an agent gets precise feedback to act on.
-- **People can review what agents write.** VibeLang code is about half the size of the Effect code it replaces, and it reads as plain TypeScript.
-- **Agents write less.** Fewer tokens per program means less to generate and less context to read back.
+The compiler tracks expected failures and required services for each function. A declared contract lets it reject code that adds an unhandled failure or dependency. Run focused tests to check behavior, including recovery, cancellation, and cleanup; successful type checking does not establish those results.
 
 ## Try it
 
