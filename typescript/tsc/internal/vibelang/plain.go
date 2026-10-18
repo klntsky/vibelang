@@ -265,8 +265,8 @@ func (a *analyzer) declares(symbol *ast.Symbol, fn *ast.Node) bool {
 // call runs inline wherever it is, at a module's top level too: it computes a
 // value and runs no program, as Chapter 13's table says.
 func (a *analyzer) directCallee(call *ast.Node) *directReference {
-	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) {
-		return nil // in a hatch, a .vibe function's call is an inert Effect value
+	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) || holdsTopLevelProgram(a.checker, call) {
+		return nil // hatches and D262 program bindings keep the inert Effect form
 	}
 	fn := esFunctionOf(a.checker, call.Expression())
 	if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {

@@ -55,6 +55,25 @@ func isEffectPackage(name string) bool {
 	return name == "effect" || strings.HasPrefix(name, "@effect/") || name == "vibelang-runtime"
 }
 
+// isTrustedPackage extends D22's built-in package trust with project globs
+// (D261). Match the package.json name, including for workspace packages.
+func isTrustedPackage(c *checker.Checker, name string) bool {
+	if isEffectPackage(name) {
+		return true
+	}
+	if name == "" {
+		return false
+	}
+	if options := c.CompilerOptions().VibeLang; options != nil {
+		for _, pattern := range options.TrustedPackages {
+			if matched, _ := path.Match(pattern, name); matched {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // isLibFile reports whether file is one of TypeScript's lib files, which
 // declare JavaScript's built-ins and the browser's globals.
 func isLibFile(c *checker.Checker, file *ast.SourceFile) bool {

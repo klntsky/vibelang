@@ -38,6 +38,8 @@ func TestCategory(t *testing.T) {
 		{"EK4403 can be off", EK4403, with(map[string]string{"EK4403": "off"}), 0, false},
 		{"other codes stay errors", EK2001, with(map[string]string{"EK2001": "off"}), diagnostics.CategoryError, true},
 		{"EK4801 is an error by default", EK4801, nil, diagnostics.CategoryError, true},
+		{"EK4814 is a warning by default", EK4814, nil, diagnostics.CategoryWarning, true},
+		{"EK4814 can be an error", EK4814, with(map[string]string{"EK4814": "error"}), diagnostics.CategoryError, true},
 		{"EK4818 is off by default", EK4818, nil, 0, false},
 		{"EK4818 can be a warning", EK4818, with(map[string]string{"EK4818": "warning"}), diagnostics.CategoryWarning, true},
 		{"EK4813 stays an error", EK4813, with(map[string]string{"EK4813": "off"}), diagnostics.CategoryError, true},

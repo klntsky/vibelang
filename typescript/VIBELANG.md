@@ -122,7 +122,9 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `platform-values` | Importing `createServer` from `node:http` and `os` from `node:os`, and passing them as values, compiles and runs |
 | `ek4403-clock.fail` | EK4403 for `Date.now()`, `new Date()`, `Math.random()`, `crypto.randomUUID()`, `performance.now()`, and `Date()`, at the top level too; `new Date(text)`, `Date.parse`, and `Date.UTC` are allowed |
 | `ek4403-warning` | With `"EK4403": "warning"`, the reads are warnings and run as plain calls |
-| `ek1001-top-level.fail` | EK1001 for a `.vibe` program, an Effect, a program passed straight to a runner, a service member call, a service, and an Effect value at the top level; none for values, lambdas, or a runner given a program |
+| `top-level-effect-const` / `top-level-effect-const.fail` | D262: an explicitly Effect-typed top-level const is cold at import and runs on each invocation; unannotated, mutable, and non-Effect bindings keep EK1001 |
+| `trusted-workspace-package` / `trusted-workspace-package-off.fail` | D261: `compilerOptions.vibelang.trustedPackages` matches a workspace package name, allows sync calls whose exceptions are defects, and runs Effects; without it the same call reports EK4401 |
+| `ek1001-top-level.fail` | EK1001 for unannotated top-level program calls, service member calls, service lookups, and Effect-value calls; values, lambdas, and programs passed by name to runners are allowed |
 | `ek1005-runners.fail` | EK1005 for runners in code a fiber runs, `ManagedRuntime` and `*With` forms included, and for `it.effect` in a test body; none at the top level or in a plain callback the top level passes to TypeScript (`describe`, a route handler, `layer(…)`); `stubs/` holds the real declarations of `NodeRuntime.runMain` and `@effect/vitest` |
 | `debug-stack` | With `sourceMap`, Node's stack traces point at `.vibe` lines and name the function, a region closure (`audited$try`), and a recursive function whose generator is a method (D36) |
 | `tracing-exported` | `"tracing": "exported"` gives exported functions `Effect.fn` spans named after them |
@@ -1128,14 +1130,16 @@ A call to a function that returns no `Effect` needs a trust level (D5, D22, D23)
 | --- | --- | --- |
 | A `.vibe` function, or a parameter of a `.vibe` function | VibeLang's own | Allowed |
 | A declaration in TypeScript's lib files: `String`, `Array`, `Math`, `JSON`, `Map`, `RegExp`, `URL`, … | A built-in with a shipped contract (D5) | Allowed; the contract's exceptions join E |
-| An export of `effect`, `@effect/*`, or `vibelang-runtime`, and the functions and values those return | Trusted `sync` (D22); exceptions are defects | Allowed |
+| An export of a package matching `compilerOptions.vibelang.trustedPackages`, `effect`, `@effect/*`, or `vibelang-runtime`, and the functions and values those return | Trusted `sync` (D22); exceptions are defects | Allowed |
 | A declaration tagged `/** @vibelang trusted */` | Trusted `sync` (D23); each `@throws {T}` joins E | Allowed |
 | A declaration in a platform package (`@types/node`, `bun-types`) | Platform | EK4402 reports the import or global instead |
 | Anything else | None | EK4401 |
 
+`compilerOptions.vibelang.trustedPackages: ["@smthrs/*"]` extends D22 trust to project-selected TypeScript packages (D261). These are whole package-name globs, with `*`, `?`, and character classes matching within slash-delimited segments. Expected failures remain per-function `trusted(impl, [Errors])` contracts (D249).
+
 A package's name comes from the nearest `package.json` (`packageOf` in `origins.go`), so `vibelang-runtime` installed through a `file:` link, outside `node_modules`, is still recognized.
 
-An Effect package may re-export another package's functions: `@effect/vitest` re-exports vitest, so `assert` and `expect` are declared in vitest's files. A call whose callee a declaration file declares is still Effect's when the callee is reached through an import from an Effect package, or through a value that a trusted call to one returned (`reachedThroughEffect`): `assert.strictEqual(n, 1)` and `expect(n).toBe(1)` are trusted calls whose exceptions are defects, so a failed assertion fails the test. The program's own TypeScript keeps its rule even when an Effect function returned the value. For another package's function, EK4401's note suggests a tagged re-export from a `.ts` file (D23), because the package's own declaration cannot carry the tag.
+An Effect package may re-export another package's functions: `@effect/vitest` re-exports vitest, so `assert` and `expect` are declared in vitest's files. A call whose callee a declaration file declares is still Effect's when the callee is reached through an import from an Effect package, or through a value that a trusted call to one returned (`reachedThroughTrustedPackage`): `assert.strictEqual(n, 1)` and `expect(n).toBe(1)` are trusted calls whose exceptions are defects, so a failed assertion fails the test. The program's own TypeScript keeps its rule even when an Effect function returned the value. For another package's function, EK4401's note suggests a tagged re-export from a `.ts` file (D23), because the package's own declaration cannot carry the tag.
 
 **The migration (D249).** A D23-tagged call reports EK4406 where its contract changes the emitted failure handling: in code a fiber runs, outside a boundary, at `checkCall`'s gate. Top-level calls and plain or boundary callbacks remain plain and get no migration diagnostic. The quick fix imports `trusted` from `vibelang-runtime`, writes `export const nameTrusted = trusted(name, [ActualClasses])` beside the TypeScript implementation, imports that value into VibeLang, and rewrites the call. It reuses an existing matching wrapper and imports, preserves aliases, and aliases `trusted` only on a name collision. A barrel import is left for manual migration unless it resolves directly to the declaring file. Methods name their declaration (for example `Ports.offset`) and ask for a receiver adapter. Keep the original function for TypeScript callers. The value returns `Effect<A, E>`; listed instances fail and other throws die. Promise and Effect implementations are rejected by its type. `legacyTrustCategory` is the named switch point in `diagnostics.go`: it is warning for the legacy emitter and becomes error when (B) emit switches on. Projects can select `"EK4406": "error"` now through `compilerOptions.vibelang.diagnostics`, or retain `"warning"` during migration.
 
@@ -1223,7 +1227,7 @@ Cases: `match-patterns` (every pattern kind, every position, `is` in if and whil
 
 | Code | Rule |
 | --- | --- |
-| EK1001 | At a module's top level, a call that would run a program inside a function body: a call that runs an Effect or a `.vibe` Effect function, a service member call, or a call of an Effect value such as `Users()` or `Port()`. Only the outermost such call is reported. A program passed straight to a runner, as in `Effect.runPromise(main())`, gets the fix `() => main()` |
+| EK1001 | Except for the initializer of an explicitly Effect-typed top-level `const` (D262), at a module's top level, a call that would run a program inside a function body: a call that runs an Effect or a `.vibe` Effect function, a service member call, or a call of an Effect value such as `Users()` or `Port()`. Only the outermost such call is reported. A program passed straight to a runner, as in `Effect.runPromise(main())`, gets the fix `() => main()` |
 | EK1005 | A runner anywhere but the module's top level and the plain callbacks that the top level passes to TypeScript functions (`outsideFibers`). The fix forks the program, `fork(() => refresh(id))`; a test runner's fix registers the test at the top level or in a `describe` callback |
 
 ```ts
@@ -1232,6 +1236,7 @@ describe("users", () => {
   it.effect("finds Ada", () => find("1"))  // allowed: a plain callback from the top level
 })
 export const config = loadConfig()         // EK1001
+export const ready: Effect.Effect<void, never, never> = Effect.suspend(() => {}) // cold (D262)
 ```
 
 ## Debugging

@@ -2,6 +2,7 @@ package tsoptions
 
 import (
 	"maps"
+	"path"
 	"slices"
 	"strings"
 
@@ -16,7 +17,8 @@ import (
 //
 //	"vibelang": {
 //	  "diagnostics": { "EK2004": "off", "EK4403": "warning" },
-//	  "tracing": "exported"
+//	  "tracing": "exported",
+//	  "trustedPackages": ["@smthrs/*"]
 //	}
 //
 // It is added by hand to the generated option tables: its declaration in
@@ -51,6 +53,15 @@ func parseVibeLangOptions(value any) *core.VibeLangOptions {
 	}
 	if tracing, ok := object.GetOrZero("tracing").(string); ok && slices.Contains(effectScriptTracing, tracing) {
 		options.Tracing = tracing
+	}
+	if packages, ok := object.GetOrZero("trustedPackages").([]any); ok {
+		for _, entry := range packages {
+			if pattern, ok := entry.(string); ok {
+				if _, err := path.Match(pattern, ""); err == nil {
+					options.TrustedPackages = append(options.TrustedPackages, pattern)
+				}
+			}
+		}
 	}
 	return options
 }
@@ -89,6 +100,28 @@ func validateVibeLangOptions(value any, valueExpression *ast.Expression, sourceF
 					report(jsonInitializer(codeProperty), diagnostics.Argument_for_0_option_must_be_Colon_1, "vibelang.diagnostics."+code, quoteList(effectScriptCategories))
 				}
 			}
+		case "trustedPackages":
+			entries, ok := v.([]any)
+			if !ok {
+				report(jsonInitializer(property), diagnostics.Compiler_option_0_requires_a_value_of_type_1, "vibelang.trustedPackages", "Array")
+				continue
+			}
+			var elements []*ast.Node
+			if expression := jsonInitializer(property); expression != nil && ast.IsArrayLiteralExpression(expression) {
+				elements = expression.AsArrayLiteralExpression().Elements.Nodes
+			}
+			for i, entry := range entries {
+				var element *ast.Node
+				if i < len(elements) {
+					element = elements[i]
+				}
+				pattern, ok := entry.(string)
+				if !ok {
+					report(element, diagnostics.Compiler_option_0_requires_a_value_of_type_1, "vibelang.trustedPackages", "string")
+				} else if _, err := path.Match(pattern, ""); err != nil {
+					report(element, diagnostics.Argument_for_0_option_must_be_Colon_1, "vibelang.trustedPackages", "a valid package-name glob")
+				}
+			}
 		case "tracing":
 			if tracing, ok := v.(string); !ok || !slices.Contains(effectScriptTracing, tracing) {
 				report(jsonInitializer(property), diagnostics.Argument_for_0_option_must_be_Colon_1, "vibelang.tracing", quoteList(effectScriptTracing))
@@ -102,7 +135,14 @@ func validateVibeLangOptions(value any, valueExpression *ast.Expression, sourceF
 
 // serializeVibeLangOptions writes options as tsconfig JSON for --showConfig.
 func serializeVibeLangOptions(options *core.VibeLangOptions) *collections.OrderedMap[string, any] {
-	result := collections.NewOrderedMapWithSizeHint[string, any](2)
+	result := collections.NewOrderedMapWithSizeHint[string, any](3)
+	if len(options.TrustedPackages) > 0 {
+		packages := make([]any, len(options.TrustedPackages))
+		for i, pattern := range options.TrustedPackages {
+			packages[i] = pattern
+		}
+		result.Set("trustedPackages", packages)
+	}
 	if len(options.Diagnostics) > 0 {
 		codes := collections.NewOrderedMapWithSizeHint[string, any](len(options.Diagnostics))
 		for _, code := range slices.Sorted(maps.Keys(options.Diagnostics)) {

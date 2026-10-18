@@ -184,7 +184,7 @@ func runsAtTopLevel(c *checker.Checker, a *analyzer, call *ast.Node) (runs bool,
 // there runs nothing and builds the program the callee receives (D147,
 // D155), so EK1001 does not apply.
 func (a *analyzer) passedAsProgram(call *ast.Node) bool {
-	if a.byNameOf(call) != nil {
+	if a.byNameOf(call) != nil || holdsTopLevelProgram(a.checker, call) {
 		return true
 	}
 	owner, path := ownerCall(call)
@@ -196,6 +196,24 @@ func (a *analyzer) passedAsProgram(call *ast.Node) bool {
 		return false
 	}
 	return a.classify(a.expectedAt(owner, signature, path, call)).program
+}
+
+// holdsTopLevelProgram recognizes D262's explicit storage of a cold program.
+// At module scope calls retain their Effect type and emit without yield*;
+// only the annotated const's initializer is a program position. Its operands
+// still follow D147, so this does not hide eager calls inside the initializer.
+func holdsTopLevelProgram(c *checker.Checker, call *ast.Node) bool {
+	node := call
+	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
+		node = node.Parent
+	}
+	decl := node.Parent
+	if decl == nil || !ast.IsVariableDeclaration(decl) || decl.Initializer() != node || decl.Type() == nil {
+		return false
+	}
+	list := decl.Parent
+	return list != nil && list.Kind == ast.KindVariableDeclarationList && list.Flags&ast.NodeFlagsConst != 0 &&
+		atTopLevel(decl) && isEffectType(c, c.GetTypeFromTypeNode(decl.Type()))
 }
 
 // reportTopLevelRun reports EK1001 for call, which runs a program at the

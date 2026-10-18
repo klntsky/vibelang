@@ -1,0 +1,12 @@
+import { Effect } from "effect"
+export let runs = 0
+export const migrate: Effect.Effect<void, never, never> = Effect.suspend(() => {
+  runs++
+})
+export const parenthesized: Effect.Effect<number, never, never> = (Effect.succeed(42))
+function increment() {
+  runs++
+  return 9
+}
+// Even a function with a plain body keeps its cold Effect form here.
+export const stored: Effect.Effect<number, never, never> = increment()

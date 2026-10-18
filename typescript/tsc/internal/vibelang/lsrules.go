@@ -50,7 +50,7 @@ var (
 	// EK4813 (outdatedApi): an Effect 3 name. {0} is the module, {1} the name, {2} the Effect 4 name.
 	EK4813 = message(4813, errorCategory, "{0}.{1} is Effect 3 API; Effect 4 calls it {0}.{2}.")
 	// EK4814 (overriddenSchemaConstructor): a constructor in a Schema class. {0} is the class.
-	EK4814 = message(4814, errorCategory, "{0} overrides the constructor of a Schema class, which decoding does not call.")
+	EK4814 = message(4814, warningCategory, "{0} overrides the constructor of a Schema class, which decoding does not call.")
 	// EK4815 (effectInFailure): a throw of an Effect value. {0} is the value.
 	EK4815 = message(4815, warningCategory, "{0} is an Effect value, so this throw fails with the program itself.")
 	// EK4816 (strictEffectProvide; off by default): a layer provided outside main. {0} is the layer.

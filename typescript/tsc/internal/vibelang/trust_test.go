@@ -100,3 +100,46 @@ export function recovered(text: string): number {
 	}
 
 }
+
+// D261 grants trust by package.json name, including TypeScript workspace
+// sources reached through paths, and preserves the boundary without a match.
+func TestTrustedWorkspacePackageNames(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name, patterns string
+		want           int
+	}{
+		{"scope glob", `["@smthrs/*"]`, 0},
+		{"exact name", `["@smthrs/keys"]`, 0},
+		{"another scope", `["@other/*"]`, 1},
+		{"prefix is not a match", `["@smthrs/key"]`, 1},
+		{"no trust", `[]`, 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			files := map[string]string{
+				"/workspace/keys/package.json": `{"name":"@smthrs/keys"}`,
+				"/workspace/keys/index.ts":     `export { key } from "../../foreign"`,
+				"/foreign.ts":                  `export function key() { return 42 }`,
+				"/main.vibe":                   `import { key } from "@smthrs/keys"; export function use() { return key() }`,
+				"/tsconfig.json":               fmt.Sprintf(`{"compilerOptions":{"strict":true,"paths":{"@smthrs/keys":["./workspace/keys/index.ts"]},"vibelang":{"trustedPackages":%s}},"files":["main.vibe"]}`, test.patterns),
+			}
+			fs := bundled.WrapFS(vfstest.FromMap(files, tspath.CaseSensitive))
+			parsed, errors := tsoptions.GetParsedCommandLineOfConfigFile("/tsconfig.json", &core.CompilerOptions{}, nil, fs, nil)
+			if len(errors) != 0 || len(parsed.Errors) != 0 {
+				t.Fatalf("config: %v / %v", errors, parsed.Errors)
+			}
+			p := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: compiler.NewCompilerHost(fs, bundled.LibPath(), nil, nil, nil)})
+			count := 0
+			for _, d := range p.GetSemanticDiagnostics(t.Context(), p.GetSourceFile("/main.vibe")) {
+				if d.Code() == EK4401.Code {
+					count++
+				} else if d.Category() == diagnostics.CategoryError {
+					t.Errorf("unexpected diagnostic: %v", d)
+				}
+			}
+			if count != test.want {
+				t.Fatalf("EK4401 count = %d, want %d", count, test.want)
+			}
+		})
+	}
+}

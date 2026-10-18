@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "types": [],
+    "skipLibCheck": true,
+    "rewriteRelativeImportExtensions": true,
+    "outDir": "out",
+    "paths": {
+      "@smthrs/twin": [
+        "./workspace/index.ts"
+      ]
+    },
+    "rootDir": ".",
+    "vibelang": {
+      "trustedPackages": [
+        "@smthrs/*"
+      ]
+    }
+  },
+  "include": [
+    "*.vibe",
+    "*.ts",
+    "workspace/*.ts"
+  ]
+}

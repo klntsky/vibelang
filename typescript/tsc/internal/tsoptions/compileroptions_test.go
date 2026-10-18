@@ -74,7 +74,8 @@ func TestGeneratedCompilerOptionParsingAndClone(t *testing.T) {
 				settings := &collections.OrderedMap[string, any]{}
 				settings.Set("tracing", "all")
 				settings.Set("diagnostics", codes)
-				input, expected = settings, &core.VibeLangOptions{Tracing: "all", Diagnostics: map[string]string{"EK4403": "warning"}}
+				settings.Set("trustedPackages", []any{"@smthrs/*"})
+				input, expected = settings, &core.VibeLangOptions{TrustedPackages: []string{"@smthrs/*"}, Tracing: "all", Diagnostics: map[string]string{"EK4403": "warning"}}
 			case field.Type == reflect.TypeFor[core.Tristate]():
 				input, expected = true, core.TSTrue
 			case field.Type.Kind() == reflect.String:
@@ -251,6 +252,8 @@ func compilerOptionTestValues(t *testing.T, field reflect.StructField) []reflect
 			reflect.Zero(field.Type),
 			reflect.ValueOf(&core.VibeLangOptions{}),
 			reflect.ValueOf(&core.VibeLangOptions{Tracing: "all", Diagnostics: map[string]string{"EK4403": "off", "EK2004": "warning"}}),
+			reflect.ValueOf(&core.VibeLangOptions{TrustedPackages: []string{"@smthrs/*"}, Tracing: "all", Diagnostics: map[string]string{"EK4403": "off", "EK2004": "warning"}}),
+			reflect.ValueOf(&core.VibeLangOptions{TrustedPackages: []string{"exact-package"}, Tracing: "all", Diagnostics: map[string]string{"EK4403": "off", "EK2004": "warning"}}),
 			reflect.ValueOf(&core.VibeLangOptions{Tracing: "exported", Diagnostics: map[string]string{"EK4403": "error"}}),
 		}
 	}

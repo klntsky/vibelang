@@ -1,10 +1,15 @@
 package core
 
-import "maps"
+import (
+	"maps"
+	"slices"
+)
 
 // VibeLangOptions is compilerOptions.vibelang in tsconfig.json, the
 // project's VibeLang settings (design decision D34).
 type VibeLangOptions struct {
+	// TrustedPackages are package-name globs granted D22 trust (D261).
+	TrustedPackages []string `json:"trustedPackages,omitzero"`
 	// Diagnostics maps an EK code in VibeLangAdjustableCodes, such as "EK2004",
 	// to "error", "warning", or "off".
 	Diagnostics map[string]string `json:"diagnostics,omitzero"`
@@ -29,5 +34,5 @@ func (o *VibeLangOptions) Equals(other *VibeLangOptions) bool {
 	if o == nil || other == nil {
 		return o == other
 	}
-	return o.Tracing == other.Tracing && maps.Equal(o.Diagnostics, other.Diagnostics)
+	return o.Tracing == other.Tracing && slices.Equal(o.TrustedPackages, other.TrustedPackages) && maps.Equal(o.Diagnostics, other.Diagnostics)
 }

@@ -13,7 +13,7 @@ main.vibe(82,10): error EK4810
 main.vibe(87,9): error EK4811
 main.vibe(92,23): error EK4812
 main.vibe(97,31): error EK4813
-main.vibe(101,3): error EK4814
+main.vibe(101,3): warning EK4814
 main.vibe(107,10): error EK4817
 main.vibe(112,9): error EK4815
 main.vibe(117,10): error EK4818

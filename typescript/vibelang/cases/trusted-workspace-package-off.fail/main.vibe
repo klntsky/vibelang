@@ -1,0 +1,3 @@
+// expect: EK4401
+import { data } from "@smthrs/twin"
+export function main() { return data() }

@@ -4,6 +4,16 @@ Runners start a program at an application boundary. Inside a running VibeLang fu
 
 Call a runner at module top level or in a plain callback registered there with a TypeScript function, such as a `describe` body or framework route handler. Calling a runner inside code a fiber runs is EK1005; call the program or use `fork` instead. Tests in `.vibe` use `it.effect` from `@effect/vitest`; Promise-style tests stay in `.ts`.
 
+An explicitly Effect-typed top-level `const` stores a cold program (D262):
+
+```vibe
+export const migrate: Effect.Effect<void, never, never> = Effect.suspend(() => {
+  Console.log("migrating")
+})
+```
+
+Importing this module prints nothing. Call `migrate()` inside a running function, or pass `migrate` to a runner, to execute it. Without the declared Effect type, the top-level call still reports EK1001; a `let`, a non-Effect annotation, or a type assertion does not opt in. Operands still follow the ordinary by-name rules, so an eager program call inside the initializer needs its own program position.
+
 ## Build and run a local project
 
 After [installing and scaffolding](004-installation.md), use the starter scripts:

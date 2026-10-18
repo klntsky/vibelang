@@ -34,12 +34,12 @@ func TestVibeLangConfigRoundTrip(t *testing.T) {
 		for _, category := range []string{"error", "warning", "off"} {
 			t.Run(tracing+"/"+category, func(t *testing.T) {
 				var policies []string
-				want := &core.VibeLangOptions{Tracing: tracing, Diagnostics: map[string]string{}}
+				want := &core.VibeLangOptions{TrustedPackages: []string{"@smthrs/*", "exact-package"}, Tracing: tracing, Diagnostics: map[string]string{}}
 				for _, code := range core.VibeLangAdjustableCodes {
 					policies = append(policies, fmt.Sprintf("%q:%q", code, category))
 					want.Diagnostics[code] = category
 				}
-				config := vibeConfig(t, `{"compilerOptions":{"vibelang":{"tracing":"`+tracing+`","diagnostics":{`+strings.Join(policies, ",")+`}}},"files":["main.vibe"]}`, "{}")
+				config := vibeConfig(t, `{"compilerOptions":{"vibelang":{"trustedPackages":["@smthrs/*","exact-package"],"tracing":"`+tracing+`","diagnostics":{`+strings.Join(policies, ",")+`}}},"files":["main.vibe"]}`, "{}")
 				if len(config.Errors) != 0 || !reflect.DeepEqual(config.CompilerOptions().VibeLang, want) {
 					t.Fatalf("accepted settings changed: %+v; errors %v", config.CompilerOptions().VibeLang, config.Errors)
 				}
@@ -78,6 +78,9 @@ func TestVibeLangConfigDiagnosticLocations(t *testing.T) {
 		{"diagnostics type", `{"diagnostics":[]}`, `[]`, "vibelang.diagnostics", 5024},
 		{"diagnostics null", `{"diagnostics":null}`, `null`, "vibelang.diagnostics", 5024},
 		{"tracing spelling", `{"tracing":"ALL"}`, `"ALL"`, "'none', 'exported', 'all'", 6046},
+		{"trusted packages type", `{"trustedPackages":"@smthrs/*"}`, `"@smthrs/*"`, "vibelang.trustedPackages", 5024},
+		{"trusted package element", `{"trustedPackages":[false]}`, `false`, "vibelang.trustedPackages", 5024},
+		{"trusted package glob", `{"trustedPackages":["["]}`, `"["`, "valid package-name glob", 6046},
 		{"tracing type", `{"tracing":42}`, `42`, "vibelang.tracing", 6046},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -96,12 +99,12 @@ func TestVibeLangConfigDiagnosticLocations(t *testing.T) {
 }
 
 func TestVibeLangConfigInheritance(t *testing.T) {
-	base := `{"compilerOptions":{"vibelang":{"tracing":"all","diagnostics":{"EK4403":"off"}}},"files":["main.vibe"]}`
+	base := `{"compilerOptions":{"vibelang":{"trustedPackages":["@smthrs/*"],"tracing":"all","diagnostics":{"EK4403":"off"}}},"files":["main.vibe"]}`
 	for _, test := range []struct {
 		name, override string
 		want           *core.VibeLangOptions
 	}{
-		{"inherit", "", &core.VibeLangOptions{Tracing: "all", Diagnostics: map[string]string{"EK4403": "off"}}},
+		{"inherit", "", &core.VibeLangOptions{TrustedPackages: []string{"@smthrs/*"}, Tracing: "all", Diagnostics: map[string]string{"EK4403": "off"}}},
 		{"replace", `,"compilerOptions":{"vibelang":{"tracing":"exported"}}`, &core.VibeLangOptions{Tracing: "exported"}},
 		{"empty object replaces", `,"compilerOptions":{"vibelang":{}}`, &core.VibeLangOptions{}},
 		{"null resets", `,"compilerOptions":{"vibelang":null}`, nil},

@@ -29,7 +29,7 @@ type trustKind uint8
 const (
 	trustUnknown  trustKind = iota // no declaration to judge, as for a callee of type any
 	trustES                        // VibeLang code, or a parameter of a .vibe function
-	trustEffect                    // an export of effect, @effect/*, or vibelang-runtime (D22)
+	trustEffect                    // an export of a trusted package (D22, D261)
 	trustBuiltin                   // a JavaScript built-in that TypeScript's lib files declare (D5)
 	trustTagged                    // a declaration tagged @vibelang trusted (D23)
 	trustPlatform                  // a platform package such as @types/node, which EK4402 reports
@@ -99,7 +99,7 @@ func computeTrust(c *checker.Checker, call *ast.Node) *trust {
 	switch pkg := packageOf(c, file); {
 	case isLibFile(c, file):
 		return tagged(c, call, candidates, &trust{kind: trustBuiltin, failures: builtinFailures(c, decl)})
-	case isEffectPackage(pkg):
+	case isTrustedPackage(c, pkg):
 		return tagged(c, call, candidates, &trust{kind: trustEffect})
 	case isPlatformPackage(pkg):
 		return tagged(c, call, candidates, &trust{kind: trustPlatform})
@@ -109,14 +109,14 @@ func computeTrust(c *checker.Checker, call *ast.Node) *trust {
 		candidates = append(candidates, symbol.Declarations()...) // the other overloads
 	}
 	t := tagged(c, call, candidates, &trust{kind: trustForeign, promise: returnsPromise(c, call)})
-	if t.kind == trustForeign && file.IsDeclarationFile && reachedThroughEffect(c, call) {
+	if t.kind == trustForeign && reachedThroughTrustedPackage(c, call, file.IsDeclarationFile) {
 		return &trust{kind: trustEffect}
 	}
 	return t
 }
 
-// reachedThroughEffect reports whether call's callee is an export of one of
-// Effect's packages, a member of one, or a function or method of a value
+// reachedThroughTrustedPackage reports whether call's callee is an export of one of
+// trusted packages (D22, D261), a member of one, or a function or method of a value
 // that a trusted call to one returned (D22). A package may re-export another
 // package's functions, as @effect/vitest re-exports vitest's assert and
 // expect, so their declarations alone do not show that they are Effect's:
@@ -124,25 +124,27 @@ func computeTrust(c *checker.Checker, call *ast.Node) *trust {
 //	import { assert, expect } from "@effect/vitest"
 //	assert.strictEqual(n, 1)   // assert is an export of @effect/vitest
 //	expect(n).toBe(1)          // toBe is a method of what expect returned
-func reachedThroughEffect(c *checker.Checker, call *ast.Node) bool {
+func reachedThroughTrustedPackage(c *checker.Checker, call *ast.Node, followReturned bool) bool {
 	callee := ast.SkipParentheses(call.Expression())
 	for {
 		switch {
 		case ast.IsPropertyAccessExpression(callee), ast.IsElementAccessExpression(callee):
 			callee = ast.SkipParentheses(callee.Expression())
 		case ast.IsCallExpression(callee):
-			return callTrust(c, callee).kind == trustEffect
+			// A returned value whose own TypeScript source declares its methods
+			// keeps the source package's trust; exports and re-exports are trusted.
+			return followReturned && callTrust(c, callee).kind == trustEffect
 		case ast.IsIdentifier(callee):
-			return importedFromEffect(c, callee)
+			return importedFromTrustedPackage(c, callee)
 		default:
 			return false
 		}
 	}
 }
 
-// importedFromEffect reports whether name is bound by an import from one of
-// Effect's packages, whichever module declares what the import names.
-func importedFromEffect(c *checker.Checker, name *ast.Node) bool {
+// importedFromTrustedPackage reports whether name is bound by an import from one of
+// trusted packages, whichever module declares what the import names.
+func importedFromTrustedPackage(c *checker.Checker, name *ast.Node) bool {
 	symbol := c.GetSymbolAtLocation(name)
 	if symbol == nil || symbol.Flags()&ast.SymbolFlagsAlias == 0 {
 		return false
@@ -157,7 +159,7 @@ func importedFromEffect(c *checker.Checker, name *ast.Node) bool {
 			continue
 		}
 		for _, moduleDecl := range module.Declarations() {
-			if file := ast.GetSourceFileOfNode(moduleDecl); file != nil && isEffectPackage(packageOf(c, file)) {
+			if file := ast.GetSourceFileOfNode(moduleDecl); file != nil && isTrustedPackage(c, packageOf(c, file)) {
 				return true
 			}
 		}
@@ -166,12 +168,12 @@ func importedFromEffect(c *checker.Checker, name *ast.Node) bool {
 }
 
 // tagged returns the trust of a declaration among candidates that is tagged
-// `@vibelang trusted` and declared outside lib files and Effect's
+// `@vibelang trusted` and declared outside lib files and trusted
 // packages, else otherwise.
 func tagged(c *checker.Checker, call *ast.Node, candidates []*ast.Node, otherwise *trust) *trust {
 	for _, candidate := range candidates {
 		file := ast.GetSourceFileOfNode(candidate)
-		if file == nil || isLibFile(c, file) || isEffectPackage(packageOf(c, file)) {
+		if file == nil || isLibFile(c, file) || isTrustedPackage(c, packageOf(c, file)) {
 			continue
 		}
 		for _, host := range jsdocHosts(candidate) {

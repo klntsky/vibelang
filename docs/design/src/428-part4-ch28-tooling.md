@@ -216,7 +216,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 
 | Code | What it reports | Suggested repair | Chapter |
 | --- | --- | --- | --- |
-| EK1001 | A module's top level runs a program | Export a function instead | 13 |
+| EK1001 | Except for an explicitly Effect-typed top-level `const` initializer (D262), a module's top level runs a program | Export a function instead | 13 |
 | EK1002 | A `function*` passed to an API whose parameter returns a library Generator or Iterator, such as `Effect.gen` (D64) | Convert the function | 10 |
 | EK1003 | `async`, `for await`, or `await using`, and `await` inside an `async` function outside a hatch: a call already waits | Remove them; `await` in VibeLang code waits for fibers (EK4601-EK4604) | 10 |
 | EK1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
@@ -260,7 +260,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | EK4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of` | 10, 16 |
-| EK4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@vibelang trusted` | 10 |
+| EK4401 | Packages matching `compilerOptions.vibelang.trustedPackages` are trusted (D261); otherwise, a plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@vibelang trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try((text) => parse(text), (error) => …, text)` | 10 |
@@ -297,7 +297,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4811 | Off by default: a throw of `any` or `unknown`, or a call that adds one to E or R (D240) | Throw an error declaration's instance; give the callee a contract | 3 |
 | EK4812 | A warning: `new Promise` in VibeLang code (D240) | `callback((resume) => …)`, or `sync(promise)` | 10 |
 | EK4813 | An Effect 3 name of the Effect module, such as `Effect.catchAll`; it replaces TypeScript's TS2339 (D240) | Write the Effect 4 name, `Effect.catch` (quick fix, also for TS2339 in `.ts` files) | 11 |
-| EK4814 | A constructor in a class that extends a Schema class, which decoding does not call (D240) | Add a static function that makes an instance | 11 |
+| EK4814 | A warning: a constructor in a class that extends a Schema class, which decoding does not call (D240) | Add a static function that makes an instance | 11 |
 | EK4815 | A warning: a throw of an Effect value (D240) | Run it: `program()` | 3 |
 | EK4816 | Off by default: a layer provided outside a function named `main` (D240) | Provide layers in the entry module's `main` | 4 |
 | EK4817 | Off by default: `instanceof` a Schema class (D240) | `Schema.is(Person)(value)` (quick fix) | 11 |
