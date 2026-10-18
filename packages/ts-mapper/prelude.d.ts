@@ -315,3 +315,6 @@ export type $PreludeLoaded =
     : Unresolved<typeof Runtime.$service> extends true
       ? "effeck-ts-mapper: the prelude cannot resolve effeck-runtime from its own location; install effeck-runtime beside effeck-ts-mapper"
       : true
+
+// D169, D225: fiber forms share the runtime declarations in both renderings.
+export { $join, $forConcurrent } from "effeck-runtime"

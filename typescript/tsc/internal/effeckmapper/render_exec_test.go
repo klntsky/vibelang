@@ -94,6 +94,30 @@ var emitCases = []struct {
 		absent:   []string{"f$fast"},
 	},
 	{
+		name:     "fiber forms in do bodies retain executable run boundaries",
+		source:   "function f(a: Fiber.Fiber<number>) { return do { join a } } function g() { return do { for concurrent (const x of [1]) { log(x) } 1 } }",
+		contains: []string{"$join(a)", "$forConcurrent([1], undefined, (x) => $gen(function* ()", "$isRun($t) ? (yield* $t) : $t"},
+		absent:   []string{"for concurrent", "join a", "f$direct", "g$direct"},
+	},
+	{
+		name:     "join runs a held fiber and keeps array and object shapes",
+		source:   "function f(a: Fiber.Fiber<number>, b: Fiber.Fiber<string>) { const x = join a; const y = join [a, b]; return join { a, b } }",
+		contains: []string{"$join(a)", "$join([a, b])", "$join({ a, b })", "$isRun($t) ? (yield* $t) : $t"},
+		absent:   []string{"join a", "f$direct", "$asProgram(a)"},
+	},
+	{
+		name:     "concurrent loops defer bodies and continue returns from one item",
+		source:   "function f(xs: number[]) { for concurrent(2) (const x of xs) { if (!x) continue; log(x) } for concurrent (const x of xs) log(x) }",
+		contains: []string{"$forConcurrent(xs, 2, (x) => $gen(function* ()", "$forConcurrent(xs, undefined, (x) => $gen(function* ()", "return;", "log(x)"},
+		absent:   []string{"for concurrent", "continue", "f$direct"},
+	},
+	{
+		name:     "all receives programs instead of completed strings",
+		source:   "function f() { return all([Effect.succeed(1), Effect.succeed(2)]) }",
+		contains: []string{"all([$gen(function* ()", "Effect.succeed(1)", "Effect.succeed(2)"},
+		absent:   []string{"f$direct"},
+	},
+	{
 		name:   "catch expressions run operands inside lazy generators",
 		source: "function f() { return a() catch e => recover(e) }",
 		contains: []string{

@@ -94,7 +94,8 @@ func (w *printer) node(n *ast.Node, e env) {
 	// These forms have source spans but synthesized descendants. Let their
 	// own lowering preserve lazy operands and lexical pipe topics, including
 	// when a match arm or do expression contains them.
-	if isCatchExpression(n) || isPipeExpression(n) || formsIsTopic(n) || p.isSource(n) ||
+	if isCatchExpression(n) || isFiberHelper(n, "$join", 1) ||
+		isPipeExpression(n) || formsIsTopic(n) || p.isSource(n) ||
 		ast.IsCallExpression(n) && isRunnableCall(n) && p.isSource(n.Expression()) {
 		// A source call with synthesized arguments still needs the normal
 		// call walker: exit(x catch y), for example, takes its operand by
@@ -190,7 +191,7 @@ func (w *printer) node(n *ast.Node, e env) {
 // statement prints a statement followed by its separator.
 func (w *printer) statement(n *ast.Node, e env) {
 	p := w.p
-	if p.isSource(n) {
+	if p.isSource(n) || n.Kind == ast.KindExpressionStatement && isFiberHelper(n.Expression(), "$forConcurrent", 3) {
 		w.chunks = append(w.chunks, chunk{node: n, env: e})
 		w.write("; ")
 		return

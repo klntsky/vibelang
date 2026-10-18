@@ -243,9 +243,7 @@ func (p *projector) blockCall(call *ast.Node, block *ast.Node, e env) {
 		break
 	}
 	for _, argument := range written {
-		if !e.effect || !p.byNameArgument(argument, e) {
-			p.visit(argument, e)
-		}
+		p.callArgument(argument, e)
 	}
 	var open string
 	switch {
@@ -296,9 +294,41 @@ func (p *projector) callArguments(call *ast.Node, e env) bool {
 		return true
 	}
 	for _, argument := range call.Arguments() {
-		if !e.effect || !p.byNameArgument(argument, e) {
-			p.visit(argument, e)
-		}
+		p.callArgument(argument, e)
 	}
 	return false
+}
+
+// callArgument follows literal containers to the resolver's element and
+// property paths. APIs such as Effect.all take programs inside a container;
+// visiting only its outer array would run those programs before the API.
+func (p *projector) callArgument(argument *ast.Node, e env) {
+	if e.effect && p.byNameArgument(argument, e) {
+		return
+	}
+	switch argument.Kind {
+	case ast.KindParenthesizedExpression, ast.KindAsExpression, ast.KindSatisfiesExpression, ast.KindNonNullExpression:
+		p.callArgument(argument.Expression(), e)
+		if argument.Type() != nil {
+			p.visit(argument.Type(), env{})
+		}
+	case ast.KindArrayLiteralExpression:
+		for _, element := range argument.Elements() {
+			p.callArgument(element, e)
+		}
+	case ast.KindObjectLiteralExpression:
+		for _, property := range argument.Properties() {
+			if property.Kind == ast.KindPropertyAssignment {
+				p.visit(property.Name(), e)
+				p.callArgument(property.Initializer(), e)
+			} else if property.Kind == ast.KindShorthandPropertyAssignment && e.effect && p.forms.Argument(property.Name()).Class&ClassProgram != 0 {
+				p.plan.insert(p.tokenStart(property), property.Name().Text()+": ")
+				p.callArgument(property.Name(), e)
+			} else {
+				p.visit(property, e)
+			}
+		}
+	default:
+		p.visit(argument, e)
+	}
 }

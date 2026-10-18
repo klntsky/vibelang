@@ -244,6 +244,12 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case node.Kind == ast.KindPropertySignature || node.Kind == ast.KindIndexSignature:
 		p.readonlyMember(node, e)
 		return
+	case isFiberHelper(node, "$join", 1):
+		p.join(node, e)
+		return
+	case isFiberHelper(node, "$forConcurrent", 3):
+		p.forConcurrent(node, e)
+		return
 	case awaitOperationHelper(node) != "":
 		p.awaitOperation(node, e)
 		return

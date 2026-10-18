@@ -29,6 +29,41 @@ var projectionCases = []struct {
 	virtual string
 }{
 	{
+		name:    "join a held Fiber",
+		source:  "function f(a: Fiber.Fiber<number>) { return join a }",
+		virtual: "function f(a: Fiber.Fiber<number>) { return $gen(function* () { return (yield* $run($join(a))) })}",
+	},
+	{
+		name:    "join an array of Fibers",
+		source:  "function f(a: Fiber.Fiber<number>, b: Fiber.Fiber<string>) { return join [a, b] }",
+		virtual: "function f(a: Fiber.Fiber<number>, b: Fiber.Fiber<string>) { return $gen(function* () { return (yield* $run($join([a, b]))) })}",
+	},
+	{
+		name:    "join an object of Fibers",
+		source:  "function f(a: Fiber.Fiber<number>) { return join { a } }",
+		virtual: "function f(a: Fiber.Fiber<number>) { return $gen(function* () { return (yield* $run($join({ a }))) })}",
+	},
+	{
+		name:    "join an annotated collection",
+		source:  "function f(xs: Fiber.Fiber<number>[]) { return join xs }",
+		virtual: "function f(xs: Fiber.Fiber<number>[]) { return $gen(function* () { return (yield* $run($join(xs))) })}",
+	},
+	{
+		name:    "concurrent unbounded with continue",
+		source:  "function f(xs: number[]) { for concurrent (const x of xs) { if (x) continue; } }",
+		virtual: "function f(xs: number[]) { return $gen(function* () { ;(yield* $run($forConcurrent(xs, undefined, (x) => $gen(function* () { if (x) return; })))); })}",
+	},
+	{
+		name:    "concurrent bounded single statement",
+		source:  "function f(xs: number[]) { for concurrent(2) (const x of xs) log(x) }",
+		virtual: "function f(xs: number[]) { return $gen(function* () { ;(yield* $run($forConcurrent(xs, 2, (x) => $gen(function* () { ;(yield* $run(log(x))) })))); })}",
+	},
+	{
+		name:    "all takes its array elements by name",
+		source:  "function f() { return all([Effect.succeed(1), Effect.succeed(2)]) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run(all([$gen(function* () { return (yield* $run(Effect.succeed(1))) }), $gen(function* () { return (yield* $run(Effect.succeed(2))) })]))) })}",
+	},
+	{
 		name:    "schema primitives optional literals arrays and readonly",
 		source:  "export schema User { readonly id: string; home?: number; role: \"a\" | \"b\"; tags: string[]; mutable active: boolean }\n",
 		virtual: "export interface User extends Schema.Schema.Type<typeof User> {}\nexport const User = Schema.Struct({ id: Schema.String, home: Schema.optional(Schema.Number), role: Schema.Literals([\"a\", \"b\"]), tags: Schema.Array(Schema.String), active: Schema.mutableKey(Schema.Boolean) });\n",
@@ -468,7 +503,7 @@ func TestVerbatimSegmentsCoverSourceText(t *testing.T) {
 // through unchanged and draws one EK9001 at the form.
 func TestUnprojectedForm(t *testing.T) {
 	t.Parallel()
-	source := "function f() {\n  return join fiber\n}\n"
+	source := "function f() {\n  return await fiber\n}\n"
 	projection := Project(source, testContext)
 	assert.Equal(t, len(projection.Diagnostics), 1)
 	d := projection.Diagnostics[0]
@@ -802,4 +837,93 @@ func TestSchemaConstantReference(t *testing.T) {
 	bad := Project("const When = Schema.is(Schema.String); schema Event { when: When }", testContext)
 	assert.Equal(t, len(bad.Diagnostics), 1, "%v", bad.Diagnostics)
 	assert.Equal(t, bad.Diagnostics[0].Code, int32(2109))
+}
+
+// TestFiberDiagnostics ensures unknown join shapes ask for evidence and
+// rejected fiber forms cannot disappear into a never-valued helper result.
+func TestFiberDiagnostics(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name, source string
+		code         int32
+	}{
+		{"unknown join", "function f(x: unknown) { return join x }", CodeFormChoice},
+		{"unannotated parameter", "function f(x) { return join x }", CodeFormChoice},
+		{"unknown call result", "function f() { return join external() }", CodeFormChoice},
+		{"nonfiber", "function f() { const x = 1; return join x }", 4611},
+		{"empty object", "function f() { return join {} }", 4611},
+		{"nested join", "function f(a: Fiber.Fiber<number>) { return join [[a]] }", 4611},
+		{"nested annotated join", "function f(a: Fiber.Fiber<number>[][]) { return join a }", 4611},
+		{"Deferred", "function f(a: Deferred.Deferred<number>) { return join a }", 4611},
+		{"break", "function f() { for concurrent (const x of [1]) { break } }", 4605},
+		{"return", "function f() { for concurrent (const x of [1]) { return x } }", 4606},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			projection := Project(c.source, testContext)
+			found := false
+			for _, d := range projection.Diagnostics {
+				found = found || d.Code == c.code
+			}
+			assert.Assert(t, found, "expected %d, got %v", c.code, projection.Diagnostics)
+			for _, d := range projection.Diagnostics {
+				assert.Assert(t, d.Code != CodeUnprojectedForm, "%v", projection.Diagnostics)
+			}
+		})
+	}
+}
+
+// TestConcurrentNestedJumps keeps a nested loop's jumps and a nested
+// function's return separate from the concurrent item's continuation.
+func TestConcurrentNestedJumps(t *testing.T) {
+	source := "function f(xs: number[]) { if (xs.length) for concurrent(2) (const x of xs) { for (let i = 0; i < 2; i++) { if (i) break; continue } const g = () => { return x }; if (x) continue; log(x) } }"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+	assertParses(t, projection.Text)
+	assert.Assert(t, strings.Contains(projection.Text, "if (xs.length) (yield*"), "%s", projection.Text)
+	assert.Assert(t, strings.Contains(projection.Text, "break; continue"), "%s", projection.Text)
+	assert.Assert(t, strings.Contains(projection.Text, "if (x) return;"), "%s", projection.Text)
+}
+
+// TestConcurrentContinueRegions checks item exits through a lazy region
+// and a parser-generated single-statement block, where edits share a span.
+func TestConcurrentContinueRegions(t *testing.T) {
+	for _, source := range []string{
+		"function f(xs: number[]) { for concurrent (const x of xs) continue }",
+		"function f(xs: number[]) { for concurrent (const x of xs) { try { if (x) continue } finally { log(x) } } }",
+		"function f(xs: number[]) { for concurrent (const x of xs) { for concurrent (const y of xs) { if (y) continue } if (x) continue } }",
+	} {
+		projection := Project(source, testContext)
+		assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+		assertParses(t, projection.Text)
+		assert.Assert(t, !strings.Contains(virtualBody(t, projection), "continue"), "%s", projection.Text)
+	}
+}
+
+// TestJoinAnnotatedFactory uses a function's written value channel after
+// its Effect runs, while a held Effect itself remains an invalid join leaf.
+func TestJoinAnnotatedFactory(t *testing.T) {
+	source := "declare function make(): Fiber.Fiber<number>!!; function f() { return join make() }"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+	assertParses(t, projection.Text)
+	assert.Assert(t, strings.Contains(projection.Text, "$join((yield* $run(make())))"), "%s", projection.Text)
+}
+
+// TestFiberFormsInSynthesizedExpressions keeps fiber operations in do and
+// match bodies on their own lowering path, including their run edits.
+func TestFiberFormsInSynthesizedExpressions(t *testing.T) {
+	for _, source := range []string{
+		"function f(a: Fiber.Fiber<number>) { return do { join a } }",
+		"function f(a: Fiber.Fiber<number>) { return match (1) { when 1: join a; default: 0; } }",
+		"function f() { return do { for concurrent (const x of [1]) { log(x) } 1 } }",
+	} {
+		projection := Project(source, testContext)
+		assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+		assertParses(t, projection.Text)
+		want := "$run($join("
+		if strings.Contains(source, "for concurrent") {
+			want = "$run($forConcurrent("
+		}
+		assert.Assert(t, strings.Contains(projection.Text, want), "%s", projection.Text)
+	}
 }
