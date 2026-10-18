@@ -2,7 +2,7 @@ import { afterAll, expect, test } from "bun:test"
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
-import { type PageHovers, sanitize, trimDocs, updateHovers, words } from "./hovers"
+import { baseKey, type PageHovers, sanitize, trimDocs, updateHovers, words } from "./hovers"
 import { leaks } from "./leaks"
 
 test("hovers identifiers, keywords, the topic, and template substitutions, not comments or strings", () => {
@@ -90,4 +90,24 @@ test.skipIf(!existsSync(compiler))("no cached text contains a forbidden string",
   const hover = entry().blocks[0].nodes.find(n => n.type === "hover" && n.target === "increment" && n.line === 3)
   expect(hover?.type === "hover" && hover.docs).toBe(
     "Plain JavaScript: Effeck code calls it directly. TypeScript callers see `Effect.Effect<number, never, never>`.\n\nWraps Effect.succeed for the docs.")
+})
+
+test("another runtime directory changes every page's key", () => {
+  const runtime = (name: string, declarations: string) => {
+    const dir = join(root, name)
+    mkdirSync(join(dir, "dist"), { recursive: true })
+    writeFileSync(join(dir, "package.json"), '{"name":"effeck-runtime","version":"0.0.1"}')
+    writeFileSync(join(dir, "dist/index.d.ts"), declarations)
+    return dir
+  }
+  const binary = join(root, "key-binary")
+  writeFileSync(binary, "binary")
+  const keyWith = (dir: string) => {
+    const saved = process.env.EFFECK_RUNTIME_DIR
+    process.env.EFFECK_RUNTIME_DIR = dir
+    try { return baseKey(binary) } finally { if (saved === undefined) delete process.env.EFFECK_RUNTIME_DIR; else process.env.EFFECK_RUNTIME_DIR = saved }
+  }
+  const release = runtime("runtime-release", "export declare const a: 1\n")
+  expect(keyWith(release)).toBe(keyWith(release))
+  expect(keyWith(runtime("runtime-other", "export declare const a: 2\n"))).not.toBe(keyWith(release))
 })

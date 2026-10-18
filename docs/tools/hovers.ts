@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpath
 import { tmpdir } from "node:os"
 import { dirname, join, relative, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { type Block, defaultCompiler, extract, linkModules, markdownPages, writeProject } from "./check-snippets"
+import { type Block, defaultCompiler, extract, linkModules, markdownPages, runtimeDir, writeProject } from "./check-snippets"
 import { leaks } from "./leaks"
 import { ResponseError, type Server, startServer } from "./lsp"
 
@@ -31,7 +31,7 @@ const files = (dir: string): string[] =>
   readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)])
 
 // What every page's hovers depend on besides its blocks: the compiler binary,
-// the packages and runtime declarations that the projects import, and the
+// the packages and the runtime (runtimeDir) that the projects import, and the
 // tools that build the projects and the nodes.
 export function baseKey(compiler: string): string {
   const binary = compiler.includes("/") ? compiler : Bun.which(compiler)
@@ -40,7 +40,8 @@ export function baseKey(compiler: string): string {
     binary,
     ...["docs/tools/hovers.ts", "docs/tools/lsp.ts", "docs/tools/check-snippets.ts"].map(path => join(repo, path)),
     ...["experiments/bun.lock", "docs/tools/bun.lock", "packages/runtime/bun.lock", "packages/vite/src/index.d.ts"].map(path => join(repo, path)),
-    ...files(join(repo, "packages/runtime/dist")).filter(path => path.endsWith(".d.ts")).sort()
+    join(runtimeDir(), "package.json"),
+    ...files(join(runtimeDir(), "dist")).filter(path => path.endsWith(".d.ts")).sort()
   ]
   const hash = new Bun.CryptoHasher("sha256")
   for (const input of inputs) hash.update(readFileSync(input)).update("\0")

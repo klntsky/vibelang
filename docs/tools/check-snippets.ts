@@ -114,6 +114,12 @@ export function defaultCompiler(): string {
 let parser: typeof import("../../experiments/node_modules/typescript") | undefined
 const typescript = () => parser ??= createRequire(join(repo, "experiments/package.json"))("typescript") as NonNullable<typeof parser>
 
+// The effeck-runtime that page projects import. EFFECK_RUNTIME_DIR checks
+// against another one, such as a release tarball's package.
+export function runtimeDir(): string {
+  return process.env.EFFECK_RUNTIME_DIR || join(repo, "packages/runtime")
+}
+
 // Links the packages that every page project imports into temp/node_modules.
 export function linkModules(temp: string) {
   const modules = join(temp, "node_modules")
@@ -124,9 +130,9 @@ export function linkModules(temp: string) {
   // two copies a module augmentation such as `declare module "effect/Schema"`
   // can name the copy outside the program and fail with TS2664, depending on
   // which copy the parallel file loader reaches first.
-  // EFFECK_RUNTIME_DIR checks against another effeck-runtime, such as a release
-  // tarball's package; without its own node_modules it shares the repo's effect.
-  const runtime = process.env.EFFECK_RUNTIME_DIR || join(repo, "packages/runtime")
+  // A runtime without its own node_modules, such as a release tarball's
+  // package, shares the repo's effect.
+  const runtime = runtimeDir()
   const ownEffect = join(runtime, "node_modules/effect")
   const runtimeEffect = existsSync(join(ownEffect, "package.json")) ? ownEffect : join(repo, "packages/runtime/node_modules/effect")
   if (existsSync(join(runtimeEffect, "package.json"))) symlinkSync(realpathSync(runtimeEffect), join(modules, "effect"))
