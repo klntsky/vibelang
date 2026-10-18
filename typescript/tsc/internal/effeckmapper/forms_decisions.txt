@@ -918,7 +918,7 @@ typescript/effeck/cases/scopes-fork/main.effeck:85:22 lambda program table
 typescript/effeck/cases/scopes-fork/main.effeck:96:8 lambda program table
 typescript/effeck/cases/scopes-types/main.effeck:39:8 lambda program table
 typescript/effeck/cases/scopes-types/main.effeck:45:8 lambda program table
-typescript/effeck/cases/scopes-types/main.effeck:50:27 lambda choice fallback
+typescript/effeck/cases/scopes-types/main.effeck:50:27 lambda dual fallback
 typescript/effeck/cases/scopes-types/main.effeck:50:38 lambda program table
 typescript/effeck/cases/scopes-types/main.effeck:55:21 lambda program table
 typescript/effeck/cases/scopes-types/main.effeck:61:12 lambda effectFn service

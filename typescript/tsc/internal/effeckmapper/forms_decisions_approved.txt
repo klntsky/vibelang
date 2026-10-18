@@ -68,3 +68,6 @@ typescript/effeck/cases/lambda-forms/main.effeck:26:17 lambda: plain fallback ->
 typescript/effeck/cases/lambda-forms/main.effeck:31:16 lambda: dual fallback -> choice fallback # a function from another file may take either form by overload: the user chooses
 typescript/effeck/cases/lambda-forms/main.effeck:36:19 lambda: plain fallback -> choice fallback # a function from another file may take either form by overload (lambda-forms' attach): the user chooses
 typescript/effeck/cases/scopes-types/main.effeck:50:27 lambda: dual fallback -> choice fallback # the dual would defer a call not known to return an Effect: the user chooses
+
+# rules 4: a conditional or alias return type takes the module its branches agree on (a dual's data-last function branch counts as its result's module), so fork, forkScoped, forkChild, Effect.all, … return an Effect and the dual over them is safe.
+typescript/effeck/cases/scopes-types/main.effeck:50:27 lambda: choice fallback -> dual fallback # fork is Effect.forkScoped, whose conditional return is an Effect in both branches: the dual over it builds the same program

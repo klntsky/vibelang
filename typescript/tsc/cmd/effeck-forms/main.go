@@ -682,6 +682,82 @@ func (w *walker) typeModule(t *checker.Type) string {
 	return home
 }
 
+// nodeModule returns the module a written return type names when the type
+// itself does not: a conditional type whose branches agree (Effect.all's
+// All.Return picks among Effect shapes; a never branch says nothing), a
+// type alias, followed to its declaration, or, for a dual's conditional
+// return (Effect.forkScoped: an Effect when given one, else a data-last
+// function), a function branch of the conditional whose first parameter is
+// an Effect, which counts as the module of its own result. A data-last
+// signature's own function result names no module. Calls of such a function only
+// build a description, so the resolver may treat their result as that
+// module's.
+func (w *walker) nodeModule(node *ast.Node, depth int, branch bool) string {
+	if node == nil || depth > 6 {
+		return ""
+	}
+	c := w.c
+	switch node.Kind {
+	case ast.KindParenthesizedType:
+		return w.nodeModule(node.Type(), depth+1, branch)
+	case ast.KindNeverKeyword:
+		return "never"
+	case ast.KindConditionalType:
+		cond := node.AsConditionalTypeNode()
+		return agree(w.nodeModule(cond.TrueType, depth+1, true), w.nodeModule(cond.FalseType, depth+1, true))
+	case ast.KindUnionType:
+		module := "never"
+		for _, member := range node.AsUnionTypeNode().Types.Nodes {
+			if module = agree(module, w.nodeModule(member, depth+1, branch)); module == "" {
+				return ""
+			}
+		}
+		return module
+	case ast.KindFunctionType:
+		if !branch {
+			return "" // a data-last signature returns a function, not its result
+		}
+		params := node.Parameters()
+		if len(params) == 0 {
+			return ""
+		}
+		if _, effect := effeck.FormsOfType(c, c.GetTypeFromTypeNode(params[0].Type())); !effect {
+			return ""
+		}
+		return w.nodeModule(node.Type(), depth+1, false)
+	case ast.KindTypeReference:
+		if m := w.typeModule(c.GetTypeFromTypeNode(node)); m != "" {
+			return m
+		}
+		// A type alias: follow its declaration.
+		name := node.AsTypeReferenceNode().TypeName
+		symbol := c.GetSymbolAtLocation(name)
+		if symbol != nil && symbol.Flags()&ast.SymbolFlagsAlias != 0 {
+			symbol = c.GetAliasedSymbol(symbol)
+		}
+		if symbol != nil && symbol.Flags()&ast.SymbolFlagsTypeAlias != 0 {
+			for _, d := range symbol.Declarations() {
+				if d.Kind == ast.KindTypeAliasDeclaration {
+					return w.nodeModule(d.Type(), depth+1, branch)
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// agree joins two branch modules: never says nothing, and different
+// modules give none.
+func agree(a, b string) string {
+	switch {
+	case a == "never":
+		return b
+	case b == "never" || a == b:
+		return a
+	}
+	return ""
+}
+
 // receiverModules keeps the result modules that name a receiver with
 // methods (a D152 method module, or a module whose main type has own
 // methods) and drops the rest. It returns the value exports whose type is
@@ -701,7 +777,7 @@ func (w *walker) receiverModules(entries map[string][]effeckmapper.Signature) ma
 	}
 	for key, sigs := range entries {
 		for i := range sigs {
-			if !receivers[sigs[i].Result] {
+			if !receivers[sigs[i].Result] { // "" and "never" included
 				sigs[i].Result = ""
 			}
 			if !receivers[sigs[i].Runs] {
@@ -880,6 +956,11 @@ func (w *walker) signatures(t *checker.Type) []effeckmapper.Signature {
 		n := len(declared.Parameters())
 		ret := c.GetReturnTypeOfSignature(declared)
 		s := effeckmapper.Signature{Min: declared.MinArgumentCount(), Max: n, Rest: declared.HasRestParameter(), Result: w.typeModule(ret)}
+		if s.Result == "" {
+			if d := declared.Declaration(); d != nil && d.Type() != nil {
+				s.Result = w.nodeModule(d.Type(), 0, false)
+			}
+		}
 		if _, effect := effeck.FormsOfType(c, ret); effect {
 			if args := c.GetTypeArguments(ret); len(args) > 0 {
 				s.Runs = w.typeModule(args[0])

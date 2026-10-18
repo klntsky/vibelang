@@ -762,3 +762,27 @@ export function g() {
 		t.Errorf("catchTags' cases = %v, want E", c)
 	}
 }
+
+func TestConditionalReturnsNameTheirModule(t *testing.T) {
+	// forkScoped returns [Arg] extends [Effect] ? Effect<Fiber> : (self:
+	// Effect) => Effect<Fiber>; Effect.all returns All.Return, a
+	// conditional over Effect shapes. Both branches agree on effect/Effect.
+	for _, key := range []string{"effect/Effect#forkScoped", "effect/Effect#forkChild", "effeck-runtime#fork", "effect/Effect#all"} {
+		f := forms(t, key, 1)
+		for _, s := range f.Candidates {
+			if s.Result != "effect/Effect" {
+				t.Errorf("%s returns %q, want effect/Effect", key, s.Result)
+			}
+		}
+	}
+	// A data-last signature's own function result names no module.
+	if f := forms(t, "effect/Effect#catch", 1); f.Candidates[0].Result != "" {
+		t.Errorf("catch(f) returns %q, want no module", f.Candidates[0].Result)
+	}
+	// So the dual over fork(…) is safe: no choice.
+	r := resolve(t, `service Audit { record(event: string): void!! }
+export const background = () => fork(() => Audit.record("background"))`)
+	if d := r.lambda(t, "() => fork("); d.Choice != nil || d.Form != FormDual {
+		t.Errorf("() => fork(…) = %+v, want the dual with no choice", d)
+	}
+}
