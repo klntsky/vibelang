@@ -33,6 +33,27 @@ Code example count: one example per fenced code block in the source body, includ
   - [Building Pipelines](src/getting-started/011-building-pipelines.md): `v4/getting-started/building-pipelines.mdx`
   - [Devtools](src/getting-started/012-devtools.md): `v4/getting-started/devtools.mdx`
 
+### Setup
+
+- [Set up Effeck](src/setup.md)
+- **Start a project**
+  - [New project](src/setup/new-project.md)
+  - [Existing project](src/setup/existing-project.md)
+- **Build and test**
+  - [effeck CLI](src/setup/effeck-cli.md)
+  - [Vite and Vitest](src/setup/vite.md)
+  - [TypeScript 7 (coming soon)](src/setup/typescript-7.md)
+  - [Bundlers (coming soon)](src/setup/bundlers.md)
+- **Frameworks**
+  - [React (coming soon)](src/setup/react.md)
+  - [Svelte (coming soon)](src/setup/svelte.md)
+  - [Vue (coming soon)](src/setup/vue.md)
+- **Editors**
+  - [VS Code and Cursor](src/setup/vscode.md)
+  - [Neovim](src/setup/neovim.md)
+  - [Zed](src/setup/zed.md)
+  - [Other editors](src/setup/other-editors.md)
+
 ### Guides
 
 - [Getting Started](src/013-getting-started.md): `v4/getting-started.mdx`

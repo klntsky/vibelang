@@ -9,6 +9,16 @@ bun run start
 Effeck compiles `.effeck` sources to JavaScript with the native `effeck`
 compiler. Version 0.0.1 installs from npm.
 
+> **For agents.** To set up Effeck with a coding agent, give it this prompt:
+>
+> ```text
+> Set up Effeck in this project: read https://effeck.dev/setup.md and follow it.
+> ```
+>
+> The agent detects the project's package manager, build, and editor, and
+> follows the matching steps in [Set up Effeck](../setup.md), which you can
+> read too.
+
 ## Prerequisites
 
 Install Node 26 or later and Bun 1.4 or later. The compiler is a native binary.
