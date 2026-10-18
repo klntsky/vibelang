@@ -297,6 +297,25 @@ function splitMismatches(results: any[]) {
   return s
 }
 
+// keepsEffectInUnion reports whether a normalized fork declaration has an
+// Effect whose success channel is a union with an Effect or an Exit member.
+function keepsEffectInUnion(text: string): boolean {
+  for (const effect of effectTypesIn(text)) {
+    const inner = effect.slice("effect/Effect#Effect <".length, -1)
+    let depth = 0
+    let end = inner.length
+    for (let i = 0; i < inner.length; i++) {
+      const c = inner[i]
+      if (c === "<" || c === "(" || c === "[" || c === "{") depth++
+      else if (c === ">" || c === ")" || c === "]" || c === "}") depth--
+      else if (c === "," && depth === 0) { end = i; break }
+    }
+    const success = inner.slice(0, end)
+    if (/\|/.test(success) && /effect\/(Effect#Effect|Exit#Exit) </.test(success)) return true
+  }
+  return false
+}
+
 // passesPlainValue reports whether decl's code passes one of names, another
 // declaration's function, as an argument value: `f(name)` or `f(a, name)`,
 // not a call of it.
@@ -694,6 +713,7 @@ const classificationRules = [
   "recursive: the function calls itself, or sits on a call cycle with other top-level functions of its file (D52). L6 applies to a recursive function whose return annotation is missing or has an `infer` channel: it must write E and R.",
   "L7: the declaration's source calls `wire(...)` with more than one argument.",
   "L8: the declaration's source calls `K.pipe|of|use|key|name|length|call|apply|bind` where K is a class in the case's .ts files that extends a Context key.",
+  "L3: the fork declaration keeps an Effect or an Exit as data in a union inside an Effect's success channel (Effect<Effect<A> | U, E, R>); under L3 a call that returns an Effect at run time runs. This rule reads the fork reference, never the projector.",
   "L2: a top-level function (or const arrow function) with no return annotation whose fork declaration does not return Effect or Stream: under L2 it becomes an Effect function. This rule reads the fork reference, never the projector.",
   "generic: a top-level function with a type parameter list.",
   "Class precedence: failing, l4-l8, recursive, generic, concrete. A declaration with any lane is in the migration group; others are unchanged, whatever their class.",
@@ -740,6 +760,11 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
         const ret = returnType(canon(unit, file).exact, unit.kind)
         if (ret !== undefined && !effectTypes.test(ret)) lanes.push("L2")
       }
+      // L3: the fork keeps an Effect or an Exit as data inside a union in a
+      // success channel, as in Effect<Effect<A> | undefined, E, R>. Under
+      // L3 a call whose value is an Effect at run time runs, so its type is
+      // A | undefined. This reads the fork reference, never the projector.
+      if (decl && keepsEffectInUnion(canon(unit, file).exact.join(" "))) lanes.push("L3")
       // L2 at a use site: the declaration passes an unannotated .effeck
       // function as a value, as in `xs.map(double)`. The fork hands such a
       // callee its plain $direct variant; under L2 it is an Effect function
