@@ -27,13 +27,13 @@ package effeckmapper
 //     disagree at the node's path, the decision says Ambiguous.
 //  3. Lambda form (formsFormFor). The class picks the form. Where the call
 //     gives no class, the lambda's own return annotation does: an Effect or
-//     a contract (A!E) makes it an Effect function, any other type plain. Where both a plain
-//     function and an Effect form fit (D39), or no class is known, the body
-//     decides: a call outside tail position, a throw, an Effeck statement,
-//     or a using declaration make it an Effect function. A parameterless
-//     lambda takes the program or Effect function form its class names, and
-//     the dual form (both at once) where its class accepts both, or no class
-//     is known and its body calls anything.
+//     a contract (A!E) makes it an Effect function, any other type plain.
+//     Where both a plain function and an Effect form fit (D39), or nothing
+//     is known, the body decides: a call outside tail position, a throw, an
+//     Effeck statement, or a using declaration make it an Effect function.
+//     A parameterless lambda takes the program or Effect function form its
+//     class names, and the dual form (both at once) where its class accepts
+//     both, or no class is known and its body calls anything.
 //  4. Blocks (Resolver.Block). D188's order: a data-first dual takes the
 //     block first, a data-last dual is applied to it, and any other callee
 //     takes it appended. A moved block is a program.
@@ -246,6 +246,11 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 	}
 	if cls, note, ok := r.serviceMember(fn); ok {
 		d.Class, d.Provenance, d.Note = cls, FromService, note
+		d.Form = formsFormFor(cls, params, facts)
+		return d
+	}
+	if cls, note, ok := r.annotatedMember(fn); ok {
+		d.Class, d.Provenance, d.Note = cls, FromAnnotation, note
 		d.Form = formsFormFor(cls, params, facts)
 		return d
 	}
@@ -524,7 +529,7 @@ func formsBodyFacts(fn *ast.Node) formsBody {
 			}
 		case n.Kind == ast.KindThrowStatement:
 			f.pauses = true
-		case n.Flags&ast.NodeFlagsEffeck != 0:
+		case n.Flags&ast.NodeFlagsEffeck != 0 && !formsIsTopic(n): // %, a pipe's topic, is a value
 			f.pauses = true
 		case n.Kind == ast.KindVariableDeclarationList && n.Flags&ast.NodeFlagsUsing != 0:
 			f.pauses = true
@@ -632,8 +637,8 @@ func formsOwnerCall(node *ast.Node) (*ast.Node, int, []PathStep) {
 	var steps []PathStep
 	for parent := node.Parent; parent != nil; node, parent = parent, parent.Parent {
 		switch parent.Kind {
-		case ast.KindParenthesizedExpression:
-			continue
+		case ast.KindParenthesizedExpression, ast.KindAsExpression, ast.KindSatisfiesExpression, ast.KindNonNullExpression:
+			continue // [a, b] as const is still the argument
 		case ast.KindObjectLiteralExpression:
 			if node.Kind == ast.KindMethodDeclaration {
 				name, ok := formsPropertyName(node)
@@ -795,6 +800,16 @@ func (r *Resolver) calleeOf(root *ast.Node, chain []string, depth int) Callee {
 				return Callee{}
 			}
 			return Callee{Kind: CalleeLocal, Key: name, Signatures: []Signature{r.writtenSignature(init.Parameters(), init.Type())}}
+		}
+		// const runner = new Runner(): a method of a class this file declares.
+		if init.Kind == ast.KindNewExpression && len(chain) == 1 {
+			if ctor := ast.SkipParentheses(init.Expression()); ast.IsIdentifier(ctor) {
+				if class := r.binding(ctor, ctor.Text()); class != nil && class.Kind == ast.KindClassDeclaration {
+					if m := formsClassMember(class, chain[0]); m != nil && m.Kind == ast.KindMethodDeclaration {
+						return Callee{Kind: CalleeLocal, Key: name + "." + chain[0], Signatures: []Signature{r.writtenSignature(m.Parameters(), m.Type())}}
+					}
+				}
+			}
 		}
 		// const E = Effect, const all = Effect.all: follow the alias.
 		if depth < 4 && decl.Parent != nil && decl.Parent.Flags&ast.NodeFlagsConst != 0 {
@@ -1302,6 +1317,92 @@ func (r *Resolver) annotatedClass(fn *ast.Node) Class {
 		return r.classOfType(p.Type(), 0)
 	}
 	return 0
+}
+
+// annotatedMember decides a lambda or method that is a member of an object
+// literal whose type is written: the initializer of an annotated variable
+// (const file: LineFile = { readLine: () => … }) or the result of a function
+// with a written return type (make(): Banner!!Settings { return { … } }).
+// The member's written type in this file's interface, type literal, or
+// service gives the class: an Effect function when it returns an Effect.
+func (r *Resolver) annotatedMember(fn *ast.Node) (Class, string, bool) {
+	member, obj := fn, fn.Parent
+	if obj != nil && obj.Kind == ast.KindPropertyAssignment && obj.Initializer() == fn {
+		member, obj = obj, obj.Parent
+	}
+	if obj == nil || obj.Kind != ast.KindObjectLiteralExpression {
+		return 0, "", false
+	}
+	name, ok := formsPropertyName(member)
+	if !ok {
+		return 0, "", false
+	}
+	written := r.writtenTypeOf(obj)
+	if written == nil {
+		return 0, "", false
+	}
+	if t := formsUnwrapType(written); t != nil && t.Kind == ast.KindTypeReference && t.AsTypeReferenceNode().TypeName.Kind == ast.KindQualifiedName && t.AsTypeReferenceNode().TypeName.Flags&ast.NodeFlagsReparsed != 0 && len(t.TypeArguments()) == 3 {
+		written = t.TypeArguments()[0] // a contract A!E!R types its value A
+	}
+	t := formsUnwrapType(written)
+	if t == nil {
+		return 0, "", false
+	}
+	var m *ast.Node
+	if t.Kind == ast.KindTypeReference && ast.IsIdentifier(t.AsTypeReferenceNode().TypeName) {
+		if d := r.binding(t.AsTypeReferenceNode().TypeName, t.AsTypeReferenceNode().TypeName.Text()); d != nil && formsIsServiceClass(d) {
+			m = formsClassMember(d, name)
+		}
+	}
+	if m == nil {
+		if lit := r.typeLiteral(t, 0); lit != nil {
+			m = formsShapeMember(lit, name)
+		}
+	}
+	if m == nil {
+		return 0, "", false
+	}
+	note := "member " + name + " of a written type"
+	switch m.Kind {
+	case ast.KindMethodDeclaration, ast.KindMethodSignature:
+		if m.Type() == nil {
+			return 0, "", false
+		}
+		return r.memberClass(m.Type()), note, true
+	case ast.KindPropertyDeclaration, ast.KindPropertySignature:
+		if mt := formsUnwrapType(m.Type()); mt != nil && mt.Kind == ast.KindFunctionType {
+			return r.memberClass(mt.Type()), note, true
+		}
+	}
+	return 0, "", false
+}
+
+// writtenTypeOf returns the type written for the value of expr: the
+// annotation of the variable it initializes, or the return type of the
+// function whose return statement or expression body it is.
+func (r *Resolver) writtenTypeOf(expr *ast.Node) *ast.Node {
+	up := expr.Parent
+	for up != nil && (up.Kind == ast.KindParenthesizedExpression || up.Kind == ast.KindSatisfiesExpression) {
+		up = up.Parent
+	}
+	switch {
+	case up == nil:
+		return nil
+	case up.Kind == ast.KindVariableDeclaration && up.Type() != nil:
+		return up.Type()
+	case up.Kind == ast.KindReturnStatement:
+		for fn := up.Parent; fn != nil; fn = fn.Parent {
+			if formsBoundary(fn) {
+				if ast.IsFunctionLike(fn) {
+					return fn.Type()
+				}
+				return nil
+			}
+		}
+	case ast.IsArrowFunction(up) && up.Body() != nil && ast.SkipParentheses(up.Body()) == expr:
+		return up.Type()
+	}
+	return nil
 }
 
 // serviceMember decides a lambda or method in a service context: a member

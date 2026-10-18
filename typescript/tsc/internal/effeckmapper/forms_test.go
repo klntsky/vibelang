@@ -424,3 +424,44 @@ export function f(xs: number[]) {
 		}
 	}
 }
+
+func TestResolverSyntaxContexts(t *testing.T) {
+	r := resolve(t, `interface LineFile { readLine(): Effect<string | undefined, never, never> }
+service Banner {
+  text(title: string): string!!
+  static make(): Banner!! {
+    return { text: (title) => title }
+  }
+}
+class Runner {
+  run(name: string, program: () => string!!) { return name }
+}
+export function f() {
+  const tuple = Effect.all([() => 12] as const)
+  const file: LineFile = { readLine: () => undefined }
+  const made = 3 |> (() => % + 1)
+  const runner = new Runner()
+  return runner.run("job") {
+    return "done"
+  }
+}`)
+	// as const keeps the array an argument of Effect.all: its elements are programs.
+	if d := r.lambda(t, "() => 12"); d.Form != FormProgram || d.Provenance != FromTable {
+		t.Errorf("element under as const = %+v, want a program from the table", d)
+	}
+	// A member of an object typed by a written interface or service.
+	if d := r.lambda(t, "() => undefined"); d.Form != FormEffectFn || d.Provenance != FromAnnotation {
+		t.Errorf("LineFile.readLine = %+v, want an Effect function from the annotation", d)
+	}
+	if d := r.lambda(t, "(title) => title"); d.Form != FormEffectFn || d.Provenance != FromAnnotation {
+		t.Errorf("Banner.text returned by make() = %+v, want an Effect function", d)
+	}
+	// The topic is a value, not an Effeck statement.
+	if d := r.lambda(t, "() => % + 1"); d.Form != FormPlain {
+		t.Errorf("lambda over the topic = %+v, want plain", d)
+	}
+	// A method of a class this file declares, through new.
+	if d := r.block(t, `runner.run("job")`); d.Form != FormEffectFn || d.Placement != BlockAppended || d.Provenance != FromAnnotation {
+		t.Errorf("runner.run block = %+v, want an appended Effect function", d)
+	}
+}
