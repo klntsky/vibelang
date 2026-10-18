@@ -1,6 +1,6 @@
 // Checks the repository content smithers.sh serves for VibeLang: the guest chat's instructions
 // (.smithers/instructions/app.md), the repo home (.smithers/home.json), the convert flow's prompt and
-// the effeck.dev hero (docs/site/converter/hero.json). It blocks the docs deploy, because these files
+// the vibelang.sh hero (docs/site/converter/hero.json). It blocks the docs deploy, because these files
 // are what the converter, the repo home and the chat say about VibeLang.
 //
 //   bun docs/tools/check-smithers-content.ts
@@ -24,10 +24,10 @@ export function linkTarget(url: string): { file?: string; ok?: true; error?: str
   let parsed: URL
   try { parsed = new URL(url) } catch { return { error: "not a URL" } }
   if (parsed.protocol !== "https:") return { error: "not https" }
-  if (parsed.hostname === "effeck.dev") {
+  if (["vibelang.sh", "effeck.dev"].includes(parsed.hostname)) {
     if (parsed.pathname === "/" || parsed.pathname === "") return { ok: true }
     const page = parsed.pathname.replace(/^\//, "")
-    if (!page.endsWith(".html")) return { error: "an effeck.dev page ends in .html" }
+    if (!page.endsWith(".html")) return { error: "a docs page ends in .html" }
     const md = page.replace(/\.html$/, ".md")
     return page.startsWith("spec/") ? { file: join("docs/design/src", md.slice("spec/".length)) } : { file: join("docs/user/src", md) }
   }
@@ -36,7 +36,7 @@ export function linkTarget(url: string): { file?: string; ok?: true; error?: str
     if (blob) return { file: decodeURIComponent(blob[1]) }
     if (parsed.pathname === "/effeck/effeck/issues" || parsed.pathname === "/effeck/effeck") return { ok: true }
   }
-  return { error: "links go to effeck.dev pages or effeck/effeck on smithers.sh only" }
+  return { error: "links go to vibelang.sh pages or effeck/effeck on smithers.sh only" }
 }
 
 export function links(markdown: string): string[] {

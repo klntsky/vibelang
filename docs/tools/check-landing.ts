@@ -64,8 +64,8 @@ console.log("PASS: first-load resource requests = 0 (source audit: one hashed in
 
 let failures = 0
 for (const href of hrefs) {
-  const url = new URL(href, "https://effeck.dev")
-  if (url.origin === "https://effeck.dev") {
+  const url = new URL(href, "https://vibelang.sh")
+  if (url.origin === "https://vibelang.sh") {
     assert(existsSync(join(site, url.pathname)), `missing local link: ${href}`)
     console.log(`PASS: ${href} resolves in the built site`)
   } else if (process.argv.includes("--online")) {

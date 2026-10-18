@@ -162,7 +162,7 @@ its text and drops the link.
 
 Each page is also written as Markdown beside its HTML, at the same path with
 `.md`, with links to pages rewritten to their `.md` copies on
-`https://effeck.dev`. `index.md` and `spec/index.md` repeat the first pages.
+`https://vibelang.sh`. `index.md` and `spec/index.md` repeat the first pages.
 `llms.txt` lists every copy in the llmstxt.org format, one section per sidebar
 view, with a page's sidebar group as its note.
 
@@ -172,7 +172,7 @@ view, with a page's sidebar group as its note.
 bun docs/tools/check-smithers-content.ts
 ```
 
-Checks the files smithers.sh reads from VibeLang's `main`, and the effeck.dev hero. It exits 1 on any problem.
+Checks the files smithers.sh reads from VibeLang's `main`, and the vibelang.sh hero. It exits 1 on any problem.
 
 - `.smithers/instructions/app.md`, the guest chat's whole knowledge base:
   - it stays under 24 KiB;

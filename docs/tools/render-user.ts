@@ -585,7 +585,7 @@ fail("checking links")
 // bare specification fragment moves to its chapter as on the HTML page, and a
 // link to a repository file that is not a page keeps only its text. Code keeps
 // its text. llms.txt (llmstxt.org) lists the copies, one section per sidebar view.
-const origin = "https://effeck.dev"
+const origin = "https://vibelang.sh"
 // A code span, which stays as written, or an inline link, the only link form the sources use.
 const LINK = /(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)|\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\(([^()\s]*)\)/g
 const lexer = new Marked({ gfm: true })
