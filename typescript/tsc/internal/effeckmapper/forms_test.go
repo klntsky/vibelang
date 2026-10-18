@@ -222,7 +222,7 @@ func TestTableFormatRoundTrips(t *testing.T) {
 		entries[k] = table.Signatures(k)
 	}
 	var buf bytes.Buffer
-	if err := WriteTable(&buf, table.Header, entries, table.Aliases()); err != nil {
+	if err := WriteTable(&buf, table.Header, entries, table.Aliases(), table.Values()); err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(buf.Bytes(), embeddedTable) {
@@ -482,5 +482,32 @@ func TestBlockPlacementOnAValue(t *testing.T) {
 	d := r.block(t, "semaphore.withPermits(1)")
 	if d.Placement != BlockApplied || d.Form != FormProgram || d.Provenance != FromTable {
 		t.Errorf("semaphore.withPermits block = %+v, want applied program from the method table", d)
+	}
+}
+
+func TestResolverReceiverModule(t *testing.T) {
+	// catchTag and timeoutOrElse take an Effect function on an Effect and a
+	// plain one on a Stream. Scope names the Stream receiver three ways: a
+	// written type, a value export, and a call whose result the table
+	// records. A top-level Effect call names an Effect receiver.
+	r := resolve(t, `export function recover(source: Stream.Stream<string, "NotReady">) {
+  return source.catchTag("NotReady", () => Stream.succeed("pending"))
+}
+export const idle = Stream.never.timeoutOrElse({ duration: "1 second", orElse: () => Stream.make("a") })
+export const boundary = Stream.die("x").catchDefect(() => Stream.succeed("unreadable"))
+export const bumped = Effect.succeed(1).flatMap((n) => Effect.succeed(n + 1))`)
+	for _, c := range []struct {
+		text string
+		form Form
+		note string
+	}{
+		{`() => Stream.succeed("pending")`, FormPlain, "method catchTag of effect/Stream"},
+		{`() => Stream.make("a")`, FormPlain, "method timeoutOrElse of effect/Stream"},
+		{`() => Stream.succeed("unreadable")`, FormPlain, "method catchDefect of effect/Stream"},
+		{"(n) => Effect.succeed", FormEffectFn, "method flatMap of effect/Effect"},
+	} {
+		if d := r.lambda(t, c.text); d.Form != c.form || d.Note != c.note {
+			t.Errorf("%s = %v (%s), want %v (%s)", c.text, d.Form, d.Note, c.form, c.note)
+		}
 	}
 }

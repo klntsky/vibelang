@@ -46,7 +46,10 @@ package effeckmapper
 //     members of effect's data types, and the self-first functions D152
 //     makes their methods. xs.map(f) passes a plain function; flatMap,
 //     whose callback is an Effect function on an Effect and plain on a
-//     Stream, gives no class. A block after such a call goes where every
+//     Stream, gives no class, unless scope names the receiver's module: a
+//     written type (s: Stream.Stream<A>), a call whose result the table
+//     records (Stream.make(…)), or a value export (Stream.never). A block
+//     after such a call goes where every
 //     receiver whose method takes the arguments puts it, as D188 orders.
 //  7. Service context. A lambda or method that is a member of an object
 //     literal providing a service (Layer.succeed(K, {…}), K.of({…}), the
@@ -419,7 +422,8 @@ func (r *Resolver) methodClassAt(name string, call *ast.Node, arg int, steps []P
 	all := ClassProgram | ClassEffectFn | ClassPlainFn
 	cls, seen, differ := all, 0, false
 	var first Class
-	for _, m := range r.table.methodReceivers(name) {
+	receivers, module := r.receiversOf(call, name)
+	for _, m := range receivers {
 		sigs := m.sigs
 		if m.self {
 			sigs = formsDropSelf(sigs)
@@ -444,7 +448,134 @@ func (r *Resolver) methodClassAt(name string, call *ast.Node, arg int, steps []P
 	if seen == 0 || cls == 0 {
 		return 0, false, ""
 	}
+	if module != "" {
+		return cls, differ, "method " + name + " of " + module
+	}
 	return cls, differ, "method " + name + " on " + strconv.Itoa(seen) + " receivers"
+}
+
+// receiversOf returns the receivers whose method name a call x.name(…)
+// may reach: the one module scope names for x when it has the method, else
+// every receiver with a method of that name.
+func (r *Resolver) receiversOf(call *ast.Node, name string) ([]methodReceiver, string) {
+	all := r.table.methodReceivers(name)
+	e := ast.SkipParentheses(call.Expression())
+	if !ast.IsPropertyAccessExpression(e) {
+		return all, ""
+	}
+	module := r.receiverModule(e.Expression(), 0)
+	if module == "" {
+		return all, ""
+	}
+	var mine []methodReceiver
+	for _, m := range all {
+		if m.receiver == module {
+			mine = append(mine, m)
+		}
+	}
+	if len(mine) == 0 {
+		return all, ""
+	}
+	return mine, module
+}
+
+// receiverModule names, from syntax, the module whose data type the
+// expression x in x.name(…) has: a call of a table function whose result
+// is that module's type (Stream.make(…)), a value export (Stream.never), or
+// a binding whose written type (s: Stream.Stream<A>) or initializer says so.
+// It returns "" when scope cannot tell. A call that returns an Effect
+// inside a function body runs there (D24), so it names no receiver.
+func (r *Resolver) receiverModule(expr *ast.Node, depth int) string {
+	expr = ast.SkipParentheses(expr)
+	if depth > 3 || r.table == nil {
+		return ""
+	}
+	if ast.IsCallExpression(expr) {
+		c := r.Callee(expr)
+		if c.Kind != CalleeTable {
+			return ""
+		}
+		_, sigs, ok := r.table.Lookup(c.Key)
+		if !ok {
+			return ""
+		}
+		module := ""
+		for _, s := range formsCandidates(sigs, len(expr.Arguments())) {
+			if s.Result == "" || module != "" && s.Result != module {
+				return ""
+			}
+			module = s.Result
+		}
+		if module == "effect/Effect" && formsInFunction(expr) {
+			return ""
+		}
+		return module
+	}
+	root, chain, ok := formsNameChain(expr)
+	if !ok {
+		return ""
+	}
+	if len(chain) > 0 {
+		if c := r.calleeOf(root, chain, 0); c.Kind == CalleeTable {
+			return r.table.ValueModule(c.Key)
+		}
+		return ""
+	}
+	d := r.binding(root, root.Text())
+	if d == nil {
+		return r.table.ValueModule("prelude#" + root.Text())
+	}
+	switch d.Kind {
+	case ast.KindParameter, ast.KindVariableDeclaration:
+		if t := d.Type(); t != nil {
+			return r.typeModuleOf(t)
+		}
+		if d.Kind == ast.KindVariableDeclaration && d.Initializer() != nil {
+			return r.receiverModule(d.Initializer(), depth+1)
+		}
+	case ast.KindImportSpecifier:
+		if c := r.calleeOf(root, nil, 0); c.Kind == CalleeTable {
+			return r.table.ValueModule(c.Key)
+		}
+	}
+	return ""
+}
+
+// typeModuleOf returns the module a written type names as its own data
+// type: Stream.Stream<A> is effect/Stream's Stream.
+func (r *Resolver) typeModuleOf(t *ast.Node) string {
+	t = formsUnwrapType(t)
+	if t == nil || t.Kind != ast.KindTypeReference {
+		return ""
+	}
+	name := t.AsTypeReferenceNode().TypeName
+	if name.Kind != ast.KindQualifiedName {
+		return ""
+	}
+	q := name.AsQualifiedName()
+	left := q.Left
+	if !ast.IsIdentifier(left) {
+		return ""
+	}
+	c := r.calleeOf(left, []string{q.Right.Text()}, 0)
+	if c.Kind != CalleeTable {
+		return ""
+	}
+	module, export, ok := strings.Cut(c.Canonical, "#")
+	if !ok || module[strings.LastIndex(module, "/")+1:] != export {
+		return ""
+	}
+	return module
+}
+
+// formsInFunction reports whether node is inside a function body.
+func formsInFunction(node *ast.Node) bool {
+	for n := node.Parent; n != nil; n = n.Parent {
+		if ast.IsFunctionLike(n) {
+			return true
+		}
+	}
+	return false
 }
 
 // methodBlock places the block of a method call whose receiver is unknown,
@@ -459,7 +590,8 @@ func (r *Resolver) methodBlock(name string, call *ast.Node, n int) (Placement, C
 	var placement Placement
 	var cls Class
 	seen := 0
-	for _, m := range r.table.methodReceivers(name) {
+	receivers, _ := r.receiversOf(call, name)
+	for _, m := range receivers {
 		sigs := m.sigs
 		if m.self {
 			sigs = formsDropSelf(sigs)

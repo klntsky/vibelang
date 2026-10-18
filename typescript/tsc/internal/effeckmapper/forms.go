@@ -166,6 +166,9 @@ type Signature struct {
 	// OrOptions): effect's data-first form, which D152 offers as a method of
 	// the module's data type with that parameter as the receiver.
 	Self bool
+	// Result is the module whose type the signature returns, when that
+	// module's values have methods: effect/Stream for Stream.make.
+	Result string
 }
 
 // Accepts reports whether s takes argc arguments.
@@ -246,6 +249,7 @@ type Table struct {
 	Header  Header
 	entries map[string][]Signature
 	aliases map[string]string
+	values  map[string]string // value export -> the module of its type, when it has methods
 
 	methodOnce sync.Once
 	methods    map[string][]methodReceiver // method name -> receivers
@@ -254,7 +258,23 @@ type Table struct {
 // NewTable returns a table that holds entries and aliases. An alias maps a
 // key, or a module path without #, to its canonical key or module path.
 func NewTable(header Header, entries map[string][]Signature, aliases map[string]string) *Table {
-	return &Table{Header: header, entries: entries, aliases: aliases}
+	return &Table{Header: header, entries: entries, aliases: aliases, values: map[string]string{}}
+}
+
+// SetValues records, for value exports such as effect/Stream#never, the
+// module whose type they have, when that module's values have methods.
+func (t *Table) SetValues(values map[string]string) { t.values = values }
+
+// Values returns the value exports SetValues recorded.
+func (t *Table) Values() map[string]string { return t.values }
+
+// ValueModule returns the module of the type of the value export callee
+// names, after aliases, or "".
+func (t *Table) ValueModule(callee string) string {
+	if m, ok := t.values[callee]; ok {
+		return m
+	}
+	return t.values[t.Canonical(callee)]
 }
 
 var (
@@ -449,10 +469,12 @@ func (t *Table) Aliases() map[string]string { return t.aliases }
 
 // The file format: JSON lines. The first line is the Header. Then one line
 // per alias, {"alias":name,"to":target}, sorted by name, and one line per
-// key, {"key":key,"sigs":[signature...]}, sorted by key. A signature is
-// {"n":arity,"p":[param...],"df":1,"dl":1}: arity "2" or "1-3", with "+"
-// for a rest parameter ("1-2+"); a param is "" or a class string when only
-// its top level has a class, else {"t":top,"e":elem,"p":{name:class},"a":any}.
+// value export whose type's module has methods, {"value":key,"module":m},
+// sorted, and one line per key, {"key":key,"sigs":[signature...]}, sorted by
+// key. A signature is {"n":arity,"p":[param...],"df":1,"dl":1,"sf":1,"r":m}:
+// arity "2" or "1-3", with "+" for a rest parameter ("1-2+"); a param is ""
+// or a class string when only its top level has a class, else
+// {"t":top,"e":elem,"p":{name:class},"a":any}; r is Result.
 
 type aliasLine struct {
 	Alias string `json:"alias"`
@@ -464,12 +486,18 @@ type keyLine struct {
 	Sigs []signatureJSON `json:"sigs"`
 }
 
+type valueLine struct {
+	Value  string `json:"value"`
+	Module string `json:"module"`
+}
+
 type signatureJSON struct {
 	N         string            `json:"n"`
 	P         []json.RawMessage `json:"p,omitempty"`
 	DataFirst int               `json:"df,omitempty"`
 	DataLast  int               `json:"dl,omitempty"`
 	Self      int               `json:"sf,omitempty"`
+	Result    string            `json:"r,omitempty"`
 }
 
 type paramJSON struct {
@@ -479,9 +507,9 @@ type paramJSON struct {
 	A string            `json:"a,omitempty"`
 }
 
-// WriteTable writes header, aliases, and entries in the file format,
-// sorted, so the same inputs always give the same bytes.
-func WriteTable(w io.Writer, header Header, entries map[string][]Signature, aliases map[string]string) error {
+// WriteTable writes header, aliases, values, and entries in the file
+// format, sorted, so the same inputs always give the same bytes.
+func WriteTable(w io.Writer, header Header, entries map[string][]Signature, aliases map[string]string, values map[string]string) error {
 	header.Keys, header.Aliases = len(entries), len(aliases)
 	bw := bufio.NewWriter(w)
 	line := func(v any) error {
@@ -502,6 +530,16 @@ func WriteTable(w io.Writer, header Header, entries map[string][]Signature, alia
 	slices.Sort(names)
 	for _, name := range names {
 		if err := line(aliasLine{Alias: name, To: aliases[name]}); err != nil {
+			return err
+		}
+	}
+	valueKeys := make([]string, 0, len(values))
+	for v := range values {
+		valueKeys = append(valueKeys, v)
+	}
+	slices.Sort(valueKeys)
+	for _, v := range valueKeys {
+		if err := line(valueLine{Value: v, Module: values[v]}); err != nil {
 			return err
 		}
 	}
@@ -572,12 +610,13 @@ func encodeSignature(s Signature) signatureJSON {
 	if s.Self {
 		out.Self = 1
 	}
+	out.Result = s.Result
 	return out
 }
 
 // ReadTable parses a table in the file format.
 func ReadTable(r io.Reader) (*Table, error) {
-	t := &Table{entries: map[string][]Signature{}, aliases: map[string]string{}}
+	t := &Table{entries: map[string][]Signature{}, aliases: map[string]string{}, values: map[string]string{}}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 1<<16), 1<<24)
 	first := true
@@ -595,6 +634,7 @@ func ReadTable(r io.Reader) (*Table, error) {
 		}
 		var probe struct {
 			Alias *string `json:"alias"`
+			Value *string `json:"value"`
 		}
 		if err := json.Unmarshal(data, &probe); err != nil {
 			return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
@@ -605,6 +645,14 @@ func ReadTable(r io.Reader) (*Table, error) {
 				return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
 			}
 			t.aliases[a.Alias] = a.To
+			continue
+		}
+		if probe.Value != nil {
+			var v valueLine
+			if err := json.Unmarshal(data, &v); err != nil {
+				return nil, fmt.Errorf("forms: line %d: %w", lineNo, err)
+			}
+			t.values[v.Value] = v.Module
 			continue
 		}
 		var k keyLine
@@ -682,5 +730,6 @@ func decodeSignature(sj signatureJSON) (Signature, error) {
 	s.DataFirst = sj.DataFirst != 0
 	s.DataLast = sj.DataLast != 0
 	s.Self = sj.Self != 0
+	s.Result = sj.Result
 	return s, nil
 }

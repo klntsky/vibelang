@@ -119,7 +119,7 @@ func main() {
 		}
 		w = f
 	}
-	if err := effeckmapper.WriteTable(w, g.header, g.entries, g.aliases); err != nil {
+	if err := effeckmapper.WriteTable(w, g.header, g.entries, g.aliases, g.values); err != nil {
 		fail(err)
 	}
 	if f != nil {
@@ -173,6 +173,7 @@ type generated struct {
 	header  effeckmapper.Header
 	entries map[string][]effeckmapper.Signature
 	aliases map[string]string
+	values  map[string]string
 	walked  int
 }
 
@@ -233,7 +234,7 @@ func generate(nodeModules, runtime string) (*generated, error) {
 	if file == nil {
 		return nil, fmt.Errorf("the root file did not load")
 	}
-	w := &walker{c: c, runtime: runtime, nodeModules: nodeModules, reach: map[*ast.Symbol][]reached{}, modulePaths: map[*ast.Symbol]string{}, sigs: map[string][]effeckmapper.Signature{}, aliases: map[string]string{}}
+	w := &walker{c: c, runtime: runtime, nodeModules: nodeModules, reach: map[*ast.Symbol][]reached{}, modulePaths: map[*ast.Symbol]string{}, sigs: map[string][]effeckmapper.Signature{}, aliases: map[string]string{}, valueTypes: map[string]string{}}
 	for i, statement := range file.Statements.Nodes {
 		if statement.Kind != ast.KindImportDeclaration {
 			continue
@@ -248,7 +249,8 @@ func generate(nodeModules, runtime string) (*generated, error) {
 	w.prelude(file)
 	entries := w.finish()
 	w.methods(entries)
-	g := &generated{entries: entries, aliases: w.aliases, walked: w.walked}
+	values := w.receiverModules(entries)
+	g := &generated{entries: entries, aliases: w.aliases, values: values, walked: w.walked}
 	inputs, err := pinInputs(p, runtime)
 	if err != nil {
 		return nil, err
@@ -350,6 +352,7 @@ type walker struct {
 	values      []*ast.Symbol // in the order first reached
 	sigs        map[string][]effeckmapper.Signature
 	aliases     map[string]string
+	valueTypes  map[string]string // canonical key of a value export -> the module of its type
 	order       int
 	walked      int
 }
@@ -489,9 +492,87 @@ func (w *walker) finish() map[string][]effeckmapper.Signature {
 				w.aliases[r.key] = canonical.key
 			}
 		}
-		w.record(entries, canonical.key, w.c.GetTypeOfSymbol(value), 0)
+		t := w.c.GetTypeOfSymbol(value)
+		if m := w.typeModule(t); m != "" {
+			w.valueTypes[canonical.key] = m
+		}
+		w.record(entries, canonical.key, t, 0)
 	}
 	return entries
+}
+
+// typeModule returns the module path that declares t's type, or "".
+func (w *walker) typeModule(t *checker.Type) string {
+	if t == nil {
+		return ""
+	}
+	if t.Flags()&checker.TypeFlagsUnion != 0 {
+		home := ""
+		for _, member := range t.Types() {
+			m := w.typeModule(member)
+			if m == "" || home != "" && m != home {
+				return ""
+			}
+			home = m
+		}
+		return home
+	}
+	symbol := t.Symbol()
+	if symbol == nil || strings.HasPrefix(symbol.Name(), "__") || symbol.Flags()&(ast.SymbolFlagsInterface|ast.SymbolFlagsClass|ast.SymbolFlagsTypeAlias) == 0 {
+		return "" // a function or object literal type is no receiver
+	}
+	// An interface merged across files belongs to the module named like it:
+	// Stream to effect/Stream, not to a module that augments it.
+	home := ""
+	for _, d := range symbol.Declarations() {
+		file := ast.GetSourceFileOfNode(d)
+		if file == nil {
+			continue
+		}
+		path := w.publicPath(string(file.FileName()))
+		if path != "" && path[strings.LastIndex(path, "/")+1:] == symbol.Name() {
+			return path
+		}
+		if home == "" {
+			home = path
+		}
+	}
+	return home
+}
+
+// receiverModules keeps the result modules that name a receiver with
+// methods (a D152 method module, or a module whose main type has own
+// methods) and drops the rest. It returns the value exports whose type is
+// such a receiver.
+func (w *walker) receiverModules(entries map[string][]effeckmapper.Signature) map[string]string {
+	receivers := map[string]bool{}
+	for _, m := range methodModules {
+		receivers["effect/"+m] = true
+	}
+	for key := range entries {
+		if rest, ok := strings.CutPrefix(key, "method:"); ok {
+			receivers[rest[:strings.IndexByte(rest, '#')]] = true
+		}
+	}
+	for key, sigs := range entries {
+		for i := range sigs {
+			if !receivers[sigs[i].Result] {
+				sigs[i].Result = ""
+			}
+		}
+		if !carriesForm(sigs) && !hasResult(sigs) {
+			delete(entries, key)
+			continue
+		}
+		entries[key] = sigs
+	}
+	values := map[string]string{}
+	for key, m := range w.valueTypes {
+		if receivers[m] {
+			values[key] = m
+		}
+	}
+	return values
 }
 
 // methods records the own methods of the lib's collection types and of
@@ -580,8 +661,8 @@ func (w *walker) record(entries map[string][]effeckmapper.Signature, key string,
 	}
 	if sigs := w.signatures(t); len(sigs) > 0 {
 		w.walked++
-		if carriesForm(sigs) {
-			entries[key] = sigs
+		if carriesForm(sigs) || hasResult(sigs) {
+			entries[key] = sigs // receiverModules drops the form-less ones whose result names no receiver
 		}
 	}
 	if depth >= 2 || t.Flags()&checker.TypeFlagsObject == 0 {
@@ -605,6 +686,15 @@ func (w *walker) record(entries map[string][]effeckmapper.Signature, key string,
 		}
 		w.record(entries, key+"."+name, pt, depth+1)
 	}
+}
+
+func hasResult(sigs []effeckmapper.Signature) bool {
+	for _, s := range sigs {
+		if s.Result != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func carriesForm(sigs []effeckmapper.Signature) bool {
@@ -640,7 +730,7 @@ func (w *walker) signatures(t *checker.Type) []effeckmapper.Signature {
 	for _, sig := range c.GetSignaturesOfType(t, checker.SignatureKindCall) {
 		declared := declaredSignature(c, sig)
 		n := len(declared.Parameters())
-		s := effeckmapper.Signature{Min: declared.MinArgumentCount(), Max: n, Rest: declared.HasRestParameter()}
+		s := effeckmapper.Signature{Min: declared.MinArgumentCount(), Max: n, Rest: declared.HasRestParameter(), Result: w.typeModule(c.GetReturnTypeOfSignature(declared))}
 		for i := range n {
 			s.Params = append(s.Params, w.param(c.GetTypeAtPosition(declared, i)))
 		}
