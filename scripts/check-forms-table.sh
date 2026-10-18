@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Check that the committed forms table is what the generator writes today.
+# Check that the committed forms table, and the decisions it makes, are
+# what the generator and the resolver give today.
 #
-#   scripts/check-forms-table.sh           regenerate into a temporary file; exit 1 on any difference
-#   scripts/check-forms-table.sh --write   regenerate typescript/tsc/internal/effeckmapper/forms_table.jsonl
+#   scripts/check-forms-table.sh           regenerate both into a temporary directory; exit 1 on any difference
+#   scripts/check-forms-table.sh --write   regenerate forms_table.jsonl and forms_decisions.txt
+#
+# forms_decisions.txt records what the resolver decides at every lambda,
+# block, and by-name argument of the repository's .effeck files
+# (typescript/effeck, examples, templates). --write refuses a decision that
+# moved at a site the snapshot already has unless
+# forms_decisions_approved.txt names the move, one line each:
+#
+#   typescript/effeck/cases/x/main.effeck:12:7 lambda: plain fallback -> effectFn table # why it is right
 #
 # The table (L1, internal/effeckmapper/forms.go) is generated from the pinned
 # declarations of effect, @effect/*, and effeck-runtime by cmd/effeck-forms,
@@ -17,7 +26,10 @@
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-table="$root/typescript/tsc/internal/effeckmapper/forms_table.jsonl"
+dir="$root/typescript/tsc/internal/effeckmapper"
+table="$dir/forms_table.jsonl"
+decisions="$dir/forms_decisions.txt"
+approved="$dir/forms_decisions_approved.txt"
 write=0
 case "${1:-}" in
   --write) write=1 ;;
@@ -42,16 +54,29 @@ if [ -n "${FORMS_NODE_MODULES:-}" ]; then
   modules=(-node-modules "$FORMS_NODE_MODULES")
 fi
 
-(cd "$root/typescript/tsc" && CGO_ENABLED=0 go run -trimpath ${overlay[@]+"${overlay[@]}"} ./cmd/effeck-forms -repo "$root" ${modules[@]+"${modules[@]}"} -o "$tmp/forms_table.jsonl")
+gate=()
+if [ "$write" = 1 ]; then
+  gate=(-previous "$decisions" -approved "$approved")
+fi
+(cd "$root/typescript/tsc" && CGO_ENABLED=0 go run -trimpath ${overlay[@]+"${overlay[@]}"} ./cmd/effeck-forms -repo "$root" ${modules[@]+"${modules[@]}"} \
+  -o "$tmp/forms_table.jsonl" -decisions "$tmp/forms_decisions.txt" ${gate[@]+"${gate[@]}"})
 
 if [ "$write" = 1 ]; then
   cp "$tmp/forms_table.jsonl" "$table"
-  echo "check-forms-table: wrote ${table#"$root"/}"
+  cp "$tmp/forms_decisions.txt" "$decisions"
+  echo "check-forms-table: wrote ${table#"$root"/} and ${decisions#"$root"/}"
   exit 0
 fi
+status=0
 if ! cmp -s "$tmp/forms_table.jsonl" "$table"; then
   diff -u "$table" "$tmp/forms_table.jsonl" | head -20 >&2 || true
   echo "check-forms-table: forms_table.jsonl differs from a fresh generation; run scripts/check-forms-table.sh --write" >&2
-  exit 1
+  status=1
 fi
-echo "check-forms-table: ok, forms_table.jsonl matches a fresh generation"
+if ! cmp -s "$tmp/forms_decisions.txt" "$decisions"; then
+  diff -u "$decisions" "$tmp/forms_decisions.txt" | grep '^[-+][^-+]' | head -20 >&2 || true
+  echo "check-forms-table: decisions differ from forms_decisions.txt; run scripts/check-forms-table.sh --write (a moved decision needs a line in forms_decisions_approved.txt)" >&2
+  status=1
+fi
+[ "$status" = 0 ] && echo "check-forms-table: ok, forms_table.jsonl and forms_decisions.txt match a fresh generation"
+exit "$status"

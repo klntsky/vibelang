@@ -1,0 +1,10 @@
+# Approved decision moves for forms_decisions.txt (scripts/check-forms-table.sh --write).
+#
+# A regenerated table or a resolver change that changes what the resolver
+# decides at a site forms_decisions.txt already has must name each move here,
+# with a reason, before --write records it. One line per move:
+#
+#   <path>:<line>:<col> <kind>: <old result> <old provenance> -> <new result> <new provenance> # reason
+#
+# Entries stay as the history of reviewed moves. Bump effeckmapper.RulesVersion
+# when the classifier, the generator, or the resolver moved them.

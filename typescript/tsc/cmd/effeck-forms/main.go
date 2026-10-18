@@ -20,8 +20,6 @@ package main
 import (
 	"cmp"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -74,6 +72,9 @@ func main() {
 	nodeModules := flag.String("node-modules", "", "directory holding effect and @effect/* (default docs/tools/node_modules)")
 	runtime := flag.String("runtime", "", "effeck-runtime's source directory (default packages/runtime/src)")
 	out := flag.String("o", "", "output file (default stdout)")
+	decisions := flag.String("decisions", "", "also write the decision snapshot here (see decisions.go)")
+	previous := flag.String("previous", "", "the committed decision snapshot: fail if a decision moved without an approval")
+	approved := flag.String("approved", "", "the approvals file for -previous")
 	stats := flag.Bool("stats", false, "print counts and timing to stderr")
 	flag.Parse()
 	root := *repo
@@ -94,6 +95,32 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
+	var lines []string
+	if *decisions != "" {
+		table := effeckmapper.NewTable(g.header, g.entries, g.aliases)
+		table.SetValues(g.values)
+		table.SetModules(g.modules)
+		if lines, err = decisionLines(root, table); err != nil {
+			fail(err)
+		}
+		if *previous != "" {
+			prev, err := readLines(*previous)
+			if err != nil {
+				fail(err)
+			}
+			approvals, err := readLines(*approved)
+			if err != nil {
+				fail(err)
+			}
+			if moved := unapprovedMoves(prev, lines, approvals); len(moved) > 0 {
+				fmt.Fprintf(os.Stderr, "effeck-forms: %d decisions moved without an approval; add each line, with a reason after #, to %s:\n", len(moved), *approved)
+				for _, m := range moved {
+					fmt.Fprintln(os.Stderr, "  "+m)
+				}
+				os.Exit(1)
+			}
+		}
+	}
 	var w io.Writer = os.Stdout
 	var f *os.File
 	if *out != "" {
@@ -107,6 +134,11 @@ func main() {
 	}
 	if f != nil {
 		if err := f.Close(); err != nil {
+			fail(err)
+		}
+	}
+	if *decisions != "" {
+		if err := writeLines(*decisions, lines); err != nil {
 			fail(err)
 		}
 	}
@@ -1007,72 +1039,58 @@ func (w *walker) prelude(file *ast.SourceFile) {
 	}
 }
 
-// pinInputs hashes every file the program loaded from a package, grouped by
-// the package that holds it: the declarations the table was generated from.
+// pinInputs pins every package the program loaded a file from: its name,
+// version, and a digest of all its declaration files (effeckmapper.
+// PackageDigest), so a test can recompute the pin from the package alone.
+// effeck-runtime is pinned by its TypeScript sources.
 func pinInputs(p *compiler.Program, runtime string) ([]effeckmapper.Input, error) {
-	type pkg struct {
-		name, version string
-		files         map[string]string
-	}
-	packages := map[string]*pkg{}
-	dirs := map[string]string{} // directory -> package root holding it
-	var rootOf func(dir string) string
-	rootOf = func(dir string) string {
-		if r, ok := dirs[dir]; ok {
-			return r
-		}
-		r := ""
-		if _, err := os.Stat(filepath.Join(dir, "package.json")); err == nil {
-			r = dir
-		} else if parent := filepath.Dir(dir); parent != dir {
-			r = rootOf(parent)
-		}
-		dirs[dir] = r
-		return r
-	}
+	roots := map[string]bool{}
+	sep := string(filepath.Separator)
 	for _, f := range p.SourceFiles() {
 		name := filepath.FromSlash(string(f.FileName()))
 		if strings.HasPrefix(string(f.FileName()), "bundled:") || !filepath.IsAbs(name) {
 			continue
 		}
-		if !strings.Contains(name, string(filepath.Separator)+"node_modules"+string(filepath.Separator)) && !strings.HasPrefix(name, runtime+string(filepath.Separator)) {
+		if strings.HasPrefix(name, runtime+sep) {
+			roots[filepath.Dir(runtime)] = true
 			continue
 		}
-		root := rootOf(filepath.Dir(name))
-		if root == "" {
+		// The package is the directory right under the last node_modules,
+		// node_modules/<name> or node_modules/@scope/<name>, whatever
+		// package.json files its own subdirectories hold.
+		i := strings.LastIndex(name, sep+"node_modules"+sep)
+		if i < 0 {
 			continue
 		}
-		pk := packages[root]
-		if pk == nil {
-			data, err := os.ReadFile(filepath.Join(root, "package.json"))
-			if err != nil {
-				return nil, err
-			}
-			var manifest struct{ Name, Version string }
-			if err := json.Unmarshal(data, &manifest); err != nil {
-				return nil, fmt.Errorf("%s: %w", filepath.Join(root, "package.json"), err)
-			}
-			pk = &pkg{name: manifest.Name, version: manifest.Version, files: map[string]string{}}
-			packages[root] = pk
+		rest := strings.Split(name[i+len(sep+"node_modules"+sep):], sep)
+		depth := 1
+		if strings.HasPrefix(rest[0], "@") {
+			depth = 2
 		}
-		rel, _ := filepath.Rel(root, name)
-		pk.files[filepath.ToSlash(rel)] = f.Text()
+		if len(rest) <= depth {
+			continue
+		}
+		roots[name[:i+len(sep+"node_modules"+sep)]+filepath.Join(rest[:depth]...)] = true
 	}
 	var inputs []effeckmapper.Input
-	for _, pk := range packages {
-		rels := make([]string, 0, len(pk.files))
-		for rel := range pk.files {
-			rels = append(rels, rel)
+	for root := range roots {
+		data, err := os.ReadFile(filepath.Join(root, "package.json"))
+		if err != nil {
+			return nil, err
 		}
-		sort.Strings(rels)
-		h := sha256.New()
-		for _, rel := range rels {
-			io.WriteString(h, rel)
-			h.Write([]byte{0})
-			io.WriteString(h, pk.files[rel])
-			h.Write([]byte{0})
+		var manifest struct{ Name, Version string }
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			return nil, fmt.Errorf("%s: %w", filepath.Join(root, "package.json"), err)
 		}
-		inputs = append(inputs, effeckmapper.Input{Package: pk.name, Version: pk.version, Files: len(rels), SHA256: hex.EncodeToString(h.Sum(nil))})
+		dir, sources := root, false
+		if strings.HasPrefix(runtime+string(filepath.Separator), root+string(filepath.Separator)) {
+			dir, sources = runtime, true
+		}
+		files, sum, err := effeckmapper.PackageDigest(dir, sources)
+		if err != nil {
+			return nil, err
+		}
+		inputs = append(inputs, effeckmapper.Input{Package: manifest.Name, Version: manifest.Version, Files: files, SHA256: sum})
 	}
 	slices.SortFunc(inputs, func(a, b effeckmapper.Input) int {
 		return cmp.Or(strings.Compare(a.Package, b.Package), strings.Compare(a.Version, b.Version), strings.Compare(a.SHA256, b.SHA256))

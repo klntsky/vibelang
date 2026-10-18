@@ -2,6 +2,8 @@ package effeckmapper
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -203,6 +205,31 @@ func TestEmbeddedTableHeader(t *testing.T) {
 	for pkg, version := range map[string]string{"effect": "4.0.5", "@effect/vitest": "4.0.5", "@effect/platform-node": "4.0.5", "@effect/platform-bun": "4.0.5", "effeck-runtime": "0.0.1"} {
 		if pinned[pkg].Version != version {
 			t.Errorf("%s pinned at %q, want %s", pkg, pinned[pkg].Version, version)
+		}
+	}
+	// The pins are content, not only versions: recompute each digest from
+	// the installed package (docs/tools/node_modules, pinned by its bun.lock)
+	// and the runtime's sources.
+	repo := filepath.Join("..", "..", "..", "..")
+	nodeModules := os.Getenv("FORMS_NODE_MODULES")
+	if nodeModules == "" {
+		nodeModules = filepath.Join(repo, "docs", "tools", "node_modules")
+	}
+	if _, err := os.Stat(filepath.Join(nodeModules, "effect", "package.json")); err != nil {
+		t.Skipf("the pinned packages are not installed (%v); set FORMS_NODE_MODULES", err)
+	}
+	for _, in := range h.Inputs {
+		dir, sources := filepath.Join(nodeModules, filepath.FromSlash(in.Package)), false
+		if in.Package == "effeck-runtime" {
+			dir, sources = filepath.Join(repo, "packages", "runtime", "src"), true
+		}
+		files, sum, err := PackageDigest(dir, sources)
+		if err != nil {
+			t.Errorf("%s: %v", in.Package, err)
+			continue
+		}
+		if files != in.Files || sum != in.SHA256 {
+			t.Errorf("%s@%s: installed declarations digest to %d files %s; the table was generated from %d files %s. Run scripts/check-forms-table.sh --write", in.Package, in.Version, files, sum, in.Files, in.SHA256)
 		}
 	}
 	if h.Keys != len(table.Keys()) || h.Aliases != len(table.Aliases()) {

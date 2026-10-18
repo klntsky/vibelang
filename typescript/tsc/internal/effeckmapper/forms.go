@@ -32,10 +32,15 @@ package effeckmapper
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -247,16 +252,58 @@ type Header struct {
 	Aliases int `json:"aliases"`
 }
 
-// Input pins one declaration package by version and by a hash of its
-// declaration files.
+// Input pins one declaration package by version and by PackageDigest.
 type Input struct {
 	Package string `json:"package"`
 	Version string `json:"version"`
-	// Files is how many declaration files the hash covers.
+	// Files is how many files the digest covers.
 	Files int `json:"files"`
-	// SHA256 hashes each declaration file's path relative to the package
-	// and its contents, in path order.
+	// SHA256 is PackageDigest's sum.
 	SHA256 string `json:"sha256"`
+}
+
+// PackageDigest hashes a declaration input: its package.json and every
+// .d.ts file under dir, or with sources every .ts file, outside nested
+// node_modules, by path relative to dir and contents, in path order. It
+// returns the number of files and the hex SHA-256.
+func PackageDigest(dir string, sources bool) (int, string, error) {
+	var paths []string
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if path != dir && d.Name() == "node_modules" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, path)
+		rel = filepath.ToSlash(rel)
+		switch {
+		case rel == "package.json" && !sources,
+			sources && strings.HasSuffix(rel, ".ts"),
+			!sources && strings.HasSuffix(rel, ".d.ts"):
+			paths = append(paths, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, "", err
+	}
+	slices.Sort(paths)
+	h := sha256.New()
+	for _, rel := range paths {
+		data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(rel)))
+		if err != nil {
+			return 0, "", err
+		}
+		io.WriteString(h, rel)
+		h.Write([]byte{0})
+		h.Write(data)
+		h.Write([]byte{0})
+	}
+	return len(paths), hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // Table is a parsed forms table.
