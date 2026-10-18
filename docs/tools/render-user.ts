@@ -7,6 +7,7 @@ import { Marked, type Tokens } from "marked"
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, extname, join, relative, resolve } from "node:path"
 import { hoverCss, useHoverRenderer } from "./render-hovers"
+import { renderLanding } from "./render-landing"
 const repo = resolve(import.meta.dir, "../..")
 const root = join(repo, "docs/user")
 const src = join(root, "src")
@@ -67,9 +68,13 @@ const LITERALS = new Set([
   "true", "false", "null", "undefined", "this", "never", "unknown", "any", "string", "number", "boolean",
   "bigint", "symbol", "object"
 ])
+// The landing colours its hero like the design mock: Effeck's form words are
+// keywords, primitive types are types, and !, % and |> are operators.
+const LANDING_KEYWORDS = new Set(["error", "provide", "fork", "join", "match", "when", "schema", "sync", "callback"])
+const LANDING_TYPES = new Set(["string", "number", "boolean", "never", "unknown", "void", "any", "object", "symbol", "bigint"])
 const TOKEN =
-  /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d[\d_]*(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)|(\s+)|([\s\S])/g
-const highlight = (code: string, lang: string): string => {
+  /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|(\b\d[\d_]*(?:\.\d+)?\b)|([A-Za-z_$][\w$]*)|(\s+)|(\|>|[\s\S])/g
+const highlight = (code: string, lang: string, landing = false): string => {
   if (!["effeck", "ts", "tsx", "js", "typescript"].includes(lang)) return escape(code)
   let out = ""
   for (const m of code.matchAll(TOKEN)) {
@@ -78,12 +83,14 @@ const highlight = (code: string, lang: string): string => {
     else if (str !== undefined) out += `<span class="s">${escape(text)}</span>`
     else if (num !== undefined) out += `<span class="n">${escape(text)}</span>`
     else if (ident !== undefined) {
-      if (KEYWORDS.has(ident)) out += `<span class="k">${ident}</span>`
+      if (landing && LANDING_TYPES.has(ident)) out += `<span class="t">${ident}</span>`
+      else if (KEYWORDS.has(ident) || landing && LANDING_KEYWORDS.has(ident)) out += `<span class="k">${ident}</span>`
       else if (LITERALS.has(ident)) out += `<span class="l">${ident}</span>`
       else if (/^[A-Z]/.test(ident)) out += `<span class="t">${ident}</span>`
       else if (/^\s*\(/.test(code.slice(m.index! + text.length))) out += `<span class="f">${ident}</span>`
       else out += escape(ident)
-    } else out += escape(text)
+    } else if (landing && /[!%]|\|>/.test(text)) out += `<span class="k">${escape(text)}</span>`
+    else out += escape(text)
   }
   return out
 }
@@ -411,28 +418,11 @@ const landing = join(repo, "docs/landing/index.html")
 // the onboarding page as the site's index.
 if (process.env.EFFECK_LANDING === "1" && existsSync(landing)) {
   const hero = JSON.parse(readFileSync(join(repo, "docs/site/converter/hero.json"), "utf8"))
-  let html = readFileSync(landing, "utf8")
-  for (const side of ["effect", "effeck"] as const) {
-    const marker = `<!-- hero:${side} -->`
-    if (typeof hero[side] !== "string" || !hero[side].trim() || html.split(marker).length !== 2) {
-      throw new Error(`Landing requires one ${side} marker and a nonempty hero.${side}`)
-    }
-    const code = highlight(hero[side], "ts")
-    html = html.replace(marker, () => code)
-  }
-  // The source link renders only where visitors can open it: EFFECK_LANDING_SOURCE=smithers once
-  // smithers.sh/effeck/effeck is public, github with EFFECK_LANDING_GITHUB_URL, and by default none,
-  // since a private repository gives a visitor a 404 or a sign-in wall.
-  const source = process.env.EFFECK_LANDING_SOURCE ?? "none"
-  const span = /<!-- source-link -->([\s\S]*?)<!-- \/source-link -->/
-  if (!span.test(html)) throw new Error("Landing has no source-link markers")
-  if (source === "none") html = html.replace(span, "")
-  else if (source === "smithers") html = html.replace(span, "$1")
-  else if (source === "github") {
-    const github = process.env.EFFECK_LANDING_GITHUB_URL
-    if (!github?.startsWith("https://github.com/")) throw new Error("EFFECK_LANDING_SOURCE=github needs EFFECK_LANDING_GITHUB_URL, a https://github.com/ URL")
-    html = html.replace(span, (_, link: string) => link.replace(/href="[^"]*">Source and issues on smithers\.sh /, `href="${github}">Source and issues on GitHub `))
-  } else throw new Error(`EFFECK_LANDING_SOURCE must be none, smithers, or github, not ${source}`)
+  const html = await renderLanding(readFileSync(landing, "utf8"), hero, (code, lang) => highlight(code, lang, true), {
+    hovers: process.env.EFFECK_DOCS_HOVERS !== "0",
+    source: process.env.EFFECK_LANDING_SOURCE ?? "none",
+    github: process.env.EFFECK_LANDING_GITHUB_URL
+  })
   rendered.set("index.html", html)
 }
 // /spec/ opens the specification's first page, so links to the old single-page specification still land on it.

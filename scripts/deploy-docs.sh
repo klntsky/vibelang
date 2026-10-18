@@ -88,7 +88,8 @@ if [ "$hovers" = 1 ]; then
 		{ tail -40 "$release_dir/hovers.log" >&2; echo "deploy-docs: building hovers failed; EFFECK_DOCS_HOVERS=0 deploys without them" >&2; exit 1; }
 	head -1 "$release_dir/hovers.log"
 fi
-bun "$root/docs/tools/render-user.ts"
+EFFECK_BINARY="${release_binary:-effeck}" EFFECK_RUNTIME_DIR="${release_runtime:-$root/packages/runtime}" \
+	bun "$root/docs/tools/render-user.ts"
 
 rm -rf "$site"
 mkdir -p "$site"
