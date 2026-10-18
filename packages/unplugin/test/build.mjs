@@ -1,0 +1,133 @@
+// Bundles src/main.ts of the fixture in the current directory into out/
+// with one bundler and effeck-unplugin, and prints one JSON line per build:
+//   {"ok":true}  or  {"ok":false,"message":"..."}
+//
+// Usage, from a fixture copy:
+//   node build.mjs webpack|rspack|rollup|rolldown|esbuild|vite [--watch]
+//   bun build.mjs bun
+//
+// The plugin finds the compiler through EFFECK_BINARY. A build without
+// --watch exits 1 when it fails.
+import module from "node:module"
+import { join, resolve } from "node:path"
+import { createUnplugin } from "unplugin"
+
+const [bundler, mode] = process.argv.slice(2)
+const watch = mode === "--watch"
+const root = process.cwd()
+const entry = resolve(root, "src/main.ts")
+const outDir = resolve(root, "out")
+const { default: effeck } = await import(`effeck-unplugin/${bundler}`)
+
+function report(ok, message) {
+  console.log(JSON.stringify(ok ? { ok } : { ok, message }))
+  if (!watch) process.exitCode = ok ? 0 : 1
+}
+
+// Watch diagnostics for a failing test: when each rebuild starts, and why.
+const started = Date.now()
+function trace(text) {
+  if (watch) console.error(`${bundler} +${Date.now() - started}ms ${text}`)
+}
+
+// webpack, Rspack and Rollup do not read TypeScript. The entry needs only
+// its types removed; Node's stripper keeps every position.
+const stripTypes = createUnplugin(() => ({
+  name: "strip-types",
+  transformInclude: (id) => id.endsWith(".ts"),
+  transform: (code) => ({ code: module.stripTypeScriptTypes(code), map: null })
+}))
+
+// Rollup does not resolve packages; Node resolves these from out/ at run time.
+const external = (id) => /^(?:effect|effeck-runtime)(?:\/|$)/.test(id)
+
+if (bundler === "webpack" || bundler === "rspack") {
+  const create = bundler === "webpack" ? (await import("webpack")).default : (await import("@rspack/core")).rspack
+  const compiler = create({
+    mode: "none", context: root, target: "node", devtool: "source-map", entry,
+    output: { path: outDir, filename: "main.cjs" },
+    plugins: [stripTypes[bundler](), effeck()],
+    infrastructureLogging: { level: "error" }
+  })
+  const done = (error, stats) => {
+    if (error) return report(false, error.message)
+    report(!stats.hasErrors(), stats.compilation.errors.map((item) => item.message).join("\n"))
+  }
+  compiler.hooks.watchRun.tap("trace", (watching) => trace(`start: ${[...(watching.modifiedFiles || [])].join(", ")}`))
+  if (watch) compiler.watch({ aggregateTimeout: 100 }, done)
+  else compiler.run((error, stats) => { done(error, stats); compiler.close(() => {}) })
+} else if (bundler === "rollup" || bundler === "rolldown") {
+  const api = await import(bundler)
+  const input = bundler === "rollup"
+    ? { input: entry, external, plugins: [stripTypes.rollup(), effeck()], onwarn() {} }
+    : { input: entry, platform: "node", plugins: [effeck()], onLog() {} }
+  const output = { dir: outDir, format: "es", sourcemap: true, entryFileNames: "main.js" }
+  if (watch) {
+    const watcher = api.watch({ ...input, output, watch: { clearScreen: false } })
+    watcher.on("change", (id) => trace(`change: ${id}`))
+    watcher.on("event", async (event) => {
+      if (event.code === "START") trace("start")
+      if (event.code === "BUNDLE_END") { await event.result.close(); report(true) }
+      if (event.code === "ERROR") { await event.result?.close(); report(false, event.error.message) }
+    })
+  } else {
+    try {
+      const bundle = await api[bundler](input)
+      await bundle.write(output)
+      await bundle.close()
+      report(true)
+    } catch (error) {
+      report(false, error.message)
+    }
+  }
+} else if (bundler === "esbuild") {
+  const esbuild = await import("esbuild")
+  const reporter = {
+    name: "report",
+    setup(build) {
+      build.onStart(() => trace("start"))
+      build.onEnd((result) => report(!result.errors.length, result.errors.map((error) => {
+        const at = error.location ? ` (${error.location.file}:${error.location.line}:${error.location.column})` : ""
+        return `${error.text}${at} [plugin ${error.pluginName}]`
+      }).join("\n")))
+    }
+  }
+  const options = {
+    entryPoints: [entry], bundle: true, platform: "node", format: "esm", sourcemap: true,
+    outfile: join(outDir, "main.js"), plugins: [effeck(), reporter], logLevel: "silent"
+  }
+  if (watch) await (await esbuild.context(options)).watch()
+  else await esbuild.build(options).catch(() => {})
+} else if (bundler === "bun") {
+  try {
+    const result = await Bun.build({
+      entrypoints: [entry], outdir: outDir, target: "bun", format: "esm", sourcemap: "external",
+      naming: "main.js", plugins: [effeck()]
+    })
+    report(result.success, result.logs.map(String).join("\n"))
+  } catch (error) {
+    report(false, [error.message, ...(error.errors || []).map(String)].join("\n"))
+  }
+} else if (bundler === "vite") {
+  const { build } = await import("vite")
+  const result = build({
+    root, configFile: false, logLevel: "silent", plugins: [effeck()],
+    build: {
+      ssr: entry, outDir, sourcemap: true, emptyOutDir: true, watch: watch ? { clearScreen: false } : null,
+      rolldownOptions: { output: { entryFileNames: "main.js" } }
+    }
+  })
+  if (watch) {
+    const watcher = await result
+    watcher.on("change", (id) => trace(`change: ${id}`))
+    watcher.on("event", async (event) => {
+      if (event.code === "START") trace("start")
+      if (event.code === "BUNDLE_END") { await event.result.close(); report(true) }
+      if (event.code === "ERROR") { await event.result?.close(); report(false, event.error.message) }
+    })
+  } else {
+    await result.then(() => report(true), (error) => report(false, error.message))
+  }
+} else {
+  throw new Error(`build.mjs: unknown bundler ${bundler}`)
+}
