@@ -31,7 +31,7 @@ false
 
 Enable `strict` in the project's compiler options. Enable `exactOptionalPropertyTypes` as well to distinguish an absent `hint` from a present `hint: undefined`. `optionalKey` accepts the absent key but rejects explicit `undefined`; turning the compiler option off does not change that runtime rule. VibeLang v0 uses the TypeScript 7.1 checker and supports `effect@4.0.5` exactly. Install `vibelang-runtime` and `effect@4.0.5` as dependencies and `vibelang` as a dev dependency. Run `vibelang --noEmit` to check `.vibe` and `.ts` files together; `vibelang` also emits JavaScript and declarations.
 
-Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls; their exceptions are defects. `catch` does not handle those defects. Use an Effect-returning parser for typed validation failures, or an explicit `try` hatch to give a synchronous exception an expected error type. External plain TypeScript functions need an explicit boundary or a `trusted(...)` adapter from `vibelang-runtime` inside a program.
+Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls; exceptions escaping into Effect code are defects. Effect catch does not handle those defects. A plain-contract function keeps JavaScript catch with an `unknown` binding (D260). Use an Effect-returning parser for typed validation failures, or an explicit `try` hatch to give a synchronous exception an expected error type. External plain TypeScript functions need an explicit boundary or a `trusted(...)` adapter from `vibelang-runtime` inside a program.
 
 ## Understanding schemas and codecs
 

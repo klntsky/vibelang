@@ -42,7 +42,7 @@ one
 No label
 ```
 
-`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, so ordinary catch does not see them. A catch whose try block has no expected failures gets warning EK2004 by default. Use a typed form such as `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect` when callers need recovery. A JavaScript catch inside `Effect.gen` can see synchronous exceptions; a catch in `.vibe` follows the expected-failure contract instead.
+`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, so ordinary catch does not see them. A try block that runs Effects with E = `never` gets warning EK2004 by default; defects pass through its catch. Use a typed form such as `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect` when callers need recovery. A JavaScript catch inside `Effect.gen` can see synchronous exceptions; an Effect catch in `.vibe` follows the expected-failure contract. A plain-contract function keeps JavaScript catch and receives every exception as `unknown` (D260).
 
 ## Promoting typed failures to defects
 
@@ -117,7 +117,7 @@ Decoder disabled after an invariant failure
 disabled
 ```
 
-`catchDefect` selects a defect and runs recovery; a cause with no defect propagates. On a mixed cause, recovery can consume the accompanying failures or interruption too, so use `catchCause` when every reason must inform that decision. Reraise defects you do not recognize. Ordinary `try`/`catch` does not intercept a defect, even if the defect value is an instance of a domain error class.
+`catchDefect` selects a defect and runs recovery; a cause with no defect propagates. On a mixed cause, recovery can consume the accompanying failures or interruption too, so use `catchCause` when every reason must inform that decision. Reraise defects you do not recognize. Effect `try`/`catch` does not intercept a defect, even if the defect value is an instance of a domain error class.
 
 ## Recovering a complete cause
 

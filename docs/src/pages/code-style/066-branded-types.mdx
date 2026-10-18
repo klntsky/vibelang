@@ -72,7 +72,7 @@ function parseAmount(raw: number) {
 InvalidAmount
 ```
 
-`Brand.make` accepts a synchronous check that returns `true` for valid input or an explanation for invalid input. The returned constructor throws a `Brand.BrandError` when validation fails. A direct call treats that exception as a defect, which ordinary `catch` does not see. Here the `try` hatch maps it to `InvalidAmount` in the expected error channel.
+`Brand.make` accepts a synchronous check that returns `true` for valid input or an explanation for invalid input. The returned constructor throws a `Brand.BrandError` when validation fails. When the exception escapes into Effect code it is a defect, which the Effect catch does not see. A plain-contract function can catch it as `unknown` (D260). Here the `try` hatch maps it to `InvalidAmount` in the expected error channel.
 
 ```vibe
 // run: const valid = inspectAmount(125); const invalid = inspectAmount(1.5); Console.log(valid.optional.isSome(), valid.result.isSuccess(), valid.valid); Console.log(invalid.optional.isNone(), invalid.result.isFailure(), invalid.valid)
