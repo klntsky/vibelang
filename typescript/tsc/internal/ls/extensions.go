@@ -73,10 +73,17 @@ func withQuickInfoHooks(c *checker.Checker, node *ast.Node, quickInfo string, do
 	if len(paragraphs) == 0 {
 		return quickInfo, documentation
 	}
-	if documentation != "" {
-		paragraphs = append(paragraphs, documentation)
+	notes := strings.Join(paragraphs, "\n\n")
+	if documentation == "" {
+		return quickInfo, notes
 	}
-	return quickInfo, strings.Join(paragraphs, "\n\n")
+	// In an .effeck file the hooks' notes come first and a horizontal rule
+	// separates them from the declaration's own documentation, so clients can
+	// tell the two apart.
+	if strings.HasSuffix(string(ast.GetSourceFileOfNode(node).FileName()), ".effeck") {
+		return quickInfo, notes + "\n\n---\n\n" + documentation
+	}
+	return quickInfo, notes + "\n\n" + documentation
 }
 
 // CompletionScopeHook lists symbols that resolve at location although no

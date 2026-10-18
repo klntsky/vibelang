@@ -550,6 +550,17 @@ try {
     assert(/Runs here and returns `string`/.test(shown), `no success value in ${JSON.stringify(shown)}`)
   })
 
+  await check("hover: Effeck's notes come first, then a rule, then the JSDoc", async () => {
+    const documented = await hover("src/hover-notes.effeck", "greet(\"Ada\")")
+    const notes = documented.indexOf("Runs here and returns `string`")
+    const rule = documented.indexOf("\n\n---\n\n")
+    const jsdoc = documented.indexOf("Greets someone by name.")
+    assert(notes >= 0 && rule > notes && jsdoc > rule, `expected notes, then ---, then JSDoc in ${JSON.stringify(documented)}`)
+    const undocumented = await hover("src/hover-notes.effeck", "shout(\"Ada\")")
+    assert(/Runs here and returns `string`/.test(undocumented), `no note in ${JSON.stringify(undocumented)}`)
+    assert(!undocumented.includes("\n---\n"), `a hover without JSDoc has a rule: ${JSON.stringify(undocumented)}`)
+  })
+
   await check("hover: a TypeScript call that runs shows its success value", async () => {
     const shown = await hover("src/main.effeck", "findName(id)")
     assert(/Runs here and returns `string`/.test(shown), `no success value in ${JSON.stringify(shown)}`)

@@ -388,7 +388,7 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/checker/extensions_values.go` (new) | `RegisterExpressionTypeHook`, `CreateArrayType`, `MapObjectType`, `IteratedType` | +55 |
 | `tsc/internal/checker/extensions_callbacks.go` (new) | `RegisterTypeParametersHook`, `RegisterParameterTypeHook`, `NewTypeParameter` | +61 |
 | `tsc/internal/checker/extensions_using.go` (new) | `RegisterUsingInitializerHook` | +29 |
-| `tsc/internal/ls/extensions.go` (new) | `RegisterQuickInfoHook`, `RegisterCompletionScopeHook`, `RegisterMemberCompletionHook` | +92 |
+| `tsc/internal/ls/extensions.go` (new) | `RegisterQuickInfoHook`, `RegisterCompletionScopeHook`, `RegisterMemberCompletionHook`; in an `.effeck` hover the hooks' notes come first, then a `---` rule, then the JSDoc | +101 |
 | `tsc/internal/execute/tsc/extensions.go` (new) | `SetIdentity` | +56 |
 | `tsc/internal/checker/extensions_signatures.go` (new) | `SignatureWithReturnType` | +8 |
 | `tsc/internal/checker/extensions_loops.go` (new) | `RegisterIteratedElementTypeHook` | +29 |
