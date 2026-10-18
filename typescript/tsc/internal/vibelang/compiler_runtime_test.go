@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -67,7 +68,8 @@ func TestCompilerRuntimeCases(t *testing.T) {
 				t.Fatalf("config: %v", errors)
 			}
 			program := compiler.NewProgram(compiler.ProgramOptions{Config: config, Host: compiler.NewCompilerHost(fileSystem, bundled.LibPath(), nil, nil, nil)})
-			all := program.GetSyntacticDiagnostics(t.Context(), nil)
+			all := slices.Clone(config.Errors)
+			all = append(all, program.GetSyntacticDiagnostics(t.Context(), nil)...)
 			all = append(all, program.GetGlobalDiagnostics(t.Context())...)
 			all = append(all, program.GetSemanticDiagnostics(t.Context(), nil)...)
 			for _, diagnostic := range all {
