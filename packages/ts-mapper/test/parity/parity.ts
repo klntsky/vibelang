@@ -1,4 +1,4 @@
-import { runtimeExclusions, exclusionNote } from "./runtime-exclusions.ts"
+import { runtimeExclusions, exclusionNote, typeExclusions, typeExclusionNote } from "./runtime-exclusions.ts"
 // The parity harness for gate 1 of decision (B): does stock TypeScript 7,
 // through Effeck's content mapper, declare the same A, E, and R as the fork?
 //
@@ -17,9 +17,10 @@ import { runtimeExclusions, exclusionNote } from "./runtime-exclusions.ts"
 // harness itself and exits 1 when it is wrong.
 import crypto from "node:crypto"
 import { runDocs } from "./docs.ts"
+import { linkModules } from "../../../../docs/tools/check-snippets.ts"
 import { mapperEntry } from "./mapper-options"
 import fs from "node:fs"
-import { isBuiltin } from "node:module"
+import { createRequire, isBuiltin } from "node:module"
 import os from "node:os"
 import path from "node:path"
 import { lanesOf, recursiveNames, scanDeclarations, statementLines, trustedNames, tsAuthoredKeys, type SourceDeclaration } from "./classify.ts"
@@ -222,8 +223,40 @@ const normalizationRules = [
   `A name that ${preludeModule} or effeck-runtime re-exports unchanged resolves to its origin: ${preludeModule} re-exports ${describeReexports(preludeModule)}; effeck-runtime re-exports ${describeReexports("effeck-runtime")}.`,
   `A bare name (no member access) that a package exports as a type alias of another module's type resolves to that type: ${[...ctx.aliases].flatMap(([m, a]) => [...a].map(([k, v]) => `${k} from ${m} is ${v}`)).join(", ") || "none"}. The mapper's prelude exports Effect only as a namespace, so its bare Effect<...> does not match.`,
   "The members of a simple union are sorted (TypeScript prints unions in type-creation order); a match that needs this is reported as union-order.",
+  "A relative Effect import and a public package import are one module only when Node resolves both to the exact same installed file; different copies and private paths stay distinct.",
   "Names the file declares are never rewritten, so service identity stays; any and unknown are never rewritten, and a mapper declaration with more of them than the fork's is reported as degraded.",
 ]
+
+// parseSideDeclaration recognizes a relative Effect import only when Node's
+// public export resolves to the exact same installed file. Resolving examples
+// exposes these filesystem spellings in the fork's declaration emit.
+function parseSideDeclaration(text: string, emittedFile: string): DeclarationFile {
+  const file = parseDeclarationFile(text)
+  const require = createRequire(emittedFile)
+  const canonical = (specifier: string) => {
+    if (!specifier.startsWith(".")) return specifier
+    const target = path.resolve(path.dirname(emittedFile), specifier)
+    if (!fs.existsSync(target)) return specifier
+    const actual = fs.realpathSync(target)
+    const relative = path.relative(fs.realpathSync(effectDir), actual)
+    if (!relative.startsWith("dist/") || !relative.endsWith(".js")) return specifier
+    const publicName = `effect/${relative.slice(5, -3)}`
+    try {
+      return fs.realpathSync(require.resolve(publicName)) === actual ? publicName : specifier
+    } catch {
+      return specifier
+    }
+  }
+  for (const binding of file.imports) binding.module = canonical(binding.module)
+  for (const unit of file.units) for (const statement of unit.statements) {
+    for (let i = 0; i < statement.length - 2; i++) {
+      if (statement[i].text !== "import" || statement[i + 1].text !== "(" || statement[i + 2].kind !== "str") continue
+      const token = statement[i + 2]
+      token.text = JSON.stringify(canonical(token.text.slice(1, -1)))
+    }
+  }
+  return file
+}
 
 type Canon = { exact: string[]; sorted: string }
 
@@ -378,15 +411,31 @@ function link(target: string, at: string) {
   fs.symlinkSync(target, at)
 }
 
-// setupNodeModules makes the two shared node_modules directories every case
-// copy links to, using only run.sh's isolated packages. The mapper link and
-// a package-less case's self-reference resolve to the same out/work package.
+// setupNodeModules reuses the snippet checker's installed dependency links in
+// the enclosing mapper package scope. Keep the harness-built runtime
+// and pinned effect so checking does not depend on a workspace runtime build.
 function setupNodeModules() {
+  const dependencies = path.join(outDir, "snippet-dependencies")
+  fs.rmSync(dependencies, { recursive: true, force: true })
+  const previousRuntime = process.env.EFFECK_RUNTIME_DIR
+  process.env.EFFECK_RUNTIME_DIR = runtimeDir
+  try {
+    linkModules(dependencies)
+  } finally {
+    if (previousRuntime === undefined) delete process.env.EFFECK_RUNTIME_DIR
+    else process.env.EFFECK_RUNTIME_DIR = previousRuntime
+  }
   for (const nm of [nmFork, nmMapper]) {
     fs.rmSync(nm, { recursive: true, force: true })
     fs.mkdirSync(nm, { recursive: true })
     link(effectDir, path.join(nm, "effect"))
     link(runtimeDir, path.join(nm, "effeck-runtime"))
+  }
+  for (const nm of [path.join(mapperPackage, "node_modules")]) {
+    for (const name of fs.readdirSync(path.join(dependencies, "node_modules"))) {
+      if (name === "effect" || name === "effeck-runtime") continue
+      link(fs.realpathSync(path.join(dependencies, "node_modules", name)), path.join(nm, name))
+    }
   }
   link(mapperPackage, path.join(nmMapper, "effeck-ts-mapper"))
 }
@@ -699,7 +748,7 @@ function unresolvedPackages(run: Run): string[] {
     for (const pkg of bareImports(text)) {
       if (pkg.startsWith("node:") || isBuiltin(pkg) || paths.includes(pkg) || paths.some((p) => p.startsWith(`${pkg}/`))) continue
       if (pkg === "effect" || pkg === "effeck-runtime") continue
-      if (!fs.existsSync(path.join(nmFork, pkg, "package.json"))) missing.add(pkg)
+      if (![nmFork, path.join(mapperPackage, "node_modules")].some((nm) => fs.existsSync(path.join(nm, pkg, "package.json")))) missing.add(pkg)
     }
   }
   return [...missing].sort()
@@ -1053,9 +1102,9 @@ function compareCase(run: Run, entry: CaseEntry | undefined): CaseResult {
   result.typeChecks = result.ek9001.count === 0 && result.stockErrors.count === 0
   if (!entry) return result
 
-  const parsedMapper = new Map([...mapper.declarations].map(([stem, { text }]) => [stem, parseDeclarationFile(text)]))
+  const parsedMapper = new Map([...mapper.declarations].map(([stem, { text, file }]) => [stem, parseSideDeclaration(text, path.resolve(workDir(run.ref, "mapper"), run.tsconfig.compilerOptions?.outDir ?? defaultOutDir, file))]))
   // The reference is this run's fork output, which the manifest hashes.
-  const parsedReference = new Map([...fork.declarations].map(([stem, { text }]) => [stem, parseDeclarationFile(text)]))
+  const parsedReference = new Map([...fork.declarations].map(([stem, { text, file }]) => [stem, parseSideDeclaration(text, path.resolve(workDir(run.ref, "fork"), run.tsconfig.compilerOptions?.outDir ?? defaultOutDir, file))]))
   for (const stem of Object.keys(entry.reference)) if (!parsedMapper.has(stem)) result.missingFiles.push(stem)
   const real = (files: Map<string, DeclarationFile>) => [...files.values()].reduce((n, f) => n + f.units.filter((u) => !u.name.startsWith(probePrefix)).length, 0)
   result.declarations = { fork: real(parsedReference), mapper: real(parsedMapper) }
@@ -1159,6 +1208,24 @@ async function runSelfTest(): Promise<boolean> {
   check("stale missing exclusion", missing.staleExclusions[0]?.detail === "listed id does not exist", "unknown id is stale")
   const unmeasured = runtimeExclusions(["retired"], [], listed)
   check("partial runtime exclusion", unmeasured.exclusions.length === 0 && unmeasured.staleExclusions.length === 0, "unselected case is not stale")
+  const typeResults = (statuses: string[]) => [{ id: "retired", units: statuses.map((status) => ({ status, sourceKind: "effeck", group: "unchanged" })) }]
+  const typeFailed = typeExclusions(["retired"], typeResults(["identical", "mismatch"]), listed)
+  check("type exclusion", typeFailed.exclusions.length === 1 && typeFailed.staleExclusions.length === 0 && typeExclusionNote(typeFailed.exclusions).includes("fixture exclusion"), "mixed declarations remain explicitly excluded")
+  check("stale matching type exclusion", typeExclusions(["retired"], typeResults(["identical", "union-order"]), listed).staleExclusions.length === 1, "all matching declarations make exclusion stale")
+  check("stale unknown type exclusion", typeExclusions([], [], listed).staleExclusions.length === 1, "unknown id is stale")
+  check("partial type exclusion", typeExclusions(["retired"], [], listed).staleExclusions.length === 0, "unselected id is not stale")
+  check("empty type exclusion", typeExclusions(["retired"], typeResults([]), listed).staleExclusions.length === 0, "missing declarations are not a pass")
+  const emittedFile = path.join(workDir(ref, "fork"), defaultOutDir, "main.d.ts")
+  const physical = path.relative(path.dirname(emittedFile), path.join(effectDir, "dist/Effect.js"))
+  const publicText = 'export declare function origin(): import("effect/Effect").Effect<number>;'
+  const publicFile = parseSideDeclaration(publicText, emittedFile)
+  const physicalFile = parseSideDeclaration(publicText.replace("effect/Effect", physical), emittedFile)
+  check("physical Effect import", compareUnit({ unit: publicFile.units[0], file: publicFile }, { unit: physicalFile.units[0], file: physicalFile }).status === "identical", "public and physical imports resolve to the same installed file")
+  const other = path.join(outDir, "self-test-other", "effect", "dist", "Effect.js")
+  fs.mkdirSync(path.dirname(other), { recursive: true })
+  fs.writeFileSync(other, "export {}\n")
+  const otherFile = parseSideDeclaration(publicText.replace("effect/Effect", path.relative(path.dirname(emittedFile), other)), emittedFile)
+  check("different Effect copy", compareUnit({ unit: publicFile.units[0], file: publicFile }, { unit: otherFile.units[0], file: otherFile }).status === "mismatch", "a different physical file stays distinct even with the same path suffix")
   const target = "total"
   const stem = "main"
   const forkText = run.fork!.declarations.get(stem)?.text
@@ -1281,12 +1348,15 @@ function top<T>(items: T[], key: (t: T) => string, n: number): { key: string; co
 
 function summarize(results: CaseResult[], manifest: Manifest, hash: string, probes: ProbeResult[], timing: Record<string, number>, stockVersion: string, partial: boolean) {
   type Site = UnitResult & { case: string }
-  const positive = results.filter((r) => !r.failing)
+  const typeExclusionReport = typeExclusions(discover().map((r) => r.id), results)
+  const typeExcludedIds = new Set(typeExclusionReport.exclusions.map((e) => e.id))
+  const positive = results.filter((r) => !r.failing && !typeExcludedIds.has(r.id))
   // Gated: declarations of .effeck sources, exported or not.
   const gated = (r: CaseResult) => r.units.filter((u) => u.sourceKind !== "ts" && u.group !== "extra")
   const sites = (rs: CaseResult[], keep: (u: UnitResult) => boolean): Site[] => rs.flatMap((r) => gated(r).filter(keep).map((u) => ({ ...u, case: r.id })))
   const pass = (u: UnitResult) => u.status === "identical" || u.status === "union-order"
-  const concrete = sites(positive, (u) => u.class === "concrete" && u.group === "unchanged")
+  const concreteResults = positive
+  const concrete = sites(concreteResults, (u) => u.class === "concrete" && u.group === "unchanged")
   const unchanged = sites(positive, (u) => u.group === "unchanged")
   const migration = sites(positive, (u) => u.group === "migration")
   const extra = positive.flatMap((r) => r.units.filter((u) => u.status === "extra").map((u) => ({ ...u, case: r.id })))
@@ -1325,7 +1395,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   const negativeDetected = negatives.filter((r) => r.negativeDetected).length
   const exclusionReport = runtimeExclusions(discover().map((r) => r.id), results)
   const excludedIds = new Set(exclusionReport.exclusions.map((e) => e.id))
-  const runnable = positive.filter((r) => r.runnable && !excludedIds.has(r.id))
+  const runnable = results.filter((r) => !r.failing && r.runnable && !excludedIds.has(r.id))
   const migrations = results.flatMap((r) => r.adapter.migrations.map((m) => ({ ...m, case: r.id })))
   const stripped = results.filter((r) => r.adapter.stripped.length > 0)
   const forced = new Map<string, number>()
@@ -1342,7 +1412,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   const split = (xs: UnitResult[]) => ({ exported: count(xs, (u) => u.exported), unexported: count(xs, (u) => !u.exported), probed: count(xs, (u) => u.probed) })
 
   const gate1 = {
-    concrete: { signatures: concrete.length, identical: count(concrete, pass), mismatched: concrete.length - count(concrete, pass), ...split(concrete), identicalExported: count(concrete, (u) => u.exported && pass(u)), identicalUnexported: count(concrete, (u) => !u.exported && pass(u)) },
+    concrete: { ...typeExclusionReport, signatures: concrete.length, identical: count(concrete, pass), mismatched: concrete.length - count(concrete, pass), ...split(concrete), identicalExported: count(concrete, (u) => u.exported && pass(u)), identicalUnexported: count(concrete, (u) => !u.exported && pass(u)) },
     unchanged: { declarations: unchanged.length, identical: count(unchanged, pass), unionOrder: count(unchanged, (u) => u.status === "union-order"), mismatched: count(unchanged, (u) => u.status === "mismatch"), missing: count(unchanged, (u) => u.status === "missing"), ...split(unchanged) },
     migration: { declarations: migration.length, expectationMissing: count(migration, (u) => u.status === "expectation-missing"), lanes: Object.fromEntries([...lanes].sort()) },
     coverage: { missingDeclarations, missingFiles, extraDeclarations: extra.length, degraded, ek9001: ek9001Positive, stockErrors: stockPositive },
@@ -1357,7 +1427,7 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
     },
     probes: { count: probes.length, markers: probes.reduce((n, p) => n + p.markers.length, 0), failTypeCheck: probes.reduce((n, p) => n + p.markers.filter((m) => m.mapper !== null).length, 0) },
     tsHelpers: { declarations: helpers.length, identical: count(helpers, pass) },
-    pass: concrete.length > 0 && unchanged.every(pass) && missingFiles === 0 && ek9001Positive === 0 && stockPositive === 0 && degraded === 0 && probes.every((p) => p.ok),
+    pass: typeExclusionReport.staleExclusions.length === 0 && exclusionReport.staleExclusions.length === 0 && concrete.length > 0 && unchanged.every(pass) && missingFiles === 0 && ek9001Positive === 0 && stockPositive === 0 && degraded === 0 && probes.every((p) => p.ok),
   }
   const json = {
     ranAt: new Date().toISOString(),
@@ -1392,9 +1462,10 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push(`Fork ${revisions.fork.source}, binary ${revisions.fork.binarySha256.slice(0, 12)}; mapper binary ${revisions.mapper.binarySha256.slice(0, 12)}; stock TypeScript ${stockVersion}; effect ${inputs.effect.version}; effeck-runtime ${inputs["effeck-runtime"].version}.`)
   L.push(`Manifest ${hash} (${path.relative(root, manifestPath)}): ${manifest.cases.length} cases, ${json.manifest.declarations} declarations, generated from this run's fork; expectations.json ${manifest.expectations.sha256.slice(0, 12)}.`)
   L.push("", "## Gate 1", "", "```")
-  L.push(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched`)
+  L.push(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched${typeExclusionNote(g.concrete.exclusions)}`)
   L.push(`  exported ${g.concrete.exported} (${g.concrete.identicalExported} identical), unexported ${g.concrete.unexported} (${g.concrete.identicalUnexported} identical; ${g.concrete.probed} printed through probe exports)`)
-  const sorted = splitMismatches(results)
+  for (const e of g.concrete.staleExclusions) L.push(`stale type exclusion: ${e.id}, ${e.reason}: ${e.detail}`)
+  const sorted = splitMismatches(concreteResults)
   L.push(`  split: (a) not implemented ${sorted.notImplemented} = ${sorted.missing} missing + ${sorted.degraded} degraded + ${sorted.unclean} in files with EK9001 or stock errors + ${sorted.structural} structural; (b) A/E/R differ in clean files ${sorted.aer.length}`)
   for (const b of sorted.aer.slice(0, 5)) L.push(`    (b) ${b.case} ${b.file}.${b.name}: fork ${b.fork} | mapper ${b.mapper}`)
   L.push(`unchanged group, all classes: ${g.unchanged.declarations} declarations, ${g.unchanged.identical} identical (${g.unchanged.unionOrder} up to union order), ${g.unchanged.mismatched} mismatched, ${g.unchanged.missing} missing`)
@@ -1544,9 +1615,10 @@ async function main() {
   }
   const g = json.gate1
   console.log(`manifest ${hash.slice(0, 12)}: ${manifest.cases.length} cases`)
-  console.log(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched`)
+  console.log(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched${typeExclusionNote(g.concrete.exclusions)}`)
   console.log(`EK9001 ${g.coverage.ek9001}, stock errors ${g.coverage.stockErrors}, missing declarations ${g.coverage.missingDeclarations}; wall ${timing.total.toFixed(0)} s`)
   console.log(`runtime parity: ${g.runnable.runtimeParity}/${g.runnable.cases} print the expected result${exclusionNote(g.runnable.exclusions)} (${g.runnable.runtimeParityTypeChecking}/${g.runnable.mapperTypeChecks} of the cases that type-check)`)
+  for (const e of g.concrete.staleExclusions) console.log(`stale type exclusion: ${e.id}, ${e.reason}: ${e.detail}`)
   for (const e of g.runnable.staleExclusions) console.log(`stale runtime exclusion: ${e.id}, ${e.reason}: ${e.detail}`)
   console.log(`wrote ${path.relative(root, path.join(outDir, "summary.md"))} and summary.json`)
   if (gate) {

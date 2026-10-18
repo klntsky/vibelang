@@ -24,3 +24,21 @@ export function runtimeExclusions(
 export function exclusionNote(excluded: RuntimeExclusion[]): string {
   return excluded.length ? ` (${excluded.length} excluded: ${excluded.map((e) => `${e.id}, ${e.reason}`).join("; ")})` : ""
 }
+
+// typeExclusions measures every declaration before omitting a listed case from
+// the concrete column, so fixed cases and misspelled ids cannot hide forever.
+export function typeExclusions(
+  knownIds: string[],
+  results: { id: string; units: { status: string; sourceKind: string; group: string }[] }[],
+  listed: RuntimeExclusion[] = exclusions,
+) {
+  return runtimeExclusions(knownIds, results.map((r) => {
+    const declarations = r.units.filter((u) => u.sourceKind !== "ts" && u.group !== "extra")
+    return { id: r.id, runtime: { ok: declarations.length > 0 && declarations.every((u) => u.status === "identical" || u.status === "union-order") } }
+  }), listed)
+}
+
+// typeExclusionNote discloses the concrete column's omitted cases and reasons.
+export function typeExclusionNote(excluded: RuntimeExclusion[]): string {
+  return excluded.length ? ` (${excluded.length} case${excluded.length === 1 ? "" : "s"} excluded: ${excluded.map((e) => `${e.id}, ${e.reason}`).join("; ")})` : ""
+}
