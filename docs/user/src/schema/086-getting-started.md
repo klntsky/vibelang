@@ -5,6 +5,8 @@
 ## Declaring schemas
 
 ```vibe
+// run: Console.log(JSON.stringify(receive({ tracking: "box-76", pieces: "2" })))
+import { Console } from "effect"
 const Shipment = Schema.Struct({
   tracking: Schema.NonEmptyString,
   pieces: Schema.FiniteFromString
@@ -13,6 +15,10 @@ const Shipment = Schema.Struct({
 function receive(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input)
 }
+```
+
+```output
+{"tracking":"box-76","pieces":2}
 ```
 
 Each field describes its own representation and checks. The struct combines them into one codec: `pieces` arrives as text and becomes a number. Declaring `Shipment` builds a description and performs no decoding.
@@ -36,10 +42,15 @@ The decoded type has a numeric `pieces`; the encoded type has a string. Both ser
 ## Understanding default immutability
 
 ```vibe
+// run: Console.log(JSON.stringify(Schema.decodeUnknownEffect(Batch)({ shipments: [{ tracking: "box-76", pieces: "2" }] })))
 schema Batch {
   shipments: ReadonlyArray<Shipment>
 }
 // Batch: { readonly shipments: ReadonlyArray<Shipment> }
+```
+
+```output
+{"shipments":[{"tracking":"box-76","pieces":2}]}
 ```
 
 `schema Batch { ... }` declares the struct `Batch` and its decoded type, the interface `Batch`, in one declaration. A field names its type, and a schema such as `Shipment` stands for its own decoded type. Struct fields, arrays, records, and tuples are readonly by default. This describes their TypeScript types; it does not freeze JavaScript objects. Use explicit mutable schema combinators when mutation is part of the model.
@@ -47,6 +58,7 @@ schema Batch {
 ## Choosing synchronous, result, or effect decoding
 
 ```vibe
+// run: Console.log(decodeWithEffects({ tracking: "box-76", pieces: "2" }).pieces); Console.log(decodeAsData({ tracking: "box-76", pieces: "2" })); Console.log(decodeSynchronously({ tracking: "box-76", pieces: "2" }).pieces); try { decodeSynchronously({}) } catch (error) { Console.log(error._tag) }; Console.log(decodeAsData({}))
 function decodeWithEffects(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input)
 }
@@ -66,6 +78,15 @@ error InvalidShipment {
 }
 ```
 
+```output
+2
+received box-76
+2
+InvalidShipment
+Missing key
+  at ["tracking"]
+```
+
 Prefer `decodeUnknownEffect` inside VibeLang: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and requires a synchronous, service-free decoding path. Unexpected exceptions from synchronous callbacks are defects; ordinary `catch` does not handle them.
 
 `decodeUnknownSync` throws on invalid input. A direct call makes that exception a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A `catch` around a direct call alone cannot run and produces warning EK2004. The `Exit` and `Option` variants provide other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant supports asynchronous decoding without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even when no service is needed.
@@ -73,6 +94,7 @@ Prefer `decodeUnknownEffect` inside VibeLang: it can pause, requires the codec's
 ## Encoding values
 
 ```vibe
+// run: Console.log(JSON.stringify(send({ tracking: "box-76", pieces: 2 }))); try { sendUntrusted({ tracking: "box-76", pieces: "2" }) } catch (error) { Console.log(error._tag) }
 function send(shipment: Shipment) {
   return Schema.encodeEffect(Shipment)(shipment)
 }
@@ -83,11 +105,17 @@ function sendUntrusted(input: unknown) {
 }
 ```
 
+```output
+{"tracking":"box-76","pieces":"2"}
+SchemaError
+```
+
 Encoding reverses the conversion, including the numeric `pieces` field. `encodeEffect` accepts the decoded type; `encodeUnknownEffect` accepts unknown input and validates it. Encoding also has `Sync`, `Result`, `Option`, `Exit`, and `Promise` variants, with the same execution limits as decoding.
 
 ## Handling schema failures
 
 ```vibe
+// run: Console.log(receiveOrExplain({ tracking: "box-76", pieces: "2" })); Console.log(receiveOrExplain({}))
 function receiveOrExplain(input: unknown) {
   try {
     const shipment = receive(input)
@@ -99,11 +127,18 @@ function receiveOrExplain(input: unknown) {
 // string!!
 ```
 
+```output
+accepted box-76
+Missing key
+  at ["tracking"]
+```
+
 The parser's expected failure is a `SchemaError` with `_tag: "SchemaError"`. Its `issue` preserves the structured failure and its `message` provides readable text. `catch` handles that expected failure; defects and interruption still propagate.
 
 ## Configuring excess properties and error collection
 
 ```vibe
+// run: try { receiveStrict({ tracking: "box-76", pieces: "2", extra: true }) } catch (error) { Console.log(error._tag) }; Console.log(JSON.stringify(Schema.decodeUnknownEffect(ShipmentWithExtras)({ tracking: "box-76", pieces: "2", extra: true })))
 function receiveStrict(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input, {
     onExcessProperty: "error",
@@ -116,6 +151,11 @@ const ShipmentWithExtras = Schema.StructWithRest(Shipment, [
 ])
 ```
 
+```output
+SchemaError
+{"tracking":"box-76","pieces":2,"extra":true}
+```
+
 By default, parsing removes unmodeled keys and stops at the first issue. `onExcessProperty: "error"` rejects extra keys, while `errors: "all"` collects independent issues encountered during parsing. To retain extra values, describe an index signature with `StructWithRest`.
 
 Options can be supplied when creating the parser or when calling it; call options take precedence. Schema annotations do not override these options for nested nodes.
@@ -123,6 +163,7 @@ Options can be supplied when creating the parser or when calling it; call option
 ## Deriving guards and assertions
 
 ```vibe
+// run: Console.log(shipmentTracking({ tracking: "box-76", pieces: 2 })); Console.log(shipmentTracking({ tracking: "box-76", pieces: "2" })); Console.log(assertShipment({ tracking: "box-76", pieces: 2 }))
 const isShipment = Schema.is(Shipment)
 
 function shipmentTracking(input: unknown) {
@@ -134,6 +175,12 @@ function assertShipment(input: unknown) {
   Schema.asserts(Shipment, input)
   return input.tracking
 }
+```
+
+```output
+box-76
+undefined
+box-76
 ```
 
 Guards and assertions check the decoded type, so a numeric `pieces` is valid and a string `pieces` is not. `Schema.is` returns a type predicate; `Schema.asserts(schema, input)` throws a generic validation error whose `cause` contains the issue. These trusted calls preserve TypeScript's narrowing in the current function without a boundary. An assertion exception is a defect, so ordinary `catch` does not handle it. Use `decodeUnknownEffect` when invalid data should produce a typed validation failure.
