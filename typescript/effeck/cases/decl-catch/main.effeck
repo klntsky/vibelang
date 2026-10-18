@@ -15,21 +15,25 @@ function fail(kind: string) {
 function describe(kind: string) {
   try {
     return fail(kind)
-  } catch (e: NotFound) {
-    return `missing ${e.id}`
-  } catch (e: Busy | Offline) {
-    return e._tag === "Busy" ? "busy" : "offline"
   } catch (e) {
-    return `other: ${e._tag}`
+    switch (e._tag) {
+      case "NotFound": return `missing ${e.id}`
+      case "Busy": return "busy"
+      case "Offline": return "offline"
+      default: return `other: ${e._tag}`
+    }
   }
 }
 
-// Without an untyped clause, a failure no clause names propagates with its type.
+// The default rethrows failures this match does not handle.
 function partial(kind: string): string!Broken! {
   try {
     return fail(kind)
-  } catch (e: NotFound | Busy | Offline) {
-    return "handled"
+  } catch (e) {
+    switch (e._tag) {
+      case "NotFound": case "Busy": case "Offline": return "handled"
+      default: throw e
+    }
   }
 }
 
@@ -39,13 +43,16 @@ function rethrow() {
     try {
       fail("missing")
       return "none"
-    } catch (e: NotFound) {
-      throw new Busy()
-    } catch (e: Busy) {
-      return "wrongly caught"
+    } catch (e) {
+      switch (e._tag) {
+        case "NotFound": throw new Busy()
+        case "Busy": return "wrongly caught"
+        default: throw e
+      }
     }
-  } catch (e: Busy) {
-    return "rethrown"
+  } catch (e) {
+    if (e._tag === "Busy") return "rethrown"
+    throw e
   }
 }
 
@@ -54,8 +61,9 @@ const Port = Schema.Struct({ port: Schema.Number })
 function parsePort(input: unknown) {
   try {
     return `${Schema.decodeUnknownEffect(Port)(input).port}`
-  } catch (e: Schema.SchemaError) {
-    return "schema"
+  } catch (e) {
+    if (e._tag === "SchemaError") return "schema"
+    throw e
   }
 }
 

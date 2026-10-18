@@ -12,61 +12,43 @@ function boom() {
   throw new Boom()
 }
 
-// A typed clause takes its expected failure; the Cause clause takes the rest.
+// Catch expected failures inside exit; defects remain in its Failure case.
 function typed() {
-  try {
-    return find("missing")
-  } catch (e: NotFound) {
-    return e._tag
-  } catch (cause: Cause) {
-    return "cause"
-  }
+  const outcome = exit(do {
+    try { find("missing") } catch (e) { e._tag }
+  })
+  if (outcome._tag === "Success") return outcome.value
+  return "cause"
 }
 
-// A defect reaches only the Cause clause.
 function defect() {
-  try {
-    return find("bug")
-  } catch (e: NotFound) {
-    return e._tag
-  } catch (cause: Cause) {
-    return cause.reasons[0]._tag
-  }
+  const outcome = exit(find("bug"))
+  if (outcome._tag === "Success") return outcome.value
+  return outcome.cause.reasons[0]._tag
 }
 
-// throw cause fails with every reason the Cause holds.
 function rethrown() {
   try {
-    try {
-      boom()
-    } catch (cause: Cause) {
-      throw cause
-    }
+    const outcome = exit(boom())
+    if (outcome._tag === "Failure") Effect.failCause(outcome.cause)
     return "no"
-  } catch (e: Boom) {
+  } catch (e) {
     return e._tag
   }
 }
 
 function onlyCause() {
-  try {
-    boom()
-    return "no"
-  } catch (cause: Cause) {
-    return cause.reasons[0]._tag
-  }
+  const outcome = exit(boom())
+  if (outcome._tag === "Success") return "no"
+  return outcome.cause.reasons[0]._tag
 }
 
-// Before a Cause clause, an untyped clause catches an expected failure.
 function untyped() {
-  try {
-    boom()
-    return "no"
-  } catch (e) {
-    return "Expected"
-  } catch (cause: Cause) {
-    return "cause"
-  }
+  const outcome = exit(do {
+    try { boom(); "no" } catch (e) { "Expected" }
+  })
+  if (outcome._tag === "Success") return outcome.value
+  return "cause"
 }
 
 export function main() {

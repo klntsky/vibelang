@@ -798,6 +798,13 @@ typescript/effeck/cases/plain-functions/main.effeck:49:28 lambda plain table
 typescript/effeck/cases/primitives-bare/main.effeck:20:22 block appended/program table
 typescript/effeck/cases/primitives-bare/main.effeck:23:15 byname program table
 typescript/effeck/cases/primitives-bare/main.effeck:9:23 byname program table
+typescript/effeck/cases/primitives-cause/main.effeck:17:24 byname program table
+typescript/effeck/cases/primitives-cause/main.effeck:17:27 lambda dual fallback
+typescript/effeck/cases/primitives-cause/main.effeck:25:24 byname program table
+typescript/effeck/cases/primitives-cause/main.effeck:32:26 byname program table
+typescript/effeck/cases/primitives-cause/main.effeck:41:24 byname program table
+typescript/effeck/cases/primitives-cause/main.effeck:47:24 byname program table
+typescript/effeck/cases/primitives-cause/main.effeck:47:27 lambda dual fallback
 typescript/effeck/cases/primitives-masks/main.effeck:20:22 block appended/program table
 typescript/effeck/cases/primitives-masks/main.effeck:30:15 byname program table
 typescript/effeck/cases/primitives-masks/main.effeck:36:22 block appended/program table
