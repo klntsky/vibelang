@@ -10,12 +10,15 @@ VibeLang sequences computations with ordinary functions and calls. This page cov
 ## Sequence computations
 
 ```vibe
+// run: Console.log(Effect.provide(invoice(3), ConfigProvider.layer(ConfigProvider.fromUnknown({ UNIT_PRICE: 4 }))))
 function invoice(quantity: number) {
   const unitPrice = Config.Finite("UNIT_PRICE")()
   const subtotal = quantity * unitPrice
-  log(`subtotal=${subtotal}`)
+  Console.log(`subtotal=${subtotal}`)
   return subtotal
 }
+// Output: subtotal=12
+// Output: 12
 ```
 
 Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")` builds a descriptor; the following `()` loads the setting and returns a number. A loading failure stops the function. You do not write `Effect.gen` or `yield*` in `.vibe` files.
@@ -41,16 +44,20 @@ function greeting() {
 ## Branches and loops
 
 ```vibe
+// run: Console.log(reportEven([1, 2, 3, 4, -1, 6]))
 function reportEven(values: ReadonlyArray<number>) {
   let count = 0
   for (const value of values) {
     if (value < 0) break
     if (value % 2 !== 0) continue
-    log(`even=${value}`)
+    Console.log(`even=${value}`)
     count += 1
   }
   return count
 }
+// Output: even=2
+// Output: even=4
+// Output: 2
 ```
 
 Conditions, local variables, `break`, `continue`, and early returns keep JavaScript's evaluation order. This loop runs sequentially. Use `Effect.forEach` with an explicit concurrency limit when the iterations should overlap.
@@ -86,11 +93,12 @@ To keep processing after a failure without catching it immediately, use `Effect.
 ## Retain the receiver
 
 ```vibe
+// run: Console.log(label())
 class Prefixer {
   constructor(readonly prefix: string) {}
 
   format(value: string) {
-    log("formatting label")
+    Console.log("formatting label")
     return `${this.prefix}: ${value}`
   }
 }
@@ -99,6 +107,8 @@ function label() {
   const prefixer = new Prefixer("item")
   return prefixer.format("marker")
 }
+// Output: formatting label
+// Output: item: marker
 ```
 
 Ordinary method calls preserve `this` and evaluate the receiver once. There is no nested generator whose receiver needs a special binding. If passing the method as a program, capture the receiver with `() => prefixer.format("marker")`.

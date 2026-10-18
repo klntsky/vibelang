@@ -88,6 +88,7 @@ function label(id: string) {
 
 ```vibe
 // A one-shot read ends its registration when either callback fires.
+// run: Console.log(readAndReport(sync(() => ({ read: (onValue: (n: number) => void) => { onValue(7); return () => {} } }))))
 type Source = {
   read: (onValue: (n: number) => void, onError: (e: Error) => void) => () => void
 }
@@ -100,9 +101,11 @@ function nextReading(source: Source) {
 
 function readAndReport(source: Source) {
   const reading = nextReading(source)
-  log(`reading=${reading}`)
+  Console.log(`reading=${reading}`)
   return reading
 }
+// Output: reading=7
+// Output: 7
 ```
 
 `callback` is the boundary hatch for a callback API. It registers a plain callback and waits for its first completion: `resume(value)` succeeds, `resume.fail(error)` fails with an expected failure, and `resume.exit(exit)` adopts an `Exit`. Later completions are ignored. A function that the registration returns runs if waiting is interrupted, so this adapter cancels the one-shot read on interruption. The registration receives its inputs first, here `source`, then `resume`, then an `AbortSignal`. Annotate `resume` with the success and failure types, `Resume<number, Error>`, because calls to `resume` inside the body cannot infer them. The body is plain, self-contained TypeScript, so it may call platform APIs but reads `source` only as an input.

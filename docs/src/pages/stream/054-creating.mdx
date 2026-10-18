@@ -10,7 +10,7 @@ Build a Stream from values, effectful work, or an existing source. Construction 
 ## Finite and empty streams
 
 ```vibe
-// run: Console.log(JSON.stringify(readPowers()))
+// run: Console.log(JSON.stringify([labels.runCollect(), absent.runCollect(), signal.runCount(), pages.runCollect(), readPowers()]))
 const labels = Stream.make("queued", "running", "complete")
 const absent = Stream.empty
 const signal = Stream.succeed(void 0)
@@ -20,7 +20,7 @@ const powers = Stream.iterate(2, (n) => n * 2).take(4)
 function readPowers() {
   return powers.runCollect() // [2, 4, 8, 16]
 }
-// Output: [2,4,8,16]
+// Output: [["queued","running","complete"],[],1,[4,5,6,7],[2,4,8,16]]
 ```
 
 `make` accepts individual elements and `empty` emits none. `range` includes both endpoints. `iterate` emits the initial value, then repeatedly applies its pure callback; limit an infinite source before collecting it.
@@ -28,6 +28,7 @@ function readPowers() {
 ## Successes and failures
 
 ```vibe
+// run: Console.log(JSON.stringify([ready.runCollect(), readClosed()]))
 error SourceClosed
 
 const ready = Stream.succeed("ready")
@@ -40,6 +41,7 @@ function readClosed() {
     return ["source unavailable"]
   }
 }
+// Output: [["ready"],["source unavailable"]]
 ```
 
 `succeed` emits once and completes. `fail` builds a failing source; it does not throw at construction. A `try` around consumption handles its typed failure.
@@ -47,6 +49,7 @@ function readClosed() {
 ## Arrays and iterables
 
 ```vibe
+// run: provide Catalog = { codes: () => ["A", "B"] } { Console.log(JSON.stringify([fromArray.runCollect(), fromBatches.runCollect(), fromSet.runCollect(), codes.runCollect()])) }
 const fromArray = Stream.fromArray([11, 22])
 const fromBatches = Stream.fromArrays([11, 22], [33])
 const fromSet = Stream.fromIterable(new Set(["east", "west"]))
@@ -56,13 +59,35 @@ service Catalog {
 }
 
 const codes = Stream.fromIterableEffect(() => Catalog.codes())
+// Output: [[11,22],[11,22,33],["east","west"],["A","B"]]
 ```
 
 `fromArray` and `fromIterable` emit collection members. `fromArrays` preserves the supplied batch boundaries internally. `fromIterableEffect` first runs the program to obtain an iterable, then emits its members; service requirements belong to consumption.
 
 ## Async iterables
 
+```ts
+// TypeScript (.ts)
+// rows.ts
+// run: return (async () => { const values = []; for await (const row of rows()) values.push(row); console.log(JSON.stringify(values)); try { for await (const row of rows(true)) {} } catch (error) { console.log((error as Error).message) } })()
+/** @vibelang trusted */
+export function rows(fail = false): AsyncIterable<string> {
+  return {
+    async *[Symbol.asyncIterator]() {
+      if (fail) throw new Error("iterator failed")
+      yield "row-a"
+      yield "row-b"
+    }
+  }
+}
+// Output: ["row-a","row-b"]
+// Output: iterator failed
+```
+
 ```vibe
+// run: Console.log(JSON.stringify(adaptRows(rows()).runCollect())); try { adaptRows(rows(true)).runCollect() } catch (error) { Console.log(error._tag) }
+import { rows } from "./rows.js"
+
 error IteratorFailed {
   cause: unknown
 }
@@ -70,6 +95,8 @@ error IteratorFailed {
 function adaptRows(rows: AsyncIterable<string>) {
   return Stream.fromAsyncIterable(rows, (cause) => new IteratorFailed({ cause }))
 }
+// Output: ["row-a","row-b"]
+// Output: IteratorFailed
 ```
 
 Pass an async iterable obtained from a TypeScript adapter or a service. The error mapper turns iteration exceptions and rejections into the stream's failure type. VibeLang has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
@@ -77,7 +104,7 @@ Pass an async iterable obtained from a TypeScript adapter or a service. The erro
 ## Effects and callbacks
 
 ```vibe
-// run: Console.log(JSON.stringify(readNotices()))
+// run: const clock = Clock.Clock(); provide Clock = { ...clock, sleep: (duration) => clock.sleep(duration), currentTimeMillis: () => 123, currentTimeMillisUnsafe: () => 123 } { Console.log(JSON.stringify([timestamp.runCollect(), readNotices()])) }
 const timestamp = Stream.fromEffect(Clock.currentTimeMillis)
 
 const notices = Stream.callback<string>((queue) => {
@@ -89,7 +116,7 @@ const notices = Stream.callback<string>((queue) => {
 function readNotices() {
   return notices.runCollect() // ["connected", "ready"]
 }
-// Output: ["connected","ready"]
+// Output: [[123],["connected","ready"]]
 ```
 
 `fromEffect` emits one success value. `callback` gives its registration program a queue: `Queue.offer` emits an element, `Queue.end` completes normally, and `Queue.fail` terminates with a typed error. Its optional second argument accepts `bufferSize` and a `strategy` of `"suspend"`, `"dropping"`, or `"sliding"`.
@@ -99,15 +126,19 @@ For a foreign event API, put the raw callback registration in a TypeScript adapt
 ## Scoped sources
 
 ```vibe
+// run: Console.log(JSON.stringify(sessionNames.runCollect()))
 function openSession() {
-  log("open session")
+  Console.log("open session")
   return Effect.acquireRelease(
     () => ({ name: "metrics" }),
-    () => log("close session")
+    () => Console.log("close session")
   )
 }
 
 const sessionNames = Stream.fromEffect(openSession()).map((session) => session.name).scoped()
+// Output: open session
+// Output: close session
+// Output: ["metrics"]
 ```
 
 `Stream.scoped` takes a Stream, and supplies its Scope during consumption. `Effect.acquireRelease` registers release in that Scope. Place all operations that use the acquired resource inside the scoped stream; see [Resourceful Streams](/stream/058-resourceful-streams).
@@ -115,7 +146,7 @@ const sessionNames = Stream.fromEffect(openSession()).map((session) => session.n
 ## Repeating values, streams, and effects
 
 ```vibe
-// run: Console.log(JSON.stringify(countdown()))
+// run: Console.log(JSON.stringify([pings.take(3).runCollect(), rounds.runCollect(), times.take(2).runCount(), countdown()]))
 const pings = Stream.succeed("ping").forever()
 const rounds = Stream.make("start", "finish").repeat(Schedule.recurs(2))
 const times = Stream.fromEffectRepeat(() => Clock.currentTimeMillis())
@@ -128,7 +159,7 @@ function countdown() {
   }
   return source.runCollect() // [3, 2, 1]
 }
-// Output: [3,2,1]
+// Output: [["ping","ping","ping"],["start","finish","start","finish","start","finish"],2,[3,2,1]]
 ```
 
 `forever` restarts its stream indefinitely. `repeat` runs the original stream once and lets the schedule control additional runs; `rounds` emits three rounds. `fromEffectRepeat` reruns its program for each element and treats `Cause.Done` as normal completion; `Cause.done()` runs an Effect that signals completion.
@@ -138,11 +169,13 @@ Keep mutable per-run state inside a function, as in `countdown`, so separate con
 ## Periodic elements
 
 ```vibe
+// run: const clock = Clock.Clock(); provide Clock = { ...clock, sleep: (duration) => clock.sleep(duration), currentTimeMillis: () => 123, currentTimeMillisUnsafe: () => 123 } { Console.log(JSON.stringify(collectSamples())) }
 const samples = Stream.tick("250 millis").mapEffect(() => Clock.currentTimeMillis())
 
 function collectSamples() {
   return samples.take(4).runCollect()
 }
+// Output: [123,123,123,123]
 ```
 
 `tick` emits `void` on an interval. Map each signal to the value you need. Backpressure still applies; a tick stream is not a guarantee that slow work completes at that frequency.
@@ -150,6 +183,7 @@ function collectSamples() {
 ## Unfolding state and paginating responses
 
 ```vibe
+// run: provide Directory = { page: (cursor) => ({ names: [String(cursor)], next: cursor < 2 ? cursor + 1 : undefined }) } { Console.log(JSON.stringify([halving.runCollect(), names.runCollect()])) }
 const halving = Stream.unfold(32, (n) => {
   if (n < 2) return undefined
   return [n, n / 2] as const
@@ -166,6 +200,7 @@ const names = Stream.paginate(0, (cursor) => {
   const page = Directory.page(cursor)
   return [page.names, Option.fromUndefinedOr(page.next)] as const
 })
+// Output: [[32,16,8,4,2],["0","1","2"]]
 ```
 
 `unfold` returns either `[element, nextState]` or `undefined` to stop without emitting. Its callback expects an Effect, so ordinary VibeLang statements can perform work between steps. `paginate` instead returns `[batch, nextStateOption]`; it emits the whole batch, including the final page whose next state is `None`.
@@ -173,7 +208,7 @@ const names = Stream.paginate(0, (cursor) => {
 ## Queues and broadcasts
 
 ```vibe
-// run: Console.log(JSON.stringify(queuedNumbers()))
+// run: Console.log(JSON.stringify(queuedNumbers())); const bus = PubSub.unbounded<string>({ replay: 1 }); PubSub.publish(bus, "broadcast"); Console.log(JSON.stringify(fromBroadcast(bus).take(1).runCollect()))
 function queuedNumbers() {
   const queue = Queue.unbounded<number, Cause.Done>()
   queue.offer(8)
@@ -186,6 +221,7 @@ function fromBroadcast(bus: PubSub.PubSub<string>) {
   return Stream.fromPubSub(bus)
 }
 // Output: [8,13]
+// Output: ["broadcast"]
 ```
 
 `fromQueue` removes items from a shared queue, so competing consumers divide the work. `fromPubSub` creates a subscription during consumption, so subscribers each receive published elements. A plain PubSub source stays live until the bus ends or the consumer stops; publishing before subscription does not guarantee delivery without replay configuration.

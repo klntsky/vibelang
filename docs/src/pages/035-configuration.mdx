@@ -198,7 +198,7 @@ function secretSetting() {
 ## Load providers
 
 ```vibe
-// run: Console.log(testPort(), Config.Port("PORT").parse(EnvProvider), Config.Port("PORT").parse(DotEnvProvider))
+// run: Console.log(testPort(), Config.Port("PORT").parse(EnvProvider), Config.Port("PORT").parse(DotEnvProvider)); provide FileSystem.layerNoop({ readFileString: (path) => { Console.log(path); return "PORT=9095" } }) { Console.log(Config.Port("PORT").parse(fileProvider())) }
 const TestProvider = ConfigProvider.fromUnknown({ PORT: 9091 })
 const EnvProvider = ConfigProvider.fromEnv({ env: { PORT: "9092" } })
 const DotEnvProvider = ConfigProvider.fromDotEnvContents("PORT=9093")
@@ -211,6 +211,8 @@ function fileProvider() {
   return ConfigProvider.fromDotEnv({ path: ".env.local" })
 }
 // Output: 9091 9092 9093
+// Output: .env.local
+// Output: 9095
 ```
 
 `fromUnknown` reads object properties and array indexes as path segments. `fromEnv()` reads the host environment; an explicit `{ env }` replaces that source for tests. Both normally treat empty strings as missing; use `preserveEmptyStrings: true` when empty text has meaning.
