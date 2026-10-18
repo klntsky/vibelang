@@ -17,8 +17,10 @@ function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)])
 }
 
+// Each rewrite has an HTML form and a Markdown form, for the pages' .md copies.
 const rewrites: [RegExp, string][] = [
   [/<code>github\.com\/roninjin10\/effectscript<\/code>/g, "<code>effectscript</code> on GitHub"],
+  [/`github\.com\/roninjin10\/effectscript`/g, "`effectscript` on GitHub"],
 ]
 
 const forbidden: [string, RegExp][] = [
