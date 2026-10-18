@@ -585,7 +585,9 @@ fail("checking links")
 // bare specification fragment moves to its chapter as on the HTML page, and a
 // link to a repository file that is not a page keeps only its text. Code keeps
 // its text. llms.txt (llmstxt.org) lists the copies, one section per sidebar view.
-const origin = "https://vibelang.sh"
+// The host whose pages the links name. vibelang.sh is the docs domain; a deploy to a
+// host that serves this build passes its own origin, so every link resolves there.
+const origin = process.env.VIBELANG_DOCS_ORIGIN ?? "https://vibelang.sh"
 // A code span, which stays as written, or an inline link, the only link form the sources use.
 const LINK = /(?<!`)(`+)(?!`)[\s\S]*?(?<!`)\1(?!`)|\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\(([^()\s]*)\)/g
 const lexer = new Marked({ gfm: true })
