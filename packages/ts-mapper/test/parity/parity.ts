@@ -363,11 +363,10 @@ const inputPattern = /\.(effeck|ts|mts|cts|tsx|json)$/
 
 // --------------------------------------------------------- node_modules
 
-// Each is a directory named node_modules, so a package resolved through its
-// real path (out/nm/mapper/node_modules/effeck-ts-mapper/prelude.d.ts) still
-// finds effect beside it. Under any other name, prelude.d.ts's import of
-// effect fails, skipLibCheck hides the failure, and every prelude helper is
-// any: the wrong-channels probe caught exactly that.
+// Cases link these node_modules directories. The mapper's real path is
+// out/work/prelude.d.ts, with its own dependencies in out/work/node_modules.
+// Imports in the prelude resolve from there, not from the case: otherwise
+// skipLibCheck hides their failure and every helper becomes any.
 const nmFork = path.join(outDir, "nm", "fork", "node_modules")
 const nmMapper = path.join(outDir, "nm", "mapper", "node_modules")
 
@@ -377,21 +376,16 @@ function link(target: string, at: string) {
 }
 
 // setupNodeModules makes the two shared node_modules directories every case
-// copy links to: effect and effeck-runtime for both sides, and the mapper
-// package (its manifest, prelude, and binary) for the stock side.
+// copy links to, using only run.sh's isolated packages. The mapper link and
+// a package-less case's self-reference resolve to the same out/work package.
 function setupNodeModules() {
   for (const nm of [nmFork, nmMapper]) {
+    fs.rmSync(nm, { recursive: true, force: true })
     fs.mkdirSync(nm, { recursive: true })
     link(effectDir, path.join(nm, "effect"))
     link(runtimeDir, path.join(nm, "effeck-runtime"))
   }
-  const pkg = path.join(nmMapper, "effeck-ts-mapper")
-  fs.rmSync(pkg, { recursive: true, force: true })
-  fs.mkdirSync(path.join(pkg, "bin"), { recursive: true })
-  fs.copyFileSync(path.join(mapperPackage, "package.json"), path.join(pkg, "package.json"))
-  fs.copyFileSync(path.join(mapperPackage, "prelude.d.ts"), path.join(pkg, "prelude.d.ts"))
-  fs.copyFileSync(mapperBin, path.join(pkg, "bin", "effeck-mapper"))
-  fs.chmodSync(path.join(pkg, "bin", "effeck-mapper"), 0o755)
+  link(mapperPackage, path.join(nmMapper, "effeck-ts-mapper"))
 }
 
 // ------------------------------------------------------ stock adapter
@@ -1168,6 +1162,14 @@ async function runSelfTest(): Promise<boolean> {
     }
     const baseline = compareWith(mapperText)
     check("baseline", baseline.status === "identical", `${target} is ${baseline.status} (fork: ${baseline.fork ?? "-"}; mapper: ${"mapper" in baseline ? baseline.mapper : "-"})`)
+    // Without package.json, NodeNext uses the enclosing package's exports
+    // before node_modules. This must reach our isolated prelude, even when
+    // the repository mapper package has no dependencies (catch-match).
+    const inherited = await runMapperIn(run, path.join(outDir, "work", "mapper-no-package", ref.id), (dir) => {
+      fs.rmSync(path.join(dir, "package.json"))
+    })
+    const inheritedType = compareWith(inherited.declarations.get(stem)?.text ?? "")
+    check("inherited mapper package scope", inherited.exec.code === 0 && inheritedType.status === "identical", `${target} is ${inheritedType.status}; exit ${inherited.exec.code}${inherited.exec.code === 0 ? "" : `\n${inherited.exec.output}`}`)
     const statement = mapperText.split("\n").find((l) => l.includes(`function ${target}(`))
     if (!statement) check("mutations", false, `no line declares ${target} in the mapper's ${stem}.d.ts`)
     else {

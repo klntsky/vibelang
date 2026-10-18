@@ -18,8 +18,8 @@
 # Steps:
 #   1. Check free disk: stop below 3 GiB.
 #   2. Build the fork's tsc and effeck-mapper once into out/bin.
-#   3. Build packages/runtime with the fork's tsc, linking effect the way
-#      typescript/effeck/smoke.sh does.
+#   3. Assemble a mapper package scope under out/work, with effect 4.0.5
+#      and a copy of packages/runtime built with the fork's tsc beside it.
 #   4. Find stock tsc: the typescript@$TS7_VERSION cache e2e.sh uses, else install it there.
 #   5. Run parity.ts with bun. Its runtime column (runtime.ts) compiles each
 #      runnable case with effeck-mapper --emit and runs it against the case's
@@ -30,6 +30,7 @@
 #   TS7_DIR              a directory whose node_modules/.bin/tsc is that version, instead of the cache
 #   EFFECT_NODE_MODULES  a node_modules that holds effect 4.0.5 (default ../experiments/node_modules,
 #                        else ~/effectscript/experiments/node_modules, as smoke.sh)
+#   PARITY_REVISION      revision label for the report (default current jj revision)
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -61,17 +62,29 @@ if [ -z "$effect_modules" ]; then
 fi
 [ -f "$effect_modules/effect/package.json" ] || { echo "parity: no effect in $effect_modules; set EFFECT_NODE_MODULES" >&2; exit 2; }
 effect_real="$(cd "$effect_modules/effect" && pwd -P)"
+effect_version="$(bun -e 'console.log(require(process.argv[1]).version)' "$effect_real/package.json")"
+[ "$effect_version" = 4.0.5 ] || { echo "parity: effect is $effect_version, expected 4.0.5" >&2; exit 2; }
 
-# The runtime's dist/ is not checked in: build it with this fork, against the
-# one copy of effect both sides use.
-runtime="$root/packages/runtime"
-if [ "$(cd "$runtime/node_modules/effect" 2>/dev/null && pwd -P)" != "$effect_real" ]; then
-  mkdir -p "$runtime/node_modules"
-  rm -rf "$runtime/node_modules/effect"
-  ln -s "$effect_real" "$runtime/node_modules/effect"
-fi
-echo "parity: build packages/runtime with the fork" >&2
-"$out/bin/tsc" -p "$runtime/tsconfig.json"
+# A case without package.json inherits its enclosing package scope. In
+# NodeNext, a self-reference to effeck-ts-mapper/prelude wins over the case's
+# node_modules. Make that enclosing scope our own package, so neither route
+# can reach the repository package's node_modules (catch-match exposed this).
+mapper_package="$out/work"
+rm -rf "$mapper_package/node_modules" "$mapper_package/bin" "$out/runtime-build"
+mkdir -p "$mapper_package/node_modules" "$mapper_package/bin" "$out/runtime-build/node_modules"
+cp "$package/package.json" "$package/prelude.d.ts" "$mapper_package/"
+cp "$out/bin/effeck-mapper" "$mapper_package/bin/"
+ln -s "$effect_real" "$mapper_package/node_modules/effect"
+
+# Build from copied sources: all generated runtime files and dependency
+# links belong to the harness, and both compilers use this same runtime.
+runtime="$mapper_package/node_modules/effeck-runtime"
+mkdir -p "$runtime"
+cp "$root/packages/runtime/package.json" "$runtime/"
+cp -R "$root/packages/runtime/src" "$root/packages/runtime/tsconfig.json" "$out/runtime-build/"
+ln -s "$effect_real" "$out/runtime-build/node_modules/effect"
+echo "parity: build packages/runtime copy with the fork" >&2
+"$out/bin/tsc" -p "$out/runtime-build/tsconfig.json" --outDir "$runtime/dist"
 
 if [ -n "${TS7_DIR:-}" ]; then
   stock_dir="$TS7_DIR"
@@ -85,7 +98,10 @@ fi
 stock_tsc="$stock_dir/node_modules/.bin/tsc"
 [ -x "$stock_tsc" ] || { echo "parity: no stock tsc at $stock_tsc" >&2; exit 2; }
 
-revision="$(cd "$root" && jj log --no-graph -r @ -T 'commit_id.short(12) ++ " (change " ++ change_id.short(12) ++ ", parent " ++ parents.map(|c| c.commit_id().short(12)).join(",") ++ ")"' 2>/dev/null || echo unknown)"
+revision="${PARITY_REVISION:-}"
+if [ -z "$revision" ]; then
+  revision="$(cd "$root" && jj log --no-graph -r @ -T 'commit_id.short(12) ++ " (change " ++ change_id.short(12) ++ ", parent " ++ parents.map(|c| c.commit_id().short(12)).join(",") ++ ")"' 2>/dev/null || echo unknown)"
+fi
 
 PARITY_ROOT="$root" \
 PARITY_FORK_TSC="$out/bin/tsc" \
@@ -93,7 +109,7 @@ PARITY_MAPPER="$out/bin/effeck-mapper" \
 PARITY_STOCK_TSC="$stock_tsc" \
 PARITY_EFFECT_DIR="$effect_real" \
 PARITY_RUNTIME_DIR="$runtime" \
-PARITY_MAPPER_PACKAGE="$package" \
+PARITY_MAPPER_PACKAGE="$mapper_package" \
 PARITY_REVISION="$revision" \
 PARITY_GO_VERSION="$(go env GOVERSION)" \
 PARITY_BUILD_SECONDS="$SECONDS" \
