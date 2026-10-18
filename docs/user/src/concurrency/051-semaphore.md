@@ -5,10 +5,12 @@ A semaphore limits access to a shared resource with a pool of permits. A one-per
 ## Creating a permit pool
 
 ```vibe
+// run: const limit = makeUploadLimit(); Console.log(Semaphore.withPermits(limit, 3, () => "three permits acquired"))
 function makeUploadLimit() {
   return Semaphore.make(3)
 }
 // Semaphore.Semaphore!!
+// Output: three permits acquired
 ```
 
 Create the pool once for the callers that must share a limit. Allocating a separate pool inside every upload would give each upload its own permits and impose no combined limit. A permit represents access, not a resource value such as a connection.
@@ -16,16 +18,22 @@ Create the pool once for the callers that must share a limit. Allocating a separ
 ## Limiting concurrent access
 
 ```vibe
+// run: Console.log(JSON.stringify(uploadAll()))
 function uploadAll() {
   const uploads = Semaphore.make(2)
   return forEach(["a.csv", "b.csv", "c.csv", "d.csv"], (file) => {
     return Semaphore.withPermits(uploads, 1) {
-      logInfo("upload started", file)
+      Console.log("upload started", file)
       sleep("30 millis")
       return file
     }
   }, { concurrency: "unbounded" })
 }
+// Output: upload started a.csv
+// Output: upload started b.csv
+// Output: upload started c.csv
+// Output: upload started d.csv
+// Output: ["a.csv","b.csv","c.csv","d.csv"]
 ```
 
 The traversal can start all four callers, but only two can enter the permit-protected region at once. This is useful when several unrelated parts of the application must share a resource limit. A traversal's own `concurrency` option instead limits only that traversal.
@@ -33,6 +41,7 @@ The traversal can start all four callers, but only two can enter the permit-prot
 ## Acquiring several permits around work
 
 ```vibe
+// run: Console.log(JSON.stringify(weightedJobs()))
 function weightedJobs() {
   const memoryBudget = Semaphore.make(4)
   return forEach([1, 2, 3], (weight) => {
@@ -42,6 +51,7 @@ function weightedJobs() {
     }
   }, { concurrency: 3 })
 }
+// Output: ["job using 1 units","job using 2 units","job using 3 units"]
 ```
 
 An operation waits until its requested permits can be acquired together. This models jobs with different resource costs, such as memory reservations. Requesting more permits than the pool can supply leaves the operation waiting, so ensure job weights fit the configured pool.
@@ -49,6 +59,7 @@ An operation waits until its requested permits can be acquired together. This mo
 ## Releasing permits safely
 
 ```vibe
+// run: Console.log(releaseOnFailure())
 error Rejected
 
 function releaseOnFailure() {
@@ -56,10 +67,12 @@ function releaseOnFailure() {
   try {
     Semaphore.withPermits(mutex, 1) { throw new Rejected() }
   } catch (error) {
-    logWarning("first job rejected", error._tag)
+    Console.log("first job rejected", error._tag)
   }
   return pipe(() => "next job can enter", Semaphore.withPermits(mutex, 1))
 }
+// Output: first job rejected Rejected
+// Output: next job can enter
 ```
 
 `withPermits` returns acquired permits on success, failure, and interruption. Prefer it to manually pairing `Semaphore.take` and `release`, where cancellation between acquisition and cleanup registration can leak permits. `Semaphore.withPermit` is the single-permit convenience form with the same release guarantee.

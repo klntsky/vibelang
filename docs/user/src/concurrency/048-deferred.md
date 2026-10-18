@@ -5,6 +5,7 @@ A `Deferred<A, E>` is a result that another fiber can complete once. Use it to s
 ## Creating a one-time result
 
 ```vibe
+// run: const signal = makeStartupSignal(); Console.log(signal.isDone()); Console.log(signal.poll().isNone())
 error StartupFailed {
   stage: string
 }
@@ -13,6 +14,8 @@ function makeStartupSignal() {
   return Deferred.make<string, StartupFailed>()
 }
 // Deferred.Deferred<string, StartupFailed>!!
+// Output: false
+// Output: true
 ```
 
 The new deferred starts empty and contains neither a success nor a failure. Creating it is an Effect operation and belongs inside a program. Pass the same handle to the producer and every waiter that should share its result.
@@ -20,12 +23,14 @@ The new deferred starts empty and contains neither a success nor a failure. Crea
 ## Waiting for completion
 
 ```vibe
+// run: Console.log(waitForAddress())
 function waitForAddress() {
   const address = Deferred.make<string>()
   const listener = fork address.await()
   address.succeed("127.0.0.1:8080")
   return join listener
 }
+// Output: 127.0.0.1:8080
 ```
 
 `address.await()` (`Deferred.await`) waits while the handle is empty and returns immediately after completion. Several fibers can await the same deferred and receive the same result. Cancelling one waiter does not require completing the deferred for everyone else.
@@ -33,6 +38,7 @@ function waitForAddress() {
 ## Completing with success or failure
 
 ```vibe
+// run: Console.log(JSON.stringify(completeOnce())); Console.log(shareFailure())
 function completeOnce() {
   const result = Deferred.make<number, string>()
   const accepted = result.succeed(25)
@@ -47,10 +53,13 @@ function shareFailure() {
   try {
     return result.await()
   } catch (error) {
-    logError(error)
+    Console.log(error)
     return 0
   }
 }
+// Output: {"accepted":true,"ignored":false,"value":25}
+// Output: configuration missing
+// Output: 0
 ```
 
 The first completion wins, and completion operations return `false` when a result already exists. `Deferred.done` accepts an `Exit`, `Deferred.failCause` accepts a cause, and `Deferred.interrupt` completes waiters with interruption. `Deferred.complete(deferred, program)` evaluates a program and shares its outcome; `completeWith` stores the program for each waiter to evaluate, so it does not promise one execution of that program.
@@ -58,6 +67,7 @@ The first completion wins, and completion operations return `false` when a resul
 ## Polling completion state
 
 ```vibe
+// run: Console.log(JSON.stringify(inspectWithoutWaiting()))
 function inspectWithoutWaiting() {
   const result = Deferred.make<number>()
   const before = result.isDone() // false
@@ -69,6 +79,7 @@ function inspectWithoutWaiting() {
   }
   return { before, value: undefined }
 }
+// Output: {"before":false,"value":9}
 ```
 
 `isDone` reports whether completion has happened. `poll` returns `None` while empty or `Some` containing the completed Effect, which runs when called. A completed failure is still done, and calling its stored program propagates that failure.
@@ -76,6 +87,7 @@ function inspectWithoutWaiting() {
 ## Coordinating work across fibers
 
 ```vibe
+// run: Console.log(coordinate())
 function coordinate() {
   const prepared = Deferred.make<ReadonlyArray<string>>()
   const producer = fork {
@@ -90,6 +102,7 @@ function coordinate() {
   join producer
   return result
 }
+// Output: part-a+part-b
 ```
 
 The consumer cannot proceed before the producer supplies its input, regardless of which fiber starts first. A producer that fails before completing the signal leaves waiters waiting, so real startup code should complete it with failure too, or supervise producer failure alongside the wait. A deferred is single use; use a Queue for repeated messages or a Latch for a reusable gate.
