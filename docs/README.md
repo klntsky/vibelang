@@ -28,6 +28,14 @@ npm run preview
 
 Vocs checks internal links during the production build, and a dead link fails it. Generated output is written to `dist/` and is ignored by Git.
 
+### Temporary Vocs search accessibility patch
+
+[`#1`](https://github.com/smithersai/vibelang/issues/1) tracks the search combobox's missing active-result relationship. npm has no native `patchedDependencies` mechanism here. The checked-in patch targets Vocs 2.8.5's `Search.tsx`; npm's `postinstall`, `prebuild` and `predev` hooks apply it with exact version/source checks and zero patch fuzz. The script recompiles only that module because Vocs loads its shipped `dist` JavaScript. It preserves the upstream [MIT license](https://github.com/wevm/vocs/blob/main/LICENSE), package and normal Vocs commands. Node, the existing TypeScript dependency, and the standard `patch` utility are required.
+
+The hook is idempotent and refuses borrowed/symlinked Vocs files or unreviewed source/compiled changes. A workspace borrowing another checkout's dependencies needs its own Vocs directory before running these hooks; shared dependencies must stay unchanged. `node --test scripts/patch-vocs-search.test.mjs` checks these guards. With an existing Playwright installation, run `BASE_URL=http://localhost:4173 PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs node scripts/verify-search-accessibility.mjs` against the built preview. It checks selection linkage, changed and empty results, responsive instances, dismissal, recent results, and navigation. Omit `BASE_URL` to reproduce against production.
+
+Remove the patch and lifecycle hooks when an [upstream Vocs Search](https://github.com/wevm/vocs/blob/main/src/react/internal/Search.tsx) release provides unique result/listbox IDs and `aria-activedescendant`, then update the pinned version and run the keyboard/browser regressions. Published 2.10.3 still lacked this relationship when checked on 2026-10-18.
+
 ## Deploy
 
 `alchemy.run.ts` deploys `dist/public` as a static-assets Worker on `vibelang.sh`, with state in Cloudflare.

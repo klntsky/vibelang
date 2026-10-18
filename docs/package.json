@@ -9,12 +9,15 @@
     "preview": "vocs preview",
     "deploy": "alchemy deploy --stage prod",
     "deploy:plan": "alchemy plan --stage prod",
-    "dev:cloudflare": "alchemy dev"
+    "dev:cloudflare": "alchemy dev",
+    "postinstall": "node scripts/patch-vocs-search.mjs",
+    "prebuild": "node scripts/patch-vocs-search.mjs",
+    "predev": "node scripts/patch-vocs-search.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "vocs": "^2.8.5",
+    "vocs": "2.8.5",
     "waku": "1.0.0-beta.6"
   },
   "devDependencies": {

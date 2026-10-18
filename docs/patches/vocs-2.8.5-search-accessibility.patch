@@ -1,0 +1,88 @@
+--- a/src/react/internal/Search.tsx
++++ b/src/react/internal/Search.tsx
+@@ -109,6 +109,9 @@
+   const [recentSearches, setRecentSearches] = React.useState<SearchResult[]>([])
+   const [index, setIndex] = React.useState<MiniSearch<SearchResult> | null>(null)
+ 
++  const searchId = React.useId()
++  const listId = `${searchId}-results`
++  const resultId = (index: number) => `${searchId}-result-${index}`
+   const listRef = React.useRef<HTMLUListElement>(null)
+   const router = useRouter()
+ 
+@@ -374,8 +377,10 @@
+             <LucideSearch className="vocs:size-5 vocs:text-secondary vocs:shrink-0" />
+             <input
+               aria-autocomplete="list"
+-              aria-controls="search-results"
+-              aria-expanded={displayedResults.length > 0}
++              aria-label="Search documentation"
++              aria-controls={allItems.length > 0 ? listId : undefined}
++              aria-activedescendant={allItems[search.selectedIndex] ? resultId(search.selectedIndex) : undefined}
++              aria-expanded={allItems.length > 0}
+               autoComplete="off"
+               // biome-ignore lint/a11y/noAutofocus: _
+               autoFocus
+@@ -409,12 +414,13 @@
+                 <ul
+                   ref={listRef}
+                   aria-label={query.trim() ? 'Search results' : 'Recent searches'}
+-                  id="search-results"
++                  id={listId}
+                   // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: _
+                   role="listbox"
+                 >
+                   {jumpToResult && (
+                     <JumpTo
++                      id={resultId(0)}
+                       onClick={() => handleResultClick(jumpToResult)}
+                       queryTerms={query.trim().split(/\s+/)}
+                       result={jumpToResult}
+@@ -428,6 +434,7 @@
+                       return (
+                         <JumpTo
+                           key={result.id}
++                          id={resultId(index)}
+                           onClick={() => handleResultClick(result)}
+                           queryTerms={queryTerms}
+                           result={result}
+@@ -437,6 +444,7 @@
+                     return (
+                       <Result
+                         key={result.id}
++                        id={resultId(index)}
+                         queryTerms={queryTerms}
+                         onClick={() => handleResultClick(result)}
+                         result={result}
+@@ -516,6 +524,7 @@
+   return (
+     // biome-ignore lint/a11y/useFocusableInteractive: _
+     <li
++      id={props.id}
+       aria-selected={selected}
+       className="vocs:group vocs:px-4 vocs:py-2 vocs:cursor-pointer vocs:transition-colors vocs:text-primary vocs:hover:bg-surfaceTint vocs:data-[selected=true]:bg-accenta3 vocs:data-[selected=true]:text-heading"
+       data-selected={selected}
+@@ -552,6 +561,7 @@
+ 
+ declare namespace Result {
+   type Props = {
++    id: string
+     queryTerms: string[]
+     onClick: () => void
+     result: SearchResult
+@@ -587,6 +597,7 @@
+   return (
+     // biome-ignore lint/a11y/useFocusableInteractive: _
+     <li
++      id={props.id}
+       aria-selected={selected}
+       className="vocs:group vocs:px-4 vocs:py-2 vocs:cursor-pointer vocs:transition-colors vocs:text-primary vocs:hover:bg-surfaceTint vocs:data-[selected=true]:bg-accenta3 vocs:data-[selected=true]:text-heading"
+       data-selected={selected}
+@@ -606,6 +617,7 @@
+ 
+ declare namespace JumpTo {
+   type Props = {
++    id: string
+     onClick: () => void
+     queryTerms: string[]
+     result: SearchResult
