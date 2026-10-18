@@ -481,6 +481,7 @@ type walker struct {
 	c           *checker.Checker
 	runtime     string
 	nodeModules string
+	realDist    map[string]string // package -> resolved dist directory, cached for linked installs
 	queue       []*ast.Symbol
 	modulePaths map[*ast.Symbol]string // module symbol -> module path
 	reach       map[*ast.Symbol][]reached
@@ -591,6 +592,21 @@ func (w *walker) publicPath(file string) string {
 	for _, pkg := range distPackages {
 		dist := filepath.ToSlash(filepath.Join(w.nodeModules, pkg, "dist")) + "/"
 		rel, ok := strings.CutPrefix(file, dist)
+		if !ok {
+			// The checker resolves package symlinks. Keep the same public
+			// module identity when node_modules links into another checkout.
+			if w.realDist == nil {
+				w.realDist = map[string]string{}
+			}
+			real, cached := w.realDist[pkg]
+			if !cached {
+				real, _ = filepath.EvalSymlinks(filepath.FromSlash(strings.TrimSuffix(dist, "/")))
+				w.realDist[pkg] = real
+			}
+			if real != "" {
+				rel, ok = strings.CutPrefix(file, filepath.ToSlash(real)+"/")
+			}
+		}
 		if !ok || !strings.HasSuffix(rel, ".d.ts") {
 			continue
 		}

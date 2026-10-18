@@ -129,4 +129,21 @@ func TestGenerateCallbackForms(t *testing.T) {
 	if !reflect.DeepEqual(before, after) {
 		t.Fatalf("callback contract changed across table serialization: %+v -> %+v", before, after)
 	}
+	t.Run("linked dependencies preserve canonical forms", func(t *testing.T) {
+		linked := filepath.Join(t.TempDir(), "node_modules")
+		if err := os.Symlink(modules, linked); err != nil {
+			t.Fatal(err)
+		}
+		g, err := generate(linked, runtime)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got bytes.Buffer
+		if err := vibelangmapper.WriteTable(&got, g.header, g.modules, g.entries, g.aliases, g.values); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(out.Bytes(), got.Bytes()) {
+			t.Fatal("linked dependencies changed the generated table, including provider keys and block receiver forms")
+		}
+	})
 }
