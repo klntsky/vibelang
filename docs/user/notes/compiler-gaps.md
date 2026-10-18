@@ -52,7 +52,7 @@ pages state the runtime limitation in prose.
 4.0.5's `timeout`, `timeoutOption`, and `timeoutOrElse` wait for the interrupted
 source's cleanup but discard failures from that cleanup. Both a `finally` that
 dies and a `using` release that dies reproduce this. A plain `timeout` reports
-only `TimeoutError`. This conflicts with D15 and the failures chapter's cleanup
-guarantee, while the Effect interop rules retain Effect's operator semantics.
-The compiler lead must decide whether VibeLang overrides these operators or
-narrows the guarantee at an Effect concurrency boundary.
+only `TimeoutError`. D256 resolves the scope of D15: cleanup VibeLang itself runs
+keeps its failures, while Effect operators retain Effect's semantics under D22,
+including dropping a loser's cleanup failure. VibeLang does not fork `timeout`;
+surfacing the loser's finalizer failure is an upstream Effect follow-up.

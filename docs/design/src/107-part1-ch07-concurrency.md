@@ -39,7 +39,7 @@ Each combinator has its own rule for a failing branch, and VibeLang adds nothing
 | `Effect.timeout` | The program's result | At the deadline, interrupts the program and fails with `Cause.TimeoutError` |
 | `join [a, b]` | Every fiber's value, in the same shape | Interrupts the other fibers and fails with that failure |
 | `await.all [a(), b()]` | Every result, in the same shape | Interrupts the other elements and fails with that failure |
-| `await.allSettled [a(), b()]` | Every outcome as a `Result`, in the same shape | Never fails |
+| `await.allSettled [a(), b()]` | Every success or typed failure as a `Result`, in the same shape | Never fails with a typed error; defects and interruption propagate as in `Effect.all` with `mode: "result"` (D258) |
 | `await.race [a(), b()]` | Whichever element finishes first, success or failure | Fails if the first to finish failed; the others are interrupted |
 | `await.any [a(), b()]` | The first success | Keeps waiting; fails only if every element fails, with every failure |
 | `for concurrent` | Nothing: the loop runs its body for each item | Interrupts the other items and fails with that failure |
@@ -136,7 +136,7 @@ function next(jobs: Queue.Queue<Job>, shutdown: Deferred.Deferred<void>) {
 ```
 
 - `await.all [a(), b()]` and `await.all { x: a(), y: b() }` are `Effect.all` with unbounded concurrency: every result, the shape kept, an object's keys in the order written, and a failure interrupts the rest.
-- `await.allSettled` is `Effect.all` with `mode: "result"`: each outcome is a `Result`, and it never fails.
+- `await.allSettled` is `Effect.all` with `mode: "result"`: each success or typed failure is a `Result`, and it never fails with a typed error. Defects and interruption propagate exactly as in that Effect operator (D258).
 - `await.race` is `Effect.raceFirst` over any number of elements: the first to finish wins, success or failure, and the others are interrupted. Of elements ready at once, the first written wins. An empty race never finishes, as `Promise.race([])` does not.
 - `await.any` is `Effect.raceAll`: the first success wins; it fails only when every element fails, with every failure.
 - A `do { ... }` expression (D187) gives an element statements of its own. A race over an object is EK4608.

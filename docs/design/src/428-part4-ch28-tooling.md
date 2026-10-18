@@ -26,8 +26,9 @@ planned:
 | macOS on Intel | `vibelang-darwin-x64` | No |
 | Linux on x64 | `vibelang-linux-x64` | Yes |
 | Linux on arm64 | `vibelang-linux-arm64` | No |
-| Windows on x64 | `vibelang-win32-x64` | No |
-| Windows on arm64 | `vibelang-win32-arm64` | No |
+
+Version 0.0.1 ships `darwin-arm64`, `darwin-x64`, `linux-arm64`, and
+`linux-x64` binaries. `win32` binaries come in a later release.
 
 To work on VibeLang itself, install from a checkout instead. `sh scripts/setup.sh`
 requires Go, Bun, and Node on PATH; the tested versions are Go 1.26 (with Go
