@@ -12,7 +12,7 @@ bun run start
 ```
 
 VibeLang compiles `.vibe` sources to JavaScript with the native `vibelang`
-compiler. Version 0.0.1 installs from npm.
+compiler. Version 0.0.2 installs from npm.
 
 > **For agents.** To set up VibeLang with a coding agent, give it this prompt:
 >
@@ -30,15 +30,18 @@ Install Node 26 or later and Bun 1.4 or later. The compiler is a native binary.
 `vibelang` lists one package per platform as an optional dependency, and your
 package manager installs only the one that matches your machine:
 
-| Platform | Package | Tested for 0.0.1 |
+| Platform | Package | Rehearsed for 0.0.2 |
 | --- | --- | --- |
-| macOS on Apple silicon | `vibelang-darwin-arm64` | Yes |
+| macOS on Apple silicon | `vibelang-darwin-arm64` | No |
 | macOS on Intel | `vibelang-darwin-x64` | No |
 | Linux on x64 | `vibelang-linux-x64` | Yes |
 | Linux on arm64 | `vibelang-linux-arm64` | No |
+| Windows on x64 | `vibelang-win32-x64` | No |
+| Windows on arm64 | `vibelang-win32-arm64` | No |
 
-Version 0.0.1 ships `darwin-arm64`, `darwin-x64`, `linux-arm64`, and
-`linux-x64` binaries. `win32` binaries come in a later release.
+Version 0.0.2 ships `darwin-arm64`, `darwin-x64`, `linux-arm64`,
+`linux-x64`, `win32-arm64`, and `win32-x64` binaries. All six are
+cross-compiled; the end-to-end npm and Bun rehearsal runs on Linux x64.
 
 Keep optional dependencies enabled. If an install skips them, for example with
 `npm install --omit=optional`, `vibelang` cannot find its binary and exits with an
@@ -71,8 +74,8 @@ See [Getting Started](/013-getting-started) for the starter's files and
 ## Add VibeLang to an existing project
 
 ```sh
-bun add vibelang-runtime@0.0.1 effect@4.0.5 @effect/platform-node@4.0.5
-bun add -d vibelang@0.0.1 vibelang-vite@0.0.1 vitest@5.0.5 @effect/vitest@4.0.5
+bun add vibelang-runtime@0.0.2 effect@4.0.5 @effect/platform-node@4.0.5
+bun add -d vibelang@0.0.2 vibelang-vite@0.0.2 vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 With npm, run `npm install --save-exact` for the first line and
