@@ -1,6 +1,8 @@
 import "./version.js"
 // Runtime ABI used by generated Effeck modules.
 export * from "./calls.js"
+export { $direct, $done, $fast, $isRun, $settle } from "./fastcalls.js"
+export type { Fast } from "./fastcalls.js"
 export * from "./regions.js"
 export * from "./fork.js"
 export { $Context, $control, $reference, $service, Control, wire } from "./services.js"

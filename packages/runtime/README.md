@@ -83,6 +83,12 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `Bind` (type) | Preserve the success, failure, and requirement types of `$bind` | D24 |
 | `$program` | Convert a zero-argument function to a lazy, rerunnable Effect | D7 |
 | `$programs` | Convert an iterable of zero-argument functions to an array of Effects, or a record of them to a record of Effects | D49 |
+| `$isRun` | Test whether a call's value runs where the call stands: an Effect that is not a Config, a Context key, or an Error (including cross-realm YieldableErrors) | D24, L3 |
+| `$direct` | Name the property, `f[$direct] = f$direct`, that gives callers in other modules a pure function's plain body | D10, D65 |
+| `$done` | Return a finished fast call's value, as `Exit.succeed(value)` when the run check would run the value | L2 |
+| `$settle` | Finish a fast call eagerly after its first step, or return the Effect that resumes its body on the fiber | L2 |
+| `$fast` | Make the fast entry that bounds eager nesting; currently emitted for every function the projector cannot prove pure | L2, D10 |
+| `Fast` (type) | Type a fast entry's result: the body's value, or an Effect that produces it | L2 |
 | `$normal` | Represent normal completion of a lowered region or loop body | D14, D26 |
 | `$catch` | Recover a cause containing expected failures only | D13, D28, D46 |
 | `$catchExpression` | Run a catch expression's left side and recover as `$catch` does | D236 |
@@ -140,6 +146,112 @@ instrumentation import the kernel module itself from
 `effeck-runtime/kernel`, for example its `hooks`, which report each
 capture and resumption; the compiler's acceptance case `stack-depth` uses them
 to check that loops run in constant stack.
+
+## Fast calls without types
+
+The text-only projector (decision (B)) cannot see types, so `$isRun`,
+`$direct`, and the fast-call helpers decide at run time what the fork decided
+from them. L2 and L3 are that decision's language changes: a function is plain
+JavaScript only with a plain return annotation (L2), and a call runs its value
+when the value is an Effect at run time (L3). None of the helpers changes what
+a call computes.
+
+| Call in an Effect body | JavaScript the projector writes |
+| --- | --- |
+| A same-file pure function | `f$direct(x)` |
+| A function another `.effeck` module exports | `(($t = (f[$direct] ?? f)(x)), f[$direct] ? $t : ($isRun($t) ? (yield* $t) : $t))` |
+| Any other same-file function | `(($t = f$fast(x)), $isRun($t) ? (yield* $t) : $t)` |
+| Anything else | `(($t = c), $isRun($t) ? (yield* $t) : $t)` |
+
+A fast entry runs the function's generator, `f$body`, eagerly on the caller's
+stack. When the body finishes without needing the fiber it returns the value,
+through `$done`, which wraps a value that `$isRun` would run in
+`Exit.succeed`. Otherwise it returns an Effect: one that resumes the body on
+the fiber after the Effect the body yielded, or the failure the body yielded.
+The call site then has the slow call's result, `yield* f(x)`. A yielded Exit
+resolves in place, as Effect.gen's own generator step resolves it. The
+projector currently writes this entry for every function it cannot prove pure:
+
+```js
+const f$fast = $fast(f$body)
+```
+
+A planned per-function entry uses `$done` and `$settle` directly for functions
+outside a same-file call cycle:
+
+```js
+function f$fast(a, b) { const it = f$body(a, b), s = it.next(); return s.done ? $done(s.value) : $settle(it, s) }
+```
+
+Only a same-file call cycle nests eager runs without limit: a call of another
+module's function, of a lambda, or of a function value starts its body on the
+fiber. `$fast` counts eager nesting. After 100 nested entries it returns the
+slow call's Effect, which starts the body on the fiber with heap frames (D10).
+Each eager level holds three JavaScript frames, whose size depends on the
+body's live locals. Node 26.10's default stack overflows at 3,085 levels with
+no locals, 888 with 80, 485 with 200, and 272 with 400; with 80 locals on a
+6,000-frame plain base stack it overflows at 297. Bun 1.4.1 overflows at
+9,384 with no locals and 4,143 with 80. A cap of 100 leaves room in these
+measured cases, but cannot guarantee stack safety for every body: enough live
+locals, a deeper base stack, or plain recursion inside a body can still
+overflow. A RangeError becomes a Die; retrying the body would be unsound
+because its side effects may already have run. The tests run 100,000-deep
+recursion on Bun and Node, including Node bodies with 0, 80, and 200 live locals.
+
+The run check also recognizes YieldableErrors across realms by Effect 4.0.5's
+string key `"~effect/Effect/identifier"` being `"YieldableError"`, so they remain
+data even when `instanceof Error` is false.
+
+The edges, each with a test in `tests/fastcalls.test.ts`:
+
+- Handlers, `resume`, and interruption see the suspended body as an ordinary
+  generator frame: tail and non-tail resumes, a continuation resumed twice,
+  and cleanup on interruption behave as for the slow call.
+- The eager part has no interruption check and no scheduler yield, as for a
+  `$direct` call. An interrupt pending at the call arrives at the first
+  suspension, after the eager part ran; the slow call takes it before the
+  body starts.
+- A failure the body yields, and a defect it throws after its first step,
+  surface at the call site's `yield*`, inside the caller's regions, with the
+  slow call's Cause. A throw in the planned per-function entry's first step,
+  or while `f$body(a, b)` binds its parameters, leaves the caller's body as a
+  JavaScript exception, which the fiber makes the same defect at the
+  caller's step; an Effect body has no JavaScript `try` (D54) to see the
+  difference. `$fast`'s entry catches both.
+- Running one suspended fast call twice is a defect: the body resumes once.
+- The fast path has no span, so a function that D34's tracing compiles with
+  `Effect.fn` keeps the slow call.
+
+Nanoseconds per call, in the text-only study's shapes: 200,000 calls of
+`n * 2` in one Effect function, best of 15 rounds. From this directory:
+
+```sh
+bun run build && node tests/fastcalls-bench.mjs
+```
+
+| Call | ns per call |
+| --- | ---: |
+| `$direct`, same file (D10 today) | 1.9 |
+| Plain helper + `$isRun` (L3) | 4.8 |
+| `f[$direct]`, another module | 6.0 |
+| Fast call, pure body | 14.9 |
+| `$fast` entry, pure body | 15.1 |
+| Fast call, body yields an Exit | 36.2 |
+| `$fast` entry, body yields an Exit | 37.2 |
+| Effect function + `$isRun` | 118.3 |
+| Fast call, body suspends | 139.4 |
+| Effect function, `yield* f(x)` (the slow call) | 149.0 |
+| `$fast` entry, body suspends | 149.4 |
+| Effect function, body yields an Exit | 228.5 |
+| Effect function, body suspends | 428.8 |
+
+The run check alone costs 2.9 ns over an inline call, and the property check
+4.1 ns. Node 26.10.0 measured these on a Mac mini (darwin arm64, 14 cores)
+that other jobs held at a load average of 78 to 147, so each row is the best
+of two runs. Rows that allocate (Effect functions and suspending fast calls)
+still carry that load: on an idle machine the study measured the slow call at
+179 ns and a suspending one at 259 ns. Rows that do not allocate repeated
+within 0.5 ns.
 
 ## Prototype compatibility
 

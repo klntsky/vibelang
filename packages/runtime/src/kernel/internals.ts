@@ -15,6 +15,10 @@ export const contA = "~effect/Effect/successCont"
 export const contE = "~effect/Effect/failureCont"
 export const contAll = "~effect/Effect/ensureCont"
 export const identifier = "~effect/Effect/identifier"
+// The run loop calls a primitive's evaluate (internal/core.ts:41, internal/effect.ts:625).
+export const evaluate = "~effect/Effect/evaluate"
+// Every Exit carries it (internal/core.ts:22); the public modules export no constant for it.
+export const ExitTypeId = "~effect/Exit"
 
 // The subset of FiberImpl (internal/effect.ts:487-743) the kernel touches.
 export interface FiberInternals {
