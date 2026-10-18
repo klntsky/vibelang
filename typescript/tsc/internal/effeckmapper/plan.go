@@ -21,8 +21,8 @@ import (
 //     call of a type guard in `((yield* $run(g(x))), g(x))`.
 //
 // This phase implements the checking rendering. The executable rendering
-// is not implemented: it drops witnesses and otherwise writes the checking
-// text, so the plan carries no checking-only text it would have to undo.
+// is a placeholder that drops witnesses and implements no other kind; the
+// plan carries no checking-only text it would have to undo.
 
 // editKind is what an edit means. Kinds come in parts: an open and a close
 // edit around source text, and sometimes a middle one.
@@ -139,9 +139,15 @@ func (r checking) text(e edit) (string, bool) {
 	case editSyntax, editWitness, editRegion, editDispatch:
 		text = e.text
 	case editRecord:
-		// A return in a region stays as written (regions.go); other
-		// records carry their checking text.
-		text = e.text
+		switch e.arg {
+		case "return value":
+			// return x in a region returns $box(x) (regions.go).
+			text = pick(e.part, "return "+helperRef("$box")+"(", "", ")")
+		case "return":
+			// return without a value stays.
+		default:
+			text = e.text
+		}
 	case editRun:
 		text = pick(e.part, "(yield* "+helperRef("$run")+"(", "", "))")
 	case editEffectBody:
@@ -188,18 +194,21 @@ func (r checking) resolve(text string) string {
 	}
 }
 
-// executable is the executable rendering. It is not implemented yet: it
-// leaves out checker-only witnesses and writes the checking text for every
-// other edit, which is not yet the code the compiler will emit.
-type executable struct {
-	checking checking
+// String names k, as reports and the executable rendering's errors do.
+func (k editKind) String() string {
+	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
+		"value call", "region", "record", "dispatch"}[k]
 }
 
-func (r executable) text(e edit) (string, bool) {
+// executable is the executable rendering, a placeholder: it leaves out
+// checker-only witnesses and implements no other kind yet.
+type executable struct{}
+
+func (executable) text(e edit) (string, bool) {
 	if e.kind == editWitness {
 		return "", false
 	}
-	return r.checking.text(e)
+	panic("exec: kind " + e.kind.String() + " not implemented")
 }
 
 // pick returns the text of part p among open, middle, and close.

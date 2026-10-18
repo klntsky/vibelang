@@ -26,8 +26,8 @@ import (
 // the jump leaves it as well, it returns the record to its own runner. A
 // block that can end normally ends with $end when some jump leaves its
 // region; a region that no jump leaves has no record to dispatch. The
-// checking rendering keeps a region's returns as written (prelude.d.ts,
-// $returned), so the values keep the types TypeScript infers for returns.
+// checking rendering returns a region's values boxed (prelude.d.ts, $box),
+// so they keep the types TypeScript infers for the source's returns.
 
 // A jump is where a return, break, or continue statement goes.
 type jump struct {
@@ -120,17 +120,27 @@ func jumpKind(j jump) string {
 }
 
 // returnStatement records a return in a region's block as a jump that
-// leaves the region. The checking rendering keeps the return as written:
-// the region's generator returns its value, which the dispatch narrows to.
-// The executable rendering will return the record { kind: "return", value }.
+// leaves the region. In the checking rendering the region's generator
+// returns the value boxed, `return $box(x)`, which the dispatch narrows
+// back to the value (prelude.d.ts); a return without a value stays. The
+// executable rendering will return the record { kind: "return", value }.
 func (p *projector) returnStatement(node *ast.Node, e env) {
 	e.frame.region.add(jump{kind: ast.KindReturnStatement})
 	start := p.tokenStart(node)
-	p.plan.mark(editRecord, partOpen, start, start, "return")
-	if expression := node.Expression(); expression != nil {
-		p.visit(expression, e)
+	expression := node.Expression()
+	if expression == nil || !strings.HasPrefix(p.text[start:], "return") || p.tokenStart(expression) <= start {
+		// A return the parser wrote, such as an arm of a returned match,
+		// has no return keyword of its own to box.
+		p.plan.mark(editRecord, partOpen, start, start, "return")
+		if expression != nil {
+			p.visit(expression, e)
+		}
+		p.plan.mark(editRecord, partClose, node.End(), node.End(), "return")
+		return
 	}
-	p.plan.mark(editRecord, partClose, node.End(), node.End(), "return")
+	p.plan.mark(editRecord, partOpen, start, p.tokenStart(expression), "return value")
+	p.visit(expression, e)
+	p.plan.mark(editRecord, partClose, expression.End(), expression.End(), "return value")
 }
 
 // jumpStatement lowers a break or continue that leaves the region of e's
@@ -168,10 +178,18 @@ func (p *projector) dispatch(r *region, name string, normal bool, e env) string 
 		var action string
 		switch {
 		case !e.frame.lands(j):
+			// Passed on to the enclosing region. A narrowed return value
+			// is boxed again, so the enclosing generator does not widen it.
 			e.frame.region.add(j)
 			action = "return " + name
+			if j.kind == ast.KindReturnStatement && (normal || i < len(r.jumps)-1) {
+				action = "return " + helperRef("$box") + "(" + name + ")"
+			}
 		case j.kind == ast.KindReturnStatement:
 			action = "return " + name
+			if !normal && i == len(r.jumps)-1 {
+				action = "return " + helperRef("$unboxed") + "(" + name + ")"
+			}
 		case j.kind == ast.KindBreakStatement:
 			action = strings.TrimSpace("break " + j.label)
 		default:

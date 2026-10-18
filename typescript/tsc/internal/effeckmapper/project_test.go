@@ -159,7 +159,7 @@ var projectionCases = []struct {
 	{
 		name:    "returns leave a try statement through its completion",
 		source:  "function f(id: string) {\n  try {\n    return find(id)\n  } catch (e) {\n    return \"guest\"\n  }\n}\n",
-		virtual: "function f(id: string) { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    return (yield* $run(find(id)))\n  }), (e) => $gen(function* () {\n    return \"guest\"\n  })); return $c\n})}\n",
+		virtual: "function f(id: string) { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    return $box((yield* $run(find(id))))\n  }), (e) => $gen(function* () {\n    return $box(\"guest\")\n  })); return $unboxed($c)\n})}\n",
 	},
 	{
 		name:    "a region that no jump leaves dispatches nothing",
@@ -174,17 +174,17 @@ var projectionCases = []struct {
 	{
 		name:    "a jump that leaves two regions passes the completion on",
 		source:  "function f() {\n  try {\n    try {\n      return 1\n    } finally {\n      g(1)\n    }\n  } catch {\n    return 2\n  }\n}\n",
-		virtual: "function f() { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    const $c_1 = yield* $finally($gen(function* () {\n      return 1\n    }), $gen(function* () {\n      ;(yield* $run(g(1)))\n    ; return $end })); return $c_1\n  }), () => $gen(function* () {\n    return 2\n  })); return $c\n})}\n",
+		virtual: "function f() { return $gen(function* () {\n  const $c = yield* $catch($gen(function* () {\n    const $c_1 = yield* $finally($gen(function* () {\n      return $box(1)\n    }), $gen(function* () {\n      ;(yield* $run(g(1)))\n    ; return $end })); return $c_1\n  }), () => $gen(function* () {\n    return $box(2)\n  })); return $unboxed($c)\n})}\n",
 	},
 	{
 		name:    "a provide block provides its layers to a region (D172, D173)",
 		source:  "function main() {\n  provide AppLive, Clock = clock {\n    return greet(\"42\")\n  }\n}\n",
-		virtual: "function main() { return $gen(function* () {\n  const $c = yield* Effect.provide([AppLive, $provideService(Clock, \"Clock\", clock)])($gen(function* () {\n    return (yield* $run(greet(\"42\")))\n  })); return $c\n})}\n",
+		virtual: "function main() { return $gen(function* () {\n  const $c = yield* Effect.provide([AppLive, $provideService(Clock, \"Clock\", clock)])($gen(function* () {\n    return $box((yield* $run(greet(\"42\"))))\n  })); return $unboxed($c)\n})}\n",
 	},
 	{
 		name:    "a handle statement runs its block under handle (D132)",
 		source:  "function k(version: string) {\n  try {\n    return release(version)\n  } handle Approval.approve(request) {\n    log(request)\n    resume(true)\n  }\n}\n",
-		virtual: "function k(version: string) { return $gen(function* () {\n  const $c = yield* handle_1($gen(function* () {\n    return (yield* $run(release(version)))\n  }) , Approval, { approve: (request, $k) => $gen(function* () {\n    ;(yield* $run(log(request)))\n    return $tailResume($k, true)\n  }) }); return $c\n})}\n",
+		virtual: "function k(version: string) { return $gen(function* () {\n  const $c = yield* handle_1($gen(function* () {\n    return $box((yield* $run(release(version))))\n  }) , Approval, { approve: (request, $k) => $gen(function* () {\n    ;(yield* $run(log(request)))\n    return $tailResume($k, true)\n  }) }); return $unboxed($c)\n})}\n",
 	},
 	{
 		name:    "a layer without statements succeeds with its members",
@@ -306,6 +306,18 @@ func TestProjectionIsDeterministic(t *testing.T) {
 		first, second := Project(c.source, testContext), Project(c.source, testContext)
 		assert.DeepEqual(t, first, second)
 	}
+}
+
+// TestExecutableRendering checks that the executable rendering drops
+// checker-only witnesses and reports each kind it does not implement.
+func TestExecutableRendering(t *testing.T) {
+	t.Parallel()
+	text, keep := executable{}.text(edit{kind: editWitness, text: ", g(x)"})
+	assert.Assert(t, !keep && text == "")
+	defer func() {
+		assert.Equal(t, recover(), "exec: kind run not implemented")
+	}()
+	executable{}.text(edit{kind: editRun})
 }
 
 // TestModuleKey checks the fork's key rule: the nearest package.json's name,

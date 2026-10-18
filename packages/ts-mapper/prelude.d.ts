@@ -64,16 +64,25 @@ export {
 export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from "effeck-runtime"
 
 /*
- * Completion records, as the checker sees them. A region's block keeps its
- * own return statements, so its generator's type is TypeScript's own
- * inference for them; a break or continue that leaves the region returns
- * $jump("break:label"), and a block that ends normally returns $end. The
- * statement after the region narrows the completion with $returned and
- * $jumped. (The runtime's records are { kind, value } objects; their
- * property would widen a literal type, which a return keeps.)
+ * Completion records, as the checker sees them. A return in a region's
+ * block returns $box(value): the value itself, joined with a brand, so the
+ * block's generator never infers a single literal type and widens it on its
+ * own; the enclosing function's own return, after $returned removes the
+ * brand, sees every return site at once and widens as TypeScript would for
+ * the source. A break or continue that leaves the region returns
+ * $jump("break:label"), and a block that ends normally returns $end. (The
+ * runtime's records are { kind, value } objects; their property would widen
+ * an inferred literal union.)
  */
 declare const endBrand: unique symbol
 declare const jumpBrand: unique symbol
+declare const boxBrand: unique symbol
+/** What a region's return adds to its value. */
+export interface $Boxed {
+  readonly [boxBrand]: true
+}
+/** A return in a region's block: its value, unwidened. */
+export declare function $box<T>(value: T): T | $Boxed
 /** The normal end of a region's block. */
 export declare const $end: { readonly [endBrand]: true }
 /** A break or continue that leaves a region: "break:label" or "continue:label". */
@@ -81,8 +90,10 @@ export interface $Jump<K extends string> {
   readonly [jumpBrand]: K
 }
 export declare function $jump<const K extends string>(kind: K): $Jump<K>
+/** A completion that can only be a return's value: the value, unboxed. */
+export declare function $unboxed<T>(completion: T): Exclude<T, $Jump<string> | typeof $end | $Boxed>
 /** The completion is a return's value. */
-export declare function $returned<T>(completion: T): completion is Exclude<T, $Jump<string> | typeof $end>
+export declare function $returned<T>(completion: T): completion is Exclude<T, $Jump<string> | typeof $end | $Boxed>
 /** The completion is the jump kind. */
 export declare function $jumped<T, const K extends string>(completion: T, kind: K): completion is Extract<T, $Jump<K>>
 
