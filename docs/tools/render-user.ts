@@ -385,7 +385,7 @@ async function render(source: string, markdown: string, destination: string, cou
 <body>
 <a class="skip" href="#content">Skip to content</a>
 <div class="layout">
-<nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), "index.html"))}">Effeck Docs</a>${sidebar}</nav>
+<nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), output(order[0]!.path)))}">Effeck Docs</a>${sidebar}</nav>
 <nav class="page-toc" aria-label="On this page"><h2>On this page</h2>${toc.map(t => `<a href="#${escape(t.id)}">${escape(t.text)}</a>`).join("\n")}</nav>
 <main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> Effeck is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav></main>
 </div>
@@ -402,6 +402,34 @@ const rendered = new Map<string, string>()
 for (const [source, markdown] of sources) rendered.set(output(source), await render(source, markdown, output(source), !source.startsWith("spec/")))
 const first = order[0]!
 rendered.set("index.html", await render(first.path, sources.get(first.path)!, "index.html", false))
+// The landing is a static template; the checked hero pair remains its source of truth.
+const landing = join(repo, "docs/landing/index.html")
+if (existsSync(landing)) {
+  const hero = JSON.parse(readFileSync(join(repo, "docs/site/converter/hero.json"), "utf8"))
+  let html = readFileSync(landing, "utf8")
+  for (const side of ["effect", "effeck"] as const) {
+    const marker = `<!-- hero:${side} -->`
+    if (typeof hero[side] !== "string" || !hero[side].trim() || html.split(marker).length !== 2) {
+      throw new Error(`Landing requires one ${side} marker and a nonempty hero.${side}`)
+    }
+    const code = highlight(hero[side], "ts")
+    html = html.replace(marker, () => code)
+  }
+  // The source link renders only where visitors can open it: EFFECK_LANDING_SOURCE=smithers once
+  // smithers.sh/effeck/effeck is public, github with EFFECK_LANDING_GITHUB_URL, and by default none,
+  // since a private repository gives a visitor a 404 or a sign-in wall.
+  const source = process.env.EFFECK_LANDING_SOURCE ?? "none"
+  const span = /<!-- source-link -->([\s\S]*?)<!-- \/source-link -->/
+  if (!span.test(html)) throw new Error("Landing has no source-link markers")
+  if (source === "none") html = html.replace(span, "")
+  else if (source === "smithers") html = html.replace(span, "$1")
+  else if (source === "github") {
+    const github = process.env.EFFECK_LANDING_GITHUB_URL
+    if (!github?.startsWith("https://github.com/")) throw new Error("EFFECK_LANDING_SOURCE=github needs EFFECK_LANDING_GITHUB_URL, a https://github.com/ URL")
+    html = html.replace(span, (_, link: string) => link.replace(/href="[^"]*">Source and issues on smithers\.sh /, `href="${github}">Source and issues on GitHub `))
+  } else throw new Error(`EFFECK_LANDING_SOURCE must be none, smithers, or github, not ${source}`)
+  rendered.set("index.html", html)
+}
 // /spec/ opens the specification's first page, so links to the old single-page specification still land on it.
 const firstChapter = order.find(p => p.path.startsWith("spec/"))!
 rendered.set("spec/index.html", await render(firstChapter.path, sources.get(firstChapter.path)!, "spec/index.html", false))

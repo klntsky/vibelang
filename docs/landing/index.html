@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-ojo6nqOvCh6aYfKRsorApBZ3oBUnTigYna7fEl+jehk='; img-src data:; base-uri 'none'; form-action 'none'">
+<!-- The live experience stays off until the PM's switch-on gate passes. -->
+<meta name="converter" content="off">
+<meta name="description" content="Effeck gives Effect.ts a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.">
+<title>Effeck · Effect, as a language.</title>
+<link rel="icon" href="data:,">
+<style>
+/* Shared mock tokens. Keep the palette and layout separate for the final mock. */
+:root {
+  color-scheme: light dark;
+  --bg: #f7f4ee; --text: #211d18; --muted: #665f54;
+  --surface: #fffefa; --surface-2: #efeae0; --border: #e4ddcf;
+  --brand: #0f766e; --action: #0d6760; --on-action: #fffefa;
+  --hl-keyword: #805636; --hl-string: #0b5b57; --hl-type: #3c6879;
+  --hl-number: #8c5a08; --hl-function: #674c87; --hl-comment: #6e675c;
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1514; --text: #ece7db; --muted: #a8a193;
+    --surface: #131b1a; --surface-2: #1a2422; --border: #293532;
+    --brand: #45c4b2; --action: #45c4b2; --on-action: #0d1514;
+    --hl-keyword: #eda381; --hl-string: #8acaba; --hl-type: #8cc5e8;
+    --hl-number: #f0c169; --hl-function: #bea6e6; --hl-comment: #a8a193;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 var(--font-ui); }
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 4px; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+.shell { width: min(100% - 64px, 1152px); margin-inline: auto; }
+.site-header { border-bottom: 1px solid var(--border); }
+.header-inner { display: flex; align-items: center; gap: 32px; min-height: 72px; }
+.wordmark { font-size: 22px; font-weight: 650; letter-spacing: -0.05em; }
+.header-inner nav { display: flex; align-items: center; flex: 1; gap: 24px; font-size: 14px; }
+.source-link { margin-left: auto; }
+.source-link span { color: var(--brand); }
+main { padding-block: 40px 48px; }
+.intro { margin-bottom: 28px; }
+h1 { margin: 0; font-size: clamp(36px, 4.4vw, 56px); font-weight: 550; line-height: 1.1; letter-spacing: -0.05em; }
+.subhead { max-width: 750px; margin: 16px 0 0; color: var(--muted); font-size: 18px; line-height: 1.5; }
+.example-heading { margin: 0 0 12px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.example-pair { min-width: 0; margin: 0; padding: 0; border: 0; }
+.switch-input, .switch-label { display: none; }
+.code-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.code-pane { min-width: 0; margin: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.code-pane figcaption { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; }
+.effeck-pane figcaption { color: var(--brand); }
+.code-pane pre { max-height: 380px; margin: 0; padding: 16px; overflow: auto; font: 12px/19px var(--font-mono); tab-size: 2; }
+.code-pane code { font: inherit; white-space: pre; }
+.code-pane .k { color: var(--hl-keyword); }
+.code-pane .s { color: var(--hl-string); }
+.code-pane .t { color: var(--hl-type); }
+.code-pane .n, .code-pane .l { color: var(--hl-number); }
+.code-pane .f { color: var(--hl-function); }
+.code-pane .c { color: var(--hl-comment); }
+.example-caption { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+.install { max-width: 560px; margin: 20px auto 0; }
+.install-command { display: flex; align-items: center; gap: 12px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.install-command input { width: 100%; min-width: 0; padding: 8px; border: 0; border-radius: 4px; background: transparent; color: var(--text); font: 13px/1.5 var(--font-mono); }
+.copy-affordance { padding: 8px 14px; border: 0; border-radius: 4px; background: var(--action); color: var(--on-action); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.copy-help { margin: 8px 0 0; text-align: center; color: var(--muted); font-size: 12px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 1023px) {
+  .switch-input { display: block; position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .switch-label { display: inline-block; margin: 0 8px 12px 0; padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 13px; cursor: pointer; }
+  .switch-input:checked + .switch-label { border-color: var(--brand); background: var(--surface); color: var(--brand); }
+  .switch-input:focus-visible + .switch-label { outline: 2px solid var(--brand); outline-offset: 3px; }
+  .code-pair { grid-template-columns: minmax(0, 1fr); }
+  #show-effect:checked ~ .code-pair .effeck-pane, #show-effeck:checked ~ .code-pair .effect-pane { display: none; }
+  .code-pane pre { max-height: 360px; }
+}
+@media (max-width: 600px) {
+  .shell { width: calc(100% - 32px); }
+  .header-inner { min-height: 64px; gap: 24px; }
+  .header-inner nav { gap: 16px; font-size: 12px; }
+  .wordmark { font-size: 20px; }
+  main { padding-block: 32px; }
+  .intro { margin-bottom: 24px; }
+  .subhead { font-size: 16px; }
+  .code-pane pre { max-height: 290px; padding: 12px; }
+  .install-command { gap: 4px; padding: 6px; }
+  .install-command input { padding: 6px 2px; font-size: 11px; }
+  .copy-affordance { padding: 8px 10px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="shell header-inner">
+    <span class="wordmark">Effeck</span>
+    <nav aria-label="Main navigation">
+      <!-- Monday fallback until Smithers' long-file view is verified. -->
+      <a href="/001-onboarding.html">Docs</a>
+      <!-- source-link --><a class="source-link" href="https://smithers.sh/effeck/effeck?utm_source=effeck.dev&amp;utm_medium=source&amp;utm_campaign=effeck-launch">Source and issues on smithers.sh <span aria-hidden="true">↗</span></a><!-- /source-link -->
+    </nav>
+  </div>
+</header>
+<main class="shell">
+  <div class="intro">
+    <h1>Effect, as a language.</h1>
+    <p class="subhead">Effeck gives Effect.ts a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.</p>
+  </div>
+  <section aria-labelledby="example-heading">
+    <h2 class="example-heading" id="example-heading">Example</h2>
+    <fieldset class="example-pair">
+      <legend class="visually-hidden">Example language</legend>
+      <input class="switch-input" type="radio" name="example-language" id="show-effect" aria-controls="effect-panel">
+      <label class="switch-label" for="show-effect">Effect</label>
+      <input class="switch-input" type="radio" name="example-language" id="show-effeck" aria-controls="effeck-panel" checked>
+      <label class="switch-label" for="show-effeck">Effeck</label>
+      <div class="code-pair">
+        <figure class="code-pane effect-pane" id="effect-panel">
+          <figcaption id="effect-label">Effect</figcaption>
+          <pre tabindex="0" aria-labelledby="effect-label"><code><!-- hero:effect --></code></pre>
+        </figure>
+        <figure class="code-pane effeck-pane" id="effeck-panel">
+          <figcaption id="effeck-label">Effeck</figcaption>
+          <pre tabindex="0" aria-labelledby="effeck-label"><code><!-- hero:effeck --></code></pre>
+        </figure>
+      </div>
+    </fieldset>
+    <p class="example-caption">Both compile.</p>
+  </section>
+  <div class="install">
+    <div class="install-command">
+      <input id="install-command" aria-label="Install command" aria-describedby="copy-help" type="text" value="npm create effeck@latest my-app" readonly spellcheck="false">
+      <button class="copy-affordance" type="button" id="copy-button">Copy</button>
+    </div>
+    <p class="copy-help" id="copy-help">Or select the command and press ⌘C or Ctrl+C.</p>
+  </div>
+</main>
+<script>document.getElementById("copy-button").addEventListener("click",function(){var i=document.getElementById("install-command"),b=this;navigator.clipboard.writeText(i.value).then(function(){b.textContent="Copied"},function(){i.select()})})</script>
+</body>
+</html>
