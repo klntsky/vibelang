@@ -1,2 +1,2 @@
-Call it through try(vitestExpect(n)), or re-export it from a .ts file you own with /** @effeck trusted */.
-Call it through try(Option.getOrThrow(account).close()), or tag its declaration in account.ts with /** @effeck trusted */.
+Call it through try((n) => vitestExpect(n), n), or re-export it from a .ts file you own with /** @effeck trusted */.
+Call it through try((account) => Option.getOrThrow(account).close(), account), or tag its declaration in account.ts with /** @effeck trusted */.

@@ -9,6 +9,13 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/lsp/lsproto"
 )
 
+// RangeOf returns the LSP range of textRange in file, for the edits of a code
+// fix that an in-tree package registers.
+func (l *LanguageService) RangeOf(file *ast.SourceFile, textRange core.TextRange) lsproto.Range {
+	r, _ := l.converters.ToLSPRange(file, textRange)
+	return r
+}
+
 // QuickInfoHook can change a hover on node. A text that is not "" replaces
 // the quick info line, such as `function add(a: number, b: number): number`.
 // A paragraph that is not "" is Markdown that the hover shows below it,

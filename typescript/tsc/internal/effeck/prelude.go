@@ -46,9 +46,12 @@ var preludeModules = map[string]string{
 	"resumeWith":  runtimeModule,
 	"abandon":     runtimeModule,
 	// The boundary hatches and the runners that lead back in (D148, hatches.go).
-	"sync":        runtimeModule,
-	"try":         runtimeModule,
-	"callback":    runtimeModule,
+	"sync":     runtimeModule,
+	"try":      runtimeModule,
+	"callback": runtimeModule,
+	// The type of callback's resume parameter. Inputs keep callback's type
+	// arguments from being written, so the parameter's annotation names them.
+	"Resume":      runtimeModule,
 	"runPromise":  runtimeModule,
 	"runFork":     runtimeModule,
 	"runSync":     runtimeModule,

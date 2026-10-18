@@ -1,18 +1,19 @@
 // Boundary hatches (D148): sync, try, and callback run plain TypeScript. In
-// a hatch's arguments calls do not run, throw and async keep their JavaScript
-// meaning, platform APIs such as setTimeout are allowed, and runPromise leads
-// back in to Effeck.
+// a hatch's first argument calls do not run, throw and async keep their
+// JavaScript meaning, platform APIs such as setTimeout are allowed, and
+// runPromise leads back in to Effeck. That TypeScript is self-contained
+// (D229): values reach it as inputs (D230).
 error BadJson { error: unknown }
 
 function parse(text: string) {
-  return try(() => JSON.parse(text), (error) => new BadJson({ error }))
+  return try((text) => JSON.parse(text), (error) => new BadJson({ error }), text)
 }
 
 function lengthOf(text: string) {
-  return try(() => {
+  return try((text) => {
     if (text === "") throw new Error("empty")
     return text.length
-  })
+  }, text)
 }
 
 function later() {
@@ -60,7 +61,7 @@ export function main() {
   } catch (error) {
     refused = error._tag
   }
-  const inert = sync(() => typeof later())
-  const viaRunner = sync(async () => runPromise(later()))
+  const inert = sync((later) => typeof later(), later)
+  const viaRunner = sync(async (later) => runPromise(later()), later)
   return { id, doubled, awaited, fetched, parsed, bad, unknown, ticked, refused, inert, viaRunner }
 }

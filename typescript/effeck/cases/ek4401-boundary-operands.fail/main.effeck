@@ -1,7 +1,8 @@
 // expect: EK4401
-// EK4401's note suggests Effect.try around a plain call. A callback of
-// Effect.try cannot run an Effect, so when the call's arguments or receiver
-// run one, the note says to bind it to a const first.
+// EK4401's note suggests try around a plain call, with the bindings the call
+// reads as inputs (D230). try's function cannot run an Effect, so when the
+// call's arguments or receiver run one, the note says to pass it as an input,
+// which runs before the hatch (D232).
 import { type Shelf, sortTitles } from "./legacy.ts"
 
 abstract class Todos {

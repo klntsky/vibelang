@@ -7,7 +7,7 @@ function later() {
 }
 
 export function main() {
-  const fine = sync(async () => runPromise(later()))
+  const fine = sync(async (later) => runPromise(later()), later)
   runPromise(later())
   return fine
 }

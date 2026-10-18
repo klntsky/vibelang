@@ -13,6 +13,6 @@ it.effect("routes a validated request without opening a socket") {
     const created = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: "Ada" }))
     const conflict = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: "Ada" }))
     const bad = Effect.provideService(app, HttpServerRequest.HttpServerRequest, request({ name: 123 }))
-    sync(assert.deepStrictEqual([created.status, conflict.status, bad.status], [201, 409, 400]))
+    assert.deepStrictEqual([created.status, conflict.status, bad.status], [201, 409, 400])
   }
 }

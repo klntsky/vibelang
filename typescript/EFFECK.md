@@ -108,7 +108,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `contract-lambdas-plain` | A lambda with a contract where only a plain function fits is plain and returns A: `Schema.suspend` and `SchemaTransformation.transform`. Pending on F3's D57 return check |
 | `trust-levels` | `JSON.parse`'s `SyntaxError` and a trusted function's `@throws` class join E and reach a `catch`, in Effect functions and in plain ones (D54); an unlisted exception is a defect; operands that run Effects run before the trusted call; Effect's exports, a boundary, a trusted re-export, a trusted method, and a parameter's callee need nothing |
 | `ek4401-plain-call.fail` | EK4401 for a plain TypeScript call, one that returns a Promise, one in a plain callback, and a trusted contract whose `@throws` class the file cannot import; none for a trusted call, a boundary, or the top level |
-| `ek4401-boundary-operands.fail` | EK4401's note for a call whose argument or receiver runs an Effect says to bind it to a const before `Effect.try`, whose callback cannot run one; a call with plain operands keeps the `Effect.try(() => …)` form |
+| `ek4401-boundary-operands.fail` | EK4401's note for a call whose argument or receiver runs an Effect says to pass it to `try` as an input, since `try`'s function cannot run one; a call with plain operands gets `try((titles) => sortTitles(titles), titles)`, with the bindings it reads as inputs |
 | `ek4401-effect-reexports.fail` | D22 through re-exports: `assert` and `expect` imported from `@effect/vitest`, which re-exports vitest's, are trusted, and so is `.toBe` on what `expect` returned; the same `expect` imported from `vitest`, and the program's own method on a value `Option.getOrThrow` returned, keep EK4401 |
 | `ek4402-platform.fail` | EK4402 where code runs a platform API (D108): imported functions called inside boundaries, a namespace member called, a property read on a default import and on a namespace member, `fetch`, `setTimeout`, `console.log`, destructuring `process`, and `new WebSocket`; importing, passing `createServer` and `os.EOL` as values, a type-only import, `URL`, and `TextEncoder` are allowed |
 | `platform-values` | Importing `createServer` from `node:http` and `os` from `node:os`, and passing them as values, compiles and runs |
@@ -1005,25 +1005,28 @@ Case `effeck-imports` covers an `.effeck` file calling an `.effeck` Effect funct
 
 Generated JavaScript imports only `effect` and `effeck-runtime` (D30): the prelude names it uses, `effect/Effect` for `Effect.fnUntraced` under a free name (`Effect`, else `Effect_1`, …), and the helpers as one namespace under a free name (`runtime`, else `runtime_1`, …), called as `runtime.$catch(…)`. The runtime's exports are the ABI between compiler and runtime, so a compiler change that needs a new helper adds it to `packages/runtime` in the same commit; `smoke.sh` builds the runtime from source and every case links it, so the commit is tested as one. Case `effeck-runtime-name` declares `runtime` and `Effect_1` itself and still runs.
 
-## Boundary hatches (D148-D150)
+## Boundary hatches (D148-D150, D229-D232)
 
-`sync`, `try`, and `callback` are prelude names whose arguments are TypeScript, not Effeck (`hatches.go`). A hatch is a call whose callee is one of those names with no declaration in any scope around it (`shadowed` reads the binder's locals); `try` is a keyword nothing can declare.
+`sync`, `try`, and `callback` are prelude names whose first argument is TypeScript, not Effeck (`hatches.go`). That TypeScript is self-contained (D229): values of the `.effeck` file reach it as inputs, the arguments after it, which fill its first parameters (D230); `try`'s error mapper stays second (D231); the mapper and the inputs are Effeck (D232). A hatch is a call whose callee is one of those names with no declaration in any scope around it (`shadowed` reads the binder's locals); `try` is a keyword nothing can declare.
 
 ```ts
 // main.effeck                                         // main.js
-const id = sync("id-" + suffix)                        const id = yield* Effect.sync(() => "id-" + suffix)
+const id = sync(crypto.randomUUID())                   const id = yield* Effect.sync(() => crypto.randomUUID())
 const page = sync(async () => (await load()).text())   const page = yield* Effect.promise(async () => (await load()).text())
-const json = try(() => JSON.parse(text), toBadJson)    const json = yield* Effect.try({ try: () => JSON.parse(text), catch: toBadJson })
-const body = try(async (signal) => fetchBody(signal))  const body = yield* Effect.tryPromise(async (signal) => fetchBody(signal))
+const json = try((t) => JSON.parse(t), toBadJson, text)
+                                                       const json = yield* Effect.try({ try: ((t) => JSON.parse(t)).bind(undefined, text), catch: toBadJson })
+const body = try(async (id, signal) => fetchBody(id, signal), id)
+                                                       const body = yield* Effect.tryPromise(((id, signal) => fetchBody(id, signal)).bind(undefined, id))
 ```
 
 - **Parsing.** `parser/effeck_hatches.go`: in an `.effeck` file, `try` followed by `(` starts an expression; the callee parses as an identifier named `try`. Seams in `parser.go`: the statement switch, `isStartOfLeftHandSideExpression`, and `parsePrimaryExpression`.
-- **Typing.** The runtime declares the overloads (`packages/runtime/src/hatches.ts`) and names each overload's first parameter for the compiler: `evaluateAsync`, `evaluate`, `promise`, or `value`. `hatchFormOf` reads the name from the resolved signature, so `sync(fetchText())`, whose value is a Promise, lowers to `Effect.promise`.
-- **TypeScript inside.** `inHatch` makes a hatch's arguments TypeScript everywhere the compiler asks: `isLowerable` and `inLowerableBody` are false there, so calls do not run and an `.effeck` function's call is an inert Effect; `runs`, `directCallee`, and `flowOf` skip them; EK1003 (`async`, `await`), EK4401, EK4402, EK4403, and EK1005 do not apply.
-- **Lowering.** `visitHatchCall` emits Effect's function under the module's `Effect` name, wraps a single expression in `() =>`, and turns a second argument into `{ try, catch }`. `callback` stays a call of the runtime's `callback`, which adapts `resume(value)`, `resume.fail`, and `resume.exit` to Effect's `resume(effect)` and runs a returned function on interruption. The emitted JavaScript never imports `sync` or `try`.
+- **Typing.** The runtime declares the overloads (`packages/runtime/src/hatches.ts`): the inputs are a rest parameter `...args: Args`, and the function's first parameters are `Args`, so TypeScript types each parameter from its input. Each overload names its first parameter for the compiler, `evaluate` or `value`, and a mapper overload names its second `mapError`. `hatchFormOf` reads the names from the resolved signature, and `isAsyncHatch` reads whether the function is `async` or returns a `then`able, so `sync(fetchText())`, whose value is a Promise, lowers to `Effect.promise`.
+- **TypeScript inside.** `inHatch` makes a hatch's first argument TypeScript everywhere the compiler asks: `isLowerable` and `inLowerableBody` are false there, so calls do not run and an `.effeck` function's call is an inert Effect; `runs`, `directCallee`, and `flowOf` skip them; EK1003 (`async`, `await`), EK4401, EK4402, EK4403, and EK1005 do not apply. `forEachHatchEffeck` visits the mapper and the inputs, where they do.
+- **Lowering.** `visitHatchCall` emits Effect's function under the module's `Effect` name, wraps a single expression in `() =>`, binds inputs with `.bind(undefined, …inputs)`, so Effect's signal lands after them, and turns a mapper into `{ try, catch }`. `callback` stays a call of the runtime's `callback`, which adapts `resume(value)`, `resume.fail`, and `resume.exit` to Effect's `resume(effect)` and runs a returned function on interruption. The emitted JavaScript never imports `sync` or `try`.
 - **EK4404.** `try({ try, catch })` is an error: the object would be the hatch's value.
+- **EK4405.** `outsideReferences` finds each identifier and shorthand property in the first argument whose value symbol the file declares outside it; imports, globals, prelude names, types, and `TaggedError` classes are exempt. The quick fix `hatchInputFix` adds the names as parameters after the existing inputs' parameters and passes them after the last argument. `hatchCall` writes the same form for EK4401's notes. Hover on a hatch's callee names its inputs.
 
-Cases: `effeck-hatches` (every form, an inert Effect, `setTimeout` in a hatch, `runPromise` back in), `effeck-hatches-shadow` (a parameter named `callback`), `ek1005-prelude-runner.fail`, `ek4404-try-options.fail`.
+Cases: `effeck-hatches` (every form, an inert Effect, `setTimeout` in a hatch, `runPromise` back in), `effeck-hatches-shadow` (a parameter named `callback`), `hatches-inputs` (inputs for every form, a call among them, a mapper with inputs, `Resume`), `ek1005-prelude-runner.fail`, `ek4404-try-options.fail`, `ek4405-self-contained.fail`, `hatch-inputs-effeck.fail` (EK4401 and EK4403 among inputs). The LSP smoke applies EK4405's quick fix.
 
 ## Method syntax on Effect data types (D152, D153)
 

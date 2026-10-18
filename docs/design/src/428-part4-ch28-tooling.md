@@ -116,8 +116,10 @@ export default defineConfig({
 ```
 
 Register `it.effect` from `@effect/vitest` at the top level or in `describe`
-(D38). Keep foreign assertions inside a boundary such as
-`sync(assert.strictEqual(actual, expected))`. `bun run test`
+(D38). Effect's packages are trusted, so call `assert` from `@effect/vitest`
+directly: `assert.strictEqual(actual, expected)`, whose failure is a defect
+that fails the test. Keep another library's assertions inside a hatch, with
+the values as inputs: `sync((actual) => check(actual), actual)`. `bun run test`
 needs no prior build and maps assertion failures to `.effeck` lines.
 
 For a Vite application, add the same plugin to `vite.config.ts`. The plugin
@@ -237,7 +239,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4401 | A plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@effeck trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
-| EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try(parse(text), (error) => …)` | 10 |
+| EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try((text) => parse(text), (error) => …, text)` | 10 |
+| EK4405 | A hatch's TypeScript reads a binding the `.effeck` file declares outside the hatch: a local, a parameter, or a module declaration (D229) | Pass the value as an input, an argument after the function that fills its first parameter: `sync((text) => text.length, text)`; the quick fix does this | 10 |
 | EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
 | EK4601 | `await` before a call that already runs (D226) | Remove `await`; to run the call concurrently, fork it and join the fiber | 7 |
 | EK4602 | `await` on a promise in Effeck code (D226) | Wrap it in a hatch: `try(async () => …)` | 7 |

@@ -1,0 +1,9 @@
+// A hatch's TypeScript reads a parameter: EK4405, and its quick fix passes it as an input.
+export function measure(text: string) {
+  return sync(() => text.length)
+}
+
+// A hatch with an input: hover on sync lists it.
+export function count(text: string) {
+  return sync((t) => t.length, text)
+}

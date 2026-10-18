@@ -340,6 +340,7 @@ try {
     assert(layerEdits.length === 1 && layerEdits[0].newText === want, `EK2121 edits ${JSON.stringify(layerEdits)}`)
     assert(layerEdits[0].range.start.line === layerStart.line && layerEdits[0].range.end.line === lineOf(file, "text() { return word }") + 1, `EK2121 edit range ${JSON.stringify(layerEdits[0].range)}`)
   })
+
   await check("code action: EK2112 warns at a typed catch clause, and its quick fix writes a match", async () => {
     open("src/old-catch.effeck", "effeck")
     const items = (await diagnostics("src/old-catch.effeck")).filter((d) => d.code === 2112)
@@ -372,6 +373,28 @@ try {
     assert(edits.length === 1 && edits[0].newText === want, `edits ${JSON.stringify(edits)}`)
   })
 
+  await check("code action: EK4405 reports a hatch reading a parameter, and its quick fix passes it as an input", async () => {
+    open("src/hatch-outside.effeck", "effeck")
+    const items = await diagnostics("src/hatch-outside.effeck")
+    assert(items.length === 1, `expected one diagnostic, got ${JSON.stringify(items.map((d) => d.message))}`)
+    const [item] = items
+    assert(item.source === "EK" && item.code === 4405, `expected EK 4405, got ${item.source} ${JSON.stringify(item.code)}`)
+    const start = at("src/hatch-outside.effeck", "text.length")
+    assert(item.range.start.line === start.line && item.range.start.character === start.character, `range ${JSON.stringify(item.range)}`)
+    const uri = fileUri("src/hatch-outside.effeck")
+    const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
+    const fix = actions.find((a) => a.title === "Pass text as an input")
+    assert(fix, `no quick fix among ${JSON.stringify(actions.map((a) => a.title))}`)
+    const edits = fix.edit?.changes?.[uri] ?? []
+    const lines = text("src/hatch-outside.effeck").split("\n")
+    const offset = (p) => lines.slice(0, p.line).reduce((n, l) => n + l.length + 1, 0) + p.character
+    let fixed = text("src/hatch-outside.effeck")
+    for (const e of [...edits].sort((a, b) => offset(b.range.start) - offset(a.range.start))) {
+      fixed = fixed.slice(0, offset(e.range.start)) + e.newText + fixed.slice(offset(e.range.end))
+    }
+    assert(fixed.includes("return sync((text) => text.length, text)"), `fixed text: ${fixed}`)
+  })
+
   await check("diagnostics: an edit to main.effeck is checked with Effeck types", async () => {
     // name is the success value of lookup(1), a string, so toFixed does not exist.
     const broken = text("src/main.effeck").replace("name.toUpperCase()", "name.toFixed()")
@@ -388,6 +411,11 @@ try {
   await check("hover: an .effeck function shows its inferred contract", async () => {
     const shown = await hover("src/main.effeck", "lookup(id")
     assert(shown.includes("function lookup(id: number): string!NotFound!"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a hatch's callee says its TypeScript is self-contained and lists its inputs", async () => {
+    const shown = await hover("src/hatch-outside.effeck", "sync((t)")
+    assert(shown.includes("self-contained TypeScript (D229)") && shown.includes("Inputs, which fill its first parameters: `text`."), `hover ${shown}`)
   })
 
   await check("hover: an exported .effeck function shows the contract its callee's failure flows into", async () => {

@@ -157,6 +157,8 @@ var (
 	EK4501 = message(4501, errorCategory, "{0} is a method of {1}'s values only in a call: x.{0}(…) calls {1}.{0}(x, …).")
 	// EK4404: a hatch given Effect's options object. {0} is the hatch.
 	EK4404 = message(4404, errorCategory, "{0} takes the code and the error mapping as two arguments, not Effect's options object.")
+	// EK4405: a hatch's TypeScript reads a binding of the .effeck file. {0} is the binding, {1} the hatch.
+	EK4405 = message(4405, errorCategory, "{0} is declared outside the hatch, and a hatch's TypeScript is self-contained: pass {0} to {1} as an input.")
 )
 
 // registry lists every message above by code.
@@ -167,7 +169,7 @@ func init() {
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009,
 		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
-		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4501,
+		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4501,
 	} {
 		registry[m.Code] = m
 	}

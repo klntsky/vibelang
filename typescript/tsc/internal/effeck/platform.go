@@ -154,7 +154,7 @@ func checkPlatform(c *checker.Checker, file *ast.SourceFile) {
 				}
 			}
 		case hatchOf(node) != "":
-			return false // a hatch's arguments may use the platform (D148)
+			return forEachHatchEffeck(node, visit) // a hatch's TypeScript may use the platform (D148)
 		case ast.IsCallExpression(node) || ast.IsNewExpression(node):
 			checkClockRead(c, file, node)
 		case ast.IsIdentifier(node):
