@@ -163,7 +163,7 @@ writeFileSync(join(createDir, "template/package.json"), JSON.stringify(appManife
 order.push({
   name: "create-vibelang",
   dir: createDir,
-  required: ["bin/create-vibelang.mjs", "template/package.json", "template/gitignore", "template/gitattributes", "template/src/main.vibe", "LICENSE"]
+  required: ["bin/create-vibelang.mjs", "template/package.json", "template/gitignore", "template/gitattributes", "template/src/main.vibe", "template/AGENTS.md", "LICENSE"]
 })
 
 order.push({

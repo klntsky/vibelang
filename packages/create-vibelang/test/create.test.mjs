@@ -19,7 +19,7 @@ test("copies the starter app and pins the VibeLang packages to its own version",
     const result = run(scratch, "My App", "--no-install", "--no-git")
     assert.equal(result.status, 0, result.stderr)
     const app = join(scratch, "My App")
-    for (const file of ["src/main.vibe", "src/greeting.vibe", "src/greeting.test.vibe", "tsconfig.json", "vitest.config.ts", "scripts/dev.mjs", ".gitignore", ".gitattributes", "README.md"]) {
+    for (const file of ["src/main.vibe", "src/greeting.vibe", "src/greeting.test.vibe", "tsconfig.json", "vitest.config.ts", "scripts/dev.mjs", ".gitignore", ".gitattributes", "README.md", "AGENTS.md"]) {
       assert.ok(existsSync(join(app, file)), file)
     }
     assert.ok(!existsSync(join(app, "node_modules")))
@@ -34,6 +34,15 @@ test("copies the starter app and pins the VibeLang packages to its own version",
   } finally {
     rmSync(scratch, { recursive: true, force: true })
   }
+})
+
+// Every turn of a coding agent in a new app loads AGENTS.md, so it carries
+// the docs' Essentials verbatim and stays small (CEO a-yrntzv).
+test("the starter's AGENTS.md carries the docs' Essentials and stays under 2 KB", () => {
+  const agents = readFileSync(new URL("../../../templates/app/AGENTS.md", import.meta.url), "utf8")
+  const essentials = readFileSync(new URL("../../../docs/user/llms-essentials.md", import.meta.url), "utf8")
+  assert.ok(agents.includes(essentials), "templates/app/AGENTS.md must contain docs/user/llms-essentials.md verbatim")
+  assert.ok(Buffer.byteLength(agents) < 2048, `AGENTS.md is ${Buffer.byteLength(agents)} bytes`)
 })
 
 test("refuses a directory that is not empty", () => {
