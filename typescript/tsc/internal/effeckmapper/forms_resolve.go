@@ -25,7 +25,9 @@ package effeckmapper
 //     written arguments do not rule out: a lambda where no form fits, or a
 //     literal where only a function fits. When the candidates left
 //     disagree at the node's path, the decision says Ambiguous.
-//  3. Lambda form (formsFormFor). The class picks the form. Where both a plain
+//  3. Lambda form (formsFormFor). The class picks the form. Where the call
+//     gives no class, the lambda's own return annotation does: an Effect or
+//     a contract (A!E) makes it an Effect function, any other type plain. Where both a plain
 //     function and an Effect form fit (D39), or no class is known, the body
 //     decides: a call outside tail position, a throw, an Effeck statement,
 //     or a using declaration make it an Effect function. A parameterless
@@ -244,6 +246,18 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 	}
 	if cls, note, ok := r.serviceMember(fn); ok {
 		d.Class, d.Provenance, d.Note = cls, FromService, note
+		d.Form = formsFormFor(cls, params, facts)
+		return d
+	}
+	if ret := fn.Type(); ret != nil {
+		// The lambda's own return annotation: an Effect or a contract makes
+		// it an Effect function, any other type a plain one (as L2 reads a
+		// function's annotation).
+		cls := ClassPlainFn
+		if r.isEffectTypeNode(ret, 0) {
+			cls = ClassEffectFn
+		}
+		d.Class, d.Provenance, d.Note = cls, FromAnnotation, "return annotation"
 		d.Form = formsFormFor(cls, params, facts)
 		return d
 	}

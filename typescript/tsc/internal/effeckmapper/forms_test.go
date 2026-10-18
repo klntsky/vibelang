@@ -399,3 +399,28 @@ func (r resolved) argument(t *testing.T, prefix string) Decision {
 	}
 	return r.Argument(args[0])
 }
+
+func TestResolverLambdaReturnAnnotation(t *testing.T) {
+	// Where the call gives no class, a lambda's own return annotation
+	// decides: a plain type keeps it plain, a contract makes it an Effect
+	// function. Without one, the call outside tail position decides.
+	r := resolve(t, `function double(x: number): number { return x * 2 }
+export function f(xs: number[]) {
+  const a = xs.map((x): number => double(x) + 1)
+  const b = xs.map((x): number!! => double(x) + 1)
+  const c = xs.map((x) => double(x) + 1)
+}`)
+	for _, c := range []struct {
+		text string
+		form Form
+		prov Provenance
+	}{
+		{"(x): number =>", FormPlain, FromAnnotation},
+		{"(x): number!! =>", FormEffectFn, FromAnnotation},
+		{"(x) => double", FormEffectFn, FromFallback},
+	} {
+		if d := r.lambda(t, c.text); d.Form != c.form || d.Provenance != c.prov {
+			t.Errorf("%s = %v from %v, want %v from %v", c.text, d.Form, d.Provenance, c.form, c.prov)
+		}
+	}
+}

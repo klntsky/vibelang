@@ -257,6 +257,58 @@ function returnType(tokens: string[], kind: string): string | undefined {
 
 const effectTypes = /^(effect\/Effect#Effect|effect\/Stream#Stream) </
 
+// effectTypesIn returns each `effect/Effect#Effect < ... >` in a normalized
+// declaration, with its type arguments.
+function effectTypesIn(text: string): string[] {
+  const key = "effect/Effect#Effect <"
+  const out: string[] = []
+  for (let i = text.indexOf(key); i >= 0; i = text.indexOf(key, i)) {
+    let k = i + key.length
+    for (let depth = 1; k < text.length && depth > 0; k++) depth += text[k] === "<" ? 1 : text[k] === ">" ? -1 : 0
+    out.push(text.slice(i, k))
+    i = k
+  }
+  return out
+}
+
+// splitMismatches sorts the concrete, unchanged declarations that are not
+// identical into (a) work the projector has not done yet (missing, degraded
+// to any/unknown, in a file with EK9001 or stock errors, or structural) and
+// (b) clean-file declarations where both sides emit Effect types whose A, E,
+// or R differ. Gate 1 stops decision (B) on any (b).
+function splitMismatches(results: any[]) {
+  const s = { notImplemented: 0, missing: 0, degraded: 0, unclean: 0, structural: 0, aer: [] as { case: string; file: string; name: string; fork: string; mapper: string }[] }
+  for (const r of results) {
+    const unclean = (r.ek9001?.count ?? 0) > 0 || (r.stockErrors?.count ?? 0) > 0
+    for (const u of r.units ?? []) {
+      if (u.class !== "concrete" || u.group !== "unchanged" || u.status === "identical") continue
+      const fork = effectTypesIn(u.fork ?? "")
+      const mapper = effectTypesIn(u.mapper ?? "")
+      if (u.status === "missing" || !u.mapper) s.missing++
+      else if (u.degraded) s.degraded++
+      else if (unclean) s.unclean++
+      else if (fork.length > 0 && mapper.length > 0 && fork.join() !== mapper.join()) {
+        s.aer.push({ case: r.id, file: u.file, name: u.name, fork: u.difference?.fork ?? fork.join(" "), mapper: u.difference?.mapper ?? mapper.join(" ") })
+        continue
+      } else s.structural++
+      s.notImplemented++
+    }
+  }
+  return s
+}
+
+// passesPlainValue reports whether decl's code passes one of names, another
+// declaration's function, as an argument value: `f(name)` or `f(a, name)`,
+// not a call of it.
+function passesPlainValue(decl: SourceDeclaration, names: Set<string>): boolean {
+  for (const name of names) {
+    if (name === decl.name) continue
+    const escaped = name.replace(/[$]/g, "\\$")
+    if (new RegExp(`[(,]\\s*${escaped}\\s*(?=[,)])`).test(decl.body)) return true
+  }
+  return false
+}
+
 // ----------------------------------------------------------------- corpus
 
 type CaseRef = { id: string; rel: string; dir: string; origin: "case" | "example" | "probe" | "self-test" }
@@ -664,6 +716,13 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
     const declarations = scanDeclarations(text)
     scanned.set(rel, { declarations, recursive: recursiveNames(declarations) })
   }
+  // The case's unannotated, non-generator .effeck functions: the fork
+  // compiles them plain (D10) when their bodies run nothing.
+  const plainValues = new Set(
+    [...scanned.values()].flatMap(({ declarations }) =>
+      declarations.filter((d) => d.isFunction && !d.generator && d.annotatedReturn === false).map((d) => d.name)
+    )
+  )
   const declarations: DeclarationEntry[] = []
   const reference: Record<string, string> = {}
   const probed = new Set((run.probeExports ?? []).flatMap((p) => p.names))
@@ -681,6 +740,11 @@ function classifyCase(run: Run, expected: Record<string, string> | undefined): C
         const ret = returnType(canon(unit, file).exact, unit.kind)
         if (ret !== undefined && !effectTypes.test(ret)) lanes.push("L2")
       }
+      // L2 at a use site: the declaration passes an unannotated .effeck
+      // function as a value, as in `xs.map(double)`. The fork hands such a
+      // callee its plain $direct variant; under L2 it is an Effect function
+      // until its return type is annotated plain.
+      if (decl && !lanes.includes("L2") && passesPlainValue(decl, plainValues)) lanes.push("L2")
       lanes.sort()
       let klass: string
       if (sourceKind === "ts") klass = failing ? "failing" : "ts-helper"
@@ -1259,6 +1323,9 @@ function summarize(results: CaseResult[], manifest: Manifest, hash: string, prob
   L.push("", "## Gate 1", "", "```")
   L.push(`concrete: ${g.concrete.signatures} signatures, ${g.concrete.identical} identical, ${g.concrete.mismatched} mismatched`)
   L.push(`  exported ${g.concrete.exported} (${g.concrete.identicalExported} identical), unexported ${g.concrete.unexported} (${g.concrete.identicalUnexported} identical; ${g.concrete.probed} printed through probe exports)`)
+  const sorted = splitMismatches(results)
+  L.push(`  split: (a) not implemented ${sorted.notImplemented} = ${sorted.missing} missing + ${sorted.degraded} degraded + ${sorted.unclean} in files with EK9001 or stock errors + ${sorted.structural} structural; (b) A/E/R differ in clean files ${sorted.aer.length}`)
+  for (const b of sorted.aer.slice(0, 5)) L.push(`    (b) ${b.case} ${b.file}.${b.name}: fork ${b.fork} | mapper ${b.mapper}`)
   L.push(`unchanged group, all classes: ${g.unchanged.declarations} declarations, ${g.unchanged.identical} identical (${g.unchanged.unionOrder} up to union order), ${g.unchanged.mismatched} mismatched, ${g.unchanged.missing} missing`)
   L.push(`migration group: ${g.migration.declarations} declarations, ${g.migration.expectationMissing} expectation-missing (${Object.entries(g.migration.lanes).map(([k, v]) => `${k} ${v}`).join(", ") || "no lanes"})`)
   L.push(`coverage failures: ${g.coverage.missingDeclarations} missing declarations, ${g.coverage.missingFiles} missing .d.ts files, ${g.coverage.extraDeclarations} extra, ${g.coverage.degraded} degraded to any/unknown, ${g.coverage.ek9001} EK9001, ${g.coverage.stockErrors} stock errors`)
