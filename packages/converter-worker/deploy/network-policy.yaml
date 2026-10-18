@@ -1,0 +1,16 @@
+# The worker accepts requests only from the Smithers backend and makes no outbound connections.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: effeck-converter-worker
+spec:
+  podSelector:
+    matchLabels: { app: effeck-converter-worker }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: smithers-api }
+      ports:
+        - { protocol: TCP, port: 8080 }
+  egress: []

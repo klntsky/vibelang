@@ -1,0 +1,11 @@
+{
+  "name": "effeck-converter-worker",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The credential-free compile worker behind effeck.dev's converter: effeck --noEmit on one file, never running it",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": { "start": "node server.mjs", "test": "node --test test/" },
+  "engines": { "node": ">=26" }
+}

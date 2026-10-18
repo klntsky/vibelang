@@ -1,0 +1,11 @@
+{
+  "name": "effeck-converter-project",
+  "private": true,
+  "description": "The fixed project every conversion compiles in. Exact pins: the compiler digest and dependencies digest in each receipt name these.",
+  "type": "module",
+  "dependencies": {
+    "effeck": "0.0.1",
+    "effeck-runtime": "0.0.1",
+    "effect": "4.0.5"
+  }
+}
