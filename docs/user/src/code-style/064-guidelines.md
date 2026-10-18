@@ -50,6 +50,7 @@ Choose the runtime matching the host and install that platform package. The appl
 ## Making argument forwarding explicit
 
 ```vibe
+// run: Console.log(JSON.stringify(parseDecimalTokens(["10", "10", "10"])))
 function parseDecimalTokens(tokens: ReadonlyArray<string>) {
   return tokens.map((text) => Number.parseInt(text, 10))
 }
@@ -58,6 +59,7 @@ function parseDecimalTokens(tokens: ReadonlyArray<string>) {
 function printValues(values: ReadonlyArray<number>) {
   forEach(values, (value) => log(value), { discard: true })
 }
+// Output: [10,10,10]
 ```
 
 Write a lambda that names the arguments you intend to pass. Passing `Number.parseInt` directly to array `map` would forward the array index as its radix argument. Explicit lambdas also preserve overload selection and make generic inference easier to inspect.

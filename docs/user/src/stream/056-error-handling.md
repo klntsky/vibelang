@@ -5,6 +5,7 @@ Stream recovery replaces a failed source with another source. Use stream operato
 ## Recovering typed failures and defects
 
 ```vibe
+// run: Console.log(JSON.stringify(readRecovered()))
 error Disconnected
 
 const primary = Stream.make("live-a", "live-b").concat(Stream.fail(new Disconnected()))
@@ -18,6 +19,7 @@ const tagged = Stream.catch(
   primary.map((value) => Result.succeed(value)),
   () => Stream.make("cached").map((value) => Result.fail(value))
 )
+// Output: ["live-a","live-b","cached"]
 ```
 
 `Stream.catch` receives a typed failure and returns the replacement Stream. Recovery abandons the rest of the failed source; it does not resume after its failing step. Tagging each source with `Result` is useful when downstream code needs to distinguish live data from fallback data.

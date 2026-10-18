@@ -5,6 +5,7 @@ Choose a Sink for the result you need, then run it with `Stream.run`. Constructo
 ## Basic consumers and endpoint values
 
 ```vibe
+// run: Console.log(JSON.stringify([endpoints().first.getOrElse(() => ""), endpoints().last.getOrElse(() => ""), endpoints().prefix]))
 function endpoints() {
   const source = Stream.make("opening", "middle", "closing")
   return {
@@ -15,6 +16,7 @@ function endpoints() {
 }
 // first: Some("opening"), last: Some("closing")
 // prefix: ["opening", "middle"]
+// Output: ["opening","closing",["opening","middle"]]
 ```
 
 `head` stops after the first element; `last` reads to the end. Both return `Option.none()` on empty input. `take(n)` returns up to `n` elements and completes early when it reaches the limit, preserving any unused suffix of its current input batch as leftovers.
@@ -22,6 +24,7 @@ function endpoints() {
 ## Counting, summing, draining, and timing
 
 ```vibe
+// run: Console.log(JSON.stringify([summarize().count, summarize().sum]))
 function summarize() {
   const source = Stream.make(6, 10, 14)
   return {
@@ -35,6 +38,7 @@ function drainObserved() {
   const source = Stream.make("ready", "done").tap((s) => log(s))
   source.run(Sink.drain)
 }
+// Output: [3,30]
 ```
 
 These sinks consume the whole source. `drain` discards elements but still executes source effects; `timed` also drains and returns a `Duration.Duration`. `Sink.withDuration(otherSink)` returns `[result, duration]` when both the other sink's result and elapsed time are useful. Each field in `summarize` runs a separate consumption.
@@ -74,6 +78,7 @@ function rejectInput() {
 ## Collecting by size or condition
 
 ```vibe
+// run: Console.log(JSON.stringify(collectSamples()))
 function collectSamples() {
   const source = Stream.make(8, 5, -1, 13)
   return {
@@ -83,6 +88,7 @@ function collectSamples() {
   }
 }
 // all: [8, 5, -1, 13], firstTwo: [8, 5], positivePrefix: [8, 5]
+// Output: {"all":[8,5,-1,13],"firstTwo":[8,5],"positivePrefix":[8,5]}
 ```
 
 `collect` gathers all inputs into an array. `takeWhile` stops at the first rejected element and leaves it in the batch remainder; it does not skip it and continue searching. `takeUntil` includes the matching element before stopping, and the corresponding `takeWhileEffect` and `takeUntilEffect` variants accept effectful predicates.
@@ -136,6 +142,7 @@ The reducer defines both the grouping key and the merge rule. This limited sink 
 ## Folding with termination and count limits
 
 ```vibe
+// run: Console.log(JSON.stringify(Effect.provide(foldSamples(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))))
 const total = Sink.reduce(() => 0, (sum, n: number) => sum + n)
 const budget = Sink.fold(
   () => 0,
@@ -155,6 +162,10 @@ function foldSamples() {
     first: source.run(firstThree) // 28
   }
 }
+// Output: adding 7
+// Output: adding 9
+// Output: adding 12
+// Output: {"all":43,"budget":28,"first":28}
 ```
 
 `reduce` uses a pure reducer and consumes to the end; `reduceEffect` supports Effect work. `fold` accepts an effectful step and checks its continuation predicate after each consumed element. The element that reaches or crosses the limit is included. `foldUntil` instead stops after a maximum number of inputs or at source completion.

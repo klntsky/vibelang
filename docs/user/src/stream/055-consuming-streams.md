@@ -30,6 +30,7 @@ function announce() {
 ## Stopping conditionally
 
 ```vibe
+// run: Console.log(reachBudget())
 function reachBudget() {
   let total = 0
   Stream.make(3, 5, 8, 13).runForEachWhile((amount) => {
@@ -38,6 +39,7 @@ function reachBudget() {
   })
   return total // 16
 }
+// Output: 16
 ```
 
 The callback returns `true` to continue or `false` to stop. The element that returns `false` has already been consumed and its callback has run. Stopping closes the source and runs its finalizers; state declared inside the function is fresh for each call.

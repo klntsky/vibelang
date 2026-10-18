@@ -5,10 +5,12 @@
 ## Using built-in orderings
 
 ```vibe
+// run: Console.log(JSON.stringify([Order.String("amber", "violet"), Order.Number(7, 7), Order.BigInt(11n, 3n), Order.Date(new Date("2026-01-01"), new Date("2026-02-01"))]))
 Order.String("amber", "violet") // -1
 Order.Number(7, 7) // 0
 Order.BigInt(11n, 3n) // 1
 Order.Date(new Date("2026-01-01"), new Date("2026-02-01")) // -1
+// Output: [-1,0,1,-1]
 ```
 
 An `Order<A>` compares two values of A synchronously. Built-in orders cover strings, numbers, booleans, bigints, and dates. Use valid dates and numbers appropriate to a total order; `NaN` does not have ordinary numeric ordering semantics.
@@ -16,6 +18,7 @@ An `Order<A>` compares two values of A synchronously. Built-in orders cover stri
 ## Sorting values
 
 ```vibe
+// run: Console.log(JSON.stringify([sorted, input, mutableCopy]))
 import { Array as Arr } from "effect"
 const input = [9, 2, 6]
 const sorted = Arr.sort(input, Order.Number)
@@ -24,6 +27,7 @@ const sorted = Arr.sort(input, Order.Number)
 const mutableCopy = [...input]
 mutableCopy.sort(Order.Number)
 // mutableCopy: [2, 6, 9]
+// Output: [[2,6,9],[9,2,6],[2,6,9]]
 ```
 
 Effect's array `sort` returns a sorted copy. JavaScript's array method sorts its receiver in place. Both accept an order as a comparator; custom callbacks must remain synchronous and must not fail through E.
@@ -31,6 +35,7 @@ Effect's array `sort` returns a sorted copy. JavaScript's array method sorts its
 ## Deriving comparison rules
 
 ```vibe
+// run: Console.log(byPriority({ priority: 1, title: "Publish" }, { priority: 3, title: "Review" }))
 interface Task {
   priority: number
   title: string
@@ -43,6 +48,7 @@ byPriority(
   { priority: 1, title: "Publish" },
   { priority: 3, title: "Review" }
 ) // -1
+// Output: -1
 ```
 
 `mapInput` extracts a comparable value from each operand, then delegates to the underlying order. The projection defines which field matters. It does not mutate or transform the objects being sorted.
@@ -50,6 +56,7 @@ byPriority(
 ## Combining comparison rules
 
 ```vibe
+// run: Console.log(tasks.map((task) => task.title).join(", "))
 import { Array as Arr } from "effect"
 interface Task {
   priority: number
@@ -65,6 +72,7 @@ const tasks = Arr.sort([
   { priority: 2, title: "Archive" }
 ], taskOrder)
 // Publish, Archive, Review
+// Output: Publish, Archive, Review
 ```
 
 `combine` uses the first rule and consults the second only for a tie. Combine more rules with `combineAll` when several fields break ties. Rule order therefore determines sorting priority.
@@ -72,9 +80,11 @@ const tasks = Arr.sort([
 ## Reversing an ordering
 
 ```vibe
+// run: Console.log(JSON.stringify(Arr.sort([5, 12, 3], descending)))
 import { Array as Arr } from "effect"
 const descending = Order.flip(Order.Number)
 Arr.sort([5, 12, 3], descending) // [12, 5, 3]
+// Output: [12,5,3]
 ```
 
 `flip` reverses an order. Flip one component before combining to reverse only that criterion, or flip the combined order to reverse all criteria.
@@ -82,6 +92,7 @@ Arr.sort([5, 12, 3], descending) // [12, 5, 3]
 ## Checking comparisons
 
 ```vibe
+// run: Console.log(JSON.stringify([less(3, 7), greater(7, 3), atMost(7, 7), atLeast(7, 7)]))
 const less = Order.isLessThan(Order.Number)
 const greater = Order.isGreaterThan(Order.Number)
 const atMost = Order.isLessThanOrEqualTo(Order.Number)
@@ -90,6 +101,7 @@ less(3, 7) // true
 greater(7, 3) // true
 atMost(7, 7) // true
 atLeast(7, 7) // true
+// Output: [true,true,true,true]
 ```
 
 These helpers turn an order into boolean comparisons. They work with derived object orders as well as primitive orders. Equality here means a comparison tie, which can intentionally ignore fields.
@@ -97,9 +109,11 @@ These helpers turn an order into boolean comparisons. They work with derived obj
 ## Selecting extrema
 
 ```vibe
+// run: Console.log(JSON.stringify([Order.min(Order.Number)(13, 8), Order.max(Order.Number)(13, 8), Order.min(Order.flip(Order.Number))(13, 8)]))
 Order.min(Order.Number)(13, 8) // 8
 Order.max(Order.Number)(13, 8) // 13
 Order.min(Order.flip(Order.Number))(13, 8) // 13
+// Output: [8,13,13]
 ```
 
 `min` and `max` select according to the supplied order. With a reversed order, the numeric meaning also reverses. An object order returns one of the original objects rather than just its projected field.
@@ -107,6 +121,7 @@ Order.min(Order.flip(Order.Number))(13, 8) // 13
 ## Clamping values and testing ranges
 
 ```vibe
+// run: Console.log(JSON.stringify([clamp(4), clamp(30), clamp(70), inside(10), inside(51)]))
 const bounds = { minimum: 10, maximum: 50 }
 const clamp = Order.clamp(Order.Number)(bounds)
 const inside = Order.isBetween(Order.Number)(bounds)
@@ -115,6 +130,7 @@ clamp(30) // 30
 clamp(70) // 50
 inside(10) // true
 inside(51) // false
+// Output: [10,30,50,true,false]
 ```
 
 `clamp` replaces an out-of-range value with the nearest bound. `isBetween` tests the same inclusive interval without changing the value. Choose bounds ordered according to the supplied order.

@@ -38,13 +38,14 @@ supported platforms, editor setup, and adding VibeLang to an existing project.
 ## Guides and reference material
 
 ```vibe
-// run: Console.log(Effect.provide(main(), Logger.layer([])))
+// run: Console.log(Effect.provide(main(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))])))
 function main() {
   const label = "first program"
   log(label)
   return label.length
 }
 // number!!
+// Output: first program
 // Output: 13
 ```
 

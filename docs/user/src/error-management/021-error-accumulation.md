@@ -43,6 +43,7 @@ function checkTeamOnly() {
 ## Partitioning successes and failures
 
 ```vibe
+// run: Console.log(JSON.stringify(inspectTeam()))
 function inspectTeam() {
   const [handles, errors] = Effect.partition(
     ["Jo", "RIVER", ""],
@@ -55,6 +56,7 @@ function inspectTeam() {
   }
 }
 // { handles: string[]; rejected: number }!!
+// Output: {"handles":["river"],"rejected":2}
 ```
 
 The tuple order is `[successes, failures]`. `partition` preserves both arrays and removes expected errors from `E`, letting you accept valid inputs while reporting rejected ones. Its mixed-cause policy is the same as validation's.

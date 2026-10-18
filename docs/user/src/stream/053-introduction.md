@@ -39,6 +39,7 @@ The source has no natural end, but the consumer requests only five elements. The
 ## Streams and individual effects
 
 ```vibe
+// run: Console.log(JSON.stringify(compare()))
 function oneResult() {
   return [12, 24, 36]
 }
@@ -55,6 +56,7 @@ function compare() {
     oneBatch.runCollect()  // [[12, 24, 36]]
   ]
 }
+// Output: [[12,24,36],[[12,24,36]]]
 ```
 
 A successful function call returns one result, even if that result is an array. A stream emits zero or more elements; an array can be either one element or the source of many elements. Streams can be empty, finite, or infinite.
@@ -77,6 +79,7 @@ function printReadings() {
 The consumer controls demand, so production slows when consumption slows. Streams exchange internal batches, so a source can prepare more than one element per pull. Buffering and concurrency introduce explicit read-ahead; backpressure does not mean exactly one element is ever in memory.
 
 ```vibe
+// run: Effect.provide(printFirstReading(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))
 function* readings() {
   for (let n = 1; n <= 3; n++) {
     sleep("50 millis")
@@ -91,6 +94,7 @@ function printFirstReading() {
     break
   }
 }
+// Output: 10
 ```
 
 A `function*` producer is a Stream wherever a Stream is expected, so Stream operators accept it directly. The adapter runs the producer on its own fiber with an unbuffered handoff: it hands over each element only when pulled. `for...of` also consumes an Effect Stream directly, pulling batches and closing the stream when the loop exits. Here `break` closes the source and interrupts the producer fiber, running its cleanup.

@@ -49,9 +49,11 @@ Create `src/hello.vibe`, in a directory that `include` selects:
 
 ```vibe
 // src/hello.vibe
+// run: Console.log(hello("VibeLang"))
 export function hello(name: string) {
   return `Hello, ${name}!`
 }
+// Output: Hello, VibeLang!
 ```
 
 Run `npx vibelang`. It prints nothing, exits with status 0, and writes `hello.js` to the `outDir`, `dist/` in the configuration above.
@@ -70,6 +72,7 @@ import { hello } from "./hello.vibe"
 export function main() {
   Console.log(hello("VibeLang"))
 }
+// Output: Hello, VibeLang!
 ```
 
 Run `npm run start`, or `bun run start`. The output ends with:

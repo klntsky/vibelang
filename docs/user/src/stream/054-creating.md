@@ -5,6 +5,7 @@ Build a Stream from values, effectful work, or an existing source. Construction 
 ## Finite and empty streams
 
 ```vibe
+// run: Console.log(JSON.stringify(readPowers()))
 const labels = Stream.make("queued", "running", "complete")
 const absent = Stream.empty
 const signal = Stream.succeed(void 0)
@@ -14,6 +15,7 @@ const powers = Stream.iterate(2, (n) => n * 2).take(4)
 function readPowers() {
   return powers.runCollect() // [2, 4, 8, 16]
 }
+// Output: [2,4,8,16]
 ```
 
 `make` accepts individual elements and `empty` emits none. `range` includes both endpoints. `iterate` emits the initial value, then repeatedly applies its pure callback; limit an infinite source before collecting it.
@@ -70,6 +72,7 @@ Pass an async iterable obtained from a TypeScript adapter or a service. The erro
 ## Effects and callbacks
 
 ```vibe
+// run: Console.log(JSON.stringify(readNotices()))
 const timestamp = Stream.fromEffect(Clock.currentTimeMillis)
 
 const notices = Stream.callback<string>((queue) => {
@@ -81,6 +84,7 @@ const notices = Stream.callback<string>((queue) => {
 function readNotices() {
   return notices.runCollect() // ["connected", "ready"]
 }
+// Output: ["connected","ready"]
 ```
 
 `fromEffect` emits one success value. `callback` gives its registration program a queue: `Queue.offer` emits an element, `Queue.end` completes normally, and `Queue.fail` terminates with a typed error. Its optional second argument accepts `bufferSize` and a `strategy` of `"suspend"`, `"dropping"`, or `"sliding"`.
@@ -106,6 +110,7 @@ const sessionNames = Stream.fromEffect(openSession()).map((session) => session.n
 ## Repeating values, streams, and effects
 
 ```vibe
+// run: Console.log(JSON.stringify(countdown()))
 const pings = Stream.succeed("ping").forever()
 const rounds = Stream.make("start", "finish").repeat(Schedule.recurs(2))
 const times = Stream.fromEffectRepeat(() => Clock.currentTimeMillis())
@@ -118,6 +123,7 @@ function countdown() {
   }
   return source.runCollect() // [3, 2, 1]
 }
+// Output: [3,2,1]
 ```
 
 `forever` restarts its stream indefinitely. `repeat` runs the original stream once and lets the schedule control additional runs; `rounds` emits three rounds. `fromEffectRepeat` reruns its program for each element and treats `Cause.Done` as normal completion; `Cause.done()` runs an Effect that signals completion.
@@ -162,6 +168,7 @@ const names = Stream.paginate(0, (cursor) => {
 ## Queues and broadcasts
 
 ```vibe
+// run: Console.log(JSON.stringify(queuedNumbers()))
 function queuedNumbers() {
   const queue = Queue.unbounded<number, Cause.Done>()
   queue.offer(8)
@@ -173,6 +180,7 @@ function queuedNumbers() {
 function fromBroadcast(bus: PubSub.PubSub<string>) {
   return Stream.fromPubSub(bus)
 }
+// Output: [8,13]
 ```
 
 `fromQueue` removes items from a shared queue, so competing consumers divide the work. `fromPubSub` creates a subscription during consumption, so subscribers each receive published elements. A plain PubSub source stays live until the bus ends or the consumer stops; publishing before subscription does not guarantee delivery without replay configuration.
@@ -180,12 +188,14 @@ function fromBroadcast(bus: PubSub.PubSub<string>) {
 ## Schedules as sources
 
 ```vibe
+// run: Console.log(JSON.stringify(readPulses()))
 const policy = Schedule.spaced("400 millis").upTo({ times: 3 })
 const pulses = Stream.fromSchedule(policy)
 
 function readPulses() {
   return pulses.runCollect() // [0, 1, 2]
 }
+// Output: [0,1,2]
 ```
 
 `fromSchedule` emits schedule outputs until the schedule stops. `Stream.fromEffectSchedule(() => work(), policy)` instead emits repeated program results under a schedule. Both preserve the schedule's timing and service requirements.

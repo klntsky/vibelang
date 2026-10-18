@@ -5,11 +5,13 @@
 ## Representing a reusable equality relation
 
 ```vibe
+// run: Console.log(JSON.stringify([sameLabel(" Inbox ", "inbox"), sameLabel("inbox", "archive")]))
 const sameLabel: Equivalence.Equivalence<string> = (a, b) =>
   a.trim().toLowerCase() === b.trim().toLowerCase()
 
 sameLabel(" Inbox ", "inbox") // true
 sameLabel("inbox", "archive") // false
+// Output: [true,false]
 ```
 
 An `Equivalence<A>` is a synchronous function from two A values to a boolean. A sound relation is reflexive, symmetric, and transitive. Keep it free of service calls and expected failures so Effect can invoke it as an ordinary JavaScript callback.
@@ -17,6 +19,7 @@ An `Equivalence<A>` is a synchronous function from two A values to a boolean. A 
 ## Choosing built-in relations
 
 ```vibe
+// run: Console.log(JSON.stringify([Equivalence.String("cyan", "cyan"), Equivalence.Number(12, 13), Equivalence.Boolean(true, true), Equivalence.BigInt(5n, 5n), Equivalence.Date(new Date("2026-04-12"), new Date("2026-04-12")), sameSymbol(key, key), sameSymbol(key, Symbol("entry"))]))
 Equivalence.String("cyan", "cyan") // true
 Equivalence.Number(12, 13) // false
 Equivalence.Boolean(true, true) // true
@@ -27,6 +30,7 @@ const sameSymbol = Equivalence.strictEqual<symbol>()
 const key = Symbol("entry")
 sameSymbol(key, key) // true
 sameSymbol(key, Symbol("entry")) // false
+// Output: [true,false,true,true,true,true,false]
 ```
 
 The string, boolean, bigint, and `strictEqual` relations use strict equality. `Equivalence.Number` also equates `NaN` with itself. The date relation compares timestamps using that numeric relation instead of comparing object references.
@@ -34,6 +38,7 @@ The string, boolean, bigint, and `strictEqual` relations use strict equality. `E
 ## Deriving comparisons through input projections
 
 ```vibe
+// run: Console.log(bySku({ sku: "part-4", displayName: "Bolt" }, { sku: "part-4", displayName: "Steel bolt" }))
 interface Product {
   sku: string
   displayName: string
@@ -48,6 +53,7 @@ bySku(
   { sku: "part-4", displayName: "Bolt" },
   { sku: "part-4", displayName: "Steel bolt" }
 ) // true
+// Output: true
 ```
 
 `mapInput` projects each operand before applying the underlying relation. Here the SKU determines equivalence and the display name is ignored. Pass this rule to an API that accepts an equivalence; it does not alter `Equal.equals`, JavaScript `===`, or hash-collection key behavior.

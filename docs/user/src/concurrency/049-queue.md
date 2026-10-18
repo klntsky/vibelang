@@ -19,6 +19,7 @@ A bounded queue suspends offers when full until consumers free space. A dropping
 ## Offering values and batches
 
 ```vibe
+// run: Console.log(JSON.stringify([offerWithBackpressure(), rejectedBatch()]))
 function offerWithBackpressure() {
   const queue = Queue.bounded<number>(1)
   queue.offer(10)
@@ -33,6 +34,7 @@ function rejectedBatch() {
   const queue = Queue.dropping<number>(2)
   return queue.offerAll([10, 20, 30]) // [30]
 }
+// Output: [[10,20],[30]]
 ```
 
 `offer` returns whether the value was accepted. `offerAll` returns the values it could not add, so an empty array means the whole batch was accepted. Fork a producer when the current fiber must consume values to free the space that producer needs; offering into a full bounded queue and only then taking from it would wait forever.
@@ -40,6 +42,7 @@ function rejectedBatch() {
 ## Taking, polling, and draining values
 
 ```vibe
+// run: Console.log(JSON.stringify([consumeBatches().first, consumeBatches().optional.getOrElse(() => 0), consumeBatches().pair, consumeBatches().batch, consumeBatches().empty]))
 function consumeBatches() {
   const queue = Queue.bounded<number>(8)
   queue.offerAll([1, 2, 3, 4, 5, 6])
@@ -50,6 +53,7 @@ function consumeBatches() {
   const empty = queue.clear()         // []
   return { first, optional, pair, batch, empty }
 }
+// Output: [1,2,[3,4],[5,6],[]]
 ```
 
 `take` waits for one value, `takeN` waits for an exact count, and `takeBetween` waits for its minimum then takes up to its maximum. In this version, `takeAll` waits for at least one value and returns the currently available nonempty batch. Use `poll` for an optional single value without waiting, or `clear` to drain buffered values without waiting for new ones.
@@ -74,6 +78,7 @@ Size counts buffered messages, and capacity is the configured limit. These value
 ## Shutting down and awaiting closure
 
 ```vibe
+// run: Console.log(JSON.stringify(finishNormally()))
 function finishNormally() {
   const queue = Queue.bounded<number, Cause.Done>(4)
   queue.offerAll([7, 8])
@@ -95,6 +100,7 @@ function stopImmediately() {
   queue.shutdown()
   return Fiber.await(waiter)
 }
+// Output: [7,8]
 ```
 
 `end` stops new offers and lets buffered values drain before normal completion; `collect` consumes until that completion. `shutdown` immediately discards buffered values and interrupts waiting operations. `Queue.await` waits for the terminal state and preserves its outcome, so awaiting a shut-down queue is interrupted; inspect that child with `Fiber.await` rather than propagating it through `join`.
