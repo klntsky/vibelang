@@ -212,6 +212,9 @@ func lower(text string, ctx FileContext) *projector {
 // visit walks node and records the edits that lower it.
 func (p *projector) visit(node *ast.Node, e env) {
 	switch {
+	case isSchemaDeclaration(node) || isSchemaInterface(node):
+		p.schemaDeclaration(node)
+		return
 	case isErrorDeclaration(node):
 		p.errorDeclaration(node)
 		return

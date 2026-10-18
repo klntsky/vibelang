@@ -29,6 +29,16 @@ var projectionCases = []struct {
 	virtual string
 }{
 	{
+		name:    "schema primitives optional literals arrays and readonly",
+		source:  "export schema User { readonly id: string; home?: number; role: \"a\" | \"b\"; tags: string[]; mutable active: boolean }\n",
+		virtual: "export interface User extends Schema.Schema.Type<typeof User> {}\nexport const User = Schema.Struct({ id: Schema.String, home: Schema.optional(Schema.Number), role: Schema.Literals([\"a\", \"b\"]), tags: Schema.Array(Schema.String), active: Schema.mutableKey(Schema.Boolean) });\n",
+	},
+	{
+		name:    "schema nested reference",
+		source:  "schema Address { city: string }\nschema User { home: Address; point: { x: number } }\n",
+		virtual: "interface Address extends Schema.Schema.Type<typeof Address> {}\nconst Address = Schema.Struct({ city: Schema.String });\ninterface User extends Schema.Schema.Type<typeof User> {}\nconst User = Schema.Struct({ home: Address, point: Schema.Struct({ x: Schema.Number }) });\n",
+	},
+	{
 		name:    "error with fields",
 		source:  "error NotFound { id: string }\n",
 		virtual: "class NotFound extends TaggedError(\"NotFound\")<{ readonly id: string }> {}\n",
@@ -617,4 +627,48 @@ func assertParses(t *testing.T, text string) {
 	for _, d := range file.Diagnostics() {
 		t.Errorf("syntax error at %d: %s\n%s", d.Pos(), d.String(), text)
 	}
+}
+
+// TestSchemaDiagnostics ensures recovery schemas and uncertain references never
+// silently turn unsupported field types into accepted schema declarations.
+func TestSchemaDiagnostics(t *testing.T) {
+	unsupported := Project("schema Event { run(): void; parts: Partial<{ a: string }> }\n", testContext)
+	assert.Equal(t, virtualBody(t, unsupported), "interface Event extends Schema.Schema.Type<typeof Event> {}\nconst Event = Schema.Struct({ run: Schema.Unknown, parts: Schema.Unknown });\n")
+	assert.Equal(t, len(unsupported.Diagnostics), 2)
+
+	for _, source := range []string{
+		"schema Event { when: Date; run(): void; parts: Partial<{ a: string }> }",
+		"type Alias = string; schema Event { value: Alias }",
+		"import type { Remote } from './remote'; schema Event { value: Remote }",
+	} {
+		projection := Project(source, testContext)
+		assert.Assert(t, len(projection.Diagnostics) > 0, source)
+		for _, diagnostic := range projection.Diagnostics {
+			assert.Equal(t, diagnostic.Code, int32(2109))
+		}
+		assertParses(t, projection.Text)
+	}
+}
+
+// TestSchemaExecutable pins the shared plan's runtime schema, including mutable
+// and optional keys, without leaking the decoded interface into JavaScript.
+func TestSchemaExecutable(t *testing.T) {
+	source := "export schema Draft { mutable title: string; tags?: readonly string[]; pair: readonly [number, string]; counts: Record<string, number> }\n"
+	projection := Executable(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 0, "%v", projection.Diagnostics)
+	assert.Assert(t, strings.HasSuffix(projection.Text, "export const Draft = Schema.Struct({ title: Schema.mutableKey(Schema.String), tags: Schema.optional(Schema.Array(Schema.String)), pair: Schema.Tuple([Schema.Number, Schema.String]), counts: Schema.Record(Schema.String, Schema.Number) });\n"), projection.Text)
+	assert.Assert(t, !strings.Contains(projection.Text, "interface Draft"), projection.Text)
+	assertParses(t, projection.Text)
+}
+
+// TestSchemaConstantReference accepts an explicitly constructed schema value
+// and rejects an ordinary value returned by a Schema utility.
+func TestSchemaConstantReference(t *testing.T) {
+	good := Project("const When = Schema.DateTimeUtc; schema Event { when: When }", testContext)
+	assert.Equal(t, len(good.Diagnostics), 0, "%v", good.Diagnostics)
+	annotated := Project("const When: Schema.Schema<string> = external; schema Event { when: When }", testContext)
+	assert.Equal(t, len(annotated.Diagnostics), 0, "%v", annotated.Diagnostics)
+	bad := Project("const When = Schema.is(Schema.String); schema Event { when: When }", testContext)
+	assert.Equal(t, len(bad.Diagnostics), 1, "%v", bad.Diagnostics)
+	assert.Equal(t, bad.Diagnostics[0].Code, int32(2109))
 }
