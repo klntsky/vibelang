@@ -7,7 +7,7 @@ import { Marked, type Tokens } from "marked"
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, extname, join, relative, resolve } from "node:path"
 import { hoverCss, useHoverRenderer } from "./render-hovers"
-import { renderLanding } from "./render-landing"
+import { renderLanding, sourceLinks } from "./render-landing"
 const repo = resolve(import.meta.dir, "../..")
 const root = join(repo, "docs/user")
 const src = join(root, "src")
@@ -64,14 +64,11 @@ const KEYWORDS = new Set([
   "declare", "default", "do", "else", "enum", "export", "extends", "finally", "for", "from", "function",
   "get", "if", "implements", "import", "in", "instanceof", "interface", "keyof", "let", "namespace", "new",
   "of", "private", "protected", "public", "readonly", "return", "satisfies", "service", "set", "static",
-  "switch", "throw", "try", "type", "typeof", "using", "var", "void", "while", "yield"
+  "switch", "this", "throw", "try", "type", "typeof", "using", "var", "while", "yield"
 ])
-const LITERALS = new Set([
-  "true", "false", "null", "undefined", "this", "never", "unknown", "any", "string", "number", "boolean",
-  "bigint", "symbol", "object"
-])
-// The landing colours its hero like the design mock: VibeLang's form words are
-// keywords, primitive types are types, and !, % and |> are operators.
+// Like the design mock: primitive type names are types and true, false, null
+// and undefined stay plain. The landing adds VibeLang's form words as keywords
+// and !, % and |> as operators for its hero.
 const LANDING_KEYWORDS = new Set(["error", "provide", "fork", "join", "match", "when", "schema", "sync", "callback"])
 const LANDING_TYPES = new Set(["string", "number", "boolean", "never", "unknown", "void", "any", "object", "symbol", "bigint"])
 const TOKEN =
@@ -85,152 +82,241 @@ const highlight = (code: string, lang: string, landing = false): string => {
     else if (str !== undefined) out += `<span class="s">${escape(text)}</span>`
     else if (num !== undefined) out += `<span class="n">${escape(text)}</span>`
     else if (ident !== undefined) {
-      if (landing && LANDING_TYPES.has(ident)) out += `<span class="t">${ident}</span>`
+      if (LANDING_TYPES.has(ident)) out += `<span class="t">${ident}</span>`
       else if (KEYWORDS.has(ident) || landing && LANDING_KEYWORDS.has(ident)) out += `<span class="k">${ident}</span>`
-      else if (LITERALS.has(ident)) out += `<span class="l">${ident}</span>`
       else if (/^[A-Z]/.test(ident)) out += `<span class="t">${ident}</span>`
       else if (/^\s*\(/.test(code.slice(m.index! + text.length))) out += `<span class="f">${ident}</span>`
       else out += escape(ident)
-    } else if (landing && /[!%]|\|>/.test(text)) out += `<span class="k">${escape(text)}</span>`
+    } else if (/[!%]|\|>/.test(text)) out += `<span class="k">${escape(text)}</span>`
     else out += escape(text)
   }
   return out
 }
 
 
-// Styles copied from render.ts; user-doc layout overrides follow.
-const css = `:root {
-  --bg: #fbfbf9; --fg: #1d1d1f; --muted: #5d6066; --rule: #dedcd6; --panel: #f2f1ed;
-  --code-bg: #f4f3ef; --code-fg: #1d1d1f; --link: #1f5fbf; --accent: #8a4b00; --mark: #fff3c4;
-  --hl-comment: #6b6f76; --hl-string: #0b6b3a; --hl-number: #9a3412; --hl-keyword: #7c2d92;
-  --hl-literal: #9a3412; --hl-type: #1d4ed8; --hl-fn: #0e6e8c;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #15161a; --fg: #e6e4df; --muted: #a2a3a8; --rule: #33353b; --panel: #1d1f24;
-    --code-bg: #1b1d22; --code-fg: #e6e4df; --link: #7fb0ff; --accent: #f0b46a; --mark: #3a3420;
-    --hl-comment: #8b8f96; --hl-string: #8fd19e; --hl-number: #f2a477; --hl-keyword: #d7a6f2;
-    --hl-literal: #f2a477; --hl-type: #8cb4ff; --hl-fn: #7fd3e8;
+// The docs skin is the design mock (.specs/design/mock/src/sites/front): its
+// palette, Inter and IBM Plex Mono, the shared header and footer, the docs
+// grid, and code blocks as cards whose header row carries a label and a Copy
+// button. __FONTS__ becomes each page's relative path to the site's fonts/.
+// The mock's --code-* and syntax colors; the --fg/--muted/--rule/--panel/
+// --accent/--link aliases are the names render-hovers.ts styles reference.
+const CODE_LIGHT = `--code-keyword: var(--water-600); --code-string: var(--sediment-600); --code-type: var(--slate-600); --code-number: var(--ember-600); --code-comment: var(--ink-500); --code-fn: var(--water-700);`
+const CODE_DARK = `--code-keyword: var(--water-300); --code-string: var(--sediment-300); --code-type: var(--slate-400); --code-number: var(--ember-400); --code-comment: var(--ink-400); --code-fn: var(--water-400);`
+const DARK = `color-scheme: dark;
+  --bg: #0d1514; --text: #ece7db; --text-muted: #a8a193; --text-faint: #969083;
+  --surface: #131b1a; --surface-2: #1a2422;
+  --border: rgb(236 231 219 / 10%); --border-strong: rgb(236 231 219 / 18%);
+  --brand: #45c4b2; --warning: var(--sediment-300);
+  --inline-code-bg: rgb(236 231 219 / 8%);
+  --shadow-2: 0 1px 2px rgb(0 0 0 / 24%), 0 12px 32px rgb(0 0 0 / 40%);
+  ${CODE_DARK}`
+const css = `@font-face { font-family: "Inter"; font-style: normal; font-weight: 400; font-display: swap; src: url("__FONTS__/inter-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 500; font-display: swap; src: url("__FONTS__/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-style: normal; font-weight: 600; font-display: swap; src: url("__FONTS__/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("__FONTS__/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); }
+:root {
+  color-scheme: light;
+  --paper-0: #fffefa; --paper-1: #f7f4ee; --paper-2: #efeae0;
+  --ink-900: #211d18; --ink-500: #6e675c; --ink-400: #9a9284;
+  --water-300: #7fbfb3; --water-400: #3e9e90; --water-500: #0f766e; --water-600: #0b5b57; --water-700: #134e4a;
+  --sediment-300: #f0c169; --sediment-600: #8c5a08;
+  --ember-400: #d97757; --ember-600: #a4442a;
+  --slate-400: #82a8b8; --slate-600: #3c6879;
+  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --bg: var(--paper-1); --text: var(--ink-900); --text-muted: #665f54; --text-faint: #6c655a;
+  --surface: var(--paper-0); --surface-2: var(--paper-2);
+  --border: rgb(33 29 24 / 8%); --border-strong: rgb(33 29 24 / 14%);
+  --brand: var(--water-500); --warning: var(--sediment-600);
+  --inline-code-bg: rgb(33 29 24 / 6%);
+  --brand-soft: var(--brand);
+  --warning-soft: var(--warning);
+  --warning-border: var(--warning);
+  @supports (color: color-mix(in lab, red, red)) {
+    --brand-soft: color-mix(in srgb, var(--brand) 10%, var(--surface));
+    --warning-soft: color-mix(in srgb, var(--warning) 12%, var(--surface));
+    --warning-border: color-mix(in srgb, var(--warning) 40%, transparent);
   }
+  --shadow-2: 0 1px 2px rgb(33 29 24 / 4%), 0 12px 32px rgb(33 29 24 / 10%);
+  ${CODE_LIGHT}
+  --fg: var(--text); --muted: var(--text-muted); --rule: var(--border); --panel: var(--surface);
+  --accent: var(--warning); --link: var(--brand); --mark: var(--warning-soft);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
-:root[data-theme="dark"] {
-  --bg: #15161a; --fg: #e6e4df; --muted: #a2a3a8; --rule: #33353b; --panel: #1d1f24;
-  --code-bg: #1b1d22; --code-fg: #e6e4df; --link: #7fb0ff; --accent: #f0b46a; --mark: #3a3420;
-  --hl-comment: #8b8f96; --hl-string: #8fd19e; --hl-number: #f2a477; --hl-keyword: #d7a6f2;
-  --hl-literal: #f2a477; --hl-type: #8cb4ff; --hl-fn: #7fd3e8;
-}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ${DARK} } }
+:root[data-theme="dark"] { ${DARK} }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 16px; }
-body {
-  margin: 0; background: var(--bg); color: var(--fg);
-  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-}
-.layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 40px; max-width: 1480px; margin: 0 auto; padding: 0 24px; }
-nav {
-  position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto;
-  padding: 28px 0 40px; font-size: 13.5px; line-height: 1.45; border-right: 1px solid var(--rule);
-}
-nav a { display: block; color: var(--muted); text-decoration: none; padding: 3px 12px 3px 0; }
-nav a:hover { color: var(--link); }
-nav .toc-2 { color: var(--fg); font-weight: 600; margin-top: 10px; }
-nav .toc-3 { padding-left: 14px; }
-main { min-width: 0; padding: 28px 0 96px; }
-h1 { font-size: 34px; line-height: 1.2; margin: 8px 0 12px; letter-spacing: -0.01em; }
-h2 { font-size: 28px; margin: 80px 0 8px; padding-top: 18px; border-top: 3px solid var(--fg); letter-spacing: -0.01em; }
-h3 { font-size: 22px; margin: 48px 0 10px; padding-top: 10px; border-top: 1px solid var(--rule); }
-h4 { font-size: 17px; margin: 30px 0 8px; }
-h1 a.anchor, h2 a.anchor, h3 a.anchor, h4 a.anchor { color: inherit; text-decoration: none; }
-p, li { max-width: 860px; }
-a { color: var(--link); }
-code { font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
-figure.code { margin: 14px 0 18px; min-width: 0; }
-figure.code figcaption {
-  font: 600 11.5px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px 2px;
-}
-figure.side-es figcaption { color: var(--accent); }
-pre.code {
-  background: var(--code-bg); color: var(--code-fg); border: 1px solid var(--rule); border-radius: 8px;
-  padding: 14px 16px; overflow-x: auto; margin: 0; max-width: 100%;
-}
-figure.side-es pre.code { border-color: color-mix(in srgb, var(--accent) 45%, var(--rule)); }
-pre.code code { background: none; padding: 0; font-size: 13px; white-space: pre; }
-pre.code[data-lang="text"] { background: var(--panel); }
-pre.code .c { color: var(--hl-comment); font-style: italic; }
-pre.code .s { color: var(--hl-string); }
-pre.code .n { color: var(--hl-number); }
-pre.code .k { color: var(--hl-keyword); font-weight: 600; }
-pre.code .l { color: var(--hl-literal); }
-pre.code .t { color: var(--hl-type); }
-pre.code .f { color: var(--hl-fn); }
-.compare { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; margin: 14px 0 18px; }
-.compare figure.code { margin: 0; }
-@media (max-width: 1180px) { .compare { grid-template-columns: minmax(0, 1fr); } }
-blockquote { margin: 16px 0; padding: 10px 18px; border-left: 4px solid var(--accent); background: var(--panel); border-radius: 0 8px 8px 0; }
-blockquote p { margin: 6px 0; }
-.table { overflow-x: auto; margin: 14px 0 20px; border: 1px solid var(--rule); border-radius: 8px; }
-table { border-collapse: collapse; width: 100%; font-size: 14px; line-height: 1.45; }
-th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--rule); }
-th { background: var(--panel); font-weight: 600; white-space: nowrap; }
-tr:last-child td { border-bottom: none; }
-td code { font-size: 12.5px; }
-strong { font-weight: 650; }
-hr { border: none; border-top: 1px solid var(--rule); margin: 32px 0; }
-@media (max-width: 960px) {
-  .layout { grid-template-columns: 1fr; gap: 0; padding: 0 16px; }
-  nav { position: static; max-height: none; border-right: none; border-bottom: 1px solid var(--rule); padding: 16px 0; }
-  nav .toc-3 { display: none; }
-  h1 { font-size: 28px; }
-}
-
-`
-const userCss = `
-.layout { grid-template-columns: 258px minmax(0, 1fr) 200px; max-width: 1540px; gap: 32px; }
-main, article, aside, nav { min-width: 0; }
-main { grid-column: 2; grid-row: 1; }
-.sidebar { grid-column: 1; grid-row: 1; }
-.page-toc { grid-column: 3; grid-row: 1; }
-body { overflow-wrap: anywhere; }
-.sidebar { padding-right: 16px; }
-.sidebar .brand { color: var(--fg); font-size: 18px; font-weight: 700; margin-bottom: 20px; }
-.sidebar .view { margin: 22px 0 8px; padding: 0; border: 0; color: var(--fg); font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
-.sidebar .group { margin: 16px 0 6px; padding: 0; border: 0; color: var(--fg); font-size: 13px; }
-.sidebar a { padding: 5px 8px; border-radius: 5px; }
-.sidebar a[aria-current="page"] { background: var(--panel); color: var(--link); font-weight: 650; box-shadow: inset 3px 0 var(--link); }
-.page-toc { border: 0; }
-.page-toc h2 { font-size: 13.5px; border: 0; margin: 0 0 10px; padding: 0; }
-.page-toc a { padding: 5px 0; }
-.pager { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; border: 0; border-top: 1px solid var(--rule); margin-top: 48px; padding: 24px 0 0; position: static; max-height: none; }
-.pager a { border: 1px solid var(--rule); border-radius: 8px; padding: 12px; color: var(--link); }
-.pager span { display: block; font-size: 12px; color: var(--muted); }
-.pager .next { text-align: right; grid-column: 2; }
-.callout { border: 1px solid var(--rule); border-left: 4px solid var(--accent); background: var(--mark); }
-.callout.not-designed { border-left-style: double; border-left-width: 6px; }
-.callout strong:first-child { color: var(--accent); }
-.v0-warning { margin: 0 0 24px; padding: 10px 18px; border-radius: 0 8px 8px 0; }
-article > .part { margin: 8px 0 18px; color: var(--accent); font-size: 13px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; }
-.part a.anchor { color: inherit; text-decoration: none; }
-img, svg, video { max-width: 100%; height: auto; }
-pre { max-width: 100%; overflow-x: auto; overflow-wrap: normal; }
-.table { max-width: 100%; }
-.skip { position: absolute; left: 16px; top: -100px; background: var(--bg); padding: 8px; z-index: 1; }
+body { margin: 0; background: var(--bg); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.front-page { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); color: var(--text); font: 14px/1.5 var(--font-ui); }
+.skip { position: absolute; left: 16px; top: -100px; background: var(--surface); color: var(--brand); padding: 8px; z-index: 20; }
 .skip:focus { top: 8px; }
-@media (max-width: 1200px) {
-  .layout { grid-template-columns: 240px minmax(0, 1fr); }
-  .page-toc { position: static; grid-column: 2; grid-row: 1; max-height: none; padding-bottom: 0; }
-  .sidebar { grid-row: 1 / 3; }
-  main { grid-column: 2; grid-row: 2; }
+
+/* ---------- header and footer (the landing's chrome) ---------- */
+
+.front-eh { display: flex; align-items: center; gap: 20px; height: 56px; padding: 0 24px; border-bottom: 1px solid var(--border); flex: 0 0 auto; }
+.front-eh .brand { font: 600 18px var(--font-ui); color: var(--text); text-decoration: none; }
+.front-eh-nav { display: flex; gap: 16px; }
+.front-eh-link { color: var(--text-muted); text-decoration: none; font-size: 14px; }
+.front-eh-link:hover { color: var(--text); }
+.front-efoot { margin-top: auto; display: flex; justify-content: center; gap: 8px; padding: 48px 16px 24px; font-size: 12px; color: var(--text-faint); }
+.front-efoot a { color: var(--text-muted); text-decoration: none; }
+.front-efoot a:hover { color: var(--text); text-decoration: underline; }
+
+/* ---------- buttons ---------- */
+
+.front-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid transparent; font: 500 14px var(--font-ui); cursor: pointer; text-decoration: none; white-space: nowrap; }
+.front-btn-secondary { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
+.front-btn-secondary:hover { background: var(--surface-2); }
+.front-btn-xs { height: 28px; padding: 0 10px; font-size: 12px; }
+button.copy .i-check { display: none; }
+button.copy[data-copied] .i-check { display: block; }
+button.copy[data-copied] .i-copy { display: none; }
+@media (max-width: 640px), (pointer: coarse) { .front-btn { height: 40px; } }
+
+/* ---------- docs grid, sidebar, on-this-page ---------- */
+
+.front-docs-body { flex: 1; width: 100%; max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; display: grid; grid-template-columns: 220px minmax(0, 1fr) 180px; gap: 32px; align-items: start; }
+@media (min-width: 1280px) { .front-docs-body { max-width: 1280px; grid-template-columns: 180px minmax(0, 760px) 160px; gap: 24px; } }
+.front-docs-side { position: sticky; top: 24px; max-height: calc(100dvh - 48px); overflow-y: auto; }
+.front-docs-menu { display: none; align-items: center; gap: 6px; height: 40px; padding: 0 14px; border: 1px solid var(--border-strong); border-radius: 8px; background: var(--surface); font: 500 14px var(--font-ui); color: var(--text); cursor: pointer; }
+.front-docs-nav { display: grid; gap: 2px; align-content: start; }
+.front-docs-section { margin: 16px 0 4px; font-size: 12px; font-weight: 600; color: var(--text-faint); }
+.front-docs-section:first-child { margin-top: 0; }
+.front-docs-view { margin-top: 28px; }
+.front-docs-item { display: block; padding: 5px 10px; border-radius: 6px; font-size: 14px; color: var(--text-muted); text-decoration: none; }
+.front-docs-item:hover { background: var(--surface-2); color: var(--text); }
+.front-docs-item[data-current="true"] { background: var(--brand-soft); color: var(--brand); font-weight: 500; }
+.front-docs-toc { position: sticky; top: 24px; display: grid; gap: 2px; align-content: start; }
+.front-docs-toc-h { margin: 0 0 4px; font-size: 12px; font-weight: 600; color: var(--text-faint); }
+.front-docs-toc-item { display: block; padding: 4px 0; font-size: 13px; color: var(--text-muted); text-decoration: none; }
+.front-docs-toc-item:hover { color: var(--text); }
+
+/* ---------- article ---------- */
+
+.front-docs-main { min-width: 0; }
+article { min-width: 0; }
+.front-docs-main p, .front-docs-main li { overflow-wrap: anywhere; }
+article h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; margin: 0 0 16px; scroll-margin-top: 16px; }
+article h2 { font-size: 20px; font-weight: 600; line-height: 1.35; margin: 32px 0 8px; scroll-margin-top: 16px; }
+article h3 { font-size: 16px; font-weight: 600; line-height: 1.4; margin: 24px 0 8px; scroll-margin-top: 16px; }
+article h4 { font-size: 14px; font-weight: 600; margin: 20px 0 6px; scroll-margin-top: 16px; }
+h1 a.anchor, h2 a.anchor, h3 a.anchor, h4 a.anchor { color: inherit; text-decoration: none; }
+article p { font-size: 16px; line-height: 1.65; margin: 0 0 12px; }
+article ul, article ol { margin: 0 0 12px; padding-left: 24px; font-size: 16px; line-height: 1.65; }
+article ul { list-style: disc outside; }
+article ol { list-style: decimal outside; }
+article li + li { margin-top: 4px; }
+article a { color: var(--brand); text-decoration: none; }
+article a:hover { text-decoration: underline; }
+article strong { font-weight: 600; }
+article hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+article img { max-width: 100%; height: auto; }
+article > .part { margin: 8px 0 16px; color: var(--text-faint); font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.part a.anchor { color: inherit; text-decoration: none; }
+article code { font: 0.85em var(--font-mono); background: var(--inline-code-bg); padding: 1px 5px; border-radius: 4px; white-space: normal; overflow-wrap: anywhere; }
+
+/* ---------- callouts ---------- */
+
+.front-callout, article blockquote { margin: 0 0 16px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 14px; line-height: 1.5; }
+article blockquote p { font-size: 14px; line-height: 1.5; margin: 0 0 6px; }
+article blockquote p:last-child { margin-bottom: 0; }
+.front-callout-warning, article blockquote.not-designed { background: var(--warning-soft); border-color: var(--warning-border); }
+
+/* ---------- code blocks as the mock's cards ---------- */
+
+figure.code { margin: 16px 0; min-width: 0; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+figure.code figcaption { min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 0 16px; border-bottom: 1px solid var(--border); }
+figure.code .code-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 12px var(--font-mono); color: var(--text-muted); }
+pre.code { margin: 0; padding: 12px 16px; max-width: 100%; overflow-x: auto; font: 13px/1.6 var(--font-mono); color: var(--text); }
+pre.code code { display: block; width: max-content; min-width: 100%; background: none; padding: 0; border-radius: 0; font: inherit; white-space: pre; overflow-wrap: normal; }
+pre.code .c { color: var(--code-comment); }
+pre.code .s { color: var(--code-string); }
+pre.code .n, pre.code .l { color: var(--code-number); }
+pre.code .k { color: var(--code-keyword); }
+pre.code .t { color: var(--code-type); }
+pre.code .f { color: var(--code-fn); }
+.compare { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; margin: 16px 0; }
+.compare figure.code { margin: 0; }
+@media (max-width: 1023px) { .compare { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- tables ---------- */
+
+.table { overflow-x: auto; max-width: 100%; margin: 0 0 12px; }
+table { border-collapse: collapse; font-size: 14px; line-height: 1.45; }
+th, td { text-align: left; vertical-align: top; padding: 8px 12px; border: 1px solid var(--border); }
+th { background: var(--surface-2); font-weight: 600; }
+td code { white-space: nowrap; }
+
+/* ---------- previous/next ---------- */
+
+.front-docs-pagenav { display: flex; justify-content: space-between; gap: 16px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); }
+.front-docs-pagenav a { color: var(--brand); text-decoration: none; font-size: 14px; }
+.front-docs-pagenav a:hover { text-decoration: underline; }
+
+/* ---------- phone ---------- */
+
+@media (max-width: 1023px) {
+  .front-docs-body { grid-template-columns: minmax(0, 1fr); gap: 16px; row-gap: 24px; align-content: start; }
+  .front-docs-side { position: static; max-height: none; overflow-y: visible; }
+  .front-docs-menu { display: inline-flex; }
+  .front-docs-nav { display: none; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+  .front-docs-nav[data-open="true"] { display: grid; }
+  .front-docs-toc { display: none; }
 }
-@media (max-width: 760px) {
-  .layout { display: flex; flex-direction: column; gap: 0; padding: 0 16px; }
-  .sidebar { width: 100%; max-height: 260px; overflow-y: auto; padding: 16px 0; }
-  .page-toc { padding: 20px 0 0; }
-  main { width: 100%; padding-top: 16px; }
-  h1 { font-size: 28px; }
-  h2 { font-size: 24px; margin-top: 48px; }
-  .pager { gap: 8px; }
+@media (max-width: 640px) {
+  .front-eh { padding: 0 16px; gap: 12px; }
+  .front-docs-body { padding: 16px 16px 48px; }
 }
 `
+
+// The one inline script every docs page runs: the phone docs menu and the Copy
+// button. Copy clones the block's code, drops hover popups, and writes the
+// exact source text to the clipboard. The CSP allows it by its hash alone.
+const pageScript = `document.addEventListener("click",function(event){
+var target=event.target;
+var button=target.closest&&target.closest("button.front-docs-menu,button.copy");
+if(!button)return;
+if(button.classList.contains("front-docs-menu")){
+var nav=button.parentElement.querySelector(".front-docs-nav");
+var open=nav.getAttribute("data-open")!=="true";
+nav.setAttribute("data-open",String(open));
+button.setAttribute("aria-expanded",String(open));
+return;
+}
+var code=button.closest("figure.code").querySelector("pre.code code").cloneNode(true);
+code.querySelectorAll(".docs-popup").forEach(function(popup){popup.remove()});
+try{
+var write=navigator.clipboard&&navigator.clipboard.writeText(code.textContent.replace(/\\n$/,""));
+if(write)write.catch(function(){});
+}catch(error){}
+button.setAttribute("data-copied","");
+button.querySelector("span").textContent="Copied";
+clearTimeout(button._copyTimer);
+button._copyTimer=setTimeout(function(){button.removeAttribute("data-copied");button.querySelector("span").textContent="Copy"},1500);
+});`
+const pageScriptHash = new Bun.CryptoHasher("sha256").update(pageScript).digest("base64")
+
+// The mock's icons, 16px stroke SVGs; the Copy button shows the check while copied.
+const ICON_COPY = `<svg class="i-copy" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 5.5v-2a1.5 1.5 0 0 0-1.5-1.5H4A1.5 1.5 0 0 0 2.5 3.5v5A1.5 1.5 0 0 0 4 10h1.5"/></svg>`
+const ICON_CHECK = `<svg class="i-check" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg>`
+const ICON_CHEVRON = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 6.5l3 3 3-3"/></svg>`
+const COPY_BUTTON = `<button type="button" class="front-btn front-btn-secondary front-btn-xs copy">${ICON_COPY}${ICON_CHECK}<span>Copy</span></button>`
+
+// A code block's header-row label: the fence role's caption, else the mock's
+// language labels (Terminal for shells, Output for text, VibeLang, TypeScript).
+const codeLabel = (lang: string): string => {
+  const language = lang.toLowerCase()
+  if (["sh", "shell", "bash", "zsh", "console"].includes(language)) return "Terminal"
+  if (["out", "output", "text", "plaintext", ""].includes(language)) return "Output"
+  if (["vibe", "vibelang"].includes(language)) return "VibeLang"
+  if (["ts", "typescript", "tsx"].includes(language)) return "TypeScript"
+  if (language === "json") return "JSON"
+  return lang
+}
 
 // group is the bold sidebar label a page is indented under, if any.
 type Page = { path: string; label: string; group?: string }
@@ -331,8 +417,8 @@ async function render(source: string, markdown: string, destination: string, cou
       },
       code(token: Tokens.Code) {
         const [lang = "", role = ""] = (token.lang ?? "").split(/\s+/)
-        const caption = CAPTIONS[role]
-        return `<figure class="code side-${escape(role || "none")}">${caption ? `<figcaption>${caption}</figcaption>` : ""}<pre class="code" data-lang="${escape(lang)}"><code>${highlight(token.text, lang)}</code></pre></figure>\n`
+        const label = CAPTIONS[role] ?? codeLabel(lang)
+        return `<figure class="code side-${escape(role || "none")}"><figcaption><span class="code-label">${escape(label)}</span>${COPY_BUTTON}</figcaption><pre class="code" data-lang="${escape(lang)}"><code>${highlight(token.text, lang)}</code></pre></figure>\n`
       },
       table(this: any, token: Tokens.Table) {
         const head = token.header.map(c => `<th>${this.parser.parseInline(c.tokens)}</th>`).join("")
@@ -379,34 +465,48 @@ async function render(source: string, markdown: string, destination: string, cou
   }).transform(new Response(body)).text()
   const href = (path: string) => escape(relative(dirname(destination), output(path)).split("/").map(encodeURIComponent).join("/"))
   const sidebar = navigation.map(item => item.kind === "page"
-    ? `<a href="${href(item.page.path)}"${item.page.path === source ? ' aria-current="page"' : ""}>${escape(item.page.label)}</a>`
-    : `<${item.kind === "view" ? "h2" : "h3"} class="${item.kind}">${escape(item.label)}</${item.kind === "view" ? "h2" : "h3"}>`).join("\n")
+    ? `<a class="front-docs-item" href="${href(item.page.path)}"${item.page.path === source ? ' data-current="true" aria-current="page"' : ""}>${escape(item.page.label)}</a>`
+    : `<p class="front-docs-section${item.kind === "view" ? " front-docs-view" : ""}">${escape(item.label)}</p>`).join("\n")
   const index = order.findIndex(p => p.path === source)
   const prev = index > 0 ? order[index - 1] : undefined
   const next = index >= 0 ? order[index + 1] : undefined
-  const pager = (page: Page | undefined, direction: "previous" | "next") => page ? `<a class="${direction}" rel="${direction === "previous" ? "prev" : "next"}" href="${href(page.path)}"><span>${direction === "previous" ? "Previous" : "Next"}</span>${escape(page.label)}</a>` : ""
+  const pager = (page: Page | undefined, direction: "previous" | "next") => page
+    ? `<a class="front-docs-${direction === "previous" ? "prev" : "next"}" rel="${direction === "previous" ? "prev" : "next"}" href="${href(page.path)}">${direction === "previous" ? "← " : ""}${escape(page.label)}${direction === "next" ? " →" : ""}</a>`
+    : "<span></span>"
+  const home = href(order[0]!.path)
+  const fonts = relative(dirname(destination), "fonts").split("/").map(encodeURIComponent).join("/")
+  // The mock shows the "On this page" rail only when the page has at least 3 sections.
+  const pageToc = toc.length >= 3
+    ? `<aside class="front-docs-toc" aria-label="On this page"><p class="front-docs-toc-h">On this page</p>${toc.map(t => `<a class="front-docs-toc-item" href="#${escape(t.id)}">${escape(t.text)}</a>`).join("\n")}</aside>`
+    : ""
   const page = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'sha256-${pageScriptHash}'; font-src 'self'; img-src data:; base-uri 'none'; form-action 'none'">
 <title>${escape(title)} · ${spec ? "VibeLang Specification" : "VibeLang Docs"}</title>
-<style>${css}${userCss}${hoverCss}</style>
+<style>${(css + hoverCss).replaceAll("__FONTS__", fonts)}</style>
 </head>
 <body>
 <a class="skip" href="#content">Skip to content</a>
-<div class="layout">
-<nav class="sidebar" aria-label="Documentation"><a class="brand" href="${escape(relative(dirname(destination), output(order[0]!.path)))}">VibeLang Docs</a>${sidebar}</nav>
-<nav class="page-toc" aria-label="On this page"><h2>On this page</h2>${toc.map(t => `<a href="#${escape(t.id)}">${escape(t.text)}</a>`).join("\n")}</nav>
-<main id="content"><p class="callout v0-warning" role="note"><strong>Warning:</strong> VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="pager" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav><footer><a href="mailto:support@smithers.sh?subject=${escape(encodeURIComponent(`VibeLang docs: ${title} (${source})`))}">Report a bug</a></footer></main>
+<div class="front-page">
+<header class="front-eh"><a class="brand" href="${home}">VibeLang</a><nav class="front-eh-nav" aria-label="Site"><a class="front-eh-link" href="${home}">Docs</a><!-- source-link --><a class="front-eh-link source-link" href="https://smithers.sh/effeck/effeck?utm_source=effeck.dev&amp;utm_medium=source&amp;utm_campaign=vibelang-launch">Source on Smithers</a><!-- /source-link --></nav></header>
+<div class="front-docs-body">
+<aside class="front-docs-side"><button type="button" class="front-docs-menu" aria-expanded="false">Menu ${ICON_CHEVRON}</button><nav class="front-docs-nav" data-open="false" aria-label="Documentation">${sidebar}</nav></aside>
+<main class="front-docs-main" id="content"><p class="front-callout front-callout-warning" role="note"><strong>Warning:</strong> VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.</p><article>${rewritten}</article><nav class="front-docs-pagenav" aria-label="Page navigation">${pager(prev, "previous")}${pager(next, "next")}</nav></main>
+${pageToc}
 </div>
+<footer class="front-efoot"><a href="mailto:support@smithers.sh?subject=${escape(encodeURIComponent(`VibeLang docs: ${title} (${source})`))}">Report a bug</a><span aria-hidden="true">·</span><a href="${home}">Docs</a><!-- source-link --><span aria-hidden="true">·</span><a class="source-link" href="https://smithers.sh/effeck/effeck?utm_source=effeck.dev&amp;utm_medium=source&amp;utm_campaign=vibelang-launch">Source on Smithers</a><!-- /source-link --></footer>
+</div>
+<script>${pageScript}</script>
 </body>
 </html>\n`
   const found = new Set<string>()
   await new HTMLRewriter().on("[id]", { element(element) { found.add(element.getAttribute("id")!) } }).transform(new Response(page)).text()
   ids.set(destination, found)
-  return page
+  // The header and footer source links follow the landing's VIBELANG_LANDING_SOURCE gate.
+  return sourceLinks(page, process.env.VIBELANG_LANDING_SOURCE ?? "none", process.env.VIBELANG_LANDING_GITHUB_URL)
 }
 
 // Complete validation before writing output, so a broken link cannot leave a partial build.
@@ -556,6 +656,19 @@ for (const [path, html] of rendered) {
   writeFileSync(destination, html)
 }
 for (const [path, text] of [...copies, ["llms.txt", llms] as const]) writeFileSync(join(site, path), text)
+// The docs pages load Inter and IBM Plex Mono from /fonts/; the landing keeps
+// its embedded fonts. The woff2 files and their OFL notice are vendored in
+// docs/user/fonts and published beside the pages.
+const FONT_FILES = [
+  "inter-latin-400-normal.woff2", "inter-latin-500-normal.woff2", "inter-latin-600-normal.woff2",
+  "ibm-plex-mono-latin-400-normal.woff2", "OFL.txt"
+]
+mkdirSync(join(site, "fonts"), { recursive: true })
+for (const file of FONT_FILES) {
+  const source = join(root, "fonts", file)
+  if (!existsSync(source)) throw new Error(`docs/user/fonts/${file} is missing; the docs pages cannot load their fonts`)
+  writeFileSync(join(site, "fonts", file), readFileSync(source))
+}
 const specPages = [...sources.keys()].filter(key => key.startsWith("spec/")).length
 console.log(`Wrote ${rendered.size} pages: ${sources.size - specPages} user pages, ${specPages} specification pages, index.html, and spec/index.html.`)
 console.log(`Specification: ${facts.testCount} kernel law tests passed; kernel ${facts.kernelLines} lines; ${crossLinks} links moved to another chapter's page.`)
