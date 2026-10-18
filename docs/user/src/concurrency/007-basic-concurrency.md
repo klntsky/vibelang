@@ -5,8 +5,9 @@ Ordinary VibeLang calls run in sequence. Use Effect's concurrency combinators to
 ## Sequential, bounded, and unbounded work
 
 ```vibe
+// run: Console.log(JSON.stringify(runTasks()))
 function task(id: number) {
-  logInfo("starting", id)
+  Console.log("starting", id)
   sleep("40 millis")
   return id * 2
 }
@@ -19,6 +20,16 @@ function runTasks() {
   const unbounded = await.all [task(5), task(6), task(7)]
   return { sequential, bounded, unbounded }
 }
+// Output: starting 1
+// Output: starting 2
+// Output: starting 1
+// Output: starting 2
+// Output: starting 3
+// Output: starting 4
+// Output: starting 5
+// Output: starting 6
+// Output: starting 7
+// Output: {"sequential":[2,4],"bounded":[2,4,6,8],"unbounded":[10,12,14]}
 ```
 
 The default is sequential execution. A positive numeric limit bounds active operations. `await.all [...]` starts every element in its own fiber at once, like `Promise.all`, and is `Effect.all` with unbounded concurrency. Results keep the order written even when work finishes out of order; choose a finite limit with `forEach` or `for concurrent(n)` when work uses a constrained service or resource.
@@ -26,6 +37,7 @@ The default is sequential execution. A positive numeric limit bounds active oper
 ## Interrupting computations
 
 ```vibe
+// run: const stopped = cancelWork(); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause))
 function cancelWork() {
   const worker = fork {
     sleep("1 minute")
@@ -34,6 +46,7 @@ function cancelWork() {
   worker.interrupt()
   return Fiber.await(worker)
 }
+// Output: true
 ```
 
 `Fiber.interrupt` requests cancellation and waits for termination, including finalizers. `Fiber.await` then returns an `Exit` describing the interruption rather than propagating it. `Effect.interrupt()` interrupts the current fiber; interruption is outside the expected error channel and ordinary `catch` does not handle it.
@@ -41,17 +54,21 @@ function cancelWork() {
 ## Attaching interruption cleanup
 
 ```vibe
+// run: cancelWithCleanup(); Console.log("interrupt returned")
 function cancelWithCleanup() {
   const worker = fork(Effect.onInterrupt(() => {
     try {
       sleep("1 minute")
     } finally {
-      logInfo("released worker resources")
+      Console.log("released worker resources")
     }
-  }, () => logInfo("worker cancelled")))
+  }, () => Console.log("worker cancelled")))
   sleep("10 millis")
   worker.interrupt()
 }
+// Output: released worker resources
+// Output: worker cancelled
+// Output: interrupt returned
 ```
 
 `finally` runs on every exit, while `onInterrupt` adds work specifically for cancellation. Cleanup runs before the interrupting caller resumes. For acquired resources, use `using` so release is registered as part of acquisition rather than depending on a later statement.
@@ -59,6 +76,7 @@ function cancelWithCleanup() {
 ## Propagating cancellation across concurrent work
 
 ```vibe
+// run: const stopped = Effect.exit(() => cancelBatch()); Console.log(stopped.isFailure() && Cause.hasInterrupts(stopped.cause))
 function cancelBatch() {
   for concurrent (const id of [1, 2, 3]) {
     try {
@@ -68,10 +86,14 @@ function cancelBatch() {
       }
       sleep("1 second")
     } finally {
-      logInfo("branch finished", id)
+      Console.log("branch finished")
     }
   }
 }
+// Output: branch finished
+// Output: branch finished
+// Output: branch finished
+// Output: true
 ```
 
 `for concurrent` runs each item in its own fiber. An interrupted branch stops the loop and interrupts its active siblings. An expected failure also stops the default concurrent traversal and cancels work whose result is no longer needed. The parent waits for branch cleanup; a cause containing interruption or a defect passes through ordinary `catch` intact.
@@ -79,6 +101,7 @@ function cancelBatch() {
 ## Racing under different winner rules
 
 ```vibe
+// run: Console.log(JSON.stringify(raceExamples()))
 function answer(label: string, delay: Duration.Input) {
   sleep(delay)
   return label
@@ -100,6 +123,7 @@ function raceExamples() {
   ]
   return { firstSuccess, anySuccess, firstCompletion }
 }
+// Output: {"firstSuccess":"replica","anySuccess":"east","firstCompletion":"primary"}
 ```
 
 The await operations come from the TC39 await operations proposal, and each behaves as the `Promise` method of the same name. `await.any` waits for a success (`Effect.raceAll`), so one early failure does not defeat another branch that can still succeed; if no branch succeeds, it fails with the collected failure reasons. `await.race` accepts the earliest completion, including failure (`Effect.raceFirst`). In both, the losing work is interrupted and cleaned up before the race returns. A named Effect function keeps Effect's meaning: `race` waits for a success, as `Effect.race` does.
@@ -107,6 +131,7 @@ The await operations come from the TC39 await operations proposal, and each beha
 ## Inspecting the winner
 
 ```vibe
+// run: const result = inspectRace(); Console.log(result.outcome.isFailure()); Console.log(JSON.stringify(result.winners))
 function inspectRace() {
   const winners: number[] = []
   const outcome = Effect.result(Effect.raceFirst(
@@ -118,10 +143,13 @@ function inspectRace() {
     { onWinner: ({ index }) => { winners.push(index) } }
   ))
   if (outcome.isFailure()) {
-    logWarning("first completion failed", outcome.failure)
+    Console.log("first completion failed", outcome.failure)
   }
   return { outcome, winners }
 }
+// Output: first completion failed primary offline
+// Output: true
+// Output: [0]
 ```
 
 The synchronous `onWinner` callback observes the winning fiber and index, zero for the first branch and one for the second. It does not replace the winning result and cannot run a VibeLang operation that pauses. `Effect.result` captures expected failures as data; use `Effect.exit` when defects and interruption must also be represented.
