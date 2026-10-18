@@ -11,7 +11,7 @@ class Money implements Equal.Equal {
     return that instanceof Money && that.cents === this.cents && that.currency === this.currency
   }
 
-  [Hash.symbol]() {
+  [Hash.symbol](): number {
     return Hash.combine(Hash.number(this.cents))(Hash.string(this.currency))
   }
 }

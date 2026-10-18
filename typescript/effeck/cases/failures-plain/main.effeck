@@ -45,7 +45,7 @@ const steps: string[] = []
 
 // expect-result: {"clamp":[5,-10,-100],"length":[0,3],"defect":["Die"],"rethrown":["negative",2],"steps":["finally -1","finally 2"]}
 export function main() {
-  const defect = Effect.exit(() => Effect.sync(() => length(undefined)))
+  const defect = Effect.exit(() => Effect.suspend(() => length(undefined)))
   return {
     clamp: [clamp(5), clamp(50), clamp(500)],
     length: [length(0), length("abc")],

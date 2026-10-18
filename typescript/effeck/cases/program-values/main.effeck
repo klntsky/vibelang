@@ -12,7 +12,7 @@ function work(name: string) {
 }
 
 // Returns a program; calling makeJob runs nothing.
-function makeJob(name: string) {
+function makeJob(name: string): () => Effect.Effect<string> {
   return () => work(name)
 }
 

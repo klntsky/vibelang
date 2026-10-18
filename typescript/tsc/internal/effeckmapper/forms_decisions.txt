@@ -658,7 +658,7 @@ typescript/effeck/cases/failures-causes/main.effeck:72:31 lambda program table
 typescript/effeck/cases/failures-causes/main.effeck:73:34 lambda program table
 typescript/effeck/cases/failures-causes/main.effeck:73:55 lambda program table
 typescript/effeck/cases/failures-plain/main.effeck:48:30 lambda program table
-typescript/effeck/cases/failures-plain/main.effeck:48:48 lambda plain table
+typescript/effeck/cases/failures-plain/main.effeck:48:51 lambda effectFn table
 typescript/effeck/cases/failures-plain/main.effeck:52:63 lambda plain fallback
 typescript/effeck/cases/failures-throw/main.effeck:100:40 lambda program table
 typescript/effeck/cases/failures-throw/main.effeck:100:59 lambda effectFn table

@@ -99,12 +99,12 @@ function piped(id: string) {
 
 // Storing, returning, and composing programs
 
-function makeSync(store: Store) {
+function makeSync(store: Store): () => Effect<SyncReport, SyncError, Inventory> {
   return () => syncInventory(store)            // returns a program
 }
-// Effect<() => Effect<SyncReport, SyncError, Inventory>, never, never>
+// A plain function (D9): calling makeSync runs nothing.
 
-// NOTE: stores.map(makeSync) passes makeSync to Array.prototype.map (D9: its plain variant), so
+// NOTE: stores.map(makeSync) passes the plain makeSync to Array.prototype.map (D9), so
 // syncAll is an array of program functions; Effect.all must then convert each element to an Effect.
 function syncEverything(stores: ReadonlyArray<Store>) {
   const syncAll = stores.map(makeSync)                    // an array of programs; nothing ran
