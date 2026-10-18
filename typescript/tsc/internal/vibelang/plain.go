@@ -268,11 +268,11 @@ func (a *analyzer) directCallee(call *ast.Node) *directReference {
 	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) || holdsTopLevelProgram(a.checker, call) {
 		return nil // hatches and D262 program bindings keep the inert Effect form
 	}
-	fn := esFunctionOf(a.checker, call.Expression())
+	fn := esFunctionOf(a.checker, ast.GetInvokedExpression(call))
 	if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {
 		return nil
 	}
-	return a.directReferenceOf(call.Expression(), fn)
+	return a.directReferenceOf(ast.GetInvokedExpression(call), fn)
 }
 
 // plainTypeOf returns the type of fn's $direct variant, given t, the type of
@@ -336,7 +336,7 @@ func (p *plainPlan) planPlain(a *analyzer, node *ast.Node) {
 	}
 	var ref *directReference
 	switch {
-	case node.Kind == ast.KindCallExpression:
+	case isInvocation(node):
 		ref = a.directCallee(node)
 	case a.finalConversion(node) == convertDirect:
 		if fn := esFunctionOf(a.checker, node); fn != nil {

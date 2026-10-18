@@ -273,6 +273,9 @@ func memberReceiver(c *checker.Checker, node *ast.Node, receiver *checker.Type) 
 // the service up in the current Context, so the service joins R whatever the
 // member returns, and then calls the member.
 func serviceLookup(c *checker.Checker, call *ast.Node) *checker.Type {
+	if !ast.IsCallExpression(call) {
+		return nil
+	}
 	callee := call.Expression()
 	if !isMemberCallSite(callee) {
 		return nil

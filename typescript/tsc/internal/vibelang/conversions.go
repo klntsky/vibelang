@@ -252,7 +252,7 @@ func containsCall(node *ast.Node) bool {
 		if isFunctionBoundary(n) {
 			return false
 		}
-		return n.Kind == ast.KindCallExpression || n.ForEachChild(visit)
+		return isInvocation(n) || n.ForEachChild(visit)
 	}
 	return visit(node)
 }
@@ -268,7 +268,7 @@ func (a *analyzer) pauses(node *ast.Node) bool {
 		if isFunctionBoundary(n) {
 			return false
 		}
-		if n.Kind == ast.KindCallExpression && (a.performs(n) || a.callsVibeLangFunction(n)) {
+		if isInvocation(n) && (a.performs(n) || a.callsVibeLangFunction(n)) {
 			return true
 		}
 		return n.ForEachChild(visit)

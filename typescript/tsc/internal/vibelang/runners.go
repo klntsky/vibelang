@@ -130,6 +130,10 @@ func checkProgramStarts(c *checker.Checker, file *ast.SourceFile) {
 		if ast.IsFunctionLike(node) && node.Body() != nil {
 			topLevel = false
 		}
+		if ast.IsTaggedTemplateExpression(node) && topLevel && !a.passedAsProgram(node) && a.runs(node) {
+			report(c, node, EK1001, nodeText(file, node))
+			return false
+		}
 		if ast.IsCallExpression(node) {
 			if topLevel && !a.passedAsProgram(node) {
 				if runs, explains := runsAtTopLevel(c, a, node); runs {

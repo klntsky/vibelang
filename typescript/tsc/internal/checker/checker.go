@@ -10270,7 +10270,7 @@ func (c *Checker) checkTaggedTemplateExpression(node *ast.Node) *Type {
 	}
 	signature := c.getResolvedSignature(node, nil, CheckModeNormal)
 	c.checkDeprecatedSignature(signature, node)
-	return c.getReturnTypeOfSignature(signature)
+	return c.applyCallExpressionTypeHooks(node, c.getReturnTypeOfSignature(signature))
 }
 
 func (c *Checker) checkParenthesizedExpression(node *ast.Node, checkMode CheckMode) *Type {

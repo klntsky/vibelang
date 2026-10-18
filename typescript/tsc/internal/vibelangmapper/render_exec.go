@@ -68,6 +68,9 @@ func renderExec(e edit) (text string, keep bool) {
 		}
 		return e.text, true
 	case editRun:
+		if e.arg == "service" {
+			return pick(e.part, "(yield* ", "", ")"), true
+		}
 		// L3: an Effect runs, any other value is the call's value.
 		return pick(e.part, "(("+t+" = ", "", "), "+helperRef("$isRun")+"("+t+") ? (yield* "+t+") : "+t+")"), true
 	case editEffectBody:

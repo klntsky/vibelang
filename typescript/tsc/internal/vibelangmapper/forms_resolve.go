@@ -1324,7 +1324,7 @@ func formsBoundary(node *ast.Node) bool {
 // formsHoldsCall reports whether expr calls something outside the functions
 // nested in it: the text a by-name argument shows.
 func formsHoldsCall(expr *ast.Node) bool {
-	if ast.IsCallExpression(expr) {
+	if ast.IsCallExpression(expr) || ast.IsTaggedTemplateExpression(expr) {
 		return true
 	}
 	if formsBoundary(expr) {
@@ -1336,7 +1336,7 @@ func formsHoldsCall(expr *ast.Node) bool {
 		if found || formsBoundary(n) {
 			return false
 		}
-		if ast.IsCallExpression(n) {
+		if ast.IsCallExpression(n) || ast.IsTaggedTemplateExpression(n) {
 			found = true
 			return true
 		}

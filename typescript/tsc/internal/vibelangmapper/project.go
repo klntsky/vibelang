@@ -368,6 +368,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 			if isStatementListItem(node) {
 				p.statementStarts[p.tokenStart(node)] = true
 			}
+		case ast.KindTaggedTemplateExpression:
+			p.runTemplate(node, e)
+			return
 		case ast.KindCallExpression:
 			if isRunnableCall(node) {
 				p.runCall(node, e)
@@ -687,6 +690,11 @@ func (p *projector) runCall(call *ast.Node, e env) {
 		delete(p.statementStarts, start)
 	}
 	runArg := p.programCallChannels(call)
+	// Effect.service returns its key at runtime; this explicit lookup must
+	// run it even though D24 keeps a key returned as data by other calls.
+	if p.forms.(*Resolver).Callee(call).Canonical == "effect/Effect#service" {
+		runArg = "service"
+	}
 	p.plan.mark(editRun, partOpen, start, start, runArg)
 	scoped := p.isBlockFork(call, e)
 	if scoped {
@@ -896,4 +904,16 @@ func (p *projector) relativeTypeScriptImport(node *ast.Node) {
 	start := p.tokenStart(specifier)
 	quote := p.text[start : start+1]
 	p.plan.replace(start, specifier.End(), quote+strings.TrimSuffix(module, ".ts")+".js"+quote)
+}
+
+// runTemplate preserves native tag evaluation while applying the call run rule.
+func (p *projector) runTemplate(node *ast.Node, e env) {
+	start := p.tokenStart(node)
+	if p.statementStarts[start] {
+		p.plan.insert(start, ";")
+		delete(p.statementStarts, start)
+	}
+	p.plan.mark(editRun, partOpen, start, start, "")
+	p.visitChildren(node, e)
+	p.plan.mark(editRun, partClose, node.End(), node.End(), "")
 }

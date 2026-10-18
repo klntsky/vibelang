@@ -31,6 +31,8 @@ The binary is VibeLang's compiler, `vibelang`, under any file name; `vibelang/ls
 
 The build embeds the `lib.*.d.ts` files; Herebyfile's `-tags=noembed` build copies them next to the binary instead. A cold build takes about 75 s and fills about 1.7 GB of Go build cache. Always pass `-trimpath`: without it, Go keys each package's cache entry by its absolute directory, so every jj workspace cold-builds and adds its own copy. `-gcflags=all=-dwarf=false` shrinks the entries; panics still print stack traces.
 
+Tagged templates follow the call rule (D267): `sql` followed by a template runs its Effect in a program, including as an expression statement, and an expression receives its success value. Plain tags keep JavaScript behavior. Program arguments pass Effectful templates by name (D147); hatches keep TypeScript and top-level running templates report EK1001.
+
 ### Cases
 
 `vibelang/smoke.sh` builds `tsc`, builds `../packages/runtime` with that `tsc`, and runs `vibelang/harness.mjs`, which compiles the cases in parallel and runs them. Each directory in `vibelang/cases` that has a `tsconfig.json` is a case, and its sources decide its kind:
@@ -59,6 +61,8 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `vibelang-wrap` | Exported functions and arrow functions lower to `Effect.fnUntraced`, and JavaScript runs them with `Effect.runSync` |
 | `vibelang-lower` | Type-directed `yield*`: pure helpers stay plain, Effect-returning TypeScript calls and `.vibe` calls run, operands run left to right, a `Config` stays data |
 | `optional-effect-calls`, `optional-effect-semantics`, `optional-effect-channels.fail` | Smithers A-11: optional Effect calls run once when present, return undefined when absent, preserve JavaScript chaining and D24 data, and contribute E/R (D147) |
+| `tagged-template-runs` | Effectful templates execute once as statements and expressions; plain tags stay plain, a fake SqlClient migration executes, and by-name and local tags run (D267) |
+| `tagged-template-contexts.fail` | EK1001 at module top level; EK4301 for a synchronous callback, a discarded D24 subtype, and positions that cannot run (D267) |
 | `vibelang-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, the `.d.ts` declares it, and the module's top level passes a program to a runner |
 | `vibelang-service-keys` | Service classes compile to Context key classes that JavaScript uses as Effect keys; an `implements` class is an implementation; two services with the same members are different types |
 | `vibelang-services` | `Users.find(id)` and `Users()` look the service up, value members read from `Settings()`, a provider captures another service, and object literal and class methods run Effects |

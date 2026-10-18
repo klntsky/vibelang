@@ -62,6 +62,10 @@ func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 // function is expected.
 func (tx *lowering) visitDirectReference(node *ast.Node, ref *directReference) *ast.Node {
 	f := tx.Factory()
+	if ast.IsTaggedTemplateExpression(node) {
+		template := node.AsTaggedTemplateExpression()
+		return f.UpdateTaggedTemplateExpression(template, tx.directExpression(template.Tag, ref), template.QuestionDotToken, nil, tx.Visitor().VisitNode(template.Template), node.Flags)
+	}
 	if node.Kind != ast.KindCallExpression {
 		return tx.directExpression(node, ref)
 	}

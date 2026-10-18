@@ -137,6 +137,10 @@ func (r *ruleCheck) checkFloating(statement *ast.Node) {
 	if isProvideLayer(statement) || isDiscardingForm(expression) || isHelperCall(expression) {
 		return
 	}
+	// A running template has invocation diagnostics, just like a call.
+	if invocation := ast.SkipParentheses(expression); ast.IsTaggedTemplateExpression(invocation) && r.a.runs(invocation) {
+		return
+	}
 	body := inLowerableBody(statement)
 	if !body && ast.IsCallExpression(ast.SkipParentheses(expression)) && ast.GetContainingFunction(statement) == nil {
 		return
@@ -182,7 +186,7 @@ func (r *ruleCheck) checkReturnedEffect(fn *ast.Node, value *ast.Node) {
 	if !isLowerable(fn) || isProducer(fn) || fn.Type() != nil || !r.a.isEffect(fn) {
 		return
 	}
-	if ast.IsCallExpression(ast.SkipParentheses(value)) && r.a.runs(ast.SkipParentheses(value)) {
+	if isInvocation(ast.SkipParentheses(value)) && r.a.runs(ast.SkipParentheses(value)) {
 		return // the call runs here; its success value is the result
 	}
 	if !isEffectType(r.c, r.c.GetTypeAtLocation(value)) {

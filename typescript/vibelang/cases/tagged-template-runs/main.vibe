@@ -1,0 +1,21 @@
+import { Effect } from "effect"
+import { events, tag, plain, SqlClient } from "./tags.js"
+// expect-result: {"value":"expression|7","plainValue":"plain-expression|9","events":["statement","expression|7","plain-statement","plain-expression|9","CREATE TABLE example (id TEXT)","deferred","local"],"topPlain":"native-top","nativePlain":"native-body"}
+function nativePlain(parts: TemplateStringsArray): string { return parts[0] }
+const topPlain = nativePlain`native-top`
+export function main() {
+  tag`statement`
+  const value = tag`expression${7}`
+  plain`plain-statement`
+  const plainValue = plain`plain-expression${9}`
+  provide Layer.succeed(SqlClient, tag) {
+    const sql = Effect.service(SqlClient)
+    sql`CREATE TABLE example (id TEXT)`
+  }
+  const deferred = Effect.as(tag`deferred`, "ignored")
+  function local(parts: TemplateStringsArray) {
+    return tag`local`
+  }
+  local`ignored`
+  return { value, plainValue, events, topPlain, nativePlain: nativePlain`native-body` }
+}

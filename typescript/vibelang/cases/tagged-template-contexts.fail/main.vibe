@@ -1,0 +1,15 @@
+// expect: EK1001 EK4301
+import { tag, statement } from "./tags.js"
+tag`top-level`
+export function main() {
+  return [1].map(() => tag`callback`)
+}
+
+export function migration() {
+  statement`CREATE TABLE example (id TEXT)`
+}
+class Invalid {
+  constructor() { tag`constructor` }
+  get value() { return tag`getter` }
+}
+function defaults(value = tag`default`) { return value }

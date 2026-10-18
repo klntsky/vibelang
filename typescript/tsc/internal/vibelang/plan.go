@@ -76,8 +76,10 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					if a.runs(call) {
 						p.runs[call] = true
 					}
-					p.planServiceCall(c, call)
-					p.planResume(c, call)
+					if ast.IsCallExpression(call) {
+						p.planServiceCall(c, call)
+						p.planResume(c, call)
+					}
 					return false
 				})
 				p.planScopes(a, node)
@@ -129,7 +131,7 @@ func forEachCallInBody(fn *ast.Node, cb func(call *ast.Node) bool) bool {
 		if isFunctionBoundary(node) {
 			return false
 		}
-		if node.Kind == ast.KindCallExpression && cb(node) {
+		if isInvocation(node) && cb(node) {
 			return true
 		}
 		return node.ForEachChild(visit)
@@ -232,7 +234,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 // performs reports whether call performs an Effect operation: it runs an
 // Effect, or it looks up a service.
 func (a *analyzer) performs(call *ast.Node) bool {
-	return a.runs(call) || isServiceLookup(a.checker, call)
+	return a.runs(call) || ast.IsCallExpression(call) && isServiceLookup(a.checker, call)
 }
 
 // runs reports whether call runs an Effect, which the lowering spells yield*.
@@ -252,7 +254,7 @@ func (a *analyzer) runs(call *ast.Node) bool {
 			// A plain function's call runs inline, through its $direct
 			// variant when it has one, and runs its Effect form only where
 			// that variant is out of reach.
-			return a.isSplittable(fn) && a.directReferenceOf(call.Expression(), fn) == nil
+			return a.isSplittable(fn) && a.directReferenceOf(ast.GetInvokedExpression(call), fn) == nil
 		}
 		return a.isEffect(fn)
 	}

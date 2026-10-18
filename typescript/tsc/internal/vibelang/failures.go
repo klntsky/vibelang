@@ -44,6 +44,9 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 		case n.Kind == ast.KindCallExpression && a.getsScope(n):
 			n.ForEachChild(visit)
 			a.addScoped(info, n) // a fork or acquisition in a Scope region (scopes.go)
+		case ast.IsTaggedTemplateExpression(n):
+			n.ForEachChild(visit)
+			a.addCall(info, n)
 		case n.Kind == ast.KindCallExpression:
 			n.ForEachChild(visit)
 			a.addServiceLookup(info, n)
@@ -205,7 +208,7 @@ func (a *analyzer) blockRunsEffects(block *ast.Node) bool {
 		if isFunctionBoundary(n) || isHatchArgument(n) || n != block && a.isByName(n) {
 			return false
 		}
-		if n.Kind == ast.KindCallExpression && a.performs(n) ||
+		if isInvocation(n) && a.performs(n) ||
 			isHandleStatement(n) ||
 			isProvideBlock(n) || maskWord(n) != "" ||
 			n.Kind == ast.KindVariableDeclarationList && isUsingList(n) ||

@@ -104,7 +104,7 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitEffectValueCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.frame.handleClause != nil && tx.isClauseResume(node):
 		return tx.visitClauseResume(node)
-	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.runsCall(node):
+	case isInvocation(node) && tx.inEffect && tx.plan.runsCall(node):
 		return tx.visitRunningCall(node)
 	case node.Kind == ast.KindCallExpression && tx.inEffect && tx.plan.trusted[node] != nil:
 		return tx.visitTrustedCall(node)

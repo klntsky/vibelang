@@ -12,7 +12,7 @@ import (
 // inline through its $direct variant has its success type anywhere in a .vibe
 // file (plain.go). Every other call keeps its type.
 func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *checker.Type {
-	if !ast.IsCallExpression(call) || !inLowerableBody(call) && analyzerFor(c).directCallee(call) == nil {
+	if !isInvocation(call) || !inLowerableBody(call) && analyzerFor(c).directCallee(call) == nil {
 		return t
 	}
 	if isExitMarkerCall(call) {
@@ -96,4 +96,34 @@ func presentCallResult(c *checker.Checker, t *checker.Type) *checker.Type {
 		}
 	}
 	return c.GetUnionType(parts)
+}
+
+// isInvocation includes tagged templates: invoking a tag is a call (D267).
+func isInvocation(node *ast.Node) bool {
+	return ast.IsCallExpression(node) || ast.IsTaggedTemplateExpression(node)
+}
+
+func init() {
+	fileChecks = append(fileChecks, checkTemplateRuns)
+}
+
+// D24 keeps structured Effect results as data. Discarding one as a template
+// statement must ask rather than silently leaving a SQL migration cold.
+func checkTemplateRuns(c *checker.Checker, file *ast.SourceFile) {
+	var visit func(*ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if ast.IsTaggedTemplateExpression(node) && !inHatch(node) {
+			sig := c.GetResolvedSignature(node)
+			if sig != nil {
+				t := c.GetReturnTypeOfSignature(sig)
+				if effectInterfaceSymbol(c, t) != nil && !isEffectType(c, t) && ast.IsExpressionStatement(ast.WalkUpParenthesizedExpressions(node).Parent) {
+					report(c, node, EK4301.With("This tag returns an Effect subtype kept as data (D24). Call the template result explicitly to run it, or annotate the tag's return type as Effect<A, E, R>."))
+				} else if isEffectType(c, t) && !inLowerableBody(node) && !atTopLevel(node) {
+					report(c, node, EK4301.With("This tagged template runs an Effect, but this position cannot run a program. Move it into an Effect function body."))
+				}
+			}
+		}
+		return node.ForEachChild(visit)
+	}
+	file.AsNode().ForEachChild(visit)
 }

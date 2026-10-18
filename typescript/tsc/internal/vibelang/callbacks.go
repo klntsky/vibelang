@@ -105,7 +105,7 @@ func (a *analyzer) plainMemberOwner(method *ast.Node) string {
 // when neither does.
 func (a *analyzer) pauseText(file *ast.SourceFile, fn *ast.Node) string {
 	if pause := a.firstPause(fn); pause != nil {
-		return nodeText(file, pause.Expression())
+		return nodeText(file, ast.GetInvokedExpression(pause))
 	}
 	if list := firstUsing(fn); list != nil {
 		if declarations := list.AsVariableDeclarationList().Declarations.Nodes; len(declarations) > 0 {
