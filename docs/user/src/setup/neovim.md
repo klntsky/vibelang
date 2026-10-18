@@ -80,10 +80,10 @@ require("vibelang").setup()
 ## 3. Check the filetype and the server
 
 ```sh
-nvim --headless "+lua io.write(vim.filetype.match({ filename = 'main.vibe' }))" +qa
+nvim --headless "+lua io.write((vim.filetype.match({ filename = 'main.vibe' })))" +qa
 ```
 
-The output is `vibelang`. Then, from the project directory, open one of its `.vibe` files, here `src/main.vibe`:
+The output is `vibe`. Then, from the project directory, open one of its `.vibe` files, here `src/main.vibe`:
 
 ```sh
 nvim --headless src/main.vibe "+lua vim.wait(5000, function() return #vim.lsp.get_clients({ name = 'vibelang' }) > 0 end)" "+lua io.write(#vim.lsp.get_clients({ name = 'vibelang' }) .. ' vibelang client')" +qa
