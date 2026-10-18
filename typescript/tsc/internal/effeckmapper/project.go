@@ -248,6 +248,12 @@ func (p *projector) visit(node *ast.Node, e env) {
 		case isProvideBlock(node):
 			p.provideBlock(node, e)
 			return
+		case maskWord(node) != "":
+			p.maskBlock(node, maskWord(node), e)
+			return
+		case isUsingDeclaration(node):
+			p.usingDeclaration(node, e)
+			return
 		}
 		switch node.Kind {
 		case ast.KindExpressionStatement:

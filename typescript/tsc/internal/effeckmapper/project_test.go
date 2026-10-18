@@ -202,6 +202,16 @@ var projectionCases = []struct {
 		virtual: "function h(n: number) { return $gen(function* () {\n  $match1: { { if (n === 1) { (yield* $run(log(\"one\"))); break $match1; } } (yield* $run(log(\"other\"))); break $match1; } \n  return (((n === 1) || (n === 2)))\n})}\n",
 	},
 	{
+		name:    "using acquires its initializer by name in the block's Scope (D47, D14)",
+		source:  "function report(path: string) {\n  using file = Files.open(path)\n  using t = timer(\"x\")\n  return file.name\n}\n",
+		virtual: "function report(path: string) { return $gen(function* () {\n  const file = (yield* $acquire($use(Files).open(path)))\n  const t = (yield* $acquire(timer(\"x\")))\n  return file.name\n})}\n",
+	},
+	{
+		name:    "interruption blocks and finally (exit) are regions (D178-D180)",
+		source:  "function f() {\n  uninterruptible {\n    const conn = acquire()\n    try { restore { return use(conn) } } finally (exit) { release(conn, exit) }\n  }\n}\n",
+		virtual: "function f() { return $gen(function* () {\n  const $c = yield* uninterruptible($gen(function* () {\n    const conn = (yield* $run($value(acquire)()))\n    const $c_1 = yield* $finallyExit($gen(function* () { const $c_2 = yield* restore($gen(function* () { return $box((yield* $run(use(conn)))) })); return $c_2 }), (exit) => $gen(function* () { ;(yield* $run(release(conn, exit))) ; return $end })); return $c_1\n  })); return $unboxed($c)\n})}\n",
+	},
+	{
 		name:    "a layer without statements succeeds with its members",
 		source:  "layer UsersLive: Users {\n  find(id) { return lookup(id) }\n  readonly region = \"eu\";\n}\n",
 		virtual: "const UsersLive = Layer.succeed(Users, {\n  find(id) { return $gen(function* () { return (yield* $run(lookup(id))) })},\n  region: \"eu\"\n})\n",

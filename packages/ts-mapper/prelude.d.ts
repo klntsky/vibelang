@@ -63,6 +63,17 @@ export {
 // statements, and provide blocks lower onto these.
 export { $catch, $finally, $tailResume, $tailResumeWith, $provideService } from "effeck-runtime"
 
+/**
+ * `using x = acquire()` in an Effect body (D47, D94, D14): the block's Scope
+ * holds an acquisition, which removes Scope from the acquisition's R; any
+ * other value is a Disposable the block releases.
+ */
+export declare function $acquire<A, E, R>(acquisition: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, Exclude<R, ScopeModule.Scope>>
+export declare function $acquire<T>(value: T): EffectModule.Effect<T, never, never>
+
+// finally (exit) { ... } (D178), and the interruption blocks (D179, D180).
+export { $finallyExit, uninterruptible, restore, interruptible } from "effeck-runtime"
+
 // The pattern matching helpers the parser writes for match and is (D206-D225).
 export { $is, $extract, $rest, $noMatch, $patternError } from "effeck-runtime"
 

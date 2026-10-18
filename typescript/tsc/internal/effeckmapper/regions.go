@@ -276,9 +276,14 @@ func (p *projector) tryStatement(node *ast.Node, e env) {
 		closeCatch = closer
 		normal = tryNormal || catchNormal
 	}
+	exit := (*ast.Node)(nil)
 	if finally != nil {
 		// The finalizer's value is dropped; a jump out of it is a record too.
-		finallyNormal, closer := p.regionBlock(finally, finally.Statements(), r, e)
+		statements := finally.Statements()
+		if exit = exitBinding(finally); exit != nil {
+			statements = statements[1:]
+		}
+		finallyNormal, closer := p.regionBlock(finally, statements, r, e)
 		closeFinally = closer
 		normal = normal && finallyNormal
 	}
@@ -292,7 +297,11 @@ func (p *projector) tryStatement(node *ast.Node, e env) {
 
 	open := openRegion(r, name)
 	if finally != nil {
-		open += helperRef("$finally") + "("
+		if exit != nil {
+			open += helperRef("$finallyExit") + "("
+		} else {
+			open += helperRef("$finally") + "("
+		}
 	}
 	if catch != nil {
 		open += helperRef("$catch") + "("
@@ -313,7 +322,15 @@ func (p *projector) tryStatement(node *ast.Node, e env) {
 	} else {
 		p.plan.markText(editRegion, partMiddle, after, after, ")")
 	}
-	if finally != nil {
+	if finally != nil && exit != nil {
+		// finally (exit) { ... }: the finalizer receives the try's Exit.
+		brace := p.braceAfter(exit.End())
+		p.plan.markText(editRegion, partMiddle, after, p.tokenStart(exit), ", (")
+		p.visit(exit, env{})
+		p.plan.markText(editRegion, partMiddle, exit.End(), brace, ") => "+generatorOpen(finally))
+		after = finally.End()
+		p.plan.markText(editRegion, partMiddle, after, after, "))")
+	} else if finally != nil {
 		p.plan.markText(editRegion, partMiddle, after, p.tokenStart(finally), ", "+generatorOpen(finally))
 		after = finally.End()
 		p.plan.markText(editRegion, partMiddle, after, after, "))")
@@ -745,4 +762,123 @@ func (p *projector) tailResume(node *ast.Node, e env) {
 	p.plan.insert(p.tokenStart(node), "return ")
 	p.plan.replace(p.tokenStart(callee), callee.End(), helperRef(helper))
 	p.continuationArguments(call, e)
+}
+
+// isUsingDeclaration reports whether node declares with using: in an
+// Effect body, an acquisition or a Disposable the block releases (D47).
+func isUsingDeclaration(node *ast.Node) bool {
+	if node.Kind != ast.KindVariableStatement {
+		return false
+	}
+	list := node.AsVariableStatement().DeclarationList
+	return list.Flags&ast.NodeFlagsUsing != 0 && list.Flags&ast.NodeFlagsAwaitUsing != ast.NodeFlagsAwaitUsing
+}
+
+// usingDeclaration lowers `using x = acquire()` in an Effect body to
+// `const x = (yield* $acquire(acquire()))`. The initializer passes by name:
+// its own call does not run, so $acquire receives the acquisition, and the
+// block's Scope leaves its R (D14). A Disposable is acquired as itself.
+func (p *projector) usingDeclaration(node *ast.Node, e env) {
+	list := node.AsVariableStatement().DeclarationList
+	start := p.tokenStart(list)
+	if !strings.HasPrefix(p.text[start:], "using") {
+		p.unprojected(node)
+		return
+	}
+	p.plan.replace(start, start+len("using"), "const")
+	for _, declaration := range list.AsVariableDeclarationList().Declarations.Nodes {
+		p.visit(declaration.Name(), env{})
+		if t := declaration.Type(); t != nil {
+			p.visit(t, env{})
+		}
+		init := declaration.Initializer()
+		if init == nil {
+			continue
+		}
+		p.plan.mark(editUsing, partOpen, p.tokenStart(init), p.tokenStart(init), "")
+		p.byName(init, e)
+		p.plan.mark(editUsing, partClose, init.End(), init.End(), "")
+	}
+}
+
+// byName walks expr, an argument passed by name: a call at its top does not
+// run, though its callee and arguments are lowered as in any call.
+func (p *projector) byName(expr *ast.Node, e env) {
+	if expr.Kind == ast.KindCallExpression && isRunnableCall(expr) {
+		p.callee(expr, e)
+		for _, argument := range expr.Arguments() {
+			p.visit(argument, e)
+		}
+		return
+	}
+	p.visit(expr, e)
+}
+
+// maskWord returns the interruption block's word, uninterruptible, restore,
+// or interruptible, when node is such a block: a block whose first statement
+// calls the parser's marker, such as $uninterruptibleBlock(). It returns "".
+func maskWord(node *ast.Node) string {
+	if node.Kind != ast.KindBlock {
+		return ""
+	}
+	statements := node.Statements()
+	if len(statements) == 0 || statements[0].Kind != ast.KindExpressionStatement {
+		return ""
+	}
+	call := statements[0].Expression()
+	if call.Kind != ast.KindCallExpression || call.Flags&ast.NodeFlagsReparsed == 0 || !ast.IsIdentifier(call.Expression()) {
+		return ""
+	}
+	switch call.Expression().Text() {
+	case "$uninterruptibleBlock":
+		return "uninterruptible"
+	case "$restoreBlock":
+		return "restore"
+	case "$interruptibleBlock":
+		return "interruptible"
+	}
+	return ""
+}
+
+// maskBlock lowers an interruption block (D179, D180) in an Effect body to
+// its region under the prelude's function of the same name:
+// `uninterruptible { body }` runs as `uninterruptible(program)`.
+func (p *projector) maskBlock(node *ast.Node, word string, e env) {
+	start := p.tokenStart(node)
+	brace := scanner.SkipTrivia(p.text, start+len(word))
+	closing := node.End() - 1
+	if !strings.HasPrefix(p.text[start:], word) || brace >= len(p.text) || p.text[brace] != '{' || p.text[closing] != '}' {
+		p.unprojected(node)
+		return
+	}
+	r := &region{}
+	name := p.freshCompletion()
+	body := node.Statements()[1:]
+	p.visitList(body, regionEnv(r, e))
+	normal := canCompleteNormally(body)
+	if normal && len(r.jumps) > 0 {
+		p.plan.markText(editRecord, partClose, closing, closing, "; return "+helperRef("$end")+" ")
+	}
+	p.plan.markText(editRegion, partOpen, start, brace, openRegion(r, name)+p.names.prelude(word)+"("+generatorOpen(node))
+	p.plan.markText(editRegion, partClose, node.End(), node.End(), "))")
+	p.plan.markText(editDispatch, partClose, node.End(), node.End(), p.dispatch(r, name, normal, e))
+}
+
+// exitBinding returns the name a `finally (exit)` block binds (D178): the
+// parser writes `const exit = $exit()` as the block's first statement.
+func exitBinding(finally *ast.Node) *ast.Node {
+	statements := finally.Statements()
+	if len(statements) == 0 || statements[0].Kind != ast.KindVariableStatement {
+		return nil
+	}
+	declarations := statements[0].AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes
+	if len(declarations) != 1 {
+		return nil
+	}
+	init := declarations[0].Initializer()
+	if init == nil || init.Kind != ast.KindCallExpression || init.Flags&ast.NodeFlagsReparsed == 0 ||
+		!ast.IsIdentifier(init.Expression()) || init.Expression().Text() != "$exit" {
+		return nil
+	}
+	return declarations[0].Name()
 }

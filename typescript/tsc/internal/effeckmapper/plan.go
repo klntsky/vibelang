@@ -59,6 +59,9 @@ const (
 	editRecord
 	// editDispatch acts on a region's completion record after it runs.
 	editDispatch
+	// editUsing acquires a using declaration's value in the block's Scope
+	// (D47, D94): its initializer, passed by name.
+	editUsing
 )
 
 // part says which part of a kind an edit is.
@@ -174,6 +177,8 @@ func (r checking) text(e edit) (string, bool) {
 		text = pick(e.part, helperRef("$use")+"(", "", ")")
 	case editValueCall:
 		text = pick(e.part, helperRef("$value")+"(", "", ")")
+	case editUsing:
+		text = pick(e.part, "(yield* "+helperRef("$acquire")+"(", "", "))")
 	}
 	return r.resolve(text), true
 }
@@ -197,7 +202,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch"}[k]
+		"value call", "region", "record", "dispatch", "using"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out
