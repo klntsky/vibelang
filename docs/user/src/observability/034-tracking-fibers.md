@@ -5,6 +5,7 @@
 ## Managing groups of running fibers
 
 ```vibe
+// run: Console.log(JSON.stringify(runGroup()))
 function runGroup() {
   using workers = FiberSet.make<number>()
   const first = FiberSet.run(workers) {
@@ -15,9 +16,14 @@ function runGroup() {
     sleep("50 millis")
     return 2
   }
-  logInfo("tracked workers", FiberSet.size(workers))
+  Console.log("tracked workers", FiberSet.size(workers))
   return [first.join(), second.join()]
 }
+```
+
+```output
+tracked workers 2
+[1,2]
 ```
 
 `FiberSet.run` forks a program and registers the resulting fiber. `FiberSet.add` can register an existing fiber, while `size` reports how many are currently tracked. Joining individual handles collects their results; tracking itself does not produce an ordered result list.
@@ -25,6 +31,7 @@ function runGroup() {
 ## Tracking fibers by key
 
 ```vibe
+// run: Console.log(replacePreview())
 function replacePreview() {
   using previews = FiberMap.make<string, string>()
   FiberMap.run(previews, "editor-1") {
@@ -39,11 +46,16 @@ function replacePreview() {
 }
 ```
 
+```output
+new preview
+```
+
 Starting another fiber under an existing key interrupts the previous fiber for that key. This supports latest-request behavior without retaining an obsolete handle elsewhere. `FiberMap.has` and `get` inspect tracked keys, `remove` interrupts and removes a keyed fiber, and `onlyIfMissing: true` avoids replacing existing work when passed to `run`.
 
 ## Removing completed work
 
 ```vibe
+// run: Console.log(waitForAllTracked())
 function waitForAllTracked() {
   using workers = FiberSet.make<void>()
   FiberSet.run(workers, sleep("10 millis"))
@@ -53,11 +65,16 @@ function waitForAllTracked() {
 }
 ```
 
+```output
+0
+```
+
 Completed fibers are removed automatically, so a long-lived owner does not accumulate finished handles. `awaitEmpty` waits for the current group to drain, whereas `FiberSet.join` waits on the set's failure signal and propagates a tracked failure; it is not a successful drain operation. Maps also remove completed fibers automatically, including protection against an older completion deleting a newer fiber under the same key.
 
 ## Interrupting tracked work on scope closure
 
 ```vibe
+// run: serveBriefly()
 function serveBriefly() {
   {
     using workers = FiberSet.make<void>()
@@ -65,13 +82,18 @@ function serveBriefly() {
       try {
         sleep("1 minute")
       } finally {
-        logInfo("tracked worker cleaned up")
+        Console.log("tracked worker cleaned up")
       }
     }
     sleep("20 millis")
   }
-  logInfo("worker scope has closed")
+  Console.log("worker scope has closed")
 }
+```
+
+```output
+tracked worker cleaned up
+worker scope has closed
 ```
 
 `make` acquires a scope-owned collection. Here `using` ties that scope to the block, whose exit interrupts remaining work and waits for cleanup. Without `using`, the collection belongs to the caller's runtime scope and `Scope` remains in the function's requirements; use that form when a service layer should own the group.

@@ -5,10 +5,15 @@ VibeLang uses Effect's structured logging to record progress, failures, and diag
 ## Emitting structured records
 
 ```vibe
+// run: const records: unknown[] = []; const capture = Logger.make(({ logLevel, message }) => { records.push([logLevel, message]) }); provide Logger.layer([capture]) { reportProgress() }; Console.log(JSON.stringify(records))
 function reportProgress() {
   log("export started", { format: "csv", stage: "prepare" })
   logInfo("export completed", { rows: 240 })
 }
+```
+
+```output
+[["Info",["export started",{"format":"csv","stage":"prepare"}]],["Info",["export completed",{"rows":240}]]]
 ```
 
 `log` uses the Info level, and a call can contain several messages or structured values. Default output includes time, severity, fiber identity, and message content. Pass a `Cause` alongside a message to retain failure detail rather than flattening it to a string.
@@ -16,6 +21,7 @@ function reportProgress() {
 ## Selecting severity thresholds
 
 ```vibe
+// run: const records: unknown[] = []; const capture = Logger.make(({ logLevel, message }) => { records.push([logLevel, message]) }); provide Logger.layer([capture]) { diagnostics() }; Console.log(JSON.stringify(records))
 function diagnostics() {
   Effect.provideService(References.MinimumLogLevel, "Debug") {
     Effect.logTrace("entered parser")
@@ -28,11 +34,16 @@ function diagnostics() {
 }
 ```
 
+```output
+[["Debug",["parsed header"]],["Info",["input accepted"]],["Warn",["using fallback settings"]],["Error",["destination unavailable"]],["Fatal",["application cannot start"]]]
+```
+
 The default threshold is Info, which filters Debug and Trace messages. Providing Debug enables debug records in this region while still filtering Trace; the surrounding program keeps its own threshold. Severity describes a record and does not itself fail or terminate the program, even for `logFatal`.
 
 ## Annotating logs and scoped regions
 
 ```vibe
+// run: const records: unknown[] = []; const capture = Logger.make(({ message, fiber }) => { records.push([message, fiber.getRef(References.CurrentLogAnnotations)]) }); provide Logger.layer([capture]) { annotatedExport(); scopedAnnotations() }; Console.log(JSON.stringify(records))
 function annotatedExport() {
   Effect.annotateLogs({ operation: "weekly-export", format: "csv" }) {
     logInfo("preparing")
@@ -51,11 +62,18 @@ function scopedAnnotations() {
 }
 ```
 
+```output
+[[["preparing"],{"operation":"weekly-export","format":"csv"}],[["writing"],{"operation":"weekly-export","format":"csv","stage":"write"}],[["outside annotated operation"],{}],[["reading input"],{"component":"importer"}],[["validating rows"],{"component":"importer"}],[["outside importer scope"],{}]]
+```
+
 `annotateLogs` attaches key/value metadata to every record inside its program, including nested calls and inherited child context. `annotateLogsScoped` changes annotations until the supplied runtime scope closes. A plain pair of braces does not supply that scope, so use `Effect.scoped` for this scoped API.
 
 ## Measuring log spans
 
 ```vibe
+// run: const records: unknown[] = []; const capture = Logger.make(({ message, fiber, date }) => { records.push([message, fiber.getRef(References.CurrentLogSpans).map(([label, start]) => [label, date.getTime() - start])]) }); provide TestClock.layer() { TestClock.setTime(0); provide Logger.layer([capture]) { const worker = fork(() => timedExport()); TestClock.adjust("30 millis"); join worker } }; Console.log(JSON.stringify(records))
+import { TestClock } from "effect/testing"
+
 function timedExport() {
   Effect.withLogSpan("write-output") {
     logInfo("opening output")
@@ -65,11 +83,18 @@ function timedExport() {
 }
 ```
 
+```output
+[[["opening output"],[["write-output",0]]],[["output written"],[["write-output",30]]]]
+```
+
 Each record inside the log span includes the elapsed time since that span began. The first record measures time near the start, and the second includes the intervening wait. A log span enriches logs; use tracing spans when you need parent/child relationships and exportable traces.
 
 ## Disabling and configuring logging
 
 ```vibe
+// run: const records: unknown[] = []; const capture = Logger.make(({ logLevel, message }) => { records.push([logLevel, message]) }); provide Logger.layer([capture]) { quiet(); provide ConfigProvider.layer(ConfigProvider.fromUnknown({ LOG_LEVEL: "Debug" })) { configured() } }; Console.log(JSON.stringify(records))
+import { ConfigProvider } from "effect"
+
 const Silent = Layer.succeed(References.MinimumLogLevel, "None")
 const LogLevel = Config.LogLevel("LOG_LEVEL")
 
@@ -87,11 +112,16 @@ function configured() {
 }
 ```
 
+```output
+[["Debug",["configuration loaded"]]]
+```
+
 The None threshold suppresses logging in the provided region. `Config.LogLevel` builds a configuration value; `LogLevel()` reads and validates the severity when the layer is built, reporting configuration errors then. Supply the configuration layer once at the application boundary; applications with several entry points can include it in a shared `ManagedRuntime`.
 
 ## Defining a custom output handler
 
 ```vibe
+// run: Console.log(JSON.stringify(captureLogs()))
 function captureLogs() {
   const records: Array<{ level: string; message: unknown }> = []
   const capture = Logger.make(({ logLevel, message }) => {
@@ -105,11 +135,16 @@ function captureLogs() {
 }
 ```
 
+```output
+[{"level":"Info","message":["batch accepted",{"count":3}]},{"level":"Warn","message":["one retry required"]}]
+```
+
 `Logger.make` takes a synchronous callback that receives the message, level, cause, emitting fiber, and date. The callback above only records values in memory, so it is eligible for a plain JavaScript callback. Do not call a pausing service inside it; use an Effect-aware logging destination such as an exporter layer for asynchronous output.
 
 ## Choosing text, structured, and JSON formats
 
 ```vibe
+// run: const records: unknown[] = []; const original = Effect.service(Console.Console); Effect.provideService(() => jsonExample(), Console.Console, { ...original, log: (line: string) => { const record = JSON.parse(line); records.push([record.level, record.message]) } }); Console.log(JSON.stringify(records))
 const TextLogs = Logger.layer([Logger.consoleLogFmt, Logger.tracerLogger])
 const PrettyLogs = Logger.layer([Logger.consolePretty(), Logger.tracerLogger])
 const ObjectLogs = Logger.layer([Logger.consoleStructured, Logger.tracerLogger])
@@ -120,11 +155,16 @@ function jsonExample() {
 }
 ```
 
+```output
+[["INFO",["started",{"workers":4}]]]
+```
+
 The default logger emits readable text; LogFmt offers compact key/value output and Pretty adds visual formatting. Structured output preserves an object containing messages, level, timestamp, annotations, cause, log spans, and fiber identity; JSON serializes that structure for ingestion. The corresponding formatter loggers are `formatSimple`, `formatLogFmt`, `formatStructured`, and `formatJson` when a custom handler needs formatted output rather than console delivery.
 
 ## Sending records to multiple destinations
 
 ```vibe
+// run: const lines: unknown[][] = []; const original = Effect.service(Console.Console); const audit = Effect.provideService(() => consoleAndCapture(), Console.Console, { ...original, log: (...args: ReadonlyArray<unknown>) => { lines.push([...args]) } }); Console.log(JSON.stringify(audit), lines.length, JSON.stringify(lines).includes("job finished"))
 function consoleAndCapture() {
   const auditMessages: unknown[] = []
   const audit = Logger.make(({ message }) => { auditMessages.push(message) })
@@ -136,6 +176,10 @@ function consoleAndCapture() {
   provide destinations { logInfo("job finished") }
   return auditMessages
 }
+```
+
+```output
+[["job finished"]] 1 true
 ```
 
 Each active logger receives the record after threshold filtering. `Logger.layer` replaces the active logger set by default; its `mergeWithExisting: true` option adds destinations instead. Include `tracerLogger` when logs should also become events on the current tracing span.
