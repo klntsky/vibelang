@@ -1,0 +1,5 @@
+main.effeck(13,32): error EK4701
+main.effeck(20,38): error EK2114
+main.effeck(25,12): warning EK2004
+main.effeck(30,10): error EK2001
+main.effeck(37,20): error EK1001

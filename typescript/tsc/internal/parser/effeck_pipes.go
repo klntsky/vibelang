@@ -41,6 +41,7 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 		p.nextToken() // >
 		bodyPos := p.nodePos()
 		body := p.parseBinaryExpressionOrHigher(ast.OperatorPrecedenceLowest)
+		body = p.parseEffeckCatchRest(body, bodyPos) // x |> f(%) catch y catches inside the body (effeck_catch.go)
 		body = p.parseConditionalExpressionRest(body, bodyPos, false /*allowReturnTypeInArrowFunction*/)
 		left = p.makeBinaryExpression(left, operator, body, pos)
 		left.Flags |= ast.NodeFlagsEffeck

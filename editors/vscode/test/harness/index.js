@@ -90,6 +90,14 @@ async function run() {
     assert(keyword.t.startsWith("source.effeck") && keyword.t.includes("storage.type.function"), `scopes ${keyword.t}`)
   })
 
+  await check("grammar: the catch of a catch expression is a keyword", async () => {
+    const file = await open("src/catch-expression.effeck")
+    const tokens = await vscode.commands.executeCommand("_workbench.captureSyntaxTokens", file.uri)
+    const keywords = tokens.filter((token) => token.c.trim() === "catch")
+    assert(keywords.length === 2, `catch tokens ${JSON.stringify(keywords)}`)
+    for (const keyword of keywords) assert(keyword.t.includes("keyword.control.trycatch"), `scopes ${keyword.t}`)
+  })
+
   await check("diagnostics: TypeScript's TS2322 appears on broken.effeck", async () => {
     const broken = await open("src/broken.effeck")
     const found = await waitFor("TS2322", () => vscode.languages.getDiagnostics(broken.uri).find((d) => codeOf(d) === 2322))

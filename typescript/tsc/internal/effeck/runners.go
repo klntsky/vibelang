@@ -201,7 +201,11 @@ func (a *analyzer) passedAsProgram(call *ast.Node) bool {
 // reportTopLevelRun reports EK1001 for call, which runs a program at the
 // module's top level.
 func reportTopLevelRun(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
-	d := report(c, call, EK1001, nodeText(file, call.Expression())+"()")
+	text := nodeText(file, call.Expression()) + "()"
+	if catchExpressionOf(call) != nil {
+		text = nodeText(file, call) // x catch y, whose callee is the keyword (catch_expressions.go)
+	}
+	d := report(c, call, EK1001, text)
 	if owner, _ := ownerCall(call); owner != nil && ast.IsCallExpression(owner) && runnerOf(c, owner) != notRunner {
 		note(d, "Pass a program, a function with no parameters, to {0}:   () => {1}", nodeText(file, owner.Expression()), nodeText(file, call))
 		return

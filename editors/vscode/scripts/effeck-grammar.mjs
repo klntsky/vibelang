@@ -7,6 +7,7 @@
 //   control Approval { approve(request: string): boolean }
 //   layer UsersLive: Users { find(id) { ... } }   (the old spelling, D221)
 //   try { ... } handle Approval.approve(request) { ... }
+//   getUser(id) catch (e) => match (e) { when NotFound: guest; }
 //   function find(id: string): User!NotFound!Db { ... }
 
 const name = "[_$[:alpha:]][_$[:alnum:]]*"
@@ -88,10 +89,17 @@ export function addEffeckSyntax(grammar) {
       { match: "(?<=[\\s(])(and|or|not)(?=\\s+(?:let|const|var|not|if|[\\[{(\"'`0-9]|[A-Z]))", captures: { 1: { name: "keyword.operator.expression.instanceof.ts" } } }
     ]
   }
+  // A catch expression (D236): x catch fallback, x catch (e) => handler. The
+  // keyword follows an expression on the same line; after a try block's },
+  // catch keeps TypeScript's scope from the control statements.
+  repository["effeck-catch-expression"] = {
+    match: "(?<=[_$[:alnum:])\\]'\"`]\\s)(catch)(?=\\s)",
+    captures: { 1: { name: "keyword.control.trycatch.ts" } }
+  }
   const effeckIncludes = ["#effeck-type-declaration", "#effeck-member-declaration", "#effeck-layer-declaration", "#effeck-handle-clause", "#effeck-provide", "#effeck-for-concurrent", "#effeck-fork", "#effeck-join"]
   const statements = repository.statements.patterns.filter((pattern) => !effeckIncludes.includes(pattern.include))
   repository.statements.patterns = [...effeckIncludes.map((include) => ({ include })), ...statements]
-  const effeckExpressions = ["#effeck-await-operation", "#effeck-fork", "#effeck-join", "#effeck-match"]
+  const effeckExpressions = ["#effeck-await-operation", "#effeck-fork", "#effeck-join", "#effeck-match", "#effeck-catch-expression"]
   const expressions = repository.expression.patterns.filter((pattern) => !effeckExpressions.includes(pattern.include))
   repository.expression.patterns = [...effeckExpressions.map((include) => ({ include })), ...expressions]
   // `!` separates the slots of an Effect type: Result!Error!Dependencies.

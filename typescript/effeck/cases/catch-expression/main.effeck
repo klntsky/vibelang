@@ -1,0 +1,91 @@
+// expect-result: {"orGuest":["user 1","guest"],"describe":["user 1","no user missing","retry"],"partial":"missing","partialSlow":"Timeout","firstOf":["user 1","user 2","none"],"wrapped":"Timeout","precedence":["fast","slow"],"nickname":["unknown","failed","x"],"defect":"died","piped":"none","lazy":["user 1",false]}
+error NotFound { id: string }
+error Timeout
+error Wrapped { reason: string }
+
+function find(id: string): string!NotFound | Timeout! {
+  if (id === "missing") throw new NotFound({ id })
+  if (id === "slow") throw new Timeout()
+  return `user ${id}`
+}
+
+// A fallback value, as Effect.orElseSucceed.
+function orGuest(id: string): string!! {
+  return find(id) catch "guest"
+}
+
+// A handler whose match handles every failure removes them all from E.
+function describe(id: string): string!! {
+  return find(id) catch (e) => match (e) {
+    when NotFound: `no user ${e.id}`;
+    when Timeout: "retry";
+  }
+}
+
+// default: throw e passes the other failures on.
+function partial(id: string): string!Timeout! {
+  return find(id) catch (e) => match (e) {
+    when NotFound: "missing";
+    default: throw e;
+  }
+}
+
+// catch associates to the left: try b after a fails, then fall back.
+function firstOf(a: string, b: string): string!! {
+  return find(a) catch find(b) catch "none"
+}
+
+// A throw expression replaces the failure.
+function wrapped(id: string): string!Wrapped! {
+  return find(id) catch (e) => throw new Wrapped({ reason: e._tag })
+}
+
+// catch binds tighter than ? :.
+function precedence(id: string, quick: boolean): string!! {
+  return quick ? find(id) catch "fast" : "slow"
+}
+
+function lookupNickname(id: string) {
+  if (id === "missing") throw new NotFound({ id })
+  return id === "anon" ? undefined : id
+}
+
+// catch binds looser than ??, so the default is inside the catch.
+function nickname(id: string): string!! {
+  return lookupNickname(id) ?? "unknown" catch "failed"
+}
+
+function crash(): string!Timeout! {
+  return Effect.die("boom")
+}
+
+// Defects pass through a catch expression.
+function defect(): string!! {
+  return match (exit(crash() catch "caught")) {
+    when Exit.Success(let value): value;
+    when Exit.Failure(let cause): Cause.hasDies(cause) ? "died" : "other";
+  }
+}
+
+// A pipe's body holds the catch.
+function piped(id: string): string!! {
+  return id |> find(%) catch "none"
+}
+
+export function main() {
+  let ran = false
+  const quick = find("1") catch do { ran = true; "guest" }
+  return {
+    orGuest: [orGuest("1"), orGuest("missing")],
+    describe: [describe("1"), describe("missing"), describe("slow")],
+    partial: partial("missing"),
+    partialSlow: partial("slow") catch (e) => e._tag,
+    firstOf: [firstOf("1", "2"), firstOf("missing", "2"), firstOf("missing", "slow")],
+    wrapped: wrapped("slow") catch (e) => e.reason,
+    precedence: [precedence("missing", true), precedence("1", false)],
+    nickname: [nickname("anon"), nickname("missing"), nickname("x")],
+    defect: defect(),
+    piped: piped("missing"),
+    lazy: [quick, ran]
+  }
+}

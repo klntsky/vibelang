@@ -737,6 +737,17 @@ function lookup(id: number) {                const lookup = Effect.fnUntraced(fu
 
 `$catch` is the kernel's `catchExpected` and `$finally` is `Effect.onExit`, from `effeck-runtime`, which the file imports as `* as runtime` under a free name. A `return`, `break`, or `continue` that leaves a region cannot jump out of its closure, so the closure returns a completion record: `{ kind: "return", value }`, `{ kind: "break", label }`, or `{ kind: "continue", label }`, with `""` as the label of an unlabeled jump, and the runtime's `$normal` when it reaches its end. The generator that runs the region dispatches each record that can arrive: it returns, breaks, or continues itself, or, when it is a region's closure too and the jump leaves it as well, returns the record to its own runner. A region that no jump leaves runs as `yield* …;` with no record. A closure whose block refers to `this` runs with the function's `this`. Control cannot leave a `finally` block (EK2006): in JavaScript a jump there replaces the block's exit and discards a failure in flight, and Effeck never drops a failure silently (D15). A `var` in a region belongs to the whole function, so the lowering declares it in the Effect function and assigns it where the source declared it.
 
+### Catch expressions (D236-D239)
+
+`parser/effeck_catch.go` reads `catch` after an expression, in `parseAssignmentExpressionOrHigherWorker` before the conditional and in a pipe's body, and writes a call of the runtime's `$catchExpression` whose callee is anchored on the keyword:
+
+| Source | Parses as |
+| --- | --- |
+| `x catch fallback` | `$catchExpression(() => x, () => fallback)` |
+| `x catch (e) => h`, `x catch e => h` | `$catchExpression(() => x, (e) => h)` |
+
+The arrows are Effeck lambdas whose parameter types expect Effects, so they lower to `Effect.fnUntraced` generators and the checker types the call as any runtime call: its value is `A | B` and its E is the handler's. `$catchExpression` runs the left side with `Effect.suspend` under the kernel's `catchExpected`, as `$catch` does for the statement. `effeck/catch_expressions.go` reports EK2114 in a hatch body and EK2004 when `flowOf` finds no expected failure in the left side, gives the keyword its hover, and `runners.go` names the whole expression in EK1001. The hover reaches the keyword, which has no symbol, because `ls/hover.go` runs the quick info hooks before it drops an empty quick info.
+
 ### Regions in plain functions
 
 A function that compiles to plain JavaScript cannot pause, so its `try`, `catch`, and `finally` stay JavaScript's (D54). Each of its throws is caught by one of its own `catch` clauses, or a throw could end it and it would be an Effect. A throw there marks the thrown value as an expected failure, and each `catch` unwraps it or rethrows anything else, a defect, so D13 holds:

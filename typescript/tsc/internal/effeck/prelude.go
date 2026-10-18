@@ -58,6 +58,8 @@ var preludeModules = map[string]string{
 	"runCallback": runtimeModule,
 	// The test of a typed catch clause, which the parser writes (D131, catches.go).
 	"$isFailure": runtimeModule,
+	// A catch expression, which the parser writes (D236, catch_expressions.go).
+	"$catchExpression": runtimeModule,
 	// What a handle statement's clause binds, which the parser writes for the
 	// checker and the lowering removes (D132, handles.go).
 	"$clause": runtimeModule,

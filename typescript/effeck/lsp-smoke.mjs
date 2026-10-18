@@ -373,6 +373,12 @@ try {
     assert(edits.length === 1 && edits[0].newText === want, `edits ${JSON.stringify(edits)}`)
   })
 
+  await check("diagnostics: catch-expression.effeck, with a fallback and a handler, checks clean", async () => {
+    open("src/catch-expression.effeck", "effeck")
+    const items = await diagnostics("src/catch-expression.effeck")
+    assert(items.length === 0, `expected no diagnostics, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
   await check("code action: EK4405 reports a hatch reading a parameter, and its quick fix passes it as an input", async () => {
     open("src/hatch-outside.effeck", "effeck")
     const items = await diagnostics("src/hatch-outside.effeck")
@@ -628,6 +634,25 @@ try {
   await check("hover: a match arm in a catch clause narrows the caught failure", async () => {
     const shown = await hover("src/declarations.effeck", "e.id")
     assert(shown.includes("e: MissingUser"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: a catch expression removes the failures its fallback replaces", async () => {
+    const shown = await hover("src/catch-expression.effeck", "userOrGuest(id: string)")
+    assert(shown.includes("function userOrGuest(id: string): string!!"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("hover: the catch keyword names the Effect function and the value", async () => {
+    const fallback = await hover("src/catch-expression.effeck", "catch \"guest\"")
+    assert(fallback.includes("Effect.orElseSucceed") && fallback.includes("Returns `string`") && /`(Late \| Missing|Missing \| Late)`/.test(fallback), `got ${JSON.stringify(fallback)}`)
+    const handler = await hover("src/catch-expression.effeck", "catch (failure)")
+    assert(handler.includes("Effect.catch") && !handler.includes("propagate"), `got ${JSON.stringify(handler)}`)
+  })
+
+  await check("hover: a catch expression's handler parameter has the caught failure's type, narrowed in each arm", async () => {
+    const parameter = await hover("src/catch-expression.effeck", "failure) =>")
+    assert(/failure: (Late \| Missing|Missing \| Late)/.test(parameter), `got ${JSON.stringify(parameter)}`)
+    const narrowed = await hover("src/catch-expression.effeck", "failure.id")
+    assert(narrowed.includes("failure: Missing"), `got ${JSON.stringify(narrowed)}`)
   })
 
   await check("definition: a thrown error goes to its error declaration", async () => {

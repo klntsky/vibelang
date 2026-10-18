@@ -10,6 +10,18 @@ export const $catch: <A, E, R, B, E2, R2>(
 ) => Effect.Effect<A | B, E2, R | R2> = K.catchExpected
 
 /**
+ * A catch expression (D236): `program catch fallback` and
+ * `program catch (e) => handler`. The parser passes both sides as functions,
+ * so the left side runs inside the catch and a fallback runs only after an
+ * expected failure; defects and interrupts pass through, as `catch (e)`
+ * statements let them.
+ */
+export const $catchExpression = <A, E, R, B, E2, R2>(
+  self: () => Effect.Effect<A, E, R>,
+  handler: (error: E) => Effect.Effect<B, E2, R2>
+): Effect.Effect<A | B, E2, R | R2> => K.catchExpected(Effect.suspend(self), handler)
+
+/**
  * A typed catch clause, `catch (e: NotFound)`, tests the caught failure with
  * the _tag of each type it names (D131); the compiler passes the tags. The
  * form is retired (D216) but still compiles, with the warning EK2112.

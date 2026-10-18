@@ -65,11 +65,12 @@ func (l *LanguageService) ProvideHover(ctx context.Context, params *lsproto.Hove
 
 		vsCapability := caps.VSSupportsVisualStudioExtensions
 		quickInfo, documentation, vsDocumentation, quickInfoRuns := l.getQuickInfoAndDocumentationForSymbol(c, symbol, rangeNode, contentFormat, vc, vsCapability)
+		// The hooks run first, so a hook can describe a keyword that has no symbol.
+		quickInfo, documentation = withQuickInfoHooks(c, rangeNode, quickInfo, documentation)
 		if quickInfo == "" {
 			done()
 			continue
 		}
-		quickInfo, documentation = withQuickInfoHooks(c, rangeNode, quickInfo, documentation)
 		rangeFile := ast.GetSourceFileOfNode(rangeNode)
 		textRange := getRangeOfNode(rangeNode, rangeFile, nil /*endNode*/)
 		hoverRange, hoverFidelity := l.converters.ToLSPRangeForFeature(rangeFile, textRange, spanmap.FeatureHover)

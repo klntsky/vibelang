@@ -238,6 +238,9 @@
 					"include": "#effeck-match"
 				},
 				{
+					"include": "#effeck-catch-expression"
+				},
+				{
 					"include": "#expressionWithoutIdentifiers"
 				},
 				{
@@ -5971,6 +5974,14 @@
 					}
 				}
 			]
+		},
+		"effeck-catch-expression": {
+			"match": "(?<=[_$[:alnum:])\\]'\"`]\\s)(catch)(?=\\s)",
+			"captures": {
+				"1": {
+					"name": "keyword.control.trycatch.ts"
+				}
+			}
 		}
 	}
 }
