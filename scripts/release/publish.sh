@@ -1,6 +1,6 @@
 #!/bin/sh
-# Publishes VibeLang's ten npm packages from dist-npm/tarballs/ in order: the six
-# platform compilers, vibelang, vibelang-runtime, vibelang-vite, and create-vibelang.
+# Publishes VibeLang's eleven npm packages from dist-npm/tarballs/ in order: the six
+# platform compilers, vibelang, vibelang-runtime, vibelang-vite, create-vibelang, and vibelang-unplugin.
 # Run it yourself in a terminal, after npm login:
 #
 #   sh scripts/release/publish.sh            # asks for a one-time password once

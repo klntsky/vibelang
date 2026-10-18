@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // create-vibelang copies the VibeLang starter app into a new directory, pins the
 // VibeLang packages to its own version, and installs dependencies with the
-// package manager that ran it: `bun create vibelang my-app` or
+// package manager that ran it: `bun create vibelang@latest my-app` or
 // `npm create vibelang@latest my-app`.
 import { spawnSync } from "node:child_process"
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"

@@ -7,7 +7,7 @@ Create a project from the VibeLang starter. The starter builds with the `vibelan
 Choose a directory name that does not exist yet, or an empty directory. With Bun, run:
 
 ```sh
-bun create vibelang my-app
+bun create vibelang@latest my-app
 ```
 
 With npm, run:

@@ -10,7 +10,7 @@ together and emits JavaScript that runs on Effect 4. Documentation:
 ## Start a project
 
 ```sh
-bun create vibelang my-app
+bun create vibelang@latest my-app
 # or
 npm create vibelang@latest my-app
 ```

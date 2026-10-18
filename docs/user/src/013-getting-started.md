@@ -5,7 +5,7 @@ These guides teach VibeLang one topic at a time and also serve as a reference wh
 ## Create and run your first project
 
 ```sh
-bun create vibelang my-app
+bun create vibelang@latest my-app
 cd my-app
 bun run start
 bun run test

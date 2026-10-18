@@ -89,7 +89,7 @@ async function printsEventually(bundler, root, text) {
 }
 
 function watchBundle(bundler, root, env = {}) {
-  // A process group of its own: close() stops the bundler and its compiler, as Ctrl-C does.
+  // close() checks ownership and stops the bundler and its compiler individually.
   const child = spawn(process.execPath, ["--no-warnings", build, bundler, "--watch"], {
     cwd: root, detached: true, env: { ...process.env, VIBELANG_UNPLUGIN_DEBUG: "1", ...env }
   })
@@ -126,16 +126,20 @@ function watchBundle(bundler, root, env = {}) {
     async close() {
       if (child.exitCode === null && child.signalCode === null) {
         const exited = once(child, "exit")
-        process.kill(-child.pid)
-        await exited
-      }
-      for (let attempt = 0; attempt < 100; attempt++) {
-        try {
-          process.kill(-child.pid, 0)
-        } catch {
-          return
+        const parentOf = (pid) => Number(spawnSync("ps", ["-o", "ppid=", "-p", String(pid)], { encoding: "utf8" }).stdout?.trim())
+        const stop = (pid, parent) => {
+          if (parentOf(pid) !== parent) return
+          const listing = spawnSync("ps", ["-eo", "pid=,ppid="], { encoding: "utf8" }).stdout || ""
+          for (const line of listing.trim().split("\n")) {
+            const [descendant, owner] = line.trim().split(/\s+/).map(Number)
+            if (owner === pid) stop(descendant, pid)
+          }
+          if (parentOf(pid) === parent) {
+            try { process.kill(pid) } catch (error) { if (error.code !== "ESRCH") throw error }
+          }
         }
-        await new Promise((accept) => setTimeout(accept, 50))
+        stop(child.pid, process.pid)
+        await exited
       }
     }
   }

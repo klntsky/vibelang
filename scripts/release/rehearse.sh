@@ -20,14 +20,17 @@ node "$root/scripts/release/repack.mjs" "$tarballs"
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/vibelang-rehearse.XXXXXX")
 pid=""
 # npx runs Verdaccio as a descendant process, and on Linux Verdaccio renames
-# its process title, so neither killing npx nor matching the config path stops
-# it. killtree stops npx and every process under it.
+# its process title. Stop only processes whose parent is still ours.
 # Cleanup must not change the exit status: kill fails once a process is gone.
 killtree() {
-  for child in $(pgrep -P "$1" 2>/dev/null); do killtree "$child"; done
+  actual_parent=$(ps -o ppid= -p "$1" 2>/dev/null | tr -d " ")
+  [ "$actual_parent" = "$2" ] || return 0
+  for child in $(pgrep -P "$1" 2>/dev/null); do killtree "$child" "$1"; done
+  actual_parent=$(ps -o ppid= -p "$1" 2>/dev/null | tr -d " ")
+  [ "$actual_parent" = "$2" ] || return 0
   kill "$1" 2>/dev/null || true
 }
-trap '[ -z "$pid" ] || killtree "$pid"; pkill -f "$scratch/config.yaml" 2>/dev/null || true; rm -rf "$scratch"' EXIT HUP INT TERM
+trap '[ -z "$pid" ] || killtree "$pid" "$$"; rm -rf "$scratch"' EXIT HUP INT TERM
 port=$(node -e 'const s=require("net").createServer().listen(0,"127.0.0.1",()=>{console.log(s.address().port);s.close()})')
 registry="http://127.0.0.1:$port/"
 

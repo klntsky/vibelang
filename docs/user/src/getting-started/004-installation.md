@@ -1,7 +1,7 @@
 # Installation
 
 ```sh
-bun create vibelang my-app
+bun create vibelang@latest my-app
 cd my-app
 bun run start
 ```
@@ -41,7 +41,7 @@ error.
 ## Create a project
 
 ```sh
-bun create vibelang my-app
+bun create vibelang@latest my-app
 cd my-app
 bun run start
 bun run test

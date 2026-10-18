@@ -5,8 +5,8 @@
 #
 #   sh scripts/release/check-app.sh <registry-url> <version> npm bun
 #
-# HOME and the package-manager caches point into a temporary directory, so the
-# check sees neither ~/.npmrc nor ~/.bun-create nor cached packages. KEEP=1
+# The npm user config and package-manager caches point into a temporary
+# directory, so the check uses fresh registry installs. KEEP=1
 # keeps that directory for inspection.
 set -eu
 registry=$1
@@ -15,8 +15,8 @@ shift 2
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/vibelang-check.XXXXXX")
 trap '[ -n "${KEEP:-}" ] && echo "check-app: kept $scratch" || rm -rf "$scratch"' EXIT
 
-export HOME="$scratch/home"
-mkdir -p "$HOME"
+mkdir -p "$scratch/home"
+export npm_config_userconfig="$scratch/home/.npmrc" NPM_CONFIG_USERCONFIG="$scratch/home/.npmrc"
 export npm_config_registry="$registry" NPM_CONFIG_REGISTRY="$registry" BUN_CONFIG_REGISTRY="$registry"
 export npm_config_cache="$scratch/npm-cache" BUN_INSTALL_CACHE_DIR="$scratch/bun-cache"
 # bun create runs bunx, which keeps create-vibelang@latest under $TMPDIR across
@@ -41,7 +41,7 @@ for manager in "$@"; do
   cd "$scratch"
   case $manager in
     npm) step "npm create vibelang@$version"; npm create "vibelang@$version" "$manager-app" ;;
-    bun) step "bun create vibelang"; bun create vibelang "$manager-app" ;;
+    bun) step "bun create vibelang@latest"; bun create vibelang@latest "$manager-app" ;;
     *) echo "check-app: unknown package manager $manager" >&2; exit 1 ;;
   esac
   cd "$app"
@@ -85,6 +85,23 @@ JS
   /usr/bin/grep -Fq 'Recovered from EmptyName' "$scratch/$manager-start.txt"
   step "run test"
   "$manager" run test
+  if [ "$manager" = npm ]; then
+    step "install vibelang-unplugin"
+    npm install --save-dev --save-exact "vibelang-unplugin@$version"
+    node --input-type=module - "$version" <<'JS'
+import { readFileSync } from "node:fs"
+const [version] = process.argv.slice(2)
+const installed = JSON.parse(readFileSync("node_modules/vibelang-unplugin/package.json", "utf8")).version
+if (installed !== version) throw new Error(`vibelang-unplugin is ${installed}, expected ${version}`)
+const { unplugin } = await import("vibelang-unplugin")
+for (const bundler of ["webpack", "rspack", "rollup", "rolldown", "esbuild", "bun"]) {
+  // unplugin builds each bundler's factory on access, so compare kinds, not identity.
+  const { default: plugin } = await import(`vibelang-unplugin/${bundler}`)
+  if (typeof plugin !== "function" || typeof unplugin[bundler] !== "function") throw new Error(`vibelang-unplugin/${bundler} does not export its plugin`)
+}
+console.log(`check-app: vibelang-unplugin ${version} loads its webpack, rspack, rollup, rolldown, esbuild and bun plugins`)
+JS
+  fi
   echo "check-app: $manager: PASS"
 done
 echo "check-app: PASS ($* on $platform, VibeLang $version from $registry)"

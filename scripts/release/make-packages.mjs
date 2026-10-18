@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-packages assembles VibeLang's ten npm packages under dist-npm/pkg/ and
+// make-packages assembles VibeLang's eleven npm packages under dist-npm/pkg/ and
 // packs them into dist-npm/tarballs/, with manifest.json listing the tarballs
 // in publish order. Run scripts/release/build-binaries.sh first.
 //
@@ -31,6 +31,7 @@ const readJson = (path) => JSON.parse(readFileSync(join(root, path), "utf8"))
 const compiler = readJson("packages/compiler/package.json")
 const runtime = readJson("packages/runtime/package.json")
 const vite = readJson("packages/vite/package.json")
+const unplugin = readJson("packages/unplugin/package.json")
 const create = readJson("packages/create-vibelang/package.json")
 const template = readJson("templates/app/package.json")
 const identity = readFileSync(join(root, "typescript/tsc/internal/vibelang/identity.go"), "utf8")
@@ -39,7 +40,7 @@ const version = /const Version = "([^"]+)"/.exec(identity)?.[1]
 const problems = []
 const expect = (ok, message) => { if (!ok) problems.push(message) }
 expect(version, "identity.go: no Version constant")
-for (const [name, pkg] of [["vibelang", compiler], ["vibelang-runtime", runtime], ["vibelang-vite", vite], ["create-vibelang", create]]) {
+for (const [name, pkg] of [["vibelang", compiler], ["vibelang-runtime", runtime], ["vibelang-vite", vite], ["vibelang-unplugin", unplugin], ["create-vibelang", create]]) {
   expect(pkg.name === name, `${name}: package.json names ${pkg.name}`)
   expect(pkg.version === version, `${name}: version ${pkg.version}, but the compiler is ${version}`)
 }
@@ -48,6 +49,7 @@ expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.ke
   `vibelang: optionalDependencies must list exactly ${Object.keys(platforms).join(", ")}`)
 for (const [name, pin] of Object.entries(optional)) expect(pin === version, `vibelang: ${name} pinned to ${pin}, expected ${version}`)
 expect(vite.peerDependencies?.vibelang === version, `vibelang-vite: peer vibelang ${vite.peerDependencies?.vibelang}, expected ${version}`)
+expect(unplugin.peerDependencies?.vibelang === version, `vibelang-unplugin: peer vibelang ${unplugin.peerDependencies?.vibelang}, expected ${version}`)
 const effect = runtime.peerDependencies?.effect
 expect(template.dependencies?.effect === effect, `template: effect ${template.dependencies?.effect}, but the runtime requires ${effect}`)
 expect(template.dependencies?.["@effect/platform-node"] === effect, `template: @effect/platform-node must match effect ${effect}`)
@@ -162,6 +164,12 @@ order.push({
   name: "create-vibelang",
   dir: createDir,
   required: ["bin/create-vibelang.mjs", "template/package.json", "template/gitignore", "template/gitattributes", "template/src/main.vibe", "LICENSE"]
+})
+
+order.push({
+  name: "vibelang-unplugin",
+  dir: stage("vibelang-unplugin", [["packages/unplugin/src", "src"], ["packages/unplugin/README.md"], ["packages/unplugin/package.json"]], { LICENSE: mit }),
+  required: ["src/index.js", "src/index.d.ts", "src/webpack.js", "src/rspack.js", "src/rollup.js", "src/rolldown.js", "src/esbuild.js", "src/bun.js", "src/vite.js", "LICENSE"]
 })
 
 const manifest = []

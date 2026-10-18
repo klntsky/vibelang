@@ -6,7 +6,7 @@ Create a [VibeLang](https://effeck.dev) application. VibeLang is a readable
 syntax for Effect that compiles to TypeScript.
 
 ```sh
-bun create vibelang my-app
+bun create vibelang@latest my-app
 # or
 npm create vibelang@latest my-app
 ```

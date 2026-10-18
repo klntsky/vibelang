@@ -98,7 +98,7 @@ When coding agents write a growing share of your code, the hard part moves from 
 ## Try it
 
 ```sh
-bun create vibelang my-app
+bun create vibelang@latest my-app
 cd my-app
 bun run dev
 ```

@@ -11,7 +11,7 @@ bun x --no-install vibelang --noEmit
 ```
 
 VibeLang 0.0.1 installs from npm as unscoped packages: `vibelang`,
-`vibelang-runtime`, `vibelang-vite`, `create-vibelang`, and one `vibelang-<os>-<cpu>`
+`vibelang-runtime`, `vibelang-vite`, `vibelang-unplugin`, `create-vibelang`, and one `vibelang-<os>-<cpu>`
 package per platform. `create-vibelang`
 copies the starter, pins the VibeLang packages to its own version, and installs
 dependencies; `--no-install` skips installation. Projects need Node 26 or later
@@ -54,6 +54,7 @@ Setup preserves unrelated templates and never edits shell configuration.
 | `vibelang-<os>-<cpu>` | The native `vibelang` binary for one platform |
 | `vibelang-runtime` | Continuation kernel, prelude, and generated-code helpers; see its README for the ABI |
 | `vibelang-vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
+| `vibelang-unplugin` | Per-module compiler integration for webpack, Rspack, Rollup, Rolldown, esbuild, and Bun |
 | `create-vibelang` | Scaffolds the starter for `bun create vibelang` and `npm create vibelang` |
 | VS Code extension | Ships inside `vibelang` as `editor/vibelang.vsix`; not on the VS Code Marketplace or Open VSX |
 

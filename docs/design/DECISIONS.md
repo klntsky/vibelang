@@ -517,6 +517,8 @@ Will: "we need to support all of the effect.ts rules in the effect lsp plugin. I
 
 **D246. Effect's hovers and completions, VibeLang's way** (lane lsp-rules). A layer's hover lists what it provides, needs, and fails with, and `wire`'s hover lists the order it builds its layers in and which layers each uses: Effect's layer hover and layer graph, as text and without its external graph link. The language server gains a completion seam, `ls.RegisterCompletionHook`, that answers before TypeScript: a string where a `Duration.Input` goes completes `"2 seconds"` and the other units, `Schema.brand("…")` completes the declared name, and an `@vibelang-diagnostics` comment completes its marker and the adjustable codes. Effect's `Self`, `Effect.gen`, `Effect.fn` span, and namespace import completions have nothing to complete in VibeLang.
 
+**D247. Platform package scoping** — Superseded by Will’s W38 (2026-10-18): publish VibeLang 0.0.1 with unscoped `vibelang-<os>-<cpu>` packages.
+
 ### Known gaps
 
 - **Integration (content mapper):** vue-tsc 3.3.13 and svelte-check 4.7.7 run on TypeScript 6.0.3, not 7.0.2. TypeScript 6 cannot resolve `.vibe` imports, so both report TS2307 on them in `examples/vue-vite` and `examples/svelte-vite`. `vibelang -p` checks those apps' `.vibe` and `.ts` files. The gap closes when the TypeScript 7 content mapper (`packages/ts-mapper`) ships and the framework checkers run on TypeScript 7.
