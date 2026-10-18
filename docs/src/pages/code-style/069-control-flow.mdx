@@ -72,6 +72,7 @@ function formattedPair() {
 ## Repeating work in loops
 
 ```vibe
+// run: Console.log(JSON.stringify(inspectPages()))
 function inspectPages() {
   const inspected: number[] = []
   let page = 1
@@ -88,6 +89,7 @@ function logAttempts() {
     log(`attempt ${attempt}`)
   }
 }
+// Output: [1,2,3]
 ```
 
 A loop can call services, pause, fail, and use `break` or `continue`. Keep accumulated results only when the caller needs them; a loop without an explicit return completes with `void`. Local state is recreated when the function runs again.
@@ -130,6 +132,7 @@ function logAll() {
 ## Collecting programs
 
 ```vibe
+// run: Console.log(JSON.stringify(collected()))
 function collected() {
   const tuple = all([() => 12, () => "ready"] as const)
   const object = all({ count: () => 12, status: () => "ready" })
@@ -140,6 +143,7 @@ function collected() {
 // tuple: [12, "ready"]
 // object: { count: 12, status: "ready" }
 // array contains the two prepared values in iteration order.
+// Output: {"tuple":[12,"ready"],"object":{"count":12,"status":"ready"},"array":["prepared-3","prepared-5"]}
 ```
 
 `all` accepts tuples, iterables, objects, and records, returning the corresponding result shape. Each entry is a program, so building the collection performs no work. The default is sequential; supply `concurrency` explicitly for overlap. `discard: true` suppresses the combined result when only completion matters.
@@ -147,6 +151,7 @@ function collected() {
 ## Early termination and alternate collection modes
 
 ```vibe
+// run: Console.log(JSON.stringify(Effect.provide(collectOutcomes(), Logger.layer([])).map((result) => result.isSuccess() ? result.success : result.failure._tag)))
 error Unavailable {
   id: number
 }
@@ -166,6 +171,7 @@ function collectOutcomes() {
   return all([load(3), load(5), load(8)], { mode: "result" })
 }
 // [Result.succeed("item-3"), Result.fail(Unavailable), Result.succeed("item-8")]
+// Output: ["item-3","Unavailable","item-8"]
 ```
 
 The default mode stops on a typed failure and keeps that failure in the consuming function's `E`. `mode: "result"` runs every program and puts each typed outcome in a Result value instead. It does not turn defects or interruption into ordinary successful outcomes. Combine it with a concurrency limit when independent jobs should all report their expected outcomes.

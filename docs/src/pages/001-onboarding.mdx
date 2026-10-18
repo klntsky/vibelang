@@ -10,6 +10,7 @@ VibeLang is a language for writing [Effect](https://effect.website) programs wit
 :::code-group
 
 ```vibe [VibeLang]
+// run: Console.log(Effect.provide(greet("ada"), Layer.succeed(Users, { find: (id) => ({ id, name: "Ada" }) })))
 interface User { id: string; name: string }
 
 error UserNotFound { id: string }
@@ -23,6 +24,7 @@ function greet(id: string) {
   return `Hello, ${name}`
 }
 // string!!Users
+// Output: Hello, Ada
 ```
 
 ```ts [Effect]
@@ -65,6 +67,7 @@ VibeLang shares TypeScript's ecosystem in two ways:
 2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
 ```vibe
+// run: Console.log(slug("Hello VibeLang"))
 function slug(title: string) {
   return sync((title) => {
     // Plain TypeScript: nothing in here is an Effect.
@@ -74,6 +77,7 @@ function slug(title: string) {
   }, title)
 }
 // string!!
+// Output: hello-vibelang
 ```
 
 A hatch's function is self-contained: it reads the `.vibe` file's values only as the arguments passed after it, here `title`.

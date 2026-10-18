@@ -34,9 +34,11 @@ Create `src/greet.vibe`:
 
 ```vibe
 // src/greet.vibe
+// run: Console.log(greet("Vite"))
 export function greet(name: string) {
   return `Hello, ${name}!`
 }
+// Output: Hello, Vite!
 ```
 
 Import it from `.ts` or `.vibe` modules by its source name, `./greet.vibe`. TypeScript code sees `greet` as a function that returns an Effect. For example, a `.ts` module can run it with one of Effect's runners:
@@ -44,10 +46,12 @@ Import it from `.ts` or `.vibe` modules by its source name, `./greet.vibe`. Type
 ```ts
 // TypeScript (.ts)
 // src/use-greet.ts
+// run: console.log(message)
 import { Effect } from "effect"
 import { greet } from "./greet.vibe"
 
 export const message = Effect.runSync(greet("Vite"))
+// Output: Hello, Vite!
 ```
 
 ## 4. Test with Vitest

@@ -10,6 +10,7 @@ Stream operators build a new description of how to process a source. Keep transf
 ## Observing and taking elements
 
 ```vibe
+// run: Console.log(JSON.stringify(Effect.provide(readFirst(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))))
 const observed = Stream.range(10, 18).tap((n) => log(`reading ${n}`))
 const first = observed.take(3)
 const below = observed.takeWhile((n) => n < 13)
@@ -19,6 +20,10 @@ const last = observed.takeRight(2)
 function readFirst() {
   return first.runCollect() // [10, 11, 12]
 }
+// Output: reading 10
+// Output: reading 11
+// Output: reading 12
+// Output: [10,11,12]
 ```
 
 `tap` observes elements without replacing them. `takeWhile` excludes the first element that fails its predicate; `takeUntil` includes the first element that satisfies its predicate. `takeRight` needs the source to end before it can emit its final elements, so it does not suit an infinite source.
@@ -78,6 +83,7 @@ const totals = Stream.make(4, 7, 9).mapAccum(() => 0, (total, n) => {
 ## Filtering, scanning, and changes
 
 ```vibe
+// run: Console.log(JSON.stringify(inspect()))
 const readings = Stream.make(2, 2, 5, 5, 2)
 const large = readings.filter((n) => n >= 5)
 const changes = readings.changes()
@@ -90,6 +96,7 @@ function inspect() {
     running: running.runCollect()  // [0, 2, 4, 9, 14, 16]
   }
 }
+// Output: {"large":[5,5],"changes":[2,5,2],"running":[0,2,4,9,14,16]}
 ```
 
 `filter` removes elements without changing the survivors. `scan` emits the initial state and each updated state, while `runFold` returns only the final state. `changes` removes consecutive equal elements; it does not remember every distinct value ever seen. `filterEffect`, `scanEffect`, and `changesWithEffect` support Effect work; `changesWith` accepts a custom synchronous equality test.
@@ -181,6 +188,7 @@ const selected = primary.interleaveWith(secondary, Stream.make(true, false, fals
 ## Separators and affixes
 
 ```vibe
+// run: Console.log(formatFields())
 const fields = Stream.make("name", "email", "role")
 const separated = fields.intersperse(",")
 const bracketed = fields.intersperseAffixes({ start: "[", middle: ",", end: "]" })
@@ -188,6 +196,7 @@ const bracketed = fields.intersperseAffixes({ start: "[", middle: ",", end: "]" 
 function formatFields() {
   return bracketed.mkString() // "[name,email,role]"
 }
+// Output: [name,email,role]
 ```
 
 `intersperse` inserts a separator between adjacent elements. `intersperseAffixes` also emits a prefix and suffix. These are stream elements, so downstream transformations see them too.

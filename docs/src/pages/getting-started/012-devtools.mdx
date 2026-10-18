@@ -11,11 +11,13 @@ Use compiler diagnostics to inspect VibeLang contracts and catch failures or req
 
 ```vibe
 // example.vibe
+// run: Console.log(sample())
 function sample() {
   sleep("5 millis")
   return "sample"
 }
 // string!!
+// Output: sample
 ```
 
 Install `vibelang` as a dev dependency. Its `vibelang --lsp --stdio` command starts the language server from the project's compiler, with one server for `.vibe` and `.ts` files.
@@ -42,6 +44,7 @@ For GitHub highlighting, add `*.vibe linguist-language=TypeScript` to `.gitattri
 ## Inspect inferred information
 
 ```vibe
+// run: Console.log(accepted(2))
 error Rejected
 
 function accepted(value: number) {
@@ -49,6 +52,7 @@ function accepted(value: number) {
   return value + 1
 }
 // number!Rejected!
+// Output: 3
 ```
 
 Inspect `A`, `E`, and `R` when changing a function. A local call returns the success value, while the function's complete contract also records escaping failures and unmet services. Generated declarations expose that complete Effect contract to TypeScript consumers.
@@ -81,9 +85,11 @@ or `yield*` inside `.vibe`.
 ## Configure compiler checks
 
 ```vibe
+// run: Console.log(checked(2))
 function checked(value: number): number!Rejected! {
   return accepted(value)
 }
+// Output: 3
 ```
 
 A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks the success and failure channels and infers requirements. All three slots are required in a return annotation with a body. For omitted slots, EK2003 suggests explicit `never` or `infer` contracts in its diagnostic text. Configure the compiler in `tsconfig.json`:
@@ -263,9 +269,11 @@ different call semantics.
 ## Debugging in editors
 
 ```vibe
+// run: Console.log(tracedSample())
 function tracedSample() {
   return withSpan(sample(), "sample")
 }
+// Output: sample
 ```
 
 Add spans where you need an execution boundary to appear in telemetry. VibeLang functions are untraced by default; `tracing` can add spans to exported functions or named functions and methods that compile to frames. Anonymous functions receive no automatic span. Effect's `DevTools` layer from `effect/devtools`, with its VS Code extension, shows fibers and logical span stacks across suspensions.

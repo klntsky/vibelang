@@ -10,6 +10,7 @@ Use statements for dependent steps and the pipe operator, `|>`, for a series of 
 ## Compose reusable functions
 
 ```vibe
+// run: Console.log(priceLabel())
 function addMargin(n: number) { return n + 3 }
 function double(n: number) { return n * 2 }
 
@@ -17,6 +18,7 @@ function priceLabel() {
   return 9 |> addMargin(%) |> double(%) |> `Price: ${%}`
 }
 // string!!; "Price: 24"
+// Output: Price: 24
 ```
 
 Each body uses the previous stage's result through `%`. Here `%` stands for a value, so the expression before `|>` runs once and the body receives its result. Standalone functions remain reusable without adding methods to a value's prototype, and bundlers can remove the Effect functions a program never calls.
@@ -24,9 +26,11 @@ Each body uses the previous stage's result through `%`. Here `%` stands for a va
 For program operators, start with the work to run:
 
 ```vibe
+// run: Console.log(preparedPrice())
 function preparedPrice() {
   return priceLabel() |> timeout(%, "1 second") |> withSpan(%, "price-label")
 }
+// Output: Price: 24
 ```
 
 Here each `%` stands where `timeout` and `withSpan` expect a program, so the expression before `|>` is passed by name: `priceLabel()` runs when `timeout` runs it, and the span covers the timed work. The pipe returns the final success value. Wrap the whole pipeline in a function to keep it as reusable work: `const prepared = () => priceLabel() |> timeout(%, "1 second")`.
@@ -36,6 +40,7 @@ A pipe passes its left side by name or uses it as a value, not both, and its bod
 ## Map or replace a success
 
 ```vibe
+// run: Console.log(adjustedPrice())
 function adjustedPrice() {
   const price = 24
   return price + 5
@@ -45,6 +50,7 @@ function recordPrice() {
   log(`price=${adjustedPrice()}`)
   return "recorded"
 }
+// Output: 29
 ```
 
 Using the returned value replaces `Effect.map` for local transformations. A subsequent constant return replaces a successful result after earlier work finishes, as `Effect.as` does. Earlier failures still propagate, so replacing the success does not hide an error.
@@ -52,6 +58,7 @@ Using the returned value replaces `Effect.map` for local transformations. A subs
 ## Sequence dependent computations
 
 ```vibe
+// run: Console.log(total())
 error InvalidRate
 
 function discounted(price: number, percent: number) {
@@ -65,6 +72,7 @@ function total() {
   return reduced + 2
 }
 // number!InvalidRate!
+// Output: 27.52
 ```
 
 A call followed by another call expresses the dependency that `flatMap` or `andThen` handles in TypeScript Effect. Each call runs once, in order. A failure prevents later statements from executing unless you handle it.
@@ -72,6 +80,7 @@ A call followed by another call expresses the dependency that `flatMap` or `andT
 ## Integrate Option and Result
 
 ```vibe
+// run: Console.log([positive(2), validated(0)].join(", "))
 function positive(value: number) {
   const optional = value > 0 ? Option.some(value) : Option.none()
   return Effect.fromOption(optional)
@@ -85,6 +94,7 @@ function validated(value: number) {
   return Effect.fromResult(checked)
 }
 // number!string!
+// Output: 2, 0
 ```
 
 `Option` and `Result` are data values, so keep them intact when you want to inspect them. Explicit conversion runs them as computations: a missing option adds `NoSuchElementError`, and a failed result adds its error type. Calling a constructor such as `Option.some` builds the container.
@@ -92,6 +102,7 @@ function validated(value: number) {
 ## Call a data type's functions as methods
 
 ```vibe
+// run: Console.log(JSON.stringify([nickname(-1), Stream.runCollect(warnings(Stream.make(24, 26, 30, 28, 40)))]))
 function nickname(id: number) {
   return Option.some(id)
     .filter((n) => n > 0)
@@ -105,6 +116,7 @@ function warnings(readings: Stream.Stream<number>) {
     .map((celsius) => `${celsius} C`)
     .take(3)
 }
+// Output: ["anonymous",["26 C","30 C","28 C"]]
 ```
 
 A value of one of Effect's data types, such as `Option`, `Stream`, `Chunk`, `Duration`, `Fiber`, or `Ref`, takes its module's functions as methods. `value.map(f)` calls `Option.map(value, f)` when `value` is an `Option`, and `Stream.map(value, f)` when it is a `Stream`. The type's own members come first, so arrays, strings, and Effect's `pipe` keep their meaning. A method that returns an Effect runs where it stands, like any call: `fiber.join()` waits for the fiber. Hover over a method to see the function it calls.
@@ -112,9 +124,11 @@ A value of one of Effect's data types, such as `Option`, `Stream`, `Chunk`, `Dur
 A method exists only in a call. To pass the function itself, name its module:
 
 ```vibe
+// run: Console.log(JSON.stringify(totals([Option.some(2), Option.none()])))
 function totals(values: ReadonlyArray<Option.Option<number>>) {
   return values.map(Option.getOrElse(() => 0))
 }
+// Output: [2,0]
 ```
 
 ## Observe intermediate results
@@ -132,6 +146,7 @@ The local variable remains available after logging, giving the behavior of `Effe
 ## Collect multiple computations
 
 ```vibe
+// run: Console.log(summary())
 function summary() {
   const details = all({
     price: total(),
@@ -139,6 +154,7 @@ function summary() {
   }, { concurrency: 2 })
   return `${details.label}, total=${details.price}`
 }
+// Output: Price: 24, total=27.52
 ```
 
 `Effect.all` preserves the input's tuple or object shape. It runs sequentially by default; this example explicitly starts up to two computations at once. If a branch fails, the combined computation fails and concurrent siblings are interrupted and cleaned up.
