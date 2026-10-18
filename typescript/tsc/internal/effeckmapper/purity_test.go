@@ -190,6 +190,8 @@ function delegates(n: number) {
 // TestEmitPuritySplits checks the D10 output on the corpus's plain-function
 // shapes: pure functions get a direct body and property; plain-looking
 // calls of methods and plain-annotated functions still use Effect wrappers.
+// The sources are frozen copies in testdata/purity, taken before the L2 case
+// migrations annotated some of these functions plain.
 func TestEmitPuritySplits(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
@@ -199,7 +201,7 @@ func TestEmitPuritySplits(t *testing.T) {
 		others []string
 	}{
 		{
-			name: "plain-functions", file: "main.effeck",
+			name: "plain-functions", file: "plain-functions.effeck",
 			pure:   []string{"double"},
 			others: []string{"traced", "parity", "area", "maps", "main", "sumTo", "isEven", "isOdd"},
 		},
@@ -211,7 +213,7 @@ func TestEmitPuritySplits(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
-			data, err := os.ReadFile(filepath.Join("../../../effeck/cases", c.name, c.file))
+			data, err := os.ReadFile(filepath.Join("testdata/purity", c.file))
 			assert.NilError(t, err)
 			js, _, diagnostics := Emit(string(data), testContext)
 			assert.Equal(t, len(diagnostics), 0, "diagnostics: %v", diagnostics)
