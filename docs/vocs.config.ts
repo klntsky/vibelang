@@ -14,7 +14,7 @@ export default defineConfig({
   accentColor: 'light-dark(#646cff, #a5a9ff)',
   baseUrl: 'https://vibelang.sh',
   banner:
-    'VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.',
+    'VibeLang is in early alpha. The language will change in major, breaking ways. It is not suitable for production use.',
   checkDeadlinks: true,
   codeHighlight: {
     // ```vibe blocks use the grammar from VibeLang's editor extension

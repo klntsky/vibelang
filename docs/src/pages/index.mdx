@@ -9,6 +9,7 @@ showSidebar: false
 ---
 
 import { HomePage } from 'vocs'
+import { CopyPromptButton } from '../components/CopyPromptButton'
 
 <div className="vibe-home">
   <div className="vibe-home__art" aria-hidden="true" />
@@ -21,9 +22,10 @@ import { HomePage } from 'vocs'
         VibeLang gives <span>Effect</span> a simple, readable syntax that <span>compiles to TypeScript</span>, with first-class access to the TypeScript ecosystem.
       </div>
       <div className="vibe-home__actions">
-        <HomePage.Button href="/013-getting-started" variant="accent">Get started</HomePage.Button>
+        <CopyPromptButton />
+        <HomePage.Button href="/001-onboarding">Docs</HomePage.Button>
         <HomePage.Button href="/vibelang-features/115-cheat-sheet">Cheat sheet</HomePage.Button>
-        <HomePage.Button href="https://smithers.sh/effeck/effeck">Source on Smithers</HomePage.Button>
+        <HomePage.Button href="https://smithers.sh/smithersai/vibelang">Open Source</HomePage.Button>
       </div>
     </div>
 
