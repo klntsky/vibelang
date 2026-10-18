@@ -256,7 +256,7 @@ func (a *analyzer) runs(call *ast.Node) bool {
 		}
 		return a.isEffect(fn)
 	}
-	return isEffectType(a.checker, a.checker.GetReturnTypeOfSignature(sig))
+	return isEffectType(a.checker, runningCallResult(a.checker, call, sig))
 }
 
 // implementationOf returns the function body that decl resolves to, which

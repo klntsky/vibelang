@@ -191,12 +191,12 @@ func inferChannel(c *checker.Checker, node *ast.Node) bool {
 // to, so a generic contract is instantiated. ok is false when the contract
 // infers a channel: the caller then reads the callee's body, which never asks
 // for a return type that a call cycle may be computing.
-func (a *analyzer) calleeContract(callee *ast.Node, sig *checker.Signature) (e, r *checker.Type, ok bool) {
+func (a *analyzer) calleeContract(callee *ast.Node, call *ast.Node, sig *checker.Signature) (e, r *checker.Type, ok bool) {
 	k := a.contractOf(callee)
 	if k == nil || k.inferredAny() {
 		return nil, nil, false
 	}
-	t := a.checker.GetReturnTypeOfSignature(sig)
+	t := runningCallResult(a.checker, call, sig)
 	return channelType(a.checker, t, "_E"), channelType(a.checker, t, "_R"), true
 }
 

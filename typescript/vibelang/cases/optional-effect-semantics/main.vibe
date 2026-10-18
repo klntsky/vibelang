@@ -1,0 +1,21 @@
+// expect-result: [["ok:x","ok:x","ok:x","ok:x"],[4,8,4,4],true,true,"","fallback","fallback"]
+import { Config, Exit } from "effect"
+import { argument, receiver, counts, config, exit, blank, fallback } from "./callbacks.js"
+function readArgument(): string { return argument() }
+function readReceiver(present: boolean): ReturnType<typeof receiver> { return receiver(present) }
+function readCounts(): number[] { return counts() }
+function computed(present: boolean) { return readReceiver(present)?.["decode"](readArgument()) }
+function computedCall(present: boolean) { return readReceiver(present)?.["decode"]?.(readArgument()) }
+function method(present: boolean) { return readReceiver(present)?.decode(readArgument()) }
+function methodCall(present: boolean) { return readReceiver(present)?.decode?.(readArgument()) }
+function configData(f: typeof config | undefined) { return f?.() }
+// D248/D251: the projector needs the Exit data annotation.
+function exitData(f: typeof exit | undefined): Exit.Exit<string> | undefined { return f?.() }
+function exitIsData(): boolean { return Exit.isExit(exitData(exit)) }
+function nullish(f: typeof blank | undefined) { return f?.() ?? fallback() }
+function or(f: typeof blank | undefined) { return f?.() || fallback() }
+export function main() {
+ const values = [computed(true), computedCall(true), method(true), methodCall(true)]
+ computed(false); computedCall(false); method(false); methodCall(false)
+ return [values, readCounts(), Config.isConfig(configData(config)), exitIsData(), nullish(blank), or(blank), nullish(undefined)]
+}

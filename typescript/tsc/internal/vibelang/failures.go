@@ -147,7 +147,7 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 	// knows only its type parameters. A callee with a contract adds what the
 	// contract says.
 	if callee := implementationOf(sig.Declaration()); callee != nil && isLowerable(callee) && sig.Target() == nil {
-		if e, r, ok := a.calleeContract(callee, sig); ok {
+		if e, r, ok := a.calleeContract(callee, call, sig); ok {
 			info.addError(e, call)
 			info.addRequirement(r, call)
 		} else if calleeInfo := a.effectOf(callee); calleeInfo != nil {
@@ -155,7 +155,7 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 		}
 		return
 	}
-	t := a.checker.GetReturnTypeOfSignature(sig)
+	t := runningCallResult(a.checker, call, sig)
 	if e := channelType(a.checker, t, "_E"); e != nil {
 		info.addError(e, call)
 	}

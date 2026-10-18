@@ -317,6 +317,14 @@ func (tx *lowering) runtimeCall(name string, arguments ...*ast.Node) *ast.Node {
 // visitRunningCall turns `f(x)` into `yield* f(x)`.
 func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
 	call := tx.Visitor().VisitEachChild(node)
+	if ast.IsOptionalChain(node) {
+		// Keep the native chain intact: it preserves the receiver and skips
+		// arguments when absent. Run its present Effect exactly once, and lift
+		// the absent branch to a successful undefined for yield*.
+		f := tx.Factory()
+		absent := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("succeed"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{f.NewVoidExpression(f.NewNumericLiteral("0", ast.TokenFlagsNone))}), ast.NodeFlagsNone)
+		call = f.NewBinaryExpression(nil, call, nil, f.NewToken(ast.KindQuestionQuestionToken), absent)
+	}
 	run := tx.Factory().NewYieldExpression(tx.Factory().NewToken(ast.KindAsteriskToken), call)
 	tx.EmitContext().SetOriginal(run, node)
 	return run

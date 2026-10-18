@@ -18,6 +18,17 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 	if isExitMarkerCall(call) {
 		return exitCallType(c, call, t) // finally (exit) (primitives.go)
 	}
+	if ast.IsOptionalChain(call) && isEffectType(c, presentCallResult(c, t)) {
+		parts := []*checker.Type{}
+		for _, part := range t.Distributed() {
+			if success := successType(c, part); success != nil {
+				parts = append(parts, success)
+			} else {
+				parts = append(parts, part)
+			}
+		}
+		return c.GetUnionType(parts)
+	}
 	if success := successType(c, t); success != nil {
 		return success
 	}
@@ -64,4 +75,25 @@ func channelType(c *checker.Checker, t *checker.Type, name string) *checker.Type
 		return nil
 	}
 	return c.GetReturnTypeOfSignature(signatures[0])
+}
+
+// runningCallResult removes only the undefined added by optional chaining.
+// D24 still decides from the present branch's exact type, never from a
+// structural Effect subtype or an arbitrary union of return values.
+func runningCallResult(c *checker.Checker, call *ast.Node, sig *checker.Signature) *checker.Type {
+	t := c.GetReturnTypeOfSignature(sig)
+	if !ast.IsOptionalChain(call) {
+		return t
+	}
+	return presentCallResult(c, t)
+}
+
+func presentCallResult(c *checker.Checker, t *checker.Type) *checker.Type {
+	parts := []*checker.Type{}
+	for _, part := range t.Distributed() {
+		if part.Flags()&checker.TypeFlagsUndefined == 0 {
+			parts = append(parts, part)
+		}
+	}
+	return c.GetUnionType(parts)
 }
