@@ -1,0 +1,16 @@
+import { double, twice as aliased } from "./math.vibe"
+import * as Math from "./math.vibe"
+import { renamed, forwarded } from "./barrel.vibe"
+
+// expect-result: {"direct":4,"aliased":6,"namespace":8,"renamed":10,"forwarded":12,"mapped":[2,4]}
+export function main() {
+  sleep("1 millis")
+  return {
+    direct: double(2),
+    aliased: aliased(3),
+    namespace: Math.twice(4),
+    renamed: renamed(5),
+    forwarded: forwarded(6),
+    mapped: [1, 2].map(double)
+  }
+}

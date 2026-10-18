@@ -1,0 +1,4 @@
+export { twice as renamed } from "./math.vibe"
+import { double as imported } from "./math.vibe"
+export { imported as forwarded }
+export type { Effect } from "effect"
