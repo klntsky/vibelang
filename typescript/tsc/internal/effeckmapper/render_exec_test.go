@@ -66,6 +66,24 @@ var emitCases = []struct {
 		absent:   []string{"o.isSome()", "o.getOrElse("},
 	},
 	{
+		name:     "async sync hatch binds inputs before the AbortSignal",
+		source:   "function f() { return sync(async (n, signal) => signal.aborted ? 0 : n, read()) }",
+		contains: []string{"$promise($evaluate.bind(undefined, ...$inputs))", "async (n, signal) => signal.aborted ? 0 : n", "$value(read)()"},
+		absent:   []string{"yield* signal", "sync(async"},
+	},
+	{
+		name:     "async try hatch binds mapper and inputs",
+		source:   "function f() { return try(async (n, signal) => { throw n }, (e) => e, 7) }",
+		contains: []string{"$tryPromise({ try: $evaluate.bind(undefined, ...$inputs), catch: $mapError })", "async (n, signal) => { throw n; }"},
+		absent:   []string{"$hatchTry(async", "return yield* $fail(n)"},
+	},
+	{
+		name:     "try value expression is lazy plain TypeScript",
+		source:   "function f() { return try(JSON.parse(\"bad\") as number) }",
+		contains: []string{"$hatchTry(() => JSON.parse(\"bad\"))"},
+		absent:   []string{"$value(JSON", "yield* JSON"},
+	},
+	{
 		name:     "acyclic entries forward defaults rest and destructuring once",
 		source:   "function f(a = seed(), { x } = object(), [y] = array(), ...rest: number[]) { return unknown(a, x, y, rest) }",
 		contains: []string{"function f$fast(a, $arg1, $arg2, ...rest)", "f$body(a, $arg1, $arg2, ...rest)", "function* f$body(a = seed(), { x } = object(), [y] = array(), ...rest)"},

@@ -316,5 +316,21 @@ export type $PreludeLoaded =
       ? "effeck-ts-mapper: the prelude cannot resolve effeck-runtime from its own location; install effeck-runtime beside effeck-ts-mapper"
       : true
 
+/** D148: a legal TypeScript identifier for the try hatch, preserving its overloads. */
+export { try as $hatchTry } from "effeck-runtime"
+
+/** D231: a written mapper arrow selects only mapper overloads. This prevents
+ * stock TypeScript from silently retrying it as a callable input. */
+export declare function $hatchTryMapped<R, E, Args extends ReadonlyArray<unknown> = []>(
+  evaluate: (...args: [...Args, AbortSignal]) => PromiseLike<R>,
+  mapError: (error: unknown) => E,
+  ...args: Args
+): EffectModule.Effect<R, E>
+export declare function $hatchTryMapped<R, E, Args extends ReadonlyArray<unknown> = []>(
+  evaluate: (...args: Args) => R,
+  mapError: (error: unknown) => E,
+  ...args: Args
+): EffectModule.Effect<Awaited<R>, E>
+
 // D169, D225: fiber forms share the runtime declarations in both renderings.
 export { $join, $forConcurrent } from "effeck-runtime"

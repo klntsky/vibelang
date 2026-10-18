@@ -254,6 +254,12 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case awaitOperationHelper(node) != "":
 		p.awaitOperation(node, e)
 		return
+	case p.isHatchCall(node):
+		p.hatchCall(node, e)
+		return
+	case isRetiredCatchStatement(node):
+		p.retiredCatchStatement(node)
+		return
 	case isCatchExpression(node):
 		p.catchExpression(node, e)
 		return
@@ -265,6 +271,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 		return
 	case p.isMatchForm(node):
 		p.synthesized(node, p.tokenStart(node), node.End(), e)
+		return
+	case p.isPlainHatchFunction(node):
+		p.visitChildren(node, env{})
 		return
 	case isLambda(node):
 		p.lambda(node, e)

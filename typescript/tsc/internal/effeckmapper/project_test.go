@@ -97,6 +97,21 @@ var projectionCases = []struct {
 		virtual: "function f() { return $gen(function* () { return (yield* $run(all([$gen(function* () { return (yield* $run(Effect.succeed(1))) }), $gen(function* () { return (yield* $run(Effect.succeed(2))) })]))) })}",
 	},
 	{
+		name:    "try hatch keeps its TypeScript body and typed mapper",
+		source:  "function f() { return try(() => { throw new Error(\"x\") }, (error) => error) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($hatchTryMapped(() => { throw new Error(\"x\") }, (error) => error))) })}",
+	},
+	{
+		name:    "hatch value is deferred and its inputs run",
+		source:  "function f() { return sync(String(7)) + sync((n) => n * 2, read()) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run(sync(() => (String(7))))) + (yield* $run(sync((n) => n * 2, (yield* $run($value(read)()))))) })}",
+	},
+	{
+		name:    "async try hatch preserves signal and mapper contextual typing",
+		source:  "function f() { return try(async (n, signal) => { await Promise.resolve(); return n }, (error) => error, 7) }",
+		virtual: "function f() { return $gen(function* () { return (yield* $run($hatchTryMapped(async (n, signal) => { await Promise.resolve(); return n }, (error) => error, 7))) })}",
+	},
+	{
 		name:    "schema primitives optional literals arrays and readonly",
 		source:  "export schema User { readonly id: string; home?: number; role: \"a\" | \"b\"; tags: string[]; mutable active: boolean }\n",
 		virtual: "export interface User extends Schema.Schema.Type<typeof User> {}\nexport const User = Schema.Struct({ id: Schema.String, home: Schema.optional(Schema.Number), role: Schema.Literals([\"a\", \"b\"]), tags: Schema.Array(Schema.String), active: Schema.mutableKey(Schema.Boolean) });\n",
@@ -970,4 +985,50 @@ func TestDataMethodTypeArgumentsRequireAnnotation(t *testing.T) {
 	assert.Equal(t, len(projection.Diagnostics), 1)
 	assert.Assert(t, strings.Contains(projection.Diagnostics[0].Message, "annotated module function call"))
 	assert.Assert(t, strings.Contains(projection.Text, "o.map<number, string>"))
+}
+
+// TestRetiredCatchMigration ensures deleted type-directed clauses request
+// the explicit failure/Exit migration in both renderings.
+func TestRetiredCatchMigration(t *testing.T) {
+	for _, source := range []string{
+		"function f() { try { g() } catch (e: Missing) { return 1 } }",
+		"function f() { try { g() } catch (cause: Cause) { return 1 } }",
+	} {
+		projection := Project(source, testContext)
+		executable := Executable(source, testContext)
+		for _, ds := range [][]Diagnostic{projection.Diagnostics, executable.Diagnostics} {
+			assert.Equal(t, len(ds), 1)
+			assert.Assert(t, strings.Contains(ds[0].Message, "L4, D216/D217"))
+			assert.Equal(t, source[ds[0].Start:ds[0].Start+ds[0].Length], "catch")
+		}
+	}
+}
+
+// TestHatchAnnotations keeps unresolved value/function and mapper/input
+// positions from silently inheriting the runtime helper's overload guess.
+func TestHatchAnnotations(t *testing.T) {
+	for _, source := range []string{
+		"import { opaque } from './foreign'; function f() { return sync(opaque()) }",
+		"import { evaluate } from './foreign'; function f() { return sync(evaluate) }",
+		"import { opaque } from './foreign'; function f() { return try(() => 1, opaque) }",
+		"function f() { return try((fn: () => number) => fn(), () => 1) }",
+		"function f() { return try((fn) => fn(), () => 1, 2) }",
+		"function f() { return try(async (fn: () => number, signal) => fn(), () => 1) }",
+		"function f() { return try(async (fn, n, signal) => fn(n), (x: number) => x + 1, 2) }",
+	} {
+		projection := Project(source, testContext)
+		assert.Equal(t, len(projection.Diagnostics), 1, "%s: %v", source, projection.Diagnostics)
+		assert.Assert(t, strings.Contains(projection.Diagnostics[0].Message, "annotat"))
+	}
+	source := "function f(text: string) { return try((s) => JSON.parse(s), text) }"
+	assert.Equal(t, len(Project(source, testContext).Diagnostics), 0)
+}
+
+// TestHatchOptions rejects Effect's options shape rather than succeeding
+// with the object as a hatch value (D148, EK4404).
+func TestHatchOptions(t *testing.T) {
+	source := "function f() { return try({ try: () => 1, catch: (e) => e }) }"
+	projection := Project(source, testContext)
+	assert.Equal(t, len(projection.Diagnostics), 1)
+	assert.Equal(t, projection.Diagnostics[0].Code, int32(4404))
 }

@@ -90,6 +90,8 @@ const (
 	// its own under $scopedBody (regions.go, scopeBlock), whose Scope ends
 	// with the block (D14, D19). Both renderings write its text.
 	editScopeRegion
+	// editHatch carries the checking and executable spelling of a hatch boundary.
+	editHatch
 )
 
 // part says which part of a kind an edit is.
@@ -236,6 +238,8 @@ func (r checking) text(e edit) (string, bool) {
 	switch e.kind {
 	case editSyntax, editWitness, editRegion, editDispatch:
 		text = e.text
+	case editHatch:
+		text = e.text
 	case editRecord:
 		switch e.arg {
 		case "return value":
@@ -345,7 +349,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region"}[k]
+		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region", "hatch"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out

@@ -39,6 +39,8 @@ import (
 func renderExec(e edit) (text string, keep bool) {
 	t, s := helperRef("$t"), helperRef("$s")
 	switch e.kind {
+	case editHatch:
+		return e.arg, true
 	case editWitness:
 		return "", false
 	case editSyntax, editRegion, editDispatch:
@@ -237,6 +239,9 @@ type execSource struct {
 var execHelpers = map[string]execSource{
 	"$gen":          {"effect/Effect", "gen"},
 	"$fail":         {"effect/Effect", "fail"},
+	"$hatchTry":     {"effeck-runtime", "try"},
+	"$promise":      {"effect/Effect", "promise"},
+	"$tryPromise":   {"effect/Effect", "tryPromise"},
 	"$sync":         {"effect/Effect", "sync"},
 	"$resume":       {"effeck-runtime", "resume"},
 	"$resumeWith":   {"effeck-runtime", "resumeWith"},
