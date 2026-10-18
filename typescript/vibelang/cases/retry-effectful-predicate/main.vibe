@@ -19,8 +19,12 @@ function retryWhileBusy() {
   }
 }
 
-// expect-result: {"attempts":3,"reserved":2,"quoted":3,"strict":4,"generator":5}
+// expect-result: {"attempts":3,"reserved":2,"quoted":3,"strict":4,"generator":5,"named":"async"}
 export function main() {
+  const named = function async() {
+    sleep("1 millis")
+    return async.name
+  }
   const handlers = {
     default: (n: number) => { sleep("1 millis"); return n + 1 },
     "not-an-identifier": (n: number) => { sleep("1 millis"); return n + 2 },
@@ -32,6 +36,7 @@ export function main() {
     reserved: handlers.default(1),
     quoted: handlers["not-an-identifier"](1),
     strict: handlers.arguments(1),
-    generator: handlers.yield(1)
+    generator: handlers.yield(1),
+    named: named()
   }
 }
