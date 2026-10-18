@@ -1115,3 +1115,37 @@ func TestRegionVarNeedsAnnotation(t *testing.T) {
 		assert.Assert(t, strings.Contains(p.Diagnostics[0].Message, "Annotate"), "%v", p.Diagnostics)
 	}
 }
+
+// TestDoControlFlow pins diagnostics in original coordinates while allowing
+// local targets and nested functions, whose returns do not leave the do block.
+func TestDoControlFlow(t *testing.T) {
+	for _, c := range []struct {
+		source, keyword string
+		code            int32
+	}{
+		{"function f() { return do { return 1; 2 } }", "return 1", 1108},
+		{"function f() { while (true) { const x = do { break; 1 } } }", "break", 1107},
+		{"function f() { outer: while (true) { const x = do { continue outer; 1 } } }", "continue outer", 1107},
+		{"function f() { return do { while (true) { break }; 1 } }", "", 0},
+		{"function f() { return do { inner: { break inner }; 1 } }", "", 0},
+		{"function f() { return do { const g = () => { return 1 }; g() } }", "", 0},
+	} {
+		got := Project(c.source, testContext)
+		if c.code == 0 {
+			assert.Equal(t, len(got.Diagnostics), 0, "%v", got.Diagnostics)
+			continue
+		}
+		assert.Equal(t, len(got.Diagnostics), 1, "%s: %v", c.source, got.Diagnostics)
+		d := got.Diagnostics[0]
+		assert.Equal(t, d.Code, c.code)
+		assert.Equal(t, d.Start, strings.Index(c.source, c.keyword))
+		assert.Equal(t, c.source[d.Start:d.Start+d.Length], c.keyword+";")
+		message := "Jump target cannot cross function boundary."
+		if c.code == 1108 {
+			message = "A 'return' statement can only be used within a function body."
+		}
+		assert.Equal(t, d.Message, message)
+		_, _, diagnostics := Emit(c.source, testContext)
+		assert.DeepEqual(t, diagnostics, got.Diagnostics)
+	}
+}

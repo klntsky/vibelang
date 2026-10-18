@@ -244,7 +244,9 @@ type execSource struct {
 // effeck-runtime under its own name.
 var execHelpers = map[string]execSource{
 	"$gen":          {"effect/Effect", "gen"},
-	"$fail":         {"effect/Effect", "fail"},
+	"$failValue":    {"effect/Effect", "fail"},
+	"$failCause":    {"effect/Effect", "failCause"},
+	"$isCause":      {"effect/Cause", "isCause"},
 	"$hatchTry":     {"effeck-runtime", "try"},
 	"$promise":      {"effect/Effect", "promise"},
 	"$tryPromise":   {"effect/Effect", "tryPromise"},
@@ -269,7 +271,7 @@ var execHelpers = map[string]execSource{
 // prologueHelpers are defined by the prefix of each file that uses them
 // (execRendering.prologue); temporaries are declared there too.
 var prologueHelpers = map[string]bool{
-	"$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
+	"$fail": true, "$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
 	"$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
 	"$t": true, "$s": true, "$scope": true, "$iterate": true, "$producerGen": true,
 }
@@ -369,6 +371,9 @@ func (r *execRendering) prologue() string {
 		r.local("$value")
 	}
 	var parts []string
+	if r.used["$fail"] {
+		parts = append(parts, "const "+r.local("$fail")+" = (value) => "+r.local("$isCause")+"(value) ? "+r.local("$failCause")+"(value) : "+r.local("$failValue")+"(value);")
+	}
 	var temps []string
 	for _, temp := range []string{"$t", "$s"} {
 		if r.used[temp] {

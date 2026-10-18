@@ -949,6 +949,11 @@ typescript/effeck/cases/scopes-using/main.effeck:29:5 lambda plain protocol
 typescript/effeck/cases/stack-depth/stack-depth.effeck:45:20 lambda choice fallback
 typescript/effeck/cases/stack-depth/stack-depth.effeck:53:25 lambda program table
 typescript/effeck/cases/stack-depth/stack-depth.effeck:54:5 lambda effectFn table
+typescript/effeck/cases/throw-cause/main.effeck:23:16 lambda dual fallback
+typescript/effeck/cases/throw-cause/main.effeck:31:53 lambda plain fallback
+typescript/effeck/cases/throw-cause/main.effeck:38:26 byname program table
+typescript/effeck/cases/throw-cause/main.effeck:39:28 byname program table
+typescript/effeck/cases/throw-cause/main.effeck:40:27 byname program table
 typescript/effeck/cases/tracing-all/main.effeck:21:18 lambda effectFn annotation
 typescript/effeck/cases/tracing-all/main.effeck:25:40 lambda effectFn table
 typescript/effeck/cases/trust-levels/main.effeck:26:22 lambda program table

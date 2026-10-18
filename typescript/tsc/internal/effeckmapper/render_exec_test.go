@@ -674,3 +674,63 @@ export function scenario() {
 	assert.NilError(t, err, "%s\n%s", out, js)
 	assert.Equal(t, strings.TrimSpace(string(out)), `{"values":[1,2],"piped":3,"topic":4,"block":6,"top":8,"runs":6}`)
 }
+
+// TestThrowCauseRuntime checks D177 through the ordinary catch and exit
+// boundaries: throwing a Cause preserves its reasons rather than nesting it
+// as one expected failure, including defects in a combined cause.
+func TestThrowCauseRuntime(t *testing.T) {
+	t.Parallel()
+	root, err := filepath.Abs("../../../..")
+	assert.NilError(t, err)
+	scope := filepath.Join(root, "packages/ts-mapper/test/parity/out/work")
+	if _, err := os.Stat(filepath.Join(scope, "node_modules/effeck-runtime/dist")); err != nil {
+		t.Skip("runtime dependencies are built by the parity harness")
+	}
+	node, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node is unavailable")
+	}
+	source, err := os.ReadFile(filepath.Join(root, "typescript/effeck/cases/throw-cause/main.effeck"))
+	assert.NilError(t, err)
+	js, _, diagnostics := Emit(string(source), testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v", diagnostics)
+	cmd := exec.Command(node, "--no-warnings", "--input-type=module")
+	cmd.Dir = scope
+	cmd.Stdin = strings.NewReader(js + "\nimport { runPromise as runCauseTest } from 'effect/Effect'; console.log(JSON.stringify(await runCauseTest(main())))")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "%s\n%s", out, js)
+	expected := strings.TrimPrefix(strings.SplitN(string(source), "\n", 2)[0], "// expect-result: ")
+	assert.Equal(t, strings.TrimSpace(string(out)), expected)
+}
+
+// TestEmitDoControlFlowCLI checks that diagnostics reach the command's exit
+// status in both output modes; callers must not execute rejected source.
+func TestEmitDoControlFlowCLI(t *testing.T) {
+	dir := t.TempDir()
+	binary := filepath.Join(dir, "effeck-mapper")
+	build := exec.Command("go", "build", "-o", binary, "../../cmd/effeck-mapper")
+	out, err := build.CombinedOutput()
+	assert.NilError(t, err, "%s", out)
+	for _, c := range []struct {
+		source string
+		code   string
+	}{
+		{"function f() { return do { return 1; 2 } }", "EK1108"},
+		{"function f() { while (true) { const x = do { break; 1 } } }", "EK1107"},
+		{"function f() { while (true) { const x = do { continue; 1 } } }", "EK1107"},
+	} {
+		source := filepath.Join(dir, "main.effeck")
+		assert.NilError(t, os.WriteFile(source, []byte(c.source), 0600))
+		for _, file := range []bool{false, true} {
+			args := []string{"--emit", source}
+			if file {
+				args = append(args, "--out", filepath.Join(dir, "main.js"))
+			}
+			out, err := exec.Command(binary, args...).CombinedOutput()
+			exit, ok := err.(*exec.ExitError)
+			assert.Assert(t, ok, "expected a failing exit: %v\n%s", err, out)
+			assert.Equal(t, exit.ExitCode(), 1)
+			assert.Assert(t, strings.Contains(string(out), c.code), "%s", out)
+		}
+	}
+}

@@ -69,8 +69,8 @@ func printProjection(path string) int {
 // out, it writes the JavaScript there, with a sourceMappingURL comment, and
 // the source map beside it; without, it prints the JavaScript. Diagnostics
 // go to stderr, one per line, as file(line,column): EKcode message. The exit
-// status is 1 only when the file cannot be read or written: JavaScript is
-// written even for a file with diagnostics, as tsc writes it.
+// status is 1 when the file cannot be read or written or has diagnostics.
+// JavaScript is written even for a file with diagnostics, as tsc writes it.
 func emit(path string, out string) int {
 	text, err := os.ReadFile(path)
 	if err != nil {
@@ -87,9 +87,13 @@ func emit(path string, out string) int {
 		line, column := lineAndColumn(string(text), d.Start)
 		fmt.Fprintf(os.Stderr, "%s(%d,%d): error %s%d: %s\n", path, line, column, effeckmapper.DiagnosticSource, d.Code, d.Message)
 	}
+	status := 0
+	if len(diagnostics) > 0 {
+		status = 1
+	}
 	if out == "" {
 		fmt.Print(js)
-		return 0
+		return status
 	}
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
@@ -104,7 +108,7 @@ func emit(path string, out string) int {
 		fmt.Fprintln(os.Stderr, "effeck-mapper:", err)
 		return 1
 	}
-	return 0
+	return status
 }
 
 // lineAndColumn returns the one-based line and column of pos in text.

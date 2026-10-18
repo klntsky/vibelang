@@ -233,7 +233,7 @@ export declare function $asProgram<A, E, R>(f: () => EffectModule.Effect<A, E, R
 export declare function $asProgram<T>(value: T): T
 
 /** `throw x` in an Effect body projects to `return yield* $fail(x)`. */
-export declare const $fail: typeof EffectModule.fail
+export declare function $fail<E>(value: E): EffectModule.Effect<never, E extends Cause.Cause<infer Failure> ? Failure : E>
 
 /**
  * The base of a service, a control, or a D1 abstract class (D1, D45):

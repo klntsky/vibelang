@@ -1,0 +1,42 @@
+// expect-result: {"caught":"expected","defect":["Die"],"combined":["Fail","Die"],"escaped":["Fail"]}
+error Expected
+
+function fail() {
+  throw Cause.fail(new Expected())
+}
+
+function defect() {
+  throw Cause.die("defect")
+}
+
+function combined() {
+  throw Cause.combine(Cause.fail(new Expected()), Cause.die("combined defect"))
+}
+
+function caught() {
+  try {
+    fail()
+    return "missing"
+  } catch (e) {
+    return match (e) {
+      when Expected: "expected";
+      default: throw e;
+    }
+  }
+}
+
+function reasons(outcome: Exit.Exit<unknown, Expected>) {
+  return match (outcome) {
+    when Exit.Success(let value): ["Success"];
+    when Exit.Failure(let cause): cause.reasons.map((reason) => reason._tag);
+  }
+}
+
+export function main() {
+  return {
+    caught: caught(),
+    defect: reasons(exit(defect())),
+    combined: reasons(exit(combined())),
+    escaped: reasons(exit(fail()))
+  }
+}
