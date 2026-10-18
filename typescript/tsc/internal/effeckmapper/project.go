@@ -613,14 +613,12 @@ func contractOf(returnType *ast.Node) contractKind {
 	switch {
 	case returnType == nil:
 		return contractNone
-	case isEffectType(returnType):
+	case isEffectType(returnType) || isWrittenEffectReference(returnType):
 		for _, slot := range returnType.TypeArguments() {
 			if slot.Kind == ast.KindInferType {
 				return contractInfer
 			}
 		}
-		return contractEffect
-	case isWrittenEffectReference(returnType):
 		return contractEffect
 	}
 	return contractPlain

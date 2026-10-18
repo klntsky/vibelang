@@ -374,6 +374,20 @@ var emitCases = []struct {
 		absent:   []string{"import.meta.main"},
 		contains: []string{"runPromise($gen(function* () { return main$direct(); }))"},
 	},
+
+	{
+		name:     "a written Effect contract infers channels without runtime helpers (D57)",
+		source:   "class Gone extends TaggedError(\"Gone\")<{}> {}\nexport function f(n: number): Effect<number, infer E, infer R> { if (n < 0) throw new Gone(); return n }",
+		contains: []string{"function* f$body(n)", "return yield* $fail(new Gone());"},
+		absent:   []string{"$Contract", "$Infer", "$contract"},
+	},
+	{
+		name:     "a plain contract callback stays plain at runtime (D67)",
+		source:   "import { Schema } from \"effect\"; const s = Schema.suspend((): Effect<Schema.Codec<A, B>, never, never> => s)",
+		contains: []string{"Schema.suspend(() => s)"},
+		absent:   []string{"$gen"},
+	},
+
 	{
 		name:     "an Effect contract with an infer channel erases to the generator (D57)",
 		source:   "class Gone extends TaggedError(\"Gone\")<{}> {}\nexport function f(n: number): number!infer E {\n  if (n < 0) throw new Gone()\n  return n\n}\n",

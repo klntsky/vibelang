@@ -337,6 +337,18 @@ var projectionCases = []struct {
 		source:  "function find(id: string): string!infer E!Db {\n  return id\n}\n",
 		virtual: "function find(id: string) { return $contract<string, $Infer, Db>()($gen(function* () {\n  return id\n}))}\n",
 	},
+
+	{
+		name:    "written Effect contracts infer channels from the body (D57)",
+		source:  "function f(): Effect<infer A, infer E, never> { return 1 }",
+		virtual: "function f() { return $contract<$Infer, $Infer, never>()($gen(function* () { return 1 }))}",
+	},
+	{
+		name:    "plain callbacks retain a contract success type (D67)",
+		source:  "import { Schema } from \"effect\"; const s = Schema.suspend((): Effect<Schema.Codec<A, B>, never, never> => s)",
+		virtual: "import { Schema } from \"effect\"; const s = Schema.suspend((): Schema.Codec<A, B> => s)",
+	},
+
 	{
 		name:    "omitted dependencies of a contract are inferred (D57)",
 		source:  "function find(id: string): string!NotFound {\n  return id\n}\n",

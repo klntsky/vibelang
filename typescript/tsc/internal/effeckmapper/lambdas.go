@@ -76,8 +76,33 @@ func (p *projector) lambda(fn *ast.Node, e env) {
 	case FormProgram, FormDual:
 		p.programLambda(fn, form == FormDual)
 	default:
-		p.visitChildren(fn, env{})
+		p.plainLambda(fn)
 	}
+}
+
+// plainLambda unwraps a contract's success channel when the receiving
+// position requires a plain callback (D9/D67). Keeping Effect here would
+// promise a program even though the plain body returns its success value.
+func (p *projector) plainLambda(fn *ast.Node) {
+	ret := fn.Type()
+	if ret == nil || !(isEffectType(ret) || isWrittenEffectReference(ret)) || len(ret.TypeArguments()) != 3 {
+		p.visitChildren(fn, env{})
+		return
+	}
+	success := ret.TypeArguments()[0]
+	if success.Kind == ast.KindInferType {
+		p.plan.replace(p.colonBefore(ret), ret.End(), "")
+	} else {
+		p.plan.replace(p.tokenStart(ret), p.tokenStart(success), "")
+		p.visit(success, env{})
+		p.plan.replace(success.End(), ret.End(), "")
+	}
+	fn.ForEachChild(func(child *ast.Node) bool {
+		if child != ret {
+			p.visit(child, env{})
+		}
+		return false
+	})
 }
 
 // providedMember recognizes direct methods and function-valued properties of

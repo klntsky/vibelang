@@ -475,6 +475,21 @@ func isEffectType(node *ast.Node) bool {
 // dependencies a function's contract leaves out (D57), becomes $Infer. With
 // slotsOnly it writes only the three slots, for $contract's type arguments.
 func (p *projector) effectType(node *ast.Node, slotsOnly bool) {
+	if slotsOnly && !isEffectType(node) {
+		// Written Effect<A, E, R> contracts share D57's channel inference
+		// with bang contracts; only their outer reference is discarded.
+		slots := node.TypeArguments()
+		p.plan.replace(p.tokenStart(node), p.tokenStart(slots[0]), "")
+		for _, slot := range slots {
+			if slot.Kind == ast.KindInferType {
+				p.plan.replace(p.tokenStart(slot), slot.End(), helperRef("$Infer"))
+			} else {
+				p.visit(slot, env{})
+			}
+		}
+		p.plan.replace(slots[len(slots)-1].End(), node.End(), "")
+		return
+	}
 	slots := node.TypeArguments()
 	result := slots[0]
 	if !slotsOnly {
