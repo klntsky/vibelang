@@ -1,0 +1,71 @@
+// Every form whose word has no node of its own after parsing. lsp-smoke.mjs
+// hovers every position of this file, and checks what the words show.
+export error Gone { id: string }
+export error Late
+
+export interface Basket { id: string; mutable items: Array<string> }
+
+export schema Ticket {
+  id: string
+  seat?: string
+}
+
+export service Seats {
+  take(id: string): string!Gone
+}
+
+export control Gate {
+  open(request: string): boolean!!
+}
+
+export const SeatsLive = Layer.effect(Seats) {
+  const taken = new Set<string>()
+  return {
+    take(id) {
+      if (taken.has(id)) throw new Gone({ id })
+      taken.add(id)
+      return id
+    }
+  }
+}
+
+export function admit(id: string) {
+  return Gate.open(`admit ${id}`) ? id : "closed"
+}
+
+export function opened(id: string) {
+  try {
+    return admit(id)
+  } handle Gate.open(request) {
+    resume(request.length > 0)
+  }
+}
+
+function maybe(id: string): string | undefined {
+  return id === "" ? undefined : id
+}
+
+export function seat(ids: ReadonlyArray<string>) {
+  provide SeatsLive {
+    const first = fork Seats.take("a")
+    const second = fork Seats.take("b")
+    const pair = join [first, second]
+    const third = fork Seats.take("c")
+    const one = join third
+    detach(Seats.take("d"))
+    const all = await.all [Seats.take("e"), Seats.take("f")]
+    const race = await.race [Seats.take("g"), do { sleep("1 millis"); "late" }]
+    const any = await.any [Seats.take("h"), Seats.take("i")]
+    const settled = await.allSettled [Seats.take("j")]
+    for concurrent(2) (const id of ids) log(id)
+    const name = Seats.take("k") catch "guest"
+    const reason = Seats.take("l") catch (e) => match (e) {
+      when Gone: `gone ${e.id}`;
+    }
+    const kept = maybe(name) ?? throw new Late()
+    const loud = kept |> %.toUpperCase() |> `${%}!`
+    const outcome = exit(Seats.take("m"))
+    if (outcome is Exit.Failure(let cause)) log(Cause.pretty(cause))
+    return { pair, one, all, race, any, settled, name, reason, kept, loud }
+  }
+}

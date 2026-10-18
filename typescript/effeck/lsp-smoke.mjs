@@ -878,6 +878,47 @@ try {
     assert(/Runs here and returns `string`/.test(shown), `got ${JSON.stringify(shown)}`)
   })
 
+  await check("diagnostics: forms.effeck, with every form whose word has no node of its own, checks clean", async () => {
+    open("src/forms.effeck", "effeck")
+    const items = await diagnostics("src/forms.effeck")
+    assert(items.length === 0, `expected no diagnostics, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  await check("hover: every position of forms.effeck answers without a server error", async () => {
+    const uri = fileUri("src/forms.effeck")
+    const failures = []
+    const lines = text("src/forms.effeck").split("\n")
+    for (let line = 0; line < lines.length; line++) {
+      for (let character = 0; character <= lines[line].length; character++) {
+        try {
+          await connection.request("textDocument/hover", { textDocument: { uri }, position: { line, character } })
+        } catch (error) {
+          failures.push(`${line + 1}:${character + 1} ${error.message.slice(0, 160)}`)
+        }
+      }
+    }
+    assert(failures.length === 0, `${failures.length} hovers failed, first: ${failures.slice(0, 3).join("; ")}`)
+  })
+
+  await check("hover: a form's word shows what the form declares or does", async () => {
+    const shows = async (needle, offset, expected) => {
+      for (const shift of [offset, offset + 1]) {
+        const shown = await hover("src/forms.effeck", needle, { offset: shift })
+        assert(expected.test(shown), `hover on ${JSON.stringify(needle)} at ${shift}: ${shown}`)
+      }
+    }
+    await shows("error Gone", 0, /class Gone/)
+    await shows("service Seats", 0, /class Seats/)
+    await shows("control Gate", 0, /class Gate/)
+    await shows("join [first", 0, /Joins the fiber/)
+    await shows("await.all [", 6, /Starts each program in its own fiber and waits for all of them/)
+    await shows("await.race [", 6, /the first to finish wins/)
+    await shows("await.allSettled [", 6, /returning each outcome as a Result/)
+    await shows("concurrent(2)", 0, /Runs the body for each item in its own fiber/)
+    await shows("const id of ids", 6, /\(parameter\) id: string/)
+    await shows("of ids)", 3, /\(parameter\) ids: readonly string\[\]/)
+  })
+
   await check("watching: the server registers a watcher that covers new .effeck files", () => {
     const watchers = connection.registrations
       .filter((r) => r.method === "workspace/didChangeWatchedFiles")

@@ -367,6 +367,8 @@ Effeck code lives in `tsc/internal/effeck/`, which may import any internal packa
 | `tsc/internal/tsoptions/parsedcommandline.go` | `.effeck` in a project's wildcard include globs, so a new `.effeck` file joins the project | +4 / -4 |
 | `tsc/internal/lsp/server.go` | `.effeck` in the `willRenameFiles` filter; exit with status 0 after `shutdown` and `exit` | +3 / -3 |
 | `tsc/internal/ls/hover.go` | Apply quick info hooks to each hover | +1 |
+| `tsc/internal/astnav/tokens.go` | In an `.effeck` file, an identifier that `getTokenAtPosition` finds between a node's children, where TypeScript code has only trivia, goes to `effeck.go` instead of panicking, both at the position and as the token ending there | +23 / -3 |
+| `tsc/internal/astnav/effeck.go` (new) | The source token a desugared node holds out of order or outside its range, such as `for concurrent`'s binding and items; otherwise the word of a form: a class or const keyword for a declaration that parses into one, else the form's own node | +77 |
 | `tsc/internal/ls/completions.go` | Add completion scope hooks' symbols to global completions; let member completion hooks replace the type left of the dot | +2 |
 | `tsc/internal/execute/tsc/help.go` | The `--version` line, the `--help` title, its examples' command, and its icon come from the identity | +6 / -6 |
 | `tsc/internal/core/compileroptions.go` | A `.effeck` file may import a TypeScript source by its extension | +5 / -1 |
