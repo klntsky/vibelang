@@ -659,9 +659,9 @@ func handleClauses(node *ast.Node) (groups []handleGroup, ok bool) {
 		elements := declaration.Name().Elements()
 		clause := handleClause{block: block, binding: inner[0], operation: operation, parameters: elements[1:], body: inner[1:]}
 		control := operation.Expression()
-		key := control.Text()
-		if control.Kind != ast.KindIdentifier {
-			key = scannerText(control)
+		key := scannerText(control)
+		if control.Kind == ast.KindIdentifier {
+			key = control.Text()
 		}
 		if n := len(groups); n > 0 && groups[n-1].control == key {
 			groups[n-1].clauses = append(groups[n-1].clauses, clause)

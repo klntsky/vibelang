@@ -1,0 +1,2 @@
+go test fuzz v1
+string("control #sk { get(): boole() { try { return Ask.get() } handle A A.A000000000000000000000000000000000000000000000000000000000000000000000000000000000")

@@ -47,6 +47,16 @@ func TestRegionJumpWithoutTarget(t *testing.T) {
 	}
 }
 
+func TestQualifiedControlProjection(t *testing.T) {
+	const source = "function f() { try { return API.Ask.get() } handle API.Ask.get() { resume(true) } }"
+	for _, projection := range []Projection{Project(source, testContext), Executable(source, testContext)} {
+		if !strings.Contains(projection.Text, "API.Ask") {
+			t.Fatalf("projection lost the qualified control: %s", projection.Text)
+		}
+		assertValidMap(t, projection, source)
+	}
+}
+
 // FuzzProjectionSpans checks the contracts TypeScript's cache and editor
 // depend on: identical source/context has identical projections, diagnostics
 // stay inside the original text, and verbatim spans map to their exact source.
