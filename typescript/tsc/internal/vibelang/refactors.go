@@ -101,9 +101,11 @@ func (rc *refactorContext) contractRefactors(fn *ast.Node) []*ls.CodeAction {
 		start := strings.LastIndexByte(rc.file.Text()[:annotation.Pos()], ':')
 		return []*ls.CodeAction{rc.action("Remove the contract", start, annotation.End(), "")}
 	}
-	if isProducer(fn) || !rc.a.isEffect(fn) {
+	if isProducer(fn) {
 		return nil
 	}
+	// A pure function can use the direct path while its public signature
+	// still returns Effect. Its inferred contract can be written too (D10).
 	contract := rc.c.GetReturnTypeOfSignature(rc.c.GetSignatureFromDeclaration(fn))
 	if !isEffectType(rc.c, contract) {
 		return nil
