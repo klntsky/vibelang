@@ -3,6 +3,7 @@ package effeckmapper
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -35,7 +36,7 @@ func TestRenderExec(t *testing.T) {
 	assert.Equal(t, render(editValueCall, "", "Config"), helperRef("$value")+"(Config)")
 	assert.Equal(t, render(editFail, "void", "e"), "return (yield* "+helperRef("$fail")+"(e))")
 	assert.Equal(t, render(editRecord, "return value", "x"), "return x")
-	assert.Equal(t, render(editUsing, "", "lease()"), "(yield* "+helperRef("$acquire")+"(lease()))")
+	assert.Equal(t, render(editUsing, "", "lease()"), "(yield* "+helperRef("$acquire")+"("+helperRef("$scope")+", lease()))")
 	assert.Equal(t, render(editEffectBody, "self", " body "), " return "+helperRef("$gen")+"({ self: this }, function* () { body })")
 	text, keep := renderExec(edit{kind: editSyntax, text: "abstract class"})
 	assert.Assert(t, keep && text == "abstract class")
@@ -187,19 +188,19 @@ var emitCases = []struct {
 	{
 		name:     "a function that holds a using gets a Scope of its own, and no fast entry",
 		source:   "function f() {\n  using r = lease(1)\n  return r.id\n}\nfunction g() {\n  return f()\n}\n",
-		contains: []string{"return $scopedBody($gen(function* () {", "const r = (yield* $acquire(lease(1)));", "(($t = f()), $isRun($t) ? (yield* $t) : $t)"},
+		contains: []string{"return $region(($scope) => $gen(function* () {", "const r = (yield* $acquire($scope, lease(1)));", "(($t = f()), $isRun($t) ? (yield* $t) : $t)"},
 		absent:   []string{"f$fast", "f$body"},
 	},
 	{
 		name:   "a producer runs under the runtime's Yield operation, and for...of takes a Stream's elements (D26)",
 		source: "function* numbers(n: number) {\n  for (let i = 0; i < n; i++) yield i\n  yield* more(1)\n  yield\n}\nfunction sum() {\n  let s = 0\n  for (const x of numbers(3)) s += x\n  return s\n}\n",
 		contains: []string{
-			"return $produce(() => $gen(function* () {",
+			"return $produce(() => $producerGen(function* () {",
 			"yield* $yield(i);",
 			"yield* $yieldAll((($t = more(1)), $isRun($t) ? (yield* $t) : $t));",
 			"yield* $yield(undefined);",
-			"for (const x of (yield* $each((($t = numbers(3)), $isRun($t) ? (yield* $t) : $t))))",
-			"const $each = (v) => $isStream(v) ? $runCollect(v) : $succeed(v);",
+			"yield* $iterate((($t = numbers(3)), $isRun($t) ? (yield* $t) : $t),",
+			"const x = $item;",
 		},
 	},
 	{
@@ -284,6 +285,46 @@ func TestEmitCorpusDeclarations(t *testing.T) {
 	}
 }
 
+// TestEmitScopeOwnership keeps a using's private Scope out of ordinary
+// acquisitions, and keeps a lowered block valid as an if branch (D14).
+func TestEmitScopeOwnership(t *testing.T) {
+	t.Parallel()
+	source := `function f() {
+   const kept = acquire("kept")
+   using log = acquire("log")
+   if (kept) { using inner = acquire("inner") }
+   return kept
+ }`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v\n%s", diagnostics, js)
+	assert.Assert(t, strings.Contains(js, "$region(($scope) => $gen(function* () {"), js)
+	assert.Assert(t, strings.Contains(js, "$acquire($scope, acquire(\"log\"))"), js)
+	assert.Equal(t, strings.Count(js, "$region("), 2, js)
+	assert.Assert(t, !strings.Contains(js, "$scopedBody"), js)
+}
+
+// TestEmitCorpusSyntax catches a lowered scope losing its statement braces
+// or separator before else, both of which single-file transpilation recovers.
+func TestEmitCorpusSyntax(t *testing.T) {
+	t.Parallel()
+	for _, name := range []string{"scopes-using", "decl-handle"} {
+		t.Run(name, func(t *testing.T) {
+			data, err := os.ReadFile(filepath.Join("../../../effeck/cases", name, "main.effeck"))
+			assert.NilError(t, err)
+			js, _, diagnostics := Emit(string(data), testContext)
+			for _, d := range diagnostics {
+				assert.Assert(t, d.Code != CodeExecSyntax, "%v", diagnostics)
+			}
+			if node, err := exec.LookPath("node"); err == nil {
+				cmd := exec.Command(node, "--check", "--input-type=module")
+				cmd.Stdin = strings.NewReader(js)
+				output, err := cmd.CombinedOutput()
+				assert.NilError(t, err, "%s", output)
+			}
+		})
+	}
+}
+
 // TestEmitIsDeterministic checks that equal text emits equal output.
 func TestEmitIsDeterministic(t *testing.T) {
 	t.Parallel()
@@ -342,4 +383,94 @@ func TestEmitReportsUnparsedText(t *testing.T) {
 		assert.Assert(t, d.Start >= 0 && d.Start+d.Length <= len(source), "diagnostic %v out of range", d)
 		assert.Assert(t, strings.Contains(d.Message, "TS1109: Expression expected."), d.Message)
 	}
+}
+
+// TestEmitScopedContract keeps the contract's closing function brace
+// outside the private Scope and optional tracing wrapper (D14, D34, D57).
+func TestEmitScopedContract(t *testing.T) {
+	t.Parallel()
+	ctx := testContext
+	ctx.Tracing = "all"
+	js, _, diagnostics := Emit("function f(): string!infer E { using r = lease(1); return r.name }", ctx)
+	assert.Equal(t, len(diagnostics), 0, "%v\n%s", diagnostics, js)
+	assert.Assert(t, strings.Contains(js, "$withSpan($region(($scope) => $gen(function* () {"), js)
+	assert.Assert(t, !strings.Contains(js, "f$fast"), js)
+}
+
+// TestEmitLoopRegions checks that iteration pulls rather than collecting,
+// and that loop callbacks propagate returns and labeled exits (D26).
+func TestEmitLoopRegions(t *testing.T) {
+	t.Parallel()
+	source := `function f(xs: number[]) {
+ outer: for (const x of xs) {
+   for (const y of xs) { if (y > x) continue outer; if (y === 3) return y }
+   if (x === 4) break
+ }
+ return 0
+ }`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v\n%s", diagnostics, js)
+	assert.Equal(t, strings.Count(js, "yield* $iterate("), 2, js)
+	assert.Assert(t, strings.Contains(js, `return $jump("continue:outer")`), js)
+	assert.Assert(t, strings.Contains(js, `return $jump("break:")`), js)
+	assert.Assert(t, !strings.Contains(js, "$runCollect"), js)
+}
+
+// TestEmitProducerCleanup makes native generator finalizers part of the
+// producer Effect's exit, including interruption after an early pull.
+func TestEmitProducerCleanup(t *testing.T) {
+	t.Parallel()
+	source := `function* values() { try { yield 1; yield 2 } finally { release() } }`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v\n%s", diagnostics, js)
+	assert.Assert(t, strings.Contains(js, "$produce(() => $producerGen(function* () {"), js)
+	assert.Assert(t, strings.Contains(js, "$onExit($gen(() => it)"), js)
+	assert.Assert(t, strings.Contains(js, "it.return(undefined)"), js)
+}
+
+// TestEmitTracing keeps named functions, variable-bound arrows, and class
+// methods in their D34 spans; calls must not bypass them through fast entries.
+func TestEmitTracing(t *testing.T) {
+	t.Parallel()
+	source := `function inner() { return Effect.currentSpan().name }
+ const viaArrow = () => Effect.currentSpan().name
+ service Greeter { greet(): string!! }
+ class Hello implements Greeter { greet() { return Effect.currentSpan().name } }
+ export function main() { return [inner(), viaArrow(), new Hello().greet()] }`
+	for _, mode := range []string{"all", "exported"} {
+		t.Run(mode, func(t *testing.T) {
+			ctx := testContext
+			ctx.Tracing = mode
+			js, _, diagnostics := Emit(source, ctx)
+			for _, d := range diagnostics {
+				assert.Assert(t, d.Code != CodeExecSyntax, "%v\n%s", diagnostics, js)
+			}
+			assert.Assert(t, strings.Contains(js, `}), "main")`), js)
+			for _, name := range []string{"inner", "viaArrow", "Hello.greet"} {
+				assert.Equal(t, strings.Contains(js, `}), "`+name+`")`), mode == "all", js)
+			}
+			assert.Assert(t, !strings.Contains(js, "main$fast"), js)
+		})
+	}
+}
+
+// TestEmitClauseContinuation keeps the continuation last when bindings
+// omit operation parameters, and propagates a resumed return after cleanup.
+func TestEmitClauseContinuation(t *testing.T) {
+	t.Parallel()
+	source := `control Log { write(message: string, level?: string): void!! }
+ function f() {
+  try { Log.write("hi"); return 7 }
+  handle Log.write(message) { resume(); record(message) }
+ }
+ function g() {
+  try { Log.write("hi"); return 8 }
+  handle Log.write(message) { using r = lease(); resume() }
+ }`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v\n%s", diagnostics, js)
+	assert.Assert(t, strings.Contains(js, "write: (message, ...$clauseArgs) =>"), js)
+	assert.Assert(t, strings.Contains(js, "const $k = $clauseArgs[$clauseArgs.length - 1]"), js)
+	assert.Assert(t, strings.Contains(js, "return $pending"), js)
+	assert.Assert(t, strings.Contains(js, "yield* $resume($k, undefined)"), js)
 }

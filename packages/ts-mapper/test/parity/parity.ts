@@ -15,6 +15,7 @@
 // out/gate-<date>.json, which a gate verdict cites. --self-test checks the
 // harness itself and exits 1 when it is wrong.
 import crypto from "node:crypto"
+import { mapperEntry } from "./mapper-options"
 import fs from "node:fs"
 import { isBuiltin } from "node:module"
 import os from "node:os"
@@ -405,6 +406,7 @@ const specifierPattern = /(\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\bexport\s+\*\
 // is a declaration normalization.
 function adaptStockProject(dir: string, tsconfig: any): Adapter {
   const adapter: Adapter = { stripped: [], forced: {}, migrations: [] }
+  const entry = mapperEntry(tsconfig)
   const options = (tsconfig.compilerOptions ??= {})
   for (const name of forkOnlyOptions) {
     if (name in options) {
@@ -426,7 +428,7 @@ function adaptStockProject(dir: string, tsconfig: any): Adapter {
   force("noEmit", undefined)
   force("noEmitOnError", false)
   if (!options.outDir) force("outDir", defaultOutDir)
-  tsconfig.contentMappers = [{ package: "effeck-ts-mapper", extensions: [".effeck"] }]
+  tsconfig.contentMappers = [entry]
   fs.writeFileSync(path.join(dir, "tsconfig.json"), `${JSON.stringify(tsconfig, null, 2)}\n`)
 
   for (const rel of walk(dir, () => true).filter((f) => sourcePattern.test(f) && !f.endsWith(".d.ts"))) {

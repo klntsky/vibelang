@@ -88,16 +88,16 @@ func renderExec(e edit) (text string, keep bool) {
 		// L1's dual: the program, also a function that returns it.
 		return pick(e.part, helperRef("$dual")+"(", "", ")"), true
 	case editScoped:
-		// A fork in a block: the runtime's fork already forks into the Scope
-		// around it, which scopeBodies gives the function.
-		return "", true
+		// Only the fork sees the block's private Scope (D19); ordinary
+		// scoped operations in the block still belong to the caller.
+		return pick(e.part, helperRef("$provideScope")+"(", "", ", "+helperRef("$scope")+")"), true
 	case editProgramValue:
 		// D7: a function value at a program position runs as its program.
 		return pick(e.part, helperRef("$asProgram")+"(", "", ")"), true
 	case editProducer:
 		// D26: the runtime's $produce takes the body as a function that
 		// returns its Effect, and runs it under its Yield handler.
-		return pick(e.part, " return "+helperRef("$produce")+"(() => "+generatorText(e.arg)+"{", "", "}))"), true
+		return pick(e.part, " return "+helperRef("$produce")+"(() => "+strings.Replace(generatorText(e.arg), helperRef("$gen"), helperRef("$producerGen"), 1)+"{", "", "}))"), true
 	case editEmit:
 		// The source's yield stays; yield x becomes yield* $yield(x), the
 		// runtime's Yield operation, and yield* p yield* $yieldAll(p).
@@ -127,7 +127,7 @@ func renderExec(e edit) (text string, keep bool) {
 	case editUsing:
 		// using x = acquire(): the acquisition runs in the Scope of the code
 		// around it (execPrologue's $acquire).
-		return pick(e.part, "(yield* "+helperRef("$acquire")+"(", "", "))"), true
+		return pick(e.part, "(yield* "+helperRef("$acquire")+"("+helperRef("$scope")+", ", "", "))"), true
 	case editServiceBase:
 		// D45: the key; D40: a reference passes its default.
 		base, key, name := e.fields[0], e.fields[1], e.fields[2]
@@ -235,18 +235,24 @@ type execSource struct {
 // or from the runtime. Every other helper that starts with $ is an export of
 // effeck-runtime under its own name.
 var execHelpers = map[string]execSource{
-	"$gen":        {"effect/Effect", "gen"},
-	"$fail":       {"effect/Effect", "fail"},
-	"$sync":       {"effect/Effect", "sync"},
-	"$fnUntraced": {"effect/Effect", "fnUntraced"},
-	"$scopedBody": {"effect/Effect", "scoped"},
-	"$suspend":    {"effect/Effect", "suspend"},
-	"$isStream":   {"effect/Stream", "isStream"},
-	"$runCollect": {"effect/Stream", "runCollect"},
-	"$isKey":      {"effect/Context", "isKey"},
-	"$isEffect":   {"effect/Effect", "isEffect"},
-	"$succeed":    {"effect/Effect", "succeed"},
-	"$ScopeKey":   {"effect/Scope", "Scope"},
+	"$gen":          {"effect/Effect", "gen"},
+	"$fail":         {"effect/Effect", "fail"},
+	"$sync":         {"effect/Effect", "sync"},
+	"$resume":       {"effeck-runtime", "resume"},
+	"$resumeWith":   {"effeck-runtime", "resumeWith"},
+	"$withSpan":     {"effect/Effect", "withSpan"},
+	"$onExit":       {"effect/Effect", "onExit"},
+	"$map":          {"effect/Effect", "map"},
+	"$fnUntraced":   {"effect/Effect", "fnUntraced"},
+	"$scopedBody":   {"effect/Effect", "scoped"},
+	"$suspend":      {"effect/Effect", "suspend"},
+	"$isStream":     {"effect/Stream", "isStream"},
+	"$runCollect":   {"effect/Stream", "runCollect"},
+	"$isKey":        {"effect/Context", "isKey"},
+	"$isEffect":     {"effect/Effect", "isEffect"},
+	"$succeed":      {"effect/Effect", "succeed"},
+	"$ScopeKey":     {"effect/Scope", "Scope"},
+	"$provideScope": {"effect/Scope", "provide"},
 }
 
 // prologueHelpers are defined by the prefix of each file that uses them
@@ -254,7 +260,7 @@ var execHelpers = map[string]execSource{
 var prologueHelpers = map[string]bool{
 	"$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
 	"$dual": true, "$asProgram": true, "$each": true,
-	"$t": true, "$s": true,
+	"$t": true, "$s": true, "$scope": true, "$iterate": true, "$producerGen": true,
 }
 
 // d151Names are the Effect functions a .effeck file calls without the
@@ -338,6 +344,16 @@ func (r *execRendering) prefix() string {
 // are a file's own, because a completion never leaves the function whose
 // region made it.
 func (r *execRendering) prologue() string {
+	if r.used["$producerGen"] {
+		for _, helper := range []string{"$gen", "$suspend", "$onExit"} {
+			r.local(helper)
+		}
+	}
+	if r.used["$iterate"] {
+		for _, helper := range []string{"$end", "$jump", "$Jump", "$map", "$forOf"} {
+			r.local(helper)
+		}
+	}
 	var parts []string
 	var temps []string
 	for _, temp := range []string{"$t", "$s"} {
@@ -371,11 +387,10 @@ func (r *execRendering) prologue() string {
 		parts = append(parts, "const "+r.local("$value")+" = (v) => typeof v === \"function\" && !"+r.local("$isKey")+"(v) ? v : () => "+r.local("$gen")+"(function* () { return yield* v });")
 	}
 	if r.used["$acquire"] {
-		// The plan marks no block as a Scope region yet, so an acquisition
-		// uses the Scope its caller provides; a Disposable is acquired as
-		// itself and released with the Scope (the runtime's $using).
-		parts = append(parts, "const "+r.local("$acquire")+" = (v) => "+r.local("$gen")+"(function* () { return yield* "+r.local("$using")+
-			"(yield* "+r.local("$ScopeKey")+", "+r.local("$isEffect")+"(v) ? v : "+r.local("$succeed")+"(v)) });")
+		// D14: the acquisition alone receives the region's Scope; the
+		// region never installs it in the surrounding Context.
+		parts = append(parts, "const "+r.local("$acquire")+" = (scope, v) => "+r.local("$using")+
+			"(scope, "+r.local("$isEffect")+"(v) ? v : "+r.local("$succeed")+"(v));")
 	}
 	if r.used["$dual"] {
 		// research/typedirected.md stock/perf/dual.mjs: the function takes the
@@ -390,6 +405,21 @@ func (r *execRendering) prologue() string {
 		// producer and its loop take turns, as the fork's $forOf does.
 		parts = append(parts, "const "+r.local("$each")+" = (v) => "+r.local("$isStream")+"(v) ? "+r.local("$runCollect")+"(v) : "+r.local("$succeed")+"(v);")
 	}
+	if r.used["$iterate"] {
+		// The runtime uses tagged loop completions; the checking rendering
+		// uses raw return values, the end sentinel, and Jump instances.
+		end, jump, cls, mapping := r.local("$end"), r.local("$jump"), r.local("$Jump"), r.local("$map")
+		parts = append(parts, "const "+r.local("$iterate")+" = (xs, body, label) => "+mapping+"("+r.local("$forOf")+"(xs, (v) => "+mapping+"(body(v), (c) => c === "+end+" ? { kind: \"normal\" } : c instanceof "+cls+" ? { kind: c.k.slice(0, c.k.indexOf(\":\")), label: c.k.slice(c.k.indexOf(\":\") + 1) } : { kind: \"return\", value: c }), label), (c) => c.kind === \"normal\" ? "+end+" : c.kind === \"return\" ? c.value : "+jump+"(c.kind + \":\" + c.label));")
+	}
+
+	if r.used["$producerGen"] {
+		// Effect.gen does not close a native generator when an Effect fails
+		// or a consumer abandons it. Drain return() under onExit so native
+		// finally blocks can themselves yield their cleanup Effects.
+		gen := r.local("$gen")
+		parts = append(parts, "const "+r.local("$producerGen")+" = (options, body) => "+r.local("$suspend")+"(() => { const it = body ? body.call(options.self) : options(); return "+r.local("$onExit")+"("+gen+"(() => it), () => "+gen+"(function* () { let s = it.return(undefined); while (!s.done) { const v = yield s.value; s = it.next(v) } })); });")
+	}
+
 	if r.used["$asProgram"] {
 		parts = append(parts, "const "+r.local("$asProgram")+" = (v) => typeof v === \"function\" && !"+r.local("$isEffect")+"(v) && !"+r.local("$isKey")+"(v) ? "+r.local("$suspend")+"(v) : v;")
 	}
@@ -457,10 +487,13 @@ func (p *projector) execPlan() *plan {
 	l.args = p.freshWord("$args")
 	l.scopeBodies()
 	l.splitFunctions()
+	l.traceBodies()
 	l.lowerCalls()
 	l.lowerServiceCalls()
+	l.lowerClauses()
 	l.lowerImports()
 	l.entry()
+	l.lowerLoops()
 	return &plan{edits: l.edits}
 }
 
@@ -555,6 +588,9 @@ func (l *execLowering) splitFunctions() {
 			continue
 		}
 		name := statement.Name().Text()
+		if l.traceName(statement) != "" {
+			continue
+		}
 		if l.p.names.declarations[name] != 1 || ast.HasSyntacticModifier(statement, ast.ModifierFlagsAmbient) {
 			continue
 		}
@@ -567,7 +603,7 @@ func (l *execLowering) splitFunctions() {
 		} else {
 			continue // a plain function (L2), or one the walk did not lower
 		}
-		if f.effectBody != nil && l.scoped[f.effectBody.open] {
+		if f.effectBody != nil && l.scoped[f.effectBody.open] || f.contract != nil && l.scoped[f.contract.open] {
 			continue // its body is scoped, so it runs only as an Effect (scopeBodies)
 		}
 		l.functions[name] = f
@@ -583,51 +619,82 @@ func (l *execLowering) splitFunctions() {
 	}
 }
 
-// scopeBodies gives each Effect body or program that holds a using
-// declaration or a fork in a block, its own or in a block or region inside
-// it, a Scope of its own:
-//
-//	function f() { using r = lease(); ... }
-//	function f() { return $scopedBody($gen(function* () { const r = (yield* $acquire(lease())); ... })) }
-//
-// The checking rendering removes Scope from the R of the using's or the
-// fork's block (D14, D19), so the acquisition or the fork needs a Scope the
-// caller does not provide. The plan marks no block as a Scope region yet,
-// so the Scope is the function's: exact for a using or fork in the
-// function's own block, and late, at the function's end, for one in a block
-// inside it. Such a function runs only as an Effect, without a fast entry,
-// so the Scope always closes.
+// scopeBodies gives only a block's own using declarations and forks its
+// private Scope (D14, D19). Nested scope regions already belong to the
+// plan; wrapping their enclosing function would capture ordinary scoped
+// acquisitions and end their lifetimes early. Statement regions keep a
+// braced statement and a separator before else, including when they have a
+// completion to dispatch.
 func (l *execLowering) scopeBodies() {
 	l.scoped = map[int]bool{}
+	scope := helperRef("$scope")
+	regionOpen := helperRef("$region") + "((" + scope + ") => "
+	var blocks = map[int]*ast.Node{}
+	var visit func(*ast.Node)
+	visit = func(n *ast.Node) {
+		if ast.IsFunctionLike(n) && n.Body() != nil && n.Body().Kind == ast.KindBlock {
+			body := n.Body()
+			blocks[l.p.tokenStart(n)] = body
+			blocks[l.p.tokenStart(body)] = body
+			blocks[l.p.tokenStart(body)+1] = body
+			blocks[body.End()] = body
+		}
+		n.ForEachChild(func(c *ast.Node) bool { visit(c); return false })
+	}
+	visit(l.p.file.AsNode())
 	var bodies []span
 	bodies = append(bodies, l.spans[editEffectBody]...)
 	bodies = append(bodies, l.spans[editProgram]...)
 	bodies = append(bodies, l.spans[editProducer]...)
-	var needs []span
-	needs = append(needs, l.spans[editUsing]...)
-	needs = append(needs, l.spans[editScoped]...)
-	for _, u := range needs {
-		at := l.edits[u.open].pos
-		innermost := -1
-		for i, b := range bodies {
-			if l.edits[b.open].pos <= at && at <= l.edits[b.close].pos &&
-				(innermost < 0 || l.edits[b.open].pos > l.edits[bodies[innermost].open].pos) {
-				innermost = i
-			}
+	bodies = append(bodies, l.spans[editContract]...)
+	for _, b := range bodies {
+		body := blocks[l.edits[b.open].pos]
+		if l.edits[b.open].kind == editContract {
+			body = blocks[l.edits[b.close].pos]
 		}
-		if innermost < 0 || l.scoped[bodies[innermost].open] {
+		if body == nil || !l.p.holdsScope(body.Statements()) {
 			continue
 		}
-		b := bodies[innermost]
-		l.scoped[b.open] = true
-		open, _ := renderExec(l.edits[b.open])
+		opening := b.open
+		if b.middle >= 0 {
+			opening = b.middle
+		}
+		contract := l.edits[b.open].kind == editContract
+		open, _ := renderExec(l.edits[opening])
 		close, _ := renderExec(l.edits[b.close])
 		gen := strings.Index(open, helperRef("$gen"))
 		if gen < 0 {
+			gen = strings.Index(open, helperRef("$producerGen"))
+		}
+		if gen < 0 {
 			continue
 		}
-		l.set(b.open, open[:gen]+helperRef("$scopedBody")+"("+open[gen:])
-		l.set(b.close, close+")")
+		l.scoped[b.open] = true
+		l.set(opening, open[:gen]+regionOpen+open[gen:])
+		if contract {
+			close = strings.TrimSuffix(close, "}") + ")}"
+		} else {
+			close += ")"
+		}
+		l.set(b.close, close)
+	}
+	for i, e := range l.edits {
+		if e.kind != editRegion && e.kind != editScopeRegion {
+			continue
+		}
+		text := strings.ReplaceAll(e.text, helperRef("$scopedBody")+"(", regionOpen)
+		if e.kind == editScopeRegion && e.part == partOpen {
+			text = "{ " + text
+		}
+		l.edits[i].text = text
+		if e.kind == editScopeRegion && e.part == partClose {
+			for j := i + 1; j < len(l.edits); j++ {
+				if d := l.edits[j]; d.pos == e.pos && d.kind == editDispatch {
+					l.edits[j].text += "; }"
+					break
+				}
+			}
+		}
 	}
 }
 
@@ -848,4 +915,346 @@ func callsRunnerSyntax(expression *ast.Node) bool {
 		return runners[callee.Name().Text()]
 	}
 	return false
+}
+
+// lowerLoops renders the plan's each operations as internal iteration
+// (D26). A callback returns the same completions as a checking region;
+// $iterate adapts those to the runtime's for-of protocol. This preserves
+// early exit, producer cleanup, and one element per pull instead of first
+// collecting the entire Stream. Ordinary iterable loops use the same
+// protocol, since syntax cannot tell which value a call returns.
+func (l *execLowering) lowerLoops() {
+	each := map[[2]int]span{}
+	for _, s := range l.spans[editEach] {
+		each[[2]int{l.edits[s.open].pos, l.edits[s.close].pos}] = s
+	}
+	rewritten := map[*ast.Node]bool{}
+	var visit func(*ast.Node)
+	visit = func(n *ast.Node) {
+		n.ForEachChild(func(c *ast.Node) bool { visit(c); return false })
+		if n.Kind != ast.KindForOfStatement {
+			return
+		}
+		loop := n.AsForInOrOfStatement()
+		s, ok := each[[2]int{l.p.tokenStart(loop.Expression), loop.Expression.End()}]
+		if !ok {
+			return
+		}
+		l.set(s.open, "")
+		l.set(s.close, "")
+		start := l.p.tokenStart(n)
+		label := ""
+		if n.Parent.Kind == ast.KindLabeledStatement {
+			label = n.Parent.AsLabeledStatement().Label.Text()
+			start = l.p.tokenStart(n.Parent)
+		}
+		value := l.p.freshWord("$item")
+		completion := l.p.freshCompletion()
+		init := loop.Initializer
+		binding := l.p.text[l.p.tokenStart(init):init.End()] + " = " + value + "; "
+		using := init.Kind == ast.KindVariableDeclarationList && init.Flags&ast.NodeFlagsUsing != 0
+		hoist := ""
+		if init.Kind == ast.KindVariableDeclarationList {
+			list := init.AsVariableDeclarationList()
+			name := list.Declarations.Nodes[0].Name()
+			if using {
+				binding = "const " + l.p.text[l.p.tokenStart(name):name.End()] + " = (yield* " + helperRef("$acquire") + "(" + helperRef("$scope") + ", " + value + ")); "
+			} else if init.Flags&ast.NodeFlagsBlockScoped == 0 {
+				hoist = "var " + l.p.text[l.p.tokenStart(name):name.End()] + "; "
+				binding = l.p.text[l.p.tokenStart(name):name.End()] + " = " + value + "; "
+			}
+		}
+		opening := "{ " + hoist + "const " + completion + " = yield* " + helperRef("$iterate") + "("
+		l.replace(start, l.p.tokenStart(loop.Expression), opening)
+		callback := ", (" + value + ") => "
+		if using {
+			callback += helperRef("$region") + "((" + helperRef("$scope") + ") => "
+		}
+		callback += helperRef("$gen") + "(" + selfPrefix(loop.Statement) + "function* () { " + binding
+		l.replace(loop.Expression.End(), l.p.tokenStart(loop.Statement), callback)
+		closing := "; return " + helperRef("$end") + "; })"
+		if using {
+			closing += ")"
+		}
+		closing += ", " + strconv.Quote(label) + "); if (" + helperRef("$returned") + "(" + completion + ")) return " + completion + "; "
+		escapes := []jump{}
+		var jumps func(*ast.Node)
+		jumps = func(c *ast.Node) {
+			if ast.IsFunctionLike(c) || ast.IsClassLike(c) {
+				return
+			}
+			if c.Kind == ast.KindBreakStatement || c.Kind == ast.KindContinueStatement {
+				target := execJumpTarget(c)
+				if target != nil && (target == n || target.Pos() < n.Pos() || target.End() > n.End()) {
+					j := jump{kind: c.Kind}
+					if c.Label() != nil {
+						j.label = c.Label().Text()
+					}
+					if target != n && !slices.Contains(escapes, j) {
+						escapes = append(escapes, j)
+					}
+					// Existing checking regions dispatch in the original loop's
+					// frame. That frame is now this callback, so their jumps
+					// crossing it must return the completion too.
+					action := strings.TrimSpace(execJumpWord(j.kind) + " " + j.label)
+					for i, e := range l.edits {
+						if e.kind == editDispatch && e.pos >= l.p.tokenStart(loop.Statement) && e.pos <= loop.Statement.End() {
+							for _, prefix := range []string{"; ", ") "} {
+								from := prefix + action
+								to := prefix + "return " + helperRef("$jump") + "(" + strconv.Quote(jumpKind(j)) + ")"
+								if strings.HasSuffix(e.text, from) {
+									e.text = strings.TrimSuffix(e.text, from) + to
+								}
+								e.text = strings.ReplaceAll(e.text, from+";", to+";")
+							}
+							l.edits[i].text = e.text
+						}
+					}
+					if !rewritten[c] {
+						// A checking region may already have recorded this jump.
+						recorded := false
+						for _, e := range l.edits {
+							if e.pos == l.p.tokenStart(c) && e.end == c.End() {
+								recorded = true
+								break
+							}
+						}
+						if !recorded {
+							l.replace(l.p.tokenStart(c), c.End(), "return "+helperRef("$jump")+"("+strconv.Quote(jumpKind(j))+");")
+						}
+						rewritten[c] = true
+					}
+				}
+			}
+			c.ForEachChild(func(child *ast.Node) bool { jumps(child); return false })
+		}
+		jumps(loop.Statement)
+		for _, j := range escapes {
+			action := strings.TrimSpace(execJumpWord(j.kind) + " " + j.label)
+			target := execLabeledTarget(n, j.label)
+			if target != nil && target.Kind == ast.KindForOfStatement {
+				action = "return " + helperRef("$jump") + "(" + strconv.Quote(jumpKind(j)) + ")"
+			}
+			for parent := n.Parent; parent != nil && parent != target; parent = parent.Parent {
+				if parent.Kind == ast.KindForOfStatement || parent.Kind == ast.KindTryStatement ||
+					parent.Kind == ast.KindBlock && parent.Parent != nil && !ast.IsFunctionLike(parent.Parent) && l.p.holdsScope(parent.Statements()) {
+					action = "return " + helperRef("$jump") + "(" + strconv.Quote(jumpKind(j)) + ")"
+					break
+				}
+			}
+			closing += "if (" + helperRef("$jumped") + "(" + completion + ", " + strconv.Quote(jumpKind(j)) + ")) " + action + "; "
+		}
+		l.insert(n.End(), closing+"}")
+	}
+	visit(l.p.file.AsNode())
+}
+
+// execJumpTarget finds a source jump's target before loop callbacks add
+// function boundaries, so only jumps that leave a callback become records.
+func execJumpTarget(n *ast.Node) *ast.Node {
+	if label := n.Label(); label != nil {
+		return execLabeledTarget(n, label.Text())
+	}
+	for p := n.Parent; p != nil && !ast.IsFunctionLike(p); p = p.Parent {
+		if ast.IsIterationStatement(p, false) || n.Kind == ast.KindBreakStatement && p.Kind == ast.KindSwitchStatement {
+			return p
+		}
+	}
+	return nil
+}
+
+// execLabeledTarget resolves a written label lexically; a loop's label
+// names the iteration itself so the runtime can consume its own jumps.
+func execLabeledTarget(n *ast.Node, label string) *ast.Node {
+	for p := n.Parent; p != nil && !ast.IsFunctionLike(p); p = p.Parent {
+		if p.Kind == ast.KindLabeledStatement && p.AsLabeledStatement().Label.Text() == label {
+			return p.AsLabeledStatement().Statement
+		}
+	}
+	return nil
+}
+
+// execJumpWord spells a jump action; statement kinds are not token kinds
+// and therefore cannot be printed with scanner.TokenToString.
+func execJumpWord(kind ast.Kind) string {
+	if kind == ast.KindBreakStatement {
+		return "break"
+	}
+	return "continue"
+}
+
+// lowerClauses takes the continuation from the last argument the runtime
+// supplies (D132), independently of how many operation arguments a clause
+// binds. A non-tail resume carries the resumed completion through normal
+// clause fallthrough (D97). In a cleanup region even a syntactic tail
+// resume must run before cleanup, rather than returning a tail request.
+func (l *execLowering) lowerClauses() {
+	k, args, pending := l.p.freshWord("$k"), l.p.freshWord("$clauseArgs"), l.p.freshWord("$pending")
+	var visit func(*ast.Node)
+	visit = func(n *ast.Node) {
+		if n.Kind == ast.KindTryStatement && n.Flags&ast.NodeFlagsEffeck != 0 {
+			groups, ok := handleClauses(n)
+			if ok {
+				for _, group := range groups {
+					for _, clause := range group.clauses {
+						brace := l.p.clauseBodyBrace(clause)
+						if brace < 0 {
+							continue
+						}
+						for i, e := range l.edits {
+							if e.kind == editRegion && e.end == brace {
+								text := strings.ReplaceAll(e.text, ", "+k+") =>", ", ..."+args+") =>")
+								text = strings.ReplaceAll(text, "("+k+") =>", "(..."+args+") =>")
+								l.edits[i].text = text
+							}
+						}
+						l.insert(brace+1, " const "+k+" = "+args+"["+args+".length - 1]; ")
+						needsPending := false
+						var resumes func(*ast.Node)
+						resumes = func(c *ast.Node) {
+							if ast.IsFunctionLike(c) || ast.IsClassLike(c) {
+								return
+							}
+							if ast.IsCallExpression(c) && ast.IsIdentifier(c.Expression()) &&
+								(c.Expression().Text() == "resume" || c.Expression().Text() == "resumeWith") &&
+								len(c.Arguments()) > 0 && isContinuationArgument(c.Arguments()[0]) {
+								tail := c.Parent != nil && isTailResume(c.Parent)
+								cleanup := l.p.holdsScope(clause.body)
+								for p := c.Parent; p != nil && p != clause.block; p = p.Parent {
+									if p.Kind == ast.KindTryStatement || p.Kind == ast.KindBlock && l.p.holdsScope(p.Statements()) {
+										cleanup = true
+									}
+								}
+								if tail && !cleanup {
+									return
+								}
+								needsPending = true
+								if tail {
+									helper := "$resume"
+									if c.Expression().Text() == "resumeWith" {
+										helper = "$resumeWith"
+									}
+									for i, e := range l.edits {
+										if e.pos == l.p.tokenStart(c.Expression()) && e.end == c.Expression().End() {
+											l.set(i, "("+pending+" = (yield* "+helperRef(helper))
+											break
+										}
+									}
+									l.insert(c.End(), "))")
+								} else {
+									for _, s := range l.spans[editRun] {
+										if l.edits[s.open].pos == l.p.tokenStart(c) && l.edits[s.close].pos == c.End() {
+											open, _ := renderExec(l.edits[s.open])
+											close, _ := renderExec(l.edits[s.close])
+											l.set(s.open, "("+pending+" = "+open)
+											l.set(s.close, close+")")
+											break
+										}
+									}
+								}
+								return
+							}
+							c.ForEachChild(func(child *ast.Node) bool { resumes(child); return false })
+						}
+						for _, statement := range clause.body {
+							resumes(statement)
+						}
+						if needsPending {
+							l.insert(brace+1, " let "+pending+" = "+helperRef("$end")+"; ")
+							end := clause.block.End() - 1
+							for i, e := range l.edits {
+								if e.pos == end && e.kind == editRecord && strings.Contains(e.text, "return "+helperRef("$end")) {
+									l.edits[i].text = strings.ReplaceAll(e.text, "return "+helperRef("$end"), "return "+pending)
+								}
+							}
+							l.insert(end, "; return "+pending+"; ")
+						}
+					}
+				}
+			}
+		}
+		n.ForEachChild(func(c *ast.Node) bool { visit(c); return false })
+	}
+	visit(l.p.file.AsNode())
+}
+
+// traceName names the D34 span of a named Effect function. Anonymous
+// callbacks share their caller's span; a variable names only its own lambda.
+func (l *execLowering) traceName(n *ast.Node) string {
+	mode := l.p.ctx.Tracing
+	if mode != "all" && mode != "exported" {
+		return ""
+	}
+	name := ""
+	exported := ast.HasSyntacticModifier(n, ast.ModifierFlagsExport)
+	switch n.Kind {
+	case ast.KindFunctionDeclaration, ast.KindFunctionExpression:
+		if n.Name() != nil {
+			name = n.Name().Text()
+		}
+	case ast.KindMethodDeclaration:
+		if ast.IsClassLike(n.Parent) && n.Parent.Name() != nil && n.Name() != nil {
+			name = n.Parent.Name().Text() + "." + n.Name().Text()
+			exported = ast.HasSyntacticModifier(n.Parent, ast.ModifierFlagsExport)
+		}
+	}
+	if name == "" && n.Parent != nil && n.Parent.Kind == ast.KindVariableDeclaration && ast.IsIdentifier(n.Parent.Name()) {
+		name = n.Parent.Name().Text()
+		statement := n.Parent.Parent.Parent
+		exported = statement != nil && ast.HasSyntacticModifier(statement, ast.ModifierFlagsExport)
+	}
+	if mode == "exported" && !exported {
+		return ""
+	}
+	return name
+}
+
+// traceBodies wraps named Effect bodies in withSpan (D34). Selected
+// declarations are left unsplit so neither a same-file fast call nor an
+// imported direct call can bypass the span.
+func (l *execLowering) traceBodies() {
+	bodies := map[int]span{}
+	for _, kind := range []editKind{editEffectBody, editContract} {
+		for _, s := range l.spans[kind] {
+			bodies[l.edits[s.close].pos] = s
+		}
+	}
+	var visit func(*ast.Node)
+	visit = func(n *ast.Node) {
+		if ast.IsFunctionLike(n) && n.Body() != nil {
+			if name := l.traceName(n); name != "" {
+				end := n.Body().End()
+				if n.Body().Kind == ast.KindBlock {
+					end--
+				}
+				s, ok := bodies[end]
+				if !ok {
+					s, ok = bodies[n.Body().End()]
+				}
+				if ok {
+					opening := s.open
+					if s.middle >= 0 {
+						opening = s.middle
+					}
+					open, _ := renderExec(l.edits[opening])
+					close, _ := renderExec(l.edits[s.close])
+					at := strings.Index(open, helperRef("$region"))
+					if at < 0 {
+						at = strings.Index(open, helperRef("$gen"))
+					}
+					if at >= 0 {
+						l.set(opening, open[:at]+helperRef("$withSpan")+"("+open[at:])
+						if s.middle >= 0 {
+							close = strings.TrimSuffix(close, "}") + ", " + strconv.Quote(name) + ")}"
+						} else {
+							close += ", " + strconv.Quote(name) + ")"
+						}
+						l.set(s.close, close)
+					}
+				}
+			}
+		}
+		n.ForEachChild(func(c *ast.Node) bool { visit(c); return false })
+	}
+	visit(l.p.file.AsNode())
 }

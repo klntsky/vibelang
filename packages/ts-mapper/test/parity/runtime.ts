@@ -15,6 +15,7 @@
 //   parity.ts calls runtimeParity for the runtime column of summary.md.
 //   bun runtime.ts [case...]   the runtime column alone, with the PARITY_*
 //                              variables run.sh sets; prints one line per case
+import { mapperEntry } from "./mapper-options"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -33,6 +34,7 @@ export type RuntimeResult = {
 export type RuntimeOptions = {
   outDir: string // the harness's out directory; this column works under out/work/runtime and out/nm/runtime
   mapper: string // the effeck-mapper binary
+  tracingEmitter?: string // the test entry that passes mapper options to Emit
   stockTsc: string
   effectDir: string
   runtimeDir: string // effeck-runtime, built
@@ -166,7 +168,12 @@ async function runCase(c: RuntimeCase, o: RuntimeOptions, nm: string): Promise<R
   const outputOf = (rel: string) => path.join(outDir, path.relative(common, rel)).replace(/\.(effeck|ts|tsx)$/, ".js").replace(/\.mts$/, ".mjs").replace(/\.cts$/, ".cjs")
 
   for (const rel of sources.filter((f) => f.endsWith(".effeck"))) {
-    const emitted = await exec([o.mapper, "--emit", path.join(dir, rel), "--out", outputOf(rel)], dir, 60_000)
+    const tracing = mapperEntry(tsconfig).options?.tracing
+    const emitter = o.tracingEmitter ?? process.env.PARITY_TRACING_EMITTER
+    if (tracing && !emitter) return done("tracing needs PARITY_TRACING_EMITTER (run parity/run.sh)")
+    const argv = [tracing ? emitter! : o.mapper, "--emit", path.join(dir, rel), "--out", outputOf(rel)]
+    if (tracing) argv.push("--tracing", tracing)
+    const emitted = await exec(argv, dir, 60_000)
     result.emit.files++
     for (const m of emitted.stderr.matchAll(/error (EK\d+):/g)) {
       result.emit.diagnostics++

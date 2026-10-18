@@ -55,6 +55,13 @@ echo "parity: go build ./cmd/tsc ./cmd/effeck-mapper" >&2
   CGO_ENABLED=0 go build -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/tsc" ./cmd/tsc &&
   CGO_ENABLED=0 go build -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/effeck-mapper" ./cmd/effeck-mapper)
 
+# The production --emit entry does not accept mapper-entry options yet.
+# Build a test-only entry against the same package with a Go source overlay;
+# the overlay and binary stay in out/, and production sources stay intact.
+bun -e 'console.log(JSON.stringify({ Replace: { [process.argv[1]]: process.argv[2] } }))' \
+  "$root/typescript/tsc/cmd/effeck-mapper/main.go" "$here/emit-main.go" > "$out/emit-overlay.json"
+(cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -overlay "$out/emit-overlay.json" -trimpath -buildvcs=false -gcflags=all=-dwarf=false -o "$out/bin/effeck-emit-options" ./cmd/effeck-mapper)
+
 effect_modules="${EFFECT_NODE_MODULES:-}"
 if [ -z "$effect_modules" ]; then
   effect_modules="$root/experiments/node_modules"
@@ -106,6 +113,7 @@ fi
 PARITY_ROOT="$root" \
 PARITY_FORK_TSC="$out/bin/tsc" \
 PARITY_MAPPER="$out/bin/effeck-mapper" \
+PARITY_TRACING_EMITTER="$out/bin/effeck-emit-options" \
 PARITY_STOCK_TSC="$stock_tsc" \
 PARITY_EFFECT_DIR="$effect_real" \
 PARITY_RUNTIME_DIR="$runtime" \
