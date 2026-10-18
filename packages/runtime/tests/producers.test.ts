@@ -282,3 +282,16 @@ test("iterable loops cache next, preserve its receiver, and skip return when a v
   expect(await Effect.runPromiseExit($forOf(broken, () => Effect.void))).toEqual(Exit.die(defect))
   expect(events).toEqual(["get next", "return"])
 })
+
+test("an input Stream failure is propagated intact after its scope closes", async () => {
+  for (const cause of [Cause.fail("upstream"), Cause.die("upstream defect"), Cause.combine(Cause.fail("upstream"), Cause.interrupt(123))]) {
+    const events: string[] = []
+    const input = Stream.ensuring(
+      Stream.concat(Stream.make(1), Stream.failCause(cause)),
+      Effect.sync(() => { events.push("closed") })
+    )
+    const exit = await Effect.runPromiseExit($forOf(input, value => Effect.sync(() => { events.push(`value:${value}`) })))
+    expect(exit).toEqual(Exit.failCause(cause))
+    expect(events).toEqual(["value:1", "closed"])
+  }
+})

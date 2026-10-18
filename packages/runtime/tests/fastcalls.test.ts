@@ -7,6 +7,7 @@
 import { describe, expect, test } from "bun:test"
 import { fileURLToPath } from "node:url"
 import { runInNewContext } from "node:vm"
+import { inspect } from "node:util"
 import { Cause, Config, Context, Data, Deferred, Fiber, Option, Stream } from "effect"
 import {
   $catch, $catchCause, $control, $direct, $done, $fast, $finally, $isRun, $service, $settle, $tailResume,
@@ -164,6 +165,22 @@ describe("$direct", () => {
 })
 
 describe("fast calls", () => {
+  test("a suspended fast call can be inspected without running and composed through pipe", async () => {
+    const events: string[] = []
+    const entry = $fast(function*() {
+      events.push("eager")
+      yield* Effect.sync(() => { events.push("resumed") })
+      return 21
+    })
+    const pending = entry() as Effect.Effect<number>
+    expect(JSON.parse(JSON.stringify(pending))).toEqual({ _id: "Effect", op: "vibelang/FastCall" })
+    expect(inspect(pending)).toContain("vibelang/FastCall")
+    const composed = pending.pipe(Effect.map(n => n * 2))
+    expect(events).toEqual(["eager"])
+    expect(await Effect.runPromise(composed)).toBe(42)
+    expect(events).toEqual(["eager", "resumed"])
+  })
+
   test("a body that never suspends gives its value without a fiber", () => {
     const double = function* (n: number) { return n * 2 }
     const viaExit = function* (n: number) { return (yield* Effect.succeed(n)) * 2 }
