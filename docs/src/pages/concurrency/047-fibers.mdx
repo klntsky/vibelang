@@ -204,3 +204,7 @@ function waitForReady() {
 ```
 
 Forking schedules a child; it does not prove the child has reached a particular statement. `yieldNow()` gives other work a chance to run, but it is not a readiness guarantee. Use a `Deferred`, as above, when ordering matters; `ready.await()` waits until the child completes it. Sleeping for an estimated startup time leaves a race.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/concurrency/fibers](https://effect.website/docs/v4/concurrency/fibers/)

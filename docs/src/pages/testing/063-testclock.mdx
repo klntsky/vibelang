@@ -149,3 +149,7 @@ it.effect("completes a deferred after a delay") {
 ```
 
 The sleep precedes completion in the worker, so the test checks delayed completion. After advancing time, wait for the Deferred with `ready.await()` or join the worker to synchronize with the observable outcome. A fork alone says work has started, not that its result is ready.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/testing/testclock](https://effect.website/docs/v4/testing/testclock/)

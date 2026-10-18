@@ -83,3 +83,7 @@ Calling a held exit runs its constant outcome. Success returns the stored value;
 ## Coming from Effect
 
 `const outcome = Exit.succeed(value)` still builds an exit object. Call `outcome()` to propagate it, or use `Effect.exit(() => work())` to capture a program's outcome. Although Exit extends Effect, its constructors return data under the call rule.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/data-types/exit](https://effect.website/docs/v4/data-types/exit/)

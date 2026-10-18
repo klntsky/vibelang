@@ -7,7 +7,6 @@ description: "Effect shares repeated uses of the same layer value within one bui
 
 Effect shares repeated uses of the same layer value within one build graph. VibeLang keeps this behavior, so reuse a layer value when consumers should share its initialization and resources.
 
-[Upstream page](https://effect.website/docs/v4/requirements-management/layer-memoization)
 
 ## Sharing acquisition across a graph
 
@@ -110,3 +109,7 @@ function manualSharing() {
 `Layer.makeMemoMap` is an Effect value, so call it to obtain the map. Building the same layer with the same map reuses its acquisition; providing the resulting contexts does not rebuild it. The explicit scope owns resource release, and both contexts are consumed before that scope closes.
 
 A memo map controls sharing, while a scope controls lifetime. Keep both aligned with the intended application or test boundary, and avoid retaining resource-owning implementations after their scopes close.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/requirements-management/layer-memoization](https://effect.website/docs/v4/requirements-management/layer-memoization/)

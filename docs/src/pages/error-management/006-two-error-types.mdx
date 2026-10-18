@@ -7,7 +7,6 @@ description: "A missing record and a broken invariant need different responses. 
 
 A missing record and a broken invariant need different responses. VibeLang tracks recoverable domain failures in `Effect<A, E, R>` and keeps defects in the runtime's failure cause.
 
-[Upstream page](https://effect.website/docs/v4/error-management/two-error-types)
 
 ## Separating failures from defects
 
@@ -59,3 +58,7 @@ Precisely, `E` describes failures in causes made entirely of expected failures. 
 
 - Write `throw error` where a generator would yield a failure.
 - Use ordinary `try`/`catch` for domain recovery and `finally` for cleanup.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/two-error-types](https://effect.website/docs/v4/error-management/two-error-types/)

@@ -7,7 +7,6 @@ description: "An operation can stop for several reasons: concurrent work can fai
 
 An operation can stop for several reasons: concurrent work can fail together, or cleanup can fail after the main operation. Effect 4 retains those reasons in one flat cause.
 
-[Upstream page](https://effect.website/docs/v4/error-management/parallel-and-sequential-errors)
 
 ## Representing multiple failures
 
@@ -70,3 +69,7 @@ Validation produces one typed failure containing a collection of domain errors. 
 ## Coming from Effect
 
 Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup, with VibeLang's guarantee that cleanup failure never replaces and drops an earlier failure.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/parallel-and-sequential-errors](https://effect.website/docs/v4/error-management/parallel-and-sequential-errors/)

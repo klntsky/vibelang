@@ -7,7 +7,6 @@ description: "Sandboxing places the complete runtime failure cause in the typed 
 
 Sandboxing places the complete runtime failure cause in the typed error channel. Use it when an inspection pipeline needs to treat defects, interruption, and expected failures as explicit error data.
 
-[Upstream page](https://effect.website/docs/v4/error-management/sandboxing)
 
 ## Moving causes into the error channel
 
@@ -78,3 +77,7 @@ function readWithInspection() {
 ```
 
 `Effect.failCause(cause)` restores the original failure model, including any defects and interruptions. `throw cause` would instead keep the cause object as a typed error. For a single inspection or recovery step, `Effect.catchCause(() => readRow(), handler)` avoids changing the error channel first.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/sandboxing](https://effect.website/docs/v4/error-management/sandboxing/)

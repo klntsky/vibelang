@@ -147,3 +147,7 @@ function describeAll(inputs: ReadonlyArray<number | string>) {
 ```
 
 `Match.type<T>()` builds a matcher without choosing an input, and its finalizer produces a plain function to pass as a callback. Match callbacks are synchronous value computations, and Match functions are trusted Effect library functions: their exceptions are defects that an ordinary `catch` does not recover. Use `match` when an arm performs Effect work.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/code-style/pattern-matching](https://effect.website/docs/v4/code-style/pattern-matching/)

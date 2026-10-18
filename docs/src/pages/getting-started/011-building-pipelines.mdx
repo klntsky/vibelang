@@ -161,4 +161,6 @@ A call in a VibeLang statement runs even when its success value is ignored. A fu
 
 Statements replace `map`, `flatMap`, `andThen`, and `tap` in most functions. Use `|>` for retry, timeout, provisioning, and tracing: `work() |> retry(%, policy) |> timeout(%, "1 second")` replaces `work().pipe(Effect.retry(policy), Effect.timeout("1 second"))`. Call a data type's functions as methods, `maybe.map(f).getOrElse(() => 0)`, instead of `pipe(maybe, Option.map(f), Option.getOrElse(() => 0))`. The global `pipe` still works, and suits data-last functions that have no data-first form, such as `Match.when`.
 
-[Upstream Effect page](https://effect.website/docs/v4/getting-started/building-pipelines)
+---
+
+The matching Effect page: [effect.website/docs/v4/getting-started/building-pipelines](https://effect.website/docs/v4/getting-started/building-pipelines/)

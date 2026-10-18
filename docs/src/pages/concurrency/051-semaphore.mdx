@@ -68,3 +68,7 @@ function releaseOnFailure() {
 ```
 
 `withPermits` returns acquired permits on success, failure, and interruption. Prefer it to manually pairing `Semaphore.take` and `release`, where cancellation between acquisition and cleanup registration can leak permits. `Semaphore.withPermit` is the single-permit convenience form with the same release guarantee.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/concurrency/semaphore](https://effect.website/docs/v4/concurrency/semaphore/)

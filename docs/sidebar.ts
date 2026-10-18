@@ -50,7 +50,7 @@ export const sidebar = [
         "collapsed": false,
         "items": [
           {
-            "text": "Importing Effect",
+            "text": "Effect's Modules",
             "link": "/getting-started/008-importing-effect"
           },
           {
@@ -58,7 +58,7 @@ export const sidebar = [
             "link": "/getting-started/009-running-effects"
           },
           {
-            "text": "Using Generators",
+            "text": "Sequencing Effects",
             "link": "/getting-started/010-using-generators"
           },
           {
@@ -204,7 +204,7 @@ export const sidebar = [
             "link": "/error-management/023-parallel-and-sequential-errors"
           },
           {
-            "text": "Yieldable Errors",
+            "text": "Custom Error Classes",
             "link": "/error-management/024-yieldable-errors"
           }
         ]

@@ -50,3 +50,7 @@ function discardRemainder() {
 ```
 
 `ignoreLeftover` changes the sink's leftover type to `never` and drops its unused batch suffix. It does not drain the rest of the upstream source. In sink composition or repeated consumption, dropping leftovers can lose already-pulled elements, so use it only when that loss is intended.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/sink/leftovers](https://effect.website/docs/v4/sink/leftovers/)

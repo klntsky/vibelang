@@ -80,3 +80,7 @@ function observeTwoClients() {
 ```
 
 The readiness signals come from each subscriber's first stream element, so both subscriptions exist before the update. Each client observes zero and then one, and its `take(2)` ends its subscription. A sleep or one scheduler yield does not establish that ordering; use explicit readiness when every observer must see a particular change.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/state-management/subscriptionref](https://effect.website/docs/v4/state-management/subscriptionref/)

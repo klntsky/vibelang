@@ -232,4 +232,6 @@ function readCrate(input: unknown) {
 
 `suspend` delays resolving a schema reference, allowing self-reference or mutual reference without accessing an uninitialized binding. Write the recursive callback's full contract to break the inference cycle. It returns a codec as data, performs no Effect operation, and has `never` for E and R, so Schema receives its plain JavaScript form. When encoded and decoded fields differ, define both recursive interfaces and retain both in `Codec`; `Codec<Crate>` would incorrectly claim the wire count is already a number. Keep any decoding and encoding services in the inner `Schema.Codec<T, E, RD, RE>` type; the callback's own E and R stay `never`.
 
-[Upstream page](https://effect.website/docs/v4/schema/advanced-usage)
+---
+
+The matching Effect page: [effect.website/docs/v4/schema/advanced-usage](https://effect.website/docs/v4/schema/advanced-usage/)

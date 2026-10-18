@@ -7,7 +7,6 @@ description: "A timeout limits how long a caller waits for work to finish. Effec
 
 A timeout limits how long a caller waits for work to finish. Effect interrupts the timed computation, waits for its cleanup, and then produces the chosen timeout outcome.
 
-[Upstream page](https://effect.website/docs/v4/error-management/timing-out)
 
 ## Limiting execution duration
 
@@ -86,3 +85,7 @@ function protectedPreview() {
 ```
 
 Uninterruptible work defers cancellation, so this call can take longer than 500 milliseconds. `finally` and resource releases complete before timeout returns, including releases that take time. Model work that must outlive a request with an explicit fiber lifetime rather than assuming a timeout stops it instantly.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/timing-out](https://effect.website/docs/v4/error-management/timing-out/)

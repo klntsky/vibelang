@@ -128,3 +128,7 @@ function combinedData() {
 ```
 
 `Result.gen` is the JavaScript generator sequencing API: the first yielded failure skips the rest. VibeLang's `function*` declares a producer, so generator-based APIs stay in `.ts` files; using `Result.gen` in `.vibe` is EK1002. Use `flatMap` and `all` locally, or keep generator syntax in a TypeScript helper. This unannotated helper uses an explicit `try` hatch; a helper declared with `/** @vibelang trusted */` can be called directly.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/data-types/result](https://effect.website/docs/v4/data-types/result/)

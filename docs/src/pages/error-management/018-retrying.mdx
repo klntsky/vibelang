@@ -7,7 +7,6 @@ description: "Retry transient domain failures when a new attempt has a useful ch
 
 Retry transient domain failures when a new attempt has a useful chance of succeeding. A retry runs the supplied program again from its beginning, including its side effects.
 
-[Upstream page](https://effect.website/docs/v4/error-management/retrying)
 
 ## Retrying failed computations
 
@@ -87,3 +86,7 @@ function sendOrQueue() {
 ## Coming from Effect
 
 Pass `() => sendRequest()` to retry. Passing the result of `sendRequest()` would run the request before the retry policy receives it.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/retrying](https://effect.website/docs/v4/error-management/retrying/)

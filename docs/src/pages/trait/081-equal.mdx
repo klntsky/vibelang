@@ -85,3 +85,7 @@ byFolder.get({ folder: "inbox" }).getOrElse(() => 0) // 9
 ```
 
 `HashSet` uses equality to deduplicate members and `HashMap` uses it to identify keys. Plain structural keys work without custom classes; implement the protocol when only selected fields determine identity. JavaScript's native `Set` and `Map` do not consult this protocol and keep their normal identity rules.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/trait/equal](https://effect.website/docs/v4/trait/equal/)

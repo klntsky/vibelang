@@ -187,3 +187,7 @@ function firstBatch() {
 ```
 
 The state tracks total cost instead of element count. This rule stops after reaching the threshold, so the final element can exceed the target; it is not a strict maximum-size packing algorithm. `Stream.transduce(source, packets)` repeats the sink to emit successive batches and feeds its leftovers into the next run. A sink that consumes nothing can produce an empty final result at end of input, so account for that in batch consumers.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/sink/creating](https://effect.website/docs/v4/sink/creating/)

@@ -7,7 +7,6 @@ description: "Clock, random generation, console output, configuration sources, a
 
 Clock, random generation, console output, configuration sources, and tracing have live defaults in Effect. VibeLang uses those same defaults, so normal access does not add an application service requirement.
 
-[Upstream page](https://effect.website/docs/v4/requirements-management/default-services)
 
 ## Using the clock, random, and console
 
@@ -83,3 +82,7 @@ Each `withSeed` call installs a new deterministic generator, so both pairs conta
 ## Coming from Effect
 
 Default service behavior is unchanged. Effect values such as `Random.next` run with parentheses, while provision and seed helpers receive a program such as `() => pair()`.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/requirements-management/default-services](https://effect.website/docs/v4/requirements-management/default-services/)

@@ -61,7 +61,7 @@ function intervalRecord() {
 
 `Effect.let` adds a field computed by a synchronous, non-failing callback. Use `bind` when computing the field performs Effect work. In an ordinary function, both become `const` declarations, with the compiler inferring the contract of each expression.
 
-## The sequence expressed with generators
+## The sequence as ordinary statements
 
 ```vibe
 function intervalRecord() {
@@ -80,3 +80,7 @@ This is the VibeLang form of the same sequence. In a TypeScript file, `Effect.ge
 - `Effect.Do` and named `bind` fields usually become local `const` bindings.
 - A derived `Effect.let` field becomes an ordinary expression.
 - An `Effect.gen` body becomes a function body, with calls replacing `yield*`.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/code-style/do](https://effect.website/docs/v4/code-style/do/)

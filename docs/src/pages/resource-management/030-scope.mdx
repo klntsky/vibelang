@@ -7,7 +7,6 @@ description: "A scope owns registered finalizers and runs them when its lifetime
 
 A scope owns registered finalizers and runs them when its lifetime ends. Use `using` for lexical ownership, or explicit scopes when several operations must share a lifetime independent of one function call.
 
-[Upstream page](https://effect.website/docs/v4/resource-management/scope)
 
 ## Registering finalizers
 
@@ -165,3 +164,7 @@ Test failure at each stage to confirm which steps were acquired and which compen
 ## Coming from Effect
 
 Use `using` for a resource that belongs to its block. Keep `Effect.scoped`, `Effect.addFinalizer`, and the `Scope` module for shared or manually controlled lifetimes; calls run them directly without generator syntax.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/resource-management/scope](https://effect.website/docs/v4/resource-management/scope/)

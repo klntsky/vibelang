@@ -7,7 +7,6 @@ description: "Expected errors describe situations callers can handle: invalid in
 
 Expected errors describe situations callers can handle: invalid input, a denied operation, or an unavailable dependency. VibeLang infers them in the `E` channel and narrows them inside `catch`.
 
-[Upstream page](https://effect.website/docs/v4/error-management/expected-errors)
 
 ## Constructing typed failures
 
@@ -193,3 +192,7 @@ These operators inspect the tagged error's readonly `reason` field. `catchReason
 ## Coming from Effect
 
 Functions replace `Effect.gen`; calls run the callee. Pass a program such as `() => findItem(input)` when a recovery operator needs work it can control.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/expected-errors](https://effect.website/docs/v4/error-management/expected-errors/)

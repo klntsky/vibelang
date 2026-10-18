@@ -98,3 +98,7 @@ NodeRuntime.runMain(() => exportBatch(0))
 Normal return is success; a value returned from `main` is not automatically printed. An unhandled expected failure or defect is reported by default and receives a failing exit code. Effect 4.0.5's default teardown uses 0 for success, 130 for interruption-only causes, and 1 for other failures unless a supported error-specific exit code overrides it.
 
 On a termination signal, the platform interrupts the application and waits for registered cleanup. VibeLang `finally` and `using` run during interruption, while ordinary `catch` does not catch it. Handle recoverable failures inside the program, and let the runner report failures that remain unhandled.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/platform/runtime](https://effect.website/docs/v4/platform/runtime/)

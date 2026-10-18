@@ -134,3 +134,7 @@ The synchronous `onWinner` callback observes the winning fiber and index, zero f
 ## Coming from Effect
 
 `Effect.all([task(1), task(2)], { concurrency: "unbounded" })` in TypeScript becomes `await.all [task(1), task(2)]` in VibeLang, and `Effect.raceFirst(a, b)` becomes `await.race [a(), b()]`. Each element is passed by name, so `task(1)` starts in its own fiber instead of running before the operation.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/concurrency/basic-concurrency](https://effect.website/docs/v4/concurrency/basic-concurrency/)

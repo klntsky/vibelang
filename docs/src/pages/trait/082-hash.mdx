@@ -53,3 +53,7 @@ Hash.hash(first) === Hash.hash(equivalent) // true
 ```
 
 Hash the same identity fields that equality compares. Including a field that equality ignores can send equal values to different buckets and break collection lookup. Using fewer fields is correct but increases collisions; keep hash-relevant fields immutable after insertion because hashes can be cached.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/trait/hash](https://effect.website/docs/v4/trait/hash/)

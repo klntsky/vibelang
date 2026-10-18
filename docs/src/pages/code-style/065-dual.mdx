@@ -53,3 +53,7 @@ const reusableLookup = () => lookup() |> retry(%, { times: 2 }) |> timeout(%, "1
 ```
 
 A direct call suits one operator; a pipe keeps several operators readable. Wrap the complete pipe in a function when you want a reusable program rather than its result. For transformations that only use a completed value, ordinary statements are usually clearer than `Effect.map` or `Effect.flatMap`.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/code-style/dual](https://effect.website/docs/v4/code-style/dual/)

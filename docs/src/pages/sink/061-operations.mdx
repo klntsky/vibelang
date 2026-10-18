@@ -73,3 +73,7 @@ function positiveBatches() {
 ```
 
 Filtering upstream means rejected elements do not count toward the sink's limit. `Stream.transduce` repeatedly runs the sink and passes batch leftovers into the next run. If input ends exactly at a completed sink boundary, a final empty sink result can appear; remove empty arrays downstream when the application needs only non-empty groups.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/sink/operations](https://effect.website/docs/v4/sink/operations/)

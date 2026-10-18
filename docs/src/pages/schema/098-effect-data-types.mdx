@@ -112,4 +112,6 @@ function readToken(input: unknown) {
 
 `RedactedFromValue` validates a raw value and wraps it; `Redacted` expects a Redacted container and validates its hidden contents. Redaction protects display, not every serialization path: encoding a raw-value codec or a default canonical JSON codec can expose the contents. Use `disallowJsonEncode: true` on the Redacted schema when its canonical JSON codec must refuse encoding, and avoid logging decoded secrets.
 
-[Upstream page](https://effect.website/docs/v4/schema/effect-data-types)
+---
+
+The matching Effect page: [effect.website/docs/v4/schema/effect-data-types](https://effect.website/docs/v4/schema/effect-data-types/)

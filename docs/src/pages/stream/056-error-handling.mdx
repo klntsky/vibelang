@@ -116,3 +116,7 @@ const fallbackWhenIdle = Stream.never.timeoutOrElse({
 ```
 
 `timeout` completes normally when an upstream pull waits too long. `timeoutOrElse` switches to the Stream returned by `orElse`, so that Stream can fail, defect, or emit fallback data. The timeout applies to each upstream pull, not to total consumption time, and does not time the replacement stream.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/stream/error-handling](https://effect.website/docs/v4/stream/error-handling/)

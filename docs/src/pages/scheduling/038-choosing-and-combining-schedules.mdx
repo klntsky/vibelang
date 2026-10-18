@@ -89,3 +89,7 @@ const reconnect = Schedule.spaced("150 millis").upTo({ times: 2 }).concat(Schedu
 ```
 
 `concat` exhausts the first rule before starting the second. With `retry`, this permits an initial attempt, two fast retries, then five slow retries. `Schedule.concatResult` keeps the outputs of the two phases distinguishable when an observer needs to identify the active phase.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/scheduling/choosing-and-combining-schedules](https://effect.website/docs/v4/scheduling/choosing-and-combining-schedules/)

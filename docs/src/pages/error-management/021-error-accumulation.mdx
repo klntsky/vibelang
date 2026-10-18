@@ -7,7 +7,6 @@ description: "Independent checks often need to report every problem in one respo
 
 Independent checks often need to report every problem in one response. Use validation to collect domain errors, or partitioning when successful results are useful even if other inputs fail.
 
-[Upstream page](https://effect.website/docs/v4/error-management/error-accumulation)
 
 ## Validating every computation
 
@@ -67,3 +66,7 @@ The tuple order is `[successes, failures]`. `partition` preserves both arrays an
 ## Coming from Effect
 
 Pass an ordinary VibeLang callback to `validate` or `partition`. A plain array `map` cannot run a callback that needs services, pauses, or has a typed failure.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/error-accumulation](https://effect.website/docs/v4/error-management/error-accumulation/)

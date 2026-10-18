@@ -115,3 +115,7 @@ function ownHub() {
 ```
 
 Closing one subscription leaves the hub and other subscriptions active. Shutting down the hub terminates its subscriptions and releases blocked operations. `awaitShutdown` waits for the shutdown signal, and `isShutdown` reads that state; keep hub shutdown in the owner's cleanup path.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/concurrency/pubsub](https://effect.website/docs/v4/concurrency/pubsub/)

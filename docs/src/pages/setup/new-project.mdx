@@ -28,7 +28,14 @@ Created my-app with VibeLang 0.0.1.
 Installing dependencies with bun...
 ```
 
-With npm, the second line names `npm`. The command copies the starter into `my-app`, pins `vibelang`, `vibelang-runtime`, and `vibelang-vite` to its own version, and installs dependencies with the package manager that ran it. It refuses a directory that is not empty, and it never runs `git init`. With `--no-install`, it skips the install; then run `bun install` or `npm install` in `my-app` before step 2.
+With npm, the second line names `npm`. The command copies the starter into `my-app`, pins `vibelang`, `vibelang-runtime`, and `vibelang-vite` to its own version, and installs dependencies with the package manager that ran it. It refuses a directory that is not empty, and it never runs `git init`. To skip installation, pass `--no-install` to the starter. npm needs `--` before starter options:
+
+```sh
+bun create vibelang my-app --no-install
+npm create vibelang@latest my-app -- --no-install
+```
+
+Then run `bun install` or `npm install` in `my-app` before step 2.
 
 ## 2. Build and run
 

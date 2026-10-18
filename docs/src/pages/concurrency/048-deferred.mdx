@@ -98,3 +98,7 @@ function coordinate() {
 ```
 
 The consumer cannot proceed before the producer supplies its input, regardless of which fiber starts first. A producer that fails before completing the signal leaves waiters waiting, so real startup code should complete it with failure too, or supervise producer failure alongside the wait. A deferred is single use; use a Queue for repeated messages or a Latch for a reusable gate.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/concurrency/deferred](https://effect.website/docs/v4/concurrency/deferred/)

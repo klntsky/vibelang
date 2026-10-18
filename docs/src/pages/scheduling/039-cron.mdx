@@ -76,3 +76,7 @@ function runApplication() {
 Keep the job's fiber alive for the part of the application that needs it. `Fiber.interrupt` waits for cleanup, and block ownership also stops this child when `runApplication` exits. A failure stops the schedule unless the scheduled action handles it or retries internally.
 
 Cron jobs here exist only in memory. Use an external scheduler or durable pending-work records when a job must survive restarts or recover missed dates.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/scheduling/cron](https://effect.website/docs/v4/scheduling/cron/)

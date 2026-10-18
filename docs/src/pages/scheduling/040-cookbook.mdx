@@ -135,3 +135,7 @@ function observedRequest() {
 ```
 
 Put `tap` after the limit so it records accepted retries only. The retry number starts at one and describes the next planned attempt, before its wait begins. Telemetry failures also fail the schedule, so handle an export failure inside the callback when it must not stop the request.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/scheduling/cookbook](https://effect.website/docs/v4/scheduling/cookbook/)

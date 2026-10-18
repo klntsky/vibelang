@@ -1,13 +1,12 @@
 ---
-title: "Yieldable Errors"
-description: "Effect's custom error values can be yielded inside TypeScript generators. In VibeLang, signal those same domain failures with throw; function produces values rather than sequencing an Effect program."
+title: "Custom Error Classes"
+description: "Effect's custom error values can be yielded inside TypeScript generators. In VibeLang, signal those same domain failures with throw; function* produces values rather than sequencing an Effect program."
 ---
 
-# Yieldable Errors
+# Custom Error Classes
 
 Effect's custom error values can be yielded inside TypeScript generators. In VibeLang, signal those same domain failures with `throw`; `function*` produces values rather than sequencing an Effect program.
 
-[Upstream page](https://effect.website/docs/v4/error-management/yieldable-errors)
 
 ## Defining an error without a tag
 
@@ -85,3 +84,7 @@ Both versions remove `EmptyTitle` from `E` while preserving `TitleTooLong`. `Eff
 Existing `.ts` functions that yield `Data.Error` or `Data.TaggedError` stay in TypeScript and are called normally from `.vibe` files. Replace `return yield* new ErrorCase(...)` with `throw new ErrorCase(...)` when writing the VibeLang implementation.
 
 A VibeLang `function*` is a producer that yields elements. It converts to an Effect `Stream` wherever one is expected; it is not a place to paste `Effect.gen` or `yield*` error sequencing.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/yieldable-errors](https://effect.website/docs/v4/error-management/yieldable-errors/)

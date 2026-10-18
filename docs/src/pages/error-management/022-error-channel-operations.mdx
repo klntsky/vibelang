@@ -7,7 +7,6 @@ description: "Error-channel operations transform, observe, or expose failures wi
 
 Error-channel operations transform, observe, or expose failures without immediately replacing the whole computation. Ordinary statements remain useful for local validation and selective recovery.
 
-[Upstream page](https://effect.website/docs/v4/error-management/error-channel-operations)
 
 ## Mapping failures or both outcomes
 
@@ -123,3 +122,7 @@ function rejectedQuantity() {
 ```
 
 `flip` makes typed errors successful values and successful values typed failures. A cause without an expected failure still propagates; a mixed cause containing one can become a success and lose its other reasons. This is useful for inspecting an error in a focused test, while `mapError` and catch usually express production transformations more clearly.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/error-management/error-channel-operations](https://effect.website/docs/v4/error-management/error-channel-operations/)

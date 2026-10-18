@@ -80,3 +80,7 @@ function serveBriefly() {
 ```
 
 `make` acquires a scope-owned collection. Here `using` ties that scope to the block, whose exit interrupts remaining work and waits for cleanup. Without `using`, the collection belongs to the caller's runtime scope and `Scope` remains in the function's requirements; use that form when a service layer should own the group.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/observability/tracking-fibers](https://effect.website/docs/v4/observability/tracking-fibers/)

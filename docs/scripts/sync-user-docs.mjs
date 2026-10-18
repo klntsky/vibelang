@@ -12,13 +12,17 @@
 // converts the Markdown that MDX rejects. The hand-written Proposals page,
 // src/pages/proposals.mdx, is not in the language repo; the script keeps it and
 // lists it as the last sidebar entry (SITE_SIDEBAR). Links into the
-// specification point at https://effeck.dev/spec/. The script fails on a page
+// specification point at https://effeck.dev/spec/. Each page that mirrors an
+// Effect page (the inventory's `v4/...mdx` column) ends with a link to that page
+// on effect.website; the source's own "Upstream page" lines are dropped so the
+// link appears once. The script fails on a page
 // missing from the inventory, an inventory entry with no page, or a link it
 // cannot resolve.
 import fs from 'node:fs'
 import path from 'node:path'
 
 const SPEC_URL = 'https://effeck.dev/spec/'
+const EFFECT_DOCS_URL = 'https://effect.website/docs/'
 const KEEP = new Set(['index.mdx', '_root.css', 'proposals.mdx'])
 // Sidebar entries for site-only pages, appended after the inventory's sections.
 const SITE_SIDEBAR = [{ text: 'Proposals', link: '/proposals' }]
@@ -45,6 +49,8 @@ const route = (rel) => `/${rel.replace(/\.md$/, '')}`
 const inventory = fs.readFileSync(path.join(source, 'inventory.md'), 'utf8').split('\n')
 const sidebar = []
 const listed = new Set()
+// Page path -> its Effect page on effect.website.
+const effectPage = new Map()
 let inSidebar = false
 let section
 let group
@@ -70,6 +76,8 @@ for (const line of inventory) {
   const [, indent, text, rel] = item
   if (!pages.includes(rel)) errors.push(`inventory lists src/${rel}, which does not exist`)
   listed.add(rel)
+  const upstream = line.match(/: `(v4\/[^`]+)\.mdx`/)?.[1]
+  if (upstream) effectPage.set(rel, `${EFFECT_DOCS_URL}${upstream.replace(/\/index$/, '')}/`)
   const entry = { text, link: route(rel) }
   if (indent.length > 0 && group) group.items.push(entry)
   else {
@@ -171,6 +179,7 @@ function convertPage(rel) {
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
     if (part.type === 'text') {
+      if (/^\[Upstream[^\]]*\]\(https:\/\/effect\.website\/docs\/[^)]*\)\s*$/.test(part.line.trim())) continue
       out.push(convertText(part.line, rel))
       continue
     }
@@ -190,6 +199,11 @@ function convertPage(rel) {
     out.push(fence(part, LABELS[part.role]))
   }
   let body = out.join('\n')
+  const effect = effectPage.get(rel)
+  if (effect) {
+    const label = effect.replace(/^https:\/\//, '').replace(/\/$/, '')
+    body = `${body.replace(/\n+$/, '')}\n\n---\n\nThe matching Effect page: [${label}](${effect})\n`
+  }
 
   // Front matter: the page title, and the first paragraph as the description.
   const title = (raw.match(/^# (.+)$/m)?.[1] ?? rel).replace(/`/g, '')
@@ -207,7 +221,8 @@ function convertPage(rel) {
   let description = paragraph
     .join(' ')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/[`*_]/g, '')
+    // Inline code keeps its text (so function* stays function*); emphasis markers go.
+    .replace(/(`[^`]*`)|[*_]/g, (match, code) => (code ? code.slice(1, -1) : ''))
   if (description.length > 200) description = `${description.slice(0, 197).replace(/\s+\S*$/, '')}...`
   const front = ['---', `title: ${JSON.stringify(title)}`]
   if (description) front.push(`description: ${JSON.stringify(description)}`)

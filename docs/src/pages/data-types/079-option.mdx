@@ -144,7 +144,7 @@ function combine(
 
 `zipWith` combines two present values through a callback. `all` combines tuple, record, or iterable contents into a single option. If any required value is absent, the combined result is `None`.
 
-## Combining options with generators
+## Combining several options
 
 ```ts
 // TypeScript (.ts)
@@ -192,3 +192,7 @@ const descending = Arr.sort(items, Order.flip(ascending))
 ```
 
 `makeEquivalence` compares present values using a chosen relation; two absent options are equivalent. `makeOrder` places `None` before `Some` and delegates present-value comparison to the supplied order. Flipping the complete option order moves absence to the end as well as reversing present values.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/data-types/option](https://effect.website/docs/v4/data-types/option/)
