@@ -45,7 +45,15 @@ const server = createServer((req, res) => {
     let source
     try { source = JSON.parse(Buffer.concat(chunks).toString("utf8")).source } catch { return send(res, 400, { error: "invalid_json" }) }
     if (typeof source !== "string") return send(res, 400, { error: "source_required" })
-    const result = await serial(() => compile(source, config))
+    let result
+    try {
+      result = await serial(() => compile(source, config))
+    } catch {
+      // Worker faults must not terminate the HTTP process or expose input,
+      // filesystem paths, credentials, or exception messages to clients.
+      console.error(JSON.stringify({ event: "compile_failed", stage: "compile" }))
+      return send(res, 500, { error: "compile_failed" })
+    }
     if (result.refusal) return send(res, 422, { refusal: result.refusal })
     // Logs carry stage outcomes only: never the source, the diagnostics' text or a client address.
     console.log(JSON.stringify({ event: "compile", exitCode: result.exitCode, timedOut: result.timedOut, diagnostics: result.diagnostics.length }))

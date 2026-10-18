@@ -6,6 +6,6 @@
   "license": "Apache-2.0",
   "type": "module",
   "main": "server.mjs",
-  "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs" },
+  "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs", "test:unit": "node --test test/unit.test.mjs test/network.test.mjs test/server.test.mjs" },
   "engines": { "node": ">=26" }
 }
