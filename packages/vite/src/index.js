@@ -1,11 +1,23 @@
 import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises"
+import { mkdir, mkdtemp, open, readFile, rm } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
 
 const cleanId = (id) => id.split("?")[0]
 const slash = (path) => path.replaceAll("\\", "/")
+
+// Native platform packages and the npm Node launcher both use bin/vibelang.
+// Inspect the shebang instead of deciding from that shared filename.
+async function isNodeLauncher(path) {
+  if (/\.(?:[cm]?js)$/.test(path)) return true
+  const file = await open(path, "r")
+  try {
+    const header = Buffer.alloc(256)
+    const { bytesRead } = await file.read(header, 0, header.length, 0)
+    return /^#![^\r\n]*\bnode(?:\s|$)/.test(header.subarray(0, bytesRead).toString("utf8"))
+  } finally { await file.close() }
+}
 
 /** @param {import('./index.d.ts').VibeLangOptions} options */
 export default function vibelang(options = {}) {
@@ -29,7 +41,7 @@ export default function vibelang(options = {}) {
       "--noEmit", "false", "--emitDeclarationOnly", "false", "--noEmitOnError", "true",
       "--incremental", "false"
     ]
-    const command = /\.(?:[cm]?js)$/.test(compiler) || compiler.endsWith("/bin/vibelang")
+    const command = await isNodeLauncher(compiler)
       ? [process.execPath, [compiler, ...args]] : [compiler, args]
     await new Promise((accept, reject) => {
       let output = ""

@@ -139,3 +139,18 @@ test("Vite production builds accept .vibe entry modules", async (t) => {
   assert.ok(output.some((file) => file.type === "chunk" && file.code.includes("succeed")))
   assert.ok(output.some((file) => file.type === "asset" && file.fileName.endsWith(".map")))
 })
+
+test("a native compiler named bin/vibelang is executed without Node", async (t) => {
+  const root = await fixture(t)
+  const native = join(root, "bin", "vibelang")
+  await mkdir(dirname(native), { recursive: true })
+  await cp(join(packageRoot, "../../typescript/built/local/tsc"), native)
+  const plugin = vibelang({ compiler: native })
+  plugin.configResolved({ root, logger: { warn() {} } })
+  const file = join(root, "main.vibe")
+  const result = await plugin.transform.call({
+    addWatchFile() {},
+    error(error) { throw new Error(error.message) }
+  }, await readFile(file, "utf8"), file)
+  assert.match(result.code, /Effect\.succeed/)
+})
