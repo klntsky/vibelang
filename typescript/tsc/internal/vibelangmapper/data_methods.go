@@ -91,9 +91,24 @@ func (p *projector) dataReceiverType(expr *ast.Node, depth int) *ast.Node {
 	}
 	if ast.IsIdentifier(expr) {
 		if d := r.binding(expr, expr.Text()); d != nil {
-			return d.Type()
+			if d.Type() != nil {
+				return d.Type()
+			}
+			if ast.IsVariableDeclaration(d) {
+				return p.dataReceiverType(d.Initializer(), depth+1)
+			}
 		}
 		return nil
+	}
+	if ast.IsCallExpression(expr) && ast.IsIdentifier(expr.Expression()) {
+		if d := r.binding(expr.Expression(), expr.Expression().Text()); d != nil {
+			if ast.IsVariableDeclaration(d) && d.Initializer() != nil {
+				d = ast.SkipParentheses(d.Initializer())
+			}
+			if ast.IsFunctionLike(d) && contractOf(d.Type()) == contractPlain {
+				return d.Type() // a synchronous factory's written object shape (D265)
+			}
+		}
 	}
 	if ast.IsElementAccessExpression(expr) {
 		return formsElementType(p.dataReceiverType(expr.Expression(), depth+1))

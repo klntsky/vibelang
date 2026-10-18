@@ -292,7 +292,7 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case isLambda(node):
 		p.lambda(node, e)
 		return
-	case node.Kind == ast.KindCallExpression && !e.effect:
+	case node.Kind == ast.KindCallExpression && (!e.effect || p.forms.(*Resolver).holdsFieldProgram(node)):
 		// moduleCall applies D152 outside the hatch's TypeScript island.
 		p.moduleCall(node, e)
 		return

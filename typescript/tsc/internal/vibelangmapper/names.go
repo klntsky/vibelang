@@ -58,11 +58,14 @@ var preludeNames = func() map[string]bool {
 	return names
 }()
 
-// builtinGlobals are JavaScript's own global values. Each keeps its meaning
+// builtinGlobals are ECMAScript and shared web-standard global values (D264). Each keeps its meaning
 // in a .vibe file although effect's root exports a module of the same
 // name (the fork's isBuiltinGlobal).
 var builtinGlobals = map[string]bool{
 	"Array": true, "BigInt": true, "Boolean": true, "Function": true, "Number": true, "RegExp": true, "String": true, "Symbol": true,
+	"Request": true, "Response": true, "Headers": true, "URL": true, "URLSearchParams": true,
+	"TextEncoder": true, "TextDecoder": true, "AbortController": true, "AbortSignal": true,
+	"Blob": true, "FormData": true, "structuredClone": true, "fetch": true,
 }
 
 // typeOnlyPrelude are prelude exports with no value, imported with `type`

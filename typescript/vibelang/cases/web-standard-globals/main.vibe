@@ -1,0 +1,6 @@
+// expect-result: ["https://x.test/",true,true]
+import { explicitRequest } from "./explicit.vibe"
+export function main() {
+  const request = new Request("https://x.test")
+  return [request.url, Option.isSome(Option.some(1)), explicitRequest()]
+}

@@ -59,6 +59,24 @@ func TestPlainContractEffectBoundaries(t *testing.T) {
 	}
 }
 
+// D265's contextual fields store programs even inside a plain factory.
+// Only the initializer call is cold; calls in its operands still run.
+func TestPlainContractContextualProgramFields(t *testing.T) {
+	for _, source := range []string{
+		`interface Shape { read: Effect.Effect<number, never, never> }; const make = (): Shape => ({ read: Effect.sync(() => 1) })`,
+		`interface Shape { read: Effect.Effect<number, never, never> }; function make(): Shape { return { read: (Effect.succeed(1)) } }`,
+		`interface Shape { read: Effect.Effect<number, never, never> }; function make(): Shape { const stored: Shape = { read: Effect.succeed(1) }; return stored }`,
+	} {
+		assertPlainContractDiagnostic(t, source, false)
+	}
+	for _, source := range []string{
+		`interface Shape { read: Effect.Effect<number, never, never> }; function make(): Shape { return { read: Effect.succeed(Effect.succeed(1)) } }`,
+		`interface Shape { read: number }; function make(): Shape { return { read: Effect.succeed(1) } }`,
+	} {
+		assertPlainContractDiagnostic(t, source, true)
+	}
+}
+
 func assertPlainContractDiagnostic(t *testing.T, source string, want bool) {
 	t.Helper()
 	for _, projection := range []Projection{Project(source, testContext), Executable(source, testContext)} {

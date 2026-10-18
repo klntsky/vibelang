@@ -1,0 +1,2 @@
+import { Request } from "effect"
+export const explicitRequest = (): boolean => typeof Request.of === "function"

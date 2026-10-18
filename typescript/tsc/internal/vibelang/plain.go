@@ -119,6 +119,9 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			continue
 		}
 		forEachCallInBody(d, func(call *ast.Node) bool {
+			if holdsFieldProgram(a.checker, call) {
+				return false
+			}
 			if callee := a.candidateCallee(call); callee != nil {
 				switch a.plain[callee] {
 				case plainNo:
@@ -265,8 +268,8 @@ func (a *analyzer) declares(symbol *ast.Symbol, fn *ast.Node) bool {
 // call runs inline wherever it is, at a module's top level too: it computes a
 // value and runs no program, as Chapter 13's table says.
 func (a *analyzer) directCallee(call *ast.Node) *directReference {
-	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) || holdsTopLevelProgram(a.checker, call) {
-		return nil // hatches and D262 program bindings keep the inert Effect form
+	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) || holdsTopLevelProgram(a.checker, call) || holdsFieldProgram(a.checker, call) {
+		return nil // hatches and D262/D265 program positions keep the inert Effect form
 	}
 	fn := esFunctionOf(a.checker, ast.GetInvokedExpression(call))
 	if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {

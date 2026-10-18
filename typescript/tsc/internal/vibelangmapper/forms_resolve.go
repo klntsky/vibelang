@@ -2142,6 +2142,7 @@ func (r *Resolver) annotatedMember(fn *ast.Node) (Class, string, bool) {
 		if mt := formsUnwrapType(m.Type()); mt != nil && mt.Kind == ast.KindFunctionType {
 			return r.memberClass(mt.Type()), note, true
 		}
+		return r.classOfType(m.Type(), 0), note, true
 	}
 	return 0, "", false
 }

@@ -66,6 +66,12 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 	if conv, ok := s.byCandidate[key]; ok {
 		switch conv {
 		case convertByName:
+			// Context can become concrete after generic inference. A field
+			// that now holds an Effect already has its program type (D265).
+			if isEffectType(c, t) && holdsFieldProgram(c, node) {
+				s.byCandidate[key], s.types[key] = convertNone, t
+				return t
+			}
 			// The program's type follows t, the type of the expression's value
 			// in this check: a check that skips a generic call, as an inference
 			// pass does, sees a placeholder never that a later check replaces,

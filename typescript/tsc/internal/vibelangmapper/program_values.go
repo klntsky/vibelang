@@ -1,8 +1,9 @@
 package vibelangmapper
 
 import (
-	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"strconv"
+
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
 )
 
 // programCollection converts stored iterable and record elements only when
@@ -217,4 +218,27 @@ func (p *projector) plainMatchPipeStage(call *ast.Node, key string) bool {
 		return d.Call != nil && d.Argument > 0 && len(d.Steps) == 0 && d.Callee.Canonical == "effect/Function#pipe"
 	}
 	return false
+}
+
+// holdsFieldProgram recognizes written program fields (D265) without a
+// checker, using the same parameter, declared-type, and service shapes as
+// lambda form resolution. Only the initializer call is cold; its operands
+// keep the surrounding evaluation rules.
+func (r *Resolver) holdsFieldProgram(expr *ast.Node) bool {
+	node := expr
+	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
+		node = node.Parent
+	}
+	field := node.Parent
+	if field == nil || !ast.IsPropertyAssignment(field) || field.Initializer() != node {
+		return false
+	}
+	if d := r.Argument(node); d.Class == ClassProgram {
+		return awaitOperationHelper(d.Call) == ""
+	}
+	if cls, _, ok := r.annotatedMember(node); ok && cls == ClassProgram {
+		return true
+	}
+	cls, _, ok := r.serviceMember(node)
+	return ok && cls == ClassProgram
 }

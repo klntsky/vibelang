@@ -188,7 +188,7 @@ func runsAtTopLevel(c *checker.Checker, a *analyzer, call *ast.Node) (runs bool,
 // there runs nothing and builds the program the callee receives (D147,
 // D155), so EK1001 does not apply.
 func (a *analyzer) passedAsProgram(call *ast.Node) bool {
-	if a.byNameOf(call) != nil || holdsTopLevelProgram(a.checker, call) {
+	if a.byNameOf(call) != nil || holdsTopLevelProgram(a.checker, call) || holdsFieldProgram(a.checker, call) {
 		return true
 	}
 	owner, path := ownerCall(call)
@@ -218,6 +218,22 @@ func holdsTopLevelProgram(c *checker.Checker, call *ast.Node) bool {
 	list := decl.Parent
 	return list != nil && list.Kind == ast.KindVariableDeclarationList && list.Flags&ast.NodeFlagsConst != 0 &&
 		atTopLevel(decl) && isEffectType(c, c.GetTypeFromTypeNode(decl.Type()))
+}
+
+// holdsFieldProgram recognizes D265's contextual object-literal program field.
+// Only the field's initializer holds the Effect value; calls in its operands
+// retain the ordinary evaluation rules, as for a D262 program binding.
+func holdsFieldProgram(c *checker.Checker, call *ast.Node) bool {
+	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) {
+		return false
+	}
+	node := call
+	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
+		node = node.Parent
+	}
+	field := node.Parent
+	return field != nil && ast.IsPropertyAssignment(field) && field.Initializer() == node &&
+		isEffectType(c, c.GetContextualTypeForObjectLiteralElement(field, checker.ContextFlagsSignature))
 }
 
 // reportTopLevelRun reports EK1001 for call, which runs a program at the

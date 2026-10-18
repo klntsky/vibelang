@@ -319,16 +319,17 @@ func isLoweredHatchCallee(location *ast.Node) bool {
 	return parent != nil && ast.IsCallExpression(parent) && parent.Expression() == location && (location.Text() == "sync" || location.Text() == "try")
 }
 
-// isBuiltinGlobal reports whether name is a global value that JavaScript
-// itself defines, declared by an ECMAScript lib file (lib.es5.d.ts,
-// lib.es2015.core.d.ts, …), such as Array, String, Number, or Symbol. Such a
-// global keeps its meaning in a .vibe file. A host's globals, such as the
-// DOM's Option and Request, do not: .vibe code reaches the host through
-// effect's modules (D102), so effect's Option wins.
+// isBuiltinGlobal gives ECMAScript and shared web-standard globals precedence
+// over effect root names (D146, D264). DOM-only globals such as Option lose.
 func isBuiltinGlobal(c *checker.Checker, name string) bool {
 	symbol := c.GlobalSymbol(name, ast.SymbolFlagsValue)
 	if symbol == nil {
 		return false
+	}
+	switch name {
+	case "Request", "Response", "Headers", "URL", "URLSearchParams", "TextEncoder", "TextDecoder",
+		"AbortController", "AbortSignal", "Blob", "FormData", "structuredClone", "fetch":
+		return true
 	}
 	for _, declaration := range symbol.Declarations() {
 		if file := ast.GetSourceFileOfNode(declaration); file != nil && strings.HasPrefix(path.Base(string(file.FileName())), "lib.es") {

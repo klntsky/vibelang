@@ -12,16 +12,24 @@ import (
 func (p *projector) memberValueCall(call *ast.Node, e env) bool {
 	access := call.Expression()
 	if len(call.Arguments()) != 0 || call.TypeArguments() != nil || call.QuestionDotToken() != nil ||
-		!ast.IsPropertyAccessExpression(access) || access.QuestionDotToken() != nil ||
-		!p.mayBeServiceKey(access.Expression()) || p.keyOwnedMember(access) {
+		!ast.IsPropertyAccessExpression(access) || access.QuestionDotToken() != nil {
 		return false
 	}
 	receiver := access.Expression()
+	service := p.mayBeServiceKey(receiver) && !p.keyOwnedMember(access)
+	field := p.forms.(*Resolver).isEffectTypeNode(p.dataReceiverType(access, 0), 0)
+	if !service && !field {
+		return false
+	}
 	member := access.Name().Text()
 	p.plan.mark(editValueCall, partOpen, p.tokenStart(receiver), p.tokenStart(receiver), member)
-	p.plan.mark(editServiceCall, partOpen, p.tokenStart(receiver), p.tokenStart(receiver), "")
+	if service {
+		p.plan.mark(editServiceCall, partOpen, p.tokenStart(receiver), p.tokenStart(receiver), "")
+	}
 	p.visit(receiver, e)
-	p.plan.mark(editServiceCall, partClose, receiver.End(), receiver.End(), "")
+	if service {
+		p.plan.mark(editServiceCall, partClose, receiver.End(), receiver.End(), "")
+	}
 	p.plan.mark(editValueCall, partClose, receiver.End(), access.End(), member)
 	return true
 }

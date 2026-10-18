@@ -79,6 +79,11 @@ var projectionCases = []struct {
 		virtual: "function f(xs: Array<() => Effect.Effect<number>>) { return $gen(function* () { return (yield* $run(Effect.all($programs(xs)))) })}",
 	},
 	{
+		name:    "stored record fields adapt function values before holding calls cold",
+		source:  "function f(job: () => Effect.Effect<number>) { return Effect.all({ a: job }) }",
+		virtual: "function f(job: () => Effect.Effect<number>) { return $gen(function* () { return (yield* $run(Effect.all({ a: $asProgram(job) }))) })}",
+	},
+	{
 		name:    "stored pipe programs and generic stages keep their forms",
 		source:  "function f(job: () => Effect.Effect<number>) { return pipe(job, Effect.retry({ times: 2 })) }",
 		virtual: "function f(job: () => Effect.Effect<number>) { return $gen(function* () { return (yield* $run(pipe($asProgram(job), Effect.retry({ times: 2 })))) })}",

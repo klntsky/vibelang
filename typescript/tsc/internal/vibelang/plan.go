@@ -234,13 +234,13 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 // performs reports whether call performs an Effect operation: it runs an
 // Effect, or it looks up a service.
 func (a *analyzer) performs(call *ast.Node) bool {
-	return a.runs(call) || ast.IsCallExpression(call) && isServiceLookup(a.checker, call)
+	return a.runs(call) || ast.IsCallExpression(call) && !holdsFieldProgram(a.checker, call) && isServiceLookup(a.checker, call)
 }
 
 // runs reports whether call runs an Effect, which the lowering spells yield*.
 func (a *analyzer) runs(call *ast.Node) bool {
-	if inHatch(call) {
-		return false // a hatch's arguments are TypeScript (hatches.go)
+	if inHatch(call) || holdsFieldProgram(a.checker, call) {
+		return false // hatches and contextual program fields keep the Effect value
 	}
 	sig := a.checker.GetResolvedSignature(call)
 	if sig == nil {

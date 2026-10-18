@@ -6,10 +6,10 @@ package vibelang
 // Schedule, Duration, and the rest. A local declaration or an import shadows
 // one, as it does a prelude name. A global value that JavaScript itself
 // defines wins, so Array, String, Number, Boolean, Symbol, BigInt, Function,
-// and RegExp keep their meaning; a host global, such as the DOM's Option, does
-// not (isBuiltinGlobal). The emitted JavaScript imports each name the file
-// uses from its own module, never from the root, which would load every
-// module.
+// and RegExp keep their meaning, as do shared web globals such as Request
+// (D264); a DOM-only global such as Option does not (isBuiltinGlobal). The
+// emitted JavaScript imports each used name from its own module, never from
+// the root, which would load every module.
 //
 // effectRootNames is generated from effect@4.0.5's dist/index.d.ts, the
 // version VibeLang pins (D1); TestEffectRootNamesMatchEffect checks it against

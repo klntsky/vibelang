@@ -38,7 +38,7 @@ function firstTwo(values: ReadonlyArray<number>) {
 // Output: [1,2]
 ```
 
-A host's globals do not shadow Effect's modules: with the DOM in your `lib`, `Option` is still Effect's. An import or a local declaration with the same name as a module shadows it, as `import * as Duration from "effect/Duration"` would. Value constructors such as `Duration.millis` build data; `Clock.currentTimeMillis()` and `Effect.sleep(...)` run computations. Effect's own packages are trusted, so their data functions need no foreign-call boundary; exceptions from those functions are defects.
+Shared web-standard globals also keep their names: `Request`, `Response`, `Headers`, `URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`, `AbortController`, `AbortSignal`, `Blob`, `FormData`, `structuredClone`, and `fetch`. Thus `new Request("https://x.test")` uses the web Request; use `import { Request } from "effect"` for Effect's module. DOM-only globals do not shadow Effect's modules: with the DOM in your `lib`, `Option` is still Effect's. An import or a local declaration with the same name as a module shadows it, as `import * as Duration from "effect/Duration"` would. Value constructors such as `Duration.millis` build data; `Clock.currentTimeMillis()` and `Effect.sleep(...)` run computations. Effect's own packages are trusted, so their data functions need no foreign-call boundary; exceptions from those functions are defects.
 
 ## Compose standalone functions
 

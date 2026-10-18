@@ -216,6 +216,12 @@ func (p *projector) byNameArgument(argument *ast.Node, e env) bool {
 	if !d.ByName {
 		return p.programValue(argument, d, e)
 	}
+	// D265 keeps initializer calls cold; named function values still need
+	// D7's program conversion above, even in a contextual Effect field.
+	if p.forms.(*Resolver).holdsFieldProgram(argument) {
+		p.visit(argument, e)
+		return true
+	}
 	arg := "expr"
 	if usesThis(argument) {
 		arg = "expr self"
