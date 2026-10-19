@@ -1,0 +1,9 @@
+import type { Effect } from "effect"
+import type * as Chain from "./chain.vibe"
+
+export class ChildRunError {
+  readonly error: Effect.Error<ReturnType<typeof Chain.run>>
+  constructor(error: Effect.Error<ReturnType<typeof Chain.run>>) {
+    this.error = error
+  }
+}

@@ -68,6 +68,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `tagged-template-runs` | Effectful templates execute once as statements and expressions; plain tags stay plain, a fake SqlClient migration executes, and by-name and local tags run (D267) |
 | `tagged-template-contexts.fail` | EK1001 at module top level; EK4301 for a synchronous callback, a discarded D24 subtype, and positions that cannot run (D267) |
 | `vibelang-infer` | Unannotated functions get `Effect<A, E, R>`: a typed failure flows from `lookup` into `main`, the `.d.ts` declares it, and the module's top level passes a program to a runner |
+| `typeof-effect-signature`, `typeof-effect-signature.fail` | Smithers A-14: a type query reached recursively through a constructor retains the function's Effect signature and error union; nearby invalid assignments and property reads keep TS2322 and TS2339 |
 | `vibelang-service-keys` | Service classes compile to Context key classes that JavaScript uses as Effect keys; an `implements` class is an implementation; two services with the same members are different types |
 | `vibelang-services` | `Users.find(id)` and `Users()` look the service up, value members read from `Settings()`, a provider captures another service, and object literal and class methods run Effects |
 | `vibelang-services-ts` | A TypeScript `Context.Service` class and Effect's `Path` are used as services: an Effect-valued member runs when called, and the service's own `pipe` wins over the key's |
