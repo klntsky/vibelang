@@ -1461,6 +1461,18 @@ func (c *Checker) getTypeAtFlowArrayMutation(f *FlowState, flow *ast.FlowNode) F
 }
 
 func (c *Checker) getDiscriminantPropertyAccess(f *FlowState, expr *ast.Node, computedType *Type) *ast.Node {
+	// A generated VibeLang tag pattern must also eliminate a single tagged
+	// failure. TypeScript normally recognizes discriminants only on unions,
+	// leaving the impossible default arm of a singleton match inhabited.
+	if computedType.flags&TypeFlagsUnion == 0 && ast.IsAccessExpression(expr) && expr.Expression().Flags&ast.NodeFlagsReparsed != 0 {
+		if access := c.getCandidateDiscriminantPropertyAccess(f, expr); access != nil {
+			if name, ok := c.getAccessedPropertyName(access); ok && name == "_tag" {
+				if tag := c.getTypeOfPropertyOfType(computedType, name); tag != nil && tag.flags&TypeFlagsStringLiteral != 0 {
+					return access
+				}
+			}
+		}
+	}
 	// As long as the computed type is a subset of the declared type, we use the full declared type to detect
 	// a discriminant property. In cases where the computed type isn't a subset, e.g because of a preceding type
 	// predicate narrowing, we use the actual computed type.

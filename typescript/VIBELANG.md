@@ -95,6 +95,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `vibelang-concise-comments` | A lowered concise arrow keeps the comment after it outside its block, and a lowered file keeps its last comment |
 | `vibelang-service-dts` | A service's `.d.ts` is an interface plus a key class: TypeScript code compiled against it with `skipLibCheck` off implements `Users`, provides it with `Layer.succeed`, and yields `Users` and a default service in `Effect.gen` |
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
+| `catch-tag-exhaustive`, `catch-tag-partial.fail` | Smithers A-15: exhaustive literal tag patterns remove Schema, Data and declared errors from E, including catch expressions; partial matches preserve unnamed failures |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives every exception as `unknown` (D260) |
 | `ek2004-dead-catch.fail` | An Effect `try` block with E = `never` is EK2004 (defects pass through), which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported |

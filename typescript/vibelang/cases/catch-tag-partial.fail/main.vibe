@@ -1,0 +1,13 @@
+// expect: EK2001
+import { Effect, Data } from "effect"
+class First extends Data.TaggedError("First")<{}> {}
+class Second extends Data.TaggedError("Second")<{}> {}
+function fail(second: boolean): never!First | Second! {
+  if (second) throw new Second()
+  throw new First()
+}
+export function incomplete(): number!! {
+  try { return fail(true) } catch (e) {
+    return match (e) { when { _tag: "First" }: 1; default: throw e; }
+  }
+}

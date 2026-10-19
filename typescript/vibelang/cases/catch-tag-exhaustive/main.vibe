@@ -1,0 +1,64 @@
+// expect-result: [1,2,3,4,"DataFailure"]
+import { Effect, Schema, Data } from "effect"
+class ProbeFailure extends Schema.TaggedError<ProbeFailure>()("ProbeFailure", { message: Schema.String }) {}
+class DataFailure extends Data.TaggedError("DataFailure")<{}> {}
+error DeclFailure
+const failed = (): Effect.Effect<never, ProbeFailure, never> => { throw new ProbeFailure({ message: "failed" }) }
+export const recovered = (): Effect.Effect<number, never, never> =>
+  failed() catch (error) => match (error) {
+    when { _tag: "ProbeFailure" }: 1;
+    default: throw error;
+  }
+function dataFail(): never!DataFailure! { throw new DataFailure() }
+function declFail(): never!DeclFailure! { throw new DeclFailure() }
+export function dataRecovered(): number!! {
+  try { return dataFail() } catch (e) {
+    return match (e) { when { _tag: "DataFailure" }: 2; default: throw e; }
+  }
+}
+export function declRecovered(): number!! {
+  try { return declFail() } catch (e) {
+    return match (e) { when { _tag: "DeclFailure" }: 3; default: throw e; }
+  }
+}
+function both(data: boolean): never!ProbeFailure | DataFailure! {
+  if (data) dataFail()
+  return failed()
+}
+export function allRecovered(): number!! {
+  try { return both(true) } catch (e) {
+    return match (e) {
+      when { _tag: "ProbeFailure" }: 0;
+      when { _tag: "DataFailure" }: 4;
+      default: throw e;
+    }
+  }
+}
+export function partial(data: boolean): number!DataFailure! {
+  try { return both(data) } catch (e) {
+    return match (e) { when { _tag: "ProbeFailure" }: 0; default: throw e; }
+  }
+}
+// These functions have no written error contract: check their inferred E too.
+export const inferredSchema = () => failed() catch (e) => match (e) {
+  when { _tag: "ProbeFailure" }: 1;
+  default: throw e;
+}
+export function inferredData() {
+  try { return dataFail() } catch (e) {
+    return match (e) { when { _tag: "DataFailure" }: 2; default: throw e; }
+  }
+}
+export function inferredDecl() {
+  try { return declFail() } catch (e) {
+    return match (e) { when { _tag: "DeclFailure" }: 3; }
+  }
+}
+const schemaCheck: () => Effect.Effect<number, never, never> = inferredSchema
+const dataCheck: () => Effect.Effect<number, never, never> = inferredData
+const declCheck: () => Effect.Effect<number, never, never> = inferredDecl
+export function main() {
+  let tag = "none"
+  try { partial(true) } catch (e) { tag = e._tag }
+  return [recovered(), dataRecovered(), declRecovered(), allRecovered(), tag]
+}
