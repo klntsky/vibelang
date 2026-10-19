@@ -252,8 +252,10 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 			// there is no unwrapped success reading to pass by name again.
 			return convertNone, t
 		}
-		// D265 fields and D269 consts already hold a program; preserve D147 for other positions.
-		if !holdsProgram(a.checker, node) {
+		// D265/D269 hold an initializer call, not the calls in a compound
+		// initializer. Delay that whole expression under D147 so an absent
+		// conditional arm becomes a success value, not a missing program.
+		if !isInvocation(node) || !holdsProgram(a.checker, node) {
 			if program := a.byNameType(node, value); program != nil {
 				return convertByName, program
 			}
@@ -404,6 +406,12 @@ func byNameResults(node *ast.Node, visit func(*ast.Node)) {
 // subtypes. A running call's value may itself be an Effect: that is A of
 // the outer program and must stay intact.
 func (a *analyzer) heldByName(node *ast.Node, t *checker.Type) bool {
+	node = ast.SkipOuterExpressions(node, ast.OEKParentheses|ast.OEKTypeAssertions|ast.OEKNonNullAssertions|ast.OEKSatisfies)
+	if isPipe(node) {
+		// A pipe has its body's value. If that body runs a call, a structured
+		// success (notably Exit) is data, just as for a direct call (D24).
+		return a.heldByName(node.AsBinaryExpression().Right, t)
+	}
 	return !(isInvocation(node) && (a.runs(node) || a.directCallee(node) != nil)) &&
 		effectInterfaceSymbol(a.checker, a.checker.GetNonNullableType(t)) != nil
 }
