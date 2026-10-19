@@ -536,6 +536,15 @@ function findUser(users: Map<string, User>, id: string) {
 // Output: Failure
 ```
 
+In expression position, `throw` takes a unary operand (D186), so it binds
+more tightly than `===`, `??`, and `?:`. In a catch handler, write
+`load() catch (failure) => throw (cond ? a : b)` to throw the selected value.
+Without parentheses, `throw cond ? a : b` means `(throw cond) ? a : b`;
+`throw failure.code === "unknown" ? a : b` throws `failure.code`.
+A **throw statement** still takes the whole expression:
+`throw cond ? a : b;` at the start of a statement throws the selected value,
+as in TypeScript.
+
 **Blocks as values** (D187, [do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
 
 ```ts effect
