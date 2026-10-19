@@ -14,20 +14,22 @@ export function firstOf(values) {
     return Chunk.head(values);
 }
 // expect-result: {"doubled":4,"size":3,"first":1,"id":5,"twice":8,"isArray":true,"text":"7","local":"local"}
-export const main = Effect.fnUntraced(function* main() {
-    yield* Console.log("effect's root is in scope");
-    const doubled = Option.map(Option.some(2), (n) => n * 2);
-    const values = Chunk.make(1, 2, 3);
-    return {
-        doubled: Option.getOrElse(doubled, () => 0),
-        size: Chunk.size(values),
-        first: Option.getOrElse(firstOf(values), () => 0),
-        id: identity(5),
-        twice: flow((n) => n + 1, (n) => n * 2)(3),
-        isArray: Array.isArray([1]),
-        text: String(7),
-        local: Duration.label,
-    };
-});
+export function main() {
+    return Effect.fnUntraced(function* main() {
+        yield* Console.log("effect's root is in scope");
+        const doubled = Option.map(Option.some(2), (n) => n * 2);
+        const values = Chunk.make(1, 2, 3);
+        return {
+            doubled: Option.getOrElse(doubled, () => 0),
+            size: Chunk.size(values),
+            first: Option.getOrElse(firstOf(values), () => 0),
+            id: identity(5),
+            twice: flow((n) => n + 1, (n) => n * 2)(3),
+            isArray: Array.isArray([1]),
+            text: String(7),
+            local: Duration.label,
+        };
+    }).apply(this, arguments);
+}
 if (import.meta.main)
     runtime.$runMain(main());

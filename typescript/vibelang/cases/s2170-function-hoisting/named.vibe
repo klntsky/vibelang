@@ -1,0 +1,7 @@
+// cycle.js calls this default declaration before this module evaluates.
+import "./cycle.js"
+
+export default function named(n: number) {
+  sleep("1 millis")
+  return n * 3
+}

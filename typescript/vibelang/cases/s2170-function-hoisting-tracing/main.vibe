@@ -1,0 +1,21 @@
+import { Cause } from "effect"
+
+function outer() {
+  "use strict"
+  const first = nested()
+  function nested(): string!Cause.NoSuchElementError! {
+    return Effect.currentSpan().name
+  }
+  {
+    const second = inBlock()
+    function inBlock(): string!Cause.NoSuchElementError! {
+      return Effect.currentSpan().name
+    }
+    return [first, second]
+  }
+}
+
+// expect-result: ["nested","inBlock"]
+export function main() {
+  return outer()
+}

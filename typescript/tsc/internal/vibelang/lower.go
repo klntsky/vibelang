@@ -21,10 +21,12 @@ import (
 // becomes
 //
 //	import * as Effect from "effect/Effect"
-//	export const greet = Effect.fnUntraced(function* (name: string) {
-//	  yield* Console.log(`hello, ${name}`)
-//	  return name.length
-//	})
+//	export function greet(arg) {
+//	  return Effect.fnUntraced(function* greet(name: string) {
+//	    yield* Console.log(`hello, ${name}`)
+//	    return name.length
+//	  }).apply(this, arguments)
+//	}
 type lowering struct {
 	transformers.Transformer
 	plan     *plan
@@ -496,36 +498,54 @@ func functionName(fn *ast.Node) string {
 	return ""
 }
 
-// visitEffectFunctionDeclaration turns `function f() {}` into
-// `const f = Effect.fnUntraced(function* () {})`, keeping `export` and
-// `export default`. The const is not hoisted like the function was.
+// visitEffectFunctionDeclaration keeps a hoisted JavaScript declaration in
+// every lexical block (including declarations after a return). Only its body
+// becomes an Effect factory; moving a const cannot cover switch clauses or
+// cyclic module imports. Keep the existing generator and tracing wrapper so
+// defaults, destructuring, this, arguments, and recursive references still run
+// inside the Effect, rather than eagerly in the forwarding declaration.
 func (tx *lowering) visitEffectFunctionDeclaration(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
 	lowered := tx.lowerFunction(node)
-	exported := ast.HasSyntacticModifier(node, ast.ModifierFlagsExport)
-	isDefault := ast.HasSyntacticModifier(node, ast.ModifierFlagsDefault)
 
-	name := node.Name()
-	if name == nil {
-		// export default function () {}
-		statement := f.NewExportAssignment(nil /*modifiers*/, false /*isExportEquals*/, nil /*type*/, lowered)
-		ec.SetOriginal(statement, node)
-		statement.Loc = node.Loc
-		return statement
+	// Forward all arguments without evaluating the source parameters twice.
+	// Placeholder parameters preserve fnUntraced's observable function length.
+	var parameters []*ast.Node
+	for _, parameter := range node.Parameters() {
+		if ast.IsIdentifier(parameter.Name()) && parameter.Name().Text() == "this" {
+			continue
+		}
+		p := parameter.AsParameterDeclaration()
+		if p.Initializer != nil || p.DotDotDotToken != nil {
+			break
+		}
+		parameters = append(parameters, f.NewParameterDeclaration(nil, nil, f.NewUniqueName("arg"), nil, nil, nil))
 	}
+	apply := f.NewPropertyAccessExpression(lowered, nil, f.NewIdentifier("apply"), ast.NodeFlagsNone)
+	call := f.NewCallExpression(apply, nil, nil, f.NewNodeList([]*ast.Node{f.NewThisExpression(), f.NewIdentifier("arguments")}), ast.NodeFlagsNone)
+	// A source directive such as "use strict" also governs the forwarding
+	// declaration's receiver coercion when the file emits as a script.
+	var statements []*ast.Node
+	for _, statement := range node.Body().Statements() {
+		if !ast.IsPrologueDirective(statement) {
+			break
+		}
+		statements = append(statements, f.NewExpressionStatement(f.NewStringLiteralFromNode(statement.Expression())))
+	}
+	statements = append(statements, f.NewReturnStatement(call))
+	body := f.NewBlock(f.NewNodeList(statements), true /*multiLine*/)
 
-	var modifiers *ast.ModifierList
-	if exported && !isDefault {
-		modifiers = f.NewModifierList([]*ast.Node{f.NewModifier(ast.KindExportKeyword)})
+	// async is implemented by the Effect generator, not by this wrapper.
+	var modifiers []*ast.Node
+	if ast.HasSyntacticModifier(node, ast.ModifierFlagsExport) {
+		modifiers = append(modifiers, f.NewModifier(ast.KindExportKeyword))
 	}
-	declaration := f.NewVariableDeclaration(name, nil /*exclamationToken*/, nil /*type*/, lowered)
-	statement := f.NewVariableStatement(modifiers, f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{declaration}), ast.NodeFlagsConst))
+	if ast.HasSyntacticModifier(node, ast.ModifierFlagsDefault) {
+		modifiers = append(modifiers, f.NewModifier(ast.KindDefaultKeyword))
+	}
+	statement := f.NewFunctionDeclaration(f.NewModifierList(modifiers), nil, node.Name(), nil, f.NewNodeList(parameters), nil, nil, body)
 	ec.SetOriginal(statement, node)
 	statement.Loc = node.Loc
-	if exported && isDefault {
-		exportDefault := f.NewExportAssignment(nil /*modifiers*/, false /*isExportEquals*/, nil /*type*/, f.NewIdentifier(name.Text()))
-		return f.NewSyntaxList([]*ast.Node{statement, exportDefault})
-	}
 	return statement
 }

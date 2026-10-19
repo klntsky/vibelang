@@ -515,7 +515,9 @@ func isProjectedFunction(node *ast.Node) bool {
 // TypeScript infers or checks f's Effect<A, E, R> from the generator. A
 // contract with an infer channel (D57) wraps the generator in $contract
 // instead of annotating. A plain return annotation keeps a plain function
-// (L2), whose calls do not run.
+// (L2), whose calls do not run. Keep the declaration itself: nested and
+// block-local Effect functions must hoist even when called before their line
+// or declared after a return (S21-70), just as in the fork lowering.
 func (p *projector) functionDeclaration(node *ast.Node) {
 	p.functionLike(node, node.Body())
 	p.preparePlainBuiltinBody(node)
