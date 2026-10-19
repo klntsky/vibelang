@@ -1,0 +1,1 @@
+{"typescript":true,"commitThenPublish":true,"withOperand":true,"withTopic":true,"withValue":true,"withOptional":true,"withTag":true,"withThis":true,"withMethod":true,"lazy":true}

@@ -9,7 +9,7 @@ import (
 // Lowering pipes (pipes.go). A pipe compiles to its body, with each topic
 // replaced by one of three things:
 //
-//	fetchUser(id) |> retry(%, policy)    retry(Effect.gen(function* () { return yield* fetchUser(id) }), policy)
+//	fetchUser(id) |> retry(%, policy)    retry(Effect.suspend(() => fetchUser(id)), policy)
 //	user |> greet(%)                     greet(user)
 //	user |> greet(%, %.name)             (topic = user, greet(topic, topic.name))
 //

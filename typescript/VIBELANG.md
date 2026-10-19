@@ -109,6 +109,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `ek2006-finally-jump.fail` | A `return` and a `continue` that leave `finally` blocks are EK2006; a `break` that stays inside one is not |
 | `regions-jumps` | `try`, `catch`, and `finally` run as regions: labeled and unlabeled `break` and `continue`, `return` from nested regions, a labeled `try`, a `try` as an `if` body, `switch` inside a region, and `var` in a region give JavaScript's results and `finally` order |
 | `lambda-forms` | A lambda takes the form the overload candidate under check declares, and the first candidate that accepts it in that form wins: the overload probes behind `../prototype/single-pass/RESULTS.md`, including a returned lambda, which is plain |
+| `by-name-mask-boundary`, `by-name-mask-boundary.fail` | S3-1: a deterministic interruption latch after a restored write still permits masked publication; a write failure still escapes its contract |
 | `programs` | A lambda with no parameters is a program where Effect expects an Effect: `retry`, `race`, `timeout`, `all` over an array and a record, `provide`, a stored lambda that reruns, and an object property typed through `Layer.succeed`'s `NoInfer<S>` |
 | `program-values` | A function value converts where it is passed: `Effect.retry(flaky, …)`, array and record literals of programs, and arrays and records built at run time through `$programs` |
 | `programs-iterables` | `Effect.all` over a tuple, a record, a `Set`, and a `Map`'s values of programs (D49) |
@@ -496,7 +497,7 @@ Where a parameter expects an Effect, an argument expression that calls something
 
 ```ts
 // main.vibe                                        // main.js
-const fiber = fork(fetchReport())                     const fiber = yield* runtime.$fork(Effect.gen(function* () { return yield* fetchReport(); }), scope_1)
+const fiber = fork(fetchReport())                     const fiber = yield* runtime.$fork(Effect.suspend(() => fetchReport()), scope_1)
 const total = Effect.runSync(subtotal())              const total = Effect.runSync(Effect.gen(function* () { return subtotal$direct(); }))
 Console.log(fast())                                   yield* Console.log(yield* fast())
 ```
@@ -504,7 +505,7 @@ Console.log(fast())                                   yield* Console.log(yield* 
 - **Where.** The expression type hook (`expressionType`, `conversions.go`) decides per overload candidate, like the conversions above: `convertByName` when the candidate's declared parameter expects a program (`classify`), the expression calls an Effect (`pauses`), and its value is not itself an Effect. Arguments, array elements, and record fields qualify, in lowered function bodies and at a module's top level (`mayRunByName`). A position that accepts any value, such as `Console.log`'s, runs the call where it stands.
 - **Type.** `byNameType` builds `Effect<A, E, R>` from the expression's value type and what `flowOf` collects from it. The value type follows each check: an inference pass that skips a generic call gives the placeholder `never`, so `valueTypeOf` reads the expression's own type there; otherwise a type parameter with a default, as in `Effect.forkScoped`'s `<Arg extends Effect | Options = Options>`, would take the default.
 - **Channels.** `flowOf` skips an expression passed by name (`isByName`), so its errors and requirements join the callee's Effect, not the enclosing function's.
-- **Lowering.** `visit` checks `convertByName` first and emits `Effect.gen(function* () { return … })` with a fresh frame (`byNameProgram`), or `Effect.gen({ self: this }, …)` when the expression uses `this`; a plain function's call inside it runs through its `$direct` variant.
+- **Lowering.** `visit` checks `convertByName` first (`byNameProgram`). A tail call becomes `Effect.suspend(() => call())`, so its body is evaluated on every run without a continuation after the program completes. If its operands run Effects, `Effect.flatten(Effect.gen(function* () { return call(yield* operand()) }))` finishes the operand generator before running the tail program. Other expressions keep a fresh generator frame, with `{ self: this }` when needed; plain calls use their `$direct` variant. This preserves D147 and the interruption boundary of `restore(write())` (S3-1).
 - **The top level.** EK1001 does not apply to a call passed by name (`passedAsProgram`), so `NodeRuntime.runMain(main())` and `Effect.runPromise(loadConfig())` are allowed. A service member call or an Effect value call there still needs `() =>`: the checker types those only inside function bodies.
 - **Hover.** A hover on the callee says "Passed by name to `Effect.timeout` as a program: it runs when that program runs, not here".
 
@@ -1086,7 +1087,7 @@ Cases: `vibelang-methods` (Stream, Option, Duration, Chunk, Fiber, and Ref chain
 ```ts
 // main.vibe                                      // main.js
 const n = 9 |> addMargin(%) |> double(%)             const n = double$direct(addMargin$direct(9))
-const r = flaky() |> retry(%, Schedule.recurs(5))    const r = yield* retry(Effect.gen(function* () { return yield* flaky() }), Schedule.recurs(5))
+const r = flaky() |> retry(%, Schedule.recurs(5))    const r = yield* retry(Effect.suspend(() => flaky()), Schedule.recurs(5))
 const l = user |> `${%.first} ${%.last}`             const l = (topic_1 = user, `${topic_1.first} ${topic_1.last}`)
 ```
 

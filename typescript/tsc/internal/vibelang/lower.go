@@ -272,12 +272,16 @@ func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
 	return converted
 }
 
-// byNameProgram lowers node, an expression passed by name (D147), to
-// `Effect.gen(function* () { return node })`, with node's calls that run
-// lowered to yield* in that generator, or to
-// `Effect.gen({ self: this }, function* () { … })` when node refers to this.
-// fork(fetchReport()) becomes fork(Effect.gen(function* () { return yield*
-// fetchReport(); })): the program runs fetchReport each time it runs.
+// byNameProgram lowers a by-name expression (D147), evaluating it on every
+// run. A tail program is returned by suspend, never yielded by a wrapper:
+// Effect 4.0.5 internal/effect.ts:976-982 returns the thunk's Effect without
+// pushing a continuation. In contrast, gen (1222-1244) installs an Iterator
+// (1417-1428), whose post-program step can be interrupted before restore
+// reinstates the mask (4582-4585, 4617-4637).
+// If operands run Effects, a generator computes the tail program first and
+// flatten (1867-1869, flatMap with identity) runs it after that generator
+// has finished. Expressions that compute a value after their last call
+// retain their generator.
 func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
@@ -292,6 +296,20 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 		value = tx.visitNode(subject)
 	}
 	tx.inEffect, tx.frame = saved, savedFrame
+	// Erasable expression wrappers do not change whether the result is a
+	// tail program. All call renderings (including Effect values, optional
+	// calls, module methods, tags and pipe topics) meet here as yield*.
+	tail := ast.SkipOuterExpressions(value, ast.OEKParentheses|ast.OEKTypeAssertions|ast.OEKNonNullAssertions|ast.OEKSatisfies)
+	tailProgram := tail.Kind == ast.KindYieldExpression && tail.AsYieldExpression().AsteriskToken != nil
+	if tailProgram {
+		value = tail.Expression()
+		if !containsYield(value) {
+			lowered := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("suspend"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{tx.arrow(nil, value)}), ast.NodeFlagsNone)
+			ec.SetOriginal(lowered, node)
+			lowered.Loc = node.Loc
+			return lowered
+		}
+	}
 	body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(value)}), false /*multiLine*/)
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
 	ec.SetOriginal(generator, node)
@@ -304,6 +322,9 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	}
 	callee := f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("gen"), ast.NodeFlagsNone)
 	lowered := f.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
+	if tailProgram {
+		lowered = f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("flatten"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{lowered}), ast.NodeFlagsNone)
+	}
 	ec.SetOriginal(lowered, node)
 	lowered.Loc = node.Loc
 	return lowered
