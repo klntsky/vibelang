@@ -1,0 +1,10 @@
+import { Effect } from "effect"
+import { methodShorthand, arrowProperty, unannotated } from "./repro.vibe"
+import { attempts } from "./repro.vibe"
+// S4-1: all three object members return the runner's Promise without running work.
+const run = <A>(_program: Effect.Effect<A, unknown>): Promise<A> => Promise.resolve(1 as A)
+// expect-result: {"cold":0,"promises":[true,true,true]}
+export function main() {
+  const results = [methodShorthand(run).go(), arrowProperty(run).go(), unannotated(run).go()]
+  return { cold: attempts, promises: results.map((p) => p instanceof Promise) }
+}

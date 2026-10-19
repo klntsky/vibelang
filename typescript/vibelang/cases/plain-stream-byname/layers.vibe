@@ -1,0 +1,20 @@
+import * as Context from "effect/Context"
+import * as Effect from "effect/Effect"
+import * as Layer from "effect/Layer"
+
+export class Port extends Context.Service<Port, { readonly id: number }>()("Port") {}
+
+declare const transport: Effect.Effect<number, never, never>
+declare const makeWith: (n: number) => Effect.Effect<{ readonly id: number }, never, never>
+
+// 1. The TypeScript shape: Layer.effect(tag, program) with a flatMap program.
+export const viaFlatMap = (): Layer.Layer<Port, never, never> =>
+  Layer.effect(Port, Effect.flatMap(transport, makeWith))
+
+// 2. The same with the program a plain call result.
+export const viaCall = (): Layer.Layer<Port, never, never> =>
+  Layer.effect(Port, makeWith(1))
+
+// 3. Curried form.
+export const viaCurried = (): Layer.Layer<Port, never, never> =>
+  Layer.effect(Port)(makeWith(1))

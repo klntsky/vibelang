@@ -4,7 +4,8 @@ import "github.com/microsoft/TypeScript/tsc/internal/ast"
 
 // checkPlainContractEffects enforces D263 independently of throw: a plain
 // contract keeps JavaScript exceptions but cannot run a named Effect operation.
-// Nested functions own their contracts; merely declaring one runs nothing.
+// Nested functions and by-name arguments own their Effect bodies (D147);
+// constructing either runs nothing in the enclosing function.
 func (p *projector) checkPlainContractEffects(fn *ast.Node) {
 	if fn.Body() == nil {
 		return
@@ -13,6 +14,15 @@ func (p *projector) checkPlainContractEffects(fn *ast.Node) {
 	visit = func(node *ast.Node) bool {
 		if ast.IsFunctionLike(node) || ast.IsClassLike(node) {
 			return false
+		}
+		// A property assignment can inherit a program class too, but is
+		// not itself the deferred expression (D265).
+		if ast.IsExpression(node) && p.forms.Argument(node).ByName {
+			// D147 defers the entire argument expression. D265 and D269 hold only
+			// the field's or const's outer call, so its operands must still be checked.
+			if r, ok := p.forms.(*Resolver); !ok || !r.holdsProgram(node) {
+				return false
+			}
 		}
 		if node.Kind == ast.KindCallExpression && p.plainContractEffectCall(node) {
 			start := p.tokenStart(node)

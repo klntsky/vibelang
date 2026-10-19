@@ -1,0 +1,30 @@
+import { Effect } from "effect"
+export class Failure extends TaggedError("Failure")<{}> {}
+export const run = (n: number): Effect.Effect<number, Failure, never> => { if (n < 0) throw new Failure(); return n }
+export const generic = <A>(value: A): Effect.Effect<A, Failure, never> => { if (!value) throw new Failure(); return value }
+export function inferred(n: number) { if (n < 0) throw new Failure(); return n }
+export function inferredGeneric<A>(value: A) { if (plain(0) < 0) throw new Failure(); return value }
+export function plain(n: number) { return n + 1 }
+type Eq<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+type Assert<T extends true> = T
+export type Checks = [
+  Assert<Eq<ReturnType<typeof run>, Effect.Effect<number, Failure, never>>>,
+  Assert<Eq<Effect.Error<ReturnType<typeof run>>, Failure>>,
+  Assert<Eq<Effect.Success<ReturnType<typeof run>>, number>>,
+  Assert<Eq<Parameters<typeof run>, [n: number]>>,
+  Assert<Eq<ReturnType<typeof generic>, Effect.Effect<unknown, Failure, never>>>,
+  Assert<Eq<Parameters<typeof generic>, [value: unknown]>>,
+  Assert<Eq<Effect.Error<ReturnType<typeof generic>>, Failure>>,
+  Assert<Eq<Effect.Success<ReturnType<typeof generic>>, unknown>>,
+  Assert<Eq<ReturnType<typeof inferred>, Effect.Effect<number, Failure, never>>>,
+  Assert<Eq<Effect.Error<ReturnType<typeof inferred>>, Failure>>,
+  Assert<Eq<Effect.Success<ReturnType<typeof inferred>>, number>>,
+  Assert<Eq<Parameters<typeof inferred>, [n: number]>>,
+  Assert<Eq<ReturnType<typeof inferredGeneric>, Effect.Effect<unknown, Failure, never>>>,
+  Assert<Eq<Effect.Error<ReturnType<typeof inferredGeneric>>, Failure>>,
+  Assert<Eq<Effect.Success<ReturnType<typeof inferredGeneric>>, unknown>>,
+  Assert<Eq<Parameters<typeof inferredGeneric>, [value: unknown]>>,
+  Assert<Eq<ReturnType<typeof plain>, Effect.Effect<number, never, never>>>
+]
+// expect-result: 4
+export function main() { const n: number = run(1); const s: string = generic("ok"); return plain(n) + s.length }

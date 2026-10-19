@@ -133,6 +133,9 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `pipe-programs` | `pipe` takes a program first when its first stage takes an Effect (D8), and stays effect's `pipe` on plain data |
 | `pipe-generic-stages` | Generic stages infer from the value before them: `Match.when` after `Match.type` and `Match.value`, `Layer.tapError` after a layer, and `Effect.mapError` after a program |
 | `plain-functions` | A pure function compiles to a `$direct` variant and an Effect form; calls run inline in source order; a pure recursive pair is plain (a greatest fixpoint); `xs.map(double)` passes `double$direct` |
+| `type-observed-signatures` | Smithers A-14: local and imported `typeof`, `ReturnType`, `Parameters`, conditional types, and module keys observe emitted signatures; ordinary VibeLang calls still run |
+| `plain-object-byname` | Smithers S4-1: annotated methods, arrow properties, and inferred methods pass cold programs to a plain Promise runner |
+| `plain-stream-byname` | Smithers D-10: arrow and named plain Stream factories pass Effect arguments by name without running them until consumption (D147) |
 | `plain-imports` | Another `.vibe` module's plain functions run inline through named, renamed, and namespace imports |
 | `plain-methods` | `[Equal.symbol]` and `[Hash.symbol]` compile to plain methods that `Equal.equals` and `HashSet` call (D55) |
 | `callbacks-pausing.fail` | EK4301 for a lambda and for a function value that can pause where `Array.prototype.map` and `forEach` call them |

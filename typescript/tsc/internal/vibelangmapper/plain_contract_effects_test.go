@@ -107,3 +107,16 @@ func assertPlainContractDiagnostic(t *testing.T, source string, want bool) {
 		}
 	}
 }
+
+// D147 applies to plain callees too: their program arguments run later.
+func TestPlainContractByNameEffects(t *testing.T) {
+	for _, source := range []string{
+		`import { Effect, Stream } from "effect"; export function valid(): Stream.Stream<number> { return Stream.fromEffect(Effect.succeed(1)) }`,
+		`import { Effect, Stream } from "effect"; export const valid = (): Stream.Stream<number> => Stream.fromEffect(Effect.succeed(1))`,
+		`import { Effect, Stream } from "effect"; type Factory = () => Stream.Stream<number>; export const valid: Factory = () => Stream.fromEffect(Effect.succeed(1))`,
+		`import { Effect, Layer } from "effect"; declare const Tag: any; export const valid = (): Layer.Layer<any> => Layer.effect(Tag, Effect.flatMap(Effect.succeed(1), (n) => Effect.succeed(n)))`,
+	} {
+		assertPlainContractDiagnostic(t, source, false)
+	}
+	assertPlainContractDiagnostic(t, `import { Effect, Stream } from "effect"; export function invalid(): Stream.Stream<number> { const stream = Stream.fromEffect(Effect.succeed(1)); Effect.succeed(2); return stream }`, true)
+}

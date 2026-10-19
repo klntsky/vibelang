@@ -219,7 +219,7 @@ func (a *analyzer) finalForm(fn *ast.Node) form {
 // operation, or nil when fn compiles to plain JavaScript.
 func (a *analyzer) firstPause(fn *ast.Node) *ast.Node {
 	var pause *ast.Node
-	forEachCallInBody(fn, func(call *ast.Node) bool {
+	a.forEachRunningCallInBody(fn, func(call *ast.Node) bool {
 		if a.performs(call) {
 			pause = call
 			return true
@@ -343,10 +343,12 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 // runs no Effect, looks up no service, and declares no using (D54).
 // A throw can escape only under a JavaScript contract (D263).
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
+	// D67 keeps callbacks typed as written in their explicit Effect form.
 	if s := a.lambdas[fn]; s != nil && s.typedAsWritten && a.contractOf(fn) != nil {
 		return false // TypeScript gave fn its contract's Effect type (functionExpressionType)
 	}
-	return !forEachCallInBody(fn, a.performs) && (!hasEscapingThrow(fn) || a.hasPlainContract(fn)) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn) && !a.hasProgramReturn(fn)
+	// D147 skips by-name argument bodies; S5-1 keeps returned programs effectful.
+	return !a.forEachRunningCallInBody(fn, a.performs) && (!hasEscapingThrow(fn) || a.hasPlainContract(fn)) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn) && !a.hasProgramReturn(fn)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript

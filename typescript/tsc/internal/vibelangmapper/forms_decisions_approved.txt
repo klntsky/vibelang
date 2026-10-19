@@ -125,3 +125,10 @@ typescript/vibelang/cases/decl-provide-service-methods/main.vibe:13:5 lambda: ef
 typescript/vibelang/cases/decl-provide-services/main.vibe:20:30 lambda: plain fallback -> effectFn service # S5-21 exposes D173's service context; providedMember already emitted this member as an Effect function.
 typescript/vibelang/cases/decl-provide-services/main.vibe:27:41 lambda: plain fallback -> effectFn service # S5-21 exposes D173's service context; providedMember already emitted this member as an Effect function.
 typescript/vibelang/cases/decl-provide-services/main.vibe:53:41 lambda: plain fallback -> effectFn service # S5-21 exposes D173's service context; providedMember already emitted this member as an Effect function.
+
+# Smithers D-10: a named variable contract follows D263, as a written function type does.
+typescript/vibelang/cases/plain-stream-byname/main.vibe:6:37 lambda: effectFn annotation -> plain annotation # IdleStream aliases a plain Stream factory; it is not a D12 callback parameter
+
+# D147: a callback parameter's written Effect argument is a known program position.
+typescript/vibelang/cases/by-name-choice-program/main.vibe:20:45 lambda: choice fallback -> program annotation # wrap declares its argument as Effect; the program lambda is decided by that written parameter, matching the fork
+typescript/vibelang/cases/by-name-choice-program/main.vibe:24:45 lambda: choice fallback -> program annotation # the same written wrap parameter decides the program in a nullish fallback

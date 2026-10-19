@@ -119,7 +119,9 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			// whole program.
 			continue
 		}
-		forEachCallInBody(d, func(call *ast.Node) bool {
+		// D147 excludes by-name arguments; D265 and D269 also hold contextual object
+		// fields and declared Effect consts.
+		a.forEachRunningCallInBody(d, func(call *ast.Node) bool {
 			if holdsProgram(a.checker, call) {
 				return false
 			}

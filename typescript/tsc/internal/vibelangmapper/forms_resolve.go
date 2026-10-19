@@ -18,8 +18,9 @@ package vibelangmapper
 //     lambda declared in this file gives the signature its written
 //     annotations describe, and a member of a service this file declares
 //     gives the member's written signature. A member of a value (xs.map), a
-//     call result, a parameter, and an import from a relative module have
-//     no key.
+//     call result, an untyped parameter, and an import from a relative module
+//     have no key. A parameter with a written function type (including a local
+//     alias) gives that signature, so its program arguments follow D147.
 //  2. Signature (formsShapeFit). Among the candidates that take the call's
 //     argument count, most required arguments first, the first one the
 //     written arguments do not rule out: a lambda where no form fits, or a
@@ -174,7 +175,7 @@ const (
 	CalleeNone CalleeKind = iota
 	// CalleeTable is a package import or a prelude name; Key is a table key.
 	CalleeTable
-	// CalleeLocal is a function or const lambda this file declares;
+	// CalleeLocal is a function, const lambda, or typed parameter this file declares;
 	// Signatures come from its written annotations.
 	CalleeLocal
 	// CalleeService is a member of a service this file declares;
@@ -421,6 +422,12 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 			return d
 		}
 	}
+	if fn.Kind == ast.KindMethodDeclaration && r.plainProgramForwarder(facts.tailCall) {
+		// S4-1: forwarding cold arguments to a plain callback returns data.
+		// Other bodies still use their own contracts and ordinary form rules.
+		d.Class, d.Provenance, d.Note, d.Form = ClassPlainFn, FromAnnotation, "plain program callback", FormPlain
+		return d
+	}
 	if call == nil && r.writtenTypeOf(fn) == nil && r.enclosingPlainContract(fn) {
 		// D263: an otherwise uncontracted local lambda belongs to its
 		// enclosing JavaScript body, including JavaScript throws. A return
@@ -455,6 +462,33 @@ func (r *Resolver) enclosingPlainContract(fn *ast.Node) bool {
 		return false
 	}
 	return false
+}
+
+// plainProgramForwarder proves the one-call body of an unannotated method
+// plain when a callback returns a known data type and every nested call is
+// deferred by D147. Non-program operands retain their ordinary execution.
+func (r *Resolver) plainProgramForwarder(call *ast.Node) bool {
+	if call == nil || !ast.IsIdentifier(call.Expression()) {
+		return false
+	}
+	decl := r.binding(call.Expression(), call.Expression().Text())
+	if decl == nil || decl.Kind != ast.KindParameter {
+		return false
+	}
+	t := r.writtenFunctionType(decl.Type())
+	if t == nil {
+		return false
+	}
+	module := r.typeModuleOf(t.Type())
+	if module == "" || module == "effect/Effect" {
+		return false
+	}
+	for _, arg := range call.Arguments() {
+		if formsHoldsCall(arg) && !r.Argument(arg).ByName {
+			return false
+		}
+	}
+	return true
 }
 
 // choiceFor returns the Choice for a fallback decision d when the rules
@@ -520,6 +554,11 @@ func (r *Resolver) returnsEffect(call *ast.Node) bool {
 			return false
 		}
 		d := r.binding(root, root.Text())
+		if d != nil && d.Kind == ast.KindParameter {
+			if t := r.writtenFunctionType(d.Type()); t != nil {
+				return r.isEffectTypeNode(t.Type(), 0)
+			}
+		}
 		if d == nil || d.Kind != ast.KindFunctionDeclaration {
 			return false
 		}
@@ -1588,6 +1627,13 @@ func (r *Resolver) calleeOf(root *ast.Node, chain []string, depth int) Callee {
 			return Callee{}
 		}
 		return Callee{Kind: CalleeLocal, Key: name, Signatures: r.functionSignatures(decl)}
+	case ast.KindParameter:
+		// D147 also applies to a plain callback parameter: its written
+		// program arguments are cold, including through a local type alias.
+		if t := r.writtenFunctionType(decl.Type()); t != nil && len(chain) == 0 {
+			return Callee{Kind: CalleeLocal, Key: name, Signatures: []Signature{r.writtenSignature(t.Parameters(), t.Type())}}
+		}
+		return Callee{}
 	case ast.KindVariableDeclaration:
 		init := decl.Initializer()
 		if init != nil {
@@ -2120,6 +2166,24 @@ func (r *Resolver) canonicalIsEffect(key string) bool {
 	return r.table != nil && r.table.Canonical(key) == "effect/Effect#Effect"
 }
 
+// writtenFunctionType follows local aliases of a written function contract.
+// Generic function signatures keep their own type parameters; aliases that
+// themselves require instantiation remain outside this syntax-only resolver.
+func (r *Resolver) writtenFunctionType(t *ast.Node) *ast.Node {
+	t = formsUnwrapType(t)
+	for depth := 0; depth < 4 && t != nil && t.Kind == ast.KindTypeReference; depth++ {
+		decl := r.localType(t)
+		if decl == nil || decl.Kind != ast.KindTypeAliasDeclaration {
+			break
+		}
+		t = formsUnwrapType(decl.Type())
+	}
+	if t != nil && t.Kind == ast.KindFunctionType {
+		return t
+	}
+	return nil
+}
+
 // annotatedClass returns the class a free lambda's variable annotation
 // gives it: const f: (x: number) => Effect<…> = (x) => ….
 func (r *Resolver) annotatedClass(fn *ast.Node) Class {
@@ -2128,7 +2192,9 @@ func (r *Resolver) annotatedClass(fn *ast.Node) Class {
 		n = n.Parent
 	}
 	if p := n.Parent; p != nil && p.Kind == ast.KindVariableDeclaration && p.Initializer() == n && p.Type() != nil {
-		if t := formsUnwrapType(p.Type()); t.Kind == ast.KindFunctionType {
+		// D263 variable contracts use the same local aliases as D147
+		// callback parameters, while keeping their plain calling convention.
+		if t := r.writtenFunctionType(p.Type()); t != nil {
 			return r.memberClass(t.Type()) // D263: a variable contract is not a D12 callback parameter
 		}
 		return r.classOfType(p.Type(), 0)

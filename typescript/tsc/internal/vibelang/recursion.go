@@ -44,7 +44,7 @@ func init() {
 // instantiates, whose E and R come from the call's type.
 func (a *analyzer) bodyCallees(fn *ast.Node) []*ast.Node {
 	var callees []*ast.Node
-	forEachCallInBody(fn, func(call *ast.Node) bool {
+	a.forEachRunningCallInBody(fn, func(call *ast.Node) bool {
 		if !a.runs(call) {
 			return false
 		}

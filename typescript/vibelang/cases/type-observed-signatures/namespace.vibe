@@ -1,0 +1,12 @@
+import type * as M from "./main.vibe"
+import { Effect } from "effect"
+type Eq<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false
+type Assert<T extends true> = T
+type NamespaceChecks = [
+  Assert<Eq<Effect.Error<ReturnType<typeof M.run>>, M.Failure>>,
+  Assert<Eq<Effect.Error<ReturnType<typeof M.generic>>, M.Failure>>
+]
+export class ChildError {
+  readonly error: Effect.Error<ReturnType<typeof M.run>>
+  constructor(error: Effect.Error<ReturnType<typeof M.run>>) { this.error = error }
+}

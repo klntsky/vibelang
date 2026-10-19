@@ -98,6 +98,17 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					})
 				}
 			}
+			// A by-name expression has its own Effect body even when the
+			// enclosing factory stays plain. Plan the calls that body runs.
+			if isInvocation(node) && a.byNameOf(node) != nil {
+				if a.runs(node) {
+					p.runs[node] = true
+				}
+				if ast.IsCallExpression(node) {
+					p.planServiceCall(c, node)
+					p.planResume(c, node)
+				}
+			}
 			if form, ok := hatchFormOf(c, node); ok {
 				p.hatches[node] = form
 			}
@@ -140,6 +151,23 @@ func forEachCallInBody(fn *ast.Node, cb func(call *ast.Node) bool) bool {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		if isFunctionBoundary(node) {
+			return false
+		}
+		if isInvocation(node) && cb(node) {
+			return true
+		}
+		return node.ForEachChild(visit)
+	}
+	return visit(fn.Body())
+}
+
+// forEachRunningCallInBody excludes expressions passed by name (D147).
+// Constructing a cold program does not make its enclosing factory effectful.
+// Lowering still uses forEachCallInBody to plan the deferred program itself.
+func (a *analyzer) forEachRunningCallInBody(fn *ast.Node, cb func(*ast.Node) bool) bool {
+	var visit func(*ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if isFunctionBoundary(node) || a.isByName(node) {
 			return false
 		}
 		if isInvocation(node) && cb(node) {
@@ -248,7 +276,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := forEachCallInBody(fn, a.performs) || (a.expectsEffect(fn) || hasEscapingThrow(fn)) && !a.hasPlainContract(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn) || declaresUsing(fn) || hasVibeLangStatement(fn) || a.hasStreamLoop(fn)
+	effect := a.forEachRunningCallInBody(fn, a.performs) || (a.expectsEffect(fn) || hasEscapingThrow(fn)) && !a.hasPlainContract(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn) || declaresUsing(fn) || hasVibeLangStatement(fn) || a.hasStreamLoop(fn)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
 }
