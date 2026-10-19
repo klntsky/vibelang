@@ -715,6 +715,10 @@ function firstFailure(outcome: Exit.Exit<User, NotFound>) {
 
 **Plain, self-contained TypeScript inside `sync`, `try`, and `callback`** (D148, D229-D232). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. A hatch's function reads values of the `.vibe` file only as inputs, the arguments after it, which fill its first parameters; `try`'s error mapper stays second (EK4405). `runPromise` leads back in from a hatch's body or a `.ts` file.
 
+**Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: a thrown `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` likewise list `URIError`. Other built-ins' exceptions are defects. A plain return annotation keeps JavaScript exceptions; if one escapes into an Effect caller, it becomes a defect (D263). This differs from a plain `JSON.parse` call inside TypeScript's `Effect.gen`, where a throw is a defect.
+
+Use `try((text) => JSON.parse(text), text)` (D148) to turn any throw into an expected `Cause.UnknownError`, or supply the error mapper shown below to choose the failure type. Use `sync((text) => JSON.parse(text), text)` to keep a parse exception as a defect.
+
 ```ts effect
 const id = Effect.sync(() => crypto.randomUUID())
 const parsed = Effect.try({ try: () => JSON.parse(text), catch: (error) => new BadJson({ error }) })
