@@ -756,15 +756,25 @@ func TestResolverHatchTypeScriptIsPlain(t *testing.T) {
     const timer = setTimeout(() => resume(7), 1)
     return () => clearTimeout(timer)
   })
+  const finalizer = callback((_resume) => Effect.sync(() => {}))
+}
+export function h() {
+  const callback = (f: () => number) => f()
+  return callback(() => 42)
 }
 export function g() {
   const sync = (f: () => number) => f()
   return sync(() => [1].map((n) => n + 1))
 }`)
-	for _, prefix := range []string{"(n) => n * 2", "() => resume(7)", "() => clearTimeout"} {
+	for _, prefix := range []string{"(n) => n * 2", "() => resume(7)", "() => clearTimeout", "(resume) =>", "(_resume) =>", "() => {}"} {
 		if d := r.lambda(t, prefix); d.Form != FormPlain || d.Provenance != FromHatch {
 			t.Errorf("%q = %v from %v, want plain from the hatch", prefix, d.Form, d.Provenance)
 		}
+	}
+	// S19-30: returning an Effect cannot turn a lexical registration into an
+	// Effect function, and a local callback still follows its own contract.
+	if d := r.lambda(t, "() => 42"); d.Provenance == FromHatch {
+		t.Errorf("a shadowed callback = %+v, want no hatch", d)
 	}
 	// A local sync is not the hatch.
 	if d := r.lambda(t, "(n) => n + 1"); d.Provenance == FromHatch {

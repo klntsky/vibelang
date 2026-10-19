@@ -17,7 +17,7 @@ import { Cause, Effect, Exit } from "effect"
 type Inputs = ReadonlyArray<unknown>
 
 const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
-  typeof value === "object" && value !== null && typeof (value as { readonly then?: unknown }).then === "function"
+  (typeof value === "object" && value !== null || typeof value === "function") && typeof (value as { readonly then?: unknown }).then === "function"
 
 const call = (evaluate: unknown, inputs: Inputs): unknown => (evaluate as (...args: Array<unknown>) => unknown)(...inputs)
 
@@ -95,21 +95,31 @@ export interface Resume<A, E> {
 /**
  * D148: `callback((resume, signal) => …)` is Effect.callback. `resume(value)`
  * succeeds, `resume.fail(error)` fails, and `resume.exit(exit)` adopts an Exit.
- * A function that the body returns runs when the fiber is interrupted. Inputs
+ * A returned Effect is the interrupt finalizer; a returned cleanup function
+ * runs on interruption and its PromiseLike result is awaited. Inputs
  * after the function fill its first parameters, before `resume` (D230).
  */
-export function callback<A, E = never, Args extends Inputs = []>(
-  register: (...args: [...Args, Resume<A, E>, AbortSignal]) => void | (() => void),
+export function callback<A, E = never, Args extends Inputs = [], R = never>(
+  register: (...args: [...Args, Resume<A, E>, AbortSignal]) => void | (() => void) | (() => PromiseLike<void>) | Effect.Effect<void, never, R>,
   ...args: Args
-): Effect.Effect<A, E>
-export function callback<A, E = never, Args extends Inputs = []>(register: (...args: [...Args, Resume<A, E>]) => void | (() => void), ...args: Args): Effect.Effect<A, E>
-export function callback(register: (...args: Array<any>) => void | (() => void), ...args: Inputs): Effect.Effect<unknown, unknown> {
-  return Effect.callback<unknown, unknown>((resumeEffect, signal) => {
+): Effect.Effect<A, E, R>
+export function callback<A, E = never, Args extends Inputs = [], R = never>(register: (...args: [...Args, Resume<A, E>]) => void | (() => void) | (() => PromiseLike<void>) | Effect.Effect<void, never, R>, ...args: Args): Effect.Effect<A, E, R>
+export function callback(register: (...args: Array<any>) => unknown, ...args: Inputs): Effect.Effect<unknown, unknown, unknown> {
+  return Effect.callback<unknown, unknown, unknown>((resumeEffect, signal) => {
     const resume = ((value: unknown) => resumeEffect(Effect.succeed(value))) as Resume<unknown, unknown> & { fail: unknown; exit: unknown }
     resume.fail = (error: unknown) => resumeEffect(Effect.fail(error))
     resume.exit = (exit: Exit.Exit<unknown, unknown>) => resumeEffect(exit)
-    const cleanup = call(register, [...args, resume, signal]) as void | (() => void)
-    return typeof cleanup === "function" ? Effect.sync(cleanup) : undefined
+    const cleanup = call(register, [...args, resume, signal])
+    // D148/S19-30: Effect 4.0.5 internal/effect.ts:1161-1205 aborts first,
+    // then runs this finalizer uninterruptibly only on interruption. Pass an
+    // Effect through (1210-1216); defer a function so synchronous cleanup keeps
+    // its defect semantics and PromiseLike cleanup completes before interrupt.
+    if (Effect.isEffect(cleanup)) return cleanup as Effect.Effect<void, never, unknown>
+    if (typeof cleanup !== "function") return undefined
+    return Effect.suspend(() => {
+      const result = cleanup()
+      return isPromiseLike(result) ? Effect.promise(() => result).pipe(Effect.asVoid) : Effect.void
+    })
   })
 }
 

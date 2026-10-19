@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { Cause, Deferred, Effect, Exit, Fiber } from "effect"
+import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
 import { callback, sync, try as attempt, type Resume } from "vibelang-runtime"
 
 test("sync is lazy and rerunnable, passes inputs, and leaves returned Effects inert", async () => {
@@ -121,7 +121,7 @@ describe("callback", () => {
         deliver = resume
         signal.addEventListener("abort", () => { events.push("abort") })
         Deferred.doneUnsafe(started, Effect.void)
-        return () => { events.push("cancel") }
+        return () => events.push("cancel")
       }))
       yield* Deferred.await(started)
       yield* Fiber.interrupt(child)
@@ -148,4 +148,70 @@ describe("callback", () => {
       }
     }))
   })
+})
+
+// S19-30: asynchronous cancellation must finish before Fiber.interrupt returns.
+for (const kind of ["promise", "thenable", "callable thenable", "effect"] as const) {
+  test(`callback awaits ${kind} cancellation after abort, once`, async () => {
+    const events: string[] = []
+    let signal!: AbortSignal
+    const finish = () => { events.push("cleanup finished") }
+    const program = callback((_resume: Resume<never, never>, abort: AbortSignal) => {
+      signal = abort
+      const pending = () => new Promise<void>(resolve => setTimeout(() => { finish(); resolve() }, 10))
+      if (kind === "effect") return Effect.promise(pending)
+      if (kind === "thenable") return () => { const p = pending(); return { then: p.then.bind(p) } }
+      if (kind === "callable thenable") return () => { const p = pending(); return Object.assign(() => {}, { then: p.then.bind(p) }) }
+      return () => pending()
+    })
+    await Effect.runPromise(Effect.gen(function*() {
+      const fiber = yield* Effect.forkChild(program, { startImmediately: true })
+      signal.addEventListener("abort", () => { events.push("abort") })
+      yield* Fiber.interrupt(fiber)
+      events.push("interrupt returned")
+      yield* Fiber.interrupt(fiber)
+    }))
+    expect(events).toEqual(["abort", "cleanup finished", "interrupt returned"])
+  })
+}
+
+for (const kind of ["promise", "effect"] as const) {
+  test(`callback skips ${kind} cleanup after synchronous resume`, async () => {
+    let cleaned = false
+    const cleanup = () => { cleaned = true }
+    const value = await Effect.runPromise(callback((resume: Resume<number, never>) => {
+      resume(42)
+      return kind === "effect" ? Effect.sync(cleanup) : async () => { cleanup() }
+    }))
+    expect(value).toBe(42)
+    expect(cleaned).toBe(false)
+  })
+
+  test(`callback retains ${kind} cleanup defects alongside interruption`, async () => {
+    const defect = new Error("cleanup failed")
+    await Effect.runPromise(Effect.gen(function*() {
+      const fiber = yield* Effect.forkChild(callback(() => kind === "effect"
+        ? Effect.die(defect)
+        : () => Promise.reject(defect)), { startImmediately: true })
+      yield* Fiber.interrupt(fiber)
+      const exit = fiber.pollUnsafe()!
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) {
+        expect(exit.cause.reasons.some(Cause.isInterruptReason)).toBe(true)
+        expect(exit.cause.reasons.find(Cause.isDieReason)?.defect).toBe(defect)
+      }
+    }))
+  })
+}
+
+test("callback's returned Effect finalizer retains its service requirements", async () => {
+  class Cleanup extends Context.Service<Cleanup, { readonly finish: () => void }>()("hatches/Cleanup") {}
+  let cleaned = 0
+  const program: Effect.Effect<number, never, Cleanup> = callback((_resume: Resume<number, never>) =>
+    Effect.flatMap(Cleanup, service => Effect.sync(service.finish)))
+  await Effect.runPromise(Effect.gen(function*() {
+    const fiber = yield* Effect.forkChild(program, { startImmediately: true })
+    yield* Fiber.interrupt(fiber)
+  }).pipe(Effect.provideService(Cleanup, { finish: () => { cleaned++ } })))
+  expect(cleaned).toBe(1)
 })

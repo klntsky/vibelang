@@ -1,0 +1,49 @@
+import { Effect, Fiber } from "effect"
+
+// S19-30's original repro: abort resolves pending only after cleanup finishes.
+export function waitWithAsyncCleanup(log: Array<string>) {
+  return callback((log: Array<string>, resume: Resume<string, never>, signal: AbortSignal) => {
+    const pending = new Promise<string>((resolve) => {
+      signal.addEventListener("abort", () => setTimeout(() => {
+        log.push("cleanup finished")
+        resolve("aborted")
+      }, 10), { once: true })
+    })
+    pending.then((value) => resume(value))
+    return () => pending.then(() => undefined)
+  }, log)
+}
+
+export function waitWithEffectCleanup(log: Array<string>) {
+  return callback((log: Array<string>, _resume: Resume<string, never>, signal: AbortSignal) => {
+    // The finalizer runs after abort and is awaited, just as Effect.callback.
+    return Effect.promise(() => new Promise<void>((resolve) => setTimeout(() => {
+      log.push(signal.aborted ? "cleanup finished" : "not aborted")
+      resolve()
+    }, 10)))
+  }, log)
+}
+
+export function waitWithSyncCleanup(log: Array<string>) {
+  return callback((log: Array<string>, _resume: Resume<string, never>) => {
+    // Sync cleanup retains the original void callback assignability.
+    return () => log.push("cleanup finished")
+  }, log)
+}
+
+// expect-result: [["cleanup finished","interrupt returned"],["cleanup finished","interrupt returned"],["cleanup finished","interrupt returned"]]
+export function main() {
+  const promise: Array<string> = []
+  const effect: Array<string> = []
+  const sync: Array<string> = []
+  const first = Effect.forkChild(waitWithAsyncCleanup(promise), { startImmediately: true })
+  Fiber.interrupt(first)
+  promise.push("interrupt returned")
+  const second = Effect.forkChild(waitWithEffectCleanup(effect), { startImmediately: true })
+  Fiber.interrupt(second)
+  effect.push("interrupt returned")
+  const third = Effect.forkChild(waitWithSyncCleanup(sync), { startImmediately: true })
+  Fiber.interrupt(third)
+  sync.push("interrupt returned")
+  return [promise, effect, sync]
+}

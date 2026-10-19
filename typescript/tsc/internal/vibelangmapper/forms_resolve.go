@@ -560,9 +560,11 @@ func (r *Resolver) keyless(d Decision) (string, bool) {
 var formsHatchNames = map[string]bool{"sync": true, "try": true, "callback": true}
 
 // inHatch reports whether node is inside the first argument of a hatch,
-// sync(…), try(…), or callback(…), but not the argument itself, which the
-// table decides. try cannot be shadowed, being a keyword; the others are
-// hatches only when no scope binds their names.
+// sync(…), try(…), or callback(…). The table decides sync/try's first
+// argument itself. D148/S19-30 also keeps callback's registration itself
+// plain: its returned Effect is a finalizer, not an Effect-function body.
+// Nested functions keep the existing hatch rule. try cannot be shadowed,
+// being a keyword; the others are hatches only when no scope binds them.
 func (r *Resolver) inHatch(node *ast.Node) (string, bool) {
 	for n := node; n.Parent != nil; n = n.Parent {
 		p := n.Parent
@@ -570,11 +572,14 @@ func (r *Resolver) inHatch(node *ast.Node) (string, bool) {
 			continue
 		}
 		args := p.Arguments()
-		if len(args) == 0 || args[0] != n || n == node {
+		if len(args) == 0 || args[0] != n {
 			continue
 		}
 		callee := p.Expression()
 		if !ast.IsIdentifier(callee) || !formsHatchNames[callee.Text()] {
+			continue
+		}
+		if n == node && callee.Text() != "callback" {
 			continue
 		}
 		if callee.Text() != "try" && r.binding(callee, callee.Text()) != nil {
