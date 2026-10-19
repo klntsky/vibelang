@@ -727,6 +727,14 @@ typescript/vibelang/cases/plain-contract-exceptions/a.vibe:31:60 lambda plain an
 typescript/vibelang/cases/plain-contract-exceptions/a.vibe:44:21 lambda plain annotation
 typescript/vibelang/cases/plain-contract-render/a.vibe:1:23 lambda plain annotation
 typescript/vibelang/cases/plain-contract-validate/a.vibe:1:25 lambda plain annotation
+typescript/vibelang/cases/plain-factory-programs.fail/main.vibe:14:21 lambda plain fallback
+typescript/vibelang/cases/plain-factory-programs.fail/main.vibe:2:21 lambda plain fallback
+typescript/vibelang/cases/plain-factory-programs.fail/main.vibe:3:57 lambda program annotation
+typescript/vibelang/cases/plain-factory-programs.fail/main.vibe:7:22 lambda plain annotation
+typescript/vibelang/cases/plain-factory-programs/main.vibe:5:24 lambda plain fallback
+typescript/vibelang/cases/plain-factory-programs/main.vibe:6:59 lambda program annotation
+typescript/vibelang/cases/plain-factory-programs/program.vibe:2:28 lambda plain fallback
+typescript/vibelang/cases/plain-factory-programs/program.vibe:4:57 lambda program annotation
 typescript/vibelang/cases/plain-functions/main.vibe:49:28 lambda plain table
 typescript/vibelang/cases/plain-functions/main.vibe:50:40 lambda effectFn table
 typescript/vibelang/cases/primitives-bare/main.vibe:20:22 block appended/program table

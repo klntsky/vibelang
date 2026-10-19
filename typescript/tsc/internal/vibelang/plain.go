@@ -172,6 +172,11 @@ func (a *analyzer) candidateCallee(call *ast.Node) *ast.Node {
 		return nil
 	}
 	if fn := implementationOf(signature.Declaration()); isPlainCandidate(fn) {
+		// A plain generic factory can return an Effect at this particular
+		// call. Its result runs even though the declaration's body is plain.
+		if !a.isSplittable(fn) && callRunsResult(a.checker, call, a.checker.GetReturnTypeOfSignature(signature)) {
+			return nil
+		}
 		return fn
 	}
 	return nil

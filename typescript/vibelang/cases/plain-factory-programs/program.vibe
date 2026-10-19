@@ -1,0 +1,27 @@
+export let runs = 0
+export const makeRuntime = (options: { n: number }) => {
+  const n = options.n
+  const p: Effect.Effect<{ n: number }, never, never> = () => {
+    runs++
+    return { n }
+  }
+  return p
+}
+// D262: importing this module constructs the program without running it.
+export const stored: Effect.Effect<{ n: number }, never, never> = makeRuntime({ n: 11 })
+
+// This body has no other Effect operation to force generator lowering.
+export function useIt(options: { n: number }): number!! {
+  const service = makeRuntime(options)
+  return service.n
+}
+
+function identity<A>(value: A): A {
+  const p: A = value
+  return p
+}
+// The instantiated call type, rather than the generic's plain body, decides.
+export function useGenericFactory() {
+  const service = identity(stored)
+  return service.n
+}

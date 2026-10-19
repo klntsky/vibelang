@@ -61,6 +61,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `ts-ordinary-error.fail` | D266 preserves ordinary TS2322 and TS2339 |
 | `vibelang-parse` | A `.vibe` file parses and checks as TypeScript and emits `main.js` and `main.d.ts`; JavaScript prints its value, because `console` is a platform API |
 | `vibelang-wrap` | Exported functions and arrow functions lower to `Effect.fnUntraced`, and JavaScript runs them with `Effect.runSync` |
+| `plain-factory-programs`, `plain-factory-programs.fail` | S3-3: a plain factory's Effect-valued call runs and returns its success each time; D262 top-level storage stays cold; EK1001, EK2003, and returned-program E/R checks remain enforced |
 | `vibelang-lower` | Type-directed `yield*`: pure helpers stay plain, Effect-returning TypeScript calls and `.vibe` calls run, operands run left to right, a `Config` stays data |
 | `optional-effect-calls`, `optional-effect-semantics`, `optional-effect-channels.fail` | Smithers A-11: optional Effect calls run once when present, return undefined when absent, preserve JavaScript chaining and D24 data, and contribute E/R (D147) |
 | `tagged-template-runs` | Effectful templates execute once as statements and expressions; plain tags stay plain, a fake SqlClient migration executes, and by-name and local tags run (D267) |
@@ -440,6 +441,8 @@ function lookup(id: number) {                const lookup = Effect_1.fnUntraced(
 - **Which functions become Effects.** A function declaration becomes `Effect.fnUntraced(function* …)` when it performs an Effect operation or can fail; otherwise it compiles to plain JavaScript (D10), as a `$direct` variant and an Effect form. A lambda takes the form its position asks for: a plain function, an Effect function, or a program. [Programs, plain functions, and callbacks](#programs-plain-functions-and-callbacks) gives the rules.
 - **Output shape.** A declaration becomes a `const` (with `export` or `export default`), and the file imports `* as Effect from "effect/Effect"` under a free name. Operands keep JavaScript's order, for example `(yield* greet("a")) + (yield* greet("bc"))`.
 - **Types.** Inside a lowered body, a call that runs has the Effect's success type, so `findName(2).toUpperCase()` checks. An unannotated `.vibe` Effect function has return type `Effect<A, E, R>`. A comes from its returns; E and R are the unions of the error and requirement channels of every Effect it runs. The `.d.ts` declares `main(): Effect.Effect<void, NotFound, never>`, and a callback such as `(e) => Console.log(…)` passed to `Effect.catch` checks and runs as an Effect function.
+
+A plain factory that returns an Effect-typed local still produces a running call: the call's result type selects `yield*` even though the factory itself remains JavaScript. The checker and lowering share `callRunsResult` for this D24 decision. Its returned program's E/R come from the result type, rather than the factory's body. An explicitly Effect-typed top-level const still holds the cold value (D262).
 
 Checking takes one pass. The analyzer decides from function bodies and callee types, and the hooks type each call and lambda inside TypeScript's own overload resolution.
 

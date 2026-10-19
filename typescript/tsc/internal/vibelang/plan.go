@@ -250,15 +250,19 @@ func (a *analyzer) runs(call *ast.Node) bool {
 		if isProducer(fn) {
 			return false // a call constructs the producer's Stream and runs none of it
 		}
-		if a.isPlainFunction(fn) {
+		if a.isPlainFunction(fn) && a.isSplittable(fn) {
 			// A plain function's call runs inline, through its $direct
 			// variant when it has one, and runs its Effect form only where
 			// that variant is out of reach.
-			return a.isSplittable(fn) && a.directReferenceOf(ast.GetInvokedExpression(call), fn) == nil
+			return a.directReferenceOf(ast.GetInvokedExpression(call), fn) == nil
 		}
-		return a.isEffect(fn)
+		if a.isEffect(fn) {
+			return true // body inference may still be computing the signature's type
+		}
+		// A plain factory can return a cold Effect stored in a local. The
+		// callee's form does not decide whether that returned program runs.
 	}
-	return isEffectType(a.checker, runningCallResult(a.checker, call, sig))
+	return callRunsResult(a.checker, call, a.checker.GetReturnTypeOfSignature(sig))
 }
 
 // implementationOf returns the function body that decl resolves to, which

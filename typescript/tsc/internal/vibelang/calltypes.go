@@ -18,7 +18,10 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 	if isExitMarkerCall(call) {
 		return exitCallType(c, call, t) // finally (exit) (primitives.go)
 	}
-	if ast.IsOptionalChain(call) && isEffectType(c, presentCallResult(c, t)) {
+	if !callRunsResult(c, call, t) {
+		return t
+	}
+	if ast.IsOptionalChain(call) {
 		parts := []*checker.Type{}
 		for _, part := range t.Distributed() {
 			if success := successType(c, part); success != nil {
@@ -33,6 +36,16 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 		return success
 	}
 	return t
+}
+
+// callRunsResult is the shared checker/lowering predicate for D24: a call
+// runs an Effect-valued result even when its callee is plain JavaScript.
+// Optional chaining keeps the absent branch; structured subtypes stay data.
+func callRunsResult(c *checker.Checker, call *ast.Node, t *checker.Type) bool {
+	if ast.IsOptionalChain(call) {
+		t = presentCallResult(c, t)
+	}
+	return isEffectType(c, t)
 }
 
 // inLowerableBody reports whether node is evaluated by the body of a function

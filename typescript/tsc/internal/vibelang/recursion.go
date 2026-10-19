@@ -50,7 +50,7 @@ func (a *analyzer) bodyCallees(fn *ast.Node) []*ast.Node {
 		}
 		sig := a.checker.GetResolvedSignature(call)
 		callee := implementationOf(sig.Declaration())
-		if callee == nil || !isLowerable(callee) || sig.Target() != nil || slices.Contains(callees, callee) {
+		if callee == nil || !isLowerable(callee) || sig.Target() != nil || !a.isSplittable(callee) && !a.isEffect(callee) || slices.Contains(callees, callee) {
 			return false
 		}
 		if k := a.contractOf(callee); k != nil && !k.inferredAny() {
