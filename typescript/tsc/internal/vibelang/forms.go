@@ -330,7 +330,7 @@ func (a *analyzer) canBePlain(fn *ast.Node) bool {
 	if s := a.lambdas[fn]; s != nil && s.typedAsWritten && a.contractOf(fn) != nil {
 		return false // TypeScript gave fn its contract's Effect type (functionExpressionType)
 	}
-	return !forEachCallInBody(fn, a.performs) && (!hasEscapingThrow(fn) || a.hasPlainContract(fn)) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn)
+	return !forEachCallInBody(fn, a.performs) && (!hasEscapingThrow(fn) || a.hasPlainContract(fn)) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn) && !a.hasProgramReturn(fn)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript

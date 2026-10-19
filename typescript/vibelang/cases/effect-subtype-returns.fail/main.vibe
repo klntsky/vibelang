@@ -1,0 +1,18 @@
+// expect: TS2322 EK2001 EK2002
+import * as Effect from "effect/Effect"
+import * as Exit from "effect/Exit"
+import { implement, needsAction } from "./host.js"
+
+export function wrongSuccess() {
+  return implement((n) => Exit.succeed("wrong"))
+}
+
+export function wrongAnnotation(): Effect.Effect<number, never, never> {
+  return Exit.succeed("wrong")
+}
+export function wrongError(): Effect.Effect<number, never, never> {
+  return Exit.fail("bad")
+}
+export function wrongRequirement(): Effect.Effect<number, never, never> {
+  return needsAction()
+}

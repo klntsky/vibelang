@@ -34,6 +34,7 @@ func init() {
 	checker.RegisterClassBaseHook(classBases)
 	checker.RegisterMemberReceiverHook(memberReceiver)
 	checker.RegisterCallSignaturesHook(effectValueCall)
+	checker.RegisterExpressionTypeHook(returnedExpressionType)
 	checker.RegisterExpressionTypeHook(expressionType)
 	checker.RegisterCatchVariableTypeHook(catchVariableType)
 	checker.RegisterUnwrappedReturnTypeHook(unwrappedReturnType)

@@ -71,7 +71,14 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 	if conversion := tx.plan.conversionOf(node); conversion != convertNone {
 		return tx.convert(node, conversion)
 	}
-	return tx.visitNode(node)
+	visited := tx.visitNode(node)
+	if tx.inEffect && tx.plan.returns[node] {
+		result := tx.Factory().NewYieldExpression(tx.Factory().NewToken(ast.KindAsteriskToken), visited)
+		tx.EmitContext().SetOriginal(result, node)
+		result.Loc = node.Loc
+		return result
+	}
+	return visited
 }
 
 func (tx *lowering) visitNode(node *ast.Node) *ast.Node {

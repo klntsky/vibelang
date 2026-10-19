@@ -19,7 +19,11 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 		return exitCallType(c, call, t) // finally (exit) (primitives.go)
 	}
 	if !callRunsResult(c, call, t) {
-		return t
+		// D24 keeps subtype results as data in running positions. An Effect
+		// return boundary instead delegates to that subtype's program (S5-1).
+		// This hook also serves the checker's quick call-type path, which
+		// skips expression hooks, including parenthesized callback returns.
+		return returnedProgramType(c, call, t)
 	}
 	if ast.IsOptionalChain(call) {
 		parts := []*checker.Type{}
@@ -33,7 +37,7 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 		return c.GetUnionType(parts)
 	}
 	if success := successType(c, t); success != nil {
-		return success
+		return success // its success may itself be subtype data
 	}
 	return t
 }
@@ -78,8 +82,9 @@ func channelType(c *checker.Checker, t *checker.Type, name string) *checker.Type
 	return programChannelType(c, t, name)
 }
 
-// programChannelType also reads held structured programs (D24) at by-name
-// result positions; ordinary calls continue to use channelType's exact test.
+// programChannelType reads structured Effect subtypes at by-name result
+// positions and Effect return boundaries (S5-1). Ordinary running calls use
+// channelType's exact-Effect test above (D24).
 func programChannelType(c *checker.Checker, t *checker.Type, name string) *checker.Type {
 	variance := c.GetTypeOfPropertyOfType(t, effectTypeID) // Variance<A, E, R>
 	if variance == nil {

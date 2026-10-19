@@ -17,6 +17,7 @@ type plan struct {
 	programs     map[*ast.Node]bool       // lambdas lowered to Effect.gen programs (design D7)
 	runs         map[*ast.Node]bool       // calls in those functions emitted as yield*
 	heldPrograms map[*ast.Node]bool       // held values in by-name result positions
+	returns      map[*ast.Node]bool       // returned Effect subtypes executed at an Effect return boundary
 	converts     map[*ast.Node]conversion // function values converted where they are passed
 	prelude      []string                 // prelude names the file uses as values (prelude.go)
 	servicePlan
@@ -47,6 +48,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, heldPrograms: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
+	p.returns = map[*ast.Node]bool{}
 	p.handlerPlan = newHandlerPlan()
 	p.hatches = map[*ast.Node]hatchForm{}
 	p.failureTags = map[*ast.Node][]string{}
@@ -84,6 +86,9 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 					return false
 				})
 				p.planScopes(a, node)
+			}
+			if a.returnedProgram(node) != nil {
+				p.returns[node] = true
 			}
 			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertSyncProgram || conversion == convertPrograms || conversion == convertByName {
 				p.converts[node] = conversion
@@ -176,9 +181,10 @@ type analyzer struct {
 	resolving       map[*ast.Node]bool                  // calls whose signature candidateOf is resolving
 	effectInterface *checker.Type                       // the generic Effect interface, once seen
 
-	conversions  map[*ast.Node]*valueState // argument expressions that convert (conversions.go)
-	heldPrograms map[*ast.Node]bool        // by-name result values before argument conversion
-	valueTyping  map[*ast.Node]bool        // by-name arguments whose own type is being read (valueTypeOf)
+	conversions      map[*ast.Node]*valueState   // argument expressions that convert (conversions.go)
+	heldPrograms     map[*ast.Node]bool          // by-name result values before argument conversion
+	returnedPrograms map[*ast.Node]*checker.Type // structured programs at Effect return boundaries
+	valueTyping      map[*ast.Node]bool          // by-name arguments whose own type is being read (valueTypeOf)
 
 	// Plain JavaScript functions (plain.go).
 	plain                 map[*ast.Node]plainState // function declarations that compile to plain JavaScript
@@ -208,11 +214,12 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			rejected:  map[*ast.Node]map[candidateKey]bool{},
 			resolving: map[*ast.Node]bool{},
 
-			conversions:  map[*ast.Node]*valueState{},
-			heldPrograms: map[*ast.Node]bool{},
-			valueTyping:  map[*ast.Node]bool{},
-			plain:        map[*ast.Node]plainState{},
-			callbacks:    map[*ast.Node]*callbackContracts{},
+			conversions:      map[*ast.Node]*valueState{},
+			heldPrograms:     map[*ast.Node]bool{},
+			returnedPrograms: map[*ast.Node]*checker.Type{},
+			valueTyping:      map[*ast.Node]bool{},
+			plain:            map[*ast.Node]plainState{},
+			callbacks:        map[*ast.Node]*callbackContracts{},
 		}
 	}).(*analyzer)
 }
