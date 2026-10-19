@@ -9264,6 +9264,12 @@ func (c *Checker) chooseOverload(s *CallState, relation *Relation) *Signature {
 		}
 		return candidate
 	}
+	var rank func(*Signature) int
+	if len(s.candidates) > 1 {
+		rank = c.candidateRanker(s.node)
+	}
+	var best *Signature
+	bestRank := -1
 	for candidateIndex, candidate := range s.candidates {
 		if !c.hasCorrectTypeArgumentArity(candidate, s.typeArguments) || !c.hasCorrectArity(s.node, s.args, candidate, s.signatureHelpTrailingComma) {
 			continue
@@ -9330,9 +9336,19 @@ func (c *Checker) chooseOverload(s *CallState, relation *Relation) *Signature {
 			}
 		}
 		s.candidates[candidateIndex] = checkCandidate
-		return checkCandidate
+		if rank == nil {
+			return checkCandidate
+		}
+		candidateRank := rank(checkCandidate)
+		if candidateRank < 0 {
+			s.candidatesForArgumentError = append(s.candidatesForArgumentError, checkCandidate)
+			continue
+		}
+		if candidateRank > bestRank {
+			best, bestRank = checkCandidate, candidateRank
+		}
 	}
-	return nil
+	return best
 }
 
 func (c *Checker) hasCorrectArity(node *ast.Node, args []*ast.Node, signature *Signature, signatureHelpTrailingComma bool) bool {
@@ -9885,6 +9901,13 @@ func (c *Checker) reportCallResolutionErrors(node *ast.Node, s *CallState, signa
 		last := s.candidatesForArgumentError[len(s.candidatesForArgumentError)-1]
 		var diags []*ast.Diagnostic
 		c.isSignatureApplicable(s.node, s.args, last, c.assignableRelation, CheckModeNormal, true /*reportErrors*/, &diags)
+		// A language's ranking rule can reject an otherwise assignable
+		// argument (for example a running program whose success is never).
+		if len(diags) == 0 {
+			if rank := c.candidateRanker(s.node); rank != nil && rank(last) < 0 {
+				diags = append(diags, NewDiagnosticForNode(s.node, diagnostics.No_overload_matches_this_call))
+			}
+		}
 		for _, diagnostic := range diags {
 			if len(s.candidatesForArgumentError) > 1 {
 				diagnostic = ast.NewDiagnosticChain(diagnostic, diagnostics.The_last_overload_gave_the_following_error)

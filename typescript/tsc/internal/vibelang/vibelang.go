@@ -25,6 +25,7 @@ func init() {
 	checker.RegisterInferredReturnTypeHook(inferredReturnType)
 	checker.RegisterCallCandidateHook(callCandidate)
 	checker.RegisterCandidateFilterHook(filterCandidate)
+	checker.RegisterCandidateRankingHook(rankProgramCandidates)
 	checker.RegisterFunctionExpressionTypeHook(functionExpressionType)
 	checker.RegisterContextualReturnTypeHook(contextualReturnType)
 	checker.RegisterAnnotatedReturnInferenceHook(annotatedReturnInference)

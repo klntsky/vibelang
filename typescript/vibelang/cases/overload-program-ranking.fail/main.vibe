@@ -1,0 +1,12 @@
+// expect: TS2769 TS2769
+import { valueOnly } from "./helpers.ts"
+
+// A nearby invalid second program must still fail overload resolution.
+export function invalid() {
+  return Effect.raceFirst(Effect.fail("failed"), 123)
+}
+
+// A running call cannot make either value overload applicable by never.
+export function noValueCandidate() {
+  return valueOnly(Effect.fail("failed"))
+}
