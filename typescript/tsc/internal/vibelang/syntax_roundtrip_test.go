@@ -162,3 +162,14 @@ func TestCurriedPipeSyntax(t *testing.T) {
 	}
 }
 
+func TestBlockParamPostfixSyntax(t *testing.T) {
+	for _, source := range []string{
+		`const x = f { return 1 }.value`,
+		`const x = f { return 1 }[0]`,
+		`const x = f { return 1 }(2)`,
+		`const x = f { return 1 }?.value`,
+		`const x = f { return 1 }.g { return 2 }.value`,
+	} {
+		checkSyntaxRoundTrip(t, source)
+	}
+}

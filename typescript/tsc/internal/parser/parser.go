@@ -5686,6 +5686,7 @@ func (p *Parser) parseCallExpressionRest(pos int, expression *ast.Expression) *a
 		}
 		if p.isStartOfVibeLangBlockParam(expression) {
 			expression = p.parseVibeLangBlockParam(pos, expression) // f(args) { block } (vibelang_blocks.go)
+			continue // its result takes the same postfix operations as any call
 		}
 		break
 	}

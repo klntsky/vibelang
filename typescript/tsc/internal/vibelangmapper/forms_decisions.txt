@@ -91,6 +91,15 @@ typescript/vibelang/cases/await-ops/main.vibe:80:5 lambda program table
 typescript/vibelang/cases/await-ops/main.vibe:89:21 byname program table
 typescript/vibelang/cases/await-ops/main.vibe:89:29 byname program table
 typescript/vibelang/cases/await-ops/main.vibe:95:29 byname program table
+typescript/vibelang/cases/block-param-postfix.fail/main.vibe:5:22 block appended/effectFn annotation
+typescript/vibelang/cases/block-param-postfix.fail/main.vibe:6:25 block appended/effectFn annotation
+typescript/vibelang/cases/block-param-postfix.fail/main.vibe:7:14 block appended/effectFn annotation
+typescript/vibelang/cases/block-param-postfix/main.vibe:10:17 block appended/effectFn annotation
+typescript/vibelang/cases/block-param-postfix/main.vibe:11:20 block appended/effectFn annotation
+typescript/vibelang/cases/block-param-postfix/main.vibe:12:20 block appended/effectFn annotation
+typescript/vibelang/cases/block-param-postfix/main.vibe:3:22 lambda dual fallback
+typescript/vibelang/cases/block-param-postfix/main.vibe:3:41 block appended/program table
+typescript/vibelang/cases/block-param-postfix/main.vibe:6:74 lambda plain annotation
 typescript/vibelang/cases/blocks-block-params.fail/main.vibe:8:20 block appended/plain fallback
 typescript/vibelang/cases/blocks-block-params/main.vibe:15:30 block prepended/program table
 typescript/vibelang/cases/blocks-block-params/main.vibe:23:35 block applied/program table
