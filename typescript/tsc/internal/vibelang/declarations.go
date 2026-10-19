@@ -121,6 +121,24 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 		var refs map[*ast.Node]bool
 		r.WithChecker(func(c *checker.Checker) {
 			state := preludeStateOf(c)
+			// S19-1: nodebuilder can recycle a written return annotation on an
+			// arrow without asking entity visibility. Inspect only references
+			// retained in the declaration, and resolve their original source
+			// identifiers so local names and explicit imports still shadow the
+			// prelude. D67 keeps the written contract; S17-1's specifier rewrite
+			// above still handles inferred and linked dependency types.
+			var visit func(*ast.Node) bool
+			visit = func(n *ast.Node) bool {
+				if ast.IsTypeReferenceNode(n) {
+					original := resolver.EmitContext().MostOriginal(n)
+					if ast.IsTypeReferenceNode(original) && ast.GetSourceFileOfNode(original) == sourceFile {
+						first := ast.GetFirstIdentifier(original.AsTypeReferenceNode().TypeName)
+						preludeNameVisible(c, first, c.GetSymbolAtLocation(first))
+					}
+				}
+				return n.ForEachChild(visit)
+			}
+			declarations.AsNode().ForEachChild(visit)
 			for _, identifier := range keys.written {
 				recordTypeUse(state, sourceFile, identifier)
 			}

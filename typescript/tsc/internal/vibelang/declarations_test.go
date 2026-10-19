@@ -177,3 +177,43 @@ func emitDeclarations(t *testing.T, files map[string]string) string {
 	}
 	return dts
 }
+
+// S19-1: copied annotations must import prelude names even when nodebuilder
+// reuses the syntax without its entity-visibility callback. A fresh TypeScript
+// consumer checks scope resolution with declaration checking enabled.
+func TestDeclarationImportsRecycledAnnotation(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name, source, want string
+		prelude            bool
+	}{
+		{"arrow", `export const value = (): Effect.Effect<number, never, never> => { return 42 }`, `Effect.Effect<number, never, never>`, true},
+		{"function expression", `export const value = function(): Effect.Effect<number, never, never> { return 42 }`, `Effect.Effect<number, never, never>`, true},
+		{"object method", `export const value = { run(): Effect.Effect<number, never, never> { return 42 } }`, `Effect.Effect<number, never, never>`, true},
+		{"explicit import", `import { Effect } from "effect"; export const value = (): Effect.Effect<number, never, never> => { return 42 }`, `from "effect"`, false},
+		{"generic shadow", `export const value = <Effect>(x: Effect): Effect => x`, `<Effect>(x: Effect) => Effect`, false},
+		{"namespace shadow", `namespace Effect { export type Effect<A, E, R> = A }; export const value = (): Effect.Effect<number, never, never> => 42`, `Effect.Effect<number, never, never>`, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			files := computedKeyFiles(false)
+			files["/Users/x/src/main.vibe"] = test.source
+			dts := emitDeclarations(t, files)
+			if !strings.Contains(dts, test.want) {
+				t.Fatalf("declaration lacks %q:\n%s", test.want, dts)
+			}
+			if got := strings.Contains(dts, `import type { Effect } from "vibelang-runtime";`); got != test.prelude {
+				t.Fatalf("prelude import = %v, want %v:\n%s", got, test.prelude, dts)
+			}
+			files["/Users/x/src/main.d.ts"] = dts
+			delete(files, "/Users/x/src/main.vibe")
+			files["/Users/x/src/consumer.ts"] = `import * as value from "./main.js"; export { value }`
+			files["/Users/x/src/tsconfig.json"] = `{"compilerOptions":{"strict":true,"skipLibCheck":false,"module":"NodeNext","noEmit":true},"files":["consumer.ts"]}`
+			p := computedKeyProgram(t, files)
+			for _, d := range p.GetSemanticDiagnostics(t.Context(), nil) {
+				if d.Category() == diagnostics.CategoryError {
+					t.Fatalf("declaration consumer: %s\n%s", d.String(), dts)
+				}
+			}
+		})
+	}
+}
