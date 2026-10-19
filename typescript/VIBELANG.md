@@ -53,6 +53,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 
 | Case | Proves |
 | --- | --- |
+| `node-format-esm`, `node-format-cjs.fail`, `node-format-default.fail` | Smithers C-9/E-12: NodeNext package type controls import.meta, top-level await, mixed TS/Vibe imports, conditional exports, and declaration emit |
 | `ts-hello` | The stock compiler still compiles and runs plain TypeScript |
 | `ts-ownership-interrupt` | D266: terminal interrupt in an unchanged Effect generator compiles with zero errors in `.ts`, `.tsx`, `.mts`, and `.cts`, even with EK rules configured as errors |
 | `vibe-ownership-interrupt.fail` | The same program in `.vibe` keeps EK1001 (module-level Effect call) and EK1002 (generator argument) |

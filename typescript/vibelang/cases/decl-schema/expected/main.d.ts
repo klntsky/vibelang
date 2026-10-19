@@ -1,30 +1,30 @@
 import type { Schema } from "vibelang-runtime";
 export interface Address extends Schema.Schema.Type<typeof Address> {
 }
-export declare const Address: import("effect/Schema", { with: { "resolution-mode": "import" } }).Struct<{
-    readonly city: import("effect/Schema", { with: { "resolution-mode": "import" } }).String;
-    readonly zip: import("effect/Schema", { with: { "resolution-mode": "import" } }).optional<import("effect/Schema", { with: { "resolution-mode": "import" } }).String>;
+export declare const Address: import("effect/Schema").Struct<{
+    readonly city: import("effect/Schema").String;
+    readonly zip: import("effect/Schema").optional<import("effect/Schema").String>;
 }>;
 export interface User extends Schema.Schema.Type<typeof User> {
 }
-export declare const User: import("effect/Schema", { with: { "resolution-mode": "import" } }).Struct<{
-    readonly id: import("effect/Schema", { with: { "resolution-mode": "import" } }).String;
-    readonly name: import("effect/Schema", { with: { "resolution-mode": "import" } }).String;
-    readonly nickname: import("effect/Schema", { with: { "resolution-mode": "import" } }).optional<import("effect/Schema", { with: { "resolution-mode": "import" } }).String>;
-    readonly role: import("effect/Schema", { with: { "resolution-mode": "import" } }).Literals<readonly ["admin", "member"]>;
-    readonly tags: import("effect/Schema", { with: { "resolution-mode": "import" } }).$Array<import("effect/Schema", { with: { "resolution-mode": "import" } }).String>;
-    readonly home: import("effect/Schema", { with: { "resolution-mode": "import" } }).Struct<{
-        readonly city: import("effect/Schema", { with: { "resolution-mode": "import" } }).String;
-        readonly zip: import("effect/Schema", { with: { "resolution-mode": "import" } }).optional<import("effect/Schema", { with: { "resolution-mode": "import" } }).String>;
+export declare const User: import("effect/Schema").Struct<{
+    readonly id: import("effect/Schema").String;
+    readonly name: import("effect/Schema").String;
+    readonly nickname: import("effect/Schema").optional<import("effect/Schema").String>;
+    readonly role: import("effect/Schema").Literals<readonly ["admin", "member"]>;
+    readonly tags: import("effect/Schema").$Array<import("effect/Schema").String>;
+    readonly home: import("effect/Schema").Struct<{
+        readonly city: import("effect/Schema").String;
+        readonly zip: import("effect/Schema").optional<import("effect/Schema").String>;
     }>;
-    readonly score: import("effect/Schema", { with: { "resolution-mode": "import" } }).Tuple<readonly [import("effect/Schema", { with: { "resolution-mode": "import" } }).Number, import("effect/Schema", { with: { "resolution-mode": "import" } }).String]>;
-    readonly counts: import("effect/Schema", { with: { "resolution-mode": "import" } }).$Record<import("effect/Schema", { with: { "resolution-mode": "import" } }).String, import("effect/Schema", { with: { "resolution-mode": "import" } }).Number>;
-    readonly verified: import("effect/Schema", { with: { "resolution-mode": "import" } }).Union<readonly [import("effect/Schema", { with: { "resolution-mode": "import" } }).Boolean, import("effect/Schema", { with: { "resolution-mode": "import" } }).Null]>;
-    readonly login: import("effect/Schema", { with: { "resolution-mode": "import" } }).Struct<{
-        readonly at: import("effect/Schema", { with: { "resolution-mode": "import" } }).Number;
+    readonly score: import("effect/Schema").Tuple<readonly [import("effect/Schema").Number, import("effect/Schema").String]>;
+    readonly counts: import("effect/Schema").$Record<import("effect/Schema").String, import("effect/Schema").Number>;
+    readonly verified: import("effect/Schema").Union<readonly [import("effect/Schema").Boolean, import("effect/Schema").Null]>;
+    readonly login: import("effect/Schema").Struct<{
+        readonly at: import("effect/Schema").Number;
     }>;
 }>;
-export declare function main(): import("effect/Effect", { with: { "resolution-mode": "import" } }).Effect<{
+export declare function main(): import("effect/Effect").Effect<{
     a: string | {
         readonly id: string;
         readonly name: string;

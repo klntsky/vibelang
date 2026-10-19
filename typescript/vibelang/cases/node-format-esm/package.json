@@ -1,0 +1,8 @@
+{
+  "type": "module",
+  "name": "conditional",
+  "exports": {
+    "import": "./esm.d.ts",
+    "require": "./cjs.d.ts"
+  }
+}

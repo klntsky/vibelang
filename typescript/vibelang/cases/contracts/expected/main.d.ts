@@ -1,12 +1,12 @@
 import type { Effect } from "vibelang-runtime";
-declare const UserNotFound_base: new <A extends Record<string, any> = {}>(args: import("effect/Types", { with: { "resolution-mode": "import" } }).VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }>) => import("effect/Cause", { with: { "resolution-mode": "import" } }).YieldableError & {
+declare const UserNotFound_base: new <A extends Record<string, any> = {}>(args: import("effect/Types").VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }>) => import("effect/Cause").YieldableError & {
     readonly _tag: "UserNotFound";
 } & Readonly<A>;
 export declare class UserNotFound extends UserNotFound_base<{
     readonly id: string;
 }> {
 }
-declare const Invalid_base: new <A extends Record<string, any> = {}>(args: import("effect/Types", { with: { "resolution-mode": "import" } }).VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }>) => import("effect/Cause", { with: { "resolution-mode": "import" } }).YieldableError & {
+declare const Invalid_base: new <A extends Record<string, any> = {}>(args: import("effect/Types").VoidIfEmpty<{ readonly [P in keyof A as P extends "_tag" ? never : P]: A[P]; }>) => import("effect/Cause").YieldableError & {
     readonly _tag: "Invalid";
 } & Readonly<A>;
 export declare class Invalid extends Invalid_base<{
@@ -24,15 +24,15 @@ export declare function point(): Effect<{
     readonly x: number;
     readonly kind: "point";
 }, never, never>;
-export declare function greeting(id: string): import("effect/Effect", { with: { "resolution-mode": "import" } }).Effect<string, UserNotFound, never>;
-export declare function safe(id: string): import("effect/Effect", { with: { "resolution-mode": "import" } }).Effect<string, never, never>;
-export declare function named(id: string): import("effect/Effect", { with: { "resolution-mode": "import" } }).Effect<{
+export declare function greeting(id: string): import("effect/Effect").Effect<string, UserNotFound, never>;
+export declare function safe(id: string): import("effect/Effect").Effect<string, never, never>;
+export declare function named(id: string): import("effect/Effect").Effect<{
     id: string;
     name: string;
 }, UserNotFound, never>;
-export declare function everything(id: string): import("effect/Effect", { with: { "resolution-mode": "import" } }).Effect<User, UserNotFound, never>;
+export declare function everything(id: string): import("effect/Effect").Effect<User, UserNotFound, never>;
 export declare const twice: (n: number) => number;
-export declare function main(): import("effect/Effect", { with: { "resolution-mode": "import" } }).Effect<{
+export declare function main(): import("effect/Effect").Effect<{
     find: string;
     wide: string;
     answer: number;

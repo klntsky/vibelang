@@ -2684,7 +2684,7 @@ func GetImpliedNodeFormatForFile(fileName tspath.RootedFilePath, packageJsonType
 		impliedNodeFormat = core.ResolutionModeESM
 	} else if fileName.ExtensionIsOneOf([]string{tspath.ExtensionDcts, tspath.ExtensionCts, tspath.ExtensionCjs}) {
 		impliedNodeFormat = core.ResolutionModeCommonJS
-	} else if fileName.ExtensionIsOneOf([]string{tspath.ExtensionDts, tspath.ExtensionTs, tspath.ExtensionTsx, tspath.ExtensionJs, tspath.ExtensionJsx}) {
+	} else if fileName.ExtensionIsOneOf([]string{tspath.ExtensionDts, tspath.ExtensionTs, tspath.ExtensionTsx, tspath.ExtensionJs, tspath.ExtensionJsx, tspath.ExtensionVibe}) {
 		impliedNodeFormat = core.IfElse(packageJsonType == "module", core.ResolutionModeESM, core.ResolutionModeCommonJS)
 	}
 

@@ -657,6 +657,9 @@ typescript/vibelang/cases/match-patterns/main.vibe:158:21 lambda plain fallback
 typescript/vibelang/cases/match-patterns/main.vibe:41:31 byname program table
 typescript/vibelang/cases/match-patterns/main.vibe:89:3 lambda plain fallback
 typescript/vibelang/cases/methods-optional-chain.fail/main.vibe:5:21 lambda plain fallback
+typescript/vibelang/cases/node-format-cjs.fail/main.vibe:2:21 lambda plain annotation
+typescript/vibelang/cases/node-format-default.fail/main.vibe:2:21 lambda plain annotation
+typescript/vibelang/cases/node-format-esm/main.vibe:5:21 lambda plain annotation
 typescript/vibelang/cases/nominal-services.fail/nominal-services.fail.vibe:20:10 lambda effectFn service
 typescript/vibelang/cases/nominal-services.fail/nominal-services.fail.vibe:24:25 lambda program table
 typescript/vibelang/cases/pipe-generic-stages/main.vibe:10:28 lambda plain table
