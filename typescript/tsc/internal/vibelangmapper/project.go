@@ -223,6 +223,10 @@ func lower(text string, ctx FileContext) *projector {
 
 // visit walks node and records the edits that lower it.
 func (p *projector) visit(node *ast.Node, e env) {
+	if e.effect && p.programReturnBoundary(node) {
+		p.returnProgram(node, e)
+		return
+	}
 	switch {
 	case ast.IsPropertyAccessExpression(node) && node.Name().Text() == "pipe" && node.Name().Flags&ast.NodeFlagsReparsed != 0 && ast.IsCallExpression(node.Parent):
 		// D272: the parser contextualizes x |> g(%) as x.pipe(g).
@@ -700,6 +704,10 @@ func isRunnableCall(call *ast.Node) bool {
 // starts with a semicolon, because VibeLang code omits semicolons and a line
 // that starts with ( would otherwise continue the previous one.
 func (p *projector) runCall(call *ast.Node, e env) {
+	if p.structuredCall(call) {
+		p.moduleCall(call, e)
+		return
+	}
 	if p.dataMethod(call, e) || p.predicateCall(call, e) {
 		return
 	}

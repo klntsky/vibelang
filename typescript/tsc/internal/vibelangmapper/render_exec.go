@@ -70,6 +70,9 @@ func renderExec(e edit) (text string, keep bool) {
 		}
 		return e.text, true
 	case editRun:
+		if e.arg == "return" {
+			return pick(e.part, "(yield* "+helperRef("$returnRun")+"(", "", "))"), true
+		}
 		if e.arg == "service" {
 			return pick(e.part, "(yield* ", "", ")"), true
 		}
@@ -302,7 +305,7 @@ var execHelpers = map[string]execSource{
 // (execRendering.prologue); temporaries are declared there too.
 var prologueHelpers = map[string]bool{
 	"$fail": true, "$end": true, "$Jump": true, "$jump": true, "$returned": true, "$jumped": true, "$value": true, "$acquire": true,
-	"$adapt": true, "$plain": true, "$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
+	"$returnRun": true, "$adapt": true, "$plain": true, "$member": true, "$dual": true, "$asProgram": true, "$programs": true, "$each": true,
 	"$t": true, "$s": true, "$scope": true, "$iterate": true, "$producerGen": true,
 }
 
@@ -411,6 +414,10 @@ func (r *execRendering) candidateConstants() string {
 // are a file's own, because a completion never leaves the function whose
 // region made it.
 func (r *execRendering) prologue() string {
+	var returnRun string
+	if r.used["$returnRun"] {
+		returnRun = "const " + r.local("$returnRun") + " = (value: any): any => value; "
+	}
 	if r.used["$producerGen"] {
 		for _, helper := range []string{"$gen", "$suspend", "$onExit"} {
 			r.local(helper)
@@ -508,7 +515,7 @@ func (r *execRendering) prologue() string {
 	if r.used["$programs"] {
 		parts = append(parts, "const "+r.local("$programs")+" = (xs) => Symbol.iterator in xs ? Array.from(xs, "+r.local("$asProgram")+") : Object.fromEntries(Object.entries(xs).map(([k, v]) => [k, "+r.local("$asProgram")+"(v)]));")
 	}
-	return strings.Join(parts, " ")
+	return returnRun + strings.Join(parts, " ")
 }
 
 // ---------------------------------------------------------------- lowering
@@ -795,6 +802,9 @@ func (l *execLowering) scopeBodies() {
 func (l *execLowering) markFastCycles() {
 	edges := map[*execFunction][]*execFunction{}
 	for _, s := range l.spans[editRun] {
+		if l.edits[s.open].arg == "return" {
+			continue
+		}
 		call := l.calls[[2]int{l.edits[s.open].pos, l.edits[s.close].pos}]
 		if call == nil {
 			continue
@@ -965,6 +975,9 @@ func (l *execLowering) splitFunction(f *execFunction) {
 // keeps its own lowering.
 func (l *execLowering) lowerCalls() {
 	for _, s := range l.spans[editRun] {
+		if l.edits[s.open].arg == "return" {
+			continue
+		}
 		call := l.calls[[2]int{l.edits[s.open].pos, l.edits[s.close].pos}]
 		if call == nil {
 			continue

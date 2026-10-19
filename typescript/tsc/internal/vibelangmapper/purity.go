@@ -205,6 +205,10 @@ func (p *projector) plainEdits(fn *ast.Node) bool {
 		if e.kind == editEffectBody && (e.pos == lo && e.part == partOpen || e.pos == hi && e.part == partClose) {
 			continue // fn's own body
 		}
+		// S5-1: a returned program must run even without a call in the body.
+		if e.kind == editRun && e.arg == "return" {
+			return false
+		}
 		if e.kind != editRun && e.kind != editSyntax {
 			return false
 		}

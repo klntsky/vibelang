@@ -176,7 +176,7 @@ func TestMapperFollowupRuntimeCases(t *testing.T) {
 		t.Fatal(err)
 	}
 	scope := mapperTestScope(t, root)
-	for _, name := range []string{"plain-export-lists", "plain-imports", "retry-effectful-predicate", "stream-pull-using", "pipe-generic-stages", "contextual-effect-fields", "program-values"} {
+	for _, name := range []string{"plain-export-lists", "plain-imports", "retry-effectful-predicate", "stream-pull-using", "pipe-generic-stages", "contextual-effect-fields", "program-values", "effect-subtype-returns"} {
 		t.Run(name, func(t *testing.T) {
 			dir, err := os.MkdirTemp(scope, "mapper-followup-")
 			if err != nil {
@@ -200,6 +200,10 @@ func TestMapperFollowupRuntimeCases(t *testing.T) {
 							expected = strings.TrimSpace(value)
 						}
 					}
+				}
+				if name == "effect-subtype-returns" && filepath.Base(file) == "main.vibe" {
+					assertSubtypeHostChoices(t, string(source))
+					t.Skip("native-only runtime: five callback contracts come from host.ts (EK9100)")
 				}
 				checked := Project(string(source), testContext)
 				if len(checked.Diagnostics) != 0 {

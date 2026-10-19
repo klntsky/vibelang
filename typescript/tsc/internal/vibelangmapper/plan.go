@@ -267,7 +267,9 @@ func (r checking) text(e edit) (string, bool) {
 			text = e.text
 		}
 	case editRun:
-		if strings.HasPrefix(e.arg, "channels ") {
+		if e.arg == "return" {
+			text = pick(e.part, "(yield* "+helperRef("$returnRun")+"(", "", "))")
+		} else if strings.HasPrefix(e.arg, "channels ") {
 			text = pick(e.part, "(yield* "+helperRef("$runAt")+"(", "", ", "+strings.TrimPrefix(e.arg, "channels ")+"))")
 		} else {
 			text = pick(e.part, "(yield* "+helperRef("$run")+"(", "", "))")
