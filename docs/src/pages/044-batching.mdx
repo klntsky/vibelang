@@ -11,6 +11,8 @@ Use requests and resolvers when independent lookups can share a backend call. A 
 
 ```vibe
 // run: const first = FindPart({ code: "ink-blue" }); const same = FindPart({ code: "ink-blue" }); Console.log(Equal.equals(first, same), Hash.hash(first) === Hash.hash(same)); Console.log(Equal.equals(first, FindPart({ code: "ink-black" })))
+import { Request } from "effect"
+
 type Part = { code: string; label: string }
 
 error PartMissing {
@@ -29,7 +31,7 @@ const FindPart = Request.tagged<FindPart>("FindPart")
 // Output: false
 ```
 
-The request carries the input, success type, and expected errors. `Request.tagged` supplies structural equality and hashing so equal request values can be compared for cache reuse. Include every input that affects the answer, such as a tenant or locale, in a real request model.
+Import `Request` from `effect`: without the import, `Request` is the web-standard `Request` class. The request carries the input, success type, and expected errors. `Request.tagged` supplies structural equality and hashing so equal request values can be compared for cache reuse. Include every input that affects the answer, such as a tenant or locale, in a real request model.
 
 A direct service call for each item performs repeated backend work. Batching helps only when the data source can actually answer several inputs together; it does not create a bulk endpoint for you.
 

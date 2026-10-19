@@ -148,6 +148,16 @@ export const sidebar = [
             "link": "/setup/other-editors"
           }
         ]
+      },
+      {
+        "text": "Upgrade",
+        "collapsed": false,
+        "items": [
+          {
+            "text": "Release notes",
+            "link": "/setup/release-notes"
+          }
+        ]
       }
     ],
     "collapsed": false
