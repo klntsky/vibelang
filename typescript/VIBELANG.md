@@ -63,6 +63,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `vibelang-wrap` | Exported functions and arrow functions lower to `Effect.fnUntraced`, and JavaScript runs them with `Effect.runSync` |
 | `plain-factory-programs`, `plain-factory-programs.fail` | S3-3: a plain factory's Effect-valued call runs and returns its success each time; D262 top-level storage stays cold; EK1001, EK2003, and returned-program E/R checks remain enforced |
 | `vibelang-lower` | Type-directed `yield*`: pure helpers stay plain, Effect-returning TypeScript calls and `.vibe` calls run, operands run left to right, a `Config` stays data |
+| `catch-narrowing`, `catch-narrowing.fail` | Smithers A-16: ternary, `&&`, `if`, and `typeof` guards reach catch operands, including bracket access and nested catches; absent and failing reads run correctly, while unguarded calls and real closure boundaries keep TS2722 |
 | `optional-effect-calls`, `optional-effect-semantics`, `optional-effect-channels.fail` | Smithers A-11: optional Effect calls run once when present, return undefined when absent, preserve JavaScript chaining and D24 data, and contribute E/R (D147) |
 | `tagged-template-runs` | Effectful templates execute once as statements and expressions; plain tags stay plain, a fake SqlClient migration executes, and by-name and local tags run (D267) |
 | `tagged-template-contexts.fail` | EK1001 at module top level; EK4301 for a synchronous callback, a discarded D24 subtype, and positions that cannot run (D267) |

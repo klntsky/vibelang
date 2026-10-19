@@ -1,0 +1,37 @@
+// expect: TS18048 TS2722
+type Read = () => Effect.Effect<number, string, never>
+interface Source { readonly read?: Read }
+
+export function unguarded(source: Source): number!! {
+  return source.read() catch 0
+}
+
+export function wrongBranch(source: Source): number!! {
+  return source.read === undefined ? (source.read() catch 0) : 1
+}
+
+// An actual callback remains a closure boundary, even inside a catch operand.
+export function nested(source: Source): number!! {
+  if (source.read !== undefined) {
+    return (do {
+      const later = (): Effect.Effect<number, string, never> => source.read()
+      later()
+    }) catch 0
+  }
+  return 0
+}
+
+// Failure can change a property; neither fallback nor handler inherits it.
+function failed(): number!string! { throw "failed" }
+export function fallback(source: Source): number!string! {
+  return source.read === undefined ? 0 : (failed() catch source.read())
+}
+export function handler(source: Source): number!string! {
+  return source.read === undefined ? 0 : (failed() catch (error) => source.read())
+}
+
+// A property assigned undefined inside the operand must not reuse its guard.
+interface MutableSource { mutable read?: Read }
+export function reassigned(source: MutableSource): number!! {
+  return source.read === undefined ? 0 : ((source.read = undefined, source.read()) catch 0)
+}

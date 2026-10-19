@@ -74,7 +74,71 @@ func (p *projector) checkCatchExpressionHatches() {
 func (p *projector) catchProgram(operand *ast.Node) {
 	start := p.tokenStart(operand)
 	arg := "expr " + selfArg(operand)
+	callee := p.catchNarrowingCallee(operand)
+	witness := ""
+	if callee != nil {
+		// A checking-only IIFE reads the callee's type in the enclosing flow,
+		// before the generator boundary. Its default parameter retains that
+		// type inside the generator; execution keeps the original property
+		// read, receiver, and evaluation order (including getters).
+		witness = p.names.fresh("$catchCallee")
+		p.names.words[witness] = true
+		p.plan.witness(start, "(("+witness+" = "+p.text[p.tokenStart(callee):callee.End()]+") => ")
+	}
 	p.plan.mark(editProgram, partOpen, start, start, arg)
 	p.visit(operand, expressionEnv())
+	if callee != nil {
+		// Record these after visiting so the cast opens inside the call's
+		// $run, not around its success value. Outer catch witnesses close
+		// last when catch operands nest, retaining the outer guard's type.
+		p.plan.witness(p.tokenStart(callee), "(")
+		p.plan.witness(callee.End(), " as typeof "+witness+")")
+	}
 	p.plan.mark(editProgram, partClose, operand.End(), operand.End(), arg)
+	if callee != nil {
+		p.plan.witness(operand.End(), ")()")
+	}
+}
+
+// catchNarrowingCallee finds an optional function property read first by this
+// operand, possibly through nested catches. The written local shape proves
+// that the property exists and is callable. Restricting the witness to this
+// first callee avoids moving type reads across assignments, conditionals or
+// user callbacks inside the operand. Fallbacks retain their own arrow's flow.
+func (p *projector) catchNarrowingCallee(operand *ast.Node) *ast.Node {
+	operand = ast.SkipParentheses(operand)
+	for isCatchExpression(operand) {
+		operand = ast.SkipParentheses(operand.Arguments()[0].Body())
+	}
+	if !ast.IsCallExpression(operand) || operand.QuestionDotToken() != nil {
+		return nil
+	}
+	callee := ast.SkipParentheses(operand.Expression())
+	if !ast.IsAccessExpression(callee) || callee.QuestionDotToken() != nil || !ast.IsIdentifier(callee.Expression()) {
+		return nil
+	}
+	name := ""
+	if ast.IsPropertyAccessExpression(callee) {
+		name = callee.Name().Text()
+	} else if key := callee.AsElementAccessExpression().ArgumentExpression; ast.IsStringLiteral(key) {
+		name = key.Text()
+	} else {
+		return nil
+	}
+	r := p.forms.(*Resolver)
+	shape := r.typeLiteral(p.dataReceiverType(callee.Expression(), 0), 0)
+	if shape == nil {
+		return nil
+	}
+	for _, member := range shape.Members() {
+		key, ok := formsPropertyName(member)
+		if !ok || key != name || member.QuestionToken() == nil {
+			continue
+		}
+		class := r.classOfType(member.Type(), 0)
+		if class&(ClassPlainFn|ClassEffectFn) != 0 && class&ClassProgram == 0 {
+			return callee
+		}
+	}
+	return nil
 }

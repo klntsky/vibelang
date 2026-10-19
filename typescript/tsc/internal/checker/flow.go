@@ -185,7 +185,7 @@ func (c *Checker) getTypeAtFlowNode(f *FlowState, flow *ast.FlowNode) FlowType {
 		case flags&ast.FlowFlagsStart != 0:
 			// Check if we should continue with the control flow of the containing function.
 			container := flow.Node
-			if container != nil && container != f.flowContainer && !ast.IsPropertyAccessExpression(f.reference) && !ast.IsElementAccessExpression(f.reference) && !(f.reference.Kind == ast.KindThisKeyword && !ast.IsArrowFunction(container)) {
+			if container != nil && container != f.flowContainer && (isCatchExpressionOperand(container) || !ast.IsPropertyAccessExpression(f.reference) && !ast.IsElementAccessExpression(f.reference)) && !(f.reference.Kind == ast.KindThisKeyword && !ast.IsArrowFunction(container)) {
 				flow = container.FlowNodeData().FlowNode
 				continue
 			}
@@ -203,6 +203,23 @@ func (c *Checker) getTypeAtFlowNode(f *FlowState, flow *ast.FlowNode) FlowType {
 		f.depth--
 		return t
 	}
+}
+
+// isCatchExpressionOperand recognizes only the parser's wrapper around the left
+// side of `expr catch fallback`. That expression runs under the enclosing
+// guard, so its property references keep the guard's narrowing. A written
+// callback, and the handler or fallback that runs after failure, still have
+// their own closure boundary.
+func isCatchExpressionOperand(node *ast.Node) bool {
+	if !ast.IsArrowFunction(node) || node.AsArrowFunction().EqualsGreaterThanToken.Flags&ast.NodeFlagsReparsed == 0 {
+		return false
+	}
+	call := node.Parent
+	if !ast.IsCallExpression(call) || len(call.Arguments()) != 2 || call.Arguments()[0] != node {
+		return false
+	}
+	callee := call.Expression()
+	return ast.IsIdentifier(callee) && callee.Flags&ast.NodeFlagsReparsed != 0 && callee.Text() == "$catchExpression"
 }
 
 func getBranchLabelAntecedents(flow *ast.FlowNode, reduceLabels []*ast.FlowReduceLabelData) *ast.FlowList {

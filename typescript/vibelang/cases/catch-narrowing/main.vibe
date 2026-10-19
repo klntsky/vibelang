@@ -1,0 +1,55 @@
+// expect-result: {"ternary":[0,7,-1],"and":[false,7,-1],"if":[0,7,-1],"typeof":[0,7,-1],"bracket":[0,7,-1],"nested":[0,7,-1],"rethrow":7,"getter":[7,2]}
+type Read = () => Effect.Effect<number, string, never>
+interface Source { readonly read?: Read }
+
+export function ternary(source: Source): number!! {
+  return source.read === undefined ? 0 : (source.read() catch -1)
+}
+
+export function and(source: Source): number | false!! {
+  return source.read !== undefined && (source.read() catch -1)
+}
+
+export function guardedIf(source: Source): number!! {
+  if (source.read !== undefined) return source.read() catch -1
+  return 0
+}
+
+export function guardedTypeof(source: Source): number!! {
+  return typeof source.read === "function" ? (source.read() catch -1) : 0
+}
+
+export function bracket(source: Source): number!! {
+  return source["read"] === undefined ? 0 : (source["read"]() catch -1)
+}
+
+export function nested(source: Source): number!! {
+  return source.read === undefined ? 0 : ((source.read() catch (error) => (throw error)) catch -1)
+}
+
+// The original Smithers repro uses an arrow and a rethrowing handler.
+export const rethrow = (source: Source): Effect.Effect<number, string, never> => {
+  return source.read === undefined ? 0 : (source.read() catch (error) => (throw error))
+}
+
+function read(): number!string! { return 7 }
+function failed(): number!string! { throw "failed" }
+
+export function main() {
+  const absent: Source = {}
+  const present: Source = { read }
+  const failure: Source = { read: failed }
+  let reads = 0
+  const getter: Source = { get read(): Read { reads++; return read } }
+  const getterValue = ternary(getter)
+  return {
+    ternary: [ternary(absent), ternary(present), ternary(failure)],
+    and: [and(absent), and(present), and(failure)],
+    if: [guardedIf(absent), guardedIf(present), guardedIf(failure)],
+    typeof: [guardedTypeof(absent), guardedTypeof(present), guardedTypeof(failure)],
+    bracket: [bracket(absent), bracket(present), bracket(failure)],
+    nested: [nested(absent), nested(present), nested(failure)],
+    rethrow: rethrow(present) catch -1,
+    getter: [getterValue, reads]
+  }
+}
