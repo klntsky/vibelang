@@ -91,7 +91,11 @@ func validateVibeLangOptions(value any, valueExpression *ast.Expression, sourceF
 			for code, category := range codes.Entries() {
 				codeProperty := jsonProperty(jsonInitializer(property), code)
 				if !slices.Contains(effectScriptAdjustableCodes, code) {
+					// Keep the option path and location, but explain the policy
+					// instead of calling an EK code an unknown compiler option.
 					d := report(jsonName(codeProperty), diagnostics.Unknown_compiler_option_0, "vibelang.diagnostics."+code)
+					d = ast.NewExternalDiagnostic(d.File(), d.Loc(), "", d.Category(), d.Code(), "vibelang.diagnostics."+code+" is not adjustable; its diagnostic category cannot be configured.")
+					errors[len(errors)-1] = d
 					d.AddMessageChain(ast.NewExternalDiagnostic(nil, core.TextRange{}, "", diagnostics.CategoryMessage, 0,
 						"Only these EK codes can be configured: "+strings.Join(effectScriptAdjustableCodes, ", ")+"."))
 					continue

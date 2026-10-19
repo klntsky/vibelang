@@ -117,3 +117,31 @@ func TestVibeLangConfigInheritance(t *testing.T) {
 		})
 	}
 }
+
+func TestVibeLangNonAdjustableDiagnostic(t *testing.T) {
+	for _, code := range []string{"EK4402", "EK2001", "EK4813"} {
+		t.Run(code, func(t *testing.T) {
+			text := `{"compilerOptions":{"vibelang":{"diagnostics":{"` + code + `":"off"}}},"files":["main.vibe"]}`
+			config := vibeConfig(t, text, "{}")
+			if len(config.Errors) != 1 {
+				t.Fatalf("want one error, got %v", config.Errors)
+			}
+			d := config.Errors[0]
+			if !strings.Contains(d.String(), code+" is not adjustable") || strings.Contains(d.String(), "Unknown compiler option") {
+				t.Fatalf("wrong policy diagnostic: %s", d.String())
+			}
+			advice := ""
+			for _, child := range d.MessageChain() {
+				advice += child.String()
+			}
+			for _, adjustable := range core.VibeLangAdjustableCodes {
+				if !strings.Contains(advice, adjustable) {
+					t.Errorf("missing adjustable code %s: %s", adjustable, d.String())
+				}
+			}
+			if options := config.CompilerOptions().VibeLang; options != nil && len(options.Diagnostics) != 0 {
+				t.Fatalf("invalid policy accepted: %+v", options)
+			}
+		})
+	}
+}
