@@ -1,7 +1,9 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-export const piped = Schema.NullOr(Schema.String) |> Schema.withDecodingDefaultKey(Effect.succeed(null))(%)
+const nullableString = Schema.NullOr(Schema.String)
+// D272 applies to a left side that calls nothing.
+export const piped = nullableString |> Schema.withDecodingDefaultKey(Effect.succeed(null))(%)
 export const method = Schema.NullOr(Schema.String).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null)))
 // Both declarations must retain the concrete input schema.
 const same: typeof method = piped

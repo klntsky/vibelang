@@ -154,6 +154,12 @@ func TestCurriedPipeSyntax(t *testing.T) {
 		{`const x = schema |> combinator(%)(%)`, `|>`},
 		{`const x = schema |> combinator(1)(%.value)`, `|>`},
 		{`const x = schema |> combinator(%)`, `|>`},
+		// A left side that calls something may run a program, which .pipe
+		// would reach only after it ran; the pipe keeps D154 (twin agent/model).
+		{`const x = load() |> combinator(1)(%)`, `|>`},
+		{`const x = schema |> other(%) |> combinator(1)(%)`, `|>`},
+		{`const x = Schema.NullOr(Schema.String) |> combinator(1)(%)`, `|>`},
+		{`const x = schema.field |> combinator(1)(%) |> next(2)(%)`, `.pipe(combinator(1)).pipe(next(2))`},
 	} {
 		printed := checkSyntaxRoundTrip(t, tc.source)
 		if !strings.Contains(printed, tc.want) {

@@ -40,6 +40,11 @@ func (p *Parser) isPipeOperator() bool {
 // parsePipeRest parses the pipes that follow left, an expression that starts
 // at pos.
 func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
+	// D272 evaluates the left side as a value, x.pipe(g), where D154 passes it
+	// by name. Only a left side that calls nothing reads the same both ways: a
+	// call there may run a program, and .pipe would then reach its result
+	// (Smithers twin agent/model, client.execute(request) |> f(id)(%)).
+	curried := !runsCall(left)
 	for p.isPipeOperator() {
 		operatorPos := p.nodePos()
 		p.nextToken() // |
@@ -49,7 +54,7 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 		body := p.parseBinaryExpressionOrHigher(ast.OperatorPrecedenceLowest)
 		body = p.parseVibeLangCatchRest(body, bodyPos) // x |> f(%) catch y catches inside the body (vibelang_catch.go)
 		body = p.parseConditionalExpressionRest(body, bodyPos, false /*allowReturnTypeInArrowFunction*/)
-		if stage := curriedPipeStage(body); stage != nil {
+		if stage := curriedPipeStage(body); stage != nil && curried {
 			// D272: give the stage exactly the contextual type of x.pipe(g).
 			name := p.vibelangSynthesized(p.factory.NewIdentifier("pipe"), operator.Loc)
 			access := p.vibelangSpanning(p.factory.NewPropertyAccessExpression(left, nil, name, ast.NodeFlagsNone), core.NewTextRange(pos, operator.End()))
@@ -59,8 +64,25 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 		}
 		left = p.makeBinaryExpression(left, operator, body, pos)
 		left.Flags |= ast.NodeFlagsVibeLang
+		curried = false // the next stage's left side runs this body
 	}
 	return left
+}
+
+// runsCall reports whether evaluating node calls something: a call, a tagged
+// template (D267), or a new expression, outside nested functions and classes.
+func runsCall(node *ast.Node) bool {
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		switch {
+		case ast.IsFunctionLike(n) || ast.IsClassLike(n):
+			return false
+		case ast.IsCallExpression(n) || ast.IsTaggedTemplateExpression(n) || ast.IsNewExpression(n):
+			return true
+		}
+		return n.ForEachChild(visit)
+	}
+	return visit(node)
 }
 
 // parseTopicReference parses %, the topic of a pipe, where an expression
