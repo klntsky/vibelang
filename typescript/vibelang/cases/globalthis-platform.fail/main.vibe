@@ -1,0 +1,9 @@
+// expect: EK4402
+/// <reference path="./node-types/index.d.ts" />
+export const direct = (): string | undefined => process.env.TMPDIR
+export const viaGlobal = (): string | undefined => globalThis.process?.env?.TMPDIR
+export const viaGlobalPlain = (): string | undefined => globalThis.process.env.TMPDIR
+export const viaBracket = (): string | undefined => globalThis["process"].env.TMPDIR
+// Passing the process object as a value runs nothing (D108).
+export const held = globalThis.process
+export const local = (globalThis: { process: { env: { TMPDIR: string } } }): string => globalThis.process.env.TMPDIR

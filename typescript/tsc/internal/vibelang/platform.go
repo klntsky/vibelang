@@ -157,7 +157,7 @@ func checkPlatform(c *checker.Checker, file *ast.SourceFile) {
 			return forEachHatchVibeLang(node, visit) // a hatch's TypeScript may use the platform (D148)
 		case ast.IsCallExpression(node) || ast.IsNewExpression(node):
 			checkClockRead(c, file, node)
-		case ast.IsIdentifier(node):
+		case ast.IsIdentifier(node) || globalPlatformName(c, node) != "":
 			checkPlatformUse(c, file, node)
 		}
 		return node.ForEachChild(visit)
@@ -195,7 +195,8 @@ type platformRef struct {
 // file or a platform package declares, or that does not resolve at all, as
 // process does without @types/node.
 func platformReference(c *checker.Checker, id *ast.Node) (platformRef, bool) {
-	if !ast.IsIdentifier(id) || !isValueUse(id) {
+	name := globalPlatformName(c, id)
+	if name == "" {
 		return platformRef{}, false
 	}
 	symbol := c.GetSymbolAtLocation(id)
@@ -209,7 +210,7 @@ func platformReference(c *checker.Checker, id *ast.Node) (platformRef, bool) {
 		}
 		return platformRef{}, false
 	}
-	r, listed := platformGlobals[id.Text()]
+	r, listed := platformGlobals[name]
 	if !listed {
 		return platformRef{}, false
 	}
@@ -217,6 +218,32 @@ func platformReference(c *checker.Checker, id *ast.Node) (platformRef, bool) {
 		return platformRef{}, false // a local, or a global the program declares
 	}
 	return platformRef{replacement: r, unresolved: symbol == nil}, true
+}
+
+// globalPlatformName covers D102's bare globals and S6-1's globalThis
+// receiver. A locally declared globalThis or process retains its own meaning.
+func globalPlatformName(c *checker.Checker, node *ast.Node) string {
+	if ast.IsIdentifier(node) && isValueUse(node) {
+		return node.Text()
+	}
+	if !ast.IsPropertyAccessExpression(node) && !ast.IsElementAccessExpression(node) {
+		return ""
+	}
+	receiver := ast.SkipParentheses(node.Expression())
+	if !ast.IsIdentifier(receiver) || receiver.Text() != "globalThis" {
+		return ""
+	}
+	symbol := c.GetSymbolAtLocation(receiver)
+	if symbol == nil || symbol.Name() != "globalThis" || len(symbol.Declarations()) != 0 {
+		return ""
+	}
+	if ast.IsPropertyAccessExpression(node) {
+		return node.Name().Text()
+	}
+	if key := node.AsElementAccessExpression().ArgumentExpression; ast.IsStringLiteral(key) {
+		return key.Text()
+	}
+	return ""
 }
 
 // importedFrom returns the module that decl, an import binding's
@@ -278,7 +305,7 @@ func checkPlatformUse(c *checker.Checker, file *ast.SourceFile, id *ast.Node) {
 		return
 	}
 	replacement := ref.replacement
-	if id.Text() == "process" && ref.module == "" && ast.IsPropertyAccessExpression(use) {
+	if globalPlatformName(c, id) == "process" && ref.module == "" && ast.IsPropertyAccessExpression(use) {
 		if r, ok := processMembers[use.Name().Text()]; ok {
 			replacement = r
 		}
