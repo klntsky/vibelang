@@ -120,3 +120,8 @@ typescript/vibelang/cases/hatches-inputs/main.vibe:39:27 lambda: plain table -> 
 typescript/vibelang/cases/hatches-inputs/main.vibe:43:25 lambda: plain table -> plain hatch # resume-only registration keeps the same plain body under the lexical hatch rule
 typescript/vibelang/cases/vibelang-hatches/main.vibe:25:27 lambda: plain table -> plain hatch # synchronous cleanup stays a plain registration; no generated wrapper may drop its return
 typescript/vibelang/cases/vibelang-hatches/main.vibe:32:36 lambda: plain table -> plain hatch # fail-only registration remains plain TypeScript, including its resume.fail return
+typescript/vibelang/cases/decl-provide-service-methods/main.vibe:12:5 lambda: plain fallback -> effectFn service # S5-21 exposes D173's service context; providedMember already emitted this method as an Effect function.
+typescript/vibelang/cases/decl-provide-service-methods/main.vibe:13:5 lambda: effectFn annotation -> effectFn service # S5-21 records the expected service member; the explicit contract and emitted Effect function are unchanged.
+typescript/vibelang/cases/decl-provide-services/main.vibe:20:30 lambda: plain fallback -> effectFn service # S5-21 exposes D173's service context; providedMember already emitted this member as an Effect function.
+typescript/vibelang/cases/decl-provide-services/main.vibe:27:41 lambda: plain fallback -> effectFn service # S5-21 exposes D173's service context; providedMember already emitted this member as an Effect function.
+typescript/vibelang/cases/decl-provide-services/main.vibe:53:41 lambda: plain fallback -> effectFn service # S5-21 exposes D173's service context; providedMember already emitted this member as an Effect function.

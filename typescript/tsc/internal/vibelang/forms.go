@@ -366,6 +366,16 @@ func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Ty
 	if f == formPlain && fn.Type() != nil {
 		return a.plainTypeOf(t)
 	}
+	if f == formProgram && fn.Type() != nil {
+		// S6-4: an explicit Effect contract already types the body as its
+		// program. The expected Effect position removes only the outer
+		// function, preserving the contract's A/E/R rather than inferring
+		// new channels. D67's Effect-function API and D263's plain form
+		// keep their existing paths above and below.
+		if signatures := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall); len(signatures) == 1 {
+			return a.checker.GetReturnTypeOfSignature(signatures[0])
+		}
+	}
 	if f == formPlain || f == formNone || fn.Type() != nil {
 		return t
 	}
