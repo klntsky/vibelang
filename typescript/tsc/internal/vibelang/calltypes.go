@@ -44,7 +44,8 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 
 // callRunsResult is the shared checker/lowering predicate for D24: a call
 // runs an Effect-valued result even when its callee is plain JavaScript.
-// Optional chaining keeps the absent branch; structured subtypes stay data.
+// S3-3 covers plain factories; D270 extends the same predicate to all-Effect
+// unions. Optional chaining keeps the absent branch; structured subtypes stay data.
 func callRunsResult(c *checker.Checker, call *ast.Node, t *checker.Type) bool {
 	if ast.IsOptionalChain(call) {
 		t = presentCallResult(c, t)
@@ -73,18 +74,31 @@ func successType(c *checker.Checker, t *checker.Type) *checker.Type {
 }
 
 // channelType returns one channel of an Effect<A, E, R>, or nil if t is not
-// an Effect. name is "_A", "_E", or "_R": a member of the Effect's
+// an Effect. A union of Effects joins each member's channel (D270).
+// name is "_A", "_E", or "_R": a member of the Effect's
 // `~effect/Effect` variance property whose type is `(_: never) => Channel`.
 func channelType(c *checker.Checker, t *checker.Type, name string) *checker.Type {
 	if !isEffectType(c, t) {
 		return nil
+	}
+	// D270 joins exact-Effect union channels in ordinary running positions.
+	if t.Flags()&checker.TypeFlagsUnion != 0 {
+		channels := make([]*checker.Type, 0, len(t.Types()))
+		for _, member := range t.Types() {
+			channel := channelType(c, member, name)
+			if channel == nil {
+				return nil
+			}
+			channels = append(channels, channel)
+		}
+		return c.GetUnionType(channels)
 	}
 	return programChannelType(c, t, name)
 }
 
 // programChannelType reads structured Effect subtypes at by-name result
 // positions and Effect return boundaries (S5-1). Ordinary running calls use
-// channelType's exact-Effect test above (D24).
+// channelType's exact-Effect test above (D24/D270).
 func programChannelType(c *checker.Checker, t *checker.Type, name string) *checker.Type {
 	variance := c.GetTypeOfPropertyOfType(t, effectTypeID) // Variance<A, E, R>
 	if variance == nil {
@@ -103,7 +117,7 @@ func programChannelType(c *checker.Checker, t *checker.Type, name string) *check
 
 // runningCallResult removes only the undefined added by optional chaining.
 // D24 still decides from the present branch's exact type, never from a
-// structural Effect subtype or an arbitrary union of return values.
+// structural Effect subtype or a union containing data (D270).
 func runningCallResult(c *checker.Checker, call *ast.Node, sig *checker.Signature) *checker.Type {
 	t := c.GetReturnTypeOfSignature(sig)
 	if !ast.IsOptionalChain(call) {

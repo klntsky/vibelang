@@ -176,7 +176,8 @@ func (a *analyzer) classify(types []*checker.Type) expectation {
 }
 
 // isExpectedEffect reports whether t, an expected type, is effect's own
-// Effect interface, or a type parameter constrained to one. A type that
+// Effect interface, a union of those interfaces (D270), or a type parameter
+// constrained to one. A type that
 // extends Effect with structure of its own, such as Config or Exit, is data
 // (D24): a callback expected to return a Config returns the Config and stays
 // plain, as Config.orElse's fallback does.
@@ -185,6 +186,8 @@ func (a *analyzer) isExpectedEffect(t *checker.Type) bool {
 		constraint := a.checker.GetBaseConstraintOfType(t)
 		return constraint != nil && constraint != t && a.isExpectedEffect(constraint)
 	}
+	// Expected program positions retain constrained union members (D147);
+	// ordinary running calls require exact-Effect members instead (D24/D270).
 	if t.Flags()&checker.TypeFlagsUnion != 0 {
 		for _, member := range t.Types() {
 			if !a.isExpectedEffect(member) {

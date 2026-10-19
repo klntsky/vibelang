@@ -305,11 +305,23 @@ func implementationOf(decl *ast.Node) *ast.Node {
 }
 
 // isEffectType reports whether t is effect's own Effect interface,
-// Effect<A, E, R>. Types that extend it, such as Config, Exit, Context keys,
+// Effect<A, E, R>, or a union consisting entirely of that interface (D270).
+// Types that extend it, such as Config, Exit, Context keys,
 // and TaggedError instances, are data: a call that returns one does not run
 // it (design D24).
 func isEffectType(c *checker.Checker, t *checker.Type) bool {
-	if t == nil || t.Flags()&checker.TypeFlagsObject == 0 || t.Symbol() == nil {
+	if t == nil {
+		return false
+	}
+	if t.Flags()&checker.TypeFlagsUnion != 0 {
+		for _, member := range t.Types() {
+			if !isEffectType(c, member) {
+				return false
+			}
+		}
+		return len(t.Types()) > 0
+	}
+	if t.Flags()&checker.TypeFlagsObject == 0 || t.Symbol() == nil {
 		return false
 	}
 	return effectInterfaceSymbol(c, t) == t.Symbol()
