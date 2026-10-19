@@ -14,10 +14,9 @@ service Users {
 }
 
 function nameOf(id: string): string!!Users {
-  if (id === "") return "anonymous"
   return Users.name(id)
-    |> retry(%, Schedule.exponential("100 millis"))
-    |> timeout(%, "2 seconds")
+    |> timeout(%, "1 second") // each attempt
+    |> retry(%, { times: 3, schedule: Schedule.exponential("100 millis") })
     catch (e) => "unknown"
 }
 
@@ -31,6 +30,6 @@ export function names(ids: ReadonlyArray<string>) {
 - `provide UsersLive { ... }` supplies a service; `UsersLive = Layer.succeed(Users, { name(id) { ... } })`.
 - `await.all [a(), b()]` runs programs together; in `x |> f(%)`, `%` is `x`.
 - Function bodies take plain TypeScript: `let`, loops, `typeof`, regex, Array/Map methods.
-- `using h = Effect.acquireRelease(() => open(), (h) => close(h))` frees `h` at block end; `sleep("1 second")` waits.
+- `using h = Effect.acquireRelease(() => open(), (h) => close(h))` frees `h` at block end, failure or interrupt. An interrupted start still runs to the first yield: call `Effect.yieldNow()` first if `open()` must not run.
 - A plain TypeScript call needs `sync(() => f(x))`, or `try(() => f(x), (error: unknown) => new E())` if it can throw.
-- Tests: `it.effect("name") { assert.strictEqual(a, b) }` from `@effect/vitest`. Under an agent, vitest hides `console.log`; assert instead.
+- Tests: `it.effect("name") { assert.strictEqual(a, b) }` from `@effect/vitest` uses a test clock (`sleep("1 second")` stalls); `it.live` uses real time. Under an agent, vitest hides `console.log`; assert instead.
