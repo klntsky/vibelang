@@ -144,6 +144,9 @@ func (w *printer) node(n *ast.Node, e env) {
 		w.list(n.Arguments(), ", ", e)
 		w.write(")")
 	case ast.KindBinaryExpression:
+		if w.tagTest(n, e) {
+			return
+		}
 		b := n.AsBinaryExpression()
 		w.node(b.Left, e)
 		w.write(" " + scanner.TokenToString(b.OperatorToken.Kind) + " ")
@@ -560,4 +563,25 @@ func (p *projector) isMatchForm(node *ast.Node) bool {
 		return node.Expression().Flags&ast.NodeFlagsReparsed != 0
 	}
 	return false
+}
+
+// tagTest preserves a generated literal comparison as a type predicate
+// (D209/D218/D238). Stock TypeScript excludes a singleton class in the
+// predicate's false branch, whereas a property equality only excludes union
+// constituents. Only parser-written accesses to an identifier qualify.
+func (w *printer) tagTest(n *ast.Node, e env) bool {
+	b := n.AsBinaryExpression()
+	if b.OperatorToken.Kind != ast.KindEqualsEqualsEqualsToken ||
+		!ast.IsPropertyAccessExpression(b.Left) || b.Left.Expression().Flags&ast.NodeFlagsReparsed == 0 ||
+		b.Left.Name().Text() != "_tag" || !ast.IsIdentifier(b.Left.Expression()) ||
+		b.Right.Kind != ast.KindStringLiteral {
+		return false
+	}
+	subject := w.identifier(b.Left.Expression())
+	value := w.p.freshWord("$tag")
+	literal := jsonString(b.Right.Text())
+	w.write("((" + value + ": typeof " + subject + "): " + value + " is " + helperRef("$TagMatch") + "<typeof " + subject + ", " + literal + "> => " + value + "._tag === ")
+	w.node(b.Right, e)
+	w.write(")(" + subject + ")")
+	return true
 }

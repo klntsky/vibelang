@@ -109,6 +109,13 @@ export declare function $scoped(fork: typeof Runtime.fork): {
 // finally (exit) { ... } (D178), and the interruption blocks (D179, D180).
 export { $finallyExit } from "vibelang-runtime"
 
+// D209/D218/D238: retain the original constituent when its tag is a
+// singleton literal, so a predicate's false branch excludes it entirely.
+// Broad or union tags retain their unmatched possibilities.
+export type $TagMatch<T, K extends string> = T extends { readonly _tag: K }
+  ? T
+  : T & { readonly _tag: K }
+
 // The pattern matching helpers the parser writes for match and is (D206-D225).
 export { $is, $extract, $rest, $noMatch, $patternError } from "vibelang-runtime"
 

@@ -70,7 +70,7 @@ var builtinGlobals = map[string]bool{
 
 // typeOnlyPrelude are prelude exports with no value, imported with `type`
 // so a project with verbatimModuleSyntax accepts the import.
-var typeOnlyPrelude = map[string]bool{"Resume": true, "$Infer": true, "$PreludeLoaded": true}
+var typeOnlyPrelude = map[string]bool{"Resume": true, "$Infer": true, "$TagMatch": true, "$PreludeLoaded": true}
 
 // names holds one file's bindings and the prelude imports its projection needs.
 type names struct {
