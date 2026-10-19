@@ -168,6 +168,9 @@ func (r *Resolver) factoryProgram(expr, success *ast.Node) bool {
 		return true
 	}
 	if ast.IsIdentifier(expr) {
+		// As in the checker's factoryProgram, an unannotated local call
+		// binds its success, including a recursive call. Only a written
+		// Effect binding identifies a held program here (D269, engine-store).
 		if d := r.binding(expr, expr.Text()); d != nil && r.factoryEffectType(d.Type(), 0) != nil {
 			// Effect<Effect<…>> deliberately returns its program as data (S7-3).
 			return r.factoryEffectType(success, 0) == nil

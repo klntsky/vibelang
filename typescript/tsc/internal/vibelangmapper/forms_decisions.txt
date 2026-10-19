@@ -577,6 +577,13 @@ typescript/vibelang/cases/contextual-named-programs/main.vibe:52:31 lambda progr
 typescript/vibelang/cases/contextual-named-programs/main.vibe:6:16 lambda plain fallback
 typescript/vibelang/cases/contextual-named-programs/main.vibe:8:15 lambda plain annotation
 typescript/vibelang/cases/contextual-named-programs/main.vibe:9:19 lambda plain annotation
+typescript/vibelang/cases/contextual-shorthand-unions/main.vibe:17:14 lambda plain annotation
+typescript/vibelang/cases/contextual-shorthand-unions/main.vibe:18:18 lambda plain annotation
+typescript/vibelang/cases/contextual-shorthand-unions/main.vibe:21:32 lambda plain table
+typescript/vibelang/cases/contextual-shorthand-unions/main.vibe:22:33 lambda plain table
+typescript/vibelang/cases/contextual-shorthand-unions/main.vibe:6:150 lambda choice fallback
+typescript/vibelang/cases/contextual-shorthand-unions/main.vibe:6:23 lambda plain annotation
+typescript/vibelang/cases/contextual-shorthand-unions/main.vibe:7:27 lambda choice fallback
 typescript/vibelang/cases/contract-arrow-api.fail/a.vibe:3:24 lambda effectFn annotation
 typescript/vibelang/cases/contract-arrow-api.fail/a.vibe:4:23 lambda effectFn annotation
 typescript/vibelang/cases/contract-arrow-api/a.vibe:2:20 lambda effectFn annotation
@@ -1196,6 +1203,11 @@ typescript/vibelang/cases/programs/main.vibe:60:55 lambda effectFn table
 typescript/vibelang/cases/programs/main.vibe:66:10 lambda effectFn service
 typescript/vibelang/cases/programs/main.vibe:70:34 lambda effectFn table
 typescript/vibelang/cases/programs/main.vibe:82:29 lambda program table
+typescript/vibelang/cases/recursive-annotated-program.fail/main.vibe:4:21 lambda effectFn annotation
+typescript/vibelang/cases/recursive-annotated-program/main.vibe:10:18 lambda effectFn annotation
+typescript/vibelang/cases/recursive-annotated-program/main.vibe:26:21 lambda effectFn annotation
+typescript/vibelang/cases/recursive-annotated-program/main.vibe:4:14 lambda effectFn annotation
+typescript/vibelang/cases/recursive-annotated-program/main.vibe:9:18 lambda effectFn table
 typescript/vibelang/cases/recursive-contract-lambdas/main.vibe:115:39 lambda effectFn table
 typescript/vibelang/cases/recursive-contract-lambdas/main.vibe:14:19 lambda effectFn annotation
 typescript/vibelang/cases/recursive-contract-lambdas/main.vibe:23:17 lambda effectFn annotation

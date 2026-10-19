@@ -1,0 +1,24 @@
+// expect-result: [{"valid":false},{"valid":true,"changed":true},1,1]
+import { Effect } from "effect"
+import { awaited, runAsync } from "./host.js"
+
+// S21-2: contextual return discrimination reads a flow-narrowed shorthand.
+export const decode = (input: Promise<number>): Promise<{ readonly valid: false } | { readonly valid: true; readonly changed: boolean }> => runAsync(() => {
+  const decoded = awaited(() => input)
+  if (decoded === 0) return { valid: false } as const
+  const changed = decoded > 1
+  return { valid: true, changed } as const
+})
+
+// S22-1: discrimination of a contextual argument must not classify itself.
+type R =
+  | { readonly status: "open"; readonly n: number }
+  | { readonly status: "closed"; readonly n: number }
+const take = (r: R): number => r.n
+export const g = (status: "open" | "closed"): number => take({ status, n: 1 })
+
+export function main() {
+  const first = Effect.promise(() => decode(Promise.resolve(0)))
+  const second = Effect.promise(() => decode(Promise.resolve(2)))
+  return [first, second, g("open"), g("closed")]
+}

@@ -193,6 +193,14 @@ func (a *analyzer) factoryProgram(expr *ast.Node, success *checker.Type) bool {
 	if ast.IsIdentifier(expr) {
 		if symbol := a.checker.GetSymbolAtLocation(expr); symbol != nil {
 			if decl := symbol.ValueDeclaration(); decl != nil && ast.IsVariableDeclaration(decl) && decl.Type() == nil {
+				// An unannotated local call runs and binds its success, just
+				// like a call returned directly above. It cannot select D269's
+				// held-program factory form. Reading its type here can resolve
+				// a recursive arrow before its initializer has a type (TS7022,
+				// engine-store); an explicitly Effect-typed local stays held.
+				if init := decl.Initializer(); init != nil && isInvocation(ast.SkipParentheses(init)) {
+					return false
+				}
 				// A lazy recursive value such as Schema.suspend(() => Crate)
 				// has no inferred type until its initializer is checked. Keep
 				// D67's success-return convention instead of creating a cycle;
