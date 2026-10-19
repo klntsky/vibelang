@@ -163,13 +163,22 @@ const greetUser = Effect.fn("greetUser")(function* (id: string) {
 ```vibe es
 // run: Console.log(Effect.provide(() => greetUser("1"), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))])))
 function greetUser(id: string) {
-  const user = getUser(id)
-  Console.log(`Hello, ${user.name}`)
-  return user.name
+  return withSpan("greetUser") {
+    const user = getUser(id)
+    Console.log(`Hello, ${user.name}`)
+    return user.name
+  }
 }
 // Output: Hello, Ada
 // Output: Ada
 ```
+
+`Effect.fn("name")(body)` adds a named tracing span. Keep that span with
+`function f(...) { return withSpan("name") { ... } }`, or
+`const f = (...) => withSpan("name") { ... }` for an object field or arrow.
+A bare function declaration uses `Effect.fnUntraced` by default and therefore
+does not preserve the original span. Put the function's work inside the
+`withSpan` block; its return value, failures, and requirements flow through.
 
 **Programs passed by name** (D147). A call runs where it stands, and is passed as a program where a parameter expects one.
 

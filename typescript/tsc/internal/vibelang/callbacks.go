@@ -51,16 +51,18 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 			if f := a.finalForm(node); !a.reportBoundaryCallback(file, node) && f == formPlain {
 				if pause := a.pauseText(file, node); pause != "" {
 					call, _ := ownerCall(node)
-					d := report(c, node, pausingCallback, pause, calleeName(c, file, call))
-					note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
-					if call != nil && !ast.IsExpressionStatement(ast.WalkUpParenthesizedExpressions(call).Parent) {
-						if sig := a.candidateOf(call); sig != nil {
-							_, path := ownerCall(node)
-							for _, expected := range a.expectedAt(call, sig, path, node) {
-								for _, callback := range c.GetSignaturesOfType(expected, checker.SignatureKindCall) {
-									if a.isBareTypeParameter(c.GetReturnTypeOfSignature(callback)) {
-										if pause := a.firstPause(node); pause != nil {
-											note(d, "To return the program instead of running it, return a function with no parameters: () => {0}. Visitor spelling: () => () => {0}.", nodeText(file, pause))
+					if !reportTracedCallback(c, file, call, node) {
+						d := report(c, node, pausingCallback, pause, calleeName(c, file, call))
+						note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
+						if call != nil && !ast.IsExpressionStatement(ast.WalkUpParenthesizedExpressions(call).Parent) {
+							if sig := a.candidateOf(call); sig != nil {
+								_, path := ownerCall(node)
+								for _, expected := range a.expectedAt(call, sig, path, node) {
+									for _, callback := range c.GetSignaturesOfType(expected, checker.SignatureKindCall) {
+										if a.isBareTypeParameter(c.GetReturnTypeOfSignature(callback)) {
+											if pause := a.firstPause(node); pause != nil {
+												note(d, "To return the program instead of running it, return a function with no parameters: () => {0}. Visitor spelling: () => () => {0}.", nodeText(file, pause))
+											}
 										}
 									}
 								}
@@ -78,6 +80,11 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 		case node.Kind == ast.KindIdentifier:
 			if a.finalConversion(node) == convertRejected {
 				call, _ := ownerCall(node)
+				// S10-21 covers named callbacks as well as inline lambdas;
+				// D68's callback-parameter advice still applies elsewhere.
+				if reportTracedCallback(c, file, call, node) {
+					break
+				}
 				d := report(c, node, EK4301, node.Text(), calleeName(c, file, call))
 				if a.isCallbackParameterValue(node) {
 					note(d, "{0} has no contract, so it accepts any callback, including one that pauses. Call it in a for...of loop, or give it a named function type such as a type alias, which takes only plain functions.", node.Text())
@@ -222,4 +229,15 @@ func isStaticReceiver(c *checker.Checker, receiver *ast.Node) bool {
 // nodeText returns the source text of node, without leading trivia.
 func nodeText(file *ast.SourceFile, node *ast.Node) string {
 	return file.Text()[scanner.SkipTrivia(file.Text(), node.Pos()):node.End()]
+}
+
+// reportTracedCallback explains Effect.fn's body convention without claiming
+// that it is an ordinary synchronous callback API (S10-21).
+func reportTracedCallback(c *checker.Checker, file *ast.SourceFile, call, callback *ast.Node) bool {
+	if call == nil || !ast.IsCallExpression(call.Expression()) || !isExportOf(c, call.Expression(), "effect", "Effect", []string{"fn"}) {
+		return false
+	}
+	d := report(c, callback, EK4301.With("{0} cannot be passed directly to {1} in this form. Effect.fn expects a body returning an Effect or a JavaScript generator."), nodeText(file, callback), calleeName(c, file, call))
+	note(d, "Write an ordinary VibeLang function or arrow with withSpan(name) { ... } as its body, using the same span name passed to Effect.fn. Calls inside the block run normally and the span is preserved.")
+	return true
 }

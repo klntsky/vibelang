@@ -1,0 +1,14 @@
+// expect-result: ["Reader.list","Reader.fires"]
+function list() {
+  return withSpan("Reader.list") {
+    yieldNow()
+    return Effect.currentSpan().name
+  }
+}
+const reader = {
+  fires: () => withSpan("Reader.fires") {
+    yieldNow()
+    return Effect.currentSpan().name
+  }
+}
+export function main() { return [list(), reader.fires()] }
