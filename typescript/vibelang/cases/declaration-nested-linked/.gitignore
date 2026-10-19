@@ -1,0 +1,6 @@
+!consumer/node_modules/
+consumer/node_modules/*
+!consumer/node_modules/agent
+!consumer/agent/node_modules/
+consumer/agent/node_modules/*
+!consumer/agent/node_modules/memory

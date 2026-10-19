@@ -160,10 +160,19 @@ func copyCompilerFixture(t *testing.T, fixture, root string) string {
 			return err
 		}
 		if entry.IsDir() {
-			if rel != "." && (entry.Name() == "node_modules" || entry.Name() == "out" || entry.Name() == "expected" || strings.HasPrefix(entry.Name(), ".")) {
+			if rel != "." && (rel == "node_modules" || entry.Name() == "out" || entry.Name() == "expected" || strings.HasPrefix(entry.Name(), ".")) {
 				return filepath.SkipDir
 			}
 			return os.MkdirAll(filepath.Join(dir, rel), 0755)
+		}
+		// Nested node_modules links are part of package-layout fixtures.
+		// Preserve their relative targets instead of copying their contents.
+		if entry.Type()&fs.ModeSymlink != 0 {
+			target, err := os.Readlink(name)
+			if err != nil {
+				return err
+			}
+			return os.Symlink(target, filepath.Join(dir, rel))
 		}
 		data, err := os.ReadFile(name)
 		if err != nil {

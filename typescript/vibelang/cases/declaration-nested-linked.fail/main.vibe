@@ -1,0 +1,3 @@
+// expect: TS2322
+import { store } from "./consumer/main.vibe";
+export const revision: number = store.revision;

@@ -12,7 +12,7 @@
 //
 //   node scripts/brand-gate.mjs            # check this checkout
 //   node scripts/brand-gate.mjs --root DIR # check another tree (the test uses it)
-import { readFileSync } from "node:fs"
+import { lstatSync, readFileSync, readlinkSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { ALLOW_END, ALLOW_MARKER, ALLOW_START, RETIRED, isBinary, isExempt, listFiles, maskKept } from "./rename-to-vibelang.mjs"
 
@@ -27,7 +27,9 @@ for (const rel of listFiles(root)) {
   if (isExempt(rel)) continue
   const named = spellings(maskKept(rel, rel).masked)
   if (named.length > 0) findings.push(`${rel}: the path spells ${named.join(", ")}`)
-  const buffer = readFileSync(join(root, rel))
+  const path = join(root, rel)
+  // A tracked symlink stores its target as text, including links to directories.
+  const buffer = lstatSync(path).isSymbolicLink() ? Buffer.from(readlinkSync(path)) : readFileSync(path)
   if (isBinary(rel, buffer)) continue
   let allowed = false
   buffer.toString("utf8").split("\n").forEach((line, index) => {

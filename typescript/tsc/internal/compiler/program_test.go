@@ -628,20 +628,25 @@ func BenchmarkNewProgram(b *testing.B) {
 func TestDeclarationTransitiveLinkedPackage(t *testing.T) {
 	t.Parallel()
 	for _, name := range []string{"dep", "@scope/dep"} {
-		for _, layout := range []string{"linked", "missing", "different", "private"} {
+		for _, layout := range []string{"linked", "nested", "missing", "different", "private", "no-exports"} {
 			t.Run(name+"/"+layout, func(t *testing.T) {
 				t.Parallel()
 				real := "/external/node_modules/" + name
+				runtime := "/external/runtime"
+				if layout == "nested" {
+					runtime = "/src/agent"
+					real = runtime + "/memory"
+				}
 				files := map[string]any{
-					"/src/package.json":                      `{"type":"module"}`,
-					"/src/tsconfig.json":                     `{"compilerOptions":{"noLib":true,"module":"nodenext","declaration":true},"files":["main.ts"]}`,
-					"/src/main.ts":                           `import { work } from "runtime"; export const value = work();`,
-					"/src/node_modules/runtime":              vfstest.Symlink("/external/runtime"),
-					"/external/runtime/package.json":         `{"type":"module","types":"index.d.ts"}`,
-					"/external/runtime/index.d.ts":           `import type { Value } from "` + name + `/public"; export declare function work(): Value;`,
-					"/external/runtime/node_modules/" + name: vfstest.Symlink(real),
-					real + "/package.json":                   `{"type":"module","exports":{"./public":{"types":"./dist/value.d.ts"}}}`,
-					real + "/dist/value.d.ts":                `export interface Value { readonly value: number }`,
+					"/src/package.json":               `{"type":"module"}`,
+					"/src/tsconfig.json":              `{"compilerOptions":{"noLib":true,"module":"nodenext","declaration":true},"files":["main.ts"]}`,
+					"/src/main.ts":                    `import { work } from "runtime"; export const value = work();`,
+					"/src/node_modules/runtime":       vfstest.Symlink(runtime),
+					runtime + "/package.json":         `{"type":"module","types":"index.d.ts","exports":{".":{"types":"./index.d.ts"}}}`,
+					runtime + "/index.d.ts":           `import type { Value } from "` + name + `/public"; export declare function work(): Value;`,
+					runtime + "/node_modules/" + name: vfstest.Symlink(real),
+					real + "/package.json":            `{"type":"module","exports":{"./public":{"types":"./dist/value.d.ts"}}}`,
+					real + "/dist/value.d.ts":         `export interface Value { readonly value: number }`,
 				}
 				switch layout {
 				case "linked", "private":
@@ -656,7 +661,13 @@ func TestDeclarationTransitiveLinkedPackage(t *testing.T) {
 					// map does not allow a declaration consumer to import.
 					files[real+"/package.json"] = `{"type":"module","exports":{"./public":{"types":"./index.d.ts"}}}`
 					files[real+"/index.d.ts"] = `import type { Value } from "./dist/value.js"; export declare function work(): Value;`
-					files["/external/runtime/index.d.ts"] = `export { work } from "` + name + `/public";`
+					files[runtime+"/index.d.ts"] = `export { work } from "` + name + `/public";`
+				}
+				if layout == "no-exports" {
+					// Without an exports map, an inaccessible transitive package
+					// still cannot be named by a portable declaration specifier.
+					files[real+"/package.json"] = `{"type":"module"}`
+					files[runtime+"/index.d.ts"] = `import type { Value } from "` + name + `/dist/value.js"; export declare function work(): Value;`
 				}
 				fs := vfstest.FromMap(files, tspath.CaseSensitive)
 				config, errors := tsoptions.GetParsedCommandLineOfConfigFile("/src/tsconfig.json", nil, nil, fs, nil)
@@ -670,7 +681,9 @@ func TestDeclarationTransitiveLinkedPackage(t *testing.T) {
 					}
 					return nil
 				}})
-				if layout == "linked" {
+				// Stock TypeScript accepts exports-map names for transitive
+				// dependencies, including missing or different consumer links.
+				if layout != "private" && layout != "no-exports" {
 					assert.Equal(t, len(result.Diagnostics), 0)
 					assert.Equal(t, dts, `export declare const value: import("`+name+`/public").Value;`+"\n")
 				} else {

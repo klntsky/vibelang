@@ -759,14 +759,6 @@ func tryGetModuleNameAsNodeModule(
 
 	caseSensitivity := host.CaseSensitivity()
 	globalTypingsCacheLocation := host.GetGlobalTypingsCacheLocation()
-	// Check reachability before consulting package.json exports, which can return
-	// a bare specifier directly. An exported path is only usable if the importing
-	// file can reach the package through node_modules, and packages under the
-	// global typings cache are excluded.
-	if !caseSensitivity.ContainsPath(parts.TopLevelNodeModulesSearchRoot, info.SourceDirectory.AsPath()) ||
-		globalTypingsCacheLocation != "" && caseSensitivity.ContainsPath(parts.TopLevelNodeModulesSearchRoot, globalTypingsCacheLocation.AsPath()) {
-		return ""
-	}
 
 	// Simplify the full file path to something that can be resolved by Node.
 	preferences := getModuleSpecifierPreferences(userPreferences, host, options, importingSourceFile, "")
@@ -826,6 +818,15 @@ func tryGetModuleNameAsNodeModule(
 	}
 
 	if pathObj.IsRedirect && !isPackageRootPath {
+		return ""
+	}
+
+	// Like TypeScript, accept a verbatim package exports specifier before
+	// checking path reachability. A dependency's own linked node_modules may
+	// provide the exported type even when the importing file cannot reach that
+	// directory directly. Paths without an exports match still need this check.
+	if !caseSensitivity.ContainsPath(parts.TopLevelNodeModulesSearchRoot, info.SourceDirectory.AsPath()) ||
+		globalTypingsCacheLocation != "" && caseSensitivity.ContainsPath(parts.TopLevelNodeModulesSearchRoot, globalTypingsCacheLocation.AsPath()) {
 		return ""
 	}
 
