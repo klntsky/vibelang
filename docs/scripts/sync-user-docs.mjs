@@ -12,7 +12,8 @@
 // converts the Markdown that MDX rejects. The hand-written Proposals page,
 // src/pages/proposals.mdx, is not in the language repo; the script keeps it and
 // lists it as the last sidebar entry (SITE_SIDEBAR). Links into the
-// specification point at https://effeck.dev/spec/. Each page that mirrors an
+// specification point at /spec/ when the specification has been synced,
+// otherwise at https://effeck.dev/spec/. Each page that mirrors an
 // Effect page (the inventory's `v4/...mdx` column) ends with a link to that page
 // on effect.website; the source's own "Upstream page" lines are dropped so the
 // link appears once. The script fails on a page
@@ -20,10 +21,12 @@
 // cannot resolve.
 import fs from 'node:fs'
 import path from 'node:path'
+import { convertText, readFences, fence, LABELS } from './docs-markdown.mjs'
+import { loadSpec } from './spec-docs.mjs'
 
-const SPEC_URL = 'https://effeck.dev/spec/'
+let SPEC_URL = 'https://effeck.dev/spec/'
 const EFFECT_DOCS_URL = 'https://effect.website/docs/'
-const KEEP = new Set(['index.mdx', '_root.css', 'proposals.mdx'])
+const KEEP = new Set(['index.mdx', '_root.css', 'proposals.mdx', 'spec'])
 // Sidebar entries for site-only pages, appended after the inventory's sections.
 const SITE_SIDEBAR = [{ text: 'Proposals', link: '/proposals' }]
 
@@ -35,6 +38,9 @@ if (!source || !fs.existsSync(path.join(source, 'inventory.md'))) {
 const docsDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')
 const pagesDir = path.join(docsDir, 'src/pages')
 const srcDir = path.join(source, 'src')
+const localSpec = fs.existsSync(path.join(pagesDir, 'spec/index.mdx'))
+const spec = localSpec ? loadSpec(path.resolve(source, '..')) : undefined
+if (localSpec) SPEC_URL = '/spec/'
 const errors = []
 
 // Pages: every .md file under docs/user/src, keyed by its path from src/.
@@ -90,9 +96,6 @@ for (const rel of pages) if (!listed.has(rel)) errors.push(`src/${rel} is missin
 // MDX conversion. Code fences pass through; ```ts effect followed by
 // ```vibe becomes a code group. Outside code, MDX's syntax characters are
 // escaped and relative .md links become routes.
-const LABELS = { effect: 'Effect', long: 'VibeLang long form', es: 'VibeLang', gen: 'Generated TypeScript', dts: 'Generated declaration' }
-const LANGS = { out: 'text', output: 'text', vibelang: 'vibe' }
-
 function convertLink(href, fromRel) {
   if (/^(https?:|mailto:|#)/.test(href)) return href
   const [target, anchor = ''] = href.split('#')
@@ -106,71 +109,13 @@ function convertLink(href, fromRel) {
     if (!pages.includes(rel)) errors.push(`${fromRel}: link to missing page ${href}`)
     return route(rel) + (anchor ? `#${anchor}` : '')
   }
-  if (resolved.startsWith('../design/src/')) return SPEC_URL
+  if (resolved.startsWith('../design/src/')) {
+    if (!localSpec) return SPEC_URL
+    return spec.link(href, path.resolve(srcDir, fromRel))
+  }
   errors.push(`${fromRel}: link outside the docs ${href}`)
   return href
 }
-
-// Escapes text outside inline code. Inline code spans pass through unchanged.
-function convertText(line, fromRel) {
-  let out = ''
-  let i = 0
-  while (i < line.length) {
-    if (line[i] === '`') {
-      const ticks = line.slice(i).match(/^`+/)[0]
-      const close = line.indexOf(ticks, i + ticks.length)
-      if (close !== -1) {
-        out += line.slice(i, close + ticks.length)
-        i = close + ticks.length
-        continue
-      }
-    }
-    const next = line.indexOf('`', i + 1)
-    const end = next === -1 ? line.length : next
-    out += escapeText(line.slice(i, end), fromRel)
-    i = end
-  }
-  return out
-}
-
-function escapeText(text, fromRel) {
-  return text
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<(https?:\/\/[^>\s]+)>/g, '[$1]($1)')
-    .replace(/\]\(([^)\s]+)\)/g, (_, href) => `](${convertLink(href, fromRel)})`)
-    .replace(/[{}]/g, (c) => `\\${c}`)
-    .replace(/<(?!\/?(?:br|sup|sub|kbd)\b)/g, '\\<')
-}
-
-function readFences(lines) {
-  // Splits a page into text lines and fenced blocks.
-  const parts = []
-  for (let i = 0; i < lines.length; i++) {
-    const open = lines[i].match(/^(\s*)(`{3,}|~{3,})(.*)$/)
-    if (!open) {
-      parts.push({ type: 'text', line: lines[i] })
-      continue
-    }
-    const [, indent, marker, info] = open
-    const body = []
-    let j = i + 1
-    while (j < lines.length && !(lines[j].trim().startsWith(marker) && lines[j].trim().replace(/[`~]/g, '') === '')) {
-      body.push(lines[j])
-      j++
-    }
-    const [lang = '', role = ''] = info.trim().split(/\s+/)
-    parts.push({ type: 'code', indent, marker, lang: LANGS[lang] ?? lang, role, body })
-    i = j
-  }
-  return parts
-}
-
-const fence = (block, title) =>
-  [
-    `${block.indent}${block.marker}${block.lang}${title ? ` [${title}]` : ''}`,
-    ...block.body,
-    `${block.indent}${block.marker}`,
-  ].join('\n')
 
 function convertPage(rel) {
   const raw = fs.readFileSync(path.join(srcDir, rel), 'utf8')
@@ -180,7 +125,7 @@ function convertPage(rel) {
     const part = parts[i]
     if (part.type === 'text') {
       if (/^\[Upstream[^\]]*\]\(https:\/\/effect\.website\/docs\/[^)]*\)\s*$/.test(part.line.trim())) continue
-      out.push(convertText(part.line, rel))
+      out.push(convertText(part.line, rel, convertLink))
       continue
     }
     // An Effect (or long-form) block followed only by blank lines and a

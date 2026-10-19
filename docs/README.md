@@ -8,7 +8,18 @@ The site at [vibelang.sh](https://vibelang.sh) is built with [Vocs](https://vocs
 node scripts/sync-user-docs.mjs <language repo>/docs/user
 ```
 
-The script replaces every page in `src/pages` except `index.mdx` and `_root.css`, rewrites `sidebar.ts`, and converts the Markdown that MDX rejects. Each page keeps its source path: `docs/user/src/error-management/014-expected-errors.md` becomes `/error-management/014-expected-errors`. Edit the source docs, not the generated pages, and run the script again. `vibe.tmLanguage.json` is the grammar from the language repository's `editors/vscode/syntaxes/VibeLang.tmLanguage.json`; it highlights `vibe` code blocks.
+The script replaces every page in `src/pages` except `index.mdx`, `_root.css`, `proposals.mdx`, and `spec/`, rewrites `sidebar.ts`, and converts the Markdown that MDX rejects. Each page keeps its source path: `docs/user/src/error-management/014-expected-errors.md` becomes `/error-management/014-expected-errors`. Edit the source docs, not the generated pages, and run the script again. `vibe.tmLanguage.json` is the grammar from the language repository's `editors/vscode/syntaxes/VibeLang.tmLanguage.json`; it highlights `vibe` code blocks.
+
+## Update the specification
+
+```bash
+node scripts/sync-spec-docs.mjs <language repo>/docs --facts <facts.json>
+node scripts/sync-user-docs.mjs <language repo>/docs/user
+```
+
+The specification importer validates the Specification inventory and writes 33 chapters plus the introduction at `src/pages/spec/index.mdx`, and `spec-sidebar.ts`. Its shared Markdown converter escapes MDX syntax while preserving code. Proposed blocks become info callouts; Not designed yet blocks become warning callouts. Bare fragments resolve to their owning chapter, with missing or ambiguous targets rejected. A link to another file in the language repository keeps only its text, so the importer needs a full checkout to confirm that the file exists.
+
+The facts JSON must supply `testCount`, `testFiles`, and `kernelLines` as nonnegative integers (or integer strings), taken from a real language repository test run. Example facts are for build verification only and must be replaced before publishing. Unknown or missing placeholders fail before pages are written. Syncing user docs after the spec exists changes specification links to local routes and preserves the spec pages and its independent sidebar. Without the spec, user sync retains its existing external links.
 
 ## Development
 
