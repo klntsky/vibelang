@@ -26,5 +26,7 @@ export function names(ids: ReadonlyArray<string>) {
 - Import a sibling module with its extension: `import { User } from "./user.vibe"`. Effect's root modules (`Option`, `Schedule`, `Console`) need no import.
 - `provide UsersLive { ... }` supplies a service; `UsersLive = Layer.succeed(Users, { name(id) { ... } })`.
 - `await.all [a(), b()]` runs programs together; in `x |> f(%)`, `%` is `x`.
+- Function bodies take plain TypeScript: `let`, loops, `typeof`, regex, Array/Map methods.
+- `using h = Effect.acquireRelease(() => open(), (h) => close(h))` frees `h` at block end; `sleep("1 second")` waits.
 - A plain TypeScript call needs `sync(() => f(x))`, or `try(() => f(x), (error: unknown) => new E())` if it can throw.
 - Tests: `it.effect("name") { assert.strictEqual(a, b) }` from `@effect/vitest`. Under an agent, vitest hides `console.log`; assert instead.
