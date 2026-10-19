@@ -69,7 +69,7 @@ func hasProvideBlock(fn *ast.Node) bool {
 		}
 		return isProvideBlock(n) || n.ForEachChild(visit)
 	}
-	return fn.Body().ForEachChild(visit) || isProvideBlock(fn.Body())
+	return visit(fn.Body())
 }
 
 // provideFlow collects what can escape a provide block: the errors of its

@@ -1,0 +1,31 @@
+const Depth: Context.Reference<number> = Context.Reference<number>("S1-1/Depth", { defaultValue: () => 0 })
+
+// The outer arrow builds the inner Effect function and stays plain (D263).
+export const nested = (
+  step: number
+): <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R> =>
+<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> => {
+  const parent = Depth()
+  provide Depth = parent + step {
+    return effect()
+  }
+}
+
+// Putting the same type on the const preserves the same API.
+export const nestedTyped: (
+  step: number
+) => <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R> = (step) =>
+<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> => {
+  const parent = Depth()
+  provide Depth = parent + step {
+    return effect()
+  }
+}
+
+export function currentDepth() { return Depth() }
+
+// Interruption blocks obey the same function boundary as provider blocks.
+export const nestedMask = (): <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R> =>
+<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> => {
+  uninterruptible { return effect() }
+}

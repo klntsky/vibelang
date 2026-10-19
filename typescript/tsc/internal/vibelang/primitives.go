@@ -161,7 +161,7 @@ func hasPrimitiveStatement(fn *ast.Node) bool {
 		}
 		return n.ForEachChild(visit)
 	}
-	return fn.Body().ForEachChild(visit)
+	return visit(fn.Body())
 }
 
 // primitiveTypes is what one checker remembers about effect's Cause interface.
