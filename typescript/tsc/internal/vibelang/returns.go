@@ -78,7 +78,10 @@ func returnedProgramType(c *checker.Checker, node *ast.Node, t *checker.Type) *c
 	// subtype's ability to run. Commands, Exits, and other yieldable values
 	// accepted by A are data; only a subtype rejected by A delegates.
 	if declared := a.declaredProgramReturn(fn); declared != nil {
-		if success := successType(c, declared); success != nil && c.IsTypeAssignableTo(t, success) {
+		// A contextual unknown or any, as in a tsc callback typed
+		// (n) => Effect<unknown>, names no success value, so a subtype returned
+		// there is S5-1's program. A contract written on the function names it.
+		if success := successType(c, declared); success != nil && (fn.Type() != nil || success.Flags()&(checker.TypeFlagsUnknown|checker.TypeFlagsAny) == 0) && c.IsTypeAssignableTo(t, success) {
 			delete(a.returnedPrograms, node) // discard a prior contextual probe's delegation
 			return t
 		}

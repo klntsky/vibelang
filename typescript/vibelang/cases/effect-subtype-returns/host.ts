@@ -10,12 +10,11 @@ export class Action extends Effectable.Class<number> {
     return Effect.sync(() => { runs++; return this.value })
   }
 }
-// S22-3: number rejects the subtype; unknown would now accept it as data.
-export const implement = (execute: (n: number) => Effect.Effect<number>): Effect.Effect<number> =>
+export const implement = (execute: (n: number) => Effect.Effect<unknown>): Effect.Effect<unknown> =>
   Effect.suspend(() => execute(1))
 /** @vibelang trusted */
 export const runCount = (): number => runs
 export const implementNumber = (execute: (n: number) => Effect.Effect<number>): Effect.Effect<number> =>
   Effect.suspend(() => execute(1))
-export const implementFailure = (execute: (n: number) => Effect.Effect<number, string>): Effect.Effect<number, string> =>
+export const implementFailure = (execute: (n: number) => Effect.Effect<unknown, string>): Effect.Effect<unknown, string> =>
   Effect.suspend(() => execute(1))

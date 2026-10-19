@@ -33,7 +33,12 @@ func (p *projector) programReturnBoundary(node *ast.Node) bool {
 	// against A, refusing opaque non-assignable shapes instead of running
 	// a value that the contract meant to return (S5-1).
 	r := p.forms.(*Resolver)
-	if !r.subtypeReturnMustRun(r.effectSuccess(r.factoryReturn(fn), 0), 0) {
+	success := r.effectSuccess(r.factoryReturn(fn), 0)
+	// A contextual unknown or any names no success value: S5-1 runs the
+	// subtype, as a tsc callback typed (n) => Effect<unknown> expects.
+	top := formsUnwrapType(success)
+	contextualTop := fn.Type() == nil && top != nil && (top.Kind == ast.KindUnknownKeyword || top.Kind == ast.KindAnyKeyword)
+	if !contextualTop && !r.subtypeReturnMustRun(success, 0) {
 		return false
 	}
 	// S5-1 runs structured returns; D269 factory bodies return programs cold.
