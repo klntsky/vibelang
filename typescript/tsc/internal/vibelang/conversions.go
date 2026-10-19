@@ -228,7 +228,10 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 		signatures := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall)
 		if len(signatures) == 1 && signatures[0].MinArgumentCount() == 0 && len(signatures[0].TypeParameters()) == 0 {
 			returned := a.checker.GetReturnTypeOfSignature(signatures[0])
-			if a.effectInterface != nil {
+			// A function that already returns a program, such as
+			// () => (throw failure), is the program's own form; Effect.sync
+			// would nest it (Smithers twin gateway).
+			if a.effectInterface != nil && !isEffectType(a.checker, returned) {
 				never := a.checker.GetNeverType()
 				return convertSyncProgram, a.checker.NewTypeReference(a.effectInterface, []*checker.Type{returned, never, never})
 			}
