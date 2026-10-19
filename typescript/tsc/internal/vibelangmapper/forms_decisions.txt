@@ -1445,6 +1445,14 @@ typescript/vibelang/cases/typeof-effect-signature/a.vibe:3:20 lambda effectFn an
 typescript/vibelang/cases/typeof-effect-signature/a.vibe:5:24 lambda plain annotation
 typescript/vibelang/cases/typeof-effect-signature/chain.vibe:10:20 lambda effectFn annotation
 typescript/vibelang/cases/typeof-effect-signature/chain.vibe:11:18 lambda effectFn table
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:11:16 lambda plain annotation
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:15:13 lambda effectFn table
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:15:33 lambda effectFn table
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:17:13 lambda effectFn table
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:17:37 lambda effectFn table
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:6:16 lambda plain annotation
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:8:17 lambda plain fallback
+typescript/vibelang/cases/union-contract-exit-arms/main.vibe:8:34 lambda plain annotation
 typescript/vibelang/cases/union-effect-calls/main.vibe:10:21 byname program table
 typescript/vibelang/cases/union-effect-calls/main.vibe:10:35 lambda plain table
 typescript/vibelang/cases/union-effect-channels.fail/main.vibe:15:21 byname program table

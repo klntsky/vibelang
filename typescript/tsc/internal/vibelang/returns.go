@@ -8,12 +8,24 @@ import (
 // returnOwner recognizes a whole returned expression, including concise arrows.
 // Operands of that expression still follow the ordinary call rule (D24).
 func returnOwner(node *ast.Node) *ast.Node {
-	if ast.IsParenthesizedExpression(node) {
-		return nil // the enclosed expression owns the delegation, exactly once
+	if ast.IsParenthesizedExpression(node) || node.Kind == ast.KindConditionalExpression {
+		return nil // the enclosed expression or each arm owns the delegation, exactly once
 	}
+	// A conditional's arms are returned when the conditional is, so each arm
+	// delegates on its own: cond ? Exit.fail(e) : Exit.void under a union of
+	// Effects contract (D270, the twins' D-9 recipe) runs the chosen Exit.
 	value := node
-	for value.Parent != nil && ast.IsParenthesizedExpression(value.Parent) {
-		value = value.Parent
+	for value.Parent != nil {
+		parent := value.Parent
+		if ast.IsParenthesizedExpression(parent) {
+			value = parent
+			continue
+		}
+		if parent.Kind == ast.KindConditionalExpression && parent.AsConditionalExpression().Condition != value {
+			value = parent
+			continue
+		}
+		break
 	}
 	parent := value.Parent
 	if parent == nil {
