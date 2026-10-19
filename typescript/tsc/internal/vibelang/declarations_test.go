@@ -217,3 +217,47 @@ func TestDeclarationImportsRecycledAnnotation(t *testing.T) {
 		})
 	}
 }
+
+func TestDeclarationElidesPrivateJSDoc(t *testing.T) {
+	for _, test := range []struct {
+		name, source string
+		want, avoid  []string
+	}{
+		{"elided namespace import", "/** PRIVATE_DOC */\nimport type * as E from \"effect/Effect\"\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"strip internal", "/** @internal PRIVATE_DOC */\nexport const hidden = 1\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"private Effect function", "/** PRIVATE_DOC */\nfunction hidden(): number!! { return 1 }\n/** PUBLIC_DOC */\nexport function visible(): number!! { return 2 }", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"overload implementation", "function hidden(x: number): number;\n/** PRIVATE_DOC */\nfunction hidden(x: number): number { return x }\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"namespace private", "export namespace Public {\n/** PRIVATE_DOC */\nconst hidden = 1\n/** PUBLIC_DOC */\nexport const visible = 2\n}", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"prelude import", "/** PRIVATE_DOC */\nconst hidden = 1\n/** PUBLIC_DOC */\nexport declare const visible: Effect.Effect<number, never, never>", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"private function with prelude import", "/** PRIVATE_DOC */\nfunction hidden(): number { return 1 }\n/** PUBLIC_DOC */\nexport declare const visible: Effect.Effect<number, never, never>", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"elided import", "/** PRIVATE_DOC */\nimport type { Effect } from \"effect/Effect\"\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"private class", "/** PRIVATE_DOC */\nclass Hidden { n = 1 }\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		// Stock TypeScript retains detached file headers, even above an elided declaration.
+		{"detached header above private", "/** HEADER_DOC */\n\nconst hidden = 1\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"HEADER_DOC", "PUBLIC_DOC"}, nil},
+		{"private first", "/** PRIVATE_DOC */\nconst hidden = 1\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"private between exports", "export const first = 1\n/** PRIVATE_DOC */\nfunction hidden(): number { return 1 }\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"private last", "export const first = 1\n/** PRIVATE_DOC */\nconst hidden = 2", nil, []string{"PRIVATE_DOC"}},
+		{"private type", "/** PRIVATE_DOC */\ntype Hidden = string\n/** PUBLIC_DOC */\nexport interface Visible { n: number }", []string{"PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+		{"retained private dependency", "/** RETAINED_DOC */\nclass Hidden { value = 1 }\n/** PUBLIC_DOC */\nexport const visible = new Hidden()", []string{"RETAINED_DOC", "PUBLIC_DOC"}, nil},
+		{"detached header", "/** LICENSE_DOC */\n\n/** PRIVATE_DOC */\nconst hidden = 1\n/** PUBLIC_DOC */\nexport const visible = 2", []string{"LICENSE_DOC", "PUBLIC_DOC"}, []string{"PRIVATE_DOC"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			files := computedKeyFiles(false)
+			files["/Users/x/src/main.vibe"] = test.source
+			if test.name == "strip internal" {
+				files["/Users/x/src/tsconfig.json"] = strings.Replace(files["/Users/x/src/tsconfig.json"], `"declaration":true`, `"declaration":true,"stripInternal":true`, 1)
+			}
+			dts := emitDeclarations(t, files)
+			for _, want := range test.want {
+				if !strings.Contains(dts, want) {
+					t.Errorf("missing %s: %s", want, dts)
+				}
+			}
+			for _, avoid := range test.avoid {
+				if strings.Contains(dts, avoid) {
+					t.Errorf("orphan %s: %s", avoid, dts)
+				}
+			}
+		})
+	}
+}

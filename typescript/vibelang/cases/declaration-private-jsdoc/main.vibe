@@ -1,0 +1,7 @@
+// expect-result: 2
+/** An elided private value's documentation. */
+const hidden = 1
+/** An elided private helper's documentation. */
+function hiddenFunction(): number { return hidden }
+/** The public program's documentation. */
+export function main(): number!! { return 2 }
