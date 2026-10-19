@@ -1,4 +1,4 @@
-// expect-result: ["left","right","left","right","condition"]
+// expect-result: ["left","right","left","right"]
 error Failure { label: string }
 function statement(cond: boolean) {
   throw cond ? new Failure({ label: "left" }) : new Failure({ label: "right" })
@@ -6,15 +6,10 @@ function statement(cond: boolean) {
 function expression(cond: boolean) {
   return statement(true) catch (_) => throw (cond ? new Failure({ label: "left" }) : new Failure({ label: "right" }))
 }
-function unary() {
-  // D186 deliberately binds throw before === and ?: in expression position.
-  return statement(true) catch (failure) => throw failure.label === "left" ? 1 : 2
-}
 export function main() {
   const a = statement(true) catch (e) => e.label
   const b = statement(false) catch (e) => e.label
   const c = expression(true) catch (e) => e.label
   const d = expression(false) catch (e) => e.label
-  const e = unary() catch (e) => e === "left" ? "condition" : "wrong"
-  return [a, b, c, d, e]
+  return [a, b, c, d]
 }

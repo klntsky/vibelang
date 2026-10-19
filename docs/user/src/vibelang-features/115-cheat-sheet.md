@@ -548,8 +548,11 @@ function findUser(users: Map<string, User>, id: string) {
 In expression position, `throw` takes a unary operand (D186), so it binds
 more tightly than `===`, `??`, and `?:`. In a catch handler, write
 `load() catch (failure) => throw (cond ? a : b)` to throw the selected value.
-Without parentheses, `throw cond ? a : b` means `(throw cond) ? a : b`;
-`throw failure.code === "unknown" ? a : b` throws `failure.code`.
+EK1010 refuses an unparenthesized throw expression on the left of a binary
+operator (except comma), as the condition of `?:`, or before `as` or `satisfies`.
+For example, `throw failure.code === "unknown" ? a : b` would throw only
+`failure.code`; write `throw (failure.code === "unknown" ? a : b)` instead.
+Right-hand forms such as `value ?? throw e` and `ok ? value : throw e` stay legal.
 A **throw statement** still takes the whole expression:
 `throw cond ? a : b;` at the start of a statement throws the selected value,
 as in TypeScript.

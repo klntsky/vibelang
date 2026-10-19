@@ -17,11 +17,12 @@ func (p *projector) syntaxToken(node *ast.Node, code int32, message string) {
 	p.diagnostics = append(p.diagnostics, Diagnostic{Start: r.Pos(), Length: r.Len(), Code: code, Message: message})
 }
 
-// checkSyntaxDiagnostics mirrors EK1003/EK1004, D57's written missing
+// checkSyntaxDiagnostics mirrors EK1003/EK1004/EK1010, D57's written missing
 // channels (EK2003), D15's finally exits (EK2006), D1's bodiless service
 // contracts (EK2101), D129's setup order (EK2104), and D229's lexical hatch
 // captures (EK4405). Alias/type identity and unresolved types remain native.
 func (p *projector) checkSyntaxDiagnostics() {
+	p.checkThrowExpressionPrecedence()
 	var visit func(*ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		if p.isHatchCall(n) {
@@ -296,4 +297,74 @@ func syntaxTaggedErrorClass(n *ast.Node) bool {
 	}
 	callee := h.Expression().Expression()
 	return ast.IsIdentifier(callee) && callee.Text() == "TaggedError" || ast.IsPropertyAccessExpression(callee) && callee.Name().Text() == "TaggedError"
+}
+
+// throwExpressionPrecedenceOperand recognizes D186's parser-generated
+// (() => { throw operand })() by both its shape and its source keyword.
+// A handwritten IIFE starts with '(' instead; do/match IIFEs have other
+// keywords. Inspect the immediate parent so parentheses around the throw
+// itself remain explicit, and right operands/conditional arms stay legal.
+func throwExpressionPrecedenceOperand(file *ast.SourceFile, node *ast.Node) *ast.Node {
+	if node.Kind != ast.KindCallExpression || node.Parent == nil || node.Pos() < 0 || node.End() > len(file.Text()) {
+		return nil
+	}
+	parent := node.Parent
+	switch parent.Kind {
+	case ast.KindBinaryExpression:
+		binary := parent.AsBinaryExpression()
+		if binary.Left != node || binary.OperatorToken.Kind == ast.KindCommaToken {
+			return nil
+		}
+	case ast.KindConditionalExpression:
+		if parent.AsConditionalExpression().Condition != node {
+			return nil
+		}
+	case ast.KindAsExpression, ast.KindSatisfiesExpression:
+		if parent.Expression() != node {
+			return nil
+		}
+	case ast.KindPropertyAccessExpression:
+		// D272 normalizes throw x |> f(args)(%) to (throw x).pipe(f(args)).
+		// Its generated 'pipe' name is anchored on '|', unlike a written member.
+		if parent.Expression() != node || parent.Name().Text() != "pipe" {
+			return nil
+		}
+		operator := scanner.GetRangeOfTokenAtPosition(file, parent.Name().Pos())
+		if file.Text()[operator.Pos():operator.End()] != "|" {
+			return nil
+		}
+	default:
+		return nil
+	}
+	keyword := scanner.GetRangeOfTokenAtPosition(file, node.Pos())
+	if file.Text()[keyword.Pos():keyword.End()] != "throw" {
+		return nil
+	}
+	callee := node.Expression()
+	if len(node.Arguments()) != 0 || callee.Kind != ast.KindParenthesizedExpression {
+		return nil
+	}
+	arrow := callee.Expression()
+	if arrow.Kind != ast.KindArrowFunction || arrow.Body() == nil || arrow.Body().Kind != ast.KindBlock {
+		return nil
+	}
+	statements := arrow.Body().Statements()
+	if len(statements) != 1 || statements[0].Kind != ast.KindThrowStatement {
+		return nil
+	}
+	return statements[0].Expression()
+}
+
+// Keep EK1010 in step with the native syntax pass, including inside hatch
+// callbacks. This scan precedes the shared plan's two renderings; the other
+// syntax checks retain their keyword/contract positions and D148 hatch gate.
+func (p *projector) checkThrowExpressionPrecedence() {
+	var visit func(*ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if operand := throwExpressionPrecedenceOperand(p.file, node); operand != nil {
+			p.syntaxDiagnostic(node, 1010, "throw takes only "+scanner.GetSourceTextOfNodeFromSourceFile(p.file, operand, false)+" here, so the rest of the expression would not be thrown; write throw (…) to throw the whole expression.")
+		}
+		return node.ForEachChild(visit)
+	}
+	p.file.AsNode().ForEachChild(visit)
 }

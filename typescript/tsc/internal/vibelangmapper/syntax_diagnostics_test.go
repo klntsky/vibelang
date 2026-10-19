@@ -155,3 +155,66 @@ func TestSyntaxEK4405(t *testing.T) {
 		}
 	}
 }
+
+// S10-12 is checked before either mapper rendering; each must refuse the
+// same source span and use the native registry's message.
+func TestSyntaxEK1010(t *testing.T) {
+	checkSyntaxDiagnostic(t, 1010, "function f() { return sync((x: any) => throw x ?? 1, 0) }", "throw x", "throw takes only x here, so the rest of the expression would not be thrown; write throw (…) to throw the whole expression.", "function f() { return sync((x: any) => { throw x ?? 1 }, 0) }")
+	checkSyntaxFixture(t, "throw-operator-precedence", 1010, 3)
+	var expressions []string
+	for _, op := range []string{"+", "-", "*", "/", "%", "**", "<<", ">>", ">>>", "<", "<=", ">", ">=", "==", "!=", "===", "!==", "&", "|", "^", "&&", "||", "??", "in", "instanceof", "=", "+=", "**=", "??=", "&&=", "||="} {
+		expressions = append(expressions, "throw x "+op+" x")
+	}
+	expressions = append(expressions, "throw x ? 1 : 2", "throw x as any", "throw x satisfies any", "throw x |> %", "throw x |> x(1)(%)")
+	for _, expr := range expressions {
+		checkSyntaxDiagnostic(t, 1010, "function f(x: any) { return "+expr+" }", "throw x", "throw takes only x here, so the rest of the expression would not be thrown; write throw (…) to throw the whole expression.", "function f(x: any) { return throw (x ? 1 : 2) }")
+	}
+	for _, tc := range []struct{ expression, span, operand string }{
+		{"throw (x) + 1", "throw (x)", "(x)"},
+		{"throw /* trivia */ x === 1", "throw /* trivia */ x", "x"},
+		{"throw x.code === \"unknown\" ? 1 : 2", "throw x.code", "x.code"},
+	} {
+		source := "function f(x: any) { return " + tc.expression + " }"
+		message := "throw takes only " + tc.operand + " here, so the rest of the expression would not be thrown; write throw (…) to throw the whole expression."
+		checkSyntaxDiagnostic(t, 1010, source, tc.span, message, "function f(x: any) { return (throw x) ?? 1 }")
+		for name, projection := range map[string]Projection{"checking": Project(source, testContext), "executable": Executable(source, testContext)} {
+			count := 0
+			for _, d := range projection.Diagnostics {
+				if d.Code != 1010 {
+					continue
+				}
+				count++
+				if d.Start != strings.Index(source, tc.span) || d.Length != len(tc.span) || d.Message != message {
+					t.Errorf("%s: %+v", name, d)
+				}
+			}
+			if count != 1 {
+				t.Errorf("%s: got %d EK1010 diagnostics, want 1", name, count)
+			}
+		}
+	}
+	for _, expr := range []string{
+		"x ?? throw x", "x || throw x", "x && throw x", "x ? 1 : throw x", "x ? throw x : 1",
+		"((x: any) => x ?? throw x)(x)", "throw (x ? 1 : 2)", "throw (x === 1)",
+		"throw (x ?? 1)", "throw (x as any)", "throw (x satisfies any)", "throw (x |> x(1)(%))", "(throw x) |> x(1)(%)",
+		"(throw x) ?? 1", "(throw x) ? 1 : 2", "(throw x) as any", "(throw x) satisfies any",
+		"(throw x, 1)", "(() => { throw x })() ?? 1", "do { throw x } ?? 1",
+	} {
+		source := "function f(x: any) { return " + expr + " }"
+		for _, d := range Project(source, testContext).Diagnostics {
+			if d.Code == 1010 {
+				t.Errorf("valid %s: %+v", expr, d)
+			}
+		}
+	}
+	for _, source := range []string{
+		"function f(x: any) { throw x ? 1 : 2; }",
+		"function f(x: any) { return x catch (e) => throw (x ? 1 : 2) }",
+	} {
+		for _, d := range Project(source, testContext).Diagnostics {
+			if d.Code == 1010 {
+				t.Errorf("valid: %+v", d)
+			}
+		}
+	}
+}

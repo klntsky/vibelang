@@ -15,7 +15,7 @@ import (
 // explicit JavaScript iterator generators and their own body syntax.
 
 func init() {
-	fileChecks = append(fileChecks, checkSyntax)
+	fileChecks = append(fileChecks, checkSyntax, checkThrowExpressionPrecedence)
 }
 
 func checkSyntax(c *checker.Checker, file *ast.SourceFile) {
@@ -90,4 +90,75 @@ func isAtModuleTopLevel(node *ast.Node) bool {
 		}
 	}
 	return true
+}
+
+// throwExpressionPrecedenceOperand recognizes D186's parser-generated
+// (() => { throw operand })() by both its shape and its source keyword.
+// A handwritten IIFE starts with '(' instead; do/match IIFEs have other
+// keywords. Inspect the immediate parent so parentheses around the throw
+// itself remain explicit, and right operands/conditional arms stay legal.
+func throwExpressionPrecedenceOperand(file *ast.SourceFile, node *ast.Node) *ast.Node {
+	if node.Kind != ast.KindCallExpression || node.Parent == nil || node.Pos() < 0 || node.End() > len(file.Text()) {
+		return nil
+	}
+	parent := node.Parent
+	switch parent.Kind {
+	case ast.KindBinaryExpression:
+		binary := parent.AsBinaryExpression()
+		if binary.Left != node || binary.OperatorToken.Kind == ast.KindCommaToken {
+			return nil
+		}
+	case ast.KindConditionalExpression:
+		if parent.AsConditionalExpression().Condition != node {
+			return nil
+		}
+	case ast.KindAsExpression, ast.KindSatisfiesExpression:
+		if parent.Expression() != node {
+			return nil
+		}
+	case ast.KindPropertyAccessExpression:
+		// D272 normalizes throw x |> f(args)(%) to (throw x).pipe(f(args)).
+		// Its generated 'pipe' name is anchored on '|', unlike a written member.
+		if parent.Expression() != node || parent.Name().Text() != "pipe" {
+			return nil
+		}
+		operator := scanner.GetRangeOfTokenAtPosition(file, parent.Name().Pos())
+		if file.Text()[operator.Pos():operator.End()] != "|" {
+			return nil
+		}
+	default:
+		return nil
+	}
+	keyword := scanner.GetRangeOfTokenAtPosition(file, node.Pos())
+	if file.Text()[keyword.Pos():keyword.End()] != "throw" {
+		return nil
+	}
+	callee := node.Expression()
+	if len(node.Arguments()) != 0 || callee.Kind != ast.KindParenthesizedExpression {
+		return nil
+	}
+	arrow := callee.Expression()
+	if arrow.Kind != ast.KindArrowFunction || arrow.Body() == nil || arrow.Body().Kind != ast.KindBlock {
+		return nil
+	}
+	statements := arrow.Body().Statements()
+	if len(statements) != 1 || statements[0].Kind != ast.KindThrowStatement {
+		return nil
+	}
+	return statements[0].Expression()
+}
+
+// EK1010 checks parser-generated throw expressions even in a hatch's
+// TypeScript callback: D148 keeps throw statements there, but the same
+// unary expression grammar must not silently discard the remaining text.
+// The existing checkSyntax keeps its keyword/using positions and hatch gate.
+func checkThrowExpressionPrecedence(c *checker.Checker, file *ast.SourceFile) {
+	var visit func(*ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if operand := throwExpressionPrecedenceOperand(file, node); operand != nil {
+			report(c, node, EK1010, scanner.GetSourceTextOfNodeFromSourceFile(file, operand, false))
+		}
+		return node.ForEachChild(visit)
+	}
+	file.AsNode().ForEachChild(visit)
 }
