@@ -156,6 +156,10 @@ func outsideReferences(c *checker.Checker, island *ast.Node) []*ast.Node {
 	var visit func(n *ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		switch {
+		case n.Kind == ast.KindTypeQuery:
+			// `typeof value` here names a type, not a runtime capture (D229).
+			// IsPartOfTypeNode deliberately treats its queried name as a value.
+			return false
 		case n.Kind == ast.KindShorthandPropertyAssignment:
 			if declaredOutside(c.GetShorthandAssignmentValueSymbol(n), island) {
 				found = append(found, n.Name())

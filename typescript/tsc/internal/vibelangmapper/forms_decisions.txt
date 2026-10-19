@@ -643,6 +643,15 @@ typescript/vibelang/cases/handlers/main.vibe:99:5 lambda effectFn table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:10:23 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:11:24 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:9:23 lambda plain table
+typescript/vibelang/cases/hatch-type-query.fail/a.vibe:2:15 lambda plain annotation
+typescript/vibelang/cases/hatch-type-query.fail/a.vibe:5:15 lambda plain table
+typescript/vibelang/cases/hatch-type-query/a.vibe:11:14 lambda plain table
+typescript/vibelang/cases/hatch-type-query/a.vibe:11:70 lambda plain table
+typescript/vibelang/cases/hatch-type-query/a.vibe:16:14 lambda plain table
+typescript/vibelang/cases/hatch-type-query/a.vibe:16:78 lambda plain table
+typescript/vibelang/cases/hatch-type-query/a.vibe:21:108 lambda plain table
+typescript/vibelang/cases/hatch-type-query/a.vibe:21:14 lambda plain table
+typescript/vibelang/cases/hatch-type-query/a.vibe:3:19 lambda plain annotation
 typescript/vibelang/cases/hatches-inputs/main.vibe:20:20 lambda plain table
 typescript/vibelang/cases/hatches-inputs/main.vibe:21:24 lambda plain table
 typescript/vibelang/cases/hatches-inputs/main.vibe:22:24 lambda plain table
