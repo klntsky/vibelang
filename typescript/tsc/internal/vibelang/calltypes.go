@@ -128,21 +128,29 @@ func isInvocation(node *ast.Node) bool {
 }
 
 func init() {
-	fileChecks = append(fileChecks, checkTemplateRuns)
+	fileChecks = append(fileChecks, checkInvocationRuns)
 }
 
-// D24 keeps structured Effect results as data. Discarding one as a template
+// D24 keeps structured Effect results as data. Discarding a call or template
 // statement must ask rather than silently leaving a SQL migration cold.
-func checkTemplateRuns(c *checker.Checker, file *ast.SourceFile) {
+func checkInvocationRuns(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(*ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if ast.IsTaggedTemplateExpression(node) && !inHatch(node) {
+		if isInvocation(node) && !inHatch(node) {
 			sig := c.GetResolvedSignature(node)
 			if sig != nil {
-				t := c.GetReturnTypeOfSignature(sig)
-				if effectInterfaceSymbol(c, t) != nil && !isEffectType(c, t) && ast.IsExpressionStatement(ast.WalkUpParenthesizedExpressions(node).Parent) {
-					report(c, node, EK4301.With("This tag returns an Effect subtype kept as data (D24). Call the template result explicitly to run it, or annotate the tag's return type as Effect<A, E, R>."))
-				} else if isEffectType(c, t) && !inLowerableBody(node) && !atTopLevel(node) {
+				t := runningCallResult(c, node, sig)
+				statement := node.Parent
+				for statement != nil && ast.IsParenthesizedExpression(statement) {
+					statement = statement.Parent
+				}
+				if isStructuredEffectResult(c, t) && statement != nil && ast.IsExpressionStatement(statement) {
+					if ast.IsCallExpression(node) {
+						report(c, node, EK4301.With("This call returns an Effect subtype kept as data (D24). Call the result explicitly to run it, or annotate the return type as Effect<A, E, R>."))
+					} else {
+						report(c, node, EK4301.With("This tag returns an Effect subtype kept as data (D24). Call the template result explicitly to run it, or annotate the tag's return type as Effect<A, E, R>."))
+					}
+				} else if ast.IsTaggedTemplateExpression(node) && isEffectType(c, t) && !inLowerableBody(node) && !atTopLevel(node) {
 					report(c, node, EK4301.With("This tagged template runs an Effect, but this position cannot run a program. Move it into an Effect function body."))
 				}
 			}
@@ -150,4 +158,16 @@ func checkTemplateRuns(c *checker.Checker, file *ast.SourceFile) {
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
+}
+
+// A union such as Exit is data too: every branch must be a structured Effect.
+func isStructuredEffectResult(c *checker.Checker, t *checker.Type) bool {
+	found := false
+	for _, part := range t.Distributed() {
+		if effectInterfaceSymbol(c, part) == nil || isEffectType(c, part) {
+			return false
+		}
+		found = true
+	}
+	return found
 }
