@@ -224,6 +224,16 @@ func lower(text string, ctx FileContext) *projector {
 // visit walks node and records the edits that lower it.
 func (p *projector) visit(node *ast.Node, e env) {
 	switch {
+	case ast.IsPropertyAccessExpression(node) && node.Name().Text() == "pipe" && node.Name().Flags&ast.NodeFlagsReparsed != 0 && ast.IsCallExpression(node.Parent):
+		// D272: the parser contextualizes x |> g(%) as x.pipe(g).
+		// Keep its source children mapped while replacing only the pipe syntax.
+		call := node.Parent
+		stage := call.Arguments()[0]
+		p.plan.insert(p.tokenStart(node.Expression()), "(")
+		p.visit(node.Expression(), e)
+		p.plan.replace(node.Expression().End(), p.tokenStart(stage), ").pipe(")
+		p.plan.replace(stage.End(), call.End(), ")")
+		return
 	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
 		p.relativeTypeScriptImport(node)
 		p.visitChildren(node, e)

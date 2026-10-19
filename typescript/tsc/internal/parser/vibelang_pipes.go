@@ -1,6 +1,9 @@
 package parser
 
-import "github.com/microsoft/TypeScript/tsc/internal/ast"
+import (
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+)
 
 // The pipe operator (design D154) in a .vibe file, as in TC39's Hack-style
 // proposal:
@@ -23,6 +26,9 @@ import "github.com/microsoft/TypeScript/tsc/internal/ast"
 // NodeFlagsVibeLang, which the checker resolves to the topic of the innermost
 // pipe whose body holds it. After an operand, % is still the remainder
 // operator, so % % 2 is the topic's remainder.
+//
+// D272 normalizes the special body f(args)(%) to left.pipe(f(args)) before
+// checking, so the stage receives the method pipe's contextual type.
 
 // isPipeOperator reports whether the current token, |, starts the pipe
 // operator |> in a .vibe file.
@@ -43,6 +49,14 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 		body := p.parseBinaryExpressionOrHigher(ast.OperatorPrecedenceLowest)
 		body = p.parseVibeLangCatchRest(body, bodyPos) // x |> f(%) catch y catches inside the body (vibelang_catch.go)
 		body = p.parseConditionalExpressionRest(body, bodyPos, false /*allowReturnTypeInArrowFunction*/)
+		if stage := curriedPipeStage(body); stage != nil {
+			// D272: give the stage exactly the contextual type of x.pipe(g).
+			name := p.vibelangSynthesized(p.factory.NewIdentifier("pipe"), operator.Loc)
+			access := p.vibelangSpanning(p.factory.NewPropertyAccessExpression(left, nil, name, ast.NodeFlagsNone), core.NewTextRange(pos, operator.End()))
+			arguments := p.newNodeList(stage.Loc, []*ast.Node{stage})
+			left = p.finishNode(p.factory.NewCallExpression(access, nil, nil, arguments, ast.NodeFlagsNone), pos)
+			continue
+		}
 		left = p.makeBinaryExpression(left, operator, body, pos)
 		left.Flags |= ast.NodeFlagsVibeLang
 	}
@@ -57,4 +71,34 @@ func (p *Parser) parseTopicReference() *ast.Node {
 	topic := p.finishNode(p.factory.NewIdentifier("%"), pos)
 	topic.Flags |= ast.NodeFlagsVibeLang
 	return topic
+}
+
+// curriedPipeStage recognizes only g(%) with a call as g and no other
+// references to this pipe's topic. All other bodies retain D154/D155.
+func curriedPipeStage(body *ast.Node) *ast.Node {
+	if !ast.IsCallExpression(body) || ast.IsOptionalChain(body) || body.TypeArgumentList() != nil || len(body.Arguments()) != 1 {
+		return nil
+	}
+	topic := body.Arguments()[0]
+	if topic.Kind != ast.KindIdentifier || topic.Text() != "%" || topic.Flags&ast.NodeFlagsVibeLang == 0 {
+		return nil
+	}
+	stage := body.Expression()
+	if !ast.IsCallExpression(stage) || ast.IsOptionalChain(stage) {
+		return nil
+	}
+	var hasTopic func(*ast.Node) bool
+	hasTopic = func(n *ast.Node) bool {
+		if n.Kind == ast.KindIdentifier && n.Text() == "%" && n.Flags&ast.NodeFlagsVibeLang != 0 {
+			return true
+		}
+		if n.Kind == ast.KindBinaryExpression && n.Flags&ast.NodeFlagsVibeLang != 0 && n.AsBinaryExpression().OperatorToken.Kind == ast.KindBarToken {
+			return hasTopic(n.AsBinaryExpression().Left) // nested pipe bodies own their topics
+		}
+		return n.ForEachChild(hasTopic)
+	}
+	if hasTopic(stage) {
+		return nil
+	}
+	return stage
 }

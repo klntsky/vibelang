@@ -145,3 +145,20 @@ func FuzzVibeLangParsePrint(f *testing.F) {
 		checkSyntaxRoundTrip(t, source)
 	})
 }
+
+// D272 normalizes only the topic-only application of a curried stage.
+func TestCurriedPipeSyntax(t *testing.T) {
+	for _, tc := range []struct{ source, want string }{
+		{`const x = schema |> combinator(1)(%)`, `.pipe(combinator(1))`},
+		{`const x = schema |> combinator(1)(%, 2)`, `|>`},
+		{`const x = schema |> combinator(%)(%)`, `|>`},
+		{`const x = schema |> combinator(1)(%.value)`, `|>`},
+		{`const x = schema |> combinator(%)`, `|>`},
+	} {
+		printed := checkSyntaxRoundTrip(t, tc.source)
+		if !strings.Contains(printed, tc.want) {
+			t.Errorf("want %q in %s", tc.want, printed)
+		}
+	}
+}
+
