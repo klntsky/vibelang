@@ -1,0 +1,4 @@
+// expect: TS2322
+export function* invalid(): Generator<number, void, unknown> {
+  yield "not a number"
+}

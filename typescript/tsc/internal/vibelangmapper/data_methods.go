@@ -61,7 +61,7 @@ func (p *projector) dataReceiver(expr *ast.Node, depth int) string {
 		}
 		if c.Kind == CalleeLocal && ast.IsIdentifier(expr.Expression()) {
 			d := r.binding(expr.Expression(), expr.Expression().Text())
-			if d != nil && d.Kind == ast.KindFunctionDeclaration && d.AsFunctionDeclaration().AsteriskToken != nil {
+			if d != nil && isProducer(d) {
 				return "effect/Stream"
 			}
 		}

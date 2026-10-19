@@ -32,8 +32,19 @@ func (p *projector) checkSyntaxDiagnostics() {
 			}
 			return false
 		}
+		if fn := ast.GetContainingFunction(n); fn != nil &&
+			!ast.IsFunctionLike(n) && !ast.IsClassLike(n) && n.Kind != ast.KindClassStaticBlockDeclaration &&
+			ast.GetFunctionFlags(fn)&ast.FunctionFlagsGenerator != 0 && HasJavaScriptIteratorReturn(fn) {
+			// D271 keeps this generator's await syntax as JavaScript. Nested
+			// function boundaries continue to own their VibeLang rules.
+			n.ForEachChild(visit)
+			return false
+		}
 		switch n.Kind {
 		case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
+			if ast.GetFunctionFlags(n)&ast.FunctionFlagsGenerator != 0 && HasJavaScriptIteratorReturn(n) {
+				break // D271 permits an explicitly JavaScript async generator.
+			}
 			if modifiers := n.Modifiers(); modifiers != nil {
 				for _, m := range modifiers.Nodes {
 					if m.Kind == ast.KindAsyncKeyword {

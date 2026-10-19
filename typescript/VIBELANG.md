@@ -170,6 +170,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `ek2005.fail` | EK2005 for a `resumeWith` program that needs a service and for one that fails with an undeclared error; a program that fails with the declared error, or returns a value read in the clause, is allowed |
 | `ek4201.fail` | EK4201 for a control operation under `Effect.forEach` with `concurrency: 4`, `Effect.race`, and `Effect.timeout`, and for a producer that performs one passed to `Stream.runCollect`; none without concurrency, with `concurrency: 1`, with a handler inside each branch, or for a `for...of` over the producer |
 | `ek4202.fail` | EK4202 for a TypeScript function whose declared requirements hold a control operation; none for a generic TypeScript function that passes its argument's requirements through |
+| `plain-generator`, `plain-async-generator`, `generator-stream`, `plain-generator-yield.fail` | D271: JavaScript iterator contracts preserve sync and async generators; unannotated generators remain Streams; an invalid yield keeps TS2322 |
 | `producers` | Producers (D26): laziness; cleanup before `break`, `return`, and `continue` to an outer label complete; one pass per run; service calls between yields; `yield*`; `Stream.take` without running ahead; a failure reaching the loop's `catch`; pattern, existing-variable, and `var` loop targets; a labeled JavaScript loop around a producer loop; `for...of` over a Stream; 100,000 elements under 50 frames; and `Stream<number, Broken, never>` in the `.d.ts` |
 
 ### Acceptance cases
@@ -633,7 +634,7 @@ The checks so far:
 | Code | Reported at | File |
 | --- | --- | --- |
 | EK1001 | The outermost call at a module's top level that runs a program; covers TypeScript's TS2339 and TS2348 for a service member call and an Effect value call there | `runners.go` |
-| EK1002 | The API, such as `Effect.gen`, when a `function*` is passed where a function that returns a lib `Generator` or `Iterator` is expected; covers the generator, and a producer passed by name with its body | `generators.go` |
+| EK1002 | The API, such as `Effect.gen`, when a `function*` without a JavaScript iterator return annotation (D271) is passed where a function that returns a lib `Generator` or `Iterator` is expected; covers the generator, and a producer passed by name with its body | `generators.go` |
 | EK1003 | `async`, `await`, `for await`, and `await using` in a `.vibe` file; covers TypeScript's errors about them, such as an `await` outside an `async` function | `syntax.go` |
 | EK1004 | `using` that no function encloses, including in a class static block | `syntax.go` |
 | EK1005 | The callee of a runner in code a fiber runs | `runners.go` |
@@ -980,7 +981,7 @@ A control type is the type of a class that `classKindOf` calls a control class; 
 
 ### Producers (D26)
 
-A `function*` declaration or function expression in a `.vibe` file is a producer (`isProducer`). Its body is an Effect body, as any `.vibe` function's is, so its calls run; `yield v` performs the built-in Yield operation, and `yield* p` yields every element of another producer, a Stream, or an iterable. Calling a producer runs none of its body: it returns a Stream that carries the body. Generator methods, `*items() { … }`, stay JavaScript's generators.
+A `function*` declaration or function expression in a `.vibe` file is a producer (`isProducer`, D26), unless it has an explicit JavaScript iterator return annotation (D271 extends D263). `Generator`, `Iterator`, `IterableIterator`, `Iterable`, `AsyncGenerator`, `AsyncIterator`, `AsyncIterableIterator`, and `AsyncIterable` annotations keep TypeScript's generator, including JavaScript `yield`, `.next()`, spread, delegation and async `for await` iteration. Unannotated generators and Stream-annotated generators keep the stream-producer form. Its body is an Effect body, as any `.vibe` function's is, so its calls run; `yield v` performs the built-in Yield operation, and `yield* p` yields every element of another producer, a Stream, or an iterable. Calling a producer runs none of its body: it returns a Stream that carries the body. Generator methods, `*items() { … }`, stay JavaScript's generators.
 
 ```ts
 // lines.vibe                                 // lines.js

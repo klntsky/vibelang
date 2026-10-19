@@ -400,6 +400,21 @@ var projectionCases = []struct {
 		virtual: "function double(n: number): number {\n  return twice(n)\n}\n",
 	},
 	{
+		name:    "an iterator contract preserves a JavaScript generator (D271)",
+		source:  "function* steps(): Generator<number, number, unknown> { yield f(); return 9 }\n",
+		virtual: "function* steps(): Generator<number, number, unknown> { yield f(); return 9 }\n",
+	},
+	{
+		name:    "an iterator-annotated function expression keeps JavaScript delegation (D271)",
+		source:  "const steps = function* (): IterableIterator<number> { yield* xs() }\n",
+		virtual: "const steps = function* (): IterableIterator<number> { yield* xs() }\n",
+	},
+	{
+		name:    "an async iterator contract preserves await and yield (D271)",
+		source:  "async function* steps(): AsyncGenerator<number> { yield await f() }\n",
+		virtual: "async function* steps(): AsyncGenerator<number> { yield await f() }\n",
+	},
+	{
 		name:    "top-level calls stay and invalid async is diagnosed; a generator function is a producer (D26)",
 		source:  "const top = f()\nasync function a() { return f() }\nfunction* g() { yield f() }\n",
 		virtual: "const top = f()\nasync function a() { return f() }\nfunction g() { return $produce(function* () { yield $emit((yield* $run($value(f)()))) })}\n",

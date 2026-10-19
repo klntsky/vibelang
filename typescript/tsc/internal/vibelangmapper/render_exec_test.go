@@ -52,6 +52,12 @@ var emitCases = []struct {
 	contains []string
 	absent   []string
 }{
+	{
+		name:     "iterator-annotated generators retain native execution (D271)",
+		source:   "function* steps(): Generator<number, number, unknown> { try { yield f(); return 9 } catch { yield 3; return 0 } }",
+		contains: []string{"function* steps()", "yield f()", "catch"},
+		absent:   []string{"$produce(", "$emit(", "$fail(", "$caught("},
+	},
 
 	{name: "unproven data method dispatches with receiver and arguments",
 		source:   `import { maybe } from "./opaque.js"; function f() { return maybe.getOrElse((): number => 0) }`,

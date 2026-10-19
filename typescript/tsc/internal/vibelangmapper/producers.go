@@ -4,7 +4,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 )
 
-// Producers (D26, D98). A generator function in a .vibe file is a
+// Producers (D26, D98, D271). An unannotated generator function in a .vibe file is a
 // producer, a Stream: `yield x` emits x, a call between yields runs, as in
 // an Effect body, `yield* p` emits every element of another producer, and a
 // throw fails the Stream:
@@ -18,13 +18,33 @@ import (
 // the Stream's E and R, and leaves any other iterable as it is (D26).
 
 // isProducer reports whether node is a producer: a generator function
-// declaration with a body, not async.
+// declaration with a body, not async, without a JavaScript iterator contract.
 func isProducer(node *ast.Node) bool {
 	if node.Kind != ast.KindFunctionDeclaration || node.Flags&ast.NodeFlagsReparsed != 0 {
 		return false
 	}
 	fn := node.AsFunctionDeclaration()
-	return fn.Body != nil && fn.AsteriskToken != nil && !ast.HasSyntacticModifier(node, ast.ModifierFlagsAsync)
+	return fn.Body != nil && fn.AsteriskToken != nil && !ast.HasSyntacticModifier(node, ast.ModifierFlagsAsync) && !HasJavaScriptIteratorReturn(node)
+}
+
+// HasJavaScriptIteratorReturn recognizes D271's explicit JavaScript iterator
+// contracts. The native compiler and both projector renderings share this
+// syntax rule so their emitted generator and caller types agree.
+func HasJavaScriptIteratorReturn(fn *ast.Node) bool {
+	t := formsUnwrapType(fn.Type())
+	if t == nil || t.Kind != ast.KindTypeReference {
+		return false
+	}
+	name := t.AsTypeReferenceNode().TypeName
+	if name.Kind == ast.KindQualifiedName {
+		name = name.AsQualifiedName().Right
+	}
+	switch name.Text() {
+	case "Generator", "Iterator", "IterableIterator", "Iterable",
+		"AsyncGenerator", "AsyncIterator", "AsyncIterableIterator", "AsyncIterable":
+		return true
+	}
+	return false
 }
 
 // producerDeclaration lowers a producer to the function that returns its

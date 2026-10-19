@@ -4,13 +4,15 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
 
 // The checks in this file report TypeScript syntax that VibeLang does not
 // have. A call already waits, so async, for await, and await using are
 // EK1003 (Chapter 10). The parser writes await outside an async function as
 // $await (fibers.go), so an AwaitExpression here is inside an async function. A module's top level is not inside a program, so using
-// there has no block to release it in: EK1004 (Chapter 6).
+// there has no block to release it in: EK1004 (Chapter 6). D271 exempts
+// explicit JavaScript iterator generators and their own body syntax.
 
 func init() {
 	fileChecks = append(fileChecks, checkSyntax)
@@ -22,8 +24,17 @@ func checkSyntax(c *checker.Checker, file *ast.SourceFile) {
 		if hatchOf(node) != "" {
 			return forEachHatchVibeLang(node, visit) // async and await keep their JavaScript meaning in a hatch's TypeScript (D148)
 		}
+		if fn := ast.GetContainingFunction(node); fn != nil && !isFunctionBoundary(node) &&
+			ast.GetFunctionFlags(fn)&ast.FunctionFlagsGenerator != 0 && vibelangmapper.HasJavaScriptIteratorReturn(fn) {
+			// Await, for await and await using are JavaScript inside this
+			// generator. Nested functions still own their VibeLang rules.
+			return node.ForEachChild(visit)
+		}
 		switch node.Kind {
 		case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
+			if ast.GetFunctionFlags(node)&ast.FunctionFlagsGenerator != 0 && vibelangmapper.HasJavaScriptIteratorReturn(node) {
+				break // D271 keeps async function* as TypeScript writes it.
+			}
 			if modifiers := node.Modifiers(); modifiers != nil {
 				for _, modifier := range modifiers.Nodes {
 					if modifier.Kind == ast.KindAsyncKeyword {

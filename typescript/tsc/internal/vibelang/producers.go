@@ -7,6 +7,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/transformers"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
 
 // Producers and loops over streams (design D26, chapters 8 and 26).
@@ -23,7 +24,8 @@ import (
 //	                                         }
 //
 // A function* declaration or function expression in a .vibe file is a
-// producer. Its body is an Effect body, as any .vibe function's is, so its calls
+// producer unless it has a JavaScript iterator return annotation (D271).
+// Its body is an Effect body, as any .vibe function's is, so its calls
 // run; `yield v` performs the built-in Yield operation, and `yield* p` yields
 // every element of p. Calling a producer runs none of its body: it returns a
 // Stream that carries the body (the runtime's $produce). To TypeScript, and to
@@ -49,13 +51,14 @@ import (
 // Over any other iterable, for...of is JavaScript's loop.
 
 // isProducer reports whether fn is a producer: a function* declaration or
-// function expression, not async, with a body, in a .vibe file.
+// function expression, not async, with a body, in a .vibe file, without
+// a JavaScript iterator return annotation (D271 extends D263 and D26).
 func isProducer(fn *ast.Node) bool {
 	if fn.Kind != ast.KindFunctionDeclaration && fn.Kind != ast.KindFunctionExpression || fn.Body() == nil {
 		return false
 	}
 	flags := ast.GetFunctionFlags(fn)
-	return flags&ast.FunctionFlagsGenerator != 0 && flags&ast.FunctionFlagsAsync == 0 && isVibeLangFile(ast.GetSourceFileOfNode(fn))
+	return flags&ast.FunctionFlagsGenerator != 0 && flags&ast.FunctionFlagsAsync == 0 && isVibeLangFile(ast.GetSourceFileOfNode(fn)) && !vibelangmapper.HasJavaScriptIteratorReturn(fn)
 }
 
 // streamTypeID names the variance property that every Effect 4 Stream has:
