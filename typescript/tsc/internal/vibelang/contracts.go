@@ -100,13 +100,7 @@ func (a *analyzer) hasPlainContract(fn *ast.Node) bool {
 	}
 	if isLambda(fn) {
 		e := a.classify(a.contextualTypes(fn))
-		if e.any() {
-			return e.plainFn && !e.effectFn && !e.program
-		}
-		// A local lambda without a contract belongs to the surrounding
-		// JavaScript body (D263). Its throws stay JavaScript throws too;
-		// an explicit or contextual Effect contract above takes precedence.
-		return a.hasPlainContract(enclosingFunction(fn))
+		return e.plainFn && !e.effectFn && !e.program
 	}
 	return false
 }
