@@ -192,6 +192,18 @@ func (a *analyzer) factoryProgram(expr *ast.Node, success *checker.Type) bool {
 	}
 	if ast.IsIdentifier(expr) {
 		if symbol := a.checker.GetSymbolAtLocation(expr); symbol != nil {
+			// A class named inside its own extends expression, as in
+			// Schema.Class<Crate>("Crate")({ children: Schema.suspend(
+			// (): Schema.Codec<Crate, W>!! => Crate) }), has no static type
+			// until that base resolves. Reading it here reports TS2506, so
+			// keep D67's success-return convention, as for the const below.
+			if decl := symbol.ValueDeclaration(); decl != nil && ast.IsClassLike(decl) {
+				for parent := expr.Parent; parent != nil && parent != decl; parent = parent.Parent {
+					if ast.IsHeritageClause(parent) {
+						return false
+					}
+				}
+			}
 			if decl := symbol.ValueDeclaration(); decl != nil && ast.IsVariableDeclaration(decl) && decl.Type() == nil {
 				// An unannotated local call runs and binds its success, just
 				// like a call returned directly above. It cannot select D269's

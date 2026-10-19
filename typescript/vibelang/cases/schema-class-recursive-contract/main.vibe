@@ -1,0 +1,23 @@
+// expect-result: [true,true,{"count":"2","children":[{"count":"1","children":[]}]}]
+// A recursive Schema.Class names itself inside its own extends expression.
+// The suspend callback's written contract returns the codec as data; D269's
+// factory check must not type the class while its base is still resolving
+// (TS2506 'Crate' is referenced directly or indirectly in its own base
+// expression).
+interface CrateWire {
+  count: string
+  children: ReadonlyArray<CrateWire>
+}
+
+export class Crate extends Schema.Class<Crate>("Crate")({
+  count: Schema.FiniteFromString,
+  children: Schema.Array(
+    Schema.suspend((): Schema.Codec<Crate, CrateWire>!! => Crate)
+  )
+}) {}
+
+export function main() {
+  const value = Schema.decodeUnknownEffect(Crate)({ count: "2", children: [{ count: "1", children: [] }] })
+  const wire = Schema.encodeEffect(Crate)(value)
+  return [value instanceof Crate, value.children[0] instanceof Crate, wire]
+}
