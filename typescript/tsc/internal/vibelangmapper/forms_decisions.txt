@@ -521,6 +521,10 @@ typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:48:14 lambda effectFn s
 typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:55:32 lambda program table
 typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:56:34 lambda program table
 typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:59:20 lambda program table
+typescript/vibelang/cases/conditional-record-environment/a.vibe:32:24 lambda plain annotation
+typescript/vibelang/cases/conditional-record-environment/a.vibe:49:43 lambda plain annotation
+typescript/vibelang/cases/conditional-record-inexact.fail/a.vibe:2:24 lambda plain annotation
+typescript/vibelang/cases/conditional-record/a.vibe:1:24 lambda plain annotation
 typescript/vibelang/cases/config-fallbacks/main.vibe:12:45 lambda plain table
 typescript/vibelang/cases/config-fallbacks/main.vibe:21:25 lambda program table
 typescript/vibelang/cases/config-fallbacks/main.vibe:21:60 byname program table

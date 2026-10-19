@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "declaration": true,
+    "outDir": "out",
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": [
+    "a.vibe",
+    "reference.ts"
+  ]
+}

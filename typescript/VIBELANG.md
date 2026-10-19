@@ -100,6 +100,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives every exception as `unknown` (D260) |
 | `ek2004-dead-catch.fail` | An Effect `try` block with E = `never` is EK2004 (defects pass through), which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported |
 | `plain-contract-validate`, `plain-contract-render`, `plain-contract-callback` | Smithers A-1, B-4, E-1: plain contracts preserve synchronous throws, callback calls, and declaration types (D263) |
+| `conditional-record`, `conditional-record-environment`, `conditional-record-inexact.fail` | Smithers E-15: paired TypeScript/VibeLang conditional records compile and stay plain under `exactOptionalPropertyTypes`; without it, both report TS2322 on the inferred optional `undefined` properties |
 | `plain-contract-exceptions` | Plain declarations, contextual lambdas, methods, and imports preserve exceptions; escaping into an Effect caller creates a defect (D263) |
 | `plain-contract-effect.fail` | Running an Effect under a plain contract remains EK2003 (D263) |
 | `plain-catch-exceptions` | Plain catches recover coercion, getter, revoked Proxy, and prototype-lookup exceptions, and trusted built-in calls keep their original exception values (D260) |
