@@ -296,26 +296,13 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	tx.inEffect = true
 	tx.frame = &frame{}
 	subject := byNameSubject(node) // a topic passes its pipe's left side (pipes.go)
-	var value *ast.Node
-	if ref := tx.plan.directRefs[subject]; ref != nil {
-		value = tx.visitDirectReference(subject, ref)
-	} else {
-		value = tx.visitNode(subject)
-	}
+	value, tailProgram := tx.byNameResult(subject)
 	tx.inEffect, tx.frame = saved, savedFrame
-	// Erasable expression wrappers do not change whether the result is a
-	// tail program. All call renderings (including Effect values, optional
-	// calls, module methods, tags and pipe topics) meet here as yield*.
-	tail := ast.SkipOuterExpressions(value, ast.OEKParentheses|ast.OEKTypeAssertions|ast.OEKNonNullAssertions|ast.OEKSatisfies)
-	tailProgram := tail.Kind == ast.KindYieldExpression && tail.AsYieldExpression().AsteriskToken != nil
-	if tailProgram {
-		value = tail.Expression()
-		if !containsYield(value) {
-			lowered := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("suspend"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{tx.arrow(nil, value)}), ast.NodeFlagsNone)
-			ec.SetOriginal(lowered, node)
-			lowered.Loc = node.Loc
-			return lowered
-		}
+	if tailProgram && !containsYield(value) {
+		lowered := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("suspend"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{tx.arrow(nil, value)}), ast.NodeFlagsNone)
+		ec.SetOriginal(lowered, node)
+		lowered.Loc = node.Loc
+		return lowered
 	}
 	body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(value)}), false /*multiLine*/)
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
@@ -335,6 +322,65 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	ec.SetOriginal(lowered, node)
 	lowered.Loc = node.Loc
 	return lowered
+}
+
+// byNameResult computes the program in each result position without running
+// it. Only operands and conditions keep yield*: they finish before flatten
+// enters the chosen program, with no generator continuation after it.
+func (tx *lowering) byNameResult(node *ast.Node) (*ast.Node, bool) {
+	f := tx.Factory()
+	node = ast.SkipOuterExpressions(node, ast.OEKParentheses|ast.OEKTypeAssertions|ast.OEKNonNullAssertions|ast.OEKSatisfies)
+	switch node.Kind {
+	case ast.KindConditionalExpression:
+		conditional := node.AsConditionalExpression()
+		condition := tx.Visitor().VisitNode(conditional.Condition)
+		left, leftProgram := tx.byNameResult(conditional.WhenTrue)
+		right, rightProgram := tx.byNameResult(conditional.WhenFalse)
+		if leftProgram != rightProgram {
+			if !leftProgram {
+				left = tx.succeedByName(left)
+			} else {
+				right = tx.succeedByName(right)
+			}
+		}
+		return f.UpdateConditionalExpression(conditional, condition, conditional.QuestionToken, left, conditional.ColonToken, right), leftProgram || rightProgram
+	case ast.KindBinaryExpression:
+		binary := node.AsBinaryExpression()
+		switch binary.OperatorToken.Kind {
+		case ast.KindCommaToken:
+			left := tx.Visitor().VisitNode(binary.Left)
+			right, program := tx.byNameResult(binary.Right)
+			return f.UpdateBinaryExpression(binary, binary.Modifiers(), left, binary.Type, binary.OperatorToken, right), program
+		case ast.KindBarBarToken, ast.KindQuestionQuestionToken:
+			left, leftProgram := tx.byNameResult(binary.Left)
+			if !leftProgram {
+				// A scalar left operand tests its value, including the success
+				// of any calls inside it, before selecting the right side.
+				return tx.visitNode(node), false
+			}
+			right, rightProgram := tx.byNameResult(binary.Right)
+			if !rightProgram {
+				right = tx.succeedByName(right)
+			}
+			return f.UpdateBinaryExpression(binary, binary.Modifiers(), left, binary.Type, binary.OperatorToken, right), true
+		}
+	}
+	var value *ast.Node
+	if ref := tx.plan.directRefs[node]; ref != nil {
+		value = tx.visitDirectReference(node, ref)
+	} else {
+		value = tx.visitNode(node)
+	}
+	tail := ast.SkipOuterExpressions(value, ast.OEKParentheses|ast.OEKTypeAssertions|ast.OEKNonNullAssertions|ast.OEKSatisfies)
+	if tail.Kind == ast.KindYieldExpression && tail.AsYieldExpression().AsteriskToken != nil {
+		return tail.Expression(), true
+	}
+	return value, tx.plan.heldPrograms[node]
+}
+
+func (tx *lowering) succeedByName(value *ast.Node) *ast.Node {
+	f := tx.Factory()
+	return f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("succeed"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{value}), ast.NodeFlagsNone)
 }
 
 // runtimeCall makes `runtime.name(arguments...)`.

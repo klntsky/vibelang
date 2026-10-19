@@ -13,11 +13,12 @@ const effectTypeID = "~effect/Effect"
 
 // plan records what the lowering does to one .vibe file.
 type plan struct {
-	effects  map[*ast.Node]bool       // functions lowered to Effect.fnUntraced generators
-	programs map[*ast.Node]bool       // lambdas lowered to Effect.gen programs (design D7)
-	runs     map[*ast.Node]bool       // calls in those functions emitted as yield*
-	converts map[*ast.Node]conversion // function values converted where they are passed
-	prelude  []string                 // prelude names the file uses as values (prelude.go)
+	effects      map[*ast.Node]bool       // functions lowered to Effect.fnUntraced generators
+	programs     map[*ast.Node]bool       // lambdas lowered to Effect.gen programs (design D7)
+	runs         map[*ast.Node]bool       // calls in those functions emitted as yield*
+	heldPrograms map[*ast.Node]bool       // held values in by-name result positions
+	converts     map[*ast.Node]conversion // function values converted where they are passed
+	prelude      []string                 // prelude names the file uses as values (prelude.go)
 	servicePlan
 	plainPlan
 	trustedPlan
@@ -45,7 +46,7 @@ func (p *plan) conversionOf(node *ast.Node) conversion { return p.converts[node]
 // planFile asks the checker which functions in file are Effects and which of
 // their calls run.
 func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
-	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
+	p := &plan{effects: map[*ast.Node]bool{}, programs: map[*ast.Node]bool{}, runs: map[*ast.Node]bool{}, heldPrograms: map[*ast.Node]bool{}, converts: map[*ast.Node]conversion{}, servicePlan: newServicePlan(), plainPlan: newPlainPlan(), trustedPlan: newTrustedPlan(), tracingPlan: newTracingPlan(), scopePlan: newScopePlan()}
 	p.handlerPlan = newHandlerPlan()
 	p.hatches = map[*ast.Node]hatchForm{}
 	p.failureTags = map[*ast.Node][]string{}
@@ -86,6 +87,11 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 			}
 			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertSyncProgram || conversion == convertPrograms || conversion == convertByName {
 				p.converts[node] = conversion
+				if conversion == convertByName {
+					byNameResults(byNameSubject(node), func(result *ast.Node) {
+						p.heldPrograms[result] = a.heldPrograms[result]
+					})
+				}
 			}
 			if form, ok := hatchFormOf(c, node); ok {
 				p.hatches[node] = form
@@ -170,8 +176,9 @@ type analyzer struct {
 	resolving       map[*ast.Node]bool                  // calls whose signature candidateOf is resolving
 	effectInterface *checker.Type                       // the generic Effect interface, once seen
 
-	conversions map[*ast.Node]*valueState // argument expressions that convert (conversions.go)
-	valueTyping map[*ast.Node]bool        // by-name arguments whose own type is being read (valueTypeOf)
+	conversions  map[*ast.Node]*valueState // argument expressions that convert (conversions.go)
+	heldPrograms map[*ast.Node]bool        // by-name result values before argument conversion
+	valueTyping  map[*ast.Node]bool        // by-name arguments whose own type is being read (valueTypeOf)
 
 	// Plain JavaScript functions (plain.go).
 	plain                 map[*ast.Node]plainState // function declarations that compile to plain JavaScript
@@ -201,10 +208,11 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			rejected:  map[*ast.Node]map[candidateKey]bool{},
 			resolving: map[*ast.Node]bool{},
 
-			conversions: map[*ast.Node]*valueState{},
-			valueTyping: map[*ast.Node]bool{},
-			plain:       map[*ast.Node]plainState{},
-			callbacks:   map[*ast.Node]*callbackContracts{},
+			conversions:  map[*ast.Node]*valueState{},
+			heldPrograms: map[*ast.Node]bool{},
+			valueTyping:  map[*ast.Node]bool{},
+			plain:        map[*ast.Node]plainState{},
+			callbacks:    map[*ast.Node]*callbackContracts{},
 		}
 	}).(*analyzer)
 }

@@ -1,0 +1,1 @@
+ran: ["INSERT INTO literal VALUES (1)","INSERT INTO interpolated_call VALUES (1)","INSERT INTO operand VALUES (2)","INSERT INTO local VALUES (3)"]

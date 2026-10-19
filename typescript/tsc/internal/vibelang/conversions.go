@@ -214,14 +214,20 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 	}
 	// An expression that runs an Effect where a program is expected is passed
 	// by name (D147): fork(fetchReport()) passes fetchReport() as a program,
-	// as if written () => fetchReport(), and runs nothing at the call site. An
-	// expression whose value is itself an Effect keeps its meaning.
+	// as if written () => fetchReport(), and runs nothing at the call site. A
+	// held program keeps its meaning, including in a compound expression.
 	if position.program && a.pauses(node) {
 		// Inference can pass a placeholder never for a skipped generic call.
-		// Inspect its actual value before choosing by-name conversion: a
-		// library call returning an Effect is already a cold program.
+		// Inspect its actual value before choosing by-name conversion. A
+		// running call still passes its outer program when A is an Effect;
+		// the success value must never select an unwrapped reading (D147).
 		value := a.valueTypeOf(node, t)
-		if !isEffectType(a.checker, value) {
+		if isEffectType(a.checker, value) && !inLowerableBody(byNameSubject(node)) {
+			// Library calls at module top level keep their raw Effect type;
+			// there is no unwrapped success reading to pass by name again.
+			return convertNone, t
+		}
+		if !holdsFieldProgram(a.checker, node) {
 			if program := a.byNameType(node, value); program != nil {
 				return convertByName, program
 			}
@@ -323,7 +329,9 @@ func (a *analyzer) callsVibeLangFunction(call *ast.Node) bool {
 // type of its value where it runs: E and R are what running node adds, as
 // for the body of the lambda () => node.
 func (a *analyzer) byNameType(node *ast.Node, success *checker.Type) *checker.Type {
-	info := a.flowOf(byNameSubject(node))
+	node = byNameSubject(node)
+	info := a.flowOf(node)
+	success = a.byNameSuccess(node, success, info)
 	effect := info.effect
 	if effect == nil {
 		effect = a.programEffectInterface()
@@ -335,6 +343,68 @@ func (a *analyzer) byNameType(node *ast.Node, success *checker.Type) *checker.Ty
 		return nil
 	}
 	return a.checker.NewTypeReference(effect, []*checker.Type{success, a.checker.GetUnionType(info.errors), a.checker.GetUnionType(info.requirements)})
+}
+
+// byNameResults visits only result positions, leaving conditions, operands,
+// and the left side of a comma in their ordinary running form.
+func byNameResults(node *ast.Node, visit func(*ast.Node)) {
+	node = ast.SkipOuterExpressions(node, ast.OEKParentheses|ast.OEKTypeAssertions|ast.OEKNonNullAssertions|ast.OEKSatisfies)
+	switch node.Kind {
+	case ast.KindConditionalExpression:
+		byNameResults(node.AsConditionalExpression().WhenTrue, visit)
+		byNameResults(node.AsConditionalExpression().WhenFalse, visit)
+		return
+	case ast.KindBinaryExpression:
+		binary := node.AsBinaryExpression()
+		switch binary.OperatorToken.Kind {
+		case ast.KindCommaToken:
+			byNameResults(binary.Right, visit)
+			return
+		case ast.KindBarBarToken, ast.KindQuestionQuestionToken:
+			byNameResults(binary.Left, visit)
+			byNameResults(binary.Right, visit)
+			return
+		}
+	}
+	visit(node)
+}
+
+// heldByName reports a program already held as a value, including D24
+// subtypes. A running call's value may itself be an Effect: that is A of
+// the outer program and must stay intact.
+func (a *analyzer) heldByName(node *ast.Node, t *checker.Type) bool {
+	return !(isInvocation(node) && (a.runs(node) || a.directCallee(node) != nil)) &&
+		effectInterfaceSymbol(a.checker, a.checker.GetNonNullableType(t)) != nil
+}
+
+func (a *analyzer) byNameSuccess(node *ast.Node, value *checker.Type, info *effectInfo) *checker.Type {
+	// A skipped inference argument must still infer nothing.
+	if isPlaceholderNever(value) {
+		return value
+	}
+	var successes []*checker.Type
+	hasHeld := false
+	byNameResults(node, func(result *ast.Node) {
+		t := value
+		if result != node {
+			t = a.checker.GetTypeAtLocation(result)
+		}
+		a.heldPrograms[result] = a.heldByName(result, t)
+		if a.heldPrograms[result] {
+			hasHeld = true
+			t = a.checker.GetNonNullableType(t)
+			info.addError(programChannelType(a.checker, t, "_E"), result)
+			info.addRequirement(programChannelType(a.checker, t, "_R"), result)
+			t = programChannelType(a.checker, t, "_A")
+		}
+		if t != nil {
+			successes = append(successes, t)
+		}
+	})
+	if !hasHeld {
+		return value // keep TypeScript's narrowing and contextual instantiation
+	}
+	return a.checker.GetUnionType(successes)
 }
 
 // isByName reports whether node is an expression passed by name (D147). It

@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "out",
+    "declaration": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "vibelang": {
+      "diagnostics": {
+        "EK4403": "warning"
+      }
+    }
+  },
+  "include": [
+    "*.vibe",
+    "*.ts"
+  ]
+}

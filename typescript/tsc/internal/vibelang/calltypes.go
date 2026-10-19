@@ -75,6 +75,12 @@ func channelType(c *checker.Checker, t *checker.Type, name string) *checker.Type
 	if !isEffectType(c, t) {
 		return nil
 	}
+	return programChannelType(c, t, name)
+}
+
+// programChannelType also reads held structured programs (D24) at by-name
+// result positions; ordinary calls continue to use channelType's exact test.
+func programChannelType(c *checker.Checker, t *checker.Type, name string) *checker.Type {
 	variance := c.GetTypeOfPropertyOfType(t, effectTypeID) // Variance<A, E, R>
 	if variance == nil {
 		return nil
