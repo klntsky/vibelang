@@ -410,3 +410,35 @@ func (c *Checker) CompareSymbols(s1, s2 *ast.Symbol) int {
 func IsDistributedTypeParameter(t *Type) bool {
 	return t.flags&TypeFlagsTypeParameter != 0 && t.AsTypeParameter().isDistributed
 }
+
+// GetContextualTypeForCandidateArgument instantiates a candidate parameter
+// using the inferences available while its arguments are being checked.
+// Unlike resolving the call again, this preserves the active candidate.
+func (c *Checker) GetContextualTypeForCandidateArgument(call *ast.Node, signature *Signature, index int) *Type {
+	t := c.getTypeAtPosition(signature, index)
+	declared := signature
+	if d := signature.Declaration(); d != nil && ast.IsFunctionLike(d) && !ast.IsJSDocSignature(d) {
+		declared = c.getSignatureFromDeclaration(d)
+	}
+	// An identity-like generic's record context comes from its expected
+	// result, before argument inference can select the field's own type.
+	// This is a form hint: normal argument inference still checks constraints.
+	// Multiple parameters retain inference from the other arguments (D44).
+	if len(declared.TypeParameters()) != 0 && len(declared.parameters) == 1 && index == 0 {
+		expected := c.instantiateContextualType(c.getContextualType(call, ContextFlagsSignature), call, ContextFlagsSignature)
+		if expected != nil {
+			context := c.newInferenceContext(declared.TypeParameters(), declared, InferenceFlagsNoConstraintChecks, nil)
+			c.inferTypes(context.inferences, expected, c.getReturnTypeOfSignature(declared), InferencePriorityNone, false)
+			for _, inference := range context.inferences {
+				if hasInferenceCandidates(inference) {
+					result := c.instantiateType(c.getTypeAtPosition(declared, index), context.nonFixingMapper)
+					return result
+				}
+			}
+		}
+	}
+	if context := c.getInferenceContext(call.Arguments()[index]); t != nil && context != nil {
+		return c.instantiateType(t, context.nonFixingMapper)
+	}
+	return t
+}

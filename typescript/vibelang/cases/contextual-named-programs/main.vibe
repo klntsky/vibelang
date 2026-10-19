@@ -1,0 +1,61 @@
+// expect-result: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,15,true,true]
+import { Config, Effect, Exit } from "effect"
+error Refused { reason: string }
+interface Service { version: Effect.Effect<number, Refused, never> }
+let runs = 0
+const shared = () => ++runs
+const sharedRecord: Service = { version: shared }
+const named = (): Service => {
+  const version = () => ++runs
+  return { version }
+}
+const explicit = (): Service => {
+  const version = () => ++runs
+  return { version: version }
+}
+const frozenInline = (): Service => Object.freeze({ version: () => ++runs })
+const frozenNamed = (): Service => {
+  const version = () => ++runs
+  return Object.freeze({ version })
+}
+const satisfies = (): Service => {
+  const version = () => ++runs
+  return { version } satisfies Service
+}
+function effectful() { return Effect.sync(() => ++runs) }
+function plainDeclaration() { return ++runs }
+const annotated: Service = { version: effectful }
+const declared: Service = { version: plainDeclaration }
+const generic = <T>(value: T): T => value
+const identity = (): Service => generic({ version: () => ++runs })
+const frozenCall = (): Service => Object.freeze({ version: Effect.sync(() => ++runs) })
+const identityCall = (): Service => generic({ version: effectful() })
+const passed = (value: Service): Service => value
+const constrained = <T extends { version: object; flag: true }>(value: T): T => value
+const constrainedRecord = (): Service => constrained({ version: () => ++runs, flag: true })
+interface DataPrograms {
+  config: Effect.Effect<Config.Config<number>, never, never>
+  snapshot: Effect.Effect<Exit.Exit<number, never>, never, never>
+}
+const dataPrograms = (): DataPrograms => {
+  const readConfig = (): Config.Config<number> => Config.succeed(42)
+  const readExit = (): Exit.Exit<number, never> => Exit.succeed(9)
+  return Object.freeze({ config: readConfig, snapshot: readExit })
+}
+export function main() {
+  const a = named()
+  const b = explicit()
+  const c = frozenInline()
+  const d = frozenNamed()
+  const e = satisfies()
+  const f = identity()
+  const g = passed({ version: () => ++runs })
+  const h = frozenCall()
+  const i = identityCall()
+  const constrainedValue = constrainedRecord()
+  const data = dataPrograms()
+  const before = runs
+  const config = data.config()
+  const snapshot = data.snapshot()
+  return [before, a.version(), a.version(), b.version(), c.version(), d.version(), e.version(), annotated.version(), declared.version(), f.version(), g.version(), h.version(), i.version(), sharedRecord.version(), shared(), constrainedValue.version(), runs, Config.isConfig(config), Exit.isSuccess(snapshot) && snapshot.value === 9]
+}

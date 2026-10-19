@@ -25,12 +25,13 @@ import (
 type conversion uint8
 
 const (
-	convertNone     conversion = iota
-	convertProgram             // Effect.suspend(value)
-	convertPrograms            // $programs(value), an array or record of programs
-	convertDirect              // f$direct, the plain variant of a function that compiles to plain JavaScript
-	convertRejected            // a function that can pause where a plain function is expected
-	convertByName              // an expression that runs an Effect, passed as a program that runs it (D147)
+	convertNone        conversion = iota
+	convertProgram                // Effect.suspend(value)
+	convertSyncProgram            // Effect.sync(value), a plain zero-argument function
+	convertPrograms               // $programs(value), an array or record of programs
+	convertDirect                 // f$direct, the plain variant of a function that compiles to plain JavaScript
+	convertRejected               // a function that can pause where a plain function is expected
+	convertByName                 // an expression that runs an Effect, passed as a program that runs it (D147)
 )
 
 // valueState records, for one argument expression, the conversion each
@@ -43,21 +44,32 @@ type valueState struct {
 }
 
 // expressionType gives an argument expression the type of the conversion the
-// candidate under check asks for.
+// candidate under check asks for, or its contextual program field (D265).
 func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checker.Type {
 	if !mayConvert(c, node, t) || analyzerFor(c).valueTyping[node] {
 		return t
 	}
 	call, path := ownerCall(node)
-	if call == nil || !isVibeLangFile(ast.GetSourceFileOfNode(node)) {
+	if !isVibeLangFile(ast.GetSourceFileOfNode(node)) || inHatch(node) {
 		return t
 	}
 	a := analyzerFor(c)
-	signature := a.candidateOf(call)
-	if signature == nil {
-		return t
+	var key candidateKey
+	var position valuePosition
+	if call != nil {
+		signature := a.candidateOf(call)
+		if signature == nil {
+			return t
+		}
+		key = keyOf(signature)
+		position = a.classifyValuePosition(call, signature, path, node, t)
+	} else {
+		// D265 supplies a program position even without an enclosing call.
+		position.expectation = a.classify(a.contextualTypes(node))
+		if !position.program {
+			return t
+		}
 	}
-	key := keyOf(signature)
 	s := a.conversions[node]
 	if s == nil {
 		s = &valueState{byCandidate: map[candidateKey]conversion{}, types: map[candidateKey]*checker.Type{}}
@@ -79,18 +91,18 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 			if program := a.byNameType(node, a.valueTypeOf(node, t)); program != nil {
 				return program
 			}
-		case convertProgram, convertPrograms, convertDirect, convertRejected:
+		case convertProgram, convertSyncProgram, convertPrograms, convertDirect, convertRejected:
 			return s.types[key]
 		}
 		return t
 	}
-	conv, converted := a.convert(node, t, a.classifyValuePosition(call, signature, path, node, t))
+	conv, converted := a.convert(node, t, position)
 	s.byCandidate[key] = conv
 	s.types[key] = converted
 	if !s.checked {
 		s.first, s.checked = conv, true
 	}
-	if conv == convertRejected {
+	if conv == convertRejected && call != nil {
 		a.reject(call, key)
 	}
 	return converted
@@ -116,6 +128,10 @@ func mayConvert(c *checker.Checker, node *ast.Node, t *checker.Type) bool {
 			return false
 		}
 	case ast.KindArrayLiteralExpression, ast.KindParenthesizedExpression:
+	case ast.KindShorthandPropertyAssignment:
+		if parent.Name() != node {
+			return false
+		}
 	case ast.KindPropertyAssignment:
 		if parent.Initializer() != node {
 			return false
@@ -184,6 +200,16 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 	case position.elements.program:
 		if converted := a.programsOf(t); converted != nil {
 			return convertPrograms, converted
+		}
+	}
+	if position.program && !position.plainFn && !position.effectFn {
+		signatures := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall)
+		if len(signatures) == 1 && signatures[0].MinArgumentCount() == 0 && len(signatures[0].TypeParameters()) == 0 {
+			returned := a.checker.GetReturnTypeOfSignature(signatures[0])
+			if a.effectInterface != nil {
+				never := a.checker.GetNeverType()
+				return convertSyncProgram, a.checker.NewTypeReference(a.effectInterface, []*checker.Type{returned, never, never})
+			}
 		}
 	}
 	// An expression that runs an Effect where a program is expected is passed
@@ -433,7 +459,7 @@ func (a *analyzer) finalConversion(node *ast.Node) conversion {
 	}
 	call, _ := ownerCall(node)
 	if call == nil {
-		return convertNone
+		return s.first
 	}
 	if signature := a.candidateOf(call); signature != nil {
 		if conv, ok := s.byCandidate[keyOf(signature)]; ok {

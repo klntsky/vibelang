@@ -290,6 +290,14 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case p.isPlainHatchFunction(node):
 		p.visitChildren(node, env{})
 		return
+	case ast.IsPropertyAssignment(node) && p.forms.Argument(node.Initializer()).Class == ClassProgram:
+		p.visit(node.Name(), e)
+		p.callArgument(node.Initializer(), e)
+		return
+	case ast.IsShorthandPropertyAssignment(node) && p.forms.Argument(node.Name()).Class == ClassProgram:
+		p.plan.insert(p.tokenStart(node), node.Name().Text()+": ")
+		p.callArgument(node.Name(), e)
+		return
 	case isLambda(node):
 		p.lambda(node, e)
 		return

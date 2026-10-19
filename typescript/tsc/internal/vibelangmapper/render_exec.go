@@ -110,6 +110,8 @@ func renderExec(e edit) (text string, keep bool) {
 		helper := "$asProgram"
 		if e.arg == "collection" {
 			helper = "$programs"
+		} else if e.arg == "plain" {
+			helper = "$sync"
 		}
 		return pick(e.part, helperRef(helper)+"(", "", ")"), true
 	case editProducer:
@@ -499,7 +501,7 @@ func (r *execRendering) prologue() string {
 	}
 
 	if r.used["$asProgram"] || r.used["$programs"] {
-		parts = append(parts, "const "+r.local("$asProgram")+" = (v) => typeof v === \"function\" && !"+r.local("$isEffect")+"(v) && !"+r.local("$isKey")+"(v) ? "+r.local("$suspend")+"(v) : v;")
+		parts = append(parts, "const "+r.local("$asProgram")+" = (v) => typeof v === \"function\" && !"+r.local("$isEffect")+"(v) && !"+r.local("$isKey")+"(v) ? "+r.local("$suspend")+"(() => { const result = v(); return "+r.local("$isRun")+"(result) ? result : "+r.local("$succeed")+"(result); }) : v;")
 	}
 	if r.used["$programs"] {
 		parts = append(parts, "const "+r.local("$programs")+" = (xs) => Symbol.iterator in xs ? Array.from(xs, "+r.local("$asProgram")+") : Object.fromEntries(Object.entries(xs).map(([k, v]) => [k, "+r.local("$asProgram")+"(v)]));")

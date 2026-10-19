@@ -139,7 +139,7 @@ var emitCases = []struct {
 	{
 		name:     "stored collections convert functions without running them early",
 		source:   "function f(xs: Array<() => Effect.Effect<number>>) { return Effect.all(xs) }",
-		contains: []string{"Effect.all($programs(xs))", "Array.from(xs, $asProgram)", "$suspend(v)"},
+		contains: []string{"Effect.all($programs(xs))", "Array.from(xs, $asProgram)", "$suspend(() => { const result = v();"},
 		absent:   []string{"f$direct"},
 	},
 	{

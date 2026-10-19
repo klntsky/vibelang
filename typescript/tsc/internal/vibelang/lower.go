@@ -76,6 +76,11 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 
 func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	switch {
+	case node.Kind == ast.KindShorthandPropertyAssignment && tx.plan.conversionOf(node.Name()) != convertNone:
+		property := tx.Factory().NewPropertyAssignment(nil, node.Name(), nil, nil, tx.visit(node.Name()))
+		tx.EmitContext().SetOriginal(property, node)
+		property.Loc = node.Loc
+		return property
 	case node.Kind == ast.KindSourceFile:
 		return tx.visitSourceFile(node.AsSourceFile())
 	case node.Kind == ast.KindImportDeclaration && len(tx.plan.directImports[node]) != 0:
@@ -261,6 +266,8 @@ func (tx *lowering) convert(node *ast.Node, conversion conversion) *ast.Node {
 	switch conversion {
 	case convertProgram:
 		callee = f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("suspend"), ast.NodeFlagsNone)
+	case convertSyncProgram:
+		callee = f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("sync"), ast.NodeFlagsNone)
 	case convertPrograms:
 		callee = tx.runtimeMember("$programs")
 	default:

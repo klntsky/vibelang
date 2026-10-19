@@ -398,6 +398,12 @@ func ownerCall(fn *ast.Node) (*ast.Node, []pathStep) {
 		case ast.KindArrayLiteralExpression:
 			path = append(path, pathStep{element: true})
 			continue
+		case ast.KindShorthandPropertyAssignment:
+			if parent.Name() != node {
+				return nil, nil
+			}
+			path = append(path, pathStep{property: node.Text()})
+			continue
 		case ast.KindPropertyAssignment:
 			name := parent.Name()
 			if parent.Initializer() != node || !(ast.IsIdentifier(name) || ast.IsStringLiteral(name) || ast.IsNumericLiteral(name)) {

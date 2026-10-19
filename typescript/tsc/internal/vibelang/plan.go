@@ -84,7 +84,7 @@ func planFile(resolver printer.EmitResolver, file *ast.SourceFile) *plan {
 				})
 				p.planScopes(a, node)
 			}
-			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertPrograms || conversion == convertByName {
+			if conversion := a.finalConversion(node); conversion == convertProgram || conversion == convertSyncProgram || conversion == convertPrograms || conversion == convertByName {
 				p.converts[node] = conversion
 			}
 			if form, ok := hatchFormOf(c, node); ok {

@@ -707,16 +707,25 @@ func (r *Resolver) Block(call *ast.Node) Decision {
 // lambda, is passed by name.
 func (r *Resolver) Argument(expr *ast.Node) Decision {
 	d := Decision{Node: expr}
-	call, arg, steps := formsOwnerCall(expr)
-	if call == nil {
-		d.Note = "no owner call"
+	if _, hatch := r.inHatch(expr); hatch {
 		return d
 	}
-	d.Call, d.Argument, d.Steps = call, arg, steps
-	d.Callee = r.Callee(call)
-	d.Class, d.Provenance, d.Ambiguous, d.Note = r.classAt(call, d.Callee, arg, steps)
+	call, arg, steps := formsOwnerCall(expr)
+	if call != nil {
+		d.Call, d.Argument, d.Steps = call, arg, steps
+		d.Callee = r.Callee(call)
+		d.Class, d.Provenance, d.Ambiguous, d.Note = r.classAt(call, d.Callee, arg, steps)
+	} else {
+		d.Note = "no owner call"
+	}
 	if d.Class == 0 {
-		d.Provenance = FromFallback
+		if cls, note, ok := r.annotatedMember(expr); ok {
+			d.Class, d.Provenance, d.Note = cls, FromAnnotation, note
+		} else if cls, note, ok := r.serviceMember(expr); ok {
+			d.Class, d.Provenance, d.Note = cls, FromService, note
+		} else {
+			d.Provenance = FromFallback
+		}
 	}
 	d.ByName = d.Class&ClassProgram != 0 && (formsHoldsCall(expr) || formsIsTopic(expr))
 	return d
@@ -1400,6 +1409,12 @@ func formsOwnerCall(node *ast.Node) (*ast.Node, int, []PathStep) {
 			continue
 		case ast.KindArrayLiteralExpression:
 			steps = append(steps, PathStep{Element: true})
+			continue
+		case ast.KindShorthandPropertyAssignment:
+			if parent.Name() != node {
+				return nil, 0, nil
+			}
+			steps = append(steps, PathStep{Property: node.Text()})
 			continue
 		case ast.KindPropertyAssignment:
 			name, ok := formsPropertyName(parent)
@@ -2123,7 +2138,7 @@ func (r *Resolver) wellKnownSymbolKey(fn *ast.Node) (string, bool) {
 // service gives the class: an Effect function when it returns an Effect.
 func (r *Resolver) annotatedMember(fn *ast.Node) (Class, string, bool) {
 	member, obj := fn, fn.Parent
-	if obj != nil && obj.Kind == ast.KindPropertyAssignment && obj.Initializer() == fn {
+	if obj != nil && (obj.Kind == ast.KindPropertyAssignment && obj.Initializer() == fn || obj.Kind == ast.KindShorthandPropertyAssignment && obj.Name() == fn) {
 		member, obj = obj, obj.Parent
 	}
 	if obj == nil || obj.Kind != ast.KindObjectLiteralExpression {
@@ -2180,7 +2195,13 @@ func (r *Resolver) annotatedMember(fn *ast.Node) (Class, string, bool) {
 func (r *Resolver) writtenTypeOf(expr *ast.Node) *ast.Node {
 	up := expr.Parent
 	for up != nil && (up.Kind == ast.KindParenthesizedExpression || up.Kind == ast.KindSatisfiesExpression) {
-		up = up.Parent
+		if up.Kind == ast.KindSatisfiesExpression {
+			return up.Type()
+		}
+		expr, up = up, up.Parent
+	}
+	if up != nil && ast.IsCallExpression(up) && r.identityArgument(up, expr) {
+		return r.writtenTypeOf(up)
 	}
 	switch {
 	case up == nil:
@@ -2196,7 +2217,7 @@ func (r *Resolver) writtenTypeOf(expr *ast.Node) *ast.Node {
 				return nil
 			}
 		}
-	case ast.IsArrowFunction(up) && up.Body() != nil && ast.SkipParentheses(up.Body()) == expr:
+	case ast.IsArrowFunction(up) && up.Body() != nil && ast.SkipParentheses(up.Body()) == ast.SkipParentheses(expr):
 		return up.Type()
 	}
 	return nil
@@ -2207,7 +2228,7 @@ func (r *Resolver) writtenTypeOf(expr *ast.Node) *ast.Node {
 // passed to Layer.effect returns.
 func (r *Resolver) serviceMember(fn *ast.Node) (Class, string, bool) {
 	member, obj := fn, fn.Parent
-	if obj != nil && obj.Kind == ast.KindPropertyAssignment && obj.Initializer() == fn {
+	if obj != nil && (obj.Kind == ast.KindPropertyAssignment && obj.Initializer() == fn || obj.Kind == ast.KindShorthandPropertyAssignment && obj.Name() == fn) {
 		member, obj = obj, obj.Parent
 	}
 	for obj != nil && obj.Kind == ast.KindParenthesizedExpression {
@@ -2488,12 +2509,18 @@ func (r *Resolver) boundLambdaClass(fn *ast.Node) Class {
 	var visit func(*ast.Node) bool
 	visit = func(n *ast.Node) bool {
 		if ast.IsIdentifier(n) && n.Text() == name && n != decl.Name() && r.binding(n, name) == decl {
-			d := r.Argument(n)
-			if d.Class != 0 {
-				if result != 0 && result != d.Class {
+			// Keep binding inference on declared call positions. D265's
+			// contextual field conversion belongs to the reference, not fn.
+			call, arg, steps := formsOwnerCall(n)
+			var cls Class
+			if call != nil {
+				cls, _, _, _ = r.classAt(call, r.Callee(call), arg, steps)
+			}
+			if cls != 0 {
+				if result != 0 && result != cls {
 					conflict = true
 				}
-				result = d.Class
+				result = cls
 			}
 		}
 		n.ForEachChild(visit)
@@ -2504,4 +2531,49 @@ func (r *Resolver) boundLambdaClass(fn *ast.Node) Class {
 		return 0
 	}
 	return result
+}
+
+// identityArgument recognizes a parameter that carries the expected result
+// record unchanged, including the standard readonly identity Object.freeze.
+func (r *Resolver) identityArgument(call, argument *ast.Node) bool {
+	callee := ast.SkipParentheses(call.Expression())
+	if ast.IsPropertyAccessExpression(callee) && ast.IsIdentifier(callee.Expression()) && callee.Expression().Text() == "Object" && callee.Name().Text() == "freeze" && r.binding(callee.Expression(), "Object") == nil {
+		return len(call.Arguments()) == 1 && call.Arguments()[0] == argument
+	}
+	if !ast.IsIdentifier(callee) {
+		return false
+	}
+	fn := r.binding(callee, callee.Text())
+	if fn != nil && ast.IsVariableDeclaration(fn) && fn.Initializer() != nil {
+		fn = ast.SkipParentheses(fn.Initializer())
+	}
+	if fn == nil || !ast.IsFunctionLike(fn) || len(fn.TypeParameters()) == 0 {
+		return false
+	}
+	result := formsUnwrapType(fn.Type())
+	if result == nil || result.Kind != ast.KindTypeReference {
+		return false
+	}
+	if ast.IsIdentifier(result.AsTypeReferenceNode().TypeName) && result.AsTypeReferenceNode().TypeName.Text() == "Readonly" && r.binding(result.AsTypeReferenceNode().TypeName, "Readonly") == nil && len(result.TypeArguments()) == 1 {
+		result = formsUnwrapType(result.TypeArguments()[0])
+	}
+	if result == nil || result.Kind != ast.KindTypeReference || !ast.IsIdentifier(result.AsTypeReferenceNode().TypeName) {
+		return false
+	}
+	name := result.AsTypeReferenceNode().TypeName.Text()
+	generic := false
+	for _, param := range fn.TypeParameters() {
+		generic = generic || param.Name().Text() == name
+	}
+	if !generic {
+		return false
+	}
+	for i, arg := range call.Arguments() {
+		if arg != argument || i >= len(fn.Parameters()) {
+			continue
+		}
+		parameter := formsUnwrapType(fn.Parameters()[i].Type())
+		return parameter != nil && parameter.Kind == ast.KindTypeReference && ast.IsIdentifier(parameter.AsTypeReferenceNode().TypeName) && parameter.AsTypeReferenceNode().TypeName.Text() == name
+	}
+	return false
 }

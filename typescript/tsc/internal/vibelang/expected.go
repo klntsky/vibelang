@@ -27,6 +27,19 @@ func (a *analyzer) expectedAt(call *ast.Node, signature *checker.Signature, path
 			}
 		}
 	}
+	// D265 carries the record's context through a generic parameter to its
+	// fields. Direct lambda arguments retain D44's declared-parameter rule.
+	if len(path) > 1 && !path[len(path)-1].element {
+		if t := a.checker.GetContextualTypeForCandidateArgument(call, signature, path[0].argument); t != nil {
+			types := []*checker.Type{t}
+			for _, step := range path[1:] {
+				types = a.stepInto(types, step)
+			}
+			if useful := a.usefulTypes(types); len(useful) > 0 && a.classify(useful).any() {
+				return useful
+			}
+		}
+	}
 	return a.contextualTypes(fn)
 }
 
@@ -52,7 +65,13 @@ func (a *analyzer) declaredSignature(signature *checker.Signature) *checker.Sign
 // contextualTypes returns the type TypeScript expects at node, instantiated
 // with whatever inference has found so far, as for a contextual signature.
 func (a *analyzer) contextualTypes(node *ast.Node) []*checker.Type {
-	if t := a.checker.GetContextualType(node, checker.ContextFlagsSignature); t != nil {
+	var t *checker.Type
+	if node.Parent != nil && ast.IsShorthandPropertyAssignment(node.Parent) && node.Parent.Name() == node {
+		t = a.checker.GetContextualTypeForObjectLiteralElement(node.Parent, checker.ContextFlagsSignature)
+	} else {
+		t = a.checker.GetContextualType(node, checker.ContextFlagsSignature)
+	}
+	if t != nil {
 		return []*checker.Type{t}
 	}
 	return nil

@@ -264,9 +264,16 @@ export declare function $dual<A, E, R>(program: EffectModule.Effect<A, E, R>): E
 
 /**
  * A function value at a position that takes a program (D7): the function
- * runs as its program, `Effect.suspend(f)`. Any other value is itself.
+ * runs as a cold program, preserving either its Effect or its plain result.
+ * Any other value is itself.
  */
+export declare function $sync<A>(f: () => A): EffectModule.Effect<A, never, never>
+export declare function $asProgram<T>(value: T & (0 extends 1 & T ? unknown : never)): T
+export declare function $asProgram<T>(f: () => (T & (0 extends 1 & T ? unknown : never))): EffectModule.Effect<T, never, never>
+export declare function $asProgram<T>(f: () => (T & ([Extract<T, RejectedEffect>] extends [never] ? never : unknown))): Generator<DataRunAnnotation, T, any>
+export declare function $asProgram<T>(f: () => (T & DataEffect)): EffectModule.Effect<T, never, never>
 export declare function $asProgram<A, E, R>(f: () => EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R>
+export declare function $asProgram<A>(f: () => A): EffectModule.Effect<A, never, never>
 export declare function $asProgram<T>(value: T): T
 
 /** `throw x` in an Effect body projects to `return yield* $fail(x)`. */

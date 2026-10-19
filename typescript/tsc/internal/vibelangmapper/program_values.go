@@ -234,7 +234,7 @@ func (r *Resolver) holdsFieldProgram(expr *ast.Node) bool {
 		return false
 	}
 	if d := r.Argument(node); d.Class == ClassProgram {
-		return awaitOperationHelper(d.Call) == ""
+		return d.Call == nil || awaitOperationHelper(d.Call) == ""
 	}
 	if cls, _, ok := r.annotatedMember(node); ok && cls == ClassProgram {
 		return true

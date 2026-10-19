@@ -234,8 +234,8 @@ func (p *projector) byNameArgument(argument *ast.Node, e env) bool {
 }
 
 // programValue lowers argument, a name or a member at a position that takes
-// a program, to $asProgram(argument): a function value there runs as its
-// program (D7), and any other value is itself.
+// a program (D7). Known plain functions use Effect.sync, preserving D24 data
+// results; other values use $asProgram and keep their existing form.
 func (p *projector) programValue(argument *ast.Node, d Decision, e env) bool {
 	if d.Class&ClassProgram == 0 || d.Class&(ClassEffectFn|ClassPlainFn) != 0 {
 		return false
@@ -245,10 +245,30 @@ func (p *projector) programValue(argument *ast.Node, d Decision, e env) bool {
 	default:
 		return false
 	}
+	kind := ""
+	if ast.IsIdentifier(argument) {
+		r := p.forms.(*Resolver)
+		fn := r.binding(argument, argument.Text())
+		if fn != nil && ast.IsVariableDeclaration(fn) && fn.Initializer() != nil {
+			fn = ast.SkipParentheses(fn.Initializer())
+		}
+		if fn != nil && ast.IsFunctionLike(fn) && len(fn.TypeParameters()) == 0 {
+			zero := true
+			for _, parameter := range fn.Parameters() {
+				if parameter.Initializer() == nil && parameter.QuestionToken() == nil && parameter.AsParameterDeclaration().DotDotDotToken == nil {
+					zero = false
+				}
+			}
+			plain := isLambda(fn) && r.Lambda(fn).Form == FormPlain || fn.Kind == ast.KindFunctionDeclaration && fn.Type() != nil && contractOf(fn.Type()) == contractPlain
+			if zero && plain {
+				kind = "plain"
+			}
+		}
+	}
 	start := p.tokenStart(argument)
-	p.plan.mark(editProgramValue, partOpen, start, start, "")
+	p.plan.mark(editProgramValue, partOpen, start, start, kind)
 	p.visit(argument, e)
-	p.plan.mark(editProgramValue, partClose, argument.End(), argument.End(), "")
+	p.plan.mark(editProgramValue, partClose, argument.End(), argument.End(), kind)
 	return true
 }
 
@@ -389,7 +409,7 @@ func (p *projector) callArgument(argument *ast.Node, e env) {
 			if property.Kind == ast.KindPropertyAssignment {
 				p.visit(property.Name(), e)
 				p.callArgument(property.Initializer(), e)
-			} else if property.Kind == ast.KindShorthandPropertyAssignment && e.effect && p.forms.Argument(property.Name()).Class&ClassProgram != 0 {
+			} else if property.Kind == ast.KindShorthandPropertyAssignment && p.forms.Argument(property.Name()).Class&ClassProgram != 0 {
 				p.plan.insert(p.tokenStart(property), property.Name().Text()+": ")
 				p.callArgument(property.Name(), e)
 			} else {

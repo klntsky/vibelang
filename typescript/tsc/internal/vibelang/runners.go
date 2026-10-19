@@ -232,8 +232,22 @@ func holdsFieldProgram(c *checker.Checker, call *ast.Node) bool {
 		node = node.Parent
 	}
 	field := node.Parent
-	return field != nil && ast.IsPropertyAssignment(field) && field.Initializer() == node &&
-		isEffectType(c, c.GetContextualTypeForObjectLiteralElement(field, checker.ContextFlagsSignature))
+	if field == nil || !ast.IsPropertyAssignment(field) || field.Initializer() != node {
+		return false
+	}
+	if isEffectType(c, c.GetContextualTypeForObjectLiteralElement(field, checker.ContextFlagsSignature)) {
+		return true
+	}
+	// During generic inference, read the parameter of the active candidate
+	// rather than resolving the owning call again and losing its context.
+	a := analyzerFor(c)
+	if owner, path := ownerCall(node); owner != nil {
+		if signature := a.candidateOf(owner); signature != nil {
+			expected := a.expectedAt(owner, signature, path, node)
+			return len(expected) == 1 && isEffectType(c, expected[0])
+		}
+	}
+	return false
 }
 
 // reportTopLevelRun reports EK1001 for call, which runs a program at the

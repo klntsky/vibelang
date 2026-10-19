@@ -308,6 +308,8 @@ func (r checking) text(e edit) (string, bool) {
 		helper := "$asProgram"
 		if e.arg == "collection" {
 			helper = "$programs"
+		} else if e.arg == "plain" {
+			helper = "$sync"
 		}
 		text = pick(e.part, helperRef(helper)+"(", "", ")")
 	case editProducer:
