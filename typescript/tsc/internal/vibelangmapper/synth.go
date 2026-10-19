@@ -22,11 +22,12 @@ import (
 // chunk is one piece of a synthesized form's output: text of kind, or a
 // source subtree to walk in place in env.
 type chunk struct {
-	kind editKind
-	part part
-	text string
-	node *ast.Node
-	env  env
+	fields []string
+	kind   editKind
+	part   part
+	text   string
+	node   *ast.Node
+	env    env
 }
 
 // printer collects a synthesized form's chunks.
@@ -34,7 +35,8 @@ type printer struct {
 	p      *projector
 	chunks []chunk
 	// names maps the parser's temporaries ($match1, $is2) to fresh names.
-	names map[string]string
+	names         map[string]string
+	rawExtraction bool // printing the executable side of an extractor witness
 }
 
 func (w *printer) write(text string) {
@@ -56,10 +58,14 @@ func (p *projector) synthesized(node *ast.Node, start, end int, e env) {
 	pending := []chunk{}
 	flush := func(to int) {
 		for i, c := range pending {
+			from := to
 			if i == 0 {
-				p.plan.markText(c.kind, c.part, cursor, to, c.text)
+				from = cursor
+			}
+			if c.fields != nil {
+				p.plan.markFields(c.kind, c.part, from, to, c.fields...)
 			} else {
-				p.plan.markText(c.kind, c.part, to, to, c.text)
+				p.plan.markText(c.kind, c.part, from, to, c.text)
 			}
 		}
 		if len(pending) == 0 && to > cursor {
@@ -89,6 +95,9 @@ func (p *projector) synthesized(node *ast.Node, start, end int, e env) {
 func (w *printer) node(n *ast.Node, e env) {
 	p := w.p
 	if n == nil {
+		return
+	}
+	if !w.rawExtraction && w.errorExtractorFlow(n, e) {
 		return
 	}
 	// These forms have source spans but synthesized descendants. Let their

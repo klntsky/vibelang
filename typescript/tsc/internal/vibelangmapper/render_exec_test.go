@@ -890,3 +890,28 @@ export function scenario() {
 	assert.NilError(t, err, "%s\n%s", out, js)
 	assert.Equal(t, strings.TrimSpace(string(out)), `{"cold":"6","mapped":8,"failed":"8","zero":"0","codec":"String","arbitrary":"UnknownError"}`)
 }
+
+// A checking witness must not add reads of a getter used as the subject.
+func TestErrorExtractorSubjectReads(t *testing.T) {
+	t.Parallel()
+	root, err := filepath.Abs("../../../..")
+	assert.NilError(t, err)
+	scope := mapperTestScope(t, root)
+	node, err := exec.LookPath("node")
+	assert.NilError(t, err)
+	source := `error B { code: string }
+let reads = 0
+const holder = { get error(): B { reads++; return new B({ code: "b" }) } }
+export function scenario() {
+ const value = match (holder.error) { when B(let b): b.code; default: "missing"; }
+ return { value, reads }
+}`
+	js, _, diagnostics := Emit(source, testContext)
+	assert.Equal(t, len(diagnostics), 0, "%v", diagnostics)
+	cmd := exec.Command(node, "--no-warnings", "--input-type=module")
+	cmd.Dir = scope
+	cmd.Stdin = strings.NewReader(js + "\nimport { runPromise as runExtractorCase } from 'effect/Effect'; console.log(JSON.stringify(await runExtractorCase(scenario())))")
+	out, err := cmd.CombinedOutput()
+	assert.NilError(t, err, "%s\n%s", out, js)
+	assert.Equal(t, strings.TrimSpace(string(out)), `{"value":"b","reads":1}`)
+}

@@ -39,6 +39,8 @@ import (
 func renderExec(e edit) (text string, keep bool) {
 	t, s := helperRef("$t"), helperRef("$s")
 	switch e.kind {
+	case editPatternFlow:
+		return e.fields[1], true
 	case editRegionVar:
 		return e.fields[1], true
 	case editHatch:

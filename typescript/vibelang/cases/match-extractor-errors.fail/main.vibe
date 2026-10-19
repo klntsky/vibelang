@@ -1,0 +1,31 @@
+// expect: EK4701 EK2001 TS2367
+error A { id: string }
+error B { code: string }
+error Out { code: string }
+service S { get(id: string): string!A | B }
+
+export function refutable(error: A | B) {
+  return match (error) {
+    when A: "a";
+    when B({ code: "only" }): "b";
+  }
+}
+export function guarded(error: A | B) {
+  return match (error) {
+    when A: "a";
+    when B(let b) and if (b.code === "only"): "b";
+  }
+}
+export function wrongArity(error: A | B) {
+  return match (error) {
+    when A: "a";
+    when B(): "b";
+  }
+}
+export function escaping(id: string): string!Out!S {
+  return S.get(id) catch (error) => match (error) {
+    when A: throw new Out({ code: "a" });
+    when B({ code: "only" }): throw new Out({ code: "only" });
+    default: throw error;
+  }
+}

@@ -101,6 +101,9 @@ const (
 	editDataMethod
 	// editRegionVar hoists storage, with a checker-only type witness.
 	editRegionVar
+	// editPatternFlow gives stock TypeScript the subject/tuple relationship
+	// guaranteed by D215, while execution retains the parser's original test.
+	editPatternFlow
 )
 
 // part says which part of a kind an edit is.
@@ -245,6 +248,8 @@ type checking struct {
 func (r checking) text(e edit) (string, bool) {
 	var text string
 	switch e.kind {
+	case editPatternFlow:
+		text = e.fields[0]
 	case editSyntax, editWitness, editRegion, editDispatch:
 		text = e.text
 	case editRegionVar:
@@ -375,7 +380,7 @@ func (r checking) resolve(text string) string {
 // String names k, as reports and the executable rendering's errors do.
 func (k editKind) String() string {
 	return [...]string{"syntax", "witness", "run", "effect body", "contract", "program", "fail", "service call",
-		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region", "hatch", "data method", "region var"}[k]
+		"value call", "region", "record", "dispatch", "using", "dual", "scoped", "program value", "producer", "emit", "each", "service base", "control", "scope region", "hatch", "data method", "region var", "pattern flow"}[k]
 }
 
 // executable is the executable rendering, a placeholder: it leaves out

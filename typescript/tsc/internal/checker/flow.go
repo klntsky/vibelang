@@ -392,6 +392,16 @@ func (c *Checker) getTypeAtFlowCondition(f *FlowState, flow *ast.FlowNode) FlowT
 // Narrow the given type based on the given expression having the assumed boolean value. The returned type
 // will be a subtype or the same type as the argument.
 func (c *Checker) narrowType(f *FlowState, t *Type, expr *ast.Node, assumeTrue bool) *Type {
+	for _, hook := range flowNarrowingHooks {
+		if narrowed := hook(c, f.reference, t, expr, assumeTrue, func(reference *ast.Node, aliasType *Type) *Type {
+			alias := *f
+			alias.reference = reference
+			alias.declaredType = aliasType
+			return c.narrowType(&alias, aliasType, expr, assumeTrue)
+		}); narrowed != nil {
+			return narrowed
+		}
+	}
 	// for `a?.b`, we emulate a synthetic `a !== null && a !== undefined` condition for `a`
 	if ast.IsExpressionOfOptionalChainRoot(expr) || ast.IsBinaryExpression(expr.Parent) && (expr.Parent.AsBinaryExpression().OperatorToken.Kind == ast.KindQuestionQuestionToken || expr.Parent.AsBinaryExpression().OperatorToken.Kind == ast.KindQuestionQuestionEqualsToken) && expr.Parent.AsBinaryExpression().Left == expr {
 		return c.narrowTypeByOptionality(f, t, expr, assumeTrue)
