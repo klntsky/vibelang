@@ -73,6 +73,8 @@ The language design diagnoses this as `EK2001`. Handle `Rejected` inside the fun
 
 Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages and packages matching `compilerOptions.vibelang.trustedPackages` are trusted: plain calls are synchronous, their exceptions are defects, and Effect-returning calls run. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a try block that runs Effects with E = `never` gets `EK2004` (defects pass through), a warning by default.
 
+EK1010 refuses an unparenthesized throw expression on the left of a binary operator (except comma), as a conditional's condition, or before `as` or `satisfies`. Write `throw (…)` to throw the whole expression; `value ?? throw e` and throw statements keep their meaning.
+
 The server exposes TypeScript completions through the VibeLang checker,
 including service member types. Quick fixes repair retired spellings and the
 mechanical cases of Effect's language service rules, below, and refactors

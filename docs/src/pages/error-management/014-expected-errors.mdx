@@ -55,7 +55,7 @@ function port(env: Map<string, string>) {
 MissingPort
 ```
 
-`throw` also works in expression position, as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it, and fails the same way the statement does. The right side of `??`, `||`, `&&`, and `?:` runs only when it is chosen.
+`throw` also works in expression position, as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it, and fails the same way the statement does. The right side of `??`, `||`, `&&`, and `?:` runs only when it is chosen. In expression position it takes only a unary operand. EK1010 refuses an unparenthesized throw on an operator's left, as a conditional's condition, or before `as` or `satisfies`; write `throw (cond ? a : b)` to throw a whole conditional. A throw statement, `throw cond ? a : b;`, still throws the selected value.
 
 ## Tracking several error cases
 

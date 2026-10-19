@@ -190,9 +190,11 @@ interface Cart { readonly id: string; items: Array<string> }
 ```vibe [VibeLang]
 // run: Console.log(Effect.provide(() => greetUser("1"), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))])))
 function greetUser(id: string) {
-  const user = getUser(id)
-  Console.log(`Hello, ${user.name}`)
-  return user.name
+  return withSpan("greetUser") {
+    const user = getUser(id)
+    Console.log(`Hello, ${user.name}`)
+    return user.name
+  }
 }
 // Output: Hello, Ada
 // Output: Ada
@@ -207,6 +209,13 @@ const greetUser = Effect.fn("greetUser")(function* (id: string) {
 ```
 
 :::
+
+`Effect.fn("name")(body)` adds a named tracing span. Keep that span with
+`function f(...) { return withSpan("name") { ... } }`, or
+`const f = (...) => withSpan("name") { ... }` for an object field or arrow.
+A bare function declaration uses `Effect.fnUntraced` by default and therefore
+does not preserve the original span. Put the function's work inside the
+`withSpan` block; its return value, failures, and requirements flow through.
 
 **Programs passed by name** (D147). A call runs where it stands, and is passed as a program where a parameter expects one.
 
@@ -644,6 +653,18 @@ const findUser = (users: Map<string, User>, id: string) =>
 ```
 
 :::
+
+In expression position, `throw` takes a unary operand (D186), so it binds
+more tightly than `===`, `??`, and `?:`. In a catch handler, write
+`load() catch (failure) => throw (cond ? a : b)` to throw the selected value.
+EK1010 refuses an unparenthesized throw expression on the left of a binary
+operator (except comma), as the condition of `?:`, or before `as` or `satisfies`.
+For example, `throw failure.code === "unknown" ? a : b` would throw only
+`failure.code`; write `throw (failure.code === "unknown" ? a : b)` instead.
+Right-hand forms such as `value ?? throw e` and `ok ? value : throw e` stay legal.
+A **throw statement** still takes the whole expression:
+`throw cond ? a : b;` at the start of a statement throws the selected value,
+as in TypeScript.
 
 **Blocks as values** (D187, [do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
 
