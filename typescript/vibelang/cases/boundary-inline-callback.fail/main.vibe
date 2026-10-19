@@ -1,0 +1,7 @@
+// expect: EK2001 EK4301 TS2322
+error Boom { cause: unknown }
+type Body<A> = () => A
+export const named = <A>(body: Body<A>): Effect.Effect<A, Boom, never> =>
+  Effect.try({ try: () => body(), catch: (cause) => new Boom({ cause }) })
+export const inline = <A>(body: () => A): Effect.Effect<A, Boom, never> =>
+  Effect.try({ try: () => body(), catch: (cause) => new Boom({ cause }) })

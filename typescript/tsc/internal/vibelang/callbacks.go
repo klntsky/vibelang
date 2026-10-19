@@ -44,7 +44,11 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 					}
 				}
 			}
-			if a.finalForm(node) == formPlain {
+			// S10-11: a boundary callback may be inferred as an Effect after
+			// calling an inline callback parameter. Explain that parameter
+			// before the downstream contract/channel errors, in either form.
+			// Keep D56's form finalization ahead of body inspection.
+			if f := a.finalForm(node); !a.reportBoundaryCallback(file, node) && f == formPlain {
 				if pause := a.pauseText(file, node); pause != "" {
 					call, _ := ownerCall(node)
 					d := report(c, node, pausingCallback, pause, calleeName(c, file, call))
@@ -85,6 +89,24 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
+}
+
+// reportBoundaryCallback adds S10-11's advice only at a plain-code boundary;
+// ordinary callbacks retain D9/D56's existing pause diagnostics.
+func (a *analyzer) reportBoundaryCallback(file *ast.SourceFile, fn *ast.Node) bool {
+	c := a.checker
+	if !isBoundaryCallback(c, fn) {
+		return false
+	}
+	pause := a.firstPause(fn)
+	if pause == nil || !a.isCallbackParameterValue(pause.Expression()) {
+		return false
+	}
+	name := nodeText(file, pause.Expression())
+	call, _ := ownerCall(fn)
+	d := report(c, pause, pausingCallback, name, calleeName(c, file, call))
+	note(d, "{0} has an inline callback type, which accepts callbacks that can pause (D12/D68). Give {0} a named function type, such as type Body<A> = () => A, to keep it plain inside {1}.", name, calleeName(c, file, call))
+	return true
 }
 
 // plainMemberOwner returns the name of the type whose member method
