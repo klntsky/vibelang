@@ -270,6 +270,9 @@ func (a *analyzer) decide(fn *ast.Node, e expectation) form {
 		return formPlain // D263: an explicit JavaScript contract keeps its calling convention
 	}
 	plainOrEffect := func() form {
+		if a.hasContract(fn) {
+			return formEffect // D67: an explicit Effect contract is the function's API
+		}
 		if a.canBePlain(fn) && (a.hasPlainContract(fn) || !a.hasEscapingFailure(fn)) {
 			return formPlain
 		}

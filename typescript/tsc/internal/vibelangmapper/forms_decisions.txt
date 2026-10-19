@@ -412,6 +412,10 @@ typescript/vibelang/cases/contextual-effect-fields/main.vibe:7:35 lambda plain t
 typescript/vibelang/cases/contextual-effect-fields/main.vibe:7:62 lambda plain table
 typescript/vibelang/cases/contextual-effect-fields/main.vibe:8:14 lambda plain annotation
 typescript/vibelang/cases/contextual-effect-fields/main.vibe:9:38 lambda plain table
+typescript/vibelang/cases/contract-arrow-api.fail/a.vibe:3:24 lambda effectFn annotation
+typescript/vibelang/cases/contract-arrow-api.fail/a.vibe:4:23 lambda effectFn annotation
+typescript/vibelang/cases/contract-arrow-api/a.vibe:2:20 lambda effectFn annotation
+typescript/vibelang/cases/contract-arrow-api/a.vibe:3:20 lambda effectFn annotation
 typescript/vibelang/cases/contract-lambdas-plain/main.vibe:18:41 lambda plain table
 typescript/vibelang/cases/contract-lambdas-plain/main.vibe:23:13 lambda plain table
 typescript/vibelang/cases/contract-lambdas-plain/main.vibe:24:13 lambda plain table
