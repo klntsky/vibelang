@@ -91,7 +91,8 @@ function ordered() {
  const original = JSON.parse
  try { return JSON.parse(sync(() => { JSON.parse = () => 0; return "{" })) }
  catch (e) { return e.name }
- finally { sync(() => { JSON.parse = original }) }
+ // D229/EK4405: cleanup receives the saved function as a hatch input.
+ finally { sync((original) => { JSON.parse = original }, original) }
 }
 export function main() {
  provide Names = { all() { return ["b"] } } {

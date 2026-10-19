@@ -1,0 +1,288 @@
+package vibelangmapper
+
+import (
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
+)
+
+// syntaxDiagnostic uses the native EK node range without importing its checker.
+func (p *projector) syntaxDiagnostic(node *ast.Node, code int32, message string) {
+	r := scanner.GetErrorRangeForNode(p.file, node)
+	p.diagnostics = append(p.diagnostics, Diagnostic{Start: r.Pos(), Length: r.Len(), Code: code, Message: message})
+}
+
+// syntaxToken matches keyword diagnostics such as EK1003 and EK2006.
+func (p *projector) syntaxToken(node *ast.Node, code int32, message string) {
+	r := scanner.GetRangeOfTokenAtPosition(p.file, node.Pos())
+	p.diagnostics = append(p.diagnostics, Diagnostic{Start: r.Pos(), Length: r.Len(), Code: code, Message: message})
+}
+
+// checkSyntaxDiagnostics mirrors EK1003/EK1004, D57's written missing
+// channels (EK2003), D15's finally exits (EK2006), D1's bodiless service
+// contracts (EK2101), D129's setup order (EK2104), and D229's lexical hatch
+// captures (EK4405). Alias/type identity and unresolved types remain native.
+func (p *projector) checkSyntaxDiagnostics() {
+	var visit func(*ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if p.isHatchCall(n) {
+			p.checkHatchCaptures(n)
+			// D232: only the first argument is TypeScript; mapper and inputs are VibeLang.
+			for _, arg := range n.Arguments()[min(1, len(n.Arguments())):] {
+				visit(arg)
+			}
+			return false
+		}
+		switch n.Kind {
+		case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
+			if modifiers := n.Modifiers(); modifiers != nil {
+				for _, m := range modifiers.Nodes {
+					if m.Kind == ast.KindAsyncKeyword {
+						p.syntaxDiagnostic(m, 1003, "async is not part of VibeLang: a call already waits.")
+					}
+				}
+			}
+			if syntaxLowerable(n) && p.partialEffectContract(n.Type()) {
+				annotation := n.Type()
+				p.syntaxDiagnostic(annotation, 2003, p.text[p.tokenStart(annotation):annotation.End()]+" leaves contract channels unspecified. Did you mean never or inferred?")
+			}
+		case ast.KindAwaitExpression:
+			p.syntaxToken(n, 1003, "await is not part of VibeLang: a call already waits.")
+		case ast.KindForOfStatement:
+			if a := n.AsForInOrOfStatement().AwaitModifier; a != nil {
+				p.syntaxDiagnostic(a, 1003, "for await is not part of VibeLang: a call already waits.")
+			}
+		case ast.KindVariableDeclarationList:
+			flags := n.Flags & ast.NodeFlagsBlockScoped
+			if flags == ast.NodeFlagsAwaitUsing {
+				p.syntaxToken(n, 1003, "await using is not part of VibeLang: a call already waits.")
+			}
+			if flags == ast.NodeFlagsUsing || flags == ast.NodeFlagsAwaitUsing {
+				top := true
+				for parent := n.Parent; parent != nil; parent = parent.Parent {
+					if ast.IsFunctionLikeDeclaration(parent) {
+						top = false
+						break
+					}
+				}
+				if top {
+					r := scanner.GetRangeOfTokenAtPosition(p.file, n.Pos())
+					if flags == ast.NodeFlagsAwaitUsing {
+						r = scanner.GetRangeOfTokenAtPosition(p.file, r.End())
+					}
+					p.diagnostics = append(p.diagnostics, Diagnostic{Start: r.Pos(), Length: r.Len(), Code: 1004, Message: "using needs a block that a program runs, but a module's top level is not inside one."})
+				}
+			}
+		case ast.KindTryStatement:
+			if block := n.AsTryStatement().FinallyBlock; block != nil && syntaxInLowerableBody(n) {
+				p.checkFinallyExits(block)
+			}
+		}
+		if isServiceClass(n) {
+			p.checkServiceContracts(n)
+		}
+		if n.Parent == p.file.AsNode() && isLayerDeclaration(n) {
+			p.checkLayerSetup(n)
+		}
+		n.ForEachChild(visit)
+		return false
+	}
+	p.file.AsNode().ForEachChild(visit)
+}
+
+// syntaxLowerable follows the native body/async/generator gate (EK2003).
+func syntaxLowerable(n *ast.Node) bool {
+	switch n.Kind {
+	case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
+	default:
+		return false
+	}
+	flags := ast.GetFunctionFlags(n)
+	return n.Body() != nil && flags&ast.FunctionFlagsAsync == 0 && (flags&ast.FunctionFlagsGenerator == 0 || isProducer(n))
+}
+
+// syntaxInLowerableBody keeps EK2006 inside the native function boundary.
+func syntaxInLowerableBody(n *ast.Node) bool {
+	for n.Parent != nil {
+		parent := n.Parent
+		if ast.IsFunctionLike(parent) || ast.IsClassLike(parent) || parent.Kind == ast.KindClassStaticBlockDeclaration {
+			return n == parent.Body() && syntaxLowerable(parent)
+		}
+		n = parent
+	}
+	return false
+}
+
+// partialEffectContract only recognizes the unshadowed prelude Effect name;
+// user aliases, qualified imports, and their type identities need the checker.
+func (p *projector) partialEffectContract(t *ast.Node) bool {
+	if t == nil || !isWrittenEffectReference(t) || len(t.TypeArguments()) == 0 || len(t.TypeArguments()) >= 3 {
+		return false
+	}
+	name := t.AsTypeReferenceNode().TypeName
+	if !ast.IsIdentifier(name) {
+		return false
+	}
+	return p.forms.(*Resolver).binding(name, name.Text()) == nil && !syntaxTypeNameShadowed(name)
+}
+
+// syntaxTypeNameShadowed excludes local type aliases and parameters from
+// the prelude Effect spelling (EK2003); the value resolver handles imports.
+func syntaxTypeNameShadowed(name *ast.Node) bool {
+	for scope := name.Parent; scope != nil; scope = scope.Parent {
+		if ast.IsFunctionLike(scope) || ast.IsClassLike(scope) || scope.Kind == ast.KindInterfaceDeclaration || scope.Kind == ast.KindTypeAliasDeclaration {
+			parameters := scope.TypeParameters()
+			for _, parameter := range parameters {
+				if parameter.Name().Text() == name.Text() {
+					return true
+				}
+			}
+		}
+		switch scope.Kind {
+		case ast.KindSourceFile, ast.KindBlock, ast.KindModuleBlock:
+			for _, s := range scope.Statements() {
+				if (s.Kind == ast.KindTypeAliasDeclaration || s.Kind == ast.KindInterfaceDeclaration) && s.Name().Text() == name.Text() {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// checkServiceContracts reports EK2101 only for absent, primitive, or
+// explicitly partial contracts. An alias may already name a complete Effect.
+func (p *projector) checkServiceContracts(class *ast.Node) {
+	for _, member := range class.Members() {
+		if member.Kind != ast.KindMethodDeclaration || ast.IsStatic(member) || member.Name() == nil || !ast.IsIdentifier(member.Name()) {
+			continue
+		}
+		annotation := member.Type()
+		incomplete := annotation == nil || p.partialEffectContract(annotation)
+		if annotation != nil {
+			switch annotation.Kind {
+			case ast.KindStringKeyword, ast.KindNumberKeyword, ast.KindBooleanKeyword, ast.KindVoidKeyword, ast.KindNeverKeyword, ast.KindUnknownKeyword, ast.KindAnyKeyword, ast.KindObjectKeyword, ast.KindUndefinedKeyword, ast.KindNullKeyword, ast.KindBigIntKeyword, ast.KindSymbolKeyword:
+				incomplete = true
+			}
+		}
+		if incomplete {
+			at := annotation
+			if at == nil {
+				at = member.Name()
+			}
+			p.syntaxDiagnostic(at, 2101, class.Name().Text()+"."+member.Name().Text()+" has no body to infer from, so its contract must be written in full.")
+		}
+	}
+}
+
+// checkLayerSetup uses the parser's retained source order to report EK2104.
+func (p *projector) checkLayerSetup(n *ast.Node) {
+	call := n.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes[0].Initializer()
+	args := call.Arguments()
+	if len(args) != 2 || !ast.IsArrowFunction(args[1]) || args[1].Body() == nil || !ast.IsBlock(args[1].Body()) {
+		return
+	}
+	statements := args[1].Body().Statements()
+	if len(statements) == 0 {
+		return
+	}
+	returned := statements[len(statements)-1]
+	if returned.Kind != ast.KindReturnStatement || returned.Expression() == nil || !ast.IsObjectLiteralExpression(returned.Expression()) {
+		return
+	}
+	members := returned.Expression().AsObjectLiteralExpression().Properties.Nodes
+	if len(members) == 0 {
+		return
+	}
+	for _, setup := range statements[:len(statements)-1] {
+		if setup.Pos() > members[0].Pos() {
+			p.syntaxDiagnostic(setup, 2104, "This statement follows the layer's members, but a layer's setup statements come first.")
+		}
+	}
+}
+
+// checkFinallyExits mirrors the native region target stack (EK2006, D15).
+func (p *projector) checkFinallyExits(block *ast.Node) {
+	f := &frame{region: &region{}}
+	var visit func(*ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if ast.IsFunctionLike(n) || ast.IsClassLike(n) || n.Kind == ast.KindClassStaticBlockDeclaration {
+			return false
+		}
+		if n.Kind == ast.KindReturnStatement || ast.IsBreakOrContinueStatement(n) {
+			j := jump{kind: n.Kind}
+			if n.Kind != ast.KindReturnStatement && n.Label() != nil {
+				j.label = n.Label().Text()
+			}
+			if !f.lands(j) {
+				keyword := "return"
+				if n.Kind == ast.KindBreakStatement {
+					keyword = "break"
+				}
+				if n.Kind == ast.KindContinueStatement {
+					keyword = "continue"
+				}
+				p.syntaxToken(n, 2006, keyword+" leaves a finally block, which would discard a failure in flight.")
+			}
+		}
+		if isJumpTarget(n) {
+			target := target{loop: ast.IsIterationStatement(n, false)}
+			if n.Kind == ast.KindLabeledStatement {
+				target.label = n.Label().Text()
+				target.loop = ast.IsIterationStatement(n.AsLabeledStatement().Statement, true)
+			}
+			f.targets = append(f.targets, target)
+			n.ForEachChild(visit)
+			f.targets = f.targets[:len(f.targets)-1]
+			return false
+		}
+		n.ForEachChild(visit)
+		return false
+	}
+	block.ForEachChild(visit)
+}
+
+// checkHatchCaptures resolves value references lexically for EK4405 (D229).
+// Imports, globals, types, error declarations, and island-local bindings pass.
+func (p *projector) checkHatchCaptures(call *ast.Node) {
+	if len(call.Arguments()) == 0 {
+		return
+	}
+	island := call.Arguments()[0]
+	var visit func(*ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if ast.IsIdentifier(n) && n.Parent != nil && ((!ast.IsDeclarationName(n) && !ast.IsPartOfTypeNode(n) && !ast.IsRightSideOfQualifiedNameOrPropertyAccess(n)) || n.Parent.Kind == ast.KindShorthandPropertyAssignment) {
+			d := p.forms.(*Resolver).binding(n, n.Text())
+			if d != nil {
+				switch d.Kind {
+				case ast.KindVariableDeclaration, ast.KindParameter, ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindClassDeclaration, ast.KindClassExpression, ast.KindEnumDeclaration, ast.KindModuleDeclaration:
+					inside := false
+					for parent := d; parent != nil; parent = parent.Parent {
+						if parent == island {
+							inside = true
+							break
+						}
+					}
+					if !inside && !isErrorDeclaration(d) && !syntaxTaggedErrorClass(d) {
+						p.syntaxDiagnostic(n, 4405, n.Text()+" is declared outside the hatch, and a hatch's TypeScript is self-contained: pass "+n.Text()+" to "+call.Expression().Text()+" as an input.")
+					}
+				}
+			}
+		}
+		n.ForEachChild(visit)
+		return false
+	}
+	visit(island)
+}
+
+// syntaxTaggedErrorClass preserves D229's error-class exception (EK4405).
+func syntaxTaggedErrorClass(n *ast.Node) bool {
+	if !ast.IsClassLike(n) {
+		return false
+	}
+	h := ast.GetClassExtendsHeritageElement(n)
+	if h == nil || !ast.IsCallExpression(h.Expression()) {
+		return false
+	}
+	callee := h.Expression().Expression()
+	return ast.IsIdentifier(callee) && callee.Text() == "TaggedError" || ast.IsPropertyAccessExpression(callee) && callee.Name().Text() == "TaggedError"
+}

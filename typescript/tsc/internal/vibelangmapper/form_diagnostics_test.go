@@ -17,7 +17,12 @@ import (
 // TestFormDiagnosticsMatchesProjection keeps the editor's inexpensive query
 // aligned with the projector's ambiguity reports across lowering shapes.
 func TestFormDiagnosticsMatchesProjection(t *testing.T) {
-	cases := slices.Clone(projectionCases)
+	// The projection cases' expected diagnostics belong to TestProjection; this
+	// test reads only their sources.
+	cases := make([]struct{ name, source, virtual string }, 0, len(projectionCases))
+	for _, tc := range projectionCases {
+		cases = append(cases, struct{ name, source, virtual string }{name: tc.name, source: tc.source, virtual: tc.virtual})
+	}
 	for _, source := range []string{
 		`function f() { return pipe(() => { throw new Offline() }, retry({ times: 2 }), timeout("1 second")) }`,
 		`import { opaque } from "./other"; function f() { return pipe(() => a(), opaque) }`,

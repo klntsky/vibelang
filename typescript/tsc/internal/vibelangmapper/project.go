@@ -214,6 +214,7 @@ func lower(text string, ctx FileContext) *projector {
 		p.statement = statement
 		p.visit(statement, env{})
 	}
+	p.checkSyntaxDiagnostics()
 	p.checkDoControlFlow()
 	p.checkCatchExpressionHatches()
 	p.normalizeRegionResults()

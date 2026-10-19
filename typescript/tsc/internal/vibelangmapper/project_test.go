@@ -24,9 +24,10 @@ var testContext = FileContext{FileName: "/app/src/main.vibe", ModuleKey: "app/sr
 // projectionCases are the lowering rules, one source and its virtual
 // TypeScript each, without the prelude import line (TestImportLine).
 var projectionCases = []struct {
-	name    string
-	source  string
-	virtual string
+	name        string
+	source      string
+	virtual     string
+	diagnostics []Diagnostic
 }{
 
 	{name: "tail resume in a cleanup block cannot invent clause fallthrough",
@@ -399,9 +400,11 @@ var projectionCases = []struct {
 		virtual: "function double(n: number): number {\n  return twice(n)\n}\n",
 	},
 	{
-		name:    "top-level calls and async functions stay; a generator function is a producer (D26)",
+		name:    "top-level calls stay and invalid async is diagnosed; a generator function is a producer (D26)",
 		source:  "const top = f()\nasync function a() { return f() }\nfunction* g() { yield f() }\n",
 		virtual: "const top = f()\nasync function a() { return f() }\nfunction g() { return $produce(function* () { yield $emit((yield* $run($value(f)()))) })}\n",
+		// EK1003: native checkSyntax rejects async outside hatch TypeScript.
+		diagnostics: []Diagnostic{{Start: 16, Length: 5, Code: 1003, Message: "async is not part of VibeLang: a call already waits."}},
 	},
 	{
 		name:    "a service is an interface and a key (D45)",
@@ -414,9 +417,10 @@ var projectionCases = []struct {
 		virtual: "interface Approval { approve(request: string): Effect.Effect<boolean, never, never>; readonly \"~vibelang/service\"?: \"app/src/main#Approval\" } abstract class Approval extends $service<Approval>(\"app/src/main#Approval\") {}\n",
 	},
 	{
+		// D1/EK2101: all three contract channels are required on now.
 		name:    "a D1 abstract class keeps its static members in the key",
-		source:  "abstract class Clock extends Control {\n  abstract now(): Effect<number>;\n  static readonly zero = 0\n}\n",
-		virtual: "interface Clock {\n  now(): Effect<number>; readonly \"~vibelang/service\"?: \"app/src/main#Clock\" } abstract class Clock extends $service<Clock>(\"app/src/main#Clock\") {\n  static readonly zero = 0\n}\n",
+		source:  "abstract class Clock extends Control {\n  abstract now(): Effect<number, never, never>;\n  static readonly zero = 0\n}\n",
+		virtual: "interface Clock {\n  now(): Effect<number, never, never>; readonly \"~vibelang/service\"?: \"app/src/main#Clock\" } abstract class Clock extends $service<Clock>(\"app/src/main#Clock\") {\n  static readonly zero = 0\n}\n",
 	},
 	{
 		name:    "a service without members is an abstract class",
@@ -615,7 +619,10 @@ func TestProjection(t *testing.T) {
 			t.Parallel()
 			projection := Project(c.source, testContext)
 			assert.Equal(t, virtualBody(t, projection), c.virtual)
-			assert.Assert(t, len(projection.Diagnostics) == 0, "diagnostics: %v", projection.Diagnostics)
+			assert.Equal(t, len(projection.Diagnostics), len(c.diagnostics), "diagnostics: %v", projection.Diagnostics)
+			for i, diagnostic := range c.diagnostics {
+				assert.Equal(t, projection.Diagnostics[i], diagnostic)
+			}
 			assertValidMap(t, projection, c.source)
 			assertParses(t, projection.Text)
 		})
@@ -1210,6 +1217,20 @@ func TestHatchDataExports(t *testing.T) {
 		assert.Equal(t, len(Executable(source, testContext).Diagnostics), 0, "%s", source)
 	}
 	source := `function f(BigDecimal: { fromNumberUnsafe(n: number): () => number }) { return try(BigDecimal.fromNumberUnsafe(0)) }`
-	assert.Equal(t, len(Project(source, testContext).Diagnostics), 1)
-	assert.Equal(t, len(Executable(source, testContext).Diagnostics), 1)
+	// D229/EK4405: the parameter is outside try's first argument, just as
+	// native checkHatches -> outsideReferences -> declaredOutside decides.
+	// Keep this invalid input to also test the original callable-value ambiguity.
+	for _, projection := range []Projection{Project(source, testContext), Executable(source, testContext)} {
+		assert.Equal(t, len(projection.Diagnostics), 2, "%v", projection.Diagnostics)
+		codes := map[int32]bool{}
+		for _, diagnostic := range projection.Diagnostics {
+			codes[diagnostic.Code] = true
+			if diagnostic.Code == 4405 {
+				assert.Equal(t, diagnostic.Start, strings.LastIndex(source, "BigDecimal"))
+				assert.Equal(t, diagnostic.Length, len("BigDecimal"))
+				assert.Equal(t, diagnostic.Message, "BigDecimal is declared outside the hatch, and a hatch's TypeScript is self-contained: pass BigDecimal to try as an input.")
+			}
+		}
+		assert.Assert(t, codes[CodeUnprojectedForm] && codes[4405], "%v", projection.Diagnostics)
+	}
 }
