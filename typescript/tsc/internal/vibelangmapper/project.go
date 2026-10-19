@@ -705,6 +705,7 @@ func isRunnableCall(call *ast.Node) bool {
 // that starts with ( would otherwise continue the previous one.
 func (p *projector) runCall(call *ast.Node, e env) {
 	if p.structuredCall(call) {
+		p.discardedStructuredCall(call)
 		p.moduleCall(call, e)
 		return
 	}

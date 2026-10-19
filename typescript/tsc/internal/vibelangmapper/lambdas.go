@@ -222,14 +222,7 @@ func (p *projector) byNameArgument(argument *ast.Node, e env) bool {
 		p.visit(argument, e)
 		return true
 	}
-	arg := "expr"
-	if usesThis(argument) {
-		arg = "expr self"
-	}
-	start := p.tokenStart(argument)
-	p.plan.mark(editProgram, partOpen, start, start, arg)
-	p.visit(argument, expressionEnv())
-	p.plan.mark(editProgram, partClose, argument.End(), argument.End(), arg)
+	p.delayedProgram(argument)
 	return true
 }
 

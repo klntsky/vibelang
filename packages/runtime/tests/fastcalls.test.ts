@@ -60,6 +60,8 @@ describe("$isRun", () => {
   const probe: Array<[string, unknown, boolean]> = [
     ["Effect", Effect.sync(() => 1), true],
     ["Config", Config.String("FAST_TEST_UNSET"), false],
+    ["structural SQL statement", Object.assign(Effect.suspend(() => Effect.void), { sql: "SELECT 1" }), false],
+    ["nominal SQL statement", Object.assign(Effect.suspend(() => Effect.void), { "~effect/sql/Statement": "~effect/sql/Statement" }), false],
     ["Exit", Exit.succeed(1), true],
     ["TaggedError instance", new NotFound(), false],
     ["Context key", Db, false],

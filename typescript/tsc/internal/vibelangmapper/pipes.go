@@ -37,15 +37,9 @@ func (p *projector) pipeExpression(node *ast.Node, e env) {
 	binary := node.AsBinaryExpression()
 	byName := p.pipeProgramTopic(node)
 	if byName {
-		p.plan.mark(editProgram, partOpen, p.tokenStart(binary.Left), p.tokenStart(binary.Left), "expr "+selfArg(binary.Left))
-	}
-	inputEnv := e
-	if byName {
-		inputEnv = expressionEnv()
-	}
-	p.visit(binary.Left, inputEnv)
-	if byName {
-		p.plan.mark(editProgram, partClose, binary.Left.End(), binary.Left.End(), "expr")
+		p.delayedProgram(binary.Left)
+	} else {
+		p.visit(binary.Left, e)
 	}
 	p.plan.replace(binary.Left.End(), p.tokenStart(binary.Right), "; return ")
 	p.visit(binary.Right, e)
@@ -66,6 +60,7 @@ func (p *projector) pipeValueTopics(pipe *ast.Node) bool {
 	ok := true
 	topics := 0
 	program, value := false, false
+	var valueTopic *ast.Node
 	var visit func(*ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		if isPipeExpression(node) {
@@ -79,6 +74,9 @@ func (p *projector) pipeValueTopics(pipe *ast.Node) bool {
 				program = true
 			} else {
 				value = true
+				if valueTopic == nil {
+					valueTopic = node
+				}
 			}
 			if d.Call != nil {
 				sigs, _ := r.signaturesOf(d.Callee)
@@ -100,7 +98,15 @@ func (p *projector) pipeValueTopics(pipe *ast.Node) bool {
 		return false
 	}
 	if program && value {
-		p.awaitChoice(pipe, "A pipe cannot use its topic as both a program and a value; bind an explicitly annotated value or split the pipe.")
+		// D155 requires a running left side before a topic can pass it by
+		// name. An opaque call does not prove that native condition.
+		left := pipe.AsBinaryExpression().Left
+		if pauses, _ := p.awaitCalls(left); ok && pauses {
+			text := p.text[p.tokenStart(left):left.End()]
+			p.fiberDiagnostic(valueTopic, 1008, "% stands for "+text+", which this pipe passes by name to a program elsewhere, so it cannot also be a value here.")
+		} else {
+			p.awaitChoice(pipe, "A pipe cannot use its topic as both a program and a value; bind an explicitly annotated value or split the pipe.")
+		}
 		return false
 	}
 	return ok

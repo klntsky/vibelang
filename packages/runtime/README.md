@@ -35,7 +35,15 @@ load the package's JavaScript export. TypeScript resolves the same export to
 before packing or installing a local copy. Generated files under `dist/` are ignored.
 
 `bun run test` builds first and then runs behavior tests through the package
-export. `bun test` uses the current build. The tests cover each helper module,
+export. `bun test` uses the current build. The tests import `bun:test` and must run
+under Bun; Vitest cannot load that module. To run only the fast-call suite,
+use `bun run build && bun test tests/fastcalls.test.ts`.
+
+The shared kernel model suite imports `experiments/tests/conformance/model-laws.ts`.
+From this package directory, install its pinned dependencies once with
+`(cd ../../experiments && bun install --frozen-lockfile)` before running the full suite.
+
+The tests cover each helper module,
 resource and interruption behavior, and isolated Node, Bun, and browser bundle
 consumers. They also compile a TypeScript consumer against the declarations.
 

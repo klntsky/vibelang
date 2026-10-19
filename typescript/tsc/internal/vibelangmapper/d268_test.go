@@ -176,7 +176,7 @@ func TestMapperFollowupRuntimeCases(t *testing.T) {
 		t.Fatal(err)
 	}
 	scope := mapperTestScope(t, root)
-	for _, name := range []string{"plain-export-lists", "plain-imports", "retry-effectful-predicate", "stream-pull-using", "pipe-generic-stages", "contextual-effect-fields", "program-values", "effect-subtype-returns"} {
+	for _, name := range []string{"plain-export-lists", "plain-imports", "retry-effectful-predicate", "stream-pull-using", "pipe-generic-stages", "contextual-effect-fields", "program-values", "effect-subtype-returns", "pipe-asserted-program", "discarded-effect-call"} {
 		t.Run(name, func(t *testing.T) {
 			dir, err := os.MkdirTemp(scope, "mapper-followup-")
 			if err != nil {
@@ -216,6 +216,16 @@ func TestMapperFollowupRuntimeCases(t *testing.T) {
 				target := strings.TrimSuffix(filepath.Base(file), ".vibe") + ".js"
 				if err := os.WriteFile(filepath.Join(dir, target), []byte(js), 0600); err != nil {
 					t.Fatal(err)
+				}
+			}
+			hatches, err := filepath.Glob(filepath.Join(caseDir, "*.ts"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, file := range hatches {
+				cmd := exec.Command("node", "--input-type=module", "-e", `import { stripTypeScriptTypes } from "node:module"; import { readFileSync, writeFileSync } from "node:fs"; writeFileSync(process.argv[2], stripTypeScriptTypes(readFileSync(process.argv[1], "utf8")))`, file, filepath.Join(dir, strings.TrimSuffix(filepath.Base(file), ".ts")+".js"))
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("%v: %s", err, out)
 				}
 			}
 			if expected == "" {

@@ -175,7 +175,7 @@ export declare function $gen<Self, Eff, AEff>(
 ): EffectModule.Effect<AEff, YieldE<Eff>, YieldR<Eff>>
 
 /** D24 data that $isRun can identify stays data at opaque calls (D254). */
-type DataEffect = Config.Config<any> | Context.Key<any, any> | Error | Cause.YieldableError
+type DataEffect = (AnyEffect & { readonly sql: string }) | Config.Config<any> | Context.Key<any, any> | Error | Cause.YieldableError
 
 /** Only Exit needs an annotation: runtime identity also marks succeed programs. */
 type RejectedEffect = Exit.Exit<any, any>

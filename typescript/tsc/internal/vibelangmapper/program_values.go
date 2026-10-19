@@ -46,10 +46,7 @@ func (p *projector) programPipeArgument(node *ast.Node, e env) bool {
 	if isLambda(node) && len(node.Parameters()) == 0 {
 		p.programLambda(node, false)
 	} else if formsHoldsCall(node) {
-		start := p.tokenStart(node)
-		p.plan.mark(editProgram, partOpen, start, start, "expr "+selfArg(node))
-		p.visit(node, expressionEnv())
-		p.plan.mark(editProgram, partClose, node.End(), node.End(), "expr")
+		p.delayedProgram(node)
 	} else {
 		return p.programValue(node, Decision{Class: ClassProgram}, e)
 	}
@@ -241,4 +238,22 @@ func (r *Resolver) holdsFieldProgram(expr *ast.Node) bool {
 	}
 	cls, _, ok := r.serviceMember(node)
 	return ok && cls == ClassProgram
+}
+
+// D147: an explicit Effect assertion describes the delayed program, not
+// the value returned inside its generator. Non-null wrappers stay transparent.
+func (p *projector) delayedProgram(node *ast.Node) {
+	subject := ast.SkipParentheses(node)
+	for subject.Kind == ast.KindNonNullExpression {
+		subject = ast.SkipParentheses(subject.Expression())
+	}
+	operand := node
+	if (subject.Kind == ast.KindAsExpression || subject.Kind == ast.KindTypeAssertionExpression) && p.forms.(*Resolver).isEffectTypeNode(subject.Type(), 0) {
+		operand = subject.Expression()
+	}
+	start := p.tokenStart(operand)
+	arg := "expr " + selfArg(operand)
+	p.plan.mark(editProgram, partOpen, start, start, arg)
+	p.visit(operand, expressionEnv())
+	p.plan.mark(editProgram, partClose, operand.End(), operand.End(), arg)
 }

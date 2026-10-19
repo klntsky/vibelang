@@ -40,9 +40,11 @@ const ConfigTypeId = "~effect/Config"
  */
 export const $isRun = (value: unknown): boolean => {
   if (value === null || (typeof value !== "object" && typeof value !== "function")) return false
-  const v = value as { [identifier]?: unknown }
+  const v = value as { [identifier]?: unknown; sql?: unknown }
   // Effect 4.0.5 uses a string key, including for errors from another realm.
-  return EffectTypeId in v && !(ConfigTypeId in v) && !(ServiceTypeId in v) &&
+  // D24 SQL statements carry their query as data, including structural
+  // adapters without effect/sql's nominal Statement marker.
+  return EffectTypeId in v && typeof v.sql !== "string" && !("~effect/sql/Statement" in v) && !(ConfigTypeId in v) && !(ServiceTypeId in v) &&
     v[identifier] !== "YieldableError" && !(v instanceof Error)
 }
 
