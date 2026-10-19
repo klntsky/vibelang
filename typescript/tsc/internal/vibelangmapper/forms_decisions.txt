@@ -668,6 +668,11 @@ typescript/vibelang/cases/effect-subtype-returns/main.vibe:23:26 lambda choice f
 typescript/vibelang/cases/effect-subtype-returns/main.vibe:24:28 lambda choice fallback
 typescript/vibelang/cases/effect-subtype-returns/main.vibe:25:28 lambda choice fallback
 typescript/vibelang/cases/effect-subtype-returns/main.vibe:37:38 lambda choice fallback
+typescript/vibelang/cases/effect-subtype-success-data/main.vibe:14:41 lambda effectFn annotation
+typescript/vibelang/cases/effect-subtype-success-data/main.vibe:33:24 lambda plain table
+typescript/vibelang/cases/effect-subtype-success-data/main.vibe:35:25 lambda program table
+typescript/vibelang/cases/effect-subtype-success-data/main.vibe:35:73 lambda program table
+typescript/vibelang/cases/effect-subtype-success-data/main.vibe:39:38 lambda effectFn annotation
 typescript/vibelang/cases/effect-values/main.vibe:21:32 lambda program table
 typescript/vibelang/cases/effect-values/main.vibe:38:29 lambda program table
 typescript/vibelang/cases/effect-values/main.vibe:8:53 lambda effectFn service

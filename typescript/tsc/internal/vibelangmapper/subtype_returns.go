@@ -2,7 +2,7 @@ package vibelangmapper
 
 import "github.com/microsoft/TypeScript/tsc/internal/ast"
 
-// S5-1: only a whole return at an Effect contract delegates subtype data.
+// S5-1/S22-3: only a whole return rejected by A delegates subtype data.
 // Unannotated declarations have no Effect expectation. Lambda form resolution
 // supplies the contextual expectation without consulting another file's types.
 func (p *projector) programReturnBoundary(node *ast.Node) bool {
@@ -27,8 +27,17 @@ func (p *projector) programReturnBoundary(node *ast.Node) bool {
 	if fn == nil || isProducer(fn) || fn.Flags&ast.NodeFlagsReparsed != 0 || !p.structuredReturnValue(node, map[*ast.Node]bool{}) {
 		return false
 	}
+	// S22-3: structured values accepted by A are data. This per-file
+	// projector delegates only when the written A proves it cannot accept
+	// an object. Otherwise preserve the value: stock TypeScript checks it
+	// against A, refusing opaque non-assignable shapes instead of running
+	// a value that the contract meant to return (S5-1).
+	r := p.forms.(*Resolver)
+	if !r.subtypeReturnMustRun(r.effectSuccess(r.factoryReturn(fn), 0), 0) {
+		return false
+	}
 	// S5-1 runs structured returns; D269 factory bodies return programs cold.
-	if p.forms.(*Resolver).isFactory(fn) {
+	if r.isFactory(fn) {
 		return false
 	}
 	if fn.Type() != nil {
@@ -105,4 +114,28 @@ func (p *projector) checkSubtypeReturnFailure(node *ast.Node) {
 		return
 	}
 	p.fiberDiagnostic(node, 2001, "string can escape "+fn.Name().Text()+", but its contract says E = never.")
+}
+
+// A structured Effect subtype is an object. Primitive success contracts
+// cannot accept it; unions delegate only if every member rejects it. Other
+// types, including aliases that may be shadowed, need the checker's proof.
+func (r *Resolver) subtypeReturnMustRun(success *ast.Node, depth int) bool {
+	success = formsUnwrapType(success)
+	if success == nil || depth > 8 {
+		return false
+	}
+	switch success.Kind {
+	case ast.KindNumberKeyword, ast.KindStringKeyword, ast.KindBooleanKeyword,
+		ast.KindBigIntKeyword, ast.KindSymbolKeyword, ast.KindUndefinedKeyword,
+		ast.KindNeverKeyword, ast.KindVoidKeyword, ast.KindLiteralType:
+		return true
+	case ast.KindUnionType:
+		for _, member := range success.AsUnionTypeNode().Types.Nodes {
+			if !r.subtypeReturnMustRun(member, depth+1) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }

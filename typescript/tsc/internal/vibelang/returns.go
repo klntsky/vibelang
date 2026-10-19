@@ -61,8 +61,9 @@ func returnedExpressionType(c *checker.Checker, node *ast.Node, t *checker.Type)
 }
 
 // returnedProgramType keeps a returned Effect subtype as the program at an
-// Effect-typed function boundary (S5-1). Its success participates in return
-// checking and its E/R in flowOf; lowering delegates to that same program.
+// Effect-typed function boundary (S5-1), unless A already accepts it as data
+// (S22-3). A delegated subtype's success participates in return checking and
+// its E/R in flowOf; lowering delegates to that same program.
 func returnedProgramType(c *checker.Checker, node *ast.Node, t *checker.Type) *checker.Type {
 	fn := returnOwner(node)
 	if fn == nil || !isVibeLangFile(ast.GetSourceFileOfNode(node)) || !isLowerable(fn) ||
@@ -72,6 +73,15 @@ func returnedProgramType(c *checker.Checker, node *ast.Node, t *checker.Type) *c
 	a := analyzerFor(c)
 	if !a.expectsProgramReturn(fn) {
 		return t
+	}
+	// S22-3 amends S5-1: the declared success channel wins over the
+	// subtype's ability to run. Commands, Exits, and other yieldable values
+	// accepted by A are data; only a subtype rejected by A delegates.
+	if declared := a.declaredProgramReturn(fn); declared != nil {
+		if success := successType(c, declared); success != nil && c.IsTypeAssignableTo(t, success) {
+			delete(a.returnedPrograms, node) // discard a prior contextual probe's delegation
+			return t
+		}
 	}
 	channels := []*checker.Type{programChannelType(c, t, "_A"), programChannelType(c, t, "_E"), programChannelType(c, t, "_R")}
 	for _, channel := range channels {

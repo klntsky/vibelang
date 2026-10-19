@@ -411,7 +411,7 @@ export declare function $runAt<A, E, R, const Id extends number>(value: EffectMo
 /** Checker-only success witness for function-scoped variables crossing regions. */
 export declare function $varType<A, E, R>(value: EffectModule.Effect<A, E, R>): A
 
-/** S5-1: Effect return boundaries run structured subtypes as programs. */
+/** S5-1/S22-3: only structured subtypes rejected by the declared success type reach this delegate. */
 export declare function $returnRun<A, E, R>(value: EffectModule.Effect<A, E, R>): EffectModule.Effect<A, E, R>
 
 // BEGIN GENERATED D252 DATA METHODS

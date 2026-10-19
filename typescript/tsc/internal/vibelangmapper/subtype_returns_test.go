@@ -40,10 +40,17 @@ func TestSubtypeReturnPlainData(t *testing.T) {
 		`function double(n: number): number!! { return n * 2 }`,
 		`function exact(): Effect.Effect<Exit.Exit<number>> { return Effect.succeed(Exit.succeed(8)) }`,
 		`function opaque(): Effect.Effect<number> { return Action.make(1) }`,
+		`function data(): Effect.Effect<Exit.Exit<number>, never, never> { return Exit.succeed(1) }`,
+		`function broad(): Effect.Effect<unknown, never, never> { return Exit.fail("data") }`,
+		`function object(): Effect.Effect<object, never, never> { return Exit.succeed(1) }`,
+		`type Result = Exit.Exit<number> | string; function union(): Effect.Effect<Result> { return Exit.succeed(1) }`,
+		`type Result = number; function outer() { type Result = Exit.Exit<number> | number; const named: () => Effect.Effect<Result> = () => Exit.succeed(1); return named() }`,
+		`const data: (n: number) => Effect.Effect<Exit.Exit<number>> = (n) => Exit.succeed(n)`,
+		`interface Service { readonly confine: (x: Exit.Exit<number>) => Effect.Effect<Exit.Exit<number>> }; const noop: Service = { confine: (x) => x }`,
 	} {
 		source := `import * as Effect from "effect/Effect"; import * as Exit from "effect/Exit"; import { Action } from "./host.js"; ` + body
 		for _, projection := range []Projection{Project(source, testContext), Executable(source, testContext)} {
-			if strings.Contains(projection.Text, "$returnRun(") {
+			if strings.Contains(projection.Text, "$returnRun(") || strings.Contains(projection.Text, "$run(Exit.succeed(") || strings.Contains(projection.Text, "$run(Exit.fail(") {
 				t.Fatal(projection.Text)
 			}
 		}
