@@ -164,7 +164,7 @@ interface CrateWire {
 class Crate extends Schema.Class<Crate>("Crate")({
   count: Schema.FiniteFromString,
   children: Schema.Array(
-    Schema.suspend((): Schema.Codec<Crate, CrateWire>!! => Crate)
+    Schema.suspend((): Schema.Codec<Crate, CrateWire> => Crate)
   )
 }) {}
 
@@ -178,7 +178,7 @@ true true
 {"count":"2","children":[{"count":"1","children":[]}]}
 ```
 
-Suspend the recursive edge and write the callback's full contract to break the inference cycle. It returns the codec as data and compiles to a plain JavaScript callback. Specify a separate encoded interface when fields transform. For mutual recursion, suspend the reference to the class declared later and state the appropriate decoded and encoded types on each recursive edge.
+Suspend the recursive edge and annotate the callback's return type to break the inference cycle. It returns the codec as data and compiles to a plain JavaScript callback. Specify a separate encoded interface when fields transform. For mutual recursion, suspend the reference to the class declared later and state the appropriate decoded and encoded types on each recursive edge.
 
 ## Creating tagged variants and extending classes
 

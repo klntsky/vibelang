@@ -155,7 +155,7 @@ bun add -d vibelang@latest vibelang-vite@latest
 ```
 
 VibeLang is v0, so a new version can change the language in breaking ways. Read
-its release notes before updating.
+the [release notes](../setup/release-notes.md) before updating.
 
 ## Configure your editor
 

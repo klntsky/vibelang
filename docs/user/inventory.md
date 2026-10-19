@@ -51,6 +51,8 @@ Code example count: one example per fenced code block in the source body, includ
   - [Neovim](src/setup/neovim.md)
   - [Zed](src/setup/zed.md)
   - [Other editors](src/setup/other-editors.md)
+- **Upgrade**
+  - [Release notes](src/setup/release-notes.md)
 
 ### Guides
 
