@@ -114,6 +114,19 @@ function syncEverything(stores: ReadonlyArray<Store>) {
 
 `stores.map(makeSync)` passes `makeSync` to JavaScript's `Array.prototype.map`, which expects a plain function. `makeSync` performs no Effect operation, so it compiles to plain JavaScript (Chapter 15), and `map` receives that form: `syncAll` holds programs. A function that can pause cannot be passed to `map` (EK4301, Chapter 10). Where `Effect.all` expects Effects, an array or record of programs converts element by element.
 
+To capture inputs at call time for a TypeScript caller, declare an Effect return and return a program (D269):
+
+```ts es
+export const capture = (input: { mutable value: number }): Effect.Effect<number, never, never> => {
+  const snapshot = input.value
+  return () => snapshot
+}
+```
+
+The factory body is plain JavaScript at the call. Changing `input.value` after `capture(input)` does not change the snapshot its program returns. The returned program can run repeatedly. Every path must return a program; Effects and service lookups belong inside it (EK2115, EK2116). Where TypeScript returned `Effect.fail(e)`, write `return () => { throw e }`; an outer `throw e` would throw synchronously.
+
+A declared Effect const holds an initializer at any scope: `const p: Effect.Effect<number> = capture(input)` calls the factory once and stores its result. `retry(p, policy)` reuses that snapshot; `retry(capture(input), policy)` passes the call by name and takes a fresh snapshot per attempt. Without a declared Effect return the earlier `makeSync` example retains its existing meaning.
+
 ```ts es
 function startServer() {
   const cachedConfig = Effect.cached(() => loadConfig())  // Effect.cached returns a program

@@ -87,7 +87,7 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 		case convertByName:
 			// Context can become concrete after generic inference. A field
 			// that now holds an Effect already has its program type (D265).
-			if isEffectType(c, t) && holdsFieldProgram(c, node) {
+			if isEffectType(c, t) && holdsProgram(c, node) {
 				s.byCandidate[key], s.types[key] = convertNone, t
 				return t
 			}
@@ -195,6 +195,8 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 		fn := esFunctionOf(a.checker, node)
 		switch {
 		case fn == nil:
+		case a.isFactory(fn):
+			return convertRejected, t
 		case isProducer(fn):
 			// Calling a producer runs none of it: it is a plain function.
 		case a.isPlainFunction(fn) && !a.isSplittable(fn):
@@ -234,7 +236,8 @@ func (a *analyzer) convert(node *ast.Node, t *checker.Type, position valuePositi
 			// there is no unwrapped success reading to pass by name again.
 			return convertNone, t
 		}
-		if !holdsFieldProgram(a.checker, node) {
+		// D265 fields and D269 consts already hold a program; preserve D147 for other positions.
+		if !holdsProgram(a.checker, node) {
 			if program := a.byNameType(node, value); program != nil {
 				return convertByName, program
 			}

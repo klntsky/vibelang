@@ -10,6 +10,7 @@ import (
 // The language server's hooks register here rather than in vibelang.go,
 // so editor features stay in this file and completions.go.
 func init() {
+	ls.RegisterQuickInfoHook(factoryQuickInfo)
 	ls.RegisterQuickInfoHook(plainFunctionQuickInfo)
 	ls.RegisterQuickInfoHook(runningCallQuickInfo)
 	ls.RegisterCompletionScopeHook(preludeCompletions)
@@ -116,4 +117,29 @@ func plainFunctionQuickInfo(c *checker.Checker, node *ast.Node) (string, string)
 	}
 	text := "function " + symbol.Name() + c.SignatureToStringEx(c.SignatureWithReturnType(signature, success), node, hoverTypeFlags, nil)
 	return text, "Plain JavaScript: VibeLang code calls it directly. TypeScript callers see `" + c.TypeToStringEx(effect, node, hoverTypeFlags, nil) + "`."
+}
+
+// factoryQuickInfo describes D269's two distinct evaluation phases.
+func factoryQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
+	if !isVibeLangFile(ast.GetSourceFileOfNode(node)) {
+		return "", ""
+	}
+	a := analyzerFor(c)
+	if call := callOfCallee(node); call != nil && holdsProgram(c, call) {
+		return "", "Holds `" + calleeText(call) + "`'s program: called here, not run."
+	}
+	if ast.IsIdentifier(node) {
+		if symbol := c.GetSymbolAtLocation(node); symbol != nil {
+			if decl := symbol.ValueDeclaration(); decl != nil && ast.IsVariableDeclaration(decl) && decl.Initializer() != nil {
+				init := ast.SkipParentheses(decl.Initializer())
+				if ast.IsCallExpression(init) && holdsProgram(c, init) {
+					return "", "Holds `" + calleeText(init) + "`'s program: called here, not run."
+				}
+			}
+		}
+	}
+	if fn := esFunctionOf(c, node); fn != nil && a.isFactory(fn) {
+		return "", "Returns a program: its body runs when called; the program runs each time its caller runs it."
+	}
+	return "", ""
 }

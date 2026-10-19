@@ -217,16 +217,20 @@ func (p *projector) plainMatchPipeStage(call *ast.Node, key string) bool {
 	return false
 }
 
-// holdsFieldProgram recognizes written program fields (D265) without a
+// holdsProgram recognizes declared consts (D269) and fields (D265) without a
 // checker, using the same parameter, declared-type, and service shapes as
 // lambda form resolution. Only the initializer call is cold; its operands
 // keep the surrounding evaluation rules.
-func (r *Resolver) holdsFieldProgram(expr *ast.Node) bool {
+func (r *Resolver) holdsProgram(expr *ast.Node) bool {
 	node := expr
 	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
 		node = node.Parent
 	}
 	field := node.Parent
+	if field != nil && ast.IsVariableDeclaration(field) && field.Initializer() == node && field.Type() != nil && r.factoryEffectType(field.Type(), 0) != nil {
+		list := field.Parent
+		return list != nil && list.Kind == ast.KindVariableDeclarationList && list.Flags&ast.NodeFlagsConst != 0
+	}
 	if field == nil || !ast.IsPropertyAssignment(field) || field.Initializer() != node {
 		return false
 	}

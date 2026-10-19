@@ -1,0 +1,55 @@
+import { check } from "./caller.js"
+import { Effect } from "effect"
+export const capture = (input: { mutable value: number }): Effect.Effect<number, never, never> => {
+  const captured = input.value
+  return () => { Effect.succeed(0); return captured }
+}
+export function declared(input: { mutable value: number }): number!! {
+  const captured = input.value
+  return () => captured
+}
+export const generic = <A>(input: { mutable value: A }): Effect.Effect<A, never, never> => {
+  const captured = input.value
+  return () => captured
+}
+export const bound: (input: { mutable value: number }) => Effect.Effect<number> = input => {
+  const captured = input.value
+  return () => captured
+}
+
+const apply = (build: () => Effect.Effect<number, never, never>): Effect.Effect<number, never, never> => {
+  const program: Effect.Effect<number, never, never> = build()
+  return program
+}
+export const parameter = (input: { mutable value: number }): Effect.Effect<number, never, never> => {
+  const program: Effect.Effect<number, never, never> = apply(() => {
+    const snapshot = input.value
+    return () => snapshot
+  })
+  return program
+}
+
+export const parameterGeneric = <A>(input: { mutable value: A }): Effect.Effect<A, never, never> => {
+  const applyFixed = (build: () => Effect.Effect<A, never, never>): Effect.Effect<A, never, never> => {
+    const program: Effect.Effect<A, never, never> = build()
+    return program
+  }
+  const program: Effect.Effect<A, never, never> = applyFixed(() => {
+    const snapshot = input.value
+    return () => snapshot
+  })
+  return program
+}
+
+export const inferred = (input: { mutable value: number }, reason: string | null): number!infer E!infer R => {
+  const snapshot = input.value
+  return () => { if (reason !== null) throw reason; return snapshot }
+}
+
+export const refuse = (reason: string): Effect.Effect<never, string, never> => {
+  if (reason === "") throw new Error("missing reason")
+  return () => { throw reason }
+}
+
+// expect-result: "snapshot: 1 (seven forms, twice)"
+export function main() { return sync((run: () => string) => run(), check) }

@@ -66,7 +66,7 @@ import { title } from "./page.js"
 const program = title("42").pipe(Effect.provide(DatabaseLive))   // nothing has run yet
 ```
 
-Calling a VibeLang function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and VibeLang callers in the same compilation use the fast path. An eligible helper with a plain annotation, such as `: number`, instead keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.vibe` the way it resolves `.js` to `.ts`.
+Calling a VibeLang function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function, except a factory (D269), whose body runs at the call. A factory explicitly returns a program under a declared Effect return type; its returned program runs only when the caller runs it. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and VibeLang callers in the same compilation use the fast path. An eligible helper with a plain annotation, such as `: number`, instead keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.vibe` the way it resolves `.js` to `.ts`.
 
 #### Readonly members
 

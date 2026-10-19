@@ -119,6 +119,8 @@ var (
 	// EK2102: a recursive function whose A depends on its own result. {0} is the function.
 	EK2102 = message(2102, errorCategory, "{0} calls itself, and its success type depends on that call, so its contract must be written.")
 
+	EK2115 = message(2115, errorCategory, "{0} returns a program, so its body runs when {0} is called and cannot run {1}.")
+	EK2116 = message(2116, errorCategory, "{0} returns a program on one path, so every path must return one; {1} does not.")
 	// EK3001: two services share a key. {0} is the key.
 	EK3001 = message(3001, errorCategory, "two services share the key {0}.")
 	// EK3002: a class extends a service.
@@ -170,7 +172,7 @@ var registry = map[int32]*Message{}
 func init() {
 	for _, m := range []*Message{
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009,
-		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113,
+		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113, EK2115, EK2116,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4406, EK4501,
 	} {

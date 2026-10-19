@@ -110,10 +110,11 @@ const (
 	// FormDual is a parameterless lambda that is both a program and a
 	// function that returns it (research/typedirected/stock/perf/dual.mjs).
 	FormDual
+	FormFactory // D269: a call-time JavaScript body returning a program
 )
 
 func (f Form) String() string {
-	return [...]string{"none", "plain", "effectFn", "program", "dual"}[f]
+	return [...]string{"none", "plain", "effectFn", "program", "dual", "factory"}[f]
 }
 
 // Provenance says where a decision's class came from.
@@ -313,6 +314,30 @@ var formsProviderCallees = map[string]int{
 // expression, or a method of an object literal.
 func (r *Resolver) Lambda(fn *ast.Node) Decision {
 	d := Decision{Node: fn}
+	if r.isFactory(fn) {
+		d.Form, d.Provenance, d.Note = FormFactory, FromAnnotation, "declared Effect factory (D269)"
+		return d
+	}
+	if owner := factoryReturnOwner(fn); owner != nil && r.isFactory(owner) {
+		d.Form, d.Class, d.Provenance, d.Note = FormProgram, ClassProgram, FromAnnotation, "factory return (D269)"
+		return d
+	}
+	if owner := factoryReturnOwner(fn); owner != nil {
+		if declared := r.factoryReturn(owner); declared != nil {
+			if success := r.effectSuccess(declared, 0); success != nil {
+				if cls := r.factorySuccessClass(success, 0); cls != 0 {
+					d.Class, d.Provenance, d.Note = cls, FromAnnotation, "declared success return (D7/D9)"
+					d.Form = formsFormFor(cls, len(fn.Parameters()), formsBodyFacts(fn))
+					return d
+				}
+			}
+		}
+	}
+	if r.factoryContextHidden(fn) {
+		d.Form, d.Provenance = FormEffectFn, FromAnnotation
+		d.Choice = r.choiceText(d, "D269 cannot see this member's imported return type. Write an explicit Effect return annotation to identify its factory and program phases.")
+		return d
+	}
 	params := len(fn.Parameters())
 	facts := formsBodyFacts(fn)
 	call, arg, steps := formsOwnerCall(fn)

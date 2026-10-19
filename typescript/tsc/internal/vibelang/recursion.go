@@ -50,7 +50,8 @@ func (a *analyzer) bodyCallees(fn *ast.Node) []*ast.Node {
 		}
 		sig := a.checker.GetResolvedSignature(call)
 		callee := implementationOf(sig.Declaration())
-		if callee == nil || !isLowerable(callee) || sig.Target() != nil || !a.isSplittable(callee) && !a.isEffect(callee) || slices.Contains(callees, callee) {
+		// D269 excludes factory bodies; S3-3 keeps plain returned programs out of body cycles.
+		if callee == nil || !isLowerable(callee) || a.isFactory(callee) || sig.Target() != nil || !a.isSplittable(callee) && !a.isEffect(callee) || slices.Contains(callees, callee) {
 			return false
 		}
 		if k := a.contractOf(callee); k != nil && !k.inferredAny() {

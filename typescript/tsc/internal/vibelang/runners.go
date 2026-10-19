@@ -188,7 +188,7 @@ func runsAtTopLevel(c *checker.Checker, a *analyzer, call *ast.Node) (runs bool,
 // there runs nothing and builds the program the callee receives (D147,
 // D155), so EK1001 does not apply.
 func (a *analyzer) passedAsProgram(call *ast.Node) bool {
-	if a.byNameOf(call) != nil || holdsTopLevelProgram(a.checker, call) || holdsFieldProgram(a.checker, call) {
+	if a.byNameOf(call) != nil || holdsProgram(a.checker, call) {
 		return true
 	}
 	owner, path := ownerCall(call)
@@ -202,44 +202,33 @@ func (a *analyzer) passedAsProgram(call *ast.Node) bool {
 	return a.classify(a.expectedAt(owner, signature, path, call)).program
 }
 
-// holdsTopLevelProgram recognizes D262's explicit storage of a cold program.
-// At module scope calls retain their Effect type and emit without yield*;
-// only the annotated const's initializer is a program position. Its operands
-// still follow D147, so this does not hide eager calls inside the initializer.
-func holdsTopLevelProgram(c *checker.Checker, call *ast.Node) bool {
-	node := call
+// holdsProgram recognizes a declared Effect const at any scope (D269),
+// or a contextual Effect field (D265). Only its initializer is held;
+// operands retain D147's ordinary parameter positions.
+func holdsProgram(c *checker.Checker, expr *ast.Node) bool {
+	if !isVibeLangFile(ast.GetSourceFileOfNode(expr)) || inHatch(expr) {
+		return false
+	}
+	node := expr
 	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
 		node = node.Parent
 	}
 	decl := node.Parent
-	if decl == nil || !ast.IsVariableDeclaration(decl) || decl.Initializer() != node || decl.Type() == nil {
+	if decl == nil || !(ast.IsVariableDeclaration(decl) || ast.IsPropertyAssignment(decl)) || decl.Initializer() != node {
 		return false
 	}
-	list := decl.Parent
-	return list != nil && list.Kind == ast.KindVariableDeclarationList && list.Flags&ast.NodeFlagsConst != 0 &&
-		atTopLevel(decl) && isEffectType(c, c.GetTypeFromTypeNode(decl.Type()))
-}
-
-// holdsFieldProgram recognizes D265's contextual object-literal program field.
-// Only the field's initializer holds the Effect value; calls in its operands
-// retain the ordinary evaluation rules, as for a D262 program binding.
-func holdsFieldProgram(c *checker.Checker, call *ast.Node) bool {
-	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) {
+	// D269 holds declared consts at every scope; D262's module case remains included.
+	if ast.IsVariableDeclaration(decl) && decl.Type() != nil {
+		list := decl.Parent
+		return list != nil && list.Kind == ast.KindVariableDeclarationList && list.Flags&ast.NodeFlagsConst != 0 && isEffectType(c, c.GetTypeFromTypeNode(decl.Type()))
+	}
+	if !ast.IsPropertyAssignment(decl) {
 		return false
 	}
-	node := call
-	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
-		node = node.Parent
-	}
-	field := node.Parent
-	if field == nil || !ast.IsPropertyAssignment(field) || field.Initializer() != node {
-		return false
-	}
-	if isEffectType(c, c.GetContextualTypeForObjectLiteralElement(field, checker.ContextFlagsSignature)) {
+	// D265 fields keep both established context and the active generic candidate (crash fix).
+	if isEffectType(c, c.GetContextualTypeForObjectLiteralElement(decl, checker.ContextFlagsSignature)) {
 		return true
 	}
-	// During generic inference, read the parameter of the active candidate
-	// rather than resolving the owning call again and losing its context.
 	a := analyzerFor(c)
 	if owner, path := ownerCall(node); owner != nil {
 		if signature := a.candidateOf(owner); signature != nil {

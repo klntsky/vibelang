@@ -156,7 +156,7 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 	// them, so it reads its instantiated return type; the callee's own body
 	// knows only its type parameters. A callee with a contract adds what the
 	// contract says.
-	if callee := implementationOf(sig.Declaration()); callee != nil && isLowerable(callee) && sig.Target() == nil && (a.isSplittable(callee) || a.isEffect(callee)) {
+	if callee := implementationOf(sig.Declaration()); callee != nil && isLowerable(callee) && sig.Target() == nil && !a.isFactory(callee) && (a.isSplittable(callee) || a.isEffect(callee)) {
 		if e, r, ok := a.calleeContract(callee, call, sig); ok {
 			info.addError(e, call)
 			info.addRequirement(r, call)
@@ -165,6 +165,7 @@ func (a *analyzer) addCall(info *effectInfo, call *ast.Node) {
 		}
 		return
 	}
+	// D269 declared factories and S3-3 plain factories read returned channels.
 	// A plain factory returns an existing program: its E/R belong to that
 	// program's type, not to the JavaScript body that constructs it.
 	t := runningCallResult(a.checker, call, sig)

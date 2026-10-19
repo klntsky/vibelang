@@ -32,7 +32,8 @@ func returnOwner(node *ast.Node) *ast.Node {
 // subtype-producing call's running position. Config-returning callbacks stay
 // plain (D109); unannotated functions without an Effect expectation keep data.
 func (a *analyzer) expectsProgramReturn(fn *ast.Node) bool {
-	if !isLowerable(fn) || isProducer(fn) {
+	// S5-1 delegates structured subtype returns; D269 holds exact-Effect factory returns.
+	if !isLowerable(fn) || isProducer(fn) || a.isFactory(fn) {
 		return false
 	}
 	if fn.Type() != nil {

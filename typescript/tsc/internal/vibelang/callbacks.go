@@ -33,11 +33,36 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 	visit = func(node *ast.Node) bool {
 		switch {
 		case isLambda(node):
+			if a.finalForm(node) == formFactory {
+				call, path := ownerCall(node)
+				if call != nil {
+					if sig := a.candidateOf(call); sig != nil {
+						e := a.expectationAt(call, sig, path, node)
+						if e.plainFn && !e.effectFn {
+							report(c, node, EK4301.With("{0} returns a program and has no plain variant, but {1} expects a plain function."), functionDisplayName(node), calleeName(c, file, call))
+						}
+					}
+				}
+			}
 			if a.finalForm(node) == formPlain {
 				if pause := a.pauseText(file, node); pause != "" {
 					call, _ := ownerCall(node)
 					d := report(c, node, pausingCallback, pause, calleeName(c, file, call))
 					note(d, "Use {0} or a for...of loop.", forEachFix(c, file, call, node))
+					if call != nil && !ast.IsExpressionStatement(ast.WalkUpParenthesizedExpressions(call).Parent) {
+						if sig := a.candidateOf(call); sig != nil {
+							_, path := ownerCall(node)
+							for _, expected := range a.expectedAt(call, sig, path, node) {
+								for _, callback := range c.GetSignaturesOfType(expected, checker.SignatureKindCall) {
+									if a.isBareTypeParameter(c.GetReturnTypeOfSignature(callback)) {
+										if pause := a.firstPause(node); pause != nil {
+											note(d, "To return the program instead of running it, return a function with no parameters: () => {0}. Visitor spelling: () => () => {0}.", nodeText(file, pause))
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		case node.Kind == ast.KindMethodDeclaration && isLowerable(node):

@@ -178,6 +178,9 @@ func (p *projector) purityDeclarations() map[string]int {
 // function's: an Effect body edit right after its brace, or a contract
 // (D57) that closes after it.
 func (p *projector) hasEffectBody(fn *ast.Node) bool {
+	if p.forms.(*Resolver).isFactory(fn) {
+		return false
+	}
 	body := fn.Body()
 	open, end := p.tokenStart(body)+1, body.End()
 	for _, e := range p.plan.edits {

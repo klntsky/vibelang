@@ -55,6 +55,10 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | --- | --- |
 | `declaration-nested-linked`, `declaration-nested-linked.fail` | S17-1: a dependency's own linked `node_modules` names an inferred export as `import("memory/MemoryStore")`; an invalid revision type keeps TS2322 |
 | `declaration-linked-esm`, `declaration-linked-esm.fail` | ESM inferred arrows and object properties name linked Effect types as `import("effect/Effect")` through its exports map; an invalid success type keeps TS2322 |
+| `factory-snapshot`, `factory-forwarding`, `factory-layer`, `held-binding-retry` | D269 call-time capture, contextual forwarding, layer setup, and held versus by-name retry timing |
+| `factory-visitor`, `factory-value-kept`, `ek4301-visitor-note.fail` | D7 visitor spelling, F7 function values, and EK4301's used-result hint |
+| `ek2115-factory-runs.fail`, `ek2116-factory-paths.fail` | Factory bodies cannot run Effects or look up services; every returning path returns a program |
+| `held-nested-effect`, `ek4802-uncontracted.fail` | S7-3: an annotated local loader returns its migration unrun; an uncontracted loader still warns |
 | `node-format-esm`, `node-format-cjs.fail`, `node-format-default.fail` | Smithers C-9/E-12: NodeNext package type controls import.meta, top-level await, mixed TS/Vibe imports, conditional exports, and declaration emit |
 | `ts-hello` | The stock compiler still compiles and runs plain TypeScript |
 | `ts-ownership-interrupt` | D266: terminal interrupt in an unchanged Effect generator compiles with zero errors in `.ts`, `.tsx`, `.mts`, and `.cts`, even with EK rules configured as errors |
@@ -471,13 +475,14 @@ Effect.all(stores.map(makeSync))                 Effect.all(runtime.$programs(st
 
 ### Lambda forms (D56, D257)
 
-A lambda, an arrow function or function expression, takes one of three forms. The body is typed the same way in each, because a call that runs has its Effect's success type wherever the lambda sits; only the lambda's own type depends on the form, so each form is computed once from the same body.
+A lambda, an arrow function or function expression, takes one of four forms. A call that runs has its Effect's success type wherever the lambda sits. D269's factory keeps a written Effect return context for its returned program; the other forms check returns against their success type.
 
 | Form | The checker sees | Lowers to |
 | --- | --- | --- |
 | Plain | `(x) => A`, what TypeScript infers | the lambda as written |
 | Effect function | `(x) => Effect<A, E, R>` | `Effect.fnUntraced(function* (x) { … })` |
 | Program | `Effect<A, E, R>` | `Effect.gen(function* () { … })`, which runs the body each time it runs |
+| Factory (D269) | `(x) => Effect<A, E, R>`, from a declared contract | plain JavaScript at the call, returning a program that runs each time it is run |
 
 An arrow function that refers to `this` keeps its enclosing function's `this`, as JavaScript's arrow functions do: its Effect function is bound with `.bind(this)`, and its program is `Effect.gen({ self: this }, function* () { … })`, so `fork(() => this.poll())` in a method reaches the instance (case `lambda-this`).
 
@@ -528,7 +533,7 @@ Console.log(fast())                                   yield* Console.log(yield* 
 - **The top level.** EK1001 does not apply to a call passed by name (`passedAsProgram`), so `NodeRuntime.runMain(main())` and `Effect.runPromise(loadConfig())` are allowed. A service member call or an Effect value call there still needs `() =>`: the checker types those only inside function bodies.
 - **Hover.** A hover on the callee says "Passed by name to `Effect.timeout` as a program: it runs when that program runs, not here".
 
-An object-literal field contextually typed as an Effect also keeps its cold program (D265, `holdsFieldProgram`): service literals in `Layer.sync`, record parameters, and declared object types run nothing at construction. A non-Effect field still runs the call. Case `contextual-effect-fields` checks construction and subsequent execution.
+An object-literal field contextually typed as an Effect also keeps its cold program (D265). A const with a declared Effect type holds its initializer at any scope (D269). Both use `holdsProgram` in `runners.go`: the initializer calls its factory now and stores the returned program, while operands keep their ordinary positions. A non-Effect field still runs the call. Cases `contextual-effect-fields`, `factory-layer`, and `held-binding-retry` check construction and subsequent execution.
 
 Case `vibelang-by-name` covers retry, race, timeout inside `try`, `fork`, array elements, `Console.log`, and a top-level runner; `lsp-smoke.sh` checks the hover.
 
@@ -638,6 +643,8 @@ The checks so far:
 | EK2005 | The program passed to `resumeWith` when it needs a service or fails with an error the operation does not declare (D17); covers TypeScript's TS2345 there | `handlers.go` |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript would discard the failure in flight | `regions.go` |
 | EK2102 | The name of an Effect function on a call cycle whose A TypeScript cannot infer because it depends on the function's own result, covering TS7022, TS7023, and TS7024 there; a `catch` variable, or a function, on a cycle that the checker typed before the cycle's E and R were known | `recursion.go` |
+| EK2115 | An Effect operation or service lookup in a factory's call-time body | `factory.go` |
+| EK2116 | A factory's return that is not a program, or its implicit return | `factory.go` |
 | EK4201 | A control operation that a combinator runs on another fiber: at its perform site in the argument, else at the argument; and a producer that performs one, passed to a function that runs it as a Stream | `reach.go` |
 | EK4202 | The callee, when a function declared outside VibeLang declares a control operation in its requirements (D20) | `reach.go` |
 | EK4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; a `.vibe` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
@@ -824,8 +831,8 @@ The return type annotation of a `.vibe` function with a body is the function's c
 
 | Rule | How |
 | --- | --- |
-| A function with a contract is an Effect, whatever its body runs | `hasContract` in `analyzer.isEffect`; a lambda's form stays the lambda's position's to decide (D56), so a lambda with a contract in a plain position is plain and returns A (D113) |
-| What it returns is checked against A | The unwrapped return type hook gives `checkReturnStatement` and an arrow function's expression body the A of the signature's return type, where TypeScript would check against the whole Effect; a mismatch is TypeScript's own error, such as TS2322. F2's contextual return type hook types the returned expressions by A |
+| A function with a contract is an Effect, except a factory (D269) | `hasContract` in `analyzer.isEffect`; a lambda's form stays the lambda's position's to decide (D56), so a lambda with a contract in a plain position is plain and returns A (D113). A factory keeps its call-time JavaScript body and has no plain variant |
+| What it returns is checked against A, except a factory's program | The unwrapped return type hook gives `checkReturnStatement` and an arrow function's expression body the A of the signature's return type; a mismatch is TypeScript's own error, such as TS2322. A factory keeps the whole Effect return context so D7 converts its returned literal. `checkFactories` checks every return path and the programs' E/R against the contract |
 | An expected failure that escapes the body must be in E | EK2001 at the call or `throw` that adds it, naming the failure and the contract, with a fix that widens E. `effectInfo` keeps, for each failure and requirement, the call or `throw` in the function's own body that adds it |
 | A requirement must be in R | EK2002 at the call that needs it |
 | A channel written `infer Name` comes from the body (D57) | The annotated return type hook completes the signature's return type: A as TypeScript infers a return type (`GetReturnTypeFromBody`), E and R from `effectOf`. The infer type hook keeps `checkInferType` from reporting TS1338 and the unused name; the binder already declares such a name in no scope |

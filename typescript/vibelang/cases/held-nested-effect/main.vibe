@@ -1,0 +1,9 @@
+import { check } from "./caller.js"
+import { Effect } from "effect"
+export const pending = (migration: Effect.Effect<void, unknown, never>) => {
+  const load: Effect.Effect<Effect.Effect<void, unknown, never>, never, never> = () => migration
+  return [1, load] as const
+}
+
+// expect-result: "loader returns migration unrun"
+export function main() { return sync((run: () => string) => run(), check) }

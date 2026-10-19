@@ -166,13 +166,15 @@ const (
 // only slower than solving the cycle. Every other function compiles to plain
 // JavaScript (design D10).
 type analyzer struct {
-	checker   *checker.Checker
-	states    map[*ast.Node]fnState
-	effects   map[*ast.Node]*effectInfo // see effectOf
-	approx    map[*ast.Node]*effectInfo // the E and R found so far of a call cycle being solved (recursion.go)
-	recursive map[*ast.Node]bool        // functions on a call cycle
-	tryBlocks map[*ast.Node]*effectInfo // see tryBlockFlow
-	contracts map[*ast.Node]*contract   // see contractOf
+	checker       *checker.Checker
+	states        map[*ast.Node]fnState
+	effects       map[*ast.Node]*effectInfo // see effectOf
+	approx        map[*ast.Node]*effectInfo // the E and R found so far of a call cycle being solved (recursion.go)
+	recursive     map[*ast.Node]bool        // functions on a call cycle
+	tryBlocks     map[*ast.Node]*effectInfo // see tryBlockFlow
+	factories     map[factoryKey]fnState
+	factoryActive map[*ast.Node]bool
+	contracts     map[*ast.Node]*contract // see contractOf
 
 	// Lambda forms (forms.go).
 	lambdas         map[*ast.Node]*lambdaState
@@ -202,17 +204,19 @@ type analyzerKey struct{}
 func analyzerFor(c *checker.Checker) *analyzer {
 	return c.ExtensionState(analyzerKey{}, func() any {
 		return &analyzer{
-			checker:   c,
-			states:    map[*ast.Node]fnState{},
-			effects:   map[*ast.Node]*effectInfo{},
-			approx:    map[*ast.Node]*effectInfo{},
-			recursive: map[*ast.Node]bool{},
-			tryBlocks: map[*ast.Node]*effectInfo{},
-			contracts: map[*ast.Node]*contract{},
-			lambdas:   map[*ast.Node]*lambdaState{},
-			current:   map[*ast.Node][]*checker.Signature{},
-			rejected:  map[*ast.Node]map[candidateKey]bool{},
-			resolving: map[*ast.Node]bool{},
+			checker:       c,
+			states:        map[*ast.Node]fnState{},
+			effects:       map[*ast.Node]*effectInfo{},
+			approx:        map[*ast.Node]*effectInfo{},
+			recursive:     map[*ast.Node]bool{},
+			tryBlocks:     map[*ast.Node]*effectInfo{},
+			contracts:     map[*ast.Node]*contract{},
+			factories:     map[factoryKey]fnState{},
+			factoryActive: map[*ast.Node]bool{},
+			lambdas:       map[*ast.Node]*lambdaState{},
+			current:       map[*ast.Node][]*checker.Signature{},
+			rejected:      map[*ast.Node]map[candidateKey]bool{},
+			resolving:     map[*ast.Node]bool{},
 
 			conversions:      map[*ast.Node]*valueState{},
 			heldPrograms:     map[*ast.Node]bool{},
@@ -225,6 +229,9 @@ func analyzerFor(c *checker.Checker) *analyzer {
 }
 
 func (a *analyzer) isEffect(fn *ast.Node) bool {
+	if a.isFactory(fn) {
+		return false
+	}
 	if isProducer(fn) {
 		return true // its body is an Effect body; calling it returns a Stream
 	}
@@ -249,13 +256,13 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 // performs reports whether call performs an Effect operation: it runs an
 // Effect, or it looks up a service.
 func (a *analyzer) performs(call *ast.Node) bool {
-	return a.runs(call) || ast.IsCallExpression(call) && !holdsFieldProgram(a.checker, call) && isServiceLookup(a.checker, call)
+	return a.runs(call) || ast.IsCallExpression(call) && !holdsProgram(a.checker, call) && isServiceLookup(a.checker, call)
 }
 
 // runs reports whether call runs an Effect, which the lowering spells yield*.
 func (a *analyzer) runs(call *ast.Node) bool {
-	if inHatch(call) || holdsFieldProgram(a.checker, call) {
-		return false // hatches and contextual program fields keep the Effect value
+	if inHatch(call) || holdsProgram(a.checker, call) {
+		return false // hatches and declared program positions keep the Effect value
 	}
 	sig := a.checker.GetResolvedSignature(call)
 	if sig == nil {
@@ -271,7 +278,8 @@ func (a *analyzer) runs(call *ast.Node) bool {
 			// that variant is out of reach.
 			return a.directReferenceOf(ast.GetInvokedExpression(call), fn) == nil
 		}
-		if a.isEffect(fn) {
+		// D269 factories run their returned program; D67 Effect arrows retain their API.
+		if a.isFactory(fn) || a.isEffect(fn) {
 			return true // body inference may still be computing the signature's type
 		}
 		// A plain factory can return a cold Effect stored in a local. The

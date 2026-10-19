@@ -119,6 +119,19 @@ Two kinds of "rest of the work" appear in this document, and they behave differe
 
 A call runs where it stands, except where the expected type is `Effect`: there an expression that calls a `.vibe` function or a function that returns an `Effect`, or looks up a service, is passed by name (D147). The compiler passes a program that evaluates the expression each time it runs, as if the source had written `() =>` before it, so `Effect.retry(syncInventory(store), Schedule.recurs(3))` retries the call and `fork(fetchReport())` runs nothing at the call site. This holds for arguments, array elements, and record fields, in function bodies and at a module's top level. A position that accepts any value, such as `Console.log`'s parameters or `Effect.succeed`'s, still runs the call where it stands, and an expression whose value is already an `Effect` keeps its meaning. A contextually Effect-typed object-literal field also holds the program (D265), including a service implementation in `Layer.sync`, a record parameter, and a declared object type. Building `{ read: work() }` runs none of `work` when `read` expects an Effect; a non-Effect field still runs the call and stores its result. Each overload candidate decides by its own declared parameter, as it does for a lambda (D56). A hover on the callee of a call passed by name says so.
 
+A `const` whose declared type is Effect holds its initializer in every scope (D269, extending D262 and D265). `const built: Made = make(config)` calls `make` here and runs none of the returned program; running `built` later runs that same program each time. Only the initializer is held; calls in its operands keep their ordinary positions. Mutable bindings and inferred or asserted types do not opt in.
+
+A function whose declared return type is Effect may explicitly return a program (D269). The declaration may be its own annotation, its binding's annotation, or a lambda's declared member or parameter type under D44. A return is a program when it is a parameterless function literal, converted by D7, or a non-call expression of Effect type, and TypeScript would reject it as the success type A. Such a function is a **factory**: its body runs when called, as plain JavaScript under D263; running its result runs the program, every time. Every return path returns a program (EK2116). The body runs no Effect and looks up no service (EK2115); put that work in the returned program. An eager `throw` is JavaScript's synchronous throw. A factory has no plain variant and is EK4301 where a plain function is expected.
+
+```ts es
+const capture = (input: { mutable value: number }): Effect.Effect<number, never, never> => {
+  const snapshot = input.value                  // at the call
+  return () => snapshot                         // each run returns this snapshot
+}
+```
+
+VibeLang calls retain D24 and D147: `capture(input)` runs the result, `retry(capture(input), policy)` repeats the call on every attempt, and `const p: Effect.Effect<number> = capture(input)` holds one call's program. Retrying `p` repeats only the program, with one snapshot. The factory forms were TS2322 before D269. Already-valid values keep their meaning: `Effect.suspend(() => () => 1)` infers a function as A and still returns that function as data.
+
 A program of several statements needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
 
 ```ts gen

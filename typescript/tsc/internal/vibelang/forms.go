@@ -17,16 +17,18 @@ import (
 //	Effect.forEach(ids, (id) => find(id))      // (a) => Effect expected: an Effect function
 //	ids.map((id) => id.trim())                 // (value) => U expected: a plain function
 //
-// The lambda's body is typed the same way in every form: a call that runs has
+// An ordinary lambda's body is typed the same way in every form: a call that runs has
 // its Effect's success type. Only the lambda's own type depends on the form,
 // so each form is computed once from the same body, and a deferred recheck
-// never reclassifies anything.
+// never reclassifies anything. A D269 factory is the exception: its plain
+// JavaScript body returns a program against the whole declared Effect type.
 type form uint8
 
 const (
 	formNone    form = iota
 	formPlain        // a plain JavaScript function: (x) => A
 	formEffect       // an Effect function: (x) => Effect<A, E, R>
+	formFactory      // a plain call-time body returning a program (D269)
 	formProgram      // a program, a function with no parameters: Effect<A, E, R>
 )
 
@@ -53,7 +55,7 @@ type lambdaState struct {
 	deciding       bool                  // free is being decided; a recursive call sees provisionalForm
 	reentered      bool                  // a recursive call saw provisionalForm while free was being decided
 	typedAsWritten bool                  // TypeScript typed fn while checking its signature, before any form (functionExpressionType)
-	types          [4]*checker.Type      // the lambda's type in each form
+	types          [5]*checker.Type      // the lambda's type in each form
 }
 
 func (a *analyzer) lambda(fn *ast.Node) *lambdaState {
@@ -134,7 +136,11 @@ func (a *analyzer) formHere(fn *ast.Node) form {
 			if f, ok := s.byCandidate[key]; ok {
 				return f
 			}
-			f := a.decide(fn, a.expectationAt(call, signature, path, fn))
+			e := a.expectationAt(call, signature, path, fn)
+			f := a.decide(fn, e)
+			if f == formFactory && e.plainFn && !e.effectFn {
+				a.reject(call, key)
+			}
 			s.byCandidate[key] = f
 			if s.first == formNone {
 				s.first = f
@@ -178,6 +184,9 @@ func annotatedReturnInference(c *checker.Checker, fn *ast.Node, t *checker.Type)
 		return t
 	}
 	if e := a.expectationAt(call, signature, path, fn); !e.plainFn || e.effectFn || e.program {
+		return t
+	}
+	if analyzerFor(c).isFactory(fn) {
 		return t
 	}
 	if success := successType(c, t); success != nil {
@@ -249,6 +258,7 @@ func (a *analyzer) freeForm(fn *ast.Node) form {
 	return f
 }
 
+// D269 adds a factory form; retain the recursion crash fix state for all five forms.
 // provisionalForm is the form a recursive call sees while fn's free form is
 // being decided: an Effect function when fn has an Effect contract, else plain.
 func (a *analyzer) provisionalForm(fn *ast.Node) form {
@@ -266,6 +276,12 @@ func (a *analyzer) provisionalForm(fn *ast.Node) form {
 // Where a function or an Effect is expected (D39), a function with parameters
 // is a function, and one without is a program when it can pause.
 func (a *analyzer) decide(fn *ast.Node, e expectation) form {
+	if outer := returnedBy(fn); len(fn.Parameters()) == 0 && outer != nil && a.isFactory(outer) {
+		return formProgram
+	}
+	if a.isFactory(fn) {
+		return formFactory
+	}
 	if fn.Type() != nil && a.hasPlainContract(fn) && a.canBePlain(fn) {
 		return formPlain // D263: an explicit JavaScript contract keeps its calling convention
 	}
@@ -338,6 +354,15 @@ func (a *analyzer) canBePlain(fn *ast.Node) bool {
 // lambda with a contract, Effect<A, E, R>, that takes the plain form returns
 // A, as Schema.suspend's thunk returns a schema (D9, D67).
 func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Type {
+	if f == formFactory {
+		if fn.Type() != nil {
+			return t
+		}
+		if sigs := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall); len(sigs) == 1 {
+			return a.checker.NewFunctionTypeWithReturnType(t.Symbol(), sigs[0], a.declaredProgramReturn(fn))
+		}
+		return t
+	}
 	if f == formPlain && fn.Type() != nil {
 		return a.plainTypeOf(t)
 	}
@@ -467,6 +492,9 @@ func contextualReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *ch
 			return successType(c, contextual)
 		}
 		return nil
+	}
+	if analyzerFor(c).isFactory(fn) {
+		return t
 	}
 	if success := successType(c, t); success != nil {
 		return success

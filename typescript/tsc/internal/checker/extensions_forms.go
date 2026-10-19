@@ -167,3 +167,9 @@ func (c *Checker) applyAnnotatedReturnInferenceHooks(fn *ast.Node, t *Type) *Typ
 	}
 	return t
 }
+
+// FunctionHasImplicitReturn reports whether fn can reach its end without
+// returning or throwing, including the checker's exhaustive-switch analysis.
+func (c *Checker) FunctionHasImplicitReturn(fn *ast.Node) bool {
+	return c.functionHasImplicitReturn(fn)
+}

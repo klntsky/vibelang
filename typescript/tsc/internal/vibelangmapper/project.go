@@ -315,7 +315,7 @@ func (p *projector) visit(node *ast.Node, e env) {
 	case isLambda(node):
 		p.lambda(node, e)
 		return
-	case node.Kind == ast.KindCallExpression && (!e.effect || p.forms.(*Resolver).holdsFieldProgram(node)):
+	case node.Kind == ast.KindCallExpression && (!e.effect || p.forms.(*Resolver).holdsProgram(node)):
 		// moduleCall applies D152 outside the hatch's TypeScript island.
 		p.moduleCall(node, e)
 		return
@@ -524,6 +524,10 @@ func (p *projector) functionDeclaration(node *ast.Node) {
 // functionLike lowers fn, a function declaration or a method with body, as
 // functionDeclaration says.
 func (p *projector) functionLike(fn *ast.Node, body *ast.Node) {
+	if p.forms.(*Resolver).isFactory(fn) {
+		p.factory(fn)
+		return
+	}
 	open := p.tokenStart(body)
 	closing := body.End() - 1
 	if open >= len(p.text) || p.text[open] != '{' || closing <= open || p.text[closing] != '}' {

@@ -58,12 +58,12 @@ func FormDiagnostics(file *ast.SourceFile) []Diagnostic {
 			} else {
 				decision := p.forms.Lambda(n)
 				p.choice(decision, n)
-				bodyEffect = decision.Form != FormPlain
+				bodyEffect = decision.Form != FormPlain && decision.Form != FormFactory
 			}
 		} else if isProducer(n) {
 			bodyEffect = true
 		} else if isProjectedFunction(n) {
-			bodyEffect = contractOf(n.Type()) != contractPlain
+			bodyEffect = contractOf(n.Type()) != contractPlain && !p.forms.(*Resolver).isFactory(n)
 		} else if ast.IsArrowFunction(n) && n.Parent != nil && ast.IsCallExpression(n.Parent) && blockArgument(n.Parent) == n {
 			bodyEffect = p.forms.Block(n.Parent).Form != FormPlain
 		} else if ast.IsMethodDeclaration(n) && ast.IsClassLike(n.Parent) {

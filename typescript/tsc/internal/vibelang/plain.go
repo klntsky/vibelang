@@ -48,7 +48,7 @@ func isPlainCandidate(fn *ast.Node) bool {
 // return type annotation or an Effect contract. A function annotated with a
 // plain return type keeps that type, and its callers call it as it is.
 func (a *analyzer) isSplittable(fn *ast.Node) bool {
-	if !isPlainCandidate(fn) {
+	if !isPlainCandidate(fn) || a.isFactory(fn) {
 		return false
 	}
 	t := fn.Type()
@@ -86,7 +86,7 @@ func (a *analyzer) isEffectAnnotation(t *ast.Node) bool {
 // isPlainFunction reports whether fn, a plain candidate, compiles to plain
 // JavaScript.
 func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
-	if !isPlainCandidate(fn) {
+	if !isPlainCandidate(fn) || a.isFactory(fn) {
 		return false
 	}
 	switch a.plain[fn] {
@@ -108,7 +108,8 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			continue
 		}
 		a.plain[d] = plainExploring
-		m := &member{ok: !a.widensContract(d) && (!hasEscapingThrow(d) || a.hasPlainContract(d)) && !declaresUsing(d) && !hasVibeLangStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d) && !a.hasProgramReturn(d)}
+		// D269 factories have no direct variant; S5-1 returned subtypes still run.
+		m := &member{ok: !a.isFactory(d) && !a.widensContract(d) && (!hasEscapingThrow(d) || a.hasPlainContract(d)) && !declaresUsing(d) && !hasVibeLangStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d) && !a.hasProgramReturn(d)}
 		group[d] = m
 		if !m.ok {
 			// d's own body rules it out, whatever its callees compile to, so
@@ -119,7 +120,7 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 			continue
 		}
 		forEachCallInBody(d, func(call *ast.Node) bool {
-			if holdsFieldProgram(a.checker, call) {
+			if holdsProgram(a.checker, call) {
 				return false
 			}
 			if callee := a.candidateCallee(call); callee != nil {
@@ -273,8 +274,8 @@ func (a *analyzer) declares(symbol *ast.Symbol, fn *ast.Node) bool {
 // call runs inline wherever it is, at a module's top level too: it computes a
 // value and runs no program, as Chapter 13's table says.
 func (a *analyzer) directCallee(call *ast.Node) *directReference {
-	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) || holdsTopLevelProgram(a.checker, call) || holdsFieldProgram(a.checker, call) {
-		return nil // hatches and D262/D265 program positions keep the inert Effect form
+	if !isVibeLangFile(ast.GetSourceFileOfNode(call)) || inHatch(call) || holdsProgram(a.checker, call) {
+		return nil // hatches and D269/D265 program positions keep the inert Effect form
 	}
 	fn := esFunctionOf(a.checker, ast.GetInvokedExpression(call))
 	if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {

@@ -1,0 +1,7 @@
+// expect: EK2001 EK2002 TS2322
+import { Effect } from "effect"
+error Gone {}
+service Needed { value(): number!! }
+export function fails(): number!! { return () => { throw new Gone() } }
+export function needs(): number!! { return () => Needed.value() }
+export function wrong(): number!! { return () => "wrong" }

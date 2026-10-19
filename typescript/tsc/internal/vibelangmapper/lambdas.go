@@ -71,6 +71,9 @@ func (p *projector) lambda(fn *ast.Node, e env) {
 		form = FormEffectFn
 	}
 	switch form {
+	case FormFactory:
+		p.rejectFactoryCallback(fn, p.forms.Argument(fn))
+		p.factory(fn)
 	case FormEffectFn:
 		p.effectLambda(fn)
 	case FormProgram, FormDual:
@@ -218,7 +221,7 @@ func (p *projector) byNameArgument(argument *ast.Node, e env) bool {
 	}
 	// D265 keeps initializer calls cold; named function values still need
 	// D7's program conversion above, even in a contextual Effect field.
-	if p.forms.(*Resolver).holdsFieldProgram(argument) {
+	if p.forms.(*Resolver).holdsProgram(argument) {
 		p.visit(argument, e)
 		return true
 	}
@@ -230,6 +233,7 @@ func (p *projector) byNameArgument(argument *ast.Node, e env) bool {
 // a program (D7). Known plain functions use Effect.sync, preserving D24 data
 // results; other values use $asProgram and keep their existing form.
 func (p *projector) programValue(argument *ast.Node, d Decision, e env) bool {
+	p.rejectFactoryCallback(argument, d)
 	if d.Class&ClassProgram == 0 || d.Class&(ClassEffectFn|ClassPlainFn) != 0 {
 		return false
 	}

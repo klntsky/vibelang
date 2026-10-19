@@ -1,6 +1,9 @@
 package vibelang
 
-import "github.com/microsoft/TypeScript/tsc/internal/checker"
+import (
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/checker"
+)
 
 // FormsOfType reads what a lambda, block, or value may be where the declared,
 // uninstantiated expected type is t, with the classifier the checker uses for
@@ -39,4 +42,10 @@ func FormsOfType(c *checker.Checker, t *checker.Type, steps ...string) (forms st
 		forms += "F"
 	}
 	return forms, len(steps) == 0 && isEffectType(c, t)
+}
+
+// IsFactoryFunction exposes D269's checked form to compiler tooling. A text
+// projector decides from written types and reports EK9100 when it cannot.
+func IsFactoryFunction(c *checker.Checker, fn *ast.Node) bool {
+	return analyzerFor(c).isFactory(fn)
 }

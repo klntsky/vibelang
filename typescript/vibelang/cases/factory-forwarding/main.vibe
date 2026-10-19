@@ -1,0 +1,12 @@
+import { check } from "./caller.js"
+import { Effect } from "effect"
+export interface Port { read(path: string): Effect.Effect<number, never, never> }
+export const wrap = (base: Port): Port => ({
+  read: (path) => {
+    const program: Effect.Effect<number, never, never> = base.read(path)
+    return program
+  }
+})
+
+// expect-result: "delegate: call time; program: twice"
+export function main() { return sync((run: () => string) => run(), check) }

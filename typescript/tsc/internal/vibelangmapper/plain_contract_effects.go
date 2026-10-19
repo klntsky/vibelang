@@ -33,7 +33,7 @@ func (p *projector) checkPlainContractEffects(fn *ast.Node) {
 func (p *projector) plainContractEffectCall(call *ast.Node) bool {
 	// D265 holds this call as a program. The diagnostic walk still visits
 	// its operands, whose calls retain their ordinary evaluation rules.
-	if r, ok := p.forms.(*Resolver); ok && r.holdsFieldProgram(call) {
+	if r, ok := p.forms.(*Resolver); ok && r.holdsProgram(call) {
 		return false
 	}
 	if p.builtinFailure(call) != "" || p.callObstacle(call, func(string) (obstacle, bool) { return obstacleUnknown, false }) != obstacleBlocking {

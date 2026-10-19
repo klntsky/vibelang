@@ -131,7 +131,7 @@ func hasInferredChannel(node *ast.Node) bool {
 // against the contract's A, as TypeScript checks what an async function
 // returns against the type its Promise wraps.
 func unwrappedReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *checker.Type {
-	if !isLowerable(fn) || analyzerFor(c).contractOf(fn) == nil {
+	if !isLowerable(fn) || analyzerFor(c).contractOf(fn) == nil || analyzerFor(c).isFactory(fn) {
 		return t
 	}
 	if success := successType(c, c.GetReturnTypeOfSignature(c.GetSignatureFromDeclaration(fn))); success != nil {
@@ -162,7 +162,12 @@ func annotatedReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *che
 		channels[channelA] = c.GetReturnTypeFromBody(fn)
 	}
 	if k.inferred(channelE) || k.inferred(channelR) {
-		info := a.effectOf(fn)
+		var info *effectInfo
+		if a.isFactory(fn) {
+			info = a.factoryInfo(fn)
+		} else {
+			info = a.effectOf(fn)
+		}
 		if info == nil {
 			info = &effectInfo{} // fn's body is being collected
 		}
@@ -258,6 +263,9 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 			note(d, "Or remove the annotation to infer them from the body.")
 		}
 		return
+	}
+	if a.isFactory(fn) {
+		return // checkFactories checks the returned programs' channels
 	}
 	info := a.effectOf(fn)
 	if info == nil {

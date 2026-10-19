@@ -85,6 +85,25 @@ A call whose result type is Effect runs at that point, except where a parameter 
 
 A held Effect value runs when called with no arguments. Data that Effect can also execute, such as `Config` and `Exit`, stays data until explicitly called. A producer call constructs a lazy Stream; see [Producers](112-producers.md).
 
+## Preserve a factory's call-time work
+
+When TypeScript captures configuration before returning an Effect, keep that phase in a function with a declared Effect return and return a parameterless program (D269):
+
+```vibe
+export const capture = (input: { mutable value: number }): Effect.Effect<number, never, never> => {
+  const snapshot = input.value
+  return () => snapshot
+}
+```
+
+A TypeScript caller can build `capture(input)`, mutate `input`, then run the program: it still gets the snapshot. The outer body runs synchronously at the call and can validate or copy plain data. Every path returns a program. **Where TypeScript returned Effect.fail(e), write return () => { throw e }**; an outer throw is a synchronous JavaScript throw. Put Effects and service lookups inside the returned program.
+
+A forwarding member keeps its delegate's call phase with `const program: Effect.Effect<number, never, never> = base.read(path); return program`. A const with a declared Effect type holds its initializer in any scope: `const built: Made = make(config)` calls the factory now and runs none of the result. For a Registry layer, build that local before `Layer.effect(Registry)(built)`; snapshot only what TypeScript snapshots, keeping later reads such as `config.snapshots` in the returned program.
+
+A synchronous visitor that must return a program keeps its callback type unchanged. Write `withRoute(plan, apiKey, (route) => () => Route.toModel(route))`. After checking the visitor's Result, call `routed.success()` to run it. The extra `() =>` returns the program rather than running `Route.toModel` inside the visitor. A discarded `items.map(item => save(item))` still needs `Effect.forEach` or a loop.
+
+VibeLang callers keep their usual rules: a call runs its program, and a program argument is passed by name. `retry(make(config), policy)` calls the factory again each attempt; `const p: Made = make(config); retry(p, policy)` calls it once and retries that program. `Effect.suspend(() => () => 1)` still yields a function value.
+
 ## Declare at the module top level
 
 ```vibe

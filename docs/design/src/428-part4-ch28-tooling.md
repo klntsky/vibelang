@@ -244,6 +244,8 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK2112 | Warning: a catch clause that tests a failure's type, `catch (e: NotFound)`, retired (D216) | `catch (e)` and test `e` with `match` or `is`; the quick fix rewrites the clauses | 3 |
 | EK2113 | Warning: a catch clause typed `Cause`, retired (D217) | `match (exit(…))` with `Exit.Success` and `Exit.Failure` arms; the quick fix rewrites `try { return X } catch (c: Cause) { return Y }` | 3 |
 | EK2114 | A catch expression, `x catch y` or `x catch (e) => …`, inside a hatch body, which is plain TypeScript (D239) | Move the catch out of the hatch, or use a try statement inside it | 3 |
+| EK2115 | A factory body runs an Effect or looks up a service (D269) | Move the work into `return () => { … }`; hold a forwarding call in an Effect-typed const before returning it | 5, 13 |
+| EK2116 | A factory returns a program on one path and a value or nothing on another (D269) | Return `() => value` or `() => { throw error }` on every returning path | 5, 13 |
 | EK2120 | A warning: a `service class` or `control class` declaration, the older spelling (D223) | Write `service` or `control` without `class`; the quick fix removes `class` | 4 |
 | EK2121 | A warning: a `layer` declaration, the old spelling of a layer (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |
@@ -259,7 +261,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK3204 | A `wire` argument whose type does not name its outputs | Compose it with `Layer.provide` | 4 |
 | EK4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | EK4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
-| EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of` | 10, 16 |
+| EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of`; a visitor returning a program uses `() => () => call()` when its result is used | 10, 16 |
 | EK4401 | Packages matching `compilerOptions.vibelang.trustedPackages` are trusted (D261); otherwise, a plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@vibelang trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
@@ -285,7 +287,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4704 | A pattern form VibeLang does not support yet: regular expression, relational, or a computed key other than a name or literal (D212) | Use a guard: `if (/re/.test(x))` or `if (x < 5)` | 3 |
 | EK4705 | `and`, `or`, and `not` combined at one level without parentheses (D206) | Add parentheses: `(a and b) or c` | 3 |
 | EK4801 | A statement that discards an Effect value, as `program` alone on a line; an error by default (D240) | Call it: `program()` (quick fix) | 2 |
-| EK4802 | A warning: an Effect function without a contract that returns an Effect value, so its caller gets the program (D240) | Call it: `return program()` (quick fix), or write the contract | 2 |
+| EK4802 | A warning: an Effect function without a contract accepting that Effect as A returns an Effect value, so its caller gets the program (D240); declared binding and contextual contracts count (S7-3) | Call it: `return program()` (quick fix), or write the contract | 2 |
 | EK4803 | A warning: the program loads two versions of `effect`, an `@effect/*` package, or `vibelang-runtime` (D240) | Install one version | 28 |
 | EK4804 | A warning: a failure that is a global `Error`, thrown or returned by a `try` mapping (D240) | Declare it: `error Failed { message: string }` | 3 |
 | EK4805 | A warning: a class that extends `Error` (D240) | Write an `error` declaration | 3 |

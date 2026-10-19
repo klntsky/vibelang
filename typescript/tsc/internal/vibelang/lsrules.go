@@ -189,8 +189,14 @@ func (r *ruleCheck) checkReturnedEffect(fn *ast.Node, value *ast.Node) {
 	if isInvocation(ast.SkipParentheses(value)) && r.a.runs(ast.SkipParentheses(value)) {
 		return // the call runs here; its success value is the result
 	}
-	if !isEffectType(r.c, r.c.GetTypeAtLocation(value)) {
+	valueType := r.c.GetTypeAtLocation(value)
+	if !isEffectType(r.c, valueType) {
 		return
+	}
+	if declared := r.a.declaredProgramReturn(fn); declared != nil {
+		if success := successType(r.c, declared); success != nil && r.c.IsTypeAssignableTo(valueType, success) {
+			return
+		}
 	}
 	d := report(r.c, value, EK4802, messageText(value, "This value"), functionDisplayName(fn))
 	note(d, "Call it to return its result: {0}. To return the program itself, write the contract.", callText(value))

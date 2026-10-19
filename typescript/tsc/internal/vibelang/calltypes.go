@@ -12,7 +12,7 @@ import (
 // inline through its $direct variant has its success type anywhere in a .vibe
 // file (plain.go). Every other call keeps its type.
 func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *checker.Type {
-	if !isInvocation(call) || holdsFieldProgram(c, call) || !inLowerableBody(call) && analyzerFor(c).directCallee(call) == nil {
+	if !isInvocation(call) || holdsProgram(c, call) || !inLowerableBody(call) && analyzerFor(c).directCallee(call) == nil {
 		return t
 	}
 	if isExitMarkerCall(call) {

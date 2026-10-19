@@ -1,0 +1,10 @@
+import { Effect } from "effect"
+const visit = <A>(callback: () => A): A => callback()
+// expect-result: [0,1,2]
+export function main() {
+  let calls = 0
+  function work() { calls++; return Effect.succeed(calls) }
+  const held = visit(() => () => work())
+  const before = calls
+  return [before, held(), held()]
+}

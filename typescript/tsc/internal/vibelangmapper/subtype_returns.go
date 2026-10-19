@@ -27,6 +27,10 @@ func (p *projector) programReturnBoundary(node *ast.Node) bool {
 	if fn == nil || isProducer(fn) || fn.Flags&ast.NodeFlagsReparsed != 0 || !p.structuredReturnValue(node, map[*ast.Node]bool{}) {
 		return false
 	}
+	// S5-1 runs structured returns; D269 factory bodies return programs cold.
+	if p.forms.(*Resolver).isFactory(fn) {
+		return false
+	}
 	if fn.Type() != nil {
 		return contractOf(fn.Type()) == contractEffect || contractOf(fn.Type()) == contractInfer
 	}
