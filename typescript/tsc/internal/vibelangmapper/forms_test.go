@@ -329,6 +329,38 @@ export const RandomFixed = Effect.provideService(Random.next(), Random.Random, {
 	}
 }
 
+func TestResolverServiceValueLambdas(t *testing.T) {
+	r := resolve(t, `import { Context, Effect, Stream } from "effect"
+import { Reference as Ref } from "effect/Context"
+const Timings = Ref<(timing: number) => Effect.Effect<void>>("Timings", { defaultValue: () => (initial) => {} })
+const Listener = Timings
+type PlainListener = (timing: number) => void
+const PlainAlias = Context.Reference<PlainListener>("PlainAlias", { defaultValue: () => () => {} })
+const Plain = Context.Reference<(timing: number) => void>("Plain", { defaultValue: () => () => {} })
+function main() {
+  Effect.provideService(Effect.void, Timings, (a) => {})
+  Effect.provideService(Timings, (b): void!! => {})
+  Stream.provideService(Stream.empty, Listener, (c) => {})
+  Stream.provideService(Timings, (d): void!! => {})
+  Layer.succeed(Timings, (e) => {})
+  Context.make(Timings, (f) => {})
+  Context.add(Context.empty(), Timings, (g) => {})
+  provide Timings = (h) => {} { return 1 }
+  Effect.provideService(Effect.void, Plain, (plain) => {})
+  Effect.provideService(Effect.void, PlainAlias, (aliased) => {})
+}`)
+	for _, text := range []string{"(initial) =>", "(a) =>", "(b):", "(c) =>", "(d):", "(e) =>", "(f) =>", "(g) =>", "(h) =>"} {
+		if d := r.lambda(t, text); d.Form != FormEffectFn || d.Provenance != FromService {
+			t.Errorf("%s = %+v, want an Effect function from the service value", text, d)
+		}
+	}
+	for _, text := range []string{"(plain) =>", "(aliased) =>"} {
+		if d := r.lambda(t, text); d.Form != FormPlain || d.Provenance != FromService {
+			t.Errorf("%s = %+v, want a plain service function", text, d)
+		}
+	}
+}
+
 func TestResolverByName(t *testing.T) {
 	r := resolve(t, `import { Effect } from "effect"
 declare function fetchUser(): Effect<number>

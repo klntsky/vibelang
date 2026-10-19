@@ -27,9 +27,11 @@ func (a *analyzer) expectedAt(call *ast.Node, signature *checker.Signature, path
 			}
 		}
 	}
-	// D265 carries the record's context through a generic parameter to its
-	// fields. Direct lambda arguments retain D44's declared-parameter rule.
-	if len(path) > 1 && !path[len(path)-1].element {
+	// D265/S1-4 carry a record's context through a generic parameter to its
+	// fields. S5-21 also needs the current candidate's inferred service shape
+	// for a direct value (S in provideService(key, value)). Keep D44 for a
+	// single bare generic argument: its result context cannot choose a form.
+	if len(path) > 1 && !path[len(path)-1].element || len(path) == 1 && len(signature.Parameters()) > 1 {
 		if t := a.checker.GetContextualTypeForCandidateArgument(call, signature, path[0].argument); t != nil {
 			types := []*checker.Type{t}
 			for _, step := range path[1:] {

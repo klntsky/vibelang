@@ -303,11 +303,8 @@ var formsProviderCallees = map[string]int{
 	"effect/Context#add":                 1,
 	"effect/Effect#provideService":       1, // data-first; providerKeyArgument handles the data-last form
 	"effect/Effect#provideServiceEffect": 1,
-	// Not vibelang-runtime#$provideService, a provide block's Key = value
-	// (D173): the fork types that value through
-	// NoInfer<Context.Service.Shape<…>> and does not apply D92 to it
-	// (research/typedirected.md section 5, defect 2), so its members take the
-	// defaults, as they do in the fork.
+	"effect/Stream#provideService":       1,
+	"vibelang-runtime#$provideService":   0,
 }
 
 // Lambda decides the form of fn, an arrow function, a function
@@ -370,6 +367,18 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 		d.Class, d.Provenance, d.Note = cls, FromAnnotation, "variable annotation"
 		d.Form = formsFormFor(cls, params, facts)
 		return d
+	}
+	// A service may itself be a function, rather than an object with methods
+	// (S5-21). Its written key shape supplies the generic provider's context.
+	if key := r.serviceValueKey(fn); key != nil {
+		if shape := r.serviceValueType(key, 0); shape != nil {
+			cls := r.serviceValueClass(shape, 0)
+			if cls != 0 {
+				d.Class, d.Provenance, d.Note = cls, FromService, "service value"
+				d.Form = formsFormFor(cls, params, facts)
+				return d
+			}
+		}
 	}
 	if cls, note, ok := r.serviceMember(fn); ok {
 		d.Class, d.Provenance, d.Note = cls, FromService, note
@@ -2379,6 +2388,104 @@ func (r *Resolver) providerKeyArgument(call, arg *ast.Node) *ast.Node {
 		return nil
 	}
 	return ast.SkipParentheses(args[at])
+}
+
+// serviceValueClass follows written aliases and unions with the service
+// member rules, including plain function results. These are value contracts,
+// not D12 callback parameters; an alias must not turn a plain service into
+// an Effect function when the directly written shape stays plain.
+func (r *Resolver) serviceValueClass(t *ast.Node, depth int) Class {
+	t = formsUnwrapType(t)
+	if t == nil || depth > 4 {
+		return 0
+	}
+	switch t.Kind {
+	case ast.KindFunctionType:
+		return r.memberClass(t.Type())
+	case ast.KindUnionType:
+		var cls Class
+		for _, member := range t.AsUnionTypeNode().Types.Nodes {
+			cls |= r.serviceValueClass(member, depth+1)
+		}
+		return cls
+	case ast.KindTypeReference:
+		if d := r.localType(t); d != nil && d.Kind == ast.KindTypeAliasDeclaration {
+			return r.serviceValueClass(d.Type(), depth+1)
+		}
+	}
+	return r.classOfType(t, depth)
+}
+
+// serviceValueKey also recognizes the service a Reference's plain
+// defaultValue factory returns. Only its returned lambda takes the service
+// shape; the factory itself stays the table's plain callback.
+func (r *Resolver) serviceValueKey(fn *ast.Node) *ast.Node {
+	if key := r.providedKey(fn); key != nil {
+		return key
+	}
+	n := fn
+	for n.Parent != nil && n.Parent.Kind == ast.KindParenthesizedExpression {
+		n = n.Parent
+	}
+	up := n.Parent
+	if up != nil && up.Kind == ast.KindReturnStatement && up.Expression() == n {
+		for up != nil && !formsBoundary(up) {
+			up = up.Parent
+		}
+	} else if up == nil || !isLambda(up) || up.Body() != n {
+		return nil
+	}
+	if up == nil || !isLambda(up) {
+		return nil
+	}
+	member := up.Parent
+	if member == nil || member.Kind != ast.KindPropertyAssignment || member.Initializer() != up {
+		return nil
+	}
+	if name, ok := formsPropertyName(member); !ok || name != "defaultValue" {
+		return nil
+	}
+	object := member.Parent
+	if object == nil || object.Kind != ast.KindObjectLiteralExpression {
+		return nil
+	}
+	call := object.Parent
+	if call == nil || !ast.IsCallExpression(call) || len(call.Arguments()) != 2 || call.Arguments()[1] != object || r.Callee(call).Canonical != "effect/Context#Reference" {
+		return nil
+	}
+	return call
+}
+
+// serviceValueType reads the explicit shape of a locally declared Context key.
+// Reference<S>(...) and Service<S>(...) have one type argument; the class
+// spelling Service<I, S>()(...) has two. Follow aliases without guessing the
+// shape of an imported or otherwise opaque key.
+func (r *Resolver) serviceValueType(key *ast.Node, depth int) *ast.Node {
+	if key == nil || depth > 4 {
+		return nil
+	}
+	key = ast.SkipParentheses(key)
+	if ast.IsIdentifier(key) {
+		if d := r.binding(key, key.Text()); d != nil {
+			if d.Kind == ast.KindVariableDeclaration && d.Initializer() != nil {
+				return r.serviceValueType(d.Initializer(), depth+1)
+			}
+			if d.Kind == ast.KindClassDeclaration {
+				return formsServiceShape(d)
+			}
+		}
+		return nil
+	}
+	if !ast.IsCallExpression(key) {
+		return nil
+	}
+	c := r.Callee(key)
+	if c.Canonical == "effect/Context#Reference" || c.Canonical == "effect/Context#Service" {
+		if args := key.TypeArguments(); len(args) > 0 {
+			return args[len(args)-1]
+		}
+	}
+	return r.serviceValueType(key.Expression(), depth+1)
 }
 
 // serviceClassOf returns the service class this file declares that id
