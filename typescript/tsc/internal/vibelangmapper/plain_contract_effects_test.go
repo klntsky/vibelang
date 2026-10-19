@@ -22,6 +22,15 @@ func TestPlainContractThrowHalf(t *testing.T) {
 	}
 }
 
+func TestPlainContractLocalThrow(t *testing.T) {
+	source := `export const half = (n: number): number => { const check = () => { if (n < 0) throw "negative" }; check(); return n / 2 }`
+	for _, projection := range []Projection{Project(source, testContext), Executable(source, testContext)} {
+		if len(projection.Diagnostics) != 0 || !strings.Contains(projection.Text, `throw "negative"`) {
+			t.Fatalf("diagnostics=%v\n%s", projection.Diagnostics, projection.Text)
+		}
+	}
+}
+
 func TestPlainContractEffectArrow(t *testing.T) {
 	assertPlainContractDiagnostic(t, `export const invalid = (): number => { Effect.succeed(1); return 1 }`, true)
 }

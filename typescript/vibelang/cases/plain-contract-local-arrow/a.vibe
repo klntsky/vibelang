@@ -1,0 +1,30 @@
+// A local unannotated arrow inherits this plain JavaScript body (D263).
+export const total = (values: ReadonlyArray<number>): number => {
+  let sum = 0
+  const check = (value: number) => {
+    if (!Number.isFinite(value)) throw new TypeError("not finite")
+  }
+  for (const value of values) {
+    check(value)
+    sum += value
+  }
+  return sum
+}
+
+// An explicit local plain contract preserves the same behavior.
+export const totalAnnotated = (values: ReadonlyArray<number>): number => {
+  let sum = 0
+  const check = (value: number): void => {
+    if (!Number.isFinite(value)) throw new TypeError("not finite")
+  }
+  for (const value of values) {
+    check(value)
+    sum += value
+  }
+  return sum
+}
+
+export const throwSame = (failure: unknown): void => {
+  const check = function () { throw failure }
+  check()
+}

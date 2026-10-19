@@ -551,7 +551,7 @@ typescript/vibelang/cases/ek4402-platform.fail/main.vibe:18:22 lambda plain tabl
 typescript/vibelang/cases/ek4402-platform.fail/main.vibe:22:22 lambda plain table
 typescript/vibelang/cases/ek4402-platform.fail/main.vibe:30:28 lambda plain table
 typescript/vibelang/cases/ek4402-platform.fail/main.vibe:34:25 lambda plain table
-typescript/vibelang/cases/ek4402-platform.fail/main.vibe:34:43 lambda plain fallback
+typescript/vibelang/cases/ek4402-platform.fail/main.vibe:34:43 lambda plain annotation
 typescript/vibelang/cases/ek4404-try-options.fail/main.vibe:8:21 lambda plain hatch
 typescript/vibelang/cases/ek4404-try-options.fail/main.vibe:8:52 lambda plain hatch
 typescript/vibelang/cases/ek4405-self-contained.fail/main.vibe:20:19 lambda plain table
@@ -766,6 +766,16 @@ typescript/vibelang/cases/plain-contract-exceptions/a.vibe:22:28 lambda plain an
 typescript/vibelang/cases/plain-contract-exceptions/a.vibe:23:24 lambda plain annotation
 typescript/vibelang/cases/plain-contract-exceptions/a.vibe:31:60 lambda plain annotation
 typescript/vibelang/cases/plain-contract-exceptions/a.vibe:44:21 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow.fail/a.vibe:10:17 lambda effectFn annotation
+typescript/vibelang/cases/plain-contract-local-arrow.fail/a.vibe:4:24 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow.fail/a.vibe:5:17 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow.fail/a.vibe:9:23 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow/a.vibe:15:31 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow/a.vibe:17:17 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow/a.vibe:27:26 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow/a.vibe:28:17 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow/a.vibe:2:22 lambda plain annotation
+typescript/vibelang/cases/plain-contract-local-arrow/a.vibe:4:17 lambda plain annotation
 typescript/vibelang/cases/plain-contract-render/a.vibe:1:23 lambda plain annotation
 typescript/vibelang/cases/plain-contract-validate/a.vibe:1:25 lambda plain annotation
 typescript/vibelang/cases/plain-factory-programs.fail/main.vibe:14:21 lambda plain fallback

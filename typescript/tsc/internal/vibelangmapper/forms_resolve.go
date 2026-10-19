@@ -387,6 +387,13 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 			return d
 		}
 	}
+	if call == nil && r.writtenTypeOf(fn) == nil && r.enclosingPlainContract(fn) {
+		// D263: an otherwise uncontracted local lambda belongs to its
+		// enclosing JavaScript body, including JavaScript throws. A return
+		// annotation or an opaque call position can supply its own contract.
+		d.Class, d.Provenance, d.Note, d.Form = ClassPlainFn, FromAnnotation, "enclosing plain contract", FormPlain
+		return d
+	}
 	if call == nil {
 		d.Note = "no owner call"
 	}
@@ -394,6 +401,26 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 	d.Form = formsFormFor(0, params, facts)
 	d.Choice = r.choiceFor(d, facts)
 	return d
+}
+
+func (r *Resolver) enclosingPlainContract(fn *ast.Node) bool {
+	for owner := fn.Parent; owner != nil; owner = owner.Parent {
+		if !formsBoundary(owner) {
+			continue
+		}
+		if !ast.IsFunctionLike(owner) || owner.Body() == nil {
+			return false
+		}
+		if ret := owner.Type(); ret != nil {
+			return !r.isEffectTypeNode(ret, 0)
+		}
+		if isLambda(owner) {
+			d := r.Lambda(owner)
+			return d.Class == ClassPlainFn
+		}
+		return false
+	}
+	return false
 }
 
 // choiceFor returns the Choice for a fallback decision d when the rules

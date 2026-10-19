@@ -113,3 +113,4 @@ typescript/vibelang/cases/retry-effectful-predicate/main.vibe:31:16 lambda: choi
 typescript/vibelang/cases/retry-effectful-predicate/main.vibe:32:12 lambda: choice fallback -> effectFn fallback # an object property handler whose body runs sleep
 typescript/vibelang/cases/vibelang-lower/main.vibe:18:15 lambda: choice fallback -> effectFn fallback # shout's body runs Console.log
 typescript/vibelang/cases/vibelang-prelude/main.vibe:16:16 lambda: plain fallback -> plain table # double is arithmetic, at a plain callback position
+typescript/vibelang/cases/ek4402-platform.fail/main.vibe:34:43 lambda: plain fallback -> plain annotation # D263: the Promise executor inherits its enclosing plain callback contract; its form remains plain
