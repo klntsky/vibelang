@@ -46,7 +46,7 @@ type valueState struct {
 // expressionType gives an argument expression the type of the conversion the
 // candidate under check asks for, or its contextual program field (D265).
 func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checker.Type {
-	if !mayConvert(c, node, t) || analyzerFor(c).valueTyping[node] {
+	if !mayConvert(c, node, t) || analyzerFor(c).valueTyping[node] || analyzerFor(c).classifying[node] {
 		return t
 	}
 	call, path := ownerCall(node)
@@ -54,28 +54,16 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 		return t
 	}
 	a := analyzerFor(c)
-	var key candidateKey
-	var position valuePosition
-	if call != nil {
-		signature := a.candidateOf(call)
-		if signature == nil {
-			return t
-		}
-		key = keyOf(signature)
-		position = a.classifyValuePosition(call, signature, path, node, t)
-	} else {
-		// D265 supplies a program position for object fields without an
-		// enclosing call. An assertion also supplies a contextual Effect type,
-		// but its operand is a value: the deferred assertion check builds the
-		// delayed program type once the surrounding by-name position is known.
-		outer := ast.WalkUpParenthesizedExpressions(node)
-		if outer.Parent == nil || !ast.IsPropertyAssignment(outer.Parent) && !ast.IsShorthandPropertyAssignment(outer.Parent) {
-			return t
-		}
-		position.expectation = a.classify(a.contextualTypes(node))
-		if !position.program {
-			return t
-		}
+	// Classifying a field reads its contextual type. For an object literal
+	// with a union context, the checker discriminates the union by the
+	// literal's members and checks a shorthand member's value, which asks for
+	// this node's type again; the inner check sees the plain value (S21-2,
+	// S22-1).
+	a.classifying[node] = true
+	key, position, ok := a.valuePositionOf(call, path, node, t)
+	delete(a.classifying, node)
+	if !ok {
+		return t
 	}
 	s := a.conversions[node]
 	if s == nil {
@@ -113,6 +101,31 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 		a.reject(call, key)
 	}
 	return converted
+}
+
+// valuePositionOf classifies node's position for expressionType: the
+// candidate's parameter when a call owns node, or else a contextual program
+// field (D265). It reports false where nothing converts node.
+func (a *analyzer) valuePositionOf(call *ast.Node, path []pathStep, node *ast.Node, t *checker.Type) (candidateKey, valuePosition, bool) {
+	var key candidateKey
+	var position valuePosition
+	if call != nil {
+		signature := a.candidateOf(call)
+		if signature == nil {
+			return key, position, false
+		}
+		return keyOf(signature), a.classifyValuePosition(call, signature, path, node, t), true
+	}
+	// D265 supplies a program position for object fields without an
+	// enclosing call. An assertion also supplies a contextual Effect type,
+	// but its operand is a value: the deferred assertion check builds the
+	// delayed program type once the surrounding by-name position is known.
+	outer := ast.WalkUpParenthesizedExpressions(node)
+	if outer.Parent == nil || !ast.IsPropertyAssignment(outer.Parent) && !ast.IsShorthandPropertyAssignment(outer.Parent) {
+		return key, position, false
+	}
+	position.expectation = a.classify(a.contextualTypes(node))
+	return key, position, position.program
 }
 
 // mayConvert is the cheap test that runs on every expression: node is an

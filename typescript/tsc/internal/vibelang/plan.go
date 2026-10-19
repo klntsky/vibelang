@@ -215,6 +215,7 @@ type analyzer struct {
 	heldPrograms     map[*ast.Node]bool          // by-name result values before argument conversion
 	returnedPrograms map[*ast.Node]*checker.Type // structured programs at Effect return boundaries
 	valueTyping      map[*ast.Node]bool          // by-name arguments whose own type is being read (valueTypeOf)
+	classifying      map[*ast.Node]bool          // values whose position is being classified (expressionType)
 
 	// Plain JavaScript functions (plain.go).
 	plain                 map[*ast.Node]plainState // function declarations that compile to plain JavaScript
@@ -250,6 +251,7 @@ func analyzerFor(c *checker.Checker) *analyzer {
 			heldPrograms:     map[*ast.Node]bool{},
 			returnedPrograms: map[*ast.Node]*checker.Type{},
 			valueTyping:      map[*ast.Node]bool{},
+			classifying:      map[*ast.Node]bool{},
 			plain:            map[*ast.Node]plainState{},
 			callbacks:        map[*ast.Node]*callbackContracts{},
 		}
