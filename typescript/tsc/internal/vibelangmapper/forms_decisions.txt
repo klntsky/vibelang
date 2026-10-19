@@ -455,6 +455,9 @@ typescript/vibelang/cases/decl-service/main.vibe:35:27 lambda program table
 typescript/vibelang/cases/decl-service/main.vibe:36:5 lambda effectFn table
 typescript/vibelang/cases/decl-service/main.vibe:40:25 lambda program table
 typescript/vibelang/cases/decl-service/main.vibe:9:11 lambda effectFn service
+typescript/vibelang/cases/declaration-linked-esm.fail/main.vibe:3:19 lambda choice fallback
+typescript/vibelang/cases/declaration-linked-esm/main.vibe:2:19 lambda choice fallback
+typescript/vibelang/cases/declaration-linked-esm/main.vibe:3:25 lambda choice fallback
 typescript/vibelang/cases/effect-values/main.vibe:21:32 lambda program table
 typescript/vibelang/cases/effect-values/main.vibe:38:29 lambda program table
 typescript/vibelang/cases/effect-values/main.vibe:8:53 lambda effectFn service

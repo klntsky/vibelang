@@ -53,6 +53,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 
 | Case | Proves |
 | --- | --- |
+| `declaration-linked-esm`, `declaration-linked-esm.fail` | ESM inferred arrows and object properties name linked Effect types as `import("effect/Effect")` through its exports map; an invalid success type keeps TS2322 |
 | `node-format-esm`, `node-format-cjs.fail`, `node-format-default.fail` | Smithers C-9/E-12: NodeNext package type controls import.meta, top-level await, mixed TS/Vibe imports, conditional exports, and declaration emit |
 | `ts-hello` | The stock compiler still compiles and runs plain TypeScript |
 | `ts-ownership-interrupt` | D266: terminal interrupt in an unchanged Effect generator compiles with zero errors in `.ts`, `.tsx`, `.mts`, and `.cts`, even with EK rules configured as errors |

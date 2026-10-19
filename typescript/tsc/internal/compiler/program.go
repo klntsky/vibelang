@@ -2356,6 +2356,18 @@ func (p *Program) GetSymlinkCache() *symlinks.KnownSymlinks {
 			knownSymlinks.SetSymlinksFromResolutions(p.ForEachResolvedModule, p.ForEachResolvedTypeReferenceDirective)
 		}
 
+		// A transitive import may be the only use of a linked package. Discover
+		// its aliases beside the emitting project's package.json too, even when
+		// that package.json does not list dependencies. Otherwise declaration
+		// specifiers see only the dependency's external realpath.
+		var linkedPackages collections.Set[string]
+		p.ForEachResolvedModule(func(resolution *module.ResolvedModule, name string, _ core.ResolutionMode, _ tspath.PathKey) {
+			if resolution.IsResolved() && resolution.OriginalPath != "" && !tspath.IsExternalModuleNameRelative(name) {
+				name, _ := module.ParsePackageName(name)
+				linkedPackages.Add(name)
+			}
+		}, nil)
+
 		// Check other dependencies for symlinks
 		var seenPackageJsons collections.Set[tspath.PathKey]
 		for filePath, meta := range p.sourceFileMetaDatas {
@@ -2370,7 +2382,9 @@ func (p *Program) GetSymlinkCache() *symlinks.KnownSymlinks {
 				continue
 			}
 
-			for dep := range info.GetContents().GetRuntimeDependencyNames().Keys() {
+			dependencies := info.GetContents().GetRuntimeDependencyNames()
+			dependencies.Union(&linkedPackages)
+			for dep := range dependencies.Keys() {
 				// Skip work in common case: we already saved a symlink for this package directory
 				// in the node_modules adjacent to this package.json
 				possibleDirectoryPath := p.caseSensitivity.PathKey(meta.PackageJsonDirectory.ResolveDirectory(tspath.CombinePaths("node_modules", dep)).AsPath())

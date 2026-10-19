@@ -621,3 +621,64 @@ func BenchmarkNewProgram(b *testing.B) {
 		}
 	})
 }
+
+// A package used only by a linked dependency can still have a project-local
+// node_modules alias. Declaration naming must discover it without requiring
+// either an explicit import or a package.json dependencies entry.
+func TestDeclarationTransitiveLinkedPackage(t *testing.T) {
+	t.Parallel()
+	for _, name := range []string{"dep", "@scope/dep"} {
+		for _, layout := range []string{"linked", "missing", "different", "private"} {
+			t.Run(name+"/"+layout, func(t *testing.T) {
+				t.Parallel()
+				real := "/external/node_modules/" + name
+				files := map[string]any{
+					"/src/package.json":                      `{"type":"module"}`,
+					"/src/tsconfig.json":                     `{"compilerOptions":{"noLib":true,"module":"nodenext","declaration":true},"files":["main.ts"]}`,
+					"/src/main.ts":                           `import { work } from "runtime"; export const value = work();`,
+					"/src/node_modules/runtime":              vfstest.Symlink("/external/runtime"),
+					"/external/runtime/package.json":         `{"type":"module","types":"index.d.ts"}`,
+					"/external/runtime/index.d.ts":           `import type { Value } from "` + name + `/public"; export declare function work(): Value;`,
+					"/external/runtime/node_modules/" + name: vfstest.Symlink(real),
+					real + "/package.json":                   `{"type":"module","exports":{"./public":{"types":"./dist/value.d.ts"}}}`,
+					real + "/dist/value.d.ts":                `export interface Value { readonly value: number }`,
+				}
+				switch layout {
+				case "linked", "private":
+					files["/src/node_modules/"+name] = vfstest.Symlink(real)
+				case "different":
+					files["/src/node_modules/"+name] = vfstest.Symlink("/other/node_modules/" + name)
+					files["/other/node_modules/"+name+"/package.json"] = files[real+"/package.json"]
+					files["/other/node_modules/"+name+"/dist/value.d.ts"] = files[real+"/dist/value.d.ts"]
+				}
+				if layout == "private" {
+					// A relative import can expose a type that the package exports
+					// map does not allow a declaration consumer to import.
+					files[real+"/package.json"] = `{"type":"module","exports":{"./public":{"types":"./index.d.ts"}}}`
+					files[real+"/index.d.ts"] = `import type { Value } from "./dist/value.js"; export declare function work(): Value;`
+					files["/external/runtime/index.d.ts"] = `export { work } from "` + name + `/public";`
+				}
+				fs := vfstest.FromMap(files, tspath.CaseSensitive)
+				config, errors := tsoptions.GetParsedCommandLineOfConfigFile("/src/tsconfig.json", nil, nil, fs, nil)
+				assert.Equal(t, len(errors), 0)
+				p := NewProgram(ProgramOptions{Config: config, Host: NewCompilerHost(fs, "/", nil, nil, nil)})
+				assert.Equal(t, len(p.GetSemanticDiagnostics(t.Context(), nil)), 0)
+				var dts string
+				result := p.Emit(t.Context(), EmitOptions{WriteFile: func(path tspath.RootedFilePath, text string, _ *WriteFileData) error {
+					if path == "/src/main.d.ts" {
+						dts = text
+					}
+					return nil
+				}})
+				if layout == "linked" {
+					assert.Equal(t, len(result.Diagnostics), 0)
+					assert.Equal(t, dts, `export declare const value: import("`+name+`/public").Value;`+"\n")
+				} else {
+					assert.Equal(t, len(result.Diagnostics), 1)
+					assert.Equal(t, result.Diagnostics[0].Code(), int32(2883))
+					assert.Equal(t, dts, "")
+				}
+			})
+		}
+	}
+}
