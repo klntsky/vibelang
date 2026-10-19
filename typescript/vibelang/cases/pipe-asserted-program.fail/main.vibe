@@ -1,0 +1,12 @@
+// expect: EK1008 TS2352
+import { Effect } from "effect"
+function load(): Effect.Effect<unknown, never, never> { return 1 }
+export function main() {
+  return (load() as Effect.Effect<number>) |> Effect.race(%, Effect.succeed(%))
+}
+
+function known() { return 1 }
+// A value position still checks the assertion against the completed value.
+export function valuePosition() {
+  return (known() as Effect.Effect<number>) |> Effect.succeed(%)
+}

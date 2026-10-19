@@ -64,7 +64,14 @@ func expressionType(c *checker.Checker, node *ast.Node, t *checker.Type) *checke
 		key = keyOf(signature)
 		position = a.classifyValuePosition(call, signature, path, node, t)
 	} else {
-		// D265 supplies a program position even without an enclosing call.
+		// D265 supplies a program position for object fields without an
+		// enclosing call. An assertion also supplies a contextual Effect type,
+		// but its operand is a value: the deferred assertion check builds the
+		// delayed program type once the surrounding by-name position is known.
+		outer := ast.WalkUpParenthesizedExpressions(node)
+		if outer.Parent == nil || !ast.IsPropertyAssignment(outer.Parent) && !ast.IsShorthandPropertyAssignment(outer.Parent) {
+			return t
+		}
 		position.expectation = a.classify(a.contextualTypes(node))
 		if !position.program {
 			return t
@@ -329,6 +336,11 @@ func (a *analyzer) callsVibeLangFunction(call *ast.Node) bool {
 // type of its value where it runs: E and R are what running node adds, as
 // for the body of the lambda () => node.
 func (a *analyzer) byNameType(node *ast.Node, success *checker.Type) *checker.Type {
+	// The assertion describes the program, not its completed value. Keep its
+	// A/E/R while delaying the operand under D147, including a pipe topic.
+	if asserted := assertedProgramType(a.checker, node); asserted != nil {
+		return asserted
+	}
 	node = byNameSubject(node)
 	info := a.flowOf(node)
 	success = a.byNameSuccess(node, success, info)
@@ -584,4 +596,39 @@ func esFunctionOf(c *checker.Checker, node *ast.Node) *ast.Node {
 		return implementationOf(declaration)
 	}
 	return nil
+}
+
+// assertedProgramType returns an explicit Effect assertion on a by-name
+// expression. An assertion does not turn a running operand into a cold value.
+func assertedProgramType(c *checker.Checker, node *ast.Node) *checker.Type {
+	node = ast.SkipParentheses(byNameSubject(node))
+	if ast.IsAsExpression(node) || ast.IsTypeAssertion(node) {
+		t := c.GetTypeFromTypeNode(node.Type())
+		if isEffectType(c, t) {
+			return t
+		}
+	}
+	return nil
+}
+
+// assertionOperandType checks a program assertion against its delayed operand,
+// once the surrounding call has chosen its by-name conversion.
+// Pipes check their left side before their stages, so doing this in the call
+// type hook would ask for a program position before that position is known.
+func assertionOperandType(c *checker.Checker, node *ast.Node, t *checker.Type) *checker.Type {
+	if !isVibeLangFile(ast.GetSourceFileOfNode(node)) || inHatch(node) || assertedProgramType(c, node) == nil {
+		return t
+	}
+	a := analyzerFor(c)
+	outer := node
+	for outer.Parent != nil && ast.IsParenthesizedExpression(outer.Parent) {
+		outer = outer.Parent
+	}
+	if !a.isByName(node) && !a.isByName(outer) {
+		return t
+	}
+	if program := a.byNameType(node.Expression(), t); program != nil {
+		return program
+	}
+	return t
 }

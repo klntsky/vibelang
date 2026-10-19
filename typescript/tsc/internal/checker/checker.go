@@ -12594,7 +12594,7 @@ func (c *Checker) checkAssertion(node *ast.Node, checkMode CheckMode) *Type {
 
 func (c *Checker) checkAssertionDeferred(node *ast.Node) {
 	typeNode := node.Type()
-	exprType := c.getRegularTypeOfObjectLiteral(c.getBaseTypeOfLiteralType(c.assertionLinks.Get(node).exprType))
+	exprType := c.getRegularTypeOfObjectLiteral(c.getBaseTypeOfLiteralType(c.applyAssertionOperandTypeHooks(node, c.assertionLinks.Get(node).exprType)))
 	targetType := c.getTypeFromTypeNode(typeNode)
 	if !c.isErrorType(targetType) {
 		widenedType := c.getWidenedType(exprType)
