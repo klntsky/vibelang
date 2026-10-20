@@ -190,9 +190,9 @@ as text; the current compiler does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic before EK4801 is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service class` or `control class` declaration; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, an Effect try block with E = `never`, or a catch expression with no expected errors; defects pass through (D260), is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in `compilerOptions.vibelang.diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
+Every EK diagnostic before EK4801 is an error, except seven. Each error marks code that has no meaning, or code whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them; it keeps its TypeScript meaning for TypeScript's own codes. Five warnings mark retired spellings that still compile the same: EK1009, the old `with` spelling of a `provide` block; EK2112, a catch clause that tests a failure's type; EK2113, a catch clause typed `Cause`; EK2120, a `service class` or `control class` declaration; and EK2121, a `layer` declaration. Each has a quick fix. The other two exceptions are policy, not soundness: EK2004, an Effect try block with E = `never`, or a catch expression with no expected errors; defects pass through (D260), is a warning by default, and EK4403, a clock or randomness read, is an error by default. A project may set either to `"error"`, `"warning"`, or `"off"` in the `vibelang` setting `diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control.
 
-EK4801-EK4825 carry the rules of Effect's language service that VibeLang's syntax does not already rule out (D240). They are lint, not soundness: each has a default category, error, warning, or off, and every one except EK4813, which stands in for TypeScript's TS2339, can be set in `compilerOptions.vibelang.diagnostics` or by a comment (D241):
+EK4801-EK4825 carry the rules of Effect's language service that VibeLang's syntax does not already rule out (D240). They are lint, not soundness: each has a default category, error, warning, or off, and every one except EK4813, which stands in for TypeScript's TS2339, can be set in the `vibelang` setting `diagnostics` or by a comment (D241):
 
 ```ts
 // @vibelang-diagnostics EK4818:warning            from here to the end of the file
@@ -202,7 +202,7 @@ EK4801-EK4825 carry the rules of Effect's language service that VibeLang's synta
 
 A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`. D266 supersedes D242: every EK diagnostic is restricted to `.vibe` files. Ordinary TypeScript sources keep TypeScript diagnostics regardless of these settings.
 
-| Option in `compilerOptions.vibelang` | Values | Default |
+| Option in the tsconfig's top-level `vibelang` object, or `compilerOptions.vibelang` (D275) | Values | Default |
 | --- | --- | --- |
 | `diagnostics` | `"EK2004"`, `"EK4403"`, and EK4801-EK4825 except `"EK4813"`, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
 | `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas do not (D104) | `"none"` |
@@ -263,7 +263,7 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4201 | A control operation inside a combinator that runs it on another fiber | Handle the operation inside the branch | 9, 16 |
 | EK4202 | A TypeScript function whose R holds a control operation | None in v0 | 9 |
 | EK4301 | A callback that can pause or fail where a plain function is expected | Rewrite as `Effect.forEach` or `for...of`; a visitor returning a program uses `() => () => call()` when its result is used | 10, 16 |
-| EK4401 | Packages matching `compilerOptions.vibelang.trustedPackages` are trusted (D261); otherwise, a plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@vibelang trusted` | 10 |
+| EK4401 | Packages matching the `vibelang` setting `trustedPackages` are trusted (D261); otherwise, a plain TypeScript call in code a fiber runs, with no boundary or trusted contract (D100) | Wrap it in `try`, or tag the declaration `@vibelang trusted` | 10 |
 | EK4402 | Running a Node.js or browser API; importing and passing values is allowed (D108) | Use the Effect module the error names | 11 |
 | EK4403 | A clock or randomness read (an error by default) | Use `Clock`, `DateTime`, or `Random` | 10 |
 | EK4404 | `try` given Effect's `{ try, catch }` options object, which it would treat as a value | Pass the code and the error mapping as two arguments: `try((text) => parse(text), (error) => …, text)` | 10 |

@@ -173,7 +173,16 @@ func parseOwnConfigOfJsonSourceFile(
 				if keyText == "excludes" {
 					propertySetErrors = append(propertySetErrors, CreateDiagnosticForNodeInSourceFile(sourceFile, propertyAssignment.Name(), diagnostics.Unknown_option_excludes_Did_you_mean_exclude))
 				}
-				if core.Find(optionsForCompiler, func(option *CommandLineOption) bool { return option.Name == keyText }) != nil {
+				if vibelang := CompilerNameMap.Get(keyText); vibelang != nil && vibelang.Name == "vibelang" {
+					// VibeLang settings may sit at the top level, which stock
+					// TypeScript and its tools ignore (D275).
+					var vibelangErrors []*ast.Diagnostic
+					value, vibelangErrors = convertJsonOption(vibelang, value, basePath, propertyAssignment, propertyAssignment.Initializer, sourceFile)
+					propertySetErrors = append(propertySetErrors, vibelangErrors...)
+					if value != nil {
+						compilerOptions.ParseOption(vibelang.Name, value)
+					}
+				} else if core.Find(optionsForCompiler, func(option *CommandLineOption) bool { return option.Name == keyText }) != nil {
 					rootCompilerOptions = append(rootCompilerOptions, propertyAssignment.Name())
 				}
 			}

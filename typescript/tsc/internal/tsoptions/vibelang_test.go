@@ -145,3 +145,23 @@ func TestVibeLangNonAdjustableDiagnostic(t *testing.T) {
 		})
 	}
 }
+
+// Stock TypeScript and the tools built on it, such as typescript-eslint and an
+// editor's TypeScript server, reject an unknown compiler option (TS5023), so
+// VibeLang also reads its settings from the tsconfig's top level, which they
+// ignore. Settings there are validated as in compilerOptions and inherited
+// through extends (D275).
+func TestVibeLangTopLevelSettings(t *testing.T) {
+	inherited := vibeConfig(t, `{"extends":"./base.json","files":["main.vibe"]}`, `{"compilerOptions":{"strict":true},"vibelang":{"trustedPackages":["@smthrs/*"]}}`)
+	if len(inherited.Errors) != 0 || inherited.CompilerOptions().VibeLang == nil || !reflect.DeepEqual(inherited.CompilerOptions().VibeLang.TrustedPackages, []string{"@smthrs/*"}) {
+		t.Fatalf("extends did not carry top-level settings: %+v; errors %v", inherited.CompilerOptions().VibeLang, inherited.Errors)
+	}
+	own := vibeConfig(t, `{"vibelang":{"tracing":"all"},"files":["main.vibe"]}`, "{}")
+	if len(own.Errors) != 0 || own.CompilerOptions().VibeLang == nil || own.CompilerOptions().VibeLang.Tracing != "all" {
+		t.Fatalf("top-level settings without compilerOptions: %+v; errors %v", own.CompilerOptions().VibeLang, own.Errors)
+	}
+	invalid := vibeConfig(t, `{"compilerOptions":{},"vibelang":{"trustedPackage":["zod"]},"files":["main.vibe"]}`, "{}")
+	if len(invalid.Errors) == 0 {
+		t.Fatal("an unknown top-level vibelang key was accepted")
+	}
+}

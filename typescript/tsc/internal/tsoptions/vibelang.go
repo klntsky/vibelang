@@ -12,8 +12,9 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
 )
 
-// compilerOptions.vibelang holds a project's VibeLang settings (design
-// decision D34):
+// A project's VibeLang settings sit at the tsconfig's top level, where stock
+// TypeScript and its tools ignore them (D275), or in compilerOptions.vibelang
+// (design decision D34), which they reject as an unknown option:
 //
 //	"vibelang": {
 //	  "diagnostics": { "EK2004": "off", "EK4403": "warning" },
