@@ -6,9 +6,13 @@
   "homepage": "https://effeck.dev",
   "license": "Apache-2.0",
   "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    "./register": "./register.mjs"
+  },
   "bin": { "vibelang": "bin/vibelang" },
-  "files": ["bin", "editor", "README.md", "LICENSE", "NOTICE"],
-  "scripts": { "test": "node --test test/" },
+  "files": ["bin", "editor", "project.mjs", "register.mjs", "README.md", "LICENSE", "NOTICE"],
+  "scripts": { "test": "node --test test/*.test.mjs" },
   "optionalDependencies": {
     "vibelang-darwin-arm64": "0.0.2",
     "vibelang-darwin-x64": "0.0.2",

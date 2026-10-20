@@ -49,6 +49,23 @@ dependencies. Point `tsconfig.json` at your `.vibe` sources:
 
 For tests with Vitest, add [`vibelang-vite`](https://www.npmjs.com/package/vibelang-vite).
 
+## Run .vibe modules in Node
+
+```sh
+node --import vibelang/register src/main.ts
+```
+
+`vibelang/register` lets Node import `.vibe` modules from source, so a
+TypeScript entry point, a script, or a test that spawns `node` needs no
+`dist/`. The first `.vibe` import compiles the whole project in the nearest
+`tsconfig.json` above the module, once per process, and every `.vibe` module of
+that project comes from that compile. Set `VIBELANG_PROJECT` to a tsconfig path
+to choose another project. A module keeps its source URL, so a `.ts` file that
+both a TypeScript and a `.vibe` module import loads once. Diagnostics that stop
+the compile are thrown at the import. Add `--enable-source-maps` for stack
+traces with `.vibe` lines. It needs Node 22.15 or later, for
+`module.registerHooks`.
+
 ## Editor support
 
 This package ships the VS Code extension. In a project with `vibelang` installed:
@@ -83,7 +100,7 @@ From the VibeLang repository root:
 ```sh
 sh scripts/build-vibelang.sh      # writes packages/compiler/native/vibelang
 packages/compiler/bin/vibelang --version
-node --test packages/compiler/test/
+node --test packages/compiler/test/*.test.mjs
 ```
 
 A checkout's launcher prefers `native/vibelang`, so projects that link to the
