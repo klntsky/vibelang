@@ -40,9 +40,6 @@ export default defineConfig({
   colorScheme: 'light dark',
   description:
     'VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.',
-  editLink: {
-    link: 'https://github.com/smithersai/vibelang/edit/main/docs/src/pages/:path',
-  },
   iconUrl: '/icon.svg',
   logoUrl: {
     light: '/logo-light.svg',
@@ -50,9 +47,6 @@ export default defineConfig({
   },
   renderStrategy: 'full-static',
   sidebar: [...sidebar, ...specSidebar],
-  socials: [
-    { icon: 'github', link: 'https://github.com/smithersai/vibelang' },
-  ],
   title: 'VibeLang',
   titleTemplate: '%s | VibeLang',
   topNav: [
