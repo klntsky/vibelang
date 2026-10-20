@@ -55,8 +55,15 @@ func runnerOf(c *checker.Checker, call *ast.Node) runnerKind {
 	switch {
 	case !ok:
 		return notRunner
-	case d.pkg == "effect" && d.module == "Effect" && d.owner.Kind == ast.KindVariableDeclaration && slices.Contains(effectContextRunners, d.name),
-		d.pkg == "effect" && d.module == "ManagedRuntime" && d.container == "ManagedRuntime" && slices.Contains(managedRuntimeRunners, d.name),
+	case d.pkg == "effect" && d.module == "Effect" && d.owner.Kind == ast.KindVariableDeclaration && slices.Contains(effectContextRunners, d.name):
+		// Effect.runPromiseWith(context) returns a runner and starts nothing;
+		// applying that runner to a program, whose signature is the one the
+		// declared type returns, starts one.
+		if signatureDeclaration(c, call).Parent == d.owner {
+			return notRunner
+		}
+		return programRunner
+	case d.pkg == "effect" && d.module == "ManagedRuntime" && d.container == "ManagedRuntime" && slices.Contains(managedRuntimeRunners, d.name),
 		isRootRunnerIdentity(d):
 		return programRunner
 	case d.pkg == "@effect/vitest":

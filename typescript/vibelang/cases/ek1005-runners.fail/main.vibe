@@ -45,6 +45,18 @@ it.effect("a test", () => {
   return refresh("t")
 })
 
+// A runner bound to the fiber's services is a value: building one starts
+// nothing, so a fiber may hand it to a callback host. Applying it starts a
+// root.
+function bridge() {
+  return Effect.runPromiseWith(Effect.context<never>())
+}
+
+function boundRunner() {
+  const run = Effect.runPromiseWith(Effect.context<never>())
+  return run(() => refresh("b"))
+}
+
 // Allowed: the module's top level, and plain callbacks passed from there to
 // TypeScript functions.
 Effect.runFork(() => refresh("top"))
