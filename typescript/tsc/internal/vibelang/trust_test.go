@@ -142,3 +142,46 @@ func TestTrustedWorkspacePackageNames(t *testing.T) {
 		})
 	}
 }
+
+// A package.json without a name, which only sets "type" for a subdirectory as
+// zod's v4/classic does, does not end its package: a method declared under it
+// keeps the package's D261 trust.
+func TestTrustedPackageNameSkipsNamelessManifests(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name, patterns string
+		want           int
+	}{
+		{"trusted", `["zodlike"]`, 0},
+		{"no trust", `[]`, 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			files := map[string]string{
+				"/node_modules/zodlike/package.json":            `{"name":"zodlike","types":"index.d.ts"}`,
+				"/node_modules/zodlike/index.d.ts":              `export * from "./v4/classic/schemas"`,
+				"/node_modules/zodlike/v4/classic/package.json": `{"type":"module"}`,
+				"/node_modules/zodlike/v4/classic/schemas.d.ts": `export interface Schema { safeParse(value: unknown): { success: boolean } }
+export declare function make(): Schema`,
+				"/main.vibe":     `import { make } from "zodlike"; export function use(value: unknown) { const schema = make(); return schema.safeParse(value).success }`,
+				"/tsconfig.json": fmt.Sprintf(`{"compilerOptions":{"strict":true,"vibelang":{"trustedPackages":%s}},"files":["main.vibe"]}`, test.patterns),
+			}
+			fs := bundled.WrapFS(vfstest.FromMap(files, tspath.CaseSensitive))
+			parsed, errors := tsoptions.GetParsedCommandLineOfConfigFile("/tsconfig.json", &core.CompilerOptions{}, nil, fs, nil)
+			if len(errors) != 0 || len(parsed.Errors) != 0 {
+				t.Fatalf("config: %v / %v", errors, parsed.Errors)
+			}
+			p := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: compiler.NewCompilerHost(fs, bundled.LibPath(), nil, nil, nil)})
+			count := 0
+			for _, d := range p.GetSemanticDiagnostics(t.Context(), p.GetSourceFile("/main.vibe")) {
+				if d.Code() == EK4401.Code {
+					count++
+				} else if d.Category() == diagnostics.CategoryError {
+					t.Errorf("unexpected diagnostic: %v", d)
+				}
+			}
+			if count != test.want {
+				t.Fatalf("EK4401 count = %d, want %d", count, test.want)
+			}
+		})
+	}
+}

@@ -28,10 +28,12 @@ func originsOf(c *checker.Checker) *originsState {
 	}).(*originsState)
 }
 
-// packageOf returns the name in the nearest package.json above file, or ""
-// when there is none or it has no name. A package installed through a
-// symbolic link, as a file: dependency is, keeps its name, although the file
-// lies outside node_modules.
+// packageOf returns the name in the nearest package.json above file that has
+// one, or "" when there is none. A package may hold package.json files without
+// a name that only set "type" for a subdirectory, as zod's v4/classic does and
+// as dual builds' dist/cjs do; they do not end the package. A package
+// installed through a symbolic link, as a file: dependency is, keeps its name,
+// although the file lies outside node_modules.
 func packageOf(c *checker.Checker, file *ast.SourceFile) string {
 	s := originsOf(c)
 	if name, ok := s.packages[file]; ok {
@@ -39,10 +41,18 @@ func packageOf(c *checker.Checker, file *ast.SourceFile) string {
 	}
 	name := ""
 	program := c.Program()
-	if directory := program.GetNearestAncestorDirectoryWithPackageJson(file.FileName().Directory()); directory != "" {
+	for directory := program.GetNearestAncestorDirectoryWithPackageJson(file.FileName().Directory()); directory != ""; {
 		if info := program.GetPackageJsonInfo(directory.ResolveFile("package.json")); info.Exists() {
-			name, _ = info.Contents.Name.GetValue()
+			if value, ok := info.Contents.Name.GetValue(); ok && value != "" {
+				name = value
+				break
+			}
 		}
+		parent := directory.AsPath().Directory()
+		if parent == directory {
+			break
+		}
+		directory = program.GetNearestAncestorDirectoryWithPackageJson(parent)
 	}
 	s.packages[file] = name
 	return name
