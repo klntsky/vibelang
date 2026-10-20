@@ -271,6 +271,9 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 		declared := channelType(c, contractType, "_E")
 		for _, escape := range escapes(c, info.errors, info.errorSources, declared) {
 			d := report(c, escape.source, EK2001, c.TypeToString(escape.t), name, "its contract says E = "+c.TypeToString(declared))
+			if parameter := a.uncontractedCallbackOf(fn, escape.t); parameter != nil {
+				note(d, "{0} has no contract, so a call to it can fail with any {1} (D12, D68). If it cannot fail, write its contract: {2}", declarationName(parameter), c.TypeToString(escape.t), callbackContractText(file, parameter))
+			}
 			note(d, "Catch it inside {0}, or change the contract to {1}.", name, contractText(c, contractType, channelE, escape.t))
 		}
 	}

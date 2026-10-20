@@ -1,0 +1,8 @@
+// expect: EK2001
+// D12, D68: a callback parameter without a contract accepts any contract, so a
+// call to it can fail with the E it gains. The note names the contract to write.
+error Boom
+
+export function raise(make: () => Boom): number!Boom {
+  throw make()
+}

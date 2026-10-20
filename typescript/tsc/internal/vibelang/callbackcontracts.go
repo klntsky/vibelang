@@ -3,6 +3,7 @@ package vibelang
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
@@ -61,6 +62,38 @@ func (a *analyzer) callbackContractsOf(fn *ast.Node) *callbackContracts {
 	}
 	a.callbacks[fn] = s
 	return s
+}
+
+// uncontractedCallbackOf returns the callback parameter of fn that gained t,
+// one of the E and R type parameters D12 adds, or nil.
+func (a *analyzer) uncontractedCallbackOf(fn *ast.Node, t *checker.Type) *ast.Node {
+	s := a.callbackContractsOf(fn)
+	if s == nil {
+		return nil
+	}
+	for i, parameter := range s.parameters {
+		if s.typeParameters[2*i] == t || s.typeParameters[2*i+1] == t {
+			return parameter
+		}
+	}
+	return nil
+}
+
+// callbackContractText writes parameter, an uncontracted callback, with the
+// contract that says it cannot fail and needs nothing: make: () => Boom!!.
+func callbackContractText(file *ast.SourceFile, parameter *ast.Node) string {
+	name := declarationName(parameter)
+	callback := parameter.Type()
+	if callback == nil || callback.Kind != ast.KindFunctionType || callback.Type() == nil {
+		return name
+	}
+	written := nodeText(file, callback)
+	returned := nodeText(file, callback.Type())
+	prefix, ok := strings.CutSuffix(written, returned)
+	if !ok {
+		return name
+	}
+	return name + ": " + prefix + bangText(returned, "never", "never")
 }
 
 // acceptsAnyContract reports whether fn's callback parameters accept any
