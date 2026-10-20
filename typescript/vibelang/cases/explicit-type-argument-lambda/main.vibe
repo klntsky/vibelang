@@ -1,0 +1,12 @@
+// expect-result: "x"
+// D44: an explicit type argument fixes its type parameter, so a lambda takes
+// the form the instantiated parameter type asks for, as in vi.fn<Invoke>(...).
+import { hold } from "./holder.ts"
+
+type Make = () => Effect.Effect<string, never, never>
+
+const make = hold<Make>(() => "x")
+
+export function main() {
+  return make()
+}

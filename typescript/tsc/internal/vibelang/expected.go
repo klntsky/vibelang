@@ -10,21 +10,22 @@ import (
 // in ids.map((id) => find(id)), map declares (value: T, ...) => U, a plain
 // function type, whatever U is inferred to be. The instantiated contextual
 // type is used only where the declared type says nothing, as with a bare type
-// parameter that another argument fixes, such as Layer.succeed's NoInfer<S>.
+// parameter that another argument fixes, such as Layer.succeed's NoInfer<S>,
+// and where explicit type arguments fix the signature, as in vi.fn<Invoke>(…):
+// nothing is inferred from the lambda then.
 
 // expectedAt returns the types expected at path below the arguments of call
 // when they are checked against signature. fn is the lambda at the end of the
 // path, whose contextual type is the fallback.
 func (a *analyzer) expectedAt(call *ast.Node, signature *checker.Signature, path []pathStep, fn *ast.Node) []*checker.Type {
+	if len(call.TypeArguments()) > 0 {
+		if useful := a.expectedFrom(signature, path); len(useful) > 0 {
+			return useful
+		}
+	}
 	if declared := a.declaredSignature(signature); declared != nil {
-		if t := a.checker.GetTypeAtPosition(declared, path[0].argument); t != nil {
-			types := []*checker.Type{t}
-			for _, step := range path[1:] {
-				types = a.stepInto(types, step)
-			}
-			if useful := a.usefulTypes(types); len(useful) > 0 && a.classify(useful).any() {
-				return useful
-			}
+		if useful := a.expectedFrom(declared, path); len(useful) > 0 {
+			return useful
 		}
 	}
 	// D265/S1-4 carry a record's context through a generic parameter to its
@@ -43,6 +44,23 @@ func (a *analyzer) expectedAt(call *ast.Node, signature *checker.Signature, path
 		}
 	}
 	return a.contextualTypes(fn)
+}
+
+// expectedFrom returns the types that signature's parameter at path expects,
+// when they ask for a form.
+func (a *analyzer) expectedFrom(signature *checker.Signature, path []pathStep) []*checker.Type {
+	t := a.checker.GetTypeAtPosition(signature, path[0].argument)
+	if t == nil {
+		return nil
+	}
+	types := []*checker.Type{t}
+	for _, step := range path[1:] {
+		types = a.stepInto(types, step)
+	}
+	if useful := a.usefulTypes(types); len(useful) > 0 && a.classify(useful).any() {
+		return useful
+	}
+	return nil
 }
 
 // declaredSignature returns the uninstantiated signature behind a candidate.
