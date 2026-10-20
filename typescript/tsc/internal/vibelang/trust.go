@@ -117,13 +117,16 @@ func computeTrust(c *checker.Checker, call *ast.Node) *trust {
 
 // reachedThroughTrustedPackage reports whether call's callee is an export of one of
 // trusted packages (D22, D261), a member of one, or a function or method of a value
-// that a trusted call to one returned (D22). A package may re-export another
-// package's functions, as @effect/vitest re-exports vitest's assert and
-// expect, so their declarations alone do not show that they are Effect's:
+// that a trusted call to one returned (D22), called at once or held in a const.
+// A package may re-export another package's functions, as @effect/vitest
+// re-exports vitest's assert and expect, so their declarations alone do not
+// show that they are Effect's:
 //
-//	import { assert, expect } from "@effect/vitest"
+//	import { assert, expect, vi } from "@effect/vitest"
 //	assert.strictEqual(n, 1)   // assert is an export of @effect/vitest
 //	expect(n).toBe(1)          // toBe is a method of what expect returned
+//	const spy = vi.spyOn(o, "f")
+//	spy.mockRestore()          // mockRestore is a method of what spyOn returned
 func reachedThroughTrustedPackage(c *checker.Checker, call *ast.Node, followReturned bool) bool {
 	callee := ast.SkipParentheses(call.Expression())
 	for {
@@ -135,11 +138,36 @@ func reachedThroughTrustedPackage(c *checker.Checker, call *ast.Node, followRetu
 			// keeps the source package's trust; exports and re-exports are trusted.
 			return followReturned && callTrust(c, callee).kind == trustEffect
 		case ast.IsIdentifier(callee):
+			if initializer := constCallInitializer(c, callee); initializer != nil {
+				// A const holds what its trusted call returned; a let may not.
+				return followReturned && callTrust(c, initializer).kind == trustEffect
+			}
 			return importedFromTrustedPackage(c, callee)
 		default:
 			return false
 		}
 	}
+}
+
+// constCallInitializer returns the call that initializes the const name
+// refers to, as vi.spyOn(o, "f") in const spy = vi.spyOn(o, "f"), or nil.
+func constCallInitializer(c *checker.Checker, name *ast.Node) *ast.Node {
+	symbol := c.GetSymbolAtLocation(name)
+	if symbol == nil {
+		return nil
+	}
+	decl := symbol.ValueDeclaration()
+	if decl == nil {
+		return nil
+	}
+	if !ast.IsVariableDeclaration(decl) || !ast.IsVarConst(decl) || decl.Initializer() == nil {
+		return nil
+	}
+	initializer := ast.SkipParentheses(decl.Initializer())
+	if !ast.IsCallExpression(initializer) {
+		return nil
+	}
+	return initializer
 }
 
 // importedFromTrustedPackage reports whether name is bound by an import from one of

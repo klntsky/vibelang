@@ -185,3 +185,47 @@ export declare function make(): Schema`,
 		})
 	}
 }
+
+// D22 trusts the values that a trusted call returns, so a method of the spy
+// that @effect/vitest's vi.spyOn returns is trusted whether the call is chained
+// or its value is held in a const. A let can be reassigned, so it is not.
+func TestTrustedValueHeldInConst(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name, body string
+		want       int
+	}{
+		{"chained", `vi.spyOn(target, "f").mockRestore()`, 0},
+		{"held in a const", `const spy = vi.spyOn(target, "f"); spy.mockRestore()`, 0},
+		{"held in a let", `let spy = vi.spyOn(target, "f"); spy.mockRestore()`, 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			files := map[string]string{
+				"/node_modules/@effect/vitest/package.json": `{"name":"@effect/vitest","types":"index.d.ts"}`,
+				"/node_modules/@effect/vitest/index.d.ts":   `export { vi } from "vitest"`,
+				"/node_modules/vitest/package.json":         `{"name":"vitest","types":"index.d.ts"}`,
+				"/node_modules/vitest/index.d.ts": `export interface Spy { mockRestore(): void }
+export declare const vi: { spyOn(target: object, name: string): Spy }`,
+				"/main.vibe":     `import { vi } from "@effect/vitest"; const target = { f: (): number => 1 }; export function use() { ` + test.body + ` }`,
+				"/tsconfig.json": `{"compilerOptions":{"strict":true},"files":["main.vibe"]}`,
+			}
+			fs := bundled.WrapFS(vfstest.FromMap(files, tspath.CaseSensitive))
+			parsed, errors := tsoptions.GetParsedCommandLineOfConfigFile("/tsconfig.json", &core.CompilerOptions{}, nil, fs, nil)
+			if len(errors) != 0 || len(parsed.Errors) != 0 {
+				t.Fatalf("config: %v / %v", errors, parsed.Errors)
+			}
+			p := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: compiler.NewCompilerHost(fs, bundled.LibPath(), nil, nil, nil)})
+			count := 0
+			for _, d := range p.GetSemanticDiagnostics(t.Context(), p.GetSourceFile("/main.vibe")) {
+				if d.Code() == EK4401.Code {
+					count++
+				} else if d.Category() == diagnostics.CategoryError {
+					t.Errorf("unexpected diagnostic: %v", d)
+				}
+			}
+			if count != test.want {
+				t.Fatalf("EK4401 count = %d, want %d", count, test.want)
+			}
+		})
+	}
+}
