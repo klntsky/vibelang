@@ -32,11 +32,8 @@ runtime=$(cd "$runtime" && pwd)
 # entries are smaller; panics still print stack traces.
 echo "build: go build -trimpath -gcflags=all=-dwarf=false -o built/local/tsc ./cmd/tsc"
 (cd "$root/tsc" && CGO_ENABLED=0 go build -trimpath -gcflags=all=-dwarf=false -o "$tsc" ./cmd/tsc)
-echo "test: go test ./internal/vibelang/"
-(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/ >/dev/null) ||
-	(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/; exit 1)
-
-# The runtime's dist/ is not checked in. Build it from source with this tsc, so
+# The runtime's dist/ is not checked in, and the Go tests compile cases
+# against it, so build it before they run. Build it from source with this tsc, so
 # a commit that changes the compiler and the runtime is tested as one. The
 # runtime resolves effect from its own node_modules; point that at the copy
 # the cases use, replacing any other install, so a program and its type
@@ -51,5 +48,9 @@ if [ -f "$runtime/tsconfig.json" ]; then
 	echo "build: tsc -p $runtime/tsconfig.json"
 	"$tsc" -p "$runtime/tsconfig.json"
 fi
+
+echo "test: go test ./internal/vibelang/"
+(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/ >/dev/null) ||
+	(cd "$root/tsc" && CGO_ENABLED=0 go test -trimpath -gcflags=all=-dwarf=false ./internal/vibelang/; exit 1)
 
 EFFECT_NODE_MODULES=$effect_modules VIBELANG_RUNTIME=$runtime exec node "$root/vibelang/harness.mjs" "$@"
