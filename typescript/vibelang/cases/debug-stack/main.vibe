@@ -36,6 +36,13 @@ function countdown(n: number, seen: number[]): Effect<number[], never, never> {
   return seen
 }
 
+// A body that is one expression returns its Effect without a generator. The
+// thunk that evaluates it is still named after the function; Effect calls it
+// as a method, so the frame also names the receiver's class, PrimitiveImpl.
+function logOwner(account: Account) {
+  return Console.log(account.owner!.name)
+}
+
 export function crash() {
   return ownerName({ owner: undefined })
 }
@@ -50,4 +57,8 @@ export function region() {
 
 export function counted() {
   return countdown(3, [])
+}
+
+export function direct() {
+  return logOwner({ owner: undefined })
 }

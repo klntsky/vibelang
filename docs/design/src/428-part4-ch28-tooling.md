@@ -337,7 +337,7 @@ Call stack (JavaScript)
 
 What a debugger shows follows from the frame invariant (Chapter 26):
 
-- **One VibeLang frame at a time.** Compiled functions are generator functions named after their source, so the running function appears by name at its `.vibe` line. Its callers are frames on the fiber's `_stack`, not JavaScript activations, so the debugger's call stack shows Effect's run loop below it, not the VibeLang call chain.
+- **One VibeLang frame at a time.** Compiled functions are generator functions named after their source, so the running function appears by name at its `.vibe` line. A function whose body is a single result returns its Effect without a generator, through a thunk named after it, which a stack shows as `PrimitiveImpl.<name>` (D274). Its callers are frames on the fiber's `_stack`, not JavaScript activations, so the debugger's call stack shows Effect's run loop below it, not the VibeLang call chain.
 - **Regions** are closures named after their function and block: `profile$try`, `profile$catch`, `profile$finally`, `profile$using`.
 - **Clauses and producers.** A clause is a generator function named after its operation member (`approve`), and a producer's body is one named after the producer (`lines`). A breakpoint in a clause shows the clause; the handled program's frames are inside `k`, a heap value, and appear again when the program resumes. A breakpoint in a producer shows the producer, and the loop body runs in the clause of the `for...of` that iterates it.
 - **Stepping over a call that pauses** continues on a later run-loop step, so the debugger steps into Effect's run loop; set a breakpoint on the next line instead, as with `Effect.gen` code today.

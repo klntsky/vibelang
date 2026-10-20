@@ -671,6 +671,9 @@ typescript/vibelang/cases/decl-service/main.vibe:9:11 lambda effectFn service
 typescript/vibelang/cases/declaration-linked-esm.fail/main.vibe:3:19 lambda choice fallback
 typescript/vibelang/cases/declaration-linked-esm/main.vibe:2:19 lambda choice fallback
 typescript/vibelang/cases/declaration-linked-esm/main.vibe:3:25 lambda choice fallback
+typescript/vibelang/cases/direct-effect/main.vibe:16:23 lambda effectFn annotation
+typescript/vibelang/cases/direct-effect/main.vibe:19:24 lambda effectFn annotation
+typescript/vibelang/cases/direct-effect/main.vibe:23:22 lambda effectFn annotation
 typescript/vibelang/cases/discarded-effect-call/main.vibe:7:30 byname program table
 typescript/vibelang/cases/effect-subtype-returns.fail/main.vibe:7:20 lambda choice fallback
 typescript/vibelang/cases/effect-subtype-returns/main.vibe:10:53 lambda effectFn annotation
@@ -1518,7 +1521,7 @@ typescript/vibelang/cases/vibelang-layer-programs/main.vibe:30:5 lambda effectFn
 typescript/vibelang/cases/vibelang-layer-programs/main.vibe:35:12 lambda effectFn service
 typescript/vibelang/cases/vibelang-layer-programs/main.vibe:44:25 lambda program table
 typescript/vibelang/cases/vibelang-layer-programs/main.vibe:47:33 lambda program table
-typescript/vibelang/cases/vibelang-lower/main.vibe:18:15 lambda effectFn fallback
+typescript/vibelang/cases/vibelang-lower/main.vibe:20:15 lambda effectFn fallback
 typescript/vibelang/cases/vibelang-methods/main.vibe:21:20 lambda plain table
 typescript/vibelang/cases/vibelang-methods/main.vibe:21:55 lambda plain fallback
 typescript/vibelang/cases/vibelang-methods/main.vibe:31:36 lambda plain fallback

@@ -387,9 +387,15 @@ func (tx *lowering) byNameResult(node *ast.Node) (*ast.Node, bool) {
 	return value, tx.plan.heldPrograms[node]
 }
 
+// succeedByName makes `Effect.succeed(value)` with value's source range: the
+// printer emits the comments after a list's last element unless it ends
+// where its parent does, which would move the next statement's comment into
+// the call.
 func (tx *lowering) succeedByName(value *ast.Node) *ast.Node {
 	f := tx.Factory()
-	return f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("succeed"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{value}), ast.NodeFlagsNone)
+	succeed := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("succeed"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{value}), ast.NodeFlagsNone)
+	succeed.Loc = value.Loc
+	return succeed
 }
 
 // runtimeCall makes `runtime.name(arguments...)`.
@@ -414,9 +420,16 @@ func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
 }
 
 // lowerFunction turns a function expression or arrow function into
-// `Effect.fnUntraced(function* (params) { body })`.
+// `Effect.fnUntraced(function* (params) { body })`, or into the same kind of
+// function returning its direct Effect (direct.go).
 func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
-	lowered := tx.wrapFunction(node, tx.generatorOf(node))
+	parameters, body := tx.loweredBody(node)
+	if hasSimpleParameters(node) {
+		if effect := tx.directEffect(node, body); effect != nil {
+			return tx.directFunction(node, parameters, effect)
+		}
+	}
+	lowered := tx.wrapFunction(node, tx.generatorFrom(node, parameters, body))
 	if keepsThis(node) {
 		lowered = tx.Factory().NewFunctionBindCall(lowered, tx.Factory().NewThisExpression(), nil /*argumentsList*/)
 	}
@@ -428,7 +441,16 @@ func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
 // it runs, or `Effect.gen({ self: this }, function* () { body })` when the
 // lambda keeps its enclosing function's this.
 func (tx *lowering) lowerProgram(node *ast.Node) *ast.Node {
-	generator := tx.generatorOf(node)
+	parameters, body := tx.loweredBody(node)
+	// Only an arrow: Effect.gen gives a function expression's body no this or
+	// arguments, which a thunk in its place would take from its scope.
+	if node.Kind == ast.KindArrowFunction {
+		if effect := tx.directEffect(node, body); effect != nil {
+			effect.Loc = node.Loc
+			return effect
+		}
+	}
+	generator := tx.generatorFrom(node, parameters, body)
 	if !keepsThis(node) {
 		return tx.wrapGenerator("gen", node, generator)
 	}
@@ -454,6 +476,21 @@ func keepsThis(node *ast.Node) bool {
 // generatorOf returns `function* (params) { body }` for node, with node's
 // calls that run lowered to yield*.
 func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
+	parameters, body := tx.loweredBody(node)
+	return tx.generatorFrom(node, parameters, body)
+}
+
+// generatorFrom returns `function* (params) { body }` for node, given its
+// lowered parameters and body.
+func (tx *lowering) generatorFrom(node *ast.Node, parameters *ast.NodeList, body *ast.Node) *ast.Node {
+	generator := tx.generatorExpression(node, sourceName(node), parameters, body)
+	tx.EmitContext().SetOriginal(generator, node)
+	return generator
+}
+
+// loweredBody returns node's parameters and its body as a block, with the
+// body's calls that run lowered to yield*.
+func (tx *lowering) loweredBody(node *ast.Node) (*ast.NodeList, *ast.Node) {
 	ec := tx.EmitContext()
 
 	saved, savedFrame := tx.inEffect, tx.frame
@@ -470,10 +507,23 @@ func (tx *lowering) generatorOf(node *ast.Node) *ast.Node {
 		// the comment after the arrow would also appear inside the block.
 		body.AsBlock().Statements.Loc = core.UndefinedTextRange()
 	}
+	return parameters, body
+}
 
-	generator := tx.generatorExpression(node, sourceName(node), parameters, body)
-	ec.SetOriginal(generator, node)
-	return generator
+// directFunction returns node, an arrow function or function expression,
+// with parameters and a body that returns effect.
+func (tx *lowering) directFunction(node *ast.Node, parameters *ast.NodeList, effect *ast.Node) *ast.Node {
+	f := tx.Factory()
+	var lowered *ast.Node
+	if node.Kind == ast.KindArrowFunction {
+		lowered = f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, parameters, nil /*typeNode*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), effect)
+	} else {
+		body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(effect)}), false /*multiLine*/)
+		lowered = f.NewFunctionExpression(nil /*modifiers*/, nil /*asteriskToken*/, node.Name(), nil /*typeParameters*/, parameters, nil /*typeNode*/, nil /*fullSignature*/, body)
+	}
+	tx.EmitContext().SetOriginal(lowered, node)
+	lowered.Loc = node.Loc
+	return lowered
 }
 
 // wrapGenerator returns `Effect.<method>(generator)` in place of node.
@@ -503,11 +553,18 @@ func functionName(fn *ast.Node) string {
 // becomes an Effect factory; moving a const cannot cover switch clauses or
 // cyclic module imports. Keep the existing generator and tracing wrapper so
 // defaults, destructuring, this, arguments, and recursive references still run
-// inside the Effect, rather than eagerly in the forwarding declaration.
+// inside the Effect, rather than eagerly in the forwarding declaration. A
+// body with a direct Effect (direct.go) is the declaration's own body.
 func (tx *lowering) visitEffectFunctionDeclaration(node *ast.Node) *ast.Node {
 	f := tx.Factory()
-	ec := tx.EmitContext()
-	lowered := tx.lowerFunction(node)
+	loweredParameters, loweredBody := tx.loweredBody(node)
+	if hasSimpleParameters(node) {
+		if effect := tx.directEffect(node, loweredBody); effect != nil {
+			body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(effect)}), true /*multiLine*/)
+			return tx.effectFunctionDeclaration(node, loweredParameters, body)
+		}
+	}
+	lowered := tx.wrapFunction(node, tx.generatorFrom(node, loweredParameters, loweredBody))
 
 	// Forward all arguments without evaluating the source parameters twice.
 	// Placeholder parameters preserve fnUntraced's observable function length.
@@ -535,7 +592,13 @@ func (tx *lowering) visitEffectFunctionDeclaration(node *ast.Node) *ast.Node {
 	}
 	statements = append(statements, f.NewReturnStatement(call))
 	body := f.NewBlock(f.NewNodeList(statements), true /*multiLine*/)
+	return tx.effectFunctionDeclaration(node, f.NewNodeList(parameters), body)
+}
 
+// effectFunctionDeclaration returns the declaration that replaces node, an
+// Effect function declaration, with parameters and body.
+func (tx *lowering) effectFunctionDeclaration(node *ast.Node, parameters *ast.NodeList, body *ast.Node) *ast.Node {
+	f := tx.Factory()
 	// async is implemented by the Effect generator, not by this wrapper.
 	var modifiers []*ast.Node
 	if ast.HasSyntacticModifier(node, ast.ModifierFlagsExport) {
@@ -544,8 +607,8 @@ func (tx *lowering) visitEffectFunctionDeclaration(node *ast.Node) *ast.Node {
 	if ast.HasSyntacticModifier(node, ast.ModifierFlagsDefault) {
 		modifiers = append(modifiers, f.NewModifier(ast.KindDefaultKeyword))
 	}
-	statement := f.NewFunctionDeclaration(f.NewModifierList(modifiers), nil, node.Name(), nil, f.NewNodeList(parameters), nil, nil, body)
-	ec.SetOriginal(statement, node)
+	statement := f.NewFunctionDeclaration(f.NewModifierList(modifiers), nil, node.Name(), nil, parameters, nil, nil, body)
+	tx.EmitContext().SetOriginal(statement, node)
 	statement.Loc = node.Loc
 	return statement
 }

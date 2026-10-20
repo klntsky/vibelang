@@ -29,6 +29,16 @@ Capture moves `_stack` frames. It cannot move a JavaScript activation. An activa
 
 A function that may capture or park compiles to one heap frame per activation. Today that frame is Effect's generator frame, made by `Effect.fnUntraced`, as above. A call to another computation is `yield*` of that computation's Effect, which the run loop evaluates as a separate frame. That keeps JavaScript stack depth constant (T6a).
 
+A function whose body is empty or one return, with every call that runs in a result position, needs no frame of its own (D274). It returns that Effect, suspended: `Effect.suspend(thunk)` when a result runs a program, `Effect.sync(thunk)` when it is a value, and `Effect.void` for an empty body. The thunk only builds the program, which runs as the next step of the caller's run loop, so nothing can capture or park inside it:
+
+```ts es
+const shout = (text: string) => Console.log(text.toUpperCase())
+```
+
+```ts gen
+const shout = (text: string) => Effect.suspend({ shout: () => Console.log(text.toUpperCase()) }.shout)
+```
+
 The generator here is only a frame representation. Control comes from the kernel's prompts, not from `Effect.gen`. The compiler never emits `Effect.fnUntracedEager`, which runs at call time, and traces a function with `Effect.fn` only when the project's `tracing` option asks for it (Chapter 28), because traced frames cost 10 to 20 times more (Chapter 24). A later backend can replace generators with explicit state machines without changing any rule here (Chapter 25).
 
 #### Regions compile to frames, never to JavaScript `try`

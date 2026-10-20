@@ -21,4 +21,4 @@ export function main() {
 }
 // The module top level is not inside a program, so a runner starts one: it
 // receives a program, a function with no parameters (D7, D38).
-Effect.runPromise(Effect_1.gen(function* () { return yield* Effect.catch(Effect_1.gen(function* () { return yield* main(); }), Effect_1.fnUntraced(function* (e) { return yield* Console.log(`caught ${e._tag} ${e.id}`); })); }));
+Effect.runPromise(Effect_1.suspend(() => Effect.catch(Effect_1.suspend(() => main()), (e) => Effect_1.suspend(() => Console.log(`caught ${e._tag} ${e.id}`)))));

@@ -56,6 +56,12 @@ func (tx *lowering) lowerMethod(node *ast.Node) *ast.Node {
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
 	tx.inEffect, tx.frame = saved, savedFrame
 
+	if effect := tx.directEffect(node, body); effect != nil {
+		block := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(effect)}), true /*multiLine*/)
+		lowered := f.UpdateMethodDeclaration(method, node.Modifiers(), method.AsteriskToken, node.Name(), method.PostfixToken, method.TypeParameters, parameters, method.Type, method.FullSignature, block)
+		ec.SetOriginal(lowered, node)
+		return lowered
+	}
 	generator := tx.generatorExpression(node, sourceName(node), f.NewNodeList(nil), body)
 	ec.SetOriginal(generator, node)
 	arguments := []*ast.Node{generator}
