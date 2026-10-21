@@ -308,6 +308,26 @@ var projectionCases = []struct {
 		virtual: "export class Timeout extends TaggedError(\"Timeout\")<{}> {}\n",
 	},
 	{
+		name:    "an error with a class's members keeps them, its fields declared (D278)",
+		source:  "export error Validated implements Coded {\n  code: string\n  mutable count: number\n  static readonly docs = \"x\"\n  constructor(code: string) { super({ code, count: 0 }) }\n  get label(): string { return this.code }\n}\n",
+		virtual: "export class Validated extends TaggedError(\"Validated\")<{ readonly code: string; count: number; }> implements Coded {\n  declare readonly code: string\n  declare count: number\n  static readonly docs = \"x\"\n  constructor(code: string) { super({ code, count: 0 }) }\n  get label(): string { return this.code }\n}\n",
+	},
+	{
+		name:    "an abstract family root types its tag as string (D304)",
+		source:  "abstract error Http { status: number; abstract describe(): string }\nerror Wide { _tag: string; code: string }\n",
+		virtual: "abstract class Http extends TaggedError(\"Http\" as string)<{ readonly status: number; }> { declare readonly status: number; abstract describe(): string }\nclass Wide extends TaggedError(\"Wide\" as string)<{ readonly _tag: string; readonly code: string }> {}\n",
+	},
+	{
+		name:    "a subclass is tagged with its own name (D278)",
+		source:  "error Missing extends Wide { path: string }\nerror Bare extends Wide\nerror Own extends Wide { reason: string; constructor(reason: string) { super({ code: reason }); this.reason = reason } }\n",
+		virtual: "class Missing extends $errorSubclass(Wide, \"Missing\") { declare readonly _tag: \"Missing\"; constructor(args: $ErrorArgs<typeof Wide, Pick<Missing, \"path\">>) { super(args) } declare readonly path: string }\nclass Bare extends $errorSubclass(Wide, \"Bare\") { declare readonly _tag: \"Bare\"; }\nclass Own extends $errorSubclass(Wide, \"Own\") { declare readonly _tag: \"Own\"; declare readonly reason: string; constructor(reason: string) { super({ code: reason }); this.reason = reason } }\n",
+	},
+	{
+		name:    "a schema error is a schema class (D279)",
+		source:  "schema error FsError { _tag: string; method: string; path?: string }\nschema error Locked extends FsError { holder: string }\n",
+		virtual: "class FsError extends Schema.TaggedError<FsError>()(\"FsError\" as string, { method: Schema.String, path: Schema.optional(Schema.String) }) { declare readonly _tag: string; declare readonly method: string; declare readonly path?: string }\nclass Locked extends FsError.extend<Locked>(\"Locked\")({ _tag: Schema.tag(\"Locked\"), holder: Schema.String }) { declare readonly holder: string }\n",
+	},
+	{
 		name:    "generic error",
 		source:  "error Wrapped<T> { value: T }\n",
 		virtual: "class Wrapped<T> extends TaggedError(\"Wrapped\")<{ readonly value: T }> {}\n",

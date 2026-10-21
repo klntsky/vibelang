@@ -287,6 +287,15 @@ export declare function $asProgram<T>(value: T): T
 export declare function $fail<E>(value: E): EffectModule.Effect<never, E extends Cause.Cause<infer Failure> ? Failure : E>
 
 /**
+ * D278: the base of an error that extends another error,
+ * `class Missing extends $errorSubclass(NotFound, "Missing")`, tagged with
+ * its own name.
+ */
+export declare const $errorSubclass: typeof Runtime.$errorSubclass
+/** D278: what the constructor of a subclass with fields and no constructor takes. */
+export type $ErrorArgs<B, A> = Runtime.$ErrorArgs<B, A>
+
+/**
  * The base of a service, a control, or a D1 abstract class (D1, D45):
  * `abstract class Users extends $service<Users>("pkg/users#Users") {}`.
  */

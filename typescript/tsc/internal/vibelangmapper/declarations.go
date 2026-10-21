@@ -12,23 +12,10 @@ import (
 // the TypeScript the fork's declaration files print for it, so a hover and
 // a .d.ts read the same in both.
 
-// isErrorDeclaration reports whether node is an `error Name { ... }`
-// declaration, which the parser reads as a class whose base is a synthesized
-// TaggedError("Name") call.
+// isErrorDeclaration reports whether node is an error declaration, which
+// the parser reads as a class whose base it writes (D126, D278, D279).
 func isErrorDeclaration(node *ast.Node) bool {
-	if node.Kind != ast.KindClassDeclaration || node.Flags&ast.NodeFlagsReparsed != 0 {
-		return false
-	}
-	base := extendsElement(node)
-	if base == nil {
-		return false
-	}
-	call := base.Expression()
-	if call.Kind != ast.KindCallExpression || call.Flags&ast.NodeFlagsReparsed == 0 {
-		return false
-	}
-	callee := call.Expression()
-	return callee.Kind == ast.KindIdentifier && callee.Text() == "TaggedError" && len(base.TypeArguments()) == 1
+	return errorClassFormOf(node) != errorClassNone
 }
 
 // extendsElement returns the single extends element of class, or nil.
@@ -49,6 +36,10 @@ func extendsElement(class *ast.Node) *ast.Node {
 // the runtime's TaggedError (D3). The fields are readonly unless written
 // mutable (D134), as the parser reads them.
 func (p *projector) errorDeclaration(node *ast.Node) {
+	if errorClassFormOf(node) != errorClassRoot || hasClassFeatures(node) {
+		p.errorClassDeclaration(node) // errors.go
+		return
+	}
 	class := node.AsClassDeclaration()
 	name := class.Name()
 	keywordStart, ok := p.keywordBefore(name, "error")
@@ -67,16 +58,29 @@ func (p *projector) errorDeclaration(node *ast.Node) {
 		}
 		head = closing + 1
 	}
-	base := "extends " + p.names.prelude("TaggedError") + "(" + strconv.Quote(name.Text()) + ")<"
+	tag := strconv.Quote(name.Text())
 	fields := extendsElement(node).TypeArguments()[0]
-	if fields.Flags&ast.NodeFlagsReparsed != 0 {
+	if fields.Flags&ast.NodeFlagsReparsed == 0 {
+		for _, member := range fields.Members() {
+			if member.Name() != nil && member.Name().Text() == "_tag" && member.Type() != nil {
+				// A family's base declares its tag type (D304).
+				tag += " as " + p.text[p.tokenStart(member.Type()):member.Type().End()]
+			}
+		}
+	}
+	base := "extends " + p.names.prelude("TaggedError") + "(" + tag + ")<"
+	open := p.errorBodyOpen(node, head)
+	if open < 0 {
 		// error Timeout: no fields were written.
 		p.plan.insert(head, " "+base+"{}> {}")
 		return
 	}
-	p.plan.insert(p.tokenStart(fields), base)
-	p.visit(fields, env{})
-	p.plan.insert(fields.End(), "> {}")
+	// The braces of the body are the braces of the fields' type literal.
+	p.plan.insert(open-1, base)
+	if fields.Flags&ast.NodeFlagsReparsed == 0 {
+		p.visit(fields, env{})
+	}
+	p.plan.insert(node.End(), "> {}")
 }
 
 // keywordBefore returns the start of word when it is the token right
