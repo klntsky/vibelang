@@ -242,7 +242,7 @@ func (p *projector) visit(node *ast.Node, e env) {
 		p.relativeTypeScriptImport(node)
 		p.visitChildren(node, e)
 		return
-	case isSchemaDeclaration(node) || isSchemaInterface(node):
+	case isSchemaDeclaration(node) || isSchemaInterface(node) || isSchemaAliasType(node):
 		p.schemaDeclaration(node)
 		return
 	case isErrorDeclaration(node):

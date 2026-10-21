@@ -233,6 +233,16 @@ var projectionCases = []struct {
 		virtual: "export interface User extends Schema.Schema.Type<typeof User> {}\nexport const User = Schema.Struct({ id: Schema.String, home: Schema.optional(Schema.Number), role: Schema.Literals([\"a\", \"b\"]), tags: Schema.Array(Schema.String), active: Schema.mutableKey(Schema.Boolean) });\n",
 	},
 	{
+		name:    "schema alias of a literal union (D280)",
+		source:  "export schema Code = \"a\" | \"b\"\n",
+		virtual: "export type Code = typeof Code.Type;\nexport const Code = Schema.Literals([\"a\", \"b\"]);\n",
+	},
+	{
+		name:    "schema alias of other forms (D280)",
+		source:  "schema Address { city: string }\nschema Home = Address | null;\nschema Pairs = ReadonlyArray<[string, number]>\nschema Point = { x: number }\n",
+		virtual: "interface Address extends Schema.Schema.Type<typeof Address> {}\nconst Address = Schema.Struct({ city: Schema.String });\ntype Home = typeof Home.Type;\nconst Home = Schema.Union([Address, Schema.Null]);\ntype Pairs = typeof Pairs.Type;\nconst Pairs = Schema.Array(Schema.Tuple([Schema.String, Schema.Number]));\ntype Point = typeof Point.Type;\nconst Point = Schema.Struct({ x: Schema.Number });\n",
+	},
+	{
 		name:    "schema nested reference",
 		source:  "schema Address { city: string }\nschema User { home: Address; point: { x: number } }\n",
 		virtual: "interface Address extends Schema.Schema.Type<typeof Address> {}\nconst Address = Schema.Struct({ city: Schema.String });\ninterface User extends Schema.Schema.Type<typeof User> {}\nconst User = Schema.Struct({ home: Address, point: Schema.Struct({ x: Schema.Number }) });\n",
@@ -1012,6 +1022,8 @@ func TestSchemaDiagnostics(t *testing.T) {
 		"schema Event { when: Date; run(): void; parts: Partial<{ a: string }> }",
 		"type Alias = string; schema Event { value: Alias }",
 		"import type { Remote } from './remote'; schema Event { value: Remote }",
+		"schema Run = () => void",
+		"schema When = Date",
 	} {
 		projection := Project(source, testContext)
 		assert.Assert(t, len(projection.Diagnostics) > 0, source)

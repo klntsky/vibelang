@@ -7,13 +7,32 @@ import (
 )
 
 // isSchemaDeclaration recognizes the parser's D133 struct initializer, so
-// ordinary Schema.Struct calls retain their ordinary expression lowering.
+// ordinary Schema.Struct calls retain their ordinary expression lowering, and
+// a D280 alias, whose declaration the parser flags.
 func isSchemaDeclaration(node *ast.Node) bool {
 	if node.Kind != ast.KindVariableStatement {
 		return false
 	}
 	declarations := node.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes
-	return len(declarations) == 1 && declarations[0].Initializer() != nil && declarations[0].Initializer().Kind == ast.KindCallExpression && declarations[0].Initializer().Flags&ast.NodeFlagsVibeLang != 0
+	return len(declarations) == 1 && declarations[0].Initializer() != nil &&
+		(isSchemaAlias(declarations[0]) || declarations[0].Initializer().Kind == ast.KindCallExpression && declarations[0].Initializer().Flags&ast.NodeFlagsVibeLang != 0)
+}
+
+// isSchemaAlias reports whether declaration is the constant of a schema alias,
+// schema Name = Type (D280), which the parser flags NodeFlagsVibeLang.
+func isSchemaAlias(declaration *ast.Node) bool {
+	return declaration.Kind == ast.KindVariableDeclaration && declaration.Flags&ast.NodeFlagsVibeLang != 0
+}
+
+// isSchemaAliasType identifies a schema alias's synthesized type alias,
+// type Name = typeof Name.Type, which is written with the constant.
+func isSchemaAliasType(node *ast.Node) bool {
+	if node.Kind != ast.KindTypeAliasDeclaration || node.Flags&ast.NodeFlagsReparsed == 0 {
+		return false
+	}
+	query := node.Type()
+	return query != nil && query.Kind == ast.KindTypeQuery && query.AsTypeQueryNode().ExprName.Kind == ast.KindQualifiedName &&
+		query.AsTypeQueryNode().ExprName.AsQualifiedName().Right.Text() == "Type"
 }
 
 // isSchemaInterface identifies the parser's preceding decoded-type declaration.
@@ -38,7 +57,7 @@ func isSchemaInterface(node *ast.Node) bool {
 // The decoded interface is a checking witness; deriving it from the value keeps
 // optional and mutable keys consistent with the runtime schema.
 func (p *projector) schemaDeclaration(node *ast.Node) {
-	if isSchemaInterface(node) {
+	if isSchemaInterface(node) || isSchemaAliasType(node) {
 		return
 	}
 	declaration := node.AsVariableStatement().DeclarationList.AsVariableDeclarationList().Declarations.Nodes[0]
@@ -55,7 +74,12 @@ func (p *projector) schemaDeclaration(node *ast.Node) {
 	}
 	// Export already precedes the replaced keyword, so it belongs to the
 	// interface, with a second export preceding the value declaration.
-	p.plan.witness(start, "interface "+name.Text()+" extends "+schema+".Schema.Type<typeof "+name.Text()+"> {}\n"+exported)
+	if isSchemaAlias(declaration) {
+		// D280: the type is the schema's decoded type.
+		p.plan.witness(start, "type "+name.Text()+" = typeof "+name.Text()+".Type;\n"+exported)
+	} else {
+		p.plan.witness(start, "interface "+name.Text()+" extends "+schema+".Schema.Type<typeof "+name.Text()+"> {}\n"+exported)
+	}
 	value := p.schemaExpression(declaration.Initializer(), schema)
 	p.plan.replace(start, node.End(), "const "+name.Text()+" = "+value+";")
 }
