@@ -6,7 +6,7 @@ export const flowPath = ".smithers/flows/docs/flow.ts";
 /** Named in every footer. check.test.ts asserts it matches the installed js-tiktoken. */
 export const tokenizer = { encoding: "o200k_base", library: "js-tiktoken", version: "1.0.21" } as const;
 /** Repository files the flow reads. Their text travels in the flow's payload and its cache key. */
-export const sourcePaths = ["README.md", "docs/user/llms-essentials.md"] as const;
+export const sourcePaths = ["README.md", "docs/user/llms-essentials.md", "packages/compiler/skills/vibelang/SKILL.md"] as const;
 export type Sources = Readonly<Record<(typeof sourcePaths)[number], string>>;
 
 const encoder = getEncoding(tokenizer.encoding);
@@ -23,17 +23,17 @@ const blocks: Record<string, () => string> = {
   releaseSteps: () => releaseSteps.map((step, i) => `${i + 1}. ${step}`).join("\n")
 };
 
-/** Replaces each `{{name}}` with a fact or a block, recursively; an unknown name throws. */
-export function resolve(text: string): string {
+/** Replaces each `{{name}}` with a block, a measured value or a fact, recursively; an unknown name throws. */
+export function resolve(text: string, measured: Readonly<Record<string, string>> = {}): string {
   return text.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
-    const value = blocks[key]?.() ?? (facts as Record<string, string>)[key];
+    const value = blocks[key]?.() ?? measured[key] ?? (facts as Record<string, string>)[key];
     if (value === undefined) throw new Error(`Unknown project fact: ${key}`);
-    return resolve(value);
+    return resolve(value, measured);
   });
 }
 
-const document = (doc: Document) =>
-  [`# ${resolve(doc.title)}`, resolve(doc.intro), ...doc.sections.map(s => `## ${s.heading}\n\n${resolve(s.body)}`)].join("\n\n") + "\n";
+const document = (doc: Document, measured: Readonly<Record<string, string>> = {}) =>
+  [`# ${resolve(doc.title, measured)}`, resolve(doc.intro, measured), ...doc.sections.map(s => `## ${s.heading}\n\n${resolve(s.body, measured)}`)].join("\n\n") + "\n";
 
 const up = (path: string) => "../".repeat(path.split("/").length - 1);
 const tokenNote = (n: number) => `${n.toLocaleString("en-US")} tokens (${tokenizer.encoding}, ${tokenizer.library} ${tokenizer.version})`;
@@ -63,7 +63,8 @@ export function render(sources: Sources): Record<string, string> {
     "README.md": counted(sources["README.md"].replace(readmeFooter, "").trimEnd() + "\n", footer("README.md")),
     "CONTRIBUTING.md": generated("CONTRIBUTING.md", document(contributing)),
     "MAINTAINERS.md": generated("MAINTAINERS.md", document(maintainers)),
-    "AGENTS.md": generated("AGENTS.md", document(agents)),
+    // The skill's size is measured from the file, so the pointer can't drift from it.
+    "AGENTS.md": generated("AGENTS.md", document(agents, { skillTokens: countTokens(sources[facts.skill]).toLocaleString("en-US") })),
     "templates/app/AGENTS.md": counted(
       `# ${resolve(starterAgents.title)}\n\n${resolve(starterAgents.intro)}\n\n${sources["docs/user/llms-essentials.md"]}`,
       starterFooter)

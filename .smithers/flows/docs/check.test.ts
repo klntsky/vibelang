@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { digestSync } from "@smthrs/crypto";
 import { generate, readSources, repository, smithers } from "./run.ts";
 import { countTokens, header, render, resolve, tokenizer } from "./render.ts";
+import { facts } from "./project.ts";
 
 test("the docs flow is deterministic, and every output and the manifest are current", async () => {
   const first = await generate();
@@ -30,7 +31,7 @@ test("each footer states the file's own exact token count and the installed toke
 });
 
 test("generated files say so and link their flow", () => {
-  const outputs = render({ "README.md": "# R\n", "docs/user/llms-essentials.md": "## Essentials\n" });
+  const outputs = render({ "README.md": "# R\n", "docs/user/llms-essentials.md": "## Essentials\n", "packages/compiler/skills/vibelang/SKILL.md": "# Skill\n" });
   for (const path of ["CONTRIBUTING.md", "MAINTAINERS.md", "AGENTS.md"]) {
     expect(outputs[path]!.startsWith(header(path))).toBe(true);
     expect(outputs[path]).toContain("](.smithers/flows/docs/flow.ts)");
@@ -50,7 +51,13 @@ test("the starter's AGENTS.md carries the docs' Essentials verbatim and stays un
 
 test("facts resolve strictly and the merge rule reaches the agents", () => {
   expect(() => resolve("{{missingFact}}")).toThrow("Unknown project fact");
-  const outputs = render({ "README.md": "# R\n", "docs/user/llms-essentials.md": "## Essentials\n" });
+  const outputs = render({ "README.md": "# R\n", "docs/user/llms-essentials.md": "## Essentials\n", "packages/compiler/skills/vibelang/SKILL.md": "# Skill\n" });
   expect(outputs["AGENTS.md"]).toContain("Agents never approve or merge.");
   expect(outputs["CONTRIBUTING.md"]).toContain("Agents never approve or merge.");
+});
+
+test("the root AGENTS.md points to the skill with its exact token count", async () => {
+  const sources = await readSources();
+  const tokens = countTokens(sources[facts.skill]).toLocaleString("en-US");
+  expect(render(sources)["AGENTS.md"]).toContain(`read ${facts.skill} (${tokens} tokens)`);
 });

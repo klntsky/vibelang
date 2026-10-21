@@ -14,8 +14,9 @@ export const facts = {
   newBug: `${repo}/issues/new?template=bug.yml`,
   newIdea: `${repo}/issues/new?template=idea.yml`,
   newQuestion: `${repo}/issues/new?template=question.yml`,
-  // The language rules agents read. Swap this one line for the VibeLang skill's path when it ships.
+  // The starter's docs link. Swap this one line for the packaged skill's path when 0.0.3 ships it.
   languageRules: "https://vibelang.sh/llms.txt",
+  skill: "packages/compiler/skills/vibelang/SKILL.md",
   setup: "sh scripts/setup.sh",
   e2e: "sh scripts/e2e.sh",
   merge: "A person reviews and merges every change. Agents never approve or merge.",
@@ -188,7 +189,9 @@ Never call a cross-compiled binary tested on an operating system it didn't run o
 /** The root AGENTS.md, for agents working on this repository. Every line costs tokens on every turn. */
 export const agents: Document = {
   title: "{{name}} repository",
-  intro: `Language rules: {{languageRules}}. Specification: \`docs/design/src/\`. Process: CONTRIBUTING.md.
+  intro: `Before writing or reviewing a \`.vibe\` file, read {{skill}} ({{skillTokens}} tokens): every form beside the Effect code it replaces, the rules with their EK codes, and the idiomatic choice for each job. The full docs are https://vibelang.sh/llms.txt.
+
+Specification: \`docs/design/src/\`. Process: CONTRIBUTING.md.
 
 - Work on one accepted issue. Add a test that fails without your change; compiler semantics get a case in \`typescript/vibelang/cases/\`.
 - Run \`{{e2e}}\` for install, compiler, runtime or starter changes. Report exact results, including failures and checks you couldn't run.

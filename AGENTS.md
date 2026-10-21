@@ -2,7 +2,9 @@
 
 # VibeLang repository
 
-Language rules: https://vibelang.sh/llms.txt. Specification: `docs/design/src/`. Process: CONTRIBUTING.md.
+Before writing or reviewing a `.vibe` file, read packages/compiler/skills/vibelang/SKILL.md (3,989 tokens): every form beside the Effect code it replaces, the rules with their EK codes, and the idiomatic choice for each job. The full docs are https://vibelang.sh/llms.txt.
+
+Specification: `docs/design/src/`. Process: CONTRIBUTING.md.
 
 - Work on one accepted issue. Add a test that fails without your change; compiler semantics get a case in `typescript/vibelang/cases/`.
 - Run `sh scripts/e2e.sh` for install, compiler, runtime or starter changes. Report exact results, including failures and checks you couldn't run.
@@ -11,4 +13,4 @@ Language rules: https://vibelang.sh/llms.txt. Specification: `docs/design/src/`.
 - Never put credentials or private user content in fixtures, logs or issues.
 - Agents never approve or merge.
 
-<sub>229 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>284 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
