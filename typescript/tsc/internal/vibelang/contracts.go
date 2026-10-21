@@ -90,6 +90,9 @@ func (a *analyzer) hasContract(fn *ast.Node) bool {
 // (D67, D282). In particular, asking about a callback parameter must not
 // first lift that parameter under D12 and then infer an Effect from its call.
 func (a *analyzer) hasPlainContract(fn *ast.Node) bool {
+	if isPlainGenerator(fn) {
+		return true // D296: a JavaScript iterator annotation is a plain contract
+	}
 	if fn == nil || !isLowerable(fn) || isProducer(fn) {
 		return false
 	}

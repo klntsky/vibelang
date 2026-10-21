@@ -44,6 +44,7 @@ func (p *projector) checkSyntaxDiagnostics() {
 		switch n.Kind {
 		case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
 			if ast.GetFunctionFlags(n)&ast.FunctionFlagsGenerator != 0 && HasJavaScriptIteratorReturn(n) {
+				p.checkPlainGeneratorThrows(n) // D296 (plain_contract_effects.go)
 				break // D271 permits an explicitly JavaScript async generator.
 			}
 			if modifiers := n.Modifiers(); modifiers != nil {

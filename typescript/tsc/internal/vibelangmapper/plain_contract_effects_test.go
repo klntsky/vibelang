@@ -120,3 +120,31 @@ func TestPlainContractByNameEffects(t *testing.T) {
 	}
 	assertPlainContractDiagnostic(t, `import { Effect, Stream } from "effect"; export function invalid(): Stream.Stream<number> { const stream = Stream.fromEffect(Effect.succeed(1)); Effect.succeed(2); return stream }`, true)
 }
+
+// D296: a generator with a JavaScript iterator annotation never fails, so a
+// throw that can escape it is EK2003 in both renderings; one its own catch
+// handles, and one in a nested function, are not.
+func TestPlainGeneratorThrows(t *testing.T) {
+	for _, test := range []struct {
+		source string
+		want   bool
+	}{
+		{"export function* steps(v: string): Generator<string> { if (v === \"\") throw v; yield v }", true},
+		{"export async function* later(v: string): AsyncGenerator<string> { yield v; throw v }", true},
+		{"export function* kept(): Iterator<string> { try { throw \"x\" } catch (e) { yield \"caught\" } }", false},
+		{"export function* nested(): Iterable<number> { const f = (): number!string! => { throw \"x\" }; yield 1 }", false},
+		{"export function* producer(v: string) { if (v === \"\") throw v; yield v }", false},
+	} {
+		for _, projection := range []Projection{Project(test.source, testContext), Executable(test.source, testContext)} {
+			count := 0
+			for _, d := range projection.Diagnostics {
+				if d.Code == 2003 && strings.Contains(d.Message, "(D296)") {
+					count++
+				}
+			}
+			if (count == 1) != test.want || count > 1 {
+				t.Fatalf("D296 diagnostics=%v, want %v\n%s", projection.Diagnostics, test.want, test.source)
+			}
+		}
+	}
+}

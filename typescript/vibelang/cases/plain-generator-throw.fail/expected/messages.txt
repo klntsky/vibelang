@@ -1,0 +1,3 @@
+Generator<string> is a JavaScript iterator annotation, but steps can fail with Invalid, and a plain generator never fails.
+  Remove the annotation to make it a Stream producer, whose throws fail the Stream.
+  Or write a generator that speaks a JavaScript protocol by throwing in a module block or a .ts file.

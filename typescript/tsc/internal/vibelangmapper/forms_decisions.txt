@@ -1162,6 +1162,7 @@ typescript/vibelang/cases/plain-factory-programs/program.vibe:4:57 lambda progra
 typescript/vibelang/cases/plain-functions/main.vibe:49:28 lambda plain table
 typescript/vibelang/cases/plain-functions/main.vibe:50:40 lambda effectFn table
 typescript/vibelang/cases/plain-generator/main.vibe:11:22 lambda plain annotation
+typescript/vibelang/cases/plain-generator/main.vibe:59:23 lambda plain table
 typescript/vibelang/cases/plain-object-byname/main.vibe:5:13 lambda plain annotation
 typescript/vibelang/cases/plain-object-byname/main.vibe:9:50 lambda plain table
 typescript/vibelang/cases/plain-object-byname/repro.vibe:12:32 lambda plain fallback

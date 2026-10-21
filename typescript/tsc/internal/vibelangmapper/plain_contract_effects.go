@@ -100,3 +100,35 @@ func (p *projector) throwCaught(throw *ast.Node, fn *ast.Node, caught map[*ast.N
 	}
 	return false
 }
+
+// checkPlainGeneratorThrows reports a throw that can escape fn, a generator
+// with a JavaScript iterator annotation (D271): it follows D282 like any
+// plain function (D296), and its calls run nothing, so only throws matter.
+func (p *projector) checkPlainGeneratorThrows(fn *ast.Node) {
+	if fn.Body() == nil {
+		return
+	}
+	caught := map[*ast.Node]bool{}
+	var visit func(*ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if invokedForm(node) {
+			return node.Body().ForEachChild(visit)
+		}
+		if ast.IsFunctionLike(node) || ast.IsClassLike(node) {
+			return false
+		}
+		if node.Kind == ast.KindTryStatement && node.AsTryStatement().CatchClause != nil {
+			caught[node.AsTryStatement().TryBlock] = true
+		}
+		if node.Kind == ast.KindThrowStatement && !p.throwCaught(node, fn, caught) {
+			start := p.tokenStart(node)
+			p.diagnostics = append(p.diagnostics, Diagnostic{
+				Start: start, Length: node.End() - start, Code: CodePlainContractEffect,
+				Message: "A generator with a JavaScript iterator annotation never fails, so it cannot throw (D296). Remove the annotation to make it a Stream producer, or write it in a module block or a .ts file.",
+			})
+			return true
+		}
+		return node.ForEachChild(visit)
+	}
+	visit(fn.Body())
+}

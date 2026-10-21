@@ -188,7 +188,7 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	case isFunctionBoundary(node):
 		saved, savedPlain := tx.inEffect, tx.plain
 		tx.inEffect = false
-		tx.plain = isLowerable(node) // a .vibe function that is not an Effect
+		tx.plain = isLowerable(node) || isPlainGenerator(node) // a .vibe function that is not an Effect, or a plain generator (D296)
 		defer func() { tx.inEffect, tx.plain = saved, savedPlain }()
 	}
 	return tx.Visitor().VisitEachChild(node)

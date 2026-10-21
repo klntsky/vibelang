@@ -1,4 +1,4 @@
-// expect-result: [1,[2,3],9,3,[4,5,6],"caught",7]
+// expect-result: [1,[2,3],9,3,[4,5,6],"caught","step",7]
 import { Effect } from "effect"
 
 export function* steps(): Generator<number, number, unknown> {
@@ -20,8 +20,17 @@ export function* iterator(): Iterator<number> { yield 4 }
 export function* iterableIterator(): IterableIterator<number> { yield 5 }
 export function* iterable(): Iterable<number> { yield 6 }
 
-export function* recover(): Generator<string, void, unknown> {
-  try { yield "ready" } catch { yield "caught" }
+export error Stop
+
+// D296: the catch receives typed failures only. A throw it handles stays
+// inside; an exception passed in with generator.throw() passes through.
+export function* recover(stop: boolean): Generator<string, void, unknown> {
+  try {
+    yield "ready"
+    if (stop) throw new Stop()
+  } catch {
+    yield "caught"
+  }
 }
 
 export function* effectSteps(): Generator<Effect.Effect<number>, number, number> {
@@ -42,7 +51,13 @@ export function main() {
   let result: IteratorResult<void, number> = tree.next()
   while (!result.done) result = tree.next()
   const values = [iterator().next().value, ...iterableIterator(), ...iterable()]
-  const recovery = recover()
+  const recovery = recover(true)
   recovery.next()
-  return [first, rest, done, result.value, values, recovery.throw(new Error("step")).value, Effect.gen(effectSteps)]
+  const caught = recovery.next().value
+  const injected = recover(false)
+  injected.next()
+  const passed = sync((g: Generator<string, void, unknown>) => {
+    try { g.throw(new Error("step")); return "kept" } catch (e) { return (e as Error).message }
+  }, injected)
+  return [first, rest, done, result.value, values, caught, passed, Effect.gen(effectSteps)]
 }

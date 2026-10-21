@@ -187,7 +187,7 @@ func catchVariableType(c *checker.Checker, declaration *ast.Node) *checker.Type 
 		return t // catch (cause: Cause) (primitives.go)
 	}
 	clause := declaration.Parent
-	if clause == nil || clause.Kind != ast.KindCatchClause || !inLowerableBody(clause.Parent) || isHandleStatement(clause.Parent) {
+	if clause == nil || clause.Kind != ast.KindCatchClause || !inLowerableBody(clause.Parent) && !inPlainGeneratorBody(clause.Parent) || isHandleStatement(clause.Parent) {
 		return nil
 	}
 	info := analyzerFor(c).tryBlockFlow(clause.Parent.AsTryStatement().TryBlock)
@@ -231,7 +231,7 @@ var deadCatch = EK2004.With("this catch can never run: nothing in its try block 
 func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
-		if node.Kind == ast.KindTryStatement && catches(node) && !isCauseCatch(node) && inLowerableBody(node) {
+		if node.Kind == ast.KindTryStatement && catches(node) && !isCauseCatch(node) && (inLowerableBody(node) || inPlainGeneratorBody(node)) {
 			try := node.AsTryStatement()
 			a := analyzerFor(c)
 			info := a.tryBlockFlow(try.TryBlock)
