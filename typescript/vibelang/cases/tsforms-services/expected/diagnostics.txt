@@ -1,0 +1,5 @@
+main.vibe(9,14): warning EK4831
+main.vibe(10,21): warning EK4833
+main.vibe(12,27): warning EK4833
+main.vibe(16,11): warning EK4833
+main.vibe(18,7): warning EK4831

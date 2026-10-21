@@ -1,0 +1,48 @@
+// expect-result: {"traced":"Ada","provided":"eu","served":4,"many":"eu 4","logged":"done"}
+// Effect.withSpan, Effect.provide, and Effect.provideService draw EK4836
+// (D290). The fix writes withSpan(name) { … } wherever the call stands, and
+// a provide block where a block can stand: a return or a statement.
+// tsforms-blocks-fixed is what vibelang --fix writes.
+service Region {
+  name(): string!!
+}
+
+service Size {
+  of(text: string): number!!
+}
+
+const RegionLive = Layer.succeed(Region, { name() { return "eu" } })
+const SizeLive = Layer.succeed(Size, { of(text) { return text.length } })
+
+function find() {
+  return "Ada"
+}
+
+function traced() {
+  return Effect.withSpan(find(), "find")
+}
+
+function provided() {
+  return Effect.provide(Region.name(), RegionLive)
+}
+
+function served() {
+  return Effect.provideService(Size.of("abcd"), Size, { of(text: string) { return text.length } })
+}
+
+function describe() {
+  return `${Region.name()} ${Size.of("four")}`
+}
+
+function many() {
+  return Effect.provide(describe(), [RegionLive, SizeLive])
+}
+
+function logged() {
+  Effect.provide(Region.name(), RegionLive)
+  return "done"
+}
+
+export function main() {
+  return { traced: traced(), provided: provided(), served: served(), many: many(), logged: logged() }
+}

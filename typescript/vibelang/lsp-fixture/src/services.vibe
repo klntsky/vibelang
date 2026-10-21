@@ -1,8 +1,11 @@
 // The prelude, a service, and a plain function. Effect and TaggedError need
-// no import in a .vibe file.
+// no import in a .vibe file. The long forms are deliberate here, so their
+// EK4830 and EK4833 warnings are off for those lines (D241).
+// @vibelang-diagnostics-next-line EK4830:off
 export class Missing extends TaggedError("Missing")<{ readonly id: number }> {}
 
 export abstract class Users {
+  // @vibelang-diagnostics-next-line EK4833:off
   abstract find(id: number): Effect<string, Missing, never>
 }
 

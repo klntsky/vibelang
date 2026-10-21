@@ -1,0 +1,9 @@
+// The error classes main.vibe raises, written as Effect's TypeScript writes
+// them. Each is exact, so --fix writes all three as error declarations and
+// removes the import of Data that nothing uses any more.
+import { Data } from "effect"
+
+/** An id that has no user. */
+export class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string; count: number }> {}
+export class Timeout extends Data.TaggedError("Timeout") {}
+export class Boxed<T> extends Data.TaggedError("Boxed")<{ readonly value: T }> {}

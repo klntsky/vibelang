@@ -1,0 +1,34 @@
+// expect-result: {"user":{"id":"1","role":"admin"},"order":{"items":["a"],"total":2,"pair":["x",true],"tags":{"t":1},"owner":{"id":"2","role":"member"},"status":"open","note":null,"meta":{"ok":true}},"refused":true,"local":{"value":"v"},"exact":{}}
+// A constant that holds a Schema.Struct draws EK4832 (D286) when a schema
+// declaration writes the same struct. The fix replaces the struct's own type
+// alias, and works in a function body too; a struct with a field that no
+// declaration writes, such as Schema.optionalKey, draws nothing.
+// tsforms-schemas-fixed is what vibelang --fix writes.
+export schema User { id: string; nickname?: string; role: "admin" | "member" }
+
+schema Order {
+  items: string[]
+  total: number
+  pair: [string, boolean]
+  tags: Record<string, number>
+  owner: User
+  mutable status: "open"
+  note: string | null
+  meta: { ok: boolean }
+}
+
+const Exact = Schema.Struct({ id: Schema.optionalKey(Schema.String) })
+
+function local(value: unknown) {
+  schema Local { value: string }
+  return Schema.decodeUnknownEffect(Local)(value)
+}
+
+export function main() {
+  const user: User = Schema.decodeUnknownEffect(User)({ id: "1", role: "admin" })
+  const order = Schema.decodeUnknownEffect(Order)({
+    items: ["a"], total: 2, pair: ["x", true], tags: { t: 1 }, owner: { id: "2", role: "member" }, status: "open", note: null, meta: { ok: true }
+  })
+  const refused = exit(Schema.decodeUnknownEffect(Order)({ items: 1 })) is Exit.Failure
+  return { user, order, refused, local: local({ value: "v" }), exact: Schema.decodeUnknownEffect(Exact)({}) }
+}

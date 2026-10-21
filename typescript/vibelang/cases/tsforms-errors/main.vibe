@@ -1,0 +1,35 @@
+// expect-result: {"found":{"id":"7","count":2,"_tag":"NotFound"},"slow":{"_tag":"Timeout"},"boxed":{"value":3,"_tag":"Boxed"},"renamed":{"id":"r","_tag":"app/Renamed"},"untagged":{"id":"u"},"schema":{"_tag":"SchemaFail","id":"s"},"described":["missing 7","slow"]}
+// TypeScript-style error classes draw EK4830 (D284). The fixed twin,
+// tsforms-errors-fixed, is what vibelang --fix writes, and returns the same
+// result. A class whose tag, base, or Schema an error declaration would
+// change keeps its warning, without a fix.
+import * as Data from "effect/Data"
+import { Boxed, NotFound, Timeout } from "./errors.vibe"
+
+class Renamed extends Data.TaggedError("app/Renamed")<{ readonly id: string }> {}
+class Untagged extends Data.Error<{ readonly id: string }> {}
+class SchemaFail extends Schema.TaggedError<SchemaFail>()("SchemaFail", { id: Schema.String }) {}
+
+function find(id: string): never!NotFound | Timeout {
+  if (id === "slow") throw new Timeout()
+  throw new NotFound({ id, count: 2 })
+}
+
+function describe(id: string) {
+  return find(id) catch (e) => match (e) {
+    when NotFound: `missing ${e.id}`;
+    when Timeout: "slow";
+  }
+}
+
+export function main() {
+  return {
+    found: find("7") catch (e) => e,
+    slow: find("slow") catch (e) => e,
+    boxed: new Boxed({ value: 3 }),
+    renamed: new Renamed({ id: "r" }),
+    untagged: new Untagged({ id: "u" }),
+    schema: new SchemaFail({ id: "s" }),
+    described: [describe("7"), describe("slow")]
+  }
+}

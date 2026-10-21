@@ -1,0 +1,51 @@
+// expect-result: {"loaded":3,"checked":"ok","held":"held","callback":4,"maybe":5,"nested":6,"kept":7}
+// An Effect type written with its type arguments draws EK4833 (D287); its
+// fix writes the ! form, which the parser expands to the same type. In a
+// return annotation with a body, a ! form without dependencies infers them,
+// so never is written as an empty slot there. The directive keeps one.
+// tsforms-types-fixed is what vibelang --fix writes.
+error Missing { id: string }
+
+function load(id: string): Effect.Effect<number, Missing, never> {
+  if (id === "") throw new Missing({ id })
+  return id.length
+}
+
+function checked(program: Effect.Effect<number, Missing>): Effect.Effect<string, never, infer R> {
+  const n = program() catch -1
+  return n >= 0 ? "ok" : "missing"
+}
+
+const held: Effect.Effect<string> = Effect.sync(() => "held")
+const six: Effect.Effect<number> = Effect.sync(() => 6)
+
+type Callback = (n: number) => Effect.Effect<number>
+const callback: Callback = (n) => n + 1
+
+function maybe(program: Effect.Effect<number> | undefined): number!! {
+  return program === undefined ? 0 : program()
+}
+
+function nested(program: Effect.Effect<Effect.Effect<number>>): number!! {
+  const inner = program()
+  return inner()
+}
+
+function kept(
+  // @vibelang-diagnostics-next-line EK4833:off
+  program: Effect.Effect<number>
+): number!! {
+  return program()
+}
+
+export function main() {
+  return {
+    loaded: load("abc"),
+    checked: checked(load("x")),
+    held: held(),
+    callback: callback(3),
+    maybe: maybe(Effect.succeed(5)),
+    nested: nested(Effect.succeed(six)),
+    kept: kept(Effect.succeed(7))
+  }
+}

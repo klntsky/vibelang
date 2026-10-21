@@ -11,7 +11,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/osutil"
 
 	// VibeLang registers its compiler hooks from init.
-	_ "github.com/microsoft/TypeScript/tsc/internal/vibelang"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelang"
 )
 
 func main() {
@@ -37,6 +37,14 @@ func runMain() int {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	result := execute.CommandLine(ctx, newSystem(), args, nil)
+	sys := newSystem()
+	if rest, fix := vibelang.FixArguments(args); fix {
+		// vibelang --fix applies the safe quick fixes, then compiles (D291).
+		if status := vibelang.Fix(ctx, sys, rest); status != 0 {
+			return status
+		}
+		args = rest
+	}
+	result := execute.CommandLine(ctx, sys, args, nil)
 	return int(result.Status)
 }

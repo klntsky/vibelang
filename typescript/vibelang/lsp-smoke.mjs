@@ -341,6 +341,31 @@ try {
     assert(layerEdits[0].range.start.line === layerStart.line && layerEdits[0].range.end.line === lineOf(file, "text() { return word }") + 1, `EK2121 edit range ${JSON.stringify(layerEdits[0].range)}`)
   })
 
+  await check("code action: TypeScript-style forms warn as EK4830 and EK4833, and their quick fixes write an error declaration and A!E!R", async () => {
+    const file = "src/ts-forms.vibe"
+    open(file, "vibe")
+    const items = await diagnostics(file)
+    const codes = items.map((d) => `${d.source} ${d.code} ${d.severity}`).sort()
+    assert(JSON.stringify(codes) === JSON.stringify(["EK 4830 2", "EK 4833 2"]), `diagnostics ${JSON.stringify(codes)}`)
+    const uri = fileUri(file)
+    const fixOf = async (item, title) => {
+      const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []
+      const fix = actions.find((a) => a.title === title)
+      assert(fix, `no quick fix ${JSON.stringify(title)} among ${JSON.stringify(actions.map((a) => a.title))}`)
+      return fix.edit?.changes?.[uri] ?? []
+    }
+    const error = items.find((d) => d.code === 4830)
+    const errorEdits = await fixOf(error, "Write error NotFound { id: string }")
+    const classAt = at(file, "class NotFound")
+    assert(errorEdits.length === 1 && errorEdits[0].newText === "error NotFound { id: string }", `EK4830 edits ${JSON.stringify(errorEdits)}`)
+    assert(errorEdits[0].range.start.line === classAt.line && errorEdits[0].range.start.character === classAt.character, `EK4830 edit range ${JSON.stringify(errorEdits[0].range)}`)
+    const type = items.find((d) => d.code === 4833)
+    const typeEdits = await fixOf(type, "Write string!NotFound!")
+    const typeAt = at(file, "Effect.Effect<string")
+    assert(typeEdits.length === 1 && typeEdits[0].newText === "string!NotFound!", `EK4833 edits ${JSON.stringify(typeEdits)}`)
+    assert(typeEdits[0].range.start.line === typeAt.line && typeEdits[0].range.start.character === typeAt.character, `EK4833 edit range ${JSON.stringify(typeEdits[0].range)}`)
+  })
+
   await check("code action: EK2112 warns at a typed catch clause, and its quick fix writes a match", async () => {
     open("src/old-catch.vibe", "vibe")
     const items = (await diagnostics("src/old-catch.vibe")).filter((d) => d.code === 2112)
@@ -405,7 +430,8 @@ try {
     open("src/lsrules.vibe", "vibe")
     const items = await diagnostics("src/lsrules.vibe")
     const codes = items.map((d) => `${d.source}${d.code}:${d.severity}`).sort()
-    assert(JSON.stringify(codes) === JSON.stringify(["EK4801:1", "EK4808:2", "EK4813:1"]), `codes ${JSON.stringify(codes)}`)
+    // EK4833 is the TypeScript spelling of discard's parameter type (D287).
+    assert(JSON.stringify(codes) === JSON.stringify(["EK4801:1", "EK4808:2", "EK4813:1", "EK4833:2"]), `codes ${JSON.stringify(codes)}`)
     const uri = fileUri("src/lsrules.vibe")
     const fixFor = async (item, title) => {
       const actions = (await connection.request("textDocument/codeAction", { textDocument: { uri }, range: item.range, context: { diagnostics: [item], only: ["quickfix"] } })) ?? []

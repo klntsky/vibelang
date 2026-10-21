@@ -1,0 +1,52 @@
+// expect-result: {"described":["Ada","missing 0"],"both":["missing","slow"],"any":"failed Timeout","nested":"to","tagged":"by tag","plain":"plain"}
+// Effect's catch combinators draw EK4835 (D289); the fix writes a catch
+// expression with one arm per tag. An arm names the error class when the
+// class's declaration fixes the tag, and tests _tag otherwise, as catchTag
+// does. tsforms-catch-fixed is what vibelang --fix writes.
+error Missing { id: number }
+error Timeout
+
+class Tagged {
+  readonly _tag = "Tagged" as const
+}
+
+function find(id: number): string!Missing | Timeout {
+  if (id === 0) throw new Missing({ id })
+  if (id < 0) throw new Timeout()
+  return "Ada"
+}
+
+function tagged(): string!Tagged {
+  throw new Tagged()
+}
+
+function describe(id: number) {
+  return Effect.catchTag(find(id), "Missing", (e) => `missing ${e.id}`)
+}
+
+function both(id: number) {
+  return Effect.catchTags(find(id), { Missing: () => "missing", Timeout: () => "slow" })
+}
+
+function any(id: number) {
+  return Effect.catch(find(id), (e) => `failed ${e._tag}`)
+}
+
+function nested(id: number) {
+  return Effect.catchTag(
+    Effect.catchTag(find(id), "Missing", () => "nf"),
+    "Timeout",
+    () => "to"
+  )
+}
+
+export function main() {
+  return {
+    described: [describe(1), describe(0)],
+    both: [both(0), both(-1)],
+    any: any(-1),
+    nested: nested(-1),
+    tagged: Effect.catchTag(tagged(), "Tagged", () => "by tag"),
+    plain: Effect.catch(find(-1), () => "plain")
+  }
+}

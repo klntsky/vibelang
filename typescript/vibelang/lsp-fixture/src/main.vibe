@@ -1,10 +1,12 @@
-import { Console, Data, Effect } from "effect"
+import { Console, Effect } from "effect"
 import { findName, names } from "./users.js"
 
-class NotFound extends Data.TaggedError("NotFound")<{ readonly id: number }> {}
+error NotFound { id: number }
 
 // No annotations: the compiler infers Effect<string, NotFound, never>.
 function lookup(id: number) {
+  // A hover test reads the call below, which VibeLang writes as throw (D288).
+  // @vibelang-diagnostics-next-line EK4834:off
   if (id >= names.length) Effect.fail(new NotFound({ id }))
   return findName(id)
 }

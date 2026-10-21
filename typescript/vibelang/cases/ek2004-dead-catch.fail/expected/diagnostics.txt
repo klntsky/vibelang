@@ -1,2 +1,5 @@
+main.vibe(8,7): warning EK4830
 main.vibe(14,5): error EK2004
+main.vibe(40,24): warning EK4833
+main.vibe(41,10): warning EK4834
 main.vibe(46,5): error EK2004
