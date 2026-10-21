@@ -42,6 +42,8 @@ Code example count: one example per fenced code block in the source body, includ
 - **Build and test**
   - [vibelang CLI](src/setup/vibelang-cli.md)
   - [Vite and Vitest](src/setup/vite.md)
+- **Format and lint**
+  - [Format with dprint](src/setup/formatting.md)
 - **Frameworks**
   - [React](src/setup/react.md)
   - [Vue](src/setup/vue.md)

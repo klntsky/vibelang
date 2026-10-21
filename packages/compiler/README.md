@@ -88,6 +88,25 @@ cursor --install-extension node_modules/vibelang/editor/vibelang.vsix
 
 The extension starts the project's own `vibelang` as the language server.
 
+## Format .vibe files with dprint
+
+The package ships a [dprint](https://dprint.dev) plugin for `.vibe` files. Add
+it beside dprint's TypeScript plugin, and add `vibe` to `includes`:
+
+```json
+{
+  "includes": ["**/*.{ts,vibe}"],
+  "plugins": [
+    "https://plugins.dprint.dev/typescript-0.93.4.wasm@cdbf74066391bdb11ddaef9ea95299636a97d637f5a9bf7f121d584875647c7a",
+    "npm:vibelang/dprint-plugin.json"
+  ]
+}
+```
+
+`dprint fmt` and `dprint check` then format `.vibe` files with the
+configuration's `typescript` settings, so they read like the project's `.ts`
+files. See [Format with dprint](https://effeck.dev/setup/formatting.html).
+
 ## How the package finds the native compiler
 
 `vibelang` is a small Node launcher. In 0.0.2, the native compiler comes from one of six
@@ -109,7 +128,7 @@ Apache-2.0. The compiler is a modified version of the TypeScript 7 compiler
 From the VibeLang repository root:
 
 ```sh
-sh scripts/build-vibelang.sh      # writes packages/compiler/native/vibelang
+sh scripts/build-vibelang.sh      # writes packages/compiler/native/vibelang and dprint-plugin.json
 packages/compiler/bin/vibelang --version
 node --test packages/compiler/test/*.test.mjs
 ```

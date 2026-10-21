@@ -40,6 +40,7 @@ Read each page that matches and follow its steps, in this order: project, build 
 | Build with the `vibelang` CLI, as with `tsc` | [Build with the vibelang CLI](setup/vibelang-cli.md) |
 | Vite or Vitest, without React, Vue, or Svelte | [Vite and Vitest](setup/vite.md) |
 | React, Vue, or Svelte with Vite | [React](setup/react.md), [Vue](setup/vue.md), or [Svelte](setup/svelte.md), in place of the Vite page |
+| Format with dprint, or a `dprint.json` in the project | [Format with dprint](setup/formatting.md) |
 | VS Code or Cursor | [VS Code and Cursor](setup/vscode.md) |
 | Neovim | [Neovim](setup/neovim.md) |
 | Zed | [Zed](setup/zed.md) |

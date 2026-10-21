@@ -1,0 +1,77 @@
+# Format with dprint
+
+[dprint](https://dprint.dev) formats `.vibe` files through the `vibelang` package's dprint plugin. The plugin writes each `.vibe` file as TypeScript, asks dprint's TypeScript plugin to format that, and writes the result back as VibeLang. A `.vibe` file therefore follows the `typescript` settings of the project's dprint configuration, the same style as its `.ts` files. Install the packages with [Add VibeLang to an existing project](existing-project.md) first.
+
+## 1. Install dprint
+
+```sh
+npm install --save-dev dprint
+```
+
+## 2. Configure dprint.json
+
+Add `vibe` to `includes` and the plugin `npm:vibelang/dprint-plugin.json` to `plugins`. If the project has no `dprint.json`, create this one:
+
+```json
+{
+  "includes": ["**/*.{ts,vibe}"],
+  "excludes": ["**/node_modules", "**/dist"],
+  "lineWidth": 120,
+  "indentWidth": 2,
+  "typescript": {
+    "semiColons": "asi",
+    "quoteStyle": "alwaysDouble"
+  },
+  "plugins": [
+    "https://plugins.dprint.dev/typescript-0.93.4.wasm@cdbf74066391bdb11ddaef9ea95299636a97d637f5a9bf7f121d584875647c7a",
+    "npm:vibelang/dprint-plugin.json"
+  ]
+}
+```
+
+dprint finds the plugin in `node_modules/vibelang` from the directory of `dprint.json`, so the configuration needs no checksum for it. The TypeScript plugin must be listed too: the VibeLang plugin formats with it. The plugin has no settings of its own; put style settings under `typescript`.
+
+## 3. Format and check
+
+```sh
+npx dprint fmt
+npx dprint check
+```
+
+`dprint fmt` rewrites the files that are not formatted. `dprint check` changes nothing; it prints a diff for each such file and exits with status 20, so a CI step or a `lint` script fails on a file that needs formatting. Run `npx dprint check` again after `npx dprint fmt`; it prints nothing and exits with status 0.
+
+## What the formatter changes
+
+Everything dprint's TypeScript plugin changes in a `.ts` file: indentation, line breaks at `lineWidth`, quotes, semicolons, trailing commas, and the order of imports. VibeLang's own forms keep their shape:
+
+| Form | Formatted as |
+| --- | --- |
+| `A!E!R`, `mutable`, patterns after `when` and `is` | Written as they are; the line breaks around them follow the code they stand in |
+| `f(args) { ... }`, `do { ... }`, `fork { ... }` | The block as a function body, as TypeScript formats `f(args)(() => { ... })` |
+| `match (x) { when P: v; ... }` | The arms as an object literal's properties: on one line when they fit and were written on one line, else one per line, each ending in `;` |
+| `provide X { ... }`, `uninterruptible { ... }` | The block as a block statement |
+| `x catch y`, `x \|> f(%)` | As a method call and as the `\|\|` operator: a line break before `catch` or `\|>` stays |
+| `fork x`, `join x`, `throw x`, `await.all x` | As a prefix operator such as `void` |
+| `error`, `schema` | The body as an object type: on one line when it was written on one line and fits |
+| `service`, `control` | The body as a class body, one member per line |
+| `try { } handle A.b(x) { } catch (e) { } finally { }` | Each clause as `} catch (e) {`, after the block before it |
+
+Comments and JSDoc stay where they are. A file that formats once does not change when it formats again.
+
+## What the formatter refuses
+
+The plugin reports the file and leaves it unchanged when:
+
+- the file has a syntax error, which it reports as `vibelang format: line:column: message`;
+- a comment stands inside a VibeLang form's own tokens, such as between `f(args)` and its block, or between two clauses of a `try` statement; move the comment into the block or before the statement;
+- formatting would change the program, which is a bug in the plugin: report it with the file.
+
+The superseded `layer` declaration and the retired `select` statement are kept exactly as written; rewrite them as `Layer.effect(...) { ... }` and `await.race`.
+
+## From a VibeLang checkout
+
+`sh scripts/build-vibelang.sh` builds the compiler and writes the plugin beside it: `packages/compiler/dprint-plugin.json`, which names a zip archive of the compiler in `packages/compiler/native/`. A project whose `node_modules/vibelang` links to the checkout formats with the compiler it just built. `vibelang --write-dprint-plugin <directory>` writes the plugin for another copy of the package.
+
+## The editor
+
+The language server's own formatting, `textDocument/formatting`, is TypeScript's formatter and does not follow dprint's settings. Format with dprint: its editor extensions and `dprint lsp` run the same plugin.
