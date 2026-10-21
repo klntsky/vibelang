@@ -160,6 +160,15 @@ func renderExec(e edit) (text string, keep bool) {
 	case editServiceBase:
 		// D45: the key; D40: a reference passes its default.
 		base, key, name := e.fields[0], e.fields[1], e.fields[2]
+		switch e.part {
+		case partOpen:
+			return serviceShapeBaseOpen(base, name), true
+		case partClose:
+			if base == "reference" {
+				return ">(" + strconv.Quote(key) + ", () => " + name + ".default)", true
+			}
+			return ">(" + strconv.Quote(key) + ")", true
+		}
 		if base == "reference" {
 			return helperRef("$reference") + "<" + name + ">(" + strconv.Quote(key) + ", () => " + name + ".default)", true
 		}

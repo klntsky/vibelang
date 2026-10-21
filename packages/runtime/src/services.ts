@@ -72,9 +72,10 @@ export type ReferenceKey<I> = (abstract new () => {}) & Context.Reference<I>
  * D1: the base of a generated service class. Its static side is an Effect 4
  * Context key whose identifier and shape are both the service's interface;
  * its instance side is empty, so the merged interface is the class's type.
+ * A service of any shape (D281) passes its shape: `$service<Prefix, string>`.
  */
-export const $service = <I>(key: string): ServiceKey<I> =>
-  Context.Service<I, I>()(key) as any
+export const $service = <I, S = I>(key: string): ServiceKey<I, S> =>
+  Context.Service<I, S>()(key) as any
 
 /**
  * D40: the base of a generated service class that declares

@@ -709,6 +709,9 @@ typescript/vibelang/cases/decl-schema-error/main.vibe:29:24 byname program table
 typescript/vibelang/cases/decl-schema-error/main.vibe:29:39 lambda effectFn table
 typescript/vibelang/cases/decl-schema-error/main.vibe:30:24 byname program table
 typescript/vibelang/cases/decl-schema-error/main.vibe:30:37 lambda effectFn table
+typescript/vibelang/cases/decl-service-type-distinct.fail/main.vibe:11:49 byname program table
+typescript/vibelang/cases/decl-service-type-dts/main.vibe:11:11 lambda plain fallback
+typescript/vibelang/cases/decl-service-type/main.vibe:15:11 lambda choice fallback
 typescript/vibelang/cases/decl-service/main.vibe:35:27 lambda program table
 typescript/vibelang/cases/decl-service/main.vibe:36:5 lambda effectFn table
 typescript/vibelang/cases/decl-service/main.vibe:40:25 lambda program table

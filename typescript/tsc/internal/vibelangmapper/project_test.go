@@ -478,6 +478,16 @@ var projectionCases = []struct {
 		virtual: "interface Flags {\n  readonly beta: boolean; readonly \"~vibelang/service\"?: \"app/src/main#Flags\" } abstract class Flags extends $reference<Flags>(\"app/src/main#Flags\") {\n  static readonly default: Flags = { beta: true }\n}\n",
 	},
 	{
+		name:    "a service of any shape is a brand and a key for its shape (D281)",
+		source:  "export service Search: SearchApi {\n  static readonly layer = live\n}\nservice Prefix: string\nservice Format: (value: string) => string!!\n",
+		virtual: "export interface Search { readonly \"~vibelang/service\"?: \"app/src/main#Search\" } export abstract class Search extends $service<Search, SearchApi>(\"app/src/main#Search\") {\n  static readonly layer = live\n}\ninterface Prefix { readonly \"~vibelang/service\"?: \"app/src/main#Prefix\" } abstract class Prefix extends $service<Prefix, string>(\"app/src/main#Prefix\") {}\ninterface Format { readonly \"~vibelang/service\"?: \"app/src/main#Format\" } abstract class Format extends $service<Format, (value: string) => Effect.Effect<string, never, never>>(\"app/src/main#Format\") {}\n",
+	},
+	{
+		name:    "a service of any shape with a static default is a reference to its shape (D281, D40)",
+		source:  "service Version: number { static readonly default: number = 4 }\n",
+		virtual: "interface Version { readonly \"~vibelang/service\"?: \"app/src/main#Version\" } abstract class Version extends $reference<number>(\"app/src/main#Version\") { static readonly default: number = 4 }\n",
+	},
+	{
 		name:    "methods of a class that implements a service are Effect functions (D92)",
 		source:  "service Users { find(id: string): User!NotFound }\nclass Memory implements Users {\n  find(id: string) { return id }\n  static make() { return 1 }\n}\n",
 		virtual: "interface Users { find(id: string): Effect.Effect<User, NotFound, never>; readonly \"~vibelang/service\"?: \"app/src/main#Users\" } abstract class Users extends $service<Users>(\"app/src/main#Users\") {}\nclass Memory implements Users {\n  find(id: string) { return $gen(function* () { return id })}\n  static make() { return 1 }\n}\n",
@@ -933,6 +943,27 @@ func TestExecutableEdits(t *testing.T) {
 	assert.DeepEqual(t, bases, [][]string{{"service", "app/src/main#Approval", "Approval"}, {"reference", "app/src/main#Flags", "Flags"}})
 	assert.DeepEqual(t, controls, [][]string{{"Approval", "approve", "-1"}})
 	assert.Equal(t, scopes, 2) // the inner block's open and close, not the function body's
+}
+
+// TestExecutableServiceShape checks that the executable rendering of a
+// service of any shape (D281) writes its key around the shape, and passes a
+// static default as a reference's.
+func TestExecutableServiceShape(t *testing.T) {
+	t.Parallel()
+	source := "service Prefix: string\nservice Version: number { static readonly default: number = 4 }\n"
+	p := lower(source, testContext)
+	var texts []string
+	for _, e := range p.plan.edits {
+		if e.kind == editServiceBase {
+			text, ok := executable{}.text(e)
+			assert.Assert(t, ok)
+			texts = append(texts, text)
+		}
+	}
+	assert.DeepEqual(t, texts, []string{
+		helperRef("$service") + "<Prefix, ", `>("app/src/main#Prefix")`,
+		helperRef("$reference") + "<", `>("app/src/main#Version", () => Version.default)`,
+	})
 }
 
 // TestExecutableRendering checks that the executable rendering drops

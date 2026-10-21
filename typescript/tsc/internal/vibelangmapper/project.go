@@ -203,7 +203,7 @@ func lower(text string, ctx FileContext) *projector {
 		reported:        map[*ast.Node]bool{},
 	}
 	for _, statement := range file.Statements.Nodes {
-		if isServiceClass(statement) {
+		if isServiceClass(statement) || isServiceShapeClass(statement) {
 			p.services[statement.Name().Text()] = statement
 		}
 		if statement.Kind == ast.KindFunctionDeclaration && statement.Name() != nil {
@@ -247,6 +247,9 @@ func (p *projector) visit(node *ast.Node, e env) {
 		return
 	case isErrorDeclaration(node):
 		p.errorDeclaration(node)
+		return
+	case isServiceShapeClass(node):
+		p.serviceShapeDeclaration(node)
 		return
 	case hasInterleavedServiceMembers(node):
 		p.interleavedServiceDeclaration(node)

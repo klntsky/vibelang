@@ -84,7 +84,8 @@ const (
 	// iterable as itself (D26).
 	editEach
 	// editServiceBase is a service class's key (D45): fields are "service"
-	// or "reference" (D40), the key, and the class's name.
+	// or "reference" (D40), the key, and the class's name. A service of any
+	// shape (D281) has an open and a close part around the written shape.
 	editServiceBase
 	// editControl registers a control's operations (D2): fields are the
 	// control's name, then each operation's name and arity, -1 for a rest
@@ -338,7 +339,15 @@ func (r checking) text(e edit) (string, bool) {
 		text = pick(e.part, "(yield* "+helperRef("$each")+"(", "", "))")
 	case editServiceBase:
 		base, key, name := e.fields[0], e.fields[1], e.fields[2]
-		text = helperRef("$"+base) + "<" + name + ">(" + strconv.Quote(key) + ")"
+		switch e.part {
+		case partOpen:
+			// service Name: Type (D281): the written shape follows.
+			text = serviceShapeBaseOpen(base, name)
+		case partClose:
+			text = ">(" + strconv.Quote(key) + ")"
+		default:
+			text = helperRef("$"+base) + "<" + name + ">(" + strconv.Quote(key) + ")"
+		}
 	case editScopeRegion:
 		text = e.text
 	case editControl:
@@ -466,4 +475,14 @@ func appendVerbatim(segments []spanmap.Segment, out *strings.Builder, original s
 		Kind:          spanmap.KindVerbatim,
 		Features:      spanmap.FeatureAll,
 	})
+}
+
+// serviceShapeBaseOpen is the text before the shape of a service of any
+// shape (D281): $service<Name, , or $reference< for a static default, whose
+// identifier is never.
+func serviceShapeBaseOpen(base, name string) string {
+	if base == "reference" {
+		return helperRef("$reference") + "<"
+	}
+	return helperRef("$service") + "<" + name + ", "
 }
