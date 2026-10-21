@@ -15,7 +15,7 @@ function fixture(t) {
   t.after(() => rmSync(root, { recursive: true, force: true }))
   for (const path of ["scripts/release/make-packages.mjs", "LICENSE", "typescript/LICENSE.txt", "typescript/NOTICE.txt", "typescript/tsc/internal/vibelang/identity.go",
     ...["compiler", "runtime", "vite", "create-vibelang", "unplugin"].flatMap((name) => [`packages/${name}/package.json`, `packages/${name}/README.md`]),
-    "packages/compiler/bin", "packages/vite/src", "packages/create-vibelang/bin", "packages/unplugin/src", "templates/app"]) {
+    "packages/compiler/bin", "packages/compiler/project.mjs", "packages/compiler/project.d.mts", "packages/compiler/register.mjs", "packages/vite/src", "packages/create-vibelang/bin", "packages/unplugin/src", "templates/app"]) {
     mkdirSync(dirname(join(root, path)), { recursive: true })
     cpSync(join(repo, path), join(root, path), { recursive: true, filter: (file) => !["node_modules", "dist", ".prototype"].includes(file.split("/").at(-1)) })
   }
@@ -37,6 +37,17 @@ function archive(root, name, path) {
   const version = json(join(root, "packages/compiler/package.json")).version
   return execFileSync("tar", ["-xOzf", join(root, "dist-npm/tarballs", `${name}-${version}.tgz`), `package/${path}`])
 }
+
+test("packs every file the compiler package lists and every target its exports name", { timeout: 120_000 }, (t) => {
+  const root = fixture(t)
+  const result = assemble(root)
+  assert.equal(result.status, 0, result.stderr)
+  const compiler = json(join(root, "packages/compiler/package.json"))
+  const targets = Object.values(compiler.exports).flatMap((target) => typeof target === "string" ? [target] : Object.values(target))
+  for (const path of [...targets.map((target) => target.replace(/^\.\//, "")), ...compiler.files.filter((file) => file !== "bin" && file !== "editor")]) {
+    assert.ok(archive(root, "vibelang", path).length > 0, `vibelang tarball lacks ${path}`)
+  }
+})
 
 test("assembles every package in publish order with pinned versions, platform binaries and portable templates", { timeout: 120_000 }, (t) => {
   const root = fixture(t)

@@ -132,10 +132,17 @@ for (const [platform, [os, cpu]] of Object.entries(platforms)) {
   order.push({ name, dir, required: [`bin/${exe}`, "LICENSE", "NOTICE"], executable: `bin/${exe}` })
 }
 
-const vibelangDir = stage("vibelang", [["packages/compiler/bin", "bin"], ["packages/compiler/README.md"], ["packages/compiler/package.json"]], { LICENSE: apache, NOTICE: notice })
+// Every file the compiler package lists, except the ones this script writes.
+const compilerFiles = compiler.files.filter((file) => !["editor", "LICENSE", "NOTICE"].includes(file))
+const vibelangDir = stage("vibelang", [...compilerFiles.map((file) => [`packages/compiler/${file}`, file]), ["packages/compiler/package.json"]], { LICENSE: apache, NOTICE: notice })
 mkdirSync(join(vibelangDir, "editor"))
 copyFileSync(vsix, join(vibelangDir, "editor", "vibelang.vsix"))
-order.push({ name: "vibelang", dir: vibelangDir, required: ["bin/vibelang", "editor/vibelang.vsix", "LICENSE", "NOTICE"], forbidden: /^native\// })
+order.push({
+  name: "vibelang",
+  dir: vibelangDir,
+  required: [...compilerFiles.filter((file) => file !== "bin"), "bin/vibelang", "editor/vibelang.vsix", "LICENSE", "NOTICE"],
+  forbidden: /^native\//
+})
 
 order.push({
   name: "vibelang-runtime",
