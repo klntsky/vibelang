@@ -253,3 +253,42 @@ function nested() {
       (module
         name: (identifier)
         body: (statement_block)))))
+
+================================================================================
+A default import whose from is on the next line
+================================================================================
+
+import Counter
+  from "./counter.ts"
+import tools
+  from text
+import text
+from(text)
+import text
+from in options
+
+--------------------------------------------------------------------------------
+
+(program
+  (import_statement
+    (import_clause
+      (identifier))
+    source: (string
+      (string_fragment)))
+  (import_statement
+    (import_clause
+      (identifier))
+    source: (identifier))
+  (import_statement
+    source: (identifier))
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      arguments: (arguments
+        (identifier))))
+  (import_statement
+    source: (identifier))
+  (expression_statement
+    (binary_expression
+      left: (identifier)
+      right: (identifier))))

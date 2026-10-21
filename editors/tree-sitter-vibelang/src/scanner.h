@@ -27,6 +27,7 @@
 
 #include "tree_sitter/parser.h"
 
+#include <string.h>
 #include <wctype.h>
 
 enum TokenType {
@@ -104,6 +105,53 @@ static bool scan_whitespace_and_comments(TSLexer *lexer, bool *scanned_comment) 
             return true;
         }
     }
+}
+
+// VibeLang: from_starts_specifier reads the rest of from and reports whether
+// a module specifier follows it on the line: a string, or a name that is not
+// an operator, as in from in options or from as T.
+static bool from_starts_specifier(TSLexer *lexer) {
+    for (unsigned i = 0; i < 3; i++) {
+        if (lexer->lookahead != "rom"[i]) {
+            return false;
+        }
+        skip(lexer);
+    }
+    if (lexer->lookahead != ' ' && lexer->lookahead != '\t') {
+        return false;
+    }
+    while (lexer->lookahead == ' ' || lexer->lookahead == '\t') {
+        skip(lexer);
+    }
+    if (lexer->lookahead == '"' || lexer->lookahead == '\'') {
+        return true;
+    }
+    if (!iswalpha(lexer->lookahead) && lexer->lookahead != '_' && lexer->lookahead != '$') {
+        return false;
+    }
+    char word[11];
+    unsigned length = 0;
+    bool ascii = true;
+    while (iswalnum(lexer->lookahead) || lexer->lookahead == '_' || lexer->lookahead == '$') {
+        if (lexer->lookahead > 127) {
+            ascii = false;
+        } else if (length < sizeof word - 1) {
+            word[length] = (char)lexer->lookahead;
+        }
+        length++;
+        skip(lexer);
+    }
+    if (!ascii || length >= sizeof word) {
+        return true;
+    }
+    word[length] = 0;
+    static const char *const operators[] = {"in", "instanceof", "as", "satisfies", "is", "catch"};
+    for (unsigned i = 0; i < sizeof operators / sizeof operators[0]; i++) {
+        if (strcmp(word, operators[i]) == 0) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols, bool *scanned_comment) {
@@ -227,6 +275,14 @@ static bool scan_automatic_semicolon(TSLexer *lexer, const bool *valid_symbols, 
                 skip(lexer);
             }
             return iswalnum(lexer->lookahead) || lexer->lookahead == '_' || lexer->lookahead == '$';
+
+            // VibeLang: don't insert a semicolon before from and a module
+            // specifier. import text is a statement of its own (D283), so
+            // import Counter\n  from "./counter.ts" would end at Counter, and
+            // from and a specifier never start a statement.
+        case 'f':
+            skip(lexer);
+            return !from_starts_specifier(lexer);
     }
 
     return true;
