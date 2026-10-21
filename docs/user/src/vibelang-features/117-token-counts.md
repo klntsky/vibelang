@@ -18,11 +18,11 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | Load | Tokens |
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,494 |
-| The skill and the [cheat sheet](115-cheat-sheet.md) | 12,609 |
-| The skill and the user guide (130 pages) | 193,232 |
-| The user guide alone | 188,738 |
+| The skill and the [cheat sheet](115-cheat-sheet.md) | 12,707 |
+| The skill and the user guide (130 pages) | 193,636 |
+| The user guide alone | 189,142 |
 | The specification (33 chapters) | 101,716 |
-| The decision log, `docs/design/DECISIONS.md` | 51,709 |
+| The decision log, `docs/design/DECISIONS.md` | 51,725 |
 
 ## Effect TypeScript beside VibeLang
 
@@ -37,6 +37,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Services | 37 | 20 | 45.9% |
 | Layers | 45 | 41 | 8.9% |
 | Schemas | 44 | 24 | 45.5% |
+| Schema aliases | 18 | 10 | 44.4% |
 | Readonly by default | 14 | 14 | 0.0% |
 | Statements instead of generators | 48 | 44 | 8.3% |
 | Programs passed by name | 28 | 27 | 3.6% |
@@ -71,7 +72,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Wait for a Deferred | 30 | 28 | 6.7% |
 | Race | 43 | 56 | -30.2% |
 | A concurrent loop | 40 | 28 | 30.0% |
-| **All 41 entries** | **1,880** | **1,674** | **11.0%** |
+| **All 42 entries** | **1,898** | **1,684** | **11.3%** |
 
 ## Every page
 
@@ -213,9 +214,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Behaviour** | **2,027** |
 | [Equivalence](../behaviour/083-equivalence.md) | 646 |
 | [Order](../behaviour/084-order.md) | 1,381 |
-| **Schema** | **30,671** |
+| **Schema** | **30,939** |
 | [Introduction](../schema/085-introduction.md) | 1,291 |
-| [Getting Started](../schema/086-getting-started.md) | 1,934 |
+| [Getting Started](../schema/086-getting-started.md) | 2,202 |
 | [Basic Usage](../schema/087-basic-usage.md) | 2,610 |
 | [Filters](../schema/088-filters.md) | 1,469 |
 | [Advanced Usage](../schema/089-advanced-usage.md) | 2,818 |
@@ -241,7 +242,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **131,030** |
+| **All 98 pages** | **131,298** |
 
 ### VibeLang features
 
@@ -250,10 +251,10 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Control operations and handlers](111-control-operations-and-handlers.md) | 1,746 |
 | [Producers](112-producers.md) | 1,246 |
 | [Building an HTTP API](113-building-an-http-api.md) | 1,383 |
-| [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 3,104 |
-| [Cheat sheet](115-cheat-sheet.md) | 8,115 |
+| [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 3,142 |
+| [Cheat sheet](115-cheat-sheet.md) | 8,213 |
 | [Pattern matching with match and is](116-match-and-is.md) | 2,709 |
-| **All 6 pages** | **18,303** |
+| **All 6 pages** | **18,439** |
 
 ### Specification
 
