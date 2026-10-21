@@ -3,7 +3,15 @@
   "version": "0.0.2",
   "description": "The VibeLang compiler and language server: a readable syntax for Effect that compiles to TypeScript",
   "keywords": ["vibelang", "effect", "typescript", "compiler", "language-server"],
-  "homepage": "https://effeck.dev",
+  "homepage": "https://vibelang.sh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smithersai/vibelang.git",
+    "directory": "packages/compiler"
+  },
+  "bugs": {
+    "url": "https://github.com/smithersai/vibelang/issues"
+  },
   "license": "Apache-2.0",
   "type": "module",
   "exports": {

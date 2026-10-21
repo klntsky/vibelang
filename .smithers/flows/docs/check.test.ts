@@ -1,0 +1,56 @@
+import { test, expect } from "bun:test";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { digestSync } from "@smthrs/crypto";
+import { generate, readSources, repository, smithers } from "./run.ts";
+import { countTokens, header, render, resolve, tokenizer } from "./render.ts";
+
+test("the docs flow is deterministic, and every output and the manifest are current", async () => {
+  const first = await generate();
+  const second = await generate();
+  expect(second).toEqual(first);
+  expect(first.outputs).toEqual(render(await readSources()));
+  for (const [path, content] of Object.entries(first.outputs)) {
+    expect({ path, current: await readFile(join(repository, path), "utf8") === content }).toEqual({ path, current: true });
+    expect(content).not.toContain("{{");
+  }
+  expect(await readFile(join(smithers, "generated.json"), "utf8")).toBe(first.manifest);
+  const manifest = JSON.parse(first.manifest);
+  expect(manifest.source).toBe(".smithers/flows/docs/flow.ts");
+  for (const [path, content] of Object.entries(first.outputs)) expect(manifest.outputs[path].sha256).toBe(digestSync(content));
+});
+
+test("each footer states the file's own exact token count and the installed tokenizer", async () => {
+  const installed = JSON.parse(await readFile(join(smithers, "node_modules/js-tiktoken/package.json"), "utf8"));
+  expect(installed.version).toBe(tokenizer.version);
+  for (const [path, content] of Object.entries(render(await readSources()))) {
+    const stated = /([\d,]+) tokens \(o200k_base, js-tiktoken 1\.0\.21\)/.exec(content);
+    expect({ path, stated: stated && Number(stated[1]!.replaceAll(",", "")) }).toEqual({ path, stated: countTokens(content) });
+  }
+});
+
+test("generated files say so and link their flow", () => {
+  const outputs = render({ "README.md": "# R\n", "docs/user/llms-essentials.md": "## Essentials\n" });
+  for (const path of ["CONTRIBUTING.md", "MAINTAINERS.md", "AGENTS.md"]) {
+    expect(outputs[path]!.startsWith(header(path))).toBe(true);
+    expect(outputs[path]).toContain("](.smithers/flows/docs/flow.ts)");
+  }
+  expect(outputs["templates/app/AGENTS.md"]).toContain("Generated: smithersai/vibelang .smithers/flows/docs/flow.ts");
+  expect(outputs["README.md"]!.startsWith("# R\n\n<sub>")).toBe(true);
+});
+
+test("the starter's AGENTS.md carries the docs' Essentials verbatim and stays under 2 KB", async () => {
+  const sources = await readSources();
+  const starter = render(sources)["templates/app/AGENTS.md"]!;
+  expect(starter).toContain(sources["docs/user/llms-essentials.md"]);
+  expect(starter).toContain("`bun run build`");
+  expect(starter).toContain("`bun run test`");
+  expect(Buffer.byteLength(starter)).toBeLessThan(2048);
+});
+
+test("facts resolve strictly and the merge rule reaches the agents", () => {
+  expect(() => resolve("{{missingFact}}")).toThrow("Unknown project fact");
+  const outputs = render({ "README.md": "# R\n", "docs/user/llms-essentials.md": "## Essentials\n" });
+  expect(outputs["AGENTS.md"]).toContain("Agents never approve or merge.");
+  expect(outputs["CONTRIBUTING.md"]).toContain("Agents never approve or merge.");
+});

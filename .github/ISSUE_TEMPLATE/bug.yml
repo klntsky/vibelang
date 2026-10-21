@@ -1,0 +1,53 @@
+name: Bug report
+description: Something VibeLang does wrong, with a minimal reproduction.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A bug report needs a minimal reproduction: the smallest program and the command that show the bug on the latest version. A maintainer accepts a reproduced bug, and an accepted issue gets a proof of concept of the fix. A report without a reproduction that shows the bug gets the `needs-repro` label.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: The smallest `.vibe` program, plus any `tsconfig.json` or other file it needs, and the exact command you ran. Remove everything the bug doesn't need. Link a repository if it needs several files.
+      placeholder: |
+        // src/main.vibe
+        export function main() {
+          ...
+        }
+
+        $ bun run start
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: What should happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happens instead, with the complete error or output.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: VibeLang version
+      description: The output of `npx vibelang --version`.
+      placeholder: VibeLang 0.0.2 (TypeScript 7.1.0-dev)
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      description: Operating system, CPU, and your Node or Bun version.
+      placeholder: macOS 26 arm64, Node 26.10
+    validations:
+      required: true

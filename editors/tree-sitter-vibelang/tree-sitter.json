@@ -33,7 +33,7 @@
     "license": "MIT",
     "description": "VibeLang grammar for tree-sitter, built on tree-sitter-typescript",
     "links": {
-      "repository": "https://github.com/roninjin10/effectscript"
+      "repository": "https://github.com/smithersai/vibelang"
     }
   }
 }

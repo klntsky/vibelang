@@ -8,7 +8,15 @@
     "runtime",
     "continuations"
   ],
-  "homepage": "https://effeck.dev",
+  "homepage": "https://vibelang.sh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smithersai/vibelang.git",
+    "directory": "packages/runtime"
+  },
+  "bugs": {
+    "url": "https://github.com/smithersai/vibelang/issues"
+  },
   "license": "MIT",
   "type": "module",
   "exports": {

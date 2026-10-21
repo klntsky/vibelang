@@ -1,0 +1,57 @@
+{
+  "version": 2,
+  "flow": "docs",
+  "source": ".smithers/flows/docs/flow.ts",
+  "digest": "73e434319ad9aafc7b2c694736c6807c78a61aa31557ea773a15c64a98b0707b",
+  "inputs": [
+    {
+      "path": ".smithers/flows/docs/project.ts",
+      "sha256": "cd7f97dff7557bbb013322caa3df139ad9ae7716980559316255f80079756197"
+    },
+    {
+      "path": ".smithers/flows/docs/render.ts",
+      "sha256": "3ef0eb7c79df93ee9c2b921088b3285f5290b9132a983f249b36450e1a5d84a6"
+    },
+    {
+      "path": ".smithers/flows/docs/flow.ts",
+      "sha256": "0de38c527acf8da52e8461f44d7c933d1f9043a86a67709952411113dec87c9d"
+    },
+    {
+      "path": ".smithers/flows/docs/run.ts",
+      "sha256": "ad584680935a531014cf1ddb5bd0dae61381cc134e3638f778810373e4c2cea7"
+    },
+    {
+      "path": ".smithers/package.json",
+      "sha256": "b22385c2f7a4181b74c223fb23d6427e6d68142ffce456ffc8454cd7d86a4d56"
+    },
+    {
+      "path": ".smithers/bun.lock",
+      "sha256": "a014e2af029a3865588af054f2e7edd3afb5a8667f891a981aab53543cc2cbef"
+    },
+    {
+      "path": "README.md",
+      "sha256": "6e7f4492f02ca595a82321405d2f745a1180ca150a2a88b5dc160345b63af109"
+    },
+    {
+      "path": "docs/user/llms-essentials.md",
+      "sha256": "90aff93b3960043d26a9d4af02a95e22f7c7913aaacc6c641c462831a8cd1657"
+    }
+  ],
+  "outputs": {
+    "README.md": {
+      "sha256": "0eff9362dd1294dd5a9a938ef4f38503da9b9b9b763311f578624bebcf67cd67"
+    },
+    "CONTRIBUTING.md": {
+      "sha256": "2927ebd26ccc56dddd750bbfa297bdf49a19e1904e526ef37a741165995313a3"
+    },
+    "MAINTAINERS.md": {
+      "sha256": "89ffdb47c483bd69cad8343b3af6ab2ef3044ee6d646521ccb7731c6a5305222"
+    },
+    "AGENTS.md": {
+      "sha256": "02d2ac936327712e13ac58107ae1b0eca65a05b6a556f003d005771978d5af5e"
+    },
+    "templates/app/AGENTS.md": {
+      "sha256": "e01a33d6e0da525df081cb1ffb8ca36f0829b11addda63b149085f7027146e63"
+    }
+  }
+}

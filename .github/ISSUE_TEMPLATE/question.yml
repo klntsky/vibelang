@@ -1,0 +1,11 @@
+name: Question
+description: Ask how to do something in VibeLang.
+labels: ["question"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: Include what you tried and what happened. The [docs](https://vibelang.sh) may already answer it.
+    validations:
+      required: true

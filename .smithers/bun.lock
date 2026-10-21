@@ -1,0 +1,45 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "vibelang-smithers",
+      "dependencies": {
+        "@smthrs/artifacts": "1.0.0-rc.16",
+        "@smthrs/crypto": "1.0.0-rc.16",
+        "@smthrs/engine": "1.0.0-rc.16",
+        "@smthrs/flow": "1.0.0-rc.16",
+        "@smthrs/plan": "1.0.0-rc.16",
+        "effect": "4.0.5",
+        "js-tiktoken": "1.0.21",
+      },
+    },
+  },
+  "packages": {
+    "@smthrs/artifacts": ["@smthrs/artifacts@1.0.0-rc.16", "", { "dependencies": { "@smthrs/crypto": "1.0.0-rc.16" }, "peerDependencies": { "effect": "4.0.5" } }, "sha512-2YXVkyRUeGBU0zK2wMBsvt26RKSbMtm470smlrGhTjMhWpWrDi2CIfWOj0WzLZm6Ca/m0rpi+46N5925SzUcJA=="],
+
+    "@smthrs/canonical": ["@smthrs/canonical@1.0.0-rc.16", "", { "peerDependencies": { "effect": "4.0.5" } }, "sha512-IHKAvLG674J5sWJcR+FICeYpUiJMcjS3ji67pFU2uuoRzniDp8HD7aKKkH5LPM+vE0KP55qm+DzxNWqSfLSQJQ=="],
+
+    "@smthrs/capability": ["@smthrs/capability@1.0.0-rc.16", "", { "dependencies": { "@smthrs/canonical": "1.0.0-rc.16" }, "peerDependencies": { "effect": "4.0.5" } }, "sha512-HvWSv6e16EEGBy9wpcdWcJTqN6WJyUAZoS982GmeFx23SCqPLCMXFoPxy2w1GOupcOdRGmPfpFF4XTh2//KzOw=="],
+
+    "@smthrs/crypto": ["@smthrs/crypto@1.0.0-rc.16", "", { "peerDependencies": { "effect": "4.0.5" } }, "sha512-/qFbCVzfaGtZuSaNdWlRQKEGf9A6aga9Tg9Dl6lQKDSsqqaEardiEl5w1eVg8I7CZ4Ob1Zbsvn6jXdcDowJESw=="],
+
+    "@smthrs/database": ["@smthrs/database@1.0.0-rc.16", "", { "peerDependencies": { "@effect/sql-pg": "*", "@effect/sql-sqlite-bun": "4.0.5", "@effect/sql-sqlite-node": "*", "effect": "4.0.5" }, "optionalPeers": ["@effect/sql-pg", "@effect/sql-sqlite-bun", "@effect/sql-sqlite-node"] }, "sha512-Wel9TSjjHC3d8VQ7OFH1U2729o62dWKgoSKyRwjmjdsPfuDfJXlfs+py+CQHnYbzEW00nuyTqIqa4yJ63GrsPg=="],
+
+    "@smthrs/engine": ["@smthrs/engine@1.0.0-rc.16", "", { "dependencies": { "@smthrs/canonical": "1.0.0-rc.16", "@smthrs/capability": "1.0.0-rc.16", "@smthrs/crypto": "1.0.0-rc.16", "@smthrs/flow": "1.0.0-rc.16", "@smthrs/journal": "1.0.0-rc.16", "@smthrs/keys": "1.0.0-rc.16", "@smthrs/plan": "1.0.0-rc.16" }, "peerDependencies": { "effect": "4.0.5" } }, "sha512-G65+EW9gw/kAW+ovYcFIP/OYqNhvgIU5R3w+JFLJ/Se+GgG1Bpifezpe3ZYYTLJTjxSDDL6Z7F3nZO7gGX3KAA=="],
+
+    "@smthrs/flow": ["@smthrs/flow@1.0.0-rc.16", "", { "dependencies": { "@smthrs/canonical": "1.0.0-rc.16", "@smthrs/capability": "1.0.0-rc.16", "@smthrs/crypto": "1.0.0-rc.16", "@smthrs/keys": "1.0.0-rc.16", "@smthrs/plan": "1.0.0-rc.16" }, "peerDependencies": { "effect": "4.0.5" } }, "sha512-B/tqRmQCTP2sHTU+NIjsy9RhV8Z2RU4I5SRVD0WClIOhniilkwW3nlPloJ+duiNw667Xtb87iZSYcD99FMFN3g=="],
+
+    "@smthrs/journal": ["@smthrs/journal@1.0.0-rc.16", "", { "dependencies": { "@smthrs/database": "1.0.0-rc.16" }, "peerDependencies": { "effect": "4.0.5" } }, "sha512-QWY8oKqhrGRbCUalUPBMfw50jfxEqEWQioyHI2Kkh0zyq+v0tdX8BNgQEz+KRWSpldp/raWLMsPF61AkDSTDLw=="],
+
+    "@smthrs/keys": ["@smthrs/keys@1.0.0-rc.16", "", { "dependencies": { "@smthrs/canonical": "1.0.0-rc.16", "@smthrs/crypto": "1.0.0-rc.16" }, "peerDependencies": { "effect": "4.0.5" } }, "sha512-XmuvJam3XfdfSXzB5vfQ9xP8jKsbr/abvVno3qZEuiODZe99YwM069CecUjFpVjFbE/VeBVYvF0CcdxJMXQIjQ=="],
+
+    "@smthrs/plan": ["@smthrs/plan@1.0.0-rc.16", "", { "dependencies": { "@smthrs/canonical": "1.0.0-rc.16", "@smthrs/crypto": "1.0.0-rc.16", "@smthrs/keys": "1.0.0-rc.16" }, "peerDependencies": { "effect": "4.0.5" } }, "sha512-P+t1oZ3D5mmnSCGDkkZRzycWRgU4jnzMQaAcoaGBQaAGi87TmREUWlvflpCmpT1bPywuxn5ZAupcn9mDZLhQig=="],
+
+    "base64-js": ["base64-js@1.5.1", "", {}, "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA=="],
+
+    "effect": ["effect@4.0.5", "", {}, "sha512-BY4/28NlpOd99yzmV741xbVGmp+1U7tks4oB7F/Png64bTa5tm5eCA6W0RiXsnuLDDoJpjfVSo4Dnq4BZb/89Q=="],
+
+    "js-tiktoken": ["js-tiktoken@1.0.21", "", { "dependencies": { "base64-js": "^1.5.1" } }, "sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g=="],
+  }
+}

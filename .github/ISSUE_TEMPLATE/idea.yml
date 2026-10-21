@@ -1,0 +1,27 @@
+name: Idea
+description: Propose a language feature, a tool, or a change in behavior.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas start as issues, before any code. A maintainer accepts an idea for discussion and labels what they believe its timeline and commitment are. Every accepted issue gets a proof of concept that you can read and run before the design is settled.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you want to write or do, and what stops you today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The syntax or behavior you propose, with a short example.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: How you work around it today, in VibeLang or in Effect TypeScript.

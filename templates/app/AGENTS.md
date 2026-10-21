@@ -1,6 +1,6 @@
 # VibeLang project
 
-This app is written in VibeLang: `.vibe` files are Effect programs in TypeScript syntax. `bun run build` type-checks and compiles to `dist/`; `bun run test` runs `src/**/*.test.vibe` with Vitest. Full docs: https://effeck.dev/llms.txt
+`bun run build` compiles `.vibe` files to `dist/`; `bun run test` runs `src/**/*.test.vibe`. Docs: https://vibelang.sh/llms.txt
 
 ## Essentials
 
@@ -33,3 +33,5 @@ export function names(ids: ReadonlyArray<string>) {
 - `using h = Effect.acquireRelease(() => open(), (h) => close(h))` frees `h` at block end, failure or interrupt. An interrupted start still runs to the first yield: call `Effect.yieldNow()` first if `open()` must not run.
 - A plain TypeScript call needs `sync(() => f(x))`, or `try(() => f(x), (error: unknown) => new E())` if it can throw.
 - Tests: `it.effect("name") { assert.strictEqual(a, b) }` from `@effect/vitest` uses a test clock (`sleep("1 second")` stalls); `it.live` uses real time. Under an agent, vitest hides `console.log`; assert instead.
+
+<!-- 591 tokens (o200k_base, js-tiktoken 1.0.21). Generated: smithersai/vibelang .smithers/flows/docs/flow.ts -->
