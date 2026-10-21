@@ -20,7 +20,8 @@ test("discovers the installed compiler, honors the project option, shares compil
   mkdirSync(join(installed, "bin"), { recursive: true })
   writeFileSync(join(installed, "package.json"), '{"name":"vibelang","type":"module"}')
   const calls = join(root, "compilations.jsonl")
-  writeFileSync(join(installed, "bin/vibelang"), `import { appendFileSync } from "node:fs"; import { spawnSync } from "node:child_process"; const args=process.argv.slice(2); appendFileSync(${JSON.stringify(calls)}, JSON.stringify(args)+"\\n"); const result=spawnSync(${JSON.stringify(native)},args,{stdio:"inherit"}); process.exit(result.status ?? 1);`)
+  // Like the npm launcher, a Node script with a shebang; the plugin runs it with Node.
+  writeFileSync(join(installed, "bin/vibelang"), `#!/usr/bin/env node\nimport { appendFileSync } from "node:fs"; import { spawnSync } from "node:child_process"; const args=process.argv.slice(2); appendFileSync(${JSON.stringify(calls)}, JSON.stringify(args)+"\\n"); const result=spawnSync(${JSON.stringify(native)},args,{stdio:"inherit"}); process.exit(result.status ?? 1);`)
   mkdirSync(join(root, "src"))
   writeFileSync(join(root, "package.json"), '{"type":"module"}')
   const config = join(root, "custom.json")

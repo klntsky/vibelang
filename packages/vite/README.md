@@ -15,8 +15,8 @@ npm install --save-dev vibelang vibelang-vite vite
 npm install --save-dev vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
-The plugin runs the `vibelang` compiler package, an optional peer dependency:
-install it, or pass a `compiler` path. It supports Vite 7 and 8 on Node 22 or
+The plugin compiles with the `vibelang` package, a peer dependency, through its
+`vibelang/project` backend; `compiler` can still name another binary. It supports Vite 7 and 8 on Node 22 or
 later; the acceptance tests use Vite 8 and Vitest 5. Apps made with
 `create-vibelang` already include the plugin and a Vitest configuration.
 
@@ -34,6 +34,11 @@ Keep your normal `tsconfig.json` with the `.vibe` sources included. The plugin
 uses the same compiler options and diagnostics as `vibelang -p tsconfig.json`.
 Import local sources with `./welcome.vibe`. Imports rewritten by `vibelang` to
 `./welcome.js` resolve back to `welcome.vibe` in Vite's module graph.
+
+A `.vibe` module outside Vite's root, such as the source of a workspace package
+that your app or test imports by name, compiles with the nearest
+`tsconfig.json` above it: its own package's project, with that package's
+settings. Each project compiles once and again after an edit.
 
 Set `"rewriteRelativeImportExtensions": true` in `compilerOptions`. Without it,
 a `.ts` file that imports `./welcome.vibe` fails with TS5097, and

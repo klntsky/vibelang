@@ -64,11 +64,6 @@
   "peerDependencies": {
     "vibelang": "0.0.2"
   },
-  "peerDependenciesMeta": {
-    "vibelang": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@rspack/core": "2.2.8",
     "esbuild": "0.28.2",

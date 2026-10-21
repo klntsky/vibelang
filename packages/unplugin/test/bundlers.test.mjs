@@ -5,7 +5,7 @@
 import assert from "node:assert/strict"
 import { spawn, spawnSync } from "node:child_process"
 import { once } from "node:events"
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
 import { SourceMap } from "node:module"
 import { availableParallelism, tmpdir } from "node:os"
 import { join, resolve } from "node:path"
@@ -208,6 +208,27 @@ describe("vibelang-unplugin", { concurrency }, () => {
       }
       assert.ok(payload.sourcesContent[source].includes("service Inventory"), "the map embeds the .vibe source")
       assert.deepEqual([entry.originalLine + 1, entry.originalColumn + 1], [32, 19])
+    })
+
+    // Rollup bundles packages only through @rollup/plugin-node-resolve, which the fixture does not use.
+    const bundlesPackages = bundler !== "rollup" || "Rollup resolves no packages without @rollup/plugin-node-resolve"
+    it(`${bundler}: builds a workspace package's .vibe source with that package's own project`, { skip: skip || (bundlesPackages === true ? false : bundlesPackages) }, async (t) => {
+      // dep lies beside the fixture, outside its root, as a workspace package
+      // that the app imports by name through node_modules.
+      const root = await fixture(t, bundler)
+      const dep = `${root}-dep`
+      t.after(() => rm(dep, { recursive: true, force: true }))
+      await mkdir(join(dep, "src"), { recursive: true })
+      await writeFile(join(dep, "package.json"), JSON.stringify({ name: "dep", type: "module", exports: { ".": "./src/index.vibe" } }))
+      await cp(join(here, "fixture/tsconfig.json"), join(dep, "tsconfig.json"))
+      await writeFile(join(dep, "src/index.vibe"), "export function greet(name: string): string {\n  return `hello, ${name}`\n}\n")
+      await mkdir(join(root, "node_modules"), { recursive: true })
+      await symlink(dep, join(root, "node_modules/dep"))
+      await edit(join(root, "src/main.ts"), 'import { shop } from "./shop.vibe"', 'import { greet } from "dep"\nimport { shop } from "./shop.vibe"')
+      await edit(join(root, "src/main.ts"), 'console.log(lines.join("\\n"))', 'console.log([...lines, greet("dep")].join("\\n"))')
+      const result = await bundleOnce(bundler, root)
+      assert.deepEqual(result.event, { ok: true }, result.stderr)
+      assert.equal(await runBundle(bundler, root), expected.replace(/\n?$/, "\nhello, dep\n"))
     })
 
     it(`${bundler}: a type error fails the build at its .vibe position`, { skip }, async (t) => {

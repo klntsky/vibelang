@@ -14,8 +14,9 @@ watch mode. For Vite and Vitest, use [vibelang-vite](../vite/README.md).
 npm install --save-dev vibelang vibelang-unplugin
 ```
 
-The plugin runs the `vibelang` compiler package, an optional peer dependency:
-install it, or pass a `compiler` path. It needs Node 22 or later.
+The plugin compiles with the `vibelang` package, a peer dependency, through its
+`vibelang/project` backend; `compiler` can still name another binary. It needs
+Node 22 or later.
 
 ## Configure
 
@@ -49,6 +50,11 @@ rewrites those imports to `./welcome.js` and `./config.js`; the plugin resolves
 them back to `welcome.vibe` and `config.ts`. The plugin compiles only
 `.vibe` modules. Your `.ts` files go through your bundler's usual TypeScript
 support.
+
+A `.vibe` module outside `root`, such as the source of a workspace package that
+your app imports by name, compiles with the nearest `tsconfig.json` above it:
+its own package's project, with that package's settings. Each project compiles
+once per build or watch rebuild.
 
 ## Options
 

@@ -1,7 +1,11 @@
-// Whole-project compilation for vibelang/register. vibelang-vite and
-// vibelang-unplugin still carry their own async copies of this logic.
-import { spawnSync } from "node:child_process"
-import { closeSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, rmSync } from "node:fs"
+// Whole-project compilation for the bundler plugins (vibelang-vite,
+// vibelang-unplugin) and the Node loader (vibelang/register).
+//
+// VibeLang's emit is type-directed: a module's JavaScript depends on the
+// contracts of the modules it imports, so no module compiles alone. Each
+// compile is one vibelang process over a whole tsconfig project.
+import { spawn, spawnSync } from "node:child_process"
+import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, rmSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
@@ -89,16 +93,73 @@ const realpath = (path) => {
   }
 }
 
+// Turns one compiler run into its result:
+//   outputs      Map from each .vibe source, by listed and real path, to its { code, map }
+//   inputs       project source files the result depends on
+//   errors       diagnostics that blocked emission; outputs is then empty
+//   warnings     diagnostics of a successful compile
+function collect({ status, signal, output }, root, out) {
+  const { files, diagnostics } = parseOutput(output, root)
+  // Dependencies are contracts too; their sources change only on install.
+  const inputs = files.filter((path) => !slash(path).includes("/node_modules/"))
+  const errors = diagnostics.filter((diagnostic) => diagnostic.category === "error")
+  const warnings = diagnostics.filter((diagnostic) => diagnostic.category === "warning")
+  if (status !== 0 && !errors.length) {
+    // A crash or an unknown flag prints no diagnostic; report the raw output.
+    errors.push({ category: "error", code: "vibelang", text: output.trim() || `exited with ${signal || status}` })
+  }
+  const outputs = new Map()
+  for (const source of errors.length ? [] : inputs) {
+    if (!source.endsWith(".vibe")) continue
+    const path = relative(root, source)
+    if (path.startsWith("..") || isAbsolute(path)) continue
+    const emitted = join(out, path.replace(/\.vibe$/, ".js"))
+    const map = JSON.parse(readFileSync(emitted + ".map", "utf8"))
+    map.sources = map.sources.map((entry) => slash(resolve(dirname(emitted), map.sourceRoot || "", entry)))
+    map.sourceRoot = ""
+    const result = { code: readFileSync(emitted, "utf8").replace(/\/\/# sourceMappingURL=.*$/m, ""), map }
+    // Bundlers ask by the listed path; Node asks by the real path.
+    outputs.set(source, result)
+    outputs.set(realpath(source), result)
+  }
+  return { outputs, inputs, errors, warnings }
+}
+
 /**
- * compileProjectSync compiles the whole tsconfig project with one vibelang
- * process. VibeLang's emit is type-directed: a module's JavaScript depends on
- * the contracts of the modules it imports, so no module compiles alone.
- *
- * It returns:
- *   outputs      Map from each .vibe source, by listed and real path, to its { code, map }
- *   inputs       project source files the result depends on
- *   errors       diagnostics that blocked emission; outputs is then empty
- *   warnings     diagnostics of a successful compile
+ * projectBackend compiles a whole tsconfig project with one vibelang process,
+ * in a fresh output directory each time. compile(project) resolves to the
+ * result described above.
+ */
+export function projectBackend({ root, compiler }) {
+  function run(args) {
+    const [file, argv] = command(compiler, args)
+    return new Promise((accept, reject) => {
+      let output = ""
+      const child = spawn(file, argv, { cwd: root, stdio: ["ignore", "pipe", "pipe"] })
+      child.stdout.on("data", (data) => { output += data })
+      child.stderr.on("data", (data) => { output += data })
+      child.on("error", (error) => reject(new Error(`vibelang: ${error.message}\nCompiler: ${compiler}`)))
+      child.on("close", (status, signal) => accept({ status, signal, output }))
+    })
+  }
+
+  async function compile(project) {
+    // Outside the project: webpack and esbuild rebuild when a directory they resolved through changes.
+    const out = mkdtempSync(join(tmpdir(), "vibelang-project-"))
+    try {
+      return collect(await run(emitArgs(project, root, out)), root, out)
+    } finally {
+      // Outputs are in memory now. The next compile starts from an empty directory.
+      rmSync(out, { recursive: true, force: true })
+    }
+  }
+
+  return { compile }
+}
+
+/**
+ * compileProjectSync is projectBackend's compile for callers that cannot wait,
+ * such as Node's synchronous module hooks.
  */
 export function compileProjectSync({ project, root = dirname(project), compiler = findCompiler(root) }) {
   const out = mkdtempSync(join(tmpdir(), "vibelang-project-"))
@@ -106,32 +167,113 @@ export function compileProjectSync({ project, root = dirname(project), compiler 
     const [file, argv] = command(compiler, emitArgs(project, root, out))
     const run = spawnSync(file, argv, { cwd: root, encoding: "utf8", maxBuffer: 1 << 30 })
     if (run.error) throw new Error(`vibelang: ${run.error.message}\nCompiler: ${compiler}`)
-    const output = run.stdout + run.stderr
-    const { files, diagnostics } = parseOutput(output, root)
-    // Dependencies are contracts too; their sources change only on install.
-    const inputs = files.filter((path) => !slash(path).includes("/node_modules/"))
-    const errors = diagnostics.filter((diagnostic) => diagnostic.category === "error")
-    const warnings = diagnostics.filter((diagnostic) => diagnostic.category === "warning")
-    if (run.status !== 0 && !errors.length) {
-      // A crash or an unknown flag prints no diagnostic; report the raw output.
-      errors.push({ category: "error", code: "vibelang", text: output.trim() || `exited with ${run.signal || run.status}` })
-    }
-    const outputs = new Map()
-    for (const source of errors.length ? [] : inputs) {
-      if (!source.endsWith(".vibe")) continue
-      const path = relative(root, source)
-      if (path.startsWith("..") || isAbsolute(path)) continue
-      const emitted = join(out, path.replace(/\.vibe$/, ".js"))
-      const map = JSON.parse(readFileSync(emitted + ".map", "utf8"))
-      map.sources = map.sources.map((entry) => slash(resolve(dirname(emitted), map.sourceRoot || "", entry)))
-      map.sourceRoot = ""
-      const result = { code: readFileSync(emitted, "utf8").replace(/\/\/# sourceMappingURL=.*$/m, ""), map }
-      // Callers ask by the listed path or, as Node does, by the real path.
-      outputs.set(source, result)
-      outputs.set(realpath(source), result)
-    }
-    return { outputs, inputs, errors, warnings }
+    return collect({ status: run.status, signal: run.signal, output: run.stdout + run.stderr }, root, out)
   } finally {
     rmSync(out, { recursive: true, force: true })
+  }
+}
+
+/** Returns the nearest tsconfig.json above file, or undefined. */
+export function nearestProject(file) {
+  for (let directory = dirname(file); ; directory = dirname(directory)) {
+    const candidate = join(directory, "tsconfig.json")
+    if (existsSync(candidate)) return candidate
+    if (dirname(directory) === directory) return undefined
+  }
+}
+
+// Returns a file modified after time, or one that is gone.
+function changedSince(files, time) {
+  return files.find((file) => {
+    try {
+      return statSync(file).mtimeMs > time
+    } catch {
+      return true
+    }
+  })
+}
+
+// Module code for a failed compile. The bundler reports the real error.
+const failed = "throw new Error(\"vibelang: this module did not compile; see the build errors\")\n"
+
+/**
+ * projects compiles .vibe modules for a bundler, one whole-project compile per
+ * tsconfig. A module inside root belongs to `project`; one outside it, such as
+ * the source of a workspace package another package imports, belongs to the
+ * nearest tsconfig.json above it, its own package's project. Each project
+ * compiles once per revision; invalidate() starts a new revision.
+ *
+ * load(file) resolves to { project, code, map, inputs, errors, warnings, first, error }.
+ * errors and warnings are the whole compile's; first is true for the first
+ * module loaded from that compile, so a bundler can report them once. `error`
+ * says that the project does not include the module.
+ */
+export function projects({ root, project, compiler, debug = () => {} }) {
+  const states = new Map()
+  let revision = 0
+
+  function projectOf(file) {
+    const path = relative(root, file)
+    if (!path.startsWith("..") && !isAbsolute(path)) return project
+    return nearestProject(file) ?? project
+  }
+
+  function stateOf(tsconfig) {
+    let state = states.get(tsconfig)
+    if (state === undefined) {
+      const projectRoot = tsconfig === project ? root : dirname(tsconfig)
+      state = { tsconfig, backend: projectBackend({ root: projectRoot, compiler }), result: undefined, pending: undefined, compiled: -1, reported: -1 }
+      states.set(tsconfig, state)
+    }
+    return state
+  }
+
+  async function compiled(state) {
+    while (state.compiled !== revision) {
+      if (!state.pending) {
+        const started = revision
+        const time = Date.now()
+        debug(`compile ${state.tsconfig} ${started} started`)
+        state.pending = state.backend.compile(state.tsconfig)
+          .then((value) => {
+            state.result = value
+            state.compiled = started
+            debug(`compile ${state.tsconfig} ${started} finished in ${Date.now() - time}ms: ${value.outputs.size} outputs, ${value.errors.length} errors`)
+            // A file saved during the compile may be missing from its output. esbuild records
+            // watch files when a load returns, so it would not rebuild for that save. Compile again.
+            const changed = changedSince([state.tsconfig, ...value.inputs], time)
+            if (changed) {
+              revision++
+              debug(`${changed} changed during compile ${started}: revision ${revision}`)
+            }
+          })
+          .finally(() => { state.pending = undefined })
+      }
+      await state.pending
+    }
+    return state.result
+  }
+
+  return {
+    projectOf,
+    /** Starts a new revision: every project compiles again on its next load. */
+    invalidate() {
+      revision++
+    },
+    async load(file) {
+      const state = stateOf(projectOf(file))
+      const { outputs, inputs, errors, warnings } = await compiled(state)
+      // Every .vibe module shares its project's diagnostics.
+      const first = state.reported !== state.compiled
+      state.reported = state.compiled
+      if (errors.length) return { project: state.tsconfig, code: failed, inputs, errors, warnings, first }
+      const output = outputs.get(file)
+      return {
+        project: state.tsconfig, code: output?.code ?? failed, map: output?.map, inputs, errors, warnings, first,
+        error: !output && {
+          message: `vibelang: ${file} is not part of ${state.tsconfig}. Add it to the tsconfig's include.`, id: file
+        }
+      }
+    }
   }
 }

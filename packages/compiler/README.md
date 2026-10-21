@@ -66,6 +66,17 @@ the compile are thrown at the import. Add `--enable-source-maps` for stack
 traces with `.vibe` lines. It needs Node 22.15 or later, for
 `module.registerHooks`.
 
+## Compile projects from a tool
+
+`vibelang/project` is the whole-project compile that `vibelang-vite`,
+`vibelang-unplugin`, and `vibelang/register` share. `projects({ root, project,
+compiler })` serves each `.vibe` module from one compile per tsconfig: a module
+inside `root` belongs to `project`, and one outside it, such as the source of a
+workspace package another package imports, belongs to the nearest
+`tsconfig.json` above it. `load(file)` returns the module's JavaScript, its
+source map, and its project's diagnostics; `invalidate()` makes every project
+compile again on its next load.
+
 ## Editor support
 
 This package ships the VS Code extension. In a project with `vibelang` installed:

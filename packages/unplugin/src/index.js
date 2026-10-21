@@ -1,26 +1,31 @@
-import { existsSync, statSync } from "node:fs"
+import { existsSync } from "node:fs"
 import { readFile } from "node:fs/promises"
-import { dirname, isAbsolute, resolve } from "node:path"
+import { createRequire } from "node:module"
+import { dirname, isAbsolute, join, resolve } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { createUnplugin } from "unplugin"
-import { findCompiler, formatDiagnostic, projectBackend } from "./backend.js"
 
 const cleanId = (id) => id.split("?")[0]
 
 // VIBELANG_UNPLUGIN_DEBUG=1 traces each compile and module load on stderr.
 const debug = process.env.VIBELANG_UNPLUGIN_DEBUG ? (text) => console.error(`vibelang-unplugin: ${text}`) : () => {}
 
-// Returns a file modified after time, or one that is gone.
-function changedSince(files, time) {
-  return files.find((file) => {
+// The compile backend is the vibelang package's own: the project's install
+// first, so it matches the compiler that runs, else the one beside this plugin.
+async function loadBackend(root) {
+  for (const base of [join(root, "package.json"), fileURLToPath(import.meta.url)]) {
+    let path
     try {
-      return statSync(file).mtimeMs > time
+      path = createRequire(base).resolve("vibelang/project")
     } catch {
-      return true
+      continue
     }
-  })
+    return import(pathToFileURL(path).href)
+  }
+  throw new Error("vibelang-unplugin needs the vibelang package: npm install --save-dev vibelang")
 }
 
-async function esbuildMessage(diagnostic) {
+async function esbuildMessage(formatDiagnostic, diagnostic) {
   return {
     text: formatDiagnostic(diagnostic),
     location: diagnostic.file && {
@@ -30,82 +35,46 @@ async function esbuildMessage(diagnostic) {
   }
 }
 
-// Module code for a failed build. The bundler reports the real error.
-const failed = "throw new Error(\"vibelang: this module did not compile; see the build errors\")\n"
-
 /** @type {import('./index.d.ts').unplugin} */
 export const unplugin = createUnplugin((options = {}, meta) => {
-  let root, project, backend, result, pending
-  let revision = 0
-  let compiled = -1
-  let reported = -1
+  let root, project, backend, modules, current
 
   function configure(base) {
-    if (backend) return
+    if (root) return
     root = resolve(options.root || base || process.cwd())
     project = resolve(root, options.project || "tsconfig.json")
-    backend = projectBackend({ root, compiler: findCompiler(root, options.compiler) })
   }
 
-  async function ensureCompiled() {
+  // One compile per tsconfig: the project for root's modules, and each
+  // workspace package's own for modules outside root.
+  function loaded() {
     configure()
-    while (compiled !== revision) {
-      if (!pending) {
-        const started = revision
-        const time = Date.now()
-        debug(`compile ${started} started`)
-        pending = backend.compile(project)
-          .then((value) => {
-            result = value
-            compiled = started
-            debug(`compile ${started} finished in ${Date.now() - time}ms: ${value.outputs.size} outputs, ${value.errors.length} errors`)
-            // A file saved during the compile may be missing from its output. esbuild records
-            // watch files when a load returns, so it would not rebuild for that save. Compile again.
-            const changed = changedSince([project, ...value.inputs], time)
-            if (changed) {
-              revision++
-              debug(`${changed} changed during compile ${started}: revision ${revision}`)
-            }
-          })
-          .finally(() => { pending = undefined })
-      }
-      await pending
-    }
-    return result
+    modules ??= loadBackend(root).then((value) => {
+      backend = value
+      current = backend.projects({ root, project, compiler: backend.findCompiler(root, options.compiler), debug })
+      return current
+    })
+    return modules
   }
 
   async function loadModule(id) {
     const file = cleanId(id)
-    const { outputs, inputs, errors, warnings } = await ensureCompiled()
-    debug(`load ${file} from compile ${compiled}`)
-    // Every .vibe module shares the project's diagnostics. Report them once per compile.
-    const report = reported !== compiled
-    if (errors.length || warnings.length) reported = compiled
-    if (errors.length) {
-      return { code: failed, inputs, errors: report ? errors : [], warnings: [] }
-    }
-    const output = outputs.get(file)
-    return {
-      code: output?.code ?? failed, map: output?.map, inputs,
-      errors: [], warnings: report ? warnings : [],
-      error: !output && {
-        message: `vibelang: ${file} is not part of ${project}. Add it to the tsconfig's include.`, id: file
-      }
-    }
+    const result = await (await loaded()).load(file)
+    debug(`load ${file} from ${result.project}`)
+    return result
   }
 
   return {
     name: "vibelang",
     enforce: "pre",
-    // Every build, and every watch rebuild, compiles the project once.
-    buildStart() {
-      configure()
-      revision++
-      debug(`build start: revision ${revision}`)
+    // Every build, and every watch rebuild, compiles each project once.
+    async buildStart() {
+      ;(await loaded()).invalidate()
+      debug("build start")
     },
     watchChange(id) {
-      if (/\.(?:vibe|[cm]?tsx?|json)$/.test(id)) revision++
-      debug(`watch change ${id}: revision ${revision}`)
+      if (/\.(?:vibe|[cm]?tsx?|json)$/.test(id)) current?.invalidate()
+      debug(`watch change ${id}`)
     },
     resolveId(source, importer) {
       const path = cleanId(source)
@@ -128,18 +97,19 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       return cleanId(id).endsWith(".vibe")
     },
     async load(id) {
-      const { code, map, inputs, errors, warnings, error } = await loadModule(id)
+      const { project, code, map, inputs, errors, warnings, first, error } = await loadModule(id)
       // Any project source or the tsconfig can change the contracts this module compiles against.
       for (const input of [project, ...inputs]) this.addWatchFile(input)
-      if (errors.length) {
+      // A compile's diagnostics are reported once, with its first module.
+      if (errors.length && first) {
         const first = errors.find((diagnostic) => diagnostic.file) || {}
         this.error({
-          message: errors.map(formatDiagnostic).join("\n"),
+          message: errors.map(backend.formatDiagnostic).join("\n"),
           id: first.file || cleanId(id),
           loc: first.file && { file: first.file, line: first.line, column: first.column - 1 }
         })
       }
-      for (const warning of warnings) this.warn(formatDiagnostic(warning))
+      if (first && !errors.length) for (const warning of warnings) this.warn(backend.formatDiagnostic(warning))
       if (error) this.error(error)
       return { code, map, moduleType: "js" }
     },
@@ -152,12 +122,12 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       onLoadFilter: /a^/,
       setup(build) {
         build.onLoad({ filter: /\.vibe(?:\?.*)?$/ }, async ({ path }) => {
-          const { code, map, inputs, errors, warnings, error } = await loadModule(path)
+          const { project, code, map, inputs, errors, warnings, first, error } = await loadModule(path)
           const messages = []
-          if (errors.length) {
+          if (errors.length && first) {
             messages.push({
-              ...await esbuildMessage(errors.find((diagnostic) => diagnostic.file) || errors[0]),
-              text: errors.map(formatDiagnostic).join("\n")
+              ...await esbuildMessage(backend.formatDiagnostic, errors.find((diagnostic) => diagnostic.file) || errors[0]),
+              text: errors.map(backend.formatDiagnostic).join("\n")
             })
           }
           if (error) messages.push({ text: error.message })
@@ -166,7 +136,8 @@ export const unplugin = createUnplugin((options = {}, meta) => {
               ? `${code}\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,${Buffer.from(JSON.stringify(map)).toString("base64")}`
               : code,
             loader: "js", resolveDir: dirname(path), watchFiles: [project, ...inputs],
-            errors: messages, warnings: await Promise.all(warnings.map(esbuildMessage))
+            errors: messages,
+            warnings: first && !errors.length ? await Promise.all(warnings.map((warning) => esbuildMessage(backend.formatDiagnostic, warning))) : []
           }
         })
       }

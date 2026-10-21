@@ -7,9 +7,9 @@
 // module, or VIBELANG_PROJECT.
 import { existsSync } from "node:fs"
 import { registerHooks } from "node:module"
-import { dirname, join, resolve } from "node:path"
+import { resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { compileProjectSync, formatDiagnostic } from "./project.mjs"
+import { compileProjectSync, formatDiagnostic, nearestProject } from "./project.mjs"
 
 if (typeof registerHooks !== "function") {
   throw new Error(`vibelang/register needs module.registerHooks, in Node 22.15 or later; this is Node ${process.version}`)
@@ -19,11 +19,9 @@ const results = new Map()
 
 function projectOf(file) {
   if (process.env.VIBELANG_PROJECT) return resolve(process.env.VIBELANG_PROJECT)
-  for (let directory = dirname(file); ; directory = dirname(directory)) {
-    const candidate = join(directory, "tsconfig.json")
-    if (existsSync(candidate)) return candidate
-    if (dirname(directory) === directory) throw new Error(`vibelang/register: no tsconfig.json above ${file}`)
-  }
+  const project = nearestProject(file)
+  if (project === undefined) throw new Error(`vibelang/register: no tsconfig.json above ${file}`)
+  return project
 }
 
 function emitted(file) {

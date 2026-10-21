@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -59,6 +59,31 @@ test("Vitest runs .vibe Effect functions and plain callbacks", async (t) => {
   console.log("PASS .vibe Vitest: 2 assertions")
 })
 
+test("Vitest compiles a workspace package's .vibe source with that package's own project", async (t) => {
+  // dep lies beside the fixture, outside its root, as a workspace package
+  // that the test imports by name through node_modules.
+  const root = await fixture(t)
+  const dep = `${root}-dep`
+  t.after(() => rm(dep, { recursive: true, force: true }))
+  await mkdir(join(dep, "src"), { recursive: true })
+  await writeFile(join(dep, "package.json"), JSON.stringify({ name: "dep", type: "module", exports: { ".": "./src/index.vibe" } }))
+  const config = JSON.parse(await readFile(join(root, "tsconfig.json"), "utf8"))
+  await writeFile(join(dep, "tsconfig.json"), JSON.stringify({ ...config, include: ["src/**/*"] }))
+  await writeFile(join(dep, "src/index.vibe"), "export function twice(value: number): number {\n  return value * 2\n}\n")
+  await mkdir(join(root, "node_modules"), { recursive: true })
+  await symlink(dep, join(root, "node_modules/dep"))
+  await writeFile(join(root, "passing.test.vibe"), `import { assert, it } from "@effect/vitest"
+import { twice } from "dep"
+
+it("uses a workspace package's VibeLang source", () => {
+  assert.strictEqual(twice(21), 42)
+})
+`)
+  const result = await runVitest(root)
+  assert.equal(result.code, 0, result.output)
+  assert.match(result.output, /1 passed/)
+})
+
 test("a deliberate failing assertion reports failure.test.vibe:6", async (t) => {
   const result = await runVitest(await fixture(t), true)
   assert.equal(result.code, 1, result.output)
@@ -94,7 +119,8 @@ test("Vite serves JS and maps, invalidates importers, reports diagnostics and re
   response = await fetch(`${base}/main.vibe`)
   assert.equal(response.status, 200)
   const javascript = await response.text()
-  assert.match(javascript, /yield\* Effect\.succeed/)
+  // D274: a single-result Effect body returns its Effect without a generator.
+  assert.match(javascript, /Effect\.succeed\(double(\$direct)?\(21\)\)/)
   assert.doesNotMatch(javascript, /value: number/)
   const map = JSON.parse(Buffer.from(javascript.match(/sourceMappingURL=data:application\/json;base64,(\S+)/)[1], "base64"))
   assert.ok(map.sources.some((source) => source.endsWith("main.vibe")))
@@ -144,7 +170,7 @@ test("a native compiler named bin/vibelang is executed without Node", async (t) 
   const root = await fixture(t)
   const native = join(root, "bin", "vibelang")
   await mkdir(dirname(native), { recursive: true })
-  await cp(join(packageRoot, "../../typescript/built/local/tsc"), native)
+  await cp(process.env.VIBELANG_BINARY || join(packageRoot, "../../typescript/built/local/tsc"), native)
   const plugin = vibelang({ compiler: native })
   plugin.configResolved({ root, logger: { warn() {} } })
   const file = join(root, "main.vibe")
