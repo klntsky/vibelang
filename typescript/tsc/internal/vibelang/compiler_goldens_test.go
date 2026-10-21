@@ -64,11 +64,7 @@ func TestCompilerGoldenCases(t *testing.T) {
 				t.Fatalf("config: %v", errors)
 			}
 			program := compiler.NewProgram(compiler.ProgramOptions{Config: config, Host: compiler.NewCompilerHost(fileSystem, bundled.LibPath(), nil, nil, nil)})
-			all := slices.Clone(config.Errors)
-			all = append(all, program.GetSyntacticDiagnostics(t.Context(), nil)...)
-			all = append(all, program.GetGlobalDiagnostics(t.Context())...)
-			all = append(all, program.GetSemanticDiagnostics(t.Context(), nil)...)
-			all = compiler.SortAndDeduplicateDiagnostics(all)
+			all := compiler.SortAndDeduplicateDiagnostics(commandLineDiagnostics(t, config.Errors, program))
 			wantDiagnostics, hasDiagnosticGolden := "", false
 			needsEmit := false
 			for _, golden := range goldens {
@@ -196,6 +192,20 @@ func copyCompilerFixture(t *testing.T, fixture, root string) string {
 	return dir
 }
 
+// commandLineDiagnostics returns the diagnostics `vibelang -p` reports for
+// program: its semantic diagnostics only when it has no syntax errors.
+func commandLineDiagnostics(t *testing.T, configErrors []*ast.Diagnostic, program *compiler.Program) []*ast.Diagnostic {
+	t.Helper()
+	all := slices.Clone(configErrors)
+	syntactic := program.GetSyntacticDiagnostics(t.Context(), nil)
+	all = append(all, syntactic...)
+	if len(syntactic) == 0 {
+		all = append(all, program.GetGlobalDiagnostics(t.Context())...)
+		all = append(all, program.GetSemanticDiagnostics(t.Context(), nil)...)
+	}
+	return all
+}
+
 func compilerDiagnosticLine(t *testing.T, dir string, d *ast.Diagnostic) string {
 	t.Helper()
 	source := d.Source()
@@ -206,10 +216,15 @@ func compilerDiagnosticLine(t *testing.T, dir string, d *ast.Diagnostic) string 
 	if d.File() == nil {
 		return message
 	}
-	file, err := filepath.Rel(dir, string(d.File().FileName()))
+	// A module declaration's body (D283) reports at its .vibe file's positions.
+	origin := d.File()
+	if canonical := origin.CanonicalSourceFile(); canonical != nil {
+		origin = canonical
+	}
+	file, err := filepath.Rel(dir, string(origin.FileName()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	line, column := scanner.GetECMALineAndUTF16CharacterOfPosition(d.File(), d.Pos())
+	line, column := scanner.GetECMALineAndUTF16CharacterOfPosition(origin, d.Pos())
 	return fmt.Sprintf("%s(%d,%d): %s", filepath.ToSlash(file), line+1, column+1, message)
 }

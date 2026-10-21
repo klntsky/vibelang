@@ -11,6 +11,10 @@ type EmbeddedModule struct {
 	Declaration *Node  // the ModuleDeclaration in the VibeLang file
 }
 
+// EmbeddedModuleContentMapper is the content mapper identity of the files
+// that hold module declarations' bodies: no external mapper makes them.
+const EmbeddedModuleContentMapper = "vibelang:module-declaration"
+
 // EmbeddedModule returns the module declaration whose body file is, or nil
 // when file holds no module declaration's body.
 func (node *SourceFile) EmbeddedModule() *EmbeddedModule {

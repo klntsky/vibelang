@@ -192,7 +192,10 @@ func (p *Parser) attachVibeLangModules(file *ast.SourceFile) {
 		opts.ExternalModuleIndicatorOptions.Force = true // a module declaration is always a module
 		module := parseModuleBody(opts, blankOutside(p.sourceText, body), body.Pos())
 		module.SetContentMapperInfo(ast.ContentMapperSourceFileInfo{
-			ParseOptions:    opts,
+			// A content-mapped file to every tool: it emits no JavaScript of its
+			// own, and editors and diagnostics map it to the .vibe file.
+			ContentMapper:   ast.EmbeddedModuleContentMapper,
+			ParseOptions:    p.opts,
 			VirtualFileName: opts.FileName,
 			OriginalText:    p.sourceText,
 			SpanMap: spanmap.New([]spanmap.Segment{{

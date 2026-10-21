@@ -2468,7 +2468,7 @@ func (node *SourceFile) Text() string {
 
 // OriginalText returns the untransformed source text for content-mapped files, or Text() otherwise.
 func (node *SourceFile) OriginalText() string {
-	if node.ContentMapper() != "" || node.EmbeddedModule() != nil {
+	if node.ContentMapper() != "" {
 		return node.contentMapperInfo.OriginalText
 	}
 	return node.text
