@@ -76,11 +76,11 @@ the project does not compile (the message holds the diagnostics), and
 
 ### The compile cache
 
-A project's compile is cached on disk, so the next process that imports the
-same project reuses it instead of compiling again: a warm start costs a few
+A project's compile is cached on disk, so the next process that imports the same
+project reuses it instead of compiling again: a warm start costs a few
 milliseconds per project, against hundreds for a compile. `vibelang/register`,
-`vibelang-vite`, and `vibelang-unplugin` share the cache. A cached compile is
-reused only while all of these are unchanged:
+`vibelang/bun`, `vibelang-vite`, and `vibelang-unplugin` share the cache. A
+cached compile is reused only while all of these are unchanged:
 
 | Input | What counts as a change |
 | --- | --- |
@@ -105,19 +105,35 @@ module resolution from outside the project's `include` and outside
 `node_modules`, or a `node_modules` link changed by hand rather than by a
 package manager; edit the importing file, or delete the cache directory.
 
+## Run .vibe modules in Bun
+
+```sh
+bun --preload vibelang/bun src/main.ts
+```
+
+`vibelang/bun` is the same loader for Bun, through a runtime plugin: `bun run`,
+`bun test`, and a `preload` in `bunfig.toml` (top level for `bun run`, under
+`[test]` for `bun test`). It compiles each project once per process, or loads it
+from the compile cache, honors `VIBELANG_PROJECT`, and throws a failed compile's
+diagnostics at the import. Bun 1.4.2 ignores a plugin's source maps, so a stack
+frame names the `.vibe` file with the line of its compiled JavaScript. `bun
+test` discovers only its own test file names, so a Bun suite is a `.test.ts`
+file that imports `.vibe` modules.
+
 ## Compile projects from a tool
 
 `vibelang/project` is the whole-project compile that `vibelang-vite`,
-`vibelang-unplugin`, and `vibelang/register` share. `projects({ root, project,
-compiler })` serves each `.vibe` module from one compile per tsconfig: a module
-inside `root` belongs to `project`; one of another workspace package, such as a
-package another package imports, belongs to the nearest `tsconfig.json` above
-it. Another package is one outside `root`, or one nested inside it with its own
-`package.json` and `tsconfig.json`. `load(file)` returns the module's
-JavaScript, its source map, and its project's diagnostics; `invalidate()` makes
-every project compile again on its next load, or load from the cache when
-nothing changed. `compileProjectSync`, `projectBackend`, and `projects` take
-`cache: false` to turn the cache off, or `cache: { directory }` to move it.
+`vibelang-unplugin`, `vibelang/register`, and `vibelang/bun` share. `projects({
+root, project, compiler })` serves each `.vibe` module from one compile per
+tsconfig: a module inside `root` belongs to `project`; one of another workspace
+package, such as a package another package imports, belongs to the nearest
+`tsconfig.json` above it. Another package is one outside `root`, or one nested
+inside it with its own `package.json` and `tsconfig.json`. `load(file)` returns
+the module's JavaScript, its source map, and its project's diagnostics;
+`invalidate()` makes every project compile again on its next load, or load from
+the cache when nothing changed. `compileProjectSync`, `projectBackend`, and
+`projects` take `cache: false` to turn the cache off, or `cache: { directory }`
+to move it.
 
 `projectImports({ project })` lists a project's module graph without
 type-checking it: `files` is every file of the program, and `imports` is every

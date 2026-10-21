@@ -136,6 +136,21 @@ a source, a tsconfig, an installed package, or the compiler changes. Set
 off. A type error stops the import with the compiler's diagnostics, and a
 stack trace names `.vibe` lines.
 
+## Run sources with Bun
+
+Bun can run and test the project from source, without `dist/`. Preload `vibelang/bun`, in `bunfig.toml`:
+
+```toml
+preload = ["vibelang/bun"]
+
+[test]
+preload = ["vibelang/bun"]
+```
+
+or on the command line: `bun --preload vibelang/bun src/main.ts`. The first `.vibe` import compiles the whole project in the nearest `tsconfig.json` above the module, once per process, with the same cache as Node. Set `VIBELANG_PROJECT` to a tsconfig path to choose another project. Diagnostics that stop the compile fail the import. Bun ignores a plugin's source maps, so a stack frame names the `.vibe` file with the line of its compiled JavaScript.
+
+`bun test` finds only files named `*.test.ts`, `*.test.js` and the like, never `*.test.vibe`. Write Bun suites as `.test.ts` files that import `.vibe` modules, or run `.test.vibe` files with Vitest.
+
 ## Next
 
 Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify with step 4 of [Set up VibeLang](../setup.md).

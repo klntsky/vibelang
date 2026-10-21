@@ -1,5 +1,6 @@
 // Whole-project compilation for the bundler plugins (vibelang-vite,
-// vibelang-unplugin) and the Node loader (vibelang/register).
+// vibelang-unplugin) and the Node and Bun loaders (vibelang/register,
+// vibelang/bun).
 //
 // VibeLang's emit is type-directed: a module's JavaScript depends on the
 // contracts of the modules it imports, so no module compiles alone. Each
