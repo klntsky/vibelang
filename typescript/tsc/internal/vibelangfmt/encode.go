@@ -67,7 +67,8 @@ type placeholder struct {
 	// indent is the indentation of the source line where text starts, so
 	// text that spans lines can be indented as its new line is.
 	indent string
-	// noBody marks an error declaration written without fields.
+	// noBody marks an error declaration written without fields or, for one
+	// written as a class, without a body.
 	noBody bool
 }
 
@@ -306,11 +307,22 @@ func (e *encoder) form(form parser.VibeSyntax) error {
 }
 
 // declaration writes error and schema as a type alias, service and control
-// as a class, and layer as a placeholder statement.
+// as a class, and layer as a placeholder statement. An error written with a
+// class's features (D278) is a class too, given an empty body when it has
+// none: error Timeout extends AppError.
 func (e *encoder) declaration(form parser.VibeSyntax) error {
 	head := e.text(form.Head)
+	if form.Class {
+		name := e.hold(placeholderClassHead, head, form.Head.Pos(), firstLineWidth(head)-len("class "))
+		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "class " + name, opaque: true})
+		if form.Open.Pos() == form.Open.End() {
+			e.holders[len(e.holders)-1].noBody = true
+			e.insert(form.Range.End(), " {}", 0)
+		}
+		return nil
+	}
 	switch form.Name {
-	case "error", "schema":
+	case "error", "schema", "schema error":
 		name := e.hold(placeholderTypeHead, head, form.Head.Pos(), firstLineWidth(head)-len("type  ="))
 		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "type " + name, opaque: true})
 		if form.Open.Pos() == form.Open.End() {

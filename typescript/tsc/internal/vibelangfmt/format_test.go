@@ -45,6 +45,28 @@ schema Account {
 }
 interface Cart { id: string; mutable items: Array<string>; mutable [key: string]: unknown }
 `,
+	"error classes": `/** The base of a family (D278, D304). */
+export abstract error AppError implements Coded {
+  _tag: string
+  code: string
+  mutable attempts: number
+  static readonly family = "app"
+  constructor(code: string) {
+    super({ code: code.trim(), attempts: 0 })
+  }
+  get label(): string { return this.code }
+  override toJSON(): Record<string, unknown> { return { code: this.code } }
+}
+export error NotFound extends AppError { path: string }
+error Timeout extends AppError
+error Typed<T extends string> extends AppError implements Coded
+schema error FsError { _tag: string; method: string; path?: string }
+schema error Missing extends FsError {
+  attempts: number
+  describe(): string { return this.method }
+}
+export schema error Plain extends FsError
+`,
 	"block params": `const UsersLive = Layer.effect(Users) {
   const seen = new Set<string>()
   return { find(id) { return getUser(id) }, region: "eu" }

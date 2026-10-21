@@ -298,6 +298,21 @@ func (d *decoder) node(node *ast.Node) error {
 			return lost()
 		}
 		d.replace(d.afterModifiers(class), end, d.reindent(holder, start))
+		if holder.noBody {
+			// An error without a body (D278): drop the {} the encoder added.
+			last := end
+			if list := class.TypeParameterList(); list != nil {
+				_, greater, ok := d.nextToken(list.End(), '>')
+				if !ok {
+					return lost()
+				}
+				last = greater
+			}
+			if clauses := class.ClassLikeData().HeritageClauses; clauses != nil && len(clauses.Nodes) != 0 {
+				last = clauses.Nodes[len(clauses.Nodes)-1].End()
+			}
+			d.replace(last, class.End(), "")
+		}
 	case placeholderCatch:
 		access := parent
 		if access.Kind != ast.KindPropertyAccessExpression || access.Name() != node || access.Parent.Kind != ast.KindCallExpression || access.Parent.Expression() != access {
