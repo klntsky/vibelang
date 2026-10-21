@@ -113,8 +113,8 @@ export const KEEP = [
     pattern: /^\*\*D(?:125|255)\. .*$|^\| D125 \|.*$/gm,
   },
   {
-    why: "the spec's row for D125, a record of the earlier name",
-    paths: ["docs/design/src/529-part5-ch29-decisions.md"],
+    why: "the spec's row for D125, a record of the earlier name, and its copy on the vibelang.sh site",
+    paths: ["docs/design/src/529-part5-ch29-decisions.md", "site/src/pages/spec/529-part5-ch29-decisions.mdx"],
     pattern: /^\| D125 \|.*$/g,
   },
 ]
