@@ -41,8 +41,8 @@ process.exit(spawnSync(${JSON.stringify(native)}, args, { stdio: "inherit" }).st
     mkdirSync(dirname(join(root, path)), { recursive: true })
     writeFileSync(join(root, path), text)
   }
-  const run = (entry, env = {}) =>
-    spawnSync(process.execPath, ["--enable-source-maps", "--import", register, entry], {
+  const run = (entry, env = {}, flags = ["--enable-source-maps"]) =>
+    spawnSync(process.execPath, [...flags, "--import", register, entry], {
       cwd: root, encoding: "utf8",
       env: { ...process.env, VIBELANG_BINARY: compiler, VIBELANG_PROJECT: "", VIBELANG_CACHE_DIR: join(root, ".cache"), ...env }
     })
@@ -150,3 +150,22 @@ test("a failed compile and a module outside the project throw errors with a code
   assert.equal(result.status, 0, result.stderr)
   assert.deepEqual(result.stdout.trim().split("\n"), ["loaded", "ERR_VIBELANG_COMPILE", "ERR_VIBELANG_PROJECT"])
 })
+
+test("stack traces name .vibe lines without --enable-source-maps", { skip }, (t) => {
+  const { run } = project(t, {
+    // The error declaration emits more lines than it takes, so an unmapped
+    // frame would name a later line of boom.vibe.
+    "src/boom.vibe": "error Refused { reason: string }\n\nexport function boom(): number!Refused {\n  throw new Refused({ reason: \"boom\" })\n}\n",
+    "src/main.ts": [
+      "import { Effect } from \"effect\"",
+      "import { boom } from \"./boom.vibe\"",
+      "const failure = Effect.runSync(Effect.flip(boom()))",
+      "console.log(String(failure.stack).split(\"\\n\").filter((line) => line.includes(\"boom.vibe\")).join(\"\\n\"))",
+      ""
+    ].join("\n")
+  })
+  const result = run("src/main.ts", {}, [])
+  assert.equal(result.stderr, "")
+  assert.match(result.stdout, /boom\.vibe:4:\d+\)?$/m)
+})
+

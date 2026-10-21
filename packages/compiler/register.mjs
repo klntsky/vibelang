@@ -7,9 +7,11 @@
 // VIBELANG_PROJECT. A compile's result is cached on disk (vibelang/project), so
 // a later process reuses it while the project's inputs are unchanged. A failed
 // compile throws an Error with code ERR_VIBELANG_COMPILE and the diagnostics;
-// a module the project does not include, ERR_VIBELANG_PROJECT.
+// a module the project does not include, ERR_VIBELANG_PROJECT. Source maps are
+// turned on, so a stack frame names the .vibe line.
 // VIBELANG_REGISTER_DEBUG=1 reports each project's compile or cache hit.
 import { existsSync, statSync } from "node:fs"
+import * as Module from "node:module"
 import { registerHooks } from "node:module"
 import { resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -18,6 +20,11 @@ import { compileProjectSync, formatDiagnostic, nearestProject } from "./project.
 if (typeof registerHooks !== "function") {
   throw new Error(`vibelang/register needs module.registerHooks, in Node 22.15 or later; this is Node ${process.version}`)
 }
+
+// A .vibe module's frames name its .vibe path; without source maps they would
+// carry the emitted JavaScript's line numbers. Node 22.14+ (every Node with
+// registerHooks) has setSourceMapsSupport.
+Module.setSourceMapsSupport?.(true)
 
 const results = new Map()
 const debug = process.env.VIBELANG_REGISTER_DEBUG

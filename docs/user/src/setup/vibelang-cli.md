@@ -126,14 +126,15 @@ To run a TypeScript entry point that imports `.vibe` modules without building
 `dist/` first, load the `vibelang/register` hook:
 
 ```sh
-node --enable-source-maps --import vibelang/register src/start.ts
+node --import vibelang/register src/start.ts
 ```
 
 The first `.vibe` import compiles the project in the nearest `tsconfig.json`.
 The result is cached on disk, so the next process starts in milliseconds until
 a source, a tsconfig, an installed package, or the compiler changes. Set
 `VIBELANG_CACHE_DIR` to move the cache and `VIBELANG_DISABLE_CACHE=1` to turn it
-off. A type error stops the import with the compiler's diagnostics.
+off. A type error stops the import with the compiler's diagnostics, and a
+stack trace names `.vibe` lines.
 
 ## Next
 
