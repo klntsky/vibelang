@@ -1,0 +1,101 @@
+import { describe, it } from "@effect/vitest"
+import * as Route from "./Route.vibe"
+
+export function greetUser(id: string): string!NotFound {
+  return withSpan("greetUser") {
+    const user = getUser(id)
+    Console.log(`Hello, ${user.name}`)
+    return user.name
+  }
+}
+
+const UsersLive = Layer.effect(Users) {
+  const seen = new Set<string>()
+  return {
+    find(id) {
+      return getUser(id)
+    },
+    region: "eu"
+  }
+}
+
+describe("Users", () => {
+  it.effect("finds a user") {
+    const user = getUser("1")
+    assert.strictEqual(user.name, "Ada")
+  }
+})
+
+function describeFailure(failure: NotFound | Timeout) {
+  return match (failure) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+  }
+}
+
+function nameOrReason(id: string) {
+  return getUser(id).name catch (e) => match (e) { when NotFound: `no user ${e.id}`; }
+}
+
+function scan(root: string) {
+  const result = discovery.scan({ source: "flows", root, naming: "path", confinementRoot: root })
+    catch (cause) => throw discoveryFailure(cause)
+  return result
+}
+
+function piped() {
+  return getUser("1")
+    |> retry(%, Schedule.recurs(2))
+    |> timeout(%, "1 second")
+}
+
+function both() {
+  const user = fork getUser("1")
+  const orders = fork getOrders("1")
+  const [a, b] = await.all [join user, join orders]
+  for concurrent(8) (const id of [a.id, b]) log(id)
+  return do {
+    const x = a
+    x
+  }
+}
+
+function program() {
+  provide UsersLive, Random = seeded {
+    uninterruptible {
+      restore {
+        return Users.find("1")
+      }
+    }
+  }
+}
+
+function tracked() {
+  try {
+    return getUser("1")
+  } finally (exit) {
+    log(`lookup ${exit._tag}`)
+  }
+}
+
+function handled(version: string) {
+  try {
+    return release(version)
+  } handle Approval.approve(request) {
+    resume(true)
+  } catch (e) {
+    return match (e) { when NotFound: "missing"; default: throw e; }
+  }
+}
+
+function hatches(text: string) {
+  const parsed = try((text) => JSON.parse(text), (error) => new BadJson({ error }), text)
+  return parsed ?? throw new BadJson({ error: "empty" })
+}
+
+const failingRender = () =>
+  exit(
+    withSpan("render-report") {
+      throw new RenderFailed({ format: "unknown" })
+    }
+  )

@@ -1,0 +1,29 @@
+// A file whose comments sit around and inside VibeLang forms.
+
+/** Finds a user. */
+export function find(id: string): User!NotFound /* the failure */ {
+  // before the block
+  return withSpan("find") {
+    // inside the block
+    return getUser(id) // trailing
+  }
+}
+
+function arms(x: number) {
+  return match (x) {
+    // the first arm
+    when 1: "one"; // after the first arm
+    /* the default */ default: "other";
+  }
+}
+
+function clauses() {
+  try {
+    a()
+  } handle Ask.answer(question) {
+    // answer
+    resume(question.length > 0)
+  } catch (e) {
+    // other
+  }
+}

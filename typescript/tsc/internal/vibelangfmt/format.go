@@ -1,0 +1,199 @@
+package vibelangfmt
+
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/parser"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
+)
+
+// TypeScriptFormatter formats a TypeScript file's text. It returns the text
+// unchanged when the file is already formatted.
+type TypeScriptFormatter func(text string) (string, error)
+
+// Format formats source, the text of a .vibe file, with formatter, which
+// formats TypeScript. fileName names the file in errors. Format fails, and
+// changes nothing, on a file with syntax errors, and when the result would not
+// parse to the program source parses to.
+func Format(fileName, source string, formatter TypeScriptFormatter) (string, error) {
+	enc, err := encode(fileName, source)
+	if err != nil {
+		return "", prefix(fileName, err)
+	}
+	formatted, err := formatter(enc.text)
+	if err != nil {
+		return "", prefix(fileName, fmt.Errorf("vibelang format: the TypeScript formatter failed: %w", err))
+	}
+	result, err := enc.decode(formatted)
+	if err != nil {
+		return "", prefix(fileName, err)
+	}
+	if err := SameProgram(source, result); err != nil {
+		return "", prefix(fileName, fmt.Errorf("vibelang format: internal error: formatting changed the program: %w", err))
+	}
+	return result, nil
+}
+
+func prefix(fileName string, err error) error {
+	if fileName == "" {
+		return err
+	}
+	return fmt.Errorf("%s: %w", fileName, err)
+}
+
+// SameProgram reports how after, a .vibe file, differs from before as a
+// program: its syntax tree, ignoring parentheses, the order of imports, and
+// the order of import and export specifiers, which a formatter may change.
+// It returns nil when they are the same.
+func SameProgram(before, after string) error {
+	a := parser.ParseSourceFile(vibeOptions, before, core.ScriptKindTS)
+	b := parser.ParseSourceFile(vibeOptions, after, core.ScriptKindTS)
+	if diagnostics := b.Diagnostics(); len(diagnostics) != 0 && len(a.Diagnostics()) == 0 {
+		return syntaxError(after, diagnostics[0])
+	}
+	c := comparer{before: before, after: after}
+	return c.same(a.AsNode(), b.AsNode())
+}
+
+type comparer struct{ before, after string }
+
+func unparenthesize(node *ast.Node) *ast.Node {
+	for node != nil && (node.Kind == ast.KindParenthesizedExpression || node.Kind == ast.KindParenthesizedType) {
+		if node.Kind == ast.KindParenthesizedExpression {
+			node = node.Expression()
+		} else {
+			node = node.Type()
+		}
+	}
+	return node
+}
+
+func (c *comparer) differ(a *ast.Node, what string) error {
+	line, column := lineColumn(c.before, scanner.SkipTrivia(c.before, a.Pos()))
+	return fmt.Errorf("%d:%d: %s", line, column, what)
+}
+
+func (c *comparer) same(a, b *ast.Node) error {
+	a, b = unparenthesize(a), unparenthesize(b)
+	if a == nil || b == nil {
+		if a != b {
+			return fmt.Errorf("a node is missing")
+		}
+		return nil
+	}
+	if a.Kind != b.Kind {
+		return c.differ(a, fmt.Sprintf("%v became %v", a.Kind, b.Kind))
+	}
+	if text, ok := leafText(a); ok {
+		if other, _ := leafText(b); text != other {
+			return c.differ(a, fmt.Sprintf("%q became %q", text, other))
+		}
+	}
+	if a.Kind == ast.KindBinaryExpression || a.Kind == ast.KindPrefixUnaryExpression || a.Kind == ast.KindPostfixUnaryExpression {
+		if operator(a) != operator(b) {
+			return c.differ(a, fmt.Sprintf("operator %v became %v", operator(a), operator(b)))
+		}
+	}
+	aChildren, bChildren := children(a), children(b)
+	if len(aChildren) != len(bChildren) {
+		return c.differ(a, fmt.Sprintf("%v has %d children, then %d", a.Kind, len(aChildren), len(bChildren)))
+	}
+	if sortsChildren(a) {
+		aChildren = sortedByKey(aChildren)
+		bChildren = sortedByKey(bChildren)
+	} else {
+		aChildren = sortImportRuns(aChildren)
+		bChildren = sortImportRuns(bChildren)
+	}
+	for i := range aChildren {
+		if err := c.same(aChildren[i], bChildren[i]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// leafText returns the text of a name or literal.
+func leafText(node *ast.Node) (string, bool) {
+	switch node.Kind {
+	case ast.KindIdentifier, ast.KindPrivateIdentifier, ast.KindStringLiteral, ast.KindNumericLiteral, ast.KindBigIntLiteral,
+		ast.KindNoSubstitutionTemplateLiteral, ast.KindTemplateHead, ast.KindTemplateMiddle, ast.KindTemplateTail, ast.KindRegularExpressionLiteral:
+		return node.Text(), true
+	}
+	return "", false
+}
+
+func operator(node *ast.Node) ast.Kind {
+	switch node.Kind {
+	case ast.KindBinaryExpression:
+		return node.AsBinaryExpression().OperatorToken.Kind
+	case ast.KindPrefixUnaryExpression:
+		return node.AsPrefixUnaryExpression().Operator
+	case ast.KindPostfixUnaryExpression:
+		return node.AsPostfixUnaryExpression().Operator
+	}
+	return ast.KindUnknown
+}
+
+func children(node *ast.Node) []*ast.Node {
+	var result []*ast.Node
+	node.ForEachChild(func(child *ast.Node) bool {
+		result = append(result, child)
+		return false
+	})
+	return result
+}
+
+// sortsChildren reports whether a formatter may reorder node's children:
+// the specifiers of a named import or export.
+func sortsChildren(node *ast.Node) bool {
+	return node.Kind == ast.KindNamedImports || node.Kind == ast.KindNamedExports
+}
+
+// key is node's kind and leaf texts, which identify an import or a specifier
+// whatever its layout.
+func key(node *ast.Node) string {
+	var b strings.Builder
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		fmt.Fprintf(&b, "%d(", n.Kind)
+		if text, ok := leafText(n); ok {
+			b.WriteString(text)
+		}
+		n.ForEachChild(visit)
+		b.WriteString(")")
+		return false
+	}
+	visit(unparenthesize(node))
+	return b.String()
+}
+
+func sortedByKey(nodes []*ast.Node) []*ast.Node {
+	sorted := slices.Clone(nodes)
+	slices.SortStableFunc(sorted, func(a, b *ast.Node) int { return strings.Compare(key(a), key(b)) })
+	return sorted
+}
+
+// sortImportRuns sorts each run of consecutive import declarations, which a
+// formatter may reorder.
+func sortImportRuns(nodes []*ast.Node) []*ast.Node {
+	result := slices.Clone(nodes)
+	for i := 0; i < len(result); {
+		if result[i].Kind != ast.KindImportDeclaration {
+			i++
+			continue
+		}
+		j := i
+		for j < len(result) && result[j].Kind == ast.KindImportDeclaration {
+			j++
+		}
+		run := sortedByKey(result[i:j])
+		copy(result[i:j], run)
+		i = j
+	}
+	return result
+}

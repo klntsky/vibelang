@@ -1,0 +1,12 @@
+/**
+   * A user that was not found.
+   */
+export error NotFound { id: string }
+error Timeout
+export error Wrapped<T> { cause: T; mutable attempts: number }
+service Users { find(id: string): User!NotFound; region: string }
+control Approval { approve(request: string): boolean!! }
+schema Account { id: string; nickname?: string; role: 'admin' | 'member' }
+interface Cart { id: string; mutable items: Array<string>; mutable [key: string]: unknown }
+type Find = (id: string)=>User!NotFound
+type Load = () => string!!Users
