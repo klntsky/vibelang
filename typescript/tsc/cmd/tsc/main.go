@@ -31,6 +31,8 @@ func runMain() int {
 			return runDprintPlugin(args) // dprint starts its process plugins so (dprint.go)
 		case "--write-dprint-plugin":
 			return runWriteDprintPlugin(args[1:])
+		case "--estree":
+			return runESTree(args[1:]) // VibeLang ESLint parser (estree.go)
 		}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
