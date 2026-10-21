@@ -1,8 +1,8 @@
-// Redirects every other effeck.* hostname to the docs on effeck.dev,
-// keeping the path and query string.
+// All effeck.* domains permanently redirect to the single VibeLang site.
 export default {
   fetch(request) {
     const url = new URL(request.url)
-    return Response.redirect(`https://effeck.dev${url.pathname}${url.search}`, 301)
+    const path = url.pathname === "/index.html" ? "/" : url.pathname.replace(/\.html$/, "")
+    return Response.redirect("https://vibelang.sh" + path + url.search, 301)
   }
 }
