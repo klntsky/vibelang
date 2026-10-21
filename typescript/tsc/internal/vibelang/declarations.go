@@ -43,6 +43,11 @@ func preludeNameVisible(c *checker.Checker, entityName *ast.Node, symbol *ast.Sy
 	if preludeSymbol(c, state, file, name) != symbol {
 		return false
 	}
+	if isServiceShapeFactory(first) {
+		// service Name: Type's extends clause, which the service's
+		// declarations replace (services_declarations.go), so it imports nothing.
+		return true
+	}
 	recordTypeUse(state, file, first)
 	return true
 }

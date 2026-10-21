@@ -43,7 +43,7 @@ func checkServices(c *checker.Checker, file *ast.SourceFile) {
 func declarationWord(class *ast.Node) string {
 	for _, modifier := range class.ModifierNodes() {
 		if modifier.Kind == ast.KindAbstractKeyword && modifier.Flags&ast.NodeFlagsReparsed != 0 {
-			if class.ClassLikeData().HeritageClauses != nil {
+			if class.ClassLikeData().HeritageClauses != nil && serviceShape(class) == nil {
 				return "control"
 			}
 			return "service"
@@ -60,6 +60,10 @@ func checkDeclarationMembers(c *checker.Checker, class *ast.Node) {
 	if word == "" {
 		return
 	}
+	if shape := serviceShape(class); shape != nil {
+		checkShapeDeclarationMembers(c, class, shape)
+		return
+	}
 	for _, member := range class.Members() {
 		if ast.HasStaticModifier(member) || member.Name() == nil {
 			continue
@@ -68,6 +72,21 @@ func checkDeclarationMembers(c *checker.Checker, class *ast.Node) {
 			d := report(c, member.Name(), EK2103, scanner.GetTextOfNode(member.Name()), word)
 			note(d, "Implement it in a layer, or make it static to keep it on the class.")
 		}
+	}
+}
+
+// checkShapeDeclarationMembers reports EK2103 for each instance member of a
+// service of any shape (D281), service Search: SearchApi { ... }: the shape
+// is the written type, so the body holds only static members, such as a
+// layer. A member without a body is reported too, since it adds nothing to
+// the shape.
+func checkShapeDeclarationMembers(c *checker.Checker, class *ast.Node, shape *ast.Node) {
+	for _, member := range class.Members() {
+		if ast.HasStaticModifier(member) || member.Name() == nil {
+			continue
+		}
+		d := report(c, member.Name(), EK2103.With("{0} is an instance member, but service {1}: {2} takes its members from {2}."), scanner.GetTextOfNode(member.Name()), class.Name().Text(), scanner.GetTextOfNode(shape))
+		note(d, "Declare the member in {0}, or make it static to keep it on the class.", scanner.GetTextOfNode(shape))
 	}
 }
 
@@ -82,6 +101,9 @@ func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
 	name := class.Name().Text()
 	if class.TypeParameters() != nil {
 		note(report(c, class.Name(), EK3005), "Use an interface for the generic type.")
+		if extends := ast.GetClassExtendsHeritageElement(class); extends != nil && serviceShape(class) != nil {
+			cover(c, extends.Expression()) // TS2507: $service is not a class, as only a service's bases are hooked
+		}
 		return
 	}
 	s := servicesFor(c)
@@ -97,6 +119,14 @@ func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
 			instance[member.Name().Text()] = true
 		}
 	}
+	if shape := serviceShape(class); shape != nil {
+		// service Search: SearchApi: the service members are SearchApi's.
+		if t := c.GetTypeFromTypeNode(shape); t != nil && t.Flags()&checker.TypeFlagsObject != 0 {
+			for _, property := range c.GetPropertiesOfType(t) {
+				instance[property.Name()] = true
+			}
+		}
+	}
 	for _, member := range class.Members() {
 		memberName := member.Name()
 		if memberName == nil || !ast.IsIdentifier(memberName) {
@@ -108,7 +138,7 @@ func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
 			}
 			continue
 		}
-		if ast.IsMethodDeclaration(member) && !isFullContract(c, member.Type()) && !isUnresolved(c, member.Type()) {
+		if ast.IsMethodDeclaration(member) && serviceShape(class) == nil && !isFullContract(c, member.Type()) && !isUnresolved(c, member.Type()) {
 			at := member.Type()
 			if at == nil {
 				at = memberName

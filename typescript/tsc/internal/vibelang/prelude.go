@@ -81,6 +81,9 @@ var preludeModules = map[string]string{
 	"forkIn":           runtimeModule,
 	// A provide block's Key = value provider, which the parser writes (D173, provide.go).
 	"$provideService": runtimeModule,
+	// The extends clause the parser writes for service Name: Type (D281,
+	// services.go). The lowering replaces it, so it is never a use.
+	"$service": runtimeModule,
 	// The primitives with their own syntax (D176-D180, primitives.go): the bare
 	// functions, the functions an interruption block calls, and the names the
 	// parser writes for a catch clause typed Cause, finally (exit), and the
@@ -267,7 +270,7 @@ func resolvePreludeName(c *checker.Checker, location *ast.Node, name string, mea
 	if symbol == nil || !hasMeaning(c, symbol, meaning) {
 		return nil
 	}
-	if isValueReference(location, name, meaning) && !isLoweredHatchCallee(location) && !isClauseCallee(location) && !isRemovedPrimitiveMarker(location) {
+	if isValueReference(location, name, meaning) && !isLoweredHatchCallee(location) && !isClauseCallee(location) && !isRemovedPrimitiveMarker(location) && !isServiceShapeFactory(location) {
 		recordPreludeUse(state, file, name)
 	}
 	return symbol

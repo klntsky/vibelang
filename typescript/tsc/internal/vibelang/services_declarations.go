@@ -28,7 +28,15 @@ import (
 //	    static readonly layer: Layer.Layer<Users, never, never>;
 //	}
 //
-// A service with a static default extends ReferenceKey instead.
+// A service with a static default extends ReferenceKey instead. A service of
+// any shape (D281) names its shape, and its interface holds only the brand:
+//
+//	export interface Prefix {
+//	    readonly "~vibelang/service"?: "app/main#Prefix";
+//	}
+//	declare const Prefix_base: import("vibelang-runtime").ServiceKey<Prefix, string>;
+//	export declare abstract class Prefix extends Prefix_base {
+//	}
 
 func init() { compiler.RegisterDeclarationTransformerHook(serviceDeclarations) }
 
@@ -109,11 +117,17 @@ func serviceDeclaration(ec *printer.EmitContext, declared, class *ast.Node, key 
 	shapeDeclaration := f.NewInterfaceDeclaration(interfaceModifiers, f.NewIdentifier(name), nil /*typeParameters*/, nil /*heritageClauses*/, f.NewNodeList(shape))
 
 	keyType := "ServiceKey"
+	keyArguments := []*ast.Node{f.NewTypeReferenceNode(f.NewIdentifier(name), nil /*typeArguments*/)}
+	if shape := writtenShape(declared, class); shape != nil {
+		// service Name: Type (D281): ServiceKey<Name, Type>, or ReferenceKey<Type>.
+		keyArguments = append(keyArguments, shape)
+	}
 	if hasStaticDefault(class) {
 		keyType = "ReferenceKey"
+		keyArguments = keyArguments[len(keyArguments)-1:]
 	}
 	base := name + "_base"
-	baseType := f.NewImportTypeNode(false /*isTypeOf*/, f.NewLiteralTypeNode(f.NewStringLiteral("vibelang-runtime", ast.TokenFlagsNone)), nil /*attributes*/, f.NewIdentifier(keyType), f.NewNodeList([]*ast.Node{f.NewTypeReferenceNode(f.NewIdentifier(name), nil /*typeArguments*/)}))
+	baseType := f.NewImportTypeNode(false /*isTypeOf*/, f.NewLiteralTypeNode(f.NewStringLiteral("vibelang-runtime", ast.TokenFlagsNone)), nil /*attributes*/, f.NewIdentifier(keyType), f.NewNodeList(keyArguments))
 	baseDeclaration := f.NewVariableStatement(
 		f.NewModifierList([]*ast.Node{f.NewModifier(ast.KindDeclareKeyword)}),
 		f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{f.NewVariableDeclaration(f.NewIdentifier(base), nil /*exclamationToken*/, baseType, nil /*initializer*/)}), ast.NodeFlagsConst),
@@ -134,4 +148,19 @@ func serviceDeclaration(ec *printer.EmitContext, declared, class *ast.Node, key 
 		result = append(result, f.NewExportAssignment(nil /*modifiers*/, false /*isExportEquals*/, nil /*type*/, f.NewIdentifier(name)))
 	}
 	return result
+}
+
+// writtenShape returns the shape of a service of any shape (D281) as the
+// declaration transform wrote it, the type argument of declared's extends
+// clause $service<Type>, or nil when class declares another service.
+func writtenShape(declared, class *ast.Node) *ast.Node {
+	if serviceShape(class) == nil {
+		return nil
+	}
+	if extends := ast.GetClassExtendsHeritageElement(declared); extends != nil {
+		if arguments := extends.TypeArguments(); len(arguments) == 1 {
+			return arguments[0]
+		}
+	}
+	return nil
 }

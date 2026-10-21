@@ -57,8 +57,10 @@ export const $control = (cls: Context.Key<any, any>, methods: ReadonlyArray<stri
  * declaration file names it: an Effect 4 `Context.Service` whose identifier
  * and shape are both the service's interface, and an abstract constructor
  * with an empty instance side, so the merged interface is the class's type.
+ * A service of any shape (D281), `service Prefix: string`, names its shape:
+ * `ServiceKey<Prefix, string>`, whose identifier is the class's branded type.
  */
-export type ServiceKey<I> = (abstract new () => {}) & Context.Service<I, I>
+export type ServiceKey<I, S = I> = (abstract new () => {}) & Context.Service<I, S>
 
 /**
  * D40: the static side of a compiled service class that declares

@@ -334,6 +334,9 @@ func (p *Parser) parseServiceDeclaration(pos int, jsdoc jsdocScannerInfo, modifi
 	p.parseOptional(ast.KindClassKeyword)
 	name := p.parseBindingIdentifier()
 	typeParameters := p.parseTypeParameters()
+	if !control && p.token == ast.KindColonToken {
+		return p.parseServiceShapeDeclaration(pos, jsdoc, modifiers, word, name, typeParameters) // D281
+	}
 	var heritage *ast.NodeList
 	if control {
 		base := p.vibelangSynthesized(p.factory.NewIdentifier("Control"), word)

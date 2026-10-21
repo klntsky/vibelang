@@ -1,0 +1,11 @@
+// expect: TS2322
+// A service of shape string is its own requirement: providing another
+// service of the same shape leaves it unprovided (D93, D281).
+service Primary: string
+service Replica: string
+
+function read() {
+  return Primary()
+}
+
+export const program: string!! = Effect.provide(read(), Layer.succeed(Replica, "replica"))

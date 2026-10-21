@@ -1,0 +1,23 @@
+// The declaration file of service Name: Type (D281) declares a class whose
+// static side is a Context key for the written shape, so TypeScript code
+// yields it and provides it as it does a Context.Service class.
+// consumer/main.ts does both; run.mjs compiles and runs it.
+export interface SearchApi {
+  find(query: string): string!!
+}
+
+export service Search: SearchApi {
+  static readonly layer = Layer.succeed(Search, {
+    find: (query: string) => `hit:${query}`
+  })
+}
+
+export service Prefix: string
+
+export service Version: number {
+  static readonly default: number = 4
+}
+
+export function greet(query: string) {
+  return `${Prefix()}${Search.find(query)} v${Version()}`
+}

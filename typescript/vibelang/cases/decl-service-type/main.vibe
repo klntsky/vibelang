@@ -1,0 +1,54 @@
+// expect-result: {"hit":"> hit:a","miss":"missing:","index":"main","formatted":"X","collapsed":false}
+// service Name: Type declares a service of any shape (D281): an interface
+// declared elsewhere, a primitive, or a function type. The body holds only
+// static members. Members are called through the key, Search.find(q) (D41),
+// and Prefix() returns the implementation (D90).
+error NotFound { query: string }
+
+export interface SearchApi {
+  find(query: string): string!NotFound
+  readonly index: string
+}
+
+export service Search: SearchApi {
+  static readonly layer = Layer.succeed(Search, {
+    find: (query: string) => {
+      if (query === "") throw new NotFound({ query })
+      return `hit:${query}`
+    },
+    index: "main"
+  })
+}
+
+service Prefix: string
+
+service Format: (value: string) => string!!
+
+// Two services with the same shape are different requirements (D93).
+service Primary: string
+service Replica: string
+
+type Collapsed = [Primary] extends [Replica] ? true : [Replica] extends [Primary] ? true : false
+const collapsed: Collapsed = false
+
+function lookup(query: string) {
+  try {
+    return `${Prefix()}${Search.find(query)}`
+  } catch (error) {
+    return `missing:${error.query}`
+  }
+}
+
+function format(value: string) {
+  return Format()(value)
+}
+
+function upper(value: string) {
+  return value.toUpperCase()
+}
+
+export function main() {
+  provide Search.layer, Prefix = "> ", Format = upper {
+    return { hit: lookup("a"), miss: lookup(""), index: Search().index, formatted: format("x"), collapsed }
+  }
+}

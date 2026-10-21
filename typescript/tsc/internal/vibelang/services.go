@@ -5,6 +5,7 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/parser"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
@@ -67,6 +68,11 @@ func shapeKindOf(class *ast.Node) classKind {
 		return ordinaryClass
 	}
 	kind := serviceClass
+	if serviceShape(class) != nil {
+		// service Name: Type (D281): the shape is the type, and an instance
+		// member in the body is EK2103.
+		return kind
+	}
 	if extends := ast.GetClassExtendsHeritageElement(class); extends != nil {
 		if !isControlReference(extends) {
 			return ordinaryClass
@@ -87,6 +93,28 @@ func shapeKindOf(class *ast.Node) classKind {
 		return ordinaryClass
 	}
 	return kind
+}
+
+// serviceShape returns the shape a service of any shape declares (D281):
+// the parser writes service Search: SearchApi as an abstract class whose
+// synthesized extends clause is $service<SearchApi>, and this returns the
+// type argument, the written SearchApi. It returns nil for any other class.
+func serviceShape(class *ast.Node) *ast.Node {
+	extends := ast.GetClassExtendsHeritageElement(class)
+	if extends == nil || !isServiceShapeFactory(extends.Expression()) {
+		return nil
+	}
+	if arguments := extends.TypeArguments(); len(arguments) == 1 {
+		return arguments[0]
+	}
+	return nil
+}
+
+// isServiceShapeFactory reports whether node is the synthesized $service of
+// a service of any shape, which names no value the program uses.
+func isServiceShapeFactory(node *ast.Node) bool {
+	return node != nil && ast.IsIdentifier(node) && node.Text() == parser.ServiceShapeFactory && node.Flags&ast.NodeFlagsReparsed != 0 &&
+		node.Parent != nil && ast.IsExpressionWithTypeArguments(node.Parent) && node.Parent.Parent != nil && ast.IsHeritageClause(node.Parent.Parent)
 }
 
 // isControlReference reports whether heritage, an extends clause element,
@@ -198,7 +226,9 @@ func (s *services) key(class *ast.Node) string {
 // Context.Service<never, Self> when a static default makes its key a
 // reference, and its instances inherit the brand
 // { readonly "~vibelang/service"?: key }. A control class's own extends clause
-// is ignored.
+// is ignored. A service of any shape (D281) has the written shape in place of
+// the second Self: service Prefix: string inherits Context.Service<Prefix,
+// string>, and its type, Prefix, is the identifier: the brand alone.
 func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checker.Type) {
 	symbol := class.Symbol()
 	if symbol == nil {
@@ -213,11 +243,14 @@ func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checke
 	if service == nil {
 		return nil, nil
 	}
-	identifier := class
+	identifier, shape := class, class
+	if node := serviceShape(declaration); node != nil {
+		shape = c.GetTypeFromTypeNode(node)
+	}
 	if hasStaticDefault(declaration) {
 		identifier = c.GetNeverType()
 	}
-	key := c.NewTypeReference(c.GetDeclaredTypeOfSymbol(service), []*checker.Type{identifier, class})
+	key := c.NewTypeReference(c.GetDeclaredTypeOfSymbol(service), []*checker.Type{identifier, shape})
 	brand := c.NewOptionalReadonlyPropertyType(serviceBrandProperty, c.GetStringLiteralType(s.key(declaration)))
 	return key, brand
 }
