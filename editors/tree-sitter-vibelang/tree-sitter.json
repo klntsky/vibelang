@@ -1,0 +1,25 @@
+{
+  "grammars": [
+    {
+      "name": "vibe",
+      "camelcase": "VibeLang",
+      "scope": "source.vibe",
+      "path": ".",
+      "external-files": [
+        "src/scanner.h"
+      ],
+      "file-types": [
+        "vibe"
+      ],
+      "injection-regex": "^(vibe|vibelang)$"
+    }
+  ],
+  "metadata": {
+    "version": "0.0.1",
+    "license": "MIT",
+    "description": "VibeLang grammar for tree-sitter, built on tree-sitter-typescript",
+    "links": {
+      "repository": "https://github.com/roninjin10/effectscript"
+    }
+  }
+}

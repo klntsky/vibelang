@@ -1,0 +1,879 @@
+================================================================================
+Block params
+================================================================================
+
+function greetUser(id: string) {
+  return withSpan("greetUser") {
+    const user = getUser(id)
+    Console.log(`Hello, ${user.name}`)
+    return user.name
+  }
+}
+it.live("finds a user") {
+  const user = getUser("1")
+  assert.strictEqual(user.name, "Ada")
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (return_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments
+            (string
+              (string_fragment)))
+          block: (statement_block
+            (lexical_declaration
+              (variable_declarator
+                name: (identifier)
+                value: (call_expression
+                  function: (identifier)
+                  arguments: (arguments
+                    (identifier)))))
+            (expression_statement
+              (call_expression
+                function: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                arguments: (arguments
+                  (template_string
+                    (string_fragment)
+                    (template_substitution
+                      (member_expression
+                        object: (identifier)
+                        property: (property_identifier)))))))
+            (return_statement
+              (member_expression
+                object: (identifier)
+                property: (property_identifier))))))))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (arguments
+        (string
+          (string_fragment)))
+      block: (statement_block
+        (lexical_declaration
+          (variable_declarator
+            name: (identifier)
+            value: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (string
+                  (string_fragment))))))
+        (expression_statement
+          (call_expression
+            function: (member_expression
+              object: (identifier)
+              property: (property_identifier))
+            arguments: (arguments
+              (member_expression
+                object: (identifier)
+                property: (property_identifier))
+              (string
+                (string_fragment)))))))))
+
+================================================================================
+A block on the next line is a statement
+================================================================================
+
+run()
+{
+  log("block")
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      arguments: (arguments)))
+  (statement_block
+    (expression_statement
+      (call_expression
+        function: (identifier)
+        arguments: (arguments
+          (string
+            (string_fragment)))))))
+
+================================================================================
+Catch expressions
+================================================================================
+
+function nameOrGuest(id: string) {
+  return getUser(id).name catch "guest"
+}
+function nameOrReason(id: string) {
+  return getUser(id).name catch (e) => match (e) {
+    when NotFound: `no user ${e.id}`;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (return_statement
+        (catch_expression
+          left: (member_expression
+            object: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (identifier)))
+            property: (property_identifier))
+          handler: (string
+            (string_fragment))))))
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (return_statement
+        (catch_expression
+          left: (member_expression
+            object: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (identifier)))
+            property: (property_identifier))
+          handler: (arrow_function
+            parameters: (formal_parameters
+              (required_parameter
+                pattern: (identifier)))
+            body: (match_expression
+              subject: (parenthesized_expression
+                (identifier))
+              body: (match_body
+                (match_arm
+                  pattern: (identifier)
+                  value: (template_string
+                    (string_fragment)
+                    (template_substitution
+                      (member_expression
+                        object: (identifier)
+                        property: (property_identifier)))))))))))))
+
+================================================================================
+A catch expression on the next line
+================================================================================
+
+function patient() {
+  return getUser("1")
+    |> retry(%, Schedule.recurs(2))
+    |> timeout(%, "1 second")
+    catch "pending"
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (return_statement
+        (pipe_expression
+          left: (pipe_expression
+            left: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (string
+                  (string_fragment))))
+            right: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (topic_reference)
+                (call_expression
+                  function: (member_expression
+                    object: (identifier)
+                    property: (property_identifier))
+                  arguments: (arguments
+                    (number))))))
+          right: (catch_expression
+            left: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (topic_reference)
+                (string
+                  (string_fragment))))
+            handler: (string
+              (string_fragment))))))))
+
+================================================================================
+Pipes and the topic
+================================================================================
+
+function piped() {
+  const loud = name |> %.toUpperCase() |> `${%}!`
+  return getUser("1") |> retry(%, Schedule.recurs(2)) |> timeout(%, "1 second")
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (pipe_expression
+            left: (pipe_expression
+              left: (identifier)
+              right: (call_expression
+                function: (member_expression
+                  object: (topic_reference)
+                  property: (property_identifier))
+                arguments: (arguments)))
+            right: (template_string
+              (template_substitution
+                (topic_reference))
+              (string_fragment)))))
+      (return_statement
+        (pipe_expression
+          left: (pipe_expression
+            left: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (string
+                  (string_fragment))))
+            right: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (topic_reference)
+                (call_expression
+                  function: (member_expression
+                    object: (identifier)
+                    property: (property_identifier))
+                  arguments: (arguments
+                    (number))))))
+          right: (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (topic_reference)
+              (string
+                (string_fragment)))))))))
+
+================================================================================
+Throw expressions
+================================================================================
+
+function findUser(users: Map<string, User>, id: string) {
+  return users.get(id) ?? throw new NotFound({ id })
+}
+const value = ok ? result : throw failure
+const handled = load() catch (failure) => throw (failure.code === "unknown" ? a : b)
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (generic_type
+            name: (type_identifier)
+            type_arguments: (type_arguments
+              (predefined_type)
+              (type_identifier)))))
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (return_statement
+        (binary_expression
+          left: (call_expression
+            function: (member_expression
+              object: (identifier)
+              property: (property_identifier))
+            arguments: (arguments
+              (identifier)))
+          right: (throw_expression
+            argument: (new_expression
+              constructor: (identifier)
+              arguments: (arguments
+                (object
+                  (shorthand_property_identifier)))))))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (ternary_expression
+        condition: (identifier)
+        consequence: (identifier)
+        alternative: (throw_expression
+          argument: (identifier)))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (catch_expression
+        left: (call_expression
+          function: (identifier)
+          arguments: (arguments))
+        handler: (arrow_function
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier)))
+          body: (throw_expression
+            argument: (parenthesized_expression
+              (ternary_expression
+                condition: (binary_expression
+                  left: (member_expression
+                    object: (identifier)
+                    property: (property_identifier))
+                  right: (string
+                    (string_fragment)))
+                consequence: (identifier)
+                alternative: (identifier)))))))))
+
+================================================================================
+A statement that starts with throw is a throw statement
+================================================================================
+
+throw new NotFound({ id })
+throw failure.code === "unknown" ? a : b
+
+--------------------------------------------------------------------------------
+
+(program
+  (throw_statement
+    (new_expression
+      constructor: (identifier)
+      arguments: (arguments
+        (object
+          (shorthand_property_identifier)))))
+  (throw_statement
+    (ternary_expression
+      condition: (binary_expression
+        left: (member_expression
+          object: (identifier)
+          property: (property_identifier))
+        right: (string
+          (string_fragment)))
+      consequence: (identifier)
+      alternative: (identifier))))
+
+================================================================================
+Do expressions
+================================================================================
+
+function label(id: string) {
+  const name = do {
+    const user = getUser(id)
+    if (user.name.length > 3) user.name
+    else "short"
+  }
+  return name
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (do_expression
+            body: (statement_block
+              (lexical_declaration
+                (variable_declarator
+                  name: (identifier)
+                  value: (call_expression
+                    function: (identifier)
+                    arguments: (arguments
+                      (identifier)))))
+              (if_statement
+                condition: (parenthesized_expression
+                  (binary_expression
+                    left: (member_expression
+                      object: (member_expression
+                        object: (identifier)
+                        property: (property_identifier))
+                      property: (property_identifier))
+                    right: (number)))
+                consequence: (expression_statement
+                  (member_expression
+                    object: (identifier)
+                    property: (property_identifier)))
+                alternative: (else_clause
+                  (expression_statement
+                    (string
+                      (string_fragment)))))))))
+      (return_statement
+        (identifier)))))
+
+================================================================================
+A statement that starts with do is a do-while loop
+================================================================================
+
+do {
+  attempt++
+} while (attempt < 3)
+
+--------------------------------------------------------------------------------
+
+(program
+  (do_statement
+    body: (statement_block
+      (expression_statement
+        (update_expression
+          argument: (identifier))))
+    condition: (parenthesized_expression
+      (binary_expression
+        left: (identifier)
+        right: (number)))))
+
+================================================================================
+Fork and join
+================================================================================
+
+function both() {
+  const user = fork getUser("1")
+  const orders = fork getOrders("1")
+  fork {
+    while (true) {
+      log("tick")
+      sleep("1 second")
+    }
+  }
+  return [join user, join [user, orders]]
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (fork_expression
+            argument: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (string
+                  (string_fragment)))))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (fork_expression
+            argument: (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (string
+                  (string_fragment)))))))
+      (expression_statement
+        (fork_expression
+          argument: (statement_block
+            (while_statement
+              condition: (parenthesized_expression
+                (true))
+              body: (statement_block
+                (expression_statement
+                  (call_expression
+                    function: (identifier)
+                    arguments: (arguments
+                      (string
+                        (string_fragment)))))
+                (expression_statement
+                  (call_expression
+                    function: (identifier)
+                    arguments: (arguments
+                      (string
+                        (string_fragment))))))))))
+      (return_statement
+        (array
+          (join_expression
+            argument: (identifier))
+          (join_expression
+            argument: (array
+              (identifier)
+              (identifier))))))))
+
+================================================================================
+Await operations
+================================================================================
+
+function many() {
+  const [user, orders] = await.all [getUser("1"), getOrders("1")]
+  const pair = await.all { user: getUser("1"), orders: getOrders("1") }
+  const fastest = await.any [getUser("1"), getUser("2")]
+  const results = await.allSettled [getUser("1"), getOrders("1")]
+  const first = await.race [`ran ${Queue.take(jobs)}`, do { sleep("1 second"); "timeout" }]
+  return ready.await()
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (lexical_declaration
+        (variable_declarator
+          name: (array_pattern
+            (identifier)
+            (identifier))
+          value: (await_expression
+            argument: (array
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (string
+                    (string_fragment))))
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (string
+                    (string_fragment))))))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (await_expression
+            argument: (object
+              (pair
+                key: (property_identifier)
+                value: (call_expression
+                  function: (identifier)
+                  arguments: (arguments
+                    (string
+                      (string_fragment)))))
+              (pair
+                key: (property_identifier)
+                value: (call_expression
+                  function: (identifier)
+                  arguments: (arguments
+                    (string
+                      (string_fragment)))))))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (await_expression
+            argument: (array
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (string
+                    (string_fragment))))
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (string
+                    (string_fragment))))))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (await_expression
+            argument: (array
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (string
+                    (string_fragment))))
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (string
+                    (string_fragment))))))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (await_expression
+            argument: (array
+              (template_string
+                (string_fragment)
+                (template_substitution
+                  (call_expression
+                    function: (member_expression
+                      object: (identifier)
+                      property: (property_identifier))
+                    arguments: (arguments
+                      (identifier)))))
+              (do_expression
+                body: (statement_block
+                  (expression_statement
+                    (call_expression
+                      function: (identifier)
+                      arguments: (arguments
+                        (string
+                          (string_fragment)))))
+                  (expression_statement
+                    (string
+                      (string_fragment)))))))))
+      (return_statement
+        (call_expression
+          function: (member_expression
+            object: (identifier)
+            property: (property_identifier))
+          arguments: (arguments))))))
+
+================================================================================
+Hatches
+================================================================================
+
+function hatches(text: string, url: string) {
+  const id = sync(crypto.randomUUID())
+  const parsed = try((text) => JSON.parse(text), (error) => new BadJson({ error }), text)
+  const fetched = try(async (url, signal) => fetch(url, { signal }), url)
+  return { id, parsed, fetched }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type)))
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (call_expression
+                function: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                arguments: (arguments))))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (arrow_function
+                parameters: (formal_parameters
+                  (required_parameter
+                    pattern: (identifier)))
+                body: (call_expression
+                  function: (member_expression
+                    object: (identifier)
+                    property: (property_identifier))
+                  arguments: (arguments
+                    (identifier))))
+              (arrow_function
+                parameters: (formal_parameters
+                  (required_parameter
+                    pattern: (identifier)))
+                body: (new_expression
+                  constructor: (identifier)
+                  arguments: (arguments
+                    (object
+                      (shorthand_property_identifier)))))
+              (identifier)))))
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (arrow_function
+                parameters: (formal_parameters
+                  (required_parameter
+                    pattern: (identifier))
+                  (required_parameter
+                    pattern: (identifier)))
+                body: (call_expression
+                  function: (identifier)
+                  arguments: (arguments
+                    (identifier)
+                    (object
+                      (shorthand_property_identifier)))))
+              (identifier)))))
+      (return_statement
+        (object
+          (shorthand_property_identifier)
+          (shorthand_property_identifier)
+          (shorthand_property_identifier))))))
+
+================================================================================
+VibeLang words stay names
+================================================================================
+
+provide(1)
+provide[0] = provide[1]
+fork(() => ticker("ticker"))
+join(a, b)
+error.message
+schema.decode(input)
+layer(platformLayer)("FileRouter", (it) => {})
+const words = { error: 1, service: 2, control: 3, schema: 4, match: 5, mutable: 6 }
+const fiber = fork(after())
+
+--------------------------------------------------------------------------------
+
+(program
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      arguments: (arguments
+        (number))))
+  (expression_statement
+    (assignment_expression
+      left: (subscript_expression
+        object: (identifier)
+        index: (number))
+      right: (subscript_expression
+        object: (identifier)
+        index: (number))))
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      arguments: (arguments
+        (arrow_function
+          parameters: (formal_parameters)
+          body: (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (string
+                (string_fragment))))))))
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      arguments: (arguments
+        (identifier)
+        (identifier))))
+  (expression_statement
+    (member_expression
+      object: (identifier)
+      property: (property_identifier)))
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (arguments
+        (identifier))))
+  (expression_statement
+    (call_expression
+      function: (call_expression
+        function: (identifier)
+        arguments: (arguments
+          (identifier)))
+      arguments: (arguments
+        (string
+          (string_fragment))
+        (arrow_function
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier)))
+          body: (statement_block)))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (object
+        (pair
+          key: (property_identifier)
+          value: (number))
+        (pair
+          key: (property_identifier)
+          value: (number))
+        (pair
+          key: (property_identifier)
+          value: (number))
+        (pair
+          key: (property_identifier)
+          value: (number))
+        (pair
+          key: (property_identifier)
+          value: (number))
+        (pair
+          key: (property_identifier)
+          value: (number)))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        arguments: (arguments
+          (call_expression
+            function: (identifier)
+            arguments: (arguments)))))))
+
+================================================================================
+Type arguments with typeof import
+================================================================================
+
+vi.mock("effect/Schema", (importOriginal) => importOriginal<typeof import("effect/Schema")>().then((module) => ({ ...module })))
+
+--------------------------------------------------------------------------------
+
+(program
+  (expression_statement
+    (call_expression
+      function: (member_expression
+        object: (identifier)
+        property: (property_identifier))
+      arguments: (arguments
+        (string
+          (string_fragment))
+        (arrow_function
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier)))
+          body: (call_expression
+            function: (member_expression
+              object: (call_expression
+                function: (identifier)
+                type_arguments: (type_arguments
+                  (type_query
+                    (call_expression
+                      function: (import)
+                      arguments: (arguments
+                        (string
+                          (string_fragment))))))
+                arguments: (arguments))
+              property: (property_identifier))
+            arguments: (arguments
+              (arrow_function
+                parameters: (formal_parameters
+                  (required_parameter
+                    pattern: (identifier)))
+                body: (parenthesized_expression
+                  (object
+                    (spread_element
+                      (identifier))))))))))))

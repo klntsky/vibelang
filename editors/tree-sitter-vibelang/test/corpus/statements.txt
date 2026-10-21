@@ -1,0 +1,417 @@
+================================================================================
+Provide blocks
+================================================================================
+
+function program() {
+  provide UsersLive {
+    return Users.find("1")
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (provide_statement
+        providers: (identifier)
+        body: (statement_block
+          (return_statement
+            (call_expression
+              function: (member_expression
+                object: (identifier)
+                property: (property_identifier))
+              arguments: (arguments
+                (string
+                  (string_fragment))))))))))
+
+================================================================================
+Provide a layer list and one service
+================================================================================
+
+function roll(): number!! {
+  provide Logger.layer([]), Random = seeded {
+    return Random.nextInt()
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    return_type: (type_annotation
+      (effect_type
+        success: (predefined_type)))
+    body: (statement_block
+      (provide_statement
+        providers: (sequence_expression
+          (call_expression
+            function: (member_expression
+              object: (identifier)
+              property: (property_identifier))
+            arguments: (arguments
+              (array)))
+          (assignment_expression
+            left: (identifier)
+            right: (identifier)))
+        body: (statement_block
+          (return_statement
+            (call_expression
+              function: (member_expression
+                object: (identifier)
+                property: (property_identifier))
+              arguments: (arguments))))))))
+
+================================================================================
+Provide in the call shape, and the old with spelling
+================================================================================
+
+provide(NamesLive, Greeting = { text: () => "hi" }) {
+  greet()
+}
+with SaluteLive {
+  return Salute.text()
+}
+with (scope) {
+  run()
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (provide_statement
+    providers: (parenthesized_expression
+      (sequence_expression
+        (identifier)
+        (assignment_expression
+          left: (identifier)
+          right: (object
+            (pair
+              key: (property_identifier)
+              value: (arrow_function
+                parameters: (formal_parameters)
+                body: (string
+                  (string_fragment))))))))
+    body: (statement_block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments)))))
+  (provide_statement
+    providers: (identifier)
+    body: (statement_block
+      (return_statement
+        (call_expression
+          function: (member_expression
+            object: (identifier)
+            property: (property_identifier))
+          arguments: (arguments)))))
+  (with_statement
+    object: (parenthesized_expression
+      (identifier))
+    body: (statement_block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments))))))
+
+================================================================================
+Handle clauses
+================================================================================
+
+function auto(version: string) {
+  try {
+    return release(version)
+  } handle Approval.approve(request) {
+    resume(true)
+  } handle Approval.reject(_request, reason) {
+    abandon()
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (try_statement
+        body: (statement_block
+          (return_statement
+            (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (identifier)))))
+        handler: (handle_clause
+          operation: (nested_identifier
+            object: (identifier)
+            property: (property_identifier))
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier)))
+          body: (statement_block
+            (expression_statement
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (true))))))
+        handler: (handle_clause
+          operation: (nested_identifier
+            object: (identifier)
+            property: (property_identifier))
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier))
+            (required_parameter
+              pattern: (identifier)))
+          body: (statement_block
+            (expression_statement
+              (call_expression
+                function: (identifier)
+                arguments: (arguments)))))))))
+
+================================================================================
+Typed catch clauses and finally with the exit
+================================================================================
+
+function tracked() {
+  try {
+    return getUser("1")
+  } catch (e: NotFound) {
+    return "missing"
+  } catch (cause: Cause) {
+    return "failed"
+  } finally (exit) {
+    log(`lookup ${exit._tag}`)
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (try_statement
+        body: (statement_block
+          (return_statement
+            (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (string
+                  (string_fragment))))))
+        handler: (catch_clause
+          parameter: (identifier)
+          type: (type_annotation
+            (type_identifier))
+          body: (statement_block
+            (return_statement
+              (string
+                (string_fragment)))))
+        handler: (catch_clause
+          parameter: (identifier)
+          type: (type_annotation
+            (type_identifier))
+          body: (statement_block
+            (return_statement
+              (string
+                (string_fragment)))))
+        finalizer: (finally_clause
+          parameter: (identifier)
+          body: (statement_block
+            (expression_statement
+              (call_expression
+                function: (identifier)
+                arguments: (arguments
+                  (template_string
+                    (string_fragment)
+                    (template_substitution
+                      (member_expression
+                        object: (identifier)
+                        property: (property_identifier)))))))))))))
+
+================================================================================
+For concurrent
+================================================================================
+
+function logAll(ids: string[]) {
+  for concurrent(8) (const id of ids) log(getUser(id).name)
+  for concurrent (const id of ids) {
+    save(id)
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (array_type
+            (predefined_type)))))
+    body: (statement_block
+      (for_in_statement
+        limit: (parenthesized_expression
+          (number))
+        left: (identifier)
+        right: (identifier)
+        body: (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (member_expression
+                object: (call_expression
+                  function: (identifier)
+                  arguments: (arguments
+                    (identifier)))
+                property: (property_identifier))))))
+      (for_in_statement
+        left: (identifier)
+        right: (identifier)
+        body: (statement_block
+          (expression_statement
+            (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (identifier)))))))))
+
+================================================================================
+Interruption blocks
+================================================================================
+
+function guarded() {
+  uninterruptible {
+    const user = getUser("1")
+    restore {
+      return { user, orders: getOrders(user.id) }
+    }
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          block: (statement_block
+            (lexical_declaration
+              (variable_declarator
+                name: (identifier)
+                value: (call_expression
+                  function: (identifier)
+                  arguments: (arguments
+                    (string
+                      (string_fragment))))))
+            (expression_statement
+              (call_expression
+                function: (identifier)
+                block: (statement_block
+                  (return_statement
+                    (object
+                      (shorthand_property_identifier)
+                      (pair
+                        key: (property_identifier)
+                        value: (call_expression
+                          function: (identifier)
+                          arguments: (arguments
+                            (member_expression
+                              object: (identifier)
+                              property: (property_identifier))))))))))))))))
+
+================================================================================
+For using
+================================================================================
+
+function each() {
+  for (using d of [disposable("x"), disposable("y")]) {
+    log(d.name)
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (for_in_statement
+        left: (identifier)
+        right: (array
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (string
+                (string_fragment))))
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (string
+                (string_fragment)))))
+        body: (statement_block
+          (expression_statement
+            (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (member_expression
+                  object: (identifier)
+                  property: (property_identifier))))))))))
+
+================================================================================
+A catch clause on the line after the try block
+================================================================================
+
+try {
+  run()
+}
+catch (e) {
+  log(e)
+}
+const value = load()
+catchAll()
+
+--------------------------------------------------------------------------------
+
+(program
+  (try_statement
+    body: (statement_block
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments))))
+    handler: (catch_clause
+      parameter: (identifier)
+      body: (statement_block
+        (expression_statement
+          (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (identifier)))))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (identifier)
+        arguments: (arguments))))
+  (expression_statement
+    (call_expression
+      function: (identifier)
+      arguments: (arguments))))

@@ -1,0 +1,227 @@
+================================================================================
+Effect types with every slot
+================================================================================
+
+type Find = (id: string) => User!NotFound
+type Release = (version: string) => string!!Approval
+type Load = () => string!!
+type Full = User!NotFound!Db
+type Open = User!NotFound!
+
+--------------------------------------------------------------------------------
+
+(program
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (function_type
+      parameters: (formal_parameters
+        (required_parameter
+          pattern: (identifier)
+          type: (type_annotation
+            (predefined_type))))
+      return_type: (effect_type
+        success: (type_identifier)
+        error: (type_identifier))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (function_type
+      parameters: (formal_parameters
+        (required_parameter
+          pattern: (identifier)
+          type: (type_annotation
+            (predefined_type))))
+      return_type: (effect_type
+        success: (predefined_type)
+        requirements: (type_identifier))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (function_type
+      parameters: (formal_parameters)
+      return_type: (effect_type
+        success: (predefined_type))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (effect_type
+      success: (type_identifier)
+      error: (type_identifier)
+      requirements: (type_identifier)))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (effect_type
+      success: (type_identifier)
+      error: (type_identifier))))
+
+================================================================================
+A union in a slot, and the success's union
+================================================================================
+
+function find(id: string): string!NotFound | Timeout! {
+  return id
+}
+type Either = A | B!E
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    return_type: (type_annotation
+      (effect_type
+        success: (predefined_type)
+        error: (union_type
+          (type_identifier)
+          (type_identifier))))
+    body: (statement_block
+      (return_statement
+        (identifier))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (effect_type
+      success: (union_type
+        (type_identifier)
+        (type_identifier))
+      error: (type_identifier))))
+
+================================================================================
+Effect types with generic, qualified, and array slots
+================================================================================
+
+type Fetched = Array<User>!Http.Error | Cause.UnknownError!HttpClient.HttpClient
+type Many = User[]!NotFound[]
+
+--------------------------------------------------------------------------------
+
+(program
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (effect_type
+      success: (generic_type
+        name: (type_identifier)
+        type_arguments: (type_arguments
+          (type_identifier)))
+      error: (union_type
+        (nested_type_identifier
+          module: (identifier)
+          name: (type_identifier))
+        (nested_type_identifier
+          module: (identifier)
+          name: (type_identifier)))
+      requirements: (nested_type_identifier
+        module: (identifier)
+        name: (type_identifier))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (effect_type
+      success: (array_type
+        (type_identifier))
+      error: (array_type
+        (type_identifier)))))
+
+================================================================================
+A slot does not take the body's brace
+================================================================================
+
+function getOrders(id: string): number!! {
+  return id.length
+}
+const inferred = (input: { mutable value: number }): number!infer E!infer R => {
+  return input.value
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    return_type: (type_annotation
+      (effect_type
+        success: (predefined_type)))
+    body: (statement_block
+      (return_statement
+        (member_expression
+          object: (identifier)
+          property: (property_identifier)))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (arrow_function
+        parameters: (formal_parameters
+          (required_parameter
+            pattern: (identifier)
+            type: (type_annotation
+              (object_type
+                (property_signature
+                  name: (property_identifier)
+                  type: (type_annotation
+                    (predefined_type)))))))
+        return_type: (type_annotation
+          (effect_type
+            success: (predefined_type)
+            error: (infer_type
+              (type_identifier))
+            requirements: (infer_type
+              (type_identifier))))
+        body: (statement_block
+          (return_statement
+            (member_expression
+              object: (identifier)
+              property: (property_identifier))))))))
+
+================================================================================
+Mutable members
+================================================================================
+
+interface Cart { id: string; mutable items: Array<string> }
+type Counter = { label: string; mutable count: number; mutable [key: string]: unknown }
+interface Flags { mutable: boolean }
+
+--------------------------------------------------------------------------------
+
+(program
+  (interface_declaration
+    name: (type_identifier)
+    body: (interface_body
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (generic_type
+            name: (type_identifier)
+            type_arguments: (type_arguments
+              (predefined_type)))))))
+  (type_alias_declaration
+    name: (type_identifier)
+    value: (object_type
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))
+      (index_signature
+        name: (identifier)
+        index_type: (predefined_type)
+        type: (type_annotation
+          (predefined_type)))))
+  (interface_declaration
+    name: (type_identifier)
+    body: (interface_body
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type))))))

@@ -1,0 +1,235 @@
+================================================================================
+Error declarations
+================================================================================
+
+error NotFound { id: string }
+error Timeout
+export error Missing<A> { value: A }
+
+--------------------------------------------------------------------------------
+
+(program
+  (error_declaration
+    name: (type_identifier)
+    body: (object_type
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))))
+  (error_declaration
+    name: (type_identifier))
+  (export_statement
+    declaration: (error_declaration
+      name: (type_identifier)
+      type_parameters: (type_parameters
+        (type_parameter
+          name: (type_identifier)))
+      body: (object_type
+        (property_signature
+          name: (property_identifier)
+          type: (type_annotation
+            (type_identifier)))))))
+
+================================================================================
+Service declarations
+================================================================================
+
+service Users {
+  find(id: string): User!NotFound
+  region: string
+}
+export service class Legacy {
+  load(): string!!
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (service_declaration
+    name: (type_identifier)
+    body: (class_body
+      (method_signature
+        name: (property_identifier)
+        parameters: (formal_parameters
+          (required_parameter
+            pattern: (identifier)
+            type: (type_annotation
+              (predefined_type))))
+        return_type: (type_annotation
+          (effect_type
+            success: (type_identifier)
+            error: (type_identifier))))
+      (public_field_definition
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))))
+  (export_statement
+    declaration: (service_declaration
+      name: (type_identifier)
+      body: (class_body
+        (method_signature
+          name: (property_identifier)
+          parameters: (formal_parameters)
+          return_type: (type_annotation
+            (effect_type
+              success: (predefined_type))))))))
+
+================================================================================
+Control declarations
+================================================================================
+
+control Approval {
+  approve(request: string): boolean!!
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (control_declaration
+    name: (type_identifier)
+    body: (class_body
+      (method_signature
+        name: (property_identifier)
+        parameters: (formal_parameters
+          (required_parameter
+            pattern: (identifier)
+            type: (type_annotation
+              (predefined_type))))
+        return_type: (type_annotation
+          (effect_type
+            success: (predefined_type)))))))
+
+================================================================================
+Schema declarations
+================================================================================
+
+schema Account {
+  id: string
+  nickname?: string
+  role: "admin" | "member"
+  mutable visits: number
+}
+export schema Empty
+
+--------------------------------------------------------------------------------
+
+(program
+  (schema_declaration
+    name: (type_identifier)
+    body: (object_type
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (union_type
+            (literal_type
+              (string
+                (string_fragment)))
+            (literal_type
+              (string
+                (string_fragment))))))
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))))
+  (export_statement
+    declaration: (schema_declaration
+      name: (type_identifier))))
+
+================================================================================
+Layer declarations, the old spelling
+================================================================================
+
+layer GreeterLive: Greeter {
+  const prefix = "hi"
+  greet(name) { return `${prefix} ${name}` }
+  readonly region = "eu"
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (layer_declaration
+    name: (identifier)
+    service: (identifier)
+    body: (layer_body
+      (lexical_declaration
+        (variable_declarator
+          name: (identifier)
+          value: (string
+            (string_fragment))))
+      (expression_statement
+        (call_expression
+          function: (identifier)
+          arguments: (arguments
+            (identifier))
+          block: (statement_block
+            (return_statement
+              (template_string
+                (template_substitution
+                  (identifier))
+                (string_fragment)
+                (template_substitution
+                  (identifier)))))))
+      (layer_value
+        name: (property_identifier)
+        value: (string
+          (string_fragment))))))
+
+================================================================================
+Layers with block params
+================================================================================
+
+const UsersLive = Layer.effect(Users) {
+  const seen = new Set<string>()
+  return {
+    find(id) { return getUser(id) },
+    region: "eu"
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (call_expression
+        function: (member_expression
+          object: (identifier)
+          property: (property_identifier))
+        arguments: (arguments
+          (identifier))
+        block: (statement_block
+          (lexical_declaration
+            (variable_declarator
+              name: (identifier)
+              value: (new_expression
+                constructor: (identifier)
+                type_arguments: (type_arguments
+                  (predefined_type))
+                arguments: (arguments))))
+          (return_statement
+            (object
+              (method_definition
+                name: (property_identifier)
+                parameters: (formal_parameters
+                  (required_parameter
+                    pattern: (identifier)))
+                body: (statement_block
+                  (return_statement
+                    (call_expression
+                      function: (identifier)
+                      arguments: (arguments
+                        (identifier))))))
+              (pair
+                key: (property_identifier)
+                value: (string
+                  (string_fragment))))))))))

@@ -1,0 +1,327 @@
+================================================================================
+Match values
+================================================================================
+
+function phaseLabel(phase: "draft" | "published") {
+  return match (phase) {
+    when "draft": "Draft";
+    when "published": "Published";
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (union_type
+            (literal_type
+              (string
+                (string_fragment)))
+            (literal_type
+              (string
+                (string_fragment)))))))
+    body: (statement_block
+      (return_statement
+        (match_expression
+          subject: (parenthesized_expression
+            (identifier))
+          body: (match_body
+            (match_arm
+              pattern: (string
+                (string_fragment))
+              value: (string
+                (string_fragment)))
+            (match_arm
+              pattern: (string
+                (string_fragment))
+              value: (string
+                (string_fragment)))))))))
+
+================================================================================
+Match errors by class and bind properties
+================================================================================
+
+function describeFailure(failure: NotFound | Timeout) {
+  return match (failure) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+    default: throw failure
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (union_type
+            (type_identifier)
+            (type_identifier)))))
+    body: (statement_block
+      (return_statement
+        (match_expression
+          subject: (parenthesized_expression
+            (identifier))
+          body: (match_body
+            (match_arm
+              pattern: (combined_pattern
+                left: (identifier)
+                right: (object_match_pattern
+                  (binding_pattern
+                    name: (identifier))))
+              value: (template_string
+                (string_fragment)
+                (template_substitution
+                  (identifier))))
+            (match_arm
+              pattern: (identifier)
+              value: (string
+                (string_fragment)))
+            (match_arm
+              value: (throw_expression
+                argument: (identifier)))))))))
+
+================================================================================
+Extractor patterns
+================================================================================
+
+function safe(id: string) {
+  return match (exit(getUser(id))) {
+    when Exit.Success(let user): user.name;
+    when Exit.Failure(let cause): `failed: ${Cause.pretty(cause)}`;
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (predefined_type))))
+    body: (statement_block
+      (return_statement
+        (match_expression
+          subject: (parenthesized_expression
+            (call_expression
+              function: (identifier)
+              arguments: (arguments
+                (call_expression
+                  function: (identifier)
+                  arguments: (arguments
+                    (identifier))))))
+          body: (match_body
+            (match_arm
+              pattern: (extractor_pattern
+                extractor: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                (binding_pattern
+                  name: (identifier)))
+              value: (member_expression
+                object: (identifier)
+                property: (property_identifier)))
+            (match_arm
+              pattern: (extractor_pattern
+                extractor: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                (binding_pattern
+                  name: (identifier)))
+              value: (template_string
+                (string_fragment)
+                (template_substitution
+                  (call_expression
+                    function: (member_expression
+                      object: (identifier)
+                      property: (property_identifier))
+                    arguments: (arguments
+                      (identifier))))))))))))
+
+================================================================================
+Combinators, lists, objects, guards, and literals
+================================================================================
+
+const kind = match (response) {
+  when { status: 404 or 410 }: "gone";
+  when { status: 200, body: [let first, ...] }: first;
+  when not (Success or Pending): "other";
+  when if (response.retries > 3): "stuck";
+  when -1: "negative";
+  when null: "none";
+  when { ...rest }: rest;
+  default: "unknown";
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (match_expression
+        subject: (parenthesized_expression
+          (identifier))
+        body: (match_body
+          (match_arm
+            pattern: (object_match_pattern
+              (pair_match_pattern
+                key: (property_identifier)
+                value: (combined_pattern
+                  left: (number)
+                  right: (number))))
+            value: (string
+              (string_fragment)))
+          (match_arm
+            pattern: (object_match_pattern
+              (pair_match_pattern
+                key: (property_identifier)
+                value: (number))
+              (pair_match_pattern
+                key: (property_identifier)
+                value: (array_match_pattern
+                  (binding_pattern
+                    name: (identifier))
+                  (rest_match_pattern))))
+            value: (identifier))
+          (match_arm
+            pattern: (not_pattern
+              pattern: (parenthesized_pattern
+                (combined_pattern
+                  left: (identifier)
+                  right: (identifier))))
+            value: (string
+              (string_fragment)))
+          (match_arm
+            pattern: (guard_pattern
+              condition: (parenthesized_expression
+                (binary_expression
+                  left: (member_expression
+                    object: (identifier)
+                    property: (property_identifier))
+                  right: (number))))
+            value: (string
+              (string_fragment)))
+          (match_arm
+            pattern: (unary_expression
+              argument: (number))
+            value: (string
+              (string_fragment)))
+          (match_arm
+            pattern: (null)
+            value: (string
+              (string_fragment)))
+          (match_arm
+            pattern: (object_match_pattern
+              (rest_match_pattern
+                (identifier)))
+            value: (identifier))
+          (match_arm
+            value: (string
+              (string_fragment))))))))
+
+================================================================================
+Is expressions
+================================================================================
+
+function firstFailure(outcome: Exit.Exit<User, NotFound>) {
+  if (outcome is Exit.Failure(let cause) && Cause.hasFails(cause)) return Cause.pretty(cause)
+  return outcome is Exit.Failure
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters
+      (required_parameter
+        pattern: (identifier)
+        type: (type_annotation
+          (generic_type
+            name: (nested_type_identifier
+              module: (identifier)
+              name: (type_identifier))
+            type_arguments: (type_arguments
+              (type_identifier)
+              (type_identifier))))))
+    body: (statement_block
+      (if_statement
+        condition: (parenthesized_expression
+          (binary_expression
+            left: (is_expression
+              left: (identifier)
+              pattern: (extractor_pattern
+                extractor: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                (binding_pattern
+                  name: (identifier))))
+            right: (call_expression
+              function: (member_expression
+                object: (identifier)
+                property: (property_identifier))
+              arguments: (arguments
+                (identifier)))))
+        consequence: (return_statement
+          (call_expression
+            function: (member_expression
+              object: (identifier)
+              property: (property_identifier))
+            arguments: (arguments
+              (identifier)))))
+      (return_statement
+        (is_expression
+          left: (identifier)
+          pattern: (member_expression
+            object: (identifier)
+            property: (property_identifier)))))))
+
+================================================================================
+A match statement
+================================================================================
+
+match (event) {
+  when Started: log("started");
+  when Stopped(let code): log(`stopped ${code}`);
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (expression_statement
+    (match_expression
+      subject: (parenthesized_expression
+        (identifier))
+      body: (match_body
+        (match_arm
+          pattern: (identifier)
+          value: (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (string
+                (string_fragment)))))
+        (match_arm
+          pattern: (extractor_pattern
+            extractor: (identifier)
+            (binding_pattern
+              name: (identifier)))
+          value: (call_expression
+            function: (identifier)
+            arguments: (arguments
+              (template_string
+                (string_fragment)
+                (template_substitution
+                  (identifier))))))))))
