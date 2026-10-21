@@ -8,6 +8,7 @@
 // --skip-build reuses packages/runtime/dist and editors/vscode/vibelang.vsix.
 // The script fails unless every package version equals the compiler's own
 // version (typescript/tsc/internal/vibelang/identity.go) and every pin agrees.
+import { releaseDocsProblems } from "../../docs/tools/release-docs.mjs"
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
@@ -48,7 +49,7 @@ const template = readJson("templates/app/package.json")
 const identity = readFileSync(join(root, "typescript/tsc/internal/vibelang/identity.go"), "utf8")
 const version = /const Version = "([^"]+)"/.exec(identity)?.[1]
 
-const problems = []
+const problems = releaseDocsProblems(root)
 const expect = (ok, message) => { if (!ok) problems.push(message) }
 expect(version, "identity.go: no Version constant")
 for (const [name, pkg] of [["vibelang", compiler], ["vibelang-runtime", runtime], ["vibelang-vite", vite], ["vibelang-unplugin", unplugin], ["create-vibelang", create]]) {

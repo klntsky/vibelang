@@ -10,7 +10,7 @@ bun run dev
 bun x --no-install vibelang --noEmit
 ```
 
-VibeLang 0.0.2 installs from npm as unscoped packages: `vibelang`,
+VibeLang 0.0.3 installs from npm as unscoped packages: `vibelang`,
 `vibelang-runtime`, `vibelang-vite`, `vibelang-unplugin`, `create-vibelang`,
 and one `vibelang-<os>-<cpu>` package per platform. `create-vibelang` copies
 the starter, pins the VibeLang packages to its own version, and installs
@@ -19,17 +19,14 @@ Bun 1.4. The compiler is a native binary: `vibelang` lists each platform's packa
 as an optional dependency, and the package manager installs the one that
 matches the machine (the per-platform distribution D30 planned):
 
-| Platform | Package | Rehearsed for 0.0.2 |
+| Platform | Package | Rehearsed for 0.0.3 |
 | --- | --- | --- |
 | macOS on Apple silicon | `vibelang-darwin-arm64` | No |
 | macOS on Intel | `vibelang-darwin-x64` | No |
 | Linux on x64 | `vibelang-linux-x64` | Yes |
 | Linux on arm64 | `vibelang-linux-arm64` | No |
-| Windows on x64 | `vibelang-win32-x64` | No |
-| Windows on arm64 | `vibelang-win32-arm64` | No |
 
-Version 0.0.2 ships all six binaries, cross-compiled; the end-to-end npm and
-Bun rehearsal runs on Linux x64.
+Version 0.0.3 publishes four native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions.
 
 To work on VibeLang itself, install from a checkout. `sh scripts/setup.sh`
 needs Go, Bun, and Node on PATH (tested: Go 1.26 with Go 1.27 downloaded

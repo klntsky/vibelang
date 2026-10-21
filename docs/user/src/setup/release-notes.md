@@ -44,10 +44,11 @@ one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
 ## 0.0.2
 
-Eleven packages: `vibelang`, six native compilers
-(`vibelang-{darwin,linux,win32}-{arm64,x64}`), `vibelang-runtime`,
-`vibelang-vite`, `vibelang-unplugin`, and `create-vibelang`. Windows and
-`vibelang-unplugin` are new in this release.
+Nine published packages: `vibelang`, four native compilers
+(`vibelang-{darwin,linux}-{arm64,x64}`), `vibelang-runtime`,
+`vibelang-vite`, `vibelang-unplugin`, and `create-vibelang`.
+`vibelang-unplugin` is new in this release. Native Windows binaries
+are not available yet; use WSL and follow the Linux instructions.
 
 ### Changes that can break code that compiled on 0.0.1
 

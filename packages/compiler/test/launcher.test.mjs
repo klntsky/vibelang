@@ -56,6 +56,7 @@ test("says Windows binaries are not published yet, without a stack trace", () =>
     })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Windows binaries are not published yet/)
+    assert.match(result.stderr, /Use WSL/)
     assert.match(result.stderr, /VIBELANG_BINARY/)
     assert.doesNotMatch(result.stderr, /\n\s+at /)
   } finally {
@@ -161,7 +162,8 @@ test("names the supported platforms when no compiler is installed", () => {
     const result = spawnSync(process.execPath, [installed(scratch)], { env: withoutOverride(), encoding: "utf8" })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /no native compiler is installed for /)
-    assert.match(result.stderr, /darwin-arm64, darwin-x64, linux-arm64, linux-x64, win32-arm64, win32-x64/)
+    assert.match(result.stderr, /darwin-arm64, darwin-x64, linux-arm64, linux-x64\./)
+    assert.doesNotMatch(result.stderr, /win32-(?:arm64|x64)/)
     assert.match(result.stderr, /VIBELANG_BINARY/)
   } finally {
     rmSync(scratch, { recursive: true, force: true })

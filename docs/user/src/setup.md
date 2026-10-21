@@ -4,11 +4,11 @@ VibeLang is a language for Effect programs in TypeScript syntax. These steps set
 
 ## 1. Check the tools
 
-Run `node --version` and expect `v26.0.0` or later. With Bun, run `bun --version` and expect `1.4.0` or later.
+Run `node --version` and expect `v26.0.0` or later. With Bun, run `bun --version` and expect `0.0.3` or later.
 
-Version 0.0.2 ships cross-compiled binaries for macOS, Linux, and Windows: `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`. The end-to-end npm and Bun rehearsal runs on Linux x64.
+Version 0.0.3 publishes native packages for macOS and Linux on arm64 and x64. Native Windows binaries are not available yet. Use WSL and follow the Linux instructions. The end-to-end npm and Bun rehearsal runs on Linux x64.
 
-Run `npm view vibelang@0.0.2 version` and expect `0.0.2`. `E404` means the configured registry lacks that version: report the registry and error before continuing.
+Run `npm view vibelang@0.0.3 version` and expect `0.0.3`. `E404` means the configured registry lacks that version: report the registry and error before continuing.
 
 ## 2. Detect the project
 
@@ -46,7 +46,7 @@ Follow each matching page, in this order: project, build or framework, editor.
 | Zed | [Zed](setup/zed.md) |
 | Another editor with an LSP client | [Other editors](setup/other-editors.md) |
 
-For webpack, Rspack, Rollup, Rolldown, esbuild, and `bun build`, version 0.0.2 includes `vibelang-unplugin`: install `vibelang@0.0.2` and `vibelang-unplugin@0.0.2` as dev dependencies and follow the [plugin configuration](https://www.npmjs.com/package/vibelang-unplugin#configure) for the bundler. Vite and Vitest use `vibelang-vite`.
+For webpack, Rspack, Rollup, Rolldown, esbuild, and `bun build`, version 0.0.3 includes `vibelang-unplugin`: install `vibelang@0.0.3` and `vibelang-unplugin@0.0.3` as dev dependencies and follow the [plugin configuration](https://www.npmjs.com/package/vibelang-unplugin#configure) for the bundler. Vite and Vitest use `vibelang-vite`.
 
 ## 4. Verify the setup
 

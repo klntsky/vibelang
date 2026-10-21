@@ -7,7 +7,8 @@
     "check:snippets": "bun test first-run.test.ts && bun check-snippets.ts --run",
     "check:content": "bun check-smithers-content.ts",
     "check:tokens": "bun token-counts.ts --check",
-    "test": "bun test"
+    "test": "bun test",
+    "check:release": "node release-docs.mjs --check"
   },
   "devDependencies": {
     "marked": "18.0.12",

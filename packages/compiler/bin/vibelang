@@ -6,7 +6,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 // Platforms with a published native compiler package, vibelang-<platform>-<arch>.
-const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-arm64", "win32-x64"]
+const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64"]
 const executable = process.platform === "win32" ? "vibelang.exe" : "vibelang"
 
 // findBinary returns the native compiler: VIBELANG_BINARY, else native/vibelang
@@ -21,7 +21,7 @@ function findBinary() {
     return join(dirname(manifest), "bin", executable)
   } catch {
     if (process.platform === "win32") {
-      // 0.0.1 shipped without its Windows packages: npm refused their names.
+      // Native Windows packages are not published yet; WSL uses the Linux package.
       console.error("vibelang: Windows binaries are not published yet.")
       console.error(`vibelang-${target} is not on npm for this version. Use WSL, or build the compiler from the VibeLang repository and set VIBELANG_BINARY.`)
       process.exit(1)

@@ -18,7 +18,7 @@ const compilerSources = json(join(repo, "packages/compiler/package.json")).files
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "vibelang-release-test-"))
   t.after(() => rmSync(root, { recursive: true, force: true }))
-  for (const path of ["scripts/release/make-packages.mjs", "LICENSE", "typescript/LICENSE.txt", "typescript/NOTICE.txt", "typescript/tsc/internal/vibelang/identity.go",
+  for (const path of ["scripts/release/make-packages.mjs", "docs/tools/release-docs.mjs", "LICENSE", "typescript/LICENSE.txt", "typescript/NOTICE.txt", "typescript/tsc/internal/vibelang/identity.go",
     ...["compiler", "runtime", "vite", "create-vibelang", "unplugin"].flatMap((name) => [`packages/${name}/package.json`, `packages/${name}/README.md`]),
     ...compilerSources, "packages/vite/src", "packages/create-vibelang/bin", "packages/unplugin/src", "templates/app"]) {
     mkdirSync(dirname(join(root, path)), { recursive: true })
@@ -148,3 +148,14 @@ for (const missing of ["editors/vscode/vibelang.vsix", "packages/runtime/dist/in
     assert.ok(!existsSync(join(root, "dist-npm/tarballs")))
   })
 }
+
+test("refuses stale install docs before replacing release artifacts", (t) => {
+  const root = fixture(t)
+  const page = join(root, "docs/user/src/setup.md")
+  mkdirSync(dirname(page), { recursive: true })
+  writeFileSync(page, "Install vibelang@0.0.0")
+  const result = assemble(root)
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /docs\/user\/src\/setup.md: stale VibeLang version/)
+  assert.ok(!existsSync(join(root, "dist-npm/tarballs")))
+})
