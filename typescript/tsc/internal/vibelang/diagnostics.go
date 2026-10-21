@@ -261,9 +261,9 @@ func newDiagnosticAt(options *core.CompilerOptions, file *ast.SourceFile, loc co
 
 // report adds a diagnostic with message m at node to the diagnostics of c,
 // which must be checking node's file, and returns it. It returns nil when the
-// project turns m's code off.
+// project that owns the file turns m's code off (D297).
 func report(c *checker.Checker, node *ast.Node, m *Message, args ...any) *ast.Diagnostic {
-	if d := newDiagnostic(c.CompilerOptions(), node, m, args...); d != nil {
+	if d := newDiagnostic(optionsFor(c, ast.GetSourceFileOfNode(node)), node, m, args...); d != nil {
 		return c.AddDiagnostic(d)
 	}
 	return nil
@@ -272,7 +272,7 @@ func report(c *checker.Checker, node *ast.Node, m *Message, args ...any) *ast.Di
 // reportAt is report for a span that is not one node's error span, such as a
 // keyword inside a node.
 func reportAt(c *checker.Checker, file *ast.SourceFile, loc core.TextRange, m *Message, args ...any) *ast.Diagnostic {
-	if d := newDiagnosticAt(c.CompilerOptions(), file, loc, m, args...); d != nil {
+	if d := newDiagnosticAt(optionsFor(c, file), file, loc, m, args...); d != nil {
 		return c.AddDiagnostic(d)
 	}
 	return nil

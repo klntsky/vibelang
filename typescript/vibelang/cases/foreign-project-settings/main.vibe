@@ -1,0 +1,9 @@
+// D297: producer/src/lib.vibe compiles with its own package's settings, which
+// trust @acme/helper. This project trusts nothing, so the call needs no hatch
+// only because the file that makes it is the producer's.
+// expect-result: 43
+import { produce } from "./producer/src/lib.vibe"
+
+export function main() {
+  return produce()
+}

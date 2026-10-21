@@ -25,10 +25,11 @@ func newTracingPlan() tracingPlan {
 }
 
 // planSpans records a span for each function in p.effects, and each lowered
-// method, that the project's tracing mode selects (D34).
+// method, that the tracing mode of the project that owns file selects (D34,
+// D297).
 func (p *plan) planSpans(c *checker.Checker, file *ast.SourceFile) {
 	mode := ""
-	if options := c.CompilerOptions(); options != nil && options.VibeLang != nil {
+	if options := optionsFor(c, file); options != nil && options.VibeLang != nil {
 		mode = options.VibeLang.Tracing
 	}
 	if mode != "exported" && mode != "all" {

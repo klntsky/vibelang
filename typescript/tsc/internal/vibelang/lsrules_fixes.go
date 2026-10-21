@@ -608,7 +608,7 @@ func resolveFormChoiceDiagnostics(ctx context.Context, service *ls.LanguageServi
 			}
 			file.AsNode().ForEachChild(visit)
 		}
-		if d := newDiagnosticAt(c.CompilerOptions(), file, core.NewTextRange(choice.Start, choice.Start+choice.Length), formChoiceMessage(choice.Code), message); d != nil {
+		if d := newDiagnosticAt(optionsFor(c, file), file, core.NewTextRange(choice.Start, choice.Start+choice.Length), formChoiceMessage(choice.Code), message); d != nil {
 			result = append(result, d)
 		}
 	}

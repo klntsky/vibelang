@@ -99,7 +99,7 @@ func computeTrust(c *checker.Checker, call *ast.Node) *trust {
 	switch pkg := packageOf(c, file); {
 	case isLibFile(c, file):
 		return tagged(c, call, candidates, &trust{kind: trustBuiltin, failures: builtinFailures(c, decl)})
-	case isTrustedPackage(c, pkg):
+	case isTrustedPackage(c, ast.GetSourceFileOfNode(call), pkg):
 		return tagged(c, call, candidates, &trust{kind: trustEffect})
 	case isPlatformPackage(pkg):
 		return tagged(c, call, candidates, &trust{kind: trustPlatform})
@@ -187,7 +187,7 @@ func importedFromTrustedPackage(c *checker.Checker, name *ast.Node) bool {
 			continue
 		}
 		for _, moduleDecl := range module.Declarations() {
-			if file := ast.GetSourceFileOfNode(moduleDecl); file != nil && isTrustedPackage(c, packageOf(c, file)) {
+			if file := ast.GetSourceFileOfNode(moduleDecl); file != nil && isTrustedPackage(c, ast.GetSourceFileOfNode(name), packageOf(c, file)) {
 				return true
 			}
 		}
@@ -201,7 +201,7 @@ func importedFromTrustedPackage(c *checker.Checker, name *ast.Node) bool {
 func tagged(c *checker.Checker, call *ast.Node, candidates []*ast.Node, otherwise *trust) *trust {
 	for _, candidate := range candidates {
 		file := ast.GetSourceFileOfNode(candidate)
-		if file == nil || isLibFile(c, file) || isTrustedPackage(c, packageOf(c, file)) {
+		if file == nil || isLibFile(c, file) || isTrustedPackage(c, ast.GetSourceFileOfNode(call), packageOf(c, file)) {
 			continue
 		}
 		for _, host := range jsdocHosts(candidate) {

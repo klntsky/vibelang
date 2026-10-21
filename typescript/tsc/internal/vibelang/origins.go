@@ -6,6 +6,7 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/tspath"
 )
 
 // Where a declaration comes from decides how VibeLang code may call it
@@ -39,13 +40,19 @@ func packageOf(c *checker.Checker, file *ast.SourceFile) string {
 	if name, ok := s.packages[file]; ok {
 		return name
 	}
-	name := ""
+	_, name := packageRootOf(c, file.FileName().Directory())
+	s.packages[file] = name
+	return name
+}
+
+// packageRootOf returns the directory and name of the package that holds
+// directory, as packageOf finds it, or "", "" when there is none.
+func packageRootOf(c *checker.Checker, directory tspath.RootedDirectoryPath) (tspath.RootedDirectoryPath, string) {
 	program := c.Program()
-	for directory := program.GetNearestAncestorDirectoryWithPackageJson(file.FileName().Directory()); directory != ""; {
+	for directory = program.GetNearestAncestorDirectoryWithPackageJson(directory); directory != ""; {
 		if info := program.GetPackageJsonInfo(directory.ResolveFile("package.json")); info.Exists() {
 			if value, ok := info.Contents.Name.GetValue(); ok && value != "" {
-				name = value
-				break
+				return directory, value
 			}
 		}
 		parent := directory.AsPath().Directory()
@@ -54,8 +61,7 @@ func packageOf(c *checker.Checker, file *ast.SourceFile) string {
 		}
 		directory = program.GetNearestAncestorDirectoryWithPackageJson(parent)
 	}
-	s.packages[file] = name
-	return name
+	return "", ""
 }
 
 // isEffectPackage reports whether name is effect, an @effect/* package, or
@@ -66,15 +72,17 @@ func isEffectPackage(name string) bool {
 }
 
 // isTrustedPackage extends D22's built-in package trust with project globs
-// (D261). Match the package.json name, including for workspace packages.
-func isTrustedPackage(c *checker.Checker, name string) bool {
+// (D261). Match the package.json name, including for workspace packages. The
+// globs are those of the project that owns from, the file that makes the call
+// (D297).
+func isTrustedPackage(c *checker.Checker, from *ast.SourceFile, name string) bool {
 	if isEffectPackage(name) {
 		return true
 	}
 	if name == "" {
 		return false
 	}
-	if options := c.CompilerOptions().VibeLang; options != nil {
+	if options := optionsFor(c, from).VibeLang; options != nil {
 		for _, pattern := range options.TrustedPackages {
 			if matched, _ := path.Match(pattern, name); matched {
 				return true
