@@ -266,10 +266,56 @@ The starter already includes this configuration. `bun run test` checks and
 compiles source tests without a prior build. See
 [TestClock](../testing/063-testclock.md) for tests with virtual time.
 
-D35 assigns syntactic linting to Oxlint and reserves type-aware rules for `.ts`
-files. `vibelang-oxlint-config` and a tested Vite Plus integration are not
-shipped. Keep type-aware linting off `.vibe`: a stock TypeScript checker models
-different call semantics.
+Lint `.vibe` files with ESLint through `vibelang/eslint`, the parser the
+`vibelang` package ships (D277). The compiler parses each file, so every
+VibeLang form is accepted, and ESLint gets the tree typescript-eslint gives it
+for TypeScript: typescript-eslint's rules and plugins such as
+`eslint-plugin-import`, `eslint-plugin-jsdoc`, and `eslint-plugin-unicorn`
+apply unchanged. Install `eslint` and `typescript-eslint` 8 beside `vibelang`;
+the parser uses typescript-eslint's scope analysis.
+
+```js
+// eslint.config.js
+import tseslint from "typescript-eslint"
+import vibelang from "vibelang/eslint"
+
+export default tseslint.config({
+  files: ["src/**/*.vibe"],
+  extends: [tseslint.configs.recommended],
+  languageOptions: { parser: vibelang }
+})
+```
+
+Reports, fixes, and `// eslint-disable-next-line` comments land on the `.vibe`
+text. Rules that need type information, such as
+`@typescript-eslint/no-unnecessary-type-assertion`, cannot run on a `.vibe`
+file, because no TypeScript program loads one: turn them on for `.ts` files
+only, and check types with `vibelang --noEmit`. EK4801-EK4825 stay in the
+compiler and the language server. To see the tree a rule reads, run
+`vibelang --estree main.vibe < main.vibe`.
+
+Forms whose TypeScript long form would mislead a rule have node types of their
+own, which rules and `no-restricted-syntax` selectors can name:
+
+| Form | ESTree node |
+| --- | --- |
+| `A!E!R` | `VibeEffectType` with `success`, `failure`, and `requirements` |
+| `A!infer E`, outside a conditional type | `VibeInferType` with `name` |
+| `x \|> f(%)` | `VibePipeExpression` with `left` and `right`; `%` is `TopicReference` |
+| `x catch fallback`, `x catch (e) => recover(e)` | `VibeCatchExpression` with `expression` and `handler` |
+| `provide AppLive, Random = seeded { ... }` | `VibeProvideStatement` with `providers` and `body`; `Random = seeded` is `VibeServiceProvider` |
+| `uninterruptible { ... }`, `restore { ... }`, `interruptible { ... }` | `VibeMaskStatement` with `kind` and `body` |
+
+The other forms keep the TypeScript the checker reads. A block param is an
+arrow function argument; `do { ... }` and a throw expression are immediately
+invoked arrow functions; `error NotFound { id: string }` is a class with those
+fields; `service` and `control` are abstract classes; `schema User { ... }` is
+a `const User` typed by its fields; `fork`, `join`, and `await.all` are calls.
+For example, `VibeCatchExpression > Literal.handler[value='']` selects a
+recovery to an empty string. The parser leaves the names it writes for the
+checker, such as a `match`'s temporaries, out of scope analysis, so no rule
+reports a name the author did not write. A Vite Plus integration and a
+VibeLang Oxlint configuration are not shipped.
 
 ## Debugging in editors
 

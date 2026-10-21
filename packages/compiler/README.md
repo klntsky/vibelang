@@ -107,6 +107,28 @@ it beside dprint's TypeScript plugin, and add `vibe` to `includes`:
 configuration's `typescript` settings, so they read like the project's `.ts`
 files. See [Format with dprint](https://effeck.dev/setup/formatting.html).
 
+## Lint .vibe files with ESLint
+
+`vibelang/eslint` is an ESLint parser for `.vibe` files. It gives ESLint the
+tree typescript-eslint gives it for TypeScript, so the same rules and plugins
+apply. Install `eslint` and `typescript-eslint` 8 beside `vibelang`:
+
+```js
+// eslint.config.js
+import tseslint from "typescript-eslint"
+import vibelang from "vibelang/eslint"
+
+export default tseslint.config({
+  files: ["src/**/*.vibe"],
+  extends: [tseslint.configs.recommended],
+  languageOptions: { parser: vibelang }
+})
+```
+
+Rules that need type information do not run on `.vibe` files; `vibelang
+--noEmit` checks types. See the Devtools page at [effeck.dev](https://effeck.dev) for the node types of
+VibeLang's own forms.
+
 ## How the package finds the native compiler
 
 `vibelang` is a small Node launcher. In 0.0.2, the native compiler comes from one of six

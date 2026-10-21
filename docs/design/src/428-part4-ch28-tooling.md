@@ -319,7 +319,16 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 D35 assigns type and language diagnostics to `vibelang` and reserves type-aware
 linting for `.ts` files. A stock TypeScript checker models different call
 semantics and cannot type-check VibeLang correctly. Run `vibelang --noEmit`
-for `.vibe` checking. `vibelang-oxlint-config` is not shipped, and Vite Plus
+for `.vibe` checking.
+
+Syntactic lint runs in ESLint through `vibelang/eslint` (D277). The parser
+runs `vibelang --estree`, which converts the VibeLang parser's tree to ESTree
+(`internal/vibelangestree`): TypeScript forms as typescript-estree 8 converts
+them, VibeLang forms whose long form would mislead a rule as `Vibe*` nodes,
+ranges in UTF-16 offsets of the `.vibe` text, and the source's own tokens and
+comments. `packages/compiler/test/eslint/run.sh` holds the conversion to
+typescript-estree's output on every `.ts` file in the repository and lints
+every `.vibe` file. `vibelang-oxlint-config` is not shipped, and Vite Plus
 integration has no acceptance coverage yet. Do not install an unpublished
 lint-config package from the registry.
 
