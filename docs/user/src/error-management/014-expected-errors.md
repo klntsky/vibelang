@@ -321,6 +321,73 @@ Busy
 
 These operators inspect the tagged error's readonly `reason` field. `catchReason` keeps the parent wrapper for unhandled reasons; `catchReasons` selects several at once; `unwrapReason` replaces the wrapper in `E` with its nested reason, without recovering.
 
+## Errors are classes
+
+```vibe
+// run: Console.log(describeFailure(new Missing({ code: "E1", path: "/a" }))); Console.log(describeFailure(new Expired({ code: "E2" }))); Console.log(new Missing({ code: "E1", path: "/a" }) is AppError); Console.log(new Normalized(" pen ").label)
+/** The base of a family: each subclass carries its own tag. */
+error AppError {
+  _tag: string
+  code: string
+}
+error Missing extends AppError { path: string }
+error Expired extends AppError
+
+function raise(error: Missing | Expired): never!(Missing | Expired) {
+  throw error
+}
+
+function describeFailure(error: Missing | Expired) {
+  return Effect.catchTags(raise(error), {
+    Missing: (missing) => `missing ${missing.path}`,
+    Expired: (expired) => `expired ${expired.code}`
+  })
+}
+// string!!
+
+error Normalized {
+  code: string
+  static readonly docs = "https://example.com/codes"
+
+  constructor(input: string) {
+    super({ code: input.trim().toUpperCase() })
+  }
+
+  get label(): string {
+    return `${this._tag} ${this.code}`
+  }
+}
+```
+
+```output
+missing /a
+expired E2
+true
+Normalized PEN
+```
+
+An `error` declaration is a named class (D278). The keyword supplies its base and its tag; every other class feature keeps its TypeScript meaning: `abstract`, `extends` another error, `implements`, a constructor that calls `super`, methods, accessors, `override`, and static and private members. A field is a property written with a type and no initializer. It is readonly, and the constructor takes it: a declaration without a constructor takes its fields as one object, and a constructor passes them to `super`.
+
+Every error class is tagged with its own bare name, a subclass included, so `catchTag("Missing")` and `catchTags` route each subclass, while `is AppError` and a `when AppError:` arm match the whole family by class. Because a value of the base's type may be a subclass, the base of a family declares its tag type with a `_tag` field, `_tag: string`, and `catchTag("AppError")` then matches only instances of the base itself (D304). An `abstract error` has that tag type without the field. A subclass whose base keeps the literal tag `"AppError"`, or an error that extends a class that is not an error, is EK2117. A subclass that declares fields and no constructor takes its base's fields and its own, as `new Missing({ code, path })` does; when the base's constructor takes other arguments, the subclass writes a constructor that calls `super` and sets its fields (EK2118).
+
+## Errors that encode
+
+```vibe
+// run: Console.log(JSON.stringify(Schema.encodeSync(NotStored)(new NotStored({ key: "a", attempts: 2 })))); Console.log(Schema.decodeUnknownSync(NotStored)({ _tag: "NotStored", key: "b", attempts: 1 }) is StoreError)
+schema error StoreError {
+  _tag: string
+  key: string
+}
+schema error NotStored extends StoreError { attempts: number }
+```
+
+```output
+{"_tag":"NotStored","key":"a","attempts":2}
+true
+```
+
+`schema error` declares an error whose fields are schemas, so it encodes and decodes (D279). It is short for `class StoreError extends Schema.TaggedError<StoreError>()("StoreError", { key: Schema.String })`: each field's type maps to a schema as a `schema` declaration's fields do, and a field whose type has no schema, such as a function, is EK2109, which names the field. The class rules above apply. A subclass extends another schema error with `Base.extend`, so its schema holds the base's fields and its own, and its own tag. Use `error` for a failure nothing encodes.
+
 ## Coming from Effect
 
 Functions replace `Effect.gen`; calls run the callee. Where it runs, `Effect.fail(error)` draws EK4834, whose quick fix writes `throw error`, and `Effect.catchTag(program, "Tag", handler)` draws EK4835, whose quick fix writes `program catch (e) => match (e) { … }` ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Pass a program such as `() => findItem(input)` when a recovery operator needs work it can control.

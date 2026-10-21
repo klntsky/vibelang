@@ -65,6 +65,49 @@ error Missing { id: string }
 error Timeout
 ```
 
+**Errors are classes** (D278, D304). Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the left column writes the tag by hand.
+
+```ts effect
+class Invalid extends Data.TaggedError("Invalid")<{ readonly code: string }> {
+  constructor(input: string) {
+    super({ code: input.trim() })
+  }
+  get label(): string {
+    return `invalid ${this.code}`
+  }
+}
+class Failure extends Data.TaggedError("Failure" as string)<{ readonly code: string }> {}
+class Refused extends Failure {
+  override readonly _tag = "Refused"
+}
+```
+
+```vibe es
+// run: Console.log(JSON.stringify([new Invalid(" x ").label, new Refused({ code: "r" })._tag]))
+error Invalid {
+  code: string
+  constructor(input: string) {
+    super({ code: input.trim() })
+  }
+  get label(): string {
+    return `invalid ${this.code}`
+  }
+}
+error Failure { _tag: string; code: string }
+error Refused extends Failure
+// Output: ["invalid x","Refused"]
+```
+
+**Errors that encode** (D279). Fields map to schemas as a `schema` declaration's do.
+
+```ts effect
+class Stored extends Schema.TaggedError<Stored>()("Stored", { key: Schema.String, attempts: Schema.optional(Schema.Number) }) {}
+```
+
+```vibe es
+schema error Stored { key: string; attempts?: number }
+```
+
 **Services** (D128, D223). Members have no bodies; value members are readonly.
 
 ```ts effect
