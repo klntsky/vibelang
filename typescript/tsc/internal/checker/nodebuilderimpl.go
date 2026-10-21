@@ -1347,6 +1347,12 @@ func (b *NodeBuilderImpl) moduleSpecifierResultForSymbol(result moduleSpecifierR
 }
 
 func (b *NodeBuilderImpl) rewriteContentMappedModuleSpecifier(specifier tspath.ModuleSpecifier) tspath.ModuleSpecifier {
+	if b.ctx.internalFlags&nodebuilder.InternalFlagsRewriteModuleSpecifiers != 0 {
+		// A declaration names a VibeLang module through its .js output (D298).
+		if rewritten, ok := specifier.RewriteVibeExtension(); ok {
+			return rewritten
+		}
+	}
 	if b.ctx.internalFlags&nodebuilder.InternalFlagsRewriteModuleSpecifiers != 0 && b.ch.compilerOptions.RewriteRelativeImportExtensions.IsTrue() {
 		rewrites := b.ctx.host.ContentMapperExtensionRewrites()
 		caseSensitivity := b.ctx.host.CaseSensitivity()
