@@ -382,6 +382,12 @@ func (p *Program) ReuseProgram(
 		newSupplementalFiles = files.Supplemental
 	} else {
 		newFile = newHost.GetSourceFile(oldFile.ParseOptions())
+		// A VibeLang file's module declarations are supplemental files of it
+		// that its parse produces (D283).
+		oldSupplementalFiles = oldFile.SupplementalSourceFiles()
+		if newFile != nil {
+			newSupplementalFiles = newFile.SupplementalSourceFiles()
+		}
 	}
 
 	// If this file is part of a package redirect group (same package installed in multiple

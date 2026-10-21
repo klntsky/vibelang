@@ -1,0 +1,94 @@
+// Module declarations lower inline (D286): each module the file imports
+// becomes a function, called once before the file's own code, whose result
+// holds the module's exports. Its imports move to the file's top level as
+// namespace imports. A module the file imports only types from, and one it
+// never imports, emit nothing; each module's declarations are a declaration
+// file of their own, main.vibe.<name>.d.ts.
+import Counter, { clean, Mode } from text
+import * as tools from text
+import { level } from config
+import type { Shape } from shapes
+import setup
+
+export { clean as tidy } from text
+export * from extras
+
+module text {
+  import { more, twice } from "./more.ts"
+  import type { Shape } from "./shapes.ts"
+
+  export { twice as double } from "./more.ts"
+  export * as moreModule from "./more.ts"
+
+  export enum Mode {
+    Trim,
+    Upper,
+  }
+
+  export function clean(value: string, mode: Mode = Mode.Trim): string {
+    const trimmed = value.trim()
+    return mode === Mode.Upper ? trimmed.toUpperCase() : twice(trimmed)
+  }
+
+  export function area(shape: Shape): number {
+    return shape.width * shape.height
+  }
+
+  const label = `${more}:`
+  export { label as prefix }
+
+  export default class {
+    count = 0
+    increment(): number {
+      return ++this.count
+    }
+  }
+}
+
+module config {
+  // A module's top level may await; the file then awaits the module.
+  export const level = await Promise.resolve(3)
+}
+
+module shapes {
+  export interface Shape {
+    readonly width: number
+    readonly height: number
+  }
+}
+
+module setup {
+  console.log("setup ran")
+}
+
+module unused {
+  console.log("never runs")
+}
+
+module extras {
+  export const one = 1
+  export function two(): number {
+    return 2
+  }
+  export default "not re-exported"
+}
+
+export function describe(shape: Shape): string!! {
+  return `${shape.width}x${shape.height}`
+}
+
+export function main() {
+  const counter = sync(() => new Counter())
+  const counted = sync((counter) => counter.increment(), counter)
+  Console.log(JSON.stringify({
+    cleaned: sync(() => clean(" ab ")),
+    upper: sync(() => clean(" ab ", Mode.Upper)),
+    doubled: sync(() => tools.double("x")),
+    prefix: tools.prefix,
+    more: tools.moreModule.more,
+    area: sync(() => tools.area({ width: 2, height: 3 })),
+    level,
+    counted,
+    described: describe({ width: 1, height: 2 }),
+  }))
+}

@@ -1117,7 +1117,10 @@ func (p *Printer) emitTabStop(node *ast.Node, snippetElement *SnippetElement) {
 
 func (p *Printer) emitIdentifierText(node *ast.Identifier) {
 	f := ast.GetSourceFileOfNode(node.AsNode())
-	debug.Assert(f == nil || p.currentSourceFile == nil || f.FileName() == p.currentSourceFile.FileName())
+	// A VibeLang file's module declarations are emitted with it, from the
+	// supplemental files that hold their bodies at the file's own positions.
+	debug.Assert(f == nil || p.currentSourceFile == nil || f.FileName() == p.currentSourceFile.FileName() ||
+		f.EmbeddedModule() != nil && f.CanonicalSourceFile().FileName() == p.currentSourceFile.FileName())
 	text := p.getTextOfNode(node.AsNode(), false /*includeTrivia*/)
 
 	if p.IdToSymbol != nil {

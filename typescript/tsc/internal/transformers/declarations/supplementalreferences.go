@@ -27,6 +27,9 @@ func NewSupplementalReferencesTransformer(host DeclarationEmitHost, sourceFile *
 
 func (t *SupplementalReferencesTransformer) TransformSourceFile(sourceFile *ast.SourceFile) *ast.SourceFile {
 	for _, supplemental := range t.supplementalFiles {
+		if supplemental.EmbeddedModule() != nil {
+			continue // a VibeLang module declaration's declarations are imported where they are used
+		}
 		if !t.host.SourceFileMayBeEmitted(supplemental, t.forceDeclarationPaths) {
 			continue
 		}

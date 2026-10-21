@@ -2468,7 +2468,7 @@ func (node *SourceFile) Text() string {
 
 // OriginalText returns the untransformed source text for content-mapped files, or Text() otherwise.
 func (node *SourceFile) OriginalText() string {
-	if node.ContentMapper() != "" {
+	if node.ContentMapper() != "" || node.EmbeddedModule() != nil {
 		return node.contentMapperInfo.OriginalText
 	}
 	return node.text
@@ -2552,6 +2552,9 @@ type ContentMapperSourceFileInfo struct {
 	DiagnosticDirectives    []MappedDiagnosticDirective
 	SupplementalSourceFiles []*SourceFile
 	CanonicalSourceFile     *SourceFile
+	// EmbeddedModule is set on the file that holds a module declaration's body,
+	// a supplemental file of the VibeLang file that declares it (vibelang_modules.go).
+	EmbeddedModule *EmbeddedModule
 }
 
 // ContentMapperParseOptions returns the parse options used to acquire this file from the mapped parse cache.

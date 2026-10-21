@@ -1,0 +1,79 @@
+// A module declaration in a CommonJS package (D283, D286): the module and its
+// imports lower with the file to require calls. A module declaration escapes
+// to TypeScript (D283). Its body is checked and
+// compiled as a .ts file would be: throw and catch, async and await, and
+// platform APIs keep their TypeScript meaning. It imports what it needs
+// itself, its relative specifiers resolve from this file's directory, and
+// this file reaches its exports only through imports.
+import { suffix } from "./suffix.ts"
+
+module text {
+  import { Effect, String as Str } from "effect"
+  import { suffix } from "./suffix.ts"
+
+  export interface Cleaned {
+    readonly value: string
+    readonly length: number
+  }
+
+  export type Mode = "trim" | "upper"
+
+  export const separator = "-"
+
+  export function clean(value: string, mode: Mode = "trim"): Cleaned {
+    const trimmed = value.trim()
+    if (trimmed === "") throw new Error("empty")
+    const result = mode === "upper" ? trimmed.toUpperCase() : trimmed
+    return { value: result, length: result.length }
+  }
+
+  // JavaScript's try and catch: a throw inside the module stays inside it.
+  export function safeLength(value: string): number {
+    try {
+      return clean(value).length
+    } catch {
+      return -1
+    }
+  }
+
+  export async function later(file: string): Promise<string> {
+    await new Promise((resolve) => setTimeout(resolve, 1))
+    return Str.capitalize(file) + suffix
+  }
+
+  // TypeScript that returns an Effect: VibeLang code that calls it runs it.
+  export const greet = (name: string) => Effect.succeed(`hello, ${name}${suffix}`)
+
+  export default class Counter {
+    count = 0
+    increment(): number {
+      return ++this.count
+    }
+  }
+}
+
+import Counter, { clean, greet, later, safeLength, separator, type Cleaned, type Mode } from text
+
+function cleaned(input: string, mode: Mode): Cleaned!Error {
+  return try((input, mode) => clean(input, mode), (error) => new Error(String(error)), input, mode)
+}
+
+// run.mjs requires out/main.js and runs program().
+export function program() {
+  const value = cleaned("  hi ", "upper")
+  let failed = "none"
+  try {
+    cleaned("   ", "trim")
+  } catch (error) {
+    failed = error.message
+  }
+  const length = sync((text) => safeLength(text), "   ")
+  const file = sync(async (name) => later(name), "x.txt")
+  const greeting = greet("Ada")
+  const counted = sync(() => {
+    const counter = new Counter()
+    counter.increment()
+    return counter.increment()
+  })
+  return { cleaned: value, failed, length, later: file, greeting, joined: ["a", "b"].join(separator) + suffix, counted }
+}

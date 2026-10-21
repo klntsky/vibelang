@@ -1,0 +1,18 @@
+// expect: TS2305 TS2459
+// An import names what a module declaration exports (D283): a name it does
+// not declare, and a name it declares but does not export, are errors.
+module text {
+  function hidden(value: string): string {
+    return value
+  }
+
+  export function clean(value: string): string {
+    return hidden(value.trim())
+  }
+}
+
+import { clean, missing, hidden } from text
+
+export function main() {
+  return sync((value) => clean(value) + missing + hidden, " a ")
+}

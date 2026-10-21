@@ -160,6 +160,9 @@ func listFiles(input EmitInput, emitResult *compiler.EmitResult) {
 		input.Program.ExplainFiles(input.Writer, input.Config.Locale(), input.Sys.GetCurrentDirectory())
 	} else if options.ListFiles.IsTrue() || options.ListFilesOnly.IsTrue() {
 		for _, file := range input.Program.GetSourceFiles() {
+			if file.EmbeddedModule() != nil {
+				continue // a VibeLang module declaration's body, which is not a file (D283)
+			}
 			fmt.Fprintln(input.Writer, file.FileName())
 		}
 	}

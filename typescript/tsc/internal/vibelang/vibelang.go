@@ -17,6 +17,7 @@ import (
 
 func init() {
 	compiler.RegisterScriptTransformerHook(newLowering)
+	compiler.RegisterScriptTransformerHook(newModuleInliner) // after the lowering (modules.go)
 	compiler.RegisterDirectiveExemptSource(diagnosticSource)
 	compiler.RegisterImplicitImportHook(implicitRuntimeImport)
 	compiler.RegisterDeclarationTransformerHook(declareCallbackContracts) // before transformDeclarations, which imports what it writes

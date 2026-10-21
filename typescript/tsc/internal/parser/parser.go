@@ -108,6 +108,7 @@ type Parser struct {
 	vibelangIsBindings          map[*ast.Node]*isInfo    // is expressions whose patterns bind names, by their markers (vibelang_match.go)
 	vibelangOmittedDependencies map[*ast.Node]bool       // Effect types whose dependencies were left out (vibelang.go)
 	vibelangSyntax              *[]VibeSyntax            // the forms recorded for ParseVibeLangSyntax, or nil (vibelang_syntax.go)
+	vibelangTypeScript          bool                     // reading a module declaration's body, which is TypeScript (vibelang_modules.go)
 }
 
 func newParser() *Parser {
@@ -471,6 +472,9 @@ func (p *Parser) parseSourceFileWorker() *ast.SourceFile {
 	collectExternalModuleReferences(result)
 	if ast.IsInJSFile(node) {
 		result.SetJSDiagnostics(attachFileToDiagnostics(p.jsDiagnostics, result))
+	}
+	if p.isVibeLangFile() {
+		p.attachVibeLangModules(result) // module declarations' bodies (vibelang_modules.go)
 	}
 	return result
 }
@@ -1198,6 +1202,9 @@ func (p *Parser) parseDeclarationWorker(pos int, jsdoc jsdocScannerInfo, modifie
 	case ast.KindEnumKeyword:
 		return p.parseEnumDeclaration(pos, jsdoc, modifiers)
 	case ast.KindGlobalKeyword, ast.KindModuleKeyword, ast.KindNamespaceKeyword:
+		if node := p.parseVibeLangModuleDeclaration(pos, jsdoc, modifiers); node != nil {
+			return node // module text { ... } (vibelang_modules.go)
+		}
 		return p.parseModuleDeclaration(pos, jsdoc, modifiers)
 	case ast.KindImportKeyword:
 		return p.parseImportDeclarationOrImportEqualsDeclaration(pos, jsdoc, modifiers)
@@ -2380,6 +2387,10 @@ func (p *Parser) parseImportDeclarationOrImportEqualsDeclaration(pos int, jsdoc 
 			identifier = p.parseIdentifier()
 		}
 	}
+	if identifier != nil && phaseModifier == ast.KindUnknown && p.isVibeLangModuleImport() {
+		p.statementHasAwaitIdentifier = saveHasAwaitIdentifier
+		return p.parseVibeLangModuleImport(pos, jsdoc, modifiers, identifier) // import text; (vibelang_modules.go)
+	}
 	if identifier != nil && p.tokenAfterImportedIdentifierAllowsImportEqualsDeclaration() && phaseModifier != ast.KindDeferKeyword && phaseModifier != ast.KindSourceKeyword {
 		importEquals := p.checkJSSyntax(p.parseImportEqualsDeclaration(pos, jsdoc, modifiers, identifier, phaseModifier == ast.KindTypeKeyword))
 		p.statementHasAwaitIdentifier = saveHasAwaitIdentifier // Import= declaration is always parsed in an Await context, no need to reparse
@@ -2468,6 +2479,9 @@ func (p *Parser) parseExternalModuleReference() *ast.Node {
 func (p *Parser) parseModuleSpecifier() *ast.Expression {
 	if p.token == ast.KindStringLiteral {
 		return p.parseLiteralExpression()
+	}
+	if specifier := p.parseVibeLangModuleReference(); specifier != nil {
+		return specifier // from text, a module declaration (vibelang_modules.go)
 	}
 	// We allow arbitrary expressions here, even though the grammar only allows string
 	// literals.  We check to ensure that it is only a string literal later in the grammar

@@ -893,6 +893,18 @@ func (p *fileLoader) resolveImportsAndModuleAugmentations(t *parseTask) {
 				resolutionsInFile[module.ModeAwareCacheKey{Name: moduleName, Mode: mode}] = &module.ResolvedModule{}
 				continue
 			}
+			if entry.Flags&ast.NodeFlagsVibeLang != 0 && ast.IsStringLiteral(entry) {
+				// from text names a module declaration of this VibeLang file (D283), whose
+				// body is a supplemental file of it, added below.
+				if embedded := file.EmbeddedModuleBySpecifier(moduleName); embedded != nil {
+					resolutionsInFile[module.ModeAwareCacheKey{Name: moduleName, Mode: mode}] = &module.ResolvedModule{
+						ResolvedFileName: embedded.FileName(),
+						ResolvedPath:     embedded.PathKey(),
+						Extension:        tspath.ExtensionTs,
+					}
+					continue
+				}
+			}
 			var resolvedModule *module.ResolvedModule
 			var trace []module.DiagAndArgs
 			var err error

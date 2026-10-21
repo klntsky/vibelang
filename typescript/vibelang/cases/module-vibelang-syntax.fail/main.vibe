@@ -1,0 +1,16 @@
+// expect: TS1434 TS1144
+// A module declaration's body is TypeScript (D283): VibeLang's own syntax,
+// such as an error declaration or an Effect contract, is a syntax error there.
+module text {
+  error Bad { reason: string }
+
+  export function clean(value: string): string!Bad {
+    return value.trim()
+  }
+}
+
+import { clean } from text
+
+export function main() {
+  return sync((value) => clean(value), " a ")
+}

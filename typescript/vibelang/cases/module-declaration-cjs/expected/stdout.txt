@@ -1,0 +1,1 @@
+{"cleaned":{"value":"HI","length":2},"failed":"Error: empty","length":-1,"later":"X.txt!","greeting":"hello, Ada!","joined":"a-b!","counted":2}

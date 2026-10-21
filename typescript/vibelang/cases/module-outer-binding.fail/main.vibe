@@ -1,0 +1,24 @@
+// expect: TS2304 TS2552
+// A module declaration is self-contained (D283): its body cannot read this
+// file's bindings, a constant or a function, as a separate .ts file cannot.
+const prefix = "item-"
+
+function label(value: string) {
+  return prefix + value
+}
+
+module text {
+  export function tag(value: string): string {
+    return prefix + value
+  }
+
+  export function relabel(value: string): string {
+    return label(value)
+  }
+}
+
+import { tag } from text
+
+export function main() {
+  return sync((value) => tag(value), "a")
+}
