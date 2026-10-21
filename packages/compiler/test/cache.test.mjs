@@ -304,12 +304,16 @@ test("a source edited while the compiler runs is not cached", { skip }, async (t
   writeFileSync(compiler, recorder(calls, `import { writeFileSync } from "node:fs"
 writeFileSync(${JSON.stringify(path)}, ${JSON.stringify(edited)})`))
   const first = run()
-  assert.equal(ok(first).text, "HI!")
   assert.match(first.stderr, /shout\.vibe changed during the compile/)
+  // The process itself compiles again for the module that changed (register).
+  assert.equal(ok(first).text, "hi!")
+  assert.equal(compiles(), 2)
   writeFileSync(compiler, recorder(calls, ""))
   await settle()
-  assert.equal(ok(run()).text, "hi!")
-  assert.equal(compiles(), 2)
+  assert.equal(ok(run()).text, "hi!", "no entry pairs the old output with the new source")
+  assert.equal(compiles(), 3)
+  ok(run())
+  assert.equal(compiles(), 3)
 })
 
 test("a corrupt entry is a miss that a compile replaces", { skip }, async (t) => {

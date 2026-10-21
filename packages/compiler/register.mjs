@@ -5,9 +5,11 @@
 // whole-project compile per tsconfig: emit is type-directed, so no module
 // compiles alone. The project is the nearest tsconfig.json above the module, or
 // VIBELANG_PROJECT. A compile's result is cached on disk (vibelang/project), so
-// a later process reuses it while the project's inputs are unchanged.
+// a later process reuses it while the project's inputs are unchanged. A failed
+// compile throws an Error with code ERR_VIBELANG_COMPILE and the diagnostics;
+// a module the project does not include, ERR_VIBELANG_PROJECT.
 // VIBELANG_REGISTER_DEBUG=1 reports each project's compile or cache hit.
-import { existsSync } from "node:fs"
+import { existsSync, statSync } from "node:fs"
 import { registerHooks } from "node:module"
 import { resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
@@ -29,19 +31,38 @@ function projectOf(file) {
   return project
 }
 
+// An Error with a code, as Node's own module errors have.
+const failure = (code, message) => Object.assign(new Error(message), { code })
+
+// A file saved after a compile started may be missing from its output.
+function changedSince(file, time) {
+  const stat = statSync(file, { throwIfNoEntry: false })
+  return stat !== undefined && Math.max(stat.mtimeMs, stat.ctimeMs) > time
+}
+
+// A long-running process compiles a project again when a module it imports
+// is newer than the compile, or was not there yet: a watcher's re-import of
+// an edited file, or a module written after the program started.
 function emitted(file) {
   const project = projectOf(file)
-  let result = results.get(project)
-  if (result === undefined) {
-    result = compileProjectSync({ project, debug })
-    results.set(project, result)
+  let compiled = results.get(project)
+  if (compiled !== undefined && changedSince(file, compiled.started)) compiled = undefined
+  if (compiled !== undefined && !compiled.result.errors.length && !compiled.result.outputs.has(file) && !compiled.missing.has(file)) {
+    compiled = undefined
   }
+  if (compiled === undefined) {
+    const started = Date.now()
+    compiled = { started, result: compileProjectSync({ project, debug }), missing: new Set() }
+    results.set(project, compiled)
+  }
+  const { result } = compiled
   if (result.errors.length) {
-    throw new Error(`vibelang: ${project} did not compile\n${result.errors.map(formatDiagnostic).join("\n")}`)
+    throw failure("ERR_VIBELANG_COMPILE", `vibelang: ${project} did not compile\n${result.errors.map(formatDiagnostic).join("\n")}`)
   }
   const output = result.outputs.get(file)
   if (output === undefined) {
-    throw new Error(`vibelang/register: ${project} does not include ${file}; set VIBELANG_PROJECT to a tsconfig that does`)
+    compiled.missing.add(file)
+    throw failure("ERR_VIBELANG_PROJECT", `vibelang/register: ${project} does not include ${file}; set VIBELANG_PROJECT to a tsconfig that does`)
   }
   return output
 }

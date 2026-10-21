@@ -67,6 +67,13 @@ with `.vibe` lines. It needs Node 22.15 or later, for `module.registerHooks`.
 `VIBELANG_REGISTER_DEBUG=1` prints each project's compile time, or that it came
 from the cache.
 
+A long-running process compiles a project again when it imports a `.vibe`
+module that changed after the project compiled, or that did not exist yet, so
+a watcher that re-imports an edited file under a new URL gets its new code. The
+errors carry a `code`, as Node's module errors do: `ERR_VIBELANG_COMPILE` when
+the project does not compile (the message holds the diagnostics), and
+`ERR_VIBELANG_PROJECT` when the module is outside the project.
+
 ### The compile cache
 
 A project's compile is cached on disk, so the next process that imports the

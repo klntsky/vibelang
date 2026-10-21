@@ -107,3 +107,46 @@ test("names VIBELANG_PROJECT when the nearest tsconfig does not include a module
   assert.equal(accepted.stderr, "")
   assert.equal(accepted.stdout, "42\n")
 })
+
+test("a long-running process loads a .vibe module written or edited after its project compiled", { skip }, (t) => {
+  const { root, run, compilations } = project(t, {
+    "src/first.vibe": "export function first(): string { return \"first\" }\n",
+    // Outside the project's include, so the compiler does not check it.
+    "tools/main.ts": [
+      "import { writeFileSync } from \"node:fs\"",
+      "import { first } from \"../src/first.vibe\"",
+      "const seen = [first()]",
+      "// A module that did not exist when the project compiled, as a registry's content-pinned copy.",
+      "writeFileSync(new URL(\"../src/later.vibe\", import.meta.url), \"export function later(): string { return \\\"later\\\" }\\n\")",
+      "seen.push((await import(\"../src/later.vibe\")).later())",
+      "// An edited module, imported again under a new URL, as a watcher does.",
+      "writeFileSync(new URL(\"../src/first.vibe\", import.meta.url), \"export function first(): string { return \\\"edited\\\" }\\n\")",
+      "seen.push((await import(\"../src/first.vibe?edit=1\")).first())",
+      "console.log(JSON.stringify(seen))",
+      ""
+    ].join("\n")
+  })
+  const result = run("tools/main.ts")
+  assert.equal(result.stderr, "")
+  assert.deepEqual(JSON.parse(result.stdout), ["first", "later", "edited"])
+  assert.equal(compilations(), 3)
+  assert.ok(existsSync(join(root, "src/later.vibe")))
+})
+
+test("a failed compile and a module outside the project throw errors with a code", { skip }, (t) => {
+  const { run } = project(t, {
+    "src/good.vibe": "export const good: number = 1\n",
+    "broken/tsconfig.json": tsconfig(["src/**/*"]),
+    "broken/src/bad.vibe": "export const count: number = \"three\"\n",
+    "elsewhere/stray.vibe": "export const stray: number = 1\n",
+    "tools/check.ts": [
+      "for (const specifier of [\"../src/good.vibe\", \"../broken/src/bad.vibe\", \"../elsewhere/stray.vibe\"]) {",
+      "  try { await import(specifier); console.log(\"loaded\") } catch (error) { console.log((error as { code?: string }).code) }",
+      "}",
+      ""
+    ].join("\n")
+  })
+  const result = run("tools/check.ts")
+  assert.equal(result.status, 0, result.stderr)
+  assert.deepEqual(result.stdout.trim().split("\n"), ["loaded", "ERR_VIBELANG_COMPILE", "ERR_VIBELANG_PROJECT"])
+})
