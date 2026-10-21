@@ -2,14 +2,20 @@
 // a tree whose tokens are the source and whose nodes keep every name the
 // author wrote, the rules Smithers lints with find nothing in clean code and
 // each seeded violation, fixes land on the .vibe text, and a syntax error is
-// ESLint's parsing error.
+// ESLint's parsing error. A module declaration's body (D283) lints as a
+// TypeScript module of its own.
 import { strict as assert } from "node:assert"
 import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { test } from "node:test"
 import { Linter } from "eslint"
+import tseslint from "typescript-eslint"
+import importPlugin from "eslint-plugin-import"
+import unicorn from "eslint-plugin-unicorn"
 import { visitorKeys as typescriptKeys } from "@typescript-eslint/visitor-keys"
 import vibelang, { parseForESLint, vibeVisitorKeys } from "../../eslint.mjs"
 import { config } from "./config.mjs"
+import { repo } from "./helpers.mjs"
 import { allVisitorKeys, problems, walk } from "./tree.mjs"
 
 const fixture = (name) => {
@@ -37,6 +43,7 @@ test("VibeLang's forms take their own node types, which keep every source child"
   assert.equal(types.get("VibeMaskStatement"), 3)
   assert.equal(types.get("VibePipeExpression"), 3)
   assert.equal(types.get("TopicReference"), 3)
+  assert.equal(types.get("VibeModuleDeclaration"), 1)
   // The parser's long forms that read as TypeScript stay TypeScript.
   for (const type of ["ArrowFunctionExpression", "ClassDeclaration", "TryStatement", "TSTypeLiteral"]) {
     assert.ok(types.has(type), `forms.vibe has no ${type}`)
@@ -106,4 +113,118 @@ test("names the parser writes are not variables a rule can report", () => {
   const names = scopeManager.scopes.flatMap((scope) => scope.variables.map((variable) => variable.name))
   assert.ok(names.includes("value"))
   assert.ok(!names.some((name) => name.startsWith("$")), names.join(", "))
+})
+
+test("a module declaration's body lints as TypeScript, on the .vibe file's lines and columns", () => {
+  const { code, filename } = fixture("modules.vibe")
+  assert.deepEqual(problems(code, parseForESLint(code, { filePath: filename }).ast, keys), [])
+  const found = lint({ code, filename }).map(({ line, column, ruleId }) => `${line}:${column} ${ruleId}`)
+  assert.deepEqual(found, [
+    "18:30 @typescript-eslint/no-unused-vars",
+    "29:31 @typescript-eslint/array-type",
+    "30:9 prefer-const",
+    "45:24 import/no-duplicates",
+    "46:8 import/no-duplicates"
+  ])
+  // The body's eslint-disable comment is what keeps no-console quiet.
+  const ignoringComments = new Linter({ configType: "flat", cwd: "/" }).verify(code, config, { filename, allowInlineConfig: false })
+  assert.ok(ignoringComments.some(({ line, column, ruleId }) => `${line}:${column} ${ruleId}` === "32:5 no-console"))
+})
+
+// The rules that read scopes, which the TypeScript config turns off for
+// .vibe files as for .ts files.
+const scopeConfig = [{
+  files: ["**/*.vibe"],
+  languageOptions: { parser: vibelang, globals: { console: "readonly" } },
+  linterOptions: { reportUnusedDisableDirectives: "off" },
+  rules: { "no-redeclare": "error", "no-shadow": "error", "no-undef": "error" }
+}]
+
+test("a module declaration's body is a module scope of its own, beside the file's", () => {
+  const { code, filename } = fixture("modules.vibe")
+  const messages = new Linter({ configType: "flat", cwd: "/" }).verify(code, scopeConfig, { filename })
+  // The body redeclares and shadows nothing, and cannot read the file's label.
+  assert.deepEqual(messages.map(({ line, column, message }) => `${line}:${column} ${message}`), [
+    "33:12 'label' is not defined."
+  ])
+  const { ast, scopeManager } = parseForESLint(code, { filePath: filename })
+  const { globalScope } = scopeManager
+  const module = ast.body.find((node) => node.type === "VibeModuleDeclaration")
+  const body = scopeManager.acquire(module.body)
+  const file = scopeManager.acquire(ast, true)
+  assert.equal(body.type, "module")
+  assert.equal(file.type, "module")
+  assert.deepEqual(globalScope.childScopes, [file, body])
+  const names = (scope) => scope.variables.map((variable) => variable.name).sort()
+  assert.deepEqual(names(body), ["Effect", "Str", "prefix", "suffix", "tag", "tagged"])
+  assert.deepEqual(names(file), ["label", "main", "prefix", "suffix", "tagged"])
+  // Each import is read where it is declared.
+  const lines = (variable) => variable.references.map((reference) => reference.identifier.loc.start.line)
+  assert.deepEqual(lines(body.set.get("suffix")), [33])
+  assert.deepEqual(lines(file.set.get("suffix")), [14])
+  assert.deepEqual(lines(file.set.get("label")), [57])
+  assert.ok(globalScope.through.some((reference) => reference.identifier.name === "label" && reference.identifier.loc.start.line === 33))
+})
+
+test("an identifier module specifier is the identifier written, with its name as source.value", () => {
+  const { code, filename } = fixture("modules.vibe")
+  const { ast } = parseForESLint(code, { filePath: filename })
+  const sources = ast.body.filter((node) => node.source?.type === "Identifier").map(({ source }) => source)
+  assert.deepEqual(sources.map((source) => [source.name, source.value, code.slice(...source.range)]), [
+    ["text", "text", "text"], ["text", "text", "text"], ["text", "text", "text"], ["text", "text", "text"]
+  ])
+  assert.ok(!JSON.stringify(ast).includes(".text.js"))
+})
+
+// Rules that read an import's or an export's source.value.
+const specifierConfig = [{
+  files: ["**/*.vibe"],
+  languageOptions: { parser: vibelang },
+  plugins: { "@typescript-eslint": tseslint.plugin, import: importPlugin, unicorn },
+  rules: {
+    "no-duplicate-imports": "error",
+    "no-restricted-imports": ["error", { paths: ["node:fs"] }],
+    "@typescript-eslint/consistent-type-imports": "error",
+    "@typescript-eslint/no-import-type-side-effects": "error",
+    "@typescript-eslint/no-restricted-imports": ["error", { paths: ["node:fs"] }],
+    "@typescript-eslint/no-useless-empty-export": "error",
+    "import/consistent-type-specifier-style": "error",
+    "import/export": "error",
+    "import/extensions": "error",
+    "import/first": "error",
+    "import/newline-after-import": "error",
+    "import/no-absolute-path": "error",
+    "import/no-cycle": "error",
+    "import/no-duplicates": "error",
+    "import/no-internal-modules": "error",
+    "import/no-named-as-default": "error",
+    "import/no-namespace": "error",
+    "import/no-nodejs-modules": "error",
+    "import/no-relative-packages": "error",
+    "import/no-relative-parent-imports": "error",
+    "import/no-self-import": "error",
+    "import/no-unassigned-import": "error",
+    "import/no-useless-path-segments": "error",
+    "import/order": "error",
+    "unicorn/import-style": "error",
+    "unicorn/prefer-node-protocol": "error"
+  }
+}]
+
+test("rules that read a module specifier's source.value lint identifier specifiers without a crash", () => {
+  const cases = ["module-declaration", "module-declaration-cjs", "module-declaration-emit"]
+    .map((name) => join(repo, "typescript/vibelang/cases", name, "main.vibe"))
+  for (const filename of [fixture("modules.vibe").filename, ...cases]) {
+    const code = readFileSync(filename, "utf8")
+    const messages = new Linter({ configType: "flat", cwd: "/" }).verify(code, specifierConfig, { filename })
+    assert.deepEqual(messages.filter((message) => message.fatal || /\.text\.js/.test(message.message)), [], filename)
+  }
+})
+
+test("a syntax error in a module declaration's body is ESLint's parsing error at its line and column", () => {
+  const code = "export const before = 1\n\nmodule text {\n  error Bad { reason: string }\n}\n"
+  const [message] = lint({ code, filename: "/broken.vibe" })
+  assert.equal(message.fatal, true)
+  assert.equal(message.message, "Parsing error: Unexpected keyword or identifier.")
+  assert.deepEqual([message.line, message.column], [4, 3])
 })

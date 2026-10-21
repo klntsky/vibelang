@@ -50,13 +50,28 @@ func Parse(fileName string, text string) (json string, failure *Error) {
 		return &Error{Message: message, Index: positions.utf16(pos), Line: line, Column: column}
 	}
 	file := parser.ParseSourceFile(ast.SourceFileParseOptions{FileName: tspath.RootedFilePath(name), PathKey: tspath.PathKey(name)}, text, core.ScriptKindTS)
-	if diagnostics := file.Diagnostics(); len(diagnostics) != 0 {
-		d := diagnostics[0]
-		return "", fail(scanner.SkipTrivia(text, max(d.Pos(), 0)), d.String())
+	var modules map[*ast.Node]*ast.SourceFile
+	var bodies []*ast.SourceFile
+	if vibe {
+		modules, bodies = moduleBodies(file)
+	}
+	// A module body's syntax errors are its own file's; the first in the
+	// text is the one ESLint reports.
+	var first *ast.Diagnostic
+	for _, f := range append([]*ast.SourceFile{file}, bodies...) {
+		if diagnostics := f.Diagnostics(); len(diagnostics) != 0 && (first == nil || diagnostics[0].Pos() < first.Pos()) {
+			first = diagnostics[0]
+		}
+	}
+	if first != nil {
+		return "", fail(scanner.SkipTrivia(text, max(first.Pos(), 0)), first.String())
 	}
 	lexical := newLexicalContext()
 	lexical.collect(file, text)
-	c := &converter{file: file, text: text, vibe: vibe, scan: scanner.NewScanner()}
+	for _, body := range bodies {
+		lexical.collect(body, body.Text())
+	}
+	c := &converter{file: file, text: text, vibe: vibe, scan: scanner.NewScanner(), modules: modules}
 	c.scan.SetText(text)
 	var program *obj
 	err := func() (failure *Error) {

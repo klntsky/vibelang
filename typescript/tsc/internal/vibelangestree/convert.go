@@ -31,6 +31,8 @@ type converter struct {
 	identifiers map[int]bool
 	// pipes holds the start of each pipe operator, |>, one token for ESLint.
 	pipes map[int]bool
+	// modules holds the source file of each module declaration's body (D283).
+	modules map[*ast.Node]*ast.SourceFile
 }
 
 // unsupported is a node the converter has no ESTree form for.

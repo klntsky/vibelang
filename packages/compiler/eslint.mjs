@@ -7,7 +7,8 @@
 // (`vibelang --estree`, typescript/tsc/internal/vibelangestree): TypeScript
 // forms take typescript-estree's shapes, so typescript-eslint's rules and
 // every plugin that reads TypeScript work unchanged, and VibeLang's own forms
-// take the node types in vibeVisitorKeys. Scope analysis is
+// take the node types in vibeVisitorKeys. A module declaration's body (D283)
+// is TypeScript and converts as a .ts file's statements do. Scope analysis is
 // @typescript-eslint/scope-manager's, resolved from the typescript-eslint the
 // project installs. There is no TypeScript program, so rules that need type
 // information do not run on .vibe files; `vibelang -p` type-checks them.
@@ -28,6 +29,7 @@ export const vibeVisitorKeys = Object.freeze({
   VibeEffectType: ["success", "failure", "requirements"],
   VibeInferType: [],
   VibeMaskStatement: ["body"],
+  VibeModuleDeclaration: ["id", "body"],
   VibePipeExpression: ["left", "right"],
   VibeProvideStatement: ["providers", "body"],
   VibeServiceProvider: ["key", "value"]
@@ -75,7 +77,8 @@ function tryLoad(require) {
     try {
       const scope = from.resolve("@typescript-eslint/scope-manager")
       const keys = from.resolve("@typescript-eslint/visitor-keys")
-      return { analyze: from(scope).analyze, visitorKeys: from(keys).visitorKeys }
+      const { analyze, Visitor } = from(scope)
+      return { analyze, Visitor, visitorKeys: from(keys).visitorKeys }
     } catch {
       return undefined
     }
@@ -116,15 +119,15 @@ export function parseForESLint(code, options = {}) {
   }
   finish(ast, code)
   ast.sourceType = options.sourceType ?? "module"
-  const { analyze, visitorKeys: typescriptKeys } = typescriptEslint(options.filePath)
+  const { analyze, Visitor, visitorKeys: typescriptKeys } = typescriptEslint(options.filePath)
   const visitorKeys = { ...typescriptKeys, ...vibeVisitorKeys }
-  const scopeManager = analyze(ast, {
+  const scopeManager = withModuleScopes(Visitor, () => analyze(ast, {
     childVisitorKeys: visitorKeys,
     globalReturn: false,
     jsxPragma: null,
     lib: options.lib ?? ["esnext"],
     sourceType: ast.sourceType
-  })
+  }))
   hideSynthesized(scopeManager)
   // As @typescript-eslint/parser reports for a file outside any TypeScript
   // program: a rule that needs type information says so instead of crashing.
@@ -137,6 +140,38 @@ export function parseForESLint(code, options = {}) {
     tsNodeToESTreeNodeMap: new WeakMap()
   }
   return { ast, scopeManager, services, visitorKeys }
+}
+
+// withModuleScopes runs analyze so that each module declaration's body is a
+// module scope of its own, a child of the global scope beside the file's: the
+// body's names are not the file's, a name it reads from the file is
+// undefined, and its imports are its own. analyze's Referencer finds the
+// method for a node type on Visitor, which scope-manager exports and the
+// Referencer extends; for as long as analyze runs, Visitor has one for
+// VibeModuleDeclaration. A nested Program cannot do it: the Referencer opens
+// a second global scope for it and asserts there is none, and ESLint runs
+// every Program listener on it.
+function withModuleScopes(Visitor, analyze) {
+  Visitor.prototype.VibeModuleDeclaration = moduleDeclaration
+  try {
+    return analyze()
+  } finally {
+    delete Visitor.prototype.VibeModuleDeclaration
+  }
+}
+
+// moduleDeclaration is the Referencer's method for module text { body }: it
+// analyzes the body in a module scope whose upper scope is the global scope,
+// then returns to the file's scope.
+function moduleDeclaration(node) {
+  const manager = this.scopeManager
+  if (!manager) return this.visitChildren(node)
+  const enclosing = manager.currentScope
+  manager.currentScope = manager.globalScope
+  manager.nestModuleScope(node.body)
+  for (const statement of node.body.body) this.visit(statement)
+  this.close(node.body)
+  manager.currentScope = enclosing
 }
 
 // hideSynthesized removes the variables of names the parser wrote, such as a

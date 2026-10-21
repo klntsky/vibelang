@@ -198,6 +198,35 @@ export layer DeclaredUsers: Users {
   readonly region = "us"
 }
 
+/**
+ * String helpers, a module whose body is TypeScript (D283).
+ *
+ * @since 0.0.2
+ */
+module strings {
+  import { Effect } from "effect"
+
+  /**
+   * Trims a value.
+   *
+   * @category constructors
+   * @since 0.0.2
+   */
+  export function clean(value: string): string {
+    return value.trim()
+  }
+
+  /**
+   * Trims a value in an Effect.
+   *
+   * @category constructors
+   * @since 0.0.2
+   */
+  export const cleaned = (value: string) => Effect.succeed(clean(value))
+}
+
+import { clean, cleaned } from strings
+
 // Contracts
 
 /**
@@ -455,7 +484,9 @@ export function hatches(text: string, url: string) {
     const timer = setTimeout(() => resume(7), 10)
     return () => clearTimeout(timer)
   })
-  return { id, parsed, fetched, tick }
+  const trimmed = sync((text) => clean(text), text)
+  const tidied = cleaned(text)
+  return { id, parsed, fetched, tick, trimmed, tidied }
 }
 
 /**

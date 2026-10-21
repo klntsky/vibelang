@@ -1,7 +1,8 @@
 // vibelang --estree converts TypeScript exactly as typescript-estree does, so
 // a rule reads a .vibe file's TypeScript forms as it reads a .ts file's. The
 // corpus is fixtures/typescript.ts, which holds every TypeScript form, and
-// every .ts file in this repository.
+// every .ts file in this repository; the fixture is also the body of a
+// module declaration (D283).
 import { strict as assert } from "node:assert"
 import { readFileSync } from "node:fs"
 import { test } from "node:test"
@@ -59,4 +60,26 @@ test("every .ts file in the repository converts as typescript-estree converts it
   }
   assert.ok(compared > 300, `compared only ${compared} files`)
   assert.deepEqual(failures, [])
+})
+
+// A module declaration's body is TypeScript at the .vibe file's offsets:
+// typescript-estree's tree of the same text, with everything outside the
+// body blanked, is the body's, node for node and token for token.
+const blank = (text) => text.replace(/[^\n\r\u2028\u2029]/g, " ")
+
+test("a module declaration's body converts as typescript-estree converts its TypeScript", () => {
+  const head = "// VibeLang around a module, after non-ASCII text: é😀\nerror Gone { id: string }\n\nmodule text {"
+  const body = `\n${readFileSync(fixture, "utf8")}`
+  const tail = "}\n\nimport { answer } from text\n\nexport function main(): number!Gone {\n  return answer |> % + 1\n}\n"
+  const code = head + body + tail
+  const start = head.length
+  const end = start + body.length
+  const { ast } = parseForESLint(code, { filePath: "/module.vibe" })
+  const module = ast.body.find((node) => node.type === "VibeModuleDeclaration")
+  assert.deepEqual(module.body.range, [start - 1, end + 1])
+  const reference = expected(blank(code.slice(0, start)) + body + blank(code.slice(end)), "/module.ts")
+  const inside = ({ range }) => range[0] >= start && range[1] <= end
+  assert.equal(firstDifference(plain(module.body.body), reference.body), undefined)
+  assert.equal(firstDifference(plain(ast.tokens.filter(inside)), reference.tokens), undefined)
+  assert.equal(firstDifference(plain(ast.comments.filter(inside)), reference.comments), undefined)
 })

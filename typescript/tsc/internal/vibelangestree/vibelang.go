@@ -6,6 +6,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/parser"
+	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
 // The parser writes each VibeLang form as the TypeScript it abbreviates
@@ -26,6 +27,16 @@ import (
 //	uninterruptible { }    VibeMaskStatement { kind, body }
 //	schema S { fields }    const S: { fields }, the fields as written
 //	error E { fields }     class E { fields }
+//	module text { body }   VibeModuleDeclaration { id, body: TSModuleBlock }
+//	from text              Identifier { name, value }
+//
+// A module declaration's body (D283) is TypeScript in a source file of its
+// own, at the .vibe file's offsets, so it converts as a .ts file's statements
+// do; its block is a TSModuleBlock, where rules expect imports and exports
+// outside a Program. An identifier module specifier, which the parser writes
+// as a string literal naming that file, is the identifier written (TC39's
+// ModuleSpecifier : Identifier), with the name as its value for rules that
+// read a specifier's source.value.
 //
 // A pipe is not a BinaryExpression, as Babel has it, so a pipe statement,
 // which runs its body, is not an unused expression; its topic is Babel's
@@ -124,8 +135,78 @@ func (c *converter) convertVibeLang(n *ast.Node, parent *ast.Node) (*obj, bool) 
 		if result := c.schemaDeclaration(n); result != nil {
 			return result, true
 		}
+	case ast.KindModuleDeclaration:
+		if parser.IsVibeLangModuleDeclaration(n) {
+			return c.moduleDeclaration(n), true
+		}
+	case ast.KindStringLiteral:
+		if parser.IsVibeLangModuleReference(n) && parent != nil && (parent.Kind == ast.KindImportDeclaration || parent.Kind == ast.KindExportDeclaration) {
+			return c.moduleReference(n), true
+		}
 	}
 	return nil, false
+}
+
+// moduleBodies returns the source file of each module declaration's body
+// (D283), by declaration and in the order of the text. The parser gives a
+// top-level declaration, the first of its name, a file of its own
+// (EmbeddedModules); the checker reports any other (EK4408), whose body is
+// parsed here as the parser parses one, so ESLint still lints it.
+func moduleBodies(file *ast.SourceFile) (map[*ast.Node]*ast.SourceFile, []*ast.SourceFile) {
+	embedded := map[*ast.Node]*ast.SourceFile{}
+	for _, body := range file.EmbeddedModules() {
+		embedded[body.EmbeddedModule().Declaration] = body
+	}
+	modules := map[*ast.Node]*ast.SourceFile{}
+	var bodies []*ast.SourceFile
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if !parser.IsVibeLangModuleDeclaration(n) {
+			return n.ForEachChild(visit)
+		}
+		body := embedded[n]
+		if body == nil {
+			body = parseModuleBody(file, n)
+		}
+		modules[n] = body
+		bodies = append(bodies, body)
+		return false
+	}
+	file.AsNode().ForEachChild(visit)
+	return modules, bodies
+}
+
+// parseModuleBody parses the body of declaration as a TypeScript module in
+// the file's text with everything outside the body blanked, so its offsets
+// are the file's.
+func parseModuleBody(file *ast.SourceFile, declaration *ast.Node) *ast.SourceFile {
+	text := file.Text()
+	body := parser.ModuleDeclarationBody(file, declaration)
+	opts := ast.SourceFileParseOptions{FileName: "/estree.module.ts", PathKey: "/estree.module.ts"}
+	opts.ExternalModuleIndicatorOptions.Force = true
+	return parser.ParseSourceFile(opts, blank(text[:body.Pos()])+text[body.Pos():body.End()]+blank(text[body.End():]), core.ScriptKindTS)
+}
+
+// moduleDeclaration converts module text { body }, whose block the parser
+// leaves empty, with the statements of its body's own file.
+func (c *converter) moduleDeclaration(n *ast.Node) *obj {
+	body := c.modules[n]
+	if body == nil {
+		c.fail(n)
+	}
+	module := &converter{file: body, text: body.Text(), scan: scanner.NewScanner(), modules: c.modules}
+	module.scan.SetText(module.text)
+	block := c.node(n.Body(), "TSModuleBlock").set("body", module.convertBodyExpressions(listNodes(body.Statements), body.AsNode(), nil))
+	result := c.node(n, "VibeModuleDeclaration").set("body", block).set("id", c.convertChild(n.Name(), n))
+	return c.fixExports(n, result)
+}
+
+// moduleReference converts an identifier module specifier, from text, as the
+// identifier written.
+func (c *converter) moduleReference(n *ast.Node) *obj {
+	r := c.rangeOf(n)
+	name := c.text[r.start:r.end]
+	return identifierShape(c.nodeAt(r, "Identifier"), name).set("value", name)
 }
 
 // effectType converts A!E!R, which the parser writes Effect.Effect<A, E, R>

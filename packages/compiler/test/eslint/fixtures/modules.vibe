@@ -1,0 +1,58 @@
+/**
+ * Module declarations (D283): each body is a TypeScript module of its own,
+ * with its own imports and names. The seeded violations are named in
+ * comments on their lines.
+ *
+ * @since 0.0.2
+ */
+
+import { suffix } from "./suffix.ts"
+
+const prefix = "item-"
+
+function label(value: string) {
+  return prefix + value + suffix
+}
+
+module text {
+  import { Effect, String as Str } from "effect" // no-unused-vars: Str
+  import { suffix } from "./suffix.ts"
+
+  const prefix = "-"
+
+  /**
+   * Tags values.
+   *
+   * @category constructors
+   * @since 0.0.2
+   */
+  export function tag(values: string[]): string { // array-type
+    let joined = values.join(prefix) // prefer-const
+    // eslint-disable-next-line no-console
+    console.log(joined)
+    return label(joined) + suffix // no-undef: label is the file's
+  }
+
+  /**
+   * Tags values in an Effect.
+   *
+   * @category constructors
+   * @since 0.0.2
+   */
+  export const tagged = (values: ReadonlyArray<string>) => Effect.succeed(tag([...values]))
+}
+
+import { tagged } from text
+import text // import/no-duplicates: text is imported above
+export { tag as tidy } from text
+export * from text
+
+/**
+ * Labels and tags a value.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function main() {
+  return tagged([label("a")])
+}

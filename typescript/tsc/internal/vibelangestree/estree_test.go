@@ -74,6 +74,155 @@ var forms = map[string]string{
 	"match":          "function f(x: number) { match (x) { when 1: log(\"one\"); default: log(\"other\"); } }\n",
 	"hatches":        "function f(text: string) { return try((text) => JSON.parse(text), text) ?? throw new Gone({ id: text }) }\n",
 	"service shapes": "service Prefix: string\nexport service Search: SearchApi { static readonly layer = live }\n",
+	"modules":        moduleFile,
+}
+
+// moduleFile declares a module (D283) whose TypeScript body holds the forms
+// the token scan rescans, and reaches it through every identifier specifier.
+const moduleFile = "import { suffix } from \"./suffix.ts\"\n" +
+	"error Unclean { reason: string }\n" +
+	"/** Text helpers. */\n" +
+	"module text {\n" +
+	"  import { Effect } from \"effect\"\n" +
+	"  // A comment in the body.\n" +
+	"  export function clean(value: string): string {\n" +
+	"    return value.trim() + /a\\/b/g.source + `${suffix}!` + String(1 >> 2)\n" +
+	"  }\n" +
+	"  export const program = Effect.succeed(clean(\"x\"))\n" +
+	"}\n" +
+	"import { clean } from text\n" +
+	"import text\n" +
+	"export { clean as tidy } from text\n" +
+	"export * from text\n" +
+	"export function main(): string!Unclean { return clean(\" a \") }\n"
+
+// find returns the nodes of tree whose type is typ.
+func find(tree any, typ string) []map[string]any {
+	var out []map[string]any
+	for _, node := range nodes(tree) {
+		if node["type"] == typ {
+			out = append(out, node)
+		}
+	}
+	return out
+}
+
+func sourceOf(text string, node map[string]any) string {
+	start, end := rangeOf(node)
+	return text[start:end]
+}
+
+func TestAModuleDeclarationHoldsItsTypeScriptBody(t *testing.T) {
+	program := parse(t, "/main.vibe", moduleFile)
+	modules := find(program, "VibeModuleDeclaration")
+	if len(modules) != 1 {
+		t.Fatalf("%d module declarations, want 1", len(modules))
+	}
+	module := modules[0]
+	if got := sourceOf(moduleFile, module); !strings.HasPrefix(got, "module text {") || !strings.HasSuffix(got, "}") {
+		t.Errorf("the declaration is %q", got)
+	}
+	id := module["id"].(map[string]any)
+	if id["type"] != "Identifier" || id["name"] != "text" || sourceOf(moduleFile, id) != "text" {
+		t.Errorf("the declaration's id is %v", id)
+	}
+	body := module["body"].(map[string]any)
+	if body["type"] != "TSModuleBlock" {
+		t.Fatalf("the body is a %v", body["type"])
+	}
+	if got := sourceOf(moduleFile, body); !strings.HasPrefix(got, "{\n  import") || !strings.HasSuffix(got, "))\n}") {
+		t.Errorf("the body is %q", got)
+	}
+	var types []string
+	for _, statement := range body["body"].([]any) {
+		types = append(types, statement.(map[string]any)["type"].(string))
+	}
+	if want := "ImportDeclaration ExportNamedDeclaration ExportNamedDeclaration"; strings.Join(types, " ") != want {
+		t.Errorf("the body holds %v, want %s", types, want)
+	}
+	// The body's own string specifier stays a string; its names sit at their offsets.
+	imports := body["body"].([]any)[0].(map[string]any)
+	if source := imports["source"].(map[string]any); source["type"] != "Literal" || source["value"] != "effect" {
+		t.Errorf("the body's import is from %v", source)
+	}
+	for _, node := range find(body, "Identifier") {
+		if got := sourceOf(moduleFile, node); !strings.HasPrefix(got, node["name"].(string)) {
+			t.Errorf("identifier %s is at %q", node["name"], got)
+		}
+	}
+	// No VibeLang form is read in the body: its errors are TypeScript's.
+	if len(find(body, "VibeEffectType")) != 0 || len(find(body, "VibePipeExpression")) != 0 {
+		t.Error("the body has a VibeLang node")
+	}
+}
+
+func TestAnIdentifierModuleSpecifierIsTheIdentifier(t *testing.T) {
+	tree, failure := Parse("/main.vibe", moduleFile)
+	if failure != nil {
+		t.Fatal(failure)
+	}
+	if strings.Contains(tree, ".text.js") {
+		t.Error("the tree holds the module's file name")
+	}
+	program := parse(t, "/main.vibe", moduleFile)
+	count := 0
+	for _, statement := range program["body"].([]any) {
+		statement := statement.(map[string]any)
+		source, ok := statement["source"].(map[string]any)
+		if !ok || source["type"] == "Literal" {
+			continue
+		}
+		count++
+		if source["type"] != "Identifier" || source["name"] != "text" || source["value"] != "text" || sourceOf(moduleFile, source) != "text" {
+			t.Errorf("%s has source %v", statement["type"], source)
+		}
+	}
+	if count != 4 {
+		t.Errorf("%d identifier specifiers, want 4", count)
+	}
+}
+
+func TestEveryModuleDeclarationConvertsItsBody(t *testing.T) {
+	// Only a top-level declaration, the first of its name, has a source file
+	// of its own; the checker reports the others (EK4408), and ESLint still
+	// lints their bodies.
+	text := "module text {\n  export const one = 1\n}\nmodule text {\n  export const two = 2\n}\n" +
+		"function nested() {\n  module inner {\n    export const three = 3\n  }\n  return 3\n}\nmodule empty {}\n"
+	program := parse(t, "/main.vibe", text)
+	modules := find(program, "VibeModuleDeclaration")
+	if len(modules) != 4 {
+		t.Fatalf("%d module declarations, want 4", len(modules))
+	}
+	for i, want := range []string{"one", "two", "three", ""} {
+		body := modules[i]["body"].(map[string]any)
+		var names []string
+		for _, node := range find(body, "Identifier") {
+			names = append(names, node["name"].(string))
+		}
+		if strings.Join(names, " ") != want {
+			t.Errorf("module %d declares %v, want %q", i, names, want)
+		}
+	}
+	if got := sourceOf(text, modules[3]["body"].(map[string]any)); got != "{}" {
+		t.Errorf("the empty body is %q", got)
+	}
+}
+
+func TestASyntaxErrorInAModuleBodyHasItsLineAndColumn(t *testing.T) {
+	for name, text := range map[string]string{
+		"vibelang": "const a = 1\nmodule text {\n  export const b: string!Bad = \"b\"\n}\n",
+		"nested":   "function f() {\n  module inner {\n    export const b: string!Bad = \"b\"\n  }\n}\n",
+	} {
+		_, failure := Parse("/main.vibe", text)
+		if failure == nil {
+			t.Errorf("%s: no error", name)
+			continue
+		}
+		// TypeScript reads string! as JSDoc's non-null type and stops at Bad.
+		if line, column := 3, strings.Index(strings.Split(text, "\n")[2], "Bad")+1; failure.Line != line || failure.Column != column || failure.Message != "',' expected." {
+			t.Errorf("%s: error at %d:%d, want %d:%d: %s", name, failure.Line, failure.Column, line, column, failure.Message)
+		}
+	}
 }
 
 func TestTokensAndCommentsAreTheSourceText(t *testing.T) {
@@ -132,6 +281,7 @@ func TestVibeLangFormsHaveTheirOwnNodeTypes(t *testing.T) {
 		"catch":        {"VibeCatchExpression"},
 		"pipes":        {"VibePipeExpression", "TopicReference"},
 		"primitives":   {"VibeMaskStatement"},
+		"modules":      {"VibeModuleDeclaration", "TSModuleBlock"},
 	}
 	for name, types := range want {
 		seen := map[string]bool{}
