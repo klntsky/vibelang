@@ -4,6 +4,7 @@
 //
 // Usage, from a fixture copy:
 //   node build.mjs webpack|rspack|rollup|rolldown|esbuild|vite [--watch]
+//   node build.mjs rollup|rolldown|vite --deferred   (the plugin from vibelang-unplugin/deferred)
 //   bun build.mjs bun
 //
 // The plugin finds the compiler through VIBELANG_BINARY. A build without
@@ -17,7 +18,10 @@ const watch = mode === "--watch"
 const root = process.cwd()
 const entry = resolve(root, "src/main.ts")
 const outDir = resolve(root, "out")
-const { default: vibelang } = await import(`vibelang-unplugin/${bundler}`)
+const { deferred } = await import("vibelang-unplugin/deferred")
+const vibelang = mode === "--deferred"
+  ? (options) => deferred(bundler, options)
+  : (await import(`vibelang-unplugin/${bundler}`)).default
 
 function report(ok, message) {
   console.log(JSON.stringify(ok ? { ok } : { ok, message }))

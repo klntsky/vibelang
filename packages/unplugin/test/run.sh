@@ -38,11 +38,13 @@ echo "build: vibelang -p packages/runtime/tsconfig.json"
 # Every fixture copy lives under test/.fixtures and resolves packages here.
 modules=$package/test/.fixtures/node_modules
 mkdir -p "$modules"
-rm -rf "$modules/effect" "$modules/vibelang-runtime" "$modules/vibelang"
+rm -rf "$modules/effect" "$modules/vibelang-runtime" "$modules/vibelang" "$modules/vibelang-unplugin"
 ln -s "$effect" "$modules/effect"
 ln -s "$runtime" "$modules/vibelang-runtime"
 # The plugin's compile backend is the project's vibelang package (vibelang/project).
 ln -s "$repo/packages/compiler" "$modules/vibelang"
+# A fixture program that imports vibelang-unplugin/deferred resolves this package.
+ln -s "$package" "$modules/vibelang-unplugin"
 
 # bunfig.toml's minimumReleaseAge applies only to fresh manifests; a warm
 # manifest cache skips it (https://github.com/oven-sh/bun/issues/45831).
@@ -50,4 +52,4 @@ ln -s "$repo/packages/compiler" "$modules/vibelang"
 (cd "$package" && bun install --frozen-lockfile --no-cache)
 
 cd "$package"
-exec node --test "$@" test/bundlers.test.mjs
+exec node --test "$@" test/bundlers.test.mjs test/deferred.test.mjs

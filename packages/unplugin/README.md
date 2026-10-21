@@ -55,6 +55,29 @@ package's project, with that package's settings. That holds outside `root` and
 for a package nested inside it, a directory with its own `package.json` and
 `tsconfig.json`. Each project compiles once per build or watch rebuild.
 
+### A config that the bundled program evaluates
+
+Some tools declare a bundle's options in the module they bundle. An
+[Alchemy](https://alchemy.run) Worker's `build` props sit in the Worker's own
+module, so the Worker runs that code too, and a static import of
+`vibelang-unplugin/rolldown` there would bundle the compiler backend into the
+Worker. Import `vibelang-unplugin/deferred` instead. It imports nothing, and
+`deferred(bundler, options)` returns a promise-like plugin that loads
+`vibelang-unplugin/<bundler>` only when the bundler awaits its plugin list:
+
+```ts
+// worker/Api.ts, an Alchemy Worker
+import { deferred } from "vibelang-unplugin/deferred"
+
+export default class Api extends Cloudflare.Worker<Api>()("Api", {
+  main: "worker/Api.ts",
+  build: { input: { plugins: [deferred("rolldown")] } }
+}, program) {}
+```
+
+The bundlers that await plugins are Rolldown, Rollup, and Vite;
+`deferred` refuses the others.
+
 ## Options
 
 ```js

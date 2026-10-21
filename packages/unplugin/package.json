@@ -56,6 +56,10 @@
     "./vite": {
       "types": "./src/vite.d.ts",
       "import": "./src/vite.js"
+    },
+    "./deferred": {
+      "types": "./src/deferred.d.ts",
+      "import": "./src/deferred.js"
     }
   },
   "files": [
