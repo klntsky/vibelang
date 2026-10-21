@@ -32,7 +32,43 @@ InvalidCode
 
 In Effect functions, trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a `.ts` wrapper made with `trusted(implementation, [ErrorClass])`, importing `trusted` from `vibelang-runtime`: instances of listed classes join `E`; unlisted exceptions are defects. The older `/** @vibelang trusted */` and `@throws` declaration tags still work; calls that rely on tagged expected failures get migration warning EK4406. Effect's own packages are trusted, so calls such as `Option.isNone` need no boundary.
 
-A plain contract keeps JavaScript exceptions (D263): under an explicit non-Effect return annotation or an inferred plain contract, `throw` is a synchronous JavaScript throw, inside `try` or not. `(value: string): string => { if (!value) throw new Error("empty"); return value }` returns a string or throws immediately, and its declaration stays `(value: string) => string`. There, plain-function parameters and TypeScript imports are ordinary calls with no trust boundary, and exceptions become defects only where they escape into an effectful caller. Calling an Effect inside a plain-contract function is still EK2003.
+`throw` is a typed failure everywhere outside a hatch, and `catch` receives typed failures only (D282). A function with a plain return annotation is plain JavaScript because it never fails and needs nothing. It may throw what its own `catch` handles, and it still returns a value:
+
+```vibe
+// run: Console.log(quantityOr("3", 0)); Console.log(quantityOr("x", 0))
+error InvalidQuantity { text: string }
+
+function quantityOr(text: string, fallback: number): number {
+  try {
+    const quantity = Number(text)
+    if (!Number.isInteger(quantity)) throw new InvalidQuantity({ text })
+    return quantity
+  } catch {
+    return fallback
+  }
+}
+// Output: 3
+// Output: 0
+```
+
+A failure that can escape a plain function is EK2003, and the quick fix writes the Effect contract:
+
+```vibe
+// expect-error: EK2003
+function quantity(text: string): number {
+  const value = Number(text)
+  if (!Number.isInteger(value)) throw new InvalidQuantity({ text })
+  return value
+}
+```
+
+```text
+error EK2003: number is a plain return annotation, but quantity can fail with InvalidQuantity, and a plain function never fails.
+  Write number!InvalidQuantity! to make it an Effect function that fails with InvalidQuantity.
+  Or throw inside a hatch, whose TypeScript keeps JavaScript's throw: sync makes the exception a defect (number!!), and try an UnknownError.
+```
+
+The same holds for a throw expression and for a `match` arm or `do` block that throws. A plain function calls TypeScript code directly. A call whose contract lists a failure, such as `JSON.parse`, is a typed failure only inside a `try` whose `catch` belongs to the function, which receives it with its type; elsewhere its exception propagates unchanged. Other TypeScript code's exceptions pass through the `catch` unchanged and become defects where they reach an effectful caller; to catch one, use the `try` hatch in an Effect function. Running an Effect inside a plain-annotated function is EK2003 too.
 
 ## Failing in an expression
 

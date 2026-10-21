@@ -109,7 +109,7 @@ func (a *analyzer) isPlainFunction(fn *ast.Node) bool {
 		}
 		a.plain[d] = plainExploring
 		// D269 factories have no direct variant; S5-1 returned subtypes still run.
-		m := &member{ok: !a.isFactory(d) && !a.widensContract(d) && (!hasEscapingThrow(d) || a.hasPlainContract(d)) && !declaresUsing(d) && !hasVibeLangStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d) && !a.hasProgramReturn(d)}
+		m := &member{ok: !a.isFactory(d) && !a.widensContract(d) && !hasEscapingThrow(d) && !declaresUsing(d) && !hasVibeLangStatement(d) && !a.hasEscapingFailure(d) && !a.hasStreamLoop(d) && !a.hasProgramReturn(d)}
 		group[d] = m
 		if !m.ok {
 			// d's own body rules it out, whatever its callees compile to, so

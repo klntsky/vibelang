@@ -89,7 +89,7 @@ Missing key
 
 Prefer `decodeUnknownEffect`: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and needs a synchronous, service-free decoding path. An unexpected exception from a synchronous callback is a defect, which ordinary `catch` does not handle.
 
-`decodeUnknownSync` throws on invalid input. Called directly, that exception is a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A plain-contract function keeps JavaScript catch and can recover the exception as `unknown` (D260). EK2004 warns only when a try block runs Effects with E = `never`, and says defects pass through its catch. The `Exit` and `Option` variants give other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant decodes asynchronously without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even with no services.
+`decodeUnknownSync` throws on invalid input. Called directly, that exception is a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A plain function's catch doesn't see it either (D282); EK2004 warns at a catch whose try block has E = `never`, and says defects pass through it. The `Exit` and `Option` variants give other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant decodes asynchronously without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even with no services.
 
 ## Encoding values
 

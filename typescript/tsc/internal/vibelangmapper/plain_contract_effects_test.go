@@ -5,20 +5,30 @@ import (
 	"testing"
 )
 
-// D263 retains EK2003 for actual Effect calls under a plain return contract.
+// D282 keeps EK2003 for actual Effect calls under a plain return contract.
 func TestPlainContractEffectGreet(t *testing.T) {
 	source := "import { Console } from \"effect\"; export function greet(name: string): number { Console.log(`hello, ${name}`); return name.length }"
 	assertPlainContractDiagnostic(t, source, true)
 }
 
-// D263 makes a throw under a plain annotation an ordinary JavaScript throw.
+// D282: a plain contract never fails, so a throw that can escape it is
+// EK2003, in a statement, a throw expression, or a match arm, and also under a
+// contextual plain type. A throw its own try catches stays inside it.
 func TestPlainContractThrowHalf(t *testing.T) {
-	source := `export const half = (n: number): number => { if (n < 0) throw "negative"; return n / 2 }`
-	assertPlainContractDiagnostic(t, source, false)
-	for _, projection := range []Projection{Project(source, testContext), Executable(source, testContext)} {
-		if !strings.Contains(projection.Text, `throw "negative"`) {
-			t.Fatal(projection.Text)
-		}
+	for _, source := range []string{
+		`export const half = (n: number): number => { if (n < 0) throw "negative"; return n / 2 }`,
+		`export function orThrow(v: string | undefined): string { return v ?? throw "missing" }`,
+		"export function pick(tag: string): number { return match (tag) { when \"a\": 1; default: throw tag; } }",
+		`export const valid: () => number = () => { throw "negative" }`,
+		`export function rethrows(n: number): number { try { if (n < 0) throw "negative"; return n } catch (e) { throw e } }`,
+	} {
+		assertPlainContractDiagnostic(t, source, true)
+	}
+	for _, source := range []string{
+		`export function clamp(n: number): number { try { if (n > 10) throw "big"; return n } catch (e) { return 10 } }`,
+		`export function inner(): number { function later(): number!string! { throw "later" }; return 1 }`,
+	} {
+		assertPlainContractDiagnostic(t, source, false)
 	}
 }
 
@@ -50,7 +60,6 @@ func TestPlainContractEffectOperations(t *testing.T) {
 func TestPlainContractEffectBoundaries(t *testing.T) {
 	for _, source := range []string{
 		`export function valid(): number { function later() { Effect.log("later"); return 1 }; return 1 }`,
-		`export const valid: () => number = () => { throw "negative" }`,
 		`export function valid(n: number): number { return Math.max(n, 1) }`,
 		`export function valid(): boolean { return Effect.isEffect(1) }`,
 		`export function valid(): number { const log = (s: string): number => s.length; return log("hello") }`,

@@ -1,10 +1,7 @@
 error Bad { cause: unknown }
 
-const parseSync = (text: string): number => {
-  const value = Number(text)
-  if (Number.isNaN(value)) throw new Error("not a number")
-  return value
-}
+// A function that throws JavaScript exceptions is TypeScript (D282).
+import { parseSync } from "./parse.ts"
 
 // A type query reads no value; the function reaches the hatch as an input.
 export function viaTypeQuery(text: string) {

@@ -282,14 +282,14 @@ func (a *analyzer) decide(fn *ast.Node, e expectation) form {
 	if a.isFactory(fn) {
 		return formFactory
 	}
-	if fn.Type() != nil && a.hasPlainContract(fn) && a.canBePlain(fn) {
-		return formPlain // D263: an explicit JavaScript contract keeps its calling convention
+	if fn.Type() != nil && a.hasPlainContract(fn) && a.canBePlain(fn) && !a.hasEscapingFailure(fn) {
+		return formPlain // D67: a plain return annotation keeps its calling convention
 	}
 	plainOrEffect := func() form {
 		if a.hasContract(fn) {
 			return formEffect // D67: an explicit Effect contract is the function's API
 		}
-		if a.canBePlain(fn) && (a.hasPlainContract(fn) || !a.hasEscapingFailure(fn)) {
+		if a.canBePlain(fn) && !a.hasEscapingFailure(fn) {
 			return formPlain
 		}
 		return formEffect
@@ -341,14 +341,14 @@ func (a *analyzer) candidateOf(call *ast.Node) *checker.Signature {
 
 // canBePlain reports whether fn compiles to plain JavaScript (D10): its body
 // runs no Effect, looks up no service, and declares no using (D54).
-// A throw can escape only under a JavaScript contract (D263).
+// No throw can end it: a throw is a typed failure everywhere (D282).
 func (a *analyzer) canBePlain(fn *ast.Node) bool {
 	// D67 keeps callbacks typed as written in their explicit Effect form.
 	if s := a.lambdas[fn]; s != nil && s.typedAsWritten && a.contractOf(fn) != nil {
 		return false // TypeScript gave fn its contract's Effect type (functionExpressionType)
 	}
 	// D147 skips by-name argument bodies; S5-1 keeps returned programs effectful.
-	return !a.forEachRunningCallInBody(fn, a.performs) && (!hasEscapingThrow(fn) || a.hasPlainContract(fn)) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn) && !a.hasProgramReturn(fn)
+	return !a.forEachRunningCallInBody(fn, a.performs) && !hasEscapingThrow(fn) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn) && !a.hasProgramReturn(fn)
 }
 
 // typeInForm returns fn's type in form f, given t, the type TypeScript
@@ -372,7 +372,7 @@ func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Ty
 		// S6-4: an explicit Effect contract already types the body as its
 		// program. The expected Effect position removes only the outer
 		// function, preserving the contract's A/E/R rather than inferring
-		// new channels. D67's Effect-function API and D263's plain form
+		// new channels. D67's Effect-function API and D67's plain form
 		// keep their existing paths above and below.
 		if signatures := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall); len(signatures) == 1 {
 			return a.checker.GetReturnTypeOfSignature(signatures[0])

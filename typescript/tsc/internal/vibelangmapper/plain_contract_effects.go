@@ -2,18 +2,36 @@ package vibelangmapper
 
 import "github.com/microsoft/TypeScript/tsc/internal/ast"
 
-// checkPlainContractEffects enforces D263 independently of throw: a plain
-// contract keeps JavaScript exceptions but cannot run a named Effect operation.
-// Nested functions and by-name arguments own their Effect bodies (D147);
-// constructing either runs nothing in the enclosing function.
+// checkPlainContractEffects enforces D282: a plain contract never fails and
+// needs nothing, so it cannot run a named Effect operation, and a throw that
+// can escape it is a typed failure it cannot have. A throw a try of the same
+// function catches stays inside it; a throw, do, or match expression is part
+// of the function that holds it. Nested functions and by-name arguments own
+// their Effect bodies (D147); constructing either runs nothing in the
+// enclosing function.
 func (p *projector) checkPlainContractEffects(fn *ast.Node) {
 	if fn.Body() == nil {
 		return
 	}
+	caught := map[*ast.Node]bool{} // try blocks whose catch clause handles their throws
 	var visit func(*ast.Node) bool
 	visit = func(node *ast.Node) bool {
+		if invokedForm(node) {
+			return node.Body().ForEachChild(visit)
+		}
 		if ast.IsFunctionLike(node) || ast.IsClassLike(node) {
 			return false
+		}
+		if node.Kind == ast.KindTryStatement && node.AsTryStatement().CatchClause != nil {
+			caught[node.AsTryStatement().TryBlock] = true
+		}
+		if node.Kind == ast.KindThrowStatement && !p.throwCaught(node, fn, caught) {
+			start := p.tokenStart(node)
+			p.diagnostics = append(p.diagnostics, Diagnostic{
+				Start: start, Length: node.End() - start, Code: CodePlainContractEffect,
+				Message: "A function with a plain return contract never fails, so it cannot throw (D282). Write an Effect return contract that names the failure, or throw inside a hatch.",
+			})
+			return true
 		}
 		// A property assignment can inherit a program class too, but is
 		// not itself the deferred expression (D265).
@@ -53,4 +71,32 @@ func (p *projector) plainContractEffectCall(call *ast.Node) bool {
 		return r.returnsEffect(call)
 	}
 	return true
+}
+
+// invokedForm reports whether node is the arrow the parser writes for a throw,
+// do, or match expression and calls where it stands: (() => { … })().
+func invokedForm(node *ast.Node) bool {
+	if node.Kind != ast.KindArrowFunction || len(node.Parameters()) != 0 || node.AsArrowFunction().EqualsGreaterThanToken.Flags&ast.NodeFlagsReparsed == 0 {
+		return false
+	}
+	callee := node.Parent
+	if callee == nil || callee.Kind != ast.KindParenthesizedExpression {
+		return false
+	}
+	call := callee.Parent
+	return call != nil && ast.IsCallExpression(call) && call.Expression() == callee && len(call.Arguments()) == 0
+}
+
+// throwCaught reports whether a try block of fn, one of caught, encloses
+// throw, walking out through throw, do, and match expressions.
+func (p *projector) throwCaught(throw *ast.Node, fn *ast.Node, caught map[*ast.Node]bool) bool {
+	for n := throw.Parent; n != nil && n != fn; n = n.Parent {
+		if caught[n] {
+			return true
+		}
+		if (ast.IsFunctionLike(n) || ast.IsClassLike(n)) && !invokedForm(n) {
+			return false
+		}
+	}
+	return false
 }

@@ -46,8 +46,8 @@ export const inferred = (input: { mutable value: number }, reason: string | null
   return () => { if (reason !== null) throw reason; return snapshot }
 }
 
+// A factory's body never fails (D282): its program fails when it runs.
 export const refuse = (reason: string): Effect.Effect<never, string, never> => {
-  if (reason === "") throw new Error("missing reason")
   return () => { throw reason }
 }
 

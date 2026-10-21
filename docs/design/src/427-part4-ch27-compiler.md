@@ -103,7 +103,7 @@ runs on Effect's fiber, Context, and Scope and adds no scheduler. It checks for
 | --- | --- |
 | `$programs` | Convert collections of program functions |
 | `$catch`, `$finally` | Expected-failure handling and cleanup |
-| `$expected`, `$caught` | Legacy helpers for pre-D260 output; new plain contracts keep JavaScript exceptions |
+| `$expected`, `$caught` | A plain function's typed throw, and its catch's filter that rethrows defects (D54, D282) |
 | `$region`, `$using`, `$fork` | Block-owned scopes, resources, and children |
 | `$service`, `$reference`, `$control` | Service keys, defaults, and control operations |
 | `$trusted`, `$trustedPlain` | Classify listed foreign exceptions |

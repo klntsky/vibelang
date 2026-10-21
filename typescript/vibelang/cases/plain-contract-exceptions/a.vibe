@@ -1,47 +1,55 @@
 import { foreign, tagged } from "./fixtures.js"
 
+export error Empty { value: string }
+
+// D282: a plain function never fails. It may throw what its own catch
+// handles, and the catch receives typed failures with their types.
 export function declared(value: string): string {
   try {
-    if (!value) throw new Error("try")
+    if (!value) throw new Empty({ value })
     return value
   } catch (e) {
-    throw e
+    return e.value === "" ? "empty" : "other"
   } finally {
-    if (value === "finally") throw new Error("finally")
+    steps.push(value)
   }
 }
 
-export const contextual: (text: string) => string = (text) => {
-  if (!text) throw new Error("contextual")
-  return foreign(text)
-}
+const steps: string[] = []
+export const stepsSeen = (): ReadonlyArray<string> => steps
 
+// TypeScript code that a plain function calls keeps its exceptions unchanged.
+export const contextual: (text: string) => string = (text) => foreign(text)
 export const inferred = (text: string) => foreign(text)
 export const callForeign = (text: string): string => foreign(text)
-export const callTagged = (text: string): string => tagged(text)
-export const callBuiltin = (text: string): unknown => JSON.parse(text)
+export const callContextual: (f: () => string) => string = (f) => f()
+
+// Trusted and built-in contracts list typed failures, which a catch receives.
+export const callBuiltin = (text: string): unknown => {
+  try { return JSON.parse(text) } catch (e) { return e.name }
+}
 export const recover = (): string => {
   try { tagged(""); return "unreachable" } catch (e) {
-    // @ts-expect-error JavaScript catches every exception as unknown.
-    const message: string = e
-    return e instanceof SyntaxError ? e.message : "other"
+    const caught: SyntaxError = e
+    return caught.message
   }
 }
 
-export const callContextual: (f: () => string) => string = (f) => f()
+// A throw that can escape needs an Effect contract.
 export class Validator {
-  validate(text: string): string {
-    if (!text) throw new Error("method")
+  validate(text: string): string!Empty! {
+    if (!text) throw new Empty({ value: text })
     return text
   }
 }
 
-export function effectful(): Effect<string, never, never> {
-  Effect.succeed(0)
-  return declared("")
-}
-
-export const half = (n: number): number => {
+export const half = (n: number): number!string! => {
   if (n < 0) throw "negative"
   return n / 2
+}
+
+// A JavaScript exception that escapes into an Effect function is a defect.
+export function effectful(): Effect<string, never, never> {
+  Effect.succeed(0)
+  return callForeign("")
 }

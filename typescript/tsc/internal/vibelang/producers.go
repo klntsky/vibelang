@@ -52,7 +52,7 @@ import (
 
 // isProducer reports whether fn is a producer: a function* declaration or
 // function expression, not async, with a body, in a .vibe file, without
-// a JavaScript iterator return annotation (D271 extends D263 and D26).
+// a JavaScript iterator return annotation (D271, amending D26).
 func isProducer(fn *ast.Node) bool {
 	if fn.Kind != ast.KindFunctionDeclaration && fn.Kind != ast.KindFunctionExpression || fn.Body() == nil {
 		return false
@@ -273,13 +273,13 @@ func (tx *lowering) visitProducer(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
 
-	saved, savedFrame := tx.inEffect, tx.frame
-	tx.inEffect = false // parameter initializers stay plain
+	saved, savedFrame, savedPlain := tx.inEffect, tx.frame, tx.plain
+	tx.inEffect, tx.plain = false, false // parameter initializers stay plain
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	tx.inEffect = true
 	tx.frame = &frame{name: sourceName(node)}
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
-	tx.inEffect, tx.frame = saved, savedFrame
+	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 
 	generator := tx.generatorExpression(node, sourceName(node), f.NewNodeList(nil), body)
 	tx.EmitContext().SetOriginal(generator, node)

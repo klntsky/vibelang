@@ -1,8 +1,9 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-const js = readFileSync(new URL("./out/a.js", import.meta.url), "utf8")
-assert.doesNotMatch(js, /fnUntraced|Effect\.fail|yield\*/)
+import { Effect, Exit } from "effect"
 import { render } from "./out/a.js"
-assert.equal(render(true), "valid")
-assert.throws(() => render(false), { name: "TypeError", message: "invalid" })
+assert.equal(Effect.runSync(render(true)), "valid")
+const exit = Effect.runSyncExit(render(false))
+assert(Exit.isFailure(exit))
+assert.deepEqual(exit.cause.reasons.map((r) => r._tag), ["Die"])
+assert(exit.cause.reasons[0].defect instanceof TypeError)
 console.log("ok")

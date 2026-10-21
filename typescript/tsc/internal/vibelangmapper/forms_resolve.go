@@ -409,8 +409,8 @@ func (r *Resolver) Lambda(fn *ast.Node) Decision {
 		d.Class, d.Provenance, d.Note = cls, FromAnnotation, "return annotation"
 		d.Form = formsFormFor(cls, params, facts)
 		if cls == ClassPlainFn && facts.effectOnly && fn.Flags&ast.NodeFlagsReparsed == 0 {
-			// D263 permits JavaScript throws under a plain contract.
-			// Effect-only statements still require an Effect contract.
+			// checkPlainContractEffects reports a throw that can escape a plain
+			// contract (D282); Effect-only statements require an Effect contract.
 			d.Choice = r.choiceText(d, "its return annotation is plain, but its body uses using or runs a VibeLang statement, which only an Effect function can")
 		}
 		return d
@@ -1338,7 +1338,7 @@ func formsBodyFacts(fn *ast.Node) formsBody {
 				f.pauses = true
 			}
 		case n.Kind == ast.KindThrowStatement:
-			f.pauses = true // a plain contract keeps JavaScript throw (D263)
+			f.pauses = true // a throw is a typed failure (D282)
 		case n.Flags&ast.NodeFlagsVibeLang != 0 && !formsIsTopic(n): // %, a pipe's topic, is a value
 			f.pauses, f.effectOnly = true, true
 		case n.Kind == ast.KindVariableDeclarationList && n.Flags&ast.NodeFlagsUsing != 0:
@@ -2043,7 +2043,7 @@ func (r *Resolver) classOfType(t *ast.Node, depth int) Class {
 // reads (a: A) => B as (a: A) => Effect<B, E, R>, so a lambda passed there
 // is an Effect function. A union with an Effect accepts either form.
 func (r *Resolver) callbackClass(ret *ast.Node) Class {
-	// D263: direct callback types under a plain owner contract keep their
+	// D67: direct callback types under a plain owner contract keep their
 	// JavaScript return types instead of gaining D12's Effect channels.
 	for owner := ret; owner != nil; owner = owner.Parent {
 		if ast.IsFunctionLike(owner) && owner.Body() != nil {
@@ -2165,10 +2165,10 @@ func (r *Resolver) annotatedClass(fn *ast.Node) Class {
 		n = n.Parent
 	}
 	if p := n.Parent; p != nil && p.Kind == ast.KindVariableDeclaration && p.Initializer() == n && p.Type() != nil {
-		// D263 variable contracts use the same local aliases as D147
+		// D67 variable contracts use the same local aliases as D147
 		// callback parameters, while keeping their plain calling convention.
 		if t := r.writtenFunctionType(p.Type()); t != nil {
-			return r.memberClass(t.Type()) // D263: a variable contract is not a D12 callback parameter
+			return r.memberClass(t.Type()) // D67: a variable contract is not a D12 callback parameter
 		}
 		return r.classOfType(p.Type(), 0)
 	}

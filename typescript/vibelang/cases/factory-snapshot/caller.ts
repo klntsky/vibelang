@@ -18,8 +18,5 @@ export function check(): string {
   if (outcome._tag !== "Failure" || outcome.failure !== "late") {
     throw new Error("refusal must fail when run")
   }
-  let threw = false
-  try { refuse("") } catch (e) { threw = e instanceof Error && e.message === "missing reason" }
-  if (!threw) throw new Error("factory validation must throw at the call")
   return "snapshot: 1 (seven forms, twice)"
 }

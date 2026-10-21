@@ -278,7 +278,7 @@ func (a *analyzer) isEffect(fn *ast.Node) bool {
 		return false
 	}
 	a.states[fn] = stateVisiting
-	effect := a.forEachRunningCallInBody(fn, a.performs) || (a.expectsEffect(fn) || hasEscapingThrow(fn)) && !a.hasPlainContract(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn) || declaresUsing(fn) || hasVibeLangStatement(fn) || a.hasStreamLoop(fn)
+	effect := a.forEachRunningCallInBody(fn, a.performs) || a.expectsEffect(fn) && !a.hasPlainContract(fn) || hasEscapingThrow(fn) || a.hasEscapingFailure(fn) || a.hasContract(fn) || declaresUsing(fn) || hasVibeLangStatement(fn) || a.hasStreamLoop(fn)
 	a.states[fn] = core.IfElse(effect, stateEffect, statePure)
 	return effect
 }

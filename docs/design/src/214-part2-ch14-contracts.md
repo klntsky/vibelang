@@ -120,7 +120,7 @@ function inferred(id: string): Effect<infer _, infer _, infer _> {
 
 The name after `infer` is documentation only, not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
 
-Omitting a channel here is an error: neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel is checked as `never` or inferred. A plain return annotation such as `: User` is EK2003 only when a non-method function's body runs an Effect; an eligible plain helper keeps that annotation and compiles to one plain function (D67). Methods, including those implementing JavaScript protocols, are exempt from EK2003 for plain annotations (D74); their expected type and body determine whether they lower to Effects (D92).
+Omitting a channel here is an error: neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel is checked as `never` or inferred. A plain return annotation such as `: User` is EK2003 when a non-method function's body runs an Effect, and when any function's throw can escape, since a plain function never fails (D282); an eligible plain helper keeps that annotation and compiles to one plain function (D67). Methods, including those implementing JavaScript protocols, are exempt from EK2003 for running Effects under plain annotations (D74); their expected type and body determine whether they lower to Effects (D92).
 
 ```ts es
 function find(id: string): Effect<User> {

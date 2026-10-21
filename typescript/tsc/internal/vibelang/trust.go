@@ -496,7 +496,7 @@ func checkTrust(c *checker.Checker, file *ast.SourceFile) {
 
 func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.Node) {
 	if fn := enclosingFunction(call); fn != nil && !a.isSplittable(fn) && !a.isEffect(fn) {
-		return // D263: calls under a plain contract are JavaScript calls
+		return // D282: a plain function's calls of TypeScript code are JavaScript calls
 	}
 	if ast.IsSuperCall(call) || ast.IsImportCall(call) || a.performs(call) || isEffectValueCall(c, call) || isPlatformCallee(c, call) {
 		return

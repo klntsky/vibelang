@@ -20,7 +20,7 @@ start
 true
 ```
 
-`Effect.die` terminates the computation with a defect, preferably an `Error` with a useful message so diagnostics include its stack. A JavaScript exception no contract lists is also a defect. An explicit `throw` in an Effect function, even `throw new Error(...)`, is a typed failure; in a plain-contract function it is a JavaScript exception, a defect only if it escapes into Effect code (D263).
+`Effect.die` terminates the computation with a defect, preferably an `Error` with a useful message so diagnostics include its stack. A JavaScript exception no contract lists is also a defect. An explicit `throw` in an Effect function, even `throw new Error(...)`, is a typed failure; it is a typed failure in a plain-annotated function too, where it may not escape: a plain function never fails (D282). Only a hatch's TypeScript keeps JavaScript's `throw`.
 
 ```vibe
 // run: Console.log(firstLabel(["one"])); Console.log(firstLabel([]))
@@ -38,7 +38,7 @@ one
 No label
 ```
 
-`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, which ordinary catch doesn't see. A try block that runs Effects with E = `never` gets warning EK2004 by default; defects pass through its catch. When callers need recovery, use a typed form: `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect`. A JavaScript catch inside `Effect.gen` sees synchronous exceptions; an Effect catch in `.vibe` follows the expected-failure contract. A plain-contract function keeps JavaScript catch, which receives every exception as `unknown` (D260).
+`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, which ordinary catch doesn't see. A catch whose try block has E = `never` gets warning EK2004 by default; defects pass through it. When callers need recovery, use a typed form: `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect`. A JavaScript catch inside `Effect.gen` sees synchronous exceptions; an Effect catch in `.vibe` follows the expected-failure contract. A plain function's catch follows the same contract (D282).
 
 ## Promoting typed failures to defects
 

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
-const js = readFileSync(new URL("./out/a.js", import.meta.url), "utf8")
-assert.doesNotMatch(js, /fnUntraced|Effect\.fail|yield\*/)
-import { validate } from "./out/a.js"
-assert.equal(validate("x"), "x")
-assert.throws(() => validate(""), { name: "Error", message: "empty" })
+import { Effect, Exit } from "effect"
+import { Empty, validate } from "./out/a.js"
+assert.equal(Effect.runSync(validate("x")), "x")
+const exit = Effect.runSyncExit(validate(""))
+assert(Exit.isFailure(exit))
+assert.deepEqual(exit.cause.reasons.map((r) => r._tag), ["Fail"])
+assert(exit.cause.reasons[0].error instanceof Empty)
 console.log("ok")

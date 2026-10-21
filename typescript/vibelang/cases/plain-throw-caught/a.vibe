@@ -1,0 +1,54 @@
+// D282: throw is a typed failure everywhere, and catch receives typed
+// failures only. A plain function may throw what its own catch handles; it
+// still never fails. An exception from TypeScript code is not a typed
+// failure: it passes through the catch and reaches the caller unchanged.
+import { hostile, tagged } from "./fixtures.js"
+
+export error Invalid { value: string }
+
+export const clamp = (n: number): number => {
+  try {
+    if (n > 10) throw new Invalid({ value: String(n) })
+    return n
+  } catch (e) {
+    const caught: Invalid = e
+    return caught.value.length
+  }
+}
+
+// The catch never sees the TypeError from hostile(): it is a defect.
+export const passesThrough = (n: number): number => {
+  try {
+    if (n < 0) throw new Invalid({ value: String(n) })
+    return hostile(n)
+  } catch (e) {
+    return -1
+  }
+}
+
+// A trusted function's listed failure is a typed failure its catch handles.
+export const parseOr = (text: string): string => {
+  try {
+    return tagged(text)
+  } catch (e) {
+    return e instanceof SyntaxError ? "syntax" : "other"
+  }
+}
+
+// Outside a try, a trusted call in a plain function is a JavaScript call:
+// its exception propagates unchanged.
+export const parse = (text: string): string => tagged(text)
+
+// The same throws under an Effect contract fail the Effect, in every form.
+export function pick(tag: string): number!Invalid {
+  return match (tag) {
+    when "a": 1;
+    when "b": do {
+      if (tag.length > 1) throw new Invalid({ value: tag })
+      2
+    };
+    default: throw new Invalid({ value: tag });
+  }
+}
+
+export const validate = (value: string): string!Invalid! => value === "" ? throw new Invalid({ value }) : value

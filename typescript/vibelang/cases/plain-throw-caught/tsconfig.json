@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "declaration": true,
+    "outDir": "out",
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": [
+    "*.vibe", "*.ts"
+  ]
+}

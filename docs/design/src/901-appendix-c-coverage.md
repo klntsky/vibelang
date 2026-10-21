@@ -45,8 +45,8 @@ On a cause mixing an expected failure and a defect, the Effect operators below k
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Expected errors and defects | Changed | `throw` is expected; an exception no contract lists, `Effect.die`, and `Effect.orDie` are defects (Chapter 3) |
-| A JavaScript `throw` | Changed | A typed failure in an Effect function; a JavaScript exception under a plain contract (D263); `Effect.die(new Error(…))` for a bug in Effect code |
-| A JavaScript `catch` around a throwing call | Changed | Plain contracts keep JavaScript catch; Effect catches handle expected failures only, and EK2004 marks an Effect try with E = `never` (D260) |
+| A JavaScript `throw` | Changed | A typed failure everywhere outside a hatch; a plain-annotated function never fails, so one that can throw needs an Effect contract (D282); `Effect.die(new Error(…))` for a bug in Effect code |
+| A JavaScript `catch` around a throwing call | Changed | Every catch handles expected failures only, in plain functions too (D282); EK2004 marks a catch whose try block has E = `never`; the `try` hatch catches a JavaScript exception |
 | `Data.TaggedError`, `Data.Error`, `Schema.TaggedError` | Changed | `error E { ... }` declares a `TaggedError` class; `Schema.TaggedError` is unchanged |
 | Error tracking in E | Changed | Inferred: what a function throws, plus its callees' E, minus what it catches |
 | `Effect.catch`, `catchTag`, `catchTags`, `catchIf` | Changed | `try`/`catch` with narrowing; the combinators still work with a program |
@@ -230,7 +230,7 @@ On a cause mixing an expected failure and a defect, the Effect operators below k
 | `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
 | `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |
 | Async iterables and event emitters | Unchanged | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
-| Synchronous code that throws | Changed | Plain contracts catch JavaScript exceptions; use `try(…)` for typed Effect failures (D260) |
+| Synchronous code that throws | Changed | An exception from TypeScript code is a defect; use `try(…)` for a typed Effect failure (D282) |
 | Effect 3 libraries | Changed | Foreign code: `try((p) => Effect3.runPromise(p), (error) => …, p)` |
 
 #### C14. Streams

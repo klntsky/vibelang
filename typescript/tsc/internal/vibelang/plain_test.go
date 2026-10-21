@@ -52,8 +52,9 @@ func TestPlainFunctionStopsAtItsOwnBody(t *testing.T) {
 	}
 }
 
-// D263 includes plain contracts supplied by an interface or object context.
-// Throws and explicitly plain callback parameters must not infer an Effect.
+// A plain contract supplied by an interface or an object's context never
+// fails (D282): a method there that throws is EK4301, and its explicitly
+// plain callback parameter infers no Effect.
 func TestInferredPlainMethodContract(t *testing.T) {
 	t.Parallel()
 	fs := bundled.WrapFS(vfstest.FromMap(map[string]string{
@@ -78,7 +79,23 @@ export const object: Plain = {
 		t.Fatalf("tsconfig: %v", errors)
 	}
 	p := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: compiler.NewCompilerHost(fs, bundled.LibPath(), nil, nil, nil)})
+	var failing []string
 	for _, d := range p.GetSemanticDiagnostics(t.Context(), p.GetSourceFile("/main.vibe")) {
-		t.Errorf("plain contract diagnostic: %s", d.String())
+		switch d.Code() {
+		case EK4301.Code:
+			failing = append(failing, d.String())
+		case EK4804.Code:
+			// a global Error has no _tag (lsrules.go)
+		default:
+			t.Errorf("plain contract diagnostic: %s", d.String())
+		}
+	}
+	if len(failing) != 2 {
+		t.Fatalf("EK4301 at %d methods, want both: %v", len(failing), failing)
+	}
+	for _, text := range failing {
+		if !strings.Contains(text, "call can fail with Error, but Plain declares it as a plain function, which never fails.") && !strings.Contains(text, "call can fail with Error, but its contextual type declares it as a plain function, which never fails.") {
+			t.Errorf("EK4301 text: %s", text)
+		}
 	}
 }

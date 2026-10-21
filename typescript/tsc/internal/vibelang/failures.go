@@ -38,9 +38,7 @@ func (a *analyzer) flowOf(node *ast.Node) *effectInfo {
 			info.add(a.provideFlow(n)) // provide Layer { ... } (provide.go)
 		case n.Kind == ast.KindThrowStatement:
 			n.ForEachChild(visit)
-			if !a.hasPlainContract(enclosingFunction(n)) {
-				info.addError(a.thrownType(n), n.Expression())
-			}
+			info.addError(a.thrownType(n), n.Expression()) // a typed failure everywhere outside a hatch (D282)
 		case n.Kind == ast.KindCallExpression && a.getsScope(n):
 			n.ForEachChild(visit)
 			a.addScoped(info, n) // a fork or acquisition in a Scope region (scopes.go)
@@ -192,15 +190,7 @@ func catchVariableType(c *checker.Checker, declaration *ast.Node) *checker.Type 
 	if clause == nil || clause.Kind != ast.KindCatchClause || !inLowerableBody(clause.Parent) || isHandleStatement(clause.Parent) {
 		return nil
 	}
-	a := analyzerFor(c)
-	block := clause.Parent.AsTryStatement().TryBlock
-	info := a.tryBlockFlow(block)
-	// A catch binding can be requested while its owner's plain-function
-	// fixpoint is still exploring. A running call in the try block proves
-	// the Effect form without trusting that provisional plain verdict.
-	if !a.blockRunsEffects(block) && !a.isEffect(ownerFunction(clause)) {
-		return c.GetUnknownType()
-	}
+	info := analyzerFor(c).tryBlockFlow(clause.Parent.AsTryStatement().TryBlock)
 	return c.GetUnionType(info.errors)
 }
 
@@ -230,10 +220,14 @@ func (a *analyzer) blockRunsEffects(block *ast.Node) bool {
 	return visit(block)
 }
 
-// checkDeadCatches reports EK2004 when a try block runs Effects but its E is
-// never (D260). Defects pass through this catch. Plain JavaScript catches
-// accept every exception and need no warning. The warning covers TypeScript's
-// errors about the never binding in an Effect catch.
+// deadCatch is EK2004's text for a catch whose try block runs no Effect and
+// fails with no expected error (D282).
+var deadCatch = EK2004.With("this catch can never run: nothing in its try block fails with an expected error, and a JavaScript exception passes through it as a defect.")
+
+// checkDeadCatches reports EK2004 when a try block's E is never (D260, D282):
+// the catch receives typed failures only, so defects, JavaScript exceptions
+// included, pass through it. The warning covers TypeScript's errors about the
+// never binding.
 func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
@@ -241,8 +235,14 @@ func checkDeadCatches(c *checker.Checker, file *ast.SourceFile) {
 			try := node.AsTryStatement()
 			a := analyzerFor(c)
 			info := a.tryBlockFlow(try.TryBlock)
-			if a.isEffect(ownerFunction(node)) && c.GetUnionType(info.errors).Flags()&checker.TypeFlagsNever != 0 && a.blockRunsEffects(try.TryBlock) {
-				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, try.CatchClause.Pos()), EK2004)
+			if c.GetUnionType(info.errors).Flags()&checker.TypeFlagsNever != 0 {
+				// A catch receives typed failures only, in a plain function too
+				// (D282): a JavaScript exception is a defect that passes through.
+				m := deadCatch
+				if a.blockRunsEffects(try.TryBlock) {
+					m = EK2004
+				}
+				d := reportAt(c, file, scanner.GetRangeOfTokenAtPosition(file, try.CatchClause.Pos()), m)
 				if d != nil {
 					note(d, "Use a form that can fail, such as Option.getOrElse or Schema.decodeUnknownEffect, or bound the call with try.")
 					cover(c, try.CatchClause)

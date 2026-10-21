@@ -66,10 +66,9 @@ function exportWithShortDeadline(id: string) {
   return Effect.timeout(() => exportReport(id), "10 millis")
 }
 
-// An Effect try skips defects (D13, D260); plain functions keep JavaScript catch.
+// A defect is not caught by catch (D13): a JavaScript TypeError is a defect.
 function defectThroughCatch() {
   try {
-    Effect.succeed(undefined)
     const broken: any = undefined
     return broken.name
   } catch (e) {

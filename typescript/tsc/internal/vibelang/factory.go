@@ -258,6 +258,7 @@ func checkFactories(c *checker.Checker, file *ast.SourceFile) {
 				d := report(c, list, EK2115, name, "using")
 				note(d, "Move using into the returned program: return () => { … }.")
 			}
+			a.reportFactoryFailures(file, fn, name) // D282 (plain_failures.go)
 			if hasVibeLangStatement(fn) || a.hasStreamLoop(fn) {
 				d := report(c, fn.Body(), EK2115, name, "this Effect statement")
 				note(d, "Move it into the returned program: return () => { … }.")

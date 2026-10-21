@@ -242,8 +242,8 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK1010 | An unparenthesized throw expression is a binary operator's left operand (except comma), a conditional's condition, or the operand of `as` or `satisfies` (D186) | Write `throw (…)` to throw the whole expression | 3 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
-| EK2003 | An Effect return annotation with missing channel slots, or a plain annotation on a non-method function whose body runs an Effect (D67, D74) | For `Effect<T>`: `T!!` or no annotation; for a bare `T`: `T!!` or `T!Errors` | 14 |
-| EK2004 | Warning by default: an Effect try block with E = `never`, or a catch expression with no expected errors; defects pass through (D238, D260) | Use the form that can fail, or `try` | 3 |
+| EK2003 | An Effect return annotation with missing channel slots, a plain annotation on a non-method function whose body runs an Effect (D67, D74), or a plain annotation on a function whose throw can escape (D282) | For `Effect<T>`: `T!!` or no annotation; for a bare `T`: `T!!` or `T!Errors`; for an escaping throw, a quick fix writes `T!E!`, or a hatch keeps JavaScript's throw | 14 |
+| EK2004 | Warning by default: a catch whose try block has E = `never`, in an Effect or a plain function, or a catch expression with no expected errors; defects, JavaScript exceptions included, pass through (D238, D260, D282) | Use the form that can fail, or `try` | 3 |
 | EK2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |
 | EK2101 | A declaration without a body that has no full contract | Write `T!Errors!Dependencies`, or `T!!` | 14 |
@@ -259,7 +259,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK2112 | Warning: a catch clause that tests a failure's type, `catch (e: NotFound)`, retired (D216) | `catch (e)` and test `e` with `match` or `is`; the quick fix rewrites the clauses | 3 |
 | EK2113 | Warning: a catch clause typed `Cause`, retired (D217) | `match (exit(…))` with `Exit.Success` and `Exit.Failure` arms; the quick fix rewrites `try { return X } catch (c: Cause) { return Y }` | 3 |
 | EK2114 | A catch expression, `x catch y` or `x catch (e) => …`, inside a hatch body, which is plain TypeScript (D239) | Move the catch out of the hatch, or use a try statement inside it | 3 |
-| EK2115 | A factory body runs an Effect or looks up a service (D269) | Move the work into `return () => { … }`; hold a forwarding call in an Effect-typed const before returning it | 5, 13 |
+| EK2115 | A factory body runs an Effect, looks up a service (D269), or throws (D282) | Move the work into `return () => { … }`; hold a forwarding call in an Effect-typed const before returning it | 5, 13 |
 | EK2116 | A factory returns a program on one path and a value or nothing on another (D269) | Return `() => value` or `() => { throw error }` on every returning path | 5, 13 |
 | EK2120 | Warning: a `service class` or `control class` declaration, the old spelling (D223) | Write `service` or `control` without `class`; the quick fix removes `class` | 4 |
 | EK2121 | Warning: a `layer` declaration, the old spelling (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |

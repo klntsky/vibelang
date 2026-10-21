@@ -24,8 +24,9 @@ import (
 // The generated code tests instanceof against each class. It imports a class
 // from the module this file imports it, or the trusted function, from
 // (reachClass); a global class such as SyntaxError needs no import. In a
-// callback that compiles to plain JavaScript, the call stays an ordinary call
-// and its exceptions propagate as JavaScript exceptions (D263).
+// function with a plain contract, outside a try whose catch belongs to it,
+// the call stays an ordinary call and its exceptions propagate as JavaScript
+// exceptions (D282).
 
 // trustedPlan records the calls whose expected failures the lowering
 // converts.
@@ -84,8 +85,11 @@ func (a *analyzer) expectedFailures(call *ast.Node) []failure {
 	// Trust first: a call to VibeLang code has no contract of its own, so
 	// this never asks whether a .vibe callee is an Effect.
 	t := callTrust(a.checker, call)
-	if len(t.failures) == 0 || t.promise || a.hasPlainContract(enclosingFunction(call)) || a.performs(call) {
+	if len(t.failures) == 0 || t.promise || a.performs(call) {
 		return nil
+	}
+	if a.hasPlainContract(enclosingFunction(call)) && !inCatchingTry(call) {
+		return nil // D282: a plain function's call of TypeScript code is a JavaScript call
 	}
 	return t.failures
 }
@@ -175,6 +179,15 @@ func (tx *lowering) visitTrustedCall(node *ast.Node) *ast.Node {
 	tx.EmitContext().SetOriginal(run, node)
 	tx.EmitContext().AssignCommentAndSourceMapRanges(run, node)
 	return run
+}
+
+// visitTrustedPlainCall turns a call with expected failures in a function
+// that compiles to plain JavaScript into `runtime.$trustedPlain(thunk, [classes])`.
+func (tx *lowering) visitTrustedPlainCall(node *ast.Node) *ast.Node {
+	call := tx.runtimeCall("$trustedPlain", tx.trustedThunk(node), tx.classArray(node))
+	tx.EmitContext().SetOriginal(call, node)
+	tx.EmitContext().AssignCommentAndSourceMapRanges(call, node)
+	return call
 }
 
 func (tx *lowering) classArray(node *ast.Node) *ast.Node {

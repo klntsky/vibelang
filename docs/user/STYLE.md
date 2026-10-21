@@ -14,7 +14,7 @@ Read the VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md`: every for
 
 - Calls run; a call returning anything but `Effect` itself returns data, such as a `Config`, an `Exit`, a key or an error (D24). A parameter that expects a program takes a call by name (D147), and collections of programs convert (D49).
 - A service is a `service` declaration with bodiless members (D128, D223): `Users.find(id)` adds `Users` to R and `Users()` returns the implementation (D41). A layer is `Layer.effect(Users) { ... }` or `Layer.succeed(Users, { ... })` (D221), not a service class.
-- `catch` receives expected failures only, the first of several (D13, D28); defects, such as `Option.getOrThrow`'s, pass through, and a try block that runs Effects with E = `never` warns EK2004 (D260).
+- `catch` receives expected failures only, the first of several (D13, D28); defects, such as `Option.getOrThrow`'s, pass through, and a catch whose try block has E = `never` warns EK2004 (D260); a plain function's catch follows the same rule, and a throw is a typed failure everywhere outside a hatch, so a plain-annotated function never fails (D282).
 - Effect's root exports need no import (D146); `Scope` is in the prelude (D48).
 - Effect's own packages are trusted, so their throws are defects (D22); other TypeScript is trusted by `trustedPackages` or `trusted(impl, [Errors])` (D261, D249), or called through a hatch.
 - Runners run only where no fiber runs the code (D38); `.vibe` tests use `it.effect` or `it.live`, and Promise-style tests stay in `.ts`.

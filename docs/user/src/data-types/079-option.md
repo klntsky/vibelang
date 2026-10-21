@@ -106,7 +106,7 @@ known
 true false
 ```
 
-`getOrElse` computes its fallback only for `None`; `getOrNull` and `getOrUndefined` suit APIs that expect nullish values. `getOrThrow` throws a defect on `None` that an Effect catch does not handle, though a plain-contract function can catch the JavaScript exception as `unknown`; when absence is expected rather than a programming error, prefer a guard, a default, or `Effect.fromOption`. EK2004 warns only when a try block runs Effects with E = `never`, and says defects pass through its catch (D260).
+`getOrElse` computes its fallback only for `None`; `getOrNull` and `getOrUndefined` suit APIs that expect nullish values. `getOrThrow` throws a defect on `None` that no catch handles, in a plain function either (D282); when absence is expected rather than a programming error, prefer a guard, a default, or `Effect.fromOption`. EK2004 warns at a catch whose try block has E = `never`, and says defects pass through it.
 
 ## Choosing fallback options
 

@@ -69,12 +69,17 @@ func checkCallbacks(c *checker.Checker, file *ast.SourceFile) {
 							}
 						}
 					}
+				} else {
+					call, _ := ownerCall(node)
+					a.reportFailingCallback(file, node, call) // D282 (plain_failures.go)
 				}
 			}
 		case node.Kind == ast.KindMethodDeclaration && isLowerable(node):
 			if owner := a.plainMemberOwner(node); owner != "" {
 				if pause := a.pauseText(file, node); pause != "" {
 					report(c, node.Name(), pausingMethod, nodeText(file, node.Name()), pause, owner)
+				} else {
+					a.reportFailingMethod(file, node, owner) // D282 (plain_failures.go)
 				}
 			}
 		case node.Kind == ast.KindIdentifier:

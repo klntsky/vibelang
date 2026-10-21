@@ -1,3 +1,6 @@
-# D263: A-1
+# D282: A-1
 
-Regression from Smithers twin finding A-1. A plain contract retains its JavaScript return type, calls, and exceptions. The runner checks synchronous behavior, declaration output, and the absence of Effect lowering.
+Smithers twin finding A-1 wrote a synchronous validator that throws under a
+plain annotation. Under D282 a plain function never fails, so the validator is
+an Effect function whose throw is a typed failure. The plain-annotated form is
+EK2003 (`plain-throw-escapes.fail`).

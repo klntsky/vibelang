@@ -1,5 +1,8 @@
-// D260: plain contracts retain JavaScript catch, including exceptions from
-// coercion, property access, revoked proxies, and prototype lookup.
+// D282 (amends D260): a plain function's catch receives typed failures only.
+// The exceptions from coercion, a getter, a revoked proxy, and a prototype
+// lookup are JavaScript exceptions, so each passes through its catch
+// unchanged, and EK2004 says the catch can never run. JSON.parse's shipped
+// contract makes its SyntaxError a typed failure, which the catch receives.
 import { primitive, getter, revoked, prototype } from "./fixtures.js"
 
 export const f = (x: unknown): string => {
@@ -10,25 +13,21 @@ export const f = (x: unknown): string => {
   }
 }
 
-const messageOf = (x: { message: string }) => {
+export const messageOf = (x: { message: string }): string => {
   try { return x.message } catch (e) {
-    // @ts-expect-error A plain catch receives unknown, not never or a typed failure.
-    const text: string = e
-    return ""
+    return "never"
   }
 }
 
-const prototypeOf = (x: object): string => {
+export const prototypeOf = (x: object): string => {
   try { Object.getPrototypeOf(x); return "ok" } catch { return "" }
 }
 
-const parseOr = (text: string): string => {
+export const parseOr = (text: string): string => {
   try { JSON.parse(text); return "parsed" } catch (e) {
-    return e instanceof SyntaxError ? "syntax" : "other"
+    const caught: SyntaxError = e
+    return caught instanceof SyntaxError ? "syntax" : "other"
   }
 }
 
-// expect-result: ["","","","","syntax"]
-export function main() {
-  return [f(primitive), messageOf(getter), f(revoked), prototypeOf(prototype), parseOr("{")]
-}
+export { primitive, getter, revoked, prototype }

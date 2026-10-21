@@ -1,1 +1,2 @@
 this try block runs Effects but has no expected errors; defects pass through this catch.
+this catch can never run: nothing in its try block fails with an expected error, and a JavaScript exception passes through it as a defect.

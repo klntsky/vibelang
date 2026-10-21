@@ -22,11 +22,11 @@ func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 	ec := tx.EmitContext()
 	name := node.Name().Text()
 
-	saved := tx.inEffect
-	tx.inEffect = false // JavaScript try/catch stays intact (D260)
+	saved, savedPlain := tx.inEffect, tx.plain
+	tx.inEffect, tx.plain = false, true // its catch clauses rethrow defects (D54)
 	parameters := ec.VisitParameters(node.ParameterList(), tx.Visitor())
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
-	tx.inEffect = saved
+	tx.inEffect, tx.plain = saved, savedPlain
 
 	var modifiers *ast.ModifierList
 	if ast.HasSyntacticModifier(node, ast.ModifierFlagsExport) {

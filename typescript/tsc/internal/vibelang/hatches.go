@@ -357,10 +357,10 @@ func (tx *lowering) visitHatchCall(node *ast.Node) *ast.Node {
 	form := tx.plan.hatches[node]
 	f := tx.Factory()
 	arguments := node.Arguments()
-	saved := tx.inEffect
-	tx.inEffect = false
+	saved, savedPlain := tx.inEffect, tx.plain
+	tx.inEffect, tx.plain = false, false
 	body := tx.Visitor().VisitNode(arguments[0])
-	tx.inEffect = saved
+	tx.inEffect, tx.plain = saved, savedPlain
 	rest := arguments[1:]
 	var mapper *ast.Node
 	if form.mapper && len(rest) > 0 {

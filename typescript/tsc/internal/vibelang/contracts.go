@@ -22,8 +22,9 @@ import (
 // A channel written `infer Name` comes from the body (D57). The signature's
 // return type holds what was inferred, so callers and declaration files see
 // the full contract. A return annotation that leaves a channel out, such as
-// Effect<User>, is EK2003. A non-Effect annotation is a JavaScript contract
-// (D263); running an Effect under that contract is EK2003.
+// Effect<User>, is EK2003. A non-Effect annotation makes a plain function,
+// which never fails and needs nothing (D67, D282): a failure that can escape
+// it, or an Effect it runs, is EK2003 (plain_failures.go).
 
 func init() {
 	fileChecks = append(fileChecks, checkContracts)
@@ -85,8 +86,8 @@ func (a *analyzer) hasContract(fn *ast.Node) bool {
 	return a.contractOf(fn) != nil
 }
 
-// hasPlainContract identifies a JavaScript contract without inspecting the
-// body (D263). In particular, asking about a callback parameter must not
+// hasPlainContract identifies a plain contract without inspecting the body
+// (D67, D282). In particular, asking about a callback parameter must not
 // first lift that parameter under D12 and then infer an Effect from its call.
 func (a *analyzer) hasPlainContract(fn *ast.Node) bool {
 	if fn == nil || !isLowerable(fn) || isProducer(fn) {
@@ -234,6 +235,9 @@ func (a *analyzer) checkContract(file *ast.SourceFile, fn *ast.Node) {
 	k := a.contractOf(fn)
 	switch {
 	case k == nil:
+		if a.reportFailingPlainContract(fn) {
+			return // D282: a plain function never fails
+		}
 		// A plain annotation keeps its type on a function that compiles to
 		// plain JavaScript (D67). On one whose body runs an Effect it is not
 		// what the function returns. A method that implements a plain-function

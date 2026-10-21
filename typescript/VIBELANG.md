@@ -98,14 +98,17 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `failures-throw` | `throw` is `Effect.fail`: a throw alone makes a function an Effect, the thrown type joins E (`throw "bad"` adds `string`), a `catch` narrows the caught union by `instanceof` and `_tag` and rethrows, and the `.d.ts` declares each E |
 | `catch-tag-exhaustive`, `catch-tag-partial.fail` | Smithers A-15: exhaustive literal tag patterns remove Schema, Data and declared errors from E, including catch expressions; partial matches preserve unnamed failures |
 | `failures-causes` | `catch` skips a defect, a mixed cause, and an interruption (D13); `finally` runs on each, and a failing `finally` keeps both failures (D15) |
-| `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` receives every exception as `unknown` (D260) |
-| `ek2004-dead-catch.fail` | An Effect `try` block with E = `never` is EK2004 (defects pass through), which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported |
-| `plain-contract-validate`, `plain-contract-render`, `plain-contract-callback` | Smithers A-1, B-4, E-1: plain contracts preserve synchronous throws, callback calls, and declaration types (D263) |
+| `failures-plain` | A function that runs no Effect and catches its own throws stays plain JavaScript, with JavaScript's `try`; its `catch` still sees expected failures only, and a TypeError passes through it (D54, D282) |
+| `ek2004-dead-catch.fail` | A catch whose `try` block has E = `never` is EK2004, in an Effect function and in a plain one (defects pass through), which `compilerOptions.vibelang` makes an error here; a live `catch` is not reported (D282) |
+| `plain-contract-validate`, `plain-contract-render`, `plain-contract-callback` | Smithers A-1, B-4, E-1 under D282: A-1's throwing validator is an Effect function, `string!Empty!`; B-4 keeps JavaScript's throw inside `sync` under `string!!`; E-1's plain callback calls keep their exceptions and declaration types |
 | `conditional-record`, `conditional-record-environment`, `conditional-record-inexact.fail` | Smithers E-15: paired TypeScript/VibeLang conditional records compile and stay plain under `exactOptionalPropertyTypes`; without it, both report TS2322 on the inferred optional `undefined` properties |
-| `plain-contract-exceptions` | Plain declarations, contextual lambdas, methods, and imports preserve exceptions; escaping into an Effect caller creates a defect (D263) |
-| `plain-contract-effect.fail` | Running an Effect under a plain contract remains EK2003 (D263) |
-| `plain-catch-exceptions` | Plain catches recover coercion, getter, revoked Proxy, and prototype-lookup exceptions, and trusted built-in calls keep their original exception values (D260) |
-| `ek2004-defect` | An Effect try with E = `never` warns with the new EK2004 text and still propagates a defect (D260) |
+| `plain-contract-exceptions` | A plain function throws only what its catch handles, which receives typed failures with their types, `JSON.parse`'s and a trusted call's included; exceptions from TypeScript it calls propagate unchanged and become defects in an Effect caller; a method or function that can throw takes an Effect contract (D282) |
+| `plain-contract-effect.fail` | Running an Effect under a plain contract remains EK2003 |
+| `plain-catch-exceptions` | Coercion, getter, revoked Proxy, and prototype-lookup exceptions pass through a plain function's catch unchanged, with EK2004 at each catch; `JSON.parse`'s `SyntaxError` is a typed failure the catch receives (D282) |
+| `plain-throw-escapes.fail` | A throw that can escape a plain-annotated function is EK2003, with the contract that fixes it: a throw statement, a throw expression, a throwing `match` arm and `do` block, a method, and a rethrow; a plain callback that throws is EK4301 (D282) |
+| `plain-throw-caught` | A plain function's catch handles its own throws and a trusted call's failure and returns a value; a TypeScript exception passes through it; under an Effect contract, throws in every form fail the Effect (D282) |
+| `factory-body-throw.fail` | A throw in a factory's call-time body is EK2115: the returned program fails instead (D269, D282) |
+| `ek2004-defect` | An Effect try with E = `never` warns that defects pass through and still propagates a defect (D260) |
 | `noemit-on-error` | Warning-only projects emit under `noEmitOnError`; errors and mixed warning/error projects do not, in both project and build mode (six checks) |
 | `contracts` | Written contracts: returns checked against A, a contract wider than the body, a contract on a body that runs nothing, `infer` in each channel (D57), and the `.d.ts` with the inferred channels filled in |
 | `contract-wider-callers` | A caller sees a contract wider than a body that runs nothing: callers of `Effect<number, Gone, Needed>` and `number!Gone!Needed` take `Gone` and `Needed`, and `number!!` keeps the plain path (Chapter 15) |
@@ -113,7 +116,7 @@ Each case gets two symlinks in its `node_modules`: `effect`, from `$EFFECT_NODE_
 | `contracts-success.fail` | A returned value that A does not accept is TypeScript's TS2322 |
 | `ek2001-escaping-failure.fail` | A failure from a call and one from a `throw` escape their contracts; a `catch` keeps a third function within its contract |
 | `ek2002-escaping-requirement.fail` | A service the body needs escapes the contract's R |
-| `ek2003-bare-return.fail` | A plain return annotation is EK2003 on a function that runs an Effect; JavaScript throws and plain calls keep the plain contract (D263) |
+| `ek2003-bare-return.fail` | A plain return annotation is EK2003 on a function that runs an Effect; plain calls keep the plain contract |
 | `ek2003-missing-channels.fail` | `Effect<string>` and `Effect<string, UserNotFound>` leave channels out |
 | `recursion` | `isOdd` and `isEven` call each other under written contracts, a caller outside reads them, and a self-recursive `totalSize` writes its contract too |
 | `recursive-contract-lambdas` | Smithers D-5, A-7, and S11-1, which crashed the checker: lambdas with Effect contracts that call themselves through a raced map of branch programs, a `catch` handler with a by-name caller, a call before the first Effect operation, a local lambda inside a program, a lambda used as a value, a `throw` after the recursive call, and a block-param body are Effect functions; a pure recursive lambda with a contract is one too, and one with a plain annotation stays plain |
@@ -648,16 +651,16 @@ The checks so far:
 | EK1005 | The callee of a runner in code a fiber runs | `runners.go` |
 | EK2001 | The call or `throw` that adds an expected failure the function's contract does not allow | `contracts.go` |
 | EK2002 | The call that adds a requirement the function's contract does not allow | `contracts.go` |
-| EK2003 | A return annotation that leaves a contract channel out, or a plain return annotation on a function whose body runs an Effect | `contracts.go` |
-| EK2004 | The `catch` keyword, when the `try` block runs Effects with E = `never`; defects pass through (D260); covers TypeScript's errors about the `never` caught value | `failures.go` |
+| EK2003 | A return annotation that leaves a contract channel out, a plain return annotation on a function whose body runs an Effect, or one on a function whose throw can escape, with a quick fix that writes `A!E!` (D282) | `contracts.go`, `plain_failures.go` |
+| EK2004 | The `catch` keyword, when the `try` block has E = `never`, in an Effect function or a plain one; defects pass through (D260, D282); covers TypeScript's errors about the `never` caught value | `failures.go` |
 | EK2005 | The program passed to `resumeWith` when it needs a service or fails with an error the operation does not declare (D17); covers TypeScript's TS2345 there | `handlers.go` |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript would discard the failure in flight | `regions.go` |
 | EK2102 | The name of an Effect function on a call cycle whose A TypeScript cannot infer because it depends on the function's own result, covering TS7022, TS7023, and TS7024 there; a `catch` variable, or a function, on a cycle that the checker typed before the cycle's E and R were known | `recursion.go` |
-| EK2115 | An Effect operation or service lookup in a factory's call-time body | `factory.go` |
+| EK2115 | An Effect operation, a service lookup, or a throw in a factory's call-time body (D282) | `factory.go`, `plain_failures.go` |
 | EK2116 | A factory's return that is not a program, or its implicit return | `factory.go` |
 | EK4201 | A control operation that a combinator runs on another fiber: at its perform site in the argument, else at the argument; and a producer that performs one, passed to a function that runs it as a Stream | `reach.go` |
 | EK4202 | The callee, when a function declared outside VibeLang declares a control operation in its requirements (D20) | `reach.go` |
-| EK4301 | A lambda that can pause where a plain function is expected, naming the first call that pauses and the function that calls it; a `.vibe` function passed by name that can pause; a method that implements a plain function member and pauses (D55). The fix names `Effect.forEach` | `callbacks.go` |
+| EK4301 | A lambda that can pause or fail where a plain function is expected, naming the first call that pauses or the failures and the function that calls it; a `.vibe` function passed by name that can pause; a method that implements a plain function member and pauses or fails (D55, D282). The fix names `Effect.forEach` | `callbacks.go`, `plain_failures.go` |
 | EK4401 | The callee of a call to a function without a trust level, in code a fiber runs and outside a boundary | `trust.go` |
 | EK4402 | Where code runs a platform API (D108): the callee of a call, `new`, or tagged template, or the property read, whose root is a binding imported from a platform module or a platform global; inside boundaries and at the top level too. It covers TypeScript's "cannot find name" for an unresolved platform global it reports | `platform.go` |
 | EK4403 | A clock or randomness read, everywhere in a `.vibe` file | `platform.go` |
@@ -822,7 +825,7 @@ The arrows are VibeLang lambdas whose parameter types expect Effects, so they lo
 
 ### Regions in plain functions
 
-A function with a plain contract keeps JavaScript's `try`, `catch`, `finally`, and `throw` (D260, amending D54). Its catch receives every exception from its try block as `unknown`, including exceptions from getters, coercion, proxies, and prototype lookup. The compiler adds no `$caught` filter, `$expected` wrapper, or trusted-call wrapper there. An exception becomes a defect only if it escapes the plain function into an Effect caller. An Effect region still handles expected failures only; EK2004 warns when its try block runs Effects with E = `never` and says defects pass through.
+A function that compiles to plain JavaScript keeps JavaScript's `try`, `catch`, and `finally` statements, and they keep VibeLang's meaning (D54, D282). Its throws are typed failures that its own catch handles: the lowering writes `throw $expected(e)`, a trusted call inside such a try `$trustedPlain(() => call, [classes])`, and starts each catch with `e = $caught(e)`, which returns the expected failure and rethrows anything else. An exception from getters, coercion, proxies, prototype lookup, or TypeScript code with no contract is therefore a defect that passes through the catch unchanged, and a trusted call outside the function's own try is an ordinary JavaScript call. A throw that can escape the function makes it an Effect, and under a plain return annotation that is EK2003 (`plain_failures.go`). An Effect region also handles expected failures only. EK2004 warns at every catch whose try block has E = `never`: when the block runs Effects it says defects pass through, otherwise that the catch can never run.
 
 `regions.go` holds the machinery as an API for every region kind: Scope regions ([Scope regions: using and fork](#scope-regions-using-and-fork)) use it, and so will loops over producers (F7):
 
@@ -849,7 +852,7 @@ The return type annotation of a `.vibe` function with a body is the function's c
 | A channel written `infer Name` comes from the body (D57) | The annotated return type hook completes the signature's return type: A as TypeScript infers a return type (`GetReturnTypeFromBody`), E and R from `effectOf`. The infer type hook keeps `checkInferType` from reporting TS1338 and the unused name; the binder already declares such a name in no scope |
 | The declaration file carries the full contract | An annotation with an `infer` channel is not copied: the declaration type annotation hook makes the emitter serialize the signature's return type. A full contract is copied, and the prelude's declaration-file imports make its `Effect` portable |
 | A contract that leaves a channel out is EK2003 | `Effect<User>` and `Effect<User, UserNotFound>`, with both fixes: the missing channels as `never`, or as `infer` |
-| A plain return annotation keeps its type on a function that compiles to plain JavaScript (D67) | On a function whose body runs an Effect, throws past its own `catch`, or makes a trusted call whose failures escape, it is EK2003. Methods are exempt: a method that implements a plain-function member is declared with a plain type (D55) |
+| A plain return annotation keeps its type on a function that compiles to plain JavaScript (D67) | On a function whose body runs an Effect, or throws past its own `catch` (D282, on a method too), it is EK2003. A method without an annotation that implements a plain-function member is checked against that member (D55): one that can fail is EK4301 |
 | A caller sees the contract, not the body | `addCall` reads a callee's E and R from its contract when the contract infers neither; a callee whose contract infers a channel is read through its body, which never asks for a return type that a call cycle may be computing |
 
 ```text
@@ -990,7 +993,7 @@ A control type is the type of a class that `classKindOf` calls a control class; 
 
 ### Producers (D26)
 
-A `function*` declaration or function expression in a `.vibe` file is a producer (`isProducer`, D26), unless it has an explicit JavaScript iterator return annotation (D271 extends D263). `Generator`, `Iterator`, `IterableIterator`, `Iterable`, `AsyncGenerator`, `AsyncIterator`, `AsyncIterableIterator`, and `AsyncIterable` annotations keep TypeScript's generator, including JavaScript `yield`, `.next()`, spread, delegation and async `for await` iteration. Unannotated generators and Stream-annotated generators keep the stream-producer form. Its body is an Effect body, as any `.vibe` function's is, so its calls run; `yield v` performs the built-in Yield operation, and `yield* p` yields every element of another producer, a Stream, or an iterable. Calling a producer runs none of its body: it returns a Stream that carries the body. Generator methods, `*items() { … }`, stay JavaScript's generators.
+A `function*` declaration or function expression in a `.vibe` file is a producer (`isProducer`, D26), unless it has an explicit JavaScript iterator return annotation (D271). `Generator`, `Iterator`, `IterableIterator`, `Iterable`, `AsyncGenerator`, `AsyncIterator`, `AsyncIterableIterator`, and `AsyncIterable` annotations keep TypeScript's generator, including JavaScript `yield`, `.next()`, spread, delegation and async `for await` iteration. Unannotated generators and Stream-annotated generators keep the stream-producer form. Its body is an Effect body, as any `.vibe` function's is, so its calls run; `yield v` performs the built-in Yield operation, and `yield* p` yields every element of another producer, a Stream, or an iterable. Calling a producer runs none of its body: it returns a Stream that carries the body. Generator methods, `*items() { … }`, stay JavaScript's generators.
 
 ```ts
 // lines.vibe                                 // lines.js
@@ -1221,7 +1224,7 @@ function port(text: string) {           const port = Effect.fnUntraced(function*
 }                                       });
 ```
 
-The listed classes join E (`addFailures`, from `flowOf`), and a call whose failures can end a function makes it an Effect (`hasEscapingFailure`, which D10's fixpoint asks too). In a function that compiles to plain JavaScript, including a plain callback such as one `Array.prototype.map` calls, a trusted call stays an ordinary JavaScript call (D260). Its catch receives any exception unchanged as `unknown`; an exception becomes a defect only when it escapes into an Effect caller. When an operand runs an Effect, the operands are evaluated first, in order, and passed to the thunk: `((receiver, args) => () => receiver.m(...args))(yield* r(), [yield* x()])`.
+The listed classes join E (`addFailures`, from `flowOf`), and a call whose failures can end a function makes it an Effect (`hasEscapingFailure`, which D10's fixpoint asks too). In a function that compiles to plain JavaScript, a trusted call inside a try whose catch belongs to the function runs through `$trustedPlain`, so that catch receives its listed failures with their types (D282). Outside such a try, including in a plain callback such as one `Array.prototype.map` calls, it stays an ordinary JavaScript call whose exceptions propagate unchanged. When an operand runs an Effect, the operands are evaluated first, in order, and passed to the thunk: `((receiver, args) => () => receiver.m(...args))(yield* r(), [yield* x()])`.
 
 The generated code imports each class from a module the `.vibe` file imports that exports it, usually the one it imports the trusted function from: `import { PortError } from "./parsers.ts"`. A global class such as `SyntaxError` needs no import. A class that no imported module exports is EK4401 (`reachClass`). The code is `trust_lower.go`.
 
@@ -1423,7 +1426,7 @@ Language server, `scripts/bench/lsp.mjs` on the chain shape (open the last modul
 - EK4201 knows effect's forking combinators by name and any call by its `concurrency` option; a TypeScript wrapper around a fork is EK4202 only when its declared requirements name the control operation. A producer stored in a variable and then passed to a Stream function is not EK4201.
 - `this` in a producer is the function's, but `arguments` is the body generator's. A `for (using x of producer)` loop takes JavaScript's `for...of`, so it cannot iterate a producer.
 - EK3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.
-- A trusted call's expected failures are defects inside a callback that compiles to plain JavaScript, such as one `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback EK4301.
+- A trusted call's expected failures are JavaScript exceptions inside a plain function outside its own try, such as a callback `Array.prototype.map` calls, where D9 and D10 read strictly would make the callback EK4301 (D282).
 - Runners are known by their declarations in `effect`, `@effect/platform-node`, `@effect/platform-bun`, and `@effect/vitest`; a function that wraps one is not a runner. EK4402's globals are a fixed list (`platformGlobals`), so a platform global outside it, such as `postMessage` or `BroadcastChannel`, is not reported.
 - EK4402 follows a platform API by its import or global name. A platform function reached through a local alias, a destructured namespace member, a parameter, or an object that a platform call returned is not reported, and as a call to a platform package it is not EK4401 either.
 - Declaration files carry no JSDoc metadata for `$direct` variants (Chapter 27), so code compiled against a `.d.ts` runs a plain function's Effect form, which is correct and slower.

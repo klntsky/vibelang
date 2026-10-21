@@ -1,8 +1,9 @@
-// expect: EK2004 EK2004
-// An Effect try block with E = never warns that defects pass through (D260):
-// Option.getOrThrow's exception is a defect. EK2004 is a warning by default;
-// this project makes it an error. TypeScript's complaint about e._tag on
-// never is covered.
+// expect: EK2004 EK2004 EK2004 EK2004
+// A catch receives typed failures only (D13, D282), so a catch whose try
+// block fails with no expected error can never run: Option.getOrThrow's
+// exception and a JavaScript TypeError are defects that pass through it.
+// EK2004 is a warning by default; this project makes it an error.
+// TypeScript's complaint about e._tag on never is covered.
 import { Console, Data, Effect, Option } from "effect"
 
 class Missing extends Data.TaggedError("Missing")<{}> {}
@@ -16,7 +17,7 @@ function firstAdmin(names: ReadonlyArray<string>) {
   }
 }
 
-// A plain function keeps JavaScript catch and receives no EK2004.
+// A plain function's catch receives typed failures only too (D282).
 function parse(text: string) {
   try {
     return text.length
@@ -48,7 +49,7 @@ function annotatedCall() {
   }
 }
 
-// Even in an Effect function, a plain try block does not get EK2004.
+// In an Effect function, a try block that fails with nothing is dead as well.
 function plainBlock() {
   Effect.succeed(0)
   try { return "ok" } catch { return "fallback" }

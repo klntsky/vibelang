@@ -28,12 +28,12 @@ export const area = Effect.fnUntraced(function* (w: number, h: number) {
 
 #### The rule
 
-A function with a plain contract, from an explicit non-Effect return annotation or inferred by the checker, is JavaScript (D263). Its `throw` statements, inside or outside `try`, throw JavaScript exceptions. Calls returning non-Effect values, including callback parameters and trusted or untrusted TypeScript imports, are ordinary calls needing no trust boundary. Its `.d.ts` keeps the plain return type. Exceptions become defects only where they escape into an effectful caller. Running an Effect under a plain contract remains EK2003.
+A function with a plain contract, from an explicit non-Effect return annotation or a plain callback type its context gives it, is JavaScript because it never fails and needs nothing (D282). `throw` is a typed failure there as everywhere outside a hatch: one that can escape is EK2003 under an annotation and EK4301 for a callback, and the function may throw what its own `catch` handles. Calls of TypeScript code, including callback parameters and trusted or untrusted imports, are ordinary calls needing no trust boundary; their exceptions propagate unchanged and become defects where they reach an effectful caller. Inside a `try` whose `catch` belongs to the function, a call's listed failures are typed, and the catch receives them with their types. Its `.d.ts` keeps the plain return type. Running an Effect under a plain contract is EK2003.
 
 For an unannotated function declaration or an Effect-contract function, the compiler can provide a plain `$direct` variant when all three hold:
 
 1. **It performs no Effect operation at all.** Its body calls only plain-JavaScript VibeLang functions, trusted built-ins, and trusted functions; it calls no service, control operation, `Effect` function, or boundary hatch such as `sync`. Its control class is `pure` or `sync`.
-2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. In Effect code, a trusted function's listed exceptions become typed failures at its call (Chapter 26). A plain function instead keeps JavaScript exceptions: its own catch handles them as `unknown`, and an exception escaping into an Effect caller becomes a defect (D260). Bridging across calls is experiment G15.
+2. **Its E is `never`.** A typed failure leaving a plain function would cross JavaScript frames as an exception, and v0 bridges no exception across a call. In Effect code, a trusted function's listed exceptions become typed failures at its call (Chapter 26). A plain function's own catch receives them as typed failures (D54, D282); outside its `try` they propagate as JavaScript exceptions, and an exception from code with no contract passes through that catch and becomes a defect where it reaches an Effect caller. Bridging across calls is experiment G15.
 3. **Its contract, if it has one, writes E and R as `never`.** A caller sees the contract, not the body (Chapter 14), so `function answer(): number!Gone!Needed { return 1 }` is an Effect: its callers can fail with `Gone` and need `Needed`, and EK2001 and EK2002 hold them to it. `number!!` keeps the plain path, and a channel written `infer Name` counts what the body raises.
 
 The test is "can it reach an Effect operation", not "are E and R empty": `Effect.sleep("1 second")` has E = R = `never`, and it pauses the fiber. So the compiler tracks a separate fact per function, its **control class**:
@@ -56,13 +56,13 @@ The test is "can it reach an Effect operation", not "are E and R empty": `Effect
 
 #### Regions inside a plain function
 
-A plain JavaScript function may contain `try`, `catch`, and `finally`; they compile to JavaScript's own statements. Nothing inside can pause or be interrupted, so JavaScript's semantics match the machine's. Its catch receives every exception from the try block as `unknown`, as TypeScript's does (D260); an exception becomes a defect only when it escapes into an Effect caller:
+A plain JavaScript function may contain `try`, `catch`, and `finally`; they compile to JavaScript's own statements. Nothing inside can pause or be interrupted, so JavaScript's semantics match the machine's. Its catch still receives typed failures only (D54, D282): a throw becomes `throw $expected(e)`, a trusted call inside the try `$trustedPlain(…)`, and the catch starts with `e = $caught(e)`, which rethrows anything else, a defect. `JSON.parse`'s shipped contract lists `SyntaxError`, so this catch receives it:
 
 ```ts es
 function readPort(text: string) {
   try {
     return JSON.parse(text).port as number
-  } catch (e) {                                // e: unknown
+  } catch (e) {                                // e: SyntaxError
     return 8080
   }
 }
@@ -71,12 +71,15 @@ function readPort(text: string) {
 ```ts gen
 export function readPort$direct(text: string): number {
   try {
-    return JSON.parse(text).port as number
+    return runtime.$trustedPlain(() => JSON.parse(text), [SyntaxError]).port as number
   } catch (e) {
+    e = runtime.$caught(e)
     return 8080
   }
 }
 ```
+
+A `TypeError` from reading `.port` of `null` is a defect: `$caught` rethrows it, and it reaches the caller unchanged.
 
 Any `using` declaration makes a function compile to frames, whether its initializer acquires an Effect resource or supplies an ordinary Disposable (D54, D94).
 

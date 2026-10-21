@@ -54,7 +54,9 @@ test("runs .vibe modules imported from TypeScript, with one compile and one copy
   const { run, compilations } = project(t, {
     "src/helper.ts": "export const marker = { id: \"helper\" }\n",
     "src/shout.vibe": "export function shout(text: string): string { return text.toUpperCase() }\n",
-    "src/boom.vibe": "export function boom(): number {\n  throw new Error(\"boom\")\n}\n",
+    // A plain function never fails (D282); a JavaScript exception from a
+    // property access still propagates, with its .vibe frame.
+    "src/boom.vibe": "export function boom(): number {\n  const broken: any = undefined; return broken.length\n}\n",
     "src/greet.vibe": [
       "import { marker } from \"./helper.ts\"",
       "import { shout } from \"./shout.vibe\"",
