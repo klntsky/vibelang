@@ -1,12 +1,12 @@
 ## Part II. The rules
 
-Part I showed the language by example. This part states the rules behind those examples precisely, still from the programmer's side. Part III explains how the runtime carries them out.
+Part I showed the language by example. This part states its rules precisely, still from the programmer's side; Part III explains how the runtime carries them out.
 
 ### 13. What a call means
 
 #### One syntax, several meanings
 
-A call is always written `f(x)`. What it compiles to depends on what `f` is, and the compiler decides from the types:
+A call is always written `f(x)`; what it compiles to depends on what `f` is, decided from the types:
 
 ```ts es
 const n = double(4)                    // VibeLang function that compiles to plain JavaScript
@@ -32,10 +32,10 @@ The full rule:
 | --- | --- | --- |
 | A VibeLang function that can pause | Runs it on the current fiber | `yield* f(a)` |
 | A VibeLang function that compiles to plain JavaScript (Chapter 15) | Runs it inline | `f$direct(a)`, or `f(a)` with a plain return annotation (D67) |
-| A TypeScript function whose call has the type `Effect<A, E, R>` | Runs the returned program | `yield* f(a)` |
+| A TypeScript function whose call has type `Effect<A, E, R>` | Runs the returned program | `yield* f(a)` |
 | A TypeScript function whose R contains a control operation | Rejected in v0: EK4202 (Chapter 9) | |
 | A value of an `Effect` type, called as `p()` | Runs it | `yield* p` |
-| A service member, `Users.find(id)` or `Path.join(a, b)` | Looks the service up in the current Context (it joins R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
+| A service member, `Users.find(id)` or `Path.join(a, b)` | Looks up the service in the current Context (joining R), then applies these rules to the member: an `Effect` runs, a plain value is a trusted call (Chapter 4) | `yield* (yield* Users).find(id)`; `(yield* Path).join(a, b)` |
 | A service member that is an `Effect` value, `Terminal.readLine()` | Looks the service up, then runs the member | `yield* (yield* Terminal).readLine` |
 | A pipe's topic, `%` in `fetchUser(id) \|> retry(%, policy)` | Where `%` stands for a program, the pipe's left side, passed by name (D155); elsewhere the left side's value, computed once before the body | `retry(Effect.gen(function* () { return yield* fetchUser(id) }), policy)` |
 | A method of an Effect data type, `stream.take(3)` or `fiber.join()` | Calls the module's function with the value first (D152), then applies these rules to that call: an `Effect` runs, other data is returned | `Stream.take(stream, 3)`; `yield* Fiber.join(fiber)` |
@@ -47,11 +47,11 @@ The full rule:
 | A platform API, or a clock or randomness read | Rejected: EK4402, EK4403 (Chapters 10, 11) | |
 | `new C(…)` | Constructs; never runs a program | `new C(…)` |
 
-Because the meaning depends on types, the compiler needs TypeScript's type checker, not a source transform. That is why VibeLang is a fork of the TypeScript compiler (Chapter 27).
+Because the meaning depends on types, the compiler needs TypeScript's type checker, not a source transform, so VibeLang is a fork of the TypeScript compiler (Chapter 27).
 
 #### Calls run `Effect` itself, not everything that extends it
 
-A call runs its result only when the call's type, after TypeScript instantiates it, is `Effect<A, E, R>` itself. Several Effect types extend `Effect` and carry structure of their own: `Config` (`Config.ts:113`), `Exit` (`Exit.ts:89`), service keys (`Context.ts:68`), and `TaggedError` instances, which are yieldable (`Cause.ts:1312`). A call that returns one of them returns data, and calling that data runs it:
+A call runs its result only when the call's instantiated type is `Effect<A, E, R>` itself. Several Effect types extend `Effect` with structure of their own: `Config` (`Config.ts:113`), `Exit` (`Exit.ts:89`), service keys (`Context.ts:68`), and `TaggedError` instances, which are yieldable (`Cause.ts:1312`). A call returning one of them returns data; calling that data runs it:
 
 ```ts es
 const Port = Config.withDefault(Config.Port("PORT"), 3000)    // data: composed before anything reads it
@@ -71,12 +71,12 @@ Without this rule, `Config.Port("PORT")` would read the variable before `Config.
 
 `x.name(args)` is a method call into a module (D152) when all of these hold:
 
-1. The file is a `.vibe` file, and the access is not part of an optional chain (`x?.name(…)`).
+1. The access is in a `.vibe` file and not in an optional chain (`x?.name(…)`).
 2. `x`'s type, after TypeScript resolves type parameters to their constraints, has no member `name` of its own.
-3. One of Effect's data-type modules declares `x`'s type in its declaration file, `effect/dist/<Module>.d.ts`. For a union, every member comes from the same module, as `None` and `Some` come from `Option`.
+3. One of Effect's data-type modules declares `x`'s type in `effect/dist/<Module>.d.ts`. For a union, every member comes from the same module, as `None` and `Some` come from `Option`.
 4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`.
 
-The method's signatures are those overloads with the first parameter moved to `this`. TypeScript checks `x` against it and infers type parameters from it, and a type predicate on it narrows `x`:
+The method's signatures are those overloads with the first parameter moved to `this`. TypeScript checks `x` against it, infers type parameters from it, and narrows `x` by a type predicate on it:
 
 ```ts es
 function describe(value: Option.Option<number>) {
@@ -85,7 +85,7 @@ function describe(value: Option.Option<number>) {
 }
 ```
 
-The call compiles to `Module.name(x, args)`, which the rules above then apply to: `Fiber.join(fiber)` returns an `Effect`, so `fiber.join()` runs, while `Stream.take` returns a `Stream`, which is data. The method exists only in the call: `const read = maybe.getOrElse` is EK4501 (D153), because no function value exists to bind; pass `Option.getOrElse` itself.
+The call compiles to `Module.name(x, args)`, and the rules above apply to that: `Fiber.join(fiber)` returns an `Effect`, so `fiber.join()` runs; `Stream.take` returns a `Stream`, which is data. The method exists only in a call: `const read = maybe.getOrElse` is EK4501 (D153), because no function value exists to bind; pass `Option.getOrElse` itself.
 
 #### Function values
 
@@ -96,15 +96,15 @@ A function used as a value is passed in the form its destination expects:
 | A function type that returns an `Effect`, as Effect's combinators expect | The function's Effect form |
 | A plain function type, as `Array.prototype.map` expects | The function's plain-JavaScript form, if it has one (Chapter 15); otherwise EK4301 |
 | `Effect<A, E, R>`, an iterable or record of them | A function with no parameters, converted to a program (Chapter 5); or an expression that calls an Effect, passed by name (D147) |
-| Either a function or an `Effect`, as `HttpRouter.add` and `Effect.withErrorReporting` accept | A function with parameters: the function. A function without parameters: the function if it compiles to plain JavaScript, a program if it can pause |
+| Either a function or an `Effect`, as `HttpRouter.add` and `Effect.withErrorReporting` accept | With parameters: the function. Without: the function if it compiles to plain JavaScript, a program if it can pause |
 
-The last row matters because several Effect APIs choose at run time with `Effect.isEffect`. In `HttpRouter.add("GET", "/users/:id", (request) => showUser(request))`, the handler has a parameter and is passed as a function. In `HttpRouter.add("GET", "/health", () => checkHealth())` and `Effect.withErrorReporting(() => serve())`, the argument can pause and is passed as a program.
+The last row matters because several Effect APIs choose at run time with `Effect.isEffect`. In `HttpRouter.add("GET", "/users/:id", (request) => showUser(request))`, the handler has a parameter, so it is passed as a function. In `HttpRouter.add("GET", "/health", () => checkHealth())` and `Effect.withErrorReporting(() => serve())`, the argument can pause, so it is passed as a program.
 
 An Effect callback or program destination means Effect's own interface, or a type parameter constrained to it; structured subtypes such as `Config` remain data (D109). A destination that allows both plain and Effect returns selects plain when D10 permits and Effect otherwise (D112). A contract-annotated lambda selected as plain has type `(…) => A`, and plain-callback inference starts from A (D113). These rules apply to named function values as well as lambdas (D66).
 
 #### Programs and continuations
 
-Two kinds of "rest of the work" appear in this document, and they behave differently. A **program** is the reusable kind from Chapter 5. A **continuation** is the `k` a handler receives in Chapter 9.
+This document has two kinds of "rest of the work", and they behave differently: a **program** is the reusable kind from Chapter 5; a **continuation** is the `k` a handler receives in Chapter 9.
 
 | | Program | Continuation |
 | --- | --- | --- |
@@ -117,11 +117,11 @@ Two kinds of "rest of the work" appear in this document, and they behave differe
 
 #### How program values are spelled
 
-A call runs where it stands, except where the expected type is `Effect`: there an expression that calls a `.vibe` function or a function that returns an `Effect`, or looks up a service, is passed by name (D147). The compiler passes a program that evaluates the expression each time it runs, as if the source had written `() =>` before it, so `Effect.retry(syncInventory(store), Schedule.recurs(3))` retries the call and `fork(fetchReport())` runs nothing at the call site. This holds for arguments, array elements, and record fields, in function bodies and at a module's top level. A position that accepts any value, such as `Console.log`'s parameters or `Effect.succeed`'s, still runs the call where it stands, and an expression whose value is already an `Effect` keeps its meaning. A contextually Effect-typed object-literal field also holds the program (D265), including a service implementation in `Layer.sync`, a record parameter, and a declared object type. Building `{ read: work() }` runs none of `work` when `read` expects an Effect; a non-Effect field still runs the call and stores its result. Each overload candidate decides by its own declared parameter, as it does for a lambda (D56). A hover on the callee of a call passed by name says so.
+A call runs where it stands, except where the expected type is `Effect`: there an expression that calls a `.vibe` or `Effect`-returning function, or looks up a service, is passed by name (D147), as a program that evaluates the expression on each run, as if `() =>` preceded it. So `Effect.retry(syncInventory(store), Schedule.recurs(3))` retries the call, and `fork(fetchReport())` runs nothing at the call site. This holds for arguments, array elements and record fields, in function bodies and at a module's top level. A position that accepts any value, such as `Console.log`'s or `Effect.succeed`'s parameters, still runs the call where it stands, and an expression whose value is already an `Effect` keeps its meaning. A contextually Effect-typed object-literal field also holds the program (D265), including a service implementation in `Layer.sync`, a record parameter, and a declared object type: building `{ read: work() }` runs none of `work` when `read` expects an Effect, while a non-Effect field runs the call and stores its result. Each overload candidate decides by its own declared parameter, as for a lambda (D56). A hover on the callee of a call passed by name says so.
 
 A `const` whose declared type is Effect holds its initializer in every scope (D269, extending D262 and D265). `const built: Made = make(config)` calls `make` here and runs none of the returned program; running `built` later runs that same program each time. Only the initializer is held; calls in its operands keep their ordinary positions. Mutable bindings and inferred or asserted types do not opt in.
 
-A function whose declared return type is Effect may explicitly return a program (D269). The declaration may be its own annotation, its binding's annotation, or a lambda's declared member or parameter type under D44. A return is a program when it is a parameterless function literal, converted by D7, or a non-call expression of Effect type, and TypeScript would reject it as the success type A. Such a function is a **factory**: its body runs when called, as plain JavaScript under D263; running its result runs the program, every time. Every return path returns a program (EK2116). The body runs no Effect and looks up no service (EK2115); put that work in the returned program. An eager `throw` is JavaScript's synchronous throw. A factory has no plain variant and is EK4301 where a plain function is expected.
+A function whose declared return type is Effect may explicitly return a program (D269). The declaration may be its own annotation, its binding's, or a lambda's declared member or parameter type under D44. A return is a program when it is a parameterless function literal, converted by D7, or a non-call expression of Effect type, and TypeScript would reject it as the success type A. Such a function is a **factory**: its body runs when called, as plain JavaScript under D263, and running its result runs the program, every time. Every return path returns a program (EK2116). The body runs no Effect and looks up no service (EK2115); put that work in the returned program. An eager `throw` is JavaScript's synchronous throw. A factory has no plain variant, so it is EK4301 where a plain function is expected.
 
 ```ts es
 const capture = (input: { mutable value: number }): Effect.Effect<number, never, never> => {
@@ -130,9 +130,9 @@ const capture = (input: { mutable value: number }): Effect.Effect<number, never,
 }
 ```
 
-VibeLang calls retain D24 and D147: `capture(input)` runs the result, `retry(capture(input), policy)` repeats the call on every attempt, and `const p: Effect.Effect<number> = capture(input)` holds one call's program. Retrying `p` repeats only the program, with one snapshot. The factory forms were TS2322 before D269. Already-valid values keep their meaning: `Effect.suspend(() => () => 1)` infers a function as A and still returns that function as data.
+VibeLang calls keep D24 and D147: `capture(input)` runs the result, `retry(capture(input), policy)` repeats the call on every attempt, and `const p: Effect.Effect<number> = capture(input)` holds one call's program. Retrying `p` repeats only the program, with one snapshot. The factory forms were TS2322 before D269. Already-valid values keep their meaning: `Effect.suspend(() => () => 1)` infers a function as A and still returns that function as data.
 
-A program of several statements needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including the elements of an array and the fields of a record, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type and never as records (D111). It never converts a value because it merely looks like a function:
+A program of several statements needs a form that does not run: a function with no parameters. The compiler converts such a function to an `Effect` only where the expected type is `Effect`, including array elements and record fields, such as `Effect.all`'s argument, and an array or record of programs built at run time, such as `stores.map(makeSync)` (D49). Other iterables, including `Set` and `Map` values, convert by their iterated type, never as records (D111). It never converts a value merely because it looks like a function:
 
 ```ts gen
 // Effect.retry(syncInventory(store), Schedule.recurs(3))
@@ -141,9 +141,9 @@ yield* Effect.retry(Effect.gen(function* () { return yield* syncInventory(store)
 yield* Effect.retry(Effect.suspend(retrySync), Schedule.recurs(3))
 ```
 
-"The expected type" has one precise meaning: the declared parameter type of the overload candidate TypeScript is trying, before instantiation (D44). TypeScript's own contextual type is the wrong one, because it is inferred from the argument itself. In `ids.map((id) => Users.find(id))`, `map`'s declared parameter is `(value: T, index: number) => U`, a plain function type, so the lambda is a callback that cannot pause (EK4301); instantiating `U` from the lambda would have made it look like an Effect position. When resolution fails, the candidates whose arity fits decide. The instantiated type is used only when the declared type is a bare type parameter fixed by another argument, such as `Layer.succeed`'s `NoInfer<S>`.
+"The expected type" means exactly the declared parameter type of the overload candidate TypeScript is trying, before instantiation (D44). TypeScript's own contextual type is wrong here, because it is inferred from the argument itself. In `ids.map((id) => Users.find(id))`, `map`'s declared parameter is `(value: T, index: number) => U`, a plain function type, so the lambda is a callback that cannot pause (EK4301); instantiating `U` from the lambda would make it look like an Effect position. When resolution fails, the candidates whose arity fits decide. The instantiated type is used only when the declared type is a bare type parameter fixed by another argument, such as `Layer.succeed`'s `NoInfer<S>`.
 
-With overloads, the first candidate that accepts the lambda in the form that candidate expects wins (D56). TypeScript tries candidates in declaration order, and against each one the lambda takes the form the candidate's parameter declares: a plain function, an Effect function, or a program.
+With overloads, the first candidate that accepts the lambda in the form it expects wins (D56). TypeScript tries candidates in declaration order, and against each the lambda takes the form the candidate's parameter declares: a plain function, an Effect function, or a program.
 
 ```ts dts
 // helpers.d.ts: a plain callback first, an Effect callback second
@@ -159,11 +159,11 @@ const a = register((x) => Math.max(x, 0))                    // plain: overload 
 const b = register((x) => Users.find(String(x)).id.length)   // Effect function: overload 2
 ```
 
-Against overload 1, `b`'s lambda is a plain function, and a plain function cannot call a service, so overload 1 fails and overload 2 accepts the Effect form. Swap the two overloads and `a`'s lambda becomes an Effect function: declaration order decides, as it does in TypeScript. The lambda's own inferred type never picks its form, so the result does not depend on which form the compiler tries first. A lambda with no expected type, such as one a function returns, is plain when Chapter 15's rule allows it and an Effect function otherwise.
+Against overload 1, `b`'s lambda is a plain function, which cannot call a service, so overload 1 fails and overload 2 accepts the Effect form. Swap the overloads and `a`'s lambda becomes an Effect function: declaration order decides, as in TypeScript. The lambda's own inferred type never picks its form, so the result does not depend on which form the compiler tries first. A lambda with no expected type, such as one a function returns, is plain when Chapter 15's rule allows and an Effect function otherwise.
 
 #### Where programs start
 
-A call never starts a fiber. A program starts only when a **runner** receives it. The compiler recognizes runners by their resolved symbols: `Effect.runPromise`, `runPromiseExit`, `runSync`, `runSyncExit`, `runFork`, `runCallback`, and their `*With` forms; `ManagedRuntime`'s `run*` methods; `NodeRuntime.runMain` and `BunRuntime.runMain`; and `@effect/vitest`'s `it.effect`, `it.live`, their `.each` and `.prop` forms, and `layer(…)`.
+A call never starts a fiber; a program starts only when a **runner** receives it. The compiler recognizes runners by their resolved symbols: `Effect.runPromise`, `runPromiseExit`, `runSync`, `runSyncExit`, `runFork`, `runCallback`, and their `*With` forms; `ManagedRuntime`'s `run*` methods; `NodeRuntime.runMain` and `BunRuntime.runMain`; and `@effect/vitest`'s `it.effect`, `it.live`, their `.each` and `.prop` forms, and `layer(…)`.
 
 ```ts es
 // main.vibe
@@ -185,7 +185,7 @@ import { main } from "./main.js"
 NodeRuntime.runMain(main())
 ```
 
-A module's top level is not inside any program. A call there may build values, such as `Layer.effect(…)`, `wire(…)`, `Config.Port(…)`, or `Schedule.exponential(…)`, but it may not run a program:
+A module's top level is inside no program. A call there may build values, such as `Layer.effect(…)`, `wire(…)`, `Config.Port(…)`, or `Schedule.exponential(…)`, but not run a program:
 
 ```ts es
 // config.vibe
@@ -198,7 +198,7 @@ error EK1001: loadConfig() runs a program, but a module's top level is not insid
   Export a function instead, or provide the value as a service with a Layer.
 ```
 
-A runner is called only where no fiber runs the code: at a module's top level, and in a plain callback that such a place passes to a TypeScript function, such as a `describe` body or a web framework's route handler. Inside code that a fiber runs, a runner would start a new root with an empty Context and no handlers, outside the caller's structured concurrency:
+A runner is called only where no fiber runs the code: a module's top level, or a plain callback that such a place passes to a TypeScript function, such as a `describe` body or a web framework's route handler. In code a fiber runs, a runner would start a new root with an empty Context and no handlers, outside the caller's structured concurrency:
 
 ```ts es
 function refreshAll(ids: ReadonlyArray<string>) {
@@ -216,11 +216,11 @@ Tests in `.vibe` use `it.effect`. A test that must `await` a Promise stays in a 
 
 #### Evaluation order
 
-Evaluation order is JavaScript's, and generated code keeps it. Arguments are evaluated left to right, each once. A receiver is evaluated once and keeps its `this`. `a() && b()` runs `b` only if `a()` is truthy. A getter runs once per access. In `double(w) * double(h) * Settings.scale()`, both `double` calls run before the service call, even though only the service call can pause (Chapter 15).
+Generated code keeps JavaScript's evaluation order. Arguments are evaluated left to right, each once. A receiver is evaluated once and keeps its `this`. `a() && b()` runs `b` only if `a()` is truthy. A getter runs once per access. In `double(w) * double(h) * Settings.scale()`, both `double` calls run before the service call, though only the service call can pause (Chapter 15).
 
 #### Blocks as values
 
-A `do { }` expression (D187, the TC39 [do expressions](https://github.com/tc39/proposal-do-expressions) proposal) has the value of its last statement. It runs where it stands, and a parameter that expects a program takes it by name, like a call (D147):
+A `do { }` expression (D187, the TC39 [do expressions](https://github.com/tc39/proposal-do-expressions) proposal) has the value of its last statement. It runs where it stands; a parameter that expects a program takes it by name, like a call (D147):
 
 ```ts
 function cached(): string!! {
@@ -240,7 +240,7 @@ function first() {
 
 #### Blocks after calls
 
-A block on the same line after a call or a name is the call's program (D188, the TC39 [block params](https://github.com/samuelgoto/proposal-block-params) proposal). The block is the call's last argument, except where the callee is an Effect dual: there it takes the place of the program, as `withSpan(block, "guarded")` or `semaphore.withPermits(1)(block)`, and the call infers its type parameters from the arguments and the block together:
+A block on the same line after a call or a name is the call's program (D188, the TC39 [block params](https://github.com/samuelgoto/proposal-block-params) proposal). The block is the call's last argument, except when the callee is an Effect dual: there it takes the program's place, as in `withSpan(block, "guarded")` or `semaphore.withPermits(1)(block)`, and the call infers its type parameters from the arguments and the block together:
 
 ```ts
 function work(): string!! {

@@ -32,18 +32,16 @@ If the 30 seconds run out during the upload, the upload is interrupted, the `cat
 Rules:
 
 - **E comes from `throw` and from contracts.** A `throw` in an Effect function, a callee's E, and the exceptions a trusted contract lists are expected failures. Any other JavaScript exception is a defect, as in Effect today.
-- **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds a defect or an interruption passes through `catch` untouched, including its expected failures. Effect's own `Effect.catch` recovers such a cause and drops the defect (Codex review R1, `internal/effect.ts:158-165, 2665-2685`); source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26). A catch expression, `x catch fallback` or `x catch (e) => …` (D236), compiles to `catchExpected` too, so it recovers exactly what the statement recovers.
+- **`catch` handles a cause only when it is made entirely of expected failures.** A cause that also holds a defect or an interruption passes through `catch` untouched, keeping its expected failures, so a cause-level tool such as `Effect.catchCause` or a TypeScript caller's `Effect.catch` can still see them; no VibeLang `catch` will. Effect's own `Effect.catch` recovers such a cause and drops the defect (Codex review R1, `internal/effect.ts:158-165, 2665-2685`); source `catch` therefore compiles to the runtime's `catchExpected` (K14a-K14c, Chapter 26). A catch expression, `x catch fallback` or `x catch (e) => …` (D236), compiles to `catchExpected` too, so it recovers exactly what the statement recovers.
 - **Cleanup runs in reverse order of acquisition**, once per exit, with interruption held off until it finishes.
 - **A failure during cleanup is never dropped.** It is added to the cause being reported, on every path: a block's exit, a clause that abandons, an explicit `abandon` while an interruption is pending, a scope that closes, and a fiber that exits (K12a-K12e, K13d).
 - **Control cannot leave a `finally` block.** A `return`, `break`, or `continue` there would replace the block's exit, and in JavaScript it discards a failure in flight, so it is EK2006.
 - **Abandonment unwinds like interruption.** Cleanup sees an interrupted exit, `catch` does not run, and the handler that abandoned the program continues only after cleanup finishes. A cleanup failure during abandonment fails the `handle` or the `abandon` call that abandoned.
 - **Cleanup that uses a control operation handles it inside the cleanup** (Chapter 9). A handler outside could stop the cleanup partway.
 
-A cause with expected failures and a defect keeps both after it passes `catch`, so a cause-level tool such as `Effect.catchCause` or a TypeScript caller's `Effect.catch` can still see the expected failure. No VibeLang `catch` will.
-
 #### Effect's operators on a mixed cause
 
-Effect's own operators keep their Effect behavior when VibeLang calls them. On a cause that holds both an expected failure and a defect, most of them act on one reason and drop the other, unlike `catch`:
+Effect's own operators keep their Effect behavior when VibeLang calls them. Unlike `catch`, most of them act on one reason of a cause holding both an expected failure and a defect, and drop the other:
 
 | Operators | Given a `Fail` plus a `Die` |
 | --- | --- |
@@ -54,7 +52,7 @@ Effect's own operators keep their Effect behavior when VibeLang calls them. On a
 
 These were checked against `effect@4.0.5` (review probe R1 for `Effect.catch`). Use such an operator where dropping the other reason is what the program means; a VibeLang `catch` never drops one.
 
-Interruption can be held off for a block of work with Effect's own combinators:
+Effect's own combinators hold off interruption for a block of work:
 
 ```ts es
 function moveFunds(from: Account, to: Account, amount: number) {
@@ -65,7 +63,7 @@ function moveFunds(from: Account, to: Account, amount: number) {
 }
 ```
 
-`try`, `catch`, `finally`, and `using` compile to Effect's own failure and cleanup frames, never to JavaScript `try`, in any function that compiles to frames. Effect does not run JavaScript `finally` blocks inside generators when a fiber fails or is interrupted (F1-F3), so a JavaScript `try` would skip cleanup. Chapter 26 shows the generated code. Functions that compile to plain JavaScript are the exception, because nothing in them can pause (Chapter 15).
+In any function that compiles to frames, `try`, `catch`, `finally`, and `using` compile to Effect's own failure and cleanup frames, never to JavaScript `try`: Effect does not run JavaScript `finally` blocks inside generators when a fiber fails or is interrupted (F1-F3), so a JavaScript `try` would skip cleanup. Chapter 26 shows the generated code. Functions that compile to plain JavaScript are the exception, because nothing in them can pause (Chapter 15).
 
 #### Causes, exits, and interruption blocks
 
@@ -100,5 +98,9 @@ function commit(rows: ReadonlyArray<string>) {
 }
 ```
 
-`exit(program)` holds every reason a failure holds, defects and interrupts included, as `Effect.exit` does; test it with `is` or `match` on `Exit.Success` and `Exit.Failure` to recover from the whole cause (D217). The earlier form, a catch clause typed `Cause` (D176), still compiles, as `Effect.catchCause` with a control operation's abandonment passed through untouched, but it is retired: it draws the warning EK2113, whose quick fix writes the `match`. `throw` with a `Cause` fails with every reason it holds, as `Effect.failCause` does, and adds the Cause's E to the function's E (D177). `finally (exit)` binds the statement's `Exit<void, E>`, where E is what the try statement can fail with; the block runs uninterruptibly, as `Effect.onExit`'s finalizer does, and a success carries no value (D178). `exit(program)`, `interrupt()`, and `yieldNow()` are bare functions (D179). An `uninterruptible` block runs as `Effect.uninterruptibleMask`, a `restore` block inside it as the mask's `restore`, and an `interruptible` block as `Effect.interruptible`; their statements stay code of the enclosing function, and each block calls the prelude function of its name, which also takes a program directly (D180). A `restore` block outside an `uninterruptible` block is EK2111.
+- `exit(program)` holds every reason a failure holds, defects and interrupts included, as `Effect.exit` does; test it with `is` or `match` on `Exit.Success` and `Exit.Failure` to recover from the whole cause (D217). The earlier form, a catch clause typed `Cause` (D176), still compiles, as `Effect.catchCause` with a control operation's abandonment passed through untouched, but is retired: it draws warning EK2113, whose quick fix writes the `match`.
+- `throw` with a `Cause` fails with every reason it holds, as `Effect.failCause` does, and adds the Cause's E to the function's E (D177).
+- `finally (exit)` binds the statement's `Exit<void, E>`, where E is what the try statement can fail with. The block runs uninterruptibly, as `Effect.onExit`'s finalizer does, and a success carries no value (D178).
+- `exit(program)`, `interrupt()`, and `yieldNow()` are bare functions (D179).
+- An `uninterruptible` block runs as `Effect.uninterruptibleMask`, a `restore` block inside it as the mask's `restore`, and an `interruptible` block as `Effect.interruptible`. Their statements stay code of the enclosing function, and each block calls the prelude function of its name, which also takes a program directly (D180). A `restore` block outside an `uninterruptible` block is EK2111.
 

@@ -2,9 +2,9 @@
 
 #### What the compiler infers
 
-An unannotated function or a function with an Effect return annotation gets a contract `Effect<A, E, R>`. An eligible function with a plain return annotation keeps its plain type (D67, Chapter 15):
+An eligible function with a plain return annotation keeps its plain type (D67, Chapter 15). An unannotated function, or one with an Effect return annotation, gets a contract `Effect<A, E, R>`:
 
-- **A** is the type of what it returns, inferred and widened as TypeScript infers a function's return type: `return "ok"` gives `string`.
+- **A** is its return type, inferred and widened as TypeScript infers one: `return "ok"` gives `string`.
 - **E** is every error it `throw`s, plus every error its callees can fail with, plus the expected failures named by the trusted contracts it calls, minus what its `catch` blocks handle.
 - **R** is every service and control operation it uses, plus its callees' requirements, minus what it provides or handles itself, plus `Scope` if a resource it acquires without `using` outlives it (Chapter 6).
 
@@ -21,13 +21,13 @@ function quoteCart(cartId: string) {
 // Quote!CartNotFound | EmptyCart!Carts | Pricing
 ```
 
-`PricingDown` is caught, so it is not in E. `Pricing` is still in R: catching an error does not remove the need for the service.
+`PricingDown` is caught, so it is not in E, but `Pricing` stays in R: catching an error does not remove the need for the service.
 
 Precisely, E is the type of the expected failures in a cause made only of expected failures. A cause that also holds a defect or an interruption can carry `Fail` reasons outside E, because `catch` passes such a cause through untouched (Chapter 17); no VibeLang `catch` recovers it, and only cause-level tools see those reasons.
 
 #### Writing contracts
 
-`.vibe` code writes `Effect<A, E, R>` as `A!E!R` (D127), anywhere a type can appear: return annotations, service members, parameters, and aliases. The parser expands it to `Effect.Effect<A, E, R>`.
+`.vibe` code writes `Effect<A, E, R>` as `A!E!R` (D127) wherever a type can appear: return annotations, service members, parameters, and aliases. The parser expands it to `Effect.Effect<A, E, R>`.
 
 | Written | Means |
 | --- | --- |
@@ -38,11 +38,11 @@ Precisely, E is the type of the expected failures in a cause made only of expect
 | `User!NotFound` on a function with a body | `Effect<User, NotFound, infer R>`: R comes from the body |
 | `User!NotFound` without a body | `Effect<User, NotFound, never>` |
 
-A slot without a type is `never`. Dependencies left out entirely are inferred on a function with a body and `never` everywhere else. Unions bind inside a slot, so `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`. A function type, a conditional type, or an Effect type inside a slot needs parentheses, and so does an object type after a `!`: a `{` there starts the function's body, so `User!NotFound! { ... }` has no dependencies. Hovers and messages about `.vibe` code show contracts in this form; declaration files keep `Effect.Effect<A, E, R>`, so TypeScript callers are unaffected. `Effect<A, E, R>` is accepted everywhere, including `infer` slots (D57).
+An empty slot is `never`; dependencies left out entirely are inferred on a function with a body and `never` everywhere else. Unions bind inside a slot, so `User!NotFound | Timeout!Db` fails with `NotFound | Timeout`. A function type, a conditional type, or an Effect type inside a slot needs parentheses, and so does an object type after a `!`: a `{` there starts the function's body, so `User!NotFound! { ... }` has no dependencies. Hovers and messages about `.vibe` code show contracts in this form; declaration files keep `Effect.Effect<A, E, R>`, so TypeScript callers are unaffected. `Effect<A, E, R>` is accepted everywhere, including `infer` slots (D57).
 
 #### Checking a written contract
 
-When you write the contract, the compiler checks the body against it:
+The compiler checks a body against its written contract:
 
 ```ts es
 export function welcome(id: string): string!UserNotFound | MailError!Users {
@@ -67,7 +67,7 @@ error EK2002: welcome needs Mailer, but its contract says R = Users.
 
 A call to a function with a complete written contract contributes that contract's E and R, even when the body needs less (D73).
 
-The contract has exactly three channels. Whether a function can pause is a separate fact the compiler tracks, its control class (Chapter 15), not part of the contract.
+The contract has exactly three channels. Whether a function can pause is a separate fact the compiler tracks, its control class (Chapter 15).
 
 #### Declarations without bodies
 
@@ -85,11 +85,11 @@ error EK2101: Rates.lookup has no body to infer from, so its contract must be wr
   Write Effect<number, E, R>; use Effect<number, never, never> if it cannot fail and needs nothing.
 ```
 
-A service's value members are not calls, so they take any type: `abstract readonly baseUrl: string`. Callback parameter types are the one exception to full contracts, and there a missing contract means "any contract", not an empty one (Chapter 16).
+A service's value members are not calls, so they take any type: `abstract readonly baseUrl: string`. Callback parameter types are the one exception to full contracts: there a missing contract means "any contract", not an empty one (Chapter 16).
 
 #### Partial annotations
 
-In the return annotation of a function with a body, write all three channel slots. A slot written `infer` followed by a name comes from the body; every other slot is checked (D57).
+In the return annotation of a function with a body, write all three channel slots. A slot written `infer Name` comes from the body; every other slot is checked (D57).
 
 ```ts es
 function find(id: string): Effect<User, infer E, never> {
@@ -118,9 +118,9 @@ function inferred(id: string): Effect<infer _, infer _, infer _> {
 // User!UserNotFound!Users, as with no annotation.
 ```
 
-The name after `infer` is documentation only and is not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
+The name after `infer` is documentation only, not in scope in any channel or in the body. `infer _` is allowed. In `Effect<infer Value, infer Value, infer Value>`, the repeated name does not connect the channels.
 
-Omission is an error in this position. Neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel should be checked as `never` or inferred. A plain return annotation such as `: User` is EK2003 only when a non-method function's body runs an Effect. An eligible plain helper keeps that annotation and compiles to one plain function (D67). Methods are exempt from EK2003 for plain annotations, including methods implementing JavaScript protocols (D74); their expected type and body determine whether they lower to Effects (D92).
+Omitting a channel here is an error: neither `Effect<User>` nor `Effect<User, UserNotFound>` says whether an absent channel is checked as `never` or inferred. A plain return annotation such as `: User` is EK2003 only when a non-method function's body runs an Effect; an eligible plain helper keeps that annotation and compiles to one plain function (D67). Methods, including those implementing JavaScript protocols, are exempt from EK2003 for plain annotations (D74); their expected type and body determine whether they lower to Effects (D92).
 
 ```ts es
 function find(id: string): Effect<User> {
@@ -134,9 +134,9 @@ error EK2003: Effect<User> leaves contract channels unspecified. Did you mean ne
   Or write Effect<User, infer E, infer R> to infer E and R from the body.
 ```
 
-These are two distinct quick fixes. The first can then report EK2001 or EK2002 when the body fails or needs services. The second keeps those channels inferred.
+These are two distinct quick fixes: the first can then report EK2001 or EK2002 when the body fails or needs services; the second keeps those channels inferred.
 
-This rule applies only to the return annotation of a VibeLang function with a body. Parameter types, type aliases, and `.ts` files keep TypeScript's meaning of `Effect<User>`, including its `never` defaults. Service and control methods instead require a complete contract (D93). They do not gain channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
+This rule applies only to the return annotation of a VibeLang function with a body. Parameter types, type aliases, and `.ts` files keep TypeScript's meaning of `Effect<User>`, `never` defaults included. Service and control methods instead require a complete contract (D93) and gain no channel inference from this syntax. A callback parameter without an Effect contract still accepts any contract (D12, Chapter 16).
 
 #### Recursion
 
@@ -153,7 +153,7 @@ function totalSize(path: string) {
 // number!IOError!Files
 ```
 
-TypeScript cannot compute this on its own: to TypeScript, the generated recursive function is an implicit `any` (TS7022). The compiler computes the fixpoint itself, inside the component only (D52). It checks the component's bodies, then rechecks those bodies alone, with the E and R found so far, until E and R stop growing. Rows only grow and are finite, so the iteration ends, and no function outside the component is checked twice. Mutual recursion is where the recheck matters:
+TypeScript cannot compute this alone: to it, the generated recursive function is an implicit `any` (TS7022). The compiler computes the fixpoint itself, inside the component only (D52): it checks the component's bodies, then rechecks only those bodies with the E and R found so far, until E and R stop growing. Rows only grow and are finite, so the iteration ends, and no function outside the component is checked twice. The recheck matters for mutual recursion:
 
 ```ts es
 error Locked { path: string }
@@ -169,6 +169,6 @@ function visitEntry(path: string) {
 // both: void!IOError | Locked!Files
 ```
 
-Checked once in source order, `visitDir` meets `visitEntry` before `visitEntry` has a contract and misses `Locked`; the recheck adds it. The prototype compiler reaches the same contracts by re-checking the whole program (`prototype/esc/FINDINGS.md`, finding 7). The single-pass experiment found this case, in its `isEven` and `isOdd` probe, to be the only one that needs a second check (`prototype/single-pass/RESULTS.md`). A follows TypeScript's rule: when A depends on the function's own result, the contract must be written (EK2102).
+Checked once in source order, `visitDir` meets `visitEntry` before `visitEntry` has a contract and misses `Locked`; the recheck adds it. The prototype compiler reaches the same contracts by re-checking the whole program (`prototype/esc/FINDINGS.md`, finding 7). The single-pass experiment found this case, in its `isEven` and `isOdd` probe, the only one needing a second check (`prototype/single-pass/RESULTS.md`). A follows TypeScript's rule: when A depends on the function's own result, the contract must be written (EK2102).
 
 EK2102 applies to functions that run Effects. Pure recursion keeps TypeScript's TS7023 when its return type depends on itself; a plain annotation fixes it (D72). The current checker also needs contracts in some cached-type cycles that the fixpoint model alone would solve. A cycle through a callback uses the checker's single type for that call, and generic-call inference does not fill `infer` channels in a lambda (F3's known gaps).
