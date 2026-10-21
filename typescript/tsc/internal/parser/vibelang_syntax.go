@@ -31,7 +31,8 @@ const (
 	// runs from the word through the declared name, and Open and Close are the
 	// body's braces, empty when the declaration has no body. Class is set for
 	// an error written with a class's features (D278): abstract, a heritage
-	// clause, or a member other than a field.
+	// clause, or a member other than a field. For service Name: Type (D281),
+	// Head runs through the shape and Right is the shape.
 	VibeSyntaxDeclaration
 	// VibeSyntaxBlockParam is a block after a call or a name (D188): Head is the
 	// callee, Open and Close the block's braces.

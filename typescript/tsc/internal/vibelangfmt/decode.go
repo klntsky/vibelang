@@ -91,7 +91,7 @@ func (enc *encoding) decode(formatted string) (string, error) {
 		return "", failure
 	}
 	for i, seen := range d.seen {
-		if !seen {
+		if !seen && !enc.placeholders[i].nested {
 			return "", fmt.Errorf("vibelang format: internal error: the formatter dropped the placeholder for %q", enc.placeholders[i].text)
 		}
 	}
@@ -302,7 +302,11 @@ func (d *decoder) node(node *ast.Node) error {
 		}
 		d.replace(d.afterModifiers(class), end, d.reindent(holder, start))
 		if holder.noBody {
-			// An error without a body (D278): drop the {} the encoder added.
+			// An error written as a class or a service of any shape without a
+			// body (D278, D281): drop the {} the encoder added.
+			if len(class.Members()) != 0 {
+				return lost()
+			}
 			last := end
 			if list := class.TypeParameterList(); list != nil {
 				_, greater, ok := d.nextToken(list.End(), '>')

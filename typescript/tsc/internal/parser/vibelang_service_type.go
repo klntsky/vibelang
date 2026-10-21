@@ -28,12 +28,12 @@ const ServiceShapeFactory = "$service"
 // replaces the clause with the key class, as for every service. The body is
 // optional and holds static members; the checker reports an instance member
 // there (EK2103). The recorded form's Head runs from the word through the
-// shape.
+// shape, and Right is the shape.
 func (p *Parser) parseServiceShapeDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList, word core.TextRange, name *ast.Node, typeParameters *ast.NodeList) *ast.Node {
 	colon := p.tokenRange()
 	p.nextToken() // :
 	shape := p.parseType()
-	form := VibeSyntax{Kind: VibeSyntaxDeclaration, Name: "service", Head: core.NewTextRange(word.Pos(), shape.End())}
+	form := VibeSyntax{Kind: VibeSyntaxDeclaration, Name: "service", Head: core.NewTextRange(word.Pos(), shape.End()), Right: p.sourceRange(shape)}
 	var members *ast.NodeList
 	if p.token == ast.KindOpenBraceToken {
 		form.Open = p.tokenRange()

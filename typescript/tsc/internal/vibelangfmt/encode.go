@@ -19,6 +19,7 @@
 //	error E { f: T }, schema S { f: T }    type $v7 = { f: T }
 //	schema S = T                           type $v7 = T
 //	service S { m(): A!E }                 class $v8 { m(): $v9 }
+//	service S: T, service S: T { static }  class $v8 {}, class $v8 { static }
 //	for concurrent(n) (const x of xs)      for (const x of xs)
 //	finally (exit) { }                     finally { }
 //	try { } handle A.b(x) { } catch (e) { } try { } catch ($v10) { } $v11: { }
@@ -69,11 +70,16 @@ type placeholder struct {
 	// text that spans lines can be indented as its new line is.
 	indent string
 	// noBody marks an error declaration written without fields or, for one
-	// written as a class, without a body.
+	// written as a class, without a body, and a service of any shape (D281)
+	// written without a body.
 	noBody bool
 	// alias marks a schema alias, schema Name = Type (D280), whose = and type
 	// the type alias keeps as written.
 	alias bool
+	// nested marks a placeholder whose edit an opaque edit swallowed, such as
+	// an Effect type in the shape of service Format: (s: string) => string!!:
+	// the enclosing placeholder keeps its text, so decoding never sees it.
+	nested bool
 }
 
 // edit replaces source[pos:end] with text. An edit with pos == end inserts.
@@ -342,12 +348,38 @@ func (e *encoder) declaration(form parser.VibeSyntax) error {
 		e.holders[len(e.holders)-1].alias = true
 		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "type " + name, opaque: true})
 	case "service", "control":
+		// The head of service Prefix: string runs through the shape (D281),
+		// which the placeholder keeps as written, with one space after the colon.
+		head = e.shapeHead(form, head)
 		name := e.hold(placeholderClassHead, head, form.Head.Pos(), firstLineWidth(head)-len("class "))
 		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "class " + name, opaque: true})
+		if form.Open.Pos() == form.Open.End() {
+			// service Prefix: string, written without a body.
+			e.holders[len(e.holders)-1].noBody = true
+			e.insert(form.Range.End(), " {}", 0)
+		}
 	default:
 		e.opaque(placeholderText, form.Range, "", "", firstLineWidth(e.text(form.Range)))
 	}
 	return nil
+}
+
+// shapeHead returns head, the head of a service declaration, with the
+// colon of service Prefix:   string written as ": " (D281). A head with a
+// comment or a line break around the colon stays as written.
+func (e *encoder) shapeHead(form parser.VibeSyntax, head string) string {
+	if form.Right.Pos() == form.Right.End() {
+		return head
+	}
+	before := strings.TrimRight(e.source[form.Head.Pos():form.Right.Pos()], " \t")
+	if !strings.HasSuffix(before, ":") {
+		return head
+	}
+	name := strings.TrimRight(before[:len(before)-1], " \t")
+	if strings.ContainsAny(before[len(name):], "\n/") {
+		return head
+	}
+	return name + ": " + e.text(form.Right)
 }
 
 // catch writes x catch y as x.$v(y), keeping the space before catch, so a
@@ -492,6 +524,7 @@ func (e *encoder) chain(chain []tryClause) error {
 // tokens decoding matches by order.
 func (e *encoder) finish() (*encoding, error) {
 	edits := dropNested(e.edits)
+	e.markNested(edits)
 	slices.SortStableFunc(edits, compareEdits)
 	var out strings.Builder
 	// marks holds, for each kind of token matched by order, the TypeScript
@@ -612,6 +645,34 @@ func dropNested(edits []edit) []edit {
 		}
 	}
 	return kept
+}
+
+// markNested marks the placeholders that only the edits dropNested dropped
+// wrote: kept holds the edits it kept.
+func (e *encoder) markNested(kept []edit) {
+	written := map[int]bool{}
+	for _, ed := range kept {
+		written[ed.seq] = true
+	}
+	for _, ed := range e.edits {
+		if written[ed.seq] {
+			continue
+		}
+		for rest := ed.text; ; {
+			at := strings.Index(rest, e.sentinel)
+			if at < 0 {
+				break
+			}
+			rest = rest[at+len(e.sentinel):]
+			digits := 0
+			for digits < len(rest) && rest[digits] >= '0' && rest[digits] <= '9' {
+				digits++
+			}
+			if index, err := strconv.Atoi(rest[:digits]); err == nil && index < len(e.holders) {
+				e.holders[index].nested = true
+			}
+		}
+	}
 }
 
 // hasComment reports whether text, which holds no string literal, has a comment.

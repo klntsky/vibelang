@@ -38,6 +38,11 @@ service Users {
 control Approval {
   approve(request: string): boolean!!
 }
+export service Search: SearchApi {
+  static readonly layer = Layer.succeed(Search, searchApi)
+}
+service Prefix: string
+service Format: (value: string) => string!!
 schema Account {
   id: string
   nickname?: string
