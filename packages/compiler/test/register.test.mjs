@@ -43,7 +43,8 @@ process.exit(spawnSync(${JSON.stringify(native)}, args, { stdio: "inherit" }).st
   }
   const run = (entry, env = {}) =>
     spawnSync(process.execPath, ["--enable-source-maps", "--import", register, entry], {
-      cwd: root, encoding: "utf8", env: { ...process.env, VIBELANG_BINARY: compiler, VIBELANG_PROJECT: "", ...env }
+      cwd: root, encoding: "utf8",
+      env: { ...process.env, VIBELANG_BINARY: compiler, VIBELANG_PROJECT: "", VIBELANG_CACHE_DIR: join(root, ".cache"), ...env }
     })
   const compilations = () => existsSync(calls) ? readFileSync(calls, "utf8").trim().split("\n").length : 0
   return { root, run, compilations }

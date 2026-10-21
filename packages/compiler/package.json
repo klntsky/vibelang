@@ -21,7 +21,7 @@
     "./eslint": "./eslint.mjs"
   },
   "bin": { "vibelang": "bin/vibelang" },
-  "files": ["bin", "editor", "dprint-plugin.json", "eslint.mjs", "project.mjs", "project.d.mts", "register.mjs", "README.md", "LICENSE", "NOTICE", "skills/vibelang/SKILL.md"],
+  "files": ["bin", "editor", "cache.mjs", "dprint-plugin.json", "eslint.mjs", "project.mjs", "project.d.mts", "register.mjs", "README.md", "LICENSE", "NOTICE", "skills/vibelang/SKILL.md"],
   "scripts": { "test": "node --test test/*.test.mjs" },
   "optionalDependencies": {
     "vibelang-darwin-arm64": "0.0.2",

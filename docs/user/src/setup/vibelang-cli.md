@@ -120,6 +120,21 @@ Run `npx vitest run`. The output includes:
 
 Tell the user you added `src/hello.vibe`, `src/main.vibe`, and `src/hello.test.vibe`, which they can keep as a starting point or delete.
 
+## Run sources with Node
+
+To run a TypeScript entry point that imports `.vibe` modules without building
+`dist/` first, load the `vibelang/register` hook:
+
+```sh
+node --enable-source-maps --import vibelang/register src/start.ts
+```
+
+The first `.vibe` import compiles the project in the nearest `tsconfig.json`.
+The result is cached on disk, so the next process starts in milliseconds until
+a source, a tsconfig, an installed package, or the compiler changes. Set
+`VIBELANG_CACHE_DIR` to move the cache and `VIBELANG_DISABLE_CACHE=1` to turn it
+off. A type error stops the import with the compiler's diagnostics.
+
 ## Next
 
 Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify with step 4 of [Set up VibeLang](../setup.md).

@@ -2,9 +2,11 @@
 //
 // A .vibe module keeps its source URL as its identity, so a program that also
 // imports .ts files sees one copy of each module. Its JavaScript comes from one
-// whole-project compile per tsconfig per process: emit is type-directed, so no
-// module compiles alone. The project is the nearest tsconfig.json above the
-// module, or VIBELANG_PROJECT.
+// whole-project compile per tsconfig: emit is type-directed, so no module
+// compiles alone. The project is the nearest tsconfig.json above the module, or
+// VIBELANG_PROJECT. A compile's result is cached on disk (vibelang/project), so
+// a later process reuses it while the project's inputs are unchanged.
+// VIBELANG_REGISTER_DEBUG=1 reports each project's compile or cache hit.
 import { existsSync } from "node:fs"
 import { registerHooks } from "node:module"
 import { resolve } from "node:path"
@@ -16,6 +18,9 @@ if (typeof registerHooks !== "function") {
 }
 
 const results = new Map()
+const debug = process.env.VIBELANG_REGISTER_DEBUG
+  ? (text) => process.stderr.write(`vibelang/register: ${text}\n`)
+  : undefined
 
 function projectOf(file) {
   if (process.env.VIBELANG_PROJECT) return resolve(process.env.VIBELANG_PROJECT)
@@ -28,7 +33,7 @@ function emitted(file) {
   const project = projectOf(file)
   let result = results.get(project)
   if (result === undefined) {
-    result = compileProjectSync({ project })
+    result = compileProjectSync({ project, debug })
     results.set(project, result)
   }
   if (result.errors.length) {

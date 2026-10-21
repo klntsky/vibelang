@@ -57,18 +57,38 @@ export interface Imports {
   readonly errors: Array<Diagnostic>
 }
 
+/**
+ * Where compiles are cached. VIBELANG_DISABLE_CACHE=1 turns the cache off
+ * everywhere. Otherwise false turns it off, `directory` moves it, and without
+ * an option it is VIBELANG_CACHE_DIR, else a private directory under the
+ * system's temporary directory.
+ */
+export type CacheOption = false | { readonly directory: string }
+
 export function findCompiler(root: string, compiler?: string): string
 export function parseOutput(output: string, root: string): { files: Array<string>; diagnostics: Array<Diagnostic> }
 export function parseExplainFiles(output: string, root: string): { files: Array<string>; imports: Array<Import>; diagnostics: Array<Diagnostic> }
 export function projectImports(options: { project: string; root?: string; compiler?: string }): Imports
 export function formatDiagnostic(diagnostic: Diagnostic): string
-export function projectBackend(options: { root: string; compiler: string }): { compile(project: string): Promise<Result> }
-export function compileProjectSync(options: { project: string; root?: string; compiler?: string }): Result
+export function projectBackend(options: {
+  root: string
+  compiler: string
+  cache?: CacheOption
+  debug?: (text: string) => void
+}): { compile(project: string): Promise<Result> }
+export function compileProjectSync(options: {
+  project: string
+  root?: string
+  compiler?: string
+  cache?: CacheOption
+  debug?: (text: string) => void
+}): Result
 export function nearestProject(file: string): string | undefined
 export function projects(options: {
   root: string
   project: string
   compiler: string
+  cache?: CacheOption
   debug?: (text: string) => void
 }): {
   projectOf(file: string): string

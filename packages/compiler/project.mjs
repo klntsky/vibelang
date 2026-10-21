@@ -3,12 +3,15 @@
 //
 // VibeLang's emit is type-directed: a module's JavaScript depends on the
 // contracts of the modules it imports, so no module compiles alone. Each
-// compile is one vibelang process over a whole tsconfig project.
+// compile is one vibelang process over a whole tsconfig project, and its
+// result is kept in a persistent cache (cache.mjs) that later processes reuse
+// while the project's inputs are unchanged.
 import { spawn, spawnSync } from "node:child_process"
 import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, rmSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { projectCache } from "./cache.mjs"
 
 const slash = (path) => path.replaceAll("\\", "/")
 const located = /^(.+?)\((\d+),(\d+)\):\s+(error|warning)\s+(\w+\d+):\s?(.*)$/
@@ -163,6 +166,7 @@ const realpath = (path) => {
 //   inputs       project source files the result depends on
 //   errors       diagnostics that blocked emission; outputs is then empty
 //   warnings     diagnostics of a successful compile
+// and every file the compiler read, dependencies included, for the cache.
 function collect({ status, signal, output }, root, out) {
   const { files, diagnostics } = parseOutput(output, root)
   // Dependencies are contracts too; their sources change only on install.
@@ -187,15 +191,37 @@ function collect({ status, signal, output }, root, out) {
     outputs.set(source, result)
     outputs.set(realpath(source), result)
   }
-  return { outputs, inputs, errors, warnings }
+  return { result: { outputs, inputs, errors, warnings }, files }
+}
+
+const elapsed = (started) => `${Math.round(performance.now() - started)}ms`
+
+// Serves a compile from the cache, or runs it and caches its result.
+function cached({ project, root, compiler, cache, debug }, run) {
+  const started = performance.now()
+  const store = projectCache({ project, root, compiler, cache, debug })
+  const hit = store?.lookup()
+  if (hit?.result) {
+    debug(`${project} from the cache in ${elapsed(started)}`)
+    return hit.result
+  }
+  const snapshot = store?.begin()
+  const finish = ({ result, files }) => {
+    store?.store(snapshot, result, files)
+    debug(`compiled ${project} in ${elapsed(started)} (${hit?.miss ?? "cache off"})`)
+    return result
+  }
+  const compiled = run()
+  return compiled instanceof Promise ? compiled.then(finish) : finish(compiled)
 }
 
 /**
  * projectBackend compiles a whole tsconfig project with one vibelang process,
- * in a fresh output directory each time. compile(project) resolves to the
- * result described above.
+ * in a fresh output directory each time, or serves the result from the cache.
+ * compile(project) resolves to the result described above. `cache` is false to
+ * turn the cache off, or { directory } to move it.
  */
-export function projectBackend({ root, compiler }) {
+export function projectBackend({ root, compiler, cache, debug = () => {} }) {
   function run(args) {
     const [file, argv] = command(compiler, args)
     return new Promise((accept, reject) => {
@@ -209,14 +235,16 @@ export function projectBackend({ root, compiler }) {
   }
 
   async function compile(project) {
-    // Outside the project: webpack and esbuild rebuild when a directory they resolved through changes.
-    const out = mkdtempSync(join(tmpdir(), "vibelang-project-"))
-    try {
-      return collect(await run(emitArgs(project, root, out)), root, out)
-    } finally {
-      // Outputs are in memory now. The next compile starts from an empty directory.
-      rmSync(out, { recursive: true, force: true })
-    }
+    return cached({ project, root, compiler, cache, debug }, async () => {
+      // Outside the project: webpack and esbuild rebuild when a directory they resolved through changes.
+      const out = mkdtempSync(join(tmpdir(), "vibelang-project-"))
+      try {
+        return collect(await run(emitArgs(project, root, out)), root, out)
+      } finally {
+        // Outputs are in memory now. The next compile starts from an empty directory.
+        rmSync(out, { recursive: true, force: true })
+      }
+    })
   }
 
   return { compile }
@@ -226,16 +254,18 @@ export function projectBackend({ root, compiler }) {
  * compileProjectSync is projectBackend's compile for callers that cannot wait,
  * such as Node's synchronous module hooks.
  */
-export function compileProjectSync({ project, root = dirname(project), compiler = findCompiler(root) }) {
-  const out = mkdtempSync(join(tmpdir(), "vibelang-project-"))
-  try {
-    const [file, argv] = command(compiler, emitArgs(project, root, out))
-    const run = spawnSync(file, argv, { cwd: root, encoding: "utf8", maxBuffer: 1 << 30 })
-    if (run.error) throw new Error(`vibelang: ${run.error.message}\nCompiler: ${compiler}`)
-    return collect({ status: run.status, signal: run.signal, output: run.stdout + run.stderr }, root, out)
-  } finally {
-    rmSync(out, { recursive: true, force: true })
-  }
+export function compileProjectSync({ project, root = dirname(project), compiler = findCompiler(root), cache, debug = () => {} }) {
+  return cached({ project, root, compiler, cache, debug }, () => {
+    const out = mkdtempSync(join(tmpdir(), "vibelang-project-"))
+    try {
+      const [file, argv] = command(compiler, emitArgs(project, root, out))
+      const run = spawnSync(file, argv, { cwd: root, encoding: "utf8", maxBuffer: 1 << 30 })
+      if (run.error) throw new Error(`vibelang: ${run.error.message}\nCompiler: ${compiler}`)
+      return collect({ status: run.status, signal: run.signal, output: run.stdout + run.stderr }, root, out)
+    } finally {
+      rmSync(out, { recursive: true, force: true })
+    }
+  })
 }
 
 /** Returns the nearest tsconfig.json above file, or undefined. */
@@ -272,9 +302,10 @@ const failed = "throw new Error(\"vibelang: this module did not compile; see the
  * load(file) resolves to { project, code, map, inputs, errors, warnings, first, error }.
  * errors and warnings are the whole compile's; first is true for the first
  * module loaded from that compile, so a bundler can report them once. `error`
- * says that the project does not include the module.
+ * says that the project does not include the module. `cache` is as for
+ * projectBackend: a compile a revision needs may come from the cache.
  */
-export function projects({ root, project, compiler, debug = () => {} }) {
+export function projects({ root, project, compiler, cache, debug = () => {} }) {
   const states = new Map()
   let revision = 0
 
@@ -296,7 +327,7 @@ export function projects({ root, project, compiler, debug = () => {} }) {
     let state = states.get(tsconfig)
     if (state === undefined) {
       const projectRoot = tsconfig === project ? root : dirname(tsconfig)
-      state = { tsconfig, backend: projectBackend({ root: projectRoot, compiler }), result: undefined, pending: undefined, compiled: -1, reported: -1 }
+      state = { tsconfig, backend: projectBackend({ root: projectRoot, compiler, cache, debug }), result: undefined, pending: undefined, compiled: -1, reported: -1 }
       states.set(tsconfig, state)
     }
     return state

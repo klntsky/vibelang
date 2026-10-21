@@ -150,7 +150,7 @@ process.exit(spawnSync(${JSON.stringify(native)}, args, { stdio: "inherit" }).st
 
 test("a module outside root compiles with its own package's project, once per revision", { skip }, async (t) => {
   const { root, app, compiler, compiles } = workspace(t)
-  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler })
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler, cache: false })
   const main = await modules.load(join(app, "src/main.vibe"))
   const lib = await modules.load(join(root, "dep/src/lib.vibe"))
   assert.equal(main.project, join(app, "tsconfig.json"))
@@ -168,7 +168,7 @@ test("a module outside root compiles with its own package's project, once per re
 
 test("a module of a package nested inside root compiles with that package's own project", { skip }, async (t) => {
   const { app, compiler, compiles } = workspace(t)
-  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler })
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler, cache: false })
   const inner = await modules.load(join(app, "packages/inner/src/inner.vibe"))
   assert.equal(inner.project, join(app, "packages/inner/tsconfig.json"))
   assert.match(inner.code, /fromInner = "inner"/)
@@ -184,7 +184,7 @@ test("a failed compile marks its first module, and a module no project includes 
   const { root, app, compiler } = workspace(t)
   writeFileSync(join(root, "dep/src/bad.vibe"), "export const count: number = \"three\"\n")
   utimesSync(join(root, "dep/src/bad.vibe"), new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
-  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler })
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler, cache: false })
   const first = await modules.load(join(root, "dep/src/lib.vibe"))
   const second = await modules.load(join(root, "dep/src/bad.vibe"))
   assert.equal(first.errors.length, 1)

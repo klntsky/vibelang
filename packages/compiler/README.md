@@ -56,14 +56,47 @@ node --import vibelang/register src/main.ts
 ```
 
 `vibelang/register` lets Node import `.vibe` modules from source, so a
-TypeScript entry point, a script, or a test that spawns `node` needs no
-`dist/`. The first `.vibe` import compiles the whole project in the nearest
+TypeScript entry point, a script, or a test that spawns `node` needs no `dist/`.
+The first `.vibe` import compiles the whole project in the nearest
 `tsconfig.json` above the module, once per process; every `.vibe` module of that
 project comes from that compile. Set `VIBELANG_PROJECT` to a tsconfig path to
 choose another project. A module keeps its source URL, so a `.ts` file imported
 by both a TypeScript and a `.vibe` module loads once. Diagnostics that stop the
 compile are thrown at the import. Add `--enable-source-maps` for stack traces
 with `.vibe` lines. It needs Node 22.15 or later, for `module.registerHooks`.
+`VIBELANG_REGISTER_DEBUG=1` prints each project's compile time, or that it came
+from the cache.
+
+### The compile cache
+
+A project's compile is cached on disk, so the next process that imports the
+same project reuses it instead of compiling again: a warm start costs a few
+milliseconds per project, against hundreds for a compile. `vibelang/register`,
+`vibelang-vite`, and `vibelang-unplugin` share the cache. A cached compile is
+reused only while all of these are unchanged:
+
+| Input | What counts as a change |
+| --- | --- |
+| Sources | A file the compile read, by content; a dependency's file by size, modification time, and inode |
+| Project files | A file added to or removed from a directory the tsconfig's `include` scans |
+| Configuration | The tsconfig, every config it `extends`, and the configs its `references` name; for another workspace package's `.vibe` source in the program, that package's `tsconfig.json`, whose settings it is checked with |
+| Packages | The `package.json` nearest each source, and the lockfiles and package-manager state (`node_modules/.modules.yaml`, `.package-lock.json`, and so on) in the project's directory and above |
+| Compiler | The compiler file, and the native binary the `vibelang` launcher runs |
+
+A failed compile is never cached, and neither is one whose sources changed
+while it ran. Entries are written to a temporary file and renamed into place,
+so any number of processes can share a cache directory.
+
+| Setting | Effect |
+| --- | --- |
+| `VIBELANG_CACHE_DIR=<dir>` | Keep the cache in `<dir>` |
+| `VIBELANG_DISABLE_CACHE=1` | Compile in every process; read and write no cache |
+| Default | `vibelang-cache-<uid>` in the system's temporary directory, readable only by you |
+
+The cache keeps one entry per project. It does not see a file that changes
+module resolution from outside the project's `include` and outside
+`node_modules`, or a `node_modules` link changed by hand rather than by a
+package manager; edit the importing file, or delete the cache directory.
 
 ## Compile projects from a tool
 
@@ -75,7 +108,9 @@ package another package imports, belongs to the nearest `tsconfig.json` above
 it. Another package is one outside `root`, or one nested inside it with its own
 `package.json` and `tsconfig.json`. `load(file)` returns the module's
 JavaScript, its source map, and its project's diagnostics; `invalidate()` makes
-every project compile again on its next load.
+every project compile again on its next load, or load from the cache when
+nothing changed. `compileProjectSync`, `projectBackend`, and `projects` take
+`cache: false` to turn the cache off, or `cache: { directory }` to move it.
 
 `projectImports({ project })` lists a project's module graph without
 type-checking it: `files` is every file of the program, and `imports` is every

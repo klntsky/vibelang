@@ -51,7 +51,7 @@ configuration.
 
 | Package | Current implementation |
 | --- | --- |
-| `vibelang` | Compiler and language server: a Node launcher that forwards arguments, streams, signals, and exit status to the matching platform package's native binary (`VIBELANG_BINARY` overrides it), plus the VS Code extension |
+| `vibelang` | Compiler and language server: a Node launcher that forwards arguments, streams, signals, and exit status to the matching platform package's native binary (`VIBELANG_BINARY` overrides it), plus the VS Code extension, the Node loader `vibelang/register`, and `vibelang/project`, the whole-project compile the loader and the bundler plugins share, with its on-disk cache (D299) |
 | `vibelang-<os>-<cpu>` | The native `vibelang` binary for one platform |
 | `vibelang-runtime` | Continuation kernel, prelude, and generated-code helpers; its README gives the ABI |
 | `vibelang-vite` | Whole-project compiler subprocess integration for Vite 7 and 8 and Vitest 5 |
@@ -69,6 +69,12 @@ compiler is the TypeScript 7.1 checker, with ordinary TypeScript semantics for
 native binary exposes `--lsp --stdio` and the upstream `--api` transport. The
 Vite plugin compiles in a subprocess, not yet through the API transport (D105,
 amending D31).
+
+A whole-project compile is cached on disk (D299). The next process that loads
+the same project reuses the result while the compiler, the configs, the scanned
+directories, the installed packages, and every file the compile read are
+unchanged; `VIBELANG_CACHE_DIR` moves the cache and `VIBELANG_DISABLE_CACHE=1`
+turns it off.
 
 #### Building and testing
 
