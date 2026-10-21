@@ -1,6 +1,6 @@
 # Cache
 
-A `Cache` stores lookup outcomes by key and shares in-progress lookups across callers. Use it when many requests need the same data, with capacity and expiration controlling how long that sharing lasts.
+A `Cache` stores lookup outcomes by key and shares in-progress lookups across callers. Use it when many requests need the same data; capacity and expiration control how long the sharing lasts.
 
 ## Building a lookup cache
 
@@ -25,7 +25,7 @@ function makePrices() {
 // Output: 42
 ```
 
-The default cache captures lookup services when it is created. `Cache.get(cache, sku)` then either reads an entry or calls the captured lookup. Creating a cache per request prevents sharing across requests; allocate it in a service layer when the cache belongs to the application.
+The default cache captures lookup services when created. `Cache.get(cache, sku)` then reads an entry or calls the captured lookup. A cache created per request shares nothing across requests; when the cache belongs to the application, allocate it in a service layer.
 
 ## Sharing concurrent requests
 
@@ -52,7 +52,7 @@ function concurrentLookup() {
 // Output: {"values":["NORTH","NORTH","NORTH"],"calls":1}
 ```
 
-Requests for the same missing key wait on one computation without blocking the JavaScript thread. A failed lookup shares its failure and caches it too. An interrupted lookup is removed so a later call can try again.
+Requests for the same missing key wait on one computation without blocking the JavaScript thread. A failed lookup shares and caches its failure. An interrupted lookup is removed, so a later call can try again.
 
 ## Setting capacity and expiration
 
@@ -69,7 +69,7 @@ function makePermanentNames() {
 // Output: item-blue
 ```
 
-Capacity is a bound on entries, not bytes, and recently used entries take priority over older ones when eviction is needed. A finite TTL prevents expired outcomes from being reused and causes the next lookup to reload them. Infinite TTL disables time expiration while leaving capacity eviction active.
+Capacity bounds entries, not bytes; eviction keeps recently used entries over older ones. With a finite TTL, an expired outcome isn't reused and the next lookup reloads it. An infinite TTL disables time expiration; capacity eviction stays active.
 
 ## Inspecting cache state
 
@@ -88,7 +88,7 @@ function inspect() {
 // Output: {"present":true,"size":1,"keys":["paper"],"entries":[["paper",5]]}
 ```
 
-`has`, `size`, `keys`, and `entries` inspect state without loading missing keys. `entries` includes successful resolved values, excluding failures and unfinished lookups. These observations can change immediately under concurrent access, so do not use `has` followed by `get` as a synchronization protocol.
+`has`, `size`, `keys`, and `entries` inspect state without loading missing keys. `entries` includes resolved successes only, not failures or unfinished lookups. Concurrent access can change these observations at once, so don't use `has` followed by `get` as a synchronization protocol.
 
 ## Invalidating and refreshing entries
 
@@ -111,4 +111,4 @@ function refreshExample() {
 // Output: {"first":"profile:1","refreshed":"profile:2","reloaded":"profile:3"}
 ```
 
-`refresh` forces a new lookup and returns the refreshed value. An existing valid value remains available to readers while its replacement loads. `invalidate` removes one entry, while `invalidateAll` removes the cache's entries; the next `get` loads again. Use refresh when the caller needs recomputation now and invalidation when a later reader should trigger it.
+`refresh` forces a new lookup and returns the refreshed value; readers still get an existing valid value while its replacement loads. `invalidate` removes one entry and `invalidateAll` removes every entry; the next `get` loads again. Refresh when the caller needs recomputation now; invalidate when a later reader should trigger it.

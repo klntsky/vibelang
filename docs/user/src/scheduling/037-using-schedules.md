@@ -1,6 +1,6 @@
 # Using schedules
 
-A schedule decides when work runs again and when it stops. `Schedule` values work in VibeLang exactly as in Effect; pass a program to `Effect.repeat`, `Effect.schedule`, or `Effect.retry` to run one. These schedules live in the running process and do not recover jobs missed during downtime.
+A schedule decides when work runs again and when it stops. `Schedule` values work in VibeLang exactly as in Effect; to run one, pass a program to `Effect.repeat`, `Effect.schedule`, or `Effect.retry`. Schedules live in the running process and don't recover jobs missed during downtime.
 
 ## Repeating successful computations
 
@@ -20,7 +20,7 @@ function heartbeat() {
 // Output: worker available
 ```
 
-`Effect.repeat` runs the program immediately, then steps the schedule after each success. Here, each completed log is followed by a fifteen second wait. A failure stops the loop, and interruption cancels it.
+`Effect.repeat` runs the program immediately, then steps the schedule after each success: here, a fifteen second wait after each completed log. A failure stops the loop; interruption cancels it.
 
 ## Stopping based on a result
 
@@ -42,7 +42,7 @@ function waitForBuild() {
 // Output: {"status":"ready","checks":4}
 ```
 
-The initial check is separate from the seven permitted repetitions, so this loop makes at most eight checks. `until` stops on a matching result; `while` continues while its predicate holds. If the count limit wins, `repeat` returns the last result, so check it before assuming the work is ready.
+The initial check is separate from the seven permitted repetitions, so the loop makes at most eight checks. `until` stops on a matching result; `while` continues while its predicate holds. If the count limit wins, `repeat` returns the last result, so check it before assuming the work is ready.
 
 ## Delaying the initial run
 
@@ -59,7 +59,7 @@ function delayedCleanup() {
 // Output: sweeping expired sessions
 ```
 
-`Effect.schedule` waits for the schedule before the first execution too. This job waits thirty minutes at startup, then thirty minutes after each completed sweep. Use it for calendar jobs and startup delays where an immediate run would be wrong.
+`Effect.schedule` also waits for the schedule before the first run: this job waits thirty minutes at startup, then thirty minutes after each completed sweep. Use it for calendar jobs and startup delays where an immediate run is wrong.
 
 ## Retrying failed computations
 
@@ -79,7 +79,7 @@ function reserveSlot() {
 // Output: reserved
 ```
 
-`retry` steps its schedule after an expected failure and stops immediately on success. `recurs(3)` permits three retries after the first attempt, for four attempts at most. Retry does not turn defects or interruption into expected failures.
+`retry` steps its schedule after an expected failure and stops immediately on success. `recurs(3)` permits three retries after the first attempt: four attempts at most. Retry doesn't turn defects or interruption into expected failures.
 
 ## Handling failures while repeating
 
@@ -105,8 +105,8 @@ function sampleContinuously() {
 // Output: sample unavailable SensorOffline
 ```
 
-Handle a recoverable failure inside the repeated program when later samples should still run. A `catch` outside `repeat` recovers after the loop has already stopped. `Effect.repeatOrElse` instead stops repetition and calls a fallback with the failure and an `Option` of the latest schedule metadata; before any schedule step, that option is empty.
+When later samples should still run, handle a recoverable failure inside the repeated program; a `catch` outside `repeat` recovers after the loop has stopped. `Effect.repeatOrElse` instead stops repetition and calls a fallback with the failure and an `Option` of the latest schedule metadata, empty before any schedule step.
 
 ## Coming from Effect
 
-Pass `() => sample()` where Effect expects the computation. Schedule constructors and count semantics stay the same; ordinary statements replace the generator body.
+Pass `() => sample()` where Effect expects the computation. Schedule constructors and count semantics are unchanged; ordinary statements replace the generator body.

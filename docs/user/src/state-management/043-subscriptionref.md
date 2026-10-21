@@ -1,6 +1,6 @@
 # SubscriptionRef
 
-A `SubscriptionRef` combines shared state with a stream of changes. Use it for observable application state where each subscriber needs a current snapshot followed by later updates. Its updates support the same serialized, effectful operations as `SynchronizedRef`.
+A `SubscriptionRef` combines shared state with a stream of changes. Use it for observable application state where each subscriber needs a current snapshot, then later updates. Its updates support the same serialized, effectful operations as `SynchronizedRef`.
 
 ## Combining state with subscriptions
 
@@ -22,7 +22,7 @@ function advance(progress: SubscriptionRef.SubscriptionRef<{
 // Output: {"completed":1,"total":12}
 ```
 
-Creating the reference establishes its initial state. Updating through `SubscriptionRef` commits the value and publishes the change to subscribers. Keep values immutable so observers receive meaningful snapshots.
+Creating the reference sets its initial state. An update through `SubscriptionRef` commits the value and publishes the change to subscribers. Keep values immutable so observers receive meaningful snapshots.
 
 ## Reading and updating observable state
 
@@ -39,7 +39,7 @@ function renameStatus() {
 // Output: {"before":"starting","after":"RUNNING"}
 ```
 
-`get` reads without subscribing. `set`, `update`, and `modify` change the value; their effectful variants can compute replacements while holding the update lock. A read outside an update callback is a snapshot, not a reservation of the value for a later write.
+`get` reads without subscribing. `set`, `update`, and `modify` change the value; their effectful variants compute replacements while holding the update lock. A read outside an update callback is a snapshot; it doesn't reserve the value for a later write.
 
 ## Consuming current and future values
 
@@ -53,7 +53,7 @@ function currentSnapshot() {
 // Output: [7]
 ```
 
-`changes` builds a Stream; it does not begin listening until that stream runs. Each run first emits the value current at subscription time, then receives future updates. Consume it with Stream operators such as `take` and `runForEach`, or iterate it directly with `for...of`. Leaving the loop closes the stream and its subscription.
+`changes` builds a Stream that starts listening only when it runs. Each run first emits the value current at subscription time, then future updates. Consume it with Stream operators such as `take` and `runForEach`, or iterate it directly with `for...of`; leaving the loop closes the stream and its subscription.
 
 ## Coordinating concurrent subscribers
 
@@ -85,4 +85,4 @@ function observeTwoClients() {
 // Output: observed 1
 ```
 
-The readiness signals come from each subscriber's first stream element, so both subscriptions exist before the update. Each client observes zero and then one, and its `take(2)` ends its subscription. A sleep or one scheduler yield does not establish that ordering; use explicit readiness when every observer must see a particular change.
+Each subscriber signals readiness from its first stream element, so both subscriptions exist before the update. Each client observes zero, then one, and its `take(2)` ends its subscription. A sleep or one scheduler yield doesn't establish that ordering; when every observer must see a particular change, signal readiness explicitly.

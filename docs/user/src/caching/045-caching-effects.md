@@ -1,6 +1,6 @@
 # Caching Effects
 
-Caching shares a computation's outcome across callers instead of repeating the work. Use a keyed `Cache` for parameterized lookups, or `Effect.cached` and its TTL variants for one reusable program. Create the cache once at the lifetime where callers should share it.
+Caching shares a computation's outcome across callers instead of repeating the work. Use a keyed `Cache` for parameterized lookups, or `Effect.cached` and its TTL variants for one reusable program. Create the cache once, at the lifetime where callers share it.
 
 ## Memoizing parameterized computations
 
@@ -26,7 +26,7 @@ function memoizeLengths() {
 // Output: {"first":6,"again":6,"other":4,"lookups":2}
 ```
 
-Each key has its own stored outcome. Repeated calls for a key reuse it, and concurrent requests for the same key share a lookup. Capacity bounds the number of entries; omitting `timeToLive` leaves them without time-based expiration.
+Each key stores its own outcome: repeated calls for the key reuse it, and concurrent requests for it share one lookup. Capacity bounds the number of entries; without `timeToLive`, entries don't expire by time.
 
 ## Reusing one computed result
 
@@ -47,7 +47,7 @@ function cachedSettings() {
 // Output: {"first":{"theme":"dark","revision":1},"again":{"theme":"dark","revision":1},"loads":1}
 ```
 
-Calling `Effect.cached` allocates a reusable Effect value; calling that value runs it. The first caller starts the work and later callers reuse its success or expected failure; concurrent callers wait for the same result. Interrupted computations are not cached, and shared pending work is interrupted only after all its waiting callers have been interrupted. Each new call to `Effect.cached` creates independent storage, so put it outside the per-request function when requests must share it.
+Calling `Effect.cached` allocates a reusable Effect value; calling that value runs it. The first caller starts the work; later callers reuse its success or expected failure, and concurrent callers wait for the same result. An interrupted computation isn't cached; shared pending work is interrupted only once every waiting caller is. Each `Effect.cached` call creates independent storage, so for requests to share it, call it outside the per-request function.
 
 ## Expiring results after a duration
 
@@ -65,7 +65,7 @@ function expiringSnapshot() {
 // Output: {"first":1,"same":1,"fresh":2}
 ```
 
-The TTL bounds how long an outcome is reused. Expiration does not start background refresh work; the next evaluation recomputes it. Use Effect's clock and sleep operations so tests can advance time without real waiting.
+The TTL bounds how long an outcome is reused. Expiration starts no background refresh; the next evaluation recomputes it. Use Effect's clock and sleep operations so tests can advance time without real waiting.
 
 ## Invalidating explicitly
 
@@ -85,8 +85,8 @@ function reloadableSnapshot() {
 // Output: {"first":1,"fresh":2}
 ```
 
-The returned pair contains a cached program and an invalidation program. `invalidate()` clears the stored outcome without loading a replacement; the next `snapshot()` does that work. Invalidate after a successful write when callers need to stop seeing the previous result before the TTL expires.
+The returned pair is a cached program and an invalidation program. `invalidate()` clears the stored outcome without loading a replacement; the next `snapshot()` loads it. Invalidate after a successful write when callers must stop seeing the previous result before the TTL expires.
 
 ## Coming from Effect
 
-Keep returned Effect values such as `snapshot` and `invalidate`, then call them to run them. Passing `() => load()` to a caching constructor delays the load until the cache needs it.
+Keep returned Effect values such as `snapshot` and `invalidate`, and call them to run them. Passing `() => load()` to a caching constructor delays the load until the cache needs it.

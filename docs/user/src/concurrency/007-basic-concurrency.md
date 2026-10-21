@@ -1,6 +1,6 @@
 # Basic Concurrency
 
-Ordinary VibeLang calls run in sequence. Use Effect's concurrency combinators to overlap work, choose a concurrency limit, and control cancellation. Pass functions describing the work so the combinator starts each operation at the right time.
+Calls run in sequence. Effect's concurrency combinators overlap work, limit concurrency, and control cancellation; pass the work as functions so the combinator starts each operation at the right time.
 
 ## Sequential, bounded, and unbounded work
 
@@ -32,7 +32,7 @@ function runTasks() {
 // Output: {"sequential":[2,4],"bounded":[2,4,6,8],"unbounded":[10,12,14]}
 ```
 
-The default is sequential execution. A positive numeric limit bounds active operations. `await.all [...]` starts every element in its own fiber at once, like `Promise.all`, and is `Effect.all` with unbounded concurrency. Results keep the order written even when work finishes out of order; choose a finite limit with `forEach` or `for concurrent(n)` when work uses a constrained service or resource.
+Sequential is the default; a positive numeric limit bounds active operations. `await.all [...]` is `Effect.all` with unbounded concurrency: like `Promise.all`, it starts every element in its own fiber at once. Results keep the written order however the work finishes. For a constrained service or resource, set a finite limit with `forEach` or `for concurrent(n)`.
 
 ## Interrupting computations
 
@@ -49,7 +49,7 @@ function cancelWork() {
 // Output: true
 ```
 
-`Fiber.interrupt` requests cancellation and waits for termination, including finalizers. `Fiber.await` then returns an `Exit` describing the interruption rather than propagating it. `Effect.interrupt()` interrupts the current fiber; interruption is outside the expected error channel and ordinary `catch` does not handle it.
+`Fiber.interrupt` requests cancellation and waits for termination, finalizers included; `Fiber.await` then returns an `Exit` describing the interruption instead of propagating it. `Effect.interrupt()` interrupts the current fiber. Interruption is outside the expected error channel, so ordinary `catch` doesn't handle it.
 
 ## Attaching interruption cleanup
 
@@ -71,7 +71,7 @@ function cancelWithCleanup() {
 // Output: interrupt returned
 ```
 
-`finally` runs on every exit, while `onInterrupt` adds work specifically for cancellation. Cleanup runs before the interrupting caller resumes. For acquired resources, use `using` so release is registered as part of acquisition rather than depending on a later statement.
+`finally` runs on every exit; `onInterrupt` adds work only for cancellation. Cleanup runs before the interrupting caller resumes. For acquired resources, `using` registers release as part of acquisition, not in a later statement.
 
 ## Propagating cancellation across concurrent work
 
@@ -96,7 +96,7 @@ function cancelBatch() {
 // Output: true
 ```
 
-`for concurrent` runs each item in its own fiber. An interrupted branch stops the loop and interrupts its active siblings. An expected failure also stops the default concurrent traversal and cancels work whose result is no longer needed. The parent waits for branch cleanup; a cause containing interruption or a defect passes through ordinary `catch` intact.
+`for concurrent` runs each item in its own fiber. An interrupted branch stops the loop and interrupts its active siblings; so does an expected failure in the default concurrent traversal, cancelling work whose result is no longer needed. The parent waits for branch cleanup. A cause containing interruption or a defect passes through ordinary `catch` intact.
 
 ## Racing under different winner rules
 
@@ -126,7 +126,7 @@ function raceExamples() {
 // Output: {"firstSuccess":"replica","anySuccess":"east","firstCompletion":"primary"}
 ```
 
-The await operations come from the TC39 await operations proposal, and each behaves as the `Promise` method of the same name. `await.any` waits for a success (`Effect.raceAll`), so one early failure does not defeat another branch that can still succeed; if no branch succeeds, it fails with the collected failure reasons. `await.race` accepts the earliest completion, including failure (`Effect.raceFirst`). In both, the losing work is interrupted and cleaned up before the race returns. A named Effect function keeps Effect's meaning: `race` waits for a success, as `Effect.race` does.
+The await operations (TC39 await operations proposal) behave as the same-named `Promise` methods. `await.any` (`Effect.raceAll`) waits for a success, so an early failure doesn't defeat a branch that can still succeed; if none succeeds, it fails with the collected failure reasons. `await.race` (`Effect.raceFirst`) takes the earliest completion, failure included. Both interrupt and clean up the losers before returning. A named Effect function keeps Effect's meaning: `race`, like `Effect.race`, waits for a success.
 
 ## Inspecting the winner
 
@@ -152,8 +152,8 @@ function inspectRace() {
 // Output: [0]
 ```
 
-The synchronous `onWinner` callback observes the winning fiber and index, zero for the first branch and one for the second. It does not replace the winning result and cannot run a VibeLang operation that pauses. `Effect.result` captures expected failures as data; use `Effect.exit` when defects and interruption must also be represented.
+The synchronous `onWinner` callback observes the winning fiber and its index: zero for the first branch, one for the second. It doesn't replace the winning result and can't run a pausing VibeLang operation. `Effect.result` captures expected failures as data; `Effect.exit` also captures defects and interruption.
 
 ## Coming from Effect
 
-`Effect.all([task(1), task(2)], { concurrency: "unbounded" })` in TypeScript becomes `await.all [task(1), task(2)]` in VibeLang, and `Effect.raceFirst(a, b)` becomes `await.race [a(), b()]`. Each element is passed by name, so `task(1)` starts in its own fiber instead of running before the operation.
+`Effect.all([task(1), task(2)], { concurrency: "unbounded" })` becomes `await.all [task(1), task(2)]`, and `Effect.raceFirst(a, b)` becomes `await.race [a(), b()]`. Each element is passed by name, so `task(1)` starts in its own fiber instead of running before the operation.
