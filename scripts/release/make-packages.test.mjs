@@ -11,12 +11,16 @@ import { fileURLToPath } from "node:url"
 const repo = fileURLToPath(new URL("../../", import.meta.url))
 const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-arm64", "win32-x64"]
 const json = (file) => JSON.parse(readFileSync(file, "utf8"))
+// The compiler package's own files; make-packages writes the others.
+const compilerSources = json(join(repo, "packages/compiler/package.json")).files
+  .filter((file) => !["editor", "dprint-plugin.json", "README.md", "LICENSE", "NOTICE"].includes(file))
+  .map((file) => `packages/compiler/${file}`)
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), "vibelang-release-test-"))
   t.after(() => rmSync(root, { recursive: true, force: true }))
   for (const path of ["scripts/release/make-packages.mjs", "LICENSE", "typescript/LICENSE.txt", "typescript/NOTICE.txt", "typescript/tsc/internal/vibelang/identity.go",
     ...["compiler", "runtime", "vite", "create-vibelang", "unplugin"].flatMap((name) => [`packages/${name}/package.json`, `packages/${name}/README.md`]),
-    "packages/compiler/bin", "packages/compiler/project.mjs", "packages/compiler/project.d.mts", "packages/compiler/register.mjs", "packages/vite/src", "packages/create-vibelang/bin", "packages/unplugin/src", "templates/app"]) {
+    ...compilerSources, "packages/vite/src", "packages/create-vibelang/bin", "packages/unplugin/src", "templates/app"]) {
     mkdirSync(dirname(join(root, path)), { recursive: true })
     cpSync(join(repo, path), join(root, path), { recursive: true, filter: (file) => !["node_modules", "dist", ".prototype"].includes(file.split("/").at(-1)) })
   }
