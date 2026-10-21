@@ -1,0 +1,6 @@
+error Timeout
+export function h(e: Timeout) {
+return match (e) {
+when Timeout: "same";
+}
+}

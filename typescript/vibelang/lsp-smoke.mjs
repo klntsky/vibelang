@@ -248,6 +248,23 @@ try {
   const diagnostics = async (relative) =>
     (await connection.request("textDocument/diagnostic", { textDocument: { uri: fileUri(relative) } })).items
 
+  await check("formatting: a match uses the reversible dprint syntax mapping", async () => {
+    const relative = "src/format-match.vibe"
+    open(relative, "vibe")
+    const source = text(relative)
+    const edits = await connection.request("textDocument/formatting", {
+      textDocument: { uri: fileUri(relative) },
+      options: { tabSize: 2, insertSpaces: true }
+    })
+    const offset = (p) => source.split("\n").slice(0, p.line).reduce((n, line) => n + line.length + 1, 0) + p.character
+    let formatted = source
+    for (const edit of [...(edits ?? [])].sort((a, b) => offset(b.range.start) - offset(a.range.start))) {
+      formatted = formatted.slice(0, offset(edit.range.start)) + edit.newText + formatted.slice(offset(edit.range.end))
+    }
+    const expected = 'error Timeout\nexport function h(e: Timeout) {\n  return match (e) {\n    when Timeout: "same";\n  }\n}\n'
+    assert(formatted === expected, `formatted ${JSON.stringify(formatted)}`)
+  })
+
   await check("diagnostics: main.vibe, opened as vibe, checks clean", async () => {
     const items = await diagnostics("src/main.vibe")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
