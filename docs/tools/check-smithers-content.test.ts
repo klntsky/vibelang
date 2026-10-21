@@ -34,17 +34,40 @@ test("sectionBlocks reads only the named section", () => {
 
 describe("home.json", () => {
   const exists = (path: string) => path === "README.md"
-  test("accepts the blocks smithers.sh renders", () => {
-    const doc = JSON.stringify({ blocks: [{ type: "text", text: "x" }, { type: "prompt", title: "Ask" }, { type: "links", links: [{ label: "Docs", url: "https://effeck.dev/" }] }, { type: "markdown", path: "README.md" }] })
+  const one = (block: unknown) => JSON.stringify({ blocks: [block] })
+  test("accepts a bare blocks array of the kinds smithers.sh renders", () => {
+    const doc = JSON.stringify({ blocks: [{ type: "text", text: "x" }, { type: "prompt", title: "Ask" }, { type: "links", links: [{ label: "Docs", url: "https://vibelang.sh/" }] }, { type: "markdown", path: "README.md" }] })
     expect(homeProblems(doc, exists)).toEqual([])
   })
-  test("refuses a missing markdown file, a bad path and an unknown block", () => {
-    expect(homeProblems(JSON.stringify({ blocks: [{ type: "markdown", path: "docs/site/fixed-by-agents.md" }] }), exists)[0]).toContain("missing")
-    expect(homeProblems(JSON.stringify({ blocks: [{ type: "markdown", path: "../x.md" }] }), exists)[0]).toContain("invalid")
-    expect(homeProblems(JSON.stringify({ blocks: [{ type: "tiles" }] }), exists)[0]).toContain("unknown type")
+  test("accepts sections with audiences, and every kind the reader knows", () => {
+    const doc = JSON.stringify({
+      contributors: "anyone",
+      sections: [
+        { title: "Today", audience: "maintainer", blocks: [{ type: "action", flow: "branch.new", title: "New branch", key: "b" }, { type: "issues" }, { type: "runs" }, { type: "flows" }, { type: "stack" }] },
+        { audience: "contributor", blocks: [{ type: "code", title: "Set up", language: "sh", code: "sh scripts/setup.sh" }, { type: "cards", cards: [{ title: "A card", text: "A line." }] }, { type: "app", flow: "issue.new", title: "File", picture: "issue" }] },
+        { blocks: [{ type: "hero", title: "VibeLang", tagline: "Effect, readable.", install: "bun create vibelang@latest", actions: [{ label: "Docs", url: "https://vibelang.sh" }] }, { type: "stats", stats: [{ value: "MIT", label: "License" }] }, { type: "releases", releases: [{ name: "0.0.2", url: "https://github.com/smithersai/vibelang/releases", date: "2026-10-19" }] }, { type: "view", flow: "docs" }] }
+      ]
+    })
+    expect(homeProblems(doc, exists)).toEqual([])
   })
-  test("refuses an empty or oversized document", () => {
-    expect(homeProblems(JSON.stringify({ blocks: [] }), exists)).toEqual(["home.json needs 1 to 32 blocks"])
+  test("refuses a missing markdown file, a bad path and an unknown kind", () => {
+    expect(homeProblems(one({ type: "markdown", path: "docs/site/fixed-by-agents.md" }), exists)).toEqual(["markdown file is missing: docs/site/fixed-by-agents.md"])
+    expect(homeProblems(one({ type: "markdown", path: "../x.md" }), exists)[0]).toContain("block 0")
+    expect(homeProblems(one({ type: "tiles" }), exists)).toEqual(["section 0, block 0: unknown type tiles, which smithers.sh skips", "home.json declares no blocks"])
+  })
+  test("refuses what the reader refuses", () => {
+    expect(homeProblems(one({ type: "text", text: "<b>bold</b>" }), exists)[0]).toContain("breaks its kind's schema")
+    expect(homeProblems(one({ type: "links", links: [{ label: "x", url: "javascript:alert(1)" }] }), exists)[0]).toContain("block 0")
+    expect(homeProblems(one({ type: "releases", releases: [{ name: "1", url: "https://x.test", date: "2026-02-30" }] }), exists)[0]).toContain("block 0")
+    expect(homeProblems(JSON.stringify({ blocks: [], sections: [] }), exists)[0]).toContain("not both")
+    expect(homeProblems(JSON.stringify({ blocks: [], contributors: "all" }), exists)[0]).toContain("contributors")
+    expect(homeProblems(JSON.stringify({ sections: [{ audience: "admins", blocks: [] }] }), exists)[0]).toContain("section 0")
+    expect(homeProblems(JSON.stringify({ sections: Array.from({ length: 9 }, () => ({ blocks: [] })) }), exists)[0]).toContain("more than 8 sections")
+    expect(homeProblems(JSON.stringify({ blocks: Array.from({ length: 33 }, () => ({ type: "runs" })) }), exists)[0]).toContain("more than 32 blocks")
+  })
+  test("refuses an empty, unparsable or oversized document", () => {
+    expect(homeProblems(JSON.stringify({ blocks: [] }), exists)).toEqual(["home.json declares no blocks"])
     expect(homeProblems("not json", exists)).toEqual(["home.json is not JSON"])
+    expect(homeProblems(JSON.stringify({ blocks: [{ type: "text", text: "x".repeat(4000) }], pad: "x".repeat(130 * 1024) }), exists)[0]).toBe("home.json is over 128 KiB")
   })
 })

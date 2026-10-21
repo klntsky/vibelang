@@ -195,7 +195,7 @@ Checks the files smithers.sh reads from VibeLang's `main`, and the vibelang.sh h
   - every link resolves to a docs page source or a repository file;
   - every VibeLang block passes `check-snippets.ts`;
   - the install block equals what `create-vibelang` prints.
-- `.smithers/home.json`: only blocks smithers.sh renders, and every markdown path exists.
+- `.smithers/home.json`: decodes with smithers.sh's reader, copied in `home.ts` from `@smthrs/views` (sections with audiences, or a bare `blocks` array); has no block of a kind the reader skips; declares a block; and every markdown path exists.
 - `.smithers/flows/convert/prompt.md`: matches `build-prompt.mjs`'s output.
 - `docs/site/converter/hero.json`: equals golden case 01, with matching hashes.
 

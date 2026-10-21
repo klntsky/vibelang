@@ -6,8 +6,8 @@
 //   bun docs/tools/check-smithers-content.ts
 //
 // app.md: under 24 KiB; every link resolves to a docs page or a repository file; every VibeLang block
-// passes check-snippets.ts; the install block matches what create-vibelang prints. home.json: the
-// blocks smithers.sh accepts, with existing markdown paths. prompt.md: not stale. hero.json: the
+// passes check-snippets.ts; the install block matches what create-vibelang prints. home.json: what
+// smithers.sh's reader accepts (home.ts), every block of a known kind, existing markdown paths. prompt.md: not stale. hero.json: the
 // hero golden case, with matching hashes. Golden source stays out of examples/ and prompt.md.
 import { heldoutProblems } from "../../.smithers/flows/convert/check-heldout.mjs"
 import { createHash } from "node:crypto"
@@ -15,6 +15,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { spawnSync } from "node:child_process"
+import * as Home from "./home.ts"
 
 const repo = resolve(import.meta.dir, "../..")
 export const appLimit = 24 * 1024
@@ -72,35 +73,32 @@ export function createVibeLangSteps(): { commands: string[]; editor: string[] } 
   }
 }
 
-const homeTypes = new Set(["prompt", "app", "flows", "markdown", "text", "stack", "links", "view"])
+const homeLimit = 128 * 1024
+const invalid: Record<Home.Invalid, string> = {
+  json: "is not JSON",
+  shape: "needs an object with a blocks array or a sections array, not both, and contributors role or anyone",
+  sections: `declares more than ${Home.maximumSections} sections`,
+  section: "has a section that isn't an object with a blocks array, or whose title or audience breaks its bounds",
+  blocks: `declares more than ${Home.maximumBlocks} blocks`,
+  block: "has a block that breaks its kind's schema: a bound, HTML in a string, or a link that isn't http(s)"
+}
 
-/** The checks smithers.sh's homepage route and RepositoryHomeBlockSchema apply. */
+/**
+ * What smithers.sh's reader (docs/tools/home.ts, a copy of @smthrs/views' Home.read) refuses, plus what it would
+ * skip or fail to show: a block of a kind it doesn't know, a home with no blocks, and a markdown file that is missing.
+ */
 export function homeProblems(document: string, exists: (path: string) => boolean): string[] {
   const problems: string[] = []
-  if (Buffer.byteLength(document) > 128 * 1024) problems.push("home.json is over 128 KiB")
-  let parsed: { blocks?: Array<Record<string, unknown>> }
-  try { parsed = JSON.parse(document) } catch { return ["home.json is not JSON"] }
-  if (!Array.isArray(parsed.blocks) || parsed.blocks.length === 0 || parsed.blocks.length > 32) return ["home.json needs 1 to 32 blocks"]
-  for (const [i, block] of parsed.blocks.entries()) {
-    const type = String(block.type)
-    if (!homeTypes.has(type)) problems.push(`block ${i}: unknown type ${type}`)
-    for (const key of ["title", "placeholder"] as const) {
-      if (block[key] !== undefined && (typeof block[key] !== "string" || !(block[key] as string).length || (block[key] as string).length > 120)) problems.push(`block ${i}: ${key} must be 1-120 characters`)
-    }
-    if (type === "text" && (typeof block.text !== "string" || !block.text.length || block.text.length > 4096)) problems.push(`block ${i}: text must be 1-4096 characters`)
-    if (type === "markdown") {
-      const path = String(block.path ?? "")
-      if (!path || path.startsWith("/") || path.split("/").some((p) => p === "" || p === "." || p === "..")) problems.push(`block ${i}: invalid markdown path ${path}`)
-      else if (!exists(path)) problems.push(`block ${i}: markdown file is missing: ${path}`)
-    }
-    if (type === "links") {
-      const items = block.links as Array<{ label?: string; url?: string }> | undefined
-      if (!Array.isArray(items) || !items.length) problems.push(`block ${i}: links needs at least one link`)
-      for (const item of items ?? []) {
-        if (!item.label || item.label.length > 120) problems.push(`block ${i}: link label must be 1-120 characters`)
-        try { if (!["https:", "http:"].includes(new URL(String(item.url)).protocol)) problems.push(`block ${i}: ${item.url} is not http(s)`) } catch { problems.push(`block ${i}: ${item.url} is not a URL`) }
-      }
-    }
+  if (Buffer.byteLength(document) > homeLimit) problems.push("home.json is over 128 KiB")
+  const home = Home.read(document)
+  if (home._tag === "Invalid") {
+    const at = home.at === undefined ? "" : ` (section ${home.at.section}${home.at.block === undefined ? "" : `, block ${home.at.block}`})`
+    return [...problems, `home.json ${invalid[home.reason]}${at}`]
+  }
+  for (const { section, block, type } of home.skipped) problems.push(`section ${section}, block ${block}: unknown type ${type}, which smithers.sh skips`)
+  if (home.sections.every((section) => section.blocks.length === 0)) problems.push("home.json declares no blocks")
+  for (const section of home.sections) {
+    for (const block of section.blocks) if (block.type === "markdown" && !exists(block.path)) problems.push(`markdown file is missing: ${block.path}`)
   }
   return problems
 }
