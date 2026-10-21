@@ -30,7 +30,7 @@ InvalidCode
 
 `error InvalidCode { input: string }` declares an expected failure class, short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. The constructor takes the fields, all readonly, and each instance has a readonly `_tag` equal to the class name. `error Timeout` has no fields. In an Effect function, `throw` adds the class to `E`. `Effect.fail(error)` also works; `Effect.failSync(() => error)` defers construction to execution, as a function body already does.
 
-In Effect functions, trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a `.ts` wrapper made with `trusted(implementation, [ErrorClass])`, importing `trusted` from `vibelang-runtime`: instances of listed classes join `E`; unlisted exceptions are defects. The older `/** @vibelang trusted */` and `@throws` declaration tags still work; calls that rely on tagged expected failures get migration warning EK4406. Effect's own packages are trusted, so calls such as `Option.isNone` need no boundary.
+In Effect functions, trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a wrapper made with `trusted(implementation, [ErrorClass])` in a `.ts` or `.vibe` module, importing `trusted` from `vibelang-runtime`: instances of listed classes join `E`; unlisted exceptions are defects. The older `/** @vibelang trusted */` and `@throws` declaration tags still work; calls that rely on tagged expected failures get migration warning EK4406. Effect's own packages are trusted, so calls such as `Option.isNone` need no boundary.
 
 `throw` is a typed failure everywhere outside a hatch, and `catch` receives typed failures only (D282). A function with a plain return annotation is plain JavaScript because it never fails and needs nothing. It may throw what its own `catch` handles, and it still returns a value:
 
@@ -69,6 +69,38 @@ error EK2003: number is a plain return annotation, but quantity can fail with In
 ```
 
 The same holds for a throw expression and for a `match` arm or `do` block that throws. A plain function calls TypeScript code directly. A call whose contract lists a failure, such as `JSON.parse`, is a typed failure only inside a `try` whose `catch` belongs to the function, which receives it with its type; elsewhere its exception propagates unchanged. Other TypeScript code's exceptions pass through the `catch` unchanged and become defects where they reach an effectful caller; to catch one, use the `try` hatch in an Effect function. Running an Effect inside a plain-annotated function is EK2003 too.
+
+## Trusting a TypeScript function
+
+```ts
+// TypeScript (.ts)
+// quantity.ts
+export class InvalidQuantity extends Error {
+  readonly _tag = "InvalidQuantity"
+}
+
+export function parseQuantity(text: string): number {
+  const quantity = Number(text)
+  if (!Number.isInteger(quantity)) throw new InvalidQuantity(text)
+  return quantity
+}
+```
+
+```vibe
+// run: Console.log(quantity("3")); Console.log(Effect.flip(() => quantity("x"))._tag)
+import { trusted } from "vibelang-runtime"
+import { InvalidQuantity, parseQuantity } from "./quantity.ts"
+
+const quantity = trusted(parseQuantity, [InvalidQuantity])
+// (text: string) => number!InvalidQuantity!
+```
+
+```output
+3
+InvalidQuantity
+```
+
+`trusted` works in a `.vibe` file as it does in TypeScript. `quantity` calls the TypeScript `parseQuantity`: an `InvalidQuantity` it throws is an expected failure in `E`, and any other exception is a defect.
 
 ## Failing in an expression
 

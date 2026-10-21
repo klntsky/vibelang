@@ -99,7 +99,7 @@ Each `.vibe` file keeps the settings of the package that owns it (D297). When a 
 
 EK2004, EK4403, EK4406, Effect's language service rules, EK4801-EK4825 except EK4813, and the TypeScript-style forms below, EK4830-EK4837, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. With EK4403 lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity; core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports source locations. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
 
-`trustedPackages` accepts package-name globs matched against `package.json` names, workspace packages included. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment, so `"@smthrs/*"` trusts packages in that scope. Without the option, foreign calls keep EK4401. For expected failures on one function, use `trusted(impl, [Errors])` from `vibelang-runtime` in TypeScript.
+`trustedPackages` accepts package-name globs matched against `package.json` names, workspace packages included. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment, so `"@smthrs/*"` trusts packages in that scope. Without the option, foreign calls keep EK4401. For expected failures on one function, use `trusted(impl, [Errors])` from `vibelang-runtime`, in TypeScript or VibeLang.
 
 ## TypeScript-style Effect code
 

@@ -74,9 +74,9 @@ Without this rule, `Config.Port("PORT")` would read the variable before `Config.
 1. The access is in a `.vibe` file and not in an optional chain (`x?.name(…)`).
 2. `x`'s type, after TypeScript resolves type parameters to their constraints, has no member `name` of its own.
 3. One of Effect's data-type modules declares `x`'s type in `effect/dist/<Module>.d.ts`. For a union, every member comes from the same module, as `None` and `Some` come from `Option`.
-4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`.
+4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`, or has the name D295's table gives that function, such as `input` for `Cause.findErrorOption` and `n` for `BigDecimal.abs`.
 
-The method's signatures are those overloads with the first parameter moved to `this`. TypeScript checks `x` against it, infers type parameters from it, and narrows `x` by a type predicate on it:
+The method's signatures are those overloads with the first parameter moved to `this`; a curried overload, such as `Stream.zipLeft(right)`, takes another first parameter and is not one of them. TypeScript checks `x` against it, infers type parameters from it, and narrows `x` by a type predicate on it:
 
 ```ts es
 function describe(value: Option.Option<number>) {

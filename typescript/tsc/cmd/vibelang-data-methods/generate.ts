@@ -8,6 +8,10 @@ import path from 'node:path'
 const root = path.resolve(import.meta.dir, '../../../..')
 const fork = fs.readFileSync(root + '/typescript/tsc/internal/vibelang/datamethods.go', 'utf8')
 const modules = [...fork.match(/var methodModules = map\[string\]bool\{([\s\S]*?)\n\}/)![1].matchAll(/"(\w+)":\s*true/g)].map(m => m[1]).sort()
+// D295: data-first functions whose receiver is not named self, such as
+// Cause.findErrorOption(input), by the parameter name the fork accepts.
+const dataFirst = new Map([...fork.match(/var dataFirstParameters = map\[string\]string\{([\s\S]*?)\n\}/)![1].matchAll(/"(\w+\.\w+)":\s*"(\w+)"/g)].map(m => [m[1], m[2]] as const))
+const takesSelfFirst = (mod: string, name: string, first: string) => first === 'self' || first.endsWith('OrOptions') || dataFirst.get(mod + '.' + name) === first
 const effectDir = root+'/docs/tools/node_modules/effect/dist'
 const declarations = new Map(modules.map(mod=>[mod, effectDir+'/'+mod+'.d.ts']))
 const program = ts.createProgram([...declarations.values()], {target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, skipLibCheck: true, types: []})
@@ -57,7 +61,7 @@ for (const mod of modules) {
  const collect=(name:string,n:ts.Node)=>{
   if(ts.isParenthesizedTypeNode(n)) {collect(name,n.type);return}
   if(ts.isIntersectionTypeNode(n)) {for(const type of n.types)collect(name,type);return}
-  if ((ts.isFunctionDeclaration(n)||ts.isCallSignatureDeclaration(n)||ts.isFunctionTypeNode(n)) && n.parameters[0] && ts.isIdentifier(n.parameters[0].name) && (n.parameters[0].name.text==='self'||n.parameters[0].name.text.endsWith('OrOptions'))) methods.push({name,sig:n})
+  if ((ts.isFunctionDeclaration(n)||ts.isCallSignatureDeclaration(n)||ts.isFunctionTypeNode(n)) && n.parameters[0] && ts.isIdentifier(n.parameters[0].name) && takesSelfFirst(mod,name,n.parameters[0].name.text)) methods.push({name,sig:n})
  }
  for(const s of sf.statements) {
   if(ts.isFunctionDeclaration(s)&&s.name) collect(s.name.text,s)

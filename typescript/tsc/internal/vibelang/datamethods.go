@@ -22,10 +22,11 @@ import (
 // members, has no property name, and x's type is declared by the module:
 // Stream<A, E, R> by effect's Stream module, Option<A> by Option. The method
 // is every overload of Module.name whose first parameter is named self,
-// effect's convention for the data-first form, with that parameter as the
-// call's this, so the call checks x against it and infers type parameters
-// from x. A type's own members win, so Effect's pipe stays a method, and
-// plain JavaScript arrays and objects keep their own methods.
+// effect's convention for the data-first form, or the name
+// dataFirstParameters gives it (D295), with that parameter as the call's
+// this, so the call checks x against it and infers type parameters from x.
+// A type's own members win, so Effect's pipe stays a method, and plain
+// JavaScript arrays and objects keep their own methods.
 
 // methodModules are effect's modules whose main types take method syntax:
 // the modules of Effect's data types, whose functions take the value first.
@@ -33,6 +34,60 @@ var methodModules = map[string]bool{
 	"BigDecimal": true, "Cause": true, "Chunk": true, "DateTime": true, "Deferred": true, "Duration": true,
 	"Effect": true, "Exit": true, "Fiber": true, "HashMap": true, "HashSet": true, "Option": true,
 	"Queue": true, "Ref": true, "Result": true, "Schedule": true, "Sink": true, "Stream": true,
+}
+
+// dataFirstParameters names effect's data-first functions whose first
+// parameter is not named self, with the name it has instead (D295): effect
+// 4.0.5 calls Cause.findErrorOption's receiver input and BigDecimal.abs's n.
+// Each takes method syntax as a self-first function does, through exactly
+// the overloads whose first parameter has that name, so the data-first
+// overload of Stream.zipLeft(left, right) is a method and its curried
+// zipLeft(right) is not. Runners such as Effect.runPromise and constructors
+// such as Effect.acquireRelease are not here: they do not operate on the
+// receiver. cmd/vibelang-data-methods/generate.ts reads this table, one
+// entry per line, so the projector's D252 methods agree.
+var dataFirstParameters = map[string]string{
+	"BigDecimal.abs":              "n",
+	"BigDecimal.format":           "n",
+	"BigDecimal.isInteger":        "n",
+	"BigDecimal.isNegative":       "n",
+	"BigDecimal.isPositive":       "n",
+	"BigDecimal.isZero":           "n",
+	"BigDecimal.negate":           "n",
+	"BigDecimal.round":            "n",
+	"BigDecimal.sign":             "n",
+	"BigDecimal.toExponential":    "n",
+	"BigDecimal.toNumberUnsafe":   "n",
+	"Cause.findErrorOption":       "input",
+	"Cause.pretty":                "cause",
+	"Duration.toHrTime":           "input",
+	"Duration.toNanosUnsafe":      "input",
+	"Effect.annotateLogs":         "effect",
+	"Effect.annotateSpans":        "effect",
+	"Effect.tx":                   "effect",
+	"Effect.withExecutionPlan":    "effect",
+	"Effect.withLogSpan":          "effect",
+	"Effect.withLogger":           "effect",
+	"Effect.withTracer":           "effect",
+	"Effect.withTracerEnabled":    "effect",
+	"Effect.withTracerTiming":     "effect",
+	"Exit.findDefect":             "input",
+	"Exit.findError":              "input",
+	"Schedule.toStep":             "schedule",
+	"Schedule.toStepWithMetadata": "schedule",
+	"Schedule.toStepWithSleep":    "schedule",
+	"Stream.cross":                "left",
+	"Stream.crossWith":            "left",
+	"Stream.mergeLeft":            "left",
+	"Stream.mergeRight":           "left",
+	"Stream.race":                 "left",
+	"Stream.toChannel":            "stream",
+	"Stream.zipLatest":            "left",
+	"Stream.zipLatestWith":        "left",
+	"Stream.zipLeft":              "left",
+	"Stream.zipRight":             "left",
+	"Stream.zipWith":              "left",
+	"Stream.zipWithArray":         "left",
 }
 
 func init() {
@@ -157,7 +212,8 @@ func methodProperty(c *checker.Checker, file *ast.SourceFile, module string, nam
 // parameter is named self, effect's name for the data-first form, or, as in
 // Stream.flatten's <Arg extends Stream<…> | Options>(streamsOrOptions?: Arg),
 // ends in OrOptions, effect's name for a dual whose one signature decides by
-// its first argument's type.
+// its first argument's type, or has the name dataFirstParameters gives the
+// function that declares it.
 func takesSelfFirst(signature *checker.Signature) bool {
 	declaration := signature.Declaration()
 	if declaration == nil {
@@ -168,7 +224,53 @@ func takesSelfFirst(signature *checker.Signature) bool {
 		return false
 	}
 	name := parameters[0].Name().Text()
-	return name == "self" || strings.HasSuffix(name, "OrOptions")
+	if name == "self" || strings.HasSuffix(name, "OrOptions") {
+		return true
+	}
+	expected, ok := dataFirstParameters[dataFunctionOf(declaration)]
+	return ok && name == expected
+}
+
+// TakesSelfFirst is takesSelfFirst for compiler tooling: cmd/vibelang-forms
+// marks the forms table's method signatures with it (Signature.Self).
+func TakesSelfFirst(signature *checker.Signature) bool {
+	return takesSelfFirst(signature)
+}
+
+// dataFunctionOf returns the method module's function that declares
+// declaration, a signature in one of effect's declaration files, as
+// "Module.name", such as "Cause.findErrorOption" for the function type of
+// `export declare const findErrorOption: <E>(input: Cause<E>) => Option<E>`,
+// or "" for any other signature, including the function a curried overload
+// returns.
+func dataFunctionOf(declaration *ast.Node) string {
+	module := effectModuleOfFile(ast.GetSourceFileOfNode(declaration))
+	if !methodModules[module] {
+		return ""
+	}
+	node := declaration
+	switch node.Kind {
+	case ast.KindFunctionDeclaration:
+		if name := node.Name(); name != nil && ast.IsIdentifier(name) {
+			return module + "." + name.Text()
+		}
+		return ""
+	case ast.KindFunctionType:
+	case ast.KindCallSignature:
+		node = node.Parent // the type literal of an overloaded const
+		if node == nil || node.Kind != ast.KindTypeLiteral {
+			return ""
+		}
+	default:
+		return ""
+	}
+	for node.Parent != nil && (node.Parent.Kind == ast.KindParenthesizedType || node.Parent.Kind == ast.KindIntersectionType) {
+		node = node.Parent
+	}
+	if parent := node.Parent; parent != nil && parent.Kind == ast.KindVariableDeclaration && parent.Type() == node && ast.IsIdentifier(parent.Name()) {
+		return module + "." + parent.Name().Text()
+	}
+	return ""
 }
 
 // effectModuleNamespace returns the symbol of effect's module named module,

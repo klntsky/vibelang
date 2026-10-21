@@ -987,7 +987,7 @@ func (w *walker) signatures(t *checker.Type) []vibelangmapper.Signature {
 		}
 		if n > 0 {
 			_, s.DataFirst = vibelang.FormsOfType(c, c.GetTypeOfSymbol(declared.Parameters()[0]))
-			s.Self = takesSelfFirst(declared)
+			s.Self = vibelang.TakesSelfFirst(declared) // D152 and D295, as the checker decides
 		}
 		for _, inner := range c.GetSignaturesOfType(c.GetReturnTypeOfSignature(declared), checker.SignatureKindCall) {
 			if ps := inner.Parameters(); len(ps) > 0 {
@@ -999,22 +999,6 @@ func (w *walker) signatures(t *checker.Type) []vibelangmapper.Signature {
 		out = append(out, s)
 	}
 	return out
-}
-
-// takesSelfFirst reports whether sig's first parameter is named self or
-// ends in OrOptions: effect's data-first form, which D152 offers as a
-// method. It mirrors takesSelfFirst in internal/vibelang/datamethods.go.
-func takesSelfFirst(sig *checker.Signature) bool {
-	d := sig.Declaration()
-	if d == nil {
-		return false
-	}
-	params := d.Parameters()
-	if len(params) == 0 || !ast.IsIdentifier(params[0].Name()) {
-		return false
-	}
-	name := params[0].Name().Text()
-	return name == "self" || strings.HasSuffix(name, "OrOptions")
 }
 
 // declaredSignature returns the uninstantiated signature behind sig, whose

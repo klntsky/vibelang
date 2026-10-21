@@ -1,0 +1,12 @@
+// expect: TS2339 TS2339 TS2339
+// D295 lists the data-first functions whose receiver is not named self.
+// A function that only shares a listed parameter name is not a method:
+// BigDecimal.fromNumberUnsafe(n: number) constructs a BigDecimal. Runners
+// and constructors take an Effect first but do not operate on it, so
+// neither Effect.runPromise nor Effect.acquireRelease is a method.
+export function misuse(value: BigDecimal.BigDecimal, program: Effect.Effect<number>) {
+  const made = value.fromNumberUnsafe()
+  const promised = program.runPromise()
+  const acquired = program.acquireRelease(() => Effect.void)
+  return [made, promised, acquired]
+}

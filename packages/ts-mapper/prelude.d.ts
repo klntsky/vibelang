@@ -905,6 +905,17 @@ interface $D152Method_max {
     "max"<Self extends $D152DateTime_DateTime, That extends $D152DateTime_DateTime>(this: Self, that: That): Self | That;
     "max"(this: $D152Duration_Duration, that: $D152Duration_Duration): $D152Duration_Duration;
 }
+interface $D152Method_sign {
+    "sign"(this: $D152BigDecimal_BigDecimal): $D152BigDecimal_Ordering;
+}
+interface $D152Method_abs {
+    "abs"(this: $D152BigDecimal_BigDecimal): $D152BigDecimal_BigDecimal;
+    "abs"(this: $D152Duration_Duration): $D152Duration_Duration;
+}
+interface $D152Method_negate {
+    "negate"(this: $D152BigDecimal_BigDecimal): $D152BigDecimal_BigDecimal;
+    "negate"(this: $D152Duration_Duration): $D152Duration_Duration;
+}
 interface $D152Method_remainder {
     "remainder"(this: $D152BigDecimal_BigDecimal, divisor: $D152BigDecimal_BigDecimal): $D152BigDecimal_Option.Option<$D152BigDecimal_BigDecimal>;
 }
@@ -914,6 +925,40 @@ interface $D152Method_remainderUnsafe {
 interface $D152Method_equals {
     "equals"(this: $D152BigDecimal_BigDecimal, that: $D152BigDecimal_BigDecimal): boolean;
     "equals"(this: $D152Duration_Duration, that: $D152Duration_Duration): boolean;
+}
+interface $D152Method_format {
+    "format"(this: $D152BigDecimal_BigDecimal): string;
+    "format"(this: $D152DateTime_DateTime, options?: (Intl.DateTimeFormatOptions & {
+    readonly locale?: string | undefined;
+}) | undefined): string;
+    "format"(this: $D152Duration_Duration): string;
+}
+interface $D152Method_toExponential {
+    "toExponential"(this: $D152BigDecimal_BigDecimal): string;
+}
+interface $D152Method_toNumberUnsafe {
+    "toNumberUnsafe"(this: $D152BigDecimal_BigDecimal): number;
+}
+interface $D152Method_isInteger {
+    "isInteger"(this: $D152BigDecimal_BigDecimal): boolean;
+}
+interface $D152Method_isZero {
+    "isZero"(this: $D152BigDecimal_BigDecimal): boolean;
+    "isZero"(this: $D152Duration_Duration): boolean;
+}
+interface $D152Method_isNegative {
+    "isNegative"(this: $D152BigDecimal_BigDecimal): boolean;
+    "isNegative"(this: $D152Duration_Duration): boolean;
+}
+interface $D152Method_isPositive {
+    "isPositive"(this: $D152BigDecimal_BigDecimal): boolean;
+    "isPositive"(this: $D152Duration_Duration): boolean;
+}
+interface $D152Method_round {
+    "round"(this: $D152BigDecimal_BigDecimal, options?: {
+    scale?: number;
+    mode?: $D152BigDecimal_RoundingMode;
+}): $D152BigDecimal_BigDecimal;
 }
 interface $D152Method_truncate {
     "truncate"(this: $D152BigDecimal_BigDecimal, scale?: number): $D152BigDecimal_BigDecimal;
@@ -975,6 +1020,11 @@ interface $D152Method_findFail {
 }
 interface $D152Method_findError {
     "findError"<E>(this: $D152Cause_Cause<E>): $D152Cause_Result.Result<E, $D152Cause_Cause<never>>;
+    "findError"<A, E>(this: $D152Exit_Exit<A, E>): $D152Exit_Result.Result<E, $D152Exit_Exit<A, E>>;
+}
+interface $D152Method_findErrorOption {
+    "findErrorOption"<E>(this: $D152Cause_Cause<E>): $D152Cause_Option<E>;
+    "findErrorOption"<A, E>(this: $D152Exit_Exit<A, E>): $D152Exit_Option<E>;
 }
 interface $D152Method_hasDies {
     "hasDies"<E>(this: $D152Cause_Cause<E>): boolean;
@@ -985,6 +1035,7 @@ interface $D152Method_findDie {
 }
 interface $D152Method_findDefect {
     "findDefect"<E>(this: $D152Cause_Cause<E>): $D152Cause_Result.Result<unknown, $D152Cause_Cause<E>>;
+    "findDefect"<A, E>(this: $D152Exit_Exit<A, E>): $D152Exit_Result.Result<unknown, $D152Exit_Exit<A, E>>;
 }
 interface $D152Method_hasInterrupts {
     "hasInterrupts"<E>(this: $D152Cause_Cause<E>): boolean;
@@ -1003,6 +1054,9 @@ interface $D152Method_prettyErrors {
     "prettyErrors"<E>(this: $D152Cause_Cause<E>, options?: {
     readonly includeCauseInStack?: boolean | undefined;
 }): Array<Error>;
+}
+interface $D152Method_pretty {
+    "pretty"<E>(this: $D152Cause_Cause<E>): string;
 }
 interface $D152Method_reasonAnnotations {
     "reasonAnnotations"<E>(this: $D152Cause_Reason<E>): $D152Cause_Context.Context<never>;
@@ -1275,6 +1329,7 @@ interface $D152Method_unzip {
 interface $D152Method_zipWith {
     "zipWith"<A, B, C>(this: $D152Chunk_Chunk<A>, that: $D152Chunk_Chunk<B>, f: (a: A, b: B) => C): $D152Chunk_Chunk<C>;
     "zipWith"<A, B, C>(this: $D152Option_Option<A>, that: $D152Option_Option<B>, f: (a: A, b: B) => C): $D152Option_Option<C>;
+    "zipWith"<AL, EL, RL, AR, ER, RR, A>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>, f: (left: AL, right: AR) => A): $D152Stream_Stream<A, EL | ER, RL | RR>;
     "zipWith"<A, E, R, A2, E2, R2, B>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, that: $D152Effect_Effect<A2, E2, R2>, f: (a: A, b: A2) => B, options?: {
     readonly concurrent?: boolean | undefined;
 }): $D152Effect_Effect<B, E2 | E, R2 | R>;
@@ -1527,12 +1582,6 @@ interface $D152Method_nearest {
     readonly weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | undefined;
 }): A;
 }
-interface $D152Method_format {
-    "format"(this: $D152DateTime_DateTime, options?: (Intl.DateTimeFormatOptions & {
-    readonly locale?: string | undefined;
-}) | undefined): string;
-    "format"(this: $D152Duration_Duration): string;
-}
 interface $D152Method_formatLocal {
     "formatLocal"(this: $D152DateTime_DateTime, options?: (Intl.DateTimeFormatOptions & {
     readonly locale?: string | undefined;
@@ -1629,21 +1678,6 @@ interface $D152Method_await {
 interface $D152Method_isFinite {
     "isFinite"(this: $D152Duration_Duration): boolean;
 }
-interface $D152Method_isZero {
-    "isZero"(this: $D152Duration_Duration): boolean;
-}
-interface $D152Method_isNegative {
-    "isNegative"(this: $D152Duration_Duration): boolean;
-}
-interface $D152Method_isPositive {
-    "isPositive"(this: $D152Duration_Duration): boolean;
-}
-interface $D152Method_abs {
-    "abs"(this: $D152Duration_Duration): $D152Duration_Duration;
-}
-interface $D152Method_negate {
-    "negate"(this: $D152Duration_Duration): $D152Duration_Duration;
-}
 interface $D152Method_toMillis {
     "toMillis"(this: $D152Duration_Input): number;
 }
@@ -1662,8 +1696,17 @@ interface $D152Method_toDays {
 interface $D152Method_toWeeks {
     "toWeeks"(this: $D152Duration_Input): number;
 }
+interface $D152Method_toNanosUnsafe {
+    "toNanosUnsafe"(this: $D152Duration_Input): bigint;
+}
 interface $D152Method_toNanos {
     "toNanos"(this: $D152Duration_Input): $D152Duration_Option.Option<bigint>;
+}
+interface $D152Method_toHrTime {
+    "toHrTime"(this: $D152Duration_Input): [
+    seconds: number,
+    nanos: number
+];
 }
 interface $D152Method_matchPair {
     "matchPair"<A, B, C>(this: $D152Duration_Duration, that: $D152Duration_Duration, options: {
@@ -1986,6 +2029,25 @@ interface $D152Method_ignoreCause {
     $D152Effect_Effect<infer _A, infer _E, infer _R>
 ] ? $D152Effect_Effect<void, never, _R> : <A, E, R>(self: $D152Effect_Effect<A, E, R>) => $D152Effect_Effect<void, never, R>;
 }
+interface $D152Method_withExecutionPlan {
+    "withExecutionPlan"<A, E extends Input, R, R2, Input, Provides, PolicyE, RX = never>(this: $D152Stream_Stream<A, E, R>, policy: $D152Stream_ExecutionPlan.ExecutionPlan<{
+    provides: Provides;
+    input: Input;
+    error: PolicyE;
+    requirements: R2;
+}>, options?: {
+    readonly preventFallbackOnPartialStream?: boolean | undefined;
+    readonly onEvent?: ((event: $D152Stream_ExecutionPlan.Event<E | PolicyE>) => $D152Stream_Effect.Effect<void, never, RX>) | undefined;
+}): $D152Stream_Stream<A, E | PolicyE, R2 | Exclude<R, Provides> | RX>;
+    "withExecutionPlan"<A, E extends Input, R, Provides, Input, PlanE, PlanR, RX = never>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, plan: $D152Effect_ExecutionPlan.ExecutionPlan<{
+    provides: Provides;
+    input: Input;
+    error: PlanE;
+    requirements: PlanR;
+}>, options?: {
+    readonly onEvent?: ((event: $D152Effect_ExecutionPlan.Event<E | PlanE>) => $D152Effect_Effect<void, never, RX>) | undefined;
+}): $D152Effect_Effect<A, E | PlanE, Exclude<R, Provides> | PlanR | RX>;
+}
 interface $D152Method_withErrorReporting {
     "withErrorReporting"<Arg extends $D152Effect_Effect<any, any, any> | {
     readonly defectsOnly?: boolean | undefined;
@@ -2030,6 +2092,7 @@ interface $D152Method_timed {
 ], E, R>;
 }
 interface $D152Method_race {
+    "race"<AL, EL, RL, AR, ER, RR>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>): $D152Stream_Stream<AL | AR, EL | ER, RL | RR>;
     "race"<A, E, R, A2, E2, R2>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, that: $D152Effect_Effect<A2, E2, R2>, options?: {
     readonly onWinner?: (options: {
         readonly fiber: $D152Effect_Fiber<any, any>;
@@ -2253,6 +2316,19 @@ interface $D152Method_schedule {
 interface $D152Method_scheduleFrom {
     "scheduleFrom"<Input, E, R, Output, Error, Env>(this: ($D152Effect_Effect<Input, E, R>) & $D152EffectReceiver, initial: Input, schedule: $D152Effect_Schedule<Output, Input, Error, Env>): $D152Effect_Effect<Output, E | Error, R | Env>;
 }
+interface $D152Method_withTracer {
+    "withTracer"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, value: $D152Effect_Tracer): $D152Effect_Effect<A, E, R>;
+}
+interface $D152Method_withTracerEnabled {
+    "withTracerEnabled"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, enabled: boolean): $D152Effect_Effect<A, E, R>;
+}
+interface $D152Method_withTracerTiming {
+    "withTracerTiming"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, enabled: boolean): $D152Effect_Effect<A, E, R>;
+}
+interface $D152Method_annotateSpans {
+    "annotateSpans"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, key: string, value: unknown): $D152Effect_Effect<A, E, R>;
+    "annotateSpans"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, values: Record<string, unknown>): $D152Effect_Effect<A, E, R>;
+}
 interface $D152Method_linkSpans {
     "linkSpans"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, span: $D152Effect_AnySpan | ReadonlyArray<$D152Effect_AnySpan>, attributes?: Record<string, unknown>): $D152Effect_Effect<A, E, R>;
 }
@@ -2333,6 +2409,16 @@ interface $D152Method_forkDetach {
 interface $D152Method_awaitAllChildren {
     "awaitAllChildren"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver): $D152Effect_Effect<A, E, R>;
 }
+interface $D152Method_withLogger {
+    "withLogger"<A, E, R, Output>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, logger: $D152Effect_Logger<unknown, Output>): $D152Effect_Effect<A, E, R>;
+}
+interface $D152Method_annotateLogs {
+    "annotateLogs"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, key: string, value: unknown): $D152Effect_Effect<A, E, R>;
+    "annotateLogs"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, values: Record<string, unknown>): $D152Effect_Effect<A, E, R>;
+}
+interface $D152Method_withLogSpan {
+    "withLogSpan"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, label: string): $D152Effect_Effect<A, E, R>;
+}
 interface $D152Method_track {
     "track"<A, E, R, Input, State>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, metric: $D152Effect_Metric.Metric<Input, State>, f: (exit: $D152Effect_Exit.Exit<A, E>) => Input): $D152Effect_Effect<A, E, R>;
     "track"<A, E, R, State>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, metric: $D152Effect_Metric.Metric<$D152Effect_Exit.Exit<$D152Effect_NoInfer<A>, $D152Effect_NoInfer<E>>, State>): $D152Effect_Effect<A, E, R>;
@@ -2352,6 +2438,9 @@ interface $D152Method_trackDefects {
 interface $D152Method_trackDuration {
     "trackDuration"<A, E, R, Input, State>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, metric: $D152Effect_Metric.Metric<Input, State>, f: (duration: $D152Effect_Duration.Duration) => Input): $D152Effect_Effect<A, E, R>;
     "trackDuration"<A, E, R, State>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, metric: $D152Effect_Metric.Metric<$D152Effect_Duration.Duration, State>): $D152Effect_Effect<A, E, R>;
+}
+interface $D152Method_tx {
+    "tx"<A, E, R>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver): $D152Effect_Effect<A, E, Exclude<R, $D152Effect_Transaction>>;
 }
 interface $D152Method_mapEager {
     "mapEager"<A, E, R, B>(this: ($D152Effect_Effect<A, E, R>) & $D152EffectReceiver, f: (a: A) => B): $D152Effect_Effect<B, E, R>;
@@ -2405,9 +2494,6 @@ interface $D152Method_getSuccess {
 }
 interface $D152Method_getCause {
     "getCause"<A, E>(this: $D152Exit_Exit<A, E>): $D152Exit_Option<$D152Exit_Cause.Cause<E>>;
-}
-interface $D152Method_findErrorOption {
-    "findErrorOption"<A, E>(this: $D152Exit_Exit<A, E>): $D152Exit_Option<E>;
 }
 interface $D152Method_awaitAll {
     "awaitAll"<A extends $D152Fiber_Fiber<any, any>>(this: Iterable<A>): $D152Fiber_Effect<Array<$D152Fiber_Exit<A extends $D152Fiber_Fiber<infer _A, infer _E> ? _A : never, A extends $D152Fiber_Fiber<infer _A, infer _E> ? _E : never>>>;
@@ -2529,9 +2615,11 @@ interface $D152Method_flatMapNullishOr {
 }
 interface $D152Method_zipRight {
     "zipRight"<X, B>(this: $D152Option_Option<X>, that: $D152Option_Option<B>): $D152Option_Option<B>;
+    "zipRight"<AL, EL, RL, AR, ER, RR>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>): $D152Stream_Stream<AR, EL | ER, RL | RR>;
 }
 interface $D152Method_zipLeft {
     "zipLeft"<A, X>(this: $D152Option_Option<A>, that: $D152Option_Option<X>): $D152Option_Option<A>;
+    "zipLeft"<AL, EL, RL, AR, ER, RR>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>): $D152Stream_Stream<AL, EL | ER, RL | RR>;
 }
 interface $D152Method_product {
     "product"<A, B>(this: $D152Option_Option<A>, that: $D152Option_Option<B>): $D152Option_Option<[
@@ -2679,6 +2767,18 @@ interface $D152Method_merge {
 interface $D152Method_transposeMapOption {
     "transposeMapOption"<A, B, E = never>(this: $D152Result_Option<A>, f: (self: A) => $D152Result_Result<B, E>): $D152Result_Result<$D152Result_Option<B>, E>;
 }
+interface $D152Method_toStep {
+    "toStep"<Output, Input, Error, Env>(this: $D152Schedule_Schedule<Output, Input, Error, Env>): $D152Schedule_Effect<(now: number, input: Input) => $D152Schedule_Pull.Pull<[
+    Output,
+    $D152Schedule_Duration.Duration
+], Error, Output, Env>, never, Env>;
+}
+interface $D152Method_toStepWithMetadata {
+    "toStepWithMetadata"<Output, Input, Error, Env>(this: $D152Schedule_Schedule<Output, Input, Error, Env>): $D152Schedule_Effect<(input: Input) => $D152Schedule_Pull.Pull<$D152Schedule_Metadata<Output, Input>, Error, Output, Env>, never, Env>;
+}
+interface $D152Method_toStepWithSleep {
+    "toStepWithSleep"<Output, Input, Error, Env>(this: $D152Schedule_Schedule<Output, Input, Error, Env>): $D152Schedule_Effect<(input: Input) => $D152Schedule_Pull.Pull<Output, Error, Output, Env>, never, Env>;
+}
 interface $D152Method_addDelay {
     "addDelay"<Output, Input, Error, Env, Error2 = never, Env2 = never>(this: $D152Schedule_Schedule<Output, Input, Error, Env>, f: (metadata: $D152Schedule_Metadata<Output, Input>) => $D152Schedule_Effect<$D152Schedule_Duration.Input, Error2, Env2>): $D152Schedule_Schedule<Output, Input, Error | Error2, Env | Env2>;
 }
@@ -2710,6 +2810,7 @@ interface $D152Method_while {
 }
 interface $D152Method_toChannel {
     "toChannel"<A, In, L, E, R>(this: $D152Sink_Sink<A, In, L, E, R>): $D152Sink_Channel.Channel<never, E, $D152Sink_End<A, L>, $D152Sink_NonEmptyReadonlyArray<In>, never, void, R>;
+    "toChannel"<A, E, R>(this: $D152Stream_Stream<A, E, R>): $D152Stream_Channel.Channel<$D152Stream_Arr.NonEmptyReadonlyArray<A>, E, void, unknown, unknown, unknown, R>;
 }
 interface $D152Method_ignoreLeftover {
     "ignoreLeftover"<A, In, L, E, R>(this: $D152Sink_Sink<A, In, L, E, R>): $D152Sink_Sink<A, In, never, E, R>;
@@ -2822,6 +2923,28 @@ interface $D152Method_mergeEffect {
 interface $D152Method_mergeResult {
     "mergeResult"<A, E, R, A2, E2, R2>(this: $D152Stream_Stream<A, E, R>, that: $D152Stream_Stream<A2, E2, R2>): $D152Stream_Stream<$D152Stream_Result.Result<A, A2>, E | E2, R | R2>;
 }
+interface $D152Method_mergeLeft {
+    "mergeLeft"<AL, EL, RL, AR, ER, RR>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>): $D152Stream_Stream<AL, EL | ER, RL | RR>;
+}
+interface $D152Method_mergeRight {
+    "mergeRight"<AL, EL, RL, AR, ER, RR>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>): $D152Stream_Stream<AR, EL | ER, RL | RR>;
+}
+interface $D152Method_cross {
+    "cross"<AL, EL, RL, AR, ER, RR>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>): $D152Stream_Stream<[
+    AL,
+    AR
+], EL | ER, RL | RR>;
+}
+interface $D152Method_crossWith {
+    "crossWith"<AL, EL, RL, AR, ER, RR, A>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>, f: (left: AL, right: AR) => A): $D152Stream_Stream<A, EL | ER, RL | RR>;
+}
+interface $D152Method_zipWithArray {
+    "zipWithArray"<AL, EL, RL, AR, ER, RR, A>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>, f: (left: $D152Stream_Arr.NonEmptyReadonlyArray<AL>, right: $D152Stream_Arr.NonEmptyReadonlyArray<AR>) => readonly [
+    output: $D152Stream_Arr.NonEmptyReadonlyArray<A>,
+    leftoverLeft: ReadonlyArray<AL>,
+    leftoverRight: ReadonlyArray<AR>
+]): $D152Stream_Stream<A, EL | ER, RL | RR>;
+}
 interface $D152Method_zipFlatten {
     "zipFlatten"<A extends ReadonlyArray<any>, E, R, A2, E2, R2>(this: $D152Stream_Stream<A, E, R>, that: $D152Stream_Stream<A2, E2, R2>): $D152Stream_Stream<[
     ...A,
@@ -2852,6 +2975,15 @@ interface $D152Method_zipWithPreviousAndNext {
     A,
     $D152Stream_Option.Option<A>
 ], E, R>;
+}
+interface $D152Method_zipLatest {
+    "zipLatest"<AL, EL, RL, AR, ER, RR>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>): $D152Stream_Stream<[
+    AL,
+    AR
+], EL | ER, RL | RR>;
+}
+interface $D152Method_zipLatestWith {
+    "zipLatestWith"<AL, EL, RL, AR, ER, RR, A>(this: $D152Stream_Stream<AL, EL, RL>, right: $D152Stream_Stream<AR, ER, RR>, f: (left: AL, right: AR) => A): $D152Stream_Stream<A, EL | ER, RL | RR>;
 }
 interface $D152Method_filterEffect {
     "filterEffect"<A, E, R, EX, RX>(this: $D152Stream_Stream<A, E, R>, predicate: (a: $D152Stream_NoInfer<A>, i: number) => $D152Stream_Effect.Effect<boolean, EX, RX>): $D152Stream_Stream<A, E | EX, R | RX>;
@@ -2900,17 +3032,6 @@ interface $D152Method_bufferArray {
 }
 interface $D152Method_orElseIfEmpty {
     "orElseIfEmpty"<A, E, R, A2, E2, R2>(this: $D152Stream_Stream<A, E, R>, orElse: $D152Stream_LazyArg<$D152Stream_Stream<A2, E2, R2>>): $D152Stream_Stream<A | A2, E | E2, R | R2>;
-}
-interface $D152Method_withExecutionPlan {
-    "withExecutionPlan"<A, E extends Input, R, R2, Input, Provides, PolicyE, RX = never>(this: $D152Stream_Stream<A, E, R>, policy: $D152Stream_ExecutionPlan.ExecutionPlan<{
-    provides: Provides;
-    input: Input;
-    error: PolicyE;
-    requirements: R2;
-}>, options?: {
-    readonly preventFallbackOnPartialStream?: boolean | undefined;
-    readonly onEvent?: ((event: $D152Stream_ExecutionPlan.Event<E | PolicyE>) => $D152Stream_Effect.Effect<void, never, RX>) | undefined;
-}): $D152Stream_Stream<A, E | PolicyE, R2 | Exclude<R, Provides> | RX>;
 }
 interface $D152Method_limitBytes {
     "limitBytes"<E, R>(this: $D152Stream_Stream<Uint8Array, E, R>, bytes: $D152Stream_ByteSize.Input, onLimitReached: $D152Stream_LazyArg<$D152Stream_Stream<Uint8Array, E, R>>): $D152Stream_Stream<Uint8Array, E, R>;
@@ -3278,21 +3399,21 @@ interface $D152Method_runIntoQueue {
     "runIntoQueue"<A, E, R>(this: $D152Stream_Stream<A, E, R>, queue: $D152Stream_Queue.Queue<A, E | $D152Stream_Cause.Done>): $D152Stream_Effect.Effect<void, never, R>;
 }
 declare module "effect/BigDecimal" {
-  interface BigDecimal extends $D152Method_normalize, $D152Method_sum, $D152Method_multiply, $D152Method_subtract, $D152Method_divide, $D152Method_divideUnsafe, $D152Method_isLessThan, $D152Method_isLessThanOrEqualTo, $D152Method_isGreaterThan, $D152Method_isGreaterThanOrEqualTo, $D152Method_between, $D152Method_clamp, $D152Method_min, $D152Method_max, $D152Method_remainder, $D152Method_remainderUnsafe, $D152Method_equals, $D152Method_truncate, $D152Method_ceil, $D152Method_floor {}
+  interface BigDecimal extends $D152Method_normalize, $D152Method_sum, $D152Method_multiply, $D152Method_subtract, $D152Method_divide, $D152Method_divideUnsafe, $D152Method_isLessThan, $D152Method_isLessThanOrEqualTo, $D152Method_isGreaterThan, $D152Method_isGreaterThanOrEqualTo, $D152Method_between, $D152Method_clamp, $D152Method_min, $D152Method_max, $D152Method_sign, $D152Method_abs, $D152Method_negate, $D152Method_remainder, $D152Method_remainderUnsafe, $D152Method_equals, $D152Method_format, $D152Method_toExponential, $D152Method_toNumberUnsafe, $D152Method_isInteger, $D152Method_isZero, $D152Method_isNegative, $D152Method_isPositive, $D152Method_round, $D152Method_truncate, $D152Method_ceil, $D152Method_floor {}
 }
 
 declare module "effect/Cause" {
-  interface Cause<out E> extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface Die extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface Fail<out E> extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface Interrupt extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface NoSuchElementError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface Done<A = void> extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface TimeoutError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface IllegalArgumentError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface ExceededCapacityError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface AsyncFiberError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
-  interface UnknownError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_reasonAnnotations {}
+  interface Cause<out E> extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface Die extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface Fail<out E> extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface Interrupt extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface NoSuchElementError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface Done<A = void> extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface TimeoutError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface IllegalArgumentError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface ExceededCapacityError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface AsyncFiberError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
+  interface UnknownError extends $D152Method_isCause, $D152Method_isReason, $D152Method_isFailReason, $D152Method_isDieReason, $D152Method_isInterruptReason, $D152Method_hasInterruptsOnly, $D152Method_map, $D152Method_combine, $D152Method_squash, $D152Method_hasFails, $D152Method_findFail, $D152Method_findError, $D152Method_findErrorOption, $D152Method_hasDies, $D152Method_findDie, $D152Method_findDefect, $D152Method_hasInterrupts, $D152Method_findInterrupt, $D152Method_interruptors, $D152Method_filterInterruptors, $D152Method_prettyErrors, $D152Method_pretty, $D152Method_reasonAnnotations {}
 }
 
 declare module "effect/Chunk" {
@@ -3316,16 +3437,16 @@ declare module "effect/Deferred" {
 }
 
 declare module "effect/Duration" {
-  interface Duration extends $D152Method_isFinite, $D152Method_isZero, $D152Method_isNegative, $D152Method_isPositive, $D152Method_abs, $D152Method_negate, $D152Method_toMillis, $D152Method_toSeconds, $D152Method_toMinutes, $D152Method_toHours, $D152Method_toDays, $D152Method_toWeeks, $D152Method_toNanos, $D152Method_match, $D152Method_matchPair, $D152Method_between, $D152Method_min, $D152Method_max, $D152Method_clamp, $D152Method_divide, $D152Method_divideUnsafe, $D152Method_times, $D152Method_subtract, $D152Method_sum, $D152Method_isLessThan, $D152Method_isLessThanOrEqualTo, $D152Method_isGreaterThan, $D152Method_isGreaterThanOrEqualTo, $D152Method_equals, $D152Method_parts, $D152Method_format {}
+  interface Duration extends $D152Method_isFinite, $D152Method_isZero, $D152Method_isNegative, $D152Method_isPositive, $D152Method_abs, $D152Method_negate, $D152Method_toMillis, $D152Method_toSeconds, $D152Method_toMinutes, $D152Method_toHours, $D152Method_toDays, $D152Method_toWeeks, $D152Method_toNanosUnsafe, $D152Method_toNanos, $D152Method_toHrTime, $D152Method_match, $D152Method_matchPair, $D152Method_between, $D152Method_min, $D152Method_max, $D152Method_clamp, $D152Method_divide, $D152Method_divideUnsafe, $D152Method_times, $D152Method_subtract, $D152Method_sum, $D152Method_isLessThan, $D152Method_isLessThanOrEqualTo, $D152Method_isGreaterThan, $D152Method_isGreaterThanOrEqualTo, $D152Method_equals, $D152Method_parts, $D152Method_format {}
 }
 
 declare module "effect/Effect" {
-  interface Effect<out A, out E = never, out R = never> extends $D152Method_forEach, $D152Method_head, $D152Method_bindTo, $D152Method_bind, $D152Method_transposeOption, $D152Method_flatMap, $D152Method_flatten, $D152Method_andThen, $D152Method_tap, $D152Method_result, $D152Method_option, $D152Method_exit, $D152Method_map, $D152Method_as, $D152Method_asSome, $D152Method_asVoid, $D152Method_flip, $D152Method_zip, $D152Method_zipWith, $D152Method_catchTag, $D152Method_catchTags, $D152Method_catchReason, $D152Method_catchReasons, $D152Method_unwrapReason, $D152Method_catchCause, $D152Method_catchDefect, $D152Method_catchIf, $D152Method_catchFilter, $D152Method_catchNoSuchElement, $D152Method_catchCauseIf, $D152Method_catchCauseFilter, $D152Method_mapError, $D152Method_mapBoth, $D152Method_orDie, $D152Method_tapError, $D152Method_tapErrorTag, $D152Method_tapCause, $D152Method_tapCauseIf, $D152Method_tapCauseFilter, $D152Method_tapDefect, $D152Method_eventually, $D152Method_retry, $D152Method_retryOrElse, $D152Method_sandbox, $D152Method_ignore, $D152Method_ignoreCause, $D152Method_withErrorReporting, $D152Method_orElseSucceed, $D152Method_timeout, $D152Method_timeoutOption, $D152Method_timeoutOrElse, $D152Method_delay, $D152Method_timed, $D152Method_race, $D152Method_raceFirst, $D152Method_filterOrElse, $D152Method_filterMapOrElse, $D152Method_filterOrFail, $D152Method_filterMapOrFail, $D152Method_when, $D152Method_match, $D152Method_matchEager, $D152Method_matchCause, $D152Method_matchCauseEager, $D152Method_matchCauseEffectEager, $D152Method_matchCauseEffect, $D152Method_matchEffect, $D152Method_isFailure, $D152Method_isSuccess, $D152Method_provide, $D152Method_provideContext, $D152Method_setContext, $D152Method_updateContext, $D152Method_updateService, $D152Method_provideService, $D152Method_provideServiceEffect, $D152Method_scoped, $D152Method_ensuring, $D152Method_onError, $D152Method_onErrorIf, $D152Method_onErrorFilter, $D152Method_onExitPrimitive, $D152Method_onExit, $D152Method_onExitIf, $D152Method_onExitFilter, $D152Method_cached, $D152Method_cachedWithTTL, $D152Method_cachedInvalidateWithTTL, $D152Method_interruptible, $D152Method_onInterrupt, $D152Method_uninterruptible, $D152Method_forever, $D152Method_repeat, $D152Method_repeatOrElse, $D152Method_replicate, $D152Method_replicateEffect, $D152Method_schedule, $D152Method_scheduleFrom, $D152Method_linkSpans, $D152Method_withSpan, $D152Method_withSpanScoped, $D152Method_withParentSpan, $D152Method_request, $D152Method_requestUnsafe, $D152Method_forkChild, $D152Method_forkIn, $D152Method_forkScoped, $D152Method_forkDetach, $D152Method_awaitAllChildren, $D152Method_track, $D152Method_trackSuccesses, $D152Method_trackErrors, $D152Method_trackDefects, $D152Method_trackDuration, $D152Method_mapEager, $D152Method_mapErrorEager, $D152Method_mapBothEager, $D152Method_flatMapEager, $D152Method_catchEager, $D152Method_let, $D152Method_catch {}
+  interface Effect<out A, out E = never, out R = never> extends $D152Method_forEach, $D152Method_head, $D152Method_bindTo, $D152Method_bind, $D152Method_transposeOption, $D152Method_flatMap, $D152Method_flatten, $D152Method_andThen, $D152Method_tap, $D152Method_result, $D152Method_option, $D152Method_exit, $D152Method_map, $D152Method_as, $D152Method_asSome, $D152Method_asVoid, $D152Method_flip, $D152Method_zip, $D152Method_zipWith, $D152Method_catchTag, $D152Method_catchTags, $D152Method_catchReason, $D152Method_catchReasons, $D152Method_unwrapReason, $D152Method_catchCause, $D152Method_catchDefect, $D152Method_catchIf, $D152Method_catchFilter, $D152Method_catchNoSuchElement, $D152Method_catchCauseIf, $D152Method_catchCauseFilter, $D152Method_mapError, $D152Method_mapBoth, $D152Method_orDie, $D152Method_tapError, $D152Method_tapErrorTag, $D152Method_tapCause, $D152Method_tapCauseIf, $D152Method_tapCauseFilter, $D152Method_tapDefect, $D152Method_eventually, $D152Method_retry, $D152Method_retryOrElse, $D152Method_sandbox, $D152Method_ignore, $D152Method_ignoreCause, $D152Method_withExecutionPlan, $D152Method_withErrorReporting, $D152Method_orElseSucceed, $D152Method_timeout, $D152Method_timeoutOption, $D152Method_timeoutOrElse, $D152Method_delay, $D152Method_timed, $D152Method_race, $D152Method_raceFirst, $D152Method_filterOrElse, $D152Method_filterMapOrElse, $D152Method_filterOrFail, $D152Method_filterMapOrFail, $D152Method_when, $D152Method_match, $D152Method_matchEager, $D152Method_matchCause, $D152Method_matchCauseEager, $D152Method_matchCauseEffectEager, $D152Method_matchCauseEffect, $D152Method_matchEffect, $D152Method_isFailure, $D152Method_isSuccess, $D152Method_provide, $D152Method_provideContext, $D152Method_setContext, $D152Method_updateContext, $D152Method_updateService, $D152Method_provideService, $D152Method_provideServiceEffect, $D152Method_scoped, $D152Method_ensuring, $D152Method_onError, $D152Method_onErrorIf, $D152Method_onErrorFilter, $D152Method_onExitPrimitive, $D152Method_onExit, $D152Method_onExitIf, $D152Method_onExitFilter, $D152Method_cached, $D152Method_cachedWithTTL, $D152Method_cachedInvalidateWithTTL, $D152Method_interruptible, $D152Method_onInterrupt, $D152Method_uninterruptible, $D152Method_forever, $D152Method_repeat, $D152Method_repeatOrElse, $D152Method_replicate, $D152Method_replicateEffect, $D152Method_schedule, $D152Method_scheduleFrom, $D152Method_withTracer, $D152Method_withTracerEnabled, $D152Method_withTracerTiming, $D152Method_annotateSpans, $D152Method_linkSpans, $D152Method_withSpan, $D152Method_withSpanScoped, $D152Method_withParentSpan, $D152Method_request, $D152Method_requestUnsafe, $D152Method_forkChild, $D152Method_forkIn, $D152Method_forkScoped, $D152Method_forkDetach, $D152Method_awaitAllChildren, $D152Method_withLogger, $D152Method_annotateLogs, $D152Method_withLogSpan, $D152Method_track, $D152Method_trackSuccesses, $D152Method_trackErrors, $D152Method_trackDefects, $D152Method_trackDuration, $D152Method_tx, $D152Method_mapEager, $D152Method_mapErrorEager, $D152Method_mapBothEager, $D152Method_flatMapEager, $D152Method_catchEager, $D152Method_let, $D152Method_catch {}
 }
 
 declare module "effect/Exit" {
-  interface Success<out A, out E = never> extends $D152Method_isSuccess, $D152Method_isFailure, $D152Method_hasFails, $D152Method_hasDies, $D152Method_hasInterrupts, $D152Method_filterSuccess, $D152Method_filterValue, $D152Method_filterFailure, $D152Method_filterCause, $D152Method_match, $D152Method_map, $D152Method_mapError, $D152Method_mapBoth, $D152Method_asVoid, $D152Method_getSuccess, $D152Method_getCause, $D152Method_findErrorOption {}
-  interface Failure<out A, out E> extends $D152Method_isSuccess, $D152Method_isFailure, $D152Method_hasFails, $D152Method_hasDies, $D152Method_hasInterrupts, $D152Method_filterSuccess, $D152Method_filterValue, $D152Method_filterFailure, $D152Method_filterCause, $D152Method_match, $D152Method_map, $D152Method_mapError, $D152Method_mapBoth, $D152Method_asVoid, $D152Method_getSuccess, $D152Method_getCause, $D152Method_findErrorOption {}
+  interface Success<out A, out E = never> extends $D152Method_isSuccess, $D152Method_isFailure, $D152Method_hasFails, $D152Method_hasDies, $D152Method_hasInterrupts, $D152Method_filterSuccess, $D152Method_filterValue, $D152Method_filterFailure, $D152Method_filterCause, $D152Method_findError, $D152Method_findDefect, $D152Method_match, $D152Method_map, $D152Method_mapError, $D152Method_mapBoth, $D152Method_asVoid, $D152Method_getSuccess, $D152Method_getCause, $D152Method_findErrorOption {}
+  interface Failure<out A, out E> extends $D152Method_isSuccess, $D152Method_isFailure, $D152Method_hasFails, $D152Method_hasDies, $D152Method_hasInterrupts, $D152Method_filterSuccess, $D152Method_filterValue, $D152Method_filterFailure, $D152Method_filterCause, $D152Method_findError, $D152Method_findDefect, $D152Method_match, $D152Method_map, $D152Method_mapError, $D152Method_mapBoth, $D152Method_asVoid, $D152Method_getSuccess, $D152Method_getCause, $D152Method_findErrorOption {}
 }
 
 declare module "effect/Fiber" {
@@ -3361,7 +3482,7 @@ declare module "effect/Result" {
 }
 
 declare module "effect/Schedule" {
-  interface Schedule<out Output, in Input = unknown, out Error = never, out Env = never> extends $D152Method_addDelay, $D152Method_concat, $D152Method_concatResult, $D152Method_map, $D152Method_modifyDelay, $D152Method_jittered, $D152Method_passthrough, $D152Method_tap, $D152Method_upTo, $D152Method_while {}
+  interface Schedule<out Output, in Input = unknown, out Error = never, out Env = never> extends $D152Method_toStep, $D152Method_toStepWithMetadata, $D152Method_toStepWithSleep, $D152Method_addDelay, $D152Method_concat, $D152Method_concatResult, $D152Method_map, $D152Method_modifyDelay, $D152Method_jittered, $D152Method_passthrough, $D152Method_tap, $D152Method_upTo, $D152Method_while {}
 }
 
 declare module "effect/Sink" {
@@ -3369,5 +3490,5 @@ declare module "effect/Sink" {
 }
 
 declare module "effect/Stream" {
-  interface Stream<out A, out E = never, out R = never> extends $D152Method_transformPull, $D152Method_transformPullBracket, $D152Method_scoped, $D152Method_map, $D152Method_as, $D152Method_mapBoth, $D152Method_mapArray, $D152Method_mapEffect, $D152Method_flattenEffect, $D152Method_mapArrayEffect, $D152Method_result, $D152Method_tap, $D152Method_tapBoth, $D152Method_tapSink, $D152Method_flatMap, $D152Method_switchMap, $D152Method_flatten, $D152Method_flattenArray, $D152Method_drain, $D152Method_drainFork, $D152Method_repeat, $D152Method_schedule, $D152Method_timeout, $D152Method_timeoutOrElse, $D152Method_repeatElements, $D152Method_forever, $D152Method_flattenIterable, $D152Method_flattenTake, $D152Method_concat, $D152Method_prepend, $D152Method_merge, $D152Method_mergeEffect, $D152Method_mergeResult, $D152Method_zip, $D152Method_zipFlatten, $D152Method_zipWithIndex, $D152Method_zipWithNext, $D152Method_zipWithPrevious, $D152Method_zipWithPreviousAndNext, $D152Method_filter, $D152Method_filterMap, $D152Method_filterEffect, $D152Method_filterMapEffect, $D152Method_partitionQueue, $D152Method_partitionEffect, $D152Method_partition, $D152Method_when, $D152Method_peel, $D152Method_buffer, $D152Method_bufferArray, $D152Method_catchCause, $D152Method_catchDefect, $D152Method_tapCause, $D152Method_tapError, $D152Method_tapErrorTag, $D152Method_tapDefect, $D152Method_catchIf, $D152Method_catchFilter, $D152Method_catchTag, $D152Method_catchTags, $D152Method_catchReason, $D152Method_catchReasons, $D152Method_unwrapReason, $D152Method_mapError, $D152Method_catchCauseIf, $D152Method_catchCauseFilter, $D152Method_orElseIfEmpty, $D152Method_orElseSucceed, $D152Method_orDie, $D152Method_ignore, $D152Method_ignoreCause, $D152Method_retry, $D152Method_withExecutionPlan, $D152Method_take, $D152Method_limitBytes, $D152Method_takeRight, $D152Method_takeUntil, $D152Method_takeUntilEffect, $D152Method_takeWhile, $D152Method_takeWhileFilter, $D152Method_takeWhileEffect, $D152Method_drop, $D152Method_dropUntil, $D152Method_dropUntilEffect, $D152Method_dropWhile, $D152Method_dropWhileFilter, $D152Method_dropWhileEffect, $D152Method_dropRight, $D152Method_chunks, $D152Method_rechunk, $D152Method_sliding, $D152Method_slidingSize, $D152Method_split, $D152Method_combine, $D152Method_combineArray, $D152Method_mapAccum, $D152Method_mapAccumArray, $D152Method_mapAccumEffect, $D152Method_mapAccumArrayEffect, $D152Method_scan, $D152Method_scanEffect, $D152Method_debounce, $D152Method_throttleEffect, $D152Method_throttle, $D152Method_grouped, $D152Method_groupedWithin, $D152Method_groupBy, $D152Method_groupByKey, $D152Method_groupAdjacentBy, $D152Method_transduce, $D152Method_aggregate, $D152Method_aggregateWithin, $D152Method_broadcastN, $D152Method_broadcast, $D152Method_share, $D152Method_pipeThroughChannel, $D152Method_pipeThroughChannelOrFail, $D152Method_pipeThrough, $D152Method_collect, $D152Method_accumulate, $D152Method_changes, $D152Method_changesWith, $D152Method_changesWithEffect, $D152Method_decodeText, $D152Method_encodeText, $D152Method_splitLines, $D152Method_intersperse, $D152Method_intersperseAffixes, $D152Method_interleave, $D152Method_interleaveWith, $D152Method_interruptWhen, $D152Method_haltWhen, $D152Method_onExit, $D152Method_onError, $D152Method_onStart, $D152Method_onFirst, $D152Method_onEnd, $D152Method_ensuring, $D152Method_provide, $D152Method_provideContext, $D152Method_provideService, $D152Method_provideServiceEffect, $D152Method_updateContext, $D152Method_updateService, $D152Method_withSpan, $D152Method_bind, $D152Method_bindEffect, $D152Method_bindTo, $D152Method_run, $D152Method_runCollect, $D152Method_runCount, $D152Method_runSum, $D152Method_runFold, $D152Method_runFoldEffect, $D152Method_runHead, $D152Method_runLast, $D152Method_runForEach, $D152Method_runForEachWhile, $D152Method_runForEachArray, $D152Method_runDrain, $D152Method_toPull, $D152Method_mkString, $D152Method_mkArrayBuffer, $D152Method_mkUint8Array, $D152Method_toReadableStreamWith, $D152Method_toReadableStream, $D152Method_toReadableStreamEffect, $D152Method_toAsyncIterableWith, $D152Method_toAsyncIterableEffect, $D152Method_toAsyncIterable, $D152Method_runIntoPubSub, $D152Method_toPubSub, $D152Method_toPubSubTake, $D152Method_toQueue, $D152Method_runIntoQueue, $D152Method_catch, $D152Method_let {}
+  interface Stream<out A, out E = never, out R = never> extends $D152Method_transformPull, $D152Method_transformPullBracket, $D152Method_toChannel, $D152Method_scoped, $D152Method_map, $D152Method_as, $D152Method_mapBoth, $D152Method_mapArray, $D152Method_mapEffect, $D152Method_flattenEffect, $D152Method_mapArrayEffect, $D152Method_result, $D152Method_tap, $D152Method_tapBoth, $D152Method_tapSink, $D152Method_flatMap, $D152Method_switchMap, $D152Method_flatten, $D152Method_flattenArray, $D152Method_drain, $D152Method_drainFork, $D152Method_repeat, $D152Method_schedule, $D152Method_timeout, $D152Method_timeoutOrElse, $D152Method_repeatElements, $D152Method_forever, $D152Method_flattenIterable, $D152Method_flattenTake, $D152Method_concat, $D152Method_prepend, $D152Method_merge, $D152Method_mergeEffect, $D152Method_mergeResult, $D152Method_mergeLeft, $D152Method_mergeRight, $D152Method_cross, $D152Method_crossWith, $D152Method_zipWith, $D152Method_zipWithArray, $D152Method_zip, $D152Method_zipLeft, $D152Method_zipRight, $D152Method_zipFlatten, $D152Method_zipWithIndex, $D152Method_zipWithNext, $D152Method_zipWithPrevious, $D152Method_zipWithPreviousAndNext, $D152Method_zipLatest, $D152Method_zipLatestWith, $D152Method_race, $D152Method_filter, $D152Method_filterMap, $D152Method_filterEffect, $D152Method_filterMapEffect, $D152Method_partitionQueue, $D152Method_partitionEffect, $D152Method_partition, $D152Method_when, $D152Method_peel, $D152Method_buffer, $D152Method_bufferArray, $D152Method_catchCause, $D152Method_catchDefect, $D152Method_tapCause, $D152Method_tapError, $D152Method_tapErrorTag, $D152Method_tapDefect, $D152Method_catchIf, $D152Method_catchFilter, $D152Method_catchTag, $D152Method_catchTags, $D152Method_catchReason, $D152Method_catchReasons, $D152Method_unwrapReason, $D152Method_mapError, $D152Method_catchCauseIf, $D152Method_catchCauseFilter, $D152Method_orElseIfEmpty, $D152Method_orElseSucceed, $D152Method_orDie, $D152Method_ignore, $D152Method_ignoreCause, $D152Method_retry, $D152Method_withExecutionPlan, $D152Method_take, $D152Method_limitBytes, $D152Method_takeRight, $D152Method_takeUntil, $D152Method_takeUntilEffect, $D152Method_takeWhile, $D152Method_takeWhileFilter, $D152Method_takeWhileEffect, $D152Method_drop, $D152Method_dropUntil, $D152Method_dropUntilEffect, $D152Method_dropWhile, $D152Method_dropWhileFilter, $D152Method_dropWhileEffect, $D152Method_dropRight, $D152Method_chunks, $D152Method_rechunk, $D152Method_sliding, $D152Method_slidingSize, $D152Method_split, $D152Method_combine, $D152Method_combineArray, $D152Method_mapAccum, $D152Method_mapAccumArray, $D152Method_mapAccumEffect, $D152Method_mapAccumArrayEffect, $D152Method_scan, $D152Method_scanEffect, $D152Method_debounce, $D152Method_throttleEffect, $D152Method_throttle, $D152Method_grouped, $D152Method_groupedWithin, $D152Method_groupBy, $D152Method_groupByKey, $D152Method_groupAdjacentBy, $D152Method_transduce, $D152Method_aggregate, $D152Method_aggregateWithin, $D152Method_broadcastN, $D152Method_broadcast, $D152Method_share, $D152Method_pipeThroughChannel, $D152Method_pipeThroughChannelOrFail, $D152Method_pipeThrough, $D152Method_collect, $D152Method_accumulate, $D152Method_changes, $D152Method_changesWith, $D152Method_changesWithEffect, $D152Method_decodeText, $D152Method_encodeText, $D152Method_splitLines, $D152Method_intersperse, $D152Method_intersperseAffixes, $D152Method_interleave, $D152Method_interleaveWith, $D152Method_interruptWhen, $D152Method_haltWhen, $D152Method_onExit, $D152Method_onError, $D152Method_onStart, $D152Method_onFirst, $D152Method_onEnd, $D152Method_ensuring, $D152Method_provide, $D152Method_provideContext, $D152Method_provideService, $D152Method_provideServiceEffect, $D152Method_updateContext, $D152Method_updateService, $D152Method_withSpan, $D152Method_bind, $D152Method_bindEffect, $D152Method_bindTo, $D152Method_run, $D152Method_runCollect, $D152Method_runCount, $D152Method_runSum, $D152Method_runFold, $D152Method_runFoldEffect, $D152Method_runHead, $D152Method_runLast, $D152Method_runForEach, $D152Method_runForEachWhile, $D152Method_runForEachArray, $D152Method_runDrain, $D152Method_toPull, $D152Method_mkString, $D152Method_mkArrayBuffer, $D152Method_mkUint8Array, $D152Method_toReadableStreamWith, $D152Method_toReadableStream, $D152Method_toReadableStreamEffect, $D152Method_toAsyncIterableWith, $D152Method_toAsyncIterableEffect, $D152Method_toAsyncIterable, $D152Method_runIntoPubSub, $D152Method_toPubSub, $D152Method_toPubSubTake, $D152Method_toQueue, $D152Method_runIntoQueue, $D152Method_catch, $D152Method_let {}
 }

@@ -1,0 +1,45 @@
+// Method syntax on Effect data types (D152, D295): a few of effect's
+// data-first functions name their receiver input, cause, n, effect, left,
+// or stream instead of self. They are methods all the same, and only their
+// data-first overloads are: Effect.annotateLogs(key, value), the curried
+// form, never becomes a method.
+error Boom { n: number }
+
+function failing() {
+  throw new Boom({ n: 1 })
+}
+
+// expect-result: {"errorOption":true,"error":1,"pretty":true,"found":"Success","defect":"Failure","abs":"2.5","zero":true,"sign":-1,"rounded":"3","hrTime":[2,0],"span":1,"annotated":2,"zipped":[1,2],"channel":"object"}
+export function main() {
+  const outcome = exit(failing())
+  if (outcome is Exit.Failure(let cause)) return describe(outcome, cause)
+  return "succeeded"
+}
+
+function describe(outcome: Exit.Exit<void, Boom>, cause: Cause.Cause<Boom>) {
+  const errorOption = cause.findErrorOption().isSome()
+  const error = cause.findErrorOption().getOrElse(() => new Boom({ n: 0 })).n
+  const pretty = cause.pretty().includes("Boom")
+  const found = outcome.findError()._tag
+  const defect = outcome.findDefect()._tag
+  const negative = BigDecimal.fromNumberUnsafe(-2.5)
+  const one: Effect.Effect<number> = Effect.succeed(1)
+  const two: Effect.Effect<number> = Effect.succeed(2)
+  const zipped = Stream.make(1, 2).zipLeft(Stream.make(3, 4)).runCollect()
+  return {
+    errorOption,
+    error,
+    pretty,
+    found,
+    defect,
+    abs: negative.abs().format(),
+    zero: BigDecimal.fromNumberUnsafe(0).isZero(),
+    sign: negative.sign(),
+    rounded: BigDecimal.fromNumberUnsafe(2.5).round({ scale: 0 }).format(),
+    hrTime: Duration.seconds(2).toHrTime(),
+    span: one.withLogSpan("span"),
+    annotated: two.annotateLogs("key", "value"),
+    zipped,
+    channel: typeof Stream.make(1).toChannel()
+  }
+}
