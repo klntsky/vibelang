@@ -1,6 +1,6 @@
 # BigDecimal
 
-`BigDecimal` works in VibeLang exactly as in Effect. Use it for decimal arithmetic when binary floating point would lose information, such as prices imported as decimal strings.
+`BigDecimal` works in VibeLang exactly as in Effect. Use it for decimal arithmetic where binary floating point loses information, such as prices imported as decimal strings.
 
 ## Representing decimal values
 
@@ -17,7 +17,7 @@ BigDecimal.format(bulkPrice) // "8750"
 8750
 ```
 
-A value stores an integer coefficient and a scale: coefficient × 10 to the power of negative scale. Positive scales place digits after the decimal point; negative scales add integer zeros. Precision is arbitrary within implementation and memory limits, rather than limited to JavaScript's number precision.
+A value is an integer coefficient and a scale, meaning coefficient × 10^-scale: a positive scale places digits after the decimal point, a negative one adds integer zeros. Precision is arbitrary up to implementation and memory limits, not JavaScript's number precision.
 
 ## Constructing decimals
 
@@ -37,7 +37,7 @@ BigDecimal.format(whole) // "42"
 true true 42 true
 ```
 
-`make` accepts a coefficient and scale, while `fromBigInt` uses scale zero. `fromString` and `fromNumber` return an `Option`, so invalid input stays data. Prefer strings for externally supplied decimals: converting a number cannot recover digits already lost in floating point calculations.
+`make` takes a coefficient and scale; `fromBigInt` uses scale zero. `fromString` and `fromNumber` return an `Option`, so invalid input stays data. Prefer strings for external decimals: converting a number cannot recover digits floating point already lost.
 
 ## Safe and unsafe constructors
 
@@ -60,7 +60,7 @@ const fixedRate = BigDecimal.fromNumberUnsafe(1.25)
 InvalidPrice invalid
 ```
 
-`fromStringUnsafe` throws for invalid text; `fromNumberUnsafe` throws for non-finite numbers. Use an unsafe constructor for a known valid constant, or put it inside an explicit boundary that declares the expected error. The safe constructors are usually simpler for validation.
+`fromStringUnsafe` throws for invalid text, `fromNumberUnsafe` for non-finite numbers. Use an unsafe constructor for a known valid constant or inside an explicit boundary that declares the expected error; for validation, the safe constructors are usually simpler.
 
 ## Performing arithmetic
 
@@ -84,7 +84,7 @@ BigDecimal.format(BigDecimal.abs(BigDecimal.negate(total))) // "32.5"
 ["32.5","35","8.125","0.5",-1,"32.5"]
 ```
 
-`sum`, `subtract`, and `multiply` produce new decimals. `divide` and `remainder` return `None` for a zero divisor; `divideUnsafe` and `remainderUnsafe` throw instead. Division with a nonterminating decimal expansion uses the library's precision policy, so arbitrary precision does not mean an infinitely long quotient.
+`sum`, `subtract`, and `multiply` return new decimals. For a zero divisor, `divide` and `remainder` return `None`, and `divideUnsafe` and `remainderUnsafe` throw. A nonterminating quotient follows the library's precision policy: arbitrary precision does not mean an infinitely long quotient.
 
 ## Comparing values
 
@@ -111,7 +111,7 @@ BigDecimal.isInteger(amount) // false
 [true,true,true,true,"32.5","40",true,false,true,false,false]
 ```
 
-Use decimal comparisons rather than converting to numbers. Bounds passed to `between` are inclusive. The sign and integer predicates inspect the decimal value, independent of its stored scale.
+Compare decimals directly, not as numbers. `between` bounds are inclusive. The sign and integer predicates test the value, whatever its stored scale.
 
 ## Normalization and equality
 
@@ -128,4 +128,4 @@ BigDecimal.toExponential(compact) // "8.75e+0"
 true 8.75 8.75e+0
 ```
 
-Normalization removes unnecessary trailing coefficient zeros and adjusts the scale. Numeric equality already ignores those representation differences; normalize when you need a compact representation, not as a prerequisite for comparison.
+Normalization strips trailing coefficient zeros and adjusts the scale. Numeric equality already ignores that difference: normalize for a compact representation, not before comparing.

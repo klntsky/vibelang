@@ -1,6 +1,6 @@
 # Hash
 
-`Hash` works in VibeLang exactly as in Effect. It gives equality-aware collections a numeric fingerprint for a value, allowing them to locate likely matches before performing a full comparison.
+`Hash` works in VibeLang exactly as in Effect. It gives equality-aware collections a numeric fingerprint of a value, so they find likely matches before a full comparison.
 
 ## Connecting hashing to equality
 
@@ -13,7 +13,7 @@ Hash.hash(first) === Hash.hash(same) // true
 // Output: [true,true]
 ```
 
-Equal values must have equal hashes. A hash collision does not prove equality: different values can share a hash, so collections still compare candidate values. Hashes are implementation details for lookup, not cryptographic digests or stable identifiers for storage.
+Equal values must have equal hashes, but equal hashes do not prove equality: different values can collide, so collections still compare candidates. Hashes are lookup implementation details, not cryptographic digests or stable storage identifiers.
 
 ## Implementing the hashing protocol
 
@@ -37,9 +37,9 @@ Equal.equals(new GridCell(3, 7), new GridCell(3, 8)) // false
 // Output: [true,false]
 ```
 
-A `[Hash.symbol]` method returns a number and must be synchronous. `Hash.hash` handles primitive and structural inputs, so hashing a tuple of identity fields is a convenient implementation. `Equal.Equal` requires hashing as part of its interface.
+A `[Hash.symbol]` method must return a number synchronously. `Hash.hash` handles primitive and structural inputs, so hashing a tuple of identity fields is an easy implementation. `Equal.Equal` includes hashing in its interface.
 
-The method compiles to a plain JavaScript method, because `[Hash.symbol]` is typed as a plain function. Its body must perform no Effect operation and cannot fail with an expected error; otherwise it is error EK4301.
+It compiles to a plain JavaScript method because `[Hash.symbol]` is typed as a plain function. A body that runs an Effect operation or fails with an expected error is error EK4301.
 
 ## Keeping equal values hash-consistent
 
@@ -53,4 +53,4 @@ Hash.hash(first) === Hash.hash(equivalent) // true
 // Output: [1,true]
 ```
 
-Hash the same identity fields that equality compares. Including a field that equality ignores can send equal values to different buckets and break collection lookup. Using fewer fields is correct but increases collisions; keep hash-relevant fields immutable after insertion because hashes can be cached.
+Hash the identity fields equality compares. A field equality ignores can send equal values to different buckets and break lookup. Fewer fields stay correct but add collisions. Hashes can be cached, so keep hashed fields immutable after insertion.

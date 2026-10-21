@@ -1,6 +1,6 @@
 # Data
 
-`Data` works in VibeLang exactly as in Effect. Use it for classes, tagged unions, and errors with Effect's equality and hashing support; ordinary objects and arrays already compare structurally in Effect 4.
+`Data` works in VibeLang exactly as in Effect. Use it for classes, tagged unions, and errors with Effect's equality and hashing.
 
 ## Creating values with structural equality
 
@@ -22,7 +22,7 @@ Equal.equals(makeRoute("inbox"), makeRoute("inbox")) // true
 true true true true
 ```
 
-Plain records, tuples, arrays, maps, and sets need no `Data` wrapper for structural equality. Comparison descends into nested values. Treat compared data as immutable: equality and hashing cache information about objects.
+In Effect 4, plain records, tuples, arrays, maps, and sets already compare structurally, nested values included, without a `Data` wrapper. Treat compared data as immutable: equality and hashing cache information about objects.
 
 ## Building ordinary and tagged classes
 
@@ -46,7 +46,7 @@ new Archived({ documentId: "doc-3" })._tag // "Archived"
 PENDING true Archived
 ```
 
-`Class` supplies a field-object constructor plus equality and hashing. `TaggedClass` also supplies a fixed `_tag`, useful when narrowing union members. These concrete data classes are distinct from the abstract classes used to declare services.
+`Class` supplies a constructor taking a field object, plus equality and hashing; `TaggedClass` adds a fixed `_tag` for narrowing union members. These concrete data classes are not the abstract classes that declare services.
 
 ## Defining tagged unions with matching helpers
 
@@ -80,7 +80,7 @@ Tracking: parcel-8
 Rejected: address missing
 ```
 
-`TaggedEnum` describes the union from a mapping of tags to payloads. `taggedEnum` creates constructors that insert `_tag`, a `$is` guard factory, and a `$match` helper that requires a case for each variant. Matching callbacks here are synchronous value computations; run service work after narrowing in an ordinary function.
+`TaggedEnum` describes the union as a map from tags to payloads. `taggedEnum` creates constructors that insert `_tag`, a `$is` guard factory, and a `$match` helper requiring a case per variant. Match callbacks compute values synchronously; for service work, narrow in an ordinary function first.
 
 ## Adding generic union cases
 
@@ -106,7 +106,7 @@ const idle = LoadState.Idle()
 [{"value":["one","two"],"_tag":"Ready"},{"error":"offline","_tag":"Failed"},{"_tag":"Idle"}]
 ```
 
-`WithGenerics<2>` gives the definition two type parameters, addressed as `A` and `B`. The generated constructors infer their payload types at each call. Keep the generic definition in a type or interface; it is not a generic service class.
+`WithGenerics<2>` gives the definition two type parameters, `A` and `B`; the constructors infer payload types per call. Keep the generic definition in a type or interface; it is not a generic service class.
 
 ## Defining ordinary and tagged errors
 
@@ -142,7 +142,7 @@ function documentOrDraft(id: string) {
 DocumentMissing
 ```
 
-`Data.Error` creates a native error with additional fields. The global `TaggedError` is Effect's `Data.TaggedError`, with an automatically populated `_tag`; use `throw` to raise it as an expected failure. Use `Schema.TaggedError` when the error needs a schema for serialization.
+`Data.Error` creates a native error with extra fields. The global `TaggedError` is Effect's `Data.TaggedError`, which fills in `_tag`; `throw` raises it as an expected failure. Use `Schema.TaggedError` when the error needs a schema for serialization.
 
 ## Preserving native error causes
 
@@ -163,8 +163,8 @@ function decodeDocument(text: string) {
 DocumentDecodeError true
 ```
 
-A `cause` field preserves the original exception using native error-cause support. It is separate from Effect's `Cause`, which describes an entire execution failure. Preserve the original error for diagnosis, and avoid adding document contents or credentials to diagnostic fields.
+A `cause` field keeps the original exception through native error-cause support; it is not Effect's `Cause`, which describes a whole execution failure. Keep the original error for diagnosis, and keep document contents and credentials out of diagnostic fields.
 
 ## Coming from Effect
 
-Raise a data error with `throw new DocumentMissing({ id })`. Generator yielding and `Effect.fail` are unnecessary for ordinary VibeLang error propagation.
+Raise a data error with `throw new DocumentMissing({ id })`; ordinary error propagation needs no generator yield or `Effect.fail`.

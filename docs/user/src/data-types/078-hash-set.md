@@ -1,6 +1,6 @@
 # HashSet
 
-`HashSet` and `MutableHashSet` work in VibeLang exactly as in Effect. They store unique, unordered values using Effect's equality and hashing rules; choose them for frequent membership checks and set operations.
+`HashSet` and `MutableHashSet` work in VibeLang exactly as in Effect. They store unique, unordered values by Effect's equality and hashing rules; use them for frequent membership checks and set operations.
 
 ## Choosing immutable or mutable sets
 
@@ -24,7 +24,7 @@ false true
 ["blue","green"]
 ```
 
-Immutable updates preserve earlier versions, making snapshots suitable for sharing between fibers. Mutable sets update in place and suit local accumulation with one owner. Use an array for indexed access or required insertion order, and a hash map for key-value associations.
+Immutable updates keep earlier versions, so snapshots suit sharing between fibers. Mutable sets update in place and suit local accumulation with one owner. For indexed access or required insertion order, use an array; for key-value pairs, a hash map.
 
 ## Equality and uniqueness
 
@@ -41,7 +41,7 @@ new Set([a, b]).size // 2
 true 1 2
 ```
 
-Plain objects compare structurally in Effect 4.0.5, so separately allocated records can count as one member. All compared fields matter: adding different request identifiers makes two records distinct. Custom equality uses `Equal.Equal` and a consistent `Hash.Hash` implementation; keep members immutable after insertion so their hashes remain valid.
+Plain objects compare structurally in Effect 4.0.5, so separately allocated records can count as one member. Every compared field matters: different request IDs make two records distinct. Custom equality uses `Equal.Equal` with a consistent `Hash.Hash`; keep members immutable after insertion so their hashes stay valid.
 
 ## Constructing and changing immutable sets
 
@@ -63,7 +63,7 @@ const sum = initial.reduce(0, (total, n) => total + n)
 [[2,4,6],[4,6,8],[4,6,8,10],[6],[4,8],[6,8,10],["item-10","item-6","item-8"],12,0]
 ```
 
-`empty`, `make`, and `fromIterable` all construct sets. `add` and `remove` return updated sets; union, intersection, and difference return the corresponding set operation. Method calls chain immutable updates without changing the original.
+`empty`, `make`, and `fromIterable` construct sets. `add`, `remove`, union, intersection, and difference return new sets, so method chains never change the original.
 
 ## Querying membership and size
 
@@ -81,7 +81,7 @@ HashSet.make("read").isSubset(allowed) // true
 true 3 true true true
 ```
 
-`has` tests one member and `size` counts unique members. `some` and `every` run predicates over members; `isSubset` tests containment of one set in another. Traversal order is not part of the contract.
+`has` tests one member; `size` counts unique members. `some` and `every` run predicates over members; `isSubset` tests whether one set is contained in another. Traversal order is unspecified.
 
 ## Updating mutable sets
 
@@ -103,7 +103,7 @@ function uniqueRegions(regions: ReadonlyArray<string>) {
 2 true ["unknown","west"]
 ```
 
-`make`, `empty`, and `fromIterable` also exist on `MutableHashSet`. Its `add`, `remove`, and `clear` change the original object. Keep mutation within an owned operation; a mutable collection alone does not coordinate concurrent workflows.
+`MutableHashSet` also has `make`, `empty`, and `fromIterable`; its `add`, `remove`, and `clear` change the set in place. Keep mutation inside one owned operation; a mutable collection alone does not coordinate concurrent workflows.
 
 ## Balancing performance and persistence
 
@@ -124,7 +124,7 @@ function snapshots(values: ReadonlyArray<number>) {
 [0,1,1,2]
 ```
 
-Persistent sets share storage between versions; mutable sets avoid persistent-update allocation when previous versions are unnecessary. With well-distributed hashes, lookup, insertion, and removal have near-constant average cost; traversals and set-wide operations scale with the members visited. Poor custom hashes increase collision work, so measure the actual workload rather than assuming every operation is constant time.
+Persistent sets share storage between versions; mutable sets skip that allocation when you need no earlier versions. With well-distributed hashes, lookup, insertion, and removal cost near-constant time on average; traversals and set-wide operations scale with the members visited. Poor custom hashes add collision work, so measure the real workload instead of assuming constant time.
 
 ## Converting to JavaScript collections
 
@@ -146,4 +146,4 @@ east
 west
 ```
 
-Both variants implement `Iterable`, supporting spread, `Array.from`, and `for...of`. Native sets use JavaScript equality for future operations, so a conversion does not transfer Effect's equality behavior. Avoid repeated array conversions in hot loops.
+Both variants implement `Iterable`, so spread, `Array.from`, and `for...of` work. A native set uses JavaScript equality from then on: conversion does not carry Effect's equality over. Avoid repeated array conversions in hot loops.

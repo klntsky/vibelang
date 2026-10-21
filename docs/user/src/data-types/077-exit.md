@@ -1,6 +1,6 @@
 # Exit
 
-`Exit` works in VibeLang exactly as in Effect. Use `Exit<A, E>` to inspect success or an entire failure cause, including defects and interruption. A call that returns an Exit returns data; calling that data runs its recorded outcome.
+`Exit` works in VibeLang exactly as in Effect. Use `Exit<A, E>` to inspect a success or an entire failure cause, defects and interruption included. A call that returns an Exit returns data; calling that data runs its recorded outcome.
 
 ## Representing full outcomes
 
@@ -23,7 +23,7 @@ function inspectExport() {
 1
 ```
 
-An exit is `Success` with `.value`, or `Failure` with `.cause`. `Effect.exit` runs a program and returns that outcome as its success value. The caller can inspect it without re-raising the recorded failure.
+An exit is `Success` with `.value` or `Failure` with `.cause`. `Effect.exit` runs a program and succeeds with its outcome, which the caller inspects without re-raising the failure.
 
 ## Creating success and cause-based failure exits
 
@@ -48,7 +48,7 @@ true true true
 ["Fail","Die"]
 ```
 
-`Exit.succeed` and `Exit.failCause` construct exit data, including at a module's top level. `Exit.succeed(12)` gives a success exit containing `12`, and `Exit.failCause(cause)` gives a failure exit containing the cause. Neither raises a failure. Use `Effect.exit` to run a program and capture its actual outcome instead.
+`Exit.succeed` and `Exit.failCause` build exit data, even at a module's top level: `Exit.succeed(12)` is a success exit holding `12`, and `Exit.failCause(cause)` a failure exit holding the cause. Neither raises a failure.
 
 ## Matching exit variants
 
@@ -67,7 +67,7 @@ Completed: 12
 true
 ```
 
-`Exit.Success(let value)` binds the success value, and `Exit.Failure(let cause)` binds the complete cause. Leaving out either arm is EK4701. Arms are ordinary expressions, so they can run Effect functions; `outcome.match({ onSuccess, onFailure })` also works when the callbacks compute values synchronously. To test one variant, write `outcome is Exit.Failure`.
+`Exit.Success(let value)` binds the success value and `Exit.Failure(let cause)` the complete cause. Leaving out either arm is EK4701. Arms are ordinary expressions and can run Effect functions; `outcome.match({ onSuccess, onFailure })` also works when the callbacks compute values synchronously. To test one variant, write `outcome is Exit.Failure`.
 
 ## Relating exits to results
 
@@ -85,7 +85,7 @@ function asResult<A, E>(outcome: Exit.Exit<A, E>) {
 ["Fail","Die"]
 ```
 
-An exit carries roughly the same information as `Result<A, Cause<E>>`. A `Result<A, E>` alone cannot express the additional defect and interruption reasons. Keep the full cause when moving an execution outcome into another data structure.
+An exit carries roughly the information of `Result<A, Cause<E>>`; a `Result<A, E>` cannot express the defect and interruption reasons. Keep the full cause when you move an outcome into another data structure.
 
 ## Relating exits to effects
 
@@ -102,8 +102,8 @@ function replay<A, E>(outcome: Exit.Exit<A, E>) {
 ["Fail","Die"]
 ```
 
-Calling a held exit runs its constant outcome. Success returns the stored value; failure propagates the stored cause, without repeating the original work. Taking an exit with `exit(program)` and later calling it therefore separates inspection from propagation. Inside a try statement, `finally (exit)` binds the statement's own exit.
+Calling a held exit runs its constant outcome: success returns the stored value and failure propagates the stored cause, without repeating the original work. So taking an exit with `exit(program)` and calling it later separates inspection from propagation. In a try statement, `finally (exit)` binds the statement's own exit.
 
 ## Coming from Effect
 
-`const outcome = Exit.succeed(value)` still builds an exit object. Call `outcome()` to propagate it, or use `Effect.exit(() => work())` to capture a program's outcome. Although Exit extends Effect, its constructors return data under the call rule.
+`const outcome = Exit.succeed(value)` still builds an exit object; `outcome()` propagates it, and `Effect.exit(() => work())` captures a program's outcome. Exit extends Effect, but under the call rule its constructors return data.

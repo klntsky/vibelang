@@ -1,6 +1,6 @@
 # Order
 
-`Order` works in VibeLang exactly as in Effect. It defines reusable comparison rules returning `-1`, `0`, or `1`, so sorting and range checks can share the same definition of before, tied, and after.
+`Order` works in VibeLang exactly as in Effect. It defines reusable comparison rules returning `-1`, `0`, or `1`, so sorting and range checks share one definition of before, tied, and after.
 
 ## Using built-in orderings
 
@@ -13,7 +13,7 @@ Order.Date(new Date("2026-01-01"), new Date("2026-02-01")) // -1
 // Output: [-1,0,1,-1]
 ```
 
-An `Order<A>` compares two values of A synchronously. Built-in orders cover strings, numbers, booleans, bigints, and dates. Use valid dates and numbers appropriate to a total order; `NaN` does not have ordinary numeric ordering semantics.
+An `Order<A>` compares two A values synchronously. Built-in orders cover strings, numbers, booleans, bigints, and dates. A total order needs valid dates and numbers: `NaN` has no ordinary numeric ordering.
 
 ## Sorting values
 
@@ -30,7 +30,7 @@ mutableCopy.sort(Order.Number)
 // Output: [[2,6,9],[9,2,6],[2,6,9]]
 ```
 
-Effect's array `sort` returns a sorted copy. JavaScript's array method sorts its receiver in place. Both accept an order as a comparator; custom callbacks must remain synchronous and must not fail through E.
+Effect's array `sort` returns a sorted copy; JavaScript's sorts its receiver in place. Both accept an order as comparator; a custom callback must be synchronous and must not fail through E.
 
 ## Deriving comparison rules
 
@@ -51,7 +51,7 @@ byPriority(
 // Output: -1
 ```
 
-`mapInput` extracts a comparable value from each operand, then delegates to the underlying order. The projection defines which field matters. It does not mutate or transform the objects being sorted.
+`mapInput` extracts a comparable value from each operand and delegates to the underlying order, so the projection picks the field that matters. It does not mutate or transform the sorted objects.
 
 ## Combining comparison rules
 
@@ -75,7 +75,7 @@ const tasks = Arr.sort([
 // Output: Publish, Archive, Review
 ```
 
-`combine` uses the first rule and consults the second only for a tie. Combine more rules with `combineAll` when several fields break ties. Rule order therefore determines sorting priority.
+`combine` uses the first rule and consults the second only on a tie, so rule order sets sorting priority. For several tie-breaking fields, use `combineAll`.
 
 ## Reversing an ordering
 
@@ -87,7 +87,7 @@ Arr.sort([5, 12, 3], descending) // [12, 5, 3]
 // Output: [12,5,3]
 ```
 
-`flip` reverses an order. Flip one component before combining to reverse only that criterion, or flip the combined order to reverse all criteria.
+`flip` reverses an order. Flip one rule before combining to reverse only that criterion, or the combined order to reverse all.
 
 ## Checking comparisons
 
@@ -104,7 +104,7 @@ atLeast(7, 7) // true
 // Output: [true,true,true,true]
 ```
 
-These helpers turn an order into boolean comparisons. They work with derived object orders as well as primitive orders. Equality here means a comparison tie, which can intentionally ignore fields.
+These helpers turn an order, primitive or derived, into boolean tests. Equality here means a comparison tie, which can deliberately ignore fields.
 
 ## Selecting extrema
 
@@ -116,7 +116,7 @@ Order.min(Order.flip(Order.Number))(13, 8) // 13
 // Output: [8,13,13]
 ```
 
-`min` and `max` select according to the supplied order. With a reversed order, the numeric meaning also reverses. An object order returns one of the original objects rather than just its projected field.
+`min` and `max` select by the supplied order, so a reversed order reverses their numeric meaning. With an object order they return an original object, not its projected field.
 
 ## Clamping values and testing ranges
 
@@ -133,4 +133,4 @@ inside(51) // false
 // Output: [10,30,50,true,false]
 ```
 
-`clamp` replaces an out-of-range value with the nearest bound. `isBetween` tests the same inclusive interval without changing the value. Choose bounds ordered according to the supplied order.
+`clamp` replaces an out-of-range value with the nearest bound; `isBetween` tests the same inclusive interval. Order the bounds by the supplied order.
