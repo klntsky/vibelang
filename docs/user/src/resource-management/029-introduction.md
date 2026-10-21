@@ -1,6 +1,6 @@
 # Introduction
 
-Resources need cleanup on success, failure, and cancellation. VibeLang uses `finally` for unconditional cleanup, `using` for lexical resource ownership, and Effect's outcome-aware combinators when release depends on how work ended.
+Resources need cleanup on success, failure, and cancellation. Use `finally` for unconditional cleanup, `using` for lexical resource ownership, and Effect's outcome-aware combinators when release depends on how work ended.
 
 [Upstream page](https://effect.website/docs/v4/resource-management/introduction)
 
@@ -28,11 +28,11 @@ function exportRows(accepted: boolean) {
 // Output: ExportRejected
 ```
 
-`finally` runs after success, a typed failure, a defect, or interruption. It also runs after early return and when a handler abandons the protected computation. VibeLang gives it Effect cleanup semantics, including deferred interruption while cleanup runs.
+`finally` runs after success, a typed failure, a defect, interruption, an early return, or a handler abandoning the protected computation. It has Effect cleanup semantics, including deferred interruption while cleanup runs.
 
-`Effect.ensuring(() => work(), () => cleanup())` remains available for a reusable combinator. A `finally` block is usually clearer for local cleanup. If cleanup itself fails, its failure is retained with the original outcome rather than silently replacing and dropping an earlier failure.
+`Effect.ensuring(() => work(), () => cleanup())` remains for a reusable combinator; `finally` is usually clearer for local cleanup. A cleanup failure is kept with the original outcome, even when a handler abandons the computation while interruption is pending; it never silently replaces an earlier failure.
 
-`ensuring` requires cleanup whose typed error channel is `never`; source `finally` permits typed cleanup failures and uses `Effect.onExit` semantics. Cleanup failure is retained even when a handler abandons the computation while interruption is pending.
+`ensuring` requires cleanup whose typed error channel is `never`; source `finally` permits typed cleanup failures and uses `Effect.onExit` semantics.
 
 ## Finalizing based on the outcome
 
@@ -59,7 +59,7 @@ function observedExport(accepted: boolean) {
 // Output: ExportRejected
 ```
 
-`finally (exit)` binds the try statement's `Exit`, as `Effect.onExit` does. A success carries no value, because the try block's statements have none; a failure carries the complete cause. Unlike a boolean success flag, this preserves defects and cancellation as well as domain errors. Its cleanup runs uninterruptibly, and successful cleanup preserves the original result.
+`finally (exit)` binds the try statement's `Exit`, as `Effect.onExit` does. A success carries no value, since the try block's statements have none; a failure carries the complete cause, so unlike a boolean success flag it keeps defects and cancellation as well as domain errors. The cleanup runs uninterruptibly, and successful cleanup preserves the original result.
 
 ## Cleaning up failed work
 
@@ -83,7 +83,7 @@ function reportFailedExport(accepted: boolean) {
 // Output: ExportRejected
 ```
 
-`onError` runs only on an unsuccessful outcome, including a defect or interruption. The callback receives a full cause and runs as cleanup; it does not recover the original computation. This differs from ordinary catch, which handles expected failures and skips causes containing defects or interruption.
+`onError` runs only on an unsuccessful outcome, defects and interruption included. Its callback receives the full cause and runs as cleanup; it doesn't recover the computation. Ordinary catch, by contrast, handles expected failures and skips causes containing defects or interruption.
 
 ## Bracketing acquisition, use, and release
 
@@ -119,9 +119,9 @@ function withLease() {
 // Output: test-lease
 ```
 
-`acquireUseRelease` protects acquisition and release while allowing normal interruption during use. Release runs exactly once after successful acquisition, even when use fails or is cancelled; it is not called if acquisition fails. A failing acquisition must clean up any partial work it created before failing.
+`acquireUseRelease` protects acquisition and release and allows normal interruption during use. After a successful acquisition, release runs exactly once, even when use fails or is cancelled. After a failed acquisition it never runs, so a failing acquisition must first clean up its own partial work.
 
-The release callback receives both the resource and the use phase's `Exit`. The combined contract includes failures and requirements from acquisition, use, and release. Default protected acquisition can delay cancellation, so acquisition should finish in bounded time.
+Release receives the resource and the use phase's `Exit`. The combined contract includes the failures and requirements of acquisition, use, and release. Protected acquisition, the default, can delay cancellation, so acquisition should finish in bounded time.
 
 ## Giving the caller resource ownership
 
@@ -155,12 +155,12 @@ function example() {
 // Output: owned
 ```
 
-`acquireRelease` registers a release in a scope and returns the acquired value. `using` supplies a lexical scope for that acquisition and releases it at block exit, removing `Scope` from the caller's requirements. Its release callback must have no typed failure; handle an expected release error explicitly or deliberately promote it with `Effect.orDie`.
+`acquireRelease` registers a release in a scope and returns the acquired value. `using` gives that acquisition a lexical scope, releases it at block exit, and removes `Scope` from the caller's requirements. The release callback must have no typed failure: handle an expected release error, or promote it on purpose with `Effect.orDie`.
 
-Only `using` acquisitions belong to the lexical block. An acquisition without `using` keeps `Scope` in `R` and belongs to its caller, including when the same function also uses a local resource.
+Only `using` acquisitions belong to the lexical block. An acquisition without `using` keeps `Scope` in `R` and belongs to the caller, even when the same function also uses a local resource.
 
-`Scope` is in the prelude as both the module and the type alias for `Scope.Scope`, so these contracts need no import. `using` adds no masking policy: `acquireRelease` masks acquisition by default, while its third argument `{ interruptible: true }` lets cancellation reach an acquisition that waits on the outside world. An adapter that receives a resource after cancellation must release it; the spec's resource adapter uses the runtime's TypeScript `suspend` helper to detect that race.
+`Scope` is in the prelude, as the module and as the type alias for `Scope.Scope`, so these contracts need no import. `using` adds no masking policy: `acquireRelease` masks acquisition by default, and its third argument `{ interruptible: true }` lets cancellation reach an acquisition that waits on the outside world. An adapter that receives a resource after cancellation must release it; the spec's resource adapter detects that race with the runtime's TypeScript `suspend` helper.
 
 ## Coming from Effect
 
-`try`/`finally` replaces local `ensuring` chains, and `using resource = acquire()` replaces a scoped acquisition for a lexical block. Effect's `onExit`, `onError`, and bracket combinators still take programs and VibeLang callbacks.
+`try`/`finally` replaces local `ensuring` chains; `using resource = acquire()` replaces a scoped acquisition for a lexical block. Effect's `onExit`, `onError`, and bracket combinators still take programs and VibeLang callbacks.

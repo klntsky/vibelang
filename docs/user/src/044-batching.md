@@ -1,6 +1,6 @@
 # Batching
 
-Use requests and resolvers when independent lookups can share a backend call. A request describes one answer; a resolver collects compatible pending requests and completes each one with its own success or failure.
+Use requests and resolvers when independent lookups can share a backend call. A request describes one answer; a resolver collects compatible pending requests and completes each with its own success or failure.
 
 ## Model requests and domain errors
 
@@ -26,9 +26,9 @@ const FindPart = Request.tagged<FindPart>("FindPart")
 // Output: false
 ```
 
-Import `Request` from `effect`: without the import, `Request` is the web-standard `Request` class. The request carries the input, success type, and expected errors. `Request.tagged` supplies structural equality and hashing so equal request values can be compared for cache reuse. Include every input that affects the answer, such as a tenant or locale, in a real request model.
+Import `Request` from `effect`; without the import, `Request` is the web-standard class. The request carries the input, success type, and expected errors. `Request.tagged` supplies structural equality and hashing, so equal requests compare equal for cache reuse. A real request model includes every input that affects the answer, such as a tenant or locale.
 
-A direct service call for each item performs repeated backend work. Batching helps only when the data source can actually answer several inputs together; it does not create a bulk endpoint for you.
+A direct service call per item repeats backend work. Batching helps only when the data source can answer several inputs together; it doesn't create a bulk endpoint.
 
 ## Define request resolvers
 
@@ -53,9 +53,9 @@ const PartResolver = RequestResolver.make<FindPart>((entries) => {
 // Output: {"code":"ink-blue","label":"Blue ink"}
 ```
 
-This executable fixture resolves a batch from a map. A backend resolver replaces the map lookup with one bulk operation, then matches the returned rows to entries. `Request.completeEffect` runs its program and completes the entry with that result, including an expected failure.
+This fixture resolves a batch from a map; a backend resolver replaces the lookup with one bulk operation, then matches the returned rows to entries. `Request.completeEffect` runs its program and completes the entry with the result, expected failures included.
 
-Complete every entry, including requests for absent rows. Use `Request.succeed` and `Request.fail` when you already have a value or error. `RequestResolver.fromEffect` is the simpler alternative when each entry needs an independent operation rather than a bulk call.
+Complete every entry, including requests for absent rows. Use `Request.succeed` and `Request.fail` when you already have a value or error. When each entry needs its own operation rather than a bulk call, `RequestResolver.fromEffect` is simpler.
 
 ## Build queries from requests
 
@@ -75,7 +75,7 @@ function partLabel(code: string) {
 // Output: PartMissing
 ```
 
-`Effect.request` submits the request to its resolver and waits for that entry's answer. The returned success value is available directly in VibeLang. The resolver's pending work, rather than the query function's syntax, determines which calls share a backend operation.
+`Effect.request` submits the request to its resolver and waits for that entry's answer, which VibeLang returns directly. The resolver's pending work, not the query function's syntax, decides which calls share a backend operation.
 
 ## Combine compatible requests into batches
 
@@ -90,9 +90,9 @@ function labels(codes: ReadonlyArray<string>) {
 // Output: ["Black ink","Blue ink"]
 ```
 
-Requests using the same resolver and batch key can join the same pending batch. The default resolver delay yields before running the collected work, allowing requests started together to accumulate. Dependencies introduce later waves: a query that needs an earlier answer starts after that answer arrives.
+Requests with the same resolver and batch key can join one pending batch. The default resolver delay yields before running the collected work, so requests started together accumulate. Dependencies add later waves: a query that needs an earlier answer starts after it arrives.
 
-`Effect.forEach` and `Effect.all` are sequential by default, so enable concurrency to collect independent requests. A bounded limit controls how many requests can be outstanding, but also limits batch size. Batching alone does not promise that repeated equal requests are cached; add a resolver cache when you need shared results.
+`Effect.forEach` and `Effect.all` are sequential by default; enable concurrency to collect independent requests. A bounded limit caps outstanding requests, and so also batch size. Batching alone doesn't guarantee repeated equal requests are cached; add a resolver cache for shared results.
 
 ## Control batch execution
 
@@ -110,9 +110,9 @@ function tunedLookup(code: string) {
 // Output: 65 true
 ```
 
-`setDelay` trades latency for a larger collection window, and `batchN` caps each backend batch. `setDelayEffect` takes a program for a custom delay, while `grouped` partitions requests by a key. Reuse the same configured resolver for callers that should share pending batches.
+`setDelay` trades latency for a larger collection window; `batchN` caps each backend batch; `setDelayEffect` takes a program for a custom delay; `grouped` partitions requests by a key. Callers that should share pending batches reuse one configured resolver.
 
-For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `collectWhile`, and `runAll`. Group by backend compatibility, such as destination or tenant. A batch size log like the one above helps verify that concurrent callers are actually sharing work.
+For full control, `RequestResolver.makeWith` accepts `batchKey`, `delay`, `collectWhile`, and `runAll`. Group by backend compatibility, such as destination or tenant. A batch size log like the one above verifies that concurrent callers share work.
 
 ## Supply resolver dependencies
 
@@ -152,9 +152,9 @@ service Parts {
 // Output: ["CatalogUnavailable","CatalogUnavailable"]
 ```
 
-Resolve `CatalogApi()` while building the layer, then close over its implementation. Resolver execution has no remaining service requirements, while building `Parts.layer` requires `CatalogApi`. All calls to the provided `Parts` implementation share the resolver built for that layer.
+Resolve `CatalogApi()` while building the layer and close over its implementation: building `Parts.layer` requires `CatalogApi`, and resolver execution requires no services. Every call to the provided `Parts` implementation shares the resolver built for that layer.
 
-Match results by identifier rather than assuming the backend preserves request order. A backend failure completes every affected entry with `CatalogUnavailable`; a missing row completes only its entry with `PartMissing`. Supply a `CatalogApi` layer alongside this layer when wiring the application.
+Match results by identifier; don't assume the backend preserves request order. A backend failure completes every affected entry with `CatalogUnavailable`; a missing row completes only its entry with `PartMissing`. When wiring the application, supply a `CatalogApi` layer alongside this one.
 
 ## Share and tune request caches
 
@@ -183,9 +183,9 @@ function cachedExample() {
 // Output: PartMissing
 ```
 
-`withCache` runs to allocate a cache and returns a wrapped resolver. Build it once in a service layer or another shared owner, then reuse it for every query that should share answers. Allocating it inside each lookup creates a fresh cache each time.
+`withCache` runs to allocate a cache and returns a wrapped resolver. Build it once in a service layer or another shared owner and reuse it for every query that should share answers; allocating it per lookup creates a fresh cache each time.
 
-The cache is bounded by `capacity`, with `"lru"` eviction by default or `"fifo"` for insertion order. Completed expected failures are cached too; interrupted results are not. Entries have no time-based expiry, and cache hits depend on request equality.
+The cache is bounded by `capacity`, with `"lru"` eviction by default or `"fifo"` for insertion order. Completed expected failures are cached; interrupted results are not. Entries have no time-based expiry, and hits depend on request equality.
 
 ```vibe
 // run: Console.log(JSON.stringify(expiringLookup()))
@@ -203,7 +203,7 @@ function expiringLookup() {
 // Output: {"code":"ink-black","label":"Black ink"}
 ```
 
-Use `asCache` when you need a first-class cache with expiry, refresh, and invalidation. Its `timeToLive` function receives the request's `Exit` and request value, so success and failure can have different lifetimes. Cache read requests whose answers can be reused; keep commands that must execute every time out of that cache.
+Use `asCache` for a first-class cache with expiry, refresh, and invalidation. Its `timeToLive` function receives the request's `Exit` and the request, so success and failure can have different lifetimes. Cache reads whose answers are reusable; keep commands that must run every time out of the cache.
 
 ## Coming from Effect
 

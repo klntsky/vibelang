@@ -1,6 +1,6 @@
 # Managing Services
 
-A service gives a program a named capability without passing an implementation through every function. VibeLang declares a service with `service`, an abstract class whose members state their contracts, and infers its use in the `R` channel.
+A service is a named capability a program uses without passing an implementation through every function. `service` declares it as an abstract class whose members state contracts; its uses are inferred in the `R` channel.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/services)
 
@@ -18,9 +18,9 @@ service Reporter {
 // Output: ticket-17
 ```
 
-A service class has no superclass or type parameters, and all its instance members are abstract. Methods state full contracts because they have no implementation from which to infer one; `abstract readonly` value members are also allowed. Static fields can hold layers or other helpers.
+A service has no superclass or type parameters, and every instance member is abstract. Methods state full contracts, having no body to infer from; `abstract readonly` value members are allowed. Static fields can hold layers or other helpers.
 
-The compiler gives each service nominal identity and derives its key from package, module path, and class name. Two services with identical members remain different dependencies. Implement a service with an object literal or a class that `implements` it; do not construct, extend, or use `instanceof` on the service class.
+Services are nominal: the compiler derives the key from package, module path, and class name, so two services with identical members are different dependencies. Implement one with an object literal or a class that `implements` it; don't construct, extend, or use `instanceof` on it.
 
 ## Requesting and supplying implementations
 
@@ -47,7 +47,7 @@ function readImplementation() {
 // Output: ticket-23 23
 ```
 
-`Sequence.next()` looks up the service and runs its method. `Sequence()` returns the implementation itself, which is useful for capturing it or reading value members. A runner needs a program whose remaining requirements have been supplied.
+`Sequence.next()` looks up the service and runs the method; `Sequence()` returns the implementation, to capture it or read value members. A runner needs every requirement supplied.
 
 ```vibe
 // run: provide Settings = { baseUrl: "https://example.test" } { Console.log(endpoint("tickets")) }
@@ -62,11 +62,11 @@ function endpoint(path: string) {
 // Output: https://example.test/tickets
 ```
 
-Value members are read from the implementation, as `Settings().baseUrl`. Calling a member through a service adds that service to `R` whatever the member returns: even `Path.join(a, b)`, from Effect's `Path` service, returns a plain string and requires `Path`. Effect's package members and packages matching the `vibelang` setting `trustedPackages` are trusted. Other plain TypeScript members need a boundary or `trusted(impl, [Errors])`, or the call is EK4401. A member that is itself an Effect value runs when called, as in `Terminal.readLine()`.
+Read value members from the implementation, as `Settings().baseUrl`. A member call through the service adds the service to `R` whatever the member returns: `Path.join(a, b)` returns a plain string and still requires Effect's `Path` service. Members from Effect's packages, or from packages matching the `vibelang` setting `trustedPackages`, are trusted; any other plain TypeScript member needs a boundary or `trusted(impl, [Errors])`, else the call is EK4401. A member that is itself an Effect value runs when called: `Terminal.readLine()`.
 
-A declared service member wins over the key's own members, including `pipe`, `use`, `key`, and `call`. A static member with the same name as a service member is error EK3006.
+Declared members win over the key's own, including `pipe`, `use`, `key`, and `call`. A static member named like a service member is error EK3006.
 
-`provideService` removes this dependency only within its supplied program. Nested overrides are local, and a captured implementation remains the same object across later overrides or pauses. Forked fibers inherit the context present when they start.
+`provideService` removes the dependency only within its program. Nested overrides are local, a captured implementation stays the same object across later overrides or pauses, and forked fibers inherit the context present when they start.
 
 ## Extracting service shapes
 
@@ -74,9 +74,9 @@ A declared service member wins over the key's own members, including `pipe`, `us
 type SequenceImplementation = Context.Service.Shape<typeof Sequence>
 ```
 
-`Context.Service.Shape` is Effect 4's utility for extracting the implementation associated with a key. A service compiles to an interface for its implementation and a class whose static side is a `Context.Key`. The utility therefore works on `typeof Sequence`; using `Sequence` as a type also names the implementation, so `implements Sequence` checks its methods. The generated key keeps the requirement nominal.
+Effect 4's `Context.Service.Shape` extracts a key's implementation type. A service compiles to an implementation interface and a class whose static side is a `Context.Key`, so the utility takes `typeof Sequence`. The type `Sequence` also names the implementation, so `implements Sequence` checks its methods; the generated key keeps the requirement nominal.
 
-Normal providers already infer and check their implementation from the key argument, so this utility is unnecessary for most layers. When crossing a TypeScript boundary, it describes the emitted implementation's Effect-returning methods.
+Providers infer and check the implementation from the key argument, so most layers don't need the utility. At a TypeScript boundary, it describes the emitted implementation's Effect-returning methods.
 
 ## Combining multiple dependencies
 
@@ -102,7 +102,7 @@ function testAnnouncement() {
 // Output: "ticket-17"
 ```
 
-A union in `R` means both capabilities are needed. Layers let you supply the group together; `wire` composes their graph and rejects duplicate providers and cycles. Inputs no argument provides remain requirements of the resulting layer; a missing provider is reported where a runner or contract requires those requirements to be satisfied. Direct service provision can also be nested when a small local override is enough.
+A union in `R` needs both capabilities. Layers supply the group together; `wire` composes their graph, rejecting duplicate providers and cycles. Inputs no argument provides stay requirements of the resulting layer, reported as missing where a runner or contract needs them satisfied. For a small local override, nest direct service provision.
 
 ```vibe
 // run: Console.log(testWithContext())
@@ -118,7 +118,7 @@ function testWithContext() {
 // Output: ticket-17
 ```
 
-A `Context` holds implementations that already exist, while a `Layer` describes how to build them. A `provide` block, like `Effect.provide`, accepts either. Keep resource-owning implementations within the lifetime that created them.
+A `Context` holds existing implementations; a `Layer` describes how to build them. A `provide` block, like `Effect.provide`, accepts either. Keep resource-owning implementations within the lifetime that created them.
 
 ## Requesting optional services
 
@@ -136,7 +136,7 @@ function optionalAnnouncement(message: string) {
 // Output: true
 ```
 
-`serviceOption` returns `None` when an application service is absent and `Some(implementation)` when it is present. The lookup does not add that service to `R`. Calling a found implementation still carries any method errors or call-time requirements declared by the service.
+`serviceOption` returns `None` when an application service is absent and `Some(implementation)` when present, without adding the service to `R`. Calling a found implementation still carries the method errors and call-time requirements the service declares.
 
 ## Handling dependencies between services
 
@@ -158,8 +158,8 @@ const ReporterLive = Layer.effect(Reporter) {
 // Output: audit: ready
 ```
 
-Capture construction dependencies in the layer factory. Calling `Reporter.write` then requires only `Reporter`, because the implementation retains `settings`. Looking up `ReportSettings()` inside `write` instead would create a call-time requirement that its declared `R = never` rejects.
+Capture construction dependencies in the layer factory: `Reporter.write` then requires only `Reporter`, because the implementation retains `settings`. Looking up `ReportSettings()` inside `write` would add a call-time requirement, which its declared `R = never` rejects.
 
 ## Coming from Effect
 
-Abstract classes replace hand-written `Context.Service` declarations in `.vibe` files. A `Context.Service` class there draws EK4831, whose quick fix writes the `service` declaration when its members are written in the class's type argument ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Call service methods directly, and use `ServiceName()` where a TypeScript generator would yield the key to obtain its implementation.
+Abstract classes replace hand-written `Context.Service` declarations in `.vibe` files. A `Context.Service` class there draws EK4831, whose quick fix writes the `service` declaration when its members are written in the class's type argument ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Call service methods directly; `ServiceName()` replaces yielding the key in a TypeScript generator to get its implementation.

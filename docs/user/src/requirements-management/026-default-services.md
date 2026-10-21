@@ -1,6 +1,6 @@
 # Default Services
 
-Clock, random generation, console output, configuration sources, and tracing have live defaults in Effect. VibeLang uses those same defaults, so normal access does not add an application service requirement.
+Effect gives the clock, random generation, console output, configuration sources, and tracing live defaults. VibeLang uses them, so using these adds no application service requirement.
 
 [Upstream page](https://effect.website/docs/v4/requirements-management/default-services)
 
@@ -17,9 +17,9 @@ function startupMessage() {
 // Output: Started at 1000; sample=0.25
 ```
 
-`Clock.currentTimeMillis` and `Random.next` are Effect values; calling them runs them. `Console.log` returns an Effect, so its call runs too. Use these modules instead of `Date.now()`, `Math.random()`, or the browser console so tests and local overrides can control the behavior.
+`Clock.currentTimeMillis` and `Random.next` are Effect values, so calling one runs it; `Console.log` returns an Effect, so its call runs too. Use these modules, not `Date.now()`, `Math.random()`, or the browser console, so tests and local overrides control the behavior.
 
-Default references include `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, `Tracer.Tracer`, and `Scheduler.Scheduler`. Their module names are available without imports in `.vibe` files. Their defaults explain why the example's `R` is `never` even though it reads time and random state.
+Default references include `Clock.Clock`, `ConfigProvider.ConfigProvider`, `Console.Console`, `Random.Random`, `Tracer.Tracer`, and `Scheduler.Scheduler`; their modules need no import in `.vibe` files. These defaults are why the example's `R` is `never` though it reads time and random state.
 
 ```vibe
 // run: provide ConfigProvider.layer(ConfigProvider.fromUnknown({})) { Console.log(configuredPort()) }
@@ -32,7 +32,7 @@ function configuredPort() {
 // Output: 3000
 ```
 
-`Config.Port` and `Config.withDefault` build configuration data; they do not read the environment. Calling `Port()` reads it through the default configuration provider. Calls returning a `Config`, an `Exit`, or a Context key leave it as data; calling the held value runs it.
+`Config.Port` and `Config.withDefault` build configuration data without reading the environment; `Port()` reads it through the default configuration provider. A call returning a `Config`, an `Exit`, or a Context key leaves it as data; calling the held value runs it.
 
 ## Replacing default implementations
 
@@ -47,9 +47,9 @@ function fixedRandomSample() {
 // Output: 0.25
 ```
 
-`Effect.provideService` overrides a default reference for the supplied program. This implementation has Effect 4's synchronous `Random` interface; both callbacks only return constants and qualify as plain JavaScript functions. Use the same provision mechanism with a complete implementation of any other default reference.
+`Effect.provideService` overrides a default reference for its program. The implementation has Effect 4's synchronous `Random` interface; both callbacks only return constants, so they qualify as plain JavaScript functions. Override any other default reference the same way, with a complete implementation.
 
-An override remains in effect across pauses and is inherited by new child fibers. It does not change unrelated programs. Prefer module helpers when they supply the behavior you need without implementing a whole service.
+An override holds across pauses, is inherited by new child fibers, and leaves unrelated programs unchanged. Prefer a module helper when it supplies the behavior without implementing a whole service.
 
 ```vibe
 // run: Console.log(defaultLabel(17)); provide DisplaySettings = { prefix: "Order" } { Console.log(defaultLabel(17)) }
@@ -66,7 +66,7 @@ function defaultLabel(id: number) {
 // Output: Order 17
 ```
 
-A service with `static readonly default` compiles to a `Context.Reference`, so using it adds nothing to `R`. Override it with `Effect.provideService` as above. Effect's own `Context.Reference(key, { defaultValue })` also works unchanged and returns a key as data.
+A service with `static readonly default` compiles to a `Context.Reference`, so using it adds nothing to `R`; override it with `Effect.provideService` as above. Effect's own `Context.Reference(key, { defaultValue })` works unchanged and returns a key as data.
 
 ## Reproducible random computations
 
@@ -84,8 +84,8 @@ function reproduciblePairs() {
 // Output: true true
 ```
 
-Each `withSeed` call installs a new deterministic generator, so both pairs contain the same sequence. Reads within one seeded region advance that generator rather than returning one fixed value. Keep random consumption order stable when a test depends on the sequence; concurrent consumers can change which task receives which number.
+Each `withSeed` call installs a new deterministic generator, so both pairs hold the same sequence. Reads in one seeded region advance the generator; they don't repeat one value. When a test depends on the sequence, keep consumption order stable: concurrent consumers can change which task gets which number.
 
 ## Coming from Effect
 
-Default service behavior is unchanged. Effect values such as `Random.next` run with parentheses, while provision and seed helpers receive a program such as `() => pair()`.
+Default services behave as in Effect. Effect values such as `Random.next` run with parentheses; provision and seed helpers take a program such as `() => pair()`.

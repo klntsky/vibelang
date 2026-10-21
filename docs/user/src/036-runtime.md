@@ -1,6 +1,6 @@
 # Introduction to Runtime
 
-Effect's runtime executes computations, carries service implementations, schedules fibers, and runs cleanup. VibeLang uses that infrastructure while ordinary functions express the work to execute.
+Effect's runtime executes computations, carries service implementations, schedules fibers, and runs cleanup. VibeLang runs on it; ordinary functions express the work.
 
 ## Execution infrastructure
 
@@ -16,9 +16,9 @@ const outcome = Effect.runPromiseExit(operation())
 // Output: complete
 ```
 
-A runner starts a root fiber with its context, fiber-local settings, and initial program. The runtime steps through the work, waits for asynchronous results, coordinates interruption, and executes finalizers. `outcome` is a promise for an `Exit` that records either the success or the complete failure cause.
+A runner starts a root fiber with its context, fiber-local settings, and initial program. The runtime steps through the work, waits for asynchronous results, coordinates interruption, and runs finalizers. `outcome` is a promise of an `Exit` holding the success or the complete failure cause.
 
-A function value remains a description until it is called or handed to a runner. Calling another VibeLang function inside `operation` continues on the same fiber; concurrency requires an explicit operator.
+A function value is a description until called or handed to a runner. A VibeLang function called inside `operation` continues on the same fiber; concurrency needs an explicit operator.
 
 ## Run with an explicit service context
 
@@ -40,11 +40,11 @@ const result = Effect.runSyncWith(context)(() => label())
 // Output: [queued]
 ```
 
-`Context.make` associates a service key with its implementation. The `run*With` variants accept that context and execute a program whose requirements it satisfies. `runPromiseWith` and `runForkWith` serve asynchronous and fiber-based entry points; plain runners require no remaining application services.
+`Context.make` pairs a service key with its implementation. The `run*With` variants take that context and run a program whose requirements it satisfies; `runPromiseWith` and `runForkWith` serve asynchronous and fiber-based entry points. Plain runners require no remaining application services.
 
-Call runners only where no fiber runs the code: at a module's top level or in a plain callback registered there with a TypeScript host. Calling one inside a running program is EK1005; call the program directly or use `fork` there.
+Call runners only where no fiber runs the code: a module's top level, or a plain callback registered there with a TypeScript host. A runner call inside a running program is EK1005; call the program directly or use `fork`.
 
-Most applications build their context through layers instead. Use an explicit context when the host already has one, or a managed runtime when several entry points must share layer resources.
+Most applications build their context from layers. Use an explicit context when the host already has one, or a managed runtime when several entry points must share layer resources.
 
 ## Change runtime behavior within a region
 
@@ -63,9 +63,9 @@ function startup() {
 // Output: visible after
 ```
 
-`Effect.provide` installs the layer only around its program. The previous logger configuration is restored afterward, including on failure. Nested regions can override it again, and child fibers inherit the configuration in effect when they start.
+`Effect.provide` installs the layer only around its program and restores the previous logger configuration afterward, even on failure. Nested regions can override it again; child fibers inherit the configuration in effect when they start.
 
-To emit a different format, supply a logger such as `Logger.consoleJson` through `Logger.layer([Logger.consoleJson])`. This uses Effect's console integration instead of a browser or Node global.
+For another format, supply a logger such as `Logger.consoleJson` through `Logger.layer([Logger.consoleJson])`; it uses Effect's console integration, not a browser or Node global.
 
 ## Replace a runtime service for a block
 
@@ -81,7 +81,7 @@ function roll(): number!! {
 // Output: 4
 ```
 
-`provide Key = value` provides one service to a block (D173). `Random`, `Clock`, and `Scheduler` are references: each has a default, so none appears in a contract's dependencies, and a provide block replaces the default for its statements and for the fibers they start. The effect module stands for its key of the same name, so `provide Random = seeded` provides `Random.Random`, `provide Clock = testClock` replaces the clock that `sleep` reads, and `provide Scheduler = fifo` runs the block's fibers on another scheduler (D174). Layers and services share one list: `provide Logger.layer([]), Random = seeded { ... }`.
+`provide Key = value` provides one service to a block (D173). `Random`, `Clock`, and `Scheduler` are references: each has a default, so none appears in a contract's dependencies, and a provide block replaces the default for its statements and the fibers they start. An effect module stands for its same-named key (D174): `provide Random = seeded` provides `Random.Random`, `provide Clock = testClock` replaces the clock `sleep` reads, and `provide Scheduler = fifo` runs the block's fibers on another scheduler. Layers and services share one list: `provide Logger.layer([]), Random = seeded { ... }`.
 
 ## Build and dispose managed runtimes
 
@@ -123,9 +123,9 @@ export async function example() {
 // Output: second event
 ```
 
-`ManagedRuntime.make` builds its layer lazily on first use and shares the resulting context across executions. The layer's resources live until disposal rather than until each call completes. Dispose the runtime when its owner shuts down, and create a fresh runtime for a new owner.
+`ManagedRuntime.make` builds its layer lazily on first use and shares the context across executions; the layer's resources live until disposal, not until each call completes. Dispose the runtime when its owner shuts down, and create a fresh one for a new owner.
 
-Each `Effect.provide` builds its layers once for that invocation. Repeating `provide` at several entry points rebuilds them, which is why a managed runtime is useful for shared pools or clients. For Effect-based cleanup, `runtime.disposeEffect` is an Effect value that runs when called from `.vibe`.
+Each `Effect.provide` builds its layers once per invocation, so repeating `provide` at several entry points rebuilds them; a managed runtime avoids that for shared pools or clients. For Effect-based cleanup, `runtime.disposeEffect` is an Effect value that runs when called from `.vibe`.
 
 ## Connect runtime execution to frameworks
 
@@ -146,12 +146,12 @@ export function makeNotificationHost() {
 // Output: framework event
 ```
 
-The framework owns this adapter: call `onMessage` at an entry point and `close` when the application, test fixture, or component owner ends. Its promise reports failures back to the host. Keep the runtime stable across repeated requests or renders so layer resources are shared as intended.
+The framework owns this adapter: call `onMessage` at an entry point and `close` when the application, test fixture, or component owner ends. Its promise reports failures to the host. Keep the runtime stable across repeated requests or renders so layer resources stay shared.
 
-Framework callbacks can stay in TypeScript and import the emitted VibeLang functions, as above. A plain framework callback registered from a `.vibe` module's top level can also call `runtime.runPromise(() => notify(message))`. The callback runs outside a fiber; the runner supplies the boundary to the application program.
+Framework callbacks can stay in TypeScript and import the emitted VibeLang functions, as above. A plain framework callback registered from a `.vibe` module's top level can also call `runtime.runPromise(() => notify(message))`: it runs outside a fiber, and the runner supplies the boundary to the application program.
 
 ## Coming from Effect
 
-Abstract service classes replace hand-written `Context.Service` declarations in `.vibe`. The runtime, context, layers, and managed runtime remain Effect's APIs; TypeScript boundary code continues to pass cold Effects to their runners.
+Abstract service classes replace hand-written `Context.Service` declarations in `.vibe`. The runtime, context, layers, and managed runtime stay Effect's APIs; TypeScript boundary code still passes cold Effects to their runners.
 
 [Upstream Effect page](https://effect.website/docs/v4/runtime)
