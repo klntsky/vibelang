@@ -200,11 +200,13 @@ EK4801-EK4825 carry the rules of Effect's language service that VibeLang's synta
 // @vibelang-diagnostics *:off                      every adjustable code
 ```
 
+EK4830-EK4837 mark Effect code written the way Effect's TypeScript writes it where VibeLang has a form of its own (D284-D290): an error class (EK4830, or EK4837 for a Schema error class), a `Context.Service` class, a constant that holds a `Schema.Struct`, an `Effect.Effect<A, E, R>` type, a running `Effect.succeed` or `Effect.fail`, a catch combinator, and `Effect.withSpan`, `Effect.provide`, or `Effect.provideService`. They are lint too, warnings by default and adjustable the same way, and they never change emit or the exit status. Each has a quick fix wherever the VibeLang form keeps the program's meaning; where it would not, the warning says what would change and offers none. `vibelang -p tsconfig.json --fix` applies every such fix, and the quick fixes of the retired spellings, to a project's `.vibe` files and then compiles as the rest of the command line says; it writes a file only when the fixed program reports no error the original did not (D291).
+
 A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`. D266 supersedes D242: every EK diagnostic is restricted to `.vibe` files. Ordinary TypeScript sources keep TypeScript diagnostics regardless of these settings.
 
 | Option in the tsconfig's top-level `vibelang` object, or `compilerOptions.vibelang` (D275) | Values | Default |
 | --- | --- | --- |
-| `diagnostics` | `"EK2004"`, `"EK4403"`, and EK4801-EK4825 except `"EK4813"`, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
+| `diagnostics` | `"EK2004"`, `"EK4403"`, EK4801-EK4825 except `"EK4813"`, and EK4830-EK4837, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
 | `tracing` | `"none"`: no spans. `"exported"`: exported functions compile with `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas do not (D104) | `"none"` |
 
 `vibelang` exits non-zero when any error is reported. The CLI prints `error EK1003:`; LSP sends source `EK` and numeric code `1003`, which VS Code displays as `EK(1003)` (D61). Diagnostics print at `.vibe` spans, in the same form as the examples in this document, in the terminal, the editor, and Vite's overlay.
@@ -312,6 +314,14 @@ README track coverage. Repairs below are suggestions, not shipped code actions:
 | EK4823 | Off by default: an arrow function whose block only returns a value (D240) | Write the value as the body (quick fix) | 2 |
 | EK4824 | Off by default: a `pipe` with no functions (D240) | Remove the pipe (quick fix) | 5 |
 | EK4825 | Off by default: a pipe of a pipe, `x.pipe(f).pipe(g)` (D240) | Pass every function to one pipe (quick fix) | 5 |
+| EK4830 | A warning: a class that extends `Data.TaggedError`, `TaggedError`, `Data.Error`, or `Schema.TaggedError` with an empty body (D284) | `error NotFound { id: string }` (quick fix when the tag is the name and the base is a TaggedError) | 3 |
+| EK4831 | A warning: a `Context.Service<Self, Shape>()(key)` class whose shape is an object type (D285) | `service Users { … }` (quick fix when the shape is written in place) | 4 |
+| EK4832 | A warning: a `const` that holds a `Schema.Struct` a `schema` declaration writes (D286) | `schema User { … }` (quick fix) | 11 |
+| EK4833 | A warning: `Effect.Effect<A, E, R>` or `Effect<A, E, R>` that the `!` form writes (D287) | `A!E!R` (quick fix) | 2 |
+| EK4834 | A warning: `Effect.succeed(x)` or `Effect.fail(e)` where the call runs (D288) | `x`, or `throw e` (quick fix) | 2, 3 |
+| EK4835 | A warning: `Effect.catchTag`, `Effect.catchTags`, or `Effect.catch` in a VibeLang function (D289) | `x catch (e) => match (e) { when NotFound: …; default: throw e; }` (quick fix) | 3 |
+| EK4836 | A warning: `Effect.withSpan`, `Effect.provide`, or `Effect.provideService` in a VibeLang function (D290) | `withSpan("name") { … }`, `provide Layer { … }` (quick fix) | 4, 24 |
+| EK4837 | A warning: a class that extends `Schema.TaggedError` with an empty body, which an error declaration replaces only by dropping its Schema (D284) | `error Failed { … }` where nothing needs the Schema; turn the code off where errors are Schemas by design | 3 |
 | EK9100 | The text projector cannot decide a lambda or await element’s form (editor warning before the emit switch) | Annotate with the fork’s inferred form and channels where safe; program-form and await sites require an author’s annotation | 10 |
 
 #### Linting

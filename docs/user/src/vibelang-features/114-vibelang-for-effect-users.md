@@ -61,6 +61,10 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 
 Use Effect's operators for retries, timeouts, concurrency, and Stream transformations. Statements replace the operators that only sequence ordinary work.
 
+## Port code with --fix
+
+Effect code ported from TypeScript compiles in a `.vibe` file, and each construct in the table above that VibeLang writes its own way draws a warning, EK4830-EK4837. Run `npx vibelang -p tsconfig.json --fix --noEmit` to rewrite every one whose VibeLang form keeps what the program does, then read the warnings left: each says what its form would change. See [TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code).
+
 ## Calls run; programs stay cold
 
 ```vibe

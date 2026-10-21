@@ -232,4 +232,4 @@ Replace a dependency to exercise the real factory, or replace the service itself
 
 ## Coming from Effect
 
-Abstract services and static layer fields replace hand-written key classes and generator-based factories. The underlying Layer graph, memoization, and resource semantics remain Effect 4's.
+Abstract services and static layer fields replace hand-written key classes and generator-based factories. The underlying Layer graph, memoization, and resource semantics remain Effect 4's. `return Effect.provide(program, AppLive)` draws EK4836, whose quick fix writes `provide AppLive { return program }`.

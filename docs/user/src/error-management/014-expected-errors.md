@@ -255,4 +255,4 @@ These operators inspect the tagged error's readonly `reason` field. `catchReason
 
 ## Coming from Effect
 
-Functions replace `Effect.gen`; calls run the callee. Pass a program such as `() => findItem(input)` when a recovery operator needs work it can control.
+Functions replace `Effect.gen`; calls run the callee. Where it runs, `Effect.fail(error)` draws EK4834, whose quick fix writes `throw error`, and `Effect.catchTag(program, "Tag", handler)` draws EK4835, whose quick fix writes `program catch (e) => match (e) { … }` ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Pass a program such as `() => findItem(input)` when a recovery operator needs work it can control.

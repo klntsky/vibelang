@@ -107,9 +107,32 @@ A contract gives the compiler a promise to check. To infer selected channels, wr
 
 A config that `extends` another inherits its `vibelang` settings, as it inherits compiler options. TypeScript, typescript-eslint, and editors' TypeScript servers ignore the top-level object. `compilerOptions.vibelang` is also accepted, but those tools reject it as an unknown compiler option (TS5023), so keep the settings at the top level (D275).
 
-EK2004, EK4403, EK4406, and the rules from Effect's language service, EK4801-EK4825 except EK4813, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity. Core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
+EK2004, EK4403, EK4406, the rules from Effect's language service, EK4801-EK4825 except EK4813, and the TypeScript-style forms below, EK4830-EK4837, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity. Core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
 
 `trustedPackages` accepts package-name globs matched against `package.json` names, including workspace packages. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment. For example, `"@smthrs/*"` trusts packages in that scope. Omit the option to retain EK4401 for foreign calls. Use `trusted(impl, [Errors])` from `vibelang-runtime` in TypeScript for expected failures on an individual function.
+
+## TypeScript-style Effect code
+
+Effect code written the way Effect's TypeScript writes it compiles in a `.vibe` file, and draws a warning where VibeLang has a form of its own (D284-D290). The warning's quick fix writes that form when it keeps what the program does; otherwise the warning's note says what the form would change, and there is no fix.
+
+| Code | TypeScript style | VibeLang form | Quick fix |
+| --- | --- | --- | --- |
+| EK4830 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` | When the tag is the class name and the base is a TaggedError; a different tag or `Data.Error` keeps the warning without one |
+| EK4831 | `class Users extends Context.Service<Users, { find(id: string): Effect.Effect<User> }>()("app/Users") {}` | `service Users { find(id: string): User!! }` | When the members are written in the type argument; the key becomes the one the compiler derives |
+| EK4832 | `const User = Schema.Struct({ id: Schema.String })` | `schema User { id: string }` | When every field has a declaration form; `Schema.optionalKey` or a check keeps the constant, without a warning |
+| EK4833 | `Effect.Effect<User, NotFound, Db>` | `User!NotFound!Db` | Always, except where EK2003 asks for the missing channels |
+| EK4834 | `return Effect.succeed(user)`, `return Effect.fail(error)`, where the call runs | `return user`, `throw error` | When the function stays an Effect function |
+| EK4835 | `Effect.catchTag(find(id), "NotFound", (e) => …)` | `find(id) catch (e) => match (e) { when NotFound: …; default: throw e; }` | When each handler is an arrow function with one value |
+| EK4836 | `Effect.withSpan(load(), "load")`, `Effect.provide(main(), AppLive)` | `withSpan("load") { return load() }`, `provide AppLive { return main() }` | Where a block can stand |
+| EK4837 | `class Failed extends Schema.TaggedError<Failed>()("Failed", { … }) {}` | `error Failed { … }`, which is not a Schema | None; turn the code off where errors are Schemas by design |
+
+Apply every fix in a project, then compile as the rest of the command says:
+
+```sh
+npx vibelang -p tsconfig.json --fix --noEmit
+```
+
+`--fix` also applies the quick fixes of the retired spellings: EK1009, EK2112, EK2113, EK2120, and EK2121. It prints each file it changes, with its fixes by code, and writes the files only after it checks the fixed program: a fix that would add an error is listed as not fixed, and the file keeps its other fixes. It fixes only what the project reports, so the `diagnostics` setting and the comments below choose what it touches; `// @vibelang-diagnostics-next-line EK4833:off` keeps one line as written. A second run finds nothing to fix. `--fix` cannot be combined with `--build` or `--watch`.
 
 ## Effect language service rules
 

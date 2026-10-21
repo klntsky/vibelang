@@ -1,6 +1,6 @@
 # Cheat sheet
 
-Every VibeLang change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is VibeLang. The [specification](../../../design/src/000-intro.md) states the rules behind each change. The examples share these declarations:
+Every VibeLang change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is VibeLang. The [specification](../../../design/src/000-intro.md) states the rules behind each change. In a `.vibe` file, the left column's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the right column where it keeps the program's meaning ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). The examples share these declarations:
 
 ```vibe es
 // run: Console.log(JSON.stringify([getUser("1"), getOrders("1"), handle(() => release("v1"), Approval, { approve: (_request, k) => resume(k, true) })]))

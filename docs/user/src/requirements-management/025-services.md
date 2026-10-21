@@ -162,4 +162,4 @@ Capture construction dependencies in the layer factory. Calling `Reporter.write`
 
 ## Coming from Effect
 
-Abstract classes replace hand-written `Context.Service` declarations in `.vibe` files. Call service methods directly, and use `ServiceName()` where a TypeScript generator would yield the key to obtain its implementation.
+Abstract classes replace hand-written `Context.Service` declarations in `.vibe` files. A `Context.Service` class there draws EK4831, whose quick fix writes the `service` declaration when its members are written in the class's type argument ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Call service methods directly, and use `ServiceName()` where a TypeScript generator would yield the key to obtain its implementation.

@@ -187,6 +187,6 @@ Guards and assertions check the decoded type, so a numeric `pieces` is valid and
 
 ## Coming from Effect
 
-`Schema.decodeUnknownEffect(Shipment)(input)` gives a shipment directly inside a function. Use ordinary `try`/`catch` around it instead of generator-based error handling.
+`Schema.decodeUnknownEffect(Shipment)(input)` gives a shipment directly inside a function. A `const` that holds a `Schema.Struct` draws EK4832 when a `schema` declaration writes the same struct, and its quick fix writes the declaration ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Use ordinary `try`/`catch` around it instead of generator-based error handling.
 
 [Upstream page](https://effect.website/docs/v4/schema/getting-started)

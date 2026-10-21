@@ -133,6 +133,6 @@ TypeScript consumers see exported VibeLang functions as functions returning ordi
 
 ## Coming from Effect
 
-`Effect<A, E, R>` is available globally in `.vibe` files. A local call gives `A`; preserve a program with a function value when you need to compose or store it.
+`Effect<A, E, R>` is available globally in `.vibe` files. Written with its type arguments, as `Effect.Effect<A, E, R>`, it draws EK4833, whose quick fix writes `A!E!R` ([TypeScript-style Effect code](012-devtools.md#typescript-style-effect-code)). A local call gives `A`; preserve a program with a function value when you need to compose or store it.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/the-effect-type)
