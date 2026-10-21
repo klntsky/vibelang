@@ -1,6 +1,6 @@
 # Sink Operations
 
-Transform a Sink when its existing consumption rule fits but its input or result type does not. Pure mappings build a new sink; effectful mappings defer their work until consumption. Filter the feeding Stream when only selected elements should reach a sink.
+Transform a Sink when its consumption rule fits but its input or result type does not. Pure mappings build a new sink; effectful ones defer their work to consumption. To let only selected elements reach a sink, filter the feeding Stream.
 
 ## Adapting consumer input
 
@@ -15,7 +15,7 @@ function countItems() {
 // Output: 18
 ```
 
-`mapInput` converts each incoming value before the original sink sees it. Its callback is synchronous and cannot perform Effect work. Use `mapInputEffect` for validation, service calls, or other work with failures and requirements.
+`mapInput` converts each incoming value before the original sink sees it. Its callback is synchronous and cannot do Effect work; use `mapInputEffect` for validation, service calls, or other work with failures and requirements.
 
 ```vibe
 // run: (() => { Console.log(Stream.make("7", "11").run(parsedTotal)); try { Stream.make("bad").run(parsedTotal) } catch (error) { Console.log(error._tag, error.raw) } })()
@@ -47,7 +47,7 @@ function totalReport() {
 // Output: {"total":18,"unit":"items"}
 ```
 
-`map` runs once on the sink's successful final result. It leaves the input and leftover types unchanged. `mapEffect` allows Effect work when transforming that result, such as saving a summary.
+`map` runs once on the sink's successful final result and leaves the input and leftover types unchanged. `mapEffect` allows Effect work there, such as saving a summary.
 
 ## Composing input and output transformations
 
@@ -64,7 +64,7 @@ function byteReport() {
 // Output: 384 bytes
 ```
 
-The input stage adapts each element, the original sink accumulates, and the output stage formats once. The method chain builds a Sink value. `Stream.run` is the operation that executes it.
+The input stage adapts each element, the original sink accumulates, and the output stage formats once. The method chain builds a Sink value; `Stream.run` executes it.
 
 ## Filtering before consumption
 
@@ -78,4 +78,4 @@ function positiveBatches() {
 // Output: [[4,8,12],[16]]
 ```
 
-Filtering upstream means rejected elements do not count toward the sink's limit. `Stream.transduce` repeatedly runs the sink and passes batch leftovers into the next run. If input ends exactly at a completed sink boundary, a final empty sink result can appear; remove empty arrays downstream when the application needs only non-empty groups.
+Elements filtered out upstream don't count toward the sink's limit. `Stream.transduce` runs the sink repeatedly, passing batch leftovers to the next run. If input ends exactly at a completed sink boundary, a final empty result can appear; remove empty arrays downstream if you need only non-empty groups.

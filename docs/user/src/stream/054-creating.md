@@ -1,6 +1,6 @@
 # Creating Streams
 
-Build a Stream from values, effectful work, or an existing source. Construction stays lazy with respect to stream execution: callbacks that perform Effect work run when the stream is consumed. The [introduction](053-introduction.md) explains trusted Stream builders and how producers work with Streams.
+Build a Stream from values, effectful work, or an existing source. Construction is lazy: callbacks that do Effect work run at consumption. The [introduction](053-introduction.md) covers trusted Stream builders and producers as Streams.
 
 ## Finite and empty streams
 
@@ -18,7 +18,7 @@ function readPowers() {
 // Output: [["queued","running","complete"],[],1,[4,5,6,7],[2,4,8,16]]
 ```
 
-`make` accepts individual elements and `empty` emits none. `range` includes both endpoints. `iterate` emits the initial value, then repeatedly applies its pure callback; limit an infinite source before collecting it.
+`make` takes individual elements; `empty` emits none. `range` includes both endpoints. `iterate` emits the initial value, then applies its pure callback repeatedly; limit an infinite source before collecting it.
 
 ## Successes and failures
 
@@ -39,7 +39,7 @@ function readClosed() {
 // Output: [["ready"],["source unavailable"]]
 ```
 
-`succeed` emits once and completes. `fail` builds a failing source; it does not throw at construction. A `try` around consumption handles its typed failure.
+`succeed` emits once and completes. `fail` builds a failing source without throwing at construction; a `try` around consumption handles its typed failure.
 
 ## Arrays and iterables
 
@@ -57,7 +57,7 @@ const codes = Stream.fromIterableEffect(() => Catalog.codes())
 // Output: [[11,22],[11,22,33],["east","west"],["A","B"]]
 ```
 
-`fromArray` and `fromIterable` emit collection members. `fromArrays` preserves the supplied batch boundaries internally. `fromIterableEffect` first runs the program to obtain an iterable, then emits its members; service requirements belong to consumption.
+`fromArray` and `fromIterable` emit collection members; `fromArrays` keeps the supplied batch boundaries internally. `fromIterableEffect` runs the program to get an iterable, then emits its members; service requirements belong to consumption.
 
 ## Async iterables
 
@@ -94,7 +94,7 @@ function adaptRows(rows: AsyncIterable<string>) {
 // Output: IteratorFailed
 ```
 
-Pass an async iterable obtained from a TypeScript adapter or a service. The error mapper turns iteration exceptions and rejections into the stream's failure type. VibeLang has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
+Pass an async iterable from a TypeScript adapter or a service; the error mapper turns iteration exceptions and rejections into the stream's failure type. VibeLang has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
 
 ## Effects and callbacks
 
@@ -114,9 +114,9 @@ function readNotices() {
 // Output: [[123],["connected","ready"]]
 ```
 
-`fromEffect` emits one success value. `callback` gives its registration program a queue: `Queue.offer` emits an element, `Queue.end` completes normally, and `Queue.fail` terminates with a typed error. Its optional second argument accepts `bufferSize` and a `strategy` of `"suspend"`, `"dropping"`, or `"sliding"`.
+`fromEffect` emits one success value. `callback` hands its registration program a queue: `Queue.offer` emits, `Queue.end` completes normally, and `Queue.fail` fails with a typed error. The optional second argument takes `bufferSize` and a `strategy`: `"suspend"`, `"dropping"`, or `"sliding"`.
 
-For a foreign event API, put the raw callback registration in a TypeScript adapter and register unsubscription with `Effect.acquireRelease`. The registration callback's Scope remains open for the stream lifetime. Platform callbacks cannot call VibeLang programs directly as synchronous JavaScript callbacks.
+For a foreign event API, register the raw callback in a TypeScript adapter and register unsubscription with `Effect.acquireRelease`; the registration callback's Scope stays open for the stream's lifetime. Platform callbacks cannot call VibeLang programs as synchronous JavaScript callbacks.
 
 ## Scoped sources
 
@@ -136,7 +136,7 @@ const sessionNames = Stream.fromEffect(openSession()).map((session) => session.n
 // Output: ["metrics"]
 ```
 
-`Stream.scoped` takes a Stream, and supplies its Scope during consumption. `Effect.acquireRelease` registers release in that Scope. Place all operations that use the acquired resource inside the scoped stream; see [Resourceful Streams](058-resourceful-streams.md).
+`Stream.scoped` takes a Stream and supplies its Scope during consumption; `Effect.acquireRelease` registers release in that Scope. Put every operation that uses the resource inside the scoped stream; see [Resourceful Streams](058-resourceful-streams.md).
 
 ## Repeating values, streams, and effects
 
@@ -157,9 +157,9 @@ function countdown() {
 // Output: [["ping","ping","ping"],["start","finish","start","finish","start","finish"],2,[3,2,1]]
 ```
 
-`forever` restarts its stream indefinitely. `repeat` runs the original stream once and lets the schedule control additional runs; `rounds` emits three rounds. `fromEffectRepeat` reruns its program for each element and treats `Cause.Done` as normal completion; `Cause.done()` runs an Effect that signals completion.
+`forever` restarts its stream indefinitely. `repeat` runs the stream once, then again as its schedule allows; `rounds` emits three rounds. `fromEffectRepeat` reruns its program per element and treats `Cause.Done` as normal completion; `Cause.done()` runs an Effect that signals it.
 
-Keep mutable per-run state inside a function, as in `countdown`, so separate consumptions do not share it. `Stream.take` is another way to bound repetition.
+Keep mutable per-run state inside a function, as in `countdown`, so consumptions don't share it. `Stream.take` also bounds repetition.
 
 ## Periodic elements
 
@@ -173,7 +173,7 @@ function collectSamples() {
 // Output: [123,123,123,123]
 ```
 
-`tick` emits `void` on an interval. Map each signal to the value you need. Backpressure still applies; a tick stream is not a guarantee that slow work completes at that frequency.
+`tick` emits `void` on an interval; map each signal to the value you need. Backpressure still applies, so slow work can fall behind that frequency.
 
 ## Unfolding state and paginating responses
 
@@ -198,7 +198,7 @@ const names = Stream.paginate(0, (cursor) => {
 // Output: [[32,16,8,4,2],["0","1","2"]]
 ```
 
-`unfold` returns either `[element, nextState]` or `undefined` to stop without emitting. Its callback expects an Effect, so ordinary VibeLang statements can perform work between steps. `paginate` instead returns `[batch, nextStateOption]`; it emits the whole batch, including the final page whose next state is `None`.
+`unfold`'s callback returns `[element, nextState]`, or `undefined` to stop without emitting; it expects an Effect, so ordinary statements can do work between steps. `paginate`'s callback returns `[batch, nextStateOption]`, and it emits each whole batch, including the final page, whose next state is `None`.
 
 ## Queues and broadcasts
 
@@ -219,7 +219,7 @@ function fromBroadcast(bus: PubSub.PubSub<string>) {
 // Output: ["broadcast"]
 ```
 
-`fromQueue` removes items from a shared queue, so competing consumers divide the work. `fromPubSub` creates a subscription during consumption, so subscribers each receive published elements. A plain PubSub source stays live until the bus ends or the consumer stops; publishing before subscription does not guarantee delivery without replay configuration.
+`fromQueue` takes items from a shared queue, so competing consumers divide the work. `fromPubSub` subscribes during consumption, so each subscriber receives published elements. A plain PubSub source stays live until the bus ends or the consumer stops; without replay configuration, elements published before subscription can be missed.
 
 ## Schedules as sources
 
@@ -234,4 +234,4 @@ function readPulses() {
 // Output: [0,1,2]
 ```
 
-`fromSchedule` emits schedule outputs until the schedule stops. `Stream.fromEffectSchedule(() => work(), policy)` instead emits repeated program results under a schedule. Both preserve the schedule's timing and service requirements.
+`fromSchedule` emits schedule outputs until the schedule stops; `Stream.fromEffectSchedule(() => work(), policy)` emits a program's results, repeated on the schedule. Both keep the schedule's timing and service requirements.

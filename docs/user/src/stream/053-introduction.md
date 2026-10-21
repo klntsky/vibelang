@@ -1,6 +1,6 @@
 # Introduction to Streams
 
-`Stream` describes a sequence that produces values as a consumer asks for them. Use it for large inputs, ongoing events, and sources that need cancellation, resource management, or backpressure. Stream constructors and operators build values; consuming a stream runs an Effect.
+A `Stream` produces values on demand. Use it for large inputs, ongoing events, and sources that need cancellation, resource management, or backpressure. Constructors and operators build values; consuming a stream runs an Effect.
 
 ## Element, error, and service types
 
@@ -22,9 +22,9 @@ function preview() {
 // Output: ["message","message","message","message"]
 ```
 
-`Stream.Stream<A, E, R>` emits elements of type `A`, can fail with `E`, and needs services `R` during consumption. A failure ends that run of the source unless an operator recovers. Constructing `messages` does not look up `Feed` or request a message.
+`Stream.Stream<A, E, R>` emits `A`, can fail with `E`, and needs services `R` while consumed. A failure ends that run of the source unless an operator recovers. Defining `messages` neither looks up `Feed` nor requests a message.
 
-Effect's Stream, Filter, and Cause value builders are trusted library calls. Call them directly; exceptions from those plain calls are defects. Callbacks invoked synchronously must perform no Effect operations and have no expected failures.
+Effect's Stream, Filter, and Cause value builders are trusted library calls: call them directly; their exceptions are defects. Synchronously invoked callbacks must perform no Effect operations and have no expected failures.
 
 ## Choosing a streaming use case
 
@@ -38,7 +38,7 @@ function firstFiveTickets() {
 // Output: [100,101,102,103,104]
 ```
 
-The source has no natural end, but the consumer requests only five elements. The same approach works for log tails, paginated APIs, or incoming messages. For a small collection already in memory, an array and an ordinary loop often suffice.
+The source never ends; the consumer takes only five elements. Log tails, paginated APIs, and incoming messages work the same way. For a small in-memory collection, an array and a loop often suffice.
 
 ## Streams and individual effects
 
@@ -63,7 +63,7 @@ function compare() {
 // Output: [[12,24,36],[],[12],[12,24,36],[[12,24,36]]]
 ```
 
-A successful function call returns one result, even if that result is an array. A stream emits zero or more elements; an array can be either one element or the source of many elements. Streams can be empty, finite, or infinite.
+A successful call returns one result, even an array. A stream emits zero or more elements and can be empty, finite, or infinite; an array can be one element or the source of many.
 
 ## Incremental production and backpressure
 
@@ -93,7 +93,7 @@ function printReadings() {
 // Output: received 25
 ```
 
-The consumer controls demand, so production slows when consumption slows. Streams exchange internal batches, so a source can prepare more than one element per pull. Buffering and concurrency introduce explicit read-ahead; backpressure does not mean exactly one element is ever in memory.
+The consumer controls demand, so production slows when consumption does. Streams exchange internal batches, so a source can prepare several elements per pull, and buffering and concurrency add explicit read-ahead: backpressure does not mean one element at a time in memory.
 
 ```vibe
 // run: Effect.provide(printFirstReading(), Logger.layer([sync(() => Logger.make(({ message }) => console.log(...(message as unknown[]))))]))
@@ -114,9 +114,9 @@ function printFirstReading() {
 // Output: 10
 ```
 
-A `function*` producer is a Stream wherever a Stream is expected, so Stream operators accept it directly. The adapter runs the producer on its own fiber with an unbuffered handoff: it hands over each element only when pulled. `for...of` also consumes an Effect Stream directly, pulling batches and closing the stream when the loop exits. Here `break` closes the source and interrupts the producer fiber, running its cleanup.
+A `function*` producer is a Stream wherever one is expected, so Stream operators accept it. The adapter runs it on its own fiber with an unbuffered handoff, passing each element only when pulled. `for...of` also consumes an Effect Stream, pulling batches and closing it when the loop exits. Here `break` closes the source and interrupts the producer fiber, running its cleanup.
 
 ## Coming from Effect
 
-- Keep Stream constructors and pipelines. Pass `() => work()` where a constructor expects an Effect.
-- `Stream.runCollect(source)` runs at the call and returns an array inside a function.
+- Keep Stream constructors and pipelines; pass `() => work()` where a constructor expects an Effect.
+- In a function, `Stream.runCollect(source)` runs at the call and returns an array.

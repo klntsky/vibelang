@@ -1,6 +1,6 @@
 # Error Handling in Streams
 
-Stream recovery replaces a failed source with another source. Use stream operators to control recovery during consumption, and ordinary `try`/`catch` when the whole consuming function should handle a typed failure. Elements emitted before a failure are not rolled back.
+Stream recovery replaces a failed source with another. Recover during consumption with stream operators, or use ordinary `try`/`catch` when the whole consuming function handles a typed failure. Elements emitted before a failure are not rolled back.
 
 ## Recovering typed failures and defects
 
@@ -22,7 +22,7 @@ const tagged = Stream.catch(
 // Output: [["live-a","live-b","cached"],["Success","Success","Failure"]]
 ```
 
-`Stream.catch` receives a typed failure and returns the replacement Stream. Recovery abandons the rest of the failed source; it does not resume after its failing step. Tagging each source with `Result` is useful when downstream code needs to distinguish live data from fallback data.
+`Stream.catch` receives a typed failure and returns the replacement Stream. Recovery abandons the rest of the failed source; it does not resume after the failing step. Tag each source with `Result` when downstream code must tell live data from fallback.
 
 ```vibe
 // run: Console.log(JSON.stringify(boundary.runCollect()))
@@ -30,7 +30,7 @@ const boundary = Stream.die(new Error("decoder invariant failed")).catchDefect((
 // Output: ["unreadable"]
 ```
 
-`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, including failure, defect, and interruption reasons; use it only when that full information is needed. Ordinary VibeLang `catch` handles typed failures only, and propagates a mixed cause containing defects or interruption.
+`catchDefect` handles defects at a deliberate boundary. `catchCause` receives the full Cause, with failure, defect, and interruption reasons; use it only when you need all of it. Ordinary VibeLang `catch` handles typed failures only and propagates a mixed cause with defects or interruption.
 
 ## Selective recovery
 
@@ -50,7 +50,7 @@ const defectOnly = Stream.die("corrupt frame").catchCauseFilter(Cause.findDie, (
 // Output: AccessDenied
 ```
 
-`catchTag` removes the handled tagged error from the output failure type. `catchFilter` handles values selected by a Filter and preserves failures it rejects. `catchCauseFilter` selects from the full Cause; `Cause.findDie` selects a defect reason rather than treating every failure as recoverable.
+`catchTag` removes the handled tagged error from the output failure type. `catchFilter` handles the values a Filter selects and keeps the failures it rejects. `catchCauseFilter` selects from the full Cause; `Cause.findDie` selects a defect reason instead of treating every failure as recoverable.
 
 ## Cleanup after failure
 
@@ -71,7 +71,7 @@ function consumeChecked() {
 // Output: read failed
 ```
 
-`onError` runs its callback on an unsuccessful stream exit and preserves the failure if that callback succeeds. It is useful for diagnostics tied to a source. Use `Stream.ensuring` for all exits or `finally` for cleanup belonging to the consuming function; cleanup failure is never silently discarded.
+`onError` runs its callback on an unsuccessful stream exit and keeps the failure if the callback succeeds: use it for source diagnostics. Use `Stream.ensuring` for every exit, or `finally` for the consuming function's cleanup. Cleanup failure is never silently discarded.
 
 ## Retrying a source
 
@@ -87,7 +87,7 @@ const readings = Stream.fromEffect(() => Sensor.read()).retry(Schedule.recurs(3)
 // Output: [42] 4
 ```
 
-`retry` starts the wrapped source again after a typed failure, according to its schedule. Retrying a multi-element source can repeat elements already delivered. Retry the smallest source that represents the intended operation, and make downstream side effects safe to repeat. An exponential schedule adds backoff; a finite recurrence schedule bounds the number of retries.
+`retry` restarts the wrapped source after a typed failure, per its schedule. A retried multi-element source can repeat delivered elements, so retry the smallest source that represents the operation and make downstream side effects safe to repeat. An exponential schedule adds backoff; a finite recurrence schedule bounds the retries.
 
 ## Narrowing error types
 
@@ -104,7 +104,7 @@ function keepSyntaxErrors(source: Stream.Stream<string, Error>) {
 // Output: true
 ```
 
-Refail the errors callers are expected to handle and turn impossible failures into defects. `Stream.orDie(source)` makes every typed failure a defect. These operators change the failure channel; they do not make a faulty source succeed.
+Refail the errors callers are expected to handle and turn impossible failures into defects; `Stream.orDie(source)` makes every typed failure a defect. These operators change the failure channel; they don't make a faulty source succeed.
 
 ## Timeout failures and replacement sources
 
@@ -128,4 +128,4 @@ const fallbackWhenIdle = Stream.never.timeoutOrElse({
 // Output: [[],"Failure",true,["backup-a","backup-b"]]
 ```
 
-`timeout` completes normally when an upstream pull waits too long. `timeoutOrElse` switches to the Stream returned by `orElse`, so that Stream can fail, defect, or emit fallback data. The timeout applies to each upstream pull, not to total consumption time, and does not time the replacement stream.
+`timeout` completes normally when an upstream pull waits too long. `timeoutOrElse` switches to the Stream `orElse` returns, which can fail, defect, or emit fallback data. The timeout applies to each upstream pull, not total consumption time, and does not time the replacement stream.
