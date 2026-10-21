@@ -80,6 +80,9 @@ func (p *Parser) parseVibeLangDeclaration(pos int, jsdoc jsdocScannerInfo, modif
 		if p.isStartOfVibeLangSchemaError() {
 			return p.parseErrorDeclaration(pos, jsdoc, modifiers, true /*schema*/) // vibelang_errors.go
 		}
+		if p.lookAhead((*Parser).scanSchemaAliasStart) {
+			return p.parseSchemaAliasDeclaration(pos, jsdoc, modifiers) // D280, vibelang_schema_alias.go
+		}
 		return p.parseSchemaDeclaration(pos, jsdoc, modifiers)
 	}
 	return nil

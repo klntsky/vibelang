@@ -100,6 +100,8 @@ func TestVibeLangSyntaxRecordsEachForm(t *testing.T) {
 			"declaration service range=\"service class Users { find(id: string): string!Gone }\" head=\"service class Users\" open=\"{\" close=\"}\"\neffect-type range=\"string!Gone\""},
 		{"schema", `schema Ticket { id: string }`,
 			`declaration schema range="schema Ticket { id: string }" head="schema Ticket" open="{" close="}"`},
+		{"schema alias", `export schema Code = "a" | "b"`,
+			`declaration schema alias range="export schema Code = \"a\" | \"b\"" head="schema Code"`},
 		{"block param", `const v = withSpan("load") { return 1 }`,
 			`block-param range="withSpan(\"load\") { return 1 }" head="withSpan(\"load\")" open="{" close="}"`},
 		{"do", `const v = do { 2 }`,

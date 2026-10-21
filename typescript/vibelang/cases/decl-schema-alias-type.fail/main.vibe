@@ -1,0 +1,5 @@
+// expect: TS2322
+// The alias's type is the schema's decoded type, so a value outside the union is a type error.
+schema Code = "root_missing" | "read_failed"
+
+export const code: Code = "other"

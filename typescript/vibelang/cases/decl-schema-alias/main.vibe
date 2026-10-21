@@ -1,0 +1,49 @@
+// expect-result: {"code":"read_failed","invalid":"invalid","described":"missing","port":true,"id":[true,true,false],"tags":["a"],"names":false,"pair":["a",1],"counts":{"a":1},"point":{"x":1},"home":{"city":"Paris"},"status":[true,true,false],"flag":true,"version":1}
+export schema Code = "root_missing" | "read_failed"
+export schema Port = number
+schema Id = string | number
+schema Tags = ReadonlyArray<string>
+schema Names = string[]
+schema Pair = readonly [string, number]
+schema Counts = Record<string, number>
+schema Point = { x: number; y?: number }
+schema Address { city: string }
+schema Home = Address
+schema Status = Code | null
+schema Flag = true;
+
+// One name is the schema and its type: the type is the schema's decoded type.
+function describe(code: Code): string {
+  return code === "root_missing" ? "missing" : "failed"
+}
+
+function decode(input: unknown) {
+  try {
+    return Schema.decodeUnknownEffect(Code)(input)
+  } catch (e) {
+    return "invalid"
+  }
+}
+
+// schema stays an ordinary name where no declaration starts.
+const schema = { version: 1 }
+
+export function main() {
+  const origin: Point = { x: 1 }
+  return {
+    code: decode("read_failed"),
+    invalid: decode("other"),
+    described: describe("root_missing"),
+    port: Schema.is(Port)(8080),
+    id: [Schema.is(Id)("a"), Schema.is(Id)(1), Schema.is(Id)(true)],
+    tags: Schema.decodeUnknownEffect(Tags)(["a"]),
+    names: Schema.is(Names)(["a", 1]),
+    pair: Schema.decodeUnknownEffect(Pair)(["a", 1]),
+    counts: Schema.decodeUnknownEffect(Counts)({ a: 1 }),
+    point: Schema.encodeEffect(Point)(origin),
+    home: Schema.decodeUnknownEffect(Home)({ city: "Paris" }),
+    status: [Schema.is(Status)(null), Schema.is(Status)("read_failed"), Schema.is(Status)("x")],
+    flag: Schema.is(Flag)(true),
+    version: schema.version
+  }
+}
