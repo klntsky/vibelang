@@ -8,17 +8,17 @@ function loadUser(id: string) {
 }
 ```
 
-Every section of Effect 4's documentation, the Effect 3 pages that version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to VibeLang. **Changed** means VibeLang has its own form. **Unchanged by design** means you use Effect's API as you do today, on purpose: the call rule (Chapter 13) makes Effect's API work directly, and a second way to do the same thing would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
+Every section of Effect 4's documentation, the Effect 3 pages version 4 dropped, and the `effect@4.0.5` modules the site omits (HTTP, SQL, CLI, AI, cluster, workflow, RPC), mapped to VibeLang. **Changed**: VibeLang has its own form. **Unchanged**: by design, you use Effect's API as you do today; the call rule (Chapter 13) makes it work directly, and a second way would be ceremony. The map comes from the feature-coverage audit (`docs/research/effect-feature-coverage.md`, 309 features), updated to the decisions in Chapter 29. D57 completes partial annotations with explicit `infer` slots.
 
 #### C1. Getting started: the Effect type, creating, running, generators, pipelines
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
 | The `Effect<A, E, R>` type | Changed | Inferred for every function; written as a return annotation to have it checked (Chapter 2) |
-| Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged by design | Apply them to the TypeScript type of a VibeLang function |
+| Type helpers (`Effect.Success`, `Error`, `Services`) | Unchanged | Apply them to the TypeScript type of a VibeLang function |
 | Annotate one channel, infer the rest | Changed (D57) | In a return annotation with a body, write `Effect<A, infer E, infer R>`; all three slots are required |
 | Installation | Changed | `effect@4.0.5`, `vibelang-runtime`, and `vibelang` (Chapter 28) |
-| Importing Effect | Changed | Every module of `effect`'s root needs no import (D146); subpath packages such as `effect/http` are imported |
+| Importing Effect | Changed | `effect`'s root modules need no import (D146); import subpath packages such as `effect/http` |
 | `Effect.succeed` | Changed | `return 42` |
 | `Effect.fail`, `failSync` | Changed | `throw new HttpError()` |
 | `Effect.sync` around a side effect | Changed | Call the code; platform side effects go through Effect modules (Chapter 11), or the `sync` hatch (D148) |
@@ -32,15 +32,15 @@ Every section of Effect 4's documentation, the Effect 3 pages that version 4 dro
 | `Effect.fn`, `fnUntraced` | Changed | `function f() { … }`, untraced unless `tracing` asks for spans (Chapter 28) |
 | `map`, `flatMap`, `andThen`, `tap`, `as` | Changed | Statements |
 | `pipe` and `.pipe` over programs | Changed | `pipe(() => f(), Effect.retry(…), Effect.timeout(…))` (D8) |
-| `pipe` over data | Unchanged by design | `pipe(items, Array.filter(isActive))` |
+| `pipe` over data | Unchanged | `pipe(items, Array.filter(isActive))` |
 | `Effect.all`, `zip`, `zipWith` | Changed | Programs as functions: `Effect.all([() => a(), () => b()])` |
-| `Effect.fromOption`, `fromResult`, `fromNullishOr` | Unchanged by design | `const n = Effect.fromOption(parse(x))` |
+| `Effect.fromOption`, `fromResult`, `fromNullishOr` | Unchanged | `const n = Effect.fromOption(parse(x))` |
 | Control flow inside `Effect.gen` | Changed | `if`, `for`, `while`, and early `return` in an ordinary function |
 | Devtools | Changed | The fork's language server for `.vibe`; `@effect/tsgo` stays on `.ts`; Effect's `DevTools` for fibers and spans (Chapter 28) |
 
 #### C2. Error management
 
-On a cause that mixes an expected failure and a defect, Effect's operators below keep their Effect behavior, which differs from VibeLang's `catch`; Chapter 17 lists how.
+On a cause mixing an expected failure and a defect, the Effect operators below keep Effect's behavior, which differs from VibeLang's `catch` (Chapter 17 lists how).
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
@@ -59,10 +59,10 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Effect.retry`, `retryOrElse` | Changed | `Effect.retry(() => request(), { times: 5 })`, with fresh locals per attempt |
 | `Effect.timeout`, `timeoutOption`, `timeoutOrElse` | Changed | `Effect.timeout(() => task(), "1 second")`; E gains `Cause.TimeoutError` |
 | `Effect.sandbox` | Changed | `Effect.sandbox(() => task())` inside `try`; `catch (cause)` gets the cause |
-| `Effect.validate`, `partition` | Unchanged by design | The same calls, with VibeLang callbacks |
+| `Effect.validate`, `partition` | Unchanged | The same calls, with VibeLang callbacks |
 | `Effect.all` with `mode: "result"` | Changed | Programs as functions, the same options |
 | `mapError`, `mapBoth`, `tapError`, `flip`, `filterOrFail` | Changed | `catch (e) { throw new Other({ e }) }`; `if (…) throw new E()` |
-| Parallel and sequential errors (`Cause.reasons`) | Unchanged by design | `catch` gets the first expected failure (D28); `Effect.catchCause` sees all |
+| Parallel and sequential errors (`Cause.reasons`) | Unchanged | `catch` gets the first expected failure (D28); `Effect.catchCause` sees all |
 | Yieldable errors | Changed | `throw new E()`; `new` never runs anything (D24) |
 | A contract with E = `never` | Changed | Checked by the compiler (EK2001) |
 
@@ -75,21 +75,21 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `yield* Users`, then a method | Changed | `Users.find(id)`; `Users()` gives the implementation |
 | `Users.use`, `useSync` | Changed | Call the member: `Users.find(id)` |
 | A member that returns a plain value (`Path.join`) | Changed | `Path.join(a, b)`; the service joins R (D41) |
-| A member that is an `Effect` value | Unchanged by design | Call it: `Terminal.readLine()` |
+| A member that is an `Effect` value | Unchanged | Call it: `Terminal.readLine()` |
 | The `make` option and `static layer` | Changed | `static make()` and `static readonly layer` on the service class (D40) |
-| `Context.Reference` with a default | Unchanged by design | `Context.Reference(key, { defaultValue })` as is, or `static readonly default` on a service class (D40) |
-| `Effect.serviceOption` | Unchanged by design | `Effect.serviceOption(Mailer)` |
-| Default services (`Clock`, `Console`, `Random`, `Tracer`, `ConfigProvider`) | Unchanged by design | `Clock.currentTimeMillis()`; R stays empty |
+| `Context.Reference` with a default | Unchanged | `Context.Reference(key, { defaultValue })` as is, or `static readonly default` on a service class (D40) |
+| `Effect.serviceOption` | Unchanged | `Effect.serviceOption(Mailer)` |
+| Default services (`Clock`, `Console`, `Random`, `Tracer`, `ConfigProvider`) | Unchanged | `Clock.currentTimeMillis()`; R stays empty |
 | `Effect.provideService` | Changed | `Effect.provideService(() => program(), Mailer, quiet)` |
-| `Context.make`, `Context.add` | Unchanged by design | Values, provided with `Effect.provide(() => program(), context)` |
+| `Context.make`, `Context.add` | Unchanged | Values, provided with `Effect.provide(() => program(), context)` |
 | `Layer.succeed`, `effect`, `sync` | Changed | `Layer.effect(Users, () => { const db = Database(); return { … } })` |
 | Layers that hold resources | Changed | Acquire without `using`; the layer's Scope owns the resource |
 | Requirements that leak into methods | Changed | EK3101 |
-| `Layer.merge`, `mergeAll`, `provide`, `provideMerge` | Unchanged by design | The same functions; `wire(…)` orders them and reports graph errors (D27) |
+| `Layer.merge`, `mergeAll`, `provide`, `provideMerge` | Unchanged | The same functions; `wire(…)` orders them and reports graph errors (D27) |
 | Missing, duplicate, and cyclic providers | Changed | EK3201, EK3202, EK3203 |
 | `Effect.provide` | Changed | `Effect.provide(() => program(), AppLive)`; each `provide` builds its layers once (D21) |
-| Layer memoization, `Layer.fresh`, MemoMaps | Unchanged by design | As in Effect; provide at `main`, or run entry points through one `ManagedRuntime` (D21) |
-| `Layer.launch`, `build`, `unwrap`, `mock`, `tap`, `catch` | Unchanged by design | Values and calls as in Effect |
+| Layer memoization, `Layer.fresh`, MemoMaps | Unchanged | As in Effect; provide at `main`, or run entry points through one `ManagedRuntime` (D21) |
+| `Layer.launch`, `build`, `unwrap`, `mock`, `tap`, `catch` | Unchanged | Values and calls as in Effect |
 | Fake services | Changed | `Layer.succeed(Users, { find: (id) => ada, rename: () => {} })` |
 
 #### C4. Resource management
@@ -98,10 +98,10 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | --- | --- | --- |
 | `Effect.scoped` | Changed | A block that declares `using` |
 | `acquireRelease`, `acquireUseRelease` | Changed | `using lock = Effect.acquireRelease(() => acquire(), (l) => release(l))` |
-| Interruptible acquisition | Unchanged by design | `acquireRelease(…, { interruptible: true })`; `using` keeps the choice (D25) |
+| Interruptible acquisition | Unchanged | `acquireRelease(…, { interruptible: true })`; `using` keeps the choice (D25) |
 | A resource the caller owns | Changed | Acquire without `using`; `Scope` stays in R (D14) |
 | `ensuring`, `onExit`, `onError`, `addFinalizer` | Changed | `finally`; `Effect.onExit(() => f(), (exit) => …)` when the exit matters |
-| `Scope.make`, `close`, `provide` | Unchanged by design | The same calls |
+| `Scope.make`, `close`, `provide` | Unchanged | The same calls |
 | `Disposable` resources | Changed | `using x = disposable` registers `[Symbol.dispose]()` |
 | `RcRef`, `RcMap`, `Pool`, `ScopedRef`, `ScopedCache`, `LayerMap` | Changed | `using pool = Pool.make({ acquire: () => connect(), size: 10 })` |
 | Cleanup when a handler abandons a program | Changed | No Effect equivalent; `using` and `finally` run before `handle` returns |
@@ -110,34 +110,34 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Effect.log` and its levels | Unchanged by design | `Effect.logWarning("disk low")` |
+| `Effect.log` and its levels | Unchanged | `Effect.logWarning("disk low")` |
 | A minimum log level for a region | Changed | `Effect.provideService(() => program(), References.MinimumLogLevel, "Debug")` |
 | `annotateLogs`, `withLogSpan` | Changed | With a program: `Effect.withLogSpan(() => handle(req), "handler")` |
-| `annotateLogsScoped` | Unchanged by design | The same call; a `using` block or the caller supplies the Scope |
-| `Logger.make`, `Logger.layer`, formats, `Logger.toFile` | Unchanged by design | Values, provided as layers |
-| `Console` | Unchanged by design | `Console.log("hi")`; `console.log` is EK4402 |
-| Metrics (`counter`, `gauge`, `histogram`, `summary`, `frequency`, `timer`) | Unchanged by design | Defined at the top level; `Metric.update(requests, 1)` |
+| `annotateLogsScoped` | Unchanged | The same call; a `using` block or the caller supplies the Scope |
+| `Logger.make`, `Logger.layer`, formats, `Logger.toFile` | Unchanged | Values, provided as layers |
+| `Console` | Unchanged | `Console.log("hi")`; `console.log` is EK4402 |
+| Metrics (`counter`, `gauge`, `histogram`, `summary`, `frequency`, `timer`) | Unchanged | Defined at the top level; `Metric.update(requests, 1)` |
 | `trackSuccesses`, `trackDuration` | Changed | `Effect.trackDuration(() => task(), latency)` |
 | `Metric.CurrentMetricAttributes` | Changed | Provided around a program with `Effect.provideService` |
 | Spans per function (`Effect.fn("name")`) | Changed | `"tracing"` in `tsconfig.json`, or `Effect.withSpan` where you want one (Chapter 28) |
 | `Effect.withSpan` | Changed | `Effect.withSpan(() => loadUser(id), "load-user")` |
-| `annotateCurrentSpan`, `currentSpan`, `linkSpans` | Unchanged by design | The same calls |
-| Logs as span events | Unchanged by design | Spans stay correct across handler capture (G6a) |
-| Exporting traces, logs, and metrics (`OtlpTracer`, `OtlpLogger`, `OtlpMetrics` from `effect/observability`) | Unchanged by design | Layers, provided as in Effect: `OtlpTracer.layer({ url, resource: { serviceName } })` |
+| `annotateCurrentSpan`, `currentSpan`, `linkSpans` | Unchanged | The same calls |
+| Logs as span events | Unchanged | Spans stay correct across handler capture (G6a) |
+| Exporting traces, logs, and metrics (`OtlpTracer`, `OtlpLogger`, `OtlpMetrics` from `effect/observability`) | Unchanged | Layers, provided as in Effect: `OtlpTracer.layer({ url, resource: { serviceName } })` |
 | `FiberSet`, `FiberMap`, `FiberHandle` | Changed | `using set = FiberSet.make()`, then `FiberSet.run(set, () => task())` |
-| Supervisors (Effect 3) | Unchanged by design | Effect 4 has none; `FiberSet` and `fork` |
+| Supervisors (Effect 3) | Unchanged | Effect 4 has none; `FiberSet` and `fork` |
 
 #### C6. Configuration
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Config.String`, `Port`, `Int`, `Boolean`, `Duration`, `URL`, `Redacted` | Unchanged by design | Data until called: `const Port = Config.Port("PORT")`, then `Port()` (D24) |
-| `Config.all`, `withDefault`, `nested`, `option`, `orElse`, `schema` | Unchanged by design | Composed as data, read once by calling |
-| `ConfigProvider` (`fromEnv`, `fromUnknown`, `layer`) | Unchanged by design | Provided as a layer |
-| `ConfigProvider.fromDotEnv()`, `fromDir()` | Unchanged by design | Calls that run, inside a function |
-| `config.parse(provider)` in tests | Unchanged by design | `AppConfig.parse(provider)` returns an Effect, so the call runs it |
+| `Config.String`, `Port`, `Int`, `Boolean`, `Duration`, `URL`, `Redacted` | Unchanged | Data until called: `const Port = Config.Port("PORT")`, then `Port()` (D24) |
+| `Config.all`, `withDefault`, `nested`, `option`, `orElse`, `schema` | Unchanged | Composed as data, read once by calling |
+| `ConfigProvider` (`fromEnv`, `fromUnknown`, `layer`) | Unchanged | Provided as a layer |
+| `ConfigProvider.fromDotEnv()`, `fromDir()` | Unchanged | Calls that run, inside a function |
+| `config.parse(provider)` in tests | Unchanged | `AppConfig.parse(provider)` returns an Effect, so the call runs it |
 | A Layer chosen by config (`Layer.unwrap`) | Changed | `Layer.unwrap(() => …)`, with a program |
-| `Redacted` | Unchanged by design | `Redacted.value(DatabaseUrl())` |
+| `Redacted` | Unchanged | `Redacted.value(DatabaseUrl())` |
 
 #### C7. Runtime
 
@@ -146,32 +146,32 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `NodeRuntime.runMain`, `BunRuntime.runMain` | Changed | `NodeRuntime.runMain(() => main())` at a module's top level |
 | `runMain` options | Changed | The same options, with a program |
 | One-shot runners and `run*With(context)` | Changed | Programs as functions, only where no fiber runs the code (D38) |
-| `ManagedRuntime` | Unchanged by design | `ManagedRuntime.make(AppLive)`; `runtime.runPromise(() => handle(req))` in a framework callback, or from TypeScript |
+| `ManagedRuntime` | Unchanged | `ManagedRuntime.make(AppLive)`; `runtime.runPromise(() => handle(req))` in a framework callback, or from TypeScript |
 | Top-level `await` | Changed | No `await`; the top level builds values and calls runners (EK1001) |
-| Scheduling and fairness | Unchanged by design | 2048 operations per slice; a plain JavaScript region is atomic |
+| Scheduling and fairness | Unchanged | 2048 operations per slice; a plain JavaScript region is atomic |
 | `ErrorReporter`, `Effect.withErrorReporting` | Changed | `Effect.withErrorReporting(() => program())`: the thunk is a program (D39) |
 
 #### C8. Scheduling
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| Schedule constructors (`spaced`, `fixed`, `exponential`, `recurs`, `cron`) | Unchanged by design | `Schedule.exponential("250 millis")` |
-| Schedule combinators | Unchanged by design | `.pipe` over a schedule value |
-| Effectful schedule callbacks (`tap`, `modifyDelay`) | Unchanged by design | VibeLang callbacks |
+| Schedule constructors (`spaced`, `fixed`, `exponential`, `recurs`, `cron`) | Unchanged | `Schedule.exponential("250 millis")` |
+| Schedule combinators | Unchanged | `.pipe` over a schedule value |
+| Effectful schedule callbacks (`tap`, `modifyDelay`) | Unchanged | VibeLang callbacks |
 | `Effect.repeat` | Changed | `Effect.repeat(() => poll(), { schedule, until: (s) => s === "done" })` |
 | `Effect.retry` with a schedule | Changed | `Effect.retry(() => f(), Schedule.exponential("100 millis"))` |
 | `Effect.schedule`, `repeatOrElse` | Changed | Programs as functions |
-| `Cron.parse`, `Schedule.cron` | Unchanged by design | `Effect.fromResult(Cron.parse("0 3 * * *", "UTC"))` |
+| `Cron.parse`, `Schedule.cron` | Unchanged | `Effect.fromResult(Cron.parse("0 3 * * *", "UTC"))` |
 | A cron job's lifetime | Changed | `fork(() => Effect.schedule(() => report(), Schedule.cron(cron)))` inside `main` |
 
 #### C9. State management
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Ref` | Unchanged by design | `const ref = Ref.make(0); Ref.update(ref, (n) => n + 1)` |
+| `Ref` | Unchanged | `const ref = Ref.make(0); Ref.update(ref, (n) => n + 1)` |
 | Programs stored as object fields | Changed | `inc = () => Ref.update(this.value, (n) => n + 1)` |
-| `SynchronizedRef.updateEffect` | Unchanged by design | `SynchronizedRef.updateEffect(ref, (xs) => [...xs, load()])` |
-| `SubscriptionRef.changes` | Unchanged by design | A `Stream`: iterate it with `for...of` |
+| `SynchronizedRef.updateEffect` | Unchanged | `SynchronizedRef.updateEffect(ref, (xs) => [...xs, load()])` |
+| `SubscriptionRef.changes` | Unchanged | A `Stream`: iterate it with `for...of` |
 | Transactions (`TxRef`, `Effect.tx`) | Changed | `Effect.tx(() => TxRef.update(ref, (n) => n + 1))` |
 
 #### C10. Caching
@@ -180,17 +180,17 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | --- | --- | --- |
 | `Effect.cached` | Changed | `const get = Effect.cached(() => load())`, then `get()` |
 | `cachedWithTTL`, `cachedInvalidateWithTTL` | Changed | Programs as functions; `get()` and `invalidate()` |
-| `Cache` | Unchanged by design | `Cache.make({ capacity: 100, lookup: (id) => fetchUser(id) })` |
+| `Cache` | Unchanged | `Cache.make({ capacity: 100, lookup: (id) => fetchUser(id) })` |
 
 #### C11. Batching
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Request.Class`, `TaggedClass` | Unchanged by design | The same classes |
-| `RequestResolver.make`, `fromEffect`, `makeGrouped`, `batchN` | Unchanged by design | Callbacks are VibeLang functions |
-| `Effect.request` | Unchanged by design | `Effect.request(new GetUser({ id }), resolver)` |
-| Batches form under concurrency | Unchanged by design | Sequential calls never batch, as in Effect |
-| `RequestResolver.withCache` | Unchanged by design | Inside a function or a Layer |
+| `Request.Class`, `TaggedClass` | Unchanged | The same classes |
+| `RequestResolver.make`, `fromEffect`, `makeGrouped`, `batchN` | Unchanged | Callbacks are VibeLang functions |
+| `Effect.request` | Unchanged | `Effect.request(new GetUser({ id }), resolver)` |
+| Batches form under concurrency | Unchanged | Sequential calls never batch, as in Effect |
+| `RequestResolver.withCache` | Unchanged | Inside a function or a Layer |
 | A resolver that needs a service | Changed | `Layer.effect(Todos, () => { const http = Http(); … })` |
 
 #### C12. Concurrency
@@ -200,25 +200,25 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | The `concurrency` option | Changed | Programs as functions, the same options |
 | Struct and record forms of `Effect.all` | Changed | Record fields convert to programs |
 | A computed array of programs | Changed | `Effect.all(stores.map(makeSync))` (D9) |
-| `Effect.forEach` with concurrency | Unchanged by design | The same call |
+| `Effect.forEach` with concurrency | Unchanged | The same call |
 | `Effect.zip` with `concurrent: true` | Changed | Programs as functions |
 | `race`, `raceFirst`, `raceAll` | Changed | Programs as functions; each has its own exit rule (Chapter 7) |
 | `forkChild`, `forkDetach`, `forkScoped`, `forkIn` | Changed | Programs as functions |
 | Background work owned by a block | Changed | `fork(() => heartbeat())` (D19) |
 | `Fiber.join`, `joinAll` | Changed | `join fiber` and `join [a, b]` (D225) |
-| `Fiber.await`, `interrupt`, `interruptAll` | Unchanged by design | The same calls, or `fiber.await()` and `fiber.interrupt()` |
-| Interruption is not an error | Changed | `catch` never sees it; `finally` and `using` always run |
+| `Fiber.await`, `interrupt`, `interruptAll` | Unchanged | The same calls, or `fiber.await()` and `fiber.interrupt()` |
+| Interruption isn't an error | Changed | `catch` never sees it; `finally` and `using` always run |
 | `uninterruptible`, `uninterruptibleMask`, `interruptibleMask` | Changed | `uninterruptible { … restore { … } }` and `interruptible { … }` blocks, or the prelude functions with a program (D180) |
 | `onInterrupt` | Changed | `Effect.onInterrupt(() => task(), () => Console.log("stopped"))` |
 | `Effect.forever` | Changed | `while (true) tick()` |
-| `Deferred` | Unchanged by design | `Deferred.make<number>()`, `d.await()` (D227) |
+| `Deferred` | Unchanged | `Deferred.make<number>()`, `d.await()` (D227) |
 | `Deferred.complete` with a program | Changed | `Deferred.complete(d, () => task())` |
-| `Queue` | Unchanged by design | `Queue.offer(queue, 1)` |
+| `Queue` | Unchanged | `Queue.offer(queue, 1)` |
 | `PubSub.subscribe` | Changed | `using subscription = PubSub.subscribe(pubsub)` |
-| `PubSub.publish` | Unchanged by design | The same call |
-| `Semaphore` | Unchanged by design | `Semaphore.make(1)`; `mutex.withPermits(1)(() => task())` |
-| `Latch` | Unchanged by design | `latch.open()`: an `Effect` member runs when called |
-| What a forked fiber sees | Unchanged by design | A snapshot of the parent's Context |
+| `PubSub.publish` | Unchanged | The same call |
+| `Semaphore` | Unchanged | `Semaphore.make(1)`; `mutex.withPermits(1)(() => task())` |
+| `Latch` | Unchanged | `latch.open()`: an `Effect` member runs when called |
+| What a forked fiber sees | Unchanged | A snapshot of the parent's Context |
 | Control operations across fibers | Changed | EK4201 (Chapter 9) |
 
 #### C13. Async interop
@@ -229,7 +229,7 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | `Effect.promise`, `Effect.tryPromise` | Changed | `sync(async (signal) => …)` and `try(async (signal) => …)`; the `AbortSignal`, after any inputs, cancels on interruption (D148, D230) |
 | `Effect.callback` | Changed | The `callback` hatch; `resume(value)`; `suspend` for resources (D43, D148) |
 | `Effect.runPromise` from Promise code | Changed | `runPromise`, from TypeScript, a top-level callback, or a hatch's body (D38, D148) |
-| Async iterables and event emitters | Unchanged by design | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
+| Async iterables and event emitters | Unchanged | `Stream.fromAsyncIterable`, `Stream.fromEventListener` |
 | Synchronous code that throws | Changed | Plain contracts catch JavaScript exceptions; use `try(…)` for typed Effect failures (D260) |
 | Effect 3 libraries | Changed | Foreign code: `try((p) => Effect3.runPromise(p), (error) => …, p)` |
 
@@ -238,26 +238,26 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
 | A sequence produced by code that waits between values | Changed | A `function*` producer and `for...of` (Chapter 8) |
-| Streams from data (`make`, `range`, `fromIterable`, `tick`) | Unchanged by design | `Stream.range(1, 10)` |
+| Streams from data (`make`, `range`, `fromIterable`, `tick`) | Unchanged | `Stream.range(1, 10)` |
 | `fromEffect`, `fromEffectRepeat` | Changed | Programs as functions |
-| `unfold`, `paginate` | Unchanged by design | VibeLang callbacks |
-| `Stream.callback`, `fromQueue`, `fromPubSub`, `fromEventListener` | Unchanged by design | The same calls; inner JavaScript callbacks cannot pause (EK4301) |
-| Operators (`map`, `filter`, `mapEffect`, `merge`, `buffer`, `debounce`, `groupedWithin`) | Unchanged by design | The same calls; a producer converts to a `Stream` (D26) |
-| `runCollect`, `runForEach`, `runFold`, `runDrain`, `run` | Unchanged by design | Calls that run the stream |
+| `unfold`, `paginate` | Unchanged | VibeLang callbacks |
+| `Stream.callback`, `fromQueue`, `fromPubSub`, `fromEventListener` | Unchanged | The same calls; inner JavaScript callbacks can't pause (EK4301) |
+| Operators (`map`, `filter`, `mapEffect`, `merge`, `buffer`, `debounce`, `groupedWithin`) | Unchanged | The same calls; a producer converts to a `Stream` (D26) |
+| `runCollect`, `runForEach`, `runFold`, `runDrain`, `run` | Unchanged | Calls that run the stream |
 | `Stream.toPull` | Changed | `for...of` over a `Stream` (D26) |
-| `Stream.catch`, `retry`, `timeout` | Unchanged by design | The same calls; `try`/`catch` applies to the call that runs a stream |
-| `Stream.scoped` | Unchanged by design | `Stream.scoped(stream)`: it takes a Stream |
+| `Stream.catch`, `retry`, `timeout` | Unchanged | The same calls; `try`/`catch` applies to the call that runs a stream |
+| `Stream.scoped` | Unchanged | `Stream.scoped(stream)`: it takes a Stream |
 | `Stream.ensuring` | Changed | `Stream.ensuring(stream, () => cleanup())`: the finalizer is a program |
 | `Stream.partition`, `broadcastN` | Changed | `using`, because they need a Scope |
 | Producers and streams together | Changed | A producer is a `Stream` wherever one is expected (D26) |
-| `Stream.toAsyncIterable` | Unchanged by design | From TypeScript, with `for await` |
+| `Stream.toAsyncIterable` | Unchanged | From TypeScript, with `for await` |
 
 #### C15. Sinks
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| Sinks (`sum`, `count`, `collect`, `head`, `drain`) | Unchanged by design | `Stream.run(stream, Sink.sum)` |
-| `Sink.fold`, `foldUntil`, `forEach` | Unchanged by design | VibeLang callbacks; pure ones pass as plain functions (D9) |
+| Sinks (`sum`, `count`, `collect`, `head`, `drain`) | Unchanged | `Stream.run(stream, Sink.sum)` |
+| `Sink.fold`, `foldUntil`, `forEach` | Unchanged | VibeLang callbacks; pure ones pass as plain functions (D9) |
 | A producer into a sink | Changed | The producer converts to a `Stream` (D26) |
 
 #### C16. Testing
@@ -265,26 +265,26 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
 | `it.effect` | Changed | `it.effect("name", () => { … })` |
-| `it.live`, `.each`, `.prop`, `it.flakyTest` | Unchanged by design | The same calls |
-| `layer(AppLive)("suite", (it) => …)` | Unchanged by design | The same call |
+| `it.live`, `.each`, `.prop`, `it.flakyTest` | Unchanged | The same calls |
+| `layer(AppLive)("suite", (it) => …)` | Unchanged | The same call |
 | Fake services | Changed | Object literals in `Layer.succeed` |
 | An override for one region | Changed | `Effect.provideService(() => program(), Mailer, quiet)` |
 | Scripted answers to requests | Changed | `handle` (Chapter 9) |
-| `TestClock` | Unchanged by design | `TestClock.adjust("1 minute")` |
-| `TestConsole`, `TestCrypto` | Unchanged by design | `TestConsole.logLines()` |
-| Asserting on an `Exit` | Unchanged by design | `Exit.succeed(1)` is data (D24) |
+| `TestClock` | Unchanged | `TestClock.adjust("1 minute")` |
+| `TestConsole`, `TestCrypto` | Unchanged | `TestConsole.logLines()` |
+| Asserting on an `Exit` | Unchanged | `Exit.succeed(1)` is data (D24) |
 | Promise-style tests | Changed | Stay in `.ts`, or move to `it.effect` (D38) |
-| Property tests | Unchanged by design | `it.effect.prop`, `Arbitrary.checkEffect` |
+| Property tests | Unchanged | `it.effect.prop`, `Arbitrary.checkEffect` |
 
 #### C17. Code style
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
 | Run once, at the edge | Changed | `NodeRuntime.runMain(() => main())` |
-| Avoid tacit calls | Unchanged by design | The same advice |
+| Avoid tacit calls | Unchanged | The same advice |
 | Dual APIs | Changed | Data-first with a program; data-last inside `pipe` |
-| Branded types | Unchanged by design | A failed check throws a defect; `Int.result(n)` for a typed error |
-| Pattern matching with pure handlers (`Match`) | Unchanged by design | The same module |
+| Branded types | Unchanged | A failed check throws a defect; `Int.result(n)` for a typed error |
+| Pattern matching with pure handlers (`Match`) | Unchanged | The same module |
 | Pattern matching with effectful branches | Changed | `switch` or `if`; effectful `Match` handlers are EK4301 (D9) |
 | Do notation (`Effect.Do`, `bind`, `let`) | Changed | Statements |
 | Control flow operators (`Effect.when`, `whileLoop`) | Changed | `if` and `while` |
@@ -293,43 +293,43 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Option` | Unchanged by design | Plain data; `Option.gen` stays in `.ts` |
+| `Option` | Unchanged | Plain data; `Option.gen` stays in `.ts` |
 | An `Option` to a typed failure | Changed | `Effect.fromOption(found)`, or `throw` |
-| `Result` (Effect 3's `Either`) | Unchanged by design | Plain data |
+| `Result` (Effect 3's `Either`) | Unchanged | Plain data |
 | `Effect.result`, `Effect.exit` | Changed | Programs as functions |
-| `Effect.fromResult` | Unchanged by design | The same call |
-| `Exit` constructors and readers | Unchanged by design | Data (D24); `Exit.match` |
-| `Cause` | Unchanged by design | `Effect.catchCause(() => f(), (cause) => …)` |
-| `Data.Class`, `TaggedClass`, `taggedEnum` | Unchanged by design | The same functions |
+| `Effect.fromResult` | Unchanged | The same call |
+| `Exit` constructors and readers | Unchanged | Data (D24); `Exit.match` |
+| `Cause` | Unchanged | `Effect.catchCause(() => f(), (cause) => …)` |
+| `Data.Class`, `TaggedClass`, `taggedEnum` | Unchanged | The same functions |
 | Error classes | Changed | `error E { ... }` declarations; `throw` |
 | `new` of a class whose instances are Effects | Changed | `new` constructs and never runs (D24) |
-| `Chunk`, `HashSet`, `HashMap`, `Duration`, `BigDecimal`, `Redacted` | Unchanged by design | The same modules |
-| `DateTime` | Unchanged by design | `DateTime.now()`; `new Date()` is EK4403 |
+| `Chunk`, `HashSet`, `HashMap`, `Duration`, `BigDecimal`, `Redacted` | Unchanged | The same modules |
+| `DateTime` | Unchanged | `DateTime.now()`; `new Date()` is EK4403 |
 | A time zone for a region | Changed | Programs as functions |
 
 #### C19. Traits and behaviours
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Equal`, `Hash` | Unchanged by design | The same functions; `===` keeps its JavaScript meaning. A class implements `[Equal.symbol]` and `[Hash.symbol]` with plain methods (D55, Chapter 15) |
-| `Equivalence`, `Order` | Unchanged by design | The same modules |
+| `Equal`, `Hash` | Unchanged | The same functions; `===` keeps its JavaScript meaning. A class implements `[Equal.symbol]` and `[Hash.symbol]` with plain methods (D55, Chapter 15) |
+| `Equivalence`, `Order` | Unchanged | The same modules |
 
 #### C20. Schema
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| Defining schemas | Unchanged by design | Values, built at the top level |
-| `decodeUnknownEffect`, `decodeEffect`, `encodeEffect` | Unchanged by design | Calls that run; `SchemaError` joins E |
-| `decodeUnknownSync`, `is`, `asserts` | Unchanged by design | Trusted; their exceptions are defects (D37) |
-| `decodeUnknownExit` | Unchanged by design | An `Exit` value (D24) |
-| Filters and transformations | Unchanged by design | The same functions |
-| `transformEffect`, `checkEffect` | Unchanged by design | VibeLang callbacks |
+| Defining schemas | Unchanged | Values, built at the top level |
+| `decodeUnknownEffect`, `decodeEffect`, `encodeEffect` | Unchanged | Calls that run; `SchemaError` joins E |
+| `decodeUnknownSync`, `is`, `asserts` | Unchanged | Trusted; their exceptions are defects (D37) |
+| `decodeUnknownExit` | Unchanged | An `Exit` value (D24) |
+| Filters and transformations | Unchanged | The same functions |
+| `transformEffect`, `checkEffect` | Unchanged | VibeLang callbacks |
 | Defaults given as Effects (`withConstructorDefault`) | Changed | A program: `Schema.withConstructorDefault(() => Clock.currentTimeMillis())` |
-| `Schema.Class`, `TaggedClass` | Unchanged by design | The same classes |
+| `Schema.Class`, `TaggedClass` | Unchanged | The same classes |
 | `Schema.TaggedError` | Changed | `throw new HttpError({ status: 500 })` |
-| `make`, `makeEffect` | Unchanged by design | `make` throws defects; `makeEffect` runs |
-| Annotations, formatters, JSON Schema, Arbitrary, compilers | Unchanged by design | The same functions |
-| `Config.schema` | Unchanged by design | Data (D24) |
+| `make`, `makeEffect` | Unchanged | `make` throws defects; `makeEffect` runs |
+| Annotations, formatters, JSON Schema, Arbitrary, compilers | Unchanged | The same functions |
+| `Config.schema` | Unchanged | Data (D24) |
 
 #### C21. Platform
 
@@ -337,85 +337,85 @@ On a cause that mixes an expected failure and a defect, Effect's operators below
 | --- | --- | --- |
 | Node.js and browser APIs | Changed | Not callable from `.vibe` (EK4402); Chapter 11 names each replacement |
 | Platform layers (`NodeServices.layer`) | Changed | `Effect.provide(() => main(), NodeServices.layer)` |
-| `FileSystem` | Unchanged by design | `FileSystem.readFileString(path)`, from `effect/FileSystem` |
+| `FileSystem` | Unchanged | `FileSystem.readFileString(path)`, from `effect/FileSystem` |
 | `FileSystem.open` (a scoped `File`) | Changed | `using file = FileSystem.open(path)` |
 | `FileSystem.layerNoop` | Changed | Its methods return values, not Effects |
-| `Path` | Unchanged by design | `Path.join(a, b)`; `Path` joins R (D41) |
-| `Terminal`, `Stdio` | Unchanged by design | `Terminal.readLine()` |
-| Child processes | Unchanged by design | `ChildProcessSpawner.string(ChildProcess.make("git", ["status"]))`; the command is data (D24) |
-| `KeyValueStore` | Unchanged by design | From `effect/persistence` |
+| `Path` | Unchanged | `Path.join(a, b)`; `Path` joins R (D41) |
+| `Terminal`, `Stdio` | Unchanged | `Terminal.readLine()` |
+| Child processes | Unchanged | `ChildProcessSpawner.string(ChildProcess.make("git", ["status"]))`; the command is data (D24) |
+| `KeyValueStore` | Unchanged | From `effect/persistence` |
 | Sockets | Changed | `using` for a scoped reader |
-| Workers | Unchanged by design | VibeLang handlers |
+| Workers | Unchanged | VibeLang handlers |
 
 #### C22. HTTP
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `HttpClient` | Unchanged by design | `HttpClient.get(url)` runs |
-| Response bodies | Unchanged by design | `response.json()` |
-| Client middleware | Unchanged by design | `.pipe` over a client value |
-| `HttpRouter.add` handlers | Unchanged by design | A handler function, or a program (D39) |
+| `HttpClient` | Unchanged | `HttpClient.get(url)` runs |
+| Response bodies | Unchanged | `response.json()` |
+| Client middleware | Unchanged | `.pipe` over a client value |
+| `HttpRouter.add` handlers | Unchanged | A handler function, or a program (D39) |
 | Serving | Changed | `NodeRuntime.runMain(() => Layer.launch(HttpRouter.serve(routes)))` |
-| `HttpApi` definitions, middleware, security | Unchanged by design | Values |
-| `HttpApi` handlers | Unchanged by design | VibeLang functions |
-| `HttpApiClient` | Unchanged by design | Calls that run |
+| `HttpApi` definitions, middleware, security | Unchanged | Values |
+| `HttpApi` handlers | Unchanged | VibeLang functions |
+| `HttpApiClient` | Unchanged | Calls that run |
 
 #### C23. SQL
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `SqlClient` | Unchanged by design | `const sql = SqlClient.SqlClient()` |
-| `` sql`…` `` statements | Unchanged by design | Data until called (D24): `` sql`SELECT * FROM users`() `` runs it, and `.stream` stays reachable |
-| Fragments (`sql.in`, `sql.insert`, `sql.and`) | Unchanged by design | The same calls |
+| `SqlClient` | Unchanged | `const sql = SqlClient.SqlClient()` |
+| `` sql`…` `` statements | Unchanged | Data until called (D24): `` sql`SELECT * FROM users`() `` runs it, and `.stream` stays reachable |
+| Fragments (`sql.in`, `sql.insert`, `sql.and`) | Unchanged | The same calls |
 | `sql.withTransaction` | Changed | `sql.withTransaction(() => insertAll())` |
-| `SqlSchema`, `SqlResolver`, `SqlModel`, migrations | Unchanged by design | The same modules |
-| Driver layers read from config | Unchanged by design | `Config` arguments are data (D24) |
+| `SqlSchema`, `SqlResolver`, `SqlModel`, migrations | Unchanged | The same modules |
+| Driver layers read from config | Unchanged | `Config` arguments are data (D24) |
 
 #### C24. CLI
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Command.make`, `withSubcommands`, `withHandler` | Unchanged by design | Data (D24), declared at the top level |
-| Flags and arguments | Unchanged by design | Values |
-| Prompts | Unchanged by design | Data until called |
+| `Command.make`, `withSubcommands`, `withHandler` | Unchanged | Data (D24), declared at the top level |
+| Flags and arguments | Unchanged | Values |
+| Prompts | Unchanged | Data until called |
 | Running a command | Changed | Inside `main`, handed to a runner |
 
 #### C25. AI
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `LanguageModel.generateText`, `generateObject` | Unchanged by design | Calls that run |
-| `LanguageModel.streamText` | Unchanged by design | A `Stream` |
-| `Tool.make`, `Toolkit.make` | Unchanged by design | Data (D24) |
+| `LanguageModel.generateText`, `generateObject` | Unchanged | Calls that run |
+| `LanguageModel.streamText` | Unchanged | A `Stream` |
+| `Tool.make`, `Toolkit.make` | Unchanged | Data (D24) |
 | Tool handlers | Changed | `toolkit.toLayer(() => ({ search: ({ q }) => runSearch(q) }))` |
-| `Chat` | Unchanged by design | `Chat.empty()` |
+| `Chat` | Unchanged | `Chat.empty()` |
 | `Effect.withExecutionPlan` | Changed | `Effect.withExecutionPlan(() => program(), plan)` |
 | `AiError` reasons | Changed | Narrow `e.reason._tag` in `catch` |
-| Provider layers read from config | Unchanged by design | `Config` arguments are data (D24) |
+| Provider layers read from config | Unchanged | `Config` arguments are data (D24) |
 
 #### C26. Cluster, workflow, and RPC
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Rpc.make`, `RpcGroup.make` | Unchanged by design | Values |
-| `group.toLayer(handlers)` | Unchanged by design | An object of VibeLang handlers (D39) |
+| `Rpc.make`, `RpcGroup.make` | Unchanged | Values |
+| `group.toLayer(handlers)` | Unchanged | An object of VibeLang handlers (D39) |
 | RPC clients and servers | Changed | `using client = RpcClient.make(UserRpcs)` |
-| Entities | Unchanged by design | `Counter.client()` |
-| Workflows | Unchanged by design | Bodies are VibeLang functions (D42) |
-| Activities | Unchanged by design | Data until called (D24) |
-| `DurableClock.sleep`, `DurableDeferred.await` | Unchanged by design | Calls that run |
-| Replay | Unchanged by design | Each execution is a fresh program run; held continuations end with it (D42) |
+| Entities | Unchanged | `Counter.client()` |
+| Workflows | Unchanged | Bodies are VibeLang functions (D42) |
+| Activities | Unchanged | Data until called (D24) |
+| `DurableClock.sleep`, `DurableDeferred.await` | Unchanged | Calls that run |
+| Replay | Unchanged | Each execution is a fresh program run; held continuations end with it (D42) |
 
 #### C27. Effect 3 features that Effect 4 removed
 
 | Feature | In VibeLang | Form |
 | --- | --- | --- |
-| `Micro` | Unchanged by design | Effect 4 has none; Effect 3 code is foreign code (Chapter 10) |
-| `Supervisor` | Unchanged by design | `FiberSet` and `fork` |
-| STM | Unchanged by design | `Effect.tx` with `TxRef` |
+| `Micro` | Unchanged | Effect 4 has none; Effect 3 code is foreign code (Chapter 10) |
+| `Supervisor` | Unchanged | `FiberSet` and `fork` |
+| STM | Unchanged | `Effect.tx` with `TxRef` |
 | `FiberRef`, `Effect.locally` | Changed | `Effect.provideService(() => program(), References.CurrentLogLevel, "Debug")` |
-| `Either` | Unchanged by design | `Result` |
-| `Mailbox` | Unchanged by design | `Queue` |
+| `Either` | Unchanged | `Result` |
+| `Mailbox` | Unchanged | `Queue` |
 | `Runtime<R>` | Changed | `ManagedRuntime`, or `run*With` under D38 |
 | `Effect.Service`, `Effect.Tag` accessors | Changed | Abstract service classes, called as `Users.find(id)` |
-| `withConcurrency`, `withClock`, `withRandom` | Unchanged by design | Per-call options and `References` |
+| `withConcurrency`, `withClock`, `withRandom` | Unchanged | Per-call options and `References` |
