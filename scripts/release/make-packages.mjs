@@ -127,6 +127,8 @@ for (const [platform, [os, cpu]] of Object.entries(platforms)) {
       version,
       description: `The native VibeLang compiler for ${os} on ${cpu}. Install vibelang instead; it selects this package.`,
       homepage: compiler.homepage,
+      bugs: compiler.bugs,
+      repository: compiler.repository,
       license: "Apache-2.0",
       os: [os],
       cpu: [cpu],

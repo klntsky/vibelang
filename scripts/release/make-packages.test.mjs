@@ -74,6 +74,8 @@ test("assembles every package in publish order with pinned versions, platform bi
     const name = `vibelang-${platform}`
     const pkg = JSON.parse(archive(root, name, "package.json"))
     assert.deepEqual(pkg.os, [os])
+    const compiler = json(join(root, "packages/compiler/package.json"))
+    assert.deepEqual([pkg.homepage, pkg.bugs, pkg.repository], [compiler.homepage, compiler.bugs, compiler.repository], `${name} links to the compiler's repository`)
     assert.deepEqual(pkg.cpu, [cpu])
     const exe = os === "win32" ? "vibelang.exe" : "vibelang"
     assert.deepEqual(archive(root, name, `bin/${exe}`), readFileSync(join(root, "dist-npm/bin", platform, exe)))
