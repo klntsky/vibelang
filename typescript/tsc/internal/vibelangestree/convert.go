@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/parser"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
@@ -1841,6 +1842,13 @@ func (c *converter) convertClass(n *ast.Node) *obj {
 		}
 	}
 	var body *obj
+	// service Search: SearchApi (D281) is class Search, whose superclass is
+	// the Context key VibeLang derives, with the written shape as that
+	// superclass's type argument, so scope analysis reads the shape's names.
+	var shape *ast.Node
+	if c.vibe && extendsType != nil && isSynthesizedIdentifier(extendsType.Expression(), parser.ServiceShapeFactory) {
+		shape, extendsType = extendsType, nil
+	}
 	if fields, ok := c.errorFields(extendsType); ok {
 		// error X { fields } is class X extends TaggedError("X")<{ fields }> {}
 		// to the checker and class X { fields } to a rule.
@@ -1865,6 +1873,9 @@ func (c *converter) convertClass(n *ast.Node) *obj {
 		result.set("superClass", nil)
 	}
 	setTypeParameters(result, c.convertTypeParameters(data.TypeParameters, n))
+	if extendsType == nil {
+		extendsType = shape
+	}
 	if extendsType != nil {
 		if typeArguments := c.convertTypeArguments(extendsType.AsExpressionWithTypeArguments().TypeArguments, extendsType); typeArguments != nil {
 			result.set("superTypeArguments", typeArguments)
