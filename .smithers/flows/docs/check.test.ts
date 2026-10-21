@@ -61,3 +61,9 @@ test("the root AGENTS.md points to the skill with its exact token count", async 
   const tokens = countTokens(sources[facts.skill]).toLocaleString("en-US");
   expect(render(sources)["AGENTS.md"]).toContain(`read ${facts.skill} (${tokens} tokens)`);
 });
+
+test("the shipped skill teaches current declarations and names the trusted import", async () => {
+  const skill = (await readSources())[facts.skill];
+  expect(skill).not.toContain("Until your compiler accepts a form, write its long form");
+  expect(skill).toContain('import { trusted } from "vibelang-runtime"');
+});
