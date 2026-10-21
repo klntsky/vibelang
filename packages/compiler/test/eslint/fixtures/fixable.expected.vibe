@@ -1,0 +1,19 @@
+/**
+ * Violations ESLint fixes; fixable.expected.vibe is the result.
+ *
+ * @since 0.0.2
+ */
+
+import type { User } from "./models.vibe"
+import { Users } from "./services.vibe"
+
+/**
+ * Finds users.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function list(ids: Array<string>): ReadonlyArray<User>!!Users {
+  const found = ids |> %.map((id) => Users.find(id))
+  return found
+}

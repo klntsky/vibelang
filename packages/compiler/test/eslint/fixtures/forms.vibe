@@ -1,0 +1,507 @@
+/**
+ * Every form of the VibeLang cheat sheet, written as clean code: linted with
+ * the rules the tests use, it draws no message.
+ *
+ * @since 0.0.2
+ */
+
+import { assert, it } from "@effect/vitest"
+
+// Declarations
+
+/**
+ * The user is missing.
+ *
+ * @category errors
+ * @since 0.0.2
+ */
+export error NotFound { id: string }
+
+/**
+ * The call took too long.
+ *
+ * @category errors
+ * @since 0.0.2
+ */
+export error Timeout
+
+/**
+ * The text was not JSON.
+ *
+ * @category errors
+ * @since 0.0.2
+ */
+export error BadJson { error: unknown }
+
+/**
+ * A user.
+ *
+ * @category models
+ * @since 0.0.2
+ */
+export interface User { id: string; name: string; mutable visits: number }
+
+/**
+ * Looks users up.
+ *
+ * @category services
+ * @since 0.0.2
+ */
+export service Users {
+  find(id: string): User!NotFound
+  region: string
+}
+
+/**
+ * Asks for approval.
+ *
+ * @category services
+ * @since 0.0.2
+ */
+export control Approval {
+  approve(request: string): boolean!!
+}
+
+/**
+ * An account.
+ *
+ * @category schemas
+ * @since 0.0.2
+ */
+export schema Account {
+  id: string
+  nickname?: string
+  role: "admin" | "member"
+  mutable tags: ReadonlyArray<string>
+}
+
+/**
+ * The users layer.
+ *
+ * @category layers
+ * @since 0.0.2
+ */
+export const UsersLive = Layer.effect(Users) {
+  const seen = new Set<string>()
+  return {
+    find(id) {
+      seen.add(id)
+      return getUser(id)
+    },
+    region: "eu"
+  }
+}
+
+/**
+ * The same layer, declared.
+ *
+ * @category layers
+ * @since 0.0.2
+ */
+export layer DeclaredUsers: Users {
+  const prefix = "user-"
+  find(id) { return getUser(`${prefix}${id}`) }
+  readonly region = "us"
+}
+
+// Contracts
+
+/**
+ * Finds a user.
+ *
+ * @category models
+ * @since 0.0.2
+ */
+export type Find = (id: string) => User!NotFound
+
+/**
+ * Releases a version.
+ *
+ * @category models
+ * @since 0.0.2
+ */
+export type Release = (version: string) => string!!Approval
+
+/**
+ * A program.
+ *
+ * @category models
+ * @since 0.0.2
+ */
+export type Load = () => string!!
+
+/**
+ * Finds a user, failing with NotFound.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function getUser(id: string): User!NotFound!Users {
+  sleep("5 millis")
+  if (id === "missing") throw new NotFound({ id })
+  return { id, name: "Ada", visits: 0 }
+}
+
+/**
+ * Leaves its failures to its body (D57).
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function inferred(id: string): string!infer E {
+  return getUser(id).name
+}
+
+// Programs
+
+/**
+ * Greets a user inside a span.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function greetUser(id: string) {
+  return withSpan("greetUser") {
+    const user = getUser(id)
+    Console.log(`Hello, ${user.name}`)
+    return user.name
+  }
+}
+
+/**
+ * Provides a layer and one service.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function provided(seeded: { nextIntUnsafe: () => number; nextDoubleUnsafe: () => number }) {
+  provide UsersLive, Logger.layer([]), Random = seeded {
+    return Users.find("1")
+  }
+}
+
+/**
+ * Catches by tag.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function describe(id: string) {
+  try {
+    return getUser(id).name
+  } catch (e) {
+    return match (e) {
+      when NotFound: `no user ${e.id}`;
+      default: throw e
+    }
+  }
+}
+
+/**
+ * Falls back in an expression.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function nameOrGuest(id: string) {
+  return getUser(id).name catch "guest"
+}
+
+/**
+ * Catches in an expression.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function nameOrReason(id: string) {
+  return getUser(id).name catch (e) => match (e) {
+    when NotFound and { let id }: `no user ${id}`;
+  }
+}
+
+/**
+ * Handles a control operation.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function auto(version: string) {
+  try {
+    return release(version)
+  } handle Approval.approve(_request) {
+    resume(true)
+  }
+}
+
+/**
+ * Matches every cause.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function safe(id: string) {
+  return match (exit(getUser(id))) {
+    when Exit.Success(let user): user.name;
+    when Exit.Failure(let cause): `failed: ${Cause.pretty(cause)}`;
+  }
+}
+
+/**
+ * Rethrows a cause.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function logged() {
+  const outcome = exit(getUser("1"))
+  if (outcome is Exit.Failure(let cause)) {
+    logError(cause)
+    throw cause
+  }
+  return outcome.value
+}
+
+/**
+ * Runs on every exit.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function tracked() {
+  try {
+    return getUser("1")
+  } finally (exit) {
+    log(`lookup ${exit._tag}`)
+  }
+}
+
+/**
+ * Masks interruption.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function guarded() {
+  uninterruptible {
+    const user = getUser("1")
+    restore {
+      return { user, orders: getOrders(user.id) }
+    }
+  }
+}
+
+/**
+ * Allows interruption.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function cancellable() {
+  interruptible {
+    return getOrders("1")
+  }
+}
+
+/**
+ * Pipes a program.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function piped() {
+  return getUser("1") |> retry(%, Schedule.recurs(2)) |> timeout(%, "1 second")
+}
+
+/**
+ * Pipes a value through a curried stage.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function curried(name: Option.Option<string>) {
+  return name |> Option.map((n: string) => n.length)(%)
+}
+
+/**
+ * Throws in an expression.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function findUser(users: Map<string, User>, id: string) {
+  return users.get(id) ?? throw new NotFound({ id })
+}
+
+/**
+ * Uses a block as a value.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function label(id: string) {
+  const name = do {
+    const user = getUser(id)
+    if (user.name.length > 3) user.name
+    else "short"
+  }
+  return name
+}
+
+/**
+ * Leaves through escape hatches.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function hatches(text: string, url: string) {
+  const id = sync(crypto.randomUUID())
+  const parsed = try((text) => JSON.parse(text), (error) => new BadJson({ error }), text)
+  const fetched = try(async (url, signal) => fetch(url, { signal }), url)
+  const tick = callback<number>((resume) => {
+    const timer = setTimeout(() => resume(7), 10)
+    return () => clearTimeout(timer)
+  })
+  return { id, parsed, fetched, tick }
+}
+
+/**
+ * Forks and joins.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function both() {
+  const user = fork getUser("1")
+  const orders = fork getOrders("1")
+  return [join user, join orders]
+}
+
+/**
+ * Waits for several.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function many() {
+  const [user, orders] = await.all [getUser("1"), getOrders("1")]
+  const pair = await.all { user: getUser("1"), orders: getOrders("1") }
+  const fastest = await.any [getUser("1"), getUser("2")]
+  const settled = await.allSettled [getUser("1"), getOrders("1")]
+  const winner = await.race [getUser("1"), getUser("2")]
+  return { user, orders, pair, fastest, settled, winner }
+}
+
+/**
+ * Forks a block.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function withHeartbeat() {
+  fork {
+    while (true) {
+      log("tick")
+      sleep("1 second")
+    }
+  }
+  return getUser("1")
+}
+
+/**
+ * Loops concurrently.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function logAll(ids: ReadonlyArray<string>) {
+  for concurrent(8) (const id of ids) log(getUser(id).name)
+}
+
+/**
+ * Matches a value.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function phaseLabel(phase: "draft" | "published") {
+  return match (phase) {
+    when "draft": "Draft";
+    when "published": "Published";
+  }
+}
+
+/**
+ * Matches an option.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function greet(name: Option.Option<string>) {
+  return match (name) {
+    when Option.Some(let n): `Hello, ${n}`;
+    when Option.None: "Hello";
+  }
+}
+
+/**
+ * Tests a pattern.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function failed(outcome: Exit.Exit<User, NotFound>) {
+  return outcome is Exit.Failure
+}
+
+/**
+ * Catches typed failures in clauses.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function clauses(id: string) {
+  try {
+    return getUser(id).name
+  } catch (e: NotFound) {
+    return e.id
+  } catch (e: Timeout) {
+    return e._tag
+  }
+}
+
+/**
+ * Waits for a Deferred.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function signal() {
+  const ready = Deferred.make<string>()
+  Deferred.succeed(ready, "go")
+  return ready.await()
+}
+
+/**
+ * A tagged template that runs.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function query() {
+  return sql`SELECT * FROM example`
+}
+
+/**
+ * The entry point.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function main() {
+  log("Hello")
+}
+
+it.live("finds a user") {
+  const user = getUser("1")
+  assert.strictEqual(user.name, "Ada")
+}

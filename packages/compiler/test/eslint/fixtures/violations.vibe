@@ -1,0 +1,58 @@
+/**
+ * One seeded violation per rule, each named in a comment on its line.
+ *
+ * @since 0.0.2
+ */
+
+import { NotFound } from "./errors.vibe" // import/no-duplicates
+import { Code } from "./errors.vibe" // import/no-duplicates, consistent-type-imports
+
+export function undocumented(ids: string[]): number!NotFound { // jsdoc/require-jsdoc, array-type
+  let total = 0 // prefer-const
+  const unused = 1 // no-unused-vars
+  const label = "héllo 😀"; console.log(label) // no-console, after non-ASCII text
+  if (ids.length === 0) throw new NotFound({ id: "none" })
+  return total
+}
+
+/**
+ * Takes its directory from the process.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export const make = (cwd = process.cwd()): string => cwd // no-restricted-syntax
+
+/**
+ * Recovers to an empty string.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function swallow(): Code {
+  return undocumented([]) catch "" // no-restricted-syntax
+}
+
+/**
+ * Binds a cause it never reads.
+ *
+ * @category constructors
+ * @since 0.0.2
+ */
+export function ignored(id: string) {
+  const outcome = exit(undocumented([id]))
+  if (outcome is Exit.Failure(let cause)) return 0 // no-unused-vars
+  return withSpan("ignored") {
+    var old = 1 // no-var
+    // eslint-disable-next-line no-console
+    console.log(old)
+    return old
+  }
+}
+
+/**
+ * Has no since tag.
+ *
+ * @category constructors
+ */
+export error Missing { id: string } // jsdoc/no-restricted-syntax

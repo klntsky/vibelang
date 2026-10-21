@@ -9,10 +9,11 @@
   "exports": {
     "./package.json": "./package.json",
     "./project": { "types": "./project.d.mts", "default": "./project.mjs" },
-    "./register": "./register.mjs"
+    "./register": "./register.mjs",
+    "./eslint": "./eslint.mjs"
   },
   "bin": { "vibelang": "bin/vibelang" },
-  "files": ["bin", "editor", "dprint-plugin.json", "project.mjs", "project.d.mts", "register.mjs", "README.md", "LICENSE", "NOTICE"],
+  "files": ["bin", "editor", "dprint-plugin.json", "eslint.mjs", "project.mjs", "project.d.mts", "register.mjs", "README.md", "LICENSE", "NOTICE"],
   "scripts": { "test": "node --test test/*.test.mjs" },
   "optionalDependencies": {
     "vibelang-darwin-arm64": "0.0.2",

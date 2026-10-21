@@ -1,0 +1,85 @@
+// Properties every tree vibelang/eslint returns must have.
+import { vibeVisitorKeys } from "../../eslint.mjs"
+
+// Words that start a VibeLang form: the tree has a node for the form, not
+// for the word, as it has none for TypeScript's `function` or `extends`.
+export const formWords = new Set([
+  "error", "service", "control", "schema", "layer", "mutable", "match", "when", "and", "or", "not",
+  "provide", "fork", "join", "is", "handle", "uninterruptible", "restore", "interruptible",
+  "concurrent", "all", "allSettled", "any", "race", "select"
+])
+
+/** Calls visit on every node of tree, with its parent. */
+export function walk(tree, visit, keys) {
+  const step = (node, parent) => {
+    visit(node, parent)
+    for (const key of keys[node.type] ?? Object.keys(node).filter((k) => !["parent", "loc", "range"].includes(k))) {
+      const value = node[key]
+      for (const child of Array.isArray(value) ? value : [value]) {
+        if (child && typeof child === "object" && typeof child.type === "string") step(child, node)
+      }
+    }
+  }
+  step(tree, undefined)
+}
+
+/**
+ * Returns what is wrong with ast as the tree of code: tokens and comments
+ * that are not the source text, in order, with only whitespace between
+ * them; a source name with no node; a node outside the text or with an
+ * unknown type.
+ */
+export function problems(code, ast, visitorKeys) {
+  const found = []
+  const pieces = [...ast.tokens.map((t) => ({ ...t, kind: "token" })), ...ast.comments.map((c) => ({ ...c, kind: "comment" }))]
+    .sort((a, b) => a.range[0] - b.range[0])
+  let cursor = 0
+  for (const piece of pieces) {
+    const [start, end] = piece.range
+    const gap = code.slice(cursor, start)
+    if (start < cursor || !/^[\s\uFEFF]*$/u.test(gap)) found.push(`text ${JSON.stringify(gap.slice(0, 40))} at ${cursor} is in no token`)
+    const text = code.slice(start, end)
+    const expected = piece.kind === "comment"
+      ? (piece.type === "Line" ? `//${piece.value}` : `/*${piece.value}*/`)
+      : piece.type === "PrivateIdentifier" ? `#${piece.value}` : piece.value
+    if (text !== expected) found.push(`${piece.kind} ${JSON.stringify(expected)} is ${JSON.stringify(text)} in the source`)
+    cursor = end
+  }
+  if (!/^[\s\uFEFF]*$/u.test(code.slice(cursor))) found.push(`text after ${cursor} is in no token`)
+
+  const named = new Set()
+  walk(ast, (node, parent) => {
+    if (!(node.type in visitorKeys)) found.push(`unknown node type ${node.type}`)
+    const [start, end] = node.range
+    if (!(start >= 0 && start <= end && end <= code.length)) found.push(`${node.type} has range [${start}, ${end}]`)
+    // An identifier's range covers its type annotation, so it is known by its start and name.
+    if (node.type === "Identifier") named.add(`${start}:${node.name}`)
+  }, visitorKeys)
+  ast.tokens.forEach((token, index) => {
+    if (token.type !== "Identifier") return
+    const word = code.slice(...token.range)
+    const previous = ast.tokens[index - 1]?.value
+    // A pattern's extractor (Exit.Success, Option.Some) and a primitive's
+    // pattern (String) become guards, and an infer placeholder (D57) is
+    // VibeInferType's name: none is a variable a rule could miss.
+    const exempt = formWords.has(word) || contextualKeywords.has(word) || patternWords.has(word) ||
+      previous === "." || previous === "infer"
+    if (!named.has(`${token.range[0]}:${word}`) && !exempt) found.push(`name ${word} at ${token.range[0]} has no node`)
+  })
+  return found
+}
+
+// Globals a pattern or a cause catch clause names, which the parser turns
+// into a typeof test or a Cause catch.
+const patternWords = new Set(["String", "Number", "Boolean", "BigInt", "Symbol", "Cause"])
+
+// Words TypeScript tokenizes as identifiers that the tree keeps as flags or
+// operators, not as Identifier nodes.
+const contextualKeywords = new Set([
+  "abstract", "accessor", "as", "asserts", "assert", "any", "async", "await", "boolean", "constructor", "declare",
+  "get", "infer", "intrinsic", "keyof", "module", "namespace", "never", "out", "readonly", "require", "number",
+  "object", "satisfies", "set", "string", "symbol", "type", "undefined", "unique", "unknown", "using", "from",
+  "global", "bigint", "override", "of", "defer", "source", "with"
+])
+
+export const allVisitorKeys = (typescriptKeys) => ({ ...typescriptKeys, ...vibeVisitorKeys })
