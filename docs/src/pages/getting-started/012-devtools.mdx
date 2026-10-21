@@ -71,7 +71,7 @@ function promised(value: number): number!! {
 
 The language design diagnoses this as `EK2001`. Handle `Rejected` inside the function or widen its contract. Related checks include unmet services (`EK2002`), running a program at module top level without an explicit Effect type on a `const` (`EK1001`), and passing a suspending callback to synchronous JavaScript (`EK4301`).
 
-Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages and packages matching `compilerOptions.vibelang.trustedPackages` are trusted: plain calls are synchronous, their exceptions are defects, and Effect-returning calls run. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a try block that runs Effects with E = `never` gets `EK2004` (defects pass through), a warning by default.
+Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages and packages matching the `vibelang` setting `trustedPackages` are trusted: plain calls are synchronous, their exceptions are defects, and Effect-returning calls run. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a try block that runs Effects with E = `never` gets `EK2004` (defects pass through), a warning by default.
 
 EK1010 refuses an unparenthesized throw expression on the left of a binary operator (except comma), as a conditional's condition, or before `as` or `satisfies`. Write `throw (…)` to throw the whole expression; `value ?? throw e` and throw statements keep their meaning.
 
@@ -94,21 +94,23 @@ function checked(value: number): number!Rejected! {
 // Output: 3
 ```
 
-A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks the success and failure channels and infers requirements. All three slots are required in a return annotation with a body. For omitted slots, EK2003 suggests explicit `never` or `infer` contracts in its diagnostic text. Configure the compiler in `tsconfig.json`:
+A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks the success and failure channels and infers requirements. All three slots are required in a return annotation with a body. For omitted slots, EK2003 suggests explicit `never` or `infer` contracts in its diagnostic text. Configure the compiler with a `vibelang` object at the top level of `tsconfig.json`:
 
 ```json
 {
   "compilerOptions": {
     "strict": true,
-    "sourceMap": true,
-    "vibelang": {
-      "diagnostics": { "EK2004": "warning", "EK4403": "error" },
-      "tracing": "exported",
-      "trustedPackages": ["@smthrs/*"]
-    }
+    "sourceMap": true
+  },
+  "vibelang": {
+    "diagnostics": { "EK2004": "warning", "EK4403": "error" },
+    "tracing": "exported",
+    "trustedPackages": ["@smthrs/*"]
   }
 }
 ```
+
+A config that `extends` another inherits its `vibelang` settings, as it inherits compiler options. TypeScript, typescript-eslint, and editors' TypeScript servers ignore the top-level object. `compilerOptions.vibelang` is also accepted, but those tools reject it as an unknown compiler option (TS5023), so keep the settings at the top level (D275).
 
 EK2004, EK4403, EK4406, and the rules from Effect's language service, EK4801-EK4825 except EK4813, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity. Core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
 
@@ -118,7 +120,7 @@ EK2004, EK4403, EK4406, and the rules from Effect's language service, EK4801-EK4
 
 The table below accounts for the 108 diagnostics and editor features in `@effect/language-service` 0.87.5 (D240). Many rules address forms that VibeLang replaces: there is no `Effect.gen` to misuse, a call already runs, and `catch` catches failures. Existing EK diagnostics cover others. The remaining checks are EK4801-EK4825, with mechanical quick fixes, alongside refactors, hovers, and completions. The table also identifies features that are not implemented.
 
-EK4801-EK4825 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in `compilerOptions.vibelang.diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
+EK4801-EK4825 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in the `vibelang` setting `diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
 
 ```vibe
 // run: Console.log(discard(() => { Console.log("unused") ; return 42 }))
