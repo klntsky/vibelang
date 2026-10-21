@@ -190,15 +190,20 @@ module.exports = grammar(TypeScript, {
     // An error's field may be written mutable (D134).
     public_field_definition: ($, previous) => seq(optional('mutable'), previous),
 
-    // service Users { find(id: string): User!NotFound } (D128, D223), and the
-    // older spelling service class Users { ... } (D220).
-    service_declaration: $ => seq(
+    // service Users { find(id: string): User!NotFound } (D128, D223), the
+    // older spelling service class Users { ... } (D220), and a service of any
+    // shape, service Prefix: string or service Search: SearchApi { static
+    // members } (D281), whose body is optional.
+    service_declaration: $ => prec.right(seq(
       'service',
       optional('class'),
       field('name', $._type_identifier),
       field('type_parameters', optional($.type_parameters)),
-      field('body', $.class_body),
-    ),
+      choice(
+        field('body', $.class_body),
+        seq(':', field('shape', $.type), field('body', optional($.class_body))),
+      ),
+    )),
 
     // control Approval { approve(request: string): boolean!! } (D128, D223).
     control_declaration: $ => seq(

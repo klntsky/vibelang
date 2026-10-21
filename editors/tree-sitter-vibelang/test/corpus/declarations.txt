@@ -75,6 +75,41 @@ export service class Legacy {
               success: (predefined_type))))))))
 
 ================================================================================
+Service declarations of any shape
+================================================================================
+
+service Prefix: string
+export service Search: SearchApi {
+  static readonly layer = live
+}
+service Format: (value: string) => string!!
+
+--------------------------------------------------------------------------------
+
+(program
+  (service_declaration
+    name: (type_identifier)
+    shape: (predefined_type))
+  (export_statement
+    declaration: (service_declaration
+      name: (type_identifier)
+      shape: (type_identifier)
+      body: (class_body
+        (public_field_definition
+          name: (property_identifier)
+          value: (identifier)))))
+  (service_declaration
+    name: (type_identifier)
+    shape: (function_type
+      parameters: (formal_parameters
+        (required_parameter
+          pattern: (identifier)
+          type: (type_annotation
+            (predefined_type))))
+      return_type: (effect_type
+        success: (predefined_type)))))
+
+================================================================================
 Control declarations
 ================================================================================
 
