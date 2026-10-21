@@ -60,6 +60,8 @@ type decoder struct {
 	file  *ast.SourceFile
 	edits []edit
 	seen  []bool
+	// references counts the identifier module specifiers decoded.
+	references int
 }
 
 // decode returns formatted, the TypeScript formatter's output for enc.text,
@@ -94,6 +96,9 @@ func (enc *encoding) decode(formatted string) (string, error) {
 		if !seen && !enc.placeholders[i].nested {
 			return "", fmt.Errorf("vibelang format: internal error: the formatter dropped the placeholder for %q", enc.placeholders[i].text)
 		}
+	}
+	if d.references != enc.references {
+		return "", fmt.Errorf("vibelang format: internal error: wrote %d identifier module specifiers, found %d", enc.references, d.references)
 	}
 	return d.apply()
 }
@@ -198,6 +203,9 @@ func (d *decoder) nextToken(pos int, want byte) (int, int, bool) {
 
 // node decodes the VibeLang form node stands for, if any.
 func (d *decoder) node(node *ast.Node) error {
+	if node.Kind == ast.KindStringLiteral {
+		return d.moduleReference(node)
+	}
 	if node.Kind == ast.KindCallExpression {
 		call := node.AsCallExpression()
 		if arguments := call.Arguments.Nodes; len(arguments) == 1 && d.isBlockMarker(arguments[0]) {

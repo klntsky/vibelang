@@ -23,13 +23,17 @@
 //	for concurrent(n) (const x of xs)      for (const x of xs)
 //	finally (exit) { }                     finally { }
 //	try { } handle A.b(x) { } catch (e) { } try { } catch ($v10) { } $v11: { }
+//	module text { ... }                    module text { ... }, the body formatted first
+//	from text, import text                 from "./$vtext", import "./$vtext"
 //
 // $v stands for a prefix the file does not contain. Identifiers carry an
 // index into a table of the text they stand for; the void, ||, for, and
 // finally tokens are matched by their order, which a formatter keeps.
-// Format checks that the result parses to the same program as the source,
-// so a formatter that moves a token it should not fails the file instead of
-// changing it.
+// A module declaration's body is TypeScript and holds no VibeLang forms;
+// Format formats it as a .ts file of its own first (modules.go). Format
+// checks that the result parses to the same program as the source, module
+// bodies included, so a formatter that moves a token it should not fails the
+// file instead of changing it.
 package vibelangfmt
 
 import (
@@ -119,6 +123,10 @@ type encoding struct {
 	pipes    []string
 	fors     []string
 	finallys []string
+	// modules are the file's module bodies, and references the number of
+	// identifier module specifiers text writes as strings.
+	modules    []moduleBody
+	references int
 }
 
 // sentinels are the prefixes placeholders may take; a file uses the first one
@@ -139,6 +147,9 @@ type encoder struct {
 	sentinel string
 	edits    []edit
 	holders  []placeholder
+	// modules and references are those of the encoding.
+	modules    []moduleBody
+	references int
 }
 
 // encode writes source, a .vibe file, as TypeScript.
@@ -146,6 +157,9 @@ func encode(fileName, source string) (*encoding, error) {
 	file, forms := parser.ParseVibeLangSyntax(vibeOptions, source)
 	if diagnostics := file.Diagnostics(); len(diagnostics) != 0 {
 		return nil, syntaxError(source, diagnostics[0])
+	}
+	if err := checkModules(file, source); err != nil {
+		return nil, err
 	}
 	sentinel := ""
 	for _, candidate := range sentinels {
@@ -185,17 +199,19 @@ func lineColumn(text string, pos int) (int, int) {
 }
 
 // uniqueForms drops forms recorded twice, which a statement the parser
-// reparses records.
+// reparses records. A form is its kind, name, range, and word, since a module
+// specifier records only its word.
 func uniqueForms(forms []parser.VibeSyntax) []parser.VibeSyntax {
 	type key struct {
 		kind     parser.VibeSyntaxKind
 		pos, end int
+		word     int
 		name     string
 	}
 	seen := map[key]bool{}
 	var unique []parser.VibeSyntax
 	for _, form := range forms {
-		k := key{form.Kind, form.Range.Pos(), form.Range.End(), form.Name}
+		k := key{form.Kind, form.Range.Pos(), form.Range.End(), form.Word.Pos(), form.Name}
 		if !seen[k] {
 			seen[k] = true
 			unique = append(unique, form)
@@ -310,6 +326,12 @@ func (e *encoder) form(form parser.VibeSyntax) error {
 		e.opaque(placeholderText, form.Range, "", "", firstLineWidth(e.text(form.Range)))
 	case parser.VibeSyntaxClause:
 		// Written with the try statement's other clauses (clauses).
+	case parser.VibeSyntaxModule:
+		// TypeScript syntax too; the body is TypeScript (modules.go).
+		e.modules = append(e.modules, moduleBody{name: form.Name, body: core.NewTextRange(form.Open.End(), form.Close.Pos())})
+	case parser.VibeSyntaxModuleReference:
+		e.replace(form.Word.Pos(), form.Word.End(), moduleSpecifierString(e.sentinel, e.text(form.Word)))
+		e.references++
 	default:
 		return fmt.Errorf("vibelang format: no TypeScript form for VibeLang syntax kind %d", form.Kind)
 	}
@@ -570,7 +592,7 @@ func (e *encoder) finish() (*encoding, error) {
 		cursor = ed.end
 	}
 	copySource(len(e.source))
-	result := &encoding{source: e.source, text: out.String(), sentinel: e.sentinel, placeholders: e.holders}
+	result := &encoding{source: e.source, text: out.String(), sentinel: e.sentinel, placeholders: e.holders, modules: e.modules, references: e.references}
 
 	file := parser.ParseSourceFile(typeScriptOptions, result.text, core.ScriptKindTS)
 	if diagnostics := file.Diagnostics(); len(diagnostics) != 0 {

@@ -24,6 +24,16 @@ func Format(fileName, source string, formatter TypeScriptFormatter) (string, err
 	if err != nil {
 		return "", prefix(fileName, err)
 	}
+	if len(enc.modules) != 0 {
+		// Each module body formats as a .ts file of its own first (modules.go).
+		staged, err := formatModules(source, enc.modules, formatter)
+		if err != nil {
+			return "", prefix(fileName, err)
+		}
+		if enc, err = encode(fileName, staged); err != nil {
+			return "", prefix(fileName, fmt.Errorf("vibelang format: internal error: the formatted module bodies do not encode: %w", err))
+		}
+	}
 	formatted, err := formatter(enc.text)
 	if err != nil {
 		return "", prefix(fileName, fmt.Errorf("vibelang format: the TypeScript formatter failed: %w", err))
@@ -46,9 +56,10 @@ func prefix(fileName string, err error) error {
 }
 
 // SameProgram reports how after, a .vibe file, differs from before as a
-// program: its syntax tree, ignoring parentheses, the order of imports, and
-// the order of import and export specifiers, which a formatter may change.
-// It returns nil when they are the same.
+// program: its syntax tree and the tree of each module declaration's body,
+// ignoring parentheses, the order of imports and of export declarations, and
+// the order of import and export specifiers, which a formatter may change. It
+// returns nil when they are the same.
 func SameProgram(before, after string) error {
 	a := parser.ParseSourceFile(vibeOptions, before, core.ScriptKindTS)
 	b := parser.ParseSourceFile(vibeOptions, after, core.ScriptKindTS)
@@ -56,7 +67,10 @@ func SameProgram(before, after string) error {
 		return syntaxError(after, diagnostics[0])
 	}
 	c := comparer{before: before, after: after}
-	return c.same(a.AsNode(), b.AsNode())
+	if err := c.same(a.AsNode(), b.AsNode()); err != nil {
+		return err
+	}
+	return c.sameModules(a, b)
 }
 
 type comparer struct{ before, after string }
@@ -106,8 +120,8 @@ func (c *comparer) same(a, b *ast.Node) error {
 		aChildren = sortedByKey(aChildren)
 		bChildren = sortedByKey(bChildren)
 	} else {
-		aChildren = sortImportRuns(aChildren)
-		bChildren = sortImportRuns(bChildren)
+		aChildren = sortDeclarationRuns(aChildren)
+		bChildren = sortDeclarationRuns(bChildren)
 	}
 	for i := range aChildren {
 		if err := c.same(aChildren[i], bChildren[i]); err != nil {
@@ -178,17 +192,19 @@ func sortedByKey(nodes []*ast.Node) []*ast.Node {
 	return sorted
 }
 
-// sortImportRuns sorts each run of consecutive import declarations, which a
-// formatter may reorder.
-func sortImportRuns(nodes []*ast.Node) []*ast.Node {
+// sortDeclarationRuns sorts each run of consecutive import declarations and
+// each run of consecutive export declarations, export { } and export *, which
+// a formatter may reorder.
+func sortDeclarationRuns(nodes []*ast.Node) []*ast.Node {
 	result := slices.Clone(nodes)
 	for i := 0; i < len(result); {
-		if result[i].Kind != ast.KindImportDeclaration {
+		kind := result[i].Kind
+		if kind != ast.KindImportDeclaration && kind != ast.KindExportDeclaration {
 			i++
 			continue
 		}
 		j := i
-		for j < len(result) && result[j].Kind == ast.KindImportDeclaration {
+		for j < len(result) && result[j].Kind == kind {
 			j++
 		}
 		run := sortedByKey(result[i:j])

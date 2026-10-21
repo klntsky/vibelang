@@ -64,6 +64,36 @@ test("dprint check fails on an unformatted .vibe file and dprint fmt formats it"
   }
 })
 
+test("dprint formats a module declaration's body as TypeScript and keeps identifier specifiers", { skip }, () => {
+  const dir = project({
+    "m.vibe": "import { clean } from text\nimport { suffix } from './suffix.ts'\n\nmodule text {\nimport { b } from './b.ts'\nimport { a } from \"a\"\nexport function clean(value: string): string { return value.trim() + a + b }\n}\n\nexport * from text\nexport function tidy(value: string): string!! { return sync(() => clean(value) + suffix) }\n"
+  })
+  try {
+    const fmt = run(dir, "fmt")
+    assert.equal(fmt.status, 0, fmt.stdout + fmt.stderr)
+    assert.equal(readFileSync(join(dir, "m.vibe"), "utf8"),
+      "import { clean } from text\nimport { suffix } from \"./suffix.ts\"\n\nmodule text {\n  import { a } from \"a\"\n  import { b } from \"./b.ts\"\n  export function clean(value: string): string {\n    return value.trim() + a + b\n  }\n}\n\nexport * from text\nexport function tidy(value: string): string!! {\n  return sync(() => clean(value) + suffix)\n}\n")
+    const again = run(dir, "check")
+    assert.equal(again.status, 0, again.stdout + again.stderr)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test("dprint reports a syntax error in a module body and leaves the file alone", { skip }, () => {
+  const broken = "module text {\n  error Bad { reason: string }\n}\n"
+  const dir = project({ "broken.vibe": broken })
+  try {
+    const fmt = run(dir, "fmt")
+    assert.notEqual(fmt.status, 0)
+    assert.match(fmt.stdout + fmt.stderr, /broken\.vibe/)
+    assert.match(fmt.stdout + fmt.stderr, /vibelang format: 2:3: module text: Unexpected keyword or identifier/)
+    assert.equal(readFileSync(join(dir, "broken.vibe"), "utf8"), broken)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test("dprint reports a .vibe file the formatter cannot read and leaves it alone", { skip }, () => {
   const broken = "const v = (\n"
   const dir = project({ "broken.vibe": broken })

@@ -10,6 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/core"
+	"github.com/microsoft/TypeScript/tsc/internal/parser"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden files of TestFormatGolden")
@@ -256,6 +260,86 @@ function hatches(text: string) {
   return callback<number>((resume) => resume(parsed + id))
 }
 `,
+	// Module declarations (D283): the body is TypeScript, and a module
+	// specifier may be the module's name.
+	"module declarations": `module text {
+  import { Effect } from "effect"
+  export function clean(value: string): string { return value.trim() }
+  export const later = async (value: string) => await Promise.resolve(value)
+  export default class Counter { count = 0 }
+}
+module config {
+  export const level = await Promise.resolve(3)
+}
+module setup {
+  console.log("setup ran")
+}
+import Counter, { clean } from text
+import setup
+import * as settings from config
+export { clean as tidy } from text
+export * from config
+function cleaned(value: string): string!! {
+  return sync(() => clean(value)) |> % + settings.level
+}
+`,
+	// A file whose TypeScript form has no import or export of its own, so
+	// only the module's body may await.
+	"a module that awaits": `module config {
+  export const level = await Promise.resolve(3)
+}
+`,
+}
+
+// TestEncodingWritesModuleSpecifiersAsStrings checks that the TypeScript form
+// of a file with module declarations keeps each declaration's head as written
+// and gives every import and export a string specifier, which dprint's
+// TypeScript parser requires after from. Before D283 support the formatter
+// refused such a file, changing nothing: "no TypeScript form for VibeLang
+// syntax kind 100" (a module) or "101" (an identifier specifier).
+func TestEncodingWritesModuleSpecifiersAsStrings(t *testing.T) {
+	t.Parallel()
+	enc, err := encode("x.vibe", forms["module declarations"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, head := range []string{"module text {\n", "module config {\n", "module setup {\n"} {
+		if !strings.Contains(enc.text, head) {
+			t.Fatalf("the TypeScript form lost %q:\n%s", head, enc.text)
+		}
+	}
+	file := parser.ParseSourceFile(typeScriptOptions, enc.text, core.ScriptKindTS)
+	specifiers := 0
+	for _, statement := range file.Statements.Nodes {
+		var specifier *ast.Node
+		switch statement.Kind {
+		case ast.KindImportDeclaration:
+			specifier = statement.AsImportDeclaration().ModuleSpecifier
+		case ast.KindExportDeclaration:
+			specifier = statement.AsExportDeclaration().ModuleSpecifier
+		default:
+			continue
+		}
+		if specifier.Kind != ast.KindStringLiteral {
+			t.Fatalf("a %v specifier in the TypeScript form:\n%s", specifier.Kind, enc.text)
+		}
+		specifiers++
+	}
+	if specifiers != 5 {
+		t.Fatalf("found %d string specifiers, want 5:\n%s", specifiers, enc.text)
+	}
+	// TypeScript's import = require takes a module specifier too.
+	source := "import legacy = require(text)\n"
+	enc, err = encode("x.vibe", source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(enc.text, `require("./`+enc.sentinel+`text")`) {
+		t.Fatalf("require kept its identifier:\n%s", enc.text)
+	}
+	if decoded, err := enc.decode(enc.text); err != nil || decoded != source {
+		t.Fatalf("round trip gave %q, %v", decoded, err)
+	}
 }
 
 // TestEncodingRoundTrips checks that decoding the TypeScript form of each
@@ -291,6 +375,12 @@ func TestFormatRejects(t *testing.T) {
 		{"syntax error", "const x = (\n", "1:"},
 		{"comment between a call and its block", "const v = withSpan(\"x\") /* why */ {\n  return 1\n}\n", "comment inside VibeLang syntax"},
 		{"comment between try clauses", "function f() {\n  try {\n    a()\n  } handle Ask.answer(q) {\n    resume(true)\n  } // next\n  catch (e) {\n    c()\n  }\n}\n", "comment between the clauses"},
+		// A module body's own syntax errors, which the .vibe file's tree does
+		// not hold (D283), are reported at their place in the .vibe file.
+		{"syntax error in a module body", "module text {\n  export const a = (\n}\nimport { a } from text\n", "vibelang format: 2:21: module text: Expression expected"},
+		{"VibeLang syntax in a module body", "module text {\n  error Bad { reason: string }\n}\n", "vibelang format: 2:3: module text: Unexpected keyword or identifier"},
+		{"module declaration below the top level", "function f() {\n  module inner {\n    export const a = 1\n  }\n}\n", "vibelang format: 2:3: module inner is not at the file's top level"},
+		{"module declared twice", "module text {\n  export const a = 1\n}\nmodule text {\n  export const b = 2\n}\n", "vibelang format: 4:1: module text is declared twice"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -310,6 +400,128 @@ func TestFormatRefusesChangedPrograms(t *testing.T) {
 	swapped := func(text string) (string, error) { return strings.Replace(text, "a + b", "a - b", 1), nil }
 	if _, err := Format("x.vibe", "const v = withSpan(\"x\") { return a + b }\n", swapped); err == nil || !strings.Contains(err.Error(), "changed the program") {
 		t.Fatalf("got %v, want a changed-program error", err)
+	}
+	// A module body's tree is checked too, though the .vibe file's tree holds
+	// none of it.
+	if _, err := Format("x.vibe", "module text {\n  export const v = a + b\n}\n", swapped); err == nil || !strings.Contains(err.Error(), "changed the program") {
+		t.Fatalf("got %v, want a changed-program error for a module body", err)
+	}
+	// So is the module an identifier specifier names.
+	renamed := func(text string) (string, error) { return strings.Replace(text, "text\"", "texts\"", 1), nil }
+	if _, err := Format("x.vibe", "import { clean } from text\n", renamed); err == nil || !strings.Contains(err.Error(), "changed the program") {
+		t.Fatalf("got %v, want a changed-program error for a module specifier", err)
+	}
+}
+
+// TestSameProgram checks what the program comparison ignores and what it
+// reports.
+func TestSameProgram(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ name, before, after, message string }{
+		{"import order", "import { b } from \"./b\"\nimport { a } from \"a\"\n", "import { a } from \"a\"\nimport { b } from \"./b\"\n", ""},
+		{"export declaration order", "export { b } from \"./b\"\nexport * from \"./a\"\n", "export * from \"./a\"\nexport { b } from \"./b\"\n", ""},
+		{"module reference order", "export { a as b } from text\nexport * from config\n", "export * from config\nexport { a as b } from text\n", ""},
+		{"module body import order", "module text {\n  import { b } from \"./b\"\n  import { a } from \"a\"\n}\n", "module text {\n  import { a } from \"a\"\n  import { b } from \"./b\"\n}\n", ""},
+		{"module body", "module text {\n  export const v = a + b\n}\n", "module text {\n  export const v = a - b\n}\n", "module text: 2:20: operator"},
+		{"module body syntax", "module text {\n  export const v = 1\n}\n", "module text {\n  export const v = (\n}\n", "module text: vibelang format: 2:21"},
+		{"module reference", "import { a } from text\n", "import { a } from texts\n", "1:19: \"./vibelang-format.vibe.text.js\" became"},
+		{"exports across a statement", "export * from \"./b\"\nconst x = 1\nexport * from \"./a\"\n", "export * from \"./a\"\nconst x = 1\nexport * from \"./b\"\n", "1:15:"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			err := SameProgram(c.before, c.after)
+			if c.message == "" && err != nil || c.message != "" && (err == nil || !strings.Contains(err.Error(), c.message)) {
+				t.Fatalf("got %v, want %q", err, c.message)
+			}
+		})
+	}
+}
+
+// TestFormatModuleBodyAsTypeScript checks that a module declaration's body
+// formats exactly as the same statements in a .ts file, imports sorted,
+// indented one level inside the braces.
+func TestFormatModuleBodyAsTypeScript(t *testing.T) {
+	formatter := dprintFormatter(t)
+	body := "import { b } from './b.ts'\nimport { a } from \"a\"\n\n  export function f(x: number) { return x > 1 ? [a, b] : [] }\nexport type T = { x: number, y: string }\n"
+	alone, err := formatter(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(alone, "import { a } from \"a\"\nimport { b } from \"./b.ts\"\n") {
+		t.Fatalf("dprint does not sort the imports of a .ts file:\n%s", alone)
+	}
+	got, err := Format("x.vibe", "module text {\n"+body+"}\n", formatter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want strings.Builder
+	want.WriteString("module text {\n")
+	for line := range strings.Lines(alone) {
+		if strings.TrimSpace(line) != "" {
+			want.WriteString("  ")
+		}
+		want.WriteString(line)
+	}
+	want.WriteString("}\n")
+	if got != want.String() {
+		t.Fatalf("formatted:\n%s\nwant:\n%s", got, want.String())
+	}
+}
+
+// TestFormatModuleBodiesAtLineWidth checks that a module body whose line
+// ends near the line width, where formatting the body alone and then
+// indenting it could disagree, formats the same way twice.
+func TestFormatModuleBodiesAtLineWidth(t *testing.T) {
+	formatter := dprintFormatter(t)
+	for width := 118; width <= 121; width++ {
+		call := "export const greeting = (name: string, place: string) => Effect.succeed(`hello ${name} ${place}`, extra, more)"
+		call = strings.Replace(call, "extra", "extra"+strings.Repeat("x", width-len(call)), 1)
+		object := "export const config = { alpha: 1, beta: \"two\", gamma: [1, 2, 3], delta: { epsilon: true }, zeta: \"\" }"
+		object = strings.Replace(object, `zeta: ""`, `zeta: "`+strings.Repeat("y", width-len(object))+`"`, 1)
+		for _, line := range []string{call, object} {
+			source := "module text {\n  " + line + "\n}\n"
+			once, err := Format("x.vibe", source, formatter)
+			if err != nil {
+				t.Fatal(err)
+			}
+			twice, err := Format("x.vibe", once, formatter)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if once != twice {
+				t.Errorf("a %d-character line is not idempotent:\n%s\nthen:\n%s", len(line), once, twice)
+			}
+		}
+	}
+}
+
+// TestFormatModuleCases formats the main.vibe of each compiler case that
+// declares modules and compiles, and checks that the result is stable.
+func TestFormatModuleCases(t *testing.T) {
+	formatter := dprintFormatter(t)
+	inputs, err := filepath.Glob(filepath.Join("..", "..", "..", "vibelang", "cases", "module-declaration*", "main.vibe"))
+	if err != nil || len(inputs) == 0 {
+		t.Skipf("no module declaration cases: %v", err)
+	}
+	for _, input := range inputs {
+		t.Run(filepath.Base(filepath.Dir(input)), func(t *testing.T) {
+			source, err := os.ReadFile(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			once, err := Format(input, string(source), formatter)
+			if err != nil {
+				t.Fatal(err)
+			}
+			twice, err := Format(input, once, formatter)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if once != twice {
+				t.Fatalf("not idempotent:\n%s\nthen:\n%s", once, twice)
+			}
+		})
 	}
 }
 
