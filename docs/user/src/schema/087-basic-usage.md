@@ -1,6 +1,6 @@
 # Basic Usage
 
-Schema constructors work in VibeLang as they do in Effect. Combine small descriptions into arrays, objects, and alternatives, then run a parser inside a function. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema constructors work as in Effect. Combine small descriptions into arrays, objects, and alternatives, then run a parser inside a function. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Modeling primitives, symbols, literals, enums, and template strings
 
@@ -28,9 +28,9 @@ true false
 false true true
 ```
 
-`Schema.String`, `Boolean`, `BigInt`, and `Symbol` describe their JavaScript primitives. `Finite` rejects `NaN` and infinities; `Number` permits them. `ObjectKeyword` describes objects, `Undefined` and `Void` describe undefined values, `Null` describes null, `Unknown` accepts anything safely, `Any` opts out of type safety, and `Never` accepts nothing.
+`Schema.String`, `Boolean`, `BigInt`, and `Symbol` describe their JavaScript primitives. `Finite` rejects `NaN` and infinities; `Number` permits them. `ObjectKeyword` describes objects, `Undefined` and `Void` undefined values, and `Null` null; `Unknown` accepts anything safely, `Any` opts out of type safety, and `Never` accepts nothing.
 
-`Literal(value)` accepts one string, number, boolean, or bigint; `Literals([...])` combines exact values. Use `Schema.Null` for null. Literal collections expose `.literals`, enum schemas expose `.enums`, and `revealCodec(schema)` reveals the full codec type without changing the value. `UniqueSymbol` checks the particular symbol, rather than any symbol.
+`Literal(value)` accepts one string, number, boolean, or bigint; `Literals([...])` combines exact values; null uses `Schema.Null`. Literal collections expose `.literals`, enum schemas `.enums`, and `revealCodec(schema)` reveals the full codec type without changing the value. `UniqueSymbol` checks one particular symbol, not any symbol.
 
 ```vibe
 // run: Console.log(JSON.stringify(locateBin("bin:12/upper")))
@@ -48,7 +48,7 @@ function locateBin(input: unknown) {
 ["bin:",12,"/","upper"]
 ```
 
-`TemplateLiteral` validates a string pattern using literal, string, finite-number, union, or branded spans. `TemplateLiteralParser` also splits it into a tuple and applies the spans' conversions. Encoding that tuple reconstructs the string.
+`TemplateLiteral` validates a string pattern of literal, string, finite-number, union, or branded spans. `TemplateLiteralParser` also splits it into a tuple and applies the spans' conversions; encoding the tuple rebuilds the string.
 
 ## Building unions and tagged alternatives
 
@@ -73,9 +73,9 @@ A3
 7
 ```
 
-A union accepts one of its members and exposes them through `.members`. With overlapping alternatives, the first successful member wins; put the more specific object first to avoid stripping fields through a broader match. Literal discriminator fields make alternatives unambiguous and enable ordinary TypeScript narrowing.
+A union accepts one of its members, exposed as `.members`. When alternatives overlap, the first successful member wins; put the more specific object first so a broader match does not strip its fields. Literal discriminator fields make alternatives unambiguous and enable ordinary TypeScript narrowing.
 
-To attach a tag that is absent from the wire representation, add a field with `Schema.tagDefaultOmit("Warehouse")`. It supplies the tag during decoding and omits it during encoding. `NullOr`, `UndefinedOr`, and `NullishOr` accept values in addition to the wrapped schema; they do not make an object key optional.
+For a tag absent from the wire representation, add a field with `Schema.tagDefaultOmit("Warehouse")`: decoding supplies the tag and encoding omits it. `NullOr`, `UndefinedOr`, and `NullishOr` accept values in addition to the wrapped schema; they do not make an object key optional.
 
 ## Defining tuples with optional and rest elements
 
@@ -103,9 +103,9 @@ true true false
 true
 ```
 
-Tuples are readonly and position-sensitive. Optional elements use `optionalKey`; a present element must still match its schema. `TupleWithRest` takes a fixed tuple and a rest list whose first schema repeats; later schemas are required trailing elements. `Readings` accepts a label, an optional finite reading, then booleans. It can end after the label, but adding booleans requires the reading in its fixed position: `["sensor", 2, true]` is valid and `["sensor", true]` is not. `BoundedReadings` ends with a boolean after any repeated numbers.
+Tuples are readonly and position-sensitive. Optional elements use `optionalKey`; a present element must still match its schema. `TupleWithRest` takes a fixed tuple and a rest list: its first schema repeats, and later schemas are required trailing elements. `Readings` accepts a label, an optional finite reading, then booleans. It can end after the label, but booleans need the reading in its fixed position: `["sensor", 2, true]` is valid, `["sensor", true]` is not. `BoundedReadings` ends with a boolean after any repeated numbers.
 
-Access fixed elements with `.elements`, or with `.schema.elements` on a tuple with rest. Its `.rest` describes the repeating and trailing schemas. Element annotations describe individual positions.
+Fixed elements are `.elements`, or `.schema.elements` on a tuple with rest, whose `.rest` describes the repeating and trailing schemas. Element annotations describe single positions.
 
 ## Modeling mutable and nonempty arrays
 
@@ -127,7 +127,7 @@ function addLabel(input: unknown) {
 false
 ```
 
-`Array` accepts zero or more elements; `NonEmptyArray` requires at least one. Both expose the element schema as `.value`. `mutable` changes the array's mutability at the outer level and does not make nested structs mutable.
+`Array` accepts zero or more elements, `NonEmptyArray` at least one; both expose the element schema as `.value`. `mutable` makes only the outer array mutable, not nested structs.
 
 ## Declaring records and index signatures
 
@@ -154,13 +154,13 @@ const LabeledCounters = Schema.StructWithRest(
 false true
 ```
 
-Records describe string or symbol keys and a value schema. A finite literal key set describes required properties; template literals and string checks restrict an open key space. A key that fails a record's key check is normally discarded as excess; pass `onExcessProperty: "error"` to reject it.
+A record describes string or symbol keys and a value schema. A finite literal key set describes required properties; template literals and string checks restrict an open key space. A key that fails the key check is normally discarded as excess; `onExcessProperty: "error"` rejects it.
 
-Record key codecs can transform selected keys. `NormalizedStock` decodes `{ NORTH: 2 }` to `{ north: 2 }`. Selection uses encoded property names before transforming them. With sequential parsing, when transformed keys collide, the later selected property overwrites the earlier value. Use a whole-object transformation when you need a different collision policy.
+Record key codecs can transform selected keys: `NormalizedStock` decodes `{ NORTH: 2 }` to `{ north: 2 }`. Selection uses encoded property names, before transforming them. With sequential parsing, when transformed keys collide, the later selected property overwrites the earlier value. For another collision policy, use a whole-object transformation.
 
-`StructWithRest` combines fixed fields with index signatures, including several signatures for the same key kind. Keep fixed-field types compatible with the index value type; otherwise split the fixed and indexed data into separate structures.
+`StructWithRest` combines fixed fields with index signatures, even several for one key kind. Keep fixed-field types compatible with the index value type, or split the fixed and indexed data into separate structures.
 
-Use `.key` and `.value` to inspect a record; a struct with rest exposes `.schema.fields` and `.records`. Use `Schema.mutableKey` on the value schema for mutable record entries.
+A record exposes `.key` and `.value`; a struct with rest, `.schema.fields` and `.records`. For mutable record entries, apply `Schema.mutableKey` to the value schema.
 
 ## Creating structs and tagged structs
 
@@ -188,9 +188,9 @@ function createPacked() {
 false
 ```
 
-Structs describe fixed fields and expose them through `.fields`. `Struct({})` accepts any non-nullish value, so use a more specific description when an actual object shape matters. Change a field's mutability with `mutableKey`.
+A struct describes fixed fields, exposed as `.fields`. `Struct({})` accepts any non-nullish value; use a more specific description when the object shape matters. `mutableKey` changes a field's mutability.
 
-`tag` supplies a constructor default, while `TaggedStruct` adds a `_tag` field for you. Construction can omit the tag, but ordinary decoding requires it in the input. Use `tagDefaultOmit` when decoding should supply it too.
+`tag` supplies a constructor default; `TaggedStruct` adds the `_tag` field for you. Construction can omit the tag, but ordinary decoding requires it in the input; `tagDefaultOmit` makes decoding supply it too.
 
 ## Validating class instances
 
@@ -214,7 +214,7 @@ P-1
 SchemaError
 ```
 
-`instanceOf` checks class identity; an object with a matching `code` field is not an instance. Add checks to validate fields after identity succeeds. Classes with private constructors need `Schema.declare` with a type guard instead of `instanceOf`.
+`instanceOf` checks class identity; an object with a matching `code` field is not an instance. Add checks to validate fields once identity passes. A class with a private constructor needs `Schema.declare` with a type guard instead of `instanceOf`.
 
 ## Selecting, removing, and changing optional fields
 
@@ -233,6 +233,6 @@ const Editable = Package.mapFields(Struct.map(Schema.mutableKey))
 false true false
 ```
 
-`mapFields` builds a new struct from transformed field descriptions. `optionalKey` permits omission while `optional` also accepts explicit `undefined`. `requiredKey` removes key optionality but does not remove an existing `undefined` union. Field transformations do not automatically preserve whole-struct checks, so reapply checks that still describe the new shape.
+`mapFields` builds a new struct from transformed field descriptions. `optionalKey` permits omission; `optional` also accepts explicit `undefined`. `requiredKey` removes key optionality but keeps an existing `undefined` union. Field transformations drop whole-struct checks; reapply the ones that still describe the new shape.
 
 [Upstream page](https://effect.website/docs/v4/schema/basic-usage)

@@ -1,6 +1,6 @@
 # Schema Transformations
 
-Transformations work in VibeLang as in Effect: a codec validates one representation, converts it, and validates the result. Use `decodeTo` to connect schemas, then supply pure conversions or effectful getters as needed. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Transformations work as in Effect: a codec validates one representation, converts it, and validates the result. `decodeTo` connects schemas; supply pure conversions or effectful getters as needed. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Defining reversible infallible conversions
 
@@ -24,7 +24,7 @@ true false
 ready
 ```
 
-`SchemaTransformation.transform` takes two synchronous, infallible functions. Input validation can still fail before either function runs, and output validation can fail afterward. Pure callbacks cannot call services or throw typed failures; choose effectful getters for those operations.
+`SchemaTransformation.transform` takes two synchronous, infallible functions. Input validation can still fail before either runs, and output validation after. Pure callbacks cannot call services or throw typed failures; use effectful getters for those.
 
 ## Understanding transformation inputs and outputs
 
@@ -47,9 +47,9 @@ true
 1
 ```
 
-Decoding first runs the source codec, then converts the source's `Type` to the target's `Encoded`, then runs the target codec. Encoding performs the reverse sequence. The complete codec has the source's `Encoded` and the target's `Type`.
+Decoding runs the source codec, converts the source's `Type` to the target's `Encoded`, then runs the target codec; encoding reverses the sequence. The complete codec has the source's `Encoded` and the target's `Type`.
 
-The middle functions above handle a number and a status string, even though the complete codec connects strings to booleans. This conversion normalizes quantities: encoding `true` produces `"1"`, so the original `"12"` is not preserved.
+The middle functions above handle a number and a status string, though the complete codec connects strings to booleans. The conversion normalizes quantities: encoding `true` produces `"1"`, so the original `"12"` is lost.
 
 ## Defining fallible conversions
 
@@ -72,7 +72,7 @@ rail
 Choose road or rail
 ```
 
-`transformEffect` receives the converted input and active parse options. Its callback returns a value directly in VibeLang and throws a `SchemaIssue.Issue` for an expected conversion failure. The outer Schema parser wraps issues in `SchemaError`. A domain error from a service must be translated to an issue before it escapes the getter.
+`transformEffect` receives the converted input and active parse options. Its callback returns a value directly and throws a `SchemaIssue.Issue` for an expected conversion failure, which the outer Schema parser wraps in `SchemaError`. Translate a service's domain error to an issue before it escapes the getter.
 
 ## Running asynchronous conversions with dependencies
 
@@ -119,7 +119,7 @@ coastal
 Route is unavailable
 ```
 
-The getter can pause while its service runs. Decoding requires `Routes`; encoding does not, because its getter only passes through the value. Use the Effect interpreter whenever services or asynchronous work are involved. The Effect catch translates expected service failures and leaves defects and interruption intact.
+The getter can pause while its service runs. Decoding requires `Routes`; encoding does not, because its getter only passes the value through. Use the Effect interpreter whenever services or asynchronous work are involved. The Effect catch translates expected service failures and leaves defects and interruption intact.
 
 ## Forbidding an encoding direction
 
@@ -142,7 +142,7 @@ A
 An initial cannot recover the full name
 ```
 
-A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue when that direction runs, rather than pretending to reconstruct discarded information. The codec still has an encoding API, but using it fails.
+A lossy conversion has no meaningful inverse. `forbidden` reports a schema issue when that direction runs instead of pretending to reconstruct discarded information; the codec keeps its encoding API, but using it fails.
 
 ## Composing transformations and effectful checks
 
@@ -177,9 +177,9 @@ crate
 Label is too short
 ```
 
-Omit the custom conversion when the source's decoded type already fits the target's encoded type. `checkEffect` validates without changing the value and returns the same filter outputs as a synchronous predicate. It can pause or require services but cannot leak arbitrary domain errors; convert those into schema issues.
+Omit the custom conversion when the source's decoded type already fits the target's encoded type. `checkEffect` validates without changing the value and returns the same filter outputs as a synchronous predicate. It can pause or require services but cannot leak arbitrary domain errors; convert them to schema issues.
 
-When converting a collection whose elements have already been decoded, use `Schema.toType(elementSchema)` on the target collection. Otherwise the element transformations run twice.
+When converting a collection whose elements are already decoded, use `Schema.toType(elementSchema)` on the target collection, or the element transformations run twice.
 
 ## Converting string case, JSON, and binary encodings
 
@@ -207,9 +207,9 @@ function decodeTextFormats() {
 {"trimmed":"crate","lower":"crate","data":{"label":"crate"},"base64":"crate","hex":"crate"}
 ```
 
-`Schema.Trim` removes surrounding whitespace. `SchemaTransformation.toUpperCase`, `capitalize`, and `uncapitalize` provide the other case conversions; pair each with an appropriate target check. Case conversion and trimming normalize values rather than preserving the original spelling.
+`Schema.Trim` removes surrounding whitespace. `SchemaTransformation.toUpperCase`, `capitalize`, and `uncapitalize` are the other case conversions; pair each with a matching target check. Case conversion and trimming normalize values and lose the original spelling.
 
-`fromJsonString(schema)` parses JSON text and validates its contents; encoding serializes the encoded contents back to text. `StringFromBase64`, `StringFromBase64Url`, `StringFromHex`, and `StringFromUriComponent` decode encoded text to a UTF-8 string and encode it in the reverse direction. Compose the URI codec with a JSON-string codec for structured URL data.
+`fromJsonString(schema)` parses JSON text and validates its contents; encoding serializes the encoded contents back to text. `StringFromBase64`, `StringFromBase64Url`, `StringFromHex`, and `StringFromUriComponent` decode encoded text to a UTF-8 string and encode it back. For structured URL data, compose the URI codec with a JSON-string codec.
 
 ## Parsing numeric, date, and decimal values
 
@@ -232,10 +232,10 @@ function readManifest(input: unknown) {
 SchemaError
 ```
 
-`FiniteFromString` rejects unparseable and nonfinite numbers; it does not require an integer unless you add a check. `BigIntFromString` rejects fractions and invalid bigint text. `DateFromString` produces a valid `Date` and rejects invalid dates; encoding uses its normalized string representation. `BigDecimalFromString` preserves decimal precision without converting through a JavaScript number.
+`FiniteFromString` rejects unparseable and nonfinite numbers; it requires an integer only if you add a check. `BigIntFromString` rejects fractions and invalid bigint text. `DateFromString` produces a valid `Date`, rejects invalid dates, and encodes to its normalized string representation. `BigDecimalFromString` preserves decimal precision without converting through a JavaScript number.
 
 ## Coming from Effect
 
-Inside `SchemaGetter.transformEffect`, write ordinary statements and `throw` schema issues. VibeLang turns the callback into the Effect expected by the getter, including its directional service requirements.
+Inside `SchemaGetter.transformEffect`, write ordinary statements and `throw` schema issues; VibeLang turns the callback into the Effect the getter expects, with its directional service requirements.
 
 [Upstream page](https://effect.website/docs/v4/schema/transformations)

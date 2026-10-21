@@ -1,6 +1,6 @@
 # Schema Projections
 
-Projections work in VibeLang exactly as in Effect. They turn one side of a codec into a schema that validates that representation without running the codec's conversion. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Projections work exactly as in Effect: they turn one side of a codec into a schema that validates that representation without running the codec's conversion. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Projecting a codec to its decoded schema
 
@@ -25,7 +25,7 @@ SchemaError
 SchemaError
 ```
 
-`toType` makes the original decoded type both the new decoded and encoded type. It keeps the checks on that side and drops conversion steps and service requirements. Use it when a value has already been decoded, or when the first stage of a composed codec has already converted nested elements.
+`toType` makes the original decoded type both the new decoded and encoded type, keeping that side's checks and dropping conversion steps and service requirements. Use it on an already decoded value, or when the first stage of a composed codec has already converted nested elements.
 
 ## Projecting a codec to its encoded schema
 
@@ -46,7 +46,7 @@ function inspectWireName(input: unknown) {
 " x "
 ```
 
-`toEncoded` uses the original encoded type on both sides. It validates the input representation without trimming it and requires no conversion services. Use this projection to inspect wire data or to generate examples of encoded values.
+`toEncoded` uses the original encoded type on both sides: it validates the input representation without trimming it and requires no conversion services. Use it to inspect wire data or generate examples of encoded values.
 
 ## Retaining checks appropriate to each side
 
@@ -71,6 +71,6 @@ function compareViews() {
 SchemaError
 ```
 
-`TextOnly` keeps the two-character input check and does not enforce the numeric bound. `NumberOnly` keeps the bound above five and has no string-length requirement. Neither projection promises that a value can complete the original full conversion: `"00"` satisfies the encoded projection but decodes to a number rejected by the original codec.
+`TextOnly` keeps the two-character input check but not the numeric bound; `NumberOnly` keeps the bound above five but no string-length requirement. Neither projection promises that a value can complete the full original conversion: `"00"` satisfies the encoded projection but decodes to a number the original codec rejects.
 
 [Upstream page](https://effect.website/docs/v4/schema/projections)

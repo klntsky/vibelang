@@ -1,6 +1,6 @@
 # Introduction to Effect Schema
 
-`Schema` works in VibeLang exactly as in Effect: it describes values, checks data, and converts between representations. Use a schema at a boundary where incoming data has an unknown shape, or where a domain value needs a storage or transport format. `Schema` is already in scope in `.vibe` files.
+`Schema` works exactly as in Effect: it describes values, checks data, and converts between representations. Use one at a boundary where incoming data has an unknown shape, or where a domain value needs a storage or transport format. `.vibe` files need no import for `Schema`.
 
 ## Configuring compiler prerequisites
 
@@ -24,9 +24,9 @@ function readSettings(input: unknown) {
 false
 ```
 
-Enable `strict` in the project's compiler options. Enable `exactOptionalPropertyTypes` as well to distinguish an absent `hint` from a present `hint: undefined`. `optionalKey` accepts the absent key but rejects explicit `undefined`; turning the compiler option off does not change that runtime rule. VibeLang v0 uses the TypeScript 7.1 checker and supports `effect@4.0.5` exactly. Install `vibelang-runtime` and `effect@4.0.5` as dependencies and `vibelang` as a dev dependency. Run `vibelang --noEmit` to check `.vibe` and `.ts` files together; `vibelang` also emits JavaScript and declarations.
+Enable `strict` in the compiler options, and `exactOptionalPropertyTypes` to distinguish an absent `hint` from a present `hint: undefined`. At runtime `optionalKey` accepts the absent key and rejects explicit `undefined`, whatever the compiler option. VibeLang v0 uses the TypeScript 7.1 checker and supports exactly `effect@4.0.5`. Install `vibelang-runtime` and `effect@4.0.5` as dependencies and `vibelang` as a dev dependency. `vibelang --noEmit` checks `.vibe` and `.ts` files together; `vibelang` also emits JavaScript and declarations.
 
-Effect's own packages are trusted. Synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls; exceptions escaping into Effect code are defects. Effect catch does not handle those defects. A plain-contract function keeps JavaScript catch with an `unknown` binding (D260). Use an Effect-returning parser for typed validation failures, or an explicit `try` hatch to give a synchronous exception an expected error type. External plain TypeScript functions need an explicit boundary or a `trusted(...)` adapter from `vibelang-runtime` inside a program.
+Effect's own packages are trusted: synchronous Schema builders, `.pipe` methods, guards, and generated helpers are plain calls, and an exception escaping into Effect code is a defect that Effect catch does not handle. A plain-contract function keeps JavaScript catch with an `unknown` binding (D260). For typed validation failures, use an Effect-returning parser; to give a synchronous exception an expected error type, use an explicit `try` hatch. Inside a program, an external plain TypeScript function needs an explicit boundary or a `trusted(...)` adapter from `vibelang-runtime`.
 
 ## Understanding schemas and codecs
 
@@ -44,9 +44,9 @@ const completeView: Schema.Codec<typeof Line.Type, typeof Line.Encoded> = Line
 true true
 ```
 
-A schema is an immutable description. Adding fields, checks, or annotations produces a new description. Interpreters use that description to derive parsers, guards, generators, equality, formatters, and JSON Schema documents.
+A schema is an immutable description; adding fields, checks, or annotations produces a new one. Interpreters derive parsers, guards, generators, equality, formatters, and JSON Schema documents from it.
 
-`Schema.Schema<T>` retains only the decoded type. `Schema.Decoder<T, RD>` also retains decoding services; `Schema.Encoder<E, RE>` retains the encoded type and encoding services. `Schema.Codec<T, E, RD, RE>` retains all four, while `Schema.Top` accepts any schema without preserving a particular value type.
+`Schema.Schema<T>` retains only the decoded type; `Schema.Decoder<T, RD>` adds decoding services; `Schema.Encoder<E, RE>` retains the encoded type and encoding services; `Schema.Codec<T, E, RD, RE>` retains all four. `Schema.Top` accepts any schema without preserving a particular value type.
 
 ## Distinguishing decoded and encoded views
 
@@ -71,7 +71,7 @@ function pack(parcel: Parcel) {
 {"weight":"3.75"}
 ```
 
-Decoding goes from `Encoded` to `Type`; encoding goes from `Type` to `Encoded`. In this example, the application uses numbers and the external representation uses strings. The codec tracks services independently in each direction, with `never` meaning that direction needs no services.
+Decoding goes from `Encoded` to `Type`, encoding from `Type` to `Encoded`. The codec tracks services separately per direction; `never` means that direction needs none.
 
 ## Decoding or encoding unknown inputs
 
@@ -90,9 +90,9 @@ function inspectBoundary(incoming: unknown, outgoing: unknown) {
 SchemaError
 ```
 
-The `Unknown` interpreters validate the input before converting it. Decoding expects a string here and produces a finite number; encoding expects a finite number and produces a string. The typed `decodeEffect` and `encodeEffect` variants constrain their arguments statically and still validate them at runtime.
+The `Unknown` interpreters validate the input before converting it: here decoding takes a string and produces a finite number, and encoding the reverse. The typed `decodeEffect` and `encodeEffect` constrain their arguments statically and still validate them at runtime.
 
-Calling an Effect-returning parser runs it. The result is the decoded or encoded value, and a schema mismatch enters the enclosing function's error channel.
+Calling an Effect-returning parser runs it: it returns the decoded or encoded value, and a schema mismatch enters the enclosing function's error channel.
 
 ## Reasoning about conversion round trips
 
@@ -114,10 +114,10 @@ function normalizeText() {
 dispatch
 ```
 
-For a valid domain value, aim for `decode(encode(value))` to be equivalent to `value`. This is a property of the chosen conversions, not an automatic guarantee. The other direction can normalize data: whitespace, numeric spelling, and discarded fields need not survive an encode after a decode.
+For a valid domain value, aim for `decode(encode(value))` to be equivalent to `value`; the chosen conversions decide this, and nothing guarantees it. The other direction can normalize: whitespace, numeric spelling, and discarded fields need not survive an encode after a decode.
 
 ## Coming from Effect
 
-Build schemas with the same Effect 4 constructors. Replace the generator around a parser with an ordinary function; its parser calls run directly, and `try`/`catch` handles `SchemaError` failures.
+Schemas use the same Effect 4 constructors. An ordinary function replaces the generator around a parser: parser calls run directly, and `try`/`catch` handles `SchemaError` failures.
 
 [Upstream page](https://effect.website/docs/v4/schema/introduction)

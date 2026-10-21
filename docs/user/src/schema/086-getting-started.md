@@ -1,6 +1,6 @@
 # Getting Started
 
-`Schema` uses the same descriptions and interpreters in VibeLang as in Effect. Start with a struct, extract its types, then choose a parser whose failure behavior fits the caller. The [trusted call rules](085-introduction.md#configuring-compiler-prerequisites) apply to the plain Schema builders below.
+`Schema` uses the same descriptions and interpreters as in Effect. Start with a struct, extract its types, then pick a parser whose failure behavior fits the caller. The [trusted call rules](085-introduction.md#configuring-compiler-prerequisites) apply to the plain builders below.
 
 ## Declaring schemas
 
@@ -21,7 +21,7 @@ function receive(input: unknown) {
 {"tracking":"box-76","pieces":2}
 ```
 
-Each field describes its own representation and checks. The struct combines them into one codec: `pieces` arrives as text and becomes a number. Declaring `Shipment` builds a description and performs no decoding.
+Each field describes its own representation and checks; the struct combines them into one codec, so `pieces` arrives as text and becomes a number. Declaring `Shipment` builds a description and decodes nothing.
 
 ## Extracting decoded, encoded, and service types
 
@@ -37,7 +37,7 @@ type SameReadServices = Schema.Codec.DecodingServices<typeof Shipment>
 type SameWriteServices = Schema.Codec.EncodingServices<typeof Shipment>
 ```
 
-The decoded type has a numeric `pieces`; the encoded type has a string. Both service types are `never` for this codec. Keep the directional service types when writing generic helpers so a future effectful conversion does not lose its requirements.
+The decoded `pieces` is a number, the encoded one a string, and both service types are `never`. Generic helpers should keep the directional service types so a future effectful conversion keeps its requirements.
 
 ## Understanding default immutability
 
@@ -53,7 +53,7 @@ schema Batch {
 {"shipments":[{"tracking":"box-76","pieces":2}]}
 ```
 
-`schema Batch { ... }` declares the struct `Batch` and its decoded type, the interface `Batch`, in one declaration. A field names its type, and a schema such as `Shipment` stands for its own decoded type. Struct fields, arrays, records, and tuples are readonly by default. This describes their TypeScript types; it does not freeze JavaScript objects. Use explicit mutable schema combinators when mutation is part of the model.
+`schema Batch { ... }` declares both the struct `Batch` and its decoded type, the interface `Batch`. A field names its type; a schema such as `Shipment` stands for its own decoded type. Struct fields, arrays, records, and tuples are readonly by default in their TypeScript types; JavaScript objects are not frozen. When mutation is part of the model, use explicit mutable schema combinators.
 
 ## Choosing synchronous, result, or effect decoding
 
@@ -87,9 +87,9 @@ Missing key
   at ["tracking"]
 ```
 
-Prefer `decodeUnknownEffect` inside VibeLang: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and requires a synchronous, service-free decoding path. Unexpected exceptions from synchronous callbacks are defects; ordinary `catch` does not handle them.
+Prefer `decodeUnknownEffect`: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and needs a synchronous, service-free decoding path. An unexpected exception from a synchronous callback is a defect, which ordinary `catch` does not handle.
 
-`decodeUnknownSync` throws on invalid input. A direct call makes that exception a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A plain-contract function keeps JavaScript catch and can recover that exception as `unknown` (D260). EK2004 warns only when a try block runs Effects with E = `never`, and says defects pass through its catch. The `Exit` and `Option` variants provide other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant supports asynchronous decoding without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even when no service is needed.
+`decodeUnknownSync` throws on invalid input. Called directly, that exception is a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A plain-contract function keeps JavaScript catch and can recover the exception as `unknown` (D260). EK2004 warns only when a try block runs Effects with E = `never`, and says defects pass through its catch. The `Exit` and `Option` variants give other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant decodes asynchronously without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even with no services.
 
 ## Encoding values
 
@@ -110,7 +110,7 @@ function sendUntrusted(input: unknown) {
 SchemaError
 ```
 
-Encoding reverses the conversion, including the numeric `pieces` field. `encodeEffect` accepts the decoded type; `encodeUnknownEffect` accepts unknown input and validates it. Encoding also has `Sync`, `Result`, `Option`, `Exit`, and `Promise` variants, with the same execution limits as decoding.
+Encoding reverses the conversion, numeric `pieces` included. `encodeEffect` accepts the decoded type; `encodeUnknownEffect` accepts unknown input and validates it. Encoding also has `Sync`, `Result`, `Option`, `Exit`, and `Promise` variants, with decoding's execution limits.
 
 ## Handling schema failures
 
@@ -133,7 +133,7 @@ Missing key
   at ["tracking"]
 ```
 
-The parser's expected failure is a `SchemaError` with `_tag: "SchemaError"`. Its `issue` preserves the structured failure and its `message` provides readable text. `catch` handles that expected failure; defects and interruption still propagate.
+The parser's expected failure is a `SchemaError` with `_tag: "SchemaError"`: its `issue` holds the structured failure and its `message` readable text. `catch` handles it; defects and interruption still propagate.
 
 ## Configuring excess properties and error collection
 
@@ -156,9 +156,9 @@ SchemaError
 {"tracking":"box-76","pieces":2,"extra":true}
 ```
 
-By default, parsing removes unmodeled keys and stops at the first issue. `onExcessProperty: "error"` rejects extra keys, while `errors: "all"` collects independent issues encountered during parsing. To retain extra values, describe an index signature with `StructWithRest`.
+By default, parsing removes unmodeled keys and stops at the first issue. `onExcessProperty: "error"` rejects extra keys; `errors: "all"` collects independent issues. To keep extra values, describe an index signature with `StructWithRest`.
 
-Options can be supplied when creating the parser or when calling it; call options take precedence. Schema annotations do not override these options for nested nodes.
+Pass options when creating the parser or when calling it; call options take precedence. Schema annotations do not override them for nested nodes.
 
 ## Deriving guards and assertions
 
@@ -183,10 +183,10 @@ undefined
 box-76
 ```
 
-Guards and assertions check the decoded type, so a numeric `pieces` is valid and a string `pieces` is not. `Schema.is` returns a type predicate; `Schema.asserts(schema, input)` throws a generic validation error whose `cause` contains the issue. These trusted calls preserve TypeScript's narrowing in the current function without a boundary. An assertion exception is a defect, so ordinary `catch` does not handle it. Use `decodeUnknownEffect` when invalid data should produce a typed validation failure.
+Guards and assertions check the decoded type: a numeric `pieces` is valid, a string `pieces` is not. `Schema.is` returns a type predicate; `Schema.asserts(schema, input)` throws a generic validation error whose `cause` holds the issue. These trusted calls keep TypeScript's narrowing in the current function without a boundary. An assertion exception is a defect that ordinary `catch` does not handle; for a typed validation failure on invalid data, use `decodeUnknownEffect`.
 
 ## Coming from Effect
 
-`Schema.decodeUnknownEffect(Shipment)(input)` gives a shipment directly inside a function. A `const` that holds a `Schema.Struct` draws EK4832 when a `schema` declaration writes the same struct, and its quick fix writes the declaration ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). Use ordinary `try`/`catch` around it instead of generator-based error handling.
+Inside a function, `Schema.decodeUnknownEffect(Shipment)(input)` returns the shipment directly; wrap it in ordinary `try`/`catch` instead of generator-based error handling. A `const` that holds a `Schema.Struct` draws EK4832 when a `schema` declaration writes the same struct, and its quick fix writes the declaration ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)).
 
 [Upstream page](https://effect.website/docs/v4/schema/getting-started)
