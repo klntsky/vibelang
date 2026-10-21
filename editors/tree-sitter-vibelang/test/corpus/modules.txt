@@ -1,0 +1,255 @@
+================================================================================
+Module declarations
+================================================================================
+
+module text {
+  import { Effect } from "effect"
+  export function clean(value: string): string {
+    return value.trim()
+  }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (module_declaration
+    name: (identifier)
+    body: (statement_block
+      (import_statement
+        (import_clause
+          (named_imports
+            (import_specifier
+              name: (identifier))))
+        source: (string
+          (string_fragment)))
+      (export_statement
+        declaration: (function_declaration
+          name: (identifier)
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier)
+              type: (type_annotation
+                (predefined_type))))
+          return_type: (type_annotation
+            (predefined_type))
+          body: (statement_block
+            (return_statement
+              (call_expression
+                function: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                arguments: (arguments)))))))))
+
+================================================================================
+A module body is TypeScript: async functions, throw, try and catch, await
+================================================================================
+
+module files {
+  export async function read(path: string): Promise<string> {
+    if (path === "") throw new Error("empty")
+    try {
+      return await load(path)
+    } catch {
+      return ""
+    }
+  }
+
+  export const level = await Promise.resolve(3)
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (module_declaration
+    name: (identifier)
+    body: (statement_block
+      (export_statement
+        declaration: (function_declaration
+          name: (identifier)
+          parameters: (formal_parameters
+            (required_parameter
+              pattern: (identifier)
+              type: (type_annotation
+                (predefined_type))))
+          return_type: (type_annotation
+            (generic_type
+              name: (type_identifier)
+              type_arguments: (type_arguments
+                (predefined_type))))
+          body: (statement_block
+            (if_statement
+              condition: (parenthesized_expression
+                (binary_expression
+                  left: (identifier)
+                  right: (string)))
+              consequence: (throw_statement
+                (new_expression
+                  constructor: (identifier)
+                  arguments: (arguments
+                    (string
+                      (string_fragment))))))
+            (try_statement
+              body: (statement_block
+                (return_statement
+                  (await_expression
+                    (call_expression
+                      function: (identifier)
+                      arguments: (arguments
+                        (identifier))))))
+              handler: (catch_clause
+                body: (statement_block
+                  (return_statement
+                    (string))))))))
+      (export_statement
+        declaration: (lexical_declaration
+          (variable_declarator
+            name: (identifier)
+            value: (await_expression
+              (call_expression
+                function: (member_expression
+                  object: (identifier)
+                  property: (property_identifier))
+                arguments: (arguments
+                  (number))))))))))
+
+================================================================================
+Several module declarations among VibeLang declarations
+================================================================================
+
+error Unclean { reason: string }
+
+module text {
+  export const separator = "-"
+}
+
+module setup {
+  console.log("setup ran")
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (error_declaration
+    name: (type_identifier)
+    body: (class_body
+      (public_field_definition
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))))
+  (module_declaration
+    name: (identifier)
+    body: (statement_block
+      (export_statement
+        declaration: (lexical_declaration
+          (variable_declarator
+            name: (identifier)
+            value: (string
+              (string_fragment)))))))
+  (module_declaration
+    name: (identifier)
+    body: (statement_block
+      (expression_statement
+        (call_expression
+          function: (member_expression
+            object: (identifier)
+            property: (property_identifier))
+          arguments: (arguments
+            (string
+              (string_fragment))))))))
+
+================================================================================
+Identifier module specifiers
+================================================================================
+
+import { clean } from text
+import text
+import Counter, { clean as tidy } from text
+import * as tools from text
+import type { Shape } from shapes
+export { clean as tidy } from text
+export * from text
+export * as tools from text
+
+--------------------------------------------------------------------------------
+
+(program
+  (import_statement
+    (import_clause
+      (named_imports
+        (import_specifier
+          name: (identifier))))
+    source: (identifier))
+  (import_statement
+    source: (identifier))
+  (import_statement
+    (import_clause
+      (identifier)
+      (named_imports
+        (import_specifier
+          name: (identifier)
+          alias: (identifier))))
+    source: (identifier))
+  (import_statement
+    (import_clause
+      (namespace_import
+        (identifier)))
+    source: (identifier))
+  (import_statement
+    (import_clause
+      (named_imports
+        (import_specifier
+          name: (identifier))))
+    source: (identifier))
+  (export_statement
+    (export_clause
+      (export_specifier
+        name: (identifier)
+        alias: (identifier)))
+    source: (identifier))
+  (export_statement
+    source: (identifier))
+  (export_statement
+    (namespace_export
+      (identifier))
+    source: (identifier)))
+
+================================================================================
+TypeScript's module forms stay TypeScript's
+================================================================================
+
+module a.b {}
+declare module x {}
+declare module "x" {}
+namespace x {}
+function nested() {
+  module inner {}
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (module
+    name: (nested_identifier
+      object: (identifier)
+      property: (property_identifier))
+    body: (statement_block))
+  (ambient_declaration
+    (module
+      name: (identifier)
+      body: (statement_block)))
+  (ambient_declaration
+    (module
+      name: (string
+        (string_fragment))
+      body: (statement_block)))
+  (expression_statement
+    (internal_module
+      name: (identifier)
+      body: (statement_block)))
+  (function_declaration
+    name: (identifier)
+    parameters: (formal_parameters)
+    body: (statement_block
+      (module
+        name: (identifier)
+        body: (statement_block)))))

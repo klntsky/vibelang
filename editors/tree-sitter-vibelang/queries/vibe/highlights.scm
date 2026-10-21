@@ -24,6 +24,19 @@
 (control_declaration
   "class" @keyword.modifier)
 
+; Module declarations (D283): module as TypeScript colors its module keyword,
+; and the name and an identifier module specifier as module names. The body
+; is TypeScript's statement_block, colored by the inherited queries.
+(module_declaration
+  "module" @keyword
+  name: (identifier) @module)
+
+(import_statement
+  source: (identifier) @module)
+
+(export_statement
+  source: (identifier) @module)
+
 (layer_declaration
   service: (identifier) @type)
 

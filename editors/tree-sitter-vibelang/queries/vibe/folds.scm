@@ -9,4 +9,5 @@
   (provide_statement)
   (handle_clause)
   (match_expression)
+  (module_declaration)
 ] @fold

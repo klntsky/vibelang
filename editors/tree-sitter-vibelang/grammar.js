@@ -98,6 +98,41 @@ module.exports = grammar(TypeScript, {
   ]),
 
   rules: {
+    // ---------------------------------------------------------- Modules
+
+    // module text { ... } at a file's top level (D283, vibelang_modules.go).
+    // Its body is TypeScript, and this grammar gives TypeScript code
+    // tree-sitter-typescript's nodes, so the body is a statement_block of
+    // TypeScript statements that the inherited TypeScript queries color.
+    // module a.b { }, declare module x { }, export module x { }, a module
+    // inside a block, and namespace x { } stay TypeScript's module nodes.
+    program: $ => seq(
+      optional($.hash_bang_line),
+      repeat(choice($.statement, $.module_declaration)),
+    ),
+
+    module_declaration: $ => prec(1, seq(
+      'module',
+      field('name', $.identifier),
+      field('body', $.statement_block),
+    )),
+
+    // import { clean } from text, export * from text, and import text: an
+    // identifier module specifier names a module declaration (D283).
+    _from_clause: $ => seq('from', field('source', choice($.string, $.identifier))),
+
+    import_statement: $ => seq(
+      'import',
+      optional(choice('type', 'typeof')),
+      choice(
+        seq($.import_clause, $._from_clause),
+        $.import_require_clause,
+        field('source', choice($.string, $.identifier)),
+      ),
+      optional($.import_attribute),
+      $._semicolon,
+    ),
+
     // ------------------------------------------------------------ Types
 
     type: ($, previous) => choice(previous, $.effect_type),

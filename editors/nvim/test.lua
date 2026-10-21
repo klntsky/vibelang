@@ -131,18 +131,24 @@ check("hover: a call that runs shows the contract and the success value", functi
   assert(text:find("Runs here and returns `string`", 1, true), "hover " .. text)
 end)
 
--- quiet_buffer returns a buffer highlighted by the vibe parser that holds the
--- fixture file relative. It skips the FileType autocommands, so no language
--- server starts for it.
-local function quiet_buffer(relative)
+-- quiet_lines returns a buffer highlighted by the vibe parser that holds
+-- lines. It skips the FileType autocommands, so no language server starts for
+-- it.
+local function quiet_lines(lines)
   local buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.fn.readfile(vim.fs.joinpath(project, relative)))
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   local eventignore = vim.o.eventignore
   vim.o.eventignore = "FileType"
   vim.bo[buf].filetype = "vibe"
   vim.o.eventignore = eventignore
   vim.treesitter.start(buf, "vibe")
   return buf
+end
+
+-- quiet_buffer returns a quiet_lines buffer that holds the fixture file
+-- relative.
+local function quiet_buffer(relative)
+  return quiet_lines(vim.fn.readfile(vim.fs.joinpath(project, relative)))
 end
 
 -- capture_at returns the captures at offset bytes into the first occurrence
@@ -154,6 +160,19 @@ local function capture_at(buf, needle, offset)
     table.insert(names, capture.capture)
   end
   return names
+end
+
+-- assert_captures fails unless each { needle, offset, capture } of tokens is
+-- colored by capture in buf.
+local function assert_captures(buf, tokens)
+  local wrong = {}
+  for _, token in ipairs(tokens) do
+    local names = capture_at(buf, token[1], token[2])
+    if names[#names] ~= token[3] then
+      table.insert(wrong, string.format("%s@%d: want %s, got %s", token[1], token[2], token[3], table.concat(names, " ")))
+    end
+  end
+  assert(#wrong == 0, table.concat(wrong, "; "))
 end
 
 check("parse: no ERROR or MISSING node in any fixture source", function()
@@ -194,15 +213,40 @@ local tokens = {
 }
 
 check("highlights: VibeLang's tokens get their captures", function()
-  local buf = quiet_buffer("src/forms.vibe")
-  local wrong = {}
-  for _, token in ipairs(tokens) do
-    local names = capture_at(buf, token[1], token[2])
-    if names[#names] ~= token[3] then
-      table.insert(wrong, string.format("%s@%d: want %s, got %s", token[1], token[2], token[3], table.concat(names, " ")))
-    end
-  end
-  assert(#wrong == 0, table.concat(wrong, "; "))
+  assert_captures(quiet_buffer("src/forms.vibe"), tokens)
+end)
+
+-- A module declaration and identifier module specifiers (D283). The body is
+-- TypeScript that VibeLang outside it would read differently.
+local module_lines = {
+  "module text {",
+  "  export async function read(path: string): Promise<string> {",
+  "    try {",
+  "      return await load(path)",
+  "    } catch {",
+  '      throw new Error("unreadable")',
+  "    }",
+  "  }",
+  "}",
+  "",
+  "import { read } from text",
+  "import text",
+  "export * from text",
+}
+
+-- Each token of the module forms, and the capture that colors it.
+local module_tokens = {
+  { "module text", 0, "keyword" },
+  { "module text", 7, "module" },
+  { "from text", 5, "module" },
+  { "import text", 7, "module" },
+  { "* from text", 7, "module" },
+}
+
+check("highlights: a module declaration's tokens get their captures", function()
+  local buf = quiet_lines(module_lines)
+  assert(not vim.treesitter.get_parser(buf):parse()[1]:root():has_error(), "the module declaration has an ERROR or MISSING node")
+  assert_captures(buf, module_tokens)
 end)
 
 if nvim_treesitter ~= "" then
@@ -215,6 +259,24 @@ if nvim_treesitter ~= "" then
     for _, query in ipairs({ "injections", "locals", "folds", "indents" }) do
       assert(vim.treesitter.query.get("vibe", query), "no " .. query .. " query")
     end
+  end)
+
+  -- TypeScript's captures in a module declaration's body, from the inherited
+  -- TypeScript queries.
+  local module_body_tokens = {
+    { "async function", 0, "keyword.coroutine" },
+    { "function read", 0, "keyword.function" },
+    { "read(path", 0, "function" },
+    { "path: string", 6, "type.builtin" },
+    { "Promise<string>", 0, "type" },
+    { "await load", 0, "keyword.coroutine" },
+    { "try {", 0, "keyword.exception" },
+    { "} catch", 2, "keyword.exception" },
+    { "throw new", 0, "keyword.exception" },
+  }
+
+  check("highlights: TypeScript's queries color a module declaration's body", function()
+    assert_captures(quiet_lines(module_lines), module_body_tokens)
   end)
 
   check("nvim-treesitter: :TSInstall vibe compiles the grammar", function()

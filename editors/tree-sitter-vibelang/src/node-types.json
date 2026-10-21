@@ -2683,6 +2683,10 @@
         "required": false,
         "types": [
           {
+            "type": "identifier",
+            "named": true
+          },
+          {
             "type": "string",
             "named": true
           }
@@ -3814,6 +3818,10 @@
         "required": false,
         "types": [
           {
+            "type": "identifier",
+            "named": true
+          },
+          {
             "type": "string",
             "named": true
           }
@@ -4933,6 +4941,32 @@
     }
   },
   {
+    "type": "module_declaration",
+    "named": true,
+    "fields": {
+      "body": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "statement_block",
+            "named": true
+          }
+        ]
+      },
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "named_imports",
     "named": true,
     "fields": {},
@@ -5878,6 +5912,10 @@
       "types": [
         {
           "type": "hash_bang_line",
+          "named": true
+        },
+        {
+          "type": "module_declaration",
           "named": true
         },
         {
