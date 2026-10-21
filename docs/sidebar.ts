@@ -110,6 +110,16 @@ export const sidebar = [
         ]
       },
       {
+        "text": "Format and lint",
+        "collapsed": false,
+        "items": [
+          {
+            "text": "Format with dprint",
+            "link": "/setup/formatting"
+          }
+        ]
+      },
+      {
         "text": "Frameworks",
         "collapsed": false,
         "items": [
