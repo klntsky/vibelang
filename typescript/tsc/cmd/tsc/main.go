@@ -27,6 +27,10 @@ func runMain() int {
 			return runLSP(args[1:])
 		case "--api":
 			return runAPI(args[1:])
+		case "--parent-pid":
+			return runDprintPlugin(args) // dprint starts its process plugins so (dprint.go)
+		case "--write-dprint-plugin":
+			return runWriteDprintPlugin(args[1:])
 		}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

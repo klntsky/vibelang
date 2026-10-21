@@ -9,3 +9,6 @@ entry=./cmd/tsc
 echo "build-vibelang: CGO_ENABLED=0 go build $entry"
 (cd "$root/typescript/tsc" && CGO_ENABLED=0 go build -o "$root/packages/compiler/native/vibelang" "$entry")
 echo "build-vibelang: $root/packages/compiler/native/vibelang"
+# The dprint plugin for .vibe files runs this binary; its manifest names a zip of it.
+"$root/packages/compiler/native/vibelang" --write-dprint-plugin "$root/packages/compiler" >/dev/null
+echo "build-vibelang: $root/packages/compiler/dprint-plugin.json"
