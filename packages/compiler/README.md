@@ -5,7 +5,7 @@
 The VibeLang compiler and language server. VibeLang is a readable syntax for
 Effect that compiles to TypeScript: `vibelang` checks `.vibe` and `.ts` files
 together and emits JavaScript that runs on Effect 4. Documentation:
-[effeck.dev](https://effeck.dev).
+[vibelang.sh](https://vibelang.sh).
 
 ## Start a project
 
@@ -105,7 +105,7 @@ it beside dprint's TypeScript plugin, and add `vibe` to `includes`:
 
 `dprint fmt` and `dprint check` then format `.vibe` files with the
 configuration's `typescript` settings, so they read like the project's `.ts`
-files. See [Format with dprint](https://effeck.dev/setup/formatting.html).
+files. See [Format with dprint](https://vibelang.sh/setup/formatting).
 
 ## Lint .vibe files with ESLint
 
@@ -126,7 +126,7 @@ export default tseslint.config({
 ```
 
 Rules that need type information do not run on `.vibe` files; `vibelang
---noEmit` checks types. See the Devtools page at [effeck.dev](https://effeck.dev) for the node types of
+--noEmit` checks types. See the Devtools page at [vibelang.sh](https://vibelang.sh/getting-started/012-devtools) for the node types of
 VibeLang's own forms.
 
 ## How the package finds the native compiler

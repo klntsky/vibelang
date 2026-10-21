@@ -37,7 +37,7 @@ func runDprintPlugin(args []string) int {
 	err = vibelangfmt.ServePlugin(os.Stdin, os.Stdout, vibelangfmt.PluginOptions{
 		Version: vibelang.Version,
 		License: "VibeLang is licensed under the Apache License, Version 2.0. Its compiler is built on TypeScript (typescript-go), licensed under the Apache License, Version 2.0.",
-		HelpURL: "https://effeck.dev/setup/formatting.html",
+		HelpURL: "https://vibelang.sh/setup/formatting",
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "vibelang: dprint plugin: %v\n", err)

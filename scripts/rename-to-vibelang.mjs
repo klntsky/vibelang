@@ -80,12 +80,16 @@ export const BINARY_EXTENSIONS = new Set([
  * them before rewriting, and the gate ignores them. `paths` limits an entry to
  * those files.
  */
+/** The effeck.dev docs site: its renderer, landing page, deploy and redirect, and the pages and sync scripts that still link it. */
+const effeckSite = ["docs/wrangler.jsonc", "docs/redirect/", "scripts/deploy-docs.sh", "docs/tools/", "docs/landing/", "site/scripts/", "site/src/pages/proposals.mdx", "site/src/pages/spec/"]
+
 export const KEEP = [
   {
-    why: "domains we serve today: effeck.dev answers, and no VibeLang domain is set up",
+    why: "the effeck.dev docs site and the files that build, deploy and link it; everything else names vibelang.sh",
+    paths: effeckSite,
     pattern: /(?<![\w.-])(?<![^/]\/)(?:www\.)?effeck\.(?:dev|sh|ai|app|com|fun|tech)(?![\w-])/g,
   },
-  { why: "the same domains as a wildcard", pattern: /(?<![\w.-])effeck\.\*/g },
+  { why: "the same domains as a wildcard", paths: effeckSite, pattern: /(?<![\w.-])effeck\.\*/g },
   {
     why: "the issue tracker repository effeck/effeck on Smithers Cloud, and its URLs",
     pattern: /smithers\.sh\/effeck\/effeck(?![\w-])|(?<![\w.-]\/)(?<![\w-])effeck\\?\/effeck(?![\w-])/g,
@@ -104,9 +108,9 @@ export const KEEP = [
     pattern: /"name": "effeck(?:-redirect)?"|names the Worker, effeck\b/g,
   },
   {
-    why: "D125 records the earlier name; the rename's own decision supersedes it",
-    paths: ["docs/design/DECISIONS.md"],
-    pattern: /^\*\*D125\. .*$/g,
+    why: "D125 records the earlier name, and D255, the rename, quotes it",
+    paths: ["docs/design/DECISIONS.md", "site/src/pages/spec/529-part5-ch29-decisions.mdx"],
+    pattern: /^\*\*D(?:125|255)\. .*$|^\| D125 \|.*$/gm,
   },
   {
     why: "the spec's row for D125, a record of the earlier name",
@@ -123,6 +127,10 @@ const capitalized = (word) => word[0].toUpperCase() + word.slice(1)
  * replacement, paths?]; `paths` are prefixes the rule is limited to.
  */
 export const RULES = [
+  // A link into the effeck.dev docs site becomes the same page on vibelang.sh,
+  // which drops the .html. The site's own files keep the domain (KEEP).
+  ["docs domain", /https?:\/\/(?:www\.)?effeck\.dev(\/[^\s)"'\]>`]*)?/g, (_url, path = "") => `https://vibelang.sh${path.replace(/\.html$/, "").replace(/(^|\/)index$/, "$1")}`],
+
   // The earlier VibeLang project (effect-lang) is prior art in the spec; once
   // the language takes its name, those lines must say which one they mean.
   ["prior art", /\bVibeLang's checkpoint\b/g, "the earlier VibeLang project's checkpoint", ["docs/design/src/"]],

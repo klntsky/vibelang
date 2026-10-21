@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Copies the VibeLang user docs into this Vocs site.
 //
-//   node scripts/sync-user-docs.mjs <effectscript>/docs/user
+//   node scripts/sync-user-docs.mjs ../docs/user
 //
-// The source is docs/user in the VibeLang language repository (formerly
-// Effeck). docs/user/inventory.md defines the sections and their order; each
+// The source is ../docs/user, the user docs in this repository.
+// docs/user/inventory.md defines the sections and their order; each
 // page in docs/user/src becomes one .mdx page here at the same path, so
 // vibelang.sh/error-management/014-expected-errors is
 // docs/user/src/error-management/014-expected-errors.md. The script rewrites
@@ -32,7 +32,7 @@ const SITE_SIDEBAR = [{ text: 'Proposals', link: '/proposals' }]
 
 const source = process.argv[2]
 if (!source || !fs.existsSync(path.join(source, 'inventory.md'))) {
-  console.error('usage: node scripts/sync-user-docs.mjs <effectscript>/docs/user')
+  console.error('usage: node scripts/sync-user-docs.mjs ../docs/user')
   process.exit(2)
 }
 const docsDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..')

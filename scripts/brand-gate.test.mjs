@@ -33,7 +33,9 @@ test("the gate finds a retired spelling and a retired extension, and honours the
     "src/a.vibe": 'import { run } from "effeck-runtime"\n',
     "src/b.effeck": "export const x = 1\n",
     "src/c.vibe": "// the old name, Effeck, on purpose: brand-gate: allow\n",
-    "docs/d.md": "Docs at https://effeck.dev; bugs at https://smithers.sh/effeck/effeck/issues.\n",
+    "docs/d.md": "Docs at https://vibelang.sh; bugs at https://smithers.sh/effeck/effeck/issues.\n",
+    "docs/tools/site.ts": "const home = \"https://effeck.dev\"\n",
+    "docs/g.md": "Old docs at https://effeck.dev/a.html\n",
     "artifacts/e.md": "Effeck, as it was.\n",
     "docs/f.md": "Set compilerOptions.EFFECK in tsconfig.json.\n",
   })
@@ -42,7 +44,8 @@ test("the gate finds a retired spelling and a retired extension, and honours the
   assert.match(result.stderr, /src\/a\.vibe:1: effeck/)
   assert.match(result.stderr, /src\/b\.effeck: the path spells effeck/)
   assert.match(result.stderr, /docs\/f\.md:1: EFFECK/)
-  assert.doesNotMatch(result.stderr, /src\/c\.vibe|docs\/d\.md|artifacts\/e\.md/)
+  assert.match(result.stderr, /docs\/g\.md:1: effeck/, "effeck.dev outside its site's files is a finding")
+  assert.doesNotMatch(result.stderr, /src\/c\.vibe|docs\/d\.md|artifacts\/e\.md|docs\/tools\/site\.ts/)
   assert.match(result.stderr, /Remedy: node scripts\/rename-to-vibelang\.mjs/)
 })
 
@@ -59,7 +62,9 @@ test("the codemod tells an extension from a property, and keeps names we do not 
     ['{ "id": "effeck", "language": "effeck" } onLanguage:effeck', "package.json", '{ "id": "vibe", "language": "vibe" } onLanguage:vibe'],
     ["```effeck", "x.md", "```vibe"],
     ["@effeck/unplugin and @effeck trusted", "x.ts", "vibelang-unplugin and @vibelang trusted"],
-    ["https://effeck.dev/effeck-features/115-cheat-sheet.html", "x.md", "https://effeck.dev/vibelang-features/115-cheat-sheet.html"],
+    ["https://effeck.dev/effeck-features/115-cheat-sheet.html", "x.md", "https://vibelang.sh/vibelang-features/115-cheat-sheet"],
+    ["see https://effeck.dev and https://effeck.dev/index.html", "x.md", "see https://vibelang.sh and https://vibelang.sh/"],
+    ["https://effeck.dev/setup/formatting.html", "docs/tools/render-user.ts", "https://effeck.dev/setup/formatting.html"],
     ["https://smithers.sh/effeck/effeck/blob/main/typescript/EFFECK.md", "x.md", "https://smithers.sh/effeck/effeck/blob/main/typescript/VIBELANG.md"],
     ['"/nonexistent/effeck/effeck" and scripts/build-effeck.sh', "x.ts", '"/nonexistent/vibelang/vibelang" and scripts/build-vibelang.sh'],
     ["image: registry/smithers/effeck-converter-worker", "x.yaml", "image: registry/smithers/effeck-converter-worker"],
@@ -81,7 +86,7 @@ test("the codemod renames a tree that then passes the gate, and a second run cha
   assert.equal(readFileSync(join(root, "src/main.vibe"), "utf8"), 'import { greet } from "./greet.vibe"\nexport function main() { Console.log("Hello, VibeLang!") }\n')
   assert.equal(readFileSync(join(root, "tsconfig.json"), "utf8"), '{ "compilerOptions": { "vibelang": { "tracing": true } }, "include": ["src/**/*.vibe"] }\n')
   assert.equal(readFileSync(join(root, "package.json"), "utf8"), '{ "name": "app", "scripts": { "build": "vibelang" }, "devDependencies": { "vibelang": "0.0.1", "vibelang-runtime": "0.0.1" } }\n')
-  assert.equal(readFileSync(join(root, "README.md"), "utf8"), "A VibeLang app. Run `vibelang --watch`. Docs: https://effeck.dev.\n\n```vibe\nconst x = 1\n```\n")
+  assert.equal(readFileSync(join(root, "README.md"), "utf8"), "A VibeLang app. Run `vibelang --watch`. Docs: https://vibelang.sh.\n\n```vibe\nconst x = 1\n```\n")
   assert.equal(gate("--root", root).status, 0)
   const second = codemod("--root", root)
   assert.equal(second.status, 0, second.stderr)

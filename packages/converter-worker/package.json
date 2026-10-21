@@ -2,7 +2,7 @@
   "name": "effeck-converter-worker",
   "version": "0.0.1",
   "private": true,
-  "description": "The credential-free compile worker behind effeck.dev's converter: vibelang --noEmit on one file, never running it",
+  "description": "The credential-free compile worker behind the docs site's converter: vibelang --noEmit on one file, never running it",
   "license": "Apache-2.0",
   "type": "module",
   "main": "server.mjs",
