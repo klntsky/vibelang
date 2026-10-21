@@ -1,6 +1,6 @@
 # Runtime
 
-A platform `runMain` starts a VibeLang application and connects its lifetime to the host process. It reports unhandled failures, handles termination signals, waits for cleanup, and chooses an exit code.
+A platform `runMain` starts a VibeLang application and ties its lifetime to the host process: it reports unhandled failures, handles termination signals, waits for cleanup, and chooses an exit code.
 
 ## Running an application entry point
 
@@ -19,11 +19,11 @@ NodeRuntime.runMain(() => main())
 // Output: Export complete
 ```
 
-Pass the runner a program: `main()` passed to a runner is passed by name, so it has not run yet. A module's top level can call the recognized runner, while the application work runs inside `main`. Supply application layers with `Effect.provide(() => main(), AppLive)` inside that runner's program.
+Pass the runner a program: `main()` in a runner argument is passed by name, so it hasn't run yet. The module's top level calls the recognized runner; the application work runs inside `main`. Supply application layers with `Effect.provide(() => main(), AppLive)` inside the runner's program.
 
-Runners may also be called in plain callbacks passed from the top level to TypeScript, such as a framework's route handler or a `describe` body. A runner inside code that a fiber runs is EK1005: call the program or use `fork` there. Tests in `.vibe` use `it.effect`; Promise-style tests stay in `.ts`.
+A runner also works in a plain callback passed from the top level to TypeScript, such as a framework's route handler or a `describe` body. A runner in code a fiber runs is EK1005: call the program or use `fork` there. Tests in `.vibe` use `it.effect`; Promise-style tests stay in `.ts`.
 
-Bun applications use `BunRuntime.runMain` from `@effect/platform-bun`; Node.js and Deno use the Node adapter. Run the generated JavaScript entry module after the VibeLang build.
+Bun uses `BunRuntime.runMain` from `@effect/platform-bun`; Node.js and Deno use the Node adapter. Run the generated JavaScript entry module after the VibeLang build.
 
 ## Configuring runtime launch behavior
 
@@ -42,7 +42,7 @@ function main() {
 NodeRuntime.runMain(() => main(), { disableErrorReporting: true })
 ```
 
-`disableErrorReporting` suppresses automatic failure logging; it does not turn failure into success or change the default exit-code policy. Leave reporting enabled unless the application has another reporting boundary. The optional `teardown` callback controls completion handling and ultimately calls the provided exit callback.
+`disableErrorReporting` suppresses automatic failure logging; the failure stays a failure, and the default exit-code policy holds. Leave reporting on unless the application has another reporting boundary. The optional `teardown` callback controls completion handling and finally calls the provided exit callback.
 
 ```ts
 // TypeScript (.ts)
@@ -69,7 +69,7 @@ NodeRuntime.runMain(() => main(), launchOptions)
 // Output: Starting with custom exit handling
 ```
 
-Teardown is a plain host callback, not an Effect-returning program. Keep a custom callback in TypeScript when it calls the host's plain `onExit` function; put effectful cleanup in the application before teardown runs. This example deliberately maps every failure to exit code 2.
+Teardown is a plain host callback, not an Effect program. Write a custom one in TypeScript when it calls the host's plain `onExit` function; put effectful cleanup in the application, before teardown runs. This example deliberately maps every failure to exit code 2.
 
 ## Handling completion and failures
 
@@ -93,13 +93,13 @@ function exportBatch(count: number) {
 NodeRuntime.runMain(() => exportBatch(0))
 ```
 
-Normal return is success; a value returned from `main` is not automatically printed. An unhandled expected failure or defect is reported by default and receives a failing exit code. Effect 4.0.5's default teardown uses 0 for success, 130 for interruption-only causes, and 1 for other failures unless a supported error-specific exit code overrides it.
+A normal return is success; `main`'s return value isn't printed. An unhandled expected failure or defect is reported by default and gets a failing exit code. Effect 4.0.5's default teardown exits 0 on success, 130 for interruption-only causes, and 1 for other failures, unless a supported error-specific exit code overrides it.
 
-On a termination signal, the platform interrupts the application and waits for registered cleanup. VibeLang `finally` and `using` run during interruption, while ordinary `catch` does not catch it. Handle recoverable failures inside the program, and let the runner report failures that remain unhandled.
+On a termination signal, the platform interrupts the application and waits for registered cleanup. `finally` and `using` run during interruption; ordinary `catch` doesn't catch it. Handle recoverable failures inside the program, and let the runner report the rest.
 
 ## Check process completion
 
-These host-side checks run the emitted entries in separate processes. They verify silent failure, cleanup before a failing exit, and both outcomes of the custom teardown.
+These host-side checks run the emitted entries in separate processes to verify silent failure, cleanup before a failing exit, and both outcomes of the custom teardown.
 
 ```ts
 // TypeScript (.ts)

@@ -1,6 +1,6 @@
 # Guidelines
 
-Run a VibeLang application through its platform runtime, keep its lifetime in `main`, and make callback arguments explicit. These habits keep shutdown predictable and prevent accidental argument forwarding when composing functions.
+Run a VibeLang application through its platform runtime, keep its lifetime in `main`, and make callback arguments explicit. These habits keep shutdown predictable and stop accidental argument forwarding in composed functions.
 
 ## Running application entry points
 
@@ -29,11 +29,11 @@ checking work
 worker stopped
 ```
 
-Export `main` from the entry module. When node starts the module, the compiled JavaScript passes `main()` to `NodeRuntime.runMain`, which starts it and coordinates interruption and shutdown; importing the module starts nothing. The `finally` block runs when the worker stops, including on interruption. Acquire application resources with `using` inside `main`, and provide the application layer once around the main program so its services share one lifetime.
+Export `main` from the entry module. When node starts the module, the compiled JavaScript passes `main()` to `NodeRuntime.runMain`, which starts it and coordinates interruption and shutdown; importing the module starts nothing. `finally` runs when the worker stops, interruption included. Acquire application resources with `using` inside `main`, and provide the application layer once around the main program so its services share one lifetime.
 
-`Effect.runPromise` is useful when another host owns execution and needs a Promise. For a standalone process, prefer the platform runner's signal handling and shutdown behavior. Module-level calls may build values or register an entry point, but ordinary application work belongs inside functions.
+Use `Effect.runPromise` when another host owns execution and needs a Promise; for a standalone process, prefer the platform runner, which handles signals and shutdown. Module-level calls build values or register an entry point; application work belongs inside functions.
 
-Call runners only where no fiber runs the code: at the module's top level or in a plain framework callback registered from there. A runner inside code a fiber runs is EK1005; call the program or use `fork` there. Tests in `.vibe` use `it.effect`; Promise-style tests stay in `.ts`.
+Call runners only where no fiber runs the code: at the module's top level or in a plain framework callback registered from there. A runner in code a fiber runs is EK1005; call the program or use `fork` there. Tests in `.vibe` use `it.effect`; Promise-style tests stay in `.ts`.
 
 ## Selecting a platform runtime
 
@@ -52,7 +52,7 @@ BunRuntime.runMain(() => main())
 running on Bun
 ```
 
-Choose the runtime matching the host and install that platform package. The application still uses Effect's services rather than directly calling Node.js modules or browser globals.
+Choose the runtime that matches the host and install its platform package. The application still uses Effect's services, not Node.js modules or browser globals.
 
 | Host | Runtime | Import |
 | --- | --- | --- |
@@ -77,10 +77,10 @@ function printValues(values: ReadonlyArray<number>) {
 // Output: 20
 ```
 
-Write a lambda that names the arguments you intend to pass. Passing `Number.parseInt` directly to array `map` would forward the array index as its radix argument. Explicit lambdas also preserve overload selection and make generic inference easier to inspect.
+Write a lambda that names the arguments you pass: `Number.parseInt` passed straight to array `map` would receive the array index as its radix. Explicit lambdas also keep overload selection and make generic inference easier to inspect.
 
-Use `Effect.forEach` or an ordinary loop when the callback performs Effect work. Array `map` accepts only callbacks eligible for plain JavaScript compilation: no Effect operations and no expected failures. A composition helper does not change that boundary.
+When the callback does Effect work, use `Effect.forEach` or an ordinary loop. Array `map` accepts only callbacks that compile to plain JavaScript: no Effect operations and no expected failures. A composition helper doesn't change that boundary.
 
 ## Coming from Effect
 
-Application code uses ordinary calls, `try`/`finally`, and `using`. Keep `runMain` at the outer boundary, and pass it `main()`: the runner receives the call by name, so the entry program has not already run.
+Application code uses ordinary calls, `try`/`finally`, and `using`. Keep `runMain` at the outer boundary and pass it `main()`: the runner receives the call by name, so the entry program hasn't run yet.

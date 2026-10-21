@@ -1,6 +1,6 @@
 # Introduction to Effect Platform
 
-VibeLang uses Effect's platform services for files, paths, terminals, and application launch. Write the application against those interfaces, then supply implementations for Node.js, Deno, Bun, or the browser at the entry point.
+VibeLang uses Effect's platform services for files, paths, terminals, and application launch. Write the application against those interfaces; the entry point supplies Node.js, Deno, Bun, or browser implementations.
 
 ## Choosing portable platform services
 
@@ -14,13 +14,13 @@ export function readGreeting() {
 // Output: Hello, VibeLang!
 ```
 
-`FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use these interfaces instead of calling `node:*` APIs or browser globals from `.vibe` files. Portability depends on the target actually implementing the services your program needs; a browser does not automatically gain arbitrary disk access.
+`FileSystem`, `Path`, and `Terminal` are modules in `effect`; runtime adapters live in platform packages. Use them instead of calling `node:*` APIs or browser globals from `.vibe` files. A program ports only to targets that implement the services it needs; a browser gains no arbitrary disk access.
 
 | Capability | API |
 | --- | --- |
 | Files and directories | `FileSystem` |
 | Path manipulation | `Path` |
-| File logging | `Logger.toFile`, documented on the PlatformLogger page |
+| File logging | `Logger.toFile` (see the PlatformLogger page) |
 | Application launch | Platform `runMain` |
 | Interactive input and output | `Terminal` |
 
@@ -32,7 +32,7 @@ npm install vibelang-runtime
 npm install --save-dev vibelang
 ```
 
-The `effect` package contains the interfaces. Install `@effect/platform-node` for Node.js or Deno, `@effect/platform-bun` for Bun, or `@effect/platform-browser` for browser integrations. Choose adapter releases compatible with the project's Effect version.
+The `effect` package holds the interfaces. Install `@effect/platform-node` for Node.js or Deno, `@effect/platform-bun` for Bun, or `@effect/platform-browser` for browsers, in a release compatible with the project's Effect version.
 
 ```sh
 # Deno
@@ -42,7 +42,7 @@ deno add npm:effect@4.0.5 npm:@effect/platform-node
 bun add effect@4.0.5 @effect/platform-bun
 ```
 
-`vibelang` ships the `vibelang` binary. Run `npx vibelang` to check and compile the project's `.vibe` and `.ts` sources before launching the generated JavaScript; `npx vibelang --noEmit` checks without emitting. The Bun and Deno projects also need `vibelang-runtime` and the compiler. Do not pass `.vibe` files directly to a TypeScript runner.
+`vibelang` ships the `vibelang` binary. `npx vibelang` checks and compiles the project's `.vibe` and `.ts` sources, then you launch the generated JavaScript; `npx vibelang --noEmit` only checks. Bun and Deno projects also need `vibelang-runtime` and the compiler. Never pass `.vibe` files to a TypeScript runner.
 
 ## Writing platform-independent programs
 
@@ -57,7 +57,7 @@ export function main() {
 // Output: Hello, VibeLang!
 ```
 
-`Effect.service` runs and returns the implementation associated with an existing Effect service key. Calls to its Effect-returning methods run normally and contribute their failures to E. Keep the runtime package import in the entry file so the application function can also run with test implementations.
+`Effect.service` runs and returns the implementation for an existing Effect service key. Its Effect-returning methods run on call and add their failures to E. Keep the runtime package import in the entry file, so the application function also runs with test implementations.
 
 ## Supplying Node or Deno implementations
 
@@ -70,7 +70,7 @@ NodeRuntime.runMain(() => Effect.provide(() => { const fs = Effect.service(FileS
 // Output: Hello, VibeLang!
 ```
 
-`NodeServices.layer` supplies the Node platform service bundle. The same package supports Deno's Node compatibility environment, subject to Deno permissions. Run the generated entry module with Node or Deno and grant only the permissions needed by the application.
+`NodeServices.layer` supplies the Node platform service bundle. The same package works in Deno's Node compatibility environment, subject to Deno permissions. Run the generated entry module with Node or Deno, granting only the permissions the application needs.
 
 ## Supplying Bun implementations
 
@@ -83,8 +83,8 @@ BunRuntime.runMain(() => Effect.provide(() => { const fs = Effect.service(FileSy
 // Output: Hello, VibeLang!
 ```
 
-Only the entry point changes: the same `main` uses Bun's implementations. A target-specific package can supply a narrower layer when the whole service bundle is unnecessary. See the FileSystem, Path, PlatformLogger, Runtime, and Terminal pages for individual integrations.
+Only the entry point changes; the same `main` uses Bun's implementations. A target-specific package can supply a narrower layer than the whole bundle. The FileSystem, Path, PlatformLogger, Runtime, and Terminal pages cover each integration.
 
 ## Coming from Effect
 
-Pass `main()` to a runner or another parameter that expects an Effect program: it is passed by name, so nothing runs until that program is executed. VibeLang functions run on calls, and platform methods return success values directly when called; there is no generator wrapper around the application.
+`main()` given to a runner, or to any parameter that expects an Effect program, is passed by name: nothing runs until the program executes. Functions run on call, platform methods return success values directly, and no generator wraps the application.

@@ -1,6 +1,6 @@
 # Tracking Fibers
 
-`FiberSet` and `FiberMap` track groups of running fibers and clean them up with an owning scope. Use a set for an unkeyed group, or a map when each running operation has an identity such as a client ID.
+`FiberSet` and `FiberMap` track groups of running fibers and clean them up with an owning scope. Use a set for an unkeyed group and a map when each operation has an identity, such as a client ID.
 
 ## Managing groups of running fibers
 
@@ -26,7 +26,7 @@ tracked workers 2
 [1,2]
 ```
 
-`FiberSet.run` forks a program and registers the resulting fiber. `FiberSet.add` can register an existing fiber, while `size` reports how many are currently tracked. Joining individual handles collects their results; tracking itself does not produce an ordered result list.
+`FiberSet.run` forks a program and registers its fiber; `FiberSet.add` registers an existing fiber; `size` counts the fibers tracked now. Join individual handles to collect results; tracking produces no ordered result list.
 
 ## Tracking fibers by key
 
@@ -50,7 +50,7 @@ function replacePreview() {
 new preview
 ```
 
-Starting another fiber under an existing key interrupts the previous fiber for that key. This supports latest-request behavior without retaining an obsolete handle elsewhere. `FiberMap.has` and `get` inspect tracked keys, `remove` interrupts and removes a keyed fiber, and `onlyIfMissing: true` avoids replacing existing work when passed to `run`.
+Running a fiber under an existing key interrupts that key's previous fiber: latest-request behavior, with no obsolete handle kept elsewhere. `FiberMap.has` and `get` inspect tracked keys, `remove` interrupts and removes a keyed fiber, and `run` with `onlyIfMissing: true` keeps existing work instead of replacing it.
 
 ## Removing completed work
 
@@ -69,7 +69,7 @@ function waitForAllTracked() {
 0
 ```
 
-Completed fibers are removed automatically, so a long-lived owner does not accumulate finished handles. `awaitEmpty` waits for the current group to drain, whereas `FiberSet.join` waits on the set's failure signal and propagates a tracked failure; it is not a successful drain operation. Maps also remove completed fibers automatically, including protection against an older completion deleting a newer fiber under the same key.
+Sets and maps remove completed fibers automatically, so a long-lived owner doesn't accumulate finished handles; a map also keeps an older completion from deleting a newer fiber under the same key. `awaitEmpty` waits for the current group to drain. `FiberSet.join` instead waits on the set's failure signal and propagates a tracked failure; it is not a successful drain.
 
 ## Interrupting tracked work on scope closure
 
@@ -96,4 +96,4 @@ tracked worker cleaned up
 worker scope has closed
 ```
 
-`make` acquires a scope-owned collection. Here `using` ties that scope to the block, whose exit interrupts remaining work and waits for cleanup. Without `using`, the collection belongs to the caller's runtime scope and `Scope` remains in the function's requirements; use that form when a service layer should own the group.
+`make` acquires a scope-owned collection. Here `using` ties that scope to the block, whose exit interrupts remaining work and waits for cleanup. Without `using`, the collection belongs to the caller's runtime scope and `Scope` stays in the function's requirements; use that form when a service layer owns the group.

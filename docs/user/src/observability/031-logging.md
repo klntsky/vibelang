@@ -1,6 +1,6 @@
 # Logging
 
-VibeLang uses Effect's structured logging to record progress, failures, and diagnostic context. Log calls run where they appear, and the current logging configuration determines which records are emitted and where they go.
+Effect's structured logging records progress, failures, and diagnostic context. Log calls run where they appear; the current logging configuration decides which records are emitted and where.
 
 ## Emitting structured records
 
@@ -16,7 +16,7 @@ function reportProgress() {
 [["Info",["export started",{"format":"csv","stage":"prepare"}]],["Info",["export completed",{"rows":240}]]]
 ```
 
-`log` uses the Info level, and a call can contain several messages or structured values. Default output includes time, severity, fiber identity, and message content. Pass a `Cause` alongside a message to retain failure detail rather than flattening it to a string.
+`log` logs at Info and takes several messages or structured values. Default output shows time, severity, fiber identity, and messages. Pass a `Cause` beside a message to keep failure detail; don't flatten it to a string.
 
 ## Selecting severity thresholds
 
@@ -38,7 +38,7 @@ function diagnostics() {
 [["Debug",["parsed header"]],["Info",["input accepted"]],["Warn",["using fallback settings"]],["Error",["destination unavailable"]],["Fatal",["application cannot start"]]]
 ```
 
-The default threshold is Info, which filters Debug and Trace messages. Providing Debug enables debug records in this region while still filtering Trace; the surrounding program keeps its own threshold. Severity describes a record and does not itself fail or terminate the program, even for `logFatal`.
+The default threshold, Info, filters Debug and Trace. Providing Debug enables Debug in this region only; Trace stays filtered. Severity only labels a record: even `logFatal` doesn't fail or end the program.
 
 ## Annotating logs and scoped regions
 
@@ -66,7 +66,7 @@ function scopedAnnotations() {
 [[["preparing"],{"operation":"weekly-export","format":"csv"}],[["writing"],{"operation":"weekly-export","format":"csv","stage":"write"}],[["outside annotated operation"],{}],[["reading input"],{"component":"importer"}],[["validating rows"],{"component":"importer"}],[["outside importer scope"],{}]]
 ```
 
-`annotateLogs` attaches key/value metadata to every record inside its program, including nested calls and inherited child context. `annotateLogsScoped` changes annotations until the supplied runtime scope closes. A plain pair of braces does not supply that scope, so use `Effect.scoped` for this scoped API.
+`annotateLogs` adds key/value metadata to every record in its program, nested calls and inherited child context included. `annotateLogsScoped` annotates until the supplied runtime scope closes; plain braces supply no scope, so use `Effect.scoped`.
 
 ## Measuring log spans
 
@@ -87,7 +87,7 @@ function timedExport() {
 [[["opening output"],[["write-output",0]]],[["output written"],[["write-output",30]]]]
 ```
 
-Each record inside the log span includes the elapsed time since that span began. The first record measures time near the start, and the second includes the intervening wait. A log span enriches logs; use tracing spans when you need parent/child relationships and exportable traces.
+Each record inside the log span carries the time elapsed since the span began, so the second includes the wait. A log span only enriches logs; use tracing spans for parent/child relationships and exportable traces.
 
 ## Disabling and configuring logging
 
@@ -116,7 +116,7 @@ function configured() {
 [["Debug",["configuration loaded"]]]
 ```
 
-The None threshold suppresses logging in the provided region. `Config.LogLevel` builds a configuration value; `LogLevel()` reads and validates the severity when the layer is built, reporting configuration errors then. Supply the configuration layer once at the application boundary; applications with several entry points can include it in a shared `ManagedRuntime`.
+The None threshold silences the provided region. `Config.LogLevel` builds a configuration value; `LogLevel()` reads and validates it when the layer builds, and reports configuration errors then. Supply the configuration layer once at the application boundary, or in a shared `ManagedRuntime` for several entry points.
 
 ## Defining a custom output handler
 
@@ -139,7 +139,7 @@ function captureLogs() {
 [{"level":"Info","message":["batch accepted",{"count":3}]},{"level":"Warn","message":["one retry required"]}]
 ```
 
-`Logger.make` takes a synchronous callback that receives the message, level, cause, emitting fiber, and date. The callback above only records values in memory, so it is eligible for a plain JavaScript callback. Do not call a pausing service inside it; use an Effect-aware logging destination such as an exporter layer for asynchronous output.
+`Logger.make` takes a synchronous callback that receives the message, level, cause, emitting fiber, and date. This one only stores values in memory, so it can be a plain JavaScript callback. Don't call a pausing service inside it; for asynchronous output, use an Effect-aware destination such as an exporter layer.
 
 ## Choosing text, structured, and JSON formats
 
@@ -159,7 +159,7 @@ function jsonExample() {
 [["INFO",["started",{"workers":4}]]]
 ```
 
-The default logger emits readable text; LogFmt offers compact key/value output and Pretty adds visual formatting. Structured output preserves an object containing messages, level, timestamp, annotations, cause, log spans, and fiber identity; JSON serializes that structure for ingestion. The corresponding formatter loggers are `formatSimple`, `formatLogFmt`, `formatStructured`, and `formatJson` when a custom handler needs formatted output rather than console delivery.
+The default logger emits readable text, LogFmt compact key/value pairs, and Pretty visual formatting. Structured output keeps an object of messages, level, timestamp, annotations, cause, log spans, and fiber identity; JSON serializes it for ingestion. For formatted output without console delivery, a custom handler uses the matching formatter loggers `formatSimple`, `formatLogFmt`, `formatStructured`, and `formatJson`.
 
 ## Sending records to multiple destinations
 
@@ -182,4 +182,4 @@ function consoleAndCapture() {
 [["job finished"]] 1 true
 ```
 
-Each active logger receives the record after threshold filtering. `Logger.layer` replaces the active logger set by default; its `mergeWithExisting: true` option adds destinations instead. Include `tracerLogger` when logs should also become events on the current tracing span.
+Every active logger receives each record that passes the threshold. `Logger.layer` replaces the active loggers; `mergeWithExisting: true` adds to them instead. Include `tracerLogger` to also record logs as events on the current tracing span.

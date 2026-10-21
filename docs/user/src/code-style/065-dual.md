@@ -1,6 +1,6 @@
 # Dual APIs
 
-Many Effect APIs accept either the data followed by options or options followed by the data. These are the data-first and data-last forms of a dual API. VibeLang preserves both forms. With the pipe operator, `|>`, and method syntax on Effect's data types, the data-first form usually reads best.
+Many Effect APIs are dual: they take the data then the options (data-first), or the options then the data (data-last). VibeLang keeps both. With the pipe operator, `|>`, and method syntax on Effect's data types, data-first usually reads best.
 
 ## Data first or data last
 
@@ -21,7 +21,7 @@ function compare() {
 [[1,2,3],[1,2,3]]
 ```
 
-The direct form supplies `source` in the first call. The data-last form first builds a stage, then `pipe` supplies `source`. Both build the same kind of Stream value and defer stream processing until consumption. These builders and their returned stages are trusted Effect library functions.
+The direct form supplies `source` in the first call; the data-last form builds a stage, then `pipe` supplies `source`. Both build the same kind of Stream value and process nothing until consumed. The builders and their stages are trusted Effect library functions.
 
 ## Direct calls and program pipelines
 
@@ -45,7 +45,7 @@ function pipedLookup() {
 found found
 ```
 
-Each `%` stands for the expression before its `|>`. Where `%` is an argument that expects a program, as the first argument of `retry` and `timeout` does, that expression is passed by name: retry runs `lookup()` again on each attempt, and timeout limits the whole retried computation. Where `%` is an argument that expects a value, the expression runs once and `%` is its result.
+Each `%` stands for the expression before its `|>`. Where `%` is an argument that expects a program, such as the first argument of `retry` and `timeout`, the expression is passed by name: retry reruns `lookup()` on each attempt, and timeout limits the whole retried computation. Where `%` is an argument that expects a value, the expression runs once and `%` is its result.
 
 ## Choosing a form
 
@@ -62,4 +62,4 @@ const reusableLookup = () => lookup() |> retry(%, { times: 2 }) |> timeout(%, "1
 found found
 ```
 
-A direct call suits one operator; a pipe keeps several operators readable. Wrap the complete pipe in a function when you want a reusable program rather than its result. For transformations that only use a completed value, ordinary statements are usually clearer than `Effect.map` or `Effect.flatMap`.
+A direct call suits one operator; a pipe keeps several readable. Wrap the whole pipe in a function for a reusable program instead of its result. To transform a completed value, ordinary statements are usually clearer than `Effect.map` or `Effect.flatMap`.

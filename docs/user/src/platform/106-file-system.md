@@ -1,6 +1,6 @@
 # FileSystem
 
-`FileSystem` exposes Effect's portable file operations in VibeLang. Request the service inside a function, call its operations, and provide a runtime implementation or test layer around the application.
+`FileSystem` exposes Effect's portable file operations. Request the service inside a function, call its operations, and provide a runtime implementation or test layer around the application.
 
 ## Requesting the file-system service
 
@@ -14,7 +14,7 @@ function readSettings() {
 // Output: {"theme":"dark"}
 ```
 
-`FileSystem` is the imported module; `FileSystem.FileSystem` is its service key. `Effect.service` retrieves the implementation and adds that service to R. `readFileString` returns text on success and reports a `PlatformError` as an expected failure.
+`FileSystem` is the imported module; `FileSystem.FileSystem` is its service key. `Effect.service` retrieves the implementation and adds the service to R. `readFileString` returns text or fails with an expected `PlatformError`.
 
 ## Performing file operations
 
@@ -31,7 +31,7 @@ function saveSummary(text: string) {
 // Output: {"content":"ready","entries":["summary.txt"]}
 ```
 
-Calls run sequentially: the write completes before the read starts. Expected I/O failures enter E and can be handled with `try`/`catch`. `readFile` and `writeFile` handle byte arrays when text encoding is not appropriate.
+Calls run in order: the write completes before the read starts. Expected I/O failures enter E, and `try`/`catch` handles them. `readFile` and `writeFile` take byte arrays where text encoding doesn't fit.
 
 | Operations | Purpose |
 | --- | --- |
@@ -59,7 +59,7 @@ function fileSize(path: string) {
 // Output: 5
 ```
 
-`open` requires a Scope and registers closing automatically. `using` makes that acquisition belong to the enclosing block, so the handle closes when the function exits, including on failure or interruption. Without `using`, the acquisition keeps Scope in R and belongs to the caller's scope.
+`open` requires a Scope and registers the close itself. `using` gives the acquisition to the enclosing block, so the handle closes when the function exits, on failure or interruption too. Without `using`, the acquisition keeps Scope in R and belongs to the caller's scope.
 
 ## Supplying platform implementations
 
@@ -77,7 +77,7 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeFileSystem.layer))
 // Output: Project notes
 ```
 
-`NodeFileSystem.layer` supplies just the file-system implementation. `NodeServices.layer` supplies the broader Node platform bundle, and Bun applications use the corresponding Bun adapter. Application functions need only `FileSystem`, not a concrete adapter package.
+`NodeFileSystem.layer` supplies only the file system; `NodeServices.layer` supplies the whole Node platform bundle; Bun applications use the matching Bun adapter. Application functions need only `FileSystem`, not an adapter package.
 
 ## Replacing behavior in tests
 
@@ -107,9 +107,9 @@ it.effect("reads the configured title") {
 // Output:
 ```
 
-`layerNoop` supplies a complete service with selected method overrides. Its defaults fail or die for unsupported operations; it is not an in-memory file system. Override every operation the test exercises and let unexpected access expose a missing test behavior.
+`layerNoop` supplies a complete service with the methods you override. Its other methods fail or die; it is not an in-memory file system. Override every operation the test exercises, so unexpected access exposes a missing test behavior.
 
 ## Coming from Effect
 
-Test overrides use ordinary VibeLang functions. Contextual typing converts them to the Effect-returning methods the service interface expects, so `readFileString: () => "Release notes"` replaces a TypeScript `Effect.succeed` body.
+Test overrides are ordinary functions; contextual typing converts them to the Effect-returning methods the service interface expects, so `readFileString: () => "Release notes"` replaces a TypeScript `Effect.succeed` body.
 

@@ -28,7 +28,7 @@ waiting: 2
 state: done
 ```
 
-Arms are tried in order, and the first arm whose pattern matches gives the value. `Number` and `String` test `typeof`. An object pattern checks only the properties it names.
+Arms are tried in order; the first that matches gives the value. `Number` and `String` test `typeof`. An object pattern checks only the properties it names.
 
 ## Shapes, guards, and tags
 
@@ -89,7 +89,7 @@ can reopen can reopen archived
 true true false
 ```
 
-`not` matches what its pattern does not; `or` matches either pattern. Order still matters: a broad arm can consume inputs that a later arm was meant to handle.
+`not` matches what its pattern does not; `or` matches either pattern. Order still matters: a broad arm takes inputs meant for a later arm.
 
 ## Fixing the return type
 
@@ -107,7 +107,7 @@ function display(input: number | boolean): string {
 3.0 enabled disabled
 ```
 
-A match's type is the union of its arms' types. Annotate the function's return type to require one type from every arm, which catches an arm that returns a number from a text formatter.
+A match's type is the union of its arms' types. Annotate the return type to require one type from every arm; that catches an arm returning a number from a text formatter.
 
 ## Exhaustive handling
 
@@ -127,7 +127,7 @@ function phaseLabel(phase: Phase) {
 Draft Published
 ```
 
-A match without a `default` arm over a finite union, such as literals, `error` classes, `Option`, `Exit`, or `Result`, must handle every case. Adding a member to `Phase` makes this match EK4701 until it gets an arm. A guard does not prove that every value of a type is covered. Over other types, a match that no arm fits throws a `TypeError` when it runs.
+Without a `default` arm, a match over a finite union (literals, `error` classes, `Option`, `Exit`, or `Result`) must handle every case: add a member to `Phase` and this match is EK4701 until it gets an arm. A guard doesn't prove that every value of a type is covered. Over other types, a match no arm fits throws a `TypeError` when it runs.
 
 ## Defaults, optional outputs, and result outputs
 
@@ -163,7 +163,7 @@ starting true
 starting help
 ```
 
-A `default` arm comes last and receives every unmatched input, narrowed to the cases no arm took. Return an `Option` or a `Result` from the arms when the caller needs to know whether a case matched. That failed Result is a returned value, not a typed Effect failure.
+A `default` arm comes last and receives every unmatched input, narrowed to the cases no arm took. When the caller needs to know whether a case matched, return an `Option` or a `Result` from the arms. A failed Result is a returned value, not a typed Effect failure.
 
 ## Reusable matchers with the Match module
 
@@ -185,4 +185,4 @@ function describeAll(inputs: ReadonlyArray<number | string>) {
 ["count 3","label news"]
 ```
 
-`Match.type<T>()` builds a matcher without choosing an input, and its finalizer produces a plain function to pass as a callback. Match callbacks are synchronous value computations, and Match functions are trusted Effect library functions: exceptions escaping into Effect code are defects that its catch does not recover. Inside a plain-contract function, JavaScript catch receives every exception as `unknown` (D260). Use `match` when an arm performs Effect work.
+`Match.type<T>()` builds a matcher with no input yet; its finalizer produces a plain function to pass as a callback. Match callbacks compute values synchronously, and Match functions are trusted Effect library functions: an exception escaping into Effect code is a defect that Effect catch doesn't recover. In a plain-contract function, JavaScript catch receives every exception as `unknown` (D260). Use `match` when an arm does Effect work.
