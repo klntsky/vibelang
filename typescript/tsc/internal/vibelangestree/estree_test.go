@@ -60,18 +60,19 @@ func utf16Slice(text string, start, end int) string {
 }
 
 var forms = map[string]string{
-	"contracts":    "function read(id: string): string!Gone!Users { return Users.find(id) }\ntype Program = number!!\n",
-	"declarations": "error Gone { id: string }\nerror Timeout\nservice Users { find(id: string): string!Gone }\ncontrol Ask { answer(): boolean!! }\nschema Ticket { id: string; mutable count: number }\nlayer Live: Users { find(id) { return id } }\n",
-	"blocks":       "function f() { return withSpan(\"f\") { const value = do { 1 }; return value } }\n",
-	"provide":      "function f() { provide Live, Clock = clock { return Users.find(\"1\") } }\n",
-	"catch":        "function f() { const a = read() catch \"x\"; return read() catch (e) => match (e) { when Gone: 1; default: 2; } }\n",
-	"pipes":        "function f(n: number) { return n |> % + 1 |> String(%) }\n",
-	"patterns":     "function f(o: unknown) { if (o is Exit.Failure(let cause)) return cause; return 0 }\n",
-	"primitives":   "function f() { uninterruptible { restore { return read() } } }\nfunction g() { try { return read() } finally (exit) { log(exit) } }\n",
-	"fibers":       "function f(ids: string[]) { const t = fork read(); const all = await.all [read()]; for concurrent(2) (const id of ids) log(id); return join t }\n",
-	"handle":       "function f() { try { return ask() } handle Ask.answer() { resume(true) } handle Ask.other(n) { resume(n) } }\n",
-	"match":        "function f(x: number) { match (x) { when 1: log(\"one\"); default: log(\"other\"); } }\n",
-	"hatches":      "function f(text: string) { return try((text) => JSON.parse(text), text) ?? throw new Gone({ id: text }) }\n",
+	"contracts":     "function read(id: string): string!Gone!Users { return Users.find(id) }\ntype Program = number!!\n",
+	"declarations":  "error Gone { id: string }\nerror Timeout\nservice Users { find(id: string): string!Gone }\ncontrol Ask { answer(): boolean!! }\nschema Ticket { id: string; mutable count: number }\nlayer Live: Users { find(id) { return id } }\n",
+	"error classes": "export error AppError implements Coded {\n  _tag: string\n  /** The code. */\n  code: string\n  static readonly family = \"app\"\n  constructor(code: string) { super({ code }) }\n  get label(): string { return this.code }\n}\nerror NotFound extends AppError { mutable path: string; describe(): string { return this.path } }\nerror Timeout extends AppError\nabstract error Http { status: number; abstract describe(): string }\nschema error FsError { _tag: string; method: string; mutable path?: string }\nschema error Missing extends FsError { attempts: number }\n",
+	"blocks":        "function f() { return withSpan(\"f\") { const value = do { 1 }; return value } }\n",
+	"provide":       "function f() { provide Live, Clock = clock { return Users.find(\"1\") } }\n",
+	"catch":         "function f() { const a = read() catch \"x\"; return read() catch (e) => match (e) { when Gone: 1; default: 2; } }\n",
+	"pipes":         "function f(n: number) { return n |> % + 1 |> String(%) }\n",
+	"patterns":      "function f(o: unknown) { if (o is Exit.Failure(let cause)) return cause; return 0 }\n",
+	"primitives":    "function f() { uninterruptible { restore { return read() } } }\nfunction g() { try { return read() } finally (exit) { log(exit) } }\n",
+	"fibers":        "function f(ids: string[]) { const t = fork read(); const all = await.all [read()]; for concurrent(2) (const id of ids) log(id); return join t }\n",
+	"handle":        "function f() { try { return ask() } handle Ask.answer() { resume(true) } handle Ask.other(n) { resume(n) } }\n",
+	"match":         "function f(x: number) { match (x) { when 1: log(\"one\"); default: log(\"other\"); } }\n",
+	"hatches":       "function f(text: string) { return try((text) => JSON.parse(text), text) ?? throw new Gone({ id: text }) }\n",
 }
 
 func TestTokensAndCommentsAreTheSourceText(t *testing.T) {
@@ -217,5 +218,78 @@ func TestLoneSurrogatesSurviveAsEscapes(t *testing.T) {
 	}
 	if !strings.Contains(tree, `"value":"\ud800a"`) {
 		t.Errorf("the literal's value lost its surrogate: %s", tree)
+	}
+}
+
+func TestErrorClassesReadAsTheirSource(t *testing.T) {
+	classes := map[string]map[string]any{}
+	for _, node := range nodes(parse(t, "/x.vibe", forms["error classes"])) {
+		if node["type"] == "ClassDeclaration" {
+			classes[node["id"].(map[string]any)["name"].(string)] = node
+		}
+	}
+	text := forms["error classes"]
+	members := func(name string) []string {
+		var out []string
+		for _, member := range classes[name]["body"].(map[string]any)["body"].([]any) {
+			m := member.(map[string]any)
+			start, end := rangeOf(m)
+			desc := m["type"].(string) + " " + text[start:end]
+			if m["readonly"] == true {
+				desc += " (readonly)"
+			}
+			out = append(out, desc)
+		}
+		return out
+	}
+	want := map[string][]string{
+		"AppError": {
+			"PropertyDefinition _tag: string (readonly)",
+			"PropertyDefinition code: string (readonly)",
+			"PropertyDefinition static readonly family = \"app\" (readonly)",
+			"MethodDefinition constructor(code: string) { super({ code }) }",
+			"MethodDefinition get label(): string { return this.code }",
+		},
+		"NotFound": {
+			"PropertyDefinition path: string;",
+			"MethodDefinition describe(): string { return this.path }",
+		},
+		"Timeout": nil,
+		"Http": {
+			"PropertyDefinition status: number; (readonly)",
+			"TSAbstractMethodDefinition abstract describe(): string",
+		},
+		"FsError": {
+			"PropertyDefinition _tag: string; (readonly)",
+			"PropertyDefinition method: string; (readonly)",
+			"PropertyDefinition path?: string",
+		},
+		"Missing": {"PropertyDefinition attempts: number (readonly)"},
+	}
+	for name, members_ := range want {
+		if classes[name] == nil {
+			t.Fatalf("no class %s", name)
+		}
+		if got := strings.Join(members(name), "\n"); got != strings.Join(members_, "\n") {
+			t.Errorf("%s:\n%s\nwant:\n%s", name, got, strings.Join(members_, "\n"))
+		}
+	}
+	for name, base := range map[string]any{"AppError": nil, "NotFound": "AppError", "Timeout": "AppError", "Missing": "FsError", "FsError": nil} {
+		superClass, _ := classes[name]["superClass"].(map[string]any)
+		switch {
+		case base == nil && superClass != nil:
+			t.Errorf("%s extends %v, want no superClass", name, superClass["name"])
+		case base != nil && (superClass == nil || superClass["name"] != base):
+			t.Errorf("%s: superClass %v, want %v", name, superClass, base)
+		}
+	}
+	if implements := classes["AppError"]["implements"].([]any); len(implements) != 1 {
+		t.Errorf("AppError implements %d, want Coded", len(implements))
+	}
+	if classes["Http"]["abstract"] != true {
+		t.Errorf("Http is abstract")
+	}
+	if start, end := rangeOf(classes["Timeout"]); text[start:end] != "error Timeout extends AppError" {
+		t.Errorf("Timeout spans %q", text[start:end])
 	}
 }

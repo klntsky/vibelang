@@ -1802,6 +1802,9 @@ func (c *converter) convertParameter(n *ast.Node, parent *ast.Node) *obj {
 }
 
 func (c *converter) convertClass(n *ast.Node) *obj {
+	if result := c.errorClass(n); result != nil {
+		return result // an error written with a class's features (D278), or a schema error (D279)
+	}
 	data := n.ClassLikeData()
 	var extendsType *ast.Node
 	var implementsClause *ast.Node

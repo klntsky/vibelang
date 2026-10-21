@@ -34,6 +34,67 @@ export error Timeout
 export error BadJson { error: unknown }
 
 /**
+ * The base of the application's failures: each subclass carries its own tag.
+ *
+ * @category errors
+ * @since 0.0.2
+ */
+export error AppError implements Coded {
+  _tag: string
+  code: string
+
+  /**
+   * Makes a failure whose code is trimmed.
+   *
+   * @param code - The failure's code.
+   */
+  constructor(code: string) {
+    super({ code: code.trim() })
+  }
+
+  /**
+   * The code in upper case.
+   *
+   * @returns The code in upper case.
+   */
+  get label(): string {
+    return this.code.toUpperCase()
+  }
+}
+
+/**
+ * A failure without a code of its own.
+ *
+ * @category errors
+ * @since 0.0.2
+ */
+export error Unknown extends AppError
+
+/**
+ * A failure that a request can carry: it encodes.
+ *
+ * @category errors
+ * @since 0.0.2
+ */
+export schema error Stored { _tag: string; key: string; mutable attempts: number }
+
+/**
+ * A stored failure whose key was missing.
+ *
+ * @category errors
+ * @since 0.0.2
+ */
+export schema error StoredMissing extends Stored { path: string }
+
+/**
+ * Something with a code.
+ *
+ * @category models
+ * @since 0.0.2
+ */
+export interface Coded { code: string }
+
+/**
  * A user.
  *
  * @category models
