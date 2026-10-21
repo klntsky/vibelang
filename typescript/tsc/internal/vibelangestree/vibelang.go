@@ -65,7 +65,8 @@ func (c *converter) typeArgumentNodes(list *ast.NodeList) []*ast.Node {
 // skipStatement reports whether statement is one the parser wrote with no
 // source of its own: the interface a schema declaration declares.
 func (c *converter) skipStatement(statement *ast.Node) bool {
-	return c.vibe && statement.Kind == ast.KindInterfaceDeclaration && synthesized(statement)
+	// A schema declaration's interface, and a schema alias's type (D280).
+	return c.vibe && (statement.Kind == ast.KindInterfaceDeclaration || statement.Kind == ast.KindTypeAliasDeclaration) && synthesized(statement)
 }
 
 func (c *converter) convertVibeLang(n *ast.Node, parent *ast.Node) (*obj, bool) {
@@ -117,6 +118,9 @@ func (c *converter) convertVibeLang(n *ast.Node, parent *ast.Node) (*obj, bool) 
 			return c.convertChild(ifStatement.ThenStatement, n), true
 		}
 	case ast.KindVariableStatement:
+		if result := c.schemaAlias(n); result != nil { // D280, schema_alias.go
+			return result, true
+		}
 		if result := c.schemaDeclaration(n); result != nil {
 			return result, true
 		}

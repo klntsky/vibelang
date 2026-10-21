@@ -61,7 +61,7 @@ func utf16Slice(text string, start, end int) string {
 
 var forms = map[string]string{
 	"contracts":     "function read(id: string): string!Gone!Users { return Users.find(id) }\ntype Program = number!!\n",
-	"declarations":  "error Gone { id: string }\nerror Timeout\nservice Users { find(id: string): string!Gone }\ncontrol Ask { answer(): boolean!! }\nschema Ticket { id: string; mutable count: number }\nlayer Live: Users { find(id) { return id } }\n",
+	"declarations":  "error Gone { id: string }\nerror Timeout\nservice Users { find(id: string): string!Gone }\ncontrol Ask { answer(): boolean!! }\nschema Ticket { id: string; mutable count: number }\nschema Code = \"a\" | \"b\"\nschema Point = { x: number }\nlayer Live: Users { find(id) { return id } }\n",
 	"error classes": "export error AppError implements Coded {\n  _tag: string\n  /** The code. */\n  code: string\n  static readonly family = \"app\"\n  constructor(code: string) { super({ code }) }\n  get label(): string { return this.code }\n}\nerror NotFound extends AppError { mutable path: string; describe(): string { return this.path } }\nerror Timeout extends AppError\nabstract error Http { status: number; abstract describe(): string }\nschema error FsError { _tag: string; method: string; mutable path?: string }\nschema error Missing extends FsError { attempts: number }\n",
 	"blocks":        "function f() { return withSpan(\"f\") { const value = do { 1 }; return value } }\n",
 	"provide":       "function f() { provide Live, Clock = clock { return Users.find(\"1\") } }\n",
@@ -141,6 +141,44 @@ func TestVibeLangFormsHaveTheirOwnNodeTypes(t *testing.T) {
 			if !seen[typ] {
 				t.Errorf("%s: no %s", name, typ)
 			}
+		}
+	}
+}
+
+// TestSchemaAliasIsAConstantOfItsWrittenType pins D280's tree: const Name:
+// Type, without the schema the parser wrote or the synthesized type alias.
+func TestSchemaAliasIsAConstantOfItsWrittenType(t *testing.T) {
+	text := "export schema Code = \"a\" | \"b\";\nschema Names = ReadonlyArray<string>\n"
+	program := parse(t, "/x.vibe", text)
+	body := program["body"].([]any)
+	if len(body) != 2 {
+		t.Fatalf("got %d statements, want 2", len(body))
+	}
+	exported := body[0].(map[string]any)
+	if exported["type"] != "ExportNamedDeclaration" {
+		t.Fatalf("got %s, want ExportNamedDeclaration", exported["type"])
+	}
+	for i, statement := range []map[string]any{exported["declaration"].(map[string]any), body[1].(map[string]any)} {
+		if statement["type"] != "VariableDeclaration" || statement["kind"] != "const" {
+			t.Fatalf("statement %d is %s %v, want a const", i, statement["type"], statement["kind"])
+		}
+		declarator := statement["declarations"].([]any)[0].(map[string]any)
+		if declarator["init"] != nil {
+			t.Errorf("statement %d has an initializer", i)
+		}
+		annotation := declarator["id"].(map[string]any)["typeAnnotation"].(map[string]any)["typeAnnotation"].(map[string]any)
+		want := []string{"TSUnionType", "TSTypeReference"}[i]
+		if annotation["type"] != want {
+			t.Errorf("statement %d is typed %s, want %s", i, annotation["type"], want)
+		}
+		start, end := rangeOf(annotation)
+		if got := text[start:end]; got != []string{"\"a\" | \"b\"", "ReadonlyArray<string>"}[i] {
+			t.Errorf("statement %d's type is at %q", i, got)
+		}
+	}
+	for _, node := range nodes(program) {
+		if node["type"] == "TSTypeAliasDeclaration" || node["type"] == "CallExpression" {
+			t.Errorf("a %s the parser wrote", node["type"])
 		}
 	}
 }

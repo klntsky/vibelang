@@ -137,6 +137,14 @@ export schema Account {
 }
 
 /**
+ * Why a lookup failed.
+ *
+ * @category schemas
+ * @since 0.0.2
+ */
+export schema Reason = "missing" | "denied"
+
+/**
  * The users layer.
  *
  * @category layers
