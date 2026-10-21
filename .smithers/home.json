@@ -1,15 +1,235 @@
 {
-  "blocks": [
-    { "type": "text", "text": "VibeLang is Effect as a language: TypeScript syntax that compiles to TypeScript." },
-    { "type": "prompt", "title": "Ask about VibeLang", "placeholder": "Ask about VibeLang…" },
+  "sections": [
     {
-      "type": "links",
-      "links": [
-        { "label": "Install VibeLang", "url": "https://effeck.dev/" },
-        { "label": "Docs", "url": "https://effeck.dev/001-onboarding.html" },
-        { "label": "Report a bug", "url": "https://smithers.sh/effeck/effeck/issues" }
+      "title": "Today",
+      "audience": "maintainer",
+      "blocks": [
+        {
+          "type": "action",
+          "flow": "branch.new",
+          "title": "New branch",
+          "key": "b"
+        },
+        {
+          "type": "issues"
+        },
+        {
+          "type": "runs"
+        }
       ]
     },
-    { "type": "markdown", "path": "README.md", "title": "README" }
+    {
+      "title": "Contribute",
+      "audience": "contributor",
+      "blocks": [
+        {
+          "type": "code",
+          "title": "Set up",
+          "language": "sh",
+          "code": "sh scripts/setup.sh"
+        },
+        {
+          "type": "cards",
+          "title": "How a change lands",
+          "cards": [
+            {
+              "title": "A bug comes with a minimal reproduction",
+              "text": "A report whose reproduction doesn't show the bug gets needs-repro."
+            },
+            {
+              "title": "Accepted for discussion",
+              "text": "A maintainer adds accepted."
+            },
+            {
+              "title": "A timeline and a commitment",
+              "text": "timeline: weeks, months or unscheduled; commitment: committed, open or undecided."
+            },
+            {
+              "title": "A proof of concept",
+              "text": "A maintainer links a draft pull request, such as poc: #123 for issue 123, that you can check out and run."
+            },
+            {
+              "title": "A pull request; a person merges",
+              "text": "One accepted issue, one focused change. Agents never approve or merge."
+            }
+          ]
+        },
+        {
+          "type": "links",
+          "title": "Where to ask",
+          "links": [
+            {
+              "label": "Issues",
+              "url": "https://github.com/smithersai/vibelang/issues"
+            },
+            {
+              "label": "Docs",
+              "url": "https://vibelang.sh"
+            }
+          ]
+        },
+        {
+          "type": "prompt",
+          "title": "Ask about the code",
+          "placeholder": "Ask about VibeLang's compiler…"
+        }
+      ]
+    },
+    {
+      "audience": "everyone",
+      "blocks": [
+        {
+          "type": "hero",
+          "title": "VibeLang",
+          "tagline": "Reliable TypeScript for the AI era, built on Effect.",
+          "text": "A simple, readable syntax for Effect that compiles to TypeScript, with first-class access to the TypeScript ecosystem.",
+          "install": "npm create vibelang@latest my-app",
+          "actions": [
+            {
+              "label": "Get started",
+              "url": "https://vibelang.sh/getting-started/004-installation"
+            },
+            {
+              "label": "Cheat sheet",
+              "url": "https://vibelang.sh/vibelang-features/115-cheat-sheet"
+            },
+            {
+              "label": "Docs",
+              "url": "https://vibelang.sh"
+            }
+          ],
+          "announcement": {
+            "label": "v0: the language will change",
+            "url": "https://vibelang.sh"
+          }
+        },
+        {
+          "type": "code",
+          "file": "users.vibe",
+          "language": "vibe",
+          "code": "error UserNotFound { id: string }\nservice Users {\n  find(id: string): string!UserNotFound\n}\n\nconst UsersLive = Layer.succeed(Users, {\n  find(id: string) {\n    if (id !== \"42\") throw new UserNotFound({ id })\n    return \"Ada\"\n  }\n})\n\nexport function main() {\n  provide UsersLive {\n    const [name, fallback] = await.all [\n      Users.find(\"42\"),\n      Users.find(\"7\") catch \"Guest\"\n    ]\n    Console.log(name, fallback)\n  }\n}"
+        },
+        {
+          "type": "stats",
+          "stats": [
+            {
+              "value": "MIT · Apache 2.0",
+              "label": "License"
+            },
+            {
+              "value": "Effect 4",
+              "label": "Runtime"
+            },
+            {
+              "value": "macOS · Linux · Windows",
+              "label": "arm64 and x64"
+            },
+            {
+              "value": "v0",
+              "label": "Breaking changes ahead"
+            }
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Why VibeLang",
+          "cards": [
+            {
+              "title": "Every function is an Effect",
+              "text": "A call runs where it stands: no generators, no yield*."
+            },
+            {
+              "title": "Typed errors",
+              "text": "error NotFound { id } and User!NotFound in the signature."
+            },
+            {
+              "title": "Services and layers",
+              "text": "service, provide and Layer as language."
+            },
+            {
+              "title": "Concurrency",
+              "text": "await.all, await.race, fork and join."
+            },
+            {
+              "title": "Your editor knows it",
+              "text": "Diagnostics, hovers and completions from the compiler."
+            },
+            {
+              "title": "TypeScript interop",
+              "text": "Checks .vibe and .ts together; emits JavaScript and types."
+            }
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Benchmarks",
+          "cards": [
+            {
+              "label": "scripts/bench/compiler.sh",
+              "title": "Compiler",
+              "text": "Check and emit time and memory against tsgo on the same Effect program; results land with their run.",
+              "url": "https://github.com/smithersai/vibelang/blob/main/scripts/bench/compiler.sh"
+            },
+            {
+              "label": "scripts/bench/lsp.mjs",
+              "title": "Language server",
+              "text": "Hover and diagnostics latency; the method first, numbers with their run.",
+              "url": "https://github.com/smithersai/vibelang/blob/main/scripts/bench/lsp.mjs"
+            }
+          ]
+        },
+        {
+          "type": "cards",
+          "title": "Ecosystem",
+          "cards": [
+            {
+              "label": "vibelang",
+              "title": "Compiler",
+              "text": "The compiler and language server.",
+              "url": "https://www.npmjs.com/package/vibelang"
+            },
+            {
+              "label": "vibelang-runtime",
+              "title": "Runtime",
+              "text": "The continuation kernel generated code runs on.",
+              "url": "https://www.npmjs.com/package/vibelang-runtime"
+            },
+            {
+              "label": "vibelang-vite",
+              "title": "Vite",
+              "text": "Compile .vibe modules in Vite and Vitest.",
+              "url": "https://www.npmjs.com/package/vibelang-vite"
+            },
+            {
+              "label": "create-vibelang",
+              "title": "Starter",
+              "text": "npm create vibelang@latest my-app",
+              "url": "https://www.npmjs.com/package/create-vibelang"
+            }
+          ]
+        },
+        {
+          "type": "releases",
+          "title": "Releases",
+          "releases": [
+            {
+              "name": "vibelang@0.0.1",
+              "url": "https://www.npmjs.com/package/vibelang/v/0.0.1",
+              "date": "2026-10-18",
+              "summary": "The first release on npm."
+            }
+          ],
+          "more": {
+            "label": "All versions",
+            "url": "https://www.npmjs.com/package/vibelang?activeTab=versions"
+          }
+        },
+        {
+          "type": "prompt",
+          "title": "Questions about VibeLang?",
+          "placeholder": "Ask about this repository…"
+        }
+      ]
+    }
   ]
 }

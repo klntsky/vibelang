@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        A bug report needs a minimal reproduction: the smallest program and the command that show the bug on the latest version. A maintainer accepts a reproduced bug, and an accepted issue gets a proof of concept of the fix. A report without a reproduction that shows the bug gets the `needs-repro` label.
+        A bug report needs a minimal reproduction: the smallest program and the command that show the bug on the latest version. A maintainer accepts a reproduced bug and links a proof of concept of the fix as a draft pull request titled `poc: #<n>` that you can check out and run. A report without a reproduction that shows the bug gets the `needs-repro` label.
   - type: textarea
     id: reproduction
     attributes:

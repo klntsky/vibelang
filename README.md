@@ -134,10 +134,10 @@ Use `cursor` instead of `code` for Cursor. The extension isn't on the marketplac
 
 ## Help build it
 
-Report a bug with a minimal reproduction, or propose an idea, in [Issues](https://github.com/smithersai/vibelang/issues/new/choose). A maintainer accepts issues for discussion and labels each with an expected timeline and commitment, and every accepted issue gets a proof of concept you can run. [CONTRIBUTING.md](CONTRIBUTING.md) explains the process, and [MAINTAINERS.md](MAINTAINERS.md) covers triage and releases. Report vulnerabilities privately through [SECURITY.md](.github/SECURITY.md).
+Report a bug with a minimal reproduction, or propose an idea, in [Issues](https://github.com/smithersai/vibelang/issues/new/choose). A maintainer accepts issues for discussion, labels each with an expected timeline and commitment, and links a proof of concept as a draft pull request titled `poc: #<n>` that you can check out and run. [CONTRIBUTING.md](CONTRIBUTING.md) explains the process, and [MAINTAINERS.md](MAINTAINERS.md) covers triage and releases. Report vulnerabilities privately through [SECURITY.md](.github/SECURITY.md).
 
 ## License
 
 [MIT](LICENSE), except the TypeScript fork in [`typescript/`](typescript/) and the compiler packages built from it, `vibelang` and `vibelang-<platform>`, which use the [Apache License 2.0](typescript/LICENSE.txt) and keep its [notices](typescript/NOTICE.txt).
 
-<sub>1,438 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,453 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>

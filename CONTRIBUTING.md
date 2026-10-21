@@ -8,7 +8,7 @@ Bug reports with a minimal reproduction, ideas, docs fixes and focused pull requ
 
 1. **Open an issue.** A [bug report](https://github.com/smithersai/vibelang/issues/new?template=bug.yml) needs a minimal reproduction: the smallest program and command that show the bug on the latest version. An [idea](https://github.com/smithersai/vibelang/issues/new?template=idea.yml) starts as an issue too, before any code.
 2. **A maintainer accepts it for discussion.** The `accepted` label opens the design discussion. A `timeline:` label gives the maintainer's estimate of when it could land, and a `commitment:` label says whether maintainers plan to build it. See [the labels](MAINTAINERS.md#labels).
-3. **Accepted issues get a proof of concept.** Accepting an issue generates a working prototype of the change and links it on the issue, so everyone can read it and run it before settling the design. It is a starting point, not a merge candidate.
+3. **Accepted issues get a proof of concept.** When a maintainer accepts an issue, they link a proof of concept as a draft pull request titled `poc: #<n>` that you can check out and run. Everyone can try it before the design is settled. It is a starting point, not a merge candidate.
 4. **Open a pull request** that links the accepted issue. A typo fix needs no issue.
 
 ## Set up
@@ -45,7 +45,7 @@ The compiler cases and the doc snippet check also need the pinned packages in `e
 | `docs/tools/`, `site/` | Docs checks and the vibelang.sh site |
 | `scripts/` | Setup, end-to-end checks and release scripts |
 | `experiments/`, `prototype/` | The continuation kernel's law suite and earlier compilers |
-| `.smithers/` | Generated-docs flow and the README's token comparison |
+| `.smithers/` | The docs flow, the README's token comparison, the converter's prompt and test cases, and the repository home page with its chat instructions |
 
 ## Test your change
 
@@ -82,4 +82,4 @@ Start with [good first issues](https://github.com/smithersai/vibelang/issues?q=i
 
 Ask with the [question form](https://github.com/smithersai/vibelang/issues/new?template=question.yml). Report a vulnerability privately, never in an issue: see [SECURITY.md](.github/SECURITY.md).
 
-<sub>1,520 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,552 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>

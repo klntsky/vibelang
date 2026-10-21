@@ -3,7 +3,7 @@
 //   node .smithers/flows/convert/score.mjs            compile in-process (needs the worker's project installed)
 //   node .smithers/flows/convert/score.mjs --worker http://host:8080   use a running worker
 // Exit 1 when any expected output fails. The model's outputs are scored the same way once the
-// Smithers convert flow exists (see README.md).
+// convert flow exists (see README.md).
 import { fileURLToPath } from "node:url"
 import { casesIn } from "./cases.mjs"
 import { heldoutProblems } from "./check-heldout.mjs"

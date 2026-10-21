@@ -38,7 +38,7 @@ export const layout: readonly (readonly [path: string, responsibility: string])[
   ["`docs/tools/`, `site/`", "Docs checks and the vibelang.sh site"],
   ["`scripts/`", "Setup, end-to-end checks and release scripts"],
   ["`experiments/`, `prototype/`", "The continuation kernel's law suite and earlier compilers"],
-  ["`.smithers/`", "Generated-docs flow and the README's token comparison"]
+  ["`.smithers/`", "The docs flow, the README's token comparison, the converter's prompt and test cases, and the repository home page with its chat instructions"]
 ];
 
 export const tests: readonly (readonly [change: string, command: string])[] = [
@@ -57,12 +57,12 @@ export const labels: readonly (readonly [label: string, meaning: string])[] = [
   ["`question`", "A question, from the question form"],
   ["`documentation`", "Guide, reference or example work"],
   ["`needs-repro`", "The report has no reproduction that shows the bug on the latest version"],
-  ["`accepted`", "Accepted for discussion; its proof of concept is generated and linked"],
+  ["`accepted`", "Accepted for discussion; a maintainer links its proof of concept"],
   ["`timeline: weeks`", "A maintainer expects it to land within weeks"],
   ["`timeline: months`", "A maintainer expects it to land within months"],
   ["`timeline: unscheduled`", "No estimate yet"],
   ["`commitment: committed`", "Maintainers plan to build it"],
-  ["`commitment: open`", "Maintainers would merge a good implementation but don't plan to build it; replaces `help wanted`"],
+  ["`commitment: open`", "Maintainers would merge a good implementation but don't plan to build it"],
   ["`commitment: undecided`", "Under discussion; it may be declined"],
   ["`good first issue`", "A bounded task with a clear result and test"],
   ["`in-progress`", "Someone is working on it"],
@@ -86,7 +86,7 @@ export const contributing: Document = {
       heading: "How work moves",
       body: `1. **Open an issue.** A [bug report]({{newBug}}) needs a minimal reproduction: the smallest program and command that show the bug on the latest version. An [idea]({{newIdea}}) starts as an issue too, before any code.
 2. **A maintainer accepts it for discussion.** The \`accepted\` label opens the design discussion. A \`timeline:\` label gives the maintainer's estimate of when it could land, and a \`commitment:\` label says whether maintainers plan to build it. See [the labels](MAINTAINERS.md#labels).
-3. **Accepted issues get a proof of concept.** Accepting an issue generates a working prototype of the change and links it on the issue, so everyone can read it and run it before settling the design. It is a starting point, not a merge candidate.
+3. **Accepted issues get a proof of concept.** When a maintainer accepts an issue, they link a proof of concept as a draft pull request titled \`poc: #<n>\` that you can check out and run. Everyone can try it before the design is settled. It is a starting point, not a merge candidate.
 4. **Open a pull request** that links the accepted issue. A typo fix needs no issue.`
     },
     {
@@ -154,7 +154,7 @@ Add a maintainer here, with their areas and a backup, when they agree to review 
       body: `Give every new issue one outcome:
 
 - **Needs a reproduction.** If a bug report's reproduction is missing or doesn't show the bug on the latest version, add \`needs-repro\` and say what is missing.
-- **Accepted.** Add \`accepted\`, one \`timeline:\` label and one \`commitment:\` label. Acceptance generates the issue's proof of concept and links it on the issue; read it before you discuss the design.
+- **Accepted.** Add \`accepted\`, one \`timeline:\` label and one \`commitment:\` label. Then open a proof of concept as a draft pull request titled \`poc: #<n>\`, where \`<n>\` is the issue number, and link it on the issue. It shows one way the change could work and stays a draft; the real change comes in its own pull request.
 - **Closed.** Use \`duplicate\`, \`invalid\` or \`wontfix\`, with a reason and a link.
 
 Classify a reproduced bug as a compiler crash, a wrong emitted program, a wrong diagnostic or a docs error. An install failure or a wrong emitted program blocks the next release until a maintainer assesses it.

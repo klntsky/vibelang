@@ -17,7 +17,7 @@ Add a maintainer here, with their areas and a backup, when they agree to review 
 Give every new issue one outcome:
 
 - **Needs a reproduction.** If a bug report's reproduction is missing or doesn't show the bug on the latest version, add `needs-repro` and say what is missing.
-- **Accepted.** Add `accepted`, one `timeline:` label and one `commitment:` label. Acceptance generates the issue's proof of concept and links it on the issue; read it before you discuss the design.
+- **Accepted.** Add `accepted`, one `timeline:` label and one `commitment:` label. Then open a proof of concept as a draft pull request titled `poc: #<n>`, where `<n>` is the issue number, and link it on the issue. It shows one way the change could work and stays a draft; the real change comes in its own pull request.
 - **Closed.** Use `duplicate`, `invalid` or `wontfix`, with a reason and a link.
 
 Classify a reproduced bug as a compiler crash, a wrong emitted program, a wrong diagnostic or a docs error. An install failure or a wrong emitted program blocks the next release until a maintainer assesses it.
@@ -33,12 +33,12 @@ Timeline and commitment labels state a maintainer's current belief, not a promis
 | `question` | A question, from the question form |
 | `documentation` | Guide, reference or example work |
 | `needs-repro` | The report has no reproduction that shows the bug on the latest version |
-| `accepted` | Accepted for discussion; its proof of concept is generated and linked |
+| `accepted` | Accepted for discussion; a maintainer links its proof of concept |
 | `timeline: weeks` | A maintainer expects it to land within weeks |
 | `timeline: months` | A maintainer expects it to land within months |
 | `timeline: unscheduled` | No estimate yet |
 | `commitment: committed` | Maintainers plan to build it |
-| `commitment: open` | Maintainers would merge a good implementation but don't plan to build it; replaces `help wanted` |
+| `commitment: open` | Maintainers would merge a good implementation but don't plan to build it |
 | `commitment: undecided` | Under discussion; it may be declined |
 | `good first issue` | A bounded task with a clear result and test |
 | `in-progress` | Someone is working on it |
@@ -69,4 +69,4 @@ Reports arrive through GitHub's private vulnerability reporting; see [SECURITY.m
 
 Publish a performance or token claim only with a public, reproducible method: pinned versions, inputs, units, results and limits. The README's [token comparison](.smithers/token-compare/README.md) is the model. Keep held-out tasks, hidden tests and transcripts private; a private benchmark is not public evidence.
 
-<sub>1,287 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
+<sub>1,318 tokens (o200k_base, js-tiktoken 1.0.21), counted by the [docs flow](.smithers/flows/docs/flow.ts).</sub>
