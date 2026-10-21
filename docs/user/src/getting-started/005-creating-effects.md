@@ -61,7 +61,7 @@ A synchronous TypeScript function can declare trust once with `/** @vibelang tru
 
 In Effect code, `catch` sees expected failures only, not defects from `Option.getOrThrow` or `Schema.decodeUnknownSync`; for recoverable input, use `Option.getOrElse`, `Effect.fromOption`, or `Schema.decodeUnknownEffect`. A catch whose try block has E = `never` gets EK2004 (defects pass through), a warning by default. A plain function's `catch` follows the same rule (D282): it receives typed failures only, so an exception from TypeScript code passes through it. Plain foreign calls at module top level are ordinary JavaScript calls, so their exceptions fail the module's import.
 
-`sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in a `.vibe` hatch; keep larger foreign-library adapters in `.ts`. `.vibe` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
+`sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in a `.vibe` hatch or a [module declaration](#write-typescript-in-a-module-declaration); keep larger foreign-library adapters in `.ts`. `.vibe` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
 
 ## Create effects from promises
 
@@ -110,6 +110,36 @@ function readAndReport(source: Source) {
 `callback` is the boundary hatch for a callback API. It registers a plain callback and waits for its first completion: `resume(value)` succeeds, `resume.fail(error)` fails with an expected failure, and `resume.exit(exit)` adopts an `Exit`; later completions are ignored. A function the registration returns runs if the wait is interrupted, so this adapter cancels the one-shot read on interruption. The registration receives its inputs (here `source`), then `resume`, then an `AbortSignal`. Annotate `resume` with the success and failure types, `Resume<number, Error>`, because calls to `resume` in the body cannot infer them. The body is plain, self-contained TypeScript: it may call platform APIs but reads `source` only as an input.
 
 For resource acquisition, cancellation must also release a resource that arrives after the waiter is gone; ignoring a late callback is not enough. Prefer an existing Effect resource API, or a TypeScript adapter using the runtime's `suspend`, which reports whether delivery lost the cancellation race.
+
+## Write TypeScript in a module declaration
+
+```vibe
+// run: Console.log(slugOf("  Hello, World  ")); Console.log(Effect.result(slugOf("  ?! "))._tag)
+module slugs {
+  // TypeScript: throw, try and catch, and regular expressions keep their JavaScript meaning.
+  export function slugify(title: string): string {
+    const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    if (slug === "") throw new Error(`no slug in ${JSON.stringify(title)}`)
+    return slug
+  }
+}
+
+import { slugify } from slugs
+
+error NoSlug {
+  title: string
+}
+
+function slugOf(title: string) {
+  return try((title) => slugify(title), () => new NoSlug({ title }), title)
+}
+// Output: hello-world
+// Output: Failure
+```
+
+`module slugs { … }` declares a module whose body is TypeScript, checked and compiled as a `.ts` file would be (D283). There `throw`, `try` and `catch`, `async` and `await`, and platform APIs keep their TypeScript meaning, and VibeLang's own syntax, such as `A!E` or an `error` declaration, is a syntax error. The file reaches the module's exports only through an import whose specifier is the module's name, `import { slugify } from slugs`, so a hatch uses them as it uses any import, and a call outside a hatch is a plain foreign call, as for an import from a `.ts` file. `export { slugify } from slugs` re-exports one, and `import slugs` runs a module for its effects. The body imports what it needs itself, its relative specifiers resolve from the `.vibe` file's directory, and it cannot read the `.vibe` file's bindings, so `title` reaches `slugify` as a hatch input.
+
+Declare modules at a file's top level. In a `.vibe` file `module` never declares a namespace: write `namespace` for one. The emitted JavaScript holds each module the file imports inline, run once before the file's own code, and each module's declarations are a declaration file of their own, `main.vibe.slugs.d.ts` beside `main.d.ts` (D286). A module the file imports only types from emits nothing. Move an adapter to its own `.ts` file when other files need it.
 
 ## Suspend work
 

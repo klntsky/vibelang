@@ -448,6 +448,14 @@ VibeLang code lives in `tsc/internal/vibelang/`, which may import any internal p
 | `tsc/internal/checker/extensions_methods.go` (new) | `RegisterMissingPropertyHook`, `NewPropertySymbol`, `SignatureWithThisFromFirstParameter`, `NewFunctionType`, `GetIntersectionType` | +78 |
 | `tsc/internal/checker/extensions_pipes.go` (new) | `isVibeLangPipe` | +13 |
 | `tsc/internal/core/vibelang.go` (new) | `VibeLangOptions` | +22 |
+| `tsc/internal/parser/parser.go` | Module declarations (D283): `module Name {` in `parseDeclarationWorker`, `import text;` in `parseImportDeclarationOrImportEqualsDeclaration`, an identifier in `parseModuleSpecifier`, and the bodies' files at the end of `parseSourceFileWorker` (`vibelang_modules.go`) | +17 |
+| `tsc/internal/ast/ast.go`, `ast/vibelang_modules.go` (new) | `ContentMapperSourceFileInfo.EmbeddedModule` marks a module declaration's body file; `EmbeddedModules`, `EmbeddedModuleBySpecifier` | +3, +73 |
+| `tsc/internal/ast/diagnostic.go` | A diagnostic argument that quotes a module declaration's specifier, `"./main.vibe.text.js"`, displays as the module's name, `text` | +3 |
+| `tsc/internal/compiler/fileloader.go` | An identifier module specifier resolves to the importing file's module declaration without the file system | +12 |
+| `tsc/internal/compiler/program.go` | `ReuseProgram` replaces the supplemental files of a file that is not content-mapped, a `.vibe` file's module declarations | +7 |
+| `tsc/internal/execute/tsc/emit.go` | `--listFiles` leaves out module declarations' bodies, which are not files | +3 |
+| `tsc/internal/printer/printer.go` | `emitIdentifierText` accepts an identifier from a module declaration's body, which has its file's positions | +4 / -1 |
+| `tsc/internal/transformers/declarations/supplementalreferences.go` | No `/// <reference>` to a module declaration's declaration file, which the file imports | +3 |
 | `tsc/internal/tsoptions/vibelang.go` (new) | Parse, validate, and serialize `compilerOptions.vibelang` | +149 |
 
 A rebase onto a newer nightly can conflict only in the existing files above. If upstream regenerates the option tables, add the `vibelang` lines again; `tsoptions/vibelang.go` lists where they go.
@@ -1101,6 +1109,27 @@ const body = try(async (id, signal) => fetchBody(id, signal), id)
 - **EK4405.** `outsideReferences` finds each identifier and shorthand property in the first argument whose value symbol the file declares outside it; imports, globals, prelude names, types, and `TaggedError` classes are exempt. The quick fix `hatchInputFix` adds the names as parameters after the existing inputs' parameters and passes them after the last argument. `hatchCall` writes the same form for EK4401's notes. Hover on a hatch's callee names its inputs.
 
 Cases: `vibelang-hatches` (every form, an inert Effect, `setTimeout` in a hatch, `runPromise` back in), `vibelang-hatches-shadow` (a parameter named `callback`), `hatches-inputs` (inputs for every form, a call among them, a mapper with inputs, `Resume`), `ek1005-prelude-runner.fail`, `ek4404-try-options.fail`, `ek4405-self-contained.fail`, `hatch-inputs-vibelang.fail` (EK4401 and EK4403 among inputs). The LSP smoke applies EK4405's quick fix.
+
+## Module declarations (D283, D286)
+
+`module text { … }` at a `.vibe` file's top level declares a module whose body is TypeScript, with TC39's grammar for module declarations and identifier module specifiers (`import { clean } from text`, `import text`, `export { clean } from text`). The body is a TypeScript file of its own, so TypeScript checks it as it checks any `.ts` file, and the `.vibe` file reaches it only through imports.
+
+```ts
+// main.vibe                                        // main.js
+module text {                                          import * as effect_1 from "effect"
+  import { String } from "effect"                      const text = (() => {
+  export function clean(value: string): string {           function clean(value) { return effect_1.String.capitalize(value.trim()) }
+    return String.capitalize(value.trim())                 return Object.freeze({ __proto__: null, clean: clean })
+  }                                                     })()
+}                                                      const { clean } = text
+import { clean } from text
+```
+
+- **Parsing.** `parser/vibelang_modules.go`: `module Name {` parses into a ModuleDeclaration flagged `NodeFlagsVibeLang` whose block is empty; the parser reads the body in TypeScript mode (`vibelangTypeScript` makes `isVibeLangFile` false) only to find its closing brace, and drops what it read. Each top-level declaration then gets a supplemental source file, `main.vibe.text.ts`, whose text is the `.vibe` text with everything outside the body blanked and which is parsed from the body's start: positions, lines, comments, and source maps are the `.vibe` file's. Its content mapper identity, `vibelang:module-declaration`, makes every tool treat it as a content-mapped file of `main.vibe`: no JavaScript of its own, diagnostics and editor results at the `.vibe` document. An identifier specifier is a string literal flagged `NodeFlagsVibeLang`, `./main.vibe.text.js`, which `fileloader.go` resolves to that file.
+- **Checks.** `modules.go`: EK4407 for a specifier that names no module of the file; EK4408 for a nested, exported, or repeated declaration, `module` used for a namespace (`declare module x`, `module a.b`), and, where TypeScript emits CommonJS and so allows them, `export =` and `import = require()` in a body. A body reading the file's bindings is TypeScript's TS2304, and VibeLang syntax in a body is TypeScript's syntax errors.
+- **Lowering.** `moduleInliner` runs after the lowering: each module the file imports becomes a function called once before the file's code, `await`ed when the body awaits at its top level; the body's imports move up as one namespace import per specifier, its references to them become members (`(0, ns.f)()` for a call); its exports become a frozen object; the file's imports from it become `const { … } = text`, or the import's generated name in CommonJS, which TypeScript's module transform reads. Elision follows TypeScript's: a module imported only for types emits nothing. Declarations are TypeScript's emit of the body, `main.vibe.text.d.ts`, which `main.d.ts` imports from `./main.vibe.text.js`.
+
+Cases: `module-declaration` (exports of each kind, imports in VibeLang code and in hatches, throw and catch, async, the body's own relative and package imports), `module-declaration-cjs` (the same in a CommonJS package), `module-declaration-emit` (the inline JavaScript, top-level await, side-effect and type-only imports, re-exports, and the declaration files), `module-outer-binding.fail`, `module-vibelang-syntax.fail`, `module-missing-export.fail`, `ek4407-module-reference.fail`, `ek4408-module-forms.fail`. `modules_test.go` checks diagnostics, hovers, and definitions in a body through the language service, and the source map; the LSP smoke edits a body; `packages/compiler/test` loads a module through `vibelang/register` and `projects()`.
 
 ## Method syntax on Effect data types (D152, D153)
 

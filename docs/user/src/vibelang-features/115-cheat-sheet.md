@@ -813,6 +813,38 @@ function hatches(text: string, url: string) {
 // Output: {"id":true,"parsed":{"ok":true},"loaded":42,"status":200,"tick":7,"name":"Ada"}
 ```
 
+**TypeScript modules inline** (D283, [module declarations](https://github.com/tc39/proposal-module-declarations)). A module's body is TypeScript, compiled as a `.ts` file would be, so JavaScript's `throw` and `catch` and `async` keep their meaning there. It is self-contained: it imports what it needs, and the file reaches it only through imports.
+
+```ts effect
+// slugs.ts
+export function slugify(title: string): string {
+  const slug = title.trim().toLowerCase().replace(/\W+/g, "-")
+  if (slug === "") throw new Error("no slug")
+  return slug
+}
+// main.ts
+import { slugify } from "./slugs.ts"
+const slug = (title: string) => Effect.try({ try: () => slugify(title), catch: () => new NotFound({ id: title }) })
+```
+
+```vibe es
+// run: Console.log(slug("Hello World"))
+module slugs {
+  export function slugify(title: string): string {
+    const slug = title.trim().toLowerCase().replace(/\W+/g, "-")
+    if (slug === "") throw new Error("no slug")
+    return slug
+  }
+}
+
+import { slugify } from slugs
+
+function slug(title: string) {
+  return try((title) => slugify(title), () => new NotFound({ id: title }), title)
+}
+// Output: hello-world
+```
+
 ## Fibers
 
 **Fork and join** (D166, D225). A fiber belongs to the block that forks it. `join [a, b]` joins several and interrupts the rest on a failure.
