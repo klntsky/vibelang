@@ -14,8 +14,7 @@ Then, from the repository root:
 bun docs/tools/check-snippets.ts
 ```
 
-The checker extracts `vibe` and `ts` fences under `docs/user`, except the
-built site in `docs/user/site`. The fence sets the language: a `vibe` block
+The checker extracts `vibe` and `ts` fences under `docs/user`. The fence sets the language: a `vibe` block
 compiles as a `.vibe` module, a `ts` block as a `.ts` module. It skips
 `ts effect` blocks (Effect TypeScript shown for comparison) and `ts` blocks
 whose first line is `// TypeScript (.ts)` and that name no file. It creates one
@@ -61,7 +60,7 @@ project configuration errors exit 2. Snippet failures exit 1.
 
 ```sh
 bun test docs/tools/check-snippets.test.ts docs/tools/first-run.test.ts docs/tools/hovers.test.ts
-bun docs/tools/render-user.ts
+sh scripts/deploy-docs.sh --dry-run
 ```
 
 ## Running examples
@@ -114,7 +113,7 @@ access, and interactive programs need deterministic fixtures before opting in.
 
 ## Compiler hovers
 
-scripts/deploy-docs.sh builds hovers by default with the 0.0.2 release compiler, so popups show what readers' compiler shows. `VIBELANG_DOCS_HOVERS=0` deploys without them.
+scripts/deploy-docs.sh checks hover generation by default with the 0.0.2 release compiler. Vocs uses its own code highlighting; the hover cache remains available to tools. `VIBELANG_DOCS_HOVERS=0` skips hover generation.
 
 `hovers.ts` asks the VibeLang language server for the hovers and diagnostics of
 the same blocks and caches them for a renderer:
@@ -153,24 +152,25 @@ Concurrent hover requests can render a contextually typed property's owner
 generically or instantiated, such as `Key<T>` or `Key<string>`, so a cold run
 can differ from the last one in a few nodes. Upstream tsgo does the same.
 
-`render-user.ts` builds the one docs site in `docs/user/site`: the user pages
-from `docs/user/src` and one page per specification chapter from
-`docs/design/src` under `spec/`, in the order of the sidebar in
-`docs/user/inventory.md`. `spec/index.html` repeats the specification's first
-page, so `/spec/` still opens the specification. Before rendering, it runs the
-kernel law suite in `experiments` and refuses to build if any test fails; the
-suite also supplies the specification's `{{testCount}}`, `{{testFiles}}`, and
-`{{kernelLines}}` facts. It checks every local link's page and heading id. A
-specification link to a heading on another chapter's page, written as a bare
-fragment such as `#20-the-machine`, and "Chapter 20" in specification prose
-both link to that page. A link to a repository file that isn't a page keeps
-its text and drops the link.
+The single docs site is the Vocs site in site/. Its prebuild hook runs
+the kernel law suite through docs/tools/kernel-facts.ts, then syncs user and
+specification pages with those measured facts. Vocs checks internal links. docs/tools/check-site.ts also checks every built local page and heading target, and refuses missing or external images.
 
-Each page is also written as Markdown beside its HTML, at the same path with
-`.md`, its page links rewritten to their `.md` copies on `https://vibelang.sh`.
-`index.md` and `spec/index.md` repeat the first pages.
-`llms.txt` lists every copy in the llmstxt.org format, one section per sidebar
-view, with a page's sidebar group as its note.
+The postbuild hook calls docs/tools/markdown.ts, extracted from the former
+HTML renderer, to write each source page as Markdown into site/dist/public.
+It preserves code, rewrites page links to their copies on https://vibelang.sh,
+moves bare specification fragments to their owning chapter, and removes
+targets for repository files that are not pages. index.md and spec/index.md
+repeat the first pages. llms.txt starts with docs/user/llms-essentials.md,
+then lists every page in one section per sidebar view.
+
+From the repository root, sh scripts/deploy-docs.sh --dry-run runs the release
+starter and snippet checks (including declared output), hover generation,
+token counts, the brand gate, npm ci, the kernel suite, Vocs build and link
+checks, the built llms.txt tests, and prepare-site.ts against site/dist.
+The latter refuses local paths, host names, LAN addresses, private repository
+names and credential values. Without --dry-run, the command calls npm run
+deploy in site/. Redirects deploy separately; see site/README.md.
 
 ## Token counts
 

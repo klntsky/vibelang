@@ -1,19 +1,11 @@
 #!/bin/sh
-# Publishes the docs on Cloudflare: one site with the user guide at / and the
-# specification's chapters under /spec/, served by a static-assets Worker on
-# effeck.dev. A second Worker (docs/redirect/) sends www.effeck.dev and the
-# other effeck.* domains there.
-#
-#   sh scripts/deploy-docs.sh             # build, check, and deploy
-#   sh scripts/deploy-docs.sh --dry-run   # build and check into .cache/docs-site only
-#
-# Deploying needs CLOUDFLARE_API_TOKEN with Workers Scripts edit access.
-# CLOUDFLARE_ACCOUNT_ID selects the account (default: Will's personal account).
-# docs/wrangler.jsonc names the Worker, effeck. docs/tools/prepare-site.ts
-# refuses to publish local paths, host names, or credentials.
+# Build, check and deploy the single Vocs site at vibelang.sh.
+# sh scripts/deploy-docs.sh --dry-run builds and checks only.
+# Without --dry-run, calls npm run deploy in site/. Redirects deploy separately.
+# Credentials: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-site="$root/.cache/docs-site"
+site="$root/site/dist"
 dry_run=false
 case "${1:-}" in
 	--dry-run) dry_run=true ;;
@@ -94,23 +86,17 @@ if [ "$hovers" = 1 ]; then
 fi
 echo "deploy-docs: checking the published token counts"
 bun "$root/docs/tools/token-counts.ts" --check
-# The docs Worker (docs/wrangler.jsonc) serves effeck.dev, so this build's links name
-# effeck.dev, where its Markdown copies live. vibelang.sh is a separate site today.
-export VIBELANG_DOCS_ORIGIN="${VIBELANG_DOCS_ORIGIN:-https://effeck.dev}"
-VIBELANG_BINARY="${release_binary:-vibelang}" VIBELANG_RUNTIME_DIR="${release_runtime:-$root/packages/runtime}" \
-	bun "$root/docs/tools/render-user.ts"
 
-rm -rf "$site"
-mkdir -p "$site"
-cp -R "$root/docs/user/site/." "$site/"
+echo "deploy-docs: checking the brand gate"
+node "$root/scripts/brand-gate.mjs" --root "$root"
+(cd "$root/site" && npm ci && npm run build && npm run test:llms)
 bun "$root/docs/tools/prepare-site.ts" "$site"
 
 if $dry_run; then
-	echo "deploy-docs: built $site; nothing deployed"
-	exit 0
+    echo "deploy-docs: built site/dist; nothing deployed"
+    exit 0
 fi
 : "${CLOUDFLARE_API_TOKEN:?deploy-docs: set CLOUDFLARE_API_TOKEN to deploy}"
-export CLOUDFLARE_ACCOUNT_ID="${CLOUDFLARE_ACCOUNT_ID:-dd3525a4132493566aeb38de533c8827}"
-cd "$root"
-bunx wrangler@4.151.1 deploy --config docs/wrangler.jsonc
-bunx wrangler@4.151.1 deploy --config docs/redirect/wrangler.jsonc
+: "${CLOUDFLARE_ACCOUNT_ID:?deploy-docs: set CLOUDFLARE_ACCOUNT_ID to deploy}"
+cd "$root/site"
+npm run deploy
