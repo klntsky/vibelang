@@ -101,18 +101,16 @@ func (tx *lowering) visitImportWithDirectVariants(node *ast.Node) *ast.Node {
 	var specifiers []*ast.Node
 	for _, specifier := range tx.plan.directImports[node] {
 		local := specifier.Name().Text()
-		imported := local
 		var propertyName *ast.Node
-		if specifier.Kind == ast.KindImportClause {
-			imported = "default"
+		if ast.IsImportClause(specifier) {
+			propertyName = f.NewIdentifier("default$direct")
 		} else if property := specifier.AsImportSpecifier().PropertyName; property != nil {
-			imported = property.Text()
+			imported := property.Text()
 			if ast.IsStringLiteral(property) {
 				propertyName = f.NewStringLiteral(imported+"$direct", ast.TokenFlagsNone)
+			} else if imported != local {
+				propertyName = f.NewIdentifier(imported + "$direct")
 			}
-		}
-		if imported != local && propertyName == nil {
-			propertyName = f.NewIdentifier(imported + "$direct")
 		}
 		specifiers = append(specifiers, f.NewImportSpecifier(false /*isTypeOnly*/, propertyName, f.NewIdentifier(local+"$direct")))
 	}

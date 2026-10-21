@@ -22,7 +22,7 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | The skill and the user guide (130 pages) | 194,951 |
 | The user guide alone | 190,471 |
 | The specification (33 chapters) | 102,245 |
-| The decision log, `docs/design/DECISIONS.md` | 53,133 |
+| The decision log, `docs/design/DECISIONS.md` | 53,191 |
 
 ## Effect TypeScript beside VibeLang
 

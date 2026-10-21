@@ -219,6 +219,8 @@ These entries record the build lanes' defaults. Lane U recorded F7's D97-D99 fro
 
 **D65. Plain VibeLang calls run inline everywhere** (default, lane F2). A call from a `.vibe` file to a plain function runs inline as `f$direct(a)` everywhere, including a module's top level, because it computes a value and runs no program.
 
+2026-10-21 implementation note: default imports use the same plain path with or without named or namespace bindings, including an empty named list, `default as` imports and re-exported defaults. The `plain-default-import-shapes` acceptance case checks their success values at runtime.
+
 **D66. Plain overloads reject suspending function values** (default, lane F2). An overload candidate that asks for a plain function rejects a `.vibe` function value that can pause, as it rejects such a lambda (D56 extended to function values); a TypeScript function that returns an Effect passes as data; when every candidate rejects, EK4301 reports against the first candidate's form.
 
 **D67. Plain return annotations preserve plain function types** (default, lane F2). A function with a plain return annotation keeps that type and compiles to one plain function; only unannotated or Effect-contract functions get the `$direct` plus `Effect.sync` pair, whose TypeScript type is `(…) => Effect<A, never, never>` (chapter 15's one calling convention). **controversial**: it interacts with EK2003, D55 methods need the annotation, and editors show plain helpers with an Effect type unless hover says otherwise. An explicit plain type supports JavaScript protocols and avoids an unwanted Effect wrapper.

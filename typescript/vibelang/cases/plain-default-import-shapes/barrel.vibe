@@ -1,0 +1,3 @@
+export { default, other } from "./named.vibe"
+import localDefault, { other as localOther } from "./named.vibe"
+export { localDefault as forwarded, localOther as forwardedOther }

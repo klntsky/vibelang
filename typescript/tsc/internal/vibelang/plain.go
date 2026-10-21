@@ -224,14 +224,14 @@ func isUsingList(list *ast.Node) bool {
 type directReference struct {
 	name      string    // the identifier to write in place of the reference, such as "double$direct"
 	access    *ast.Node // for M.double through a namespace import, the access expression
-	specifier *ast.Node // for a named import, the import specifier that must bring the variant in
+	specifier *ast.Node // for an import, the named specifier or default clause that must bring the variant in
 }
 
 // directReferenceOf returns how node, the callee of a call or a function
 // value, reaches the $direct variant of fn, a plain function: by its own name
-// in fn's file, by a named import of fn's .vibe module, or through a namespace
-// import of it. It returns nil when the variant is out of reach, as through a
-// default import, and the reference then uses fn's Effect form.
+// in fn's file, by a named or default import of fn's .vibe module, or through
+// a namespace import of it. It returns nil when the variant is out of reach,
+// and the reference then uses fn's Effect form.
 func (a *analyzer) directReferenceOf(node *ast.Node, fn *ast.Node) *directReference {
 	switch {
 	case ast.IsIdentifier(node):
@@ -247,7 +247,10 @@ func (a *analyzer) directReferenceOf(node *ast.Node, fn *ast.Node) *directRefere
 			return nil
 		}
 		for _, d := range symbol.Declarations() {
-			if ast.IsImportSpecifier(d) && !d.AsImportSpecifier().IsTypeOnly && a.declares(a.checker.GetAliasedSymbol(symbol), fn) {
+			// A default binding belongs to the clause, whether or not the
+			// same clause also contains named or namespace bindings.
+			valueImport := ast.IsImportSpecifier(d) && !d.AsImportSpecifier().IsTypeOnly || ast.IsImportClause(d) && !d.AsImportClause().IsTypeOnly()
+			if valueImport && a.declares(a.checker.GetAliasedSymbol(symbol), fn) {
 				return &directReference{name: node.Text() + "$direct", specifier: d}
 			}
 		}

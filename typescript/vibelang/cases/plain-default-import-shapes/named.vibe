@@ -1,0 +1,6 @@
+export function other(s: string) {
+  return s + "?"
+}
+export default function plainDefault(s: string) {
+  return s + "#"
+}
