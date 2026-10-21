@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build, check and deploy the single Vocs site at vibelang.sh.
 # sh scripts/deploy-docs.sh --dry-run builds and checks only.
-# Without --dry-run, calls npm run deploy in site/. Redirects deploy separately.
+# Without --dry-run, calls CI=1 npm run deploy -- --yes in site/. Redirects deploy separately.
 # Credentials: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID.
 set -eu
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
