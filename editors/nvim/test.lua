@@ -2,8 +2,21 @@
 -- typescript/vibelang/lsp-fixture whose node_modules/.bin/vibelang is the
 -- compiler under test:
 --
---   nvim --headless --clean -l editors/nvim/test.lua <project> <vibelang.lua>
-local project, config = arg[1], arg[2]
+--   nvim --headless --clean -l editors/nvim/test.lua <project> <vibelang.lua> <runtime> [nvim-treesitter]
+--
+-- <runtime> holds parser/vibe.so, the vibe parser compiled from
+-- editors/tree-sitter-vibelang. With "fallback" in its place, there is no vibe
+-- parser, and only the fallback to TypeScript is checked. nvim-treesitter, when
+-- given, supplies the TypeScript queries that the vibe queries inherit, and
+-- :TSInstall vibe is checked into a scratch directory.
+local project, config, runtime, nvim_treesitter = arg[1], arg[2], arg[3], arg[4] or ""
+local fallback = runtime == "fallback"
+if not fallback then
+  vim.opt.runtimepath:prepend(runtime)
+end
+if nvim_treesitter ~= "" then
+  vim.opt.runtimepath:append(nvim_treesitter)
+end
 vim.cmd("filetype on")
 dofile(config).setup()
 
@@ -55,10 +68,32 @@ local function position_of(buf, needle)
   error("no " .. needle)
 end
 
-check("filetype: .vibe files are vibe, highlighted as TypeScript", function()
+-- finish stops the language servers and exits with the result.
+local function finish()
+  for _, client in ipairs(vim.lsp.get_clients()) do
+    client.stop()
+  end
+  vim.wait(5000, function()
+    return #vim.lsp.get_clients() == 0
+  end)
+  os.exit(failures > 0 and 1 or 0)
+end
+
+if fallback then
+  check("filetype: without the vibe parser, .vibe files are highlighted as TypeScript", function()
+    local buf = edit("src/broken.vibe")
+    assert(vim.bo[buf].filetype == "vibe", "filetype " .. vim.bo[buf].filetype)
+    assert(vim.treesitter.language.get_lang("vibe") == "typescript", "language " .. tostring(vim.treesitter.language.get_lang("vibe")))
+    assert(vim.bo[buf].syntax == "typescript" or vim.treesitter.highlighter.active[buf], "no highlighting")
+  end)
+  finish()
+end
+
+check("filetype: .vibe files are vibe, highlighted by the vibe parser", function()
   local buf = edit("src/broken.vibe")
   assert(vim.bo[buf].filetype == "vibe", "filetype " .. vim.bo[buf].filetype)
-  assert(vim.bo[buf].syntax == "typescript" or vim.treesitter.highlighter.active[buf], "no highlighting")
+  assert(vim.treesitter.highlighter.active[buf], "no tree-sitter highlighting")
+  assert(vim.treesitter.get_parser(buf):lang() == "vibe", "parser " .. vim.treesitter.get_parser(buf):lang())
 end)
 
 check("lsp: the project's node_modules/.bin/vibelang attaches", function()
@@ -96,10 +131,101 @@ check("hover: a call that runs shows the contract and the success value", functi
   assert(text:find("Runs here and returns `string`", 1, true), "hover " .. text)
 end)
 
-for _, client in ipairs(vim.lsp.get_clients()) do
-  client.stop()
+-- quiet_buffer returns a buffer highlighted by the vibe parser that holds the
+-- fixture file relative. It skips the FileType autocommands, so no language
+-- server starts for it.
+local function quiet_buffer(relative)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.fn.readfile(vim.fs.joinpath(project, relative)))
+  local eventignore = vim.o.eventignore
+  vim.o.eventignore = "FileType"
+  vim.bo[buf].filetype = "vibe"
+  vim.o.eventignore = eventignore
+  vim.treesitter.start(buf, "vibe")
+  return buf
 end
-vim.wait(5000, function()
-  return #vim.lsp.get_clients() == 0
+
+-- capture_at returns the captures at offset bytes into the first occurrence
+-- of needle, the last of which colors it.
+local function capture_at(buf, needle, offset)
+  local at = position_of(buf, needle)
+  local names = {}
+  for _, capture in ipairs(vim.treesitter.get_captures_at_pos(buf, at.line, at.character + offset)) do
+    table.insert(names, capture.capture)
+  end
+  return names
+end
+
+check("parse: no ERROR or MISSING node in any fixture source", function()
+  for name in vim.fs.dir(vim.fs.joinpath(project, "src")) do
+    if name:match("%.vibe$") then
+      local text = table.concat(vim.fn.readfile(vim.fs.joinpath(project, "src", name)), "\n")
+      local root = vim.treesitter.get_string_parser(text, "vibe"):parse()[1]:root()
+      assert(not root:has_error(), name .. " has an ERROR or MISSING node")
+    end
+  end
 end)
-os.exit(failures > 0 and 1 or 0)
+
+-- Each VibeLang token of forms.vibe, and the capture that colors it.
+local tokens = {
+  { "export error Gone", 7, "keyword.type" },
+  { "mutable items", 0, "keyword.modifier" },
+  { "export schema", 7, "keyword.type" },
+  { "export service", 7, "keyword.type" },
+  { "export control", 7, "keyword.type" },
+  { "string!Gone", 6, "operator" },
+  { "boolean!!", 7, "operator" },
+  { "boolean!!", 8, "operator" },
+  { "} handle", 2, "keyword.exception" },
+  { "provide SeatsLive", 0, "keyword" },
+  { "fork Seats", 0, "keyword.coroutine" },
+  { "join [first", 0, "keyword.coroutine" },
+  { "await.all", 6, "keyword.coroutine" },
+  { "for concurrent", 4, "keyword.repeat" },
+  { 'catch "guest"', 0, "keyword.exception" },
+  { "catch (e) => match", 0, "keyword.exception" },
+  { "match (e)", 0, "keyword.conditional" },
+  { "when Gone", 0, "keyword.conditional" },
+  { "?? throw", 3, "keyword.exception" },
+  { "do { sleep", 0, "keyword.repeat" },
+  { "|> %", 0, "operator" },
+  { "|> %", 3, "operator" },
+  { "is Exit", 0, "keyword.operator" },
+}
+
+check("highlights: VibeLang's tokens get their captures", function()
+  local buf = quiet_buffer("src/forms.vibe")
+  local wrong = {}
+  for _, token in ipairs(tokens) do
+    local names = capture_at(buf, token[1], token[2])
+    if names[#names] ~= token[3] then
+      table.insert(wrong, string.format("%s@%d: want %s, got %s", token[1], token[2], token[3], table.concat(names, " ")))
+    end
+  end
+  assert(#wrong == 0, table.concat(wrong, "; "))
+end)
+
+if nvim_treesitter ~= "" then
+  check("highlights: the vibe queries inherit nvim-treesitter's TypeScript queries", function()
+    local buf = quiet_buffer("src/forms.vibe")
+    local names = capture_at(buf, "Array<string>", 0)
+    assert(vim.tbl_contains(names, "type"), "Array: " .. table.concat(names, " "))
+    names = capture_at(buf, "export function admit", 0)
+    assert(vim.tbl_contains(names, "keyword.import"), "export: " .. table.concat(names, " "))
+    for _, query in ipairs({ "injections", "locals", "folds", "indents" }) do
+      assert(vim.treesitter.query.get("vibe", query), "no " .. query .. " query")
+    end
+  end)
+
+  check("nvim-treesitter: :TSInstall vibe compiles the grammar", function()
+    local dir = vim.fn.tempname()
+    require("nvim-treesitter.configs").setup({ parser_install_dir = dir })
+    require("nvim-treesitter.install").commands.TSInstallSync["run!"]("vibe")
+    io.stdout:write("\n") -- after nvim-treesitter's message
+    local installed = vim.fs.joinpath(dir, "parser", "vibe.so")
+    assert(vim.uv.fs_stat(installed), "no " .. installed)
+    vim.fn.delete(dir, "rf")
+  end)
+end
+
+finish()
