@@ -2,7 +2,7 @@
 
 > **Warning:** VibeLang is v0. The language will change in major, breaking ways. It is not suitable for production use.
 
-The VibeLang runtime: the one-shot continuation kernel and the helpers that the
+The VibeLang runtime: the one-shot continuation kernel and the helpers the
 [`vibelang`](https://www.npmjs.com/package/vibelang) compiler emits. It runs on
 Effect 4's fibers, scopes, and services.
 
@@ -13,10 +13,10 @@ npm install vibelang-runtime effect@4.0.5
 ```
 
 JavaScript compiled by `vibelang` imports `effect` and `vibelang-runtime`, so an
-application lists both as dependencies; apps made with `create-vibelang` already
-do. The runtime requires **effect@4.0.5 exactly**, because the kernel accesses
-that version's fiber continuation stack. Install one copy of `effect`: with two
-copies, a Scope can miss the fibers it must stop.
+application lists both as dependencies; `create-vibelang` apps already do. The
+runtime requires **effect@4.0.5 exactly**: the kernel accesses that version's
+fiber continuation stack. Install one copy of `effect`; with two, a Scope can
+miss fibers it must stop.
 
 ## Build and test
 
@@ -29,32 +29,32 @@ bun run test
 ```
 
 The build uses TypeScript to write ES2022 JavaScript modules, declarations,
-JavaScript source maps, and declaration maps to `dist/`. Node 26 and Bun 1.4
-load the package's JavaScript export. TypeScript resolves the same export to
-`dist/index.d.ts`. The package includes `dist/`, this README, and the license; build it
-before packing or installing a local copy. Generated files under `dist/` are ignored.
+source maps, and declaration maps to `dist/`. Node 26 and Bun 1.4 load the
+package's JavaScript export; TypeScript resolves it to `dist/index.d.ts`. The
+package includes `dist/`, this README, and the license; build before packing or
+installing a local copy. Generated files under `dist/` are ignored.
 
-`bun run test` builds first and then runs behavior tests through the package
-export. `bun test` uses the current build. The tests import `bun:test` and must run
-under Bun; Vitest cannot load that module. To run only the fast-call suite,
-use `bun run build && bun test tests/fastcalls.test.ts`.
+`bun run test` builds, then runs behavior tests through the package export;
+`bun test` uses the current build. The tests import `bun:test`, so they run
+only under Bun; Vitest cannot load that module. Fast-call suite only:
+`bun run build && bun test tests/fastcalls.test.ts`.
 
 The shared kernel model suite imports `experiments/tests/conformance/model-laws.ts`.
-From this package directory, install its pinned dependencies once with
-`(cd ../../experiments && bun install --frozen-lockfile)` before running the full suite.
+Before the full suite, install its pinned dependencies once from this directory:
+`(cd ../../experiments && bun install --frozen-lockfile)`.
 
-The tests cover each helper module,
-resource and interruption behavior, and isolated Node, Bun, and browser bundle
-consumers. They also compile a TypeScript consumer against the declarations.
+The tests cover each helper module, resource and interruption behavior, and
+isolated Node, Bun, and browser bundle consumers, and compile a TypeScript
+consumer against the declarations.
 
-The original suites remain available from the repository root:
+The original suites still run from the repository root:
 
 ```sh
 (cd experiments && bun test)                  # 148 kernel law tests
 bun prototype/esc/examples/run-all.ts          # 46 compiler examples
 ```
 
-For example, generated JavaScript can compose helpers directly:
+Generated JavaScript can compose helpers directly:
 
 ```js
 import { Effect, $bind, $program } from "vibelang-runtime"
@@ -63,39 +63,37 @@ const answer = $program(() => $bind(42))
 console.log(await Effect.runPromise(answer))
 ```
 
-Applications normally write `.vibe` programs and let the compiler select these
-helpers. Programs stay lazy: a helper that receives a program does not start a
-root fiber. An explicit Effect runner starts execution at the application
-boundary.
+Applications normally write `.vibe` programs and let the compiler pick these
+helpers. Programs stay lazy: a helper that receives a program starts no root
+fiber; an explicit Effect runner starts execution at the application boundary.
 
 ## Effect version guard
 
 At module load, `version.js` statically imports the public `effect/package.json`
 export with the JSON import attribute and checks its version. This works in Node
-and Bun, and bundlers resolve the same metadata into their output without a
-Node module loader or file-system access. A mismatch throws an error naming the
-runtime version, the installed and required Effect versions, and the command
-`npm install effect@4.0.5`. Package metadata preserves module side effects so
-browser tree shaking cannot drop the guard when a caller imports only a helper.
-The mismatch tests exercise both a different patch version and Effect 3.
+and Bun, and bundlers inline the same metadata without a Node module loader or
+file-system access. A mismatch throws an error naming the runtime version, the
+installed and required Effect versions, and the command `npm install effect@4.0.5`.
+Package metadata keeps module side effects, so browser tree shaking can't drop
+the guard when a caller imports only a helper. The mismatch tests cover a
+different patch version and Effect 3.
 
 ## Public exports
 
-This table lists every export from the package root. The `$` prefix identifies
-compiler helpers. Types have no JavaScript value. Decision references point to
-[`docs/design/DECISIONS.md`](../../docs/design/DECISIONS.md).
+Every export from the package root. `$` marks compiler helpers; types have no
+JavaScript value. Decisions are in [`docs/design/DECISIONS.md`](../../docs/design/DECISIONS.md).
 
-| Export | What generated code uses it for | Decision |
+| Export | Purpose | Decision |
 | --- | --- | --- |
 | `$bind` | Run an Effect result or lift an ordinary value during prototype call lowering | D24 |
-| `Bind` (type) | Preserve the success, failure, and requirement types of `$bind` | D24 |
+| `Bind` (type) | Keep `$bind`'s success, failure, and requirement types | D24 |
 | `$program` | Convert a zero-argument function to a lazy, rerunnable Effect | D7 |
 | `$programs` | Convert an iterable of zero-argument functions to an array of Effects, or a record of them to a record of Effects | D49 |
-| `$isRun` | Test whether a call's value runs where the call stands: an Effect that is not a Config, a Context key, or an Error (including cross-realm YieldableErrors) | D24, L3 |
+| `$isRun` | Test whether a call's value runs where the call stands: an Effect that isn't a Config, a Context key, or an Error (including cross-realm YieldableErrors) | D24, L3 |
 | `$direct` | Name the property, `f[$direct] = f$direct`, that gives callers in other modules a pure function's plain body | D10, D65 |
 | `$done` | Return a finished fast call's value, as `Exit.succeed(value)` when the run check would run the value | L2 |
 | `$settle` | Finish a fast call eagerly after its first step, or return the Effect that resumes its body on the fiber | L2 |
-| `$fast` | Make the fast entry that bounds eager nesting; currently emitted for every function the projector cannot prove pure | L2, D10 |
+| `$fast` | Make the fast entry that bounds eager nesting; emitted today for every function the projector can't prove pure | L2, D10 |
 | `Fast` (type) | Type a fast entry's result: the body's value, or an Effect that produces it | L2 |
 | `$normal` | Represent normal completion of a lowered region or loop body | D14, D26 |
 | `$catch` | Recover a cause containing expected failures only | D13, D28, D46 |
@@ -105,7 +103,7 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `$expected` | Legacy expected-failure wrapper for pre-D260 emitted code | D54, D260 |
 | `$caught` | Legacy helper for pre-D260 emitted code; new plain contracts keep JavaScript catch | D54, D260 |
 | `$region` | Create a block-owned scope without adding it to the body's Context | D14, D47 |
-| `$using` | Run an acquisition with a block's scope, keeping the acquisition's own interruptibility, and register `Symbol.dispose` cleanup with interruption masked | D14, D25 |
+| `$using` | Run an acquisition with a block's scope, keeping its own interruptibility, and register `Symbol.dispose` cleanup with interruption masked | D14, D25 |
 | `$fork` | Fork into a block's scope, with `forkIn`'s options, or require a scope from the caller | D19, D47 |
 | `fork` | Expose `Effect.forkScoped` to TypeScript and prelude type positions | D4, D19 |
 | `$Context` | Expose Effect's Context namespace for generated service references | D1, D40 |
@@ -142,28 +140,26 @@ compiler helpers. Types have no JavaScript value. Decision references point to
 | `pipe` | Supply the prelude pipeline function | D8 |
 | `Exit` | Expose Effect completion values to TypeScript adapters | D43 |
 | `runMain` | Run a prototype entry program and return its Exit | D38 |
-| `$runMain` | Run an entry module's `main` as `NodeRuntime.runMain` would, when `@effect/platform-node` is not installed | D135 |
+| `$runMain` | Run an entry module's `main` as `NodeRuntime.runMain` would, when `@effect/platform-node` isn't installed | D135 |
 | `suspend` | Bridge callback registration with a resumer that reports a lost race | D43 |
 | `Resumer` (type) | Type `resume` and the callback registration state | D43 |
 | `handoff` | Bridge sources that acknowledge cancellation before releasing late values | D43 |
 | `HandoffProtocolViolation` | Report duplicate delivery or delivery after acknowledged shutdown | D43 |
 
-The kernel's implementation modules are private package files. Their source
-remains in `src/kernel/` so the original law and trace suites can test the
+The kernel's implementation modules are private package files; their source
+stays in `src/kernel/` so the original law and trace suites can test the
 continuation machine directly. Generated code uses the package root. Tests and
-instrumentation import the kernel module itself from
-`vibelang-runtime/kernel`, for example its `hooks`, which report each
-capture and resumption; the compiler's acceptance case `stack-depth` uses them
-to check that loops run in constant stack.
+instrumentation import the kernel module itself from `vibelang-runtime/kernel`,
+such as its `hooks`, which report each capture and resumption; the compiler's
+acceptance case `stack-depth` uses them to check that loops run in constant stack.
 
 ## Fast calls without types
 
-The text-only projector (decision (B)) cannot see types, so `$isRun`,
-`$direct`, and the fast-call helpers decide at run time what the fork decided
-from them. L2 and L3 are that decision's language changes: a function is plain
-JavaScript only with a plain return annotation (L2), and a call runs its value
-when the value is an Effect at run time (L3). None of the helpers changes what
-a call computes.
+The text-only projector (decision (B)) can't see types, so `$isRun`, `$direct`,
+and the fast-call helpers decide at run time what the fork decided from types.
+That decision's language changes: a function is plain JavaScript only with a
+plain return annotation (L2), and a call runs its value when the value is an
+Effect at run time (L3). No helper changes what a call computes.
 
 | Call in an Effect body | JavaScript the projector writes |
 | --- | --- |
@@ -173,13 +169,13 @@ a call computes.
 | Anything else | `(($t = c), $isRun($t) ? (yield* $t) : $t)` |
 
 A fast entry runs the function's generator, `f$body`, eagerly on the caller's
-stack. When the body finishes without needing the fiber it returns the value,
-through `$done`, which wraps a value that `$isRun` would run in
-`Exit.succeed`. Otherwise it returns an Effect: one that resumes the body on
-the fiber after the Effect the body yielded, or the failure the body yielded.
-The call site then has the slow call's result, `yield* f(x)`. A yielded Exit
-resolves in place, as Effect.gen's own generator step resolves it. The
-projector currently writes this entry for every function it cannot prove pure:
+stack. If the body finishes without needing the fiber, the entry returns the
+value through `$done`, which wraps in `Exit.succeed` a value `$isRun` would run.
+Otherwise it returns an Effect that resumes the body on the fiber after the
+Effect the body yielded, or the failure the body yielded. The call site then
+has the slow call's result, `yield* f(x)`. A yielded Exit resolves in place, as
+Effect.gen's own generator step resolves it. The projector writes this entry
+today for every function it can't prove pure:
 
 ```js
 const f$fast = $fast(f$body)
@@ -192,23 +188,23 @@ outside a same-file call cycle:
 function f$fast(a, b) { const it = f$body(a, b), s = it.next(); return s.done ? $done(s.value) : $settle(it, s) }
 ```
 
-Only a same-file call cycle nests eager runs without limit: a call of another
-module's function, of a lambda, or of a function value starts its body on the
-fiber. `$fast` counts eager nesting. After 100 nested entries it returns the
-slow call's Effect, which starts the body on the fiber with heap frames (D10).
-Each eager level holds three JavaScript frames, whose size depends on the
-body's live locals. Node 26.10's default stack overflows at 3,085 levels with
-no locals, 888 with 80, 485 with 200, and 272 with 400; with 80 locals on a
-6,000-frame plain base stack it overflows at 297. Bun 1.4.1 overflows at
-9,384 with no locals and 4,143 with 80. A cap of 100 leaves room in these
-measured cases, but cannot guarantee stack safety for every body: enough live
-locals, a deeper base stack, or plain recursion inside a body can still
-overflow. A RangeError becomes a Die; retrying the body would be unsound
-because its side effects may already have run. The tests run 100,000-deep
-recursion on Bun and Node, including Node bodies with 0, 80, and 200 live locals.
+Only a same-file call cycle nests eager runs without limit; a call of another
+module's function, a lambda, or a function value starts its body on the fiber.
+`$fast` counts eager nesting: after 100 nested entries it returns the slow
+call's Effect, which starts the body on the fiber with heap frames (D10). Each
+eager level holds three JavaScript frames, sized by the body's live locals.
+Node 26.10's default stack overflows at 3,085 levels with no locals, 888 with
+80, 485 with 200, and 272 with 400; with 80 locals on a 6,000-frame plain base
+stack, at 297. Bun 1.4.1 overflows at 9,384 with no locals and 4,143 with 80. A
+cap of 100 leaves room in these measured cases but can't guarantee stack safety
+for every body: enough live locals, a deeper base stack, or plain recursion
+inside a body can still overflow. A RangeError becomes a Die; retrying the body
+would be unsound because its side effects may already have run. The tests run
+100,000-deep recursion on Bun and Node, including Node bodies with 0, 80, and
+200 live locals.
 
-The run check also recognizes YieldableErrors across realms by Effect 4.0.5's
-string key `"~effect/Effect/identifier"` being `"YieldableError"`, so they remain
+The run check also recognizes cross-realm YieldableErrors, whose Effect 4.0.5
+string key `"~effect/Effect/identifier"` is `"YieldableError"`, so they stay
 data even when `instanceof Error` is false.
 
 The edges, each with a test in `tests/fastcalls.test.ts`:
@@ -216,7 +212,7 @@ The edges, each with a test in `tests/fastcalls.test.ts`:
 - Handlers, `resume`, and interruption see the suspended body as an ordinary
   generator frame: tail and non-tail resumes, a continuation resumed twice,
   and cleanup on interruption behave as for the slow call.
-- The eager part has no interruption check and no scheduler yield, as for a
+- The eager part has no interruption check or scheduler yield, like a
   `$direct` call. An interrupt pending at the call arrives at the first
   suspension, after the eager part ran; the slow call takes it before the
   body starts.
@@ -254,35 +250,34 @@ bun run build && node tests/fastcalls-bench.mjs
 | Effect function, body yields an Exit | 228.5 |
 | Effect function, body suspends | 428.8 |
 
-The run check alone costs 2.9 ns over an inline call, and the property check
-4.1 ns. Node 26.10.0 measured these on a Mac mini (darwin arm64, 14 cores)
-that other jobs held at a load average of 78 to 147, so each row is the best
-of two runs. Rows that allocate (Effect functions and suspending fast calls)
-still carry that load: on an idle machine the study measured the slow call at
-179 ns and a suspending one at 259 ns. Rows that do not allocate repeated
-within 0.5 ns.
+The run check alone costs 2.9 ns over an inline call; the property check,
+4.1 ns. Node 26.10.0 measured these on a Mac mini (darwin arm64, 14 cores) that
+other jobs held at a load average of 78 to 147, so each row is the best of two
+runs. Rows that allocate (Effect functions and suspending fast calls) still
+carry that load: on an idle machine the study measured the slow call at 179 ns
+and a suspending one at 259 ns. Rows that don't allocate repeated within 0.5 ns.
 
 ## Prototype compatibility
 
-The extraction preserves the prototype's helper names and execution behavior.
-The compiler orders `wire` arguments with dependents before providers; the
-runtime itself does not inspect or sort Layer dependencies. `$trusted` tests
-`instanceof` against the classes the compiler passes (D51), where the prototype
-matched exception tags and constructor names.
+The extraction keeps the prototype's helper names and execution behavior. The
+compiler orders `wire` arguments with dependents before providers; the runtime
+doesn't inspect or sort Layer dependencies. `$trusted` tests `instanceof`
+against the classes the compiler passes (D51); the prototype matched exception
+tags and constructor names.
 
 `Continuation<V, E, H>` follows D50: `V` is what the perform site receives, `E`
 the operation's declared errors, which `resumeWith`'s program may raise, and `H`
-what `resume` returns. `handle` takes `H` to be the program's own result, which
-is exact when every clause that returns a value of another type does not
-resume; with `onReturn`, `H` is `never`, so a clause's tail `resume` adds
-nothing to the `handle`'s result (D97).
+what `resume` returns. `handle` takes `H` to be the program's own result,
+exact when no clause that returns a value of another type resumes; with
+`onReturn`, `H` is `never`, so a clause's tail `resume` adds nothing to the
+`handle`'s result (D97).
 
 A producer is a `Stream`. `for...of` over it runs its body under a `Yield`
 handler on the loop's fiber and resumes it in tail position, so a long producer
 runs in constant stack; a loop that ends early abandons it, which runs its
-cleanup. Anything else that runs it as a `Stream` starts its body on a fiber of
-its own on the first pull, and the `Yield` clause completes the pending pull and
-waits for the next one before it resumes the body: a handoff with no buffer, so
-the producer never runs ahead of its consumer (D26; the prototype's adapter used
-a one-element buffer). Closing the stream interrupts that fiber, which runs the
+cleanup. Anything else that runs it as a `Stream` starts its body on its own
+fiber at the first pull; the `Yield` clause completes the pending pull and waits
+for the next before resuming the body: an unbuffered handoff, so the producer
+never runs ahead of its consumer (D26; the prototype's adapter used a
+one-element buffer). Closing the stream interrupts that fiber, which runs the
 producer's cleanup.

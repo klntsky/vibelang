@@ -1,38 +1,37 @@
 # Documentation checks
 
-From the repository root, install `experiments` and `docs/tools` dependencies
-with `bun install` in each directory, build `packages/runtime` with `bun run
-build`, and build the native compiler:
+From the repository root, run `bun install` in `experiments` and `docs/tools`,
+run `bun run build` in `packages/runtime`, and build the native compiler:
 
 ```sh
 cd typescript/tsc
 CGO_ENABLED=0 GOFLAGS=-trimpath go build -o ../built/local/tsc ./cmd/tsc
 ```
 
-Then run one command from the repository root:
+Then, from the repository root:
 
 ```sh
 bun docs/tools/check-snippets.ts
 ```
 
 The checker extracts `vibe` and `ts` fences under `docs/user`, except the
-built site in `docs/user/site`. The fence decides the language: a `vibe`
-block compiles as a `.vibe` module and a `ts` block as a `.ts` module. It
-skips `ts effect` blocks, Effect TypeScript shown for comparison, and `ts`
-blocks whose first line is `// TypeScript (.ts)` and that name no file. It
-creates one temporary project per page and runs `vibelang --noEmit` once per
-page. Each block gets its own module. A filename comment in either of the
-first two lines, such as `// launch-options.ts` after `// TypeScript (.ts)` or
-`// main.vibe`, names that file and makes it available to relative imports.
-Its extension must match the fence, or the checker stops with an error. `.ts`
-companions keep TypeScript semantics and must import their own dependencies.
-The temporary project links the local runtime and Vite plugin packages.
-Repeated captions name independent examples, so those blocks keep numbered
-filenames. Unnamed blocks also use numbered files, such as `block-3.vibe`. Imports
-and declarations from earlier examples are available in later blocks; a new
-name shadows the earlier example's name. Blocks that deliberately fail or opt
-out do not supply declarations to later blocks. Local imports with no fixture
-remain fragments. By default, no snippet executes. `--run` also checks declared output (see below).
+built site in `docs/user/site`. The fence sets the language: a `vibe` block
+compiles as a `.vibe` module, a `ts` block as a `.ts` module. It skips
+`ts effect` blocks (Effect TypeScript shown for comparison) and `ts` blocks
+whose first line is `// TypeScript (.ts)` and that name no file. It creates one
+temporary project per page, linking the local runtime and Vite plugin packages,
+and runs `vibelang --noEmit` once per page; each block gets its own module. A
+filename comment in either of the first two lines, such as `// launch-options.ts`
+after `// TypeScript (.ts)` or `// main.vibe`, names that file and makes it
+available to relative imports. Its extension must match the fence, or the
+checker stops with an error. `.ts` companions keep TypeScript semantics and
+must import their own dependencies. Blocks with repeated captions are
+independent examples and keep numbered filenames, as do unnamed blocks, such as
+`block-3.vibe`. Later blocks see earlier examples' imports and declarations; a
+new name shadows the earlier one. Blocks that deliberately fail or opt out
+supply no declarations to later blocks. Local imports with no fixture remain
+fragments. By default no snippet executes; `--run` also checks declared output
+(see below).
 
 | Status | Meaning |
 | --- | --- |
@@ -43,22 +42,22 @@ remain fragments. By default, no snippet executes. `--run` also checks declared 
 
 Use a header comment before the code:
 
-- `// expect-error: EK2001` declares an intentionally invalid example. List
-  several codes separated by spaces. Unexpected diagnostics still fail.
+- `// expect-error: EK2001` declares an intentionally invalid example; separate
+  several codes with spaces. Unexpected diagnostics still fail.
 - `// fragment` opts out of classification for incomplete syntax or a prose
   sketch. The compiler still checks the block.
-- `// compiler-gap: <reason>` retains the intended language example while the
+- `// compiler-gap: <reason>` keeps the intended language example while the
   compiler disagrees. Record the page, first code line, diagnostics, and rule
   in `docs/user/notes/compiler-gaps.md`. A marker becomes stale when the block
   has no unexpected substantive error and every expected code occurs. Stale
   markers fail, so resolved gaps cannot silently accumulate.
 
-`--compiler path` (or `VIBELANG_BINARY`) selects a compiler. The default is
-`typescript/built/local/tsc`, then `vibelang` on PATH. `--filter text` selects pages,
-`--json path` writes diagnostics with Markdown line numbers, and `--keep`
-preserves temporary projects for debugging. Compiler crashes, missing runtime
-builds, and project configuration errors exit 2. Snippet failures exit 1.
-Temporary files are removed on success and failure unless `--keep` is set.
+`--compiler path` (or `VIBELANG_BINARY`) selects a compiler; the default is
+`typescript/built/local/tsc`, then `vibelang` on PATH. `--filter text` selects
+pages, and `--json path` writes diagnostics with Markdown line numbers.
+Temporary files are removed on success and failure; `--keep` preserves the
+temporary projects for debugging. Compiler crashes, missing runtime builds, and
+project configuration errors exit 2. Snippet failures exit 1.
 
 ```sh
 bun test docs/tools/check-snippets.test.ts docs/tools/first-run.test.ts docs/tools/hovers.test.ts
@@ -73,9 +72,9 @@ bun docs/tools/check-snippets.ts --run --filter getting-started/
 ```
 
 Declare stdout with an `output` fence immediately after a checked code fence
-(blank lines are allowed), or put one `// Output: text` comment per output line
-inside the code block. An empty `// Output:` asserts no stdout. Do not use both
-forms for one block. Other output fence labels (`out`, `text`) do not opt in.
+(blank lines are allowed), or one `// Output: text` comment per output line
+inside the block. An empty `// Output:` asserts no stdout. Don't use both forms
+for one block. Other output fence labels (`out`, `text`) don't opt in.
 
 ```vibe
 // run: Console.log(greet("Ada"))
@@ -83,31 +82,31 @@ function greet(name: string) { return `Hello, ${name}!` }
 // Output: Hello, Ada!
 ```
 
-`// run: <expression>` is an optional header comment. It runs that expression
-inside a generated VibeLang entry function, with the block's declarations and
-imports in scope. Without it, Node runs the emitted block as the entry module:
+The optional header comment `// run: <expression>` runs that expression inside
+a generated VibeLang entry function, with the block's declarations and imports
+in scope. Without it, Node runs the emitted block as the entry module:
 export `function main()` or include an explicit top-level runner. Markers never
-cause a function to run in the published example itself.
+make a function run in the published example itself.
 
 The `check:snippets` package script and the pre-deploy snippet check both use
 `--run`. Both also test the locally scaffolded starter, including Vitest without
 a prior build, and compare its stdout to the `out` fences in the getting-started,
 installation, and new-project guides. It also checks the compiler version shown
-in the existing-project guide. Shell commands are not executed by the snippet checker.
+in the existing-project guide. The snippet checker doesn't execute shell commands.
 
 With `--run`, the checker emits marked blocks and their dependencies with the
 selected compiler, then runs each entry separately with Node and the linked
 local runtime. It compares stdout exactly, normalizing CRLF to LF and removing
-one final newline from each side. Spaces, ordering, and extra lines matter.
-Nonzero exits, execution timeouts (10 seconds by default, changed with
+one final newline from each side; spaces, ordering, and extra lines matter.
+Nonzero exits, execution timeouts (10 seconds by default; set with
 `--timeout milliseconds`), compile errors, and output mismatches fail the check.
 Examples that import `@effect/vitest`, including through earlier blocks, run
-inside Vitest after compilation. Registered `it.effect` tests must all pass.
+inside Vitest after compilation, and every registered `it.effect` test must pass.
 An empty output marker checks their assertions without adding printed output;
 a `// run:` header runs as an additional live-clock Effect test with stdout enabled.
 
 Marked fragments, expected-error blocks, and compiler gaps fail instead of
-silently skipping execution. Unmarked blocks keep their compile-only checks.
+silently skipping execution; unmarked blocks keep their compile-only checks.
 Reports include execution status and captured stdout/stderr for marked blocks.
 Use `Console.log` for stable output. Logs with timestamps, randomness, network
 access, and interactive programs need deterministic fixtures before opting in.
@@ -115,7 +114,7 @@ access, and interactive programs need deterministic fixtures before opting in.
 
 ## Compiler hovers
 
-scripts/deploy-docs.sh builds hovers by default with the 0.0.2 release compiler, so popups show what readers' compiler shows. `VIBELANG_DOCS_HOVERS=0` deploys without them. The tool records hover request failures in each page's cache entry and prints examples so language-server defects remain visible.
+scripts/deploy-docs.sh builds hovers by default with the 0.0.2 release compiler, so popups show what readers' compiler shows. `VIBELANG_DOCS_HOVERS=0` deploys without them.
 
 `hovers.ts` asks the VibeLang language server for the hovers and diagnostics of
 the same blocks and caches them for a renderer:
@@ -124,7 +123,7 @@ the same blocks and caches them for a renderer:
 bun docs/tools/hovers.ts
 ```
 
-It builds the projects that the snippet checker builds, with the same
+It builds the snippet checker's projects, with the same
 `--compiler`, `--root`, and `--filter` options, and opens them in one
 `vibelang --lsp --stdio` session, four pages at a time. It writes one JSON file
 per page under `.cache/docs-hovers` (`--cache` selects another directory). Each
@@ -148,7 +147,8 @@ the runtime's declarations, and these tools are unchanged; otherwise the
 whole page is refreshed, because later blocks import earlier ones. Pages
 that no longer exist lose their entries unless `--filter` is set. A hover
 request that the server answers with an error is a language server defect:
-the entry keeps it under `failures`, and every run prints one example of each.
+the page's entry keeps it under `failures`, and every run prints one example of
+each, so defects stay visible.
 Concurrent hover requests can render a contextually typed property's owner
 generically or instantiated, such as `Key<T>` or `Key<string>`, so a cold run
 can differ from the last one in a few nodes. Upstream tsgo does the same.
@@ -163,12 +163,12 @@ suite also supplies the specification's `{{testCount}}`, `{{testFiles}}`, and
 `{{kernelLines}}` facts. It checks every local link's page and heading id. A
 specification link to a heading on another chapter's page, written as a bare
 fragment such as `#20-the-machine`, and "Chapter 20" in specification prose
-both link to that page. A link to a repository file that is not a page keeps
+both link to that page. A link to a repository file that isn't a page keeps
 its text and drops the link.
 
 Each page is also written as Markdown beside its HTML, at the same path with
-`.md`, with links to pages rewritten to their `.md` copies on
-`https://vibelang.sh`. `index.md` and `spec/index.md` repeat the first pages.
+`.md`, its page links rewritten to their `.md` copies on `https://vibelang.sh`.
+`index.md` and `spec/index.md` repeat the first pages.
 `llms.txt` lists every copy in the llmstxt.org format, one section per sidebar
 view, with a page's sidebar group as its note.
 
@@ -193,11 +193,11 @@ It needs the same compiler and runtime build as `check-snippets.ts`. `bun test c
 
 ## Converter content
 
-`bun run --cwd docs/tools check:content` checks the app instructions, repository
-home, generated converter prompt and hero receipt. It also rejects held-out
-golden source in the prompt or worked examples, after normalizing whitespace
-and comments between tokens. The converter prompt uses `examples/` only;
-all 20 cases in `golden/`, including the hero, remain held out.
+`bun run --cwd docs/tools check:content` runs `check-smithers-content.ts`,
+which also rejects held-out golden source in the prompt or worked examples,
+after normalizing whitespace and comments between tokens. The converter prompt
+uses `examples/` only; all 20 cases in `golden/`, including the hero, remain
+held out.
 
 Run the overlap regression tests with:
 

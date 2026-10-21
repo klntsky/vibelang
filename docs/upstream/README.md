@@ -1,8 +1,8 @@
 # Upstream drafts
 
-All entries have status **drafted, not filed** (D59). Nothing in this directory
+Every entry is **drafted, not filed** (D59). Nothing in this directory
 authorizes filing an issue, opening a pull request, or contacting maintainers.
-The behavior below is pinned to `effect@4.0.5`; these drafts make no claim about
+The behavior below is pinned to `effect@4.0.5`; the drafts make no claim about
 later releases or the current state of upstream issues.
 
 | Draft | Target | Summary | Status |
@@ -25,9 +25,8 @@ come from the [Effect research](../research/effect4-runtime.md),
 each draft. The supported-prompt and segmented-stack entries are API and
 performance proposals, not claims that Effect violates a public contract.
 
-The review's abandonment, tail-resume, and transferred-owner defects were in
-the VibeLang kernel and are fixed by K11-K13. They are not Effect bugs.
-Masked acquisition is an existing policy with an `interruptible` option
-(K15). Service class identity, Layer provider precedence, and hidden forks
-also have local language rules; these drafts do not request upstream semantic
-changes for those behaviors.
+The review's abandonment, tail-resume, and transferred-owner defects were
+VibeLang kernel bugs, not Effect bugs, and K11-K13 fix them. Masked acquisition
+is an existing policy with an `interruptible` option (K15). Service class
+identity, Layer provider precedence, and hidden forks also have local language
+rules; these drafts request no upstream semantic changes for those behaviors.

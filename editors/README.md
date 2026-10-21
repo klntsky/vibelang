@@ -1,8 +1,8 @@
 # Editor setup
 
-Every editor runs the same language server: `vibelang --lsp --stdio`, the VibeLang compiler that a project installs from `vibelang` (`node_modules/.bin/vibelang`). It serves `.vibe` and `.ts` files of the program that `tsconfig.json` describes: diagnostics with TypeScript codes and EK codes, hovers with inferred contracts, definitions, references, renames, and completions.
+Every editor runs the same language server: `vibelang --lsp --stdio`, the VibeLang compiler a project installs from `vibelang` (`node_modules/.bin/vibelang`). It serves the `.vibe` and `.ts` files of the program `tsconfig.json` describes: diagnostics with TypeScript and EK codes, hovers with inferred contracts, definitions, references, renames, and completions.
 
-The server reports a file's diagnostics when the editor asks for them (LSP 3.17 pull diagnostics, `textDocument/diagnostic`), so the editor's LSP client must support pull diagnostics. VS Code, Cursor, Neovim 0.10 or later, and current Zed releases do.
+The server reports a file's diagnostics when the editor asks (LSP 3.17 pull diagnostics, `textDocument/diagnostic`), so the editor's LSP client must support pull diagnostics; VS Code, Cursor, Neovim 0.10 or later, and current Zed releases do.
 
 | Editor | Setup | Tested |
 | --- | --- | --- |
@@ -12,33 +12,33 @@ The server reports a file's diagnostics when the editor asks for them (LSP 3.17 
 
 ## Neovim
 
-Load `nvim/vibelang.lua` from your clone of this repository, so it finds the tree-sitter grammar in `tree-sitter-vibelang/` next to it. Add this line to `init.lua`:
+Load `nvim/vibelang.lua` from your clone of this repository, so it finds the tree-sitter grammar in `tree-sitter-vibelang/` next to it. Add this line to `init.lua`, with your clone's path for `<vibelang checkout>`:
 
 ```lua
-dofile(vim.fn.expand("~/effectscript/editors/nvim/vibelang.lua")).setup()
+dofile(vim.fn.expand("<vibelang checkout>/editors/nvim/vibelang.lua")).setup()
 ```
 
-`.vibe` files then get the `vibe` filetype, highlighting, and `vibelang --lsp --stdio` as their language server. The server is the project's `node_modules/.bin/vibelang`, else `vibelang` on `PATH`; `setup({ cmd = "/path/to/vibelang" })` names another. Neovim's built-in LSP client then shows diagnostics, and its defaults give hover on `K`, go to definition on `<C-]>` (through 'tagfunc'), and completion on `<C-x><C-o>` (through 'omnifunc').
+`.vibe` files then get the `vibe` filetype, highlighting, and `vibelang --lsp --stdio` as their language server. The server is the project's `node_modules/.bin/vibelang`, else `vibelang` on `PATH`; `setup({ cmd = "/path/to/vibelang" })` names another. Neovim's built-in LSP client shows diagnostics, and its defaults give hover on `K`, go to definition on `<C-]>` (through 'tagfunc'), and completion on `<C-x><C-o>` (through 'omnifunc').
 
-Highlighting uses the `vibe` parser once it is installed, else tree-sitter's TypeScript parser, else Vim's TypeScript syntax. The TypeScript parser reads VibeLang's forms, such as `A!E!R`, `match`, and `provide`, as errors. With [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) (its `master` branch, for Neovim 0.10), `setup()` registers the grammar, so this command compiles it with your C compiler and installs it:
+Highlighting uses the `vibe` parser once installed, else tree-sitter's TypeScript parser, else Vim's TypeScript syntax. The TypeScript parser reads VibeLang's forms, such as `A!E!R`, `match`, and `provide`, as errors. With [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) (its `master` branch, for Neovim 0.10), `setup()` registers the grammar, so this command compiles it with your C compiler and installs it:
 
 ```vim
 :TSInstall vibe
 ```
 
-Then reopen your `.vibe` buffers. Without nvim-treesitter, compile the parser into Neovim's `site` directory:
+Then reopen your `.vibe` buffers. Without nvim-treesitter, compile the parser into Neovim's `site` directory, from the repository root:
 
 ```sh
-cd ~/effectscript/editors/tree-sitter-vibelang
+cd editors/tree-sitter-vibelang
 mkdir -p ~/.local/share/nvim/site/parser
 cc -o ~/.local/share/nvim/site/parser/vibe.so -shared -fPIC -Os -I src src/parser.c src/scanner.c
 ```
 
-The highlight queries, `tree-sitter-vibelang/queries/vibe/*.scm`, inherit nvim-treesitter's TypeScript queries and color VibeLang's words in the same groups as the VS Code extension. If you copy `vibelang.lua` elsewhere, `setup({ grammar = "~/effectscript/editors/tree-sitter-vibelang" })` names the grammar.
+The highlight queries, `tree-sitter-vibelang/queries/vibe/*.scm`, inherit nvim-treesitter's TypeScript queries and color VibeLang's words in the same groups as the VS Code extension. If you copy `vibelang.lua` elsewhere, `setup({ grammar = "<vibelang checkout>/editors/tree-sitter-vibelang" })` names the grammar.
 
 `setup({ typescript = true })` also attaches the server to `.ts` and `.js` files, so a `.ts` file that imports a `.vibe` module resolves it. Turn off your other TypeScript server (`ts_ls`, `vtsls`) for those projects first, or both report every `.ts` file.
 
-`editors/nvim/test.sh` checks the configuration in a headless Neovim: it copies `typescript/vibelang/lsp-fixture` to a scratch project that has `vibelang` installed, with its Node launcher at `node_modules/.bin/vibelang` and the compiler under test as its native binary, and compiles the `vibe` parser. Without the parser, it checks that `.vibe` files fall back to TypeScript highlighting. With it, it checks the filetype and the `vibe` parser's highlighting, that the project's `vibelang` attaches, TS2322 and EK1003 diagnostics, a hover with the inferred contract and a call's success value, that no fixture source has an ERROR or MISSING node, and the capture of each VibeLang token in `forms.vibe`, such as `!!`, `match`, `when`, `catch`, and `provide`. Given nvim-treesitter, it also checks that the `vibe` queries inherit its TypeScript queries and that `:TSInstall vibe` builds the parser. It reads `NVIM`, `VIBELANG`, `EFFECT_NODE_MODULES`, `VIBELANG_RUNTIME`, `NVIM_TREESITTER` (default: lazy.nvim's checkout, when there is one), and `CC`.
+`editors/nvim/test.sh` checks the configuration in a headless Neovim. It copies `typescript/vibelang/lsp-fixture` to a scratch project with `vibelang` installed, its Node launcher at `node_modules/.bin/vibelang` and the compiler under test as its native binary, and compiles the `vibe` parser. Without the parser, it checks that `.vibe` files fall back to TypeScript highlighting. With it, it checks the filetype and the `vibe` parser's highlighting, that the project's `vibelang` attaches, TS2322 and EK1003 diagnostics, a hover with the inferred contract and a call's success value, that no fixture source has an ERROR or MISSING node, and the capture of each VibeLang token in `forms.vibe`, such as `!!`, `match`, `when`, `catch`, and `provide`. With nvim-treesitter, it also checks that the `vibe` queries inherit its TypeScript queries and that `:TSInstall vibe` builds the parser. It reads `NVIM`, `VIBELANG`, `EFFECT_NODE_MODULES`, `VIBELANG_RUNTIME`, `NVIM_TREESITTER` (default: lazy.nvim's checkout, if any), and `CC`.
 
 ## Tree-sitter grammar
 
@@ -51,7 +51,7 @@ npm run generate
 npm test
 ```
 
-`npm test` checks that `src/` is what `grammar.js` generates, runs the corpus tests in `test/corpus/`, and parses every `.vibe` file of the repository (except the failing compiler cases, `*.fail`, and the files that `scripts/corpus.mjs` lists as invalid on purpose) and every `vibe` block under `docs/`, failing on any ERROR or MISSING node. `node scripts/corpus.mjs name=/path/to/dir` adds another directory's `.vibe` files.
+`npm test` checks that `src/` is what `grammar.js` generates, runs the corpus tests in `test/corpus/`, and parses every `.vibe` file in the repository (except failing compiler cases, `*.fail`, and files `scripts/corpus.mjs` lists as deliberately invalid) and every `vibe` block under `docs/`, failing on any ERROR or MISSING node. `node scripts/corpus.mjs name=/path/to/dir` adds another directory's `.vibe` files.
 
 ## Zed
 
@@ -78,7 +78,7 @@ Zed defines languages through extensions, so these settings treat `.vibe` files 
 }
 ```
 
-The path must be absolute. The `vibelang` that `scripts/setup.sh` links into `~/.local/bin` works too when written out in full, such as `/Users/you/.local/bin/vibelang`. Zed then sends `.vibe` files with the language id `typescript`, which the server accepts, and the server serves the project's `.ts` files too. These settings are untested: Zed cannot run headlessly, so nothing here checked them in Zed. An `initialize` request with `vtsls`-style initialization options, as Zed sends, succeeds against `vibelang`.
+The path must be absolute; the `vibelang` that `scripts/setup.sh` links into `~/.local/bin` also works when written in full, such as `/Users/you/.local/bin/vibelang`. Zed then sends `.vibe` files with the language id `typescript`, which the server accepts, and the server serves the project's `.ts` files too. These settings are untested in Zed, which cannot run headlessly. An `initialize` request with `vtsls`-style initialization options, as Zed sends, succeeds against `vibelang`.
 
 ## Other LSP clients
 

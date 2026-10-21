@@ -1,28 +1,27 @@
 # Converter compile worker
 
-The worker checks one VibeLang source file with the pinned compiler and dependencies.
-It runs `vibelang --noEmit --pretty false -p <fixed project>` in a fresh temporary
-directory. It never runs the submitted program. `POST /compile` accepts
+The worker checks one VibeLang source file with the pinned compiler and dependencies:
+it runs `vibelang --noEmit --pretty false -p <fixed project>` in a fresh temporary
+directory and never runs the submitted program. `POST /compile` accepts
 `{"source":"..."}` and returns the exit code, bounded diagnostics, compiler version,
 compiler digest, and dependencies digest. `GET /healthz` returns the worker identity.
 
 Each compile has one CPU, a 512 MiB container memory limit, and a 10-second wall
-and CPU limit. The process runs as UID/GID 1000 without credentials, capabilities,
-a service account token, or a writable root filesystem. Only `/tmp` is writable,
-using a 64 MiB memory-backed volume counted against the memory limit. Compiles
-run serially. Diagnostic output is capped at 64 KiB, 50 records, and 500 characters
-per message. Source is limited to 8 KiB. Logs omit source, diagnostic text, and
-client addresses.
+and CPU limit; compiles run serially. The process runs as UID/GID 1000 without
+credentials, capabilities, a service account token, or a writable root filesystem.
+Only `/tmp` is writable: a 64 MiB memory-backed volume counted against the memory
+limit. Source is limited to 8 KiB; diagnostic output to 64 KiB, 50 records, and 500
+characters per message. Logs omit source, diagnostic text, and client addresses.
 
 ## Build and test
 
 Cloud Build builds the compiler and runtime from this repository, packs their
-existing packages, and installs the fixed project with `effect@4.0.5`. The final
-image contains neither a shell nor npm. No package is published. Cloud Build
-uses the existing narrow `plue-image-builder` account and records verified
-provenance. The smoke step runs the final image with `--network=none`, one CPU,
-512 MiB, a read-only root, no capabilities, and a bounded temporary filesystem.
-It checks the UID, absent shells, health endpoint, hero compile, and type error.
+existing packages, and installs the fixed project with `effect@4.0.5`; no package
+is published. The final image has no shell or npm. Cloud Build uses the existing
+narrow `plue-image-builder` account and records verified provenance. The smoke
+step runs the final image with `--network=none`, one CPU, 512 MiB, a read-only
+root, no capabilities, and a bounded temporary filesystem, and checks the UID,
+absent shells, health endpoint, hero compile, and type error.
 
 From the repository root, submit a clean source revision with a unique tag:
 
@@ -37,8 +36,8 @@ gcloud builds submit . --project plue-prod-1771780303 --region us-central1 \
 ```
 
 The Artifact Registry repository has immutable tags. Record `results.images[].digest`
-from `gcloud builds describe`, then pin that digest in `deploy/deployment.yaml`.
-See `deploy/image.json` for the staged build receipt.
+from `gcloud builds describe` and pin it in `deploy/deployment.yaml`.
+`deploy/image.json` holds the staged build receipt.
 
 For worker tests on the Linux build host, build the native compiler and runtime,
 then run these commands through `scripts/remote.sh`:
@@ -49,7 +48,7 @@ sh packages/converter-worker/test/setup-project.sh dist-npm/tarballs
 VIBELANG_WORKER_NETWORK=policy node --test packages/converter-worker/test/*.test.mjs
 ```
 
-Policy-mode host tests do not prove Kubernetes network isolation. The Cloud Build
+Policy-mode host tests don't prove Kubernetes network isolation. The Cloud Build
 image smoke test proves the process works in an isolated container; the hosting
 DRI must verify the cluster policies after applying them.
 
@@ -64,27 +63,27 @@ Use project `plue-prod-1771780303`, cluster `plue-sandbox-cluster`, region
 The backend runs in namespace `smithers`, with pod labels `app=smithers-api`,
 `app.kubernetes.io/name=smithers`, `app.kubernetes.io/instance=smithers`, and
 `app.kubernetes.io/component=api`. The worker uses the existing `default`
-namespace. The Helm chart's `templates/cluster-dns-policy.yaml` grants DNS to
-every pod in `smithers`. NetworkPolicy allow rules are additive, so placing the
-worker there would retain DNS egress even with `egress: []`. At staging time,
-`default` had no NetworkPolicies or workloads. Do not add any policy selecting
-the worker that permits egress, including DNS or metadata access.
+namespace: the Helm chart's `templates/cluster-dns-policy.yaml` grants DNS to
+every pod in `smithers`, and NetworkPolicy allow rules are additive, so a worker
+there would keep DNS egress even with `egress: []`. At staging time, `default`
+had no NetworkPolicies or workloads. Add no policy selecting the worker that
+permits egress, including DNS or metadata access.
 
 `network-policy.yaml` permits incoming TCP/8080 only from those backend pods in
-`smithers`, and denies all worker egress. `backend-egress.yaml` is a new, narrow
-policy permitting the API to reach that worker. It does not edit Helm-managed
-policies. `namespace.yaml` references the existing namespace without changing
-its labels or security configuration. Do not delete that namespace on rollback.
+`smithers` and denies all worker egress. `backend-egress.yaml` is a new, narrow
+policy letting the API reach the worker; it doesn't edit Helm-managed policies.
+`namespace.yaml` references the existing namespace without changing its labels
+or security configuration; don't delete that namespace on rollback.
 
-The server checks an outbound TCP connection to `1.1.1.1:443` before binding its
-HTTP port. A successful connection or a probe execution fault exits the server.
-The HTTP startup probe can pass only after this check succeeds. This is a
+Before binding its HTTP port, the server checks an outbound TCP connection to
+`1.1.1.1:443`; a successful connection or a probe execution fault exits the
+server. The HTTP startup probe can pass only after this check succeeds. It is a
 misconfiguration check; NetworkPolicy enforces isolation for all destinations.
 Keep policies in place throughout rollouts and rollback.
 
 ### Validate and apply
 
-The hosting DRI applies the manifests during the approved rollout. Staging uses
+The hosting DRI applies the manifests during the approved rollout; staging uses
 only server dry-run. From the repository root:
 
 ```sh
@@ -108,12 +107,12 @@ kubectl -n default logs deployment/effeck-converter-worker
 ```
 
 If startup fails, inspect `kubectl -n default describe pod -l app=effeck-converter-worker`
-and the previous container logs. An egress error requires correcting policy
+and the previous container logs. An egress error requires fixing policy
 selection or enforcement. Keep conversion disabled while investigating.
 
 ### Smoke-test
 
-First use a local port forward to check the compiled image without creating a
+First check the compiled image through a local port forward, without creating a
 test pod. Run the forward in another terminal:
 
 ```sh
@@ -148,11 +147,10 @@ console.log({ heroExitCode: good.exitCode, typeErrorDiagnostics: bad.diagnostics
 JS
 ```
 
-A port forward bypasses Service routing and policy checks. Also POST the same
-fixtures from the Smithers API using its compile activity, confirm worker
-egress is blocked, and confirm a caller without the backend identity is denied.
-The image has Node but no shell; an operator can run a direct Node command to
-test egress:
+A port forward bypasses Service routing and policy checks, so also POST the same
+fixtures from the Smithers API's compile activity, confirm worker egress is
+blocked, and confirm a caller without the backend identity is denied. The image
+has Node but no shell; test egress with a direct Node command:
 
 ```sh
 kubectl -n default exec deployment/effeck-converter-worker -- /usr/local/bin/node \
@@ -168,20 +166,20 @@ SMITHERS_GUEST_COMPILE_ENDPOINT=http://effeck-converter-worker.default.svc.clust
 ```
 
 This setting is `guest.compile_endpoint` in the `eh-convert` backend change
-`dbbd5a50bfb6ab61d3b96742592eab1d0b936cc0`. That lane's handoff was awaiting
-landing when this worker was staged. The activity POSTs directly to the complete
-URL, so include `/compile`. It bounds responses and times out at 15 seconds.
-An empty setting disables conversion execution. Apply this operator setting
-only after that backend change lands and the worker passes its smoke checks.
-Receipt signing keys stay in the backend; the worker receives none. This runbook
-does not enable guest access, change budgets, or bypass the golden gate.
+`dbbd5a50bfb6ab61d3b96742592eab1d0b936cc0`, whose handoff was awaiting landing
+when this worker was staged. The activity POSTs directly to the complete URL, so
+include `/compile`; it bounds responses and times out at 15 seconds. An empty
+setting disables conversion execution. Apply the setting only after that backend
+change lands and the worker passes its smoke checks. Receipt signing keys stay
+in the backend; the worker receives none. This runbook doesn't enable guest
+access, change budgets, or bypass the golden gate.
 
 ### Roll back
 
 Clear `SMITHERS_GUEST_COMPILE_ENDPOINT` or restore its previously approved value
 through the backend's normal operator configuration path. For an earlier worker
 revision, restore its recorded digest in the Deployment manifest, dry-run, and
-apply that manifest. Alternatively use the Deployment's retained history:
+apply it, or use the Deployment's retained history:
 
 ```sh
 kubectl -n default rollout history deployment/effeck-converter-worker
@@ -190,7 +188,6 @@ kubectl -n default rollout status deployment/effeck-converter-worker --timeout=1
 ```
 
 For the initial release, disable the backend setting and delete only the worker
-Deployment and Service. After its pods have terminated, delete its two named
-NetworkPolicies if removing the integration completely. Preserve `default` and
-all existing infrastructure. Do not remove the deny policy while a worker pod
-is running.
+Deployment and Service. To remove the integration completely, delete its two
+named NetworkPolicies after its pods terminate. Preserve `default` and all
+existing infrastructure. Never remove the deny policy while a worker pod runs.

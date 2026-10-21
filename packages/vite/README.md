@@ -16,9 +16,9 @@ npm install --save-dev vitest@5.0.5 @effect/vitest@4.0.5
 ```
 
 The plugin compiles with the `vibelang` package, a peer dependency, through its
-`vibelang/project` backend; `compiler` can still name another binary. It supports Vite 7 and 8 on Node 22 or
-later; the acceptance tests use Vite 8 and Vitest 5. Apps made with
-`create-vibelang` already include the plugin and a Vitest configuration.
+`vibelang/project` backend. It supports Vite 7 and 8 on Node 22 or later; the
+acceptance tests use Vite 8 and Vitest 5. `create-vibelang` apps already include
+the plugin and a Vitest configuration.
 
 ## Configure Vite
 
@@ -30,15 +30,15 @@ import vibelang from "vibelang-vite"
 export default defineConfig({ plugins: [vibelang()] })
 ```
 
-Keep your normal `tsconfig.json` with the `.vibe` sources included. The plugin
+Keep your normal `tsconfig.json` with the `.vibe` sources included; the plugin
 uses the same compiler options and diagnostics as `vibelang -p tsconfig.json`.
-Import local sources with `./welcome.vibe`. Imports rewritten by `vibelang` to
+Import local sources as `./welcome.vibe`; imports `vibelang` rewrites to
 `./welcome.js` resolve back to `welcome.vibe` in Vite's module graph.
 
 A `.vibe` module outside Vite's root, such as the source of a workspace package
 that your app or test imports by name, compiles with the nearest
 `tsconfig.json` above it: its own package's project, with that package's
-settings. Each project compiles once and again after an edit.
+settings. Each project compiles once, and again after an edit.
 
 Set `"rewriteRelativeImportExtensions": true` in `compilerOptions`. Without it,
 a `.ts` file that imports `./welcome.vibe` fails with TS5097, and
@@ -72,7 +72,7 @@ it.effect("answers") {
 }
 ```
 
-Run `bunx vitest run` or `bunx vitest` for watch mode. No prior emission to
+Run `bunx vitest run`, or `bunx vitest` for watch mode; no prior emission to
 `dist/` is needed. `assert` and `expect` from `@effect/vitest` are trusted
 exports of an Effect package, so a test calls them directly. A failed
 assertion's stack points to its `.vibe` source line.
@@ -86,31 +86,31 @@ vibelang({
 })
 ```
 
-By default, the plugin resolves `vibelang` from the application's
-root and runs its Node launcher. `VIBELANG_BINARY` selects a native binary when no
-`compiler` option is set.
+By default, the plugin resolves `vibelang` from the application's root and runs
+its Node launcher. Without a `compiler` option, `VIBELANG_BINARY` selects a
+native binary.
 
 ## How it works
 
 v0 runs one `vibelang` subprocess for the whole project on the first module request
-and after each source change. Requests share that compilation. Each plugin
-instance owns an output directory under `node_modules/.vibelang/vite-*` and
-removes it when Vite closes. It forces JavaScript and source-map emission,
-embeds source content, and disables declarations, incremental output, and
-emission on errors. Source paths in compiler maps are resolved to the original
-files before Vite composes the maps for its transformations.
+and after each source change; requests share that compilation. Each plugin
+instance owns an output directory under `node_modules/.vibelang/vite-*`, removed
+when Vite closes. It forces JavaScript and source-map emission, embeds source
+content, and disables declarations, incremental output, and emission on errors.
+Source paths in compiler maps resolve to the original files before Vite composes
+the maps for its transformations.
 
-The Vite root must contain the project's source files. The plugin overrides
+The Vite root must contain the project's source files; the plugin overrides
 `rootDir` to that root so emitted paths are predictable. Normal application
-`dist/` output stays separate. Each change recompiles the project and invalidates
-all loaded `.vibe` modules and their transitive importers. This conservative rule
-covers exported contract and control changes without duplicating compiler logic.
-Direct HTTP requests for `.vibe` files enter Vite's module transform pipeline.
+`dist/` output stays separate. Each change invalidates all loaded `.vibe`
+modules and their transitive importers, a conservative rule
+that covers exported contract and control changes without duplicating compiler
+logic. Direct HTTP requests for `.vibe` files enter Vite's module transform pipeline.
 
-The plugin never implements language syntax or lowering. Prelude, service,
+The plugin never implements language syntax or lowering; prelude, service,
 program, and cross-file import support comes from the installed compiler.
-A compiler error blocks JavaScript serving, includes its original diagnostic
-text and source location in the overlay, and clears on the next successful edit.
+A compiler error blocks JavaScript serving, shows its original diagnostic text
+and source location in the overlay, and clears on the next successful edit.
 
 ## Acceptance checks
 
@@ -123,11 +123,11 @@ bun install
 bun run test
 ```
 
-The harness runs a passing `.vibe` suite through Vitest, then verifies an expected
-failure at `failure.test.vibe:6:28`. A real HTTP server check verifies JavaScript,
+The harness runs a passing `.vibe` suite through Vitest, then checks an expected
+failure at `failure.test.vibe:6:28`. A real HTTP server check covers JavaScript,
 source maps, importer invalidation, terminal and overlay diagnostics, and recovery.
-A production build checks `.vibe` entry support. Temporary projects and compiler
-output are removed after each check.
+A production build checks `.vibe` entry support. Each check removes its temporary
+projects and compiler output.
 
 The template and the users, http-api, and resilience examples also use this
 plugin for their source tests. Their advanced language features require the

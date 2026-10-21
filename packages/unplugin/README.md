@@ -15,12 +15,11 @@ npm install --save-dev vibelang vibelang-unplugin
 ```
 
 The plugin compiles with the `vibelang` package, a peer dependency, through its
-`vibelang/project` backend; `compiler` can still name another binary. It needs
-Node 22 or later.
+`vibelang/project` backend. It needs Node 22 or later.
 
 ## Configure
 
-Keep your normal `tsconfig.json` with the `.vibe` sources included. The plugin
+Keep your normal `tsconfig.json` with the `.vibe` sources included; the plugin
 uses the same compiler options and diagnostics as `vibelang -p tsconfig.json`.
 
 ```js
@@ -47,9 +46,8 @@ await Bun.build({ entrypoints: ["src/main.ts"], outdir: "out", plugins: [vibelan
 
 Import local sources as `./welcome.vibe` and `./config.ts`. The compiler
 rewrites those imports to `./welcome.js` and `./config.js`; the plugin resolves
-them back to `welcome.vibe` and `config.ts`. The plugin compiles only
-`.vibe` modules. Your `.ts` files go through your bundler's usual TypeScript
-support.
+them back to `welcome.vibe` and `config.ts`. The plugin compiles only `.vibe`
+modules; `.ts` files go through your bundler's usual TypeScript support.
 
 A `.vibe` module outside `root`, such as the source of a workspace package that
 your app imports by name, compiles with the nearest `tsconfig.json` above it:
@@ -74,10 +72,10 @@ trace each build start, compile, and module load on stderr.
 
 VibeLang's emit is type-directed: a module's JavaScript depends on the contracts of
 the modules it imports. So v0 compiles the whole project with one `vibelang`
-process per build, on the first `.vibe` module load, and every watch rebuild
-compiles it again. The compiler writes to a directory under the system
-temporary directory; the plugin reads the JavaScript and source maps into
-memory and deletes it. The plugin forces JavaScript and source-map emission,
+process per build, on the first `.vibe` module load, and again on every watch
+rebuild. The compiler writes to a directory under the system temporary
+directory; the plugin reads the JavaScript and source maps into memory and
+deletes it. It forces JavaScript and source-map emission,
 embeds source content, overrides `rootDir` to the root, and disables
 declarations, incremental output, and emission on errors. A source saved
 during a compile starts another compile before any module is served.
@@ -93,7 +91,7 @@ as `file:line:column - error TS2322: text`.
   into the compiled JavaScript of each `.vibe` module, not its source. Bun has
   no watch API for plugins.
 - **webpack and Rspack:** the error carries its position in the message only;
-  unplugin does not pass a location to webpack. webpack before 5.112.0 can miss
+  unplugin doesn't pass a location to webpack. webpack before 5.112.0 can miss
   a save made as a watch build finishes
   ([webpack#22646](https://github.com/webpack/webpack/pull/22646)).
 - **esbuild:** `.vibe` modules load in the `vibelang` namespace.
@@ -114,8 +112,8 @@ sh packages/unplugin/test/run.sh
 The script builds the compiler and `vibelang-runtime` from the checkout, then
 bundles `test/fixture` with webpack, Rspack, Rollup, Rolldown, esbuild, Bun, and
 Vite. For each bundler it runs the bundle and compares its output with
-`test/expected.txt`, checks that the source map maps a token back to its
-`.vibe` line and column, and checks that a type error fails the build with its
-`.vibe` position. In watch mode it edits the `.vibe` source, a `.ts` file the
+`test/expected.txt`, and checks that the source map maps a token back to its
+`.vibe` line and column and that a type error fails the build with its `.vibe`
+position. In watch mode it edits the `.vibe` source, a `.ts` file the
 `.vibe` module imports only for types, and the tsconfig, and waits for each
 rebuild.

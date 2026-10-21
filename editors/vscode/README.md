@@ -14,14 +14,14 @@ The extension `vibelang.vibelang` registers the VibeLang language for `.vibe` fi
 
 ## Install
 
-From a project that has `vibelang` installed, such as one made with `bun create vibelang`:
+From a project with `vibelang` installed, such as one made with `bun create vibelang`:
 
 ```sh
 code --install-extension node_modules/vibelang/editor/vibelang.vsix     # VS Code
 cursor --install-extension node_modules/vibelang/editor/vibelang.vsix   # Cursor
 ```
 
-Then open the project directory. The extension is not on the VS Code Marketplace or Open VSX yet; install it again after updating `vibelang`.
+Then open the project directory. The extension isn't on the VS Code Marketplace or Open VSX yet; install it again after updating `vibelang`.
 
 To build it from this repository, run `sh scripts/setup.sh` at the repository root, which builds the extension and prints the install commands, or build it alone:
 
@@ -45,7 +45,7 @@ If none exists, the extension says so and the status item next to the language m
 
 ## TypeScript files
 
-The language server checks the `.ts` files of the program together with the `.vibe` files, so `.vibe` code sees TypeScript types. Which server answers for an open `.ts` file depends on `vibelang.server.typeScriptFiles`:
+The language server checks the program's `.ts` files with its `.vibe` files, so `.vibe` code sees TypeScript types. `vibelang.server.typeScriptFiles` decides which server answers for an open `.ts` file:
 
 | Value | `.ts` and `.js` files are served by |
 | --- | --- |
@@ -55,7 +55,7 @@ The language server checks the `.ts` files of the program together with the `.vi
 
 The built-in features count as off when the built-in extension "TypeScript and JavaScript Language Features" is disabled, or, in Cursor, when `typescript.experimental.useTsgo` is `true`. Turn them off when a `.ts` file imports a `.vibe` module: VS Code's TypeScript cannot resolve `.vibe` files. **VibeLang: Serve TypeScript Files in This Workspace** does it in Cursor and shows the extension to disable in VS Code.
 
-The extension never forwards `typescript.validate.enable` to the server, so turning off the built-in TypeScript diagnostics does not turn off VibeLang's.
+The extension never forwards `typescript.validate.enable` to the server, so turning off the built-in TypeScript diagnostics doesn't turn off VibeLang's.
 
 ## Settings and commands
 
@@ -71,7 +71,7 @@ The extension never forwards `typescript.validate.enable` to the server, so turn
 | VibeLang: Show Language Server Output | Opens the VibeLang output, which has the server's log |
 | VibeLang: Serve TypeScript Files in This Workspace | Turns the built-in TypeScript features off for the workspace, as above |
 
-The extension does not run in untrusted workspaces, because it executes the workspace's `node_modules/.bin/vibelang`. Highlighting still works there.
+The extension doesn't run in untrusted workspaces, because it executes the workspace's `node_modules/.bin/vibelang`; highlighting still works there.
 
 ## Develop
 
@@ -82,7 +82,7 @@ bun run test             # install vibelang.vsix into a fresh VS Code and check 
 bun run derive-grammar   # regenerate syntaxes/ from the installed VS Code's TypeScript grammar
 ```
 
-`bun run test` needs `vibelang` at `../../typescript/built/local/vibelang` (or `VIBELANG`), `effect` in `../../experiments/node_modules` (or `EFFECT_NODE_MODULES`), and the built runtime in `../../packages/runtime` (or `VIBELANG_RUNTIME`). It downloads VS Code 1.98.2 to `.vscode-test/` (`VSCODE_VERSION`, `VSCODE_TEST_CACHE`), or uses the VS Code at `VSCODE_EXECUTABLE`. It copies `typescript/vibelang/lsp-fixture` to a scratch project, installs `vibelang` there as `bun install` does, with the compiler under test as its native binary, installs the `.vsix` into a fresh profile, and checks the language, the grammar's scopes, TypeScript and EK diagnostics, hovers, a definition, and completions of prelude names and service members; a second run disables the built-in TypeScript extension and checks that VibeLang reports `.ts` diagnostics. On Linux, run it under `xvfb-run -a`. On macOS it opens a VS Code window for about a minute.
+`bun run test` needs `vibelang` at `../../typescript/built/local/vibelang` (or `VIBELANG`), `effect` in `../../experiments/node_modules` (or `EFFECT_NODE_MODULES`), and the built runtime in `../../packages/runtime` (or `VIBELANG_RUNTIME`). It downloads VS Code 1.98.2 to `.vscode-test/` (`VSCODE_VERSION`, `VSCODE_TEST_CACHE`), or uses the VS Code at `VSCODE_EXECUTABLE`. It copies `typescript/vibelang/lsp-fixture` to a scratch project, installs `vibelang` there as `bun install` does, with the compiler under test as its native binary, installs the `.vsix` into a fresh profile, and checks the language, the grammar's scopes, TypeScript and EK diagnostics, hovers, a definition, and completions of prelude names and service members; a second run disables the built-in TypeScript extension and checks that VibeLang reports `.ts` diagnostics. On Linux, run it under `xvfb-run -a`; on macOS it opens a VS Code window for about a minute.
 
 ## License
 

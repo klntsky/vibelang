@@ -58,24 +58,23 @@ node --import vibelang/register src/main.ts
 `vibelang/register` lets Node import `.vibe` modules from source, so a
 TypeScript entry point, a script, or a test that spawns `node` needs no
 `dist/`. The first `.vibe` import compiles the whole project in the nearest
-`tsconfig.json` above the module, once per process, and every `.vibe` module of
-that project comes from that compile. Set `VIBELANG_PROJECT` to a tsconfig path
-to choose another project. A module keeps its source URL, so a `.ts` file that
-both a TypeScript and a `.vibe` module import loads once. Diagnostics that stop
-the compile are thrown at the import. Add `--enable-source-maps` for stack
-traces with `.vibe` lines. It needs Node 22.15 or later, for
-`module.registerHooks`.
+`tsconfig.json` above the module, once per process; every `.vibe` module of that
+project comes from that compile. Set `VIBELANG_PROJECT` to a tsconfig path to
+choose another project. A module keeps its source URL, so a `.ts` file imported
+by both a TypeScript and a `.vibe` module loads once. Diagnostics that stop the
+compile are thrown at the import. Add `--enable-source-maps` for stack traces
+with `.vibe` lines. It needs Node 22.15 or later, for `module.registerHooks`.
 
 ## Compile projects from a tool
 
 `vibelang/project` is the whole-project compile that `vibelang-vite`,
-`vibelang-unplugin`, and `vibelang/register` share. `projects({ root, project,
-compiler })` serves each `.vibe` module from one compile per tsconfig: a module
-inside `root` belongs to `project`, and one outside it, such as the source of a
-workspace package another package imports, belongs to the nearest
-`tsconfig.json` above it. `load(file)` returns the module's JavaScript, its
-source map, and its project's diagnostics; `invalidate()` makes every project
-compile again on its next load.
+`vibelang-unplugin`, and `vibelang/register` share.
+`projects({ root, project, compiler })` serves each `.vibe` module from one
+compile per tsconfig: a module inside `root` belongs to `project`; one outside
+it, such as the source of a workspace package another package imports, belongs
+to the nearest `tsconfig.json` above it. `load(file)` returns the module's
+JavaScript, its source map, and its project's diagnostics; `invalidate()` makes
+every project compile again on its next load.
 
 ## Editor support
 
@@ -109,8 +108,8 @@ files. See [Format with dprint](https://vibelang.sh/setup/formatting).
 
 ## Lint .vibe files with ESLint
 
-`vibelang/eslint` is an ESLint parser for `.vibe` files. It gives ESLint the
-tree typescript-eslint gives it for TypeScript, so the same rules and plugins
+`vibelang/eslint` is an ESLint parser for `.vibe` files: it gives ESLint the
+tree typescript-eslint gives for TypeScript, so the same rules and plugins
 apply. Install `eslint` and `typescript-eslint` 8 beside `vibelang`:
 
 ```js
@@ -125,9 +124,9 @@ export default tseslint.config({
 })
 ```
 
-Rules that need type information do not run on `.vibe` files; `vibelang
---noEmit` checks types. See the Devtools page at [vibelang.sh](https://vibelang.sh/getting-started/012-devtools) for the node types of
-VibeLang's own forms.
+Rules that need type information don't run on `.vibe` files;
+`vibelang --noEmit` checks types. The
+[Devtools page](https://vibelang.sh/getting-started/012-devtools) lists the node types of VibeLang's own forms.
 
 ## How the package finds the native compiler
 
@@ -135,8 +134,8 @@ VibeLang's own forms.
 optional dependencies, and npm installs the one that matches your platform:
 `vibelang-darwin-arm64`, `vibelang-darwin-x64`, `vibelang-linux-arm64`,
 `vibelang-linux-x64`, `vibelang-win32-arm64`, or `vibelang-win32-x64`. The launcher
-runs `VIBELANG_BINARY` when it is set, then `native/vibelang` beside the package in
-a VibeLang checkout, then the platform package. If you installed with optional
+runs `VIBELANG_BINARY` when set, then `native/vibelang` beside the package in a
+VibeLang checkout, then the platform package. If you installed with optional
 dependencies omitted, reinstall without that option. The launcher forwards
 arguments, standard streams, signals, and the exit status.
 

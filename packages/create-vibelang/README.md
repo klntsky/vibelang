@@ -13,8 +13,8 @@ npm create vibelang@latest my-app
 
 The command copies a starter app into `my-app`, pins `vibelang`,
 `vibelang-runtime`, and `vibelang-vite` to its own version, and installs
-dependencies with the package manager that ran it. It refuses a directory that
-is not empty, and it never runs `git init`.
+dependencies with the package manager that ran it. It refuses a non-empty
+directory and never runs `git init`.
 
 | Option | Effect |
 | --- | --- |
