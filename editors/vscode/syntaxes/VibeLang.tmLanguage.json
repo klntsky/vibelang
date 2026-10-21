@@ -35,6 +35,9 @@
 					"include": "#vibelang-error-declaration"
 				},
 				{
+					"include": "#vibelang-schema-alias"
+				},
+				{
 					"include": "#vibelang-type-declaration"
 				},
 				{
@@ -6067,6 +6070,61 @@
 				},
 				{
 					"include": "#expressionPunctuations"
+				}
+			]
+		},
+		"vibelang-schema-alias": {
+			"name": "meta.type.declaration.ts",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(schema)\\s+([_$[:alpha:]][_$[:alnum:]]*)(?=\\s*=)\\s*",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.export.ts"
+				},
+				"2": {
+					"name": "storage.type.type.ts"
+				},
+				"3": {
+					"name": "entity.name.type.alias.ts"
+				}
+			},
+			"end": "(?=\\}|;|^\\s*$|(?:^\\s*(?:error|service|control|schema|layer|abstract|async|(?:\\bawait\\s+(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)\\b)|break|case|catch|class|const|continue|declare|do|else|enum|export|finally|function|for|goto|if|import|interface|let|module|namespace|switch|return|throw|try|type|(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)|var|while)\\b))",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#type-parameters"
+				},
+				{
+					"begin": "(=)\\s*(intrinsic)(?![_$[:alnum:]])(?:(?=\\.\\.\\.)|(?!\\.))",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.operator.assignment.ts"
+						},
+						"2": {
+							"name": "keyword.control.intrinsic.ts"
+						}
+					},
+					"end": "(?=\\}|;|^\\s*$|(?:^\\s*(?:error|service|control|schema|layer|abstract|async|(?:\\bawait\\s+(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)\\b)|break|case|catch|class|const|continue|declare|do|else|enum|export|finally|function|for|goto|if|import|interface|let|module|namespace|switch|return|throw|try|type|(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)|var|while)\\b))",
+					"patterns": [
+						{
+							"include": "#type"
+						}
+					]
+				},
+				{
+					"begin": "(=)\\s*",
+					"beginCaptures": {
+						"1": {
+							"name": "keyword.operator.assignment.ts"
+						}
+					},
+					"end": "(?=\\}|;|^\\s*$|(?:^\\s*(?:error|service|control|schema|layer|abstract|async|(?:\\bawait\\s+(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)\\b)|break|case|catch|class|const|continue|declare|do|else|enum|export|finally|function|for|goto|if|import|interface|let|module|namespace|switch|return|throw|try|type|(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)|var|while)\\b))",
+					"patterns": [
+						{
+							"include": "#type"
+						}
+					]
 				}
 			]
 		}

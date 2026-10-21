@@ -3,6 +3,7 @@
 // declaration like a class and a handle clause like catch.
 //
 //   error NotFound { id: string }          schema User { name: string }
+//   schema Code = "a" | "b"                (D280, read as a type alias)
 //   error Missing extends NotFound { path: string; describe(): string { ... } }
 //   schema error FsError { method: string }
 //   service Users { find(id: string): User!NotFound }
@@ -34,6 +35,21 @@ function declaration(words, body, header = "") {
 
 export function addVibeLangSyntax(grammar) {
   const { repository } = grammar
+  // schema Code = "a" | "b" (D280) is TypeScript's type alias with schema for
+  // type: its = and type are the alias's, and it ends where the alias does
+  // or at a line that starts another VibeLang declaration.
+  const alias = JSON.parse(
+    JSON.stringify(repository["type-alias-declaration"]).replaceAll("(?:abstract|", "(?:error|service|control|schema|layer|abstract|")
+  )
+  repository["vibelang-schema-alias"] = {
+    ...alias,
+    begin: `${start}\\b(schema)\\s+(${name})(?=\\s*=)\\s*`,
+    beginCaptures: {
+      1: { name: "keyword.control.export.ts" },
+      2: { name: "storage.type.type.ts" },
+      3: { name: "entity.name.type.alias.ts" }
+    }
+  }
   repository["vibelang-type-declaration"] = declaration("schema", "#type-object")
   // error and schema error declare classes (D126, D278, D279): abstract,
   // extends and implements, and a class body, whose fields read as properties.
@@ -128,7 +144,7 @@ export function addVibeLangSyntax(grammar) {
     match: "(?<=[_$[:alnum:])\\]'\"`]\\s)(catch)(?=\\s)",
     captures: { 1: { name: "keyword.control.trycatch.ts" } }
   }
-  const vibelangIncludes = ["#vibelang-error-declaration", "#vibelang-type-declaration", "#vibelang-member-declaration", "#vibelang-layer-declaration", "#vibelang-handle-clause", "#vibelang-provide", "#vibelang-for-concurrent", "#vibelang-fork", "#vibelang-join"]
+  const vibelangIncludes = ["#vibelang-error-declaration", "#vibelang-schema-alias", "#vibelang-type-declaration", "#vibelang-member-declaration", "#vibelang-layer-declaration", "#vibelang-handle-clause", "#vibelang-provide", "#vibelang-for-concurrent", "#vibelang-fork", "#vibelang-join"]
   const statements = repository.statements.patterns.filter((pattern) => !vibelangIncludes.includes(pattern.include))
   repository.statements.patterns = [...vibelangIncludes.map((include) => ({ include })), ...statements]
   const vibelangExpressions = ["#vibelang-await-operation", "#vibelang-fork", "#vibelang-join", "#vibelang-match", "#vibelang-catch-expression"]
