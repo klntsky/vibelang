@@ -26,7 +26,7 @@ release
 handle returned -100
 ```
 
-Everything in that test except `operation`, `handle`, and the capture is ordinary Effect: `Effect.scoped`, `acquireRelease`, `addFinalizer`, the fiber, and the finalizers that run during abandonment. This chapter lists what Effect provides, what the kernel adds, and the Effect behaviors the design works around.
+Everything in that test except `operation`, `handle`, and the capture is ordinary Effect: `Effect.scoped`, `acquireRelease`, `addFinalizer`, the fiber, and the finalizers that run during abandonment.
 
 #### Provided by Effect 4, unchanged
 
@@ -86,9 +86,9 @@ The [upstream draft index](../../upstream/README.md) collects reproductions and 
 
 #### Scheduling, stack safety, and cancellation
 
-**Scheduling** [Effect] [Rule]. A fiber runs until it parks, completes, or reaches 2048 run-loop steps, then yields through its dispatcher. Woken fibers run on the waker's JS stack (`Deferred`, `PubSub`, fiber exit, `Effect.callback`) or through a dispatcher task (`Queue.offer`, `Latch.open`, `Semaphore.release`). VibeLang makes no promise about whether a woken fiber runs before or after the waker's next step; programs that need an order must synchronize explicitly. Fairness is promised only at run-loop steps. A plain JavaScript region is atomic, exactly as an `Effect.sync` body is.
+**Scheduling** [Effect] [Rule]. A fiber runs until it parks, completes, or reaches 2048 run-loop steps, then yields through its dispatcher. Woken fibers run on the waker's JS stack (`Deferred`, `PubSub`, fiber exit, `Effect.callback`) or through a dispatcher task (`Queue.offer`, `Latch.open`, `Semaphore.release`). VibeLang does not promise whether a woken fiber runs before or after the waker's next step; programs that need an order must synchronize explicitly. Fairness is promised only at run-loop steps. A plain JavaScript region is atomic, exactly as an `Effect.sync` body is.
 
-Kotlin and Swift never run a woken coroutine on the waker's stack: Kotlin to avoid stack overflow, Swift to avoid taking over the waker's thread for an unbounded time (`continuation-prior-art.md` rule 12). The kernel keeps Effect's synchronous fast path and bounds its depth instead (K10a). Both choices satisfy the rule above, and VibeLang keeps the bounded fast path: always scheduling would add one dispatcher hop to every wake-up, and Effect's own wake-ups already run inline. A measurement that shows waker-blocking time mattering in real programs would change this default, not the rule.
+Kotlin and Swift never run a woken coroutine on the waker's stack: Kotlin to avoid stack overflow, Swift to avoid taking over the waker's thread for an unbounded time (`continuation-prior-art.md` rule 12). The kernel keeps Effect's synchronous fast path and bounds its depth instead (K10a). Both choices satisfy the rule above, and VibeLang keeps the bounded fast path: always scheduling would add one dispatcher hop to every wake-up, and Effect's own wake-ups already run inline. A measurement showing that waker-blocking time matters in real programs would change this default, not the rule.
 
 **Stack safety** [Effect] [Kernel] [Rule]. Heap frames make recursion depth a heap question: T6a nests 100,001 compiled calls and captures all of them in one operation. Direct JavaScript recursion is bounded by the host: about 10,150 frames on Node 26.10 and about 39,900 on Bun 1.4.1 for a one-line recursive function (F9). Plain JavaScript functions recurse on that stack, as any JavaScript does (Chapter 15). Capture and resume copy the frames between the perform site and the prompt; the cost is linear in that distance (Chapter 25). Cross-fiber wake-ups are stack-safe only when bounded (K10a); Effect's own are not (F10a).
 

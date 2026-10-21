@@ -20,7 +20,7 @@ fiber._stack while Payments.charge runs, bottom to top:
 
 Every construct in the function is a frame on the fiber's stack. The machine defines what every VibeLang program means; syntax, types, and the compiler exist to produce and check its states. It is not a model of Effect's runtime that we hope matches: it is Effect's runtime plus a few frame kinds and four operations, and the kernel prototype runs it.
 
-In the machine's terms, Effect supplies two things. It supplies the representation: frames on `_stack` and the Context. It also supplies the **root handler**: the scheduler at the bottom of every fiber, which handles the runtime operations (wait, yield, fork, interrupt) by parking and resuming whole fiber stacks. Every other handler is a prompt above the root. That is the precise sense in which the language is the effect system: every feature is a rule over frames, prompts, and one-shot continuations, and Effect's run loop is one handler in that semantics rather than a library the language calls.
+In the machine's terms, Effect supplies two things: the representation (frames on `_stack` and the Context) and the **root handler**, the scheduler at the bottom of every fiber, which handles the runtime operations (wait, yield, fork, interrupt) by parking and resuming whole fiber stacks. Every other handler is a prompt above the root. In this precise sense the language is the effect system: every feature is a rule over frames, prompts, and one-shot continuations, and Effect's run loop is one handler in that semantics, not a library the language calls.
 
 #### Objects
 
@@ -103,7 +103,7 @@ These rules are the specification. Within one rule, changes to K, Γ, ι, π, an
 
 The interruption rows describe Effect 4 as it is (`internal/effect.ts:558-579`, `internal/core.ts:600-631`) [Effect]. The prompt, owner, clause, collector, fiber-exit, capture, resume, abandon, and transfer rows are the kernel (`packages/runtime/src/kernel/kernel.ts`) [Kernel].
 
-**Tail position is structural.** A resume is in tail position when `Owner(k)` (with `Clause(k)` above it) is the top of the stack at the moment it runs. In a generator clause, `return yield* resume(k, v)` runs with the clause's own frame above them, so it is not a tail resume, and a producer looping that way keeps every element's clause frames until the loop ends (review probe R10: 3,002 frames at 1,000 elements). The compiler therefore emits `return tailResume(k, v)`: the clause's generator finishes first, and `Clause(k)` performs the resume (K11a). Inside a `try`, `catch`, `finally`, or `using` region of the clause, the compiler emits `yield* resume(…)` instead, because the region's cleanup must run after the resumed computation (K11d).
+**Tail position is structural.** A resume is in tail position when `Owner(k)` (with `Clause(k)` above it) is on top of the stack when it runs. In a generator clause, `return yield* resume(k, v)` runs with the clause's own frame above them, so it is not a tail resume, and a producer looping that way keeps every element's clause frames until the loop ends (review probe R10: 3,002 frames at 1,000 elements). The compiler therefore emits `return tailResume(k, v)`: the clause's generator finishes first, and `Clause(k)` performs the resume (K11a). Inside a `try`, `catch`, `finally`, or `using` region of the clause, the compiler emits `yield* resume(…)` instead, because the region's cleanup must run after the resumed computation (K11d).
 
 #### Choices the machine makes
 

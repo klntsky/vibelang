@@ -13,7 +13,7 @@ socket.once("connect") {
 }
 ```
 
-Both snippets consume a continuation a second time, or too late, and the machine answers differently in each case. One representation has three holders, and the law for a second consumption depends on the holder:
+Both snippets consume a continuation a second time, or too late. One representation has three holders, and the law for a second consumption depends on the holder:
 
 | Holder | What it holds | Law on a second consumption | Why it differs |
 | --- | --- | --- | --- |
@@ -43,7 +43,7 @@ Both snippets consume a continuation a second time, or too late, and the machine
 
 [Kernel] [Rule]
 
-- **The clause.** By default, `k` is owned by the clause invocation that received it, through an `Owner(k)` frame under the clause. If the clause exits by any path while `k` is still suspended, `k` is abandoned before control leaves the clause (T3, T4). An `Owner` nested inside a captured segment abandons its own continuation when that segment is abandoned (O01, O02).
+- **The clause.** By default, the clause invocation that received `k` owns it, through an `Owner(k)` frame under the clause. If the clause exits by any path while `k` is still suspended, `k` is abandoned before control leaves the clause (T3, T4). An `Owner` nested inside a captured segment abandons its own continuation when that segment is abandoned (O01, O02).
 - **A Scope region, after `transfer`.** `transfer(k)` moves ownership to the Scope region around the handler, the Scope in the clause's Context, and returns a `Suspended` handle that `resume`, `resumeWith`, and `abandon` accept (T10). Closing that region abandons `k` if it is still suspended and still owned by that transfer (O03). A second transfer revokes the first (O08). Transfer into the Scope parked inside `k` itself, a direct ownership cycle, is a defect (O07). Transfer into a Scope with parallel finalizers is a defect, `TransferIntoParallelScope`, because Effect runs each parallel finalizer on a forked fiber, which could never abandon `k` (K13e).
 - **The capturing fiber, always.** A transferred continuation never outlives the fiber that captured it. The first transfer on a fiber puts a `FiberExit` frame at the bottom of its stack, and when the fiber's computation ends by any path, that frame abandons every transferred continuation still suspended, newest first, before the fiber's exit is published; cleanup failures join that exit (K13a-K13d). Without it, a child that transferred into a Scope inherited from its parent and then exited left a segment no fiber could release (review probe R5).
 

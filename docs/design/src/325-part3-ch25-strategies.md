@@ -13,7 +13,7 @@ control: in-place evidence under 1000 compiled frames       118108 ns/op
 kernel perform, capture + resume, 1000 frames in segment    134409 ns/op
 ```
 
-A service call through the kernel costs what a service call costs in Effect today. A capture plus resume costs about 165 ns plus 16 to 22 ns per captured frame. Entering one compiled generator frame costs about 110 ns, and that dominates. Two rules follow. Services must run in place, never through capture. And compiled frames, not capture, are the main cost to optimize (Chapter 15).
+A service call through the kernel costs what one costs in Effect today. A capture plus resume costs about 165 ns plus 16 to 22 ns per captured frame. Entering one compiled generator frame costs about 110 ns, and that dominates. Two rules follow: services must run in place, never through capture; and compiled frames, not capture, are the main cost to optimize (Chapter 15).
 
 The run above predates the tail-resume fix, which adds one frame to every clause invocation. A rerun on 2026-10-16, on a machine busy with other work, measured capture plus resume at 223 ns with 0 frames, 1,650 ns with 10, and 14,661 ns with 100: the same shape, with the per-frame cost unchanged.
 
@@ -44,7 +44,7 @@ The growth is quadratic, but the constant is about 2.5 ns per frame copy, so it 
 
 #### Decision
 
-**Strategy A is the runtime** [Rule]. It is the only candidate where TypeScript-authored Effect code on the same fiber is transparent to capture (T7a). Seamless Effect interop requires that. It also reuses Effect's finalizers, masks, scheduler, and tracing instead of re-implementing them.
+**Strategy A is the runtime** [Rule]. It is the only candidate where TypeScript-authored Effect code on the same fiber is transparent to capture (T7a), which seamless Effect interop requires. It also reuses Effect's finalizers, masks, scheduler, and tracing instead of re-implementing them.
 
 **Strategy B is the reference semantics** [Rule]. Two independent implementations of the same laws make the laws, not an implementation, the specification. Today they pass separate suites, and they do not agree everywhere: B records the `handle` site's Context in a reinstalled prompt where Chapter 22 requires the resume site's (R9). Passing tests in both is therefore not evidence of agreement. G16 writes the Chapter 20 laws once and runs them against both; R9 is its first law. A law that one passes and the other fails is a bug in an implementation or an ambiguity in Chapter 20, never something to paper over.
 

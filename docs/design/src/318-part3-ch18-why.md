@@ -1,14 +1,14 @@
 ## Part III. The runtime
 
-This part is for reviewing how VibeLang runs. It explains how the features in Parts I and II execute on Effect 4's fiber runtime, what Effect already provides, what a small runtime extension (the **kernel**) adds, and the tests that check each claim. Claims carry tags:
+This part is for reviewing how VibeLang runs: how the features of Parts I and II execute on Effect 4's fiber runtime, what Effect already provides, what a small runtime extension (the **kernel**) adds, and which tests check each claim. Claims carry tags:
 
 | Tag | Meaning |
 | --- | --- |
 | **[Effect]** | Verified in `effect@4.0.5` source (`experiments/node_modules/effect/src`, cited as `file:line`) or by an Effect-only test (F1-F10, conformance tests D01-D05, K15a) |
-| **[Kernel]** | Verified by a kernel test: T1-T17, K10-K15, H1-H4, G6, and the conformance suite's A, F, I, O, S, T, W, and X tests. These test the language model, not ordinary Effect programs |
+| **[Kernel]** | Verified by a kernel test: T1-T17, K10-K15, H1-H4, G6, and the conformance suite's A, F, I, O, S, T, W, and X tests, which test the language model, not ordinary Effect programs |
 | **[Prototype]** | Compiled from `.vibe` by the prototype compiler and run on the kernel: an example in `prototype/esc/examples` (Chapter 27) |
 | **[Rule]** | A language rule, decided in Part V; the compiler enforces it, and no test can prove a rule a checker has not been built to enforce |
-| **[Experiment]** | A rule whose implementation an experiment in Chapter 30 still has to confirm |
+| **[Experiment]** | A rule whose implementation an experiment in Chapter 30 must still confirm |
 
 ### 18. Why a continuation runtime
 
@@ -22,13 +22,13 @@ for (const line of lines(path)) {          // one value at a time; break closes 
 }
 ```
 
-Both examples need one thing Effect does not expose today: a way for code on a fiber to take "the rest of the computation, up to here", hand it to a handler, and let the handler continue it once, later, or never. That object is a **one-shot delimited continuation**. Fubhy's advice was to build the language on it: "Start with a one-shot delimited continuation though. That is kind of the core thing that anything else should be based on." This part shows that Effect 4 already provides most of it, and what the rest takes.
+Both examples need one thing Effect does not expose today: a way for code on a fiber to take "the rest of the computation, up to here", hand it to a handler, and let the handler continue it once, later, or never. That object is a **one-shot delimited continuation**. Fubhy advised building the language on it: "Start with a one-shot delimited continuation though. That is kind of the core thing that anything else should be based on." Effect 4 already provides most of it; this part shows what the rest takes.
 
 #### Effect already runs on continuations
 
-Effect 4 runs every program as a one-shot continuation. A fiber's `_stack` is the rest of the computation, reified as an array of frames. `Effect.callback` parks it and accepts one resume. Interruption unwinds it through finalizer frames. What Effect lacks is a delimiter inside a fiber: the only one is the fiber's root, so the only continuation anyone can take is the whole fiber.
+Effect 4 runs every program as a one-shot continuation. A fiber's `_stack` is the rest of the computation, reified as an array of frames. `Effect.callback` parks it and accepts one resume. Interruption unwinds it through finalizer frames. Effect lacks a delimiter inside a fiber: the fiber's root is the only one, so the only continuation anyone can take is the whole fiber.
 
-VibeLang adds the missing delimiter. A {{kernelLines}}-line kernel prototype on `effect@4.0.5` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. {{testCount}} tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer. A prototype compiler then compiled 46 example files written from this document to that kernel and ran them (Chapter 27).
+VibeLang adds the missing delimiter. A {{kernelLines}}-line kernel prototype on `effect@4.0.5` pushes prompt frames onto the real fiber stack and captures the segment above a prompt as a one-shot continuation. It restores the Context and interruptibility recorded at each boundary, abandons unresumed continuations through Effect's own finalizers, keeps a continuation from outliving the fiber that captured it, and bounds cross-fiber wake-up depth. {{testCount}} tests cover nested suspension with Context and Scope, double resumption, abandonment, interruption while a continuation is held, cancellation races, a 100,001-frame capture, capture through TypeScript-authored `Effect.forEach`, retry, producers in constant stack, cause-aware `catch`, and a 54-test conformance suite written by an independent reviewer.
 
 Every feature in Parts I and II is a rule over that one machine:
 
@@ -43,12 +43,12 @@ Every feature in Parts I and II is a rule over that one machine:
 
 An earlier proposal compiled VibeLang through `Effect.gen` and deferred delimited control to a later experiment. That cannot be the foundation, for four reasons that are facts about the running system:
 
-1. `Effect.gen` and `flatMap` push frames onto one fiber stack whose only delimiter is the root. They sequence work. They cannot hand "the rest of the computation up to here" to a handler, because nothing marks "here". When the handler is on another fiber, the operation is simply unhandled (T7b, T8).
+1. `Effect.gen` and `flatMap` push frames onto one fiber stack whose only delimiter is the root. They sequence work but cannot hand "the rest of the computation up to here" to a handler, because nothing marks "here". When the handler is on another fiber, the operation is unhandled (T7b, T8).
 2. `Effect.gen` drops its generator on failure and interruption without running JavaScript `finally` (F1-F3). A language that compiled `finally` to generator `finally` would leak on every failure.
 3. Wrapping an API in `Effect.callback` parks the whole fiber or nothing. No frame inside the fiber can act as the handler for part of the stack.
 4. A service method always returns to its caller exactly once. It cannot end the caller's remaining work with a value, defer it, or store it.
 
-General delimited control therefore needs new frame kinds (`Prompt` and `Owner` above all) and capture, resume, and abandon operations. Those are a runtime extension; no choice of code generation supplies them.
+General delimited control therefore needs new frame kinds (`Prompt` and `Owner` above all) and capture, resume, and abandon operations: a runtime extension, which no choice of code generation supplies.
 
 #### The central test
 
@@ -75,7 +75,7 @@ General delimited control therefore needs new frame kinds (`Prompt` and `Owner` 
 
 Features checked against the claim and kept out:
 
-- **Multi-shot handlers** (backtracking, probabilistic choice). A multi-shot feature needs copyable frames, and Effect's frames are not copyable: they hold live generators and closures bound to one fiber.
+- **Multi-shot handlers** (backtracking, probabilistic choice). They need copyable frames, and Effect's frames are not: they hold live generators and closures bound to one fiber.
 - **Durable execution.** It needs serializable continuations, a different machine. The earlier VibeLang project reversed course on it twice in ten days (`vibelang.md` §9).
 
-**Verdict.** Yes. Two independent reviews (2026-10-16) reached the same verdict and found five defects in how the machine was implemented or lowered, not in what it is; all five are fixed with regression tests (K11-K15). A prototype compiler then lowered 46 example files to the machine mechanically and ran them, with no feature needing a mechanism outside it (Chapter 27). Two qualifications remain, both tracked in Chapter 30. Prompt capture relies on undocumented Effect fields, so the foundation is real but not yet a supported Effect API (Chapter 25, G1). And the checker rules that make it safe to program against (fiber crossing, second-class continuations, control classes) are specified here but not built (G8).
+**Verdict.** Yes. Two independent reviews (2026-10-16) reached the same verdict and found five defects in how the machine was implemented or lowered, not in what it is; all five are fixed with regression tests (K11-K15). A prototype compiler then mechanically lowered 46 example files, written from this document, to the machine and ran them on the kernel; no feature needed a mechanism outside it (Chapter 27). Two qualifications remain, both tracked in Chapter 30: prompt capture relies on undocumented Effect fields, so the foundation is real but not yet a supported Effect API (Chapter 25, G1); and the checker rules that make it safe to program against (fiber crossing, second-class continuations, control classes) are specified here but not built (G8).
