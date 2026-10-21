@@ -1,6 +1,6 @@
 # Welcome to VibeLang
 
-VibeLang is a language for writing [Effect](https://effect.website) programs with TypeScript syntax. Its compiler checks `.vibe` and `.ts` files together and emits JavaScript and TypeScript declarations.
+VibeLang is a language for writing [Effect](https://effect.website) programs with TypeScript syntax. Its compiler checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` declarations.
 
 ```ts effect
 class UserNotFound extends Schema.TaggedError<UserNotFound>()("UserNotFound", {
@@ -38,23 +38,23 @@ function greet(id: string) {
 // Output: Hello, Ada
 ```
 
-A user service, a typed error, and a fallback, in Effect and in VibeLang. The comment under `greet` is the type your editor shows: `string!!Users` is VibeLang's spelling of `Effect<string, never, Users>`. It returns a `string`, has no expected failures, and needs the `Users` service. Defects and interruption remain possible. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The TypeScript example adds a tracing span with `Effect.fn("greet")`; the VibeLang function is untraced by default.
+A user service, a typed error, and a fallback in Effect and in VibeLang. The comment under `greet` is the type your editor shows: `string!!Users` means `Effect<string, never, Users>`. It returns a `string`, has no expected failures (defects and interruption remain possible), and needs the `Users` service. The compiler infers all three from the body, and TypeScript code that imports `greet` sees the Effect type. The TypeScript example's `Effect.fn("greet")` adds a tracing span; the VibeLang function is untraced by default.
 
-VibeLang is v0. The language will change in major, breaking ways, and it is not ready for production use.
+VibeLang is v0: the language will change in major, breaking ways and is not ready for production use.
 
 ## Why a language
 
-**Effect tracks failures and services.** A TypeScript signature says what a function returns, but not what can fail or what it depends on. Effect puts all three in one type, `Effect<Success, Error, Requirements>`, and the compiler checks it. Retries, timeouts, concurrency, resource cleanup, and tracing come with it.
+**Effect tracks failures and services.** A TypeScript signature says what a function returns, not what can fail or what it depends on. Effect puts all three in one type the compiler checks, `Effect<Success, Error, Requirements>`, and brings retries, timeouts, concurrency, resource cleanup, and tracing.
 
-**Effect expresses sequencing through library calls.** Effect is a library, so it builds every feature out of what TypeScript already has: generators and `yield*` to run steps in order, `pipe` to compose them, and classes to declare errors and services. The code reads like a separate language written in library calls.
+**Effect expresses sequencing through library calls.** As a library, Effect builds every feature from TypeScript's own tools: generators and `yield*` run steps in order, `pipe` composes them, and classes declare errors and services. The code reads like a separate language written in library calls.
 
-**VibeLang adds language syntax.** Each Effect idea gets its own syntax. Calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the same Effect program you would have written by hand.
+**VibeLang adds language syntax.** Each Effect idea gets syntax: calls run in order, `throw` fails with a typed error, `catch` handles it, `service` declares a dependency, and `fork` starts a fiber. The compiler builds the Effect program you would write by hand.
 
 ## TypeScript stays one step away
 
 VibeLang shares TypeScript's ecosystem in two ways:
 
-1. **It shares TypeScript's compiler and types.** VibeLang's compiler is TypeScript's compiler, extended. It checks `.vibe` and `.ts` files together and emits JavaScript and `.d.ts` files, so you can use existing Effect code and npm packages through [TypeScript interop](vibelang-features/114-vibelang-for-effect-users.md). TypeScript code calls exported VibeLang functions as ordinary Effect functions.
+1. **It shares TypeScript's compiler and types.** VibeLang's compiler is TypeScript's, extended, so you use existing Effect code and npm packages through [TypeScript interop](vibelang-features/114-vibelang-for-effect-users.md), and TypeScript calls exported VibeLang functions as ordinary Effect functions.
 2. **You can opt out to plain TypeScript.** `sync`, `try`, and `callback` take a plain TypeScript function, and a `.ts` file can sit beside any `.vibe` file.
 
 ```vibe
@@ -71,11 +71,11 @@ function slug(title: string) {
 // Output: hello-vibelang
 ```
 
-A hatch's function is self-contained: it reads the `.vibe` file's values only as the arguments passed after it, here `title`.
+A hatch's function is self-contained: it reads `.vibe` values only as the arguments after it, here `title`.
 
 ## Effect's features, in VibeLang syntax
 
-VibeLang runs on Effect and uses its library modules. Common operations have language syntax:
+VibeLang runs on Effect and its library modules; common operations have syntax:
 
 | Effect feature | VibeLang |
 | --- | --- |
@@ -89,11 +89,11 @@ VibeLang runs on Effect and uses its library modules. Common operations have lan
 | Schema validation | `schema User { id: string; role: "admin" \| "member" }` |
 | Pattern matching | `match (e) { when NotFound: ...; }` |
 
-Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages need no syntax of their own: call them as you would in TypeScript. The [cheat sheet](vibelang-features/115-cheat-sheet.md) puts every VibeLang form beside the Effect code it replaces.
+Streams, configuration, and Effect's HTTP, SQL, CLI, and AI packages have no syntax of their own: call them as in TypeScript. The [cheat sheet](vibelang-features/115-cheat-sheet.md) puts every VibeLang form beside the Effect code it replaces.
 
 ## Check application code
 
-The compiler tracks expected failures and required services for each function. A declared contract lets it reject code that adds an unhandled failure or dependency. Run focused tests to check behavior, including recovery, cancellation, and cleanup; successful type checking does not establish those results.
+The compiler tracks each function's expected failures and required services; with a declared contract, it rejects code that adds an unhandled failure or dependency. Type checking does not establish behavior: run focused tests for it, including recovery, cancellation, and cleanup.
 
 ## Try it
 
@@ -103,7 +103,7 @@ cd my-app
 bun run dev
 ```
 
-Then open the folder in VS Code or Cursor and install the editor extension that comes with the compiler: `code --install-extension node_modules/vibelang/editor/vibelang.vsix`. [Installation](getting-started/004-installation.md) covers existing projects.
+Then open the folder in VS Code or Cursor and install the editor extension that ships with the compiler: `code --install-extension node_modules/vibelang/editor/vibelang.vsix`. [Installation](getting-started/004-installation.md) covers existing projects.
 
 ## Where to go next
 

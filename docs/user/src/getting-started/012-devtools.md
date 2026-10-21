@@ -1,6 +1,6 @@
 # Devtools
 
-Use compiler diagnostics to inspect VibeLang contracts and catch failures or requirements that escape a function's promise. The `vibelang` compiler and its language server check `.vibe` and `.ts` files together. A VibeLang-specific Oxlint configuration is not shipped.
+Compiler diagnostics show VibeLang contracts and catch failures or requirements that escape a function's promise. The `vibelang` compiler and its language server check `.vibe` and `.ts` files together.
 
 ## Install language tooling
 
@@ -15,10 +15,9 @@ function sample() {
 // Output: sample
 ```
 
-Install `vibelang` as a dev dependency. Its `vibelang --lsp --stdio` command starts the language server from the project's compiler, with one server for `.vibe` and `.ts` files.
+Install `vibelang` as a dev dependency. `vibelang --lsp --stdio` starts the language server from the project's compiler, one server for `.vibe` and `.ts` files.
 
-For VS Code and Cursor, install the extension that ships in `vibelang`, then open
-the application directory:
+For VS Code and Cursor, install the extension that ships in `vibelang`, then open the application directory:
 
 ```sh
 code --install-extension node_modules/vibelang/editor/vibelang.vsix
@@ -26,15 +25,11 @@ code --install-extension node_modules/vibelang/editor/vibelang.vsix
 cursor --install-extension node_modules/vibelang/editor/vibelang.vsix
 ```
 
-The extension is not on the VS Code Marketplace or Open VSX yet. Install it
-again from `node_modules` after you update `vibelang`.
+The extension is not on the VS Code Marketplace or Open VSX yet; reinstall it from `node_modules` after you update `vibelang`.
 
-Other editors configure their LSP client to run `vibelang --lsp --stdio` for `*.vibe`
-and `*.ts`, with `tsconfig.json` as the root marker. Turn off the other TypeScript
-server for this project to avoid duplicate diagnostics. JetBrains IDEs can use
-LSP4IJ.
+Other editors configure their LSP client to run `vibelang --lsp --stdio` for `*.vibe` and `*.ts`, with `tsconfig.json` as the root marker. Turn off the other TypeScript server for this project to avoid duplicate diagnostics. JetBrains IDEs can use LSP4IJ.
 
-For GitHub highlighting, add `*.vibe linguist-language=TypeScript` to `.gitattributes`; otherwise GitHub shows `.vibe` files without highlighting. The starter's `.gitattributes` already has this line. Effect's own `@effect/tsgo` tooling remains for `.ts` files and does not check VibeLang semantics.
+For GitHub highlighting, add `*.vibe linguist-language=TypeScript` to `.gitattributes`; the starter's `.gitattributes` already has this line. Effect's own `@effect/tsgo` tooling remains for `.ts` files and does not check VibeLang semantics.
 
 ## Inspect inferred information
 
@@ -50,9 +45,9 @@ function accepted(value: number) {
 // Output: 3
 ```
 
-Inspect `A`, `E`, and `R` when changing a function. A local call returns the success value, while the function's complete contract also records escaping failures and unmet services. Generated declarations expose that complete Effect contract to TypeScript consumers.
+Inspect `A`, `E`, and `R` when changing a function. A local call returns the success value; the function's complete contract also records escaping failures and unmet services, and generated declarations expose it to TypeScript consumers.
 
-Hover over a function to see its inferred `Effect<A, E, R>`; hover over a call to see its success value's type. Separate control-class hover text is a D33 design target, not a shipped feature.
+Hover over a function to see its inferred `Effect<A, E, R>`, and over a call to see its success value's type. Separate control-class hover text is a D33 design target, not shipped.
 
 ## Diagnostics, completions, and refactors
 
@@ -64,20 +59,13 @@ function promised(value: number): number!! {
 }
 ```
 
-The language design diagnoses this as `EK2001`. Handle `Rejected` inside the function or widen its contract. Related checks include unmet services (`EK2002`), running a program at module top level without an explicit Effect type on a `const` (`EK1001`), and passing a suspending callback to synchronous JavaScript (`EK4301`).
+This is `EK2001`: handle `Rejected` inside the function or widen its contract. Related checks: unmet services (`EK2002`), running a program at module top level without an explicit Effect type on a `const` (`EK1001`), and passing a suspending callback to synchronous JavaScript (`EK4301`).
 
 Inside functions, plain foreign calls need a boundary hatch such as `try` or `sync`, or a trusted declaration (`EK4401`). Effect's own packages and packages matching the `vibelang` setting `trustedPackages` are trusted: plain calls are synchronous, their exceptions are defects, and Effect-returning calls run. Running a platform API is rejected with an Effect module suggestion (`EK4402`, D108); importing or passing its binding as a value is allowed, and uncontrolled time or randomness reads have their own diagnostic (`EK4403`). A runner inside code a fiber runs is `EK1005`, and a try block that runs Effects with E = `never` gets `EK2004` (defects pass through), a warning by default.
 
 EK1010 refuses an unparenthesized throw expression on the left of a binary operator (except comma), as a conditional's condition, or before `as` or `satisfies`. Write `throw (…)` to throw the whole expression; `value ?? throw e` and throw statements keep their meaning.
 
-The server exposes TypeScript completions through the VibeLang checker,
-including service member types. Quick fixes repair retired spellings and the
-mechanical cases of Effect's language service rules, below, and refactors
-write a function's inferred contract, convert an `async` function or an
-interface, and convert between calls and pipes (D245). D33's catch-specific
-completions are not implemented. Other diagnostic messages include suggested
-repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen`
-or `yield*` inside `.vibe`.
+The server exposes TypeScript completions through the VibeLang checker, service member types included. Quick fixes repair retired spellings and the mechanical cases of Effect's language service rules (below); refactors write a function's inferred contract, convert an `async` function or an interface, and convert between calls and pipes (D245). D33's catch-specific completions are not implemented. Other diagnostic messages suggest repairs as text. Do not apply a TypeScript refactor that introduces `Effect.gen` or `yield*` inside `.vibe`.
 
 ## Configure compiler checks
 
@@ -89,7 +77,7 @@ function checked(value: number): number!Rejected! {
 // Output: 3
 ```
 
-A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks the success and failure channels and infers requirements. All three slots are required in a return annotation with a body. For omitted slots, EK2003 suggests explicit `never` or `infer` contracts in its diagnostic text. Configure the compiler with a `vibelang` object at the top level of `tsconfig.json`:
+A contract gives the compiler a promise to check. To infer selected channels, write `infer Name` in those slots: `Effect<number, Rejected, infer R>` checks success and failure and infers requirements. A return annotation with a body requires all three slots; for omitted slots, EK2003's text suggests explicit `never` or `infer` contracts. Configure the compiler with a `vibelang` object at the top level of `tsconfig.json`:
 
 ```json
 {
@@ -107,9 +95,9 @@ A contract gives the compiler a promise to check. To infer selected channels, wr
 
 A config that `extends` another inherits its `vibelang` settings, as it inherits compiler options. TypeScript, typescript-eslint, and editors' TypeScript servers ignore the top-level object. `compilerOptions.vibelang` is also accepted, but those tools reject it as an unknown compiler option (TS5023), so keep the settings at the top level (D275).
 
-EK2004, EK4403, EK4406, the rules from Effect's language service, EK4801-EK4825 except EK4813, and the TypeScript-style forms below, EK4830-EK4837, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. When EK4403 is lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity. Core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports locations in the source. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
+EK2004, EK4403, EK4406, Effect's language service rules, EK4801-EK4825 except EK4813, and the TypeScript-style forms below, EK4830-EK4837, can be set to `"error"`, `"warning"`, or `"off"`; the values shown are EK2004's and EK4403's defaults. With EK4403 lowered, those reads compile as trusted synchronous calls that tests cannot control. Migration diagnostics such as EK2112 for retired typed catch clauses are warnings with fixed severity; core language errors have fixed severity too. `@ts-expect-error` does not suppress EK diagnostics. `vibelang` exits non-zero on any error and reports source locations. `tracing` accepts `"none"` (the default), `"exported"`, or `"all"` to add function spans.
 
-`trustedPackages` accepts package-name globs matched against `package.json` names, including workspace packages. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment. For example, `"@smthrs/*"` trusts packages in that scope. Omit the option to retain EK4401 for foreign calls. Use `trusted(impl, [Errors])` from `vibelang-runtime` in TypeScript for expected failures on an individual function.
+`trustedPackages` accepts package-name globs matched against `package.json` names, workspace packages included. The whole name must match; `*`, `?`, and character classes match within each slash-delimited segment, so `"@smthrs/*"` trusts packages in that scope. Without the option, foreign calls keep EK4401. For expected failures on one function, use `trusted(impl, [Errors])` from `vibelang-runtime` in TypeScript.
 
 ## TypeScript-style Effect code
 
@@ -136,9 +124,9 @@ npx vibelang -p tsconfig.json --fix --noEmit
 
 ## Effect language service rules
 
-The table below accounts for the 108 diagnostics and editor features in `@effect/language-service` 0.87.5 (D240). Many rules address forms that VibeLang replaces: there is no `Effect.gen` to misuse, a call already runs, and `catch` catches failures. Existing EK diagnostics cover others. The remaining checks are EK4801-EK4825, with mechanical quick fixes, alongside refactors, hovers, and completions. The table also identifies features that are not implemented.
+The table accounts for the 108 diagnostics and editor features in `@effect/language-service` 0.87.5 (D240). Many rules address forms VibeLang replaces: there is no `Effect.gen` to misuse, a call already runs, and `catch` catches failures. Existing EK diagnostics cover others. The remaining checks are EK4801-EK4825, with mechanical quick fixes, alongside refactors, hovers, and completions. The table also marks features not implemented.
 
-EK4801-EK4825 are lint. Each has a default, error, warning, or off, and every one except EK4813 can be set in the `vibelang` setting `diagnostics` or by a comment (D241). A later comment overrides an earlier one, and within one comment a code named on its own overrides `*`:
+EK4801-EK4825 are lint. Each has a default, error, warning, or off, and all but EK4813 can be set in the `vibelang` setting `diagnostics` or by a comment (D241). A later comment overrides an earlier one; within one comment, a code named on its own overrides `*`:
 
 ```vibe
 // run: Console.log(discard(() => { Console.log("unused") ; return 42 }))
@@ -150,27 +138,27 @@ function discard(program: Effect.Effect<number>) {
 // Output: 0
 ```
 
-`// @vibelang-diagnostics EK4818:warning` applies from its line to the end of the file, and `*` names every adjustable code. EK4801, EK4819, and EK4820 also report in the `.ts` files that the program checks; for Effect's other rules in `.ts` files, serve them with Effect's own TypeScript 7 server, `@effect/tsgo` (D242).
+`// @vibelang-diagnostics EK4818:warning` applies from its line to the end of the file; `*` names every adjustable code. EK4801, EK4819, and EK4820 also report in the `.ts` files the program checks; for Effect's other rules in `.ts` files, use Effect's own TypeScript 7 server, `@effect/tsgo` (D242).
 
 | Group | Effect's rule or feature | In VibeLang | Example |
 | --- | --- | --- | --- |
 | Correctness | `anyUnknownInErrorContext` | EK4811, off by default | `throw cause` where `cause: unknown` |
-| Correctness | `classSelfMismatch` | Not needed: a `service` declaration has no `Self` parameter | `service Users { find(id: string): User!NotFound }` |
+| Correctness | `classSelfMismatch` | Not needed: a `service` has no `Self` parameter | `service Users { find(id: string): User!NotFound }` |
 | Correctness | `duplicatePackage` | EK4803, warning | two versions of `effect` in one program |
-| Correctness | `effectFnImplicitAny` | Not needed: a VibeLang function's parameters are TypeScript's, so `strict` reports TS7006 | `function load(id) { … }` is TS7006 |
+| Correctness | `effectFnImplicitAny` | Not needed: parameters are TypeScript's, so `strict` reports TS7006 | `function load(id) { … }` |
 | Correctness | `floatingEffect` | EK4801, error, with a quick fix; also in `.ts` files | `program` alone on a line; the fix writes `program()` |
-| Correctness | `genericEffectServices` | Covered: EK3005 | `service Repo<T> { … }` is EK3005 |
+| Correctness | `genericEffectServices` | Covered: EK3005 | `service Repo<T> { … }` |
 | Correctness | `missingEffectContext` | Covered: EK2002 at a contract, EK3201 at a runner | `function f(): User!NotFound! { return Users.find(id) }` is EK2002 |
-| Correctness | `missingEffectError` | Covered: EK2001 | `function f(): User!! { return Users.find(id) }` is EK2001 |
+| Correctness | `missingEffectError` | Covered: EK2001 | `function f(): User!! { return Users.find(id) }` |
 | Correctness | `missingLayerContext` | Covered: EK2002 and EK3201; `wire` places providers | `provide UsersLive { … }` without the database layer is EK3201 at the runner |
 | Correctness | `missingReturnYieldStar` | Not needed in `.vibe`: `throw` ends the function. EK4820 in `.ts` files | `throw new NotFound({ id })` |
 | Correctness | `missingStarInYieldEffectGen` | Not needed in `.vibe`: a call runs, and `Effect.gen` with `function*` is EK1002. EK4819 in `.ts` files | `const user = Users.find(id)` |
 | Correctness | `nonObjectEffectServiceType` | Effect 3 only, and a `service` declares members | `service Port { value: number }` |
 | Correctness | `outdatedApi` | EK4813, error, in place of TS2339, with a quick fix; the same fix on TS2339 in `.ts` files | `Effect.catchAll`; the fix writes `Effect.catch` |
-| Correctness | `outdatedEffectCodegen` | Not adopted: VibeLang has no codegen comments | None |
+| Correctness | `outdatedEffectCodegen` | Not adopted: no codegen comments | None |
 | Correctness | `overriddenSchemaConstructor` | EK4814, warning | `class Person extends Schema.Class<Person>("Person")({ … }) { constructor() { … } }` |
 | Correctness | `unsupportedServiceAccessors` | Not needed: `Users.find(id)` calls a member through the key, generic or not | `Users.find(id)` |
-| Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { Effect.succeed(1) } catch (e) { … }` is EK2004; plain catches keep JavaScript semantics |
+| Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { Effect.succeed(1) } catch (e) { … }`; plain catches keep JavaScript semantics |
 | Anti-pattern | `effectFnIife` | Not needed: no `Effect.fn`; an immediately called function is a call | `(() => load())()` |
 | Anti-pattern | `effectGenUsesAdapter` | Not needed: no `Effect.gen` | None |
 | Anti-pattern | `effectInFailure` | EK4815, warning | `throw program`; run it: `program()` |
@@ -182,32 +170,32 @@ function discard(program: Effect.Effect<number>) {
 | Anti-pattern | `leakingRequirements` | EK4809, warning; `@vibelang leakable` exempts a service | `service Users { find(): User!!Db; all(): User[]!!Db }` |
 | Anti-pattern | `multipleEffectProvide` | EK4808, warning, with a quick fix | `provide A { provide B { … } }`; the fix writes `provide A, B { … }` or `provide wire(A, B) { … }` |
 | Anti-pattern | `returnEffectInGen` | EK4802, warning, with a quick fix | `return program`; the fix writes `return program()` |
-| Anti-pattern | `runEffectInsideEffect` | Covered: EK1005 | `Effect.runPromise(load())` inside a function is EK1005 |
+| Anti-pattern | `runEffectInsideEffect` | Covered: EK1005 | `Effect.runPromise(load())` inside a function |
 | Anti-pattern | `schemaSyncInEffect` | Effect 3 only | None |
 | Anti-pattern | `scopeInLayerEffect` | Effect 3 only: Effect 4's `Layer.effect` owns its scope | `Layer.effect(Users) { using pool = open(); … }` |
 | Anti-pattern | `strictEffectProvide` | EK4816, off by default | `provide AppLive { … }` outside `main` |
 | Anti-pattern | `tryCatchInEffectGen` | Not needed: `catch` catches failures | `try { Users.find(id) } catch (e) { … }` |
 | Anti-pattern | `unknownInEffectCatch` | EK4806, warning | `try(code, (cause) => cause)` |
-| Effect-native | `asyncFunction` | Covered: EK1003 | `async function load() { … }` is EK1003 |
-| Effect-native | `cryptoRandomUUID` | Covered: EK4403 | `crypto.randomUUID()` is EK4403 |
-| Effect-native | `cryptoRandomUUIDInEffect` | Covered: EK4403 | `crypto.randomUUID()` is EK4403 |
+| Effect-native | `asyncFunction` | Covered: EK1003 | `async function load() { … }` |
+| Effect-native | `cryptoRandomUUID` | Covered: EK4403 | `crypto.randomUUID()` |
+| Effect-native | `cryptoRandomUUIDInEffect` | Covered: EK4403 | `crypto.randomUUID()` |
 | Effect-native | `extendsNativeError` | EK4805, warning | `class Boom extends Error {}`; declare `error Boom { }` |
-| Effect-native | `globalConsole` | Covered: EK4402 | `console.log(x)` is EK4402 |
-| Effect-native | `globalConsoleInEffect` | Covered: EK4402 | `console.log(x)` is EK4402 |
-| Effect-native | `globalDate` | Covered: EK4403 | `Date.now()` is EK4403 |
-| Effect-native | `globalDateInEffect` | Covered: EK4403 | `new Date()` is EK4403 |
-| Effect-native | `globalFetch` | Covered: EK4402 | `fetch(url)` is EK4402 |
-| Effect-native | `globalFetchInEffect` | Covered: EK4402 | `fetch(url)` is EK4402 |
-| Effect-native | `globalRandom` | Covered: EK4403 | `Math.random()` is EK4403 |
-| Effect-native | `globalRandomInEffect` | Covered: EK4403 | `Math.random()` is EK4403 |
-| Effect-native | `globalTimers` | Covered: EK4402 | `setTimeout(f, 10)` is EK4402 |
-| Effect-native | `globalTimersInEffect` | Covered: EK4402 | `setTimeout(f, 10)` is EK4402 |
+| Effect-native | `globalConsole` | Covered: EK4402 | `console.log(x)` |
+| Effect-native | `globalConsoleInEffect` | Covered: EK4402 | `console.log(x)` |
+| Effect-native | `globalDate` | Covered: EK4403 | `Date.now()` |
+| Effect-native | `globalDateInEffect` | Covered: EK4403 | `new Date()` |
+| Effect-native | `globalFetch` | Covered: EK4402 | `fetch(url)` |
+| Effect-native | `globalFetchInEffect` | Covered: EK4402 | `fetch(url)` |
+| Effect-native | `globalRandom` | Covered: EK4403 | `Math.random()` |
+| Effect-native | `globalRandomInEffect` | Covered: EK4403 | `Math.random()` |
+| Effect-native | `globalTimers` | Covered: EK4402 | `setTimeout(f, 10)` |
+| Effect-native | `globalTimersInEffect` | Covered: EK4402 | `setTimeout(f, 10)` |
 | Effect-native | `instanceOfSchema` | EK4817, off by default, with a quick fix | `value instanceof Person`; the fix writes `Schema.is(Person)(value)` |
 | Effect-native | `newPromise` | EK4812, warning | `new Promise((resolve) => …)`; use `callback((resume) => …)` |
-| Effect-native | `nodeBuiltinImport` | Covered: EK4402 where the code runs the import; importing is allowed (D108) | `readFile(path)` from `node:fs/promises` is EK4402 |
+| Effect-native | `nodeBuiltinImport` | Covered: EK4402 where the code runs the import; importing is allowed (D108) | `readFile(path)` from `node:fs/promises` |
 | Effect-native | `preferSchemaOverJson` | EK4818, off by default | `JSON.parse(text)` |
-| Effect-native | `processEnv` | Covered: EK4402 | `process.env.PORT` is EK4402; use `Config` |
-| Effect-native | `processEnvInEffect` | Covered: EK4402 | `process.env.PORT` is EK4402 |
+| Effect-native | `processEnv` | Covered: EK4402 | `process.env.PORT`; use `Config` |
+| Effect-native | `processEnvInEffect` | Covered: EK4402 | `process.env.PORT` |
 | Effect-native | `unsafeEffectTypeAssertion` | EK4810, warning, with a quick fix | `program as Effect.Effect<number>` drops a failure |
 | Style | `catchAllToMapError` | Not needed: a catch that rethrows is the one form | `catch (e) { throw new Failed({ cause: e }) }` |
 | Style | `deterministicKeys` | Not needed: the compiler derives each service key from its package, module, and name | `@acme/app/src/users#Users` |
@@ -217,7 +205,7 @@ function discard(program: Effect.Effect<number>) {
 | Style | `effectMapVoid` | Not needed: statements | `f()` on its own line |
 | Style | `effectSucceedWithVoid` | Not needed: a function that returns nothing | `function done() { }` |
 | Style | `flatMapToMap` | Not needed: statements | `return g(f())` |
-| Style | `importFromBarrel` | Not needed: the compiler writes the imports for effect's root names (D146) | `Option.some(1)` with no import |
+| Style | `importFromBarrel` | Not needed: the compiler imports effect's root names (D146) | `Option.some(1)` with no import |
 | Style | `missedPipeableOpportunity` | Refactor: "Convert to a pipe" | `f(g(h(x)))` becomes `x \|> h(%) \|> g(%) \|> f(%)` |
 | Style | `missingEffectServiceDependency` | Effect 3 only; `wire` computes dependencies | `wire(UsersLive, DbLive)` |
 | Style | `nestedEffectGenYield` | Not needed: no `Effect.gen` | None |
@@ -266,12 +254,7 @@ function discard(program: Effect.Effect<number>) {
 
 ## Lint and build integration
 
-Run `vibelang --noEmit` for type checking. The compiler owns type and language
-diagnostics in the terminal, editor, and Vite overlay. The local
-`vibelang-vite` package supports Vite 7 and 8 and Vitest 5. It runs one
-whole-project compiler subprocess on the first request and after edits, serves
-JavaScript and source maps, and invalidates loaded `.vibe` modules and their
-importers. It does not use `vibelang --api`.
+Type-check with `vibelang --noEmit`. The compiler owns type and language diagnostics in the terminal, editor, and Vite overlay. The local `vibelang-vite` package supports Vite 7 and 8 and Vitest 5. It runs one whole-project compiler subprocess on the first request and after edits, serves JavaScript and source maps, and invalidates loaded `.vibe` modules and their importers; it does not use `vibelang --api`.
 
 ```ts
 // TypeScript (.ts)
@@ -285,17 +268,9 @@ export default defineConfig({
 })
 ```
 
-The starter already includes this configuration. `bun run test` checks and
-compiles source tests without a prior build. See
-[TestClock](../testing/063-testclock.md) for tests with virtual time.
+The starter already includes this configuration. `bun run test` checks and compiles source tests without a prior build. See [TestClock](../testing/063-testclock.md) for tests with virtual time.
 
-Lint `.vibe` files with ESLint through `vibelang/eslint`, the parser the
-`vibelang` package ships (D277). The compiler parses each file, so every
-VibeLang form is accepted, and ESLint gets the tree typescript-eslint gives it
-for TypeScript: typescript-eslint's rules and plugins such as
-`eslint-plugin-import`, `eslint-plugin-jsdoc`, and `eslint-plugin-unicorn`
-apply unchanged. Install `eslint` and `typescript-eslint` 8 beside `vibelang`;
-the parser uses typescript-eslint's scope analysis.
+Lint `.vibe` files with ESLint through `vibelang/eslint`, the parser the `vibelang` package ships (D277). The compiler parses each file, so every VibeLang form is accepted, and ESLint gets the tree typescript-eslint gives it for TypeScript: typescript-eslint's rules and plugins such as `eslint-plugin-import`, `eslint-plugin-jsdoc`, and `eslint-plugin-unicorn` apply unchanged. Install `eslint` and `typescript-eslint` 8 beside `vibelang`; the parser uses typescript-eslint's scope analysis.
 
 ```js
 // eslint.config.js
@@ -309,16 +284,9 @@ export default tseslint.config({
 })
 ```
 
-Reports, fixes, and `// eslint-disable-next-line` comments land on the `.vibe`
-text. Rules that need type information, such as
-`@typescript-eslint/no-unnecessary-type-assertion`, cannot run on a `.vibe`
-file, because no TypeScript program loads one: turn them on for `.ts` files
-only, and check types with `vibelang --noEmit`. EK4801-EK4825 stay in the
-compiler and the language server. To see the tree a rule reads, run
-`vibelang --estree main.vibe < main.vibe`.
+Reports, fixes, and `// eslint-disable-next-line` comments land on the `.vibe` text. Rules that need type information, such as `@typescript-eslint/no-unnecessary-type-assertion`, cannot run on a `.vibe` file, since no TypeScript program loads one: enable them for `.ts` files only and check types with `vibelang --noEmit`. EK4801-EK4825 stay in the compiler and the language server. To see the tree a rule reads, run `vibelang --estree main.vibe < main.vibe`.
 
-Forms whose TypeScript long form would mislead a rule have node types of their
-own, which rules and `no-restricted-syntax` selectors can name:
+Forms whose TypeScript long form would mislead a rule have their own node types, which rules and `no-restricted-syntax` selectors can name:
 
 | Form | ESTree node |
 | --- | --- |
@@ -329,16 +297,9 @@ own, which rules and `no-restricted-syntax` selectors can name:
 | `provide AppLive, Random = seeded { ... }` | `VibeProvideStatement` with `providers` and `body`; `Random = seeded` is `VibeServiceProvider` |
 | `uninterruptible { ... }`, `restore { ... }`, `interruptible { ... }` | `VibeMaskStatement` with `kind` and `body` |
 
-The other forms keep the TypeScript the checker reads. A block param is an
-arrow function argument; `do { ... }` and a throw expression are immediately
-invoked arrow functions; `error NotFound { id: string }` is a class with those
-fields; `service` and `control` are abstract classes; `schema User { ... }` is
-a `const User` typed by its fields; `fork`, `join`, and `await.all` are calls.
-For example, `VibeCatchExpression > Literal.handler[value='']` selects a
-recovery to an empty string. The parser leaves the names it writes for the
-checker, such as a `match`'s temporaries, out of scope analysis, so no rule
-reports a name the author did not write. A Vite Plus integration and a
-VibeLang Oxlint configuration are not shipped.
+For example, `VibeCatchExpression > Literal.handler[value='']` selects a recovery to an empty string.
+
+The other forms keep the TypeScript the checker reads: a block param is an arrow function argument; `do { ... }` and a throw expression are immediately invoked arrow functions; `error NotFound { id: string }` is a class with those fields; `service` and `control` are abstract classes; `schema User { ... }` is a `const User` typed by its fields; `fork`, `join`, and `await.all` are calls. The parser leaves the names it writes for the checker, such as a `match`'s temporaries, out of scope analysis, so no rule reports a name the author did not write. A Vite Plus integration and a VibeLang Oxlint configuration are not shipped.
 
 ## Debugging in editors
 
@@ -350,14 +311,14 @@ function tracedSample() {
 // Output: sample
 ```
 
-Add spans where you need an execution boundary to appear in telemetry. VibeLang functions are untraced by default; `tracing` can add spans to exported functions or named functions and methods that compile to frames. Anonymous functions receive no automatic span. Effect's `DevTools` layer from `effect/devtools`, with its VS Code extension, shows fibers and logical span stacks across suspensions.
+Add spans where an execution boundary should appear in telemetry. VibeLang functions are untraced by default; `tracing` can add spans to exported functions or named functions and methods that compile to frames. Anonymous functions get no automatic span. Effect's `DevTools` layer from `effect/devtools`, with its VS Code extension, shows fibers and logical span stacks across suspensions.
 
-`vibelang` with `sourceMap` enabled and the Vite plugin produce maps from emitted JavaScript directly to `.vibe` positions. Debuggers that read standard source maps map breakpoints and paused frames to `.vibe`: VS Code's JavaScript debugger, Chrome and Edge DevTools, and JetBrains IDEs.
+`vibelang` with `sourceMap` enabled, and the Vite plugin, map emitted JavaScript directly to `.vibe` positions. Debuggers that read standard source maps map breakpoints and paused frames to `.vibe`: VS Code's JavaScript debugger, Chrome and Edge DevTools, and JetBrains IDEs.
 
-Compiled functions and producers retain their source names; clauses use the operation member's name, and region closures use names such as `sample$try`, `$catch`, `$finally`, and `$using`. The JavaScript stack shows the active frame above Effect's run loop. A paused continuation is a heap value, so its frames are absent while a clause runs and become active again when it resumes. Stepping over a pausing call can enter the run loop; set a breakpoint on the next source line. Use spans for the logical call chain, and include the Effect version, inferred contract, and diagnostic when reporting a problem.
+Compiled functions and producers keep their source names; clauses use the operation member's name, and region closures use names such as `sample$try`, `$catch`, `$finally`, and `$using`. The JavaScript stack shows the active frame above Effect's run loop. A paused continuation is a heap value: its frames are absent while a clause runs and active again when it resumes. Stepping over a pausing call can enter the run loop; set a breakpoint on the next source line. Use spans for the logical call chain. When reporting a problem, include the Effect version, inferred contract, and diagnostic.
 
 ## Coming from Effect
 
-Library debugging concepts still apply. VibeLang's call execution, service declarations, and source mapping need language-aware tooling beyond the upstream TypeScript plugin.
+Library debugging concepts still apply; VibeLang's call execution, service declarations, and source mapping need language-aware tooling beyond the upstream TypeScript plugin.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/devtools)

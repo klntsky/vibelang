@@ -1,6 +1,6 @@
 # Creating Effects
 
-Write an ordinary function to describe a VibeLang computation. Return a value for success, throw a typed value for an expected failure, and use explicit Effect boundaries when integrating plain TypeScript libraries.
+An ordinary function describes a VibeLang computation: return a value to succeed, throw a typed value for an expected failure, and use explicit Effect boundaries for plain TypeScript libraries.
 
 ## Success and failure
 
@@ -18,7 +18,7 @@ function reserve(item: string, available: boolean) {
 // Output: notebook
 ```
 
-The compiler records the returned object in `A` and `Unavailable` in `E`. `Effect.succeed(value)` and `Effect.fail(error)` remain available inside a function, but those calls run immediately. To store the work, write `const reservation = () => reserve("notebook", true)`.
+The compiler records the returned object in `A` and `Unavailable` in `E`. `Effect.succeed(value)` and `Effect.fail(error)` still work inside a function, but run immediately. To store the work, write `const reservation = () => reserve("notebook", true)`.
 
 ## Track errors as values
 
@@ -33,7 +33,7 @@ function attemptReservation(item: string, available: boolean) {
 // Output: notebook
 ```
 
-`Effect.result` captures an expected failure as a `Result` value so the function can continue. Defects and interruption still propagate. In an Effect function, `throw` contributes to the inferred contract; using `Effect.fail` gives the same expected failure channel.
+`Effect.result` captures an expected failure as a `Result` value so the function can continue; defects and interruption still propagate. In an Effect function, `throw` adds to the inferred contract, and `Effect.fail` gives the same expected failure channel.
 
 ## Wrap synchronous operations
 
@@ -51,13 +51,17 @@ function encodeLabel(value: string) {
 // string!EncodingFailed!
 ```
 
-In an Effect function, a plain imported function needs a boundary or a trusted contract that declares what its exceptions mean. `try` is a boundary hatch: `try((value) => encode(value), value)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name. The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls there do not run as Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports such as `encode`, and the file's error declarations, but not another binding of the `.vibe` file, such as the parameter `value`. Pass such a value as an input, an argument after the function and after the error mapper, which fills the function's first parameter. EK4405 reports a binding read from outside, and its quick fix passes the binding as an input. JavaScript language built-ins have compiler trust contracts, so operations such as string trimming can be called directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls, and their exceptions are defects.
+In an Effect function, a plain imported function needs a boundary or a trusted contract that says what its exceptions mean. `try` is a boundary hatch: `try((value) => encode(value), value)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name.
 
-A synchronous TypeScript function can declare trust once with `/** @vibelang trusted */` on its declaration. Each `@throws {T}` names an exported exception class whose instances become expected failures; unlisted exceptions remain defects. Re-export a function from a package you cannot edit through a tagged `.ts` module. The tag is not allowed on Promise- or Effect-returning functions. Calls that rely on tagged expected failures report migration warning EK4406 in the current compiler (D249). For new adapters, export a `trusted(implementation, [ErrorClass])` value from `vibelang-runtime` in the `.ts` module and call that value from `.vibe`; it returns an Effect with the listed expected failures.
+The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls in it are not Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports such as `encode`, and the file's error declarations, but no other binding of the `.vibe` file, such as the parameter `value`. Pass such a value as an input, an argument after the function and the error mapper; it fills the function's first parameter. EK4405 reports a binding read from outside; its quick fix passes the binding as an input.
 
-In Effect code, `catch` sees expected failures only. It does not catch defects from `Option.getOrThrow` or `Schema.decodeUnknownSync`; use `Option.getOrElse`, `Effect.fromOption`, or `Schema.decodeUnknownEffect` for recoverable input. A try block that runs Effects with E = `never` gets EK2004 (defects pass through), a warning by default. A function with a plain contract keeps JavaScript catch and receives every exception as `unknown` (D260). Plain foreign calls at module top level are ordinary JavaScript calls, so their exceptions fail the module's import.
+JavaScript language built-ins have compiler trust contracts, so you call operations such as string trimming directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls whose exceptions are defects.
 
-`sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in `.vibe` inside a hatch; keep larger foreign-library adapters in `.ts`. Ordinary `.vibe` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
+A synchronous TypeScript function can declare trust once with `/** @vibelang trusted */` on its declaration. Each `@throws {T}` names an exported exception class whose instances become expected failures; unlisted exceptions stay defects. Re-export a function from a package you cannot edit through a tagged `.ts` module. The tag is not allowed on Promise- or Effect-returning functions. Calls that rely on tagged expected failures report migration warning EK4406 in the current compiler (D249). For new adapters, export a `trusted(implementation, [ErrorClass])` value from `vibelang-runtime` in the `.ts` module and call it from `.vibe`; it returns an Effect with the listed expected failures.
+
+In Effect code, `catch` sees expected failures only, not defects from `Option.getOrThrow` or `Schema.decodeUnknownSync`; for recoverable input, use `Option.getOrElse`, `Effect.fromOption`, or `Schema.decodeUnknownEffect`. A try block that runs Effects with E = `never` gets EK2004 (defects pass through), a warning by default. A function with a plain contract keeps JavaScript catch and receives every exception as `unknown` (D260). Plain foreign calls at module top level are ordinary JavaScript calls, so their exceptions fail the module's import.
+
+`sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in a `.vibe` hatch; keep larger foreign-library adapters in `.ts`. `.vibe` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
 
 ## Create effects from promises
 
@@ -75,9 +79,9 @@ function label(id: string) {
 // string!LookupFailed!
 ```
 
-`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`. The function receives an `AbortSignal` after its inputs. Pass the signal to an API that supports cancellation; otherwise interruption stops waiting without necessarily stopping the foreign operation. Without a second argument the failure is `UnknownError`.
+`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`; without a second argument the failure is `UnknownError`. The function receives an `AbortSignal` after its inputs. Pass it to an API that supports cancellation; otherwise interruption stops the wait but not necessarily the foreign operation.
 
-`sync` with such a function treats rejection as a defect and belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: a VibeLang function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. Use Effect's HTTP modules for HTTP rather than wrapping a browser `fetch` call.
+`sync` with such a function treats rejection as a defect; it belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: a VibeLang function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. For HTTP, use Effect's HTTP modules, not a wrapped browser `fetch` call.
 
 ## Adapt callbacks and cancellation
 
@@ -103,9 +107,9 @@ function readAndReport(source: Source) {
 // Output: 7
 ```
 
-`callback` is the boundary hatch for a callback API. It registers a plain callback and waits for its first completion: `resume(value)` succeeds, `resume.fail(error)` fails with an expected failure, and `resume.exit(exit)` adopts an `Exit`. Later completions are ignored. A function that the registration returns runs if waiting is interrupted, so this adapter cancels the one-shot read on interruption. The registration receives its inputs first, here `source`, then `resume`, then an `AbortSignal`. Annotate `resume` with the success and failure types, `Resume<number, Error>`, because calls to `resume` inside the body cannot infer them. The body is plain, self-contained TypeScript, so it may call platform APIs but reads `source` only as an input.
+`callback` is the boundary hatch for a callback API. It registers a plain callback and waits for its first completion: `resume(value)` succeeds, `resume.fail(error)` fails with an expected failure, and `resume.exit(exit)` adopts an `Exit`; later completions are ignored. A function the registration returns runs if the wait is interrupted, so this adapter cancels the one-shot read on interruption. The registration receives its inputs (here `source`), then `resume`, then an `AbortSignal`. Annotate `resume` with the success and failure types, `Resume<number, Error>`, because calls to `resume` in the body cannot infer them. The body is plain, self-contained TypeScript: it may call platform APIs but reads `source` only as an input.
 
-For resource acquisition, cancellation must also release a resource that arrives after the waiter has gone away; merely ignoring a late callback is insufficient. Prefer an existing Effect resource API, or a TypeScript adapter using the runtime's `suspend`, which reports whether delivery lost the cancellation race.
+For resource acquisition, cancellation must also release a resource that arrives after the waiter is gone; ignoring a late callback is not enough. Prefer an existing Effect resource API, or a TypeScript adapter using the runtime's `suspend`, which reports whether delivery lost the cancellation race.
 
 ## Suspend work
 
@@ -127,7 +131,7 @@ function counters() {
 // Output: [1,2]
 ```
 
-The returned function delays its body until each call. Wrap an entire computation, including mutable setup, if retry should create new state each time. `Effect.suspend` remains useful in TypeScript adapters to delay construction of an Effect; in VibeLang, passing a program already delays its body.
+The returned function delays its body until each call. For retry to create new state each time, wrap the whole computation, mutable setup included. `Effect.suspend` still delays building an Effect in TypeScript adapters; in VibeLang, passing a program already delays its body.
 
 ```vibe
 // run: Console.log(countdown(3))
@@ -145,10 +149,10 @@ function checkedQuantity(n: number) {
 // Output: 3
 ```
 
-Suspending recursion uses runtime frames, so it does not accumulate JavaScript stack frames. Pure recursion without Effect operations uses the JavaScript stack and can overflow. Ordinary returns and throws also unify success and failure channels across branches without an extra suspension wrapper.
+Suspending recursion uses runtime frames, not JavaScript stack frames. Pure recursion without Effect operations uses the JavaScript stack and can overflow. Returns and throws also unify success and failure channels across branches without an extra suspension wrapper.
 
 ## Coming from Effect
 
-Use returns, throws, and program functions for local work. Keep the hatches `sync`, `try`, and `callback`, and TypeScript callback adapters where they state a foreign-code boundary.
+Use returns, throws, and program functions for local work. Keep the hatches `sync`, `try`, and `callback`, and TypeScript callback adapters, where they state a foreign-code boundary.
 
 [Upstream Effect page](https://effect.website/docs/v4/getting-started/creating-effects)
