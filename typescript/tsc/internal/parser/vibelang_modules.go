@@ -188,7 +188,9 @@ func (p *Parser) attachVibeLangModules(file *ast.SourceFile) {
 		body := ModuleDeclarationBody(file, statement)
 		opts := p.opts
 		opts.FileName = opts.FileName.AppendSuffix(suffix)
-		opts.PathKey = opts.PathKey.AppendCanonicalSuffix(suffix)
+		if opts.PathKey != "" { // a caller outside a program may parse with a file name only
+			opts.PathKey = opts.PathKey.AppendCanonicalSuffix(suffix)
+		}
 		opts.ExternalModuleIndicatorOptions.Force = true // a module declaration is always a module
 		module := parseModuleBody(opts, blankOutside(p.sourceText, body), body.Pos())
 		module.SetContentMapperInfo(ast.ContentMapperSourceFileInfo{

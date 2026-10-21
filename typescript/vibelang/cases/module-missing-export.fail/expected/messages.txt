@@ -1,0 +1,2 @@
+Module 'text' has no exported member 'missing'.
+Module 'text' declares 'hidden' locally, but it is not exported.

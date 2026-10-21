@@ -46,3 +46,28 @@ func (node *SourceFile) EmbeddedModuleBySpecifier(specifier string) *SourceFile 
 	}
 	return nil
 }
+
+// embeddedModuleNames returns args with each argument that names a module
+// declaration of file, or of the file whose module file is, as TypeScript
+// quotes a module ("./main.vibe.text.js"), replaced by the declared name
+// (text), or nil when no argument names one.
+func embeddedModuleNames(file *SourceFile, args []string) []string {
+	if canonical := file.CanonicalSourceFile(); canonical != nil {
+		file = canonical
+	}
+	var result []string
+	for i, arg := range args {
+		if len(arg) < 2 || arg[0] != '"' || arg[len(arg)-1] != '"' {
+			continue
+		}
+		module := file.EmbeddedModuleBySpecifier(arg[1 : len(arg)-1])
+		if module == nil {
+			continue
+		}
+		if result == nil {
+			result = append([]string(nil), args...)
+		}
+		result[i] = module.EmbeddedModule().Name
+	}
+	return result
+}

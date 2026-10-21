@@ -135,6 +135,9 @@ func (d *Diagnostic) displayMessageArgs() []string {
 	if d.file == nil || d.source != "" {
 		return d.messageArgs
 	}
+	if args := embeddedModuleNames(d.file, d.messageArgs); args != nil {
+		return args // a VibeLang module declaration's name (vibelang_modules.go)
+	}
 	segment, ok := d.file.SpanMap().AliasForVirtualSpan(d.loc)
 	if !ok {
 		return d.messageArgs
