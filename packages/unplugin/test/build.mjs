@@ -5,10 +5,12 @@
 // Usage, from a fixture copy:
 //   node build.mjs webpack|rspack|rollup|rolldown|esbuild|vite [--watch]
 //   node build.mjs rollup|rolldown|vite --deferred   (the plugin from vibelang-unplugin/deferred)
+//   bun build.mjs bun --files                       (entry points from Bun.build's in-memory files)
 //   bun build.mjs bun
 //
 // The plugin finds the compiler through VIBELANG_BINARY. A build without
 // --watch exits 1 when it fails.
+import { writeFileSync } from "node:fs"
 import module from "node:module"
 import { join, resolve } from "node:path"
 import { createUnplugin } from "unplugin"
@@ -104,9 +106,19 @@ if (bundler === "webpack" || bundler === "rspack") {
   else await esbuild.build(options).catch(() => {})
 } else if (bundler === "bun") {
   try {
+    // --files: a virtual entry that embeds a file asset and imports the fixture, and a virtual .js entry beside it,
+    // as an app that compiles to one executable embeds a helper and a worker.
+    const asset = JSON.stringify(join(root, "helper.bin"))
+    if (mode === "--files") writeFileSync(join(root, "helper.bin"), "helper")
+    const files = mode === "--files"
+      ? {
+        "virtual-main.ts": `import asset from ${asset} with { type: "file" }\nif (typeof asset !== "string") throw new Error("no asset")\nawait import(${JSON.stringify(entry)})`,
+        "virtual-worker.js": "export const worker = 1"
+      }
+      : undefined
     const result = await Bun.build({
-      entrypoints: [entry], outdir: outDir, target: "bun", format: "esm", sourcemap: "external",
-      naming: "main.js", plugins: [vibelang()]
+      entrypoints: files ? Object.keys(files) : [entry], outdir: outDir, target: "bun", format: "esm",
+      sourcemap: "external", naming: files ? "[name].js" : "main.js", plugins: [vibelang()], ...(files ? { files } : {})
     })
     report(result.success, result.logs.map(String).join("\n"))
   } catch (error) {

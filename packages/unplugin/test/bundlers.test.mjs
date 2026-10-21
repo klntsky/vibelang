@@ -210,6 +210,21 @@ describe("vibelang-unplugin", { concurrency }, () => {
       assert.deepEqual([entry.originalLine + 1, entry.originalColumn + 1], [32, 19])
     })
 
+    if (bundler === "bun") {
+      // Bun 1.4.2 stops resolving Bun.build's in-memory `files` once a plugin's
+      // onResolve matches their names, and panics on a `with { type: "file" }`
+      // import once a plugin's onLoad matches every file, even when the hooks
+      // return nothing.
+      it("bun: an entry point from Bun.build's files keeps resolving and embedding files", { skip }, async (t) => {
+        const root = await fixture(t, "bun-files")
+        const result = await spawned("bun", ["--no-warnings", build, "bun", "--files"], root)
+        assert.equal(result.code, 0, `${result.stdout}\n${result.stderr}`)
+        const run = await spawned("bun", ["out/virtual-main.js"], root)
+        assert.equal(run.code, 0, run.stderr)
+        assert.equal(run.stdout, expected)
+      })
+    }
+
     // Rollup bundles packages only through @rollup/plugin-node-resolve, which the fixture does not use.
     const bundlesPackages = bundler !== "rollup" || "Rollup resolves no packages without @rollup/plugin-node-resolve"
     it(`${bundler}: builds a workspace package's .vibe source with that package's own project`, { skip: skip || (bundlesPackages === true ? false : bundlesPackages) }, async (t) => {

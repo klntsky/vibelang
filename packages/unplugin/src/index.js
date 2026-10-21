@@ -64,6 +64,25 @@ export const unplugin = createUnplugin((options = {}, meta) => {
     return result
   }
 
+  // The module the plugin serves for a specifier, or undefined to leave it to the bundler.
+  function resolveId(source, importer) {
+    const path = cleanId(source)
+    const query = source.slice(path.length)
+    // An absolute id is resolved; webpack sends each result back through this hook.
+    if (isAbsolute(path) || (importer && !path.startsWith("."))) return
+    const target = resolve(importer ? dirname(cleanId(importer)) : root || process.cwd(), path)
+    // Resolve .vibe here too, so esbuild loads every .vibe module in one namespace.
+    if (path.endsWith(".vibe")) return existsSync(target) ? target + query : undefined
+    // vibelang rewrites `./x.vibe` and `./x.ts` imports to `./x.js`. Map them back to the source.
+    if (!importer || !path.endsWith(".js") || existsSync(target)) return
+    const stem = target.slice(0, -3)
+    // Only a compiled .vibe module has rewritten .ts imports. esbuild maps those itself,
+    // and a plugin result would load the .ts file in the vibelang namespace.
+    const sources = cleanId(importer).endsWith(".vibe") && meta.framework !== "esbuild"
+      ? [".vibe", ".ts", ".tsx"] : [".vibe"]
+    for (const extension of sources) if (existsSync(stem + extension)) return stem + extension + query
+  }
+
   return {
     name: "vibelang",
     enforce: "pre",
@@ -76,27 +95,14 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       if (/\.(?:vibe|[cm]?tsx?|json)$/.test(id)) current?.invalidate()
       debug(`watch change ${id}`)
     },
-    resolveId(source, importer) {
-      const path = cleanId(source)
-      const query = source.slice(path.length)
-      // An absolute id is resolved; webpack sends each result back through this hook.
-      if (isAbsolute(path) || (importer && !path.startsWith("."))) return
-      const target = resolve(importer ? dirname(cleanId(importer)) : root || process.cwd(), path)
-      // Resolve .vibe here too, so esbuild loads every .vibe module in one namespace.
-      if (path.endsWith(".vibe")) return existsSync(target) ? target + query : undefined
-      // vibelang rewrites `./x.vibe` and `./x.ts` imports to `./x.js`. Map them back to the source.
-      if (!importer || !path.endsWith(".js") || existsSync(target)) return
-      const stem = target.slice(0, -3)
-      // Only a compiled .vibe module has rewritten .ts imports. esbuild maps those itself,
-      // and a plugin result would load the .ts file in the vibelang namespace.
-      const sources = cleanId(importer).endsWith(".vibe") && meta.framework !== "esbuild"
-        ? [".vibe", ".ts", ".tsx"] : [".vibe"]
-      for (const extension of sources) if (existsSync(stem + extension)) return stem + extension + query
-    },
-    loadInclude(id) {
-      return cleanId(id).endsWith(".vibe")
-    },
-    async load(id) {
+    // Bun 1.4.2 stops resolving Bun.build's in-memory `files` once a plugin's
+    // onResolve matches their names, and panics on a `with { type: "file" }`
+    // import once a plugin's onLoad matches every file, even when the hooks
+    // return nothing. unplugin's Bun adapter registers both for every path, so
+    // under Bun the plugin registers its own hooks, filtered to what it serves.
+    resolveId: meta.framework === "bun" ? undefined : resolveId,
+    loadInclude: meta.framework === "bun" ? undefined : (id) => cleanId(id).endsWith(".vibe"),
+    load: meta.framework === "bun" ? undefined : async function load(id) {
       const { project, code, map, inputs, errors, warnings, first, error } = await loadModule(id)
       // Any project source or the tsconfig can change the contracts this module compiles against.
       for (const input of [project, ...inputs]) this.addWatchFile(input)
@@ -112,6 +118,23 @@ export const unplugin = createUnplugin((options = {}, meta) => {
       if (first && !errors.length) for (const warning of warnings) this.warn(backend.formatDiagnostic(warning))
       if (error) this.error(error)
       return { code, map, moduleType: "js" }
+    },
+    bun: {
+      setup(build) {
+        build.onResolve({ filter: /(?:\.vibe|^\.\.?\/.+\.js)(?:\?.*)?$/ }, (args) => {
+          const entry = args.kind === "entry-point-build" || args.kind === "entry-point-run"
+          const id = resolveId(args.path, entry ? undefined : args.importer)
+          return id === undefined ? undefined : { path: id }
+        })
+        // Bun ignores plugin source maps, so the module is its JavaScript alone.
+        build.onLoad({ filter: /\.vibe(?:\?.*)?$/ }, async ({ path }) => {
+          const { code, errors, warnings, first, error } = await loadModule(path)
+          if (errors.length && first) throw new Error(errors.map(backend.formatDiagnostic).join("\n"))
+          if (first && !errors.length) for (const warning of warnings) console.warn(backend.formatDiagnostic(warning))
+          if (error) throw new Error(error.message)
+          return { contents: code, loader: "js" }
+        })
+      }
     },
     vite: { configResolved(config) { configure(config.root) } },
     webpack(compiler) { configure(compiler.context) },

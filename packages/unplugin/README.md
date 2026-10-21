@@ -113,7 +113,11 @@ as `file:line:column - error TS2322: text`.
 
 - **Bun:** `Bun.build` ignores plugin source maps, so a Bun bundle's map points
   into the compiled JavaScript of each `.vibe` module, not its source. Bun has
-  no watch API for plugins.
+  no watch API for plugins. Bun 1.4.2 stops resolving `Bun.build`'s in-memory
+  `files` once a plugin's resolve hook matches their names, and crashes on a
+  `with { type: "file" }` import once a plugin's load hook matches every file,
+  so under Bun the plugin registers its own hooks: resolve for `.vibe` and
+  relative `.js` specifiers, load for `.vibe` modules.
 - **webpack and Rspack:** the error carries its position in the message only;
   unplugin doesn't pass a location to webpack. webpack before 5.112.0 can miss
   a save made as a watch build finishes
