@@ -54,16 +54,25 @@ func (p *Parser) parseVibeLangMaskBlock() *ast.Node {
 	pos := p.nodePos()
 	word := p.scanner.TokenValue()
 	anchor := p.scanner.TokenRange()
+	form := VibeSyntax{Kind: VibeSyntaxBlockStatement, Word: anchor, Head: anchor}
 	p.nextToken()
 	callee := p.vibelangSynthesized(p.factory.NewIdentifier("$"+word+vibelangMaskBlockLabel), anchor)
 	call := p.vibelangSynthesized(p.factory.NewCallExpression(callee, nil /*questionDotToken*/, nil /*typeArguments*/, p.newNodeList(anchor, nil), ast.NodeFlagsNone), anchor)
 	marker := p.vibelangSynthesized(p.factory.NewExpressionStatement(call), anchor)
 	statements := []*ast.Node{marker}
+	if p.token == ast.KindOpenBraceToken {
+		form.Open = p.tokenRange()
+	}
 	if p.parseExpected(ast.KindOpenBraceToken) {
 		body := p.parseList(PCBlockStatements, (*Parser).parseStatement)
 		statements = append(statements, body.Nodes...)
+		if p.token == ast.KindCloseBraceToken {
+			form.Close = p.tokenRange()
+		}
 		p.parseExpected(ast.KindCloseBraceToken)
 	}
+	form.Range = core.NewTextRange(anchor.Pos(), p.nodePos())
+	p.recordVibeSyntax(form)
 	block := p.factory.NewBlock(p.newNodeList(core.NewTextRange(anchor.Pos(), p.nodePos()), statements), true /*multiLine*/)
 	return p.finishNode(block, pos)
 }
@@ -77,10 +86,24 @@ func (p *Parser) parseVibeLangMaskBlock() *ast.Node {
 // types $exit() as the Exit of the try statement (D178); the lowering
 // removes the declaration and passes the Exit to the block's closure.
 func (p *Parser) parseVibeLangFinallyBlock() *ast.Node {
+	keyword := core.NewTextRange(p.nodePos()-len("finally"), p.nodePos())
+	binding := p.scanner.TokenStart()
 	p.parseExpected(ast.KindOpenParenToken)
 	name := p.parseIdentifier()
 	p.parseExpected(ast.KindCloseParenToken)
+	bindingEnd := p.nodePos()
 	block := p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
+	open, closing := p.blockBraces(block)
+	p.recordVibeSyntax(VibeSyntax{
+		Kind:  VibeSyntaxClause,
+		Name:  "finally",
+		Word:  keyword,
+		Right: core.NewTextRange(binding, bindingEnd),
+		Head:  core.NewTextRange(keyword.Pos(), bindingEnd),
+		Open:  open,
+		Close: closing,
+		Range: core.NewTextRange(keyword.Pos(), block.End()),
+	})
 	marker := p.vibelangSynthesized(p.factory.NewIdentifier(vibelangExitMarker), name.Loc)
 	call := p.vibelangSynthesized(p.factory.NewCallExpression(marker, nil /*questionDotToken*/, nil /*typeArguments*/, p.newNodeList(name.Loc, nil), ast.NodeFlagsNone), name.Loc)
 	declaration := p.vibelangSpanning(p.factory.NewVariableDeclaration(name, nil /*exclamationToken*/, nil /*typeNode*/, call), name.Loc)

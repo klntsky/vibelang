@@ -35,6 +35,7 @@ func (p *Parser) parseVibeLangThrowExpression() *ast.Node {
 	anchor := p.tokenRange()
 	p.nextToken() // throw
 	operand := p.parseSimpleUnaryExpression()
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxPrefix, Word: anchor, Range: core.NewTextRange(anchor.Pos(), operand.End())})
 	loc := core.NewTextRange(anchor.Pos(), operand.End())
 	statement := p.vibelangSpanning(p.factory.NewThrowStatement(operand), loc)
 	body := p.vibelangSpanning(p.factory.NewBlock(p.newNodeList(loc, []*ast.Node{statement}), false /*multiLine*/), loc)
@@ -64,6 +65,7 @@ func (p *Parser) parseVibeLangDoExpression() *ast.Node {
 	anchor := p.tokenRange()
 	p.nextToken() // do
 	body := p.parseFunctionBlock(ParseFlagsNone, nil /*diagnosticMessage*/)
+	p.recordVibeSyntaxBlock(VibeSyntaxDo, anchor, body)
 	p.reportReturnsInDo(body)
 	statements := body.AsBlock().Statements
 	if len(statements.Nodes) != 0 {
@@ -173,6 +175,7 @@ func (p *Parser) isStartOfVibeLangBlockParam(expression *ast.Node) bool {
 func (p *Parser) parseVibeLangBlockParam(pos int, expression *ast.Node) *ast.Node {
 	anchor := p.tokenRange()
 	body := p.parseFunctionBlock(ParseFlagsNone, nil /*diagnosticMessage*/)
+	p.recordVibeSyntaxBlock(VibeSyntaxBlockParam, p.sourceRange(expression), body)
 	program := p.vibelangProgramArrow(nil, body, anchor)
 	if expression.Kind == ast.KindCallExpression {
 		call := expression.AsCallExpression()

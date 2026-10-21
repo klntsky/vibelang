@@ -60,9 +60,11 @@ func (p *Parser) parseVibeLangFork() *ast.Node {
 	var program *ast.Node
 	if p.token == ast.KindOpenBraceToken {
 		body := p.parseFunctionBlock(ParseFlagsNone, nil /*diagnosticMessage*/)
+		p.recordVibeSyntaxBlock(VibeSyntaxForkBlock, keyword, body)
 		program = p.vibelangProgramArrow(nil, body, keyword)
 	} else {
 		program = p.parseSimpleUnaryExpression()
+		p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxPrefix, Word: keyword, Range: core.NewTextRange(keyword.Pos(), program.End())})
 	}
 	call := p.finishNode(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(program.Loc, []*ast.Node{program}), ast.NodeFlagsNone), pos)
 	return call
@@ -100,6 +102,7 @@ func (p *Parser) parseVibeLangJoin() *ast.Node {
 	anchor := p.tokenRange()
 	p.nextToken() // join
 	operand := p.parseSimpleUnaryExpression()
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxPrefix, Word: anchor, Range: core.NewTextRange(anchor.Pos(), operand.End())})
 	callee := p.vibelangSynthesized(p.factory.NewIdentifier("$join"), anchor)
 	return p.finishNode(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(operand.Loc, []*ast.Node{operand}), ast.NodeFlagsNone), pos)
 }
@@ -202,7 +205,9 @@ func (p *Parser) parseVibeLangAwaitOperation() *ast.Node {
 	p.nextToken() // .
 	helper := awaitOperations[p.scanner.TokenValue()]
 	p.nextToken() // the operation
+	word := core.NewTextRange(anchor.Pos(), p.nodePos())
 	operand := p.parseSimpleUnaryExpression()
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxPrefix, Word: word, Range: core.NewTextRange(anchor.Pos(), operand.End())})
 	callee := p.vibelangSynthesized(p.factory.NewIdentifier(helper), anchor)
 	return p.finishNode(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(operand.Loc, []*ast.Node{operand}), ast.NodeFlagsNone), pos)
 }
@@ -371,6 +376,7 @@ func (p *Parser) parseVibeLangSelect() *ast.Node {
 	block := p.finishNode(p.factory.NewBlock(p.newNodeList(core.NewTextRange(anchor.End(), p.nodePos()), statements), true /*multiLine*/), anchor.End())
 	result := p.finishNode(p.factory.NewLabeledStatement(label, block), pos)
 	result.Flags |= ast.NodeFlagsVibeLang
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxStatement, Word: anchor, Range: core.NewTextRange(anchor.Pos(), result.End())})
 	return result
 }
 
@@ -451,6 +457,8 @@ func (p *Parser) parseVibeLangConcurrentFor(pos int) *ast.Node {
 		limit = p.parseExpressionAllowIn()
 		p.parseExpected(ast.KindCloseParenToken)
 	}
+	forKeyword := scanner.SkipTrivia(p.sourceText, pos)
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxForConcurrent, Word: core.NewTextRange(forKeyword, forKeyword+len("for")), Head: core.NewTextRange(anchor.Pos(), p.nodePos()), Range: core.NewTextRange(forKeyword, p.nodePos())})
 	p.parseExpected(ast.KindOpenParenToken)
 	if p.token == ast.KindConstKeyword || p.token == ast.KindLetKeyword {
 		p.nextToken()

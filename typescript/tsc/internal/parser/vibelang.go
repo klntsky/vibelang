@@ -156,7 +156,18 @@ func (p *Parser) parseVibeLangMutable() bool {
 	if p.token != ast.KindIdentifier || p.scanner.TokenValue() != "mutable" || !p.lookAhead((*Parser).nextTokenStartsMemberNameOnSameLine) {
 		return false
 	}
+	word := p.tokenRange()
 	p.nextToken()
+	end := p.scanner.TokenEnd()
+	index := p.token == ast.KindOpenBracketToken
+	if index {
+		p.lookAhead(func(p *Parser) bool {
+			p.nextToken()
+			end = p.scanner.TokenEnd()
+			return true
+		})
+	}
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxMutable, Word: word, Range: core.NewTextRange(word.Pos(), end), Index: index})
 	return true
 }
 
@@ -195,16 +206,21 @@ func (p *Parser) vibelangReadonly(modifiers *ast.ModifierList, anchor core.TextR
 // The tag is the class name, every field is readonly, and the body is
 // optional: `error Timeout` declares an error without fields.
 func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList) *ast.Node {
+	word := p.tokenRange()
 	p.nextToken() // error
 	name := p.parseBindingIdentifier()
 	typeParameters := p.parseTypeParameters()
 	var fields *ast.Node
+	form := VibeSyntax{Kind: VibeSyntaxDeclaration, Name: "error", Head: core.NewTextRange(word.Pos(), name.End())}
 	if p.token == ast.KindOpenBraceToken {
 		fields = p.parseTypeLiteral() // readonly unless written mutable (D134)
+		form.Open, form.Close = p.blockBraces(fields)
 	} else {
 		fields = p.vibelangSynthesized(p.factory.NewTypeLiteralNode(p.newNodeList(name.Loc, nil)), name.Loc)
 	}
 	end := p.nodePos()
+	form.Range = core.NewTextRange(scanner.SkipTrivia(p.sourceText, pos), end)
+	p.recordVibeSyntax(form)
 	tag := p.vibelangSynthesized(p.factory.NewStringLiteral(name.Text(), ast.TokenFlagsNone), name.Loc)
 	callee := p.vibelangSynthesized(p.factory.NewIdentifier("TaggedError"), name.Loc)
 	call := p.vibelangSynthesized(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(name.Loc, []*ast.Node{tag}), ast.NodeFlagsNone), name.Loc)
@@ -259,6 +275,7 @@ func (p *Parser) parseVibeLangEffectType(result *ast.TypeNode) *ast.TypeNode {
 		dependencies = p.parseVibeLangSlot()
 	}
 	span := core.NewTextRange(result.Pos(), dependencies.End())
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxEffectType, Range: core.NewTextRange(scanner.SkipTrivia(p.sourceText, result.Pos()), dependencies.End())})
 	module := p.vibelangSynthesized(p.factory.NewIdentifier("Effect"), bang)
 	member := p.vibelangSynthesized(p.factory.NewIdentifier("Effect"), bang)
 	name := p.vibelangSynthesized(p.factory.NewQualifiedName(module, member), bang)
@@ -357,15 +374,28 @@ func (p *Parser) parseServiceDeclaration(pos int, jsdoc jsdocScannerInfo, modifi
 		heritage = p.newNodeList(word, []*ast.Node{clause})
 	}
 	var members *ast.NodeList
+	formName := "service"
+	if control {
+		formName = "control"
+	}
+	form := VibeSyntax{Kind: VibeSyntaxDeclaration, Name: formName, Head: core.NewTextRange(word.Pos(), name.End())}
+	if p.token == ast.KindOpenBraceToken {
+		form.Open = p.tokenRange()
+	}
 	if p.parseExpected(ast.KindOpenBraceToken) {
 		saveAbstract := p.vibelangAbstractMembers
 		p.vibelangAbstractMembers = true
 		members = p.parseList(PCClassMembers, (*Parser).parseClassElement)
 		p.vibelangAbstractMembers = saveAbstract
+		if p.token == ast.KindCloseBraceToken {
+			form.Close = p.tokenRange()
+		}
 		p.parseExpected(ast.KindCloseBraceToken)
 	} else {
 		members = p.createMissingList()
 	}
+	form.Range = core.NewTextRange(scanner.SkipTrivia(p.sourceText, pos), p.nodePos())
+	p.recordVibeSyntax(form)
 	abstract := p.vibelangSynthesized(p.factory.NewModifier(ast.KindAbstractKeyword), word)
 	if modifiers == nil {
 		modifiers = p.newModifierList(word, []*ast.Node{abstract})
@@ -424,6 +454,7 @@ func (p *Parser) parseLayerDeclaration(pos int, jsdoc jsdocScannerInfo, modifier
 		p.parseExpected(ast.KindCloseBraceToken)
 	}
 	bodyEnd := p.nodePos()
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxDeclaration, Name: "layer", Head: core.NewTextRange(word.Pos(), name.End()), Range: core.NewTextRange(scanner.SkipTrivia(p.sourceText, pos), bodyEnd)})
 	body := core.NewTextRange(bodyStart, bodyEnd)
 	membersLoc := body
 	if len(members) > 0 {
@@ -586,6 +617,7 @@ func (p *Parser) scanVibeLangProvideArguments() bool {
 // JavaScript's with statement is a syntax error, so it took nothing away.
 func (p *Parser) parseVibeLangProvideStatement() *ast.Node {
 	pos := p.nodePos()
+	form := VibeSyntax{Kind: VibeSyntaxBlockStatement, Word: p.tokenRange()}
 	p.nextToken() // provide, or the old spelling with
 	var providers *ast.Node
 	if p.token == ast.KindOpenParenToken && p.lookAhead((*Parser).scanVibeLangProvideArguments) {
@@ -600,15 +632,24 @@ func (p *Parser) parseVibeLangProvideStatement() *ast.Node {
 		providers = p.parseExpression()
 		p.vibelangNoBlockParams = saveNoBlockParams
 	}
+	form.Head = core.NewTextRange(form.Word.Pos(), p.nodePos())
 	layer := p.vibelangProviders(providers)
 	statement := p.vibelangSpanning(p.factory.NewExpressionStatement(layer), layer.Loc)
 	statement.Flags |= ast.NodeFlagsVibeLang
 	statements := []*ast.Node{statement}
+	if p.token == ast.KindOpenBraceToken {
+		form.Open = p.tokenRange()
+	}
 	if p.parseExpected(ast.KindOpenBraceToken) {
 		body := p.parseList(PCBlockStatements, (*Parser).parseStatement)
 		statements = append(statements, body.Nodes...)
+		if p.token == ast.KindCloseBraceToken {
+			form.Close = p.tokenRange()
+		}
 		p.parseExpected(ast.KindCloseBraceToken)
 	}
+	form.Range = core.NewTextRange(form.Word.Pos(), p.nodePos())
+	p.recordVibeSyntax(form)
 	block := p.factory.NewBlock(p.newNodeList(core.NewTextRange(layer.Pos(), p.nodePos()), statements), true /*multiLine*/)
 	p.finishNode(block, pos)
 	block.Flags |= ast.NodeFlagsVibeLang
@@ -702,6 +743,9 @@ func (p *Parser) parseVibeLangCatchClauses(first *ast.Node) *ast.Node {
 	clauses := []*ast.Node{first}
 	for p.token == ast.KindCatchKeyword {
 		clauses = append(clauses, p.parseCatchClause())
+	}
+	for _, clause := range clauses {
+		p.recordVibeSyntaxClause("catch", scanner.SkipTrivia(p.sourceText, clause.Pos()), clause.AsCatchClause().Block)
 	}
 	if len(clauses) == 1 && !isTypedCatchClause(first) {
 		return first
@@ -951,6 +995,7 @@ func (p *Parser) parseHandleClause() vibelangHandleClause {
 	p.parseExpected(ast.KindCloseParenToken)
 	header := core.NewTextRange(open.Pos(), p.nodePos())
 	body := p.parseBlock(false /*ignoreMissingOpenBrace*/, nil)
+	p.recordVibeSyntaxClause("handle", anchor.Pos(), body)
 	// The continuation comes first, so a rest parameter stays last.
 	var k *ast.Node
 	if p.vibelangClauseResumes(body, open) {
@@ -1101,11 +1146,15 @@ func (p *Parser) parseSchemaDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 	name := p.parseBindingIdentifier()
 	var members []*ast.Node
 	body := name.Loc
+	form := VibeSyntax{Kind: VibeSyntaxDeclaration, Name: "schema", Head: core.NewTextRange(keyword.Pos(), name.End())}
 	if p.token == ast.KindOpenBraceToken {
 		literal := p.parseTypeLiteral()
 		members = literal.AsTypeLiteralNode().Members.Nodes
 		body = literal.Loc
+		form.Open, form.Close = p.blockBraces(literal)
 	}
+	form.Range = core.NewTextRange(scanner.SkipTrivia(p.sourceText, pos), p.nodePos())
+	p.recordVibeSyntax(form)
 	fields := p.vibelangSchemaFields(members, body)
 	statement := p.factory.NewVariableStatement(modifiers, p.vibelangSpanning(p.factory.NewVariableDeclarationList(
 		p.newNodeList(core.NewTextRange(name.Pos(), fields.End()), []*ast.Node{

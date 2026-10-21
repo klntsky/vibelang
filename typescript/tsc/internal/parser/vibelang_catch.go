@@ -37,7 +37,10 @@ func (p *Parser) parseVibeLangCatchRest(left *ast.Expression, pos int) *ast.Expr
 		handler := p.parseVibeLangCatchHandler()
 		if handler == nil {
 			fallback := p.parseBinaryExpressionOrHigher(ast.OperatorPrecedenceLowest)
+			p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxCatch, Word: keyword, Left: p.sourceRange(left), Right: p.sourceRange(fallback), Range: core.NewTextRange(p.sourceRange(left).Pos(), fallback.End())})
 			handler = p.vibelangProgramArrow(nil, fallback, core.NewTextRange(fallback.Pos(), fallback.Pos()))
+		} else {
+			p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxCatch, Word: keyword, Left: p.sourceRange(left), Right: p.sourceRange(handler), Range: core.NewTextRange(p.sourceRange(left).Pos(), handler.End())})
 		}
 		self := p.vibelangProgramArrow(nil, left, core.NewTextRange(left.Pos(), left.Pos()))
 		callee := p.vibelangSynthesized(p.factory.NewIdentifier("$catchExpression"), keyword)

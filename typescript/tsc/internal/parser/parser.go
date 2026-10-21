@@ -107,6 +107,7 @@ type Parser struct {
 	vibelangMatches             map[*ast.Node]*matchInfo // match expressions as written, by the call that stands for each (vibelang_match.go)
 	vibelangIsBindings          map[*ast.Node]*isInfo    // is expressions whose patterns bind names, by their markers (vibelang_match.go)
 	vibelangOmittedDependencies map[*ast.Node]bool       // Effect types whose dependencies were left out (vibelang.go)
+	vibelangSyntax              *[]VibeSyntax            // the forms recorded for ParseVibeLangSyntax, or nil (vibelang_syntax.go)
 }
 
 func newParser() *Parser {
@@ -353,6 +354,7 @@ type ParserState struct {
 	jsDiagnosticsLen            int
 	jsdocInfosLen               int
 	reparsedClonesLen           int
+	vibelangSyntaxLen           int
 	statementHasAwaitIdentifier bool
 	hasParseError               bool
 }
@@ -365,6 +367,7 @@ func (p *Parser) mark() ParserState {
 		jsDiagnosticsLen:            len(p.jsDiagnostics),
 		jsdocInfosLen:               len(p.jsdocInfos),
 		reparsedClonesLen:           len(p.reparsedClones),
+		vibelangSyntaxLen:           p.vibelangSyntaxCount(),
 		statementHasAwaitIdentifier: p.statementHasAwaitIdentifier,
 		hasParseError:               p.hasParseError,
 	}
@@ -378,6 +381,7 @@ func (p *Parser) rewind(state ParserState) {
 	p.jsDiagnostics = p.jsDiagnostics[0:state.jsDiagnosticsLen]
 	p.jsdocInfos = p.jsdocInfos[0:state.jsdocInfosLen]
 	p.reparsedClones = p.reparsedClones[0:state.reparsedClonesLen]
+	p.vibelangSyntaxRewind(state.vibelangSyntaxLen)
 	p.statementHasAwaitIdentifier = state.statementHasAwaitIdentifier
 	p.hasParseError = state.hasParseError
 }
@@ -5804,7 +5808,7 @@ func (p *Parser) parsePrimaryExpression() *ast.Expression {
 		return p.parsePrivateIdentifier()
 	case ast.KindTryKeyword:
 		if p.isStartOfTryCall() {
-			return p.parseIdentifierName() // the callee of try(…) (vibelang_hatches.go)
+			return p.parseTryCallee() // the callee of try(…) (vibelang_hatches.go)
 		}
 	case ast.KindDoKeyword:
 		if p.isStartOfVibeLangDoExpression() {

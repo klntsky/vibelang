@@ -47,6 +47,7 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 	curried := !runsCall(left)
 	for p.isPipeOperator() {
 		operatorPos := p.nodePos()
+		word := core.NewTextRange(p.scanner.TokenStart(), p.scanner.TokenEnd()+1)
 		p.nextToken() // |
 		operator := p.finishNode(p.factory.NewToken(ast.KindBarToken), operatorPos)
 		p.nextToken() // >
@@ -54,6 +55,7 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 		body := p.parseBinaryExpressionOrHigher(ast.OperatorPrecedenceLowest)
 		body = p.parseVibeLangCatchRest(body, bodyPos) // x |> f(%) catch y catches inside the body (vibelang_catch.go)
 		body = p.parseConditionalExpressionRest(body, bodyPos, false /*allowReturnTypeInArrowFunction*/)
+		p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxPipe, Word: word, Left: p.sourceRange(left), Right: p.sourceRange(body), Range: core.NewTextRange(p.sourceRange(left).Pos(), body.End())})
 		if stage := curriedPipeStage(body); stage != nil && curried {
 			// D272: give the stage exactly the contextual type of x.pipe(g).
 			name := p.vibelangSynthesized(p.factory.NewIdentifier("pipe"), operator.Loc)
@@ -89,6 +91,7 @@ func runsCall(node *ast.Node) bool {
 // starts in a .vibe file.
 func (p *Parser) parseTopicReference() *ast.Node {
 	pos := p.nodePos()
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxTopic, Word: p.tokenRange(), Range: p.tokenRange()})
 	p.nextToken()
 	topic := p.finishNode(p.factory.NewIdentifier("%"), pos)
 	topic.Flags |= ast.NodeFlagsVibeLang

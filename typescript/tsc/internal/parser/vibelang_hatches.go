@@ -16,3 +16,9 @@ import "github.com/microsoft/TypeScript/tsc/internal/ast"
 func (p *Parser) isStartOfTryCall() bool {
 	return p.token == ast.KindTryKeyword && p.isVibeLangFile() && p.lookAhead((*Parser).nextTokenIsOpenParen)
 }
+
+// parseTryCallee parses the callee of try(…) as an identifier named try.
+func (p *Parser) parseTryCallee() *ast.Node {
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxTryCall, Word: p.tokenRange(), Range: p.tokenRange()})
+	return p.parseIdentifierName()
+}

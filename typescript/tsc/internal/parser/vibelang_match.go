@@ -157,10 +157,15 @@ func (p *Parser) parseVibeLangMatch() *ast.Node {
 	p.parseExpected(ast.KindOpenParenToken)
 	info.subject = p.parseExpressionAllowIn()
 	p.parseExpected(ast.KindCloseParenToken)
+	form := VibeSyntax{Kind: VibeSyntaxMatch, Word: info.anchor, Left: p.sourceRange(info.subject)}
+	if p.token == ast.KindOpenBraceToken {
+		form.Open = p.tokenRange()
+	}
 	p.parseExpected(ast.KindOpenBraceToken)
 	sawDefault := false
 	for p.token != ast.KindCloseBraceToken && p.token != ast.KindEndOfFile {
 		arm := matchArm{anchor: p.tokenRange()}
+		armForm := VibeSyntaxArm{}
 		switch {
 		case p.token == ast.KindDefaultKeyword:
 			if sawDefault {
@@ -179,13 +184,24 @@ func (p *Parser) parseVibeLangMatch() *ast.Node {
 			p.nextToken()
 			continue
 		}
+		armForm.Head = core.NewTextRange(arm.anchor.Pos(), p.nodePos())
 		p.parseExpected(ast.KindColonToken)
 		arm.value = p.parseAssignmentExpressionOrHigher()
 		arm.end = p.nodePos()
+		armForm.Value = p.sourceRange(arm.value)
+		if p.token == ast.KindSemicolonToken {
+			armForm.Semicolon = p.tokenRange()
+		}
 		p.parseSemicolon()
 		info.arms = append(info.arms, arm)
+		form.Arms = append(form.Arms, armForm)
+	}
+	if p.token == ast.KindCloseBraceToken {
+		form.Close = p.tokenRange()
 	}
 	p.parseExpected(ast.KindCloseBraceToken)
+	form.Range = core.NewTextRange(info.anchor.Pos(), p.nodePos())
+	p.recordVibeSyntax(form)
 	node := p.matchFunctionCall(info)
 	if p.vibelangMatches == nil {
 		p.vibelangMatches = map[*ast.Node]*matchInfo{}
@@ -450,7 +466,9 @@ func (p *Parser) isVibeLangIs() bool {
 func (p *Parser) parseVibeLangIs(subject *ast.Node, pos int) *ast.Node {
 	info := &isInfo{anchor: p.tokenRange(), subject: subject}
 	p.nextToken() // is
+	patternStart := p.scanner.TokenStart()
 	info.pattern = p.parseMatchPattern()
+	p.recordVibeSyntax(VibeSyntax{Kind: VibeSyntaxIs, Word: info.anchor, Right: core.NewTextRange(patternStart, p.nodePos()), Range: core.NewTextRange(info.anchor.Pos(), p.nodePos())})
 	if !patternHasBindings(info.pattern) {
 		return p.isExpression(info, pos)
 	}
