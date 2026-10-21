@@ -27,11 +27,11 @@ function firstAlert() {
 // Output: 25
 ```
 
-Calling `readings()` constructs a lazy source. Its body starts when a consumer asks for a value. Each `yield` hands one value to the loop, and the producer waits until the consumer continues.
+`readings()` constructs a lazy source; its body starts when a consumer asks for a value. Each `yield` hands one value to the loop, and the producer waits until the consumer continues.
 
-Here the consumer returns at 25. Before `firstAlert` returns, the producer's `finally` logs `sensor closed`. `break`, a return, or a failure in the loop body closes the source and runs its cleanup. Iterating the source again starts a new run.
+The consumer returns at 25; before `firstAlert` returns, the producer's `finally` logs `sensor closed`. `break`, a return, or a failure in the loop body closes the source and runs its cleanup. Iterating the source again starts a new run.
 
-In `.vibe`, `function*` declares a producer. Do not use it to write `Effect.gen` or other generator-based APIs. Generator methods on objects remain JavaScript generators.
+In `.vibe`, `function*` declares a producer; don't use it for `Effect.gen` or other generator-based APIs. Generator methods on objects remain JavaScript generators.
 
 ## Call services between yields
 
@@ -61,9 +61,9 @@ function firstLargeFile(directory: string) {
 // Output: true
 ```
 
-Service calls run as they do in an ordinary function. The producer's failures and requirements join the consuming function's contract. Provide `NodeServices.layer` at the application boundary to supply `FileSystem` and `Path`, as in `examples/file-tree`.
+Service calls run as in an ordinary function, and the producer's failures and requirements join the consuming function's contract. Provide `NodeServices.layer` at the application boundary to supply `FileSystem` and `Path`, as in `examples/file-tree`.
 
-A producer can acquire resources with `using`. They stay open between yields and close when consumption finishes or stops early. This example reads one whole file at a time; stopping avoids reading the remaining files.
+Resources a producer acquires with `using` stay open between yields and close when consumption finishes or stops early. This example reads one whole file at a time; stopping skips the remaining files.
 
 ## Use a producer as a Stream
 
@@ -80,9 +80,9 @@ function alerts() {
 // Output: ["25 C","28 C"]
 ```
 
-A producer has type `Stream.Stream<Value, Error, Requirements>`. Stream operators accept it directly, and TypeScript consumers see a Stream in its declaration file. The `examples/pipeline` program uses this filter, map, and take pattern.
+A producer has type `Stream.Stream<Value, Error, Requirements>`: Stream operators accept it directly, and TypeScript consumers see a Stream in its declaration file. `examples/pipeline` uses this filter, map, and take pattern.
 
-When Stream operators consume a producer, the runtime starts it on its own fiber and uses a handoff with no buffer. The producer yields only when the Stream pulls; closing the Stream interrupts the producer and runs cleanup. Handle control operations inside that producer before sending it to Stream operators.
+When Stream operators consume a producer, the runtime starts it on its own fiber with an unbuffered handoff: the producer yields only when the Stream pulls, and closing the Stream interrupts it and runs cleanup. Handle control operations inside the producer before passing it to Stream operators.
 
 ## Iterate any Stream
 
@@ -98,10 +98,10 @@ function sumStream() {
 // Output: 6
 ```
 
-`for...of` pulls an Effect Stream and closes it when the loop exits, including on `break`. Arrays, maps, sets, and strings keep JavaScript's ordinary iteration behavior.
+`for...of` pulls an Effect Stream and closes it when the loop exits, including on `break`. Arrays, maps, sets, and strings iterate as in JavaScript.
 
-Use `for (const value of source)` for producers. This preview does not support `for (using value of source)` over a producer, and `Array.from(source)` is not a Stream consumer. Use `Stream.runCollect(source)` when you need all the elements as an array.
+Use `for (const value of source)` for producers. This preview doesn't support `for (using value of source)` over a producer, and `Array.from(source)` is not a Stream consumer; `Stream.runCollect(source)` collects all the elements into an array.
 
 ## Coming from Effect
 
-A generator wrapped in `Stream.unwrap` becomes a `function*`. Write calls between `yield` statements; reserve `yield` for the values the producer emits. Use Stream's existing operators whenever they express the transformation you need.
+A generator wrapped in `Stream.unwrap` becomes a `function*`. Write calls between `yield` statements, and reserve `yield` for emitted values. Use Stream's existing operators when they express the transformation you need.

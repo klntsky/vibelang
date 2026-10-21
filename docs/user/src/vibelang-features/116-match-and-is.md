@@ -1,6 +1,6 @@
 # Pattern matching with match and is
 
-`match` picks the first arm whose pattern fits a value. `is` tests a value against one pattern. Both come from the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1). They compile to plain conditionals, so TypeScript narrows the value in each arm, and an arm can call Effect functions.
+`match` picks the first arm whose pattern fits a value; `is` tests a value against one pattern. Both come from the TC39 [pattern matching](https://github.com/tc39/proposal-pattern-matching) proposal (stage 1) and compile to plain conditionals, so TypeScript narrows the value in each arm, and an arm can call Effect functions.
 
 ## match
 
@@ -23,7 +23,7 @@ function describe(failure: Failure) {
 // Output: ["no user 7","retry","denied by policy","denied Ada"]
 ```
 
-Each arm is `when pattern: expression;`. Arms are tried in order, and the first match gives the value. A `default: expression;` arm matches anything and must come last. `match` is an expression, so it can appear after `return`, in a `const` initializer, or as an argument.
+Each arm, `when pattern: expression;`, is tried in order; the first match gives the value. A `default: expression;` arm matches anything and must come last. `match` is an expression: it can follow `return`, initialize a `const`, or be an argument.
 
 An arm is one expression. Use `do { }` for several statements; its value is its last statement's:
 
@@ -115,7 +115,7 @@ function getUser(id: string): { name: string }!NotFound {
 
 ## Errors and custom matchers
 
-An `error` class matches its own instances, by `instanceof`, so two classes with the same tag stay distinct. As an extractor it gives the instance: `when NotFound(let error):`. Any other class matches by `instanceof` as well.
+An `error` class matches its own instances by `instanceof`, so two classes with the same tag stay distinct; as an extractor it gives the instance: `when NotFound(let error):`. Any other class also matches by `instanceof`.
 
 A value with a `[customMatcher]` method decides for itself. `customMatcher` is the proposal's `Symbol.customMatcher`:
 
@@ -169,7 +169,7 @@ function isRetryable(failure: Failure) {
 // Output: [true,true,false]
 ```
 
-In the condition of an `if` or a `while`, joined by `&&`, the pattern can bind names. They are in scope in the rest of the condition and in the `if`'s first branch or the loop's body:
+In an `if` or `while` condition, joined by `&&`, the pattern can bind names, scoped to the rest of the condition and the `if`'s first branch or the loop's body:
 
 ```vibe
 // run: Console.log(firstFailure("ada")); Console.log(firstFailure("").includes("NotFound"))
@@ -224,6 +224,6 @@ For any other type, a match without `default` that no arm fits throws a `TypeErr
 - Object patterns do not match primitives, so `{ length: let n }` does not match a string.
 - An extractor with a custom matcher types its bindings loosely; a class or a listed matcher types them exactly.
 - `is` bindings are not in scope in an `else` branch or after the statement.
-- A subject such as `user.role` is read once per test, not once, so a getter there runs more than once. Assign it to a `const` first when that matters.
+- A subject such as `user.role` is read once per test, not once, so a getter there runs more than once; assign it to a `const` first when that matters.
 - A match inside a larger expression runs its arms in their own function, so an arm there cannot `yield`. A match after `return` or as a statement can.
 - `async match` and the proposal's regular expression and relational patterns.

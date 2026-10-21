@@ -1,6 +1,6 @@
 # Control operations and handlers
 
-A control operation lets a handler decide how the caller continues. Use one when a dependency must pause a program, answer a request, or end the program early.
+A control operation lets a handler decide how the caller continues. Use one when a dependency must pause a program, answer a request, or end it early.
 
 ## Declare and perform an operation
 
@@ -22,7 +22,7 @@ export function release(version: string) {
 // Output: released v1
 ```
 
-`Approval.approve` returns a boolean at the call. `Approval` stays in the program's requirements until a handler answers it. Each abstract operation states all three channels of its contract.
+`Approval.approve` returns a boolean at the call, and `Approval` stays in the program's requirements until a handler answers it. Each abstract operation declares all three contract channels.
 
 `Control`, `handle`, `resume`, `resumeWith`, and `abandon` are globals in `.vibe` files.
 
@@ -59,15 +59,15 @@ export function comparePolicies() {
 // Output: ["released v1","production declined"]
 ```
 
-The business program stays the same. A `handle` clause after a try block names an operation, `Approval.approve`, and parameters that take the operation's parameter types. Each time the try block performs the operation, the clause runs.
+A `handle` clause after a try block names an operation, `Approval.approve`, and parameters typed like the operation's. The clause runs each time the try block performs the operation.
 
 `resume(true)` continues the try block with `true` as the operation's result. The handler is deep: the next approval request reaches the same clause. A clause that ends with `resume` runs in constant stack space, however many times the block performs the operation.
 
-A `return` in the try block or in a clause returns from the enclosing function, and `break` and `continue` leave its loops. A statement answers every operation of each control it names: give each operation a clause (EK2108). One statement can handle several controls.
+A `return` in the try block or a clause returns from the enclosing function; `break` and `continue` leave its loops. One statement can handle several controls, and answers every operation of each: give each operation a clause (EK2108).
 
-A clause can work after `resume`. The try block runs first, until it finishes. Then the clause goes on, and when the clause ends, the statement ends the way the try block did: a `return` in the try block takes effect after the clause, as a pending `return` waits for a `finally` block.
+A clause can work after `resume`: the try block runs to its end, then the clause continues, then the statement ends the way the try block did. A `return` in the try block takes effect after the clause, as a pending `return` waits for a `finally` block.
 
-A continuation can be consumed once. Call `resume`, `resumeWith`, and `abandon` in the clause's own code, not in a function nested inside it. The runtime rejects a second resume.
+A continuation can be consumed once; the runtime rejects a second resume. Call `resume`, `resumeWith`, and `abandon` in the clause's own code, not in a nested function.
 
 ## Stop and clean up
 
@@ -99,9 +99,9 @@ export function stopDeployment() {
 // Output: cancelled
 ```
 
-`abandon()` runs the try block's cleanup before the clause continues. It skips the block's `catch` blocks and runs its `finally` blocks and resource releases. Cleanup failures still fail the operation.
+`abandon()` runs the try block's cleanup before the clause continues: it skips the block's `catch` blocks and runs its `finally` blocks and resource releases. Cleanup failures still fail the operation.
 
-A clause that ends without resuming also stops the try block and cleans it up first. The statement then completes, and the function continues after it. Use `abandon()` when the clause needs cleanup to finish before its next statement.
+A clause that ends without resuming also stops the try block and cleans it up; then the statement completes, and the function continues after it. Use `abandon()` when cleanup must finish before the clause's next statement.
 
 ## Resume with an expected failure
 
@@ -122,9 +122,9 @@ export function busyReviewer() {
 // Output: review unavailable: deploy now
 ```
 
-`resumeWith` runs its program at the original operation call, inside the try block. This program can raise only errors declared by the operation, and it must need no services. Read services in the clause first, then capture their values in the program passed to `resumeWith`.
+`resumeWith` runs its program at the original operation call, inside the try block. The program can raise only the operation's declared errors and must need no services: read services in the clause first, then capture their values in the program.
 
-Catch clauses and a `finally` block may follow the handle clauses. They cover the try block and the clauses, so here the catch clause sees the `ReviewBusy` that the operation call raised.
+Catch clauses and a `finally` block can follow the handle clauses and cover both the try block and the clauses, so here the catch clause sees the `ReviewBusy` the operation call raised.
 
 ## Use handle as an expression
 
@@ -150,7 +150,7 @@ export function countReleased(versions: ReadonlyArray<string>) {
 // Output: 2
 ```
 
-`handle(program, Control, clauses, onReturn?)` takes a program, the control class, and a clause for every operation. A clause receives the operation's arguments followed by `k`, the continuation, which `resume(k, value)`, `resumeWith(k, program)`, and `abandon(k)` take. `resume` returns the resumed program's result. The optional fourth argument of `handle` transforms normal returns. In this preview, `resume` is typed with the program's original result, or `never` when that fourth argument is supplied; avoid inspecting the resumed result when clauses return different types. Keep `k` inside its clause; never save it or return it.
+`handle(program, Control, clauses, onReturn?)` takes a program, the control class, and a clause for every operation. A clause receives the operation's arguments, then `k`, the continuation that `resume(k, value)`, `resumeWith(k, program)`, and `abandon(k)` take. `resume` returns the resumed program's result. The optional fourth argument, `onReturn`, transforms normal returns. In this preview, `resume` is typed with the program's original result, or `never` when `onReturn` is supplied; don't inspect the resumed result when clauses return different types. Keep `k` inside its clause; never save or return it.
 
 ## Keep handlers on the executing fiber
 
@@ -176,9 +176,9 @@ Handle the operation inside each concurrent branch. A handler on the parent fibe
 | Diagnostic | Meaning | Fix |
 | --- | --- | --- |
 | EK2005 | A `resumeWith` program needs a service or raises an undeclared error | Read the service in the clause; raise only the operation's declared errors |
-| EK2107 | A handle clause names an operation of something that is not a control, such as a service | Provide a service with a layer or a `provide` block |
+| EK2107 | A handle clause names an operation of a non-control, such as a service | Provide a service with a layer or a `provide` block |
 | EK2108 | A handle statement leaves an operation of its control without a clause, or gives one two clauses | Add the missing clause, or remove the second |
-| EK4201 | Work sent to another fiber still requires a control operation | Handle it inside the branch, or use sequential execution where the combinator supports it |
-| EK4202 | A TypeScript function's declared requirements include a control operation | Write it in VibeLang or handle the operation inside the TypeScript implementation |
+| EK4201 | Work sent to another fiber still requires a control operation | Handle it inside the branch, or run sequentially where the combinator supports it |
+| EK4202 | A TypeScript function's declared requirements include a control operation | Write it in VibeLang, or handle the operation in the TypeScript implementation |
 
-Stream operators run a producer on its own fiber too. Handle any control requirements inside the producer before passing it to a Stream operator. See [Producers](112-producers.md).
+Stream operators also run a producer on its own fiber, so handle its control requirements inside the producer before passing it to one. See [Producers](112-producers.md).

@@ -1,6 +1,6 @@
 # Cheat sheet
 
-Every VibeLang change next to the Effect code it replaces. The left column is Effect 4 TypeScript, and the right column is VibeLang. The [specification](../../../design/src/000-intro.md) states the rules behind each change. In a `.vibe` file, the left column's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the right column where it keeps the program's meaning ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). The examples share these declarations:
+Every VibeLang change beside the Effect code it replaces: Effect 4 TypeScript in the left column, VibeLang in the right. The [specification](../../../design/src/000-intro.md) states the rules behind each. In a `.vibe` file, the left column's error classes, services, schemas, Effect types, `Effect.succeed` and `Effect.fail`, catch combinators, and `withSpan` and `provide` calls draw warnings whose quick fixes, and `vibelang --fix`, write the right column where it keeps the program's meaning ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)). The examples share these declarations:
 
 ```vibe es
 // run: Console.log(JSON.stringify([getUser("1"), getOrders("1"), handle(() => release("v1"), Approval, { approve: (_request, k) => resume(k, true) })]))
@@ -30,7 +30,7 @@ function release(version: string) {
 
 ## Types
 
-**Effect types** (D127). An empty slot is `never`. Dependencies left out are inferred from a function's body, and are `never` anywhere else.
+**Effect types** (D127). An empty slot is `never`. Omitted dependencies are inferred from a function's body, and are `never` elsewhere.
 
 ```ts effect
 type Find = (id: string) => Effect.Effect<User, NotFound>
@@ -65,7 +65,7 @@ error Missing { id: string }
 error Timeout
 ```
 
-**Services** (D128, D223). Members have no bodies, and value members are readonly.
+**Services** (D128, D223). Members have no bodies; value members are readonly.
 
 ```ts effect
 class Users extends Context.Service<Users, {
@@ -81,7 +81,7 @@ service Users {
 }
 ```
 
-**Control operations** (D128, D223). Effect has none, so the left column is VibeLang's long form.
+**Control operations** (D128, D223). Effect has none; the left column is VibeLang's long form.
 
 ```vibe long
 abstract class Review extends Control {
@@ -95,7 +95,7 @@ control Review {
 }
 ```
 
-**Layers** (D221). A layer is Effect's own call: the block after `Layer.effect(Users)` is its effect (block params, D188), its statements run once when the layer builds, and the service types the returned members. Without setup, write `Layer.succeed(Users, { ... })`.
+**Layers** (D221). A layer is Effect's own call: the block after `Layer.effect(Users)` is its effect (block params, D188), runs once when the layer builds, and returns members typed by the service. Without setup, write `Layer.succeed(Users, { ... })`.
 
 ```ts effect
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
@@ -173,12 +173,7 @@ function greetUser(id: string) {
 // Output: Ada
 ```
 
-`Effect.fn("name")(body)` adds a named tracing span. Keep that span with
-`function f(...) { return withSpan("name") { ... } }`, or
-`const f = (...) => withSpan("name") { ... }` for an object field or arrow.
-A bare function declaration uses `Effect.fnUntraced` by default and therefore
-does not preserve the original span. Put the function's work inside the
-`withSpan` block; its return value, failures, and requirements flow through.
+`Effect.fn("name")(body)` adds a named tracing span; a bare function declaration uses `Effect.fnUntraced` by default and loses it. Keep the span with `function f(...) { return withSpan("name") { ... } }`, or `const f = (...) => withSpan("name") { ... }` for an object field or arrow. Put the function's work inside the `withSpan` block; its return value, failures, and requirements flow through.
 
 **Programs passed by name** (D147). A call runs where it stands, and is passed as a program where a parameter expects one.
 
@@ -237,7 +232,7 @@ function roll(): number!! {
 // Output: 4
 ```
 
-**Catching by tag** (D216). Catch the failure and `match` on it. A match that names every failure needs no rethrow; `default: throw e` passes on the ones it does not name.
+**Catching by tag** (D216). Catch the failure and `match` on it. A match naming every failure needs no rethrow; `default: throw e` passes on the rest.
 
 ```ts effect
 const describe = (id: string) =>
@@ -277,7 +272,7 @@ function nameOrGuest(id: string) {
 // Output: ["Ada","guest"]
 ```
 
-**Catching in an expression** (D236). `x catch (e) => …` passes the failure to a handler, which can `match` on it; a match that names every failure removes them all.
+**Catching in an expression** (D236). `x catch (e) => …` passes the failure to a handler, which can `match` on it; a match naming every failure removes them all.
 
 ```ts effect
 const nameOrReason = (id: string) =>
@@ -296,7 +291,7 @@ function nameOrReason(id: string) {
 // Output: ["Ada","no user missing"]
 ```
 
-**Handling control operations** (D132). Effect has none, so the left column is VibeLang's long form.
+**Handling control operations** (D132). Effect has none; the left column is VibeLang's long form.
 
 ```vibe long
 // run: Console.log(auto("v1"))
@@ -322,7 +317,7 @@ function auto(version: string) {
 // Output: released v1
 ```
 
-**Entry point** (D135). An exported `main` runs when Node starts its module, and not when a test imports it.
+**Entry point** (D135). An exported `main` runs when Node starts its module, not when a test imports it.
 
 ```ts effect
 // main.ts
@@ -423,7 +418,7 @@ function outcome() {
 // Output: Success
 ```
 
-**Interruption** (D180). The blocks keep `return` and `break` meaning what they mean in the function; `uninterruptible(program)` also works.
+**Interruption** (D180). In the blocks, `return` and `break` keep their meaning in the function; `uninterruptible(program)` also works.
 
 ```ts effect
 const guarded = Effect.uninterruptibleMask((restore) =>
@@ -457,7 +452,7 @@ function cancellable() {
 
 ## Calls
 
-A tagged template is a call of its tag (D267). If `sql` returns an Effect, the statement ``sql`CREATE TABLE example (id TEXT)` `` runs it, and ``const rows = sql`SELECT * FROM example` `` receives its success value. Plain tags keep JavaScript behavior. A discarded structured Effect subtype, such as SQL Statement, reports EK4301: call the result explicitly, or annotate the tag as returning `Effect<A, E, R>`. A parameter that expects a program takes an Effectful template by name, just as it takes a call (D147).
+A tagged template is a call of its tag (D267). If `sql` returns an Effect, the statement ``sql`CREATE TABLE example (id TEXT)` `` runs it, and ``const rows = sql`SELECT * FROM example` `` gets its success value. Plain tags keep JavaScript behavior. Discarding a structured Effect subtype, such as SQL Statement, is EK4301: call the result explicitly, or annotate the tag as returning `Effect<A, E, R>`. A program parameter takes an Effectful template by name, as it takes a call (D147).
 
 **No imports from `effect`** (D146).
 
@@ -545,17 +540,7 @@ function findUser(users: Map<string, User>, id: string) {
 // Output: Failure
 ```
 
-In expression position, `throw` takes a unary operand (D186), so it binds
-more tightly than `===`, `??`, and `?:`. In a catch handler, write
-`load() catch (failure) => throw (cond ? a : b)` to throw the selected value.
-EK1010 refuses an unparenthesized throw expression on the left of a binary
-operator (except comma), as the condition of `?:`, or before `as` or `satisfies`.
-For example, `throw failure.code === "unknown" ? a : b` would throw only
-`failure.code`; write `throw (failure.code === "unknown" ? a : b)` instead.
-Right-hand forms such as `value ?? throw e` and `ok ? value : throw e` stay legal.
-A **throw statement** still takes the whole expression:
-`throw cond ? a : b;` at the start of a statement throws the selected value,
-as in TypeScript.
+In expression position, `throw` takes a unary operand (D186), so it binds more tightly than `===`, `??`, and `?:`: `throw failure.code === "unknown" ? a : b` would throw only `failure.code`. EK1010 refuses an unparenthesized throw expression on the left of a binary operator (except comma), as the condition of `?:`, or before `as` or `satisfies`. To throw the selected value, write `throw (failure.code === "unknown" ? a : b)`, or in a catch handler `load() catch (failure) => throw (cond ? a : b)`. Right-hand forms such as `value ?? throw e` and `ok ? value : throw e` stay legal. A **throw statement** still takes the whole expression: `throw cond ? a : b;` at the start of a statement throws the selected value, as in TypeScript.
 
 **Blocks as values** (D187, [do expressions](https://github.com/tc39/proposal-do-expressions)). The value is the last statement's.
 
@@ -618,7 +603,7 @@ it.live("finds a user") {
 // Output:
 ```
 
-`it.live` uses the live clock because this page's `getUser` sleeps. `it.effect` supplies a test clock; a test that sleeps there must advance it with `TestClock.adjust`.
+`it.live` uses the live clock, because this page's `getUser` sleeps. Under `it.effect`'s test clock, a sleeping test must advance it with `TestClock.adjust`.
 
 ## Pattern matching
 
@@ -668,7 +653,7 @@ function describeFailure(failure: NotFound | Timeout) {
 // Output: ["no user 7","retry"]
 ```
 
-**Option, Exit, and Result** (D208). The arms can run Effect functions.
+**Option, Exit, and Result** (D208). Arms can run Effect functions.
 
 ```ts effect
 const greet = (name: Option.Option<string>) =>
@@ -713,11 +698,11 @@ function firstFailure(outcome: Exit.Exit<User, NotFound>) {
 
 ## Escape hatches
 
-**Plain, self-contained TypeScript inside `sync`, `try`, and `callback`** (D148, D229-D232). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. A hatch's function reads values of the `.vibe` file only as inputs, the arguments after it, which fill its first parameters; `try`'s error mapper stays second (EK4405). `runPromise` leads back in from a hatch's body or a `.ts` file.
+**Plain, self-contained TypeScript inside `sync`, `try`, and `callback`** (D148, D229-D232). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. A hatch's function reads `.vibe` values only as inputs, the arguments after it, which fill its first parameters; `try`'s error mapper stays second (EK4405). `runPromise` leads back in from a hatch's body or a `.ts` file.
 
-**Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: a thrown `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` likewise list `URIError`. Other built-ins' exceptions are defects. A plain return annotation keeps JavaScript exceptions; if one escapes into an Effect caller, it becomes a defect (D263). This differs from a plain `JSON.parse` call inside TypeScript's `Effect.gen`, where a throw is a defect.
+**Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: its `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` list `URIError`. Other built-ins' exceptions are defects. A plain return annotation keeps JavaScript exceptions; one that escapes into an Effect caller becomes a defect (D263). Inside TypeScript's `Effect.gen`, by contrast, a plain `JSON.parse` throw is a defect.
 
-Use `try((text) => JSON.parse(text), text)` (D148) to turn any throw into an expected `Cause.UnknownError`, or supply the error mapper shown below to choose the failure type. Use `sync((text) => JSON.parse(text), text)` to keep a parse exception as a defect.
+`try((text) => JSON.parse(text), text)` (D148) turns any throw into an expected `Cause.UnknownError`; the error mapper below chooses the failure type. `sync((text) => JSON.parse(text), text)` keeps a parse exception a defect.
 
 ```ts effect
 const id = Effect.sync(() => crypto.randomUUID())
@@ -788,7 +773,7 @@ function many() {
 // Output: {"user":{"id":"1","name":"Ada"},"orders":1,"pair":{"user":{"id":"1","name":"Ada"},"orders":1}}
 ```
 
-**First success, expected outcomes** (D196, D258). `await.any` waits for the first success. `await.allSettled` returns successes and typed failures as `Result` values, rather than JavaScript's settlement objects, and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`; a cause with no typed failure still propagates. Wrap each element in `exit(...)` when every cause must become data.
+**First success, expected outcomes** (D196, D258). `await.any` waits for the first success. `await.allSettled` returns successes and typed failures as `Result` values, not JavaScript's settlement objects, and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"`; a cause with no typed failure still propagates. To make every cause data, wrap each element in `exit(...)`.
 
 ```ts effect
 const fastest = yield* Effect.raceAll([getUser("1"), getUser("2")])
