@@ -2,7 +2,7 @@
 
 #### Throwing a typed error
 
-Errors are the same tagged error classes you use today. `error InvalidId { raw: string }` declares one. It is short for `class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}`, where `TaggedError` is Effect's `Data.TaggedError`, in scope in every `.vibe` file. The tag is the class name, every field is readonly, and `error Timeout` declares an error without fields (D126). Errors that must be serialized use `Schema.TaggedError`. In an Effect function, `throw` adds the error to E.
+Errors are the tagged error classes you use today. `error InvalidId { raw: string }` is short for `class InvalidId extends TaggedError("InvalidId")<{ readonly raw: string }> {}`; `TaggedError`, Effect's `Data.TaggedError`, is in scope in every `.vibe` file. The tag is the class name, every field is readonly, and `error Timeout` declares an error without fields (D126). Errors that must be serialized use `Schema.TaggedError`. In an Effect function, `throw` adds the error to E.
 
 ```ts effect
 class InvalidId extends Data.TaggedError("InvalidId")<{ readonly raw: string }> {}
@@ -23,13 +23,13 @@ function parseId(raw: string) {
 // number!InvalidId!
 ```
 
-Errors from callees flow upward the same way. A function's E is everything it throws plus everything its callees can fail with, minus what it catches.
+Callee errors flow up the same way: a function's E is everything it throws plus everything its callees can fail with, minus what it catches.
 
-In an Effect function, any value can be thrown, and it joins E with its static type: `throw new Error("bad")` adds `Error`, and `throw "bad"` adds `string`, as `Effect.fail` would. Tagged error classes are the convention because `catch` can tell them apart with `instanceof` or `_tag`.
+In an Effect function you can throw any value; it joins E with its static type, as with `Effect.fail`: `throw new Error("bad")` adds `Error`, and `throw "bad"` adds `string`. Tagged error classes are the convention because `catch` tells them apart with `instanceof` or `_tag`.
 
 #### Catching
 
-`try`/`catch` handles typed errors. The caught value is typed as exactly the errors the `try` block can produce.
+`try`/`catch` handles typed errors. The caught value's type is exactly the errors the `try` block can produce.
 
 ```ts effect
 const lookup = Effect.fn("lookup")(function* (raw: string) {
@@ -53,7 +53,7 @@ function lookup(raw: string) {
 // User!InvalidId!Users
 ```
 
-To handle some errors and pass the rest on, catch the failure and test it with pattern matching (D216). `default: throw e` passes the rest on with their types:
+To handle some errors and pass on the rest, catch the failure and test it with pattern matching (D216); `default: throw e` passes on the rest with their types:
 
 ```ts es
 function lookupOrGuest(raw: string) {
@@ -69,11 +69,11 @@ function lookupOrGuest(raw: string) {
 // User!InvalidId!Users
 ```
 
-An arm names an error class, or several with `or`, and tests instances of it, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A `match` without `default` must handle every failure the `try` block can raise (EK4701), so a complete match needs no rethrow. In statement form, `if (e is UserNotFound) { ... }` tests one class, and TypeScript narrows `e` after it. The earlier form, a catch clause that names a type, `catch (e: UserNotFound)` (D131), still compiles but is retired: it draws the warning EK2112, whose quick fix writes the `match`.
+An arm names an error class, or several with `or`, and tests for instances, so it also matches tagged errors from other packages, such as `Schema.SchemaError`. A `match` without `default` must handle every failure the `try` block can raise (EK4701), so a complete match needs no rethrow. As a statement, `if (e is UserNotFound) { ... }` tests one class, and TypeScript narrows `e` after it. The earlier catch clause that names a type, `catch (e: UserNotFound)` (D131), still compiles but is retired: it draws warning EK2112, whose quick fix writes the `match`.
 
 #### Catching in an expression
 
-`catch` also works after an expression (D236), as Zig's inline catch does. `x catch fallback` runs `x` and, after an expected failure, evaluates the fallback instead, as `Effect.orElseSucceed` does. `x catch (e) => handler` passes the expected failure to the handler, as `Effect.catch` does:
+`catch` also works after an expression (D236), like Zig's inline catch. `x catch fallback` runs `x` and, after an expected failure, evaluates the fallback instead, like `Effect.orElseSucceed`. `x catch (e) => handler` passes the expected failure to the handler, like `Effect.catch`:
 
 ```ts es
 function nameOrGuest(id: string) {
@@ -90,11 +90,11 @@ function nameOrReason(raw: string) {
 // string!!Users
 ```
 
-The left side runs inside the catch, and the fallback runs only when the left side fails. Defects and interrupts pass through, as they pass through the statement. The value is the left side's or the handler's, and E is what the fallback or handler lets escape: the `match` above handles every failure, so none escapes, and `default: throw e` would pass the rest on. `catch` binds looser than `??` and `||` and tighter than `? :` and assignment, and it associates to the left, so `a() catch b() catch c` tries each in turn (D237). Effect's combinators still work, and a call in a program position is passed by name (D147): `Effect.catchTag(Users.find(id), "UserNotFound", () => guest)`.
+The left side runs inside the catch; the fallback runs only when it fails. Defects and interrupts pass through, as with the statement. The value is the left side's or the handler's, and E is what the fallback or handler lets escape: the `match` above handles every failure, so none escapes; `default: throw e` would pass on the rest. `catch` binds looser than `??` and `||`, tighter than `? :` and assignment, and associates left, so `a() catch b() catch c` tries each in turn (D237). Effect's combinators still work, and a call in a program position is passed by name (D147): `Effect.catchTag(Users.find(id), "UserNotFound", () => guest)`.
 
 #### Promising that nothing escapes
 
-A contract with `never` in E says every error is handled inside. The compiler checks it.
+A contract with `never` in E promises every error is handled inside, and the compiler checks it.
 
 ```ts es
 export function safeLookup(raw: string): User!!Users {
@@ -106,7 +106,7 @@ export function safeLookup(raw: string): User!!Users {
 }
 ```
 
-Remove the `try` and you get `EK2001: InvalidId can escape safeLookup` (the same error as in Chapter 2).
+Without the `try`, you get Chapter 2's error, `EK2001: InvalidId can escape safeLookup`.
 
 #### Cleanup with `finally`
 
@@ -132,7 +132,7 @@ function report(id: string) {
 }
 ```
 
-A cleanup that acquires and releases a resource is better written with `using` (Chapter 6).
+For cleanup that acquires and releases a resource, use `using` (Chapter 6).
 
 #### Failures, defects, and interruption
 
@@ -152,25 +152,25 @@ function lookupAudited(id: string) {
 }
 ```
 
-`catch` handles an expected failure only when nothing else went wrong. Here the exit carries both the `UserNotFound` and the crash, so the `catch` block does not run and the whole failure propagates, crash included. Effect's own `Effect.catch` would recover from this exit and drop the crash.
+`catch` handles an expected failure only when nothing else went wrong. Here the exit carries both the `UserNotFound` and the crash, so the `catch` block does not run and the whole failure propagates, crash included. `Effect.catch` would recover from this exit and drop the crash.
 
 | What happened | Example | In E? | Caught by `catch`? | Runs `finally`? |
 | --- | --- | --- | --- | --- |
 | Expected failure | `throw new InvalidId(…)`, a callee's E | Yes | Yes | Yes |
 | Defect: a bug | `(undefined as any).name` throws a `TypeError` | No | No | Yes |
-| Interruption | a timeout, a cancelled request, a parent shutting down | No | No | Yes |
+| Interruption | a timeout, a cancelled request, a parent shutdown | No | No | Yes |
 | An expected failure plus a defect or an interruption | `lookupAudited` above | No: E describes causes made only of expected failures, so this exit can carry a failure outside E (Chapter 14) | No: the whole exit propagates | Yes |
 | Several expected failures | both branches of `Effect.race` failed | Yes | Yes: `e` is the first | Yes |
 
-A `catch` that caught bugs or cancellation would hide them, so it does not. To deal with defects deliberately, use Effect's tools at a boundary: `Effect.catchDefect(() => risky(), …)`. To declare that an expected failure cannot happen here, turn it into a defect: `const id = Effect.orDie(() => parseId(raw))`. To see every failure in an exit, use `Effect.catchCause` or `Effect.exit`. Chapter 17 states the full rules.
+`catch` does not catch bugs or cancellation, because that would hide them. Handle defects deliberately with Effect's tools at a boundary: `Effect.catchDefect(() => risky(), …)`. To declare an expected failure impossible here, make it a defect: `const id = Effect.orDie(() => parseId(raw))`. To see every failure in an exit, use `Effect.catchCause` or `Effect.exit`. Chapter 17 states the full rules.
 
 #### Coming from `Effect.gen`
 
-Two things that look the same mean different things, on purpose.
+Two forms look the same but mean different things, on purpose.
 
 **`throw` is `Effect.fail`.** Inside `Effect.gen`, `throw new Error("unreachable")` is a defect. In an Effect function, `throw` is a typed failure: `Error` joins E, and a `catch` can handle it. To signal a bug, die explicitly: `Effect.die(new Error("unreachable"))`.
 
-**Effect `catch` sees expected failures only.** Inside `Effect.gen`, a JavaScript `catch` sees any synchronous exception from the code in its `try`. In an Effect region, an exception that no contract lists is a defect, and `catch` does not see it. A function with a plain contract keeps JavaScript catch: it receives every exception as `unknown` (D260). That covers Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, whose exceptions are defects (Chapter 10). Each has a form for code that can fail: `Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`. A try block that runs Effects with E = `never` reports EK2004, a warning by default; defects pass through its catch:
+**Effect `catch` sees expected failures only.** Inside `Effect.gen`, a JavaScript `catch` sees any synchronous exception from its `try`. In an Effect region, an exception no contract lists is a defect, and `catch` does not see it. That covers Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, whose exceptions are defects (Chapter 10); each has a form for code that can fail: `Option.getOrElse`, `Effect.fromOption`, `Schema.decodeUnknownEffect`. A function with a plain contract keeps JavaScript catch: it receives every exception as `unknown` (D260). A try block that runs Effects with E = `never` reports EK2004, a warning by default; defects pass through its catch:
 
 ```ts es
 function firstAdmin(users: ReadonlyArray<User>) {
@@ -193,7 +193,7 @@ warning EK2004: this try block runs Effects but has no expected errors; defects 
 
 #### Failing in an expression
 
-`throw` also works in expression position (D186), as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it. It fails exactly as the statement does and has type `never`:
+`throw` also works as an expression (D186), as in the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal. It fails exactly as the statement does and has type `never`:
 
 ```ts
 error NoAdmin
@@ -223,4 +223,4 @@ function firstFailure(id: string) {
 }
 ```
 
-The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case; leaving out `Timeout` above is EK4701 (D209). The same `match` handles a failure as it propagates, inside `catch (e)`, and a failure or an Exit held as a value.
+The parser writes both as conditionals TypeScript narrows, so each arm sees its own type and can call Effect functions (D214). A match without `default` over a finite union must cover every case: omitting `Timeout` above is EK4701 (D209). The same `match` handles a propagating failure, inside `catch (e)`, and a failure or Exit held as a value.

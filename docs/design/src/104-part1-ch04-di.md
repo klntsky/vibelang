@@ -1,6 +1,6 @@
 ### 4. Dependency injection: the R channel
 
-Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. VibeLang removes the ceremony and adds compile-time checks of the dependency graph.
+Dependency injection is Effect's: services are `Context` keys, implementations are `Layer`s, and `Effect.provide` supplies them. VibeLang removes the ceremony and checks the dependency graph at compile time.
 
 #### Declaring a service
 
@@ -18,13 +18,13 @@ service Users {
 }
 ```
 
-`service Users { ... }` declares a service, and it does the job of the class on the left. Its members have no bodies (D128, D223). It is short for `abstract class Users { ... }` in which every member without a body is abstract, and every value member is also readonly; static members, such as a layer, stay as written (D128). The older spelling `service class Users { ... }` still compiles, with the warning EK2120. An abstract class whose instance members are all abstract is a service whichever way it is written. The rules, each checked by the compiler:
+`service Users { ... }` declares a service that does the job of the class on the left. Its members have no bodies (D128, D223). It is short for `abstract class Users { ... }` in which every member without a body is abstract and every value member is also readonly; static members, such as a layer, stay as written (D128). The older spelling `service class Users { ... }` still compiles, with warning EK2120. An abstract class whose instance members are all abstract is a service however it is written. The compiler checks each rule:
 
 - **What makes a class a service.** In a `.vibe` file, a class is a service when it is `abstract`, has no `extends` clause and no type parameters, and every instance member is abstract: methods with full contracts, and `abstract readonly` values. Static members are allowed and stay on the class. An abstract class with a concrete instance member is an ordinary class.
 - **Identity.** Effect identifies a service by its key string, and two services with the same string silently share a slot. The compiler derives the key from the package, module path, and class name (`@acme/app/src/users#Users`) and rejects a duplicate anywhere in the program (EK3001).
-- **Each service is its own type.** TypeScript compares classes by shape, so two abstract classes with the same members would be one type: providing one would type-check as providing the other, and the program would die at run time with `Service not found`. The compiler gives every service class its own identity, as Effect's `Context.Service` classes have.
+- **Each service is its own type.** TypeScript compares classes by shape, so two abstract classes with the same members would be one type: providing one would type-check as providing the other, and the program would die at run time with `Service not found`. The compiler gives every service class its own identity, as `Context.Service` classes have.
 - **Contracts are written out.** A service has no body to infer from, so each method states its full `Effect<A, E, R>` (EK2101, Chapter 14).
-- **A service is a key, not a base class.** `extends Users` (EK3002), `new Users()` (EK3003), `instanceof Users` (EK3004), and a generic service class (EK3005) are errors. Implement a service with an object literal or with a class that `implements Users`.
+- **A service is a key, not a base class.** `extends Users` (EK3002), `new Users()` (EK3003), `instanceof Users` (EK3004), and a generic service class (EK3005) are errors. Implement a service with an object literal or a class that `implements Users`.
 
 ```text
 error EK3002: a class cannot extend a service.
@@ -32,7 +32,7 @@ error EK3002: a class cannot extend a service.
   Implement it instead:  class UsersInMemory implements Users { … }
 ```
 
-What the class compiles to:
+The class compiles to:
 
 ```ts gen
 export interface Users {
@@ -43,11 +43,11 @@ export interface Users {
 export class Users extends serviceKey<Users>("@acme/app/src/users#Users") {}
 ```
 
-TypeScript sees `Users` two ways. As a type, it is the interface, so `implements Users` and a parameter typed `db: Users` mean the methods. As a value, it is a `Context.Key`, so `Layer.succeed(Users, …)`, `Effect.provideService`, and `yield* Users` work as they do with a `Context.Service` class. The optional brand keeps two services with the same methods distinct in R. Effect's own class form cannot be the output: it makes the class's instance type the service identifier, so `implements Users` would fail with TS2720 (`prototype/esc/scratch/probe2.ts`).
+TypeScript sees `Users` two ways. As a type it is the interface, so `implements Users` and a parameter typed `db: Users` mean the methods. As a value it is a `Context.Key`, so `Layer.succeed(Users, …)`, `Effect.provideService`, and `yield* Users` work as with a `Context.Service` class. The optional brand keeps two services with the same methods distinct in R. Effect's own class form can't be the output: it makes the class's instance type the service identifier, so `implements Users` would fail with TS2720 (`prototype/esc/scratch/probe2.ts`).
 
-The syntax takes nothing away from TypeScript. Calling an abstract member through its class (`Users.find(id)`) is error TS2339 today, and calling a class without `new` (`Users()`) is TS2348, so VibeLang gives both a meaning. Fully abstract classes are also rare in ordinary code: Smithers has none in 4,461 files, and opencode has five in 3,235, whose only fully abstract one extends another class.
+The syntax takes nothing from TypeScript: calling an abstract member through its class (`Users.find(id)`) is error TS2339 today, and calling a class without `new` (`Users()`) is TS2348, so VibeLang gives both a meaning. Fully abstract classes are also rare: Smithers has none in 4,461 files, and opencode has five in 3,235, whose only fully abstract one extends another class.
 
-A `Context.Service` written in TypeScript, as a class or as a value like Effect's own `FileSystem`, is a service too, and VibeLang uses it the same way.
+A `Context.Service` written in TypeScript, as a class or as a value like Effect's `FileSystem`, is also a service, used the same way.
 
 #### Using a service
 
@@ -62,7 +62,7 @@ const user = yield* users.find(id)
 const user = Users.find(id)
 ```
 
-Calling the service itself with no arguments, `Users()`, gives you its implementation object, the equivalent of `yield* Users`. You need it inside providers, and to read a service's value members:
+Calling the service with no arguments, `Users()`, returns its implementation object, like `yield* Users`. Use it inside providers and to read a service's value members:
 
 ```ts es
 service Settings {
@@ -76,11 +76,11 @@ function apiUrl(path: string) {
 // string!!Settings
 ```
 
-Calling any member through the service looks the service up, so the service joins R whatever the member returns. `Path.join(a, b)`, from Effect's `Path` service, returns a string and still adds `Path`. A member that is itself an `Effect` value runs when called: `Terminal.readLine()`. A member the service declares wins over the key's own members, such as `pipe`, `use`, and `key`, so `Rpc.call(…)` reaches the service even though the key, a class, has a `call` of its own. A static member with the same name as a service member is EK3006.
+Calling any member through the service looks the service up, so the service joins R whatever the member returns: `Path.join(a, b)`, from Effect's `Path` service, returns a string and still adds `Path`. A member that is itself an `Effect` value runs when called: `Terminal.readLine()`. A member the service declares wins over the key's own members, such as `pipe`, `use`, and `key`, so `Rpc.call(…)` reaches the service even though the key, a class, has its own `call`. A static member named like a service member is EK3006.
 
 #### Writing a provider
 
-A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function that runs when the layer is built and returns the implementation. In VibeLang the function is a block after the call, through block params (D188): `Layer.effect(Users) { ... }` runs its statements once, when the layer is built, and returns the implementation, an object whose members the service types (D221). Without setup, write `Layer.succeed(Users, { ... })`. The older `layer UsersLive: Users { ... }` declaration (D129) still compiles, with the warning EK2121 and a quick fix that rewrites it.
+A provider is a `Layer`. Build one with Effect's own `Layer.effect`, passing a function; in VibeLang the function is a block after the call (block params, D188). `Layer.effect(Users) { ... }` runs its statements once, when the layer is built, and returns the implementation, an object whose members the service types (D221). Without setup, write `Layer.succeed(Users, { ... })`. The older `layer UsersLive: Users { ... }` declaration (D129) still compiles, with warning EK2121 and a quick fix that rewrites it.
 
 ```ts effect
 const UsersLive = Layer.effect(Users, Effect.gen(function* () {
@@ -116,7 +116,7 @@ const UsersLive = Layer.effect(Users) {
 // Layer<Users, never, Database>
 ```
 
-`Database()` runs when the layer is built and captures the implementation in `db`. `Database` is therefore a requirement of *building* `UsersLive`, not of calling `Users.find`. Code that calls `Users.find` needs only `Users`.
+`Database()` captures the implementation in `db` when the layer is built, so `Database` is a requirement of *building* `UsersLive`, not of calling `Users.find`. Code that calls `Users.find` needs only `Users`.
 
 The compiler checks each method against the service's contract. Without the `Effect.orDie`, the database's `DbError` would escape:
 
@@ -127,7 +127,7 @@ error EK2001: DbError can escape UsersLive.find, but Users.find's contract allow
   Handle it, add DbError to Users.find's contract, or make it a defect with Effect.orDie.
 ```
 
-Effect 4 code often keeps the default Layer on the service class as `static readonly layer`. A service class can do the same, because static members stay on the class:
+Effect 4 code often keeps the default Layer on the service class as `static readonly layer`. A service can too, because static members stay on the class:
 
 ```ts es
 service Users {
@@ -144,7 +144,7 @@ service Users {
 }
 ```
 
-An implementation can also be a class that `implements` the service. Its methods are VibeLang methods, checked against the service's contracts:
+An implementation can also be a class that `implements` the service; its methods are VibeLang methods, checked against the service's contracts:
 
 ```ts es
 class UsersInMemory implements Users {
@@ -196,7 +196,7 @@ function checkoutPage(cartId: string) {
 // FeatureFlags is not in R: it always has a value
 ```
 
-A service with `static readonly default` compiles to Effect's `Context.Reference`. Code that uses it never needs a provider, and `Effect.provideService(() => …, FeatureFlags, { newCheckout: true })` overrides it for a region. Effect's own `Context.Reference("app/Flag", { defaultValue: () => false })` works unchanged too, because a call that returns a service key is data (Chapter 13).
+A service with `static readonly default` compiles to Effect's `Context.Reference`. Code using it never needs a provider; `Effect.provideService(() => …, FeatureFlags, { newCheckout: true })` overrides it for a region. Effect's own `Context.Reference("app/Flag", { defaultValue: () => false })` also works unchanged, because a call that returns a service key is data (Chapter 13).
 
 #### Providers that hold resources
 
@@ -225,11 +225,11 @@ const DatabaseLive = Layer.effect(Database) {
 // Layer<Database, ConnectError, DatabaseConfig>
 ```
 
-`Postgres.connect` returns `Pool!ConnectError!Scope`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6), and `Layer.effect` supplies the layer's own Scope, as it does in Effect today. The pool therefore closes when the program that provided `DatabaseLive` finishes. Writing `using pool = …` would close it as soon as the provider function returned, before any query ran.
+`Postgres.connect` returns `Pool!ConnectError!Scope`. Without `using`, the pool belongs to whoever supplies the `Scope` (Chapter 6); `Layer.effect` supplies the layer's own Scope, as in Effect today, so the pool closes when the program that provided `DatabaseLive` finishes. `using pool = …` would close it when the provider function returned, before any query ran.
 
 #### Requirements that would leak
 
-Sometimes a method looks up another service each time it is called, instead of capturing it when the layer is built. That lookup happens in the *caller's* context, so its requirement belongs to the caller, and the service contract has to say so. The compiler catches the mismatch:
+Sometimes a method looks up another service on each call instead of capturing it when the layer is built. That lookup happens in the *caller's* context, so its requirement belongs to the caller, and the service contract must say so. The compiler catches the mismatch:
 
 ```ts es
 const UsersAudited = Layer.effect(Users) {
@@ -253,7 +253,7 @@ error EK3101: UsersAudited.find looks up Audit each time it is called, but
   or declare it:        abstract find(id: string): Effect<User, UserNotFound, Audit>
 ```
 
-Either fix is honest. Capturing makes `Audit` a requirement of building the layer. Declaring it makes every caller of `Users.find` provide `Audit`.
+Either fix is honest: capturing makes `Audit` a requirement of building the layer; declaring it makes every caller of `Users.find` provide `Audit`.
 
 #### Composing an application
 
@@ -269,7 +269,7 @@ const AppLive = wire(UsersLive, MailerLive, DatabaseLive, DatabaseConfigLive)
 // Layer<Users | Mailer | Database | DatabaseConfig, ConfigError | ConnectError, never>
 ```
 
-`wire` reads each provider's inputs and outputs from its `Layer<Out, E, In>` type, orders them, and generates the composition on the left. Its value is the errors. Today Effect reports a missing provider only as a leftover requirement where you run the program, silently picks one of two providers for the same service, and hangs on some cycles. `wire` reports all three at compile time:
+`wire` reads each provider's inputs and outputs from its `Layer<Out, E, In>` type, orders them, and generates the composition on the left. Its value is the errors: today Effect reports a missing provider only as a leftover requirement where you run the program, silently picks one of two providers for the same service, and hangs on some cycles. `wire` reports all three at compile time:
 
 ```text
 error EK3201: no provider for Smtp.
@@ -294,9 +294,9 @@ function main() {
 // void!UserNotFound | MailError | ConfigError | ConnectError!
 ```
 
-`main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error, and anything already acquired is released.
+`main`'s contract shows what providing costs: `ConfigError` and `ConnectError` come from building the layers. The layers are built when `Effect.provide` runs, shared by everything inside it, and released in reverse order when it finishes. If building a layer fails, the program fails with that error and releases anything already acquired.
 
-`provide AppLive { ... }` provides a layer to a block (D130, D172); its keyword matches `Effect.provide`. It is short for `Effect.provide(() => { ... }, AppLive)`, except that its statements are code of the enclosing function: a `return` returns from the function, and `break` and `continue` leave its loops. Its errors are the block's and the layer's, and its requirements are the block's that the layer does not provide plus the layer's own. Like `Effect.provide`, it accepts a layer, an array of layers, or a `Context`. A `with` block at a module's top level would run a program there, so it is EK1001.
+`provide AppLive { ... }` provides a layer to a block (D130, D172); the keyword matches `Effect.provide`. It is short for `Effect.provide(() => { ... }, AppLive)`, except that its statements are code of the enclosing function: `return` returns from the function, and `break` and `continue` leave its loops. Its errors are the block's and the layer's; its requirements are the block's that the layer does not provide, plus the layer's own. Like `Effect.provide`, it accepts a layer, an array of layers, or a `Context`. A `with` block at a module's top level would run a program there, so it is EK1001.
 
 ```ts es
 function main() {
@@ -306,7 +306,7 @@ function main() {
 }
 ```
 
-A provider written `Key = value` provides one service without a layer, and providers separated by commas share one block (D173). `provide AppLive, Mailer = fakeMailer { ... }` is `Effect.provide` with `[AppLive, Layer.succeed(Mailer, fakeMailer)]`, so the block's requirements drop `Mailer` as well as what `AppLive` provides. An effect module whose export of the same name is a service key stands for that key: `provide Clock = testClock` provides `Clock.Clock`, and `provide Scheduler = fifo` installs a scheduler (D174). `provide(AppLive, Mailer = fakeMailer) { ... }` means the same, as `fork(x)` means `fork x`. The analyzer reads a provider list element by element, because the list's own type merges its layers into one union, which for a layer that provides nothing collapses to `Layer<never>` (D175).
+A provider written `Key = value` provides one service without a layer, and comma-separated providers share one block (D173). `provide AppLive, Mailer = fakeMailer { ... }` is `Effect.provide` with `[AppLive, Layer.succeed(Mailer, fakeMailer)]`, so the block's requirements drop `Mailer` as well as what `AppLive` provides. An effect module whose same-named export is a service key stands for that key: `provide Clock = testClock` provides `Clock.Clock`, and `provide Scheduler = fifo` installs a scheduler (D174). `provide(AppLive, Mailer = fakeMailer) { ... }` means the same, as `fork(x)` means `fork x`. The analyzer reads a provider list element by element, because the list's own type merges its layers into one union, which collapses to `Layer<never>` for a layer that provides nothing (D175).
 
 ```ts es
 const fakeMailer = { send: (to: string, text: string) => log(`to ${to}: ${text}`) }
@@ -358,7 +358,7 @@ it.effect("welcome returns the user's name") {
 }
 ```
 
-To replace one service for part of a program, provide it around that part. The override applies only inside:
+To replace one service for part of a program, provide it around that part; the override applies only inside:
 
 ```ts es
 function welcomeQuietly(id: string) {
