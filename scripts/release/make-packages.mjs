@@ -9,6 +9,7 @@
 // The script fails unless every package version equals the compiler's own
 // version (typescript/tsc/internal/vibelang/identity.go) and every pin agrees.
 import { execFileSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -25,6 +26,16 @@ const platforms = {
   "linux-x64": ["linux", "x64"],
   "win32-arm64": ["win32", "arm64"],
   "win32-x64": ["win32", "x64"]
+}
+
+// dprint's name for each platform, for the .vibe formatter's plugin manifest (D276).
+const dprintPlatforms = {
+  "darwin-arm64": "darwin-aarch64",
+  "darwin-x64": "darwin-x86_64",
+  "linux-arm64": "linux-aarch64",
+  "linux-x64": "linux-x86_64",
+  "win32-arm64": "windows-aarch64",
+  "win32-x64": "windows-x86_64"
 }
 
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), "utf8"))
@@ -133,14 +144,14 @@ for (const [platform, [os, cpu]] of Object.entries(platforms)) {
 }
 
 // Every file the compiler package lists, except the ones this script writes.
-const compilerFiles = compiler.files.filter((file) => !["editor", "LICENSE", "NOTICE"].includes(file))
+const compilerFiles = compiler.files.filter((file) => !["editor", "dprint-plugin.json", "LICENSE", "NOTICE"].includes(file))
 const vibelangDir = stage("vibelang", [...compilerFiles.map((file) => [`packages/compiler/${file}`, file]), ["packages/compiler/package.json"]], { LICENSE: apache, NOTICE: notice })
 mkdirSync(join(vibelangDir, "editor"))
 copyFileSync(vsix, join(vibelangDir, "editor", "vibelang.vsix"))
 order.push({
   name: "vibelang",
   dir: vibelangDir,
-  required: [...compilerFiles.filter((file) => file !== "bin"), "bin/vibelang", "editor/vibelang.vsix", "LICENSE", "NOTICE"],
+  required: [...compilerFiles.filter((file) => file !== "bin"), "bin/vibelang", "editor/vibelang.vsix", "dprint-plugin.json", "LICENSE", "NOTICE"],
   forbidden: /^native\//
 })
 
@@ -179,8 +190,24 @@ order.push({
   required: ["src/index.js", "src/index.d.ts", "src/webpack.js", "src/rspack.js", "src/rollup.js", "src/rolldown.js", "src/esbuild.js", "src/bun.js", "src/vite.js", "LICENSE"]
 })
 
+// writeDprintPlugin writes vibelang's dprint plugin manifest, which dprint names
+// npm:vibelang/dprint-plugin.json: each platform's compiler is the plugin's
+// executable, fetched from its platform package and checked against the
+// checksum of the tarball packed above (D276).
+function writeDprintPlugin(dir, packed) {
+  const plugin = { schemaVersion: 2, kind: "process", name: "dprint-plugin-vibelang", version }
+  for (const [platform, [os]] of Object.entries(platforms)) {
+    const tarball = packed.find((p) => p.name === `vibelang-${platform}`)
+    const exe = os === "win32" ? "vibelang.exe" : "vibelang"
+    const checksum = createHash("sha256").update(readFileSync(join(tarballs, tarball.file))).digest("hex")
+    plugin[dprintPlatforms[platform]] = { reference: `npm:vibelang-${platform}@${version}/bin/${exe}`, checksum }
+  }
+  writeFileSync(join(dir, "dprint-plugin.json"), JSON.stringify(plugin, null, 2) + "\n")
+}
+
 const manifest = []
 for (const entry of order) {
+  if (entry.name === "vibelang") writeDprintPlugin(entry.dir, manifest)
   const [packed] = JSON.parse(execFileSync("npm", ["pack", entry.dir, "--pack-destination", tarballs, "--json", "--silent"], { encoding: "utf8" }))
   const paths = new Map(packed.files.map((file) => [file.path, file]))
   for (const required of entry.required) {

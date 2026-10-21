@@ -29,7 +29,7 @@ Add `vibe` to `includes` and the plugin `npm:vibelang/dprint-plugin.json` to `pl
 }
 ```
 
-dprint finds the plugin in `node_modules/vibelang` from the directory of `dprint.json`, so the configuration needs no checksum for it. The TypeScript plugin must be listed too: the VibeLang plugin formats with it. The plugin has no settings of its own; put style settings under `typescript`.
+dprint finds the plugin in `node_modules/vibelang` from the directory of `dprint.json`, so the configuration needs no checksum for it. The plugin's executable is the native compiler: the manifest names the platform package that holds it, such as `vibelang-linux-x64`, with the checksum of that package's tarball, and dprint downloads the tarball from the npm registry once, checks it, and caches it. The TypeScript plugin must be listed too: the VibeLang plugin formats with it. The plugin has no settings of its own; put style settings under `typescript`.
 
 ## 3. Format and check
 

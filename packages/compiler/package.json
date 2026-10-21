@@ -12,7 +12,7 @@
     "./register": "./register.mjs"
   },
   "bin": { "vibelang": "bin/vibelang" },
-  "files": ["bin", "editor", "project.mjs", "project.d.mts", "register.mjs", "README.md", "LICENSE", "NOTICE"],
+  "files": ["bin", "editor", "dprint-plugin.json", "project.mjs", "project.d.mts", "register.mjs", "README.md", "LICENSE", "NOTICE"],
   "scripts": { "test": "node --test test/*.test.mjs" },
   "optionalDependencies": {
     "vibelang-darwin-arm64": "0.0.2",

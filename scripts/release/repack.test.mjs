@@ -8,7 +8,7 @@ import { join } from "node:path"
 import { test } from "node:test"
 import { repack } from "./repack.mjs"
 
-function fixture(t) {
+function fixture(t, options = {}) {
   const scratch = mkdtempSync(join(tmpdir(), "vibelang-repack-test-"))
   t.after(() => rmSync(scratch, { recursive: true, force: true }))
   const source = join(scratch, "source")
@@ -19,7 +19,7 @@ function fixture(t) {
   const platforms = ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "win32-arm64", "win32-x64"]
   const pkg = {
     name: "vibelang", version: "0.0.1", bin: { vibelang: "bin/vibelang" },
-    files: ["bin", "editor", "LICENSE", "NOTICE", "README.md"],
+    files: ["bin", "editor", "LICENSE", "NOTICE", "README.md", ...(options.plugin ? ["dprint-plugin.json"] : [])],
     scripts: { prepack: "node -e 'process.exit(80)'" },
     optionalDependencies: Object.fromEntries(platforms.map((p) => [`vibelang-${p}`, "0.0.1"]))
   }
@@ -28,6 +28,12 @@ function fixture(t) {
     writeFileSync(join(source, path), content)
   }
   chmodSync(join(source, "bin/vibelang"), 0o755)
+  if (options.plugin) {
+    const dprintNames = { "darwin-arm64": "darwin-aarch64", "darwin-x64": "darwin-x86_64", "linux-arm64": "linux-aarch64", "linux-x64": "linux-x86_64", "win32-arm64": "windows-aarch64", "win32-x64": "windows-x86_64" }
+    const plugin = { schemaVersion: 2, kind: "process", name: "dprint-plugin-vibelang", version: "0.0.1" }
+    for (const p of platforms) plugin[dprintNames[p]] = { reference: `npm:vibelang-${p}@0.0.1/bin/${p.startsWith("win32") ? "vibelang.exe" : "vibelang"}`, checksum: "0".repeat(64) }
+    writeFileSync(join(source, "dprint-plugin.json"), JSON.stringify(plugin, null, 2) + "\n")
+  }
   const [packed] = JSON.parse(execFileSync("npm", ["pack", source, "--pack-destination", tarballs, "--ignore-scripts", "--json", "--silent"], { encoding: "utf8" }))
   const packages = platforms.map((p) => `vibelang-${p}`).concat("vibelang-runtime", "vibelang-vite", "create-vibelang").map((name) => {
     const file = `${name}-0.0.1.tgz`
@@ -66,6 +72,16 @@ test("win32 repack changes only package.json, records sha256, and preserves the 
   repack(tarballs, "win32")
   assert.deepEqual(readFileSync(join(tarballs, entry.file)), after)
   assert.deepEqual(readFileSync(join(tarballs, "manifest.json")), afterManifest)
+})
+
+test("win32 repack drops the skipped platforms from the dprint plugin manifest", (t) => {
+  const { tarballs, entry } = fixture(t, { plugin: true })
+  repack(tarballs, "win32")
+  const plugin = JSON.parse(archiveFile(tarballs, "dprint-plugin.json"))
+  assert.deepEqual(Object.keys(plugin).sort(), ["darwin-aarch64", "darwin-x86_64", "kind", "linux-aarch64", "linux-x86_64", "name", "schemaVersion", "version"])
+  assert.equal(plugin["linux-x86_64"].reference, "npm:vibelang-linux-x64@0.0.1/bin/vibelang")
+  assert.equal(JSON.parse(archiveFile(tarballs, "package.json")).name, entry.name)
+  assert.equal(archiveFile(tarballs, "bin/vibelang").toString(), "#!/usr/bin/env node\nconsole.log('unchanged launcher')\n")
 })
 
 test("empty and unmatched skip patterns leave tarball and manifest byte-identical", (t) => {

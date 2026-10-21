@@ -1,6 +1,7 @@
 // Local release assembly only: npm pack runs, npm publish never does.
 import assert from "node:assert/strict"
 import { execFileSync, spawnSync } from "node:child_process"
+import { createHash } from "node:crypto"
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
@@ -74,6 +75,19 @@ test("assembles every package in publish order with pinned versions, platform bi
     assert.deepEqual(archive(root, name, `bin/${exe}`), readFileSync(join(root, "dist-npm/bin", platform, exe)))
     const mode = execFileSync("tar", ["-tvzf", join(root, "dist-npm/tarballs", `${name}-${manifest.version}.tgz`)], { encoding: "utf8" })
     assert.match(mode, /-rwxr-xr-x/)
+  }
+  const plugin = JSON.parse(archive(root, "vibelang", "dprint-plugin.json"))
+  assert.equal(plugin.kind, "process")
+  assert.equal(plugin.name, "dprint-plugin-vibelang")
+  assert.equal(plugin.version, manifest.version)
+  const dprintNames = { "darwin-arm64": "darwin-aarch64", "darwin-x64": "darwin-x86_64", "linux-arm64": "linux-aarch64", "linux-x64": "linux-x86_64", "win32-arm64": "windows-aarch64", "win32-x64": "windows-x86_64" }
+  for (const platform of platforms) {
+    const exe = platform.startsWith("win32") ? "vibelang.exe" : "vibelang"
+    const tarball = readFileSync(join(root, "dist-npm/tarballs", `vibelang-${platform}-${manifest.version}.tgz`))
+    assert.deepEqual(plugin[dprintNames[platform]], {
+      reference: `npm:vibelang-${platform}@${manifest.version}/bin/${exe}`,
+      checksum: createHash("sha256").update(tarball).digest("hex")
+    })
   }
   const launcherFiles = execFileSync("tar", ["-tzf", join(root, "dist-npm/tarballs", `vibelang-${manifest.version}.tgz`)], { encoding: "utf8" })
   assert.doesNotMatch(launcherFiles, /package\/native\//)

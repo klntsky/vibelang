@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // Repack only vibelang's existing tarball when VIBELANG_SKIP leaves platforms out.
-// No build or staging tree is used. All payloads except package.json must stay
+// No build or staging tree is used. All payloads except package.json and the
+// dprint plugin manifest, which lose the skipped platforms, must stay
 // byte-identical, including the launcher and the packaged editor extension.
 //
 //   VIBELANG_SKIP=win32 node scripts/release/repack.mjs [tarball-directory]
 import { deepStrictEqual } from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
-import { lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, renameSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, renameSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -42,6 +43,15 @@ export function repack(tarballs, skip = process.env.VIBELANG_SKIP ?? "") {
     for (const name of removed) delete pkg.optionalDependencies[name]
     if (removed.length) {
       writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + "\n")
+      const pluginPath = join(dir, "dprint-plugin.json")
+      if (existsSync(pluginPath)) {
+        // dprint must not fetch a platform package that is not published.
+        const plugin = JSON.parse(readFileSync(pluginPath, "utf8"))
+        for (const key of Object.keys(plugin)) {
+          if (removed.some((name) => plugin[key]?.reference?.startsWith(`npm:${name}@`))) delete plugin[key]
+        }
+        writeFileSync(pluginPath, JSON.stringify(plugin, null, 2) + "\n")
+      }
       const expected = payload(dir)
       const packedDir = join(scratch, "packed")
       mkdirSync(packedDir)
