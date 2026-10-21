@@ -57,9 +57,10 @@ func prefix(fileName string, err error) error {
 
 // SameProgram reports how after, a .vibe file, differs from before as a
 // program: its syntax tree and the tree of each module declaration's body,
-// ignoring parentheses, the order of imports and of export declarations, and
-// the order of import and export specifiers, which a formatter may change. It
-// returns nil when they are the same.
+// ignoring parentheses, the braces around a single statement that is the
+// body of an if, else, or loop, the order of imports and of export
+// declarations, and the order of import and export specifiers, which a
+// formatter may change. It returns nil when they are the same.
 func SameProgram(before, after string) error {
 	a := parser.ParseSourceFile(vibeOptions, before, core.ScriptKindTS)
 	b := parser.ParseSourceFile(vibeOptions, after, core.ScriptKindTS)
@@ -112,7 +113,7 @@ func (c *comparer) same(a, b *ast.Node) error {
 			return c.differ(a, fmt.Sprintf("operator %v became %v", operator(a), operator(b)))
 		}
 	}
-	aChildren, bChildren := children(a), children(b)
+	aChildren, bChildren := unbraced(a, children(a)), unbraced(b, children(b))
 	if len(aChildren) != len(bChildren) {
 		return c.differ(a, fmt.Sprintf("%v has %d children, then %d", a.Kind, len(aChildren), len(bChildren)))
 	}
@@ -159,6 +160,28 @@ func children(node *ast.Node) []*ast.Node {
 		result = append(result, child)
 		return false
 	})
+	return result
+}
+
+// unbraced returns the children of node, replacing a block that holds one
+// statement with the statement when it is the body of an if, else, or loop,
+// which dprint's useBraces settings write with or without braces. A
+// declaration keeps its block, which scopes it.
+func unbraced(node *ast.Node, nodes []*ast.Node) []*ast.Node {
+	switch node.Kind {
+	case ast.KindIfStatement, ast.KindForStatement, ast.KindForInStatement, ast.KindForOfStatement, ast.KindWhileStatement, ast.KindDoStatement:
+	default:
+		return nodes
+	}
+	result := slices.Clone(nodes)
+	for i, child := range result {
+		if child.Kind != ast.KindBlock {
+			continue
+		}
+		if statements := child.AsBlock().Statements.Nodes; len(statements) == 1 && statements[0].Kind != ast.KindVariableStatement && !ast.IsDeclarationStatement(statements[0]) {
+			result[i] = statements[0]
+		}
+	}
 	return result
 }
 

@@ -425,6 +425,9 @@ func TestSameProgram(t *testing.T) {
 		{"module body", "module text {\n  export const v = a + b\n}\n", "module text {\n  export const v = a - b\n}\n", "module text: 2:20: operator"},
 		{"module body syntax", "module text {\n  export const v = 1\n}\n", "module text {\n  export const v = (\n}\n", "module text: vibelang format: 2:21"},
 		{"module reference", "import { a } from text\n", "import { a } from texts\n", "1:19: \"./vibelang-format.vibe.text.js\" became"},
+		{"braces around an if's statement", "function f(x: number) {\n  if (x > 1) { return x } else { return 0 }\n  for (const y of [x]) { log(y) }\n}\n", "function f(x: number) {\n  if (x > 1) return x\n  else return 0\n  for (const y of [x]) log(y)\n}\n", ""},
+		{"braces that keep an else with its if", "if (a) { if (b) f() } else g()\n", "if (a) if (b) f()\nelse g()\n", "1:1: KindIfStatement has 3 children, then 2"},
+		{"braces around a declaration", "if (a) { function f() {} }\n", "if (a) function f() {}\n", "1:8: KindBlock became KindFunctionDeclaration"},
 		{"exports across a statement", "export * from \"./b\"\nconst x = 1\nexport * from \"./a\"\n", "export * from \"./a\"\nconst x = 1\nexport * from \"./b\"\n", "1:15:"},
 	}
 	for _, c := range cases {
@@ -443,7 +446,7 @@ func TestSameProgram(t *testing.T) {
 // indented one level inside the braces.
 func TestFormatModuleBodyAsTypeScript(t *testing.T) {
 	formatter := dprintFormatter(t)
-	body := "import { b } from './b.ts'\nimport { a } from \"a\"\n\n  export function f(x: number) { return x > 1 ? [a, b] : [] }\nexport type T = { x: number, y: string }\n"
+	body := "import { b } from './b.ts'\nimport { a } from \"a\"\n\n  export function f(x: number) { if (x > 1) { return [a, b] } return [] }\nexport type T = { x: number, y: string }\n"
 	alone, err := formatter(body)
 	if err != nil {
 		t.Fatal(err)
