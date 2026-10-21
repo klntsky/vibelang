@@ -20,7 +20,7 @@ export default defineConfig({ plugins: [vibelang()] })
 The plugin compiles the project `tsconfig.json` describes, with its options and diagnostics. Check three things:
 
 1. `compilerOptions` sets `"rewriteRelativeImportExtensions": true`. Without it, a `.ts` file that imports `./greet.vibe` fails with TS5097. `"allowImportingTsExtensions": true` alone fails with TS5096, because the plugin emits JavaScript.
-2. `include` selects the app's `.vibe` files under Vite's root. A `.vibe` file outside the root, such as a workspace package's source that the app imports by name, compiles with the nearest `tsconfig.json` above it instead: that package's own project.
+2. `include` selects the app's `.vibe` files under Vite's root. A `.vibe` file of another workspace package, such as one the app imports by name, compiles with the nearest `tsconfig.json` above it instead: that package's own project. This holds outside the root and for a package nested inside it, one with its own `package.json` and `tsconfig.json`.
 3. If `tsconfig.json` has `"files": []` and only lists `references`, as Vite's templates do, pass the referenced configuration that includes `src` to the plugin, for example `vibelang({ project: "tsconfig.app.json" })`.
 
 ## 3. Add a first module

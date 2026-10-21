@@ -198,9 +198,10 @@ const failed = "throw new Error(\"vibelang: this module did not compile; see the
 
 /**
  * projects compiles .vibe modules for a bundler, one whole-project compile per
- * tsconfig. A module inside root belongs to `project`; one outside it, such as
- * the source of a workspace package another package imports, belongs to the
- * nearest tsconfig.json above it, its own package's project. Each project
+ * tsconfig. A module inside root belongs to `project`; one of another
+ * workspace package, outside root or nested inside it with its own package.json
+ * and tsconfig.json, belongs to the nearest tsconfig.json above it, its own
+ * package's project. Each project
  * compiles once per revision; invalidate() starts a new revision.
  *
  * load(file) resolves to { project, code, map, inputs, errors, warnings, first, error }.
@@ -214,8 +215,16 @@ export function projects({ root, project, compiler, debug = () => {} }) {
 
   function projectOf(file) {
     const path = relative(root, file)
-    if (!path.startsWith("..") && !isAbsolute(path)) return project
-    return nearestProject(file) ?? project
+    if (path.startsWith("..") || isAbsolute(path)) return nearestProject(file) ?? project
+    // A workspace package nested inside root, such as packages/a/b inside
+    // packages/a, compiles with its own tsconfig.json: the innermost package.json
+    // below root, with a tsconfig.json between it and the module.
+    for (let directory = dirname(file); directory !== root && dirname(directory) !== directory; directory = dirname(directory)) {
+      if (!existsSync(join(directory, "package.json"))) continue
+      const own = nearestProject(file)
+      return own !== undefined && !relative(directory, own).startsWith("..") ? own : project
+    }
+    return project
   }
 
   function stateOf(tsconfig) {

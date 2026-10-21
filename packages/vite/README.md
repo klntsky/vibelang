@@ -35,10 +35,12 @@ uses the same compiler options and diagnostics as `vibelang -p tsconfig.json`.
 Import local sources as `./welcome.vibe`; imports `vibelang` rewrites to
 `./welcome.js` resolve back to `welcome.vibe` in Vite's module graph.
 
-A `.vibe` module outside Vite's root, such as the source of a workspace package
-that your app or test imports by name, compiles with the nearest
-`tsconfig.json` above it: its own package's project, with that package's
-settings. Each project compiles once, and again after an edit.
+A `.vibe` module of another workspace package, such as one that your app or
+test imports by name, compiles with the nearest `tsconfig.json` above it: its
+own package's project, with that package's settings. That holds outside Vite's
+root and for a package nested inside it, a directory with its own
+`package.json` and `tsconfig.json`. Each project compiles once, and again after
+an edit.
 
 Set `"rewriteRelativeImportExtensions": true` in `compilerOptions`. Without it,
 a `.ts` file that imports `./welcome.vibe` fails with TS5097, and

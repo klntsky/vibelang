@@ -128,7 +128,14 @@ process.exit(spawnSync(${JSON.stringify(native)}, args, { stdio: "inherit" }).st
     "dep/package.json": '{"type":"module"}',
     "dep/tsconfig.json": tsconfig,
     "dep/src/lib.vibe": "export function shout(text: string): string { return text.toUpperCase() }\n",
-    "dep/stray.vibe": "export const stray: number = 1\n"
+    "dep/stray.vibe": "export const stray: number = 1\n",
+    // A workspace package nested inside the app's directory, as packages/a/b
+    // sits inside packages/a, with its own project.
+    "app/packages/inner/package.json": '{"type":"module"}',
+    "app/packages/inner/tsconfig.json": tsconfig,
+    "app/packages/inner/src/inner.vibe": "export const fromInner: string = \"inner\"\n",
+    // A nested package without a tsconfig.json of its own, such as a test fixture.
+    "app/fixtures/plain/package.json": '{"type":"module"}'
   })) {
     mkdirSync(dirname(join(root, path)), { recursive: true })
     writeFileSync(join(root, path), text)
@@ -157,6 +164,20 @@ test("a module outside root compiles with its own package's project, once per re
   modules.invalidate()
   await modules.load(join(root, "dep/src/lib.vibe"))
   assert.deepEqual(compiles().slice(2), [join(root, "dep/tsconfig.json")], "a new revision compiles only the project asked for")
+})
+
+test("a module of a package nested inside root compiles with that package's own project", { skip }, async (t) => {
+  const { app, compiler, compiles } = workspace(t)
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler })
+  const inner = await modules.load(join(app, "packages/inner/src/inner.vibe"))
+  assert.equal(inner.project, join(app, "packages/inner/tsconfig.json"))
+  assert.match(inner.code, /fromInner = "inner"/)
+  assert.deepEqual([inner.errors, inner.error], [[], false])
+  assert.ok(inner.map.sources.includes(join(app, "packages/inner/src/inner.vibe")))
+  assert.deepEqual(compiles(), [join(app, "packages/inner/tsconfig.json")])
+  // Root's own directories, and a nested package without a project of its own, stay in root's project.
+  assert.equal(modules.projectOf(join(app, "src/deep/main.vibe")), join(app, "tsconfig.json"))
+  assert.equal(modules.projectOf(join(app, "fixtures/plain/thing.vibe")), join(app, "tsconfig.json"))
 })
 
 test("a failed compile marks its first module, and a module no project includes names the project it tried", { skip }, async (t) => {

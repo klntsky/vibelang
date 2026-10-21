@@ -49,10 +49,11 @@ rewrites those imports to `./welcome.js` and `./config.js`; the plugin resolves
 them back to `welcome.vibe` and `config.ts`. The plugin compiles only `.vibe`
 modules; `.ts` files go through your bundler's usual TypeScript support.
 
-A `.vibe` module outside `root`, such as the source of a workspace package that
-your app imports by name, compiles with the nearest `tsconfig.json` above it:
-its own package's project, with that package's settings. Each project compiles
-once per build or watch rebuild.
+A `.vibe` module of another workspace package, such as one that your app
+imports by name, compiles with the nearest `tsconfig.json` above it: its own
+package's project, with that package's settings. That holds outside `root` and
+for a package nested inside it, a directory with its own `package.json` and
+`tsconfig.json`. Each project compiles once per build or watch rebuild.
 
 ## Options
 

@@ -68,11 +68,12 @@ with `.vibe` lines. It needs Node 22.15 or later, for `module.registerHooks`.
 ## Compile projects from a tool
 
 `vibelang/project` is the whole-project compile that `vibelang-vite`,
-`vibelang-unplugin`, and `vibelang/register` share.
-`projects({ root, project, compiler })` serves each `.vibe` module from one
-compile per tsconfig: a module inside `root` belongs to `project`; one outside
-it, such as the source of a workspace package another package imports, belongs
-to the nearest `tsconfig.json` above it. `load(file)` returns the module's
+`vibelang-unplugin`, and `vibelang/register` share. `projects({ root, project,
+compiler })` serves each `.vibe` module from one compile per tsconfig: a module
+inside `root` belongs to `project`; one of another workspace package, such as a
+package another package imports, belongs to the nearest `tsconfig.json` above
+it. Another package is one outside `root`, or one nested inside it with its own
+`package.json` and `tsconfig.json`. `load(file)` returns the module's
 JavaScript, its source map, and its project's diagnostics; `invalidate()` makes
 every project compile again on its next load.
 
