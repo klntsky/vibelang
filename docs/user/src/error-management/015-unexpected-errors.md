@@ -1,6 +1,6 @@
 # Unexpected Errors
 
-Defects report bugs and broken invariants outside the typed error contract. Keep domain recovery focused on expected errors, and inspect defects at a boundary that can report or isolate the failed operation.
+Defects report bugs and broken invariants, outside the typed error contract. Domain recovery handles expected errors; inspect defects at a boundary that can report or isolate the failed operation.
 
 [Upstream page](https://effect.website/docs/v4/error-management/unexpected-errors)
 
@@ -20,7 +20,7 @@ start
 true
 ```
 
-`Effect.die` terminates the computation with a defect. Prefer an `Error` with a useful message, so diagnostics include its stack. A JavaScript exception that no contract lists is also a defect; an explicit `throw` in an Effect function, including `throw new Error(...)`, is a typed failure. In a plain-contract function it is a JavaScript exception; it becomes a defect only if it escapes into Effect code (D263).
+`Effect.die` terminates the computation with a defect, preferably an `Error` with a useful message so diagnostics include its stack. A JavaScript exception no contract lists is also a defect. An explicit `throw` in an Effect function, even `throw new Error(...)`, is a typed failure; in a plain-contract function it is a JavaScript exception, a defect only if it escapes into Effect code (D263).
 
 ```vibe
 // run: Console.log(firstLabel(["one"])); Console.log(firstLabel([]))
@@ -38,7 +38,7 @@ one
 No label
 ```
 
-`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, so ordinary catch does not see them. A try block that runs Effects with E = `never` gets warning EK2004 by default; defects pass through its catch. Use a typed form such as `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect` when callers need recovery. A JavaScript catch inside `Effect.gen` can see synchronous exceptions; an Effect catch in `.vibe` follows the expected-failure contract. A plain-contract function keeps JavaScript catch and receives every exception as `unknown` (D260).
+`Option.getOrThrow` and `Schema.decodeUnknownSync` are trusted calls whose exceptions are defects, which ordinary catch doesn't see. A try block that runs Effects with E = `never` gets warning EK2004 by default; defects pass through its catch. When callers need recovery, use a typed form: `Effect.fromOption`, as above, or `Schema.decodeUnknownEffect`. A JavaScript catch inside `Effect.gen` sees synchronous exceptions; an Effect catch in `.vibe` follows the expected-failure contract. A plain-contract function keeps JavaScript catch, which receives every exception as `unknown` (D260).
 
 ## Promoting typed failures to defects
 
@@ -69,7 +69,7 @@ true
 true
 ```
 
-`orDie` removes `E` by moving typed failures into defect reasons. This changes what callers can recover from; use it where a failure violates a required invariant. Map the error before promotion when the defect needs a clearer message.
+`orDie` removes `E` by moving typed failures into defect reasons, which callers can't recover from; use it where a failure violates a required invariant. For a clearer defect message, map the error first.
 
 ## Examining complete execution results
 
@@ -88,9 +88,9 @@ function inspectStartup() {
 startup defect
 ```
 
-`Effect.exit` returns `Exit<A, E>` as a successful value. A failure exit retains the full cause, including defects, interruption reasons, and combinations of reasons. This is broader than `Effect.result`, which exposes domain failures only; capturing an exit does not make an externally cancelled fiber immune to cancellation.
+`Effect.exit` succeeds with an `Exit<A, E>`. A failure exit keeps the full cause: defects, interruption reasons, and combinations of reasons. `Effect.result` exposes domain failures only. Capturing an exit doesn't make an externally cancelled fiber immune to cancellation.
 
-An `Exit` stays data when returned by a call. Constructing one with `Exit.succeed(value)` does not run it; calling a held exit runs that outcome.
+An `Exit` returned by a call stays data, and `Exit.succeed(value)` constructs one without running it; calling a held exit runs that outcome.
 
 ## Recovering defects at a boundary
 
@@ -113,7 +113,7 @@ Decoder disabled after an invariant failure
 disabled
 ```
 
-`catchDefect` selects a defect and runs recovery; a cause with no defect propagates. On a mixed cause, recovery can consume the accompanying failures or interruption too, so use `catchCause` when every reason must inform that decision. Reraise defects you do not recognize. Effect `try`/`catch` does not intercept a defect, even if the defect value is an instance of a domain error class.
+`catchDefect` selects a defect and runs recovery; a cause with no defect propagates. On a mixed cause, recovery can also consume the accompanying failures or interruption, so use `catchCause` when every reason must inform the decision. Reraise defects you don't recognize. Effect `try`/`catch` never intercepts a defect, even one that is an instance of a domain error class.
 
 ## Recovering a complete cause
 
@@ -138,4 +138,4 @@ Decoder failed ["Die"]
 disabled
 ```
 
-`exit(program)` returns the whole outcome, as `Effect.exit` does, so a `Failure` exit's cause holds every reason: failures, defects, and interruption that ordinary catch clauses leave alone. Test it with `is` or `match` on `Exit.Success` and `Exit.Failure`. `throw cause` restores the original failure, every reason included, as `Effect.failCause` does, instead of turning the cause object into a typed error. Inspect every reason before recovering from a mixed cause, and preserve cancellation when the boundary has no reason to consume it.
+`exit(program)` returns the whole outcome, as `Effect.exit` does: a `Failure` exit's cause holds every reason, including the failures, defects, and interruption that ordinary catch leaves alone. Test it with `is` or `match` on `Exit.Success` and `Exit.Failure`. `throw cause` restores the original failure with every reason, as `Effect.failCause` does; it doesn't make the cause object a typed error. Inspect every reason before recovering from a mixed cause, and preserve cancellation unless the boundary has a reason to consume it.

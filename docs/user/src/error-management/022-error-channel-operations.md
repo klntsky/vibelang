@@ -1,6 +1,6 @@
 # Error Channel Operations
 
-Error-channel operations transform, observe, or expose failures without immediately replacing the whole computation. Ordinary statements remain useful for local validation and selective recovery.
+Error-channel operations transform, observe, or expose failures without immediately replacing the whole computation. Ordinary statements still suit local validation and selective recovery.
 
 [Upstream page](https://effect.website/docs/v4/error-management/error-channel-operations)
 
@@ -41,11 +41,11 @@ Quantity must be positive: 0
 Rejected quantity 0
 ```
 
-`mapError` changes `E` and preserves successes. `mapBoth` maps each outcome channel separately; it does not turn failures into successes. The callbacks must be eligible synchronous functions; use a catch block or an effectful operator when a transformation needs Effect operations.
+`mapError` changes `E` and preserves successes. `mapBoth` maps each outcome channel separately; failures stay failures. The callbacks must be eligible synchronous functions; for a transformation that needs Effect operations, use a catch block or an effectful operator.
 
-These combinators keep Effect's own failure-selection policy: when a mixed cause contains an expected failure, mapping it can discard the other reasons. Ordinary catch maps only causes made entirely of expected failures and preserves mixed causes intact.
+These combinators keep Effect's own failure-selection policy: mapping a mixed cause that contains an expected failure can discard the other reasons. Ordinary catch maps only causes made entirely of expected failures and leaves mixed causes intact.
 
-`mapErrorEager` and `mapBothEager` are eager optimization variants. They preserve the same channel distinction and are not substitutes for effectful callbacks.
+`mapErrorEager` and `mapBothEager` are eager optimization variants with the same channel distinction, not substitutes for effectful callbacks.
 
 ## Rejecting successes with a predicate
 
@@ -75,9 +75,9 @@ Maximum is 20; received 21
 InvalidQuantity
 ```
 
-`filterOrFail` keeps a success that passes the predicate and otherwise adds the generated error to `E`. A type guard can narrow the success type. `filterOrElse` runs a replacement computation on a rejected success, so that branch can use services or fail.
+`filterOrFail` keeps a success that passes the predicate and otherwise adds the generated error to `E`; a type guard can narrow the success type. `filterOrElse` runs a replacement computation on a rejected success, so that branch can use services or fail.
 
-A normal `if` followed by `throw` is the statement form. Neither form changes existing failures from the source.
+The statement form is an `if` followed by `throw`. Neither form changes the source's existing failures.
 
 ## Observing errors, tags, causes, and defects
 
@@ -110,9 +110,9 @@ Inventory defect recorded
 true
 ```
 
-`tapError` observes typed errors, and `tapErrorTag` selects a tagged member without handling it. `tapCause` sees the full cause, including interruption and combined reasons; `tapDefect` observes defect values. On a successful observation, the original outcome propagates.
+`tapError` observes typed errors; `tapErrorTag` selects a tagged member without handling it; `tapCause` sees the full cause, interruption and combined reasons included; `tapDefect` observes defect values. After a successful observation, the original outcome propagates.
 
-If observation fails, its failure can change the resulting cause, so use observation code that cannot fail when preserving the original outcome matters. Log diagnostic fields rather than entire customer values or credentials. A catch block that logs and rethrows is useful for local typed error observation.
+A failing observation can change the resulting cause, so observe with code that can't fail when preserving the original outcome matters. Log diagnostic fields, not entire customer values or credentials. For local typed error observation, a catch block can log and rethrow.
 
 ## Exposing failures as successes
 
@@ -141,7 +141,7 @@ function quantityOrErrorValue(value: number) {
 InvalidQuantity
 ```
 
-`result` exposes typed errors as `Result` data; `exit` captures the complete outcome with its cause. The last example instead puts either the original number or the original error directly into one success union. Removing `E` this way does not mean an error has been resolved at the application level.
+`result` exposes typed errors as `Result` data; `exit` captures the complete outcome with its cause. The last example puts the original number or error directly into one success union; removing `E` this way doesn't resolve the error at the application level.
 
 ## Swapping channels
 
@@ -157,4 +157,4 @@ function rejectedQuantity() {
 InvalidQuantity
 ```
 
-`flip` makes typed errors successful values and successful values typed failures. A cause without an expected failure still propagates; a mixed cause containing one can become a success and lose its other reasons. This is useful for inspecting an error in a focused test, while `mapError` and catch usually express production transformations more clearly.
+`flip` swaps typed errors and successful values. A cause without an expected failure still propagates; a mixed cause containing one can become a success and lose its other reasons. Use it to inspect an error in a focused test; `mapError` and catch usually express production transformations more clearly.

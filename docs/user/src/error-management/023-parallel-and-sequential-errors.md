@@ -1,6 +1,6 @@
 # Parallel and Sequential Errors
 
-An operation can stop for several reasons: concurrent work can fail together, or cleanup can fail after the main operation. Effect 4 retains those reasons in one flat cause.
+An operation can stop for several reasons: concurrent work can fail together, or cleanup can fail after the main operation. Effect 4 keeps them in one flat cause.
 
 [Upstream page](https://effect.website/docs/v4/error-management/parallel-and-sequential-errors)
 
@@ -19,7 +19,7 @@ function failureKinds() {
 ["Fail","Die"]
 ```
 
-A `Cause.Cause<E>` contains a readonly array of `Cause.Reason<E>`. Each reason is `Fail` with an `error`, `Die` with a `defect`, or `Interrupt` with interruption information. There is no separate sequential or parallel tree to traverse.
+A `Cause.Cause<E>` holds a readonly array of `Cause.Reason<E>`, each `Fail` with an `error`, `Die` with a `defect`, or `Interrupt` with interruption information. There is no sequential or parallel tree to traverse.
 
 ## Combining concurrent or sequential reasons
 
@@ -50,11 +50,11 @@ function inspectDelivery() {
 {"expected":true,"defective":true,"interrupted":false}
 ```
 
-Cleanup failure is retained alongside the original failure. Concurrent combinators normally stop after a failure and interrupt siblings, but overlapping failures can still contribute several reasons. Their flat representation does not preserve a causal tree or prove which task completed first.
+A cleanup failure is kept beside the original failure. Concurrent combinators normally stop after a failure and interrupt siblings, but overlapping failures can still add several reasons. The flat representation keeps no causal tree and doesn't prove which task completed first.
 
-Ordinary `catch` does not recover a mixed cause containing a defect or interruption, even when a typed failure is present. Use `Effect.exit` or `Effect.catchCause` to examine the whole outcome. `Cause.findError` and `Cause.findDefect` return a `Result` for extracting one matching value; inspect `reasons` when all values matter.
+Ordinary `catch` doesn't recover a mixed cause containing a defect or interruption, even with a typed failure present; `Effect.exit` or `Effect.catchCause` examines the whole outcome. `Cause.findError` and `Cause.findDefect` return a `Result` holding one matching value; inspect `reasons` when all values matter.
 
-When every reason is an expected failure, ordinary catch receives the first failure and handles the cause as a whole. For example, if both programs passed to `Effect.race` fail, catch receives one error, not an array. Use `Effect.catchCause` when recovery needs all the failures.
+When every reason is an expected failure, ordinary catch receives the first and handles the whole cause: if both programs passed to `Effect.race` fail, catch receives one error, not an array. Use `Effect.catchCause` when recovery needs them all.
 
 ## Runtime causes and domain error collections
 
@@ -75,8 +75,8 @@ function validatePorts() {
 [-1,70000]
 ```
 
-Validation produces one typed failure containing a collection of domain errors. That is different from several runtime cause reasons. Use `Effect.partition` instead when you want successful values alongside the collected errors.
+Validation produces one typed failure holding a collection of domain errors, not several runtime cause reasons. Use `Effect.partition` to keep successful values alongside the collected errors.
 
 ## Coming from Effect
 
-Effect 4's flat cause representation applies unchanged. Use `finally` for cleanup: its failure joins the operation's original cause, as `inspectDelivery` shows. A timeout boundary currently drops failures from the interrupted source's cleanup; see [Timing Out](019-timing-out.md).
+Effect 4's flat cause applies unchanged. Use `finally` for cleanup: its failure joins the operation's original cause, as `inspectDelivery` shows. A timeout boundary currently drops failures from the interrupted source's cleanup; see [Timing Out](019-timing-out.md).

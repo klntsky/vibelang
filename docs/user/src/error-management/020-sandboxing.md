@@ -1,6 +1,6 @@
 # Sandboxing
 
-Sandboxing places the complete runtime failure cause in the typed error channel. Use it when an inspection pipeline needs to treat defects, interruption, and expected failures as explicit error data.
+Sandboxing puts the complete runtime failure cause in the typed error channel, for an inspection pipeline that must treat defects, interruption, and expected failures as explicit error data.
 
 [Upstream page](https://effect.website/docs/v4/error-management/sandboxing)
 
@@ -27,7 +27,7 @@ function sandboxedRow() {
 ["Fail"]
 ```
 
-`Cause` is in scope in `.vibe` files. `sandbox` changes `A!E!R` into `A!Cause.Cause<E>!R`. A defect in the original computation becomes a `Die` reason inside a typed cause value rather than a defect reason at this outer level.
+`Cause` is in scope in `.vibe` files. `sandbox` changes `A!E!R` into `A!Cause.Cause<E>!R`: a defect in the original computation becomes a `Die` reason inside a typed cause value, not a defect at the outer level.
 
 ## Inspecting individual reasons
 
@@ -50,7 +50,7 @@ function rowFailureKinds() {
 ["row 8"]
 ```
 
-Effect 4 stores reasons in a flat readonly array. `isFailReason` exposes `error`, `isDieReason` exposes `defect`, and `isInterruptReason` identifies cancellation. Inspect the entire array because one outcome can contain more than one reason.
+Effect 4 stores reasons in a flat readonly array; one outcome can hold several, so inspect them all. `isFailReason` exposes `error`, `isDieReason` exposes `defect`, and `isInterruptReason` identifies cancellation.
 
 ## Recovering selected variants
 
@@ -72,7 +72,7 @@ function rowOrPlaceholder() {
 Malformed row omitted
 ```
 
-This boundary recovers only causes made entirely of domain failures. Checking for any `Fail` reason alone would also consume defects or interruption in a mixed cause. Sandboxing makes that decision explicit; it does not remove the need for a recovery policy.
+This boundary recovers only causes made entirely of domain failures; checking only for a `Fail` reason would also consume a mixed cause's defects or interruption. Sandboxing makes that decision explicit; you still need a recovery policy.
 
 ## Restoring causes after inspection
 
@@ -94,4 +94,4 @@ Row computation stopped ["Fail"]
 8
 ```
 
-`Effect.failCause(cause)` and `throw cause` both restore the original failure model, including every expected failure, defect, and interruption in the cause. To keep a cause as typed error data, use `Effect.fail(cause)` instead. For a single inspection or recovery step, `Effect.catchCause(() => readRow(), handler)` avoids changing the error channel first.
+`Effect.failCause(cause)` and `throw cause` both restore the original failure model, with every expected failure, defect, and interruption in the cause; `Effect.fail(cause)` instead keeps the cause as typed error data. For a single inspection or recovery step, `Effect.catchCause(() => readRow(), handler)` avoids changing the error channel first.

@@ -1,6 +1,6 @@
 # Error Accumulation
 
-Independent checks often need to report every problem in one response. Use validation to collect domain errors, or partitioning when successful results are useful even if other inputs fail.
+Independent checks often must report every problem in one response. Validation collects domain errors; partitioning also keeps successful results when other inputs fail.
 
 [Upstream page](https://effect.website/docs/v4/error-management/error-accumulation)
 
@@ -33,7 +33,7 @@ river
 ["Jo",""]
 ```
 
-`Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel contains a nonempty array of every domain error and the successful values are discarded. If all succeed, it returns an array of successes.
+`Effect.validate` runs each input's computation even when others fail with typed errors. If any fail, the error channel holds a nonempty array of every domain error and the successes are discarded; otherwise it returns an array of successes.
 
 ```vibe
 // run: checkTeamOnly(); Console.log("All handles valid")
@@ -49,7 +49,7 @@ function checkTeamOnly() {
 All handles valid
 ```
 
-`discard: true` returns `void` on success when you only need validation. Concurrency controls how many independent checks run at once. A cause without an expected failure still terminates the computation. These APIs use Effect's error-to-result conversion, so a mixed cause containing an expected failure can be reduced to that error and lose its other reasons; use cause-level inspection when those reasons matter.
+`discard: true` returns `void` on success, when you only need validation. `concurrency` sets how many checks run at once. A cause without an expected failure still terminates the computation. These APIs use Effect's error-to-result conversion, so a mixed cause containing an expected failure can shrink to that error and lose its other reasons; inspect the cause when they matter.
 
 ## Partitioning successes and failures
 
@@ -70,8 +70,8 @@ function inspectTeam() {
 // Output: {"handles":["river"],"rejected":2}
 ```
 
-The tuple order is `[successes, failures]`. `partition` preserves both arrays and removes expected errors from `E`, letting you accept valid inputs while reporting rejected ones. Its mixed-cause policy is the same as validation's.
+The tuple order is `[successes, failures]`. `partition` keeps both arrays and removes expected errors from `E`, so you can accept valid inputs and report rejected ones. Its mixed-cause policy matches validation's.
 
 ## Coming from Effect
 
-Pass an ordinary VibeLang callback to `validate` or `partition`. A plain array `map` cannot run a callback that needs services, pauses, or has a typed failure.
+Pass `validate` or `partition` an ordinary VibeLang callback; a plain array `map` can't run one that needs services, pauses, or has a typed failure.

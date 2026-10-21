@@ -1,6 +1,6 @@
 # Two Types of Errors
 
-A missing record and a broken invariant need different responses. VibeLang tracks recoverable domain failures in `Effect<A, E, R>` and keeps defects in the runtime's failure cause.
+A missing record and a broken invariant need different responses: VibeLang tracks recoverable domain failures in `Effect<A, E, R>`, and defects in the runtime's failure cause.
 
 [Upstream page](https://effect.website/docs/v4/error-management/two-error-types)
 
@@ -32,11 +32,11 @@ $12
 No price for pen
 ```
 
-`throw` declares an expected failure. A caller can recover with `try`/`catch`, and the caught value has the error type inferred from the protected code. A defect, such as an invalid property access or `Effect.die(new Error("broken invariant"))`, bypasses this catch.
+`throw` declares an expected failure. `try`/`catch` recovers it, and the caught value's type is inferred from the protected code. A defect, such as an invalid property access or `Effect.die(new Error("broken invariant"))`, bypasses `catch`.
 
-Expected failures also come from a callee's `E` and exceptions listed by a trusted contract. An exception that no contract lists is a defect. When a cause contains several expected failures and nothing else, `catch` receives the first and handles the cause as a whole; use `Effect.catchCause` to inspect every reason.
+Expected failures also come from a callee's `E` and from exceptions a trusted contract lists; an unlisted exception is a defect. When a cause holds several expected failures and nothing else, `catch` receives the first and handles the whole cause; `Effect.catchCause` inspects every reason.
 
-Interruption is a third kind of termination. It also bypasses `catch`; both interruption and defects still run `finally` and release `using` resources. If a cause contains a failure together with a defect or interruption, ordinary `catch` propagates the entire cause.
+Interruption, a third kind of termination, also bypasses `catch`. Defects and interruption still run `finally` and release `using` resources. A cause that mixes a failure with a defect or interruption passes through ordinary `catch` whole.
 
 ## Choosing the error type
 
@@ -56,11 +56,11 @@ function percentage(part: number, total: number) {
 true
 ```
 
-Use this contract only when validation has already established the invariant. If users can submit an invalid total, represent that case with a typed error instead. Put a failure in `E` when callers have a useful response, such as asking for corrected input or choosing another source.
+Use this contract only when validation already established the invariant; if users can submit an invalid total, throw a typed error. Put a failure in `E` when callers have a useful response, such as asking for corrected input or choosing another source.
 
-`E = never` promises no expected failures escape. It does not promise the absence of bugs or cancellation. Use `Effect.exit`, `Effect.catchDefect`, or `Effect.catchCause` at a boundary that must examine those outcomes.
+`E = never` promises that no expected failure escapes, not that bugs or cancellation can't occur. A boundary that must examine those uses `Effect.exit`, `Effect.catchDefect`, or `Effect.catchCause`.
 
-Precisely, `E` describes failures in causes made entirely of expected failures. A mixed cause can retain failure values outside `E` after passing through a catch; no ordinary catch recovers those values.
+Precisely, `E` describes failures in causes made entirely of expected failures. A mixed cause that passes through a catch can keep failure values outside `E`, which no ordinary catch recovers.
 
 ## Coming from Effect
 

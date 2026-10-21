@@ -1,6 +1,6 @@
 # Custom Error Classes
 
-Effect's custom error values can be yielded inside TypeScript generators. In VibeLang, signal those same domain failures with `throw`; `function*` produces values rather than sequencing an Effect program.
+Effect's custom error values can be yielded inside TypeScript generators. VibeLang signals the same domain failures with `throw`; `function*` produces values and doesn't sequence an Effect program.
 
 [Upstream page](https://effect.website/docs/v4/error-management/yieldable-errors)
 
@@ -24,7 +24,7 @@ Hello
 doc-1
 ```
 
-`Data.Error` creates an error class with typed fields and Effect's yieldable behavior. VibeLang does not require yielding it: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object by itself does not fail the computation.
+`Data.Error` creates an error class with typed fields and Effect's yieldable behavior. VibeLang needs no yield: an explicit throw puts `EmptyDocument` in `E`. Creating or returning an error object alone doesn't fail the computation.
 
 ```vibe
 // run: Console.log(emptyDocumentError("doc-1").documentId); Console.log(Effect.flip(() => rejectDocument("doc-1")).documentId)
@@ -44,7 +44,7 @@ doc-1
 doc-1
 ```
 
-`new` only constructs, and a call returning an error instance returns data. Calling the held error runs its failure behavior, just as `throw error` does.
+`new` only constructs, and a call returning an error instance returns data; calling the held error fails with it, as `throw error` does.
 
 ## Creating tagged error classes
 
@@ -69,9 +69,9 @@ EmptyTitle
 81
 ```
 
-An `error` declaration is a class that extends the global `TaggedError`, Effect's `Data.TaggedError`, which needs no import. Every instance has a readonly `_tag` equal to the class name, and the class names the instance type as well as constructing values. Use `Schema.TaggedError` when an error also needs schema-based serialization.
+An `error` declaration is a class extending the global `TaggedError` (Effect's `Data.TaggedError`, no import needed). Every instance has a readonly `_tag` equal to the class name, and the class names the instance type as well as constructing values. Use `Schema.TaggedError` when an error also needs schema-based serialization.
 
-Choose distinct tags for distinct error cases. Tag-based matching compares strings, so two classes with the same tag cannot be distinguished by `catchTag` or `_tag` narrowing; do not assume a duplicate tag is diagnosed. `is` and `match` test the class with `instanceof`, so they do tell such classes apart.
+Give distinct error cases distinct tags. Tag-based matching compares strings, so `catchTag` and `_tag` narrowing can't tell two classes with the same tag apart, and nothing guarantees a duplicate tag is diagnosed. `is` and `match` test the class with `instanceof`, so they tell them apart.
 
 ## Recovering failures by tag
 
@@ -102,12 +102,12 @@ TitleTooLong
 TitleTooLong
 ```
 
-Both versions remove `EmptyTitle` from `E` while preserving `TitleTooLong`. `Effect.catchTags` supports one handler per tag when several cases need different responses. These remain typed failures even though the error classes also support generators in TypeScript.
+Both versions remove `EmptyTitle` from `E` and keep `TitleTooLong`. When cases need different responses, `Effect.catchTags` takes one handler per tag. These stay typed failures, though the classes also support generators in TypeScript.
 
 ## Coming from Effect
 
-Existing `.ts` functions that yield `Data.Error` or `Data.TaggedError` stay in TypeScript and are called normally from `.vibe` files. Replace `return yield* new ErrorCase(...)` with `throw new ErrorCase(...)` when writing the VibeLang implementation.
+Existing `.ts` functions that yield `Data.Error` or `Data.TaggedError` stay in TypeScript; `.vibe` files call them normally. In VibeLang, `return yield* new ErrorCase(...)` becomes `throw new ErrorCase(...)`.
 
 In a `.vibe` file, `class NotFound extends Data.TaggedError("NotFound")<{ … }> {}` draws EK4830, whose quick fix writes `error NotFound { … }`; a `Schema.TaggedError` class draws EK4837, without a fix, because an error declaration is not a Schema ([TypeScript-style Effect code](../getting-started/012-devtools.md#typescript-style-effect-code)).
 
-A VibeLang `function*` is a producer that yields elements. It converts to an Effect `Stream` wherever one is expected; it is not a place to paste `Effect.gen` or `yield*` error sequencing.
+A VibeLang `function*` is a producer that yields elements and converts to an Effect `Stream` wherever one is expected; don't paste `Effect.gen` or `yield*` error sequencing into it.
