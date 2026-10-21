@@ -2563,7 +2563,7 @@
         "required": false,
         "types": [
           {
-            "type": "object_type",
+            "type": "class_body",
             "named": true
           }
         ]
@@ -2588,6 +2588,16 @@
           }
         ]
       }
+    },
+    "children": {
+      "multiple": false,
+      "required": false,
+      "types": [
+        {
+          "type": "class_heritage",
+          "named": true
+        }
+      ]
     }
   },
   {

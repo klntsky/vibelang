@@ -11,8 +11,8 @@ export error Missing<A> { value: A }
 (program
   (error_declaration
     name: (type_identifier)
-    body: (object_type
-      (property_signature
+    body: (class_body
+      (public_field_definition
         name: (property_identifier)
         type: (type_annotation
           (predefined_type)))))
@@ -24,8 +24,8 @@ export error Missing<A> { value: A }
       type_parameters: (type_parameters
         (type_parameter
           name: (type_identifier)))
-      body: (object_type
-        (property_signature
+      body: (class_body
+        (public_field_definition
           name: (property_identifier)
           type: (type_annotation
             (type_identifier)))))))
@@ -233,3 +233,151 @@ const UsersLive = Layer.effect(Users) {
                 key: (property_identifier)
                 value: (string
                   (string_fragment))))))))))
+
+================================================================================
+Error classes
+================================================================================
+
+export abstract error Http implements Coded {
+  status: number
+  abstract describe(): string
+}
+error Missing extends Http {
+  mutable path: string
+  constructor(path: string) {
+    super({ status: 404, path })
+  }
+  override describe(): string { return this.path }
+}
+error Gone extends Http
+error Typed<T extends string> extends Base<T> { value: T }
+
+--------------------------------------------------------------------------------
+
+(program
+  (export_statement
+    (error_declaration
+      (type_identifier)
+      (class_heritage
+        (implements_clause
+          (type_identifier)))
+      (class_body
+        (public_field_definition
+          (property_identifier)
+          (type_annotation
+            (predefined_type)))
+        (abstract_method_signature
+          (property_identifier)
+          (formal_parameters)
+          (type_annotation
+            (predefined_type))))))
+  (error_declaration
+    (type_identifier)
+    (class_heritage
+      (extends_clause
+        (identifier)))
+    (class_body
+      (public_field_definition
+        (property_identifier)
+        (type_annotation
+          (predefined_type)))
+      (method_definition
+        (property_identifier)
+        (formal_parameters
+          (required_parameter
+            (identifier)
+            (type_annotation
+              (predefined_type))))
+        (statement_block
+          (expression_statement
+            (call_expression
+              (super)
+              (arguments
+                (object
+                  (pair
+                    (property_identifier)
+                    (number))
+                  (shorthand_property_identifier)))))))
+      (method_definition
+        (override_modifier)
+        (property_identifier)
+        (formal_parameters)
+        (type_annotation
+          (predefined_type))
+        (statement_block
+          (return_statement
+            (member_expression
+              (this)
+              (property_identifier)))))))
+  (error_declaration
+    (type_identifier)
+    (class_heritage
+      (extends_clause
+        (identifier))))
+  (error_declaration
+    (type_identifier)
+    (type_parameters
+      (type_parameter
+        (type_identifier)
+        (constraint
+          (predefined_type))))
+    (class_heritage
+      (extends_clause
+        (identifier)
+        (type_arguments
+          (type_identifier))))
+    (class_body
+      (public_field_definition
+        (property_identifier)
+        (type_annotation
+          (type_identifier))))))
+
+================================================================================
+Schema errors
+================================================================================
+
+schema error FsError { _tag: string; method: string; path?: string }
+export schema error Locked extends FsError {
+  holder: string
+  describe(): string { return this.holder }
+}
+
+--------------------------------------------------------------------------------
+
+(program
+  (error_declaration
+    (type_identifier)
+    (class_body
+      (public_field_definition
+        (property_identifier)
+        (type_annotation
+          (predefined_type)))
+      (public_field_definition
+        (property_identifier)
+        (type_annotation
+          (predefined_type)))
+      (public_field_definition
+        (property_identifier)
+        (type_annotation
+          (predefined_type)))))
+  (export_statement
+    (error_declaration
+      (type_identifier)
+      (class_heritage
+        (extends_clause
+          (identifier)))
+      (class_body
+        (public_field_definition
+          (property_identifier)
+          (type_annotation
+            (predefined_type)))
+        (method_definition
+          (property_identifier)
+          (formal_parameters)
+          (type_annotation
+            (predefined_type))
+          (statement_block
+            (return_statement
+              (member_expression
+                (this)
+                (property_identifier)))))))))

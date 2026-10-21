@@ -170,13 +170,25 @@ module.exports = grammar(TypeScript, {
       $.layer_declaration,
     ),
 
-    // error NotFound { id: string }, error Timeout (D126).
+    // error NotFound { id: string }, error Timeout (D126). An error is a
+    // class (D278): abstract, extends and implements, and a class body, whose
+    // fields are field definitions; schema error FsError { method: string }
+    // (D279). A { after the head is the body, never a block.
     error_declaration: $ => prec.right(seq(
+      optional('abstract'),
+      optional('schema'),
       'error',
       field('name', $._type_identifier),
       field('type_parameters', optional($.type_parameters)),
-      field('body', optional($.object_type)),
+      optional(choice(
+        prec.dynamic(10, seq(optional($.class_heritage), field('body', $.class_body))),
+        // error Timeout extends AppError ends at its line.
+        seq($.class_heritage, $._semicolon),
+      )),
     )),
+
+    // An error's field may be written mutable (D134).
+    public_field_definition: ($, previous) => seq(optional('mutable'), previous),
 
     // service Users { find(id: string): User!NotFound } (D128, D223), and the
     // older spelling service class Users { ... } (D220).
