@@ -278,6 +278,9 @@ func (d *decoder) node(node *ast.Node) error {
 		}
 		keyword := d.afterModifiers(alias)
 		d.replace(keyword, end, d.reindent(holder, start))
+		if holder.alias {
+			return nil // schema Name = Type keeps its = and type
+		}
 		after := end
 		if list := alias.TypeParameterList(); list != nil {
 			_, greater, ok := d.nextToken(list.End(), '>')

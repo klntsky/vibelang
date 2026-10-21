@@ -17,6 +17,7 @@
 //	x is P                                 x in $v5
 //	provide X { }, uninterruptible { }     $v6: { }
 //	error E { f: T }, schema S { f: T }    type $v7 = { f: T }
+//	schema S = T                           type $v7 = T
 //	service S { m(): A!E }                 class $v8 { m(): $v9 }
 //	for concurrent(n) (const x of xs)      for (const x of xs)
 //	finally (exit) { }                     finally { }
@@ -70,6 +71,9 @@ type placeholder struct {
 	// noBody marks an error declaration written without fields or, for one
 	// written as a class, without a body.
 	noBody bool
+	// alias marks a schema alias, schema Name = Type (D280), whose = and type
+	// the type alias keeps as written.
+	alias bool
 }
 
 // edit replaces source[pos:end] with text. An edit with pos == end inserts.
@@ -306,10 +310,11 @@ func (e *encoder) form(form parser.VibeSyntax) error {
 	return nil
 }
 
-// declaration writes error and schema as a type alias, service and control
-// as a class, and layer as a placeholder statement. An error written with a
-// class's features (D278) is a class too, given an empty body when it has
-// none: error Timeout extends AppError.
+// declaration writes error and schema as a type alias, a schema alias as the
+// type alias it is written as, service and control as a class, and layer as
+// a placeholder statement. An error written with a class's features (D278)
+// is a class too, given an empty body when it has none: error Timeout
+// extends AppError.
 func (e *encoder) declaration(form parser.VibeSyntax) error {
 	head := e.text(form.Head)
 	if form.Class {
@@ -331,6 +336,11 @@ func (e *encoder) declaration(form parser.VibeSyntax) error {
 		} else {
 			e.insert(form.Open.Pos(), "= ", 0)
 		}
+	case parser.VibeSyntaxSchemaAlias:
+		// schema Code = "a" | "b" is type $v = "a" | "b": only the head changes.
+		name := e.hold(placeholderTypeHead, head, form.Head.Pos(), firstLineWidth(head)-len("type "))
+		e.holders[len(e.holders)-1].alias = true
+		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "type " + name, opaque: true})
 	case "service", "control":
 		name := e.hold(placeholderClassHead, head, form.Head.Pos(), firstLineWidth(head)-len("class "))
 		e.add(edit{pos: form.Head.Pos(), end: form.Head.End(), text: "class " + name, opaque: true})

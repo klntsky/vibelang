@@ -43,6 +43,8 @@ schema Account {
   nickname?: string
   role: "admin" | "member"
 }
+export schema Code = "root_missing" | "read_failed"
+schema Point = { x: number; y?: number }
 interface Cart { id: string; mutable items: Array<string>; mutable [key: string]: unknown }
 `,
 	"error classes": `/** The base of a family (D278, D304). */

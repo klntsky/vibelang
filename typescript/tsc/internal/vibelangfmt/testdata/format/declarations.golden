@@ -12,6 +12,8 @@ control Approval {
   approve(request: string): boolean!!
 }
 schema Account { id: string; nickname?: string; role: "admin" | "member" }
+export schema Code = "root_missing" | "read_failed"
+schema Point = { x: number; y?: number }
 interface Cart {
   id: string
   mutable items: Array<string>
