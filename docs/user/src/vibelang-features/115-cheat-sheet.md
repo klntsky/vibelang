@@ -181,6 +181,20 @@ schema Account {
 // Output: {"id":"1","role":"admin"}
 ```
 
+**Schema aliases** (D280). A schema of any type the struct form maps, and the type, under one name.
+
+```ts effect
+const Role = Schema.Literals(["admin", "member"])
+type Role = typeof Role.Type
+```
+
+```vibe es
+// run: Console.log(Schema.is(Role)("admin")); Console.log(Schema.is(Role)("owner"))
+schema Role = "admin" | "member"
+// Output: true
+// Output: false
+```
+
 **Readonly by default** (D134). Write `mutable` for a member you assign.
 
 ```ts effect

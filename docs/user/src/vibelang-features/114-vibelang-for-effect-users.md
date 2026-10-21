@@ -27,6 +27,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.gen(function* () { ... })` | An ordinary function with statements |
 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
 | `const User = Schema.Struct({ id: Schema.String })` and `type User = typeof User.Type` | `schema User { id: string }` |
+| `const Role = Schema.Literals(["admin", "member"])` and `type Role = typeof Role.Type` | `schema Role = "admin" \| "member"` |
 | `interface Cart { readonly id: string; items: Array<Item> }` | `interface Cart { id: string; mutable items: Array<Item> }` |
 | `const x = yield* work()` | `const x = work()` |
 | `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, call the next function |

@@ -55,6 +55,22 @@ schema Batch {
 
 `schema Batch { ... }` declares both the struct `Batch` and its decoded type, the interface `Batch`. A field names its type; a schema such as `Shipment` stands for its own decoded type. Struct fields, arrays, records, and tuples are readonly by default in their TypeScript types; JavaScript objects are not frozen. When mutation is part of the model, use explicit mutable schema combinators.
 
+## Declaring a schema for any type
+
+```vibe
+// run: Console.log(JSON.stringify(Schema.decodeUnknownEffect(Delivery)({ status: "delivered", shipments: [] }))); Console.log(Schema.is(Status)("lost"))
+schema Status = "pending" | "delivered" | "returned"
+schema Delivery = { status: Status; shipments: ReadonlyArray<Shipment> }
+// Status: "pending" | "delivered" | "returned"
+```
+
+```output
+{"status":"delivered","shipments":[]}
+false
+```
+
+`schema Status = ...` declares the schema `Status`, here `Schema.Literals(["pending", "delivered", "returned"])`, and the type `Status`, `typeof Status.Type`, in one declaration (D280). The type after `=` maps to a schema as a struct field's type does: a union of literals is `Schema.Literals`, another union is `Schema.Union`, and arrays, tuples, records, object types, and the names of other schemas map as they do in a field. Refinements and transformations such as `Schema.NonEmptyString` and `Schema.FiniteFromString` stay `Schema` constants, as `Shipment` shows. A type outside the mapping, such as a function type, is EK2109.
+
 ## Choosing synchronous, result, or effect decoding
 
 ```vibe
