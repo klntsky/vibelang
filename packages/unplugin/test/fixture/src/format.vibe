@@ -1,4 +1,14 @@
 // The compiler rewrites shop.vibe's import of this module to ./format.js.
+// Its module declaration (D283) is TypeScript, which the emitted JavaScript
+// holds inline, so every bundler loads it with the file.
+module text {
+  export function line(verb: string, quantity: number, item: string): string {
+    return [verb, String(quantity), item].join(" ")
+  }
+}
+
+import { line } from text
+
 export function receipt(verb: string, quantity: number, item: string) {
-  return `${verb} ${quantity} ${item}`
+  return sync((verb, quantity, item) => line(verb, quantity, item), verb, quantity, item)
 }

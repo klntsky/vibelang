@@ -180,6 +180,30 @@ test("a module of a package nested inside root compiles with that package's own 
   assert.equal(modules.projectOf(join(app, "fixtures/plain/thing.vibe")), join(app, "tsconfig.json"))
 })
 
+test("a module declaration compiles into its file's output, and its body is no input file (D283)", { skip }, async (t) => {
+  const { app, compiler, compiles } = workspace(t)
+  const main = join(app, "src/main.vibe")
+  writeFileSync(main, [
+    "module tools {",
+    "  export function shout(text: string): string { return text.toUpperCase() }",
+    "}",
+    "import { shout } from tools",
+    "export function fromApp() {",
+    "  return sync(() => shout(\"app\"))",
+    "}",
+    ""
+  ].join("\n"))
+  utimesSync(main, new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler })
+  const loaded = await modules.load(main)
+  assert.deepEqual([loaded.errors, loaded.error], [[], false])
+  assert.match(loaded.code, /const tools = \(\(\) => \{/)
+  assert.ok(loaded.inputs.includes(main))
+  assert.deepEqual(loaded.inputs.filter((input) => !existsSync(input)), [], "every input is a file on disk")
+  await modules.load(main)
+  assert.deepEqual(compiles(), [join(app, "tsconfig.json")], "a body that is not on disk never looks changed")
+})
+
 test("a failed compile marks its first module, and a module no project includes names the project it tried", { skip }, async (t) => {
   const { root, app, compiler } = workspace(t)
   writeFileSync(join(root, "dep/src/bad.vibe"), "export const count: number = \"three\"\n")

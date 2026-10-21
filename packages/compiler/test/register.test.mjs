@@ -84,6 +84,37 @@ test("runs .vibe modules imported from TypeScript, with one compile and one copy
   assert.equal(compilations(), 1, "every .vibe module of a project comes from one compile")
 })
 
+test("loads a .vibe module whose module declaration holds TypeScript, with stack frames inside it (D283)", { skip }, (t) => {
+  const { run, compilations } = project(t, {
+    "src/text.vibe": [
+      "module tools {",
+      "  export function clean(value: string): string {",
+      "    if (value.trim() === \"\") throw new Error(\"empty\")",
+      "    return value.trim()",
+      "  }",
+      "}",
+      "import { clean } from tools",
+      "export function tidy(value: string) {",
+      "  return sync((value) => clean(value), value)",
+      "}",
+      ""
+    ].join("\n"),
+    "src/main.ts": [
+      "import { Cause, Effect, Exit } from \"effect\"",
+      "import { tidy } from \"./text.vibe\"",
+      "const exit = Effect.runSyncExit(tidy(\"  \"))",
+      "const defect = Exit.isFailure(exit) ? Cause.squash(exit.cause) as Error : undefined",
+      "console.log(JSON.stringify({ text: Effect.runSync(tidy(\"  a  \")), defect: defect?.message, mapped: /text\\.vibe:3:/.test(String(defect?.stack)) }))",
+      ""
+    ].join("\n")
+  })
+  const result = run("src/main.ts")
+  assert.equal(result.stderr, "")
+  assert.equal(result.status, 0)
+  assert.deepEqual(JSON.parse(result.stdout), { text: "a", defect: "empty", mapped: true })
+  assert.equal(compilations(), 1)
+})
+
 test("reports the compiler's diagnostics when the project does not compile", { skip }, (t) => {
   const { run } = project(t, {
     "src/bad.vibe": "export const count: number = \"three\"\n",
