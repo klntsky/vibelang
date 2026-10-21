@@ -182,6 +182,7 @@ Code example count: one example per fenced code block in the source body, includ
 - [VibeLang for Effect users](src/vibelang-features/114-vibelang-for-effect-users.md)
 - [Cheat sheet](src/vibelang-features/115-cheat-sheet.md)
 - [Pattern matching with match and is](src/vibelang-features/116-match-and-is.md)
+- [Token counts](src/vibelang-features/117-token-counts.md)
 
 ### Specification
 
@@ -354,6 +355,7 @@ These original pages supplement the 110 mirrored Effect pages. They have no upst
 | [VibeLang for Effect users](src/vibelang-features/114-vibelang-for-effect-users.md) | Idiom translation, programs, top-level declarations, platform work, expected failures |
 | [Cheat sheet](src/vibelang-features/115-cheat-sheet.md) | Every VibeLang change beside the Effect code it replaces |
 | [Pattern matching with match and is](src/vibelang-features/116-match-and-is.md) | `match` arms, every pattern kind, Option, Exit, and Result matchers, custom matchers, `is` bindings, exhaustiveness |
+| [Token counts](src/vibelang-features/117-token-counts.md) | Tokens an agent loads: the skill, each page, and each cheat-sheet entry in Effect TypeScript and VibeLang |
 
 ## Counts by sidebar section
 

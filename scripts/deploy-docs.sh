@@ -92,6 +92,8 @@ if [ "$hovers" = 1 ]; then
 		{ tail -40 "$release_dir/hovers.log" >&2; echo "deploy-docs: building hovers failed; VIBELANG_DOCS_HOVERS=0 deploys without them" >&2; exit 1; }
 	head -1 "$release_dir/hovers.log"
 fi
+echo "deploy-docs: checking the published token counts"
+bun "$root/docs/tools/token-counts.ts" --check
 # The docs Worker (docs/wrangler.jsonc) serves effeck.dev, so this build's links name
 # effeck.dev, where its Markdown copies live. vibelang.sh is a separate site today.
 export VIBELANG_DOCS_ORIGIN="${VIBELANG_DOCS_ORIGIN:-https://effeck.dev}"

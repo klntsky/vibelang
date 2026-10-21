@@ -6,7 +6,8 @@
   "scripts": {
     "build": "bun render-user.ts",
     "check:snippets": "bun test first-run.test.ts && bun check-snippets.ts --run",
-    "check:content": "bun check-smithers-content.ts"
+    "check:content": "bun check-smithers-content.ts",
+    "check:tokens": "bun token-counts.ts --check"
   },
   "devDependencies": {
     "marked": "18.0.12",

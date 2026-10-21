@@ -8,15 +8,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, extname, join, relative, resolve } from "node:path"
 import { hoverCss, useHoverRenderer } from "./render-hovers"
 import { renderLanding, sourceLinks } from "./render-landing"
+import { pageKeys, readSidebar, type Page } from "./sidebar"
 const repo = resolve(import.meta.dir, "../..")
 const root = join(repo, "docs/user")
 const src = join(root, "src")
 const design = join(repo, "docs/design/src")
 const site = join(root, "site")
 // Page keys are site paths with a .md extension. Specification chapters live under spec/.
-const fileOf = (key: string) => key.startsWith("spec/") ? join(design, key.slice(5)) : join(src, key)
-const keyOf = (file: string) =>
-  file.startsWith(design + "/") ? "spec/" + relative(design, file) : file.startsWith(src + "/") ? relative(src, file) : undefined
+const { fileOf, keyOf } = pageKeys(repo)
 const where = (key: string) => relative(repo, fileOf(key))
 if (existsSync(join(src, "spec"))) throw new Error("docs/user/src/spec would collide with the specification's pages")
 
@@ -318,33 +317,7 @@ const codeLabel = (lang: string): string => {
   return lang
 }
 
-// group is the bold sidebar label a page is indented under, if any.
-type Page = { path: string; label: string; group?: string }
-type NavItem = { kind: "view" | "group"; label: string } | { kind: "page"; page: Page }
-const inventory = readFileSync(join(root, "inventory.md"), "utf8")
-const lines = inventory.split("\n")
-const start = lines.findIndex(line => /^## V4 sidebar in order\s*$/.test(line))
-if (start < 0) throw new Error('inventory.md: missing "V4 sidebar in order" section')
-const navigation: NavItem[] = []
-const order: Page[] = []
-let lastGroup: string | undefined
-for (const line of lines.slice(start + 1)) {
-  if (/^## /.test(line)) break
-  const view = /^### (.+)$/.exec(line)
-  const group = /^- \*\*(.+)\*\*\s*$/.exec(line)
-  const page = /^\s*- \[([^\]]+)\]\(((?:src|\.\.\/design\/src)\/[^)]+\.md)\)/.exec(line)
-  if (view) navigation.push({ kind: "view", label: view[1]! })
-  else if (group) navigation.push({ kind: "group", label: lastGroup = group[1]! })
-  else if (page) {
-    const path = keyOf(resolve(root, page[2]!))
-    if (!path) throw new Error(`inventory.md: page outside docs/user/src and docs/design/src: ${page[2]}`)
-    if (order.some(p => p.path === path)) throw new Error(`inventory.md: duplicate page: ${path}`)
-    const entry = { path, label: page[1]!, group: /^\s/.test(line) ? lastGroup : undefined }
-    order.push(entry)
-    navigation.push({ kind: "page", page: entry })
-  } else if (line.trim().startsWith("-")) throw new Error(`inventory.md: unrecognized sidebar entry: ${line.trim()}`)
-}
-if (!order.length) throw new Error("inventory.md: sidebar contains no pages")
+const { navigation, order } = readSidebar(readFileSync(join(root, "inventory.md"), "utf8"), repo)
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name)).flatMap(entry =>
     entry.isDirectory() ? files(join(dir, entry.name)) : entry.isFile() && entry.name.endsWith(".md") ? [relative(src, join(dir, entry.name))] : [])
