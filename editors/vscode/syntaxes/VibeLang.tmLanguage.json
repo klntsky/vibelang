@@ -32,6 +32,9 @@
 		"statements": {
 			"patterns": [
 				{
+					"include": "#vibelang-error-declaration"
+				},
+				{
 					"include": "#vibelang-type-declaration"
 				},
 				{
@@ -5794,7 +5797,7 @@
 		},
 		"vibelang-type-declaration": {
 			"name": "meta.class.ts",
-			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(error|schema)\\s+([_$[:alpha:]][_$[:alnum:]]*)",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(schema)\\s+([_$[:alpha:]][_$[:alnum:]]*)",
 			"beginCaptures": {
 				"1": {
 					"name": "keyword.control.export.ts"
@@ -5982,6 +5985,90 @@
 					"name": "keyword.control.trycatch.ts"
 				}
 			}
+		},
+		"vibelang-error-declaration": {
+			"name": "meta.class.ts",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?(?:(abstract)\\s+)?(?:(schema)\\s+)?\\b(error)\\s+([_$[:alpha:]][_$[:alnum:]]*)",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.export.ts"
+				},
+				"2": {
+					"name": "storage.modifier.ts"
+				},
+				"3": {
+					"name": "storage.type.class.ts"
+				},
+				"4": {
+					"name": "storage.type.class.ts"
+				},
+				"5": {
+					"name": "entity.name.type.class.ts"
+				}
+			},
+			"end": "(?<=\\})|(?<=[_$[:alnum:]>])(?=\\s*(?:$|;|//))",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#type-parameters"
+				},
+				{
+					"include": "#vibelang-error-heritage"
+				},
+				{
+					"include": "#class-or-interface-body"
+				}
+			]
+		},
+		"vibelang-error-heritage": {
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:\\b(extends|implements)\\b)(?![_$[:alnum:]])(?:(?=\\.\\.\\.)|(?!\\.))",
+			"beginCaptures": {
+				"1": {
+					"name": "storage.modifier.ts"
+				}
+			},
+			"end": "(?=\\{)|$",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"include": "#vibelang-error-heritage"
+				},
+				{
+					"include": "#type-parameters"
+				},
+				{
+					"include": "#expressionWithoutIdentifiers"
+				},
+				{
+					"match": "([_$[:alpha:]][_$[:alnum:]]*)\\s*(?:(\\.)|(\\?\\.(?!\\s*[[:digit:]])))(?=\\s*[_$[:alpha:]][_$[:alnum:]]*(\\s*\\??\\.\\s*[_$[:alpha:]][_$[:alnum:]]*)*\\s*)",
+					"captures": {
+						"1": {
+							"name": "entity.name.type.module.ts"
+						},
+						"2": {
+							"name": "punctuation.accessor.ts"
+						},
+						"3": {
+							"name": "punctuation.accessor.optional.ts"
+						}
+					}
+				},
+				{
+					"match": "([_$[:alpha:]][_$[:alnum:]]*)",
+					"captures": {
+						"1": {
+							"name": "entity.other.inherited-class.ts"
+						}
+					}
+				},
+				{
+					"include": "#expressionPunctuations"
+				}
+			]
 		}
 	}
 }

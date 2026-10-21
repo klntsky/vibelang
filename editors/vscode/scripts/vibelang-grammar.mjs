@@ -3,6 +3,8 @@
 // declaration like a class and a handle clause like catch.
 //
 //   error NotFound { id: string }          schema User { name: string }
+//   error Missing extends NotFound { path: string; describe(): string { ... } }
+//   schema error FsError { method: string }
 //   service Users { find(id: string): User!NotFound }
 //   control Approval { approve(request: string): boolean }
 //   layer UsersLive: Users { find(id) { ... } }   (the old spelling, D221)
@@ -32,7 +34,37 @@ function declaration(words, body, header = "") {
 
 export function addVibeLangSyntax(grammar) {
   const { repository } = grammar
-  repository["vibelang-type-declaration"] = declaration("error|schema", "#type-object")
+  repository["vibelang-type-declaration"] = declaration("schema", "#type-object")
+  // error and schema error declare classes (D126, D278, D279): abstract,
+  // extends and implements, and a class body, whose fields read as properties.
+  repository["vibelang-error-declaration"] = {
+    name: "meta.class.ts",
+    begin: `${start}(?:(abstract)\\s+)?(?:(schema)\\s+)?\\b(error)\\s+(${name})`,
+    beginCaptures: {
+      1: { name: "keyword.control.export.ts" },
+      2: { name: "storage.modifier.ts" },
+      3: { name: "storage.type.class.ts" },
+      4: { name: "storage.type.class.ts" },
+      5: { name: "entity.name.type.class.ts" }
+    },
+    end,
+    patterns: [
+      { include: "#comment" },
+      { include: "#type-parameters" },
+      { include: "#vibelang-error-heritage" },
+      { include: "#class-or-interface-body" }
+    ]
+  }
+  // An error's extends and implements end at the line's end too, since an
+  // error without fields or members has no body: error Gone extends Http.
+  const heritage = repository["class-or-interface-heritage"]
+  repository["vibelang-error-heritage"] = {
+    ...heritage,
+    end: "(?=\\{)|$",
+    patterns: heritage.patterns.map((pattern) =>
+      pattern.include === "#class-or-interface-heritage" ? { include: "#vibelang-error-heritage" } : pattern
+    )
+  }
   // service and control (D128, D223); the older spelling with class
   // (D220) matches too.
   repository["vibelang-member-declaration"] = {
@@ -96,7 +128,7 @@ export function addVibeLangSyntax(grammar) {
     match: "(?<=[_$[:alnum:])\\]'\"`]\\s)(catch)(?=\\s)",
     captures: { 1: { name: "keyword.control.trycatch.ts" } }
   }
-  const vibelangIncludes = ["#vibelang-type-declaration", "#vibelang-member-declaration", "#vibelang-layer-declaration", "#vibelang-handle-clause", "#vibelang-provide", "#vibelang-for-concurrent", "#vibelang-fork", "#vibelang-join"]
+  const vibelangIncludes = ["#vibelang-error-declaration", "#vibelang-type-declaration", "#vibelang-member-declaration", "#vibelang-layer-declaration", "#vibelang-handle-clause", "#vibelang-provide", "#vibelang-for-concurrent", "#vibelang-fork", "#vibelang-join"]
   const statements = repository.statements.patterns.filter((pattern) => !vibelangIncludes.includes(pattern.include))
   repository.statements.patterns = [...vibelangIncludes.map((include) => ({ include })), ...statements]
   const vibelangExpressions = ["#vibelang-await-operation", "#vibelang-fork", "#vibelang-join", "#vibelang-match", "#vibelang-catch-expression"]
