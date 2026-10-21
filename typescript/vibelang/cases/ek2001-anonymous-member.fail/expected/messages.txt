@@ -1,0 +1,5 @@
+Gone can escape literal.exists, but exists's contract allows no failures.
+Handle it, add Gone to exists's contract, or make it a defect with Effect.orDie.
+Gone can escape aliased.exists, but Probe.exists's contract allows no failures.
+Handle it, add Gone to Probe.exists's contract, or make it a defect with Effect.orDie.
+audited.exists looks up Audit each time it is called, but exists(path: string): boolean!! allows no call-time requirements.

@@ -1,0 +1,32 @@
+// expect: EK2001 EK2001 EK3101
+// A member whose contract comes from an anonymous object type is named by
+// itself in EK2001 and EK3101, and one typed by an alias of such a type by
+// the alias. The internal name of a type literal never reaches a message.
+error Gone { path: string }
+
+abstract class Audit {
+  abstract record(entry: string): Effect.Effect<void, never, never>
+}
+
+export const literal: { exists: (path: string) => boolean!! } = {
+  exists: (path) => {
+    if (path === "") throw new Gone({ path })
+    return true
+  }
+}
+
+type Probe = { exists: (path: string) => boolean!! }
+
+export const aliased: Probe = {
+  exists: (path) => {
+    if (path === "") throw new Gone({ path })
+    return true
+  }
+}
+
+export const audited: { exists: (path: string) => boolean!! } = {
+  exists: (path) => {
+    Audit.record(path)
+    return true
+  }
+}

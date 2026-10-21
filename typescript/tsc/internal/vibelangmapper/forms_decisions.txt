@@ -742,6 +742,9 @@ typescript/vibelang/cases/ek1005-runners.fail/main.vibe:56:22 lambda effectFn ta
 typescript/vibelang/cases/ek1005-runners.fail/main.vibe:57:34 lambda choice fallback
 typescript/vibelang/cases/ek1005-runners.fail/main.vibe:59:36 lambda plain fallback
 typescript/vibelang/cases/ek1005-runners.fail/main.vibe:60:22 lambda dual fallback
+typescript/vibelang/cases/ek2001-anonymous-member.fail/main.vibe:12:11 lambda effectFn annotation
+typescript/vibelang/cases/ek2001-anonymous-member.fail/main.vibe:21:11 lambda effectFn annotation
+typescript/vibelang/cases/ek2001-anonymous-member.fail/main.vibe:28:11 lambda effectFn annotation
 typescript/vibelang/cases/ek2004-dead-catch.fail/main.vibe:14:62 lambda plain table
 typescript/vibelang/cases/ek2004-defect/main.vibe:15:30 lambda program table
 typescript/vibelang/cases/ek2004-defect/main.vibe:16:118 lambda plain fallback

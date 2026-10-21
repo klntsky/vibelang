@@ -1,6 +1,8 @@
 package vibelang
 
 import (
+	"strings"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
@@ -127,15 +129,15 @@ func checkMember(c *checker.Checker, at, fn *ast.Node, holder, owner, name strin
 		if allowedErrors.Flags()&checker.TypeFlagsNever != 0 {
 			allows = "allows no failures"
 		}
-		d := report(c, at, EK2001, c.TypeToString(failure), holder+"."+name, owner+"."+name+"'s contract "+allows)
-		note(d, "Handle it, add {0} to {1}.{2}'s contract, or make it a defect with Effect.orDie.", c.TypeToString(failure), owner, name)
+		d := report(c, at, EK2001, c.TypeToString(failure), holder+"."+name, qualifiedMember(owner, name)+"'s contract "+allows)
+		note(d, "Handle it, add {0} to {1}'s contract, or make it a defect with Effect.orDie.", c.TypeToString(failure), qualifiedMember(owner, name))
 	}
 	for _, service := range unionMembers(channelType(c, effect, "_R")) {
 		if c.IsTypeAssignableTo(service, allowedRequirements) {
 			continue
 		}
 		reported = true
-		signature := owner + "." + name + c.SignatureToStringEx(declaredSignature, nil, checker.TypeFormatFlagsNone, nil)
+		signature := qualifiedMember(owner, name) + c.SignatureToStringEx(declaredSignature, nil, checker.TypeFormatFlagsNone, nil)
 		lookup, member := lookupOf(c, fn, service)
 		where := at
 		if lookup != nil {
@@ -208,13 +210,33 @@ func containsTypeParameter(t *checker.Type) bool {
 	return false
 }
 
-// serviceNameOf returns the name of the service whose shape t is, or "the
-// service" when t has no name of its own.
+// serviceNameOf returns the name of the service whose shape t is: its
+// declaration's name, else the name of the type alias that names it, as Probe
+// in type Probe = { … }. It returns "" when t has no name of its own, as an
+// object type literal written in place, whose symbol has an internal name.
 func serviceNameOf(c *checker.Checker, t *checker.Type) string {
-	if symbol := t.Symbol(); symbol != nil && symbol.Name() != "" && symbol.Name()[0] != '_' {
+	if symbol := t.Symbol(); symbol != nil && isWrittenName(symbol.Name()) {
 		return symbol.Name()
 	}
-	return "the service"
+	if alias := t.Alias(); alias != nil && alias.Symbol() != nil && isWrittenName(alias.Symbol().Name()) {
+		return alias.Symbol().Name()
+	}
+	return ""
+}
+
+// isWrittenName reports whether name is a name an author wrote, not the
+// internal name the binder gives an anonymous declaration, such as \xFEtype
+// for a type literal, or a TypeScript 5 style __type.
+func isWrittenName(name string) bool {
+	return name != "" && !strings.HasPrefix(name, ast.InternalSymbolNamePrefix) && !strings.HasPrefix(name, "__")
+}
+
+// qualifiedMember returns owner.name, or name alone when owner is "".
+func qualifiedMember(owner, name string) string {
+	if owner == "" {
+		return name
+	}
+	return owner + "." + name
 }
 
 // providerName returns the name of the variable, property, or class that
