@@ -23,6 +23,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 | Effect TypeScript | VibeLang |
 | --- | --- |
 | `class E extends Data.TaggedError("E")<{ readonly id: string }> {}` | `error E { id: string }`, `error Timeout` (D126) |
+| an error class with a constructor, methods or a subclass | `error E { id: string; constructor(raw: string) { super({ id: raw.trim() }) } }`, `error Sub extends Base { path: string }` (D278) |
 | `Schema.TaggedError` class | `schema error E { id: string }` (D279) |
 | `Context.Service<Users, {...}>()("app/Users")` | `service Users { find(id: string): User!NotFound; region: string }` (D128, D223) |
 | a service of another shape | `service Prefix: string`, `service Search: SearchApi` (D281) |
@@ -58,7 +59,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 | none (VibeLang's own) | `control Approval { approve(r: string): boolean!! }`, then `try { ... } handle Approval.approve(r) { resume(true) }` (D132) |
 | none (a TypeScript escape) | `module text { export function clean(s: string): string { ... } }`, `import { clean } from text` (D283) |
 
-D278 to D283 (2026-10-21) are newer than compiler 0.0.2. Until your compiler accepts a form, write its long form: `schema error` → the `Schema.TaggedError` class; `schema X =` → `Schema.Literals` or `Schema.Union` plus `type X = typeof X.Type`; `service X: T` → `class X extends Context.Service<X, T>()(key) {}`; `module` → a `.ts` file.
+D278 to D283 (2026-10-21) are newer than compiler 0.0.2. Until your compiler accepts a form, write its long form: an `error` with members or `extends` → the `Data.TaggedError` class; `schema error` → the `Schema.TaggedError` class; `schema X =` → `Schema.Literals` or `Schema.Union` plus `type X = typeof X.Type`; `service X: T` → `class X extends Context.Service<X, T>()(key) {}`; `module` → a `.ts` file.
 
 ## Rules
 
@@ -69,7 +70,7 @@ D278 to D283 (2026-10-21) are newer than compiler 0.0.2. Until your compiler acc
 5. Outside a hatch or a `module` body, `throw` is always a typed failure (D282). A function with a plain return annotation never fails and needs no service: a throw that can escape it, in a statement, a throw expression, a `match` arm or a `do` block, is EK2003, as is running an Effect; the quick fix writes the contract (`number!BadInput!`), or move the throw into a hatch. It may throw what its own `catch` handles. A plain callback that can fail is EK4301. Its calls of TypeScript code are JavaScript calls: their exceptions pass through its `catch` (EK2004 warns) and become defects at an effectful caller; a trusted call's listed failure is typed only inside the function's own `try`.
 6. A module's top level declares: running a program there is EK1001, except through a runner such as `NodeRuntime.runMain(...)`. A `const` declared with an Effect type holds a cold program (D262, D269).
 7. `catch (e: E)` and `catch (cause: Cause)` are retired (EK2112, EK2113): catch, then `match` or `is`. A `match` without `default` over a finite union must cover it (EK4701), and then runs its last arm without testing it (D294), so write no `default` there. `is` binds only in an `if` or `while` condition (EK4703). No regex or relational patterns (EK4704): guard with `when let n and if (n < 10):`.
-8. An error's tag is its bare class name, a subclass's its own (D278): `catchTag("NotFound")` matches it, and `when NotFound` and `is NotFound` match by class.
+8. An `error` is a class (D278): `abstract`, `extends` another error, `implements`, a constructor that calls `super`, methods, accessors and static or private members mean what they mean in TypeScript. A field is a property with a type and no initializer; the constructor takes it. An error's tag is its bare class name, a subclass's its own: `catchTag("NotFound")` matches it, and `when NotFound` and `is NotFound` match by class. A family's base writes `_tag: string` so its subclasses' tags fit (EK2117; an `abstract error` needs none), and catching the base's own tag leaves the base in E (D304). A subclass with fields and no constructor takes its base's fields and its own as one object; when the base's constructor takes other arguments, write one (EK2118).
 9. Don't write `readonly` on interface or object-type members (D134); arrays still need `ReadonlyArray`. Class members keep TypeScript's rule, and an `error`'s fields are always readonly.
 10. `throw` in an expression takes a unary operand: write `throw (c ? a : b)` (EK1010). `x catch y` binds looser than `??` and `||`, tighter than `? :`, and chains left to right (D237). Both sides take the expression's contextual type, so `{ _tag: "Found", ... } catch (e) => ({ _tag: "Error", e })` checks against a declared union (D293).
 11. Retired spellings warn: `with X { }` (EK1009), `service class` (EK2120), `layer X: S { }` (EK2121). `select` is the error EK4607: use `await.race`.
