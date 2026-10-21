@@ -84,9 +84,17 @@ assertion's stack points to its `.vibe` source line.
 ```ts
 vibelang({
   project: "tsconfig.test.json", // Relative to Vite's root; default: tsconfig.json.
-  compiler: "/absolute/path/to/vibelang" // Native binary or Node launcher.
+  compiler: "/absolute/path/to/vibelang", // Native binary or Node launcher.
+  register: true // Vitest: processes a test starts load vibelang/register; default: false.
 })
 ```
+
+`register: true` is for suites that start Node on source, such as a test that
+runs a command-line program from `src/bin.ts`. The plugin adds `--import` of
+`vibelang/register`, by absolute URL, to the tests' `NODE_OPTIONS`, keeping any
+value the configuration or the environment already sets, so a child process
+imports `.vibe` modules from any working directory. A child given an
+environment of its own, without `NODE_OPTIONS`, does not inherit it.
 
 By default, the plugin resolves `vibelang` from the application's root and runs
 its Node launcher. Without a `compiler` option, `VIBELANG_BINARY` selects a

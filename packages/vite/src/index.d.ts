@@ -5,6 +5,12 @@ export interface VibeLangOptions {
   project?: string
   /** Native vibelang binary or Node launcher path. Defaults to vibelang. */
   compiler?: string
+  /**
+   * Vitest only: add `--import` of `vibelang/register` to the tests'
+   * NODE_OPTIONS, so a Node process a test starts, such as a CLI run from
+   * source, imports .vibe modules too. Defaults to false.
+   */
+  register?: boolean
 }
 
 export default function vibelang(options?: VibeLangOptions): Plugin

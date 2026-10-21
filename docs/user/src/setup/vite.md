@@ -84,6 +84,8 @@ Run `npx vitest run`. Tests need no prior build. The output includes:
       Tests  1 passed (1)
 ```
 
+If a test starts a Node process that runs the project's source, such as a command-line program, pass `vibelang({ register: true })`. The plugin adds `vibelang/register` to the tests' `NODE_OPTIONS`, so that process imports `.vibe` modules too, whatever its working directory. Any `NODE_OPTIONS` the configuration or the environment already sets is kept.
+
 ## 5. Build
 
 Run `npx vite build`. It exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added.

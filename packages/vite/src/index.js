@@ -21,6 +21,18 @@ async function loadBackend(root) {
   throw new Error("vibelang-vite needs the vibelang package: npm install --save-dev vibelang")
 }
 
+// The Node loader's absolute URL, so a process started in any directory finds it.
+function registerUrl(root) {
+  for (const base of [join(root, "package.json"), fileURLToPath(import.meta.url)]) {
+    try {
+      return pathToFileURL(createRequire(base).resolve("vibelang/register")).href
+    } catch {
+      continue
+    }
+  }
+  throw new Error("vibelang-vite's register option needs the vibelang package: npm install --save-dev vibelang")
+}
+
 /** @param {import('./index.d.ts').VibeLangOptions} options */
 export default function vibelang(options = {}) {
   let root, project, logger, backend, modules, current
@@ -48,6 +60,14 @@ export default function vibelang(options = {}) {
   return {
     name: "vibelang",
     enforce: "pre",
+    config(config) {
+      if (!options.register) return
+      // Vitest copies test.env into process.env, which the processes a test starts inherit.
+      const flag = `--import=${registerUrl(resolve(config.root || process.cwd()))}`
+      const inherited = config.test?.env?.NODE_OPTIONS ?? process.env.NODE_OPTIONS ?? ""
+      if (inherited.includes(flag)) return
+      return { test: { env: { NODE_OPTIONS: [inherited, flag].filter(Boolean).join(" ") } } }
+    },
     configResolved(config) {
       root = config.root
       project = resolve(root, options.project || "tsconfig.json")

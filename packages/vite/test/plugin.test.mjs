@@ -84,6 +84,38 @@ it("uses a workspace package's VibeLang source", () => {
   assert.match(result.output, /1 passed/)
 })
 
+test("register: true lets a Node process a test starts import .vibe source, from any directory", async (t) => {
+  const root = await fixture(t)
+  await writeFile(join(root, "plain.vibe"), "export function triple(value: number): number {\n  return value * 3\n}\n")
+  await writeFile(join(root, "spawn.test.ts"), `import { execFileSync } from "node:child_process"
+import { tmpdir } from "node:os"
+import { expect, it } from "vitest"
+
+it("starts a Node process that imports a .vibe module", () => {
+  const plain = new URL("./plain.vibe", import.meta.url).href
+  const program = \`const { triple } = await import(\${JSON.stringify(plain)}); console.log(triple(14), process.env.NODE_OPTIONS.includes("--no-warnings"))\`
+  const output = execFileSync(process.execPath, ["--input-type=module", "-e", program], { cwd: tmpdir(), encoding: "utf8" })
+  expect(output.trim()).toBe("42 true")
+})
+`)
+  const config = (register) => `
+import { defineConfig } from "vitest/config"
+import vibelang from ${JSON.stringify(join(packageRoot, "src/index.js"))}
+export default defineConfig({
+  plugins: [vibelang({ compiler: ${JSON.stringify(compiler)}, register: ${register} })],
+  test: { include: ["spawn.test.ts"], env: { NODE_OPTIONS: "--no-warnings" } }
+})
+`
+  await writeFile(join(root, "vitest.config.ts"), config(true))
+  const registered = await runVitest(root)
+  assert.equal(registered.code, 0, registered.output)
+  assert.match(registered.output, /1 passed/)
+  await writeFile(join(root, "vitest.config.ts"), config(false))
+  const plain = await runVitest(root)
+  assert.equal(plain.code, 1, plain.output)
+  assert.match(plain.output, /ERR_UNKNOWN_FILE_EXTENSION|Unknown file extension "\.vibe"/)
+})
+
 test("a deliberate failing assertion reports failure.test.vibe:6", async (t) => {
   const result = await runVitest(await fixture(t), true)
   assert.equal(result.code, 1, result.output)
