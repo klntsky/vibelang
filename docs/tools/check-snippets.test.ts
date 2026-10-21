@@ -264,3 +264,14 @@ test.skipIf(!existsSync(compiler))("runs Effect Vitest snippets, shared assertio
     expect(failure.execution.stderr).toContain("AssertionError")
   } finally { rmSync(root, { recursive: true, force: true }) }
 }, 60000)
+
+test("onboarding pages include the starter and compile their inline hatch examples", () => {
+  const repo = resolve(import.meta.dir, "../..")
+  const pages = markdownPages(join(repo, "docs/user"))
+  for (const file of ["docs/user/llms-essentials.md", "templates/app/AGENTS.md"]) {
+    expect(pages).toContain(join(repo, file))
+    const blocks = extract(readFileSync(join(repo, file), "utf8"), { hatchExamples: true })
+    expect(blocks.filter(b => b.firstLine.startsWith("sync(") || b.firstLine.startsWith("try("))).toHaveLength(2)
+    expect(blocks.some(b => b.filename === "hatch-input.ts")).toBe(true)
+  }
+})

@@ -10,7 +10,7 @@ export type Block = { number: number; line: number; language: "vibe" | "ts"; sou
 export type Result = Block & { status: "ok" | "fragment" | "compiler-gap" | "fail"; diagnostics: Diagnostic[]; reason?: string; execution?: Execution }
 export type Execution = { phase: "compile" | "run"; status: "passed" | "failed"; expectedStdout: string; stdout: string; stderr: string; exitCode: number; timedOut: boolean }
 
-export function extract(markdown: string): Block[] {
+export function extract(markdown: string, options: { hatchExamples?: boolean } = {}): Block[] {
   const lines = markdown.split(/\r?\n/)
   const blocks: Block[] = []
   let number = 0
@@ -63,6 +63,21 @@ export function extract(markdown: string): Block[] {
       expected: [...(header.match(/\/\/ expect-error:\s*([^\n]+)/)?.[1] ?? "").matchAll(/(?:EK|TS)\d+/g)].map(m => m[0]),
       fragment: /\/\/ fragment\s*(?:$|\n)/.test(header),
       gap: header.match(/\/\/ compiler-gap:\s*([^\n]+)/)?.[1] })
+  }
+
+  // These inline examples are copied into new apps. Give f an imported
+  // TypeScript implementation and x a local binding, exactly as readers use them.
+  if (options.hatchExamples) {
+    const line = lines.findIndex(line => line.startsWith("- A plain TypeScript call needs "))
+    if (line < 0) throw new Error("Missing onboarding hatch examples")
+    const examples = [...lines[line].matchAll(/\x60((?:sync|try)\([^\x60]+)\x60/g)]
+    if (examples.length !== 2) throw new Error("Expected sync and try onboarding examples")
+    const add = (source: string, firstLine: string, filename?: string, language: "vibe" | "ts" = "vibe") =>
+      blocks.push({ number: ++number, line: line + 1, language, source, firstLine, filename, expected: [], fragment: false })
+    add("export function f(x: number): number { return x + 1 }", "TypeScript hatch input", "hatch-input.ts", "ts")
+    for (const [, expression] of examples) add(
+      'import { f } from "./hatch-input.ts"; error E; function hatchExample() { const x = 1; return ' + expression + ' }',
+      expression)
   }
   return blocks
 }
@@ -123,7 +138,9 @@ export function parseDiagnostics(output: string): { file?: string; diagnostic: D
 export function markdownPages(root: string): string[] {
   const walk = (path: string): string[] => readdirSync(path, { withFileTypes: true }).flatMap(e =>
     e.isDirectory() ? (join(path, e.name) === join(root, "site") ? [] : walk(join(path, e.name))) : e.name.endsWith(".md") ? [join(path, e.name)] : [])
-  return walk(root).sort()
+  const pages = walk(root)
+  if (root === join(repo, "docs/user")) pages.push(join(repo, "templates/app/AGENTS.md"))
+  return [...new Set(pages)].sort()
 }
 
 // The compiler that VIBELANG_BINARY names, else the local build, else vibelang on PATH.
@@ -417,7 +434,7 @@ async function main() {
     linkModules(temp)
     let index = 0
     for (const page of markdownPages(root).filter(p => relative(root, p).includes(filter))) {
-      const blocks = extract(readFileSync(page, "utf8"))
+      const blocks = extract(readFileSync(page, "utf8"), { hatchExamples: [join(repo, "docs/user/llms-essentials.md"), join(repo, "templates/app/AGENTS.md")].includes(page) })
       if (!blocks.length) continue
       const dir = join(temp, String(++index))
       const { filenames, offsets } = writeProject(dir, blocks)
