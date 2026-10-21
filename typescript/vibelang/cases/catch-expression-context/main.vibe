@@ -1,0 +1,62 @@
+// expect-result: {"select":["Found","Error"],"fallback":["Some","None"],"declared":"Error","argument":"Found","block":"Error","chained":["first","second","last"],"mode":"slow"}
+export error Missing { code: string }
+
+type Outcome = { _tag: "Found"; value: number } | { _tag: "Error"; error: Missing }
+type Maybe = { _tag: "Some"; value: number } | { _tag: "None" }
+type Mode = "fast" | "slow"
+
+function find(n: number): number!Missing {
+  if (n < 0) throw new Missing({ code: "negative" })
+  return n
+}
+
+// D293: both sides of a catch expression take the expression's contextual
+// type, as both branches of a conditional do, so literal tags stay literal.
+function select(n: number): Outcome!! {
+  return { _tag: "Found", value: find(n) } catch (error) => ({ _tag: "Error", error })
+}
+
+function fallback(n: number): Maybe!! {
+  return { _tag: "Some", value: find(n) } catch ({ _tag: "None" })
+}
+
+function declared(n: number) {
+  const outcome: Outcome = { _tag: "Found", value: find(n) } catch (error) => ({ _tag: "Error", error })
+  return outcome._tag
+}
+
+function report(outcome: Outcome): string {
+  return outcome._tag
+}
+
+function block(n: number): Outcome!! {
+  return { _tag: "Found", value: find(n) } catch (error) => {
+    const failed: Missing = error
+    return { _tag: "Error", error: failed }
+  }
+}
+
+function step(label: "first" | "second", n: number): "first" | "second"!Missing {
+  if (n < 0) throw new Missing({ code: label })
+  return label
+}
+
+function chained(a: number, b: number): "first" | "second" | "last"!! {
+  return step("first", a) catch step("second", b) catch "last"
+}
+
+function mode(n: number): Mode!! {
+  return (find(n) > 10 ? "fast" : "slow") catch "slow"
+}
+
+export function main() {
+  return {
+    select: [select(1)._tag, select(-1)._tag],
+    fallback: [fallback(1)._tag, fallback(-1)._tag],
+    declared: declared(-1),
+    argument: report({ _tag: "Found", value: find(2) } catch (error) => ({ _tag: "Error", error })),
+    block: block(-1)._tag,
+    chained: [chained(1, 1), chained(-1, 1), chained(-1, -1)],
+    mode: mode(-1)
+  }
+}

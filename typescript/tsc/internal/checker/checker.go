@@ -20719,6 +20719,10 @@ func (c *Checker) getReturnTypeFromBodyWorker(fn *ast.Node, checkMode CheckMode)
 				}
 			default:
 				contextualType = c.instantiateContextualType(c.getReturnTypeOfSignature(contextualSignature), fn, ContextFlagsNone)
+				if !isGenerator {
+					// What fn returns sees the contextual type the extensions give it.
+					contextualType = c.applyContextualReturnTypeHooks(fn, contextualType)
+				}
 			}
 			if isGenerator {
 				yieldType = c.getWidenedLiteralLikeTypeForContextualIterationTypeIfNeeded(yieldType, contextualType, IterationTypeKindYield, isAsync)

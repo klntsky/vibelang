@@ -255,7 +255,7 @@ function describe(id: string) {
 // Output: ["Ada","no user missing"]
 ```
 
-**Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through.
+**Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through. Both sides take the expression's contextual type, as a conditional's branches do (D293).
 
 ```ts effect
 const nameOrGuest = (id: string) =>
