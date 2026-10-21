@@ -10,6 +10,9 @@
 	"scopeName": "source.vibe",
 	"patterns": [
 		{
+			"include": "#vibelang-module-declaration"
+		},
+		{
 			"include": "#directives"
 		},
 		{
@@ -31,6 +34,9 @@
 		},
 		"statements": {
 			"patterns": [
+				{
+					"include": "#vibelang-module-import"
+				},
 				{
 					"include": "#vibelang-error-declaration"
 				},
@@ -2372,6 +2378,9 @@
 		},
 		"import-export-declaration": {
 			"patterns": [
+				{
+					"include": "#vibelang-module-specifier"
+				},
 				{
 					"include": "#comment"
 				},
@@ -6127,6 +6136,67 @@
 					]
 				}
 			]
+		},
+		"vibelang-module-declaration": {
+			"name": "meta.namespace.declaration.ts",
+			"begin": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(?:(\\bexport)\\s+)?\\b(module)\\s+([_$[:alpha:]][_$[:alnum:]]*)(?=\\s*(?:$|\\{|//|/\\*))",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.export.ts"
+				},
+				"2": {
+					"name": "storage.type.namespace.ts"
+				},
+				"3": {
+					"name": "entity.name.type.module.ts"
+				}
+			},
+			"end": "(?<=\\})|(?=;|^\\s*$|(?:^\\s*(?:abstract|async|(?:\\bawait\\s+(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)\\b)|break|case|catch|class|const|continue|declare|do|else|enum|export|finally|function|for|goto|if|import|interface|let|module|namespace|switch|return|throw|try|type|(?:\\busing(?=\\s+(?!in\\b|of\\b(?!\\s*(?:of\\b|=)))[_$[:alpha:]])\\b)|var|while)\\b))",
+			"patterns": [
+				{
+					"include": "#comment"
+				},
+				{
+					"name": "meta.block.ts",
+					"begin": "\\{",
+					"beginCaptures": {
+						"0": {
+							"name": "punctuation.definition.block.ts"
+						}
+					},
+					"end": "\\}",
+					"endCaptures": {
+						"0": {
+							"name": "punctuation.definition.block.ts"
+						}
+					},
+					"patterns": [
+						{
+							"include": "source.ts"
+						}
+					]
+				}
+			]
+		},
+		"vibelang-module-specifier": {
+			"match": "(?<=\\bfrom\\s)\\s*([_$[:alpha:]][_$[:alnum:]]*)(?=\\s*(?:$|;|//|/\\*))",
+			"captures": {
+				"1": {
+					"name": "entity.name.type.module.ts"
+				}
+			}
+		},
+		"vibelang-module-import": {
+			"name": "meta.import.ts",
+			"match": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))\\b(import)\\s+([_$[:alpha:]][_$[:alnum:]]*)(?=\\s*(?:$|;|//|/\\*))",
+			"captures": {
+				"1": {
+					"name": "keyword.control.import.ts"
+				},
+				"2": {
+					"name": "entity.name.type.module.ts"
+				}
+			}
 		}
 	}
 }

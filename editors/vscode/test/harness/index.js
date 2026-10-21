@@ -41,6 +41,24 @@ async function hoverText(document, needle) {
   return hovers.flatMap((hover) => hover.contents.map((part) => (typeof part === "string" ? part : part.value))).join("\n")
 }
 
+// The tokens VS Code's grammars give text, written to grammar/<name> in the
+// project, outside the program (tsconfig.json includes only src/). Each token
+// is its text, c, and its scopes, t, such as "source.vibe meta.import.ts ...".
+async function syntaxTokens(name, text) {
+  const file = path.join(workspace, "grammar", name)
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, text)
+  const tokens = await vscode.commands.executeCommand("_workbench.captureSyntaxTokens", vscode.Uri.file(file))
+  return tokens.map(({ c, t }) => ({ c, t }))
+}
+
+// The first token where a .vibe file's tokens differ from a .ts file's, with
+// the root scopes source.vibe and source.ts counted as the same, else "".
+function firstDifference(vibe, ts) {
+  const index = ts.findIndex((token, i) => !vibe[i] || token.c !== vibe[i].c || token.t !== vibe[i].t.replace(/^source\.vibe\b/, "source.ts"))
+  return index < 0 ? "" : `token ${index} is ${JSON.stringify(vibe[index])}, TypeScript's is ${JSON.stringify(ts[index])}`
+}
+
 function codeOf(diagnostic) {
   return typeof diagnostic.code === "object" ? diagnostic.code.value : diagnostic.code
 }
@@ -96,6 +114,73 @@ async function run() {
     const keywords = tokens.filter((token) => token.c.trim() === "catch")
     assert(keywords.length === 2, `catch tokens ${JSON.stringify(keywords)}`)
     for (const keyword of keywords) assert(keyword.t.includes("keyword.control.trycatch"), `scopes ${keyword.t}`)
+  })
+
+  await check("grammar: a module declaration's body is colored as TypeScript colors it", async () => {
+    // Braces in the body's strings, templates, regular expression and
+    // comments do not end it. VibeLang's own forms, such as the error
+    // declaration that the compiler rejects there (D283), are TypeScript's.
+    const body = [
+      '  import { Effect } from "effect"',
+      "",
+      '  export const close = "}"',
+      "  export const braces = /[{}]/g",
+      '  export const label = (name: string) => `{${name}${"}"}}`',
+      "  export const page = `",
+      "    <main>{ } }</main>",
+      "  `",
+      "  // a } in a comment",
+      "  /* a { and",
+      "     a } in a comment */",
+      "",
+      "  export function clean(value: string): string {",
+      "    const trimmed = value.trim()",
+      '    if (trimmed === "") throw new Error("empty")',
+      "    return trimmed",
+      "  }",
+      "",
+      "  export const greet = (name: string) => Effect.succeed({ greeting: `hello, ${name}` })",
+      "",
+      "  error Bad { reason: string }"
+    ]
+    const vibe = await syntaxTokens("module.vibe", ["module text {", ...body, "}", "", "error NotFound { id: string }", ""].join("\n"))
+    const ts = await syntaxTokens("namespace.ts", ["namespace text {", ...body, "}", ""].join("\n"))
+    assert(vibe[0].c === "module" && ts[0].c === "namespace", `first tokens ${JSON.stringify([vibe[0], ts[0]])}`)
+    const difference = firstDifference([{ ...vibe[0], c: "namespace" }, ...vibe.slice(1)], ts)
+    assert(difference === "", difference)
+    const after = vibe.slice(ts.length).find((token) => token.c === "error")
+    assert(after?.t === "source.vibe meta.class.ts storage.type.class.ts", `the error after the module is ${JSON.stringify(after)}`)
+  })
+
+  await check("grammar: an identifier module specifier is a module name", async () => {
+    const tokens = await syntaxTokens(
+      "specifiers.vibe",
+      [
+        "module text {",
+        "  export const clean = (value: string) => value.trim()",
+        "}",
+        "",
+        "import { clean } from text",
+        "import text",
+        "export { clean as tidy } from text",
+        "export * from text",
+        ""
+      ].join("\n")
+    )
+    const names = tokens.filter((token) => token.c === "text")
+    assert(names.length === 5, `text tokens ${JSON.stringify(names)}`)
+    for (const name of names) assert(name.t.endsWith(" entity.name.type.module.ts"), `scopes ${name.t}`)
+    const exports = tokens.filter((token) => token.c === "export")
+    assert(exports.length === 3, `export tokens ${JSON.stringify(exports)}`)
+    for (const keyword of exports) assert(keyword.t.endsWith(" keyword.control.export.ts"), `scopes ${keyword.t}`)
+  })
+
+  await check("grammar: namespace and declare module keep TypeScript's scopes", async () => {
+    const text = ["namespace tools {", "  export const version = 1", "}", "", 'declare module "effect-extra" {', "  export const extra: number", "}", ""].join("\n")
+    const vibe = await syntaxTokens("namespaces.vibe", text)
+    const ts = await syntaxTokens("namespaces.ts", text)
+    const difference = firstDifference(vibe, ts)
+    assert(difference === "" && vibe.length === ts.length, difference || `${vibe.length} tokens, TypeScript's ${ts.length}`)
   })
 
   await check("diagnostics: TypeScript's TS2322 appears on broken.vibe", async () => {

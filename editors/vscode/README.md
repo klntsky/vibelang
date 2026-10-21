@@ -10,7 +10,7 @@ The extension `vibelang.vibelang` registers the VibeLang language for `.vibe` fi
 | Hover | A function's inferred contract, `function lookup(id: number): Effect<string, NotFound, never>`, and at a call that runs, "Runs here and returns `string`." |
 | Navigation | Go to definition, find references, and rename across `.vibe` and `.ts` files |
 | Completions | TypeScript's completions, with VibeLang types: inside a `.vibe` function, a call that runs has its success type |
-| Highlighting | A TextMate grammar derived from VS Code's TypeScript grammar, with root scope `source.vibe` |
+| Highlighting | A TextMate grammar derived from VS Code's TypeScript grammar, with root scope `source.vibe`. A module declaration's body is colored by VS Code's TypeScript grammar, `source.ts`, as a `.ts` file is |
 
 ## Install
 
