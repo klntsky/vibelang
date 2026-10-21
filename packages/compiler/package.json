@@ -1,6 +1,6 @@
 {
   "name": "vibelang",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "The VibeLang compiler and language server: a readable syntax for Effect that compiles to TypeScript",
   "keywords": ["vibelang", "effect", "typescript", "compiler", "language-server"],
   "homepage": "https://vibelang.sh",
@@ -25,12 +25,12 @@
   "files": ["bin", "editor", "cache.mjs", "dprint-plugin.json", "eslint.mjs", "project.mjs", "project.d.mts", "register.mjs", "bun.mjs", "README.md", "LICENSE", "NOTICE", "skills/vibelang/SKILL.md"],
   "scripts": { "test": "node --test test/*.test.mjs" },
   "optionalDependencies": {
-    "vibelang-darwin-arm64": "0.0.2",
-    "vibelang-darwin-x64": "0.0.2",
-    "vibelang-linux-arm64": "0.0.2",
-    "vibelang-linux-x64": "0.0.2",
-    "vibelang-win32-arm64": "0.0.2",
-    "vibelang-win32-x64": "0.0.2"
+    "vibelang-darwin-arm64": "0.0.3",
+    "vibelang-darwin-x64": "0.0.3",
+    "vibelang-linux-arm64": "0.0.3",
+    "vibelang-linux-x64": "0.0.3",
+    "vibelang-win32-arm64": "0.0.3",
+    "vibelang-win32-x64": "0.0.3"
   },
   "engines": { "node": ">=22" }
 }
