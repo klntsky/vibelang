@@ -209,11 +209,15 @@ module.exports = grammar(TypeScript, {
       field('body', $.class_body),
     ),
 
-    // schema Account { id: string; nickname?: string } (D133).
+    // schema Account { id: string; nickname?: string } (D133), and the alias
+    // form schema Code = "a" | "b" (D280).
     schema_declaration: $ => prec.right(seq(
       'schema',
       field('name', $._type_identifier),
-      field('body', optional($.object_type)),
+      optional(choice(
+        field('body', $.object_type),
+        seq('=', field('value', $.type), $._semicolon),
+      )),
     )),
 
     // layer UsersLive: Users { setup; find(id) { ... } readonly region = "eu" },

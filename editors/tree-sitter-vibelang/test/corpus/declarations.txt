@@ -144,6 +144,46 @@ export schema Empty
       name: (type_identifier))))
 
 ================================================================================
+Schema aliases
+================================================================================
+
+export schema Code = "root_missing" | "read_failed"
+schema Names = ReadonlyArray<string>;
+schema Point = { x: number }
+const after = 1
+
+--------------------------------------------------------------------------------
+
+(program
+  (export_statement
+    declaration: (schema_declaration
+      name: (type_identifier)
+      value: (union_type
+        (literal_type
+          (string
+            (string_fragment)))
+        (literal_type
+          (string
+            (string_fragment))))))
+  (schema_declaration
+    name: (type_identifier)
+    value: (generic_type
+      name: (type_identifier)
+      type_arguments: (type_arguments
+        (predefined_type))))
+  (schema_declaration
+    name: (type_identifier)
+    value: (object_type
+      (property_signature
+        name: (property_identifier)
+        type: (type_annotation
+          (predefined_type)))))
+  (lexical_declaration
+    (variable_declarator
+      name: (identifier)
+      value: (number))))
+
+================================================================================
 Layer declarations, the old spelling
 ================================================================================
 
