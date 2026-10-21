@@ -161,7 +161,7 @@ bun run test
 bun x --no-install vibelang --noEmit
 ```
 
-The starter's `tsconfig.json` selects `.vibe` files under `src/`, emits Node ESM to `dist/`, enables strict checking and source maps, and prevents emit on errors. Local source imports use `.vibe`; generated JavaScript imports use `.js`. `vibelang` accepts TypeScript compiler flags such as `--noEmit`, `--watch`, and `-b`.
+The starter's `tsconfig.json` selects `.vibe` files under `src/`, emits Node ESM to `dist/`, enables strict checking and source maps, and prevents emit on errors. Local source imports use `.vibe`; generated JavaScript and declaration files import `.js`, so a TypeScript project that installs your package resolves each module's declarations. `vibelang` accepts TypeScript compiler flags such as `--noEmit`, `--watch`, and `-b`.
 
 ## Coming from Effect
 

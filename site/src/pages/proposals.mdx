@@ -218,7 +218,7 @@ export default Deployment.make({
 
 - Effect 4's `effect/workflow` modules (`Workflow`, `Activity`, `DurableClock`, `DurableDeferred`, `DurableQueue`) work from `.vibe` files. A workflow body is an ordinary VibeLang function. Every execution, first or replay, reruns the body from the start, and side effects belong in activities (decision D42).
 - `Workflow.make` and `Activity.make` take explicit `Schema` values for the payload, success, and error. The earlier design derived these codecs from the Action's signature.
-- The specification keeps durable execution out of the language: "It needs serializable continuations, a different machine" ([specification](https://effeck.dev/spec/), chapter 18).
+- The specification keeps durable execution out of the language: "It needs serializable continuations, a different machine" ([specification](https://vibelang.sh/spec/), chapter 18).
 - Missing: Action and Flow declarations, codecs derived from signatures, a static Plan, inspection before execution, approval, content-cache reuse, and multi-artifact deployment builds.
 - The prelude's `sleep` is `Effect.sleep` and takes a duration such as `"5 millis"`. A durable timer needs a different name, as Effect's `DurableClock.sleep` has.
 
@@ -692,4 +692,4 @@ The earlier design is preserved in the `smithersai/vibelang` repository at two r
 - [`c60eca97`](https://github.com/smithersai/vibelang/tree/c60eca975b01a6778fdad81e5f54d72091481298/docs) (August 21, 2026): `Result` with `.unwrap()`, `Optional<T>`, expression control flow, native and Wasm targets, and the first durable Plan design. Its long-form drafts are `docs/DURABLE_EXECUTION.md`, `docs/AGENT_LIBRARY.md`, and `docs/ASSET_LOADERS.md`.
 - [`ebe89a2b`](https://github.com/smithersai/vibelang/tree/ebe89a2bc72f1603059dea7b10e661bb0e5c7c49/docs) (September 10, 2026): postfix `!`, TypeScript as the only target, the bundler plugin, the diagnostics and TC39 reference pages, and static keyed Plans.
 
-The current language's decisions are in its decision log and [specification](https://effeck.dev/spec/).
+The current language's decisions are in its decision log and [specification](https://vibelang.sh/spec/).

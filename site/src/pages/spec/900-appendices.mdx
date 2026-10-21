@@ -21,7 +21,7 @@ node scripts/v3-wakeup-chain.mjs 100000  # F10b: the same chain on effect 3.22.3
 cd reference-machine && bun install && bun test   # strategy B, 20 tests, about 18 s
 ```
 
-The docs site build (`docs/tools/render-user.ts`) runs this suite first and won't build if a test fails.
+The docs site build (`site/scripts/build-docs.ts`) runs this suite first and won't build if a test fails.
 
 #### How this revision was checked
 

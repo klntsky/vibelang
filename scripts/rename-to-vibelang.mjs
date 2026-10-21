@@ -80,12 +80,12 @@ export const BINARY_EXTENSIONS = new Set([
  * them before rewriting, and the gate ignores them. `paths` limits an entry to
  * those files.
  */
-/** The effeck.dev docs site: its renderer, landing page, deploy and redirect, and the pages and sync scripts that still link it. */
-const effeckSite = ["docs/wrangler.jsonc", "docs/redirect/", "scripts/deploy-docs.sh", "docs/tools/", "docs/landing/", "site/scripts/", "site/src/pages/proposals.mdx", "site/src/pages/spec/"]
+/** Only the redirect Worker still names the retired domains. */
+const effeckSite = ["docs/redirect/"]
 
 export const KEEP = [
   {
-    why: "the effeck.dev docs site and the files that build, deploy and link it; everything else names vibelang.sh",
+    why: "the retired domains served by the redirect Worker",
     paths: effeckSite,
     pattern: /(?<![\w.-])(?<![^/]\/)(?:www\.)?effeck\.(?:dev|sh|ai|app|com|fun|tech)(?![\w-])/g,
   },
@@ -104,7 +104,7 @@ export const KEEP = [
   },
   {
     why: "the deployed Cloudflare Worker names of the docs site",
-    paths: ["docs/wrangler.jsonc", "docs/redirect/wrangler.jsonc", "scripts/deploy-docs.sh"],
+    paths: ["docs/redirect/wrangler.jsonc"],
     pattern: /"name": "effeck(?:-redirect)?"|names the Worker, effeck\b/g,
   },
   {
@@ -326,7 +326,7 @@ function decisionText(number) {
       `Source files end in \`.${EXTENSION}\`, the editor language id and the Neovim filetype are \`${LANGUAGE_ID}\`, ` +
       `the configuration key is \`compilerOptions.${BRAND_LOWER}\`, the trust tag is \`@${BRAND_LOWER} trusted\`, ` +
       `and the editor extension is \`${BRAND_LOWER}.${BRAND_LOWER}\`. Diagnostic codes keep the prefix \`EK\`. ` +
-      "The domains effeck.dev and effeck.sh, the issue tracker `effeck/effeck` on smithers.sh, and the converter worker's deployment " +
+      "The single docs site is vibelang.sh. The issue tracker `effeck/effeck` on smithers.sh, and the converter worker's deployment " +
       "effeck-converter-worker keep their names until they move. `node scripts/rename-to-vibelang.mjs` applies the rename to any tree, " +
       "and `scripts/brand-gate.mjs` fails on a retired spelling.",
     "",

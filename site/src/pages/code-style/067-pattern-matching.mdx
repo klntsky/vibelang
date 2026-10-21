@@ -190,7 +190,7 @@ function describeAll(inputs: ReadonlyArray<number | string>) {
 ["count 3","label news"]
 ```
 
-`Match.type<T>()` builds a matcher with no input yet; its finalizer produces a plain function to pass as a callback. Match callbacks compute values synchronously, and Match functions are trusted Effect library functions: an exception escaping into Effect code is a defect that Effect catch doesn't recover. In a plain-contract function, JavaScript catch receives every exception as `unknown` (D260). Use `match` when an arm does Effect work.
+`Match.type<T>()` builds a matcher with no input yet; its finalizer produces a plain function to pass as a callback. Match callbacks compute values synchronously, and Match functions are trusted Effect library functions: an exception escaping into Effect code is a defect that Effect catch doesn't recover. A plain function's catch doesn't recover it either (D282). Use `match` when an arm does Effect work.
 
 ---
 

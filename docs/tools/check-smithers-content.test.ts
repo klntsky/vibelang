@@ -7,11 +7,11 @@ describe("links in app.md", () => {
     expect(linkTarget("https://vibelang.sh/spec/103-part1-ch03-errors.html")).toEqual({ file: "docs/design/src/103-part1-ch03-errors.md" })
     expect(linkTarget("https://vibelang.sh/")).toEqual({ ok: true })
   })
-  test("map effeck.dev pages to their sources", () => {
-    expect(linkTarget("https://effeck.dev/001-onboarding.html")).toEqual({ file: "docs/user/src/001-onboarding.md" })
-    expect(linkTarget("https://effeck.dev/error-management/014-expected-errors.html")).toEqual({ file: "docs/user/src/error-management/014-expected-errors.md" })
-    expect(linkTarget("https://effeck.dev/spec/103-part1-ch03-errors.html")).toEqual({ file: "docs/design/src/103-part1-ch03-errors.md" })
-    expect(linkTarget("https://effeck.dev/")).toEqual({ ok: true })
+  test("map vibelang.sh pages to their sources", () => {
+    expect(linkTarget("https://vibelang.sh/001-onboarding.html")).toEqual({ file: "docs/user/src/001-onboarding.md" })
+    expect(linkTarget("https://vibelang.sh/error-management/014-expected-errors.html")).toEqual({ file: "docs/user/src/error-management/014-expected-errors.md" })
+    expect(linkTarget("https://vibelang.sh/spec/103-part1-ch03-errors.html")).toEqual({ file: "docs/design/src/103-part1-ch03-errors.md" })
+    expect(linkTarget("https://vibelang.sh/")).toEqual({ ok: true })
   })
   test("map smithers.sh blobs to repository files", () => {
     expect(linkTarget("https://smithers.sh/effeck/effeck/blob/main/README.md")).toEqual({ file: "README.md" })
@@ -19,11 +19,11 @@ describe("links in app.md", () => {
   })
   test("refuse other hosts and plain http", () => {
     expect(linkTarget("https://example.com/x").error).toBeDefined()
-    expect(linkTarget("http://effeck.dev/001-onboarding.html").error).toBe("not https")
-    expect(linkTarget("https://effeck.dev/001-onboarding").error).toBeDefined()
+    expect(linkTarget("http://vibelang.sh/001-onboarding.html").error).toBe("not https")
+    expect(linkTarget("https://vibelang.sh/001-onboarding")).toEqual({ file: "docs/user/src/001-onboarding.md" })
   })
   test("are collected once, without trailing punctuation", () => {
-    expect(links("See https://effeck.dev/a.html. And (https://effeck.dev/a.html), https://effeck.dev/b.html")).toEqual(["https://effeck.dev/a.html", "https://effeck.dev/b.html"])
+    expect(links("See https://vibelang.sh/a.html. And (https://vibelang.sh/a.html), https://vibelang.sh/b.html")).toEqual(["https://vibelang.sh/a.html", "https://vibelang.sh/b.html"])
   })
 })
 

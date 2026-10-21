@@ -71,7 +71,7 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D34 | Diagnostics: errors, except the policies EK2004 (a warning) and EK4403; `compilerOptions.vibelang` | Soundness errors cannot be lowered | 28 |
 | D35 | One owner per diagnostic: `vibelang` for types and language, Oxlint for lint | tsgolint embeds TypeScript's checker | 28 |
 | D36 | Debugging through composed source maps; spans for logical stacks | The frame invariant keeps callers off the JavaScript stack | 28 |
-| D37 | Effect `catch` lets defects pass through; an Effect try with E = `never` is warning EK2004 (amended by D260) | Coverage audit X2; prototype finding 16 | 3, 10 |
+| D37 | Effect `catch` lets defects pass through; an Effect try with E = `never` is warning EK2004 (amended by D260 and D282) | Coverage audit X2; prototype finding 16 | 3, 10 |
 | D38 | Runners only where no fiber runs the code; EK1005 elsewhere | Coverage audit X4 | 13 |
 | D39 | A function-or-Effect parameter: a function if plain, a program if it can pause | Coverage audit X9 | 13 |
 | D40 | Service statics: `layer`, `make`; `static readonly default` makes a `Context.Reference` | Coverage audit X12 | 4 |
@@ -88,13 +88,13 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D51 | Plain calls at a module's top level are ordinary calls; `@throws {T}` names a class | Prototype finding 21 | 10 |
 | D52 | E and R of recursion by a fixpoint inside the component, never a whole-program pass (EK2102 for A); A widens; definite assignment on the source | Prototype findings 7, 10, 13; the single-pass probe `isEven`/`isOdd` | 14, 26, 27 |
 | D53 | Diagnostic codes follow the prototype | Prototype diagnostics | 28 |
-| D54 | Inside a plain-JavaScript function, `try`, `catch`, and `finally` are JavaScript's own; plain contracts keep throws and calls as JavaScript (D260, D263) | D10 with D5: nothing in the function can pause | 15 |
+| D54 | Inside a plain-JavaScript function, `try`, `catch`, and `finally` are JavaScript's own statements, and its catch still receives typed failures only (D282) | D10 with D5: nothing in the function can pause | 15 |
 | D55 | A method implementing a plain-function member (`[Equal.symbol]`, `[Hash.symbol]`) compiles to a plain JavaScript method, or EK4301 | The member's declared type is not an Effect | 15 |
 | D56 | Each overload candidate's declared parameter type, never the lambda's own inferred type, decides a lambda's form (plain, Effect function, program); the first candidate that accepts it wins. D10 eligibility is computed on demand | Single-pass experiment: 0 disagreements in 46 files; 6 probe lambdas with two self-consistent lowerings | 13, 15, 27 |
 | D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; omitted slots are EK2003. D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
 | D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; superseded by D125 | Another compile-to-JavaScript language uses the name | 28 |
 | D59 | Draft upstream issues and proposals in `docs/upstream/`; status: drafted, not filed | Filing speaks for the owner in a third-party project and needs his go-ahead | 24, 25, 30 |
-| D60 | **Will.** One private repository, `github.com/roninjin10/effectscript`; the compiler is in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
+| D60 | **Will.** One private repository, `effectscript on GitHub`; the compiler is in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
 
 #### Decisions from the end-to-end build (2026-10-16)
 
@@ -115,7 +115,7 @@ These rows record build defaults, not new language decisions. Lane U recorded D9
 | D71 | EK2102 also covers a `catch` variable or return type typed before its cycle's E and R are known; fix: a written contract | The checker cannot revise cached recursive types | 14, 28 |
 | D72 | EK2102 applies only to functions that run Effects; a pure recursive function keeps TypeScript's TS7023, which a plain annotation fixes (consistent with D67) | Pure recursion needs no Effect channel analysis | 14, 15 |
 | D73 | A call to a function with a complete written contract adds the contract's E and R, not what its body does | Callers rely on the public contract | 14 |
-| D74 | Methods are exempt from EK2003 for a plain annotation | A method implementing a plain-function member (D55) needs a plain annotation | 14, 15 |
+| D74 | Methods are exempt from EK2003 for a plain annotation on a body that runs an Effect; a throw that can escape one is EK2003 (D282) | A method implementing a plain-function member (D55) needs a plain annotation | 14, 15 |
 | D75 | The `tsc/cmd/tsc` binary identifies as VibeLang; no separate cmd/vibelang | One upstream entry-point seam | 27, 28 |
 | D76 | **Controversial.** The editor serves `.ts` only when the built-in TypeScript extension is disabled, or with Cursor's useTsgo | Disabling validation also hides VibeLang diagnostics; amends D32 | 28 |
 | D77 | **Controversial.** Hover shows a running call's success value and a plain helper's direct and TypeScript-facing signatures; `.ts` hover is unchanged | Explains both call semantics and the helper ABI | 15, 28 |
@@ -234,7 +234,9 @@ These rows record build defaults, not new language decisions. Lane U recorded D9
 | D244 | **Controversial.** VibeLang warns where Effect's defaults are off: `extendsNativeError`, `newPromise`, `unsafeEffectTypeAssertion` | Failures are `error` declarations, promises cannot be awaited, contracts check types | 28 |
 | D245 | Refactors are `refactor.rewrite` code actions: write or remove a contract, interface to `schema`, async to a VibeLang function (with an `error` per `await`), calls to a pipe and back, and the two pipe styles | Effect's 15 refactors, for one function form | 28 |
 | D246 | A layer's hover lists what it provides, needs, and fails with; `wire`'s hover its build order; `Duration.Input` strings, a brand's name, and `@vibelang-diagnostics` codes complete | Effect's hovers and completions that still apply | 28 |
-| D260 | Plain contracts keep JavaScript catch with an `unknown` binding; only Effect try blocks with E = `never` get EK2004, which says defects pass through | Smithers twin failures; effectscript-4a ruling `d-syzjja` | 3, 15 |
+| D260 | EK2004's text says defects pass through a catch; its JavaScript catch in plain contracts is superseded by D282 | Smithers twin failures; effectscript-4a ruling `d-syzjja` | 3, 15 |
+| D281 | `service Name: Type` declares a service of any shape, `Context.Service<Name, Type>`; its body holds only static members (EK2103) | Smithers: 103 services with the interface beside them, 8 of shape `string` | 4 |
+| D282 | `throw` always fails and `catch` receives typed failures only, outside hatches; a plain function never fails and needs nothing, so a throw that can escape it is EK2003 (supersedes D263) | Will, 2026-10-21 | 3, 15 |
 
 #### Rules of the runtime and compiler
 
@@ -285,6 +287,6 @@ Proposed in the first draft as P1-P22; adopted by D29. A row marked **revised** 
 | O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
 | O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
 | O9 | D58, superseded by D125, then D255 (**controversial**) | VibeLang: `vibelang`, `.vibe`, `EK` codes, and unscoped npm packages |
-| Remote and repository layout | D60 | One repository, with the compiler in `typescript/`: private at `github.com/roninjin10/effectscript` when decided, now public at `github.com/smithersai/vibelang` |
+| Remote and repository layout | D60 | One repository, with the compiler in `typescript/`: private at `effectscript on GitHub` when decided, now public at `github.com/smithersai/vibelang` |
 
 No language or repository decision waits on the owner. D59's filing boundary stands: the drafts are ready to file, and none is filed without his go-ahead. Build lanes land locally; the orchestrator handles any push.

@@ -78,9 +78,9 @@ Without this rule, `Config.Port("PORT")` would read the variable before `Config.
 1. The access is in a `.vibe` file and not in an optional chain (`x?.name(…)`).
 2. `x`'s type, after TypeScript resolves type parameters to their constraints, has no member `name` of its own.
 3. One of Effect's data-type modules declares `x`'s type in `effect/dist/<Module>.d.ts`. For a union, every member comes from the same module, as `None` and `Some` come from `Option`.
-4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`.
+4. That module exports a function `name` with an overload whose first parameter is named `self`, Effect's name for a dual's data-first form, or ends in `OrOptions`, or has the name D295's table gives that function, such as `input` for `Cause.findErrorOption` and `n` for `BigDecimal.abs`.
 
-The method's signatures are those overloads with the first parameter moved to `this`. TypeScript checks `x` against it, infers type parameters from it, and narrows `x` by a type predicate on it:
+The method's signatures are those overloads with the first parameter moved to `this`; a curried overload, such as `Stream.zipLeft(right)`, takes another first parameter and is not one of them. TypeScript checks `x` against it, infers type parameters from it, and narrows `x` by a type predicate on it:
 
 ```ts [VibeLang]
 function describe(value: Option.Option<number>) {
@@ -125,7 +125,7 @@ A call runs where it stands, except where the expected type is `Effect`: there a
 
 A `const` whose declared type is Effect holds its initializer in every scope (D269, extending D262 and D265). `const built: Made = make(config)` calls `make` here and runs none of the returned program; running `built` later runs that same program each time. Only the initializer is held; calls in its operands keep their ordinary positions. Mutable bindings and inferred or asserted types do not opt in.
 
-A function whose declared return type is Effect may explicitly return a program (D269). The declaration may be its own annotation, its binding's, or a lambda's declared member or parameter type under D44. A return is a program when it is a parameterless function literal, converted by D7, or a non-call expression of Effect type, and TypeScript would reject it as the success type A. Such a function is a **factory**: its body runs when called, as plain JavaScript under D263, and running its result runs the program, every time. Every return path returns a program (EK2116). The body runs no Effect and looks up no service (EK2115); put that work in the returned program. An eager `throw` is JavaScript's synchronous throw. A factory has no plain variant, so it is EK4301 where a plain function is expected.
+A function whose declared return type is Effect may explicitly return a program (D269). The declaration may be its own annotation, its binding's, or a lambda's declared member or parameter type under D44. A return is a program when it is a parameterless function literal, converted by D7, or a non-call expression of Effect type, and TypeScript would reject it as the success type A. Such a function is a **factory**: its body runs when called, as plain JavaScript, which never fails (D282), and running its result runs the program, every time. Every return path returns a program (EK2116). The body runs no Effect and looks up no service (EK2115); put that work in the returned program. An eager `throw` is EK2115 too: return `() => { throw e }` so the program fails when it runs. A factory has no plain variant, so it is EK4301 where a plain function is expected.
 
 ```ts [VibeLang]
 const capture = (input: { mutable value: number }): Effect.Effect<number, never, never> => {

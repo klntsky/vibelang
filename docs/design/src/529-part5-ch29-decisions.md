@@ -90,7 +90,7 @@ D57 supplies decision 2's partial-annotation spelling: explicit `infer Name` slo
 | D57 | **Controversial.** Partial annotations use `infer Name` per channel in a function return annotation with a body; omitted slots are EK2003. D12 stands | TypeScript 7 parses `infer`; explicit slots distinguish inference from `never` | 2, 14, 16, 28 |
 | D58 | **Controversial.** Keep EffectScript, `esc`, `.es`, and `@effectscript`; superseded by D125 | Another compile-to-JavaScript language uses the name | 28 |
 | D59 | Draft upstream issues and proposals in `docs/upstream/`; status: drafted, not filed | Filing speaks for the owner in a third-party project and needs his go-ahead | 24, 25, 30 |
-| D60 | **Will.** One private repository, `github.com/roninjin10/effectscript`; the compiler is in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
+| D60 | **Will.** One private repository, `effectscript on GitHub`; the compiler is in `typescript/` | Spec and implementations change together; the imported TypeScript tree omits 349 MB of baselines | 27, 28 |
 
 #### Decisions from the end-to-end build (2026-10-16)
 
@@ -283,6 +283,6 @@ Proposed in the first draft as P1-P22; adopted by D29. A row marked **revised** 
 | O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
 | O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
 | O9 | D58, superseded by D125, then D255 (**controversial**) | VibeLang: `vibelang`, `.vibe`, `EK` codes, and unscoped npm packages |
-| Remote and repository layout | D60 | One repository, with the compiler in `typescript/`: private at `github.com/roninjin10/effectscript` when decided, now public at `github.com/smithersai/vibelang` |
+| Remote and repository layout | D60 | One repository, with the compiler in `typescript/`: private at `effectscript on GitHub` when decided, now public at `github.com/smithersai/vibelang` |
 
 No language or repository decision waits on the owner. D59's filing boundary stands: the drafts are ready to file, and none is filed without his go-ahead. Build lanes land locally; the orchestrator handles any push.

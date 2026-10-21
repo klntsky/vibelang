@@ -211,6 +211,8 @@ function phaseLabel(phase: Phase) {
 error EK4701: This match does not handle every case of Phase: "review" is left.
 ```
 
+A match that handles every case needs no check when it runs: its last arm runs without testing its pattern, so tests that reach every arm cover every branch. A value outside the declared type, which only an unsound cast or `any` can produce, takes the last arm; write `default: throw …` to reject it at run time instead.
+
 For any other type, a match without `default` that no arm fits throws a `TypeError` when it runs, as the proposal specifies.
 
 ## Errors

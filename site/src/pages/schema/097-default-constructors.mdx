@@ -146,7 +146,7 @@ true
 {"reference":"pkg-94","handling":"standard","labels":[]}
 ```
 
-Classes use the same default-bearing field descriptions as structs and give a validated instance with its class behavior. `new PackingRequest(...)` also applies defaults. An exception escaping into Effect code is a defect unless an explicit `try` hatch gives it an expected error type. A plain-contract function keeps JavaScript catch and receives every exception as `unknown` (D260); `new` itself never runs a program.
+Classes use the same default-bearing field descriptions as structs and give a validated instance with its class behavior. `new PackingRequest(...)` also applies defaults. An exception escaping into Effect code is a defect unless an explicit `try` hatch gives it an expected error type. A plain function's catch doesn't see it either (D282); `new` itself never runs a program.
 
 ---
 

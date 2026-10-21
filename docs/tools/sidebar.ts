@@ -1,5 +1,5 @@
 // Reads the docs sidebar from the "V4 sidebar in order" section of
-// docs/user/inventory.md. render-user.ts builds the site in this order, and
+// docs/user/inventory.md. markdown.ts builds the site in this order, and
 // token-counts.ts counts the pages in it.
 import { relative, resolve } from "node:path"
 

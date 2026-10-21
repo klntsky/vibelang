@@ -13,7 +13,7 @@
 // src/pages/proposals.mdx, is not in the language repo; the script keeps it and
 // lists it as the last sidebar entry (SITE_SIDEBAR). Links into the
 // specification point at /spec/ when the specification has been synced,
-// otherwise at https://effeck.dev/spec/. Each page that mirrors an
+// otherwise at https://vibelang.sh/spec/. Each page that mirrors an
 // Effect page (the inventory's `v4/...mdx` column) ends with a link to that page
 // on effect.website; the source's own "Upstream page" lines are dropped so the
 // link appears once. The script fails on a page
@@ -24,7 +24,7 @@ import path from 'node:path'
 import { convertText, readFences, fence, LABELS } from './docs-markdown.mjs'
 import { loadSpec } from './spec-docs.mjs'
 
-let SPEC_URL = 'https://effeck.dev/spec/'
+let SPEC_URL = 'https://vibelang.sh/spec/'
 const EFFECT_DOCS_URL = 'https://effect.website/docs/'
 const KEEP = new Set(['index.mdx', '_root.css', 'proposals.mdx', 'spec'])
 // Sidebar entries for site-only pages, appended after the inventory's sections.
@@ -51,7 +51,7 @@ const pages = fs
 const route = (rel) => `/${rel.replace(/\.md$/, '')}`
 
 // Sidebar: the inventory's "V4 sidebar in order" section, up to the
-// specification, which is published separately at effeck.dev/spec/.
+// specification, which is published separately at vibelang.sh/spec/.
 const inventory = fs.readFileSync(path.join(source, 'inventory.md'), 'utf8').split('\n')
 const sidebar = []
 const listed = new Set()

@@ -11,7 +11,7 @@ export function substituteFacts(raw, facts) {
   })
 }
 
-// Match render-user.ts's heading IDs, including duplicate heading suffixes.
+// Stable specification heading IDs, including duplicate heading suffixes.
 const slug = s => s.toLowerCase().replace(/<[^>]+>/g, '').replace(/[^\p{L}\p{N}\s-]/gu, '').trim().replace(/\s/g, '-')
 export function loadSpec(root) {
   root = path.resolve(root)
@@ -20,7 +20,7 @@ export function loadSpec(root) {
   const raw = new Map(chapters.map(f => [f, fs.readFileSync(path.join(dir, f), 'utf8')]))
   const sidebar = { text: 'Specification', collapsed: false, items: [] }
   const listed = new Set()
-  // Page titles are the inventory's labels, as on effeck.dev: "18. Why a continuation runtime".
+  // Page titles are the inventory's labels, as on vibelang.sh: "18. Why a continuation runtime".
   const labels = new Map()
   let active = false, group
   for (const line of fs.readFileSync(path.join(root, 'user/inventory.md'), 'utf8').split('\n')) {

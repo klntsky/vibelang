@@ -25,11 +25,10 @@ export function linkTarget(url: string): { file?: string; ok?: true; error?: str
   let parsed: URL
   try { parsed = new URL(url) } catch { return { error: "not a URL" } }
   if (parsed.protocol !== "https:") return { error: "not https" }
-  if (["vibelang.sh", "effeck.dev"].includes(parsed.hostname)) {
+  if (parsed.hostname === "vibelang.sh") {
     if (parsed.pathname === "/" || parsed.pathname === "") return { ok: true }
     const page = parsed.pathname.replace(/^\//, "")
-    if (!page.endsWith(".html")) return { error: "a docs page ends in .html" }
-    const md = page.replace(/\.html$/, ".md")
+    const md = page.replace(/\.(?:html|md)$/, "") + ".md"
     return page.startsWith("spec/") ? { file: join("docs/design/src", md.slice("spec/".length)) } : { file: join("docs/user/src", md) }
   }
   if (parsed.hostname === "smithers.sh") {

@@ -78,6 +78,57 @@ class Timeout extends Data.TaggedError("Timeout") {}
 
 :::
 
+**Errors are classes** (D278, D304). Constructors, methods, accessors, statics, `abstract`, `implements` and `extends` keep their TypeScript meaning, and each subclass is tagged with its own name. A family's base declares `_tag: string` so its subclasses' tags fit. Effect has no subclass with its own tag, so the left column writes the tag by hand.
+
+:::code-group
+
+```vibe [VibeLang]
+// run: Console.log(JSON.stringify([new Invalid(" x ").label, new Refused({ code: "r" })._tag]))
+error Invalid {
+  code: string
+  constructor(input: string) {
+    super({ code: input.trim() })
+  }
+  get label(): string {
+    return `invalid ${this.code}`
+  }
+}
+error Failure { _tag: string; code: string }
+error Refused extends Failure
+// Output: ["invalid x","Refused"]
+```
+
+```ts [Effect]
+class Invalid extends Data.TaggedError("Invalid")<{ readonly code: string }> {
+  constructor(input: string) {
+    super({ code: input.trim() })
+  }
+  get label(): string {
+    return `invalid ${this.code}`
+  }
+}
+class Failure extends Data.TaggedError("Failure" as string)<{ readonly code: string }> {}
+class Refused extends Failure {
+  override readonly _tag = "Refused"
+}
+```
+
+:::
+
+**Errors that encode** (D279). Fields map to schemas as a `schema` declaration's do.
+
+:::code-group
+
+```vibe [VibeLang]
+schema error Stored { key: string; attempts?: number }
+```
+
+```ts [Effect]
+class Stored extends Schema.TaggedError<Stored>()("Stored", { key: Schema.String, attempts: Schema.optional(Schema.Number) }) {}
+```
+
+:::
+
 **Services** (D128, D223). Members have no bodies; value members are readonly.
 
 :::code-group
@@ -94,6 +145,28 @@ class Users extends Context.Service<Users, {
   find(id: string): Effect.Effect<User, NotFound>
   readonly region: string
 }>()("app/Users") {}
+```
+
+:::
+
+**Services of any shape** (D281). The shape is any type: an interface, a primitive, a function type. A body is optional and holds only static members.
+
+:::code-group
+
+```vibe [VibeLang]
+interface SearchApi {
+  find(query: string): string!!
+}
+service Search: SearchApi
+service Prefix: string
+```
+
+```ts [Effect]
+interface SearchApi {
+  find(query: string): Effect.Effect<string>
+}
+class Search extends Context.Service<Search, SearchApi>()("app/Search") {}
+class Prefix extends Context.Service<Prefix, string>()("app/Prefix") {}
 ```
 
 :::
@@ -163,6 +236,24 @@ const Account = Schema.Struct({
   role: Schema.Literals(["admin", "member"])
 })
 interface Account extends Schema.Schema.Type<typeof Account> {}
+```
+
+:::
+
+**Schema aliases** (D280). A schema of any type the struct form maps, and the type, under one name.
+
+:::code-group
+
+```vibe [VibeLang]
+// run: Console.log(Schema.is(Role)("admin")); Console.log(Schema.is(Role)("owner"))
+schema Role = "admin" | "member"
+// Output: true
+// Output: false
+```
+
+```ts [Effect]
+const Role = Schema.Literals(["admin", "member"])
+type Role = typeof Role.Type
 ```
 
 :::
@@ -308,7 +399,7 @@ const describe = (id: string) =>
 
 :::
 
-**Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through.
+**Falling back in an expression** (D236). `x catch fallback` runs the fallback only after an expected failure; defects and interrupts pass through. Both sides take the expression's contextual type, as a conditional's branches do (D293).
 
 :::code-group
 
@@ -606,6 +697,8 @@ const hot = Stream.take(
 
 :::
 
+A method is a data-first overload: its first parameter is named `self`, ends in `OrOptions`, or is one of the few others D295 lists, such as `Cause.findErrorOption(input)`.
+
 **The pipe operator** (D154). `%` is the value on the left; where it lands in a program parameter, the left side is passed as a program.
 
 :::code-group
@@ -833,7 +926,7 @@ const firstFailure = (outcome: Exit.Exit<User, NotFound>) =>
 
 **Plain, self-contained TypeScript inside `sync`, `try`, and `callback`** (D148, D229-D232). A throw in `sync` is a defect; in `try` it is an expected failure. Async bodies are `Effect.promise` and `Effect.tryPromise`. A hatch's function reads `.vibe` values only as inputs, the arguments after it, which fill its first parameters; `try`'s error mapper stays second (EK4405). `runPromise` leads back in from a hatch's body or a `.ts` file.
 
-**Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: its `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` list `URIError`. Other built-ins' exceptions are defects. A plain return annotation keeps JavaScript exceptions; one that escapes into an Effect caller becomes a defect (D263). Inside TypeScript's `Effect.gen`, by contrast, a plain `JSON.parse` throw is a defect.
+**Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: its `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` list `URIError`. Other built-ins' exceptions are defects. In a plain function `JSON.parse` is a JavaScript call, unless a `try` of that function whose `catch` handles the `SyntaxError` encloses it (D282); an exception that escapes into an Effect caller becomes a defect. Inside TypeScript's `Effect.gen`, by contrast, a plain `JSON.parse` throw is a defect.
 
 `try((text) => JSON.parse(text), text)` (D148) turns any throw into an expected `Cause.UnknownError`; the error mapper below chooses the failure type. `sync((text) => JSON.parse(text), text)` keeps a parse exception a defect.
 

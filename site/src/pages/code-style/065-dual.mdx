@@ -28,6 +28,39 @@ function compare() {
 
 The direct form supplies `source` in the first call; the data-last form builds a stage, then `pipe` supplies `source`. Both build the same kind of Stream value and process nothing until consumed. The builders and their stages are trusted Effect library functions.
 
+## Methods
+
+```vibe
+// run: Console.log(JSON.stringify(methods()))
+const missing = Cause.fail("missing port")
+
+function methods() {
+  return {
+    error: missing.findErrorOption().getOrElse(() => "none"),
+    amount: BigDecimal.fromNumberUnsafe(-2.5).abs().format(),
+    pairs: Stream.make(1, 2).zipLeft(Stream.make(3, 4)).runCollect()
+  }
+}
+```
+
+```text
+{"error":"missing port","amount":"2.5","pairs":[1,2]}
+```
+
+A value of one of Effect's data types takes its module's data-first functions as methods: `missing.findErrorOption()` is `Cause.findErrorOption(missing)`. A data-first function is an overload that takes the value first. Effect names that parameter `self`, or ends its name in `OrOptions`. These functions name it otherwise and are methods too (D295):
+
+| Module | Functions |
+| --- | --- |
+| `BigDecimal` | `abs`, `format`, `isInteger`, `isNegative`, `isPositive`, `isZero`, `negate`, `round`, `sign`, `toExponential`, `toNumberUnsafe` |
+| `Cause` | `findErrorOption`, `pretty` |
+| `Duration` | `toHrTime`, `toNanosUnsafe` |
+| `Effect` | `annotateLogs`, `annotateSpans`, `tx`, `withExecutionPlan`, `withLogger`, `withLogSpan`, `withTracer`, `withTracerEnabled`, `withTracerTiming` |
+| `Exit` | `findDefect`, `findError` |
+| `Schedule` | `toStep`, `toStepWithMetadata`, `toStepWithSleep` |
+| `Stream` | `cross`, `crossWith`, `mergeLeft`, `mergeRight`, `race`, `toChannel`, `zipLatest`, `zipLatestWith`, `zipLeft`, `zipRight`, `zipWith`, `zipWithArray` |
+
+Only the data-first overloads are methods: `stream.zipLeft(other)` calls `Stream.zipLeft(stream, other)`, and `Stream.zipLeft(other)`, the data-last form, stays a function. Runners such as `Effect.runPromise` and constructors such as `Effect.acquireRelease` take an Effect first but do not operate on it, so they are not methods.
+
 ## Direct calls and program pipelines
 
 ```vibe

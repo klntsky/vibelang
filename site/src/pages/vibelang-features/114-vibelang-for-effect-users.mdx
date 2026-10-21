@@ -32,6 +32,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.gen(function* () { ... })` | An ordinary function with statements |
 | `class NotFound extends Data.TaggedError("NotFound")<{ readonly id: string }> {}` | `error NotFound { id: string }` |
 | `const User = Schema.Struct({ id: Schema.String })` and `type User = typeof User.Type` | `schema User { id: string }` |
+| `const Role = Schema.Literals(["admin", "member"])` and `type Role = typeof Role.Type` | `schema Role = "admin" \| "member"` |
 | `interface Cart { readonly id: string; items: Array<Item> }` | `interface Cart { id: string; mutable items: Array<Item> }` |
 | `const x = yield* work()` | `const x = work()` |
 | `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, call the next function |
@@ -105,7 +106,7 @@ export const capture = (input: { mutable value: number }): Effect.Effect<number,
 }
 ```
 
-A TypeScript caller can build `capture(input)`, mutate `input`, then run the program, and still get the snapshot. The outer body runs synchronously at the call and can validate or copy plain data; every path returns a program. **Where TypeScript returned Effect.fail(e), write return () => \{ throw e \}**; an outer throw is a synchronous JavaScript throw. Put Effects and service lookups inside the returned program.
+A TypeScript caller can build `capture(input)`, mutate `input`, then run the program, and still get the snapshot. The outer body runs synchronously at the call and can compute or copy plain data; every path returns a program. **Where TypeScript returned Effect.fail(e), write return () => \{ throw e \}**; the outer body never fails, so a throw there is EK2115 (D282). Put Effects and service lookups inside the returned program.
 
 A forwarding member keeps its delegate's call phase with `const program: Effect.Effect<number, never, never> = base.read(path); return program`. A const with a declared Effect type holds its initializer in any scope: `const built: Made = make(config)` calls the factory now and runs none of the result. For a Registry layer, build that local before `Layer.effect(Registry)(built)`; snapshot only what TypeScript snapshots, keeping later reads such as `config.snapshots` in the returned program.
 

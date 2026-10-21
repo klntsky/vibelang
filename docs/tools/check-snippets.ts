@@ -118,7 +118,7 @@ export function parseDiagnostics(output: string): { file?: string; diagnostic: D
   return result
 }
 
-// The Markdown pages under root, except root/site: render-user.ts builds the
+// The Markdown pages under root, except root/site: markdown.ts builds the
 // site there, with a Markdown copy of every page and specification chapter.
 export function markdownPages(root: string): string[] {
   const walk = (path: string): string[] => readdirSync(path, { withFileTypes: true }).flatMap(e =>
@@ -168,6 +168,7 @@ export function linkModules(temp: string) {
       if (!existsSync(target)) symlinkSync(join(source, name), target)
     }
   }
+  if (!existsSync(join(modules, "vibelang"))) symlinkSync(join(repo, "packages/compiler"), join(modules, "vibelang"))
   symlinkSync(runtime, join(modules, "vibelang-runtime"))
   symlinkSync(join(repo, "packages/vite"), join(modules, "vibelang-vite"))
   if (!existsSync(join(modules, "effect/package.json")) || !existsSync(join(runtime, "dist/index.d.ts"))) {

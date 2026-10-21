@@ -73,6 +73,23 @@ No title available
 
 `x catch value` is `Effect.orElseSucceed(x, () => value)`: the value is computed only after an expected failure, and every expected error of `x` is discarded. To keep some visible, take the failure and rethrow the rest: `latestTitle() catch (error) => match (error) { when SourceOffline: "No title available"; default: throw error; }`. The fallback is VibeLang code, so it can call functions that fail or need services; their errors become the expression's. `Effect.orElseSucceed(latestTitle(), () => "No title available")` still works, with a synchronous callback.
 
+## Typing both sides
+
+```vibe
+// run: Console.log(JSON.stringify(lookup()))
+type Lookup = { _tag: "Found"; title: string } | { _tag: "Offline" }
+
+function lookup(): Lookup!! {
+  return { _tag: "Found", title: latestTitle() } catch { _tag: "Offline" }
+}
+```
+
+```text
+{"_tag":"Offline"}
+```
+
+Both sides of a catch expression take the expression's contextual type, as both branches of a conditional do (D293). Here that is `Lookup`, so each `_tag` stays a literal and the result checks as a `Lookup`. Without a contextual type, each side keeps its own type and the value is their union.
+
 ## Trying alternatives until one succeeds
 
 ```vibe

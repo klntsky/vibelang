@@ -11,8 +11,10 @@
     "deploy:plan": "alchemy plan --stage prod",
     "dev:cloudflare": "alchemy dev",
     "postinstall": "node scripts/patch-vocs-search.mjs",
-    "prebuild": "node scripts/patch-vocs-search.mjs",
-    "predev": "node scripts/patch-vocs-search.mjs"
+    "prebuild": "bun scripts/build-docs.ts",
+    "predev": "node scripts/patch-vocs-search.mjs",
+    "postbuild": "bun scripts/build-docs.ts --markdown && node scripts/publication.mjs && bun ../docs/tools/check-site.ts dist/public && bun ../docs/tools/prepare-site.ts dist",
+    "test:llms": "node --test scripts/llms.test.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

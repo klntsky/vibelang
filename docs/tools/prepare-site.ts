@@ -2,7 +2,7 @@
 //
 // Prepares the assembled docs site for publication. The private repository's
 // address works only inside the repository, so the published copy names the
-// repository without it. render-user.ts already drops links to repository
+// repository without it. markdown.ts already drops links to repository
 // files, such as the upstream issue drafts, that are not pages. The script
 // adds a 404 page, then refuses to publish local paths, the build host, LAN
 // addresses, the private repository, or any credential value present in the

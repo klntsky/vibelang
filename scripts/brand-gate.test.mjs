@@ -34,7 +34,8 @@ test("the gate finds a retired spelling and a retired extension, and honours the
     "src/b.effeck": "export const x = 1\n",
     "src/c.vibe": "// the old name, Effeck, on purpose: brand-gate: allow\n",
     "docs/d.md": "Docs at https://vibelang.sh; bugs at https://smithers.sh/effeck/effeck/issues.\n",
-    "docs/tools/site.ts": "const home = \"https://effeck.dev\"\n",
+    "docs/redirect/index.js": "const home = \"https://effeck.dev\"\n",
+    "docs/tools/site.ts": "https://effeck.dev/a.html\n",
     "docs/g.md": "Old docs at https://effeck.dev/a.html\n",
     "artifacts/e.md": "Effeck, as it was.\n",
     "docs/f.md": "Set compilerOptions.EFFECK in tsconfig.json.\n",
@@ -44,8 +45,9 @@ test("the gate finds a retired spelling and a retired extension, and honours the
   assert.match(result.stderr, /src\/a\.vibe:1: effeck/)
   assert.match(result.stderr, /src\/b\.effeck: the path spells effeck/)
   assert.match(result.stderr, /docs\/f\.md:1: EFFECK/)
+  assert.match(result.stderr, /docs\/tools\/site\.ts:1: effeck/)
   assert.match(result.stderr, /docs\/g\.md:1: effeck/, "effeck.dev outside its site's files is a finding")
-  assert.doesNotMatch(result.stderr, /src\/c\.vibe|docs\/d\.md|artifacts\/e\.md|docs\/tools\/site\.ts/)
+  assert.doesNotMatch(result.stderr, /src\/c\.vibe|docs\/d\.md|artifacts\/e\.md|docs\/redirect\/index\.js/)
   assert.match(result.stderr, /Remedy: node scripts\/rename-to-vibelang\.mjs/)
 })
 
@@ -64,7 +66,7 @@ test("the codemod tells an extension from a property, and keeps names we do not 
     ["@effeck/unplugin and @effeck trusted", "x.ts", "vibelang-unplugin and @vibelang trusted"],
     ["https://effeck.dev/effeck-features/115-cheat-sheet.html", "x.md", "https://vibelang.sh/vibelang-features/115-cheat-sheet"],
     ["see https://effeck.dev and https://effeck.dev/index.html", "x.md", "see https://vibelang.sh and https://vibelang.sh/"],
-    ["https://effeck.dev/setup/formatting.html", "docs/tools/render-user.ts", "https://effeck.dev/setup/formatting.html"],
+    ["https://effeck.dev/setup/formatting.html", "docs/redirect/index.js", "https://effeck.dev/setup/formatting.html"],
     ["https://smithers.sh/effeck/effeck/blob/main/typescript/EFFECK.md", "x.md", "https://smithers.sh/effeck/effeck/blob/main/typescript/VIBELANG.md"],
     ['"/nonexistent/effeck/effeck" and scripts/build-effeck.sh', "x.ts", '"/nonexistent/vibelang/vibelang" and scripts/build-vibelang.sh'],
     ["image: registry/smithers/effeck-converter-worker", "x.yaml", "image: registry/smithers/effeck-converter-worker"],

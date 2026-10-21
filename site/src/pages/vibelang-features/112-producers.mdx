@@ -107,6 +107,18 @@ function sumStream() {
 
 Use `for (const value of source)` for producers. This preview doesn't support `for (using value of source)` over a producer, and `Array.from(source)` is not a Stream consumer; `Stream.runCollect(source)` collects all the elements into an array.
 
+## JavaScript generators
+
+```vibe
+// run: Console.log([...countdown(3)].join(","))
+function* countdown(from: number): Generator<number> {
+  for (let n = from; n > 0; n--) yield n
+}
+// Output: 3,2,1
+```
+
+A `function*` annotated with a JavaScript iterator type, such as `Generator`, `Iterator`, `Iterable`, or their async forms, compiles to the generator TypeScript would write, for APIs that call `.next()` (D271). It is plain JavaScript, so it never fails (D296): a `throw` that can escape it is EK2003, and its `catch` receives typed failures only, so an exception a caller passes in with `generator.throw()` passes through. Remove the annotation to make it a producer, whose throws fail the Stream. Write a generator that speaks a JavaScript protocol by throwing in a `module` block or a `.ts` file.
+
 ## Coming from Effect
 
 A generator wrapped in `Stream.unwrap` becomes a `function*`. Write calls between `yield` statements, and reserve `yield` for emitted values. Use Stream's existing operators when they express the transformation you need.
