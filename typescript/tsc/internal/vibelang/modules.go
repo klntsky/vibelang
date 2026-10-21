@@ -26,7 +26,7 @@ import (
 // The body is therefore checked as any .ts file is, and the .vibe file sees
 // it only through its imports.
 //
-// The emitted JavaScript holds the module inline (D286): a module that the
+// The emitted JavaScript holds the module inline (D303): a module that the
 // file imports becomes a function that returns the module's exports, called
 // once before the file's own code, and its imports move to the file's top
 // level as namespace imports:

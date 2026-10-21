@@ -17,12 +17,12 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 
 | Load | Tokens |
 | --- | ---: |
-| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,515 |
-| The skill and the [cheat sheet](115-cheat-sheet.md) | 12,848 |
-| The skill and the user guide (130 pages) | 194,043 |
-| The user guide alone | 189,528 |
-| The specification (33 chapters) | 102,113 |
-| The decision log, `docs/design/DECISIONS.md` | 51,736 |
+| The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,578 |
+| The skill and the [cheat sheet](115-cheat-sheet.md) | 13,218 |
+| The skill and the user guide (130 pages) | 195,131 |
+| The user guide alone | 190,553 |
+| The specification (33 chapters) | 102,255 |
+| The decision log, `docs/design/DECISIONS.md` | 52,735 |
 
 ## Effect TypeScript beside VibeLang
 
@@ -65,6 +65,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Option, Exit, and Result | 60 | 62 | -3.3% |
 | Test and bind | 44 | 45 | -2.3% |
 | Plain, self-contained TypeScript inside `sync`, `try`, and `callback` | 120 | 164 | -36.7% |
+| TypeScript modules inline | 99 | 94 | 5.1% |
 | Fork and join | 43 | 34 | 20.9% |
 | Wait for several | 62 | 57 | 8.1% |
 | First success, expected outcomes | 53 | 48 | 9.4% |
@@ -73,7 +74,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Wait for a Deferred | 30 | 28 | 6.7% |
 | Race | 43 | 56 | -30.2% |
 | A concurrent loop | 40 | 28 | 30.0% |
-| **All 43 entries** | **1,945** | **1,707** | **12.2%** |
+| **All 44 entries** | **2,044** | **1,801** | **11.9%** |
 
 ## Every page
 
@@ -84,19 +85,19 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Start Here** | **2,097** |
 | [Welcome](../001-onboarding.md) | 1,497 |
 | [Why VibeLang?](../getting-started/002-why-effect.md) | 600 |
-| **Learning Path** | **7,553** |
+| **Learning Path** | **8,108** |
 | [The Effect Type](../getting-started/003-the-effect-type.md) | 1,587 |
 | [Installation](../getting-started/004-installation.md) | 1,827 |
-| [Creating Effects](../getting-started/005-creating-effects.md) | 2,052 |
+| [Creating Effects](../getting-started/005-creating-effects.md) | 2,607 |
 | [Two Types of Errors](../error-management/006-two-error-types.md) | 646 |
 | [Basic Concurrency](../concurrency/007-basic-concurrency.md) | 1,441 |
-| **Core Concepts** | **13,185** |
+| **Core Concepts** | **13,271** |
 | [Effect's Modules](../getting-started/008-importing-effect.md) | 1,087 |
 | [Running Effects](../getting-started/009-running-effects.md) | 1,511 |
 | [Sequencing Effects](../getting-started/010-using-generators.md) | 1,184 |
 | [Building Pipelines](../getting-started/011-building-pipelines.md) | 1,807 |
-| [Devtools](../getting-started/012-devtools.md) | 7,596 |
-| **All 12 pages** | **22,835** |
+| [Devtools](../getting-started/012-devtools.md) | 7,682 |
+| **All 12 pages** | **23,476** |
 
 ### Setup
 
@@ -109,8 +110,8 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Build and test** | **2,483** |
 | [vibelang CLI](../setup/vibelang-cli.md) | 1,498 |
 | [Vite and Vitest](../setup/vite.md) | 985 |
-| **Format and lint** | **1,228** |
-| [Format with dprint](../setup/formatting.md) | 1,228 |
+| **Format and lint** | **1,305** |
+| [Format with dprint](../setup/formatting.md) | 1,305 |
 | **Frameworks** | **6,996** |
 | [React](../setup/react.md) | 1,931 |
 | [Vue](../setup/vue.md) | 2,687 |
@@ -122,7 +123,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Other editors](../setup/other-editors.md) | 327 |
 | **Upgrade** | **1,426** |
 | [Release notes](../setup/release-notes.md) | 1,426 |
-| **All 14 pages** | **16,570** |
+| **All 14 pages** | **16,647** |
 
 ### Guides
 
@@ -253,9 +254,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Producers](112-producers.md) | 1,246 |
 | [Building an HTTP API](113-building-an-http-api.md) | 1,383 |
 | [VibeLang for Effect users](114-vibelang-for-effect-users.md) | 3,142 |
-| [Cheat sheet](115-cheat-sheet.md) | 8,333 |
+| [Cheat sheet](115-cheat-sheet.md) | 8,640 |
 | [Pattern matching with match and is](116-match-and-is.md) | 2,709 |
-| **All 6 pages** | **18,559** |
+| **All 6 pages** | **18,866** |
 
 ### Specification
 
@@ -291,15 +292,15 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [24. What Effect provides and what the kernel adds](../../../design/src/324-part3-ch24-effect.md) | 3,816 |
 | [25. Implementation strategies and costs](../../../design/src/325-part3-ch25-strategies.md) | 1,933 |
 | [26. What compiled code must guarantee](../../../design/src/326-part3-ch26-compiled.md) | 2,970 |
-| **Part IV. The compiler** | **10,742** |
+| **Part IV. The compiler** | **10,884** |
 | [27. Compiler architecture](../../../design/src/427-part4-ch27-compiler.md) | 1,662 |
-| [28. Tooling](../../../design/src/428-part4-ch28-tooling.md) | 9,080 |
+| [28. Tooling](../../../design/src/428-part4-ch28-tooling.md) | 9,222 |
 | **Part V. Decisions** | **14,649** |
 | [29. Decisions](../../../design/src/529-part5-ch29-decisions.md) | 12,003 |
 | [30. Risks and experiments](../../../design/src/530-part5-ch30-risks.md) | 2,646 |
 | **Appendices** | **13,072** |
 | [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,882 |
 | [C. Every Effect feature in VibeLang](../../../design/src/901-appendix-c-coverage.md) | 8,190 |
-| **All 33 pages** | **102,113** |
+| **All 33 pages** | **102,255** |
 
 <!-- token-counts: end -->

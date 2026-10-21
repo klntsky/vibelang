@@ -61,6 +61,8 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 
 D278 to D283 (2026-10-21) are newer than compiler 0.0.2. Until your compiler accepts a form, write its long form: an `error` with members or `extends` → the `Data.TaggedError` class; `schema error` → the `Schema.TaggedError` class; `schema X =` → `Schema.Literals` or `Schema.Union` plus `type X = typeof X.Type`; `service X: T` → `class X extends Context.Service<X, T>()(key) {}`; `module` → a `.ts` file.
 
+`module name { ... }` is an inline TypeScript module: outside hatches, its body is the only place in a `.vibe` file where JavaScript’s `throw` and `async` work; import its exports with `import { x } from name` (D283, D303).
+
 ## Rules
 
 1. `await x` is an error (EK4601 to EK4603; a fiber is `join x`, EK4609; a Deferred `d.await()`, EK4610). `async` is EK1003. Inside a hatch or a `module` body both mean JavaScript, as in an `async function*` annotated `AsyncGenerator` (D271).

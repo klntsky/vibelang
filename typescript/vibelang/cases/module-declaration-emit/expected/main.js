@@ -1,4 +1,4 @@
-// Module declarations lower inline (D286): each module the file imports
+// Module declarations lower inline (D303): each module the file imports
 // becomes a function, called once before the file's own code, whose result
 // holds the module's exports. Its imports move to the file's top level as
 // namespace imports. A module the file imports only types from, and one it

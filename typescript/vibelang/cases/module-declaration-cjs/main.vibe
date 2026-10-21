@@ -1,4 +1,4 @@
-// A module declaration in a CommonJS package (D283, D286): the module and its
+// A module declaration in a CommonJS package (D283, D303): the module and its
 // imports lower with the file to require calls. A module declaration escapes
 // to TypeScript (D283). Its body is checked and
 // compiled as a .ts file would be: throw and catch, async and await, and

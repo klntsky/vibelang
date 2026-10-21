@@ -115,7 +115,7 @@ func hoverText(t *testing.T, service *ls.LanguageService, uri lsproto.DocumentUr
 	return response.Hover.Contents.MarkupContent.Value
 }
 
-// A module declaration's body is emitted inline (D286) with source map
+// A module declaration's body is emitted inline (D303) with source map
 // entries that point into the .vibe file at the body's own lines.
 func TestModuleDeclarationSourceMap(t *testing.T) {
 	root, err := filepath.Abs("../../../..")

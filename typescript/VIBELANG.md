@@ -1110,7 +1110,7 @@ const body = try(async (id, signal) => fetchBody(id, signal), id)
 
 Cases: `vibelang-hatches` (every form, an inert Effect, `setTimeout` in a hatch, `runPromise` back in), `vibelang-hatches-shadow` (a parameter named `callback`), `hatches-inputs` (inputs for every form, a call among them, a mapper with inputs, `Resume`), `ek1005-prelude-runner.fail`, `ek4404-try-options.fail`, `ek4405-self-contained.fail`, `hatch-inputs-vibelang.fail` (EK4401 and EK4403 among inputs). The LSP smoke applies EK4405's quick fix.
 
-## Module declarations (D283, D286)
+## Module declarations (D283, D303)
 
 `module text { … }` at a `.vibe` file's top level declares a module whose body is TypeScript, with TC39's grammar for module declarations and identifier module specifiers (`import { clean } from text`, `import text`, `export { clean } from text`). The body is a TypeScript file of its own, so TypeScript checks it as it checks any `.ts` file, and the `.vibe` file reaches it only through imports.
 
