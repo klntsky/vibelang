@@ -49,6 +49,22 @@ The syntax takes nothing from TypeScript: calling an abstract member through its
 
 A `Context.Service` written in TypeScript, as a class or as a value like Effect's `FileSystem`, is also a service, used the same way.
 
+#### A service of any shape
+
+```ts effect
+class Prefix extends Context.Service<Prefix, string>()("app/Prefix") {}
+class Search extends Context.Service<Search, SearchApi>()("app/Search") {}
+```
+
+```ts es
+service Prefix: string
+service Search: SearchApi {
+  static readonly layer = Layer.succeed(Search, searchApi)
+}
+```
+
+`service Name: Type` declares a service whose implementation has any type: an interface declared elsewhere, a primitive, or a function type (D281). It does the job of the class on the left, with the key derived as above (D93). The body is optional and holds only static members, such as a layer; an instance member there is EK2103, because the shape already states what an implementation has. Reading is unchanged: `Prefix()` returns the implementation and `Search.find(q)` calls a member of the shape (D41, D90). The type `Search` is the service's identifier, its key's brand, as Effect's class form makes it; an implementation's type is the shape, `SearchApi`. A generic service is EK3005, and a static member named like a member of the shape is EK3006. The parser reads the declaration as an abstract class whose synthesized extends clause carries the shape; the checker gives it the static side `Context.Service<Search, SearchApi>`, and the declaration file writes `ServiceKey<Search, SearchApi>`, or `ReferenceKey<Shape>` for a static default (D40), as its base.
+
 #### Using a service
 
 Call its methods. Using a service adds it to R.

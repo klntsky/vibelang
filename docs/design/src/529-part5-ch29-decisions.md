@@ -231,6 +231,7 @@ These rows record build defaults, not new language decisions. Lane U recorded D9
 | D245 | Refactors are `refactor.rewrite` code actions: write or remove a contract, interface to `schema`, async to a VibeLang function (with an `error` per `await`), calls to a pipe and back, and the two pipe styles | Effect's 15 refactors, for one function form | 28 |
 | D246 | A layer's hover lists what it provides, needs, and fails with; `wire`'s hover its build order; `Duration.Input` strings, a brand's name, and `@vibelang-diagnostics` codes complete | Effect's hovers and completions that still apply | 28 |
 | D260 | EK2004's text says defects pass through a catch; its JavaScript catch in plain contracts is superseded by D282 | Smithers twin failures; effectscript-4a ruling `d-syzjja` | 3, 15 |
+| D281 | `service Name: Type` declares a service of any shape, `Context.Service<Name, Type>`; its body holds only static members (EK2103) | Smithers: 103 services with the interface beside them, 8 of shape `string` | 4 |
 | D282 | `throw` always fails and `catch` receives typed failures only, outside hatches; a plain function never fails and needs nothing, so a throw that can escape it is EK2003 (supersedes D263) | Will, 2026-10-21 | 3, 15 |
 
 #### Rules of the runtime and compiler

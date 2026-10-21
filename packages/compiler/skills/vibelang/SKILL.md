@@ -26,7 +26,7 @@ A `.vibe` file is TypeScript in which every function is an Effect. Read and writ
 | an error class with a constructor, methods or a subclass | `error E { id: string; constructor(raw: string) { super({ id: raw.trim() }) } }`, `error Sub extends Base { path: string }` (D278) |
 | `Schema.TaggedError` class | `schema error E { id: string }` (D279) |
 | `Context.Service<Users, {...}>()("app/Users")` | `service Users { find(id: string): User!NotFound; region: string }` (D128, D223) |
-| a service of another shape | `service Prefix: string`, `service Search: SearchApi` (D281) |
+| a service of another shape | `service Prefix: string`, `service Search: SearchApi { static members }` (D281); the type `Search` is the key, so type an implementation `SearchApi` |
 | `Schema.Struct({...})` and its type | `schema User { id: string; nick?: string; role: "admin" \| "member"; home: Address }` (D133) |
 | `Schema.Literals([...])` and its type | `schema Code = "a" \| "b"` (D280) |
 | `readonly` members | the default for interface and object-type members; `mutable count: number` for one you assign (D134) |

@@ -124,6 +124,24 @@ service Users {
 }
 ```
 
+**Services of any shape** (D281). The shape is any type: an interface, a primitive, a function type. A body is optional and holds only static members.
+
+```ts effect
+interface SearchApi {
+  find(query: string): Effect.Effect<string>
+}
+class Search extends Context.Service<Search, SearchApi>()("app/Search") {}
+class Prefix extends Context.Service<Prefix, string>()("app/Prefix") {}
+```
+
+```vibe es
+interface SearchApi {
+  find(query: string): string!!
+}
+service Search: SearchApi
+service Prefix: string
+```
+
 **Control operations** (D128, D223). Effect has none; the left column is VibeLang's long form.
 
 ```vibe long
