@@ -26,10 +26,12 @@ const (
 	// from mutable through the name. With Index, the name is preceded by [ and
 	// Range runs through the token after it.
 	VibeSyntaxMutable
-	// VibeSyntaxDeclaration is error, service, control, schema, or layer (Name):
-	// Range is the statement from its first modifier, Head runs from the word
-	// through the declared name, and Open and Close are the body's braces,
-	// empty when the declaration has no body.
+	// VibeSyntaxDeclaration is error, schema error, service, control, schema,
+	// or layer (Name): Range is the statement from its first modifier, Head
+	// runs from the word through the declared name, and Open and Close are the
+	// body's braces, empty when the declaration has no body. Class is set for
+	// an error written with a class's features (D278): abstract, a heritage
+	// clause, or a member other than a field.
 	VibeSyntaxDeclaration
 	// VibeSyntaxBlockParam is a block after a call or a name (D188): Head is the
 	// callee, Open and Close the block's braces.
@@ -88,6 +90,7 @@ type VibeSyntax struct {
 	Close core.TextRange
 	Name  string
 	Index bool
+	Class bool
 	Arms  []VibeSyntaxArm
 }
 

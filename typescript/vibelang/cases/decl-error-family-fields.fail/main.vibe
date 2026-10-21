@@ -1,0 +1,13 @@
+// expect: EK2118
+// A subclass that declares fields and no constructor passes them to its
+// base's constructor, which here takes positional arguments.
+error Base {
+  _tag: string
+  code: string
+
+  constructor(code: string, note: string) {
+    super({ code: `${code}:${note}` })
+  }
+}
+
+export error Child extends Base { extra: number }

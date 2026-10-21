@@ -69,7 +69,7 @@ func (p *Parser) parseVibeLangDeclaration(pos int, jsdoc jsdocScannerInfo, modif
 	}
 	switch p.scanner.TokenValue() {
 	case "error":
-		return p.parseErrorDeclaration(pos, jsdoc, modifiers)
+		return p.parseErrorDeclaration(pos, jsdoc, modifiers, false /*schema*/)
 	case "service":
 		return p.parseServiceDeclaration(pos, jsdoc, modifiers, false /*control*/)
 	case "control":
@@ -77,6 +77,9 @@ func (p *Parser) parseVibeLangDeclaration(pos int, jsdoc jsdocScannerInfo, modif
 	case "layer":
 		return p.parseLayerDeclaration(pos, jsdoc, modifiers)
 	case "schema":
+		if p.isStartOfVibeLangSchemaError() {
+			return p.parseErrorDeclaration(pos, jsdoc, modifiers, true /*schema*/) // vibelang_errors.go
+		}
 		return p.parseSchemaDeclaration(pos, jsdoc, modifiers)
 	}
 	return nil
@@ -193,44 +196,6 @@ func (p *Parser) vibelangReadonly(modifiers *ast.ModifierList, anchor core.TextR
 		return p.newModifierList(anchor, []*ast.Node{readonly})
 	}
 	return p.newModifierList(modifiers.Loc, append([]*ast.Node{readonly}, modifiers.Nodes...))
-}
-
-// parseErrorDeclaration parses
-//
-//	error NotFound { id: string }
-//
-// as the class it abbreviates:
-//
-//	class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}
-//
-// The tag is the class name, every field is readonly, and the body is
-// optional: `error Timeout` declares an error without fields.
-func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList) *ast.Node {
-	word := p.tokenRange()
-	p.nextToken() // error
-	name := p.parseBindingIdentifier()
-	typeParameters := p.parseTypeParameters()
-	var fields *ast.Node
-	form := VibeSyntax{Kind: VibeSyntaxDeclaration, Name: "error", Head: core.NewTextRange(word.Pos(), name.End())}
-	if p.token == ast.KindOpenBraceToken {
-		fields = p.parseTypeLiteral() // readonly unless written mutable (D134)
-		form.Open, form.Close = p.blockBraces(fields)
-	} else {
-		fields = p.vibelangSynthesized(p.factory.NewTypeLiteralNode(p.newNodeList(name.Loc, nil)), name.Loc)
-	}
-	end := p.nodePos()
-	form.Range = core.NewTextRange(scanner.SkipTrivia(p.sourceText, pos), end)
-	p.recordVibeSyntax(form)
-	tag := p.vibelangSynthesized(p.factory.NewStringLiteral(name.Text(), ast.TokenFlagsNone), name.Loc)
-	callee := p.vibelangSynthesized(p.factory.NewIdentifier("TaggedError"), name.Loc)
-	call := p.vibelangSynthesized(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(name.Loc, []*ast.Node{tag}), ast.NodeFlagsNone), name.Loc)
-	base := p.vibelangSpanning(p.factory.NewExpressionWithTypeArguments(call, p.newNodeList(fields.Loc, []*ast.Node{fields})), fields.Loc)
-	clause := p.vibelangSpanning(p.factory.NewHeritageClause(ast.KindExtendsKeyword, p.newNodeList(fields.Loc, []*ast.Node{base})), fields.Loc)
-	members := p.newNodeList(core.NewTextRange(end, end), nil)
-	result := p.factory.NewClassDeclaration(modifiers, name, typeParameters, p.newNodeList(fields.Loc, []*ast.Node{clause}), members)
-	p.finishNode(result, pos)
-	p.withJSDoc(result, jsdoc)
-	return result
 }
 
 // Effect types.
@@ -1208,6 +1173,17 @@ func (p *Parser) vibelangSchemaCall(name string, anchor core.TextRange, argument
 // a schema declaration's body or of an object type in a field, flagged
 // NodeFlagsVibeLang. body is the range of the braces.
 func (p *Parser) vibelangSchemaFields(members []*ast.Node, body core.TextRange) *ast.Node {
+	properties := p.vibelangSchemaProperties(members)
+	object := p.vibelangSpanning(p.factory.NewObjectLiteralExpression(p.newNodeList(body, properties), true /*multiLine*/), body)
+	brace := scanner.SkipTrivia(p.sourceText, body.Pos())
+	call := p.vibelangSchemaCall("Struct", core.NewTextRange(brace, min(brace+1, body.End())), object)
+	call.Flags |= ast.NodeFlagsVibeLang
+	return call
+}
+
+// vibelangSchemaProperties returns the property assignments of a struct's
+// field schemas, one for each of members, the members of a type literal.
+func (p *Parser) vibelangSchemaProperties(members []*ast.Node) []*ast.Node {
 	var properties []*ast.Node
 	for _, member := range members {
 		name := member.Name()
@@ -1229,11 +1205,7 @@ func (p *Parser) vibelangSchemaFields(members []*ast.Node, body core.TextRange) 
 		}
 		properties = append(properties, p.vibelangSpanning(p.factory.NewPropertyAssignment(nil /*modifiers*/, name, nil /*postfixToken*/, nil /*typeNode*/, value), core.NewTextRange(name.Pos(), value.End())))
 	}
-	object := p.vibelangSpanning(p.factory.NewObjectLiteralExpression(p.newNodeList(body, properties), true /*multiLine*/), body)
-	brace := scanner.SkipTrivia(p.sourceText, body.Pos())
-	call := p.vibelangSchemaCall("Struct", core.NewTextRange(brace, min(brace+1, body.End())), object)
-	call.Flags |= ast.NodeFlagsVibeLang
-	return call
+	return properties
 }
 
 // vibelangUnsupportedSchema makes the Schema.Unknown that stands for a field

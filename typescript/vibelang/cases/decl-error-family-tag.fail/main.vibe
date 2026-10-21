@@ -1,0 +1,10 @@
+// expect: EK2117 EK2117 EK2117
+// A subclass's tag must fit its base's tag type (D304): Leaf's is "Leaf".
+error Leaf { id: number }
+export error Sub extends Leaf
+
+schema error SchemaLeaf { id: number }
+export schema error SchemaSub extends SchemaLeaf
+
+// A concrete error's own name must fit the tag type it declares.
+export error Narrow { _tag: "A" | "B" }

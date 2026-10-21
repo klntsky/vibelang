@@ -261,6 +261,8 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK2114 | A catch expression, `x catch y` or `x catch (e) => …`, inside a hatch body, which is plain TypeScript (D239) | Move the catch out of the hatch, or use a try statement inside it | 3 |
 | EK2115 | A factory body runs an Effect, looks up a service (D269), or throws (D282) | Move the work into `return () => { … }`; hold a forwarding call in an Effect-typed const before returning it | 5, 13 |
 | EK2116 | A factory returns a program on one path and a value or nothing on another (D269) | Return `() => value` or `() => { throw error }` on every returning path | 5, 13 |
+| EK2117 | An error whose tag does not fit: a subclass whose base's tag type does not include the subclass's name, a concrete error whose `_tag` field's type does not include its own name, an error that extends a class that is not an error, a `schema error` that extends an error that is not one, or an `error` that extends a `schema error` (D278, D279, D304) | Give the base the field `_tag: string`, or declare it `abstract`; extend an error of the same kind | 3 |
+| EK2118 | A subclass that declares fields and no constructor, whose base's constructor takes something other than one object of fields (D278) | Write a constructor that calls `super` with what the base takes and sets the fields | 3 |
 | EK2120 | Warning: a `service class` or `control class` declaration, the old spelling (D223) | Write `service` or `control` without `class`; the quick fix removes `class` | 4 |
 | EK2121 | Warning: a `layer` declaration, the old spelling (D221) | Write `Layer.effect(Service) { … }` or `Layer.succeed(Service, { … })`; the quick fix rewrites it | 4 |
 | EK3001 | Two services share a key | Rename one | 4 |

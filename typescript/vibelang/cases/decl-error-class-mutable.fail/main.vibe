@@ -1,0 +1,8 @@
+// expect: TS1031
+// mutable marks a field; a method is not one.
+export error Failure {
+  code: string
+  mutable describe(): string {
+    return this.code
+  }
+}

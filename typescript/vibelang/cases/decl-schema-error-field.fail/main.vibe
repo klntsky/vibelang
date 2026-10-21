@@ -1,0 +1,6 @@
+// expect: EK2109
+// Every field of a schema error has a schema; a function type has none.
+export schema error Bad {
+  code: string
+  callback: () => void
+}

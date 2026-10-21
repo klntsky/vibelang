@@ -41,6 +41,9 @@ func checkSchemaDeclarations(c *checker.Checker, file *ast.SourceFile) {
 		if outer := enclosingSchemaCall(n); isSchemaStruct(n) && (outer == nil || !isSchemaStruct(outer)) {
 			checkSchemaFields(c, file, n, n)
 		}
+		if isSchemaErrorFields(n) {
+			checkSchemaErrorFields(c, file, n) // errors_check.go
+		}
 		return n.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)

@@ -1,0 +1,7 @@
+// expect: EK2117 EK2117
+// A schema error extends a schema error, and an error extends an error.
+error PlainBase { _tag: string; code: string }
+export schema error FromPlain extends PlainBase { x: number }
+
+schema error SchemaBase { _tag: string; code: string }
+export error FromSchema extends SchemaBase

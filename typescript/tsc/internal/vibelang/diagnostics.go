@@ -118,6 +118,13 @@ var (
 	// EK2111: a restore block that no uninterruptible block encloses (D180).
 	EK2111 = message(2111, errorCategory, "This restore block is not inside an uninterruptible block, so it has no interruptibility to restore.")
 	EK2109 = message(2109, errorCategory, "{0} has no schema form: a schema declaration's field is a primitive, a literal, a union, an array, a tuple, a record, an object type, or another schema.")
+	// EK2117: an error whose tag does not fit (D278, D304): a subclass's tag and its base's tag type,
+	// or a concrete error's name and its _tag field; also an error that extends what is not an error
+	// of its kind. {0} is the error, {1} its base, {2} the base's tag type, {3} the subclass's tag.
+	EK2117 = message(2117, errorCategory, "{0} cannot have its own tag: {1}'s tag is {2}, which does not include {3}.")
+	// EK2118: a subclass that declares fields and no constructor, whose base's constructor does not
+	// take one object of fields (D278). {0} is the subclass, {1} its base.
+	EK2118 = message(2118, errorCategory, "{0} declares fields and no constructor, but {1}'s constructor does not take its fields as one object.")
 	// EK2102: a recursive function whose A depends on its own result. {0} is the function.
 	EK2102 = message(2102, errorCategory, "{0} calls itself, and its success type depends on that call, so its contract must be written.")
 
@@ -174,7 +181,7 @@ var registry = map[int32]*Message{}
 func init() {
 	for _, m := range []*Message{
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009, EK1010,
-		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113, EK2115, EK2116,
+		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113, EK2115, EK2116, EK2117, EK2118,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4406, EK4501,
 	} {

@@ -29,3 +29,32 @@ export const TaggedError: typeof Data.TaggedError = ((tag: string) => {
   }
   return Base
 }) as any
+
+/**
+ * D278: the base of `error Name extends Base`, a subclass of Base whose
+ * instances carry their own tag and report it as their name, as
+ * `Data.TaggedError` does for its own. The declaration's members declare the
+ * tag's type, so the base keeps Base's type, its constructor and its statics.
+ */
+export const $errorSubclass = <B extends abstract new(...args: any) => { readonly _tag: string }>(
+  base: B,
+  tag: string
+): B => {
+  const Base = base as unknown as abstract new(...args: Array<any>) => { _tag: string }
+  abstract class Tagged extends Base {
+    constructor(...args: Array<any>) {
+      super(...args)
+      this._tag = tag
+    }
+  }
+  ;(Tagged.prototype as unknown as { name: string }).name = tag
+  return Tagged as unknown as B
+}
+
+/**
+ * D278: what the constructor of `error Name extends Base { fields }` takes
+ * when it writes none: what Base's constructor takes, plus the fields. Base's
+ * constructor must take a single object of fields, as an error declared
+ * without a constructor does; otherwise this is never (EK2118).
+ */
+export type $ErrorArgs<B, A> = B extends abstract new(args: infer P) => any ? ([P] extends [void] ? {} : P) & A : never

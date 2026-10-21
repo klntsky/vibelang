@@ -1,0 +1,7 @@
+// expect: EK2117
+// An error extends another error.
+class Plain {
+  readonly x = 1
+}
+
+export error Child extends Plain

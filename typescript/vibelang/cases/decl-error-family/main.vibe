@@ -1,0 +1,92 @@
+// expect-result: {"tags":["AppError","NotFound","Timeout","Typed"],"names":["AppError","NotFound","Timeout","Typed"],"family":[true,true,true,true],"notFoundIsTimeout":false,"routed":["not found /a","timeout t"],"base":"base b","classified":["NotFound /a","AppError t","AppError b","other"],"typed":"v","static":"app","describe":"missing 404","abstract":true,"gone":"Gone 410"}
+// D278: a subclass is tagged with its own name, so catchTag routes each
+// subclass, while is and match test the whole family through instanceof.
+// D304: the base of a family declares its tag type with a _tag field.
+
+/** The base of a family: each subclass carries its own tag. */
+export error AppError {
+  _tag: string
+  code: string
+  static readonly family = "app"
+}
+
+export error NotFound extends AppError { path: string }
+
+export error Timeout extends AppError
+
+export error Typed<T extends string> extends AppError { value: T }
+
+/** An abstract error has a family's tag type without a _tag field. */
+export abstract error HttpError {
+  status: number
+  abstract describe(): string
+}
+
+export error Missing extends HttpError {
+  override describe(): string {
+    return `missing ${this.status}`
+  }
+}
+
+export error Gone extends HttpError {
+  override describe(): string {
+    return `${this._tag} ${this.status}`
+  }
+}
+
+function failWith(error: NotFound | Timeout): never!(NotFound | Timeout) {
+  throw error
+}
+
+// Routing by tag: each subclass's own tag reaches its own handler, and
+// nothing escapes.
+function route(error: NotFound | Timeout): string!! {
+  return failWith(error)
+    |> Effect.catchTag(%, "NotFound", (caught) => `not found ${caught.path}`)
+    |> Effect.catchTag(%, "Timeout", (caught) => `timeout ${caught.code}`)
+}
+
+function failBase(error: AppError): never!AppError {
+  throw error
+}
+
+// catchTag("AppError") matches only an instance of the base itself.
+function routeBase(error: AppError): string!! {
+  return failBase(error)
+    |> Effect.catchTag(%, "AppError", (caught) => `base ${caught.code}`)
+    catch (caught) => `subclass ${caught._tag}`
+}
+
+function classify(value: unknown): string {
+  return match (value) {
+    when NotFound(let error): `NotFound ${error.path}`;
+    when AppError(let error): `AppError ${error.code}`;
+    default: "other";
+  }
+}
+
+function codeOf(error: AppError): string {
+  return error.code
+}
+
+export function main() {
+  const base = new AppError({ code: "b" })
+  const notFound = new NotFound({ code: "n", path: "/a" })
+  const timeout = new Timeout({ code: "t" })
+  const typed = new Typed({ code: "y", value: "v" })
+  const errors = [base, notFound, timeout, typed]
+  return {
+    tags: errors.map((error) => error._tag),
+    names: errors.map((error) => error.name),
+    family: errors.map((error) => error is AppError),
+    notFoundIsTimeout: notFound is Timeout,
+    routed: [route(notFound), route(timeout)],
+    base: routeBase(base),
+    classified: [classify(notFound), classify(timeout), classify(base), classify(new Gone({ status: 1 }))],
+    typed: codeOf(typed) === "y" ? typed.value : "",
+    static: NotFound.family,
+    describe: new Missing({ status: 404 }).describe(),
+    abstract: new Missing({ status: 1 }) is HttpError,
+    gone: new Gone({ status: 410 }).describe()
+  }
+}

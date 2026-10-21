@@ -55,6 +55,9 @@ func describeVibeSyntax(source string, forms []parser.VibeSyntax) string {
 		if form.Index {
 			parts = append(parts, "index")
 		}
+		if form.Class {
+			parts = append(parts, "class")
+		}
 		add("range", form.Range)
 		add("word", form.Word)
 		add("head", form.Head)
@@ -83,6 +86,16 @@ func TestVibeLangSyntaxRecordsEachForm(t *testing.T) {
 			`declaration error range="export error NotFound<T> { id: T }" head="error NotFound" open="{" close="}"`},
 		{"error without fields", `error Timeout`,
 			`declaration error range="error Timeout" head="error Timeout"`},
+		{"error class", "abstract error Http implements Coded { status: number; abstract describe(): string }",
+			`declaration error class range="abstract error Http implements Coded { status: number; abstract describe(): string }" head="error Http" open="{" close="}"`},
+		{"error subclass without a body", "error Timeout extends AppError\nconst x = 1",
+			`declaration error class range="error Timeout extends AppError" head="error Timeout"`},
+		{"error with mutable field", "error Counted extends Base { mutable count: number }",
+			"declaration error class range=\"error Counted extends Base { mutable count: number }\" head=\"error Counted\" open=\"{\" close=\"}\"\nmutable range=\"mutable count\" word=\"mutable\""},
+		{"schema error", "schema error FsError { method: string }",
+			`declaration schema error range="schema error FsError { method: string }" head="schema error FsError" open="{" close="}"`},
+		{"schema error subclass", "schema error Missing extends FsError { path: string; describe(): string { return this.path } }",
+			`declaration schema error class range="schema error Missing extends FsError { path: string; describe(): string { return this.path } }" head="schema error Missing" open="{" close="}"`},
 		{"service", `service class Users { find(id: string): string!Gone }`,
 			"declaration service range=\"service class Users { find(id: string): string!Gone }\" head=\"service class Users\" open=\"{\" close=\"}\"\neffect-type range=\"string!Gone\""},
 		{"schema", `schema Ticket { id: string }`,

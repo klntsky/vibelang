@@ -1,0 +1,81 @@
+// expect-result: {"code":"notfound","tag":"Validated","name":"Validated","label":"code notfound","first":"code notfound (1)","second":"code notfound (2)","json":"{\"code\":\"notfound\"}","docs":"https://example.com/errors","made":"a","coded":"notfound","attempts":0,"recovered":"x","wrapped":"w","matched":"Validated notfound"}
+// D278: an error declaration is a named class. Everything but the base and
+// the tag keeps its TypeScript meaning: implements, a constructor that calls
+// super, methods, accessors, override, and static and private members.
+
+interface Coded {
+  readonly code: string
+}
+
+/** A failure whose code is normalized when it is made. */
+export error Validated implements Coded {
+  /** The code, trimmed and in lower case. */
+  code: string
+  attempts: number
+  static readonly docs = "https://example.com/errors"
+  #seen = 0
+  private readonly prefix = "code"
+
+  constructor(code: string, attempts: number = 0) {
+    super({ code: code.trim().toLowerCase(), attempts })
+  }
+
+  static make(code: string): Validated {
+    return new Validated(code)
+  }
+
+  get label(): string {
+    return `${this.prefix} ${this.code}`
+  }
+
+  describe(): string {
+    this.#seen += 1
+    return `${this.label} (${this.#seen})`
+  }
+
+  override toJSON(): Record<string, unknown> {
+    return { code: this.code }
+  }
+}
+
+export error Wrapped<T extends string> { value: T }
+
+function codeOf(coded: Coded): string {
+  return coded.code
+}
+
+function fail(code: string): never!Validated {
+  throw new Validated(code)
+}
+
+function recover(): string!! {
+  return fail("X") |> Effect.catchTag(%, "Validated", (error) => error.code)
+}
+
+function classify(value: unknown): string {
+  return match (value) {
+    when Validated(let error): `${error._tag} ${error.code}`;
+    default: "other";
+  }
+}
+
+export function main() {
+  const error = new Validated("  NotFound ")
+
+  return {
+    code: error.code,
+    tag: error._tag,
+    name: error.name,
+    label: error.label,
+    first: error.describe(),
+    second: error.describe(),
+    json: JSON.stringify(error),
+    docs: Validated.docs,
+    made: Validated.make("A").code,
+    coded: codeOf(error),
+    attempts: error.attempts,
+    recovered: recover(),
+    wrapped: new Wrapped({ value: "w" }).value,
+    matched: classify(error)
+  }
+}

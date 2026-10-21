@@ -1,0 +1,57 @@
+// expect-result: {"failure":{"tag":"Failure","summary":"no summary"},"integration":{"tag":"Integration","code":"INTEGRATION","reason":"timeout","summary":"slow"},"plain":{"tag":"Plain","code":"PLAIN","summary":"x"},"keys":["code","summary","_tag","reason"],"routed":["integration timeout","plain PLAIN"],"base":"INTEGRATION"}
+// D278: an error whose constructor takes positional arguments, as
+// @smthrs/errors' SmithersError does. A subclass with fields writes its own
+// constructor and sets them; one without fields inherits the base's.
+
+export error Failure {
+  _tag: string
+  code: string
+  summary: string
+
+  constructor(code: string, summary: string) {
+    super({ code, summary: summary.trim() === "" ? "no summary" : summary.trim() })
+  }
+
+  override toJSON(): Record<string, unknown> {
+    return Object.fromEntries(Object.entries(this))
+  }
+}
+
+export error Integration extends Failure {
+  reason: string
+
+  constructor(reason: string, summary: string) {
+    super("INTEGRATION", summary)
+    this.reason = reason
+  }
+}
+
+export error Plain extends Failure
+
+function fail(error: Integration | Plain): never!(Integration | Plain) {
+  throw error
+}
+
+function route(error: Integration | Plain): string!! {
+  return fail(error)
+    |> Effect.catchTag(%, "Integration", (caught) => `integration ${caught.reason}`)
+    |> Effect.catchTag(%, "Plain", (caught) => `plain ${caught.code}`)
+}
+
+function codeOf(failure: Failure): string {
+  return failure.code
+}
+
+export function main() {
+  const failure = new Failure("BASE", "  ")
+  const integration = new Integration("timeout", " slow ")
+  const plain = new Plain("PLAIN", "x")
+  return {
+    failure: { tag: failure._tag, summary: failure.summary },
+    integration: { tag: integration._tag, code: integration.code, reason: integration.reason, summary: integration.summary },
+    plain: { tag: plain._tag, code: plain.code, summary: plain.summary },
+    keys: Object.keys(integration.toJSON()),
+    routed: [route(integration), route(plain)],
+    base: codeOf(integration)
+  }
+}
