@@ -1,6 +1,6 @@
 # Schema to Formatter
 
-Value formatters work in VibeLang exactly as in Effect. A schema-derived formatter renders decoded values as readable strings for diagnostics or display. It does not validate input or serialize a value for transport; use a codec for serialization and an issue formatter for failures. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Value formatters work exactly as in Effect. A schema-derived formatter renders decoded values as readable strings for diagnostics or display. It neither validates input nor serializes for transport; use a codec for serialization and an issue formatter for failures. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Deriving value formatters from schemas
 
@@ -23,7 +23,7 @@ function displayDispatch(input: unknown) {
 { "depot": "east", "counts": [2, 4] }
 ```
 
-`toFormatter` walks structs, arrays, unions, and supported declarations. Its argument type is the schema's decoded type, even when the codec accepts a different wire representation. The example decodes first so the formatter receives valid data. The explicit boundary accounts for exceptions from generated or custom formatting callbacks.
+`toFormatter` walks structs, arrays, unions, and supported declarations. It takes the schema's decoded type, even when the codec accepts a different wire representation, so the example decodes first to give it valid data. The explicit boundary accounts for exceptions from generated or custom formatting callbacks.
 
 ## Customizing formatting at selected syntax-tree nodes
 
@@ -48,8 +48,8 @@ function displayManifest(input: unknown) {
 { "label": [crate], "weight": 2 kg }
 ```
 
-`overrideToFormatter` replaces formatting at one schema node, such as the weight above. `onBefore` intercepts selected AST nodes after any `toFormatter` annotation has taken priority and before built-in derivation; returning undefined keeps the default behavior. The example changes string rendering while retaining the weight formatter.
+`overrideToFormatter` replaces formatting at one schema node, here the weight. A `toFormatter` annotation takes priority; `onBefore` then intercepts selected AST nodes before built-in derivation, and returning undefined keeps the default.
 
-Opaque declarations can supply `toFormatter` when declared. A parameterized declaration receives the formatter for each parameter. Keep hooks and generated formatter functions synchronous and pure; compute service-dependent display data before formatting. Review custom output for secret exposure before using it in logs.
+An opaque declaration can supply `toFormatter` when declared; a parameterized one receives the formatter for each parameter. Keep hooks and generated formatter functions synchronous and pure; compute service-dependent display data before formatting. Check custom output for exposed secrets before logging it.
 
 [Upstream page](https://effect.website/docs/v4/schema/formatter)

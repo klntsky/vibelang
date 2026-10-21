@@ -1,6 +1,6 @@
 # Schema to Equivalence
 
-Schema-derived equivalence works in VibeLang exactly as in Effect. It compares decoded values using the structure described by a schema, making it useful for domain comparisons and round-trip checks. It does not decode or validate the compared values. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema-derived equivalence works exactly as in Effect. It compares decoded values by a schema's structure, for domain comparisons and round-trip checks, and neither decodes nor validates them. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Deriving equality from schemas
 
@@ -24,7 +24,7 @@ true
 false
 ```
 
-`toEquivalence` derives a comparison for the schema's decoded type. Arrays and nested structs are compared recursively. For a nonempty struct, only the fields described by the schema participate; unmodeled fields do not become extra equality conditions. Decode untrusted inputs before comparing them.
+`toEquivalence` derives a comparison for the schema's decoded type, comparing arrays and nested structs recursively. For a nonempty struct, only the schema's fields participate; unmodeled fields add no equality conditions. Decode untrusted inputs before comparing them.
 
 ## Handling broad schemas and custom declarations
 
@@ -53,7 +53,7 @@ true
 true
 ```
 
-`Any`, `Unknown`, `ObjectKeyword`, and the empty struct use `Equal.equals`, including its structural handling of arrays and objects. Opaque declarations also default to `Equal.equals`; add a `toEquivalence` annotation when domain identity follows a particular field. Parameterized declarations receive the derived comparator for each type parameter.
+`Any`, `Unknown`, `ObjectKeyword`, and the empty struct use `Equal.equals`, with its structural handling of arrays and objects. Opaque declarations default to it too; add a `toEquivalence` annotation when domain identity follows one field. Parameterized declarations receive the derived comparator for each type parameter.
 
 ## Overriding generated comparison behavior
 
@@ -73,6 +73,6 @@ true
 false
 ```
 
-`overrideToEquivalence` replaces the comparison derived at that schema node. This comparison intentionally ignores stops. Keep custom comparisons reflexive, symmetric, and transitive; otherwise consumers cannot treat them as an equivalence relation. A comparator callback is synchronous and should not call services or perform effects.
+`overrideToEquivalence` replaces the comparison derived at that schema node; this one ignores stops on purpose. Keep custom comparisons reflexive, symmetric, and transitive, or consumers cannot treat them as an equivalence relation. A comparator callback is synchronous; don't call services or perform effects in it.
 
 [Upstream page](https://effect.website/docs/v4/schema/equivalence)

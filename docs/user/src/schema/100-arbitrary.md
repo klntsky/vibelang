@@ -1,6 +1,6 @@
 # Schema to Arbitrary
 
-Effect's native `Arbitrary` module derives generators and shrinkers from schemas in VibeLang exactly as in Effect. Use it to explore valid inputs and check properties across many examples. The module and replay format are unstable in Effect 4.0.5. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Effect's native `Arbitrary` module derives generators and shrinkers from schemas exactly as in Effect. Use it to explore valid inputs and check properties across many examples. The module and replay format are unstable in Effect 4.0.5. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Generating schema-conforming random values
 
@@ -22,7 +22,7 @@ function sampleParcels() {
 12 true
 ```
 
-`Arbitrary.schema` derives a generator immediately and can throw when derivation is unsupported, so the example puts it inside a boundary. `sampleEffect` runs generation and accepts `count`, `size`, `maxDiscards`, and `seed`. A seed makes sampling reproducible; `size` is a local complexity budget for each collection or recursive component, not one global maximum length.
+`Arbitrary.schema` derives a generator immediately and throws when derivation is unsupported, so the example wraps it in a boundary. `sampleEffect` runs generation and takes `count`, `size`, `maxDiscards`, and `seed`. A seed makes sampling reproducible; `size` is a local complexity budget for each collection or recursive component, not one global maximum length.
 
 ## Translating filters into generation constraints
 
@@ -46,7 +46,7 @@ const EvenCapacity = Schema.Number.check(Schema.makeFilter(
 12 true
 ```
 
-Built-in bounds, lengths, patterns, property counts, and uniqueness checks provide constructive constraints where supported. Custom `arbitraryConstraint` metadata guides construction but does not replace the predicate. The example constructs integers in the desired range and lets the predicate reject odd candidates. Every generated root and shrink candidate still passes the schema's filters.
+Built-in bounds, lengths, patterns, property counts, and uniqueness checks give constructive constraints where supported. Custom `arbitraryConstraint` metadata guides construction without replacing the predicate: the example constructs integers in range and the predicate rejects odd ones. Every generated root and shrink candidate still passes the schema's filters.
 
 ## Handling opaque checks and transformed values
 
@@ -67,7 +67,7 @@ function sampleRepresentations() {
 true
 ```
 
-Schema generation targets the decoded type, so a string-to-number codec generates numbers. Derive from `toEncoded` to generate values accepted by the encoded-side schema instead. Here that schema is `String`, so its generated strings need not decode as finite numbers. Encode generated decoded values when a test needs valid wire values. Opaque predicates without constructive metadata still run, but rejected candidates consume the discard budget. Sampling then fails with `SampleError` when the budget is exhausted; property checking instead returns `Exhausted`.
+Generation targets the decoded type, so a string-to-number codec generates numbers. Derive from `toEncoded` to generate values the encoded-side schema accepts; here that is `String`, so the strings need not decode as finite numbers. For valid wire values, encode generated decoded values. Opaque predicates without constructive metadata still run, but rejected candidates use up the discard budget. When it runs out, sampling fails with `SampleError` and property checking returns `Exhausted`.
 
 ## Checking properties
 
@@ -88,9 +88,9 @@ function checkCountRoundTrip() {
 Passed
 ```
 
-`checkEffect` accepts a pure boolean property or an effectful boolean property. False results and expected failures are shrinkable falsifications; defects and interruption fail the checking Effect itself. Its result is `Passed`, `Falsified`, `Exhausted`, or `ReplayMismatch`.
+`checkEffect` takes a pure or effectful boolean property. False results and expected failures are shrinkable falsifications; defects and interruption fail the checking Effect itself. The result is `Passed`, `Falsified`, `Exhausted`, or `ReplayMismatch`.
 
-A falsification includes `shrunkInput` and a `replay` token. Call `checkEffect` with the same property and `{ replay: result.replay }` to reproduce it; the token controls the seed, attempt, size, and shrink path, overriding other checking options. `formatCheckFailure` returns a diagnostic for unsuccessful results and undefined for `Passed`.
+A falsification includes `shrunkInput` and a `replay` token. To reproduce it, call `checkEffect` with the same property and `{ replay: result.replay }`; the token sets the seed, attempt, size, and shrink path, overriding other checking options. `formatCheckFailure` returns a diagnostic for unsuccessful results and undefined for `Passed`.
 
 ## Composing generators and customizing shrinking
 
@@ -116,7 +116,7 @@ function sampleDispatchPlans() {
 
 `map` transforms values and shrink candidates; `flatMap` selects dependent generators; `all` combines a tuple, iterable, or record. `filter` and `filterMap` discard rejected values, while `Constant` produces one value with no shrink candidates. Prefer constructive schema constraints when valid values are rare.
 
-A custom `shrink` replaces the derived shrink strategy without replacing root generation. It must be synchronous, deterministic, terminating, and free of mutation. Candidates are validated against the schema before the property sees them. Treat generated values as immutable because checking, shrinking, and replay can examine them repeatedly.
+A custom `shrink` replaces the derived shrink strategy, not root generation. It must be synchronous, deterministic, terminating, and free of mutation. The schema validates candidates before the property sees them. Treat generated values as immutable: checking, shrinking, and replay can examine them repeatedly.
 
 ## Supporting custom declarations
 
@@ -145,7 +145,7 @@ function sampleShelves() {
 5 true
 ```
 
-An opaque declaration needs a generatable representation through `toCodecArbitrary`. The link converts generated representation values into domain values. Parameterized declarations receive decoded parameter schemas and normalized constraints in their annotation callback.
+An opaque declaration needs a generatable representation through `toCodecArbitrary`; the link converts generated representation values into domain values. Parameterized declarations receive decoded parameter schemas and normalized constraints in their annotation callback.
 
 ## Diagnosing derivation failures
 
@@ -166,6 +166,6 @@ Arbitrary derivation failed for the empty domain
 Empty domain rejected
 ```
 
-Derivation fails immediately for impossible constraints, `Never`, unsupported declarations, and recursion with no finite generation path. Runtime exhaustion is different: inspect the effective seed and discard budget, then add constructive constraints or correct the predicate. Preserve the seed and replay token with a failing test so the same counterexample can be examined again.
+Derivation fails immediately for impossible constraints, `Never`, unsupported declarations, and recursion with no finite generation path. For runtime exhaustion, inspect the effective seed and discard budget, then add constructive constraints or fix the predicate. Keep the seed and replay token with a failing test to reexamine the same counterexample.
 
 [Upstream page](https://effect.website/docs/v4/schema/arbitrary)

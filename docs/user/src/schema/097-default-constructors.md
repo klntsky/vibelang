@@ -1,6 +1,6 @@
 # Default Constructors
 
-Schema constructors work as in Effect and operate on decoded values. They apply constructor defaults and type-side checks without running the codec's encoded-to-decoded conversion. In local Effect 4.0.5, `makeEffect` fails with a raw schema issue. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
+Schema constructors work as in Effect, on decoded values: they apply constructor defaults and type-side checks without running the codec's encoded-to-decoded conversion. Plain builders follow the [trusted call rules](085-introduction.md#configuring-compiler-prerequisites).
 
 ## Constructing structs and records
 
@@ -21,7 +21,7 @@ function makeLabels() {
 {"label":{"text":"Keep upright"},"byId":{"handling":"Keep upright"}}
 ```
 
-Every schema exposes `make`, `makeOption`, and `makeEffect`. A constructor takes the schema's constructor input and returns its decoded type. `FiniteFromString.makeEffect(6)` constructs a number; its decoder instead accepts text. Struct and record constructors validate fields and entries.
+Every schema has `make`, `makeOption`, and `makeEffect`. Each takes the schema's constructor input and returns its decoded type: `FiniteFromString.makeEffect(6)` constructs a number, while its decoder accepts text. Struct and record constructors validate fields and entries.
 
 ## Applying filters and brands during construction
 
@@ -41,7 +41,7 @@ function makeCaseCount(value: number) {
 Composite
 ```
 
-Filters run during construction as well as parsing. A filter leaves the static type unchanged; a brand returns a branded number while keeping the runtime number representation. `{ disableChecks: true }` deliberately skips checks, but does not decode an encoded input or establish that the value is valid.
+Filters run during construction as well as parsing. A filter leaves the static type unchanged; a brand returns a branded number with the same runtime number representation. `{ disableChecks: true }` skips checks; it neither decodes an encoded input nor proves the value valid.
 
 ## Handling constructor failures
 
@@ -70,7 +70,7 @@ true
 Construction rejected
 ```
 
-`makeEffect` fails with `SchemaIssue.Issue`, not the `SchemaError` wrapper returned by Schema decoders. Format the issue directly or translate it to an application error. `makeOption` discards schema-validation details, while `make` throws a generic validation Error with the issue in `cause`. Both synchronous APIs can throw for non-schema causes or asynchronous work, so their explicit boundaries remain useful.
+In local Effect 4.0.5, `makeEffect` fails with a raw `SchemaIssue.Issue`, not the `SchemaError` wrapper Schema decoders return. Format the issue directly or translate it to an application error. `makeOption` discards schema-validation details; `make` throws a generic validation Error with the issue in `cause`. Both synchronous APIs can also throw for non-schema causes or asynchronous work, so keep their explicit boundaries.
 
 ## Setting nested and lazy defaults
 
@@ -96,9 +96,9 @@ function makePacking() {
 false
 ```
 
-Pass a program to `withConstructorDefault`; the constructor runs it only when the field needs a default. An outer default supplies nested constructor input, after which inner defaults fill their own fields. A fresh `[]` is created each time the labels default runs, rather than sharing one mutable array.
+Pass a program to `withConstructorDefault`; the constructor runs it only when the field needs a default. An outer default supplies nested constructor input, then inner defaults fill their own fields. Each run of the labels default creates a fresh `[]`, so no mutable array is shared.
 
-The default program may fail with schema issues but cannot require services. `make` and `makeOption` need defaults that complete synchronously; use `makeEffect` if a default pauses. Read service-dependent values in the enclosing program and pass them as explicit fields instead.
+A default program may fail with schema issues but cannot require services; read service-dependent values in the enclosing program and pass them as explicit fields. `make` and `makeOption` need defaults that complete synchronously; use `makeEffect` if a default pauses.
 
 ## Reusing defaults
 
@@ -119,7 +119,7 @@ function makeReturnPacking() {
 {"reason":"inspection","handling":"standard","labels":[]}
 ```
 
-Defaults belong to field descriptions. Reusing a field carries its constructor default into the new struct. A documented `default` annotation is metadata only, and a constructor default does not make decoding accept a missing field; add a decoding default separately when both behaviors are required.
+Defaults belong to field descriptions, so reusing a field carries its constructor default into the new struct. A documented `default` annotation is metadata only, and a constructor default does not make decoding accept a missing field; add a decoding default separately when you need both.
 
 ## Initializing schema-backed classes
 
@@ -141,6 +141,6 @@ true
 {"reference":"pkg-94","handling":"standard","labels":[]}
 ```
 
-Classes use the same default-bearing field descriptions as structs. The result is a validated instance with its class behavior. `new PackingRequest(...)` also applies defaults. Exceptions escaping into Effect code are defects unless an explicit `try` hatch gives them an expected error type. A plain-contract function keeps JavaScript catch and receives every exception as `unknown` (D260); `new` itself never runs a program.
+Classes use the same default-bearing field descriptions as structs and give a validated instance with its class behavior. `new PackingRequest(...)` also applies defaults. An exception escaping into Effect code is a defect unless an explicit `try` hatch gives it an expected error type. A plain-contract function keeps JavaScript catch and receives every exception as `unknown` (D260); `new` itself never runs a program.
 
 [Upstream page](https://effect.website/docs/v4/schema/default-constructors)
