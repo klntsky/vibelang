@@ -25,7 +25,7 @@ If the project has no `tsconfig.json`, create this one. It selects `.vibe` files
 }
 ```
 
-If the project has a `tsconfig.json`, keep it, and check that `include` selects `.vibe` files. A directory entry such as `"src"` selects them. A glob such as `"src/**/*.ts"` does not; add `"src/**/*.vibe"` beside it.
+If the project has a `tsconfig.json`, keep it and check that `include` selects `.vibe` files: a directory entry such as `"src"` does; a glob such as `"src/**/*.ts"` does not, so add `"src/**/*.vibe"` beside it.
 
 ## 2. Replace tsc in the scripts
 
@@ -56,7 +56,7 @@ export function hello(name: string) {
 // Output: Hello, VibeLang!
 ```
 
-Run `npx vibelang`. It prints nothing, exits with status 0, and writes `hello.js` to the `outDir`, `dist/` in the configuration above.
+Run `npx vibelang`: it prints nothing, exits with status 0, and writes `hello.js` to the `outDir` (`dist/` above).
 
 In `.vibe` files, import local modules by their source name: `import { hello } from "./hello.vibe"`. In `.ts` files, import `./hello.js`, which resolves to `hello.vibe`.
 
@@ -81,7 +81,7 @@ Run `npm run start`, or `bun run start`. The output ends with:
 Hello, VibeLang!
 ```
 
-The compiler runs the exported `main` when Node executes the file directly. Importing the module does not run it.
+The compiler runs the exported `main` when Node executes the file directly, not when another module imports it.
 
 ## 5. Test with Vitest
 
@@ -118,8 +118,8 @@ Run `npx vitest run`. The output includes:
       Tests  1 passed (1)
 ```
 
-Tell the user that you added `src/hello.vibe`, `src/main.vibe`, and `src/hello.test.vibe`. They can keep them as a starting point or delete them.
+Tell the user you added `src/hello.vibe`, `src/main.vibe`, and `src/hello.test.vibe`, which they can keep as a starting point or delete.
 
 ## Next
 
-Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify the setup with step 4 of [Set up VibeLang](../setup.md).
+Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify with step 4 of [Set up VibeLang](../setup.md).

@@ -1,6 +1,6 @@
 # Svelte
 
-Add VibeLang to a Svelte 5 app that builds with Vite. A component runs a VibeLang program with a `ManagedRuntime` and renders three states: loading, the program's result, and an error the program recovers from. Install the packages with [Add VibeLang to an existing project](existing-project.md) first. Follow this page instead of [Vite and Vitest](vite.md): it covers the same plugin, tsconfig.json, Vitest, and build steps.
+Add VibeLang to a Svelte 5 app that builds with Vite. A component runs a VibeLang program with a `ManagedRuntime` and renders three states: loading, the result, and an error the program recovers from. Install the packages with [Add VibeLang to an existing project](existing-project.md) first. This page replaces [Vite and Vitest](vite.md): it covers the same plugin, tsconfig.json, Vitest, and build steps.
 
 ## 1. Install the test packages
 
@@ -18,10 +18,10 @@ npm install --save-dev --save-exact happy-dom@20.14.6 @testing-library/svelte@5.
 
 ## 2. Configure tsconfig.json
 
-Find the configuration that includes `src`. In an app from Vite's `svelte-ts` template, `tsconfig.json` has `"files": []` and lists `tsconfig.app.json` and `tsconfig.node.json` as `references`; the one that includes `src` is `tsconfig.app.json`. Make two changes there:
+Find the configuration that includes `src`. In an app from Vite's `svelte-ts` template, `tsconfig.json` has `"files": []` and lists `tsconfig.app.json` and `tsconfig.node.json` as `references`; `tsconfig.app.json` includes `src`. Make two changes there:
 
 1. In `compilerOptions`, set `"rewriteRelativeImportExtensions": true`. Without it, `vite build` fails with TS5097 for each `.ts` file that imports a `.vibe` module. A configuration that sets `allowImportingTsExtensions` fails with TS5096 instead.
-2. Add `"src/**/*.vibe"` to `include`. The template lists `.ts`, `.js`, and `.svelte` globs only. Without the `.vibe` glob, the compiler skips `.vibe` files that no other file imports, such as tests, and Vitest fails with `ENOENT`.
+2. Add `"src/**/*.vibe"` to `include`; the template lists only `.ts`, `.js`, and `.svelte` globs. Without the `.vibe` glob, the compiler skips `.vibe` files that no other file imports, such as tests, and Vitest fails with `ENOENT`.
 
 ```json
 {
@@ -31,7 +31,7 @@ Find the configuration that includes `src`. In an app from Vite's `svelte-ts` te
 
 ## 3. Configure Vite and Vitest
 
-Replace `vite.config.ts` with this file. It adds `vibelang()` before `svelte()`, passes the configuration that includes `src` as `project`, and imports `defineConfig` from `vitest/config`, so the same file configures Vitest. `svelteTesting()` makes Vitest load Svelte's browser build and clean up after each test. Keep any other plugins the app has. If `tsconfig.json` itself includes `src`, call `vibelang()` without the `project` option.
+Replace `vite.config.ts` with this file, keeping any other plugins the app has. It adds `vibelang()` before `svelte()`, passes the configuration that includes `src` as `project`, and imports `defineConfig` from `vitest/config` so the same file configures Vitest. `svelteTesting()` makes Vitest load Svelte's browser build and clean up after each test. If `tsconfig.json` itself includes `src`, call `vibelang()` without `project`.
 
 ```ts
 // TypeScript (.ts)
@@ -141,7 +141,7 @@ Create `src/CartQuote.svelte`. Its `<script lang="ts">` block imports `./cart.vi
 </main>
 ```
 
-Render it from a component the app already has, such as `src/App.svelte`: add `import CartQuote from "./CartQuote.svelte"` to its script block and `<CartQuote />` to its markup. The page shows `Loading…`, then `2 x Green tea: $8.00` and `Only 1 coffee left`.
+Render it from an existing component, such as `src/App.svelte`: add `import CartQuote from "./CartQuote.svelte"` to its script block and `<CartQuote />` to its markup. The page shows `Loading…`, then `2 x Green tea: $8.00` and `Only 1 coffee left`.
 
 ## 6. Test the module and the component
 
@@ -205,7 +205,7 @@ If `package.json` has no `test` script, add `"test": "vitest run"`. Run `npx vit
 
 ## 7. Type-check and build
 
-svelte-check does not understand `.vibe` files, so the template's `check` script fails. svelte-check 4.7.7 reports TS2307 for each import of `./cart.vibe`, and then TS2345 for the `{#each}` block, whose `lines` it types as `unknown`. With `--output human`, it prints each file's absolute path; here they are shortened to `src/`:
+svelte-check does not understand `.vibe` files, so the template's `check` script fails: svelte-check 4.7.7 reports TS2307 for each import of `./cart.vibe`, then TS2345 for the `{#each}` block, whose `lines` it types as `unknown`. With `--output human` it prints absolute paths, shortened here to `src/`:
 
 ```out
 src/runtime.ts:4:31
@@ -215,7 +215,7 @@ src/CartQuote.svelte:3:29
 Error: Cannot find module './cart.vibe' or its corresponding type declarations. (ts)
 ```
 
-Use `vibelang -b` for the mixed `.vibe` and `.ts` program instead. It builds the same project references and checks `.vibe` and `.ts` files as one program; it does not check the script blocks of `.svelte` files. Keep those blocks thin: import a program, run it, and render its result, as `CartQuote.svelte` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `check` script:
+Use `vibelang -b` instead: it builds the same project references and checks `.vibe` and `.ts` files as one program, but not the script blocks of `.svelte` files. Keep those blocks thin: import a program, run it, and render its result, as `CartQuote.svelte` does. The `.vibe` tests and the component test cover the rest. In `package.json`, change the `check` script:
 
 ```json
 {
@@ -225,8 +225,8 @@ Use `vibelang -b` for the mixed `.vibe` and `.ts` program instead. It builds the
 }
 ```
 
-Run `npm run check`, or `bun run check`. It exits with status 0. Then run `npm run build`, or `bun run build`. It exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added and changed, and that `svelte-check` no longer runs in the `check` script.
+Run `npm run check` or `bun run check`; it exits with status 0. Then run `npm run build` or `bun run build`; it exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added and changed, and that `svelte-check` no longer runs in the `check` script.
 
 ## Next
 
-Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify the setup with step 4 of [Set up VibeLang](../setup.md).
+Set up the editor: [VS Code and Cursor](vscode.md), [Neovim](neovim.md), [Zed](zed.md), or [other editors](other-editors.md). Then verify with step 4 of [Set up VibeLang](../setup.md).

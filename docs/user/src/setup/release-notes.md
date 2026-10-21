@@ -1,8 +1,8 @@
 # Release notes
 
-VibeLang is v0, so a new version can change the language in breaking ways. Read
-the notes for every version between yours and the new one before you update, and
-update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
+VibeLang is v0, so a new version can change the language in breaking ways.
+Before you update, read the notes for every version between yours and the new
+one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
 ## 0.0.2
 
@@ -13,8 +13,8 @@ Eleven packages: `vibelang`, six native compilers
 
 ### Changes that can break code that compiled on 0.0.1
 
-Each change is a compile error that names the problem. None changes what
-compiled code does without telling you.
+Each is a compile error that names the problem; none silently changes what
+compiled code does.
 
 #### Platform globals through `globalThis` are EK4402
 
@@ -49,8 +49,8 @@ export const processEnv = () => globalThis.process?.env
 #### A call typed as a union of Effects runs where it stands
 
 A call to a function that returns `Effect<A> | Effect<never, E>` now runs the
-program, as `yield* decide(flag)` does in TypeScript. In 0.0.1 it held the
-program without saying so.
+program, as `yield* decide(flag)` does in TypeScript. In 0.0.1 it silently held
+the program.
 
 ```vibe
 error Rejected
@@ -60,8 +60,7 @@ function decide(flag: boolean): Effect.Effect<number> | Effect.Effect<never, Rej
 }
 ```
 
-Code that worked around 0.0.1 by holding the program and then calling it no
-longer compiles:
+A 0.0.1 workaround that holds the program and then calls it no longer compiles:
 
 ```vibe
 // expect-error: TS2349
@@ -105,17 +104,17 @@ const Lookup = Request.tagged<Lookup>("Lookup")
 
 #### A `const` with a declared Effect type holds the program
 
-`const p: Effect.Effect<A, E> = make()` keeps the program that `make()` returns
-cold instead of running it, at any scope. When the call returns a program that
+`const p: Effect.Effect<A, E> = make()` keeps the program `make()` returns cold
+instead of running it, at any scope. When the call returns a program that
 produces a program, as `Effect.cached(...)` does, the annotation must name the
-outer program, or the compiler reports TS2322 or TS2375. Annotate the outer type,
-`Effect.Effect<Effect.Effect<A, E>>`, or drop the annotation to run the call.
+outer program, `Effect.Effect<Effect.Effect<A, E>>`, or the compiler reports
+TS2322 or TS2375. To run the call, drop the annotation.
 
 #### A throw expression can't be an operator's left operand (EK1010)
 
-`throw cond ? a : b` in expression position threw `cond` and discarded the rest.
-It is now EK1010. Write `throw (cond ? a : b)`. A statement that starts with
-`throw` is unchanged.
+In expression position, `throw cond ? a : b` threw `cond` and discarded the
+rest; it is now EK1010. Write `throw (cond ? a : b)`. A statement that starts
+with `throw` is unchanged.
 
 #### A curried pipe stage after a call keeps the call
 
@@ -125,8 +124,8 @@ then `s |> f(args)(%)`.
 
 ### Fixes
 
-- An Effect subtype returned at an Effect boundary runs. A value that the
-  contract's written success type accepts is returned as data; for example,
+- An Effect subtype returned at an Effect boundary runs. A value the contract's
+  written success type accepts is returned as data:
   `keep(command): ChildProcess.Command!never!Scope` returns the command.
 - A discarded structured Effect call is diagnosed (EK4301). A program cast and
   piped with `|>` is passed by name.
@@ -148,7 +147,7 @@ then `s |> f(args)(%)`.
 
 - A throwing local arrow with no contract, inside a function with a plain return
   annotation, reports EK2003 on the outer annotation. Annotate the local arrow,
-  for example `(value: number): void => { ... }`.
+  such as `(value: number): void => { ... }`.
 - EK4802 can warn on a local annotated `Effect<Effect<...>>` that returns its
   program unrun. The emitted code is correct.
 - Programs that by-name lowering wraps spend extra Effect operations.
