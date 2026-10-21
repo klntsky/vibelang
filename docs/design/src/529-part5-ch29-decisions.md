@@ -281,6 +281,6 @@ Proposed in the first draft as P1-P22; adopted by D29. A row marked **revised** 
 | O7 | D57 (**controversial**) | `infer Name` marks an inferred channel; all three return-annotation slots are required; D12 stands |
 | O8 | D59 | Upstream issues and proposals are drafted in `docs/upstream/`, not filed |
 | O9 | D58, superseded by D125, then D255 (**controversial**) | VibeLang: `vibelang`, `.vibe`, `EK` codes, and unscoped npm packages |
-| Remote and repository layout | D60 | One private repository, `github.com/roninjin10/effectscript`, with the compiler in `typescript/` |
+| Remote and repository layout | D60 | One repository, with the compiler in `typescript/`: private at `github.com/roninjin10/effectscript` when decided, now public at `github.com/smithersai/vibelang` |
 
 No language or repository decision waits on the owner. D59's filing boundary stands: the drafts are ready to file, and none is filed without his go-ahead. Build lanes land locally; the orchestrator handles any push.

@@ -172,6 +172,16 @@ Each page is also written as Markdown beside its HTML, at the same path with
 `llms.txt` lists every copy in the llmstxt.org format, one section per sidebar
 view, with a page's sidebar group as its note.
 
+## Token counts
+
+```sh
+bun docs/tools/token-counts.ts --write   # update the Token counts page
+bun docs/tools/token-counts.ts --check   # exit 1 if the page drifts (bun run check:tokens, deploy-docs.sh)
+bun docs/tools/token-counts.ts --files docs/user/src/setup.md   # count any files
+```
+
+`token-counts.ts` counts tokens with OpenAI's `o200k_base` encoding (js-tiktoken 1.0.21, pinned in `package.json`) over each file's exact text. It writes the marked section of `docs/user/src/vibelang-features/117-token-counts.md`: the skill (`packages/compiler/skills/vibelang/SKILL.md`), the skill with the cheat sheet and with the user guide, the specification, the decision log, every page and sidebar group in `inventory.md` order, and each cheat-sheet entry's `ts effect` blocks against its `vibe` blocks, without the checker's `// run:` and `// Output:` lines. A `vibe long` block counts on neither side. The page doesn't count itself. `bun test docs/tools/token-counts.test.ts` covers the pairing and the counting. Change any page, the skill or the decision log, then run `--write`.
+
 ## What smithers.sh serves for VibeLang
 
 ```sh

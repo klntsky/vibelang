@@ -87,6 +87,10 @@ cursor --install-extension node_modules/vibelang/editor/vibelang.vsix
 
 The extension starts the project's own `vibelang` as the language server.
 
+## Agent skill
+
+The package ships an agent skill for writing VibeLang, `node_modules/vibelang/skills/vibelang/SKILL.md`: every form, rule and idiom of this version, in about 4,000 tokens. Point an agent's instructions at it (D292).
+
 ## Format .vibe files with dprint
 
 The package ships a [dprint](https://dprint.dev) plugin for `.vibe` files. Add
