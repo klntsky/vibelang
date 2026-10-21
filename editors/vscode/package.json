@@ -164,8 +164,8 @@
     ]
   },
   "scripts": {
-    "build": "tsc --noEmit -p . && esbuild src/extension.ts --bundle --platform=node --format=cjs --target=node20 --external:vscode --sourcemap --outfile=dist/extension.js",
-    "package": "bun run build && vsce package --no-dependencies --skip-license --allow-missing-repository --out vibelang.vsix",
+    "build": "tsc --noEmit -p . && node scripts/build.mjs",
+    "package": "bun run build && vsce package --no-dependencies --allow-missing-repository --out vibelang.vsix && node --test test/package.test.mjs",
     "test": "node test/run.mjs",
     "test:unit": "bun test --coverage test/unit.test.ts",
     "derive-grammar": "node scripts/derive-grammar.mjs"

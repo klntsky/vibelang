@@ -105,7 +105,12 @@ test("assembles every package in publish order with pinned versions, platform bi
   assert.ok(archive(root, "create-vibelang", "template/gitignore").length)
   assert.ok(archive(root, "create-vibelang", "template/gitattributes").length)
   assert.match(archive(root, "vibelang", "NOTICE").toString(), /Microsoft/)
-  assert.match(archive(root, "vibelang-runtime", "LICENSE").toString(), /MIT License/)
+  for (const name of ["vibelang-runtime", "vibelang-vite", "vibelang-unplugin", "create-vibelang"]) {
+    const license = archive(root, name, "LICENSE").toString()
+    assert.equal(license.split("\n")[0], "MIT License", name + ": LICENSE must start at the MIT heading")
+    const expected = readFileSync(join(repo, "LICENSE"), "utf8").split("\nMIT License\n")[1]
+    assert.equal(license, "MIT License\n" + expected)
+  }
 })
 
 test("reports inconsistent versions, pins and missing binaries together before replacing release artifacts", (t) => {

@@ -96,7 +96,9 @@ rmSync(tarballs, { recursive: true, force: true })
 mkdirSync(tarballs, { recursive: true })
 
 const rootLicense = readFileSync(join(root, "LICENSE"), "utf8")
-const mit = rootLicense.slice(rootLicense.indexOf("MIT License"))
+const mitStart = rootLicense.indexOf("\nMIT License\n")
+if (mitStart < 0) throw new Error("LICENSE: missing standalone MIT License heading")
+const mit = rootLicense.slice(mitStart + 1)
 const apache = readFileSync(join(root, "typescript/LICENSE.txt"), "utf8")
 const notice = `VibeLang
 Copyright (c) 2026 the VibeLang authors

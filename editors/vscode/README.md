@@ -77,7 +77,7 @@ The extension doesn't run in untrusted workspaces, because it executes the works
 
 ```sh
 bun run build            # type-check with tsc, bundle with esbuild to dist/extension.js
-bun run package          # build, then write vibelang.vsix
+bun run package          # build, write vibelang.vsix, then verify its licenses
 bun run test             # install vibelang.vsix into a fresh VS Code and check it
 bun run derive-grammar   # regenerate syntaxes/ from the installed VS Code's TypeScript grammar
 ```
@@ -86,4 +86,4 @@ bun run derive-grammar   # regenerate syntaxes/ from the installed VS Code's Typ
 
 ## License
 
-The grammar and the language configuration are derived from MIT-licensed work by Microsoft; `ThirdPartyNotices.txt` carries their notices.
+The extension is MIT-licensed. The grammar and language configuration are derived from MIT-licensed work by Microsoft. `bun run build` generates `LICENSE` from the repository license and `ThirdPartyNotices.txt` from `scripts/grammar-notices.txt` plus the license and notice files of every dependency that contributes code to esbuild's bundle. Edit the grammar notices source rather than the generated file. `bun run package` verifies the license and complete dependency notices inside the packed VSIX.
