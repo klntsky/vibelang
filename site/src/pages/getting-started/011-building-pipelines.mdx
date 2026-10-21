@@ -21,7 +21,7 @@ function priceLabel() {
 // Output: Price: 24
 ```
 
-Each body uses the previous stage's result through `%`. Here `%` stands for a value, so the expression before `|>` runs once and the body receives its result. Standalone functions remain reusable without adding methods to a value's prototype, and bundlers can remove the Effect functions a program never calls.
+Each body reads the previous stage's result through `%`. Here `%` stands for a value, so the expression before `|>` runs once and the body receives its result. Standalone functions stay reusable without adding methods to a value's prototype, and bundlers can remove the Effect functions a program never calls.
 
 For program operators, start with the work to run:
 
@@ -33,7 +33,7 @@ function preparedPrice() {
 // Output: Price: 24
 ```
 
-Here each `%` stands where `timeout` and `withSpan` expect a program, so the expression before `|>` is passed by name: `priceLabel()` runs when `timeout` runs it, and the span covers the timed work. The pipe returns the final success value. Wrap the whole pipeline in a function to keep it as reusable work: `const prepared = () => priceLabel() |> timeout(%, "1 second")`.
+Here each `%` stands where `timeout` and `withSpan` expect a program, so the expression before `|>` is passed by name: `priceLabel()` runs when `timeout` runs it, and the span covers the timed work. The pipe returns the final success value. To keep the pipeline as reusable work, wrap it in a function: `const prepared = () => priceLabel() |> timeout(%, "1 second")`.
 
 A pipe passes its left side by name or uses it as a value, not both, and its body must use `%`. Hover over a `%` to see which it does.
 
@@ -53,7 +53,7 @@ function recordPrice() {
 // Output: 29
 ```
 
-Using the returned value replaces `Effect.map` for local transformations. A subsequent constant return replaces a successful result after earlier work finishes, as `Effect.as` does. Earlier failures still propagate, so replacing the success does not hide an error.
+Using the returned value replaces `Effect.map` for local transformations. A later constant return replaces the success after earlier work finishes, as `Effect.as` does; earlier failures still propagate, so replacing the success hides no error.
 
 ## Sequence dependent computations
 
@@ -75,7 +75,7 @@ function total() {
 // Output: 27.52
 ```
 
-A call followed by another call expresses the dependency that `flatMap` or `andThen` handles in TypeScript Effect. Each call runs once, in order. A failure prevents later statements from executing unless you handle it.
+One call after another expresses the dependency that `flatMap` or `andThen` handles in TypeScript Effect. Each call runs once, in order; an unhandled failure stops later statements.
 
 ## Integrate Option and Result
 
@@ -97,7 +97,7 @@ function validated(value: number) {
 // Output: 2, 0
 ```
 
-`Option` and `Result` are data values, so keep them intact when you want to inspect them. Explicit conversion runs them as computations: a missing option adds `NoSuchElementError`, and a failed result adds its error type. Calling a constructor such as `Option.some` builds the container.
+`Option` and `Result` are data values; keep them intact to inspect them. Explicit conversion runs them as computations: a missing option adds `NoSuchElementError`, and a failed result adds its error type. Calling a constructor such as `Option.some` builds the container.
 
 ## Call a data type's functions as methods
 
@@ -119,7 +119,7 @@ function warnings(readings: Stream.Stream<number>) {
 // Output: ["anonymous",["26 C","30 C","28 C"]]
 ```
 
-A value of one of Effect's data types, such as `Option`, `Stream`, `Chunk`, `Duration`, `Fiber`, or `Ref`, takes its module's functions as methods. `value.map(f)` calls `Option.map(value, f)` when `value` is an `Option`, and `Stream.map(value, f)` when it is a `Stream`. The type's own members come first, so arrays, strings, and Effect's `pipe` keep their meaning. A method that returns an Effect runs where it stands, like any call: `fiber.join()` waits for the fiber. Hover over a method to see the function it calls.
+A value of an Effect data type, such as `Option`, `Stream`, `Chunk`, `Duration`, `Fiber`, or `Ref`, takes its module's functions as methods: `value.map(f)` calls `Option.map(value, f)` when `value` is an `Option`, and `Stream.map(value, f)` for a `Stream`. The type's own members come first, so arrays, strings, and Effect's `pipe` keep their meaning. A method that returns an Effect runs where it stands, like any call: `fiber.join()` waits for the fiber. Hover over a method to see the function it calls.
 
 A method exists only in a call. To pass the function itself, name its module:
 
@@ -144,7 +144,7 @@ function quotedTotal() {
 // Output: 27.52
 ```
 
-The local variable remains available after logging, giving the behavior of `Effect.tap`. An observation that fails also fails the enclosing function. Use `try`/`catch` around the observation only when ignoring that failure is intentional.
+The local variable stays available after logging, as with `Effect.tap`. An observation that fails also fails the enclosing function; wrap it in `try`/`catch` only to ignore that failure on purpose.
 
 ## Collect multiple computations
 
@@ -162,7 +162,7 @@ function summary() {
 
 `Effect.all` preserves the input's tuple or object shape. It runs sequentially by default; this example explicitly starts up to two computations at once. If a branch fails, the combined computation fails and concurrent siblings are interrupted and cleaned up.
 
-For a dynamic collection, use `Effect.forEach(values, (value) => work(value), { concurrency: 4 })`. You can also build a collection of programs first: `const jobs = values.map((value) => () => work(value))`, then `Effect.all(jobs, { concurrency: 4 })`. Iterables and records of zero-argument programs convert to Effects where the combinator expects them. A synchronous array callback cannot call work that pauses or has expected failures; returning a program delays that work.
+For a dynamic collection, use `Effect.forEach(values, (value) => work(value), { concurrency: 4 })`, or build a collection of programs first, `const jobs = values.map((value) => () => work(value))`, then call `Effect.all(jobs, { concurrency: 4 })`. Iterables and records of zero-argument programs convert to Effects where the combinator expects them. A synchronous array callback cannot call work that pauses or has expected failures; returning a program delays that work.
 
 ## Avoid discarded programs
 
@@ -177,11 +177,11 @@ function saveNotice() {
 // Output: finished
 ```
 
-A call in a VibeLang statement runs even when its success value is ignored. A function value such as `notice` describes work and needs a call to execute. Merely writing `() => Effect.log("saved")` creates a value that no runner or caller uses.
+A call statement runs even when its success value is ignored. A function value such as `notice` describes work and runs only when called; writing `() => Effect.log("saved")` alone creates a value no runner or caller uses.
 
 ## Coming from Effect
 
-Statements replace `map`, `flatMap`, `andThen`, and `tap` in most functions. Use `|>` for retry, timeout, provisioning, and tracing: `work() |> retry(%, policy) |> timeout(%, "1 second")` replaces `work().pipe(Effect.retry(policy), Effect.timeout("1 second"))`. Call a data type's functions as methods, `maybe.map(f).getOrElse(() => 0)`, instead of `pipe(maybe, Option.map(f), Option.getOrElse(() => 0))`. The global `pipe` still works, and suits data-last functions that have no data-first form, such as `Match.when`.
+Statements replace `map`, `flatMap`, `andThen`, and `tap` in most functions. Use `|>` for retry, timeout, provisioning, and tracing: `work() |> retry(%, policy) |> timeout(%, "1 second")` replaces `work().pipe(Effect.retry(policy), Effect.timeout("1 second"))`. Call a data type's functions as methods, `maybe.map(f).getOrElse(() => 0)`, instead of `pipe(maybe, Option.map(f), Option.getOrElse(() => 0))`. The global `pipe` still works and suits data-last functions with no data-first form, such as `Match.when`.
 
 ---
 

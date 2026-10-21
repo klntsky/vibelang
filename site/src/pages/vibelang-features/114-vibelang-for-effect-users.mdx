@@ -1,11 +1,11 @@
 ---
 title: "VibeLang for Effect users"
-description: "Keep Effect's runtime, libraries, layers, and error channels. In .vibe files, write the sequential work as ordinary functions and statements. For every change side by side with Effect code, see..."
+description: "Keep Effect's runtime, libraries, layers, and error channels; in .vibe files, write sequential work as ordinary functions and statements. The cheat sheet shows every change beside its Effect code,..."
 ---
 
 # VibeLang for Effect users
 
-Keep Effect's runtime, libraries, layers, and error channels. In `.vibe` files, write the sequential work as ordinary functions and statements. For every change side by side with Effect code, see the [cheat sheet](/vibelang-features/115-cheat-sheet). For the rules behind each change, read the [specification](/spec/000-intro).
+Keep Effect's runtime, libraries, layers, and error channels; in `.vibe` files, write sequential work as ordinary functions and statements. The [cheat sheet](/vibelang-features/115-cheat-sheet) shows every change beside its Effect code, and the [specification](/spec/000-intro) gives the rules behind each.
 
 ```vibe
 // run: Console.log(main())
@@ -23,7 +23,7 @@ function main() {
 // Output: Hello, Ada
 ```
 
-Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.retry`, whose parameter expects a program, the same call is passed by name: retry runs it again on each attempt. Use `async` and plain `await` only inside a boundary hatch. The concurrent `await.all`, `await.allSettled`, `await.any`, and `await.race` operations are VibeLang forms.
+Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.retry`, whose parameter expects a program, the same call is passed by name, and retry runs it on each attempt. Use `async` and plain `await` only inside a boundary hatch; `await.all`, `await.allSettled`, `await.any`, and `await.race` are VibeLang's concurrent forms.
 
 ## Translate the idioms
 
@@ -34,7 +34,7 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `const User = Schema.Struct({ id: Schema.String })` and `type User = typeof User.Type` | `schema User { id: string }` |
 | `interface Cart { readonly id: string; items: Array<Item> }` | `interface Cart { id: string; mutable items: Array<Item> }` |
 | `const x = yield* work()` | `const x = work()` |
-| `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, then call the next function |
+| `pipe(x, Effect.map(f), Effect.flatMap(g))` | Bind the result, transform it, call the next function |
 | `Option.getOrElse(Option.map(maybe, f), () => 0)` | `maybe.map(f).getOrElse(() => 0)` |
 | `pipe(stream, Stream.filter(p), Stream.take(3))` | `stream.filter(p).take(3)` |
 | `work().pipe(Effect.retry(policy), Effect.timeout("1 second"))` | `work() \|> retry(%, policy) \|> timeout(%, "1 second")` |
@@ -62,9 +62,13 @@ Where it stands, `greet("Ada")` runs and returns a string. Passed to `Effect.ret
 | `Effect.runPromise(program)` in TypeScript | `runPromise(main())` in a `.ts` file or a hatch's body |
 | `Stream.fromIterable` or a generator-based source | A producer: `function*` with `yield value` |
 
-`await.allSettled` never fails with a typed error: it captures typed failures as `Result.fail`. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258).
+`await.allSettled` captures typed failures as `Result.fail` and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258).
 
-Use Effect's operators for retries, timeouts, concurrency, and Stream transformations. Statements replace the operators that only sequence ordinary work.
+Use Effect's operators for retries, timeouts, concurrency, and Stream transformations. Statements replace operators that only sequence ordinary work.
+
+## Port code with --fix
+
+Effect code ported from TypeScript compiles in a `.vibe` file, and each construct in the table above that VibeLang writes its own way draws a warning, EK4830-EK4837. Run `npx vibelang -p tsconfig.json --fix --noEmit` to rewrite every one whose VibeLang form keeps what the program does, then read the warnings left: each says what its form would change. See [TypeScript-style Effect code](/getting-started/012-devtools#typescript-style-effect-code).
 
 ## Calls run; programs stay cold
 
@@ -86,7 +90,7 @@ function concurrent() {
 // Output: [["Hello, Ada","Hello, Grace"],["Hello, Ada","Hello, Grace"]]
 ```
 
-A call whose result type is Effect runs at that point, except where a parameter expects a program: there the call is passed by name, and runs when the program runs. This applies to `Effect.retry`, `Effect.timeout`, `fork`, and entries in `Effect.all`. A program of several statements is a function with no arguments, `() => { ... }`.
+A call whose result type is Effect runs at that point, except where a parameter expects a program, as in `Effect.retry`, `Effect.timeout`, `fork`, and entries in `Effect.all`: there the call is passed by name and runs when the program runs. A program of several statements is a function with no arguments, `() => { ... }`.
 
 A held Effect value runs when called with no arguments. Data that Effect can also execute, such as `Config` and `Exit`, stays data until explicitly called. A producer call constructs a lazy Stream; see [Producers](/vibelang-features/112-producers).
 
@@ -101,13 +105,13 @@ export const capture = (input: { mutable value: number }): Effect.Effect<number,
 }
 ```
 
-A TypeScript caller can build `capture(input)`, mutate `input`, then run the program: it still gets the snapshot. The outer body runs synchronously at the call and can validate or copy plain data. Every path returns a program. **Where TypeScript returned Effect.fail(e), write return () => \{ throw e \}**; an outer throw is a synchronous JavaScript throw. Put Effects and service lookups inside the returned program.
+A TypeScript caller can build `capture(input)`, mutate `input`, then run the program, and still get the snapshot. The outer body runs synchronously at the call and can validate or copy plain data; every path returns a program. **Where TypeScript returned Effect.fail(e), write return () => \{ throw e \}**; an outer throw is a synchronous JavaScript throw. Put Effects and service lookups inside the returned program.
 
 A forwarding member keeps its delegate's call phase with `const program: Effect.Effect<number, never, never> = base.read(path); return program`. A const with a declared Effect type holds its initializer in any scope: `const built: Made = make(config)` calls the factory now and runs none of the result. For a Registry layer, build that local before `Layer.effect(Registry)(built)`; snapshot only what TypeScript snapshots, keeping later reads such as `config.snapshots` in the returned program.
 
-A synchronous visitor that must return a program keeps its callback type unchanged. Write `withRoute(plan, apiKey, (route) => () => Route.toModel(route))`. After checking the visitor's Result, call `routed.success()` to run it. The extra `() =>` returns the program rather than running `Route.toModel` inside the visitor. A discarded `items.map(item => save(item))` still needs `Effect.forEach` or a loop.
+A synchronous visitor that must return a program keeps its callback type unchanged: write `withRoute(plan, apiKey, (route) => () => Route.toModel(route))`. The extra `() =>` returns the program instead of running `Route.toModel` inside the visitor; after checking the visitor's Result, call `routed.success()` to run it. A discarded `items.map(item => save(item))` still needs `Effect.forEach` or a loop.
 
-VibeLang callers keep their usual rules: a call runs its program, and a program argument is passed by name. `retry(make(config), policy)` calls the factory again each attempt; `const p: Made = make(config); retry(p, policy)` calls it once and retries that program. `Effect.suspend(() => () => 1)` still yields a function value.
+VibeLang callers keep the usual rules: `retry(make(config), policy)` calls the factory again each attempt; `const p: Made = make(config); retry(p, policy)` calls it once and retries that program. `Effect.suspend(() => () => 1)` still yields a function value.
 
 ## Declare at the module top level
 
@@ -120,9 +124,9 @@ export function main() {
 // Output: started
 ```
 
-Declare functions, services, schemas, and layers at module scope. Do not run a program there: `const answer = Effect.succeed(1)` is EK1001. An explicitly Effect-typed const, such as `const answer: Effect.Effect<number, never, never> = Effect.succeed(1)`, stores a cold program and runs nothing at import (D262). Export a `main` without parameters instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing the module runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
+Declare functions, services, schemas, and layers at module scope, but run no program there: `const answer = Effect.succeed(1)` is EK1001. An explicitly Effect-typed const, such as `const answer: Effect.Effect<number, never, never> = Effect.succeed(1)`, stores a cold program and runs nothing at import (D262). Export a parameterless `main` instead: the module runs it with `NodeRuntime.runMain` when node starts the module, and importing it runs nothing. To provide layers or runner options, call the runner at the top level yourself, `NodeRuntime.runMain(() => Effect.provide(() => main(), AppLive))`; the module then runs only that.
 
-Every export of Effect's root is in scope without an import, along with VibeLang's runtime helpers. This includes `Console`, `Clock`, `Option`, `Schedule`, and `Stream`. JavaScript globals such as `Array` keep their meaning; import Effect's conflicting modules under another name. Subpaths such as `effect/http` still need imports.
+Every export of Effect's root, including `Console`, `Clock`, `Option`, `Schedule`, and `Stream`, is in scope without an import, along with VibeLang's runtime helpers. JavaScript globals such as `Array` keep their meaning; import Effect's conflicting modules under another name. Subpaths such as `effect/http` still need imports.
 
 ## Keep platform work in Effect
 
@@ -137,9 +141,9 @@ function reportTime() {
 // Output: 123
 ```
 
-`console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe`. Use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. Importing a Node function or passing it as a value is allowed; directly running it is a platform API error. [Building an HTTP API](/vibelang-features/113-building-an-http-api) shows `createServer` passed to a server layer.
+`console.log`, `fetch`, timers, and `Date.now()` are errors in `.vibe`; use `Console`, `Clock`, `Effect.sleep`, and Effect's HTTP modules. You can import a Node function or pass it as a value; running it directly is a platform API error. [Building an HTTP API](/vibelang-features/113-building-an-http-api) passes `createServer` to a server layer.
 
-Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a value of the `.vibe` file, such as `text`, only as an input: an argument after the function, bound to its first parameter. Projects can also trust workspace or other TypeScript packages with `"vibelang": { "trustedPackages": ["@smthrs/*"] }` at the top level of `tsconfig.json` (D261, D275). Matching packages have synchronous plain calls whose exceptions are defects; their Effects run, and EK4401 does not fire. Use `trusted(impl, [Errors])` for a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
+Inside an Effect function, a plain function from your `.ts` code or a foreign package needs a boundary hatch, `try((text) => parse(text), text)` or `sync(crypto.randomUUID())`, or a trusted declaration. A hatch's first argument is plain, self-contained TypeScript: `async`, `await`, `throw`, and platform APIs keep their JavaScript meaning there, and `runPromise` or `runFork` leads back in. It reads a `.vibe` value, such as `text`, only as an input: an argument after the function, bound to its first parameter. To trust workspace or other TypeScript packages, set `"vibelang": { "trustedPackages": ["@smthrs/*"] }` at the top level of `tsconfig.json` (D261, D275). Exceptions from a matching package's synchronous plain calls are defects, its Effects run, and EK4401 does not fire. `trusted(impl, [Errors])` declares a function's expected failures. Effect's own packages are trusted, including `assert` and `expect` re-exported by `@effect/vitest`.
 
 ## Catch expected failures only
 
@@ -162,8 +166,8 @@ function displayName(id: string) {
 // Output: ["Ada","Unknown user: missing"]
 ```
 
-Inside an Effect function, `throw` adds an expected failure to the function's error channel, and `catch` receives those failures. Defects and interruption bypass `catch`; `finally` still runs. Use `Effect.orDie(() => work())` to promote an expected failure to a defect, and Effect's cause APIs at a boundary when you need to inspect defects.
+Inside an Effect function, `throw` adds an expected failure to the function's error channel, and `catch` receives it. Defects and interruption bypass `catch`; `finally` still runs. `Effect.orDie(() => work())` promotes an expected failure to a defect; to inspect defects, use Effect's cause APIs at a boundary.
 
-Contracts remain `Effect<A, E, R>` and can be written `A!E!R`. Most functions infer them. In the shorthand, `A!E` checks the success and error channels and infers dependencies from the body; an empty slot is `never`. With `Effect<A, E, R>`, write all three channels and use `infer E` or `infer R` to infer a channel.
+Contracts remain `Effect<A, E, R>`, or `A!E!R` for short, and most functions infer them. In the shorthand, `A!E` checks the success and error channels and infers dependencies from the body; an empty slot is `never`. `Effect<A, E, R>` needs all three channels; write `infer E` or `infer R` to infer one.
 
 For the feature with no direct Effect equivalent, see [Control operations and handlers](/vibelang-features/111-control-operations-and-handlers).

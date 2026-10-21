@@ -1,23 +1,23 @@
 ---
 title: "Set up VibeLang"
-description: "VibeLang is a language for writing Effect programs with TypeScript syntax. These steps set it up in a project. Each step gives a command and the output to expect. When the output differs, stop and..."
+description: "VibeLang is a language for Effect programs in TypeScript syntax. These steps set it up in a project; each gives a command and its expected output. When the output differs, stop and show the user..."
 ---
 
 # Set up VibeLang
 
-VibeLang is a language for writing Effect programs with TypeScript syntax. These steps set it up in a project. Each step gives a command and the output to expect. When the output differs, stop and show the user the command and its output. VibeLang is v0: the language will change in major, breaking ways, and it is not suitable for production use.
+VibeLang is a language for Effect programs in TypeScript syntax. These steps set it up in a project; each gives a command and its expected output. When the output differs, stop and show the user the command and its output. VibeLang is v0: the language will change in major, breaking ways, and it is not suitable for production use.
 
 ## 1. Check the tools
 
-Run `node --version` and expect `v26.0.0` or later. If the project uses Bun, run `bun --version` and expect `1.4.0` or later.
+Run `node --version` and expect `v26.0.0` or later. With Bun, run `bun --version` and expect `1.4.0` or later.
 
-Version 0.0.2 ships binaries for macOS, Linux, and Windows: `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`. All six are cross-compiled; the end-to-end npm and Bun rehearsal runs on Linux x64.
+Version 0.0.2 ships cross-compiled binaries for macOS, Linux, and Windows: `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64`, and `win32-x64`. The end-to-end npm and Bun rehearsal runs on Linux x64.
 
-Run `npm view vibelang@0.0.2 version` and expect `0.0.2`. An `E404` error means that version is unavailable from the configured registry: report the registry and error before continuing.
+Run `npm view vibelang@0.0.2 version` and expect `0.0.2`. `E404` means the configured registry lacks that version: report the registry and error before continuing.
 
 ## 2. Detect the project
 
-Read the project's root directory and record what you find:
+Read the project's root directory and record:
 
 | Fact | Signal | Result |
 | --- | --- | --- |
@@ -25,18 +25,18 @@ Read the project's root directory and record what you find:
 | | A `package.json` | Existing project |
 | Package manager | `bun.lock` or `bun.lockb` | Bun |
 | | `package-lock.json`, or no lockfile | npm |
-| | `pnpm-lock.yaml` or `yarn.lock` | pnpm or Yarn: install the packages the npm commands name with `pnpm add` or `yarn add` |
+| | `pnpm-lock.yaml` or `yarn.lock` | pnpm or Yarn: install the npm commands' packages with `pnpm add` or `yarn add` |
 | Build | `vite` or `vitest` in `package.json`, or a `vite.config.*` or `vitest.config.*` file | Vite |
 | | `webpack`, `rollup`, `esbuild`, or `@rspack/core` in `package.json`, or `bun build` in a script | Another bundler: `vibelang-unplugin` |
 | | None of these | The `vibelang` CLI |
-| Framework | `react`, `vue`, or `svelte` in `package.json`, and the build is Vite | React, Vue, or Svelte. With `@sveltejs/kit` or `nuxt`, tell the user these pages do not cover it |
+| Framework | `react`, `vue`, or `svelte` in `package.json`, with a Vite build | React, Vue, or Svelte. With `@sveltejs/kit` or `nuxt`, tell the user these pages don't cover it |
 | Editor | A `.vscode/` or `.cursor/` directory | VS Code or Cursor |
 | | A `.zed/` directory | Zed |
 | | None of these | Ask the user |
 
 ## 3. Follow the matching pages
 
-Read each page that matches and follow its steps, in this order: project, build or framework, editor.
+Follow each matching page, in this order: project, build or framework, editor.
 
 | Case | Page |
 | --- | --- |
@@ -44,14 +44,14 @@ Read each page that matches and follow its steps, in this order: project, build 
 | Existing project | [Add VibeLang to an existing project](/setup/existing-project) |
 | Build with the `vibelang` CLI, as with `tsc` | [Build with the vibelang CLI](/setup/vibelang-cli) |
 | Vite or Vitest, without React, Vue, or Svelte | [Vite and Vitest](/setup/vite) |
-| React, Vue, or Svelte with Vite | [React](/setup/react), [Vue](/setup/vue), or [Svelte](/setup/svelte), in place of the Vite page |
+| React, Vue, or Svelte with Vite | [React](/setup/react), [Vue](/setup/vue), or [Svelte](/setup/svelte), instead of the Vite page |
 | Format with dprint, or a `dprint.json` in the project | [Format with dprint](/setup/formatting) |
 | VS Code or Cursor | [VS Code and Cursor](/setup/vscode) |
 | Neovim | [Neovim](/setup/neovim) |
 | Zed | [Zed](/setup/zed) |
 | Another editor with an LSP client | [Other editors](/setup/other-editors) |
 
-Version 0.0.2 includes `vibelang-unplugin` for webpack, Rspack, Rollup, Rolldown, esbuild, and `bun build`. Install `vibelang@0.0.2` and `vibelang-unplugin@0.0.2` as dev dependencies, and follow the [plugin configuration](https://www.npmjs.com/package/vibelang-unplugin#configure) for the project's bundler. For Vite and Vitest, use `vibelang-vite`.
+For webpack, Rspack, Rollup, Rolldown, esbuild, and `bun build`, version 0.0.2 includes `vibelang-unplugin`: install `vibelang@0.0.2` and `vibelang-unplugin@0.0.2` as dev dependencies and follow the [plugin configuration](https://www.npmjs.com/package/vibelang-unplugin#configure) for the bundler. Vite and Vitest use `vibelang-vite`.
 
 ## 4. Verify the setup
 
@@ -62,4 +62,4 @@ npx vibelang --version
 npx vibelang --noEmit
 ```
 
-The first command prints `VibeLang 0.0.2 (TypeScript 7.1.0-dev)`. The second prints nothing and exits with status 0. Then run the project's `build` and `test` scripts; each must exit with status 0. Report to the user the pages you followed and each command's output.
+The first prints `VibeLang 0.0.2 (TypeScript 7.1.0-dev)`; the second prints nothing and exits with status 0. Then run the project's `build` and `test` scripts; each must exit with status 0. Report the pages you followed and each command's output to the user.

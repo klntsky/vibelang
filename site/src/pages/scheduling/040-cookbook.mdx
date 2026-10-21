@@ -1,11 +1,11 @@
 ---
 title: "Schedule cookbook"
-description: "These recipes use ordinary functions as repeatable programs. Each recipe bounds its attempts or checks, and a successful request stops retrying immediately. Schedule values and duration..."
+description: "These recipes use ordinary functions as repeatable programs. Each bounds its attempts or checks, and a successful request stops retrying immediately. Schedule values and duration calculations work..."
 ---
 
 # Schedule cookbook
 
-These recipes use ordinary functions as repeatable programs. Each recipe bounds its attempts or checks, and a successful request stops retrying immediately. `Schedule` values and duration calculations work exactly as in Effect.
+These recipes use ordinary functions as repeatable programs. Each bounds its attempts or checks, and a successful request stops retrying immediately. `Schedule` values and duration calculations work exactly as in Effect.
 
 ## Honoring server retry hints
 
@@ -38,7 +38,7 @@ function download() {
 // Output: archive ready
 ```
 
-Parse the response's retry hint into a duration at the HTTP boundary. The policy compares that duration with the backoff for the same failure, so the first two waits above are two seconds each. Three permitted retries mean at most four requests, and exhausting them propagates the last `Throttled` failure.
+Parse the response's retry hint into a duration at the HTTP boundary. The policy waits the longer of that duration and the backoff for the same failure, so the first two waits are two seconds each. Three permitted retries mean at most four requests; exhausting them propagates the last `Throttled` failure.
 
 ## Polling with response-dependent delays
 
@@ -75,7 +75,7 @@ function waitForArchive() {
 // Output: /archives/week.csv
 ```
 
-A pending response is a success, so it feeds `repeat` rather than `retry`. This simulation waits 300 milliseconds, then 600 milliseconds, and returns the path on its third check. The count limit permits at most six checks; reaching it with another pending result becomes `PollLimit`.
+A pending response is a success, so it feeds `repeat`, not `retry`. This simulation waits 300 then 600 milliseconds and returns the path on its third check. The count limit permits at most six checks; reaching it with another pending result becomes `PollLimit`.
 
 ## Bounding the whole retry operation
 
@@ -93,7 +93,7 @@ function readWithDeadline() {
 // Output: TimeoutError
 ```
 
-The outer timeout covers the first attempt, every wait, and every retry. Placing a timeout inside the retried program instead gives each attempt a separate budget. A schedule's elapsed-duration limit is checked only at its steps and cannot interrupt an attempt already in progress; a timeout interrupts the work and waits for its cleanup.
+The outer timeout covers the first attempt, every wait, and every retry; a timeout inside the retried program gives each attempt its own budget. A schedule checks its elapsed-duration limit only at its steps and can't interrupt an attempt in progress; a timeout interrupts the work and waits for its cleanup.
 
 ## Switching from rapid to slower retries
 
@@ -113,7 +113,7 @@ function reconnect() {
 // Output: connected
 ```
 
-The first two retries use short waits; later retries use four second waits. This simulation succeeds on attempt four, after entering the slow phase. If every attempt fails, the two phases allow five retries plus the initial attempt.
+The first two retries wait briefly; later ones wait four seconds. This simulation succeeds on attempt four, in the slow phase. If every attempt fails, the two phases allow five retries plus the initial attempt.
 
 ## Recording retry decisions
 
@@ -148,7 +148,7 @@ function observedRequest() {
 // Output: accepted
 ```
 
-Put `tap` after the limit so it records accepted retries only. The retry number starts at one and describes the next planned attempt, before its wait begins. Telemetry failures also fail the schedule, so handle an export failure inside the callback when it must not stop the request.
+Put `tap` after the limit so it records accepted retries only. The retry number starts at one and describes the next planned attempt, before its wait begins. A telemetry failure also fails the schedule; when an export failure must not stop the request, handle it inside the callback.
 
 ---
 

@@ -1,11 +1,11 @@
 ---
 title: "Managing Layers"
-description: "A layer describes how to construct services, including their dependencies, initialization errors, and resources. Build the application graph once around an entry point so its services share one..."
+description: "A layer describes how to build services: their dependencies, initialization errors, and resources. Build the application graph once around an entry point so its services share one managed lifetime."
 ---
 
 # Managing Layers
 
-A layer describes how to construct services, including their dependencies, initialization errors, and resources. Build the application graph once around an entry point so its services share one managed lifetime.
+A layer describes how to build services: their dependencies, initialization errors, and resources. Build the application graph once around an entry point so its services share one managed lifetime.
 
 
 ## Describing a dependency graph
@@ -29,7 +29,7 @@ function report(title: string) {
 // Output: report/Inventory
 ```
 
-The implementation graph on this page has `Printer` depend on `Settings`, and `Reports` depend on both. `Layer.Layer<Out, E, In>` describes the services produced, construction failures, and construction requirements. The global `Layer` namespace provides the constructors and that type.
+On this page, `Printer` depends on `Settings`, and `Reports` on both. `Layer.Layer<Out, E, In>` gives the services produced, construction failures, and construction requirements; the global `Layer` namespace holds the constructors and that type.
 
 ## Preventing dependency leakage
 
@@ -47,9 +47,9 @@ const PrinterLive = Layer.effect(Printer) {
 // Output: test: ready
 ```
 
-`Layer.effect(Printer) { ... }` builds a `Printer`: the block is the layer's effect, passed to Effect's `Layer.effect` through block params. Its statements run once, when the layer builds, and the object it returns is the implementation, whose members the service types, so `print(text)` needs no annotation. A layer without setup is `Layer.succeed(Printer, { ... })`. `Settings()` runs once when the layer builds, and the method captures that implementation, so callers need `Printer` without also needing `Settings`. Looking up a service inside a method instead makes it a call-time requirement, which must appear in the member's full contract.
+`Layer.effect(Printer) { ... }` builds a `Printer`: the block is the layer's effect, passed to Effect's `Layer.effect` through block params. Its statements, `Settings()` included, run once when the layer builds. The returned object is the implementation; the service types its members, so `print(text)` needs no annotation. The method captures the `Settings` implementation, so callers need `Printer` but not `Settings`. A layer without setup is `Layer.succeed(Printer, { ... })`. Looking up a service inside a method instead makes it a call-time requirement, which the member's full contract must list.
 
-Keep method requirements at `never` when dependencies are implementation details. This lets a test provide a simple fake without also recreating the production graph.
+Keep method requirements at `never` when dependencies are implementation details, so a test can provide a simple fake without recreating the production graph.
 
 ## Constructing service layers
 
@@ -75,9 +75,9 @@ const ReportsLive = Layer.effect(Reports) {
 // Output: reports/Inventory
 ```
 
-Use `Layer.succeed` for an existing implementation and `Layer.effect` for a factory that performs Effect operations. `Layer.sync` accepts an eligible synchronous constructor when no Effect work is required. Constructing a layer value does not run its initialization program.
+Use `Layer.succeed` for an existing implementation or constant factory, `Layer.effect` for a factory that performs Effect operations, and `Layer.sync` for an eligible synchronous constructor that needs no Effect work. Constructing a layer value doesn't run its initialization program.
 
-A factory can also register `Effect.addFinalizer` or acquire with `Effect.acquireRelease`. `Layer.effect` supplies its construction scope and removes `Scope` from the layer's input requirements. Acquire a returned service's resources without `using`: a lexical `using` would release them when the factory returns.
+A factory can register `Effect.addFinalizer` or acquire with `Effect.acquireRelease`; `Layer.effect` supplies the construction scope and removes `Scope` from the layer's input requirements. Acquire a returned service's resources without `using`: a lexical `using` releases them when the factory returns.
 
 ## Merging independent layers
 
@@ -93,7 +93,7 @@ const Many = Layer.mergeAll(SettingsLive, PrinterLive, ReportsLive)
 // Output: reports/many
 ```
 
-Merging combines outputs and inputs, and can initialize independent branches concurrently. It does not automatically feed one sibling's output into another's input. `Merged` therefore still needs `Settings` to build `PrinterLive`, even though another branch produces `Settings`.
+Merging combines outputs and inputs and can initialize independent branches concurrently. It doesn't feed one sibling's output into another's input, so `Merged` still needs `Settings` to build `PrinterLive`, though a sibling produces it.
 
 ## Wiring dependent layers
 
@@ -118,11 +118,11 @@ const AppLive = wire(ReportsLive, PrinterLive, SettingsLive)
 // Output: reports/app
 ```
 
-`Layer.provide(consumer, dependencies)` feeds dependency outputs into the consumer and retains the consumer's outputs. `provideMerge` also retains the supplied dependency outputs. `wire` derives this ordering from the layer contracts and rejects duplicate providers (EK3202) and cycles (EK3203).
+`Layer.provide(consumer, dependencies)` feeds dependency outputs into the consumer and keeps the consumer's outputs; `provideMerge` also keeps the dependency outputs. `wire` derives this ordering from the layer contracts and rejects duplicate providers (EK3202) and cycles (EK3203).
 
-Inputs no argument provides stay in the resulting layer's `In`, so a partial graph is valid. At a runner, missing providers report EK3201 with the unsatisfied layer inputs. A written contract that excludes a remaining requirement reports EK2002. An argument whose type does not name its outputs, such as `Layer.Layer<any>`, is EK3204; compose it with `Layer.provide` instead.
+Inputs no argument provides stay in the resulting layer's `In`, so a partial graph is valid. At a runner, missing providers report EK3201 with the unsatisfied inputs. A written contract that excludes a remaining requirement reports EK2002. An argument whose type doesn't name its outputs, such as `Layer.Layer<any>`, is EK3204; compose it with `Layer.provide` instead.
 
-Reuse the same layer value when several paths need a shared instance. Reconstructing equivalent layer values does not give them the same memoization identity.
+Reuse one layer value when several paths need a shared instance: equivalent reconstructed layer values have different memoization identities.
 
 ## Providing and building layers
 
@@ -150,9 +150,9 @@ function withBuiltContext() {
 // Output: reports/Inventory
 ```
 
-`provide AppLive { ... }` provides the layer to its statements: it builds the layer once, every call inside shares the implementations, and the layer's resources are released when the block exits. The statements are code of the enclosing function, so the `return` inside returns from `main`. The block is short for `Effect.provide(() => { ... }, AppLive)`, and like it accepts a layer, an array of layers, or a `Context`. Separate provision boundaries acquire separately; use `ManagedRuntime` when several entry points need one application lifetime.
+`provide AppLive { ... }` builds the layer once, shares its implementations with every call inside, and releases its resources when the block exits. The statements belong to the enclosing function, so the `return` inside returns from `main`. The block is short for `Effect.provide(() => { ... }, AppLive)` and, like it, accepts a layer, an array of layers, or a `Context`. Separate provision boundaries acquire separately; use `ManagedRuntime` when several entry points need one application lifetime.
 
-`Layer.build` produces a `Context` and requires a `Scope`, supplied here by `Effect.scoped`. Consume resource-owning services inside that scope. For an application represented entirely by a layer, `Layer.launch(AppLive)` builds it and waits until interruption, keeping its resources alive.
+`Layer.build` produces a `Context` and requires a `Scope`, here from `Effect.scoped`; consume resource-owning services inside that scope. For an application that is entirely a layer, `Layer.launch(AppLive)` builds it and keeps its resources alive until interruption.
 
 ## Observing initialization and recovering failures
 
@@ -177,9 +177,9 @@ const ResilientReports = Layer.catch(ObservedReports, () => ReportsFallback)
 // Output: Offline report: Inventory
 ```
 
-`Layer.tap` observes successful acquisition; `Layer.tapError` observes typed construction failures. Observers can add their own errors or requirements, so use infallible logging when you want to preserve the original signature. `Layer.catch` recovers construction errors with another layer; it does not handle errors from later service calls.
+`Layer.tap` observes successful acquisition; `Layer.tapError` observes typed construction failures. Observers can add their own errors or requirements, so log infallibly to keep the original signature. `Layer.catch` recovers construction errors with another layer, not errors from later service calls.
 
-If a larger graph fails to initialize, acquired resources still release. Keep initialization diagnostics focused on service names and safe failure tags rather than configuration secrets.
+When a larger graph fails to initialize, acquired resources still release. Initialization diagnostics should name services and safe failure tags, not configuration secrets.
 
 ## Declaring service factories and dependencies
 
@@ -200,9 +200,7 @@ service Banner {
 // Output: reports: Orders
 ```
 
-Static members stay on the service class. `static make()` builds the implementation, taking the place of Effect 4's service `make` option. `layerWithoutDependencies` exposes a factory requiring `Settings`; `static readonly layer` holds the chosen default layer. The compiler does not generate a layer automatically.
-
-A constant factory can use `Layer.succeed`; synchronous factories can use `Layer.sync`; effectful and scoped factories use `Layer.effect`. A service may expose several layer values for different configurations or runtimes.
+Static members stay on the service class. `static make()` builds the implementation, replacing Effect 4's service `make` option. `layerWithoutDependencies` exposes a factory that requires `Settings`; `static readonly layer` holds the chosen default layer. The compiler generates no layer, and a service can expose several layer values for different configurations or runtimes.
 
 ## Replacing services in tests
 
@@ -232,11 +230,11 @@ function testBannerWithInlineSettings() {
 // Output: ["test: Orders","fixture/Orders","inline: Orders"]
 ```
 
-Replace a dependency to exercise the real factory, or replace the service itself to isolate its consumers. A layer that already includes production dependencies must be changed at its exposed factory boundary if the test needs different construction inputs. Small local overrides can use `provide Key = value`, which provides one implementation without writing a layer. Put construction dependencies in an outer block so they are available while the inner layer builds. Providers in one list supply the block together; they do not feed one another's construction dependencies.
+Replace a dependency to exercise the real factory, or the service itself to isolate its consumers. If a test needs different construction inputs, change a layer that already includes production dependencies at its exposed factory boundary. For a small local override, `provide Key = value` provides one implementation without a layer. Put construction dependencies in an outer block so they exist while the inner layer builds: providers in one list supply the block together and don't feed one another's construction dependencies.
 
 ## Coming from Effect
 
-Abstract services and static layer fields replace hand-written key classes and generator-based factories. The underlying Layer graph, memoization, and resource semantics remain Effect 4's.
+Abstract services and static layer fields replace hand-written key classes and generator-based factories. The Layer graph, memoization, and resource semantics stay Effect 4's. `return Effect.provide(program, AppLive)` draws EK4836, whose quick fix writes `provide AppLive { return program }`.
 
 ---
 

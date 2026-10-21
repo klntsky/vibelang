@@ -1,11 +1,11 @@
 ---
 title: "Schema Annotations"
-description: "Annotations work in VibeLang exactly as in Effect. They attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation..."
+description: "Annotations work exactly as in Effect: they attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation choices, and..."
 ---
 
 # Schema Annotations
 
-Annotations work in VibeLang exactly as in Effect. They attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation choices, and custom tooling. Plain builders follow the [trusted call rules](/schema/085-introduction#configuring-compiler-prerequisites).
+Annotations work exactly as in Effect: they attach metadata or interpreter hooks without changing the value's static type. Use them for documentation, error messages, representation choices, and custom tooling. Plain builders follow the [trusted call rules](/schema/085-introduction#configuring-compiler-prerequisites).
 
 ## Attaching built-in metadata
 
@@ -37,11 +37,11 @@ Choose a destination
   at ["destination"]
 ```
 
-`identifier` gives interpreters a stable name; `title`, `description`, and `documentation` explain the value. `examples` and `default` document values without checking examples or applying defaults. Use explicit constructor or decoding default combinators to change runtime behavior.
+`identifier` gives interpreters a stable name; `title`, `description`, and `documentation` explain the value. `examples` and `default` only document: they check no examples and apply no defaults. To change runtime behavior, use the explicit constructor or decoding default combinators.
 
-`message` targets a schema node or check; annotating after a check targets the last check. `annotateKey` applies to a struct field or tuple position, and `annotateEncoded` targets a codec's external representation. `messageUnexpectedKey` customizes excess-key errors.
+`message` targets a schema node or check; annotating after a check targets the last check. `annotateKey` applies to a struct field or tuple position, `annotateEncoded` to a codec's external representation. `messageUnexpectedKey` customizes excess-key errors.
 
-Representation hooks include `toCodec`, `toCodecJson`, `toCodecStringTree`, `toCodecIso`, and `toCodecArbitrary`. `toFormatter` and `toEquivalence` define behavior for opaque declarations; checks use `toJsonSchema` and `arbitraryConstraint` to explain their constraints to interpreters. Pass parse options to a parser rather than relying on arbitrary annotation keys to change execution.
+Representation hooks include `toCodec`, `toCodecJson`, `toCodecStringTree`, `toCodecIso`, and `toCodecArbitrary`. `toFormatter` and `toEquivalence` define behavior for opaque declarations; checks explain their constraints to interpreters with `toJsonSchema` and `arbitraryConstraint`. To change execution, pass parse options to a parser instead of relying on arbitrary annotation keys.
 
 ## Controlling decoding concurrency
 
@@ -67,7 +67,7 @@ Empty label
   at [0]
 ```
 
-Product schemas such as arrays, structs, and tuples can run effectful child parsers concurrently. The default is sequential; use a positive concurrency limit or `"unbounded"`. Concurrency changes completion order of side effects, so do not make a check depend on which sibling finishes first. Pass the option when creating or applying the parser.
+Product schemas such as arrays, structs, and tuples can run effectful child parsers concurrently. The default is sequential; pass a positive concurrency limit or `"unbounded"` when creating or applying the parser. Concurrency changes the completion order of side effects, so a check must not depend on which sibling finishes first.
 
 ## Recovering decoding failures with fallback values
 
@@ -92,9 +92,9 @@ unlabeled
 SchemaError
 ```
 
-`catchDecoding` receives the decoding issue and returns an Effect producing an `Option` of the decoded value. `Some` provides a fallback value; `None` represents absence, which only succeeds where the surrounding schema permits it. Throw the issue to propagate it. A fallback changes decoding only; it does not automatically repair encoding or capture defects.
+`catchDecoding` receives the decoding issue and returns an Effect producing an `Option` of the decoded value. `Some` is a fallback value; `None` means absence, which succeeds only where the surrounding schema permits it. Throw the issue to propagate it. A fallback changes decoding only: it does not repair encoding or capture defects.
 
-Log the issue tag or stage when diagnostics help. Avoid recording the rejected payload when it contains secrets or customer data.
+Log the issue tag or stage when diagnostics help; don't record a rejected payload that contains secrets or customer data.
 
 ## Defining custom schema annotations
 
@@ -121,7 +121,7 @@ function isInternal(schema: Schema.Top) {
 true false
 ```
 
-Use a namespaced symbol to avoid collisions with other tools. Module augmentation makes the annotation's value type checkable. `resolveAnnotations` retrieves metadata from the appropriate schema node; application tooling must explicitly interpret custom metadata for it to have an effect.
+A namespaced symbol avoids collisions with other tools, and module augmentation makes the annotation's value type checkable. `resolveAnnotations` retrieves metadata from the appropriate schema node; custom metadata has no effect until application tooling interprets it.
 
 ---
 

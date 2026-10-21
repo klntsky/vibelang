@@ -1,11 +1,11 @@
 ---
 title: "Sequencing Effects"
-description: "VibeLang sequences computations with ordinary functions and calls. This page covers the control-flow tasks handled by Effect.gen in TypeScript and explains the separate role of function* in VibeLang."
+description: "VibeLang sequences computations with ordinary functions and calls, covering the control-flow tasks Effect.gen handles in TypeScript; function* has a separate role."
 ---
 
 # Sequencing Effects
 
-VibeLang sequences computations with ordinary functions and calls. This page covers the control-flow tasks handled by `Effect.gen` in TypeScript and explains the separate role of `function*` in VibeLang.
+VibeLang sequences computations with ordinary functions and calls, covering the control-flow tasks `Effect.gen` handles in TypeScript; `function*` has a separate role.
 
 ## Sequence computations
 
@@ -21,7 +21,7 @@ function invoice(quantity: number) {
 // Output: 12
 ```
 
-Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")` builds a descriptor; the following `()` loads the setting and returns a number. A loading failure stops the function. You do not write `Effect.gen` or `yield*` in `.vibe` files.
+Each call completes before the next statement runs. `Config.Finite("UNIT_PRICE")` builds a descriptor; the following `()` loads the setting and returns a number, and a loading failure stops the function. `.vibe` files have no `Effect.gen` or `yield*`.
 
 ## Relate calls to async functions
 
@@ -39,7 +39,7 @@ function greeting() {
 // Output: Hello SORA
 ```
 
-`greeting` waits for the callee without `async` or `await`. The computation can pause while retaining typed errors, service requirements, and interruption support. At a promise-based framework boundary, run the exported function through a runner from `.ts`.
+`greeting` waits for the callee without `async` or `await`; the computation can pause and keeps typed errors, service requirements, and interruption support. At a promise-based framework boundary, run the exported function through a runner from `.ts`.
 
 ## Branches and loops
 
@@ -60,7 +60,7 @@ function reportEven(values: ReadonlyArray<number>) {
 // Output: 2
 ```
 
-Conditions, local variables, `break`, `continue`, and early returns keep JavaScript's evaluation order. This loop runs sequentially. Use `Effect.forEach` with an explicit concurrency limit when the iterations should overlap.
+Conditions, local variables, `break`, `continue`, and early returns keep JavaScript's evaluation order. This loop runs sequentially; for overlapping iterations, use `Effect.forEach` with an explicit concurrency limit.
 
 ## Raise failures and stop early
 
@@ -84,11 +84,9 @@ function optionalTitle(title: string | undefined) {
 // Output: 0
 ```
 
-A throw stops the current sequence and adds its type to `E`. Control-flow analysis knows that the missing-title branch cannot continue, so `title` is narrowed afterward. `try`/`catch` handles expected failures; defects and interruption propagate, while `finally` still runs. A cause containing a defect or interruption bypasses `catch` as a whole, even if it also contains an expected failure.
+A throw stops the current sequence and adds its type to `E`. Control-flow analysis knows the missing-title branch cannot continue, so `title` is narrowed afterward. `try`/`catch` handles expected failures; defects and interruption propagate, and `finally` still runs. A cause containing a defect or interruption bypasses `catch` as a whole, even if it also contains an expected failure.
 
-When a cause contains several expected failures and no defect or interruption, `catch` receives the first and handles the cause as a whole. Use `Effect.catchCause` to inspect every failure.
-
-To keep processing after a failure without catching it immediately, use `Effect.result(() => titleLength(title))` and inspect the resulting `Result`.
+When a cause contains several expected failures and no defect or interruption, `catch` receives the first and handles the cause as a whole; use `Effect.catchCause` to inspect every failure. To keep processing after a failure without catching it immediately, use `Effect.result(() => titleLength(title))` and inspect the resulting `Result`.
 
 ## Retain the receiver
 
@@ -111,7 +109,7 @@ function label() {
 // Output: item: marker
 ```
 
-Ordinary method calls preserve `this` and evaluate the receiver once. There is no nested generator whose receiver needs a special binding. If passing the method as a program, capture the receiver with `() => prefixer.format("marker")`.
+Method calls preserve `this` and evaluate the receiver once; no nested generator needs a special receiver binding. To pass the method as a program, capture the receiver with `() => prefixer.format("marker")`.
 
 ## Generators produce values and streams
 
@@ -135,13 +133,13 @@ function firstTwo() {
 // Output: [0,1]
 ```
 
-A VibeLang generator produces values for `for...of`; `yield` delivers a value rather than running an Effect. Early loop exit runs the producer's cleanup. Existing `Effect.gen` code stays in `.ts` files, where JavaScript generators keep their usual Effect meaning.
+A VibeLang generator produces values for `for...of`; `yield` delivers a value instead of running an Effect. Leaving the loop early runs the producer's cleanup. Existing `Effect.gen` code stays in `.ts` files, where JavaScript generators keep their usual Effect meaning.
 
-A producer also converts to a `Stream` wherever one is expected, so `Stream.take(ticks(), 2)` uses Effect's operators directly. The adapter hands over each value only when pulled, without running ahead; closing it interrupts the producer's fiber and runs its cleanup. `for...of` can also consume an Effect `Stream` directly and closes it when the loop exits.
+A producer also converts to a `Stream` wherever one is expected, so `Stream.take(ticks(), 2)` uses Effect's operators directly. The adapter hands over each value only when pulled, never running ahead; closing it interrupts the producer's fiber and runs its cleanup. `for...of` also consumes an Effect `Stream` directly and closes it when the loop exits.
 
 ## Coming from Effect
 
-Remove `Effect.gen`, `function*`, and `yield*` when converting a sequence to an ordinary VibeLang function. Keep `function*` only when the function's purpose is to produce a sequence of values.
+To convert a sequence to an ordinary VibeLang function, remove `Effect.gen`, `function*`, and `yield*`. Keep `function*` only for a function that produces a sequence of values.
 
 ---
 

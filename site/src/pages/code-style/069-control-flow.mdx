@@ -1,11 +1,11 @@
 ---
 title: "Control Flow Operators"
-description: "VibeLang uses ordinary branches and loops for sequential work. Effect's operators remain useful when you need concurrent execution, a collected set of results, or a policy that applies to whole..."
+description: "VibeLang uses ordinary branches and loops for sequential work. Effect's operators serve concurrent execution, collected results, and policies over whole programs. Pass them functions, so they..."
 ---
 
 # Control Flow Operators
 
-VibeLang uses ordinary branches and loops for sequential work. Effect's operators remain useful when you need concurrent execution, a collected set of results, or a policy that applies to whole programs. Pass functions to operators so they decide when each computation starts.
+VibeLang uses ordinary branches and loops for sequential work. Effect's operators serve concurrent execution, collected results, and policies over whole programs. Pass them functions, so they decide when each computation starts.
 
 ## Branching and conditional computations
 
@@ -42,7 +42,7 @@ notifications enabled
 announced
 ```
 
-`if`, early `return`, and `throw` work inside a VibeLang function, including after a service call. `Effect.when` evaluates its condition program first, runs its source only for `true`, and returns an `Option` indicating whether it ran. `false` produces `None`; a condition failure propagates instead of skipping work.
+`if`, early `return`, and `throw` work in a VibeLang function, after a service call too. `Effect.when` runs its condition program first, runs its source only on `true`, and returns an `Option` saying whether it ran: `false` gives `None`, and a condition failure propagates instead of skipping work.
 
 ## Combining two results
 
@@ -81,7 +81,7 @@ function formattedPair() {
 [[18,"USD"],[18,"USD"],"18 USD"]
 ```
 
-`zip` returns a tuple and `zipWith` applies a synchronous combining callback. Their default execution is left then right; `{ concurrent: true }` starts both branches together. Concurrent completion order does not change tuple positions. A failed branch interrupts its sibling and waits for cleanup before the combined operation finishes.
+`zip` returns a tuple; `zipWith` applies a synchronous combining callback. Both run left then right by default; `{ concurrent: true }` starts both branches together, and completion order doesn't change tuple positions. A failed branch interrupts its sibling and waits for cleanup before the combined operation finishes.
 
 ## Repeating work in loops
 
@@ -109,7 +109,7 @@ function logAttempts() {
 // Output: attempt 3
 ```
 
-A loop can call services, pause, fail, and use `break` or `continue`. Keep accumulated results only when the caller needs them; a loop without an explicit return completes with `void`. Local state is recreated when the function runs again.
+A loop can call services, pause, fail, and use `break` or `continue`. Accumulate results only when the caller needs them; a loop without an explicit return completes with `void`. Each run of the function recreates its local state.
 
 ```vibe
 // run: operatorLoop()
@@ -129,7 +129,7 @@ iteration 1
 iteration 2
 ```
 
-In Effect 4.0.5, `whileLoop` accepts one options object and returns `void`. Its `body` lazily supplies an Effect, and `step` synchronously updates state after a successful iteration. It has no initial-state argument or result-collection option; use local state and an array when you need results.
+In Effect 4.0.5, `whileLoop` takes one options object and returns `void`. `body` lazily supplies an Effect; `step` updates state synchronously after each successful iteration. It has no initial-state argument or result-collection option; collect results in local state and an array.
 
 ## Traversing collections and discarding values
 
@@ -162,7 +162,7 @@ id 5
 id 8
 ```
 
-`forEach` returns results in input order and defaults to sequential execution. A concurrency limit overlaps work while bounding the number of active callbacks. `{ discard: true }` runs all work without retaining callback results. A failure stops traversal; concurrent callbacks already running are interrupted and cleaned up.
+`forEach` returns results in input order and runs sequentially by default. A concurrency limit overlaps work and bounds active callbacks. `{ discard: true }` runs all work and keeps no results. A failure stops traversal; concurrent callbacks already running are interrupted and cleaned up.
 
 ## Collecting programs
 
@@ -181,7 +181,7 @@ function collected() {
 // Output: {"tuple":[12,"ready"],"object":{"count":12,"status":"ready"},"array":["prepared-3","prepared-5"]}
 ```
 
-`all` accepts tuples, iterables, objects, and records, returning the corresponding result shape. Each entry is a program, so building the collection performs no work. The default is sequential; supply `concurrency` explicitly for overlap. `discard: true` suppresses the combined result when only completion matters.
+`all` takes tuples, iterables, objects, and records and returns the matching shape. Each entry is a program, so building the collection does no work. It runs sequentially unless you pass `concurrency`. `discard: true` drops the combined result when only completion matters.
 
 ## Early termination and alternate collection modes
 
@@ -213,7 +213,7 @@ function collectOutcomes() {
 // Output: ["item-3","Unavailable","item-8"]
 ```
 
-The default mode stops on a typed failure and keeps that failure in the consuming function's `E`. `mode: "result"` runs every program and puts each typed outcome in a Result value instead. It does not turn defects or interruption into ordinary successful outcomes. Combine it with a concurrency limit when independent jobs should all report their expected outcomes.
+The default mode stops at a typed failure and keeps it in the consuming function's `E`. `mode: "result"` runs every program and puts each typed outcome in a Result value instead; it doesn't turn defects or interruption into successful outcomes. Add a concurrency limit when independent jobs should all report their expected outcomes.
 
 ## Coming from Effect
 

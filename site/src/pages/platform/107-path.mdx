@@ -1,11 +1,11 @@
 ---
 title: "Path"
-description: "Path provides Effect's platform-specific path service to VibeLang. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module."
+description: "Path is Effect's platform-specific path service. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module."
 ---
 
 # Path
 
-`Path` provides Effect's platform-specific path service to VibeLang. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module.
+`Path` is Effect's platform-specific path service. Use it to join, split, normalize, and convert paths without hard-coding host separators or importing a native path module.
 
 ## Requesting the path service
 
@@ -19,7 +19,7 @@ function pathSeparator() {
 // Output: /
 ```
 
-`Path` is the module and `Path.Path` is its service key. `Effect.service` obtains the implementation from the current environment. Reading `sep` returns that implementation's path separator.
+`Path` is the module and `Path.Path` its service key. `Effect.service` gets the implementation from the current environment.
 
 ## Manipulating paths portably
 
@@ -43,7 +43,7 @@ function describeReport() {
 // Output: {"joined":"reports/weekly.txt","normalized":"reports/weekly.txt","base":"weekly.txt","directory":"reports","extension":".txt","absolute":false,"rebuilt":"reports/weekly.txt"}
 ```
 
-Most `Path` methods are plain synchronous TypeScript functions. Effect's own packages are trusted, so call these methods directly; exceptions escaping into Effect code are defects, which its catch does not handle. A plain-contract function keeps JavaScript catch and can recover the exception as `unknown` (D260). Calling a member through the key, such as `Path.Path.join("reports", "weekly.txt")`, looks up the service and adds `Path.Path` to R even though the member returns a string.
+Most `Path` methods are plain synchronous TypeScript functions. Effect's own packages are trusted, so call them directly; an exception escaping into Effect code is a defect, which Effect catch doesn't handle. A plain-contract function keeps JavaScript catch and recovers the exception as `unknown` (D260). Calling a member through the key, as in `Path.Path.join("reports", "weekly.txt")`, looks up the service and adds `Path.Path` to R even though the member returns a string.
 
 | Operation | Result |
 | --- | --- |
@@ -67,7 +67,7 @@ function asFileUrl(file: string) {
 // Output: /reports/weekly.txt
 ```
 
-URL conversions return Effects and run directly when called, reporting `BadArgument` on invalid input. Path string operations are lexical: normalizing or resolving a path does not check that a file exists. Use FileSystem when filesystem state matters.
+URL conversions return Effects, run when called, and report `BadArgument` on invalid input. Path string operations are lexical: normalizing or resolving a path doesn't check that a file exists. Use FileSystem when file-system state matters.
 
 ## Supplying a platform path implementation
 
@@ -84,11 +84,11 @@ NodeRuntime.runMain(() => Effect.provide(() => main(), NodeServices.layer))
 // Output: reports/weekly.txt
 ```
 
-The Node service bundle supplies host path behavior. `Path.layer` supplies the built-in POSIX implementation for programs that intentionally use POSIX paths, including deterministic tests. Use Bun's service bundle when the rest of the application runs against Bun platform services.
+The Node service bundle supplies host path behavior. `Path.layer` supplies the built-in POSIX implementation, for programs that use POSIX paths on purpose, deterministic tests included. Use Bun's service bundle when the rest of the application runs on Bun platform services.
 
 ## Coming from Effect
 
-Effect-returning methods run directly; synchronous methods from Effect's trusted packages return plain values. Both forms look up the service when called through its key, so both add the service to R. Value members are read from the implementation, for example `Path.Path().sep`.
+Effect-returning methods run directly; synchronous methods from Effect's trusted packages return plain values. Called through the key, both look up the service and add it to R. Read value members from the implementation, as in `Path.Path().sep`.
 
 ---
 

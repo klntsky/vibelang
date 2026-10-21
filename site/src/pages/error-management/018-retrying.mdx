@@ -1,11 +1,11 @@
 ---
 title: "Retrying"
-description: "Retry transient domain failures when a new attempt has a useful chance of succeeding. A retry runs the supplied program again from its beginning, including its side effects."
+description: "Retry transient domain failures when a new attempt has a useful chance of succeeding. A retry reruns the supplied program from the start, side effects included."
 ---
 
 # Retrying
 
-Retry transient domain failures when a new attempt has a useful chance of succeeding. A retry runs the supplied program again from its beginning, including its side effects.
+Retry transient domain failures when a new attempt has a useful chance of succeeding. A retry reruns the supplied program from the start, side effects included.
 
 
 ## Retrying failed computations
@@ -32,9 +32,9 @@ Attempt 3
 Snapshot ready
 ```
 
-The initial attempt always runs. `{ times: 3 }` allows three additional attempts, for at most four executions; this example succeeds on its third execution. State declared outside the retry callback, such as `attempts`, persists across attempts, while local variables inside it start fresh.
+The first attempt always runs; `{ times: 3 }` allows three more, at most four executions. State declared outside the retry callback, such as `attempts`, persists across attempts; locals inside it start fresh.
 
-Failures stop the current attempt before retry begins. Defects and interruption are not retry signals. Retried writes need an application policy that makes repeated execution safe.
+A failure ends the current attempt before the retry begins. Defects and interruption don't trigger a retry. Retried writes need an application policy that makes repeated execution safe.
 
 ## Selecting retryable domain errors
 
@@ -60,7 +60,7 @@ function sendTransient() {
 false
 ```
 
-`while` permits retry while its predicate holds; `until` stops retry when its predicate holds. Both can return a boolean or an Effect, so selection can consult a service when needed. Unselected errors remain typed failures rather than becoming successful results.
+`while` retries while its predicate holds; `until` stops once its predicate holds. Either can return a boolean or an Effect, so selection can consult a service. Unselected errors stay typed failures.
 
 ## Controlling timing and limits
 
@@ -84,7 +84,7 @@ RequestRejected
 RequestRejected
 ```
 
-A schedule controls delay and can add its own stopping condition. Combining `times`, predicates, and a schedule stops when the applicable policy says to stop. `Schedule.recurs(3)` permits three retries; use `Effect.repeat` for repetition after success.
+A schedule controls delay and can add its own stopping condition; with `times`, predicates, and a schedule combined, retrying stops when the applicable policy says to. `Schedule.recurs(3)` permits three retries. `Effect.repeat` repeats after success.
 
 ## Recovering after retries end
 
@@ -107,11 +107,11 @@ Queued after 2 retries; transient=false
 Queued for later
 ```
 
-`retryOrElse` runs recovery after its schedule is exhausted. The callback receives the last error and the schedule's output, which is a retry count for `Schedule.recurs`. The recovery computation can introduce its own errors and requirements.
+`retryOrElse` runs recovery once its schedule is exhausted, passing the last error and the schedule's output (a retry count for `Schedule.recurs`). Recovery can add its own errors and requirements.
 
 ## Coming from Effect
 
-Both `retry(sendRequest(), policy)` and `Effect.retry(() => sendRequest(), policy)` pass the request as a program. The first form passes the call by name because the parameter expects an Effect. Each attempt runs that call again; use a callback or block when an attempt needs several statements.
+`retry(sendRequest(), policy)` and `Effect.retry(() => sendRequest(), policy)` both pass the request as a program; the first passes the call by name because the parameter expects an Effect. Each attempt reruns the call. When an attempt needs several statements, use a callback or block.
 
 ---
 

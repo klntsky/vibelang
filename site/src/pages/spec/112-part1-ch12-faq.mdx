@@ -4,7 +4,7 @@ title: "12. Questions Effect users ask"
 
 ### 12. Questions Effect users ask
 
-Short answers, each with the code. Appendix C maps every section of Effect's documentation to VibeLang, including the many features that carry over unchanged.
+Short answers with code. Appendix C maps every section of Effect's documentation to VibeLang, including the many features that carry over unchanged.
 
 #### Where did `async` and `await` go?
 
@@ -21,7 +21,7 @@ function loadProfile(id: string) {
 // { user: User; avatar: Avatar }!UserNotFound | AvatarError!Users
 ```
 
-A call waits for its callee, whether the callee finishes at once or after a network round trip. While it waits, the fiber is parked and other fibers run. There is no `async` function and no `await` on a call, so there are no "colored" functions: every function can wait. In VibeLang code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning, and a value of the `.vibe` file, such as `user.avatarId`, arrives as an input (D229). Platform APIs that return Promises, such as `fetch`, are replaced by Effect modules (Chapter 11).
+A call waits for its callee, whether it finishes at once or after a network round trip; meanwhile the fiber is parked and other fibers run. With no `async` function and no `await` on a call, no function is "colored": every function can wait. In VibeLang code, `join` waits for a fiber you forked, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7). A Promise from a TypeScript library crosses with the `try` hatch, or with `sync` when a rejection is a bug (D148); inside the hatch's function, `async` and `await` keep their JavaScript meaning, and a value of the `.vibe` file, such as `user.avatarId`, arrives as an input (D229). Effect modules replace platform APIs that return Promises, such as `fetch` (Chapter 11).
 
 #### How do I run things concurrently?
 
@@ -46,7 +46,7 @@ function displayName(id: string) {
 }
 ```
 
-Every function body plays the part of the generator, and every call that returns an Effect plays the part of `yield*`. `function*` now declares a producer (Chapter 8), so APIs that take a generator, such as `Effect.gen` and `Option.gen`, stay in `.ts` files (EK1002). The editor converts an `Effect.gen` function for you (Chapter 28).
+Every function body plays the generator, and every call that returns an Effect plays `yield*`. `function*` now declares a producer (Chapter 8), so APIs that take a generator, such as `Effect.gen`, `Option.gen`, and `Result.gen`, stay in `.ts` files (EK1002). The editor converts an `Effect.gen` function for you (Chapter 28).
 
 #### What does `throw` mean now?
 
@@ -59,7 +59,7 @@ function parseId(raw: string) {
 // number!InvalidId!
 ```
 
-In an Effect function, `throw` is `Effect.fail`. Every thrown value joins E with its type and can be caught, including `throw new Error("unreachable")`, which inside `Effect.gen` would be a defect. To signal a bug, die explicitly with `Effect.die`. Defects also come from exceptions no contract lists, and from `Effect.orDie(() => …)` (Chapter 3).
+In an Effect function, `throw` is `Effect.fail`: every thrown value joins E with its type and can be caught, including `throw new Error("unreachable")`, which inside `Effect.gen` would be a defect. To signal a bug, die explicitly with `Effect.die`. Defects also come from exceptions no contract lists and from `Effect.orDie(() => …)` (Chapter 3).
 
 #### What happens when code that is not Effect throws?
 
@@ -74,7 +74,7 @@ function readPort(text: string) {
 // number!!
 ```
 
-JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401), and platform APIs are replaced by Effect modules (EK4402). An exception that no contract lists is a defect. Unlike a JavaScript `catch` inside `Effect.gen`, an Effect catch does not see it. EK2004 warns when a try block runs Effects with E = `never`: defects pass through (Chapter 3). A plain contract keeps JavaScript catch and receives every exception as `unknown` (D260).
+JavaScript's built-ins and Effect's own functions ship with contracts that say which exceptions are expected failures. Other TypeScript code needs an explicit boundary or a trusted contract (EK4401); Effect modules replace platform APIs (EK4402). An exception that no contract lists is a defect, and unlike a JavaScript `catch` inside `Effect.gen`, an Effect catch does not see it. EK2004 warns when a try block runs Effects with E = `never`: defects pass through (Chapter 3). A plain contract keeps JavaScript catch and receives every exception as `unknown` (D260).
 
 #### How do I use `Option` and `Result`?
 
@@ -93,7 +93,7 @@ function tryCharge(cartId: string) {
 // Receipt | undefined!!Payments
 ```
 
-`Option` and `Result` (Effect 4's name for `Either`) are plain data, imported from `effect` and used as in TypeScript. `Effect.result` and `Effect.option` turn a failure into a value; `throw` turns a value back into a failure. `Option.gen` and `Result.gen` take generators, so they stay in `.ts` files.
+`Option` and `Result` (Effect 4's name for `Either`) are plain data, imported from `effect` and used as in TypeScript. `Effect.result` and `Effect.option` turn a failure into a value; `throw` turns a value back into a failure.
 
 #### How do I validate data with `Schema`?
 
@@ -228,7 +228,7 @@ function search(query: string) {
 }
 ```
 
-They are Effect's. A fiber is Effect's fiber, `fork` starts one owned by the enclosing block (Chapter 7), and `Fiber.join` and `Fiber.interrupt` work unchanged. Interruption runs every `finally` block and `using` release on the way out, and `catch` never catches it (Chapter 3). `Effect.uninterruptible(() => …)` protects a region, `Effect.onInterrupt` reacts to cancellation, and `Effect.timeout` and `Effect.race` interrupt the branches they discard. A Promise is cancelled through the `AbortSignal` that the `try` and `sync` hatches pass.
+They are Effect's: `fork` starts a fiber owned by the enclosing block (Chapter 7), and `Fiber.join` and `Fiber.interrupt` work unchanged. Interruption runs every `finally` block and `using` release on the way out, and `catch` never catches it (Chapter 3). `Effect.uninterruptible(() => …)` protects a region, `Effect.onInterrupt` reacts to cancellation, and `Effect.timeout` and `Effect.race` interrupt the branches they discard. A Promise is cancelled through the `AbortSignal` that the `try` and `sync` hatches pass.
 
 #### How do I wrap a callback API?
 
@@ -252,7 +252,7 @@ export function title(id: string) {
 }
 ```
 
-Yes, in one program: `vibelang` checks both, and the editor serves both (Chapter 28). A TypeScript function that returns an `Effect` is called like a VibeLang function, and TypeScript sees every VibeLang function as one that returns an `Effect` (Chapter 10).
+Yes, in one program: `vibelang` checks both and the editor serves both (Chapter 28). A TypeScript function that returns an `Effect` is called like a VibeLang function, and TypeScript sees every VibeLang function as one that returns an `Effect` (Chapter 10).
 
 #### Is there anything from Effect I cannot use?
 
@@ -260,7 +260,15 @@ Yes, in one program: `vibelang` checks both, and the editor serves both (Chapter
 const legacy = try((program) => Effect3.runPromise(program), (cause) => new LegacyError({ cause }), oldProgram)
 ```
 
-Five things, each with a replacement. Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.vibe` files; call them from TypeScript. Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`. Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program. A TypeScript function whose requirements include a control operation is rejected (EK4202). Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above. Everything else in Effect is available, and Appendix C lists it feature by feature.
+Five things, each with a replacement:
+
+- Generator-based APIs (`Effect.gen`, `Option.gen`) cannot be written in `.vibe` files; call them from TypeScript.
+- Effectful handlers in `Option.match` or `Match` are rejected (EK4301); use `if` or `switch`.
+- Runners inside code a fiber runs are rejected (EK1005); call or `fork` the program.
+- A TypeScript function whose requirements include a control operation is rejected (EK4202).
+- Effect 3 code, including `Micro`, runs only as foreign code behind a boundary, as above.
+
+Everything else in Effect is available; Appendix C lists it feature by feature.
 
 #### How do I keep state that several fibers share?
 
@@ -276,4 +284,4 @@ function countVisits(paths: ReadonlyArray<string>) {
 // number!VisitError!Visits
 ```
 
-Local variables work inside one function, as in any JavaScript. State shared between fibers uses Effect's `Ref`, `SynchronizedRef`, and `SubscriptionRef`, unchanged: `Ref.make(0)` returns an `Effect`, so the call runs it and gives you the `Ref`.
+Local variables work inside one function, as in JavaScript. State shared between fibers uses Effect's `Ref`, `SynchronizedRef`, and `SubscriptionRef`, unchanged: `Ref.make(0)` returns an `Effect`, so the call runs it and gives you the `Ref`.

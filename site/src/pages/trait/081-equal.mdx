@@ -1,11 +1,11 @@
 ---
 title: "Equal"
-description: "Equal works in VibeLang exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can represent the same member or key in an Effect hash..."
+description: "Equal works in VibeLang exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can be the same member or key in an Effect hash collection."
 ---
 
 # Equal
 
-`Equal` works in VibeLang exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can represent the same member or key in an Effect hash collection.
+`Equal` works in VibeLang exactly as in Effect. It compares values structurally and supports custom equality, so separately allocated values can be the same member or key in an Effect hash collection.
 
 ## Checking structural equality
 
@@ -20,7 +20,7 @@ Equal.equals(new Set([2, 5]), new Set([5, 2])) // true
 // Output: [false,true,false,true]
 ```
 
-Effect 4 compares plain objects, arrays, maps, sets, dates, and regular expressions by content. Nested values participate recursively, with custom implementations consulted where present. Treat structural values as immutable after comparison or hashing because results are cached.
+Effect 4 compares plain objects, arrays, maps, sets, dates, and regular expressions by content, recursing into nested values and consulting custom implementations where present. Results are cached, so treat structural values as immutable once compared or hashed.
 
 ## Implementing the equality protocol
 
@@ -51,9 +51,9 @@ Equal.equals(
 // Output: true
 ```
 
-`Equal.Equal` extends `Hash.Hash`, so implement both computed methods. The equality method defines which fields matter, and equal values must produce the same hash. Here `observedBy` is excluded from both methods because it describes an observation rather than revision identity.
+`Equal.Equal` extends `Hash.Hash`, so implement both computed methods. The equality method defines which fields matter, and equal values must hash the same. Both methods leave out `observedBy`: it describes an observation, not revision identity.
 
-These methods compile to plain JavaScript methods, because they implement members typed as plain functions. A protocol method must perform no Effect operation and cannot fail with an expected error; otherwise it is error EK4301, and the fix is to compute the value before building the object. Callers call it as an ordinary method.
+Both compile to plain JavaScript methods, which callers call as ordinary methods, because they implement members typed as plain functions. A protocol method that runs an Effect operation or fails with an expected error is error EK4301; compute the value before building the object.
 
 ## Opting into reference identity
 
@@ -71,7 +71,7 @@ Equal.equals(owned, { state: "ready" }) // false
 // Output: [false,true,true,false]
 ```
 
-`byReference` returns a proxy that opts out of structural comparison without changing the original object. Compare and store that returned proxy consistently. `byReferenceUnsafe` marks the original object permanently and avoids the proxy allocation.
+`byReference` returns a proxy that opts out of structural comparison and leaves the original unchanged; compare and store that proxy consistently. `byReferenceUnsafe` marks the original object permanently, without allocating a proxy.
 
 ## Using custom equality in hash-based collections
 
@@ -92,7 +92,7 @@ byFolder.get({ folder: "inbox" }).getOrElse(() => 0) // 9
 // Output: [1,1,9]
 ```
 
-`HashSet` uses equality to deduplicate members and `HashMap` uses it to identify keys. Plain structural keys work without custom classes; implement the protocol when only selected fields determine identity. JavaScript's native `Set` and `Map` do not consult this protocol and keep their normal identity rules.
+`HashSet` uses equality to deduplicate members and `HashMap` to identify keys. Plain structural keys need no custom class; implement the protocol when only some fields determine identity. JavaScript's native `Set` and `Map` ignore the protocol and keep their normal identity rules.
 
 ---
 

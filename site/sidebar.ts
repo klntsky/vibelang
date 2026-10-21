@@ -698,6 +698,10 @@ export const sidebar = [
       {
         "text": "Pattern matching with match and is",
         "link": "/vibelang-features/116-match-and-is"
+      },
+      {
+        "text": "Token counts",
+        "link": "/vibelang-features/117-token-counts"
       }
     ],
     "collapsed": false

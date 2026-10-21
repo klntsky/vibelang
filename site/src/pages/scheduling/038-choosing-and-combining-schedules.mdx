@@ -1,11 +1,11 @@
 ---
 title: "Choosing and combining schedules"
-description: "Schedule works in VibeLang exactly as in Effect. Start with the timing rule you need, add limits to it, and combine separate rules only when the job needs them. The consumer determines whether..."
+description: "Schedule works in VibeLang exactly as in Effect. Start with the timing rule you need, add limits, and combine rules only when the job needs them. The consumer decides whether schedule input is a..."
 ---
 
 # Choosing and combining schedules
 
-`Schedule` works in VibeLang exactly as in Effect. Start with the timing rule you need, add limits to it, and combine separate rules only when the job needs them. The consumer determines whether schedule input is a successful result (`repeat`) or an expected error (`retry`).
+`Schedule` works in VibeLang exactly as in Effect. Start with the timing rule you need, add limits, and combine rules only when the job needs them. The consumer decides whether schedule input is a successful result (`repeat`) or an expected error (`retry`).
 
 ## Choosing a starting rule
 
@@ -25,7 +25,7 @@ const calendar = Schedule.cron("15 4 * * *", "UTC")
 // Output: 15300000
 ```
 
-These declarations build reusable values without running work. Choose a rule according to the requirement:
+These declarations build reusable values and run no work. Choose a rule by requirement:
 
 | Requirement | Rule | When it continues |
 | --- | --- | --- |
@@ -35,7 +35,7 @@ These declarations build reusable values without running work. Choose a rule acc
 | Increase retry delays | `exponential` | With a growing wait, doubling by default |
 | Follow a calendar | `cron` | At the next matching date in the given zone |
 
-`Schedule.fibonacci` provides another growing backoff. None of the interval or backoff rules above stops by itself.
+`Schedule.fibonacci` is another growing backoff. None of the interval or backoff rules stops by itself.
 
 ## Understanding schedule steps
 
@@ -52,9 +52,9 @@ function runChecks() {
 // Output: checking 16000
 ```
 
-With `repeat`, the initial action runs before the schedule advances. This example has three action starts roughly at zero, eight, and sixteen seconds. Replacing `spaced` with `fixed` gives starts roughly at zero, eight, and fourteen seconds in this version: the fixed schedule anchors its cadence at its first step, after the initial two-second action. Later starts follow that cadence instead of adding a full delay after every action; overruns do not replay every missed interval.
+With `repeat`, the initial action runs before the schedule advances: starts at about zero, eight, and sixteen seconds. With `fixed` instead of `spaced`, starts are at about zero, eight, and fourteen seconds in this version, because `fixed` anchors its cadence at its first step, after the initial two-second action; later starts follow that cadence instead of adding a full delay after every action. Overruns don't replay every missed interval.
 
-A schedule step receives input and produces output plus timing metadata. In `retry`, each input is the latest error; in `repeat`, it is the latest success. Constructing one schedule does not share a running loop's step state with another loop.
+A schedule step takes input and produces output plus timing metadata. The input is the latest error in `retry` and the latest success in `repeat`. Loops built from one schedule don't share step state.
 
 ## Limiting duration and adjusting delays
 
@@ -75,7 +75,7 @@ const firstThree = Schedule.while(
 // Output: 3 true
 ```
 
-`upTo` stops when either configured limit is reached. Its duration limit is checked at schedule steps; it does not interrupt a running attempt or wait, so use `Effect.timeout` around the whole operation for a deadline. `modifyDelay` replaces the selected wait, and `while` can stop based on metadata. `jittered` multiplies each delay by a factor between 0.8 and 1.2. Here it runs after the eight second cap, so the final wait can reach 9.6 seconds; put the cap after `jittered` when it must bound the final wait.
+`upTo` stops at whichever configured limit comes first. It checks the duration limit only at schedule steps and never interrupts a running attempt or wait; for a deadline, wrap the whole operation in `Effect.timeout`. `modifyDelay` replaces the selected wait, and `while` can stop on metadata. `jittered` multiplies each delay by a factor between 0.8 and 1.2. Here it follows the eight second cap, so the final wait can reach 9.6 seconds; to bound the final wait, cap after `jittered`.
 
 ## Requiring every timing rule
 
@@ -88,7 +88,7 @@ const policy = Schedule.max([
 // Output: [2000,2000,2000,3200]
 ```
 
-`max` continues only while every input schedule can continue and chooses the largest proposed delay. Here the first waits are two seconds, two seconds, two seconds, and 3.2 seconds. The separate limit permits four recurrences.
+`max` continues only while every input schedule can continue and chooses the largest proposed delay. The separate limit permits four recurrences.
 
 ## Accepting any timing rule
 
@@ -101,7 +101,7 @@ const startupAndSteady = Schedule.min([
 // Output: [500,500,11000,12000,12000]
 ```
 
-`min` continues while at least one rule remains active and chooses the shortest active delay. Both rules advance from the start, so the two quick probes do not restart the twelve second cadence. The combined schedule stops only when every input has stopped.
+`min` continues while any rule is active, chooses the shortest active delay, and stops only when every input has stopped. Both rules advance from the start, so the two quick probes don't restart the twelve second cadence.
 
 ## Switching rules in phases
 
@@ -111,7 +111,7 @@ const reconnect = Schedule.spaced("150 millis").upTo({ times: 2 }).concat(Schedu
 // Output: [150,150,3000,3000,3000,3000,3000]
 ```
 
-`concat` exhausts the first rule before starting the second. With `retry`, this permits an initial attempt, two fast retries, then five slow retries. `Schedule.concatResult` keeps the outputs of the two phases distinguishable when an observer needs to identify the active phase.
+`concat` exhausts the first rule before starting the second. With `retry`, this permits an initial attempt, two fast retries, then five slow retries. `Schedule.concatResult` keeps the two phases' outputs distinguishable when an observer must identify the active phase.
 
 ---
 

@@ -35,7 +35,7 @@ Three calls look alike and meet three different boundaries. A capture moves fram
 
 #### Regions and ownership
 
-A block opens a Scope region when it directly declares `using` or calls `fork`; the region closes when the block exits, by any path. Only the `using` acquisitions and the forked fibers of that block belong to it. Any other acquisition in the block keeps `Scope` in the function's requirements, so the caller owns it (D14, D19). Whole-block ownership was the alternative, and review probe R8 shows why it was rejected: it closes a connection the function returns to its caller.
+A block opens a Scope region when it directly declares `using` or calls `fork`; the region closes when the block exits, by any path. Only that block's `using` acquisitions and forked fibers belong to it. Any other acquisition in the block keeps `Scope` in the function's requirements, so the caller owns it (D14, D19). Review probe R8 shows why the alternative, whole-block ownership, was rejected: it closes a connection the function returns to its caller.
 
 #### Finalization
 

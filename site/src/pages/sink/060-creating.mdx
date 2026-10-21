@@ -1,11 +1,11 @@
 ---
 title: "Creating Sinks"
-description: "Choose a Sink for the result you need, then run it with Stream.run. Constructors stay reusable: state supplied by an initializer is fresh on each run. This page uses trusted Sink builders and..."
+description: "Choose a Sink for the result you need and run it with Stream.run. Sinks are reusable: initializer state is fresh on each run, so runs share no mutable state. This page uses trusted Sink builders..."
 ---
 
 # Creating Sinks
 
-Choose a Sink for the result you need, then run it with `Stream.run`. Constructors stay reusable: state supplied by an initializer is fresh on each run. This page uses [trusted Sink builders](/sink/059-introduction) and keeps effectful callbacks as ordinary VibeLang functions.
+Choose a Sink for the result you need and run it with `Stream.run`. Sinks are reusable: initializer state is fresh on each run, so runs share no mutable state. This page uses [trusted Sink builders](/sink/059-introduction) and writes effectful callbacks as ordinary VibeLang functions.
 
 ## Basic consumers and endpoint values
 
@@ -24,7 +24,7 @@ function endpoints() {
 // Output: ["opening","closing",["opening","middle"]]
 ```
 
-`head` stops after the first element; `last` reads to the end. Both return `Option.none()` on empty input. `take(n)` returns up to `n` elements and completes early when it reaches the limit, preserving any unused suffix of its current input batch as leftovers.
+`head` stops after the first element; `last` reads to the end; both return `Option.none()` on empty input. `take(n)` returns up to `n` elements, completing early at the limit and keeping any unused suffix of its current input batch as leftovers.
 
 ## Counting, summing, draining, and timing
 
@@ -48,7 +48,7 @@ function drainObserved() {
 // Output: done
 ```
 
-These sinks consume the whole source. `drain` discards elements but still executes source effects; `timed` also drains and returns a `Duration.Duration`. `Sink.withDuration(otherSink)` returns `[result, duration]` when both the other sink's result and elapsed time are useful. Each field in `summarize` runs a separate consumption.
+These sinks consume the whole source. `drain` discards elements but still runs source effects; `timed` also drains and returns a `Duration.Duration`. `Sink.withDuration(otherSink)` returns `[result, duration]`: the other sink's result and the elapsed time. Each field in `summarize` is a separate consumption.
 
 ## Per-element work
 
@@ -66,7 +66,7 @@ function writeRecords() {
 // Output: record: approved
 ```
 
-`forEach` runs work sequentially and returns `void`. Its callback's expected failures and services become the sink's `E` and `R`. `forEachWhile` stops when its effectful callback returns `false`; `forEachArray` works on internal batches.
+`forEach` runs work in sequence and returns `void`; its callback's expected failures and services become the sink's `E` and `R`. `forEachWhile` stops when its effectful callback returns `false`; `forEachArray` works on internal batches.
 
 ## Successful and failed sinks
 
@@ -86,7 +86,7 @@ function rejectInput() {
 // Output: Rejected
 ```
 
-`succeed` and `fail` finish without requesting source elements. Construction itself does not succeed or fail a running program; that happens when the sink runs. `Sink.fromEffect(() => work())` creates the same kind of immediate sink from a VibeLang program.
+`succeed` and `fail` finish without requesting source elements. They succeed or fail when the sink runs, not at construction. `Sink.fromEffect(() => work())` makes the same kind of immediate sink from a VibeLang program.
 
 ## Collecting by size or condition
 
@@ -104,7 +104,7 @@ function collectSamples() {
 // Output: {"all":[8,5,-1,13],"firstTwo":[8,5],"positivePrefix":[8,5]}
 ```
 
-`collect` gathers all inputs into an array. `takeWhile` stops at the first rejected element and leaves it in the batch remainder; it does not skip it and continue searching. `takeUntil` includes the matching element before stopping, and the corresponding `takeWhileEffect` and `takeUntilEffect` variants accept effectful predicates.
+`collect` gathers every input into an array. `takeWhile` stops at the first rejected element and leaves it in the batch remainder; it does not skip it and keep searching. `takeUntil` includes the matching element, then stops. `takeWhileEffect` and `takeUntilEffect` accept effectful predicates.
 
 ## Uniqueness and key limits
 
@@ -124,7 +124,7 @@ function collectUnique() {
 // Output: ["oak","ash","elm"]
 ```
 
-Use a native Set when JavaScript value equality is appropriate. A size limit counts unique values, so duplicates do not consume another slot. The initializer creates a fresh Set on every run, avoiding shared mutable sink state.
+Use a native Set when JavaScript value equality fits. A size limit counts unique values, so duplicates take no extra slot.
 
 ```vibe
 // run: Console.log(JSON.stringify(Array.from(summarizeStations())))
@@ -154,7 +154,7 @@ function summarizeStations() {
 // Output: [["hill",7],["lake",8]]
 ```
 
-The reducer defines both the grouping key and the merge rule. This limited sink stops immediately after reaching two keys, so even later updates for existing keys remain unread. It limits the consumed prefix, rather than scanning all input while rejecting new keys.
+The reducer defines both the grouping key and the merge rule. The limited sink stops at two keys and leaves later input unread, even updates for existing keys: it limits the consumed prefix rather than scanning all input while rejecting new keys.
 
 ## Folding with termination and count limits
 
@@ -185,7 +185,7 @@ function foldSamples() {
 // Output: {"all":43,"budget":28,"first":28}
 ```
 
-`reduce` uses a pure reducer and consumes to the end; `reduceEffect` supports Effect work. `fold` accepts an effectful step and checks its continuation predicate after each consumed element. The element that reaches or crosses the limit is included. `foldUntil` instead stops after a maximum number of inputs or at source completion.
+`reduce` takes a pure reducer and consumes to the end; `reduceEffect` supports Effect work. `fold` takes an effectful step and checks its continuation predicate after each consumed element, so the element that reaches or crosses the limit is included. `foldUntil` stops after a maximum number of inputs or at source completion.
 
 ## Folding by weight
 
@@ -211,7 +211,7 @@ function firstBatch() {
 // Output: [{"bytes":60},{"bytes":55}]
 ```
 
-The state tracks total cost instead of element count. This rule stops after reaching the threshold, so the final element can exceed the target; it is not a strict maximum-size packing algorithm. `Stream.transduce(source, packets)` repeats the sink to emit successive batches and feeds its leftovers into the next run. A sink that consumes nothing can produce an empty final result at end of input, so account for that in batch consumers.
+The state tracks total cost, not element count. It stops after reaching the threshold, so the final element can exceed the target: this is not strict maximum-size packing. `Stream.transduce(source, packets)` repeats the sink to emit successive batches, feeding each run's leftovers into the next. At end of input, a sink that consumes nothing can produce an empty final result; batch consumers must handle it.
 
 ---
 

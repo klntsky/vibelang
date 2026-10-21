@@ -1,11 +1,11 @@
 ---
 title: "Queue"
-description: "A Queue passes values between fibers, delivering each offered value to one consumer. Use it to separate producers from workers and to apply backpressure when workers cannot keep up."
+description: "A Queue passes values between fibers, delivering each offered value to one consumer. Use it to separate producers from workers and apply backpressure when workers fall behind."
 ---
 
 # Queue
 
-A `Queue` passes values between fibers, delivering each offered value to one consumer. Use it to separate producers from workers and to apply backpressure when workers cannot keep up.
+A `Queue` passes values between fibers, delivering each offered value to one consumer. Use it to separate producers from workers and apply backpressure when workers fall behind.
 
 ## Choosing an overflow strategy
 
@@ -21,7 +21,7 @@ function chooseQueues() {
 // Output: 32 32 32 Infinity
 ```
 
-A bounded queue suspends offers when full until consumers free space. A dropping queue rejects new values when full, while a sliding queue discards the oldest buffered values to accept new ones. An unbounded queue imposes no capacity limit, so memory use grows if producers stay ahead of consumers.
+When full, a bounded queue suspends offers until consumers free space, a dropping queue rejects new values, and a sliding queue discards the oldest buffered values to accept new ones. An unbounded queue has no capacity limit, so memory grows while producers stay ahead of consumers.
 
 ## Offering values and batches
 
@@ -44,7 +44,7 @@ function rejectedBatch() {
 // Output: [[10,20],[30]]
 ```
 
-`offer` returns whether the value was accepted. `offerAll` returns the values it could not add, so an empty array means the whole batch was accepted. Fork a producer when the current fiber must consume values to free the space that producer needs; offering into a full bounded queue and only then taking from it would wait forever.
+`offer` returns whether the value was accepted. `offerAll` returns the values it couldn't add; an empty array means it accepted the whole batch. Fork a producer when the current fiber must consume values to free the space that producer needs: offering into a full bounded queue and only then taking from it waits forever.
 
 ## Taking, polling, and draining values
 
@@ -63,7 +63,7 @@ function consumeBatches() {
 // Output: [1,2,[3,4],[5,6],[]]
 ```
 
-`take` waits for one value, `takeN` waits for an exact count, and `takeBetween` waits for its minimum then takes up to its maximum. In this version, `takeAll` waits for at least one value and returns the currently available nonempty batch. Use `poll` for an optional single value without waiting, or `clear` to drain buffered values without waiting for new ones.
+`take` waits for one value, `takeN` for an exact count, and `takeBetween` for its minimum, then takes up to its maximum. In this version, `takeAll` waits for at least one value and returns the available nonempty batch. Without waiting, `poll` returns an optional single value and `clear` drains the buffered values.
 
 ## Querying queue state
 
@@ -82,7 +82,7 @@ function inspectQueue() {
 // Output: {"capacity":2,"size":1,"full":false}
 ```
 
-Size counts buffered messages, and capacity is the configured limit. These values are observations, not reservations; another fiber can change the queue immediately after a check. Call `offer` or `take` directly to coordinate instead of checking state first.
+Size counts buffered messages; capacity is the configured limit. Both are observations, not reservations: another fiber can change the queue right after a check, so coordinate by calling `offer` or `take` directly instead of checking state first.
 
 ## Shutting down and awaiting closure
 
@@ -114,9 +114,9 @@ function stopImmediately() {
 // Output: true
 ```
 
-`end` stops new offers and lets buffered values drain before normal completion; `collect` consumes until that completion. `shutdown` immediately discards buffered values and interrupts waiting operations. `Queue.await` waits for the terminal state and preserves its outcome, so awaiting a shut-down queue is interrupted; inspect that child with `Fiber.await` rather than propagating it through `join`.
+`end` stops new offers and lets buffered values drain before normal completion; `collect` consumes until that completion. `shutdown` discards buffered values at once and interrupts waiting operations. `Queue.await` waits for the terminal state and keeps its outcome, so awaiting a shut-down queue is interrupted; inspect that child with `Fiber.await` instead of propagating it through `join`.
 
-Queues do not automatically close at ordinary block exit. Have their owner call shutdown in `finally` when consumers and producers must stop with it.
+Ordinary block exit doesn't close a queue. When consumers and producers must stop with it, have its owner call shutdown in `finally`.
 
 ## Restricting producer and consumer capabilities
 
@@ -138,7 +138,7 @@ function handoff() {
 // Output: ready
 ```
 
-`Enqueue` gives a producer access to offering operations, while `Dequeue` gives a consumer access to taking operations. The adapters return the same underlying queue with narrower types. This restriction documents ownership and catches accidental use of the wrong side at compile time.
+`Enqueue` gives a producer the offering operations; `Dequeue` gives a consumer the taking operations. The adapters return the same underlying queue with narrower types, which documents ownership and catches use of the wrong side at compile time.
 
 ---
 

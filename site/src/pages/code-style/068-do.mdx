@@ -1,11 +1,11 @@
 ---
 title: "Simplifying Excessive Nesting"
-description: "Dependent computations often need several intermediate values at once. VibeLang gives those values ordinary local names, so sequencing does not require nested callbacks or a record of named..."
+description: "Dependent computations often need several intermediate values at once. VibeLang gives them ordinary local names, so sequencing needs no nested callbacks or record of named bindings. In TypeScript..."
 ---
 
 # Simplifying Excessive Nesting
 
-Dependent computations often need several intermediate values at once. VibeLang gives those values ordinary local names, so sequencing does not require nested callbacks or a record of named bindings. When reading TypeScript Effect code, do notation and generators express the same dependency order.
+Dependent computations often need several intermediate values at once. VibeLang gives them ordinary local names, so sequencing needs no nested callbacks or record of named bindings. In TypeScript Effect code, do notation and generators express the same dependency order.
 
 ## Recognizing nesting in dependent pipelines
 
@@ -34,7 +34,7 @@ completed in 40 ms
 complete
 ```
 
-The later statements can still refer to `started` and `value`. There is no need to nest a callback each time a value must remain in scope. The callback type leaves its contract inferred, so errors and services from `program` pass through `elapsed`.
+Later statements still see `started` and `value`, with no nested callback to keep each in scope. The callback type leaves its contract inferred, so errors and services from `program` pass through `elapsed`.
 
 ## Named bindings with do notation
 
@@ -56,7 +56,7 @@ function readInterval() {
 {"started":0,"value":"complete","finished":40}
 ```
 
-`Effect.Do` is an Effect value holding an empty record. Each `%` stands where `Effect.bind` expects a program, so the pipe passes the bindings so far by name, and each `Effect.bind` runs its callback and adds the result under a new field name, with previous fields available to later callbacks. Field names must be unique. This style remains useful when maintaining an existing pipeline, while local variables are the usual VibeLang spelling.
+`Effect.Do` is an Effect value holding an empty record. Each `%` stands where `Effect.bind` expects a program, so the pipe passes the bindings so far by name. Each `Effect.bind` runs its callback and adds the result under a new, unique field name; later callbacks see earlier fields. The style suits maintaining an existing pipeline; local variables are the usual VibeLang spelling.
 
 ## Introducing derived values
 
@@ -77,7 +77,7 @@ function intervalRecord() {
 {"started":0,"finished":40,"millis":40}
 ```
 
-`Effect.let` adds a field computed by a synchronous, non-failing callback. Use `bind` when computing the field performs Effect work. In an ordinary function, both become `const` declarations, with the compiler inferring the contract of each expression.
+`Effect.let` adds a field computed by a synchronous, non-failing callback; use `bind` when the field needs Effect work. In an ordinary function both become `const` declarations, and the compiler infers each expression's contract.
 
 ## The sequence as ordinary statements
 
@@ -96,7 +96,7 @@ function intervalRecord() {
 {"started":0,"finished":40,"millis":40}
 ```
 
-This is the VibeLang form of the same sequence. In a TypeScript file, `Effect.gen(function* () { ... })` binds each Effect result with `yield*` and gives it a local name. In a `.vibe` file, ordinary calls already perform that sequencing. `function*` declares a value producer, so it is not an alternate syntax for running a single-result Effect.
+This is the VibeLang form of the same sequence. In a TypeScript file, `Effect.gen(function* () { ... })` binds each Effect result with `yield*` to a local name; in a `.vibe` file, ordinary calls already sequence. `function*` declares a value producer, not another syntax for running a single-result Effect.
 
 ## Coming from Effect
 

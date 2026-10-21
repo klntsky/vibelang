@@ -1,11 +1,11 @@
 ---
 title: "Expected Errors"
-description: "Expected errors describe situations callers can handle: invalid input, a denied operation, or an unavailable dependency. VibeLang infers them in the E channel and narrows them inside catch."
+description: "Expected errors are situations callers can handle: invalid input, a denied operation, an unavailable dependency. VibeLang infers them in E and narrows them inside catch."
 ---
 
 # Expected Errors
 
-Expected errors describe situations callers can handle: invalid input, a denied operation, or an unavailable dependency. VibeLang infers them in the `E` channel and narrows them inside `catch`.
+Expected errors are situations callers can handle: invalid input, a denied operation, an unavailable dependency. VibeLang infers them in `E` and narrows them inside `catch`.
 
 
 ## Constructing typed failures
@@ -32,11 +32,11 @@ PEN
 InvalidCode
 ```
 
-`error InvalidCode { input: string }` declares an expected failure. The declaration is a class: its constructor takes the fields, every field is readonly, and each instance has a readonly `_tag` equal to the class name. In an Effect function, `throw` adds the class to `E`. `error Timeout` declares an error without fields. The declaration is short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. `Effect.fail(error)` is also available, and `Effect.failSync(() => error)` defers construction until execution, though a function body already gives you that deferral.
+`error InvalidCode { input: string }` declares an expected failure class, short for `class InvalidCode extends TaggedError("InvalidCode")<{ readonly input: string }> {}`, which also compiles; the global `TaggedError` is Effect's `Data.TaggedError`. The constructor takes the fields, all readonly, and each instance has a readonly `_tag` equal to the class name. `error Timeout` has no fields. In an Effect function, `throw` adds the class to `E`. `Effect.fail(error)` also works; `Effect.failSync(() => error)` defers construction to execution, as a function body already does.
 
-In Effect functions, trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a wrapper created with `trusted(implementation, [ErrorClass])` in a `.ts` module. Import `trusted` from `vibelang-runtime`: instances of the listed classes join `E`, and unlisted exceptions are defects. The older `/** @vibelang trusted */` and `@throws` declaration tags still work. Calls that rely on tagged expected failures produce migration warning EK4406. Effect's own packages are trusted already, so calls such as `Option.isNone` need no boundary.
+In Effect functions, trusted built-ins can add expected failures too: `JSON.parse` adds `SyntaxError`. A plain TypeScript function needs the `try` hatch or a `.ts` wrapper made with `trusted(implementation, [ErrorClass])`, importing `trusted` from `vibelang-runtime`: instances of listed classes join `E`; unlisted exceptions are defects. The older `/** @vibelang trusted */` and `@throws` declaration tags still work; calls that rely on tagged expected failures get migration warning EK4406. Effect's own packages are trusted, so calls such as `Option.isNone` need no boundary.
 
-A function with a plain contract keeps JavaScript exceptions (D263): an explicit non-Effect return annotation, or a plain contract inferred by the checker, makes `throw` a synchronous JavaScript throw inside and outside `try`. For example, `(value: string): string => { if (!value) throw new Error("empty"); return value }` returns a string or throws immediately, and its declaration stays `(value: string) => string`. Plain-function parameters and TypeScript imports are ordinary calls there, with no trust boundary required. Exceptions become defects only where they escape into an effectful caller. Calling an Effect inside a plain-contract function is still EK2003.
+A plain contract keeps JavaScript exceptions (D263): under an explicit non-Effect return annotation or an inferred plain contract, `throw` is a synchronous JavaScript throw, inside `try` or not. `(value: string): string => { if (!value) throw new Error("empty"); return value }` returns a string or throws immediately, and its declaration stays `(value: string) => string`. There, plain-function parameters and TypeScript imports are ordinary calls with no trust boundary, and exceptions become defects only where they escape into an effectful caller. Calling an Effect inside a plain-contract function is still EK2003.
 
 ## Failing in an expression
 
@@ -55,7 +55,7 @@ function port(env: Map<string, string>) {
 MissingPort
 ```
 
-`throw` also works in expression position, as the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal writes it, and fails the same way the statement does. The right side of `??`, `||`, `&&`, and `?:` runs only when it is chosen. In expression position it takes only a unary operand. EK1010 refuses an unparenthesized throw on an operator's left, as a conditional's condition, or before `as` or `satisfies`; write `throw (cond ? a : b)` to throw a whole conditional. A throw statement, `throw cond ? a : b;`, still throws the selected value.
+`throw` also works as an expression, per the TC39 [throw expressions](https://github.com/tc39/proposal-throw-expressions) proposal, and fails as the statement does. The right side of `??`, `||`, `&&`, and `?:` runs only when chosen. A throw expression takes only a unary operand: EK1010 refuses an unparenthesized throw on an operator's left, as a conditional's condition, or before `as` or `satisfies`, so write `throw (cond ? a : b)` to throw a whole conditional. The statement `throw cond ? a : b;` still throws the selected value.
 
 ## Tracking several error cases
 
@@ -75,7 +75,7 @@ ItemMissing
 InvalidCode
 ```
 
-A function collects the failures it throws and those its calls can produce. Sequential statements stop at the first failure, so no lookup happens after normalization fails. An explicit full contract checks this inferred union rather than replacing it.
+A function collects the failures it throws and those its calls can produce. Sequential statements stop at the first failure: no lookup follows a failed normalization. An explicit full contract checks this inferred union; it doesn't replace it.
 
 ## Turning failures into values
 
@@ -103,7 +103,7 @@ Fountain pen
 No item
 ```
 
-`Effect.result` returns `Result<A, E>` in the success channel and removes the typed failure channel. `Effect.option` returns `Some` on success and discards a typed error as `None`. Use the latter only when every domain failure means absence. Causes without any expected failure still propagate; these Effect combinators can consume a mixed cause when it also contains an expected failure. Use ordinary catch when defects and interruption must always propagate intact.
+`Effect.result` moves `E` into the success channel as `Result<A, E>`. `Effect.option` gives `Some` on success and discards a typed error as `None`; use it only when every domain failure means absence. Causes with no expected failure still propagate, but both can consume a mixed cause that contains one; use ordinary catch when defects and interruption must always propagate intact.
 
 ## Recovering all failures
 
@@ -125,7 +125,7 @@ Unavailable (InvalidCode)
 Unavailable (ItemMissing)
 ```
 
-The catch receives `InvalidCode | ItemMissing` and handles both here. It handles only causes with no defect and no interruption. If several expected failures occur together, it receives the first and handles their whole cause.
+The catch receives `InvalidCode | ItemMissing` and handles both, but only in causes with no defect or interruption; given several expected failures together, it receives the first and handles their whole cause.
 
 ```vibe
 // run: Console.log(itemLabelInline("pen")); Console.log(itemLabelInline("")); Console.log(itemLabelInline("book"))
@@ -141,9 +141,9 @@ Unavailable (InvalidCode)
 Unavailable (ItemMissing)
 ```
 
-`catch` also works after an expression. `x catch (error) => handler` runs `x` and passes an expected failure to the handler, as `Effect.catch` does, with the same guard as the statement: defects and interruption pass through. `x catch fallback` evaluates the fallback instead, as `Effect.orElseSucceed` does; see [Fallback](/error-management/016-fallback).
+After an expression, `x catch (error) => handler` runs `x` and passes an expected failure to the handler, as `Effect.catch` does, with the statement's guard: defects and interruption pass through. `x catch fallback` evaluates the fallback instead, as `Effect.orElseSucceed` does; see [Fallback](/error-management/016-fallback).
 
-`Effect.catch(() => findItem(input), handler)` also recovers expected failures, but keeps Effect's own policy: it can recover a mixed cause containing an expected failure and drop the other reasons. `Effect.catchEager` uses that same policy and can apply recovery immediately when given an already computed `Exit`. Neither combinator has source catch's mixed-cause guard.
+`Effect.catch(() => findItem(input), handler)` also recovers expected failures, under Effect's own policy and without source catch's mixed-cause guard: it can recover a mixed cause containing an expected failure and drop the other reasons. `Effect.catchEager` has the same policy and can recover immediately when given an already computed `Exit`.
 
 ## Recovering selected failures
 
@@ -177,7 +177,7 @@ Out of catalog
 InvalidCode
 ```
 
-Catch the failure, then `match` on it: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types, as `string!InvalidCode!` shows. The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise, or it is a compile error (EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case; it also accepts a nonempty array of tags sharing one handler. `Effect.catchTags` supplies a table of separate handlers.
+Catch, then `match` on the failure: an arm such as `when ItemMissing:` handles that error class, and `default: throw error` passes the others on with their types (`string!InvalidCode!`). The expression form takes the same `match`: `findItem(input).label catch (error) => match (error) { when ItemMissing: "Out of catalog"; default: throw error; }`. A `match` without `default` must handle every failure the `try` block can raise (compile error EK4701), so a complete match needs no rethrow. `error is ItemMissing` tests one class in an `if`. `Effect.catchTag` removes the selected tagged case, and accepts a nonempty array of tags for one handler; `Effect.catchTags` takes a table of separate handlers.
 
 ```vibe
 // run: Console.log(withTagTable("").label); Console.log(withFilter("book").label); Console.log(withPredicate("book").label); Console.log(Effect.flip(() => withFilter(""))._tag); Console.log(Effect.flip(() => withPredicate(""))._tag)
@@ -213,7 +213,7 @@ InvalidCode
 InvalidCode
 ```
 
-`catchIf` selects errors using a predicate or type guard. `catchFilter` accepts reusable selection logic from `Filter`; a narrowing filter removes the handled subtype. A boolean condition that handles only some values cannot promise that the whole subtype is gone.
+`catchIf` selects errors with a predicate or type guard; `catchFilter`, with reusable selection logic from `Filter`. A narrowing filter removes the handled subtype; a boolean condition that handles only some values can't promise the whole subtype is gone.
 
 ## Filtering nested reasons
 
@@ -255,11 +255,11 @@ Wait 4 seconds
 Busy
 ```
 
-These operators inspect the tagged error's readonly `reason` field. `catchReason` keeps the parent wrapper for unhandled reasons, while `catchReasons` selects several reasons at once. `unwrapReason` replaces the wrapper with its nested reason in `E` without recovering.
+These operators inspect the tagged error's readonly `reason` field. `catchReason` keeps the parent wrapper for unhandled reasons; `catchReasons` selects several at once; `unwrapReason` replaces the wrapper in `E` with its nested reason, without recovering.
 
 ## Coming from Effect
 
-Functions replace `Effect.gen`; calls run the callee. Pass a program such as `() => findItem(input)` when a recovery operator needs work it can control.
+Functions replace `Effect.gen`; calls run the callee. Where it runs, `Effect.fail(error)` draws EK4834, whose quick fix writes `throw error`, and `Effect.catchTag(program, "Tag", handler)` draws EK4835, whose quick fix writes `program catch (e) => match (e) { … }` ([TypeScript-style Effect code](/getting-started/012-devtools#typescript-style-effect-code)). Pass a program such as `() => findItem(input)` when a recovery operator needs work it can control.
 
 ---
 

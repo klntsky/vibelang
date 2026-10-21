@@ -4,13 +4,13 @@ title: "1. A first look"
 
 ## Part I. The language by example
 
-Each chapter shows something you do in Effect today and the same thing in VibeLang. VibeLang code uses Effect's own modules unchanged; what changes is that you stop writing generators, `yield*`, and most combinators.
+Each chapter shows a task in today's Effect and in VibeLang. VibeLang uses Effect's own modules unchanged; you stop writing generators, `yield*`, and most combinators.
 
-Three conventions for the snippets. A snippet shown without an enclosing function sits inside one, because a module's top level cannot run a program (Chapter 13). Names such as `User`, `guest`, and `MailerTest` are declared nearby, and helpers such as `toUser` are VibeLang functions. Imports of Effect modules outside the prelude (`Schedule`, `Stream`, `Fiber`, and so on) are left out.
+Snippet conventions: a snippet without an enclosing function sits inside one, because a module's top level cannot run a program (Chapter 13). Names such as `User`, `guest`, and `MailerTest` are declared nearby; helpers such as `toUser` are VibeLang functions. Imports of Effect modules outside the prelude (`Schedule`, `Stream`, `Fiber`, and so on) are omitted.
 
 ### 1. A first look
 
-Here is a small but complete program: two services, two typed errors, a function that uses them, and a `main` that runs it.
+A complete program: two services, two typed errors, a function that uses them, and a `main` that runs it.
 
 #### The program
 
@@ -68,29 +68,29 @@ export function welcome(id: string) {
 
 Four things changed:
 
-- **`welcome` is a plain function.** No `Effect.fn`, no generator, no `yield*`. Calling `Users.find(id)` runs it and gives you the `User`; if it fails, `welcome` fails with the same error.
-- **A service is a `service` declaration.** `service Users`, an abstract class, replaces the `Context.Service` class: no key string and no `Context` import. You call `Users.find(id)` directly instead of first getting the service with `yield* Users` (Chapter 4).
-- **The contract is inferred.** `welcome` is `string!UserNotFound | MailError!Users | Mailer`: it succeeds with a `string`, can fail with either error, and needs both services. You write the contract only when you want the compiler to check it (Chapter 2).
+- **`welcome` is a plain function.** No `Effect.fn`, no generator, no `yield*`. Calling `Users.find(id)` runs it and returns the `User`; if it fails, `welcome` fails with the same error.
+- **A service is a `service` declaration.** `service Users`, an abstract class, replaces the `Context.Service` class, with no key string and no `Context` import. You call `Users.find(id)` without first getting the service with `yield* Users` (Chapter 4).
+- **The contract is inferred.** `welcome` is `string!UserNotFound | MailError!Users | Mailer`: it succeeds with a `string`, can fail with either error, and needs both services. Write the contract only when you want the compiler to check it (Chapter 2).
 - **Errors are the same classes.** `error UserNotFound { id: string }` declares a class that extends `TaggedError`, Effect's `Data.TaggedError`, in scope without an import.
 
 #### What is in scope
 
-Every `.vibe` file starts with a small prelude in scope, so the program above has no imports:
+Every `.vibe` file has this prelude in scope, so the program above needs no imports:
 
 | Name | What it is |
 | --- | --- |
 | `Effect` | Effect's `Effect` module, and the type `Effect<A, E, R>` |
 | `Schema`, `Layer` | Effect's modules, unchanged |
-| `Scope` | Effect's `Scope` module, and the type `Scope`, which is Effect's `Scope.Scope` |
+| `Scope` | Effect's `Scope` module, and the type `Scope` (Effect's `Scope.Scope`) |
 | `TaggedError` | Effect's `Data.TaggedError` |
 | `Control` | The base class of control operations (Chapter 9) |
-| `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | VibeLang's built-ins, each introduced where it is first used |
+| `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, `abandon` | VibeLang's built-ins, each introduced at first use |
 | `sync`, `try`, `callback` | Boundary hatches: their first argument is self-contained TypeScript, and values reach it as inputs (D148, D229) |
 | `runPromise`, `runFork`, `runSync`, `runCallback` | Effect's runners, the way back in from TypeScript (D150) |
 | `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, `die` | The Effect module's functions without the `Effect.` prefix (D151) |
 | Every other export of `effect`'s root | `Console`, `Option`, `Stream`, `Schedule`, `Duration`, and the rest, plus `flow` and `identity` (D146) |
 
-Modules from `effect`'s subpath packages, such as `effect/http`, are imported as usual. An import or a local declaration with the same name shadows a prelude name, as it would shadow any global. The prelude is what most Effect files import anyway: `Effect` appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), `Schema` in 39-44%, `Layer` in 34-44%, and no other module in more than 22%. `Scope` is there because contracts name it whenever a resource outlives a function (Chapter 6). JavaScript's own globals keep their names: `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so Effect's modules with those names need an import under another name, as in `import { Array as Arr } from "effect"`. Shared web-standard globals such as `Request` also keep their names (D264); Effect's `Request` needs `import { Request } from "effect"`. DOM-only globals still lose: in a project whose `lib` includes the DOM, `Option` is still Effect's.
+Import modules from `effect`'s subpath packages, such as `effect/http`, as usual. An import or local declaration with the same name shadows a prelude name, as it shadows any global. The prelude is what most Effect files import anyway: `Effect` appears in 77-81% of the Effect files in two large codebases (Smithers, 2,149 files; opencode, 1,031), `Schema` in 39-44%, `Layer` in 34-44%, and no other module in more than 22%. `Scope` is included because contracts name it whenever a resource outlives a function (Chapter 6). JavaScript's globals keep their names: `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules of those names under another name, as in `import { Array as Arr } from "effect"`. Shared web-standard globals such as `Request` also keep their names (D264); Effect's `Request` needs `import { Request } from "effect"`. DOM-only globals lose: in a project whose `lib` includes the DOM, `Option` is still Effect's.
 
 #### Running it
 
@@ -105,11 +105,11 @@ export function main() {
 }
 ```
 
-`Effect.provide` supplies the services `welcome` needs from an application Layer (Chapter 4 builds `AppLive`). The `() =>` in `() => welcome("42")` is how you hand a program to Effect without running it yet (Chapter 5). The module exports `main` without parameters, so its JavaScript ends with `if (import.meta.main) NodeRuntime.runMain(main())`: `node main.js` hands `main` to Node's runner, the only place a program starts, and importing the module starts nothing (D135).
+`Effect.provide` supplies the services `welcome` needs from an application Layer (Chapter 4 builds `AppLive`). The `() =>` in `() => welcome("42")` hands Effect a program without running it (Chapter 5). The module exports a parameterless `main`, so its JavaScript ends with `if (import.meta.main) NodeRuntime.runMain(main())`: `node main.js` hands `main` to Node's runner, the only place a program starts, and importing the module starts nothing (D135).
 
 #### What the compiler produces
 
-VibeLang compiles to TypeScript. This is the output for `welcome`:
+VibeLang compiles to TypeScript. The output for `welcome`:
 
 ```ts [Generated TypeScript]
 export const welcome = Effect.fnUntraced(function* (id: string) {
@@ -126,4 +126,4 @@ export declare const welcome: (id: string) =>
   string!UserNotFound | MailError!Users | Mailer
 ```
 
-TypeScript code that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so a TypeScript program can provide `Users` with an ordinary Layer, and VibeLang can use services written in TypeScript.
+TypeScript that imports `welcome` sees an ordinary function returning an `Effect`. Each service class compiles to an interface for its methods and a `Context.Key` class (Chapter 4), so TypeScript can provide `Users` with an ordinary Layer, and VibeLang can use services written in TypeScript.

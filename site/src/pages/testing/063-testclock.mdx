@@ -1,18 +1,15 @@
 ---
 title: "TestClock"
-description: "TestClock replaces live time with time controlled by your test. Use it to check sleeps, timeouts, recurring work, and clock reads without waiting for wall-clock time. Import it from..."
+description: "TestClock replaces live time with time your test controls, so you can check sleeps, timeouts, recurring work, and clock reads without waiting for wall-clock time. Import it from effect/testing."
 ---
 
 # TestClock
 
-`TestClock` replaces live time with time controlled by your test. Use it to check sleeps, timeouts, recurring work, and clock reads without waiting for wall-clock time. Import it from `effect/testing`, and use `Clock` rather than JavaScript time reads in application code.
+`TestClock` replaces live time with time your test controls, so you can check sleeps, timeouts, recurring work, and clock reads without waiting for wall-clock time. Import it from `effect/testing`.
 
 ## Configure the test runner
 
-The [starter](/getting-started/004-installation) includes Vitest 5.0.5,
-`@effect/vitest` 4.0.5, and the local `vibelang-vite` plugin. Run
-`bun run test` to compile and execute `src/**/*.test.vibe` directly. Tests need no
-prior `dist/` build. Keep configuration in TypeScript:
+The [starter](/getting-started/004-installation) includes Vitest 5.0.5, `@effect/vitest` 4.0.5, and the local `vibelang-vite` plugin. `bun run test` compiles and runs `src/**/*.test.vibe` directly, with no prior `dist/` build. Keep configuration in TypeScript:
 
 ```ts
 // TypeScript (.ts)
@@ -26,15 +23,7 @@ export default defineConfig({
 })
 ```
 
-Register `it.effect` at the top level or inside `describe`. The callback is a
-program, so VibeLang calls inside it run. `assert` and `expect` from
-`@effect/vitest` are exports of an Effect package, so call them directly, as in
-`assert.strictEqual(actual, expected)` or `expect(actual).toBe(expected)`. A
-failed assertion is a defect: it fails the test, and its stack points to the
-original `.vibe` line through the plugin's maps. Import them from
-`@effect/vitest`; the same functions imported from `vitest` are plain
-TypeScript, which is EK4401 inside a test. The examples below use a local
-`check` helper, which works the same way.
+Register `it.effect` at the top level or inside `describe`; its callback is a program, so VibeLang calls inside it run. `assert` and `expect` from `@effect/vitest` are Effect package exports: call them directly, as in `assert.strictEqual(actual, expected)` or `expect(actual).toBe(expected)`. A failed assertion is a defect that fails the test, and the plugin's maps point its stack at the original `.vibe` line. Import them from `@effect/vitest`: from `vitest` they are plain TypeScript, which is EK4401 inside a test. The examples below use a local `check` helper that works the same way.
 
 ## Controlling virtual time
 
@@ -62,7 +51,7 @@ it.effect("a deadline returns the fallback") {
 }
 ```
 
-`it.effect` provides the test services, including virtual time. `adjust` advances by a duration and runs sleepers whose deadlines fall within that interval; `setTime` sets an absolute timestamp in milliseconds. Fork the timed work first so the test's own fiber remains free to adjust the clock. The block owns `pending` and interrupts it if the test exits early.
+`it.effect` provides the test services, virtual time included. `adjust` advances by a duration and runs sleepers whose deadlines fall within it; `setTime` sets an absolute timestamp in milliseconds. Fork the timed work first so the test's own fiber stays free to adjust the clock. The block owns `pending` and interrupts it if the test exits early.
 
 ```vibe
 // run: Console.log(standaloneClockExample())
@@ -81,7 +70,7 @@ function standaloneClockExample() {
 7000
 ```
 
-Outside the test harness, explicitly provide `TestClock.layer()`. The virtual clock does not advance merely because real time passes. Sleeping on the test's own fiber before adjusting time leaves the test waiting for an adjustment it cannot perform.
+Outside the test harness, provide `TestClock.layer()` yourself. Real time passing does not advance the virtual clock. Sleeping on the test's own fiber before adjusting time leaves the test waiting for an adjustment it cannot make.
 
 ## Advancing recurring computations
 
@@ -112,7 +101,7 @@ it.effect("emits once per interval") {
 }
 ```
 
-Use the `check` helper from the first example. Advancing to each boundary lets the loop schedule its next sleep before the next adjustment. The queue makes each recurrence observable without relying on real-time delays, and the background loop stops when the test block exits.
+Use the `check` helper from the first example. Advancing to each boundary lets the loop schedule its next sleep before the next adjustment. The queue makes each recurrence observable without real-time delays, and the background loop stops when the test block exits.
 
 ## Checking clock-dependent behavior
 
@@ -134,7 +123,7 @@ it.effect("expires at the boundary") {
 }
 ```
 
-Calls to `Clock.currentTimeMillis()` read the supplied clock and remain deterministic under the test layer. `Date.now()`, zero-argument `new Date()`, and platform timers are not application time sources in VibeLang. Testing just before and at a boundary catches comparison mistakes that checking only a later timestamp misses.
+Application code reads time with `Clock`: `Clock.currentTimeMillis()` reads the supplied clock, so it stays deterministic under the test layer. `Date.now()`, zero-argument `new Date()`, and platform timers are not application time sources in VibeLang. Testing just before and at a boundary catches comparison mistakes that a later timestamp alone misses.
 
 ## Timed waits and deferred results
 
@@ -157,7 +146,7 @@ it.effect("completes a deferred after a delay") {
 }
 ```
 
-The sleep precedes completion in the worker, so the test checks delayed completion. After advancing time, wait for the Deferred with `ready.await()` or join the worker to synchronize with the observable outcome. A fork alone says work has started, not that its result is ready.
+The worker sleeps before completing, so the test checks delayed completion. After advancing time, wait for the Deferred with `ready.await()` or join the worker to synchronize with the observable outcome. A fork alone says work started, not that its result is ready.
 
 ---
 

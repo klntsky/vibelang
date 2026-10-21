@@ -1,11 +1,11 @@
 ---
 title: "Timing Out"
-description: "A timeout limits how long a caller waits for work to finish. Effect interrupts the timed computation, waits for its cleanup, and then produces the chosen timeout outcome."
+description: "A timeout limits how long a caller waits for work. Effect interrupts the timed computation, waits for its cleanup, then produces the chosen timeout outcome."
 ---
 
 # Timing Out
 
-A timeout limits how long a caller waits for work to finish. Effect interrupts the timed computation, waits for its cleanup, and then produces the chosen timeout outcome.
+A timeout limits how long a caller waits for work. Effect interrupts the timed computation, waits for its cleanup, then produces the chosen timeout outcome.
 
 
 ## Limiting execution duration
@@ -30,7 +30,7 @@ Rendered preview
 TimeoutError
 ```
 
-`Effect.timeout` adds `Cause.TimeoutError` to `E`. A timely success returns its original value, and a domain failure before the deadline keeps its original error. The source call is passed by name because the parameter expects an Effect, so the timer surrounds the work itself; an explicit `() => buildPreview()` also works.
+`Effect.timeout` adds `Cause.TimeoutError` to `E`. A timely success keeps its value, and a domain failure before the deadline keeps its error. The parameter expects an Effect, so the source call passes by name and the timer surrounds the work itself; an explicit `() => buildPreview()` also works.
 
 ```vibe
 // run: Console.log(previewLabel())
@@ -48,9 +48,9 @@ function previewLabel() {
 Preview still unavailable
 ```
 
-The interruption used internally to stop the source is separate from the typed timeout error returned to its caller. Ordinary catch inside `buildPreview` cannot consume that interruption.
+The internal interruption that stops the source is separate from the typed timeout error the caller receives; ordinary catch inside `buildPreview` can't consume it.
 
-> **Current limitation.** Timeout waits for the interrupted source's cleanup, but Effect 4.0.5 drops failures from that cleanup at the timeout boundary. This affects `timeout`, `timeoutOption`, and `timeoutOrElse`, including `finally` and `using` cleanup. D256 clarifies that D15 binds cleanup VibeLang itself runs; Effect operators keep Effect's semantics under D22, including dropping a loser's cleanup failure.
+> **Current limitation.** Timeout waits for the interrupted source's cleanup, but Effect 4.0.5 drops that cleanup's failures at the timeout boundary. This affects `timeout`, `timeoutOption`, and `timeoutOrElse`, including `finally` and `using` cleanup. D256 clarifies that D15 binds cleanup VibeLang itself runs; Effect operators keep Effect's semantics under D22, including dropping a loser's cleanup failure.
 
 ## Representing timeout as absence
 
@@ -66,7 +66,7 @@ function optionalPreview() {
 No preview yet
 ```
 
-`timeoutOption` returns `None` for a timeout and `Some(value)` for a timely success. Expected failures from the source stay in `E`. It does not treat every failed computation as absence.
+`timeoutOption` returns `None` for a timeout and `Some(value)` for a timely success. The source's expected failures stay in `E`, not `None`.
 
 ## Choosing an alternative or custom failure
 
@@ -97,7 +97,7 @@ Static placeholder
 doc-1
 ```
 
-The alternative runs lazily after the timer wins. It can use services, fail, or return another success type, and those channels join the overall contract. Use a typed failure for an expected deadline; a defect is appropriate only when timing out breaks an invariant.
+The alternative runs lazily, after the timer wins, and can use services, fail, or return another success type; those channels join the overall contract. Use a typed failure for an expected deadline, and a defect only when timing out breaks an invariant.
 
 ## Interruption of protected work
 
@@ -116,7 +116,7 @@ Preview rendered
 TimeoutError
 ```
 
-The `Preview rendered` log appears before the timeout failure because the protected work finishes before interruption takes effect. Uninterruptible work defers cancellation, so this call can take longer than 500 milliseconds. `finally` and resource releases complete before timeout returns, including releases that take time. Model work that must outlive a request with an explicit fiber lifetime rather than assuming a timeout stops it instantly.
+The `Preview rendered` log precedes the timeout failure because the protected work finishes before interruption takes effect: uninterruptible work defers cancellation, so this call can take longer than 500 milliseconds. `finally` and resource releases, even slow ones, complete before timeout returns. Give work that must outlive a request an explicit fiber lifetime; don't assume a timeout stops it instantly.
 
 ---
 

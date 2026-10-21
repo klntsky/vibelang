@@ -1,11 +1,11 @@
 ---
 title: "Fibers"
-description: "A fiber is a running computation with a result and a lifetime. VibeLang uses Effect's lightweight fibers to overlap waiting work, inspect completion, and cancel safely. Fibers provide concurrency..."
+description: "A fiber is a running computation with a result and a lifetime. Effect's lightweight fibers overlap waiting work, inspect completion, and cancel safely. They give concurrency on the runtime's..."
 ---
 
 # Fibers
 
-A fiber is a running computation with a result and a lifetime. VibeLang uses Effect's lightweight fibers to overlap waiting work, inspect completion, and cancel safely. Fibers provide concurrency on the runtime's scheduler; they do not turn JavaScript computation into parallel CPU execution.
+A fiber is a running computation with a result and a lifetime. Effect's lightweight fibers overlap waiting work, inspect completion, and cancel safely. They give concurrency on the runtime's scheduler, not parallel CPU execution of JavaScript.
 
 ## Forking and awaiting
 
@@ -24,9 +24,9 @@ function buildDashboard() {
 // Output: chart
 ```
 
-`fork` starts a child fiber and returns its handle, here a `Fiber<string>`, without waiting for its result. `join` waits for the child and returns its value, or propagates its failure. Unlike an ordinary call, the fork lets the parent continue while its child is waiting.
+`fork` starts a child fiber and returns its handle, here a `Fiber<string>`, without waiting for its result: unlike an ordinary call, the parent continues while the child waits. `join` waits for the child and returns its value or propagates its failure.
 
-`fork loadChart()` forks one call, and `fork { ... }` forks a block. The call form, `fork(loadChart())`, means the same. `join` takes a fiber, not a call: a call already runs and waits where it stands. `await` in VibeLang code means only the await operations below; `await chart` is EK4609, whose quick fix writes `join chart`.
+`fork loadChart()`, or the call form `fork(loadChart())`, forks one call; `fork { ... }` forks a block. `join` takes a fiber, not a call: a call already runs and waits where it stands. `await` means only the await operations below; `await chart` is EK4609, whose quick fix writes `join chart`.
 
 ## Awaiting completion as data
 
@@ -44,7 +44,7 @@ function inspectChild() {
 // Output: true
 ```
 
-`Fiber.await` succeeds with an `Exit`, so it does not rethrow the child's failure into the caller. The exit also represents defects and interruption. Use `join child` when failure should propagate and `Fiber.await(child)` when the caller needs to decide what the outcome means.
+`Fiber.await` succeeds with an `Exit`, which also represents defects and interruption, so it doesn't rethrow the child's failure into the caller. Use `join child` to propagate failure and `Fiber.await(child)` when the caller decides what the outcome means.
 
 ## Handling asynchronous interruption
 
@@ -66,9 +66,9 @@ function stopWorker() {
 // Output: worker has terminated
 ```
 
-Cancellation does not require a hand-written polling loop. Effect delivers it at runtime boundaries, defers it in uninterruptible regions, and runs cleanup before `interrupt` returns. A long plain JavaScript calculation still occupies the host thread until it returns or reaches an Effect operation.
+Cancellation needs no hand-written polling loop: Effect delivers it at runtime boundaries, defers it in uninterruptible regions, and runs cleanup before `interrupt` returns. A long plain JavaScript calculation still holds the host thread until it returns or reaches an Effect operation.
 
-When the caller needs to continue during cleanup, fork the interruption, `fork worker.interrupt()`, and join that fiber before its owner exits. Avoid immediate unsafe runtime methods when cleanup ordering matters.
+To continue during cleanup, fork the interruption (`fork worker.interrupt()`) and join that fiber before its owner exits. When cleanup ordering matters, avoid immediate unsafe runtime methods.
 
 ## Protecting work from interruption
 
@@ -95,7 +95,12 @@ function pollStatus(cancelled: boolean) {
 // Output: true
 ```
 
-An `uninterruptible` block runs without interruption, as `Effect.uninterruptibleMask` does: an interruption that arrives waits until the block ends. A `restore` block inside it brings back the interruptibility the fiber had before, so long waits stay cancellable. An `interruptible` block makes its code interruptible even inside an uninterruptible region, as `Effect.interruptible` does. Statements inside these blocks stay code of the enclosing function, so `return` returns from it. The blocks call prelude functions of the same names, so `uninterruptible(saveRows())` passes a program instead. `interrupt()` interrupts the running fiber, as `Effect.interrupt` does.
+- `uninterruptible` (`Effect.uninterruptibleMask`) runs its block without interruption: an interruption that arrives waits until the block ends.
+- `restore` inside it brings back the fiber's previous interruptibility, so long waits stay cancellable.
+- `interruptible` (`Effect.interruptible`) makes its code interruptible even inside an uninterruptible region.
+- `interrupt()` (`Effect.interrupt`) interrupts the running fiber.
+
+Statements in these blocks stay code of the enclosing function, so `return` returns from it. The blocks call prelude functions of the same names; `uninterruptible(saveRows())` passes a program instead.
 
 ## Combining results
 
@@ -118,11 +123,11 @@ function combine() {
 // Output: Inventory: 18
 ```
 
-`await.all [...]` starts every element in its own fiber and waits for all of them, keeping the shape of an array or an object, like `Promise.all`. Each element is passed by name, so `rowCount()` starts in its fiber instead of running before the operation. When one fails, `await.all` interrupts the others still running and propagates the failure, as `all` fails fast. For an expected-failure fallback, put `try` around it and recover in `catch`; defects and interruption still propagate.
+`await.all [...]`, like `Promise.all`, starts every element in its own fiber, waits for all, and keeps the array or object shape. Elements are passed by name, so `rowCount()` starts in its fiber, not before the operation. If one fails, `await.all` interrupts the rest and propagates the failure, as `all` fails fast. For an expected-failure fallback, wrap it in `try` and recover in `catch`; defects and interruption still propagate.
 
-`await.allSettled [...]` returns each success or typed failure as a `Result` and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258); a cause with no typed failure still propagates. Use `Effect.exit` around each program to preserve every kind of outcome as data, including mixed causes.
+`await.allSettled [...]` returns each success or typed failure as a `Result` and never fails with a typed error. Defects and interruption propagate exactly as in `Effect.all` with `mode: "result"` (D258); a cause with no typed failure still propagates. Wrap each program in `Effect.exit` to keep every outcome as data, mixed causes included.
 
-To wait for fibers you already hold, use `join`: `const [name, count] = join [titleFiber, rowsFiber]`. An await operation also accepts a fiber or a `Deferred` as an element and waits for it without restarting it.
+For fibers you already hold, use `join`: `const [name, count] = join [titleFiber, rowsFiber]`. An await operation also accepts a fiber or a `Deferred` as an element and waits for it without restarting it.
 
 ## Racing events
 
@@ -149,7 +154,7 @@ function nextEvent(jobs: Queue.Queue<string>, shutdown: Deferred.Deferred<void>)
 // Output: idle
 ```
 
-`await.race [...]` starts each element in its own fiber and returns the first to finish, success or failure, like `Promise.race` (`Effect.raceFirst`); the others are interrupted. A `do { ... }` expression gives an element statements of its own; its last expression is the element's value. Of elements ready at once, the first written wins. `await.any [...]` returns the first success instead and fails only when every element fails (`Effect.raceAll`). To poll without waiting, call `Queue.poll(jobs)` and test the result with an `if`.
+`await.race [...]` (`Promise.race`, `Effect.raceFirst`) starts each element in its own fiber, returns the first to finish, success or failure, and interrupts the rest; of elements ready at once, the first written wins. A `do { ... }` element runs its own statements, and its last expression is the element's value. `await.any [...]` (`Effect.raceAll`) returns the first success instead and fails only when every element fails. To poll without waiting, test `Queue.poll(jobs)` with an `if`.
 
 ## Running a loop body concurrently
 
@@ -170,7 +175,7 @@ function printAll(ids: ReadonlyArray<string>) {
 // Output: page b
 ```
 
-`for concurrent` runs its body for each item in its own fiber and waits for them all before the loop ends; `for concurrent(8)` runs at most eight at once, and `for concurrent (...)` sets no limit. A failure interrupts the items still running and fails the loop. `continue` ends one item. Because each item runs in its own fiber, a `break` that would leave the loop (EK4605) and a `return` (EK4606) are errors; throw to stop every item. Use `forEach` when you need the results.
+`for concurrent` runs its body for each item in its own fiber and ends when all finish; `for concurrent(8)` runs at most eight at once, and `for concurrent (...)` sets no limit. A failure interrupts the items still running and fails the loop. `continue` ends one item. Because each item has its own fiber, a `break` that would leave the loop (EK4605) and a `return` (EK4606) are errors; throw to stop every item. For results, use `forEach`.
 
 ## Supervising child lifetimes
 
@@ -194,7 +199,7 @@ function request() {
 // Output: request finishing
 ```
 
-The VibeLang `fork` belongs to its enclosing block. Leaving that block interrupts unfinished children and waits for their cleanup. `Effect.forkChild` remains available when ownership should follow the parent fiber instead of the lexical block.
+`fork` belongs to its enclosing block: leaving the block interrupts unfinished children and waits for their cleanup. For ownership by the parent fiber instead of the lexical block, use `Effect.forkChild`.
 
 Forked fibers inherit the current services and tracing context. Control-operation handlers belong to one fiber, so handle those operations inside each child that performs them.
 
@@ -217,7 +222,7 @@ function detachedExample() {
 // Output: detached finished
 ```
 
-`forkIn(scope, program)` attaches the child to a scope you hold, so it lives until that scope closes. `detach(program)` ties the child to nothing: it survives its parent and needs an explicit shutdown strategy; joining it above keeps the example bounded. `Effect.forkScoped` attaches the child to the caller's scope and leaves `Scope` in the caller's requirements until a scope is supplied.
+`forkIn(scope, program)` attaches the child to a scope you hold; it lives until that scope closes. `detach(program)` ties the child to nothing: it survives its parent and needs an explicit shutdown strategy (the example joins it to stay bounded). `Effect.forkScoped` attaches the child to the caller's scope and leaves `Scope` in the caller's requirements until a scope is supplied.
 
 ## Understanding execution scheduling
 
@@ -238,7 +243,7 @@ function waitForReady() {
 // Output: initialization is complete
 ```
 
-Forking schedules a child; it does not prove the child has reached a particular statement. `yieldNow()` gives other work a chance to run, but it is not a readiness guarantee. Use a `Deferred`, as above, when ordering matters; `ready.await()` waits until the child completes it. Sleeping for an estimated startup time leaves a race.
+Forking schedules a child; it doesn't prove the child reached a particular statement. `yieldNow()` lets other work run but guarantees no readiness, and sleeping for an estimated startup time leaves a race. When ordering matters, use a `Deferred`: `ready.await()` waits until the child completes it.
 
 ---
 

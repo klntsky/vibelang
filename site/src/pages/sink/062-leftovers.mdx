@@ -1,11 +1,11 @@
 ---
 title: "Leftovers"
-description: "Leftovers are elements a sink has already received in a batch but has not consumed when it completes. Preserve them when another sink should continue from that batch, or move them into the result..."
+description: "Leftovers are elements of a batch that a sink received but had not consumed when it completed. Keep them when another sink should continue from that batch, or move them into the result to inspect..."
 ---
 
 # Leftovers
 
-Leftovers are elements a sink has already received in a batch but has not consumed when it completes. Preserve them when another sink should continue from that batch, or move them into the result for inspection. They are not a collection of every element remaining in the source.
+Leftovers are elements of a batch that a sink received but had not consumed when it completed. Keep them when another sink should continue from that batch, or move them into the result to inspect them. They are not every element left in the source.
 
 ## Collecting leftover elements
 
@@ -22,7 +22,7 @@ function inspectRemainder() {
 // Output: {"selected":[21,34],"leftover":[55,89]}
 ```
 
-`Sink.mapEnd` receives `[result, optionalLeftoverBatch]` and returns another such tuple. Returning a one-element tuple moves the leftovers into the success result and leaves no separate leftover batch. `Stream.run` then returns that success result.
+`Sink.mapEnd` receives `[result, optionalLeftoverBatch]` and returns another such tuple. A one-element tuple moves the leftovers into the success result, leaving no separate leftover batch; `Stream.run` returns that result.
 
 ```vibe
 // run: (() => { const result = inspectSmallBatches(); Console.log(JSON.stringify({ first: Option.getOrElse(result.first, () => 0), leftover: result.leftover })) })()
@@ -37,7 +37,7 @@ function inspectSmallBatches() {
 // Output: {"first":21,"leftover":[34]}
 ```
 
-Here `55` and `89` are in a batch the sink never requests. Changing internal batch boundaries therefore changes the leftovers you can inspect. Use `Stream.peel` when you need both the sink result and a live remainder stream, including input not yet requested; consume that remainder inside its Scope.
+Here `55` and `89` are in a batch the sink never requests, so the leftovers you can inspect depend on internal batch boundaries. `Stream.peel` gives both the sink result and a live remainder stream, including input not yet requested; consume that remainder inside its Scope.
 
 ## Explicitly discarding leftovers
 
@@ -55,7 +55,7 @@ function discardRemainder() {
 // Output: {"selected":[21,34],"leftover":[]}
 ```
 
-`ignoreLeftover` changes the sink's leftover type to `never` and drops its unused batch suffix. It does not drain the rest of the upstream source. In sink composition or repeated consumption, dropping leftovers can lose already-pulled elements, so use it only when that loss is intended.
+`ignoreLeftover` changes the sink's leftover type to `never` and drops its unused batch suffix; it does not drain the rest of the upstream source. In sink composition or repeated consumption, dropping leftovers can lose already-pulled elements, so use it only when you intend that loss.
 
 ---
 

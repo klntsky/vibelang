@@ -1,11 +1,11 @@
 ---
 title: "Error Messages"
-description: "Schema error messages work as in Effect. A SchemaError combines a readable message with a structured issue, including paths into nested values. Customize messages at the node that fails so users..."
+description: "Schema error messages work as in Effect. A SchemaError combines a readable message with a structured issue, including paths into nested values. Customize a message at the node that fails, so users..."
 ---
 
 # Error Messages
 
-Schema error messages work as in Effect. A `SchemaError` combines a readable message with a structured issue, including paths into nested values. Customize messages at the node that fails so users receive an explanation appropriate to that field. Plain builders follow the [trusted call rules](/schema/085-introduction#configuring-compiler-prerequisites).
+Schema error messages work as in Effect. A `SchemaError` combines a readable message with a structured issue, including paths into nested values. Customize a message at the node that fails, so users get an explanation that fits that field. Plain builders follow the [trusted call rules](/schema/085-introduction#configuring-compiler-prerequisites).
 
 ## Understanding default validation messages
 
@@ -36,7 +36,7 @@ Expected number
 Accepted
 ```
 
-A base-type mismatch reports what type was expected. An absent required field reports `Missing key`; a nested mismatch adds a key or index path. `errors: "all"` collects independent issues instead of stopping at the first. Checks run only after their underlying type is accepted.
+A base-type mismatch reports the expected type, an absent required field `Missing key`; a nested mismatch adds a key or index path. `errors: "all"` collects independent issues instead of stopping at the first. Checks run only after their underlying type is accepted.
 
 ## Identifying schemas in error output
 
@@ -58,9 +58,9 @@ Expected number
   at ["count"]
 ```
 
-An identifier replaces a generic expected-value description with a stable domain name. `expected` supplies readable text for the annotated node or check. `Count` annotates the finite-number check: `NaN` reports `Expected a finite package count`, while a string reports `Expected number` before that check runs. `title` is documentation metadata and does not change the default validation message.
+An identifier replaces a generic expected-value description with a stable domain name. `expected` supplies readable text for the annotated node or check. `Count` annotates the finite-number check: `NaN` reports `Expected a finite package count`, while a string reports `Expected number` before that check runs. `title` is documentation metadata and leaves the default validation message unchanged.
 
-Naming the whole struct changes errors for the struct itself; an invalid nested tracking value still reports the tracking schema's own identity.
+Naming the whole struct changes only the struct's own errors; an invalid nested tracking value still reports the tracking schema's own identity.
 
 ## Customizing messages for checks and conversions
 
@@ -95,7 +95,7 @@ Use a whole package count
 Reference needs at least four characters
 ```
 
-The conversion has three failure sites: the encoded string, the conversion function, and the decoded integer check. Each message targets its own stage. For checks, pass a message to the check constructor; applying `.annotate({ message })` after several checks targets the last check rather than replacing every earlier failure.
+The conversion has three failure sites, each with its own message: the encoded string, the conversion function, and the decoded integer check. For checks, pass a message to the check constructor; `.annotate({ message })` after several checks targets only the last check, not every earlier failure.
 
 ## Assigning messages to scalar and compound values
 
@@ -131,7 +131,7 @@ Contact must be text
   at ["contacts"][0]
 ```
 
-A scalar message replaces a mismatch at that scalar. A union message summarizes failure of all alternatives, and a collection check explains failure of the collection's size. Nested failures retain their own messages and paths; a message on an outer node does not automatically replace every inner issue.
+A scalar message replaces a mismatch at that scalar. A union message summarizes failure of all alternatives, and a collection check explains a failure of the collection's size. Nested failures keep their own messages and paths; a message on an outer node does not replace every inner issue.
 
 ## Explaining missing fields
 
@@ -161,7 +161,7 @@ Supply latitude
   at [1]
 ```
 
-`messageMissingKey` belongs to a field or tuple position and explains absence. An explicitly present wrong value still uses its value schema's message. Keep those cases separate when a form needs different instructions for a missing answer and an invalid answer.
+`messageMissingKey` belongs to a field or tuple position and explains absence; a present but wrong value still uses its value schema's message. This lets a form give different instructions for a missing answer and an invalid one.
 
 ---
 

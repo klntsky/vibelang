@@ -1,11 +1,11 @@
 ---
 title: "Latch"
-description: "A latch is a reusable gate for fibers. A closed latch makes callers wait; an open latch lets them pass. Use one when many operations must wait for a condition such as completed initialization."
+description: "A latch is a reusable gate for fibers: closed, it makes callers wait; open, it lets them pass. Use one when many operations wait for a condition such as completed initialization."
 ---
 
 # Latch
 
-A latch is a reusable gate for fibers. A closed latch makes callers wait; an open latch lets them pass. Use one when many operations must wait for a condition such as completed initialization.
+A latch is a reusable gate for fibers: closed, it makes callers wait; open, it lets them pass. Use one when many operations wait for a condition such as completed initialization.
 
 ## Waiting at a reusable gate
 
@@ -24,7 +24,7 @@ function initializeThenWork() {
 // Output: processing enabled
 ```
 
-`Latch.await` waits until the latch permits the fiber to proceed. Waiting does not block other fibers, and an already open latch returns immediately. `Latch.whenOpen` can wrap a program when the wait and action read better as one expression.
+`Latch.await` waits until the latch lets the fiber proceed, without blocking other fibers; on an open latch it returns at once. `Latch.whenOpen` wraps a program when the wait and action read better as one expression.
 
 ## Opening and closing
 
@@ -41,7 +41,7 @@ function reopenGate() {
 // Output: allowed again
 ```
 
-Opening releases current waiters and allows future callers through. Closing makes future callers wait again; it does not cancel work that already passed the gate. `Latch.release` releases the currently waiting fibers without leaving the latch permanently open, so later arrivals can still wait.
+Opening releases current waiters and lets future callers through. Closing makes future callers wait again; it doesn't cancel work already past the gate. `Latch.release` releases the current waiters without leaving the latch open, so later arrivals still wait.
 
 ## Choosing the initial state
 
@@ -56,7 +56,7 @@ function createGates() {
 // Output: false false true
 ```
 
-Create the latch once and share it with all operations controlled by the same condition. Opening is persistent until a close, so a caller arriving after initialization does not miss the signal. A latch carries no result value or typed failure; use a Deferred when waiters need either of those.
+Create the latch once and share it with every operation the condition controls. Opening lasts until a close, so a caller arriving after initialization doesn't miss the signal. A latch carries no result value or typed failure; use a Deferred when waiters need either.
 
 ## Choosing a latch or a permit pool
 
@@ -74,7 +74,7 @@ function gatedExclusiveWork() {
 // Output: updating shared device
 ```
 
-The latch answers whether callers may proceed at all. The semaphore limits how many may remain inside a protected operation at once. An open latch admits every caller and does not provide mutual exclusion; share the semaphore too when callers must take turns.
+The latch decides whether callers may proceed at all; the semaphore limits how many are inside a protected operation at once. An open latch admits every caller and gives no mutual exclusion, so share the semaphore too when callers must take turns.
 
 ---
 

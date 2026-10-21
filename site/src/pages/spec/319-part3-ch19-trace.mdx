@@ -4,7 +4,7 @@ title: "19. The checkout trace, step by step"
 
 ### 19. The checkout trace, step by step
 
-This chapter follows one program through the machine before Chapter 20 defines the machine. The program is the checkout from Chapter 9, simplified, with a request-scoped audit log added so the trace shows which Context each piece of code sees. Kernel test T1 runs exactly this program, lowered by hand.
+This chapter follows one program through the machine before Chapter 20 defines it: the checkout from Chapter 9, simplified, plus a request-scoped audit log so the trace shows which Context each piece of code sees. Kernel test T1 runs exactly this program, lowered by hand.
 
 ```ts [VibeLang]
 service AuditLog { info(message: string): void!! }
@@ -88,7 +88,7 @@ Notation: K is the fiber's frame stack, listed bottom to top; Γ is its Context.
    → Restore → Prompt restores Γ₀ → handle returns the receipt
 ```
 
-The kernel's own trace from `bun test tests/trace.test.ts` (frame labels: `OnExit` is Effect's restore or finalizer frame, `fn x` is a compiled function frame, `Iterator` is an `Effect.gen` frame). T1 names the service `Logger` and its two implementations `AppLogger` and `RequestLogger`. T1 writes its clause by hand as a generator that ends in `return yield* resume(k, decision)`, which is not a tail resume, so its reinstated stack keeps the clause's frames (`Owner`, `Clause`, and the clause's `Iterator`) under the new prompt. Step ④ above shows the compiled shape, which drops them (K11a):
+The kernel's own trace from `bun test tests/trace.test.ts` (frame labels: `OnExit` is Effect's restore or finalizer frame, `fn x` a compiled function frame, `Iterator` an `Effect.gen` frame). T1 names the service `Logger`, with two implementations `AppLogger` and `RequestLogger`, and writes its clause by hand as a generator ending in `return yield* resume(k, decision)`. That is not a tail resume, so the reinstated stack keeps the clause's frames (`Owner`, `Clause`, and the clause's `Iterator`) under the new prompt. Step ④ shows the compiled shape, which drops them (K11a):
 
 ```text
 capture Approve on fiber 1: 5 frames

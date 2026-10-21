@@ -1,11 +1,11 @@
 ---
 title: "Chunk"
-description: "Chunk works in VibeLang exactly as in Effect. It is an immutable sequence optimized for repeated concatenation; use an ordinary array when concatenation is not the main workload."
+description: "Chunk works in VibeLang exactly as in Effect. It is an immutable sequence optimized for repeated concatenation; when concatenation is not the main workload, use an array."
 ---
 
 # Chunk
 
-`Chunk` works in VibeLang exactly as in Effect. It is an immutable sequence optimized for repeated concatenation; use an ordinary array when concatenation is not the main workload.
+`Chunk` works in VibeLang exactly as in Effect. It is an immutable sequence optimized for repeated concatenation; when concatenation is not the main workload, use an array.
 
 ## Choosing sequence storage
 
@@ -24,7 +24,7 @@ function collectBatches(batches: ReadonlyArray<ReadonlyArray<string>>) {
 ["queued","running","done"]
 ```
 
-A chunk preserves sequence order and shares internal structure across updates. That makes repeated concatenation useful without repeatedly copying the whole prefix. Its bookkeeping adds overhead, so it is not a general replacement for arrays.
+A chunk keeps order and shares internal structure across updates, so repeated concatenation does not recopy the whole prefix. Its bookkeeping adds overhead.
 
 ## Building chunks
 
@@ -40,7 +40,7 @@ const fromSet = Chunk.fromIterable(new Set(["center"]))
 [[],["north","south"],["east","west"],["center"]]
 ```
 
-`make` returns a nonempty chunk, while `empty` represents a sequence with no elements. `fromIterable` accepts arrays, sets, and other iterables; it reuses input arrays and existing chunks. Copy an array before passing it when other code can still mutate it. Immutability applies to the sequence, not to mutable objects stored as its elements.
+`make` returns a nonempty chunk; `empty` has no elements. `fromIterable` accepts arrays, sets, and other iterables, and reuses input arrays and existing chunks, so copy an array that other code can still mutate. Immutability covers the sequence, not mutable objects stored as elements.
 
 ## Reusing an array unsafely
 
@@ -57,7 +57,7 @@ function ownedBatch() {
 ["queued","running"]
 ```
 
-`fromArrayUnsafe` avoids copying its input. Any later mutation of that array breaks the chunk's immutability guarantees, including through aliases held elsewhere. Use `Chunk.fromIterable([...values])` when you need a copy; `fromIterable(values)` alone also reuses an array.
+`fromArrayUnsafe` does not copy its input: any later mutation of that array, through any alias, breaks the chunk's immutability. For a copy, use `Chunk.fromIterable([...values])`; `fromIterable(values)` alone also reuses the array.
 
 ## Concatenating and dropping elements
 
@@ -74,7 +74,7 @@ remaining.toReadonlyArray() // ["review", "published"]
 [["draft","review"],["review","published"]]
 ```
 
-`appendAll` preserves the order of both chunks. `drop` removes a prefix and returns the remaining sequence. Neither operation changes its inputs.
+`appendAll` keeps both chunks' order; `drop` removes a prefix. Neither changes its inputs.
 
 ## Checking structural equality
 
@@ -91,7 +91,7 @@ Equal.equals(first, reversed) // false
 true false
 ```
 
-Equality compares lengths and corresponding elements using Effect's equality rules. Distinct chunk objects can therefore be equal, including when their plain object elements were created separately. Element order matters.
+Equality compares lengths and corresponding elements by Effect's equality rules, so distinct chunks can be equal, even with separately created plain object elements. Order matters.
 
 ## Converting to arrays
 
@@ -107,7 +107,7 @@ mutableCopy.push(9)
 [[7,8],[],[7,8,9]]
 ```
 
-`toReadonlyArray` exposes a readonly view, preserving nonempty information when the input is known to be nonempty. Do not cast the result to a mutable array. Copy it with spread when a JavaScript consumer needs mutable storage.
+`toReadonlyArray` returns a readonly view that keeps the nonempty type for a known nonempty input. Do not cast it to a mutable array; copy it with spread when JavaScript code needs mutable storage.
 
 ---
 

@@ -1,11 +1,11 @@
 ---
 title: "Equivalence"
-description: "Equivalence works in VibeLang exactly as in Effect. It packages a reusable rule for deciding whether two values count as equivalent in a particular operation, without changing their global..."
+description: "Equivalence works in VibeLang exactly as in Effect. It packages a reusable rule for whether two values count as equivalent in one operation."
 ---
 
 # Equivalence
 
-`Equivalence` works in VibeLang exactly as in Effect. It packages a reusable rule for deciding whether two values count as equivalent in a particular operation, without changing their global equality behavior.
+`Equivalence` works in VibeLang exactly as in Effect. It packages a reusable rule for whether two values count as equivalent in one operation.
 
 ## Representing a reusable equality relation
 
@@ -19,7 +19,7 @@ sameLabel("inbox", "archive") // false
 // Output: [true,false]
 ```
 
-An `Equivalence<A>` is a synchronous function from two A values to a boolean. A sound relation is reflexive, symmetric, and transitive. Keep it free of service calls and expected failures so Effect can invoke it as an ordinary JavaScript callback.
+An `Equivalence<A>` is a synchronous function from two A values to a boolean. A sound relation is reflexive, symmetric, and transitive. Keep it free of service calls and expected failures so Effect can call it as a plain JavaScript callback.
 
 ## Choosing built-in relations
 
@@ -38,7 +38,7 @@ sameSymbol(key, Symbol("entry")) // false
 // Output: [true,false,true,true,true,true,false]
 ```
 
-The string, boolean, bigint, and `strictEqual` relations use strict equality. `Equivalence.Number` also equates `NaN` with itself. The date relation compares timestamps using that numeric relation instead of comparing object references.
+The string, boolean, bigint, and `strictEqual` relations use strict equality; `Equivalence.Number` also equates `NaN` with itself. The date relation compares timestamps with that numeric relation, not object references.
 
 ## Deriving comparisons through input projections
 
@@ -61,7 +61,7 @@ bySku(
 // Output: true
 ```
 
-`mapInput` projects each operand before applying the underlying relation. Here the SKU determines equivalence and the display name is ignored. Pass this rule to an API that accepts an equivalence; it does not alter `Equal.equals`, JavaScript `===`, or hash-collection key behavior.
+`mapInput` projects each operand before applying the relation, so here only the SKU counts. Pass the rule to an API that accepts an equivalence; it does not change `Equal.equals`, JavaScript `===`, or hash-collection keys.
 
 ---
 

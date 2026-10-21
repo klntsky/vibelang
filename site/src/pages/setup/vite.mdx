@@ -1,15 +1,15 @@
 ---
 title: "Vite and Vitest"
-description: "vibelang-vite compiles .vibe modules for Vite and Vitest with the project's vibelang compiler. It supports Vite 7 and 8. It serves JavaScript and source maps, and reports compiler errors in the..."
+description: "vibelang-vite compiles .vibe modules for Vite (7 and 8) and Vitest with the project's vibelang compiler. It serves JavaScript and source maps, and reports compiler errors in the terminal and in..."
 ---
 
 # Vite and Vitest
 
-`vibelang-vite` compiles `.vibe` modules for Vite and Vitest with the project's `vibelang` compiler. It supports Vite 7 and 8. It serves JavaScript and source maps, and reports compiler errors in the terminal and in Vite's overlay. Install the packages with [Add VibeLang to an existing project](/setup/existing-project) first.
+`vibelang-vite` compiles `.vibe` modules for Vite (7 and 8) and Vitest with the project's `vibelang` compiler. It serves JavaScript and source maps, and reports compiler errors in the terminal and in Vite's overlay. Install the packages with [Add VibeLang to an existing project](/setup/existing-project) first.
 
 ## 1. Add the plugin to Vite
 
-Add `vibelang()` to the `plugins` array in `vite.config.ts`, beside the plugins the project already has:
+Add `vibelang()` to the `plugins` array in `vite.config.ts`, beside the existing plugins:
 
 ```ts
 // TypeScript (.ts)
@@ -22,10 +22,10 @@ export default defineConfig({ plugins: [vibelang()] })
 
 ## 2. Configure tsconfig.json
 
-The plugin compiles the project that `tsconfig.json` describes, with its options and diagnostics. Check three things:
+The plugin compiles the project `tsconfig.json` describes, with its options and diagnostics. Check three things:
 
 1. `compilerOptions` sets `"rewriteRelativeImportExtensions": true`. Without it, a `.ts` file that imports `./greet.vibe` fails with TS5097. `"allowImportingTsExtensions": true` alone fails with TS5096, because the plugin emits JavaScript.
-2. `include` selects the app's `.vibe` files under Vite's root. A `.vibe` file outside the root, such as the source of a workspace package the app imports by name, compiles with the nearest `tsconfig.json` above it instead: that package's own project.
+2. `include` selects the app's `.vibe` files under Vite's root. A `.vibe` file outside the root, such as a workspace package's source that the app imports by name, compiles with the nearest `tsconfig.json` above it instead: that package's own project.
 3. If `tsconfig.json` has `"files": []` and only lists `references`, as Vite's templates do, pass the referenced configuration that includes `src` to the plugin, for example `vibelang({ project: "tsconfig.app.json" })`.
 
 ## 3. Add a first module
@@ -41,7 +41,7 @@ export function greet(name: string) {
 // Output: Hello, Vite!
 ```
 
-Import it from `.ts` or `.vibe` modules by its source name, `./greet.vibe`. TypeScript code sees `greet` as a function that returns an Effect. For example, a `.ts` module can run it with one of Effect's runners:
+Import it from `.ts` or `.vibe` modules by its source name, `./greet.vibe`. TypeScript sees `greet` as a function that returns an Effect, so a `.ts` module can run it with one of Effect's runners:
 
 ```ts
 // TypeScript (.ts)
@@ -56,7 +56,7 @@ export const message = Effect.runSync(greet("Vite"))
 
 ## 4. Test with Vitest
 
-If the project has no Vitest configuration, create `vitest.config.ts`. If it has one, add the plugin and the `include` pattern to it instead.
+Create `vitest.config.ts`, or add the plugin and the `include` pattern to the project's existing Vitest configuration.
 
 ```ts
 // TypeScript (.ts)
@@ -95,4 +95,4 @@ Run `npx vite build`. It exits with status 0, and its last line starts with `✓
 
 ## Next
 
-Set up the editor: [VS Code and Cursor](/setup/vscode), [Neovim](/setup/neovim), [Zed](/setup/zed), or [other editors](/setup/other-editors). Then verify the setup with step 4 of [Set up VibeLang](/setup).
+Set up the editor: [VS Code and Cursor](/setup/vscode), [Neovim](/setup/neovim), [Zed](/setup/zed), or [other editors](/setup/other-editors). Then verify with step 4 of [Set up VibeLang](/setup).
