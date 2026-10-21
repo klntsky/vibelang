@@ -70,25 +70,44 @@ func checkPatterns(c *checker.Checker, file *ast.SourceFile) {
 // checkExhaustive reports a match whose subject, a finite union, still has
 // cases at the $noMatch call that ends its arms.
 func checkExhaustive(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
-	args := call.Arguments()
-	if len(args) != 1 {
-		return
-	}
-	subject := args[0]
-	left := c.GetTypeAtLocation(subject)
-	if left == nil || left.Flags()&checker.TypeFlagsNever != 0 {
-		return
-	}
-	symbol := c.GetSymbolAtLocation(subject)
-	if symbol == nil {
-		return
-	}
-	declared := c.GetTypeOfSymbol(symbol)
-	if declared == nil || !isFiniteMatchType(c, declared) {
+	declared, left := matchRemainder(c, call)
+	if declared == nil || left.Flags()&checker.TypeFlagsNever != 0 {
 		return
 	}
 	d := reportAt(c, file, call.Expression().Loc, EK4701, c.TypeToString(declared), c.TypeToString(left))
 	note(d, "Add an arm for each case that is left, or a default arm.")
+}
+
+// provenExhaustive reports whether D209 proves that call, the $noMatch call
+// that ends a match without a default arm, never runs: the subject's
+// declared type is a finite union and no case of it is left there (D294).
+func provenExhaustive(c *checker.Checker, call *ast.Node) bool {
+	declared, left := matchRemainder(c, call)
+	return declared != nil && left.Flags()&checker.TypeFlagsNever != 0
+}
+
+// matchRemainder returns the declared type of the subject of call, the
+// $noMatch call that ends a match, and its narrowed type there, what no arm
+// matched. It returns nils unless the declared type is a finite union.
+func matchRemainder(c *checker.Checker, call *ast.Node) (declared, left *checker.Type) {
+	args := call.Arguments()
+	if len(args) != 1 {
+		return nil, nil
+	}
+	subject := args[0]
+	left = c.GetTypeAtLocation(subject)
+	if left == nil {
+		return nil, nil
+	}
+	symbol := c.GetSymbolAtLocation(subject)
+	if symbol == nil {
+		return nil, nil
+	}
+	declared = c.GetTypeOfSymbol(symbol)
+	if declared == nil || !isFiniteMatchType(c, declared) {
+		return nil, nil
+	}
+	return declared, left
 }
 
 // isFiniteMatchType reports whether t is a finite union a match can cover:

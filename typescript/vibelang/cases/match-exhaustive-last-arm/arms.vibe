@@ -1,0 +1,63 @@
+// Every match here is one D209 proves exhaustive, so its last arm runs
+// without a test and this module never imports $noMatch (D294).
+export type Phase = "draft" | "review" | "published"
+
+export error NotFound { id: string }
+export error Timeout
+export error Denied { user: string }
+
+export type Failure = NotFound | Timeout | Denied
+
+// After return.
+export function phaseLabel(phase: Phase) {
+  return match (phase) {
+    when "draft": "Draft";
+    when "review": "Review";
+    when "published": "Published";
+  }
+}
+
+// Inside an expression, where the match runs in its own function.
+export function width(phase: Phase) {
+  const label = match (phase) {
+    when "draft": 5;
+    when "review": 6;
+    when "published": 9;
+  }
+  return label
+}
+
+// As a statement.
+export function record(phase: Phase, log: Array<string>) {
+  match (phase) {
+    when "draft": log.push("draft");
+    when "review": log.push("review");
+    when "published": log.push("published");
+  }
+}
+
+// The last arm still binds user and n.
+export function describe(failure: Failure) {
+  return match (failure) {
+    when NotFound and { let id }: `no user ${id}`;
+    when Timeout: "retry";
+    when Denied and { let user }: `denied ${user}`;
+  }
+}
+
+export function greeting(name: Option.Option<string>) {
+  return match (name) {
+    when Option.None: "Hello";
+    when Option.Some(let n): `Hello, ${n}`;
+  }
+}
+
+// In an Effect function, whose arms run Effects.
+export function announce(phase: Phase) {
+  match (phase) {
+    when "draft": Effect.log("draft");
+    when "review": Effect.log("review");
+    when "published": Effect.log("published");
+  }
+  return phase
+}

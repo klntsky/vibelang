@@ -987,6 +987,7 @@ typescript/vibelang/cases/lsrules.fail/main.vibe:36:15 lambda plain table
 typescript/vibelang/cases/lsrules.fail/main.vibe:59:14 lambda plain table
 typescript/vibelang/cases/lsrules.fail/main.vibe:59:38 lambda plain table
 typescript/vibelang/cases/lsrules.fail/main.vibe:92:39 lambda plain fallback
+typescript/vibelang/cases/match-exhaustive-last-arm/arms.vibe:22:23 lambda dual fallback
 typescript/vibelang/cases/match-extractor-errors.fail/main.vibe:26:10 lambda effectFn table
 typescript/vibelang/cases/match-extractor-errors.fail/main.vibe:26:26 lambda effectFn table
 typescript/vibelang/cases/match-extractor-errors.fail/main.vibe:26:43 lambda dual fallback

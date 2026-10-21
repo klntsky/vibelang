@@ -86,6 +86,10 @@ func (tx *lowering) visit(node *ast.Node) *ast.Node {
 
 func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 	switch {
+	case tx.plan.unreachable[node]:
+		return nil // the $noMatch of a match D209 proves exhaustive (D294, match_lower.go)
+	case tx.plan.untested[node]:
+		return tx.visitUntestedArm(node)
 	case node.Kind == ast.KindShorthandPropertyAssignment && tx.plan.conversionOf(node.Name()) != convertNone:
 		property := tx.Factory().NewPropertyAssignment(nil, node.Name(), nil, nil, tx.visit(node.Name()))
 		tx.EmitContext().SetOriginal(property, node)
