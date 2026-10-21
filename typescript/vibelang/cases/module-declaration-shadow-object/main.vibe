@@ -1,0 +1,7 @@
+// expect-result: 42
+module impl {
+  const Object = 42
+  export const value = Object
+}
+import { value } from impl
+export function main() { return value }

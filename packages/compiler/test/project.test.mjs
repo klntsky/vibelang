@@ -197,7 +197,7 @@ test("a module declaration compiles into its file's output, and its body is no i
   const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler })
   const loaded = await modules.load(main)
   assert.deepEqual([loaded.errors, loaded.error], [[], false])
-  assert.match(loaded.code, /const tools = \(\(\) => \{/)
+  assert.match(loaded.code, /const tools_1 = \(\(\) => \{/)
   assert.ok(loaded.inputs.includes(main))
   assert.deepEqual(loaded.inputs.filter((input) => !existsSync(input)), [], "every input is a file on disk")
   await modules.load(main)

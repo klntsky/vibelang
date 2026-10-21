@@ -1,0 +1,17 @@
+// expect-result: [1, 2, 3, 4, 5]
+error X {}
+module X { export const x = 1 }
+import { x } from X
+module text { export const n = 2 }
+schema text = "a"
+import { n } from text
+module callable { export const n = 3 }
+function callable() { return 4 }
+import { n as other } from callable
+const { Bound } = { Bound: 4 }
+module Bound { export const value = 4 }
+import { value as boundValue } from Bound
+import { other as Imported } from "./other.ts"
+module Imported { export const value = 5 }
+import { value as importedValue } from Imported
+export function main() { return [x, n, other, boundValue, importedValue] }

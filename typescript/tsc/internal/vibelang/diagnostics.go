@@ -60,6 +60,7 @@ const (
 // (docs/design/src/428-part4-ch28-tooling.md) with its default category and
 // the headline the spec prints for it. Every code is an error except EK2004,
 // EK1009, EK2112, EK2113, EK2120, EK2121, and EK4406, which are warnings by default; a
+// EK4408 name collisions are warnings (D303). A
 // project may change the category of EK2004, EK4403, and EK4406 (design decisions D34,
 // D53, and D172).
 var (

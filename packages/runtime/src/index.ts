@@ -1,5 +1,7 @@
 import "./version.js"
 // Runtime ABI used by generated VibeLang modules.
+// Capture the intrinsic outside user scopes, where Object may be shadowed.
+export const $freeze = Object.freeze
 export * from "./calls.js"
 export { $direct, $done, $fast, $isRun, $settle } from "./fastcalls.js"
 export type { Fast } from "./fastcalls.js"

@@ -1,0 +1,14 @@
+// expect-result: [42, 7, 43]
+const Object = 42
+const moduleRuntime_1 = 1
+const $freeze = 2
+module impl {
+  import { value as Object } from "./other.ts"
+  const moduleRuntime_1 = 3
+  const $freeze = 4
+  export const value = Object + moduleRuntime_1 + $freeze
+}
+module second { export const value = 7 }
+import { value } from impl
+import { value as secondValue } from second
+export function main() { return [value, secondValue, Object + moduleRuntime_1] }

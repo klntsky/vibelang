@@ -34,7 +34,7 @@ import (
 //	import * as node_path_1 from "node:path"
 //	const text_1 = (() => {
 //	  function clean(value) { return node_path_1.basename(value.trim()) }
-//	  return Object.freeze({ __proto__: null, clean: clean })
+//	  return moduleRuntime_1.$freeze({ __proto__: null, clean: clean })
 //	})()
 //	const { clean } = text_1
 //
@@ -73,6 +73,14 @@ func checkModuleDeclarations(c *checker.Checker, file *ast.SourceFile) {
 				report(c, node.Name(), EK4408.With("This file already declares a module named {0}."), name)
 			}
 			seen[key] = true
+			if symbol := c.ResolveName(name, node, ast.SymbolFlagsValue, true); symbol != nil &&
+				c.GetSymbolFlags(symbol)&ast.SymbolFlagsValue != 0 && c.GetTypeOnlyAliasDeclaration(symbol) == nil {
+				// Unused modules with a colliding value already run correctly. Report
+				// the collision without rejecting those programs (D303).
+				collision := EK4408.With("A module named {0} shares its name with a value binding of this file; use a distinct module name.")
+				collision.Category = warningCategory
+				report(c, node.Name(), collision, name)
+			}
 			return false
 		case node.Kind == ast.KindModuleDeclaration && node.AsModuleDeclaration().Keyword == ast.KindModuleKeyword && node.Name() != nil && ast.IsIdentifier(node.Name()):
 			// declare module x { }, module a.b { }: in a .vibe file module is never a namespace.
@@ -131,13 +139,15 @@ type moduleInliner struct {
 	resolver printer.EmitResolver
 	file     *ast.SourceFile // the .vibe file's parse tree
 	modules  []*inlineModule
-	verbatim bool // verbatimModuleSyntax: imports are kept unless type only
-	cjs      bool // the file is emitted as CommonJS
+	verbatim bool      // verbatimModuleSyntax: imports are kept unless type only
+	cjs      bool      // the file is emitted as CommonJS
+	runtime  *ast.Node // the emitter-owned runtime namespace used to freeze exports
 }
 
 // inlineModule is one module declaration being written inline.
 type inlineModule struct {
 	file    *ast.SourceFile
+	holder  *ast.Node               // a unique name, never the module's source-level name
 	needed  bool                    // the .vibe file imports a value from it, or imports it for its effects
 	imports map[*ast.Node]*ast.Node // import binding declarations of the body, by the statement whose generated name holds their module
 	locals  map[string]*ast.Node    // import binding declarations of the body, by name
@@ -194,6 +204,14 @@ func (tx *moduleInliner) visit(node *ast.Node) *ast.Node {
 		if module.needed {
 			head = append(head, tx.inline(module)...)
 		}
+	}
+	if tx.runtime != nil {
+		f := tx.Factory()
+		declaration := f.NewImportDeclaration(nil,
+			f.NewImportClause(ast.KindUnknown, nil, f.NewNamespaceImport(tx.runtime.Clone(f))),
+			f.NewStringLiteral("vibelang-runtime", ast.TokenFlagsNone), nil)
+		ast.SetParentInChildren(declaration)
+		head = append([]*ast.Node{declaration}, head...)
 	}
 	if moved != nil {
 		// The comments before the file's first statement, such as its header, stay first.
@@ -262,7 +280,7 @@ func (tx *moduleInliner) importBindings(declaration *ast.Node, module *inlineMod
 		switch bindings.Kind {
 		case ast.KindNamespaceImport:
 			if tx.keepsImport(bindings) {
-				declarations = append(declarations, f.NewVariableDeclaration(f.NewIdentifier(bindings.Name().Text()), nil, nil, f.NewGeneratedNameForNode(module.declaration())))
+				declarations = append(declarations, f.NewVariableDeclaration(f.NewIdentifier(bindings.Name().Text()), nil, nil, module.name(f)))
 				module.needed = true
 			}
 		case ast.KindNamedImports:
@@ -281,9 +299,9 @@ func (tx *moduleInliner) importBindings(declaration *ast.Node, module *inlineMod
 	if len(elements) != 0 {
 		module.needed = true
 		if tx.cjs {
-			declarations = append(declarations, f.NewVariableDeclaration(f.NewGeneratedNameForNode(declaration), nil, nil, f.NewGeneratedNameForNode(module.declaration())))
+			declarations = append(declarations, f.NewVariableDeclaration(f.NewGeneratedNameForNode(declaration), nil, nil, module.name(f)))
 		} else {
-			declarations = append(declarations, f.NewVariableDeclaration(f.NewBindingPattern(ast.KindObjectBindingPattern, f.NewNodeList(elements)), nil, nil, f.NewGeneratedNameForNode(module.declaration())))
+			declarations = append(declarations, f.NewVariableDeclaration(f.NewBindingPattern(ast.KindObjectBindingPattern, f.NewNodeList(elements)), nil, nil, module.name(f)))
 		}
 	}
 	if len(declarations) == 0 {
@@ -300,7 +318,7 @@ func (tx *moduleInliner) reexports(declaration *ast.Node, module *inlineModule) 
 	if d.IsTypeOnly {
 		return nil
 	}
-	moduleName := func() *ast.Node { return f.NewGeneratedNameForNode(module.declaration()) }
+	moduleName := func() *ast.Node { return module.name(f) }
 	var names []*ast.Node  // the exported names
 	var values []*ast.Node // their values
 	switch {
@@ -337,10 +355,13 @@ func (tx *moduleInliner) reexports(declaration *ast.Node, module *inlineModule) 
 	}
 }
 
-// declaration is the module declaration's node, whose generated name holds
-// the module's exports.
-func (module *inlineModule) declaration() *ast.Node {
-	return module.file.EmbeddedModule().Declaration
+// name returns the unique name that holds the module's exports. The source
+// name is only a module specifier, never a value binding in the emitted file.
+func (module *inlineModule) name(f *printer.NodeFactory) *ast.Node {
+	if module.holder == nil {
+		module.holder = f.NewUniqueName(module.file.EmbeddedModule().Declaration.Name().Text())
+	}
+	return module.holder.Clone(f)
 }
 
 // inline returns the statements that evaluate module: its imports, moved to
@@ -360,7 +381,12 @@ func (tx *moduleInliner) inline(module *inlineModule) []*ast.Node {
 	var body []*ast.Node
 	var properties []*ast.Node
 	export := func(name string, value *ast.Node) {
-		properties = append(properties, f.NewPropertyAssignment(nil, propertyName(f, name), nil, nil, value))
+		property := propertyName(f, name)
+		if name == "__proto__" {
+			// An export is an own data property, not the object literal's prototype setter.
+			property = f.NewComputedPropertyName(f.NewStringLiteral(name, ast.TokenFlagsNone))
+		}
+		properties = append(properties, f.NewPropertyAssignment(nil, property, nil, nil, value))
 	}
 	for _, statement := range statements {
 		switch statement.Kind {
@@ -393,8 +419,11 @@ func (tx *moduleInliner) inline(module *inlineModule) []*ast.Node {
 		}
 	}
 	properties = append([]*ast.Node{f.NewPropertyAssignment(nil, f.NewIdentifier("__proto__"), nil, nil, f.NewKeywordExpression(ast.KindNullKeyword))}, properties...)
+	if tx.runtime == nil {
+		tx.runtime = f.NewUniqueName("moduleRuntime")
+	}
 	freeze := f.NewCallExpression(
-		f.NewPropertyAccessExpression(f.NewIdentifier("Object"), nil, f.NewIdentifier("freeze"), ast.NodeFlagsNone),
+		member(f, tx.runtime.Clone(f), "$freeze"),
 		nil, nil, f.NewNodeList([]*ast.Node{f.NewObjectLiteralExpression(f.NewNodeList(properties), true)}), ast.NodeFlagsNone)
 	body = append(body, f.NewReturnStatement(freeze))
 	var modifiers *ast.ModifierList
@@ -407,7 +436,7 @@ func (tx *moduleInliner) inline(module *inlineModule) []*ast.Node {
 	if awaits {
 		value = f.NewAwaitExpression(value)
 	}
-	holder := constStatement(f, []*ast.Node{f.NewVariableDeclaration(f.NewGeneratedNameForNode(module.declaration()), nil, nil, value)})
+	holder := constStatement(f, []*ast.Node{f.NewVariableDeclaration(module.name(f), nil, nil, value)})
 	return append(hoisted, holder)
 }
 

@@ -4,8 +4,9 @@
 // namespace imports. A module the file imports only types from, and one it
 // never imports, emit nothing; each module's declarations are a declaration
 // file of their own, main.vibe.<name>.d.ts.
+import * as moduleRuntime_1 from "vibelang-runtime";
 import * as more_ts_1 from "./more.js";
-const text = (() => {
+const text_1 = (() => {
     let Mode;
     (function (Mode) {
         Mode[Mode["Trim"] = 0] = "Trim";
@@ -25,7 +26,7 @@ const text = (() => {
             return ++this.count;
         }
     }
-    return Object.freeze({
+    return moduleRuntime_1.$freeze({
         __proto__: null,
         double: more_ts_1.twice,
         moreModule: more_ts_1,
@@ -36,39 +37,39 @@ const text = (() => {
         default: default_1
     });
 })();
-const config = await (async () => {
+const config_1 = await (async () => {
     // A module's top level may await; the file then awaits the module.
     const level = await Promise.resolve(3);
-    return Object.freeze({
+    return moduleRuntime_1.$freeze({
         __proto__: null,
         level: level
     });
 })();
-const setup = (() => {
+const setup_1 = (() => {
     console.log("setup ran");
-    return Object.freeze({
+    return moduleRuntime_1.$freeze({
         __proto__: null
     });
 })();
-const extras = (() => {
+const extras_1 = (() => {
     const one = 1;
     function two() {
         return 2;
     }
     const default_2 = "not re-exported";
-    return Object.freeze({
+    return moduleRuntime_1.$freeze({
         __proto__: null,
         one: one,
         two: two,
         default: default_2
     });
 })();
-const { default: Counter, clean, Mode } = text;
-const tools = text;
-const { level } = config;
-const tidy_1 = text.clean;
+const { default: Counter, clean, Mode } = text_1;
+const tools = text_1;
+const { level } = config_1;
+const tidy_1 = text_1.clean;
 export { tidy_1 as tidy };
-const one_1 = extras.one, two_1 = extras.two;
+const one_1 = extras_1.one, two_1 = extras_1.two;
 export { one_1 as one, two_1 as two };
 import * as Console from "effect/Console";
 import * as Effect_1 from "effect/Effect";

@@ -1,0 +1,11 @@
+// expect-result: [1, 2, 3]
+type Alias = string
+interface Shape { value: string }
+import type { Other } from "./other.ts"
+module Alias { export const n = 1 }
+module Shape { export const n = 2 }
+module Other { export const n = 3 }
+import { n as a } from Alias
+import { n as b } from Shape
+import { n as c } from Other
+export function main() { return [a, b, c] }
