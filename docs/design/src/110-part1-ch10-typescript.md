@@ -1,10 +1,10 @@
 ### 10. Working with TypeScript
 
-VibeLang uses the TypeScript compiler and shares its types, modules, and Effect. A project can mix `.ts` and `.vibe` files freely: existing Effect code stays in TypeScript, and new code can be written in either.
+VibeLang uses the TypeScript compiler and shares its types, modules, and Effect. A project mixes `.ts` and `.vibe` files freely: existing Effect code stays in TypeScript, and new code goes in either.
 
 #### Using TypeScript Effect code from VibeLang
 
-A TypeScript function that returns an `Effect` is called like any VibeLang function. The call runs it, and its A, E, and R join the caller's contract unchanged.
+A TypeScript function that returns an `Effect` is called like any VibeLang function: the call runs it, and its A, E, and R join the caller's contract unchanged.
 
 ```ts ts
 // users-repo.ts
@@ -27,11 +27,11 @@ export function title(id: string) {
 // string!UserNotFound | DbError!Database
 ```
 
-Generic, overloaded, and aliased TypeScript functions keep their signatures. Services written in TypeScript as `Context.Service` classes or values are used exactly like abstract service classes: `Database.query(…)` works on either. A TypeScript function whose R contains a control operation is the one exception (EK4202, Chapter 9).
+Generic, overloaded, and aliased TypeScript functions keep their signatures. TypeScript services, `Context.Service` classes or values, are used exactly like abstract service classes: `Database.query(…)` works on either. The one exception is a TypeScript function whose R contains a control operation (EK4202, Chapter 9).
 
 #### Generator-style code stays in TypeScript
 
-Existing `Effect.gen` and `Effect.fn` code keeps working in `.ts` files, and VibeLang calls it as above. It cannot be pasted into a `.vibe` file unchanged, because there `function*` declares a producer (Chapter 8), not a JavaScript generator:
+Existing `Effect.gen` and `Effect.fn` code keeps working in `.ts` files, and VibeLang calls it as above. It cannot move into a `.vibe` file unchanged, because there `function*` declares a producer (Chapter 8), not a JavaScript generator:
 
 ```ts es
 const findName = (id: string) => Effect.gen(function* () {
@@ -47,7 +47,7 @@ error EK1002: Effect.gen expects a JavaScript generator, but in VibeLang functio
     function findName(id: string) { return Users.find(id).name }
 ```
 
-The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. `async` functions are not part of VibeLang either: a call already waits. `join` waits for a fiber and `d.await()` for a Deferred; `await` appears only in the await operations (Chapter 7, D225, D226). Converting a function is mostly deletion, as every chapter of Part I shows, and the editor refactor remains a design target (Chapter 28).
+The same holds for `Option.gen`, `Result.gen`, and any other API that takes a generator. VibeLang has no `async` functions either: a call already waits, `join` waits for a fiber, `d.await()` for a Deferred, and `await` appears only in the await operations (Chapter 7, D225, D226). Converting a function is mostly deletion, as every chapter of Part I shows; the editor refactor remains a design target (Chapter 28).
 
 #### Using VibeLang code from TypeScript
 
@@ -66,7 +66,7 @@ import { title } from "./page.js"
 const program = title("42").pipe(Effect.provide(DatabaseLive))   // nothing has run yet
 ```
 
-Calling a VibeLang function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function, except a factory (D269), whose body runs at the call. A factory explicitly returns a program under a declared Effect return type; its returned program runs only when the caller runs it. That holds even for functions that compile to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and VibeLang callers in the same compilation use the fast path. An eligible helper with a plain annotation, such as `: number`, instead keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.vibe` the way it resolves `.js` to `.ts`.
+Calling a VibeLang function from TypeScript builds a program and runs nothing, like calling an `Effect.fn` function, even if it compiles to plain JavaScript (Chapter 15): TypeScript sees an unannotated `add` as `(a: number, b: number) => Effect<number>`, and VibeLang callers in the same compilation use the fast path. Two kinds run at the call. A factory (D269) explicitly returns a program under a declared Effect return type; its body runs at the call, and its returned program runs only when the caller runs it. An eligible helper with a plain annotation, such as `: number`, keeps a plain JavaScript signature and runs when TypeScript calls it (D67). TypeScript imports `./page.js`, which the compiler resolves to `page.vibe` the way it resolves `.js` to `.ts`.
 
 #### Readonly members
 
@@ -80,7 +80,7 @@ interface Cart {
 // interface Cart { readonly id: string; items: Array<string> }
 ```
 
-The declaration file writes `readonly`, so TypeScript code sees the same types. Readonly limits writes through the type, not the object: TypeScript assigns a mutable object to a readonly type, so TypeScript code passes its objects in unchanged. Index signatures follow the same rule. Class members keep TypeScript's rule, and arrays keep theirs: write `ReadonlyArray` or `readonly T[]` for an array the code must not change.
+The declaration file writes `readonly`, so TypeScript code sees the same types. Readonly limits writes through the type, not the object: TypeScript assigns a mutable object to a readonly type, so TypeScript passes its objects in unchanged. Index signatures follow the same rule. Class members and arrays keep TypeScript's rules: write `ReadonlyArray` or `readonly T[]` for an array the code must not change.
 
 #### Code that is not Effect
 
@@ -101,8 +101,8 @@ function publish(draft: Draft) {
 | Callee | Rule | Diagnostic |
 | --- | --- | --- |
 | A function returning `Effect`, from VibeLang or TypeScript | Calls run it | |
-| A JavaScript built-in: `String`, `Array`, `Math`, `JSON`, `Number`, `Object`, `Map`, `Set`, `RegExp`, deterministic `Date` parsing | Ships with a trusted contract: a control class, and which exceptions are expected failures (`JSON.parse` fails with `SyntaxError`) | |
-| An export of `effect` or an `@effect/*` package that does not return an `Effect`, and the functions and values it returns, such as a `Brand` constructor or the function `Match.exhaustive` returns | Trusted: `sync`, and its exceptions are defects, as inside `Effect.gen` today | |
+| A JavaScript built-in: `String`, `Array`, `Math`, `JSON`, `Number`, `Object`, `Map`, `Set`, `RegExp`, deterministic `Date` parsing | Ships with a trusted contract: a control class, and which exceptions are expected failures. Only built-ins that parse outside text declare any: `JSON.parse` fails with `SyntaxError`, `decodeURI` and `decodeURIComponent` with `URIError`; other built-in exceptions are defects (D101) | |
+| An export of `effect` or an `@effect/*` package that does not return an `Effect`, and the functions and values it returns, such as a `Brand` constructor or the function `Match.exhaustive` returns | Trusted: `sync`; its exceptions are defects, as inside `Effect.gen` today | |
 | A TypeScript function tagged `/** @vibelang trusted */` | Trusted: `sync`; each `@throws {T}` names an expected failure; any other exception is a defect | |
 | A platform API: `node:*` modules and browser globals such as `fetch`, `setTimeout`, `process`, `console`, `localStorage` | Not callable from `.vibe` files; the error names the Effect module to use (Chapter 11) | EK4402 |
 | A clock or randomness read: `Date.now()`, `new Date()`, `Math.random()`, `crypto.randomUUID()` | Use `Clock`, `DateTime`, and `Random`, so tests control them | EK4403 |
@@ -119,13 +119,11 @@ A trusted contract is declared once, on the TypeScript declaration:
 export function slugify(title: string): string { … }
 ```
 
-The compiler trusts the tag; it cannot check a TypeScript body. `@throws {InvalidSlug}` makes `InvalidSlug` an expected failure that joins the caller's E; any other exception from `slugify` is a defect. Each `@throws` names a class exported by a module the `.vibe` caller imports; otherwise the call is EK4401 (D101). The generated code tests `instanceof InvalidSlug`. The tag cannot be put on a function that returns a Promise or an `Effect`. To trust a function from a package you cannot edit, re-export it from a `.ts` file you own, with the tag.
+The compiler trusts the tag; it cannot check a TypeScript body. `@throws {InvalidSlug}` makes `InvalidSlug` an expected failure that joins the caller's E, and the generated code tests `instanceof InvalidSlug`; any other exception from `slugify` is a defect. Each `@throws` must name a class exported by a module the `.vibe` caller imports; otherwise the call is EK4401 (D101). The tag cannot go on a function that returns a Promise or an `Effect`. To trust a function from a package you cannot edit, re-export it with the tag from a `.ts` file you own.
 
 EK4401 applies where a fiber runs the code. Module initialization and its plain callbacks passed to TypeScript, such as `describe` bodies and route handlers, run ordinary JavaScript calls (D100). An exception at module top level fails the import. Trusted failures stay defects inside plain callbacks, while they make free lambdas and named VibeLang functions use the Effect form (D101).
 
-Only built-ins that parse outside text declare expected failures: `JSON.parse` declares `SyntaxError`, and `decodeURI` and `decodeURIComponent` declare `URIError`. Other built-in exceptions are defects (D101).
-
-An explicit boundary says what an exception means at the call. The boundary hatches are `sync`, `try`, and `callback` (D148):
+An explicit boundary, one of the hatches `sync`, `try`, and `callback` (D148), says what an exception means at the call:
 
 ```ts es
 function parseLegacy(text: string) {
@@ -136,21 +134,21 @@ function parseLegacy(text: string) {
 
 `try` turns an exception or a rejection into a typed error: `UnknownError`, or what its second argument makes of it. `sync` makes them defects. `callback` adapts a callback API (Chapter 6). Each takes either a function, `try(() => { … })` or `try(async (signal) => …)`, or a single expression evaluated when the Effect runs, `sync(crypto.randomUUID())`. A hatch's first argument is plain TypeScript, not VibeLang: calls there do not run, so calling a `.vibe` function gives an inert Effect value for `runPromise` or `runFork`; `throw`, `async`, and `await` keep their JavaScript meaning; platform APIs and clock reads are allowed (no EK4401, EK4402, or EK4403); and `return` returns from the hatch's function. Effect's `{ try, catch }` options object is EK4404: the hatch takes the code and the error mapping as two arguments.
 
-That TypeScript is self-contained (D229). It may use its own parameters and locals, globals, imports, and the file's error declarations, but no other binding of the `.vibe` file: not a local, a parameter, or a module declaration. A value reaches it as an input (D230), an argument after the function that fills the function's first parameters, as `text` does above. An async function receives its `AbortSignal` after the inputs, and a callback's register function receives `resume` and the signal after them. `try`'s error mapper stays the second argument, so inputs follow it (D231). Only the first argument is TypeScript: the mapper and the inputs are VibeLang, so a call among the inputs runs before the hatch starts, and the mapper may read the file's bindings, as `cartId` below (D232). A binding read from outside is EK4405, whose quick fix passes it as an input. A `.vibe` function is a binding too, so a hatch that leads back in takes it as an input: `sync(async (load) => runPromise(load()), loadReport)`. Inputs keep `callback`'s type arguments from being written, so its `resume` parameter takes the prelude type instead: `callback((source, resume: Resume<number, Error>) => …, source)`.
+That TypeScript is self-contained (D229). It may use its own parameters and locals, globals, imports, and the file's error declarations, but no other binding of the `.vibe` file: not a local, a parameter, or a module declaration. A value reaches it as an input (D230), an argument after the function that fills the function's first parameters, as `text` does above. An async function receives its `AbortSignal` after the inputs, and a callback's register function receives `resume` and the signal after them. `try`'s error mapper stays the second argument, so inputs follow it (D231). Only the first argument is TypeScript: the mapper and the inputs are VibeLang, so a call among the inputs runs before the hatch starts, and the mapper may read the file's bindings, as `cartId` below (D232). A binding read from outside is EK4405 (quick fix: pass it as an input). A `.vibe` function is a binding too, so a hatch that leads back in takes it as an input: `sync(async (load) => runPromise(load()), loadReport)`. Inputs keep `callback`'s type arguments from being written, so its `resume` parameter takes the prelude type instead: `callback((source, resume: Resume<number, Error>) => …, source)`.
 
 The rule is deliberately strict, so a hatch's function reads like a standalone TypeScript function and could move to a `.ts` file unchanged; a later version may relax it.
 
-`runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude as the way back in. They are called from plain TypeScript: a `.ts` file, a hatch's body, or a module's top level, never from code a fiber runs (EK1005).
+`runPromise`, `runFork`, `runSync`, and `runCallback` are in the prelude as the way back in, called from plain TypeScript (a `.ts` file, a hatch's body, or a module's top level), never from code a fiber runs (EK1005).
 
-An exception that no contract lists is a defect, and an Effect catch does not see it, unlike JavaScript catch inside `Effect.gen`. A plain contract keeps JavaScript catch with an `unknown` binding (D260) (Chapter 3). That includes the exceptions of Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, which `effect`'s trusted contracts classify as defects.
+An exception that no contract lists is a defect, and an Effect catch does not see it, unlike JavaScript catch inside `Effect.gen`. That includes the exceptions of Effect's "cannot fail here" functions, such as `Option.getOrThrow` and `Schema.decodeUnknownSync`, which `effect`'s trusted contracts classify as defects. A plain contract keeps JavaScript catch with an `unknown` binding (D260) (Chapter 3).
 
-What a boundary cannot do is set by JavaScript, not by VibeLang. It cannot discover a dependency the function reaches through a global or a module variable, it cannot cancel synchronous JavaScript once it has started, and it cannot let a synchronous callback pause. Effect code today has the same limits.
+JavaScript, not VibeLang, sets a boundary's limits: it cannot discover a dependency the function reaches through a global or a module variable, cancel synchronous JavaScript once started, or let a synchronous callback pause. Effect code today has the same limits.
 
-This is a policy change from the original direction, which adapted every plain call automatically, with unknown errors and unknown requirements. The premise is kept: foreign code is untrusted until something vouches for it. What changes is where the vouching happens: once, explicitly, at a boundary or on a declaration, so an unprovidable `unknown` never enters a requirement and an `unknown` error never spreads to every caller. Pure helpers written in `.vibe` get inferred contracts and compile to plain JavaScript (Chapter 15), so most project code never needs a boundary at all.
+This changes policy from the original direction, which adapted every plain call automatically, with unknown errors and unknown requirements. The premise stays: foreign code is untrusted until something vouches for it. The vouching now happens once, explicitly, at a boundary or on a declaration, so an unprovidable `unknown` never enters a requirement and an `unknown` error never spreads to every caller. Pure helpers written in `.vibe` get inferred contracts and compile to plain JavaScript (Chapter 15), so most project code never needs a boundary.
 
 #### Promises
 
-Outside a hatch, a call already waits for the callee, `join` waits for a fiber, and `await` appears only in the await operations (D226). A Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
+Outside a hatch, `await` appears only in the await operations (D226), so a Promise from a TypeScript library is waited on with the `try` hatch, which says what a rejection means and passes an `AbortSignal` so interruption can cancel the request:
 
 ```ts es
 import { createCharge } from "./payments-sdk.ts"   // (amount: number, signal: AbortSignal) => Promise<Charge>
@@ -165,7 +163,7 @@ HTTP itself goes through Effect's `HttpClient`, not `fetch` (Chapter 11).
 
 #### Callbacks into plain JavaScript
 
-A JavaScript function such as `Array.prototype.map` calls its callback synchronously, so the callback cannot pause. Callbacks that only compute are fine, and so is a VibeLang function passed by name if it compiles to plain JavaScript. A callback that calls a service is rejected, with the fix in the message:
+A JavaScript function such as `Array.prototype.map` calls its callback synchronously, so the callback cannot pause. A callback that only computes is fine, as is a VibeLang function passed by name that compiles to plain JavaScript. A callback that calls a service is rejected, with the fix in the message:
 
 ```ts es
 const trimmed = ids.map((id) => id.trim())         // fine
@@ -177,8 +175,8 @@ error EK4301: this callback can pause (Users.find), but Array.prototype.map call
   synchronously. Use Effect.forEach(ids, (id) => Users.find(id)) or a for...of loop.
 ```
 
-Effect's own combinators, such as `Effect.forEach`, expect callbacks that return Effects, so VibeLang callbacks work there. Chapter 16 gives the rules for higher-order functions.
+Effect's own combinators, such as `Effect.forEach`, expect callbacks that return Effects, so VibeLang callbacks work there; Chapter 16 gives the rules for higher-order functions.
 
 #### Effect 3
 
-VibeLang targets Effect 4 only. Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try((program) => Effect3.runPromise(program), (error) => …, program)`.
+VibeLang targets Effect 4 only; Effect 3 values do not run on the Effect 4 runtime. Code that must call an Effect 3 library wraps it as foreign code, for example with the `try` hatch around `Effect3.runPromise`: `try((program) => Effect3.runPromise(program), (error) => …, program)`.

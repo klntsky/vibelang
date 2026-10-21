@@ -15,11 +15,15 @@ error EK4402: node:fs/promises is a platform API, which VibeLang code does not c
   Provide it with NodeServices.layer from @effect/platform-node, or the Bun or browser equivalent.
 ```
 
-VibeLang's standard library is Effect's. Node.js and browser APIs are not callable from `.vibe` files, and each error names the Effect module that replaces the API. VibeLang adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
+VibeLang's standard library is Effect's. Node.js and browser APIs are not callable from `.vibe` files; each error names the Effect module that replaces the API. VibeLang adds no Node.js clones: the replacement is the module Effect already ships, implemented by the platform package your program runs with.
 
-Imports, re-exports, and passing platform values to adapters are allowed (D108). For example, `NodeHttpServer.layer(createServer, { port })` passes a host function without calling it. EK4402 reports execution: calls, construction, tagged templates, and reads of platform properties, including destructuring and spreading. Namespace members used as values, such as `os.EOL`, are allowed. The current check does not follow platform functions through local aliases, parameters, or objects returned by platform calls.
+Imports, re-exports, and passing platform values to adapters are allowed (D108): `NodeHttpServer.layer(createServer, { port })` passes a host function without calling it. EK4402 reports execution: calls, construction, tagged templates, and reads of platform properties, including destructuring and spreading. Namespace members used as values, such as `os.EOL`, are allowed. The current check does not follow platform functions through local aliases, parameters, or objects returned by platform calls.
 
-There are three reasons. Platform APIs throw and reject in ways their types do not state, which is exactly what Chapter 10's boundary rules exist to contain. An Effect module states its errors in its types and is a service, so a test replaces it with a Layer. And Effect already ships these modules, with implementations for Node.js, Bun, and browsers, so cloning Node's API surface would duplicate them.
+Three reasons:
+
+- Platform APIs throw and reject in ways their types do not state, which Chapter 10's boundary rules exist to contain.
+- An Effect module states its errors in its types and is a service, so a test replaces it with a Layer.
+- Effect already ships these modules, with implementations for Node.js, Bun, and browsers, so cloning Node's API surface would duplicate them.
 
 #### What replaces what
 
@@ -47,7 +51,7 @@ There are three reasons. Platform APIs throw and reject in ways their types do n
 
 The runtime packages supply the implementations and the runner: `@effect/platform-node` (`NodeRuntime`, `NodeServices.layer`), `@effect/platform-bun`, and `@effect/platform-browser`.
 
-A module whose service is a `Context.Service` value, such as `FileSystem`, is imported from its module path, `effect/FileSystem`, so its methods are called directly: `FileSystem.readFileString(path)`. Importing the namespace from `effect` works too, as `FileSystem.FileSystem.readFileString(path)`.
+Import a module whose service is a `Context.Service` value, such as `FileSystem`, from its module path, `effect/FileSystem`, to call its methods directly: `FileSystem.readFileString(path)`. The namespace from `effect` works too: `FileSystem.FileSystem.readFileString(path)`.
 
 #### Files
 
@@ -89,7 +93,7 @@ schema Todo {
 }
 ```
 
-A `schema` declaration declares both: the constant `Todo`, a `Schema.Struct`, and the interface `Todo`, its decoded type (D133). Each field is written with a type, and the compiler writes its schema: a primitive, a literal or a union, an array, a tuple, a record, an object type, or the name of another schema, which stands for that schema's decoded type. `name?: T` is `Schema.optional`, which accepts an absent key or `undefined`. A field that needs another schema, such as `Schema.DateTimeUtc` or a checked string, names a schema constant: `const Created = Schema.DateTimeUtc`, then `created: Created`. A field type with no schema form is EK2109. The interface comes from the struct, so the two cannot drift apart.
+A `schema` declaration declares both: the constant `Todo`, a `Schema.Struct`, and the interface `Todo`, its decoded type (D133). Each field has a type, and the compiler writes its schema: a primitive, a literal or a union, an array, a tuple, a record, an object type, or the name of another schema, standing for that schema's decoded type. `name?: T` is `Schema.optional`, which accepts an absent key or `undefined`. A field that needs another schema, such as `Schema.DateTimeUtc` or a checked string, names a schema constant: `const Created = Schema.DateTimeUtc`, then `created: Created`. A field type with no schema form is EK2109. The interface comes from the struct, so the two cannot drift apart.
 
 #### HTTP
 
@@ -110,7 +114,7 @@ function getTodo(id: number) {
 // Todo!HttpClientError | SchemaError!HttpClient
 ```
 
-`HttpClient.get` returns an `Effect`, so the call runs it. `HttpClientResponse.schemaBodyJson(Todo)` returns a plain function, which `effect` exports with a trusted contract, and calling that function with the response returns an `Effect`, which runs.
+`HttpClient.get` returns an `Effect`, so the call runs it. `HttpClientResponse.schemaBodyJson(Todo)` returns a plain function, which `effect` exports with a trusted contract; calling it with the response returns an `Effect`, which runs.
 
 #### Timers
 
