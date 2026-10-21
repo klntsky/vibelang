@@ -630,6 +630,37 @@ try {
     assert(location.range.start.line === lineOf("src/main.vibe", "function lookup"), `line ${location.range.start.line}`)
   })
 
+  await check("diagnostics: module.vibe, with a module declaration, checks clean", async () => {
+    open("src/module.vibe", "vibe")
+    const items = await diagnostics("src/module.vibe")
+    assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)
+  })
+
+  await check("hover: a parameter inside a module declaration's body has its TypeScript type", async () => {
+    const shown = await hover("src/module.vibe", "value.trim")
+    assert(shown.includes("value: string"), `got ${JSON.stringify(shown)}`)
+  })
+
+  await check("definition: a call to a module's export goes into the module's body", async () => {
+    const [location, ...rest] = await definition("src/module.vibe", "clean(input)")
+    assert(location && rest.length === 0, `expected one location, got ${JSON.stringify([location, ...rest])}`)
+    assert(location.uri === fileUri("src/module.vibe"), `went to ${location.uri}`)
+    const want = at("src/module.vibe", "clean(value", {})
+    assert(location.range.start.line === want.line && location.range.start.character === want.character, `range ${JSON.stringify(location.range)}`)
+  })
+
+  await check("diagnostics: an edit inside a module's body is checked as TypeScript, at its .vibe position", async () => {
+    const broken = text("src/module.vibe").replace("return value.trim()", "return value.length")
+    const uri = fileUri("src/module.vibe")
+    connection.notify("textDocument/didChange", { textDocument: { uri, version: 2 }, contentChanges: [{ text: broken }] })
+    const items = await diagnostics("src/module.vibe")
+    connection.notify("textDocument/didChange", { textDocument: { uri, version: 3 }, contentChanges: [{ text: text("src/module.vibe") }] })
+    const error = items.find((d) => d.code === 2322)
+    assert(error, `expected TS2322, got ${JSON.stringify(items.map((d) => d.message))}`)
+    assert(error.range.start.line === lineOf("src/module.vibe", "return value.trim()"), `range ${JSON.stringify(error.range)}`)
+    assert((await diagnostics("src/module.vibe")).length === 0, "the reverted file still has diagnostics")
+  })
+
   await check("references: a .ts function's references include its .vibe callers", async () => {
     const locations = await connection.request("textDocument/references", {
       ...position("src/users.ts", "findName"),

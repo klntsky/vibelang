@@ -1,0 +1,12 @@
+// A module declaration (D283): its body is TypeScript, checked as a .ts file.
+module text {
+  export function clean(value: string): string {
+    return value.trim()
+  }
+}
+
+import { clean } from text
+
+export function tidy(input: string) {
+  return sync((input) => clean(input), input)
+}
