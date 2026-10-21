@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { findCompiler, formatDiagnostic, nearestProject, parseOutput, projectBackend, projects } from "../project.mjs"
+import { findCompiler, formatDiagnostic, nearestProject, parseExplainFiles, parseOutput, projectBackend, projectImports, projects } from "../project.mjs"
 
 const repo = fileURLToPath(new URL("../../../", import.meta.url))
 const native = process.env.VIBELANG_BINARY || join(repo, "typescript/built/local/tsc")
@@ -196,4 +196,61 @@ test("a failed compile marks its first module, and a module no project includes 
   modules.invalidate()
   const outside = await modules.load(join(root, "dep/stray.vibe"))
   assert.match(outside.error.message, /dep\/stray\.vibe is not part of .*dep\/tsconfig\.json/)
+})
+
+test("explainFiles parsing keeps written imports with their resolved files and drops compiler-added ones", () => {
+  const root = resolve("project")
+  const input = [
+    "bundled:///libs/lib.es5.d.ts",
+    "   Library 'lib.es5.d.ts' specified in compilerOptions",
+    "src/b.vibe",
+    "   Matched by include pattern 'src/**/*' in 'tsconfig.json'",
+    "   Imported via \"./b.vibe\" from file 'src/a.ts'",
+    "   Imported via './b.vibe' from file 'src/it's.ts'",
+    "../node_modules/effect/dist/index.d.ts",
+    "   Imported via \"effect\" from file 'src/b.vibe' with packageId 'effect/dist/index.d.ts@4.0.5'",
+    "   Imported via \"effect\" from file 'src/b.vibe' with packageId 'effect/dist/index.d.ts@4.0.5' to import 'jsx' and 'jsxs' factory functions",
+    "src/a.ts",
+    "   Matched by include pattern 'src/**/*' in 'tsconfig.json'",
+    "   File is ECMAScript module because 'package.json' has field \"type\" with value \"module\"",
+    "tsconfig.json(3,5): error TS5023: Unknown compiler option 'nope'.",
+    "  detail of the option error"
+  ].join("\r\n")
+  assert.deepEqual(parseExplainFiles(input, root), {
+    files: [join(root, "src/b.vibe"), resolve(root, "../node_modules/effect/dist/index.d.ts"), join(root, "src/a.ts")],
+    imports: [
+      { importer: join(root, "src/a.ts"), specifier: "./b.vibe", file: join(root, "src/b.vibe") },
+      { importer: join(root, "src/it's.ts"), specifier: "./b.vibe", file: join(root, "src/b.vibe") },
+      { importer: join(root, "src/b.vibe"), specifier: "effect", file: resolve(root, "../node_modules/effect/dist/index.d.ts") }
+    ],
+    diagnostics: [
+      { file: join(root, "tsconfig.json"), line: 3, column: 5, category: "error", code: "TS5023", text: "Unknown compiler option 'nope'.\n  detail of the option error" }
+    ]
+  })
+})
+
+test("a project's imports name every program file and what each import resolved to, .vibe included", { skip }, (t) => {
+  const { app, compiler } = workspace(t)
+  for (const [path, text] of Object.entries({
+    "src/main.vibe": "import { shout } from \"./loud.ts\"\nimport type { Volume } from \"./volume.vibe\"\nexport const fromApp: string = shout(\"app\")\n",
+    "src/loud.ts": "export const shout = (text: string): string => text.toUpperCase()\nexport const later = () => import(\"./main.vibe\")\n",
+    "src/volume.vibe": "export type Volume = \"quiet\" | \"loud\"\n"
+  })) writeFileSync(join(app, path), text)
+  const { files, imports, errors } = projectImports({ project: join(app, "tsconfig.json"), compiler })
+  assert.deepEqual(errors, [])
+  for (const file of ["src/main.vibe", "src/loud.ts", "src/volume.vibe"]) assert.ok(files.includes(join(app, file)), file)
+  const own = imports.filter(({ importer, file }) => importer.startsWith(app + "/") && file.startsWith(app + "/"))
+  assert.deepEqual(own.map(({ importer, specifier, file }) => [importer.slice(app.length + 1), specifier, file.slice(app.length + 1)]).sort(), [
+    ["src/loud.ts", "./main.vibe", "src/main.vibe"],
+    ["src/main.vibe", "./loud.ts", "src/loud.ts"],
+    ["src/main.vibe", "./volume.vibe", "src/volume.vibe"]
+  ])
+})
+
+test("a project the compiler cannot read reports its diagnostics instead of an empty graph", { skip }, (t) => {
+  const { app, compiler } = workspace(t)
+  writeFileSync(join(app, "tsconfig.json"), JSON.stringify({ compilerOptions: { notAnOption: true }, include: ["src/**/*"] }))
+  const { errors } = projectImports({ project: join(app, "tsconfig.json"), compiler })
+  assert.equal(errors.length, 1)
+  assert.match(formatDiagnostic(errors[0]), /tsconfig\.json:\d+:\d+ - error TS5023: Unknown compiler option 'notAnOption'/)
 })

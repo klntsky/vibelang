@@ -71,6 +71,71 @@ export function parseOutput(output, root) {
   return { files, diagnostics }
 }
 
+const imported = /^\s+Imported via (".*"|'.*') from file '(.+?)'(?: with packageId '[^']*')?( to import .+)?$/
+
+/**
+ * Parses `vibelang --pretty false --explainFiles --listFilesOnly` output into
+ * the program's files, the imports its sources write, and the diagnostics the
+ * compiler reported. Each import is { importer, specifier, file }: the file
+ * the compiler resolved `specifier` to. Imports the compiler adds itself, such
+ * as JSX factories and import helpers, and its bundled libraries are left out.
+ * The output's paths are relative to root; the result's are absolute.
+ */
+export function parseExplainFiles(output, root) {
+  const files = []
+  const imports = []
+  const diagnostics = []
+  // An indented line belongs to the last unindented one: a file's reasons or a diagnostic's detail.
+  let file
+  let diagnostic
+  let match
+  for (const line of output.split(/\r?\n/)) {
+    if (/^\s/.test(line)) {
+      if (diagnostic) diagnostic.text += "\n" + line
+      else if (file && (match = line.match(imported)) && !match[3]) {
+        imports.push({ importer: resolve(root, match[2]), specifier: match[1].slice(1, -1), file })
+      }
+      continue
+    }
+    file = diagnostic = undefined
+    if ((match = line.match(located))) {
+      diagnostic = {
+        file: resolve(root, match[1]), line: Number(match[2]), column: Number(match[3]),
+        category: match[4], code: match[5], text: match[6]
+      }
+      diagnostics.push(diagnostic)
+    } else if ((match = line.match(global))) {
+      diagnostic = { category: match[1], code: match[2], text: match[3] }
+      diagnostics.push(diagnostic)
+    } else if (line.trim() && !line.startsWith("bundled:")) {
+      file = resolve(root, line.trim())
+      files.push(file)
+    }
+  }
+  return { files, imports, diagnostics }
+}
+
+/**
+ * projectImports lists a tsconfig project's files and the imports its `.ts`
+ * and `.vibe` sources write, each with the file the compiler resolved it to,
+ * without type-checking the project. A tool that needs a module graph, such as
+ * a circular-dependency check, reads it here instead of resolving `.vibe`
+ * specifiers itself. It returns { files, imports, errors }; errors holds the
+ * diagnostics that stopped the compiler from reading the project.
+ */
+export function projectImports({ project, root = dirname(project), compiler = findCompiler(root) }) {
+  const [file, argv] = command(compiler, ["--project", project, "--pretty", "false", "--explainFiles", "--listFilesOnly"])
+  const run = spawnSync(file, argv, { cwd: root, encoding: "utf8", maxBuffer: 1 << 30 })
+  if (run.error) throw new Error(`vibelang: ${run.error.message}\nCompiler: ${compiler}`)
+  const output = run.stdout + run.stderr
+  const { files, imports, diagnostics } = parseExplainFiles(output, root)
+  const errors = diagnostics.filter((diagnostic) => diagnostic.category === "error")
+  if (run.status !== 0 && !errors.length) {
+    errors.push({ category: "error", code: "vibelang", text: output.trim() || `exited with ${run.signal || run.status}` })
+  }
+  return { files, imports, errors }
+}
+
 /** Formats a diagnostic as `file:line:column - error TS2322: text`. */
 export function formatDiagnostic(diagnostic) {
   const where = diagnostic.file ? `${diagnostic.file}:${diagnostic.line}:${diagnostic.column} - ` : ""

@@ -39,8 +39,28 @@ export interface Loaded {
   readonly error?: false | { readonly message: string; readonly id: string }
 }
 
+export interface Import {
+  /** The file that writes the import. */
+  readonly importer: string
+  /** The specifier as written, such as `./User.vibe` or `effect/Schema`. */
+  readonly specifier: string
+  /** The file the compiler resolved the specifier to. */
+  readonly file: string
+}
+
+export interface Imports {
+  /** Every file of the program except the compiler's bundled libraries. */
+  readonly files: Array<string>
+  /** Every import the program's files write, type-only imports included. */
+  readonly imports: Array<Import>
+  /** Diagnostics that stopped the compiler from reading the project; files and imports are then incomplete. */
+  readonly errors: Array<Diagnostic>
+}
+
 export function findCompiler(root: string, compiler?: string): string
 export function parseOutput(output: string, root: string): { files: Array<string>; diagnostics: Array<Diagnostic> }
+export function parseExplainFiles(output: string, root: string): { files: Array<string>; imports: Array<Import>; diagnostics: Array<Diagnostic> }
+export function projectImports(options: { project: string; root?: string; compiler?: string }): Imports
 export function formatDiagnostic(diagnostic: Diagnostic): string
 export function projectBackend(options: { root: string; compiler: string }): { compile(project: string): Promise<Result> }
 export function compileProjectSync(options: { project: string; root?: string; compiler?: string }): Result

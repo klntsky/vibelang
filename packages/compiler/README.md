@@ -77,6 +77,24 @@ it. Another package is one outside `root`, or one nested inside it with its own
 JavaScript, its source map, and its project's diagnostics; `invalidate()` makes
 every project compile again on its next load.
 
+`projectImports({ project })` lists a project's module graph without
+type-checking it: `files` is every file of the program, and `imports` is every
+import its `.ts` and `.vibe` files write, as `{ importer, specifier, file }`
+with the file the compiler resolved the specifier to, `.vibe` files included.
+Type-only imports are listed too; a tool that needs only run-time edges reads
+the importer's syntax. `errors` holds the diagnostics that stopped the compiler
+from reading the project, such as an unknown compiler option. A dependency
+checker or a circular-import guard reads this graph instead of resolving
+`.vibe` specifiers itself.
+
+```js
+import { formatDiagnostic, projectImports } from "vibelang/project"
+
+const { imports, errors } = projectImports({ project: "packages/app/tsconfig.json" })
+if (errors.length) throw new Error(errors.map(formatDiagnostic).join("\n"))
+for (const { importer, specifier, file } of imports) console.log(importer, specifier, file)
+```
+
 ## Editor support
 
 This package ships the VS Code extension. In a project with `vibelang` installed:
