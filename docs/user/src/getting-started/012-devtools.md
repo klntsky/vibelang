@@ -298,10 +298,11 @@ Forms whose TypeScript long form would mislead a rule have their own node types,
 | `x catch fallback`, `x catch (e) => recover(e)` | `VibeCatchExpression` with `expression` and `handler` |
 | `provide AppLive, Random = seeded { ... }` | `VibeProvideStatement` with `providers` and `body`; `Random = seeded` is `VibeServiceProvider` |
 | `uninterruptible { ... }`, `restore { ... }`, `interruptible { ... }` | `VibeMaskStatement` with `kind` and `body` |
+| `module text { ... }` | `VibeModuleDeclaration` with `id` and `body`, a `TSModuleBlock` of the body's TypeScript; `from text` is an `Identifier` |
 
 For example, `VibeCatchExpression > Literal.handler[value='']` selects a recovery to an empty string.
 
-The other forms keep the TypeScript the checker reads: a block param is an arrow function argument; `do { ... }` and a throw expression are immediately invoked arrow functions; `error NotFound { id: string }` is a class with those fields; `service` and `control` are abstract classes; `schema User { ... }` is a `const User` typed by its fields; `fork`, `join`, and `await.all` are calls. The parser leaves the names it writes for the checker, such as a `match`'s temporaries, out of scope analysis, so no rule reports a name the author did not write. A Vite Plus integration and a VibeLang Oxlint configuration are not shipped.
+The other forms keep the TypeScript the checker reads: a block param is an arrow function argument; `do { ... }` and a throw expression are immediately invoked arrow functions; `error NotFound { id: string }` is a class with those fields; `service` and `control` are abstract classes; `schema User { ... }` is a `const User` typed by its fields; `fork`, `join`, and `await.all` are calls. A module declaration's body lints as its own TypeScript module: sharing a name with the file is not a redeclaration, and `no-undef` reports a file binding read from the body. The parser leaves the names it writes for the checker, such as a `match`'s temporaries, out of scope analysis, so no rule reports a name the author did not write. A Vite Plus integration and a VibeLang Oxlint configuration are not shipped.
 
 ## Debugging in editors
 
