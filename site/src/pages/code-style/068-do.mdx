@@ -1,0 +1,109 @@
+---
+title: "Simplifying Excessive Nesting"
+description: "Dependent computations often need several intermediate values at once. VibeLang gives those values ordinary local names, so sequencing does not require nested callbacks or a record of named..."
+---
+
+# Simplifying Excessive Nesting
+
+Dependent computations often need several intermediate values at once. VibeLang gives those values ordinary local names, so sequencing does not require nested callbacks or a record of named bindings. When reading TypeScript Effect code, do notation and generators express the same dependency order.
+
+## Recognizing nesting in dependent pipelines
+
+```vibe
+// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => example()); TestClock.adjust("40 millis"); Console.log(join worker) }
+import { TestClock } from "effect/testing"
+
+function elapsed<A>(program: () => A) {
+  const started = Clock.currentTimeMillis()
+  const value = program()
+  const finished = Clock.currentTimeMillis()
+  Console.log(`completed in ${finished - started} ms`)
+  return value
+}
+
+function example() {
+  return elapsed {
+    sleep("40 millis")
+    return "complete"
+  }
+}
+```
+
+```text
+completed in 40 ms
+complete
+```
+
+The later statements can still refer to `started` and `value`. There is no need to nest a callback each time a value must remain in scope. The callback type leaves its contract inferred, so errors and services from `program` pass through `elapsed`.
+
+## Named bindings with do notation
+
+```vibe
+// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => readInterval()); TestClock.adjust("40 millis"); Console.log(JSON.stringify(join worker)) }
+function readInterval() {
+  return Effect.Do
+    |> Effect.bind(%, "started", () => Clock.currentTimeMillis())
+    |> Effect.bind(%, "value") {
+      sleep("40 millis")
+      return "complete"
+    }
+    |> Effect.bind(%, "finished", () => Clock.currentTimeMillis())
+}
+// Returns { started, value, finished }.
+```
+
+```text
+{"started":0,"value":"complete","finished":40}
+```
+
+`Effect.Do` is an Effect value holding an empty record. Each `%` stands where `Effect.bind` expects a program, so the pipe passes the bindings so far by name, and each `Effect.bind` runs its callback and adds the result under a new field name, with previous fields available to later callbacks. Field names must be unique. This style remains useful when maintaining an existing pipeline, while local variables are the usual VibeLang spelling.
+
+## Introducing derived values
+
+```vibe
+// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => intervalRecord()); TestClock.adjust("40 millis"); Console.log(JSON.stringify(join worker)) }
+function intervalRecord() {
+  return Effect.Do
+    |> Effect.bind(%, "started", () => Clock.currentTimeMillis())
+    |> Effect.bind(%, "finished") {
+      sleep("40 millis")
+      return Clock.currentTimeMillis()
+    }
+    |> Effect.let(%, "millis", ({ started, finished }) => finished - started)
+}
+```
+
+```text
+{"started":0,"finished":40,"millis":40}
+```
+
+`Effect.let` adds a field computed by a synchronous, non-failing callback. Use `bind` when computing the field performs Effect work. In an ordinary function, both become `const` declarations, with the compiler inferring the contract of each expression.
+
+## The sequence as ordinary statements
+
+```vibe
+// run: provide TestClock.layer() { TestClock.setTime(0); const worker = fork(() => intervalRecord()); TestClock.adjust("40 millis"); Console.log(JSON.stringify(join worker)) }
+function intervalRecord() {
+  const started = Clock.currentTimeMillis()
+  sleep("40 millis")
+  const finished = Clock.currentTimeMillis()
+  const millis = finished - started
+  return { started, finished, millis }
+}
+```
+
+```text
+{"started":0,"finished":40,"millis":40}
+```
+
+This is the VibeLang form of the same sequence. In a TypeScript file, `Effect.gen(function* () { ... })` binds each Effect result with `yield*` and gives it a local name. In a `.vibe` file, ordinary calls already perform that sequencing. `function*` declares a value producer, so it is not an alternate syntax for running a single-result Effect.
+
+## Coming from Effect
+
+- `Effect.Do` and named `bind` fields usually become local `const` bindings.
+- A derived `Effect.let` field becomes an ordinary expression.
+- An `Effect.gen` body becomes a function body, with calls replacing `yield*`.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/code-style/do](https://effect.website/docs/v4/code-style/do/)

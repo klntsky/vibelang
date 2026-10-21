@@ -1,0 +1,126 @@
+---
+title: "Duration"
+description: "Duration works in VibeLang exactly as in Effect. Use it to express elapsed time, delays, and timeout budgets with explicit units; Effect 4.0.5 also supports negative durations and infinities."
+---
+
+# Duration
+
+`Duration` works in VibeLang exactly as in Effect. Use it to express elapsed time, delays, and timeout budgets with explicit units; Effect 4.0.5 also supports negative durations and infinities.
+
+## Constructing finite and infinite durations
+
+```vibe
+// run: Console.log(JSON.stringify([String(Duration.toNanosUnsafe(small)), String(Duration.toNanosUnsafe(micro)), polling.toMillis(), budget.toSeconds(), session.toMinutes(), shift.toHours(), retention.toDays(), fortnight.toWeeks(), String(unbounded), negative.toSeconds()]))
+const small = Duration.nanos(750n)
+const micro = Duration.micros(20n)
+const polling = Duration.millis(250)
+const budget = Duration.seconds(12)
+const session = Duration.minutes(15)
+const shift = Duration.hours(8)
+const retention = Duration.days(3)
+const fortnight = Duration.weeks(2)
+const unbounded = Duration.infinity
+const negative = Duration.seconds(-2)
+```
+
+```text
+["750","20000",250,12,15,8,3,2,"Infinity",-2]
+```
+
+Constructors identify the unit at the call site. `infinity` represents an unbounded positive span; `negativeInfinity` represents its negative counterpart. A day here is a fixed 24 hours, not a calendar-day operation across daylight saving changes.
+
+```vibe
+// run: Console.log(milliseconds.toMillis(), String(Duration.toNanosUnsafe(nanoseconds)), text.toSeconds(), checked.isSome(), Duration.fromInput("invalid" as Duration.Input).isNone())
+const milliseconds = Duration.fromInputUnsafe(240)
+const nanoseconds = Duration.fromInputUnsafe(240n)
+const text = Duration.fromInputUnsafe("3 seconds")
+const checked = Duration.fromInput("3 seconds")
+```
+
+```text
+240 240 3 true true
+```
+
+`fromInputUnsafe` accepts durations, numeric milliseconds, bigint nanoseconds, and supported duration strings. It throws for invalid input; `fromInput` returns an `Option` instead. Prefer a unit constructor when the unit is known.
+
+## Extracting values in chosen units
+
+```vibe
+// run: Console.log(JSON.stringify([delay.toMillis(), delay.toSeconds(), delay.toMinutes(), delay.toHours(), Duration.weeks(1).toDays(), Duration.days(14).toWeeks(), String(Duration.millis(3).toNanos().getOrThrow()), Duration.infinity.toNanos().isNone()]))
+const delay = Duration.minutes(2)
+delay.toMillis() // 120000
+delay.toSeconds() // 120
+delay.toMinutes() // 2
+delay.toHours() // 1 / 30
+Duration.weeks(1).toDays() // 7
+Duration.days(14).toWeeks() // 2
+Duration.millis(3).toNanos() // Some containing 3000000n
+Duration.infinity.toNanos() // None
+```
+
+```text
+[120000,120,2,0.03333333333333333,7,2,"3000000",true]
+```
+
+Numeric conversions return numbers in the requested unit. `toNanos` returns an `Option<bigint>` because infinity has no bigint representation. `toNanosUnsafe` returns the bigint directly for finite input and throws for infinite input.
+
+## Comparing durations
+
+```vibe
+// run: Console.log(elapsed.isLessThan(budget), elapsed.isLessThanOrEqualTo(elapsed), budget.isGreaterThan(elapsed), budget.isGreaterThanOrEqualTo(budget), Duration.seconds(1).equals(Duration.millis(1000)))
+const elapsed = Duration.seconds(9)
+const budget = Duration.seconds(12)
+elapsed.isLessThan(budget) // true
+elapsed.isLessThanOrEqualTo(elapsed) // true
+budget.isGreaterThan(elapsed) // true
+budget.isGreaterThanOrEqualTo(budget) // true
+Duration.seconds(1).equals(Duration.millis(1000)) // true
+```
+
+```text
+true true true true true
+```
+
+Comparison uses the elapsed span, independent of the constructor used. Keep durations in this form rather than converting them all to a less precise unit before comparing.
+
+## Adding and scaling durations
+
+```vibe
+// run: provide TestClock.layer() { TestClock.setTime(0); const waiting = fork(() => waitBeforeRetry()); TestClock.adjust("9 seconds"); join waiting; Console.log(doubled.toMillis(), Clock.currentTimeMillis()) }
+import { TestClock } from "effect/testing"
+
+const attempt = Duration.seconds(4)
+const overhead = Duration.millis(500)
+const total = attempt.sum(overhead)
+const doubled = total.times(2)
+doubled.toMillis() // 9000
+
+function waitBeforeRetry() {
+  sleep(doubled)
+}
+```
+
+```text
+9000 9000
+```
+
+`sum` adds spans and `times` scales by a numeric factor. Both return new values. `Effect.sleep` accepts the resulting duration and waits when called inside a program.
+
+## Converting and formatting
+
+```vibe
+// run: Console.log(Duration.millis(6250).format(), String(Duration.infinity), String(Duration.toNanosUnsafe(Duration.millis(2))))
+Duration.millis(6250).format() // "6s 250ms"
+String(Duration.infinity) // "Infinity"
+Duration.toNanosUnsafe(Duration.millis(2)) // 2000000n
+```
+
+```text
+6s 250ms Infinity 2000000
+```
+
+Use `format` for a compact display string and explicit unit conversions for calculations. The formatted text is a presentation choice, so store a defined numeric unit when a wire protocol requires one.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/data-types/duration](https://effect.website/docs/v4/data-types/duration/)

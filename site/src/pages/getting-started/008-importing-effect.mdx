@@ -1,0 +1,93 @@
+---
+title: "Effect's Modules"
+description: "Effect's modules are already in scope in .vibe files: the prelude, and every module that effect exports from its root, such as Console, Option, Stream, and Schedule. Import modules from effect's..."
+---
+
+# Effect's Modules
+
+Effect's modules are already in scope in `.vibe` files: the prelude, and every module that `effect` exports from its root, such as `Console`, `Option`, `Stream`, and `Schedule`. Import modules from `effect`'s subpath packages, such as `effect/http`, as you need them.
+
+## Install the core package
+
+```sh
+npm install effect@4.0.5
+```
+
+The core package supplies Effect's data types, schedules, concurrency tools, and other modules. See [Installation](/getting-started/004-installation) for platform packages, `vibelang`, and `vibelang-runtime`.
+
+## Module and namespace imports
+
+```vibe
+// run: Console.log(Number.isFinite(pauseBeforeRetry()))
+function pauseBeforeRetry() {
+  const started = Clock.currentTimeMillis()
+  sleep(Duration.millis(25))
+  return started
+}
+
+const backoff = Schedule.exponential("50 millis")
+// Output: true
+```
+
+`Effect`, the `Effect<A, E, R>` type, `Schema`, `Layer`, `Scope`, `TaggedError`, and `Control` need no import. In a contract, `Scope` means Effect's `Scope.Scope`, as in `File!IOError!Scope`. The prelude also includes `pipe`, `wire`, `fork`, `handle`, `resume`, `resumeWith`, and `abandon`; the boundary hatches `sync`, `try`, and `callback`; the runners `runPromise`, `runFork`, `runSync`, and `runCallback`; and the Effect module's most used functions without the `Effect.` prefix: `sleep`, `log`, `logDebug`, `logInfo`, `logWarning`, `logError`, `retry`, `repeat`, `timeout`, `all`, `forEach`, `race`, `withSpan`, and `die`. The other Effect functions keep the prefix, as in `Effect.result(work())`. `Clock`, `Duration`, `Schedule`, and every other module of `effect`'s root need no import either, and neither do `flow` and `identity`.
+
+JavaScript's own globals keep their names. `Array`, `String`, `Number`, `Boolean`, `Symbol`, `BigInt`, `Function`, and `RegExp` mean JavaScript's, so import Effect's modules with those names under another name:
+
+```vibe
+// run: Console.log(JSON.stringify(firstTwo([1, 2, 3])))
+import { Array as Arr } from "effect"
+
+function firstTwo(values: ReadonlyArray<number>) {
+  return Arr.take(values, 2)
+}
+// Output: [1,2]
+```
+
+Shared web-standard globals also keep their names: `Request`, `Response`, `Headers`, `URL`, `URLSearchParams`, `TextEncoder`, `TextDecoder`, `AbortController`, `AbortSignal`, `Blob`, `FormData`, `structuredClone`, and `fetch`. Thus `new Request("https://x.test")` uses the web Request; use `import { Request } from "effect"` for Effect's module. DOM-only globals do not shadow Effect's modules: with the DOM in your `lib`, `Option` is still Effect's. An import or a local declaration with the same name as a module shadows it, as `import * as Duration from "effect/Duration"` would. Value constructors such as `Duration.millis` build data; `Clock.currentTimeMillis()` and `Effect.sleep(...)` run computations. Effect's own packages are trusted, so their data functions need no foreign-call boundary; exceptions from those functions are defects.
+
+## Compose standalone functions
+
+```vibe
+// run: Console.log(expirationWindow())
+function expirationWindow() {
+  const short = Duration.seconds(15)
+  return short.toMillis()
+}
+// number!!
+// Output: 15000
+```
+
+Effect exposes operations as module functions. Call them with their data argument or use their curried form in `pipe` where available. An Effect pipeline starts with a program, as in `pipe(() => work(), Effect.timeout("1 second"))`.
+
+## Bundling unused code
+
+Named module imports and direct namespace imports both expose the library without adding methods to your objects. Bundlers can eliminate unused exports when their module analysis supports it. Check the generated bundle when size matters; the import spelling alone does not guarantee a particular size.
+
+VibeLang's global names are source conveniences. They refer to Effect and language support code, which still participates in the emitted module graph.
+
+## Reusable operators
+
+```vibe
+// run: Console.log(example())
+function withinSecond<A, E, R>(program: () => A!E!R) {
+  return timeout(program, "1 second")
+}
+
+function example() {
+  return withinSecond {
+    sleep("10 millis")
+    return "ready"
+  }
+}
+// Output: ready
+```
+
+A helper can accept a program and apply library operators to it. Its contract preserves the program's errors and services and adds `TimeoutError` here. You can extend your application without changing Effect's prototypes.
+
+## Coming from Effect
+
+Skip imports from `effect`'s root in `.vibe`. In `.ts` integration files, import `Effect`, `Layer`, and the other names you use as usual.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/getting-started/importing-effect](https://effect.website/docs/v4/getting-started/importing-effect/)

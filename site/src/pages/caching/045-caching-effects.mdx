@@ -1,0 +1,101 @@
+---
+title: "Caching Effects"
+description: "Caching shares a computation's outcome across callers instead of repeating the work. Use a keyed Cache for parameterized lookups, or Effect.cached and its TTL variants for one reusable program...."
+---
+
+# Caching Effects
+
+Caching shares a computation's outcome across callers instead of repeating the work. Use a keyed `Cache` for parameterized lookups, or `Effect.cached` and its TTL variants for one reusable program. Create the cache once at the lifetime where callers should share it.
+
+## Memoizing parameterized computations
+
+```vibe
+// run: Console.log(JSON.stringify(memoizeLengths()))
+function memoizeLengths() {
+  let lookups = 0
+  const cache = Cache.make({
+    capacity: 64,
+    lookup: (word: string) => {
+      lookups++
+      sleep("10 millis")
+      return word.length
+    }
+  })
+  const length = (word: string) => Cache.get(cache, word)
+  const first = length("violet")
+  const again = length("violet")
+  const other = length("blue")
+  return { first, again, other, lookups }
+}
+// Returns { first: 6, again: 6, other: 4, lookups: 2 }.
+// Output: {"first":6,"again":6,"other":4,"lookups":2}
+```
+
+Each key has its own stored outcome. Repeated calls for a key reuse it, and concurrent requests for the same key share a lookup. Capacity bounds the number of entries; omitting `timeToLive` leaves them without time-based expiration.
+
+## Reusing one computed result
+
+```vibe
+// run: Console.log(JSON.stringify(cachedSettings()))
+function cachedSettings() {
+  let loads = 0
+  const settings = Effect.cached {
+    loads++
+    sleep("20 millis")
+    return { theme: "dark", revision: loads }
+  }
+  // The settings loader has not run yet.
+  const first = settings()
+  const again = settings()
+  return { first, again, loads }
+}
+// Output: {"first":{"theme":"dark","revision":1},"again":{"theme":"dark","revision":1},"loads":1}
+```
+
+Calling `Effect.cached` allocates a reusable Effect value; calling that value runs it. The first caller starts the work and later callers reuse its success or expected failure; concurrent callers wait for the same result. Interrupted computations are not cached, and shared pending work is interrupted only after all its waiting callers have been interrupted. Each new call to `Effect.cached` creates independent storage, so put it outside the per-request function when requests must share it.
+
+## Expiring results after a duration
+
+```vibe
+// run: Console.log(JSON.stringify(expiringSnapshot()))
+function expiringSnapshot() {
+  let revision = 0
+  const snapshot = Effect.cachedWithTTL(() => ++revision, "100 millis")
+  const first = snapshot()
+  const same = snapshot()
+  sleep("150 millis")
+  const fresh = snapshot()
+  return { first, same, fresh } // { first: 1, same: 1, fresh: 2 }
+}
+// Output: {"first":1,"same":1,"fresh":2}
+```
+
+The TTL bounds how long an outcome is reused. Expiration does not start background refresh work; the next evaluation recomputes it. Use Effect's clock and sleep operations so tests can advance time without real waiting.
+
+## Invalidating explicitly
+
+```vibe
+// run: Console.log(JSON.stringify(reloadableSnapshot()))
+function reloadableSnapshot() {
+  let revision = 0
+  const [snapshot, invalidate] = Effect.cachedInvalidateWithTTL(
+    () => ++revision,
+    "10 minutes"
+  )
+  const first = snapshot()
+  invalidate()
+  const fresh = snapshot()
+  return { first, fresh } // { first: 1, fresh: 2 }
+}
+// Output: {"first":1,"fresh":2}
+```
+
+The returned pair contains a cached program and an invalidation program. `invalidate()` clears the stored outcome without loading a replacement; the next `snapshot()` does that work. Invalidate after a successful write when callers need to stop seeing the previous result before the TTL expires.
+
+## Coming from Effect
+
+Keep returned Effect values such as `snapshot` and `invalidate`, then call them to run them. Passing `() => load()` to a caching constructor delays the load until the cache needs it.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/caching/caching-effects](https://effect.website/docs/v4/caching/caching-effects/)

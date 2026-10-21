@@ -1,0 +1,174 @@
+---
+title: "26. What compiled code must guarantee"
+---
+
+### 26. What compiled code must guarantee
+
+```ts [VibeLang]
+function displayName(id: string) {
+  return Users.find(id).name
+}
+```
+
+```ts [Generated TypeScript]
+export const displayName = Effect.fnUntraced(function* (id: string) {
+  const users = yield* Users          // in-place evidence from the current Context
+  const user = yield* users.find(id)  // runs on this fiber, under this Context
+  return user.name
+})
+```
+
+```ts [Generated declaration]
+export declare const displayName:
+  (id: string) => string!UserNotFound!Users
+```
+
+#### One obligation
+
+> **Frame invariant** [Rule]. At every point where a computation can capture or park, everything needed to continue it lives in frames on the fiber's `_stack`. No JavaScript activation of compiled or foreign code sits between the run loop and that point.
+
+Capture moves `_stack` frames. It cannot move a JavaScript activation. An activation between the run loop and a perform site would be lost on capture, or would force re-execution. Everything else in this chapter follows from that one rule.
+
+#### What a function compiles to
+
+A function that may capture or park compiles to one heap frame per activation. Today that frame is Effect's generator frame, made by `Effect.fnUntraced`, as above. A call to another computation is `yield*` of that computation's Effect, which the run loop evaluates as a separate frame. That keeps JavaScript stack depth constant (T6a).
+
+The generator here is only a frame representation. Control comes from the kernel's prompts, not from `Effect.gen`. The compiler never emits `Effect.fnUntracedEager`, which runs at call time, and traces a function with `Effect.fn` only when the project's `tracing` option asks for it (Chapter 28), because traced frames cost 10 to 20 times more (Chapter 24). A later backend can replace generators with explicit state machines without changing any rule here (Chapter 25).
+
+#### Regions compile to frames, never to JavaScript `try`
+
+```ts [VibeLang]
+function profile(raw: string) {
+  const id = parseId(raw)                 // may throw InvalidId
+  try {
+    return Users.find(String(id))
+  } catch (e) {                           // e: UserNotFound
+    return guest
+  } finally {
+    Metrics.increment("profile")
+  }
+}
+// User!InvalidId!Users | Metrics
+```
+
+```ts [Generated TypeScript]
+export const profile = Effect.fnUntraced(function* (raw: string) {
+  const id = yield* parseId(raw)
+  return yield* Effect.onExit(                         // Final: finally
+    catchExpected(                                     // Catch: causes made only of expected failures
+      Effect.fnUntraced(function* () {                 // try region
+        return yield* (yield* Users).find(String(id))
+      })(),
+      (_e) => Effect.succeed(guest)                    // catch region
+    ),
+    () => Effect.fnUntraced(function* () {             // finally region: it may fail (D15)
+      yield* (yield* Metrics).increment("profile")
+    })()
+  )
+})
+```
+
+| Source | Frame | Generated with |
+| --- | --- | --- |
+| `try { } catch (e) { }` | `Catch(h)`: causes made only of expected failures | The runtime's `catchExpected`, built on `Effect.catchCause` (K14a-K14c) |
+| `finally { }` | `Final(fin)` | `Effect.onExit`, never `Effect.ensuring`, whose cleanup must have E = `never` (D46) |
+| `throw e` | Fail | `return yield* Effect.fail(e)`: the `return` keeps TypeScript's narrowing after the `throw` |
+| A block that declares `using` or calls `fork` | A Scope region: `Final` closes it | `Effect.scopedWith` |
+| `using x = acquire()` | Registers in the block's Scope | `Scope.provide(acquire(), scope)` |
+| `fork(() => p())` | A child owned by the block's Scope | `Effect.forkIn(p(), scope)` |
+| A provider override | `Restore(Γ′)` | `Effect.provideService` / `Effect.provide` |
+| Masks | `Mask(ι′)` | `Effect.uninterruptible`, `Effect.interruptible` |
+| `handle(...)` | `Prompt` | The runtime's `handle` |
+| A clause's last `return resume(k, v)` | `Clause(k)` performs it | `return tailResume(k, v)` (K11a) |
+
+Region bodies are closures over the function's variables, so assignments inside a region are visible after it. `return`, `break`, and `continue` that leave a region produce a completion record (`{ kind: "return", value }`, `{ kind: "break", label }`, `{ kind: "normal" }`) that the enclosing frame dispatches on. This is the same transform TypeScript's own downlevel generator emit performs, applied to Effect frames. Because closures hide assignments from TypeScript's definite-assignment analysis, the compiler checks definite assignment on the source, before lowering (D52).
+
+The prototype compiler (`prototype/esc`) emits these shapes and runs them on the kernel. Its `regions.vibe` example reproduces plain JavaScript's results and `finally` order through labeled `break`, `continue`, and `return` across nested `try`, `catch`, and `finally`, and a `using` in a loop body releases once per iteration on every exit (`prototype/esc/FINDINGS.md`, findings 15 and 17).
+
+#### Scope regions
+
+A region's Scope is given only to the block's `using` acquisitions and forked fibers (D14, D19). Everything else in the block runs under the Scope its caller supplies, so an acquisition without `using` stays in the function's R:
+
+```ts [Generated TypeScript]
+// openAndLog from Chapter 6
+export const openAndLog = Effect.fnUntraced(function* (url: string) {
+  return yield* Effect.scopedWith((scope) => Effect.fnUntraced(function* () {
+    const connection = yield* (yield* Database).connect(url)                     // the caller's Scope: R keeps Scope
+    const log = yield* Scope.provide((yield* Logs).open("connect.log"), scope)   // `using`: this block's Scope
+    yield* log.write(`connected to ${url}`)
+    return connection
+  })())
+})
+```
+
+`Effect.scopedWith` creates the region's Scope without providing it, so `Database.connect` still sees the caller's `Scope`, and only the `using` acquisition receives the region's. Acquisition is masked or interruptible as the resource's `acquireRelease` says; `using` adds no policy (D25). `using` on a TypeScript `Disposable` registers a finalizer that calls `[Symbol.dispose]()` [Rule].
+
+Block-owned fibers use the same Scope:
+
+```ts [Generated TypeScript]
+// serve from Chapter 7
+export const serve = Effect.fnUntraced(function* (port: number) {
+  return yield* Effect.scopedWith((scope) => Effect.fnUntraced(function* () {
+    const server = yield* Scope.provide((yield* Http).listen(port), scope)   // `using server`
+    yield* Effect.forkIn(heartbeat(), scope)                                 // registered after server: closed before it
+    return yield* server.awaitShutdown()
+  })())
+})
+```
+
+A Scope finalizer registered later runs earlier, so the child is interrupted and awaited before resources acquired earlier in the block are released. A block that calls `fork` without declaring `using` is a region too (D47); without that rule, the prototype compiler's fork-only block found no `Scope` and died with `Service not found` (finding 18).
+
+#### Clauses
+
+A clause compiles like any function, with one rule for its last step (D18). When a clause's last action is `return resume(k, v)` and no `try`, `catch`, `finally`, or `using` region of the clause encloses it, the compiler emits `return tailResume(k, v)`: the request is returned, never yielded, so the clause's generator finishes and the `Clause(k)` frame performs the resume with the clause gone (K11a, K11c). Inside such a region the compiler emits `yield* resume(k, v)`, because the region's cleanup must run after the resumed computation, and the stack grows by design (K11d). In the prototype compiler, producer loops, handler clauses, and loop bodies with `try` and `finally` stay under 50 frames over 100,000 elements (`stack-depth.vibe`, finding 23).
+
+#### Producers
+
+A `function*` body may pause, so it cannot keep JavaScript's generator meaning, whose body runs synchronously inside `next()`. VibeLang defines `function*` by the machine instead [Rule]:
+
+- Calling a `function*` runs none of its body. The result is a **producer**: a cold program that performs the built-in control operation `Yield<T>` once per element.
+- `yield v` performs `Yield<T>`.
+- `for (const x of p)` over a producer is **internal iteration**. It installs a `Yield` handler and runs `p` under it. The clause runs the loop body, then tail-resumes `p`. `break`, `return`, or `throw` out of the body returns from the clause without resuming, so the owner abandons `p` and its finalizers run before the loop exits.
+- Pulling elements one at a time from outside, as zipping two producers does, is **external iteration**. The standard library's clause transfers `k` and returns the element with the `Suspended` handle; the next pull resumes it, on the same fiber.
+
+```ts [Generated TypeScript]
+// The loop in firstErrors from Chapter 8
+const producer = yield* lines(path)                  // constructs the producer; runs none of its body
+yield* handle(Yield,
+  producer,
+  {
+    Yield: Effect.fnUntraced(function* (line: string, k: Continuation<void, never, void>) {
+      if (line.startsWith("ERROR")) found.push(line)
+      if (found.length === 3) return                 // break: Owner(k) abandons the producer
+      return tailResume(k, undefined)                // RETURN the request; never yield* it
+    })
+  })
+```
+
+A loop body with `using`, `try`, or `finally` runs those regions inside the clause; they return completion records, and the clause tail-resumes only after every region has closed (K11b).
+
+Evidence [Kernel]:
+
+- T16 runs internal iteration over an infinite producer with a finalizer. `break` after three elements runs the producer's finalizer before the loop exits.
+- K11a runs this exact generator-clause lowering over 100,000 elements; the deepest stack is 3 frames. K11b adds a per-element `using` and `finally`: 5 frames, with every region closed before each resume. Before the fix, the same clause written as `return yield* resume(k, undefined)` reached 200,003 frames (review probe R10; Fable review finding 1).
+- T17 covers the `flatMap`-shaped clause, which the kernel also drops in constant stack.
+- T10 runs external iteration with `transfer`. Each element is one capture and one resume. A producer is one-shot per run: iterating it again runs it again from the start.
+
+If a producer's own loop iterated another producer, abandoning the outer one would reach the inner loop's owner frame and abandon the inner producer too, finalizers included (O01).
+
+**The `Stream` adapter** [Experiment]. Where a `Stream` is expected, or across the TypeScript boundary, a producer becomes a `Stream` that runs the producer on a fiber of its own, under internal iteration, and hands over one element per pull through a zero-capacity handoff: the clause completes the pending pull and waits for the next one before it resumes the producer. A buffer of one element, as the prototype compiler used (`Stream.callback` with `bufferSize: 1`), lets the producer run one element ahead, which D26 forbids (prototype finding 26). Closing the stream interrupts the producer's fiber, which abandons the producer and runs its finalizers. `for...of` over a `Stream` needs no adapter: it opens a Scope region, takes the stream's pull with `Stream.toPull`, and loops over chunks until the pull signals the end. G12 is the experiment that confirms the adapter.
+
+#### Trusted calls
+
+A call to a trusted function that lists expected failures compiles to a plain call wrapped in a JavaScript `try` with no pause point inside, which the frame invariant allows:
+
+```ts [Generated TypeScript]
+// const slug = slugify(meta.title), where slugify carries @throws {InvalidSlug}
+let slug: string
+try {
+  slug = slugify(meta.title)
+} catch (e) {
+  if (e instanceof InvalidSlug) return yield* Effect.fail(e)    // an expected failure
+  throw e                                                       // a defect, as in any generator body (F4)
+}
+```

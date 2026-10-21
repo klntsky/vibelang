@@ -1,0 +1,206 @@
+---
+title: "React"
+description: "Add VibeLang to a React app that builds with Vite. A component runs a VibeLang program with a ManagedRuntime and renders three states: loading, the program's result, and an error the program..."
+---
+
+# React
+
+Add VibeLang to a React app that builds with Vite. A component runs a VibeLang program with a `ManagedRuntime` and renders three states: loading, the program's result, and an error the program recovers from. Install the packages with [Add VibeLang to an existing project](/setup/existing-project) first. Follow this page instead of [Vite and Vitest](/setup/vite): it covers the same plugin, tsconfig.json, Vitest, and build steps.
+
+## 1. Install the test packages
+
+With Bun, run:
+
+```sh
+bun add -d happy-dom@20.14.6 @testing-library/react@16.3.3 @testing-library/dom@10.4.2
+```
+
+With npm, run:
+
+```sh
+npm install --save-dev --save-exact happy-dom@20.14.6 @testing-library/react@16.3.3 @testing-library/dom@10.4.2
+```
+
+## 2. Configure tsconfig.json
+
+Find the configuration that includes `src`. In an app from Vite's `react-ts` template, `tsconfig.json` has `"files": []` and lists `tsconfig.app.json` and `tsconfig.node.json` as `references`; the one that includes `src` is `tsconfig.app.json`. Make two checks there:
+
+1. `compilerOptions` sets `"rewriteRelativeImportExtensions": true`. Without it, `vite build` fails with TS5096, because the template sets `allowImportingTsExtensions` and the plugin emits JavaScript. A configuration without `allowImportingTsExtensions` fails with TS5097 instead.
+2. `include` selects the `.vibe` files. The template's `"include": ["src"]` does.
+
+## 3. Configure Vite and Vitest
+
+Replace `vite.config.ts` with this file. It adds `vibelang()` before `react()`, passes the configuration that includes `src` as `project`, and imports `defineConfig` from `vitest/config`, so the same file configures Vitest. Keep any other plugins the app has. If `tsconfig.json` itself includes `src`, call `vibelang()` without the `project` option.
+
+```ts
+// TypeScript (.ts)
+import react from "@vitejs/plugin-react"
+import vibelang from "vibelang-vite"
+import { defineConfig } from "vitest/config"
+
+export default defineConfig({
+  plugins: [vibelang({ project: "tsconfig.app.json" }), react()],
+  test: {
+    environment: "happy-dom",
+    include: ["src/**/*.test.vibe", "src/**/*.test.tsx"]
+  }
+})
+```
+
+## 4. Add a VibeLang module
+
+Create `src/users.vibe`. It declares a `Users` service and its layer, and `greet` recovers from `UserNotFound`, so `greet` cannot fail:
+
+```vibe
+// src/users.vibe
+// run: provide UsersLive { Console.log(greet("42")); Console.log(greet("404")); try { Users.find("404") } catch (error) { Console.log(error._tag, error.id) } }
+export schema User { id: string; name: string }
+
+export error UserNotFound { id: string }
+
+export service Users {
+  find(id: string): User!UserNotFound
+}
+
+const directory: ReadonlyArray<User> = [
+  { id: "42", name: "Ada Lovelace" },
+  { id: "7", name: "Grace Hopper" }
+]
+
+export const UsersLive = Layer.succeed(Users, {
+  find(id) {
+    const user = directory.find((entry) => entry.id === id)
+    if (user === undefined) throw new UserNotFound({ id })
+    return user
+  }
+})
+
+export function greet(id: string) {
+  try {
+    const user = Users.find(id)
+    return `Welcome, ${user.name}`
+  } catch (error) {
+    return `No user ${error.id}`
+  }
+}
+```
+
+```text
+Welcome, Ada Lovelace
+No user 404
+UserNotFound 404
+```
+
+## 5. Run a program from a component
+
+Create `src/runtime.ts`. One `ManagedRuntime` builds `UsersLive` once and runs every program in the app:
+
+```ts
+// TypeScript (.ts)
+// src/runtime.ts
+// run: return import("./users.vibe").then(({ greet }) => runtime.runPromise(greet("42"))).then(console.log).finally(() => runtime.dispose())
+import { ManagedRuntime } from "effect"
+import { UsersLive } from "./users.vibe"
+
+export const runtime = ManagedRuntime.make(UsersLive)
+```
+
+```text
+Welcome, Ada Lovelace
+```
+
+Create `src/Greeting.tsx`. To TypeScript, `greet(id)` returns `Effect<string, never, Users>`; `runtime.runPromise` provides `Users` and returns a `Promise<string>`. The `AbortSignal` interrupts the program when the component unmounts or `id` changes:
+
+```tsx
+// src/Greeting.tsx
+import { useEffect, useState } from "react"
+import { runtime } from "./runtime.ts"
+import { greet } from "./users.vibe"
+
+export function Greeting({ id }: { readonly id: string }) {
+  const [text, setText] = useState<string>()
+  useEffect(() => {
+    const controller = new AbortController()
+    runtime.runPromise(greet(id), { signal: controller.signal }).then(setText, (cause) => {
+      if (!controller.signal.aborted) throw cause
+    })
+    return () => controller.abort()
+  }, [id])
+  return <p>{text ?? "Loading…"}</p>
+}
+```
+
+Render it from a component the app already has, such as `App` in `src/App.tsx`: import it with `import { Greeting } from "./Greeting.tsx"` and add `<Greeting id="42" />` and `<Greeting id="404" />`. The page shows `Loading…` twice, then `Welcome, Ada Lovelace` and `No user 404`.
+
+## 6. Test the module and the component
+
+Create `src/users.test.vibe`:
+
+```vibe
+// src/users.test.vibe
+import { assert, it } from "@effect/vitest"
+import { greet, UserNotFound, Users, UsersLive } from "./users.vibe"
+
+it.effect("greets a known user") {
+  const message = Effect.provide(() => greet("42"), UsersLive)
+  assert.strictEqual(message, "Welcome, Ada Lovelace")
+}
+
+it.effect("fails a lookup with UserNotFound") {
+  provide UsersLive {
+    try {
+      Users.find("404")
+      assert.fail("expected UserNotFound")
+    } catch (error) {
+      assert.instanceOf(error, UserNotFound)
+      assert.strictEqual(error.id, "404")
+    }
+  }
+}
+
+it.effect("recovers UserNotFound in greet") {
+  const message = Effect.provide(() => greet("404"), UsersLive)
+  assert.strictEqual(message, "No user 404")
+}
+```
+
+Create `src/Greeting.test.tsx`:
+
+```tsx
+// src/Greeting.test.tsx
+import { render, screen } from "@testing-library/react"
+import { expect, it } from "vitest"
+import { Greeting } from "./Greeting.tsx"
+
+it("shows loading, then the user and the recovered error", async () => {
+  render(<><Greeting id="42" /><Greeting id="404" /></>)
+  expect(screen.getAllByText("Loading…")).toHaveLength(2)
+  expect(await screen.findByText("Welcome, Ada Lovelace")).toBeDefined()
+  expect(await screen.findByText("No user 404")).toBeDefined()
+})
+```
+
+If `package.json` has no `test` script, add `"test": "vitest run"`. Run `npx vitest run`. The output includes:
+
+```text
+ Test Files  2 passed (2)
+      Tests  4 passed (4)
+```
+
+## 7. Type-check and build
+
+TypeScript cannot read `.vibe` files, so the template's `tsc -b` fails with TS2307: `Cannot find module './users.vibe'`. `vibelang -b` replaces it. It builds the same project references and checks `.vibe`, `.ts`, and `.tsx` files as one program. In `package.json`, change the `build` script:
+
+```json
+{
+  "scripts": {
+    "build": "vibelang -b && vite build"
+  }
+}
+```
+
+Run `npx vibelang -b`. It prints nothing and exits with status 0. Then run `npm run build`, or `bun run build`. It exits with status 0, and its last line starts with `✓ built in`. Tell the user which files you added and changed.
+
+## Next
+
+Set up the editor: [VS Code and Cursor](/setup/vscode), [Neovim](/setup/neovim), [Zed](/setup/zed), or [other editors](/setup/other-editors). Then verify the setup with step 4 of [Set up VibeLang](/setup).

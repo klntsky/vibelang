@@ -1,0 +1,96 @@
+import { afterEach, test } from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import { tmpdir } from 'node:os'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+import { loadSpec, substituteFacts } from './spec-docs.mjs'
+
+const roots = []
+afterEach(() => { for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true }) })
+function fixture() {
+  const root = fs.mkdtempSync(path.join(tmpdir(), 'vibelang-spec-')); roots.push(root)
+  const put = (file, body) => { const dest = path.join(root, file); fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, body) }
+  put('docs/user/inventory.md', '### Specification\n\n- [Introduction](../design/src/000-intro.md)\n- **Part I. Examples**\n  - [1. Calls](../design/src/101-calls.md)\n- **Part II. Rules**\n  - [2. Rules](../design/src/202-rules.md)\n## Other\n')
+  put('docs/design/src/000-intro.md', '# Intro\n\n{{testCount}} tests\n')
+  put('docs/design/src/101-calls.md', '# Calls\n\n## Shared\n')
+  put('docs/design/src/202-rules.md', '# Rules\n\n## Shared\n')
+  put('docs/user/src/welcome.md', '# Welcome\n')
+  put('README.md', 'Repository')
+  return { root, put, load: () => loadSpec(path.join(root, 'docs')) }
+}
+const facts = { testCount: '12', testFiles: 2, kernelLines: 100 }
+test('facts are explicit; unknown, missing and invalid placeholders fail', () => {
+  assert.equal(substituteFacts('{{testCount}} {{testFiles}} {{kernelLines}}', facts), '12 2 100')
+  for (const [text, input] of [['{{unknown}}', facts], ['{{testCount}}', {}], ['{{testCount}}', { testCount: 'guess' }]]) {
+    assert.throws(() => substituteFacts(text, input), /Unknown or missing placeholder/)
+  }
+})
+test('chapter, user, cross-chapter and local fragments resolve; repository files retain text', () => {
+  const { put, load } = fixture()
+  put('docs/design/src/000-intro.md', '# Intro\n\n[chapter](101-calls.md#calls) [user](../../user/src/welcome.md) [fragment](#rules) [local](#intro) [repo](../../../README.md)\n')
+  const spec = load(), body = spec.convert('000-intro.md', facts)
+  for (const link of ['/spec/101-calls#calls', '/welcome', '/spec/202-rules#rules', '/spec/000-intro#intro']) assert.ok(body.includes(`](${link})`))
+  assert.ok(body.includes(' repo\n')); assert.equal(spec.counts().links, 4)
+})
+test('page titles are the inventory labels, not the first heading', () => {
+  const { put, load } = fixture()
+  put('docs/design/src/101-calls.md', '## Part I. Examples\n\n### 1. Calls\n')
+  const spec = load()
+  assert.ok(spec.convert('101-calls.md', facts).startsWith('---\ntitle: "1. Calls"\n---'))
+  assert.ok(spec.convert('000-intro.md', facts).startsWith('---\ntitle: "Introduction"\n---'))
+})
+test('missing chapters, user pages, headings and ambiguous fragments fail', () => {
+  const { put, load } = fixture()
+  for (const href of ['missing.md', '../../user/src/missing.md', '#missing', '#shared', '101-calls.md#missing', '../../../missing.txt']) {
+    put('docs/design/src/000-intro.md', `# Intro\n\n[broken](${href})\n`)
+    assert.throws(() => load().convert('000-intro.md', facts), /Unresolvable/)
+  }
+})
+test('callouts preserve status text and continuation, while code remains literal', () => {
+  const { put, load } = fixture()
+  put('docs/design/src/000-intro.md', '# Intro\n\n> **Proposed.** Future {syntax}.\n> More.\n\n> **Not designed yet.** Unknown.\n\n```text\n> **Proposed.** {literal}\n```\n')
+  const spec = load(), body = spec.convert('000-intro.md', facts)
+  assert.ok(body.includes(':::info\n**Proposed.** Future \\{syntax\\}.\nMore.\n:::'))
+  assert.ok(body.includes(':::warning\n**Not designed yet.** Unknown.\n:::'))
+  assert.ok(body.includes('> **Proposed.** {literal}'))
+  assert.deepEqual(spec.counts(), { links: 0, proposed: 1, notDesigned: 1 })
+})
+test('sidebar follows inventory order and groups, and chapter inventory must match', () => {
+  const { put, load } = fixture()
+  assert.deepEqual(load().sidebar.items, [
+    { text: 'Introduction', link: '/spec/' },
+    { text: 'Part I. Examples', collapsed: true, items: [{ text: '1. Calls', link: '/spec/101-calls' }] },
+    { text: 'Part II. Rules', collapsed: true, items: [{ text: '2. Rules', link: '/spec/202-rules' }] },
+  ])
+  put('docs/design/src/extra.md', '# Extra')
+  assert.throws(load, /missing from inventory/)
+})
+test('inventory entries with no chapter fail', () => {
+  const { root, load } = fixture()
+  fs.unlinkSync(path.join(root, 'docs/design/src/101-calls.md'))
+  assert.throws(load, /does not exist/)
+})
+test('CLI validates before writing, writes duplicate introduction, and user sync keeps spec pages', () => {
+  const { root, put } = fixture()
+  const site = path.join(root, 'site')
+  fs.mkdirSync(path.join(site, 'scripts'), { recursive: true })
+  for (const file of ['sync-spec-docs.mjs', 'sync-user-docs.mjs', 'spec-docs.mjs', 'docs-markdown.mjs']) fs.copyFileSync(fileURLToPath(new URL(file, import.meta.url)), path.join(site, 'scripts', file))
+  put('facts.json', JSON.stringify(facts))
+  const run = (name, args) => execFileSync(process.execPath, [path.join(site, 'scripts', name), ...args], { stdio: 'pipe' })
+  run('sync-spec-docs.mjs', [path.join(root, 'docs'), '--facts', path.join(root, 'facts.json')])
+  const intro = fs.readFileSync(path.join(site, 'src/pages/spec/index.mdx'), 'utf8')
+  assert.equal(intro, fs.readFileSync(path.join(site, 'src/pages/spec/000-intro.mdx'), 'utf8'))
+  put('docs/user/inventory.md', fs.readFileSync(path.join(root, 'docs/user/inventory.md'), 'utf8').replace('### Specification', '## V4 sidebar in order\n### Guides\n- [Welcome](src/welcome.md)\n### Specification'))
+  put('docs/user/src/welcome.md', '# Welcome\n\n[spec](../../design/src/000-intro.md#calls)\n')
+  // Explicit chapter links must own their fragment.
+  assert.throws(() => run('sync-user-docs.mjs', [path.join(root, 'docs/user')]))
+  put('docs/user/src/welcome.md', '# Welcome\n\n[spec](../../design/src/101-calls.md#calls)\n')
+  run('sync-user-docs.mjs', [path.join(root, 'docs/user')])
+  assert.equal(fs.readFileSync(path.join(site, 'src/pages/spec/index.mdx'), 'utf8'), intro)
+  assert.ok(fs.readFileSync(path.join(site, 'src/pages/welcome.mdx'), 'utf8').includes('/spec/101-calls#calls'))
+  put('facts.json', '{}')
+  assert.throws(() => run('sync-spec-docs.mjs', [path.join(root, 'docs'), '--facts', path.join(root, 'facts.json')]))
+  assert.equal(fs.readFileSync(path.join(site, 'src/pages/spec/index.mdx'), 'utf8'), intro)
+})

@@ -1,0 +1,209 @@
+---
+title: "Tracing in VibeLang"
+description: "Tracing records an operation's duration and its relationship to other operations. VibeLang uses Effect's spans, attributes, and exporters, so traces can connect work across services. Functions are..."
+---
+
+# Tracing in VibeLang
+
+Tracing records an operation's duration and its relationship to other operations. VibeLang uses Effect's spans, attributes, and exporters, so traces can connect work across services. Functions are untraced by default; add spans around operations that you want to observe.
+
+## Relating spans to traces
+
+```vibe
+// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); Console.log(Effect.withTracer(() => requestTrace(), tracer)); Console.log(spans[0].name, spans[0].status._tag, spans[0].parent.isNone())
+import { ConfigProvider, Tracer } from "effect"
+
+function requestTrace() {
+  return withSpan("report-request") {
+    sleep("10 millis")
+    return "response"
+  }
+}
+```
+
+```text
+response
+report-request Ended true
+```
+
+A span describes one operation with a name, identifiers, timestamps, status, and attributes. A trace groups related spans under one trace ID, usually beginning with a request's root span. Parent span IDs connect the operations into a tree that a trace viewer displays as a waterfall.
+
+## Adding spans around computations
+
+```vibe
+// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); Console.log(Effect.withTracer(() => renderReport("csv"), tracer)); Console.log(spans[0].name, spans[0].attributes.get("report.format"), spans[0].status._tag)
+function renderReport(format: string) {
+  return withSpan("render-report", { attributes: { "report.format": format } }) {
+    sleep("20 millis")
+    return `report.${format}`
+  }
+}
+// string!!
+```
+
+```text
+report.csv
+render-report csv Ended
+```
+
+`withSpan` starts the span before the program runs and ends it when that program exits. It preserves the success and failure behavior of the program. A stable operation name groups comparable work; put variable details into attributes instead of inventing a new span name per request.
+
+## Exporting spans and SDK boundaries
+
+```vibe
+// run: const requests: unknown[] = []; const collector: typeof globalThis.fetch = (_input, init) => { requests.push(JSON.parse(new TextDecoder().decode(init?.body as Uint8Array))); return Promise.resolve(new Response(null, { status: 200 })) }; Console.log(Effect.provideService(() => exportedReport(), FetchHttpClient.Fetch, collector)); Console.log(requests.length, JSON.stringify(requests).includes("render-report"), JSON.stringify(requests).includes("report-worker"))
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
+import * as OtlpSerialization from "effect/observability/OtlpSerialization"
+import * as OtlpTracer from "effect/observability/OtlpTracer"
+
+const Tracing = OtlpTracer.layer({
+  url: "http://localhost:4318/v1/traces",
+  resource: { serviceName: "report-worker" },
+  exportInterval: "1 second"
+})
+  |> Layer.provide(%, OtlpSerialization.layerJson)
+  |> Layer.provide(%, FetchHttpClient.layer)
+
+function exportedReport() {
+  provide Tracing { return renderReport("csv") }
+}
+```
+
+```text
+report.csv
+1 true true
+```
+
+This source version provides direct OTLP/HTTP export under `effect/observability`. The layer batches ended spans, uses the supplied HTTP client and serialization, and flushes during scope shutdown. Provide it around the application's lifetime so each request does not create and close its own exporter.
+
+An application that already owns an OpenTelemetry SDK tracer provider can initialize its compatible bridge in a TypeScript bootstrap or adapter and provide the resulting Effect layer to VibeLang. Effect's own packages are trusted; a plain third-party SDK call inside a VibeLang function needs an explicit boundary such as `try`, or a TypeScript declaration tagged `/** @vibelang trusted */`. A synchronous SDK context callback must compile to plain JavaScript, so it cannot call services or perform other Effect operations.
+
+## Inspecting failures and attributes
+
+```vibe
+// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); const result = Effect.withTracer(() => Effect.provide(() => failingRender(), Logger.layer([])), tracer); Console.log(result.isFailure(), spans[0].attributes.get("report.format")); if (spans[0].status._tag === "Ended") Console.log(spans[0].status.exit.isFailure())
+error RenderFailed {
+  format: string
+}
+
+function failingRender() {
+  const exit = Effect.exit(withSpan("render-report") {
+    Effect.annotateCurrentSpan("report.format", "unknown")
+    throw new RenderFailed({ format: "unknown" })
+  })
+  if (exit.isFailure()) logError("render failed", exit.cause)
+  return exit
+}
+```
+
+```text
+true unknown
+true
+```
+
+An exported failure includes error status and failure details, while attributes identify the operation's context. `annotateCurrentSpan` enriches the active span from inside its body. Recording an exit as data lets a diagnostic boundary inspect failure, defects, and interruption without changing the span's already recorded outcome.
+
+## Representing logs as span events
+
+```vibe
+// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); const original = Effect.service(Console.Console); Effect.withTracer(() => Effect.provideService(() => tracedLogs(), Console.Console, { ...original, log: () => {} }), tracer); Console.log(JSON.stringify(spans[0].events.map(([name]) => name)), spans[0].status._tag)
+function tracedLogs() {
+  Effect.provide(() => withSpan("generate-artifact") {
+    logInfo("input validated")
+    sleep("10 millis")
+    logInfo("artifact written")
+  }, Logger.layer([
+    Logger.defaultLogger,
+    Logger.tracerLogger
+  ]))
+}
+```
+
+```text
+["input validated","artifact written"] Ended
+```
+
+The tracer logger records logs within an active span as timestamped events. Those events provide an internal timeline alongside the span's start and finish. Replacing the logger set without retaining `tracerLogger` stops this event forwarding.
+
+## Nesting operations
+
+```vibe
+// run: const spans: Tracer.NativeSpan[] = []; const tracer = Tracer.make({ span(options) { const span = new Tracer.NativeSpan(options); spans.push(span); return span } }); Console.log(JSON.stringify(Effect.withTracer(() => generate(), tracer))); Console.log(JSON.stringify(spans.map((span) => [span.name, span.parent.map((parent) => parent.spanId === spans[0].spanId).getOrElse(() => false), span.traceId === spans[0].traceId, span.status._tag])))
+function loadTemplate() {
+  return withSpan("load-template") {
+    sleep("10 millis")
+    return "weekly-template"
+  }
+}
+
+function generate() {
+  return withSpan("generate-report") {
+    const template = loadTemplate()
+    const output = renderReport("csv")
+    return { template, output }
+  }
+}
+```
+
+```text
+{"template":"weekly-template","output":"report.csv"}
+[["generate-report",false,true,"Ended"],["load-template",true,true,"Ended"],["render-report",true,true,"Ended"]]
+```
+
+The inner spans inherit the outer span as parent. Their trace IDs match, while each span has its own ID and duration. Child fibers inherit the tracing context too, allowing concurrent operations to appear as siblings in the same trace.
+
+## Viewing traces locally
+
+```vibe
+// run: const requests: unknown[] = []; const collector: typeof globalThis.fetch = (_input, init) => { requests.push(JSON.parse(new TextDecoder().decode(init?.body as Uint8Array))); return Promise.resolve(new Response(null, { status: 200 })) }; Effect.provideService(() => demonstration(), FetchHttpClient.Fetch, collector); Console.log(requests.length, JSON.stringify(requests).includes("generate-report"), JSON.stringify(requests).includes("load-template"), JSON.stringify(requests).includes("render-report"))
+function demonstration() {
+  provide Tracing { generate() }
+}
+```
+
+```text
+1 true true true
+```
+
+Run an OTLP/HTTP collector and a trace viewer on the endpoints configured above. For a local Grafana LGTM container, run `docker run --rm --name vibelang-telemetry --publish 3000:3000 --publish 4318:4318 grafana/otel-lgtm`. It supplies a collector and Tempo for trace storage, with Grafana for inspection. Keep the container running and wait until it reports that the stack is ready.
+
+In another terminal, run `demonstration` through the application runner and let the exporter close cleanly. Open `http://localhost:3000/explore`, sign in using the container's startup instructions, and search Tempo for service `report-worker`. Tempo needs time to index received spans before search returns them.
+
+Open a `generate-report` trace to compare parent duration, child durations, attributes, events, and failure status. If nothing arrives, check the trace URL, HTTP transport, serialization, and exporter diagnostics before adding more instrumentation.
+
+## Connecting external tracing services
+
+```vibe
+// run: const requests: unknown[] = []; const collector: typeof globalThis.fetch = (_input, init) => { requests.push(JSON.parse(new TextDecoder().decode(init?.body as Uint8Array))); return Promise.resolve(new Response(null, { status: 200 })) }; provide ConfigProvider.layer(ConfigProvider.fromUnknown({ TRACE_ENDPOINT: "http://collector.invalid/v1/traces" })) { Console.log(JSON.stringify(Effect.provideService(() => productionReport(), FetchHttpClient.Fetch, collector))) }; Console.log(requests.length, JSON.stringify(requests).includes("generate-report"))
+import * as FetchHttpClient from "effect/http/FetchHttpClient"
+import * as OtlpSerialization from "effect/observability/OtlpSerialization"
+import * as OtlpTracer from "effect/observability/OtlpTracer"
+
+const TraceEndpoint = Config.String("TRACE_ENDPOINT")
+
+const VendorTracing = Layer.unwrap {
+  const url = TraceEndpoint()
+  return OtlpTracer.layer({ url, resource: { serviceName: "report-worker" } })
+    |> Layer.provide(%, OtlpSerialization.layerJson)
+    |> Layer.provide(%, FetchHttpClient.layer)
+}
+
+function productionReport() {
+  provide VendorTracing { return generate() }
+}
+```
+
+```text
+{"template":"weekly-template","output":"report.csv"}
+1 true
+```
+
+`Config.String` builds a configuration value; `TraceEndpoint()` reads it when the layer is built. Point the exporter at an authenticated collector or a service's documented OTLP traces endpoint, and configure required headers through `OtlpTracer.layer` when needed. A collector can route these spans to a hosted tracing backend. For Sentry or another service that already installs its own SDK, use that service's compatible SDK bridge or documented OTLP route; exporting successful spans does not also create error-monitoring issues.
+
+## Coming from Effect
+
+`withSpan` still supplies tracing explicitly, but its program is an ordinary function. Do not add a span to every helper merely to reproduce function boundaries; instrument the operations you need to diagnose.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/observability/tracing](https://effect.website/docs/v4/observability/tracing/)

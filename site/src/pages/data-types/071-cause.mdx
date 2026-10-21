@@ -1,0 +1,128 @@
+---
+title: "Cause"
+description: "Cause works in VibeLang exactly as in Effect. It records every reason a computation failed, including typed errors, defects, and interruption, so use it when the error channel alone cannot explain..."
+---
+
+# Cause
+
+`Cause` works in VibeLang exactly as in Effect. It records every reason a computation failed, including typed errors, defects, and interruption, so use it when the error channel alone cannot explain an outcome.
+
+## Representing failure reasons
+
+```vibe
+// run: Console.log(expected.reasons[0]._tag, defect.reasons[0]._tag, interrupted.reasons[0]._tag, empty.reasons.length)
+const expected = Cause.fail("record missing")
+const defect = Cause.die(new Error("invariant broken"))
+const interrupted = Cause.interrupt(17)
+const empty = Cause.empty
+empty.reasons.length // 0
+```
+
+```text
+Fail Die Interrupt 0
+```
+
+`Cause.fail` stores an error in E; `Cause.die` stores a defect outside E. `Cause.interrupt` records interruption with an optional numeric fiber identifier. An empty cause has no reasons, rather than a separate `Empty` reason variant.
+
+## Combining reasons
+
+```vibe
+// run: Console.log(JSON.stringify(combined.reasons.map((reason) => reason._tag))); Console.log(Cause.fail("same error").combine(Cause.fail("same error")).reasons.length)
+const combined = Cause.fail("export failed").combine(Cause.die(new Error("cleanup failed")))
+combined.reasons.map((reason) => reason._tag) // ["Fail", "Die"]
+Cause.fail("same error").combine(Cause.fail("same error")).reasons.length // 1
+```
+
+```text
+["Fail","Die"]
+1
+```
+
+Effect 4 stores reasons in a flat array. `combine` merges both sets of reasons and removes equal duplicates; it does not encode a sequential or parallel tree. A mixed cause must be inspected as a whole to avoid hiding a defect behind an expected failure.
+
+## Extracting a computation's cause
+
+```vibe
+// run: Console.log(diagnose().split("\n")[0].trim())
+error MissingRecord {
+  id: string
+}
+
+function diagnose() {
+  const outcome = exit {
+    throw new MissingRecord({ id: "r-9" })
+  }
+  if (outcome.isFailure()) {
+    return Cause.pretty(outcome.cause)
+  }
+  return "completed"
+}
+```
+
+```text
+MissingRecord:
+```
+
+`exit` runs the program and returns its full outcome as data, as `Effect.exit` does. A failure exit exposes `.cause`, including defects and interruption that ordinary `catch` does not handle. Use `throw cause` when you deliberately want to propagate the entire cause again, and `match` on the exit, with `Exit.Success(let value)` and `Exit.Failure(let cause)` arms, to branch on the whole outcome.
+
+## Identifying reason variants
+
+```vibe
+// run: Console.log(JSON.stringify(classify(Cause.fail("missing").combine(Cause.die("broken")).combine(Cause.interrupt(17))))); Console.log(JSON.stringify(classify(Cause.empty)))
+function classify<E>(cause: Cause.Cause<E>) {
+  const summary = {
+    failed: cause.hasFails(),
+    defective: cause.hasDies(),
+    interrupted: cause.hasInterrupts(),
+    interruptionOnly: cause.hasInterruptsOnly()
+  }
+  for (const reason of cause.reasons) {
+    if (reason.isFailReason()) Console.log("expected failure")
+    else if (reason.isDieReason()) Console.log("defect")
+    else if (reason.isInterruptReason()) {
+      Console.log(`interruption: ${reason.fiberId}`)
+    }
+  }
+  return summary
+}
+```
+
+```text
+expected failure
+defect
+interruption: 17
+{"failed":true,"defective":true,"interrupted":true,"interruptionOnly":false}
+{"failed":false,"defective":false,"interrupted":false,"interruptionOnly":false}
+```
+
+Cause predicates answer whether a kind of reason is present. Reason guards narrow individual entries to `Fail`, `Die`, or `Interrupt`, exposing `.error`, `.defect`, or `.fiberId`. Check `reasons.length === 0` for an empty cause.
+
+## Formatting and inspecting errors
+
+```vibe
+// run: const result = inspect(Cause.fail("missing").combine(Cause.die("broken"))); Console.log(JSON.stringify({ failures: result.failures, defects: result.defects })); Console.log(JSON.stringify(inspect(Cause.empty)))
+function inspect<E>(cause: Cause.Cause<E>) {
+  const failures = cause.reasons
+    .filter(Cause.isFailReason)
+    .map((reason) => reason.error)
+  const defects = cause.reasons
+    .filter(Cause.isDieReason)
+    .map((reason) => reason.defect)
+  return { failures, defects, rendered: Cause.pretty(cause) }
+}
+```
+
+```text
+{"failures":["missing"],"defects":["broken"]}
+{"failures":[],"defects":[],"rendered":""}
+```
+
+`Cause.pretty` produces readable error and trace information; it returns an empty string for `Cause.empty`. Select individual reasons when a reporting boundary needs separate counts or categories. Format only errors suitable for the destination: error fields and messages can contain sensitive application data.
+
+## Coming from Effect
+
+A VibeLang `catch` handles a cause only when it contains no defect and no interruption. For full outcome inspection, use `Effect.exit(() => work())` and keep the complete cause available.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/data-types/cause](https://effect.website/docs/v4/data-types/cause/)

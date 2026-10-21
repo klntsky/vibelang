@@ -1,0 +1,35 @@
+{
+  "name": "vibelang-docs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vocs dev",
+    "build": "vocs build",
+    "preview": "vocs preview",
+    "deploy": "alchemy deploy --stage prod",
+    "deploy:plan": "alchemy plan --stage prod",
+    "dev:cloudflare": "alchemy dev",
+    "postinstall": "node scripts/patch-vocs-search.mjs",
+    "prebuild": "node scripts/patch-vocs-search.mjs",
+    "predev": "node scripts/patch-vocs-search.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "vocs": "2.8.5",
+    "waku": "1.0.0-beta.6"
+  },
+  "devDependencies": {
+    "@effect/platform-bun": "^4.0.0-beta.105",
+    "@effect/platform-node": "^4.0.0-beta.105",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.1.0",
+    "alchemy": "^2.0.0-beta.72",
+    "effect": "^4.0.0-beta.105",
+    "typescript": "^6.0.2",
+    "vite": "^8.2.2"
+  }
+}

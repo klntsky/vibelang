@@ -1,0 +1,119 @@
+---
+title: "Ref"
+description: "A Ref holds shared mutable state behind atomic operations. Use it when several functions or fibers update one value, and keep the stored value immutable so every change goes through the reference."
+---
+
+# Ref
+
+A `Ref` holds shared mutable state behind atomic operations. Use it when several functions or fibers update one value, and keep the stored value immutable so every change goes through the reference.
+
+## Creating a shared reference
+
+```vibe
+// run: Console.log(JSON.stringify([countLocally(), countLocally()]))
+function makeCounter() {
+  return Ref.make(0)
+}
+// Ref.Ref<number>!!
+
+function countLocally() {
+  const counter = makeCounter()
+  counter.update((n) => n + 1)
+  return counter.get()
+}
+// Output: [1,1]
+```
+
+`makeCounter()` creates a reference when called inside a program. Repeated calls create independent counters; sharing requires passing the same reference to each caller. Reads and writes run as Effects even when they complete without waiting.
+
+## Reading and atomically updating state
+
+```vibe
+// run: Console.log(JSON.stringify(allocateIds()))
+function allocateIds() {
+  const nextId = Ref.make(100)
+  const first = nextId.modify((n) => [n, n + 1] as const)
+  const second = nextId.getAndUpdate((n) => n + 1)
+  const current = nextId.get()
+  nextId.set(500)
+  return { first, second, current }
+}
+// Returns { first: 100, second: 101, current: 102 }.
+// Output: {"first":100,"second":101,"current":102}
+```
+
+`modify` returns the tuple's first element and stores its second element in one atomic operation. `getAndUpdate` returns the old value, while `updateAndGet` returns the new one. A separate `get` followed by `set` is two operations and does not protect a read-modify-write sequence against other fibers.
+
+## Coordinating concurrent updates
+
+```vibe
+// run: Console.log(countCompleted())
+function countCompleted() {
+  const completed = Ref.make(0)
+  forEach([10, 20, 30, 40], (delay) => {
+    sleep(`${delay} millis`)
+    completed.update((n) => n + 1)
+  }, { concurrency: 4 })
+  return completed.get() // 4
+}
+// Output: 4
+```
+
+Each update uses the latest value, so no increments disappear. A `Ref.update` callback must compute its replacement synchronously without Effect operations; use `SynchronizedRef.updateEffect` when the update must wait or call a service. For arrays and objects, return replacements instead of mutating the previous value in place.
+
+## Supplying state as a service
+
+```vibe
+// run: Console.log(JSON.stringify([handleRequests(), handleRequests()]))
+service RequestCount {
+  increment(): void!!
+  read(): number!!
+
+  static readonly layer = Layer.effect(RequestCount) {
+    const count = Ref.make(0)
+    return {
+      increment: () => count.update((n) => n + 1),
+      read: () => count.get()
+    }
+  }
+}
+
+function handleRequests() {
+  provide RequestCount.layer {
+    RequestCount.increment()
+    RequestCount.increment()
+    return RequestCount.read()
+  }
+}
+// Output: [2,2]
+```
+
+The layer allocates one reference when it is built. All calls inside this `provide` share it, and a separate `provide` builds a fresh counter. Keeping the reference behind service methods also prevents callers from resetting it arbitrarily.
+
+## Sharing references across fibers
+
+```vibe
+// run: Console.log(JSON.stringify(collectNames().toSorted()))
+function collectNames() {
+  const names = Ref.make<ReadonlyArray<string>>([])
+  const west = fork {
+    sleep("20 millis")
+    names.update((old) => [...old, "west"])
+  }
+  const east = fork names.update((old) => [...old, "east"])
+  join west
+  join east
+  return names.get()
+}
+// Output: ["east","west"]
+```
+
+Both closures capture the same reference. Joining the fibers ensures their updates finish before the final read; the order of updates depends on execution timing. Forking shares the handle rather than cloning its current value.
+
+## Coming from Effect
+
+`Ref.make`, `get`, and updates return their success values directly when called. Use ordinary functions for operations that previously stored `Effect` values as fields.
+
+---
+
+The matching Effect page: [effect.website/docs/v4/state-management/ref](https://effect.website/docs/v4/state-management/ref/)

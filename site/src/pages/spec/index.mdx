@@ -1,0 +1,72 @@
+---
+title: "Introduction"
+---
+
+# VibeLang
+
+A language for writing Effect programs. Specification, 2026-10-16. Runtime: `effect@4.0.5`.
+
+VibeLang is TypeScript syntax in which every function is an Effect. You call functions normally, `throw` and `catch` typed errors, and ask for services by name. The compiler infers each function's `Effect<A, E, R>` and emits the Effect code you would have written by hand, so TypeScript code uses it like any other Effect library.
+
+```ts [Effect]
+const welcome = Effect.fn("welcome")(function* (id: string) {
+  const users = yield* Users
+  const mailer = yield* Mailer
+  const user = yield* users.find(id)
+  yield* mailer.send(user.email, `Welcome, ${user.name}!`)
+  return user.name
+})
+```
+
+```ts [VibeLang]
+function welcome(id: string) {
+  const user = Users.find(id)
+  Mailer.send(user.email, `Welcome, ${user.name}!`)
+  return user.name
+}
+// string!UserNotFound | MailError!Users | Mailer
+```
+
+The comment under the VibeLang version is not something you write. It is the contract the compiler infers, and what your editor shows when you hover over `welcome`.
+
+The two functions do the same work, with two differences. `Effect.fn("welcome")` opens a tracing span on every call; VibeLang adds a span only where you ask for one (Chapter 2). And the generated code looks each service up at the call that uses it, so a missing `Mailer` fails after `Users.find` has run instead of before.
+
+## How to read this document
+
+| Part | What it covers | Read it if |
+| --- | --- | --- |
+| [I. The language by example](/spec/101-part1-ch01-first-look#part-i-the-language-by-example) | Functions, errors, dependency injection, pipelines, resources, concurrency, producers, handlers, TypeScript interop, the standard library, and the questions Effect users ask, each shown next to the Effect code you write today | You use Effect and want to know what VibeLang is like. Start here. |
+| [II. The rules](/spec/213-part2-ch13-calls#part-ii-the-rules) | The precise rules behind Part I: what a call means, how contracts are inferred and checked, which functions compile to plain JavaScript | You are reviewing the language design |
+| [III. The runtime](/spec/318-part3-ch18-why#part-iii-the-runtime) | How VibeLang runs on Effect's fiber runtime: one-shot delimited continuations, ownership, cancellation, and the tests that check them | You care how it executes, or you are reviewing the runtime |
+| [IV. The compiler](/spec/427-part4-ch27-compiler#part-iv-the-compiler) | The fork of the TypeScript compiler, the pipeline, declarations, and editor support | You will build it |
+| [V. Decisions](/spec/529-part5-ch29-decisions#part-v-decisions) | Every decision with its reason and evidence, the closed end-to-end build calls, and the experiments that confirm the implementation | You want to check or change a decision |
+| [Appendices](/spec/900-appendices#appendices) | The evidence index, prior art, and every Effect feature mapped to VibeLang | You want to check a claim |
+
+To learn VibeLang by task rather than by rule, start with the [user guide](/001-onboarding). The [cheat sheet](/vibelang-features/115-cheat-sheet) puts every change beside the Effect code it replaces.
+
+**Status.** This is the specification. Every rule in it is decided: the owner's decisions and the defaults made to complete the design are logged in `docs/design/DECISIONS.md` (D1-D60) and collected in [Part V](/spec/529-part5-ch29-decisions#29-decisions), which records the closed end-to-end build calls. D57 and D58 are controversial defaults. The runtime in Part III is a working prototype: 154 tests pass in `experiments/`. The compiler exists as two prototypes: `prototype/esc`, on TypeScript's API, compiles 46 example files written from this document, and the Go fork of TypeScript in `typescript/` lowers calls by type and infers contracts (Chapter 27). The compiler, spec, runtime, and tooling share one private repository (D60).
+
+## Effect to VibeLang at a glance
+
+| In Effect today | In VibeLang | Chapter |
+| --- | --- | --- |
+| `Effect.gen(function* () { … })`, `Effect.fn(…)` | an ordinary `function` | [2](/spec/102-part1-ch02-functions#2-functions-and-calls) |
+| `yield* effect` | just call it: `f(x)` | [2](/spec/102-part1-ch02-functions#2-functions-and-calls) |
+| `Effect.map`, `Effect.flatMap`, `Effect.andThen`, `Effect.tap` | plain statements: `const x = f(); g(x)` | [2](/spec/102-part1-ch02-functions#2-functions-and-calls) |
+| `Effect.fail(e)` or `return yield* new E()` | `throw new E()` | [3](/spec/103-part1-ch03-errors#3-errors-the-e-channel) |
+| `class E extends Data.TaggedError("E")<{ ... }> {}` | `error E { ... }` | [3](/spec/103-part1-ch03-errors#3-errors-the-e-channel) |
+| `Effect.catchTag("E", h)` | `try { … } catch (e) { … }` | [3](/spec/103-part1-ch03-errors#3-errors-the-e-channel) |
+| `Effect.ensuring(cleanup)` | `finally { … }` | [3](/spec/103-part1-ch03-errors#3-errors-the-e-channel) |
+| `class S extends Context.Service<…>()("key") {}` | `service S { method(): A!E }` | [4](/spec/104-part1-ch04-di#4-dependency-injection-the-r-channel) |
+| `const s = yield* S` then `yield* s.method()` | `S.method()` | [4](/spec/104-part1-ch04-di#4-dependency-injection-the-r-channel) |
+| `Layer.effect(S, Effect.gen(…))` | `Layer.effect(S) { … }` | [4](/spec/104-part1-ch04-di#4-dependency-injection-the-r-channel) |
+| `program.pipe(Effect.provide(layer))` | `provide layer { program() }` | [4](/spec/104-part1-ch04-di#4-dependency-injection-the-r-channel) |
+| `effect.pipe(Effect.retry(…), Effect.timeout(…))` | `f() \|> retry(%, …) \|> timeout(%, …)` | [5](/spec/105-part1-ch05-programs#5-programs-as-values-retry-timeout-and-pipe) |
+| `Effect.scoped` with `Effect.acquireRelease` | `using x = acquire()` | [6](/spec/106-part1-ch06-resources#6-resources) |
+| `Effect.all([a, b], { concurrency: 2 })` | `Effect.all([() => a(), () => b()], { concurrency: 2 })` | [7](/spec/107-part1-ch07-concurrency#7-concurrency) |
+| `Effect.forkScoped(effect)` | `fork(() => f())`, owned by the enclosing block | [7](/spec/107-part1-ch07-concurrency#7-concurrency) |
+| a `Stream` you build by hand | a `function*` producer and `for...of` | [8](/spec/108-part1-ch08-producers#8-producers-streams-of-values) |
+| nothing comparable | `control Op { ... }` and `handle` | [9](/spec/109-part1-ch09-handlers#9-handlers-defining-your-own-effects) |
+| `node:fs`, `fetch`, `process.env`, `child_process` | `FileSystem`, `HttpClient`, `Config`, `ChildProcessSpawner` | [11](/spec/111-part1-ch11-stdlib#11-the-standard-library) |
+
+Where `async`, `Option`, `Schema`, `Stream`, testing, and the rest of Effect fit is answered in [Chapter 12](/spec/112-part1-ch12-faq#12-questions-effect-users-ask) and, feature by feature, in [Appendix C](/spec/901-appendix-c-coverage#c-every-effect-feature-in-vibelang).
