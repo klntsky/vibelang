@@ -15,17 +15,17 @@ esac
 
 # The site build runs the kernel's law suite first, which needs these installs.
 for dir in docs/tools experiments packages/runtime; do
-	[ -d "$root/$dir/node_modules" ] || (cd "$root/$dir" && bun install --silent)
+	(cd "$root/$dir" && bun install --silent --frozen-lockfile)
 done
 # The docs are checked and annotated with the release that
-# `npm create vibelang@latest` installs: the 0.0.2 native compiler and runtime from
+# `npm create vibelang@latest` installs: the native compiler and runtime of the version packages/compiler declares, from
 # the release tarballs (VIBELANG_RELEASE_TARBALLS, else dist-npm/tarballs, else the
 # registry's own files through npm pack), not this checkout's build.
 # - Every docs example must compile with it. VIBELANG_SKIP_RELEASE_SNIPPETS=1 skips
 #   that check, and needs VIBELANG_SKIP_RELEASE_SNIPPETS_REASON, which is printed.
 # - Code blocks get its hovers (docs/tools/hovers.ts). VIBELANG_DOCS_HOVERS=0 turns
 #   them off; the default is on, so every redeploy ships the same site.
-release=${VIBELANG_RELEASE_VERSION:-0.0.2}
+release=${VIBELANG_RELEASE_VERSION:-$(node -p 'require(process.argv[1]).version' "$root/packages/compiler/package.json")}
 tarballs=${VIBELANG_RELEASE_TARBALLS:-$root/dist-npm/tarballs}
 hovers=${VIBELANG_DOCS_HOVERS:-1}
 case "$hovers" in

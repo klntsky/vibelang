@@ -45,7 +45,7 @@ npx vibelang --version
 The output is:
 
 ```out
-VibeLang 0.0.2 (TypeScript 7.1.0-dev)
+VibeLang 0.0.3 (TypeScript 7.1.0-dev)
 ```
 
 ## Next

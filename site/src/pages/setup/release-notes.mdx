@@ -9,6 +9,44 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.3
+
+### Changes that can break code that compiled on 0.0.2
+
+- `error`, `service`, and `control` declarations are classes. Error classes
+  accept constructors, methods, and inheritance; each subclass has its own
+  name as its tag. An error family's base can declare `_tag: string`;
+  an abstract error has that tag type by default.
+- `throw` always fails outside a TypeScript hatch or module. Plain functions
+  and JavaScript generators cannot let a typed failure escape. Use an Effect
+  contract for a function that can fail, or TypeScript for JavaScript throws.
+
+### Language
+
+- `schema error` declares a serializable error class. `schema Name = Type`
+  declares a schema and its type; `service Name: Type` declares a service
+  whose shape can be any type.
+- Inline `module` declarations hold self-contained TypeScript. Import their
+  exports by the module's name; diagnostics and editor navigation point into
+  the body, and declaration emit writes a separate declaration file.
+- Both sides of a catch expression receive its contextual type. An exhaustive
+  match omits its final test. More data-first Effect functions support method
+  syntax, including functions whose receiver is not named `self`.
+
+### Tools and integrations
+
+- Format `.vibe` with the dprint process plugin and lint it with
+  `vibelang/eslint`. A tree-sitter grammar and Neovim support are available.
+- TypeScript-style Effect forms warn with editor quick fixes where a
+  VibeLang form preserves their meaning. `vibelang --fix` applies the fixes.
+- The compiler package ships the VibeLang agent skill.
+- Imported foreign-project sources use their own VibeLang settings.
+  Declarations use `.js` specifiers for `.vibe` modules, and tools reuse
+  successful whole-project compiles through an on-disk cache.
+- `bun --preload vibelang/bun` runs and tests source modules.
+  The Vite plugin's `register: true` lets child processes import `.vibe`;
+  `vibelang-unplugin/deferred` loads the plugin when a bundler awaits it.
+
 ## 0.0.2
 
 Eleven packages: `vibelang`, six native compilers
