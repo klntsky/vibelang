@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { $extract, $is, $noMatch, $patternError, $rest, customMatcher, TaggedError } from "vibelang-runtime"
+import { $assertMatch, $extract, $is, $noMatch, $patternError, $rest, customMatcher, TaggedError } from "vibelang-runtime"
 
 class NotFound extends TaggedError("NotFound")<{ readonly id: string }> {}
 class Timeout extends TaggedError("Timeout")<{}> {}
@@ -43,6 +43,15 @@ test("match: $rest keeps the properties the clauses do not name; $noMatch and $p
   expect($rest({ a: 1, b: 2, c: 3 }, ["a"])).toEqual({ b: 2, c: 3 })
   expect(() => $noMatch({ _tag: "Timeout" })).toThrow(TypeError)
   expect(() => $patternError(4705)).toThrow(TypeError)
+})
+
+test("match: $assertMatch returns when the last arm's test passed and throws $noMatch's TypeError when it failed", () => {
+  expect($assertMatch(true, "kept")).toBeUndefined()
+  expect($assertMatch(1, "kept")).toBeUndefined()
+  expect(() => $assertMatch(false, "missing")).toThrow('No match arm matched "missing"')
+  const structural = { _tag: "NotFound", id: "1" }
+  expect(() => $assertMatch($is(NotFound, structural), structural)).toThrow("No match arm matched [object Object]")
+  expect($assertMatch($is(NotFound, new NotFound({ id: "1" })), structural)).toBeUndefined()
 })
 
 test("match: object rest copies __proto__ as data without changing the result prototype", () => {

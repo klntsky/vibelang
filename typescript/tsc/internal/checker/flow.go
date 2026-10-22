@@ -333,10 +333,12 @@ func (c *Checker) getTypeAtFlowCall(f *FlowState, flow *ast.FlowNode) FlowType {
 func (c *Checker) narrowTypeByTypePredicate(f *FlowState, t *Type, predicate *TypePredicate, callExpression *ast.Node, assumeTrue bool) *Type {
 	// Don't narrow from 'any' if the predicate type is exactly 'Object' or 'Function'
 	if predicate.t != nil && !(IsTypeAny(t) && (predicate.t == c.globalObjectType || predicate.t == c.globalFunctionType)) {
+		// A VibeLang class pattern narrows as instanceof does (extensions_match.go).
+		checkDerived := c.isVibeLangClassPattern(callExpression)
 		predicateArgument := c.getTypePredicateArgument(predicate, callExpression)
 		if predicateArgument != nil {
 			if c.isMatchingReference(f.reference, predicateArgument) {
-				return c.getNarrowedType(t, predicate.t, assumeTrue, false /*checkDerived*/)
+				return c.getNarrowedType(t, predicate.t, assumeTrue, checkDerived)
 			}
 			if c.strictNullChecks && c.optionalChainContainsReference(predicateArgument, f.reference) && (assumeTrue && !c.hasTypeFacts(predicate.t, TypeFactsEQUndefined) || !assumeTrue && everyType(predicate.t, c.IsNullableType)) {
 				t = c.getAdjustedTypeWithFacts(t, TypeFactsNEUndefinedOrNull)
@@ -344,7 +346,7 @@ func (c *Checker) narrowTypeByTypePredicate(f *FlowState, t *Type, predicate *Ty
 			access := c.getDiscriminantPropertyAccess(f, predicateArgument, t)
 			if access != nil {
 				return c.narrowTypeByDiscriminant(t, access, func(t *Type) *Type {
-					return c.getNarrowedType(t, predicate.t, assumeTrue, false /*checkDerived*/)
+					return c.getNarrowedType(t, predicate.t, assumeTrue, checkDerived)
 				})
 			}
 		}

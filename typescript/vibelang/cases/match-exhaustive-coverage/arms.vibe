@@ -1,0 +1,57 @@
+// D294: tests that reach every arm of a match D209 proves exhaustive cover
+// every branch, whether its last arm runs untested (literals, Option) or
+// keeps its tests as a check (a class or a custom matcher). run.mjs runs
+// every arm under V8 block coverage and prints what no call reached.
+export type Phase = "draft" | "published"
+
+export error NotFound { id: string }
+export error Denied { user: string }
+
+export class Even {
+  readonly _tag = "Even"
+  constructor(readonly n: number) {}
+}
+
+export class Odd {
+  readonly _tag = "Odd"
+  constructor(readonly n: number) {}
+  static [customMatcher](subject: unknown) {
+    return subject instanceof Odd && subject.n % 2 === 1
+  }
+}
+
+export function phase(p: Phase) {
+  return match (p) {
+    when "draft": "D";
+    when "published": "P";
+  }
+}
+
+export function failure(e: NotFound | Denied) {
+  return match (e) {
+    when NotFound: `missing ${e.id}`;
+    when Denied and { let user }: `denied ${user}`;
+  }
+}
+
+export function parity(n: Even | Odd) {
+  return match (n) {
+    when Even: "even";
+    when Odd: "odd";
+  }
+}
+
+export function count(o: Option.Option<number>) {
+  return match (o) {
+    when Option.None: 0;
+    when Option.Some(let n): n;
+  }
+}
+
+// Over string, which is not a finite union, the tests and $noMatch stay;
+// run.mjs reports the $noMatch that no call reaches.
+export function text(value: string) {
+  return match (value) {
+    when String(let s): s;
+  }
+}

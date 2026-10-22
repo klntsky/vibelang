@@ -1,0 +1,24 @@
+// expect: EK4701
+// D209's proof follows a class pattern's class, as instanceof narrows: an
+// arm for one of two error classes that share a name and fields leaves the
+// other, and a family's base leaves an unrelated error with the same fields.
+import * as A from "./a.vibe"
+import * as B from "./b.vibe"
+
+error Timeout { ms: number }
+error AppError { _tag: string; code: string }
+error Missing extends AppError { path: string }
+error Other { code: string }
+
+export function sameName(e: A.NotFound | B.NotFound | Timeout) {
+  return match (e) {
+    when A.NotFound: "A";
+    when Timeout: "timeout";
+  }
+}
+
+export function family(e: Missing | Other) {
+  return match (e) {
+    when AppError: "app";
+  }
+}

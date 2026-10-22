@@ -5,8 +5,10 @@
 // A variable pattern calls $is, an extractor pattern with an argument list
 // that the compiler does not know calls $extract, an object pattern's rest
 // calls $rest, and a match without a default arm that no arm matched calls
-// $noMatch. $patternError marks a pattern VibeLang does not support; the
-// compiler reports it, so it never runs in a program that compiled.
+// $noMatch. The last arm of an exhaustive match that tests a class or a
+// custom matcher calls $assertMatch. $patternError marks a pattern VibeLang
+// does not support; the compiler reports it, so it never runs in a program
+// that compiled.
 
 /**
  * The proposal's `Symbol.customMatcher`: a static method that decides whether
@@ -128,6 +130,17 @@ export function $noMatch(subject: unknown): never {
     shown = typeof subject
   }
   throw new TypeError(`No match arm matched ${shown}`)
+}
+
+/**
+ * Tests the last arm of a match that D209 proves exhaustive when one of its
+ * arms tests a class or a custom matcher, whose result a value's type does
+ * not prove (D294): returns when the arm's test passed, and otherwise ends the
+ * match as $noMatch does. The compiler writes it in place of the arm's if, so
+ * the test adds no branch to the program.
+ */
+export function $assertMatch(matched: unknown, subject: unknown): void {
+  if (!matched) $noMatch(subject)
 }
 
 /** A pattern VibeLang does not support; the compiler reports it (EK4702-EK4705). */

@@ -102,6 +102,9 @@ export function describe$direct(failure) {
         }
         {
             {
+                runtime.$assertMatch($is(Denied, failure) && typeof failure === "object" && failure
+                    !== null && "user" in
+                    failure, failure);
                 let user = failure.user;
                 return `denied ${user}`;
             }

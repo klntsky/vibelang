@@ -1,0 +1,131 @@
+// expect-result: {"sameName":["A a","timeout 5.0","B b"],"sameNameIs":["A a","timeout","B b"],"family":["app /p","other o"],"shape":["circle","square 2","No match arm matched [object Object]"],"parity":["even","odd 3","No match arm matched [object Object]"],"shapeOrCount":["circle","none","some 4","No match arm matched [object Object]"],"positions":[["square 2"],"No match arm matched [object Object]","square 2","No match arm matched [object Object]","logged","No match arm matched [object Object]"]}
+// A class pattern matches by class (D213, D215, D278), so D209's proof
+// follows the class, not the shape: two error classes that share a name and
+// fields stay distinct, a family's base covers its subclasses but not an
+// unrelated error with the same fields, and is narrows as instanceof does.
+// D294 keeps the last arm's tests of a match that tests a class or a custom
+// matcher, because a value's type does not prove what instanceof or a custom
+// matcher returns: a structural object of a class type, an instance that a
+// custom matcher refuses, and a structural object that passes a class arm to
+// reach an Option arm each throw the proposal's TypeError instead of taking
+// the last arm.
+import * as A from "./a.vibe"
+import * as B from "./b.vibe"
+
+error Timeout { ms: number }
+error AppError { _tag: string; code: string }
+error Missing extends AppError { path: string }
+error Other { code: string }
+
+class Circle { readonly _tag = "Circle"; readonly r = 1 }
+class Square { readonly _tag = "Square"; readonly side = 2 }
+
+class Even {
+  readonly _tag = "Even"
+  constructor(readonly n: number) {}
+}
+
+// Only an instance with an odd n is an Odd.
+class Odd {
+  readonly _tag = "Odd"
+  constructor(readonly n: number) {}
+  static [customMatcher](subject: unknown) {
+    return subject instanceof Odd && subject.n % 2 === 1
+  }
+}
+
+type Failure = A.NotFound | B.NotFound | Timeout
+
+function sameName(e: Failure) {
+  return match (e) {
+    when A.NotFound: `A ${e.id}`;
+    when Timeout: `timeout ${e.ms.toFixed(1)}`;
+    when B.NotFound: `B ${e.id}`;
+  }
+}
+
+function sameNameIs(e: Failure) {
+  if (e is A.NotFound) return `A ${e.id}`
+  if (e is Timeout) return "timeout"
+  return `B ${e.id}`
+}
+
+function family(e: Missing | Other) {
+  return match (e) {
+    when AppError: `app ${e.path}`;
+    when Other: `other ${e.code}`;
+  }
+}
+
+function shape(s: Circle | Square) {
+  return match (s) {
+    when Circle: "circle";
+    when Square: `square ${s.side}`;
+  }
+}
+
+function parity(n: Even | Odd) {
+  return match (n) {
+    when Even: "even";
+    when Odd: `odd ${n.n}`;
+  }
+}
+
+function shapeOrCount(x: Circle | Option.Option<number>) {
+  return match (x) {
+    when Circle: "circle";
+    when Option.None: "none";
+    when Option.Some(let n): `some ${n}`;
+  }
+}
+
+// The last arm keeps its check in each position a match lowers to (D214):
+// a statement, inside an expression, and in an Effect function.
+function shapeStatement(s: Circle | Square, log: Array<string>) {
+  match (s) {
+    when Circle: log.push("circle");
+    when Square: log.push(`square ${s.side}`);
+  }
+  return log
+}
+
+function shapeExpression(s: Circle | Square) {
+  const label = match (s) {
+    when Circle: "circle";
+    when Square: `square ${s.side}`;
+  }
+  return label
+}
+
+function shapeEffect(s: Circle | Square) {
+  match (s) {
+    when Circle: Effect.log("circle");
+    when Square: Effect.log(`square ${s.side}`);
+  }
+  return "logged"
+}
+
+// The program's value, or the message of the defect it dies with.
+function settle<A>(program: A!!) {
+  return match (exit(program)) {
+    when Exit.Success(let value): value;
+    when Exit.Failure(let cause): (Cause.squash(cause) as Error).message;
+  }
+}
+
+export function main() {
+  const circle: Circle = { _tag: "Circle", r: 1 }
+  return {
+    sameName: [sameName(new A.NotFound({ id: "a" })), sameName(new Timeout({ ms: 5 })), sameName(new B.NotFound({ id: "b" }))],
+    sameNameIs: [sameNameIs(new A.NotFound({ id: "a" })), sameNameIs(new Timeout({ ms: 5 })), sameNameIs(new B.NotFound({ id: "b" }))],
+    family: [family(new Missing({ code: "m", path: "/p" })), family(new Other({ code: "o" }))],
+    shape: [shape(new Circle()), shape(new Square()), settle(shape(circle))],
+    parity: [parity(new Even(2)), parity(new Odd(3)), settle(parity(new Odd(2)))],
+    shapeOrCount: [shapeOrCount(new Circle()), shapeOrCount(Option.none()), shapeOrCount(Option.some(4)), settle(shapeOrCount(circle))],
+    positions: [
+      shapeStatement(new Square(), []), settle(shapeStatement(circle, [])),
+      shapeExpression(new Square()), settle(shapeExpression(circle)),
+      shapeEffect(new Square()), settle(shapeEffect(circle))
+    ]
+  }
+}

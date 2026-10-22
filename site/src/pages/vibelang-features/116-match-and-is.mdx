@@ -211,7 +211,26 @@ function phaseLabel(phase: Phase) {
 error EK4701: This match does not handle every case of Phase: "review" is left.
 ```
 
-A match that handles every case needs no check when it runs: its last arm runs without testing its pattern, so tests that reach every arm cover every branch. A value outside the declared type, which only an unsound cast or `any` can produce, takes the last arm; write `default: throw …` to reject it at run time instead.
+A class pattern covers its class and its subclasses, never another class with the same fields: each package's `error NotFound` needs its own arm, and so does an error that has a family base's fields without extending it:
+
+```vibe
+// expect-error: EK4701
+error AppError { _tag: string; code: string }
+error Missing extends AppError { path: string }
+error Other { code: string }
+
+function describe(failure: Missing | Other) {
+  return match (failure) {
+    when AppError: failure.code;
+  }
+}
+```
+
+```text
+error EK4701: This match does not handle every case of Missing | Other: Other is left.
+```
+
+A match that handles every case needs no `default`, and tests that reach every arm cover every branch. When its arms test only literals, shapes, `String` and the other primitive classes, `Option`, `Exit` or `Result`, its last arm runs without testing its pattern; a value outside the declared type, which only an unsound cast or `any` can produce, takes it, so write `default: throw …` to reject one at run time instead. A class, a custom matcher or another named matcher decides at run time what a type can't prove: a structural object of a class type is no instance. When an arm tests one, the last arm keeps its test without adding a branch, and a value that fails it throws a `TypeError`.
 
 For any other type, a match without `default` that no arm fits throws a `TypeError` when it runs, as the proposal specifies.
 
