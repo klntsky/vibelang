@@ -1150,7 +1150,7 @@ func (p *Parser) parseSchemaDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 	base := p.vibelangSynthesized(p.factory.NewExpressionWithTypeArguments(helper, p.newNodeList(name.Loc, []*ast.Node{query})), keyword)
 	clause := p.vibelangSynthesized(p.factory.NewHeritageClause(ast.KindExtendsKeyword, p.newNodeList(keyword, []*ast.Node{base})), keyword)
 	declaration := p.factory.NewInterfaceDeclaration(interfaceModifiers, typeName, nil /*typeParameters*/, p.newNodeList(keyword, []*ast.Node{clause}), p.newNodeList(keyword, nil))
-	p.vibelangSynthesized(declaration, core.NewTextRange(pos, keyword.End()))
+	p.vibelangSynthesized(declaration, p.vibelangCompanionLoc(pos, keyword))
 	p.reparseList = append(p.reparseList, declaration)
 	return statement
 }
@@ -1173,7 +1173,36 @@ func (p *Parser) vibelangSchemaCall(name string, anchor core.TextRange, argument
 		span = core.NewTextRange(min(anchor.Pos(), arguments[0].Pos()), max(anchor.End(), arguments[len(arguments)-1].End()))
 	}
 	list := p.newNodeList(span, arguments)
-	return p.vibelangSpanning(p.factory.NewCallExpression(p.vibelangSchemaMember(nil, name, anchor), nil /*questionDotToken*/, nil /*typeArguments*/, list, ast.NodeFlagsNone), span)
+	return p.vibelangSpanning(p.factory.NewCallExpression(p.vibelangSchemaMember(nil, name, p.vibelangCalleeAnchor(anchor)), nil /*questionDotToken*/, nil /*typeArguments*/, list, ast.NodeFlagsNone), span)
+}
+
+// vibelangCalleeAnchor is where a synthesized Schema.<name> stands for anchor,
+// the source it replaces: on the blanks before that source's first token, on
+// the token's own line. The printer writes a property access's dot after the
+// comments that follow its object's end, and breaks the line when the object,
+// the dot and the name fall on different lines, so a Schema.<name> that ended
+// where its source ends carried the comments after the source, such as the
+// next declaration's JSDoc, and split across lines. Ending where the source's
+// first token starts, on that token's line, it carries neither. With no blank
+// before the token on its line it takes all the trivia before the token, and
+// with no trivia at all the anchor stays, since an empty range reads as a
+// missing node.
+func (p *Parser) vibelangCalleeAnchor(anchor core.TextRange) core.TextRange {
+	start := scanner.SkipTrivia(p.sourceText, anchor.Pos())
+	if start > anchor.End() {
+		return anchor
+	}
+	blanks := start
+	for blanks > anchor.Pos() && (p.sourceText[blanks-1] == ' ' || p.sourceText[blanks-1] == '\t') {
+		blanks--
+	}
+	if blanks == start {
+		blanks = anchor.Pos()
+	}
+	if blanks >= start {
+		return anchor
+	}
+	return core.NewTextRange(blanks, start)
 }
 
 // vibelangSchemaFields makes Schema.Struct({ ... }) of members, the members of
@@ -1181,9 +1210,13 @@ func (p *Parser) vibelangSchemaCall(name string, anchor core.TextRange, argument
 // NodeFlagsVibeLang. body is the range of the braces.
 func (p *Parser) vibelangSchemaFields(members []*ast.Node, body core.TextRange) *ast.Node {
 	properties := p.vibelangSchemaProperties(members)
-	object := p.vibelangSpanning(p.factory.NewObjectLiteralExpression(p.newNodeList(body, properties), true /*multiLine*/), body)
 	brace := scanner.SkipTrivia(p.sourceText, body.Pos())
-	call := p.vibelangSchemaCall("Struct", core.NewTextRange(brace, min(brace+1, body.End())), object)
+	// The properties lie between the braces, as a parsed object literal's do:
+	// the printer writes the comments at the list's end before the closing
+	// brace, and after the body come the next declaration's.
+	inside := core.NewTextRange(min(brace+1, body.End()), max(body.End()-1, min(brace+1, body.End())))
+	object := p.vibelangSpanning(p.factory.NewObjectLiteralExpression(p.newNodeList(inside, properties), true /*multiLine*/), body)
+	call := p.vibelangSchemaCall("Struct", core.NewTextRange(body.Pos(), min(brace+1, body.End())), object)
 	call.Flags |= ast.NodeFlagsVibeLang
 	return call
 }
@@ -1230,11 +1263,11 @@ func (p *Parser) vibelangSchemaOf(typeNode *ast.Node) *ast.Node {
 		return p.vibelangSchemaOf(typeNode.AsParenthesizedTypeNode().Type)
 	case ast.KindStringKeyword, ast.KindNumberKeyword, ast.KindBooleanKeyword, ast.KindBigIntKeyword, ast.KindSymbolKeyword,
 		ast.KindUndefinedKeyword, ast.KindUnknownKeyword, ast.KindAnyKeyword, ast.KindNeverKeyword, ast.KindObjectKeyword, ast.KindVoidKeyword:
-		return p.vibelangSchemaMember(nil, vibelangSchemaKeywords[typeNode.Kind], typeNode.Loc)
+		return p.vibelangSchemaMember(nil, vibelangSchemaKeywords[typeNode.Kind], p.vibelangCalleeAnchor(typeNode.Loc))
 	case ast.KindLiteralType:
 		literal := typeNode.AsLiteralTypeNode().Literal
 		if literal.Kind == ast.KindNullKeyword {
-			return p.vibelangSchemaMember(nil, "Null", typeNode.Loc)
+			return p.vibelangSchemaMember(nil, "Null", p.vibelangCalleeAnchor(typeNode.Loc))
 		}
 		return p.vibelangSchemaCall("Literal", typeNode.Loc, literal)
 	case ast.KindUnionType:

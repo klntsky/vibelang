@@ -1,0 +1,37 @@
+/**
+ * The file's header.
+ */
+
+/** The codes. */
+export schema Code =
+  | "a"
+  | "b"
+
+/** A user. */
+export schema User {
+  /** The id. */
+  id: string
+  /** The nickname. */
+  nick?: string
+  /** The address. */
+  home: {
+    /** The city. */
+    city: string
+  }
+}
+
+/** A name. */
+export schema Name = string
+
+/** Nothing. */
+export schema Nothing = null
+
+/** After the schemas. */
+export const after = 1
+
+// expect-result: {"code":"b","user":{"id":"1","home":{"city":"Paris"}}}
+export function main() {
+  const code = Schema.decodeUnknownEffect(Code)("b")
+  const user = Schema.decodeUnknownEffect(User)({ id: "1", home: { city: "Paris" } })
+  return { code, user }
+}

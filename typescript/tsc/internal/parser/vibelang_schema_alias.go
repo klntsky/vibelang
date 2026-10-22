@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/core"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
@@ -81,9 +83,33 @@ func (p *Parser) parseSchemaAliasDeclaration(pos int, jsdoc jsdocScannerInfo, mo
 	right := p.vibelangSynthesized(p.factory.NewIdentifier("Type"), name.Loc)
 	query := p.vibelangSynthesized(p.factory.NewTypeQueryNode(p.vibelangSynthesized(p.factory.NewQualifiedName(left, right), name.Loc), nil /*typeArguments*/), name.Loc)
 	alias := p.factory.NewTypeAliasDeclaration(aliasModifiers, typeName, nil /*typeParameters*/, query)
-	p.vibelangSynthesized(alias, core.NewTextRange(pos, keyword.End()))
+	p.vibelangSynthesized(alias, p.vibelangCompanionLoc(pos, keyword))
 	p.reparseList = append(p.reparseList, alias)
 	return statement
+}
+
+// vibelangCompanionLoc is the range of the declaration a schema form adds
+// before its constant (the alias form's type, the struct form's interface):
+// from the line break before the declaration's own JSDoc, or from the keyword
+// when it has none, to the keyword's end. The constant's statement starts at
+// pos, so it alone owns the comments before that JSDoc, such as the file's
+// header: the printers emit a node's leading comments from its position, and
+// two nodes at pos would both print the header. The range starts at the line
+// break because a scan for leading comments collects a comment only after a
+// line break, except at the start of the file. The companion still carries
+// the JSDoc, so the type and the constant are documented alike.
+func (p *Parser) vibelangCompanionLoc(pos int, keyword core.TextRange) core.TextRange {
+	start := keyword.Pos()
+	for comment := range scanner.GetLeadingCommentRanges(&p.factory, p.sourceText, pos) {
+		text := p.sourceText[comment.Pos():comment.End()]
+		if comment.Kind == ast.KindMultiLineCommentTrivia && len(text) > 4 && text[:3] == "/**" {
+			start = pos
+			if lineBreak := strings.LastIndexByte(p.sourceText[pos:comment.Pos()], '\n'); lineBreak >= 0 {
+				start = pos + lineBreak
+			}
+		}
+	}
+	return core.NewTextRange(start, keyword.End())
 }
 
 // IsSchemaAliasDeclaration reports whether node is the variable declaration
