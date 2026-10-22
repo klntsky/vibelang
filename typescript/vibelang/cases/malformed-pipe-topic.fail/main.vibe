@@ -1,0 +1,3 @@
+// expect: TS1109
+const e = |> %
+export function main() { return 1 }

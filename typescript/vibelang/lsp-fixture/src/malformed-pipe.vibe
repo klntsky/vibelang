@@ -1,0 +1,2 @@
+const e = |> 2
+export function main() { return 1 }

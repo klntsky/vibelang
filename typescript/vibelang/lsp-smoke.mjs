@@ -265,6 +265,12 @@ try {
     assert(formatted === expected, `formatted ${JSON.stringify(formatted)}`)
   })
 
+  await check("diagnostics: a missing pipe operand reports TS1109 while editing", async () => {
+    open("src/malformed-pipe.vibe", "vibe")
+    const items = await diagnostics("src/malformed-pipe.vibe")
+    assert(items.some((d) => d.code === 1109), `diagnostics ${JSON.stringify(items)}`)
+  })
+
   await check("diagnostics: main.vibe, opened as vibe, checks clean", async () => {
     const items = await diagnostics("src/main.vibe")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)

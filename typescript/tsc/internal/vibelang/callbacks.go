@@ -231,9 +231,21 @@ func isStaticReceiver(c *checker.Checker, receiver *ast.Node) bool {
 	return declaration != nil && ast.IsVariableDeclaration(declaration) && ast.GetSourceFileOfNode(declaration).IsDeclarationFile
 }
 
-// nodeText returns the source text of node, without leading trivia.
+// nodeText returns the source text of node, without leading trivia. Missing,
+// synthesized and invalid recovery spans have no source text.
 func nodeText(file *ast.SourceFile, node *ast.Node) string {
-	return file.Text()[scanner.SkipTrivia(file.Text(), node.Pos()):node.End()]
+	if file == nil || ast.NodeIsMissing(node) {
+		return ""
+	}
+	source := file.Text()
+	if node.Pos() < 0 || node.End() < node.Pos() || node.End() > len(source) || node.Pos() > len(source) {
+		return ""
+	}
+	start := scanner.SkipTrivia(source, node.Pos())
+	if start > node.End() {
+		return ""
+	}
+	return source[start:node.End()]
 }
 
 // reportTracedCallback explains Effect.fn's body convention without claiming

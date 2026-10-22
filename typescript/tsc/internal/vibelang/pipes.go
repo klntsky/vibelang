@@ -6,7 +6,6 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
-	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
 // The pipe operator (design D154, D155). In a .vibe file,
@@ -145,6 +144,9 @@ func checkPipes(c *checker.Checker, file *ast.SourceFile) {
 			}
 		case isPipe(n):
 			body := n.AsBinaryExpression().Right
+			if ast.NodeIsMissing(n.AsBinaryExpression().Left) || ast.NodeIsMissing(body) {
+				break // the parser already reports the missing operand
+			}
 			topics := topicsOf(n)
 			if len(topics) == 0 {
 				d := report(c, body, EK1006)
@@ -177,7 +179,7 @@ func topicQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
 		return "", ""
 	}
 	file := ast.GetSourceFileOfNode(node)
-	left := scanner.GetSourceTextOfNodeFromSourceFile(file, pipe.AsBinaryExpression().Left, false /*includeJsDoc*/)
+	left := nodeText(file, pipe.AsBinaryExpression().Left)
 	a := analyzerFor(c)
 	t := c.TypeToStringEx(c.GetTypeAtLocation(node), node, hoverTypeFlags, nil)
 	if a.isByName(node) {

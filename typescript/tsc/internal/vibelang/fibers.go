@@ -109,7 +109,7 @@ func checkAwait(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 		return
 	}
 	args := call.Arguments()
-	if len(args) != 1 {
+	if len(args) != 1 || ast.NodeIsMissing(args[0]) {
 		return
 	}
 	operand := args[0]
@@ -153,7 +153,7 @@ func checkJoin(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 		return
 	}
 	args := call.Arguments()
-	if len(args) != 1 {
+	if len(args) != 1 || ast.NodeIsMissing(args[0]) {
 		return
 	}
 	operand := args[0]
@@ -301,7 +301,7 @@ func checkAwaitOperation(c *checker.Checker, file *ast.SourceFile, call *ast.Nod
 		return
 	}
 	args := call.Arguments()
-	if len(args) != 1 {
+	if len(args) != 1 || ast.NodeIsMissing(args[0]) {
 		return
 	}
 	if (helper == "$awaitRace" || helper == "$awaitAny") && ast.SkipParentheses(args[0]).Kind == ast.KindObjectLiteralExpression {

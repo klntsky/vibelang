@@ -1,0 +1,2 @@
+// expect: TS2304
+export function main() { join }
