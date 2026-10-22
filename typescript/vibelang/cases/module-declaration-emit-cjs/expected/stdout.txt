@@ -1,0 +1,3 @@
+setup ran
+{"cleaned":"abab","upper":"AB","doubled":"xx","prefix":"more:","more":"more","area":6,"level":3,"counted":1,"described":"1x2"}
+reexports ok

@@ -141,7 +141,7 @@ type moduleInliner struct {
 	modules  []*inlineModule
 	verbatim bool      // verbatimModuleSyntax: imports are kept unless type only
 	cjs      bool      // the file is emitted as CommonJS
-	runtime  *ast.Node // the emitter-owned runtime namespace used to freeze exports
+	runtime  *ast.Node // the emitter-owned runtime namespace for module helpers
 }
 
 // inlineModule is one module declaration being written inline.
@@ -343,6 +343,31 @@ func (tx *moduleInliner) reexports(declaration *ast.Node, module *inlineModule) 
 	if len(names) == 0 {
 		return nil
 	}
+	if tx.cjs {
+		// These exports were synthesized after binding. TypeScript's CommonJS
+		// transform cannot connect their locals to the original export symbols.
+		var statements []*ast.Node
+		for i, name := range names {
+			var value *ast.Node
+			if name.Text() == "__proto__" {
+				// Assignment would invoke Object.prototype's inherited setter.
+				properties := []*ast.Node{
+					f.NewPropertyAssignment(nil, f.NewIdentifier("value"), nil, nil, values[i]),
+				}
+				for _, flag := range []string{"enumerable", "configurable", "writable"} {
+					properties = append(properties, f.NewPropertyAssignment(nil, f.NewIdentifier(flag), nil, nil, f.NewKeywordExpression(ast.KindTrueKeyword)))
+				}
+				value = f.NewCallExpression(tx.runtimeMember("$defineProperty"), nil, nil, f.NewNodeList([]*ast.Node{
+					f.NewIdentifier("exports"), f.NewStringLiteral(name.Text(), ast.TokenFlagsNone),
+					f.NewObjectLiteralExpression(f.NewNodeList(properties), false),
+				}), ast.NodeFlagsNone)
+			} else {
+				value = f.NewAssignmentExpression(member(f, f.NewIdentifier("exports"), name.Text()), values[i])
+			}
+			statements = append(statements, f.NewExpressionStatement(value))
+		}
+		return statements
+	}
 	var declarations, specifiers []*ast.Node
 	for i, name := range names {
 		local := f.NewUniqueName(exportNameText(name))
@@ -353,6 +378,15 @@ func (tx *moduleInliner) reexports(declaration *ast.Node, module *inlineModule) 
 		constStatement(f, declarations),
 		f.NewExportDeclaration(nil, false, f.NewNamedExports(f.NewNodeList(specifiers)), nil, nil),
 	}
+}
+
+// runtimeMember returns an intrinsic captured outside the user's scopes.
+func (tx *moduleInliner) runtimeMember(name string) *ast.Node {
+	f := tx.Factory()
+	if tx.runtime == nil {
+		tx.runtime = f.NewUniqueName("moduleRuntime")
+	}
+	return member(f, tx.runtime.Clone(f), name)
 }
 
 // name returns the unique name that holds the module's exports. The source
@@ -419,11 +453,8 @@ func (tx *moduleInliner) inline(module *inlineModule) []*ast.Node {
 		}
 	}
 	properties = append([]*ast.Node{f.NewPropertyAssignment(nil, f.NewIdentifier("__proto__"), nil, nil, f.NewKeywordExpression(ast.KindNullKeyword))}, properties...)
-	if tx.runtime == nil {
-		tx.runtime = f.NewUniqueName("moduleRuntime")
-	}
 	freeze := f.NewCallExpression(
-		member(f, tx.runtime.Clone(f), "$freeze"),
+		tx.runtimeMember("$freeze"),
 		nil, nil, f.NewNodeList([]*ast.Node{f.NewObjectLiteralExpression(f.NewNodeList(properties), true)}), ast.NodeFlagsNone)
 	body = append(body, f.NewReturnStatement(freeze))
 	var modifiers *ast.ModifierList
