@@ -15,7 +15,7 @@ npm install --save-dev vibelang vibelang-unplugin
 ```
 
 The plugin compiles with the `vibelang` package, a peer dependency, through its
-`vibelang/project` backend. It needs Node 22 or later.
+`vibelang/project` backend. It needs Node 26 or later.
 
 ## Configure
 

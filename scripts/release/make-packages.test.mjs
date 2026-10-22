@@ -159,3 +159,31 @@ test("refuses stale install docs before replacing release artifacts", (t) => {
   assert.match(result.stderr, /docs\/user\/src\/setup.md: stale VibeLang version/)
   assert.ok(!existsSync(join(root, "dist-npm/tarballs")))
 })
+
+test("all release packages and the starter declare the Node 26 floor", () => {
+  for (const path of [...["compiler", "runtime", "vite", "unplugin", "create-vibelang"].map(name => "packages/" + name + "/package.json"), "templates/app/package.json"]) {
+    assert.equal(json(join(repo, path)).engines?.node, ">=26", path)
+  }
+})
+
+for (const name of ["compiler", "runtime", "vite", "unplugin", "create-vibelang"]) {
+  test("refuses a drifting Node engine in " + name + " before replacing release artifacts", (t) => {
+    const root = fixture(t)
+    const path = join(root, "packages", name, "package.json")
+    const pkg = json(path)
+    pkg.engines = { ...pkg.engines, node: ">=22" }
+    writeFileSync(path, JSON.stringify(pkg))
+    const result = assemble(root)
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /engines.node .*expected >=26/)
+    assert.ok(!existsSync(join(root, "dist-npm/tarballs")))
+  })
+}
+
+test("package READMEs teach the Node 26 floor", () => {
+  for (const name of ["compiler", "runtime", "vite", "unplugin", "create-vibelang"]) {
+    const readme = readFileSync(join(repo, "packages", name, "README.md"), "utf8")
+    assert.doesNotMatch(readme, /Node (?:22|24)(?:\.\d+)? or later/, name)
+    assert.match(readme, /Node 26(?:\s|\.)/, name)
+  }
+})

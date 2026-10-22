@@ -50,12 +50,15 @@ const identity = readFileSync(join(root, "typescript/tsc/internal/vibelang/ident
 const version = /const Version = "([^"]+)"/.exec(identity)?.[1]
 
 const problems = releaseDocsProblems(root)
+const nodeEngine = runtime.engines?.node
 const expect = (ok, message) => { if (!ok) problems.push(message) }
 expect(version, "identity.go: no Version constant")
 for (const [name, pkg] of [["vibelang", compiler], ["vibelang-runtime", runtime], ["vibelang-vite", vite], ["vibelang-unplugin", unplugin], ["create-vibelang", create]]) {
   expect(pkg.name === name, `${name}: package.json names ${pkg.name}`)
+  expect(pkg.engines?.node === nodeEngine && nodeEngine === ">=26", name + ": engines.node " + pkg.engines?.node + ", expected >=26 (matching vibelang-runtime)")
   expect(pkg.version === version, `${name}: version ${pkg.version}, but the compiler is ${version}`)
 }
+expect(template.engines?.node === nodeEngine, "template: engines.node " + template.engines?.node + ", expected >=26 (matching vibelang-runtime)")
 const optional = compiler.optionalDependencies ?? {}
 expect(JSON.stringify(Object.keys(optional).sort()) === JSON.stringify(Object.keys(platforms).map((p) => `vibelang-${p}`).sort()),
   `vibelang: optionalDependencies must list exactly ${Object.keys(platforms).join(", ")}`)

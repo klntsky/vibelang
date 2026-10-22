@@ -63,7 +63,7 @@ project comes from that compile. Set `VIBELANG_PROJECT` to a tsconfig path to
 choose another project. A module keeps its source URL, so a `.ts` file imported
 by both a TypeScript and a `.vibe` module loads once. Diagnostics that stop the
 compile are thrown at the import. The hook turns on Node's source-map support,
-so a stack trace names `.vibe` lines. It needs Node 22.15 or later, for
+so a stack trace names `.vibe` lines. It needs Node 26 or later, for
 `module.registerHooks`. `VIBELANG_REGISTER_DEBUG=1` prints each project's
 compile time, or that it came from the cache.
 
