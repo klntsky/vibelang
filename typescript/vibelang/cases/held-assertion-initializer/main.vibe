@@ -1,0 +1,43 @@
+import { Effect } from "effect"
+
+// A declared Effect const holds its initializer (D269) through a type
+// assertion, a satisfies clause, a non-null assertion and parentheses: the
+// call runs when the const is initialized, and its program runs only when
+// the const is run.
+const make = (state: { mutable calls: number, mutable runs: number }): Effect.Effect<number, never, never> => {
+  state.calls++
+  return () => {
+    state.runs++
+    return state.runs
+  }
+}
+
+// A factory may hold a program built by a call whose channels an assertion
+// states, and return it unrun.
+export const forwarded = (state: { mutable calls: number, mutable runs: number }): number!! => {
+  const program: number!! = make(state) as any
+  return program
+}
+
+// At a module's top level the held call builds the program (D262).
+const moduleState = { calls: 0, runs: 0 }
+const atModule: number!! = make(moduleState) satisfies number!!
+
+// expect-result: [[1,1,1,1,1,1,1],[0,0,0,0,0,0,0],[2,2,2,2,2,2,2]]
+export function main() {
+  const states = [0, 1, 2, 3, 4, 5].map(() => ({ calls: 0, runs: 0 }))
+  const asAny: number!! = make(states[0]!) as any
+  const asEffect: number!! = make(states[1]!) as Effect.Effect<number, never, never>
+  const satisfied: number!! = make(states[2]!) satisfies number!!
+  const nonNull: number!! = make(states[3]!)!
+  const nested: number!! = ((make(states[4]!) as any)!)
+  const factory: number!! = forwarded(states[5]!)
+  const all = [...states, moduleState]
+  const calls = all.map((state) => state.calls)
+  const before = all.map((state) => state.runs)
+  for (const program of [asAny, asEffect, satisfied, nonNull, nested, factory, atModule]) {
+    program()
+    program()
+  }
+  return [calls, before, all.map((state) => state.runs)]
+}

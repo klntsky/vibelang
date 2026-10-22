@@ -5,6 +5,7 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
 
 // Where programs start (design D38, Chapter 13). A call never starts a fiber;
@@ -216,20 +217,16 @@ func holdsProgram(c *checker.Checker, expr *ast.Node) bool {
 	if !isVibeLangFile(ast.GetSourceFileOfNode(expr)) || inHatch(expr) {
 		return false
 	}
+	// D269 holds declared consts at every scope; D262's module case remains included.
+	if decl := vibelangmapper.HeldConstDeclaration(expr); decl != nil {
+		return isEffectType(c, c.GetTypeFromTypeNode(decl.Type()))
+	}
 	node := expr
 	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
 		node = node.Parent
 	}
 	decl := node.Parent
-	if decl == nil || !(ast.IsVariableDeclaration(decl) || ast.IsPropertyAssignment(decl)) || decl.Initializer() != node {
-		return false
-	}
-	// D269 holds declared consts at every scope; D262's module case remains included.
-	if ast.IsVariableDeclaration(decl) && decl.Type() != nil {
-		list := decl.Parent
-		return list != nil && list.Kind == ast.KindVariableDeclarationList && list.Flags&ast.NodeFlagsConst != 0 && isEffectType(c, c.GetTypeFromTypeNode(decl.Type()))
-	}
-	if !ast.IsPropertyAssignment(decl) {
+	if decl == nil || !ast.IsPropertyAssignment(decl) || decl.Initializer() != node {
 		return false
 	}
 	// D265 fields keep both established context and the active generic candidate (crash fix).

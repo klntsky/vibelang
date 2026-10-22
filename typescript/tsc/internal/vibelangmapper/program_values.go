@@ -222,15 +222,14 @@ func (p *projector) plainMatchPipeStage(call *ast.Node, key string) bool {
 // lambda form resolution. Only the initializer call is cold; its operands
 // keep the surrounding evaluation rules.
 func (r *Resolver) holdsProgram(expr *ast.Node) bool {
+	if decl := HeldConstDeclaration(expr); decl != nil {
+		return r.factoryEffectType(decl.Type(), 0) != nil
+	}
 	node := expr
 	for node.Parent != nil && ast.IsParenthesizedExpression(node.Parent) {
 		node = node.Parent
 	}
 	field := node.Parent
-	if field != nil && ast.IsVariableDeclaration(field) && field.Initializer() == node && field.Type() != nil && r.factoryEffectType(field.Type(), 0) != nil {
-		list := field.Parent
-		return list != nil && list.Kind == ast.KindVariableDeclarationList && list.Flags&ast.NodeFlagsConst != 0
-	}
 	if field == nil || !ast.IsPropertyAssignment(field) || field.Initializer() != node {
 		return false
 	}
@@ -242,6 +241,26 @@ func (r *Resolver) holdsProgram(expr *ast.Node) bool {
 	}
 	cls, _, ok := r.serviceMember(node)
 	return ok && cls == ClassProgram
+}
+
+// HeldConstDeclaration returns the const declaration with a declared type
+// whose initializer is expr (D269), or nil. Parentheses, a type assertion, a
+// satisfies clause and a non-null assertion leave the initializer's value as
+// it is, so expr may stand inside them. The caller decides whether the
+// declared type is an Effect.
+func HeldConstDeclaration(expr *ast.Node) *ast.Node {
+	node := expr
+	for node.Parent != nil && ast.IsOuterExpression(node.Parent, ast.OEKParentheses|ast.OEKAssertions) {
+		node = node.Parent
+	}
+	decl := node.Parent
+	if decl == nil || !ast.IsVariableDeclaration(decl) || decl.Initializer() != node || decl.Type() == nil {
+		return nil
+	}
+	if list := decl.Parent; list == nil || list.Kind != ast.KindVariableDeclarationList || list.Flags&ast.NodeFlagsConst == 0 {
+		return nil
+	}
+	return decl
 }
 
 // D147: an explicit Effect assertion describes the delayed program, not

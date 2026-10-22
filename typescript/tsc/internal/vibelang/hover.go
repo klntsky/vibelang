@@ -131,7 +131,7 @@ func factoryQuickInfo(c *checker.Checker, node *ast.Node) (string, string) {
 	if ast.IsIdentifier(node) {
 		if symbol := c.GetSymbolAtLocation(node); symbol != nil {
 			if decl := symbol.ValueDeclaration(); decl != nil && ast.IsVariableDeclaration(decl) && decl.Initializer() != nil {
-				init := ast.SkipParentheses(decl.Initializer())
+				init := ast.SkipOuterExpressions(decl.Initializer(), ast.OEKParentheses|ast.OEKAssertions)
 				if ast.IsCallExpression(init) && holdsProgram(c, init) {
 					return "", "Holds `" + calleeText(init) + "`'s program: called here, not run."
 				}
