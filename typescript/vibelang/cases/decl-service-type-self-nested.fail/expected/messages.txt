@@ -1,0 +1,1 @@
+a service's shape cannot refer to the service itself

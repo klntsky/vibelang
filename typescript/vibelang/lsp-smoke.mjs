@@ -271,6 +271,12 @@ try {
     assert(items.some((d) => d.code === 1109), `diagnostics ${JSON.stringify(items)}`)
   })
 
+  await check("diagnostics: self-referential service shapes report EK2103", async () => {
+    open("src/service-self.vibe", "vibe")
+    const items = await diagnostics("src/service-self.vibe")
+    assert(items.filter((d) => d.source === "EK" && d.code === 2103).length === 4, `diagnostics ${JSON.stringify(items)}`)
+  })
+
   await check("diagnostics: main.vibe, opened as vibe, checks clean", async () => {
     const items = await diagnostics("src/main.vibe")
     assert(items.length === 0, `expected none, got ${JSON.stringify(items.map((d) => d.message))}`)

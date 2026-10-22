@@ -98,6 +98,12 @@ func checkServiceDeclaration(c *checker.Checker, class *ast.Node) {
 	if kind == ordinaryClass {
 		return
 	}
+	if reference := serviceShapeSelfReference(c, class); reference != nil {
+		d := report(c, serviceShape(class), EK2103.With("a service's shape cannot refer to the service itself."))
+		note(d, "Name the implementation's type instead of the service key {0}.", class.Name().Text())
+		cover(c, reference)
+		return
+	}
 	name := class.Name().Text()
 	if class.TypeParameters() != nil {
 		note(report(c, class.Name(), EK3005), "Use an interface for the generic type.")

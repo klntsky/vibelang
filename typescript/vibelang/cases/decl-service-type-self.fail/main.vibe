@@ -1,0 +1,5 @@
+// expect: EK2103
+service X: X
+service Typeof: typeof Typeof
+service Result: ReturnType<typeof Result>
+service Keys: keyof typeof Keys

@@ -110,6 +110,58 @@ func serviceShape(class *ast.Node) *ast.Node {
 	return nil
 }
 
+// serviceShapeSelfReference finds a reference to the service key in its
+// implementation shape. Resolve names, not types: asking for typeof the key
+// while constructing its base type re-enters the same base resolution.
+// Follow named shapes too, while preserving local type and value bindings.
+func serviceShapeSelfReference(c *checker.Checker, class *ast.Node) *ast.Node {
+	shape := serviceShape(class)
+	if shape == nil {
+		return nil
+	}
+	seen := map[*ast.Symbol]bool{}
+	var found *ast.Node
+	var visit func(*ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if node == nil {
+			return false
+		}
+		var name *ast.Node
+		meaning := ast.SymbolFlagsType
+		switch node.Kind {
+		case ast.KindTypeReference:
+			name = node.AsTypeReferenceNode().TypeName
+		case ast.KindTypeQuery:
+			name = node.AsTypeQueryNode().ExprName
+			meaning = ast.SymbolFlagsValue
+		case ast.KindExpressionWithTypeArguments:
+			name = node.Expression()
+		}
+		for name != nil && ast.IsQualifiedName(name) {
+			name = name.AsQualifiedName().Left
+		}
+		if name != nil && ast.IsIdentifier(name) {
+			symbol := c.ResolveName(name.Text(), name, meaning, false)
+			if symbol == class.Symbol() {
+				found = node
+				return true
+			}
+			if symbol != nil && !seen[symbol] {
+				seen[symbol] = true
+				for _, declaration := range symbol.Declarations() {
+					if ast.IsTypeAliasDeclaration(declaration) && visit(declaration.Type()) ||
+						ast.IsInterfaceDeclaration(declaration) && visit(declaration) {
+						return true
+					}
+				}
+			}
+		}
+		return node.ForEachChild(visit)
+	}
+	visit(shape)
+	return found
+}
+
 // isServiceShapeFactory reports whether node is the synthesized $service of
 // a service of any shape, which names no value the program uses.
 func isServiceShapeFactory(node *ast.Node) bool {
@@ -245,7 +297,11 @@ func classBases(c *checker.Checker, class *checker.Type) (*checker.Type, *checke
 	}
 	identifier, shape := class, class
 	if node := serviceShape(declaration); node != nil {
-		shape = c.GetTypeFromTypeNode(node)
+		if serviceShapeSelfReference(c, declaration) != nil {
+			shape = c.GetErrorType()
+		} else {
+			shape = c.GetTypeFromTypeNode(node)
+		}
 	}
 	if hasStaticDefault(declaration) {
 		identifier = c.GetNeverType()
