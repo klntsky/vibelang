@@ -1,0 +1,25 @@
+/**
+ * The file overview stays first in the declaration file, above the prelude
+ * types and the callback contracts that declaration emit writes.
+ *
+ * @since 0.1.0
+ */
+
+const encoder = new TextEncoder()
+
+// A prelude type, which the declaration file imports.
+export const layer: Layer.Layer<never> = Layer.empty
+
+// A callback contract, which the declaration file writes (D12).
+export function mapAll<A, B>(items: ReadonlyArray<A>, f: (a: A) => B) {
+  const out: B[] = []
+  for (const item of items) out.push(f(item))
+  return out
+}
+
+export const size: number = encoder.encode("vibe").length
+
+// expect-result: 4
+export function main(): number!! {
+  return size
+}

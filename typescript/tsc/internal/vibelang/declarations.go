@@ -185,8 +185,11 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 				imports = append(imports, f.NewImportDeclaration(nil /*modifiers*/, clause, f.NewStringLiteral(module, ast.TokenFlagsNone), nil /*attributes*/))
 			}
 		}
-		statements := append(imports, declarations.Statements.Nodes...)
-		return f.UpdateSourceFile(declarations, f.NewNodeList(statements), declarations.EndOfFileToken).AsSourceFile()
+		// The list keeps the source range, so the printer still emits the
+		// comments before the file's first statement, such as its header, first.
+		statements := f.NewNodeList(append(imports, declarations.Statements.Nodes...))
+		statements.Loc = declarations.Statements.Loc
+		return f.UpdateSourceFile(declarations, statements, declarations.EndOfFileToken).AsSourceFile()
 	}
 }
 

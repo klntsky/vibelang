@@ -219,7 +219,11 @@ func declareCallbackContracts(resolver printer.EmitResolver, sourceFile *ast.Sou
 		if !changed {
 			return declarations
 		}
-		return f.UpdateSourceFile(declarations, f.NewNodeList(statements), declarations.EndOfFileToken).AsSourceFile()
+		// The list keeps the source range, from which the printer emits the
+		// file's leading comments, such as its header.
+		list := f.NewNodeList(statements)
+		list.Loc = declarations.Statements.Loc
+		return f.UpdateSourceFile(declarations, list, declarations.EndOfFileToken).AsSourceFile()
 	}
 }
 
