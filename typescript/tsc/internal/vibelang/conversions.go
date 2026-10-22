@@ -458,7 +458,13 @@ func (a *analyzer) isByName(node *ast.Node) bool {
 			return false
 		}
 		call, _ := ownerCall(node)
-		if call == nil || a.resolving[call] {
+		if call == nil {
+			// A field initializer has no owning call to resolve. Before the
+			// checker reaches it, its contextual type decides: a pipe in an
+			// Effect-typed field is held, as the check later records (D265).
+			return isPipe(ast.SkipParentheses(node)) && holdsProgram(a.checker, node)
+		}
+		if a.resolving[call] {
 			return false
 		}
 		a.checker.GetResolvedSignature(call)

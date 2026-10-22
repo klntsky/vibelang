@@ -1025,6 +1025,12 @@ typescript/vibelang/cases/held-binding-retry/main.vibe:3:21 lambda factory annot
 typescript/vibelang/cases/held-binding-retry/main.vibe:5:10 lambda program annotation
 typescript/vibelang/cases/held-conditional-initializer/main.vibe:10:14 lambda effectFn annotation
 typescript/vibelang/cases/held-conditional-initializer/main.vibe:5:15 lambda effectFn annotation
+typescript/vibelang/cases/held-field-pipe-plain/lib.vibe:10:28 lambda plain annotation
+typescript/vibelang/cases/held-field-pipe-plain/lib.vibe:7:21 lambda choice annotation
+typescript/vibelang/cases/held-field-pipe-plain/lib.vibe:7:48 byname program annotation
+typescript/vibelang/cases/held-field-pipe-plain/lib.vibe:7:80 byname program table
+typescript/vibelang/cases/held-field-pipe-plain/lib.vibe:7:83 lambda plain table
+typescript/vibelang/cases/held-field-pipe-plain/main.vibe:7:23 lambda plain table
 typescript/vibelang/cases/held-nested-effect/main.vibe:3:24 lambda plain fallback
 typescript/vibelang/cases/held-nested-effect/main.vibe:4:82 lambda program annotation
 typescript/vibelang/cases/held-nested-effect/main.vibe:9:38 lambda plain table

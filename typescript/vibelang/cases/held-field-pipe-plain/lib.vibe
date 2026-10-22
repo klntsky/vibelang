@@ -1,0 +1,10 @@
+export interface Changes {
+  changes: number!!
+}
+
+// The pipe in an Effect-typed field is held (D265): building the record runs
+// nothing, so make stays the plain function its annotation says it is.
+export const make = (): Changes => ({ changes: Effect.succeed(1) |> Effect.map(%, (n) => n + 1) })
+
+// A plain caller of a plain function is plain too (D67).
+export const plainCaller = (): Changes => make()
