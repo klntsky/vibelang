@@ -10,8 +10,12 @@ import { Cause, Effect, Exit } from "effect"
 // compiler lowers `sync` and `try` to Effect's own functions and reads the
 // overload it chose by the first parameter's name (evaluate or value) and
 // whether the second is named mapError (D231); the function itself decides
-// between sync and async (D232). These implementations serve TypeScript
-// callers and a hatch passed as a value.
+// between sync and async by its type (D232). These implementations serve
+// TypeScript callers and a hatch passed as a value. They see no types, so
+// they decide by the function's declaration: an async function that
+// declares a parameter after its inputs gets the AbortSignal there, and
+// interruption aborts it; any other function gets its inputs only, and a
+// promise it returns is awaited without a signal.
 
 /** The inputs a hatch passes to its function's first parameters (D230). */
 type Inputs = ReadonlyArray<unknown>
@@ -22,10 +26,33 @@ const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
 const call = (evaluate: unknown, inputs: Inputs): unknown => (evaluate as (...args: Array<unknown>) => unknown)(...inputs)
 
 /**
+ * Whether evaluate is declared async, the only kind of function the
+ * runtime's sync and try pass an AbortSignal (D232). An async generator
+ * function is not: it returns a generator, not a promise.
+ */
+const isAsyncFunction = (evaluate: unknown): evaluate is Function =>
+  Object.prototype.toString.call(evaluate) === "[object AsyncFunction]"
+
+/**
+ * An async hatch function as the evaluate of Effect.promise or tryPromise:
+ * its inputs, then the AbortSignal when it declares a parameter for it
+ * (D230). Effect.promise makes a signal only for an evaluate that takes one,
+ * which is what the compiler's `f.bind(undefined, ...inputs)` gives it; a
+ * rest or defaulted parameter does not count, so it never receives one.
+ */
+const callAsync = (evaluate: Function, inputs: Inputs): (signal: AbortSignal) => PromiseLike<unknown> =>
+  evaluate.length > inputs.length
+    ? (signal) => call(evaluate, [...inputs, signal]) as PromiseLike<unknown>
+    : () => call(evaluate, inputs) as PromiseLike<unknown>
+
+/**
  * D148: `sync((n) => n * 2, count)` is Effect.sync, so a throw is a defect; an
- * async function is Effect.promise, so a rejection is a defect; and
+ * async function is Effect.promise, so a rejection is a defect, and it gets
+ * the AbortSignal after its inputs when it declares a parameter for it,
+ * which interruption aborts; and
  * `sync(expression)` evaluates the expression when the Effect runs. Inputs
- * after the function fill its first parameters (D230).
+ * after the function fill its first parameters (D230). A function that is
+ * not async but returns a promise is awaited without a signal (D232).
  */
 export function sync<R, Args extends Inputs = []>(evaluate: (...args: [...Args, AbortSignal]) => PromiseLike<R>, ...args: Args): Effect.Effect<R>
 export function sync<R, Args extends Inputs = []>(evaluate: (...args: Args) => R, ...args: Args): Effect.Effect<Awaited<R>>
@@ -34,6 +61,7 @@ export function sync(evaluate: unknown, ...inputs: Array<unknown>): Effect.Effec
   if (typeof evaluate !== "function") {
     return isPromiseLike(evaluate) ? Effect.promise(() => evaluate) : Effect.succeed(evaluate)
   }
+  if (isAsyncFunction(evaluate)) return Effect.promise(callAsync(evaluate, inputs))
   return Effect.suspend(() => {
     const result = call(evaluate, inputs)
     return isPromiseLike(result) ? Effect.promise(() => result) : Effect.succeed(result)
@@ -43,9 +71,12 @@ export function sync(evaluate: unknown, ...inputs: Array<unknown>): Effect.Effec
 /**
  * D148: `try((text) => JSON.parse(text), text)` is Effect.try, so a throw is an
  * expected Cause.UnknownError, or the error that `mapError` makes of it; an
- * async function is Effect.tryPromise; and `try(expression)` evaluates the
+ * async function is Effect.tryPromise, and it gets the AbortSignal after its
+ * inputs when it declares a parameter for it, which interruption aborts; and
+ * `try(expression)` evaluates the
  * expression when the Effect runs. The mapper stays the second argument, and
- * inputs follow it (D231). Exported as `try`.
+ * inputs follow it (D231). A function that is not async but returns a
+ * promise is awaited without a signal (D232). Exported as `try`.
  */
 export function attempt<R, E, Args extends Inputs = []>(
   evaluate: (...args: [...Args, AbortSignal]) => PromiseLike<R>,
@@ -63,6 +94,7 @@ export function attempt(evaluate: unknown, ...rest: Array<unknown>): Effect.Effe
   const inputs = mapError ? rest.slice(1) : rest
   const run = typeof evaluate === "function" ? () => call(evaluate, inputs) : () => evaluate
   const failure = (error: unknown) => (mapError ? mapError(error) : new Cause.UnknownError(error))
+  if (isAsyncFunction(evaluate)) return Effect.tryPromise({ try: callAsync(evaluate, inputs), catch: failure })
   return Effect.suspend(() => {
     let result: unknown
     try {

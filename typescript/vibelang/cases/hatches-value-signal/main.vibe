@@ -1,0 +1,44 @@
+// A hatch called as a value runs through the runtime's sync and try, which
+// pass an async function the AbortSignal in the parameter after its inputs,
+// as a direct call does (D230, D232). Interruption aborts the signal. A rest
+// or defaulted parameter gets no signal.
+module foreign {
+  export async function hasSignal(signal: AbortSignal) {
+    return signal instanceof AbortSignal && !signal.aborted
+  }
+  export async function echo(value: number, signal: AbortSignal) {
+    return { value, signal: signal instanceof AbortSignal }
+  }
+  export function untilAborted(events: string[], signal: AbortSignal): Promise<string> {
+    return new Promise((resolve) => signal.addEventListener("abort", () => {
+      events.push("aborted")
+      resolve("aborted")
+    }))
+  }
+  export async function count(...xs: number[]) {
+    return xs.length
+  }
+  export async function defaulted(a: number, b: number = 5) {
+    return a + b
+  }
+  export async function untilAbortedAsync(events: string[], signal: AbortSignal): Promise<string> {
+    return untilAborted(events, signal)
+  }
+}
+import { hasSignal, echo, count, defaulted, untilAbortedAsync } from foreign
+import { try as attempt } from "vibelang-runtime"
+
+const run = sync
+
+// expect-result: {"direct":true,"value":true,"input":{"value":42,"signal":true},"tried":{"value":7,"signal":true},"rest":2,"defaulted":6,"timedOut":"timed out","events":["aborted"]}
+export function main() {
+  const events: string[] = []
+  const direct = sync(hasSignal)
+  const value = run(hasSignal)
+  const input = run(echo, 42)
+  const tried = attempt(echo, 7)
+  const rest = run(count, 1, 2)
+  const sum = run(defaulted, 1)
+  const timedOut = timeout(run(untilAbortedAsync, events), "10 millis") catch "timed out"
+  return { direct, value, input, tried, rest, defaulted: sum, timedOut, events }
+}

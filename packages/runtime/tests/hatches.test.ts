@@ -59,17 +59,46 @@ test("synchronous hatch rest parameters receive exactly the supplied inputs", ()
   expect(Effect.runSync(attempt((...inputs: number[]) => inputs, 1, 2, 3))).toEqual([1, 2, 3])
 })
 
+// Called as a value or from TypeScript, sync and try see no types, so they
+// decide by the function's declaration (D232): an async function that
+// declares a parameter after its inputs gets the AbortSignal there; any
+// other function gets its inputs only.
 for (const [name, hatch] of [["sync", sync], ["try", attempt]] as const) {
-  // Runtime-valued hatches classify a promise only after invoking the
-  // function, too late to supply its signal. Unconditionally appending one
-  // would break synchronous rest arguments (tested above). A complete fix
-  // needs async dispatch metadata shared with compiler lowering, including
-  // non-async functions returning promises, rather than an AsyncFunction hack.
-  test.skip(`${name}: async AbortSignal after inputs (D230; needs async dispatch metadata)`, async () => {
+  test(`${name}: an async function receives the AbortSignal after its inputs (D230)`, async () => {
     const value = await Effect.runPromise(hatch(async (input: number, signal: AbortSignal) => ({ input, signal }), 42))
     expect(value.input).toBe(42)
     expect(value.signal).toBeInstanceOf(AbortSignal)
     expect(value.signal.aborted).toBe(false)
+    const alone = await Effect.runPromise(hatch(async (signal: AbortSignal) => signal))
+    expect(alone).toBeInstanceOf(AbortSignal)
+  })
+
+  test(`${name}: interruption aborts an async function's signal`, async () => {
+    const events: string[] = []
+    await Effect.runPromise(Effect.gen(function*() {
+      const started = yield* Deferred.make<void>()
+      const fiber = yield* Effect.forkChild(hatch(async (label: string, signal: AbortSignal) => {
+        Deferred.doneUnsafe(started, Effect.void)
+        await new Promise<void>(resolve => signal.addEventListener("abort", () => { events.push(`${label} aborted`); resolve() }))
+      }, name))
+      yield* Deferred.await(started)
+      yield* Fiber.interrupt(fiber)
+      const exit = fiber.pollUnsafe()!
+      expect(Exit.isFailure(exit) && exit.cause.reasons.some(Cause.isInterruptReason)).toBe(true)
+    }))
+    expect(events).toEqual([`${name} aborted`])
+  })
+
+  test(`${name}: an async function with no parameter for the signal gets exactly its inputs`, async () => {
+    expect(await Effect.runPromise(hatch(async (...inputs: number[]) => inputs, 1, 2))).toEqual([1, 2])
+    expect(await Effect.runPromise(hatch(async (a: number, b: number = 5) => [a, b], 1))).toEqual([1, 5])
+    expect(await Effect.runPromise(hatch(async (...inputs: unknown[]) => inputs))).toEqual([])
+  })
+
+  test(`${name}: a function that is not async gets exactly its inputs, even when it returns a promise`, async () => {
+    expect(await Effect.runPromise(hatch((...inputs: unknown[]) => Promise.resolve(inputs), 1, 2))).toEqual([1, 2])
+    const generator = Effect.runSync(hatch(async function*(n: number) { yield n }, 3))
+    expect(Object.prototype.toString.call(generator)).toBe("[object AsyncGenerator]")
   })
 }
 
