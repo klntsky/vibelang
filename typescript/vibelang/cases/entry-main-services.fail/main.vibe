@@ -1,0 +1,9 @@
+// The entry statement runs an exported main with a root runner (D135), which
+// supplies no services, so EK3205 warns of each service main still needs
+// (D122). It is a warning: a module that exports main may also be a library
+// whose importer provides them (imported.vibe).
+import { Users } from "./services.vibe"
+
+export function main() {
+  Console.log(Users.find("1"))
+}

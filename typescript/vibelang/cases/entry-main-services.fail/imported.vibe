@@ -1,0 +1,9 @@
+// A main that another module imports is also a function that module runs
+// with the services it provides (start.vibe), as an application's entry or a
+// test does, so it is not reported. So are a main imported through the
+// module's namespace and one re-exported.
+import { Users } from "./services.vibe"
+
+export function main() {
+  Console.log(Users.find("1"))
+}

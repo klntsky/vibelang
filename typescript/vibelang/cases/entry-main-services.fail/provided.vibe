@@ -1,0 +1,8 @@
+// A main that provides every service it needs is not reported.
+import { Users, UsersLive } from "./services.vibe"
+
+export function main() {
+  provide UsersLive {
+    Console.log(Users.find("1"))
+  }
+}

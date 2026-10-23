@@ -1,0 +1,5 @@
+// Imports typeonly.vibe for a type only and sideeffect.vibe for its effects.
+import type { Shape } from "./typeonly.vibe"
+import "./sideeffect.vibe"
+
+export const shape: Shape = { id: "1" }

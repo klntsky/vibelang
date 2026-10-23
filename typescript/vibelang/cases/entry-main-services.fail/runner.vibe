@@ -1,0 +1,10 @@
+// expect: EK3201
+// A module that runs main itself gets no entry statement, so its runner
+// reports the error EK3201, and EK3205 is not reported.
+import { Users } from "./services.vibe"
+
+export function main() {
+  Console.log(Users.find("1"))
+}
+
+Effect.runPromise(main())

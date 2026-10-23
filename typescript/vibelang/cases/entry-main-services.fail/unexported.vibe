@@ -1,0 +1,8 @@
+// A main the module does not export gets no entry statement either.
+import { Users } from "./services.vibe"
+
+function main() {
+  Console.log(Users.find("1"))
+}
+
+export const program = main

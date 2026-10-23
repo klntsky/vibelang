@@ -1,0 +1,10 @@
+// Importing only a type, or only for its effects, binds no main: still reported.
+import { Users } from "./services.vibe"
+
+export interface Shape {
+  id: string
+}
+
+export function main() {
+  Console.log(Users.find("4"))
+}

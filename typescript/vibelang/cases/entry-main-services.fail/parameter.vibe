@@ -1,0 +1,7 @@
+// A main with a parameter gets no entry statement (D135): nothing runs it, so
+// nothing is reported.
+import { Users } from "./services.vibe"
+
+export function main(id: string) {
+  Console.log(Users.find(id))
+}

@@ -153,6 +153,8 @@ var (
 	EK3203 = message(3203, errorCategory, "providers form a cycle: {0}")
 	// EK3204: a wire argument whose type does not name its outputs. {0} is the argument.
 	EK3204 = message(3204, errorCategory, "{0} does not name its outputs in its type, so wire cannot place it.")
+	// EK3205: an entry module's main needs a service that nothing provides when the host starts the module (D135, D122). {0} is the service.
+	EK3205 = message(3205, warningCategory, "main needs {0}, which nothing provides when the host starts this module.")
 
 	// EK4201: a control operation inside a combinator that runs it on another fiber. {0} is the operation, {1} the combinator, {2} the operation's control.
 	EK4201 = message(4201, errorCategory, "{0} is a control operation, and {1} runs it on other fibers, where the {2} handler on this fiber cannot be reached.")
@@ -187,7 +189,7 @@ func init() {
 	for _, m := range []*Message{
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009, EK1010,
 		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113, EK2115, EK2116, EK2117, EK2118,
-		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204,
+		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204, EK3205,
 		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4406, EK4407, EK4408, EK4501,
 	} {
 		registry[m.Code] = m

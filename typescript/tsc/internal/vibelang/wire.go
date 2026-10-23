@@ -309,16 +309,30 @@ func (tx *lowering) visitWireCall(node *ast.Node) *ast.Node {
 	return f.UpdateCallExpression(node.AsCallExpression(), tx.Visitor().VisitNode(node.Expression()), nil /*questionDotToken*/, node.TypeArgumentList(), f.NewNodeList(arguments), ast.NodeFlagsNone)
 }
 
+// A runnerSite is where a runner gets the program checkProgram checks.
+type runnerSite int
+
+const (
+	runnerCall  runnerSite = iota // the argument of a root runner's call
+	runnerTest                    // a test that it.effect registers
+	runnerEntry                   // an entry module's main, which its entry statement runs (D135)
+)
+
 // checkRunners reports EK3201 at a runner whose program still needs a
 // service that a wire call in the program leaves unprovided: the dependency
-// path names the provider that needs it.
+// path names the provider that needs it. An entry module's main is checked
+// as a root runner's program, since its entry statement runs it with
+// NodeRuntime.runMain or the runtime's copy of it (D135, D122): EK3205, a
+// warning, since a module that exports main may also be a library whose
+// importer, maybe in another program, provides its services. A main that
+// another module of the program imports is not checked (mainImported).
 func checkRunners(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		if ast.IsCallExpression(node) {
 			switch {
 			case isRootRunner(c, node) && len(node.Arguments()) > 0:
-				checkProgram(c, node.Arguments()[0], nil /*accepted*/, false /*test*/)
+				checkProgram(c, node.Arguments()[0], nil /*accepted*/, runnerCall)
 			case isTestRegistration(c, node):
 				checkTest(c, node)
 			}
@@ -326,6 +340,71 @@ func checkRunners(c *checker.Checker, file *ast.SourceFile) {
 		return node.ForEachChild(visit)
 	}
 	file.AsNode().ForEachChild(visit)
+	if main := entryMain(file); main != nil && runnerRequirements(c, c.GetTypeAtLocation(main.Name())) != nil && !mainImported(c, file) {
+		checkProgram(c, main.Name(), nil /*accepted*/, runnerEntry)
+	}
+}
+
+// mainImported reports whether another module of the program can bind
+// file's main: it imports main or file's namespace, re-exports them, or
+// imports file dynamically. Such a main is also a function that module runs
+// with the services it provides, as an application's entry or a test does
+// (D135), so only the host starting file directly would run it without them.
+func mainImported(c *checker.Checker, file *ast.SourceFile) bool {
+	for _, other := range c.Program().SourceFiles() {
+		if other == file || other.IsDeclarationFile {
+			continue
+		}
+		for _, specifier := range other.Imports() {
+			if !bindsMain(specifier.Parent) {
+				continue
+			}
+			if module := c.ResolveExternalModuleName(specifier, nil /*importAttributesType*/); module != nil && module.ValueDeclaration() == file.AsNode() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// bindsMain reports whether node, the import, export or call that holds a
+// module specifier, can bind the module's export named main.
+func bindsMain(node *ast.Node) bool {
+	named := func(elements []*ast.Node) bool {
+		for _, element := range elements {
+			if !element.IsTypeOnly() && moduleExportNameText(element.PropertyNameOrName()) == "main" {
+				return true
+			}
+		}
+		return false
+	}
+	switch {
+	case ast.IsImportDeclaration(node):
+		clause := node.ImportClause()
+		if clause == nil || clause.IsTypeOnly() {
+			return false // import "./m.vibe", import type { … } from "./m.vibe"
+		}
+		switch bindings := clause.AsImportClause().NamedBindings; {
+		case bindings == nil:
+			return false // a default import
+		case ast.IsNamespaceImport(bindings):
+			return true
+		default:
+			return named(bindings.Elements())
+		}
+	case ast.IsExportDeclaration(node):
+		d := node.AsExportDeclaration()
+		if d.IsTypeOnly {
+			return false
+		}
+		if d.ExportClause == nil || d.ExportClause.Kind == ast.KindNamespaceExport {
+			return true // export * from "./m.vibe", export * as m from "./m.vibe"
+		}
+		return named(d.ExportClause.Elements())
+	case node.Kind == ast.KindLiteralType:
+		return false // import("./m.vibe").T names a type
+	}
+	return true // import("./m.vibe"), require("./m.js"), import m = require("./m.js")
 }
 
 // checkTest checks the program of a test that it.effect registers against
@@ -338,7 +417,7 @@ func checkTest(c *checker.Checker, call *ast.Node) {
 	}
 	for i, program := range call.Arguments() {
 		if accepted := runnerRequirements(c, c.GetTypeAtPosition(signature, i)); accepted != nil {
-			checkProgram(c, program, accepted, true /*test*/)
+			checkProgram(c, program, accepted, runnerTest)
 			return
 		}
 	}
@@ -349,8 +428,9 @@ func checkTest(c *checker.Checker, call *ast.Node) {
 // as Effect.runPromise or NodeRuntime.runMain starts with an empty Context,
 // so accepted is nil. TypeScript would report that the program's type does
 // not fit the parameter; EK3201 names the services instead, and the wire
-// arguments that need them.
-func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type, test bool) {
+// arguments that need them. For an entry module, program is main's name,
+// and the code is EK3205.
+func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type, site runnerSite) {
 	needed := runnerRequirements(c, c.GetTypeAtLocation(program))
 	if needed == nil {
 		return
@@ -368,19 +448,27 @@ func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type,
 	if len(names) == 0 {
 		return
 	}
-	d := report(c, program, EK3201, strings.Join(names, ", "))
+	code := EK3201
+	if site == runnerEntry {
+		code = EK3205
+	}
+	d := report(c, program, code, strings.Join(names, ", "))
 	for _, path := range paths {
 		note(d, "{0}, and no argument of its wire provides it.", path)
 	}
 	switch {
 	case len(paths) > 0:
 		note(d, "Add a provider of {0} to wire.", strings.Join(names, ", "))
-	case test:
+	case site == runnerTest:
 		note(d, "Provide it to the test with Effect.provide(() => …, layer), or register the test inside layer(…).")
+	case site == runnerEntry:
+		note(d, "Provide it inside main with provide layer { … }.")
 	default:
 		note(d, "Provide it to the program with Effect.provide(() => …, layer).")
 	}
-	coverArgument(c, program)
+	if site != runnerEntry {
+		coverArgument(c, program)
+	}
 }
 
 // runnerRequirements returns R of t, an Effect or a function that returns one,
