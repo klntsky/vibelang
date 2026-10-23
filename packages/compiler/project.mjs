@@ -76,6 +76,7 @@ export function parseOutput(output, root) {
 }
 
 const imported = /^\s+Imported via (".*"|'.*') from file '(.+?)'(?: with packageId '[^']*')?( to import .+)?$/
+const supplemental = /^\s+Supplemental virtual file produced by the content mapper for file '(.+)'\.$/
 
 /**
  * Parses `vibelang --pretty false --explainFiles --listFilesOnly` output into
@@ -83,12 +84,16 @@ const imported = /^\s+Imported via (".*"|'.*') from file '(.+?)'(?: with package
  * compiler reported. Each import is { importer, specifier, file }: the file
  * the compiler resolved `specifier` to. Imports the compiler adds itself, such
  * as JSX factories and import helpers, and its bundled libraries are left out.
- * The output's paths are relative to root; the result's are absolute.
+ * A virtual file the compiler derives from a source, such as the body of a
+ * .vibe file's module declaration (D283), is part of that source: it is not a
+ * file, and its imports are the source's. The output's paths are relative to
+ * root; the result's are absolute.
  */
 export function parseExplainFiles(output, root) {
   const files = []
   const imports = []
   const diagnostics = []
+  const sources = new Map() // each virtual file, to the source it is part of
   // An indented line belongs to the last unindented one: a file's reasons or a diagnostic's detail.
   let file
   let diagnostic
@@ -98,6 +103,8 @@ export function parseExplainFiles(output, root) {
       if (diagnostic) diagnostic.text += "\n" + line
       else if (file && (match = line.match(imported)) && !match[3]) {
         imports.push({ importer: resolve(root, match[2]), specifier: match[1].slice(1, -1), file })
+      } else if (file && (match = line.match(supplemental))) {
+        sources.set(file, resolve(root, match[1]))
       }
       continue
     }
@@ -116,7 +123,11 @@ export function parseExplainFiles(output, root) {
       files.push(file)
     }
   }
-  return { files, imports, diagnostics }
+  return {
+    files: files.filter((file) => !sources.has(file)),
+    imports: imports.map((entry) => sources.has(entry.importer) ? { ...entry, importer: sources.get(entry.importer) } : entry),
+    diagnostics
+  }
 }
 
 /**

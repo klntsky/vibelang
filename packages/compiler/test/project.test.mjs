@@ -271,6 +271,48 @@ test("a project's imports name every program file and what each import resolved 
   ])
 })
 
+test("explainFiles parsing gives a module declaration's imports to its .vibe file, the only file", () => {
+  const root = resolve("project")
+  const input = [
+    "src/loud.ts",
+    "   Imported via \"./loud.ts\" from file 'src/main.vibe.text.ts'",
+    "   Matched by include pattern 'src/**/*' in 'tsconfig.json'",
+    "src/main.vibe.text.ts",
+    "   Supplemental virtual file produced by the content mapper for file 'src/main.vibe'.",
+    "src/main.vibe",
+    "   Matched by include pattern 'src/**/*' in 'tsconfig.json'"
+  ].join("\n")
+  assert.deepEqual(parseExplainFiles(input, root), {
+    files: [join(root, "src/loud.ts"), join(root, "src/main.vibe")],
+    imports: [{ importer: join(root, "src/main.vibe"), specifier: "./loud.ts", file: join(root, "src/loud.ts") }],
+    diagnostics: []
+  })
+})
+
+test("a module declaration's imports are its .vibe file's, and its body is not a file", { skip }, (t) => {
+  const { app, compiler } = workspace(t)
+  for (const [path, text] of Object.entries({
+    "src/main.vibe": [
+      "module text {",
+      "  import { shout } from \"./loud.ts\"",
+      "  export const loud = (value: string): string => shout(value)",
+      "}",
+      "import { loud } from text",
+      "export const fromApp: string = loud(\"app\")",
+      ""
+    ].join("\n"),
+    "src/loud.ts": "export const shout = (text: string): string => text.toUpperCase()\n"
+  })) writeFileSync(join(app, path), text)
+  const { files, imports, errors } = projectImports({ project: join(app, "tsconfig.json"), compiler })
+  assert.deepEqual(errors, [])
+  const own = (file) => file.startsWith(app + "/") && !file.includes("/node_modules/")
+  assert.deepEqual(files.filter(own).map((file) => file.slice(app.length + 1)).sort(), ["src/loud.ts", "src/main.vibe"])
+  assert.deepEqual(
+    imports.filter(({ importer, file }) => own(importer) && own(file)).map(({ importer, specifier, file }) => [importer.slice(app.length + 1), specifier, file.slice(app.length + 1)]),
+    [["src/main.vibe", "./loud.ts", "src/loud.ts"]]
+  )
+})
+
 test("a project the compiler cannot read reports its diagnostics instead of an empty graph", { skip }, (t) => {
   const { app, compiler } = workspace(t)
   writeFileSync(join(app, "tsconfig.json"), JSON.stringify({ compilerOptions: { notAnOption: true }, include: ["src/**/*"] }))
