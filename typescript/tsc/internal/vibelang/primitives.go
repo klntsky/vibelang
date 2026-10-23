@@ -302,7 +302,10 @@ func checkPrimitives(c *checker.Checker, file *ast.SourceFile) {
 	var visit func(n *ast.Node, inFunction bool, masked bool) bool
 	visit = func(n *ast.Node, inFunction bool, masked bool) bool {
 		if isFunctionBoundary(n) {
-			n.ForEachChild(func(child *ast.Node) bool { return visit(child, true, false) })
+			// The program of uninterruptible written as an expression, as in
+			// `return uninterruptible { … }`, runs masked like the statement form.
+			inner := isUninterruptibleProgram(c, n)
+			n.ForEachChild(func(child *ast.Node) bool { return visit(child, true, inner) })
 			return false
 		}
 		switch maskWord(n) {
@@ -329,6 +332,21 @@ func checkPrimitives(c *checker.Checker, file *ast.SourceFile) {
 		return false
 	}
 	file.AsNode().ForEachChild(func(child *ast.Node) bool { return visit(child, false, false) })
+}
+
+// isUninterruptibleProgram reports whether fn is the program a call of the
+// runtime's uninterruptible runs: its block param, as in
+// `return uninterruptible { … }`, or an arrow passed to it.
+func isUninterruptibleProgram(c *checker.Checker, fn *ast.Node) bool {
+	call := fn.Parent
+	if call == nil || !ast.IsCallExpression(call) {
+		return false
+	}
+	arguments := call.Arguments()
+	if len(arguments) != 1 || arguments[0] != fn {
+		return false
+	}
+	return isRuntimeExport(c, ast.SkipParentheses(call.Expression()), "uninterruptible")
 }
 
 // primitiveQuickInfo describes an interruption block's word.

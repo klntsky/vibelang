@@ -1,0 +1,35 @@
+// expect-result: {"restored":"Failure","value":3}
+
+// A restore block inside an uninterruptible block written as an expression,
+// `return uninterruptible { … }`, restores the interruptibility the region
+// began with, as it does inside the statement form (D180).
+function restored() {
+  const started = Deferred.make<string>()
+  const fiber = fork {
+    return uninterruptible {
+      restore {
+        Deferred.succeed(started, "started")
+        sleep("1 second")
+      }
+      return "finished"
+    }
+  }
+  started.await()
+  fiber.interrupt()
+  return exit(fiber.join())._tag
+}
+
+// The restore block runs where it stands, inside the region.
+function value(): number!! {
+  let ran = 0
+  return uninterruptible {
+    restore {
+      ran = 1
+    }
+    return ran + 2
+  }
+}
+
+export function main() {
+  return { restored: restored(), value: value() }
+}

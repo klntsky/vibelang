@@ -1479,6 +1479,10 @@ typescript/vibelang/cases/ref6-handlers/ref6-handlers.vibe:89:5 lambda effectFn 
 typescript/vibelang/cases/regions-jumps/main.vibe:95:3 lambda effectFn annotation
 typescript/vibelang/cases/regions/regions.vibe:40:5 lambda program table
 typescript/vibelang/cases/regions/regions.vibe:44:5 lambda effectFn table
+typescript/vibelang/cases/restore-in-uninterruptible-expression/main.vibe:19:15 byname program table
+typescript/vibelang/cases/restore-in-uninterruptible-expression/main.vibe:25:26 block appended/program table
+typescript/vibelang/cases/restore-in-uninterruptible-expression/main.vibe:8:22 block appended/program table
+typescript/vibelang/cases/restore-in-uninterruptible-expression/main.vibe:9:28 block appended/program table
 typescript/vibelang/cases/retry-effectful-predicate/main.vibe:12:14 lambda effectFn table
 typescript/vibelang/cases/retry-effectful-predicate/main.vibe:24:17 lambda dual fallback
 typescript/vibelang/cases/retry-effectful-predicate/main.vibe:29:14 lambda effectFn fallback
