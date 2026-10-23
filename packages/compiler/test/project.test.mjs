@@ -180,6 +180,26 @@ test("a module of a package nested inside root compiles with that package's own 
   assert.equal(modules.projectOf(join(app, "fixtures/plain/thing.vibe")), join(app, "tsconfig.json"))
 })
 
+test("a project whose rootDir holds sources above root compiles them, without TS6059", { skip }, async (t) => {
+  const { root, app, compiler } = workspace(t)
+  for (const [path, text] of Object.entries({
+    "shared/clock.ts": "export const now = (): number => 7\n",
+    // A test project that reaches a sibling package's source by a relative
+    // path widens rootDir to their common directory.
+    "app/tsconfig.test.json": JSON.stringify({ extends: "./tsconfig.json", compilerOptions: { rootDir: ".." } }),
+    "app/src/main.vibe": 'import { now } from "../../shared/clock.ts"\nexport const fromApp: number = now()\n'
+  })) {
+    mkdirSync(dirname(join(root, path)), { recursive: true })
+    writeFileSync(join(root, path), text)
+    utimesSync(join(root, path), new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
+  }
+  const modules = projects({ root: app, project: join(app, "tsconfig.test.json"), compiler, cache: false })
+  const main = await modules.load(join(app, "src/main.vibe"))
+  assert.deepEqual([main.errors, main.error], [[], false])
+  assert.match(main.code, /fromApp = now\(\)/)
+  assert.ok(main.map.sources.includes(join(app, "src/main.vibe")))
+})
+
 test("a module declaration compiles into its file's output, and its body is no input file (D283)", { skip }, async (t) => {
   const { app, compiler, compiles } = workspace(t)
   const main = join(app, "src/main.vibe")

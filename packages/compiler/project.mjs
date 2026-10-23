@@ -11,7 +11,7 @@ import { spawn, spawnSync } from "node:child_process"
 import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, readSync, realpathSync, rmSync, statSync } from "node:fs"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
-import { dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { dirname, isAbsolute, join, parse, relative, resolve } from "node:path"
 import { projectCache } from "./cache.mjs"
 
 const slash = (path) => path.replaceAll("\\", "/")
@@ -157,10 +157,16 @@ export function formatDiagnostic(diagnostic) {
   return `${where}${diagnostic.category} ${diagnostic.code}: ${diagnostic.text}`
 }
 
+// The compile emits from the filesystem root, not from root: a project may
+// hold sources above its directory, as a test project whose tsconfig sets
+// rootDir to the repository does, and a narrower --rootDir than the project's
+// own fails it with TS6059. Only root's .vibe outputs are collected.
+const emitRoot = (root) => parse(resolve(root)).root
+
 const emitArgs = (project, root, out) => [
-  "--project", project, "--pretty", "false", "--listFiles", "true", "--rootDir", root,
+  "--project", project, "--pretty", "false", "--listFiles", "true", "--rootDir", emitRoot(root),
   "--outDir", out, "--sourceMap", "true", "--inlineSources", "true",
-  "--inlineSourceMap", "false", "--sourceRoot", slash(root) + "/", "--declaration", "false", "--declarationMap", "false",
+  "--inlineSourceMap", "false", "--sourceRoot", slash(emitRoot(root)).replace(/\/?$/, "/"), "--declaration", "false", "--declarationMap", "false",
   "--noEmit", "false", "--emitDeclarationOnly", "false", "--noEmitOnError", "true",
   "--incremental", "false"
 ]
@@ -194,7 +200,7 @@ function collect({ status, signal, output }, root, out) {
     if (!source.endsWith(".vibe")) continue
     const path = relative(root, source)
     if (path.startsWith("..") || isAbsolute(path)) continue
-    const emitted = join(out, path.replace(/\.vibe$/, ".js"))
+    const emitted = join(out, relative(emitRoot(root), source).replace(/\.vibe$/, ".js"))
     const map = JSON.parse(readFileSync(emitted + ".map", "utf8"))
     map.sources = map.sources.map((entry) => slash(resolve(dirname(emitted), map.sourceRoot || "", entry)))
     map.sourceRoot = ""
