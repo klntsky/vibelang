@@ -19,10 +19,10 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,487 |
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,022 |
-| The skill and the user guide (130 pages) | 195,361 |
-| The user guide alone | 190,874 |
-| The specification (33 chapters) | 102,599 |
-| The decision log, `docs/design/DECISIONS.md` | 54,254 |
+| The skill and the user guide (130 pages) | 195,403 |
+| The user guide alone | 190,916 |
+| The specification (33 chapters) | 102,614 |
+| The decision log, `docs/design/DECISIONS.md` | 54,687 |
 
 ## Effect TypeScript beside VibeLang
 
@@ -130,8 +130,8 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Page | Tokens |
 | --- | ---: |
 | [Getting Started](../013-getting-started.md) | 919 |
-| **Error Management** | **13,126** |
-| [Expected Errors](../error-management/014-expected-errors.md) | 4,044 |
+| **Error Management** | **13,168** |
+| [Expected Errors](../error-management/014-expected-errors.md) | 4,086 |
 | [Unexpected Errors](../error-management/015-unexpected-errors.md) | 1,293 |
 | [Fallback](../error-management/016-fallback.md) | 989 |
 | [Matching](../error-management/017-matching.md) | 741 |
@@ -244,7 +244,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **131,156** |
+| **All 98 pages** | **131,198** |
 
 ### VibeLang features
 
@@ -292,15 +292,15 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [24. What Effect provides and what the kernel adds](../../../design/src/324-part3-ch24-effect.md) | 3,816 |
 | [25. Implementation strategies and costs](../../../design/src/325-part3-ch25-strategies.md) | 1,933 |
 | [26. What compiled code must guarantee](../../../design/src/326-part3-ch26-compiled.md) | 2,970 |
-| **Part IV. The compiler** | **11,085** |
+| **Part IV. The compiler** | **11,100** |
 | [27. Compiler architecture](../../../design/src/427-part4-ch27-compiler.md) | 1,662 |
-| [28. Tooling](../../../design/src/428-part4-ch28-tooling.md) | 9,423 |
+| [28. Tooling](../../../design/src/428-part4-ch28-tooling.md) | 9,438 |
 | **Part V. Decisions** | **14,639** |
 | [29. Decisions](../../../design/src/529-part5-ch29-decisions.md) | 11,993 |
 | [30. Risks and experiments](../../../design/src/530-part5-ch30-risks.md) | 2,646 |
 | **Appendices** | **13,073** |
 | [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,883 |
 | [C. Every Effect feature in VibeLang](../../../design/src/901-appendix-c-coverage.md) | 8,190 |
-| **All 33 pages** | **102,599** |
+| **All 33 pages** | **102,614** |
 
 <!-- token-counts: end -->

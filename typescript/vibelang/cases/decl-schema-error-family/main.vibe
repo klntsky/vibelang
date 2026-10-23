@@ -1,0 +1,69 @@
+// expect-result: {"encoded":{"_tag":"NotStored","key":"a","attempts":2},"decoded":"not stored after 2","evicted":{"_tag":"Evicted","key":"b","at":3,"by":"lru"},"throughExpired":{"_tag":"Evicted","key":"b","at":3,"by":"lru"},"decodedEvicted":["Evicted",true],"base":{"_tag":"StoreError","key":"s"},"decodedBase":["StoreError",false],"subclass":[false,{"_tag":"NotStored","key":"a","attempts":2}],"abstract":{"_tag":"OverQuota","limit":1,"used":2},"envelope":{"id":"e","error":{"_tag":"Late","key":"l"}},"unknownTag":true,"caught":"NotStored","json":{"_tag":"NotStored","key":"a","attempts":2}}
+// D304: a value of a family base's type may be any of its subclasses, so the
+// base's schema encodes and decodes each of them, as well as its own instances.
+
+export schema error StoreError {
+  _tag: string
+  key: string
+}
+
+export schema error NotStored extends StoreError {
+  attempts: number
+
+  describe(): string {
+    return `not stored after ${this.attempts}`
+  }
+}
+
+/** An intermediate base widens its own tag for its subclasses. */
+export schema error Expired extends StoreError {
+  _tag: string
+  at: number
+}
+
+export schema error Evicted extends Expired { by: string }
+
+/** An abstract base has a family's tag type without a _tag field. */
+export abstract schema error Quota { limit: number }
+
+export schema error OverQuota extends Quota { used: number }
+
+/** A schema built from the base before a subclass is declared lists it too. */
+schema Envelope { id: string; error: StoreError }
+
+export schema error Late extends StoreError
+
+function fail(error: StoreError): never!StoreError {
+  throw error
+}
+
+function describe(value: StoreError): string {
+  return match (value) {
+    when NotStored(let error): error.describe();
+    default: value._tag;
+  }
+}
+
+export function main() {
+  const notStored = new NotStored({ key: "a", attempts: 2 })
+  const evicted = new Evicted({ key: "b", at: 3, by: "lru" })
+  const encode = Schema.encodeSync(StoreError)
+  const decode = Schema.decodeUnknownSync(StoreError)
+  const decodedEvicted = decode({ _tag: "Evicted", key: "c", at: 4, by: "ttl" })
+  const decodedBase = decode({ _tag: "StoreError", key: "s" })
+  return {
+    encoded: encode(notStored),
+    decoded: describe(decode(encode(notStored))),
+    evicted: encode(evicted),
+    throughExpired: Schema.encodeSync(Expired)(evicted),
+    decodedEvicted: [decodedEvicted._tag, decodedEvicted instanceof Evicted],
+    base: encode(new StoreError({ key: "s" })),
+    decodedBase: [decodedBase._tag, decodedBase instanceof NotStored],
+    subclass: [Schema.is(NotStored)(new StoreError({ key: "s" })), Schema.encodeSync(NotStored)(notStored)],
+    abstract: Schema.encodeSync(Quota)(new OverQuota({ limit: 1, used: 2 })),
+    envelope: Schema.encodeSync(Envelope)({ id: "e", error: new Late({ key: "l" }) }),
+    unknownTag: Option.isNone(Schema.decodeUnknownOption(StoreError)({ _tag: "Unknown", key: "x" })),
+    caught: fail(notStored) catch (e) => encode(e)._tag,
+    json: Schema.encodeSync(Schema.toCodecJson(StoreError))(notStored)
+  }
+}

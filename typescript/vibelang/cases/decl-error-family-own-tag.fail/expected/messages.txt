@@ -1,0 +1,4 @@
+Sub's tag is "Sub", but its _tag field's type is "Other".
+Typed's tag is "Typed", but its _tag field's type is T.
+SchemaSub's tag is "SchemaSub", but its _tag field's type is "Other".
+Both's tag is "Both", but its _tag field's type is "Other".

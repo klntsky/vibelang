@@ -44,8 +44,22 @@ import (
 // A field named _tag declares the class's tag type (D304), which the base of
 // a family widens so that its subclasses' tags fit: `_tag: string`. The tag
 // type of an abstract error is string unless it declares one. The checker
-// reports a subclass whose tag does not fit its base's tag type (EK2117) and
-// one that declares fields its base's constructor cannot take (EK2118).
+// reports a tag that does not fit (EK2117): a subclass's and its base's tag
+// type, or a concrete error's own name and its _tag field. It also reports a
+// subclass that declares fields its base's constructor cannot take (EK2118).
+//
+// A value of a schema error family's base type may be any of its subclasses,
+// so the base's schema accepts them too. Each class of a family tells the
+// runtime so in a static block: the base of a family, a schema error with a
+// _tag field or abstract, runs $schemaErrorFamily, and any other subclass
+// $schemaErrorMember:
+//
+//	class FsError extends Schema.TaggedError<FsError>()("FsError" as string, { method: Schema.String }) {
+//	  static { $schemaErrorFamily(this) }
+//	}
+//	class Missing extends FsError.extend<Missing>("Missing")({ _tag: Schema.tag("Missing"), path: Schema.String }) {
+//	  static { $schemaErrorMember(this) }
+//	}
 
 // errorDeclaration is what parseErrorDeclaration read.
 type errorDeclaration struct {
@@ -173,6 +187,9 @@ func (p *Parser) parseErrorDeclaration(pos int, jsdoc jsdocScannerInfo, modifier
 		heritage, members = p.vibelangErrorSubclass(d)
 	default:
 		heritage, members = p.vibelangSchemaErrorSubclass(d), d.members
+	}
+	if registration := p.vibelangSchemaErrorRegistration(d); registration != nil {
+		members = append([]*ast.Node{registration}, members...)
 	}
 	heritage = append(heritage, d.implements...)
 	membersLoc := core.NewTextRange(d.body.End(), d.body.End())
@@ -403,6 +420,33 @@ func (p *Parser) vibelangSchemaErrorSubclass(d *errorDeclaration) []*ast.Node {
 	call := p.vibelangSpanning(p.factory.NewCallExpression(inner, nil, nil, p.newNodeList(d.body, []*ast.Node{fields}), ast.NodeFlagsNone), core.NewTextRange(expression.Pos(), d.body.End()))
 	base := p.vibelangSpanning(p.factory.NewExpressionWithTypeArguments(call, d.base.AsExpressionWithTypeArguments().TypeArguments), d.base.Loc)
 	return p.vibelangErrorHeritage(base, d.base.Loc)
+}
+
+// vibelangSchemaErrorRegistration returns the static block through which a
+// schema error joins its family (D304): static { $schemaErrorFamily(this) }
+// for the base of a family, a schema error with a _tag field or abstract, and
+// static { $schemaErrorMember(this) } for any other subclass. It returns nil
+// for any other declaration. The block comes first among the members, so the
+// class has joined its family before its own static initializers run.
+func (p *Parser) vibelangSchemaErrorRegistration(d *errorDeclaration) *ast.Node {
+	var helper string
+	switch {
+	case !d.schema:
+		return nil
+	case d.tag != nil || d.abstract:
+		helper = "$schemaErrorFamily"
+	case d.base != nil:
+		helper = "$schemaErrorMember"
+	default:
+		return nil
+	}
+	at := d.name.Loc
+	callee := p.vibelangSynthesized(p.factory.NewIdentifier(helper), at)
+	this := p.vibelangSynthesized(p.factory.NewKeywordExpression(ast.KindThisKeyword), at)
+	call := p.vibelangSynthesized(p.factory.NewCallExpression(callee, nil, nil, p.newNodeList(at, []*ast.Node{this}), ast.NodeFlagsNone), at)
+	statement := p.vibelangSynthesized(p.factory.NewExpressionStatement(call), at)
+	body := p.vibelangSynthesized(p.factory.NewBlock(p.newNodeList(at, []*ast.Node{statement}), true /*multiLine*/), at)
+	return p.vibelangSynthesized(p.factory.NewClassStaticBlockDeclaration(nil, body), at)
 }
 
 // vibelangErrorSubclass writes the base and the members of an error that

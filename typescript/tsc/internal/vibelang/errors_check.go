@@ -13,8 +13,10 @@ import (
 // say well:
 //
 //   - EK2117: a tag that does not fit. A concrete error's own name must fit
-//     the tag type its _tag field declares, and a subclass's tag must fit its
-//     base's tag type, which a family's base widens with `_tag: string`. Also
+//     the tag type its _tag field declares, a subclass's included, since the
+//     runtime tags it with that name whatever the field says; and a subclass's
+//     tag must fit its base's tag type, which a family's base widens with
+//     `_tag: string`. Also
 //     an error that extends a class that is not an error, a schema error that
 //     extends an error that is not a schema error, and an error that extends
 //     a schema error.
@@ -126,6 +128,10 @@ func checkErrorDeclaration(c *checker.Checker, class *ast.Node, form errorForm, 
 		if field := errorTagField(class, form); field != name {
 			cover(c, field)
 		}
+	}
+	if field := errorTagField(class, form); !abstract && tag != nil && field != name && !c.IsTypeAssignableTo(own, tag) {
+		d := report(c, field, EK2117.With("{0}'s tag is \"{0}\", but its _tag field's type is {1}."), name.Text(), c.TypeToString(tag))
+		note(d, "A concrete error is tagged with its own name; give _tag a type that includes it, such as string.")
 	}
 	if form == errorFormSubclass {
 		checkErrorConstructor(c, class, baseName)

@@ -1,0 +1,26 @@
+// expect: EK2117 EK2117 EK2117 EK2117 EK2117 EK2117 EK2117
+// A concrete error is tagged with its own name (D304), a subclass included,
+// whatever its _tag field says: a _tag field whose type leaves the name out
+// declares a tag the error never carries, so catchTag on it never matches.
+export error Base { _tag: string; code: number }
+export error Sub extends Base { _tag: "Other"; path: string }
+export error Quoted extends Base { readonly "_tag": "Q" }
+export error Typed<T extends string> extends Base { _tag: T }
+
+export schema error SchemaBase { _tag: string; code: number }
+export schema error SchemaSub extends SchemaBase { _tag: "Other" }
+export schema error SchemaNarrow { _tag: "A" }
+
+// A tag that fits neither the name nor the base is reported for both.
+error Literal { code: number }
+export error Both extends Literal { _tag: "Other" }
+
+// These fit: a type that includes the name, an intermediate base, and an
+// abstract base, which has no instances of its own.
+export error Fits extends Base { _tag: "Fits" | "Other" }
+export error Mid extends Base { _tag: string }
+export error Leaf extends Mid
+export abstract error Shape extends Base { _tag: "Circle" | "Square" }
+export error Circle extends Shape
+export schema error SchemaMid extends SchemaBase { _tag: string }
+export schema error SchemaLeaf extends SchemaMid

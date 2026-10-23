@@ -24,6 +24,9 @@ import (
 //
 //	schema error FsError { method: string }
 //	class FsError extends Schema.TaggedError<FsError>()("FsError", { method: Schema.String }) { declare readonly method: string }
+//
+// The static block through which the fork's schema error joins its family
+// (D304) changes no type, so the projection leaves it out.
 
 // errorClassForm is the class an error declaration's parser output is.
 type errorClassForm int
@@ -286,6 +289,9 @@ func (p *projector) errorClassDeclaration(node *ast.Node) {
 			p.plan.insert(base.End(), ".extend<"+self+">("+quoted+")("+fields+")")
 		}
 		for _, member := range class.Members.Nodes {
+			if member.Kind == ast.KindClassStaticBlockDeclaration && member.Flags&ast.NodeFlagsReparsed != 0 {
+				continue // the family's static block
+			}
 			p.visit(member, env{})
 		}
 	}
