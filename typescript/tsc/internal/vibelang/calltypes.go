@@ -36,6 +36,9 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 		}
 		return c.GetUnionType(parts)
 	}
+	if result := resumeResultType(c, call); result != nil {
+		return result // what the handle statement ends with (handle_results.go)
+	}
 	if success := successType(c, t); success != nil {
 		return success // its success may itself be subtype data
 	}

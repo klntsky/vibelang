@@ -1452,7 +1452,7 @@ Language server, `scripts/bench/lsp.mjs` on the chain shape (open the last modul
 
 - `arguments` inside a region's closure is the closure's, not the function's, and a function whose body declares `using` or calls `fork` runs its whole body in such a closure.
 - A `using` in the head of a C-style `for` loop, `for (using x = init; …; …)`, stays TypeScript's own `using`, which Effect does not run on failure or interruption, and an acquisition there is TS2850.
-- Inside a clause, `resume(k, v)` has the program's own result type, or `never` with `onReturn` (D97), so a clause that uses the resumed result while another clause returns early with another type sees a narrower type than the value. The rule that `k` stays inside its clause is not checked.
+- In a handle statement, a clause's return computed from a non-tail `resume`'s result stays out of that result's type (D97); EK2119 only warns when it does not fit. In `handle(...)`, `resume(k, v)` has the program's own result type, or `never` with `onReturn`, and reading it where the handle can produce another type is EK2110. The rule that `k` stays inside its clause is not checked.
 - EK4201 knows effect's forking combinators by name and any call by its `concurrency` option; a TypeScript wrapper around a fork is EK4202 only when its declared requirements name the control operation. A producer stored in a variable and then passed to a Stream function is not EK4201.
 - `this` in a producer is the function's, but `arguments` is the body generator's. A `for (using x of producer)` loop takes JavaScript's `for...of`, so it cannot iterate a producer.
 - EK3201 is reported at runners only, not at a written contract whose R excludes the service a `wire` leaves unprovided.

@@ -1,0 +1,117 @@
+// expect-result: {"early":"early","after":42,"written":"42 first","unwritten":"42 first","falls":["undefined"],"agreed":43,"held":84,"log":["first 42"]}
+// What a resume returns when it is not its clause's last step (D97): its
+// type covers every value the handle can end with, so reading it is checked.
+
+control Steps {
+  first(): void!!
+  second(): void!!
+}
+
+function work() {
+  Steps.first()
+  Steps.second()
+  return 42
+}
+
+const log: string[] = []
+
+// resume returns number | string: the second clause's "early" reaches it.
+function early() {
+  try {
+    return work()
+  } handle Steps.first() {
+    const n = resume()
+    return typeof n === "number" ? n.toFixed(1) : n
+  } handle Steps.second() {
+    return "early"
+  }
+}
+
+// A clause that works after resume adds nothing: the statement ends as the
+// block did.
+function after() {
+  try {
+    return work()
+  } handle Steps.first() {
+    const n: number = resume()
+    log.push(`first ${n}`)
+  } handle Steps.second() {
+    resume()
+  }
+}
+
+// A written success type covers a return computed from resume's result.
+function written(): number | string!! {
+  try {
+    return work()
+  } handle Steps.first() {
+    return `${resume()} first`
+  } handle Steps.second() {
+    resume()
+  }
+}
+
+// Without one, that return stays out of resume's type, and EK2119 warns.
+function unwritten() {
+  try {
+    return work()
+  } handle Steps.first() {
+    return `${resume()} first`
+  } handle Steps.second() {
+    resume()
+  }
+}
+
+// A try block that ends without returning gives resume undefined.
+function falls() {
+  const seen: string[] = []
+  try {
+    work()
+  } handle Steps.first() {
+    const n = resume()
+    seen.push(String(n))
+  } handle Steps.second() {
+    resume()
+  }
+  return seen
+}
+
+// handle's clauses that return the program's type may read resume's result.
+function agreed() {
+  return handle(() => work(), Steps, {
+    first(k) {
+      const n = resume(k, undefined)
+      return n + 1
+    },
+    second(k) {
+      return resume(k, undefined)
+    }
+  })
+}
+
+// A result held in a const and returned unread is never read, even with
+// onReturn.
+function held() {
+  return handle(() => work(), Steps, {
+    first(k) {
+      const n = resume(k, undefined)
+      return n
+    },
+    second(k) {
+      return resume(k, undefined)
+    }
+  }, (n) => n * 2)
+}
+
+export function main() {
+  return {
+    early: early(),
+    after: after(),
+    written: written(),
+    unwritten: unwritten(),
+    falls: falls(),
+    agreed: agreed(),
+    held: held(),
+    log
+  }
+}

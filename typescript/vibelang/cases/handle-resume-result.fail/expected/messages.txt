@@ -1,0 +1,3 @@
+This resume returns what the handle produces next, which can be string | number, but its result is typed number.
+Make every clause return number, or return resume's result unread.
+With onReturn, resume's result is typed never: return it unread, or transform the handle's result after handle returns.

@@ -1,0 +1,134 @@
+// expect: EK2110 TS2322 TS2345
+// A resume that is not its clause's last step returns what the handle ends
+// with next: the try block's result, or what a clause returns when the block
+// performs an operation again before it ends (D97). Each function below
+// compiled before and failed or returned the wrong value when it ran.
+
+control Steps {
+  first(): void!!
+  second(): void!!
+}
+
+function work() {
+  Steps.first()
+  Steps.second()
+  return 42
+}
+
+// TS2322: the second clause ends the statement with "early", which the first
+// clause's resume then returns.
+export function early() {
+  try {
+    return work()
+  } handle Steps.first() {
+    const n: number = resume()
+    return n.toFixed(1)
+  } handle Steps.second() {
+    return "early"
+  }
+}
+
+function half(n: number) {
+  return n / 2
+}
+
+// TS2345: the same result, passed where a number is expected.
+export function passed() {
+  try {
+    return work()
+  } handle Steps.first() {
+    return half(resume())
+  } handle Steps.second() {
+    return "early"
+  }
+}
+
+control Once {
+  step(): void!!
+}
+
+function twice() {
+  Once.step()
+  Once.step()
+  return 42
+}
+
+// TS2322: the clause answers the second step first, and its string reaches
+// the resume that answers the first.
+export function nested() {
+  try {
+    return twice()
+  } handle Once.step() {
+    const n: number = resume()
+    return n.toFixed(1)
+  }
+}
+
+// TS2322: a try block that ends without returning ends the statement with
+// undefined.
+export function falls() {
+  try {
+    twice()
+  } handle Once.step() {
+    const n: number = resume()
+    Console.log(n.toFixed(1))
+  }
+}
+
+// TS2322: a break out of the statement ends it with undefined too.
+export function breaks() {
+  for (const round of [1, 2]) {
+    try {
+      twice()
+      break
+    } handle Once.step() {
+      const n: number = resume()
+      Console.log(round, n.toFixed(1))
+    }
+  }
+}
+
+let calls = 0
+
+// TS2322: a clause that ends without resuming ends the statement with
+// undefined, which the first step's resume then returns.
+export function stops() {
+  try {
+    return twice()
+  } handle Once.step() {
+    calls++
+    if (calls === 2) {
+      Console.log("second step stops")
+    } else {
+      const n: number = resume()
+      return n + 1
+    }
+  }
+}
+
+// EK2110: handle types resume's result with the program's, number, but the
+// second clause can end the handle with "early" first.
+export function expression() {
+  return handle(() => work(), Steps, {
+    first(k) {
+      const n: number = resume(k, undefined)
+      return n.toFixed(1)
+    },
+    second(k) {
+      return "early"
+    }
+  })
+}
+
+// EK2110: with onReturn, resume's result is typed never.
+export function transformed() {
+  return handle(() => work(), Steps, {
+    first(k) {
+      const n: number = resume(k, undefined)
+      return n + 1
+    },
+    second(k) {
+      return resume(k, undefined)
+    }
+  }, (n) => `${n}`)
+}
