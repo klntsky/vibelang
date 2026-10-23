@@ -1,0 +1,30 @@
+import { Effect } from "effect"
+
+// A declared Effect const holds its initializer (D269) when the initializer is
+// a pipe (D154): the pipe body builds the program and its left side lands in a
+// program parameter, so the const is initialized without running anything,
+// and running the const runs the pipe.
+const make = (state: { mutable runs: number }): number!! => {
+  state.runs++
+  return state.runs
+}
+
+// At a module's top level the held pipe builds the program (D262).
+const moduleState = { runs: 0 }
+const atModule: number!! = make(moduleState) |> Effect.map(%, (n) => n * 10)
+const chainedAtModule: number!! = make(moduleState) |> Effect.map(%, (n) => n * 5) |> Effect.map(%, (n) => n * 2)
+
+// expect-result: [[0,0,0],[2,2,4],[20,20,20,40]]
+export function main() {
+  const states = [0, 1].map(() => ({ runs: 0 }))
+  const piped: number!! = make(states[0]!) |> Effect.map(%, (n) => n * 10)
+  const chained: number!! = make(states[1]!) |> Effect.map(%, (n) => n * 5) |> Effect.map(%, (n) => n * 2)
+  const all = [...states, moduleState]
+  const before = all.map((state) => state.runs)
+  const results: Array<number> = []
+  for (const program of [piped, chained, atModule, chainedAtModule]) {
+    program()
+    results.push(program())
+  }
+  return [before, all.map((state) => state.runs), results]
+}

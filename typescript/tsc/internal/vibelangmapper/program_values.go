@@ -248,13 +248,16 @@ func (r *Resolver) holdsProgram(expr *ast.Node) bool {
 // satisfies clause and a non-null assertion leave the initializer's value as
 // it is, so expr may stand inside them. A conditional's value is one of its
 // branches, so expr may also be a branch, though never the condition, which
-// the conditional evaluates to choose the branch. The caller decides whether
-// the declared type is an Effect.
+// the conditional evaluates to choose the branch. A pipe's value is its body's
+// (D154), so expr may also be a pipe's body, though never its left side: the
+// body builds the program and the left side keeps its parameter position.
+// The caller decides whether the declared type is an Effect.
 func HeldConstDeclaration(expr *ast.Node) *ast.Node {
 	node := expr
 	for parent := node.Parent; parent != nil; parent = node.Parent {
 		if ast.IsOuterExpression(parent, ast.OEKParentheses|ast.OEKAssertions) ||
-			(ast.IsConditionalExpression(parent) && parent.AsConditionalExpression().Condition != node) {
+			(ast.IsConditionalExpression(parent) && parent.AsConditionalExpression().Condition != node) ||
+			(isPipeExpression(parent) && parent.AsBinaryExpression().Right == node) {
 			node = parent
 			continue
 		}

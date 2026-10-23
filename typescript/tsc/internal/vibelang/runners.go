@@ -199,15 +199,35 @@ func (a *analyzer) passedAsProgram(call *ast.Node) bool {
 	if a.byNameOf(call) != nil || holdsProgram(a.checker, call) {
 		return true
 	}
-	owner, path := ownerCall(call)
-	if owner == nil || !isEffectType(a.checker, a.checker.GetTypeAtLocation(call)) {
+	return a.atProgramPosition(call) || a.inProgramPipe(call)
+}
+
+// atProgramPosition reports whether node, an Effect, is an argument where its
+// callee expects a program.
+func (a *analyzer) atProgramPosition(node *ast.Node) bool {
+	owner, path := ownerCall(node)
+	if owner == nil || !isEffectType(a.checker, a.checker.GetTypeAtLocation(node)) {
 		return false
 	}
 	signature := a.checker.GetResolvedSignature(owner)
 	if signature == nil {
 		return false
 	}
-	return a.classify(a.expectedAt(owner, signature, path, call)).program
+	return a.classify(a.expectedAt(owner, signature, path, node)).program
+}
+
+// inProgramPipe reports whether node is the left side of a pipe, or the body
+// of a pipe that is, whose topic lands where a program is expected (D154). At
+// a module's top level the left side keeps its Effect type, so its topic
+// converts nothing, and the pipe passes it as a call argument there is
+// passed: unrun, as the program the callee receives.
+func (a *analyzer) inProgramPipe(node *ast.Node) bool {
+	n := node
+	for n.Parent != nil && (ast.IsParenthesizedExpression(n.Parent) || isPipe(n.Parent) && n.Parent.AsBinaryExpression().Right == n) {
+		n = n.Parent
+	}
+	pipe := pipeOfLeft(n)
+	return pipe != nil && slices.ContainsFunc(topicsOf(pipe), a.atProgramPosition)
 }
 
 // holdsProgram recognizes a declared Effect const at any scope (D269),
