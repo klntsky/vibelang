@@ -1091,7 +1091,8 @@ func (l *execLowering) lowerImports() {
 
 // entry appends the entry statement of a module that exports a function
 // named main with no parameters and calls no runner at its top level
-// (D135): if (import.meta.main) $runMain(main()). A main with a plain
+// (D135): $entry(import.meta.main, import.meta.url, main, () =>
+// $runMain(main())), as the fork writes it (entry.go). A main with a plain
 // return annotation runs through Effect.sync. The fork runs with
 // @effect/platform-node's NodeRuntime when that package resolves; a
 // projection cannot resolve packages, so this one always uses the
@@ -1115,7 +1116,7 @@ func (l *execLowering) entry() {
 	if contractOf(main.Type()) == contractPlain {
 		program = helperRef("$sync") + "(main)"
 	}
-	l.insert(len(l.p.text), "\nif (import.meta.main) "+helperRef("$runMain")+"("+program+");\n")
+	l.insert(len(l.p.text), "\n"+helperRef("$entry")+"(import.meta.main, import.meta.url, main, () => "+helperRef("$runMain")+"("+program+"));\n")
 }
 
 // callsRunnerSyntax reports whether expression calls a runner, such as

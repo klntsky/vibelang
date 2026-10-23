@@ -14,14 +14,19 @@ import (
 // A module that exports a function declaration named main with no parameters
 // runs it when the host starts the module: the emitted JavaScript ends with
 //
-//	if (import.meta.main) NodeRuntime.runMain(main());
+//	runtime.$entry(import.meta.main, import.meta.url, main, () => NodeRuntime.runMain(main()));
 //
 // with NodeRuntime imported from @effect/platform-node when that package
 // resolves from the module, and runtime.$runMain, the runtime's copy of the
-// same runner, otherwise. import.meta.main is true only in the module the
-// host started, so importing the module, from a test or another module, runs
-// nothing. A module that calls a runner at its top level starts its program
-// itself and gets no entry statement.
+// same runner, otherwise. $entry calls the arrow when the host started the
+// module. import.meta.main is true only in that module, so importing the
+// module, from a test or another module, runs nothing. In an ES module bundle
+// made by esbuild, Rollup, Rolldown, or Vite, every module shares the bundle's
+// import.meta, so $entry runs only the main the bundle exports. A file
+// emitted as CommonJS has no import.meta and passes void 0 for both, as every
+// module of a CommonJS bundle does, which empties it; $entry then asks the
+// host's main module. A module that calls a runner at its top level starts
+// its program itself and gets no entry statement.
 
 // platformNodeModule is the package whose NodeRuntime runs an entry module.
 const platformNodeModule = "@effect/platform-node"
@@ -102,9 +107,10 @@ func planEntry(c *checker.Checker, file *ast.SourceFile) *entryPlan {
 	return entry
 }
 
-// entryStatement makes `if (import.meta.main) NodeRuntime.runMain(main())`,
-// or the same with runtime.$runMain. A main that compiles to plain JavaScript
-// runs through Effect.sync.
+// entryStatement makes `runtime.$entry(import.meta.main, import.meta.url,
+// main, () => NodeRuntime.runMain(main()))`, or the same with runtime.$runMain.
+// A main that compiles to plain JavaScript runs through Effect.sync. In a file
+// emitted as CommonJS, both import.meta arguments are void 0.
 func (tx *lowering) entryStatement() *ast.Node {
 	f := tx.Factory()
 	entry := tx.plan.entry
@@ -120,7 +126,15 @@ func (tx *lowering) entryStatement() *ast.Node {
 	} else {
 		runner = tx.runtimeMember("$runMain")
 	}
-	run := f.NewExpressionStatement(f.NewCallExpression(runner, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{program}), ast.NodeFlagsNone))
-	meta := f.NewPropertyAccessExpression(f.NewMetaProperty(ast.KindImportKeyword, f.NewIdentifier("meta")), nil /*questionDotToken*/, f.NewIdentifier("main"), ast.NodeFlagsNone)
-	return f.NewIfStatement(meta, run, nil /*elseStatement*/)
+	run := f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*returnType*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken),
+		f.NewCallExpression(runner, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{program}), ast.NodeFlagsNone))
+	started, url := f.NewVoidZeroExpression(), f.NewVoidZeroExpression()
+	if !tx.commonJS {
+		meta := func(name string) *ast.Node {
+			return f.NewPropertyAccessExpression(f.NewMetaProperty(ast.KindImportKeyword, f.NewIdentifier("meta")), nil /*questionDotToken*/, f.NewIdentifier(name), ast.NodeFlagsNone)
+		}
+		started, url = meta("main"), meta("url")
+	}
+	arguments := []*ast.Node{started, url, f.NewIdentifier("main"), run}
+	return f.NewExpressionStatement(f.NewCallExpression(tx.runtimeMember("$entry"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone))
 }

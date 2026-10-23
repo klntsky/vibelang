@@ -1,7 +1,8 @@
 #!/bin/sh
 # Builds the vibelang compiler and vibelang-runtime from this checkout, then
 # bundles test/fixture with webpack, Rspack, Rollup, Rolldown, esbuild, Bun,
-# and Vite through vibelang-unplugin and checks each bundle.
+# and Vite through vibelang-unplugin and checks each bundle, and bundles the
+# compiler's output of test/entry with each of them (entry.test.mjs).
 #
 # Usage: sh packages/unplugin/test/run.sh [node --test options]
 #
@@ -52,4 +53,4 @@ ln -s "$package" "$modules/vibelang-unplugin"
 (cd "$package" && bun install --frozen-lockfile --no-cache)
 
 cd "$package"
-exec node --test "$@" test/bundlers.test.mjs test/deferred.test.mjs
+exec node --test "$@" test/bundlers.test.mjs test/deferred.test.mjs test/entry.test.mjs

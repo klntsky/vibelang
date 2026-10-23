@@ -140,6 +140,7 @@ JavaScript value. Decisions are in [`docs/design/DECISIONS.md`](../../docs/desig
 | `pipe` | Supply the prelude pipeline function | D8 |
 | `Exit` | Expose Effect completion values to TypeScript adapters | D43 |
 | `runMain` | Run a prototype entry program and return its Exit | D38 |
+| `$entry` | Run an entry module's `main` when the host started the module, unbundled or as a bundle's entry module | D135 |
 | `$runMain` | Run an entry module's `main` as `NodeRuntime.runMain` would, when `@effect/platform-node` isn't installed | D135 |
 | `suspend` | Bridge callback registration with a resumer that reports a lost race | D43 |
 | `Resumer` (type) | Type `resume` and the callback registration state | D43 |

@@ -20,5 +20,6 @@ const main = Effect.fnUntraced(function* () {
 })
 ```
 
-The compiler ends `main.js` with `if (import.meta.main) NodeRuntime.runMain(main())`,
-so importing the module runs nothing.
+The compiler ends `main.js` with
+`$entry(import.meta.main, import.meta.url, main, () => NodeRuntime.runMain(main()))`,
+which runs `main` when Node starts the module, so importing it runs nothing.

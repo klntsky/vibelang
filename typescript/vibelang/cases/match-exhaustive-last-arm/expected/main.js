@@ -42,5 +42,4 @@ export function main() {
         };
     }).apply(this, arguments);
 }
-if (import.meta.main)
-    runtime.$runMain(main());
+runtime.$entry(import.meta.main, import.meta.url, main, () => runtime.$runMain(main()));

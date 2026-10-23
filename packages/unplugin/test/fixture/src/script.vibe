@@ -1,0 +1,5 @@
+// A module that is also a program: its main runs when the host starts it,
+// and never from a bundle whose entry module is another (D135).
+export function main() {
+  Console.log("script main ran")
+}

@@ -36,6 +36,7 @@ type lowering struct {
 	frame    *frame              // the generator being emitted while inEffect
 	plain    bool                // visiting the body of a .vibe function that compiles to plain JavaScript
 	imports  []namedImport       // named imports the lowering adds, such as a @throws class
+	commonJS bool                // the file is emitted as CommonJS, which has no import.meta (entry.go)
 
 	// scopes maps each Scope region's block to the name of its Scope (scopes_lower.go).
 	scopes map[*ast.Node]*ast.Node
@@ -57,7 +58,10 @@ func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *tra
 	if !isVibeLangFile(file) {
 		return nil
 	}
-	tx := &lowering{plan: planFile(opts.EmitResolver, file)}
+	tx := &lowering{
+		plan:     planFile(opts.EmitResolver, file),
+		commonJS: opts.GetEmitModuleFormatOfFile != nil && opts.GetEmitModuleFormatOfFile(file) == core.ModuleKindCommonJS,
+	}
 	return tx.NewTransformer(tx.visit, opts.Context)
 }
 

@@ -78,6 +78,13 @@ export default class Api extends Cloudflare.Worker<Api>()("Api", {
 The bundlers that await plugins are Rolldown, Rollup, and Vite;
 `deferred` refuses the others.
 
+### An entry module's main
+
+A module that exports a parameterless `main` runs it when the host starts the
+module (D135). A bundle runs the `main` of its entry module and no other, as
+an ES module or as CommonJS, with this plugin or from the compiler's output:
+the runtime asks the file the host started which `main` it exports.
+
 ## Options
 
 ```js

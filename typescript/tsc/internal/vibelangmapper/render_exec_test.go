@@ -384,12 +384,12 @@ var emitCases = []struct {
 	{
 		name:     "an entry module runs main when the host starts it (D135)",
 		source:   "export function main() {\n  return 1\n}\n",
-		contains: []string{"if (import.meta.main)\n    $runMain(main());"},
+		contains: []string{"$entry(import.meta.main, import.meta.url, main, () => $runMain(main()));"},
 	},
 	{
 		name:     "a module that calls a runner itself gets no entry statement",
 		source:   "export function main() {\n  return 1\n}\nrunPromise(main())\n",
-		absent:   []string{"import.meta.main"},
+		absent:   []string{"import.meta.main", "$entry"},
 		contains: []string{"runPromise($gen(function* () { return main$direct(); }))"},
 	},
 
