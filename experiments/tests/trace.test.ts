@@ -23,12 +23,12 @@
 //   } with {
 //     Approve(request, k) {
 //       Logger.info(`clause handling "${request}"`)      // AppLogger: outside the provide
-//       const decision = Reviewers.decide(request)       // whole fiber suspends (timer)
+//       const decision = Reviewers.decide(request)       // whole fiber suspends (handoff)
 //       return resume(k, decision)
 //     }
 //   }
 import { expect, test } from "bun:test"
-import { Context, Effect, Exit, Scope } from "effect"
+import { Context, Deferred, Effect, Exit, Scope } from "effect"
 import { handle, hooks, operation, resume } from "../../packages/runtime/src/kernel/kernel.ts"
 import { compiled, contextLabels, stackLabels } from "../../packages/runtime/src/kernel/trace.ts"
 
@@ -82,6 +82,8 @@ const describeContext = (context: Context.Context<never>) =>
   }).join(", ")
 
 test("T1 nested suspension and resumption preserve Context and Scope", async () => {
+  const reviewStarted = Deferred.makeUnsafe<void>()
+  const tickerRan = Deferred.makeUnsafe<void>()
   const machine: Array<string> = []
   hooks.onCapture = (fiber, k) => {
     machine.push(`capture ${k.op} on fiber ${fiber.id}: ${k.frameCount} frames`)
@@ -112,8 +114,9 @@ test("T1 nested suspension and resumption preserve Context and Scope", async () 
   )
 
   const ticker = Effect.gen(function*() {
-    yield* Effect.sleep("1 millis")
+    yield* Deferred.await(reviewStarted)
     yield* note("other fiber ran while the main fiber was suspended")
+    yield* Deferred.succeed(tickerRan, undefined)
   })
 
   const main = Effect.gen(function*() {
@@ -129,7 +132,14 @@ test("T1 nested suspension and resumption preserve Context and Scope", async () 
         )
     }),
     Effect.provideService(Reviewers, {
-      decide: (request: string) => Effect.as(Effect.andThen(Effect.sleep("5 millis"), note(`reviewer approved "${request}"`)), true)
+      decide: (request: string) => Effect.gen(function*() {
+        // Timer deadlines do not order fibers: a delayed child can otherwise be
+        // interrupted when main completes before it records its event.
+        yield* Deferred.succeed(reviewStarted, undefined)
+        yield* Deferred.await(tickerRan)
+        yield* note(`reviewer approved "${request}"`)
+        return true
+      })
     })
   )
 
