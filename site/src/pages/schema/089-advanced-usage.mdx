@@ -64,7 +64,7 @@ const BoxedCount = BoxSchema(Schema.FiniteFromString)
 ## Adding interpreter support
 
 ```vibe
-// run: const codec = try((schema) => Schema.toCodecJson(schema), PortableShelf); Console.log(Schema.encodeEffect(codec)(new Shelf("S-12"))); Console.log(Schema.decodeUnknownEffect(codec)("S-12") instanceof Shelf)
+// run: const codec = Schema.toCodecJson(PortableShelf); Console.log(Schema.encodeEffect(codec)(new Shelf("S-12"))); Console.log(Schema.decodeUnknownEffect(codec)("S-12") instanceof Shelf)
 const PortableShelf = Schema.declare(
   (input: unknown) => input instanceof Shelf,
   {

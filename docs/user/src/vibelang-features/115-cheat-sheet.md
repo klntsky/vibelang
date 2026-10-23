@@ -779,12 +779,12 @@ function firstFailure(outcome: Exit.Exit<User, NotFound>) {
 
 **Built-in exceptions (D101).** In an Effect function, `JSON.parse(text)` has a shipped contract: its `SyntaxError` is an expected failure that joins E and reaches `catch`. `decodeURI` and `decodeURIComponent` list `URIError`. Other built-ins' exceptions are defects. In a plain function `JSON.parse` is a JavaScript call, unless a `try` of that function whose `catch` handles the `SyntaxError` encloses it (D282); an exception that escapes into an Effect caller becomes a defect. Inside TypeScript's `Effect.gen`, by contrast, a plain `JSON.parse` throw is a defect.
 
-`try((text) => JSON.parse(text), text)` (D148) turns any throw into an expected `Cause.UnknownError`; the error mapper below chooses the failure type. `sync((text) => JSON.parse(text), text)` keeps a parse exception a defect.
+Use ordinary `catch` to map a built-in’s expected failure; reserve hatches for foreign or platform operations.
 
 ```ts effect
 const id = Effect.sync(() => crypto.randomUUID())
 const parsed = Effect.try({ try: () => JSON.parse(text), catch: (error) => new BadJson({ error }) })
-const loaded = Effect.promise(() => Promise.resolve(42))
+const loaded = Effect.promise(() => crypto.subtle.digest("SHA-256", new Uint8Array()))
 const fetched = Effect.tryPromise((signal) => fetch(url, { signal }))
 const tick = Effect.callback<number>((resume) => {
   const timer = setTimeout(() => resume(Effect.succeed(7)), 10)
@@ -799,9 +799,12 @@ error BadJson { error: unknown }
 
 function hatches(text: string, url: string) {
   const id = sync(crypto.randomUUID())
-  const parsed = try((text) => JSON.parse(text), (error) => new BadJson({ error }), text)
-  const loaded = sync(async () => Promise.resolve(42))
-  const fetched = try(async (url, signal) => fetch(url, { signal }), url)
+  const parsed = JSON.parse(text) catch (error) => throw new BadJson({ error })
+  const loaded = sync(async () => {
+    const digest = await crypto.subtle.digest("SHA-256", new Uint8Array())
+    return digest.byteLength
+  })
+  const fetched = try(async (url, signal) => await fetch(url, { signal }), url)
   const tick = callback<number>((resume) => {
     const timer = setTimeout(() => resume(7), 10)
     return () => clearTimeout(timer)
@@ -810,39 +813,35 @@ function hatches(text: string, url: string) {
   return { id, parsed, loaded, status: fetched.status, tick, name }
 }
 // Output: Hello, Ada
-// Output: {"id":true,"parsed":{"ok":true},"loaded":42,"status":200,"tick":7,"name":"Ada"}
+// Output: {"id":true,"parsed":{"ok":true},"loaded":32,"status":200,"tick":7,"name":"Ada"}
 ```
 
 **TypeScript modules inline** (D283, [module declarations](https://github.com/tc39/proposal-module-declarations)). A module's body is TypeScript, compiled as a `.ts` file would be, so JavaScript's `throw` and `catch` and `async` keep their meaning there. It is self-contained: it imports what it needs, and the file reaches it only through imports.
 
 ```ts effect
-// slugs.ts
-export function slugify(title: string): string {
-  const slug = title.trim().toLowerCase().replace(/\W+/g, "-")
-  if (slug === "") throw new Error("no slug")
-  return slug
+// platform.ts
+export function randomId(): string {
+  return crypto.randomUUID()
 }
 // main.ts
-import { slugify } from "./slugs.ts"
-const slug = (title: string) => Effect.try({ try: () => slugify(title), catch: () => new NotFound({ id: title }) })
+import { randomId } from "./platform.ts"
+const requestId = Effect.sync(() => randomId())
 ```
 
 ```vibe es
-// run: Console.log(slug("Hello World"))
-module slugs {
-  export function slugify(title: string): string {
-    const slug = title.trim().toLowerCase().replace(/\W+/g, "-")
-    if (slug === "") throw new Error("no slug")
-    return slug
+// run: Console.log(/^[-0-9a-f]{36}$/.test(requestId()))
+module platform {
+  export function randomId(): string {
+    return crypto.randomUUID()
   }
 }
 
-import { slugify } from slugs
+import { randomId } from platform
 
-function slug(title: string) {
-  return try((title) => slugify(title), () => new NotFound({ id: title }), title)
+function requestId() {
+  return sync(() => randomId())
 }
-// Output: hello-world
+// Output: true
 ```
 
 ## Fibers

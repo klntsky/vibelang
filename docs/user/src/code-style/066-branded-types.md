@@ -57,7 +57,7 @@ error InvalidAmount {
 }
 
 function parseAmount(raw: number) {
-  return try((make, raw) => make(raw), (cause) => new InvalidAmount({ cause }), WholeCents, raw)
+  return Effect.fromResult(WholeCents.result(raw)) catch (cause) => throw new InvalidAmount({ cause })
 }
 // WholeCents!InvalidAmount!
 ```
@@ -67,7 +67,7 @@ function parseAmount(raw: number) {
 InvalidAmount
 ```
 
-`Brand.make` takes a synchronous check that returns `true` for valid input or an explanation for invalid input. Its constructor throws a `Brand.BrandError` when validation fails. Escaping into Effect code, the exception is a defect that Effect catch doesn't see; a plain function's catch doesn't see it either (D282). Here the `try` hatch maps it to the expected failure `InvalidAmount`.
+`Brand.make` takes a synchronous check that returns `true` for valid input or an explanation for invalid input. Its constructor throws a `Brand.BrandError` when validation fails. Escaping into Effect code, the exception is a defect that Effect catch doesn't see; a plain function's catch doesn't see it either (D282). Here `result` avoids throwing, and ordinary `catch` maps its expected failure to `InvalidAmount`.
 
 ```vibe
 // run: const valid = inspectAmount(125); const invalid = inspectAmount(1.5); Console.log(valid.optional.isSome(), valid.result.isSuccess(), valid.valid); Console.log(invalid.optional.isNone(), invalid.result.isFailure(), invalid.valid)
@@ -106,7 +106,7 @@ error InvalidCharge {
 }
 
 function chargeAmount(raw: number) {
-  return try((make, raw) => make(raw), (cause) => new InvalidCharge({ cause }), Charge, raw)
+  return Effect.fromResult(Charge.result(raw)) catch (cause) => throw new InvalidCharge({ cause })
 }
 // chargeAmount(125) succeeds; -5 and 1.5 fail with InvalidCharge.
 ```

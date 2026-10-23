@@ -54,7 +54,7 @@ Success
 ```vibe
 // run: Console.log(JSON.stringify(encodeResult()))
 function encodeResult() {
-  const codec = try(Schema.toCodecJson(CountResult))
+  const codec = Schema.toCodecJson(CountResult)
   return Schema.encodeEffect(codec)(Result.succeed(9))
 }
 // { _tag: "Success", success: "9" }
@@ -87,8 +87,8 @@ const PersistentSet = Schema.HashSet(Schema.FiniteFromString)
 const PersistentMap = Schema.HashMap(Schema.String, Schema.FiniteFromString)
 
 function collectionsFromJson() {
-  const setCodec = try((schema) => Schema.toCodecJson(schema), PersistentSet)
-  const mapCodec = try((schema) => Schema.toCodecJson(schema), PersistentMap)
+  const setCodec = Schema.toCodecJson(PersistentSet)
+  const mapCodec = Schema.toCodecJson(PersistentMap)
   const set = Schema.decodeUnknownEffect(setCodec)(["4", "7"])
   const map = Schema.decodeUnknownEffect(mapCodec)([["cold", "4"]])
   return { set, map }
@@ -112,7 +112,7 @@ function durations() {
   const hold = Schema.decodeEffect(Schema.DurationFromString)("3 seconds")
   const milliseconds = Schema.encodeEffect(Schema.DurationFromMillis)(hold)
   const nanoseconds = Schema.decodeEffect(Schema.DurationFromNanos)(3_000_000_000n)
-  const jsonCodec = try(Schema.toCodecJson(Schema.Duration))
+  const jsonCodec = Schema.toCodecJson(Schema.Duration)
   const json = Schema.encodeEffect(jsonCodec)(Duration.seconds(3))
   return { milliseconds, nanoseconds, json }
 }
@@ -127,7 +127,7 @@ function durations() {
 `Schema.Duration` validates an existing Duration. `DurationFromString`, `DurationFromMillis`, and `DurationFromNanos` select text, numeric milliseconds, or bigint nanoseconds. The canonical Duration representation is tagged and preserves the supported precision and infinity cases.
 
 ```vibe
-// run: const value = readToken("example-token"); Console.log(String(value)); const codec = try((schema) => Schema.toCodecJson(schema), NonSerializableToken); try { Schema.encodeEffect(codec)(value) } catch (error) { Console.log(error._tag) }
+// run: const value = readToken("example-token"); Console.log(String(value)); const codec = Schema.toCodecJson(NonSerializableToken); try { Schema.encodeEffect(codec)(value) } catch (error) { Console.log(error._tag) }
 const AccessToken = Schema.RedactedFromValue(Schema.NonEmptyString)
 const NonSerializableToken = Schema.Redacted(Schema.String, {
   label: "DispatchToken",

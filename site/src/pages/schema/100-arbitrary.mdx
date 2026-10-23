@@ -18,7 +18,7 @@ const Parcel = Schema.Struct({
 })
 
 function sampleParcels() {
-  const generator = try((schema) => Arbitrary.schema(schema), Parcel)
+  const generator = Arbitrary.schema(Parcel)
   return Arbitrary.sampleEffect(generator, { count: 12, seed: "parcel-samples" })
 }
 ```
@@ -27,12 +27,12 @@ function sampleParcels() {
 12 true
 ```
 
-`Arbitrary.schema` derives a generator immediately and throws when derivation is unsupported, so the example wraps it in a boundary. `sampleEffect` runs generation and takes `count`, `size`, `maxDiscards`, and `seed`. A seed makes sampling reproducible; `size` is a local complexity budget for each collection or recursive component, not one global maximum length.
+`Arbitrary.schema` derives a generator immediately; unsupported derivation is a defect. `sampleEffect` runs generation and takes `count`, `size`, `maxDiscards`, and `seed`. A seed makes sampling reproducible; `size` is a local complexity budget for each collection or recursive component, not one global maximum length.
 
 ## Translating filters into generation constraints
 
 ```vibe
-// run: const generator = try((schema) => Arbitrary.schema(schema), EvenCapacity); const values = Arbitrary.sampleEffect(generator, { count: 12, seed: 17 }); Console.log(values.length, values.every(Schema.is(EvenCapacity)))
+// run: const generator = Arbitrary.schema(EvenCapacity); const values = Arbitrary.sampleEffect(generator, { count: 12, seed: 17 }); Console.log(values.length, values.every(Schema.is(EvenCapacity)))
 const EvenCapacity = Schema.Number.check(Schema.makeFilter(
   (value) => Number.isInteger(value) && value >= 2 && value <= 40 && value % 2 === 0,
   {
@@ -58,8 +58,8 @@ Built-in bounds, lengths, patterns, property counts, and uniqueness checks give 
 ```vibe
 // run: const values = sampleRepresentations(); Console.log(values.numbers.length, values.numbers.every(Number.isFinite)); Console.log(values.strings.length, values.strings.every((value) => typeof value === "string")); Console.log(values.strings.some((value) => Schema.decodeUnknownResult(Schema.FiniteFromString)(value).isFailure()))
 function sampleRepresentations() {
-  const decoded = try(Arbitrary.schema(Schema.FiniteFromString))
-  const encoded = try(Arbitrary.schema(Schema.toEncoded(Schema.FiniteFromString)))
+  const decoded = Arbitrary.schema(Schema.FiniteFromString)
+  const encoded = Arbitrary.schema(Schema.toEncoded(Schema.FiniteFromString))
   const numbers = Arbitrary.sampleEffect(decoded, { count: 4, seed: 17 })
   const strings = Arbitrary.sampleEffect(encoded, { count: 4, seed: 17 })
   return { numbers, strings }
@@ -80,7 +80,7 @@ Generation targets the decoded type, so a string-to-number codec generates numbe
 // run: Console.log(checkCountRoundTrip()._tag)
 function checkCountRoundTrip() {
   const Count = Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 100 }))
-  const generator = try((schema) => Arbitrary.schema(schema), Count)
+  const generator = Arbitrary.schema(Count)
   const result = Arbitrary.checkEffect(generator, (count) => {
     const wire = Schema.encodeEffect(Schema.FiniteFromString)(count)
     return Schema.decodeEffect(Schema.FiniteFromString)(wire) === count
@@ -102,11 +102,11 @@ A falsification includes `shrunkInput` and a `replay` token. To reproduce it, ca
 ```vibe
 // run: const values = sampleDispatchPlans(); Console.log(values.length, values.every((plan) => plan.label === "test-dispatch" && Number.isInteger(plan.count) && plan.count >= 0 && plan.count <= 32))
 function sampleDispatchPlans() {
-  const counts = try(() => Arbitrary.schema(Schema.Int.check(
+  const counts = Arbitrary.schema(Schema.Int.check(
     Schema.isBetween({ minimum: 0, maximum: 32 })
   ), {
     shrink: (value) => value === 0 ? [] : [Math.floor(value / 2)]
-  }))
+  })
   const plans = Arbitrary.all({
     count: counts,
     label: Arbitrary.Constant("test-dispatch")
@@ -141,7 +141,7 @@ const ShelfRefSchema = Schema.instanceOf(ShelfRef, {
 })
 
 function sampleShelves() {
-  const generator = try((schema) => Arbitrary.schema(schema), ShelfRefSchema)
+  const generator = Arbitrary.schema(ShelfRefSchema)
   return Arbitrary.sampleEffect(generator, { count: 5, seed: 23 })
 }
 ```
@@ -155,23 +155,20 @@ An opaque declaration needs a generatable representation through `toCodecArbitra
 ## Diagnosing derivation failures
 
 ```vibe
-// run: try { tryImpossibleGenerator() } catch (error) { Console.log("Empty domain rejected") }
-function tryImpossibleGenerator() {
-  try {
-    return try(Arbitrary.schema(Schema.Never))
-  } catch (error) {
+// run: reportImpossibleGenerator()
+function reportImpossibleGenerator() {
+  const outcome = exit(() => Arbitrary.schema(Schema.Never))
+  if (outcome is Exit.Failure) {
     Console.log("Arbitrary derivation failed for the empty domain")
-    throw error
   }
 }
 ```
 
 ```text
 Arbitrary derivation failed for the empty domain
-Empty domain rejected
 ```
 
-Derivation fails immediately for impossible constraints, `Never`, unsupported declarations, and recursion with no finite generation path. For runtime exhaustion, inspect the effective seed and discard budget, then add constructive constraints or fix the predicate. Keep the seed and replay token with a failing test to reexamine the same counterexample.
+`exit` captures the derivation defect as an `Exit.Failure`. Derivation fails immediately for impossible constraints, `Never`, unsupported declarations, and recursion with no finite generation path. For runtime exhaustion, inspect the effective seed and discard budget, then add constructive constraints or fix the predicate. Keep the seed and replay token with a failing test to reexamine the same counterexample.
 
 ---
 

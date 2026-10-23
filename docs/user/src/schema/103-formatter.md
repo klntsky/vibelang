@@ -14,7 +14,7 @@ const Dispatch = Schema.Struct({
 
 function displayDispatch(input: unknown) {
   const dispatch = Schema.decodeUnknownEffect(Dispatch)(input)
-  return try((schema, dispatch) => Schema.toFormatter(schema)(dispatch), Dispatch, dispatch)
+  return Schema.toFormatter(Dispatch)(dispatch)
 }
 // For { depot: "east", counts: [2, 4] }, produces a readable object representation.
 ```
@@ -23,7 +23,7 @@ function displayDispatch(input: unknown) {
 { "depot": "east", "counts": [2, 4] }
 ```
 
-`toFormatter` walks structs, arrays, unions, and supported declarations. It takes the schema's decoded type, even when the codec accepts a different wire representation, so the example decodes first to give it valid data. The explicit boundary accounts for exceptions from generated or custom formatting callbacks.
+`toFormatter` walks structs, arrays, unions, and supported declarations. It takes the schema's decoded type, even when the codec accepts a different wire representation, so the example decodes first to give it valid data. Exceptions from formatting callbacks are defects.
 
 ## Customizing formatting at selected syntax-tree nodes
 
@@ -36,11 +36,11 @@ schema Manifest { label: string; weight: Weight }
 
 function displayManifest(input: unknown) {
   const manifest = Schema.decodeUnknownEffect(Manifest)(input)
-  return try((schema, manifest) => Schema.toFormatter(schema, {
+  return Schema.toFormatter(Manifest, {
     onBefore: (ast) => ast._tag === "String"
       ? (value: string) => `[${value}]`
       : undefined
-  })(manifest), Manifest, manifest)
+  })(manifest)
 }
 ```
 

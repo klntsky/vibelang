@@ -150,12 +150,10 @@ missing
 
 ```vibe
 // run: Console.log(JSON.stringify(combinedData().getOrThrow()))
-import { combineResults } from "./combine-results.ts"
-
 function combinedData() {
-  return try(() => combineResults(
-    Result.succeed(" Weekly "), Result.succeed(6)
-  ))
+  return Result.all([Result.succeed(" Weekly "), Result.succeed(6)]).map(([title, count]) => ({
+    title: title.trim(), count
+  }))
 }
 ```
 
@@ -163,4 +161,4 @@ function combinedData() {
 {"title":"Weekly","count":6}
 ```
 
-`Result.gen` sequences with JavaScript generators: the first yielded failure skips the rest. VibeLang's `function*` declares a producer, so `Result.gen` in `.vibe` is EK1002 and generator-based APIs stay in `.ts` files. In VibeLang, use `flatMap` and `all`, or a TypeScript helper: an unannotated one, like this, is called through an explicit `try` hatch; one declared with `/** @vibelang trusted */` can be called directly.
+`Result.gen` sequences with JavaScript generators: the first yielded failure skips the rest. VibeLang's `function*` declares a producer, so `Result.gen` in `.vibe` is EK1002 and generator-based APIs stay in `.ts` files. In VibeLang, use `flatMap` and `all` for the same computation, as above.

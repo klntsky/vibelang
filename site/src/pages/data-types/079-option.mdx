@@ -224,12 +224,10 @@ true
 
 ```vibe
 // run: Console.log(JSON.stringify(combinedData().getOrNull()))
-import { combineOptions } from "./combine-options.ts"
-
 function combinedData() {
-  return try(() => combineOptions(
-    Option.some(" Daily "), Option.some(3)
-  ))
+  return Option.all([Option.some(" Daily "), Option.some(3)]).map(([title, total]) => ({
+    title: title.trim(), total
+  }))
 }
 ```
 
@@ -237,7 +235,7 @@ function combinedData() {
 {"title":"Daily","total":3}
 ```
 
-`Option.gen` sequences JavaScript generator yields and stops at the first `None`. In `.vibe`, `function*` creates a producer instead, so `Option.gen` there is EK1002 and generator-based APIs stay in `.ts` files. In VibeLang, use `flatMap`, `zipWith`, and `all`, or a TypeScript helper: an unannotated one, like this, is called through an explicit boundary; one declared with `/** @vibelang trusted */` can be called directly.
+`Option.gen` sequences JavaScript generator yields and stops at the first `None`. In `.vibe`, `function*` creates a producer instead, so `Option.gen` there is EK1002 and generator-based APIs stay in `.ts` files. In VibeLang, use `flatMap`, `zipWith`, and `all` for the same computation, as above.
 
 ## Deriving equality and ordering
 

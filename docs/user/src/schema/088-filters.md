@@ -113,7 +113,7 @@ const ShipDate = Schema.Date.check(
 )
 
 function boundedPriceSchema() {
-  const zero = try(BigDecimal.fromNumberUnsafe(0))
+  const zero = BigDecimal.fromNumberUnsafe(0)
   return Schema.BigDecimal.check(Schema.isGreaterThanOrEqualToBigDecimal(zero))
 }
 

@@ -17,7 +17,7 @@ function readableFailure(input: unknown) {
     Schema.decodeUnknownEffect(Dispatch)(input)
     return "Accepted"
   } catch (error) {
-    return try((error) => SchemaIssue.makeFormatterDefault()(error.issue), error)
+    return SchemaIssue.makeFormatterDefault()(error.issue)
   }
 }
 ```
@@ -63,7 +63,7 @@ function formFailures(input: unknown) {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
     return []
   } catch (error) {
-    return try((error) => SchemaIssue.makeFormatterStandardSchemaV1()(error.issue).issues, error)
+    return SchemaIssue.makeFormatterStandardSchemaV1()(error.issue).issues
   }
 }
 // An issue has a message and a path such as ["destination"].
@@ -90,7 +90,7 @@ function localizedFailures(input: unknown) {
     Schema.decodeUnknownEffect(Dispatch)(input, { errors: "all" })
     return []
   } catch (error) {
-    return try((formFormatter, error) => formFormatter(error.issue).issues, formFormatter, error)
+    return formFormatter(error.issue).issues
   }
 }
 ```
@@ -105,7 +105,7 @@ function localizedFailures(input: unknown) {
 ## Connecting validation to form libraries
 
 ```vibe
-// run: Console.log(try((schema) => JSON.stringify(schema["~standard"].validate({})), formSchema()))
+// run: Console.log(JSON.stringify(formSchema()["~standard"].validate({})))
 const DispatchForm = Schema.toStandardSchemaV1(Dispatch, {
   parseOptions: { errors: "all" },
   leafHook: (issue) => issue._tag === "MissingKey"

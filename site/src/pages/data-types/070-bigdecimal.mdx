@@ -53,7 +53,10 @@ error InvalidPrice {
 }
 
 function parsePrice(input: string) {
-  return try((input) => BigDecimal.fromStringUnsafe(input), () => new InvalidPrice({ input }), input)
+  return match (BigDecimal.fromString(input)) {
+    when Option.Some(let price): price;
+    when Option.None: throw new InvalidPrice({ input });
+  }
 }
 // BigDecimal.BigDecimal!InvalidPrice!
 
@@ -65,7 +68,7 @@ const fixedRate = BigDecimal.fromNumberUnsafe(1.25)
 InvalidPrice invalid
 ```
 
-`fromStringUnsafe` throws for invalid text, `fromNumberUnsafe` for non-finite numbers. Use an unsafe constructor for a known valid constant or inside an explicit boundary that declares the expected error; for validation, the safe constructors are usually simpler.
+`fromStringUnsafe` throws for invalid text, `fromNumberUnsafe` for non-finite numbers. Use an unsafe constructor for a known valid constant; validate input with the safe constructor and fail explicitly.
 
 ## Performing arithmetic
 

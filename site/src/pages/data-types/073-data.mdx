@@ -158,7 +158,7 @@ error DocumentDecodeError {
 }
 
 function decodeDocument(text: string) {
-  return try((text) => JSON.parse(text), (cause) => new DocumentDecodeError({ cause }), text)
+  return JSON.parse(text) catch (cause) => throw new DocumentDecodeError({ cause })
 }
 // any!DocumentDecodeError!
 ```

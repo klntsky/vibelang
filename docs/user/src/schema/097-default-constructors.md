@@ -46,21 +46,21 @@ Filters run during construction as well as parsing. A filter leaves the static t
 ## Handling constructor failures
 
 ```vibe
-// run: Console.log(constructOrExplain(6)); Console.log(constructAsOption(0).isNone()); try { constructWithThrowingApi(0) } catch (error) { Console.log("Construction rejected") }
+// run: Console.log(constructOrExplain(6)); Console.log(constructAsOption(0).isNone()); try { constructWithExpectedFailure(0) } catch (error) { Console.log("Construction rejected") }
 function constructOrExplain(value: number) {
   try {
     return String(CaseCount.makeEffect(value))
   } catch (issue) {
-    return try((issue) => SchemaIssue.makeFormatterDefault()(issue), issue)
+    return SchemaIssue.makeFormatterDefault()(issue)
   }
 }
 
 function constructAsOption(value: number) {
-  return try((value) => CaseCount.makeOption(value), value)
+  return CaseCount.makeOption(value)
 }
 
-function constructWithThrowingApi(value: number) {
-  return try((value) => CaseCount.make(value), value)
+function constructWithExpectedFailure(value: number) {
+  return CaseCount.makeEffect(value)
 }
 ```
 
@@ -70,7 +70,7 @@ true
 Construction rejected
 ```
 
-In local Effect 4.0.5, `makeEffect` fails with a raw `SchemaIssue.Issue`, not the `SchemaError` wrapper Schema decoders return. Format the issue directly or translate it to an application error. `makeOption` discards schema-validation details; `make` throws a generic validation Error with the issue in `cause`. Both synchronous APIs can also throw for non-schema causes or asynchronous work, so keep their explicit boundaries.
+In local Effect 4.0.5, `makeEffect` fails with a raw `SchemaIssue.Issue`, not the `SchemaError` wrapper Schema decoders return. Format the issue directly or translate it to an application error. `makeOption` discards schema-validation details; `make` throws a generic validation Error with the issue in `cause`. Both synchronous APIs can also throw for non-schema causes or asynchronous work; those exceptions are defects. Use `makeEffect` for expected validation failures.
 
 ## Setting nested and lazy defaults
 

@@ -74,7 +74,7 @@ false
 ## Choosing synchronous, result, or effect decoding
 
 ```vibe
-// run: Console.log(decodeWithEffects({ tracking: "box-76", pieces: "2" }).pieces); Console.log(decodeAsData({ tracking: "box-76", pieces: "2" })); Console.log(decodeSynchronously({ tracking: "box-76", pieces: "2" }).pieces); try { decodeSynchronously({}) } catch (error) { Console.log(error._tag) }; Console.log(decodeAsData({}))
+// run: Console.log(decodeWithEffects({ tracking: "box-76", pieces: "2" }).pieces); Console.log(decodeAsData({ tracking: "box-76", pieces: "2" })); Console.log(decodeWithDomainError({ tracking: "box-76", pieces: "2" }).pieces); try { decodeWithDomainError({}) } catch (error) { Console.log(error._tag) }; Console.log(decodeAsData({}))
 function decodeWithEffects(input: unknown) {
   return Schema.decodeUnknownEffect(Shipment)(input)
 }
@@ -85,8 +85,8 @@ function decodeAsData(input: unknown) {
   return `received ${result.success.tracking}`
 }
 
-function decodeSynchronously(input: unknown) {
-  return try((schema, input) => Schema.decodeUnknownSync(schema)(input), (cause) => new InvalidShipment({ cause }), Shipment, input)
+function decodeWithDomainError(input: unknown) {
+  return Schema.decodeUnknownEffect(Shipment)(input) catch (cause) => throw new InvalidShipment({ cause })
 }
 
 error InvalidShipment {
@@ -105,7 +105,7 @@ Missing key
 
 Prefer `decodeUnknownEffect`: it can pause, requires the codec's decoding services, and fails with `Schema.SchemaError`. `decodeUnknownResult` returns success or failure as data and needs a synchronous, service-free decoding path. An unexpected exception from a synchronous callback is a defect, which ordinary `catch` does not handle.
 
-`decodeUnknownSync` throws on invalid input. Called directly, that exception is a defect; the explicit boundary above turns it into `InvalidShipment`, which `catch` can handle. A plain function's catch doesn't see it either (D282); EK2004 warns at a catch whose try block has E = `never`, and says defects pass through it. The `Exit` and `Option` variants give other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant decodes asynchronously without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even with no services.
+`decodeUnknownSync` throws on invalid input. Called directly, that exception is a defect; the example instead maps `decodeUnknownEffect`’s expected failure to `InvalidShipment` with ordinary `catch`. A plain function's catch also ignores defects (D282); EK2004 warns at a catch whose try block has E = `never`, and says defects pass through it. The `Exit` and `Option` variants give other synchronous result shapes; an `Exit` stays data until called. The `Promise` variant decodes asynchronously without services and is consumed through the `try` hatch. The synchronous variants cannot complete asynchronous conversions, even with no services.
 
 ## Encoding values
 

@@ -38,22 +38,22 @@ function attemptReservation(item: string, available: boolean) {
 ## Wrap synchronous operations
 
 ```vibe
-// Assume ./legacy-codec.ts exports encode(value: string): string.
-import { encode } from "./legacy-codec.ts"
-
-error EncodingFailed {
+// run: Console.log(randomBytes(16).length)
+error RandomBytesFailed {
   cause: unknown
 }
 
-function encodeLabel(value: string) {
-  return try((value) => encode(value), (cause) => new EncodingFailed({ cause }), value)
+function randomBytes(size: number) {
+  return try((size) => crypto.getRandomValues(new Uint8Array(size)),
+    (cause) => new RandomBytesFailed({ cause }), size)
 }
-// string!EncodingFailed!
+// Uint8Array!RandomBytesFailed!
+// Output: 16
 ```
 
-In an Effect function, a plain imported function needs a boundary or a trusted contract that says what its exceptions mean. `try` is a boundary hatch: `try((value) => encode(value), value)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name.
+Platform work needs a boundary hatch. `try((size) => crypto.getRandomValues(new Uint8Array(size)), size)` turns an exception into the expected failure `UnknownError`, and a function in second place, as above, gives the failure a domain name.
 
-The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls in it are not Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports such as `encode`, and the file's error declarations, but no other binding of the `.vibe` file, such as the parameter `value`. Pass such a value as an input, an argument after the function and the error mapper; it fills the function's first parameter. EK4405 reports a binding read from outside; its quick fix passes the binding as an input.
+The hatch's first argument is plain TypeScript, evaluated when the Effect runs: calls in it are not Effects, and platform APIs are allowed. It is self-contained: it may use its own parameters and locals, globals, imports, and the file's error declarations, but no other binding of the `.vibe` file, such as the parameter `size`. Pass such a value as an input, an argument after the function and the error mapper; it fills the function's first parameter. EK4405 reports a binding read from outside; its quick fix passes the binding as an input.
 
 JavaScript language built-ins have compiler trust contracts, so you call operations such as string trimming directly. Exports of `effect` and `@effect/*` packages are trusted too: data operations such as `Option.map` and `Schema.is` are plain calls whose exceptions are defects.
 
@@ -63,20 +63,34 @@ In Effect code, `catch` sees expected failures only, not defects from `Option.ge
 
 `sync` wraps synchronous work whose exceptions should be defects: `sync(crypto.randomUUID())`, or `sync(() => { … })` for several statements. A small adapter can live in a `.vibe` hatch or a [module declaration](#write-typescript-in-a-module-declaration); keep larger foreign-library adapters in `.ts`. `.vibe` helpers that only calculate or mutate local data need no wrapper. Use `Console` or `Effect.log` for output and `FileSystem` for files.
 
+String computation needs no hatch:
+
+```vibe
+// run: Console.log(slug("Hello VibeLang"))
+function slug(title: string) {
+  let s = title.trim().toLowerCase()
+  s = s.replaceAll(/[^a-z0-9]+/g, "-")
+  return s
+}
+// Output: hello-vibelang
+```
+
 ## Create effects from promises
 
 ```vibe
-// Assume this SDK function returns Promise<string> and accepts AbortSignal.
-import { lookupLabel } from "./legacy-sdk.ts"
-
-error LookupFailed {
+// run: Console.log(digest("parcel").byteLength)
+error DigestFailed {
   cause: unknown
 }
 
-function label(id: string) {
-  return try((id, signal) => lookupLabel(id, signal), (cause) => new LookupFailed({ cause }), id)
+function digest(text: string) {
+  return try(async (text) => {
+    const bytes = new TextEncoder().encode(text)
+    return await crypto.subtle.digest("SHA-256", bytes)
+  }, (cause) => new DigestFailed({ cause }), text)
 }
-// string!LookupFailed!
+// ArrayBuffer!DigestFailed!
+// Output: 32
 ```
 
 `try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`; without a second argument the failure is `UnknownError`. The function receives an `AbortSignal` after its inputs. Pass it to an API that supports cancellation; otherwise interruption stops the wait but not necessarily the foreign operation.
@@ -87,7 +101,7 @@ function label(id: string) {
 
 ```vibe
 // A one-shot read ends its registration when either callback fires.
-// run: Console.log(readAndReport(sync(() => ({ read: (onValue: (n: number) => void) => { onValue(7); return () => {} } }))))
+// run: Console.log(readAndReport({ read: (onValue: (n: number) => void) => { onValue(7); return () => {} } }))
 type Source = {
   read: (onValue: (n: number) => void, onError: (e: Error) => void) => () => void
 }
@@ -114,32 +128,24 @@ For resource acquisition, cancellation must also release a resource that arrives
 ## Write TypeScript in a module declaration
 
 ```vibe
-// run: Console.log(slugOf("  Hello, World  ")); Console.log(Effect.result(slugOf("  ?! "))._tag)
-module slugs {
-  // TypeScript: throw, try and catch, and regular expressions keep their JavaScript meaning.
-  export function slugify(title: string): string {
-    const slug = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
-    if (slug === "") throw new Error(`no slug in ${JSON.stringify(title)}`)
-    return slug
+// run: Console.log(/^[-0-9a-f]{36}$/.test(requestId()))
+module platform {
+  export function randomId(): string {
+    return crypto.randomUUID()
   }
 }
 
-import { slugify } from slugs
+import { randomId } from platform
 
-error NoSlug {
-  title: string
+function requestId() {
+  return sync(() => randomId())
 }
-
-function slugOf(title: string) {
-  return try((title) => slugify(title), () => new NoSlug({ title }), title)
-}
-// Output: hello-world
-// Output: Failure
+// Output: true
 ```
 
-`module slugs { … }` declares a module whose body is TypeScript, checked and compiled as a `.ts` file would be (D283). There `throw`, `try` and `catch`, `async` and `await`, and platform APIs keep their TypeScript meaning, and VibeLang's own syntax, such as `A!E` or an `error` declaration, is a syntax error. The file reaches the module's exports only through an import whose specifier is the module's name, `import { slugify } from slugs`, so a hatch uses them as it uses any import, and a call outside a hatch is a plain foreign call, as for an import from a `.ts` file. `export { slugify } from slugs` re-exports one, and `import slugs` runs a module for its effects. The body imports what it needs itself, its relative specifiers resolve from the `.vibe` file's directory, and it cannot read the `.vibe` file's bindings, so `title` reaches `slugify` as a hatch input.
+`module platform { … }` declares a module whose body is TypeScript, checked and compiled as a `.ts` file would be (D283). There `throw`, `try` and `catch`, `async` and `await`, and platform APIs keep their TypeScript meaning, and VibeLang's own syntax, such as `A!E` or an `error` declaration, is a syntax error. The file reaches the module's exports only through an import whose specifier is the module's name, `import { randomId } from platform`, so a hatch uses them as it uses any import, and a call outside a hatch is a plain foreign call, as for an import from a `.ts` file. `export { randomId } from platform` re-exports one, and `import platform` runs a module for its effects. The body imports what it needs itself, its relative specifiers resolve from the `.vibe` file's directory, and it cannot read the `.vibe` file's bindings, so inputs reach the imported function as hatch arguments.
 
-Declare modules at a file's top level. In a `.vibe` file `module` never declares a namespace: write `namespace` for one. The emitted JavaScript holds each module the file imports inline, run once before the file's own code, and each module's declarations are a declaration file of their own, `main.vibe.slugs.d.ts` beside `main.d.ts` (D303). A module the file imports only types from emits nothing. Move an adapter to its own `.ts` file when other files need it.
+Declare modules at a file's top level. In a `.vibe` file `module` never declares a namespace: write `namespace` for one. The emitted JavaScript holds each module the file imports inline, run once before the file's own code, and each module's declarations are a declaration file of their own, `main.vibe.platform.d.ts` beside `main.d.ts` (D303). A module the file imports only types from emits nothing. Move an adapter to its own `.ts` file when other files need it.
 
 ## Suspend work
 

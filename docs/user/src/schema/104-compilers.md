@@ -57,11 +57,9 @@ Put the enabling import before code that creates or runs parsers; importing the 
 import { SchemaJITCompiler } from "effect/schema"
 
 function enableSelectedDirections() {
-  try(() => {
-    SchemaJITCompiler.enable(Schema.FiniteFromString.ast)
-    SchemaJITCompiler.enable(SchemaAST.toType(Schema.FiniteFromString.ast))
-    SchemaJITCompiler.enable(SchemaAST.flip(Schema.FiniteFromString.ast))
-  })
+  SchemaJITCompiler.enable(Schema.FiniteFromString.ast)
+  SchemaJITCompiler.enable(SchemaAST.toType(Schema.FiniteFromString.ast))
+  SchemaJITCompiler.enable(SchemaAST.flip(Schema.FiniteFromString.ast))
 }
 ```
 
@@ -154,11 +152,11 @@ Load the generated module before using the schemas, and ensure the bundler prese
 import * as SchemaAOTCompiler from "effect/schema/SchemaAOTCompiler"
 
 function generateSource() {
-  return try(() => SchemaAOTCompiler.compile([
+  return SchemaAOTCompiler.compile([
     { ast: Parcel.ast, operations: ["decode"] },
     { ast: SchemaAST.toType(Parcel.ast), operations: ["is", "make"] },
     { ast: SchemaAST.flip(Parcel.ast), operations: ["decode"] }
-  ]))
+  ])
 }
 ```
 

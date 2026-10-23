@@ -33,7 +33,7 @@ function constructPackage(reference: string, pieces: number) {
 }
 
 function constructWithNew(reference: string) {
-  return try((reference) => new Package({ reference, pieces: 1 }), reference)
+  return new Package({ reference, pieces: 1 })
 }
 ```
 
@@ -42,7 +42,7 @@ function constructWithNew(reference: string) {
 Composite
 ```
 
-Construction takes decoded fields, so `pieces` is a number though decoding takes a string. `new Package(...)` and `Package.make(...)` apply defaults and type-side checks and throw on invalid input; an explicit boundary accounts for those exceptions. In local Effect 4.0.5, `makeEffect` fails with a raw `SchemaIssue.Issue`. A class with no fields constructs without an argument.
+Construction takes decoded fields, so `pieces` is a number though decoding takes a string. `new Package(...)` and `Package.make(...)` apply defaults and type-side checks and throw on invalid input; use `makeEffect` for expected failures. In local Effect 4.0.5, `makeEffect` fails with a raw `SchemaIssue.Issue`. A class with no fields constructs without an argument.
 
 For a cross-field invariant, pass a checked `Schema.Struct` instead of a fields object; its checks apply during construction and codec use.
 
@@ -51,7 +51,7 @@ For a cross-field invariant, pass a checked `Schema.Struct` instead of a fields 
 ```vibe
 // run: Console.log(fromVerifiedFields("", 2).reference === "")
 function fromVerifiedFields(reference: string, pieces: number) {
-  return try((reference, pieces) => new Package({ reference, pieces }, { disableChecks: true }), reference, pieces)
+  return new Package({ reference, pieces }, { disableChecks: true })
 }
 ```
 
