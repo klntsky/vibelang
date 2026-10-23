@@ -1463,6 +1463,13 @@ typescript/vibelang/cases/scopes-types/main.vibe:61:64 lambda effectFn table
 typescript/vibelang/cases/scopes-types/main.vibe:63:50 lambda effectFn service
 typescript/vibelang/cases/scopes-types/main.vibe:67:27 lambda program table
 typescript/vibelang/cases/scopes-types/main.vibe:74:25 lambda program table
+typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:23:12 lambda plain annotation
+typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:29:15 lambda plain table
+typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:34:5 lambda program table
+typescript/vibelang/cases/scopes-using-async-dispose/main.vibe:35:5 lambda effectFn table
+typescript/vibelang/cases/scopes-using-pending-interrupt/main.vibe:12:45 lambda program table
+typescript/vibelang/cases/scopes-using-pending-interrupt/main.vibe:16:16 lambda plain annotation
+typescript/vibelang/cases/scopes-using-pending-interrupt/main.vibe:20:34 byname program table
 typescript/vibelang/cases/scopes-using/main.vibe:100:24 lambda program table
 typescript/vibelang/cases/scopes-using/main.vibe:118:5 lambda program table
 typescript/vibelang/cases/scopes-using/main.vibe:123:5 lambda effectFn table

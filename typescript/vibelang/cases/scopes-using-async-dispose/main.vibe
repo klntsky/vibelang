@@ -1,0 +1,52 @@
+// using releases an AsyncDisposable whose acquisition registers no release
+// of its own with await [Symbol.asyncDispose](), in reverse order with the
+// block's other releases, and waits for it before the next release (D94).
+// A resource that releases itself, here an acquireRelease, keeps only its
+// own release.
+module resources {
+  export function asyncResource(name: string, events: string[]): AsyncDisposable {
+    return {
+      async [Symbol.asyncDispose]() {
+        await new Promise((resolve) => setTimeout(resolve, 5))
+        events.push(`async dispose ${name}`)
+      }
+    }
+  }
+}
+import { asyncResource } from resources
+
+const events: string[] = []
+
+function openSync(name: string) {
+  yieldNow()
+  events.push(`open ${name}`)
+  return { [Symbol.dispose](): void { events.push(`dispose ${name}`) } }
+}
+
+function openAsync(name: string) {
+  yieldNow()
+  events.push(`open ${name}`)
+  return sync((n: string, log: string[]) => asyncResource(n, log), name, events)
+}
+
+function releasing(name: string) {
+  return Effect.acquireRelease(
+    () => openAsync(name),
+    () => {
+      events.push(`release ${name}`)
+    }
+  )
+}
+
+function work() {
+  using a = openSync("a")
+  using b = openAsync("b")
+  using c = releasing("c")
+  events.push("work")
+}
+
+// expect-result: ["open a","open b","open c","work","release c","async dispose b","dispose a"]
+export function main() {
+  work()
+  return events
+}

@@ -21,8 +21,8 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,022 |
 | The skill and the user guide (130 pages) | 195,188 |
 | The user guide alone | 190,701 |
-| The specification (33 chapters) | 102,245 |
-| The decision log, `docs/design/DECISIONS.md` | 53,609 |
+| The specification (33 chapters) | 102,277 |
+| The decision log, `docs/design/DECISIONS.md` | 53,857 |
 
 ## Effect TypeScript beside VibeLang
 
@@ -263,13 +263,13 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Page | Tokens |
 | --- | ---: |
 | [Introduction](../../../design/src/000-intro.md) | 1,605 |
-| **Part I. The language by example** | **28,923** |
+| **Part I. The language by example** | **28,955** |
 | [1. A first look](../../../design/src/101-part1-ch01-first-look.md) | 1,681 |
 | [2. Functions and calls](../../../design/src/102-part1-ch02-functions.md) | 1,470 |
 | [3. Errors: the E channel](../../../design/src/103-part1-ch03-errors.md) | 2,579 |
 | [4. Dependency injection: the R channel](../../../design/src/104-part1-ch04-di.md) | 4,788 |
 | [5. Programs as values: retry, timeout, and pipe](../../../design/src/105-part1-ch05-programs.md) | 2,447 |
-| [6. Resources](../../../design/src/106-part1-ch06-resources.md) | 1,550 |
+| [6. Resources](../../../design/src/106-part1-ch06-resources.md) | 1,582 |
 | [7. Concurrency](../../../design/src/107-part1-ch07-concurrency.md) | 2,281 |
 | [8. Producers: streams of values](../../../design/src/108-part1-ch08-producers.md) | 979 |
 | [9. Handlers: defining your own effects](../../../design/src/109-part1-ch09-handlers.md) | 2,414 |
@@ -301,6 +301,6 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Appendices** | **13,073** |
 | [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,883 |
 | [C. Every Effect feature in VibeLang](../../../design/src/901-appendix-c-coverage.md) | 8,190 |
-| **All 33 pages** | **102,245** |
+| **All 33 pages** | **102,277** |
 
 <!-- token-counts: end -->

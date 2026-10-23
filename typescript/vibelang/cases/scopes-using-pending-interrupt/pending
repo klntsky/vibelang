@@ -1,0 +1,1 @@
+runtime A Disposable made in a masked section that ends a using acquisition is not released when an interruption is pending: the interruption is delivered as that mask ends, before using registers the release. Registering it inside the mask needs using to mask the acquisition, which D25 rules out (D25 note, 2026-10-23).

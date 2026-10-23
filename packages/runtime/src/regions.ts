@@ -42,17 +42,44 @@ export const $region = <A, E, R>(body: (scope: Scope.Scope) => Effect.Effect<A, 
 
 /**
  * `using x = acquire()`: only this acquisition sees the block's Scope (D14,
- * Codex R8). A TypeScript `Disposable` is released with `Symbol.dispose`.
- * The acquisition keeps the interruptibility its own `acquireRelease` gives
- * it (D25); the `Symbol.dispose` release is registered with interruption
- * masked, so a value that arrives is always released.
+ * Codex R8). The acquisition keeps the interruptibility its own
+ * `acquireRelease` gives it (D25), so it runs under `restore`, with a Scope
+ * of its own inside the block's. Once its value reaches `$using`, the block's
+ * release of it is registered with interruption masked: `[Symbol.dispose]()`
+ * for a Disposable from either kind of acquisition (D94), and an awaited
+ * `[Symbol.asyncDispose]()` for an AsyncDisposable without `Symbol.dispose`
+ * whose acquisition registered no release of its own. A resource that
+ * releases itself, such as an `acquireRelease`, is never released again
+ * asynchronously.
+ *
+ * An interruption that arrives while the acquisition is masked is delivered
+ * as that mask ends, inside `restore`. When the mask ends the acquisition,
+ * the value never reaches `$using` and the block does not release it (the
+ * pending case scopes-using-pending-interrupt; D25's note of 2026-10-23).
  */
 export const $using = <A, E, R>(scope: Scope.Scope, acquire: Effect.Effect<A, E, R>): Effect.Effect<A, E, Exclude<R, Scope.Scope>> =>
-  Effect.uninterruptibleMask((restore) =>
-    Effect.tap(restore(Scope.provide(acquire, scope)), (value: any) =>
-      value !== null && typeof value === "object" && typeof value[Symbol.dispose] === "function"
-        ? Scope.addFinalizer(scope, Effect.sync(() => value[Symbol.dispose]()))
-        : Effect.void))
+  Effect.uninterruptibleMask((restore) => {
+    const own = Scope.forkUnsafe(scope)
+    return Effect.tap(restore(Scope.provide(acquire, own)), (value: unknown) => {
+      const release = disposal(value, own.state._tag !== "Empty")
+      return release === undefined ? Effect.void : Scope.addFinalizer(scope, release)
+    })
+  })
+
+/**
+ * The block's release of a `using` value, or undefined when it has none:
+ * `[Symbol.dispose]()`, else, when the acquisition registered no release,
+ * `[Symbol.asyncDispose]()` awaited. A throw or a rejection is a defect.
+ */
+const disposal = (value: unknown, releasesItself: boolean): Effect.Effect<void> | undefined => {
+  if (value === null || typeof value !== "object") return undefined
+  const resource = value as Partial<Disposable & AsyncDisposable>
+  if (typeof resource[Symbol.dispose] === "function") return Effect.sync(() => resource[Symbol.dispose]!())
+  if (!releasesItself && typeof resource[Symbol.asyncDispose] === "function") {
+    return Effect.promise(() => resource[Symbol.asyncDispose]!())
+  }
+  return undefined
+}
 
 /**
  * D54: an expected failure thrown in a function that compiles to plain

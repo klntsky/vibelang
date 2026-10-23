@@ -91,10 +91,12 @@ test("a region closes children before earlier using resources", async () => {
 })
 
 for (const masked of [true, false]) {
-  // A pending interrupt is delivered as acquireRelease restores its mask,
-  // before $using can register Symbol.dispose. Its own release still runs.
-  // Fixing this while preserving D25 needs disposal integrated atomically
-  // with acquisition, rather than another mask around the whole acquisition.
+  // Masked: the interruption stays pending while acquireRelease's mask is on
+  // and is delivered as that mask ends, inside $using's restore and before
+  // the value reaches $using, so Symbol.dispose is never registered; the
+  // resource's own release still runs. Registering inside that mask needs
+  // $using to mask the acquisition, and then the interruptible case would
+  // wait for its gate (D25). Open; see D25's note of 2026-10-23.
   const check = masked ? test.skip : test
   check(`using ${masked ? "masked (pending interrupt preempts Disposable registration)" : "interruptible"} acquisition handles cancellation without leaking`, async () => {
     const events: string[] = []
@@ -131,6 +133,73 @@ test("a Disposable defect is retained beside a body failure; other finalizers st
   })))
   expect(events).toEqual(["last"])
   expect(Exit.isFailure(exit) && exit.cause.reasons.filter(Cause.isFailReason).map(r => r.error)).toEqual(["body failed"])
+  expect(Exit.isFailure(exit) && exit.cause.reasons.find(Cause.isDieReason)?.defect).toBe(defect)
+})
+
+const asyncResource = (events: string[], name: string, ms = 5): AsyncDisposable => ({
+  async [Symbol.asyncDispose]() {
+    await new Promise(resolve => setTimeout(resolve, ms))
+    events.push(`async dispose ${name}`)
+  }
+})
+
+test("using awaits Symbol.asyncDispose of a value whose acquisition registers no release", async () => {
+  const events: string[] = []
+  const open = <A>(name: string, value: A) => Effect.sync(() => { events.push(`open ${name}`); return value })
+  await Effect.runPromise($region(scope => Effect.gen(function*() {
+    yield* $using(scope, open("a", { [Symbol.dispose]() { events.push("dispose a") } }))
+    yield* $using(scope, open("b", asyncResource(events, "b", 10)))
+    yield* $using(scope, open("c", asyncResource(events, "c", 1)))
+    events.push("body")
+  })))
+  expect(events).toEqual(["open a", "open b", "open c", "body", "async dispose c", "async dispose b", "dispose a"])
+})
+
+test("using releases on failure and interruption with Symbol.asyncDispose", async () => {
+  const events: string[] = []
+  const failed = await Effect.runPromiseExit($region(scope => Effect.gen(function*() {
+    yield* $using(scope, Effect.succeed(asyncResource(events, "failed")))
+    return yield* Effect.fail("body failed")
+  })))
+  expect(failed).toEqual(Exit.fail("body failed"))
+  await Effect.runPromise(Effect.gen(function*() {
+    const entered = yield* Deferred.make<void>()
+    const child = yield* Effect.forkChild($region(scope => Effect.gen(function*() {
+      yield* $using(scope, Effect.succeed(asyncResource(events, "interrupted")))
+      yield* Deferred.succeed(entered, undefined)
+      return yield* Effect.never
+    })))
+    yield* Deferred.await(entered)
+    yield* Fiber.interrupt(child)
+  }))
+  expect(events).toEqual(["async dispose failed", "async dispose interrupted"])
+})
+
+test("a resource that releases itself keeps its own release: Symbol.dispose still runs (D94), Symbol.asyncDispose never does", async () => {
+  const events: string[] = []
+  const released = (name: string) => () => Effect.sync(() => { events.push(`release ${name}`) })
+  const both = {
+    [Symbol.dispose]() { events.push("dispose both") },
+    async [Symbol.asyncDispose]() { events.push("async dispose both") }
+  }
+  await Effect.runPromise($region(scope => Effect.gen(function*() {
+    yield* $using(scope, Effect.acquireRelease(Effect.succeed(asyncResource(events, "own")), released("own")))
+    yield* $using(scope, Effect.acquireRelease(Effect.succeed({ [Symbol.dispose]() { events.push("dispose sync") } }), released("sync")))
+    yield* $using(scope, Effect.succeed(both))
+    yield* $using(scope, Effect.succeed(null))
+  })))
+  expect(events).toEqual(["dispose both", "dispose sync", "release sync", "release own"])
+})
+
+test("a Symbol.asyncDispose rejection is a defect beside the block's exit; earlier releases still run", async () => {
+  const events: string[] = []
+  const defect = new Error("async dispose failed")
+  const exit = await Effect.runPromiseExit($region(scope => Effect.gen(function*() {
+    yield* $using(scope, Effect.succeed({ [Symbol.dispose]() { events.push("first") } }))
+    yield* $using(scope, Effect.succeed({ [Symbol.asyncDispose]: () => Promise.reject(defect) }))
+    return "body"
+  })))
+  expect(events).toEqual(["first"])
   expect(Exit.isFailure(exit) && exit.cause.reasons.find(Cause.isDieReason)?.defect).toBe(defect)
 })
 

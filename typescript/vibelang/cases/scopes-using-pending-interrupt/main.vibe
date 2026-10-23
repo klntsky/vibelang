@@ -1,0 +1,26 @@
+// A Disposable made in a masked section that ends a using acquisition is
+// released when an interruption arrives during that section (D25, D94).
+// Pending: the interruption is delivered as the mask ends, before using
+// registers [Symbol.dispose](), so this prints ["acquired"].
+// expect-result: ["acquired","disposed"]
+export function main() {
+  const events: string[] = []
+  const entered = Deferred.make<void>()
+  const gate = Deferred.make<void>()
+
+  function work() {
+    using resource = Effect.uninterruptible(() => {
+      Deferred.succeed(entered, undefined)
+      Deferred.await(gate)
+      events.push("acquired")
+      return { [Symbol.dispose](): void { events.push("disposed") } }
+    })
+  }
+
+  const child = Effect.forkChild(work())
+  Deferred.await(entered)
+  child.interruptUnsafe(98765)
+  Deferred.succeed(gate, undefined)
+  Fiber.await(child)
+  return events
+}
