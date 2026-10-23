@@ -47,6 +47,10 @@ The hook is idempotent and refuses borrowed/symlinked Vocs files or unreviewed s
 
 Remove the patch and lifecycle hooks when an [upstream Vocs Search](https://github.com/wevm/vocs/blob/main/src/react/internal/Search.tsx) release provides unique result/listbox IDs and `aria-activedescendant`, then update the pinned version and run the keyboard/browser regressions. Published 2.10.3 still lacked this relationship when checked on 2026-10-18.
 
+## Social card
+
+`public/social-card.svg` is the outlined source for the 1200×630 social card, using the mark from `public/logo-light.svg`. From `site/`, run `npm run social-card` to reproduce `public/social-card.png` with the pinned renderer and no system fonts. Keep the PNG under 300 KB. The built-site check requires social image URLs and their metadata on every HTML page.
+
 ## Deploy
 
 From the repository root, build and run every publication check:

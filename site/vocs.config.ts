@@ -40,6 +40,14 @@ export default defineConfig({
   colorScheme: 'light dark',
   description:
     'VibeLang gives Effect a simple, readable syntax that compiles to TypeScript, with first-class access to the TypeScript ecosystem.',
+  ogImageUrl: 'https://vibelang.sh/social-card.png',
+  head: {
+    meta: {
+      ogImageWidth: '1200',
+      ogImageHeight: '630',
+      ogImageAlt: 'VibeLang — Effect, as a language',
+    },
+  },
   iconUrl: '/icon.svg',
   logoUrl: {
     light: '/logo-light.svg',

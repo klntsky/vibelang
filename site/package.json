@@ -14,7 +14,8 @@
     "prebuild": "bun scripts/build-docs.ts",
     "predev": "node scripts/patch-vocs-search.mjs",
     "postbuild": "bun scripts/build-docs.ts --markdown && node scripts/publication.mjs && bun ../docs/tools/check-site.ts dist/public && bun ../docs/tools/prepare-site.ts dist",
-    "test:llms": "node --test scripts/llms.test.mjs"
+    "test:llms": "node --test scripts/llms.test.mjs",
+    "social-card": "node scripts/render-social-card.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@effect/platform-bun": "^4.0.0-beta.105",
     "@effect/platform-node": "^4.0.0-beta.105",
+    "@resvg/resvg-js": "2.6.2",
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

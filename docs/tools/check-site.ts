@@ -4,14 +4,18 @@ import { join, relative, resolve } from "node:path"
 
 export async function checkSite(root: string) {
   root = resolve(root)
-  const pages = new Map<string, { ids: Set<string>; links: string[]; images: string[] }>()
+  const pages = new Map<string, { ids: Set<string>; links: string[]; images: string[]; meta: Map<string, string> }>()
   function files(dir: string): string[] {
     return readdirSync(dir, { withFileTypes: true }).flatMap(e =>
       e.isDirectory() ? files(join(dir, e.name)) : e.name.endsWith(".html") ? [join(dir, e.name)] : [])
   }
   for (const file of files(root)) {
-    const page = { ids: new Set<string>(), links: [] as string[], images: [] as string[] }
+    const page = { ids: new Set<string>(), links: [] as string[], images: [] as string[], meta: new Map<string, string>() }
     await new HTMLRewriter()
+      .on("meta", { element(e) {
+        const key = e.getAttribute("property") ?? e.getAttribute("name")
+        if (key) page.meta.set(key, e.getAttribute("content") ?? "")
+      } })
       .on("[id]", { element(e) { page.ids.add(e.getAttribute("id")!) } })
       .on("a[href]", { element(e) { page.links.push(e.getAttribute("href")!) } })
       .on("img[src]", { element(e) { page.images.push(e.getAttribute("src")!) } })
@@ -22,6 +26,21 @@ export async function checkSite(root: string) {
   const external = (href: string) => /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href)
   for (const [file, page] of pages) {
     const route = "/" + relative(root, file).replace(/index\.html$/, "")
+    for (const key of ["og:image", "twitter:image"]) {
+      const value = page.meta.get(key) ?? ""
+      try {
+        const url = new URL(value)
+        if (url.protocol !== "https:") throw new Error("must be an absolute https URL")
+        const target = resolve(root, "." + decodeURIComponent(url.pathname))
+        if (!target.startsWith(root + "/") || !existsSync(target) || !statSync(target).isFile())
+          throw new Error("missing image in build output")
+      } catch (error) { errors.push(relative(root, file) + ": " + key + " (" + (error as Error).message + ")") }
+    }
+    for (const key of ["og:image:width", "og:image:height", "og:image:alt"]) {
+      const value = page.meta.get(key)?.trim()
+      if (!value || (key !== "og:image:alt" && !/^[1-9]\d*$/.test(value)))
+        errors.push(relative(root, file) + ": missing or invalid " + key)
+    }
     for (const href of page.links) {
       if (!href || external(href)) continue
       try {
