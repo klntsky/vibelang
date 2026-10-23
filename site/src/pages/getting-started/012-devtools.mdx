@@ -133,7 +133,7 @@ npx vibelang -p tsconfig.json --fix --noEmit
 
 The table accounts for the 108 diagnostics and editor features in `@effect/language-service` 0.87.5 (D240). Many rules address forms VibeLang replaces: there is no `Effect.gen` to misuse, a call already runs, and `catch` catches failures. Existing EK diagnostics cover others. The remaining checks are EK4801-EK4825, with mechanical quick fixes, alongside refactors, hovers, and completions. The table also marks features not implemented.
 
-EK4801-EK4825 are lint. Each has a default, error, warning, or off, and all but EK4813 can be set in the `vibelang` setting `diagnostics` or by a comment (D241). A later comment overrides an earlier one; within one comment, a code named on its own overrides `*`:
+EK4801-EK4825 are lint. Each has a default, error, warning, or off, and all but EK4813 can be set in the `vibelang` setting `diagnostics` or by a comment (D241). A later comment overrides an earlier one; within one comment, a code named on its own overrides `*`. Words after the codes are prose, and punctuation ends a category, so `// @vibelang-diagnostics-next-line EK4801:off: returned unrun` keeps its reason:
 
 ```vibe
 // run: Console.log(discard(() => { Console.log("unused") ; return 42 }))

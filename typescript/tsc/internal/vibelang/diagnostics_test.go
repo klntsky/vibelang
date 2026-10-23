@@ -98,6 +98,10 @@ func TestDirectiveCategory(t *testing.T) {
 		"f()", // 9: * turns EK4801 off, and EK4818 named on its own is a warning
 		"// @vibelang-diagnostics EK4801:error",
 		"g()", // 11: a later comment overrides *
+		"// @vibelang-diagnostics-next-line EK4801:warning: the reason after a colon is prose",
+		"h()", // 13: punctuation after a category ends it, so the reason can follow
+		"// @vibelang-diagnostics-next-line EK4801:warning, EK4818:error.",
+		"i()", // 15: so can a comma or a full stop
 	}, "\n")
 	at := func(line int) int {
 		return len(strings.Join(strings.Split(text, "\n")[:line], "\n")) + core.IfElse(line > 0, 1, 0)
@@ -117,6 +121,9 @@ func TestDirectiveCategory(t *testing.T) {
 		{9, EK4818, diagnostics.CategoryWarning, true},
 		{11, EK4801, diagnostics.CategoryError, true},
 		{11, EK4818, diagnostics.CategoryWarning, true},
+		{13, EK4801, diagnostics.CategoryWarning, true},
+		{15, EK4801, diagnostics.CategoryWarning, true},
+		{15, EK4818, diagnostics.CategoryError, true},
 	}
 	for _, test := range tests {
 		category, on := category(nil, test.m)

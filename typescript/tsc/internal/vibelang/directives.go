@@ -17,8 +17,10 @@ import (
 //
 // The values are those of compilerOptions.vibelang.diagnostics: "error",
 // "warning", and "off". A later comment overrides an earlier one, and within
-// one comment a code named on its own overrides *. A comment changes only
-// the codes in adjustableCodes; every other EK diagnostic keeps its category.
+// one comment a code named on its own overrides *. Words after the codes are
+// prose, and punctuation ends a category, so a comment can give its reason:
+// "EK4801:off: the program is returned". A comment changes only the codes in
+// adjustableCodes; every other EK diagnostic keeps its category.
 
 const (
 	directiveMarker   = "@vibelang-diagnostics"
@@ -62,6 +64,9 @@ func directiveCategoryIn(text string, pos int, m *Message, category diagnostics.
 		var commentNamed, commentWildcard string
 		for field := range strings.FieldsSeq(strings.TrimSuffix(strings.TrimSpace(text[offset:offset+end]), "*/")) {
 			code, value, ok := strings.Cut(field, ":")
+			// Punctuation ends a category, so a reason can follow it as prose:
+			// EK4801:off: why, EK4801:off, EK4818:error.
+			value = strings.TrimRight(value, ":;,.")
 			switch {
 			case !ok:
 			case code == m.String():
