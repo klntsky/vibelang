@@ -1,0 +1,31 @@
+// A function expression's written contract is its declaration's return type,
+// as a function declaration's is: the declaration file names Digest, the
+// alias the contract wrote, rather than the type it stands for.
+export const Digest = Schema.String.pipe(Schema.brand("Digest"))
+export type Digest = typeof Digest.Type
+
+export error Empty
+
+export const parse = (input: string): Digest!Empty! => {
+  if (input.length === 0) throw new Empty()
+  return input as Digest
+}
+
+export const parseExpression = function (input: string): Digest!Empty! {
+  return parse(input)
+}
+
+export const codec = {
+  parse(input: string): Digest!Empty! {
+    return parse(input)
+  }
+}
+
+export function parseDeclaration(input: string): Digest!Empty! {
+  return parse(input)
+}
+
+// expect-result: "abc abc abc abc"
+export function main(): string!Empty! {
+  return `${parse("abc")} ${parseExpression("abc")} ${codec.parse("abc")} ${parseDeclaration("abc")}`
+}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
-	"github.com/microsoft/TypeScript/tsc/internal/nodebuilder"
 	"github.com/microsoft/TypeScript/tsc/internal/printer"
 	"github.com/microsoft/TypeScript/tsc/internal/transformers"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
@@ -71,10 +70,6 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 	}
 	return func(declarations *ast.SourceFile) *ast.SourceFile {
 		rewriter := &specifierRewriter{sourceDirectory: tspath.GetDirectoryPath(string(sourceFile.FileName()))}
-		// Function-expression signatures may be recycled by the node builder
-		// without an entity-visibility callback. Qualify their bang references
-		// directly, retaining the same public spelling as inferred signatures.
-		bang := &bangDeclarationRewriter{types: map[*ast.Node]*ast.Node{}}
 		keys := &computedKeyRewriter{keys: map[string]computedKey{}, bound: map[string]bool{}}
 		r.WithChecker(func(c *checker.Checker) {
 			if namespace := preludeSymbol(c, preludeStateOf(c), sourceFile, "Effect"); namespace != nil {
@@ -94,15 +89,6 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 						}
 					}
 				}
-				if ast.IsTypeReferenceNode(n) {
-					first := ast.GetFirstIdentifier(n.AsTypeReferenceNode().TypeName)
-					owner := ast.FindAncestor(first, func(n *ast.Node) bool {
-						return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsMethodDeclaration(n) || ast.IsFunctionDeclaration(n)
-					})
-					if owner != nil && owner.Body() != nil && (ast.IsArrowFunction(owner) || ast.IsFunctionExpression(owner) || ast.IsMethodDeclaration(owner) && ast.IsObjectLiteralExpression(owner.Parent)) && first.Flags&ast.NodeFlagsReparsed != 0 && isEffectType(c, c.GetTypeFromTypeNode(n)) {
-						bang.types[first] = c.TypeToTypeNode(c.GetTypeFromTypeNode(n), n, nodebuilder.FlagsNoTruncation|nodebuilder.FlagsUseFullyQualifiedType, nil)
-					}
-				}
 				if ast.IsComputedPropertyName(n) {
 					keys.add(c, sourceFile, n.Expression())
 				}
@@ -110,8 +96,6 @@ func transformDeclarations(resolver printer.EmitResolver, sourceFile *ast.Source
 			}
 			sourceFile.AsNode().ForEachChild(visit)
 		})
-		bang.NewTransformer(bang.visit, resolver.EmitContext())
-		declarations = bang.TransformSourceFile(declarations)
 		rewriter.NewTransformer(rewriter.visit, resolver.EmitContext())
 		declarations = rewriter.TransformSourceFile(declarations)
 		if len(keys.keys) > 0 {
@@ -310,32 +294,6 @@ func outputSpecifier(f *printer.NodeFactory, specifier *ast.Node) (*ast.Node, bo
 		return specifier, false
 	}
 	return f.NewStringLiteral(text, specifier.AsStringLiteral().TokenFlags), true
-}
-
-// bangDeclarationRewriter qualifies the parser's synthetic Effect.Effect in
-// serialized lambda signatures. Named declarations keep their existing imports.
-type bangDeclarationRewriter struct {
-	transformers.Transformer
-	types map[*ast.Node]*ast.Node
-}
-
-// visit replaces only bang references owned by expressions or object methods,
-// leaving user-defined Effect names and generic shadowing untouched.
-func (tx *bangDeclarationRewriter) visit(node *ast.Node) *ast.Node {
-	if ast.IsTypeReferenceNode(node) {
-		name := node.AsTypeReferenceNode().TypeName
-		first := ast.GetFirstIdentifier(name)
-		original := tx.EmitContext().MostOriginal(first)
-		if tx.types[original] != nil && first.Text() == "Effect" && ast.IsQualifiedName(name) && name.AsQualifiedName().Right.Text() == "Effect" {
-			owner := ast.FindAncestor(original, func(n *ast.Node) bool {
-				return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsMethodDeclaration(n) || ast.IsFunctionDeclaration(n)
-			})
-			if owner != nil && !ast.IsFunctionDeclaration(owner) {
-				return tx.types[original]
-			}
-		}
-	}
-	return tx.Visitor().VisitEachChild(node)
 }
 
 // computedKeyRewriter writes a computed key that the source took from the
