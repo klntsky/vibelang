@@ -7,7 +7,6 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
 	"github.com/microsoft/TypeScript/tsc/internal/ls"
-	"github.com/microsoft/TypeScript/tsc/internal/printer"
 	"github.com/microsoft/TypeScript/tsc/internal/scanner"
 )
 
@@ -400,7 +399,7 @@ func (tx *lowering) moduleNamespace(module string) *ast.IdentifierNode {
 		return name
 	}
 	base := module[strings.LastIndex(module, "/")+1:]
-	name := tx.Factory().NewUniqueNameEx(base, printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
+	name := tx.fileName(base)
 	tx.modules[module] = name
 	tx.moduleOrder = append(tx.moduleOrder, module)
 	return name

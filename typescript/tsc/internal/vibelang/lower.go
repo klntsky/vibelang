@@ -242,11 +242,20 @@ func (tx *lowering) namespaceImport(name *ast.IdentifierNode, module string) *as
 	return declaration
 }
 
+// fileName returns a new name for a binding the lowering adds to the file's
+// top level: base when neither the file nor another generated name uses it,
+// else base_1, base_2, ... A FileLevel name would be checked against the
+// file's identifiers only, so it could take the name a module declaration's
+// hoisted import (modules.go) generated, and the file would declare it twice.
+func (tx *lowering) fileName(base string) *ast.IdentifierNode {
+	return tx.Factory().NewUniqueNameEx(base, printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic})
+}
+
 // effectName returns the local name bound to effect's Effect module.
 func (tx *lowering) effectName() *ast.IdentifierNode {
 	if tx.effect == nil {
 		// "Effect" when the file does not use that name, else "Effect_1", ...
-		tx.effect = tx.Factory().NewUniqueNameEx("Effect", printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
+		tx.effect = tx.fileName("Effect")
 	}
 	return tx.effect
 }
@@ -277,7 +286,7 @@ func (tx *lowering) visitThrowStatement(node *ast.Node) *ast.Node {
 // bound to vibelang-runtime.
 func (tx *lowering) runtimeMember(name string) *ast.Node {
 	if tx.runtime == nil {
-		tx.runtime = tx.Factory().NewUniqueNameEx("runtime", printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
+		tx.runtime = tx.fileName("runtime")
 	}
 	return tx.Factory().NewPropertyAccessExpression(tx.runtime, nil /*questionDotToken*/, tx.Factory().NewIdentifier(name), ast.NodeFlagsNone)
 }

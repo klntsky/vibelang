@@ -1,0 +1,20 @@
+// expect-result: 2
+// The file's local name for effect/Effect and a module declaration's hoisted
+// import of effect/Effect are both generated names; they must differ, or the
+// file declares the name twice.
+module bridge {
+  import * as Effect from "effect/Effect"
+
+  /** @vibelang trusted */
+  export const run = <A, E>(effect: Effect.Effect<A, E>): A => Effect.runSync(effect)
+}
+
+import { run } from bridge
+
+const decode = Schema.decodeUnknownEffect(Schema.Number)
+
+export const same = <A, E>(effect: A!E!): A!E! => effect()
+
+export function main() {
+  return run(decode(2))
+}

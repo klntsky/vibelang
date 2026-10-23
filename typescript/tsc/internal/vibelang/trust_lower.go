@@ -3,7 +3,6 @@ package vibelang
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
-	"github.com/microsoft/TypeScript/tsc/internal/printer"
 )
 
 // A call whose contract lists expected failures compiles to a runtime helper
@@ -150,7 +149,7 @@ func (tx *lowering) classReference(ref classRef) *ast.Node {
 			return imported.local
 		}
 	}
-	local := tx.Factory().NewUniqueNameEx(ref.name, printer.AutoGenerateOptions{Flags: printer.GeneratedIdentifierFlagsOptimistic | printer.GeneratedIdentifierFlagsFileLevel})
+	local := tx.fileName(ref.name)
 	tx.imports = append(tx.imports, namedImport{module: ref.module, name: ref.name, local: local})
 	return local
 }

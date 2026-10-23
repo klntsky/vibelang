@@ -1180,11 +1180,16 @@ typescript/vibelang/cases/module-declaration-emit/main.vibe:86:19 lambda plain t
 typescript/vibelang/cases/module-declaration-emit/main.vibe:89:16 lambda plain table
 typescript/vibelang/cases/module-declaration-export-names/main.vibe:11:10 lambda plain table
 typescript/vibelang/cases/module-declaration-export-names/main.vibe:11:43 lambda plain table
+typescript/vibelang/cases/module-declaration-generated-names/main.vibe:16:21 lambda effectFn annotation
+typescript/vibelang/cases/module-declaration-import-names/main.vibe:16:35 lambda plain table
+typescript/vibelang/cases/module-declaration-import-names/main.vibe:16:61 lambda choice fallback
+typescript/vibelang/cases/module-declaration-import-names/main.vibe:20:25 lambda plain table
 typescript/vibelang/cases/module-declaration/main.vibe:58:14 lambda plain table
 typescript/vibelang/cases/module-declaration/main.vibe:58:51 lambda plain table
 typescript/vibelang/cases/module-declaration/main.vibe:70:23 lambda plain table
 typescript/vibelang/cases/module-declaration/main.vibe:71:21 lambda plain table
 typescript/vibelang/cases/module-declaration/main.vibe:73:24 lambda plain table
+typescript/vibelang/cases/module-import-generated-names/main.vibe:14:21 lambda dual fallback
 typescript/vibelang/cases/module-missing-export.fail/main.vibe:17:15 lambda plain table
 typescript/vibelang/cases/module-outer-binding.fail/main.vibe:23:15 lambda plain table
 typescript/vibelang/cases/module-vibelang-syntax.fail/main.vibe:15:15 lambda plain table

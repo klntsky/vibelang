@@ -1,0 +1,21 @@
+// expect-result: [1, 2]
+// A module declaration's imports and the names the file's own lowering imports
+// never collide: both import effect/Effect and effect/Option here (D303).
+module hosts {
+  import * as Effect from "effect/Effect"
+  import * as Option from "effect/Option"
+
+  export const twice = (value: number): number => Effect.runSync(Effect.succeed(value * 2))
+  export const none: Option.Option<number> = Option.none()
+}
+
+import { none, twice } from hosts
+
+function first(): number!! {
+  Effect.annotateCurrentSpan({ first: true })
+  return Option.some(1).getOrElse(() => 0) + none.getOrElse(() => 0)
+}
+
+export function main() {
+  return [first(), sync(() => twice(1))]
+}
