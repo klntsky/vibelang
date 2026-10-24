@@ -108,6 +108,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return tx.visitImportWithDirectVariants(node)
 	case node.Kind == ast.KindExportDeclaration && len(tx.plan.directExports[node]) != 0:
 		return tx.visitExportWithDirectVariants(node)
+	case node.Kind == ast.KindExportAssignment && tx.plan.directDefaults[node] != nil:
+		return tx.visitExportDefaultWithDirectVariant(node)
 	case node.Kind == ast.KindImportDeclaration || node.Kind == ast.KindExportDeclaration:
 		return tx.visitImportOrExport(node)
 	case isPipe(node):

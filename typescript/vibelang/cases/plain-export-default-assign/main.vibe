@@ -1,0 +1,18 @@
+// `export default f` of a plain function, local, imported, renamed or a
+// namespace member, exports its plain variant too, so an importer's call
+// runs it and the module loads (D65).
+import local from "./local.vibe"
+import imported from "./imported.vibe"
+import renamed from "./renamed.vibe"
+import namespace from "./namespace.vibe"
+import forwarded from "./forwarded.vibe"
+
+// expect-result: {"local":"local#","imported":"imported!","renamed":"renamed?","namespace":"namespace?","forwarded":"forwarded!","mapped":["mapped!"]}
+export function main() {
+  const a: string = local("local")
+  const b: string = imported("imported")
+  const c: string = renamed("renamed")
+  const d: string = namespace("namespace")
+  const e: string = forwarded("forwarded")
+  return { local: a, imported: b, renamed: c, namespace: d, forwarded: e, mapped: ["mapped"].map(imported) }
+}

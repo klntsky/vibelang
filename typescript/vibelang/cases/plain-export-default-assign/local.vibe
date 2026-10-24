@@ -1,0 +1,4 @@
+function helper(s: string) {
+  return s + "#"
+}
+export default helper

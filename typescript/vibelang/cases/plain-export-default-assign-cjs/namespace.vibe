@@ -1,0 +1,2 @@
+import * as lib from "./lib.vibe"
+export default lib.other

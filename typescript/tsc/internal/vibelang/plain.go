@@ -333,10 +333,11 @@ type plainPlan struct {
 	directImports   map[*ast.Node][]*ast.Node      // import declarations, and the specifiers whose $direct variants they bring in
 	directExports   map[*ast.Node][]*ast.Node      // named export declarations, and their plain-function specifiers
 	exportedImports map[*ast.Node]*ast.Node        // local export specifiers of an imported plain function, and the import binding they name
+	directDefaults  map[*ast.Node]*directReference // export default assignments of a plain function, and how they reach its variant
 }
 
 func newPlainPlan() plainPlan {
-	return plainPlan{directs: map[*ast.Node]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}, directExports: map[*ast.Node][]*ast.Node{}, exportedImports: map[*ast.Node]*ast.Node{}}
+	return plainPlan{directs: map[*ast.Node]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}, directExports: map[*ast.Node][]*ast.Node{}, exportedImports: map[*ast.Node]*ast.Node{}, directDefaults: map[*ast.Node]*directReference{}}
 }
 
 // planPlain records how the lowering treats node with respect to plain
@@ -345,6 +346,9 @@ func newPlainPlan() plainPlan {
 func (p *plainPlan) planPlain(a *analyzer, node *ast.Node) {
 	if node.Kind == ast.KindExportDeclaration {
 		p.planPlainExports(a, node)
+	}
+	if node.Kind == ast.KindExportAssignment {
+		p.planPlainDefault(a, node)
 	}
 	if a.isSplittable(node) && a.isPlainFunction(node) {
 		p.directs[node] = true
@@ -362,11 +366,37 @@ func (p *plainPlan) planPlain(a *analyzer, node *ast.Node) {
 		return
 	}
 	p.directRefs[node] = ref
-	if ref.specifier != nil {
-		declaration := ast.FindAncestor(ref.specifier, ast.IsImportDeclaration)
-		if declaration != nil && !slices.Contains(p.directImports[declaration], ref.specifier) {
-			p.directImports[declaration] = append(p.directImports[declaration], ref.specifier)
-		}
+	p.importVariant(ref.specifier)
+}
+
+// importVariant records that binding, an import specifier or default import
+// clause, or nil, must bring in its $direct variant.
+func (p *plainPlan) importVariant(binding *ast.Node) {
+	if binding == nil {
+		return
+	}
+	declaration := ast.FindAncestor(binding, ast.IsImportDeclaration)
+	if declaration != nil && !slices.Contains(p.directImports[declaration], binding) {
+		p.directImports[declaration] = append(p.directImports[declaration], binding)
+	}
+}
+
+// planPlainDefault records `export default double`, where double is a plain
+// function, local, imported or a namespace member. A default import of the
+// module reaches double's variant as default$direct (directReferenceOf), so
+// the module must export it, as `export default function` does.
+func (p *plainPlan) planPlainDefault(a *analyzer, node *ast.Node) {
+	assignment := node.AsExportAssignment()
+	if assignment.IsExportEquals {
+		return
+	}
+	fn := esFunctionOf(a.checker, assignment.Expression)
+	if fn == nil || !a.isSplittable(fn) || !a.isPlainFunction(fn) {
+		return
+	}
+	if ref := a.directReferenceOf(assignment.Expression, fn); ref != nil {
+		p.directDefaults[node] = ref
+		p.importVariant(ref.specifier)
 	}
 }
 
@@ -404,10 +434,7 @@ func (p *plainPlan) planPlainExports(a *analyzer, node *ast.Node) {
 				continue
 			}
 			p.exportedImports[specifier] = imported
-			declaration := ast.FindAncestor(imported, ast.IsImportDeclaration)
-			if declaration != nil && !slices.Contains(p.directImports[declaration], imported) {
-				p.directImports[declaration] = append(p.directImports[declaration], imported)
-			}
+			p.importVariant(imported)
 		}
 	}
 }

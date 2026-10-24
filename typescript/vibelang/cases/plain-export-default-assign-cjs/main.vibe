@@ -1,0 +1,17 @@
+// plain-export-default-assign in a CommonJS package: `export default f` of a
+// plain function exports its plain variant too (D65). run.mjs loads it with
+// require.
+import local from "./local.vibe"
+import imported from "./imported.vibe"
+import renamed from "./renamed.vibe"
+import namespace from "./namespace.vibe"
+import forwarded from "./forwarded.vibe"
+
+export function program() {
+  const a: string = local("local")
+  const b: string = imported("imported")
+  const c: string = renamed("renamed")
+  const d: string = namespace("namespace")
+  const e: string = forwarded("forwarded")
+  return { local: a, imported: b, renamed: c, namespace: d, forwarded: e, mapped: ["mapped"].map(imported) }
+}

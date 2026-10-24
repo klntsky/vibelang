@@ -223,3 +223,23 @@ func (tx *lowering) defineDirectExports(node *ast.Node) []*ast.Node {
 	}
 	return statements
 }
+
+// visitExportDefaultWithDirectVariant keeps `export default double` and
+// exports double's variant beside it, since a default import of the module
+// calls default$direct:
+//
+//	export default double
+//	export const default$direct = double$direct
+//
+// The variant is double$direct, an imported variant (visitImportWithDirectVariants,
+// or importedVariant in CommonJS), or M.double$direct, and is bound when the
+// default is.
+func (tx *lowering) visitExportDefaultWithDirectVariant(node *ast.Node) *ast.Node {
+	f := tx.Factory()
+	visited := tx.Visitor().VisitEachChild(node)
+	variant := tx.directExpression(node.AsExportAssignment().Expression, tx.plan.directDefaults[node])
+	declaration := f.NewVariableDeclaration(f.NewIdentifier("default$direct"), nil /*exclamationToken*/, nil /*typeNode*/, variant)
+	list := f.NewVariableDeclarationList(f.NewNodeList([]*ast.Node{declaration}), ast.NodeFlagsConst)
+	export := f.NewVariableStatement(f.NewModifierList([]*ast.Node{f.NewModifier(ast.KindExportKeyword)}), list)
+	return f.NewSyntaxList([]*ast.Node{visited, export})
+}

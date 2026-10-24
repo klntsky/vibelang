@@ -1,0 +1,2 @@
+import { other as renamed } from "./lib.vibe"
+export default renamed
