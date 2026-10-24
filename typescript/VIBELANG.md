@@ -755,6 +755,15 @@ A lookup also keeps a lambda from compiling to plain JavaScript: `canBePlain` as
 find(id) { return Effect.gen({ self: this }, function* () { … }) }
 ```
 
+A generator binds `super` and `arguments` afresh, which would make `super` a SyntaxError and `arguments` the generator's own, so the function that binds them in the source declares them once at the top of its body when the lowering moves code that reads them into a generator: an Effect method's body, an Effect arrow, a try statement's regions (`frames_lower.go`, case `effect-method-super`). A call keeps JavaScript's order, the lookup before the arguments, and its receiver, because `usesThis` counts `super`. An assignment to `super.name`, compound and logical ones included, calls `superSet_1("name", value)`; a compound assignment to `super[key]` and `super.name++` would evaluate the key twice and keep JavaScript's form:
+
+```ts
+greet(name) {
+  const super_1 = key => super[key];
+  return Effect.gen({ self: this }, function* greet() { const b = yield* super_1("greet").call(this, name); … })
+}
+```
+
 A method's expectation is read once, from the contextual type the checker has when it first asks, whereas a lambda's form is decided per overload candidate (D56).
 ### Checks of service classes
 

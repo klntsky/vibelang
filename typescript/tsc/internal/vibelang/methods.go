@@ -78,12 +78,13 @@ func (tx *lowering) lowerMethod(node *ast.Node) *ast.Node {
 
 // usesThis reports whether body refers to this, looking into arrow
 // functions, which share their enclosing function's this, but not into other
-// functions or classes.
+// functions or classes. super counts: a super call that the lowering moves
+// into a generator passes this as its receiver (frames_lower.go).
 func usesThis(body *ast.Node) bool {
 	var visit func(node *ast.Node) bool
 	visit = func(node *ast.Node) bool {
 		switch {
-		case node.Kind == ast.KindThisKeyword:
+		case node.Kind == ast.KindThisKeyword, node.Kind == ast.KindSuperKeyword:
 			return true
 		case node.Kind == ast.KindArrowFunction:
 		case isFunctionBoundary(node):

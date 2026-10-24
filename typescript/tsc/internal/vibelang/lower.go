@@ -52,6 +52,11 @@ type lowering struct {
 	// (pipes_lower.go).
 	topicNames map[*ast.Node]*ast.IdentifierNode
 	rebinding  map[*ast.Node]bool
+
+	// frames records the super and arguments references of the file's
+	// functions, which a generator the lowering introduces cannot bind
+	// (frames_lower.go).
+	frames frameReferences
 }
 
 func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *transformers.Transformer {
@@ -60,12 +65,21 @@ func newLowering(opts *transformers.TransformOptions, file *ast.SourceFile) *tra
 	}
 	tx := &lowering{
 		plan:     planFile(opts.EmitResolver, file),
+		frames:   findFrameReferences(file),
 		commonJS: opts.GetEmitModuleFormatOfFile != nil && opts.GetEmitModuleFormatOfFile(file) == core.ModuleKindCommonJS,
 	}
 	return tx.NewTransformer(tx.visit, opts.Context)
 }
 
 func (tx *lowering) visit(node *ast.Node) *ast.Node {
+	if tx.frames.binders[node] {
+		return tx.hoistFrameReferences(node, tx.visitSource(node)) // super and arguments (frames_lower.go)
+	}
+	return tx.visitSource(node)
+}
+
+// visitSource lowers node, a node of the .vibe file or one the lowering made.
+func (tx *lowering) visitSource(node *ast.Node) *ast.Node {
 	if pipes := tx.plan.topicClosures[node]; len(pipes) != 0 && !tx.rebinding[node] {
 		return tx.visitTopicClosure(node, pipes)
 	}

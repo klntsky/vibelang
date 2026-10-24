@@ -33,6 +33,7 @@ func (tx *lowering) generatorExpression(original *ast.Node, name string, paramet
 	// form. Quoting the method and its access also keeps arbitrary keys valid.
 	if name != "" && !ownName && (!scanner.IsIdentifierText(name, core.LanguageVariantStandard) || ast.IsKeyword(scanner.StringToToken(name)) || name == "eval" || name == "arguments") {
 		method := f.NewMethodDeclaration(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), f.NewStringLiteral(name, ast.TokenFlagsNone), nil /*postfixToken*/, nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
+		tx.EmitContext().SetOriginal(method, original) // the method binds what original binds (frames_lower.go)
 		object := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{method}), false /*multiLine*/)
 		return f.NewElementAccessExpression(object, nil /*questionDotToken*/, f.NewStringLiteral(name, ast.TokenFlagsNone), ast.NodeFlagsNone)
 	}
@@ -44,6 +45,7 @@ func (tx *lowering) generatorExpression(original *ast.Node, name string, paramet
 		return f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), id, nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
 	}
 	method := f.NewMethodDeclaration(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), f.NewIdentifier(name), nil /*postfixToken*/, nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
+	tx.EmitContext().SetOriginal(method, original) // the method binds what original binds (frames_lower.go)
 	object := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{method}), false /*multiLine*/)
 	return f.NewPropertyAccessExpression(object, nil /*questionDotToken*/, f.NewIdentifier(name), ast.NodeFlagsNone)
 }
