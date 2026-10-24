@@ -1,0 +1,22 @@
+// A lambda that returns a program unrun where a function returning an Effect
+// is expected is a factory (D269). Its type is TypeScript's, as for
+// () => Effect.void, so a call infers the type parameters of the expected
+// Effect from the program, as TypeScript does: R2 is never below. The
+// factory took the expected type itself, Effect<void, never, R2>, so R2 was
+// inferred as R2 and leaked into the call's type and its declaration.
+import { withRollback } from "./rollbacks.ts"
+
+/** Fails to compile unless T is never. */
+type Never<T extends never> = T
+
+export const inferred = () => withRollback(Effect.succeed(1), () => Effect.void)
+
+type InferredServices = Never<Effect.Services<ReturnType<typeof inferred>>>
+
+export const declared = (): number!! => withRollback(Effect.succeed(2), () => Effect.void)
+
+// expect-result: [1,2]
+export function main() {
+  const services: InferredServices[] = []
+  return [inferred(), declared(), ...services]
+}

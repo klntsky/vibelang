@@ -364,7 +364,16 @@ func (a *analyzer) typeInForm(fn *ast.Node, t *checker.Type, f form) *checker.Ty
 			return t
 		}
 		if sigs := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall); len(sigs) == 1 {
-			return a.checker.NewFunctionTypeWithReturnType(t.Symbol(), sigs[0], a.declaredProgramReturn(fn))
+			declared := a.declaredProgramReturn(fn)
+			// A declared program type that names the candidate's type
+			// parameters, as R2 does in (a: A) => void!!R2, is what inference
+			// reads from fn's type. A factory whose returns TypeScript already
+			// types as an Effect, as () => Effect.void, keeps that type, or R2
+			// would be inferred as itself.
+			if returned := a.checker.GetReturnTypeOfSignature(sigs[0]); isEffectType(a.checker, returned) && a.namesCandidateTypeParameters(fn, declared) {
+				return t
+			}
+			return a.checker.NewFunctionTypeWithReturnType(t.Symbol(), sigs[0], declared)
 		}
 		return t
 	}
@@ -549,4 +558,19 @@ func (a *analyzer) isBodyDeferred(fn *ast.Node) bool {
 		return node.ForEachChild(visit)
 	}
 	return visit(body)
+}
+
+// namesCandidateTypeParameters reports whether t mentions a type parameter of
+// the declared candidate that fn's owner call is checked against.
+func (a *analyzer) namesCandidateTypeParameters(fn *ast.Node, t *checker.Type) bool {
+	call, _ := ownerCall(fn)
+	if call == nil || t == nil {
+		return false
+	}
+	candidate := a.candidateOf(call)
+	if candidate == nil {
+		return false
+	}
+	declared := a.declaredSignature(candidate)
+	return declared != nil && factoryHasInferenceParameter(a.checker, t, declared.TypeParameters(), 0)
 }
