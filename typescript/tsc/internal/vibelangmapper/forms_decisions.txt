@@ -1014,6 +1014,7 @@ typescript/vibelang/cases/handlers/main.vibe:92:5 lambda effectFn table
 typescript/vibelang/cases/handlers/main.vibe:93:6 lambda effectFn table
 typescript/vibelang/cases/handlers/main.vibe:98:17 lambda program table
 typescript/vibelang/cases/handlers/main.vibe:99:5 lambda effectFn table
+typescript/vibelang/cases/hatch-destructuring-property-name/main.vibe:10:33 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:10:23 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:11:24 lambda plain table
 typescript/vibelang/cases/hatch-inputs-vibelang.fail/main.vibe:9:23 lambda plain table

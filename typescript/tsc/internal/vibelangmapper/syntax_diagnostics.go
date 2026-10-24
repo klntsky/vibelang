@@ -45,7 +45,7 @@ func (p *projector) checkSyntaxDiagnostics() {
 		case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindArrowFunction, ast.KindMethodDeclaration:
 			if ast.GetFunctionFlags(n)&ast.FunctionFlagsGenerator != 0 && HasJavaScriptIteratorReturn(n) {
 				p.checkPlainGeneratorThrows(n) // D296 (plain_contract_effects.go)
-				break // D271 permits an explicitly JavaScript async generator.
+				break                          // D271 permits an explicitly JavaScript async generator.
 			}
 			if modifiers := n.Modifiers(); modifiers != nil {
 				for _, m := range modifiers.Nodes {
@@ -263,7 +263,9 @@ func (p *projector) checkHatchCaptures(call *ast.Node) {
 	island := call.Arguments()[0]
 	var visit func(*ast.Node) bool
 	visit = func(n *ast.Node) bool {
-		if ast.IsIdentifier(n) && n.Parent != nil && ((!ast.IsDeclarationName(n) && !ast.IsPartOfTypeNode(n) && !ast.IsRightSideOfQualifiedNameOrPropertyAccess(n)) || n.Parent.Kind == ast.KindShorthandPropertyAssignment) {
+		// A binding element's property name, `extra` in `const { extra: picked } = item`,
+		// names the property it reads, not a binding.
+		if ast.IsIdentifier(n) && n.Parent != nil && !(n.Parent.Kind == ast.KindBindingElement && n.Parent.PropertyName() == n) && ((!ast.IsDeclarationName(n) && !ast.IsPartOfTypeNode(n) && !ast.IsRightSideOfQualifiedNameOrPropertyAccess(n)) || n.Parent.Kind == ast.KindShorthandPropertyAssignment) {
 			d := p.forms.(*Resolver).binding(n, n.Text())
 			if d != nil {
 				switch d.Kind {

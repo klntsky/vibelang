@@ -212,7 +212,10 @@ func hatchCall(c *checker.Checker, file *ast.SourceFile, hatch string, code *ast
 // isHatchValueReference reports whether id, an identifier, reads a value: not a
 // declaration's name, a type, or a member name after a dot.
 func isHatchValueReference(id *ast.Node) bool {
-	return id.Parent != nil && !ast.IsDeclarationName(id) && !ast.IsPartOfTypeNode(id) && !ast.IsRightSideOfQualifiedNameOrPropertyAccess(id)
+	// A binding element's property name, `extra` in `const { extra: picked } = item`,
+	// names the property it reads, not a binding.
+	return id.Parent != nil && !ast.IsDeclarationName(id) && !ast.IsPartOfTypeNode(id) && !ast.IsRightSideOfQualifiedNameOrPropertyAccess(id) &&
+		!(id.Parent.Kind == ast.KindBindingElement && id.Parent.PropertyName() == id)
 }
 
 // declaredOutside reports whether symbol is a value that island's file

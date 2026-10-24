@@ -1,0 +1,15 @@
+// expect-result: {"rest":{"kind":"a"},"picked":"b","outside":"outside"}
+// A property name in a hatch's destructuring pattern names the property it
+// reads, not a binding, so a same-named value outside the hatch is no capture
+// (D229).
+schema Item { kind: string; extra?: string }
+
+export function main() {
+  const extra = "outside"
+  const item: Item = { kind: "a", extra: "b" }
+  const { rest, picked } = sync((item: Item) => {
+    const { extra: picked, ...rest } = item
+    return { rest, picked }
+  }, item)
+  return { rest, picked, outside: extra }
+}
