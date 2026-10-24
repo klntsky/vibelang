@@ -4,6 +4,104 @@ VibeLang is v0, so a new version can change the language in breaking ways.
 Before you update, read the notes for every version between yours and the new
 one, and update `vibelang`, `vibelang-runtime`, and `vibelang-vite` together.
 
+## 0.0.4
+
+### Changes that can break code that compiled on 0.0.3
+
+Each one rejects, or changes, a program that compiled on 0.0.3 but ran
+differently from what its types said.
+
+- A `throw` that can escape a constructor, a getter or setter, a class
+  `static` block, or a module's top level is a compile error: EK2003, or
+  EK1001 at the top level. These run as plain JavaScript, so the throw ended
+  the program with a defect its type said could not happen. A throw that a
+  `catch` in the same code handles still compiles. Put code that must throw a
+  JavaScript exception, such as a test's throwing getter, in a `module`
+  declaration.
+- A `match` arm that tests a class runs only for an instance of that class.
+  A match that relied on a class pattern to cover a type that is neither that
+  class nor a subclass of it is a compile error; on 0.0.3 it could run the
+  wrong arm.
+- A subclass in a schema error family that declares a `_tag` field must
+  include its own name in that field's type.
+- A `const` declared with an Effect type holds its initializer through
+  `as`, `satisfies`, `!`, a conditional, and a pipe, as it already did through
+  parentheses. The initializer runs each time the const is run, not where the
+  const is declared.
+- A direct `sync` or `try` of an async function passes the function exactly
+  its inputs, and an `AbortSignal` only where its overload passes one. On
+  0.0.3 a rest parameter received a stray `undefined` and an optional
+  parameter of another type could receive the signal.
+- Every package requires Node 26 or later.
+
+### Compiler
+
+- A plain function is called as a plain function from every import shape:
+  a default import beside named or namespace imports, CommonJS output, and
+  `export default f`.
+- `super` and `arguments` work in Effect methods, Effect arrows, and `try`
+  blocks. On 0.0.3, `super` in an Effect method emitted a module that failed
+  to load.
+- A bundle runs only its entry module's `main`, in ES module and CommonJS
+  output, and a CommonJS file that exports `main` loads and runs it when Node
+  runs the file. The compiler warns
+  (EK3205) when an entry module's `main` needs services that nothing
+  provides.
+- `module` declarations: emitted names never collide with your names, global
+  names, or the file's imports; CommonJS output keeps their re-exports; their
+  declaration files use the `.vibe` file's imports.
+- A schema error family's base schema encodes and decodes its subclasses.
+- A non-tail `resume` has a type that covers every value its handler can end
+  with.
+- `using` awaits `Symbol.asyncDispose` of a value that only async-disposes.
+  `sync` and `try` called as values pass an async function its `AbortSignal`.
+- The compiler no longer crashes on `service X: typeof X` or on a pipe with a
+  missing left operand, and the formatter no longer crashes on a file with a
+  `match`.
+- Lambdas and pipes keep their meaning in more places: a lambda for an
+  optional member takes the member's contract; a factory lambda keeps
+  TypeScript's type in a branch of a conditional argument; either arm of a
+  returned conditional can make a factory; an annotated lambda can call the
+  variable it initializes; a returned pipe that ends in a call returns what
+  the call returns; a function literal on a pipe's left side stays a program
+  for a curried stage; a pipe in an Effect-typed field keeps its function
+  plain for callers.
+- A `provide` block keeps `Exclude<R, I>` of a generic requirement, and a
+  `for...of` over a Stream inside one no longer crashes the compiler.
+- A `restore` block inside an uninterruptible expression is inside it, and a
+  comment before a by-name program no longer ends its return early.
+- A destructuring property name inside a hatch is not a capture.
+- Declaration files: a function expression's written contract is its
+  declared type, a `.vibe` file's header comment stays first, and schema
+  declarations keep their comments.
+- Diagnostics: a contract suggestion for a `never` success writes `never`,
+  and a diagnostics comment can give its reason after punctuation.
+
+### Tools and integrations
+
+- The install guides install the current version and say that Windows needs
+  WSL. The starter's `AGENTS.md`, `llms.txt`, and the agent skill teach the
+  forms the compiler accepts.
+- npm packages and the VS Code extension ship complete license and notice
+  files.
+- Projects: a project compiles sources above its directory; a program without
+  a `tsconfig.json` checks each package's `.vibe` files with that package's
+  settings; `VIBELANG_PROJECT` compiles the modules in its directory, and a
+  workspace dependency's source compiles with its own `tsconfig.json`; a
+  check-only project that imports `.ts` files compiles in the loaders; a root
+  project compiles a nested package it reaches through `node_modules`.
+- `vibelang-unplugin`: esbuild tree-shakes the `.vibe` modules of a package
+  without side effects, and each entry's types import only its own bundler's
+  types.
+
+### Known limitations
+
+- `using` does not release a value whose acquisition ends in an
+  uninterruptible section when an interruption arrives during that section.
+- A class method annotated with a plain return type whose body runs an
+  Effect keeps its plain type; called through an interface, it returns the
+  Effect instead of running it.
+
 ## 0.0.3
 
 ### Changes that can break code that compiled on 0.0.2

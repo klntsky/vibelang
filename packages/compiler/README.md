@@ -214,7 +214,7 @@ Rules that need type information don't run on `.vibe` files;
 
 ## How the package finds the native compiler
 
-`vibelang` is a small Node launcher. In 0.0.3, the native compiler comes from one of four
+`vibelang` is a small Node launcher. In 0.0.4, the native compiler comes from one of four
 optional dependencies, and npm installs the one that matches your platform:
 `vibelang-darwin-arm64`, `vibelang-darwin-x64`, `vibelang-linux-arm64`,
 `vibelang-linux-x64`. Native Windows binaries are not published yet; use WSL. The launcher
