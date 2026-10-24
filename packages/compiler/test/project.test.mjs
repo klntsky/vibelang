@@ -200,6 +200,27 @@ test("a project whose rootDir holds sources above root compiles them, without TS
   assert.ok(main.map.sources.includes(join(app, "src/main.vibe")))
 })
 
+test("a check-only project that imports .ts files compiles, without TS5096", { skip }, async (t) => {
+  const { root, app, compiler } = workspace(t)
+  for (const [path, text] of Object.entries({
+    // Typechecked with `vibelang -p --noEmit`, it sets neither noEmit nor a rewrite.
+    "app/tsconfig.check.json": JSON.stringify({
+      extends: "./tsconfig.json",
+      compilerOptions: { noEmit: false, rewriteRelativeImportExtensions: false }
+    }),
+    "app/src/helper.ts": "export const seven = (): number => 7\n",
+    "app/src/main.vibe": 'import { seven } from "./helper.ts"\nexport const fromApp: number = seven()\n'
+  })) {
+    mkdirSync(dirname(join(root, path)), { recursive: true })
+    writeFileSync(join(root, path), text)
+    utimesSync(join(root, path), new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
+  }
+  const modules = projects({ root: app, project: join(app, "tsconfig.check.json"), compiler, cache: false })
+  const main = await modules.load(join(app, "src/main.vibe"))
+  assert.deepEqual([main.errors, main.error], [[], false])
+  assert.match(main.code, /from "\.\/helper\.js"/)
+})
+
 test("a module declaration compiles into its file's output, and its body is no input file (D283)", { skip }, async (t) => {
   const { app, compiler, compiles } = workspace(t)
   const main = join(app, "src/main.vibe")

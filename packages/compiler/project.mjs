@@ -168,6 +168,9 @@ const emitArgs = (project, root, out) => [
   "--outDir", out, "--sourceMap", "true", "--inlineSources", "true",
   "--inlineSourceMap", "false", "--sourceRoot", slash(emitRoot(root)).replace(/\/?$/, "/"), "--declaration", "false", "--declarationMap", "false",
   "--noEmit", "false", "--emitDeclarationOnly", "false", "--noEmitOnError", "true",
+  // A project checked with --noEmit may import .ts files without a rewrite of its
+  // own; emitting it then needs one (TS5096), and the output imports .js anyway.
+  "--rewriteRelativeImportExtensions", "true",
   "--incremental", "false"
 ]
 
