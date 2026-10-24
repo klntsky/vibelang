@@ -34,7 +34,9 @@ func (a *analyzer) declaredProgramReturn(fn *ast.Node) *checker.Type {
 		if isEffectType(a.checker, t) {
 			return t
 		}
-		sigs := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall)
+		// An optional member or parameter expects its function type or
+		// undefined, as a Partial of a service shape does for its overrides.
+		sigs := a.checker.GetSignaturesOfType(a.checker.GetNonNullableType(t), checker.SignatureKindCall)
 		if len(sigs) == 1 {
 			ret := a.checker.GetReturnTypeOfSignature(sigs[0])
 			if isEffectType(a.checker, ret) {

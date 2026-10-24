@@ -1209,6 +1209,11 @@ typescript/vibelang/cases/node-format-default.fail/main.vibe:2:21 lambda plain a
 typescript/vibelang/cases/node-format-esm/main.vibe:5:21 lambda plain annotation
 typescript/vibelang/cases/nominal-services.fail/nominal-services.fail.vibe:20:10 lambda effectFn service
 typescript/vibelang/cases/nominal-services.fail/nominal-services.fail.vibe:24:25 lambda program table
+typescript/vibelang/cases/optional-member-factory/main.vibe:13:19 lambda plain annotation
+typescript/vibelang/cases/optional-member-factory/main.vibe:14:14 lambda effectFn annotation
+typescript/vibelang/cases/optional-member-factory/main.vibe:18:40 lambda plain fallback
+typescript/vibelang/cases/optional-member-factory/main.vibe:19:42 lambda dual fallback
+typescript/vibelang/cases/optional-member-factory/main.vibe:24:65 byname program table
 typescript/vibelang/cases/overload-program-ranking.fail/main.vibe:6:27 byname program table
 typescript/vibelang/cases/overload-program-ranking/main.vibe:101:17 byname program annotation
 typescript/vibelang/cases/overload-program-ranking/main.vibe:101:36 byname program annotation

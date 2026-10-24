@@ -1,0 +1,26 @@
+// expect-result: {"answered":{"_tag":"Updated"},"overridden":{"_tag":"Updated"},"hung":true}
+// A lambda given for an optional member, as in a `Partial<Service>` of
+// overrides, takes its contract from the member's function type: one that
+// returns a program returns it unrun (D269), as it does for a required member.
+interface Outcome {
+  _tag: "Updated"
+}
+
+interface Store {
+  heartbeat: (runId: string) => Outcome!never
+}
+
+const layerNoop = (overrides: Partial<Store> = {}): Store => ({
+  heartbeat: () => ({ _tag: "Updated" as const }),
+  ...overrides
+})
+
+const hanging = layerNoop({ heartbeat: () => Effect.never })
+const answering = layerNoop({ heartbeat: () => Effect.succeed({ _tag: "Updated" as const }) })
+
+export function main() {
+  const answered = layerNoop().heartbeat("run")
+  const overridden = answering.heartbeat("run")
+  const hung = hanging.heartbeat("run") |> Effect.timeoutOption(%, "20 millis")
+  return { answered, overridden, hung: Option.isNone(hung) }
+}
