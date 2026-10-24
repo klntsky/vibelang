@@ -98,7 +98,7 @@ function digest(text: string) {
 // Output: 32
 ```
 
-`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`; without a second argument the failure is `UnknownError`. The function receives an `AbortSignal` after its inputs. Pass it to an API that supports cancellation; otherwise interruption stops the wait but not necessarily the foreign operation.
+`try` with a function that returns a promise, `async` or not, waits for it and maps a rejection into `E`; without a second argument the failure is `UnknownError`. The function receives an `AbortSignal` in the parameter after its inputs, when it declares one that takes it. Pass it to an API that supports cancellation; otherwise interruption stops the wait but not necessarily the foreign operation.
 
 `sync` with such a function treats rejection as a defect; it belongs in an adapter whose success-only promise contract is deliberate. `async` appears only inside a hatch: a VibeLang function waits by calling, `join` waits for a fiber, and `await` appears only in the await operations. For HTTP, use Effect's HTTP modules, not a wrapped browser `fetch` call.
 

@@ -278,14 +278,16 @@ type hatchForm struct {
 	effect string // "sync", "promise", "try", or "tryPromise"
 	value  bool   // sync(expression), try(expression): wrap it in () =>
 	mapper bool   // try's second argument maps a thrown error (D231)
+	signal bool   // the overload gives an async function the AbortSignal after its inputs (D230)
 }
 
 // hatchFormOf returns the form of call, a sync or try hatch. The overload the
 // checker selected tells a function from a value, by the name the runtime
-// gives its first parameter (evaluate or value), and whether try has an error
-// mapper (a second parameter named mapError). The function itself decides
-// between sync and async (D232): an async function, or one that returns a
-// promise, is Effect.promise or Effect.tryPromise.
+// gives its first parameter (evaluate or value), whether try has an error
+// mapper (a second parameter named mapError), and whether an async function
+// gets the AbortSignal after its inputs (takesSignal). The function itself
+// decides between sync and async (D232): an async function, or one that
+// returns a promise, is Effect.promise or Effect.tryPromise.
 func hatchFormOf(c *checker.Checker, call *ast.Node) (hatchForm, bool) {
 	name := hatchOf(call)
 	if name != "sync" && name != "try" {
@@ -308,11 +310,54 @@ func hatchFormOf(c *checker.Checker, call *ast.Node) (hatchForm, bool) {
 		return hatchForm{}, false
 	}
 	form.mapper = len(parameters) > 1 && ast.IsIdentifier(parameters[1].Name()) && parameters[1].Name().Text() == "mapError"
+	form.signal = takesSignal(parameters[0])
 	form.effect = name
 	if isAsyncHatch(c, call.Arguments()[0], form.value) {
 		form.effect = map[string]string{"sync": "promise", "try": "tryPromise"}[name]
 	}
 	return form, true
+}
+
+// takesSignal reports whether parameter, the evaluate parameter of the
+// overload the checker selected, gives the function the AbortSignal after its
+// inputs: evaluate: (...args: [...Args, AbortSignal]) => PromiseLike<R>.
+// TypeScript selects that overload only when the function's parameter after
+// its inputs, if it has one, can take an AbortSignal; the other overload
+// calls the function with its inputs alone.
+func takesSignal(parameter *ast.Node) bool {
+	fn := parameter.Type()
+	if fn == nil || !ast.IsFunctionTypeNode(fn) || len(fn.Parameters()) == 0 {
+		return false
+	}
+	rest := fn.Parameters()[len(fn.Parameters())-1]
+	if rest.AsParameterDeclaration().DotDotDotToken == nil || rest.Type() == nil || !ast.IsTupleTypeNode(rest.Type()) {
+		return false
+	}
+	elements := rest.Type().AsTupleTypeNode().Elements.Nodes
+	if len(elements) == 0 {
+		return false
+	}
+	last := elements[len(elements)-1]
+	return ast.IsTypeReferenceNode(last) && ast.IsIdentifier(last.AsTypeReferenceNode().TypeName) && last.AsTypeReferenceNode().TypeName.Text() == "AbortSignal"
+}
+
+// bindsExactly reports whether binding argument's inputs gives Effect.promise
+// the evaluate $asyncHatch would make of it when the overload passes a
+// signal: argument is an arrow function, which has no arguments object, with
+// no rest parameter. The bound function's length then counts a parameter for
+// the signal exactly when $asyncHatch would pass one, and the undefined that
+// Effect passes otherwise fills no parameter, or a defaulted one.
+func bindsExactly(argument *ast.Node) bool {
+	argument = ast.SkipParentheses(argument)
+	if !ast.IsArrowFunction(argument) {
+		return false
+	}
+	for _, parameter := range argument.Parameters() {
+		if parameter.AsParameterDeclaration().DotDotDotToken != nil {
+			return false
+		}
+	}
+	return true
 }
 
 // isAsyncHatch reports whether argument, a hatch's first argument, is
@@ -351,8 +396,17 @@ func isPromiseLike(c *checker.Checker, t *checker.Type) bool {
 // the mapper are VibeLang, lowered where the call stands, so a call among the
 // inputs runs before the hatch starts. bind fills the function's first
 // parameters with the inputs; Effect then passes the signal, if any, after
-// them. The call itself returns an Effect, so it runs as yield* where calls
-// run.
+// them. An async function is called through the runtime's $asyncHatch unless
+// binding is exact (bindsExactly):
+//
+//	sync(count, 1, 2)                  Effect.promise(runtime.$asyncHatch(count, false, 1, 2))
+//
+// Effect.promise passes the signal to whatever parameter the bound function
+// has left and undefined when it has none, which a rest parameter collects.
+// $asyncHatch gives the function exactly its inputs, then the signal when
+// the overload passes one (hatchForm.signal) and the function declares a
+// parameter for it: the rule sync and try follow when called as values. The
+// call itself returns an Effect, so it runs as yield* where calls run.
 func (tx *lowering) visitHatchCall(node *ast.Node) *ast.Node {
 	form := tx.plan.hatches[node]
 	f := tx.Factory()
@@ -371,9 +425,17 @@ func (tx *lowering) visitHatchCall(node *ast.Node) *ast.Node {
 	for _, input := range rest {
 		inputs = append(inputs, tx.Visitor().VisitNode(input))
 	}
+	async := form.effect == "promise" || form.effect == "tryPromise"
 	switch {
 	case form.value:
 		body = f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*returnType*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), body)
+	case async && !(form.signal && bindsExactly(arguments[0])):
+		signal := f.NewKeywordExpression(ast.KindFalseKeyword)
+		if form.signal {
+			signal = f.NewKeywordExpression(ast.KindTrueKeyword)
+		}
+		hatchArguments := append([]*ast.Node{body, signal}, inputs[1:]...)
+		body = f.NewCallExpression(tx.runtimeMember("$asyncHatch"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(hatchArguments), ast.NodeFlagsNone)
 	case len(inputs) > 1:
 		bind := f.NewPropertyAccessExpression(f.NewParenthesizedExpression(body), nil /*questionDotToken*/, f.NewIdentifier("bind"), ast.NodeFlagsNone)
 		body = f.NewCallExpression(bind, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(inputs), ast.NodeFlagsNone)

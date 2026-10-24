@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { Cause, Context, Deferred, Effect, Exit, Fiber } from "effect"
-import { callback, sync, try as attempt, type Resume } from "vibelang-runtime"
+import { $asyncHatch, callback, sync, try as attempt, type Resume } from "vibelang-runtime"
 
 test("sync is lazy and rerunnable, passes inputs, and leaves returned Effects inert", async () => {
   let runs = 0
@@ -101,6 +101,22 @@ for (const [name, hatch] of [["sync", sync], ["try", attempt]] as const) {
     expect(Object.prototype.toString.call(generator)).toBe("[object AsyncGenerator]")
   })
 }
+
+// A direct hatch calls an async function through $asyncHatch: the compiler
+// passes signal false when the overload TypeScript chose gives the function
+// its inputs alone, and sync and try called as values pass true (D232).
+test("$asyncHatch gives exactly the inputs, then the signal only when allowed and declared", async () => {
+  const optional = async (a: number, b?: unknown) => [a, b]
+  expect(await Effect.runPromise(Effect.promise($asyncHatch(optional, false, 1)))).toEqual([1, undefined])
+  const [, signal] = await Effect.runPromise(Effect.promise($asyncHatch(optional, true, 1)))
+  expect(signal).toBeInstanceOf(AbortSignal)
+  const rest = async (...xs: unknown[]) => xs
+  expect(await Effect.runPromise(Effect.promise($asyncHatch(rest, true, 1, 2)))).toEqual([1, 2])
+  expect(await Effect.runPromise(Effect.promise($asyncHatch(rest, false, 1, 2)))).toEqual([1, 2])
+  expect(await Effect.runPromise(Effect.tryPromise({ try: $asyncHatch(rest, false), catch: (error) => error }))).toEqual([])
+  const defaulted = async (a: number, b: number = 5) => [a, b]
+  expect(await Effect.runPromise(Effect.promise($asyncHatch(defaulted, true, 1)))).toEqual([1, 5])
+})
 
 describe("callback", () => {
   test("passes inputs before resume and signal, supports synchronous and delayed completion, and reruns registration", async () => {

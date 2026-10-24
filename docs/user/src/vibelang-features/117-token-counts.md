@@ -19,10 +19,10 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,487 |
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,022 |
-| The skill and the user guide (130 pages) | 195,453 |
-| The user guide alone | 190,966 |
-| The specification (33 chapters) | 102,669 |
-| The decision log, `docs/design/DECISIONS.md` | 56,596 |
+| The skill and the user guide (130 pages) | 195,464 |
+| The user guide alone | 190,977 |
+| The specification (33 chapters) | 102,678 |
+| The decision log, `docs/design/DECISIONS.md` | 56,846 |
 
 ## Effect TypeScript beside VibeLang
 
@@ -85,10 +85,10 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Start Here** | **2,180** |
 | [Welcome](../001-onboarding.md) | 1,580 |
 | [Why VibeLang?](../getting-started/002-why-effect.md) | 600 |
-| **Learning Path** | **8,000** |
+| **Learning Path** | **8,011** |
 | [The Effect Type](../getting-started/003-the-effect-type.md) | 1,587 |
 | [Installation](../getting-started/004-installation.md) | 1,780 |
-| [Creating Effects](../getting-started/005-creating-effects.md) | 2,546 |
+| [Creating Effects](../getting-started/005-creating-effects.md) | 2,557 |
 | [Two Types of Errors](../error-management/006-two-error-types.md) | 646 |
 | [Basic Concurrency](../concurrency/007-basic-concurrency.md) | 1,441 |
 | **Core Concepts** | **13,312** |
@@ -97,7 +97,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [Sequencing Effects](../getting-started/010-using-generators.md) | 1,184 |
 | [Building Pipelines](../getting-started/011-building-pipelines.md) | 1,807 |
 | [Devtools](../getting-started/012-devtools.md) | 7,723 |
-| **All 12 pages** | **23,492** |
+| **All 12 pages** | **23,503** |
 
 ### Setup
 
@@ -263,7 +263,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | Page | Tokens |
 | --- | ---: |
 | [Introduction](../../../design/src/000-intro.md) | 1,605 |
-| **Part I. The language by example** | **29,075** |
+| **Part I. The language by example** | **29,084** |
 | [1. A first look](../../../design/src/101-part1-ch01-first-look.md) | 1,681 |
 | [2. Functions and calls](../../../design/src/102-part1-ch02-functions.md) | 1,470 |
 | [3. Errors: the E channel](../../../design/src/103-part1-ch03-errors.md) | 2,579 |
@@ -273,7 +273,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [7. Concurrency](../../../design/src/107-part1-ch07-concurrency.md) | 2,281 |
 | [8. Producers: streams of values](../../../design/src/108-part1-ch08-producers.md) | 979 |
 | [9. Handlers: defining your own effects](../../../design/src/109-part1-ch09-handlers.md) | 2,534 |
-| [10. Working with TypeScript](../../../design/src/110-part1-ch10-typescript.md) | 3,278 |
+| [10. Working with TypeScript](../../../design/src/110-part1-ch10-typescript.md) | 3,287 |
 | [11. The standard library](../../../design/src/111-part1-ch11-stdlib.md) | 2,171 |
 | [12. Questions Effect users ask](../../../design/src/112-part1-ch12-faq.md) | 3,285 |
 | **Part II. The rules** | **12,384** |
@@ -301,6 +301,6 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Appendices** | **13,073** |
 | [A. Evidence index and B. Prior art](../../../design/src/900-appendices.md) | 4,883 |
 | [C. Every Effect feature in VibeLang](../../../design/src/901-appendix-c-coverage.md) | 8,190 |
-| **All 33 pages** | **102,669** |
+| **All 33 pages** | **102,678** |
 
 <!-- token-counts: end -->

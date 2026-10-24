@@ -1,0 +1,53 @@
+// A hatch called directly gives an async function exactly its inputs, then
+// the AbortSignal when the overload TypeScript chose passes one and the
+// function declares a parameter for it: the rule sync and try follow when
+// called as values (D230, D232, hatches-value-signal). A rest parameter
+// collects only the inputs, a parameter typed for something else gets no
+// signal, and interruption aborts a signal the function receives.
+module foreign {
+  export async function count(...xs: number[]) {
+    return xs.length
+  }
+  export async function anyCount(...xs: unknown[]) {
+    return xs.length
+  }
+  export async function second(a: number, b?: number) {
+    return typeof b
+  }
+  export async function defaulted(a: number, b: number = 5) {
+    return a + b
+  }
+  export async function echo(value: number, signal: AbortSignal) {
+    return { value, signal: signal instanceof AbortSignal }
+  }
+  export function untilAborted(events: string[], signal: AbortSignal): Promise<string> {
+    return new Promise((resolve) => signal.addEventListener("abort", () => {
+      events.push("aborted")
+      resolve("aborted")
+    }))
+  }
+}
+import { count, anyCount, second, defaulted, echo, untilAborted } from foreign
+
+// expect-result: {"rest":2,"triedRest":2,"mappedRest":2,"unknownRest":2,"optional":"undefined","triedOptional":"undefined","defaulted":6,"input":{"value":42,"signal":true},"tried":{"value":7,"signal":true},"literalRest":2,"literalOptional":"undefined","literalSignal":true,"literalNone":1,"timedOut":"timed out","events":["aborted"]}
+export function main() {
+  const events: string[] = []
+  const rest = sync(count, 1, 2)
+  const triedRest = try(count, 1, 2)
+  const mappedRest = try(count, (e) => e, 1, 2)
+  const unknownRest = sync(anyCount, 1, 2)
+  const optional = sync(second, 1)
+  const triedOptional = try(second, 1)
+  const sum = sync(defaulted, 1)
+  const input = sync(echo, 42)
+  const tried = try(echo, 7)
+  const literalRest = sync(async (...xs: number[]) => xs.length, 1, 2)
+  const literalOptional = sync(async (a: number, b?: number) => typeof b, 1)
+  const literalSignal = try(async (n: number, signal: AbortSignal) => signal instanceof AbortSignal, 3)
+  const literalNone = sync(async () => 1)
+  const timedOut = timeout(sync(untilAborted, events), "10 millis") catch "timed out"
+  return {
+    rest, triedRest, mappedRest, unknownRest, optional, triedOptional, defaulted: sum, input, tried,
+    literalRest, literalOptional, literalSignal, literalNone, timedOut, events
+  }
+}

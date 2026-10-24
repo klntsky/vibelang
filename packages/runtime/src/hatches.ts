@@ -15,7 +15,10 @@ import { Cause, Effect, Exit } from "effect"
 // they decide by the function's declaration: an async function that
 // declares a parameter after its inputs gets the AbortSignal there, and
 // interruption aborts it; any other function gets its inputs only, and a
-// promise it returns is awaited without a signal.
+// promise it returns is awaited without a signal. A direct hatch calls an
+// async function through $asyncHatch as well, so both follow one rule; the
+// compiler also withholds the signal when the overload TypeScript chose
+// gives the function its inputs alone.
 
 /** The inputs a hatch passes to its function's first parameters (D230). */
 type Inputs = ReadonlyArray<unknown>
@@ -34,15 +37,18 @@ const isAsyncFunction = (evaluate: unknown): evaluate is Function =>
   Object.prototype.toString.call(evaluate) === "[object AsyncFunction]"
 
 /**
- * An async hatch function as the evaluate of Effect.promise or tryPromise:
- * its inputs, then the AbortSignal when it declares a parameter for it
- * (D230). Effect.promise makes a signal only for an evaluate that takes one,
- * which is what the compiler's `f.bind(undefined, ...inputs)` gives it; a
- * rest or defaulted parameter does not count, so it never receives one.
+ * An async hatch function as the evaluate of Effect.promise or tryPromise
+ * (D230, D232): evaluate with exactly its inputs, then the AbortSignal when
+ * signal allows one and evaluate declares a parameter for it. Effect.promise
+ * makes a signal only for an evaluate that takes one; a rest or defaulted
+ * parameter does not count, so it never receives one, nor the undefined
+ * Effect passes in its place. The compiler passes signal false when the
+ * overload TypeScript chose gives the function its inputs alone; sync and
+ * try called as values see no types and pass true.
  */
-const callAsync = (evaluate: Function, inputs: Inputs): (signal: AbortSignal) => PromiseLike<unknown> =>
-  evaluate.length > inputs.length
-    ? (signal) => call(evaluate, [...inputs, signal]) as PromiseLike<unknown>
+export const $asyncHatch = (evaluate: Function, signal: boolean, ...inputs: Inputs): (signal: AbortSignal) => PromiseLike<unknown> =>
+  signal && evaluate.length > inputs.length
+    ? (abort) => call(evaluate, [...inputs, abort]) as PromiseLike<unknown>
     : () => call(evaluate, inputs) as PromiseLike<unknown>
 
 /**
@@ -61,7 +67,7 @@ export function sync(evaluate: unknown, ...inputs: Array<unknown>): Effect.Effec
   if (typeof evaluate !== "function") {
     return isPromiseLike(evaluate) ? Effect.promise(() => evaluate) : Effect.succeed(evaluate)
   }
-  if (isAsyncFunction(evaluate)) return Effect.promise(callAsync(evaluate, inputs))
+  if (isAsyncFunction(evaluate)) return Effect.promise($asyncHatch(evaluate, true, ...inputs))
   return Effect.suspend(() => {
     const result = call(evaluate, inputs)
     return isPromiseLike(result) ? Effect.promise(() => result) : Effect.succeed(result)
@@ -94,7 +100,7 @@ export function attempt(evaluate: unknown, ...rest: Array<unknown>): Effect.Effe
   const inputs = mapError ? rest.slice(1) : rest
   const run = typeof evaluate === "function" ? () => call(evaluate, inputs) : () => evaluate
   const failure = (error: unknown) => (mapError ? mapError(error) : new Cause.UnknownError(error))
-  if (isAsyncFunction(evaluate)) return Effect.tryPromise({ try: callAsync(evaluate, inputs), catch: failure })
+  if (isAsyncFunction(evaluate)) return Effect.tryPromise({ try: $asyncHatch(evaluate, true, ...inputs), catch: failure })
   return Effect.suspend(() => {
     let result: unknown
     try {

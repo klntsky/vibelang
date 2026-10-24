@@ -1001,6 +1001,14 @@ typescript/vibelang/cases/hatch-type-query/a.vibe:18:108 lambda plain table
 typescript/vibelang/cases/hatch-type-query/a.vibe:18:14 lambda plain table
 typescript/vibelang/cases/hatch-type-query/a.vibe:8:14 lambda plain table
 typescript/vibelang/cases/hatch-type-query/a.vibe:8:70 lambda plain table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:37:33 lambda plain table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:44:28 lambda plain table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:45:32 lambda plain table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:46:29 lambda plain table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:47:28 lambda plain table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:48:20 lambda effectFn table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:48:28 byname program table
+typescript/vibelang/cases/hatches-direct-params/main.vibe:48:75 lambda effectFn table
 typescript/vibelang/cases/hatches-inputs/main.vibe:20:20 lambda plain table
 typescript/vibelang/cases/hatches-inputs/main.vibe:21:24 lambda plain table
 typescript/vibelang/cases/hatches-inputs/main.vibe:22:24 lambda plain table
