@@ -186,8 +186,24 @@ func isDiscardingForm(expression *ast.Node) bool {
 // conditional, an operand of ?? or ||, the right side of &&. In
 // `n === 0 ? Effect.interrupt : Console.log(n)` the call runs and the other
 // arm is the success value, so emit(0) succeeded with the interruption.
+//
+// Where fn's success type names no value (successNamesNoValue), every value
+// is accepted as the success value, so a returned Effect value or program
+// literal returns as data (D24, D269) where Effect code would run it. EK4802
+// reports that too, with the two spellings that say which was meant; a
+// written contract counts then as well.
 func (r *ruleCheck) checkReturnedEffect(fn *ast.Node, value *ast.Node) {
-	if !isLowerable(fn) || isProducer(fn) || fn.Type() != nil || !r.a.isEffect(fn) {
+	if !isLowerable(fn) || isProducer(fn) {
+		return
+	}
+	if fn.Type() != nil {
+		// A written contract says what fn succeeds with, unless its success
+		// names no value; then a plain variant's Effect form returns the
+		// value as data too.
+		if r.a.successNamesNoValue(fn) == nil || !r.a.isEffect(fn) && !r.a.isSplittable(fn) {
+			return
+		}
+	} else if !r.a.isEffect(fn) {
 		return
 	}
 	r.checkReturnedValue(fn, value)
@@ -198,19 +214,143 @@ func (r *ruleCheck) checkReturnedValue(fn *ast.Node, value *ast.Node) {
 		return // the call runs here; its success value is the result
 	}
 	valueType := r.c.GetTypeAtLocation(value)
+	if literal := ast.SkipParentheses(value); isLambda(literal) && len(literal.Parameters()) == 0 {
+		if success := r.a.successNamesNoValue(fn); success != nil {
+			d := report(r.c, value, returnedLiteralAsValue, messageText(value, "The returned function"), functionDisplayName(fn), r.c.TypeToString(success))
+			note(d, "Write its body in place to run it, or write its type as the success type to return it: ({0})!E!R.", bangTypes(r.c.TypeToString(valueType)))
+		}
+		return
+	}
 	if !isEffectType(r.c, valueType) {
+		if isEffectSubtype(r.c, valueType) {
+			r.checkReturnedSubtype(fn, value, valueType)
+			return
+		}
 		for _, part := range returnedParts(value) {
 			r.checkReturnedValue(fn, part)
 		}
 		return
 	}
-	if declared := r.a.declaredProgramReturn(fn); declared != nil {
-		if success := successType(r.c, declared); success != nil && r.c.IsTypeAssignableTo(valueType, success) {
+	accepted := false
+	declared := r.a.declaredProgramReturn(fn)
+	if declared != nil {
+		success := successType(r.c, declared)
+		accepted = success != nil && r.c.IsTypeAssignableTo(valueType, success)
+	}
+	if declared == nil || accepted {
+		if named := r.a.successNamesNoValue(fn); named != nil {
+			d := report(r.c, value, returnedEffectAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(named))
+			note(d, "Call it to run it: {0}. To return the program itself, write its type as the success type: ({1})!E!R.", callText(value), bangTypes(r.c.TypeToString(valueType)))
 			return
 		}
 	}
+	if accepted || fn.Type() != nil {
+		return // TypeScript reports a value the written contract rejects
+	}
 	d := report(r.c, value, EK4802, messageText(value, "This value"), functionDisplayName(fn))
 	note(d, "Call it to return its result: {0}. To return the program itself, write the contract.", callText(value))
+}
+
+// checkReturnedSubtype reports EK4802 where fn returns value, an Effect
+// subtype with structure of its own (an Exit, a Config, a class that extends
+// Effect), as data because fn's success type names no value. The return
+// boundary runs a subtype that its success type does not accept, and one
+// that a contextual unknown or any accepts (S5-1); one that a written
+// contract or a type parameter accepts is data (D24's S22-3 amendment).
+func (r *ruleCheck) checkReturnedSubtype(fn *ast.Node, value *ast.Node, valueType *checker.Type) {
+	named := r.a.successNamesNoValue(fn)
+	declared := r.a.declaredProgramReturn(fn)
+	if named == nil || declared == nil {
+		return
+	}
+	success := successType(r.c, declared)
+	if success == nil || !r.c.IsTypeAssignableTo(valueType, success) || fn.Type() == nil && success.Flags()&(checker.TypeFlagsUnknown|checker.TypeFlagsAny) != 0 {
+		return // the boundary runs it
+	}
+	d := report(r.c, value, returnedEffectAsValue, messageText(value, "This value"), functionDisplayName(fn), r.c.TypeToString(named))
+	note(d, "Call it to run it: {0}. To return it itself, write its type as the success type: ({1})!E!R.", callText(value), bangTypes(r.c.TypeToString(valueType)))
+}
+
+// isEffectSubtype reports whether t is an Effect with structure of its own
+// (D24), or a union of such types, as Exit is.
+func isEffectSubtype(c *checker.Checker, t *checker.Type) bool {
+	if t.Flags()&checker.TypeFlagsUnion != 0 {
+		return len(t.Types()) > 0 && core.Every(t.Types(), func(member *checker.Type) bool { return isEffectSubtype(c, member) })
+	}
+	return effectInterfaceSymbol(c, t) != nil
+}
+
+// EK4802's text where fn's success type names no value. {0} is the value, {1}
+// the function, {2} the success type.
+var (
+	returnedEffectAsValue  = EK4802.With("{0} is an Effect value, and {1}'s success type, {2}, names no value, so {1} succeeds with this program instead of running it.")
+	returnedLiteralAsValue = EK4802.With("{0} is a program literal, and {1}'s success type, {2}, names no value, so {1} succeeds with the function instead of running it.")
+)
+
+// successNamesNoValue returns the success type of fn's Effect when it names
+// no value: void, unknown, any, or an unconstrained type parameter that fn's
+// call infers,
+// from fn's written contract, the uninstantiated parameter of fn's call
+// (D44; the call's own type arguments when it writes them), or fn's
+// contextual type. Any value is then a success value, and a returned Effect
+// value or program literal returns as data where Effect code runs it:
+// `Sink.forEach((n) => announce)` and `withSpan("refresh") { return refresh }`
+// succeed with the program. It returns nil otherwise.
+func (a *analyzer) successNamesNoValue(fn *ast.Node) *checker.Type {
+	var expected []*checker.Type
+	switch call, path := ownerCall(fn); {
+	case fn.Type() != nil:
+		expected = []*checker.Type{a.checker.GetTypeFromTypeNode(fn.Type())}
+	case call != nil:
+		signature := a.candidateOf(call)
+		if signature == nil {
+			return nil
+		}
+		if len(call.TypeArguments()) == 0 {
+			if isBlockParamCall(call) {
+				// A block param's signature moves the program (blockparams.go),
+				// so its own generic target, not the declaration, has its order.
+				for signature.Target() != nil {
+					signature = signature.Target()
+				}
+			} else {
+				signature = a.declaredSignature(signature)
+			}
+		}
+		if t := a.checker.GetTypeAtPosition(signature, path[0].argument); t != nil {
+			expected = []*checker.Type{t}
+			for _, step := range path[1:] {
+				expected = a.stepInto(expected, step)
+			}
+		}
+	default:
+		expected = a.contextualTypes(fn)
+	}
+	for _, t := range expected {
+		if !isEffectType(a.checker, t) {
+			if signatures := a.checker.GetSignaturesOfType(t, checker.SignatureKindCall); len(signatures) == 1 {
+				t = a.checker.GetReturnTypeOfSignature(signatures[0])
+			}
+		}
+		if success := successType(a.checker, t); success != nil && a.namesNoValue(success) {
+			return success
+		}
+	}
+	return nil
+}
+
+// namesNoValue reports whether t, a success type, is void, unknown, any, or a
+// type parameter without a constraint that names a value: T extends Exit
+// names an Exit.
+func (a *analyzer) namesNoValue(t *checker.Type) bool {
+	if t.Flags()&(checker.TypeFlagsVoid|checker.TypeFlagsUnknown|checker.TypeFlagsAny) != 0 {
+		return true
+	}
+	if t.Flags()&checker.TypeFlagsTypeParameter == 0 {
+		return false
+	}
+	constraint := a.checker.GetBaseConstraintOfType(t)
+	return constraint == nil || constraint == t || constraint.Flags()&(checker.TypeFlagsUnknown|checker.TypeFlagsAny) != 0
 }
 
 // returnedParts returns the parts of value, a returned expression, whose
