@@ -1379,6 +1379,10 @@ typescript/vibelang/cases/programs/main.vibe:60:55 lambda effectFn table
 typescript/vibelang/cases/programs/main.vibe:66:10 lambda effectFn service
 typescript/vibelang/cases/programs/main.vibe:70:34 lambda effectFn table
 typescript/vibelang/cases/programs/main.vibe:82:29 lambda program table
+typescript/vibelang/cases/provide-generic-requirement/main.vibe:12:15 lambda effectFn fallback
+typescript/vibelang/cases/provide-generic-requirement/main.vibe:19:25 lambda effectFn annotation
+typescript/vibelang/cases/provide-generic-requirement/main.vibe:19:52 byname program annotation
+typescript/vibelang/cases/provide-generic-requirement/main.vibe:6:27 lambda effectFn fallback
 typescript/vibelang/cases/recursive-annotated-program.fail/main.vibe:4:21 lambda effectFn annotation
 typescript/vibelang/cases/recursive-annotated-program/main.vibe:10:18 lambda effectFn annotation
 typescript/vibelang/cases/recursive-annotated-program/main.vibe:26:21 lambda effectFn annotation

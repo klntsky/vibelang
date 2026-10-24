@@ -91,7 +91,16 @@ func (a *analyzer) provideFlow(block *ast.Node) *effectInfo {
 	info.errorSources = append(info.errorSources, body.errorSources...)
 	for i, requirement := range body.requirements {
 		for _, member := range unionMembers(requirement) {
-			if provided == nil || !c.IsTypeAssignableTo(member, provided) {
+			switch {
+			case provided == nil:
+				info.addRequirement(member, body.requirementSources[i])
+			case c.IsTypeAssignableTo(member, provided):
+			case member.Flags()&checker.TypeFlagsInstantiable != 0:
+				// A generic requirement, such as a function's type parameter R,
+				// keeps what the block does not provide: Exclude<R, I>, as
+				// Effect.provideService and Effect.provide leave it.
+				info.addRequirement(c.ExcludeType(member, provided), body.requirementSources[i])
+			default:
 				info.addRequirement(member, body.requirementSources[i])
 			}
 		}

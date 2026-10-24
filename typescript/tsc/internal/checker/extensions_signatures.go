@@ -49,3 +49,14 @@ func (c *Checker) IsCheckingSignatureOf(fn *ast.Node) bool {
 func (c *Checker) IsResolvingTypeOf(symbol *ast.Symbol) bool {
 	return c.findResolutionCycleStartIndex(symbol, TypeSystemPropertyNameType) >= 0
 }
+
+// ExcludeType returns Exclude<source, excluded>, as lib.es5.d.ts declares it,
+// or source when no such alias is in reach. Effect.provide leaves
+// Exclude<R, I> of a requirement R that is a type parameter.
+func (c *Checker) ExcludeType(source *Type, excluded *Type) *Type {
+	symbol := c.getGlobalTypeAliasSymbol("Exclude", 2, false /*reportErrors*/)
+	if symbol == nil {
+		return source
+	}
+	return c.getTypeAliasInstantiation(symbol, []*Type{source, excluded}, nil)
+}

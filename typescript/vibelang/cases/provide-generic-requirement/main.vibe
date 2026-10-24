@@ -1,0 +1,25 @@
+// A provide block over a program whose requirement is a type parameter R
+// needs Exclude<R, Prefix>, as Effect.provideService gives it: a caller whose
+// program needs only Prefix needs nothing. The block needed R itself.
+service Prefix: string
+
+export const withPrefix = <A, E, R>(body: A!E!R) => {
+  provide Prefix = "> " {
+    return body()
+  }
+}
+
+const greet = (name: string) => `${Prefix()}${name}`
+
+/** Fails to compile unless T is never. */
+type Never<T extends never> = T
+
+type Left = Never<Effect.Services<ReturnType<typeof withPrefix<string, never, Prefix>>>>
+
+export const greeting = (): string!! => withPrefix(greet("vibe"))
+
+// expect-result: "> vibe"
+export function main() {
+  const left: Left[] = []
+  return [greeting(), ...left][0]
+}
