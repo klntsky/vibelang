@@ -1,4 +1,6 @@
-import type { unplugin } from "./index.js"
+import type { RspackPluginInstance } from "@rspack/core"
 
-declare const vibelang: typeof unplugin.rspack
+import type { VibeLangOptions } from "./options.js"
+
+declare const vibelang: (options?: VibeLangOptions) => RspackPluginInstance
 export default vibelang

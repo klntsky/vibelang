@@ -1,4 +1,6 @@
-import type { unplugin } from "./index.js"
+import type { Plugin } from "vite"
 
-declare const vibelang: typeof unplugin.vite
+import type { VibeLangOptions } from "./options.js"
+
+declare const vibelang: (options?: VibeLangOptions) => Plugin
 export default vibelang

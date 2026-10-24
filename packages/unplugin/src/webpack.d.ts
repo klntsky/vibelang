@@ -1,4 +1,6 @@
-import type { unplugin } from "./index.js"
+import type { WebpackPluginInstance } from "webpack"
 
-declare const vibelang: typeof unplugin.webpack
+import type { VibeLangOptions } from "./options.js"
+
+declare const vibelang: (options?: VibeLangOptions) => WebpackPluginInstance
 export default vibelang
