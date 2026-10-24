@@ -141,6 +141,22 @@ test("names VIBELANG_PROJECT when the nearest tsconfig does not include a module
   assert.equal(accepted.stdout, "42\n")
 })
 
+test("VIBELANG_PROJECT compiles its own modules; another workspace package's source compiles with its own tsconfig", { skip }, (t) => {
+  const { root, run } = project(t, {
+    "app/package.json": '{"type":"module"}',
+    "app/tsconfig.json": tsconfig(["src/**/*"]),
+    "app/tsconfig.tools.json": tsconfig(["tools/**/*"]),
+    "app/tools/answer.vibe": "import { value } from \"../../lib/src/value.vibe\"\nexport const answer: number = value + 1\n",
+    "app/tools/run.ts": "import { answer } from \"./answer.vibe\"\nconsole.log(answer)\n",
+    "lib/package.json": '{"type":"module"}',
+    "lib/tsconfig.json": tsconfig(["src/**/*"]),
+    "lib/src/value.vibe": "export const value: number = 41\n"
+  })
+  const result = run("app/tools/run.ts", { VIBELANG_PROJECT: join(root, "app/tsconfig.tools.json") })
+  assert.equal(result.stderr, "")
+  assert.equal(result.stdout, "42\n")
+})
+
 test("a long-running process loads a .vibe module written or edited after its project compiled", { skip }, (t) => {
   const { root, run, compilations } = project(t, {
     "src/first.vibe": "export function first(): string { return \"first\" }\n",

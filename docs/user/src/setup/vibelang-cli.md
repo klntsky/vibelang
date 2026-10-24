@@ -147,7 +147,7 @@ preload = ["vibelang/bun"]
 preload = ["vibelang/bun"]
 ```
 
-or on the command line: `bun --preload vibelang/bun src/main.ts`. The first `.vibe` import compiles the whole project in the nearest `tsconfig.json` above the module, once per process, with the same cache as Node. Set `VIBELANG_PROJECT` to a tsconfig path to choose another project. Diagnostics that stop the compile fail the import. Bun ignores a plugin's source maps, so a stack frame names the `.vibe` file with the line of its compiled JavaScript.
+or on the command line: `bun --preload vibelang/bun src/main.ts`. The first `.vibe` import compiles the whole project in the nearest `tsconfig.json` above the module, once per process, with the same cache as Node. Set `VIBELANG_PROJECT` to a tsconfig path to choose another project for the modules in its directory; a module of another workspace package compiles with that package's own `tsconfig.json`. Diagnostics that stop the compile fail the import. Bun ignores a plugin's source maps, so a stack frame names the `.vibe` file with the line of its compiled JavaScript.
 
 `bun test` finds only files named `*.test.ts`, `*.test.js` and the like, never `*.test.vibe`. Write Bun suites as `.test.ts` files that import `.vibe` modules, or run `.test.vibe` files with Vitest.
 

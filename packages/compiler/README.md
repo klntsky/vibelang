@@ -60,7 +60,10 @@ TypeScript entry point, a script, or a test that spawns `node` needs no `dist/`.
 The first `.vibe` import compiles the whole project in the nearest
 `tsconfig.json` above the module, once per process; every `.vibe` module of that
 project comes from that compile. Set `VIBELANG_PROJECT` to a tsconfig path to
-choose another project. A module keeps its source URL, so a `.ts` file imported
+choose another project, such as `tsconfig.test.json` for an example beside a
+library; it compiles the modules in its directory, and a module of another
+workspace package, such as a dependency linked to its source, still compiles
+with that package's own `tsconfig.json`. A module keeps its source URL, so a `.ts` file imported
 by both a TypeScript and a `.vibe` module loads once. Diagnostics that stop the
 compile are thrown at the import. The hook turns on Node's source-map support,
 so a stack trace names `.vibe` lines. It needs Node 26 or later, for

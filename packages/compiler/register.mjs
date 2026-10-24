@@ -4,7 +4,9 @@
 // imports .ts files sees one copy of each module. Its JavaScript comes from one
 // whole-project compile per tsconfig: emit is type-directed, so no module
 // compiles alone. The project is the nearest tsconfig.json above the module, or
-// VIBELANG_PROJECT. A compile's result is cached on disk (vibelang/project), so
+// VIBELANG_PROJECT for the modules in its directory; a module of another
+// workspace package, such as a dependency linked to its source, compiles with
+// its own package's tsconfig.json. A compile's result is cached on disk (vibelang/project), so
 // a later process reuses it while the project's inputs are unchanged. A failed
 // compile throws an Error with code ERR_VIBELANG_COMPILE and the diagnostics;
 // a module the project does not include, ERR_VIBELANG_PROJECT. Source maps are
@@ -13,9 +15,9 @@
 import { existsSync, statSync } from "node:fs"
 import * as Module from "node:module"
 import { registerHooks } from "node:module"
-import { resolve } from "node:path"
+import { dirname, resolve } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
-import { compileProjectSync, formatDiagnostic, nearestProject } from "./project.mjs"
+import { compileProjectSync, formatDiagnostic, nearestProject, workspaceProject } from "./project.mjs"
 
 if (typeof registerHooks !== "function") {
   throw new Error(`vibelang/register needs module.registerHooks, in Node 22.15 or later; this is Node ${process.version}`)
@@ -32,7 +34,10 @@ const debug = process.env.VIBELANG_REGISTER_DEBUG
   : undefined
 
 function projectOf(file) {
-  if (process.env.VIBELANG_PROJECT) return resolve(process.env.VIBELANG_PROJECT)
+  if (process.env.VIBELANG_PROJECT) {
+    const named = resolve(process.env.VIBELANG_PROJECT)
+    return workspaceProject(file, dirname(named), named)
+  }
   const project = nearestProject(file)
   if (project === undefined) throw new Error(`vibelang/register: no tsconfig.json above ${file}`)
   return project

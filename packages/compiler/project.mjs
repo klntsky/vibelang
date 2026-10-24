@@ -295,6 +295,27 @@ export function nearestProject(file) {
   }
 }
 
+/**
+ * workspaceProject names the project that compiles a module when `project`
+ * (whose directory is `root`) is the one asked for: `project` for a module
+ * inside root; for one of another workspace package, outside root or nested
+ * inside it with its own package.json and tsconfig.json, the nearest
+ * tsconfig.json above it, its own package's project.
+ */
+export function workspaceProject(file, root, project) {
+  const path = relative(root, file)
+  if (path.startsWith("..") || isAbsolute(path)) return nearestProject(file) ?? project
+  // A workspace package nested inside root, such as packages/a/b inside
+  // packages/a, compiles with its own tsconfig.json: the innermost package.json
+  // below root, with a tsconfig.json between it and the module.
+  for (let directory = dirname(file); directory !== root && dirname(directory) !== directory; directory = dirname(directory)) {
+    if (!existsSync(join(directory, "package.json"))) continue
+    const own = nearestProject(file)
+    return own !== undefined && !relative(directory, own).startsWith("..") ? own : project
+  }
+  return project
+}
+
 // Returns a file modified after time, or one that is gone.
 function changedSince(files, time) {
   return files.find((file) => {
@@ -327,19 +348,7 @@ export function projects({ root, project, compiler, cache, debug = () => {} }) {
   const states = new Map()
   let revision = 0
 
-  function projectOf(file) {
-    const path = relative(root, file)
-    if (path.startsWith("..") || isAbsolute(path)) return nearestProject(file) ?? project
-    // A workspace package nested inside root, such as packages/a/b inside
-    // packages/a, compiles with its own tsconfig.json: the innermost package.json
-    // below root, with a tsconfig.json between it and the module.
-    for (let directory = dirname(file); directory !== root && dirname(directory) !== directory; directory = dirname(directory)) {
-      if (!existsSync(join(directory, "package.json"))) continue
-      const own = nearestProject(file)
-      return own !== undefined && !relative(directory, own).startsWith("..") ? own : project
-    }
-    return project
-  }
+  const projectOf = (file) => workspaceProject(file, root, project)
 
   function stateOf(tsconfig) {
     let state = states.get(tsconfig)

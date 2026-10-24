@@ -4,12 +4,13 @@
 // bunfig.toml `preload`. A .vibe module's JavaScript comes from one
 // whole-project compile per tsconfig per process: emit is type-directed, so no
 // module compiles alone. The project is the nearest tsconfig.json above the
-// module, or VIBELANG_PROJECT. A compile's result is cached on disk
+// module, or VIBELANG_PROJECT for the modules in its directory (a module of
+// another workspace package compiles with its own tsconfig.json). A compile's result is cached on disk
 // (vibelang/project), so a later process reuses it while the project's inputs
 // are unchanged.
 import { existsSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { compileProjectSync, formatDiagnostic, nearestProject } from "./project.mjs"
+import { compileProjectSync, formatDiagnostic, nearestProject, workspaceProject } from "./project.mjs"
 
 if (typeof Bun === "undefined") {
   throw new Error("vibelang/bun is a Bun preload; under Node, use node --import vibelang/register")
@@ -18,7 +19,10 @@ if (typeof Bun === "undefined") {
 const results = new Map()
 
 function projectOf(file) {
-  if (process.env.VIBELANG_PROJECT) return resolve(process.env.VIBELANG_PROJECT)
+  if (process.env.VIBELANG_PROJECT) {
+    const named = resolve(process.env.VIBELANG_PROJECT)
+    return workspaceProject(file, dirname(named), named)
+  }
   const project = nearestProject(file)
   if (project === undefined) throw new Error(`vibelang/bun: no tsconfig.json above ${file}`)
   return project

@@ -84,6 +84,14 @@ export function compileProjectSync(options: {
   debug?: (text: string) => void
 }): Result
 export function nearestProject(file: string): string | undefined
+
+/**
+ * The project that compiles `file` when `project` (in directory `root`) is asked
+ * for: `project` for a module inside root; for one of another workspace package,
+ * outside root or nested inside it with its own package.json and tsconfig.json,
+ * the nearest tsconfig.json above it.
+ */
+export function workspaceProject(file: string, root: string, project: string): string
 export function projects(options: {
   root: string
   project: string
