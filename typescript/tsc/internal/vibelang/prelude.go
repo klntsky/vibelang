@@ -8,6 +8,7 @@ import (
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"github.com/microsoft/TypeScript/tsc/internal/vibelangmapper"
 )
 
 // The prelude (design decisions D4 and D48) is the names every .vibe file sees
@@ -118,18 +119,21 @@ var preludeModules = map[string]string{
 // function that may compile to plain JavaScript resolves effect too: such a
 // function is still an Effect to TypeScript (plain.go), and its type needs
 // effect's Effect interface. A file with none of these compiles exactly as
-// TypeScript would.
+// TypeScript would. So does a file whose functions are Effects only by what
+// they do (mayLowerToEffect): one that throws, a producer, and one that
+// declares `using`.
 func implicitRuntimeImport(file *ast.SourceFile) []string {
 	if !isVibeLangFile(file) {
 		return nil
 	}
 	prelude, root := mayUsePrelude(file)
+	effect, runtime := mayLowerToEffect(file)
 	entry := entryMain(file) != nil
 	var modules []string
-	if prelude || entry {
+	if prelude || entry || runtime {
 		modules = append(modules, runtimeModule)
 	}
-	if root || maySplitPlainFunction(file) {
+	if root || effect || maySplitPlainFunction(file) {
 		modules = append(modules, effectRootModule)
 	}
 	if entry {
@@ -181,6 +185,37 @@ func maySplitPlainFunction(file *ast.SourceFile) bool {
 		return node.ForEachChild(visit)
 	}
 	return file.AsNode().ForEachChild(visit)
+}
+
+// mayLowerToEffect reports whether file has a function that may compile to an
+// Effect though it names no prelude or effect root export: one with a throw
+// (D282), a producer, a function* without a JavaScript iterator annotation,
+// or one that declares `using`. The last two also call the runtime's helpers.
+// Their types name effect's Effect, so the program needs effect's
+// declarations: without them, a function that only throws was declared plain
+// while its JavaScript returned an Effect. A module declaration's body is
+// TypeScript (D283), so it is not read.
+func mayLowerToEffect(file *ast.SourceFile) (effect bool, runtime bool) {
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		switch {
+		case node.Kind == ast.KindModuleDeclaration:
+			return false
+		case node.Kind == ast.KindThrowStatement:
+			effect = true
+		case node.Kind == ast.KindVariableDeclarationList && isUsingList(node),
+			(node.Kind == ast.KindFunctionDeclaration || node.Kind == ast.KindFunctionExpression) && node.Body() != nil &&
+				ast.GetFunctionFlags(node)&(ast.FunctionFlagsAsync|ast.FunctionFlagsGenerator) == ast.FunctionFlagsGenerator &&
+				!vibelangmapper.HasJavaScriptIteratorReturn(node):
+			effect, runtime = true, true
+		}
+		if effect && runtime {
+			return true
+		}
+		return node.ForEachChild(visit)
+	}
+	file.AsNode().ForEachChild(visit)
+	return effect, runtime
 }
 
 // forEachTopLevelName calls fn with each name that statement, a statement at

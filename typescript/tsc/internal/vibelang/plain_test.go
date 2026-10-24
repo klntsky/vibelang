@@ -86,6 +86,8 @@ export const object: Plain = {
 			failing = append(failing, d.String())
 		case EK4804.Code:
 			// a global Error has no _tag (lsrules.go)
+		case EK1011.Code:
+			// the program has no effect package to type the throwing methods (effectavailable.go)
 		default:
 			t.Errorf("plain contract diagnostic: %s", d.String())
 		}
