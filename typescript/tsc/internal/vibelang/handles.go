@@ -396,7 +396,7 @@ func (tx *lowering) clauseFunction(r *region, clause handleClause, state *clause
 	case state.pending != nil && reachesEnd:
 		body = append(body, f.NewReturnStatement(state.pending))
 	case len(r.jumps) > 0 && reachesEnd:
-		body = append(body, f.NewReturnStatement(tx.runtimeMember("$normal")))
+		body = append(body, tx.generated(f.NewReturnStatement(tx.runtimeMember("$normal"))))
 	}
 	block := f.NewBlock(f.NewNodeList(body), true /*multiLine*/)
 	block.Loc = clause.block.Loc
@@ -407,6 +407,7 @@ func (tx *lowering) clauseFunction(r *region, clause handleClause, state *clause
 	rest := f.NewParameterDeclaration(nil /*modifiers*/, f.NewToken(ast.KindDotDotDotToken), args, nil /*questionToken*/, nil /*typeNode*/, nil /*initializer*/)
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), name, nil /*typeParameters*/, f.NewNodeList([]*ast.Node{rest}), nil /*type*/, nil /*fullSignature*/, block)
 	tx.EmitContext().SetOriginal(generator, clause.block)
+	tx.generated(generator)
 	lowered := tx.wrapGenerator("fnUntraced", clause.block, generator)
 	if usesThis(clause.block) {
 		lowered = f.NewFunctionBindCall(lowered, f.NewThisExpression(), nil /*argumentsList*/)

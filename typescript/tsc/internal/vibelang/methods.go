@@ -56,21 +56,22 @@ func (tx *lowering) lowerMethod(node *ast.Node) *ast.Node {
 	body := ec.VisitFunctionBody(node.Body(), tx.Visitor())
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
 
-	if effect := tx.directEffect(node, body); effect != nil {
-		block := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(effect)}), true /*multiLine*/)
+	if effect := tx.directEffect(node, body, thunkIsReturn); effect != nil {
+		block := f.NewBlock(f.NewNodeList([]*ast.Node{tx.generated(f.NewReturnStatement(effect))}), true /*multiLine*/)
 		lowered := f.UpdateMethodDeclaration(method, node.Modifiers(), method.AsteriskToken, node.Name(), method.PostfixToken, method.TypeParameters, parameters, method.Type, method.FullSignature, block)
 		ec.SetOriginal(lowered, node)
 		return lowered
 	}
 	generator := tx.generatorExpression(node, sourceName(node), f.NewNodeList(nil), body)
 	ec.SetOriginal(generator, node)
+	tx.generatedFunctions(generator) // the method stands for the source method
 	arguments := []*ast.Node{generator}
 	if usesThis(node.Body()) {
 		self := f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("self"), nil /*postfixToken*/, nil /*type*/, f.NewKeywordExpression(ast.KindThisKeyword))
 		arguments = []*ast.Node{f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{self}), false /*multiLine*/), generator}
 	}
 	gen := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("gen"), ast.NodeFlagsNone), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
-	block := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(tx.traceMethod(node, gen))}), true /*multiLine*/)
+	block := f.NewBlock(f.NewNodeList([]*ast.Node{tx.generated(f.NewReturnStatement(tx.traceMethod(node, gen)))}), true /*multiLine*/)
 	lowered := f.UpdateMethodDeclaration(method, node.Modifiers(), method.AsteriskToken, node.Name(), method.PostfixToken, method.TypeParameters, parameters, method.Type, method.FullSignature, block)
 	ec.SetOriginal(lowered, node)
 	return lowered

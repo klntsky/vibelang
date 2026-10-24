@@ -219,6 +219,7 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 
 func (tx *lowering) visitSourceFile(file *ast.SourceFile) *ast.Node {
 	visited := tx.Visitor().VisitEachChild(file.AsNode())
+	tx.markProgramArrows(visited)
 	if tx.plan.entry != nil {
 		// Run main when the host starts this module (entry.go).
 		statements := tx.Factory().NewNodeList(append(append([]*ast.Node{}, visited.Statements()...), tx.entryStatement()))
@@ -358,7 +359,7 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	// undefined instead of its value.
 	ec.AddEmitFlags(value, printer.EFNoLeadingComments)
 	if tailProgram && !containsYield(value) {
-		lowered := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("suspend"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{tx.arrow(nil, value)}), ast.NodeFlagsNone)
+		lowered := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("suspend"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{tx.generatedThunk(nil, value)}), ast.NodeFlagsNone)
 		ec.SetOriginal(lowered, node)
 		lowered.Loc = node.Loc
 		return lowered
@@ -366,6 +367,7 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(value)}), false /*multiLine*/)
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), nil /*name*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, body)
 	ec.SetOriginal(generator, node)
+	tx.generated(generator)
 	arguments := []*ast.Node{generator}
 	if usesThis(subject) {
 		self := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{
@@ -475,7 +477,14 @@ func (tx *lowering) visitRunningCall(node *ast.Node) *ast.Node {
 func (tx *lowering) lowerFunction(node *ast.Node) *ast.Node {
 	parameters, body := tx.loweredBody(node)
 	if hasSimpleParameters(node) {
-		if effect := tx.directEffect(node, body); effect != nil {
+		role := thunkIsReturn // a function expression returns the Effect (directFunction)
+		switch {
+		case isProgramArrow(node):
+			role = programArrowRole(node)
+		case node.Kind == ast.KindArrowFunction:
+			role = thunkIsNothing
+		}
+		if effect := tx.directEffect(node, body, role); effect != nil {
 			return tx.directFunction(node, parameters, effect)
 		}
 	}
@@ -495,7 +504,13 @@ func (tx *lowering) lowerProgram(node *ast.Node) *ast.Node {
 	// Only an arrow: Effect.gen gives a function expression's body no this or
 	// arguments, which a thunk in its place would take from its scope.
 	if node.Kind == ast.KindArrowFunction {
-		if effect := tx.directEffect(node, body); effect != nil {
+		// The thunk replaces the lambda, so it stands for the lambda, unless
+		// the parser wrote it (isProgramArrow).
+		role := thunkIsNode
+		if isProgramArrow(node) {
+			role = programArrowRole(node)
+		}
+		if effect := tx.directEffect(node, body, role); effect != nil {
 			effect.Loc = node.Loc
 			return effect
 		}
@@ -568,7 +583,7 @@ func (tx *lowering) directFunction(node *ast.Node, parameters *ast.NodeList, eff
 	if node.Kind == ast.KindArrowFunction {
 		lowered = f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, parameters, nil /*typeNode*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), effect)
 	} else {
-		body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(effect)}), false /*multiLine*/)
+		body := f.NewBlock(f.NewNodeList([]*ast.Node{tx.generated(f.NewReturnStatement(effect))}), false /*multiLine*/)
 		lowered = f.NewFunctionExpression(nil /*modifiers*/, nil /*asteriskToken*/, node.Name(), nil /*typeParameters*/, parameters, nil /*typeNode*/, nil /*fullSignature*/, body)
 	}
 	tx.EmitContext().SetOriginal(lowered, node)
@@ -609,12 +624,14 @@ func (tx *lowering) visitEffectFunctionDeclaration(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	loweredParameters, loweredBody := tx.loweredBody(node)
 	if hasSimpleParameters(node) {
-		if effect := tx.directEffect(node, loweredBody); effect != nil {
-			body := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(effect)}), true /*multiLine*/)
+		if effect := tx.directEffect(node, loweredBody, thunkIsReturn); effect != nil {
+			body := f.NewBlock(f.NewNodeList([]*ast.Node{tx.generated(f.NewReturnStatement(effect))}), true /*multiLine*/)
 			return tx.effectFunctionDeclaration(node, loweredParameters, body)
 		}
 	}
-	lowered := tx.wrapFunction(node, tx.generatorFrom(node, loweredParameters, loweredBody))
+	// The declaration stands for the source function; the generator it
+	// forwards to maps to no source position (generated.go).
+	lowered := tx.wrapFunction(node, tx.generatedFunctions(tx.generatorFrom(node, loweredParameters, loweredBody)))
 
 	// Forward all arguments without evaluating the source parameters twice.
 	// Placeholder parameters preserve fnUntraced's observable function length.
@@ -640,7 +657,7 @@ func (tx *lowering) visitEffectFunctionDeclaration(node *ast.Node) *ast.Node {
 		}
 		statements = append(statements, f.NewExpressionStatement(f.NewStringLiteralFromNode(statement.Expression())))
 	}
-	statements = append(statements, f.NewReturnStatement(call))
+	statements = append(statements, tx.generated(f.NewReturnStatement(call)))
 	body := f.NewBlock(f.NewNodeList(statements), true /*multiLine*/)
 	return tx.effectFunctionDeclaration(node, f.NewNodeList(parameters), body)
 }

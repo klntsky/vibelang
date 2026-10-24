@@ -77,7 +77,10 @@ it.effect("answers") {
 Run `bunx vitest run`, or `bunx vitest` for watch mode; no prior emission to
 `dist/` is needed. `assert` and `expect` from `@effect/vitest` are trusted
 exports of an Effect package, so a test calls them directly. A failed
-assertion's stack points to its `.vibe` source line.
+assertion's stack points to its `.vibe` source line. Coverage with
+`@vitest/coverage-v8` counts the code you wrote: one function for each
+function in a `.vibe` module, and none for the thunks and generators the
+compiler makes, which map to no source position (D36).
 
 ## Options
 
@@ -136,8 +139,12 @@ bun run test
 The harness runs a passing `.vibe` suite through Vitest, then checks an expected
 failure at `failure.test.vibe:6:28`. A real HTTP server check covers JavaScript,
 source maps, importer invalidation, terminal and overlay diagnostics, and recovery.
-A production build checks `.vibe` entry support. Each check removes its temporary
-projects and compiler output.
+A production build checks `.vibe` entry support. A coverage check runs
+`test/coverage`, `.vibe` modules beside the Effect TypeScript an author would
+write, under `@vitest/coverage-v8`: each `.vibe` module reports one function for
+each function in its source, and no more uncovered functions, statements, or
+branches than its TypeScript. Each check removes its temporary projects and
+compiler output.
 
 The template and the users, http-api, and resilience examples also use this
 plugin for their source tests. Their advanced language features require the

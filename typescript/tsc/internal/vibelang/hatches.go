@@ -431,7 +431,7 @@ func (tx *lowering) visitHatchCall(node *ast.Node) *ast.Node {
 	async := form.effect == "promise" || form.effect == "tryPromise"
 	switch {
 	case form.value:
-		body = f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*returnType*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), body)
+		body = tx.generated(f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*returnType*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), body))
 	case async && !(form.signal && bindsExactly(arguments[0])):
 		signal := f.NewKeywordExpression(ast.KindFalseKeyword)
 		if form.signal {

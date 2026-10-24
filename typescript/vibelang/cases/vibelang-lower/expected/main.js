@@ -18,7 +18,7 @@ function greet(arg_1) {
 // An arrow function that runs an Effect becomes one too. Its body is a single
 // call, so it returns that call's Effect, suspended until it runs, without a
 // generator.
-const shout = (text) => Effect_1.suspend({ shout: () => Console.log(text.toUpperCase()) }.shout);
+const shout = (text) => Effect_1.suspend({ shout: () => { return Console.log(text.toUpperCase()); } }.shout);
 export function main() {
     return Effect_1.fnUntraced(function* main() {
         for (const id of [0, 1]) {

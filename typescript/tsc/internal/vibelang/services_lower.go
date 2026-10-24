@@ -113,7 +113,7 @@ func (tx *lowering) visitServiceClass(node *ast.Node) *ast.Node {
 		// runtime.$reference(key, () => Flags.default)
 		helper = "$reference"
 		read := f.NewPropertyAccessExpression(f.NewIdentifier(node.Name().Text()), nil /*questionDotToken*/, f.NewIdentifier("default"), ast.NodeFlagsNone)
-		arguments = append(arguments, f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), read))
+		arguments = append(arguments, tx.generated(f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), tx.generated(read))))
 	}
 	base := f.NewCallExpression(tx.runtimeMember(helper), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
 	extends := f.NewHeritageClause(ast.KindExtendsKeyword, f.NewNodeList([]*ast.Node{f.NewExpressionWithTypeArguments(base, nil /*typeArguments*/)}))

@@ -126,8 +126,8 @@ func (tx *lowering) entryStatement() *ast.Node {
 	} else {
 		runner = tx.runtimeMember("$runMain")
 	}
-	run := f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*returnType*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken),
-		f.NewCallExpression(runner, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{program}), ast.NodeFlagsNone))
+	run := tx.generated(f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*returnType*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken),
+		tx.generated(f.NewCallExpression(runner, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{program}), ast.NodeFlagsNone))))
 	started, url := f.NewVoidZeroExpression(), f.NewVoidZeroExpression()
 	if !tx.commonJS {
 		meta := func(name string) *ast.Node {

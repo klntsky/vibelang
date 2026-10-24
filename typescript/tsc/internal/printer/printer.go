@@ -133,6 +133,9 @@ type Printer struct {
 	sourceMapLineCharCache            *lineCharacterCache
 	mostRecentSourceMapSource         sourcemap.Source
 	mostRecentSourceMapSourceIndex    sourcemap.SourceIndex
+	lastSourceMapping                 sourceMapping // the source position of the last mapping to one (emitNoSourcePosition)
+	lastMappedLine                    int           // the output line of the last mapping, or -1
+	bridge                            bridge        // an output position to map to lastSourceMapping (emitNoSourcePosition)
 	containerPos                      int
 	containerEnd                      int
 	declarationListContainerEnd       int
@@ -1697,7 +1700,11 @@ func (p *Printer) emitMethodDeclaration(node *ast.MethodDeclaration) {
 	state := p.enterNode(node.AsNode())
 	p.emitModifierList(node.AsNode(), node.Modifiers(), true /*allowDecorators*/)
 	p.emitTokenNode(node.AsteriskToken)
-	p.emitPropertyName(node.Name())
+	if p.hasNoSourcePosition(node.AsNode()) {
+		p.emitUnmappedName(func() { p.emitPropertyName(node.Name()) })
+	} else {
+		p.emitPropertyName(node.Name())
+	}
 	p.emitTokenNode(node.PostfixToken)
 	indented := p.shouldEmitIndented(node.AsNode())
 	p.increaseIndentIf(indented)
@@ -2655,10 +2662,17 @@ func (p *Printer) emitFunctionExpression(node *ast.FunctionExpression) {
 	state := p.enterNode(node.AsNode())
 	p.generateNameIfNeeded(node.Name())
 	p.emitModifierList(node.AsNode(), node.Modifiers(), false /*allowDecorators*/)
+	if p.hasNoSourcePosition(node.AsNode()) {
+		p.emitNoSourcePosition()
+	}
 	p.writeKeyword("function")
 	p.emitTokenNode(node.AsteriskToken)
 	p.writeSpace()
-	p.emitIdentifierNameNode(node.Name())
+	if node.Name() != nil && p.hasNoSourcePosition(node.AsNode()) {
+		p.emitUnmappedName(func() { p.emitIdentifierNameNode(node.Name()) })
+	} else {
+		p.emitIdentifierNameNode(node.Name())
+	}
 	indented := p.shouldEmitIndented(node.AsNode())
 	p.increaseIndentIf(indented)
 	p.pushNameGenerationScope(node.AsNode())
@@ -3745,10 +3759,15 @@ func (p *Printer) emitFunctionDeclaration(node *ast.FunctionDeclaration) {
 	state := p.enterNode(node.AsNode())
 	p.generateNameIfNeeded(node.Name())
 	p.emitModifierList(node.AsNode(), node.Modifiers(), false /*allowDecorators*/)
+	if p.hasNoSourcePosition(node.AsNode()) {
+		p.emitNoSourcePosition()
+	}
 	p.writeKeyword("function")
 	p.emitTokenNode(node.AsteriskToken)
 	p.writeSpace()
-	if name := node.Name(); name != nil {
+	if name := node.Name(); name != nil && p.hasNoSourcePosition(node.AsNode()) {
+		p.emitUnmappedName(func() { p.emitIdentifierName(name.AsIdentifier()) })
+	} else if name != nil {
 		p.emitIdentifierName(name.AsIdentifier())
 	}
 	indented := p.shouldEmitIndented(node.AsNode())
@@ -5091,11 +5110,14 @@ func (p *Printer) Write(node *ast.Node, sourceFile *ast.SourceFile, writer EmitT
 	savedSourceMapSourceIndex := p.sourceMapSourceIndex
 	savedSourceMapLineCharCache := p.sourceMapLineCharCache
 
+	savedLastSourceMapping, savedLastMappedLine, savedBridge := p.lastSourceMapping, p.lastMappedLine, p.bridge
+
 	p.sourceMapsDisabled = sourceMapGenerator == nil
 	p.sourceMapGenerator = sourceMapGenerator
 	p.sourceMapSource = nil
 	p.sourceMapSourceIndex = -1
 	p.sourceMapLineCharCache = nil
+	p.lastSourceMapping, p.lastMappedLine, p.bridge = sourceMapping{}, -1, bridge{}
 
 	p.setSourceFile(sourceFile)
 	if p.Options.OmitTrailingSemicolon {
@@ -5290,6 +5312,7 @@ func (p *Printer) Write(node *ast.Node, sourceFile *ast.SourceFile, writer EmitT
 	p.sourceMapSource = savedSourceMapSource
 	p.sourceMapSourceIndex = savedSourceMapSourceIndex
 	p.sourceMapLineCharCache = savedSourceMapLineCharCache
+	p.lastSourceMapping, p.lastMappedLine, p.bridge = savedLastSourceMapping, savedLastMappedLine, savedBridge
 }
 
 //
@@ -5856,9 +5879,7 @@ func (p *Printer) emitPos(pos int) {
 	if p.MapSourcePosition != nil {
 		mappedSource, mappedPos, ok := p.MapSourcePosition(source, pos)
 		if !ok {
-			if err := p.sourceMapGenerator.AddGeneratedMapping(p.writer.GetLine(), p.writer.GetColumn()); err != nil {
-				panic(err)
-			}
+			p.emitGeneratedPos()
 			return
 		}
 		pos = mappedPos
@@ -5878,15 +5899,93 @@ func (p *Printer) emitPos(pos int) {
 	}
 
 	sourceLine, sourceCharacter := lineCharCache.getLineAndCharacter(pos)
-	if err := p.sourceMapGenerator.AddSourceMapping(
-		p.writer.GetLine(),
-		p.writer.GetColumn(),
-		sourceIndex,
-		sourceLine,
-		sourceCharacter,
-	); err != nil {
+	p.addMapping(p.writer.GetLine(), p.writer.GetColumn(), sourceMapping{true, sourceIndex, sourceLine, sourceCharacter})
+}
+
+// sourceMapping is a source position: a source, line, and character. The
+// zero value, which is not valid, is no source position.
+type sourceMapping struct {
+	valid           bool
+	sourceIndex     sourcemap.SourceIndex
+	sourceLine      int
+	sourceCharacter core.UTF16Offset
+}
+
+// bridge is an output position that emitNoSourcePosition maps to the last
+// source position once a later mapping comes.
+type bridge struct {
+	valid  bool
+	line   int
+	column core.UTF16Offset
+}
+
+// addMapping maps the output position line:column to source, or to no source
+// position when source is not valid. A pending bridge before that position is
+// mapped first; one after it waits for a later mapping, and one at it gives
+// way to it.
+func (p *Printer) addMapping(line int, column core.UTF16Offset, source sourceMapping) {
+	if b := p.bridge; b.valid && (line > b.line || line == b.line && column >= b.column) {
+		p.bridge = bridge{}
+		if line > b.line || column > b.column {
+			p.addMapping(b.line, b.column, p.lastSourceMapping)
+		}
+	}
+	if source.valid {
+		if err := p.sourceMapGenerator.AddSourceMapping(line, column, source.sourceIndex, source.sourceLine, source.sourceCharacter); err != nil {
+			panic(err)
+		}
+		p.lastSourceMapping = source
+	} else if err := p.sourceMapGenerator.AddGeneratedMapping(line, column); err != nil {
 		panic(err)
 	}
+	p.lastMappedLine = line
+}
+
+// emitGeneratedPos maps the current output position to no source position.
+func (p *Printer) emitGeneratedPos() {
+	if p.sourceMapsDisabled || p.sourceMapSource == nil || p.sourceMapGenerator == nil || p.sourceMapSourceIsJson {
+		return
+	}
+	p.addMapping(p.writer.GetLine(), p.writer.GetColumn(), sourceMapping{})
+}
+
+// emitNoSourcePosition maps the start of a node with no source position
+// (EFNoSourcePosition), where the writer is, to no source position, which
+// is how coverage tools such as ast-v8-to-istanbul and v8-to-istanbul tell
+// code a compiler made from the source's: they skip a function whose start
+// maps to none. Composing this map with another, as Vite does, keeps such a
+// position only after one on the same line that maps to a source position
+// (@jridgewell/remapping drops one that starts a line or follows another),
+// so the positions just before and after it map to the last source
+// position again.
+func (p *Printer) emitNoSourcePosition() {
+	if p.sourceMapsDisabled || p.sourceMapSource == nil || p.sourceMapGenerator == nil || p.sourceMapSourceIsJson {
+		return
+	}
+	line, column := p.writer.GetLine(), p.writer.GetColumn()
+	if p.lastSourceMapping.valid && p.lastMappedLine != line && column > 0 {
+		p.addMapping(line, column-1, p.lastSourceMapping)
+	}
+	p.emitGeneratedPos()
+	if p.lastSourceMapping.valid {
+		p.bridge = bridge{true, line, column + 1}
+	}
+}
+
+// emitUnmappedName emits, with emit, the name of a function that maps to no
+// source position (EFNoSourcePosition). Coverage tools locate a named
+// function by its name, so the name maps to none either.
+func (p *Printer) emitUnmappedName(emit func()) {
+	p.emitNoSourcePosition()
+	saved := p.sourceMapsDisabled
+	p.sourceMapsDisabled = true
+	emit()
+	p.sourceMapsDisabled = saved
+}
+
+// hasNoSourcePosition reports whether node maps to no source position.
+func (p *Printer) hasNoSourcePosition(node *ast.Node) bool {
+	return p.emitContext.EmitFlags(node)&EFNoSourcePosition != 0
 }
 
 // TODO: Support emitting nameIndex for source maps
@@ -5946,7 +6045,14 @@ func (p *Printer) emitSourceMapsBeforeNode(node *ast.Node) *sourceMapState {
 	emitFlags := p.emitContext.EmitFlags(node)
 	loc := p.emitContext.SourceMapRange(node)
 
-	if !ast.IsNotEmittedStatement(node) &&
+	if emitFlags&EFNoSourcePosition != 0 {
+		// V8 starts a function at its function keyword, after any modifiers,
+		// and coverage tools locate a method by its name, which may directly
+		// follow its *: their emitters map those positions.
+		if !ast.IsFunctionDeclaration(node) && !ast.IsFunctionExpression(node) && !ast.IsMethodDeclaration(node) {
+			p.emitNoSourcePosition()
+		}
+	} else if !ast.IsNotEmittedStatement(node) &&
 		emitFlags&EFNoLeadingSourceMap == 0 &&
 		p.currentSourceFile != nil &&
 		!ast.PositionIsSynthesized(loc.Pos()) {

@@ -463,6 +463,7 @@ func (tx *moduleInliner) inline(module *inlineModule) []*ast.Node {
 		modifiers = f.NewModifierList([]*ast.Node{f.NewModifier(ast.KindAsyncKeyword)})
 	}
 	function := f.NewArrowFunction(modifiers, nil, f.NewNodeList(nil), nil, nil, f.NewToken(ast.KindEqualsGreaterThanToken), f.NewBlock(f.NewNodeList(body), true))
+	tx.EmitContext().AddEmitFlags(function, printer.EFNoSourcePosition) // code no source stands for (generated.go)
 	var value *ast.Node = f.NewCallExpression(f.NewParenthesizedExpression(function), nil, nil, f.NewNodeList(nil), ast.NodeFlagsNone)
 	if awaits {
 		value = f.NewAwaitExpression(value)

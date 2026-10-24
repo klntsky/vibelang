@@ -19,9 +19,13 @@ import (
 //
 // becomes
 //
-//	export const step = (n) => Effect.suspend({ step: () => Effect.succeed(n + 1) }.step)
-//	export const size = (items) => Effect.sync({ size: () => items.length }.size)
+//	export const step = (n) => Effect.suspend({ step: () => { return Effect.succeed(n + 1); } }.step)
+//	export const size = (items) => Effect.sync({ size: () => { return items.length; } }.size)
 //	export const ignore = (event) => Effect.void
+//
+// An arrow's thunk has a block, so coverage counts the arrow's concise body,
+// not the thunk's as well (thunkRole); a function declaration's or method's
+// thunk is `() => value`, which stands for its return statement.
 //
 // Effect 4.0.5 dies with a throw from either thunk, as it does with one from
 // a generator (internal/effect.ts:625-670), and suspend returns its program
@@ -31,9 +35,28 @@ import (
 // function (D36). Every Effect the lowering yields is an Effect at run time
 // (Context keys and Config are Effects in 4.0.5), so suspend accepts it.
 
+// thunkRole says what the thunk of a direct Effect stands for in the source,
+// which decides how it maps (generated.go).
+type thunkRole int
+
+const (
+	// thunkIsNode: the thunk replaces node, a lambda, so it keeps node's
+	// source position.
+	thunkIsNode thunkRole = iota
+	// thunkIsReturn: node stays around the Effect, in a return statement that
+	// maps to no source position, so the thunk maps to none and its body
+	// stands for node's return statement.
+	thunkIsReturn
+	// thunkIsNothing: node stays around the Effect, an arrow whose concise
+	// body, the Effect, stands for node's body, or the parser wrote node; the
+	// thunk and its body stand for no source.
+	thunkIsNothing
+)
+
 // directEffect returns the Effect a call of node returns without a
 // generator, given body, node's lowered body, or nil when body needs one.
-func (tx *lowering) directEffect(node *ast.Node, body *ast.Node) *ast.Node {
+// role says what its thunk stands for.
+func (tx *lowering) directEffect(node *ast.Node, body *ast.Node, role thunkRole) *ast.Node {
 	if _, traced := tx.plan.spans[node]; traced || ast.GetFunctionFlags(node)&ast.FunctionFlagsAsyncGenerator != 0 || tx.plan.resumesInTail(node) {
 		return nil
 	}
@@ -53,9 +76,18 @@ func (tx *lowering) directEffect(node *ast.Node, body *ast.Node) *ast.Node {
 	if program {
 		method = "suspend"
 	}
-	thunk := tx.namedThunk(sourceName(node), value)
+	thunk := tx.namedThunk(sourceName(node), value, role)
 	effect := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier(method), ast.NodeFlagsNone), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{thunk}), ast.NodeFlagsNone)
 	tx.EmitContext().SetOriginal(effect, statements[0])
+	switch {
+	case isProgramArrow(node):
+		tx.generated(effect) // the arrow's concise body
+	case role == thunkIsNothing:
+		// The arrow's concise body stands for its source body.
+		if loc := tx.EmitContext().SourceMapRange(value); !ast.PositionIsSynthesized(loc.Pos()) {
+			tx.EmitContext().SetSourceMapRange(effect, loc)
+		}
+	}
 	return effect
 }
 
@@ -104,10 +136,19 @@ func (tx *lowering) directResult(node *ast.Node) (value *ast.Node, program bool,
 }
 
 // namedThunk returns `() => value`, as `{ name: () => value }.name` when name
-// is not "", which names the arrow without binding name inside it.
-func (tx *lowering) namedThunk(name string, value *ast.Node) *ast.Node {
+// is not "", which names the arrow without binding name inside it. role
+// says what the thunk stands for (directEffect).
+func (tx *lowering) namedThunk(name string, value *ast.Node, role thunkRole) *ast.Node {
 	f := tx.Factory()
-	thunk := tx.arrow(nil, value)
+	var thunk *ast.Node
+	switch role {
+	case thunkIsNode:
+		thunk = tx.arrow(nil, value)
+	case thunkIsReturn:
+		thunk = tx.generated(tx.arrow(nil, value))
+	default:
+		thunk = tx.generatedThunk(nil, value)
+	}
 	if name == "" || name == "__proto__" { // a __proto__ property sets the prototype
 		return thunk
 	}

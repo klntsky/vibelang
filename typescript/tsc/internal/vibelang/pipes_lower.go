@@ -201,7 +201,7 @@ func (tx *lowering) visitTopicClosure(closure *ast.Node, pipes []*ast.Node) *ast
 	if len(parameters) == 0 {
 		return visited
 	}
-	arrow := f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(parameters), nil /*returnType*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), f.NewParenthesizedExpression(visited))
+	arrow := tx.generatedThunk(parameters, visited)
 	lowered := f.NewCallExpression(f.NewParenthesizedExpression(arrow), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(arguments), ast.NodeFlagsNone)
 	tx.EmitContext().SetOriginal(lowered, closure)
 	return lowered

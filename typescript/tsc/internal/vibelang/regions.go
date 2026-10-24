@@ -273,7 +273,7 @@ func (tx *lowering) regionFunction(r *region, role string, binding *ast.Node, bl
 		parameters = append(parameters, f.NewParameterDeclaration(nil /*modifiers*/, nil /*dotDotDotToken*/, name, nil /*questionToken*/, nil /*typeNode*/, nil /*initializer*/))
 	}
 	if len(r.jumps) > 0 && canCompleteNormally(block) {
-		statements = append(statements, f.NewReturnStatement(tx.runtimeMember("$normal")))
+		statements = append(statements, tx.generated(f.NewReturnStatement(tx.runtimeMember("$normal"))))
 	}
 	body := f.NewBlock(f.NewNodeList(statements), true /*multiLine*/)
 	body.Loc = block.Loc
@@ -283,6 +283,7 @@ func (tx *lowering) regionFunction(r *region, role string, binding *ast.Node, bl
 	}
 	generator := f.NewFunctionExpression(nil /*modifiers*/, f.NewToken(ast.KindAsteriskToken), name, nil /*typeParameters*/, f.NewNodeList(parameters), nil /*type*/, nil /*fullSignature*/, body)
 	tx.EmitContext().SetOriginal(generator, block)
+	tx.generated(generator)
 	return tx.wrapGenerator("fnUntraced", block, generator)
 }
 

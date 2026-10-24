@@ -36,17 +36,23 @@ func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 	if ast.HasSyntacticModifier(node, ast.ModifierFlagsExport) {
 		modifiers = f.NewModifierList([]*ast.Node{f.NewModifier(ast.KindExportKeyword)})
 	}
-	direct := f.NewFunctionDeclaration(modifiers, nil /*asteriskToken*/, f.NewIdentifier(name+"$direct"), nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
+	directName := f.NewIdentifier(name + "$direct")
+	direct := f.NewFunctionDeclaration(modifiers, nil /*asteriskToken*/, directName, nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
+	// .vibe callers call the variant, so it keeps the source function's
+	// position, and the Effect wrapper maps to none (generated.go).
+	ec.SetSourceMapRange(direct, node.Loc)
+	ec.SetSourceMapRange(directName, node.Name().Loc)
 
 	// function double(...args) { return Effect.sync(() => double$direct(...args)) }
 	args := f.NewIdentifier("args")
 	rest := f.NewParameterDeclaration(nil /*modifiers*/, f.NewToken(ast.KindDotDotDotToken), args, nil /*questionToken*/, nil /*type*/, nil /*initializer*/)
-	call := f.NewCallExpression(f.NewIdentifier(name+"$direct"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{f.NewSpreadElement(args)}), ast.NodeFlagsNone)
-	thunk := f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), call)
+	call := tx.generated(f.NewCallExpression(f.NewIdentifier(name+"$direct"), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{f.NewSpreadElement(args)}), ast.NodeFlagsNone))
+	thunk := tx.generated(f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), call))
 	sync := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil /*questionDotToken*/, f.NewIdentifier("sync"), ast.NodeFlagsNone), nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{thunk}), ast.NodeFlagsNone)
-	wrapperBody := f.NewBlock(f.NewNodeList([]*ast.Node{f.NewReturnStatement(sync)}), false /*multiLine*/)
+	wrapperBody := f.NewBlock(f.NewNodeList([]*ast.Node{tx.generated(f.NewReturnStatement(sync))}), false /*multiLine*/)
 	wrapper := f.UpdateFunctionDeclaration(node.AsFunctionDeclaration(), node.Modifiers(), nil /*asteriskToken*/, node.Name(), nil /*typeParameters*/, f.NewNodeList([]*ast.Node{rest}), nil /*type*/, nil /*fullSignature*/, wrapperBody)
 	ec.SetOriginal(wrapper, node)
+	tx.generated(wrapper)
 	// D268 puts purity on the function object, so export aliases preserve it.
 	marker := f.NewElementAccessExpression(f.NewIdentifier(name), nil, tx.runtimeMember("$direct"), ast.NodeFlagsNone)
 	assign := f.NewBinaryExpression(nil, marker, nil, f.NewToken(ast.KindEqualsToken), f.NewIdentifier(name+"$direct"))

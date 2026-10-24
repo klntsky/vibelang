@@ -208,7 +208,7 @@ func (tx *lowering) trustedThunk(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	call := tx.Visitor().VisitEachChild(node)
 	if !containsYield(call) {
-		return tx.arrow(nil, call)
+		return tx.generated(tx.arrow(nil, call))
 	}
 	var parameters, values []*ast.Node
 	hoist := func(name string, value *ast.Node) *ast.Node {
@@ -233,7 +233,7 @@ func (tx *lowering) trustedThunk(node *ast.Node) *ast.Node {
 	}
 	arguments := hoist("args", f.NewArrayLiteralExpression(f.NewNodeList(call.Arguments()), false /*multiLine*/))
 	inner := f.NewCallExpression(callee, call.QuestionDotToken(), nil /*typeArguments*/, f.NewNodeList([]*ast.Node{f.NewSpreadElement(arguments)}), ast.NodeFlagsNone)
-	outer := f.NewParenthesizedExpression(tx.arrow(parameters, tx.arrow(nil, inner)))
+	outer := f.NewParenthesizedExpression(tx.generated(tx.arrow(parameters, tx.generated(tx.arrow(nil, inner)))))
 	return f.NewCallExpression(outer, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList(values), ast.NodeFlagsNone)
 }
 
