@@ -236,10 +236,10 @@ func (a *analyzer) addStreamLoop(info *effectInfo, statement *ast.Node) {
 	}
 	iterated := a.checker.GetTypeAtLocation(statement.Expression())
 	if e := streamChannel(a.checker, iterated, "_E"); e != nil {
-		info.errors = append(info.errors, e)
+		info.addError(e, statement)
 	}
 	if r := streamChannel(a.checker, iterated, "_R"); r != nil {
-		info.requirements = append(info.requirements, r)
+		info.addRequirement(r, statement)
 	}
 }
 

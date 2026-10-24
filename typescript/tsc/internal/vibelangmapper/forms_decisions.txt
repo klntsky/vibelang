@@ -1430,6 +1430,7 @@ typescript/vibelang/cases/provide-generic-requirement/main.vibe:12:15 lambda eff
 typescript/vibelang/cases/provide-generic-requirement/main.vibe:19:25 lambda effectFn annotation
 typescript/vibelang/cases/provide-generic-requirement/main.vibe:19:52 byname program annotation
 typescript/vibelang/cases/provide-generic-requirement/main.vibe:6:27 lambda effectFn fallback
+typescript/vibelang/cases/provide-stream-loop/main.vibe:9:59 lambda effectFn table
 typescript/vibelang/cases/recursive-annotated-program.fail/main.vibe:4:21 lambda effectFn annotation
 typescript/vibelang/cases/recursive-annotated-program/main.vibe:10:18 lambda effectFn annotation
 typescript/vibelang/cases/recursive-annotated-program/main.vibe:26:21 lambda effectFn annotation
