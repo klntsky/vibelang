@@ -1073,6 +1073,8 @@ typescript/vibelang/cases/lambda-forms/main.vibe:51:10 lambda plain fallback
 typescript/vibelang/cases/lambda-forms/main.vibe:56:27 lambda plain table
 typescript/vibelang/cases/lambda-forms/main.vibe:57:41 lambda effectFn table
 typescript/vibelang/cases/lambda-forms/main.vibe:61:32 lambda program annotation
+typescript/vibelang/cases/lambda-own-contextual-type/main.vibe:23:19 lambda choice fallback
+typescript/vibelang/cases/lambda-own-contextual-type/main.vibe:24:23 lambda choice fallback
 typescript/vibelang/cases/lambda-this/main.vibe:18:25 lambda program table
 typescript/vibelang/cases/lambda-this/main.vibe:23:34 lambda effectFn table
 typescript/vibelang/cases/lambda-this/main.vibe:28:24 lambda program table

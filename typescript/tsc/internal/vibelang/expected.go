@@ -3,6 +3,7 @@ package vibelang
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
+	"slices"
 )
 
 // The expected type of a lambda is the declared, uninstantiated parameter type
@@ -34,7 +35,7 @@ func (a *analyzer) expectedAt(call *ast.Node, signature *checker.Signature, path
 	// single bare generic argument: its result context cannot choose a form.
 	if len(path) > 1 && !path[len(path)-1].element || len(path) == 1 && len(signature.Parameters()) > 1 {
 		if t := a.checker.GetContextualTypeForCandidateArgument(call, signature, path[0].argument); t != nil {
-			types := []*checker.Type{t}
+			types := withoutOwnType([]*checker.Type{t}, fn)
 			for _, step := range path[1:] {
 				types = a.stepInto(types, step)
 			}
@@ -91,10 +92,42 @@ func (a *analyzer) contextualTypes(node *ast.Node) []*checker.Type {
 	} else {
 		t = a.checker.GetContextualType(node, checker.ContextFlagsSignature)
 	}
-	if t != nil {
-		return []*checker.Type{t}
+	if t == nil {
+		return nil
 	}
-	return nil
+	return withoutOwnType([]*checker.Type{t}, node)
+}
+
+// withoutOwnType drops fn's own type from types. After inference, the
+// instantiated type of a type parameter that fn fixed is fn's own type, as for
+// the lambda in check(() => make()) with check<T>(actual: T). It says nothing
+// about fn's form, and reading its return type would re-enter fn's own return
+// type (TS7024).
+func withoutOwnType(types []*checker.Type, fn *ast.Node) []*checker.Type {
+	var out []*checker.Type
+	for _, t := range types {
+		if t.Flags()&checker.TypeFlagsUnion != 0 && slices.ContainsFunc(t.Types(), func(member *checker.Type) bool {
+			return isTypeOfDeclaration(member, fn)
+		}) {
+			for _, member := range t.Types() {
+				if !isTypeOfDeclaration(member, fn) {
+					out = append(out, member)
+				}
+			}
+			continue
+		}
+		if !isTypeOfDeclaration(t, fn) {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// isTypeOfDeclaration reports whether t is the type of the function or class
+// that node declares.
+func isTypeOfDeclaration(t *checker.Type, node *ast.Node) bool {
+	symbol := t.Symbol()
+	return symbol != nil && slices.Contains(symbol.Declarations(), node)
 }
 
 func (a *analyzer) stepInto(types []*checker.Type, step pathStep) []*checker.Type {
