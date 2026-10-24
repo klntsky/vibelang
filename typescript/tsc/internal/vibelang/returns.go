@@ -8,7 +8,7 @@ import (
 // returnOwner recognizes a whole returned expression, including concise arrows.
 // Operands of that expression still follow the ordinary call rule (D24).
 func returnOwner(node *ast.Node) *ast.Node {
-	if ast.IsParenthesizedExpression(node) || node.Kind == ast.KindConditionalExpression {
+	if ast.IsParenthesizedExpression(node) || node.Kind == ast.KindConditionalExpression || pipeEndsInCall(node) {
 		return nil // the enclosed expression or each arm owns the delegation, exactly once
 	}
 	// A conditional's arms are returned when the conditional is, so each arm
@@ -22,6 +22,14 @@ func returnOwner(node *ast.Node) *ast.Node {
 			continue
 		}
 		if parent.Kind == ast.KindConditionalExpression && parent.AsConditionalExpression().Condition != value {
+			value = parent
+			continue
+		}
+		// A pipe's value is its body's (D154). When the body is a call, that
+		// call is returned exactly as it would be unpiped: a call that runs
+		// gives its success, D24 data such as an Exit included, and only a call
+		// that keeps a subtype as data delegates at the boundary (S5-1).
+		if pipeEndsInCall(parent) && parent.AsBinaryExpression().Right == value {
 			value = parent
 			continue
 		}
@@ -146,4 +154,10 @@ func (a *analyzer) hasProgramReturn(fn *ast.Node) bool {
 		return a.returnedProgram(node) != nil || node.ForEachChild(visit)
 	}
 	return visit(fn.Body())
+}
+
+// pipeEndsInCall reports whether node is a pipe whose body is a call or a
+// tagged template, possibly parenthesized.
+func pipeEndsInCall(node *ast.Node) bool {
+	return isPipe(node) && isInvocation(ast.SkipParentheses(node.AsBinaryExpression().Right))
 }

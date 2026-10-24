@@ -1,0 +1,36 @@
+// expect-result: {"suspended":"Failure","block":"Failure","concise":"Failure","subtype":7,"code":"lost"}
+// A pipe whose last stage is a call that runs gives that call's success, as
+// the call does without the pipe (D24, D154). Returned from a function whose
+// Effect contract comes from a generic parameter, an Exit that pipe produces
+// is the function's success, not a program to run a second time (S5-1).
+// A last stage that returns a subtype as data still delegates, as the bare
+// call does.
+import * as Cause from "effect/Cause"
+import * as Effect from "effect/Effect"
+import * as Exit from "effect/Exit"
+
+error Lost { code: string }
+
+const work = (): number!Lost! => {
+  throw new Lost({ code: "lost" })
+}
+
+const held = <A, E>(effect: A!E!) => Effect.map(effect, (value) => value)
+
+export function main() {
+  const suspended = Effect.suspend(() => work() |> Effect.exit(%) |> Effect.ensuring(%, Effect.void))
+  const block = held(() => {
+    const before = 1
+    return work() |> Effect.exit(%)
+  })
+  const concise = held(() => work() |> Effect.exit(%))
+  const subtype = held(() => 7 |> Exit.succeed(%))
+  const failure = Exit.isFailure(block) ? Cause.squash(block.cause) : undefined
+  return {
+    suspended: suspended._tag,
+    block: block._tag,
+    concise: concise._tag,
+    subtype,
+    code: failure instanceof Lost ? failure.code : "none"
+  }
+}
