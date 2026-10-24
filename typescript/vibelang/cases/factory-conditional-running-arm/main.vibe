@@ -1,0 +1,21 @@
+// expect-result: {"ran":1,"skipped":0}
+// A returned conditional whose arm runs a call keeps compiling as an Effect
+// function's result: the call runs when the program does, and the other arm,
+// an Effect value, is its success.
+import * as Effect from "effect/Effect"
+
+type Hook = (n: number) => void!!
+
+let ran = 0
+const work = (): void!! => {
+  ran++
+}
+
+const hook: Hook = (n) => n > 0 ? (work() |> Effect.orDie(%)) : Effect.void
+
+export function main() {
+  hook(0)
+  const skipped = ran
+  hook(1)
+  return { ran, skipped }
+}

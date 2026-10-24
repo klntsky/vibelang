@@ -156,6 +156,18 @@ func (a *analyzer) factoryProgram(expr *ast.Node, success *checker.Type) bool {
 	if isInvocation(expr) {
 		return false
 	}
+	// A returned conditional returns one of its arms, so an arm that is a
+	// program makes a factory, as a `return` of it does (returnOwner gives
+	// each arm its own delegation). A conditional with an arm that runs, such
+	// as `c ? work() : Effect.void`, keeps compiling as an Effect function's
+	// result, as it always has.
+	if expr.Kind == ast.KindConditionalExpression {
+		if conditionalRunsArm(expr) {
+			return false
+		}
+		conditional := expr.AsConditionalExpression()
+		return a.factoryProgram(conditional.WhenTrue, success) || a.factoryProgram(conditional.WhenFalse, success)
+	}
 	if isLambda(expr) && len(expr.Parameters()) == 0 {
 		// Test the return under the pre-factory success context. D7/D9 may
 		// already convert it to a program or an Effect function accepted by
@@ -425,4 +437,18 @@ func (a *analyzer) factoryInfo(fn *ast.Node) *effectInfo {
 		}
 	})
 	return info
+}
+
+// conditionalRunsArm reports whether an arm of a conditional, or of a
+// conditional nested in an arm, is a call, a tagged template, or a pipe that
+// ends in one.
+func conditionalRunsArm(node *ast.Node) bool {
+	conditional := node.AsConditionalExpression()
+	for _, arm := range []*ast.Node{conditional.WhenTrue, conditional.WhenFalse} {
+		arm = ast.SkipParentheses(arm)
+		if isInvocation(arm) || pipeEndsInCall(arm) || arm.Kind == ast.KindConditionalExpression && conditionalRunsArm(arm) {
+			return true
+		}
+	}
+	return false
 }
