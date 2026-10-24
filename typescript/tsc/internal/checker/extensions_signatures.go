@@ -39,3 +39,13 @@ func (c *Checker) checkContextualSignatureDeclaration(node *ast.Node) {
 func (c *Checker) IsCheckingSignatureOf(fn *ast.Node) bool {
 	return c.signatureChecks()[fn] > 0
 }
+
+// IsResolvingTypeOf reports whether the type of symbol, a variable, parameter
+// or property, is being resolved: its declaration's initializer is being
+// checked. An extension that resolves a call reading symbol there, as a hook
+// deciding a lambda's form in that initializer does, would report TypeScript's
+// circularity error (TS7022) for a reference that TypeScript itself checks
+// only once symbol has a type.
+func (c *Checker) IsResolvingTypeOf(symbol *ast.Symbol) bool {
+	return c.findResolutionCycleStartIndex(symbol, TypeSystemPropertyNameType) >= 0
+}

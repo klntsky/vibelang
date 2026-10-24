@@ -347,6 +347,9 @@ func (a *analyzer) canBePlain(fn *ast.Node) bool {
 	if s := a.lambdas[fn]; s != nil && s.typedAsWritten && a.contractOf(fn) != nil {
 		return false // TypeScript gave fn its contract's Effect type (functionExpressionType)
 	}
+	if a.isBodyDeferred(fn) {
+		return a.hasPlainContract(fn) // the deferred check reports a body that cannot be plain (EK2003)
+	}
 	// D147 skips by-name argument bodies; S5-1 keeps returned programs effectful.
 	return !a.forEachRunningCallInBody(fn, a.performs) && !hasEscapingThrow(fn) && !declaresUsing(fn) && !hasVibeLangStatement(fn) && !a.hasStreamLoop(fn) && !a.hasProgramReturn(fn)
 }
@@ -512,4 +515,38 @@ func contextualReturnType(c *checker.Checker, fn *ast.Node, t *checker.Type) *ch
 		return success
 	}
 	return t
+}
+
+// isBodyDeferred reports whether fn's body cannot be read yet, as in
+//
+//	const Recursive = Flow.make("r", { body: (p): Node<number> => Recursive.call(p) })
+//
+// while TypeScript infers make's type arguments: fn has a return annotation,
+// so TypeScript types its body only after the initializer fn is in, and the
+// body calls the variable that initializer declares. Resolving that call
+// sooner reports a circularity (TS7022) that TypeScript does not, so until
+// then fn's form follows its annotation (D67).
+func (a *analyzer) isBodyDeferred(fn *ast.Node) bool {
+	body := fn.Body()
+	if fn.Type() == nil || body == nil {
+		return false
+	}
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if ast.IsCallExpression(node) {
+			// Only a callee's leftmost name is a reference whose symbol can
+			// be resolved here without typing anything.
+			root := node.Expression()
+			for ast.IsPropertyAccessExpression(root) || ast.IsElementAccessExpression(root) || ast.IsParenthesizedExpression(root) {
+				root = root.Expression()
+			}
+			if ast.IsIdentifier(root) {
+				if symbol := a.checker.GetResolvedSymbol(root); symbol != nil && symbol.Flags()&ast.SymbolFlagsVariable != 0 && a.checker.IsResolvingTypeOf(symbol) {
+					return true
+				}
+			}
+		}
+		return node.ForEachChild(visit)
+	}
+	return visit(body)
 }

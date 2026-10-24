@@ -59,6 +59,7 @@ examples/vue-vite/src/todos.vibe:20:5 lambda effectFn service
 templates/app/src/greeting.test.vibe:4:28 block appended/effectFn table
 templates/app/src/greeting.test.vibe:8:42 block appended/effectFn table
 templates/app/src/main.vibe:8:3 lambda effectFn service
+typescript/vibelang/cases/annotated-lambda-reads-its-variable/main.vibe:26:9 lambda plain annotation
 typescript/vibelang/cases/await-ops.fail/main.vibe:17:15 lambda plain table
 typescript/vibelang/cases/await-ops.fail/main.vibe:8:20 lambda effectFn table
 typescript/vibelang/cases/await-ops/main.vibe:100:22 byname program table

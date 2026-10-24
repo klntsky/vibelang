@@ -105,6 +105,9 @@ func (a *analyzer) addFailures(info *effectInfo, call *ast.Node) {
 // failures that can end fn: one that no try block of fn with a catch clause
 // encloses. Such a function is an Effect, as one with an escaping throw is.
 func (a *analyzer) hasEscapingFailure(fn *ast.Node) bool {
+	if a.isBodyDeferred(fn) {
+		return false
+	}
 	return a.forEachFailingCall(fn, func(call *ast.Node, caught bool) bool { return !caught })
 }
 

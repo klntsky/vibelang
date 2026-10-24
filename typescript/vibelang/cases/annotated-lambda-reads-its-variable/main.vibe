@@ -1,0 +1,35 @@
+// A lambda with a return annotation may call the variable whose initializer
+// it is in: TypeScript types the lambda's body only once that variable has a
+// type, while it infers the call's type arguments from the annotation, and
+// the lambda's form follows the annotation (D67). Deciding the form resolved
+// the call first: TS7022, "'Countdown' implicitly has type 'any'".
+module plans {
+  export interface Plan<A> {
+    readonly value: A
+  }
+
+  export interface Declared<P> {
+    readonly name: string
+    readonly body: (payload: P) => Plan<number>
+  }
+
+  export const declare = <P>(name: string, options: { payload: P; body: (payload: P) => Plan<number> }): Declared<P> => ({
+    name,
+    body: options.body
+  })
+}
+
+import { type Plan, declare } from plans
+
+const Countdown = declare("countdown", {
+  payload: { n: 0 },
+  body: ({ n }): Plan<number> => n === 0 ? { value: 0 } : { value: Countdown.body({ n: n - 1 }).value + 1 }
+})
+
+const counted = Countdown.body({ n: 3 }).value
+
+// expect-result: ["countdown",3]
+export function main() {
+  yieldNow()
+  return [Countdown.name, counted]
+}
