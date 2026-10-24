@@ -14,7 +14,7 @@ export function renderReleasePage(path, text, version) {
   let output = text
     .replace(new RegExp(String.raw`\b(vibelang(?:-[a-z0-9-]+)?@)` + semver, "g"), (_, prefix) => prefix + version)
     .replace(new RegExp(String.raw`\b((?:VibeLang|vibelang|[Vv]ersion|Rehearsed for|In) )` + semver, "g"), (_, prefix) => prefix + version)
-    .replace(new RegExp('(expect \\x60)' + semver + '(\\x60)', "g"), (_, prefix, suffix) => prefix + version + suffix)
+    .replace(new RegExp('(vibelang@' + semver + ' version\\x60? and expect \\x60)' + semver + '(\\x60)', "g"), (_, prefix, suffix) => prefix + version + suffix)
   if (path === "site/src/pages/index.mdx") {
     output = output.replace(new RegExp("(<strong>)" + semver + "(</strong>)", "g"), (_, prefix, suffix) => prefix + version + suffix)
   }

@@ -15,6 +15,14 @@ test("install pins, compiler output, prose and homepage badges derive from the c
   assert.equal(renderReleasePage("page.md", next, "9.8.7"), next)
 })
 
+test("a toolchain version the docs expect keeps its value", () => {
+  const text = "Run \x60node --version\x60 and expect \x60v26.0.0\x60 or later. With Bun, run \x60bun --version\x60 and expect \x601.4.0\x60 or later.\n" +
+    "Run \x60npm view vibelang@0.0.2 version\x60 and expect \x600.0.2\x60."
+  assert.equal(renderReleasePage("docs/user/src/setup.md", text, "9.8.7"),
+    "Run \x60node --version\x60 and expect \x60v26.0.0\x60 or later. With Bun, run \x60bun --version\x60 and expect \x601.4.0\x60 or later.\n" +
+    "Run \x60npm view vibelang@9.8.7 version\x60 and expect \x609.8.7\x60.")
+})
+
 test("historical release notes and ordinary addresses keep their original values", () => {
   const text = "Version 0.0.2; vibelang@0.0.2"
   assert.equal(renderReleasePage("docs/user/src/setup/release-notes.md", text, "9.8.7"), text)
