@@ -546,6 +546,10 @@ typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:48:14 lambda effectFn s
 typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:55:32 lambda program table
 typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:56:34 lambda program table
 typescript/vibelang/cases/ch24-profile/ch24-profile.vibe:59:20 lambda program table
+typescript/vibelang/cases/conditional-factory-lambda-infers-channels/main.vibe:10:15 lambda effectFn annotation
+typescript/vibelang/cases/conditional-factory-lambda-infers-channels/main.vibe:11:19 lambda effectFn annotation
+typescript/vibelang/cases/conditional-factory-lambda-infers-channels/main.vibe:14:28 lambda plain fallback
+typescript/vibelang/cases/conditional-factory-lambda-infers-channels/main.vibe:5:13 lambda effectFn annotation
 typescript/vibelang/cases/conditional-record-environment/a.vibe:32:24 lambda plain annotation
 typescript/vibelang/cases/conditional-record-environment/a.vibe:49:43 lambda plain annotation
 typescript/vibelang/cases/conditional-record-inexact.fail/a.vibe:2:24 lambda plain annotation

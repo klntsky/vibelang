@@ -473,6 +473,23 @@ func ownerCall(fn *ast.Node) (*ast.Node, []pathStep) {
 	return nil, nil
 }
 
+// conditionalRoot returns the outermost conditional expression that holds
+// node in a branch, through parentheses, or node when no conditional does.
+func conditionalRoot(node *ast.Node) *ast.Node {
+	root := node
+	for n := node; n.Parent != nil; n = n.Parent {
+		parent := n.Parent
+		if parent.Kind == ast.KindParenthesizedExpression {
+			continue
+		}
+		if parent.Kind != ast.KindConditionalExpression || parent.AsConditionalExpression().Condition == n {
+			break
+		}
+		root = parent
+	}
+	return root
+}
+
 // pathStep is one step from a call's argument list down to a lambda: the
 // argument at an index, an array element, or an object property.
 type pathStep struct {
@@ -561,9 +578,11 @@ func (a *analyzer) isBodyDeferred(fn *ast.Node) bool {
 }
 
 // namesCandidateTypeParameters reports whether t mentions a type parameter of
-// the declared candidate that fn's owner call is checked against.
+// the declared candidate that fn's owner call is checked against. A branch of
+// a conditional takes the conditional's contextual type, so fn may stand in a
+// branch of the argument, as in run(watching ? observe : () => Effect.void).
 func (a *analyzer) namesCandidateTypeParameters(fn *ast.Node, t *checker.Type) bool {
-	call, _ := ownerCall(fn)
+	call, _ := ownerCall(conditionalRoot(fn))
 	if call == nil || t == nil {
 		return false
 	}
