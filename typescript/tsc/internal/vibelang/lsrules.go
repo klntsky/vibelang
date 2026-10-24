@@ -181,16 +181,27 @@ func isDiscardingForm(expression *ast.Node) bool {
 
 // checkReturnedEffect reports EK4802 when fn, an Effect function without a
 // written contract, returns value, an Effect value: its caller runs fn and
-// gets the program back.
+// gets the program back. When value as a whole is not an Effect, each part of
+// it that can be what fn returns is asked about the same way: an arm of a
+// conditional, an operand of ?? or ||, the right side of &&. In
+// `n === 0 ? Effect.interrupt : Console.log(n)` the call runs and the other
+// arm is the success value, so emit(0) succeeded with the interruption.
 func (r *ruleCheck) checkReturnedEffect(fn *ast.Node, value *ast.Node) {
 	if !isLowerable(fn) || isProducer(fn) || fn.Type() != nil || !r.a.isEffect(fn) {
 		return
 	}
+	r.checkReturnedValue(fn, value)
+}
+
+func (r *ruleCheck) checkReturnedValue(fn *ast.Node, value *ast.Node) {
 	if isInvocation(ast.SkipParentheses(value)) && r.a.runs(ast.SkipParentheses(value)) {
 		return // the call runs here; its success value is the result
 	}
 	valueType := r.c.GetTypeAtLocation(value)
 	if !isEffectType(r.c, valueType) {
+		for _, part := range returnedParts(value) {
+			r.checkReturnedValue(fn, part)
+		}
 		return
 	}
 	if declared := r.a.declaredProgramReturn(fn); declared != nil {
@@ -200,6 +211,28 @@ func (r *ruleCheck) checkReturnedEffect(fn *ast.Node, value *ast.Node) {
 	}
 	d := report(r.c, value, EK4802, messageText(value, "This value"), functionDisplayName(fn))
 	note(d, "Call it to return its result: {0}. To return the program itself, write the contract.", callText(value))
+}
+
+// returnedParts returns the parts of value, a returned expression, whose
+// value can be the one returned: a conditional's arms, the operands of ?? and
+// ||, and the right side of &&, whose left side is returned only when it is
+// falsy, which an Effect never is.
+func returnedParts(value *ast.Node) []*ast.Node {
+	value = ast.SkipParentheses(value)
+	switch {
+	case value.Kind == ast.KindConditionalExpression:
+		conditional := value.AsConditionalExpression()
+		return []*ast.Node{conditional.WhenTrue, conditional.WhenFalse}
+	case ast.IsBinaryExpression(value):
+		binary := value.AsBinaryExpression()
+		switch binary.OperatorToken.Kind {
+		case ast.KindQuestionQuestionToken, ast.KindBarBarToken:
+			return []*ast.Node{binary.Left, binary.Right}
+		case ast.KindAmpersandAmpersandToken:
+			return []*ast.Node{binary.Right}
+		}
+	}
+	return nil
 }
 
 // checkThrow reports what a VibeLang function's throw statement fails with:

@@ -1,0 +1,2 @@
+Call it to return its result: Effect.interrupt().
+Call it to return its result: (Effect.never)().

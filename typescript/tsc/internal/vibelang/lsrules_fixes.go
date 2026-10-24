@@ -3,6 +3,7 @@ package vibelang
 import (
 	"context"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -69,6 +70,10 @@ var callEffectFix = &ls.CodeFixProvider{
 				return true
 			case ast.IsArrowFunction(parent):
 				return parent.Body() == node
+			case parent.Kind == ast.KindConditionalExpression:
+				return parent.AsConditionalExpression().Condition != node // an arm EK4802 reports
+			case ast.IsBinaryExpression(parent):
+				return slices.Contains(returnedParts(parent), node)
 			}
 			return false
 		})
