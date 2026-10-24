@@ -113,7 +113,7 @@ func (c *comparer) same(a, b *ast.Node) error {
 			return c.differ(a, fmt.Sprintf("operator %v became %v", operator(a), operator(b)))
 		}
 	}
-	aChildren, bChildren := unbraced(a, children(a)), unbraced(b, children(b))
+	aChildren, bChildren := unbraced(a, statements(a, children(a))), unbraced(b, statements(b, children(b)))
 	if len(aChildren) != len(bChildren) {
 		return c.differ(a, fmt.Sprintf("%v has %d children, then %d", a.Kind, len(aChildren), len(bChildren)))
 	}
@@ -161,6 +161,20 @@ func children(node *ast.Node) []*ast.Node {
 		return false
 	})
 	return result
+}
+
+// statements returns the children of node without the empty statements of a
+// statement list: dprint's "asi" setting writes one before a statement that
+// starts with a parenthesis or a bracket, as in ;(() => { ... })(), and it
+// changes nothing. An empty statement that is the body of an if or a loop is
+// that statement's child, not a list's, and stays.
+func statements(node *ast.Node, nodes []*ast.Node) []*ast.Node {
+	switch node.Kind {
+	case ast.KindBlock, ast.KindSourceFile, ast.KindModuleBlock, ast.KindCaseClause, ast.KindDefaultClause:
+	default:
+		return nodes
+	}
+	return slices.DeleteFunc(slices.Clone(nodes), func(child *ast.Node) bool { return child.Kind == ast.KindEmptyStatement })
 }
 
 // unbraced returns the children of node, replacing a block that holds one

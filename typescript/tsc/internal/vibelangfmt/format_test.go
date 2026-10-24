@@ -428,6 +428,8 @@ func TestSameProgram(t *testing.T) {
 		{"braces around an if's statement", "function f(x: number) {\n  if (x > 1) { return x } else { return 0 }\n  for (const y of [x]) { log(y) }\n}\n", "function f(x: number) {\n  if (x > 1) return x\n  else return 0\n  for (const y of [x]) log(y)\n}\n", ""},
 		{"braces that keep an else with its if", "if (a) { if (b) f() } else g()\n", "if (a) if (b) f()\nelse g()\n", "1:1: KindIfStatement has 3 children, then 2"},
 		{"braces around a declaration", "if (a) { function f() {} }\n", "if (a) function f() {}\n", "1:8: KindBlock became KindFunctionDeclaration"},
+		{"an ASI guard before a parenthesized statement", "function f() {\n  (() => {\n    g()\n  })()\n}\n", "function f() {\n  ;(() => {\n    g()\n  })()\n}\n", ""},
+		{"an empty statement that is an if's body", "if (a) ;\nelse g()\n", "if (a) g()\n", "1:1:"},
 		{"exports across a statement", "export * from \"./b\"\nconst x = 1\nexport * from \"./a\"\n", "export * from \"./a\"\nconst x = 1\nexport * from \"./b\"\n", "1:15:"},
 	}
 	for _, c := range cases {
