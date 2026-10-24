@@ -2,6 +2,7 @@ package vibelangmapper
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -202,7 +203,17 @@ func TestEmbeddedTableHeader(t *testing.T) {
 			t.Errorf("input %+v has no content hash", in)
 		}
 	}
-	for pkg, version := range map[string]string{"effect": "4.0.5", "@effect/vitest": "4.0.5", "@effect/platform-node": "4.0.5", "@effect/platform-bun": "4.0.5", "vibelang-runtime": "0.0.2"} {
+	// The generator pins the runtime at its package.json version.
+	repo := filepath.Join("..", "..", "..", "..")
+	var runtime struct{ Version string }
+	data, err := os.ReadFile(filepath.Join(repo, "packages", "runtime", "package.json"))
+	if err == nil {
+		err = json.Unmarshal(data, &runtime)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	for pkg, version := range map[string]string{"effect": "4.0.5", "@effect/vitest": "4.0.5", "@effect/platform-node": "4.0.5", "@effect/platform-bun": "4.0.5", "vibelang-runtime": runtime.Version} {
 		if pinned[pkg].Version != version {
 			t.Errorf("%s pinned at %q, want %s", pkg, pinned[pkg].Version, version)
 		}
@@ -210,7 +221,6 @@ func TestEmbeddedTableHeader(t *testing.T) {
 	// The pins are content, not only versions: recompute each digest from
 	// the installed package (docs/tools/node_modules, pinned by its bun.lock)
 	// and the runtime's sources.
-	repo := filepath.Join("..", "..", "..", "..")
 	nodeModules := os.Getenv("FORMS_NODE_MODULES")
 	if nodeModules == "" {
 		nodeModules = filepath.Join(repo, "docs", "tools", "node_modules")
