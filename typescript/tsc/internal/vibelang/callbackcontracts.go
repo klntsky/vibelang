@@ -15,12 +15,14 @@ import (
 // fail, needs nothing" (Chapter 16):
 //
 //	function mapAll<A, B>(items: ReadonlyArray<A>, f: (a: A) => B) { … }
-//	// <A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>) => Effect<B[], E, R>
+//	// <A, B, E = never, R = never>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>) => Effect<B[], E, R>
 //
 // Each such parameter's return type B becomes Effect<B, E, R>, where E and R
 // are type parameters the function gains. A call infers them from its
-// argument, and a call to the callback runs it and passes them on. A callback
-// whose return type is an Effect already has its contract.
+// argument, and a call to the callback runs it and passes them on. E and R
+// default to never: a call that omits an optional callback, `f?.(x)` in the
+// body, adds no failure and needs nothing. A callback whose return type is an
+// Effect already has its contract.
 
 // callbackContracts lists the callback parameters of one function that have
 // no contract, and the E and R type parameters each of them gains.
@@ -56,9 +58,10 @@ func (a *analyzer) callbackContractsOf(fn *ast.Node) *callbackContracts {
 		if i > 0 {
 			suffix = strconv.Itoa(i + 1)
 		}
+		never := a.checker.GetNeverType()
 		s.typeParameters = append(s.typeParameters,
-			a.checker.NewTypeParameter(freeName("E"+suffix, taken)),
-			a.checker.NewTypeParameter(freeName("R"+suffix, taken)))
+			a.checker.NewTypeParameterWithDefault(freeName("E"+suffix, taken), never),
+			a.checker.NewTypeParameterWithDefault(freeName("R"+suffix, taken), never))
 	}
 	a.callbacks[fn] = s
 	return s
@@ -80,9 +83,13 @@ func (a *analyzer) uncontractedCallbackOf(fn *ast.Node, t *checker.Type) *ast.No
 }
 
 // callbackContractText writes parameter, an uncontracted callback, with the
-// contract that says it cannot fail and needs nothing: make: () => Boom!!.
+// contract that says it cannot fail and needs nothing: make: () => Boom!!,
+// or make?: () => Boom!! for an optional one.
 func callbackContractText(file *ast.SourceFile, parameter *ast.Node) string {
 	name := declarationName(parameter)
+	if parameter.QuestionToken() != nil {
+		name += "?"
+	}
 	callback := parameter.Type()
 	if callback == nil || callback.Kind != ast.KindFunctionType || callback.Type() == nil {
 		return name
@@ -186,7 +193,7 @@ func callbackParameterType(c *checker.Checker, parameter *ast.Node, t *checker.T
 //
 // becomes
 //
-//	export declare function mapAll<A, B, E, R>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>): Effect<B[], E, R>
+//	export declare function mapAll<A, B, E = never, R = never>(items: ReadonlyArray<A>, f: (a: A) => Effect<B, E, R>): Effect<B[], E, R>
 //
 // It runs before the prelude transform, which imports the Effect it writes.
 func declareCallbackContracts(resolver printer.EmitResolver, sourceFile *ast.SourceFile) func(*ast.SourceFile) *ast.SourceFile {
@@ -237,7 +244,7 @@ func (a *analyzer) declareContracts(f *printer.NodeFactory, declaration *ast.Nod
 		typeParameters = append(typeParameters, fn.TypeParameters.Nodes...)
 	}
 	for _, tp := range s.typeParameters {
-		typeParameters = append(typeParameters, f.NewTypeParameterDeclaration(nil /*modifiers*/, f.NewIdentifier(tp.Symbol().Name()), nil /*constraint*/, nil /*expression*/, nil /*defaultType*/))
+		typeParameters = append(typeParameters, f.NewTypeParameterDeclaration(nil /*modifiers*/, f.NewIdentifier(tp.Symbol().Name()), nil /*constraint*/, nil /*expression*/, f.NewKeywordTypeNode(ast.KindNeverKeyword)))
 	}
 	parameters := slices.Clone(fn.Parameters.Nodes)
 	for i, parameter := range s.parameters {

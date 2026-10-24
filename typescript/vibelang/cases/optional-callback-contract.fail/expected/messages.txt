@@ -1,0 +1,2 @@
+If it cannot fail, write its contract: label?: (seconds: number) => Late!!
+If it cannot fail, write its contract: log?: (n: number) => void!!

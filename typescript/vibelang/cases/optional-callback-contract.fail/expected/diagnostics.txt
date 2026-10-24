@@ -1,0 +1,4 @@
+main.vibe(7,10): error EK2001
+main.vibe(7,10): error EK2002
+main.vibe(11,3): error EK2001
+main.vibe(11,3): error EK2002

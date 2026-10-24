@@ -45,6 +45,30 @@ func callExpressionType(c *checker.Checker, call *ast.Node, t *checker.Type) *ch
 	return t
 }
 
+// runningCallInferenceTarget keeps TypeScript from inferring a candidate's
+// type arguments from the contextual type of a call that runs the Effect the
+// candidate returns. Such a call stands for that Effect's success value
+// (callExpressionType), so its contextual type, as in `const user: User =
+// find(id)`, is a value's, not the Effect's. Read as the Effect, a contextual
+// type that is itself an Effect, such as an error instance, which fails with
+// itself, gave the Effect's E the error: `function f(): Late!! { return
+// late() }` drew EK2001 for an E that no argument names. Any other value type
+// gave no inference. Where the contextual type expects an Effect, the call
+// stands where a program is expected (D147, D262, D269), and TypeScript
+// infers from it as usual.
+func runningCallInferenceTarget(c *checker.Checker, call *ast.Node, contextual *checker.Type, target *checker.Type) *checker.Type {
+	if !isInvocation(call) || !inLowerableBody(call) || !isVibeLangFile(ast.GetSourceFileOfNode(call)) || !isEffectType(c, target) {
+		return target
+	}
+	a := analyzerFor(c)
+	for _, part := range contextual.Distributed() {
+		if a.isExpectedEffect(part) {
+			return target
+		}
+	}
+	return nil
+}
+
 // callRunsResult is the shared checker/lowering predicate for D24: a call
 // runs an Effect-valued result even when its callee is plain JavaScript.
 // S3-3 covers plain factories; D270 extends the same predicate to all-Effect

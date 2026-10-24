@@ -9648,8 +9648,8 @@ func (c *Checker) inferTypeArguments(node *ast.Node, signature *Signature, args 
 		skipBindingPatterns := core.Every(signature.TypeParameters(), func(p *Type) bool { return c.getDefaultFromTypeParameter(p) != nil })
 		contextualType := c.getContextualType(node, core.IfElse(skipBindingPatterns, ContextFlagsSkipBindingPatterns, ContextFlagsNone))
 		if contextualType != nil {
-			inferenceTargetType := c.getReturnTypeOfSignature(signature)
-			if c.couldContainTypeVariables(inferenceTargetType) {
+			inferenceTargetType := c.applyReturnInferenceTargetHooks(node, contextualType, c.getReturnTypeOfSignature(signature))
+			if inferenceTargetType != nil && c.couldContainTypeVariables(inferenceTargetType) {
 				outerContext := c.getInferenceContext(node)
 				isFromBindingPattern := !skipBindingPatterns && c.getContextualType(node, ContextFlagsSkipBindingPatterns) != contextualType
 				// A return type inference from a binding pattern can be used in instantiating the contextual
@@ -19813,6 +19813,9 @@ func (c *Checker) cloneSignature(sig *Signature) *Signature {
 	result.target = sig.target
 	result.mapper = sig.mapper
 	result.setComposite(c, sig.getComposite())
+	if given := sig.getGivenReturnType(); given != nil {
+		result.ensureExtra(c).givenReturnType = given
+	}
 	return result
 }
 
@@ -20512,6 +20515,8 @@ func (c *Checker) getReturnTypeOfSignature(sig *Signature) *Type {
 		t = c.instantiateType(c.getReturnTypeOfSignature(sig.target), sig.mapper)
 	case sig.getComposite() != nil:
 		t = c.instantiateType(c.getUnionOrIntersectionType(core.Map(sig.getComposite().signatures, c.getReturnTypeOfSignature), sig.getComposite().isUnion, UnionReductionSubtype), sig.mapper)
+	case sig.getGivenReturnType() != nil:
+		t = sig.getGivenReturnType()
 	default:
 		t = c.getReturnTypeFromAnnotation(sig.declaration)
 		if t == nil {

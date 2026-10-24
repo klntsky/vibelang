@@ -59,3 +59,12 @@ func (c *Checker) applyParameterTypeHooks(parameter *ast.Node, t *Type) *Type {
 func (c *Checker) NewTypeParameter(name string) *Type {
 	return c.getDeclaredTypeOfTypeParameter(c.newSymbol(ast.SymbolFlagsTypeParameter, name))
 }
+
+// NewTypeParameterWithDefault returns a new type parameter named name whose
+// default is defaultType, the type a call infers for it when no argument
+// names it.
+func (c *Checker) NewTypeParameterWithDefault(name string, defaultType *Type) *Type {
+	t := c.NewTypeParameter(name)
+	t.AsTypeParameter().resolvedDefaultType = defaultType
+	return t
+}

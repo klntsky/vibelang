@@ -1539,6 +1539,7 @@ type signatureExtra struct {
 	resolvedTypePredicate *TypePredicate
 	isolatedSignatureType *Type
 	composite             *CompositeSignature
+	givenReturnType       *Type // see NewFunctionTypeWithReturnType
 }
 
 func (s *Signature) ensureExtra(c *Checker) *signatureExtra {
@@ -1599,6 +1600,15 @@ func (s *Signature) getIsolatedSignatureType() *Type {
 		return nil
 	}
 	return s.extra.isolatedSignatureType
+}
+
+// getGivenReturnType returns the return type that NewFunctionTypeWithReturnType
+// gave s in place of its declaration's, or nil.
+func (s *Signature) getGivenReturnType() *Type {
+	if s.extra == nil {
+		return nil
+	}
+	return s.extra.givenReturnType
 }
 
 func (s *Signature) Id() SignatureId {

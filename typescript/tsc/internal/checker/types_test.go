@@ -592,7 +592,9 @@ func TestCompactTypeNodeLinksLayout(t *testing.T) {
 func TestCompactSignatureLayout(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, unsafe.Sizeof(Signature{}), 16+8*unsafe.Sizeof(uintptr(0)))
-	assert.Equal(t, unsafe.Sizeof(signatureExtra{}), 7*unsafe.Sizeof(uintptr(0)))
+	// VibeLang adds givenReturnType (NewFunctionTypeWithReturnType) to the
+	// seven words upstream keeps here.
+	assert.Equal(t, unsafe.Sizeof(signatureExtra{}), 8*unsafe.Sizeof(uintptr(0)))
 }
 
 func TestSignatureExtra(t *testing.T) {

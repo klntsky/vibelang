@@ -114,12 +114,16 @@ func (c *Checker) applyFunctionExpressionTypeHooks(fn *ast.Node, t *Type) *Type 
 }
 
 // NewFunctionTypeWithReturnType returns a function type with the parameters
-// and type parameters of signature and the given return type.
+// and type parameters of signature and the given return type. A copy of its
+// signature keeps that return type: the signature of an optional call such as
+// `f?.(x)` is one, and before, its return type was read again from the
+// declaration, so the call lost the Effect the type gave it.
 func (c *Checker) NewFunctionTypeWithReturnType(symbol *ast.Symbol, signature *Signature, returnType *Type) *Type {
 	result := c.cloneSignature(signature)
 	result.target = nil
 	result.mapper = nil
 	result.resolvedReturnType = returnType
+	result.ensureExtra(c).givenReturnType = returnType
 	return c.newAnonymousType(symbol, nil, []*Signature{result}, nil, nil)
 }
 
@@ -142,6 +146,33 @@ func (c *Checker) applyContextualReturnTypeHooks(fn *ast.Node, t *Type) *Type {
 		t = hook(c, fn, t)
 	}
 	return t
+}
+
+// ReturnInferenceTargetHook can replace target, the return type of call's
+// candidate signature, as the type that TypeScript infers the candidate's type
+// arguments to from contextual, the call's contextual type, or return nil to
+// infer nothing from contextual. An extension whose call does not stand for
+// what its signature returns, such as a call whose value is the success of
+// the Effect it runs, returns nil.
+type ReturnInferenceTargetHook func(c *Checker, call *ast.Node, contextual *Type, target *Type) *Type
+
+var returnInferenceTargetHooks []ReturnInferenceTargetHook
+
+// RegisterReturnInferenceTargetHook adds hook to every checker. Call it only
+// from the init function of an in-tree package that tsc/cmd/tsc imports;
+// registration is not synchronized.
+func RegisterReturnInferenceTargetHook(hook ReturnInferenceTargetHook) {
+	returnInferenceTargetHooks = append(returnInferenceTargetHooks, hook)
+}
+
+func (c *Checker) applyReturnInferenceTargetHooks(call *ast.Node, contextual *Type, target *Type) *Type {
+	for _, hook := range returnInferenceTargetHooks {
+		if target == nil {
+			return nil
+		}
+		target = hook(c, call, contextual, target)
+	}
+	return target
 }
 
 // AnnotatedReturnInferenceHook can replace t, the type of the return type

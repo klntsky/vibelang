@@ -23,6 +23,7 @@ func init() {
 	compiler.RegisterDeclarationTransformerHook(declareCallbackContracts) // before transformDeclarations, which imports what it writes
 	compiler.RegisterDeclarationTransformerHook(transformDeclarations)
 	checker.RegisterCallExpressionTypeHook(callExpressionType)
+	checker.RegisterReturnInferenceTargetHook(runningCallInferenceTarget)
 	checker.RegisterInferredReturnTypeHook(inferredReturnType)
 	checker.RegisterCallCandidateHook(callCandidate)
 	checker.RegisterCandidateFilterHook(filterCandidate)

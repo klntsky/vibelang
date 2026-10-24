@@ -586,12 +586,12 @@ EK4301 (`callbacks.go`) reports a lambda in plain form that pauses, a `.vibe` fu
 
 ```ts
 // mapAll.vibe                                      // mapAll.d.ts
-function mapAll<A, B>(                           export declare function mapAll<A, B, E, R>(
+function mapAll<A, B>(                           export declare function mapAll<A, B, E = never, R = never>(
   items: ReadonlyArray<A>,                         items: ReadonlyArray<A>,
   f: (a: A) => B) { … }                            f: (a: A) => Effect<B, E, R>): Effect<B[], E, R>;
 ```
 
-A parameter whose annotation is a function type returning something other than an Effect accepts any contract (`callbackcontracts.go`). The type parameters hook adds `E` and `R` to the function's signature and to the outer type parameters of what it declares, and the parameter type hook gives the parameter the type `(a: A) => Effect<B, E, R>`, so a call to the callback runs it, and each call of the function infers `E` and `R` from its argument. A lambda passed as an argument keeps the types its call gives it. A declaration transformer hook writes the type parameters and the contracts into the `.d.ts`, before the prelude transform imports `Effect`. A call to a generic `.vibe` function, such as `mapAll`, adds the callee's E and R as the call instantiates them.
+A parameter whose annotation is a function type returning something other than an Effect accepts any contract (`callbackcontracts.go`). The type parameters hook adds `E` and `R` to the function's signature and to the outer type parameters of what it declares, and the parameter type hook gives the parameter the type `(a: A) => Effect<B, E, R>`, so a call to the callback runs it, and each call of the function infers `E` and `R` from its argument, or `never` for an omitted optional callback. A lambda passed as an argument keeps the types its call gives it. A declaration transformer hook writes the type parameters and the contracts into the `.d.ts`, before the prelude transform imports `Effect`. A call to a generic `.vibe` function, such as `mapAll`, adds the callee's E and R as the call instantiates them.
 
 ### Commits
 

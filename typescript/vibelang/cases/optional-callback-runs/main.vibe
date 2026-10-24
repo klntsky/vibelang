@@ -1,0 +1,48 @@
+// expect-result: ["custom 2","custom 2","default",true,20,"caught thrown",true,"ran 2","default",-1]
+// An optional call of a callback without a contract runs the callback when it
+// is present, as a required call does (D68).
+error Late { label: string }
+
+const coalesced = (label?: (seconds: number) => Late) => {
+  return label?.(2) ?? new Late({ label: "default" })
+}
+
+const bound = (label?: (seconds: number) => Late) => {
+  const value = label?.(2)
+  return value
+}
+
+const scaled = (scale?: (n: number) => number) => scale?.(2)
+
+const announced = (log?: (n: number) => void) => {
+  log?.(2)
+  return true
+}
+
+// An omitted callback adds no failure and needs nothing: E and R default to never.
+function defaulted(): Late!! {
+  return coalesced()
+}
+
+function unscaled(): number!! {
+  return scaled() ?? -1
+}
+
+export function main() {
+  const ran: Array<string> = []
+  const a = coalesced((s) => new Late({ label: "custom " + s }))
+  const b = bound((s) => new Late({ label: "custom " + s }))
+  const c = coalesced()
+  const d = bound()
+  const n = scaled((n) => {
+    sleep("1 millis")
+    return n * 10
+  })
+  const caught = coalesced((s) => {
+    throw new Late({ label: "thrown" })
+  }) catch (e) => new Late({ label: "caught " + e.label })
+  const announcedOk = announced((n) => {
+    ran.push("ran " + n)
+  })
+  return [a.label, b?.label, c.label, d === undefined, n, caught.label, announcedOk, ran[0], defaulted().label, unscaled()]
+}
