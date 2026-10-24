@@ -328,14 +328,15 @@ func (a *analyzer) programEffectInterface() *checker.Type {
 
 // plainPlan records what the lowering does with plain functions in one file.
 type plainPlan struct {
-	directs       map[*ast.Node]bool             // function declarations split into a $direct variant and an Effect wrapper
-	directRefs    map[*ast.Node]*directReference // calls and function values that reach a $direct variant
-	directImports map[*ast.Node][]*ast.Node      // import declarations, and the specifiers whose $direct variants they bring in
-	directExports map[*ast.Node][]*ast.Node      // named export declarations, and their plain-function specifiers
+	directs         map[*ast.Node]bool             // function declarations split into a $direct variant and an Effect wrapper
+	directRefs      map[*ast.Node]*directReference // calls and function values that reach a $direct variant
+	directImports   map[*ast.Node][]*ast.Node      // import declarations, and the specifiers whose $direct variants they bring in
+	directExports   map[*ast.Node][]*ast.Node      // named export declarations, and their plain-function specifiers
+	exportedImports map[*ast.Node]*ast.Node        // local export specifiers of an imported plain function, and the import binding they name
 }
 
 func newPlainPlan() plainPlan {
-	return plainPlan{directs: map[*ast.Node]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}, directExports: map[*ast.Node][]*ast.Node{}}
+	return plainPlan{directs: map[*ast.Node]bool{}, directRefs: map[*ast.Node]*directReference{}, directImports: map[*ast.Node][]*ast.Node{}, directExports: map[*ast.Node][]*ast.Node{}, exportedImports: map[*ast.Node]*ast.Node{}}
 }
 
 // planPlain records how the lowering treats node with respect to plain
@@ -402,6 +403,7 @@ func (p *plainPlan) planPlainExports(a *analyzer, node *ast.Node) {
 			if !ast.IsImportSpecifier(imported) && imported.Kind != ast.KindImportClause {
 				continue
 			}
+			p.exportedImports[specifier] = imported
 			declaration := ast.FindAncestor(imported, ast.IsImportDeclaration)
 			if declaration != nil && !slices.Contains(p.directImports[declaration], imported) {
 				p.directImports[declaration] = append(p.directImports[declaration], imported)

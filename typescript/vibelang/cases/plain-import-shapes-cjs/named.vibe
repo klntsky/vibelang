@@ -1,0 +1,13 @@
+export function other(s: string) {
+  return s + "?"
+}
+function quoted(s: string) {
+  return s + "!"
+}
+export { quoted as "quoted name" }
+export function tag(strings: TemplateStringsArray, ...values: string[]) {
+  return strings.join("|") + values.join("")
+}
+export default function plainDefault(s: string) {
+  return s + "#"
+}

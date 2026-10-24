@@ -2,6 +2,7 @@ package vibelang
 
 import (
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
+	"github.com/microsoft/TypeScript/tsc/internal/printer"
 )
 
 // visitPlainFunctionDeclaration turns a function that compiles to plain
@@ -16,7 +17,10 @@ import (
 //
 // The variant is exported when the function is, so other .vibe modules can
 // import it. The Effect form keeps the declaration's modifiers and stays a
-// hoisted function declaration.
+// hoisted function declaration. The variant keeps no link to the source
+// declaration: TypeScript's CommonJS transform keys an exported function by
+// its original node, so a link would merge the variant's export into the
+// Effect form's and leave exports.double$direct unset.
 func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	ec := tx.EmitContext()
@@ -33,7 +37,6 @@ func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 		modifiers = f.NewModifierList([]*ast.Node{f.NewModifier(ast.KindExportKeyword)})
 	}
 	direct := f.NewFunctionDeclaration(modifiers, nil /*asteriskToken*/, f.NewIdentifier(name+"$direct"), nil /*typeParameters*/, parameters, nil /*type*/, nil /*fullSignature*/, body)
-	ec.SetOriginal(direct, node)
 
 	// function double(...args) { return Effect.sync(() => double$direct(...args)) }
 	args := f.NewIdentifier("args")
@@ -62,32 +65,66 @@ func (tx *lowering) visitPlainFunctionDeclaration(node *ast.Node) *ast.Node {
 // function is expected.
 func (tx *lowering) visitDirectReference(node *ast.Node, ref *directReference) *ast.Node {
 	f := tx.Factory()
-	if ast.IsTaggedTemplateExpression(node) {
+	var call *ast.Node
+	switch {
+	case ast.IsTaggedTemplateExpression(node):
 		template := node.AsTaggedTemplateExpression()
-		return f.UpdateTaggedTemplateExpression(template, tx.directExpression(template.Tag, ref), template.QuestionDotToken, nil, tx.Visitor().VisitNode(template.Template), node.Flags)
-	}
-	if node.Kind != ast.KindCallExpression {
+		call = f.UpdateTaggedTemplateExpression(template, tx.directExpression(template.Tag, ref), template.QuestionDotToken, nil, tx.Visitor().VisitNode(template.Template), node.Flags)
+	case node.Kind == ast.KindCallExpression:
+		callee := tx.directExpression(node.Expression(), ref)
+		arguments := tx.Visitor().VisitNodes(node.ArgumentList())
+		call = f.UpdateCallExpression(node.AsCallExpression(), callee, node.QuestionDotToken(), nil /*typeArguments*/, arguments, node.Flags)
+	default:
 		return tx.directExpression(node, ref)
 	}
-	callee := tx.directExpression(node.Expression(), ref)
-	arguments := tx.Visitor().VisitNodes(node.ArgumentList())
-	return f.UpdateCallExpression(node.AsCallExpression(), callee, node.QuestionDotToken(), nil /*typeArguments*/, arguments, node.Flags)
+	if tx.commonJS && ref.specifier != nil {
+		// (0, m_1.double$direct)(n): the variant is called without a receiver,
+		// as TypeScript's CommonJS transform calls an imported function.
+		tx.EmitContext().AddEmitFlags(call, printer.EFIndirectCall)
+	}
+	return call
 }
 
 // directExpression returns the expression that names ref's variant in place
-// of node: double$direct, or M.double$direct through a namespace import.
+// of node: double$direct, M.double$direct through a namespace import, or, in a
+// file emitted as CommonJS, m_1.double$direct through a named or default
+// import (importedVariant).
 func (tx *lowering) directExpression(node *ast.Node, ref *directReference) *ast.Node {
 	f := tx.Factory()
 	var expression *ast.Node
-	if ref.access != nil {
+	switch {
+	case ref.access != nil:
 		receiver := tx.Visitor().VisitNode(ref.access.Expression())
 		expression = f.NewPropertyAccessExpression(receiver, nil /*questionDotToken*/, f.NewIdentifier(ref.name), ast.NodeFlagsNone)
-	} else {
+	case ref.specifier != nil && tx.commonJS:
+		expression = tx.importedVariant(ref.specifier)
+	default:
 		expression = f.NewIdentifier(ref.name)
 	}
 	tx.EmitContext().SetOriginal(expression, node)
 	expression.Loc = node.Loc
 	return expression
+}
+
+// importedVariant returns, in a file emitted as CommonJS, the expression that
+// reads the $direct variant of binding, an import specifier or default import
+// clause, from the module its import requires: m_1.double$direct, or
+// m_1.default$direct. TypeScript's CommonJS transform finds what an identifier
+// names through the checker, which knows nothing of the variants import an ES
+// module gets (visitImportWithDirectVariants): it would rewrite double$direct
+// to the import's own binding, m_1.double. This is the property it writes for
+// that binding, with the variant's name.
+func (tx *lowering) importedVariant(binding *ast.Node) *ast.Node {
+	f := tx.Factory()
+	module := f.NewGeneratedNameForNode(ast.FindAncestor(binding, ast.IsImportDeclaration))
+	if ast.IsImportClause(binding) {
+		return f.NewPropertyAccessExpression(module, nil /*questionDotToken*/, f.NewIdentifier("default$direct"), ast.NodeFlagsNone)
+	}
+	imported := binding.AsImportSpecifier().PropertyNameOrName()
+	if ast.IsStringLiteral(imported) {
+		return f.NewElementAccessExpression(module, nil /*questionDotToken*/, f.NewStringLiteral(imported.Text()+"$direct", ast.TokenFlagsNone), ast.NodeFlagsNone)
+	}
+	return f.NewPropertyAccessExpression(module, nil /*questionDotToken*/, f.NewIdentifier(imported.Text()+"$direct"), ast.NodeFlagsNone)
 }
 
 // visitImportWithDirectVariants keeps an import of plain functions and adds
@@ -126,6 +163,9 @@ func (tx *lowering) visitImportWithDirectVariants(node *ast.Node) *ast.Node {
 func (tx *lowering) visitExportWithDirectVariants(node *ast.Node) *ast.Node {
 	f := tx.Factory()
 	visited := tx.visitImportOrExport(node)
+	if tx.commonJS && node.AsExportDeclaration().ModuleSpecifier == nil {
+		return f.NewSyntaxList(append([]*ast.Node{visited}, tx.defineDirectExports(node)...))
+	}
 	var specifiers []*ast.Node
 	for _, specifier := range tx.plan.directExports[node] {
 		local := specifier.AsExportSpecifier().PropertyName
@@ -144,4 +184,42 @@ func (tx *lowering) visitExportWithDirectVariants(node *ast.Node) *ast.Node {
 	variants := f.NewExportDeclaration(nil /*modifiers*/, false /*isTypeOnly*/, f.NewNamedExports(f.NewNodeList(specifiers)), decl.ModuleSpecifier, decl.Attributes)
 	ast.SetParentInChildren(variants)
 	return f.NewSyntaxList([]*ast.Node{visited, variants})
+}
+
+// defineDirectExports returns, for a local export list in a file emitted as
+// CommonJS, a statement per plain function that defines its variant on
+// exports as a live binding, the form TypeScript writes for an exported
+// import:
+//
+//	Object.defineProperty(exports, "alias$direct", { enumerable: true, get: () => double$direct })
+//
+// TypeScript's CommonJS transform finds a local export's value through the
+// checker, which knows no $direct binding, so an export list that named the
+// variants would leave them undefined. An imported function's variant is read
+// from its module (importedVariant), so the import may stand anywhere.
+func (tx *lowering) defineDirectExports(node *ast.Node) []*ast.Node {
+	f := tx.Factory()
+	var statements []*ast.Node
+	for _, specifier := range tx.plan.directExports[node] {
+		var value *ast.Node
+		if binding := tx.plan.exportedImports[specifier]; binding != nil {
+			value = tx.importedVariant(binding)
+		} else {
+			local := specifier.AsExportSpecifier().PropertyName
+			if local == nil {
+				local = specifier.Name()
+			}
+			value = f.NewIdentifier(local.Text() + "$direct")
+		}
+		getter := f.NewArrowFunction(nil /*modifiers*/, nil /*typeParameters*/, f.NewNodeList(nil), nil /*type*/, nil /*fullSignature*/, f.NewToken(ast.KindEqualsGreaterThanToken), value)
+		descriptor := f.NewObjectLiteralExpression(f.NewNodeList([]*ast.Node{
+			f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("enumerable"), nil /*postfixToken*/, nil /*typeNode*/, f.NewKeywordExpression(ast.KindTrueKeyword)),
+			f.NewPropertyAssignment(nil /*modifiers*/, f.NewIdentifier("get"), nil /*postfixToken*/, nil /*typeNode*/, getter),
+		}), false /*multiLine*/)
+		define := f.NewPropertyAccessExpression(f.NewIdentifier("Object"), nil /*questionDotToken*/, f.NewIdentifier("defineProperty"), ast.NodeFlagsNone)
+		name := f.NewStringLiteral(specifier.Name().Text()+"$direct", ast.TokenFlagsNone)
+		call := f.NewCallExpression(define, nil /*questionDotToken*/, nil /*typeArguments*/, f.NewNodeList([]*ast.Node{f.NewIdentifier("exports"), name, descriptor}), ast.NodeFlagsNone)
+		statements = append(statements, f.NewExpressionStatement(call))
+	}
+	return statements
 }

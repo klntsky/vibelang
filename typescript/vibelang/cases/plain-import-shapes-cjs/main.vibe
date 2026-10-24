@@ -1,0 +1,43 @@
+// In a CommonJS package, a call of a plain function imported from a .vibe
+// module runs its plain variant through every import shape, as it does in an
+// ES module (plain-default-import-shapes). run.mjs loads it with require.
+import solo from "./named.vibe"
+import mixed, { other } from "./named.vibe"
+import { other as renamed, "quoted name" as quoted, tag } from "./named.vibe"
+import withNamespace, * as ns from "./named.vibe"
+import empty, {} from "./named.vibe"
+import { default as named } from "./named.vibe"
+import reexported, { forwarded, forwardedOther, early } from "./barrel.vibe"
+
+function logged(s: string) {
+  Console.log(s)
+  return other(s)
+}
+
+export function program() {
+  const a: string = solo("solo")
+  const b: string = mixed("mixed")
+  const c: string = withNamespace("namespace")
+  const d: string = empty("empty")
+  const e: string = named("named")
+  const f: string = reexported("reexported")
+  return {
+    solo: a,
+    mixed: b,
+    other: other("other"),
+    renamed: renamed("renamed"),
+    quoted: quoted("quoted"),
+    tagged: tag`a${"b"}c`,
+    mapped: ["mapped"].map(other),
+    logged: logged("logged"),
+    withNamespace: c,
+    namespace: ns.other("ns"),
+    namespaceDefault: ns.default("ns-default"),
+    empty: d,
+    named: e,
+    reexported: f,
+    forwarded: forwarded("forwarded"),
+    forwardedOther: forwardedOther("forwarded"),
+    early: early("early")
+  }
+}

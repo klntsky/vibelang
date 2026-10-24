@@ -1,0 +1,2 @@
+logged
+{"solo":"solo#","mixed":"mixed#","other":"other?","renamed":"renamed?","quoted":"quoted!","tagged":"a|cb","mapped":["mapped?"],"logged":"logged?","withNamespace":"namespace#","namespace":"ns?","namespaceDefault":"ns-default#","empty":"empty#","named":"named#","reexported":"reexported#","forwarded":"forwarded#","forwardedOther":"forwarded?","early":"early?"}

@@ -36,7 +36,7 @@ type lowering struct {
 	frame    *frame              // the generator being emitted while inEffect
 	plain    bool                // visiting the body of a .vibe function that compiles to plain JavaScript
 	imports  []namedImport       // named imports the lowering adds, such as a @throws class
-	commonJS bool                // the file is emitted as CommonJS, which has no import.meta (entry.go)
+	commonJS bool                // the file is emitted as CommonJS, which has no import.meta (entry.go) and reads imported plain variants from the module (plain_lower.go)
 
 	// scopes maps each Scope region's block to the name of its Scope (scopes_lower.go).
 	scopes map[*ast.Node]*ast.Node
@@ -103,7 +103,8 @@ func (tx *lowering) visitNode(node *ast.Node) *ast.Node {
 		return property
 	case node.Kind == ast.KindSourceFile:
 		return tx.visitSourceFile(node.AsSourceFile())
-	case node.Kind == ast.KindImportDeclaration && len(tx.plan.directImports[node]) != 0:
+	case node.Kind == ast.KindImportDeclaration && len(tx.plan.directImports[node]) != 0 && !tx.commonJS:
+		// CommonJS reads the variants from the module the import requires (importedVariant).
 		return tx.visitImportWithDirectVariants(node)
 	case node.Kind == ast.KindExportDeclaration && len(tx.plan.directExports[node]) != 0:
 		return tx.visitExportWithDirectVariants(node)
