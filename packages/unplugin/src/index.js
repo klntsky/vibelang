@@ -1,7 +1,7 @@
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { readFile } from "node:fs/promises"
 import { createRequire } from "node:module"
-import { dirname, isAbsolute, join, resolve } from "node:path"
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { createUnplugin } from "unplugin"
 
@@ -23,6 +23,37 @@ async function loadBackend(root) {
     return import(pathToFileURL(path).href)
   }
   throw new Error("vibelang-unplugin needs the vibelang package: npm install --save-dev vibelang")
+}
+
+// A glob from package.json `sideEffects`, as esbuild reads it: a pattern without
+// a slash matches a file of that name in any directory.
+function globMatches(pattern, path) {
+  const glob = pattern.replace(/^\.\//, "")
+  const source = glob.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*\*\/|\*\*|\*|\?/g, (token) =>
+    token === "**/" ? "(?:.*/)?" : token === "**" ? ".*" : token === "*" ? "[^/]*" : "[^/]")
+  return new RegExp(`^${glob.includes("/") ? "" : "(?:.*/)?"}${source}$`).test(path)
+}
+
+// What the nearest package.json's `sideEffects` says of file: false when it marks
+// the file free of side effects, undefined when it says nothing. esbuild reads the
+// field only for paths it resolves itself, so the plugin passes it on.
+function sideEffectsOf(file) {
+  for (let directory = dirname(file); ; directory = dirname(directory)) {
+    const manifest = join(directory, "package.json")
+    if (existsSync(manifest)) {
+      let declared
+      try {
+        declared = JSON.parse(readFileSync(manifest, "utf8")).sideEffects
+      } catch {
+        return undefined
+      }
+      if (declared === false) return false
+      if (!Array.isArray(declared)) return undefined
+      const path = relative(directory, file).split(sep).join("/")
+      return declared.some((pattern) => typeof pattern === "string" && globMatches(pattern, path)) ? undefined : false
+    }
+    if (dirname(directory) === directory) return undefined
+  }
 }
 
 async function esbuildMessage(formatDiagnostic, diagnostic) {
@@ -141,9 +172,19 @@ export const unplugin = createUnplugin((options = {}, meta) => {
     rspack(compiler) { configure(compiler.context) },
     esbuild: {
       config(initialOptions) { configure(initialOptions.absWorkingDir) },
-      // No path matches /a^/: use the native loader to preserve diagnostic lineText.
+      // No path matches /a^/: use the native loader to preserve diagnostic lineText,
+      // and resolve below, where the result can carry the module's side effects.
       onLoadFilter: /a^/,
+      onResolveFilter: /a^/,
       setup(build) {
+        build.onResolve({ filter: /(?:\.vibe|^\.\.?\/.+\.js)(?:\?.*)?$/ }, (args) => {
+          const id = resolveId(args.path, args.kind === "entry-point" ? undefined : args.importer)
+          if (id === undefined) return
+          // Without this, esbuild keeps every .vibe module of a package that declares
+          // none has side effects, and tree shaking drops nothing it imports.
+          const sideEffects = sideEffectsOf(cleanId(id))
+          return { path: id, namespace: "vibelang", ...(sideEffects === undefined ? {} : { sideEffects }) }
+        })
         build.onLoad({ filter: /\.vibe(?:\?.*)?$/ }, async ({ path }) => {
           const { project, code, map, inputs, errors, warnings, first, error } = await loadModule(path)
           const messages = []

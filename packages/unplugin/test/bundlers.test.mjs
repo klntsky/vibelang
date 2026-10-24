@@ -261,6 +261,21 @@ describe("vibelang-unplugin", { concurrency }, () => {
     })
 
     if (bundler === "esbuild") {
+      it("esbuild: a package that declares no side effects drops a .vibe module nothing uses", async (t) => {
+        const root = await fixture(t, "esbuild-side-effects")
+        await writeFile(join(root, "package.json"), JSON.stringify({ private: true, type: "module", sideEffects: false }))
+        // A top-level call: without the package's word, esbuild must keep the module.
+        await writeFile(join(root, "src", "unused.vibe"), 'export const marker = ["unused", "module", "marker"].join("-")\n')
+        await writeFile(join(root, "src", "barrel.ts"), 'export * as Unused from "./unused.vibe"\nexport { shop } from "./shop.vibe"\n')
+        await edit(join(root, "src", "main.ts"), 'from "./shop.vibe"', 'from "./barrel.ts"')
+        const result = await bundleOnce("esbuild", root)
+        assert.deepEqual(result.event, { ok: true }, result.stderr)
+        assert.equal(await runBundle("esbuild", root), expected)
+        const code = await readFile(join(root, "out/main.js"), "utf8")
+        assert.ok(code.includes("service") || code.includes("coffee"), "the bundle holds the used modules")
+        assert.ok(!code.includes("unused"), "the bundle keeps unused.vibe")
+      })
+
       it("esbuild: a type error uses the .vibe source in its code frame", async (t) => {
         const root = await fixture(t, "esbuild-frame")
         const file = join(root, "src/shop.vibe")
