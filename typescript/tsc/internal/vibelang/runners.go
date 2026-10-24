@@ -2,6 +2,7 @@ package vibelang
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
 	"github.com/microsoft/TypeScript/tsc/internal/checker"
@@ -267,8 +268,8 @@ func holdsProgram(c *checker.Checker, expr *ast.Node) bool {
 // module's top level.
 func reportTopLevelRun(c *checker.Checker, file *ast.SourceFile, call *ast.Node) {
 	text := nodeText(file, call.Expression()) + "()"
-	if catchExpressionOf(call) != nil {
-		text = nodeText(file, call) // x catch y, whose callee is the keyword (catch_expressions.go)
+	if catchExpressionOf(call) != nil || isInvokedForm(file, call) {
+		text = nodeText(file, call) // x catch y, whose callee is the keyword (catch_expressions.go), or throw x
 	}
 	d := report(c, call, EK1001, text)
 	if owner, _ := ownerCall(call); owner != nil && ast.IsCallExpression(owner) && runnerOf(c, owner) != notRunner {
@@ -276,6 +277,16 @@ func reportTopLevelRun(c *checker.Checker, file *ast.SourceFile, call *ast.Node)
 		return
 	}
 	note(d, "Export a function instead, or provide the value as a service with a Layer.")
+}
+
+// isInvokedForm reports whether call is an expression form that the parser
+// writes as an invoked arrow function: throw x is (() => { throw x })() and
+// do { … } is (() => { … })() (D186, D187). Its source text starts with its
+// keyword, where a written call of an arrow function starts with (.
+func isInvokedForm(file *ast.SourceFile, call *ast.Node) bool {
+	callee := call.Expression()
+	return len(call.Arguments()) == 0 && ast.IsParenthesizedExpression(callee) && ast.IsArrowFunction(callee.Expression()) &&
+		!strings.HasPrefix(nodeText(file, call), "(")
 }
 
 // isRunnerCallee reports whether call is the callee of a runner call, as

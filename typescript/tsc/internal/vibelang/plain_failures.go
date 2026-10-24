@@ -31,6 +31,7 @@ var plainContractFailure = EK2003.With("{0} is a plain return annotation, but {1
 
 func init() {
 	ls.RegisterCodeFixProvider(plainContractFailureFix)
+	fileChecks = append(fileChecks, checkPlainCodeThrows)
 }
 
 // plainFailures returns the expected failures that can escape the body of fn,
@@ -154,6 +155,15 @@ func (a *analyzer) reportFactoryFailures(file *ast.SourceFile, fn *ast.Node, nam
 // forEachEscapingThrow calls cb with each throw statement in fn's own body
 // that no try block of fn with a catch clause encloses.
 func forEachEscapingThrow(fn *ast.Node, cb func(throw *ast.Node)) {
+	if fn.Body() != nil {
+		forEachEscapingThrowIn(fn.Body(), cb)
+	}
+}
+
+// forEachEscapingThrowIn calls cb with each throw statement in root, outside
+// the functions and classes nested in it, that no try block in root with a
+// catch clause encloses.
+func forEachEscapingThrowIn(root *ast.Node, cb func(throw *ast.Node)) {
 	var visit func(n *ast.Node, caught bool) bool
 	visit = func(n *ast.Node, caught bool) bool {
 		switch {
@@ -176,9 +186,98 @@ func forEachEscapingThrow(fn *ast.Node, cb func(throw *ast.Node)) {
 		n.ForEachChild(func(child *ast.Node) bool { return visit(child, caught) })
 		return false
 	}
-	if fn.Body() != nil {
-		visit(fn.Body(), false /*caught*/)
+	visit(root, false /*caught*/)
+}
+
+// A constructor, an accessor and a class static block run as plain
+// JavaScript wherever they stand, as a module's top level does: none of them
+// is an Effect, so none of them can fail (D282). A throw is a typed failure
+// everywhere outside a hatch or a module declaration, so one that can escape
+// such code is a compile error, as it is in a function with a plain return
+// annotation: EK2003, and EK1001 at a module's top level, where running a
+// program is EK1001 too.
+//
+//	error Invalid { value: number }
+//	class Port {
+//	  constructor(readonly value: number) {
+//	    if (value < 0) throw new Invalid({ value })   // EK2003
+//	  }
+//	}
+//
+// A throw that the code's own catch handles stays inside it.
+
+// plainCodeFailure is EK2003's text for a throw that can escape a constructor,
+// an accessor or a static block. {0} is what it throws, {1} names the code.
+var plainCodeFailure = EK2003.With("This throw fails with {0}, but {1} runs as plain JavaScript, which never fails.")
+
+// topLevelFailure is EK1001's text for a throw that can escape a module's top
+// level.
+var topLevelFailure = EK1001.With("This throw fails a program, but a module's top level is not inside one.")
+
+// moduleThrowNote names the escape for code that must throw a JavaScript
+// exception.
+const moduleThrowNote = "Code that must throw a JavaScript exception, such as a test's throwing getter, belongs in a module declaration, whose TypeScript keeps JavaScript's throw (D283)."
+
+// checkPlainCodeThrows reports each throw that can escape a module's top level
+// (EK1001) or a constructor, accessor or static block (EK2003) in file.
+func checkPlainCodeThrows(c *checker.Checker, file *ast.SourceFile) {
+	a := analyzerFor(c)
+	forEachEscapingThrowIn(file.AsNode(), func(throw *ast.Node) {
+		d := report(c, throw, topLevelFailure)
+		note(d, "Throw inside a function that a program runs, such as main.")
+		note(d, moduleThrowNote)
+	})
+	var visit func(node *ast.Node) bool
+	visit = func(node *ast.Node) bool {
+		if isHatchArgument(node) {
+			return false // a hatch's function is TypeScript (D148)
+		}
+		body := node.Body()
+		if node.Kind == ast.KindClassStaticBlockDeclaration {
+			body = node.AsClassStaticBlockDeclaration().Body // a static block has no Body()
+		}
+		switch node.Kind {
+		case ast.KindConstructor, ast.KindGetAccessor, ast.KindSetAccessor, ast.KindClassStaticBlockDeclaration:
+			if body != nil {
+				forEachEscapingThrowIn(body, func(throw *ast.Node) {
+					failure := c.TypeToString(a.thrownType(throw))
+					d := report(c, throw, plainCodeFailure, failure, plainCodeName(node))
+					switch node.Kind {
+					case ast.KindConstructor:
+						note(d, "Check before constructing, in a function whose Effect contract names {0}.", failure)
+					case ast.KindClassStaticBlockDeclaration:
+						note(d, "Throw inside a function that a program runs, such as main.")
+					default:
+						note(d, "Write a method instead, whose Effect contract can name {0}.", failure)
+					}
+					note(d, moduleThrowNote)
+				})
+			}
+		}
+		return node.ForEachChild(visit)
 	}
+	file.AsNode().ForEachChild(visit)
+}
+
+// plainCodeName names node, a constructor, accessor or class static block, in
+// a diagnostic: "the constructor of Port", "get value", "the static block of
+// Port".
+func plainCodeName(node *ast.Node) string {
+	file := ast.GetSourceFileOfNode(node)
+	switch node.Kind {
+	case ast.KindGetAccessor:
+		return "get " + nodeText(file, node.Name())
+	case ast.KindSetAccessor:
+		return "set " + nodeText(file, node.Name())
+	}
+	what := "the constructor"
+	if node.Kind == ast.KindClassStaticBlockDeclaration {
+		what = "the static block"
+	}
+	if class := node.Parent; class != nil && class.Name() != nil {
+		return what + " of " + nodeText(file, class.Name())
+	}
+	return what + " of this class"
 }
 
 // inCatchingTry reports whether a try block with a catch clause in the

@@ -1,0 +1,12 @@
+This throw fails with Bad, but the constructor of Invalid runs as plain JavaScript, which never fails.
+  Check before constructing, in a function whose Effect contract names Bad.
+This throw fails with Bad, but get level runs as plain JavaScript, which never fails.
+  Write a method instead, whose Effect contract can name Bad.
+This throw fails with Bad, but set level runs as plain JavaScript, which never fails.
+This throw fails with Bad, but get boom runs as plain JavaScript, which never fails.
+This throw fails with Bad, but the static block of Registry runs as plain JavaScript, which never fails.
+This throw fails with Bad, but the constructor of Local runs as plain JavaScript, which never fails.
+This throw fails a program, but a module's top level is not inside one.
+  Throw inside a function that a program runs, such as main.
+  Code that must throw a JavaScript exception, such as a test's throwing getter, belongs in a module declaration, whose TypeScript keeps JavaScript's throw (D283).
+throw new Bad({ why: "expression" }) runs a program, but a module's top level is not inside one.

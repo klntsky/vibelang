@@ -231,7 +231,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 
 | Code | What it reports | Suggested repair | Chapter |
 | --- | --- | --- | --- |
-| EK1001 | Except for an explicitly Effect-typed top-level `const` initializer (D262), a module's top level runs a program | Export a function instead | 13 |
+| EK1001 | Except for an explicitly Effect-typed top-level `const` initializer (D262), a module's top level runs a program, or a throw can escape it (D282) | Export a function instead | 13 |
 | EK1002 | A `function*` passed to an API whose parameter returns a library Generator or Iterator, such as `Effect.gen` (D64) | Convert the function | 10 |
 | EK1003 | `async`, `for await`, or `await using`, and `await` inside an `async` function outside a hatch: a call already waits | Remove them; `await` in VibeLang code waits for fibers (EK4601-EK4604) | 10 |
 | EK1004 | `using` at a module's top level or in a class static block | Move it into a function | 6 |
@@ -243,7 +243,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK1010 | An unparenthesized throw expression is a binary operator's left operand (except comma), a conditional's condition, or the operand of `as` or `satisfies` (D186) | Write `throw (…)` to throw the whole expression | 3 |
 | EK2001 | An expected failure escapes the written contract | Catch it, widen the contract, or `Effect.orDie` | 2, 14 |
 | EK2002 | A requirement escapes the written contract | Widen the contract, or provide the service | 14 |
-| EK2003 | An Effect return annotation with missing channel slots, a plain annotation on a non-method function whose body runs an Effect (D67, D74), or a plain annotation on a function, or a JavaScript iterator annotation on a generator, whose throw can escape (D282, D296) | For `Effect<T>`: `T!!` or no annotation; for a bare `T`: `T!!` or `T!Errors`; for an escaping throw, a quick fix writes `T!E!`, or a hatch keeps JavaScript's throw | 14 |
+| EK2003 | An Effect return annotation with missing channel slots, a plain annotation on a non-method function whose body runs an Effect (D67, D74), or a plain annotation on a function, or a JavaScript iterator annotation on a generator, whose throw can escape, or a throw that can escape a constructor, an accessor or a class static block, which run as plain JavaScript (D282, D296) | For `Effect<T>`: `T!!` or no annotation; for a bare `T`: `T!!` or `T!Errors`; for an escaping throw, a quick fix writes `T!E!`, or a hatch keeps JavaScript's throw | 14 |
 | EK2004 | Warning by default: a catch whose try block has E = `never`, in an Effect or a plain function, or a catch expression with no expected errors; defects, JavaScript exceptions included, pass through (D238, D260, D282) | Use the form that can fail, or `try` | 3 |
 | EK2005 | A `resumeWith` program that needs a service or fails outside the operation's contract | Read the service in the clause first | 9 |
 | EK2006 | A `return`, `break`, or `continue` that leaves a `finally` block, which in JavaScript discards the failure in flight | Move it after the `try` statement | 17 |

@@ -1280,6 +1280,12 @@ typescript/vibelang/cases/plain-catch-exceptions/main.vibe:16:26 lambda plain an
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:22:28 lambda plain annotation
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:26:24 lambda plain annotation
 typescript/vibelang/cases/plain-catch-exceptions/main.vibe:8:18 lambda plain annotation
+typescript/vibelang/cases/plain-code-throw-caught/main.vibe:41:106 lambda effectFn table
+typescript/vibelang/cases/plain-code-throw-caught/main.vibe:41:16 lambda effectFn table
+typescript/vibelang/cases/plain-code-throw-caught/main.vibe:41:20 lambda plain table
+typescript/vibelang/cases/plain-code-throw-caught/main.vibe:41:35 lambda plain table
+typescript/vibelang/cases/plain-code-throw-caught/main.vibe:42:22 lambda plain table
+typescript/vibelang/cases/plain-code-throw.fail/main.vibe:66:32 lambda dual fallback
 typescript/vibelang/cases/plain-contract-callback/a.vibe:1:22 lambda plain annotation
 typescript/vibelang/cases/plain-contract-callback/a.vibe:3:27 lambda plain annotation
 typescript/vibelang/cases/plain-contract-curried.fail/a.vibe:3:24 lambda plain annotation

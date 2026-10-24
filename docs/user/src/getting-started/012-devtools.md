@@ -160,7 +160,7 @@ function discard(program: Effect.Effect<number>) {
 | Correctness | `outdatedEffectCodegen` | Not adopted: no codegen comments | None |
 | Correctness | `overriddenSchemaConstructor` | EK4814, warning | `class Person extends Schema.Class<Person>("Person")({ … }) { constructor() { … } }` |
 | Correctness | `unsupportedServiceAccessors` | Not needed: `Users.find(id)` calls a member through the key, generic or not | `Users.find(id)` |
-| Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { Effect.succeed(1) } catch (e) { … }`; plain catches keep JavaScript semantics |
+| Anti-pattern | `catchUnfailableEffect` | Covered: EK2004, warning | `try { Effect.succeed(1) } catch (e) { … }`; a catch receives typed failures only, in plain functions too (D282) |
 | Anti-pattern | `effectFnIife` | Not needed: no `Effect.fn`; an immediately called function is a call | `(() => load())()` |
 | Anti-pattern | `effectGenUsesAdapter` | Not needed: no `Effect.gen` | None |
 | Anti-pattern | `effectInFailure` | EK4815, warning | `throw program`; run it: `program()` |
