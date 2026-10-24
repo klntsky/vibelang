@@ -1,0 +1,27 @@
+// A by-name program (D147) evaluates the expression written before a pipe's
+// topic each time it runs. The comment written before the statement stays
+// before the statement: printed again inside the generated program, between
+// its return and the expression, a line comment would end the return, and
+// the program would return undefined instead of the journal's receipt.
+interface Journal { emit: (input: { value: number }) => number!string }
+const recorded: Array<number> = []
+const journal: Journal = {
+  emit: (input) => {
+    recorded.push(input.value)
+    return recorded.length
+  }
+}
+const make = (state: { mutable runs: number }): number!! => {
+  state.runs++
+  return state.runs * 10
+}
+
+// expect-result: [[10,20],2]
+export function main() {
+  const state = { runs: 0 }
+  // A comment on the statement: the left side runs a call, so the program is a generator.
+  journal.emit({ value: make(state) }) |> Effect.orDie(%)
+  // A comment on the second statement.
+  journal.emit({ value: make(state) }) |> Effect.orDie(%)
+  return [recorded, state.runs]
+}

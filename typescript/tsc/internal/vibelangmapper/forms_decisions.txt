@@ -158,6 +158,10 @@ typescript/vibelang/cases/by-name-choice-program/main.vibe:4:68 lambda plain tab
 typescript/vibelang/cases/by-name-choice-program/main.vibe:50:33 byname program table
 typescript/vibelang/cases/by-name-choice-program/main.vibe:8:21 lambda effectFn annotation
 typescript/vibelang/cases/by-name-choice-program/main.vibe:9:53 lambda program annotation
+typescript/vibelang/cases/by-name-leading-comment/main.vibe:14:14 lambda effectFn annotation
+typescript/vibelang/cases/by-name-leading-comment/main.vibe:23:56 byname program table
+typescript/vibelang/cases/by-name-leading-comment/main.vibe:25:56 byname program table
+typescript/vibelang/cases/by-name-leading-comment/main.vibe:9:9 lambda effectFn annotation
 typescript/vibelang/cases/by-name-mask-boundary.fail/main.vibe:5:30 lambda effectFn table
 typescript/vibelang/cases/by-name-mask-boundary/main.vibe:15:30 lambda effectFn table
 typescript/vibelang/cases/by-name-mask-boundary/main.vibe:17:13 byname program annotation

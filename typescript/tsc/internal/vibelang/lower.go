@@ -351,6 +351,12 @@ func (tx *lowering) byNameProgram(node *ast.Node) *ast.Node {
 	subject := byNameSubject(node) // a topic passes its pipe's left side (pipes.go)
 	value, tailProgram := tx.byNameResult(subject)
 	tx.inEffect, tx.frame, tx.plain = saved, savedFrame, savedPlain
+	// The expression's leading comments are printed where it was written,
+	// before its statement. Printed again inside the program, a line comment
+	// between the generated return and the expression would end the return
+	// (a line break there inserts a semicolon), and the program would return
+	// undefined instead of its value.
+	ec.AddEmitFlags(value, printer.EFNoLeadingComments)
 	if tailProgram && !containsYield(value) {
 		lowered := f.NewCallExpression(f.NewPropertyAccessExpression(tx.effectName(), nil, f.NewIdentifier("suspend"), ast.NodeFlagsNone), nil, nil, f.NewNodeList([]*ast.Node{tx.arrow(nil, value)}), ast.NodeFlagsNone)
 		ec.SetOriginal(lowered, node)
