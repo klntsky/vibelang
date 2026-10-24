@@ -1,4 +1,4 @@
-import type { VibeLangOptions } from "./index.js"
+import type { VibeLangOptions } from "./options.js"
 
 /** A bundler whose plugin list awaits promises. */
 export type DeferredBundler = "rolldown" | "rollup" | "vite"

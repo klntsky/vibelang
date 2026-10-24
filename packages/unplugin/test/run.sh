@@ -53,4 +53,4 @@ ln -s "$package" "$modules/vibelang-unplugin"
 (cd "$package" && bun install --frozen-lockfile --no-cache)
 
 cd "$package"
-exec node --test "$@" test/bundlers.test.mjs test/deferred.test.mjs test/entry.test.mjs
+exec node --test "$@" test/bundlers.test.mjs test/deferred.test.mjs test/deferred-types.test.mjs test/entry.test.mjs
