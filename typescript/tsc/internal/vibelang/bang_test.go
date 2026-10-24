@@ -8,6 +8,8 @@ func TestBangTypes(t *testing.T) {
 		{"Effect<number, never, never>", "number!!"},
 		{"Effect<User, never, Db>", "User!!Db"},
 		{"Effect<User>", "User!!"},
+		{"Effect<never>", "never!!"},
+		{"Effect<never, NotFound, Db>", "never!NotFound!Db"},
 		{"Effect<User, NotFound>", "User!NotFound!"},
 		{"type Scoped = Effect.Effect<string, NotFound, Scope>", "type Scoped = string!NotFound!Scope"},
 		{`import("effect/Effect", { with: { "resolution-mode": "import" } }).Effect<string, A | B, never>`, "string!A | B!"},

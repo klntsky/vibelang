@@ -34,7 +34,9 @@ func bangQuickInfo(c *checker.Checker, node *ast.Node, text string) string {
 func bangText(channels ...string) string {
 	slots := make([]string, 3)
 	for i := range slots {
-		if i < len(channels) && channels[i] != "never" {
+		// An empty error or requirement slot is never; the success slot has
+		// no empty form, so a never success stays written.
+		if i < len(channels) && (channels[i] != "never" || i == 0) {
 			slots[i] = bangSlot(channels[i], i > 0)
 		}
 	}
