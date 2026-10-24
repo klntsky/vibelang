@@ -675,3 +675,22 @@ func TestFormatDocsCorpus(t *testing.T) {
 		t.Fatalf("formatted only %d docs blocks", formatted)
 	}
 }
+
+// TestFormatModuleBodiesTheHostLeavesUnchanged checks that a module whose
+// body the TypeScript formatter returns as it is, as a dprint host without a
+// TypeScript plugin answers, formats to itself every time.
+func TestFormatModuleBodiesTheHostLeavesUnchanged(t *testing.T) {
+	unchanged := func(text string) (string, error) { return text, nil }
+	for _, source := range []string{
+		"module disk {\n  export const read = (path: string): string => path\n}\n",
+		"module disk {\n  import { readFileSync } from \"node:fs\"\n\n  export const read = (path: string): string => readFileSync(path, \"utf8\")\n}\n\nimport { read } from disk\n\nexport const text = read(\"a\")\n",
+	} {
+		got, err := Format("x.vibe", source, unchanged)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != source {
+			t.Errorf("formatted:\n%s\nwant:\n%s", got, source)
+		}
+	}
+}
