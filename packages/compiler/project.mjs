@@ -204,6 +204,9 @@ function collect({ status, signal, output }, root, out) {
     const path = relative(root, source)
     if (path.startsWith("..") || isAbsolute(path)) continue
     const emitted = join(out, relative(emitRoot(root), source).replace(/\.vibe$/, ".js"))
+    // The compile emits nothing for a module it reached through node_modules,
+    // such as a nested workspace package's: that one compiles with its own project.
+    if (!existsSync(emitted)) continue
     const map = JSON.parse(readFileSync(emitted + ".map", "utf8"))
     map.sources = map.sources.map((entry) => slash(resolve(dirname(emitted), map.sourceRoot || "", entry)))
     map.sourceRoot = ""

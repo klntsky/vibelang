@@ -180,6 +180,28 @@ test("a module of a package nested inside root compiles with that package's own 
   assert.equal(modules.projectOf(join(app, "fixtures/plain/thing.vibe")), join(app, "tsconfig.json"))
 })
 
+test("a root module that imports a nested package through node_modules compiles, and so does that package's module", { skip }, async (t) => {
+  const { root, app, compiler } = workspace(t)
+  for (const [path, text] of Object.entries({
+    "app/packages/inner/package.json": JSON.stringify({ name: "inner", type: "module", exports: { "./inner": "./src/inner.vibe" } }),
+    "app/src/uses-inner.vibe": 'import { fromInner } from "inner/inner"\nexport const both: string = `${fromInner}!`\n'
+  })) {
+    mkdirSync(dirname(join(root, path)), { recursive: true })
+    writeFileSync(join(root, path), text)
+    utimesSync(join(root, path), new Date(Date.now() - 60_000), new Date(Date.now() - 60_000))
+  }
+  // A workspace link, as a package manager makes one.
+  mkdirSync(join(app, "node_modules"), { recursive: true })
+  symlinkSync(join(app, "packages/inner"), join(app, "node_modules/inner"), "dir")
+  const modules = projects({ root: app, project: join(app, "tsconfig.json"), compiler, cache: false })
+  const uses = await modules.load(join(app, "src/uses-inner.vibe"))
+  assert.deepEqual([uses.errors, uses.error], [[], false])
+  assert.match(uses.code, /from "inner\/inner"/)
+  const inner = await modules.load(join(app, "packages/inner/src/inner.vibe"))
+  assert.deepEqual([inner.errors, inner.error], [[], false])
+  assert.match(inner.code, /fromInner = "inner"/)
+})
+
 test("a project whose rootDir holds sources above root compiles them, without TS6059", { skip }, async (t) => {
   const { root, app, compiler } = workspace(t)
   for (const [path, text] of Object.entries({
