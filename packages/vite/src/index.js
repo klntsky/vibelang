@@ -68,6 +68,15 @@ export default function vibelang(options = {}) {
       if (inherited.includes(flag)) return
       return { test: { env: { NODE_OPTIONS: [inherited, flag].filter(Boolean).join(" ") } } }
     },
+    // Vitest's fsModuleCache keys a transform by the module's own text, but a
+    // .vibe module's JavaScript also depends on the compiler and on the
+    // contracts of the modules it imports, so a rerun would serve JavaScript
+    // compiled against an earlier contract. The project compile has its own
+    // cache (vibelang/cache), keyed by every input.
+    configureVitest(context) {
+      const define = context.defineCacheKeyGenerator ?? context.experimental_defineCacheKeyGenerator
+      define?.(({ id }) => cleanId(id).endsWith(".vibe") ? false : undefined)
+    },
     configResolved(config) {
       root = config.root
       project = resolve(root, options.project || "tsconfig.json")

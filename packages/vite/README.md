@@ -119,6 +119,9 @@ The Vite root must contain the project's source files; the plugin overrides
 modules and their transitive importers, a conservative rule
 that covers exported contract and control changes without duplicating compiler
 logic. Direct HTTP requests for `.vibe` files enter Vite's module transform pipeline.
+Vitest keeps transforms between runs (`fsModuleCache`), keyed by a module's own
+text; the plugin keeps `.vibe` modules out of that cache, since their JavaScript
+also depends on the compiler and on the modules they import.
 
 The plugin never implements language syntax or lowering; prelude, service,
 program, and cross-file import support comes from the installed compiler.

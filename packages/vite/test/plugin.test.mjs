@@ -84,6 +84,28 @@ it("uses a workspace package's VibeLang source", () => {
   assert.match(result.output, /1 passed/)
 })
 
+test("a Vitest rerun recompiles a .vibe module whose import changed its contract", async (t) => {
+  // Vitest 5 keeps transforms on disk between runs (fsModuleCache), keyed by
+  // the module's own text; passing.test.vibe does not change, but value()
+  // becomes an Effect function, so its call must now run the Effect.
+  const root = await fixture(t)
+  await writeFile(join(root, "passing.test.vibe"), `import { assert, it } from "@effect/vitest"
+import { value } from "./dep.vibe"
+
+it.effect("reads its dependency") {
+  assert.strictEqual(value(), 7)
+}
+`)
+  await writeFile(join(root, "dep.vibe"), "export function value(): number {\n  return 7\n}\n")
+  let result = await runVitest(root)
+  assert.equal(result.code, 0, result.output)
+  await writeFile(join(root, "dep.vibe"), "export function value(): number!! {\n  Console.log(\"value\")\n  return 7\n}\n")
+  result = await runVitest(root)
+  assert.equal(result.code, 0, result.output)
+  assert.match(result.output, /1 passed/)
+  console.log("PASS Vitest rerun: a changed import's contract recompiles its importer")
+})
+
 test("register: true lets a Node process a test starts import .vibe source, from any directory", async (t) => {
   const root = await fixture(t)
   await writeFile(join(root, "plain.vibe"), "export function triple(value: number): number {\n  return value * 3\n}\n")
