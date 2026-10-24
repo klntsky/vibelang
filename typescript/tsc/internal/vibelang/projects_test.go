@@ -10,6 +10,7 @@ import (
 	"github.com/microsoft/TypeScript/tsc/internal/diagnostics"
 	"github.com/microsoft/TypeScript/tsc/internal/tsoptions"
 	"github.com/microsoft/TypeScript/tsc/internal/tspath"
+	"github.com/microsoft/TypeScript/tsc/internal/vfs"
 	"github.com/microsoft/TypeScript/tsc/internal/vfs/vfstest"
 )
 
@@ -38,6 +39,13 @@ func untrustedCalls(t *testing.T, files map[string]string, config tspath.RootedF
 	if len(errors) != 0 || len(parsed.Errors) != 0 {
 		t.Fatalf("config: %v / %v", errors, parsed.Errors)
 	}
+	return untrustedCallsIn(t, fs, parsed, names...)
+}
+
+// untrustedCallsIn compiles the parsed command line over fs and returns the
+// EK4401 count in each named file, failing the test on any other error.
+func untrustedCallsIn(t *testing.T, fs vfs.FS, parsed *tsoptions.ParsedCommandLine, names ...tspath.RootedFilePath) []int {
+	t.Helper()
 	p := compiler.NewProgram(compiler.ProgramOptions{Config: parsed, Host: compiler.NewCompilerHost(fs, bundled.LibPath(), nil, nil, nil)})
 	counts := make([]int, len(names))
 	for i, name := range names {
@@ -74,6 +82,37 @@ func TestForeignVibeFileUsesItsOwnProjectSettings(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			counts := untrustedCalls(t, projectFiles(test.producerTrust, test.appTrust), "/app/tsconfig.json", "/producer/src/lib.vibe", "/app/main.vibe")
+			if counts[0] != test.foreign || counts[1] != test.own {
+				t.Fatalf("EK4401 in the producer, the app = %d, %d; want %d, %d", counts[0], counts[1], test.foreign, test.own)
+			}
+		})
+	}
+}
+
+// D297: a program without a tsconfig, such as `vibelang --ignoreConfig a.ts`
+// or a command line of files, has no VibeLang settings of its own, so each
+// package's .vibe file keeps its package's settings there too, the same ones
+// its own build checks it with.
+func TestCommandLineProgramUsesEachPackageProjectSettings(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name          string
+		producerTrust string
+		appTrust      string
+		foreign, own  int
+	}{
+		{"the producer's trust holds", `["@acme/helper"]`, `[]`, 0, 1},
+		{"the producer's distrust holds", `[]`, `["@acme/helper"]`, 1, 0},
+		{"neither trusts it", `[]`, `[]`, 1, 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			fs := bundled.WrapFS(vfstest.FromMap(projectFiles(test.producerTrust, test.appTrust), tspath.CaseSensitive))
+			parsed := tsoptions.ParseCommandLine([]string{"--strict", "--noEmit", "--allowImportingTsExtensions", "/app/main.vibe"}, fs, "/")
+			if len(parsed.Errors) != 0 {
+				t.Fatalf("command line: %v", parsed.Errors)
+			}
+			counts := untrustedCallsIn(t, fs, parsed, "/producer/src/lib.vibe", "/app/main.vibe")
 			if counts[0] != test.foreign || counts[1] != test.own {
 				t.Fatalf("EK4401 in the producer, the app = %d, %d; want %d, %d", counts[0], counts[1], test.foreign, test.own)
 			}

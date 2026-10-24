@@ -25,7 +25,10 @@ import (
 // A file of the compiled project's own package keeps the compiled project's
 // settings, so a test tsconfig that extends the package's tsconfig and changes
 // them applies to its files. A file of another package takes the settings of
-// the nearest tsconfig.json above it; with none, the compiled project's.
+// the nearest tsconfig.json above it; with none, the compiled project's. A
+// program without a tsconfig, such as `vibelang --ignoreConfig a.ts`, has no
+// VibeLang settings and no package of its own, so every package's .vibe file
+// takes its own package's settings.
 
 type projectSettingsState struct {
 	files   map[*ast.SourceFile]*core.CompilerOptions // .vibe file -> the options whose VibeLang settings apply to it
@@ -47,7 +50,7 @@ func projectSettingsOf(c *checker.Checker) *projectSettingsState {
 // copy; TypeScript keeps checking every file with the program's options.
 func optionsFor(c *checker.Checker, file *ast.SourceFile) *core.CompilerOptions {
 	options := c.CompilerOptions()
-	if !isVibeLangFile(file) || options == nil || options.ConfigFilePath == "" {
+	if !isVibeLangFile(file) || options == nil {
 		return options
 	}
 	s := projectSettingsOf(c)
@@ -69,10 +72,13 @@ func optionsFor(c *checker.Checker, file *ast.SourceFile) *core.CompilerOptions 
 }
 
 // homeOf returns the package directory of the compiled project's tsconfig,
-// or "" when it lies in no package.
+// or "" when the program has no tsconfig or it lies in no package.
 func homeOf(c *checker.Checker, s *projectSettingsState) tspath.RootedDirectoryPath {
 	if s.home == nil {
-		home, _ := packageRootOf(c, c.CompilerOptions().ConfigFilePath.Directory())
+		var home tspath.RootedDirectoryPath
+		if config := c.CompilerOptions().ConfigFilePath; config != "" {
+			home, _ = packageRootOf(c, config.Directory())
+		}
 		s.home = &home
 	}
 	return *s.home
