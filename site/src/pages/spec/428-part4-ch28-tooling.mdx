@@ -203,7 +203,7 @@ does not implement those editor refactors.
 
 #### Diagnostics
 
-Every EK diagnostic before EK4801 is an error, except eight. Each error marks code with no meaning, or whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them (it keeps its TypeScript meaning for TypeScript's own codes). Five warnings mark retired spellings that still compile the same, each with a quick fix: EK1009, EK2112, EK2113, EK2120, and EK2121. The other two exceptions, EK2004 and EK4403, are policy, not soundness: a project may set either to `"error"`, `"warning"`, or `"off"` in the `vibelang` setting `diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control. The eighth, the warning EK2119, marks a handle clause's return that a `resume`'s type may not cover, which the checker cannot settle without a fixpoint (D97).
+Every EK diagnostic before EK4801 is an error, except nine. Each error marks code with no meaning, or whose generated output would break a rule of Parts II and III, so none can be lowered and `// @ts-expect-error` does not apply to them (it keeps its TypeScript meaning for TypeScript's own codes). Five warnings mark retired spellings that still compile the same, each with a quick fix: EK1009, EK2112, EK2113, EK2120, and EK2121. Three more, EK2004, EK4403, and EK4409, are policy, not soundness: a project may set each to `"error"`, `"warning"`, or `"off"` in the `vibelang` setting `diagnostics`; an EK4403 read then compiles as a trusted `sync` call that tests cannot control. The ninth, the warning EK2119, marks a handle clause's return that a `resume`'s type may not cover, which the checker cannot settle without a fixpoint (D97).
 
 EK4801-EK4825 carry the rules of Effect's language service that VibeLang's syntax does not already rule out (D240). They are lint, not soundness: each has a default category (error, warning, or off), and each except EK4813, which stands in for TypeScript's TS2339, can be set in the `vibelang` setting `diagnostics` or by a comment (D241):
 
@@ -219,7 +219,7 @@ A later comment overrides an earlier one; within one comment, a code named on it
 
 | Option in the tsconfig's top-level `vibelang` object, or `compilerOptions.vibelang` (D275) | Values | Default |
 | --- | --- | --- |
-| `diagnostics` | `"EK2004"`, `"EK4403"`, EK4801-EK4825 except `"EK4813"`, and EK4830-EK4837, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
+| `diagnostics` | `"EK2004"`, `"EK4403"`, `"EK4409"`, EK4801-EK4825 except `"EK4813"`, and EK4830-EK4837, each `"error"`, `"warning"`, or `"off"` | EK2004 `"warning"`, EK4403 `"error"`; EK48xx as the table below says |
 | `tracing` | `"none"`: no spans. `"exported"`: exported functions get `Effect.fn` spans. `"all"`: every named lowered function and method gets a span; anonymous lambdas don't (D104) | `"none"` |
 
 `vibelang` exits non-zero when it reports any error. The CLI prints `error EK1003:`; LSP sends source `EK` and numeric code `1003`, which VS Code displays as `EK(1003)` (D61). In the terminal, the editor, and Vite's overlay, diagnostics print at `.vibe` spans in the form this document's examples use.
@@ -292,6 +292,7 @@ coverage. Repairs are suggestions, not shipped code actions:
 | EK4406 | A call whose D23-tagged TypeScript declaration changes the emitted failure contract (warning until the emit switch, D249) | Export a `trusted(impl, [Errors])` value beside the implementation and call that value | 10 |
 | EK4407 | A module specifier written as an identifier, `from text`, names no module declaration of the file (D283) | Declare `module text { … }` at the file's top level, or import a file with a string specifier | 10 |
 | EK4408 | A module declaration that is nested, exported, or declared twice; `module` used for a namespace in a `.vibe` file; a module body that uses `export =` or `import = require()` (D283); or a module name shared with a value binding of the file (warning, D303) | Keep module declarations at the top level and unexported, write namespaces with `namespace`, use ES module syntax in the body, and choose distinct module and value names | 10 |
+| EK4409 | Warning: what an Effect function or a program returns is a call of a value of type `any`, so a program the callee returns never runs (D24) | Give the callee a function type: one that returns `A!E!R` runs the program | 10 |
 | EK4501 | A method of an Effect data type named without a call, as in `const f = stream.filter` (D153) | Call it, or pass `Stream.filter` itself | 13 |
 | EK4601 | `await` before a call that already runs (D226) | Remove `await`; to run the call concurrently, fork it and join the fiber | 7 |
 | EK4602 | `await` on a promise in VibeLang code (D226) | Wrap it in a hatch: `try(async () => …)` | 7 |

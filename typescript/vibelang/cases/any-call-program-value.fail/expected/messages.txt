@@ -1,0 +1,2 @@
+Give execute a type: a function type that returns A!E!R runs the program the call returns, and one that returns a value type keeps the value.
+Give loader a type:

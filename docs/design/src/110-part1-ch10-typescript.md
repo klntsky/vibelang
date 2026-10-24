@@ -107,6 +107,7 @@ function publish(draft: Draft) {
 | A platform API: `node:*` modules and browser globals such as `fetch`, `setTimeout`, `process`, `console`, `localStorage` | Not callable from `.vibe` files; the error names the Effect module to use (Chapter 11) | EK4402 |
 | A clock or randomness read: `Date.now()`, `new Date()`, `Math.random()`, `crypto.randomUUID()` | Use `Clock`, `DateTime`, and `Random`, so tests control them | EK4403 |
 | Any other plain TypeScript or JavaScript function | Needs an explicit boundary or a trusted contract | EK4401 |
+| A value of type `any` | Its call returns its value, as a call of data does (D24); where that value is what an Effect function or a program returns, a program the callee returns would never run | EK4409 (warning) |
 
 A trusted contract is declared once, on the TypeScript declaration:
 

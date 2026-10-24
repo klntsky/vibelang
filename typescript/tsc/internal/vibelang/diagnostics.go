@@ -182,6 +182,8 @@ var (
 	EK4407 = message(4407, errorCategory, "This file declares no module named {0}: write module {0} { … } at its top level, or import a file with a string specifier.")
 	// EK4408: a module declaration written where none can stand, or a body that is not an ES module (D283).
 	EK4408 = message(4408, errorCategory, "A module declaration stands at the top level of a .vibe file and holds an ES module.")
+	// EK4409: what an Effect function or a program returns is a call of a value of type any. {0} is the call, {1} the function. A warning, adjustable.
+	EK4409 = message(4409, warningCategory, "{0} calls a value of type any, so {1} succeeds with whatever it returns and runs no program it returns.")
 )
 
 // registry lists every message above by code.
@@ -192,7 +194,7 @@ func init() {
 		EK1001, EK1002, EK1003, EK1004, EK1005, EK1006, EK1007, EK1008, EK1009, EK1010, EK1011,
 		EK2001, EK2002, EK2003, EK2004, EK2005, EK2006, EK2101, EK2102, EK2103, EK2104, EK2105, EK2106, EK2107, EK2108, EK2109, EK2112, EK2113, EK2115, EK2116, EK2117, EK2118,
 		EK3001, EK3002, EK3003, EK3004, EK3005, EK3006, EK3101, EK3201, EK3202, EK3203, EK3204, EK3205,
-		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4406, EK4407, EK4408, EK4501,
+		EK4201, EK4202, EK4301, EK4401, EK4402, EK4403, EK4404, EK4405, EK4406, EK4407, EK4408, EK4409, EK4501,
 	} {
 		registry[m.Code] = m
 	}

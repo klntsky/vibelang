@@ -1,0 +1,24 @@
+// expect: EK4409
+// A call of a value of type any returns its value (D24): nothing says whether
+// it is a program. Where that value is what a program or an Effect function
+// returns, a program the callee returns would never run. EK4409 is an error
+// here (tsconfig.json).
+export const register = (execute: any) => Effect.updateContext(() => execute(), (context) => context)
+
+export const each = (handler: any, items: Array<number>) => Effect.forEach(items, (item) => handler.run(item))
+
+export function load(loader: any) {
+  sleep("1 millis")
+  return (loader as any)()
+}
+
+// A typed callee says which it returns, so these are not reported.
+export const typed = (execute: () => number!!) => Effect.updateContext(() => execute(), (context) => context)
+
+export function parse(text: string) {
+  sleep("1 millis")
+  return JSON.parse(text)
+}
+
+// A plain function's call returns the value to its caller as JavaScript does.
+export const plain = (execute: any): unknown => execute()

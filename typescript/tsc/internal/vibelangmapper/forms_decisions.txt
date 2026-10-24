@@ -60,6 +60,15 @@ templates/app/src/greeting.test.vibe:4:28 block appended/effectFn table
 templates/app/src/greeting.test.vibe:8:42 block appended/effectFn table
 templates/app/src/main.vibe:8:3 lambda effectFn service
 typescript/vibelang/cases/annotated-lambda-reads-its-variable/main.vibe:26:9 lambda plain annotation
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:16:22 lambda plain fallback
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:16:72 lambda program table
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:16:89 lambda plain table
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:24:22 lambda plain annotation
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:6:25 lambda plain fallback
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:6:64 lambda program table
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:6:81 lambda plain table
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:8:21 lambda plain fallback
+typescript/vibelang/cases/any-call-program-value.fail/main.vibe:8:83 lambda effectFn table
 typescript/vibelang/cases/await-ops.fail/main.vibe:17:15 lambda plain table
 typescript/vibelang/cases/await-ops.fail/main.vibe:8:20 lambda effectFn table
 typescript/vibelang/cases/await-ops/main.vibe:100:22 byname program table
