@@ -43,8 +43,10 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 	// D272 evaluates the left side as a value, x.pipe(g), where D154 passes it
 	// by name. Only a left side that calls nothing reads the same both ways: a
 	// call there may run a program, and .pipe would then reach its result
-	// (Smithers twin agent/model, client.execute(request) |> f(id)(%)).
-	curried := !runsCall(left)
+	// (Smithers twin agent/model, client.execute(request) |> f(id)(%)). A
+	// function literal is a program by name and has no pipe method, so it
+	// keeps D154 too: (() => { ... }) |> f(id)(%) passes the program.
+	curried := !runsCall(left) && !isFunctionLiteral(left)
 	for p.isPipeOperator() {
 		operatorPos := p.nodePos()
 		word := core.NewTextRange(p.scanner.TokenStart(), p.scanner.TokenEnd()+1)
@@ -69,6 +71,15 @@ func (p *Parser) parsePipeRest(left *ast.Expression, pos int) *ast.Expression {
 		curried = false // the next stage's left side runs this body
 	}
 	return left
+}
+
+// isFunctionLiteral reports whether node, inside any parentheses, is an arrow
+// function or a function expression.
+func isFunctionLiteral(node *ast.Node) bool {
+	for node.Kind == ast.KindParenthesizedExpression {
+		node = node.Expression()
+	}
+	return node.Kind == ast.KindArrowFunction || node.Kind == ast.KindFunctionExpression
 }
 
 // runsCall reports whether evaluating node calls something: a call, a tagged

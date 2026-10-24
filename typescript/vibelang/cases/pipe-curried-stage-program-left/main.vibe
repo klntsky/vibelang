@@ -1,0 +1,18 @@
+// A pipe whose left side is a program literal, `() => { ... }`, passes it by
+// name to a curried stage `f(args)(%)`, as D154 passes any program. D272's
+// method-pipe form `x.pipe(f(args))` reads the left side as a value, and a
+// function literal has no pipe method.
+const twice = (label: string) => <A, E, R>(self: A!E!R): Array<A | string>!E!R => {
+  const first = self()
+  const second = self()
+  return [label, first, second]
+}
+
+// expect-result: ["runs",1,2]
+export function main() {
+  let runs = 0
+  return (() => {
+    runs++
+    return runs
+  }) |> twice("runs")(%)
+}
