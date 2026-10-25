@@ -2,6 +2,8 @@ package vibelang
 
 import (
 	"context"
+	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/microsoft/TypeScript/tsc/internal/ast"
@@ -207,6 +209,157 @@ func hatchCall(c *checker.Checker, file *ast.SourceFile, hatch string, code *ast
 		text += ", " + names
 	}
 	return hatch + "(" + text + ")"
+}
+
+// boundaryCall writes call, a plain TypeScript call that EK4401 reports, as a
+// call of hatch that compiles, for the note that suggests it. A hatch's
+// function is TypeScript, where a .vibe function's call is an Effect value
+// that nothing runs (D148, D232), so each operand of call, its receiver or
+// an argument, that runs an Effect or calls a .vibe function is an input: it
+// runs before the hatch, and the function receives its value under the
+// callee's parameter name. The bindings the rest reads from its file are
+// inputs too (D229, D230). A mapper that is not "" goes second.
+//
+//	shout(hello("VibeLang"))   try((s) => shout(s), hello("VibeLang"))
+//	sortTitles(titles)         try((titles) => sortTitles(titles), titles)
+//	shout("hi")                try(shout("hi"))
+func boundaryCall(c *checker.Checker, file *ast.SourceFile, hatch string, call *ast.Node, mapper string) string {
+	a := analyzerFor(c)
+	type input struct {
+		node        *ast.Node // the operand the parameter stands for, or nil for a binding
+		pos         int
+		param, text string
+	}
+	var operands []input
+	callee := ast.SkipParentheses(call.Expression())
+	if ast.IsPropertyAccessExpression(callee) || ast.IsElementAccessExpression(callee) {
+		operands = append(operands, input{node: callee.Expression(), param: receiverParameterName(callee.Expression())})
+	}
+	for i, argument := range call.Arguments() {
+		if ast.IsSpreadElement(argument) {
+			argument = argument.Expression()
+		}
+		operands = append(operands, input{node: argument, param: argumentParameterName(c, call, i)})
+	}
+	var inputs []input
+	for _, operand := range operands {
+		if a.runsVibeLang(operand.node) {
+			operand.pos, operand.text = nodeStart(file, operand.node), nodeText(file, operand.node)
+			inputs = append(inputs, operand)
+		}
+	}
+	replaced := func(n *ast.Node) bool {
+		return slices.ContainsFunc(inputs, func(in input) bool { return in.node != nil && in.node.Pos() <= n.Pos() && n.End() <= in.node.End() })
+	}
+	// The names the rest of the call reads, which a parameter must not shadow.
+	taken := map[string]bool{}
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if replaced(n) {
+			return false
+		}
+		if ast.IsIdentifier(n) {
+			taken[n.Text()] = true
+		}
+		return n.ForEachChild(visit)
+	}
+	visit(call)
+	for _, reference := range outsideReferences(c, call) {
+		if !replaced(reference) && !slices.ContainsFunc(inputs, func(in input) bool { return in.node == nil && in.param == reference.Text() }) {
+			inputs = append(inputs, input{pos: nodeStart(file, reference), param: reference.Text(), text: reference.Text()})
+		}
+	}
+	for i := range inputs {
+		if inputs[i].node == nil {
+			continue
+		}
+		base, name := inputs[i].param, inputs[i].param
+		for n := 2; taken[name]; n++ {
+			name = base + strconv.Itoa(n)
+		}
+		taken[name] = true
+		inputs[i].param = name
+	}
+	slices.SortFunc(inputs, func(x, y input) int { return x.pos - y.pos })
+	start := nodeStart(file, call)
+	text := file.Text()[start:call.End()]
+	for i := len(inputs) - 1; i >= 0; i-- {
+		if in := inputs[i]; in.node != nil {
+			text = text[:in.pos-start] + in.param + text[in.node.End()-start:]
+		}
+	}
+	if mapper != "" {
+		mapper = ", " + mapper
+	}
+	if len(inputs) == 0 {
+		return hatch + "(" + text + mapper + ")"
+	}
+	params := make([]string, len(inputs))
+	values := make([]string, len(inputs))
+	for i, in := range inputs {
+		params[i], values[i] = in.param, in.text
+	}
+	return hatch + "((" + strings.Join(params, ", ") + ") => " + text + mapper + ", " + strings.Join(values, ", ") + ")"
+}
+
+// runsVibeLang reports whether evaluating node, an expression, runs an
+// Effect, looks up a service, reads an Effect value, or calls a .vibe
+// function, outside the functions it defines.
+func (a *analyzer) runsVibeLang(node *ast.Node) bool {
+	var visit func(n *ast.Node) bool
+	visit = func(n *ast.Node) bool {
+		if isFunctionBoundary(n) {
+			return false
+		}
+		if isInvocation(n) && (a.performs(n) || a.callsVibeLangFunction(n) || ast.IsCallExpression(n) && isEffectValueCall(a.checker, n)) {
+			return true
+		}
+		return n.ForEachChild(visit)
+	}
+	return visit(node)
+}
+
+// receiverParameterName names the parameter that stands for receiver, a
+// call's receiver passed to a hatch as an input: its own name, or the name of
+// the member a call or an access reads, as shelf for Todos.shelf().
+func receiverParameterName(receiver *ast.Node) string {
+	receiver = ast.SkipParentheses(receiver)
+	if ast.IsCallExpression(receiver) {
+		receiver = ast.SkipParentheses(receiver.Expression())
+	}
+	switch {
+	case ast.IsIdentifier(receiver):
+		return receiver.Text()
+	case ast.IsPropertyAccessExpression(receiver) && ast.IsIdentifier(receiver.Name()):
+		return receiver.Name().Text()
+	}
+	return "receiver"
+}
+
+// argumentParameterName names the parameter that stands for call's argument
+// at index, passed to a hatch as an input: the callee's parameter there, as s
+// for shout(s: string), or value.
+func argumentParameterName(c *checker.Checker, call *ast.Node, index int) string {
+	declaration := signatureDeclaration(c, call)
+	if declaration == nil {
+		return "value"
+	}
+	var parameters []*ast.Node
+	for _, parameter := range declaration.Parameters() {
+		if name := parameter.Name(); !ast.IsIdentifier(name) || name.Text() != "this" {
+			parameters = append(parameters, parameter)
+		}
+	}
+	if index >= len(parameters) {
+		if len(parameters) == 0 || parameters[len(parameters)-1].AsParameterDeclaration().DotDotDotToken == nil {
+			return "value"
+		}
+		index = len(parameters) - 1
+	}
+	if name := parameters[index].Name(); ast.IsIdentifier(name) {
+		return name.Text()
+	}
+	return "value"
 }
 
 // isHatchValueReference reports whether id, an identifier, reads a value: not a

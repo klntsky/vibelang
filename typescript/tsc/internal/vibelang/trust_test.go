@@ -2,6 +2,7 @@ package vibelang
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -225,6 +226,53 @@ export declare const vi: { spyOn(target: object, name: string): Spy }`,
 			}
 			if count != test.want {
 				t.Fatalf("EK4401 count = %d, want %d", count, test.want)
+			}
+		})
+	}
+}
+
+// EK4401's note suggests a hatch call that compiles. Inside the hatch,
+// TypeScript sees a .vibe function's call as an Effect, so an operand that
+// calls one is an input, named after the callee's parameter; the bindings
+// the rest reads are inputs too. Each suggestion, written in place of the
+// call, compiles without an error.
+func TestEK4401SuggestionCompiles(t *testing.T) {
+	const prefix = "module util {\n" +
+		"  export function shout(s: string): string { return s.toUpperCase() }\n" +
+		"  export class Box { constructor(readonly v: string) {} show(prefix: string): string { return prefix + this.v } }\n" +
+		"}\n" +
+		"import { shout, Box } from util\n" +
+		"function hello(name: string) { return `hello ${name}` }\n" +
+		"function box() { return new Box(\"b\") }\n" +
+		"export function main(s: string) {\n  return "
+	suggestion := regexp.MustCompile(`Call it through (try\(.*?\)), or `)
+	for _, test := range []struct{ call, want string }{
+		{`shout(hello("VibeLang"))`, `try((s) => shout(s), hello("VibeLang"))`},
+		{`shout(s + hello(s))`, `try((s) => shout(s), s + hello(s))`},
+		{`shout(s)`, `try((s) => shout(s), s)`},
+		{`new Box(s).show(s)`, `try((s) => new Box(s).show(s), s)`},
+		{`box().show(s + hello(s))`, `try((box, prefix) => box.show(prefix), box(), s + hello(s))`},
+		{`shout("hi")`, `try(shout("hi"))`},
+		{`box().show(hello(s))`, `try((box, prefix) => box.show(prefix), box(), hello(s))`},
+	} {
+		t.Run(test.call, func(t *testing.T) {
+			program, file, _, _ := editorProgram(t, prefix+test.call+"\n}\n")
+			got := ""
+			for _, d := range program.GetSemanticDiagnostics(t.Context(), file) {
+				if d.Code() == EK4401.Code {
+					if m := suggestion.FindStringSubmatch(diagnosticWithNotes(d)); m != nil {
+						got = m[1]
+					}
+				}
+			}
+			if got != test.want {
+				t.Fatalf("EK4401 suggests %q, want %q", got, test.want)
+			}
+			fixed, fixedFile, _, _ := editorProgram(t, prefix+got+"\n}\n")
+			for _, d := range append(fixed.GetSyntacticDiagnostics(t.Context(), fixedFile), fixed.GetSemanticDiagnostics(t.Context(), fixedFile)...) {
+				if d.Category() == diagnostics.CategoryError {
+					t.Errorf("the suggestion %s does not compile: %s", got, diagnosticWithNotes(d))
+				}
 			}
 		})
 	}

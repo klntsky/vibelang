@@ -1,2 +1,2 @@
-Call it through try((n) => vitestExpect(n), n), or re-export it from a .ts file you own with /** @vibelang trusted */.
-Call it through try((account) => Option.getOrThrow(account).close(), account), or tag its declaration in account.ts with /** @vibelang trusted */.
+Call it through try((n) => vitestExpect(n), n), or list its package in the vibelang setting trustedPackages, or declare its failures once, const vitestExpectTrusted = trusted(vitestExpect, [Errors]) with trusted imported from "vibelang-runtime", and call vitestExpectTrusted.
+Call it through try((account) => Option.getOrThrow(account).close(), account), or wrap it in a function and declare that function's failures with trusted(impl, [Errors]), imported from "vibelang-runtime".

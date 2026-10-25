@@ -1,7 +1,6 @@
 package vibelang
 
 import (
-	"path"
 	"slices"
 	"strings"
 
@@ -510,23 +509,10 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 	switch {
 	case (t.kind == trustForeign || t.kind == trustTagged) && t.promise:
 		d := report(c, callee, promiseCall, name)
-		note(d, "Wait for it with {0}, or name its failure: {1}.", hatchCall(c, file, "try", call, ""), hatchCall(c, file, "try", call, "(error) => …"))
+		note(d, "Wait for it with {0}, or name its failure: {1}.", boundaryCall(c, file, "try", call, ""), boundaryCall(c, file, "try", call, "(error) => …"))
 	case t.kind == trustForeign:
 		d := report(c, callee, EK4401, name)
-		// Another package's declaration cannot carry the tag; a re-export can (D23).
-		trusted := ""
-		if declared := ast.GetSourceFileOfNode(signatureDeclaration(c, call)); packageOf(c, declared) != packageOf(c, file) {
-			trusted = "re-export it from a .ts file you own with /** @vibelang trusted */"
-		} else {
-			trusted = "tag its declaration in " + path.Base(string(declared.FileName())) + " with /** @vibelang trusted */"
-		}
-		// A hatch's function is TypeScript (D148), so the operands that run an
-		// Effect must reach it as inputs, which run before it (D232).
-		if operand := performingOperand(c, a, call); operand != nil {
-			note(d, "Pass {0} to try as an input, an argument after try's function, which cannot run an Effect; or {1}.", nodeText(file, operand), trusted)
-		} else {
-			note(d, "Call it through {0}, or {1}.", hatchCall(c, file, "try", call, ""), trusted)
-		}
+		note(d, "Call it through {0}, or {1}.", boundaryCall(c, file, "try", call, ""), trustedNote(c, file, call))
 	case t.kind == trustTagged && t.unreachable != "":
 		d := report(c, callee, unreachableThrows, name, t.unreachable)
 		note(d, "Name an exported class in @throws.")
@@ -541,32 +527,24 @@ func checkCall(c *checker.Checker, a *analyzer, file *ast.SourceFile, call *ast.
 	}
 }
 
-// performingOperand returns the first call in call's receiver or arguments
-// that runs an Effect, outside the functions they define, or nil.
-func performingOperand(c *checker.Checker, a *analyzer, call *ast.Node) *ast.Node {
-	var operands []*ast.Node
-	if callee := ast.SkipParentheses(call.Expression()); ast.IsPropertyAccessExpression(callee) || ast.IsElementAccessExpression(callee) {
-		operands = append(operands, callee.Expression())
+// trustedNote is EK4401's other fix: declare the function's failures with
+// trusted(impl, [Errors]) (D249), whose listed classes are expected failures
+// and any other exception a defect; for another package's function, trusting
+// the whole package with the vibelang setting trustedPackages (D261) also
+// does. A method needs a function around it first.
+func trustedNote(c *checker.Checker, file *ast.SourceFile, call *ast.Node) string {
+	declaration := signatureDeclaration(c, call)
+	callee := ast.SkipParentheses(call.Expression())
+	wrap := "wrap it in a function and declare that function's failures with trusted(impl, [Errors]), imported from \"vibelang-runtime\""
+	if declaration != nil && !ast.IsMethodDeclaration(declaration) && declaration.Kind != ast.KindMethodSignature && ast.IsEntityNameExpression(callee) {
+		impl := nodeText(file, callee)
+		value := impl[strings.LastIndex(impl, ".")+1:] + "Trusted"
+		wrap = "declare its failures once, const " + value + " = trusted(" + impl + ", [Errors]) with trusted imported from \"vibelang-runtime\", and call " + value
 	}
-	operands = append(operands, call.Arguments()...)
-	var found *ast.Node
-	var visit func(node *ast.Node) bool
-	visit = func(node *ast.Node) bool {
-		if ast.IsFunctionLike(node) {
-			return false
-		}
-		if ast.IsCallExpression(node) && (a.performs(node) || isEffectValueCall(c, node)) {
-			found = node
-			return true
-		}
-		return node.ForEachChild(visit)
+	if declaration != nil && packageOf(c, ast.GetSourceFileOfNode(declaration)) != packageOf(c, file) {
+		return "list its package in the vibelang setting trustedPackages, or " + wrap
 	}
-	for _, operand := range operands {
-		if visit(operand) {
-			return found
-		}
-	}
-	return nil
+	return wrap
 }
 
 // reachClass finds how the generated code of file refers to f's class at run
