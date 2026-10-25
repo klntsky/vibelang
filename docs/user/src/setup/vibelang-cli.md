@@ -2,6 +2,8 @@
 
 `vibelang` replaces `tsc`. It checks `.vibe` and `.ts` files as one program, emits JavaScript, and accepts TypeScript's compiler flags. Install the packages with [Add VibeLang to an existing project](existing-project.md) first.
 
+VibeLang uses TypeScript 7, which rejects removed options such as `moduleResolution: "node"` / `"node10"` and `baseUrl` (TS5108 / TS5102); update an older tsconfig using the [TypeScript 7 migration notes](https://github.com/microsoft/typescript-go/blob/main/CHANGES.md).
+
 ## 1. Configure tsconfig.json
 
 If the project has no `tsconfig.json`, create this one. It selects `.vibe` files under `src/` and emits Node ESM to `dist/`:
