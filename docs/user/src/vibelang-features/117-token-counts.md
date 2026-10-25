@@ -19,8 +19,8 @@ An agent that writes VibeLang loads the skill first: its forms, rules and idioms
 | --- | ---: |
 | The VibeLang skill, `packages/compiler/skills/vibelang/SKILL.md` | 4,528 |
 | The skill and the [cheat sheet](115-cheat-sheet.md) | 13,062 |
-| The skill and the user guide (131 pages) | 199,499 |
-| The user guide alone | 194,971 |
+| The skill and the user guide (131 pages) | 199,568 |
+| The user guide alone | 195,040 |
 | The specification (33 chapters) | 103,189 |
 | The decision log, `docs/design/DECISIONS.md` | 60,384 |
 
@@ -151,10 +151,10 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | **Resource Management** | **3,935** |
 | [Introduction](../resource-management/029-introduction.md) | 1,604 |
 | [Scope](../resource-management/030-scope.md) | 2,331 |
-| **Observability** | **6,462** |
+| **Observability** | **6,482** |
 | [Logging](../observability/031-logging.md) | 1,945 |
 | [Metrics](../observability/032-metrics.md) | 1,331 |
-| [Tracing](../observability/033-tracing.md) | 2,453 |
+| [Tracing](../observability/033-tracing.md) | 2,473 |
 | [Tracking Fibers](../observability/034-tracking-fibers.md) | 733 |
 | [Configuration](../035-configuration.md) | 2,689 |
 | [Runtime](../036-runtime.md) | 1,416 |
@@ -178,9 +178,9 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PubSub](../concurrency/050-pubsub.md) | 1,132 |
 | [Semaphore](../concurrency/051-semaphore.md) | 707 |
 | [Latch](../concurrency/052-latch.md) | 599 |
-| **Stream** | **10,083** |
+| **Stream** | **10,132** |
 | [Introduction](../stream/053-introduction.md) | 1,076 |
-| [Creating Streams](../stream/054-creating.md) | 2,337 |
+| [Creating Streams](../stream/054-creating.md) | 2,386 |
 | [Consuming Streams](../stream/055-consuming-streams.md) | 775 |
 | [Error Handling](../stream/056-error-handling.md) | 1,428 |
 | [Operations](../stream/057-operations.md) | 3,809 |
@@ -245,7 +245,7 @@ Each row is one [cheat sheet](115-cheat-sheet.md) entry: its Effect TypeScript b
 | [PlatformLogger](../platform/108-platformlogger.md) | 758 |
 | [Runtime](../platform/109-runtime.md) | 1,219 |
 | [Terminal](../platform/110-terminal.md) | 1,511 |
-| **All 98 pages** | **131,709** |
+| **All 98 pages** | **131,778** |
 
 ### VibeLang features
 

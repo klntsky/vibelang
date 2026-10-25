@@ -64,9 +64,11 @@ const codes = Stream.fromIterableEffect(() => Catalog.codes())
 ```ts
 // TypeScript (.ts)
 // rows.ts
-// run: return (async () => { const values = []; for await (const row of rows()) values.push(row); console.log(JSON.stringify(values)); try { for await (const row of rows(true)) {} } catch (error) { console.log((error as Error).message) } })()
-/** @vibelang trusted */
-export function rows(fail = false): AsyncIterable<string> {
+// run: return (async () => { const values = []; for await (const row of Effect.runSync(rows())) values.push(row); console.log(JSON.stringify(values)); try { for await (const row of Effect.runSync(rows(true))) {} } catch (error) { console.log((error as Error).message) } })()
+import { Effect } from "effect"
+import { trusted } from "vibelang-runtime"
+
+export const rows = trusted((fail = false): AsyncIterable<string> => {
   return {
     async *[Symbol.asyncIterator]() {
       if (fail) throw new Error("iterator failed")
@@ -74,7 +76,7 @@ export function rows(fail = false): AsyncIterable<string> {
       yield "row-b"
     }
   }
-}
+}, [])
 // Output: ["row-a","row-b"]
 // Output: iterator failed
 ```
@@ -94,7 +96,7 @@ function adaptRows(rows: AsyncIterable<string>) {
 // Output: IteratorFailed
 ```
 
-Pass an async iterable from a TypeScript adapter or a service; the error mapper turns iteration exceptions and rejections into the stream's failure type. VibeLang has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
+The trusted wrapper returns an Effect: TypeScript callers run `Effect.runSync(rows())`, while VibeLang calls run it automatically. Pass an async iterable from a TypeScript adapter or a service; the error mapper turns iteration exceptions and rejections into the stream's failure type. VibeLang has no `async` generator syntax or `for await`; use Stream consumers after adaptation.
 
 ## Effects and callbacks
 
