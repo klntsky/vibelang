@@ -32,6 +32,8 @@ func checkProviders(c *checker.Checker, file *ast.SourceFile) {
 			checkProviderObject(c, node)
 		case ast.IsClassDeclaration(node) || ast.IsClassExpression(node):
 			checkProviderClass(c, node)
+		case ast.IsCallExpression(node):
+			checkLayerProgram(c, node)
 		}
 		return node.ForEachChild(visit)
 	}
@@ -45,7 +47,86 @@ func checkProviderObject(c *checker.Checker, object *ast.Node) {
 	if contextual == nil {
 		return
 	}
-	owner := serviceNameOf(c, contextual)
+	checkProviderMembers(c, object, providerName(object), serviceNameOf(c, contextual), func(member *ast.Node) *checker.Type {
+		return c.GetContextualTypeForObjectLiteralElement(member, checker.ContextFlagsNone)
+	})
+}
+
+// checkLayerProgram checks the implementation that a Layer.effect program
+// returns through a variable, as in
+//
+//	const UsersLive = Layer.effect(Users) {
+//	  const impl = { find(id) { ... } }
+//	  return impl
+//	}
+//
+// against the service's shape. An object literal the program returns itself
+// has the shape as its contextual type, and checkProviderObject checks it; a
+// variable's object literal has none, so TypeScript would report only that
+// the program's type does not fit.
+func checkLayerProgram(c *checker.Checker, call *ast.Node) {
+	key, program := layerEffectArguments(c, call)
+	if program == nil {
+		return
+	}
+	_, shape := serviceOfKey(c, c.GetTypeAtLocation(key))
+	if shape == nil {
+		return
+	}
+	ast.ForEachReturnStatement(program.Body(), func(statement *ast.Node) bool {
+		if object := variableObject(c, program, statement.Expression()); object != nil {
+			checkProviderMembers(c, object, providerName(call), serviceNameOf(c, shape), func(member *ast.Node) *checker.Type {
+				return c.GetTypeOfPropertyOfType(shape, member.Name().Text())
+			})
+		}
+		return false
+	})
+}
+
+// layerEffectArguments returns the service key and the program of call when
+// it is Layer.effect(S) { ... }, Layer.effect(S, () => { ... }) or
+// Layer.effect(S)(() => { ... }), or nil and nil.
+func layerEffectArguments(c *checker.Checker, call *ast.Node) (key *ast.Node, program *ast.Node) {
+	arguments := call.Arguments()
+	switch callee := call.Expression(); {
+	case len(arguments) == 2 && isExportOf(c, call, "effect", "Layer", []string{"effect"}):
+		key, program = arguments[0], arguments[1]
+	case len(arguments) == 1 && ast.IsCallExpression(callee) && len(callee.Arguments()) == 1 && isExportOf(c, callee, "effect", "Layer", []string{"effect"}):
+		key, program = callee.Arguments()[0], arguments[0]
+	default:
+		return nil, nil
+	}
+	program = ast.SkipParentheses(program)
+	if !ast.IsArrowFunction(program) && !ast.IsFunctionExpression(program) || program.Body() == nil || !ast.IsBlock(program.Body()) {
+		return nil, nil
+	}
+	return key, program
+}
+
+// variableObject returns the object literal that initializes the variable
+// expression names, when fn declares that variable without a type.
+func variableObject(c *checker.Checker, fn *ast.Node, expression *ast.Node) *ast.Node {
+	if expression == nil || !ast.IsIdentifier(ast.SkipParentheses(expression)) {
+		return nil
+	}
+	symbol := c.GetSymbolAtLocation(ast.SkipParentheses(expression))
+	if symbol == nil || symbol.ValueDeclaration() == nil {
+		return nil
+	}
+	declaration := symbol.ValueDeclaration()
+	if !ast.IsVariableDeclaration(declaration) || declaration.Type() != nil || declaration.Initializer() == nil || ast.GetContainingFunction(declaration) != fn {
+		return nil
+	}
+	if initializer := ast.SkipParentheses(declaration.Initializer()); ast.IsObjectLiteralExpression(initializer) {
+		return initializer
+	}
+	return nil
+}
+
+// checkProviderMembers checks each method and function-valued property of
+// object, which holder provides for owner's service, against the type
+// declared gives that member.
+func checkProviderMembers(c *checker.Checker, object *ast.Node, holder, owner string, declaredOf func(member *ast.Node) *checker.Type) {
 	for _, member := range object.AsObjectLiteralExpression().Properties.Nodes {
 		name := member.Name()
 		if name == nil || !ast.IsIdentifier(name) && !ast.IsStringLiteral(name) {
@@ -60,11 +141,11 @@ func checkProviderObject(c *checker.Checker, object *ast.Node) {
 		default:
 			continue
 		}
-		declared := c.GetContextualTypeForObjectLiteralElement(member, checker.ContextFlagsNone)
+		declared := declaredOf(member)
 		if declared == nil {
 			continue
 		}
-		if checkMember(c, member, implementation, providerName(object), owner, name.Text(), declared, c.GetTypeAtLocation(implementation)) {
+		if checkMember(c, member, implementation, holder, owner, name.Text(), declared, c.GetTypeAtLocation(implementation)) {
 			coverMismatch(c, object, member, implementation)
 		}
 	}

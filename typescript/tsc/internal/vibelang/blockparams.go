@@ -83,7 +83,7 @@ func blockParamSignatures(c *checker.Checker, call *ast.Node, signatures []*chec
 		}
 		if acceptsArguments(signature, n) {
 			for _, inner := range c.GetSignaturesOfType(c.GetReturnTypeOfSignature(signature), checker.SignatureKindCall) {
-				if !takesEffectFirst(c, inner) {
+				if !takesEffectFirst(c, inner) || takesBlockDirectly(c, signatures, n, inner) {
 					continue
 				}
 				if flattened := c.FlattenSignature(signature, n, inner); flattened != nil {
@@ -95,6 +95,24 @@ func blockParamSignatures(c *checker.Checker, call *ast.Node, signatures []*chec
 		result = append(result, signature)
 	}
 	return result
+}
+
+// takesBlockDirectly reports whether one of signatures takes the block as its
+// own parameter n in the role inner takes it, an Effect parameter of the same
+// name, as Layer.effect(service, effect) does beside its data-last form
+// Layer.effect(service)(effect). The call is then that signature's own, and
+// flattening the data-last form would infer the outer type parameters from
+// the block too: Layer.effect(S) { ... } would widen S, the service's shape,
+// to the object the block returns, where the direct form's NoInfer<S> keeps it.
+func takesBlockDirectly(c *checker.Checker, signatures []*checker.Signature, n int, inner *checker.Signature) bool {
+	name := inner.Parameters()[0].Name()
+	for _, signature := range signatures {
+		parameters := signature.Parameters()
+		if n < len(parameters) && acceptsArguments(signature, n+1) && parameters[n].Name() == name && isEffectType(c, c.GetTypeOfSymbol(parameters[n])) {
+			return true
+		}
+	}
+	return false
 }
 
 func acceptsArguments(signature *checker.Signature, n int) bool {

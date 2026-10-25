@@ -460,6 +460,9 @@ func checkProgram(c *checker.Checker, program *ast.Node, accepted *checker.Type,
 		if accepted != nil && c.IsTypeAssignableTo(service, accepted) {
 			continue
 		}
+		if service.Flags()&(checker.TypeFlagsUnknown|checker.TypeFlagsAny) != 0 {
+			continue // R of a call TypeScript rejected, such as a Layer.effect whose service does not fit: that error is the one to fix
+		}
 		names = append(names, c.TypeToString(service))
 		for _, needer := range servicesFor(c).wireNeeders(service) {
 			paths = append(paths, scanner.GetTextOfNode(needer)+" needs "+c.TypeToString(service))
